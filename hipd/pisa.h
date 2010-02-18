@@ -1,5 +1,12 @@
-/** @file
- * A header file for pisa.c.
+/**
+ * @file hipd/pisa.h
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * This file contains function declarations  specific to PISA. They deal with the
+ * certificate loading.
+ *
+ * @brief Functions declarations for certificate loading
  *
  * @author Thomas Jansen
  */

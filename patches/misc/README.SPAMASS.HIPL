@@ -3,7 +3,7 @@ Installation and configuration
 
 * spamc
 * libmilter0
-* libmilter-dev 
+* libmilter-dev
 * apply spamass-milter-0.3.0-hipl-v1.patch
 * apply spamass-sendmail-debian-v1.patch
   * edit the directory path to point to the correct hipconf

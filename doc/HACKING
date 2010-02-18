@@ -158,8 +158,8 @@ commit the changes.
 
 bzr commit
 
-NOTE: Please, don't use the -m "#COMMIT_COMMENT#" option known from
-TLA. I strongly encourage you to use an editor for your commit
+NOTE: Please, don't use the -m "#COMMIT_COMMENT#" option.
+I strongly encourage you to use an editor for your commit
 messages instead and to give a one line summary followed by a empty
 line and then a more detailed description of your changes. This way,
 it will be much easier for your fellow developers to understand your
@@ -180,8 +180,6 @@ bzr conflicts/resolve
 A list of possible conflicts can be found at:
 http://doc.bazaar.canonical.com/bzr.2.0/en/user-reference/index.html#conflicts-types
 
-
-NOTE: You can find information on how to use the DEPRICATED TLA further below.
 
 
 C CODING QUALITY
@@ -674,104 +672,6 @@ CODING CONVENTIONS
       free(mem);
     return err;
   }
-
-
-TLA instructions DEPRACATED!!!
-==============================
-
-These instructions assume that you want to access the HIPL source code
-using ssh. Note: tla and bazaar (baz) provide the same functionality
-but bazaar was faster and more user friendly when this was
-written. Notice that HIP sources are NOT managed with bzr!
-
-# Register an account:
-#
-tla register-archive hipl-dev@freelists.org--hipl \
-       sftp://mkomu@hipl.hiit.fi/var/archive/hipl
-tla my-default-archive hipl-dev@freelists.org--hipl
-
-# Get a working copy from the main branch:
-#
-tla get hipl--main--2.6 hipl--main--2.6
-
-# Copy the tla hook if you want to get your commit logs to the mailing list:
-#
-cp hipl--main--2.6/test/tla-hook ~/.arch-params/hook
-
-# Different ways to commit code:
-#
-a) tla commit # Open's your default editor and commits.
-b) emacs `tla make-log`; tla commit
-c) tla commit -s "Explanation jaada jaada"
-
-# How to check what your have modified in the tree
-#
-tla changes
-
-# How to make a branch from the current version of the main branch
-#
-tla my-default archive # Make sure that you are accessing the HIPL archive
-tla archive-setup hipl--mybranch--2.6
-tla tag hipl--main--2.6 hipl--mybranch--2.6
-
-# Get the new branch
-#
-tla get hipl--mybranch--2.6 hipl--mybranch--2.6
-
-# How to synchronize branches... remember to make clean commits, i.e. do
-# NOT commit a merge and local modifications in the same commit!
-#
-cd hipl--mybranch--2.6
-tla changes # Check that the tree is unmodified
-tla star-merge hipl--main--2.6
-
---- Optional ---
-
-Below are some instructions on using revision libraries. They speed-up
-tla/tla operations.
-
-# Make a revision library (otherwise e.g. commit and changes take up to
-# 15 mins!)
-#
-mkdir ~/.tla-rev-lib
-tla my-revision-library ~/.tla-rev-lib/
-tla library-config --greedy --sparse ~/.tla-rev-lib/
-
-# Get a working copy from the main branch using revision libraries:
-#
-tla get --link hipl--main--2.6 hipl--main--2.6
-
-Also, the tla usage is optimized using hard-linked revision
-libraries.
-
-# Run the command below in your working copy (e.g. monthly) if you
-# experience a serious slow-down in the commit speed or you want to enable
-# revision libraries in your local copy:
-#
-cd hipl--main--2.6
-tla changes --link
-
-ARCH POLICY
-===========
-
-*** Important: see that your umask is 0002 before you make any commits ***
-
-hipl--main--2.6 is the "stable" branch for HIPL code. Do not put any
-experimental code in there because other people are relying on that
-the code works! Commit only minor bugfixes directly to the stable
-branch, and use/create other branches to develop experimental
-code. When you have tested and are sure that code works, you can merge
-it into the stable branch.
-
-Some points in the branch quality assurance:
-
-- the code must compile as it is without errors
-- compiler warning messages must be taken seriously and must not be ignored
-  unless you really know what the message means. And we REALLY mean really.
-- the base exchange should be manually tested between two hosts
-- UPDATE packet exchange should work
-- the code should not leak memory or do bad locking
-- (all existing unit tests should be run without any errors (see TESTING))
 
 ECLIPSE
 ========
@@ -1575,32 +1475,6 @@ NAT handover in hard IPv4-Only Handover, no locators in base exchange
 ----------------------
 
 * tools/hipconf rst all
-
-
-UPGRADING THE KERNEL - DEPRACATED
-=================================
-
-# note: there is a perl script called "hashline" diff which is more
-# convinient to use in upgrading the kernel (to check for added/deleted
-# files)
-
-% <get the patch to ~/down>
-% cd hipl--fix--2.6/linux
-% patch -p1 <~/down/patch-2.6.7 2>&1| tee /tmp/PATCH_LOG
-% grep ^patching /tmp/PATCH_LOG|cut -d' ' -f3 >/tmp/CHANGES
-% for i in `cat /tmp/CHANGES`; do tla id $i 2>&1; done >/tmp/TLA_LOG
-% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
-    (/id: untagged file/)' </tmp/TLA_LOG`
-% tla delete `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
-  (/error finding file id \(2: No such file or directory\)/)' \
-    </tmp/TLA_LOG|cut -d' ' -f3`
-% find . -type d|grep -v .arch-ids >/tmp/LINUX_DIRS
-% for i in `cat /tmp/LINUX_DIRS`; do tla id $i 2>&1; done
-    >/tmp/TLA_DIR_LOG
-% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
-    (/id: untagged file/)' </tmp/TLA_DIR_LOG`
-
-Check HUNK messages from PATCH_LOG manually.
 
 
 ADDING HIPCONF ACTIONS AND PARAMETERS

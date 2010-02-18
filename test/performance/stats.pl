@@ -10,7 +10,7 @@
 #            adamo# perl -MCPAN -e shell
 #            # Are you ready for manual configuration? [yes] no
 #            cpan> install Statistics::Distributions
-#            cpan> install Scalar::Util::Numeric 
+#            cpan> install Scalar::Util::Numeric
 #
 # todo:
 # - xx
@@ -75,7 +75,7 @@ foreach my $type (keys(%val)) {
     if ($confidence == 100) {
 	# no values will be filtered
 	push(@{ $filt_val{$type} }, @{ $val{$type} });
-    } else { 
+    } else {
 	push(@{ $filt_val{$type} }, filter(@{ $conf{$type} },
 					   @{ $val{$type} }));
     }
@@ -185,7 +185,7 @@ sub getargs {
     return 1;
 }
 
-# Purpose: Read the values for types from the filehandle 
+# Purpose: Read the values for types from the filehandle
 # Params:  $inputfd        A filehandle where the input data will be read
 #          $regexp         A regexp for catching type values
 #          \%regexp_order  A refererence to the hash of the order of the
@@ -200,7 +200,7 @@ sub read_values {
 
     while (defined(my $line = <$inputfd>)) {
 	$line =~ /$regexp/;
-	my ($type, $val) = (eval($regexp_order{'type'}), 
+	my ($type, $val) = (eval($regexp_order{'type'}),
 			      eval($regexp_order{'value'}));
 	if (isnum($val)) {
 	    push (@{ $values{$type} }, $val);
@@ -229,7 +229,7 @@ sub average {
 # Purpose: Calculate standard deviation of the given values
 # Params:  $avg  the average of @val
 #          @val  the values
-# Returns: 
+# Returns:
 #
 sub standard_deviation {
     my $avg = shift(@ARG);
@@ -285,6 +285,6 @@ sub filter {
 	    print("$val was filtered\n");
 	}
     }
-    
+
     return @filtered_val;
 }

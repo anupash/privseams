@@ -16,7 +16,7 @@ Userspace or kernel
 builder.c   - HIP packet parsing/construction
 keymat.c    - Keymaterial generation (macros (?) wrapping the current crypto API calls)
 cookie.c    - Cookie generation/validation
-hashtable.c -  
+hashtable.c -
 hip.c       - Misc. packet processing functions -> split to kernel-only and where-ever files
 misc.c      - the same.
 input.c     - Processing of incoming messages (from wire)  -> separate files for payload and signaling, separate files for work before workqueue and by workqueue (the first operates for now in kernel only)
@@ -29,7 +29,7 @@ Not ported for now
 ------------------
 
 test.c      - unit tests.
-rvs.c       - Rendezvous 
+rvs.c       - Rendezvous
 update.c    - Update packet processing.
 
 High-level description of userspace / kernel work division
@@ -38,7 +38,7 @@ High-level description of userspace / kernel work division
 - for incoming traffic: the code to generate a work order. in future
   r1 optionally in kernel.
 
-- for outgoing traffic: 
+- for outgoing traffic:
     1) HA established: the code to send the packet through without any
        userspace calls;
     2) HA not-established: the code to generate a work order to

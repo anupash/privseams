@@ -10,9 +10,9 @@ mkdir fig 2>/dev/null
 
 set -e
 
-seq 10 30|while read op 
+seq 10 30|while read op
   do
-    
+
     grep type=$op initiator_times.txt | \
       cut -d" " -f10 >fig/gnuplotdata-initiator
     grep type=$op responder_times.txt | \

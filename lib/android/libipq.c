@@ -136,7 +136,7 @@ static ssize_t ipq_netlink_recvfrom(const struct ipq_handle *h,
 		int ret;
 		struct timeval tv;
 		fd_set read_fds;
-		
+
 		if (timeout < 0) {
 			/* non-block non-timeout */
 			tv.tv_sec = 0;
@@ -214,9 +214,9 @@ struct ipq_handle *ipq_create_handle(u_int32_t flags, u_int32_t protocol)
 		ipq_errno = IPQ_ERR_HANDLE;
 		return NULL;
 	}
-	
+
 	memset(h, 0, sizeof(struct ipq_handle));
-	
+
         if (protocol == PF_INET)
                 h->fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_FIREWALL);
         else if (protocol == PF_INET6)
@@ -226,7 +226,7 @@ struct ipq_handle *ipq_create_handle(u_int32_t flags, u_int32_t protocol)
 		free(h);
 		return NULL;
         }
-        
+
 	if (h->fd == -1) {
 		ipq_errno = IPQ_ERR_SOCKET;
 		close(h->fd);

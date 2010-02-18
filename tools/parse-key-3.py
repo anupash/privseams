@@ -31,7 +31,7 @@ def fillto(b,l):
     if len(b) < l:
         b = ('\x00' * (l-len(b))) + b
     return b
-    
+
 def rvs2b(rvslist):
     '''Convert hostname list to DNS encoded binary format.'''
     a = []
@@ -67,7 +67,7 @@ class Global:
         rsa_data_b64 = binascii.b2a_base64(rsa_data).strip()
         sys.stdout.write('  %s\n' % (binascii.b2a_hex(rsa_data),))
         sys.stdout.write('  %s\n' % (rsa_data_b64,))
-        
+
         # The following is based on RFC4843
         # Begin bit twiddling magic
         o1 = binascii.a2b_hex('F0EFF02FBFF43D0FE7930C3C6E6174EA')
@@ -101,7 +101,7 @@ class Global:
 
         fout.write('DJBDNS :%s:55:%s\n' % (hostname,aa3,))
         fout.write('9BIND %s IN TYPE55 \\# %d ( %s )\n' % (hostname,len(aa),binascii.b2a_hex(aa)))
-        
+
     def write_dsa_data(gp,fout,dsa_q,dsa_p,dsa_g,dsa_y,hostname,rvslist):
         dsa_q_bytes = i2b(dsa_q,20)
         dsa_p_bytes = i2b(dsa_p)
@@ -124,7 +124,7 @@ class Global:
         dsa_data = '%s%s%s%s%s' % (t_bytes,dsa_q_bytes,dsa_p_bytes,dsa_g_bytes,dsa_y_bytes)
 
         dsa_data_b64 = binascii.b2a_base64(dsa_data).strip()
-        
+
         # The following is based on RFC4843
         o1 = binascii.a2b_hex('F0EFF02FBFF43D0FE7930C3C6E6174EA')
         o2 = dsa_data
@@ -157,7 +157,7 @@ class Global:
 
         fout.write('DJBDNS :%s:55:%s\n' % (hostname,aa3,))
         fout.write('9BIND %s IN TYPE55 \\# %d ( %s )\n' % (hostname,len(aa),binascii.b2a_hex(aa)))
-        
+
     def parse2(gp,fout,level,as1,hostname,rvslist=()):
         a = []
         x = as1.decode_next()
@@ -173,7 +173,7 @@ class Global:
             fout.write('RSA_N 0x%x\n' % (rsa_n,))
             fout.write('RSA_E 0x%x\n' % (rsa_e,))
             gp.write_rsa_data(sys.stdout,rsa_n,rsa_e,hostname,rvslist)
-            
+
         elif id[1] == '1.2.840.10040.4.1': # DSA key
             dsa_p = x[0][1][0].getvalue()
             dsa_q = x[0][1][1].getvalue()
@@ -189,7 +189,7 @@ class Global:
         else:
             pass
         return a
-        
+
     def read_base64_file(gp,f):
         a = []
         st = 0
@@ -218,7 +218,7 @@ class Global:
         as1 = myasn.ASN(d0)
         hostname = args.pop(0)
         gp.parse2(sys.stdout,0,as1,hostname,args)
-        
+
         return
 
 def main(argv):
@@ -242,6 +242,6 @@ def main(argv):
             gp.fetchcount = int(arg)
 
     gp.doit(args)
-        
+
 if __name__ == '__main__':
     main(sys.argv)

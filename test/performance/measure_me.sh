@@ -131,22 +131,22 @@ then
     mkdir $EXT_BASE_DIR
   fi
 
-  if [ $MEASURE_RTT -eq "1" ] 
+  if [ $MEASURE_RTT -eq "1" ]
   then
     EXT_BASE_DIR=$EXT_BASE_DIR/rtt-no_load
   fi
-  
-  if [ $MEASURE_RTT -eq "2" ] 
+
+  if [ $MEASURE_RTT -eq "2" ]
   then
     EXT_BASE_DIR=$EXT_BASE_DIR/rtt-with_load
   fi
 
-  if [ $MEASURE_TPUT -eq "1" ] 
+  if [ $MEASURE_TPUT -eq "1" ]
   then
     EXT_BASE_DIR=$EXT_BASE_DIR/tcp
   fi
 
-  if [ $MEASURE_TPUT -eq "2" ] 
+  if [ $MEASURE_TPUT -eq "2" ]
   then
     EXT_BASE_DIR=$EXT_BASE_DIR/udp
   fi
@@ -157,7 +157,7 @@ then
   fi
 
   OUTPUT_DIR=$EXT_BASE_DIR/$OUTPUT_DIR
-  
+
   if [ $MEASURE_RTT -ne "0" -o $MEASURE_TPUT -ne "0" ]
   then
     if [ ! -e  $OUTPUT_DIR ]
@@ -228,7 +228,7 @@ then
   elif [ $DEVICE_TYPE -eq "2" ]
   then
     HIPFW_OPTS=
-  else 
+  else
     echo "ERROR: Unknown device type."
     exit 1
   fi
@@ -335,7 +335,7 @@ fi
 if [ $VERIFY_PATH -eq "1" ]
 then
   if [ $DEVICE_TYPE -eq "1" -o $DEVICE_TYPE -eq "3" ]
-  then 
+  then
 
     read -p "Verify path: [ENTER]"
 
@@ -393,7 +393,7 @@ then
     then
       rm $OUTPUT_DIR/$FILE
     fi
-    
+
     i=0
 
     if [ $RUN_HIPD -eq "1" ]
@@ -457,7 +457,7 @@ then
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
   then
-    
+
     # remove old measurement
     if [ -e $OUTPUT_DIR/$FILE ]
     then
@@ -473,7 +473,7 @@ then
         iperf -V --client $DST_HIT --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
-      done 
+      done
     elif [ $ADDR_FAMILY -eq "4" ]
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
