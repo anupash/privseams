@@ -675,17 +675,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 
     case HIP_UPDATE:
         HIP_DEBUG_HIT("received an UPDATE:  ", src_addr );
-        if (entry) {
-            HIP_IFCS(entry, err = entry->hadb_rcv_func->hip_receive_update(msg,
-                                                                           src_addr,
-                                                                           dst_addr,
-                                                                           entry,
-                                                                           msg_info));
-        } else {
-            /* to support stun from firewall */
-            HIP_DEBUG("FOUND A UPDATE FROM FIREWALL \n");
-            hip_receive_update(msg, src_addr, dst_addr, entry, msg_info);
-        }
+        HIP_IFCS(entry, err = entry->hadb_rcv_func->hip_receive_update(msg,
+                                                                       src_addr,
+                                                                       dst_addr,
+                                                                       entry,
+                                                                       msg_info));
         break;
 
     case HIP_NOTIFY:
