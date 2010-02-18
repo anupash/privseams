@@ -1,3 +1,15 @@
+/**
+ * @file test/auth_performance.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * This file contains a benchmark for the cryptographic authentication functions..
+ *
+ * @brief Authentication function benchmark
+ *
+ * @author Tobias Heer
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
