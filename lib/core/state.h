@@ -108,10 +108,6 @@ typedef int (*hip_xmit_func_t)(const struct in6_addr *,
 typedef struct hip_stateless_info {
     in_port_t src_port;     /**< The source port of an incoming packet. */
     in_port_t dst_port;     /**< The destination port of an incoming packet. */
-#ifdef CONFIG_HIP_I3
-    int       hi3_in_use; /**< A boolean to indicate whether this message was
-                         *   sent through I3 or not .*/
-#endif
 } hip_portpair_t;
 
 /**
