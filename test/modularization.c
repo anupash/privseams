@@ -1,13 +1,13 @@
 /** @file
  * A small test program for the modularization lib.
  *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
  * @brief  Runs various tests in the data structures and functions provided by
  *         libmodularization.
  *
- * @author  Tim Just
- * @version 0.1
- * @date    04.02.2010
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ * @author Tim Just <tim.just@rwth-aachen.de>
+ *
  */
 #include <stdio.h>
 
