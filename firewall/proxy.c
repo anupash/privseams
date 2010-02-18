@@ -792,15 +792,15 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
     //set the IP_HDRINCL flag
     if (dst_is_ipv4) {
         if (setsockopt(hip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-            HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
         } else {
-            HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK!\n");
         }
     } else {
         if (setsockopt(hip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0) {
-            HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
         } else {
-            HIP_DEBUG("setsockopt IP_HDRINCL for ipv6 OK！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL for ipv6 OK!\n");
         }
     }
 
@@ -882,11 +882,11 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
 
     if (dst_is_ipv4) {
         if (setsockopt(hip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0) {
-            HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
         }
     } else {
         if (setsockopt(hip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &off, sizeof(off)) < 0) {
-            HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
         }
     }
 
@@ -986,7 +986,7 @@ static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6
     ip = (struct ip *) buff;
 
     if (setsockopt(hip_proxy_raw_sock_icmp_inbound, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-        HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+        HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
     }
 
     memcpy(&src6.sin6_addr, src_addr,  sizeof(struct in6_addr));

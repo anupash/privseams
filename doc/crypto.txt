@@ -7,14 +7,14 @@ Kernel:
 
 - puzzle-create             (luo uuden puzzlen)
 - I2:ssa salattu identity, mutta sen voi hoitaa kokonaan
-  kernelin sisällä
+  kernelin sisÃ¤llÃ¤
 
 User-space:
 
 i = initiator, r = responder
 
-Seuraava koskee nimenomaan pfkey-rajapintaa ja siinä on oletettu, että
-avaimet lähetetään kern->us samalla, kun tehdään pyyntö:
+Seuraava koskee nimenomaan pfkey-rajapintaa ja siinÃ¤ on oletettu, ettÃ¤
+avaimet lÃ¤hetetÃ¤Ã¤n kern->us samalla, kun tehdÃ¤Ã¤n pyyntÃ¶:
 
 - dsa-create-key            (luo uuden dsa-avainparin)
   - { i_pubkey_dsa, i_privkey_dsa, i_params } = generate_key(type=dsa);

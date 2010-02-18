@@ -175,7 +175,7 @@ SA timeout parameter. If the system has open SAs, it MUST increase its
 Birthday.
 -"open SAs"=? When building R1 birthday is set automatically
 
-[LATER] 4.2 Sending data on HIP packets (draft-08)
+[LATER] 4.2 Sending data on HIP packets (draft-08)
 - The OPTIONAL PAYLOAD packet (see Section 7.8) MAY be used to transfer
   data.
 

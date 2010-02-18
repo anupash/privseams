@@ -2,7 +2,7 @@
 
 # ripattu suoraan usagin doc/HOWTO/IPsec:sta
 
-# vaihda n‰m‰ konekohtaisesti
+# vaihda n√§m√§ konekohtaisesti
 MYIP=3ffe::1
 OTHERIP=3ffe::2
 
