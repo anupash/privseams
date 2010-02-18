@@ -1,9 +1,16 @@
-/** @file
+/**
+ * @file firewall/pisa_cert.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * This file deals with the PISA specific handling of SPKI certificates. The
  * certificate is parsed and split into small chunks.
  *
+ * @brief PISA handling for SPKI certificates
+ * *
  * @author Thomas Jansen
  */
+
 #include "pisa_cert.h"
 
 #include <sys/types.h>

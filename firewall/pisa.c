@@ -1,12 +1,16 @@
-/** @file
+/**
+ * @file firewall/pisa.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * This file contains PISA specific functions for the firewall. The basic idea
  * is to modify the HIP messages and manage state for allowed connections to
  * allow or reject associated ESP traffic.
  *
+ * @brief PISA functions for the firewall
+ * *
  * @author Thomas Jansen
  * @author Dominic Gatzen
- *
- * This code is GNU/GPL.
  */
 
 /* required by the libipq header for IFNAMSZ */

@@ -1,8 +1,14 @@
-/** @file
- * A header file for midauth.c.
+/**
+ * @file firewall/midauth.h
  *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * @brief The header file for firewall/midauth.c
+ * *
  * @author Thomas Jansen
+ *
  */
+
 #ifndef HIP_FIREWALL_MIDAUTH_H
 #define HIP_FIREWALL_MIDAUTH_H
 

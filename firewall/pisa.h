@@ -1,8 +1,13 @@
-/** @file
- * A header file for pisa.c.
+/**
+ * @file firewall/pisa.h
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * @brief A header file for pisa.c
  *
  * @author Thomas Jansen
  */
+
 #ifndef HIP_FIREWALL_PISA_H
 #define HIP_FIREWALL_PISA_H
 

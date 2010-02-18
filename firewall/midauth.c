@@ -1,14 +1,18 @@
-/** @file
+/**
+ * @file firewall/midauth.c
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * This file provides a framework for modifying HIP packets. It includes
  * adding new parameters in the correct order and adapting the various
  * headers.
  *
+ * @brief Framework for the midauth extensions
+ *
  * @author Thomas Jansen
  * @author Dominic Gatzen
  *
- * This code is GNU/GPL.
- *
- * According to draft-heer-hip-middle-auth-00 we SHOULD support IP-level
+ * @note: According to draft-heer-hip-middle-auth-00 we SHOULD support IP-level
  * fragmentation for IPv6 and MUST support IP-level fragmentation for IPv4.
  * Currently we do neither.
  */
@@ -216,7 +220,7 @@ static void midauth_update_all_headers(hip_fw_context_t *ctx)
 
 /**
  * Verify that the challenge response in a packet is valid
- * 
+ *
  * @param hip packet that contains the challenge response
  * @param s   challenge response parameter
  * @return    0 on success, <0 otherwise
