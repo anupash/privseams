@@ -31,6 +31,9 @@
  * SUCH DAMAGE.
  */
 
+/* required for caddr_t */
+#define _BSD_SOURCE
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif

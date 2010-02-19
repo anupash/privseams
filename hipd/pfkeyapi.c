@@ -5,6 +5,9 @@
  * - Diego Beltrami <diego.beltrami@gmail.com>
  */
 
+/* required for caddr_t */
+#define _BSD_SOURCE
+
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
