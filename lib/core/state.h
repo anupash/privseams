@@ -44,6 +44,11 @@
 #define HIP_STATE_CLOSED                 9
 /* @} */
 
+/**
+ * @todo add description
+ */
+#define HIP_MAX_HA_STATE                16
+
 #define HIP_UPDATE_STATE_REKEYING        1 /**< @todo REMOVE */
 #define HIP_UPDATE_STATE_DEPRECATING     2
 

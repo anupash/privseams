@@ -47,6 +47,11 @@ typedef uint16_t in_port_t;
 /* only hip network message types here */
 /* @} */
 
+/**
+ * @todo add description
+ */
+#define HIP_MAX_PACKET_TYPE      64
+
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_MASK_100   0x20010010
 #define HIP_TEREDO_TYPE_MASK_100 0x20010000

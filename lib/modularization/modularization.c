@@ -13,6 +13,97 @@
 
 #include "modularization.h"
 #include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/state.h"
+
+/**
+ * @todo add description
+ */
+static hip_ll_t *handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
+
+/**
+ * hip_register_handle_function
+ *
+ * Register a function for handling of the specified combination from packet
+ * type and host association state.
+ *
+ * @param packet_type
+ * @param ha_state
+ * @param *handle_function
+ *
+ *  @return Success =  0
+ *          Error   = -1
+ **/
+int hip_register_handle_function(uint32_t packet_type,
+                                 uint32_t ha_state,
+                                 void *handle_function)
+{
+    int       err     = 0;
+    hip_ll_t *newlist = NULL;
+
+    HIP_IFE(packet_type > HIP_MAX_PACKET_TYPE, -1);
+    HIP_IFE(ha_state    > HIP_MAX_HA_STATE,    -1);
+
+    if (!handle_functions[packet_type][ha_state]) {
+        if ((newlist = (hip_ll_t *) malloc(sizeof(hip_ll_t))) == NULL) {
+            HIP_ERROR("Error on allocating memory for a linked list.\n");
+            return -1;
+        }
+        hip_ll_init(newlist);
+        handle_functions[packet_type][ha_state] = newlist;
+    }
+
+    err = hip_ll_add_last(handle_functions[packet_type][ha_state],
+                          handle_function);
+out_err:
+    return err;
+}
+
+/**
+ * @todo add description
+ */
+int hip_run_handle_functions(uint32_t packet_type,
+                             uint32_t ha_state,
+                             struct hip_packet_context *ctx)
+{
+    int            err  = 0;
+    hip_ll_t      *list = NULL;
+    hip_ll_node_t *iter = NULL;
+    int (*handle_func)(uint32_t packet_type,
+                       uint32_t ha_state,
+                       struct hip_packet_context *ctx) = NULL;
+
+    HIP_IFE(packet_type > HIP_MAX_PACKET_TYPE, -1);
+    HIP_IFE(ha_state    > HIP_MAX_HA_STATE,    -1);
+
+    list = handle_functions[packet_type][ha_state];
+
+    while((iter = hip_ll_iterate(list, iter)) != NULL) {
+        handle_func = iter->ptr;
+
+        handle_func(packet_type, ha_state, ctx);
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * @todo add description
+ */
+void hip_uninit_handle_functions(void)
+{
+    int i,j;
+
+    for (i = 0; i < HIP_MAX_PACKET_TYPE; i++) {
+        for (j = 0; j < HIP_MAX_HA_STATE; j++) {
+            if (handle_functions[i][j]) {
+                hip_ll_uninit(handle_functions[i][j], NULL);
+                free(handle_functions[i][j]);
+            }
+        }
+    }
+}
 
 /**
  * hip_init_state

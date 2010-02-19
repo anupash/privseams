@@ -10,6 +10,8 @@
  *
  */
 #include <stdio.h>
+#include <malloc.h>
+#include <sys/types.h>
 
 #include "lib/modularization/modularization.h"
 
@@ -23,27 +25,34 @@ struct update_state {
     char name[10];
 };
 
-int main(void)
+
+static int test_function(void)
+{
+    printf("test_function\n");
+    return 0;
+}
+
+static int test_function2(void)
+{
+    printf("test_function2\n");
+    return 0;
+}
+
+/*
+int test_modular_state(void)
 {
     struct ha_state ha_state_item1;
     struct update_state update_state_item1;
     struct ha_state ha_state_item2;
     struct update_state update_state_item2;
     struct modular_state *entry1, *entry2;
-    void *tmp;
-    struct update_state *tmp2;
+    void *tmp = NULL;
 
     ha_state_item1.id = 11;
-//    ha_state_item1.name = {"h", "a", "1"};
-
     update_state_item1.id = 12;
-//    update_state_item1.name = {"u", ,"p", "1"};
 
     ha_state_item2.id = 21;
-//    ha_state_item2.name = {"h", "a", "2"};
-
     update_state_item2.id = 22;
-//    update_state_item2.name = {"u", "p","2"};
 
     entry1 = hip_init_state();
     entry2 = hip_init_state();
@@ -56,24 +65,34 @@ int main(void)
 
     printf("update_state1: %p\n", hip_get_state_item(entry1, "update"));
     tmp = hip_get_state_item(entry1, "update");
-    tmp2 = tmp;
-    printf("id update 1: %d\n", tmp2->id);
-    //printf("update_state1: %p\n", &update_state_item);
     printf("ha_state2: %p\n", hip_get_state_item(entry1, "ha"));
-    //printf("ha_state2: %p\n", &ha_state_item);
-
     printf("\n");
-
     printf("update_state2: %p\n", hip_get_state_item(entry2, "update"));
     tmp = hip_get_state_item(entry2, "update");
-    tmp2 = tmp;
-    printf("id update 2: %d\n", tmp2->id);
-//    printf("update state: %p\n", &ha_state_item);
     printf("ha_state2: %p\n", hip_get_state_item(entry2, "ha"));
-    //printf("ha state: %p\n", &update_state_item);
 
     hip_free_state(entry1);
     hip_free_state(entry2);
+
+    return 0;
+}
+*/
+
+int test_handle_functions(void)
+{
+    hip_register_handle_function(1, 1, &test_function);
+    hip_register_handle_function(1, 1, &test_function2);
+
+    hip_run_handle_functions(1, 1, NULL);
+
+    hip_uninit_handle_functions();
+
+    return 0;
+}
+
+int main(void)
+{
+    test_handle_functions();
 
     return 0;
 }
