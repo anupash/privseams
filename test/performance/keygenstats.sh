@@ -14,4 +14,3 @@ do
     stats.pl 95 type '.*(\S+) key created in (\S+) secs' <logs/keygentest-${ALGO}-${BITS} | tail -1 | tee -a $LOG
   done
 done
-

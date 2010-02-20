@@ -659,4 +659,3 @@ if __name__ == '__main__':
         client.echo('qwerty')
         client.commit()
         client.process_replies()
-

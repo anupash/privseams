@@ -261,4 +261,3 @@ then
 else
     die "*** Unknown platform, aborting ***"
 fi
-

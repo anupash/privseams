@@ -26,4 +26,3 @@ oface ::=
 
 state ::=
         "--state" ["!"] ("NEW" | "ESTABLISHED") ["--verify_responder"] ["--accept_mobile"]
-

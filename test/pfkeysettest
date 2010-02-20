@@ -39,4 +39,3 @@ $pfkey -A sa -T esp -S 0xdef0 -p udp -d $MYIP -s $OTHERIP \
 $pfkey -A sp -T ah -S 0x9abc -p udp  -d $MYIP -s $OTHERIP
 #(SP for ESP)
 $pfkey -A sp -T esp -S 0xdef0 -p udp -d $MYIP -s $OTHERIP
-

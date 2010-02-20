@@ -1553,4 +1553,3 @@ defined above at the step 3.1.
 4. hipconf_usage in libinet6/hipconf.c
 --------------------------------------
 Add a simple usage for your new action in the usage string.
-

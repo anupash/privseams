@@ -49,4 +49,3 @@ TEMPFILE=$(mktemp)
 find_verbous_decls searchtags_local_headers $TEMPFILE
 
 grep -vE "android|libinet6|i3|_H$" $TEMPFILE | sort -u >| verbose-headers.txt
-

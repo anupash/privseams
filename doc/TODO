@@ -559,4 +559,3 @@ action items:
  * - Space, suite and case structures are somewhat the same; this could
  *   better exploited by combining the several almost-the-same-copy-paste
  *   functions into one, signle function.
-

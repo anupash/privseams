@@ -37,4 +37,3 @@ fi
 echo "switching $ETH IP from $OLD_IP to $NEW_IP"
 ifconfig $ETH $NEW_IP up
 route add -net "$DESTINATION netmask $NETMASK gw $PREFIX$GW
-

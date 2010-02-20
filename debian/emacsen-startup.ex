@@ -22,4 +22,3 @@
     (autoload 'hipl-mode "hipl-mode"
       "Major mode for editing hipl files." t)
     (add-to-list 'auto-mode-alist '("\\.hipl$" . hipl-mode))))
-

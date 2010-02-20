@@ -10,4 +10,3 @@
 
 INPUT   -src_hit 2001:7c:e802:a62e:cccb:8bd2:79f2:e6d7 -dst_hit 2001:7c:a2ff:6c4:379a:411:bd02:5375 ACCEPT
 OUTPUT  -dst_hit 2001:7c:e802:a62e:cccb:8bd2:79f2:e6d7 -src_hit 2001:7c:a2ff:6c4:379a:411:bd02:5375 ACCEPT
-
