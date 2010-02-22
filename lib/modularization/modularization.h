@@ -18,14 +18,6 @@
 /**
  * @todo add description
  */
-struct hip_packet_context {
-
-
-};
-
-/**
- * @todo add description
- */
 struct modular_state {
     hip_ll_t        *item_list;
     char           **item_names;

@@ -518,6 +518,17 @@ struct hip_hadb_user_info_state {
     struct timeval  bex_duration;
 };
 
+/**
+ * @todo add description
+ */
+struct hip_packet_context {
+    struct hip_common         *msg;
+    struct in6_addr           *src_addr;
+    struct in6_addr           *dst_addr;
+    struct hip_stateless_info *msg_info;
+    struct hip_hadb_state     *hadb_entry;
+};
+
 
 struct hip_turn_info {
     uint32_t        spi;
