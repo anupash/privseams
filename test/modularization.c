@@ -26,15 +26,33 @@ struct update_state {
 };
 
 
-static int test_function(void)
+static int test_function1(void)
 {
-    printf("test_function\n");
+    printf("test_function1\n");
     return 0;
 }
 
 static int test_function2(void)
 {
     printf("test_function2\n");
+    return 0;
+}
+
+static int test_function3(void)
+{
+    printf("test_function3\n");
+    return 0;
+}
+
+static int test_function4(void)
+{
+    printf("test_function4\n");
+    return 0;
+}
+
+static int test_function5(void)
+{
+    printf("test_function5\n");
     return 0;
 }
 
@@ -80,10 +98,33 @@ int test_modular_state(void)
 
 int test_handle_functions(void)
 {
-    hip_register_handle_function(1, 1, &test_function);
-    hip_register_handle_function(1, 1, &test_function2);
+    hip_register_handle_function(0, 0, &test_function1, 0);
+    hip_register_handle_function(0, 0, &test_function2, 0);
+    hip_register_handle_function(0, 0, &test_function3, 0);
+    hip_register_handle_function(0, 0, &test_function4, 0);
+    hip_register_handle_function(0, 0, &test_function5, 0);
+
+    hip_run_handle_functions(0, 0, NULL);
+
+    printf("\n");
+
+    hip_register_handle_function(1, 1, &test_function1, 1003);
+    hip_register_handle_function(1, 1, &test_function2, 1002);
+    hip_register_handle_function(1, 1, &test_function3, 1000);
+    hip_register_handle_function(1, 1, &test_function4, 1005);
+    hip_register_handle_function(1, 1, &test_function5, 1004);
 
     hip_run_handle_functions(1, 1, NULL);
+
+    printf("\n");
+
+    hip_register_handle_function(16, 16, &test_function1, 5);
+    hip_register_handle_function(16, 16, &test_function2, 4);
+    hip_register_handle_function(16, 16, &test_function3, 3);
+    hip_register_handle_function(16, 16, &test_function4, 2);
+    hip_register_handle_function(16, 16, &test_function5, 1);
+
+    hip_run_handle_functions(16, 16, NULL);
 
     hip_uninit_handle_functions();
 

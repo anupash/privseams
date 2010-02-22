@@ -16,6 +16,13 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/state.h"
 
+struct handle_func_entry {
+    int (*handle_func)(uint32_t packet_type,
+                       uint32_t ha_state,
+                       struct hip_packet_context *ctx);
+    uint32_t priority;
+};
+
 /**
  * @todo add description
  */
@@ -29,19 +36,23 @@ static hip_ll_t *handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *handle_function Pointer to the function, which should be called,
+ * @param *handle_function Pointer to the function which should be called
  *                         when the combination of packet type and host
  *                         association state is reached.
+ * @param priority Execution priority for the handle function.
  *
  * @return Success =  0
  *         Error   = -1
  */
 int hip_register_handle_function(uint32_t packet_type,
                                  uint32_t ha_state,
-                                 void *handle_function)
+                                 void *handle_function,
+                                 uint32_t priority)
 {
-    int       err     = 0;
-    hip_ll_t *newlist = NULL;
+    int       err, index    = 0;
+    hip_ll_t *new_func_list = NULL;
+    hip_ll_node_t *iter     = NULL;
+    struct handle_func_entry *handle_func = NULL;
 
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
              -1,
@@ -51,24 +62,41 @@ int hip_register_handle_function(uint32_t packet_type,
              "Maximum host association state exceeded.\n");
 
     if (!handle_functions[packet_type][ha_state]) {
-        HIP_IFEL(((newlist = (hip_ll_t *) malloc(sizeof(hip_ll_t))) == NULL),
+        HIP_IFEL(((new_func_list = (hip_ll_t *) malloc(sizeof(hip_ll_t))) == NULL),
                  -1,
                  "Error on allocating memory for a linked list.\n");
-        hip_ll_init(newlist);
-        handle_functions[packet_type][ha_state] = newlist;
+        hip_ll_init(new_func_list);
+        handle_functions[packet_type][ha_state] = new_func_list;
     }
 
-    err = hip_ll_add_last(handle_functions[packet_type][ha_state],
-                          handle_function);
+    HIP_IFEL(((handle_func = (struct handle_func_entry *)
+                             malloc(sizeof(struct handle_func_entry))) == NULL),
+             -1,
+             "Error on allocating memory for a linked list.\n");
+
+    handle_func->handle_func = handle_function;
+    handle_func->priority    = priority;
+
+    /* Iterate through handle functions until the desired position is found */
+    while((iter = hip_ll_iterate(handle_functions[packet_type][ha_state], iter)) != NULL) {
+        if (priority < ((struct handle_func_entry *) iter->ptr)->priority) {
+            break;
+        } else {
+            index++;
+        }
+    }
+
+    err = hip_ll_add(handle_functions[packet_type][ha_state], index, handle_func);
+
 out_err:
     return err;
 }
 
 /**
- * hip_register_handle_function
+ * hip_run_handle_functions
  *
- * Register a function for handling of the specified combination from packet
- * type and host association state.
+ * Run all handle functions for specified combination from packet type and host
+ * association state.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
@@ -86,9 +114,6 @@ int hip_run_handle_functions(uint32_t packet_type,
     int            err  = 0;
     hip_ll_t      *list = NULL;
     hip_ll_node_t *iter = NULL;
-    int (*handle_func)(uint32_t packet_type,
-                       uint32_t ha_state,
-                       struct hip_packet_context *ctx) = NULL;
 
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
              -1,
@@ -100,9 +125,9 @@ int hip_run_handle_functions(uint32_t packet_type,
     list = handle_functions[packet_type][ha_state];
 
     while((iter = hip_ll_iterate(list, iter)) != NULL) {
-        handle_func = iter->ptr;
-
-        handle_func(packet_type, ha_state, ctx);
+        ((struct handle_func_entry *) iter->ptr)->handle_func(packet_type,
+                                                              ha_state,
+                                                              ctx);
     }
 
 out_err:
@@ -122,7 +147,7 @@ void hip_uninit_handle_functions(void)
     for (i = 0; i < HIP_MAX_PACKET_TYPE; i++) {
         for (j = 0; j < HIP_MAX_HA_STATE; j++) {
             if (handle_functions[i][j]) {
-                hip_ll_uninit(handle_functions[i][j], NULL);
+                hip_ll_uninit(handle_functions[i][j], free);
                 free(handle_functions[i][j]);
             }
         }

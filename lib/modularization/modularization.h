@@ -37,7 +37,8 @@ struct modular_state {
 
 int hip_register_handle_function(uint32_t packet_type,
                                  uint32_t ha_state,
-                                 void *handle_function);
+                                 void *handle_function,
+                                 uint32_t priority);
 
 int hip_run_handle_functions(uint32_t packet_type,
                              uint32_t ha_state,
