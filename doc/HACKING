@@ -611,7 +611,7 @@ CODING CONVENTIONS
 - Kernel code (if any) MUST follow the kernel guidelines:
   Documentation/CodingStyle
 
-- USE ASCII encoding! No fancy symbols like: ŠšŸ§..
+- USE ASCII encoding, no fancy symbols!
 
 - Do not make unreadable code by nesting code too much:
 
@@ -1553,4 +1553,3 @@ defined above at the step 3.1.
 4. hipconf_usage in libinet6/hipconf.c
 --------------------------------------
 Add a simple usage for your new action in the usage string.
-

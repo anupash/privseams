@@ -186,12 +186,12 @@ class DnsRequest:
         self.response=None
         for self.ns in server:
             try:
-		# Miika: changed to support ipv6
-	        if self.ns.find(':') == -1:
-      			family = socket.AF_INET
-	        else:
-	                family = socket.AF_INET6
-      		self.socketInit(family, socket.SOCK_DGRAM)
+                # Miika: changed to support ipv6
+                if self.ns.find(':') == -1:
+                        family = socket.AF_INET
+                else:
+                        family = socket.AF_INET6
+                self.socketInit(family, socket.SOCK_DGRAM)
                 # TODO. Handle timeouts &c correctly (RFC)
                 #self.s.connect((self.ns, self.port))
                 self.conn()
@@ -213,12 +213,12 @@ class DnsRequest:
         self.response=None
         for self.ns in server:
             try:
-		# Miika: changed to support ipv6
-	        if self.ns.find(':') == -1:
-      			family = socket.AF_INET
-	        else:
-	                family = socket.AF_INET6
-      		self.socketInit(family, socket.SOCK_STREAM)
+                # Miika: changed to support ipv6
+                if self.ns.find(':') == -1:
+                        family = socket.AF_INET
+                else:
+                        family = socket.AF_INET6
+                self.socketInit(family, socket.SOCK_STREAM)
                 self.time_start=time.time()
                 self.conn()
                 self.s.send(Lib.pack16bit(len(self.request))+self.request)

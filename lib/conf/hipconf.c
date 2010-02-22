@@ -1,5 +1,18 @@
-/** @file
- * This file defines functions for configuring the the Host Identity
+/** @file lib/conf/hipconf
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * This library is used to configure HIP daemon (hipd) dynamically
+ * with the hipconf command line tool. Hipd uses this library also to
+ * parse the static configuration from @c /etc/hip/hipd_config (the file
+ * has same syntax as hipconf).
+ *
+ * All new messages have to be registered into the action_handler
+ * array defined in the end of this file. You will have to register
+ * also action and type handlers. See hip_conf_get_action(),
+ * hip_conf_check_action_argc() and hip_conf_get_type()
+ *
+ * @brief This file defines functions for configuring the the Host Identity
  * Protocol daemon (hipd).
  *
  * @author  Janne Lundberg <jlu_tcs.hut.fi>
@@ -13,10 +26,10 @@
  * @author  Tao Wan  <twan@cc.hut.fi>
  * @author  Teresa Finez <tfinezmo_cc.hut.fi> Modifications
  * @author  Samu Varjonen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
- * @todo    add/del map
+ * @todo    del map
  * @todo    fix the rst kludges
  * @todo    read the output message from send_msg?
+ * @todo    adding of new extensions should be made simpler
  */
 
 /* required for ifreq */
@@ -30,13 +43,6 @@
 #include "lib/core/debug.h"
 #include "hipconf.h"
 #include "lib/core/utils.h"
-
-/**
- * A help string containing the usage of @c hipconf.
- *
- * @note If you added a new action, do not forget to add a brief usage below
- *       for the action.
- */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -95,6 +101,13 @@
 
 /* #define TYPE_RELAY         22 */
 
+/**
+ * A help string containing the usage of @c hipconf and also
+ * @c /etc/hip/hipd_config.
+ *
+ * @note If you added a new action, do not forget to add a brief usage below
+ *       for the action.
+ */
 const char *hipconf_usage =
     "add|del map <hit> <ipv6> [lsi]\n"
     "del hi <hit>|all\n"
@@ -147,7 +160,16 @@ const char *hipconf_usage =
     "id-to-addr hit|lsi\n"
 ;
 
-/* Static functions -> file scope */
+/**
+ * Query hipd for the HITs of the local host
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param opt "all" to query for all HITs or "default" for the default
+ * @param optc currently 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
 static int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
 {
     int err                              = 0;
@@ -246,6 +268,18 @@ out_err:
     return err;
 }
 
+/**
+ * Flush all run-time host identities from hipd
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt currently unused
+ * @param optc currently unused
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ * @note this does not flush the host identities from disk
+ */
 static int hip_conf_handle_hi_del_all(hip_common_t *msg,
                                       int action,
                                       const char *opt[],
@@ -280,7 +314,8 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg,
         hip_msg_init(msg);
     }
 
-    /*FIXME Deleting HITs from the interface isn't working, so we restart it */
+    /** @todo deleting HITs from the interface isn't working, so we
+        restart it */
     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_RESTART_DUMMY_INTERFACE, 0),
              -1, "Failed to build message header\n");
 
@@ -296,12 +331,10 @@ out_err:
 /**
  * Handles the hipconf commands where the type is @c del.
  *
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array.
+ * @param msg    input/output message for the query/response for hipd
+ * @öaram action currently unused
+ * @param opt    "all" or a specific HIT
+ * @param optc   1
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_hi_del(hip_common_t *msg,
@@ -343,6 +376,12 @@ out_err:
     return err;
 }
 
+/**
+ * print a hip_hadb_user_info_state structure
+ *
+ * @param ha hip_hadb_user_info_state (partial information of hadb)
+ * @return zero for success and negative on error
+ */
 static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 {
     _HIP_HEXDUMP("HEXHID ", ha, sizeof(struct hip_hadb_user_info_state));
@@ -400,9 +439,10 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 /* Non-static functions -> global scope */
 
 /**
- * Maps symbolic hipconf action (=add/del) names into numeric action
- * identifiers.
+ * Map a symbolic hipconf action (=add/del) into a number
  *
+ * @param argv an array of strings (command line args to hipconf)
+ * @return the numeric action id correspoding to the symbolic text
  * @note If you defined a constant ACTION_NEWACT in hipconf.h,
  *       you also need to add a proper sentence in the strcmp() series,
  *       like that:
@@ -410,9 +450,6 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
  *       else if (!strcmp("newaction", text))
  *           ret = ACTION_NEWACT;
  *       ...
- *
- * @param  text the action as a string.
- * @return the numeric action id correspoding to the symbolic text.
  */
 int hip_conf_get_action(char *argv[])
 {
@@ -490,7 +527,7 @@ int hip_conf_get_action(char *argv[])
 }
 
 /**
- * Gets the minimum amount of arguments needed to be given to the action.
+ * Get the minimum amount of arguments needed to be given to the action.
  *
  * @note If you defined a constant ACTION_NEWACT in hipconf.h,
  *       you also need to add a case block for the constant
@@ -549,10 +586,10 @@ int hip_conf_check_action_argc(int action)
 }
 
 /**
- * Maps symbolic hipconf type (=lhi/map) names to numeric types.
+ * map a symbolic hipconf type (=lhi/map/etc) name to numeric type
  *
- * @param  text the type as a string.
- * @return the numeric type id correspoding to the symbolic text.
+ * @param  text the type as a string
+ * @return the numeric type id correspoding to the symbolic text
  */
 int hip_conf_get_type(char *text, char *argv[])
 {
@@ -590,9 +627,7 @@ int hip_conf_get_type(char *text, char *argv[])
         }
     } else if (strcmp("locator", argv[1]) == 0)     {
         ret = TYPE_LOCATOR;
-    }
-    /* Tao Wan added tcptimeout on 08.Jan.2008 */
-    else if (!strcmp("tcptimeout", text)) {
+    } else if (!strcmp("tcptimeout", text)) {
         ret = TYPE_TCPTIMEOUT;
     } else if ((!strcmp("all", text)) && (strcmp("bos", argv[1]) == 0)) {
         ret = TYPE_BOS;
@@ -707,7 +742,14 @@ int hip_conf_get_type_arg(int action)
 }
 
 /**
- * Resolves a given hostname to a HIT/LSI or IP address depending on match_hip flag
+ * Resolve a given hostname to a HIT/LSI or IP address depending on match_hip flag
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param opt options arguments as strings
+ * @param optc number of arguments
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
  */
 int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
                            int match_hip)
@@ -1681,12 +1723,12 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
         }
     }
 
-    //obtain the new value for set
+    /* obtain the new value for set */
     if ((msg_type == SO_HIP_CONF_PUZZLE_SET) && (optc == 2)) {
         newVal = atoi(opt[1]);
     }
 
-    //attach the hit into the message
+    /* attach the hit into the message */
     err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
                                    sizeof(in6_addr_t));
     if (err) {
@@ -1694,7 +1736,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
         goto out_err;
     }
 
-    //obtain the result for the get action
+    /* obtain the result for the get action */
     if (msg_type == SO_HIP_CONF_PUZZLE_GET) {
         /* Build a HIP message with socket option to get puzzle difficulty. */
         HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
@@ -1724,7 +1766,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
         err = hip_build_user_hdr(msg, msg_type, 0);
     }
 
-    //attach new val for the set action
+    /* attach new val for the set action */
     if (msg_type == SO_HIP_CONF_PUZZLE_SET) {
         err = hip_build_param_contents(msg, (void *) &newVal, HIP_PARAM_INT,
                                        sizeof(int));
@@ -1817,343 +1859,17 @@ out:
     return err;
 }
 
-static int hip_conf_handle_ttl(hip_common_t *msg,
-                               int action,
-                               const char *opt[],
-                               int optc,
-                               int send_only)
-{
-    int ret = 0;
-    HIP_INFO("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
-    /* useless function remove */
-    return ret;
-}
-
 /**
- * Function that is used to set the name sent to DHT in name/fqdn -> HIT -> IP mappings
+ * Translate a HIT to an LSI
  *
- * @return       zero on success, or negative error value on error.
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt remote hit as a string
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
  */
-static int hip_conf_handle_set(hip_common_t *msg,
-                               int action,
-                               const char *opt[],
-                               int optc,
-                               int send_only)
-{
-    int err      = 0;
-    int len_name = 0;
-    len_name = strlen(opt[0]);
-    HIP_DEBUG("Name received from user: %s (len = %d (max 256))\n", opt[0], len_name);
-    HIP_IFEL((len_name > 255), -1, "Name too long, max 256\n");
-
-    /* warning: passing argument 2 of 'hip_build_param_opendht_set' discards
-     * qualifiers from pointer target type. 04.07.2008 */
-    err = hip_build_param_opendht_set(msg, opt[0]);
-    if (err) {
-        HIP_ERROR("build param hit failed: %s\n", strerror(err));
-        goto out_err;
-    }
-out_err:
-    return err;
-}
-
-/**
- * Function that is used to set the used gateway addr port and ttl with DHT
- *  - hipconf dht gw <HIT>/<IP> 5851 600
- *
- * @return       zero on success, or negative error value on error.
- */
-static int hip_conf_handle_gw(hip_common_t *msg,
-                              int action,
-                              const char *opt[],
-                              int optc,
-                              int send_only)
-{
-    int err;
-    int ret_HIT = 0, ret_IP = 0, ret_HOSTNAME = 0;
-    struct in_addr ip_gw;
-    struct in6_addr ip_gw_mapped;
-    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-
-    HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
-
-    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-
-    if (optc != 3) {
-        HIP_ERROR("Missing arguments\n");
-        err = -EINVAL;
-        goto out_err;
-    }
-
-    if (strlen(opt[0]) > 39) { //address longer than size of ipv6 address
-        HIP_ERROR("Address longer than maximum allowed\n");
-        err = -EINVAL;
-        goto out_err;
-    }
-
-    ret_IP  = inet_pton(AF_INET, opt[0], &ip_gw);
-    ret_HIT = inet_pton(AF_INET6, opt[0], &ip_gw_mapped);
-
-    if (!(ret_IP || ret_HIT)) {
-        //HIP_ERROR("Gateway address not correct\n");
-        //goto out_err;
-        memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-        hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX - 1] = '\0';
-        ret_HOSTNAME                               = 1;
-    }
-
-    if (ret_IP) {
-        IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-    }
-
-    if (ret_IP || ret_HIT) {
-        HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
-    } else {
-        HIP_DEBUG("Host name : %s\n", hostname);
-    }
-
-    err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
-                                          atoi(opt[2]), atoi(opt[1]), hostname);
-    if (err) {
-        HIP_ERROR("build param hit failed: %s\n", strerror(err));
-        goto out_err;
-    }
-
-out_err:
-    return err;
-}
-
-#if 0
-/* */
-/**
- * Function that gets data from DHT - hipconf dht get <HIT> - returns IP mappings
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_get(hip_common_t *msg,
-                        int action,
-                        const char *opt[],
-                        int optc,
-                        int send_only)
-{
-    int err = 0, ret = 0, ret_HIT = 0, ret_HOSTNAME = 0;
-    hip_hit_t hit                        = {0};
-    struct in_addr *reply_ipv4;
-    struct in6_addr *reply_ipv6          = {0};
-
-    hip_tlv_type_t param_type            = 0;
-    struct hip_tlv_common *current_param = NULL;
-    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-
-    HIP_INFO("Asking serving gateway info from daemon...\n");
-
-    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-
-    //obtain the hit
-    ret     = inet_pton(AF_INET6, opt[0], &hit);
-    ret_HIT = 1;
-    if (ret < 0 && errno == EAFNOSUPPORT) {
-        HIP_PERROR("inet_pton: not a valid address family\n");
-        err = -EAFNOSUPPORT;
-        goto out_err;
-    } else if (ret == 0)   {
-        memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-        hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
-        ret_HIT                                = 0;
-        ret_HOSTNAME                           = 1;
-    }
-    ret = 0;
-
-    //Build a HIP message to get ip mapping
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0), -1,
-             "Building daemon header failed\n");
-
-    //attach the hit into the message
-    if (ret_HIT) {
-        err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-                                       sizeof(in6_addr_t));
-        if (err) {
-            HIP_ERROR("build param hit failed: %s\n", strerror(err));
-            goto out_err;
-        }
-    }
-
-    //attach the hostname into the message
-    if (ret_HOSTNAME) {
-        err = hip_build_param_contents(msg, (void *) hostname,
-                                       HIP_PARAM_HOSTNAME,
-                                       HIP_HOST_ID_HOSTNAME_LEN_MAX);
-        if (err) {
-            HIP_ERROR("build param hostname failed: %s\n", strerror(err));
-            goto out_err;
-        }
-    }
-
-    // Send the message to the daemon. Wait for reply
-    HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
-
-    // Loop through all the parameters in the message just filled.
-    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-        param_type = hip_get_param_type(current_param);
-        if (param_type == HIP_PARAM_SRC_ADDR) {
-            reply_ipv6 = (struct in6_addr *) hip_get_param_contents_direct(
-                current_param);
-
-            HIP_DEBUG_IN6ADDR("Result IP ", reply_ipv6);
-        } else if (param_type == HIP_PARAM_INT)   {
-            //TO DO, get int that indicates error
-            ret = *(int *) hip_get_param_contents_direct(current_param);
-        }
-    }
-
-    switch (ret) {
-    case 1: HIP_INFO("Connection to the DHT gateway did not succeed.\n");
-        break;
-    case 2: HIP_INFO("Getting a response DHT gateway failed.\n");
-        break;
-    case 3: HIP_INFO("Entry not found at DHT gateway.\n");
-        break;
-    case 4: HIP_INFO("DHT gateway not configured yet.\n");
-        break;
-    case 5: HIP_INFO("DHT support not turned on.\n");
-        break;
-    }
-
-out_err:
-    hip_msg_init(msg);
-    return err;
-}
-
-#endif /* 0 */
-
-/**
- * Function that gets data from DHT
- *
- * @return       zero on success, or negative error value on error.
- */
-static int hip_conf_handle_get(hip_common_t *msg,
-                               int action,
-                               const char *opt[],
-                               int optc,
-                               int send_only)
-{
-#ifdef CONFIGH_HIP_DHT
-    int err = 0, is_hit = 0, socket = 0;
-    hip_hit_t hit;
-    unsigned char dht_response[HIP_MAX_PACKET];
-    struct addrinfo *serving_gateway;
-    struct hip_opendht_gw_info *gw_info;
-    struct hip_host_id *hid;
-    struct in_addr tmp_v4;
-    struct in6_addr reply6;
-    char tmp_ip_str[INET_ADDRSTRLEN];
-    int tmp_ttl, tmp_port;
-    const char *pret;
-
-    memset(&hit, 0, sizeof(hip_hit_t));
-
-    /* ASK THIS INFO FROM DAEMON */
-    HIP_INFO("Asking serving gateway info from daemon...\n");
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0), -1,
-             "Building daemon header failed\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-             "Send recv daemon info failed\n");
-    HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
-             "No gw struct found\n");
-
-    /* Check if DHT was on */
-    if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
-        HIP_INFO("DHT is not in use\n");
-        goto out_err;
-    }
-    memset(&tmp_ip_str, '\0', sizeof(tmp_ip_str));
-    tmp_ttl  = gw_info->ttl;
-    tmp_port = htons(gw_info->port);
-    IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-    pret     = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
-    HIP_INFO("Got address %s, port %d, TTL %d from daemon\n",
-             tmp_ip_str, tmp_port, tmp_ttl);
-
-    is_hit   = inet_pton(AF_INET6, opt[0], &hit);
-
-    /* If this is 1 then it is hit (actually any ipv6 would do), if 0 then hostname */
-    if (is_hit < 0 && errno == EAFNOSUPPORT) {
-        HIP_PERROR("inet_pton: not a valid address family\n");
-        err = -EAFNOSUPPORT;
-        goto out_err;
-    }
-
-    HIP_DEBUG("Resolve the gateway address\n");
-    HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, tmp_port, AF_INET), 0,
-             "Resolve error!\n");
-
-    HIP_DEBUG("Initialize socket\n");
-    socket = init_dht_gateway_socket_gw(socket, serving_gateway);
-
-    _HIP_DEBUG("Connect the DHT socket\n");
-    err    = connect_dht_gateway(socket, serving_gateway, 1);
-
-    HIP_DEBUG("Send get msg\n");
-    HIP_IFEL((err = opendht_get(socket, (unsigned char *) opt[0],
-                                (unsigned char *) tmp_ip_str, tmp_port)), 0, "DHT get error\n");
-
-    HIP_DEBUG("Read response\n");
-    HIP_IFE((err = opendht_read_response(socket, dht_response)), -1);
-
-    _HIP_DEBUG("is_hit %d err %d\n", is_hit, err);
-
-    if (is_hit == 1 && err >= 0) {
-        _HIP_DUMP_MSG(dht_response);
-        _HIP_DEBUG("Returned locators above\n");
-        /* hip_print_locator_addresses((struct hip_common *)dht_response); */
-        /* Verify signature */
-        HIP_IFEL(!(hid = hip_get_param((struct hip_common *) dht_response,
-                                       HIP_PARAM_HOST_ID)), -ENOENT,
-                 "No HOST_ID found in DHT response\n");
-
-        HIP_IFEL((err = hip_verify_packet_signature((struct hip_common *) dht_response,
-                                                    hid)), -1,
-                 "Failed to verify the signature in HDRR\n");
-        HIP_DEBUG("HDRR signature successfully verified\n");
-    } else if (is_hit == 0 && err >= 0)   {
-        memcpy(&((&reply6)->s6_addr), dht_response, sizeof(reply6.s6_addr));
-        HIP_DEBUG_HIT("Returned HIT", &reply6);
-    }
-    hip_msg_init(msg);
-out_err:
-    return err;
-#else /* CONFIGH_HIP_DHT */
-    return -1;
-#endif /* CONFIGH_HIP_DHT */
-}
-
-/**
- * Function that is used to set BUDDIES on or off
- *
- * @return       zero on success, or negative error value on error.
- */
-static int hip_conf_handle_buddies_toggle(hip_common_t *msg,
-                                          int action,
-                                          const char *opt[],
-                                          int optc,
-                                          int send_only)
-{
-    int err = 0, status = 0;
-
-    if (!strcmp("on", opt[0])) {
-        status = SO_HIP_BUDDIES_ON;
-    } else if (!strcmp("off", opt[0])) {
-        status = SO_HIP_BUDDIES_OFF;
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-    }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
-
-out_err:
-    return err;
-}
-
 static int hip_conf_handle_get_peer_lsi(hip_common_t *msg,
                                         int action,
                                         const char *opt[],
@@ -2190,127 +1906,6 @@ out_err:
     return err;
 }
 
-#if 0
-/**
- * Function that gets data from hipd for the dns proxy - hipconf dnsproxy IP/hostname
- *
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_get_dnsproxy(hip_common_t *msg,
-                                 int action,
-                                 const char *opt[],
-                                 int optc,
-                                 int send_only)
-{
-    int err                   = 0, ret4 = 0, ret6 = 0, ret = 0;
-    struct in_addr ipv4_addr  = {0}, ipv4_addr_all_zero = {0}, lsi;
-    struct in6_addr ipv6_addr = {0}, ipv6_addr_all_zero = {0};
-    //char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-    char hostname[HOST_NAME_MAX];
-    char hit_str[INET6_ADDRSTRLEN + 2], lsi_str[INET6_ADDRSTRLEN];
-    char ip_str[INET6_ADDRSTRLEN];
-    hip_hit_t hit = {0};
-    struct in6_addr mapped_lsi;
-
-    _HIP_INFO("Asking dnsproxy info from daemon...\n");
-
-    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-
-    memset(ip_str, 0, sizeof(ip_str));
-    memset(lsi_str, 0, sizeof(lsi_str));
-    memset(&mapped_lsi, 0, sizeof(&mapped_lsi));
-
-    //obtain ipv4/ipv6 address
-    ret4 = inet_pton(AF_INET,  opt[0], &ipv4_addr);
-    ret6 = inet_pton(AF_INET6, opt[0], &ipv6_addr);
-    if (ret4) {
-        IPV4_TO_IPV6_MAP(&ipv4_addr, &ipv6_addr);
-    }
-    if (!(ret4 || ret6)) {
-        memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-        hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
-    }
-
-    //hostname provided
-    if (!(ret4 || ret6)) {
-        /*map hostname to hit*/
-        err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
-                                           hip_map_first_hostname_to_hit_from_hosts,
-                                           hostname, &hit);
-        //hit string
-        hip_convert_hit_to_str(&hit, NULL, hit_str);
-
-        /*map hostname to ip*/
-        err = hip_for_each_hosts_file_line(HOSTS_FILE,
-                                           hip_map_first_hostname_to_ip_from_hosts,
-                                           hostname, &ipv6_addr);
-
-        /*map hostname to lsi*/
-        err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
-                                           hip_map_first_hostname_to_lsi_from_hosts,
-                                           hostname, &mapped_lsi);
-        IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
-    } else {
-        if (IS_LSI32(ipv4_addr.s_addr)) {      /*map lsi to hit*/
-            err = hip_for_each_hosts_file_line(HOSTS_FILE,
-                                               hip_map_lsi_to_hit_from_hosts_files,
-                                               &ipv6_addr, hostname);
-        } else {     /*map ipv4/ipv6 to hit*/
-            err = hip_for_each_hosts_file_line(HOSTS_FILE,
-                                               hip_map_first_id_to_hostname_from_hosts,
-                                               &ipv6_addr, hostname);
-        }
-
-        if (strlen(hostname) == 0) {
-            goto out_err;
-        }
-
-        /*map hostname to hit*/
-        err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
-                                           hip_map_first_hostname_to_hit_from_hosts,
-                                           hostname, &hit);
-        //hit string
-        hip_convert_hit_to_str(&hit, NULL, hit_str);
-
-        /*map hostname to lsi*/
-        err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
-                                           hip_map_first_hostname_to_lsi_from_hosts,
-                                           hostname, &mapped_lsi);
-    }
-
-    //set the ip string
-    if (IN6_IS_ADDR_V4MAPPED(&ipv6_addr)) {
-        IPV6_TO_IPV4_MAP(&ipv6_addr, &ipv4_addr);
-        if (ipv4_addr_cmp(&ipv4_addr_all_zero, &ipv4_addr) != 0) {
-            inet_ntop(AF_INET, &ipv4_addr, ip_str, INET_ADDRSTRLEN);
-        }
-    } else if (ipv4_addr_cmp(&ipv6_addr_all_zero, &ipv6_addr) != 0) {
-        inet_ntop(AF_INET6, &ipv6_addr, ip_str, INET6_ADDRSTRLEN);
-    }
-
-
-    //set the lsi string
-    IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
-    if (IS_LSI32(lsi.s_addr)) {
-        inet_ntop(AF_INET, &lsi, lsi_str, INET_ADDRSTRLEN);
-    }
-
-    ////HIP_DEBUG("strings -  %s - %s - %s\n", hit_str, ip_str, lsi_str);
-    if ((((ipv4_addr_cmp(&ipv4_addr_all_zero, &ipv4_addr) != 0) ||
-          (ipv6_addr_cmp(&ipv6_addr_all_zero, &ipv6_addr) != 0))) &&
-        (ipv6_addr_cmp(&ipv6_addr_all_zero, &hit) != 0)) {
-        HIP_DEBUG("hipconf add map %s %s %s\n", hit_str, ip_str, lsi_str);
-    } else {
-        HIP_DEBUG("No ip or hit in hosts files\n");
-    }
-
-out_err:
-    hip_msg_init(msg);
-
-    return 0;
-}
-
-#endif /* 0 */
 
 /**
  * Handles @c service commands received from @c hipconf.
@@ -2396,6 +1991,19 @@ out_err:
     return err;
 }
 
+/**
+ * Handle e.g. "hipconf run normal firefox". Enables HIP support
+ * for the given application using LD_PRELOAD. This means that
+ * all getaddrinfo() calls go through the modified libinet library.
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt a string containing the name of the application to LD_PRELOAD
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
 static int hip_conf_handle_run_normal(hip_common_t *msg,
                                       int action,
                                       const char *opt[],
@@ -2406,6 +2014,18 @@ static int hip_conf_handle_run_normal(hip_common_t *msg,
                                        (char **) &opt[0]);
 }
 
+
+/**
+ * query and print information on host associations from hipd
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt an array of string containing one string "all"
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
 static int hip_conf_handle_ha(hip_common_t *msg,
                               int action,
                               const char *opt[],
@@ -2447,6 +2067,17 @@ out_err:
     return err;
 }
 
+/**
+ * set mobility to lazy or active mode for mhaddr extension
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt "lazy" or "active"
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
 static int hip_conf_handle_mhaddr(hip_common_t *msg,
                                   int action,
                                   const char *opt[],
@@ -2472,6 +2103,17 @@ out_err:
     return err;
 }
 
+/**
+ * prefer hard or soft handovers
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt "hard" or "soft"
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
 static int hip_conf_handle_handover(hip_common_t *msg,
                                     int action,
                                     const char *opt[],
@@ -2500,11 +2142,10 @@ out_err:
 }
 
 /**
- * hip_append_pathtolib: Creates the string intended to set the
- * environmental variable LD_PRELOAD. The function recibes the required
- * libraries, and then includes the prefix (path where these libraries
- * are located) to each one. Finally it appends all of the them to the
- * same string.
+ * creates the string intended to set the environmental variable
+ * LD_PRELOAD. The function required the required libraries, and then
+ * includes the prefix (path where these libraries are located) to
+ * each one. Finally it appends all of the them to the same string.
  *
  * @param libs            an array of pointers to the required libraries
  * @param lib_all         a pointer to the string to store the result
@@ -2519,7 +2160,7 @@ static int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
     char *prefix  = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
 
     while (*libs != NULL) {
-        // Copying prefix to lib_all
+        /* Copying prefix to lib_all */
         HIP_IFEL(c_count < strlen(prefix), -1, "Overflow in string lib_all\n");
         strncpy(lib_aux, prefix, c_count);
         while (*lib_aux != '\0') {
@@ -2527,13 +2168,13 @@ static int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
             c_count--;
         }
 
-        // Copying "/lib/" to lib_all
+        /* Copying "/lib/" to lib_all */
         HIP_IFEL(c_count < 5, -1, "Overflow in string lib_all\n");
         strncpy(lib_aux, "/lib/", c_count);
         c_count -= 5;
         lib_aux += 5;
 
-        // Copying the library name to lib_all
+        /* Copying the library name to lib_all */
         HIP_IFEL(c_count < strlen(*libs), -1, "Overflow in string lib_all\n");
         strncpy(lib_aux, *libs, c_count);
         while (*lib_aux != '\0') {
@@ -2541,16 +2182,16 @@ static int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
             c_count--;
         }
 
-        // Adding ':' to separate libraries
+        /* Adding ':' to separate libraries */
         *lib_aux = ':';
         c_count--;
         lib_aux++;
 
-        // Next library
+        /* Next library */
         libs++;
     }
 
-    // Delete the last ':'
+    /* Delete the last ':' */
     *--lib_aux = '\0';
 
 out_err:
@@ -2558,18 +2199,9 @@ out_err:
 }
 
 /**
- * Handles the hipconf commands where the type is @c run. Execute new
+ * Handle the hipconf commands where the type is @c run. Execute new
  * application and set environment variable "LD_PRELOAD" to as type
  * says.
- * @note In order to this function to work properly, "make install"
- * must be executed to install libraries to right paths. Also library
- * paths must be set right.
- *
- * @see
- * exec_app_types\n
- * EXEC_LOADLIB_OPP\n
- * EXEC_LOADLIB_HIP\n
- * EXEC_LOADLIB_NONE\n
  *
  * @param do_fork Whether to fork or not.
  * @param type   the numeric action identifier for the action to be performed.
@@ -2577,6 +2209,12 @@ out_err:
  * @param argv   an array of pointers to the command line arguments after
  *               the action and type.
  * @return       zero on success, or negative error value on error.
+ * @note In order to this function to work properly, "make install"
+ *       must be executed to install libraries to right paths. Also library
+ *       paths must be set right.
+ * @see exec_app_types EXEC_LOADLIB_OPP, EXEC_LOADLIB_HIP and
+ *      EXEC_LOADLIB_NONE
+ *
  */
 int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 {
@@ -2630,7 +2268,15 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 }
 
 /**
- * Send restart request to HIP daemon.
+ * trigger HIP CLOSE to close all SAs and HAs
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt ignored
+ * @param optc ignored
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
  */
 static int hip_conf_handle_restart(hip_common_t *msg,
                                    int type,
@@ -2647,6 +2293,17 @@ out_err:
     return err;
 }
 
+/**
+ * turn on or off opportunistic TCP extension
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt "on" or "off"
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
 static int hip_conf_handle_opptcp(hip_common_t *msg,
                                   int action,
                                   const char *opt[],
@@ -2669,24 +2326,20 @@ static int hip_conf_handle_opptcp(hip_common_t *msg,
 
 out_err:
     return err;
-
-
-/*	hip_set_opportunistic_tcp_status(1);*/
-/*	hip_set_opportunistic_tcp_status(0);*/
 }
 
 /**
- * Handles the hipconf commands where the type is @ tcptimeout.
+ * Handles the hipconf commands where the type is @ tcptimeout. Experimental.
+ * Tries to pimp up TCP using /proc file system to tolerate mobility better.
  *
  * @param msg    a pointer to the buffer where the message for hipd will
- *                be written.
+ *               be written.
  * @param action the numeric action identifier for the action to be performed.
  * @param opt    an array of pointers to the command line arguments after
- *                the action and type.
- *  @param optc   the number of elements in the array (@b 0).
- *  @return       zero on success, or negative error value on error.
- * */
-
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
 static int hip_conf_handle_tcptimeout(struct hip_common *msg,
                                       int action,
                                       const char *opt[],
@@ -2732,6 +2385,17 @@ out_err:
     return err;
 }
 
+/**
+ * ask hipd to map a HIT or LSI to a locator
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt a HIT or LSI
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
 static int hip_conf_handle_map_id_to_addr(struct hip_common *msg,
                                           int action,
                                           const char *opt[],
@@ -2783,6 +2447,20 @@ out_err:
     return err;
 }
 
+/**
+ * Set hit-to-ip extension on of off. The extension "subscribes" the host
+ * to DNS resolution for HITs from the configured DNS server.
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt "on" or "off"
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ * @see hip_conf_handle_nsupdate
+ * @see hip_conf_handle_hit_to_ip_set
+ */
 static int hip_conf_handle_hit_to_ip(hip_common_t *msg,
                                      int action,
                                      const char *opt[],
@@ -2804,6 +2482,18 @@ out_err:
     return err;
 }
 
+/**
+ * Set the HIT-to-IP server
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt the ip address of the HIT-to-IP server
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ * @see hip_conf_handle_hit_to_ip
+ */
 static int hip_conf_handle_hit_to_ip_set(hip_common_t *msg,
                                          int action,
                                          const char *opt[],
@@ -2830,6 +2520,17 @@ out_err:
     return err;
 }
 
+/**
+ * translate a remote LSI to a HIT
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param action unused
+ * @param opt the LSI as a string
+ * @param optc 1
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
 static int hip_conf_handle_lsi_to_hit(struct hip_common *msg,
                                       int action,
                                       const char *opt[],
@@ -2957,59 +2658,24 @@ out_err:
 }
 
 /**
- * Handles the hipconf commands where the type is @c del.
- *
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array.
- * @return       zero on success, or negative error value on error.
- *
- */
-#if 0
-static int hip_conf_handle_hi_get(struct hip_common *msg, int action,
-        const char *opt[], int optc)
-{
-    struct gaih_addrtuple *at = NULL;
-    struct gaih_addrtuple *tmp;
-    int err                   = 0;
-
-    HIP_IFEL((optc != 1), -1, "Missing arguments\n");
-
-    /* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
-    /*err = get_local_hits(NULL, &at);*/
-    if (err) {
-        goto out_err;
-    }
-
-    tmp = at;
-    while (tmp) {
-        /* XX FIXME: THE LIST CONTAINS ONLY A SINGLE HIT */
-        _HIP_DEBUG_HIT("HIT", &tmp->addr);
-        tmp = tmp->next;
-    }
-
-    _HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
-
-out_err:
-    if (at) {
-        HIP_FREE(at);
-    }
-    return err;
-}
-
-#endif
-/**
  * Function pointer array containing pointers to handler functions.
  * Add a handler function for your new action in the action_handler[] array.
  * If you added a handler function here, do not forget to define that function
- * somewhere in this source file.
+ * somewhere in this source file. The API for the array is as follows:
  *
- *  @note Keep the elements in the same order as the @c TYPE values are defined
- *        in hipconf.h because type values are used as @c action_handler array
- *        index. Locations and order of these handlers are important.
+ * - Input/output message describes the query message to be sent to hipd. The
+ *   message may be overwritten by hipd with a response message from hipd.
+ * - The action to take
+ * - Arguments for the action
+ * - Number of arguments
+ * - Wait for a response message from hipd
+ *
+ * @note You will have to register also action and type handlers. See
+ *       hip_conf_get_action(), hip_conf_check_action_argc() and
+ *       hip_conf_get_type()
+ * @note Keep the elements in the same order as the @c TYPE values are defined
+ *       in hipconf.h because type values are used as @c action_handler array
+ *       index. Locations and order of these handlers are important.
  */
 int (*action_handler[])(hip_common_t *,
                         int action,
@@ -3032,7 +2698,7 @@ int (*action_handler[])(hip_common_t *,
     /* Any server side registration action. */
     hip_conf_handle_load,               /* 11: TYPE_CONFIG */
     hip_conf_handle_run_normal,         /* 12: TYPE_RUN */
-    hip_conf_handle_ttl,                /* 13: TYPE_TTL */
+    NULL,                               /* was 13: TYPE_TTL */
     hip_conf_handle_gw,                 /* 14: TYPE_GW */
     hip_conf_handle_get,                /* 15: TYPE_GET */
     hip_conf_handle_ha,                 /* 16: TYPE_HA */
@@ -3066,6 +2732,16 @@ int (*action_handler[])(hip_common_t *,
     NULL     /* TYPE_MAX, the end. */
 };
 
+/**
+ * hipconf stub used by the hipconf tool and hipd (to read conf file)
+ *
+ * @param msg input/output message for the query/response for hipd
+ * @param opt options arguments as strings
+ * @param optc number of arguments
+ * @param send_only 1 if no response from hipd should be requrested, or 0 if
+ *                  should block for a response from hipd
+ * @return zero for success and negative on error
+ */
 int hip_do_hipconf(int argc, char *argv[], int send_only)
 {
     int err           = 0, type_arg = 0;

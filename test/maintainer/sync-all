@@ -29,13 +29,13 @@ make bin syncrepo"
 # FC11-i386           hipserver (real host)
 # Ubuntu 8.10, i386   terokkar.infrahip.net
 # Ubuntu 8.10, amd64  halko.pc.infrahip.net (real host)
-# F10-x86_64	      nagrand.infrahip.net
-# F12-x86_64	      shadowmoon.infrahip.net
+# F10-x86_64          nagrand.infrahip.net
+# F12-x86_64          shadowmoon.infrahip.net
 # CentOS-5.4 i386     hellfire.infrahip.net
 # CentOS-5.4 x86_64   zangarmash.infrahip.net
 # --
-# F10-i386		  ironforge.infrahip.net
-# f12-i386		  netherstorm.infrahip.net
+# F10-i386                ironforge.infrahip.net
+# f12-i386                netherstorm.infrahip.net
 # fc11-x86_64             stonebreaker
 # fc11-i386               blacktemple
 #
@@ -60,8 +60,8 @@ do
     ping -c 2 $HOST
     if test $? = 0
     then
-	ssh $HOST $COMMANDS
+        ssh $HOST $COMMANDS
     else
-	echo "Not responding, skipping"
+        echo "Not responding, skipping"
     fi
 done

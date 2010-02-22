@@ -1,4 +1,4 @@
-/*	$NetBSD: policy_token.l,v 1.6.6.1 2007/08/01 11:52:19 vanhu Exp $	*/
+/*      $NetBSD: policy_token.l,v 1.6.6.1 2007/08/01 11:52:19 vanhu Exp $       */
 
 /* Id: policy_token.l,v 1.12 2005/05/05 12:32:18 manubsd Exp */
 
@@ -60,7 +60,7 @@
 #include "policy_parse.h"
 #endif
 
-#define yylval __libipseclval	/* XXX */
+#define yylval __libipseclval   /* XXX */
 
 int yylex __P((void));
 %}
@@ -69,103 +69,103 @@ int yylex __P((void));
 %option nounput
 
 /* common section */
-nl		\n
-ws		[ \t]+
-digit		[0-9]
-hexdigit	[0-9A-Fa-f]
-special		[()+\|\?\*,]
-dot		\.
-comma		\,
-hyphen		\-
-colon		\:
-slash		\/
-bcl		\{
-ecl		\}
-blcl		\[
-elcl		\]
-percent		\%
-semi		\;
-plus	\+
-usec		{dot}{digit}{1,6}
-comment		\#.*
-ccomment	"/*"
-bracketstring	\<[^>]*\>
-quotedstring	\"[^"]*\"
-decstring	{digit}+
-hexpair		{hexdigit}{hexdigit}
-hexstring	0[xX]{hexdigit}+
-octetstring	{octet}({dot}{octet})+
-ipaddress	[a-zA-Z0-9:\._][a-zA-Z0-9:\._]*(%[a-zA-Z0-9]+)?
+nl              \n
+ws              [ \t]+
+digit           [0-9]
+hexdigit        [0-9A-Fa-f]
+special         [()+\|\?\*,]
+dot             \.
+comma           \,
+hyphen          \-
+colon           \:
+slash           \/
+bcl             \{
+ecl             \}
+blcl            \[
+elcl            \]
+percent         \%
+semi            \;
+plus    \+
+usec            {dot}{digit}{1,6}
+comment         \#.*
+ccomment        "/*"
+bracketstring   \<[^>]*\>
+quotedstring    \"[^"]*\"
+decstring       {digit}+
+hexpair         {hexdigit}{hexdigit}
+hexstring       0[xX]{hexdigit}+
+octetstring     {octet}({dot}{octet})+
+ipaddress       [a-zA-Z0-9:\._][a-zA-Z0-9:\._]*(%[a-zA-Z0-9]+)?
 
 %%
 
-in		{ yylval.num = IPSEC_DIR_INBOUND; return(DIR); }
-out		{ yylval.num = IPSEC_DIR_OUTBOUND; return(DIR); }
-fwd		{
+in              { yylval.num = IPSEC_DIR_INBOUND; return(DIR); }
+out             { yylval.num = IPSEC_DIR_OUTBOUND; return(DIR); }
+fwd             {
 #ifdef HAVE_POLICY_FWD
-		  yylval.num = IPSEC_DIR_FWD; return(DIR);
+                  yylval.num = IPSEC_DIR_FWD; return(DIR);
 #else
-		  yylval.num = IPSEC_DIR_INBOUND; return(DIR);
+                  yylval.num = IPSEC_DIR_INBOUND; return(DIR);
 #endif
-		}
+                }
 
-priority	{ return(PRIORITY); }
-prio	{ return(PRIORITY); }
-low	{ yylval.num32 = PRIORITY_LOW; return(PRIO_BASE); }
+priority        { return(PRIORITY); }
+prio    { return(PRIORITY); }
+low     { yylval.num32 = PRIORITY_LOW; return(PRIO_BASE); }
 def { yylval.num32 = PRIORITY_DEFAULT; return(PRIO_BASE); }
-high	{ yylval.num32 = PRIORITY_HIGH; return(PRIO_BASE); }
-{plus}	{ return(PLUS); }
-{decstring}	{
-			yylval.val.len = strlen(yytext);
-			yylval.val.buf = yytext;
-			return(PRIO_OFFSET);
+high    { yylval.num32 = PRIORITY_HIGH; return(PRIO_BASE); }
+{plus}  { return(PLUS); }
+{decstring}     {
+                        yylval.val.len = strlen(yytext);
+                        yylval.val.buf = yytext;
+                        return(PRIO_OFFSET);
 }
 
-discard		{ yylval.num = IPSEC_POLICY_DISCARD; return(ACTION); }
-none		{ yylval.num = IPSEC_POLICY_NONE; return(ACTION); }
-ipsec		{ yylval.num = IPSEC_POLICY_IPSEC; return(ACTION); }
-bypass		{ yylval.num = IPSEC_POLICY_BYPASS; return(ACTION); }
-entrust		{ yylval.num = IPSEC_POLICY_ENTRUST; return(ACTION); }
+discard         { yylval.num = IPSEC_POLICY_DISCARD; return(ACTION); }
+none            { yylval.num = IPSEC_POLICY_NONE; return(ACTION); }
+ipsec           { yylval.num = IPSEC_POLICY_IPSEC; return(ACTION); }
+bypass          { yylval.num = IPSEC_POLICY_BYPASS; return(ACTION); }
+entrust         { yylval.num = IPSEC_POLICY_ENTRUST; return(ACTION); }
 
-esp		{ yylval.num = IPPROTO_ESP; return(PROTOCOL); }
-ah		{ yylval.num = IPPROTO_AH; return(PROTOCOL); }
-ipcomp		{ yylval.num = IPPROTO_IPCOMP; return(PROTOCOL); }
+esp             { yylval.num = IPPROTO_ESP; return(PROTOCOL); }
+ah              { yylval.num = IPPROTO_AH; return(PROTOCOL); }
+ipcomp          { yylval.num = IPPROTO_IPCOMP; return(PROTOCOL); }
 
-transport	{ yylval.num = IPSEC_MODE_TRANSPORT; return(MODE); }
-tunnel		{ yylval.num = IPSEC_MODE_TUNNEL; return(MODE); }
+transport       { yylval.num = IPSEC_MODE_TRANSPORT; return(MODE); }
+tunnel          { yylval.num = IPSEC_MODE_TUNNEL; return(MODE); }
 
-me		{ return(ME); }
-any		{ return(ANY); }
+me              { return(ME); }
+any             { return(ANY); }
 
-default		{ yylval.num = IPSEC_LEVEL_DEFAULT; return(LEVEL); }
-use		{ yylval.num = IPSEC_LEVEL_USE; return(LEVEL); }
-require		{ yylval.num = IPSEC_LEVEL_REQUIRE; return(LEVEL); }
+default         { yylval.num = IPSEC_LEVEL_DEFAULT; return(LEVEL); }
+use             { yylval.num = IPSEC_LEVEL_USE; return(LEVEL); }
+require         { yylval.num = IPSEC_LEVEL_REQUIRE; return(LEVEL); }
 unique{colon}{decstring} {
-			yylval.val.len = strlen(yytext + 7);
-			yylval.val.buf = yytext + 7;
-			return(LEVEL_SPECIFY);
-		}
-unique		{ yylval.num = IPSEC_LEVEL_UNIQUE; return(LEVEL); }
-{slash}		{ return(SLASH); }
+                        yylval.val.len = strlen(yytext + 7);
+                        yylval.val.buf = yytext + 7;
+                        return(LEVEL_SPECIFY);
+                }
+unique          { yylval.num = IPSEC_LEVEL_UNIQUE; return(LEVEL); }
+{slash}         { return(SLASH); }
 
-{ipaddress}	{
-			yylval.val.len = strlen(yytext);
-			yylval.val.buf = yytext;
-			return(IPADDRESS);
-		}
+{ipaddress}     {
+                        yylval.val.len = strlen(yytext);
+                        yylval.val.buf = yytext;
+                        return(IPADDRESS);
+                }
 
-{hyphen}	{ return(HYPHEN); }
+{hyphen}        { return(HYPHEN); }
 
 {blcl}{decstring}{elcl} {
-			/* Remove leading '[' and trailing ']' */
-			yylval.val.buf = yytext + 1;
-			yylval.val.len = strlen(yytext) - 2;
+                        /* Remove leading '[' and trailing ']' */
+                        yylval.val.buf = yytext + 1;
+                        yylval.val.len = strlen(yytext) - 2;
 
-			return(PORT);
-		}
+                        return(PORT);
+                }
 
-{ws}		{ ; }
-{nl}		{ ; }
+{ws}            { ; }
+{nl}            { ; }
 
 %%
 
@@ -176,21 +176,21 @@ static YY_BUFFER_STATE strbuffer;
 
 void
 __policy__strbuffer__init__(msg)
-	char *msg;
+        char *msg;
 {
-	if (YY_CURRENT_BUFFER)
-		yy_delete_buffer(YY_CURRENT_BUFFER);
-	strbuffer = (YY_BUFFER_STATE)yy_scan_string(msg);
-	yy_switch_to_buffer(strbuffer);
+        if (YY_CURRENT_BUFFER)
+                yy_delete_buffer(YY_CURRENT_BUFFER);
+        strbuffer = (YY_BUFFER_STATE)yy_scan_string(msg);
+        yy_switch_to_buffer(strbuffer);
 
-	return;
+        return;
 }
 
 void
 __policy__strbuffer__free__()
 {
-	yy_delete_buffer(strbuffer);
+        yy_delete_buffer(strbuffer);
 
-	return;
+        return;
 }
 #endif /* CONFIG_HIP_PFKEY */

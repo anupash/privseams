@@ -483,17 +483,17 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    three levels: hosts, interfaces, and addresses.  This is illustrated
    in Figure 1.
 
-   			     address11
-   			   /
-   		interface1 - address12
-   	      /
-   	     /               address21
-   	host -- interface2 <
-   	     \               address22
-   	      \
-   		interface3 - address31
-   			   \
-   			     address32
+                             address11
+                           /
+                interface1 - address12
+              /
+             /               address21
+        host -- interface2 <
+             \               address22
+              \
+                interface3 - address31
+                           \
+                             address32
 
                                 Figure 1
 

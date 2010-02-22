@@ -28,8 +28,8 @@
 
 use strict;
 use warnings;
-use Fcntl;	# for sysopen flags
-use Cwd 'abs_path';	# for finding where files really are
+use Fcntl;      # for sysopen flags
+use Cwd 'abs_path';     # for finding where files really are
 use Config;
 
 # regex debugger
@@ -55,13 +55,13 @@ sub expandmacros;
 # default is /usr/src/debian/{BUILD,SOURCES,SPECS,DEBS,SDEBS}
 
 # Globals
-my $finalmessages = '';	# A place to stuff messages that I want printed at the *very* end of any processing.
+my $finalmessages = ''; # A place to stuff messages that I want printed at the *very* end of any processing.
 my $specfile;
 my $tarball;
 my $srcpkg;
 my $cmdbuildroot;
-my $tarballdir = '%{name}-%{version}';	# We do this in case of a spec file not using %setup...
-my %specglobals;	# For %define's in specfile, among other things.
+my $tarballdir = '%{name}-%{version}';  # We do this in case of a spec file not using %setup...
+my %specglobals;        # For %define's in specfile, among other things.
 
 $specglobals{'_vendor'} = 'debbuild';
 $specglobals{'vendor'} = 'debbuild';
@@ -70,41 +70,41 @@ $specglobals{'vendor'} = 'debbuild';
 my $verbosity = 0;
 my $NoAutoReq = 0;
 my %cmdopts = (type => '',
-		stage => 'a',
-		short => 'n'
-	);
+                stage => 'a',
+                short => 'n'
+        );
 my $topdir = "/usr/src/debian";
 #my $specglobals{buildroot} = "%{_tmppath}/%{name}-%{version}-%{release}.root".int(rand(99998)+1);
 $specglobals{buildroot} = '';
 
 # "Constants"
 my %targets = ('p' => 'Prep',
-		'c' => 'Compile',
-		'i' => 'Install',
-		'l' => 'Verify %files',
-		'a' => 'Build binary and source',
-		'b' => 'Build binary',
-		's' => 'Build source'
-	);
+                'c' => 'Compile',
+                'i' => 'Install',
+                'l' => 'Verify %files',
+                'a' => 'Build binary and source',
+                'b' => 'Build binary',
+                's' => 'Build source'
+        );
 # Ah, the joys of multiple architectures.  :(  Feh.
 # As copied from rpm
-my %optflags = ( 'i386'	=>	'-O2 -g -march=i386 -mcpu=i686',
-		'amd64'	=>	'-O2 -g'
-	);
-my $hostarch;	# we set this later...
+my %optflags = ( 'i386' =>      '-O2 -g -march=i386 -mcpu=i686',
+                'amd64' =>      '-O2 -g'
+        );
+my $hostarch;   # we set this later...
 my $scriptletbase;
 
 # Hackery to try to bring some semblance of sanity to packages built for more
 # than one Debian version at the same time.  Whee.
 # /etc/debian-version
 my %distmap = (
-	"3.1.9ubuntu7.1"	=> "dapper",
-	"4ubuntu2"	=> "feisty",
-	"3.0"	=> "woody",
-	"3.1"	=> "sarge",
-	"4"	=> "etch",
-	"4.0"	=> "lenny",
-	"4.0.0"	=> "sid");
+        "3.1.9ubuntu7.1"        => "dapper",
+        "4ubuntu2"      => "feisty",
+        "3.0"   => "woody",
+        "3.1"   => "sarge",
+        "4"     => "etch",
+        "4.0"   => "lenny",
+        "4.0.0" => "sid");
 # Enh.  There doesn't seem to be any better way to do this...  :(
 {
   my $basever = qx { dpkg-query --showformat '\${version}' -W base-files };
@@ -116,17 +116,17 @@ my %distmap = (
   chomp $releasever;
 
   $specglobals{"debdist"} = $distmap{$basever};
-  $specglobals{"debver"} = $basever;	# this may have trouble with Ubuntu versions?
+  $specglobals{"debver"} = $basever;    # this may have trouble with Ubuntu versions?
 }
 
 # Package data
 # This is the form of $pkgdata{pkgname}{meta}
 # meta includes Summary, Name, Version, Release, Group, Copyright,
-#	Source, URL, Packager, BuildRoot, Description, BuildRequires,
-#	Requires, Provides
+#       Source, URL, Packager, BuildRoot, Description, BuildRequires,
+#       Requires, Provides
 # 10/31/2005 Maybe this should be flatter?  -kgd
 my %pkgdata;
-my @pkglist = ('main');	#sigh
+my @pkglist = ('main'); #sigh
 # Files listing.  Embedding this in %pkgdata would be, um, messy.
 my %filelist;
 my %doclist;
@@ -197,16 +197,16 @@ if ($cmdopts{type} eq 'd') {
     $pkgdata{$pkg}{name} =~ tr/_/-/;
 
     my $pkgfullname = "$pkgdata{$pkg}{name}_".
-	(defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
-	"$pkgdata{$pkg}{version}-$pkgdata{main}{release}_$pkgdata{$pkg}{arch}.deb";
+        (defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
+        "$pkgdata{$pkg}{version}-$pkgdata{main}{release}_$pkgdata{$pkg}{arch}.deb";
 
     print "$pkgfullname\n" if $filelist{$pkg};
 
   }
   # Source package
   print "$pkgdata{main}{name}-".
-	(defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
-	"$pkgdata{main}{version}-$pkgdata{main}{release}.sdeb\n";
+        (defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
+        "$pkgdata{main}{version}-$pkgdata{main}{release}.sdeb\n";
   exit 0;
 }
 
@@ -250,8 +250,8 @@ if ($cmdopts{type} eq 't') {
 
   $tarball = abs_path($tarball);
   my $unpackcmd = "cd $topdir/BUILD; tar -".
-	( $tarball =~ /\.tar\.gz$/ ? "z" : "" ).
-	( $tarball =~ /\.tar\.bz2$/ ? "j" : "" ). "xf $tarball";
+        ( $tarball =~ /\.tar\.gz$/ ? "z" : "" ).
+        ( $tarball =~ /\.tar\.bz2$/ ? "j" : "" ). "xf $tarball";
   system "$unpackcmd";
   system "cp $tarball $topdir/SOURCES/$fileonly";
   system "cp $specfile $topdir/SPECS/";
@@ -314,13 +314,13 @@ sub load_userconfig {
     while (<USERMACROS>) {
       # And we also only handle a few macros at the moment.
       if (/^\%_topdir/) {
-	my (undef,$tmp) = split /\s+/, $_;
-	$topdir = $tmp;
+        my (undef,$tmp) = split /\s+/, $_;
+        $topdir = $tmp;
       }
       next if /^\%_/;
       # Allow arbitrary definitions.  Note that we're only doing simple defs here for now.
       if (/^\%([a-z0-9]+)\s+(.+)$/) {
-	$specglobals{$1} = $2;
+        $specglobals{$1} = $2;
       }
     }
   }
@@ -347,41 +347,41 @@ sub parse_cmd {
 
       # Is it a long option?
       if (/^--/) {
-	if (/^--short-circuit/) {
-	  $cmdopts{short} = 'y';
-	} elsif (/^--rebuild/) {
-	  $cmdopts{type} = 's';
-	} elsif (/^--showpkgs/) {
-	  $cmdopts{type} = 'd';	# d for 'diagnostic' or 'debug' or 'dump'
-	} elsif (/^--buildroot/) {
-	   # nothing to do?  Can't see anything needed, we handle the actual definition later.
-	} elsif (/^--define/) {
-	  # nothing to do?  Can't see anything needed, we handle the actual definition later.
+        if (/^--short-circuit/) {
+          $cmdopts{short} = 'y';
+        } elsif (/^--rebuild/) {
+          $cmdopts{type} = 's';
+        } elsif (/^--showpkgs/) {
+          $cmdopts{type} = 'd'; # d for 'diagnostic' or 'debug' or 'dump'
+        } elsif (/^--buildroot/) {
+           # nothing to do?  Can't see anything needed, we handle the actual definition later.
+        } elsif (/^--define/) {
+          # nothing to do?  Can't see anything needed, we handle the actual definition later.
 ##fixme
 # add --self-package here
 # deps build-essential pax fakeroot
-	} else {
-	  print "Long option $_ not handled\n";
-	}
+        } else {
+          print "Long option $_ not handled\n";
+        }
       } else {
-	# Not a long option
-	if (/^-[bt]/) {
-	  if ($cmdopts{stage} eq 's') {
-	    # Mutually exclusive options.
-	    die "Can't use $_ with --rebuild\n";
-	  } else {
-	    # Capture the type (from "bare" files or tarball) and the stage (prep, build, etc)
-	    ($cmdopts{stage}) = (/^-[bt]([pcilabs])/);
-	    ($cmdopts{type}) = (/^-([bt])[pcilabs]/);
-	  }
-	} elsif (/^-v/) {
-	  # bump verbosity.  Not sure what I'll actually do here...
-	} elsif (/^-i/) {
-	  $cmdopts{install} = 1;
-	  $prevopt = '-i';
-	} else {
-	  die "Bad option $_\n";
-	}
+        # Not a long option
+        if (/^-[bt]/) {
+          if ($cmdopts{stage} eq 's') {
+            # Mutually exclusive options.
+            die "Can't use $_ with --rebuild\n";
+          } else {
+            # Capture the type (from "bare" files or tarball) and the stage (prep, build, etc)
+            ($cmdopts{stage}) = (/^-[bt]([pcilabs])/);
+            ($cmdopts{type}) = (/^-([bt])[pcilabs]/);
+          }
+        } elsif (/^-v/) {
+          # bump verbosity.  Not sure what I'll actually do here...
+        } elsif (/^-i/) {
+          $cmdopts{install} = 1;
+          $prevopt = '-i';
+        } else {
+          die "Bad option $_\n";
+        }
       }
 
     } else { # Not an option argument
@@ -391,30 +391,30 @@ sub parse_cmd {
       # tarball, or source package we're operating on - depending
       # on which one we meet.
       if ($prevopt eq '--buildroot') {
-	$cmdbuildroot = $_;
+        $cmdbuildroot = $_;
       } elsif ($prevopt eq '--define') {
-	my ($macro,$value) = (/([a-z0-9_.-]+)(?:\s+(.+))?/i);
-	if ($value ne '') {
-	  $specglobals{$macro} = $value;
-	} else {
-	  warn "WARNING:  missing value for macro $macro in --define!  Ignoring.\n";
-	}
+        my ($macro,$value) = (/([a-z0-9_.-]+)(?:\s+(.+))?/i);
+        if ($value ne '') {
+          $specglobals{$macro} = $value;
+        } else {
+          warn "WARNING:  missing value for macro $macro in --define!  Ignoring.\n";
+        }
       } elsif ($prevopt eq '-i') {
-	$srcpkg = $_;
+        $srcpkg = $_;
       } else {
-	if ($cmdopts{type} eq 's') {
-	  # Source package
- 	  if (!/(sdeb|\.src\.rpm)$/) {
-	    die "Can't --rebuild with $_\n";
-	  }
+        if ($cmdopts{type} eq 's') {
+          # Source package
+          if (!/(sdeb|\.src\.rpm)$/) {
+            die "Can't --rebuild with $_\n";
+          }
           $srcpkg = $_;
-	} elsif ($cmdopts{type} eq 'b' || $cmdopts{type} eq 'd') {
-	  # Spec file
-	  $specfile = $_;
-	} else {
-	  # Tarball build.  Need to extract tarball to find spec file.  Whee.
-	  $tarball = $_;
-	}
+        } elsif ($cmdopts{type} eq 'b' || $cmdopts{type} eq 'd') {
+          # Spec file
+          $specfile = $_;
+        } else {
+          # Tarball build.  Need to extract tarball to find spec file.  Whee.
+          $tarball = $_;
+        }
       }
     }
     $prevopt = $_;
@@ -482,13 +482,13 @@ sub parse_spec {
 # Basic algorithm:
 # For each line
 #   if it's a member of an %if construct, branch and see which segment of the
-#	spec file we need to parse and which one gets discarded, then
-#	short-circuit back to the top of the loop.
+#       spec file we need to parse and which one gets discarded, then
+#       short-circuit back to the top of the loop.
 #   if it's a %section, bump the stage.  Preparse addons to the %section line
-#	(eg subpackage) and stuff them in suitable loop-global variables, then
-#	short-circuit back to the top of the loop.
+#       (eg subpackage) and stuff them in suitable loop-global variables, then
+#       short-circuit back to the top of the loop.
 #   Otherwise, parse the line according to which section we're supposedly
-#	parsing right now
+#       parsing right now
 
 LINE: while (<SPECFILE>) {
     next if /^#/ && $stage eq 'preamble';       # Ignore comments...
@@ -501,13 +501,13 @@ LINE: while (<SPECFILE>) {
     # Extracted from the Maximum RPM online doc via:
     # grep -h %[a-z] *|perl -e 'while (<>) { /\%([a-z0-9]+)\b/; print "$1|\n"; }'|sort -u
     if (/^%[a-z]/ &&
-		$_ !~ /^%(?:attr|build|changelog|check|clean|config|configure|defattr|define|description|
-		dir|doc|docdir|else|endif|files|ghost|if|ifarch|ifn|ifnarch|ifnos|ifnxxx|fos|ifxxx|
-		install|makeinstall|package|patch\d+|post|postun|pre|prep|preun|readme|setup|
-		triggerin|triggerpostun|triggerun|verify|verifyscript)\b/x
-	) {
-	my ($badtag) = (/^%([a-z]+)/i);
-	die "Unknown tag \%$badtag at line $. of $specfile\n";
+                $_ !~ /^%(?:attr|build|changelog|check|clean|config|configure|defattr|define|description|
+                dir|doc|docdir|else|endif|files|ghost|if|ifarch|ifn|ifnarch|ifnos|ifnxxx|fos|ifxxx|
+                install|makeinstall|package|patch\d+|post|postun|pre|prep|preun|readme|setup|
+                triggerin|triggerpostun|triggerun|verify|verifyscript)\b/x
+        ) {
+        my ($badtag) = (/^%([a-z]+)/i);
+        die "Unknown tag \%$badtag at line $. of $specfile\n";
     }
 
 # preprocess %define's
@@ -528,14 +528,14 @@ LINE: while (<SPECFILE>) {
 
 # For Great w00tness!  New and Improved multilayered logic handling.
 
-	my @bits = split /\b/, $expr;
-	$expr = '';
-	foreach my $bit (@bits) {
-	  next if $bit eq '"';
-	  $bit =~ s/"//g;
-	  $expr .= qq("$bit") if $bit =~ /^\w+$/;
-	  $expr .= $bit if $bit !~ /^\w+$/;
-	}
+        my @bits = split /\b/, $expr;
+        $expr = '';
+        foreach my $bit (@bits) {
+          next if $bit eq '"';
+          $bit =~ s/"//g;
+          $expr .= qq("$bit") if $bit =~ /^\w+$/;
+          $expr .= $bit if $bit !~ /^\w+$/;
+        }
 
         # Done in this order so we don't cascade incorrectly.  Yes, those spaces ARE correct in the replacements!
         $expr =~ s/==/ eq /g;
@@ -702,19 +702,19 @@ LINE: while (<SPECFILE>) {
           $prepscript .= "mkdir $tarballdir\ncd $tarballdir\n";
         }
         $prepscript .= "tar -".
-		( $pkgdata{main}{source} =~ /\.tar\.gz$/ ? "z" : "" ).
-		( $pkgdata{main}{source} =~ /\.tar\.bz2$/ ? "j" : "" ).
-		( /\s+-q\s+/ ? '' : 'vv' )."xf ".
-		"$topdir/SOURCES/$pkgdata{main}{source}\n".
-		qq(STATUS=\$?\nif [ \$STATUS -ne 0 ]; then\n  exit \$STATUS\nfi\n).
-		"cd $topdir/BUILD/$tarballdir\n".
-		qq([ `/usr/bin/id -u` = '0' ] && /bin/chown -Rhf root .\n).
-		qq([ `/usr/bin/id -u` = '0' ] && /bin/chgrp -Rhf root .\n).
-		qq(/bin/chmod -Rf a+rX,g-w,o-w .\n);
+                ( $pkgdata{main}{source} =~ /\.tar\.gz$/ ? "z" : "" ).
+                ( $pkgdata{main}{source} =~ /\.tar\.bz2$/ ? "j" : "" ).
+                ( /\s+-q\s+/ ? '' : 'vv' )."xf ".
+                "$topdir/SOURCES/$pkgdata{main}{source}\n".
+                qq(STATUS=\$?\nif [ \$STATUS -ne 0 ]; then\n  exit \$STATUS\nfi\n).
+                "cd $topdir/BUILD/$tarballdir\n".
+                qq([ `/usr/bin/id -u` = '0' ] && /bin/chown -Rhf root .\n).
+                qq([ `/usr/bin/id -u` = '0' ] && /bin/chgrp -Rhf root .\n).
+                qq(/bin/chmod -Rf a+rX,g-w,o-w .\n);
       } elsif ( my ($patchnum,$patchopts) = (/^\%patch([^\s]+)(\s+.+)?$/) ) {
         chomp $patchnum;
         $prepscript .= qq(echo "Patch #$patchnum ($pkgdata{main}{"patch$patchnum"}):"\n).
-		"patch ";
+                "patch ";
         # If there are options passed, use'em.
         # Otherwise, catch a bare %patch and ASS-U-ME it's '-p0'-able.
         # Will break on options that don't provide -pnn, but what the hell.
@@ -768,7 +768,7 @@ LINE: while (<SPECFILE>) {
       next LINE if /^\%ghost/;
       # Debian dpkg doesn't speak "%docdir".  Meh.
       next LINE if /^\%docdir/;
-#      my $singleton = 0;	# don't recall what this was for
+#      my $singleton = 0;       # don't recall what this was for
 
 # create and initialize flags
       my ($perms, $owner, $group, $conf, $filesline);
@@ -778,14 +778,14 @@ LINE: while (<SPECFILE>) {
 
       # strip and flag %attr constructs
       if ($filesline =~ /\%attr\b/) {
-	# Extract %attr...
-	my ($args) = (/(\%attr\s*\(\s*[\d-]+\s*,\s*["a-zA-Z0-9-]+\s*,\s*["a-zA-Z0-9-]+\s*\))/);
-	$args =~ s/\s+//g;
-	$args =~ s/"//g;    # don't think quotes are ever necessary, but they're *allowed*
-	# ... and parse it ...
-	($perms,$owner,$group) = ($args =~ /\(([\d-]+),([a-zA-Z0-9-]+),([a-zA-Z0-9-]+)/);
-	# ... and wipe it when we're done.
-	$filesline =~ s/\%attr\s*\(\s*[\d-]+\s*,\s*["a-zA-Z0-9-]+\s*,\s*["a-zA-Z0-9-]+\s*\)//;
+        # Extract %attr...
+        my ($args) = (/(\%attr\s*\(\s*[\d-]+\s*,\s*["a-zA-Z0-9-]+\s*,\s*["a-zA-Z0-9-]+\s*\))/);
+        $args =~ s/\s+//g;
+        $args =~ s/"//g;    # don't think quotes are ever necessary, but they're *allowed*
+        # ... and parse it ...
+        ($perms,$owner,$group) = ($args =~ /\(([\d-]+),([a-zA-Z0-9-]+),([a-zA-Z0-9-]+)/);
+        # ... and wipe it when we're done.
+        $filesline =~ s/\%attr\s*\(\s*[\d-]+\s*,\s*["a-zA-Z0-9-]+\s*,\s*["a-zA-Z0-9-]+\s*\)//;
       }
 
       # Conffiles.  Note that Debian and RH have similar, but not
@@ -797,8 +797,8 @@ LINE: while (<SPECFILE>) {
 # hmm.  not sure if such is **POSSIBLE** with Debian...  maybe an addition to %post?
       if ($filesline =~ /\%config\b(?:\s*\(\s*noreplace\s*\)\s*)?/) {
         $pkgdata{$subname}{conffiles} = 1;  # Flag it for later
-	$conf = 'y';
-	$filesline =~ s/\%config\b(?:\s*\(\s*noreplace\s*\)\s*)?//;
+        $conf = 'y';
+        $filesline =~ s/\%config\b(?:\s*\(\s*noreplace\s*\)\s*)?//;
       }
 
       # %doc needs extra processing, because it can be a space-separated list, and may
@@ -812,20 +812,20 @@ LINE: while (<SPECFILE>) {
         $filesline =~ s/\s*\%doc\s+//;
 
 # this could probably go elsewhere.
-	my $pkgname = $pkgdata{$subname}{name};
-	$pkgname =~ tr/_/-/;
+        my $pkgname = $pkgdata{$subname}{name};
+        $pkgname =~ tr/_/-/;
 
-	# have to extract the partial pathnames that %doc installs automagically
-	foreach (split /\s+/, $filesline) {
-	  if (! (/^\%/ or m|^/|) ) {
-	    $doclist{$subname} .= " $_";
-	    my ($element) = m|([^/\s]+/?)$|;
-	    $filesline =~ s|$_|\%{_docdir}/$pkgname/$element|;
-	  }
-	}
+        # have to extract the partial pathnames that %doc installs automagically
+        foreach (split /\s+/, $filesline) {
+          if (! (/^\%/ or m|^/|) ) {
+            $doclist{$subname} .= " $_";
+            my ($element) = m|([^/\s]+/?)$|;
+            $filesline =~ s|$_|\%{_docdir}/$pkgname/$element|;
+          }
+        }
       } # $filesline =~ /\%doc\b/
 
-      $filesline =~ s/^\s*//;	# Just In Case.  For, uh, neatness.
+      $filesline =~ s/^\s*//;   # Just In Case.  For, uh, neatness.
 
 # due to Debian's total lack of real permissions-processing in its actual package
 # handling component (dpkg-deb), this can't really be done "properly".  We'll have
@@ -873,7 +873,7 @@ LINE: while (<SPECFILE>) {
         $specglobals{buildroot} = $1;
       } elsif (/^source0?:\s*(.+)/i) {
         $pkgdata{main}{source} = $1;
-	# .tar, .tar.gz, .tar.bz2, .tgz
+        # .tar, .tar.gz, .tar.bz2, .tgz
         die "Unknown tarball format $1\n" if $1 !~ /\.(?:tar(?:\.(?:gz|bz2))?|tgz)$/;
       } elsif (/^source([0-9]+):\s*(.+)/i) {
         $pkgdata{sources}{$1} = $2;
@@ -900,19 +900,19 @@ LINE: while (<SPECFILE>) {
         $pkgdata{main}{conflicts} .= ", $1";
       } elsif (/^recommends:\s*(.+)/i) {
         $pkgdata{main}{recommends} .= ", $1";
-	warn "Warning:  Debian-specific 'Recommends:' outside \%if wrapper\n" if $iflevel == 0;
+        warn "Warning:  Debian-specific 'Recommends:' outside \%if wrapper\n" if $iflevel == 0;
       } elsif (/^suggests:\s*(.+)/i) {
         $pkgdata{main}{suggests} .= ", $1";
-	warn "Warning:  Debian-specific 'Suggests:' outside \%if wrapper\n" if $iflevel == 0;
+        warn "Warning:  Debian-specific 'Suggests:' outside \%if wrapper\n" if $iflevel == 0;
       } elsif (/^enhances:\s*(.+)/i) {
         $pkgdata{main}{enhances} .= ", $1";
-	warn "Warning:  Debian-specific 'Enahnces:' outside \%if wrapper\n" if $iflevel == 0;
+        warn "Warning:  Debian-specific 'Enahnces:' outside \%if wrapper\n" if $iflevel == 0;
       } elsif (/^replaces:\s*(.+)/i) {
         $pkgdata{main}{replaces} .= ", $1";
-	warn "Warning:  Debian-specific 'Replaces:' outside \%if wrapper\n" if $iflevel == 0;
+        warn "Warning:  Debian-specific 'Replaces:' outside \%if wrapper\n" if $iflevel == 0;
       } elsif (/^autoreq(?:prov)?:\s*(.+)/i) {
-	# we don't handle auto-provides (yet)
-	$NoAutoReq = 1 if $1 =~ /(?:no|0)/i;
+        # we don't handle auto-provides (yet)
+        $NoAutoReq = 1 if $1 =~ /(?:no|0)/i;
       }
       next LINE;
     } # preamble
@@ -942,7 +942,7 @@ sub prep {
   # create script filename
   my $prepscriptfile = "$tmpdir/deb-tmp.prep.".int(rand(99998)+1);
   sysopen(PREPSCRIPT, $prepscriptfile, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW)
-	or die $!;
+        or die $!;
   print PREPSCRIPT $scriptletbase;
   print PREPSCRIPT $prepscript;
   close PREPSCRIPT;
@@ -950,7 +950,7 @@ sub prep {
   # execute
   print "Calling \%prep script $prepscriptfile...\n";
   system("/bin/sh -e $prepscriptfile") == 0
-	or die "Can't exec: $!\n";
+        or die "Can't exec: $!\n";
 
   # and clean up
   unlink $prepscriptfile;
@@ -966,7 +966,7 @@ sub build {
   # create script filename
   my $buildscriptfile = "$tmpdir/deb-tmp.build.".int(rand(99998)+1);
   sysopen(BUILDSCRIPT, $buildscriptfile, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW)
-	or die $!;
+        or die $!;
   print BUILDSCRIPT $scriptletbase;
   print BUILDSCRIPT $buildscript;
   close BUILDSCRIPT;
@@ -974,7 +974,7 @@ sub build {
   # execute
   print "Calling \%build script $buildscriptfile...\n";
   system("/bin/sh -e $buildscriptfile") == 0
-	or die "Can't exec: $!\n";
+        or die "Can't exec: $!\n";
 
   # and clean up
   unlink $buildscriptfile;
@@ -1005,7 +1005,7 @@ sub install {
   # create script filename
   my $installscriptfile = "$tmpdir/deb-tmp.inst.".int(rand(99998)+1);
   sysopen(INSTSCRIPT, $installscriptfile, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW)
-	or die $!;
+        or die $!;
   print INSTSCRIPT $scriptletbase;
   print INSTSCRIPT $installscript;
   close INSTSCRIPT;
@@ -1013,7 +1013,7 @@ sub install {
   # execute
   print "Calling \%install script $installscriptfile...\n";
   system("/bin/sh -e $installscriptfile") == 0
-	or die "Can't exec: $!\n";
+        or die "Can't exec: $!\n";
 
   # and clean up
   unlink $installscriptfile;
@@ -1028,23 +1028,23 @@ sub install {
       next if $mandir !~ /^man/;
       opendir MANPAGES, "$specglobals{buildroot}/usr/share/man/$mandir";
       my @pagelist = readdir MANPAGES;
-      closedir MANPAGES;			# Slightly safer to to this;  no accidental recursion.  O_o
+      closedir MANPAGES;                        # Slightly safer to to this;  no accidental recursion.  O_o
       foreach my $manpage (@pagelist) {
         $manpage = "$specglobals{buildroot}/usr/share/man/$mandir/$manpage";
         if ( -f $manpage) {
-	  if ($manpage =~ /^(.+)\.(?:Z|gz|bz2)\n?$/) {
-	    my $newpage = $1;
-	    `gunzip $manpage` if $manpage =~ /\.(?:Z|gz)$/;
-	    `bunzip2 $manpage` if $manpage =~ /\.bz2$/;
-	    $manpage = $newpage;
-	  }
-	  `gzip -9 -n $manpage`;
+          if ($manpage =~ /^(.+)\.(?:Z|gz|bz2)\n?$/) {
+            my $newpage = $1;
+            `gunzip $manpage` if $manpage =~ /\.(?:Z|gz)$/;
+            `bunzip2 $manpage` if $manpage =~ /\.bz2$/;
+            $manpage = $newpage;
+          }
+          `gzip -9 -n $manpage`;
         } elsif ( -l $manpage) {
-	  my $linkdest = readlink $manpage;
-	  $linkdest =~ s/\.(?:Z|gz|bz2)//;
-	  unlink $manpage;
-	  $manpage =~ s/\.(?:Z|gz|bz2)//;
-	  symlink "$linkdest.gz", "$manpage.gz" or print "DEBUG: wibble: symlinking manpage failed: $!\n";
+          my $linkdest = readlink $manpage;
+          $linkdest =~ s/\.(?:Z|gz|bz2)//;
+          unlink $manpage;
+          $manpage =~ s/\.(?:Z|gz|bz2)//;
+          symlink "$linkdest.gz", "$manpage.gz" or print "DEBUG: wibble: symlinking manpage failed: $!\n";
         }
       }
     }
@@ -1086,26 +1086,26 @@ sub binpackage {
 
       # Feh.  Manpages don't **NEED** to be gzipped, but rpmbuild does, and so shall we.
       if ($pkgfile =~ m|/usr/share/man/man|) {
-	# need to check to see if manpage is gzipped
-	if (-e "$specglobals{buildroot}$pkgfile") {
-	  if ($pkgfile !~ m|\.gz$|) {
-	    qx { gzip $specglobals{buildroot}$pkgfile };
-	    $pkgfile .= ".gz";
-	  }
-	} else {
-	  if ($pkgfile !~ m|\.gz$|) {
-	    $pkgfile .= ".gz";
-	  } else {
-	    $pkgfile =~ s/\.gz$//;
-	    qx { gzip $specglobals{buildroot}$pkgfile };
-	    $pkgfile .= ".gz";
-	  }
-	}
+        # need to check to see if manpage is gzipped
+        if (-e "$specglobals{buildroot}$pkgfile") {
+          if ($pkgfile !~ m|\.gz$|) {
+            qx { gzip $specglobals{buildroot}$pkgfile };
+            $pkgfile .= ".gz";
+          }
+        } else {
+          if ($pkgfile !~ m|\.gz$|) {
+            $pkgfile .= ".gz";
+          } else {
+            $pkgfile =~ s/\.gz$//;
+            qx { gzip $specglobals{buildroot}$pkgfile };
+            $pkgfile .= ".gz";
+          }
+        }
       }
 
-      my ($fpath,$fname) = ($pkgfile =~ m|(.+?/?)?([^/]+/?)$|);	# We don't need $fname now, but we might.
+      my ($fpath,$fname) = ($pkgfile =~ m|(.+?/?)?([^/]+/?)$|); # We don't need $fname now, but we might.
       qx { mkdir -p $specglobals{buildroot}/$pkg$fpath }
-	if $fpath && $fpath ne '';
+        if $fpath && $fpath ne '';
       qx { mv $specglobals{buildroot}$pkgfile $specglobals{buildroot}/$pkg$fpath };
     }
 
@@ -1116,7 +1116,7 @@ sub binpackage {
 
     # magic needed to properly version dependencies...
     # only provided deps will really be included
-    $pkgdata{$pkg}{requires} =~ s/^, //;	# Still have to do this here.
+    $pkgdata{$pkg}{requires} =~ s/^, //;        # Still have to do this here.
     $pkgdata{$pkg}{requires} =~ s/\s+//g;
     my @deps = split /,/, $pkgdata{$pkg}{requires};
     my $tmp = '';
@@ -1125,13 +1125,13 @@ sub binpackage {
       # May or may not be versioned.
       # We do this first so the version rewriter can do its magic next.
       if (my ($mod,$ver) = ($dep =~ /^perl\(([A-Za-z0-9\:\-]+)\)([><=]+.+)?/) ) {
-	$mod =~ s/^perl\(//;
-	$mod =~ s/\)$//;
-	$mod =~ s/::/-/g;
-	$mod =~ tr/A-Z/a-z/;
-	$mod = "lib$mod-perl";
-	$mod .= $ver if $ver;
-	$dep = $mod;
+        $mod =~ s/^perl\(//;
+        $mod =~ s/\)$//;
+        $mod =~ s/::/-/g;
+        $mod =~ tr/A-Z/a-z/;
+        $mod = "lib$mod-perl";
+        $mod .= $ver if $ver;
+        $dep = $mod;
       }
       if (my ($name,$rel,$value) = ($dep =~ /^([a-zA-Z0-9._-]+)([><=]+)([a-zA-Z0-9._-]+)$/)) {
         $tmp .= ", $name ($rel $value)";
@@ -1179,31 +1179,31 @@ sub binpackage {
     # create script filename
     my $debscriptfile = "$tmpdir/deb-tmp.pkg.".int(rand(99998)+1);
     sysopen(DEBSCRIPT, $debscriptfile, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW)
-	or die $!;
+        or die $!;
     print DEBSCRIPT $scriptletbase;
     print DEBSCRIPT "fakeroot dpkg-deb -b $specglobals{buildroot}/$pkg $topdir/DEBS/$pkgdata{$pkg}{arch}/".
-	"$pkgdata{$pkg}{name}_".
-	(defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
-	"$pkgdata{$pkg}{version}-$pkgdata{main}{release}_$pkgdata{$pkg}{arch}.deb\n";
+        "$pkgdata{$pkg}{name}_".
+        (defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
+        "$pkgdata{$pkg}{version}-$pkgdata{main}{release}_$pkgdata{$pkg}{arch}.deb\n";
       # %$&$%@#@@#%@@@ Debian and their horrible ugly package names.  >:(
     close DEBSCRIPT;
 
     my $control = "Package: $pkgdata{$pkg}{name}\n".
-	"Version: ".
-	(defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
-	"$pkgdata{$pkg}{version}-$pkgdata{main}{release}\n".
-	"Section: $pkgdata{$pkg}{group}\n".
-	"Priority: optional\n".
-	"Architecture: $pkgdata{$pkg}{arch}\n".
-	"Maintainer: $pkgdata{main}{packager}\n".
-	( $pkgdata{$pkg}{requires} ne '' ? "Depends: $pkgdata{$pkg}{requires}\n" : '' ).
-	( defined($pkgdata{$pkg}{provides}) ? "Provides: $pkgdata{$pkg}{provides}\n" : '' ).
-	( defined($pkgdata{$pkg}{conflicts}) ? "Conflicts: $pkgdata{$pkg}{conflicts}\n" : '' ).
-	( defined($pkgdata{$pkg}{recommends}) ? "Recommends: $pkgdata{$pkg}{recommends}\n" : '' ).
-	( defined($pkgdata{$pkg}{suggests}) ? "Suggests: $pkgdata{$pkg}{suggests}\n" : '' ).
-	( defined($pkgdata{$pkg}{enhances}) ? "Enhances: $pkgdata{$pkg}{enhances}\n" : '' ).
-	( defined($pkgdata{$pkg}{replaces}) ? "Replaces: $pkgdata{$pkg}{replaces}\n" : '' ).
-	"Description: $pkgdata{$pkg}{summary}\n";
+        "Version: ".
+        (defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
+        "$pkgdata{$pkg}{version}-$pkgdata{main}{release}\n".
+        "Section: $pkgdata{$pkg}{group}\n".
+        "Priority: optional\n".
+        "Architecture: $pkgdata{$pkg}{arch}\n".
+        "Maintainer: $pkgdata{main}{packager}\n".
+        ( $pkgdata{$pkg}{requires} ne '' ? "Depends: $pkgdata{$pkg}{requires}\n" : '' ).
+        ( defined($pkgdata{$pkg}{provides}) ? "Provides: $pkgdata{$pkg}{provides}\n" : '' ).
+        ( defined($pkgdata{$pkg}{conflicts}) ? "Conflicts: $pkgdata{$pkg}{conflicts}\n" : '' ).
+        ( defined($pkgdata{$pkg}{recommends}) ? "Recommends: $pkgdata{$pkg}{recommends}\n" : '' ).
+        ( defined($pkgdata{$pkg}{suggests}) ? "Suggests: $pkgdata{$pkg}{suggests}\n" : '' ).
+        ( defined($pkgdata{$pkg}{enhances}) ? "Enhances: $pkgdata{$pkg}{enhances}\n" : '' ).
+        ( defined($pkgdata{$pkg}{replaces}) ? "Replaces: $pkgdata{$pkg}{replaces}\n" : '' ).
+        "Description: $pkgdata{$pkg}{summary}\n";
     $control .= "$pkgdata{$pkg}{desc}\n";
 
     open CONTROL, ">$specglobals{buildroot}/$pkg/DEBIAN/control";
@@ -1215,13 +1215,13 @@ sub binpackage {
     if ($pkgdata{$pkg}{conffiles}) {
       open CONFLIST, ">$specglobals{buildroot}/$pkg/DEBIAN/conffiles";
       foreach my $conffile (@{$pkgdata{$pkg}{conflist}}) {
-	$conffile = expandmacros($conffile, 'g');
-	my @tmp = glob "$specglobals{buildroot}/$pkg/$conffile";
-	foreach (@tmp) {
-	  s|$specglobals{buildroot}/$pkg/||g;	# nrgl.  gotta be a better way to do this...
-	  s/\s+/\n/g;	# Not gonna support spaces in filenames.  Ewww.
-	  print CONFLIST "$_\n";
-	}
+        $conffile = expandmacros($conffile, 'g');
+        my @tmp = glob "$specglobals{buildroot}/$pkg/$conffile";
+        foreach (@tmp) {
+          s|$specglobals{buildroot}/$pkg/||g;   # nrgl.  gotta be a better way to do this...
+          s/\s+/\n/g;   # Not gonna support spaces in filenames.  Ewww.
+          print CONFLIST "$_\n";
+        }
       }
       close CONFLIST;
     }
@@ -1263,13 +1263,13 @@ sub binpackage {
     # execute
     print "Calling package creation script $debscriptfile for $pkgdata{$pkg}{name}...\n";
     system("/bin/sh -e $debscriptfile") == 0
-	or die "Can't exec: $!\n";
+        or die "Can't exec: $!\n";
 
     $finalmessages .= "Wrote binary package ".
-	"$pkgdata{$pkg}{name}_".
-	(defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
-	"$pkgdata{$pkg}{version}-$pkgdata{main}{release}_$pkgdata{$pkg}{arch}.deb".
-	" in $topdir/DEBS/$pkgdata{$pkg}{arch}\n";
+        "$pkgdata{$pkg}{name}_".
+        (defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
+        "$pkgdata{$pkg}{version}-$pkgdata{main}{release}_$pkgdata{$pkg}{arch}.deb".
+        " in $topdir/DEBS/$pkgdata{$pkg}{arch}\n";
     # and clean up
     unlink $debscriptfile;
 
@@ -1287,8 +1287,8 @@ sub srcpackage {
   # In case we were called with -bs.
   $pkgdata{main}{name} =~ tr/_/-/;
   my $pkgsrcname = "$pkgdata{main}{name}-".
-	(defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
-	"$pkgdata{main}{version}-$pkgdata{main}{release}.sdeb";
+        (defined($pkgdata{main}{epoch}) ? "$pkgdata{main}{epoch}:" : '').
+        "$pkgdata{main}{version}-$pkgdata{main}{release}.sdeb";
 
   my $paxcmd;
 
@@ -1341,7 +1341,7 @@ sub clean {
   # create script filename
   my $cleanscriptfile = "$tmpdir/deb-tmp.clean.".int(rand(99998)+1);
   sysopen(CLEANSCRIPT, $cleanscriptfile, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW)
-	or die $!;
+        or die $!;
   print CLEANSCRIPT $scriptletbase;
   print CLEANSCRIPT $cleanscript;
   close CLEANSCRIPT;
@@ -1349,7 +1349,7 @@ sub clean {
   # execute
   print "Calling \%clean script $cleanscriptfile...\n";
   system("/bin/sh -e $cleanscriptfile") == 0
-	or die "Can't exec: $!\n";
+        or die "Can't exec: $!\n";
 
   # and clean up
   unlink $cleanscriptfile;
@@ -1361,18 +1361,18 @@ sub clean {
 # Spits out a rude warning and returns a true-false error if any
 # requirements are not met.
 sub checkbuildreq {
-  return 1 if $buildreq eq '';	# No use doing extra work.
+  return 1 if $buildreq eq '';  # No use doing extra work.
 
   if ( ! -e "/usr/bin/dpkg-query" ) {
     print "**WARNING**  dpkg-query not found.  Can't check build-deps.\n".
-	"  Required for sucessful build:\n".$buildreq."\n".
-	"  Continuing anyway.\n";
+        "  Required for sucessful build:\n".$buildreq."\n".
+        "  Continuing anyway.\n";
     return 1;
   }
 
   my $reqflag = 1;  # unset iff a buildreq is missing
 
-  $buildreq =~ s/^, //;	# Strip the leading comma and space
+  $buildreq =~ s/^, //; # Strip the leading comma and space
   my @reqlist = split /,\s+/, $buildreq;
 
   foreach my $req (@reqlist) {
@@ -1398,8 +1398,8 @@ sub checkbuildreq {
     } else {
       my ($resp) = qx { dpkg --compare-versions $reqver '$rel' $ver && echo "ok" };
       if ($resp !~ /^ok/) {
-	$reqflag = 0;
-	print " * Buildreq $pkg is installed, but wrong version ($reqver):  Need $ver\n"
+        $reqflag = 0;
+        print " * Buildreq $pkg is installed, but wrong version ($reqver):  Need $ver\n"
       }
     } # end not installed/installed check
   } # end req loop
@@ -1445,12 +1445,12 @@ sub getreqs() {
   foreach (@reqlist) {
     next if /^$pkgtree/;
     next if /not a dynamic executable/;
-    next if m|/lib(?:64)?/ld-linux|;	# Hack! Hack!  PTHBTT!  (libc suxx0rz)
-    next if /linux-gate.so/;		# Kernel hackery for teh W1n!!1!1eleventy-one!1  (Don't ask.  Feh.)
+    next if m|/lib(?:64)?/ld-linux|;    # Hack! Hack!  PTHBTT!  (libc suxx0rz)
+    next if /linux-gate.so/;            # Kernel hackery for teh W1n!!1!1eleventy-one!1  (Don't ask.  Feh.)
 
     my ($req) = (m|=\>\s+([a-z0-9._/-]+)|); # dig out the actual library (so)name.
-	# And feh, we need the *path*, since I've discovered a new edge case where
-	# the same libnnn.1.2.3 *file*name is found across *several* lib dirs.  >:(
+        # And feh, we need the *path*, since I've discovered a new edge case where
+        # the same libnnn.1.2.3 *file*name is found across *several* lib dirs.  >:(
 
     # Ignore libs provided by this package.  Note that we don't match
     # on word-boundary at the *end* of the lib we're looking for, as the
@@ -1511,22 +1511,22 @@ sub expandmacros {
   if ($section =~ /c/) {
     # %configure macro
 # Don't know what it's for, don't have a useful default replacement
-# 	--program-prefix=%{_program_prefix} \
+#       --program-prefix=%{_program_prefix} \
     $macrostring =~ s'%configure'./configure --host=$DEB_HOST_GNU_TYPE \
-	--build=$DEB_BUILD_GNU_TYPE \
-	--prefix=%{_prefix} \
-	--exec-prefix=%{_exec_prefix} \
-	--bindir=%{_bindir} \
-	--sbindir=%{_sbindir} \
-	--sysconfdir=%{_sysconfdir} \
-	--datadir=%{_datadir} \
-	--includedir=%{_includedir} \
-	--libdir=%{_libdir} \
-	--libexecdir=%{_libexecdir} \
-	--localstatedir=%{_localstatedir} \
-	--sharedstatedir=%{_sharedstatedir} \
-	--mandir=%{_mandir} \
-	--infodir=%{_infodir} ';
+        --build=$DEB_BUILD_GNU_TYPE \
+        --prefix=%{_prefix} \
+        --exec-prefix=%{_exec_prefix} \
+        --bindir=%{_bindir} \
+        --sbindir=%{_sbindir} \
+        --sysconfdir=%{_sysconfdir} \
+        --datadir=%{_datadir} \
+        --includedir=%{_includedir} \
+        --libdir=%{_libdir} \
+        --libexecdir=%{_libexecdir} \
+        --localstatedir=%{_localstatedir} \
+        --sharedstatedir=%{_sharedstatedir} \
+        --mandir=%{_mandir} \
+        --infodir=%{_infodir} ';
   } # done %configure
 
   if ($section =~ /m/) {
@@ -1558,20 +1558,20 @@ sub expandmacros {
   # Note that these are processed in reverse order to get the substitution order right
   if ($section =~ /b/) {
 #    $macrostring =~ s'%{fhs}'host=$DEB_HOST_GNU_TYPE \
-#	build=$DEB_BUILD_GNU_TYPE \
+#       build=$DEB_BUILD_GNU_TYPE \
     $macrostring =~ s'%{fhs}'prefix=%{_prefix} \
-	exec-prefix=%{_exec_prefix} \
-	bindir=%{_bindir} \
-	sbindir=%{_sbindir} \
-	sysconfdir=%{_sysconfdir} \
-	datadir=%{_datadir} \
-	includedir=%{_includedir} \
-	libdir=%{_libdir} \
-	libexecdir=%{_libexecdir} \
-	localstatedir=%{_localstatedir} \
-	sharedstatedir=%{_sharedstatedir} \
-	mandir=%{_mandir} \
-	infodir=%{_infodir} \
+        exec-prefix=%{_exec_prefix} \
+        bindir=%{_bindir} \
+        sbindir=%{_sbindir} \
+        sysconfdir=%{_sysconfdir} \
+        datadir=%{_datadir} \
+        includedir=%{_includedir} \
+        libdir=%{_libdir} \
+        libexecdir=%{_libexecdir} \
+        localstatedir=%{_localstatedir} \
+        sharedstatedir=%{_sharedstatedir} \
+        mandir=%{_mandir} \
+        infodir=%{_infodir} \
 ';
 
     # Note that the above regex terminates with the extra space
@@ -1580,22 +1580,22 @@ sub expandmacros {
     # over the "default" ones.
 
     # Now we cascade the macros introduced above.  >_<
-									# Wot ot to go theah:
-    $macrostring =~ s|%{_mandir}|%{_datadir}/man|g;			#/usr/share/man
-    $macrostring =~ s|%{_infodir}|%{_datadir}/info|g;			#/usr/share/info
-    $macrostring =~ s|%{_oldincludedir}|/usr/include|g;		#/usr/include
-    $macrostring =~ s|%{_includedir}|%{_prefix}/include|g;	#/usr/include
-    $macrostring =~ s|%{_libdir}|%{_exec_prefix}/%{_lib}|g;	#/usr/lib
-    $macrostring =~ s|%{_lib}|lib|g;					#?
-    $macrostring =~ s|%{_localstatedir}|/var|g;			#/var
-    $macrostring =~ s|%{_sharedstatedir}|%{_prefix}/com|g;	#/usr/com WTF?
-    $macrostring =~ s|%{_sysconfdir}|/etc|g;			#/etc
-    $macrostring =~ s|%{_datadir}|%{_prefix}/share|g;		#/usr/share
-    $macrostring =~ s|%{_libexecdir}|%{_exec_prefix}/libexec|g;	#/usr/libexec
-    $macrostring =~ s|%{_sbindir}|%{_exec_prefix}/sbin|g;	#/usr/sbin
-    $macrostring =~ s|%{_bindir}|%{_exec_prefix}/bin|g;		#/usr/bin
-    $macrostring =~ s|%{_exec_prefix}|%{_prefix}|g;		#/usr
-    $macrostring =~ s|%{_prefix}|/usr|g;				#/usr
+                                                                        # Wot ot to go theah:
+    $macrostring =~ s|%{_mandir}|%{_datadir}/man|g;                     #/usr/share/man
+    $macrostring =~ s|%{_infodir}|%{_datadir}/info|g;                   #/usr/share/info
+    $macrostring =~ s|%{_oldincludedir}|/usr/include|g;         #/usr/include
+    $macrostring =~ s|%{_includedir}|%{_prefix}/include|g;      #/usr/include
+    $macrostring =~ s|%{_libdir}|%{_exec_prefix}/%{_lib}|g;     #/usr/lib
+    $macrostring =~ s|%{_lib}|lib|g;                                    #?
+    $macrostring =~ s|%{_localstatedir}|/var|g;                 #/var
+    $macrostring =~ s|%{_sharedstatedir}|%{_prefix}/com|g;      #/usr/com WTF?
+    $macrostring =~ s|%{_sysconfdir}|/etc|g;                    #/etc
+    $macrostring =~ s|%{_datadir}|%{_prefix}/share|g;           #/usr/share
+    $macrostring =~ s|%{_libexecdir}|%{_exec_prefix}/libexec|g; #/usr/libexec
+    $macrostring =~ s|%{_sbindir}|%{_exec_prefix}/sbin|g;       #/usr/sbin
+    $macrostring =~ s|%{_bindir}|%{_exec_prefix}/bin|g;         #/usr/bin
+    $macrostring =~ s|%{_exec_prefix}|%{_prefix}|g;             #/usr
+    $macrostring =~ s|%{_prefix}|/usr|g;                                #/usr
   } # done with config section
 
   # Package data
@@ -1639,14 +1639,14 @@ sub expandmacros {
       # Oy vey this gets silly for the perl bits.  Executing a shell to
       # call Perl to get the vendorlib/sitelib/whatever "core" globals.
       # This can do more, but...  eww.
-      $shellstr = qx { /bin/sh -c '$shellstr' };	# Yay!  ' characters apparently get properly exscapededed.
+      $shellstr = qx { /bin/sh -c '$shellstr' };        # Yay!  ' characters apparently get properly exscapededed.
       $macrostring =~ s/\%\(.+\)/$shellstr/;
     }
 
     # support for **some** %if constructs.  Note that this breaks somewhat if
     # there's no value specified...  but so does rpm.
 
-    my $tmpcount = 0;	# runaway shutdown.  Not really sure how else to avoid getting stuck.
+    my $tmpcount = 0;   # runaway shutdown.  Not really sure how else to avoid getting stuck.
     while ($macrostring =~ m/\%\{([?!]+)([a-z0-9_.-]+)(?:\:([a-z0-9_.\/\-\\]+)?)?\}/g) {       #Whew....
       my $qex = $1;
       my $macro = $2;
@@ -1654,9 +1654,9 @@ sub expandmacros {
 
       my $neg = '1' if $qex =~ /\!/;
       if ($specglobals{$macro}) {
-	$value = '' if $neg;
+        $value = '' if $neg;
       } else {
-	$value = '' if !$neg;
+        $value = '' if !$neg;
       }
       $macrostring =~ s/\%\{[?!]+[a-z0-9_.-]+(?:\:([a-z0-9_.\/\-\\]+)?)?\}/$value/;
 
@@ -1678,7 +1678,7 @@ die "excessive recursive macro replacement;  dying.\n" if $tmpcount > 14;
 # hrm.  This needs thinking.
 #die "A horrible death!  \%{$key}, '$macrostring'\n" if !$specglobals{$key};
       $macrostring =~ s|%{$key}|$specglobals{$key}|g;
-		# wanna limit this to "... if $specglobals{$key}", but need more magic
+                # wanna limit this to "... if $specglobals{$key}", but need more magic
     }
 
     # system programs.  RPM uses a global config file for these;  we'll just

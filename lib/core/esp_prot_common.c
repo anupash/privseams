@@ -19,10 +19,10 @@
 /**
  * Checks if the passed transform is one of our locally preferred transforms
  *
- * @param	num_transforms amount of transforms contained in the array
- * @param	preferred_transforms the transforms against which should be checked
- * @param	transform the ESP protection extension transform to be checked
- * @return	index in the preferred_transforms array, -1 if no match found
+ * @param       num_transforms amount of transforms contained in the array
+ * @param       preferred_transforms the transforms against which should be checked
+ * @param       transform the ESP protection extension transform to be checked
+ * @return      index in the preferred_transforms array, -1 if no match found
  */
 int esp_prot_check_transform(const int num_transforms,
                              const uint8_t *preferred_transforms,

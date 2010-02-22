@@ -64,15 +64,15 @@ build_rpm()
 
     for SUBDIR in $SUBRPMDIRS
     do
-	if test ! -d $RPMBUILD/$SUBDIR
-	then
-	    $SUDO mkdir -p $RPMBUILD/$SUBDIR
-	fi
+        if test ! -d $RPMBUILD/$SUBDIR
+        then
+            $SUDO mkdir -p $RPMBUILD/$SUBDIR
+        fi
     done
 
     # fix this hack -miika
     test -d $RPMBUILD/RPMS/i586 && \
-	cp -a $RPMBUILD/RPMS/i586 $RPMBUILD/RPMS/i386
+        cp -a $RPMBUILD/RPMS/i586 $RPMBUILD/RPMS/i386
 
     $SUDO mv -f $TARBALL $RPMBUILD/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
@@ -89,7 +89,7 @@ mkindex_rpm()
     test ! -d $PKG_INDEX && mkdir $PKG_INDEX
     # fix this hack -miika
     test -d  /tmp/hipl--main--2.6/buildenv/RPMS/i586 && \
-	cp -a /tmp/hipl--main--2.6/buildenv/RPMS/i586 /tmp/hipl--main--2.6/buildenv/RPMS/i386
+        cp -a /tmp/hipl--main--2.6/buildenv/RPMS/i586 /tmp/hipl--main--2.6/buildenv/RPMS/i386
     #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
     $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
@@ -101,8 +101,8 @@ mkindex_deb()
     WD=`echo $PKG_WEB_DIR|sed 's/\//\\\\\//g'`
     #dpkg-scanpackages --multiversion . |
     dpkg-scanpackages . | \
-	sed "s/Filename: \./Filename: $WD/" | \
-	gzip -9c > $PKG_INDEX
+        sed "s/Filename: \./Filename: $WD/" | \
+        gzip -9c > $PKG_INDEX
     cd $ORIG
 }
 
@@ -114,12 +114,12 @@ syncrepo()
     # build index of all packages
     if test x"$DISTROBASE" = x"debian"
     then
-	mkindex_deb
+        mkindex_deb
     elif test x"$DISTROBASE" = x"redhat"
     then
-	mkindex_rpm
+        mkindex_rpm
     else
-	die "Unhandled distro $DISTROBASE"
+        die "Unhandled distro $DISTROBASE"
     fi
 
     # Delete old packages from the repo
@@ -134,28 +134,28 @@ build_deb()
 {
     if dpkg --print-architecture|grep -q armel
     then
-	build_maemo_deb
-	exit 0
+        build_maemo_deb
+        exit 0
     fi
 
     test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
     if test -e ~/debbuild
     then
-	echo "Warning: ~/debbuild found, could be a problem"
-	echo "It should be a link to /usr/src/debian"
+        echo "Warning: ~/debbuild found, could be a problem"
+        echo "It should be a link to /usr/src/debian"
     fi
 
     if test ! -x /usr/bin/pax
     then
-	die "apt-get install pax"
+        die "apt-get install pax"
     fi
 
     for SUBDIR in $SUBDEBDIRS
     do
-	if test ! -d $DEBDIR/$SUBDIR
-	then
-	    mkdir -p $DEBDIR/$SUBDIR
-	fi
+        if test ! -d $DEBDIR/$SUBDIR
+        then
+            mkdir -p $DEBDIR/$SUBDIR
+        fi
     done
 
     cp $SPECFILE $DEBDIR/SPECS
@@ -221,12 +221,12 @@ elif test x"$1" = x"bin"
 then
     if test x"$DISTROBASE" = x"redhat"
     then
-	BIN_FORMAT=rpm
+        BIN_FORMAT=rpm
     elif test x"$DISTROBASE" = x"debian"
     then
-	BIN_FORMAT=deb
+        BIN_FORMAT=deb
     else
-	die "Unknown distro"
+        die "Unknown distro"
     fi
 fi
 echo "Architecture: $ARCH"
@@ -261,4 +261,3 @@ then
 else
     die "*** Unknown platform, aborting ***"
 fi
-
