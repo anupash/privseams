@@ -539,11 +539,7 @@ struct hip_hadb_rcv_func_set {
     /* as there is possibly no state established when i2
      * messages are received, the hip_handle_i2 function pointer
      * is not executed during the establishment of a new connection*/
-    int (*hip_receive_i2)(struct hip_common *,
-                          struct in6_addr *,
-                          struct in6_addr *,
-                          hip_ha_t *,
-                          hip_portpair_t *);
+    int (*hip_receive_i2)(struct hip_packet_context *ctx);
 
     int (*hip_receive_r2)(struct hip_common *,
                           struct in6_addr *,
@@ -587,11 +583,7 @@ struct hip_hadb_handle_func_set {
     /* as there is possibly no state established when i2
      * messages are received, the hip_handle_i2 function pointer
      * is not executed during the establishment of a new connection*/
-    int (*hip_handle_i2)(struct hip_common *i2,
-                         struct in6_addr *i2_saddr,
-                         struct in6_addr *i2_daddr,
-                         hip_ha_t *ha,
-                         hip_portpair_t *i2_info);
+    int (*hip_handle_i2)(struct hip_packet_context *ctx);
 
     int (*hip_handle_r2)(struct hip_common *r2,
                          struct in6_addr *r2_saddr,

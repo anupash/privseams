@@ -92,8 +92,7 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 //FIXME inconsistence usage in input.c, once via function pointer, once a direct
 //function call
-int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
-                   hip_ha_t *entry, hip_portpair_t *i2_info);
+int hip_receive_i2(struct hip_packet_context *ctx);
 
 int hip_receive_r2(struct hip_common *hip_common, struct in6_addr *r2_saddr,
                    struct in6_addr *r2_daddr, hip_ha_t *entry, hip_portpair_t *r2_info);
@@ -113,8 +112,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 //FIXME inconsistence usage in input.c, different function pointers and a
 //direct function call
-int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
-                  hip_ha_t *ha, hip_portpair_t *i2_info);
+int hip_handle_i2(struct hip_packet_context *ctx);
 
 int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
                   hip_ha_t *entry, hip_portpair_t *r2_info);
