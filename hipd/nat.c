@@ -154,8 +154,6 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
         goto out_err;
     }
 
-
-    entry->hadb_misc_func->
     hip_build_network_hdr(msg, HIP_NOTIFY,
                           0, &entry->hit_our,
                           &entry->hit_peer);
@@ -168,7 +166,6 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
      * choose to use other than hip_get_nat_udp_port() as source port, but we must use hip_get_nat_udp_port()
      * as destination port. However, because it is recommended to use
      * hip_get_nat_udp_port() as source port also, we choose to do so here. */
-    entry->hadb_xmit_func->
     hip_send_pkt(&entry->our_addr, &entry->peer_addr,
                  entry->local_udp_port, entry->peer_udp_port, msg,
                  entry, 0);
@@ -253,29 +250,28 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry)
  */
 int hip_user_nat_mode(int nat_mode)
 {
-    int err = 0, nat;
+    int err = 0;
     HIP_DEBUG("hip_user_nat_mode() invoked. mode: %d\n", nat_mode);
 #if HIP_UDP_PORT_RANDOMIZING
     hip_nat_randomize_nat_ports();
 #endif
 
-    nat = nat_mode;
-    switch (nat) {
+    switch (nat_mode) {
     case SO_HIP_SET_NAT_PLAIN_UDP:
-        nat = HIP_NAT_MODE_PLAIN_UDP;
+        nat_mode = HIP_NAT_MODE_PLAIN_UDP;
         break;
     case SO_HIP_SET_NAT_NONE:
-        nat = HIP_NAT_MODE_NONE;
+        nat_mode = HIP_NAT_MODE_NONE;
         break;
     default:
         err = -1;
         HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
     }
-    HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, (void *) &nat), 0,
+    HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, (void *) &nat_mode), 0,
              "Error from for_each_ha().\n");
-    //set the nat mode for the host
-    hip_nat_status = nat;
 
+    /* set the NAT mode for the host */
+    hip_nat_status = nat_mode;
 
     HIP_DEBUG("hip_user_nat_mode() end. mode: %d\n", hip_nat_status);
 
@@ -309,7 +305,7 @@ static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 {
     int err = 0;
     if (entry && mode != HIP_NAT_MODE_NONE) {
-        hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+        //hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
         entry->nat_mode = *((hip_transform_suite_t *) mode);
         HIP_DEBUG("NAT status of host association %p: %d\n",
                   entry, entry->nat_mode);

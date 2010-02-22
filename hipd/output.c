@@ -361,13 +361,7 @@ static int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
     HIP_DEBUG_HIT("BEFORE sending", peer_addr);
-    err = entry->hadb_xmit_func-> hip_send_pkt(local_addr,
-                                               peer_addr,
-                                               src_port,
-                                               dst_port,
-                                               i1,
-                                               entry,
-                                               1);
+    err = hip_send_pkt(local_addr, peer_addr, src_port, dst_port, i1, entry, 1);
 
     HIP_DEBUG("err after sending: %d.\n", err);
 
@@ -443,11 +437,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
     i1 = hip_msg_alloc();
 
-    entry->hadb_misc_func-> hip_build_network_hdr(i1,
-                                                  HIP_I1,
-                                                  mask,
-                                                  &entry->hit_our,
-                                                  dst_hit);
+    hip_build_network_hdr(i1, HIP_I1, mask, &entry->hit_our, dst_hit);
 
     /* Calculate the HIP header length */
     hip_calc_hdr_len(i1);

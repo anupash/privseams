@@ -1933,9 +1933,9 @@ int hip_solve_puzzle_m(struct hip_common *out,
         tmp.opaque[0] = tmp.opaque[1] = 0;
         tmp.I         = *digist & 0x40; //truncate I to 8 byte length
 
-        HIP_IFEL((solution = entry->hadb_misc_func->hip_solve_puzzle(
-                      &tmp, in, HIP_SOLVE_PUZZLE)) == 0,
-                 -EINVAL, "Solving of puzzle failed\n");
+        HIP_IFEL((solution = hip_solve_puzzle(&tmp, in, HIP_SOLVE_PUZZLE)) == 0,
+                 -EINVAL,
+                 "Solving of puzzle failed\n");
 
         HIP_IFEL(hip_build_param_challenge_response(out, pz, ntoh64(solution)) < 0,
                  -1,

@@ -47,11 +47,6 @@ static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
                                const struct in6_addr *ip_peer,
                                const struct in6_addr *ip_our,
                                const struct sockaddr_in6 *caller);
-static int hip_receive_opp_r1(struct hip_common *msg,
-                              struct in6_addr *src_addr,
-                              struct in6_addr *dst_addr,
-                              hip_ha_t *opp_entry,
-                              hip_portpair_t *msg_info);
 static int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *ips);
 
 static unsigned long hip_oppdb_hash_hit(const void *ptr)
@@ -216,6 +211,7 @@ out_err:
     return err;
 }
 
+#if 0
 static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
 {
     hip_opp_info_t *opp_info = (hip_opp_info_t *) ptr;
@@ -233,6 +229,7 @@ static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
 out_err:
     return err;
 }
+#endif
 
 static hip_opp_block_t *hip_create_opp_block_entry(void)
 {
@@ -364,6 +361,8 @@ out_err:
     return entry;
 }
 
+
+#if 0
 static int hip_receive_opp_r1(struct hip_common *msg,
                               struct in6_addr *src_addr,
                               struct in6_addr *dst_addr,
@@ -428,21 +427,18 @@ static int hip_receive_opp_r1(struct hip_common *msg,
     ipv6_addr_copy(&opp_info.peer_addr, src_addr);
     hip_for_each_opp(hip_oppdb_unblock_group, &opp_info);
 
-
     /* why is the receive entry still pointing to hip_receive_opp_r1 ? */
-    entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
+    /* @todo is this function set needed? */
+    //entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
     HIP_IFCS(entry,
-             (err = entry->hadb_rcv_func->hip_receive_r1(msg,
-                                                         src_addr,
-                                                         dst_addr,
-                                                         entry,
-                                                         msg_info)));
+             (err = hip_receive_r1(msg, src_addr, dst_addr, entry, msg_info)));
     hip_del_peer_info_entry(opp_entry);
 
 out_err:
 
     return err;
 }
+#endif
 
 hip_ha_t *hip_opp_add_map(const struct in6_addr *dst_ip,
                           const struct in6_addr *hit_our,
@@ -486,7 +482,8 @@ hip_ha_t *hip_opp_add_map(const struct in6_addr *dst_ip,
              "Did not find entry\n");
 
     /* Override the receiving function */
-    ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
+    /* @todo is this function set needed? */
+    //ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
 
     HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, &src_ip,
                                  caller), -1, "Add db failed\n");
@@ -615,7 +612,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
              "Did not find entry\n");
 
     /* Override the receiving function */
-    ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
+    /* @todo is this function set needed? */
+    //ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
 
     //entry = hip_oppdb_find_byhits(&phit, src);
     //HIP_ASSERT(!entry);

@@ -910,8 +910,7 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
                     type, granted_lifetime, &(entry->hit_peer),
                     &(entry->peer_addr),
                     entry->peer_udp_port,
-                    &(entry->hip_hmac_in),
-                    entry->hadb_xmit_func->hip_send_pkt);
+                    &(entry->hip_hmac_in));
 
                 hip_relht_put(new_record);
 

@@ -409,10 +409,9 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
                                const uint8_t lifetime,
                                const in6_addr_t *hit_r, const hip_hit_t *ip_r,
                                const in_port_t port,
-                               const hip_crypto_key_t *hmac,
-                               const hip_xmit_func_t func)
+                               const hip_crypto_key_t *hmac)
 {
-    if (hit_r == NULL || ip_r == NULL || hmac == NULL || func == NULL) {
+    if (hit_r == NULL || ip_r == NULL || hmac == NULL) {
         return NULL;
     }
 
@@ -427,7 +426,6 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
     memcpy(&(rec->ip_r), ip_r, sizeof(*ip_r));
     rec->udp_port_r = port;
     memcpy(&(rec->hmac_relay), hmac, sizeof(*hmac));
-    rec->send_fn    = func;
     hip_relrec_set_lifetime(rec, lifetime);
     rec->created    = time(NULL);
 
@@ -729,7 +727,7 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
                               rec->udp_port_r, msg_to_be_relayed, NULL, 0),
                  -ECOMM, "Relaying the packet failed.\n");
     } else {
-        HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
+        HIP_IFEL(hip_send_pkt(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
                               rec->udp_port_r, msg_to_be_relayed, NULL, 0),
                  -ECOMM, "Relaying the packet failed.\n");
     }

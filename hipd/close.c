@@ -65,11 +65,11 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
     HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
 
-    entry->hadb_misc_func->hip_build_network_hdr(close,
-                                                 HIP_CLOSE,
-                                                 mask,
-                                                 &entry->hit_our,
-                                                 &entry->hit_peer);
+    hip_build_network_hdr(close,
+                          HIP_CLOSE,
+                          mask,
+                          &entry->hit_our,
+                          &entry->hit_peer);
 
     /********ECHO (SIGNED) **********/
 
@@ -88,8 +88,7 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
              -EINVAL,
              "Could not create signature.\n");
 
-    HIP_IFEL(entry->hadb_xmit_func->
-             hip_send_pkt(NULL, &entry->peer_addr,
+    HIP_IFEL(hip_send_pkt(NULL, &entry->peer_addr,
                           (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                           entry->peer_udp_port, close, entry, 0),
              -ECOMM, "Sending CLOSE message failed.\n");
@@ -205,9 +204,11 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
              -1, "No echo request under signature.\n");
     echo_len = hip_get_param_contents_len(request);
 
-    entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
-                                                 mask, &entry->hit_our,
-                                                 &entry->hit_peer);
+    hip_build_network_hdr(close_ack,
+                          HIP_CLOSE_ACK,
+                          mask,
+                          &entry->hit_our,
+                          &entry->hit_peer);
 
     HIP_IFEL(hip_build_param_echo(close_ack, request + 1,
                                   echo_len, 1, 0), -1,
@@ -222,8 +223,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
     HIP_IFEL(entry->sign(entry->our_priv_key, close_ack), -EINVAL,
              "Could not create signature.\n");
 
-    HIP_IFEL(entry->hadb_xmit_func->
-             hip_send_pkt(NULL, &entry->peer_addr, hip_get_local_nat_udp_port(),
+    HIP_IFEL(hip_send_pkt(NULL, &entry->peer_addr, hip_get_local_nat_udp_port(),
                           entry->peer_udp_port,
                           close_ack, entry, 0),
              -ECOMM, "Sending CLOSE ACK message failed.\n");
@@ -294,7 +294,7 @@ int hip_receive_close(struct hip_common *close,
     switch (state) {
     case HIP_STATE_ESTABLISHED:
     case HIP_STATE_CLOSING:
-        err = entry->hadb_handle_func->hip_handle_close(close, entry);
+        err = hip_handle_close(close, entry);
         break;
     default:
         HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -407,7 +407,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
     switch (state) {
     case HIP_STATE_CLOSING:
     case HIP_STATE_CLOSED:
-        err = entry->hadb_handle_func->hip_handle_close_ack(close_ack, entry);
+        err = hip_handle_close_ack(close_ack, entry);
         break;
     default:
         HIP_ERROR("Internal state (%d) is incorrect\n", state);

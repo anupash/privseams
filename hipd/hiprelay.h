@@ -120,8 +120,6 @@ typedef struct {
     in_port_t        udp_port_r;
     /** Integrity key established while registration occurred. */
     hip_crypto_key_t hmac_relay;
-    /** Function pointer to send function (raw or udp). */
-    hip_xmit_func_t  send_fn;
 } hip_relrec_t;
 
 /**
@@ -323,8 +321,7 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
                                const uint8_t lifetime,
                                const in6_addr_t *hit_r, const hip_hit_t *ip_r,
                                const in_port_t port,
-                               const hip_crypto_key_t *hmac,
-                               const hip_xmit_func_t func);
+                               const hip_crypto_key_t *hmac);
 
 /**
  * Deletes all entries of @c type from the relay record hashtable and frees the

@@ -49,11 +49,11 @@ static int esp_prot_send_update_response(const hip_common_t *recv_update,
 
     HIP_IFEL(!(resp_update = hip_msg_alloc()), -ENOMEM, "out of memory\n");
 
-    entry->hadb_misc_func->hip_build_network_hdr(resp_update,
-                                                 HIP_UPDATE,
-                                                 mask,
-                                                 &recv_update->hitr,
-                                                 &recv_update->hits);
+    hip_build_network_hdr(resp_update,
+                          HIP_UPDATE,
+                          mask,
+                          &recv_update->hitr,
+                          &recv_update->hits);
 
     /* Add ESP_INFO */
     HIP_IFEL(hip_build_param_esp_info(resp_update,
@@ -77,11 +77,13 @@ static int esp_prot_send_update_response(const hip_common_t *recv_update,
     HIP_IFEL(entry->sign(entry->our_priv_key, resp_update), -EINVAL,
              "Could not sign UPDATE. Failing\n");
 
-    HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_ip,
-                                                 dst_ip,
-                                                 (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                                 entry->peer_udp_port,
-                                                 resp_update, entry, 0),
+    HIP_IFEL(hip_send_pkt(src_ip,
+                          dst_ip,
+                          (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                          entry->peer_udp_port,
+                          resp_update,
+                          entry,
+                          0),
              -1,
              "failed to send ANCHOR-UPDATE\n");
 
@@ -925,18 +927,18 @@ int esp_prot_handle_update(const hip_common_t *recv_update, hip_ha_t *entry,
         entry->update_state = 0;
 
         // notify sadb about next anchor
-        HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_ip,
-                                                    src_ip,
-                                                    &entry->hit_our,
-                                                    &entry->hit_peer,
-                                                    entry->spi_outbound_new,
-                                                    entry->esp_transform,
-                                                    &entry->esp_out,
-                                                    &entry->auth_out,
-                                                    0,
-                                                    HIP_SPI_DIRECTION_OUT,
-                                                    1,
-                                                    entry),
+        HIP_IFEL(hip_add_sa(dst_ip,
+                            src_ip,
+                            &entry->hit_our,
+                            &entry->hit_peer,
+                            entry->spi_outbound_new,
+                            entry->esp_transform,
+                            &entry->esp_out,
+                            &entry->auth_out,
+                            0,
+                            HIP_SPI_DIRECTION_OUT,
+                            1,
+                            entry),
                  -1,
                  "failed to notify sadb about next anchor\n");
     } else {

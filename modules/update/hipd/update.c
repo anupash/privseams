@@ -77,9 +77,11 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
         HIP_DEBUG("UPDATE without locators\n");
     }
 
-    ha->hadb_misc_func->hip_build_network_hdr(update_packet_to_send, HIP_UPDATE,
-                                              mask, &ha->hit_our,
-                                              &ha->hit_peer);
+    hip_build_network_hdr(update_packet_to_send,
+                          HIP_UPDATE,
+                          mask,
+                          &ha->hit_our,
+                          &ha->hit_peer);
 
     // Add ESP_INFO
     if (type == HIP_UPDATE_LOCATOR || type == HIP_UPDATE_ECHO_REQUEST) {
@@ -231,8 +233,8 @@ static int hip_send_update_pkt(hip_common_t *update_packet_to_send,
 
     // TODO: set the local address unverified for that dst_hit();
 
-    err = ha->hadb_xmit_func->
-          hip_send_pkt(src_addr, dst_addr,
+    err = hip_send_pkt(src_addr,
+                       dst_addr,
                        (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
                        ha->peer_udp_port, update_packet_to_send, ha, 1);
 

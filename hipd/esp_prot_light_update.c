@@ -38,9 +38,11 @@ static int esp_prot_send_light_ack(hip_ha_t *entry, const in6_addr_t *src_addr,
     HIP_IFEL(!(light_ack = hip_msg_alloc()), -ENOMEM,
              "failed to allocate memory\n");
 
-    entry->hadb_misc_func->hip_build_network_hdr(light_ack, HIP_LUPDATE,
-                                                 mask, &entry->hit_our,
-                                                 &entry->hit_peer);
+    hip_build_network_hdr(light_ack,
+                          HIP_LUPDATE,
+                          mask,
+                          &entry->hit_our,
+                          &entry->hit_peer);
 
     /* Add ESP_INFO */
     HIP_IFEL(hip_build_param_esp_info(light_ack, entry->current_keymat_index,
@@ -54,10 +56,13 @@ static int esp_prot_send_light_ack(hip_ha_t *entry, const in6_addr_t *src_addr,
     HIP_IFEL(hip_build_param_hmac_contents(light_ack, &entry->hip_hmac_out), -1,
              "Building of HMAC failed\n");
 
-    HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_addr, dst_addr,
-                                                 (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                                 entry->peer_udp_port,
-                                                 light_ack, entry, 0),
+    HIP_IFEL(hip_send_pkt(src_addr,
+                          dst_addr,
+                          (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                          entry->peer_udp_port,
+                          light_ack,
+                          entry,
+                          0),
              -1,
              "failed to send ANCHOR-UPDATE\n");
 
@@ -91,8 +96,11 @@ int esp_prot_send_light_update(hip_ha_t *entry,
     HIP_IFEL(!(light_update = hip_msg_alloc()), -ENOMEM,
              "failed to allocate memory\n");
 
-    entry->hadb_misc_func->hip_build_network_hdr(light_update, HIP_LUPDATE,
-                                                 mask, &entry->hit_our, &entry->hit_peer);
+    hip_build_network_hdr(light_update,
+                          HIP_LUPDATE,
+                          mask,
+                          &entry->hit_our,
+                          &entry->hit_peer);
 
     /********************* add SEQ *********************/
 
@@ -142,13 +150,13 @@ int esp_prot_send_light_update(hip_ha_t *entry,
     /* send the packet with retransmission enabled */
     entry->light_update_retrans = 1;
 
-    HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(&entry->our_addr,
-                                                 &entry->peer_addr,
-                                                 (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                                 entry->peer_udp_port,
-                                                 light_update,
-                                                 entry,
-                                                 entry->light_update_retrans),
+    HIP_IFEL(hip_send_pkt(&entry->our_addr,
+                          &entry->peer_addr,
+                          (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                          entry->peer_udp_port,
+                          light_update,
+                          entry,
+                          entry->light_update_retrans),
              -1,
              "failed to send light anchor update\n");
 
@@ -229,18 +237,18 @@ int esp_prot_receive_light_update(hip_common_t *msg,
         entry->light_update_retrans = 0;
 
         // notify sadb about next anchor
-        HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_addr,
-                                                    src_addr,
-                                                    &entry->hit_our,
-                                                    &entry->hit_peer,
-                                                    entry->spi_outbound_new,
-                                                    entry->esp_transform,
-                                                    &entry->esp_out,
-                                                    &entry->auth_out,
-                                                    0,
-                                                    HIP_SPI_DIRECTION_OUT,
-                                                    1,
-                                                    entry),
+        HIP_IFEL(hip_add_sa(dst_addr,
+                            src_addr,
+                            &entry->hit_our,
+                            &entry->hit_peer,
+                            entry->spi_outbound_new,
+                            entry->esp_transform,
+                            &entry->esp_out,
+                            &entry->auth_out,
+                            0,
+                            HIP_SPI_DIRECTION_OUT,
+                            1,
+                            entry),
                  -1,
                  "failed to notify sadb about next anchor\n");
     } else {

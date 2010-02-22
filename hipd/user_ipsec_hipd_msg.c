@@ -43,9 +43,9 @@ int hip_userspace_ipsec_activate(const struct hip_common *msg)
      * -> firewall might already be closed when user-message arrives */
     if (hip_use_userspace_ipsec) {
         HIP_DEBUG("flushing all ipsec policies in the kernel...\n");
-        default_ipsec_func_set.hip_flush_all_policy();
+        hip_flush_all_policy();
         HIP_DEBUG("flushing all ipsec SAs in the kernel...\n");
-        default_ipsec_func_set.hip_flush_all_sa();
+        hip_flush_all_sa();
     }
 
 #if 0 /* see bug id 816 */
@@ -53,42 +53,9 @@ int hip_userspace_ipsec_activate(const struct hip_common *msg)
       // This removes HA from HADB as well as it removes mapping
       // BUG
     HIP_IFEL(hip_send_close(NULL, 0), -1, "failed to close all connections");
+out_err:
 #endif
 
-    /* reset the ipsec function set
-     *
-     * copied from hadb.c */
-    if (hip_use_userspace_ipsec) {
-        HIP_DEBUG("reseting ipsec function set to userspace api\n");
-
-        default_ipsec_func_set.hip_add_sa                        = hip_userspace_ipsec_add_sa;
-        default_ipsec_func_set.hip_delete_sa                     = hip_userspace_ipsec_delete_sa;
-        default_ipsec_func_set.hip_setup_hit_sp_pair             = hip_userspace_ipsec_setup_hit_sp_pair;
-        default_ipsec_func_set.hip_delete_hit_sp_pair            = hip_userspace_ipsec_delete_hit_sp_pair;
-        default_ipsec_func_set.hip_flush_all_policy              = hip_userspace_ipsec_flush_all_policy;
-        default_ipsec_func_set.hip_flush_all_sa                  = hip_userspace_ipsec_flush_all_sa;
-        default_ipsec_func_set.hip_acquire_spi                   = hip_acquire_spi;
-        default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_userspace_ipsec_delete_default_prefix_sp_pair;
-        default_ipsec_func_set.hip_setup_default_sp_prefix_pair  = hip_userspace_ipsec_setup_default_sp_prefix_pair;
-    } else {
-        HIP_DEBUG("reseting ipsec function set to kernel-mode api\n");
-
-        default_ipsec_func_set.hip_add_sa                        = hip_add_sa;
-        default_ipsec_func_set.hip_delete_sa                     = hip_delete_sa;
-        default_ipsec_func_set.hip_setup_hit_sp_pair             = hip_setup_hit_sp_pair;
-        default_ipsec_func_set.hip_delete_hit_sp_pair            = hip_delete_hit_sp_pair;
-        default_ipsec_func_set.hip_flush_all_policy              = hip_flush_all_policy;
-        default_ipsec_func_set.hip_flush_all_sa                  = hip_flush_all_sa;
-        default_ipsec_func_set.hip_acquire_spi                   = hip_acquire_spi;
-        default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_delete_default_prefix_sp_pair;
-        default_ipsec_func_set.hip_setup_default_sp_prefix_pair  = hip_setup_default_sp_prefix_pair;
-
-        // re-enable triggering of the BEX by the kernel
-        HIP_IFEL(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1,
-                 "failed to set up default sp prefix pair\n");
-    }
-
-out_err:
     return err;
 }
 

@@ -93,40 +93,11 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 
-#if 0
-typedef struct hip_peer_addr_opaque {
-    struct in6_addr              addr;
-    struct hip_peer_addr_opaque *next;
-} hip_peer_addr_opaque_t;         /* Structure to record peer addresses */
-
-typedef struct hip_peer_entry_opaque {
-    unsigned int                  count;
-    struct hip_host_id *          host_id;
-    hip_hit_t                     hit;
-    hip_peer_addr_opaque_t *      addr_list;
-    struct hip_peer_entry_opaque *next;
-} hip_peer_entry_opaque_t;         /* Structure to record kernel peer entry */
-
-typedef struct hip_peer_opaque {
-    unsigned int                  count;
-    struct hip_peer_entry_opaque *head;
-    struct hip_peer_entry_opaque *end;
-} hip_peer_opaque_t;         /* Structure to record kernel peer list */
-#endif
-
 int hip_for_each_ha(int(func) (hip_ha_t * entry, void *opaq), void *opaque);
 
 /* next 2 functions are not called from outside but make sense and are
  * 'proposed' in libhipcore/state.h
  */
-
-int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
-                                  hip_rcv_func_set_t *new_func_set);
-int hip_hadb_set_handle_function_set(hip_ha_t *entry,
-                                     hip_handle_func_set_t *new_func_set);
-
-int hip_hadb_set_xmit_function_set(hip_ha_t *entry,
-                                   hip_xmit_func_set_t *new_func_set);
 
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask);
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask);
@@ -148,8 +119,5 @@ int hip_get_local_addr(struct hip_common *msg);
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
                                               in6_addr_t *src_addr,
                                               in6_addr_t *dst_addr);
-
-hip_rcv_func_set_t *hip_get_rcv_default_func_set(void);
-hip_handle_func_set_t *hip_get_handle_default_func_set(void);
 
 #endif /* HIP_HIPD_HADB_H */
