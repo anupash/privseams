@@ -18,6 +18,17 @@
 /**
  * @todo add description
  */
+struct hip_packet_context {
+    struct hip_common         *msg;
+    struct in6_addr           *src_addr;
+    struct in6_addr           *dst_addr;
+    struct hip_stateless_info *msg_info;
+    struct hip_hadb_state     *hadb_entry;
+};
+
+/**
+ * @todo add description
+ */
 struct modular_state {
     hip_ll_t        *item_list;
     char           **item_names;

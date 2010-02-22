@@ -158,7 +158,7 @@ fi
 AC_ARG_ENABLE(maemo,
              AC_HELP_STRING([--enable-maemo],
                             [Maemo (default is NO)]),
-             [ac_cv_use_maemo=$enableval ac_cv_use_altsep=yes ac_cv_use_i3=no],
+             [ac_cv_use_maemo=$enableval ac_cv_use_altsep=yes],
              [ac_cv_use_maemo=no])
 AC_CACHE_CHECK([whether to use Maemo],
                [ac_cv_use_maemo], [ac_cv_use_maemo=no])

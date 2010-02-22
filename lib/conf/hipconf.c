@@ -2699,14 +2699,14 @@ int (*action_handler[])(hip_common_t *,
     hip_conf_handle_load,               /* 11: TYPE_CONFIG */
     hip_conf_handle_run_normal,         /* 12: TYPE_RUN */
     NULL,                               /* was 13: TYPE_TTL */
-    hip_conf_handle_gw,                 /* 14: TYPE_GW */
-    hip_conf_handle_get,                /* 15: TYPE_GET */
+    NULL,                               /* unused, was 14: TYPE_GW */
+    NULL,                               /* unused, was 15: TYPE_GET */
     hip_conf_handle_ha,                 /* 16: TYPE_HA */
     hip_conf_handle_mhaddr,             /* 17: TYPE_MHADDR */
     hip_conf_handle_debug,              /* 18: TYPE_DEBUG */
     hip_conf_handle_restart,            /* 19: TYPE_DAEMON */
     hip_conf_handle_locator,            /* 20: TYPE_LOCATOR */
-    hip_conf_handle_set,                /* 21: TYPE_SET */
+    NULL,                               /* 21: unused, was TYPE_SET */
     NULL,                               /* 22: unused, was TYPE_DHT */
     hip_conf_handle_opptcp,             /* 23: TYPE_OPPTCP */
     hip_conf_handle_trans_order,        /* 24: TYPE_ORDER */
@@ -2715,7 +2715,7 @@ int (*action_handler[])(hip_common_t *,
     hip_conf_handle_heartbeat,          /* 27: TYPE_HEARTBEAT */
     NULL,                               /* 28: unused, was TYPE_HI3 */
     NULL,                               /* 29: unused */
-    hip_conf_handle_buddies_toggle,     /* 30: TYPE_BUDDIES */
+    NULL,                               /* 30: unused, was TYPE_BUDDIES */
     NULL,                               /* 31: TYPE_SAVAHR, reserved for sava */
     hip_conf_handle_nsupdate,           /* 32: TYPE_NSUPDATE */
     hip_conf_handle_hit_to_ip,          /* 33: TYPE_HIT_TO_IP */
