@@ -528,11 +528,7 @@ struct hip_turn_info {
  * @{
  */
 struct hip_hadb_rcv_func_set {
-    int (*hip_receive_i1)(struct hip_common *,
-                          struct in6_addr *,
-                          struct in6_addr *,
-                          hip_ha_t *,
-                          hip_portpair_t *);
+    int (*hip_receive_i1)(struct hip_packet_context *ctx);
 
     int (*hip_receive_r1)(struct hip_common *,
                           struct in6_addr *,

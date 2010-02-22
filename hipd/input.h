@@ -85,8 +85,7 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
                                    struct in6_addr *daddr,
                                    hip_portpair_t *info);
 
-int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-                   struct in6_addr *i1_daddr, hip_ha_t *entry, hip_portpair_t *i1_info);
+int hip_receive_i1(struct hip_packet_context *ctx);
 
 int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
                    hip_ha_t *entry, hip_portpair_t *r1_info);

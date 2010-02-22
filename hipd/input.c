@@ -610,10 +610,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 #endif
         /* No state. */
         HIP_DEBUG("Received HIP_I1 message\n");
-        err = (hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr,
-                                                               dst_addr,
-                                                               entry,
-                                                               msg_info);
+        err = (hip_get_rcv_default_func_set())->hip_receive_i1(&ctx);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_I1\n");
         hip_perf_stop_benchmark(perf_set, PERF_I1);
@@ -2703,69 +2700,73 @@ out_err:
  *                 in use).
  * @return         zero on success, or negative error value on error.
  */
-int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-                   struct in6_addr *i1_daddr, hip_ha_t *entry,
-                   hip_portpair_t *i1_info)
+int hip_receive_i1(struct hip_packet_context *ctx)
 {
     int err = 0, state, mask = 0, src_hit_is_our;
 
     _HIP_DEBUG("hip_receive_i1() invoked.\n");
 
-    HIP_ASSERT(!ipv6_addr_any(&i1->hitr));
+    HIP_ASSERT(!ipv6_addr_any(&(ctx->msg)->hitr));
 
-    HIP_DEBUG_IN6ADDR("Source IP", i1_saddr);
-    HIP_DEBUG_IN6ADDR("Destination IP", i1_daddr);
+    HIP_DEBUG_IN6ADDR("Source IP", ctx->src_addr);
+    HIP_DEBUG_IN6ADDR("Destination IP", ctx->dst_addr);
 
     /* In some environments, a copy of broadcast our own I1 packets
      * arrive at the local host too. The following variable handles
      * that special case. Since we are using source HIT (and not
      * destination) it should handle also opportunistic I1 broadcast */
-    src_hit_is_our = hip_hidb_hit_is_our(&i1->hits);
+    src_hit_is_our = hip_hidb_hit_is_our(&(ctx->msg)->hits);
 
     /* check i1 for broadcast/multicast addresses */
-    if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) {
+    if (IN6_IS_ADDR_V4MAPPED(ctx->dst_addr)) {
         struct in_addr addr4;
 
-        IPV6_TO_IPV4_MAP(i1_daddr, &addr4);
+        IPV6_TO_IPV4_MAP(ctx->dst_addr, &addr4);
 
         if (addr4.s_addr == INADDR_BROADCAST) {
             HIP_DEBUG("Received i1 broadcast\n");
             HIP_IFEL(src_hit_is_our, -1,
                      "Received a copy of own broadcast, dropping\n");
-            HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
+            HIP_IFEL(hip_select_source_address(ctx->dst_addr, ctx->src_addr), -1,
                      "Could not find source address\n");
         }
-    } else if (IN6_IS_ADDR_MULTICAST(i1_daddr)) {
+    } else if (IN6_IS_ADDR_MULTICAST(ctx->dst_addr)) {
         HIP_IFEL(src_hit_is_our, -1,
                  "Received a copy of own broadcast, dropping\n");
-        HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
+        HIP_IFEL(hip_select_source_address(ctx->dst_addr, ctx->src_addr), -1,
                  "Could not find source address\n");
     }
 
-    HIP_IFEL(!hip_controls_sane(ntohs(i1->control), mask), -1,
-             "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
+    HIP_IFEL(!hip_controls_sane(ntohs(ctx->msg->control), mask), -1,
+             "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(ctx->msg->control));
 
-    if (entry) {
-        state = entry->state;
+    if (ctx->hadb_entry) {
+        state = ctx->hadb_entry->state;
         /* hip_put_ha(entry); */
     } else {
 #ifdef CONFIG_HIP_RVS
         if (hip_relay_get_status() != HIP_RELAY_OFF &&
-            !hip_hidb_hit_is_our(&i1->hitr)) {
+            !hip_hidb_hit_is_our(&(ctx->msg)->hitr)) {
             hip_relrec_t *rec = NULL, dummy;
 
             /* Check if we have a relay record in our database matching the
              * Responder's HIT. We should find one, if the Responder is
              * registered to relay.*/
-            HIP_DEBUG_HIT("Searching relay record on HIT ", &i1->hitr);
-            memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
+            HIP_DEBUG_HIT("Searching relay record on HIT ", &(ctx->msg)->hitr);
+            memcpy(&(dummy.hit_r), &(ctx->msg)->hitr, sizeof(ctx->msg->hitr));
             rec = hip_relht_get(&dummy);
             if (rec == NULL) {
                 HIP_INFO("No matching relay record found.\n");
             } else if (rec->type == HIP_RELAY ||
                        rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY) {
                 HIP_INFO("Matching relay record found.\n");
-                hip_relay_forward(i1, i1_saddr, i1_daddr, rec, i1_info, HIP_I1, rec->type);
+                hip_relay_forward(ctx->msg,
+                                  ctx->src_addr,
+                                  ctx->dst_addr,
+                                  rec,
+                                  ctx->msg_info,
+                                  HIP_I1,
+                                  rec->type);
                 state = HIP_STATE_NONE;
                 err   = -ECANCELED;
                 goto out_err;
@@ -2780,14 +2781,19 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
     switch (state) {
     case HIP_STATE_NONE:
         err = ((hip_handle_func_set_t *) hip_get_handle_default_func_set())
-              ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
+              ->hip_handle_i1(ctx->msg, ctx->src_addr, ctx->dst_addr, ctx->hadb_entry, ctx->msg_info);
         break;
     case HIP_STATE_I1_SENT:
         if (src_hit_is_our ||         /* loopback */
-            hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
+            hip_hit_is_bigger(&(ctx->hadb_entry)->hit_our,
+                              &(ctx->hadb_entry)->hit_peer))
+        {
             err = ((hip_handle_func_set_t *)
-                   hip_get_handle_default_func_set())->
-                  hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
+                   hip_get_handle_default_func_set())->hip_handle_i1(ctx->msg,
+                                                                     ctx->src_addr,
+                                                                     ctx->dst_addr,
+                                                                     ctx->hadb_entry,
+                                                                     ctx->msg_info);
         }
         break;
     case HIP_STATE_UNASSOCIATED:
@@ -2797,7 +2803,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
     case HIP_STATE_CLOSED:
     case HIP_STATE_CLOSING:
         err = ((hip_handle_func_set_t *) hip_get_handle_default_func_set())
-              ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
+              ->hip_handle_i1(ctx->msg, ctx->src_addr, ctx->dst_addr, ctx->hadb_entry, ctx->msg_info);
         break;
     default:
         /* should not happen */
