@@ -27,13 +27,15 @@ static hip_ll_t *handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
  * Register a function for handling of the specified combination from packet
  * type and host association state.
  *
- * @param packet_type
- * @param ha_state
- * @param *handle_function
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *handle_function Pointer to the function, which should be called,
+ *                         when the combination of packet type and host
+ *                         association state is reached.
  *
- *  @return Success =  0
- *          Error   = -1
- **/
+ * @return Success =  0
+ *         Error   = -1
+ */
 int hip_register_handle_function(uint32_t packet_type,
                                  uint32_t ha_state,
                                  void *handle_function)
@@ -41,14 +43,17 @@ int hip_register_handle_function(uint32_t packet_type,
     int       err     = 0;
     hip_ll_t *newlist = NULL;
 
-    HIP_IFE(packet_type > HIP_MAX_PACKET_TYPE, -1);
-    HIP_IFE(ha_state    > HIP_MAX_HA_STATE,    -1);
+    HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
+             -1,
+             "Maximum packet type exceeded.\n");
+    HIP_IFEL(ha_state    > HIP_MAX_HA_STATE,
+             -1,
+             "Maximum host association state exceeded.\n");
 
     if (!handle_functions[packet_type][ha_state]) {
-        if ((newlist = (hip_ll_t *) malloc(sizeof(hip_ll_t))) == NULL) {
-            HIP_ERROR("Error on allocating memory for a linked list.\n");
-            return -1;
-        }
+        HIP_IFEL(((newlist = (hip_ll_t *) malloc(sizeof(hip_ll_t))) == NULL),
+                 -1,
+                 "Error on allocating memory for a linked list.\n");
         hip_ll_init(newlist);
         handle_functions[packet_type][ha_state] = newlist;
     }
@@ -60,7 +65,19 @@ out_err:
 }
 
 /**
- * @todo add description
+ * hip_register_handle_function
+ *
+ * Register a function for handling of the specified combination from packet
+ * type and host association state.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx The packet context containing the received message, source and
+ *             destination address, the ports and the corresponding entry from
+ *             the host association database.
+ *
+ * @return Success =  0
+ *         Error   = -1
  */
 int hip_run_handle_functions(uint32_t packet_type,
                              uint32_t ha_state,
@@ -73,8 +90,12 @@ int hip_run_handle_functions(uint32_t packet_type,
                        uint32_t ha_state,
                        struct hip_packet_context *ctx) = NULL;
 
-    HIP_IFE(packet_type > HIP_MAX_PACKET_TYPE, -1);
-    HIP_IFE(ha_state    > HIP_MAX_HA_STATE,    -1);
+    HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
+             -1,
+             "Maximum packet type exceeded.\n");
+    HIP_IFEL(ha_state    > HIP_MAX_HA_STATE,
+             -1,
+             "Maximum host association state exceeded.\n");
 
     list = handle_functions[packet_type][ha_state];
 
@@ -89,7 +110,10 @@ out_err:
 }
 
 /**
- * @todo add description
+ * hip_uninit_handle_functions
+ *
+ * Free the memory used for storage of handle functions.
+ *
  */
 void hip_uninit_handle_functions(void)
 {
