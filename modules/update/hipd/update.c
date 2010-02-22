@@ -657,8 +657,7 @@ out_err:
     }
 }
 
-int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_addr,
-                       in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo)
+int hip_receive_update(struct hip_packet_context *ctx)
 {
     int err = 0, same_seq = 0;
     unsigned int ack_peer_update_id         = 0;
@@ -674,25 +673,25 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
 
     /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
      * the implementation MAY reply with an ICMP Parameter Problem. */
-    HIP_IFEL(!ha, -1, "No host association database entry found.\n");
+    HIP_IFEL(!ctx->hadb_entry, -1, "No host association database entry found.\n");
 
     /// @todo: Relay support
 
     /* RFC 5201 Section 4.4.2, Table 5: According to the state processes
      * listed, the state is moved from R2_SENT to ESTABLISHED if an
      * UPDATE packet is received */
-    if (ha->state == HIP_STATE_R2_SENT) {
-        ha->state = HIP_STATE_ESTABLISHED;
+    if (ctx->hadb_entry->state == HIP_STATE_R2_SENT) {
+        ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
         HIP_DEBUG("Received UPDATE in state %s, moving to " \
-                  "ESTABLISHED.\n", hip_state_str(ha->state));
-    } else if (ha->state != HIP_STATE_ESTABLISHED) {
+                  "ESTABLISHED.\n", hip_state_str(ctx->hadb_entry->state));
+    } else if (ctx->hadb_entry->state != HIP_STATE_ESTABLISHED) {
         HIP_ERROR("Received UPDATE in illegal state %s.\n",
-                  hip_state_str(ha->state));
+                  hip_state_str(ctx->hadb_entry->state));
         err = -EPROTO;
         goto out_err;
     }
 
-    localstate = hip_get_state_item(ha->hip_modular_state, "update");
+    localstate = hip_get_state_item(ctx->hadb_entry->hip_modular_state, "update");
 
     /* RFC 5201 Section 6.12: Receiving UPDATE Packets */
     HIP_DEBUG("previous incoming update id=%u\n", localstate->update_id_in);
@@ -706,7 +705,7 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
      * both an ACK and SEQ in the UPDATE, the ACK is first processed as
      * described in Section 6.12.2, and then the rest of the UPDATE is
      * processed as described in Section 6.12.1 */
-    ack = hip_get_param(received_update_packet, HIP_PARAM_ACK);
+    ack = hip_get_param(ctx->msg, HIP_PARAM_ACK);
     if (ack != NULL) {
         ack_peer_update_id = ntohl(ack->peer_update_id);
         HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
@@ -732,7 +731,7 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
      * 2nd case: If the association is in the ESTABLISHED state and the SEQ
      * (but not ACK) parameter is present, the UPDATE is processed and replied
      * to as described in Section 6.12.1. */
-    seq = hip_get_param(received_update_packet, HIP_PARAM_SEQ);
+    seq = hip_get_param(ctx->msg, HIP_PARAM_SEQ);
     if (seq != NULL) {
         seq_update_id = ntohl(seq->update_id);
         HIP_DEBUG("SEQ parameter found with  Update ID %u.\n",
@@ -771,9 +770,9 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
 
     /* RFC 5201 Section 6.12.1 3th and 4th steps or
      *          Section 6.12.2 2nd and 3th steps */
-    HIP_IFE(hip_check_hmac_and_signature(received_update_packet, ha), -1);
+    HIP_IFE(hip_check_hmac_and_signature(ctx->msg, ctx->hadb_entry), -1);
 
-    esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
+    esp_info = hip_get_param(ctx->msg, HIP_PARAM_ESP_INFO);
     if (esp_info != NULL) {
         HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
                   ntohl(esp_info->new_spi));
@@ -788,17 +787,18 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
     }
 
     /* @todo: a workaround for bug id 944 */
-    ha->peer_udp_port = sinfo->src_port;
+    ctx->hadb_entry->peer_udp_port = ctx->msg_info->src_port;
 
     /* RFC 5206: End-Host Mobility and Multihoming. */
     // 3.2.1. Mobility with a Single SA Pair (No Rekeying)
-    locator           = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
-    echo_request      = hip_get_param(received_update_packet, HIP_PARAM_ECHO_REQUEST_SIGN);
-    echo_response     = hip_get_param(received_update_packet, HIP_PARAM_ECHO_RESPONSE_SIGN);
+    locator           = hip_get_param(ctx->msg, HIP_PARAM_LOCATOR);
+    echo_request      = hip_get_param(ctx->msg, HIP_PARAM_ECHO_REQUEST_SIGN);
+    echo_response     = hip_get_param(ctx->msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
 
     if (locator != NULL) {
-        hip_handle_first_update_packet(received_update_packet,
-                                       ha, src_addr);
+        hip_handle_first_update_packet(ctx->msg,
+                                       ctx->hadb_entry,
+                                       ctx->src_addr);
 
         goto out_err;
     } else if (echo_request != NULL)   {
@@ -810,13 +810,17 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
 
         // We handle ECHO_REQUEST by sending an update packet
         // with reversed source and destination address.
-        hip_handle_second_update_packet(received_update_packet,
-                                        ha, dst_addr, src_addr);
+        hip_handle_second_update_packet(ctx->msg,
+                                        ctx->hadb_entry,
+                                        ctx->dst_addr,
+                                        ctx->src_addr);
 
         goto out_err;
     } else if (echo_response != NULL)   {
-        hip_handle_third_update_packet(received_update_packet,
-                                       ha, dst_addr, src_addr);
+        hip_handle_third_update_packet(ctx->msg,
+                                       ctx->hadb_entry,
+                                       ctx->dst_addr,
+                                       ctx->src_addr);
 
         goto out_err;
     }

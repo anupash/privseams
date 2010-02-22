@@ -514,6 +514,7 @@ int hip_receive_control_packet(struct hip_common *msg,
     hip_ha_t tmp, *entry = NULL;
     int err = 0, type, skip_sync = 0;
     struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
+    struct hip_packet_context ctx = {0};
 
     /* Debug printing of received packet information. All received HIP
      * control packets are first passed to this function. Therefore
@@ -556,6 +557,12 @@ int hip_receive_control_packet(struct hip_common *msg,
         err = -1;
         goto out_err;
     }
+
+    ctx.msg        = msg;
+    ctx.src_addr   = src_addr;
+    ctx.dst_addr   = dst_addr;
+    ctx.hadb_entry = entry;
+    ctx.msg_info   = msg_info;
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     if (!entry && opportunistic_mode &&
@@ -675,11 +682,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 
     case HIP_UPDATE:
         HIP_DEBUG_HIT("received an UPDATE:  ", src_addr );
-        HIP_IFCS(entry, err = entry->hadb_rcv_func->hip_receive_update(msg,
-                                                                       src_addr,
-                                                                       dst_addr,
-                                                                       entry,
-                                                                       msg_info));
+        HIP_IFCS(entry, err = entry->hadb_rcv_func->hip_receive_update(&ctx));
         break;
 
     case HIP_NOTIFY:

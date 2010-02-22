@@ -555,11 +555,7 @@ struct hip_hadb_rcv_func_set {
                           hip_ha_t *,
                           hip_portpair_t *);
 
-    int (*hip_receive_update)(struct hip_common *,
-                              struct in6_addr *,
-                              struct in6_addr *,
-                              hip_ha_t *,
-                              hip_portpair_t *);
+    int (*hip_receive_update)(struct hip_packet_context *ctx);
 
     int (*hip_receive_notify)(const struct hip_common *,
                               const struct in6_addr *,

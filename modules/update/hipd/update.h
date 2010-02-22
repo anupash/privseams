@@ -63,8 +63,7 @@ int hip_send_locators_to_all_peers(void);
  *
  * @return 0 if succeeded, error number otherwise
  */
-int hip_receive_update(hip_common_t *msg, in6_addr_t *src_addr,
-                       in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo);
+int hip_receive_update(struct hip_packet_context *ctx);
 
 int hip_create_locators(hip_common_t *locator_msg,
                         struct hip_locator_info_addr_item **locators);
