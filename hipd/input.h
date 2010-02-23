@@ -10,6 +10,7 @@
  * @author  Tobias Heer
  * @author  Samu Varjonen
  * @author  Rene Hummen
+ * @author  Tim Just
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_HIPD_INPUT_H
@@ -84,13 +85,9 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
                                    struct in6_addr *daddr,
                                    hip_portpair_t *info);
 
-int hip_receive_i1(struct hip_packet_context *ctx);
-
 int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
                    hip_ha_t *entry, hip_portpair_t *r1_info);
 
-//FIXME inconsistence usage in input.c, once via function pointer, once a direct
-//function call
 int hip_receive_i2(struct hip_packet_context *ctx);
 
 int hip_receive_r2(struct hip_common *hip_common, struct in6_addr *r2_saddr,
@@ -103,21 +100,18 @@ int hip_receive_notify(const struct hip_common *notify,
 int hip_receive_bos(struct hip_common *bos, struct in6_addr *bos_saddr,
                     struct in6_addr *bos_daddr, hip_ha_t *entry, hip_portpair_t *bos_info);
 
-int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-                  struct in6_addr *i1_daddr, hip_ha_t *entry, hip_portpair_t *i1_info);
+int hip_handle_i1(const uint32_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *ctx);
 
 int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
                   hip_ha_t *entry, hip_portpair_t *r1_info);
 
-//FIXME inconsistence usage in input.c, different function pointers and a
-//direct function call
 int hip_handle_i2(struct hip_packet_context *ctx);
 
 int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
                   hip_ha_t *entry, hip_portpair_t *r2_info);
 
-//FIXME inconsistence usage in input.c, once via function pointer, once a direct
-//function call
 int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
                                 uint64_t I, uint64_t J, struct hip_dh_public_value **dhpv);
 

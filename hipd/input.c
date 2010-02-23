@@ -12,6 +12,7 @@
  * @author  Laura Takkinen (blind code)
  * @author  Rene Hummen
  * @author  Samu Varjonen
+ * @author  Tim Just
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 /* required for s6_addr32 */
@@ -510,19 +511,17 @@ int hip_receive_control_packet(struct hip_common *msg,
                                hip_portpair_t *msg_info)
 {
     hip_ha_t tmp, *entry = NULL;
-    int err = 0, type, skip_sync = 0;
+    int err = 0, skip_sync = 0;
     struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
     struct hip_packet_context ctx = {0};
+    uint32_t type, state;
 
     /* Debug printing of received packet information. All received HIP
      * control packets are first passed to this function. Therefore
      * printing packet data here works for all packets. To avoid excessive
      * debug printing do not print this information inside the individual
      * receive or handle functions. */
-    _HIP_DEBUG("hip_receive_control_packet() invoked.\n");
-    HIP_DEBUG_IN6ADDR("Source IP", src_addr);
-    HIP_DEBUG_IN6ADDR("Destination IP", dst_addr);
-    HIP_DEBUG_HIT("HIT Sender", &msg->hits);
+    HIP_DEBUG_HIT("HIT Sender  ", &msg->hits);
     HIP_DEBUG_HIT("HIT Receiver", &msg->hitr);
     HIP_DEBUG("source port: %u, destination port: %u\n",
               msg_info->src_port, msg_info->dst_port);
@@ -562,6 +561,12 @@ int hip_receive_control_packet(struct hip_common *msg,
     ctx.hadb_entry = entry;
     ctx.msg_info   = msg_info;
 
+    if (entry) {
+        state = entry->state;
+    } else {
+        state = HIP_STATE_NONE;
+    }
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     if (!entry && opportunistic_mode &&
         (type == HIP_I1 || type == HIP_R1)) {
@@ -571,22 +576,15 @@ int hip_receive_control_packet(struct hip_common *msg,
     }
 #endif
 
-//add by santtu
 #ifdef CONFIG_HIP_RVS
-    //check if it a relaying msg
-
-    //add by santtu
-    //if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
-
+    /* check if it a relaying msg */
     if (hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)) {
-        //end
         err = -ECANCELED;
         goto out_err;
     } else {
         HIP_DEBUG("handle relay to failed, continue the bex handler\n");
     }
 #endif
-//end add
 
     switch (type) {
     case HIP_DATA:
@@ -595,9 +593,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         HIP_DEBUG("Start PERF_I1\n");
         hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
-        /* No state. */
-        HIP_DEBUG("Received HIP_I1 message\n");
-        err = hip_receive_i1(&ctx);
+        err = hip_handle_i1(type, state, &ctx);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_I1\n");
         hip_perf_stop_benchmark(perf_set, PERF_I1);
@@ -668,7 +664,6 @@ int hip_receive_control_packet(struct hip_common *msg,
         /*In case of BOS the msg->hitr is null, therefore it is replaced
          * with our own HIT, so that the beet state can also be
          * synchronized. */
-
         ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
         hip_init_us(&tmp, NULL);
         ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
@@ -2596,106 +2591,20 @@ out_err:
  *                 present in the incoming I1 packet, only the first of a kind
  *                 is parsed.
  */
-int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-                  struct in6_addr *i1_daddr, hip_ha_t *entry,
-                  hip_portpair_t *i1_info)
+int hip_handle_i1(const uint32_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_BASE\n");
     hip_perf_start_benchmark(perf_set, PERF_BASE);
 #endif
-    int err                        = 0, state;
+    int err = 0, mask = 0, src_hit_is_our;
     hip_tlv_type_t relay_para_type = 0;
-    in6_addr_t dest;  // For the IP address in FROM/RELAY_FROM
-    in_port_t dest_port            = 0; // For the port in RELAY_FROM
-
-    HIP_INFO("\n\nReceived I1 from:");
-    HIP_INFO_HIT("Source HIT:", &i1->hits);
-    HIP_INFO_IN6ADDR("Source IP :", i1_saddr);
-
-    ipv6_addr_copy(&dest, &in6addr_any);
-
-#ifdef CONFIG_HIP_RVS
-    if (hip_hidb_hit_is_our(&i1->hitr)) {
-        /* This is where the Responder handles the incoming relayed I1
-         * packet. We need two things from the relayed packet:
-         * 1) The destination IP address and port from the FROM/RELAY_FROM
-         * parameters.
-         * 2) The source address and source port of the I1 packet to build
-         * the VIA_RVS/RELAY_TO parameter.
-         * 3) only one relay parameter should appear
-         */
-        state = hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port);
-        if (state == -1) {
-            HIP_DEBUG( "Handling FROM of  I1 packet failed.\n");
-            goto out_err;
-        } else if (state == 1)   {
-            relay_para_type = HIP_PARAM_FROM;
-        }
-
-        state = hip_relay_handle_relay_from(i1, i1_saddr, &dest, &dest_port);
-        if (state == -1) {
-            HIP_DEBUG( "Handling RELAY_FROM of  I1 packet failed.\n");
-            goto out_err;
-        } else if (state == 1)   {
-            relay_para_type = HIP_PARAM_RELAY_FROM;
-        }
-    }
-#endif /* CONFIG_HIP_RVS */
-
-    err = hip_xmit_r1(i1, i1_saddr, i1_daddr, &dest, dest_port, i1_info,
-                      relay_para_type );
-out_err:
-    return err;
-}
-
-/**
- * @addtogroup receive_functions
- * @{
- */
-/**
- * Determines the action to be executed for an incoming I1 packet.
- *
- * This function is called when a HIP control packet is received by
- * hip_receive_control_packet()-function and the packet is detected to be
- * an I1 packet. The operation of this function depends on whether the current
- * machine is a rendezvous server or not.
- *
- * <ol>
- * <li>If the current machine is @b NOT a rendezvous server:</li>
- * <ul>
- * <li>hip_handle_i1() is invoked.</li>
- * </ul>
- * <li>If the current machine @b IS a rendezvous server:</li>
- * <ul>
- * <li>if a valid rendezvous association is found from the server's rva table,
- * the I1 packet is relayed by invoking hip_rvs_relay_i1().</li>
- * <li>If no valid valid rendezvous association is found, hip_handle_i1() is
- * invoked.</li>
- * </ul>
- * </ol>
- *
- * @param i1       a pointer to the received I1 HIP packet common header with
- *                 source and destination HITs.
- * @param i1_saddr a pointer to the source address from where the I1 packet was
- *                 received.
- * @param i1_daddr a pointer to the destination address where to the I1 packet
- *                 was sent to (own address).
- * @param entry    a pointer to the current host association database state.
- * @param i1_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
- * @return         zero on success, or negative error value on error.
- */
-int hip_receive_i1(struct hip_packet_context *ctx)
-{
-    int err = 0, state, mask = 0, src_hit_is_our;
-
-    _HIP_DEBUG("hip_receive_i1() invoked.\n");
+    in6_addr_t dest;    /* For the IP address in FROM/RELAY_FROM */
+    in_port_t dest_port = 0; /* For the port in RELAY_FROM */
 
     HIP_ASSERT(!ipv6_addr_any(&(ctx->msg)->hitr));
-
-    HIP_DEBUG_IN6ADDR("Source IP", ctx->src_addr);
-    HIP_DEBUG_IN6ADDR("Destination IP", ctx->dst_addr);
 
     /* In some environments, a copy of broadcast our own I1 packets
      * arrive at the local host too. The following variable handles
@@ -2710,7 +2619,7 @@ int hip_receive_i1(struct hip_packet_context *ctx)
         IPV6_TO_IPV4_MAP(ctx->dst_addr, &addr4);
 
         if (addr4.s_addr == INADDR_BROADCAST) {
-            HIP_DEBUG("Received i1 broadcast\n");
+            HIP_DEBUG("Received I1 broadcast\n");
             HIP_IFEL(src_hit_is_our, -1,
                      "Received a copy of own broadcast, dropping\n");
             HIP_IFEL(hip_select_source_address(ctx->dst_addr, ctx->src_addr), -1,
@@ -2726,76 +2635,26 @@ int hip_receive_i1(struct hip_packet_context *ctx)
     HIP_IFEL(!hip_controls_sane(ntohs(ctx->msg->control), mask), -1,
              "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(ctx->msg->control));
 
-    if (ctx->hadb_entry) {
-        state = ctx->hadb_entry->state;
-        /* hip_put_ha(entry); */
-    } else {
-#ifdef CONFIG_HIP_RVS
-        if (hip_relay_get_status() != HIP_RELAY_OFF &&
-            !hip_hidb_hit_is_our(&(ctx->msg)->hitr)) {
-            hip_relrec_t *rec = NULL, dummy;
+    HIP_INFO_HIT("I1 Source HIT:", &(ctx->msg)->hits);
+    HIP_INFO_IN6ADDR("I1 Source IP :", ctx->src_addr);
 
-            /* Check if we have a relay record in our database matching the
-             * Responder's HIT. We should find one, if the Responder is
-             * registered to relay.*/
-            HIP_DEBUG_HIT("Searching relay record on HIT ", &(ctx->msg)->hitr);
-            memcpy(&(dummy.hit_r), &(ctx->msg)->hitr, sizeof(ctx->msg->hitr));
-            rec = hip_relht_get(&dummy);
-            if (rec == NULL) {
-                HIP_INFO("No matching relay record found.\n");
-            } else if (rec->type == HIP_RELAY ||
-                       rec->type == HIP_FULLRELAY || rec->type == HIP_RVSRELAY) {
-                HIP_INFO("Matching relay record found.\n");
-                hip_relay_forward(ctx->msg,
-                                  ctx->src_addr,
-                                  ctx->dst_addr,
-                                  rec,
-                                  ctx->msg_info,
-                                  HIP_I1,
-                                  rec->type);
-                state = HIP_STATE_NONE;
-                err   = -ECANCELED;
-                goto out_err;
-            }
-        }
-#endif
-        state = HIP_STATE_NONE;
-    }
+    ipv6_addr_copy(&dest, &in6addr_any);
 
-    HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
-
-    switch (state) {
-    case HIP_STATE_NONE:
-        err = hip_handle_i1(ctx->msg, ctx->src_addr, ctx->dst_addr, ctx->hadb_entry, ctx->msg_info);
-        break;
-    case HIP_STATE_I1_SENT:
-        if (src_hit_is_our ||         /* loopback */
-            hip_hit_is_bigger(&(ctx->hadb_entry)->hit_our,
-                              &(ctx->hadb_entry)->hit_peer))
-        {
-            err = hip_handle_i1(ctx->msg,
-                                ctx->src_addr,
-                                ctx->dst_addr,
-                                ctx->hadb_entry,
-                                ctx->msg_info);
-        }
-        break;
-    case HIP_STATE_UNASSOCIATED:
-    case HIP_STATE_I2_SENT:
-    case HIP_STATE_R2_SENT:
-    case HIP_STATE_ESTABLISHED:
-    case HIP_STATE_CLOSED:
-    case HIP_STATE_CLOSING:
-        err = hip_handle_i1(ctx->msg, ctx->src_addr, ctx->dst_addr, ctx->hadb_entry, ctx->msg_info);
-        break;
-    default:
-        /* should not happen */
-        HIP_IFEL(1, -EINVAL, "DEFAULT CASE, UNIMPLEMENTED STATE HANDLING OR A BUG\n");
-    }
-
+    err = hip_xmit_r1(ctx->msg,
+                      ctx->src_addr,
+                      ctx->dst_addr,
+                      &dest,
+                      dest_port,
+                      ctx->msg_info,
+                      relay_para_type);
 out_err:
     return err;
 }
+
+/**
+ * @addtogroup receive_functions
+ * @{
+ */
 
 /**
  * hip_receive_r2 - receive R2 packet
