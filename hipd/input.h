@@ -85,9 +85,6 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
                                    struct in6_addr *daddr,
                                    hip_portpair_t *info);
 
-int hip_receive_r2(struct hip_common *hip_common, struct in6_addr *r2_saddr,
-                   struct in6_addr *r2_daddr, hip_ha_t *entry, hip_portpair_t *r2_info);
-
 int hip_receive_notify(const struct hip_common *notify,
                        const struct in6_addr *notify_saddr, const struct in6_addr *notify_daddr,
                        hip_ha_t *entry);
@@ -107,8 +104,9 @@ int hip_handle_i2(const uint32_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx);
 
-int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
-                  hip_ha_t *entry, hip_portpair_t *r2_info);
+int hip_handle_r2(const uint32_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *packet_ctx);
 
 int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
                                 uint64_t I, uint64_t J, struct hip_dh_public_value **dhpv);
