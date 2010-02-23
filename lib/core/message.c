@@ -467,8 +467,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
     /* UDP port numbers */
     if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
-        HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
-                  ntohs(addr_from4->sin_port));
+        HIP_DEBUG("source port = %d\n", ntohs(addr_from4->sin_port));
         msg_info->src_port = ntohs(addr_from4->sin_port);
         /* Destination port is known from the bound socket. */
         msg_info->dst_port = hip_get_local_nat_udp_port();
