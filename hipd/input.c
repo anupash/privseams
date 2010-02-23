@@ -702,7 +702,9 @@ int hip_receive_control_packet(struct hip_common *msg,
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Write PERF_SIGN, PERF_DSA_SIGN_IMPL, PERF_RSA_SIGN_IMPL, PERF_VERIFY, PERF_DSA_VERIFY_IMPL, PERF_RSA_VERIFY_IMPL, PERF_DH_CREATE\n");
+    HIP_DEBUG("Write PERF_SIGN, PERF_DSA_SIGN_IMPL, PERF_RSA_SIGN_IMPL," \
+              " PERF_VERIFY, PERF_DSA_VERIFY_IMPL, PERF_RSA_VERIFY_IMPL," \
+              " PERF_DH_CREATE\n");
     hip_perf_write_benchmark(perf_set, PERF_SIGN);
     hip_perf_write_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_RSA_SIGN_IMPL);
@@ -712,10 +714,6 @@ int hip_receive_control_packet(struct hip_common *msg,
     hip_perf_write_benchmark(perf_set, PERF_DH_CREATE);
 #endif
     HIP_DEBUG("Done with control packet, err is %d.\n", err);
-
-    if (err) {
-        goto out_err;
-    }
 
 out_err:
     return err;
