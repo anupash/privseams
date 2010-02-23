@@ -5,6 +5,8 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <netinet/icmp6.h>
+
 #include "firewall/proxy.h"
 #include "firewall/proxyconndb.h"
 #include "firewall/firewall_defines.h"
@@ -568,8 +570,8 @@ static int hip_proxy_send_pkt(struct in6_addr *local_addr,
     if (protocol == IPPROTO_ICMPV6) {
         //TODO
         HIP_DEBUG("ICMPV6 packet\n");
-        ((struct icmp6hdr *) msg)->icmp6_cksum = htons(0);
-        ((struct icmp6hdr *) msg)->icmp6_cksum = ipv6_checksum(
+        ((struct icmp6_hdr *) msg)->icmp6_cksum = htons(0);
+        ((struct icmp6_hdr *) msg)->icmp6_cksum = ipv6_checksum(
                 IPPROTO_ICMPV6, &src6->sin6_addr, &dst6->sin6_addr, msg, len);
     }
 
@@ -636,7 +638,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
     struct tcphdr *tcp          = NULL;
     struct udphdr *udp          = NULL;
     struct icmphdr *icmp        = NULL;
-    struct icmp6hdr *icmpv6     = NULL;
+    struct icmp6_hdr *icmpv6     = NULL;
     u8 *msg                     = NULL;
     /* Points either to v4 or v6 raw sock */
     int hip_raw_sock            = 0;
@@ -664,7 +666,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
     tcp         = (struct tcphdr *) (buff + 40); //sizeof ip6_hdr is 40
     udp         = (struct udphdr *) (buff + 40); //sizeof ip6_hdr is 40
     icmp        = (struct icmphdr *) (buff + 40); //sizeof ip6_hdr is 40
-    icmpv6      = (struct icmp6hdr *) (buff + 40); //sizeof ip6_hdr is 40
+    icmpv6      = (struct icmp6_hdr *) (buff + 40); //sizeof ip6_hdr is 40
 
     memset(&src, 0, sizeof(src));
     memset(&dst, 0, sizeof(dst));

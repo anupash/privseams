@@ -16,6 +16,8 @@
 #define _BSD_SOURCE
 
 #include <netinet/ip_icmp.h>
+#include <netinet/icmp6.h>
+
 #include "firewalldb.h"
 #include "cache.h"
 #include "firewall_defines.h"
@@ -858,8 +860,8 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
         break;
     case IPPROTO_ICMPV6:
         firewall_raw_sock = firewall_raw_sock_icmp_v6;
-        ((struct icmp6hdr *) msg)->icmp6_cksum = htons(0);
-        ((struct icmp6hdr *) msg)->icmp6_cksum
+        ((struct icmp6_hdr *) msg)->icmp6_cksum = htons(0);
+        ((struct icmp6_hdr *) msg)->icmp6_cksum
                 = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr,
                                    &sock_dst6->sin6_addr, msg, len);
         break;
