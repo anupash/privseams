@@ -140,7 +140,7 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
 {
     //int n = 0;
-    hip_ha_t ha, *ret;
+    hip_ha_t ha, *ret = NULL;
     memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
     memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
     HIP_DEBUG_HIT("HIT1", hit);
