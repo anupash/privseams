@@ -10,9 +10,9 @@ mkdir fig 2>/dev/null
 
 set -e
 
-seq 10 30|while read op 
+seq 10 30|while read op
   do
-    
+
     grep type=$op initiator_times.txt | \
       cut -d" " -f10 >fig/gnuplotdata-initiator
     grep type=$op responder_times.txt | \
@@ -32,12 +32,12 @@ seq 10 30|while read op
 
    if test `getsize fig/gnuplotdata-initiator` -eq 0
    then
-	PLOT_INIT=""
+        PLOT_INIT=""
    fi
 
    if test `getsize fig/gnuplotdata-responder|cut -f1 -d" "` -eq 0
    then
-	PLOT_RESP=""
+        PLOT_RESP=""
    fi
 
    if test -z "$PLOT_INIT" -a -n "$PLOT_RESP"

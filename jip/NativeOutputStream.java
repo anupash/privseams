@@ -25,8 +25,8 @@ public class NativeOutputStream extends OutputStream {
     private native void internalWrite (byte[] b, int off, int len);
 
     static {
-	System.loadLibrary("jip");
-	nativeInit();
+        System.loadLibrary("jip");
+        nativeInit();
     }
 
     /**
@@ -37,23 +37,23 @@ public class NativeOutputStream extends OutputStream {
      * @param fd the file descriptor to wrap
      */
     NativeOutputStream (int fd) {
-	this.fd = fd;
+        this.fd = fd;
     }
 
     public void write (int b) {
-	byte[] data = new byte[1];
-	data[0] = (byte) (b & 0xFF);
-	write(data, 0, 1);
+        byte[] data = new byte[1];
+        data[0] = (byte) (b & 0xFF);
+        write(data, 0, 1);
     }
 
     public void write (byte[] b, int off, int len) {
-	if (b == null) {
-	    throw new NullPointerException();
-	}
-	if (off < 0 || len < 0 || off + len > b.length) {
-	    throw new IndexOutOfBoundsException();
-	}
-	internalWrite(b, off, len);
+        if (b == null) {
+            throw new NullPointerException();
+        }
+        if (off < 0 || len < 0 || off + len > b.length) {
+            throw new IndexOutOfBoundsException();
+        }
+        internalWrite(b, off, len);
     }
 
 }

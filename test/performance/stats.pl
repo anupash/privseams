@@ -10,7 +10,7 @@
 #            adamo# perl -MCPAN -e shell
 #            # Are you ready for manual configuration? [yes] no
 #            cpan> install Statistics::Distributions
-#            cpan> install Scalar::Util::Numeric 
+#            cpan> install Scalar::Util::Numeric
 #
 # todo:
 # - xx
@@ -65,27 +65,27 @@ foreach my $type (keys(%val)) {
     $avg{$type}     = average(@{ $val{$type} });
     $std_dev{$type} = standard_deviation($avg{$type}, @{ $val{$type} });
     push(@{ $conf{$type} }, confidence_interval($avg{$type},
-						$std_dev{$type},
-						$confidence));
+                                                $std_dev{$type},
+                                                $confidence));
 }
 
 # Filter the values that are not in the confidence interval.
 #
 foreach my $type (keys(%val)) {
     if ($confidence == 100) {
-	# no values will be filtered
-	push(@{ $filt_val{$type} }, @{ $val{$type} });
-    } else { 
-	push(@{ $filt_val{$type} }, filter(@{ $conf{$type} },
-					   @{ $val{$type} }));
+        # no values will be filtered
+        push(@{ $filt_val{$type} }, @{ $val{$type} });
+    } else {
+        push(@{ $filt_val{$type} }, filter(@{ $conf{$type} },
+                                           @{ $val{$type} }));
     }
 
     # Average/stddev cannot be calculated if there are no values left
     # (division by zero).
     if ($#{ $filt_val{$type} } != -1) {
-	$filt_avg{$type}     = average(@{ $filt_val{$type} });
-	$filt_std_dev{$type} = standard_deviation($filt_avg{$type},
-						  @{ $filt_val{$type} });
+        $filt_avg{$type}     = average(@{ $filt_val{$type} });
+        $filt_std_dev{$type} = standard_deviation($filt_avg{$type},
+                                                  @{ $filt_val{$type} });
     }
 }
 
@@ -111,11 +111,11 @@ foreach my $type (keys(%filt_val)) {
     $filt_avg     = "N/A" unless (defined($filt_avg));
     $filt_std_dev = "N/A" unless (defined($filt_std_dev));
     print($outputfd
-	  $type                                          . "\t" .
-	  $filt_avg                                      . "\t" .
-	  $filt_std_dev                                  . "\t" .
-	  ($#{$val{$type}} - $#{$filt_val{$type}}) . "\t" .
-	  ($#{$val{$type}} + 1) . "\n");
+          $type                                          . "\t" .
+          $filt_avg                                      . "\t" .
+          $filt_std_dev                                  . "\t" .
+          ($#{$val{$type}} - $#{$filt_val{$type}}) . "\t" .
+          ($#{$val{$type}} + 1) . "\n");
 }
 
 # Print sums.
@@ -136,15 +136,15 @@ print($outputfd "Sums:\n\t"  .
 #
 sub gethelp {
     return "Usage: stats <conf_interval> [order regexp]\n\n" .
-	"conf_interval: confindence interval in procents.\n" .
-	"order:         type|value, denoting which is read first\n" .
-	"regexp:        regular experession containing (type and (val).\n" .
-	"The data to be analyzed is read from stdin.\n\n" .
-	"EXAMPLE:       stats 95 type '\\s*(\\S+)\\s+(\\S+)\\s*'\n" .
+        "conf_interval: confindence interval in procents.\n" .
+        "order:         type|value, denoting which is read first\n" .
+        "regexp:        regular experession containing (type and (val).\n" .
+        "The data to be analyzed is read from stdin.\n\n" .
+        "EXAMPLE:       stats 95 type '\\s*(\\S+)\\s+(\\S+)\\s*'\n" .
         "               Reads a input with 'type value' lines separated\n" .
-	"               by whitespaces, assuming that type field is first.\n" .
-	"               Outputs the values that are within the confidece\n" .
-	"               interval of 95 procent. This is the default.\n";
+        "               by whitespaces, assuming that type field is first.\n" .
+        "               Outputs the values that are within the confidece\n" .
+        "               interval of 95 procent. This is the default.\n";
 }
 
 # Purpose: Get, check and parse the arguments given for the program
@@ -156,36 +156,36 @@ sub getargs {
     my $ret = 1;
 
     if (!($#ARGV == 0 || $#ARGV == 2) || $ARGV[0] eq "-h") {
-	return 0;
+        return 0;
     }
 
     if ($ARGV[0] >= 0 || $ARGV[0] <= 100) {
-	$confidence = $ARGV[0];
+        $confidence = $ARGV[0];
     } else {
-	print("Confidence value must be between [0..100]\n");
-	return 0;
+        print("Confidence value must be between [0..100]\n");
+        return 0;
     }
 
     if ($#ARGV == 0) {
-	return 1;
+        return 1;
     }
 
     if ($ARGV[1] =~ /type/) {
-	%regexp_order = ( 'type' => '$1', 'value' => '$2' );
+        %regexp_order = ( 'type' => '$1', 'value' => '$2' );
     } elsif ($ARGV[1] =~ /value/) {
-	%regexp_order = ( 'type' => '$2', 'value' => '$1' );
+        %regexp_order = ( 'type' => '$2', 'value' => '$1' );
     } else {
-	return 0;
+        return 0;
     }
 
     if (defined($ARGV[2])) {
-	$regexp = $ARGV[2];
+        $regexp = $ARGV[2];
     }
 
     return 1;
 }
 
-# Purpose: Read the values for types from the filehandle 
+# Purpose: Read the values for types from the filehandle
 # Params:  $inputfd        A filehandle where the input data will be read
 #          $regexp         A regexp for catching type values
 #          \%regexp_order  A refererence to the hash of the order of the
@@ -199,19 +199,19 @@ sub read_values {
     my $lineno = 1;
 
     while (defined(my $line = <$inputfd>)) {
-	$line =~ /$regexp/;
-	my ($type, $val) = (eval($regexp_order{'type'}), 
-			      eval($regexp_order{'value'}));
-	if (isnum($val)) {
-	    push (@{ $values{$type} }, $val);
-	} else {
-	    print("Non-numeric value ($val) at line $lineno, aborting\n");
-	    print "Type was $type\n";
-	    print "Regexp was $regexp\n";
-	    print "Line was $regexp\n";
-	    return ();
-	}
-	$lineno++;
+        $line =~ /$regexp/;
+        my ($type, $val) = (eval($regexp_order{'type'}),
+                              eval($regexp_order{'value'}));
+        if (isnum($val)) {
+            push (@{ $values{$type} }, $val);
+        } else {
+            print("Non-numeric value ($val) at line $lineno, aborting\n");
+            print "Type was $type\n";
+            print "Regexp was $regexp\n";
+            print "Line was $regexp\n";
+            return ();
+        }
+        $lineno++;
     }
 
     return %values;
@@ -229,7 +229,7 @@ sub average {
 # Purpose: Calculate standard deviation of the given values
 # Params:  $avg  the average of @val
 #          @val  the values
-# Returns: 
+# Returns:
 #
 sub standard_deviation {
     my $avg = shift(@ARG);
@@ -237,8 +237,8 @@ sub standard_deviation {
     my $sum = 0;
 
     foreach my $val (@val) {
-	my $delta = $val - $avg;
-	$sum += $delta * $delta;
+        my $delta = $val - $avg;
+        $sum += $delta * $delta;
     }
 
     return sqrt($sum / ( $#val + 1));
@@ -256,9 +256,9 @@ sub confidence_interval {
 
     $udist_val = (100 - (100 - $conf) / 2) / 100;
     if ($udist_val == 1) {
-	$udist_res = 1;
+        $udist_res = 1;
     } else {
-	$udist_res = udistr($udist_val);
+        $udist_res = udistr($udist_val);
     }
     $diff = abs($udist_res * $std_dev);
     $lower = $avg - $diff;
@@ -279,12 +279,12 @@ sub filter {
     my ($lower, $upper, @val) = @ARG;
     my @filtered_val = ();
     foreach my $val (@val) {
-	if ($val >= $lower && $val <= $upper) {
-	    push(@filtered_val, $val);
-	} else {
-	    print("$val was filtered\n");
-	}
+        if ($val >= $lower && $val <= $upper) {
+            push(@filtered_val, $val);
+        } else {
+            print("$val was filtered\n");
+        }
     }
-    
+
     return @filtered_val;
 }

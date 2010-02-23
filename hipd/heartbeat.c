@@ -1,6 +1,8 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <netinet/icmp6.h>
+
 #include "heartbeat.h"
 #include "maintenance.h"
 
@@ -97,7 +99,7 @@ int hip_icmp_recvmsg(int sockfd)
     struct iovec iov[1];
     u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
     u_char iovbuf[HIP_MAX_ICMP_PACKET];
-    struct icmp6hdr *icmph = NULL;
+    struct icmp6_hdr *icmph = NULL;
     struct inet6_pktinfo *pktinfo;
     struct sockaddr_in6 src_sin6;
     struct in6_addr *src   = NULL, *dst = NULL;
@@ -161,13 +163,13 @@ int hip_icmp_recvmsg(int sockfd)
     gettimeofday(rtval, (struct timezone *) NULL);
 
     /* Check if the process identifier is ours and that this really is echo response */
-    icmph = (struct icmp6hdr *) (void *) iovbuf;
-    if (icmph->icmp6_type != ICMPV6_ECHO_REPLY) {
+    icmph = (struct icmp6_hdr *) (void *) iovbuf;
+    if (icmph->icmp6_type != ICMP6_ECHO_REPLY) {
         err = 0;
         goto out_err;
     }
     identifier = getpid() & 0xFFFF;
-    if (identifier != icmph->icmp6_identifier) {
+    if (identifier != icmph->icmp6_id) {
         err = 0;
         goto out_err;
     }

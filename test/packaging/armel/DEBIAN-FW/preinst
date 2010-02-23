@@ -1,5 +1,3 @@
 #!/bin/sh
-invoke-rc.d --force --quiet hipfw stop 
-update-rc.d -f hipfw remove 
-
- 
+invoke-rc.d --force --quiet hipfw stop
+update-rc.d -f hipfw remove

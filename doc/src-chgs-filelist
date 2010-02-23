@@ -21,7 +21,7 @@ static inline struct absproto_info* absproto_find_handler(__u8 protocol):
 Absproto initialization, new protocol registration for IPv6, unregistering a protocol and cleanup.
 
 int absproto_register6(struct absproto_info* info)
-int absproto_unregister6(struct absproto_info* info) 
+int absproto_unregister6(struct absproto_info* info)
 static int absproto_init(void)
 static void absproto_cleanup(void)
 
@@ -30,14 +30,14 @@ static void absproto_cleanup(void)
 
 Outbound data header handling functions (make options, build header, push header)
 
-struct ipv6_txoptions *absproto_handler_make_opts (struct ipv6_txoptions *opt, 
+struct ipv6_txoptions *absproto_handler_make_opts (struct ipv6_txoptions *opt,
                                                    struct ipv6_txoptions *opt_space,
                                                    struct flowi *fl)
 u8* absproto_handler_build_header(struct sk_buff *skb, struct ipv6_txoptions *opt, u8 *prev hdr)
 struct sk_buff* absproto_handler_push_header(struct sk_buff *skb, struct ipv6_txoptions *opt, u8 *nexthdr)
 void absproto_handler_free_opts(struct ipv6_txoptions *opt)
 #if 0 static struct sk_buff *esp_build_header(struct sk_buff *skb, struct sad_entry *sade, struct sock *sk)
-#if 0 void* *esp_outbound(struct sk_buff *skb, struct in6_addr *daddr, struct in6_addr *saddr, int *opt_len, int *nh_offset, struct sock* sk) 
+#if 0 void* *esp_outbound(struct sk_buff *skb, struct in6_addr *daddr, struct in6_addr *saddr, int *opt_len, int *nh_offset, struct sock* sk)
 #if 0 struct sk_buff *esp_outbound_modify(struct sk_buff *skb, void *info)
 
 
@@ -72,9 +72,9 @@ int hip_del_lhi(struct hip_lhid *hi)
 static int hip_get_lhi_hit(struct in6_addr *hit, int type)
 static int hip_sdb_init(void)
 static void hip_sdb_uninit(void)
-static struct hip_sdb_state *hip_sdb_find(struct in6_addr *hit) 
+static struct hip_sdb_state *hip_sdb_find(struct in6_addr *hit)
 static struct hip_sdb_state *hip_sdb_find_spi(u32 spi)
-static struct hip_sdb_state *hip_sdb_add(void) 
+static struct hip_sdb_state *hip_sdb_add(void)
 int hip_len_pad(int len)
 static struct hip_tlv_common* hip_tlv_sane(struct hip_tlv_common *cur, int min_len, int max_len, struct hip_common *start, unsigned int *prev_type, int type_num)
 struct hip_common* hip_get_r1(void)
@@ -86,10 +86,10 @@ static int hip_csum_verify(struct sk_buff *skb)
 static int hip_csum_send(struct in6_addr *peer_addr, struct hip_common* buf)
 int hip_handle_i1(struct sk_buff *skb)
 void hip_handle_r1_finish(struct usd_context *ctx)
-int hip_handle_r1(struct hip_sdb_state *entry, struct sk_buff *skb) 
+int hip_handle_r1(struct hip_sdb_state *entry, struct sk_buff *skb)
 void hip_handle_i2_finish(struct usd_context *ctx)
-int hip_handle_i2(struct sk_buff *skb) 
-int hip_handle_r2(struct hip_sdb_state *entry, struct sk_buff *skb) 
+int hip_handle_i2(struct sk_buff *skb)
+int hip_handle_r2(struct hip_sdb_state *entry, struct sk_buff *skb)
 int hip_inbound(struct sk_buff **skb, int offset)
 static int hip_send_i1(struct hip_sdb_state *entry)
 int hip_exchange(struct sockaddr *uaddr, int addr_len)
@@ -120,7 +120,7 @@ void usd_r1_start(struct usd_context *ctx, void (*finish_callback)(struct usd_co
 * absproto/spd/spdm.c
 
 struct sad_entry *spd_get_sa_out6(int alg, struct in6_addr *daddr)
-struct sad_entry *spd_get_sa_in6(int alg, struct in6_addr *daddr, __u32 spi) 
+struct sad_entry *spd_get_sa_in6(int alg, struct in6_addr *daddr, __u32 spi)
 static struct sad_entry *spd_get_new_sade(void)
 static int spd_setup_esp(struct sad_entry *sade, int enc_alg, char* key)
 int spd_add_sa6(int algorithm, int dir, struct in6_addr *addr, __u32 spi, int antir,
@@ -153,7 +153,7 @@ optimizations
 
 optimizations
 
-* tcp_ipv6.c 
+* tcp_ipv6.c
 
 optimizations
 
@@ -174,7 +174,7 @@ diff -Nr --exclude=CVS . ~/hipl/linux/include/net
 * ipv6.h
 * pfkeyv2.h
 * spdm.h
-* usd.h 
+* usd.h
 
 structs and defines
 
@@ -267,7 +267,7 @@ Output:
 
 -> ip6_output
   - ip6_output_finish
-    - 
+    -
 
 -> ip6_build_xmit
    - ip6_route_output

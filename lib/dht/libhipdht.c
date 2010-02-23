@@ -48,9 +48,9 @@ static void connect_alarm(int signo)
 
 /**
  * init_dht_gateway_socket_gw - Initializes socket for the openDHT
- *				communications based on gateway address family
- * @param sockfd	Socket descriptor to be initialized.
- * @param gateway	addrinfo of the gateway, used to determine the address family to use
+ *                              communications based on gateway address family
+ * @param sockfd        Socket descriptor to be initialized.
+ * @param gateway       addrinfo of the gateway, used to determine the address family to use
  *
  * @return Returns positive if socket creation was ok negative on error.
  */
@@ -73,10 +73,10 @@ int init_dht_gateway_socket_gw(int sockfd, struct addrinfo *gateway)
 /**
  * resolve_dht_gateway_info - Resolves the gateway address
  *
- * @param gateway_name	FQDN of the gateway
- * @param gateway	Addrinfo struct where the result will be stored
+ * @param gateway_name  FQDN of the gateway
+ * @param gateway       Addrinfo struct where the result will be stored
  * @param gateway_port  Port number of the used gateway
- * @param af		address family
+ * @param af            address family
  *
  * @return Returns 0 on success otherwise -1
  */

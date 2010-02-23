@@ -17,14 +17,14 @@ EXEC="/opt/bamboo/bin/run-java"
 
 start() {
         touch $LOG 2>/dev/null
-	chown $USER:$USER $LOG 2>/dev/null
+        chown $USER:$USER $LOG 2>/dev/null
         daemon --user=${USER} $EXEC $ARGS # 2>&1 >${LOG}
-	RETVAL=$?
+        RETVAL=$?
 }
 
 stop() {
-	kill `ps axu|grep "$ARGS"|grep -v grep|cut -d" " -f4` 2>/dev/null
-	RETVAL=$?
+        kill `ps axu|grep "$ARGS"|grep -v grep|cut -d" " -f4` 2>/dev/null
+        RETVAL=$?
 }
 
 restart() {
@@ -40,16 +40,16 @@ case "$1" in
 start)
         echo -n $"Starting bamboo: "
         start
-	echo
+        echo
         ;;
 stop)
         echo -n $"Stopping bamboo: "
         stop
-	echo
+        echo
         ;;
 reload)
         echo -n $"Reloading bamboo: "
-	echo
+        echo
         ;;
 force-reload)
         echo "$0: Unimplemented feature."
@@ -58,7 +58,7 @@ force-reload)
 restart)
         echo -n $"Restarting bamboo"
         restart
-	echo
+        echo
         ;;
 condrestart)
         #if [ -f /var/lock/subsys/acpid ]; then

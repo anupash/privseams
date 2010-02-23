@@ -13,9 +13,9 @@ JAVA_HOME=/usr/lib/j2se/1.4
 endif
 
 JAVA_SOURCES=HipAddress.java HipSocket.java HipSocketFactory.java \
-	HipServerSocket.java HipServerSocketFactory.java HipSocketImpl.java \
-	HipSocketImplFactory.java NativeInputStream.java \
-	NativeOutputStream.java
+             HipServerSocket.java HipServerSocketFactory.java HipSocketImpl.java \
+             HipSocketImplFactory.java NativeInputStream.java \
+             NativeOutputStream.java
 C_SOURCES=hip-address.c hip-socket-impl.c hip-socket.c native-stream.c
 JAVA_CLASSES=$(patsubst %.java,jip/%.class,$(JAVA_SOURCES))
 JAVA_HEADERS=jip_HipAddress.h jip_HipSocketImpl.h jip_HipSocket.h jip_NativeInputStream.h jip_NativeOutputStream.h

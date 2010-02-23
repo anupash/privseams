@@ -68,7 +68,7 @@ class ClientConnection(object):
         self.addrlabel = '(%s:%d)' % address[:2]
         self.logic = mgmtlogic
         self.fd = self.con.fileno()
-        
+
         # XML stuff
         self.parser = expat.ParserCreate()
         self.parser.StartElementHandler  = self.handle_start_element
@@ -83,7 +83,7 @@ class ClientConnection(object):
         self.want_list_rules = False
         self.want_list_keys  = False
         self.addables = []       # list of rules to add
-        self.prependables = []	 # list of rules to prepend
+        self.prependables = []   # list of rules to prepend
         self.removables = []     # list of rules to remove
         self.empty_rules = False # true if rules should be flushed
 
@@ -324,7 +324,7 @@ class ClientConnection(object):
 
         if wanna_write_rules:
             self.logic.write_rules(rulelist)
-                
+
         if self.want_list_rules:
             if self.debug:
                 syslog.syslog(self.addrlabel + ' replying to list_rules request')
@@ -499,7 +499,7 @@ class ConfigurationInterfaceServer(object):
 
             items = poller.poll(60*1000)
             if self.debug and not items:
-                syslog.syslog('Poll: timeout')                
+                syslog.syslog('Poll: timeout')
             for x in items:
                 if self.debug:
                     syslog.syslog('Poll: fd=%d, event=0x%x' % x)
@@ -560,7 +560,7 @@ class ConfigurationInterfaceClient(object):
         self.replydone = False
 
         # Reply stuff
-        self.rules = [] 	# Filled if list_rules is used.
+        self.rules = []         # Filled if list_rules is used.
         self.keys = []          # Filled if list_keys is used.
 
     def connect(self):
@@ -569,7 +569,7 @@ class ConfigurationInterfaceClient(object):
         Relevant elements: X{query}.
         """
         assert not self.connected
-        
+
         # Connect
         try:
             self.socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
@@ -618,7 +618,7 @@ class ConfigurationInterfaceClient(object):
             else:
                 self.parser.Parse('', True)
                 break
-        
+
     def echo(self, data):
         """Send data to the server and ask that it sends it back.
 

@@ -144,7 +144,7 @@ class ManagementConsole(object):
         self.print_headers()
 
         errmsg = ''
-        
+
         if self.form.has_key('host'):
             host = self.form['host'].value
         else:
@@ -164,7 +164,7 @@ class ManagementConsole(object):
             target = None
             cond = ''
             ok = True
-            
+
             if self.form.has_key('rulehook'):
                 hook = self.form['rulehook'].value
             if hook not in ('INPUT', 'OUTPUT', 'FORWARD'):
@@ -229,7 +229,7 @@ class ManagementConsole(object):
                     errmsg = '<p><b color="red">Invalid rule, failed to add!</b></p>'
                 else:
                     client.add_rules([rule])
-                
+
 
         client.list_rules()
         client.list_keys()
@@ -247,7 +247,7 @@ class ManagementConsole(object):
                          cgi.escape(rule.conditions_to_text(True)),
                          cgi.escape(rule.to_text()),
                          )
-        
+
         print """<html><head><title>Firewall host: %(server)s</title></head>
         <body>
         <h1>Firewall host: %(server)s</h1>
@@ -303,13 +303,13 @@ class ManagementConsole(object):
         <td><input type="text" size="40" name="src_hit"></td>
         <td><input type="checkbox" name="src_hit_not" value="1">Reverse condition</td>
         </tr>
-        
+
         <tr>
         <td align="right">Destination HIT:</td>
         <td><input type="text" size="40" name="dst_hit"></td>
         <td><input type="checkbox" name="dst_hit_not" value="1">Reverse condition</td>
         </tr>
-        
+
         <tr>
         <td align="right">Source Host Identity:</td>
         <td>
@@ -326,13 +326,13 @@ class ManagementConsole(object):
         <td><input type="text" size="10" name="in_iface"></td>
         <td><input type="checkbox" name="in_iface_not" value="1">Reverse condition</td>
         </tr>
-        
+
         <tr>
         <td align="right">Outgoing interface:</td>
         <td><input type="text" size="10" name="out_iface"></td>
         <td><input type="checkbox" name="out_iface_not" value="1">Reverse condition</td>
         </tr>
-        
+
         <tr>
         <td align="right">Packet type:</td>
         <td>
@@ -365,7 +365,7 @@ class ManagementConsole(object):
         </td>
         <td><input type="checkbox" name="state_not" value="1">Reverse condition</td>
         </tr>
-        
+
         </tbody>
         </table>
         <br>
@@ -514,16 +514,16 @@ class ManagementConsole(object):
         errmsg = ''
 
         ok = True
-	src_hit = None
+        src_hit = None
         name = None
         keytype = None
         key = None
         roadwarrior = False
-	if self.form.has_key('src_hit'):
-	    src_hit = self.form['src_hit'].value.strip()
-	if not src_hit:
-	    errmsg = '<p><b color="red">Missing hit!</b></p>'
-	    ok = False
+        if self.form.has_key('src_hit'):
+            src_hit = self.form['src_hit'].value.strip()
+        if not src_hit:
+            errmsg = '<p><b color="red">Missing hit!</b></p>'
+            ok = False
         #if self.form.has_key('name'):
         #    name = self.form['name'].value.strip().replace(' ', '_')
         #if not name:
@@ -549,12 +549,12 @@ class ManagementConsole(object):
             in_rule  = Rules.Rule('INPUT -src_hit %s ACCEPT' % src_hit)
             fwd_rule = Rules.Rule('FORWARD -src_hit %s ACCEPT' % src_hit)
             webserver_rule = Rules.Rule('INPUT -src_hit %s -dst_hit 4078:4163:62c8:897:f60e:7d69:bd6a:4e0e ACCEPT'
-				        % src_hit)
+                                        % src_hit)
 
             hosts = self.get_hosts()
             for host in hosts:
                 self.wanna_configure(host)
-		#self.servers[host].upload_key(keyname, key)
+                #self.servers[host].upload_key(keyname, key)
                 #msg = msg + 'key to %s; ' % host
                 if 'gateway' in host:
                     self.servers[host].prepend_rules([webserver_rule, fwd_rule])
@@ -659,4 +659,3 @@ if __name__ == '__main__':
         client.echo('qwerty')
         client.commit()
         client.process_replies()
-

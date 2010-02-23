@@ -1,5 +1,3 @@
 #!/bin/sh
 
-invoke-rc.d --force --quiet hipfw stop 
-
-
+invoke-rc.d --force --quiet hipfw stop

@@ -8,13 +8,13 @@ $Id: testing.txt,v 1.6 2003/08/12 13:18:21 mkomu Exp $
     - varying k values
   - resolver
     - manual keying or from DNS
-  - the effect of the network 
+  - the effect of the network
     - packet transfer latency included / excluded
     - performance time with HIP and without HIP
     - fragmentation
     - wlan
     - hand-over
-  - meters   
+  - meters
     - measure the performance of subcomponents to find the bottlenecks
       - coarse grained: packets I1, I2, jne.
       - fine grained: operations (signing, verifying)

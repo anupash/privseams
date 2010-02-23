@@ -34,15 +34,15 @@ public class HipServerSocket extends ServerSocket {
     private HipSocketImpl impl;
 
     HipServerSocket (HipSocketImplFactory factory) throws IOException {
-	this.factory = factory;
-	impl = (HipSocketImpl) factory.createSocketImpl();
-	impl.create(true);
+        this.factory = factory;
+        impl = (HipSocketImpl) factory.createSocketImpl();
+        impl.create(true);
     }
 
     public void bind (SocketAddress endpoint, int backlog) throws IOException {
-	InetSocketAddress end = (InetSocketAddress) endpoint;
-	impl.bind(HipAddress.getByAddress(end.getAddress()), end.getPort());
-	impl.listen(backlog);
+        InetSocketAddress end = (InetSocketAddress) endpoint;
+        impl.bind(HipAddress.getByAddress(end.getAddress()), end.getPort());
+        impl.listen(backlog);
     }
 
     /**
@@ -55,7 +55,7 @@ public class HipServerSocket extends ServerSocket {
      * @param port the port number to bind to
      */
     public void bind (HipAddress endpoint, int port) {
-	bind(endpoint, port, 50);
+        bind(endpoint, port, 50);
     }
 
     /**
@@ -70,22 +70,22 @@ public class HipServerSocket extends ServerSocket {
      * @param backlog the listening backlog length
      */
     public void bind (HipAddress endpoint, int port, int backlog) {
-	if (backlog < 1) {
-	    backlog = 50;
-	}
-	impl.bind(endpoint, port);
-	impl.listen(backlog);
+        if (backlog < 1) {
+            backlog = 50;
+        }
+        impl.bind(endpoint, port);
+        impl.listen(backlog);
     }
 
     public Socket accept () throws IOException {
-	HipSocket s =
-	    new HipSocket((HipSocketImpl) factory.createSocketImpl());
-	HipSocketImpl si = s.impl;
-	s.impl = null;
-	impl.accept(si);
-	s.impl = si;
-	s.klugeAccept();
-	return s;
+        HipSocket s =
+            new HipSocket((HipSocketImpl) factory.createSocketImpl());
+        HipSocketImpl si = s.impl;
+        s.impl = null;
+        impl.accept(si);
+        s.impl = si;
+        s.klugeAccept();
+        return s;
     }
 
 }

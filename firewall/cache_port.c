@@ -173,11 +173,13 @@ void hip_firewall_port_cache_uninit_hldb(void)
 
     list_for_each_safe(item, tmp, firewall_port_cache_db, i)
     {
+      HIP_DEBUG("xx\n");
         this = (firewall_port_cache_hl_t *) list_entry(item);
         hip_ht_delete(firewall_port_cache_db, this);
         free(this);
+      HIP_DEBUG("yy\n");
     }
     HIP_UNLOCK_HT(&firewall_port_cache_db);
-    hip_ht_uninit(&firewall_port_cache_db);
+    hip_ht_uninit(firewall_port_cache_db);
     HIP_DEBUG("End hldbdb delete\n");
 }

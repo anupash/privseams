@@ -5,7 +5,7 @@
 #
 ### TODO ############################################
 #
-# - libinet6test and conntest-client-gai depend on 
+# - libinet6test and conntest-client-gai depend on
 #   libinet6 which should compiled automatically if
 #   either test application is being compiled
 # - the rules for compilation are non-uniform: LINK should be used
@@ -23,8 +23,8 @@ CC       = gcc
 CFLAGS   = -Wall -O2 -g -DCONFIG_HIP_DEBUG $(INCPATH)
 LDFLAGS  = -g
 LINK     = gcc
-LIBPATH  = 
-LIBS     = 
+LIBPATH  =
+LIBS     =
 
 ####### Implicit rules ###############################
 
@@ -81,7 +81,7 @@ dsa_file: dsa_file.o ../hipd/debug.o ../hipd/crypto.o
 dsa_hit: dsa_hit.o ../hipd/debug.o ../hipd/crypto.o
 	$(CC) $(CFLAGS) -DDEBUG -o dsa_hit dsa_hit.o ../hipd/debug.c ../hipd/crypto.c -lcrypto
 
-hiplisthi.o: 
+hiplisthi.o:
 	$(CC) $(CFLAGS) -DDEBUG -c hiplisthi.c
 
 devfstest.o: devfstest.c
@@ -122,4 +122,3 @@ clean:
 checksum: checksum.h
 unit: $(HIPLMODULESRCDIR)/unit.h
 unittest: unit unittest.h
-

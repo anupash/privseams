@@ -9,4 +9,3 @@ Package: hipl
 Replaces: hipl
 Architecture: armel
 Description: Host Identity Protocol for Linux
-

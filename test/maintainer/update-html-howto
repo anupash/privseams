@@ -25,4 +25,3 @@ cd $TMP_DIR/doc
 #cp -r manual/* $OUTPUT_DIR
 make
 cp -r howto-html/* $OUTPUT_DIR
-

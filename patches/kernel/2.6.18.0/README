@@ -17,4 +17,3 @@ kernel-2.6.18-92.1.10.el5.spec.patch
 7. rpm -i <built-package>
 8. Do something with the grub, possibly the following:
   /sbin/new-kernel-pkg --mkinitrd --depmod --install --make-default 2.6.18
-

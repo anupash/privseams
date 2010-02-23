@@ -25,8 +25,8 @@ public class NativeInputStream extends InputStream {
     private native int internalRead (byte[] b, int off, int len);
 
     static {
-	System.loadLibrary("jip");
-	nativeInit();
+        System.loadLibrary("jip");
+        nativeInit();
     }
 
     /**
@@ -37,26 +37,26 @@ public class NativeInputStream extends InputStream {
      * @param fd the file descriptor to wrap
      */
     NativeInputStream (int fd) {
-	this.fd = fd;
+        this.fd = fd;
     }
 
     public int read () {
-	byte[] data = new byte[1];
-	if (read(data, 0, 1) == 1) {
-	    return data[0];
-	} else {
-	    return -1;
-	}
+        byte[] data = new byte[1];
+        if (read(data, 0, 1) == 1) {
+            return data[0];
+        } else {
+            return -1;
+        }
     }
 
     public int read (byte[] b, int off, int len) {
-	if (b == null) {
-	    throw new NullPointerException();
-	}
-	if (off < 0 || len < 0 || off + len > b.length) {
-	    throw new IndexOutOfBoundsException();
-	}
-	return internalRead(b, off, len);
+        if (b == null) {
+            throw new NullPointerException();
+        }
+        if (off < 0 || len < 0 || off + len > b.length) {
+            throw new IndexOutOfBoundsException();
+        }
+        return internalRead(b, off, len);
     }
 
 }

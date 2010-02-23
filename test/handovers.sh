@@ -24,34 +24,34 @@
 # These tests are run with one interface by using different IP masks
 # and by using the tools offered by the iputils package.
 #
-# NOTE: RUN AS SUDO to get everything working without having to ask 
+# NOTE: RUN AS SUDO to get everything working without having to ask
 #       passwords all the time. BECAUSE this is run as sudo READ this
 #       script to know what it does before using it.
 #
 # NOTE: Remember this peer is the MN/Initiator node. Also Remember
-#       to check that the other CN/Responder has its hipd running 
+#       to check that the other CN/Responder has its hipd running
 #       and that it has both IPv4 and IPv6 addresses. Also this
 #       node/MN/Initiator has to have hipd running.
 #
-# NOTE: All the interfamily tests are run with "locator on" option of 
+# NOTE: All the interfamily tests are run with "locator on" option of
 #       hipconf configuration tool.
 #
 # NOTE: Remember to change the variables below to mirror your network
-#       Also remember that to this script to work the IPv4 primary and 
+#       Also remember that to this script to work the IPv4 primary and
 #       secondary addresses have to be added with different masks.
-#       Otherwise when you delete the primary address the secondary 
-#       one will also disappear. 
+#       Otherwise when you delete the primary address the secondary
+#       one will also disappear.
 #
 # NOTE: If initialization of the tunnel hangs your mappings in /etc/hosts
 #       or in /etc/hip/hosts might be incorrect.
 #
 # NOTE: Removing the primary IPv4 address from the interface will
 #       also remove the default route and when you add default route
-#       to the interface you may have to wait a long time before you can 
+#       to the interface you may have to wait a long time before you can
 #       send anything. For some reason after manually adding default route
 #       the networking becomes unresponsive.
 #
-# NOTE: Also wireless interfaces might intervene and take control so 
+# NOTE: Also wireless interfaces might intervene and take control so
 #       shut them down
 #
 # NOTE: Modifies /proc/sys/net/ipv6/conf/all/accept_ra
@@ -65,10 +65,10 @@
 #
 ##########################################################################
 
-#VARIABLES THAT HAVE TO BE MODIFIED 
+#VARIABLES THAT HAVE TO BE MODIFIED
 #ACCORDING TO YOUR INFRASTRUCTURE
 
-# if you have more addresses with scope:global they might interfere so 
+# if you have more addresses with scope:global they might interfere so
 # remove them or at least know that they might and probably will interfere
 # This means that you may have to modify this scripts reset interface to remove
 # the extra addresses after it has brought up the interface
@@ -133,7 +133,7 @@ BSTAT_H64="No_result"
 tmp=""
 pinglinecount=""
 
-ROOT_UID=0 
+ROOT_UID=0
 
 #END INTERNAL VARIABLES
 
@@ -180,152 +180,152 @@ function print_statistics {
     dotline
     echo "Test results!!!!!!!"
     dotline
-    case $1 in 
-	"all") 
-	    printf "\nTest results for all the tests:\n\n"
-	    printf "Starting from IPv4 address -->\n"
-	    printf "\tSoft handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_S44 $STAT_S44
-	    printf "\tHard handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_H44 $STAT_H44
-	    printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S46 $STAT_S46
-	    printf "\tHard handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_H46 $STAT_H46
-	    printf "\nStarting from IPv6 address -->\n"
-	    printf "\tSoft handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_S66 $STAT_S66
-	    printf "\tHard handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_H66 $STAT_H66
-	    printf "\tSoft handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_S64 $STAT_S64
-	    printf "\tHard handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_H64 $STAT_H64
-	    ;; 	
-	"all4")    
-	    printf "Starting from IPv4 address -->\n"
-	    printf "\tSoft handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_S44 $STAT_S44
-	    printf "\tHard handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_H44 $STAT_H44
-	    printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S46 $STAT_S46
-	    printf "\tHard handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_H46 $STAT_H46
-	    ;;
-	"all6")    
-	    printf "\nStarting from IPv6 address -->\n"
-	    printf "\tSoft handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_S66 $STAT_S66
-	    printf "\tHard handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_H66 $STAT_H66
-	    printf "\tSoft handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_S64 $STAT_S64
-	    printf "\tHard handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_H64 $STAT_H64
-	    ;;
-	"inner")  
-	    printf "\tSoft handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_S44 $STAT_S44
-	    printf "\tHard handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_H44 $STAT_H44
-	    printf "\tSoft handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_S66 $STAT_S66
-	    printf "\tHard handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_H66 $STAT_H66
-	    ;;
-	"inter")  
-	    printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S46 $STAT_S46
-	    printf "\tHard handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_H46 $STAT_H46
-	    printf "\tSoft handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_S64 $STAT_S64
-	    printf "\tHard handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_H64 $STAT_H64
-	    ;;
-	"h44")      
-	    printf "\tHard handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_H44 $STAT_H44
-	    ;;
-	"h66")      
-	    printf "\tHard handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_H66 $STAT_H66
-	    ;;
-	"s44")      
-	    printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S44 $STAT_S44
-	    ;;
-	"s66")      
-	    printf "\tSoft handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_S66 $STAT_S66
-	    ;;
-	"h46")      
-	    printf "\tHard handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_H46 $STAT_H46
-	    ;;
-	"h64")      
-	    printf "\tHard handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_H64 $STAT_H64
-	    ;;
-	"s46")     
-	    printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S46 $STAT_S46
-	    ;;
-	"s64")     
-	    printf "\tSoft handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_S64 $STAT_S64
-	    ;;
-	*) echo "ERROR unknown test type"; usage ; exit 0;;
+    case $1 in
+        "all")
+            printf "\nTest results for all the tests:\n\n"
+            printf "Starting from IPv4 address -->\n"
+            printf "\tSoft handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_S44 $STAT_S44
+            printf "\tHard handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_H44 $STAT_H44
+            printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S46 $STAT_S46
+            printf "\tHard handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_H46 $STAT_H46
+            printf "\nStarting from IPv6 address -->\n"
+            printf "\tSoft handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_S66 $STAT_S66
+            printf "\tHard handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_H66 $STAT_H66
+            printf "\tSoft handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_S64 $STAT_S64
+            printf "\tHard handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_H64 $STAT_H64
+            ;;
+        "all4")
+            printf "Starting from IPv4 address -->\n"
+            printf "\tSoft handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_S44 $STAT_S44
+            printf "\tHard handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_H44 $STAT_H44
+            printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S46 $STAT_S46
+            printf "\tHard handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_H46 $STAT_H46
+            ;;
+        "all6")
+            printf "\nStarting from IPv6 address -->\n"
+            printf "\tSoft handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_S66 $STAT_S66
+            printf "\tHard handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_H66 $STAT_H66
+            printf "\tSoft handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_S64 $STAT_S64
+            printf "\tHard handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_H64 $STAT_H64
+            ;;
+        "inner")
+            printf "\tSoft handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_S44 $STAT_S44
+            printf "\tHard handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_H44 $STAT_H44
+            printf "\tSoft handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_S66 $STAT_S66
+            printf "\tHard handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_H66 $STAT_H66
+            ;;
+        "inter")
+            printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S46 $STAT_S46
+            printf "\tHard handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_H46 $STAT_H46
+            printf "\tSoft handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_S64 $STAT_S64
+            printf "\tHard handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_H64 $STAT_H64
+            ;;
+        "h44")
+            printf "\tHard handover from IPv4 to IPv4: before %s after %s\n" $BSTAT_H44 $STAT_H44
+            ;;
+        "h66")
+            printf "\tHard handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_H66 $STAT_H66
+            ;;
+        "s44")
+            printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S44 $STAT_S44
+            ;;
+        "s66")
+            printf "\tSoft handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_S66 $STAT_S66
+            ;;
+        "h46")
+            printf "\tHard handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_H46 $STAT_H46
+            ;;
+        "h64")
+            printf "\tHard handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_H64 $STAT_H64
+            ;;
+        "s46")
+            printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S46 $STAT_S46
+            ;;
+        "s64")
+            printf "\tSoft handover from IPv6 to IPv4: before %s after %s\n" $BSTAT_S64 $STAT_S64
+            ;;
+        *) echo "ERROR unknown test type"; usage ; exit 0;;
     esac
     exit 0
 }
 
 function check_root {
     if [ "$UID" -eq "$ROOT_UID" ] ; then
-	echo "You are root, so be carefull and"
-	echo -n "read the comments for usage [ENTER to continue]:"
-	read tmp
-	printf "\n"
+        echo "You are root, so be carefull and"
+        echo -n "read the comments for usage [ENTER to continue]:"
+        read tmp
+        printf "\n"
     else
-	echo ""
-	echo "This scripts needs to be run as sudo/root"
-	echo "and be sure to read the comments from the script"
-	echo "to know what this script works."
-	echo ""
-	exit 0 
+        echo ""
+        echo "This scripts needs to be run as sudo/root"
+        echo "and be sure to read the comments from the script"
+        echo "to know what this script works."
+        echo ""
+        exit 0
     fi
 
 }
 
 function pong {
-    printf "Trying to send ping to %s\n" $PEER_HIT 
-    ping6 -c 1 $PEER_HIT > $TEMPORARY_FILE_PING 
+    printf "Trying to send ping to %s\n" $PEER_HIT
+    ping6 -c 1 $PEER_HIT > $TEMPORARY_FILE_PING
     pinglinecount=$(grep '1 packets transmitted, 1 received' $TEMPORARY_FILE_PING)
     if [ "$pinglinecount" = "" ]
-    then 
-	case $1 in 
-	    "STAT_S44") STAT_S44="FAILED" ; echo FAILED ;;
-	    "STAT_H44") STAT_H44="FAILED" ; echo FAILED ;;
-	    "STAT_H66") STAT_H66="FAILED" ; echo FAILED ;;
-	    "STAT_S66") STAT_S66="FAILED" ; echo FAILED ;;
-	    "STAT_H46") STAT_H46="FAILED" ; echo FAILED ;;
-	    "STAT_H64") STAT_H64="FAILED" ; echo FAILED ;;
-	    "STAT_S46") STAT_S46="FAILED" ; echo FAILED ;;
-	    "STAT_S64") STAT_S64="FAILED" ; echo FAILED ;;
-	    "BSTAT_S44") BSTAT_S44="FAILED" ; echo FAILED ;;
-	    "BSTAT_H44") BSTAT_H44="FAILED" ; echo FAILED ;;
-	    "BSTAT_H66") BSTAT_H66="FAILED" ; echo FAILED ;;
-	    "BSTAT_S66") BSTAT_S66="FAILED" ; echo FAILED ;;
-	    "BSTAT_H46") BSTAT_H46="FAILED" ; echo FAILED ;;
-	    "BSTAT_H64") BSTAT_H64="FAILED" ; echo FAILED ;;
-	    "BSTAT_S46") BSTAT_S46="FAILED" ; echo FAILED ;;
-	    "BSTAT_S64") BSTAT_S64="FAILED" ; echo FAILED ;;
-	esac
+    then
+        case $1 in
+            "STAT_S44") STAT_S44="FAILED" ; echo FAILED ;;
+            "STAT_H44") STAT_H44="FAILED" ; echo FAILED ;;
+            "STAT_H66") STAT_H66="FAILED" ; echo FAILED ;;
+            "STAT_S66") STAT_S66="FAILED" ; echo FAILED ;;
+            "STAT_H46") STAT_H46="FAILED" ; echo FAILED ;;
+            "STAT_H64") STAT_H64="FAILED" ; echo FAILED ;;
+            "STAT_S46") STAT_S46="FAILED" ; echo FAILED ;;
+            "STAT_S64") STAT_S64="FAILED" ; echo FAILED ;;
+            "BSTAT_S44") BSTAT_S44="FAILED" ; echo FAILED ;;
+            "BSTAT_H44") BSTAT_H44="FAILED" ; echo FAILED ;;
+            "BSTAT_H66") BSTAT_H66="FAILED" ; echo FAILED ;;
+            "BSTAT_S66") BSTAT_S66="FAILED" ; echo FAILED ;;
+            "BSTAT_H46") BSTAT_H46="FAILED" ; echo FAILED ;;
+            "BSTAT_H64") BSTAT_H64="FAILED" ; echo FAILED ;;
+            "BSTAT_S46") BSTAT_S46="FAILED" ; echo FAILED ;;
+            "BSTAT_S64") BSTAT_S64="FAILED" ; echo FAILED ;;
+        esac
     else
-	case $1 in 
-	    "STAT_S44") STAT_S44="SUCCESS" ; echo SUCCESS ;;
-	    "STAT_H44") STAT_H44="SUCCESS" ; echo SUCCESS  ;;
-	    "STAT_H66") STAT_H66="SUCCESS" ; echo SUCCESS  ;;
-	    "STAT_S66") STAT_S66="SUCCESS" ; echo SUCCESS  ;;
-	    "STAT_H46") STAT_H46="SUCCESS" ; echo SUCCESS  ;;
-	    "STAT_H64") STAT_H64="SUCCESS" ; echo SUCCESS  ;;
-	    "STAT_S46") STAT_S46="SUCCESS" ; echo SUCCESS  ;;
-	    "STAT_S64") STAT_S64="SUCCESS" ; echo SUCCESS  ;;
-	    "BSTAT_S44") BSTAT_S44="SUCCESS" ; echo SUCCESS  ;;
-	    "BSTAT_H44") BSTAT_H44="SUCCESS" ; echo SUCCESS  ;;
-	    "BSTAT_H66") BSTAT_H66="SUCCESS" ; echo SUCCESS  ;;
-	    "BSTAT_S66") BSTAT_S66="SUCCESS" ; echo SUCCESS  ;;
-	    "BSTAT_H46") BSTAT_H46="SUCCESS" ; echo SUCCESS  ;;
-	    "BSTAT_H64") BSTAT_H64="SUCCESS" ; echo SUCCESS  ;;
-	    "BSTAT_S46") BSTAT_S46="SUCCESS" ; echo SUCCESS  ;;
-	    "BSTAT_S64") BSTAT_S64="SUCCESS" ; echo SUCCESS  ;;
-	esac
+        case $1 in
+            "STAT_S44") STAT_S44="SUCCESS" ; echo SUCCESS ;;
+            "STAT_H44") STAT_H44="SUCCESS" ; echo SUCCESS  ;;
+            "STAT_H66") STAT_H66="SUCCESS" ; echo SUCCESS  ;;
+            "STAT_S66") STAT_S66="SUCCESS" ; echo SUCCESS  ;;
+            "STAT_H46") STAT_H46="SUCCESS" ; echo SUCCESS  ;;
+            "STAT_H64") STAT_H64="SUCCESS" ; echo SUCCESS  ;;
+            "STAT_S46") STAT_S46="SUCCESS" ; echo SUCCESS  ;;
+            "STAT_S64") STAT_S64="SUCCESS" ; echo SUCCESS  ;;
+            "BSTAT_S44") BSTAT_S44="SUCCESS" ; echo SUCCESS  ;;
+            "BSTAT_H44") BSTAT_H44="SUCCESS" ; echo SUCCESS  ;;
+            "BSTAT_H66") BSTAT_H66="SUCCESS" ; echo SUCCESS  ;;
+            "BSTAT_S66") BSTAT_S66="SUCCESS" ; echo SUCCESS  ;;
+            "BSTAT_H46") BSTAT_H46="SUCCESS" ; echo SUCCESS  ;;
+            "BSTAT_H64") BSTAT_H64="SUCCESS" ; echo SUCCESS  ;;
+            "BSTAT_S46") BSTAT_S46="SUCCESS" ; echo SUCCESS  ;;
+            "BSTAT_S64") BSTAT_S64="SUCCESS" ; echo SUCCESS  ;;
+        esac
     fi
 }
 
 function init_maps {
     if [ $1 -eq 4 ] ; then
-	printf "Adding %s to %s mapping\n" $PEER_HIT $PEER_IPV4
-	sudo hipconf add map $PEER_HIT $PEER_IPV4
+        printf "Adding %s to %s mapping\n" $PEER_HIT $PEER_IPV4
+        sudo hipconf add map $PEER_HIT $PEER_IPV4
     else
-	printf "Adding %s to %s mapping\n" $PEER_HIT $PEER_IPV6
-	sudo hipconf add map $PEER_HIT $PEER_IPV6
+        printf "Adding %s to %s mapping\n" $PEER_HIT $PEER_IPV6
+        sudo hipconf add map $PEER_HIT $PEER_IPV6
     fi
 }
 
 function init_bex {
     printf "Initializing BEX/tunnel to %s\n" $PEER_HIT
     eqline
-    ping6 -c 1 -W 25 $PEER_HIT 
+    ping6 -c 1 -W 25 $PEER_HIT
     eqline
     printf "Tunnel should be open\n"
 }
@@ -339,7 +339,7 @@ function reset_hipd {
     printf "Resetting hadb\n"
     sudo hipconf rst all > /dev/null
     sleep 5
-    #turn locators off by default because some of the 
+    #turn locators off by default because some of the
     #tests did not work locators on (soft4to4 for example)
     # -Samu 29.9.2008
     sudo hipconf locator off
@@ -400,10 +400,10 @@ function locators {
 function raflip {
     printf "Echo IPv6 routing advertisements to %s on all devices\n" $1
     if [ -e /proc/sys/net/ipv6/conf/all/accept_ra ] ; then
-	for f in /proc/sys/net/ipv6/conf/*/accept_ra
-	do
-	    echo $1 > $f
-	done
+        for f in /proc/sys/net/ipv6/conf/*/accept_ra
+        do
+            echo $1 > $f
+        done
     fi
 }
 
@@ -463,7 +463,7 @@ function all4tests {
     dotline
 }
 
-# Do all tests that start from IPv6 address 
+# Do all tests that start from IPv6 address
 function all6tests {
     echo "Running all tests from IPv6"
     dotline
@@ -500,7 +500,7 @@ function hard4to4 {
 
 # Soft IPv4 to IPv4
 #
-# In this test we start from the IPv4 address and add another IPv4 address 
+# In this test we start from the IPv4 address and add another IPv4 address
 # to the same interface with different prefix mask. After we wait a while
 # we remove the original/first IPv4 address.
 function soft4to4 {
@@ -570,7 +570,7 @@ function hard4to6 {
 function hard6to6 {
     printf "Running test hard6to6...\n"
     reset_interface
-    deladdr $OUR_PRIMARY_ADDR_V4 $OUR_PRIMARY_MASK_V4 
+    deladdr $OUR_PRIMARY_ADDR_V4 $OUR_PRIMARY_MASK_V4
     addaddr $OUR_PRIMARY_ADDR_V6 $OUR_MASK_V6
     #addroute
     reset_hipd
@@ -590,7 +590,7 @@ function hard6to6 {
 # Soft IPv6 to IPv6
 #
 # In this test we start from IPv6 address and add another IPv6 address to
-# the same interface and after a while we remove the original/first IPv6 
+# the same interface and after a while we remove the original/first IPv6
 # address.
 function soft6to6 {
     printf "Running test soft6to6...\n"
@@ -638,7 +638,7 @@ function soft6to4 {
 
 # Hard IPv6 to IPv4
 #
-# We start with IPv6 address that is removed and an IPv4 address is 
+# We start with IPv6 address that is removed and an IPv4 address is
 # added to the interface.
 function hard6to4 {
     printf "Running test hard6to4...\n"
@@ -666,7 +666,7 @@ function hard6to4 {
 
 #MAIN
 
-if [ $# -ne 1 ] ; then 
+if [ $# -ne 1 ] ; then
     usage
     exit 0
 fi
@@ -677,7 +677,7 @@ set $args
 
 for i
 do
-  case $i in 
+  case $i in
       "all")    alltests   ;;
       "all4")   all4tests  ;;
       "all6")   all6tests  ;;

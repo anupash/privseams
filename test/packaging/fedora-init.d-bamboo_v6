@@ -20,12 +20,12 @@ start() {
         check_previous=`ps ax |grep -c "/bamboo_v6/bin/"`
         if [ $check_previous == 1 ]; then
                 echo -n $"Starting bamboo_v6: "
-                daemon --user=nobody /opt/bamboo_v6/bin/run-java bamboo.lss.DustDevil /opt/gateway_v6.cfg 2>>/var/log/bamboo_v6 #3>>/var/log/bamboo_v6 1>>/var/log/bamboo_v6 
+                daemon --user=nobody /opt/bamboo_v6/bin/run-java bamboo.lss.DustDevil /opt/gateway_v6.cfg 2>>/var/log/bamboo_v6 #3>>/var/log/bamboo_v6 1>>/var/log/bamboo_v6
                 RETVAL=$?
         else
                 echo -n $"Bamboo_v6 daemon is already running:"
         fi
-        echo  
+        echo
         return $RETVAL
 }
 
@@ -104,4 +104,3 @@ status)
 esac
 
 exit $RETVAL
-

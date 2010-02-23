@@ -862,7 +862,7 @@ void edit_hit_remote(char *hit_name)
     i = combo_box_find(hit->g->name, widget(ID_TWR_RGROUP));
     gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)), i);
 
-//		tw_set_remote_rgroup_info(hit->g);
+//              tw_set_remote_rgroup_info(hit->g);
 
     gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_APPLY)), TRUE);
     gtk_container_add(GTK_CONTAINER(container), widget(ID_TWREMOTE));
@@ -976,7 +976,7 @@ void edit_apply(void)
             NAMECPY(ud.old_name, r->name);
             NAMECPY(ud.new_name, str);
             NAMECPY(r->name, str);
-/*			ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_URL)));
+/*                      ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_URL)));
  *                      URLCPY(r->url, ps);
  *                      ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_PORT)));
  *                      URLCPY(r->port, ps);*/
@@ -1035,7 +1035,7 @@ void edit_apply(void)
             HIP_DEBUG("Updating remote group %s -> %s.\n", ud.old_name, ud.new_name);
 
             gtk_tree_model_foreach(widget(ID_RLISTMODEL), update_tree_value, &ud);
-//			all_update_rgroups(ud.old_name, ud.new_name);
+//                      all_update_rgroups(ud.old_name, ud.new_name);
             //tw_set_mode(TWMODE_RGROUP);
             edit_group_remote(g->name);
         }

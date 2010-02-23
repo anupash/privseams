@@ -143,7 +143,7 @@ class Hosts:
         d = {}
         aaaa_hit = {}
         aaaa = {}
-	a = {}
+        a = {}
         while 1:
             l = f.readline()
             if not l:
@@ -166,7 +166,7 @@ class Hosts:
                     aaaa[n] = (addr, 0)
                 else:
                     a[n] = (addr, 0)
-	self.a = a
+        self.a = a
         self.aaaa = aaaa
         self.aaaa_hit = aaaa_hit
         return
@@ -255,6 +255,6 @@ def main(argv):
             gp.fetchcount = int(arg)
 
     gp.doit(args)
-        
+
 if __name__ == '__main__':
     main(sys.argv)

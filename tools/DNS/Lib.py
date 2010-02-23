@@ -90,7 +90,7 @@ class Packer:
     def add32bit(self, n):
         self.buf = self.buf + pack32bit(n)
     def addaddr(self, addr):
-	n = inet_pton_v4(addr)
+        n = inet_pton_v4(addr)
         self.buf = self.buf + n
     def addaddr6(self, addr):
         n = inet_pton(addr)
@@ -697,10 +697,10 @@ if __name__ == "__main__":
 # added identifying header to top of each file
 #
 # Revision 1.7  2001/07/19 07:50:44  anthony
-# Added SRV (RFC 2782) support. Code from Michael Strˆder.
+# Added SRV (RFC 2782) support. Code from Michael Str√∂der.
 #
 # Revision 1.6  2001/07/19 07:39:18  anthony
-# 'type' -> 'rrtype' in getRRheader(). Fix from Michael Strˆder.
+# 'type' -> 'rrtype' in getRRheader(). Fix from Michael Str√∂der.
 #
 # Revision 1.5  2001/07/19 07:34:19  anthony
 # oops. glitch in storeRR (fixed now).

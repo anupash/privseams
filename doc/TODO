@@ -175,7 +175,7 @@ SA timeout parameter. If the system has open SAs, it MUST increase its
 Birthday.
 -"open SAs"=? When building R1 birthday is set automatically
 
-[LATER] 4.2 Sending data on HIP packets (draft-08)
+[LATER] 4.2 Sending data on HIP packets (draft-08)
 - The OPTIONAL PAYLOAD packet (see Section 7.8) MAY be used to transfer
   data.
 
@@ -259,7 +259,7 @@ Miika Komu: cookie indexes fail randomly:
 Feb 20 07:54:26 crash kernel: hip_solve_puzzle: *** Puzzle solved ***:
 ae6a19d2d1d939cb
 Feb 20 07:54:26 crash kernel: hip_handle_r1: R1 Successfully received
-   
+
 Feb 20 07:52:00 oops kernel: hip_fetch_cookie_entry:Calculated index:9
 Feb 20 07:52:00 oops kernel: hip_verify_cookie:error: WARNING: Unknown cookie
 Feb 20 07:52:00 oops kernel: hip_handle_i2:error: Birthday cookie checks failed
@@ -271,7 +271,7 @@ Date: Thu, 19 Feb 2004 11:20:02 +0000
 From: Simon Schuetz <simon.schuetz@netlab.nec.de>
 Reply-To: hipl-users@freelists.org
 
-Started connest-server on remote machine. Then conntest-gai-client on local 
+Started connest-server on remote machine. Then conntest-gai-client on local
 machine. Then:
 
 $ ifconfig eth0 del 3ffe::2/64
@@ -323,7 +323,7 @@ action items:
   * multihoming: try multiple addresses of the peer if xmit fails?
   * check TODO entries from hip.c, input.c etc (the file was split and TODO
     entries may be in wrong files.
-  * test signature when p = q = null 
+  * test signature when p = q = null
     - p=q=null not tested yet
 
 * Miika
@@ -492,7 +492,7 @@ action items:
  * - document hip_getfrag using docbook
  *
  * BUGS:
- * - It should be signalled somehow when building of R1 is 100 % 
+ * - It should be signalled somehow when building of R1 is 100 %
  *   complete. Otherwise an incomplete packet could be sent for
  *   the initiator?
  *
@@ -559,4 +559,3 @@ action items:
  * - Space, suite and case structures are somewhat the same; this could
  *   better exploited by combining the several almost-the-same-copy-paste
  *   functions into one, signle function.
-

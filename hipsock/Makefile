@@ -11,7 +11,7 @@ LIBHIPCORE=../libhipcore
 HIPD=../hipd
 LN=ln -sf
 
-all:	warn links
+all: warn links
 	make -C $(LINUX) M=$(PWD) modules
 
 links:
