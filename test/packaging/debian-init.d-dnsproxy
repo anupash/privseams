@@ -26,7 +26,7 @@ if test -f /etc/default/hipdnsproxy; then
 fi
 
 start_dnsproxy() {
-        log_daemon_msg "Starting hip dnsproxy" "hipdnsproxy"
+        log_daemon_msg "Starting DNS proxy for HIP" "hipdnsproxy"
         if start-stop-daemon --start --quiet --exec $EXEC -- $DNSPROXY_OPTS; then
             log_end_msg 0
         else
@@ -35,7 +35,7 @@ start_dnsproxy() {
 }
 
 stop_dnsproxy() {
-    log_daemon_msg "Stopping hip dnsproxy" "hipdnsproxy"
+    log_daemon_msg "Stopping DNS proxy for HIP" "hipdnsproxy"
     if test -r $PID_FILE && ps `head -1 $PID_FILE` >/dev/null # see bug id 812
     then
         if start-stop-daemon --stop --pidfile $PID_FILE --quiet -- $DNSPROXY_OPTS; then
