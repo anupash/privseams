@@ -40,6 +40,10 @@ int hip_register_handle_function(const uint32_t packet_type,
                                  const void *handle_function,
                                  const uint32_t priority);
 
+int hip_unregister_handle_function(const uint32_t packet_type,
+                                   const uint32_t ha_state,
+                                   const void *handle_function);
+
 int hip_run_handle_functions(const uint32_t packet_type,
                              const uint32_t ha_state,
                              struct hip_packet_context *ctx);

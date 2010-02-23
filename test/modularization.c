@@ -104,6 +104,10 @@ int test_handle_functions(void)
     hip_register_handle_function(0, 0, &test_function4, 0);
     hip_register_handle_function(0, 0, &test_function5, 0);
 
+    hip_unregister_handle_function(0, 0, &test_function1);
+    hip_unregister_handle_function(0, 0, &test_function3);
+    hip_unregister_handle_function(0, 0, &test_function5);
+
     hip_run_handle_functions(0, 0, NULL);
 
     printf("\n");
@@ -114,6 +118,8 @@ int test_handle_functions(void)
     hip_register_handle_function(1, 1, &test_function4, 1005);
     hip_register_handle_function(1, 1, &test_function5, 1004);
 
+    hip_unregister_handle_function(1, 1, &test_function3);
+
     hip_run_handle_functions(1, 1, NULL);
 
     printf("\n");
@@ -123,6 +129,7 @@ int test_handle_functions(void)
     hip_register_handle_function(16, 16, &test_function3, 3);
     hip_register_handle_function(16, 16, &test_function4, 2);
     hip_register_handle_function(16, 16, &test_function5, 1);
+
 
     hip_run_handle_functions(16, 16, NULL);
 
