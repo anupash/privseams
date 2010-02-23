@@ -1845,7 +1845,7 @@ int hip_handle_i2(struct hip_packet_context *ctx)
             }
         }
 
-        /* This far we have succesfully produced the keying material (key),
+        /* This far we have successfully produced the keying material (key),
          * identified which HIP transform is use (hip_tfm), retrieved pointers
          * both to the encrypted HOST_ID (host_id_in_enc) and initialization
          * vector (iv) and we know the length of the encrypted HOST_ID
@@ -2143,7 +2143,7 @@ int hip_handle_i2(struct hip_packet_context *ctx)
     /* As for the above todo item:
      *
      * Where is it said that we should wait for ESP or implementation
-     * specific time here? This far we have succesfully verified and
+     * specific time here? This far we have successfully verified and
      * processed the I2 message (except the LOCATOR parameter) and sent an
      * R2 as an response. We are here at state UNASSOCIATED. From Section
      * 4.4.2. of RFC 5201 we learn that if I2 processing was successful, we
