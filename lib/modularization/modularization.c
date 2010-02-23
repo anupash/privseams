@@ -17,8 +17,8 @@
 #include "lib/core/state.h"
 
 struct handle_func_entry {
-    int (*handle_func)(uint32_t packet_type,
-                       uint32_t ha_state,
+    int (*handle_func)(const uint32_t packet_type,
+                       const uint32_t ha_state,
                        struct hip_packet_context *ctx);
     uint32_t priority;
 };
@@ -44,10 +44,10 @@ static hip_ll_t *handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
  * @return Success =  0
  *         Error   = -1
  */
-int hip_register_handle_function(uint32_t packet_type,
-                                 uint32_t ha_state,
-                                 void *handle_function,
-                                 uint32_t priority)
+int hip_register_handle_function(const uint32_t packet_type,
+                                 const uint32_t ha_state,
+                                 const void *handle_function,
+                                 const uint32_t priority)
 {
     int       err, index    = 0;
     hip_ll_t *new_func_list = NULL;
@@ -107,8 +107,8 @@ out_err:
  * @return Success =  0
  *         Error   = -1
  */
-int hip_run_handle_functions(uint32_t packet_type,
-                             uint32_t ha_state,
+int hip_run_handle_functions(const uint32_t packet_type,
+                             const uint32_t ha_state,
                              struct hip_packet_context *ctx)
 {
     int            err  = 0;
