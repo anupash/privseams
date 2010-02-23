@@ -628,7 +628,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 #endif
         /* State. */
         HIP_IFEL(!entry, -1, "No entry when receiving R1\n");
-        HIP_IFCS(entry, err = hip_receive_r1(msg, src_addr, dst_addr, entry, msg_info));
+        HIP_IFCS(entry, err = hip_handle_r1(type, state, &ctx));
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_R1\n");
         hip_perf_stop_benchmark(perf_set, PERF_R1);
@@ -1155,14 +1155,15 @@ out_err:
  *                 to the responder via the rendezvous server. Responder then
  *                 replies directly to the initiator with an R1 packet that has
  *                 a @c VIA_RVS parameter. This parameter contains the IP
- *                 addresses of the travesed RVSes (usually just one). The
+ *                 addresses of the traversed RVSes (usually just one). The
  *                 initiator should store these addresses to cope with the
  *                 double jump problem.
  */
-int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
-                  hip_ha_t *entry, hip_portpair_t *r1_info)
+int hip_handle_r1(const uint32_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *packet_ctx)
 {
-    int err                          = 0, retransmission = 0, len;
+    int mask = HIP_PACKET_CTRL_ANON, err = 0, retransmission = 0, len;
     uint64_t solved_puzzle           = 0, I = 0;
     struct hip_context *ctx          = NULL;
     struct hip_host_id *peer_host_id = NULL;
@@ -1170,14 +1171,61 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
     struct hip_dh_public_value *dhpv = NULL;
     struct hip_locator *locator      = NULL;
     char *str                        = NULL;
+    struct in6_addr daddr;
 
-    /** A function set for NAT travelsal. */
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+    /* Check and remove the IP of the peer from the opp non-HIP database */
+   hip_oppipdb_delentry(&(packet_ctx->hadb_entry->peer_addr));
+#endif
 
-    _HIP_DEBUG("hip_handle_r1() invoked.\n");
+   if (ipv6_addr_any(&(packet_ctx->msg)->hitr)) {
+       HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
+   }
 
-    if (entry->state == HIP_STATE_I2_SENT) {
-        HIP_DEBUG("Retransmission\n");
-        retransmission = 1;
+   HIP_IFEL(!hip_controls_sane(ntohs(packet_ctx->msg->control), mask), 0,
+            "Received illegal controls in R1: 0x%x Dropping\n",
+            ntohs(packet_ctx->msg->control));
+   HIP_IFEL(!packet_ctx->hadb_entry, -EFAULT,
+            "Received R1 with no local state. Dropping\n");
+
+   /* An implicit and insecure REA. If sender's address is different than
+    * the one that was mapped, then we will overwrite the mapping with the
+    * newer address. This enables us to use the rendezvous server, while
+    * not supporting the REA TLV. */
+   hip_hadb_get_peer_addr(packet_ctx->hadb_entry, &daddr);
+   if (ipv6_addr_cmp(&daddr, packet_ctx->src_addr) != 0) {
+       HIP_DEBUG("Mapped address didn't match received address\n");
+       HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
+       HIP_HEXDUMP("Mapping", &daddr, 16);
+       HIP_HEXDUMP("Received", packet_ctx->src_addr, 16);
+       hip_hadb_delete_peer_addrlist_one_old(packet_ctx->hadb_entry, &daddr);
+       hip_hadb_add_peer_addr(packet_ctx->hadb_entry,
+                              packet_ctx->src_addr,
+                              0,
+                              0,
+                              PEER_ADDR_STATE_ACTIVE,
+                              packet_ctx->msg_info->src_port);
+   }
+
+   HIP_DEBUG("Received R1 in state %s\n", hip_state_str(ha_state));
+
+   switch (ha_state) {
+   case HIP_STATE_R2_SENT:
+   case HIP_STATE_ESTABLISHED:
+       goto out_err;
+   case HIP_STATE_NONE:
+   case HIP_STATE_UNASSOCIATED:
+   default:
+       /* Can't happen. */
+       err = -EFAULT;
+       HIP_ERROR("R1 received in odd state: %d. Dropping.\n",
+                 packet_ctx->hadb_entry);
+       break;
+   }
+
+   if (ha_state == HIP_STATE_I2_SENT) {
+       HIP_DEBUG("Retransmission\n");
+       retransmission = 1;
     } else {
         HIP_DEBUG("Not a retransmission\n");
     }
@@ -1185,9 +1233,9 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
     HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)),
              -ENOMEM, "Could not allocate memory for context\n");
     memset(ctx, 0, sizeof(struct hip_context));
-    ctx->input = r1;
+    ctx->input = packet_ctx->msg;
 
-    hip_relay_add_rvs_to_ha(r1, entry);
+    hip_relay_add_rvs_to_ha(packet_ctx->msg, packet_ctx->hadb_entry);
 
     /* According to the section 8.6 of the base draft, we must first check
      * signature. */
@@ -1196,43 +1244,51 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
      * verification must be delayed to the R2 */
     /* Store the peer's public key to HA and validate it */
     /** @todo Do not store the key if the verification fails. */
-    HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)),
+    HIP_IFEL(!(peer_host_id = hip_get_param(packet_ctx->msg, HIP_PARAM_HOST_ID)),
              -ENOENT, "No HOST_ID found in R1\n");
     //copy hostname to hadb entry if local copy is empty
-    if (strlen((char *) (entry->peer_hostname)) == 0) {
-        memcpy(entry->peer_hostname,
+    if (strlen((char *) (packet_ctx->hadb_entry->peer_hostname)) == 0) {
+        memcpy(packet_ctx->hadb_entry->peer_hostname,
                hip_get_param_host_id_hostname(peer_host_id),
                HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
     }
-    HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL);
+    HIP_IFE(hip_init_peer(packet_ctx->hadb_entry, packet_ctx->msg, peer_host_id), -EINVAL);
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_VERIFY\n");
     hip_perf_start_benchmark(perf_set, PERF_VERIFY);
 #endif
-    HIP_IFEL(entry->verify(entry->peer_pub_key, r1), -EINVAL,
-                 "Verification of R1 signature failed\n");
+    HIP_IFEL(packet_ctx->hadb_entry->verify(packet_ctx->hadb_entry->peer_pub_key,
+                                            packet_ctx->msg),
+             -EINVAL,
+             "Verification of R1 signature failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_VERIFY\n");
     hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
 #endif
 
-    /* R1 packet had destination port hip_get_nat_udp_port(), which means that the peer is
-     * behind NAT. We set NAT mode "on" and set the send funtion to
+    /* R1 packet had destination port hip_get_nat_udp_port(), which means that
+     * the peer is behind NAT. We set NAT mode "on" and set the send function to
      * "hip_send_udp". The client UDP port is not stored until the handling
      * of R2 packet. Don't know if the entry is already locked... */
-    if (r1_info->dst_port != 0) {
-        HIP_LOCK_HA(entry);
-        if (entry->nat_mode == HIP_NAT_MODE_NONE) {
-            entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
+    if (packet_ctx->msg_info->dst_port != 0) {
+        HIP_LOCK_HA(packet_ctx->hadb_entry);
+        if (packet_ctx->hadb_entry->nat_mode == HIP_NAT_MODE_NONE) {
+            packet_ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
         }
-        //hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-        HIP_UNLOCK_HA(entry);
+        /* @todo Is this alternative xmit function necessary? */
+        /* hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set); */
+        HIP_UNLOCK_HA(packet_ctx->hadb_entry);
     }
 
     /***** LOCATOR PARAMETER ******/
-    locator = (struct hip_locator *) hip_get_param(r1, HIP_PARAM_LOCATOR);
+    locator = (struct hip_locator *) hip_get_param(packet_ctx->msg, HIP_PARAM_LOCATOR);
     if (locator) {
-        err = handle_locator(locator, r1_saddr, r1_daddr, entry, r1_info);
+        err = handle_locator(locator,
+                             packet_ctx->src_addr,
+                             packet_ctx->dst_addr,
+                             packet_ctx->hadb_entry,
+                             packet_ctx->msg_info);
     } else {
         HIP_DEBUG("R1 did not have locator\n");
     }
@@ -1241,16 +1297,16 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
     /* We have problems with creating precreated R1s in reasonable
      * fashion... so we don't mind about generations. */
-    r1cntr = hip_get_param(r1, HIP_PARAM_R1_COUNTER);
+    r1cntr = hip_get_param(packet_ctx->msg, HIP_PARAM_R1_COUNTER);
 
     /* Do control bit stuff here... */
 
     /* We must store the R1 generation counter, _IF_ it exists. */
     if (r1cntr) {
-        HIP_LOCK_HA(entry);
+        HIP_LOCK_HA(packet_ctx->hadb_entry);
         HIP_DEBUG("Storing R1 generation counter %d\n", r1cntr->generation);
-        entry->birthday = ntoh64(r1cntr->generation);
-        HIP_UNLOCK_HA(entry);
+        packet_ctx->hadb_entry->birthday = ntoh64(r1cntr->generation);
+        HIP_UNLOCK_HA(packet_ctx->hadb_entry);
     }
 
     /* Solve puzzle: if this is a retransmission, we have to preserve
@@ -1258,23 +1314,23 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
     if (!retransmission) {
         struct hip_puzzle *pz = NULL;
 
-        HIP_IFEL(!(pz = hip_get_param(r1, HIP_PARAM_PUZZLE)), -EINVAL,
+        HIP_IFEL(!(pz = hip_get_param(packet_ctx->msg, HIP_PARAM_PUZZLE)), -EINVAL,
                  "Malformed R1 packet. PUZZLE parameter missing\n");
-        HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0,
+        HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz, packet_ctx->msg, HIP_SOLVE_PUZZLE)) == 0,
                  -EINVAL, "Solving of puzzle failed\n");
         I                      = pz->I;
-        entry->puzzle_solution = solved_puzzle;
-        entry->puzzle_i        = pz->I;
+        packet_ctx->hadb_entry->puzzle_solution = solved_puzzle;
+        packet_ctx->hadb_entry->puzzle_i        = pz->I;
     } else {
-        I             = entry->puzzle_i;
-        solved_puzzle = entry->puzzle_solution;
+        I             = packet_ctx->hadb_entry->puzzle_i;
+        solved_puzzle = packet_ctx->hadb_entry->puzzle_solution;
     }
 
     /* calculate shared secret and create keying material */
     ctx->dh_shared_key = NULL;
     /* note: we could skip keying material generation in the case
      * of a retransmission but then we'd had to fill ctx->hmac etc */
-    HIP_IFEL(hip_produce_keying_material(r1,
+    HIP_IFEL(hip_produce_keying_material(packet_ctx->msg,
                                          ctx,
                                          I,
                                          solved_puzzle,
@@ -1282,14 +1338,15 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
             -EINVAL, "Could not produce keying material\n");
 
     /* Everything ok, save host id to HA */
-    HIP_IFE(hip_get_param_host_id_di_type_len(
-            peer_host_id, &str, &len) < 0, -1);
-    HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n", str,
-              len, hip_get_param_host_id_hostname(peer_host_id));
+    HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
+    HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
+              str,
+              len,
+              hip_get_param_host_id_hostname(peer_host_id));
 
     /********* ESP protection preferred transforms [OPTIONAL] *********/
 
-    HIP_IFEL(esp_prot_r1_handle_transforms(entry, ctx), -1,
+    HIP_IFEL(esp_prot_r1_handle_transforms(packet_ctx->hadb_entry, ctx), -1,
              "failed to handle preferred esp protection transforms\n");
 
     /******************************************************************/
@@ -1300,16 +1357,16 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
     err = hip_create_i2(ctx,
                         solved_puzzle,
-                        r1_saddr,
-                        r1_daddr,
-                        entry,
-                        r1_info,
+                        packet_ctx->src_addr,
+                        packet_ctx->dst_addr,
+                        packet_ctx->hadb_entry,
+                        packet_ctx->msg_info,
                         dhpv);
 
     HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
 
-    if (entry->state == HIP_STATE_I1_SENT) {
-        entry->state = HIP_STATE_I2_SENT;
+    if (packet_ctx->hadb_entry->state == HIP_STATE_I1_SENT) {
+        packet_ctx->hadb_entry->state = HIP_STATE_I2_SENT;
     }
 
 out_err:
@@ -1319,105 +1376,6 @@ out_err:
     if (ctx) {
         HIP_FREE(ctx);
     }
-
-    return err;
-}
-
-/**
- * Determines the action to be executed for an incoming R1 packet.
- *
- * This function is called when a HIP control packet is received by
- * hip_receive_control_packet()-function and the packet is detected to be
- * a R1 packet. First it is checked, if the corresponding I1 packet has
- * been sent. If yes, then the received R1 packet is handled in
- * hip_handle_r1(). The R1 packet is handled also in @c HIP_STATE_ESTABLISHED.
- * Otherwise the packet is dropped and not handled in any way.
- *
- * @param r1       a pointer to the received I1 HIP packet common header with
- *                 source and destination HITs.
- * @param r1_saddr a pointer to the source address from where the R1 packet
- *                 was received.
- * @param i1_daddr a pointer to the destination address where to the R1 packet
- *                 was sent to (own address).
- * @param entry    a pointer to the current host association database state.
- * @param r1_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
- * @return         zero on success, or negative error value on error.
- */
-int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
-                   hip_ha_t *entry, hip_portpair_t *r1_info)
-{
-    int state, mask = HIP_PACKET_CTRL_ANON, err = 0;
-
-    HIP_DEBUG("hip_receive_r1() invoked.\n");
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&(entry->peer_addr));
-#endif
-
-    if (ipv6_addr_any(&r1->hitr)) {
-        HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
-    }
-
-    HIP_IFEL(!hip_controls_sane(ntohs(r1->control), mask), 0,
-             "Received illegal controls in R1: 0x%x Dropping\n",
-             ntohs(r1->control));
-    HIP_IFEL(!entry, -EFAULT,
-             "Received R1 with no local state. Dropping\n");
-
-    /* An implicit and insecure REA. If sender's address is different than
-     * the one that was mapped, then we will overwrite the mapping with the
-     * newer address. This enables us to use the rendezvous server, while
-     * not supporting the REA TLV. */
-    {
-        struct in6_addr daddr;
-
-        hip_hadb_get_peer_addr(entry, &daddr);
-        if (ipv6_addr_cmp(&daddr, r1_saddr) != 0) {
-            HIP_DEBUG("Mapped address didn't match received address\n");
-            HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
-            HIP_HEXDUMP("Mapping", &daddr, 16);
-            HIP_HEXDUMP("Received", r1_saddr, 16);
-            hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
-            hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
-                                   PEER_ADDR_STATE_ACTIVE,
-                                   r1_info->src_port);
-        }
-    }
-
-    state = entry->state;
-
-    HIP_DEBUG("Received R1 in state %s\n", hip_state_str(state));
-    switch (state) {
-    case HIP_STATE_I1_SENT:
-    case HIP_STATE_I2_SENT:
-    case HIP_STATE_CLOSING:
-    case HIP_STATE_CLOSED:
-        /* E1. The normal case. Process, send I2, goto E2. */
-        err = hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);
-        HIP_LOCK_HA(entry);
-        if (err < 0) {
-            HIP_ERROR("Handling of R1 failed\n");
-        }
-        HIP_UNLOCK_HA(entry);
-        break;
-    case HIP_STATE_R2_SENT:
-        break;
-    case HIP_STATE_ESTABLISHED:
-        break;
-    case HIP_STATE_NONE:
-    case HIP_STATE_UNASSOCIATED:
-    default:
-        /* Can't happen. */
-        err = -EFAULT;
-        HIP_ERROR("R1 received in odd state: %d. Dropping.\n", state);
-        break;
-    }
-
-    /* hip_put_ha(entry); */
-
-out_err:
     return err;
 }
 
