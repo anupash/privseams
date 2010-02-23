@@ -607,7 +607,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         HIP_DEBUG("Start PERF_I2\n");
         hip_perf_start_benchmark(perf_set, PERF_I2);
 #endif
-        err = hip_receive_i2(&ctx);
+        err = hip_handle_i2(type, state, &ctx);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_I2\n");
         hip_perf_stop_benchmark(perf_set, PERF_I2);
@@ -1612,14 +1612,15 @@ out_err:
  *                 <a href="http://www.rfc-editor.org/rfc/rfc5201.txt">
  *                 RFC 5201</a>.
  */
-int hip_handle_i2(struct hip_packet_context *ctx)
+int hip_handle_i2(const uint32_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *ctx)
 {
-    /* Primitive data types. */
     int err = 0, retransmission = 0, state = 0, host_id_found = 0, is_loopback = 0;
+    uint16_t mask = HIP_PACKET_CTRL_ANON;
     uint16_t crypto_len                     = 0;
     uint32_t spi_in                         = 0, spi_out = 0;
     in_port_t dest_port                     = 0; // For the port in RELAY_FROM
-    /* Pointers */
     char *tmp_enc                           = NULL, *enc = NULL;
     unsigned char *iv                       = NULL;
     struct hip_hip_transform *hip_transform = NULL;
@@ -1628,7 +1629,6 @@ int hip_handle_i2(struct hip_packet_context *ctx)
     struct hip_esp_info *esp_info           = NULL;
     struct hip_dh_public_value *dhpv        = NULL;
     struct hip_solution *solution           = NULL;
-    /* Data structures. */
     in6_addr_t dest;     // dest for the IP address in RELAY_FROM
     hip_transform_suite_t esp_tfm, hip_tfm;
     struct hip_spi_in_item spi_in_data;
@@ -1639,13 +1639,35 @@ int hip_handle_i2(struct hip_packet_context *ctx)
     struct sockaddr_storage ss_addr;
     struct sockaddr *addr                   = NULL;
     struct update_state *localstate         = NULL;
-    /** A function set for NAT travelsal. */
 
-    HIP_INFO("\n\nReceived I2 from:");
+    HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hitr),
+             0,
+             "Received NULL receiver HIT in I2. Dropping\n");
+
+    HIP_IFEL(!hip_controls_sane(ntohs(ctx->msg->control), mask),
+             0,
+             "Received illegal controls in I2: 0x%x. Dropping\n",
+             ntohs(ctx->msg->control));
+
+    HIP_DEBUG("Received I2 in state %s\n", hip_state_str(state));
+
+    /*
+        case HIP_STATE_I2_SENT:
+            if (ctx->hadb_entry->is_loopback) {
+                err = hip_handle_i2(ctx);
+            } else if (hip_hit_is_bigger(&(ctx->hadb_entry)->hit_our,
+                                         &(ctx->hadb_entry)->hit_peer)) {
+                HIP_IFEL(hip_receive_i2(ctx),
+                         -ENOSYS,
+                         "Dropping HIP packet.\n");
+            }
+            break;
+    */
+
+
+    HIP_INFO("Received I2 from:\n");
     HIP_INFO_HIT("Source HIT:", &(ctx->msg)->hits);
-    HIP_INFO_IN6ADDR("Source IP :", ctx->src_addr);
-
-    _HIP_DEBUG("hip_handle_i2() invoked.\n");
+    HIP_INFO_IN6ADDR("Source IP: ", ctx->src_addr);
 
     /* The context structure is used to gather the context created from
      * processing the I2 packet, as well as storing the original packet.
@@ -2207,115 +2229,6 @@ out_err:
     }
     if (i2_context.dh_shared_key != NULL) {
         free(i2_context.dh_shared_key);
-    }
-
-    return err;
-}
-
-/**
- * Receive I2 packet.
- *
- * This is the initial function which is called when an I2 packet is received.
- * If we are in correct state, the packet is handled to hip_handle_i2() for
- * further processing.
- *
- * @param i2       a pointer to...
- * @param i2_saddr a pointer to...
- * @param i2_daddr a pointer to...
- * @param entry    a pointer to...
- * @param i2_info  a pointer to...
- * @return         always zero
- * @todo   Check if it is correct to return always 0
- */
-int hip_receive_i2(struct hip_packet_context *ctx)
-{
-    int state     = 0, err = 0;
-    uint16_t mask = HIP_PACKET_CTRL_ANON;
-    _HIP_DEBUG("hip_receive_i2() invoked.\n");
-
-    HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hitr), 0,
-             "Received NULL receiver HIT in I2. Dropping\n");
-
-    HIP_IFEL(!hip_controls_sane(ntohs(ctx->msg->control), mask), 0,
-             "Received illegal controls in I2: 0x%x. Dropping\n",
-             ntohs(ctx->msg->control));
-
-    if (ctx->hadb_entry == NULL) {
-#ifdef CONFIG_HIP_RVS
-        if (hip_relay_get_status() != HIP_RELAY_OFF) {
-            hip_relrec_t *rec = NULL, dummy;
-
-            /* Check if we have a relay record in our database matching the
-             * Responder's HIT. We should find one, if the Responder is
-             * registered to relay.*/
-            HIP_DEBUG_HIT("Searching relay record on HIT ", &(ctx->msg)->hitr);
-            memcpy(&(dummy.hit_r), &(ctx->msg)->hitr, sizeof(ctx->msg->hitr));
-            rec = hip_relht_get(&dummy);
-            if (rec == NULL) {
-                HIP_INFO("No matching relay record found.\n");
-            } else if (rec->type != HIP_RVSRELAY) {
-                HIP_INFO("Matching relay record found:Full-Relay.\n");
-                hip_relay_forward(ctx->msg,
-                                  ctx->src_addr,
-                                  ctx->dst_addr,
-                                  rec,
-                                  ctx->msg_info,
-                                  HIP_I2,
-                                  rec->type);
-                state = HIP_STATE_NONE;
-                err   = -ECANCELED;
-                goto out_err;
-            }
-        }
-#endif
-//end
-        state = HIP_STATE_UNASSOCIATED;
-    } else {
-        HIP_LOCK_HA(ctx->hadb_entry);
-        state = ctx->hadb_entry->state;
-    }
-
-    HIP_DEBUG("Received I2 in state %s\n", hip_state_str(state));
-
-    switch (state) {
-    case HIP_STATE_UNASSOCIATED:
-        /* Possibly no state created yet, thus function pointers can't
-         * be used here. */
-        err = hip_handle_i2(ctx);
-
-        break;
-    case HIP_STATE_I2_SENT:
-        if (ctx->hadb_entry->is_loopback) {
-            err = hip_handle_i2(ctx);
-        } else if (hip_hit_is_bigger(&(ctx->hadb_entry)->hit_our,
-                                     &(ctx->hadb_entry)->hit_peer)) {
-            HIP_IFEL(hip_receive_i2(ctx),
-                     -ENOSYS,
-                     "Dropping HIP packet.\n");
-        }
-        break;
-    case HIP_STATE_I1_SENT:
-    case HIP_STATE_R2_SENT:
-        err = hip_handle_i2(ctx);
-        break;
-    case HIP_STATE_ESTABLISHED:
-        err = hip_handle_i2(ctx);
-
-        break;
-    case HIP_STATE_CLOSING:
-    case HIP_STATE_CLOSED:
-        err = hip_handle_i2(ctx);
-        break;
-    default:
-        HIP_ERROR("Internal state (%d) is incorrect\n", state);
-        break;
-    }
-
-    /* hip_put_ha(entry); */
-
-out_err:
-    if (err) {
-        HIP_ERROR("Error (%d) occurred\n", err);
     }
 
     return err;
