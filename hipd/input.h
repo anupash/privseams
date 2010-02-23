@@ -77,8 +77,7 @@ int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 int hip_receive_control_packet(struct hip_common *msg,
                                struct in6_addr *src_addr,
                                struct in6_addr *dst_addr,
-                               hip_portpair_t *msg_info,
-                               int filter);
+                               hip_portpair_t *msg_info);
 
 int hip_receive_udp_control_packet(struct hip_common *msg,
                                    struct in6_addr *saddr,

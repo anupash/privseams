@@ -277,7 +277,7 @@ static int hipd_main(int argc, char *argv[])
     hip_perf_open(perf_set);
 #endif
 
-	/* default is long format */
+    /* default is long format */
     hip_set_logfmt(LOGFMT_LONG);
 
     /* Parse command-line options */
@@ -344,14 +344,14 @@ static int hipd_main(int argc, char *argv[])
     HIP_IFEL(create_configs_and_exit, 0,
              "Configs created, exiting\n");
 
-	highest_descriptor = maxof(7,
-							   hip_nl_route.fd,
-							   hip_raw_sock_input_v6,
-							   hip_user_sock,
-							   hip_nl_ipsec.fd,
-							   hip_raw_sock_input_v4,
-							   hip_nat_sock_input_udp,
-							   hip_icmp_sock);
+    highest_descriptor = maxof(7,
+                               hip_nl_route.fd,
+                               hip_raw_sock_input_v6,
+                               hip_user_sock,
+                               hip_nl_ipsec.fd,
+                               hip_raw_sock_input_v4,
+                               hip_nat_sock_input_udp,
+                               hip_icmp_sock);
 
     /* Allocate user message. */
     HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
@@ -397,7 +397,7 @@ static int hipd_main(int argc, char *argv[])
         }
 #endif
 
-		err = select((highest_descriptor + 1), &read_fdset, NULL, NULL, &timeout);
+        err = select((highest_descriptor + 1), &read_fdset, NULL, NULL, &timeout);
 
         if (err < 0) {
             HIP_ERROR("select() error: %s.\n", strerror(errno));
@@ -435,23 +435,23 @@ static int hipd_main(int argc, char *argv[])
                 type = hip_get_msg_type(hipd_msg_v4);
                 if (type == HIP_R2) {
                     err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4,
-                                                     &daddr_v4, &pkt_info, 1);
+                                                     &daddr_v4, &pkt_info);
                     if (err) {
                         HIP_ERROR("hip_receive_control_packet()!\n");
                     }
                     err = hip_receive_control_packet(hipd_msg, &saddr, &daddr,
-                                                     &pkt_info, 1);
+                                                     &pkt_info);
                     if (err) {
                         HIP_ERROR("hip_receive_control_packet()!\n");
                     }
                 } else {
                     err = hip_receive_control_packet(hipd_msg, &saddr, &daddr,
-                                                     &pkt_info, 1);
+                                                     &pkt_info);
                     if (err) {
                         HIP_ERROR("hip_receive_control_packet()!\n");
                     }
                     err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4,
-                                                     &daddr_v4, &pkt_info, 1);
+                                                     &daddr_v4, &pkt_info);
                     if (err) {
                         HIP_ERROR("hip_receive_control_packet()!\n");
                     }
@@ -476,7 +476,7 @@ static int hipd_main(int argc, char *argv[])
                                             &saddr, &daddr, &pkt_info, 0)) {
                     HIP_ERROR("Reading network msg failed\n");
                 } else {
-                    err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, &pkt_info, 1);
+                    err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
                     if (err) {
                         HIP_ERROR("hip_receive_control_packet()!\n");
                     }
@@ -499,14 +499,13 @@ static int hipd_main(int argc, char *argv[])
                                             &saddr, &daddr, &pkt_info, IPV4_HDR_SIZE)) {
                     HIP_ERROR("Reading network msg failed\n");
                 } else {
-                    err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, &pkt_info, 1);
+                    err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
                     if (err) {
                         HIP_ERROR("hip_receive_control_packet()!\n");
                     }
                 }
             }
         }
-
 
         if (FD_ISSET(hip_icmp_sock, &read_fdset)) {
             HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,

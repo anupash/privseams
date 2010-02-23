@@ -502,14 +502,12 @@ static int hip_packet_to_drop(hip_ha_t *entry,
  * @param daddr a pointer to the destination address where to the packet was
  *              sent to (own address).
  * @param info  a pointer to the source and destination ports.
- * @param filter Whether to filter trough agent or not.
  * @return      zero on success, or negative error value on error.
  */
 int hip_receive_control_packet(struct hip_common *msg,
                                struct in6_addr *src_addr,
                                struct in6_addr *dst_addr,
-                               hip_portpair_t *msg_info,
-                               int filter)
+                               hip_portpair_t *msg_info)
 {
     hip_ha_t tmp, *entry = NULL;
     int err = 0, type, skip_sync = 0;
@@ -783,7 +781,7 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
         saddr_public = &entry->peer_addr;
     }
 #endif
-    HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr, info, 1), -1,
+    HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr, info), -1,
              "receiving of control packet failed\n");
 out_err:
     return err;
