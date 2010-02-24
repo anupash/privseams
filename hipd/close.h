@@ -14,10 +14,11 @@
 #include "lib/tool/pk.h"
 
 int hip_send_close(struct hip_common *msg, int delete_ha_info);
-int hip_handle_close(struct hip_common *close, hip_ha_t *entry);
+int hip_handle_close(const uint32_t packet_type,
+                     const uint32_t ha_state,
+                     struct hip_packet_context *ctx);
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
 int hip_purge_closing_ha(hip_ha_t *ha, void *notused);
-int hip_receive_close(struct hip_common *close, hip_ha_t *entry);
 int hip_receive_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
 
 #endif /* HIP_HIPD_CLOSE_H */
