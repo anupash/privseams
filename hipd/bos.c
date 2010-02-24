@@ -189,59 +189,82 @@ out_err:
 }
 
 /**
- * hip_handle_bos - handle incoming BOS packet
+ * hip_handle_bos
+ *
+ * This function is the actual point from where the processing of an incoming
+ * BOS packet is started.
+ *
  * @param skb sk_buff where the HIP packet is in
  * @param entry HA
  *
- * This function is the actual point from where the processing of BOS
- * is started.
- *
- * On success (BOS payloads are checked) 0 is returned, otherwise < 0.
+ * @return On success (BOS payloads are checked) 0 is returned, otherwise < 0.
  */
 
-int hip_handle_bos(struct hip_common *bos,
-                   struct in6_addr *bos_saddr,
-                   struct in6_addr *bos_daddr,
-                   hip_ha_t *entry,
-                   hip_portpair_t *stateless_info)
+int hip_handle_bos(const uint32_t packet_type,
+                   const uint32_t ha_state,
+                   struct hip_packet_context *ctx)
 {
     int err = 0, len;
     struct hip_host_id *peer_host_id;
-    hip_lsi_t lsi;
-    //struct hip_lhi peer_lhi;
     struct in6_addr peer_hit;
-    char *str;
     struct in6_addr *dstip;
+    hip_lsi_t lsi;
+    char *str;
     char src[INET6_ADDRSTRLEN];
+
+    HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hits), 0,
+            "Received NULL sender HIT in BOS.\n");
+    HIP_IFEL(!ipv6_addr_any(&(ctx->msg)->hitr), 0,
+            "Received non-NULL receiver HIT in BOS.\n");
+
+    /* @todo Is this needed? */
+    /* state = entry ? entry->state : HIP_STATE_UNASSOCIATED; */
+
+    /** @todo If received BOS packet from already known sender should return
+     *  right now */
+    HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(ha_state));
+
+    switch (ha_state) {
+    case HIP_STATE_UNASSOCIATED:
+    case HIP_STATE_I1_SENT:
+    case HIP_STATE_I2_SENT:
+        /* Proceed with packet handling */
+        break;
+    case HIP_STATE_R2_SENT:
+    case HIP_STATE_ESTABLISHED:
+        HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(ha_state));
+        goto out_err;
+    default:
+        HIP_IFEL(1, 0, "Internal state (%d) is incorrect\n", ha_state);
+    }
 
     /* according to the section 8.6 of the base draft,
      * we must first check signature
      */
-    HIP_IFEL(!(peer_host_id = hip_get_param(bos, HIP_PARAM_HOST_ID)), -ENOENT,
-             "No HOST_ID found in BOS\n");
+    HIP_IFEL(!(peer_host_id = hip_get_param(ctx->msg, HIP_PARAM_HOST_ID)), -ENOENT,
+            "No HOST_ID found in BOS\n");
 
-    HIP_IFEL(hip_verify_packet_signature(bos, peer_host_id), -EINVAL,
-             "Verification of BOS signature failed\n");
-
+    HIP_IFEL(hip_verify_packet_signature((ctx->msg), peer_host_id), -EINVAL,
+            "Verification of BOS signature failed\n");
 
     /* Validate HIT against received host id */
     hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH100);
-    HIP_IFEL(ipv6_addr_cmp(&peer_hit, &bos->hits) != 0, -EINVAL,
-             "Sender HIT does not match the advertised host_id\n");
+    HIP_IFEL(ipv6_addr_cmp(&peer_hit, &(ctx->msg)->hits) != 0, -EINVAL,
+            "Sender HIT does not match the advertised host_id\n");
 
-    HIP_HEXDUMP("Advertised HIT:", &bos->hits, 16);
+    HIP_HEXDUMP("Advertised HIT:", &(ctx->msg)->hits, 16);
 
     /* Everything ok, first save host id to db */
     HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
     HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
-              str, len, hip_get_param_host_id_hostname(peer_host_id));
+            str, len, hip_get_param_host_id_hostname(peer_host_id));
 
     /* Now save the peer IP address */
-    dstip = bos_saddr;
+    dstip = ctx->src_addr;
     hip_in6_ntop(dstip, src);
     HIP_DEBUG("BOS sender IP: saddr %s\n", src);
 
-    if (entry) {
+    if (ctx->hadb_entry) {
         struct in6_addr daddr;
 
         HIP_DEBUG("I guess we should not even get here ...\n");
@@ -249,25 +272,29 @@ int hip_handle_bos(struct hip_common *bos,
 
         /* The entry may contain the wrong address mapping... */
         HIP_DEBUG("Updating existing entry\n");
-        hip_hadb_get_peer_addr(entry, &daddr);
+        hip_hadb_get_peer_addr(ctx->hadb_entry, &daddr);
         if (ipv6_addr_cmp(&daddr, dstip) != 0) {
             HIP_DEBUG("Mapped address doesn't match received address\n");
             HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
             HIP_HEXDUMP("Mapping", &daddr, 16);
             HIP_HEXDUMP("Received", dstip, 16);
-            hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
+            hip_hadb_delete_peer_addrlist_one_old(ctx->hadb_entry, &daddr);
             HIP_ERROR("assuming we are doing base exchange\n");
-            hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0,
+            hip_hadb_add_peer_addr(ctx->hadb_entry,
+                                   dstip,
+                                   0,
+                                   0,
+                                   0,
                                    hip_get_peer_nat_udp_port());
         }
     } else {
         // FIXME: just add it here and not via workorder.
 
-        /* we have no previous infomation on the peer, create
+        /* we have no previous information on the peer, create
          * a new HIP HA */
-        HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip, &lsi, NULL) < 0),
-                 -1,
-                 "Failed to insert new peer info");
+        HIP_IFEL((hip_hadb_add_peer_info(&(ctx->msg)->hits, dstip, &lsi, NULL) < 0),
+                -1,
+                "Failed to insert new peer info");
         HIP_DEBUG("HA entry created.\n");
     }
 

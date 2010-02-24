@@ -659,7 +659,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         break;
 
     case HIP_BOS:
-        err = hip_receive_bos(msg, src_addr, dst_addr, entry, msg_info);
+        err = hip_handle_bos(type, state, &ctx);
 
         /*In case of BOS the msg->hitr is null, therefore it is replaced
          * with our own HIT, so that the beet state can also be
@@ -2730,60 +2730,6 @@ int hip_handle_notify(const uint32_t packet_type,
         }
     }
 
-out_err:
-    return err;
-}
-
-/**
- * Receive BOS packet.
- *
- * This function is called when a BOS packet is received. We add the
- * received HIT and HOST_ID to the database.
- *
- * @param bos       a pointer to...
- * @param bos_saddr a pointer to...
- * @param bos_daddr a pointer to...
- * @param entry     a pointer to...
- * @param bos_info  a pointer to...
- * @return          always zero.
- * @todo Check if it is correct to return always zero.
- */
-int hip_receive_bos(struct hip_common *bos,
-                    struct in6_addr *bos_saddr,
-                    struct in6_addr *bos_daddr,
-                    hip_ha_t *entry,
-                    hip_portpair_t *bos_info)
-{
-    int err = 0, state = 0;
-
-    _HIP_DEBUG("hip_receive_bos() invoked.\n");
-
-    HIP_IFEL(ipv6_addr_any(&bos->hits), 0,
-             "Received NULL sender HIT in BOS.\n");
-    HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0,
-             "Received non-NULL receiver HIT in BOS.\n");
-    HIP_DEBUG("Entered in hip_receive_bos...\n");
-    state = entry ? entry->state : HIP_STATE_UNASSOCIATED;
-
-    /** @todo If received BOS packet from already known sender should return
-     *  right now */
-    HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
-    switch (state) {
-    case HIP_STATE_UNASSOCIATED:
-    case HIP_STATE_I1_SENT:
-    case HIP_STATE_I2_SENT:
-        /* Possibly no state created yet */
-        err = hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
-        break;
-    case HIP_STATE_R2_SENT:
-    case HIP_STATE_ESTABLISHED:
-        HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
-        break;
-    default:
-        HIP_IFEL(1, 0, "Internal state (%d) is incorrect\n", state);
-    }
-
-    /* hip_put_ha(entry); */
 out_err:
     return err;
 }
