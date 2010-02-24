@@ -173,7 +173,9 @@ out_err:
 }
 
 /**
- * receives and processes an HHL-based update message
+ * esp_prot_handle_light_update
+ *
+ * Handles an HHL-based update message
  *
  * @param msg       received hip message
  * @param src_addr  src ip address
@@ -181,10 +183,9 @@ out_err:
  * @param entry     host association for this connection
  * @return          0 in case of succcess, -1 otherwise
  */
-int esp_prot_receive_light_update(hip_common_t *msg,
-                                  const in6_addr_t *src_addr,
-                                  const in6_addr_t *dst_addr,
-                                  hip_ha_t *entry)
+int esp_prot_handle_light_update(const uint32_t packet_type,
+                                 const uint32_t ha_state,
+                                 struct hip_packet_context *ctx)
 {
     struct hip_seq *seq = NULL;
     struct hip_ack *ack = NULL;
@@ -193,62 +194,70 @@ int esp_prot_receive_light_update(hip_common_t *msg,
     uint32_t spi        = 0;
     int err             = 0;
 
-    HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1,
+    HIP_IFEL(hip_verify_packet_hmac(ctx->msg, &(ctx->hadb_entry)->hip_hmac_in),
+             -1,
              "HMAC validation on UPDATE failed.\n");
 
-    ack = hip_get_param(msg, HIP_PARAM_ACK);
-    seq = hip_get_param(msg, HIP_PARAM_SEQ);
+    ack = hip_get_param(ctx->msg, HIP_PARAM_ACK);
+    seq = hip_get_param(ctx->msg, HIP_PARAM_SEQ);
 
     if (seq != NULL) {
         /********** SEQ ***********/
         seq_no = ntohl(seq->update_id);
 
         HIP_DEBUG("SEQ parameter found with update ID: %u\n", seq_no);
-        HIP_DEBUG("previous incoming update id=%u\n", entry->light_update_id_in);
+        HIP_DEBUG("previous incoming update id=%u\n", ctx->hadb_entry->light_update_id_in);
 
-        if (seq_no < entry->light_update_id_in) {
+        if (seq_no < ctx->hadb_entry->light_update_id_in) {
             HIP_DEBUG("old SEQ, dropping...\n");
 
             err = -EINVAL;
             goto out_err;
-        } else if (seq_no == entry->light_update_id_in) {
+        } else if (seq_no == ctx->hadb_entry->light_update_id_in) {
             HIP_DEBUG("retransmitted UPDATE packet (?), continuing\n");
         } else {
             HIP_DEBUG("new SEQ, storing...\n");
-            entry->light_update_id_in = seq_no;
+            ctx->hadb_entry->light_update_id_in = seq_no;
         }
 
         /********** ANCHOR ***********/
-        HIP_IFEL(esp_prot_update_handle_anchor(msg, entry, src_addr, dst_addr, &spi),
+        HIP_IFEL(esp_prot_update_handle_anchor(ctx->msg,
+                                               ctx->hadb_entry,
+                                               ctx->src_addr,
+                                               ctx->dst_addr,
+                                               &spi),
                  -1, "failed to handle anchors\n");
 
         // send ACK
-        esp_prot_send_light_ack(entry, dst_addr, src_addr, spi);
+        esp_prot_send_light_ack(ctx->hadb_entry,
+                                ctx->dst_addr,
+                                ctx->src_addr,
+                                spi);
     } else if (ack != NULL) {
         /********** ACK ***********/
         ack_no = ntohl(ack->peer_update_id);
 
         HIP_DEBUG("ACK found with peer update ID: %u\n", ack_no);
 
-        HIP_IFEL(ack_no != entry->light_update_id_out, -1,
+        HIP_IFEL(ack_no != ctx->hadb_entry->light_update_id_out, -1,
                  "received non-matching ACK\n");
 
         // stop retransmission
-        entry->light_update_retrans = 0;
+        ctx->hadb_entry->light_update_retrans = 0;
 
         // notify sadb about next anchor
-        HIP_IFEL(hip_add_sa(dst_addr,
-                            src_addr,
-                            &entry->hit_our,
-                            &entry->hit_peer,
-                            entry->spi_outbound_new,
-                            entry->esp_transform,
-                            &entry->esp_out,
-                            &entry->auth_out,
+        HIP_IFEL(hip_add_sa(ctx->dst_addr,
+                            ctx->src_addr,
+                            &(ctx->hadb_entry)->hit_our,
+                            &(ctx->hadb_entry)->hit_peer,
+                            ctx->hadb_entry->spi_outbound_new,
+                            ctx->hadb_entry->esp_transform,
+                            &(ctx->hadb_entry)->esp_out,
+                            &(ctx->hadb_entry)->auth_out,
                             0,
                             HIP_SPI_DIRECTION_OUT,
                             1,
-                            entry),
+                            ctx->hadb_entry),
                  -1,
                  "failed to notify sadb about next anchor\n");
     } else {

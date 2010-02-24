@@ -615,10 +615,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 #endif
         break;
     case HIP_LUPDATE:
-        HIP_IFCS(entry, err = esp_prot_receive_light_update(msg,
-                                                            src_addr,
-                                                            dst_addr,
-                                                            entry));
+        HIP_IFCS(entry, err = esp_prot_handle_light_update(type, state, &ctx));
         break;
 
     case HIP_R1:
