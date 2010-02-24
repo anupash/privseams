@@ -478,6 +478,27 @@ static int hip_init_handle_functions(void)
         hip_perf_write_benchmark(perf_set, PERF_R1);
 #endif
 #endif
+
+    hip_register_handle_function(HIP_R2, HIP_STATE_UNASSOCIATED, &hip_drop_packet, 0);
+    hip_register_handle_function(HIP_R2, HIP_STATE_I1_SENT,      &hip_drop_packet, 0);
+    hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT,      &hip_handle_r2, 0);
+    hip_register_handle_function(HIP_R2, HIP_STATE_R2_SENT,      &hip_drop_packet, 0);
+    hip_register_handle_function(HIP_R2, HIP_STATE_ESTABLISHED,  &hip_drop_packet, 0);
+    hip_register_handle_function(HIP_R2, HIP_STATE_CLOSING,      &hip_drop_packet, 0);
+    hip_register_handle_function(HIP_R2, HIP_STATE_CLOSED,       &hip_drop_packet, 0);
+    hip_register_handle_function(HIP_R2, HIP_STATE_NONE,         &hip_drop_packet, 0);
+
+#if 0
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_R2\n");
+        hip_perf_start_benchmark(perf_set, PERF_R2);
+
+        HIP_DEBUG("Stop and write PERF_R2\n");
+        hip_perf_stop_benchmark(perf_set, PERF_R2);
+        hip_perf_write_benchmark(perf_set, PERF_R2);
+#endif
+#endif
+
     return err;
 }
 

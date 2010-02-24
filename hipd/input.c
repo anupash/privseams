@@ -599,18 +599,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         HIP_IFCS(ctx.hadb_entry, err = esp_prot_handle_light_update(type, state, &ctx));
         break;
     case HIP_R2:
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_R2\n");
-        hip_perf_start_benchmark(perf_set, PERF_R2);
-#endif
-        HIP_IFCS(ctx.hadb_entry, err = hip_handle_r2(type, state, &ctx));
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop and write PERF_R2\n");
-        hip_perf_stop_benchmark(perf_set, PERF_R2);
-        hip_perf_write_benchmark(perf_set, PERF_R2);
-#endif
         break;
-
     case HIP_NOTIFY:
         HIP_IFCS(ctx.hadb_entry, err = hip_handle_notify(type, state, &ctx));
         break;
@@ -1136,7 +1125,9 @@ int hip_handle_r1(const uint32_t packet_type,
     char *str                        = NULL;
     struct in6_addr daddr;
 
-    HIP_IFEL(!packet_ctx->hadb_entry, -1, "No entry when receiving R1\n");
+    HIP_IFEL(!packet_ctx->hadb_entry, -1,
+             "No entry in host association database when receiving R1." \
+             "Dropping.\n");
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Check and remove the IP of the peer from the opp non-HIP database */
@@ -2175,10 +2166,9 @@ int hip_handle_r2(const uint32_t packet_type,
              "Received illegal controls in R2: 0x%x. Dropping\n",
              ntohs(packet_ctx->msg->control));
 
-    HIP_IFEL(!packet_ctx->hadb_entry, -EFAULT,
-             "Received R2 by unknown sender\n");
-
-    HIP_LOCK_HA(packet_ctx->hadb_entry);
+    HIP_IFEL(!packet_ctx->hadb_entry, -1,
+             "No entry in host association database when receiving R2." \
+             "Dropping.\n");
 
     /* if the NAT mode is used, update the port numbers of the host association */
     if (packet_ctx->msg_info->dst_port == hip_get_local_nat_udp_port()) {
