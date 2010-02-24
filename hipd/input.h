@@ -85,6 +85,10 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
                                    struct in6_addr *daddr,
                                    hip_portpair_t *info);
 
+void hip_drop_packet(const uint32_t packet_type,
+                     const uint32_t ha_state,
+                     struct hip_packet_context *packet_ctx);
+
 int hip_receive_bos(struct hip_common *bos, struct in6_addr *bos_saddr,
                     struct in6_addr *bos_daddr, hip_ha_t *entry, hip_portpair_t *bos_info);
 

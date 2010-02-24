@@ -591,38 +591,13 @@ int hip_receive_control_packet(struct hip_common *msg,
     hip_run_handle_functions(type, state, &ctx);
 
     switch (type) {
+    case HIP_I1:
     case HIP_I2:
-        /* Possibly state. */
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2\n");
-        hip_perf_start_benchmark(perf_set, PERF_I2);
-#endif
-        err = hip_handle_i2(type, state, &ctx);
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop and write PERF_I2\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I2);
-        hip_perf_write_benchmark(perf_set, PERF_I2);
-#endif
+    case HIP_R1:
         break;
     case HIP_LUPDATE:
         HIP_IFCS(ctx.hadb_entry, err = esp_prot_handle_light_update(type, state, &ctx));
         break;
-
-    case HIP_R1:
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_R1\n");
-        hip_perf_start_benchmark(perf_set, PERF_R1);
-#endif
-        /* State. */
-        HIP_IFEL(!ctx.hadb_entry, -1, "No entry when receiving R1\n");
-        HIP_IFCS(ctx.hadb_entry, err = hip_handle_r1(type, state, &ctx));
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop and write PERF_R1\n");
-        hip_perf_stop_benchmark(perf_set, PERF_R1);
-        hip_perf_write_benchmark(perf_set, PERF_R1);
-#endif
-        break;
-
     case HIP_R2:
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_R2\n");
@@ -1115,6 +1090,14 @@ out_err:
     return err;
 }
 
+void hip_drop_packet(const uint32_t packet_type,
+                     const uint32_t ha_state,
+                     struct hip_packet_context *packet_ctx)
+{
+    HIP_ERROR("Received packet type %d in state: %s. Dropping.\n",
+              packet_type, hip_state_str(ha_state));
+}
+
 /**
  * Handles an incoming R1 packet.
  *
@@ -1153,6 +1136,8 @@ int hip_handle_r1(const uint32_t packet_type,
     char *str                        = NULL;
     struct in6_addr daddr;
 
+    HIP_IFEL(!packet_ctx->hadb_entry, -1, "No entry when receiving R1\n");
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Check and remove the IP of the peer from the opp non-HIP database */
    hip_oppipdb_delentry(&(packet_ctx->hadb_entry->peer_addr));
@@ -1188,20 +1173,6 @@ int hip_handle_r1(const uint32_t packet_type,
    }
 
    HIP_DEBUG("Received R1 in state %s\n", hip_state_str(ha_state));
-
-   switch (ha_state) {
-   case HIP_STATE_R2_SENT:
-   case HIP_STATE_ESTABLISHED:
-       goto out_err;
-   case HIP_STATE_NONE:
-   case HIP_STATE_UNASSOCIATED:
-   default:
-       /* Can't happen. */
-       err = -EFAULT;
-       HIP_ERROR("R1 received in odd state: %d. Dropping.\n",
-                 packet_ctx->hadb_entry);
-       break;
-   }
 
    if (ha_state == HIP_STATE_I2_SENT) {
        HIP_DEBUG("Retransmission\n");
