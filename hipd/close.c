@@ -193,10 +193,9 @@ int hip_handle_close(const uint32_t packet_type,
              "Received illegal controls in CLOSE: 0x%x. Dropping\n",
              ntohs(ctx->msg->control));
 
-    if (!ctx->hadb_entry) {
-        HIP_DEBUG("No HA for the received close\n");
-        goto out_err;
-    }
+    HIP_IFEL(!ctx->hadb_entry, -1,
+             "No entry in host association database when receiving R2." \
+             "Dropping.\n");
 
     switch (ha_state) {
     case HIP_STATE_ESTABLISHED:

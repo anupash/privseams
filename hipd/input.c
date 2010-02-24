@@ -615,16 +615,6 @@ int hip_receive_control_packet(struct hip_common *msg,
         break;
 
     case HIP_CLOSE:
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
-        hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
-#endif
-        HIP_IFCS(ctx.hadb_entry, err = hip_handle_close(type, state, &ctx));
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE");
-        hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE);
-        hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE);
-#endif
         break;
 
     case HIP_CLOSE_ACK:
