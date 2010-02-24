@@ -651,7 +651,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 
     case HIP_UPDATE:
         HIP_DEBUG_HIT("received an UPDATE:  ", src_addr );
-        HIP_IFCS(entry, err = hip_receive_update(&ctx));
+        HIP_IFCS(entry, err = hip_handle_update(&ctx));
         break;
 
     case HIP_NOTIFY:

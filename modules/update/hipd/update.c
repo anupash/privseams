@@ -659,7 +659,7 @@ out_err:
     }
 }
 
-int hip_receive_update(struct hip_packet_context *ctx)
+int hip_handle_update(struct hip_packet_context *ctx)
 {
     int err = 0, same_seq = 0;
     unsigned int ack_peer_update_id         = 0;
