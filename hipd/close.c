@@ -311,10 +311,9 @@ int hip_handle_close_ack(const uint32_t packet_type,
         goto out_err;
     }
 
-    if (!ctx->hadb_entry) {
-        HIP_DEBUG("No HA for the received close ack\n");
-        goto out_err;
-    }
+    HIP_IFEL(!ctx->hadb_entry, -1,
+             "No entry in host association database when receiving R2." \
+             "Dropping.\n");
 
     switch (ha_state) {
     case HIP_STATE_CLOSING:
