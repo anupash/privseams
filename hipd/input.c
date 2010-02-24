@@ -655,7 +655,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         break;
 
     case HIP_NOTIFY:
-        HIP_IFCS(entry, err = hip_receive_notify(msg, src_addr, dst_addr, entry));
+        HIP_IFCS(entry, err = hip_handle_notify(type, state, &ctx));
         break;
 
     case HIP_BOS:
@@ -2556,6 +2556,10 @@ out_err:
  * Handles an incoming NOTIFY packet and parses @c NOTIFICATION parameters and
  * @c VIA_RVS parameter from the packet.
  *
+ * @note draft-ietf-hip-base-06, Section 6.13: Processing NOTIFY packets is
+ * OPTIONAL. If processed, any errors in a received NOTIFICATION parameter
+ * SHOULD be logged.
+ *
  * @param notify       a pointer to the received NOTIFY HIP packet common header
  *                     with source and destination HITs.
  * @param notify_saddr a pointer to the source address from where the NOTIFY
@@ -2564,11 +2568,12 @@ out_err:
  *                     packet was sent to (own address).
  * @param entry        a pointer to a host association
  */
-static inline int hip_handle_notify(const struct hip_common *notify,
-                                    const struct in6_addr *notify_saddr,
-                                    const struct in6_addr *notify_daddr, hip_ha_t *entry)
+int hip_handle_notify(const uint32_t packet_type,
+                      const uint32_t ha_state,
+                      struct hip_packet_context *ctx)
 {
-    int err                               = 0;
+    int err       = 0;
+    uint16_t mask = HIP_PACKET_CTRL_ANON, notify_controls = 0;
     struct hip_common i1;
     struct hip_tlv_common *current_param  = NULL;
     struct hip_notification *notification = NULL;
@@ -2578,15 +2583,20 @@ static inline int hip_handle_notify(const struct hip_common *notify,
     uint16_t msgtype                      = 0;
     in_port_t port                        = 0;
 
-    /* draft-ietf-hip-base-06, Section 6.13: Processing NOTIFY packets is
-     * OPTIONAL. If processed, any errors in a received NOTIFICATION parameter
-     * SHOULD be logged. */
 
-    _HIP_DEBUG("hip_receive_notify() invoked.\n");
+    HIP_IFEL(ctx->hadb_entry == NULL, -EFAULT,
+             "Received a NOTIFY packet from an unknown sender, ignoring " \
+             "the packet.\n");
+
+    notify_controls = ntohs(ctx->msg->control);
+
+    HIP_IFEL(!hip_controls_sane(notify_controls, mask), -EPROTO,
+           "Received a NOTIFY packet with illegal controls: 0x%x, ignoring " \
+           "the packet.\n", notify_controls);
 
     /* Loop through all the parameters in the received I1 packet. */
     while ((current_param =
-                hip_get_next_param(notify, current_param)) != NULL) {
+                hip_get_next_param(ctx->msg, current_param)) != NULL) {
         param_type = hip_get_param_type(current_param);
 
         if (param_type == HIP_PARAM_NOTIFICATION) {
@@ -2685,9 +2695,9 @@ static inline int hip_handle_notify(const struct hip_common *notify,
 
                 hip_build_network_hdr(&i1,
                                       response,
-                                      entry->local_controls,
-                                      &entry->hit_our,
-                                      &entry->hit_peer);
+                                      ctx->hadb_entry->local_controls,
+                                      &(ctx->hadb_entry)->hit_our,
+                                      &(ctx->hadb_entry)->hit_peer);
 
                 /* Calculate the HIP header length */
                 hip_calc_hdr_len(&i1);
@@ -2696,8 +2706,8 @@ static inline int hip_handle_notify(const struct hip_common *notify,
 
                 /* This I1 packet must be send only once, which
                  * is why we use NULL entry for sending. */
-                err = hip_send_pkt(&entry->our_addr, &responder_ip,
-                                   (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                err = hip_send_pkt(&(ctx->hadb_entry)->our_addr, &responder_ip,
+                                   (ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                                    port,
                                    &i1, NULL, 0);
 
@@ -2720,49 +2730,7 @@ static inline int hip_handle_notify(const struct hip_common *notify,
         }
     }
 
-    return err;
-}
-
-/**
- * Determines the action to be executed for an incoming NOTIFY packet.
- *
- * This function is called when a HIP control packet is received by
- * hip_receive_control_packet()-function and the packet is detected to be
- * a NOTIFY packet.
- *
- * @param notify       a pointer to the received NOTIFY HIP packet common header
- *                     with source and destination HITs.
- * @param notify_saddr a pointer to the source address from where the NOTIFY
- *                     packet was received.
- * @param notify_daddr a pointer to the destination address where to the NOTIFY
- *                     packet was sent to (own address).
- * @param entry        a pointer to the current host association database state.
- */
-int hip_receive_notify(const struct hip_common *notify,
-                       const struct in6_addr *notify_saddr,
-                       const struct in6_addr *notify_daddr, hip_ha_t *entry)
-{
-    int err       = 0;
-    uint16_t mask = HIP_PACKET_CTRL_ANON, notify_controls = 0;
-
-    _HIP_DEBUG("hip_receive_notify() invoked.\n");
-
-    HIP_IFEL(entry == NULL, -EFAULT,
-             "Received a NOTIFY packet from an unknown sender, ignoring " \
-             "the packet.\n");
-
-    notify_controls = ntohs(notify->control);
-
-    HIP_IFEL(!hip_controls_sane(notify_controls, mask), -EPROTO,
-             "Received a NOTIFY packet with illegal controls: 0x%x, ignoring " \
-             "the packet.\n", notify_controls);
-
-    err = hip_handle_notify(notify, notify_saddr, notify_daddr, entry);
-
 out_err:
-
-    /* hip_put_ha(entry); */
-
     return err;
 }
 
