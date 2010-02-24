@@ -499,6 +499,13 @@ static int hip_init_handle_functions(void)
 #endif
 #endif
 
+    hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I1_SENT,     &hip_handle_notify, 0);
+    hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I2_SENT,     &hip_handle_notify, 0);
+    hip_register_handle_function(HIP_NOTIFY, HIP_STATE_R2_SENT,     &hip_handle_notify, 0);
+    hip_register_handle_function(HIP_NOTIFY, HIP_STATE_ESTABLISHED, &hip_handle_notify, 0);
+    hip_register_handle_function(HIP_NOTIFY, HIP_STATE_CLOSING,     &hip_handle_notify, 0);
+    hip_register_handle_function(HIP_NOTIFY, HIP_STATE_CLOSED,      &hip_handle_notify, 0);
+
     return err;
 }
 

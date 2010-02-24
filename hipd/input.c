@@ -601,9 +601,7 @@ int hip_receive_control_packet(struct hip_common *msg,
     case HIP_R2:
         break;
     case HIP_NOTIFY:
-        HIP_IFCS(ctx.hadb_entry, err = hip_handle_notify(type, state, &ctx));
         break;
-
     case HIP_BOS:
         err = hip_handle_bos(type, state, &ctx);
 
@@ -2537,7 +2535,7 @@ int hip_handle_notify(const uint32_t packet_type,
            "Received a NOTIFY packet with illegal controls: 0x%x, ignoring " \
            "the packet.\n", notify_controls);
 
-    /* Loop through all the parameters in the received I1 packet. */
+    /* Loop through all the parameters in the received packet. */
     while ((current_param =
                 hip_get_next_param(ctx->msg, current_param)) != NULL) {
         param_type = hip_get_param_type(current_param);
