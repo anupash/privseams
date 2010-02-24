@@ -510,7 +510,7 @@ int hip_receive_control_packet(struct hip_common *msg,
                                struct in6_addr *dst_addr,
                                hip_portpair_t *msg_info)
 {
-    hip_ha_t tmp, *entry = NULL;
+    hip_ha_t tmp;
     int err = 0, skip_sync = 0;
     struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
     struct hip_packet_context ctx = {0};
@@ -546,10 +546,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 
     /** @todo Check packet csum.*/
 
-    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+    ctx.hadb_entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
     // Check if we need to drop the packet
-    if (entry && hip_packet_to_drop(entry, type, &msg->hitr) == 1) {
+    if (ctx.hadb_entry &&
+        hip_packet_to_drop(ctx.hadb_entry, type, &msg->hitr) == 1)
+    {
         HIP_DEBUG("Ignoring the packet sent \n");
         err = -1;
         goto out_err;
@@ -558,19 +560,19 @@ int hip_receive_control_packet(struct hip_common *msg,
     ctx.msg        = msg;
     ctx.src_addr   = src_addr;
     ctx.dst_addr   = dst_addr;
-    ctx.hadb_entry = entry;
     ctx.msg_info   = msg_info;
 
-    if (entry) {
-        state = entry->state;
+    if (ctx.hadb_entry) {
+        state = ctx.hadb_entry->state;
     } else {
         state = HIP_STATE_NONE;
     }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    if (!entry && opportunistic_mode &&
+    if (!ctx.hadb_entry && opportunistic_mode &&
         (type == HIP_I1 || type == HIP_R1)) {
-        entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr,
+        ctx.hadb_entry = hip_oppdb_get_hadb_entry_i1_r1(msg,
+                                               src_addr,
                                                dst_addr,
                                                msg_info);
     }
@@ -586,21 +588,9 @@ int hip_receive_control_packet(struct hip_common *msg,
     }
 #endif
 
-    switch (type) {
-    case HIP_DATA:
-    case HIP_I1:
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I1\n");
-        hip_perf_start_benchmark(perf_set, PERF_I1);
-#endif
-        err = hip_handle_i1(type, state, &ctx);
-#ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop and write PERF_I1\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I1);
-        hip_perf_write_benchmark(perf_set, PERF_I1);
-#endif
-        break;
+    hip_run_handle_functions(type, state, &ctx);
 
+    switch (type) {
     case HIP_I2:
         /* Possibly state. */
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -615,7 +605,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 #endif
         break;
     case HIP_LUPDATE:
-        HIP_IFCS(entry, err = esp_prot_handle_light_update(type, state, &ctx));
+        HIP_IFCS(ctx.hadb_entry, err = esp_prot_handle_light_update(type, state, &ctx));
         break;
 
     case HIP_R1:
@@ -624,8 +614,8 @@ int hip_receive_control_packet(struct hip_common *msg,
         hip_perf_start_benchmark(perf_set, PERF_R1);
 #endif
         /* State. */
-        HIP_IFEL(!entry, -1, "No entry when receiving R1\n");
-        HIP_IFCS(entry, err = hip_handle_r1(type, state, &ctx));
+        HIP_IFEL(!ctx.hadb_entry, -1, "No entry when receiving R1\n");
+        HIP_IFCS(ctx.hadb_entry, err = hip_handle_r1(type, state, &ctx));
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_R1\n");
         hip_perf_stop_benchmark(perf_set, PERF_R1);
@@ -638,7 +628,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         HIP_DEBUG("Start PERF_R2\n");
         hip_perf_start_benchmark(perf_set, PERF_R2);
 #endif
-        HIP_IFCS(entry, err = hip_handle_r2(type, state, &ctx));
+        HIP_IFCS(ctx.hadb_entry, err = hip_handle_r2(type, state, &ctx));
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_R2\n");
         hip_perf_stop_benchmark(perf_set, PERF_R2);
@@ -646,13 +636,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 #endif
         break;
 
-    case HIP_UPDATE:
-        HIP_DEBUG_HIT("received an UPDATE:  ", src_addr );
-        HIP_IFCS(entry, err = hip_handle_update(&ctx));
-        break;
-
     case HIP_NOTIFY:
-        HIP_IFCS(entry, err = hip_handle_notify(type, state, &ctx));
+        HIP_IFCS(ctx.hadb_entry, err = hip_handle_notify(type, state, &ctx));
         break;
 
     case HIP_BOS:
@@ -672,7 +657,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
         hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
 #endif
-        HIP_IFCS(entry, err = hip_handle_close(type, state, &ctx));
+        HIP_IFCS(ctx.hadb_entry, err = hip_handle_close(type, state, &ctx));
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE");
         hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE);
@@ -685,7 +670,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
         hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
 #endif
-        HIP_IFCS(entry, err = hip_handle_close_ack(type, state, &ctx));
+        HIP_IFCS(ctx.hadb_entry, err = hip_handle_close_ack(type, state, &ctx));
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK\n");
         hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);

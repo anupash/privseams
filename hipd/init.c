@@ -408,6 +408,42 @@ static void hip_probe_kernel_modules(void)
 #endif /* ANDROID_CHANGES */
 #endif /* CONFIG_HIP_OPENWRT */
 
+static int hip_init_handle_functions(void)
+{
+    int err = 0;
+
+    hip_register_handle_function(HIP_I1, HIP_STATE_UNASSOCIATED, &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_I1, HIP_STATE_I1_SENT,      &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_I1, HIP_STATE_I2_SENT,      &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_I1, HIP_STATE_R2_SENT,      &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_I1, HIP_STATE_ESTABLISHED,  &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_I1, HIP_STATE_CLOSING,      &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_I1, HIP_STATE_CLOSED,       &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_I1, HIP_STATE_NONE,         &hip_handle_i1, 0);
+
+    hip_register_handle_function(HIP_STATE_NONE, HIP_STATE_UNASSOCIATED, &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_STATE_NONE, HIP_STATE_I1_SENT,      &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_STATE_NONE, HIP_STATE_I2_SENT,      &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_STATE_NONE, HIP_STATE_R2_SENT,      &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_STATE_NONE, HIP_STATE_ESTABLISHED,  &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_STATE_NONE, HIP_STATE_CLOSING,      &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_STATE_NONE, HIP_STATE_CLOSED,       &hip_handle_i1, 0);
+    hip_register_handle_function(HIP_STATE_NONE, HIP_STATE_NONE,         &hip_handle_i1, 0);
+
+    /* @todo enable performance measurement */
+#if 0
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I1\n");
+    hip_perf_start_benchmark(perf_set, PERF_I1);
+    HIP_DEBUG("Stop and write PERF_I1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I1);
+    hip_perf_write_benchmark(perf_set, PERF_I1);
+#endif
+#endif
+
+    return err;
+}
+
 /**
  * Main initialization function for HIP daemon.
  */
@@ -441,6 +477,8 @@ int hipd_init(int flush_ipsec, int killold)
     hip_init_hostid_db(NULL);
 
     hip_set_os_dep_variables();
+
+    hip_init_handle_functions();
 
 #ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
@@ -882,6 +920,8 @@ void hip_exit(int signal)
 
     /* Next line is needed only if RVS or hiprelay is in use. */
     hip_uninit_services();
+
+    hip_uninit_handle_functions();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     hip_oppdb_uninit();

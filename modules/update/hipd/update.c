@@ -659,7 +659,9 @@ out_err:
     }
 }
 
-int hip_handle_update(struct hip_packet_context *ctx)
+int hip_handle_update(const uint32_t packet_type,
+                      const uint32_t ha_state,
+                      struct hip_packet_context *ctx)
 {
     int err = 0, same_seq = 0;
     unsigned int ack_peer_update_id         = 0;
@@ -677,15 +679,15 @@ int hip_handle_update(struct hip_packet_context *ctx)
      * the implementation MAY reply with an ICMP Parameter Problem. */
     HIP_IFEL(!ctx->hadb_entry, -1, "No host association database entry found.\n");
 
-    /// @todo: Relay support
+    /** @todo: Relay support */
 
     /* RFC 5201 Section 4.4.2, Table 5: According to the state processes
      * listed, the state is moved from R2_SENT to ESTABLISHED if an
      * UPDATE packet is received */
     if (ctx->hadb_entry->state == HIP_STATE_R2_SENT) {
         ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
-        HIP_DEBUG("Received UPDATE in state %s, moving to " \
-                  "ESTABLISHED.\n", hip_state_str(ctx->hadb_entry->state));
+        HIP_DEBUG("Received UPDATE in state %s, moving to ESTABLISHED.\n",
+                  hip_state_str(ctx->hadb_entry->state));
     } else if (ctx->hadb_entry->state != HIP_STATE_ESTABLISHED) {
         HIP_ERROR("Received UPDATE in illegal state %s.\n",
                   hip_state_str(ctx->hadb_entry->state));
@@ -843,12 +845,18 @@ out_err:
 /**
  * Initialization function for update module.
  *
- * @note currently without any functionality.
- *
  * @return 0
  */
 int hip_update_init(void)
 {
+    hip_register_handle_function(HIP_UPDATE,
+                                 HIP_STATE_ESTABLISHED,
+                                 &hip_handle_update,
+                                 0);
+    hip_register_handle_function(HIP_UPDATE,
+                                 HIP_STATE_R2_SENT,
+                                 &hip_handle_update,
+                                 0);
     return 0;
 }
 

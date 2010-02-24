@@ -1253,7 +1253,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
              * address */
             exists = hip_exists_address_in_list(addr, ifa->ifa_index);
             HIP_IFEL(((exists && is_add) || (!exists && !is_add)), -1,
-                     "Address change discarded (exists=%d, is_add=%d)",
+                     "Address change discarded (exists=%d, is_add=%d)\n",
                      exists, is_add);
 
             hip_update_address_list(addr, is_add, ifa->ifa_index);
