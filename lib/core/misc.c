@@ -1,4 +1,4 @@
-/**@file
+/** @file
  * This file defines miscellaneous utility functions
  *
  * @author Miika Komu

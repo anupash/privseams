@@ -1,4 +1,5 @@
-/** @file cert.c This file defines the certificate signing and verification
+/** @file
+ * This file defines the certificate signing and verification
  * functions to use with HIP
  *
  * @author Samu Varjonen
