@@ -685,7 +685,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
         hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
 #endif
-        HIP_IFCS(entry, err = hip_receive_close_ack(msg, entry));
+        HIP_IFCS(entry, err = hip_handle_close_ack(type, state, &ctx));
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK\n");
         hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);

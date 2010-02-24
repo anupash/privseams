@@ -288,51 +288,79 @@ out_err:
     return err;
 }
 
-int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
+int hip_handle_close_ack(const uint32_t packet_type,
+                         const uint32_t ha_state,
+                         struct hip_packet_context *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
     hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
 #endif
-    int err = 0;
+    int err       = 0;
     struct hip_echo_request *echo_resp;
+    uint16_t mask = HIP_PACKET_CTRL_ANON;
+
+    HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hitr), -1,
+            "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
+
+    if (!hip_controls_sane(ntohs(ctx->msg->control), mask
+    //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
+    // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
+    )) {
+        HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
+                ntohs(ctx->msg->control));
+        goto out_err;
+    }
+
+    if (!ctx->hadb_entry) {
+        HIP_DEBUG("No HA for the received close ack\n");
+        goto out_err;
+    }
+
+    switch (ha_state) {
+    case HIP_STATE_CLOSING:
+    case HIP_STATE_CLOSED:
+        /* Proceed with packet handling */
+        break;
+    default:
+        HIP_ERROR("Internal state (%d) is incorrect\n", ha_state);
+        goto out_err;
+    }
 
     /* verify ECHO */
     HIP_IFEL(!(echo_resp =
-                   hip_get_param(close_ack, HIP_PARAM_ECHO_RESPONSE_SIGN)),
+                   hip_get_param(ctx->msg, HIP_PARAM_ECHO_RESPONSE_SIGN)),
              -1, "Echo response not found\n");
-    HIP_IFEL(memcmp(echo_resp + 1, entry->echo_data,
-                    sizeof(entry->echo_data)), -1,
+    HIP_IFEL(memcmp(echo_resp + 1, ctx->hadb_entry->echo_data,
+                    sizeof(ctx->hadb_entry->echo_data)), -1,
              "Echo response did not match request\n");
 
     /* verify HMAC */
-    if (entry->is_loopback) {
-        HIP_IFEL(hip_verify_packet_hmac(close_ack,
-                                        &entry->hip_hmac_out),
+    if (ctx->hadb_entry->is_loopback) {
+        HIP_IFEL(hip_verify_packet_hmac(ctx->msg,
+                                        &(ctx->hadb_entry)->hip_hmac_out),
                  -ENOENT, "HMAC validation on close ack failed\n");
     } else {
-        HIP_IFEL(hip_verify_packet_hmac(close_ack,
-                                        &entry->hip_hmac_in),
+        HIP_IFEL(hip_verify_packet_hmac(ctx->msg,
+                                        &(ctx->hadb_entry)->hip_hmac_in),
                  -ENOENT, "HMAC validation on close ack failed\n");
     }
     /* verify signature */
-    HIP_IFEL(entry->verify(entry->peer_pub_key, close_ack), -EINVAL,
-             "Verification of close ack signature failed\n");
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key, ctx->msg),
+             -EINVAL, "Verification of close ack signature failed\n");
 
-    entry->state = HIP_STATE_CLOSED;
+    ctx->hadb_entry->state = HIP_STATE_CLOSED;
 
     HIP_DEBUG("CLOSED\n");
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&(entry->peer_addr));
+    hip_oppipdb_delentry(&(ctx->hadb_entry->peer_addr));
 #endif
 
-    HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
-             "Deleting peer info failed\n");
-
-    //hip_hadb_remove_state(entry);
-    //hip_delete_esp(entry);
+    HIP_IFEL(hip_del_peer_info(&(ctx->hadb_entry)->hit_our,
+                               &(ctx->hadb_entry)->hit_peer),
+             -1, "Deleting peer info failed\n");
 
     /* by now, if everything is according to plans, the refcnt should
      * be 1 */
@@ -345,52 +373,6 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
     hip_perf_stop_benchmark( perf_set, PERF_CLOSE_COMPLETE );
     hip_perf_write_benchmark( perf_set, PERF_CLOSE_COMPLETE );
 #endif
-
-out_err:
-
-    return err;
-}
-
-int hip_receive_close_ack(struct hip_common *close_ack,
-                          hip_ha_t *entry)
-{
-    int state     = 0;
-    int err       = 0;
-    uint16_t mask = HIP_PACKET_CTRL_ANON;
-
-    /* XX FIX:  */
-
-    HIP_DEBUG("\n");
-
-    HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
-             "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
-
-    if (!hip_controls_sane(ntohs(close_ack->control), mask
-                           //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
-                           // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
-                           )) {
-        HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
-                  ntohs(close_ack->control));
-        goto out_err;
-    }
-
-    if (!entry) {
-        HIP_DEBUG("No HA for the received close ack\n");
-        goto out_err;
-    } else {
-        HIP_LOCK_HA(entry);
-        state = entry->state;
-    }
-
-    switch (state) {
-    case HIP_STATE_CLOSING:
-    case HIP_STATE_CLOSED:
-        err = hip_handle_close_ack(close_ack, entry);
-        break;
-    default:
-        HIP_ERROR("Internal state (%d) is incorrect\n", state);
-        break;
-    }
 
 out_err:
     return err;
