@@ -430,7 +430,7 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_DATA, HIP_STATE_CLOSED,       &hip_handle_i1, 0);
     hip_register_handle_function(HIP_DATA, HIP_STATE_NONE,         &hip_handle_i1, 0);
 
-    /* @todo enable performance measurement */
+    /** @todo Register performance measurement functions as handle functions */
 #if 0
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I1\n");
@@ -450,13 +450,14 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_CLOSED,       &hip_handle_i2, 0);
     hip_register_handle_function(HIP_I2, HIP_STATE_NONE,         &hip_handle_i2, 0);
 
+    /** @todo Register performance measurement functions as handle functions */
 #if 0
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_I2\n");
-        hip_perf_start_benchmark(perf_set, PERF_I2);
-        HIP_DEBUG("Stop and write PERF_I2\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I2);
-        hip_perf_write_benchmark(perf_set, PERF_I2);
+    HIP_DEBUG("Start PERF_I2\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2);
+    HIP_DEBUG("Stop and write PERF_I2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2);
+    hip_perf_write_benchmark(perf_set, PERF_I2);
 #endif
 #endif
 
@@ -469,13 +470,14 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED,       &hip_handle_r1, 0);
     hip_register_handle_function(HIP_R1, HIP_STATE_NONE,         &hip_drop_packet, 0);
 
+    /** @todo Register performance measurement functions as handle functions */
 #if 0
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_R1\n");
-        hip_perf_start_benchmark(perf_set, PERF_R1);
-        HIP_DEBUG("Stop and write PERF_R1\n");
-        hip_perf_stop_benchmark(perf_set, PERF_R1);
-        hip_perf_write_benchmark(perf_set, PERF_R1);
+    HIP_DEBUG("Start PERF_R1\n");
+    hip_perf_start_benchmark(perf_set, PERF_R1);
+    HIP_DEBUG("Stop and write PERF_R1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R1);
+    hip_perf_write_benchmark(perf_set, PERF_R1);
 #endif
 #endif
 
@@ -488,14 +490,14 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_R2, HIP_STATE_CLOSED,       &hip_drop_packet, 0);
     hip_register_handle_function(HIP_R2, HIP_STATE_NONE,         &hip_drop_packet, 0);
 
+    /** @todo Register performance measurement functions as handle functions */
 #if 0
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_R2\n");
-        hip_perf_start_benchmark(perf_set, PERF_R2);
-
-        HIP_DEBUG("Stop and write PERF_R2\n");
-        hip_perf_stop_benchmark(perf_set, PERF_R2);
-        hip_perf_write_benchmark(perf_set, PERF_R2);
+    HIP_DEBUG("Start PERF_R2\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2);
+    HIP_DEBUG("Stop and write PERF_R2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2);
+    hip_perf_write_benchmark(perf_set, PERF_R2);
 #endif
 #endif
 
@@ -515,13 +517,14 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_CLOSE, HIP_STATE_CLOSED,       &hip_drop_packet, 0);
     hip_register_handle_function(HIP_CLOSE, HIP_STATE_NONE,         &hip_drop_packet, 0);
 
+    /** @todo Register performance measurement functions as handle functions */
 #if 0
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
-        hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
-        HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE");
-        hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE);
-        hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE);
+    HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
+    hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
+    HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE");
+    hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE);
+    hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE);
 #endif
 #endif
 
@@ -534,13 +537,14 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_CLOSED,       &hip_handle_close_ack, 0);
     hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_NONE,         &hip_drop_packet, 0);
 
+    /** @todo Register performance measurement functions as handle functions */
 #if 0
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
-        hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
-        HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK\n");
-        hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
-        hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+    HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
+    hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+    HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK\n");
+    hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+    hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
 #endif
 #endif
 
