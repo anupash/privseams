@@ -67,15 +67,14 @@ int hip_register_handle_function(const uint32_t packet_type,
              "Maximum host association state exceeded.\n");
 
     if (!handle_functions[packet_type][ha_state]) {
-        HIP_IFEL(((new_func_list = (hip_ll_t *) malloc(sizeof(hip_ll_t))) == NULL),
+        HIP_IFEL(((new_func_list = malloc(sizeof(hip_ll_t))) == NULL),
                  -1,
                  "Error on allocating memory for a linked list.\n");
         hip_ll_init(new_func_list);
         handle_functions[packet_type][ha_state] = new_func_list;
     }
 
-    HIP_IFEL(((handle_func = (struct handle_func_entry *)
-                             malloc(sizeof(struct handle_func_entry))) == NULL),
+    HIP_IFEL(((handle_func = malloc(sizeof(struct handle_func_entry))) == NULL),
              -1,
              "Error on allocating memory for a linked list.\n");
 
@@ -83,7 +82,7 @@ int hip_register_handle_function(const uint32_t packet_type,
     handle_func->priority    = priority;
 
     /* Iterate through handle functions until the desired position is found */
-    while((iter = hip_ll_iterate(handle_functions[packet_type][ha_state], iter)) != NULL) {
+    while ((iter = hip_ll_iterate(handle_functions[packet_type][ha_state], iter)) != NULL) {
         if (priority < ((struct handle_func_entry *) iter->ptr)->priority) {
             break;
         } else {
@@ -130,7 +129,7 @@ int hip_unregister_handle_function(const uint32_t packet_type,
     }
 
     /* Iterate through handle functions until the desired function is found */
-    while((iter = hip_ll_iterate(handle_functions[packet_type][ha_state], iter)) != NULL) {
+    while ((iter = hip_ll_iterate(handle_functions[packet_type][ha_state], iter)) != NULL) {
         if (handle_function == ((struct handle_func_entry *) iter->ptr)->handle_func) {
             hip_ll_del(handle_functions[packet_type][ha_state], index, free);
             break;
@@ -174,7 +173,7 @@ int hip_run_handle_functions(const uint32_t packet_type,
 
     list = handle_functions[packet_type][ha_state];
 
-    while((iter = hip_ll_iterate(list, iter)) != NULL) {
+    while ((iter = hip_ll_iterate(list, iter)) != NULL) {
         ((struct handle_func_entry *) iter->ptr)->handle_func(packet_type,
                                                               ha_state,
                                                               ctx);
@@ -218,12 +217,12 @@ struct modular_state *hip_init_state(void)
 {
     struct modular_state *state;
 
-    if ((state = (struct modular_state*) malloc(sizeof(struct modular_state))) == NULL) {
+    if ((state = malloc(sizeof(struct modular_state))) == NULL) {
         HIP_ERROR("Error on allocating memory for a modular_state instance.\n");
         return NULL;
     }
 
-    if ((state->item_list = (hip_ll_t*) malloc(sizeof(hip_ll_t))) == NULL) {
+    if ((state->item_list = malloc(sizeof(hip_ll_t))) == NULL) {
         HIP_ERROR("Error on allocating memory for a linked list.\n");
         return NULL;
     }
@@ -254,7 +253,7 @@ int hip_register_state_init_function(void *func)
     HIP_IFEL(!func, -1, "Invalid init function provided");
 
     if (!state_init_functions) {
-        HIP_IFEL(((new_func_list = (hip_ll_t *) malloc(sizeof(hip_ll_t))) == NULL),
+        HIP_IFEL(((new_func_list = malloc(sizeof(hip_ll_t))) == NULL),
                  -1,
                  "Error on allocating memory for a linked list.\n");
         hip_ll_init(new_func_list);
@@ -283,7 +282,7 @@ void hip_init_state_items(struct modular_state *state)
     hip_ll_node_t *iter = NULL;
     int (*init_function)(struct modular_state *state) = NULL;
 
-    while((iter = hip_ll_iterate(state_init_functions, iter)) != NULL) {
+    while ((iter = hip_ll_iterate(state_init_functions, iter)) != NULL) {
         init_function = iter->ptr;
         init_function(state);
     }

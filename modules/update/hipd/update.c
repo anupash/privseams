@@ -897,16 +897,15 @@ int hip_update_init_state(struct modular_state *state)
     int err = 0;
     struct update_state *update_state;
 
-    HIP_IFEL((update_state = (struct update_state*)
-                             malloc(sizeof(struct update_state))) == NULL,
+    HIP_IFEL((update_state = malloc(sizeof(struct update_state))) == NULL,
              -1,
              "Error on allocating memory for a update state instance.\n");
 
-    update_state->update_state     = 0;
-    update_state->hadb_update_func = NULL;
+    update_state->update_state                   = 0;
+    update_state->hadb_update_func               = NULL;
     update_state->addresses_to_send_echo_request = hip_linked_list_init();
-    update_state->update_id_out    = 0;
-    update_state->update_id_in     = 0;
+    update_state->update_id_out                  = 0;
+    update_state->update_id_in                   = 0;
 
     err = hip_add_state_item(state, update_state, "update");
 
