@@ -46,9 +46,6 @@
 
 #include "oppipdb.h"
 
-/* TODO Remove this include, when modularization is finished */
-#include "modules/update/hipd/update.h"
-
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
 #endif
@@ -1491,7 +1488,7 @@ int hip_handle_i2(const uint32_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int err = 0, retransmission = 0, state = 0, host_id_found = 0, is_loopback = 0;
+    int err = 0, retransmission = 0, host_id_found = 0, is_loopback = 0;
     uint16_t mask = HIP_PACKET_CTRL_ANON;
     uint16_t crypto_len                     = 0;
     uint32_t spi_in                         = 0, spi_out = 0;
@@ -1513,7 +1510,6 @@ int hip_handle_i2(const uint32_t packet_type,
     int if_index                            = 0;
     struct sockaddr_storage ss_addr;
     struct sockaddr *addr                   = NULL;
-    struct update_state *localstate         = NULL;
 
     HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hitr),
              0,
@@ -1524,7 +1520,7 @@ int hip_handle_i2(const uint32_t packet_type,
              "Received illegal controls in I2: 0x%x. Dropping\n",
              ntohs(ctx->msg->control));
 
-    HIP_DEBUG("Received I2 in state %s\n", hip_state_str(state));
+    HIP_DEBUG("Received I2 in state %s\n", hip_state_str(ha_state));
 
     /*
         case HIP_STATE_I2_SENT:
@@ -2008,8 +2004,11 @@ int hip_handle_i2(const uint32_t packet_type,
 #ifdef CONFIG_HIP_RVS
     ipv6_addr_copy(&dest, &in6addr_any);
     if (hip_relay_get_status() == HIP_RELAY_OFF) {
-        state = hip_relay_handle_relay_from(ctx->msg, ctx->src_addr, &dest, &dest_port);
-        if (state == -1) {
+        ctx->hadb_entry->state = hip_relay_handle_relay_from(ctx->msg,
+                                                             ctx->src_addr,
+                                                             &dest,
+                                                             &dest_port);
+        if (ctx->hadb_entry->state == -1) {
             HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
             goto out_err;
         }
@@ -2046,21 +2045,6 @@ int hip_handle_i2(const uint32_t packet_type,
      * 4.4.2. of RFC 5201 we learn that if I2 processing was successful, we
      * should "send R2 and go to R2-SENT" or if I2 processing failed, we
      * should "stay at UNASSOCIATED". -Lauri 29.04.2008 */
-
-    /** RFC 5201 Section 5.2.13:
-     *   Notice that the section says "The Update ID is an unsigned quantity,
-     *   initialized by a host to zero upon moving to ESTABLISHED state" and
-     *   "The Update ID is incremented by one before each new UPDATE that is
-     *   sent by the host; the first UPDATE packet originated by a host has
-     *   an Update ID of 0". All of these requirements can not be achieved
-     *   at the same time so we initialize the id to -1.
-     */
-
-    /* @todo Need hook for modularization */
-    //ctx->hadb_entry->update_id_out = -1; TODO why -1?
-    localstate = hip_get_state_item(ctx->hadb_entry->hip_modular_state, "update");
-    localstate->update_id_out = 0;
-
     ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
 
     /***** LOCATOR PARAMETER ******/
@@ -2130,7 +2114,6 @@ int hip_handle_r2(const uint32_t packet_type,
     struct hip_context *ctx         = NULL;
     struct hip_esp_info *esp_info   = NULL;
     struct hip_locator *locator     = NULL;
-    struct update_state *localstate = NULL;
     struct hip_spi_out_item spi_out_data;
 
     HIP_IFEL(ipv6_addr_any(&(packet_ctx->msg)->hitr), -1,
@@ -2303,21 +2286,7 @@ int hip_handle_r2(const uint32_t packet_type,
     // hip_finalize_sa(&entry->hit_peer, spi_recvd);
     // hip_finalize_sa(&entry->hit_our, spi_in);
 
-    /** RFC 5201 Section 5.2.13:
-     *   Notice that the section says "The Update ID is an unsigned quantity,
-     *   initialized by a host to zero upon moving to ESTABLISHED state" and
-     *   "The Update ID is incremented by one before each new UPDATE that is
-     *   sent by the host; the first UPDATE packet originated by a host has
-     *   an Update ID of 0". All of these requirements can not be achieved
-     *   at the same time so we initialize the id to -1.
-     */
-    /* @todo Need hook for modularization */
-    //entry->update_id_out = -1; TODO why -1?
-    localstate = hip_get_state_item(packet_ctx->hadb_entry->hip_modular_state,
-                                    "update");
-    localstate->update_id_out  = 0;
-
-    packet_ctx->hadb_entry->state         = HIP_STATE_ESTABLISHED;
+    packet_ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
     hip_hadb_insert_state(packet_ctx->hadb_entry);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC

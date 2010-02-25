@@ -659,6 +659,49 @@ out_err:
     }
 }
 
+/**
+ * hip_update_init_id_out
+ *
+ * Initialize the id counter for outgoing UPDATE packets.
+ *
+ * @note RFC 5201 Section 5.2.13:
+ *       Notice that the section says "The Update ID is an unsigned quantity,
+ *       initialized by a host to zero upon moving to ESTABLISHED state" and
+ *       "The Update ID is incremented by one before each new UPDATE that is
+ *       sent by the host; the first UPDATE packet originated by a host has
+ *       an Update ID of 0". All of these requirements can not be achieved
+ *       at the same time so we initialize the id to -1.
+ *
+ * @todo Initialization of an unsigned integer with -1 seems curious.
+ *
+ * @param packet_type   Type of the received control packet.
+ * @param ha_state      Host association state when receiving the packet.
+ * @param *ctx          Pointer to the packet context.
+ *
+ * @return 0 on success, -1 on error
+ */
+static int hip_update_init_id_out(const uint32_t packet_type,
+                                  const uint32_t ha_state,
+                                  struct hip_packet_context *ctx)
+{
+    int err = 0;
+    struct update_state *localstate = NULL;
+
+    HIP_IFEL(!ctx->hadb_entry, -1,
+             "No entry in host association database. Dropping.\n");
+
+    if (ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
+        localstate = hip_get_state_item(ctx->hadb_entry->hip_modular_state,
+                                        "update");
+        localstate->update_id_out = -1;
+    } else {
+        err = -1;
+    }
+
+out_err:
+    return err;
+}
+
 int hip_handle_update(const uint32_t packet_type,
                       const uint32_t ha_state,
                       struct hip_packet_context *ctx)
@@ -857,6 +900,72 @@ int hip_update_init(void)
                                  HIP_STATE_R2_SENT,
                                  &hip_handle_update,
                                  0);
+
+    hip_register_handle_function(HIP_I2,
+                                 HIP_STATE_UNASSOCIATED,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_I2,
+                                 HIP_STATE_I1_SENT,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_I2,
+                                 HIP_STATE_I2_SENT,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_I2,
+                                 HIP_STATE_R2_SENT,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_I2,
+                                 HIP_STATE_ESTABLISHED,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_I2,
+                                 HIP_STATE_CLOSING,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_I2,
+                                 HIP_STATE_CLOSED,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_I2,
+                                 HIP_STATE_NONE,
+                                 &hip_update_init_id_out,
+                                 10);
+
+    hip_register_handle_function(HIP_R2,
+                                 HIP_STATE_UNASSOCIATED,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_R2,
+                                 HIP_STATE_I1_SENT,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_R2,
+                                 HIP_STATE_I2_SENT,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_R2,
+                                 HIP_STATE_R2_SENT,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_R2,
+                                 HIP_STATE_ESTABLISHED,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_R2,
+                                 HIP_STATE_CLOSING,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_R2,
+                                 HIP_STATE_CLOSED,
+                                 &hip_update_init_id_out,
+                                 10);
+    hip_register_handle_function(HIP_R2,
+                                 HIP_STATE_NONE,
+                                 &hip_update_init_id_out,
+                                 10);
     return 0;
 }
 
