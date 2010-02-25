@@ -29,6 +29,11 @@ struct handle_func_entry {
 static hip_ll_t *handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
 
 /**
+ * @todo add description
+ */
+static hip_ll_t *state_init_functions;
+
+/**
  * hip_register_handle_function
  *
  * Register a function for handling of the specified combination from packet
@@ -208,7 +213,7 @@ void hip_uninit_handle_functions(void)
  *
  *  @return Success = Pointer to the new data structure
  *          Error   = NULL
- **/
+ */
 struct modular_state *hip_init_state(void)
 {
     struct modular_state *state;
@@ -231,6 +236,60 @@ struct modular_state *hip_init_state(void)
 }
 
 /**
+ * hip_register_state_init_function
+ *
+ * Registers a new state initialization function. These functions are called,
+ * when a new host association database entry is created.
+ *
+ * @param  Pointer to the state initialization function.
+ *
+ * @return Success = 0
+ *         Error   = -1
+ */
+int hip_register_state_init_function(void *func)
+{
+    int err = 0;
+    hip_ll_t *new_func_list = NULL;
+
+    HIP_IFEL(!func, -1, "Invalid init function provided");
+
+    if (!state_init_functions) {
+        HIP_IFEL(((new_func_list = (hip_ll_t *) malloc(sizeof(hip_ll_t))) == NULL),
+                 -1,
+                 "Error on allocating memory for a linked list.\n");
+        hip_ll_init(new_func_list);
+        state_init_functions = new_func_list;
+    }
+
+    err = hip_ll_add_last(state_init_functions, func);
+
+out_err:
+    return err;
+}
+
+/**
+ * hip_init_state_items
+ *
+ * Initialize all registered state items. This function is called, when a new
+ * host association database entry is created.
+ *
+ * @note  Call hip_register_state_init_function to add an initialization
+ *        function.
+ *
+ * @param *state    Pointer to the modular state data structure.
+ */
+void hip_init_state_items(struct modular_state *state)
+{
+    hip_ll_node_t *iter = NULL;
+    int (*init_function)(struct modular_state *state) = NULL;
+
+    while((iter = hip_ll_iterate(state_init_functions, iter)) != NULL) {
+        init_function = iter->ptr;
+        init_function(state);
+    }
+}
+
+/**
  * hip_add_state_item
  *
  * Registers a new state item to the global state. The state item can be of any
@@ -245,8 +304,11 @@ struct modular_state *hip_init_state(void)
  *  @return Success = id (unsigned int) for retrieving the state by number
  *          Error   = -1
  **/
-int hip_add_state_item(struct modular_state *state, void *state_item, const char *item_name)
+int hip_add_state_item(struct modular_state *state,
+                       void *state_item,
+                       const char *item_name)
 {
+
     /* Check if identifier already exists */
     if (-1 != hip_get_state_item_id(state, item_name)) {
         return -1;
@@ -293,7 +355,8 @@ void *hip_get_state_item(struct modular_state *state, const char *item_name)
  *  @return Success = Pointer to the requested state item (if exists)
  *          Error   = NULL
  **/
-void *hip_get_state_item_by_id(struct modular_state *state, const unsigned int id)
+void *hip_get_state_item_by_id(struct modular_state *state,
+                               const unsigned int id)
 {
     return hip_ll_get(state->item_list, id);
 }

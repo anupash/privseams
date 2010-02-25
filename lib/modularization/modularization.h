@@ -50,6 +50,10 @@ int hip_run_handle_functions(const uint32_t packet_type,
 
 void hip_uninit_handle_functions(void);
 
+int hip_register_state_init_function(void *func);
+
+void hip_init_state_items(struct modular_state *state);
+
 struct modular_state *hip_init_state(void);
 
 int   hip_add_state_item(struct modular_state *state,

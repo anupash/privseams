@@ -82,6 +82,6 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
 
 int hip_update_init(void);
 
-struct update_state *hip_update_init_state(void);
+int hip_update_init_state(struct modular_state *state);
 
 #endif /* HIP_HIPD_UPDATE_H */

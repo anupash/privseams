@@ -54,17 +54,39 @@ out_err:
     return err;
 }
 
+/**
+ * hip_update_get_out_id
+ *
+ * @note RFC 5201 Section 5.2.13:
+ *       Notice that the section says "The Update ID is an unsigned quantity,
+ *       initialized by a host to zero upon moving to ESTABLISHED state" and
+ *       "The Update ID is incremented by one before each new UPDATE that is
+ *       sent by the host; the first UPDATE packet originated by a host has
+ *       an Update ID of 0". Therefore we initialize the Update ID with 0 and
+ *       increment this value before a new UPDATE packet is sent. Because the
+ *       first UPDATE packet should contain 0 as value, we need to decrement
+ *       the packet value by one for each UPDATE packet.
+ *
+ * @param *state    Pointer to the update state.
+ *
+ * @return The next UPDATE out ID if state is set, -1 on error
+*/
+static inline uint32_t hip_update_get_out_id(struct update_state *state)
+{
+    HIP_IFCS(state, return (state->update_id_out - 1));
+    return -1;
+}
+
 /// @todo : should we implement base draft update with ifindex 0 stuff ??
 /// @todo :  Divide this function into more pieces, handle_spi, handle_seq, etc
 /// @todo : Remove the uncommented lines?
 static int hip_create_update_msg(hip_common_t *received_update_packet,
-                                 struct hip_hadb_state *ha, hip_common_t *update_packet_to_send,
+                                 struct hip_hadb_state *ha,
+                                 hip_common_t *update_packet_to_send,
                                  struct hip_locator_info_addr_item *locators,
                                  int type)
 {
     int err                               = 0;
-
-    uint32_t update_id_out                = 0;
     uint32_t esp_info_old_spi             = 0, esp_info_new_spi = 0;
     uint16_t mask                         = 0;
     struct hip_seq *seq                   = NULL;
@@ -130,13 +152,13 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
          *  esp_info_new_spi, 0);*/
 
         localstate = hip_get_state_item(ha->hip_modular_state, "update");
-
         localstate->update_id_out++;
-        update_id_out = localstate->update_id_out;
-        _HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
+        HIP_DEBUG("outgoing UPDATE ID=%u\n", hip_update_get_out_id(localstate));
         /** @todo Handle this case. */
-        HIP_IFEL(hip_build_param_seq(update_packet_to_send, update_id_out), -1,
-                 "Building of SEQ param failed\n");
+        HIP_IFEL(hip_build_param_seq(update_packet_to_send,
+                                     hip_update_get_out_id(localstate)),
+                 -1,
+                 "Building of SEQ parameter failed\n");
 
         /* remember the update id of this update */
         /* hip_update_set_status(ha, esp_info_old_spi,
@@ -659,49 +681,6 @@ out_err:
     }
 }
 
-/**
- * hip_update_init_id_out
- *
- * Initialize the id counter for outgoing UPDATE packets.
- *
- * @note RFC 5201 Section 5.2.13:
- *       Notice that the section says "The Update ID is an unsigned quantity,
- *       initialized by a host to zero upon moving to ESTABLISHED state" and
- *       "The Update ID is incremented by one before each new UPDATE that is
- *       sent by the host; the first UPDATE packet originated by a host has
- *       an Update ID of 0". All of these requirements can not be achieved
- *       at the same time so we initialize the id to -1.
- *
- * @todo Initialization of an unsigned integer with -1 seems curious.
- *
- * @param packet_type   Type of the received control packet.
- * @param ha_state      Host association state when receiving the packet.
- * @param *ctx          Pointer to the packet context.
- *
- * @return 0 on success, -1 on error
- */
-static int hip_update_init_id_out(const uint32_t packet_type,
-                                  const uint32_t ha_state,
-                                  struct hip_packet_context *ctx)
-{
-    int err = 0;
-    struct update_state *localstate = NULL;
-
-    HIP_IFEL(!ctx->hadb_entry, -1,
-             "No entry in host association database. Dropping.\n");
-
-    if (ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
-        localstate = hip_get_state_item(ctx->hadb_entry->hip_modular_state,
-                                        "update");
-        localstate->update_id_out = -1;
-    } else {
-        err = -1;
-    }
-
-out_err:
-    return err;
-}
-
 int hip_handle_update(const uint32_t packet_type,
                       const uint32_t ha_state,
                       struct hip_packet_context *ctx)
@@ -892,6 +871,8 @@ out_err:
  */
 int hip_update_init(void)
 {
+    hip_register_state_init_function(&hip_update_init_state);
+
     hip_register_handle_function(HIP_UPDATE,
                                  HIP_STATE_ESTABLISHED,
                                  &hip_handle_update,
@@ -900,72 +881,6 @@ int hip_update_init(void)
                                  HIP_STATE_R2_SENT,
                                  &hip_handle_update,
                                  0);
-
-    hip_register_handle_function(HIP_I2,
-                                 HIP_STATE_UNASSOCIATED,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_I2,
-                                 HIP_STATE_I1_SENT,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_I2,
-                                 HIP_STATE_I2_SENT,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_I2,
-                                 HIP_STATE_R2_SENT,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_I2,
-                                 HIP_STATE_ESTABLISHED,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_I2,
-                                 HIP_STATE_CLOSING,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_I2,
-                                 HIP_STATE_CLOSED,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_I2,
-                                 HIP_STATE_NONE,
-                                 &hip_update_init_id_out,
-                                 10);
-
-    hip_register_handle_function(HIP_R2,
-                                 HIP_STATE_UNASSOCIATED,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_R2,
-                                 HIP_STATE_I1_SENT,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_R2,
-                                 HIP_STATE_I2_SENT,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_R2,
-                                 HIP_STATE_R2_SENT,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_R2,
-                                 HIP_STATE_ESTABLISHED,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_R2,
-                                 HIP_STATE_CLOSING,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_R2,
-                                 HIP_STATE_CLOSED,
-                                 &hip_update_init_id_out,
-                                 10);
-    hip_register_handle_function(HIP_R2,
-                                 HIP_STATE_NONE,
-                                 &hip_update_init_id_out,
-                                 10);
     return 0;
 }
 
@@ -974,22 +889,27 @@ int hip_update_init(void)
  *
  * Allocates the required memory and sets the members to the start values.
  *
- *  @return Success = Pointer to the new data structure
- *          Error   = NULL
+ *  @return Success = Index of the update state item in the global state. (>0)
+ *          Error   = -1
  */
-struct update_state *hip_update_init_state(void)
+int hip_update_init_state(struct modular_state *state)
 {
-    struct update_state *state;
+    int err = 0;
+    struct update_state *update_state;
 
-    if ((state = (struct update_state*) malloc(sizeof(struct update_state))) == NULL) {
-        HIP_ERROR("Error on allocating memory for a update_state instance.\n");
-        return NULL;
-    }
-    state->update_state = 0;
-    state->hadb_update_func = NULL;
-    state->addresses_to_send_echo_request = hip_linked_list_init();
-    state->update_id_out = 0;
-    state->update_id_in = 0;
+    HIP_IFEL((update_state = (struct update_state*)
+                             malloc(sizeof(struct update_state))) == NULL,
+             -1,
+             "Error on allocating memory for a update state instance.\n");
 
-    return state;
+    update_state->update_state     = 0;
+    update_state->hadb_update_func = NULL;
+    update_state->addresses_to_send_echo_request = hip_linked_list_init();
+    update_state->update_id_out    = 0;
+    update_state->update_id_in     = 0;
+
+    err = hip_add_state_item(state, update_state, "update");
+
+out_err:
+    return err;
 }

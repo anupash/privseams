@@ -13,9 +13,6 @@
 #include "lib/core/list.h"
 #include "lib/modularization/modularization.h"
 
-/* TODO Remove this include when modularization is finised */
-#include "modules/update/hipd/update.h"
-
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
 
@@ -573,43 +570,31 @@ out_err:
 static int hip_hadb_init_entry(hip_ha_t *entry)
 {
     int   err          = 0;
-    void *update_state = NULL;
 
     HIP_IFEL(!entry, -1, "HA is NULL\n");
-
-#if 0
-    INIT_LIST_HEAD(&entry->next_hit);
-    INIT_LIST_HEAD(&entry->spis_in_old);
-    INIT_LIST_HEAD(&entry->spis_out_old);
-#endif
-
-    //HIP_LOCK_INIT(entry);
-    //atomic_set(&entry->refcnt,0);
 
     entry->state         = HIP_STATE_UNASSOCIATED;
     entry->hastate       = HIP_HASTATE_INVALID;
     entry->purge_timeout = HIP_HA_PURGE_TIMEOUT;
 
-    //initialize the peer hostname
+    /* Initialize the peer host name */
     memset(entry->peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-
-    /* @todo Need hook for modularization
-     * FIXME This initialization should be done in the update module!
-     */
-    update_state = hip_update_init_state();
-    entry->hip_modular_state = hip_init_state();
-    hip_add_state_item(entry->hip_modular_state, update_state, "update");
 
     entry->peer_addresses_old = hip_linked_list_init();
 
-    // Randomize inbound SPI
+    /* Randomize inbound SPI */
     get_random_bytes(&entry->spi_inbound_current,
                      sizeof(entry->spi_inbound_current));
 
-    HIP_IFE(!(entry->hip_msg_retrans.buf =
-                  malloc(HIP_MAX_NETWORK_PACKET)), -ENOMEM);
+    HIP_IFE(!(entry->hip_msg_retrans.buf = malloc(HIP_MAX_NETWORK_PACKET)),
+            -ENOMEM);
     entry->hip_msg_retrans.count = 0;
     memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
+
+    /* Initialize module states */
+    entry->hip_modular_state = hip_init_state();
+    hip_init_state_items(entry->hip_modular_state);
+    HIP_DEBUG("Modular state initialized.\n");
 
 out_err:
     return err;
