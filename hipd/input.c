@@ -594,14 +594,17 @@ int hip_receive_control_packet(struct hip_common *msg,
     case HIP_I1:
     case HIP_I2:
     case HIP_R1:
+    case HIP_R2:
+    case HIP_UPDATE:
+    case HIP_NOTIFY:
+    case HIP_CLOSE:
+    case HIP_CLOSE_ACK:
         break;
+
     case HIP_LUPDATE:
         HIP_IFCS(ctx.hadb_entry, err = esp_prot_handle_light_update(type, state, &ctx));
         break;
-    case HIP_R2:
-        break;
-    case HIP_NOTIFY:
-        break;
+
     case HIP_BOS:
         err = hip_handle_bos(type, state, &ctx);
 
@@ -612,10 +615,6 @@ int hip_receive_control_packet(struct hip_common *msg,
         hip_init_us(&tmp, NULL);
         ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
         skip_sync = 0;
-        break;
-
-    case HIP_CLOSE:
-    case HIP_CLOSE_ACK:
         break;
 
     default:
