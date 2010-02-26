@@ -1096,6 +1096,10 @@ int hip_handle_r1(const uint32_t packet_type,
     struct hip_locator *locator      = NULL;
     char *str                        = NULL;
     struct in6_addr daddr;
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R1\n");
+    hip_perf_start_benchmark(perf_set, PERF_R1);
+#endif
 
     HIP_IFEL(!packet_ctx->hadb_entry, -1,
              "No entry in host association database when receiving R1." \
@@ -1290,6 +1294,11 @@ out_err:
     if (ctx) {
         HIP_FREE(ctx);
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_R1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R1);
+    hip_perf_write_benchmark(perf_set, PERF_R1);
+#endif
     return err;
 }
 
