@@ -46,7 +46,7 @@ bzr checkout -q --lightweight $BZR_REPO_URL $CHECKOUT_DIR
 
 # Perform a self-update if the autobuild script in the repository has changed.
 if ! cmp -s "$0" "$AUTOBUILD_SCRIPT" ; then
-    cat "$AUTOBUILD_SCRIPT" > $0
+    cp "$AUTOBUILD_SCRIPT" $0
     rm -rf "$CHECKOUT_DIR"
     exec $0
 fi
