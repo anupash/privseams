@@ -938,7 +938,6 @@ static void firewall_exit(void)
     }
     free(msg);
 
-    hip_firewall_port_cache_uninit_hldb();
     hip_fw_uninit_system_based_opp_mode();
     hip_fw_flush_iptables();
     /* rules have to be removed first, otherwise HIP packets won't pass through
