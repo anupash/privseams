@@ -2380,6 +2380,8 @@ int hip_handle_i1(const uint32_t packet_type,
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_BASE\n");
     hip_perf_start_benchmark(perf_set, PERF_BASE);
+    HIP_DEBUG("Start PERF_I1\n");
+    hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
     int err = 0, mask = 0, src_hit_is_our;
     hip_tlv_type_t relay_para_type = 0;
@@ -2429,6 +2431,12 @@ int hip_handle_i1(const uint32_t packet_type,
                       dest_port,
                       ctx->msg_info,
                       relay_para_type);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_I1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I1);
+    hip_perf_write_benchmark(perf_set, PERF_I1);
+#endif
 out_err:
     return err;
 }
