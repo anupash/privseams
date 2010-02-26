@@ -291,13 +291,13 @@ int hip_handle_close_ack(const uint32_t packet_type,
                          const uint32_t ha_state,
                          struct hip_packet_context *ctx)
 {
+    int err       = 0;
+    struct hip_echo_request *echo_resp;
+    uint16_t mask = HIP_PACKET_CTRL_ANON;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
     hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
 #endif
-    int err       = 0;
-    struct hip_echo_request *echo_resp;
-    uint16_t mask = HIP_PACKET_CTRL_ANON;
 
     HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hitr), -1,
             "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
@@ -364,6 +364,7 @@ int hip_handle_close_ack(const uint32_t packet_type,
      * be 1 */
     /* hip_put_ha(entry); */
 
+out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK, PERF_CLOSE_COMPLETE\n");
     hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
@@ -372,7 +373,6 @@ int hip_handle_close_ack(const uint32_t packet_type,
     hip_perf_write_benchmark( perf_set, PERF_CLOSE_COMPLETE );
 #endif
 
-out_err:
     return err;
 }
 
