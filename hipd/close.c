@@ -177,14 +177,14 @@ int hip_handle_close(const uint32_t packet_type,
                      const uint32_t ha_state,
                      struct hip_packet_context *ctx)
 {
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
-    hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE );
-#endif
     uint16_t mask = HIP_PACKET_CTRL_ANON;
     int err = 0, echo_len;
     struct hip_common *close_ack = NULL;
     struct hip_echo_request *request;
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
+    hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE );
+#endif
 
     HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hitr), -1,
              "Received NULL receiver HIT in CLOSE. Dropping\n");
@@ -273,17 +273,17 @@ int hip_handle_close(const uint32_t packet_type,
 
     HIP_IFEL(hip_del_peer_info(&(ctx->hadb_entry)->hit_our, &(ctx->hadb_entry)->hit_peer), -1,
              "Deleting peer info failed.\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
-    hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE );
-    hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE );
-#endif
 out_err:
 
     if (close_ack) {
         HIP_FREE(close_ack);
     }
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
+    hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE );
+    hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE );
+#endif
     return err;
 }
 
