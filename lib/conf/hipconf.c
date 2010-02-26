@@ -2828,7 +2828,11 @@ static int hip_conf_handle_hipproxy(struct hip_common *msg,
                                     int optc,
                                     int send_only)
 {
-    int err = 0, status = 0;
+    int err = 0;
+#ifdef CONFIG_HIP_HIPPROXY
+    int status = 0;
+#endif
+
     HIP_DEBUG("hip_conf_handle_hipproxy()\n");
 
 #ifdef CONFIG_HIP_HIPPROXY
@@ -2841,9 +2845,9 @@ static int hip_conf_handle_hipproxy(struct hip_common *msg,
     }
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
              "build hdr failed: %s\n", strerror(err));
-#endif
 
 out_err:
+#endif
     return err;
 }
 

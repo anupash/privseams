@@ -1890,10 +1890,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
                   hip_ha_t *entry, hip_portpair_t *i2_info)
 {
     /* Primitive data types. */
-    int err = 0, retransmission = 0, state = 0, host_id_found = 0, is_loopback = 0;
+    int err = 0, retransmission = 0, host_id_found = 0, is_loopback = 0;
     uint16_t crypto_len                     = 0;
     uint32_t spi_in                         = 0, spi_out = 0;
     in_port_t dest_port                     = 0; // For the port in RELAY_FROM
+#ifdef CONFIG_HIP_RVS
+    int state = 0;
+#endif
     /* Pointers */
     char *tmp_enc                           = NULL, *enc = NULL;
     unsigned char *iv                       = NULL;
@@ -2981,7 +2984,11 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
     HIP_DEBUG("Start PERF_BASE\n");
     hip_perf_start_benchmark(perf_set, PERF_BASE);
 #endif
-    int err                        = 0, state;
+
+#ifdef CONFIG_HIP_RVS
+    int state                      = 0;
+#endif
+    int err                        = 0;
     hip_tlv_type_t relay_para_type = 0;
     in6_addr_t dest;  // For the IP address in FROM/RELAY_FROM
     in_port_t dest_port            = 0; // For the port in RELAY_FROM
