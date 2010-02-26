@@ -2132,6 +2132,10 @@ int hip_handle_r2(const uint32_t packet_type,
     struct hip_esp_info *esp_info   = NULL;
     struct hip_locator *locator     = NULL;
     struct hip_spi_out_item spi_out_data;
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_R2\n");
+    hip_perf_start_benchmark(perf_set, PERF_R2);
+#endif
 
     HIP_IFEL(ipv6_addr_any(&(packet_ctx->msg)->hitr), -1,
              "Received NULL receiver HIT in R2. Dropping\n");
@@ -2348,6 +2352,11 @@ out_err:
     if (ctx) {
         HIP_FREE(ctx);
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_R2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R2);
+    hip_perf_write_benchmark(perf_set, PERF_R2);
+#endif
     return err;
 }
 
