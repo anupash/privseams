@@ -1510,6 +1510,10 @@ int hip_handle_i2(const uint32_t packet_type,
     int if_index                            = 0;
     struct sockaddr_storage ss_addr;
     struct sockaddr *addr                   = NULL;
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_I2\n");
+    hip_perf_start_benchmark(perf_set, PERF_I2);
+#endif
 
     HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hitr),
              0,
@@ -2089,7 +2093,11 @@ out_err:
     if (i2_context.dh_shared_key != NULL) {
         free(i2_context.dh_shared_key);
     }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_I2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2);
+    hip_perf_write_benchmark(perf_set, PERF_I2);
+#endif
     return err;
 }
 
