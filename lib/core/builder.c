@@ -54,6 +54,7 @@
  * @author Mika Kousa
  * @author Tobias Heer
  *
+ * @see @c message.c contains functions to read and write HIP-related messages
  * @note   In network packets @c hip_build_network_hdr() should be used instead
  *         of @c hip_build_user_hdr().
  * @todo Macros for doing @c ntohs() and @c htons() conversion? Currently they are
