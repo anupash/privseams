@@ -9,7 +9,7 @@ BZR_REPO_URL=http://hipl.hiit.fi/hipl/hipl-bzr/trunk
 CHECKOUT_DIR=$BUILD_DIR/$(date +"%Y-%m-%d-%H%M")
 HIPL_HEAD_REVISION=$(bzr revno -q $BZR_REPO_URL)
 AUTOBUILD_REVISION=$(cat $BUILD_DIR/HIPL_HEAD_REVISION)
-AUTOBUILD_SCRIPT="$CHECKOUT_DIR/tools/autobuild/hipl_autobuild"
+AUTOBUILD_SCRIPT="$CHECKOUT_DIR/tools/hipl_autobuild"
 
 # helper functions
 run_program()
