@@ -1,0 +1,62 @@
+#!/bin/sh
+# HIPL autobuild script for periodic compilation tests.
+#
+# If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
+# for the user running this script, then email will be sent in case of failure.
+
+BUILD_DIR=$HOME/tmp/hipl_autobuild
+BZR_REPO_URL=http://hipl.hiit.fi/hipl/hipl-bzr/trunk
+CHECKOUT_DIR=$BUILD_DIR/$(date +"%Y-%m-%d-%H%M")
+HIPL_HEAD_REVISION=$(bzr revno -q $BZR_REPO_URL)
+AUTOBUILD_REVISION=$(cat $BUILD_DIR/HIPL_HEAD_REVISION)
+AUTOBUILD_SCRIPT="$CHECKOUT_DIR/tools/hipl_autobuild"
+
+# helper functions
+run_program()
+{
+    $@ > log.txt 2>&1
+    if [ $? -eq 0 ] ; then
+        rm -f log.txt
+        return 0
+    else
+        test $HIPL_NOTIFICATION_EMAIL &&
+            mailx -s "autobuild failed: @$1 output:" $HIPL_NOTIFICATION_EMAIL < log.txt
+        cleanup 1
+    fi
+}
+
+cleanup()
+{
+    rm -rf "$CHECKOUT_DIR"
+    echo $HIPL_HEAD_REVISION > $BUILD_DIR/HIPL_HEAD_REVISION
+    exit $1
+}
+
+compile()
+{
+    run_program ./autogen.sh &&
+        run_program ./configure --prefix=$(pwd)/local_install $@ &&
+        run_program make -j16 &&
+        run_program make install
+}
+
+test $HIPL_HEAD_REVISION = $AUTOBUILD_REVISION && exit 0
+
+bzr checkout -q --lightweight $BZR_REPO_URL $CHECKOUT_DIR
+
+# Perform a self-update if the autobuild script in the repository has changed.
+if ! cmp -s "$0" "$AUTOBUILD_SCRIPT" ; then
+    cp "$AUTOBUILD_SCRIPT" $0
+    rm -rf "$CHECKOUT_DIR"
+    exec $0
+fi
+
+cd "$CHECKOUT_DIR"
+
+# Compile HIPL in different configurations
+compile
+# The following configuration is commented out until HIPL is fixed
+#compile --disable-firewall --enable-agent --enable-cookie --enable-pfkey --enable-cert --disable-rvs --disable-ice --disable-hipproxy --enable-maemo --enable-openwrt --enable-altsep --enable-i3 --disable-privsep --disable-opportunistic --disable-savaipopt --disable-dht --enable-blind --enable-libinet6 --enable-profiling --enable-ecdsa --disable-debug --enable-midauth --enable-performance --enable-demo
+
+
+cleanup 0

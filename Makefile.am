@@ -32,8 +32,7 @@ EXTRA_DIST += $(wildcard lib/tool/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard test/*.h)
-EXTRA_DIST += tools/gen-python-starter.sh \
-              $(wildcard tools/*.h)
+EXTRA_DIST += tools/gen-python-starter.sh
 EXTRA_DIST += release.version
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 
@@ -402,10 +401,10 @@ syncrepo:
 
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
-	@sh test -x tools/hipdnsproxy || tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+	@sh test -x @top_srcdir@/tools/hipdnsproxy || @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
 
 tools/hipdnskeyparse:
-	@sh test -x tools/hipdnskeyparse || tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+	@sh test -x @top_srcdir@/tools/hipdnskeyparse || @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
 
 # Make sure that dynamically generated scripts are properly generated
 # for "make dist" tarball.
@@ -418,7 +417,7 @@ all: all-local
 # necessary because otherwise "make rpm" target has the old $pyexecdir from
 # "make dist" and it refuses to build the scripts again.
 all-local:
-	@rm -f tools/hipdnsproxy
-	@rm -f tools/hipdnskeyparse
-	@sh tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
-	@sh tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+	@rm -f @top_srcdir@/tools/hipdnsproxy
+	@rm -f @top_srcdir@/tools/hipdnskeyparse
+	@sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+	@sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse

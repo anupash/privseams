@@ -1,15 +1,67 @@
 /** @file
- * HIP userspace communication mechanism between userspace and kernelspace.
- * The mechanism is used by hipd, hipconf and unittest.
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
+ * This file contains functions to read and writing of HIP-related
+ * messages. HIP message format is overloaded (see builder.c) so that
+ * interprocess and network communications share roughly the same message
+ * format. Thus, the functions in this file support also sending and receiving
+ * of interprocess and network related messages. The interprocess communications
+ * occurs between hipd, hipfw, hipconf and the resolver. Network communications
+ * occurs between different HIP daemon processes located on different hosts.
+ *
+ * The messaging interface supports both "synchronous" and
+ * "asynchronous" messaging. Synchronous "request" message blocks
+ * until a "response" message is received. Asynchronous message means
+ * that the message is just sent and the no response is expected,
+ * hence the message does not block.
+ *
+ * Use the synchronous message interface only when you expect the
+ * request message to be completed immediately. For example, "hipconf
+ * get ha all" was safe to be implemented with synchronous messaging
+ * because hipd can process the request immediately.
+ *
+ * Use the asynchronous message interface when you don't want any
+ * response or you just want to avoid blocking.  Reading of the hipd
+ * configuration file is a good example of (a). It was implemented
+ * using the hipconf interface itself to maximize code reuse. When
+ * hipd reads its configuration file, it is actually calling hipconf
+ * messaging API which sends messages to hipd. So, effectively hipd is
+ * sending messages to itself through the loopback interface.  This
+ * had to be implemented through the asynchronous messaging interface
+ * or otherwise the single-threaded hipd was blocking itself in
+ * reading the configuration file and waiting for a response message
+ * for the first hipconf message. The hipd did not reach the select
+ * loop that processes incoming hipconf messaging because it was still
+ * initializing itself. So, the use of asynchronous messages avoided
+ * the chicken-egg-problem here.
+ *
+ * It is also possible to send a synchronous message but process it
+ * asynchronously on the other end with the help of queues. An example
+ * of this is "hipconf dht get <hostname>" which is
+ * synchronous. However, hipd cannot process immediately because it
+ * has to wait for a response from DHT. As hipd is currently single
+ * threaded, it cannot block until it gets a response from the DHT
+ * because it could take for ever and other HIP connections should not
+ * be punished for this. As a solution, the DHT code in hipd implements a
+ * queue for the query messages and stores also the sender (hipconf
+ * process) port numbers. Hipd delivers the responses as soon as information
+ * is retrieved from the DHT. A similar solution was implemented for
+ * opportunistic mode connections.
+ *
+ * It should be also noticed the there is an optional timeout period
+ * to wait for responses of synchronous messages. When the timeout is
+ * exceeded, the called function will return an error and unblocks the
+ * caller. Use this wisely; timeouts optimized for LAN can be short but
+ * they are not applicable with the long delays introduced by WAN.
+ *
+ * @brief HIP messaging interface that allows the resolver, hipd, hipfw and hipconf
+ *        to communicate with each other. Includes also functions to read messages
+ *        from the network.
  *
  * @author  Miika Komu <miika_iki.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @version 1.0
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
- * @see     message.h
- * @todo    Asynchronous term should be replaced with a better one.
- * @todo    Asynchronous messages should also have a counterpart that receives
- *          a response from kernel.
+ * @see     The building and parsing functions are located in @c builder.c.
  */
 
 /* required for s6_addr32 */
@@ -25,6 +77,10 @@
  * @param  timeout        -1 for blocking sockets, 0 or positive nonblocking
  * @return Number of bytes received on success or a negative error value on
  *         error.
+ * @todo This function had some portability issues on symbian. It should be ok
+ *       to read HIP_MAX_PACKET because the socket call returns the number of
+ *       actual bytes read. If you decide to reimplement this functionality,
+ *       remember to preserve the timeout property.
  */
 int hip_peek_recv_total_len(int socket,
                             int encap_hdr_size,
@@ -83,15 +139,6 @@ int hip_peek_recv_total_len(int socket,
         goto out_err;
     }
 
-    /* The maximum possible length value is equal to HIP_MAX_PACKET.
-     * if(bytes > HIP_MAX_PACKET) {
-     *      HIP_ERROR("HIP message max length exceeded. Dropping.\n");
-     *      recv(socket, msg, 0, 0);
-     *      err = -EMSGSIZE;
-     *      errno = EMSGSIZE;
-     *      goto out_err;
-     * } */
-
     bytes += encap_hdr_size;
 
 out_err:
@@ -106,6 +153,14 @@ out_err:
     return bytes;
 }
 
+/**
+ * Connect a socket to the loop back address of hipd
+ *
+ * @param hip_user_sock The socket to connect. Currently the only SOCK_DGRAM
+ *                      and AF_INET6 are supported.
+ * @return zero on success and negative on failure
+ * @note currently the only SOCK_DGRAM and AF_INET6 are supported
+ */
 int hip_daemon_connect(int hip_user_sock)
 {
     int err = 0;
@@ -127,6 +182,26 @@ out_err:
     return err;
 }
 
+/**
+ * Bind a socket to a specific socket address structure to communicate
+ * with hipd. This function has also a access control feature when the
+ * port number in the socket is zero. This function first tries to
+ * obtain a port number below 1024. In UNIX/Linux this means that the
+ * process has superuser privileges. Hipd uses the port number to
+ * verify if the caller has sufficient privileges to execute
+ * e.g. "hipconf rst all". The function falls back to non-privileged
+ * ports if it fails to obtain a privileged port and then hipd allows
+ * only certain operations for the calling process.
+ *
+ * @param socket the socket to bind to
+ * @param sa     An IPv6-based socket address structure. The sin6_port
+ *               field may be filled in in the case of e.g. sockets
+ *               remaining open for long time periods. Alternetively,
+ *               the sin6_port can be zero to allow the function to
+ *               determine a suitable port number (see the description
+ *               of the function).
+ * @return zero on success and negative on failure
+ */
 int hip_daemon_bind_socket(int socket, struct sockaddr *sa)
 {
     int err                   = 0, port = 0, on = 1;
@@ -189,8 +264,17 @@ out_err:
     return err;
 }
 
-/* do not call this function directly, use hip_send_recv_daemon_info instead */
-int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
+/**
+ * Send one-way data to hipd. Do not call this function directly, use
+ * hip_send_recv_daemon_info instead!
+ *
+ * @param socket the socket to use for sending
+ * @param msg the message to send to hipd
+ * @param len the length of the message in bytes
+ * @return zero on success and negative on failure
+ * @note currently the only SOCK_DGRAM and AF_INET6 are supported
+ */
+static int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 {
     /* Variables. */
     struct sockaddr_in6 sock_addr;
@@ -213,10 +297,22 @@ int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
     return n;
 }
 
+/**
+ * Send and receive data with hipd. Do not call this function directly, use
+ * hip_send_recv_daemon_info instead!
+ *
+ * @param msg the message to send to hipd
+ * @param opt_socket Optional socket to use for the message exchange. When
+ *                   set to zero, the function creates a temporary socket
+ *                   and closes it after the transaction is completed.
+ * @param len the length of the message in bytes
+ * @return zero on success and negative on failure
+ * @note currently the only SOCK_DGRAM and AF_INET6 are supported
+ */
 /*
  * Don't call this function directly. Use hip_send_recv_daemon_info instead
  */
-int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket)
+static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket)
 {
     int hip_user_sock = 0, err = 0, n = 0, len = 0;
     struct sockaddr_in6 addr;
@@ -303,6 +399,25 @@ out_err:
     return err;
 }
 
+/**
+ * A generic function to send messages to hipd. Optionally, a response
+ * message can be required from hipd. This will block the process
+ * until the hipd sends the response or a predefined timeout is
+ * exceeded.
+ *
+ * @param msg An input/output parameter. As input, contains the
+ *            message to be sent to hipd. As output, hipd response
+ *            will be written here when @c send_only is zero.
+ * @param send_only Zero when the caller requires a response
+ *                  from hipd. One when the caller does not
+ *                  want to wait for any response.
+ * @param opt_socket Optional precreated socket to use for
+ *                   communications with hipd. A value of zero
+ *                   means that a temporary socket will be created
+ *                   during the transaction.
+ * @return zero on success and negative on failure.
+ * @note currently the only SOCK_DGRAM and AF_INET6 are supported
+ */
 int hip_send_recv_daemon_info(struct hip_common *msg,
                               int send_only,
                               int opt_socket)
@@ -346,13 +461,30 @@ out_err:
     return err;
 }
 
+/**
+ * Receive information from the daemon. Call first send_daemon_info
+ * with info_type and then recvfrom.
+ *
+ * @param msg currently unused
+ * @param info_type currently unused
+ * @return always -1
+ * @note currently the only SOCK_DGRAM and AF_INET6 are supported
+ * @todo required by the native HIP API
+ */
 int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type)
 {
-    /** @todo required by the native HIP API */
-    /* Call first send_daemon_info with info_type and then recvfrom */
     return -1;
 }
 
+/**
+ * Read an interprocess (user) message
+ *
+ * @param  socket a socket from where to read
+ * @param  hip_msg the message will be written here
+ * @param  saddr the sender information is stored here
+ * @return zero on success and negative on error
+ * @note currently the only SOCK_DGRAM and AF_INET6 are supported
+ */
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
                               struct sockaddr_in6 *saddr)
 {
@@ -389,7 +521,32 @@ out_err:
     return err;
 }
 
-/* Moved function doxy descriptor to the header file. Lauri 11.03.2008 */
+/**
+ * Prepare a @c hip_common struct, allocate memory for buffers and nested
+ * structs. Receive a message from socket and fill the @c hip_common struct
+ * with the values from this message. Do not call this function directly,
+ * use hip_read_control_msg_v4() and hip_read_control_msg_v6() wrappers
+ * instead!
+ *
+ * @param socket         a socket to read from.
+ * @param hip_msg        a pointer to a buffer where to put the received HIP
+ *                       common header. This is returned as filled struct.
+ * @param read_addr      a flag whether the adresses should be read from the
+ *                       received packet. <b>1</b>:read addresses,
+ *                       <b>0</b>:don't read addresses.
+ * @param saddr          a pointer to a buffer where to put the source IP
+ *                       address of the received message (if @c read_addr is set
+ *                       to 1).
+ * @param daddr          a pointer to a buffer where to put the destination IP
+ *                       address of the received message (if @c read_addr is set
+ *                       to 1).
+ * @param msg_info       a pointer to a buffer where to put the source and
+ *                       destination ports of the received message.
+ * @param encap_hdr_size size of encapsulated header in bytes.
+ * @param is_ipv4        a boolean value to indicate whether message is received
+ *                       on IPv4.
+ * @return               -1 in case of an error, 0 otherwise.
+ */
 int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              struct in6_addr *saddr,
                              struct in6_addr *daddr,
@@ -493,12 +650,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         ipv6_addr_copy(&addr_to6->sin6_addr, daddr);
     }
 
-//added by santtu
-    if (hip_read_control_msg_plugin_handler(hip_msg, len, saddr, msg_info->src_port)) {
-        goto out_err;
-    }
-//endadd
-
     if (is_ipv4 && (encap_hdr_size == IPV4_HDR_SIZE)) {    /* raw IPv4, !UDP */
         /* For some reason, the IPv4 header is always included.
          * Let's remove it here. */
@@ -529,6 +680,17 @@ out_err:
     return err;
 }
 
+/**
+ * Read an IPv6 control message
+ *
+ * @param  socket         a socket file descriptor.
+ * @param  hip_msg        a pointer to a HIP message.
+ * @param  saddr          source IPv6 address.
+ * @param  daddr          destination IPv6 address.
+ * @param  msg_info       transport layer source and destination port numbers.
+ * @param  encap_hdr_size .
+ * @return                .
+ */
 int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
                             struct in6_addr *saddr,
                             struct in6_addr *daddr,
@@ -539,6 +701,17 @@ int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
                                     daddr, msg_info, encap_hdr_size, 0);
 }
 
+/**
+ * Read an IPv4 control message
+ *
+ * @param  socket         a socket file descriptor.
+ * @param  hip_msg        a pointer to a HIP message.
+ * @param  saddr          source IPv4 address.
+ * @param  daddr          destination IPv4 address.
+ * @param  msg_info       transport layer source and destination port numbers.
+ * @param  encap_hdr_size .
+ * @return                .
+ */
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
                             struct in6_addr *saddr,
                             struct in6_addr *daddr,
@@ -547,22 +720,4 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 {
     return hip_read_control_msg_all(socket, hip_msg, saddr,
                                     daddr, msg_info, encap_hdr_size, 1);
-}
-
-/* TODO Can this function be removed? */
-int hip_read_control_msg_plugin_handler(void *msg,
-                                        int len,
-                                        in6_addr_t *src_addr,
-                                        in_port_t port)
-{
-    int err = 0;
-#if 0
-    //handle stun msg
-    if (hip_external_ice_receive_pkt_all(msg, len, src_addr, port)) {
-        err = 1;
-        goto out_err;
-    }
-out_err:
-#endif
-    return err;
 }

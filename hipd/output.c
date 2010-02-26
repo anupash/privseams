@@ -14,6 +14,8 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <netinet/icmp6.h>
+
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -1333,7 +1335,7 @@ int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_
 int hip_send_icmp(int sockfd, hip_ha_t *entry)
 {
     int err                = 0, i = 0, identifier = 0;
-    struct icmp6hdr *icmph = NULL;
+    struct icmp6_hdr *icmph = NULL;
     struct sockaddr_in6 dst6;
     u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
     u_char *icmp_pkt       = NULL;
@@ -1378,13 +1380,13 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry)
     dst6.sin6_flowinfo      = 0;
 
     /* build icmp header */
-    icmph                   = (struct icmp6hdr *) (void *) icmp_pkt;
-    icmph->icmp6_type       = ICMPV6_ECHO_REQUEST;
+    icmph                   = (struct icmp6_hdr *) (void *) icmp_pkt;
+    icmph->icmp6_type       = ICMP6_ECHO_REQUEST;
     icmph->icmp6_code       = 0;
     entry->heartbeats_sent++;
 
-    icmph->icmp6_sequence   = htons(entry->heartbeats_sent);
-    icmph->icmp6_identifier = identifier;
+    icmph->icmp6_seq        = htons(entry->heartbeats_sent);
+    icmph->icmp6_id         = identifier;
 
     gettimeofday(&tval, NULL);
 
@@ -1394,7 +1396,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry)
 
     /* put the icmp packet to the io vector struct for the msghdr */
     iov[0].iov_base     = icmp_pkt;
-    iov[0].iov_len      = sizeof(struct icmp6hdr) + sizeof(struct timeval);
+    iov[0].iov_len      = sizeof(struct icmp6_hdr) + sizeof(struct timeval);
 
     /* build the msghdr for the sendmsg, put ancillary data also*/
     mhdr.msg_name       = &dst6;

@@ -1,4 +1,4 @@
-/**@file
+/** @file
  * A header file for misc.c
  *
  * @author Miika Komu

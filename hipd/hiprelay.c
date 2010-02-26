@@ -1038,7 +1038,9 @@ int hip_relay_handle_from(hip_common_t *source_msg,
     hip_tlv_type_t param_type;
     //   struct hip_relay_from *relay_from = NULL;
     struct hip_from *from  = NULL;
+#ifdef CONFIG_HIP_RVS
     hip_ha_t *rvs_ha_entry = NULL;
+#endif
 
     /* Check if the incoming I1 packet has a FROM parameters. */
 
@@ -1113,7 +1115,9 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 {
     hip_tlv_type_t param_type;
     struct hip_relay_from *relay_from = NULL;
+#ifdef CONFIG_HIP_RVS
     hip_ha_t *relay_ha_entry          = NULL;
+#endif
 
     /* Check if the incoming I1 packet has  RELAY_FROM parameters. */
     relay_from = (struct hip_relay_from *)

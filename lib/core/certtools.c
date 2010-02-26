@@ -1,4 +1,4 @@
-/** @file certtools.c
+/** @file
  * This file defines the certificate building and verification functions to use with HIP
  *
  * @author Samu Varjonen

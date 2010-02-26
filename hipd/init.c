@@ -10,6 +10,7 @@
 
 #include <sys/prctl.h>
 #include <sys/types.h>
+#include <netinet/icmp6.h>
 
 #ifdef HAVE_CONFIG_H
   #include "config.h"
@@ -340,15 +341,9 @@ static int hip_init_icmp_v6(int *icmpsockfd)
     HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
 
     ICMP6_FILTER_SETBLOCKALL(&filter);
-#ifdef ANDROID_CHANGES
     ICMP6_FILTER_SETPASS(ICMP6_ECHO_REPLY, &filter);
     err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMP6_FILTER, &filter,
                      sizeof(struct icmp6_filter));
-#else
-    ICMP6_FILTER_SETPASS(ICMPV6_ECHO_REPLY, &filter);
-    err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMPV6_FILTER, &filter,
-                     sizeof(struct icmp6_filter));
-#endif
     HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
 
 
