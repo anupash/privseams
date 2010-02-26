@@ -56,7 +56,7 @@ cd "$CHECKOUT_DIR"
 # Compile HIPL in different configurations
 compile
 # The following configuration is commented out until HIPL is fixed
-#compile --disable-firewall --enable-agent --enable-cookie --enable-pfkey --enable-cert --disable-rvs --disable-ice --disable-hipproxy --enable-maemo --enable-openwrt --enable-altsep --enable-i3 --disable-privsep --disable-opportunistic --disable-savaipopt --disable-dht --enable-blind --enable-libinet6 --enable-profiling --enable-ecdsa --disable-debug --enable-midauth --enable-performance --enable-demo
+#compile --disable-firewall --enable-agent --enable-cookie --enable-pfkey --enable-cert --disable-rvs --disable-ice --disable-hipproxy --enable-openwrt --enable-altsep --enable-i3 --disable-privsep --disable-opportunistic --disable-savaipopt --disable-dht --enable-blind --enable-libinet6 --enable-profiling --enable-ecdsa --disable-debug --enable-midauth --enable-performance --enable-demo
 
 
 cleanup 0
