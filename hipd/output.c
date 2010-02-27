@@ -358,7 +358,7 @@ static int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     // if hitr is hashed null hit, send it as null on the wire
-    if  (hit_is_opportunistic_hashed_hit(&i1->hitr)) {
+    if  (hit_is_opportunistic_hit(&i1->hitr)) {
         ipv6_addr_copy(&i1->hitr, &in6addr_any);
     }
 
@@ -405,7 +405,7 @@ static int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
 
     /*send the TCP SYN_i1 packet*/
     if (hip_get_opportunistic_tcp_status() &&
-        hit_is_opportunistic_hashed_hit(dst_hit)) {
+        hit_is_opportunistic_hit(dst_hit)) {
         /* Ensure that I1 gets first to destination */
         usleep(50);
         hip_send_opp_tcp_i1(entry);
@@ -834,7 +834,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* It should not be null hit, null hit has been replaced by real local
      * hit. */
-    HIP_ASSERT(!hit_is_opportunistic_hashed_hit(&i1->hitr));
+    HIP_ASSERT(!hit_is_opportunistic_hit(&i1->hitr));
 #endif
 
     /* Case: I ----->IPv4---> RVS ---IPv6---> R */

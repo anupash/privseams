@@ -85,32 +85,6 @@ int hit_is_opportunistic_hit(const struct in6_addr *hit)
 }
 
 /**
- * Test if a given IPv6 address is a pseudo HIT instead of a
- * real HIT
- *
- * @param hit the IPv6 address to be tested
- * @return zero if the IPv6 address was a real HIT and
-'          one if it was a pseudo HIT
- */
-int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit)
-{
-    return hit_is_opportunistic_hit(hit);
-}
-
-/**
- * Test if an IPv6 address is all zeroes
- *
- * @param ip the IPv6 address to test
- * @return one if the address is all zeroes and zero otherwise
- */
-int hit_is_opportunistic_null(const struct in6_addr *hit)
-{
-    // return hit_is_opportunistic_hit(hit);
-    return (hit->s6_addr32[0] | hit->s6_addr32[1] |
-            hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0;
-}
-
-/**
  * Fill in the HIT prefix for a given IPv6 address
  *
  * @param hit an IPv6 address for which to set the HIT prefix

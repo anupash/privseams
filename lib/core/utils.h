@@ -39,8 +39,6 @@ int ipv6_addr_is_teredo(const struct in6_addr *teredo);
 int ipv6_addr_is_null(struct in6_addr *ip);
 int hit_is_real_hit(const struct in6_addr *hit);
 int hit_is_opportunistic_hit(const struct in6_addr *hit);
-int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit);
-int hit_is_opportunistic_null(const struct in6_addr *hit);
 void set_hit_prefix(struct in6_addr *hit);
 void set_lsi_prefix(hip_lsi_t *lsi);
 
