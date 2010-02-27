@@ -30,8 +30,7 @@
 
 #include <sys/socket.h>
 #include <asm/types.h>
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
+#include "lib/tool/nlink.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netpacket/packet.h>
