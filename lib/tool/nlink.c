@@ -51,8 +51,8 @@ typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
                              const struct nlmsghdr *n, void **);
 
 typedef struct {
-    __u8  family;
-    __u8  bytelen;
+    uint8_t  family;
+    uint8_t  bytelen;
     __s16 bitlen;
     uint32_t flags;
     uint32_t data[4];
@@ -1492,7 +1492,7 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
 int xfrm_fill_selector(struct xfrm_selector *sel,
                        const struct in6_addr *id_our,
                        const struct in6_addr *id_peer,
-                       __u8 proto, u8 id_prefix,
+                       uint8_t proto, u8 id_prefix,
                        uint32_t src_port, uint32_t dst_port,
                        int preferred_family)
 {

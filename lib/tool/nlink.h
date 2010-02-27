@@ -105,7 +105,7 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft);
 int xfrm_fill_selector(struct xfrm_selector *sel,
                        const struct in6_addr *id_our,
                        const struct in6_addr *id_peer,
-                       __u8 proto, u8 id_prefix,
+                       uint8_t proto, u8 id_prefix,
                        uint32_t src_port, uint32_t dst_port,
                        int preferred_family);
 int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
