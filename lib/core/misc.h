@@ -24,7 +24,7 @@
 
 #include <string.h>
 #include "hipd/registration.h"
-#include "lib/core/utils.h"
+#include "lib/core/prefix.h"
 #include "icomm.h"
 #include "lib/tool/lutil.h"
 
@@ -36,6 +36,11 @@
 # define HOST_NAME_MAX 64
 #endif
 
+#ifdef CONFIG_HIP_OPENWRT
+# define HIP_CREATE_FILE(x)     check_and_create_file(x, 0644)
+#else
+# define HIP_CREATE_FILE(x)     open((x), O_RDWR | O_CREAT, 0644)
+#endif
 
 /* system/bin for Android */
 #define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin:/system/bin"

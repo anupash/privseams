@@ -338,7 +338,7 @@ lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hashtable.c \
                                  lib/core/hashtree.c \
-                                 lib/core/utils.c \
+                                 lib/core/prefix.c \
                                  lib/core/certtools.c \
                                  lib/core/linkedlist.c \
                                  lib/core/debug.c \

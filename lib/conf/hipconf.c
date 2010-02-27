@@ -42,7 +42,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "hipconf.h"
-#include "lib/core/utils.h"
+#include "lib/core/prefix.h"
 #include "lib/dht/libhipdht.h"
 
 /**

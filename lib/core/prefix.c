@@ -3,7 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
- * This file contains mostly address-related utility functions to
+ * This file contains address-related utility functions to
  * manipulate LSI/HIT prefixes
  *
  * @brief Address-related utility functions
@@ -14,7 +14,7 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#include "utils.h"
+#include "prefix.h"
 
 /**
  * Test if the given IPv6 address has HIT prefix (RFC4843 ORCHID prefix)

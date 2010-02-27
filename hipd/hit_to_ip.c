@@ -21,7 +21,7 @@
 #include "hit_to_ip.h"
 #include "lib/core/list.h"
 #include "lib/core/debug.h"
-#include "lib/core/utils.h"
+#include "lib/core/prefix.h"
 #include "maintenance.h"
 #include "lib/conf/hipconf.h"
 

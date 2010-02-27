@@ -14,7 +14,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "protodefs.h"
-#include "utils.h"
+#include "prefix.h"
 #include "ife.h"
 
 /* includes filename, line number and max(debug_prefix[]) */
