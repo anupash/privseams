@@ -54,8 +54,8 @@ typedef struct {
     __u8  family;
     __u8  bytelen;
     __s16 bitlen;
-    __u32 flags;
-    __u32 data[4];
+    uint32_t flags;
+    uint32_t data[4];
 } inet_prefix;
 
 int lsi_total = 0;
@@ -637,7 +637,7 @@ done:
  * @param data the attribute
  * @return zero on success and negative on error
  */
-static int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
+static int addattr32(struct nlmsghdr *n, int maxlen, int type, uint32_t data)
 {
     int len = RTA_LENGTH(4);
     struct rtattr *rta;
@@ -1356,7 +1356,7 @@ static int get_ctl_fd(void)
  * @param mask mask for the flags
  * @return zero on success and negative on error
  */
-static int do_chflags(const char *dev, __u32 flags, __u32 mask)
+static int do_chflags(const char *dev, uint32_t flags, uint32_t mask)
 {
     struct ifreq ifr;
     int fd;
@@ -1398,8 +1398,8 @@ static int do_chflags(const char *dev, __u32 flags, __u32 mask)
 int set_up_device(char *dev, int up)
 {
     int err     = -1, total_add;
-    __u32 mask  = 0;
-    __u32 flags = 0;
+    uint32_t mask  = 0;
+    uint32_t flags = 0;
     char label[4];
     char *res   = NULL;
     int size_dev;

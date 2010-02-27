@@ -20,6 +20,8 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include "lib/tool/nlink.h"
+
 #include "xfrmapi.h"
 
 #ifndef CONFIG_HIP_PFKEY
@@ -124,9 +126,9 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
         tmpl->id.proto = proto;
     }
 
-    tmpl->aalgos   = (~(__u32) 0);
-    tmpl->ealgos   = (~(__u32) 0);
-    tmpl->calgos   = (~(__u32) 0);
+    tmpl->aalgos   = (~(uint32_t) 0);
+    tmpl->ealgos   = (~(uint32_t) 0);
+    tmpl->calgos   = (~(uint32_t) 0);
     tmpl->optional = 0;     /* required */
     tmpls_len     += sizeof(*tmpl);
     if (tmpl_saddr && tmpl_daddr) {
@@ -276,7 +278,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
                                  const struct in6_addr *daddr,
                                  const struct in6_addr *src_id,
                                  const struct in6_addr *dst_id,
-                                 const __u32 spi, const int ealg,
+                                 const uint32_t spi, const int ealg,
                                  const struct hip_crypto_key *enckey,
                                  const int enckey_len,
                                  const int aalg,
@@ -386,7 +388,7 @@ out_err:
  * @return 0 on success or negative on error
  */
 static int hip_xfrm_state_delete(struct rtnl_handle *rth,
-                                 const struct in6_addr *peer_addr, __u32 spi,
+                                 const struct in6_addr *peer_addr, uint32_t spi,
                                  const int preferred_family,
                                  const int sport, const int dport)
 {

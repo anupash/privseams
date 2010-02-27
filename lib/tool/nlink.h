@@ -5,13 +5,19 @@
 #include <stdint.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <linux/netlink.h>
+/* CentOS 5.4 and some other legacy systems are broken. Including
+   linux/rtnetlink.h complains that __u32 or __64 is undefine */
+#ifndef __u32
+#define __u32 uint32_t
+#define __u64 uint64_t
+#endif /* __u32 */
+#include <linux/xfrm.h>
+#include <linux/rtnetlink.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
-#include <linux/xfrm.h>
 
-/* Keep this one as the last to avoid some weird compilation problems */
-#include <linux/netlink.h>
 
 struct pseudo_hdr {
     u32 s_addr;
@@ -54,8 +60,8 @@ struct rtnl_handle {
     int                fd;
     struct sockaddr_nl local;
     struct sockaddr_nl peer;
-    __u32              seq;
-    __u32              dump;
+    uint32_t           seq;
+    uint32_t           dump;
 };
 
 /* Workaround: in6_pktinfo does not compile on Fedora and Ubuntu anymore.

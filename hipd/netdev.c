@@ -26,6 +26,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <netinet/in.h>
+#include "lib/tool/nlink.h"
 #include "netdev.h"
 #include "maintenance.h"
 #include "lib/dht/libhipdht.h"
