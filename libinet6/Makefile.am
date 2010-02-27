@@ -5,7 +5,7 @@
 #
 # Copyright (C) 2000-2001 USAGI/WIDE Project.
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -17,7 +17,7 @@
 # 3. Neither the name of the project nor the names of its contributors
 #    may be used to endorse or promote products derived from this software
 #    without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -38,9 +38,9 @@ lib_LTLIBRARIES = libinet6.la
 
 # Original sources
 libinet6_la_SOURCES  = usagi.c getaddrinfo.c getnameinfo.c ip6opt.c rthdr.c
-libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c 
+libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c
 #rexec.c
-libinet6_la_SOURCES += sa_len.c tempname.c 
+libinet6_la_SOURCES += sa_len.c tempname.c
 #util.c
 #libinet6_la_SOURCES += rcmd.c
 
@@ -64,17 +64,20 @@ CFLAGS += -DHIP_TRANSPARENT_API
 
 # HIP library added
 #LDADD  = ../libhiptool/.libs/libhiptool.a
-LDADD = ../libhipcore/.libs/libhipcore.a
+LDADD = $(top_srcdir)/libhipcore/.libs/libhipcore.a
 
 include_HEADERS = libc-compat.h #util.h
 include_HEADERS += getaddrinfo.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
-LDADD += ../libdht/.libs/libhipopendht.a 
+LDADD += $(top_srcdir)/libdht/.libs/libhipopendht.a
 
-INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-INCLUDES += -I..
+INCLUDES += -I$(top_srcdir)/i3/i3_client -I$(top_srcdir)/i3/utils -I$(top_srcdir)/i3/i3
+
+# Fix for bug id 1249
+INCLUDES += -I $(top_srcdir)
+INCLUDES += -I $(top_srcdir)/libinet6/include
 
 #getendpointinfo.c: include/netdb.h
 
