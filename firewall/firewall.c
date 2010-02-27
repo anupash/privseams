@@ -654,12 +654,8 @@ static int hip_fw_uninit_lsi_support(void)
         system_print("iptables -D HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE 2>/dev/null");
 
         system_print("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-
-        HIP_IFEL(uninit_lsi(), -1,
-                 "failed to uninit lsi extension\n");
     }
 
-out_err:
     return err;
 }
 
@@ -937,6 +933,10 @@ static void firewall_exit(void)
         HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
     }
     free(msg);
+
+    hip_firewall_delete_hldb();
+    hip_firewall_cache_delete_hldb(1);
+    hip_firewall_port_cache_uninit_hldb();
 
     hip_fw_uninit_system_based_opp_mode();
     hip_fw_flush_iptables();
