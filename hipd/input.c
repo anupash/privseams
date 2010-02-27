@@ -3041,7 +3041,9 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 #endif
     err = hip_xmit_r1(i1, i1_saddr, i1_daddr, &dest, dest_port, i1_info,
                       relay_para_type );
+#if defined(CONFIG_HIP_BLIND) || defined(CONFIG_HIP_RVS)
 out_err:
+#endif
     return err;
 }
 
