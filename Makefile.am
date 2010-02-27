@@ -769,20 +769,14 @@ tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 
 endif # HAVE_PYTHON
 
-
-
 # TODO directly stating targets seems wrong in Makefile.am - Rene
 doxygen:
 	cd @top_srcdir@/doc && doxygen
-rpm:
-	@top_srcdir@/test/packaging/create-package.sh rpm
 
+# For maemo builds only
 olddeb:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh -s
-
-deb:
-	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh deb
 
 bin:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh bin
