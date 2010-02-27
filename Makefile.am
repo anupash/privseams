@@ -773,25 +773,25 @@ endif # HAVE_PYTHON
 
 # TODO directly stating targets seems wrong in Makefile.am - Rene
 doxygen:
-	cd doc && doxygen
+	cd @top_srcdir@/doc && doxygen
 rpm:
-	test/packaging/create-package.sh rpm
+	@top_srcdir@/test/packaging/create-package.sh rpm
 
 olddeb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh -s
 
 deb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh deb
 
 bin:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh bin
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh bin
 
 increl:
-	test/packaging/create-package.sh increl
+	@top_srcdir@/test/packaging/create-package.sh increl
 
 syncrepo:
-	test/packaging/create-package.sh syncrepo
+	@top_srcdir@/test/packaging/create-package.sh syncrepo
 
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
