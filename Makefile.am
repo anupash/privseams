@@ -773,11 +773,8 @@ doxygen:
 	cd @top_srcdir@/doc && doxygen
 
 # The olddeb target is for maemo builds only
-bin olddeb:
+bin increl olddeb syncrepo:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
-
-increl syncrepo:
-	@top_srcdir@/test/packaging/create-package.sh $@
 
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
