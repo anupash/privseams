@@ -228,6 +228,10 @@ then
     else
         die "Unknown distro"
     fi
+elif test x"$1" = x"olddeb"
+then
+    build_maemo_deb
+    exit
 fi
 echo "Architecture: $ARCH"
 
