@@ -778,7 +778,7 @@ olddeb:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh -s
 
 bin:
-	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh bin
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
 
 increl syncrepo:
 	@top_srcdir@/test/packaging/create-package.sh $@
