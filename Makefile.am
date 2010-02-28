@@ -778,10 +778,10 @@ bin increl olddeb syncrepo:
 
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
-	sh test -x @top_srcdir@/$@ || @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/dnsproxy.py $@
+	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/dnsproxy.py $@
 
 tools/hipdnskeyparse:
-	sh test -x @top_srcdir@/$@ || @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/parse-key-3.py $@
+	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/parse-key-3.py $@
 
 # Make sure that dynamically generated scripts are properly generated
 # for "make dist" tarball.
