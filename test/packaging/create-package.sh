@@ -1,4 +1,4 @@
-#!/bin/sh -xv
+#!/bin/sh
 
 VERSION=
 NAME=hipl
