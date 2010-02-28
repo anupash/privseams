@@ -781,11 +781,8 @@ olddeb:
 bin:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh bin
 
-increl:
-	@top_srcdir@/test/packaging/create-package.sh increl
-
-syncrepo:
-	@top_srcdir@/test/packaging/create-package.sh syncrepo
+increl syncrepo:
+	@top_srcdir@/test/packaging/create-package.sh $@
 
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
