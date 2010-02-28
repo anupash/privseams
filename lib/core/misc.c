@@ -269,23 +269,6 @@ int hip_match_hit(const void *ptr1, const void *ptr2)
     return hip_hash_hit(ptr1) != hip_hash_hit(ptr2);
 }
 
-/*
- * unsigned long hip_hidb_hash(const void *ptr){
- *      hip_hit_t *hit = &(((struct hip_host_id_entry *) ptr)->lhi.hit);
- *      unsigned long hash;
- *
- *      hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), &hash);
- *
- *      return hash;
- * }
- *
- * int hip_hidb_match(const void *ptr1, const void *ptr2){
- *      return (hip_hidb_hash(ptr1) != hip_hidb_hash(ptr2));
- * }
- */
-
-
-
 /**
  * hip_enc_key_length - get encryption key length of a transform
  * @param tid transform
