@@ -772,12 +772,8 @@ endif # HAVE_PYTHON
 doxygen:
 	cd @top_srcdir@/doc && doxygen
 
-# For maemo builds only
-olddeb:
-	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh
-	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh -s
-
-bin:
+# The olddeb target is for maemo builds only
+bin olddeb:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
 
 increl syncrepo:
