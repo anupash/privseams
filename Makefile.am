@@ -810,4 +810,4 @@ all-local:
 	@sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
 	@sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
 
-.PHONY: all all-local dist increl syncrepo bin olddeb doxygen
+.PHONY: bin doxygen increl olddeb syncrepo
