@@ -53,8 +53,8 @@ die()
 
 build_maemo_deb()
 {
-    env PYEXECDIR=$(PYEXECDIR) $PKGEXE/create-deb.sh
-    env PYEXECDIR=$(PYEXECDIR) $PKGEXE/create-deb.sh -s
+    env PYEXECDIR=$PYEXECDIR $PKGEXE/create-deb.sh
+    env PYEXECDIR=$PYEXECDIR $PKGEXE/create-deb.sh -s
 }
 
 build_rpm()
