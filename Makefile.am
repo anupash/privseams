@@ -769,7 +769,6 @@ tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 
 endif # HAVE_PYTHON
 
-# TODO directly stating targets seems wrong in Makefile.am - Rene
 doxygen:
 	cd @top_srcdir@/doc && doxygen
 
