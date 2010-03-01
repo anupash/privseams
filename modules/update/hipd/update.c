@@ -721,7 +721,7 @@ int hip_handle_update(const uint32_t packet_type,
 
     /* RFC 5201 Section 6.12: Receiving UPDATE Packets */
     HIP_DEBUG("previous incoming update id=%u\n", localstate->update_id_in);
-    HIP_DEBUG("previous outgoing update id=%u\n", localstate->update_id_out);
+    HIP_DEBUG("previous outgoing update id=%u\n", hip_update_get_out_id(localstate));
 
     /* RFC 5201 Section 6.12: 3th or 4th step:
      *
@@ -738,7 +738,7 @@ int hip_handle_update(const uint32_t packet_type,
                   ack_peer_update_id);
         /*ha->hadb_update_func->hip_update_handle_ack(
          *      ha, ack, has_esp_info);*/
-        if (ack_peer_update_id != localstate->update_id_out) {
+        if (ack_peer_update_id != hip_update_get_out_id(localstate)) {
             // Simplified logic of RFC 5201 6.12.2, 1st step:
             // We drop the packet if the Update ID in the ACK
             // parameter does not equal to the last outgoing Update ID
@@ -746,7 +746,7 @@ int hip_handle_update(const uint32_t packet_type,
                       "equal to the last outgoing Update ID (%u). "
                       "Dropping the packet.\n",
                       ack_peer_update_id,
-                      localstate->update_id_out);
+                      hip_update_get_out_id(localstate));
             err = -1;
             goto out_err;
         }
