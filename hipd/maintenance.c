@@ -20,9 +20,8 @@
 #include "maintenance.h"
 #include "heartbeat.h"
 
-/* TODO Remove these includes, when modularization is finished */
+/* TODO Remove this include, when modularization is finished */
 #include "modules/update/hipd/update.h"
-#include "modules/update/hipd/update_legacy.h"
 
 #define FORCE_EXIT_COUNTER_START                5
 
