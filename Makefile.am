@@ -81,6 +81,8 @@ EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
+BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
+
 # Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
 # Gtk requires the images without the hipl prefix hence we use ".." below
 imagesdir = $(pkgdatadir)/../pixmaps
@@ -381,7 +383,7 @@ lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
 AM_YFLAGS = -d -p __libhipsec
 AM_LFLAGS = -P__libhipsec -olex.yy.c
 
-BUILT_SOURCES = lib/ipsec/policy_parse.h
+BUILT_SOURCES += lib/ipsec/policy_parse.h
 
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
@@ -782,21 +784,5 @@ tools/hipdnsproxy:
 
 tools/hipdnskeyparse:
 	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/parse-key-3.py $@
-
-# Make sure that dynamically generated scripts are properly generated
-# for "make dist" tarball.
-dist: all-local
-
-# This is necessary, because otherwise parallel builds may fail.
-all: all-local
-
-# This workaround forces automake to generate the scripts on each run. It is
-# necessary because otherwise "make rpm" target has the old $pyexecdir from
-# "make dist" and it refuses to build the scripts again.
-all-local:
-	rm -f @top_srcdir@/tools/hipdnsproxy
-	rm -f @top_srcdir@/tools/hipdnskeyparse
-	sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
-	sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
 
 .PHONY: bin doxygen increl olddeb syncrepo
