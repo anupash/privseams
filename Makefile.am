@@ -773,7 +773,7 @@ doxygen:
 	cd @top_srcdir@/doc && doxygen
 
 # The olddeb target is for maemo builds only
-bin olddeb increl syncrepo:
+bin deb increl olddeb rpm syncrepo:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
 
 # Automake does not build the shell scripts without this
