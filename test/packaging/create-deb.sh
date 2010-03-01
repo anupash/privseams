@@ -60,6 +60,9 @@ POSTFIX="deb"
 # Comment this out if you want to install without sudo (see bug id 603)
 if [ $DEBARCH != "armel" ]; then
     SUDO=sudo
+    if $(fakeroot); then
+        SUDO=fakeroot
+    fi
 fi
 
 # The current debian compilation does not use a fresh copy of files,
