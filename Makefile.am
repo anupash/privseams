@@ -772,8 +772,14 @@ endif # HAVE_PYTHON
 doxygen:
 	cd @top_srcdir@/doc && doxygen
 
+# For maemo builds only. TODO: port the maemo functionality into the
+# create-package script!
+olddeb:
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh -s
+
 # The olddeb target is for maemo builds only
-bin increl olddeb syncrepo:
+bin increl syncrepo:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
 
 # Automake does not build the shell scripts without this
