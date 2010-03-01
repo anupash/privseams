@@ -116,6 +116,7 @@ fi
 
 AC_ARG_ENABLE(agent,
               AC_HELP_STRING([--enable-agent],
+              [HIP enabled agent daemon (default is YES)]),
               [HIP user agent]),
               [ac_cv_use_agent=$enableval],)
 AC_CACHE_CHECK([whether to use agent],
