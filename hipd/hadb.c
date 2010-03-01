@@ -550,7 +550,7 @@ int hip_add_peer_map(const struct hip_common *input)
     err = hip_hadb_add_peer_info(hit, ip, lsi, peer_hostname);
 
     _HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
-    _HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+    _HIP_ASSERT(hit_is_opportunistic_hit(hit));
 
     if (err) {
         HIP_ERROR("Failed to insert peer map (%d)\n", err);
@@ -1342,7 +1342,7 @@ int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
 
     if (ipv6_addr_cmp(&entry->peer_addr, id) == 0 &&
         !ipv6_addr_any(&entry->hit_peer) &&
-        !hit_is_opportunistic_hashed_hit(&entry->hit_peer)) {
+        !hit_is_opportunistic_hit(&entry->hit_peer)) {
         ipv6_addr_copy(id, &entry->hit_peer);
         HIP_DEBUG_HIT("hit", &entry->hit_peer);
         HIP_DEBUG_HIT("pref", &entry->peer_addr);

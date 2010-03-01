@@ -1,7 +1,7 @@
 /**
- * @file firewall/esp_prot_common.c
+ * @file
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This implementation provides functionality for the ESP protection in
  * hipd and hipfw. It also defines necessary TPA parameters used by both

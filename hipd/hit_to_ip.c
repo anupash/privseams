@@ -14,23 +14,16 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#include "maintenance.h"
-#include "lib/conf/hipconf.h"
 #include <netinet/in.h>
 #include <string.h>
-
 #include <sys/socket.h>
-#ifndef __u32
-/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
-#  include <linux/types.h>
-#endif
-//#include <netinet/ip6.h>
-
-#include "lib/core/list.h"
-#include "lib/core/debug.h"
-#include "lib/core/utils.h"
 
 #include "hit_to_ip.h"
+#include "lib/core/list.h"
+#include "lib/core/debug.h"
+#include "lib/core/prefix.h"
+#include "maintenance.h"
+#include "lib/conf/hipconf.h"
 
 int hip_hit_to_ip_status = 0;
 

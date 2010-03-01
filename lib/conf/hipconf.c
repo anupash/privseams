@@ -42,7 +42,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "hipconf.h"
-#include "lib/core/utils.h"
+#include "lib/core/prefix.h"
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.

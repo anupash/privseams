@@ -31,7 +31,7 @@
 #include <openssl/evp.h>
 #include "user_ipsec_esp.h"
 #include "esp_prot_api.h"
-#include "lib/core/utils.h"
+#include "lib/core/prefix.h"
 #include "lib/core/misc.h"
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */

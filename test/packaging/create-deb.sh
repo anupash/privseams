@@ -1,4 +1,4 @@
-#!/bin/sh -xv
+#!/bin/sh
 # This script allows for building binary and source debian packages
 # for maemo. Note that this script is somewhat depracated!
 

@@ -18,7 +18,7 @@
 #include <string.h>
 
 #include "misc.h"
-#include "utils.h"
+#include "prefix.h"
 
 // needed due to missing system inlcude for openWRT
 #ifndef HOST_NAME_MAX
@@ -268,23 +268,6 @@ int hip_match_hit(const void *ptr1, const void *ptr2)
 {
     return hip_hash_hit(ptr1) != hip_hash_hit(ptr2);
 }
-
-/*
- * unsigned long hip_hidb_hash(const void *ptr){
- *      hip_hit_t *hit = &(((struct hip_host_id_entry *) ptr)->lhi.hit);
- *      unsigned long hash;
- *
- *      hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), &hash);
- *
- *      return hash;
- * }
- *
- * int hip_hidb_match(const void *ptr1, const void *ptr2){
- *      return (hip_hidb_hash(ptr1) != hip_hidb_hash(ptr2));
- * }
- */
-
-
 
 /**
  * hip_enc_key_length - get encryption key length of a transform
@@ -2010,104 +1993,6 @@ out_err:
     }
     return res;
 }
-
-/**
- * Obtains the information needed by the dns proxy, based on the ip addr
- *
- * @param *ip_addr  input, the ip address to look for
- * @param *hit      output, the corresponding hit
- * @param *lsi      output, the corresponding lsi
- *
- * @return  1 - if a corresponding entry is found
- *          0 - is returned if there is no entry
- */
-/*int hip_get_info_for_dnsproxy_from_ip(
- *                              struct in6_addr *ip_addr,
- *                              struct in6_addr *hit,
- *                              hip_lsi_t       *lsi){
- *      int err = 0, res = 0;
- *      hip_lsi_t src_ip4, dst_ip4;
- *      struct hip_tlv_common *current_param = NULL;
- *      struct hip_common *msg = NULL;
- *      struct hip_hadb_user_info_state *ha;
- *
- *      HIP_ASSERT(ip_addr != NULL);
- *
- *      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
- *      hip_msg_init(msg);
- *      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
- *                              -1, "Building of daemon header failed\n");
- *      HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
- *
- *      while((current_param = hip_get_next_param(msg, current_param)) != NULL){
- *              ha = hip_get_param_contents_direct(current_param);
- *              if(ipv6_addr_cmp(ip_addr, &ha->ip_our) == 0){
- *hit = ha->hit_our;
- *lsi = ha->lsi_our;
- *                      res = 1;
- *                      break;
- *              }
- *              else if(ipv6_addr_cmp(ip_addr, &ha->ip_peer) == 0){
- *hit = ha->hit_peer;
- *lsi = ha->lsi_peer;
- *                      res = 1;
- *                      break;
- *              }
- *      }
- * out_err:
- *      if(msg)
- *              HIP_FREE(msg);
- *      return res;
- * }
- */
-
-/**
- * Obtains the information needed by the dns proxy, based on the hostname
- *
- * @param *hostname input, the ip address to look for
- * @param *hit      output, the corresponding hit
- * @param *lsi      output, the corresponding lsi
- *
- * @return  1 - if a corresponding entry is found
- *          0 - is returned if there is no entry
- */
-/*int hip_get_info_for_dnsproxy_from_hostname(
- *                              const char      *hostname,
- *                              struct in6_addr *ip,
- *                              struct in6_addr *hit,
- *                              hip_lsi_t       *lsi){
- *      int err = 0, res = 0;
- *      hip_lsi_t src_ip4, dst_ip4;
- *      struct hip_tlv_common *current_param = NULL;
- *      struct hip_common *msg = NULL;
- *      struct hip_hadb_user_info_state *ha;
- *
- *      HIP_ASSERT(hostname != NULL);
- *
- *      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
- *      hip_msg_init(msg);
- *      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
- *                              -1, "Building of daemon header failed\n");
- *      HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
- *
- *      while((current_param = hip_get_next_param(msg, current_param)) != NULL){
- *              ha = hip_get_param_contents_direct(current_param);
- *
- *              if(strcmp(hostname, &ha->peer_hostname) == 0){
- *ip =  ha->ip_peer;
- *hit = ha->hit_peer;
- *lsi = ha->lsi_peer;
- *                      res = 1;
- *                      break;
- *              }
- *      }
- *
- * out_err:
- *      if(msg)
- *              HIP_FREE(msg);
- *      return res;
- * }
- */
 
 /* This builds a msg which will be sent to the HIPd in order to trigger
  * a BEX there.

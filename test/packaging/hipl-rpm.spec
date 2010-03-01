@@ -25,14 +25,6 @@ other related tools and test software.
 %prep
 %setup
 
-#added by CentOS
-%ifarch x86_64 ppc64 sparc64 ia64
-%{__perl} -p -i -e 's,/usr/lib/libipq.a,/usr/lib64/libipq.a,g' firewall/Makefile.in
-%endif
-
-%{__perl} -p -i -e 's,/usr/share/pixmaps,\$(DESTDIR)/usr/share/pixmaps,g' libhipgui/Makefile.in
-#end CentOS changes
-
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
 ./autogen.sh --prefix=/usr

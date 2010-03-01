@@ -196,7 +196,7 @@ lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hashtable.c \
                                  lib/core/hashtree.c \
-                                 lib/core/utils.c \
+                                 lib/core/prefix.c \
                                  lib/core/certtools.c \
                                  lib/core/linkedlist.c \
                                  lib/core/debug.c \
@@ -377,34 +377,25 @@ tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 
 endif # HAVE_PYTHON
 
-# TODO directly stating targets seems wrong in Makefile.am - Rene
 doxygen:
-	cd doc && doxygen
-rpm:
-	test/packaging/create-package.sh rpm
+	cd @top_srcdir@/doc && doxygen
 
+# For maemo builds only. TODO: port the maemo functionality into the
+# create-package script!
 olddeb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh -s
 
-deb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb
-
-bin:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh bin
-
-increl:
-	test/packaging/create-package.sh increl
-
-syncrepo:
-	test/packaging/create-package.sh syncrepo
+# The olddeb target is for maemo builds only
+bin increl syncrepo:
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
 
 # Automake does not build the shell scripts without this
 tools/hipdnsproxy:
-	@sh test -x @top_srcdir@/tools/hipdnsproxy || @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/dnsproxy.py $@
 
 tools/hipdnskeyparse:
-	@sh test -x @top_srcdir@/tools/hipdnskeyparse || @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/parse-key-3.py $@
 
 # Make sure that dynamically generated scripts are properly generated
 # for "make dist" tarball.
@@ -417,7 +408,9 @@ all: all-local
 # necessary because otherwise "make rpm" target has the old $pyexecdir from
 # "make dist" and it refuses to build the scripts again.
 all-local:
-	@rm -f @top_srcdir@/tools/hipdnsproxy
-	@rm -f @top_srcdir@/tools/hipdnskeyparse
-	@sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
-	@sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+	rm -f @top_srcdir@/tools/hipdnsproxy
+	rm -f @top_srcdir@/tools/hipdnskeyparse
+	sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
+	sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+
+.PHONY: bin doxygen increl olddeb syncrepo

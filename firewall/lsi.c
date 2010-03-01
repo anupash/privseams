@@ -440,16 +440,3 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
     }
     return err;
 }
-
-int uninit_lsi()
-{
-    int err = 0;
-
-    //empty the firewall db
-    hip_firewall_delete_hldb();
-
-    //empty tha firewall cache
-    hip_firewall_cache_delete_hldb();
-
-    return err;
-}

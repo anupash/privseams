@@ -329,7 +329,7 @@ hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
                                            HIP_HIT_TYPE_HASH100), -1,
              "hip_opportunistic_ipv6_to_hit failed\n");
 
-    HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit));
+    HIP_ASSERT(hit_is_opportunistic_hit(&phit));
 
     entry_tmp = hip_hadb_find_byhits(init_hit, &phit);
 
@@ -346,7 +346,7 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
     hip_ha_t *entry     = NULL;
 
     if (type == HIP_I1) {
-        if (!hit_is_opportunistic_null(&msg->hitr)) {
+        if (!ipv6_addr_is_null(&msg->hitr)) {
             goto out_err;
         }
         hip_get_default_hit(&msg->hitr);
@@ -459,7 +459,7 @@ hip_ha_t *hip_opp_add_map(const struct in6_addr *dst_ip,
                                            HIP_HIT_TYPE_HASH100),
              -1, "Opp HIT conversion failed\n");
 
-    HIP_ASSERT(hit_is_opportunistic_hashed_hit(&opp_hit));
+    HIP_ASSERT(hit_is_opportunistic_hit(&opp_hit));
 
     HIP_DEBUG_HIT("opportunistic hashed hit", &opp_hit);
 
@@ -601,7 +601,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
                                            HIP_HIT_TYPE_HASH100),
              -1, "Opp HIT conversion failed\n");
 
-    HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit));
+    HIP_ASSERT(hit_is_opportunistic_hit(&phit));
 
     HIP_DEBUG_HIT("phit", &phit);
 
