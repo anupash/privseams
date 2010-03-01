@@ -60,6 +60,9 @@ POSTFIX="deb"
 # Comment this out if you want to install without sudo (see bug id 603)
 if [ $DEBARCH != "armel" ]; then
     SUDO=sudo
+    if $(fakeroot); then
+        SUDO=fakeroot
+    fi
 fi
 
 # The current debian compilation does not use a fresh copy of files,
@@ -183,9 +186,9 @@ copy_files_gpl()
         cd "$HIPL"
 
         for suffix in a so so.0 so.0.0.0;do
-                copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
+                copy -d lib/tool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
         done
-        copy -L libhiptool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
+        copy -L lib/tool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
 
         set +e
 }
@@ -275,22 +278,22 @@ copy_and_package_files ()
     for suffix in a so so.0 so.0.0.0;do
         copy -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
         if [ ! "$CORPORATE" ];then
-                copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
+                copy -d lib/tool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
         fi
-        copy -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
-        copy -d libdht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
+        copy -d lib/opphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
+        copy -d lib/dht/.libs/libhipdht.$suffix $PKGDIR/usr/lib/
     done
 
     copy -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
         if [ ! "$CORPORATE" ];then
-            copy -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
+            copy -L lib/tool/.libs/libhiptool.la $PKGDIR/usr/lib/
         fi
 
-    copy -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
+    copy -L lib/opphip/.libs/libopphip.la $PKGDIR/usr/lib/
 
-    copy -L libdht/.libs/libhipopendht.la $PKGDIR/usr/lib/
+    copy -L lib/dht/.libs/libhipdht.la $PKGDIR/usr/lib/
 
-    copy -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+    copy -d lib/gui/.libs/libhipgui.a $PKGDIR/usr/lib/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;

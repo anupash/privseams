@@ -5,71 +5,16 @@ ACLOCAL_AMFLAGS  = -I m4
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
-EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
-EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
-EXTRA_DIST += hipsock jip
-EXTRA_DIST += test/packaging/create-package.sh
-EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec
-EXTRA_DIST += test/packaging/debbuild
-EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/rh-init.d-dnsproxy
-EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hipfw test/packaging/debian-init.d-dnsproxy
-# The design choices doc is currently depracated
-EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
-EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += doc/doxygen.h doc/Doxyfile
-EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content/hipext.js hipext/src/chrome.manifest
-EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
-EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
-EXTRA_DIST += autogen.sh
-EXTRA_DIST += $(wildcard lib/android/*.{c,h})
-EXTRA_DIST += $(wildcard lib/conf/*.h)
-EXTRA_DIST += $(wildcard lib/core/*.h)
-EXTRA_DIST += $(wildcard lib/ipsec/*.h)
-EXTRA_DIST += $(wildcard lib/modularization/*.h)
-EXTRA_DIST += $(wildcard lib/performance/*.h)
-EXTRA_DIST += $(wildcard lib/tool/*.h)
+EXTRA_DIST =  doc patches test/packaging test/configs
+EXTRA_DIST += autogen.sh release.version
+EXTRA_DIST += $(wildcard lib/*/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard test/*.h)
 EXTRA_DIST += tools/gen-python-starter.sh
-EXTRA_DIST += release.version
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 
-# XX TODO: remove these when maemo building uses spec files
-EXTRA_DIST += test/packaging/create-deb.sh
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/preinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/preinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN/control
-EXTRA_DIST += test/packaging/armel/DEBIAN/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
+BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
 
 ### bin_PROGRAMS ###
 bin_PROGRAMS = test/certteststub \
@@ -161,7 +106,6 @@ if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
 
-if HIP_FIREWALL
 firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/conntrack.c \
                          firewall/rule_management.c \
@@ -189,7 +133,6 @@ firewall_hipfw_SOURCES += firewall/midauth.c \
                           firewall/pisa.c \
                           firewall/pisa_cert.c
 endif
-endif # HIP_FIREWALL
 
 lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
 
@@ -240,8 +183,6 @@ lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
 AM_YFLAGS = -d -p __libhipsec
 AM_LFLAGS = -P__libhipsec -olex.yy.c
 
-BUILT_SOURCES = lib/ipsec/policy_parse.h
-
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
 #lib_ipsec_la_LDFLAGS = -version-info 0:1:0
@@ -250,16 +191,14 @@ BUILT_SOURCES = lib/ipsec/policy_parse.h
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
 DISTCLEANFILES = lib/ipsec/policy_token.h
 
+if HIP_PFKEY
+BUILT_SOURCES += lib/ipsec/policy_parse.h
 else
-
 # don't use libipsec, but xfrmapi
 lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
-
 endif # HIPPFKEY
 
-if HIP_PERFORMANCE
 lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
-endif
 
 ### *_LDADD ###
 test_certteststub_LDADD = lib/core/libhipcore.la \
@@ -380,37 +319,13 @@ endif # HAVE_PYTHON
 doxygen:
 	cd @top_srcdir@/doc && doxygen
 
-# For maemo builds only. TODO: port the maemo functionality into the
-# create-package script!
-olddeb:
-	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh
-	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-deb.sh -s
-
 # The olddeb target is for maemo builds only
-bin increl syncrepo:
+bin deb increl olddeb rpm syncrepo:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
 
-# Automake does not build the shell scripts without this
-tools/hipdnsproxy:
-	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/dnsproxy.py $@
-
-tools/hipdnskeyparse:
-	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/parse-key-3.py $@
-
-# Make sure that dynamically generated scripts are properly generated
-# for "make dist" tarball.
-dist: all-local
-
-# This is necessary, because otherwise parallel builds may fail.
-all: all-local
-
-# This workaround forces automake to generate the scripts on each run. It is
-# necessary because otherwise "make rpm" target has the old $pyexecdir from
-# "make dist" and it refuses to build the scripts again.
-all-local:
-	rm -f @top_srcdir@/tools/hipdnsproxy
-	rm -f @top_srcdir@/tools/hipdnskeyparse
-	sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
-	sh @top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+tools/hipdnsproxy: tools/dnsproxy.py
+tools/hipdnskeyparse: tools/parse-key-3.py
+tools/hipdnsproxy tools/hipdnskeyparse:
+	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
 
 .PHONY: bin doxygen increl olddeb syncrepo

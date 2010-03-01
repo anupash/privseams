@@ -148,7 +148,7 @@ out_err:
  *
  * @return ...
  */
-int periodic_maintenance()
+int hip_periodic_maintenance()
 {
     int err = 0;
 

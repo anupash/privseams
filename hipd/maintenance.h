@@ -11,7 +11,7 @@
 
 extern int heartbeat_counter;
 
-int periodic_maintenance(void);
+int hip_periodic_maintenance(void);
 void hip_set_firewall_status(void);
 int hip_get_firewall_status(void);
 
