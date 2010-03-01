@@ -202,9 +202,7 @@ test_hashtest_SOURCES = test/hashtest.c
 
 test_listtest_SOURCES = test/listtest.c
 
-if HIP_DHT
 test_dhtteststub_SOURCES = test/dhtteststub.c
-endif
 
 test_certteststub_SOURCES = test/certteststub.c
 
@@ -214,9 +212,7 @@ test_hc_performance_SOURCES = test/hc_performance.c
 
 test_auth_performance_SOURCES = test/auth_performance.c
 
-if HIP_PERFORMANCE
 test_dh_performance_SOURCES = test/dh_performance.c
-endif
 
 tools_hipconf_SOURCES = tools/hipconftool.c
 
@@ -275,7 +271,6 @@ if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
 
-if HIP_FIREWALL
 firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/conntrack.c \
                          firewall/rule_management.c \
@@ -310,9 +305,7 @@ firewall_hipfw_SOURCES += firewall/midauth.c \
                           firewall/pisa.c \
                           firewall/pisa_cert.c
 endif
-endif # HIP_FIREWALL
 
-if HIP_AGENT
 # NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
 agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
 
@@ -333,7 +326,6 @@ lib_gui_libhipgui_la_SOURCES = lib/gui/hipgui.c \
                                lib/gui/events.c \
                                lib/gui/create.c \
                                lib/gui/dragndrop.c
-endif # HIP_AGENT
 
 lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
 
@@ -362,7 +354,6 @@ lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/nlink.c \
                                  lib/tool/lutil.c
 
-if HIP_PFKEY
 ############################ NOTE ##################################
 #
 # Note: when you upgrade this library, please do the following:
@@ -383,8 +374,6 @@ lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
 AM_YFLAGS = -d -p __libhipsec
 AM_LFLAGS = -P__libhipsec -olex.yy.c
 
-BUILT_SOURCES += lib/ipsec/policy_parse.h
-
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
 #lib_ipsec_la_LDFLAGS = -version-info 0:1:0
@@ -393,31 +382,24 @@ BUILT_SOURCES += lib/ipsec/policy_parse.h
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
 DISTCLEANFILES = lib/ipsec/policy_token.h
 
+if HIP_PFKEY
+BUILT_SOURCES += lib/ipsec/policy_parse.h
 else
-
 # don't use libipsec, but xfrmapi
 lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
-
 endif # HIPPFKEY
 
-if HIP_PERFORMANCE
 lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
-endif
 
-if HIP_OPPORTUNISTIC
 lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
                                    lib/opphip/wrap_db.c
-endif
 
-if HIP_DHT
 # NOTE: this would overwrite AM_CFLAGS, so we need to append it
 lib_dht_libhipdht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
 
 lib_dht_libhipdht_la_SOURCES = lib/dht/libhipdht.c \
                                lib/dht/libhipdhtxml.c
-endif
 
-if HIP_I3
 i3_aeshash_libaes_a_SOURCES = i3/aeshash/aescrypp.c \
                               i3/aeshash/aescrypt.c \
                               i3/aeshash/aeshash.c \
@@ -492,8 +474,6 @@ i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c \
                               i3/utils/inetfns.c \
                               i3/utils/event.c \
                               i3/utils/netwrap_posix.c
-
-endif # HIP_I3
 
 ### *_LDADD ###
 
