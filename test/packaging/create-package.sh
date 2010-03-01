@@ -1,4 +1,4 @@
-#!/bin/sh -xv
+#!/bin/sh
 
 VERSION=
 NAME=hipl
@@ -53,8 +53,8 @@ die()
 
 build_maemo_deb()
 {
-    env PYEXECDIR=$(PYEXECDIR) $PKGEXE/create-deb.sh
-    env PYEXECDIR=$(PYEXECDIR) $PKGEXE/create-deb.sh -s
+    env PYEXECDIR=$PYEXECDIR $PKGEXE/create-deb.sh
+    env PYEXECDIR=$PYEXECDIR $PKGEXE/create-deb.sh -s
 }
 
 build_rpm()
@@ -228,6 +228,10 @@ then
     else
         die "Unknown distro"
     fi
+elif test x"$1" = x"olddeb"
+then
+    build_maemo_deb
+    exit
 fi
 echo "Architecture: $ARCH"
 

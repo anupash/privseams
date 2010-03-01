@@ -42,7 +42,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "hipconf.h"
-#include "lib/core/utils.h"
+#include "lib/core/prefix.h"
 #include "lib/dht/libhipdht.h"
 
 /**
@@ -2106,7 +2106,7 @@ static int hip_conf_handle_get(hip_common_t *msg,
                                int optc,
                                int send_only)
 {
-#ifdef CONFIGH_HIP_DHT
+#ifdef CONFIG_HIP_DHT
     int err = 0, is_hit = 0, socket = 0;
     hip_hit_t hit;
     unsigned char dht_response[HIP_MAX_PACKET];
@@ -2191,9 +2191,9 @@ static int hip_conf_handle_get(hip_common_t *msg,
     hip_msg_init(msg);
 out_err:
     return err;
-#else /* CONFIGH_HIP_DHT */
+#else /* CONFIG_HIP_DHT */
     return -1;
-#endif /* CONFIGH_HIP_DHT */
+#endif /* CONFIG_HIP_DHT */
 }
 
 /**
@@ -2828,7 +2828,11 @@ static int hip_conf_handle_hipproxy(struct hip_common *msg,
                                     int optc,
                                     int send_only)
 {
-    int err = 0, status = 0;
+    int err = 0;
+#ifdef CONFIG_HIP_HIPPROXY
+    int status = 0;
+#endif
+
     HIP_DEBUG("hip_conf_handle_hipproxy()\n");
 
 #ifdef CONFIG_HIP_HIPPROXY
@@ -2841,9 +2845,9 @@ static int hip_conf_handle_hipproxy(struct hip_common *msg,
     }
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
              "build hdr failed: %s\n", strerror(err));
-#endif
 
 out_err:
+#endif
     return err;
 }
 

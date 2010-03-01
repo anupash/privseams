@@ -14,7 +14,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "protodefs.h"
-#include "utils.h"
+#include "prefix.h"
 #include "ife.h"
 
 /* includes filename, line number and max(debug_prefix[]) */
@@ -238,12 +238,6 @@ void uint32_to_binstring(uint32_t val, char *buffer);
 void hip_print_locator_addresses(struct hip_common *);
 void hip_print_peer_addresses_to_be_added(hip_ha_t *);
 void hip_print_peer_addresses(hip_ha_t *);
-void hip_print_locator(int debug_level,
-                       const char *file,
-                       int line,
-                       const char *function,
-                       const char *str,
-                       const struct hip_locator *locator);
 void hip_print_addresses_to_send_update_request(hip_ha_t *);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

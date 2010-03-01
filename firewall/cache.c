@@ -276,8 +276,11 @@ void hip_firewall_cache_init_hldb(void)
 
 /**
  * Uninitialize cache database
+ *
+ * @param exit 1 if the firewall is exiting and the hashtable should be
+ *               freed or zero otherwise
  */
-void hip_firewall_cache_delete_hldb(void)
+void hip_firewall_cache_delete_hldb(int exit)
 {
     int i;
     firewall_cache_hl_t *this = NULL;
@@ -290,13 +293,16 @@ void hip_firewall_cache_delete_hldb(void)
     list_for_each_safe(item, tmp, firewall_cache_db, i)
     {
         this = (firewall_cache_hl_t *) list_entry(item);
-        // delete this
         hip_ht_delete(firewall_cache_db, this);
-        // free this
         free(this);
     }
 
+    /* Note: this function is also reached by "hipconf rst all"
+     * so we don't want to uninitialize hash table here. Instead,
+     * we handle it in firewall_exit(). */
+
     HIP_UNLOCK_HT(&firewall_cache_db);
-    hip_ht_uninit(firewall_cache_db);
+    if (exit)
+        hip_ht_uninit(firewall_cache_db);
     HIP_DEBUG("End hldbdb delete\n");
 }

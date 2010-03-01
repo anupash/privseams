@@ -23,6 +23,7 @@
   #include "hiprelay.h"
 #endif
 
+#include "lib/core/state.h"
 #include "lib/core/debug.h"
 #include "lib/core/protodefs.h"
 

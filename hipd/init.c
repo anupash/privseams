@@ -46,9 +46,9 @@
 #ifndef ANDROID_CHANGES
 
 /** ICMPV6_FILTER related stuff */
-#define BIT_CLEAR(nr, addr) do { ((__u32 *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
-#define BIT_SET(nr, addr) do { ((__u32 *) (addr))[(nr) >> 5] |= (1U << ((nr) & 31)); } while (0)
-#define BIT_TEST(nr, addr) do { (__u32 *) (addr))[(nr) >> 5] & (1U << ((nr) & 31)); } while (0)
+#define BIT_CLEAR(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
+#define BIT_SET(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] |= (1U << ((nr) & 31)); } while (0)
+#define BIT_TEST(nr, addr) do { (uint32_t *) (addr))[(nr) >> 5] & (1U << ((nr) & 31)); } while (0)
 
 #ifndef ICMP6_FILTER_WILLPASS
 #define ICMP6_FILTER_WILLPASS(type, filterp) \
