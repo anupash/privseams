@@ -702,4 +702,8 @@ tools/hipdnskeyparse: tools/parse-key-3.py
 tools/hipdnsproxy tools/hipdnskeyparse:
 	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
 
+autotools-clean: maintainer-clean
+	rm -f aclocal.m4 compile config.* configure depcomp install-sh
+	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
+
 .PHONY: bin doxygen increl olddeb syncrepo
