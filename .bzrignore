@@ -69,3 +69,7 @@ test/dh_performance
 cscope.in.out
 cscope.out
 cscope.po.out
+build-stamp
+debian/files
+debian/hipl
+debian/hipl.substvars
