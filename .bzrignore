@@ -1,4 +1,4 @@
- *.la
+*.la
 *.lo
 .cproject
 .deps
