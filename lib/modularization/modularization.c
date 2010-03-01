@@ -395,7 +395,7 @@ void hip_free_state(struct modular_state *state)
 {
     unsigned int      i;
 
-    hip_ll_uninit(state->item_list, NULL);
+    hip_ll_uninit(state->item_list, free);
     free(state->item_list);
 
     for (i = 0; i < state->num_items; i++) {
