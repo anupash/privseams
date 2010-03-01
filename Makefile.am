@@ -5,22 +5,8 @@ ACLOCAL_AMFLAGS  = -I m4
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
-EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
-EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
-EXTRA_DIST += hipsock jip
-EXTRA_DIST += test/packaging/create-package.sh
-EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec
-EXTRA_DIST += test/packaging/debbuild
-# The design choices doc is currently depracated
-EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
-EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += doc/doxygen.h doc/Doxyfile
-EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content/hipext.js hipext/src/chrome.manifest
-EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
-EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
-EXTRA_DIST += i3-cfg-PL.xml
-EXTRA_DIST += autogen.sh
+EXTRA_DIST =  doc hipext hipsock jip patches test/packaging test/configs
+EXTRA_DIST += autogen.sh i3-cfg-PL.xml release.version
 EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard i3/*/*.h)
 EXTRA_DIST += $(wildcard lib/android/*.c)
@@ -28,45 +14,10 @@ EXTRA_DIST += $(wildcard lib/*/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard test/*.h)
-EXTRA_DIST += $(wildcard test/packaging/*-init.d-*)
 EXTRA_DIST += tools/gen-python-starter.sh
-EXTRA_DIST += release.version
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 
 # XX TODO: remove these when maemo building uses spec files
-EXTRA_DIST += test/packaging/create-deb.sh
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/preinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/preinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN/control
-EXTRA_DIST += test/packaging/armel/DEBIAN/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
 
 BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
