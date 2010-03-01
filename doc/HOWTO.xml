@@ -2421,7 +2421,7 @@ $ tools/adb shell # Log into device shell
         naming as described in <xref linkend="ch_opendht" />.
       </para>
       <para>
-        3. Override the resolver library dynamically:
+        3. Override the resolver library dynamically (warning: this method will be depracated soon):
       </para>
       <para>
         3a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
@@ -2555,6 +2555,8 @@ $ tools/adb shell # Log into device shell
       <para>
         Now your Firefox should be connected by HIP to your proxy server,
         enabling mobility and enhancing security from your proxy to your host.
+        Note: "hipconf normal" method will be depracated soon. The preferred
+        method is to use the DNS proxy.
       </para>
     </section>
     <section id="sec_sendmail">
@@ -2717,6 +2719,10 @@ $ tools/adb shell # Log into device shell
   <programlisting>
   hipconf run opp ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
   </programlisting>
+  <para>
+    Note: "hipconf normal" method will be depracated soon. The preferred
+    method is to use the DNS proxy.
+  </para>
   <para>
   Ldapadd can be used similarly with LDAPURI and HITs.
   </para>
