@@ -32,6 +32,17 @@ agent/hipagent
 i3/chord/chord_getfingers
 firewall/hipfw
 hipd/hipd
+libinet6/include_glibc21/bits/in.h
+libinet6/include_glibc21/netinet/icmp6.h
+libinet6/include_glibc21/netinet/ip6.h
+libinet6/include_glibc22/bits/in.h
+libinet6/include_glibc22/bits/sockaddr.h
+libinet6/include_glibc22/netinet/icmp6.h
+libinet6/include_glibc22/netinet/ip6.h
+libinet6/include_glibc23/bits/in.h
+libinet6/include_glibc23/bits/sockaddr.h
+libinet6/include_glibc23/netinet/icmp6.h
+libinet6/include_glibc23/netinet/ip6.h
 test/certteststub
 test/conntest-client-native
 test/conntest-client-hip
