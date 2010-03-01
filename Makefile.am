@@ -698,10 +698,10 @@ bin deb increl olddeb rpm syncrepo:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
 
 # Automake does not build the shell scripts without this
-tools/hipdnsproxy:
-	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/dnsproxy.py $@
 
-tools/hipdnskeyparse:
-	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) tools/parse-key-3.py $@
+tools/hipdnsproxy: tools/dnsproxy.py
+tools/hipdnskeyparse: tools/parse-key-3.py
+tools/hipdnsproxy tools/hipdnskeyparse:
+	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
 
 .PHONY: bin doxygen increl olddeb syncrepo
