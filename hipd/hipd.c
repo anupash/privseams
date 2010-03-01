@@ -887,7 +887,7 @@ static int hipd_main(int argc, char *argv[])
         }
 
 to_maintenance:
-        err = periodic_maintenance();
+        err = hip_periodic_maintenance();
         if (err) {
             HIP_ERROR("Error (%d) ignoring. %s\n", err,
                       ((errno) ? strerror(errno) : ""));
