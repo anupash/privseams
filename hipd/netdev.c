@@ -309,6 +309,7 @@ int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex)
     struct netdev_address *n;
     hip_list_t *tmp, *t;
     int c;
+    int err = 0;
     const struct in6_addr *in6;
     const struct in_addr *in;
 
@@ -323,9 +324,13 @@ int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex)
 
         if (mapped) {
             in6          = (const struct in6_addr * ) hip_cast_sa_addr((struct sockaddr *) (&n->addr));
-            in           = (const struct in_addr *) hip_cast_sa_addr(addr);
+
+            HIP_IFEL(!(in = (const struct in_addr *) hip_cast_sa_addr(addr)),
+                     -1, "unable to cast address\n");
+
             addr_match   = IPV6_EQ_IPV4(in6, in);
             family_match = 1;
+
         } else if (!mapped && addr->sa_family == AF_INET6) {
             addr_match   = !memcmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
                                    hip_cast_sa_addr(addr),
@@ -346,12 +351,16 @@ int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex)
         if ((n->if_index == ifindex || ifindex == -1) &&
             family_match && addr_match) {
             HIP_DEBUG("Address exist in the list\n");
-            return 1;
+
+            err = 1;
+            goto out_err;
         }
     }
 
     HIP_DEBUG("Address does not exists in the list\n");
-    return 0;
+
+out_err:
+    return err;
 }
 
 /**

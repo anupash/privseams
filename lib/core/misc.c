@@ -1614,6 +1614,8 @@ out_err:
 void *hip_cast_sa_addr(const struct sockaddr *sa)
 {
     if (sa == NULL) {
+        HIP_ERROR("sockaddr is NULL, skipping type conversion\n");
+
         return NULL;
     }
 
@@ -1623,6 +1625,7 @@ void *hip_cast_sa_addr(const struct sockaddr *sa)
     case AF_INET6:
         return &(((struct sockaddr_in6 *) sa)->sin6_addr);
     default:
+        HIP_ERROR("unhandled type: %i, skipping cast\n", sa->sa_family);
         return NULL;
     }
 }
@@ -1935,13 +1938,13 @@ out_err:
 
 /**
  * Gets the state of the bex for a pair of ip addresses.
+ *
  * @param *src_ip       input for finding the correct entries
  * @param *dst_ip       input for finding the correct entries
  * @param *src_hit      output data of the correct entry
  * @param *dst_hit      output data of the correct entry
  * @param *src_lsi      output data of the correct entry
  * @param *dst_lsi      output data of the correct entry
- *
  * @return              the state of the bex if the entry is found
  *                      otherwise returns -1
  */
@@ -2132,9 +2135,7 @@ out_err:
  *
  * @param port_dest     the port number of the socket
  * @param *proto        protocol type
- *
- * @return              1 if it finds the required socket
- *          0 otherwise
+ * @return              1 if it finds the required socket, 0 otherwise
  */
 int hip_get_proto_info(in_port_t port_dest, char *proto)
 {
