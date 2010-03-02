@@ -407,6 +407,8 @@ static int hip_init_handle_functions(void)
 {
     int err = 0;
 
+    HIP_DEBUG("Initialize handle functions.\n");
+
     hip_register_handle_function(HIP_I1, HIP_STATE_UNASSOCIATED, &hip_handle_i1, 0);
     hip_register_handle_function(HIP_I1, HIP_STATE_I1_SENT,      &hip_handle_i1, 0);
     hip_register_handle_function(HIP_I1, HIP_STATE_I2_SENT,      &hip_handle_i1, 0);
