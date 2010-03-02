@@ -489,15 +489,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                                     0,
                                     HIP_FLAG_CONTROL_TRAFFIC_ONLY);
             }
-
-            // Refresh locators stored in DHT
-#ifdef CONFIG_HIP_DHT
-            if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-                /* First remove the old one -samu */
-                hip_dht_remove_current_hdrr();
-                hip_register_to_dht();
-            }
-#endif
         }
 
         /* Workaround for bug id 880 until bug id 589 is implemented.
