@@ -1797,6 +1797,9 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
         newVal = atoi(opt[1]);
     }
 
+    /* Build a HIP message with socket option to get puzzle difficulty. */
+    HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
+
     /* attach the hit into the message */
     err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
                                    sizeof(in6_addr_t));
@@ -1807,8 +1810,6 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
 
     /* obtain the result for the get action */
     if (msg_type == SO_HIP_CONF_PUZZLE_GET) {
-        /* Build a HIP message with socket option to get puzzle difficulty. */
-        HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
         /* Send the message to the daemon. The daemon fills the message. */
         HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
@@ -1831,8 +1832,6 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
             inet_ntop(AF_INET6, &hit, hit_s, INET6_ADDRSTRLEN);
             HIP_INFO("for peer hit: %s\n", hit_s);
         }
-    } else {
-        err = hip_build_user_hdr(msg, msg_type, 0);
     }
 
     /* attach new val for the set action */
