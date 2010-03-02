@@ -881,6 +881,9 @@ int hip_update_init(void)
                                  HIP_STATE_R2_SENT,
                                  &hip_handle_update,
                                  0);
+
+    hip_register_maint_function(&hip_update_maintenance, 0);
+
     return 0;
 }
 
@@ -910,5 +913,30 @@ int hip_update_init_state(struct modular_state *state)
     err = hip_add_state_item(state, update_state, "update");
 
 out_err:
+    return err;
+}
+
+int hip_update_maintenance(void)
+{
+    int err = 0;
+
+    if (hip_wait_addr_changes_to_stabilize &&
+        address_change_time_counter != -1) {
+        if (address_change_time_counter == 0) {
+            address_change_time_counter = -1;
+
+            HIP_DEBUG("Triggering UPDATE\n");
+            err = hip_send_locators_to_all_peers();
+
+            if (err) {
+                HIP_ERROR("Error sending UPDATE\n");
+            }
+        } else {
+            HIP_DEBUG("Delay mobility triggering (count %d)\n",
+                      address_change_time_counter - 1);
+            address_change_time_counter--;
+        }
+    }
+
     return err;
 }

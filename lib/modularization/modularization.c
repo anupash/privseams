@@ -304,15 +304,12 @@ int hip_run_maint_functions(void)
     int            err  = 0;
     hip_ll_node_t *iter = NULL;
 
-    HIP_IFEL(!maintenance_functions,
-             -1,
-             "Error on running maintenance functions.\n");
-
-    while ((iter = hip_ll_iterate(maintenance_functions, iter)) != NULL) {
-        ((struct maint_function*) iter->ptr)->func_ptr();
+    if(maintenance_functions != NULL) {
+        while ((iter = hip_ll_iterate(maintenance_functions, iter)) != NULL) {
+            ((struct maint_function*) iter->ptr)->func_ptr();
+        }
     }
 
-out_err:
     return err;
 }
 

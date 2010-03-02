@@ -84,4 +84,6 @@ int hip_update_init(void);
 
 int hip_update_init_state(struct modular_state *state);
 
+int hip_update_maintenance(void);
+
 #endif /* HIP_HIPD_UPDATE_H */

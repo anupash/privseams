@@ -19,9 +19,7 @@
 
 #include "maintenance.h"
 #include "heartbeat.h"
-
-/* TODO Remove this include, when modularization is finished */
-#include "modules/update/hipd/update.h"
+#include "lib/modularization/modularization.h"
 
 #define FORCE_EXIT_COUNTER_START                5
 
@@ -222,21 +220,7 @@ int hip_periodic_maintenance()
         hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
     }
 
-    if (hip_wait_addr_changes_to_stabilize &&
-        address_change_time_counter != -1) {
-        if (address_change_time_counter == 0) {
-            address_change_time_counter = -1;
-            HIP_DEBUG("Triggering UPDATE\n");
-            err                         = hip_send_locators_to_all_peers();
-            if (err) {
-                HIP_ERROR("Error sending UPDATE\n");
-            }
-        } else {
-            HIP_DEBUG("Delay mobility triggering (count %d)\n",
-                      address_change_time_counter - 1);
-            address_change_time_counter--;
-        }
-    }
+    hip_run_maint_functions();
 
 //#ifdef CONFIG_HIP_UDPRELAY
     /* Clear the expired records from the relay hashtable. */
