@@ -386,16 +386,18 @@ unsigned long hip_relht_size()
  * @brief Clear the expired records from the relay hashtable.
  *
  */
-void hip_relht_maintenance()
+int hip_relht_maintenance()
 {
     if (hiprelay_ht == NULL) {
-        return;
+        return 0;
     }
 
     unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
     ((struct lhash_st *) hiprelay_ht)->down_load = 0;
     hip_ht_doall(hiprelay_ht, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(hip_relht_rec_free_expired));
     ((struct lhash_st *) hiprelay_ht)->down_load = tmp;
+
+    return 0;
 }
 
 void hip_relht_free_all_of_type(const hip_relrec_type_t type)

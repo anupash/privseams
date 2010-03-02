@@ -518,6 +518,9 @@ int hipd_init(int flush_ipsec, int killold)
 
     hip_init_handle_functions();
 
+    hip_register_maint_function(&hip_relht_maintenance, 0);
+    hip_register_maint_function(&hip_registration_maintenance, 0);
+
 #ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
     hip_print_sysinfo();
@@ -960,6 +963,8 @@ void hip_exit(int signal)
     hip_uninit_services();
 
     hip_uninit_handle_functions();
+
+    hip_uninit_maint_functions();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     hip_oppdb_uninit();

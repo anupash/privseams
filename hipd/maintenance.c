@@ -217,10 +217,6 @@ int hip_periodic_maintenance()
 
     hip_run_maint_functions();
 
-    hip_relht_maintenance();
-
-    hip_registration_maintenance();
-
 out_err:
 
     return err;

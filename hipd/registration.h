@@ -53,7 +53,7 @@ void hip_init_services(void);
  * Uninitializes the services. Removes all pending requests.
  */
 void hip_uninit_services(void);
-void hip_registration_maintenance(void);
+int hip_registration_maintenance(void);
 int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status);
 int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime);
 int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime);

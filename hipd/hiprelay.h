@@ -300,7 +300,7 @@ unsigned long hip_relht_size(void);
  * @todo a REG_RESPONSE with zero lifetime should be sent to each client whose
  *       registration is cancelled.
  */
-void hip_relht_maintenance(void);
+int hip_relht_maintenance(void);
 
 /**
  * Allocates a new relay record.
