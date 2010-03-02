@@ -340,10 +340,14 @@ static void hip_send_opp_tcp_i1(hip_ha_t *entry)
  * Sends an I1 packet to the peer. Used internally by hip_send_i1
  * Check hip_send_i1 & hip_send_pkt for the parameters.
  */
-static int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
-                           struct in6_addr *local_addr, struct in6_addr *peer_addr,
-                           in_port_t src_port, in_port_t dst_port, struct hip_common *i1_blind,
-                           hip_ha_t *entry, int retransmit)
+static int hip_send_i1_pkt(struct hip_common *i1,
+                           hip_hit_t *dst_hit,
+                           struct in6_addr *local_addr,
+                           struct in6_addr *peer_addr,
+                           in_port_t src_port,
+                           in_port_t dst_port,
+                           hip_ha_t *entry,
+                           int retransmit)
 {
     int err = 0;
 
@@ -405,7 +409,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
     int err                     = 0;
     hip_list_t *item            = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr;
-    struct hip_common *i1_blind = NULL;
     int i                       = 0;
     struct in6_addr *local_addr = NULL;
     struct in6_addr peer_addr;
@@ -456,13 +459,14 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                  "No preferred IP address for the peer.\n");
 
         local_addr = &entry->our_addr;
-        err        = hip_send_i1_pkt(i1, dst_hit,
-                                     local_addr, &peer_addr,
+        err        = hip_send_i1_pkt(i1,
+                                     dst_hit,
+                                     local_addr,
+                                     &peer_addr,
                                      entry->local_udp_port,
                                      entry->peer_udp_port,
-                                     //(entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                     //(entry->nat_mode ? hip_get_peer_nat_udp_port() : 0),
-                                     i1_blind, entry, 1);
+                                     entry,
+                                     1);
     } else {
         HIP_DEBUG("Number of items in the peer addr list: %d ",
                   ((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items);
@@ -471,11 +475,14 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
             addr = (struct hip_peer_addr_list_item *) list_entry(item);
             ipv6_addr_copy(&peer_addr, &addr->address);
 
-            err  = hip_send_i1_pkt(i1, dst_hit,
-                                   NULL, &peer_addr,
+            err  = hip_send_i1_pkt(i1,
+                                   dst_hit,
+                                   NULL,
+                                   &peer_addr,
                                    entry->local_udp_port,
                                    entry->peer_udp_port,
-                                   i1_blind, entry, 1);
+                                   entry,
+                                   1);
 
             /* Do not bail out on error with shotgun. Some
              * address pairs just might fail. */

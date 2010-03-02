@@ -101,11 +101,6 @@ static int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
     if (id->r1) {
         hip_uninit_r1(id->r1);
     }
-#ifdef CONFIG_HIP_BLIND
-    if (id->blindr1) {
-        hip_uninit_r1(id->blindr1);
-    }
-#endif
 
     if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA && id->private_key) {
         RSA_free(id->private_key);

@@ -306,7 +306,7 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
     struct hip_host_id_entry *hid = NULL;
     int err                       = 0;
 
-    /* Find the proper R1 table, no blind used */
+    /* Find the proper R1 table */
     HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
                    HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO,
                    -1)),

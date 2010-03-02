@@ -9,7 +9,7 @@
  * @author  Anthony D. Joseph
  * @author  Bing Zhou
  * @author  Tobias Heer
- * @author  Laura Takkinen (blind code)
+ * @author  Laura Takkinen
  * @author  Rene Hummen
  * @author  Samu Varjonen
  * @author  Tim Just
