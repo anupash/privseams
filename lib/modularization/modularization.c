@@ -16,11 +16,23 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/state.h"
 
-struct handle_func_entry {
-    int (*handle_func)(const uint32_t packet_type,
-                       const uint32_t ha_state,
-                       struct hip_packet_context *ctx);
-    uint32_t priority;
+enum function_types {
+    HANDLE_FUNCTION,
+    MAINTENANCE_FUNCTION
+};
+
+struct handle_function {
+    enum function_types type;
+    uint32_t            priority;
+    int               (*func_ptr)(const uint32_t packet_type,
+                                  const uint32_t ha_state,
+                                  struct hip_packet_context *ctx);
+};
+
+struct maint_function {
+    enum function_types type;
+    uint32_t            priority;
+    int               (*func_ptr)(void);
 };
 
 /**
@@ -31,7 +43,17 @@ static hip_ll_t *handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
 /**
  * @todo add description
  */
+static hip_ll_t *maintenance_functions;
+
+/**
+ * @todo add description
+ */
 static hip_ll_t *state_init_functions;
+
+
+/******************************************************************************
+ * HANDLE FUNCTIONS                                                           *
+ ******************************************************************************/
 
 /**
  * hip_register_handle_function
@@ -51,13 +73,15 @@ static hip_ll_t *state_init_functions;
  */
 int hip_register_handle_function(const uint32_t packet_type,
                                  const uint32_t ha_state,
-                                 const void *handle_function,
+                                 int (*handle_function)(const uint32_t packet_type,
+                                                        const uint32_t ha_state,
+                                                        struct hip_packet_context *ctx),
                                  const uint32_t priority)
 {
-    int       err, index    = 0;
-    hip_ll_t *new_func_list = NULL;
-    hip_ll_node_t *iter     = NULL;
-    struct handle_func_entry *handle_func = NULL;
+    int err = 0, index = 0;
+    hip_ll_t               *new_func_list = NULL;
+    hip_ll_node_t          *iter          = NULL;
+    struct handle_function *new_entry     = NULL;
 
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
              -1,
@@ -65,6 +89,14 @@ int hip_register_handle_function(const uint32_t packet_type,
     HIP_IFEL(ha_state    > HIP_MAX_HA_STATE,
              -1,
              "Maximum host association state exceeded.\n");
+
+    HIP_IFEL(((new_entry = malloc(sizeof(struct handle_function))) == NULL),
+             -1,
+             "Error on allocating memory for a handle function entry.\n");
+
+    new_entry->type        = HANDLE_FUNCTION;
+    new_entry->priority    = priority;
+    new_entry->func_ptr    = handle_function;
 
     if (!handle_functions[packet_type][ha_state]) {
         HIP_IFEL(((new_func_list = malloc(sizeof(hip_ll_t))) == NULL),
@@ -74,24 +106,22 @@ int hip_register_handle_function(const uint32_t packet_type,
         handle_functions[packet_type][ha_state] = new_func_list;
     }
 
-    HIP_IFEL(((handle_func = malloc(sizeof(struct handle_func_entry))) == NULL),
-             -1,
-             "Error on allocating memory for a linked list.\n");
-
-    handle_func->handle_func = handle_function;
-    handle_func->priority    = priority;
-
-    /* Iterate through handle functions until the desired position is found */
-    while ((iter = hip_ll_iterate(handle_functions[packet_type][ha_state], iter)) != NULL) {
-        if (priority < ((struct handle_func_entry *) iter->ptr)->priority) {
+    /* Iterate through function list until the desired position is found */
+    while ((iter = hip_ll_iterate(handle_functions[packet_type][ha_state],
+                                  iter)) != NULL)
+    {
+        if (priority < ((struct handle_function *) iter->ptr)->priority) {
             break;
         } else {
             index++;
         }
     }
 
-    err = hip_ll_add(handle_functions[packet_type][ha_state], index, handle_func);
-
+    HIP_IFEL(hip_ll_add(handle_functions[packet_type][ha_state],
+                        index,
+                        new_entry),
+             -1,
+             "Error on adding handle function.\n");
 out_err:
     return err;
 }
@@ -130,7 +160,7 @@ int hip_unregister_handle_function(const uint32_t packet_type,
 
     /* Iterate through handle functions until the desired function is found */
     while ((iter = hip_ll_iterate(handle_functions[packet_type][ha_state], iter)) != NULL) {
-        if (handle_function == ((struct handle_func_entry *) iter->ptr)->handle_func) {
+        if (handle_function == ((struct handle_function *) iter->ptr)->func_ptr) {
             hip_ll_del(handle_functions[packet_type][ha_state], index, free);
             break;
         }
@@ -161,7 +191,6 @@ int hip_run_handle_functions(const uint32_t packet_type,
                              struct hip_packet_context *ctx)
 {
     int            err  = 0;
-    hip_ll_t      *list = NULL;
     hip_ll_node_t *iter = NULL;
 
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
@@ -171,12 +200,18 @@ int hip_run_handle_functions(const uint32_t packet_type,
              -1,
              "Maximum host association state exceeded.\n");
 
-    list = handle_functions[packet_type][ha_state];
+    HIP_IFEL(!handle_functions[packet_type][ha_state],
+             -1,
+             "Error on running handle functions.\nPacket type: %d, HA state: %d\n",
+             packet_type,
+             ha_state);
 
-    while ((iter = hip_ll_iterate(list, iter)) != NULL) {
-        ((struct handle_func_entry *) iter->ptr)->handle_func(packet_type,
-                                                              ha_state,
-                                                              ctx);
+    while ((iter = hip_ll_iterate(handle_functions[packet_type][ha_state],
+                                  iter)) != NULL)
+    {
+        ((struct handle_function *) iter->ptr)->func_ptr(packet_type,
+                                                         ha_state,
+                                                         ctx);
     }
 
 out_err:
@@ -202,6 +237,102 @@ void hip_uninit_handle_functions(void)
         }
     }
 }
+
+
+
+/******************************************************************************
+ * MAINTENANCE FUNCTIONS                                                      *
+ ******************************************************************************/
+
+/**
+ * hip_register_maint_function
+ *
+ */
+int hip_register_maint_function(int (*maint_function)(void),
+                                const uint32_t priority)
+{
+    int err = 0, index = 0;
+    hip_ll_t               *new_func_list = NULL;
+    hip_ll_node_t          *iter          = NULL;
+    struct maint_function *new_entry     = NULL;
+
+    HIP_IFEL(((new_entry = malloc(sizeof(struct maint_function))) == NULL),
+             -1,
+             "Error on allocating memory for a handle function entry.\n");
+
+    new_entry->type        = MAINTENANCE_FUNCTION;
+    new_entry->priority    = priority;
+    new_entry->func_ptr    = maint_function;
+
+    if (!maintenance_functions) {
+        HIP_IFEL(((new_func_list = malloc(sizeof(hip_ll_t))) == NULL),
+                 -1,
+                 "Error on allocating memory for a linked list.\n");
+        hip_ll_init(new_func_list);
+        maintenance_functions = new_func_list;
+    }
+
+    /* Iterate through function list until the desired position is found */
+    while ((iter = hip_ll_iterate(maintenance_functions, iter)) != NULL)
+    {
+        if (priority < ((struct maint_function *) iter->ptr)->priority) {
+            break;
+        } else {
+            index++;
+        }
+    }
+
+    HIP_IFEL(hip_ll_add(maintenance_functions,
+                        index,
+                        new_entry),
+             -1,
+             "Error on adding maintenance function.\n");
+out_err:
+    return err;
+}
+
+/**
+ * hip_run_maint_functions
+ *
+ * Run all maintenance functions.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int hip_run_maint_functions(void)
+{
+    int            err  = 0;
+    hip_ll_node_t *iter = NULL;
+
+    HIP_IFEL(!maintenance_functions,
+             -1,
+             "Error on running maintenance functions.\n");
+
+    while ((iter = hip_ll_iterate(maintenance_functions, iter)) != NULL) {
+        ((struct maint_function*) iter->ptr)->func_ptr();
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * hip_uninit_maint_functions
+ *
+ * Free the memory used for storage of maintenance functions.
+ *
+ */
+void hip_uninit_maint_functions(void)
+{
+    if (maintenance_functions) {
+        hip_ll_uninit(maintenance_functions, free);
+        free(maintenance_functions);
+    }
+}
+
+/******************************************************************************
+ * MODULAR STATE                                                              *
+ ******************************************************************************/
 
 /**
  * hip_init_state
