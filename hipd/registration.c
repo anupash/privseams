@@ -78,6 +78,10 @@ void hip_uninit_services()
  * calling @c hip_del_pending_request_by_expiration() until there are no expired
  * pending requests left.
  *
+ * @note This is by no means time critical operation and is not needed to be
+ * done on every maintenance cycle. Once every 10 minutes or so should be enough.
+ * Just for the record, if periodic_maintenance() is ever to be optimized.
+ *
  * An expired pending requests is one that has not been deleted within
  * @c HIP_PENDING_REQUEST_LIFETIME seconds.
  */

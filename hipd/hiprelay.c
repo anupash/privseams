@@ -380,6 +380,12 @@ unsigned long hip_relht_size()
     return ((struct lhash_st *) hiprelay_ht)->num_items;
 }
 
+/**
+ * hip_relht_maintenance
+ *
+ * @brief Clear the expired records from the relay hashtable.
+ *
+ */
 void hip_relht_maintenance()
 {
     if (hiprelay_ht == NULL) {

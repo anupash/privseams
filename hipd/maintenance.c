@@ -215,21 +215,10 @@ int hip_periodic_maintenance()
         }
     }
 
-    if (hip_trigger_update_on_heart_beat_failure &&
-        hip_icmp_interval > 0) {
-        hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
-    }
-
     hip_run_maint_functions();
 
-//#ifdef CONFIG_HIP_UDPRELAY
-    /* Clear the expired records from the relay hashtable. */
     hip_relht_maintenance();
-//#endif
-    /* Clear the expired pending service requests. This is by no means time
-     * critical operation and is not needed to be done on every maintenance
-     * cycle. Once every 10 minutes or so should be enough. Just for the
-     * record, if periodic_maintenance() is ever to be optimized. */
+
     hip_registration_maintenance();
 
 out_err:
