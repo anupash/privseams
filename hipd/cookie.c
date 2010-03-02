@@ -19,7 +19,7 @@
 #include "cookie.h"
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
-#define HIP_DEFAULT_COOKIE_K    10ULL
+#define HIP_DEFAULT_COOKIE_K    1ULL /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
