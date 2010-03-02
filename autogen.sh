@@ -7,11 +7,11 @@ display_dependencies() {
     if test -e /etc/debian_version
         then
         echo "apt-get install automake autoconf libtool gcc g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev libuuid1 libnet-ip-perl libnet-dns-perl libsocket6-perl libio-socket-inet6-perl"
-        echo "Optional: apt-get install pax miredo tla"
+        echo "Optional: apt-get install pax miredo bzr"
     elif test -e /etc/redhat-release
         then
         echo "yum install gcc gcc-c++ openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel rpm-build perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
-        echo "Optional: yum install uuid miredo tla"
+        echo "Optional: yum install uuid miredo bzr"
         echo "If yum does not find a package, try searching 'rpm.pbone.net' or 'rpmfind.net' or install from sources"
     else
         echo -n "Unknown linux system:"
@@ -20,7 +20,7 @@ display_dependencies() {
         echo "autoreconf, automake, autoconf, libtool, gcc, g++, xmlto, doxygen, iproute, netcat6, Socket6, IO::Socket::INET6, Net::IP and Net::DNS modules for perl"
         echo "And the following packages with their development headers:"
         echo "libgtk2.0, openssl, libxml2, iptables, libcap, libsqlite3"
-        echo "Optionally you can install also uuid, miredo, tla"
+        echo "Optionally you can install also uuid, miredo, bzr"
     fi
 }
 
