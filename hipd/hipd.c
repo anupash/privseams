@@ -131,10 +131,6 @@ int hip_wait_addr_changes_to_stabilize       = 1;
 
 int hip_use_opptcp                           = 0; // false
 
-/* the opp tcp */
-
-HIP_HASHTABLE *bex_timestamp_db = NULL;
-
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 {
     struct sockaddr_in6 sock_addr;
