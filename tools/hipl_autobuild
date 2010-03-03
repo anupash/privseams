@@ -47,7 +47,9 @@ test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
 bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR
 
 # Perform a self-update if the autobuild script in the repository has changed.
-if ! cmp -s "$0" "$AUTOBUILD_SCRIPT" ; then
+# Only do this when running as the autobuild user so as not to interfere with
+# manual testing of this script.
+if test $HIPL_AUTOBUILDER && ! cmp -s "$0" "$AUTOBUILD_SCRIPT" ; then
     cp "$AUTOBUILD_SCRIPT" $0
     rm -rf "$CHECKOUT_DIR"
     exec $0
