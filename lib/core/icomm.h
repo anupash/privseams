@@ -146,8 +146,9 @@
  */
 #define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
 #define SO_HIP_IPSEC_ADD_SA                     136
-#define SO_HIP_SET_TCPTIMEOUT_ON                137
-#define SO_HIP_SET_TCPTIMEOUT_OFF               138
+/* 137-138 unused, were SO_HIP_SET_TCPTIMEOUT_ON,
+ *                      SO_HIP_SET_TCPTIMEOUT_OFF
+ */
 #define SO_HIP_SET_NAT_ICE_UDP                  139
 #define HIP_PARAM_INT                           140
 #define SO_HIP_CERT_SPKI_SIGN                   141

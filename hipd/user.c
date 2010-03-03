@@ -238,28 +238,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
     }
     break;
 #endif
-    case SO_HIP_SET_TCPTIMEOUT_ON:
-        HIP_DEBUG("Setting TCP TIMEOUT ON\n");
-        hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
-        HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
-                  hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_ON);
-
-        /* paramters setting to do here */
-        HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
-                 "set new tcptimeout parameters error\n");
-        break;
-
-    case SO_HIP_SET_TCPTIMEOUT_OFF:
-        HIP_DEBUG("Setting TCP TIMEOUT OFF\n");
-        hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_OFF;
-        HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
-                  hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_OFF);
-
-        /* paramters resetting */
-        HIP_IFEL(reset_default_tcptimeout_parameters_value(), -1,
-                 "reset tcptimeout parameters to be default error\n");
-
-        break;
     case SO_HIP_CERT_SPKI_VERIFY:
     {
         HIP_DEBUG("Got an request to verify SPKI cert\n");

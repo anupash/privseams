@@ -109,8 +109,6 @@ extern int hip_icmp_interval;
 
 extern int hip_encrypt_i2_hi;
 
-extern int hip_tcptimeout_status;
-
 extern struct addrinfo *opendht_serving_gateway;
 extern int opendht_serving_gateway_ttl;
 extern int opendht_serving_gateway_port;
