@@ -592,8 +592,8 @@ static int hip_hadb_init_entry(hip_ha_t *entry)
     memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
 
     /* Initialize module states */
-    entry->hip_modular_state = hip_init_state();
-    hip_init_state_items(entry->hip_modular_state);
+    entry->hip_modular_state = lmod_init_state();
+    lmod_init_state_items(entry->hip_modular_state);
     HIP_DEBUG("Modular state initialized.\n");
 
 out_err:
@@ -1176,7 +1176,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
         HIP_FREE(ha->rendezvous_addr);
     }
 
-    hip_free_state(ha->hip_modular_state);
+    lmod_uninit_state(ha->hip_modular_state);
 
     if (ha->locator) {
         free(ha->locator);

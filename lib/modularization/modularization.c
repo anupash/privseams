@@ -14,6 +14,9 @@
 #include "modularization.h"
 #include "lib/core/debug.h"
 
+/**
+ * A generic struct for function pointer.
+ */
 struct function {
     uint32_t priority;
     void    *func_ptr;
@@ -21,69 +24,16 @@ struct function {
 
 
 /**
- * @todo add description
+ * List of initialization functions for the modular state.
+ *
+ * Call lmod_register_state_init_function to add a function to the list and
+ * lmod_init_state_items to initialize all items of a modular state instance.
+ *
  */
 static hip_ll_t *state_init_functions;
 
-hip_ll_t *lmod_register_function(hip_ll_t *list, void *entry, const uint32_t priority)
-{
-    int            index    = 0;
-    hip_ll_t      *new_list = NULL;
-    hip_ll_node_t *iter     = NULL;
-
-    if (list == NULL) {
-        if ((new_list = malloc(sizeof(hip_ll_t))) == NULL) {
-            return NULL;
-        }
-        hip_ll_init(new_list);
-        list = new_list;
-    }
-
-    if (entry == NULL) {
-        return NULL;
-    }
-
-    /* Iterate through function list until the desired position is found */
-    while ((iter = hip_ll_iterate(list, iter)) != NULL)
-    {
-        if (priority < ((struct function *) iter->ptr)->priority) {
-            break;
-        } else {
-            index++;
-        }
-    }
-
-    hip_ll_add(list, index, entry);
-
-    return list;
-}
-
-int lmod_unregister_function(hip_ll_t *list, const void *function)
-{
-    int            index = 0;
-    hip_ll_node_t *iter  = NULL;
-
-    if(list == NULL) {
-        return -1;
-    }
-
-    while ((iter = hip_ll_iterate(list, iter)) != NULL) {
-        if (function == ((struct function *) iter->ptr)->func_ptr) {
-            hip_ll_del(list, index, free);
-            break;
-        }
-        index++;
-    }
-
-    return 0;
-}
-
-/******************************************************************************
- * MODULAR STATE                                                              *
- ******************************************************************************/
-
 /**
- * hip_init_state
+ * lmod_init_state
  *
  * Initializes a new data structure for storage of references to state items.
  * This data structure consists of a pointer set and can be mentioned as global
@@ -92,16 +42,16 @@ int lmod_unregister_function(hip_ll_t *list, const void *function)
  *  @return Success = Pointer to the new data structure
  *          Error   = NULL
  */
-struct modular_state *hip_init_state(void)
+struct modular_state *lmod_init_state(void)
 {
     struct modular_state *state;
 
-    if ((state = malloc(sizeof(struct modular_state))) == NULL) {
+    if (!(state = malloc(sizeof(struct modular_state)))) {
         HIP_ERROR("Error on allocating memory for a modular_state instance.\n");
         return NULL;
     }
 
-    if ((state->item_list = malloc(sizeof(hip_ll_t))) == NULL) {
+    if (!(state->item_list = malloc(sizeof(hip_ll_t)))) {
         HIP_ERROR("Error on allocating memory for a linked list.\n");
         return NULL;
     }
@@ -114,7 +64,7 @@ struct modular_state *hip_init_state(void)
 }
 
 /**
- * hip_register_state_init_function
+ * lmod_register_state_init_function
  *
  * Registers a new state initialization function. These functions are called,
  * when a new host association database entry is created.
@@ -124,7 +74,7 @@ struct modular_state *hip_init_state(void)
  * @return Success = 0
  *         Error   = -1
  */
-int hip_register_state_init_function(void *func)
+int lmod_register_state_init_function(void *func)
 {
     int err = 0;
     hip_ll_t *new_func_list = NULL;
@@ -132,7 +82,7 @@ int hip_register_state_init_function(void *func)
     HIP_IFEL(!func, -1, "Invalid init function provided");
 
     if (!state_init_functions) {
-        HIP_IFEL(((new_func_list = malloc(sizeof(hip_ll_t))) == NULL),
+        HIP_IFEL(!(new_func_list = malloc(sizeof(hip_ll_t))),
                  -1,
                  "Error on allocating memory for a linked list.\n");
         hip_ll_init(new_func_list);
@@ -146,22 +96,22 @@ out_err:
 }
 
 /**
- * hip_init_state_items
+ * lmod_init_state_items
  *
  * Initialize all registered state items. This function is called, when a new
  * host association database entry is created.
  *
- * @note  Call hip_register_state_init_function to add an initialization
+ * @note  Call lmod_register_state_init_function to add an initialization
  *        function.
  *
  * @param *state    Pointer to the modular state data structure.
  */
-void hip_init_state_items(struct modular_state *state)
+void lmod_init_state_items(struct modular_state *state)
 {
     hip_ll_node_t *iter = NULL;
     int (*init_function)(struct modular_state *state) = NULL;
 
-    while ((iter = hip_ll_iterate(state_init_functions, iter)) != NULL) {
+    while ((iter = hip_ll_iterate(state_init_functions, iter))) {
         init_function = iter->ptr;
         init_function(state);
     }
@@ -181,14 +131,14 @@ void hip_init_state_items(struct modular_state *state)
  *  @param      item_name   String for retrieving the state item by name.
  *  @return Success = id (unsigned int) for retrieving the state by number
  *          Error   = -1
- **/
+ */
 int hip_add_state_item(struct modular_state *state,
                        void *state_item,
                        const char *item_name)
 {
 
     /* Check if identifier already exists */
-    if (-1 != hip_get_state_item_id(state, item_name)) {
+    if (-1 != lmod_get_state_item_id(state, item_name)) {
         return -1;
     }
 
@@ -203,7 +153,7 @@ int hip_add_state_item(struct modular_state *state,
 }
 
 /**
- * hip_get_state_item
+ * lmod_get_state_item
  *
  * Returns a void pointer to a state item from the global state set using
  * the string identifier.
@@ -212,18 +162,18 @@ int hip_add_state_item(struct modular_state *state,
  *  @param      item_name   String identifying the state.
  *  @return Success = Pointer to the requested state item (if exists)
  *          Error   = NULL
- **/
-void *hip_get_state_item(struct modular_state *state, const char *item_name)
+ */
+void *lmod_get_state_item(struct modular_state *state, const char *item_name)
 {
     unsigned int state_id;
 
-    state_id = hip_get_state_item_id(state, item_name);
+    state_id = lmod_get_state_item_id(state, item_name);
 
-    return hip_get_state_item_by_id(state, state_id);
+    return lmod_get_state_item_by_id(state, state_id);
 }
 
 /**
- * hip_get_state_item_by_id
+ * lmod_get_state_item_by_id
  *
  * Returns a void pointer to a state item from the global state set using
  * the id (index number).
@@ -232,15 +182,15 @@ void *hip_get_state_item(struct modular_state *state, const char *item_name)
  *  @param      id          Index number of the requested state.
  *  @return Success = Pointer to the requested state item (if exists)
  *          Error   = NULL
- **/
-void *hip_get_state_item_by_id(struct modular_state *state,
-                               const unsigned int id)
+ */
+void *lmod_get_state_item_by_id(struct modular_state *state,
+                                const unsigned int id)
 {
     return hip_ll_get(state->item_list, id);
 }
 
 /**
- * hip_get_state_item_id
+ * lmod_get_state_item_id
  *
  * Retrieve a void pointer to a state variable from the global state set using
  * the state item name.
@@ -249,10 +199,10 @@ void *hip_get_state_item_by_id(struct modular_state *state,
  *  @param      item_name   String identifying a state.
  *  @return Success = id (index number) of the state item as unsigned int
  *          Error   = -1
- **/
-int hip_get_state_item_id(struct modular_state *state, const char *item_name)
+ */
+int lmod_get_state_item_id(struct modular_state *state, const char *item_name)
 {
-    unsigned int      i;
+    unsigned int i;
 
     for (i = 0; i < state->num_items; i++) {
        if (0 == strcmp(item_name, state->item_names[i])) {
@@ -264,15 +214,15 @@ int hip_get_state_item_id(struct modular_state *state, const char *item_name)
 }
 
 /**
- * hip_free_state
+ * lmod_uninit_state
  *
  * Free all allocated memory for storage of the global state set.
  *
  *  @param      state       Pointer to the global state.
- **/
-void hip_free_state(struct modular_state *state)
+ */
+void lmod_uninit_state(struct modular_state *state)
 {
-    unsigned int      i;
+    unsigned int i;
 
     hip_ll_uninit(state->item_list, free);
     free(state->item_list);
@@ -283,4 +233,84 @@ void hip_free_state(struct modular_state *state)
 
     free(state->item_names);
     free(state);
+}
+
+/**
+ * lmod_register_function
+ *
+ * Register a function to the specified list according their priority.
+ *
+ * @param *list Pointer to the list if already exist, NULL otherwise.
+ * @param *entry Pointer to the data structure containing the function pointer.
+ * @param priority Execution priority for the function.
+ *
+ * @note If there already exists a function with the same priority, this
+ *       function will return NULL as error value. Functions need to have unique
+ *       priority values.
+ *
+ * @return Success = Pointer to the function list.
+ *         Error   = NULL
+ */
+hip_ll_t *lmod_register_function(hip_ll_t *list, void *entry, const uint32_t priority)
+{
+    int            index    = 0;
+    hip_ll_t      *new_list = NULL;
+    hip_ll_node_t *iter     = NULL;
+
+    if (!list) {
+        if (!(new_list = malloc(sizeof(hip_ll_t)))) {
+            return NULL;
+        }
+        hip_ll_init(new_list);
+        list = new_list;
+    }
+
+    if (!entry) {
+        return NULL;
+    }
+
+    while ((iter = hip_ll_iterate(list, iter))) {
+        if (priority == ((struct function *) iter->ptr)->priority) {
+            return NULL;
+        } else if (priority < ((struct function *) iter->ptr)->priority) {
+            break;
+        } else {
+            index++;
+        }
+    }
+
+    hip_ll_add(list, index, entry);
+
+    return list;
+}
+
+/**
+ * lmod_unregister_function
+ *
+ * Unregister a function from the specified list.
+ *
+ * @param *list Pointer to the list from which the function should be removed.
+ * @param *function Pointer to the function to remove.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int lmod_unregister_function(hip_ll_t *list, const void *function)
+{
+    int            index = 0;
+    hip_ll_node_t *iter  = NULL;
+
+    if (!list) {
+        return -1;
+    }
+
+    while ((iter = hip_ll_iterate(list, iter))) {
+        if (function == ((struct function *) iter->ptr)->func_ptr) {
+            hip_ll_del(list, index, free);
+            break;
+        }
+        index++;
+    }
+
+    return 0;
 }

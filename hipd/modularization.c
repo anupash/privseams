@@ -65,7 +65,7 @@ int hip_register_handle_function(const uint32_t packet_type,
                                  const uint32_t priority)
 {
     int err = 0;
-    struct handle_function *new_entry     = NULL;
+    struct handle_function *new_entry = NULL;
 
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
              -1,
@@ -74,7 +74,7 @@ int hip_register_handle_function(const uint32_t packet_type,
              -1,
              "Maximum host association state exceeded.\n");
 
-    HIP_IFEL(((new_entry = malloc(sizeof(struct handle_function))) == NULL),
+    HIP_IFEL(!(new_entry = malloc(sizeof(struct handle_function))),
              -1,
              "Error on allocating memory for a handle function entry.\n");
 
@@ -86,7 +86,7 @@ int hip_register_handle_function(const uint32_t packet_type,
             lmod_register_function(hip_handle_functions[packet_type][ha_state],
                                    new_entry,
                                    priority);
-    if (hip_handle_functions[packet_type][ha_state] == NULL) {
+    if (!hip_handle_functions[packet_type][ha_state]) {
         HIP_ERROR("Error on registering a handle function.\n");
         err = -1;
     }
@@ -162,9 +162,9 @@ int hip_run_handle_functions(const uint32_t packet_type,
              packet_type,
              ha_state);
 
-    while ((iter = hip_ll_iterate(hip_handle_functions[packet_type][ha_state],
-                                  iter)) != NULL)
-    {
+    while ((iter =
+           hip_ll_iterate(hip_handle_functions[packet_type][ha_state], iter))) {
+
         ((struct handle_function *) iter->ptr)->func_ptr(packet_type,
                                                          ha_state,
                                                          ctx);
@@ -182,7 +182,7 @@ out_err:
  */
 void hip_uninit_handle_functions(void)
 {
-    int i,j;
+    int i, j;
 
     for (i = 0; i < HIP_MAX_PACKET_TYPE; i++) {
         for (j = 0; j < HIP_MAX_HA_STATE; j++) {
@@ -202,9 +202,9 @@ int hip_register_maint_function(int (*maint_function)(void),
                                 const uint32_t priority)
 {
     int err = 0;
-    struct maint_function *new_entry     = NULL;
+    struct maint_function *new_entry = NULL;
 
-    HIP_IFEL(((new_entry = malloc(sizeof(struct maint_function))) == NULL),
+    HIP_IFEL(!(new_entry = malloc(sizeof(struct maint_function))),
              -1,
              "Error on allocating memory for a handle function entry.\n");
 
@@ -215,7 +215,7 @@ int hip_register_maint_function(int (*maint_function)(void),
     hip_maintenance_functions = lmod_register_function(hip_maintenance_functions,
                                                        new_entry,
                                                        priority);
-    if (hip_maintenance_functions == NULL) {
+    if (!hip_maintenance_functions) {
         HIP_ERROR("Error on registering a maintenance function.\n");
         err = -1;
     }
@@ -237,8 +237,8 @@ int hip_run_maint_functions(void)
     int            err  = 0;
     hip_ll_node_t *iter = NULL;
 
-    if(hip_maintenance_functions != NULL) {
-        while ((iter = hip_ll_iterate(hip_maintenance_functions, iter)) != NULL) {
+    if (hip_maintenance_functions) {
+        while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {
             ((struct maint_function*) iter->ptr)->func_ptr();
         }
     } else {

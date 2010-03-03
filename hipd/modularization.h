@@ -1,3 +1,12 @@
+/**
+ * @file
+ * The header file for hipd/modularization.h
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
+ * @author Tim Just <tim.just@rwth-aachen.de>
+ *
+ */
 #ifndef HIP_HIPD_MODULARIZATION_H
 #define HIP_HIPD_MODULARIZATION_H
 
@@ -24,6 +33,5 @@ int hip_register_maint_function(int (*maint_function)(void),
 int hip_run_maint_functions(void);
 
 void hip_uninit_maint_functions(void);
-
 
 #endif /* HIP_HIPD_MODULARIZATION_H */

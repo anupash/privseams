@@ -150,7 +150,7 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
         /* hip_update_set_new_spi_in_old(ha, esp_info_old_spi,
          *  esp_info_new_spi, 0);*/
 
-        localstate = hip_get_state_item(ha->hip_modular_state, "update");
+        localstate = lmod_get_state_item(ha->hip_modular_state, "update");
         localstate->update_id_out++;
         HIP_DEBUG("outgoing UPDATE ID=%u\n", hip_update_get_out_id(localstate));
         /** @todo Handle this case. */
@@ -287,7 +287,7 @@ static void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
     struct in6_addr *address;
     struct update_state *localstate;
 
-    localstate = hip_get_state_item(ha->hip_modular_state, "update");
+    localstate = lmod_get_state_item(ha->hip_modular_state, "update");
 
     HIP_DEBUG("Addresses to send update:\n");
     list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
@@ -399,7 +399,7 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
 
             break;
         case HIP_UPDATE_ECHO_REQUEST:
-            localstate = hip_get_state_item(ha->hip_modular_state, "update");
+            localstate = lmod_get_state_item(ha->hip_modular_state, "update");
 
             list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
                 dst_addr = (struct in6_addr *) list_entry(item);
@@ -543,7 +543,7 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
 
     // Empty the addresses_to_send_echo_request list before adding the
     // new addresses
-    localstate = hip_get_state_item(ha->hip_modular_state, "update");
+    localstate = lmod_get_state_item(ha->hip_modular_state, "update");
     HIP_DEBUG("hip_get_state_item returned localstate: %p\n", localstate);
     hip_remove_addresses_to_send_echo_request(localstate);
 
@@ -716,7 +716,7 @@ int hip_handle_update(const uint32_t packet_type,
         goto out_err;
     }
 
-    localstate = hip_get_state_item(ctx->hadb_entry->hip_modular_state, "update");
+    localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "update");
 
     /* RFC 5201 Section 6.12: Receiving UPDATE Packets */
     HIP_DEBUG("previous incoming update id=%u\n", localstate->update_id_in);
@@ -870,7 +870,7 @@ out_err:
  */
 int hip_update_init(void)
 {
-    hip_register_state_init_function(&hip_update_init_state);
+    lmod_register_state_init_function(&hip_update_init_state);
 
     hip_register_handle_function(HIP_UPDATE,
                                  HIP_STATE_ESTABLISHED,

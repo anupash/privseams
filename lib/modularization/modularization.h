@@ -38,25 +38,25 @@ struct modular_state {
 hip_ll_t *lmod_register_function(hip_ll_t *list, void *entry, const uint32_t priority);
 int lmod_unregister_function(hip_ll_t *list, const void *function);
 
-int hip_register_state_init_function(void *func);
+int lmod_register_state_init_function(void *func);
 
-void hip_init_state_items(struct modular_state *state);
+void lmod_init_state_items(struct modular_state *state);
 
-struct modular_state *hip_init_state(void);
+struct modular_state *lmod_init_state(void);
 
 int   hip_add_state_item(struct modular_state *state,
                          void *state_item,
                          const char *item_name);
 
-void *hip_get_state_item(struct modular_state *state,
+void *lmod_get_state_item(struct modular_state *state,
                          const char *item_name);
 
-void *hip_get_state_item_by_id(struct modular_state *state,
+void *lmod_get_state_item_by_id(struct modular_state *state,
                                const unsigned int index);
 
-int   hip_get_state_item_id(struct modular_state *state,
+int   lmod_get_state_item_id(struct modular_state *state,
                             const char *item_name);
 
-void  hip_free_state(struct modular_state *state);
+void  lmod_uninit_state(struct modular_state *state);
 
 #endif /* HIP_LIB_MODULARIZATION_MODULARIZATION_H */
