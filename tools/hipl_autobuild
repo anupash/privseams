@@ -37,6 +37,7 @@ compile()
     run_program ./autogen.sh &&
         run_program ./configure --prefix=$(pwd)/local_install $@ &&
         run_program make -j16 &&
+        run_program make -j16 distcheck &&
         run_program make install
 }
 
