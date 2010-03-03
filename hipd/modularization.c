@@ -86,6 +86,10 @@ int hip_register_handle_function(const uint32_t packet_type,
             lmod_register_function(hip_handle_functions[packet_type][ha_state],
                                    new_entry,
                                    priority);
+    if (hip_handle_functions[packet_type][ha_state] == NULL) {
+        HIP_ERROR("Error on registering a handle function.\n");
+        err = -1;
+    }
 out_err:
     return err;
 }
@@ -208,11 +212,13 @@ int hip_register_maint_function(int (*maint_function)(void),
     new_entry->priority    = priority;
     new_entry->func_ptr    = maint_function;
 
-    HIP_IFEL(lmod_register_function(hip_maintenance_functions,
-                                    new_entry,
-                                    priority),
-             -1,
-             "Error on registering a maintenance function.\n");
+    hip_maintenance_functions = lmod_register_function(hip_maintenance_functions,
+                                                       new_entry,
+                                                       priority);
+    if (hip_maintenance_functions == NULL) {
+        HIP_ERROR("Error on registering a maintenance function.\n");
+        err = -1;
+    }
 
 out_err:
     return err;
@@ -235,6 +241,8 @@ int hip_run_maint_functions(void)
         while ((iter = hip_ll_iterate(hip_maintenance_functions, iter)) != NULL) {
             ((struct maint_function*) iter->ptr)->func_ptr();
         }
+    } else {
+        HIP_DEBUG("No maintenance function registered.\n");
     }
 
     return err;
