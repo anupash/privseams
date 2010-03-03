@@ -740,6 +740,9 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
         // Done in hip_handle_esp_info() before
     }
 
+   /* set local UDP port just in case the original communications
+      changed from raw to UDP or vice versa */
+    ha->local_udp_port = sinfo->dst_port;
     /* @todo: a workaround for bug id 944 */
     ha->peer_udp_port = sinfo->src_port;
 
