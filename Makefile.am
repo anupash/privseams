@@ -83,6 +83,7 @@ hipd_hipd_SOURCES = hipd/hipd.c \
                     hipd/nat.c \
                     hipd/init.c \
                     hipd/maintenance.c \
+                    hipd/modularization.c \
                     hipd/accessor.c \
                     hipd/oppipdb.c \
                     hipd/dh.c \

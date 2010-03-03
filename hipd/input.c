@@ -43,8 +43,8 @@
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_light_update.h"
 #include "hipd.h"
-
 #include "oppipdb.h"
+#include "modularization.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"

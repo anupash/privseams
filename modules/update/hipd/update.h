@@ -12,8 +12,8 @@
 #include <stdint.h>
 
 #include "lib/core/builder.h"
-#include "lib/modularization/modularization.h"
 #include "hipd/hadb.h"
+#include "hipd/modularization.h"
 
 struct update_state {
     /** A kludge to get the UPDATE retransmission to work.

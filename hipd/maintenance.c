@@ -18,8 +18,8 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "maintenance.h"
+#include "modularization.h"
 #include "heartbeat.h"
-#include "lib/modularization/modularization.h"
 
 #define FORCE_EXIT_COUNTER_START                5
 
