@@ -1,11 +1,8 @@
 /** @file
- * A header file for util.c.
+ * A header file for lutil.c. Imported from libinet6.
  *
- * @author  ?
- * @version ?
- * @date    17.01.2008
- * @note    Distributed under
- * <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ * Distributed under
+ * <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 #ifndef HIP_LIB_TOOL_LUTIL_H
 #define HIP_LIB_TOOL_LUTIL_H
