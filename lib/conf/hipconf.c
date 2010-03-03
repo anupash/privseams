@@ -2328,42 +2328,6 @@ out_err:
     return err;
 }
 
-/**
- * Handles the hipconf commands where the type is @ tcptimeout. Experimental.
- * Tries to pimp up TCP using /proc file system to tolerate mobility better.
- *
- * @param msg    a pointer to the buffer where the message for hipd will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array (@b 0).
- * @return       zero on success, or negative error value on error.
- */
-static int hip_conf_handle_tcptimeout(struct hip_common *msg,
-                                      int action,
-                                      const char *opt[],
-                                      int optc,
-                                      int send_only)
-{
-    int err = 0, status = 0;
-
-    if (!strcmp("on", opt[0])) {
-        HIP_INFO("tcptimeout set on\n");
-        status = SO_HIP_SET_TCPTIMEOUT_ON;
-    } else if (!strcmp("off", opt[0])) {
-        HIP_INFO("tcptimeout set off\n");
-        status = SO_HIP_SET_TCPTIMEOUT_OFF;
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-        // err = -1;
-    }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
-
-out_err:
-    return err;
-}
-
 static int hip_conf_handle_nsupdate(hip_common_t *msg,
                                     int action,
                                     const char *opt[],
@@ -2710,7 +2674,7 @@ int (*action_handler[])(hip_common_t *,
     NULL,                               /* 22: unused, was TYPE_DHT */
     hip_conf_handle_opptcp,             /* 23: TYPE_OPPTCP */
     hip_conf_handle_trans_order,        /* 24: TYPE_ORDER */
-    hip_conf_handle_tcptimeout,         /* 25: TYPE_TCPTIMEOUT */
+    NULL,                               /* 25: unused, was TYPE_TCPTIMEOUT */
     NULL,                               /* 26: unused, was TYPE_HIPPROXY */
     hip_conf_handle_heartbeat,          /* 27: TYPE_HEARTBEAT */
     NULL,                               /* 28: unused, was TYPE_HI3 */

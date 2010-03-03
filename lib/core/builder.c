@@ -1246,8 +1246,6 @@ char *hip_message_type_name(const uint8_t msg_type)
     case SO_HIP_SET_NAT_NONE:       return "SO_HIP_SET_NAT_NONE";
     case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST: return "SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST";
     case SO_HIP_FW_BEX_DONE:        return "SO_HIP_FW_BEX_DONE";
-    case SO_HIP_SET_TCPTIMEOUT_ON:  return "SO_HIP_SET_TCPTIMEOUT_ON";
-    case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
     case SO_HIP_SET_NAT_ICE_UDP:    return "SO_HIP_SET_NAT_ICE_UDP";
     case SO_HIP_IPSEC_ADD_SA:       return "SO_HIP_IPSEC_ADD_SA";
     case SO_HIP_USERSPACE_IPSEC:    return "SO_HIP_USERSPACE_IPSEC";
