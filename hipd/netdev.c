@@ -34,9 +34,6 @@
 #include "lib/conf/hipconf.h"
 #include "hipd.h"
 
-/* TODO Remove this include, when modularization is finished */
-#include "modules/update/hipd/update.h"
-
 /**
  * We really don't expect more than a handfull of interfaces to be on
  * our white list.
@@ -1172,12 +1169,12 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
  */
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
-    int err            = 0, l = 0, is_add = 0, exists;
-    struct ifinfomsg *ifinfo;     /* link layer specific message */
-    struct ifaddrmsg *ifa;     /* interface address message */
-    struct rtattr *rta = NULL, *tb[IFA_MAX + 1];
+    int err = 0, l = 0, is_add = 0, exists;
     struct sockaddr_storage ss_addr;
-    struct sockaddr *addr;
+    struct ifinfomsg *ifinfo  = NULL;     /* link layer specific message */
+    struct ifaddrmsg *ifa     = NULL;     /* interface address message */
+    struct rtattr *rta        = NULL, *tb[IFA_MAX + 1];
+    struct sockaddr *addr     = NULL;
 
     addr = (struct sockaddr *) &ss_addr;
 
@@ -1268,8 +1265,14 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
             if (hip_wait_addr_changes_to_stabilize) {
                 address_change_time_counter = HIP_ADDRESS_CHANGE_WAIT_INTERVAL;
             } else {
-                err = hip_send_locators_to_all_peers();
+            /**
+             * @todo Re-enable UPDATE triggering from here and remove dependency
+             *       between netdev.c and UPDATE.
+             *
+             * See trac Ticket#11 for details.
+             */
             }
+
             if (err) {
                 goto out_err;
             }
@@ -1331,7 +1334,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
     }
 
 out_err:
-
     return 0;
 }
 
