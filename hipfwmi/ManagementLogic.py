@@ -145,8 +145,8 @@ class ManagementLogic(object):
     def reload_firewall(self):
         """Send a request of reloading the firewall rules."""
         print 'reloadfw'
-	sys.stdout.flush()
-	syslog.syslog("requested firewall reload")
+        sys.stdout.flush()
+        syslog.syslog("requested firewall reload")
 
     def list_rules(self):
         """List current firewall rules.
@@ -171,7 +171,7 @@ class ManagementLogic(object):
         try:
             _write_rules(rulelist, self.fwrulefile)
             syslog.syslog("wrote %d rules" % len(rulelist))
-	    self.reload_firewall()
+            self.reload_firewall()
             return True
         except StandardError, e:
             #import traceback

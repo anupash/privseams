@@ -5,82 +5,22 @@ ACLOCAL_AMFLAGS  = -I m4
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
-EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
-EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
-EXTRA_DIST += hipsock jip
-EXTRA_DIST += test/packaging/create-package.sh
-EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec
-EXTRA_DIST += test/packaging/debbuild
-EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/rh-init.d-dnsproxy
-EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hipfw test/packaging/debian-init.d-dnsproxy
-# The design choices doc is currently depracated
-EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
-EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += doc/doxygen.h doc/Doxyfile
-EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content/hipext.js hipext/src/chrome.manifest
-EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
-EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
-EXTRA_DIST += i3-cfg-PL.xml
-EXTRA_DIST += autogen.sh
+EXTRA_DIST =  doc hipext hipsock jip patches test/packaging test/configs
+EXTRA_DIST += autogen.sh i3-cfg-PL.xml release.version
 EXTRA_DIST += $(wildcard agent/*.h)
-EXTRA_DIST += $(wildcard i3/aeshash/*.h)
-EXTRA_DIST += $(wildcard i3/chord/*.h)
-EXTRA_DIST += $(wildcard i3/i3/*.h)
-EXTRA_DIST += $(wildcard i3/i3_client/*.h)
-EXTRA_DIST += $(wildcard i3/utils/*.h)
-EXTRA_DIST += $(wildcard lib/android/*.{c,h})
-EXTRA_DIST += $(wildcard lib/conf/*.h)
-EXTRA_DIST += $(wildcard lib/core/*.h)
-EXTRA_DIST += $(wildcard lib/dht/*.h)
-EXTRA_DIST += $(wildcard lib/gui/*.h)
-EXTRA_DIST += $(wildcard lib/ipsec/*.h)
-EXTRA_DIST += $(wildcard lib/opphip/*.h)
-EXTRA_DIST += $(wildcard lib/performance/*.h)
-EXTRA_DIST += $(wildcard lib/tool/*.h)
+EXTRA_DIST += $(wildcard i3/*/*.h)
+EXTRA_DIST += $(wildcard lib/android/*.c)
+EXTRA_DIST += $(wildcard lib/*/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard test/*.h)
-EXTRA_DIST += tools/gen-python-starter.sh \
-              $(wildcard tools/*.h)
-EXTRA_DIST += release.version
+EXTRA_DIST += tools/gen-python-starter.sh
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 
 # XX TODO: remove these when maemo building uses spec files
-EXTRA_DIST += test/packaging/create-deb.sh
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/preinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/preinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN/control
-EXTRA_DIST += test/packaging/armel/DEBIAN/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
 EXTRA_DIST += libinet6/include
+
+BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
 
 # Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
 # Gtk requires the images without the hipl prefix hence we use ".." below
@@ -201,9 +141,7 @@ test_hashtest_SOURCES = test/hashtest.c
 
 test_listtest_SOURCES = test/listtest.c
 
-if HIP_DHT
 test_dhtteststub_SOURCES = test/dhtteststub.c
-endif
 
 test_certteststub_SOURCES = test/certteststub.c
 
@@ -213,9 +151,7 @@ test_hc_performance_SOURCES = test/hc_performance.c
 
 test_auth_performance_SOURCES = test/auth_performance.c
 
-if HIP_PERFORMANCE
 test_dh_performance_SOURCES = test/dh_performance.c
-endif
 
 tools_hipconf_SOURCES = tools/hipconftool.c
 
@@ -274,7 +210,6 @@ if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
 
-if HIP_FIREWALL
 firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/conntrack.c \
                          firewall/rule_management.c \
@@ -309,9 +244,7 @@ firewall_hipfw_SOURCES += firewall/midauth.c \
                           firewall/pisa.c \
                           firewall/pisa_cert.c
 endif
-endif # HIP_FIREWALL
 
-if HIP_AGENT
 # NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
 agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
 
@@ -332,14 +265,13 @@ lib_gui_libhipgui_la_SOURCES = lib/gui/hipgui.c \
                                lib/gui/events.c \
                                lib/gui/create.c \
                                lib/gui/dragndrop.c
-endif # HIP_AGENT
 
 lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
 
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hashtable.c \
                                  lib/core/hashtree.c \
-                                 lib/core/utils.c \
+                                 lib/core/prefix.c \
                                  lib/core/certtools.c \
                                  lib/core/linkedlist.c \
                                  lib/core/debug.c \
@@ -361,7 +293,6 @@ lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/nlink.c \
                                  lib/tool/lutil.c
 
-if HIP_PFKEY
 ############################ NOTE ##################################
 #
 # Note: when you upgrade this library, please do the following:
@@ -382,8 +313,6 @@ lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
 AM_YFLAGS = -d -p __libhipsec
 AM_LFLAGS = -P__libhipsec -olex.yy.c
 
-BUILT_SOURCES = lib/ipsec/policy_parse.h
-
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
 #lib_ipsec_la_LDFLAGS = -version-info 0:1:0
@@ -392,31 +321,24 @@ BUILT_SOURCES = lib/ipsec/policy_parse.h
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
 DISTCLEANFILES = lib/ipsec/policy_token.h
 
+if HIP_PFKEY
+BUILT_SOURCES += lib/ipsec/policy_parse.h
 else
-
 # don't use libipsec, but xfrmapi
 lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
-
 endif # HIPPFKEY
 
-if HIP_PERFORMANCE
 lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
-endif
 
-if HIP_OPPORTUNISTIC
 lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
                                    lib/opphip/wrap_db.c
-endif
 
-if HIP_DHT
 # NOTE: this would overwrite AM_CFLAGS, so we need to append it
 lib_dht_libhipdht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
 
 lib_dht_libhipdht_la_SOURCES = lib/dht/libhipdht.c \
                                lib/dht/libhipdhtxml.c
-endif
 
-if HIP_I3
 i3_aeshash_libaes_a_SOURCES = i3/aeshash/aescrypp.c \
                               i3/aeshash/aescrypt.c \
                               i3/aeshash/aeshash.c \
@@ -491,8 +413,6 @@ i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c \
                               i3/utils/inetfns.c \
                               i3/utils/event.c \
                               i3/utils/netwrap_posix.c
-
-endif # HIP_I3
 
 ### *_LDADD ###
 
@@ -770,49 +690,20 @@ tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 
 endif # HAVE_PYTHON
 
-
-
-# TODO directly stating targets seems wrong in Makefile.am - Rene
 doxygen:
-	cd doc && doxygen
-rpm:
-	test/packaging/create-package.sh rpm
+	cd @top_srcdir@/doc && doxygen
 
-olddeb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
+# The olddeb target is for maemo builds only
+bin deb increl olddeb rpm syncrepo:
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
 
-deb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb
+tools/hipdnsproxy: tools/dnsproxy.py
+tools/hipdnskeyparse: tools/parse-key-3.py
+tools/hipdnsproxy tools/hipdnskeyparse:
+	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
 
-bin:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh bin
+autotools-clean: maintainer-clean
+	rm -f aclocal.m4 compile config.* configure depcomp install-sh
+	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
-increl:
-	test/packaging/create-package.sh increl
-
-syncrepo:
-	test/packaging/create-package.sh syncrepo
-
-# Automake does not build the shell scripts without this
-tools/hipdnsproxy:
-	@sh test -x tools/hipdnsproxy || tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
-
-tools/hipdnskeyparse:
-	@sh test -x tools/hipdnskeyparse || tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
-
-# Make sure that dynamically generated scripts are properly generated
-# for "make dist" tarball.
-dist: all-local
-
-# This is necessary, because otherwise parallel builds may fail.
-all: all-local
-
-# This workaround forces automake to generate the scripts on each run. It is
-# necessary because otherwise "make rpm" target has the old $pyexecdir from
-# "make dist" and it refuses to build the scripts again.
-all-local:
-	@rm -f tools/hipdnsproxy
-	@rm -f tools/hipdnskeyparse
-	@sh tools/gen-python-starter.sh $(pyexecdir)/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
-	@sh tools/gen-python-starter.sh $(pyexecdir)/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+.PHONY: bin doxygen increl olddeb syncrepo

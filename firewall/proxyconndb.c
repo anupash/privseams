@@ -16,26 +16,10 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#include <sys/types.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stddef.h>
-#include <sys/socket.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
-#include <netinet/ip_icmp.h>
-
 #include "hipd/hidb.h"
 #include "lib/core/hashtable.h"
 #include "proxyconndb.h"
 
-#ifndef ANDROID_CHANGES
- #include <linux/icmpv6.h>
-#else
- #include <linux/icmp.h>
- #include <linux/coda.h>
- #include "libhipandroid/icmp6.h"
-#endif
 
 static HIP_HASHTABLE *hip_proxy_conn_db = NULL;
 

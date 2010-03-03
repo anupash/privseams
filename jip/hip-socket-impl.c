@@ -17,13 +17,13 @@
 
 #define CHECKINT(oper, message, text) do \
     if ((oper) < 0) { \
-	jclass io_ex_cls = (*env)->FindClass(env, "java/io/IOException"); \
-	if (io_ex_cls != NULL) { \
+        jclass io_ex_cls = (*env)->FindClass(env, "java/io/IOException"); \
+        if (io_ex_cls != NULL) { \
             char buffer[256]; \
             sprintf(buffer, "%s: %s", message, strerror(errno)); \
-	    (*env)->ThrowNew(env, io_ex_cls, buffer); \
+            (*env)->ThrowNew(env, io_ex_cls, buffer); \
             text; \
-	} \
+        } \
     } while (0)
 
 #define CHECK(oper, message) CHECKINT(oper, message, return)
@@ -65,13 +65,13 @@ get_boolean (JNIEnv *env, jobject obj)
     int result = -1;
     jclass cls = (*env)->GetObjectClass(env, obj);
     if (cls != NULL) {
-	jmethodID mid = (*env)->GetMethodID(env, cls, "booleanValue", "()Z");
-	if (mid != NULL) {
-	    result = (*env)->CallBooleanMethod(env, obj, mid);
-	    if ((*env)->ExceptionOccurred(env)) {
-		result = -1;
-	    }
-	}
+        jmethodID mid = (*env)->GetMethodID(env, cls, "booleanValue", "()Z");
+        if (mid != NULL) {
+            result = (*env)->CallBooleanMethod(env, obj, mid);
+            if ((*env)->ExceptionOccurred(env)) {
+                result = -1;
+            }
+        }
     }
     return result;
 }
@@ -82,13 +82,13 @@ get_integer (JNIEnv *env, jobject obj)
     int result = -1;
     jclass cls = (*env)->GetObjectClass(env, obj);
     if (cls != NULL) {
-	jmethodID mid = (*env)->GetMethodID(env, cls, "intValue", "()I");
-	if (mid != NULL) {
-	    result = (*env)->CallIntMethod(env, obj, mid);
-	    if ((*env)->ExceptionOccurred(env)) {
-		result = -1;
-	    }
-	}
+        jmethodID mid = (*env)->GetMethodID(env, cls, "intValue", "()I");
+        if (mid != NULL) {
+            result = (*env)->CallIntMethod(env, obj, mid);
+            if ((*env)->ExceptionOccurred(env)) {
+                result = -1;
+            }
+        }
     }
     return result;
 }
@@ -99,10 +99,10 @@ create_boolean (JNIEnv *env, jboolean value)
     jobject result = NULL;
     jclass cls = (*env)->FindClass(env, "java/lang/Boolean");
     if (cls != NULL) {
-	jmethodID mid = (*env)->GetMethodID(env, cls, "<init>", "(Z)V");
-	if (mid != NULL) {
-	    result = (*env)->NewObject(env, cls, mid, value);
-	}
+        jmethodID mid = (*env)->GetMethodID(env, cls, "<init>", "(Z)V");
+        if (mid != NULL) {
+            result = (*env)->NewObject(env, cls, mid, value);
+        }
     }
     return result;
 }
@@ -113,10 +113,10 @@ create_integer (JNIEnv *env, jint value)
     jobject result = NULL;
     jclass cls = (*env)->FindClass(env, "java/lang/Integer");
     if (cls != NULL) {
-	jmethodID mid = (*env)->GetMethodID(env, cls, "<init>", "(I)V");
-	if (mid != NULL) {
-	    result = (*env)->NewObject(env, cls, mid, value);
-	}
+        jmethodID mid = (*env)->GetMethodID(env, cls, "<init>", "(I)V");
+        if (mid != NULL) {
+            result = (*env)->NewObject(env, cls, mid, value);
+        }
     }
     return result;
 }
@@ -129,11 +129,11 @@ Java_jip_HipSocketImpl_nativeInit (JNIEnv *env, jclass cls)
     fflush(stdout);
     ia_cls = (*env)->FindClass(env, "java/net/InetAddress");
     if (ia_cls == NULL) {
-	return;
+        return;
     }
     ha_cls = (*env)->FindClass(env, "jip/HipAddress");
     if (ha_cls == NULL) {
-	return;
+        return;
     }
     native_fd_id = (*env)->GetFieldID(env, cls, "native_fd", "I");
     localport_id = (*env)->GetFieldID(env, cls, "localport", "I");
@@ -142,7 +142,7 @@ Java_jip_HipSocketImpl_nativeInit (JNIEnv *env, jclass cls)
     dump_id = (*env)->GetMethodID(env, cls, "dump", "()V");
     set_address_id = (*env)->GetMethodID(env, cls, "setAddress", "([B)V");
     ia_get_host_address_id = (*env)->GetMethodID(env, ia_cls, "getHostAddress",
-						 "()Ljava/lang/String;");
+                                                 "()Ljava/lang/String;");
     DEFINE_CONSTANT(IP_MULTICAST_IF);
     DEFINE_CONSTANT(IP_MULTICAST_IF2);
     DEFINE_CONSTANT(IP_MULTICAST_LOOP);
@@ -195,13 +195,13 @@ Java_jip_HipSocketImpl_bind (JNIEnv *env, jobject obj, jobject addr, jint port)
     sock_addr.ship_port = htons(port);
 
     CHECK(bind(fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)),
-	  "Bind failed\n");
+          "Bind failed\n");
     (*env)->SetIntField(env, obj, localport_id, port);
 }
 
 JNIEXPORT void JNICALL
 Java_jip_HipSocketImpl_connect (JNIEnv *env, jobject obj, jobject addr,
-				jint port)
+                                jint port)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     struct sockaddr_hip sock_addr;
@@ -224,7 +224,7 @@ Java_jip_HipSocketImpl_connect (JNIEnv *env, jobject obj, jobject addr,
     sock_addr.ship_port = htons(port);
 
     CHECK(connect(fd, (struct sockaddr *) &sock_addr, sizeof sock_addr),
-	  "Connect failed");
+          "Connect failed");
     (*env)->SetIntField(env, obj, port_id, port);
 }
 
@@ -251,7 +251,7 @@ Java_jip_HipSocketImpl_accept (JNIEnv *env, jobject obj, jobject impl)
     s = accept(fd, (struct sockaddr *) &remote_addr, &remote_len);
     CHECK(s, "Accept failed");
     CHECK(getsockname(s, (struct sockaddr *) &local_addr, &local_len),
-	  "Sockname failed");
+          "Sockname failed");
     (*env)->SetIntField(env, impl, native_fd_id, s);
     (*env)->SetIntField(env, impl, localport_id, ntohs(local_addr.ship_port));
     (*env)->SetIntField(env, impl, port_id, ntohs(remote_addr.ship_port));
@@ -299,64 +299,64 @@ Java_jip_HipSocketImpl_getOption (JNIEnv *env, jobject obj, jint id)
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
     if (id == JAVA_TCP_NODELAY) {
-	int optval;
-	int optlen = sizeof optval;
-	CHECKVAL(getsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &optval, &optlen),
-		 "Get option failed", NULL);
-	if (optval) {
-	    result = create_boolean(env, JNI_TRUE);
-	} else {
-	    result = create_boolean(env, JNI_FALSE);
-	}
+        int optval;
+        int optlen = sizeof optval;
+        CHECKVAL(getsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &optval, &optlen),
+                 "Get option failed", NULL);
+        if (optval) {
+            result = create_boolean(env, JNI_TRUE);
+        } else {
+            result = create_boolean(env, JNI_FALSE);
+        }
     } else if (id == JAVA_SO_TIMEOUT) {
-	struct timeval optval;
-	int optlen = sizeof optval;
-	CHECKVAL(getsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &optval, &optlen),
-		 "Get option failed", NULL);
-	result = create_integer(env, optval.tv_sec * 1000
-				+ optval.tv_usec / 1000);
+        struct timeval optval;
+        int optlen = sizeof optval;
+        CHECKVAL(getsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &optval, &optlen),
+                 "Get option failed", NULL);
+        result = create_integer(env, optval.tv_sec * 1000
+                                + optval.tv_usec / 1000);
     } else {
-	jclass ex_cls = (*env)->FindClass(env, "java/net/SocketException");
-	if (ex_cls != NULL) {
-	    char buffer[256];
-	    sprintf(buffer, "Unrecognized option: %d", id);
-	    (*env)->ThrowNew(env, ex_cls, buffer);
-	}
+        jclass ex_cls = (*env)->FindClass(env, "java/net/SocketException");
+        if (ex_cls != NULL) {
+            char buffer[256];
+            sprintf(buffer, "Unrecognized option: %d", id);
+            (*env)->ThrowNew(env, ex_cls, buffer);
+        }
     }
     return result;
 }
 
 JNIEXPORT void JNICALL
 Java_jip_HipSocketImpl_setOption (JNIEnv *env, jobject obj, jint id,
-				  jobject value)
+                                  jobject value)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     printf("Set option: %d %d\n", fd, id);
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
     if (id == JAVA_TCP_NODELAY) {
-	int optval = get_boolean(env, value);
-	if (optval == -1) {
-	    return;
-	}
-	CHECK(setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof optval),
-	      "Set option failed");
+        int optval = get_boolean(env, value);
+        if (optval == -1) {
+            return;
+        }
+        CHECK(setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof optval),
+              "Set option failed");
     } else if (id == JAVA_SO_TIMEOUT) {
-	int time = get_integer(env, value);
-	struct timeval optval;
-	if (time == -1) {
-	    return;
-	}
-	optval.tv_sec = time / 1000;
-	optval.tv_usec = time % 1000;
-	CHECK(setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &optval, sizeof optval),
-	      "Set option failed");
+        int time = get_integer(env, value);
+        struct timeval optval;
+        if (time == -1) {
+            return;
+        }
+        optval.tv_sec = time / 1000;
+        optval.tv_usec = time % 1000;
+        CHECK(setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &optval, sizeof optval),
+              "Set option failed");
     } else {
-	jclass ex_cls = (*env)->FindClass(env, "java/net/SocketException");
-	if (ex_cls != NULL) {
-	    char buffer[256];
-	    sprintf(buffer, "Unrecognized option: %d", id);
-	    (*env)->ThrowNew(env, ex_cls, buffer);
-	}
+        jclass ex_cls = (*env)->FindClass(env, "java/net/SocketException");
+        if (ex_cls != NULL) {
+            char buffer[256];
+            sprintf(buffer, "Unrecognized option: %d", id);
+            (*env)->ThrowNew(env, ex_cls, buffer);
+        }
     }
 }

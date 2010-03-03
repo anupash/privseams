@@ -83,4 +83,3 @@ cat $STAGING_DIR/$DEVICE_TYPE/dsa_sign | $STATS_DIR/stats.pl 95 value '(\S+)\s+(
 cat $STAGING_DIR/$DEVICE_TYPE/dsa_verify | $STATS_DIR/stats.pl 95 value '(\S+)\s+(ms)' | awk '{if ($1 == "ms") {printf("avg\tstd_dev\tper_sec\n"); printf("%.3f\t%.3f\t%.3f\n", $2, $3, 1000/$2);}}' | tee $RESULTS_DIR/$DEVICE_TYPE/dsa_verify
 cat $STAGING_DIR/$DEVICE_TYPE/ecdsa_sign | $STATS_DIR/stats.pl 95 value '(\S+)\s+(ms)' | awk '{if ($1 == "ms") {printf("avg\tstd_dev\tper_sec\n"); printf("%.3f\t%.3f\t%.3f\n", $2, $3, 1000/$2);}}' | tee $RESULTS_DIR/$DEVICE_TYPE/ecdsa_sign
 cat $STAGING_DIR/$DEVICE_TYPE/ecdsa_verify | $STATS_DIR/stats.pl 95 value '(\S+)\s+(ms)' | awk '{if ($1 == "ms") {printf("avg\tstd_dev\tper_sec\n"); printf("%.3f\t%.3f\t%.3f\n", $2, $3, 1000/$2);}}' | tee $RESULTS_DIR/$DEVICE_TYPE/ecdsa_verify
-

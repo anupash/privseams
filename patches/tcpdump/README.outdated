@@ -85,7 +85,7 @@ UML patch for 2.4.20 with HIP support
 (depracated)
 
 Status: Basically works, Further changes to HIP might require some
-	additional changes in linux/arch/um/*
+        additional changes in linux/arch/um/*
 
 Installation:
 cd hipl

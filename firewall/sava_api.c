@@ -1177,9 +1177,9 @@ int hip_sava_handle_output(hip_fw_context_t *ctx)
         }
 #endif
         if (setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0) {
-            HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
         } else {
-            HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK!\n");
         }
     } else { //IPv4
         iphdr            = (struct ip *) buff;
@@ -1247,9 +1247,9 @@ int hip_sava_handle_output(hip_fw_context_t *ctx)
         }
 #endif
         if (setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-            HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
         } else {
-            HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK!\n");
         }
     }
 #ifdef CONFIG_SAVAH_IP_OPTION
@@ -1262,11 +1262,11 @@ int hip_sava_handle_output(hip_fw_context_t *ctx)
 #endif
     if (ctx->ip_version == 4) {
         if (setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0) {
-            HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
         }
     }     else {
         if (setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &off, sizeof(off)) < 0) {
-            HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+            HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
         }
     }
 #ifdef CONFIG_SAVAH_IP_OPTION
@@ -1480,9 +1480,9 @@ int hip_sava_handle_router_forward(hip_fw_context_t *ctx)
                 }
 #endif
                 if (setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0) {
-                    HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+                    HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
                 } else {
-                    HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+                    HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK!\n");
                 }
             } else { //IPv4
                 dst4->sin_family = AF_INET;
@@ -1532,9 +1532,9 @@ int hip_sava_handle_router_forward(hip_fw_context_t *ctx)
                 }
 #endif
                 if (setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-                    HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+                    HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
                 } else {
-                    HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+                    HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK!\n");
                 }
             }
 #ifdef CONFIG_SAVAH_IP_OPTION
@@ -1561,11 +1561,11 @@ int hip_sava_handle_router_forward(hip_fw_context_t *ctx)
             }
             if (ctx->ip_version == 4) {
                 if (setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0) {
-                    HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+                    HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
                 }
             } else {
                 if (setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &off, sizeof(off)) < 0) {
-                    HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+                    HIP_DEBUG("setsockopt IP_HDRINCL ERROR!\n");
                 }
             }
         } else {

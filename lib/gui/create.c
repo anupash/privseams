@@ -368,7 +368,7 @@ static int _create_status_icon(void)
     /* When user right clicks status icon. */
     g_signal_connect(status_icon, "popup-menu", G_CALLBACK(e_menu_status_icon), (gpointer) "popup-menu");
     /* When user double clicks status icon. */
-//	g_signal_connect(status_icon, "activate", G_CALLBACK(e_button), (gpointer)IDB_SYSTRAY);
+//      g_signal_connect(status_icon, "activate", G_CALLBACK(e_button), (gpointer)IDB_SYSTRAY);
 
     /* Create menu for status icon. */
     w     = gtk_menu_new();
@@ -443,7 +443,7 @@ static int _create_remote_list(GtkWidget *parent)
 
     list   = gtk_tree_view_new();
     /* This signal occurs when user double clicks item in list. */
-//	g_signal_connect(list, "row-activated", G_CALLBACK(e_row_activated), (gpointer)"remote-hit-list");
+//      g_signal_connect(list, "row-activated", G_CALLBACK(e_row_activated), (gpointer)"remote-hit-list");
     /* Check when user changes selection in list. */
     g_signal_connect(list, "cursor-changed", G_CALLBACK(e_cursor_changed), (gpointer) "remote-hit-list");
     /* This could be used to example popup a menu when user click right mouse button. */
@@ -575,7 +575,7 @@ static int _create_menubar(GtkWidget *parent)
     iconw = gtk_image_new_from_stock(GTK_STOCK_PROPERTIES, GTK_ICON_SIZE_MENU);
     gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
     gtk_menu_shell_append(GTK_MENU_SHELL(w2), label);
-//	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
+//      g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
     gtk_widget_show(GTK_WIDGET(label));
 
     /* Submenu for locals. */
@@ -913,7 +913,7 @@ int create_content_nhdlg(void)
     gtk_box_pack_start(GTK_BOX(vb2), hb, FALSE, FALSE, 1);
     gtk_widget_show(GTK_WIDGET(hb));
 
-/*	w = gtk_label_new(lang_get("nhdlg-url"));
+/*      w = gtk_label_new(lang_get("nhdlg-url"));
  *      gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
  *      gtk_widget_show(GTK_WIDGET(w));
  *      w = gtk_entry_new();
@@ -925,7 +925,7 @@ int create_content_nhdlg(void)
  *      widget_set(ID_NH_URL, w);
  */
 
-/*	w = gtk_label_new(lang_get("nhdlg-port"));
+/*      w = gtk_label_new(lang_get("nhdlg-port"));
  *      gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
  *      gtk_widget_show(GTK_WIDGET(w));
  *      w = gtk_entry_new();

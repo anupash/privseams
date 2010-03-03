@@ -14,6 +14,8 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <netinet/icmp6.h>
+
 #ifdef HAVE_CONFIG_H
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -356,7 +358,7 @@ static int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     // if hitr is hashed null hit, send it as null on the wire
-    if  (hit_is_opportunistic_hashed_hit(&i1->hitr)) {
+    if  (hit_is_opportunistic_hit(&i1->hitr)) {
         ipv6_addr_copy(&i1->hitr, &in6addr_any);
     }
 
@@ -403,7 +405,7 @@ static int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
 
     /*send the TCP SYN_i1 packet*/
     if (hip_get_opportunistic_tcp_status() &&
-        hit_is_opportunistic_hashed_hit(dst_hit)) {
+        hit_is_opportunistic_hit(dst_hit)) {
         /* Ensure that I1 gets first to destination */
         usleep(50);
         hip_send_opp_tcp_i1(entry);
@@ -832,7 +834,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* It should not be null hit, null hit has been replaced by real local
      * hit. */
-    HIP_ASSERT(!hit_is_opportunistic_hashed_hit(&i1->hitr));
+    HIP_ASSERT(!hit_is_opportunistic_hit(&i1->hitr));
 #endif
 
     /* Case: I ----->IPv4---> RVS ---IPv6---> R */
@@ -1430,7 +1432,7 @@ int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_
 int hip_send_icmp(int sockfd, hip_ha_t *entry)
 {
     int err                = 0, i = 0, identifier = 0;
-    struct icmp6hdr *icmph = NULL;
+    struct icmp6_hdr *icmph = NULL;
     struct sockaddr_in6 dst6;
     u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
     u_char *icmp_pkt       = NULL;
@@ -1475,13 +1477,13 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry)
     dst6.sin6_flowinfo      = 0;
 
     /* build icmp header */
-    icmph                   = (struct icmp6hdr *) (void *) icmp_pkt;
-    icmph->icmp6_type       = ICMPV6_ECHO_REQUEST;
+    icmph                   = (struct icmp6_hdr *) (void *) icmp_pkt;
+    icmph->icmp6_type       = ICMP6_ECHO_REQUEST;
     icmph->icmp6_code       = 0;
     entry->heartbeats_sent++;
 
-    icmph->icmp6_sequence   = htons(entry->heartbeats_sent);
-    icmph->icmp6_identifier = identifier;
+    icmph->icmp6_seq        = htons(entry->heartbeats_sent);
+    icmph->icmp6_id         = identifier;
 
     gettimeofday(&tval, NULL);
 
@@ -1491,7 +1493,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry)
 
     /* put the icmp packet to the io vector struct for the msghdr */
     iov[0].iov_base     = icmp_pkt;
-    iov[0].iov_len      = sizeof(struct icmp6hdr) + sizeof(struct timeval);
+    iov[0].iov_len      = sizeof(struct icmp6_hdr) + sizeof(struct timeval);
 
     /* build the msghdr for the sendmsg, put ancillary data also*/
     mhdr.msg_name       = &dst6;

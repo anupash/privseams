@@ -1,3 +1,22 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * This file contains functionality to lower the privileges (or
+ * capabilities) of agent, hipd and hipfw. It is important to restrict
+ * the damage of a exploit to the software. The code is Linux
+ * specific.
+ *
+ * The capability code has been problematic with valgrind, the memory leak
+ * detector. If you experience problems with valgrind, you can disable
+ * capability code with ./configure --disable-privsep && make clean all
+ *
+ * @brief Functionality to lower the privileges of a daemon
+ *
+ * @author Miika Komu <miika@iki.fi>
+ */
+
 #define _BSD_SOURCE
 
 #ifdef HAVE_CONFIG_H
@@ -31,6 +50,12 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
 #define USER_HIPD "hipd"
 #endif /* CONFIG_HIP_PRIVSEP */
 
+/**
+ * map a user name such as "nobody" to the corresponding UID number
+ *
+ * @param the name to map
+ * @return the UID or -1 on error
+ */
 int hip_user_to_uid(char *name)
 {
     int uid            = -1;
@@ -63,8 +88,11 @@ int hip_user_to_uid(char *name)
 
 #define _LINUX_CAPABILITY_VERSION_HIPL  0x19980330
 
-/*
- * Note: this function does not go well with valgrind
+/**
+ * lower the privileges of the running process
+ *
+ * @param run_as_sudo
+ * @return
  */
 int hip_set_lowcapability(int run_as_sudo)
 {
@@ -72,8 +100,6 @@ int hip_set_lowcapability(int run_as_sudo)
 
 #ifdef CONFIG_HIP_PRIVSEP
     uid_t uid;
-    //struct __user_cap_header_struct header;
-    //struct __user_cap_data_struct data;
     struct __user_cap_header_struct header;
     struct __user_cap_data_struct data;
 
@@ -99,9 +125,6 @@ int hip_set_lowcapability(int run_as_sudo)
              "error while retrieving capabilities through capget()\n");
     HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
               data.effective, data.permitted, data.inheritable);
-
-    //ruid=nobody_pswd->pw_uid;
-    //euid=nobody_pswd->pw_uid;
 
     HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
               getuid(), geteuid());
@@ -140,8 +163,12 @@ out_err:
 
 #else /* ! ALTSEP */
 
-/*
- * Note: this function does not go well with valgrind
+/**
+ * Lower the privileges of the currently running process.
+ *
+ * @param run_as_sudo 1 if the process was started with "sudo" or
+ *                    0 otherwise
+ * @return zero on success and negative on error
  */
 int hip_set_lowcapability(int run_as_sudo)
 {

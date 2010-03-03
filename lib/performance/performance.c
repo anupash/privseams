@@ -27,7 +27,7 @@ int hip_perf_enabled()
  * Create a set of performance slots. Each performance measurement type needs
  * a slot. This is the first step when starting measurements.
  *
- * \author	Tobias Heer
+ * \author      Tobias Heer
  *
  * \param num Number of distinct sets to create.
  * \return A pointer to the performance set.
@@ -72,7 +72,7 @@ perf_set_t *hip_perf_create(int num)
  * \brief Set the filename for an performance slot..
  *
  * Assigns a filename to each performance measurement slot.
- * \author	Tobias Heer
+ * \author      Tobias Heer
  *
  * \param perf_set The respective performance measurement created by hip_perf_create.
  * \see hip_perf_create
@@ -99,7 +99,7 @@ out_err:
  * \brief Open the files for result output.
  *
  * Open the files for a specific perf set.
- * \author	Tobias Heer
+ * \author      Tobias Heer
  *
  * \see hip_perf_create
  * \note Filenames must have been set by hip_perf_set_name before calling this function.
@@ -132,7 +132,7 @@ out_err:
  *
  * Start taking the time for a perf set slot. Slots can overlap but should not
  * write to disk while another slot is active.
- * \author	Tobias Heer
+ * \author      Tobias Heer
  *
  * \see hip_perf_create
  * \param perf_set The respective performance measurement created by hip_perf_create.
@@ -152,7 +152,7 @@ void hip_perf_start_benchmark(perf_set_t *perf_set, int slot)
  *
  * Stop taking the time for a perf set slot. Slots can overlap but should not
  * write to disk while another slot is active.
- * \author	Tobias Heer
+ * \author      Tobias Heer
  *
  * \note This function only writes results to the memory. For disk writes you
  * need to run hip_perf_write_benchmark.
@@ -180,7 +180,7 @@ void hip_perf_stop_benchmark(perf_set_t *perf_set, int slot)
  * \brief Write the benchmark results to the files.
  *
  * Save the benchmark results to the respective files.
- * \author	Tobias Heer
+ * \author      Tobias Heer
  *
  * \note Do not use this functions while other benchmarks are in progress. It may disturb the measurements.
  *
@@ -218,7 +218,7 @@ out_err:
  * \brief Close the result files.
  *
  * Close the result files before exiting.
- * \author	Tobias Heer
+ * \author      Tobias Heer
  *
  * \note This function does not free the memory of perf_set.
  *
@@ -250,7 +250,7 @@ int hip_perf_close(perf_set_t *perf_set)
  *
  * Deallocate memory of the given performance set, including each member of
  * the perf_set_t data structure.
- * \author	Dongsu Park
+ * \author      Dongsu Park
  *
  * \see hip_perf_close
  *

@@ -24,8 +24,8 @@ import java.net.UnknownHostException;
 public class HipAddress {
 
     static {
-	System.loadLibrary("jip");
-	nativeInit();
+        System.loadLibrary("jip");
+        nativeInit();
     }
 
     private byte[] address = new byte[16];
@@ -36,7 +36,7 @@ public class HipAddress {
      * should suffice.
      */
     private HipAddress (byte[] address) {
-	this.address = address;
+        this.address = address;
     }
 
     private native static void nativeInit ();
@@ -59,10 +59,10 @@ public class HipAddress {
      * @return an endpoint for <code>host</code>
      */
     public static HipAddress getByName (String host) {
-	HipAddress ret[] = getAllByName(host);
-	if (ret.length == 0)
-	    return null;
-	return ret[0];
+        HipAddress ret[] = getAllByName(host);
+        if (ret.length == 0)
+            return null;
+        return ret[0];
     }
 
     /**
@@ -79,7 +79,7 @@ public class HipAddress {
      * @return an array of endpoints for <code>addr</code>
      */
     public static HipAddress[] getAllByAddress (InetAddress addr) {
-	return getAllByName(addr.getHostName());
+        return getAllByName(addr.getHostName());
     }
 
     /**
@@ -96,10 +96,10 @@ public class HipAddress {
      * @return an endpoint for <code>addr</code>
      */
     public static HipAddress getByAddress (InetAddress addr) {
-	HipAddress ret[] = getAllByAddress(addr);
-	if (ret.length == 0)
-	    return null;
-	return ret[0];
+        HipAddress ret[] = getAllByAddress(addr);
+        if (ret.length == 0)
+            return null;
+        return ret[0];
     }
 
     /**

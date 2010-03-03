@@ -1,6 +1,6 @@
-/*	$NetBSD: pfkey.c,v 1.13.4.2 2007/10/15 16:05:22 vanhu Exp $	*/
+/*      $NetBSD: pfkey.c,v 1.13.4.2 2007/10/15 16:05:22 vanhu Exp $     */
 
-/*	$KAME: pfkey.c,v 1.47 2003/10/02 19:52:12 itojun Exp $	*/
+/*      $KAME: pfkey.c,v 1.47 2003/10/02 19:52:12 itojun Exp $  */
 
 /*
  * Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.
@@ -30,6 +30,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/* required for caddr_t */
+#define _BSD_SOURCE
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -208,8 +211,8 @@ struct sadb_supported *sup;
  * augument, and only calls to ipsec_check_keylen2();
  * keylen is the unit of bit.
  * OUT:
- *	-1: invalid.
- *	 0: valid.
+ *      -1: invalid.
+ *       0: valid.
  */
 int ipsec_check_keylen(supported, alg_id, keylen)
 u_int supported;
@@ -239,8 +242,8 @@ u_int keylen;
  * satype is one of satype defined at pfkeyv2.h.
  * keylen is the unit of bit.
  * OUT:
- *	-1: invalid.
- *	 0: valid.
+ *      -1: invalid.
+ *       0: valid.
  */
 int ipsec_check_keylen2(satype, alg_id, keylen)
 u_int satype;
@@ -270,8 +273,8 @@ u_int keylen;
  * satype is one of satype defined at pfkeyv2.h.
  * keylen is the unit of bit.
  * OUT:
- *	-1: invalid.
- *	 0: valid.
+ *      -1: invalid.
+ *       0: valid.
  */
 int ipsec_get_keylen(supported, alg_id, alg0)
 u_int supported, alg_id;
@@ -370,8 +373,8 @@ u_int type;
 /*
  * sending SADB_GETSPI message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_getspi(so, satype, mode, src, dst, min, max, reqid, seq)
 int so;
@@ -499,8 +502,8 @@ u_int32_t min, max, reqid, seq;
  * sending SADB_UPDATE message to the kernel.
  * The length of key material is a_keylen + e_keylen.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_update2(sa_parms)
 struct pfkey_send_sa_args *sa_parms;
@@ -520,8 +523,8 @@ struct pfkey_send_sa_args *sa_parms;
  * sending SADB_ADD message to the kernel.
  * The length of key material is a_keylen + e_keylen.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_add2(sa_parms)
 struct pfkey_send_sa_args *sa_parms;
@@ -539,8 +542,8 @@ struct pfkey_send_sa_args *sa_parms;
 /*
  * sending SADB_DELETE message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_delete(so, satype, mode, src, dst, spi)
 int so;
@@ -562,8 +565,8 @@ u_int32_t spi;
  * Solaris).
  *
  * OUT:
- *	positive: success and return length sent
- *	-1	: error occured, and set errno
+ *      positive: success and return length sent
+ *      -1      : error occured, and set errno
  */
 /*ARGSUSED*/
 int pfkey_send_delete_all(so, satype, mode, src, dst)
@@ -645,8 +648,8 @@ struct sockaddr *src, *dst;
 /*
  * sending SADB_GET message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_get(so, satype, mode, src, dst, spi)
 int so;
@@ -665,8 +668,8 @@ u_int32_t spi;
 /*
  * sending SADB_REGISTER message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_register(so, satype)
 int so;
@@ -707,8 +710,8 @@ u_int satype;
  * receiving SADB_REGISTER message from the kernel, and copy buffer for
  * sadb_supported returned into ipsec_supported.
  * OUT:
- *	 0: success and return length sent.
- *	-1: error occured, and set errno.
+ *       0: success and return length sent.
+ *      -1: error occured, and set errno.
  */
 int pfkey_recv_register(so)
 int so;
@@ -747,10 +750,10 @@ int so;
  * sadb_supported returned into ipsec_supported.
  * NOTE: sadb_msg_len must be host order.
  * IN:
- *	tlen: msg length, it's to makeing sure.
+ *      tlen: msg length, it's to makeing sure.
  * OUT:
- *	 0: success and return length sent.
- *	-1: error occured, and set errno.
+ *       0: success and return length sent.
+ *      -1: error occured, and set errno.
  */
 int pfkey_set_supported(msg, tlen)
 struct sadb_msg *msg;
@@ -813,8 +816,8 @@ int tlen;
 /*
  * sending SADB_FLUSH message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_flush(so, satype)
 int so;
@@ -832,8 +835,8 @@ u_int satype;
 /*
  * sending SADB_DUMP message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_dump(so, satype)
 int so;
@@ -852,13 +855,13 @@ u_int satype;
  * sending SADB_X_PROMISC message to the kernel.
  * NOTE that this function handles promisc mode toggle only.
  * IN:
- *	flag:	set promisc off if zero, set promisc on if non-zero.
+ *      flag:   set promisc off if zero, set promisc on if non-zero.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
- *	0     : error occured, and set errno.
- *	others: a pointer to new allocated buffer in which supported
- *	        algorithms is.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
+ *      0     : error occured, and set errno.
+ *      others: a pointer to new allocated buffer in which supported
+ *              algorithms is.
  */
 int pfkey_send_promisc_toggle(so, flag)
 int so;
@@ -1035,8 +1038,8 @@ u_int32_t spid;
 /*
  * sending SADB_X_SPDGET message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_spdget(so, spid)
 int so;
@@ -1054,8 +1057,8 @@ u_int32_t spid;
 /*
  * sending SADB_X_SPDSETIDX message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_spdsetidx(so, src, prefs, dst, prefd, proto, policy, policylen, seq)
 int so;
@@ -1085,8 +1088,8 @@ u_int32_t seq;
 /*
  * sending SADB_SPDFLUSH message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_spdflush(so)
 int so;
@@ -1103,8 +1106,8 @@ int so;
 /*
  * sending SADB_SPDDUMP message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_spddump(so)
 int so;
@@ -1123,8 +1126,8 @@ int so;
 /*
  * sending SADB_X_MIGRATE message to the kernel.
  * OUT:
- *	positive: success and return length sent.
- *	-1	: error occured, and set errno.
+ *      positive: success and return length sent.
+ *      -1      : error occured, and set errno.
  */
 int pfkey_send_migrate(so, src, prefs, dst, prefd, proto, policy, policylen, seq)
 int so;
@@ -1788,8 +1791,8 @@ u_int32_t spid;
 /*
  * open a socket.
  * OUT:
- *	-1: fail.
- *	others : success and return value of socket.
+ *      -1: fail.
+ *      others : success and return value of socket.
  */
 int pfkey_open()
 {
@@ -1820,8 +1823,8 @@ int pfkey_open()
 /*
  * close a socket.
  * OUT:
- *	 0: success.
- *	-1: fail.
+ *       0: success.
+ *      -1: fail.
  */
 void pfkey_close(so)
 int so;
@@ -1836,8 +1839,8 @@ int so;
  * receive sadb_msg data, and return pointer to new buffer allocated.
  * Must free this buffer later.
  * OUT:
- *	NULL	: error occured.
- *	others	: a pointer to sadb_msg structure.
+ *      NULL    : error occured.
+ *      others  : a pointer to sadb_msg structure.
  *
  * XXX should be rewritten to pass length explicitly
  */
@@ -1897,8 +1900,8 @@ int so;
 /*
  * send message to a socket.
  * OUT:
- *	 others: success and return length sent.
- *	-1     : fail.
+ *       others: success and return length sent.
+ *      -1     : fail.
  */
 int pfkey_send(so, msg, len)
 int so;
@@ -1920,11 +1923,11 @@ int len;
  */
 /*
  * set the pointer to each header in this message buffer.
- * IN:	msg: pointer to message buffer.
- *	mhp: pointer to the buffer initialized like below:
- *		caddr_t mhp[SADB_EXT_MAX + 1];
- * OUT:	-1: invalid.
- *	 0: valid.
+ * IN:  msg: pointer to message buffer.
+ *      mhp: pointer to the buffer initialized like below:
+ *              caddr_t mhp[SADB_EXT_MAX + 1];
+ * OUT: -1: invalid.
+ *       0: valid.
  *
  * XXX should be rewritten to obtain length explicitly
  */
@@ -2031,13 +2034,13 @@ caddr_t *mhp;
 /*
  * check basic usage for sadb_msg,
  * NOTE: This routine is derived from netkey/key.c in KAME.
- * IN:	msg: pointer to message buffer.
- *	mhp: pointer to the buffer initialized like below:
+ * IN:  msg: pointer to message buffer.
+ *      mhp: pointer to the buffer initialized like below:
  *
- *		caddr_t mhp[SADB_EXT_MAX + 1];
+ *              caddr_t mhp[SADB_EXT_MAX + 1];
  *
- * OUT:	-1: invalid.
- *	 0: valid.
+ * OUT: -1: invalid.
+ *       0: valid.
  */
 int pfkey_check(mhp)
 caddr_t * mhp;

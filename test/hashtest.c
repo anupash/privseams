@@ -193,8 +193,8 @@ void hip_socketdb_dump(void)
                   " src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
                   data->pid, data->orig_socket);
     }
-//		}
-//	}
+//              }
+//      }
     //HIP_UNLOCK_HT(socketdb);
     HIP_DEBUG("end socketdb dump\n");
 }

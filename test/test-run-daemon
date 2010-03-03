@@ -5,7 +5,7 @@
 
 seq 1 100|while read n
 do
-	echo "** SEQ $n ***"
-	/home/mkomu/projects/hipl/test/hipsetup -s chekov &
-	sleep 70
+        echo "** SEQ $n ***"
+        /home/mkomu/projects/hipl/test/hipsetup -s chekov &
+        sleep 70
 done

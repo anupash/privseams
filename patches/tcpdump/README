@@ -17,4 +17,3 @@
    "-vv" prints the HIP header and parameter names
    "-vvv" prints the HIP header and parameter names
    and also the contents of the parameters
-

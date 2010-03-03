@@ -108,20 +108,20 @@ AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 # Try to automatically detect GTK if not disabled or enabled by user
 PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.10.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
 if test x"$ac_cv_use_agent" = x"no"; then
-	PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
-	if test x"$ac_cv_use_agent" = x"yes"; then
-		AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
-	fi
+        PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
+        if test x"$ac_cv_use_agent" = x"yes"; then
+                AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
+        fi
 fi
 
 AC_ARG_ENABLE(agent,
               AC_HELP_STRING([--enable-agent],
-              [HIP user agent]),
+              [HIP enable user agent (default is YES)]),
               [ac_cv_use_agent=$enableval],)
 AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
-	AC_DEFINE(CONFIG_HIP_AGENT)
+        AC_DEFINE(CONFIG_HIP_AGENT)
     AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
         AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3-dev not found))
 fi
@@ -202,12 +202,13 @@ AC_ARG_ENABLE(maemo,
              AC_HELP_STRING([--enable-maemo],
                             [Maemo (default is NO)]),
              [ac_cv_use_maemo=$enableval \
-	      ac_cv_use_altsep=yes \
+              ac_cv_use_altsep=yes \
               ac_cv_use_i3=no], [ac_cv_use_maemo=no])
 AC_CACHE_CHECK([whether to use Maemo],
                [ac_cv_use_maemo], [ac_cv_use_maemo=no])
 if test x"$ac_cv_use_maemo" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_MAEMO)
+        AC_SUBST(MAEMO_CFLAGS, "-O2 -g -fgnu89-inline")
         AC_SUBST(MAEMO_CPPFLAGS, "-I/usr/include/libipq/")
         AH_TEMPLATE(CONFIG_HIP_MAEMO, [Defined to 1 if maemo build is enabled.])
 fi
@@ -217,7 +218,7 @@ AC_ARG_ENABLE(openwrt,
              AC_HELP_STRING([--enable-openwrt],
                             [OpenWRT (default is NO)]),
              [ac_cv_use_openwrt=$enableval \
-	      ac_cv_use_altsep=yes], [ac_cv_use_openwrt=no])
+              ac_cv_use_altsep=yes], [ac_cv_use_openwrt=no])
 AC_CACHE_CHECK([whether to use OpenWRT],
                [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
 if test x"$ac_cv_use_openwrt" = x"yes"; then
@@ -253,11 +254,11 @@ AM_CONDITIONAL(HIP_UUIDLIB, test "$ac_has_uuid_lib" = "1")
 if test x"$ac_cv_use_i3" != x"no"; then
 AC_ARG_ENABLE(i3,
               AC_HELP_STRING([--enable-i3],
-              [HIP i3  (default is YES)]),
+              [HIP i3  (default is NO)]),
               [ac_cv_use_i3=$enableval],)
 fi
 AC_CACHE_CHECK([whether to use i3],
-               [ac_cv_use_i3], [ac_cv_use_i3=yes])
+               [ac_cv_use_i3], [ac_cv_use_i3=no])
 if test x"$ac_cv_use_i3" = x"yes"; then
         AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
         AC_CHECK_LIB(pthread, pthread_create,, AC_MSG_ERROR(libpthread not found))
@@ -275,9 +276,9 @@ AC_ARG_ENABLE(privsep,
 AC_CACHE_CHECK([whether to use privsep],
                [ac_cv_use_privsep], [ac_cv_use_privsep=yes])
 if test x"$ac_cv_use_privsep" = x"yes"; then
-	if test x"$ac_cv_use_altsep" != x"yes"; then
-		AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
-	fi
+        if test x"$ac_cv_use_altsep" != x"yes"; then
+                AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
+        fi
         AC_DEFINE(CONFIG_HIP_PRIVSEP)
         AH_TEMPLATE(CONFIG_HIP_PRIVSEP, [Defined to 1 if privilege separation is enabled.])
 fi
@@ -427,7 +428,7 @@ AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
 # Set default AM_CFLAGS for the complete project.
 # -funit-at-a-time can be removed when libinet6 is removed.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing -funit-at-a-time $OPENWRT_CFLAGS $GPROF_CFLAGS")
+AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing -funit-at-a-time $OPENWRT_CFLAGS $MAEMO_CFLAGS $GPROF_CFLAGS")
 
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500 $MAEMO_CPPFLAGS")

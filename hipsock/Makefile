@@ -11,14 +11,14 @@ LIBHIPCORE=../libhipcore
 HIPD=../hipd
 LN=ln -sf
 
-all:	warn links
+all: warn links
 	make -C $(LINUX) M=$(PWD) modules
 
 links:
 	$(LN) $(LIBHIPCORE)/builder.c
 	$(LN) $(LIBHIPCORE)/builder.h
 	$(LN) $(LIBHIPCORE)/protodefs.h
-	$(LN) $(LIBHIPCORE)/utils.h
+	$(LN) $(LIBHIPCORE)/prefix.h
 	$(LN) $(LIBHIPCORE)/misc.c
 	$(LN) $(LIBHIPCORE)/misc.h
 	$(LN) $(LIBHIPCORE)/state.h

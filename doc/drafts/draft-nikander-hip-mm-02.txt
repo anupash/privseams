@@ -1845,5 +1845,3 @@ Acknowledgment
 
 Nikander, et al.        Expires January 11, 2005               [Page 33]
 
-
-

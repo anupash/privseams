@@ -67,4 +67,3 @@ uint64_t hton64(uint64_t i);
 uint64_t ntoh64(uint64_t i);
 
 #endif /* HIP_HIPSOCK_DEBUG_H */
-

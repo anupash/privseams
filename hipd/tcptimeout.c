@@ -1,4 +1,5 @@
-/** @fileThis file defines TCP timeout parameters setting for the Host Identity
+/** @file
+ * This file defines TCP timeout parameters setting for the Host Identity
  * Protocol (HIP) in order to overcome the application time out when handover taking
  * long time.
  *

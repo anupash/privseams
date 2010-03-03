@@ -18,7 +18,7 @@
 #include "lib/core/hashtable.h"
 #include "lib/core/builder.h"
 #include "lib/tool/lutil.h"
-#include "lib/core/utils.h"
+#include "lib/core/prefix.h"
 #include "oppipdb.h"
 
 struct hip_opp_blocking_request_entry {

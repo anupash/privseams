@@ -169,7 +169,7 @@ int hip_handle_msg(struct hip_common *msg)
         // save to database
         break;
     case SO_HIP_RESET_FIREWALL_DB:
-        hip_firewall_cache_delete_hldb();
+        hip_firewall_cache_delete_hldb(0);
         hip_firewall_delete_hldb();
         break;
     case SO_HIP_OFFER_FULLRELAY:

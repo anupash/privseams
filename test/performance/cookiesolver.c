@@ -33,14 +33,14 @@ struct hip_birthday_cookie {
 
 u_int64_t calculate_digest(unsigned char *data, const u_int64_t j)
 {
-	unsigned char buf[SHA_DIGEST_LENGTH]; // openssl
-	u_int64_t result = 0;
+        unsigned char buf[SHA_DIGEST_LENGTH]; // openssl
+        u_int64_t result = 0;
 
-	memcpy(&(data[40]), &j, sizeof(u_int64_t));
+        memcpy(&(data[40]), &j, sizeof(u_int64_t));
 
-	SHA1((unsigned char *)data,48,buf);
-	memcpy(&result,buf+(SHA_DIGEST_LENGTH-sizeof(u_int64_t)),sizeof(u_int64_t));
-	return (ntoh64(result));
+        SHA1((unsigned char *)data,48,buf);
+        memcpy(&result,buf+(SHA_DIGEST_LENGTH-sizeof(u_int64_t)),sizeof(u_int64_t));
+        return (ntoh64(result));
 }
 
 /*
@@ -53,7 +53,7 @@ u_int64_t calculate_digest(unsigned char *data, const u_int64_t j)
 */
 /* Unportable code ? */
 int solve_puzzle(struct hip_birthday_cookie *cookie, const struct in6_addr *initiator,
-		 const struct in6_addr *responder)
+                 const struct in6_addr *responder)
 {
     u_int64_t challenge_resp = 0;
     u_int64_t randval = 0; /* j */
@@ -62,16 +62,16 @@ int solve_puzzle(struct hip_birthday_cookie *cookie, const struct in6_addr *init
     unsigned char cookiebuffer[48];
 
     if (cookie->random_j_k > 64) {
-	return(1);
+        return(1);
     }
 
     /* results in _last_ bits 1s */
     mask = (cookie->random_j_k == 64ULL ? 0xffffffffffffffffULL: (1ULL << cookie->random_j_k)-1);
 
     if (cookie->random_j_k + 2 >= 64)
-	maxtries = 0xffffffffffffffffULL;
+        maxtries = 0xffffffffffffffffULL;
     else
-	maxtries = (1ULL << (cookie->random_j_k + 2));
+        maxtries = (1ULL << (cookie->random_j_k + 2));
 
     /* prepare the cookie digest note: random_i must be in MSB order (network).
      * sizeof(u_int64_t) is not used instead of 8 since we are dependent on getting
@@ -91,13 +91,13 @@ int solve_puzzle(struct hip_birthday_cookie *cookie, const struct in6_addr *init
 
     while(maxtries-- > 0) {
 
-	challenge_resp = calculate_digest(cookiebuffer,randval);
+        challenge_resp = calculate_digest(cookiebuffer,randval);
 
-	if ((challenge_resp & mask) == 0) {
-	    break;
-	}
+        if ((challenge_resp & mask) == 0) {
+            break;
+        }
 
-	randval++; // is in network byte order!
+        randval++; // is in network byte order!
     }
 
 
@@ -154,37 +154,37 @@ int main(int argc, char **argv)
     printf("--------------------------------------------------------------\n");
     i = diff;
 
-	for(t=0;t<rounds;t++) {
-	    hbc.random_j_k = i;
+        for(t=0;t<rounds;t++) {
+            hbc.random_j_k = i;
 #ifdef TIME
-	    gettimeofday(&start,NULL);
+            gettimeofday(&start,NULL);
 #else
-	    getrusage(RUSAGE_SELF,&start);
+            getrusage(RUSAGE_SELF,&start);
 #endif
-	    solve_puzzle(&hbc,&init,&resp);
+            solve_puzzle(&hbc,&init,&resp);
 #ifdef TIME
-	    gettimeofday(&end,NULL);
+            gettimeofday(&end,NULL);
 #else
-	    getrusage(RUSAGE_SELF,&end);
+            getrusage(RUSAGE_SELF,&end);
 #endif
 
 #ifdef TIME
-	    u_usec = (end.tv_usec - start.tv_usec);
-	    u_usec += ((end.tv_sec - start.tv_sec) * 1000000);
-	    printf("Time: %d usec\n",u_usec);
+            u_usec = (end.tv_usec - start.tv_usec);
+            u_usec += ((end.tv_sec - start.tv_sec) * 1000000);
+            printf("Time: %d usec\n",u_usec);
 #else
-	    u_usec = (end.ru_utime.tv_usec - start.ru_utime.tv_usec);
-	    u_usec += ((end.ru_utime.tv_sec - start.ru_utime.tv_sec) * 1000000);
+            u_usec = (end.ru_utime.tv_usec - start.ru_utime.tv_usec);
+            u_usec += ((end.ru_utime.tv_sec - start.ru_utime.tv_sec) * 1000000);
 
-	    s_usec = (end.ru_stime.tv_usec - start.ru_stime.tv_usec);
-	    s_usec += ((end.ru_stime.tv_sec - start.ru_stime.tv_sec) * 1000000);
-	    printf("User time: %d usec System time: %d usec\n", u_usec, s_usec);
+            s_usec = (end.ru_stime.tv_usec - start.ru_stime.tv_usec);
+            s_usec += ((end.ru_stime.tv_sec - start.ru_stime.tv_sec) * 1000000);
+            printf("User time: %d usec System time: %d usec\n", u_usec, s_usec);
 #endif
-	    total_usec += u_usec;
-	}
-	printf("--------------------------------------------------------\n");
-	//    }
+            total_usec += u_usec;
+        }
+        printf("--------------------------------------------------------\n");
+        //    }
 
-	printf("Total time: %lu usec Avg: %.2f usec\n", total_usec, (float)total_usec/rounds);
-	return 0;
+        printf("Total time: %lu usec Avg: %.2f usec\n", total_usec, (float)total_usec/rounds);
+        return 0;
 }

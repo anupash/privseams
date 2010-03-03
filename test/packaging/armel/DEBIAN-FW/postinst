@@ -13,9 +13,3 @@ update-rc.d hipfw defaults
 #/etc/init.d/hipd restart
 
 invoke-rc.d hipfw start
-
-
-
-
-
-

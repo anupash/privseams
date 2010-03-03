@@ -409,4 +409,3 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 {
         return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 1);
 }
-

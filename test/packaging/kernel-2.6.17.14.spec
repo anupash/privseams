@@ -119,5 +119,3 @@ Dual SMP version.
 /boot/System.map-%{version}-%{release}smp
 
 /boot/config-%{version}-%{release}smp
-
-

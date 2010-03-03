@@ -100,4 +100,3 @@ done
 #  gnuplot $STATS_DIR/plot-with_pcfw
 #  cd $TMP_DIR
 #fi
-

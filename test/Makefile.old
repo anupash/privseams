@@ -122,4 +122,3 @@ clean:
 checksum: checksum.h
 unit: $(HIPLMODULESRCDIR)/unit.h
 unittest: unit unittest.h
-

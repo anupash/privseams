@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <netinet/in.h>
-#include <linux/types.h>
+//#include <linux/types.h>
 #include <linux/netfilter.h>
 #include <libipq.h>
 

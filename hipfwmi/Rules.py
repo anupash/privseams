@@ -337,4 +337,3 @@ class Rule(object):
                     raise ValueError("Invalid char %s in hit." % repr(c))
             return True
         raise ValueError("Expected a hit, got %s." % repr(hit))
-

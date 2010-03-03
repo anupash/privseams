@@ -109,11 +109,11 @@ int main(int argc,char *argv[]) {
 
   while ((k = fread(mylovemostdata,1,sizeof(mylovemostdata),stdin)) > 0)
   {
-	sendnum = send(peer, mylovemostdata, k, 0);
-	if (sendnum < 0) {
-		perror("sendnum");
-		break;
-	}
+        sendnum = send(peer, mylovemostdata, k, 0);
+        if (sendnum < 0) {
+                perror("sendnum");
+                break;
+        }
   }
 
   close(peer);

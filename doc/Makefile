@@ -30,13 +30,13 @@ DOCDIR = $(DOCDIR_PREFIX)/hipl
 
 ### COMPILATION RULESETS ######################################################
 
-%.dvi:	%.tex
+%.dvi: %.tex
 	$(LATEX) $*
 	$(BIBTEX) $(BIBS:.bib=)
 	$(LATEX) $*
 	$(LATEX) $*
 
-%.pdf:	%.tex
+%.pdf: %.tex
 	$(PDFLATEX) $*
 	$(BIBTEX) $(BIBS:.bib=)
 	$(PDFLATEX) $*
@@ -62,19 +62,19 @@ DOCDIR = $(DOCDIR_PREFIX)/hipl
 
 ### TARGETS ##################################################################
 
-all:	$(HOWTO).txt $(HOWTO).html \
-#	$(DESIGN_CHOICES).dvi $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf
+all: $(HOWTO).txt $(HOWTO).html \
+#     $(DESIGN_CHOICES).dvi $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf
 
-$(DESIGN_CHOICES).dvi:	$(DESIGN_CHOICES).tex $(DESIGN_CHOICES_SOURCES) \
-			$(FIGS:.fig=.eps)
+$(DESIGN_CHOICES).dvi: $(DESIGN_CHOICES).tex $(DESIGN_CHOICES_SOURCES) \
+	$(FIGS:.fig=.eps)
 
-$(DESIGN_CHOICES).pdf:	$(DESIGN_CHOICES).tex $(DESIGN_CHOICES_SOURCES) \
-			$(FIGS:.fig=.pdf)
+$(DESIGN_CHOICES).pdf: $(DESIGN_CHOICES).tex $(DESIGN_CHOICES_SOURCES) \
+	$(FIGS:.fig=.pdf)
 
-$(DESIGN_CHOICES).ps:	$(DESIGN_CHOICES).dvi
+$(DESIGN_CHOICES).ps: $(DESIGN_CHOICES).dvi
 
-$(HOWTO).txt:	$(HOWTO).xml
-$(HOWTO).html:	$(HOWTO).xml
+$(HOWTO).txt: $(HOWTO).xml
+$(HOWTO).html: $(HOWTO).xml
 
 clean:
 	rm -f *~ *.aux *.log *.toc *.bbl *.blg *.ps *.dvi *.pdf *.out

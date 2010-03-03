@@ -39,8 +39,6 @@ int ipv6_addr_is_teredo(const struct in6_addr *teredo);
 int ipv6_addr_is_null(struct in6_addr *ip);
 int hit_is_real_hit(const struct in6_addr *hit);
 int hit_is_opportunistic_hit(const struct in6_addr *hit);
-int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit);
-int hit_is_opportunistic_null(const struct in6_addr *hit);
 void set_hit_prefix(struct in6_addr *hit);
 void set_lsi_prefix(hip_lsi_t *lsi);
 
@@ -58,7 +56,7 @@ void set_lsi_prefix(hip_lsi_t *lsi);
 
 #define IPV6_EQ_IPV4(in6_addr_a, in_addr_b)   \
     (IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
-     ((in6_addr_a)->s6_addr32[3] == (in_addr_b)->s_addr))
+    (((__const uint32_t *) (in6_addr_a))[3] == (in_addr_b)->s_addr))
 
 /**
  * Checks if a uint32_t represents a Local Scope Identifier (LSI).
@@ -94,12 +92,6 @@ void set_lsi_prefix(hip_lsi_t *lsi);
 
 #ifndef MAX
 #  define MAX(a, b)      ((a) > (b) ? (a) : (b))
-#endif
-
-#ifdef CONFIG_HIP_OPENWRT
-# define HIP_CREATE_FILE(x)     check_and_create_file(x, 0644)
-#else
-# define HIP_CREATE_FILE(x)     open((x), O_RDWR | O_CREAT, 0644)
 #endif
 
 #endif /* HIP_LIB_CORE_UTILS_H */

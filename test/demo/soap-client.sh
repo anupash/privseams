@@ -33,4 +33,3 @@ echo "Starting SOAP client"
 cd $FC_DIR
 ./hip-demo-client oops $1
 umount /etc/hip
-

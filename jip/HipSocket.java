@@ -21,9 +21,9 @@ public class HipSocket extends Socket {
     HipSocketImpl impl;
 
     HipSocket (HipSocketImpl impl) throws SocketException {
-	super(impl);
-	this.impl = impl;
-	impl.create(true);
+        super(impl);
+        this.impl = impl;
+        impl.create(true);
     }
 
     native void klugeAccept ();
@@ -35,7 +35,7 @@ public class HipSocket extends Socket {
      * required when using application-specified endpoints.
      */
     public void bind (HipAddress addr, int port) {
-	impl.bind(addr, port);
+        impl.bind(addr, port);
     }
 
 }

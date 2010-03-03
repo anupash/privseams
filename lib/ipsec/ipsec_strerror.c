@@ -1,6 +1,6 @@
-/*	$NetBSD: ipsec_strerror.c,v 1.4.6.1 2007/08/01 11:52:17 vanhu Exp $	*/
+/*      $NetBSD: ipsec_strerror.c,v 1.4.6.1 2007/08/01 11:52:17 vanhu Exp $     */
 
-/*	$KAME: ipsec_strerror.c,v 1.7 2000/07/30 00:45:12 itojun Exp $	*/
+/*      $KAME: ipsec_strerror.c,v 1.7 2000/07/30 00:45:12 itojun Exp $  */
 
 /*
  * Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.

@@ -25,14 +25,6 @@ other related tools and test software.
 %prep
 %setup
 
-#added by CentOS
-%ifarch x86_64 ppc64 sparc64 ia64
-%{__perl} -p -i -e 's,/usr/lib/libipq.a,/usr/lib64/libipq.a,g' firewall/Makefile.in
-%endif
-
-%{__perl} -p -i -e 's,/usr/share/pixmaps,\$(DESTDIR)/usr/share/pixmaps,g' libhipgui/Makefile.in
-#end CentOS changes
-
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
 ./autogen.sh --prefix=/usr
@@ -158,61 +150,61 @@ install -m 755 tools/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
 %post daemon
 if [ "$1" = "2" ]
 then
-	# upgrade
-	/sbin/service hipd restart
+        # upgrade
+        /sbin/service hipd restart
 else
-	# first install
-	/sbin/chkconfig --add hipd
-	/sbin/chkconfig --level 2 hipd on
-	/sbin/service hipd start
+        # first install
+        /sbin/chkconfig --add hipd
+        /sbin/chkconfig --level 2 hipd on
+        /sbin/service hipd start
 fi
 
 %preun daemon
 if [ "$1" = "0" ]
 then
-	# removing package completely
-	/sbin/service hipd stop
-	/sbin/chkconfig --del hipd
+        # removing package completely
+        /sbin/service hipd stop
+        /sbin/chkconfig --del hipd
 fi
 
 %post dnsproxy
 if [ "$1" = "2" ]
 then
-	# upgrade
-	/sbin/service hipdnsproxy restart
+        # upgrade
+        /sbin/service hipdnsproxy restart
 else
-	# first install
-	/sbin/chkconfig --add hipdnsproxy
-	/sbin/chkconfig --level 2 hipdnsproxy on
-	/sbin/service hipdnsproxy start
+        # first install
+        /sbin/chkconfig --add hipdnsproxy
+        /sbin/chkconfig --level 2 hipdnsproxy on
+        /sbin/service hipdnsproxy start
 fi
 
 %preun dnsproxy
 if [ "$1" = "0" ]
 then
-	# removing package completely
-	/sbin/service hipdnsproxy stop
-	/sbin/chkconfig --del hipdnsproxy
+        # removing package completely
+        /sbin/service hipdnsproxy stop
+        /sbin/chkconfig --del hipdnsproxy
 fi
 
 %post firewall
 if [ "$1" = "2" ]
 then
-	# upgrade
-	/sbin/service hipfw restart
+        # upgrade
+        /sbin/service hipfw restart
 else
-	# first install
-	/sbin/chkconfig --add hipfw
-	/sbin/chkconfig --level 2 hipfw on
-	/sbin/service hipfw start
+        # first install
+        /sbin/chkconfig --add hipfw
+        /sbin/chkconfig --level 2 hipfw on
+        /sbin/service hipfw start
 fi
 
 %preun firewall
 if [ "$1" = "0" ]
 then
-	# removing package completely
-	/sbin/service hipfw stop
-	/sbin/chkconfig --del hipfw
+        # removing package completely
+        /sbin/service hipfw stop
+        /sbin/chkconfig --del hipfw
 fi
 
 %clean
@@ -284,4 +276,3 @@ rm -rf %{buildroot}
 - Renamed to hipl.spec (original was from Mika) and modularized
 * Tue Feb 14 2006 Miika Komu <miika@iki.fi>
 - added changelog
-

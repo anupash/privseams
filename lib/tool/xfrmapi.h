@@ -8,12 +8,6 @@
 
 #include <time.h>
 #include <netdb.h>
-#ifndef __u32
-/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
-#  include <linux/types.h>
-#endif
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
 #include <errno.h>
 
 #include "hipd/netdev.h"

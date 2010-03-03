@@ -22,9 +22,9 @@
 
 /** calculates the logarithm for a given base
  *
- * @param	base the base of the logarithm
- * @param	value value for which the log should be computed
- * return	logarithm of value to base
+ * @param       base the base of the logarithm
+ * @param       value value for which the log should be computed
+ * return       logarithm of value to base
  */
 double log_x(const int base, const double value)
 {
@@ -33,13 +33,13 @@ double log_x(const int base, const double value)
 
 /** creates an empty hash tree.
  *
- * @param	num_data_blocks number of leaf node
- * @param	max_data_length the maximum data length hashed in a leaf node
- * @param	node_length the length of a hash value
- * @param	secret_length length of the eventual secrets
- * @param	link_tree the link tree in case of HHL-based linking
- * @param	hierarchy_level the hierarchy level of the created hash tree
- * @return	pointer to the inited tree, NULL in case of an error.
+ * @param       num_data_blocks number of leaf node
+ * @param       max_data_length the maximum data length hashed in a leaf node
+ * @param       node_length the length of a hash value
+ * @param       secret_length length of the eventual secrets
+ * @param       link_tree the link tree in case of HHL-based linking
+ * @param       hierarchy_level the hierarchy level of the created hash tree
+ * @return      pointer to the inited tree, NULL in case of an error.
  */
 hash_tree_t *htree_init(const int num_data_blocks,
                         const int max_data_length,
@@ -143,7 +143,7 @@ out_err:
 
 /** frees the hash tree
  *
- * @param	tree the hash tree to be freed
+ * @param       tree the hash tree to be freed
  */
 void htree_free(hash_tree_t *tree)
 {
@@ -168,10 +168,10 @@ void htree_free(hash_tree_t *tree)
 
 /** adds a data item to the tree.
  *
- * @param	tree pointer to the tree
+ * @param       tree pointer to the tree
  * @param   data data to be added
- * @param	data_length length of the data item
- * @return	always 0
+ * @param       data_length length of the data item
+ * @return      always 0
  */
 int htree_add_data(hash_tree_t *tree,
                    const unsigned char *data,
@@ -215,9 +215,9 @@ out_err:
 
 /** adds random data item to the tree.
  *
- * @param	tree pointer to the tree
- * @param	num_random_blocks number of random blocks to be added
- * @return	always 0
+ * @param       tree pointer to the tree
+ * @param       num_random_blocks number of random blocks to be added
+ * @return      always 0
  */
 int htree_add_random_data(hash_tree_t *tree, const int num_random_blocks)
 {
@@ -255,11 +255,11 @@ int htree_add_random_data(hash_tree_t *tree, const int num_random_blocks)
 
 /** adds a secret to the tree.
  *
- * @param	tree pointer to the tree
+ * @param       tree pointer to the tree
  * @param   secret the secret to be added
- * @param	secret_length length of the secret
- * @param	secret_index position of the secret in the leaf set
- * @return	always 0
+ * @param       secret_length length of the secret
+ * @param       secret_index position of the secret in the leaf set
+ * @return      always 0
  */
 int htree_add_secret(hash_tree_t *tree,
                      const unsigned char *secret,
@@ -280,8 +280,8 @@ int htree_add_secret(hash_tree_t *tree,
 
 /** adds random secrets to the tree.
  *
- * @param	tree pointer to the tree
- * @return	always 0
+ * @param       tree pointer to the tree
+ * @return      always 0
  */
 int htree_add_random_secrets(hash_tree_t *tree)
 {
@@ -303,11 +303,11 @@ int htree_add_random_secrets(hash_tree_t *tree)
 /** generates the nodes for a tree with completely filled leaf set,
  * otherwise it fills up the remaining data items with random data
  *
- * @param	tree pointer to the tree
- * @param	leaf_gen leaf generator function pointer
- * @param	node_gen node generator function pointer
- * @param	gen_args arguments for the generators
- * @return	0 on success, -1 otherwise
+ * @param       tree pointer to the tree
+ * @param       leaf_gen leaf generator function pointer
+ * @param       node_gen node generator function pointer
+ * @param       gen_args arguments for the generators
+ * @return      0 on success, -1 otherwise
  */
 int htree_calc_nodes(hash_tree_t *tree,
                      const htree_leaf_gen_t leaf_gen,
@@ -386,7 +386,7 @@ out_err:
 
 /** gets the number of remaining elements in the tee
  *
- * @param	tree given tree
+ * @param       tree given tree
  * @return number of remaining elements
  */
 int htree_get_num_remaining(const hash_tree_t *tree)
@@ -396,8 +396,8 @@ int htree_get_num_remaining(const hash_tree_t *tree)
 
 /** checks if the hash tree contains further unrevealed data items
  *
- * @param	tree pointer to the tree
- * @return	1 if more elements, else 0
+ * @param       tree pointer to the tree
+ * @return      1 if more elements, else 0
  */
 int htree_has_more_data(const hash_tree_t *tree)
 {
@@ -406,8 +406,8 @@ int htree_has_more_data(const hash_tree_t *tree)
 
 /** gets the offset of the next unrevealed data item
  *
- * @param	tree pointer to the tree
- * @return	offset of the data item
+ * @param       tree pointer to the tree
+ * @return      offset of the data item
  *
  * NOTE: this increases the internal pointer to the current element
  */
@@ -424,11 +424,11 @@ int htree_get_next_data_offset(hash_tree_t *tree)
 
 /** gets the elements of the verification branch from a computed tree
  *
- * @param	tree pointer to the hash tree
- * @param	data_index leaf position for which the verification branch is fetched
- * @param	nodes buffer with sufficient space for branch nodes, if NULL buffer will be malloced here
- * @param	branch_length destination buffer length, returns used space
- * @return	buffer containing the branch nodes, NULL on error
+ * @param       tree pointer to the hash tree
+ * @param       data_index leaf position for which the verification branch is fetched
+ * @param       nodes buffer with sufficient space for branch nodes, if NULL buffer will be malloced here
+ * @param       branch_length destination buffer length, returns used space
+ * @return      buffer containing the branch nodes, NULL on error
  */
 unsigned char *htree_get_branch(const hash_tree_t *tree,
                                 const int data_index,
@@ -496,10 +496,10 @@ unsigned char *htree_get_branch(const hash_tree_t *tree,
 
 /** gets the data item at the specified position
  *
- * @param	tree pointer to the hash tree
- * @param	data_index leaf position for which the data item is returned
- * @param	data_length length of the returned data item
- * @return	pointer to the data item, NULL in case of an error
+ * @param       tree pointer to the hash tree
+ * @param       data_index leaf position for which the data item is returned
+ * @param       data_length length of the returned data item
+ * @return      pointer to the data item, NULL in case of an error
  */
 const unsigned char *htree_get_data(const hash_tree_t *tree,
                                     const int data_index,
@@ -516,10 +516,10 @@ const unsigned char *htree_get_data(const hash_tree_t *tree,
 
 /** gets the secret at the specified position
  *
- * @param	tree pointer to the hash tree
- * @param	secret_index leaf position for which the secret is returned
- * @param	secret_length length of the returned secret
- * @return	pointer to the secret, NULL in case of an error
+ * @param       tree pointer to the hash tree
+ * @param       secret_index leaf position for which the secret is returned
+ * @param       secret_length length of the returned secret
+ * @return      pointer to the secret, NULL in case of an error
  */
 const unsigned char *htree_get_secret(const hash_tree_t *tree,
                                       const int secret_index,
@@ -540,9 +540,9 @@ const unsigned char *htree_get_secret(const hash_tree_t *tree,
 
 /** gets the root node of the hash tree
  *
- * @param	tree pointer to the hash tree
- * @param	root_length length of the returned root element
- * @return	pointer to the root element, NULL in case of an error
+ * @param       tree pointer to the hash tree
+ * @param       root_length length of the returned root element
+ * @return      pointer to the root element, NULL in case of an error
  */
 const unsigned char *htree_get_root(const hash_tree_t *tree, int *root_length)
 {
@@ -559,19 +559,19 @@ const unsigned char *htree_get_root(const hash_tree_t *tree, int *root_length)
 
 /** checks the data item and an verification branch against the root
  *
- * @param	root pointer to the root
- * @param	root_length length of the root node
- * @param	branch_nodes buffer containing the branch nodes
- * @param	branch_length length of the verification branch
- * @param	verify_data the data item to be verified
- * @param	data_length length of the data item
- * @param	data_index index of the data item in the leaf set
- * @param	secret potentially incorporated secret
- * @param	secret_length length of the secret
- * @param	leaf_gen leaf generator function pointer
- * @param	node_gen node generator function pointer
- * @param	gen_args arguments for the generators
- * @return	0 if successful, 1 if invalid, -1 in case of an error
+ * @param       root pointer to the root
+ * @param       root_length length of the root node
+ * @param       branch_nodes buffer containing the branch nodes
+ * @param       branch_length length of the verification branch
+ * @param       verify_data the data item to be verified
+ * @param       data_length length of the data item
+ * @param       data_index index of the data item in the leaf set
+ * @param       secret potentially incorporated secret
+ * @param       secret_length length of the secret
+ * @param       leaf_gen leaf generator function pointer
+ * @param       node_gen node generator function pointer
+ * @param       gen_args arguments for the generators
+ * @return      0 if successful, 1 if invalid, -1 in case of an error
  */
 int htree_verify_branch(const unsigned char *root,
                         const int root_length,
@@ -669,13 +669,13 @@ out_err:
 
 /** generates a leaf node from a given data item
  *
- * @param	data data item to be hashed
- * @param	data_length length of the data item
- * @param	secret potentially incorporated secret
- * @param	secret_length length of the secret
- * @param	dst_buffer buffer for the generated leaf node
- * @param	gen_args arguments for the generator
- * @return	always 0
+ * @param       data data item to be hashed
+ * @param       data_length length of the data item
+ * @param       secret potentially incorporated secret
+ * @param       secret_length length of the secret
+ * @param       dst_buffer buffer for the generated leaf node
+ * @param       gen_args arguments for the generator
+ * @return      always 0
  */
 int htree_leaf_generator(const unsigned char *data,
                          const int data_length,
@@ -709,12 +709,12 @@ out_err:
 
 /** generates an intermediate node from two hash tree nodes
  *
- * @param	left_node the left node to be hashed
- * @param	right_node the right node to be hashed
- * @param	node_length length of each node
- * @param	dst_buffer buffer for the generated intermediate node
- * @param	gen_args arguments for the generator
- * @return	0 on success, -1 in case of an error
+ * @param       left_node the left node to be hashed
+ * @param       right_node the right node to be hashed
+ * @param       node_length length of each node
+ * @param       dst_buffer buffer for the generated intermediate node
+ * @param       gen_args arguments for the generator
+ * @return      0 on success, -1 in case of an error
  *
  * NOTE: the calling function has to ensure that left and right node are in
  *       subsequent memory blocks
@@ -738,7 +738,7 @@ out_err:
 
 /** prints the data set
  *
- * @param	tree pointer to the tree
+ * @param       tree pointer to the tree
  */
 void htree_print_data(const hash_tree_t *tree)
 {
@@ -757,7 +757,7 @@ void htree_print_data(const hash_tree_t *tree)
 
 /** prints a hash tree
  *
- * @param	tree pointer to the tree
+ * @param       tree pointer to the tree
  */
 void htree_print_nodes(const hash_tree_t *tree)
 {

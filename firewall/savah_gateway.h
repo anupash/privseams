@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <netinet/in.h>
-#include <linux/types.h>
+//#include <linux/types.h>
 #include <openssl/sha.h>
 #include <openssl/md5.h>
 #include <openssl/des.h>

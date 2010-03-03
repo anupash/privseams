@@ -6,12 +6,6 @@
 #define HIP_HIPD_NETDEV_H
 
 #include <sys/socket.h>
-#ifndef __u32
-/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
-#  include <linux/types.h>
-#endif
-#include <linux/netlink.h>      /* get_my_addresses() support   */
-#include <linux/rtnetlink.h>    /* get_my_addresses() support   */
 #include <netinet/ip6.h>
 #include <openssl/rand.h>
 #ifdef HAVE_CONFIG_H
@@ -21,7 +15,7 @@
 #include "lib/tool/nlink.h"
 #include "lib/core/list.h"
 #include "lib/core/debug.h"
-#include "lib/core/utils.h"
+#include "lib/core/prefix.h"
 #include "lib/core/misc.h"
 #include "hit_to_ip.h"
 

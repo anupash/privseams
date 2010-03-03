@@ -83,7 +83,7 @@ class ClientConnection(object):
         self.want_list_rules = False
         self.want_list_keys  = False
         self.addables = []       # list of rules to add
-        self.prependables = []	 # list of rules to prepend
+        self.prependables = []   # list of rules to prepend
         self.removables = []     # list of rules to remove
         self.empty_rules = False # true if rules should be flushed
 
@@ -560,7 +560,7 @@ class ConfigurationInterfaceClient(object):
         self.replydone = False
 
         # Reply stuff
-        self.rules = [] 	# Filled if list_rules is used.
+        self.rules = []         # Filled if list_rules is used.
         self.keys = []          # Filled if list_keys is used.
 
     def connect(self):

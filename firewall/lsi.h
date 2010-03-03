@@ -31,7 +31,4 @@ int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
                                                in_port_t *dst_tcp_port,
                                                int *fallback,
                                                int *reject);
-
-int uninit_lsi(void);
-
 #endif

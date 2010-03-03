@@ -32,12 +32,12 @@ seq 10 30|while read op
 
    if test `getsize fig/gnuplotdata-initiator` -eq 0
    then
-	PLOT_INIT=""
+        PLOT_INIT=""
    fi
 
    if test `getsize fig/gnuplotdata-responder|cut -f1 -d" "` -eq 0
    then
-	PLOT_RESP=""
+        PLOT_RESP=""
    fi
 
    if test -z "$PLOT_INIT" -a -n "$PLOT_RESP"

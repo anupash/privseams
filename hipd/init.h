@@ -1,5 +1,6 @@
 #ifndef HIP_HIPD_INIT_H
 #define HIP_HIPD_INIT_H
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -7,12 +8,7 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
-#ifndef ANDROID_CHANGES
-#ifdef CONFIG_HIP_MAEMO
-#define asm(arg) __asm(arg)
-#endif
-#include <linux/icmpv6.h>
-#endif
+
 #include "lib/tool/xfrmapi.h"
 #include "lib/conf/hipconf.h"
 #include "oppipdb.h"

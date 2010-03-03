@@ -39,7 +39,7 @@ struct list_head {
   #define hton64(i) (i)
   #define ntoh64(i) (i)
 #else
-  #define hton64(i) (((__u64) (htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ))
+  #define hton64(i) (((uint64_t) (htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ))
   #define ntoh64 hton64
 #endif
 
