@@ -1000,8 +1000,6 @@ struct hip_heartbeat {
     int            heartbeat;
 } __attribute__ ((packed));
 
-//add by santtu from here
-
 struct hip_nat_transform {
     hip_tlv_type_t        type;
     hip_tlv_len_t         length;
@@ -1009,7 +1007,6 @@ struct hip_nat_transform {
     hip_transform_suite_t suite_id[6];
 } __attribute__ ((packed));
 /* @} */
-
 
 struct hip_nat_pacing {
     hip_tlv_type_t type;
@@ -1047,6 +1044,20 @@ struct hip_port_info {
     hip_tlv_len_t  length;      /**< Length of the parameter contents in bytes. */
     in_port_t      port;      /**< Port number. */
 } __attribute__ ((packed));
+
+/**
+ * Structure used during packet handling to store the incoming message,
+ * source address, destination address, the used ports, the host association
+ * database entry and a flag indicating the packet handling should be aborted.
+ */
+struct hip_packet_context {
+    struct hip_common         *msg;
+    struct in6_addr           *src_addr;
+    struct in6_addr           *dst_addr;
+    struct hip_stateless_info *msg_info;
+    struct hip_hadb_state     *hadb_entry;
+    uint8_t                    drop_packet;
+};
 
 
 #endif /* HIP_LIB_CORE_PROTODEFS_H */
