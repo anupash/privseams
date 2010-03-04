@@ -23,8 +23,9 @@ run_program()
         rm -f log.txt
         return 0
     else
+        SUBJECT="[$BRANCH_NAME] [autobuild] failing command: $@"
         test $HIPL_NOTIFICATION_EMAIL &&
-            mailx -s "[$BRANCH_NAME] [autobuild] failing command: $@" $HIPL_NOTIFICATION_EMAIL < log.txt
+            mailx -s "$SUBJECT" $HIPL_NOTIFICATION_EMAIL < log.txt
         cleanup 1
     fi
 }
