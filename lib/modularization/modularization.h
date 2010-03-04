@@ -24,6 +24,7 @@ struct hip_packet_context {
     struct in6_addr           *dst_addr;
     struct hip_stateless_info *msg_info;
     struct hip_hadb_state     *hadb_entry;
+    uint8_t                    drop_packet;
 };
 
 /**
@@ -44,7 +45,7 @@ void lmod_init_state_items(struct modular_state *state);
 
 struct modular_state *lmod_init_state(void);
 
-int   hip_add_state_item(struct modular_state *state,
+int   lmod_add_state_item(struct modular_state *state,
                          void *state_item,
                          const char *item_name);
 

@@ -118,7 +118,7 @@ void lmod_init_state_items(struct modular_state *state)
 }
 
 /**
- * hip_add_state_item
+ * lmod_add_state_item
  *
  * Registers a new state item to the global state. The state item can be of any
  * type. This function stores a reference to the new state item.
@@ -132,7 +132,7 @@ void lmod_init_state_items(struct modular_state *state)
  *  @return Success = id (unsigned int) for retrieving the state by number
  *          Error   = -1
  */
-int hip_add_state_item(struct modular_state *state,
+int lmod_add_state_item(struct modular_state *state,
                        void *state_item,
                        const char *item_name)
 {

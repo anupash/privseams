@@ -909,7 +909,7 @@ int hip_update_init_state(struct modular_state *state)
     update_state->update_id_out                  = 0;
     update_state->update_id_in                   = 0;
 
-    err = hip_add_state_item(state, update_state, "update");
+    err = lmod_add_state_item(state, update_state, "update");
 
 out_err:
     return err;
