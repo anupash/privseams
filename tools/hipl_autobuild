@@ -14,7 +14,6 @@ CHECKOUT_DIR=$BUILD_DIR/$(date +"%Y-%m-%d-%H%M")_$BRANCH_NAME
 BRANCH_REVISION=$(bzr revno -q $BRANCH_URL)
 BRANCH_REVISION_FILE=$BUILD_DIR/HIPL_REVISION_$BRANCH_NAME
 AUTOBUILD_REVISION=$(cat $BRANCH_REVISION_FILE)
-AUTOBUILD_SCRIPT="$CHECKOUT_DIR/tools/hipl_autobuild"
 
 # helper functions
 run_program()
@@ -50,15 +49,6 @@ compile()
 test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
 
 bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR
-
-# Perform a self-update if the autobuild script in the repository has changed.
-# Only do this when running as the autobuild user so as not to interfere with
-# manual testing of this script.
-if test "$HIPL_AUTOBUILDER" = "yes" && ! cmp -s "$0" "$AUTOBUILD_SCRIPT" ; then
-    cp "$AUTOBUILD_SCRIPT" $0
-    rm -rf "$CHECKOUT_DIR"
-    exec $0 $@
-fi
 
 cd "$CHECKOUT_DIR"
 
