@@ -734,7 +734,7 @@ out_err:
  * @param rvs_count     number of addresses in @c traversed_rvs.
  * @return              zero on success, or negative error value on error.
  */
-int hip_xmit_r1(const uint32_t packet_type,
+int hip_send_r1(const uint32_t packet_type,
                 const uint32_t ha_state,
                 struct hip_packet_context *ctx)
 {
