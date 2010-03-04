@@ -2257,25 +2257,40 @@ int hip_handle_i1(const uint32_t packet_type,
 
         if (addr4.s_addr == INADDR_BROADCAST) {
             HIP_DEBUG("Received I1 broadcast\n");
-            HIP_IFEL(src_hit_is_our, -1,
-                     "Received a copy of own broadcast, dropping\n");
-            HIP_IFEL(hip_select_source_address(ctx->dst_addr, ctx->src_addr), -1,
-                     "Could not find source address\n");
+            HIP_IFEBL2(src_hit_is_our,
+                       -1,
+                       ctx->drop_packet = 1,
+                       "Received a copy of own broadcast, dropping\n");
+
+            HIP_IFEBL2(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
+                       -1,
+                       ctx->drop_packet = 1,
+                       "Could not find source address\n");
         }
     } else if (IN6_IS_ADDR_MULTICAST(ctx->dst_addr)) {
-        HIP_IFEL(src_hit_is_our, -1,
-                 "Received a copy of own broadcast, dropping\n");
-        HIP_IFEL(hip_select_source_address(ctx->dst_addr, ctx->src_addr), -1,
-                 "Could not find source address\n");
+        HIP_IFEBL2(src_hit_is_our,
+                   -1,
+                   ctx->drop_packet = 1,
+                   "Received a copy of own broadcast, dropping\n");
+        HIP_IFEBL2(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
+                   -1,
+                   ctx->drop_packet = 1,
+                   "Could not find source address\n");
     }
 
-    HIP_IFEL(!hip_controls_sane(ntohs(ctx->msg->control), mask), -1,
-             "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(ctx->msg->control));
+    HIP_IFEBL2(!hip_controls_sane(ntohs(ctx->msg->control), mask),
+               -1,
+               ctx->drop_packet = 1,
+               "Received illegal controls in I1: 0x%x. Dropping\n",
+               ntohs(ctx->msg->control));
 
     HIP_INFO_HIT("I1 Source HIT:", &(ctx->msg)->hits);
     HIP_INFO_IN6ADDR("I1 Source IP :", ctx->src_addr);
 
-out_err:
+/**
+ * @todo Change macro HIP_IFEBL2: add goto out_err and uncomment the label.
+ * out_err:
+ */
     return err;
 }
 

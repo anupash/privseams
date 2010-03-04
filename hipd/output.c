@@ -750,8 +750,11 @@ int hip_send_r1(const uint32_t packet_type,
                    *local_plain_hit = NULL,
                    *r1_src_addr = ctx->dst_addr;
     in_port_t r1_dst_port    = 0;
-    in_port_t dst_port       = 0;
     uint16_t relay_para_type = 0;
+
+    HIP_IFEL(ctx->drop_packet,
+             -1,
+             "Abort packet processing and don't send R1 packet.\n")
 
     HIP_DEBUG_IN6ADDR("i1_saddr", ctx->src_addr);
     HIP_DEBUG_IN6ADDR("i1_daddr", ctx->dst_addr);
@@ -841,7 +844,7 @@ int hip_send_r1(const uint32_t packet_type,
         if (relay_para_type == HIP_PARAM_RELAY_FROM) {
             HIP_DEBUG("Build param relay from\n");
             hip_build_param_relay_to(
-                r1pkt, &dst_ip, dst_port);
+                r1pkt, &dst_ip, r1_dst_port);
         } else if (relay_para_type == HIP_PARAM_FROM)    {
             HIP_DEBUG("Build param from\n");
             hip_build_param_via_rvs(r1pkt, ctx->src_addr);
