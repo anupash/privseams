@@ -734,32 +734,34 @@ out_err:
  * @param rvs_count     number of addresses in @c traversed_rvs.
  * @return              zero on success, or negative error value on error.
  */
-int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
-                in6_addr_t *dst_ip, const in_port_t dst_port,
-                hip_portpair_t *i1_info, uint16_t relay_para_type)
+int hip_xmit_r1(const uint32_t packet_type,
+                const uint32_t ha_state,
+                struct hip_packet_context *ctx)
 {
+    int err = 0;
     hip_common_t *r1pkt     = NULL;
-    in6_addr_t *r1_dst_addr = NULL, *local_plain_hit = NULL,
-    *r1_src_addr            = i1_daddr;
-    in_port_t r1_dst_port   = 0;
-    int err                 = 0;
+    struct in6_addr dst_ip = IN6ADDR_ANY_INIT,
+                   *r1_dst_addr = NULL,
+                   *local_plain_hit = NULL,
+                   *r1_src_addr = ctx->dst_addr;
+    in_port_t r1_dst_port    = 0;
+    in_port_t dst_port       = 0;
+    uint16_t relay_para_type = 0;
 
-    _HIP_DEBUG("hip_xmit_r1() invoked.\n");
-
-    HIP_DEBUG_IN6ADDR("i1_saddr", i1_saddr);
-    HIP_DEBUG_IN6ADDR("i1_daddr", i1_daddr);
-    HIP_DEBUG_IN6ADDR("dst_ip", dst_ip);
+    HIP_DEBUG_IN6ADDR("i1_saddr", ctx->src_addr);
+    HIP_DEBUG_IN6ADDR("i1_daddr", ctx->dst_addr);
+    HIP_DEBUG_IN6ADDR("dst_ip", &dst_ip);
 
     /* Get the final destination address and port for the outgoing R1.
      * dst_ip and dst_port have values only if the incoming I1 had
      * FROM/FROM_NAT parameter. */
-    if (!ipv6_addr_any(dst_ip) && relay_para_type) {
+    if (!ipv6_addr_any(&dst_ip) && relay_para_type) {
         //from RVS or relay
         if (relay_para_type == HIP_PARAM_RELAY_FROM) {
             HIP_DEBUG("Param relay from\n");
             //from relay
-            r1_dst_addr = i1_saddr;
-            r1_dst_port = i1_info->src_port;
+            r1_dst_addr = ctx->src_addr;
+            r1_dst_port = ctx->msg_info->src_port;
             // I---> NAT--> RVS-->R is not supported yet
             /*
              * r1_dst_addr =  dst_ip;
@@ -768,8 +770,8 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
         } else if (relay_para_type == HIP_PARAM_FROM)    {
             HIP_DEBUG("Param from\n");
             //from RVS, answer to I
-            r1_dst_addr =  dst_ip;
-            if (i1_info->src_port) {
+            r1_dst_addr =  &dst_ip;
+            if (ctx->msg_info->src_port) {
                 // R and RVS is in the UDP mode or I send UDP to RVS with incoming port hip_get_peer_nat_udp_port()
                 r1_dst_port =  hip_get_peer_nat_udp_port();
             } else {
@@ -780,18 +782,18 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
     } else {
         HIP_DEBUG("No RVS or relay\n");
         /* no RVS or RELAY found;  direct connection */
-        r1_dst_addr = i1_saddr;
-        r1_dst_port = i1_info->src_port;
+        r1_dst_addr = ctx->src_addr;
+        r1_dst_port = ctx->msg_info->src_port;
     }
 
 /* removed by santtu because relay supported
- *      r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
- *      r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
+ *      r1_dst_addr = (ipv6_addr_any(dst_ip) ? ctx->src_addr : dst_ip);
+ *      r1_dst_port = (dst_port == 0 ? ctx->msg_info->src_port : dst_port);
  */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* It should not be null hit, null hit has been replaced by real local
      * hit. */
-    HIP_ASSERT(!hit_is_opportunistic_hit(&i1->hitr));
+    HIP_ASSERT(!hit_is_opportunistic_hit(&ctx->msg->hitr));
 #endif
 
     /* Case: I ----->IPv4---> RVS ---IPv6---> R */
@@ -808,12 +810,12 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
         }
     }
 
-    HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr,
-                                  &i1->hitr, &i1->hits)),
+    HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, ctx->dst_addr,
+                                  &ctx->msg->hitr, &ctx->msg->hits)),
              -ENOENT, "No precreated R1\n");
 
-    if (&i1->hits) {
-        ipv6_addr_copy(&r1pkt->hitr, &i1->hits);
+    if (&ctx->msg->hits) {
+        ipv6_addr_copy(&r1pkt->hitr, &ctx->msg->hits);
     } else {
         memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
     }
@@ -828,16 +830,16 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
      *  parameter is the last parameter. */
     /* If I1 had a FROM/RELAY_FROM, then we must build a RELAY_TO/VIA_RVS
      * parameter. */
-    if (!ipv6_addr_any(dst_ip) && relay_para_type) { // dst_port has the value of RELAY_FROM port.
+    if (!ipv6_addr_any(&dst_ip) && relay_para_type) { // dst_port has the value of RELAY_FROM port.
                                                     //there is port no value for FROM parameter
                                                     //here condition is not enough
         if (relay_para_type == HIP_PARAM_RELAY_FROM) {
             HIP_DEBUG("Build param relay from\n");
             hip_build_param_relay_to(
-                r1pkt, dst_ip, dst_port);
+                r1pkt, &dst_ip, dst_port);
         } else if (relay_para_type == HIP_PARAM_FROM)    {
             HIP_DEBUG("Build param from\n");
-            hip_build_param_via_rvs(r1pkt, i1_saddr);
+            hip_build_param_via_rvs(r1pkt, ctx->src_addr);
         }
     }
 #endif
@@ -860,6 +862,11 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
     }
 
 out_err:
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_I1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I1);
+    hip_perf_write_benchmark(perf_set, PERF_I1);
+#endif
     if (r1pkt) {
         HIP_FREE(r1pkt);
     }

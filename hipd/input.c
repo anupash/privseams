@@ -2411,9 +2411,6 @@ int hip_handle_i1(const uint32_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
     int err = 0, mask = 0, src_hit_is_our;
-    hip_tlv_type_t relay_para_type = 0;
-    in6_addr_t dest;    /* For the IP address in FROM/RELAY_FROM */
-    in_port_t dest_port = 0; /* For the port in RELAY_FROM */
 
     HIP_ASSERT(!ipv6_addr_any(&(ctx->msg)->hitr));
 
@@ -2449,21 +2446,6 @@ int hip_handle_i1(const uint32_t packet_type,
     HIP_INFO_HIT("I1 Source HIT:", &(ctx->msg)->hits);
     HIP_INFO_IN6ADDR("I1 Source IP :", ctx->src_addr);
 
-    ipv6_addr_copy(&dest, &in6addr_any);
-
-    err = hip_xmit_r1(ctx->msg,
-                      ctx->src_addr,
-                      ctx->dst_addr,
-                      &dest,
-                      dest_port,
-                      ctx->msg_info,
-                      relay_para_type);
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_I1\n");
-    hip_perf_stop_benchmark(perf_set, PERF_I1);
-    hip_perf_write_benchmark(perf_set, PERF_I1);
-#endif
 out_err:
     return err;
 }
