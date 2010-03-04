@@ -69,7 +69,7 @@ fi
 
 if [ ! $FILE = "" ]
 then
-  OUTPUT="tee $FILE"
+  OUTPUT="tee -a $FILE"
   RTT_POSTFIX="-rtt"
   TCP_POSTFIX="-tcp"
   UDP_POSTFIX="-udp"
@@ -81,6 +81,12 @@ fi
 if [ $MEASURE_RTT -eq "1" ]
 then
   read -p "Measure RTT: [ENTER]" TMP
+
+  # remove old measurement
+  if [ -e $OUTPUT$RTT_POSTFIX ]
+  then
+    rm $OUTPUT$RTT_POSTFIX
+  fi
 
   if [ ! $REMOTE_ADDRESS = "0" ]
   then
@@ -109,6 +115,12 @@ then
   # client side
   if [ $RUN_MODE -eq "1" -a ! $REMOTE_ADDRESS = "0" ]
   then
+
+    # remove old measurement
+    if [ -e $OUTPUT$TCP_POSTFIX ]
+    then
+      rm $OUTPUT$TCP_POSTFIX
+    fi
 
     i=0
 
@@ -160,6 +172,12 @@ then
   # client side
   if [ $RUN_MODE -eq "1" -a ! $REMOTE_ADDRESS = "0" ]
   then
+
+    # remove old measurement
+    if [ -e $OUTPUT$UDP_POSTFIX ]
+    then
+      rm $OUTPUT$UDP_POSTFIX
+    fi
 
     i=0
 
