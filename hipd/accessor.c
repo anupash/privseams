@@ -1,13 +1,12 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+/**
+ * @file
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * @brief An assortment of access for functions for hipd
+ *
+ * @author Miika Komu <miika@iki.fi>
+ * @todo move the functions elsewhere and delete this file?
  */
 
 /* required for s6_addr32 */
@@ -79,7 +78,12 @@ int hip_agent_is_alive()
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 /**
- * No description.
+ * Set opportunistic mode
+ *
+ * @param msg A message containing a HIP_PARAM_UINT parameter.
+ *            Zero means turning off, one means "normal" (hipconf run opp)
+ *            and two means advanced (system-based opportunistic mode).
+ * @return zero on success and negative on error
  */
 int hip_set_opportunistic_mode(struct hip_common *msg)
 {
@@ -115,7 +119,11 @@ out_err:
 }
 
 /**
- * No description.
+ * Query opportunistic mode status
+ *
+ * @param msg an output parameter into which the function writes
+ *            the status of the opportunistic mode
+ * @return zero on success or negative on error
  */
 int hip_query_opportunistic_mode(struct hip_common *msg)
 {
@@ -138,7 +146,11 @@ out_err:
 }
 
 /**
- * No description.
+ * Query if a pseudo HIT is stored in the host association
+ * data base.
+ *
+ * @param msg a message containing a HIP_PARAM_PSEUDO_HIT parameter
+ * @return zero on success or negative on error
  */
 int hip_query_ip_hit_mapping(struct hip_common *msg)
 {
@@ -176,11 +188,21 @@ out_err:
 
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
+/**
+ * Query status of client-side HIP proxy
+ *
+ * @return one if the proxy mode is on or zero otherwise
+ */
 int hip_get_hip_proxy_status(void)
 {
     return hipproxy;
 }
 
+/**
+ * Set the client-side proxy on
+ *
+ * @return zero on success or negative on error
+ */
 int hip_set_hip_proxy_on(void)
 {
     int err = 0;
@@ -189,6 +211,11 @@ int hip_set_hip_proxy_on(void)
     return err;
 }
 
+/**
+ * Set the client-side proxy off
+ *
+ * @return zero on success or negative on error
+ */
 int hip_set_hip_proxy_off(void)
 {
     int err = 0;
@@ -197,31 +224,61 @@ int hip_set_hip_proxy_off(void)
     return err;
 }
 
+/**
+ * Query status of sava client mode
+ *
+ * @return one if the sava client mode is on or zero otherwise
+ */
 int hip_get_sava_client_status(void)
 {
     return hipsava_client;
 }
 
+/**
+ * Query status of sava server mode
+ *
+ * @return one if the sava server mode is on or zero otherwise
+ */
 int hip_get_sava_server_status(void)
 {
     return hipsava_server;
 }
 
+/**
+ * Set the client-side sava mode on
+ *
+ * @return zero on success or negative on error
+ */
 void hip_set_sava_client_on(void)
 {
     hipsava_client = 1;
 }
 
+/**
+ * Set the server-side sava mode on
+ *
+ * @return zero on success or negative on error
+ */
 void hip_set_sava_server_on(void)
 {
     hipsava_server = 1;
 }
 
+/**
+ * Set the client-side sava mode off
+ *
+ * @return zero on success or negative on error
+ */
 void hip_set_sava_client_off(void)
 {
     hipsava_client = 0;
 }
 
+/**
+ * Set the server-side sava mode off
+ *
+ * @return zero on success or negative on error
+ */
 void hip_set_sava_server_off(void)
 {
     hipsava_server = 0;
