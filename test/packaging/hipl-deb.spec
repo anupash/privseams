@@ -28,7 +28,7 @@ other related tools and test software.
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
 ./autogen.sh --prefix=/usr
-%configure --prefix=/usr --enable-libinet6
+%configure --prefix=/usr
 make -C doc
 make -j 4 all
 
