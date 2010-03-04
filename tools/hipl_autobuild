@@ -32,6 +32,7 @@ run_program()
 
 cleanup()
 {
+    chmod -R u+rwx "$CHECKOUT_DIR"
     rm -rf "$CHECKOUT_DIR"
     echo $BRANCH_REVISION > $BRANCH_REVISION_FILE
     exit $1
