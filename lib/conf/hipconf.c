@@ -132,7 +132,6 @@ const char *hipconf_usage =
     "load config default\n"
     "mhaddr mode lazy|active\n"
     "handover mode hard|soft\n"
-    "run normal|opp <binary>\n"
     "Server side:\n"
     "\tadd|del service rvs|relay|full-relay\n"
     "\treinit service rvs|relay|full-relay\n"
@@ -2448,6 +2447,7 @@ out_err:
  * @param send_only 1 if no response from hipd should be requrested, or 0 if
  *                  should block for a response from hipd
  * @return zero for success and negative on error
+ * @todo remove this and related constants
  */
 static int hip_conf_handle_run_normal(hip_common_t *msg,
                                       int action,
@@ -2455,8 +2455,8 @@ static int hip_conf_handle_run_normal(hip_common_t *msg,
                                       int optc,
                                       int send_only)
 {
-    return hip_handle_exec_application(0, EXEC_LOADLIB_HIP, optc,
-                                       (char **) &opt[0]);
+    HIP_ERROR("Unsupported\n");
+    return -1;
 }
 
 

@@ -17,9 +17,6 @@ EXTRA_DIST += $(wildcard test/*.h)
 EXTRA_DIST += tools/gen-python-starter.sh
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 
-# XX TODO: remove these when maemo building uses spec files
-EXTRA_DIST += libinet6/include
-
 BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
 
 # Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
@@ -27,18 +24,10 @@ BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
 imagesdir = $(pkgdatadir)/../pixmaps
 dist_images_DATA = lib/gui/hipmanager.png
 
-# TODO remove libinet6 after next release
-if HIP_LIBINET6
-SUBDIRS = libinet6
-endif
-
 ### bin_PROGRAMS ###
 bin_PROGRAMS = test/conntest-client-opp \
                test/conntest-client-hip \
-               test/conntest-client-native \
-               test/conntest-client-native-user-key \
                test/conntest-server \
-               test/conntest-server-native \
                test/hipsetup \
                test/first_test \
                test/cookietest \
@@ -115,15 +104,9 @@ test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
 
 test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
                                    test/conntest.c
-test_conntest_client_native_SOURCES = test/conntest-client-native.c \
-                                      test/conntest.c
-test_conntest_client_native_user_key_SOURCES = test/conntest-client-native-user-key.c
 
 test_conntest_server_SOURCES = test/conntest-server.c \
                                test/conntest.c
-
-test_conntest_server_native_SOURCES = test/conntest-server-native.c \
-                                      test/conntest.c
 
 test_hipsetup_SOURCES = test/hipsetup.c \
                         test/misc_install.c \
@@ -282,7 +265,6 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/sqlitedbapi.c \
                                  lib/core/hashchain_store.c \
                                  lib/core/hip_statistics.c \
-                                 lib/core/getendpointinfo.c \
                                  lib/core/crypto.c
 
 if HIP_PRIVSEP
@@ -433,31 +415,11 @@ if HIP_PERFORMANCE
 test_conntest_client_hip_LDADD += lib/performance/libperformance.la
 endif
 
-test_conntest_client_native_LDADD = lib/core/libhipcore.la \
-                                    lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_conntest_client_native_LDADD += lib/performance/libperformance.la
-endif
-
-test_conntest_client_native_user_key_LDADD = lib/core/libhipcore.la \
-                                             lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_conntest_client_native_user_key_LDADD += lib/performance/libperformance.la
-endif
-
 test_conntest_server_LDADD = lib/core/libhipcore.la \
                              lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_conntest_server_LDADD += lib/performance/libperformance.la
-endif
-
-test_conntest_server_native_LDADD = lib/core/libhipcore.la \
-                                    lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_conntest_server_native_LDADD += lib/performance/libperformance.la
 endif
 
 test_hipsetup_LDADD = lib/core/libhipcore.la \
@@ -640,15 +602,6 @@ i3_chord_chord_getfingers_LDADD = $(APP_LADD)
 
 i3_chord_chord_traceroute_LDADD = $(APP_LADD)
 endif # HIP_I3
-
-if HIP_LIBINET6
-test_conntest_client_hip_LDADD += libinet6/libinet6.la
-test_conntest_client_native_LDADD += libinet6/libinet6.la
-test_conntest_client_native_user_key_LDADD += libinet6/libinet6.la
-test_conntest_server_LDADD += libinet6/libinet6.la
-test_conntest_server_native_LDADD += libinet6/libinet6.la
-test_hipsetup_LDADD += libinet6/libinet6.la
-endif
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 

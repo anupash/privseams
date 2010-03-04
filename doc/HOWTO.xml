@@ -2421,24 +2421,7 @@ $ tools/adb shell # Log into device shell
         naming as described in <xref linkend="ch_opendht" />.
       </para>
       <para>
-        3. Override the resolver library dynamically (warning: this method will be depracated soon):
-      </para>
-      <para>
-        3a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
-      </para>
-      <!-- http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln= -->
-
-      <para>
-        3b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
-      </para>
-
-      <para>
-        4. Use HIP configuration GUI to run the application. You can execute applications
-        with GUI and edit their library-path as you like. Also you should be
-        able to see list of processes you have executed from GUI.
-      </para>
-      <para>
-        5. You can also use HITs (or LSIs) directly in the application. For example, you can
+        4. You can also use HITs (or LSIs) directly in the application. For example, you can
         do "ping6 PEER_HIT". However, hipd must know the mapping from the
         PEER_HIT to the corresponding IP address. You can tell this mapping to
         hipd using several ways. First way is to configure the HIT-hostname
@@ -2448,20 +2431,20 @@ $ tools/adb shell # Log into device shell
         want the mapping to be permanent.
       </para>
       <para>
-        6. Overload your /etc/hosts files by adding HITs or LSIs to the
+        5. Overload your /etc/hosts files by adding HITs or LSIs to the
         file and use the hostname in your application. The file should contain also
         the IP addresses with the same hostname as HITs and LSIs.
       </para>
       <para>
-        7. Use the opportunistic mode as described in
+        6. Use the opportunistic mode as described in
         <xref linkend="opportunistic" />. This method works with both IPv4 and
         IPv6 applications. It does not require HIT configuration at all.
       </para>
       <para>
-        7a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
+        6a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
       </para>
       <para>
-        7b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
+        6b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
       </para>
     </section>
     <section id="sec_advanced_methods">
@@ -2551,12 +2534,6 @@ $ tools/adb shell # Log into device shell
       </para>
       <para>
         hipconf run normal|opp firefox
-      </para>
-      <para>
-        Now your Firefox should be connected by HIP to your proxy server,
-        enabling mobility and enhancing security from your proxy to your host.
-        Note: "hipconf normal" method will be depracated soon. The preferred
-        method is to use the DNS proxy.
       </para>
     </section>
     <section id="sec_sendmail">
@@ -2697,11 +2674,11 @@ $ tools/adb shell # Log into device shell
   <para>
   Tested with stable version openldap-2.3.38 and with release version
   2.4.7. ACL part is tested using 2.4.11. Using OpenLDAP with HIP is
-  pretty straight forward thing to do. Simplest way is to run hipd on
-  both machines and just use command like
+  pretty straight forward thing to do. Simplest way is to run hipd and on
+  DNS proxy both machines and just use command like:
   </para>
   <programlisting>
-  hipconf run normal ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
+  ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
   </programlisting>
   <para>
   The name can be
@@ -2711,18 +2688,14 @@ $ tools/adb shell # Log into device shell
   with HIT by command
   </para>
   <programlisting>
-  hipconf run normal ldapsearch -x -H ldap://[&lt;HIT&gt;] -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
+  ldapsearch -x -H ldap://[&lt;HIT&gt;] -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
   </programlisting>
   <para>
   You can search also by using the opportunistic mode by using command
   </para>
   <programlisting>
-  hipconf run opp ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
+  ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
   </programlisting>
-  <para>
-    Note: "hipconf normal" method will be depracated soon. The preferred
-    method is to use the DNS proxy.
-  </para>
   <para>
   Ldapadd can be used similarly with LDAPURI and HITs.
   </para>
@@ -4731,208 +4704,6 @@ combo-newgroup=&lt;create new...&gt;
 
 
 </chapter>
-
-<chapter id="ch_native_api_for_hip">
-    <title>Native API for HIP</title>
-
-<section id="ch_hip_socket_handler">
-    <title>HIP socket handler kernel module</title>
-    <para>The HIP socket handler is a component of the HIPL HIP
-          implementation. It is used to intercept HIP socket
-          API calls. The hipsock kernel module is used to
-          register a new protocol family and to handle the
-          socket system calls for this family.
-    </para>
-    <para>The kernel patch:
-          patches/kernel/hipmod-2.6.13.1-v2.patch has to be appiled to the running
-          kernel in order to make the socket handler module run.
-    </para>
-    <para>Recompile the patched kernel. Change directory to hipsock to build
-          the socket handler module. The makefile assumes
-          that the kernel sources are located in /usr/src/linux. Override it
-          with "make LINUX=/path/to/linux/" if necessary.
-    </para>
-    <para>Use "insmod hipsock.ko" to activate the kernel module.
-          Check dmesg for messages. Use "rmmod hipsock.ko" to
-          remove the module from the kernel. If you get the error
-          "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
-          format", you have to specify the path of the kernel source (using
-          LINUX variable) for the system in which you are going to use the
-          kernel module.
-     </para>
-   </section> <!-- ch_hip_socket_handler -->
-
-   <section id="ch_conntest_native">
-   <title>Custom C-based Test Applications</title>
-   <para>
-   conntest-client-native and conntest-server-native can be used to test
-   the native HIP API. They can be used similarly
-   as conntest-client-hip and conntest-server as described in
-   <xref linkend="ipv6_appl" />.
-   </para>
-   </section> <!-- ch_conntest_native -->
-
-   <section id="ch_hip_telnet">
-      <title>HIP Enabled Telnet</title>
-      <para>
-        We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
-        support native HIP API. HIP is a compile time option, so that you can
-        see the required modifications to the code (ifdef USE_HIP). Here's how
-        you compile the telnet applications:
-      </para>
-      <itemizedlist>
-        <listitem><para>
-          # cd telnetd
-        </para></listitem>
-        <listitem><para>
-          # ./configure
-        </para></listitem>
-        <listitem><para>
-          # make
-        </para></listitem>
-        <listitem><para>
-          # cd ../telnet
-        </para></listitem>
-        <listitem><para>
-          # ./configure
-        </para></listitem>
-        <listitem><para>
-          # make
-        </para></listitem>
-      </itemizedlist>
-      <para>
-        Before actually using the telnet, you should build and "insmod"
-        the HIP kernel module. It is needed for telnet because it uses
-        the native API (and not the legacy APIs). After that, you can
-        experiment with telnet as follows:
-      </para>
-      <itemizedlist>
-        <listitem><para>
-          oops  # telnetd/telnetd -debug 12345
-        </para></listitem>
-        <listitem><para>
-          crash # telnet/telnet -l username oops 12345
-        </para></listitem>
-      </itemizedlist>
-      <para>
-        Note: the username must be non-root.
-      </para>
-      <para>
-        There is a limitation in the current version of the native API. It does
-        not support wildcard addresses at the server. This means that you have to
-        select the correct HIT at the client.
-      </para>
-  </section> <!-- ch_hip_telnet -->
-
-  <section id="ch_compiling_java">
-    <title>Java API</title>
-    <para>
-      HIP works also with java applications. If you are using the DNS proxy
-      for HIP, no changes to the (HIP-unaware) application are needed.
-      This  section decribes how you can make a java application aware of HIP.
-   </para>
-   <para>
-      HIPL software bundle includes also a java wrapper library to the HIP
-      native API.  The library is called "jip" and it
-      is located in "jip" directory. The use of the java library requires
-      the HIP socket handler defined elsewhere in this document.
-    </para>
-    <para>
-      You need to have either Blackdown or Sun java jdk 1.4.x or later to
-      compile jip. The code does *not* work on java 1.3.  The installation
-      assumes that you are using Blackdown 1.4 jdk, but if you are Sun jdk
-      or other version of blackdown java, just set up the environment
-      variable "JAVA_HOME" to point to the correct java installation
-      directory.
-    </para>
-    <para>
-      Compile libinet6.so and jip:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-        cd libinet6
-      </para></listitem>
-      <listitem><para>
-        make libinet6.so
-      </para></listitem>
-      <listitem><para>
-        cd ../jip
-      </para></listitem>
-      <listitem><para>
-        make
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      The outcome of the previous operation is jip/jip.jar which you should
-      use in your java applications to enable HIP. You can also run "make
-      apidoc" to build the Javadoc documentation into the directory
-      doc/jip-api.
-    </para>
-    <para>
-      There are three example java applications in "test" directory that you
-      must compile manually with the following procedure:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-        cd ../test
-      </para></listitem>
-      <listitem><para>
-        javac -classpath ../jip/jip.jar HipClient.java
-      </para></listitem>
-      <listitem><para>
-        javac -classpath ../jip/jip.jar HipUserkeyClient.java
-      </para></listitem>
-      <listitem><para>
-        javac -classpath ../jip/jip.jar HipServer.java
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      You should have setup your networking environment as explained in
-      <xref linkend="ch_basictest" />, that is, you
-      should have configured your /etc/hosts and /etc/hip/hosts
-      properly. However, hipd will automatically create your public keys,
-      so you don't have to worry about them.
-    </para>
-    <para>
-      You cannot quite convert your normal Java networking application to a
-      HIP application by just setting the socket factories.  You will need
-      to either ensure that a used host name always resolves only to IPv6
-      addresses, or that you never pass host names to methods in Socket and
-      ServerSocket classes.  This latter can be achieved by using the
-      resolver methods in the HipAddress class as is done in the example.
-    </para>
-    <para>
-      Run the example applications as follows:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-        crash # cd test
-      </para></listitem>
-      <listitem><para>
-        crash # ./java HipServer 12345
-      </para></listitem>
-      <listitem><para>
-        oops # cd test
-      </para></listitem>
-      <listitem><para>
-        oops # ./java HipClient crash 12345 54321
-      </para></listitem>
-      <listitem><para>
-        &lt;wait for the prompt, type some text and press enter&gt;
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      The shell script "java" contains some LD_PRELOAD, library and
-      class path information necessary for executing the HIP enabled java
-      applications.
-    </para>
-    <para>
-      The HipUserkeyClient class is otherwise the same as the HipClient
-      class, except that its optional fourth argument is the name of a file
-      from which to read an application-specified endpoint.
-    </para>
-  </section> <!-- ch_compiling_java -->
-
   </chapter> <!-- native api -->
 
 <chapter id="ch_exp_extensions">
