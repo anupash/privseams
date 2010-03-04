@@ -16,7 +16,7 @@ MEASURE_TPUT=0
 MEASURE_RTT=0
 MEASUREMENT_COUNT=10
 TCP_LENGTH=
-FILE=0
+FILE=
 RTT_POSTFIX=
 TCP_POSTFIX=
 UDP_POSTFIX=
@@ -39,7 +39,7 @@ then
   exit 0
 fi
 
-set -- `getopt a:b:c:l:n:rst: "$@"`
+set -- `getopt a:b:c:l:n:p:rst: "$@"`
 [ $# -lt 1 ] && exit 1    # getopt failed
 
 while [ $# -gt 0 ]
@@ -51,6 +51,7 @@ do
         REMOTE_ADDRESS=$2; shift;;
     -l) PACKET_LENGTH=$2; shift;;
     -n) MEASUREMENT_COUNT=$2; shift;;
+    -p) FILE=$2; shift;;
     -r) MEASURE_RTT=1;;
     -s) RUN_MODE=2;;
     -t) MEASURE_TPUT=$2; shift;;
@@ -66,9 +67,9 @@ then
   TCP_LENGTH="-M "$PACKET_LENGTH
 fi
 
-if [ $FILE -ne "0" ]
+if [ ! $FILE = "" ]
 then
-  OUTPUT="tee --append $FILE"
+  OUTPUT="tee $FILE"
   RTT_POSTFIX="-rtt"
   TCP_POSTFIX="-tcp"
   UDP_POSTFIX="-udp"
@@ -85,10 +86,10 @@ then
   then
     if [ $ADDR_FAMILY -eq "4" ]
     then
-      ping -c $MEASUREMENT_COUNT $REMOTE_ADDRESS #| $OUTPUT$RTT_POSTFIX
+      ping -c $MEASUREMENT_COUNT $REMOTE_ADDRESS | $OUTPUT$RTT_POSTFIX
     elif [ $ADDR_FAMILY -eq "6" ]
     then
-      ping6 -c $MEASUREMENT_COUNT $REMOTE_ADDRESS #| $OUTPUT$RTT_POSTFIX
+      ping6 -c $MEASUREMENT_COUNT $REMOTE_ADDRESS | $OUTPUT$RTT_POSTFIX
     else
       echo "ERROR: Address family not specified."
       exit 1
