@@ -56,7 +56,7 @@ bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR
 if test "$HIPL_AUTOBUILDER" = "yes" && ! cmp -s "$0" "$AUTOBUILD_SCRIPT" ; then
     cp "$AUTOBUILD_SCRIPT" $0
     rm -rf "$CHECKOUT_DIR"
-    exec $0
+    exec $0 $@
 fi
 
 cd "$CHECKOUT_DIR"
