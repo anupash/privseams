@@ -1,17 +1,34 @@
-/*
- * getendpointinfo: native HIP API resolver
+/** @file
  *
- * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Anthony D. Joseph <adj@hiit.fi>
- * Copyright: The Inner Net License v2.00.
- * Notes:     This file uses the code in this directory from Craig Metz.
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
- * Todo:
- * - there is a lot of redundant code in this file to scan hosts files;
- *   reimplement with for_each() and function pointers
- * Bugs:
- * - xx
+ * This file contains functionality to support a subset of <a
+ * href="http://tools.ietf.org/html/draft-ietf-hip-native-api"> Native
+ * HIP API</a> resolver functionality. The implemented functionality
+ * may be not be completely up-to-date with the specification.
+ *
+ * Functionality beyond the native HIP API is also implemented here,
+ * such as application-specific host identities as described in <a
+ * href="http://www.niksula.cs.hut.fi/~mkomu/docs/f17-komu.pdf">M. Komu,
+ * S. Tarkoma, J. Kangasharju, A. Gurtov, Applying a Cryptographic
+ * Namespace to Applications, in Proc. of First International ACM
+ * Workshop on Dynamic Interconnection of Networks, September
+ * 2005. </a>.
+ *
+ * You can find test software for the native API in test directory
+ * (all of them have the word "native" in their file name). The use of
+ * the native API requires a small patch to the kernel (from the
+ * patches directory) and a kernel module to be loaded from the
+ * hipsock directory.
+ *
+ * It should be noted that this file can be erased completely if
+ * the support for native HIP API will be ceased.
+ *
+ * @author Miika Komu <miika@iki.fi>
+ * @author Anthony D. Joseph <adj@hiit.fi>
+ *
+ * @brief <a href="http://tools.ietf.org/html/draft-ietf-hip-native-api">
+ *        Native HIP API</a> functionality
  */
 
 /* required for s6_addr32 */
@@ -49,13 +66,19 @@
 #include "debug.h"
 #include "getendpointinfo.h"
 
-//#include <ifaddrs.h>
-
-// needed due to missing system inlcude for openWRT
+/* to compensate for a missing system include in OpenWRT */
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX           64
 #endif
 
+/**
+ * convert a service number (e.g. "http") or port string (e.g. "80") to
+ * a numeric port number
+ *
+ * @param servname the service or port number as a string
+ * @param port the converted numeric port (output argument)
+ * @return zero on success or negative on failure
+ */
 int convert_port_string_to_number(const char *servname, in_port_t *port)
 {
     int err = 0;
@@ -84,6 +107,17 @@ out_err:
     return err;
 }
 
+/**
+ * Set local endpoint identifier (EID), i.e., exchange a public key (or HIT)
+ * to an EID from the hipsock kernel module
+ *
+ * @param my_eid the EID that the hipsock should assign
+ * @param servname a symbolic service name or port number
+ * @param endpoint a HIT or HI to exchange with hipsock
+ * @param ifaces currently unused
+ * @return zero on success and negative on failure
+ * @todo the EID concept is deprecated
+ */
 int setmyeid(struct sockaddr_eid *my_eid,
              const char *servname,
              const struct endpoint *endpoint,
@@ -235,6 +269,17 @@ out_err:
     return err;
 }
 
+/**
+ * Set a remote endpoint identifier (EID), i.e., exchange a remote
+ * HIT (or HI) to a EID with hipd
+ *
+ * @param peer_eid the peer EID that the hipsock should assign
+ * @param servname a symbolic service name or port number
+ * @param endpoint the HIT (or HI)
+ * @param addrinfo peer address information from the resolver
+ * @return zero on success and negative on failure
+ * @todo the EID concept is deprecated
+ */
 int setpeereid(struct sockaddr_eid *peer_eid,
                const char *servname,
                const struct endpoint *endpoint,
@@ -393,11 +438,16 @@ out_err:
     return err;
 }
 
-/*
- * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- * XX FIXME: grep for public / private word from the filename and
+/**
+ * Load a Host Identity from a file. Used for application-specific
+ * identities in test/conntest-client-native-user-key.c
+ *
+ * @param filename a file name where to load the keys
+ * @param endpoint the corresponding endpoint will be stored here
+ * @return zero on success and negative on failure
+ * @todo grep for public / private word from the filename and
  * call either load_private or load_public correspondingly.
- * Are application specified identities always anonymous?
+ * @todo Are application specified identities always anonymous?
  */
 int load_hip_endpoint_pem(const char *filename,
                           struct endpoint **endpoint)
@@ -474,6 +524,12 @@ out_err:
     return err;
 }
 
+/**
+ * Deallocated memory for an addrinfo structure
+ *
+ * @param res the addrinfo structure to deallocated
+ * @note this is completely redundant with freeaddrinfo()
+ */
 void free_endpointinfo(struct addrinfo *res)
 {
     struct addrinfo *tmp;
@@ -502,7 +558,8 @@ void free_endpointinfo(struct addrinfo *res)
 }
 
 /**
- * get_localhost_endpointinfo - query endpoint info about the localhost
+ * query endpoint info about the localhost
+ *
  * @param basename the basename for the hip/hosts file (included for easier writing
  *            of unit tests)
  * @param servname the service port name (e.g. "http" or "12345")
@@ -519,7 +576,7 @@ void free_endpointinfo(struct addrinfo *res)
  * identities are needed, one needs to call this function multiple times
  * with different basename arguments and link the results together.
  *
- * XX FIX: LOCAL RESOLVER SHOULD RESOLVE PUBLIC KEYS, NOT
+ * @todo LOCAL RESOLVER SHOULD RESOLVE PUBLIC KEYS, NOT
  * PRIVATE. CHECK THAT IT WORKS WITH THE USER-KEY TEST PROGRAM.
  *
  * @return zero on success, or negative error value on failure
@@ -708,7 +765,8 @@ out_err:
 }
 
 /**
- * get_hipd_peer_list - query hipd for list of known peers
+ * query hipd for list of known peers
+ *
  * @param nodename the name of the peer to be resolved
  * @param servname the service port name (e.g. "http" or "12345")
  * @param hints selects which type of endpoints is going to be resolved
@@ -716,11 +774,9 @@ out_err:
  * @param alt_flag flag for an alternate query (after a file query has been done)
  *             This flag will add entries (if found) to an existing result
  *
- * This function is for libinet6 internal purposes only.
- *
  * @return zero on success, or negative error value on failure
- * @todo: this function is outdated; query for SO_HIP_GET_HA_INFO instead
- *
+ * @todo this function is outdated; query for SO_HIP_GET_HA_INFO instead
+ * @note This function is for libinet6 internal purposes only.
  */
 int get_hipd_peer_list(const char *nodename,
                        const char *servname,
@@ -1036,17 +1092,16 @@ out_err:
 }
 
 /**
- * get_peer_endpointinfo - query endpoint info about a peer
+ * query endpoint info about a peer
+ *
  * @param hostsfile the filename where the endpoint information is stored
  * @param nodename the name of the peer to be resolved
  * @param servname the service port name (e.g. "http" or "12345")
  * @param hints selects which type of endpoints is going to be resolved
  * @param res the result of the query
  *
- * This function is for libinet6 internal purposes only.
- *
  * @return zero on success, or negative error value on failure
- *
+ * @note This function is for libinet6 internal purposes only.
  */
 int get_peer_endpointinfo(const char *hostsfile,
                           const char *nodename,
@@ -1249,9 +1304,12 @@ out_err:
     return err;
 }
 
-/*
- * Finds HIP key files from the directory specified by 'path'.
- * Stores the file names into linked list (type listelement).
+/**
+ * Find HIP key files from the directory specified by 'path'.
+ * Store the file names into linked list (type listelement).
+ *
+ * @param path a directory from where to store key files
+ * @param files a list of discovered HIP-related file names
  */
 void findkeyfiles(char *path, List *files)
 {
@@ -1269,17 +1327,16 @@ void findkeyfiles(char *path, List *files)
     }
     ;
 
-    //Loop through all files and directories
+    /* Loop through all files and directories */
     while ((entry = readdir(dir)) != NULL) {
         if ((strcmp(entry->d_name, ".") != 0) &&
             (strcmp(entry->d_name, "..") != 0)) {
-            //Get the status info for the current file
+            /* Get the status info for the current file */
             if (stat(entry->d_name, &file_status) == 0) {
-                //Is this a directory, or a file?
-                //Go through all public key files
+                /* Is this a directory, or a file? */
+                /* Go through all public key files */
                 if (!S_ISDIR(file_status.st_mode) &&
                     findsubstring(entry->d_name, ".pub") &&
-                    //!findsubstring(entry->d_name, ".pub") && original
                     findsubstring(entry->d_name, "hip_host_")) {
                     _HIP_DEBUG("findkeyfiles: Public key file: %s \n",
                                entry->d_name);
@@ -1295,6 +1352,18 @@ void findkeyfiles(char *path, List *files)
     }
 }
 
+/**
+ * Query local or peer endpoint identifiers (EIDs). The interface
+ * is very similar to getaddrinfo()
+ *
+ * @param nodename the remote node name to query or NULL if you want to
+ *                 query local host identifiers
+ * @param servname an optional symbolic service name
+ * @param hints the resolver hints
+ * @param res the result of the query is allocated and stored here (caller deallocates)
+ * @return zero on success, or negative error value on failure
+ * @todo the EID concept is deprecated
+ */
 int getendpointinfo(const char *nodename, const char *servname,
                     const struct addrinfo *hints,
                     struct addrinfo **res)
@@ -1433,11 +1502,30 @@ err_out:
     return err;
 }
 
+/**
+ * convert getendpointinfo error codes to human-readable strings
+ *
+ * @param errcode the error code to convert
+ * @return a symbolic presentation of the error code
+ */
 const char *gepi_strerror(int errcode)
 {
     return "HIP native resolver failed"; /* XX FIXME */
 }
 
+/**
+ * convert a local host id in a file to addrinfo structure (no EIDs)
+ *
+ * @param basename the basename for the RSA encoded public key file
+ * @param servname the service port name (e.g. "http" or "12345")
+ * @param hints selects which type of endpoints is going to be resolved
+ * @param res the result of the query
+ * @param lhi the corresponding LSI
+ *
+ * @return zero on success, or negative error value on failure
+ *
+ * @todo this function contains redundant code with get_localhost_endpoint()
+ */
 int get_localhost_endpoint_no_setmyeid(const char *basename,
                                        const char *servname,
                                        struct addrinfo *hints,
@@ -1492,11 +1580,8 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
     }
 
     if (algo == HIP_HI_RSA) {
-        //modified according Laura's suggestion
-        //    err = load_rsa_private_key(basename, &rsa);
         err = load_rsa_public_key(basename, &rsa);
     } else {
-        //err = load_dsa_private_key(basename, &dsa);
         err = load_dsa_public_key(basename, &dsa);
     }
     if (err) {
@@ -1528,7 +1613,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
             err = -EFAULT;
             goto out_err;
         }
-        //    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
         err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
         if (err) {
             HIP_ERROR("Conversion from RSA to HIT failed\n");
@@ -1543,7 +1627,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
             err = -EFAULT;
             goto out_err;
         }
-        //err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
         err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
         if (err) {
             HIP_ERROR("Conversion from DSA to HIT failed\n");
@@ -1602,6 +1685,19 @@ out_err:
     return err;
 }
 
+/**
+ * convert a local host id in a file to addrinfo structure with EID structures
+ *
+ * @param basename the basename for the RSA encoded public key file
+ * @param servname the service port name (e.g. "http" or "12345")
+ * @param hints selects which type of endpoints is going to be resolved
+ * @param res the result of the query
+ * @param lhi the corresponding LSI
+ *
+ * @return zero on success, or negative error value on failure
+ *
+ * @todo this function contains redundant code with get_localhost_endpoint()
+ */
 int get_localhost_endpoint(const char *basename,
                            const char *servname,
                            struct addrinfo *hints,
@@ -1775,7 +1871,7 @@ out_err:
 }
 
 /**
- * get_local_hits - Query about local HITs and add the corresponding HIs into
+ * Query about local HITs and add the corresponding HIs into
  * kernel database. This function is used by getaddrinfo() in getaddrinfo.c
  *
  * @param servname the service port name (e.g. "http" or "12345")
@@ -1858,6 +1954,18 @@ out_err:
     return err;
 }
 
+/**
+ * dig up peer HIT from hosts files
+ *
+ * @param hostsfile the HIP hosts file
+ * @param nodename the node to search for
+ * @param servname symbolic service string to prefill in the result
+ * @param hints hints for filtering the results
+ * @param res The result of the query formatted as a addrinfo structure.
+ *            This function allocated and the caller is responsible of
+ *            deallocation.
+ * @return zero on success, or negative error value on failure
+ */
 int get_peer_addrinfo_hit(const char *hostsfile,
                           const char *nodename,
                           const char *servname,
@@ -1929,8 +2037,18 @@ out_err:
     return err;
 }
 
-/* getendpointfo() modified for sockaddr_hip instead of sockaddr_eid */
-
+/**
+ * map a node name to a HIT from hosts files
+ *
+ * @param hostsfile the HIP hosts file
+ * @param nodename the node to search for
+ * @param servname symbolic service string to prefill in the result
+ * @param hints hints for filtering the results
+ * @param res The result of the query formatted as a addrinfo structure.
+ *            This function allocated and the caller is responsible of
+ *            deallocation.
+ * @return zero on success, or negative error value on failure
+ */
 int get_hit_addrinfo(const char *nodename, const char *servname,
                      const struct addrinfo *hints,
                      struct addrinfo **res)
@@ -2005,6 +2123,15 @@ out_err:
     return err;
 }
 
+/**
+ * map a file containing a PEM encoded public key into a addrinfo structure
+ *
+ * @param basename the file where the PEM encoded public key is located
+ * @param servname the service port name (e.g. "http" or "12345")
+ * @param hints selects which type of endpoints is going to be resolved
+ * @param res the result of the query
+ * @return zero on success, or negative error value on failure
+ */
 int get_addrinfo_from_key(const char *basename,
                           const char *servname,
                           struct addrinfo *hints,
@@ -2132,6 +2259,13 @@ out_err:
     return err;
 }
 
+/**
+ * load a public key from a file and map it into a sockaddr_hip structure
+ *
+ * @param filename the file where the PEM formatted public key is located
+ * @param hit the sockaddr_hip structure
+ * @return zero on success, or negative error value on failure
+ */
 int get_sockaddr_hip_from_key(const char *filename, struct sockaddr_hip **hit)
 {
     int err              = 0;
