@@ -5,7 +5,7 @@ ACLOCAL_AMFLAGS  = -I m4
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  doc hipext hipsock jip patches test/packaging test/configs
+EXTRA_DIST =  doc hipext patches test/packaging test/configs
 EXTRA_DIST += autogen.sh i3-cfg-PL.xml release.version
 EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard i3/*/*.h)
