@@ -24,7 +24,7 @@ run_program()
         return 0
     else
         test $HIPL_NOTIFICATION_EMAIL &&
-            mailx -s "autobuild failed: @$1 output:" $HIPL_NOTIFICATION_EMAIL < log.txt
+            mailx -s "[$BRANCH_NAME] [autobuild] failing command: $@" $HIPL_NOTIFICATION_EMAIL < log.txt
         cleanup 1
     fi
 }
