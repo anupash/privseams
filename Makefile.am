@@ -28,8 +28,6 @@ dist_images_DATA = lib/gui/hipmanager.png
 bin_PROGRAMS = test/conntest-client-opp \
                test/conntest-client-hip \
                test/conntest-server \
-               test/hipsetup \
-               test/first_test \
                test/cookietest \
                test/keygentest \
                test/hashtest \
@@ -108,13 +106,6 @@ test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
 test_conntest_server_SOURCES = test/conntest-server.c \
                                test/conntest.c
 
-test_hipsetup_SOURCES = test/hipsetup.c \
-                        test/misc_install.c \
-                        test/conntest.c
-
-test_first_test_SOURCES = test/first_test.c \
-                          test/misc_install.c \
-                          test/conntest.c
 
 test_cookietest_SOURCES = test/cookietest.c
 
@@ -420,28 +411,6 @@ test_conntest_server_LDADD = lib/core/libhipcore.la \
 
 if HIP_PERFORMANCE
 test_conntest_server_LDADD += lib/performance/libperformance.la
-endif
-
-test_hipsetup_LDADD = lib/core/libhipcore.la \
-                      lib/tool/libhiptool.la \
-                      lib/conf/libhipconf.la
-if HIP_DHT
-test_hipsetup_LDADD += lib/dht/libhipdht.la
-endif
-
-if HIP_PERFORMANCE
-test_hipsetup_LDADD += lib/performance/libperformance.la
-endif
-
-test_first_test_LDADD = lib/core/libhipcore.la \
-                        lib/tool/libhiptool.la \
-                        lib/conf/libhipconf.la
-if HIP_DHT
-test_first_test_LDADD += lib/dht/libhipdht.la
-endif
-
-if HIP_PERFORMANCE
-test_first_test_LDADD += lib/performance/libperformance.la
 endif
 
 test_cookietest_LDADD = lib/core/libhipcore.la \
