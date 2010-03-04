@@ -46,10 +46,6 @@
 #include "oppipdb.h"
 #include "modularization.h"
 
-#ifdef CONFIG_HIP_MIDAUTH
-#include "pisa.h"
-#endif
-
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
 #endif
@@ -930,7 +926,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
     }
 
     /* Now that almost everything is set up except the signature, we can
-     * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
+     * try to set up inbound IPsec SA, similarly as in hip_send_r2 */
 
     HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
 
@@ -1304,173 +1300,6 @@ out_err:
 }
 
 /**
- * Creates and transmits an R2 packet.
- *
- * @param  ctx      a pointer to the context of processed I2 packet.
- * @param  i2_saddr a pointer to I2 packet source IP address.
- * @param  i2_daddr a pointer to I2 packet destination IP address.
- * @param  entry    a pointer to the current host association database state.
- * @param  i2_info  a pointer to the source and destination ports (when NAT is
- *                  in use).
- * @return zero on success, negative otherwise.
- */
-int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
-                  in6_addr_t *i2_daddr, hip_ha_t *entry,
-                  hip_portpair_t *i2_info,
-                  in6_addr_t *dest,
-                  const in_port_t dest_port)
-{
-    hip_common_t *r2 = NULL, *i2 = NULL;
-    struct hip_crypto_key hmac;
-    int err          = 0;
-    uint16_t mask    = 0;
-    uint32_t spi_in  = 0;
-
-    _HIP_DEBUG("hip_create_r2() invoked.\n");
-    /* Assume already locked entry */
-    i2 = ctx->input;
-
-    /* Build and send R2: IP ( HIP ( SPI, HMAC, HIP_SIGNATURE ) ) */
-    HIP_IFEL(!(r2 = hip_msg_alloc()), -ENOMEM, "No memory for R2\n");
-
-    /* Just swap the addresses to use the I2's destination HIT as the R2's
-     * source HIT. */
-    hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our, &entry->hit_peer);
-
-    HIP_DUMP_MSG(r2);
-
-    /* ESP_INFO */
-    spi_in = entry->spi_inbound_current;
-    HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index, 0, spi_in),
-             -1, "building of ESP_INFO failed.\n");
-
-    /********** CHALLENGE_RESPONSE **********/
-#ifdef CONFIG_HIP_MIDAUTH
-    /* TODO: no caching is done for PUZZLE_M parameters. This may be
-     * a DOS attack vector.
-     */
-    HIP_IFEL(hip_solve_puzzle_m(r2, ctx->input, entry), -1,
-             "Building of Challenge_Response failed\n");
-    char *midauth_cert = hip_pisa_get_certificate();
-
-    HIP_IFEL(hip_build_param(r2, entry->our_pub), -1,
-             "Building of host id failed\n");
-
-    /* For now we just add some random data to see if it works */
-    HIP_IFEL(hip_build_param_cert(r2, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)),
-             -1,
-             "Building of cert failed\n");
-
-#endif
-
-    /********** ESP-PROT anchor [OPTIONAL] **********/
-
-    HIP_IFEL(esp_prot_r2_add_anchor(r2, entry), -1,
-             "failed to add esp protection anchor\n");
-
-    /************************************************/
-
-#if defined(CONFIG_HIP_RVS)
-    /********** REG_REQUEST **********/
-    /* This part should only be executed at server offering rvs or relay
-     * services.
-     */
-
-    /* Handle REG_REQUEST parameter. */
-    hip_handle_param_reg_request(entry, i2, r2);
-
-#endif
-
-#if defined(CONFIG_HIP_RVS)
-    if (hip_relay_get_status() != HIP_RELAY_OFF) {
-        hip_build_param_reg_from(r2, i2_saddr, i2_info->src_port);
-    }
-
-#endif
-
-
-    /* Create HMAC2 parameter. */
-    if (entry->our_pub == NULL) {
-        HIP_DEBUG("entry->our_pub is NULL.\n");
-    } else {
-        _HIP_HEXDUMP("Host ID for HMAC2", entry->our_pub,
-                     hip_get_param_total_len(entry->our_pub));
-    }
-
-    memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
-    HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
-             "Failed to build parameter HMAC2 contents.\n");
-
-    /* Why is err reset to zero? -Lauri 11.06.2008 */
-    if (err == 1) {
-        err = 0;
-    }
-
-    HIP_IFEL(entry->sign(entry->our_priv_key, r2), -EINVAL, "Could not sign R2. Failing\n");
-
-#ifdef CONFIG_HIP_RVS
-    if (!ipv6_addr_any(dest)) {
-        //if(hip_relay_get_status() == HIP_RELAY_ON) {
-
-        HIP_INFO("create replay_to parameter in R2\n");
-        hip_build_param_relay_to(
-            r2, dest, dest_port);
-        //}
-    }
-
-#endif
-
-    err = hip_add_sa(i2_daddr, i2_saddr,
-                     &ctx->input->hitr, &ctx->input->hits,
-                     entry->spi_outbound_current,
-                     entry->esp_transform,
-                     &ctx->esp_out, &ctx->auth_out,
-                     1, HIP_SPI_DIRECTION_OUT, 0, entry);
-    if (err) {
-        HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
-                  entry->spi_outbound_current);
-
-        /* delete all IPsec related SPD/SA for this entry*/
-        hip_delete_security_associations_and_sp(entry);
-        goto out_err;
-    }
-
-    //end modify
-    /* @todo Check if err = -EAGAIN... */
-    HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", entry->spi_outbound_new);
-// end move
-
-    err = hip_send_pkt(i2_daddr,
-                       i2_saddr,
-                       (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                       entry->peer_udp_port,
-                       r2,
-                       entry,
-                       1);
-
-    if (err == 1) {
-        err = 0;
-    }
-
-    HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
-
-    /* Send the first heartbeat. Notice that error value is ignored
-     * because we want to to complete the base exchange successfully */
-    /* for ICE , we do not need it*/
-    if (hip_icmp_interval > 0) {
-        _HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
-        hip_send_icmp(hip_icmp_sock, entry);
-    }
-
-out_err:
-    if (r2 != NULL) {
-        free(r2);
-    }
-
-    return err;
-}
-
-/**
  * Handles an incoming I2 packet.
  *
  * This function is the actual point from where the processing of I2 is started
@@ -1556,7 +1385,7 @@ int hip_handle_i2(const uint32_t packet_type,
 
     /* The context structure is used to gather the context created from
      * processing the I2 packet, as well as storing the original packet.
-     * From the context struct we can then access the I2 in hip_create_r2()
+     * From the context struct we can then access the I2 in hip_send_r2()
      * later. */
     i2_context.input         = NULL;
     i2_context.output        = NULL;
@@ -1564,7 +1393,7 @@ int hip_handle_i2(const uint32_t packet_type,
 
     /* Store a pointer to the incoming i2 message in the context just
      * allocted. From the context struct we can then access the I2 in
-     * hip_create_r2() later. */
+     * hip_send_r2() later. */
     i2_context.input         = ctx->msg;
 
     /* Check that the Responder's HIT is one of ours. According to RFC5201,
@@ -2032,11 +1861,11 @@ int hip_handle_i2(const uint32_t packet_type,
     /* Note that we haven't handled the REG_REQUEST yet. This is because we
      * must create an REG_RESPONSE parameter into the R2 packet based on the
      * REG_REQUEST parameter. We handle the REG_REQUEST parameter in
-     * hip_create_r2() - although that is somewhat illogical.
+     * hip_send_r2() - although that is somewhat illogical.
      * -Lauri 06.05.2008 */
 
     /* Create an R2 packet in response. */
-    HIP_IFEL(hip_create_r2(&i2_context,
+    HIP_IFEL(hip_send_r2(&i2_context,
                            ctx->src_addr,
                            ctx->dst_addr,
                            ctx->hadb_entry,

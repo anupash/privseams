@@ -55,6 +55,14 @@ int hip_send_r1(const uint32_t packet_type,
                 const uint32_t ha_state,
                 struct hip_packet_context *ctx);
 
+int hip_send_r2(struct hip_context *ctx,
+                in6_addr_t *i2_saddr,
+                in6_addr_t *i2_daddr,
+                hip_ha_t *entry,
+                hip_portpair_t *i2_info,
+                in6_addr_t *dest,
+                const in_port_t dest_port);
+
 int hip_send_r2_response(struct hip_common *r2,
                          struct in6_addr *r2_saddr,
                          struct in6_addr *r2_daddr,

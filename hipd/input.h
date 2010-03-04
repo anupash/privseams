@@ -120,8 +120,4 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
                   in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
                   hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv);
 
-int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
-                  in6_addr_t *i2_daddr, hip_ha_t *entry, hip_portpair_t *i2_info,
-                  in6_addr_t *dest, const in_port_t dest_port);
-
 #endif /* HIP_HIPD_INPUT_H */
