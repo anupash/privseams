@@ -216,8 +216,9 @@ out_err:
  * @param dhpv pointer to the DH public value choosen
  * @return zero on success, or negative on error.
  */
-int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
-                                uint64_t I, uint64_t J,
+int hip_produce_keying_material(struct hip_packet_context *packet_ctx,
+                                uint64_t I,
+                                uint64_t J,
                                 struct hip_dh_public_value **dhpv)
 {
     char *dh_shared_key = NULL;
@@ -237,12 +238,12 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
     _HIP_DEBUG("hip_produce_keying_material() invoked.\n");
     /* Perform light operations first before allocating memory or
      * using lots of CPU time */
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIP_TRANSFORM)),
+    HIP_IFEL(!(param = hip_get_param(packet_ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
              -EINVAL,
              "Could not find HIP transform\n");
     HIP_IFEL((hip_tfm = hip_select_hip_transform((struct hip_hip_transform *) param)) == 0,
              -EINVAL, "Could not select HIP transform\n");
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_ESP_TRANSFORM)),
+    HIP_IFEL(!(param = hip_get_param(packet_ctx->input_msg, HIP_PARAM_ESP_TRANSFORM)),
              -EINVAL,
              "Could not find ESP transform\n");
     HIP_IFEL((esp_tfm = hip_select_esp_transform((struct hip_esp_transform *) param)) == 0,
@@ -273,9 +274,9 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
                                hip_transf_length + hmac_transf_length;
 
     /* R1 contains no ESP_INFO */
-    esp_info                 = hip_get_param(msg, HIP_PARAM_ESP_INFO);
+    esp_info = hip_get_param(packet_ctx->input_msg, HIP_PARAM_ESP_INFO);
 
-    if (esp_info != NULL) {
+    if (esp_info) {
         esp_keymat_index = ntohs(esp_info->keymat_index);
     } else {
         esp_keymat_index = esp_default_keymat_index;
@@ -310,7 +311,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
     memset(dh_shared_key, 0, dh_shared_len);
 
     HIP_IFEL(!(dhf = (struct hip_diffie_hellman *) hip_get_param(
-                   msg, HIP_PARAM_DIFFIE_HELLMAN)),
+                   packet_ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT,  "No Diffie-Hellman parameter found.\n");
 
     /* If the message has two DH keys, select (the stronger, usually) one. */
@@ -335,91 +336,99 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
     _HIP_HEXDUMP("Diffie-Hellman shared key:\n", dh_shared_key,
                  dh_shared_len);
 
-
-    hip_make_keymat(dh_shared_key, dh_shared_len,
-                    &km, keymat, keymat_len,
-                    &msg->hits, &msg->hitr, &ctx->keymat_calc_index, I, J);
+    hip_make_keymat(dh_shared_key,
+                    dh_shared_len,
+                    &km,
+                    keymat,
+                    keymat_len,
+                    &packet_ctx->input_msg->hits,
+                    &packet_ctx->input_msg->hitr,
+                    &packet_ctx->hadb_entry->keymat_calc_index,
+                    I,
+                    J);
 
     /* draw from km to keymat, copy keymat to dst, length of
      * keymat is len */
 
-    we_are_HITg = hip_hit_is_bigger(&msg->hitr, &msg->hits);
+    we_are_HITg = hip_hit_is_bigger(&packet_ctx->input_msg->hitr,
+                                    &packet_ctx->input_msg->hits);
+
     HIP_DEBUG("We are %s HIT.\n", we_are_HITg ? "greater" : "lesser");
 
     if (we_are_HITg) {
-        hip_keymat_draw_and_copy(ctx->hip_enc_out.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_enc_out.key, &km,
                                  hip_transf_length);
-        hip_keymat_draw_and_copy(ctx->hip_hmac_out.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_hmac_out.key, &km,
                                  hmac_transf_length);
-        hip_keymat_draw_and_copy(ctx->hip_enc_in.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_enc_in.key, &km,
                                  hip_transf_length);
-        hip_keymat_draw_and_copy(ctx->hip_hmac_in.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_hmac_in.key, &km,
                                  hmac_transf_length);
-        hip_keymat_draw_and_copy(ctx->esp_out.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->esp_out.key, &km,
                                  esp_transf_length);
-        hip_keymat_draw_and_copy(ctx->auth_out.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->auth_out.key, &km,
                                  auth_transf_length);
-        hip_keymat_draw_and_copy(ctx->esp_in.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->esp_in.key, &km,
                                  esp_transf_length);
-        hip_keymat_draw_and_copy(ctx->auth_in.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->auth_in.key, &km,
                                  auth_transf_length);
     } else {
-        hip_keymat_draw_and_copy(ctx->hip_enc_in.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_enc_in.key, &km,
                                  hip_transf_length);
-        hip_keymat_draw_and_copy(ctx->hip_hmac_in.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_hmac_in.key, &km,
                                  hmac_transf_length);
-        hip_keymat_draw_and_copy(ctx->hip_enc_out.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_enc_out.key, &km,
                                  hip_transf_length);
-        hip_keymat_draw_and_copy(ctx->hip_hmac_out.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_hmac_out.key, &km,
                                  hmac_transf_length);
-        hip_keymat_draw_and_copy(ctx->esp_in.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->esp_in.key, &km,
                                  esp_transf_length);
-        hip_keymat_draw_and_copy(ctx->auth_in.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->auth_in.key, &km,
                                  auth_transf_length);
-        hip_keymat_draw_and_copy(ctx->esp_out.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->esp_out.key, &km,
                                  esp_transf_length);
-        hip_keymat_draw_and_copy(ctx->auth_out.key, &km,
+        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->auth_out.key, &km,
                                  auth_transf_length);
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_DH_CREATE\n");
     hip_perf_stop_benchmark(perf_set, PERF_DH_CREATE);
 #endif
-    HIP_HEXDUMP("HIP-gl encryption:", &ctx->hip_enc_out.key,
+    HIP_HEXDUMP("HIP-gl encryption:", &packet_ctx->hadb_entry->hip_enc_out.key,
                 hip_transf_length);
-    HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hip_hmac_out.key,
+    HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &packet_ctx->hadb_entry->hip_hmac_out.key,
                 hmac_transf_length);
     _HIP_DEBUG("skipping HIP-lg encryption key, %u bytes\n",
                hip_transf_length);
-    HIP_HEXDUMP("HIP-lg encryption:", &ctx->hip_enc_in.key,
+    HIP_HEXDUMP("HIP-lg encryption:", &packet_ctx->hadb_entry->hip_enc_in.key,
                 hip_transf_length);
-    HIP_HEXDUMP("HIP-lg integrity (HMAC) key:", &ctx->hip_hmac_in.key,
+    HIP_HEXDUMP("HIP-lg integrity (HMAC) key:", &packet_ctx->hadb_entry->hip_hmac_in.key,
                 hmac_transf_length);
-    HIP_HEXDUMP("SA-gl ESP encryption key:", &ctx->esp_out.key,
+    HIP_HEXDUMP("SA-gl ESP encryption key:", &packet_ctx->hadb_entry->esp_out.key,
                 esp_transf_length);
-    HIP_HEXDUMP("SA-gl ESP authentication key:", &ctx->auth_out.key,
+    HIP_HEXDUMP("SA-gl ESP authentication key:", &packet_ctx->hadb_entry->auth_out.key,
                 auth_transf_length);
-    HIP_HEXDUMP("SA-lg ESP encryption key:", &ctx->esp_in.key,
+    HIP_HEXDUMP("SA-lg ESP encryption key:", &packet_ctx->hadb_entry->esp_in.key,
                 esp_transf_length);
-    HIP_HEXDUMP("SA-lg ESP authentication key:", &ctx->auth_in.key,
+    HIP_HEXDUMP("SA-lg ESP authentication key:", &packet_ctx->hadb_entry->auth_in.key,
                 auth_transf_length);
 
     /* the next byte when creating new keymat */
-    ctx->current_keymat_index = keymat_len_min;     /* offset value, so no +1 ? */
-    ctx->keymat_calc_index    = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
-    ctx->esp_keymat_index     = esp_keymat_index;
+    packet_ctx->hadb_entry->current_keymat_index = keymat_len_min;     /* offset value, so no +1 ? */
+    packet_ctx->hadb_entry->keymat_calc_index    = (packet_ctx->hadb_entry->current_keymat_index / HIP_AH_SHA_LEN) + 1;
+    packet_ctx->hadb_entry->esp_keymat_index     = esp_keymat_index;
 
-    memcpy(ctx->current_keymat_K,
-           keymat + (ctx->keymat_calc_index - 1) * HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
+    memcpy(packet_ctx->hadb_entry->current_keymat_K,
+           keymat + (packet_ctx->hadb_entry->keymat_calc_index - 1) * HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
 
-    _HIP_DEBUG("ctx: keymat_calc_index=%u current_keymat_index=%u\n",
-               ctx->keymat_calc_index, ctx->current_keymat_index);
-    _HIP_HEXDUMP("CTX CURRENT KEYMAT", ctx->current_keymat_K,
+    _HIP_DEBUG("packet_ctx->hadb_entry: keymat_calc_index=%u current_keymat_index=%u\n",
+               packet_ctx->hadb_entry->keymat_calc_index, packet_ctx->hadb_entry->current_keymat_index);
+    _HIP_HEXDUMP("CTX CURRENT KEYMAT", packet_ctx->hadb_entry->current_keymat_K,
                  HIP_AH_SHA_LEN);
 
     /* store DH shared key */
-    ctx->dh_shared_key     = dh_shared_key;
-    ctx->dh_shared_key_len = dh_shared_len;
+    packet_ctx->hadb_entry->dh_shared_key     = dh_shared_key;
+    packet_ctx->hadb_entry->dh_shared_key_len = dh_shared_len;
 
     /* on success HIP_FREE for dh_shared_key is called by caller */
 out_err:
@@ -744,15 +753,17 @@ int hip_handle_r1(const uint32_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *packet_ctx)
 {
-    int mask = HIP_PACKET_CTRL_ANON, err = 0, retransmission = 0, len;
+    int mask = HIP_PACKET_CTRL_ANON, err = 0, retransmission = 0, written = 0, len;
     uint64_t solved_puzzle           = 0, I = 0;
-    struct hip_context *ctx          = NULL;
+    struct hip_puzzle *pz            = NULL;
+    struct hip_diffie_hellman *dh_req       = NULL;
     struct hip_host_id *peer_host_id = NULL;
     struct hip_r1_counter *r1cntr    = NULL;
     struct hip_dh_public_value *dhpv = NULL;
     struct hip_locator *locator      = NULL;
     char *str                        = NULL;
     struct in6_addr daddr;
+    uint16_t i2_mask = 0;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R1\n");
     hip_perf_start_benchmark(perf_set, PERF_R1);
@@ -774,8 +785,6 @@ int hip_handle_r1(const uint32_t packet_type,
    HIP_IFEL(!hip_controls_sane(ntohs(packet_ctx->input_msg->control), mask), 0,
             "Received illegal controls in R1: 0x%x Dropping\n",
             ntohs(packet_ctx->input_msg->control));
-   HIP_IFEL(!packet_ctx->hadb_entry, -EFAULT,
-            "Received R1 with no local state. Dropping\n");
 
    /* An implicit and insecure REA. If sender's address is different than
     * the one that was mapped, then we will overwrite the mapping with the
@@ -804,11 +813,6 @@ int hip_handle_r1(const uint32_t packet_type,
     } else {
         HIP_DEBUG("Not a retransmission\n");
     }
-
-    HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)),
-             -ENOMEM, "Could not allocate memory for context\n");
-    memset(ctx, 0, sizeof(struct hip_context));
-    ctx->input = packet_ctx->input_msg;
 
     hip_relay_add_rvs_to_ha(packet_ctx->input_msg, packet_ctx->hadb_entry);
 
@@ -891,9 +895,11 @@ int hip_handle_r1(const uint32_t packet_type,
 
         HIP_IFEL(!(pz = hip_get_param(packet_ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
                  "Malformed R1 packet. PUZZLE parameter missing\n");
-        HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz, packet_ctx->input_msg, HIP_SOLVE_PUZZLE)) == 0,
-                 -EINVAL, "Solving of puzzle failed\n");
-        I                      = pz->I;
+        HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz,
+                                                   packet_ctx->input_msg,
+                                                   HIP_SOLVE_PUZZLE)) == 0,
+                                                   -EINVAL, "Solving of puzzle failed\n");
+        I = pz->I;
         packet_ctx->hadb_entry->puzzle_solution = solved_puzzle;
         packet_ctx->hadb_entry->puzzle_i        = pz->I;
     } else {
@@ -901,16 +907,67 @@ int hip_handle_r1(const uint32_t packet_type,
         solved_puzzle = packet_ctx->hadb_entry->puzzle_solution;
     }
 
-    /* calculate shared secret and create keying material */
-    ctx->dh_shared_key = NULL;
+    /* Allocate space for a new I2 message. */
+    HIP_IFEL(!(packet_ctx->output_msg = hip_msg_alloc()),
+             -ENOMEM,
+             "Allocation of I2 failed\n");
+
+    HIP_DEBUG("Build normal I2.\n");
+    /* create I2 */
+    hip_build_network_hdr(packet_ctx->output_msg,
+                          HIP_I2,
+                          i2_mask,
+                          &packet_ctx->input_msg->hitr,
+                          &packet_ctx->input_msg->hits);
+
     /* note: we could skip keying material generation in the case
      * of a retransmission but then we'd had to fill ctx->hmac etc */
-    HIP_IFEL(hip_produce_keying_material(packet_ctx->input_msg,
-                                         ctx,
+    HIP_IFEL(hip_produce_keying_material(packet_ctx,
                                          I,
                                          solved_puzzle,
                                          &dhpv),
-            -EINVAL, "Could not produce keying material\n");
+             -EINVAL,
+             "Could not produce keying material\n");
+
+    /********** ESP_INFO **********/
+    /* SPI is set below */
+    HIP_IFEL(hip_build_param_esp_info(packet_ctx->output_msg,
+                                      packet_ctx->hadb_entry->esp_keymat_index,
+                                      0,
+                                      0),
+             -1,
+             "building of ESP_INFO failed.\n");
+
+    /********** SOLUTION **********/
+    HIP_IFEL(!(pz = hip_get_param(packet_ctx->input_msg, HIP_PARAM_PUZZLE)),
+             -ENOENT,
+             "Internal error: PUZZLE parameter mysteriously gone\n");
+    HIP_IFEL(hip_build_param_solution(packet_ctx->output_msg, pz, ntoh64(solved_puzzle)),
+             -1,
+             "Building of solution failed\n");
+
+    /********** Diffie-Hellman *********/
+    /* calculate shared secret and create keying material */
+    packet_ctx->hadb_entry->dh_shared_key = NULL;
+
+    HIP_IFEL(!(dh_req = hip_get_param(packet_ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
+             -ENOENT,
+             "Internal error\n");
+    HIP_IFEL((written = hip_insert_dh(dhpv->public_value,
+                                      ntohs(dhpv->pub_len),
+                                      dhpv->group_id)) < 0,
+                -1,
+                "Could not extract the DH public key\n");
+
+    HIP_IFEL(hip_build_param_diffie_hellman_contents(packet_ctx->output_msg,
+                                                     dhpv->group_id,
+                                                     dhpv->public_value,
+                                                     written,
+                                                     HIP_MAX_DH_GROUP_ID,
+                                                     NULL,
+                                                     0),
+             -1,
+             "Building of DH failed.\n");
 
     /* Everything ok, save host id to HA */
     HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
@@ -920,36 +977,15 @@ int hip_handle_r1(const uint32_t packet_type,
               hip_get_param_host_id_hostname(peer_host_id));
 
     /********* ESP protection preferred transforms [OPTIONAL] *********/
-
-    HIP_IFEL(esp_prot_r1_handle_transforms(packet_ctx->hadb_entry, ctx), -1,
+    HIP_IFEL(esp_prot_r1_handle_transforms(packet_ctx),
+             -1,
              "failed to handle preferred esp protection transforms\n");
 
     /******************************************************************/
 
-    /* We haven't handled REG_INFO parameter. We do that in hip_send_i2()
-     * because we must create an REG_REQUEST parameter based on the data
-     * of the REG_INFO parameter. */
-
-    err = hip_send_i2(ctx,
-                        solved_puzzle,
-                        packet_ctx->src_addr,
-                        packet_ctx->dst_addr,
-                        packet_ctx->hadb_entry,
-                        packet_ctx->msg_ports,
-                        dhpv);
-
-    HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
-
-    if (packet_ctx->hadb_entry->state == HIP_STATE_I1_SENT) {
-        packet_ctx->hadb_entry->state = HIP_STATE_I2_SENT;
-    }
-
-out_err:
-    if (ctx->dh_shared_key) {
-        HIP_FREE(ctx->dh_shared_key);
-    }
-    if (ctx) {
-        HIP_FREE(ctx);
+    out_err:
+    if (packet_ctx->hadb_entry->dh_shared_key) {
+        HIP_FREE(packet_ctx->hadb_entry->dh_shared_key);
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_R1\n");
@@ -1039,7 +1075,6 @@ int hip_handle_i2(const uint32_t packet_type,
     in6_addr_t dest;     // dest for the IP address in RELAY_FROM
     hip_transform_suite_t esp_tfm, hip_tfm;
     struct hip_spi_in_item spi_in_data;
-    struct hip_context i2_context;
     struct hip_locator *locator             = NULL;
     int do_transform                        = 0;
     int if_index                            = 0;
@@ -1047,8 +1082,8 @@ int hip_handle_i2(const uint32_t packet_type,
     struct sockaddr *addr                   = NULL;
 
     HIP_IFEL(ctx->drop_packet,
-                 -1,
-                 "Abort packet processing.\n");
+             -1,
+             "Abort packet processing.\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2\n");
@@ -1069,19 +1104,6 @@ int hip_handle_i2(const uint32_t packet_type,
     HIP_INFO_HIT("Source HIT:", &(ctx->input_msg)->hits);
     HIP_INFO_IN6ADDR("Source IP: ", ctx->src_addr);
 
-    /* The context structure is used to gather the context created from
-     * processing the I2 packet, as well as storing the original packet.
-     * From the context struct we can then access the I2 in hip_send_r2()
-     * later. */
-    i2_context.input         = NULL;
-    i2_context.output        = NULL;
-    i2_context.dh_shared_key = NULL;
-
-    /* Store a pointer to the incoming i2 message in the context just
-     * allocted. From the context struct we can then access the I2 in
-     * hip_send_r2() later. */
-    i2_context.input         = ctx->input_msg;
-
     /* Check that the Responder's HIT is one of ours. According to RFC5201,
      * this MUST be done. This check was added by Lauri on 01.08.2008.
      * Note that this condition is not satisfied at the HIP relay server */
@@ -1101,7 +1123,7 @@ int hip_handle_i2(const uint32_t packet_type,
      * boot counter so we do not check it. */
 
     /* Check solution for cookie */
-    solution = hip_get_param(i2_context.input, HIP_PARAM_SOLUTION);
+    solution = hip_get_param(ctx->input_msg, HIP_PARAM_SOLUTION);
     if (solution == NULL) {
         err = -ENODATA;
         HIP_ERROR("SOLUTION parameter missing from I2 packet. " \
@@ -1125,7 +1147,16 @@ int hip_handle_i2(const uint32_t packet_type,
         } else if (ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
             retransmission = 1;
         }
-    }
+    } else {
+         HIP_DEBUG("No HIP association found. Creating a new one.\n");
+
+         if ((ctx->hadb_entry = hip_hadb_create_state(GFP_KERNEL)) == NULL) {
+             err = -ENOMEM;
+             HIP_ERROR("Out of memory when allocating memory for a new " \
+                       "HIP association. Dropping the I2 packet.\n");
+             goto out_err;
+         }
+     }
 
     /* Check HIP and ESP transforms, and produce keying material. */
 
@@ -1135,24 +1166,29 @@ int hip_handle_i2(const uint32_t packet_type,
      * which is set from haDB. Usually you shouldn't have state here,
      * right? */
 
-    HIP_IFEL(hip_produce_keying_material(i2_context.input, &i2_context,
-                                         solution->I, solution->J, &dhpv),
-             -EPROTO, "Unable to produce keying material. Dropping the I2" \
-                      " packet.\n");
-
+    HIP_IFEL(hip_produce_keying_material(ctx,
+                                         solution->I,
+                                         solution->J,
+                                         &dhpv),
+             -EPROTO,
+             "Unable to produce keying material. Dropping the I2 packet.\n");
 
     /* Verify HMAC. */
     if (hip_hidb_hit_is_our(&(ctx->input_msg)->hits) &&
-        hip_hidb_hit_is_our(&(ctx->input_msg)->hitr))
-    {
+        hip_hidb_hit_is_our(&(ctx->input_msg)->hitr)) {
+
         is_loopback = 1;
-        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &i2_context.hip_hmac_out),
-                 -EPROTO, "HMAC loopback validation on I2 failed. " \
-                          "Dropping the I2 packet.\n");
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
+                                        &ctx->hadb_entry->hip_hmac_out),
+                 -EPROTO,
+                 "HMAC loopback validation on I2 failed. " \
+                 "Dropping the I2 packet.\n");
     } else {
-        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &i2_context.hip_hmac_in),
-                 -EPROTO, "HMAC validation on I2 failed. Dropping the" \
-                          " I2 packet.\n");
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
+                                        &ctx->hadb_entry->hip_hmac_in),
+                 -EPROTO,
+                 "HMAC validation on I2 failed. Dropping the" \
+                 " I2 packet.\n");
     }
 
     hip_transform = hip_get_param(ctx->input_msg, HIP_PARAM_HIP_TRANSFORM);
@@ -1169,6 +1205,7 @@ int hip_handle_i2(const uint32_t packet_type,
     } else {
         do_transform = 1;
     }
+
 
     /* Decrypt the HOST_ID and verify it against the sender HIT. */
     /* @todo: the HOST_ID can be in the packet in plain text */
@@ -1278,8 +1315,9 @@ int hip_handle_i2(const uint32_t packet_type,
          * Note, that the original packet has the data still encrypted. */
         if (!host_id_found) {
             HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
-                                          (is_loopback ? &i2_context.hip_enc_out.key :
-                                           &i2_context.hip_enc_in.key),
+                                          (is_loopback ?
+                                              &ctx->hadb_entry->hip_enc_out.key :
+                                              &ctx->hadb_entry->hip_enc_in.key),
                                           HIP_DIRECTION_DECRYPT),
 #ifdef CONFIG_HIP_OPENWRT
                      // workaround for non-included errno-base.h in openwrt
@@ -1302,23 +1340,6 @@ int hip_handle_i2(const uint32_t packet_type,
     }
     HIP_HEXDUMP("Initiator host id", host_id_in_enc,
                 hip_get_param_total_len(host_id_in_enc));
-
-    /* If there is no HIP association, we must create one now. */
-    if (ctx->hadb_entry == NULL) {
-        HIP_DEBUG("No HIP association found. Creating a new one.\n");
-
-        if ((ctx->hadb_entry = hip_hadb_create_state(GFP_KERNEL)) == NULL) {
-            err = -ENOMEM;
-            HIP_ERROR("Out of memory when allocating memory for a new " \
-                      "HIP association. Dropping the I2 packet.\n");
-            goto out_err;
-        }
-    }
-
-    //ctx->hadb_entry->hip_nat_key = i2_context.hip_nat_key;
-    //HIP_DEBUG("hip nat key from context %s", i2_context.hip_nat_key);
-    memcpy(ctx->hadb_entry->hip_nat_key, i2_context.hip_nat_key, HIP_MAX_KEY_LEN);
-    //HIP_DEBUG("hip nat key in entry %s", ctx->hadb_entry->hip_nat_key);
 
     if (spi_in == 0) {
         spi_in = ctx->hadb_entry->spi_inbound_current;
@@ -1404,7 +1425,9 @@ int hip_handle_i2(const uint32_t packet_type,
     HIP_DEBUG("Start PERF_VERIFY(2)\n");
     hip_perf_start_benchmark(perf_set, PERF_VERIFY);
 #endif
-    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key, i2_context.input), -EINVAL,
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                     ctx->input_msg),
+             -EINVAL,
              "Verification of I2 signature failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_VERIFY(2)\n");
@@ -1418,10 +1441,10 @@ int hip_handle_i2(const uint32_t packet_type,
         struct hip_esp_transform *esp_tf = NULL;
         struct hip_spi_out_item spi_out_data;
 
-        HIP_IFEL(!(esp_tf = hip_get_param(i2_context.input,
+        HIP_IFEL(!(esp_tf = hip_get_param(ctx->input_msg,
                                           HIP_PARAM_ESP_TRANSFORM)),
                  -ENOENT, "Did not find ESP transform on i2\n");
-        HIP_IFEL(!(esp_info = hip_get_param(i2_context.input,
+        HIP_IFEL(!(esp_info = hip_get_param(ctx->input_msg,
                                             HIP_PARAM_ESP_INFO)),
                  -ENOENT, "Did not find SPI LSI on i2\n");
 
@@ -1457,8 +1480,8 @@ int hip_handle_i2(const uint32_t packet_type,
               ctx->msg_ports->dst_port);
 
     /********** ESP-PROT anchor [OPTIONAL] **********/
-
-    HIP_IFEL(esp_prot_i2_handle_anchor(ctx->hadb_entry, &i2_context), -1,
+    /** @todo Modularize esp_prot_* */
+    HIP_IFEL(esp_prot_i2_handle_anchor(ctx), -1,
              "failed to handle esp prot anchor\n");
 
     /************************************************/
@@ -1466,12 +1489,12 @@ int hip_handle_i2(const uint32_t packet_type,
     /* Set up IPsec associations */
     err = hip_add_sa(ctx->src_addr,
                      ctx->dst_addr,
-                     &i2_context.input->hits,
-                     &i2_context.input->hitr,
+                     &ctx->input_msg->hits,
+                     &ctx->input_msg->hitr,
                      spi_in,
                      esp_tfm,
-                     &i2_context.esp_in,
-                     &i2_context.auth_in,
+                     &ctx->hadb_entry->esp_in,
+                     &ctx->hadb_entry->auth_in,
                      retransmission,
                      HIP_SPI_DIRECTION_IN,
                      0,
@@ -1490,8 +1513,8 @@ int hip_handle_i2(const uint32_t packet_type,
     spi_out = ntohl(esp_info->new_spi);
     HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
-    HIP_IFEL(hip_setup_hit_sp_pair(&i2_context.input->hits,
-                                   &i2_context.input->hitr,
+    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input_msg->hits,
+                                   &ctx->input_msg->hitr,
                                    ctx->src_addr,
                                    ctx->dst_addr,
                                    IPPROTO_ESP,
@@ -1520,7 +1543,7 @@ int hip_handle_i2(const uint32_t packet_type,
      * */
 
     ctx->hadb_entry->spi_outbound_new = spi_out;
-    HIP_IFE(hip_store_base_exchange_keys(ctx->hadb_entry, &i2_context, 0), -1);
+    //HIP_IFE(hip_store_base_exchange_keys(ctx->hadb_entry, &i2_context, 0), -1);
     //hip_hadb_insert_state(ctx->hadb_entry);
 
     HIP_DEBUG("\nInserted a new host association state.\n"
@@ -1586,8 +1609,11 @@ out_err:
     if (tmp_enc != NULL) {
         free(tmp_enc);
     }
-    if (i2_context.dh_shared_key != NULL) {
-        free(i2_context.dh_shared_key);
+    if (ctx->hadb_entry->dh_shared_key != NULL) {
+        free(ctx->hadb_entry->dh_shared_key);
+    }
+    if (err) {
+        ctx->drop_packet = 1;
     }
     return err;
 }

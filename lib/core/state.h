@@ -319,6 +319,8 @@ struct hip_hadb_state {
     int                   hip_transform;
     /** ESP extension protection transform */
     uint8_t               esp_prot_transform;
+    /** ESP extension protection parameter */
+    int                   esp_prot_param;
     /** ESP extension protection local_anchor */
     unsigned char         esp_local_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
     /** another local anchor used for UPDATE messages */

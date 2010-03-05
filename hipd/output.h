@@ -67,9 +67,9 @@ int hip_send_r2_response(struct hip_common *r2,
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 
-int hip_send_i2(struct hip_context *ctx, uint64_t solved_puzzle,
-                  in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
-                  hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv);
+int hip_send_i2(const uint32_t packet_type,
+                const uint32_t ha_state,
+                struct hip_packet_context *packet_ctx);
 
 int are_addresses_compatible(const struct in6_addr *src_addr,
                              const struct in6_addr *dst_addr);

@@ -113,7 +113,9 @@ int hip_handle_r2(const uint32_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *packet_ctx);
 
-int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
-                                uint64_t I, uint64_t J, struct hip_dh_public_value **dhpv);
+int hip_produce_keying_material(struct hip_packet_context *packet_ctx,
+                                uint64_t I,
+                                uint64_t J,
+                                struct hip_dh_public_value **dhpv);
 
 #endif /* HIP_HIPD_INPUT_H */
