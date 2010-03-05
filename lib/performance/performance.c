@@ -10,6 +10,9 @@
  * <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  *
  */
+
+#include <sys/time.h>
+
 #include "performance.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
