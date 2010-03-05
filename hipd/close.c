@@ -197,16 +197,6 @@ int hip_handle_close(const uint32_t packet_type,
              "No entry in host association database when receiving R2." \
              "Dropping.\n");
 
-    switch (ha_state) {
-    case HIP_STATE_ESTABLISHED:
-    case HIP_STATE_CLOSING:
-        /* Proceed with packet handling */
-        break;
-    default:
-        HIP_ERROR("Internal state (%d) is incorrect\n", ha_state);
-        goto out_err;
-    }
-
     /* verify HMAC */
     if (ctx->hadb_entry->is_loopback) {
         HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &(ctx->hadb_entry)->hip_hmac_out),
