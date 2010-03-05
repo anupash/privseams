@@ -191,7 +191,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
                               struct sockaddr *src,
                               struct sockaddr *dst,
                               int len);
-u16 hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
+uint16_t hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
 int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
 void hip_dump_msg(const struct hip_common *);
@@ -227,7 +227,7 @@ void hip_msg_free(struct hip_common *);
 void hip_msg_init(struct hip_common *);
 char *hip_param_type_name(const hip_tlv_type_t);
 void hip_set_msg_err(struct hip_common *, hip_hdr_err_t);
-void hip_set_msg_checksum(struct hip_common *msg, u8 checksum);
+void hip_set_msg_checksum(struct hip_common *msg, uint8_t checksum);
 void hip_set_msg_total_len(struct hip_common *, uint16_t);
 void hip_set_msg_type(struct hip_common *, hip_hdr_type_t);
 void hip_set_param_contents_len(struct hip_tlv_common *, hip_tlv_len_t);

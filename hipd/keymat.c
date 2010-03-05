@@ -15,24 +15,24 @@
 
 #include "keymat.h"
 
-static u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
+static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
                                     struct in6_addr *smaller_hit,
                                     struct in6_addr *bigger_hit,
                                     uint64_t I, uint64_t J)
 
 {
-    u8 *buffer = NULL, *cur = NULL;
+    uint8_t *buffer = NULL, *cur = NULL;
     size_t requiredmem;
 
     HIP_DEBUG("\n");
     /* 2*sizeof(uint64_t) added to take care of I and J. */
     if (2 * sizeof(struct in6_addr) < hash_len) {
-        requiredmem = kij_len + hash_len + sizeof(u8) + 2 * sizeof(uint64_t);
+        requiredmem = kij_len + hash_len + sizeof(uint8_t) + 2 * sizeof(uint64_t);
     } else {
         requiredmem = kij_len + 2 * sizeof(struct in6_addr) +
-                      sizeof(u8) + 2 * sizeof(uint64_t);
+                      sizeof(uint8_t) + 2 * sizeof(uint64_t);
     }
-    buffer = (u8 *) HIP_MALLOC(requiredmem, GFP_KERNEL);
+    buffer = (uint8_t *) HIP_MALLOC(requiredmem, GFP_KERNEL);
     if (!buffer) {
         HIP_ERROR("Out of memory\n");
         return buffer;
@@ -41,24 +41,24 @@ static u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
     cur    = buffer;
     memcpy(cur, kij, kij_len);
     cur   += kij_len;
-    memcpy(cur, (u8 *) smaller_hit, sizeof(struct in6_addr));
+    memcpy(cur, (uint8_t *) smaller_hit, sizeof(struct in6_addr));
     cur   += sizeof(struct in6_addr);
-    memcpy(cur, (u8 *) bigger_hit, sizeof(struct in6_addr));
+    memcpy(cur, (uint8_t *) bigger_hit, sizeof(struct in6_addr));
     cur   += sizeof(struct in6_addr);
     memcpy(cur, &I, sizeof(uint64_t));     // XX CHECK: network byte order?
     cur   += sizeof(uint64_t);
     memcpy(cur, &J, sizeof(uint64_t));     // XX CHECK: network byte order?
     cur   += sizeof(uint64_t);
     *(cur) = 1;
-    cur   += sizeof(u8);
+    cur   += sizeof(uint8_t);
 
     _HIP_HEXDUMP("beginning of keymat", buffer, cur - buffer);
 
     return buffer;
 }
 
-static void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
-                                     size_t Kij_len, u8 cnt)
+static void hip_update_keymat_buffer(uint8_t *keybuf, uint8_t *Kold, size_t Kold_len,
+                                     size_t Kij_len, uint8_t cnt)
 {
     HIP_ASSERT(keybuf);
 
@@ -83,7 +83,7 @@ static void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
 void hip_make_keymat(char *kij, size_t kij_len,
                      struct hip_keymat_keymat *keymat,
                      void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
-                     struct in6_addr *hit2, u8 *calc_index,
+                     struct in6_addr *hit2, uint8_t *calc_index,
                      uint64_t I, uint64_t J)
 {
     int bufsize;
@@ -92,7 +92,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
     void *seedkey;
     struct in6_addr *smaller_hit, *bigger_hit;
     int hit1_is_bigger;
-    u8 *shabuffer     = NULL;
+    uint8_t *shabuffer     = NULL;
 
     HIP_DEBUG("\n");
     if (dstbuflen < HIP_AH_SHA_LEN) {
@@ -251,7 +251,7 @@ static int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_l
     /* must have the hadb lock when calling this function */
     int err      = 0;
     int copied   = 0;
-    u8 *tmp_data = NULL;
+    uint8_t *tmp_data = NULL;
     size_t tmp_data_len;
 
     _HIP_DEBUG("key_len=%d, requested keymat_index=%u calc_index=%u Kn_is_at=%u\n",
@@ -307,7 +307,7 @@ static int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_l
     _HIP_DEBUG("need %d bytes more data\n", key_len - copied);
 
     tmp_data_len = kij_len + HIP_AH_SHA_LEN + 1;
-    tmp_data     = (u8 *) HIP_MALLOC(tmp_data_len, GFP_KERNEL);
+    tmp_data     = (uint8_t *) HIP_MALLOC(tmp_data_len, GFP_KERNEL);
     if (!tmp_data) {
         HIP_ERROR("HIP_MALLOC failed\n");
         err = -ENOMEM;

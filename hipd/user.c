@@ -1416,7 +1416,7 @@ int hip_handle_netlink_msg(const struct nlmsghdr *msg, int len, void *arg)
 {
     int err = 0;
 
-    for (; NLMSG_OK(msg, (u32) len); msg = NLMSG_NEXT(msg, len)) {
+    for (; NLMSG_OK(msg, (uint32_t) len); msg = NLMSG_NEXT(msg, len)) {
         switch (msg->nlmsg_type) {
         case SO_HIP_ADD_PEER_MAP_HIT_IP:
             HIP_DEBUG("add hit-ip map\n");

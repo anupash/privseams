@@ -80,7 +80,7 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
                                   const struct in6_addr *id_peer,
                                   const struct in6_addr *tmpl_saddr,
                                   const struct in6_addr *tmpl_daddr,
-                                  int dir, u8 proto, u8 id_prefix,
+                                  int dir, uint8_t proto, uint8_t id_prefix,
                                   int preferred_family)
 {
     struct {
@@ -455,7 +455,7 @@ out_err:
 static int hip_calc_sp_prefix(const struct in6_addr *src_id,
                               int use_full_prefix)
 {
-    u8 prefix;
+    uint8_t prefix;
 
     if (IN6_IS_ADDR_V4MAPPED(src_id)) {
         HIP_DEBUG("ipv4 address mapped as ipv6\n");
@@ -695,14 +695,14 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
                           const struct in6_addr *dst_id,
                           const struct in6_addr *src_addr,
                           const struct in6_addr *dst_addr,
-                          u8 proto,
+                          uint8_t proto,
                           int use_full_prefix,
                           int update)
 {
     HIP_DEBUG("Start\n");
 
     int err   = 0;
-    u8 prefix = hip_calc_sp_prefix(src_id, use_full_prefix);
+    uint8_t prefix = hip_calc_sp_prefix(src_id, use_full_prefix);
     int cmd   = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 
     /* XX FIXME: remove the proto argument */
@@ -737,7 +737,7 @@ void hip_delete_hit_sp_pair(const hip_hit_t *src_hit,
                             const uint8_t proto,
                             const int use_full_prefix)
 {
-    u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+    uint8_t prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
     hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, dst_hit, src_hit,
                            XFRM_POLICY_IN, proto, prefix, AF_INET6);

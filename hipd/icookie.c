@@ -30,7 +30,7 @@ void hip_init_puzzle_defaults()
 int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
                         struct in6_addr *hit_i)
 {
-    register u32 base = 0;
+    register uint32_t base = 0;
     int i;
 
     /* Indexing based on the initiator HIT only: however, this may happen

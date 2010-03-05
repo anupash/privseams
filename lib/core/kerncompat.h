@@ -12,10 +12,6 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-
 #ifndef IPPROTO_HIP
 #  define IPPROTO_HIP             139
 #endif

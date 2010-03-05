@@ -28,29 +28,29 @@
 #include "lib/core/protodefs.h"
 
 struct hi3_ipv4_addr {
-    u8             sin_family;
+    uint8_t             sin_family;
     struct in_addr sin_addr;
 };
 
 struct hi3_ipv6_addr {
-    u8              sin6_family;
+    uint8_t              sin6_family;
     struct in6_addr sin6_addr;
 };
 
 struct pseudo_header6 {
     unsigned char src_addr[16];
     unsigned char dst_addr[16];
-    u32           packet_length;
+    uint32_t           packet_length;
     unsigned char zero[3];
-    u8            next_hdr;
+    uint8_t            next_hdr;
 };
 
 struct pseudo_header {
     unsigned char src_addr[4];
     unsigned char dst_addr[4];
-    u8            zero;
-    u8            protocol;
-    u16           packet_length;
+    uint8_t            zero;
+    uint8_t            protocol;
+    uint16_t           packet_length;
 };
 
 /**
@@ -71,7 +71,7 @@ struct pseudo_header {
  * @todo           If BLIND is in use we should include the BLIND bit
  *                 in legal values, shouldn't we?
  */
-static inline int hip_controls_sane(u16 controls, u16 legal)
+static inline int hip_controls_sane(uint16_t controls, uint16_t legal)
 {
     _HIP_DEBUG("hip_controls_sane() invoked.\n");
     return ((controls & HIP_PACKET_CTRL_ANON) | legal) == legal;

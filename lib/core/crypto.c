@@ -371,9 +371,9 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
     int err      = -1;
     AES_KEY aes_key;
     des_key_schedule ks1, ks2, ks3;
-    u8 secret_key1[8], secret_key2[8], secret_key3[8];
+    uint8_t secret_key1[8], secret_key2[8], secret_key3[8];
     /* OpenSSL modifies the IV it is passed during the encryption/decryption */
-    u8 iv[20];
+    uint8_t iv[20];
     HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
     _HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
 
@@ -449,7 +449,7 @@ out_err:
  *
  * @return 0 on success and non-zero on error
  */
-int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature)
+int impl_dsa_sign(uint8_t *digest, DSA *dsa, uint8_t *signature)
 {
     DSA_SIG *dsa_sig = NULL;
     int err          = 0, t;
@@ -497,7 +497,7 @@ out_err:
  * @return 1 for a valid signature, 0 for an incorrect signature and -1 on
  *         error (see ERR_get_error(3) for the actual error)
  */
-int impl_dsa_verify(u8 *digest, DSA *dsa, u8 *signature)
+int impl_dsa_verify(uint8_t *digest, DSA *dsa, uint8_t *signature)
 {
     DSA_SIG *dsa_sig;
     int err = 0;
@@ -537,9 +537,9 @@ out_err:
  * @return 1 on success, 0 otherwise
  */
 int hip_gen_dh_shared_key(DH *dh,
-                          u8 *peer_key,
+                          uint8_t *peer_key,
                           size_t peer_len,
-                          u8 *dh_shared_key,
+                          uint8_t *dh_shared_key,
                           size_t outlen)
 {
     BIGNUM *peer_pub_key = NULL;
@@ -569,7 +569,7 @@ out_err:
  * @param outlen the length of @c out in bytes
  * @return the number of bytes written
  */
-int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen)
+int hip_encode_dh_publickey(DH *dh, uint8_t *out, int outlen)
 {
     int len, err;
     HIP_IFEL(!dh, -EINVAL, "No Diffie Hellman context for DH tlv.\n");
@@ -629,9 +629,9 @@ void hip_free_dh(DH *dh)
  *
  * @return 0 on failure, or the size for storing DH shared secret in bytes
  */
-u16 hip_get_dh_size(u8 hip_dh_group_type)
+uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 {
-    u16 ret = -1;
+    uint16_t ret = -1;
 
     _HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
     if (hip_dh_group_type == 0) {

@@ -380,7 +380,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
     int packet_length    = 0;
     int protocol         = 0;
     int ttl              = 0;
-    u8 *msg              = NULL;
+    uint8_t *msg              = NULL;
     struct icmphdr *icmp = NULL;
 
     if (ipOrigTraffic == 4) {
@@ -416,7 +416,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
     /* Note: using calloc to zero memory region here because I think
      * firewall_send_incoming_pkt() calculates checksum
      * from too long region sometimes. See bug id 874 */
-    msg = (u8 *) calloc((packet_length + sizeof(struct ip)), 1);
+    msg = (uint8_t *) calloc((packet_length + sizeof(struct ip)), 1);
     memcpy(msg, (m->payload) + ip_hdr_size, packet_length);
 
     if (protocol == IPPROTO_ICMP && incoming) {

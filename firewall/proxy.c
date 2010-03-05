@@ -417,7 +417,7 @@ int uninit_proxy(void)
 
 static int hip_proxy_send_pkt(struct in6_addr *local_addr,
                               struct in6_addr *peer_addr,
-                              u8 *msg, u16 len, int protocol)
+                              uint8_t *msg, uint16_t len, int protocol)
 {
     int err = 0, sa_size, sent;
     struct sockaddr_storage src, dst;
@@ -528,8 +528,8 @@ static int hip_proxy_send_pkt(struct in6_addr *local_addr,
             HIP_DEBUG("TCP packet\n");
             ((struct tcphdr *) msg)->check = ipv4_checksum(
                     IPPROTO_TCP,
-                    (u8 *) (&(src4->sin_addr)),
-                    (u8 *) (&(dst4->sin_addr)),
+                    (uint8_t *) (&(src4->sin_addr)),
+                    (uint8_t *) (&(dst4->sin_addr)),
                     msg, len);       //checksum is ok for ipv4
         } else {
             HIP_DEBUG("src_addr and dst_aadr are ipv6!\n");
@@ -549,8 +549,8 @@ static int hip_proxy_send_pkt(struct in6_addr *local_addr,
             HIP_DEBUG("src_addr and dst_aadr are ipv4!\n");
             HIP_DEBUG("UDP packet\n");
             ((struct udphdr *) msg)->check = ipv4_checksum(
-                    IPPROTO_UDP, (u8 *) (&(src4->sin_addr)),
-                    (u8 *) (&(dst4->sin_addr)),
+                    IPPROTO_UDP, (uint8_t *) (&(src4->sin_addr)),
+                    (uint8_t *) (&(dst4->sin_addr)),
                     msg, len);       //checksum is ok for ipv4
         } else {
             HIP_DEBUG("src_addr and dst_aadr are ipv6!\n");
@@ -622,7 +622,7 @@ out_err:
 
 static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
                                         struct in6_addr *peer_addr,
-                                        u8 *buff, u16 len)
+                                        uint8_t *buff, uint16_t len)
 {
     int on = 1, off = 0, protocol, err = 0, sa_size = 0, sent;
     struct sockaddr_storage src, dst;
@@ -639,7 +639,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
     struct udphdr *udp          = NULL;
     struct icmphdr *icmp        = NULL;
     struct icmp6_hdr *icmpv6     = NULL;
-    u8 *msg                     = NULL;
+    uint8_t *msg                     = NULL;
     /* Points either to v4 or v6 raw sock */
     int hip_raw_sock            = 0;
 
@@ -711,37 +711,37 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
         if (protocol == IPPROTO_TCP) {
             hip_raw_sock = hip_proxy_raw_sock_tcp_v4;
             sa_size      = sizeof(struct sockaddr_in);
-            msg          = (u8 *) HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
+            msg          = (uint8_t *) HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
             memset(msg, 0, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
 
             HIP_DEBUG_INADDR("ipv4 src address  inbound: ", &src4->sin_addr);
             HIP_DEBUG_INADDR("ipv4 src address  inbound: ", &dst4->sin_addr);
             tcp->check =  htons(0);
-            tcp->check = ipv4_checksum(IPPROTO_TCP, (u8 *) (&(src4->sin_addr)), (u8 *) (&(dst4->sin_addr)), (u8 *) tcp, (len - sizeof(struct ip6_hdr)));       //checksum is ok for ipv4
+            tcp->check = ipv4_checksum(IPPROTO_TCP, (uint8_t *) (&(src4->sin_addr)), (uint8_t *) (&(dst4->sin_addr)), (uint8_t *) tcp, (len - sizeof(struct ip6_hdr)));       //checksum is ok for ipv4
             HIP_HEXDUMP("tcp dump: ", tcp, (len - sizeof(struct ip6_hdr)));
-            memcpy((msg + sizeof(struct ip)), (u8 *) tcp, (len - sizeof(struct ip6_hdr)));
+            memcpy((msg + sizeof(struct ip)), (uint8_t *) tcp, (len - sizeof(struct ip6_hdr)));
             HIP_HEXDUMP("tcp msg dump: ", msg, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
         }
 
         if (protocol == IPPROTO_UDP) {
             hip_raw_sock = hip_proxy_raw_sock_udp_v4;
             sa_size      = sizeof(struct sockaddr_in);
-            msg          = (u8 *) HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
+            msg          = (uint8_t *) HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
             memset(msg, 0, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
 
             HIP_DEBUG_INADDR("ipv4 src address  inbound: ", &src4->sin_addr);
             HIP_DEBUG_INADDR("ipv4 src address  inbound: ", &dst4->sin_addr);
             udp->check =  htons(0);
-            udp->check = ipv4_checksum(IPPROTO_UDP, (u8 *) (&(src4->sin_addr)), (u8 *) (&(dst4->sin_addr)), (u8 *) udp, (len - sizeof(struct ip6_hdr)));       //checksum is ok for ipv4
+            udp->check = ipv4_checksum(IPPROTO_UDP, (uint8_t *) (&(src4->sin_addr)), (uint8_t *) (&(dst4->sin_addr)), (uint8_t *) udp, (len - sizeof(struct ip6_hdr)));       //checksum is ok for ipv4
             HIP_HEXDUMP("udp dump: ", udp, (len - sizeof(struct ip6_hdr)));
-            memcpy((msg + sizeof(struct ip)), (u8 *) udp, (len - sizeof(struct ip6_hdr)));
+            memcpy((msg + sizeof(struct ip)), (uint8_t *) udp, (len - sizeof(struct ip6_hdr)));
             HIP_HEXDUMP("udp msg dump: ", msg, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
         }
 
         if (protocol == IPPROTO_ICMP) {
             hip_raw_sock = hip_proxy_raw_sock_icmp_v4;
             sa_size      = sizeof(struct sockaddr_in);
-            msg          = (u8 *) HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
+            msg          = (uint8_t *) HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
             memset(msg, 0, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
 
             HIP_DEBUG_INADDR("ipv4 src address  inbound: ", &src4->sin_addr);
@@ -750,7 +750,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
             //icmp->checksum = ipv4_checksum(IPPROTO_ICMP, &(src4->sin_addr), &(dst4->sin_addr), icmp, (len - sizeof(struct ip6_hdr))); //checksum is ok for ipv4
             icmp->checksum = inchksum(icmp, (len - sizeof(struct ip6_hdr)));             //checksum is ok for ipv4
             HIP_HEXDUMP("icmp dump: ", icmp, (len - sizeof(struct ip6_hdr)));
-            memcpy((msg + sizeof(struct ip)), (u8 *) icmp, (len - sizeof(struct ip6_hdr)));
+            memcpy((msg + sizeof(struct ip)), (uint8_t *) icmp, (len - sizeof(struct ip6_hdr)));
             HIP_HEXDUMP("icmp msg dump: ", msg, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
         }
     } else {
@@ -758,33 +758,33 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
             HIP_DEBUG("Using IPv6 raw socket (TCP)\n");
             hip_raw_sock = hip_proxy_raw_sock_tcp_v6;
             sa_size      = sizeof(struct sockaddr_in6);
-            msg          = (u8 *) HIP_MALLOC(len, 0);
+            msg          = (uint8_t *) HIP_MALLOC(len, 0);
             //memset(msg, 0, len);
             tcp->check   =  htons(0);
             tcp->check   = ipv6_checksum(IPPROTO_TCP, &(src6->sin6_addr), &(dst6->sin6_addr), tcp, (len - sizeof(struct ip6_hdr)));           //checksum is ok for ipv6
-            memcpy((msg + sizeof(struct ip6_hdr)), (u8 *) tcp, (len - sizeof(struct ip6_hdr)));
+            memcpy((msg + sizeof(struct ip6_hdr)), (uint8_t *) tcp, (len - sizeof(struct ip6_hdr)));
         }
 
         if (protocol == IPPROTO_UDP) {
             HIP_DEBUG("Using IPv6 raw socket (UDP)\n");
             hip_raw_sock = hip_proxy_raw_sock_udp_v6;
             sa_size      = sizeof(struct sockaddr_in6);
-            msg          = (u8 *) HIP_MALLOC(len, 0);
+            msg          = (uint8_t *) HIP_MALLOC(len, 0);
             //memset(msg, 0, len);
             udp->check   =  htons(0);
             udp->check   = ipv6_checksum(IPPROTO_UDP, &(src6->sin6_addr), &(dst6->sin6_addr), udp, (len - sizeof(struct ip6_hdr)));           //checksum is ok for ipv6
-            memcpy((msg + sizeof(struct ip6_hdr)), (u8 *) udp, (len - sizeof(struct ip6_hdr)));
+            memcpy((msg + sizeof(struct ip6_hdr)), (uint8_t *) udp, (len - sizeof(struct ip6_hdr)));
         }
 
         if (protocol == IPPROTO_ICMPV6) {
             HIP_DEBUG("Using IPv6 raw socket (ICMPV6)\n");
             hip_raw_sock        = hip_proxy_raw_sock_icmp_v6;
             sa_size             = sizeof(struct sockaddr_in6);
-            msg                 = (u8 *) HIP_MALLOC(len, 0);
+            msg                 = (uint8_t *) HIP_MALLOC(len, 0);
             //memset(msg, 0, len);
             icmpv6->icmp6_cksum =  htons(0);
             icmpv6->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &(src6->sin6_addr), &(dst6->sin6_addr), icmpv6, (len - sizeof(struct ip6_hdr)));             //checksum is ok for ipv6
-            memcpy((msg + sizeof(struct ip6_hdr)), (u8 *) icmpv6, (len - sizeof(struct ip6_hdr)));
+            memcpy((msg + sizeof(struct ip6_hdr)), (uint8_t *) icmpv6, (len - sizeof(struct ip6_hdr)));
         }
     }
 
@@ -956,7 +956,7 @@ int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
             HIP_DEBUG("We are translating esp packet!\n");
             HIP_DEBUG_IN6ADDR("inbound address 1:", &conn_entry->addr_peer);
             HIP_DEBUG_IN6ADDR("inbound address 2:", &conn_entry->addr_client);
-            hip_proxy_send_to_client_pkt(&conn_entry->addr_peer, &conn_entry->addr_client, (u8 *) ipheader, m->data_len);
+            hip_proxy_send_to_client_pkt(&conn_entry->addr_peer, &conn_entry->addr_client, (uint8_t *) ipheader, m->data_len);
             /* drop packet */
             err = 0;
         }
@@ -975,7 +975,7 @@ out_err:
     return err;
 }
 
-static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6_addr *dst_addr, u8 *buff, u16 len)
+static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6_addr *dst_addr, uint8_t *buff, uint16_t len)
 {
     struct sockaddr_in6 src6, dst6;
     struct ip *ip;
@@ -983,7 +983,7 @@ static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6
     struct icmphdr *icmp;
     int sa_size, sent;
     int on = 1;
-    u8 *msg;
+    uint8_t *msg;
 
     ip = (struct ip *) buff;
 
@@ -1000,7 +1000,7 @@ static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6
     HIP_DEBUG_IN6ADDR("dst6", &dst6.sin6_addr);
 
     sa_size = sizeof(struct sockaddr_in6);
-    msg = (u8 *) HIP_MALLOC((len + sizeof(struct ip6_hdr) - ip->ip_hl), 0);
+    msg = (uint8_t *) HIP_MALLOC((len + sizeof(struct ip6_hdr) - ip->ip_hl), 0);
     memset(msg, 0, (len + sizeof(struct ip6_hdr) - ip->ip_hl));
 
     ip6 = (struct ip6_hdr *) msg;
@@ -1010,7 +1010,7 @@ static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6
     ip6->ip6_dst = dst6.sin6_addr;
 
 
-    memcpy((msg + sizeof(struct ip6_hdr)), (u8 *) icmp, (len - ip->ip_hl));
+    memcpy((msg + sizeof(struct ip6_hdr)), (uint8_t *) icmp, (len - ip->ip_hl));
 
     icmp->checksum = htons(0);
     icmp->checksum = inchksum(icmp, (len - ip->ip_hl));     //checksum is ok for ipv4
@@ -1110,7 +1110,7 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
             err = 0;
         } else if (entry->state == HIP_PROXY_TRANSLATE) {
             int packet_length = 0;
-            u8 *msg;
+            uint8_t *msg;
 
             //TODO: check the connection with same ip but different port, should be added into conndb
 
@@ -1141,12 +1141,12 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
             }
 
             if ((protocol == IPPROTO_ICMP) || (protocol == IPPROTO_ICMPV6)) {
-                hip_proxy_send_inbound_icmp_pkt(proxy_hit, &entry->hit_peer, (u8 *) m->payload, m->data_len);
+                hip_proxy_send_inbound_icmp_pkt(proxy_hit, &entry->hit_peer, (uint8_t *) m->payload, m->data_len);
                 /* drop packet */
                 err = 0;
             } else {
                 packet_length = m->data_len - hdr_size;
-                msg           = (u8 *) HIP_MALLOC(packet_length, 0);
+                msg           = (uint8_t *) HIP_MALLOC(packet_length, 0);
                 memcpy(msg, (m->payload) + hdr_size,
                        packet_length);
 

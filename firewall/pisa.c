@@ -124,7 +124,7 @@ void pisa_check_for_random_update()
 static int pisa_append_hmac(struct in6_addr *hit1, struct in6_addr *hit2,
                             int rnd, void *data, int data_len)
 {
-    u8 key[32 + PISA_RANDOM_LEN];
+    uint8_t key[32 + PISA_RANDOM_LEN];
     int err          = 0;
     unsigned int len = HIP_AH_SHA_LEN;
 

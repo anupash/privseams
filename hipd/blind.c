@@ -162,7 +162,7 @@ out_err:
 int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit)
 {
     int err = 0;
-    u8 digest[HIP_AH_SHA_LEN];
+    uint8_t digest[HIP_AH_SHA_LEN];
 
     HIP_DEBUG("\n");
 
@@ -171,7 +171,7 @@ int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit)
 
     bzero(blind_hit, sizeof(hip_hit_t));
     HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
-                        ((u8 *) blind_hit) + 3,
+                        ((uint8_t *) blind_hit) + 3,
                         sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
              -1, "encoding failed\n");
 
@@ -494,7 +494,7 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
     hip_common_t *msg = NULL;
     int err                                     = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
     int mask                                    = 0;
-    u8 *dh_data1                                = NULL, *dh_data2 = NULL;
+    uint8_t *dh_data1                                = NULL, *dh_data2 = NULL;
     hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
     unsigned int service_count                  = 0;
 

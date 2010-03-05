@@ -155,7 +155,7 @@ int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 char *hip_in6_ntop(const struct in6_addr *in6, char *buf);
 char *hip_hit_ntop(const hip_hit_t *hit, char *buf);
 int hip_host_id_contains_private_key(struct hip_host_id *host_id);
-u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
+uint8_t *hip_host_id_extract_public_key(uint8_t *buffer, struct hip_host_id *data);
 
 int hip_lsi_are_equal(const hip_lsi_t *lsi1,
                       const hip_lsi_t *lsi2);
@@ -320,7 +320,7 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t *src_lsi,
                                 struct in6_addr *src_hit,
                                 struct in6_addr *dst_hit);
 
-u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len);
+uint16_t ipv4_checksum(uint8_t protocol, uint8_t src[], uint8_t dst[], uint8_t data[], uint16_t len);
 
 /* openSSL wrapper functions for base64 encoding and decoding */
 

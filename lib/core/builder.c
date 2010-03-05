@@ -364,7 +364,7 @@ void hip_zero_msg_checksum(struct hip_common *msg)
  * @param msg the message
  * @param checksum the checksum value
  */
-void hip_set_msg_checksum(struct hip_common *msg, u8 checksum)
+void hip_set_msg_checksum(struct hip_common *msg, uint8_t checksum)
 {
     msg->checksum = checksum;     /* one byte, no ntohs() */
 }
@@ -2017,15 +2017,15 @@ out_err:
  * @return     the checksum
  * @note       Checksumming is from Boeing's HIPD.
  */
-u16 hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
+uint16_t hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 {
-    u16 checksum      = 0;
+    uint16_t checksum      = 0;
     unsigned long sum = 0;
     int count         = 0, length = 0;
     unsigned short *p = NULL;     /* 16-bit */
     struct pseudo_header pseudoh;
     struct pseudo_header6 pseudoh6;
-    u32 src_network, dst_network;
+    uint32_t src_network, dst_network;
     struct in6_addr *src6, *dst6;
     struct hip_common *hiph = (struct hip_common *) data;
 

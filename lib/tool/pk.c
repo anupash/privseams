@@ -36,8 +36,8 @@
 int hip_rsa_sign(void *priv_key, struct hip_common *msg)
 {
     RSA *rsa      = (RSA *) priv_key;
-    u8 sha1_digest[HIP_AH_SHA_LEN];
-    u8 *signature = NULL;
+    uint8_t sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t *signature = NULL;
     int err       = 0, len;
     unsigned int sig_len;
 
@@ -84,8 +84,8 @@ out_err:
 int hip_dsa_sign(void *priv_key, struct hip_common *msg)
 {
     DSA *dsa = (DSA *) priv_key;
-    u8 sha1_digest[HIP_AH_SHA_LEN];
-    u8 signature[HIP_DSA_SIGNATURE_LEN];
+    uint8_t sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t signature[HIP_DSA_SIGNATURE_LEN];
     int err  = 0, len;
 
     len = hip_get_msg_total_len(msg);
@@ -123,7 +123,7 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
 {
     int err               = 0, len, origlen;
     struct hip_sig *sig;
-    u8 sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t sha1_digest[HIP_AH_SHA_LEN];
     struct in6_addr tmpaddr;
     struct hip_puzzle *pz = NULL;
     uint8_t opaque[3];
@@ -152,7 +152,7 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
     }
 
     //HIP_HEXDUMP("SIG", sig, hip_get_param_total_len(sig));
-    len = ((u8 *) sig) - ((u8 *) msg);
+    len = ((uint8_t *) sig) - ((uint8_t *) msg);
     hip_zero_msg_checksum(msg);
     HIP_IFEL(len < 0, -ENOENT, "Invalid signature len\n");
     hip_set_msg_total_len(msg, len);

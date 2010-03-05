@@ -410,7 +410,7 @@ int main(int argc, char **argv)
         printf( "-------------------------------\n"
                 "RSA performance test\n"
                 "-------------------------------\n\n");
-        //impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
+        //impl_dsa_sign(uint8_t *digest, uint8_t *private_key, uint8_t *signature)
 
 
         rsa_key_pool = malloc(sw_create_rsa * sizeof(RSA *));
@@ -459,10 +459,10 @@ int main(int argc, char **argv)
 
         /* if sw_rsa_sig_len == 0 we will use the default lengths as they
          * occur in hip */
-        u8 rsa_data[SHA_DIGEST_LENGTH];
+        uint8_t rsa_data[SHA_DIGEST_LENGTH];
         memset(rsa_data, 22, SHA_DIGEST_LENGTH);
-        u8 **rsa_sig_pool;
-        rsa_sig_pool = malloc(sw_bench_loops * sizeof(u8 *));
+        uint8_t **rsa_sig_pool;
+        rsa_sig_pool = malloc(sw_bench_loops * sizeof(uint8_t *));
 
         printf("Calculating %d RSA signatures (len: %d)\n", sw_bench_loops, sw_rsa_keylen);
 
@@ -536,7 +536,7 @@ int main(int argc, char **argv)
         printf( "-------------------------------\n"
                 "DSA performance test\n"
                 "-------------------------------\n\n");
-        //impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
+        //impl_dsa_sign(uint8_t *digest, uint8_t *private_key, uint8_t *signature)
 
         dsa_key_pool = malloc(sw_create_dsa * sizeof(DSA *));
         printf("Creating key pool of %d keys of length %d.\n",
@@ -586,7 +586,7 @@ int main(int argc, char **argv)
 
         /* if sw_dsa_sig_len == 0 we will use the default lengths as they
          * occur in hip */
-        u8 dsa_data[SHA_DIGEST_LENGTH];
+        uint8_t dsa_data[SHA_DIGEST_LENGTH];
         memset(dsa_data, 22, SHA_DIGEST_LENGTH);
         DSA_SIG **dsa_sig_pool;
         dsa_sig_pool = malloc(sw_bench_loops * sizeof(DSA_SIG *));
@@ -702,7 +702,7 @@ int main(int argc, char **argv)
 
     dhp_start_benchmark(&bench_time);
     int dh_size = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID);
-    u8 shared_key[sw_shared_key_len];
+    uint8_t shared_key[sw_shared_key_len];
     uint8_t pub_key[dh_size];
 
 
@@ -778,8 +778,8 @@ int main(int argc, char **argv)
             "-------------------------------\n\n");
 
     printf("Creating %d hashes\n", sw_hashloops);
-    u8 buffer1[HASH_LEN];
-    u8 buffer2[HASH_LEN];
+    uint8_t buffer1[HASH_LEN];
+    uint8_t buffer2[HASH_LEN];
     memset(buffer1, 22, SHA_DIGEST_LENGTH);
     memset(buffer2, 25, SHA_DIGEST_LENGTH);
 

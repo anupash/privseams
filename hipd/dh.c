@@ -16,7 +16,7 @@
 
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
 
-static void hip_regen_dh_keys(u32 bitmask);
+static void hip_regen_dh_keys(uint32_t bitmask);
 
 /**
  * hip_insert_dh - Insert the current DH-key into the buffer
@@ -24,7 +24,7 @@ static void hip_regen_dh_keys(u32 bitmask);
  * If a DH-key does not exist, we will create one.
  * @return >0 if ok, -1 if errors
  */
-int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
+int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
 {
     size_t res;
     DH *tmp;
@@ -118,7 +118,7 @@ int hip_calculate_shared_secret(uint8_t *public_value,
  *
  * Use only this function to generate DH keys.
  */
-static void hip_regen_dh_keys(u32 bitmask)
+static void hip_regen_dh_keys(uint32_t bitmask)
 {
     DH *tmp, *okey;
     int maxmask, i;
@@ -162,7 +162,7 @@ void hip_dh_uninit(void)
 
 int hip_init_cipher(void)
 {
-    u32 supported_groups;
+    uint32_t supported_groups;
 
     supported_groups = (1 << HIP_DH_OAKLEY_1 |
                         1 << HIP_DH_OAKLEY_5 |

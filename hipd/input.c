@@ -66,10 +66,10 @@
  * @note            Fix the packet len before calling this function!
  */
 static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
-                           u8 *hmac, void *hmac_key, int hmac_type)
+                           uint8_t *hmac, void *hmac_key, int hmac_type)
 {
     int err = 0;
-    u8 hmac_res[HIP_AH_SHA_LEN];
+    uint8_t hmac_res[HIP_AH_SHA_LEN];
 
     HIP_HEXDUMP("HMAC data", buffer, buf_len);
 
@@ -102,7 +102,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
     int err               = 0, len = 0, orig_len = 0;
     struct hip_crypto_key tmpkey;
     struct hip_hmac *hmac = NULL;
-    u8 orig_checksum      = 0;
+    uint8_t orig_checksum      = 0;
 
     HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 
@@ -117,7 +117,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
     orig_checksum = hip_get_msg_checksum(msg);
     hip_zero_msg_checksum(msg);
 
-    len           = (u8 *) hmac - (u8 *) msg;
+    len           = (uint8_t *) hmac - (uint8_t *) msg;
     hip_set_msg_total_len(msg, len);
 
     _HIP_HEXDUMP("HMAC key", crypto_key->key,
