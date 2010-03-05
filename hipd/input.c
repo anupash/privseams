@@ -40,8 +40,6 @@
 #include "lib/core/state.h"
 #include "oppdb.h"
 #include "registration.h"
-#include "esp_prot_hipd_msg.h"
-#include "esp_prot_light_update.h"
 #include "hipd.h"
 #include "oppipdb.h"
 #include "modularization.h"
@@ -540,8 +538,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 
     HIP_IFEL(hip_check_network_msg(msg),
              -1,
-             "checking control message failed\n",
-             -1);
+             "Checking control message failed.\n");
 
     type  = hip_get_msg_type(msg);
 
@@ -551,17 +548,16 @@ int hip_receive_control_packet(struct hip_common *msg,
 
     // Check if we need to drop the packet
     if (ctx.hadb_entry &&
-        hip_packet_to_drop(ctx.hadb_entry, type, &msg->hitr) == 1)
-    {
-        HIP_DEBUG("Ignoring the packet sent \n");
+        hip_packet_to_drop(ctx.hadb_entry, type, &msg->hitr) == 1) {
+        HIP_DEBUG("Ignoring the packet sent.\n");
         err = -1;
         goto out_err;
     }
 
-    ctx.input_msg        = msg;
-    ctx.src_addr   = src_addr;
-    ctx.dst_addr   = dst_addr;
-    ctx.msg_ports   = msg_info;
+    ctx.input_msg = msg;
+    ctx.src_addr  = src_addr;
+    ctx.dst_addr  = dst_addr;
+    ctx.msg_ports = msg_info;
 
     if (ctx.hadb_entry) {
         state = ctx.hadb_entry->state;
@@ -590,27 +586,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 #endif
 
     hip_run_handle_functions(type, state, &ctx);
-
-    switch (type) {
-    case HIP_I1:
-    case HIP_I2:
-    case HIP_R1:
-    case HIP_R2:
-    case HIP_UPDATE:
-    case HIP_NOTIFY:
-    case HIP_CLOSE:
-    case HIP_CLOSE_ACK:
-    case HIP_BOS:
-        break;
-
-    case HIP_LUPDATE:
-        HIP_IFCS(ctx.hadb_entry, err = esp_prot_handle_light_update(type, state, &ctx));
-        break;
-
-    default:
-        HIP_ERROR("Unknown packet %d\n", type);
-        err = -ENOSYS;
-    }
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Write PERF_SIGN, PERF_DSA_SIGN_IMPL, PERF_RSA_SIGN_IMPL," \

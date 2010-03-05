@@ -194,7 +194,12 @@ int esp_prot_handle_light_update(const uint32_t packet_type,
     uint32_t spi        = 0;
     int err             = 0;
 
-    HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &(ctx->hadb_entry)->hip_hmac_in),
+    HIP_IFEL(!ctx->hadb_entry, -1,
+              "No entry in host association database when receiving " \
+              " HIP_LUPDATE. Dropping.\n");
+
+    HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
+                                    &(ctx->hadb_entry)->hip_hmac_in),
              -1,
              "HMAC validation on UPDATE failed.\n");
 
@@ -206,7 +211,8 @@ int esp_prot_handle_light_update(const uint32_t packet_type,
         seq_no = ntohl(seq->update_id);
 
         HIP_DEBUG("SEQ parameter found with update ID: %u\n", seq_no);
-        HIP_DEBUG("previous incoming update id=%u\n", ctx->hadb_entry->light_update_id_in);
+        HIP_DEBUG("previous incoming update id=%u\n",
+                  ctx->hadb_entry->light_update_id_in);
 
         if (seq_no < ctx->hadb_entry->light_update_id_in) {
             HIP_DEBUG("old SEQ, dropping...\n");

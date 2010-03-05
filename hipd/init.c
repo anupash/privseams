@@ -27,6 +27,7 @@
 
 #include "init.h"
 #include "oppdb.h"
+#include "esp_prot_light_update.h"
 
 /**
  * HIP daemon lock file is used to prevent multiple instances
@@ -490,6 +491,9 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_BOS, HIP_STATE_UNASSOCIATED, &hip_handle_bos, 1000);
     hip_register_handle_function(HIP_BOS, HIP_STATE_I1_SENT,      &hip_handle_bos, 1000);
     hip_register_handle_function(HIP_BOS, HIP_STATE_I2_SENT,      &hip_handle_bos, 1000);
+
+    hip_register_handle_function(HIP_LUPDATE, HIP_STATE_ESTABLISHED, &esp_prot_handle_light_update, 1000);
+    hip_register_handle_function(HIP_LUPDATE, HIP_STATE_R2_SENT,     &esp_prot_handle_light_update, 1000);
 
     return err;
 }
