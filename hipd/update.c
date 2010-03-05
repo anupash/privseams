@@ -184,9 +184,13 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
     if (type == HIP_UPDATE_ECHO_REQUEST) {
         HIP_HEXDUMP("ECHO_REQUEST in the host association",
                     ha->echo_data, sizeof(ha->echo_data));
-        HIP_IFEBL2(hip_build_param_echo(update_packet_to_send, ha->echo_data,
-                                        sizeof(ha->echo_data), 1, 1),
-                   -1, return err, "Building of ECHO_REQUEST failed\n");
+        HIP_IFEL(hip_build_param_echo(update_packet_to_send,
+                                      ha->echo_data,
+                                      sizeof(ha->echo_data),
+                                      1,
+                                      1),
+                 -1,
+                 "Building of ECHO_REQUEST failed\n");
     }
 
     /* Add ECHO_RESPONSE (signed) */
