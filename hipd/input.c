@@ -1289,8 +1289,23 @@ out_err:
 #endif
     return err;
 }
-
 /**
+ * hip_handle_i2_in_i2_sent
+ *
+ * Checks wether the received I2 packet in state I2-SENT should be droppped, or
+ * not. If the packet should be dropped, the drop_packet flag is set to 1.
+ *
+ * @note See RFC5201, 4.4.2., Table 4 for details.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx The packet context containing a pointer to the received message,
+ *             a pointer to the outgoing message, source and destination
+ *             address, the ports and the corresponding entry from the host
+ *             association database.
+ *
+ * @return Success = 0,
+ *         Error   = -1
  *
  */
 int hip_handle_i2_in_i2_sent(const uint32_t packet_type,
