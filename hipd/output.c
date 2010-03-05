@@ -543,7 +543,8 @@ int hip_send_i2(const uint32_t packet_type,
      * of the REG_INFO parameter. */
 
     HIP_DEBUG("R1 source port %u, destination port %d\n",
-              packet_ctx->msg_ports->src_port, packet_ctx->msg_ports->dst_port);
+              packet_ctx->msg_ports->src_port,
+              packet_ctx->msg_ports->dst_port);
 
     HIP_ASSERT(packet_ctx->hadb_entry);
 
@@ -569,14 +570,18 @@ int hip_send_i2(const uint32_t packet_type,
     }
 
     /********** HIP transform. **********/
-    HIP_IFE(!(param = hip_get_param(packet_ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)), -ENOENT);
+    HIP_IFE(!(param = hip_get_param(packet_ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
+            -ENOENT);
     HIP_IFEL((transform_hip_suite =
                   hip_select_hip_transform((struct hip_hip_transform *) param)) == 0,
-             -EINVAL, "Could not find acceptable hip transform suite\n");
+             -EINVAL,
+             "Could not find acceptable hip transform suite\n");
 
     /* Select only one transform */
     HIP_IFEL(hip_build_param_hip_transform(packet_ctx->output_msg,
-                                           &transform_hip_suite, 1), -1,
+                                           &transform_hip_suite,
+                                           1),
+             -1,
              "Building of HIP transform failed\n");
 
     HIP_DEBUG("HIP transform: %d\n", transform_hip_suite);
@@ -589,17 +594,20 @@ int hip_send_i2(const uint32_t packet_type,
                                                         (struct hip_tlv_common *) packet_ctx->hadb_entry->our_pub),
                      -1,
                      "Building of param encrypted failed.\n");
-            enc_in_msg     = hip_get_param(packet_ctx->output_msg, HIP_PARAM_ENCRYPTED);
+            enc_in_msg     = hip_get_param(packet_ctx->output_msg,
+                                           HIP_PARAM_ENCRYPTED);
             HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
             iv             = ((struct hip_encrypted_aes_sha1 *) enc_in_msg)->iv;
             get_random_bytes(iv, 16);
-            host_id_in_enc = enc_in_msg +
-                             sizeof(struct hip_encrypted_aes_sha1);
+            host_id_in_enc = enc_in_msg + sizeof(struct hip_encrypted_aes_sha1);
             break;
         case HIP_HIP_3DES_SHA1:
-            HIP_IFEL(hip_build_param_encrypted_3des_sha1(packet_ctx->output_msg, (struct hip_tlv_common *) packet_ctx->hadb_entry->our_pub),
-                     -1, "Building of param encrypted failed.\n");
-            enc_in_msg     = hip_get_param(packet_ctx->output_msg, HIP_PARAM_ENCRYPTED);
+            HIP_IFEL(hip_build_param_encrypted_3des_sha1(packet_ctx->output_msg,
+                                                         (struct hip_tlv_common *) packet_ctx->hadb_entry->our_pub),
+                     -1,
+                     "Building of param encrypted failed.\n");
+            enc_in_msg     = hip_get_param(packet_ctx->output_msg,
+                                           HIP_PARAM_ENCRYPTED);
             HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
             iv             = ((struct hip_encrypted_3des_sha1 *) enc_in_msg)->iv;
             get_random_bytes(iv, 8);
@@ -607,9 +615,12 @@ int hip_send_i2(const uint32_t packet_type,
                              sizeof(struct hip_encrypted_3des_sha1);
             break;
         case HIP_HIP_NULL_SHA1:
-            HIP_IFEL(hip_build_param_encrypted_null_sha1(packet_ctx->output_msg, (struct hip_tlv_common *) packet_ctx->hadb_entry->our_pub),
-                     -1, "Building of param encrypted failed.\n");
-            enc_in_msg     = hip_get_param(packet_ctx->output_msg, HIP_PARAM_ENCRYPTED);
+            HIP_IFEL(hip_build_param_encrypted_null_sha1(packet_ctx->output_msg,
+                                                         (struct hip_tlv_common *) packet_ctx->hadb_entry->our_pub),
+                     -1,
+                     "Building of param encrypted failed.\n");
+            enc_in_msg     = hip_get_param(packet_ctx->output_msg,
+                                           HIP_PARAM_ENCRYPTED);
             HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
             iv             = NULL;
             host_id_in_enc = enc_in_msg +
@@ -640,10 +651,14 @@ int hip_send_i2(const uint32_t packet_type,
 
     /* REG_INFO parameter. This builds a REG_REQUEST parameter in the I2
      * packet. */
-    hip_handle_param_reg_info(packet_ctx->hadb_entry, packet_ctx->input_msg, packet_ctx->output_msg);
+    hip_handle_param_reg_info(packet_ctx->hadb_entry,
+                              packet_ctx->input_msg,
+                              packet_ctx->output_msg);
 
     /********** ESP-ENC transform. **********/
-    HIP_IFE(!(param = hip_get_param(packet_ctx->input_msg, HIP_PARAM_ESP_TRANSFORM)), -ENOENT);
+    HIP_IFE(!(param = hip_get_param(packet_ctx->input_msg,
+                                    HIP_PARAM_ESP_TRANSFORM)),
+            -ENOENT);
 
     /* Select only one transform */
     HIP_IFEL((transform_esp_suite =
@@ -662,7 +677,8 @@ int hip_send_i2(const uint32_t packet_type,
     /************************************************/
 
     if (hip_encrypt_i2_hi) {
-        HIP_HEXDUMP("enc(host_id)", host_id_in_enc,
+        HIP_HEXDUMP("enc(host_id)",
+                    host_id_in_enc,
                     hip_get_param_total_len(host_id_in_enc));
 
         /* Calculate the length of the host id inside the encrypted param */
@@ -705,7 +721,9 @@ int hip_send_i2(const uint32_t packet_type,
     /* Now that almost everything is set up except the signature, we can
      * try to set up inbound IPsec SA, similarly as in hip_send_r2 */
 
-    HIP_DEBUG("src %d, dst %d\n", packet_ctx->msg_ports->src_port, packet_ctx->msg_ports->dst_port);
+    HIP_DEBUG("src %d, dst %d\n",
+              packet_ctx->msg_ports->src_port,
+              packet_ctx->msg_ports->dst_port);
 
     packet_ctx->hadb_entry->local_udp_port = packet_ctx->msg_ports->src_port;
     packet_ctx->hadb_entry->peer_udp_port  = packet_ctx->msg_ports->dst_port;
@@ -718,11 +736,13 @@ int hip_send_i2(const uint32_t packet_type,
     HIP_IFEL(hip_setup_hit_sp_pair(&packet_ctx->input_msg->hits,
                                    &packet_ctx->input_msg->hitr,
                                    packet_ctx->src_addr, packet_ctx->dst_addr,
-                                   IPPROTO_ESP, 1, 1),
+                                   IPPROTO_ESP,
+                                   1,
+                                   1),
              -1,
              "Setting up SP pair failed\n");
 
-    esp_info          = hip_get_param(packet_ctx->output_msg, HIP_PARAM_ESP_INFO);
+    esp_info = hip_get_param(packet_ctx->output_msg, HIP_PARAM_ESP_INFO);
     HIP_ASSERT(esp_info);     /* Builder internal error */
     esp_info->new_spi = htonl(spi_in);
     /* LSI not created, as it is local, and we do not support IPv4 */
@@ -741,8 +761,10 @@ int hip_send_i2(const uint32_t packet_type,
     }
 
     /************* HMAC ************/
-    HIP_IFEL(hip_build_param_hmac_contents(packet_ctx->output_msg, &packet_ctx->hadb_entry->hip_hmac_out),
-             -1, "Building of HMAC failed\n");
+    HIP_IFEL(hip_build_param_hmac_contents(packet_ctx->output_msg,
+                                           &packet_ctx->hadb_entry->hip_hmac_out),
+             -1,
+             "Building of HMAC failed\n");
 
     /********** Signature **********/
     /* Build a digest of the packet built so far. Signature will
@@ -751,7 +773,10 @@ int hip_send_i2(const uint32_t packet_type,
     HIP_DEBUG("Start PERF_SIGN\n");
     hip_perf_start_benchmark(perf_set, PERF_SIGN);
 #endif
-    HIP_IFEL(packet_ctx->hadb_entry->sign(packet_ctx->hadb_entry->our_priv_key, packet_ctx->output_msg), -EINVAL, "Could not create signature\n");
+    HIP_IFEL(packet_ctx->hadb_entry->sign(packet_ctx->hadb_entry->our_priv_key,
+                                          packet_ctx->output_msg),
+             -EINVAL,
+             "Could not create signature\n");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_SIGN\n");
     hip_perf_stop_benchmark(perf_set, PERF_SIGN);
@@ -776,19 +801,16 @@ int hip_send_i2(const uint32_t packet_type,
     spi_in_data.ifindex = hip_devaddr2ifindex(packet_ctx->dst_addr);
     HIP_LOCK_HA(packet_ctx->hadb_entry);
 
-    // 99999 HIP_IFEB(hip_hadb_add_spi_old(packet_ctx->hadb_entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(packet_ctx->hadb_entry));
+    /* 99999 HIP_IFEB(hip_hadb_add_spi_old(packet_ctx->hadb_entry,
+                                           HIP_SPI_DIRECTION_IN, &spi_in_data),
+                      -1,
+                      HIP_UNLOCK_HA(packet_ctx->hadb_entry));
+    */
 
     packet_ctx->hadb_entry->esp_transform = transform_esp_suite;
-    HIP_DEBUG("Saving base exchange encryption data to packet_ctx->hadb_entry \n");
+    HIP_DEBUG("Saving base exchange encryption data to hadb_entry \n");
     HIP_DEBUG_HIT("Our HIT: ", &packet_ctx->hadb_entry->hit_our);
     HIP_DEBUG_HIT("Peer HIT: ", &packet_ctx->hadb_entry->hit_peer);
-    /* Store the keys until we receive R2 */
-    //HIP_IFEB(hip_store_base_exchange_keys(packet_ctx->hadb_entry, ctx, 1), -1, HIP_UNLOCK_HA(packet_ctx->hadb_entry));
-//    hip_update_entry_keymat(packet_ctx->hadb_entry,
-//                            packet_ctx->hadb_entry->current_keymat_index,
-//                            packet_ctx->hadb_entry->keymat_calc_index,
-//                            packet_ctx->hadb_entry->esp_keymat_index,
-//                            packet_ctx->hadb_entry->current_keymat_K);
 
     /** @todo Also store the keys that will be given to ESP later */
     HIP_IFE(hip_hadb_get_peer_addr(packet_ctx->hadb_entry, &daddr), -1);
