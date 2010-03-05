@@ -63,7 +63,7 @@ firewall/user_ipsec_esp.h : add_ipv4_header
 firewall/user_ipsec_esp.h : add_ipv6_header
 hipd/hadb i3/chord/chord i3/i3_client/i3_client i3/i3_client/i3server_list i3/i3_client/ping i3/i3/i3 libhipcore/protodefs libhiptool/lutil libhiptool/nlink libipsec/test-policy libopphip/wrap /usr/include/linux/ipv6 /usr/include/netax25/ax25 /usr/include/neteconet/ec.h : addr
 firewall/conndb firewall/proxydb.h : addr_client
-libhipcore/protodefs libinet6/ifaddrs tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/netrose/rose /usr/include/zlib.h : address
+libhipcore/protodefs tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/netrose/rose /usr/include/zlib.h : address
 libhipcore/protodefs.h : address_and_port
 hipd/hipd.h : addresses
 hipd/hadb.h : addr_list
@@ -76,15 +76,9 @@ libhipcore/hip_statistics.h : add_statistics_item
 libhiptool/xfrm.h : add_time
 firewall/user_ipsec_esp.h : add_udp_header
 firewall/user_ipsec_sadb.h : aes_key
-libhipcore/protodefs libinet6/include_glibc23/bits/socket.h : AF_HIP
+libhipcore/protodefs : AF_HIP
 agent/agent.h : AGENT_H
 agent/tools.h : AGENT_TOOLS_H
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : AI_CHK_KERNEL
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : AI_HIP
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : AI_HIP_NATIVE
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : AI_KERNEL_LIST
-libhipcore/getendpointinfo libinet6/include_glibc23/netdb.h : AI_NODHT
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : AI_RENDEZVOUS
 libipsec/libpfkey.h : a_keylen
 libhiptool/nlink.h : alen
 libhipcore/protodefs.h : alg_id
@@ -95,7 +89,6 @@ libhipcore/protodefs.h : algo
 libhipcore/protodefs.h : algorithm
 libhipcore/utils tools/djbdns/djbdns-1.h : alias
 libhipcore/utils.h : alias2
-libinet6/libc-compat.h : __alloca
 libhipandroid/regex.h : allocated
 firewall/rule_management.h : alloc_empty_rule
 firewall/dlist.h : alloc_list
@@ -127,7 +120,6 @@ libhipcore/kerncompat.h : atomic_inc
 libhipcore/kerncompat.h : atomic_read
 libhipcore/kerncompat.h : atomic_set
 libhipcore/kerncompat.h : atomic_t
-libinet6/libc-compat.h : attribute_hidden
 libipsec/libpfkey.h : a_type
 firewall/user_ipsec_sadb.h : auth_key
 firewall/firewall_defines.h : auth_len
@@ -149,7 +141,6 @@ libhipcore/protodefs.h : branch_length
 libhipcore/protodefs.h : branch_nodes
 libipsec/policy_parse libipsec/policy_parse libipsec/test-policy libopphip/wrap test/telnet/ring test/ttcp tools/daemontools/admin/daemontools-0 tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/openssl/pem.h : buf
 libhipandroid/regex tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1.h : buffer
-libinet6/libc-compat.h : __builtin_expect
 libhipgui/events.h : BUTTON_IDS
 libhipgui/events.h : BUTTON_IDS_N
 libhiptool/nlink.h : bytelen
@@ -184,12 +175,10 @@ libhipcore/common_defines.h : CIPHER_BLOCK_SIZE
 hipd/cookie.h : Ck
 test/escrow.h : client_end
 libopphip/wrap test/telnet/netlink /usr/include/libio.h : close
-libinet6/libc-compat.h : __close
 libhipgui/tools.h : combo_box_find
 libhipcore/common_defines.h : COMMON_DEFINES_H_
 hipd/configfilereader.h : CONFIGFILEREADER_H
 firewall/esp_prot_config /usr/include/libconfig.h : config_t
-libinet6/libc-compat.h : __connect
 firewall/firewall_defines.h : connection
 firewall/rule_management.h : CONN_ESTABLISHED
 agent/connhipd.h : CONNHIPD_H
@@ -230,7 +219,7 @@ libhiptool/xfrm.h : curlft
 libhipcore/hashchain.h : current_index
 libhiptool/xfrm /usr/include/linux/ipv6 /usr/include/netinet/ip.h : daddr
 libhiptool/nlink.h : d_addr
-agent/str_var firewall/common_types firewall/firewall_defines firewall/sava_api hipd/configfilereader hipd/hipqueue i3/i3_client/i3_client i3/i3_client/ping libhipcore/hashtree libhipcore/protodefs libhiptool/lutil libhiptool/nlink libinet6/include_glibc/netinet/icmp6 tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/arpa/nameser /usr/include/linux/capability /usr/include/linux/icmp /usr/include/linux/icmpv6 /usr/include/netinet/ip.h : data
+agent/str_var firewall/common_types firewall/firewall_defines firewall/sava_api hipd/configfilereader hipd/hipqueue i3/i3_client/i3_client i3/i3_client/ping libhipcore/hashtree libhipcore/protodefs libhiptool/lutil libhiptool/nlink tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/arpa/nameser /usr/include/linux/capability /usr/include/linux/icmp /usr/include/linux/icmpv6 /usr/include/netinet/ip.h : data
 hipd/hipqueue i3/i3_client/i3_client /usr/include/linux/netfilter_ipv4/ip_queue.h : data_len
 libhipcore/debug.h : DEBUG_H
 libhipcore/debug.h : debug_level
@@ -318,31 +307,11 @@ libhipgui/tools.h : edit_group_remote
 libhipgui/tools.h : edit_hit_remote
 libhipgui/tools.h : edit_reset
 libhipgui/tools.h : edit_set_remote_group
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_ADDRFAMILY
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_AGAIN
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_ALLDONE
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_CANCELED
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_FAIL
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_FAMILY
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_INPROGRESS
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_INTR
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_MEMORY
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_NODATA
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_NONAME
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_NOTCANCELED
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_SERVICE
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_SOCKTYPE
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EEI_SYSTEM
 libhipcore/ife.h : EHADDRINFO
 libhipcore/ife.h : EHIP
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_ANON
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_CANONNAME
 libhipcore/protodefs.h : eid_family
 libhipcore/protodefs.h : eid_port
 libhipcore/protodefs.h : eid_val
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_FALLBACK
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_NOLOCATORS
-libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : EI_PASSIVE
 libipsec/ipsec_strerror.h : EIPSEC_DO_GET_SUPP_LIST
 libipsec/ipsec_strerror.h : EIPSEC_FAMILY_MISMATCH
 libipsec/ipsec_strerror.h : EIPSEC_FEW_ARGUMENTS
@@ -483,34 +452,3 @@ firewall/esp_prot_api firewall/esp_prot_fw_msg libhipcore/esp_prot_common.h : ES
 firewall/esp_prot_config.h : esp_prot_token_config
 firewall/esp_prot_api firewall/esp_prot_fw_msg firewall/user_ipsec_sadb.h : esp_prot_transform
 firewall/esp_prot_api.h : esp_prot_uninit
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 hipd/esp_prot_hipd_msg.h : esp_prot_update_add_anchor
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 firewall/rule_management.h : ESTABLISHED_STR
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipgui/events.h : _EVENTS_H
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/esp_prot_common.h : EXT_ESP_PROT_COMMON_H_
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipandroid/regex.h : fastmap
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipandroid/regex.h : fastmap_accurate
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 performance/performance.h : files_open
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 firewall/firewall_control.h : FIREWALL_CONTROL_H_
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 firewall/firewall_defines.h : FIREWALL_DEFINES_H_
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/icomm.h : firewall_hl
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/icomm.h : firewall_port_cache_hl
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipandroid/libhipandroid /usr/include/fcntl /usr/include/unistd.h : F_LOCK
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 hipd/maintenance.h : FORCE_EXIT_COUNTER_START
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 firewall/rule_management.h : FORWARD_STR
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/linkedlist.h : free_elem_fn_t
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 firewall/dlist.h : free_list_chain
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 firewall/rule_management.h : free_rule
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipandroid/libhipandroid /usr/include/fcntl /usr/include/unistd.h : F_TEST
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_FQDN_STR_MAX
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_FQDN_STR_VAL_MAX
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_HI_STR_MAX
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/getendpointinfo libinet6/include_glibc22/netdb libinet6/include_glibc23/netdb.h : GEPI_HI_STR_VAL_MAX
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libinet6/getaddrinfo.h : GETADDRINFO_H
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhiptool/nlink.h : get_ctl_fd
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/getendpointinfo.h : GETENDPOINTINFO_H
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipcore/ife.h : GOTO_OUT
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipgui/hipgui.h : _GUIAPI_H
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipgui/hipgui.h : gui_hit_local_add
-agent/gui_interface {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2.h : GUI_INTERFACE_H
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 libhipgui/widgets.h : GUI_WIDGETS_H
-{arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 {arch}/++pristine-trees/unlocked/hipl/hipl--userspace/hipl--userspace--2 hipd/hadb_legacy.h : HADB_LEGACY_H

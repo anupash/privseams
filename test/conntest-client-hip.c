@@ -125,10 +125,6 @@ out_err:
                      "data,\nbut the sent and received data do " \
                      "not match.\n");
         }
-        /* Then move to errno handling. Note that the errno is set
-         * in somewhat randomly in libinet6 functions and therefore
-         * these error messages do not neccessarily hold. Well, better
-         * than nothing... */
         else if (errno == ECONNREFUSED) {
             HIP_ERROR("The peer was reached but it refused the " \
                       "connection.\nThere is no one listening on " \

@@ -2438,7 +2438,8 @@ out_err:
 /**
  * Handle e.g. "hipconf run normal firefox". Enables HIP support
  * for the given application using LD_PRELOAD. This means that
- * all getaddrinfo() calls go through the modified libinet library.
+ * all getaddrinfo() calls go through the modified libinet6 library.
+ * This function is depracated.
  *
  * @param msg input/output message for the query/response for hipd
  * @param action unused
@@ -2679,16 +2680,14 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
     } else if (err == 0)    {
         HIP_DEBUG("Exec new application.\n");
         if (type == EXEC_LOADLIB_HIP) {
-            libs[0] = "libinet6.so";
-            libs[1] = "libhiptool.so";
-            libs[3] = NULL;
-            libs[4] = NULL;
-            libs[2] = "libhipopendht.so";
+            libs[0] = "libhiptool.so";
+            libs[1] = NULL;
+            libs[2] = NULL;
+            libs[3] = "libhipopendht.so";
         } else if (type == EXEC_LOADLIB_OPP)   {
             libs[0] = "libopphip.so";
-            libs[1] = "libinet6.so";
-            libs[2] = "libhiptool.so";
-            libs[4] = NULL;
+            libs[1] = "libhiptool.so";
+            libs[2] = NULL;
             libs[3] = "libhipopendht.so";
         }
 

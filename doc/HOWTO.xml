@@ -375,7 +375,7 @@
        </para></listitem>
     </itemizedlist>
     <para>
-      Next, build the hipd, libinet6, tools and test directory as follows:
+      Next, build HIPL software as follows:
     </para>
     <para>
       ./configure &amp;&amp; make install
@@ -992,7 +992,6 @@ define Package/hipl/install
     $(INSTALL_DATA) ./files/test/* $(1)/etc/init.d/test/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/conntest* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hipsetup* $(1)/usr/bin/
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/libinet6test* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/listifaces* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/* $(1)/usr/sbin/
 endif
@@ -2444,7 +2443,7 @@ $ tools/adb shell # Log into device shell
         6a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
       </para>
       <para>
-        6b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
+        6b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so:libhipopendht.so</emphasis>
       </para>
     </section>
     <section id="sec_advanced_methods">
@@ -2458,33 +2457,6 @@ $ tools/adb shell # Log into device shell
         Following applications are IPv6 enabled (and use getaddrinfo for name
         resolution): telnet, firefox, lynx, ssh. Not using getaddrinfo: ping,
         ping6, tla, svn.
-      </para>
-      <para>
-        8. Relink the application to use the libinet6 library provided in the
-        HIPL software bundle Configure the HIT of the peer to /etc/hip/hosts and
-        add the corresponding address to /etc/hosts. Then, use either of the
-        following methods:
-      </para>
-      <para>
-        8a) Run the application by using the hostname you just configured to
-        the hosts files. It will use HIP for those hostnames. For hostnames
-        that are not present in /etc/hip/hosts, the application will just
-        use normal IPv4 or IPv6 connectivity. Good for environments where
-        the are both HIP and non-HIP enabled hosts, and backwards
-        compatibility is more important that the security of the connections.
-      </para>
-      <para>
-        8b) Set the AI_HIP flag in the getaddrinfo call and recompile the
-        application (see conntest.c). This will make the getaddrinfo
-        function to return <emphasis>only</emphasis> HITs in the place of IP
-        addresses (no IP addresses are returned). This option good for
-        security critical applications for which you want to force the
-        use of HIP.
-      </para>
-      <para>
-        8c. Port it to use the native HIP API. See the telnet code for a
-        practical example. The API is documented in url:
-        <ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
       </para>
     </section>
 

@@ -1180,7 +1180,7 @@ void hip_dump_msg(const struct hip_common *msg)
  * Return a sting for a given parameter type number for diagnostics.
  * The returned string should be just the same as its type constant name.
  *
- * @note If you added a SO_HIP_NEWMODE in libinet6/icomm.h, you also need to
+ * @note If you added a SO_HIP_NEWMODE in lib/core/icomm.h, you also need to
  *       add a case block for your SO_HIP_NEWMODE constant in the
  *       switch(msg_type) block in this function.
  * @param msg_type message type number

@@ -27,7 +27,7 @@ struct list_head {
 };
 
 #ifndef IPPROTO_HIP
-#  define IPPROTO_HIP             139 /* Also in libinet6/include/netinet/in.h */
+#  define IPPROTO_HIP             139
 #endif
 
 #define HIP_MALLOC(size, flags)  malloc(size)

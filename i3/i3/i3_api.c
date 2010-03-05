@@ -1,6 +1,5 @@
 /** @file
  *
- * @note: HIPU: libinet6 requires LD_PRELOAD which is "dylib" on BSD.
  */
 
 #include <stdio.h>

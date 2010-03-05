@@ -307,7 +307,7 @@
  *
  * Unfortunately Doxygen gets confused when dealing with the extensive '\' and
  * '#' characters that these macros contain. This documentation is therefore
- * messed up. You can find the implementation of these macros from libinet/debug.h.
+ * messed up. You can find the implementation of these macros from lib/core/debug.h.
  */
 
 /** @defgroup params TODOs for parameters */
@@ -319,7 +319,7 @@
  */
 
 /**
- * @file libinet6/protodefs.h
+ * @file lib/core/protodefs.h
  * @def HIP_I1
  * @def HIP_R1
  * @def HIP_I2
@@ -405,7 +405,7 @@
  */
 
 /**
- * @file libinet6/protodefs.h
+ * @file lib/core/protodefs.h
  * @def HIP_PARAM_MIN
  *      Defines the minimum parameter type value.
  * @note exclusive
@@ -550,7 +550,7 @@
  */
 
 /**
- * @file libinet6/protodefs.h
+ * @file lib/core/protodefs.h
  * @def  HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE
  *       Sent if the parameter type has the "critical" bit set and the
  *       parameter type is not recognized.  Notification Data contains the two
@@ -625,7 +625,7 @@
  */
 
  /**
- * @file libinet6/protodefs.h
+ * @file lib/core/protodefs.h
  * @def HIP_SERVICE_RENDEZVOUS
  *      Rendezvous service for relaying I1 packets.
  * @def HIP_SERVICE_RELAY
@@ -636,7 +636,7 @@
  */
 
 /**
- * @file   libinet6/protodefs.h
+ * @file   lib/core/protodefs.h
  * @struct hip_rvs_hmac
  *         Rendezvous server hmac. A non-critical parameter whose only difference with
  *         the @c HMAC parameter defined in [I-D.ietf-hip-base] is its @c type code.
@@ -778,7 +778,7 @@
  */
 
 /**
- * @file libinet6/state.h
+ * @file lib/core/state.h
  * @def HIP_STATE_NONE
  *      No state, structure unused.
  * @def HIP_STATE_UNASSOCIATED
