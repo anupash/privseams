@@ -14,12 +14,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#ifdef __KERNEL__
-#  include "hipsock/usercompat.h"
-#  include <linux/list.h>
-#else
-#  include "hipd/hidb.h"
-#endif /* __KERNEL__ */
+#include "hipd/hidb.h"
 
 #include <string.h>
 #include "hipd/registration.h"
@@ -129,14 +124,11 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
  * file. It still remains as useless abstraction, but at least we eliminate the
  * need for a call and return sequence. -Lauri 06.08.2008
  */
-#ifndef __KERNEL__
 static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
                                          struct in6_addr *hit, int hit_type)
 {
     return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
-
-#endif
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
                        struct in6_addr *hit, int hit_type);
@@ -190,11 +182,9 @@ int maxof(int num_args, ...);
 int addr2ifindx(struct in6_addr *local_address);
 void get_random_bytes(void *buf, int n);
 
-#ifndef __KERNEL__
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
-#endif
 void *hip_cast_sa_addr(const struct sockaddr *sa);
 int hip_sockaddr_len(const void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
@@ -236,11 +226,8 @@ void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
                         struct hip_rsa_keylen *ret,
                         int is_priv);
 
-#ifndef __KERNEL__
 RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv);
 DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv);
-#endif
-
 
 int hip_get_random_hostname_id_from_hosts(char *filename,
                                           char *hostname,

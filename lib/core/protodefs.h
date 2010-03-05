@@ -5,21 +5,15 @@
 #ifndef HIP_LIB_CORE_PROTODEFS_H
 #define HIP_LIB_CORE_PROTODEFS_H
 
-#ifdef __KERNEL__
-#  include "usercompat.h"
-typedef uint16_t in_port_t;
-#  define MAX_HASH_LENGTH 0
-#  define MAX_HTREE_DEPTH 0
-#else
-#  include <netinet/ip6.h>
-#  include "hashchain.h"
-#  include "esp_prot_common.h"
+#include <netinet/ip6.h>
+#include "hashchain.h"
+#include "esp_prot_common.h"
+
 #ifndef PF_HIP
 #  define PF_HIP 32
 #endif
 #ifndef AF_HIP
 #  define AF_HIP 32
-#endif
 #endif
 
 #ifndef IPPROTO_HIP
@@ -462,7 +456,6 @@ struct hip_keymat_keymat {
     void * keymatdst;     /**< Pointer to beginning of key material */
 };
 
-#ifndef __KERNEL__
 struct esp_prot_preferred_tfms {
     hip_tlv_type_t type;
     hip_tlv_len_t  length;
@@ -479,7 +472,6 @@ struct esp_prot_anchor {
     // contains active and next anchor
     unsigned char  anchors[2 * MAX_HASH_LENGTH];
 } __attribute__ ((packed));
-#endif
 
 struct esp_prot_branch {
     hip_tlv_type_t type;

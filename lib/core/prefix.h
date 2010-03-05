@@ -5,21 +5,10 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#ifdef __KERNEL__
-#  include <linux/un.h>
-#  include <linux/in6.h>
-#  include "usercompat.h"
-#  include "protodefs.h"
-#  include "state.h"
-#  include "icomm.h"
-#  include "ife.h"
-#else
-#  include <sys/un.h>
-#  include "protodefs.h"
-#  include <stdlib.h>
-#  include "list.h"
-#endif
-
+#include <sys/un.h>
+#include <stdlib.h>
+#include "protodefs.h"
+#include "list.h"
 #include "debug.h"
 
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"

@@ -487,7 +487,6 @@ out:
     return tid;
 }
 
-#ifndef __KERNEL__
 uint16_t ipv4_checksum(uint8_t protocol, uint8_t src[], uint8_t dst[], uint8_t data[], uint16_t len)
 {
     uint16_t word16;
@@ -698,7 +697,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 
     /* Allocate enough space for host id; there will be 20 bytes extra
      * to avoid hassle with padding. */
-    host_id_pub = (struct hip_host_id *) HIP_MALLOC(total_len, GFP_KERNEL);
+    host_id_pub = (struct hip_host_id *) HIP_MALLOC(total_len, 0);
     HIP_IFE(!host_id_pub, -EFAULT);
     memset(host_id_pub, 0, total_len);
 
@@ -1933,8 +1932,7 @@ int hip_solve_puzzle_m(struct hip_common *out,
 out_err:
     return err;
 }
-
-#endif
+#endif /* CONFIG_HIP_MIDAUTH */
 
 /**
  * Gets the state of the bex for a pair of ip addresses.
@@ -2247,7 +2245,6 @@ void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
     ret->n     = bytes;
 }
 
-#ifndef __KERNEL__
 RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv)
 {
     int offset;
@@ -2316,8 +2313,6 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
 
     return dsa;
 }
-
-#endif /* !__KERNEL__ */
 
 int hip_string_to_lowercase(char *to, const char *from, const size_t count)
 {
@@ -2802,8 +2797,6 @@ out_err:
     return err;
 }
 
-#endif /* !__KERNEL__ */
-
 in_port_t hip_get_local_nat_udp_port()
 {
     return hip_local_nat_udp_port;
@@ -2848,7 +2841,7 @@ int hip_verify_packet_signature(struct hip_common *pkt,
     int len                      = hip_get_param_total_len(peer_host_id);
     char *key                    = NULL;
 
-    HIP_IFEL(!(peer_pub = HIP_MALLOC(len, GFP_KERNEL)),
+    HIP_IFEL(!(peer_pub = HIP_MALLOC(len, 0)),
              -ENOMEM, "Out of memory\n");
 
     memcpy(peer_pub, peer_host_id, len);

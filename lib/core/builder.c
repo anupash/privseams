@@ -76,13 +76,6 @@
 #include "hipd/input.h"
 #include "lib/core/crypto.h"
 
-/* Not needed, already defined in netinet/in.h */
-/* #define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } } */
-
-#ifdef __KERNEL__
-const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
-#endif /* __KERNEL__ */
-
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
   #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -543,8 +536,6 @@ struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(const struct 
     return (struct hip_locator_info_addr_item *) (locator + 1);
 }
 
-#ifndef __KERNEL__
-
 /**
  * Translate a service life time from seconds to a 8-bit integer value. The
  * lifetime value in seconds is translated to a 8-bit integer value using
@@ -603,8 +594,6 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds)
         return 0;
     }
 }
-
-#endif /* __KERNEL__ */
 
 /**
  * check the validity of user (interprocess) message length
@@ -1863,7 +1852,6 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
     ipv6_addr_copy(&msg->hitr, hit_receiver ? hit_receiver : &in6addr_any);
 }
 
-#ifndef __KERNEL__
 /**
  * Builds a @c HMAC parameter to the HIP packet @c msg. This function calculates
  * also the hmac value from the whole message as specified in the drafts.
@@ -2163,8 +2151,6 @@ out_err:
     return err;
 }
 
-#endif /* __KERNEL__ */
-
 /**
  * build a hip_encrypted parameter
  *
@@ -2197,7 +2183,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
     if (rem) {
         HIP_DEBUG("Adjusting param size to AES block size\n");
 
-        param_padded = (char *) HIP_MALLOC(param_len + rem, GFP_KERNEL);
+        param_padded = (char *) HIP_MALLOC(param_len + rem, 0);
         if (!param_padded) {
             err = -ENOMEM;
             goto out_err;
@@ -2717,7 +2703,6 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
     return err;
 }
 
-#ifndef __KERNEL__
 /**
  * Build and append a HIP challenge_request to the message.
  *
@@ -2892,7 +2877,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
     }
 
     /* Allocating memory for the "value" packet */
-    HIP_IFEL(!(value = value_tmp = HIP_MALLOC((pubkey_len), GFP_ATOMIC)),
+    HIP_IFEL(!(value = value_tmp = HIP_MALLOC((pubkey_len), 0)),
              -1, "Failed to alloc memory for value\n");
 
     hip_calc_generic_param_len((struct hip_tlv_common *) &diffie_hellman,
@@ -2932,7 +2917,6 @@ out_err:
     return err;
 }
 
-#endif /* __KERNEL__ */
 /**
  * Find out the maximum number of transform suite ids
  *
@@ -3115,7 +3099,6 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
     return 0;
 }
 
-#ifndef __KERNEL__
 /**
  * build a HIP locator parameter
  *
@@ -3157,7 +3140,6 @@ out_err:
     return err;
 }
 
-#endif /* !__KERNEL__ */
 
 
 /**
@@ -3202,7 +3184,6 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
     return err;
 }
 
-#ifndef __KERNEL__
 /**
  * build and append a ESP PROT transform parameter
  *
@@ -3309,8 +3290,6 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg,
 
     return err;
 }
-
-#endif /* __KERNEL__ */
 
 /**
  * build and insert an unit test parameter (interprocess only)
@@ -4102,7 +4081,6 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
     return err;
 }
 
-#ifndef __KERNEL__
 /**
  * Build and append a SPKI infor parameter into a HIP control message (on-the-wire)
  *
@@ -4398,8 +4376,6 @@ int rsa_to_hip_endpoint(RSA *rsa,
     return err;
 }
 
-#endif /* __KERNEL__ */
-
 /**
  * allocate memory and write the header for host id parameter
  *
@@ -4421,7 +4397,7 @@ int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
     struct hip_host_id host_id_hdr;
     hip_build_param_host_id_hdr(&host_id_hdr, hostname, key_rr_len, algo);
 
-    *host_id = HIP_MALLOC(hip_get_param_total_len(&host_id_hdr), GFP_ATOMIC);
+    *host_id = HIP_MALLOC(hip_get_param_total_len(&host_id_hdr), 0);
     if (!host_id) {
         err = -ENOMEM;
     }
@@ -4469,7 +4445,6 @@ out_err:
     return err;
 }
 
-#ifndef __KERNEL__
 /**
  * Translate a host id into a HIT
  *
@@ -4644,9 +4619,6 @@ int hip_private_dsa_to_hit(DSA *dsa_key,
 {
     return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
-
-#endif /* __KERNEL__ */
-
 
 /**
  * Retrieve the amount the locators inside a LOCATOR parameter.

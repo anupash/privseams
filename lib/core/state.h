@@ -11,12 +11,9 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#ifndef __KERNEL__
 #include "hashtable.h"
 #include "esp_prot_common.h"
 #include "hip_statistics.h"
-
-#endif
 
 #define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1
@@ -233,7 +230,6 @@ struct hip_spi_in_item {
     int                                addresses_n; /* number of addresses */
 };
 
-#ifndef __KERNEL__
 struct hip_spi_out_item {
 //    hip_list_t list;
     uint32_t        spi;
@@ -247,7 +243,6 @@ struct hip_spi_out_item {
     HIP_HASHTABLE * peer_addr_list;    /* Peer's IPv6 addresses */
     struct in6_addr preferred_address;
 };
-#endif
 
 /* this struct is here instead of hidb.h to avoid some weird compilation
  * warnings */
@@ -268,7 +263,7 @@ struct hip_host_id_entry {
     int                 (*remove)(struct hip_host_id_entry *, void **arg);
     void *              arg;
 };
-#ifndef __KERNEL__
+
 /* If you need to add a new boolean type variable to this structure, consider
  * adding a control value to the local_controls and/or peer_controls bitmask
  * field(s) instead of adding yet another integer. Lauri 24.01.2008. */
@@ -541,7 +536,6 @@ struct hip_hadb_state {
     // Has struct hip_peer_addr_list_item s
     HIP_HASHTABLE *peer_addresses_old;
 };
-#endif /* __KERNEL__ */
 
 /** A data structure defining host association information that is sent
  *  to the userspace */

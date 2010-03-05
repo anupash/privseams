@@ -221,7 +221,7 @@ static struct hip_data *get_hip_data(const struct hip_common *common)
              -1, "Unable to verify HOST_ID mapping to src HIT\n");
 
     // init hi parameter and copy
-    HIP_IFEL(!(data->src_hi = HIP_MALLOC(len, GFP_KERNEL)),
+    HIP_IFEL(!(data->src_hi = HIP_MALLOC(len, 0)),
              -ENOMEM, "Out of memory\n");
     memcpy(data->src_hi, host_id, len);
 

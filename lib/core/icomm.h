@@ -6,9 +6,7 @@
 #  define IPV6_2292PKTINFO 2
 #endif
 
-#ifndef __KERNEL__
 #include <netinet/in.h>
-#endif
 #include "protodefs.h"
 
 /* Use this port to send asynchronous/unidirectional messages
