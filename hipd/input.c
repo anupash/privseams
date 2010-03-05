@@ -1968,12 +1968,6 @@ int hip_handle_r2(const uint32_t packet_type,
     }
 
     HIP_DEBUG("Received R2 in state %s\n", hip_state_str(ha_state));
-    switch (ha_state) {
-    case HIP_STATE_R2_SENT:
-    case HIP_STATE_UNASSOCIATED:
-    case HIP_STATE_I1_SENT:
-        HIP_IFEL(1, -EFAULT, "Dropping\n");
-    }
 
     if (ha_state == HIP_STATE_ESTABLISHED) {
         retransmission = 1;
