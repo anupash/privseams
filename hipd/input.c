@@ -1543,15 +1543,6 @@ int hip_handle_i2(const uint32_t packet_type,
      * */
 
     ctx->hadb_entry->spi_outbound_new = spi_out;
-    //HIP_IFE(hip_store_base_exchange_keys(ctx->hadb_entry, &i2_context, 0), -1);
-    //hip_hadb_insert_state(ctx->hadb_entry);
-
-    HIP_DEBUG("\nInserted a new host association state.\n"
-              "\tHIP state: %s\n" \
-              "\tDefault outgoing SPI 0x%x.\n"
-              "\tCreating an R2 packet in response next.\n",
-              hip_state_str(ctx->hadb_entry->state), ctx->hadb_entry->spi_outbound_new);
-
 
 #ifdef CONFIG_HIP_RVS
     ipv6_addr_copy(&dest, &in6addr_any);

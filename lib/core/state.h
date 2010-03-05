@@ -127,36 +127,6 @@ struct hip_in6_addr_port {
     in_port_t       sin6_port;     /**< Transport layer port number. */
 } __attribute__ ((packed));
 
-struct hip_context {
-    //struct sk_buff *skb_in;         /* received skbuff */
-    struct hip_common *   input;        /**< Received packet. */
-    struct hip_common *   output;       /**< Packet to be built and sent. */
-    struct hip_crypto_key hip_enc_out;
-    struct hip_crypto_key hip_hmac_out;
-    struct hip_crypto_key esp_out;
-    struct hip_crypto_key auth_out;
-    struct hip_crypto_key hip_enc_in;
-    struct hip_crypto_key hip_hmac_in;
-    struct hip_crypto_key esp_in;
-    struct hip_crypto_key auth_in;
-    char *                dh_shared_key;
-    size_t                dh_shared_key_len;
-    struct hip_esp_info * esp_info;
-
-    uint16_t              current_keymat_index; /**< The byte offset index in draft
-                                        * chapter HIP KEYMAT */
-    unsigned char         current_keymat_K[HIP_AH_SHA_LEN];
-    uint8_t               keymat_calc_index; /**< The one byte index number used
-                                    * during the keymat calculation. */
-    uint16_t              keymat_index; /**< KEYMAT offset. */
-    uint16_t              esp_keymat_index; /**< A pointer to the esp keymat index. */
-
-    int                   esp_prot_param;
-
-    char                  hip_nat_key[HIP_MAX_KEY_LEN];
-    int                   use_ice;
-};
-
 /*
  * Fixed start of this struct must match to struct hip_locator_info_addr_item
  * for the part of address item. It is used in hip_update_locator_match().
