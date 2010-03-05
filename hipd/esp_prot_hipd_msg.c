@@ -812,7 +812,8 @@ out_err:
  * @param ctx       packet context for the R2 message
  * @return          0 on success, -1 in case of an error
  */
-int esp_prot_r2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
+int esp_prot_r2_handle_anchor(hip_ha_t *entry,
+                              const struct hip_common *input_msg)
 {
     struct hip_tlv_common *param        = NULL;
     struct esp_prot_anchor *prot_anchor = NULL;
@@ -821,7 +822,7 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
 
     // only process anchor, if we agreed on using it before
     if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED) {
-        if ((param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))) {
+        if ((param = hip_get_param(input_msg, HIP_PARAM_ESP_PROT_ANCHOR))) {
             prot_anchor = (struct esp_prot_anchor *) param;
 
             // check if the anchor has got the negotiated transform
@@ -848,7 +849,7 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx)
                     }
 
                     // get next anchor
-                    param       = hip_get_next_param(ctx->input, param);
+                    param       = hip_get_next_param(input_msg, param);
                     prot_anchor = (struct esp_prot_anchor *) param;
                 }
             } else if (prot_anchor->transform == ESP_PROT_TFM_UNUSED) {

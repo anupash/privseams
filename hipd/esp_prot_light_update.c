@@ -194,12 +194,12 @@ int esp_prot_handle_light_update(const uint32_t packet_type,
     uint32_t spi        = 0;
     int err             = 0;
 
-    HIP_IFEL(hip_verify_packet_hmac(ctx->msg, &(ctx->hadb_entry)->hip_hmac_in),
+    HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &(ctx->hadb_entry)->hip_hmac_in),
              -1,
              "HMAC validation on UPDATE failed.\n");
 
-    ack = hip_get_param(ctx->msg, HIP_PARAM_ACK);
-    seq = hip_get_param(ctx->msg, HIP_PARAM_SEQ);
+    ack = hip_get_param(ctx->input_msg, HIP_PARAM_ACK);
+    seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ);
 
     if (seq != NULL) {
         /********** SEQ ***********/
@@ -221,7 +221,7 @@ int esp_prot_handle_light_update(const uint32_t packet_type,
         }
 
         /********** ANCHOR ***********/
-        HIP_IFEL(esp_prot_update_handle_anchor(ctx->msg,
+        HIP_IFEL(esp_prot_update_handle_anchor(ctx->input_msg,
                                                ctx->hadb_entry,
                                                ctx->src_addr,
                                                ctx->dst_addr,

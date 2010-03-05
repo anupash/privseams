@@ -30,7 +30,8 @@ int esp_prot_i2_add_anchor(hip_common_t *i2,
                            const struct hip_context *ctx);
 int esp_prot_i2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx);
 int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry);
-int esp_prot_r2_handle_anchor(hip_ha_t *entry, const struct hip_context *ctx);
+int esp_prot_r2_handle_anchor(hip_ha_t *entry,
+                              const struct hip_common *input_msg);
 int esp_prot_handle_update(const hip_common_t *recv_update, hip_ha_t *entry,
                            const in6_addr_t *src_ip, const in6_addr_t *dst_ip);
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry);

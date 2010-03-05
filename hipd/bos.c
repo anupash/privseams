@@ -212,9 +212,9 @@ int hip_handle_bos(const uint32_t packet_type,
     char *str;
     char src[INET6_ADDRSTRLEN];
 
-    HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hits), 0,
+    HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hits), 0,
             "Received NULL sender HIT in BOS.\n");
-    HIP_IFEL(!ipv6_addr_any(&(ctx->msg)->hitr), 0,
+    HIP_IFEL(!ipv6_addr_any(&(ctx->input_msg)->hitr), 0,
             "Received non-NULL receiver HIT in BOS.\n");
 
     /* @todo Is this needed? */
@@ -241,18 +241,18 @@ int hip_handle_bos(const uint32_t packet_type,
     /* according to the section 8.6 of the base draft,
      * we must first check signature
      */
-    HIP_IFEL(!(peer_host_id = hip_get_param(ctx->msg, HIP_PARAM_HOST_ID)), -ENOENT,
+    HIP_IFEL(!(peer_host_id = hip_get_param(ctx->input_msg, HIP_PARAM_HOST_ID)), -ENOENT,
             "No HOST_ID found in BOS\n");
 
-    HIP_IFEL(hip_verify_packet_signature((ctx->msg), peer_host_id), -EINVAL,
+    HIP_IFEL(hip_verify_packet_signature((ctx->input_msg), peer_host_id), -EINVAL,
             "Verification of BOS signature failed\n");
 
     /* Validate HIT against received host id */
     hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH100);
-    HIP_IFEL(ipv6_addr_cmp(&peer_hit, &(ctx->msg)->hits) != 0, -EINVAL,
+    HIP_IFEL(ipv6_addr_cmp(&peer_hit, &(ctx->input_msg)->hits) != 0, -EINVAL,
             "Sender HIT does not match the advertised host_id\n");
 
-    HIP_HEXDUMP("Advertised HIT:", &(ctx->msg)->hits, 16);
+    HIP_HEXDUMP("Advertised HIT:", &(ctx->input_msg)->hits, 16);
 
     /* Everything ok, first save host id to db */
     HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
@@ -292,7 +292,7 @@ int hip_handle_bos(const uint32_t packet_type,
 
         /* we have no previous information on the peer, create
          * a new HIP HA */
-        HIP_IFEL((hip_hadb_add_peer_info(&(ctx->msg)->hits, dstip, &lsi, NULL) < 0),
+        HIP_IFEL((hip_hadb_add_peer_info(&(ctx->input_msg)->hits, dstip, &lsi, NULL) < 0),
                 -1,
                 "Failed to insert new peer info");
         HIP_DEBUG("HA entry created.\n");

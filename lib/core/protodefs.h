@@ -1051,10 +1051,11 @@ struct hip_port_info {
  * database entry and a flag indicating the packet handling should be aborted.
  */
 struct hip_packet_context {
-    struct hip_common         *msg;
+    struct hip_common         *input_msg;
+    struct hip_common         *output_msg;
     struct in6_addr           *src_addr;
     struct in6_addr           *dst_addr;
-    struct hip_stateless_info *msg_info;
+    struct hip_stateless_info *msg_ports;
     struct hip_hadb_state     *hadb_entry;
     uint8_t                    drop_packet;
 };

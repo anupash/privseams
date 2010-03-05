@@ -97,15 +97,19 @@ int hip_handle_i1(const uint32_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx);
 
+int hip_handle_i2_in_i2_sent(const uint32_t packet_type,
+                             const uint32_t ha_state,
+                             struct hip_packet_context *ctx);
+
+int hip_handle_i2(const uint32_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *ctx);
+
 int hip_handle_notify(const uint32_t packet_type,
                       const uint32_t ha_state,
                       struct hip_packet_context *ctx);
 
 int hip_handle_r1(const uint32_t packet_type,
-                  const uint32_t ha_state,
-                  struct hip_packet_context *ctx);
-
-int hip_handle_i2(const uint32_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx);
 

@@ -730,7 +730,7 @@ int hip_handle_update(const uint32_t packet_type,
      * both an ACK and SEQ in the UPDATE, the ACK is first processed as
      * described in Section 6.12.2, and then the rest of the UPDATE is
      * processed as described in Section 6.12.1 */
-    ack = hip_get_param(ctx->msg, HIP_PARAM_ACK);
+    ack = hip_get_param(ctx->input_msg, HIP_PARAM_ACK);
     if (ack != NULL) {
         ack_peer_update_id = ntohl(ack->peer_update_id);
         HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
@@ -756,7 +756,7 @@ int hip_handle_update(const uint32_t packet_type,
      * 2nd case: If the association is in the ESTABLISHED state and the SEQ
      * (but not ACK) parameter is present, the UPDATE is processed and replied
      * to as described in Section 6.12.1. */
-    seq = hip_get_param(ctx->msg, HIP_PARAM_SEQ);
+    seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ);
     if (seq != NULL) {
         seq_update_id = ntohl(seq->update_id);
         HIP_DEBUG("SEQ parameter found with  Update ID %u.\n",
@@ -795,9 +795,9 @@ int hip_handle_update(const uint32_t packet_type,
 
     /* RFC 5201 Section 6.12.1 3th and 4th steps or
      *          Section 6.12.2 2nd and 3th steps */
-    HIP_IFE(hip_check_hmac_and_signature(ctx->msg, ctx->hadb_entry), -1);
+    HIP_IFE(hip_check_hmac_and_signature(ctx->input_msg, ctx->hadb_entry), -1);
 
-    esp_info = hip_get_param(ctx->msg, HIP_PARAM_ESP_INFO);
+    esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO);
     if (esp_info != NULL) {
         HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
                   ntohl(esp_info->new_spi));
@@ -812,16 +812,16 @@ int hip_handle_update(const uint32_t packet_type,
     }
 
     /* @todo: a workaround for bug id 944 */
-    ctx->hadb_entry->peer_udp_port = ctx->msg_info->src_port;
+    ctx->hadb_entry->peer_udp_port = ctx->msg_ports->src_port;
 
     /* RFC 5206: End-Host Mobility and Multihoming. */
     // 3.2.1. Mobility with a Single SA Pair (No Rekeying)
-    locator           = hip_get_param(ctx->msg, HIP_PARAM_LOCATOR);
-    echo_request      = hip_get_param(ctx->msg, HIP_PARAM_ECHO_REQUEST_SIGN);
-    echo_response     = hip_get_param(ctx->msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
+    locator           = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
+    echo_request      = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
+    echo_response     = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
 
     if (locator != NULL) {
-        hip_handle_first_update_packet(ctx->msg,
+        hip_handle_first_update_packet(ctx->input_msg,
                                        ctx->hadb_entry,
                                        ctx->src_addr);
 
@@ -835,14 +835,14 @@ int hip_handle_update(const uint32_t packet_type,
 
         // We handle ECHO_REQUEST by sending an update packet
         // with reversed source and destination address.
-        hip_handle_second_update_packet(ctx->msg,
+        hip_handle_second_update_packet(ctx->input_msg,
                                         ctx->hadb_entry,
                                         ctx->dst_addr,
                                         ctx->src_addr);
 
         goto out_err;
     } else if (echo_response != NULL)   {
-        hip_handle_third_update_packet(ctx->msg,
+        hip_handle_third_update_packet(ctx->input_msg,
                                        ctx->hadb_entry,
                                        ctx->dst_addr,
                                        ctx->src_addr);

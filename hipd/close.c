@@ -186,12 +186,12 @@ int hip_handle_close(const uint32_t packet_type,
     hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE );
 #endif
 
-    HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hitr), -1,
+    HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hitr), -1,
              "Received NULL receiver HIT in CLOSE. Dropping\n");
 
-    HIP_IFEL(!hip_controls_sane(ntohs(ctx->msg->control), 0), -1,
+    HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), 0), -1,
              "Received illegal controls in CLOSE: 0x%x. Dropping\n",
-             ntohs(ctx->msg->control));
+             ntohs(ctx->input_msg->control));
 
     HIP_IFEL(!ctx->hadb_entry, -1,
              "No entry in host association database when receiving R2." \
@@ -209,21 +209,21 @@ int hip_handle_close(const uint32_t packet_type,
 
     /* verify HMAC */
     if (ctx->hadb_entry->is_loopback) {
-        HIP_IFEL(hip_verify_packet_hmac(ctx->msg, &(ctx->hadb_entry)->hip_hmac_out),
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &(ctx->hadb_entry)->hip_hmac_out),
                  -ENOENT, "HMAC validation on close failed.\n");
     } else {
-        HIP_IFEL(hip_verify_packet_hmac(ctx->msg, &(ctx->hadb_entry)->hip_hmac_in),
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &(ctx->hadb_entry)->hip_hmac_in),
                  -ENOENT, "HMAC validation on close failed.\n");
     }
 
     /* verify signature */
-    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key, ctx->msg), -EINVAL,
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key, ctx->input_msg), -EINVAL,
              "Verification of close signature failed.\n");
 
     HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
 
     HIP_IFEL(!(request =
-                   hip_get_param(ctx->msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
+                   hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
              -1, "No echo request under signature.\n");
     echo_len = hip_get_param_contents_len(request);
 
@@ -260,13 +260,13 @@ int hip_handle_close(const uint32_t packet_type,
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status()) {
         hip_relrec_t dummy;
-        memcpy(&(dummy.hit_r), &(ctx->msg->hits),
-               sizeof(ctx->msg->hits));
+        memcpy(&(dummy.hit_r), &(ctx->input_msg->hits),
+               sizeof(ctx->input_msg->hits));
         hip_relht_rec_free_doall(&dummy);
         /* Check that the element really got deleted. */
         if (hip_relht_get(&dummy) == NULL) {
             HIP_DEBUG_HIT("Deleted relay record for HIT",
-                          &(ctx->msg->hits));
+                          &(ctx->input_msg->hits));
         }
     }
 #endif
@@ -299,15 +299,15 @@ int hip_handle_close_ack(const uint32_t packet_type,
     hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
 #endif
 
-    HIP_IFEL(ipv6_addr_any(&(ctx->msg)->hitr), -1,
+    HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hitr), -1,
             "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
-    if (!hip_controls_sane(ntohs(ctx->msg->control), mask
+    if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask
     //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
     // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
     )) {
         HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
-                ntohs(ctx->msg->control));
+                ntohs(ctx->input_msg->control));
         goto out_err;
     }
 
@@ -327,7 +327,7 @@ int hip_handle_close_ack(const uint32_t packet_type,
 
     /* verify ECHO */
     HIP_IFEL(!(echo_resp =
-                   hip_get_param(ctx->msg, HIP_PARAM_ECHO_RESPONSE_SIGN)),
+                   hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN)),
              -1, "Echo response not found\n");
     HIP_IFEL(memcmp(echo_resp + 1, ctx->hadb_entry->echo_data,
                     sizeof(ctx->hadb_entry->echo_data)), -1,
@@ -335,16 +335,16 @@ int hip_handle_close_ack(const uint32_t packet_type,
 
     /* verify HMAC */
     if (ctx->hadb_entry->is_loopback) {
-        HIP_IFEL(hip_verify_packet_hmac(ctx->msg,
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
                                         &(ctx->hadb_entry)->hip_hmac_out),
                  -ENOENT, "HMAC validation on close ack failed\n");
     } else {
-        HIP_IFEL(hip_verify_packet_hmac(ctx->msg,
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
                                         &(ctx->hadb_entry)->hip_hmac_in),
                  -ENOENT, "HMAC validation on close ack failed\n");
     }
     /* verify signature */
-    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key, ctx->msg),
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key, ctx->input_msg),
              -EINVAL, "Verification of close ack signature failed\n");
 
     ctx->hadb_entry->state = HIP_STATE_CLOSED;
