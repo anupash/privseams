@@ -707,7 +707,7 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
+int hip_send_i2(struct hip_context *ctx, uint64_t solved_puzzle,
                   in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
                   hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv)
 {
@@ -1050,7 +1050,7 @@ out_err:
 /**
  * Handles an incoming R1 packet.
  *
- * Handles an incoming R1 packet and calls hip_create_i2() if the R1 packet
+ * Handles an incoming R1 packet and calls hip_send_i2() if the R1 packet
  * passes all tests.
  *
  * @param r1       a pointer to the received R1 HIP packet common header with
@@ -1257,11 +1257,11 @@ int hip_handle_r1(const uint32_t packet_type,
 
     /******************************************************************/
 
-    /* We haven't handled REG_INFO parameter. We do that in hip_create_i2()
+    /* We haven't handled REG_INFO parameter. We do that in hip_send_i2()
      * because we must create an REG_REQUEST parameter based on the data
      * of the REG_INFO parameter. */
 
-    err = hip_create_i2(ctx,
+    err = hip_send_i2(ctx,
                         solved_puzzle,
                         packet_ctx->src_addr,
                         packet_ctx->dst_addr,
@@ -2045,7 +2045,7 @@ int hip_handle_r2(const uint32_t packet_type,
     }
     //end add
 
-    // moved from hip_create_i2
+    // moved from hip_send_i2
     HIP_DEBUG_HIT("hit our", &(packet_ctx->hadb_entry)->hit_our);
     HIP_DEBUG_HIT("hit peer", &(packet_ctx->hadb_entry)->hit_peer);
     HIP_IFEL(hip_add_sa(packet_ctx->src_addr,
