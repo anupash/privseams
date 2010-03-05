@@ -133,7 +133,7 @@ static int connhipd_handle_msg(struct hip_common *msg,
     } else if (type == SO_HIP_SET_NAT_ON)   {
         gui_update_nat(1);
         HIP_DEBUG("NAT extensions on.\n");
-    } else if (type == SO_HIP_SET_NAT_OFF)   {
+    } else if (type == SO_HIP_SET_NAT_NONE)   {
         gui_update_nat(0);
         HIP_DEBUG("NAT extensions off.\n");
     } else if (type == SO_HIP_DAEMON_QUIT)   {
