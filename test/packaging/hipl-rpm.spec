@@ -238,10 +238,7 @@ rm -rf %{buildroot}
 %files test
 %{prefix}/bin/conntest-client-opp
 %{prefix}/bin/conntest-client-hip
-%{prefix}/bin/conntest-client-native
-%{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
-%{prefix}/bin/conntest-server-native
 
 %files firewall
 %{prefix}/sbin/hipfw
