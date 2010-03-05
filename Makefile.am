@@ -13,6 +13,8 @@ EXTRA_DIST += $(wildcard lib/*/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
 EXTRA_DIST += $(wildcard test/*.h)
+EXTRA_DIST += $(wildcard modules/*.h)
+EXTRA_DIST += $(wildcard modules/*/*/*.h)
 EXTRA_DIST += tools/gen-python-starter.sh
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 
