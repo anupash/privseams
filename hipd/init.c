@@ -460,23 +460,12 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_NONE,         &hip_handle_i2, 1000);
     hip_register_handle_function(HIP_I2, HIP_STATE_NONE,         &hip_send_r2, 1100);
 
-    hip_register_handle_function(HIP_R1, HIP_STATE_UNASSOCIATED, &hip_drop_packet, 1000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT,      &hip_handle_r1, 1000);
     hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT,      &hip_handle_r1, 1000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_R2_SENT,      &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_ESTABLISHED,  &hip_drop_packet, 1000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING,      &hip_handle_r1, 1000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED,       &hip_handle_r1, 1000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_NONE,         &hip_drop_packet, 1000);
 
-    hip_register_handle_function(HIP_R2, HIP_STATE_UNASSOCIATED, &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_R2, HIP_STATE_I1_SENT,      &hip_drop_packet, 1000);
     hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT,      &hip_handle_r2, 1000);
-    hip_register_handle_function(HIP_R2, HIP_STATE_R2_SENT,      &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_R2, HIP_STATE_ESTABLISHED,  &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_R2, HIP_STATE_CLOSING,      &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_R2, HIP_STATE_CLOSED,       &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_R2, HIP_STATE_NONE,         &hip_drop_packet, 1000);
 
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I1_SENT,     &hip_handle_notify, 1000);
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I2_SENT,     &hip_handle_notify, 1000);
@@ -485,23 +474,11 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_CLOSING,     &hip_handle_notify, 1000);
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_CLOSED,      &hip_handle_notify, 1000);
 
-    hip_register_handle_function(HIP_CLOSE, HIP_STATE_UNASSOCIATED, &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_CLOSE, HIP_STATE_I1_SENT,      &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_CLOSE, HIP_STATE_I2_SENT,      &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_CLOSE, HIP_STATE_R2_SENT,      &hip_drop_packet, 1000);
     hip_register_handle_function(HIP_CLOSE, HIP_STATE_ESTABLISHED,  &hip_handle_close, 1000);
     hip_register_handle_function(HIP_CLOSE, HIP_STATE_CLOSING,      &hip_handle_close, 1000);
-    hip_register_handle_function(HIP_CLOSE, HIP_STATE_CLOSED,       &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_CLOSE, HIP_STATE_NONE,         &hip_drop_packet, 1000);
 
-    hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_UNASSOCIATED, &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_I1_SENT,      &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_I2_SENT,      &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_R2_SENT,      &hip_drop_packet, 1000);
-    hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_ESTABLISHED,  &hip_drop_packet, 1000);
     hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_CLOSING,      &hip_handle_close_ack, 1000);
     hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_CLOSED,       &hip_handle_close_ack, 1000);
-    hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_NONE,         &hip_drop_packet, 1000);
 
     return err;
 }

@@ -1047,15 +1047,6 @@ out_err:
     return err;
 }
 
-int hip_drop_packet(const uint32_t packet_type,
-                    const uint32_t ha_state,
-                    struct hip_packet_context *packet_ctx)
-{
-    HIP_ERROR("Received packet type %d in state: %s. Dropping.\n",
-              packet_type, hip_state_str(ha_state));
-    return 0;
-}
-
 /**
  * Handles an incoming R1 packet.
  *
