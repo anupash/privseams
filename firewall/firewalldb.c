@@ -22,7 +22,6 @@
 #include "cache.h"
 #include "firewall_defines.h"
 #include "lib/core/icomm.h"
-#include "lib/core/kerncompat.h"
 #include "lib/core/debug.h"
 #include "lib/core/hashtable.h"
 #include "lib/core/misc.h"

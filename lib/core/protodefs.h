@@ -22,6 +22,10 @@ typedef uint16_t in_port_t;
 #endif
 #endif
 
+#ifndef IPPROTO_HIP
+#  define IPPROTO_HIP             139
+#endif
+
 #define HIP_MAX_PACKET 4096
 #define HIP_MAX_NETWORK_PACKET 2048
 /** @addtogroup hip_msg

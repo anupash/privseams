@@ -34,6 +34,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <sys/ioctl.h>
 #include "nlink.h"
 
 /* New one to prevent netlink overrun */

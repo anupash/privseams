@@ -18,7 +18,6 @@
 #  include "hipsock/usercompat.h"
 #  include <linux/list.h>
 #else
-#  include "lib/core/kerncompat.h"
 #  include "hipd/hidb.h"
 #endif /* __KERNEL__ */
 

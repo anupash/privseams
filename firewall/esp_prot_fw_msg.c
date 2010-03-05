@@ -15,7 +15,6 @@
 
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
-#include "lib/core/kerncompat.h"
 #include "lib/core/builder.h"
 
 #include "esp_prot_fw_msg.h"

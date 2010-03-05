@@ -39,6 +39,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <sys/ioctl.h>
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "hipconf.h"

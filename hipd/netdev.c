@@ -26,6 +26,8 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <ifaddrs.h>
 #include "lib/tool/nlink.h"
 #include "netdev.h"
 #include "maintenance.h"

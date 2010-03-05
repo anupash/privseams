@@ -3,7 +3,6 @@
 
 #include <netinet/ip_icmp.h>
 #include "lib/core/icomm.h"
-#include "lib/core/kerncompat.h"
 
 void hip_firewall_init_hldb(void);
 firewall_hl_t *hip_firewall_ip_db_match(const struct in6_addr *ip_peer);
