@@ -116,8 +116,4 @@ int hip_handle_r2(const uint32_t packet_type,
 int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
                                 uint64_t I, uint64_t J, struct hip_dh_public_value **dhpv);
 
-int hip_send_i2(struct hip_context *ctx, uint64_t solved_puzzle,
-                  in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
-                  hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv);
-
 #endif /* HIP_HIPD_INPUT_H */
