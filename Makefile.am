@@ -5,7 +5,7 @@ ACLOCAL_AMFLAGS  = -I m4
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  debian doc patches test/packaging test/configs
+EXTRA_DIST =  debian doc patches test/packaging test/configs process_modules.py
 EXTRA_DIST += Android.mk check_header_verbosity.sh tcp verbose-headers.txt
 EXTRA_DIST += autogen.sh release.version
 EXTRA_DIST += $(wildcard lib/android/*.c)
