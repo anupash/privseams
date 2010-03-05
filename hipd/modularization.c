@@ -62,7 +62,7 @@ int hip_register_handle_function(const uint32_t packet_type,
                                  int (*handle_function)(const uint32_t packet_type,
                                                         const uint32_t ha_state,
                                                         struct hip_packet_context *ctx),
-                                 const uint32_t priority)
+                                 const uint16_t priority)
 {
     int err = 0;
     struct handle_function *new_entry = NULL;
@@ -199,7 +199,7 @@ void hip_uninit_handle_functions(void)
  *
  */
 int hip_register_maint_function(int (*maint_function)(void),
-                                const uint32_t priority)
+                                const uint16_t priority)
 {
     int err = 0;
     struct maint_function *new_entry = NULL;

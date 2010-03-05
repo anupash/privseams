@@ -18,7 +18,7 @@
  * A generic struct for function pointer.
  */
 struct function {
-    uint32_t priority;
+    uint16_t priority;
     void    *func_ptr;
 };
 
@@ -251,7 +251,9 @@ void lmod_uninit_state(struct modular_state *state)
  * @return Success = Pointer to the function list.
  *         Error   = NULL
  */
-hip_ll_t *lmod_register_function(hip_ll_t *list, void *entry, const uint32_t priority)
+hip_ll_t *lmod_register_function(hip_ll_t *list,
+                                 void *entry,
+                                 const uint16_t priority)
 {
     int            index    = 0;
     hip_ll_t      *new_list = NULL;

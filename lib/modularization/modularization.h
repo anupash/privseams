@@ -24,7 +24,7 @@ struct modular_state {
     unsigned int     num_items;
 };
 
-hip_ll_t *lmod_register_function(hip_ll_t *list, void *entry, const uint32_t priority);
+hip_ll_t *lmod_register_function(hip_ll_t *list, void *entry, const uint16_t priority);
 int lmod_unregister_function(hip_ll_t *list, const void *function);
 
 int lmod_register_state_init_function(void *func);
