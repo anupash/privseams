@@ -447,6 +447,7 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_send_r2, 1100);
     hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT,      &hip_handle_i2, 1000);
     hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT,      &hip_send_r2, 1100);
+    hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,      &hip_handle_i2_in_i2_sent, 900);
     hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,      &hip_handle_i2, 1000);
     hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,      &hip_send_r2, 1100);
     hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,      &hip_handle_i2, 1000);

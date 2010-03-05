@@ -1301,7 +1301,7 @@ int hip_handle_i2_in_i2_sent(const uint32_t packet_type,
 
     HIP_IFEL(ctx->drop_packet,
              -1,
-             "Abort packet processing.\n")
+             "Abort packet processing.\n");
 
     if (hip_hit_is_bigger(&ctx->hadb_entry->hit_peer,
                           &ctx->hadb_entry->hit_our)) {
@@ -1361,6 +1361,11 @@ int hip_handle_i2(const uint32_t packet_type,
     int if_index                            = 0;
     struct sockaddr_storage ss_addr;
     struct sockaddr *addr                   = NULL;
+
+    HIP_IFEL(ctx->drop_packet,
+                 -1,
+                 "Abort packet processing.\n");
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2\n");
     hip_perf_start_benchmark(perf_set, PERF_I2);
