@@ -216,7 +216,6 @@ rm -rf %{buildroot}
 
 %files daemon
 %{prefix}/sbin/hipd
-%{prefix}/bin/hipsetup
 %config /etc/rc.d/init.d/hipd
 
 %files agent
