@@ -512,8 +512,7 @@ int hip_receive_control_packet(struct hip_common *msg,
                                struct in6_addr *dst_addr,
                                hip_portpair_t *msg_info)
 {
-    hip_ha_t tmp;
-    int err = 0, skip_sync = 0;
+    int err = 0;
     struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
     struct hip_packet_context ctx = {0};
     uint32_t type, state;
@@ -601,22 +600,11 @@ int hip_receive_control_packet(struct hip_common *msg,
     case HIP_NOTIFY:
     case HIP_CLOSE:
     case HIP_CLOSE_ACK:
+    case HIP_BOS:
         break;
 
     case HIP_LUPDATE:
         HIP_IFCS(ctx.hadb_entry, err = esp_prot_handle_light_update(type, state, &ctx));
-        break;
-
-    case HIP_BOS:
-        err = hip_handle_bos(type, state, &ctx);
-
-        /*In case of BOS the msg->hitr is null, therefore it is replaced
-         * with our own HIT, so that the beet state can also be
-         * synchronized. */
-        ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
-        hip_init_us(&tmp, NULL);
-        ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
-        skip_sync = 0;
         break;
 
     default:

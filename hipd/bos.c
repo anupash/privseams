@@ -224,20 +224,6 @@ int hip_handle_bos(const uint32_t packet_type,
      *  right now */
     HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(ha_state));
 
-    switch (ha_state) {
-    case HIP_STATE_UNASSOCIATED:
-    case HIP_STATE_I1_SENT:
-    case HIP_STATE_I2_SENT:
-        /* Proceed with packet handling */
-        break;
-    case HIP_STATE_R2_SENT:
-    case HIP_STATE_ESTABLISHED:
-        HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(ha_state));
-        goto out_err;
-    default:
-        HIP_IFEL(1, 0, "Internal state (%d) is incorrect\n", ha_state);
-    }
-
     /* according to the section 8.6 of the base draft,
      * we must first check signature
      */
