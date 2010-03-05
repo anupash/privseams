@@ -38,7 +38,7 @@ int hip_cert_spki_sign(struct hip_common *msg, HIP_HASHTABLE *db)
     unsigned char *signature_b64 = NULL;
     unsigned char *digest_b64    = NULL;
     unsigned char *sha_retval;
-    u8 *signature                = NULL;
+    uint8_t *signature                = NULL;
     DSA_SIG *dsa_sig             = NULL;
 
     /* RSA needed variables */

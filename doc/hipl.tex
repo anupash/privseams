@@ -695,11 +695,12 @@ a limited computing capacity.
 \subsubsection{Legacy Sockets API}
 \label{sec:legacy_api_architecture}
 
-Traditional UNIX systems have a library called \verb|libc| which
-contains an implementation for the BSD socket interface~\cite{stevens}
-which are needed by network applications. USAGI has a separate libc
-implementation for testing purposes and it is called
-\verb|libinet6|. It is also used in the \ac{HIPL} project.
+% depracated
+%Traditional UNIX systems have a library called \verb|libc| which
+%contains an implementation for the BSD socket interface~\cite{stevens}
+%which are needed by network applications. USAGI has a separate libc
+%implementation for testing purposes and it is called
+%\verb|libinet6|. It is also used in the \ac{HIPL} project.
 
 Network applications typically use \ac{DNS} names to address
 peers. \ac{DNS} names have to be resolved to IPv6 addresses in libc
@@ -733,9 +734,10 @@ statically linked applications require to be recompiled. The
 recompilation of applications may even be omitted by overriding the
 \verb|libc| as presented in \cite{libcoverride}.
 
-Transparent mode is set or unset by a compile time flag in
-libinet6. This means that transparent mode is system specific instead
-of application specific. Transparent mode is enabled by default.
+% depracated
+%Transparent mode is set or unset by a compile time flag in
+%&libinet6. This means that transparent mode is system specific instead
+%of application specific. Transparent mode is enabled by default.
 
 The other flag is concerned about enforcing the use of \ac{HIP}
 independently of transparent mode. The name of the flag is
@@ -1182,13 +1184,14 @@ Other resolver functions, such as \verb|gethostbyname|, should also be
 modified to support \ac{HIP}. Until then, \verb|getaddrinfo| suffices
 for testing purposes.
 
-Transparent mode is controlled by a static compilation flag in
-libinet6. This means that transparent mode is host specific and not
-application specific. There has been some talk about a more dynamic
-method to control transparent mode, such as using function
-\verb|setsockopt|. This is a bit contradictory because the transparent
-mode is targeted for the legacy applications and the source code in
-legacy applications should not be altered.
+%Depracated
+%Transparent mode is controlled by a static compilation flag in
+%libinet6. This means that transparent mode is host specific and not
+%application specific. There has been some talk about a more dynamic
+%method to control transparent mode, such as using function
+%\verb|setsockopt|. This is a bit contradictory because the transparent
+%mode is targeted for the legacy applications and the source code in
+%legacy applications should not be altered.
 
 Transparent mode may break existing applications, such as IP
 integrated applications. This should be investigated and tested with

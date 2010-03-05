@@ -73,12 +73,13 @@
         } \
     }
 
-#define HIP_IFEBL2(func, eval, finally, args ...) \
+#define HIP_IFF(func, eval, finally, args ...) \
     { \
         if (func) { \
             HIP_ERROR(args); \
             err = eval; \
             finally; \
+            goto out_err; \
         } \
     }
 

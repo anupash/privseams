@@ -37,7 +37,7 @@ void hip_hadb_hold_entry(void *entry);
 /* Matching */
 static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 {
-    return *(const u32 *) key_1 == *(const u32 *) key_2;
+    return *(const uint32_t *) key_1 == *(const uint32_t *) key_2;
 }
 
 int hip_ha_compare(const hip_ha_t *ha1, const hip_ha_t *ha2);

@@ -7,11 +7,11 @@
 #include <netinet/in.h>
 #include <linux/netlink.h>
 /* CentOS 5.4 and some other legacy systems are broken. Including
-   linux/rtnetlink.h complains that __u32 or __64 is undefine */
-#ifndef __u32
-#define __u32 uint32_t
+   linux/rtnetlink.h complains that __uint32_t or __64 is undefine */
+#ifndef __uint32_t
+#define __uint32_t uint32_t
 #define __u64 uint64_t
-#endif /* __u32 */
+#endif /* __uint32_t */
 #include <linux/xfrm.h>
 #include <linux/rtnetlink.h>
 
@@ -20,19 +20,19 @@
 
 
 struct pseudo_hdr {
-    u32 s_addr;
-    u32 d_addr;
-    u8  zer0;
-    u8  protocol;
-    u16 length;
+    uint32_t s_addr;
+    uint32_t d_addr;
+    uint8_t  zer0;
+    uint8_t  protocol;
+    uint16_t length;
 };
 
 struct pseudo6_hdr {
     struct in6_addr s_addr;
     struct in6_addr d_addr;
-    u8              zer0;
-    u8              protocol;
-    u16             length;
+    uint8_t              zer0;
+    uint8_t              protocol;
+    uint16_t             length;
 };
 
 #define HIP_OPTION_KIND 30
@@ -105,7 +105,7 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft);
 int xfrm_fill_selector(struct xfrm_selector *sel,
                        const struct in6_addr *id_our,
                        const struct in6_addr *id_peer,
-                       uint8_t proto, u8 id_prefix,
+                       uint8_t proto, uint8_t id_prefix,
                        uint32_t src_port, uint32_t dst_port,
                        int preferred_family);
 int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,

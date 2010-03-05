@@ -2,7 +2,6 @@
 #define HIP_LIB_CORE_LIST_H
 
 #include <openssl/lhash.h>
-//#include "kerncompat.h"
 
 typedef LHASH_NODE hip_list_t;
 

@@ -17,10 +17,8 @@
 #include "lib/core/misc.h"
 #include "lib/core/builder.h" // For lifetime conversions.
 #include "lib/core/protodefs.h" // For service type values and hip_ha_t
-#ifndef __KERNEL__
 #include "hiprelay.h" // For relrec lifetimes.
 #include "lib/core/linkedlist.h" // For pending service requests.
-#endif
 
 /** Possible service states. */
 typedef enum { HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1 } hip_srv_status_t;

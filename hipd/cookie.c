@@ -19,7 +19,7 @@
 #include "cookie.h"
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
-#define HIP_DEFAULT_COOKIE_K    10ULL
+#define HIP_DEFAULT_COOKIE_K    1ULL /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
@@ -125,7 +125,7 @@ int hip_dec_cookie_difficulty(hip_hit_t *not_used)
 int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
                         struct in6_addr *hit_i)
 {
-    register u32 base = 0;
+    register uint32_t base = 0;
     int i;
 
     for (i = 0; i < 4; i++) {
@@ -225,7 +225,7 @@ struct hip_r1entry *hip_init_r1(void)
     struct hip_r1entry *err;
 
     HIP_IFE(!(err = (struct hip_r1entry *) HIP_MALLOC(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE,
-                                                      GFP_KERNEL)), NULL);
+                                                      0)), NULL);
     memset(err, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
 
 out_err:

@@ -75,17 +75,17 @@
 # define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
 #endif
 
-int ssl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
-int ssl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
+int ssl_rsa_verify(uint8_t *digest, uint8_t *public_key, uint8_t *signature, int pub_klen);
+int ssl_dsa_verify(uint8_t *digest, uint8_t *public_key, uint8_t *signature);
 int hip_init_cipher(void);
 void hip_uninit_cipher(void);
 /* In kernel these come from crypto/dh.h, included above */
-int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *out,
+int hip_gen_dh_shared_key(DH *dh, uint8_t *peer_key, size_t peer_len, uint8_t *out,
                           size_t outlen);
-int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen);
+int hip_encode_dh_publickey(DH *dh, uint8_t *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
 void hip_free_dh(DH *target);
-u16 hip_get_dh_size(u8 hip_dh_group_type);
+uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
                struct in6_addr *hit);
 int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
@@ -98,8 +98,8 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa);
 int load_rsa_private_key(const char *filename, RSA **rsa);
 int load_dsa_public_key(const char *filenamebase, DSA **dsa);
 int load_rsa_public_key(const char *filename, RSA **rsa);
-int impl_dsa_sign(u8 *digest, DSA *dsa, u8 *signature);
-int impl_dsa_verify(u8 *digest, DSA *dsa, u8 *signature);
+int impl_dsa_sign(uint8_t *digest, DSA *dsa, uint8_t *signature);
+int impl_dsa_verify(uint8_t *digest, DSA *dsa, uint8_t *signature);
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
                          void *enc_key, int direction);

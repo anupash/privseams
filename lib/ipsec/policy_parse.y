@@ -86,7 +86,7 @@
 
 #include "ipsec_strerror.h"
 #include "libpfkey.h"
-#include "libinet6/include/net/pfkeyv2.h"
+#include "linux/pfkeyv2.h"
 
 #ifndef INT32_MAX
 #define INT32_MAX       (0xffffffff)

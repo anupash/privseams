@@ -5,8 +5,10 @@ ACLOCAL_AMFLAGS  = -I m4
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  doc patches test/packaging test/configs
+EXTRA_DIST =  debian doc patches test/packaging test/configs
+EXTRA_DIST += Android.mk check_header_verbosity.sh tcp verbose-headers.txt
 EXTRA_DIST += autogen.sh release.version
+EXTRA_DIST += $(wildcard lib/android/*.c)
 EXTRA_DIST += $(wildcard lib/*/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
@@ -15,6 +17,7 @@ EXTRA_DIST += tools/gen-python-starter.sh
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 
 BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
+
 
 ### bin_PROGRAMS ###
 bin_PROGRAMS = test/certteststub \
@@ -150,7 +153,6 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hashchain.c \
                                  lib/core/hashchain_store.c \
                                  lib/core/hip_statistics.c \
-                                 lib/core/getendpointinfo.c \
                                  lib/core/crypto.c
 
 if HIP_PRIVSEP
@@ -163,7 +165,6 @@ lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
 
 lib_modularization_libmodularization_la_SOURCES = lib/modularization/modularization.c
 
-if HIP_PFKEY
 ############################ NOTE ##################################
 #
 # Note: when you upgrade this library, please do the following:
@@ -192,6 +193,7 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
 DISTCLEANFILES = lib/ipsec/policy_token.h
 
+if HIP_PFKEY
 BUILT_SOURCES += lib/ipsec/policy_parse.h
 else
 # don't use libipsec, but xfrmapi
@@ -327,5 +329,9 @@ tools/hipdnsproxy: tools/dnsproxy.py
 tools/hipdnskeyparse: tools/parse-key-3.py
 tools/hipdnsproxy tools/hipdnskeyparse:
 	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
+
+autotools-clean: maintainer-clean
+	rm -f aclocal.m4 compile config.* configure depcomp install-sh
+	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
 .PHONY: bin doxygen increl olddeb syncrepo

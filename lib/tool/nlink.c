@@ -34,6 +34,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <sys/ioctl.h>
 #include "nlink.h"
 
 /* New one to prevent netlink overrun */
@@ -1443,12 +1444,12 @@ int xfrm_selector_upspec(struct xfrm_selector *sel,
 {
     sel->sport = htons(src_port);
     if (sel->sport) {
-        sel->sport_mask = ~((__u16) 0);
+        sel->sport_mask = ~((__uint16_t) 0);
     }
 
     sel->dport = htons(dst_port);
     if (sel->dport) {
-        sel->dport_mask = ~((__u16) 0);
+        sel->dport_mask = ~((__uint16_t) 0);
     }
 
     return 0;
@@ -1492,7 +1493,7 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
 int xfrm_fill_selector(struct xfrm_selector *sel,
                        const struct in6_addr *id_our,
                        const struct in6_addr *id_peer,
-                       uint8_t proto, u8 id_prefix,
+                       uint8_t proto, uint8_t id_prefix,
                        uint32_t src_port, uint32_t dst_port,
                        int preferred_family)
 {

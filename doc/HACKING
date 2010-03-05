@@ -40,9 +40,7 @@ header dependency hell" so they are also used by HIPL in "tools" and
 "test" directories. Standard linux kernel supports only plain old
 Makefiles, so "linux" subdirectory is not controlled with
 autoconf/automake. The "doc" directory uses plain old Makefile because
-it uses the same documentation building system as "linux". Libinet6
-has been imported from the Usagi project and uses only automake (no
-autoconf).
+it uses the same documentation building system as "linux".
 
 If you need to add or remove source/header files or modify build
 rules, edit "Makefile.am". If you need to modify dependencies, edit
@@ -907,7 +905,7 @@ Sometimes you can find yourself in a situation where you have a large number of
 repetitive comments. Say that you have similar type definitions which are nicely
 aligned in a header file. You could, of course, insert a normal Doxygen comment
 before (or after, using "<") every definition, but you just don't want to break
-the alignment for comments sake. libinet6/protodefs.h is a good example of
+the alignment for comments sake. lib/core/protodefs.h is a good example of
 that kind of file.
 
 To help in a situation like this, the HIPL project has a special file just for
@@ -918,7 +916,7 @@ HIP_NTF_INVALID_SYNTAX located in libhipcore/protodefs.h you can add the
 following comment block in doc/doxygen.h, example 7.
 
 /**
- * @file libinet6/protodefs.h
+ * @file lib/core/protodefs.h
  * @def  HIP_NTF_INVALID_SYNTAX
  *       Indicates that the HIP message received was invalid because...
  */
@@ -1486,12 +1484,12 @@ but also for hipd.
 
 Assume that you want to add an action named as 'NEWACT'.
 
-1.1. ACTION_NEWACT in libinet6/hipconf.h
+1.1. ACTION_NEWACT in lib/conf/hipconf.h
 ----------------------------------------
 Define a constant ACTION_NEWACT which has value between 0 and ACTION_MAX.
 Probably you also need to increase the value of ACTION_MAX.
 
-1.2. hip_conf_get_action() in libinet6/hipconf.c
+1.2. hip_conf_get_action() in lib/conf/hipconf.c
 ------------------------------------------------
 Add a proper sentence in the strcmp() series, like that:
 
@@ -1500,15 +1498,15 @@ Add a proper sentence in the strcmp() series, like that:
         ret = ACTION_NEWACT;
     ...
 
-1.3. hip_conf_check_action_argc() in libinet6/hipconf.c
+1.3. hip_conf_check_action_argc() in lib/conf/hipconf.c
 -------------------------------------------------------
 Add a case block for your ACTION_NEWACT constant in the switch(action) block.
 
-1.4. hip_conf_get_type_arg() in libinet6/hipconf.c
+1.4. hip_conf_get_type_arg() in lib/conf/hipconf.c
 --------------------------------------------------
 Add a case block for your ACTION_NEWACT constant in the switch(action) block.
 
-2.1. SO_HIP_NEWMODE in libinet6/icomm.h
+2.1. SO_HIP_NEWMODE in lib/conf/icomm.h
 ---------------------------------------
 Define a constant SO_HIP_NEWMODE which has value between 0 and
 HIP_SO_ROOT_MAX. Take also care of the value of HIP_SO_ROOT_MAX.
@@ -1517,18 +1515,18 @@ HIP_SO_ROOT_MAX. Take also care of the value of HIP_SO_ROOT_MAX.
 -----------------------------------------
 Add a case block for your SO_HIP_NEWMODE constant in the switch(msg_type) block.
 
-2.3. hip_message_type_name() in libinet6/builder.c
+2.3. hip_message_type_name() in lib/conf/builder.c
 --------------------------------------------------
 Add a case block for your SO_HIP_NEWMODE constant in the switch(msg_type) block.
 In this case, you just need to return the same string as the constant.
 
-3.1. action_handler[] in libinet6/hipconf.c
+3.1. action_handler[] in lib/conf/hipconf.c
 -------------------------------------------
 Add a handler function for your new action in the action_handler[] array.
 NOTE: the location and the order of these handlers are important, because
 each entry of the handler array is to be accessed via type index.
 
-3.2. TYPE_NEWTYPE in libinet6/hipconf.h
+3.2. TYPE_NEWTYPE in lib/conf/hipconf.h
 ---------------------------------------
 Define a constant TYPE_NEWTYPE which has value between 0 and TYPE_MAX.
 Probably you also need to increase the value of TYPE_MAX.
@@ -1541,15 +1539,15 @@ NOTE: the value of TYPE_NEWTYPE must be a correct index for looking up
 each handler function in action_handler[], which you just added above
 at the step 3.1.
 
-3.3. hip_conf_handle_NEWACT() in libinet6/hipconf.c
+3.3. hip_conf_handle_NEWACT() in lib/conf/hipconf.c
 ---------------------------------------------------
 Define a handler function added above at the step 3.1, somewhere in hipconf.c.
 
-3.4. hip_conf_handle_NEWACT() in libinet6/hipconf.h
+3.4. hip_conf_handle_NEWACT() in lib/conf/hipconf.h
 ---------------------------------------------------
 Declare a prototype for your new handler function hip_conf_handle_NEWACT
 defined above at the step 3.1.
 
-4. hipconf_usage in libinet6/hipconf.c
+4. hipconf_usage in lib/conf/hipconf.c
 --------------------------------------
 Add a simple usage for your new action in the usage string.

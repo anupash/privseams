@@ -11,6 +11,7 @@
  */
 
 #include <limits.h>
+#include <arpa/inet.h>
 
 #include "helpers.h"
 

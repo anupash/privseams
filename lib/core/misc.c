@@ -54,7 +54,7 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
                                   int hit_type)
 {
     int err              = 0;
-    u8 digest[HIP_AH_SHA_LEN];
+    uint8_t digest[HIP_AH_SHA_LEN];
     char *key            = (char *) (ip);
     unsigned int key_len = sizeof(struct in6_addr);
 
@@ -487,12 +487,11 @@ out:
     return tid;
 }
 
-#ifndef __KERNEL__
-u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
+uint16_t ipv4_checksum(uint8_t protocol, uint8_t src[], uint8_t dst[], uint8_t data[], uint16_t len)
 {
-    u16 word16;
-    u32 sum;
-    u16 i;
+    uint16_t word16;
+    uint32_t sum;
+    uint16_t i;
 
     //initialize sum to zero
     sum = 0;
@@ -500,7 +499,7 @@ u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
     // make 16 bit words out of every two adjacent 8 bit words and
     // calculate the sum of all 16 vit words
     for (i = 0; i < len; i = i + 2) {
-        word16 = ((((u16) (data[i] << 8))) & 0xFF00) + (((u16) data[i + 1]) & 0xFF);
+        word16 = ((((uint16_t) (data[i] << 8))) & 0xFF00) + (((uint16_t) data[i + 1]) & 0xFF);
         sum    = sum + (unsigned long) word16;
     }
     // add the TCP pseudo header which contains:
@@ -610,14 +609,14 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
                            struct in6_addr *hit, int hit_type)
 {
     int err                 = 0;
-    u8 digest[HIP_AH_SHA_LEN];
-    u8 *key_rr              = (u8 *) host_id->key; /* skip the header */
+    uint8_t digest[HIP_AH_SHA_LEN];
+    uint8_t *key_rr              = (uint8_t *) host_id->key; /* skip the header */
     /* hit excludes rdata but it is included in hi_length;
      * subtract rdata */
     unsigned int key_rr_len = ntohs(host_id->hi_length) -
                               sizeof(struct hip_host_id_key_rdata);
-    u8 *khi_data            = NULL;
-    u8 khi_context_id[]     = HIP_KHI_CONTEXT_ID_INIT;
+    uint8_t *khi_data            = NULL;
+    uint8_t khi_context_id[]     = HIP_KHI_CONTEXT_ID_INIT;
     int khi_data_len        = key_rr_len + sizeof(khi_context_id);
     int khi_index           = 0;
 
@@ -646,7 +645,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
     memset(hit, 0, sizeof(hip_hit_t));
     HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
-                        ((u8 *) hit) + 3,
+                        ((uint8_t *) hit) + 3,
                         sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
              -1, "encoding failed\n");
 
@@ -698,7 +697,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 
     /* Allocate enough space for host id; there will be 20 bytes extra
      * to avoid hassle with padding. */
-    host_id_pub = (struct hip_host_id *) HIP_MALLOC(total_len, GFP_KERNEL);
+    host_id_pub = (struct hip_host_id *) HIP_MALLOC(total_len, 0);
     HIP_IFE(!host_id_pub, -EFAULT);
     memset(host_id_pub, 0, total_len);
 
@@ -845,8 +844,8 @@ int check_and_create_file(char *filename, mode_t mode)
 int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 {
     uint16_t len = hip_get_param_contents_len(host_id);
-    u8 *buf      = (u8 *) host_id->key;
-    u8 t         = *buf;
+    uint8_t *buf      = (uint8_t *) host_id->key;
+    uint8_t t         = *buf;
 
     return len >= 3 * (64 + 8 * t) + 2 * 20;     /* PQGXY 3*(64+8*t) + 2*20 */
 }
@@ -1563,7 +1562,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr)
     }
     c++; /* If e_len is more than one byte, first byte is 0. */
     if (e_len_bytes == 3) {
-        *c = htons((u16) e_len);
+        *c = htons((uint16_t) e_len);
         c += 2;
     }
 
@@ -1804,7 +1803,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
     uint64_t randval  = 0;
     uint64_t maxtries = 0;
     uint64_t digest   = 0;
-    u8 cookie[48];
+    uint8_t cookie[48];
     int err           = 0;
     union {
         struct hip_puzzle   pz;
@@ -1825,7 +1824,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
              " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
 
     mask = hton64((1ULL << u->pz.K) - 1);
-    memcpy(cookie, (u8 *) &(u->pz.I), sizeof(uint64_t));
+    memcpy(cookie, (uint8_t *) &(u->pz.I), sizeof(uint64_t));
 
     HIP_DEBUG("(u->pz.I: 0x%llx\n", u->pz.I);
 
@@ -1851,10 +1850,10 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
      * the next round while (0 > 0) [maxtries > 0 now]
      */
     while (maxtries-- > 0) {
-        u8 sha_digest[HIP_AH_SHA_LEN];
+        uint8_t sha_digest[HIP_AH_SHA_LEN];
 
         /* must be 8 */
-        memcpy(cookie + 40, (u8 *) &randval, sizeof(uint64_t));
+        memcpy(cookie + 40, (uint8_t *) &randval, sizeof(uint64_t));
 
         hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
 
@@ -1933,8 +1932,7 @@ int hip_solve_puzzle_m(struct hip_common *out,
 out_err:
     return err;
 }
-
-#endif
+#endif /* CONFIG_HIP_MIDAUTH */
 
 /**
  * Gets the state of the bex for a pair of ip addresses.
@@ -2217,13 +2215,13 @@ void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
                         int is_priv)
 {
     int bytes;
-    u8 *tmp    = (u8 *) host_id->key;
+    uint8_t *tmp    = (uint8_t *) host_id->key;
     int offset = 0;
     int e_len  = tmp[offset++];
 
     /* Check for public exponent longer than 255 bytes (see RFC 3110) */
     if (e_len == 0) {
-        e_len   = ntohs((u16) tmp[offset]);
+        e_len   = ntohs((uint16_t) tmp[offset]);
         offset += 2;
     }
 
@@ -2247,7 +2245,6 @@ void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
     ret->n     = bytes;
 }
 
-#ifndef __KERNEL__
 RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv)
 {
     int offset;
@@ -2289,7 +2286,7 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
 {
     int offset  = 0;
     DSA *dsa    = NULL;
-    u8 t        = host_id->key[offset++];
+    uint8_t t        = host_id->key[offset++];
     int key_len = 64 + (t * 8);
 
     dsa = DSA_new();
@@ -2316,8 +2313,6 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
 
     return dsa;
 }
-
-#endif /* !__KERNEL__ */
 
 int hip_string_to_lowercase(char *to, const char *from, const size_t count)
 {
@@ -2802,8 +2797,6 @@ out_err:
     return err;
 }
 
-#endif /* !__KERNEL__ */
-
 in_port_t hip_get_local_nat_udp_port()
 {
     return hip_local_nat_udp_port;
@@ -2848,7 +2841,7 @@ int hip_verify_packet_signature(struct hip_common *pkt,
     int len                      = hip_get_param_total_len(peer_host_id);
     char *key                    = NULL;
 
-    HIP_IFEL(!(peer_pub = HIP_MALLOC(len, GFP_KERNEL)),
+    HIP_IFEL(!(peer_pub = HIP_MALLOC(len, 0)),
              -ENOMEM, "Out of memory\n");
 
     memcpy(peer_pub, peer_host_id, len);

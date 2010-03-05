@@ -13,10 +13,9 @@
 #endif /* HAVE_CONFIG_H */
 
 #ifdef CONFIG_HIP_PFKEY
-#include </usr/include/linux/pfkeyv2.h>
-#include </usr/include/linux/ipsec.h>
+#include <linux/pfkeyv2.h>
+#include <linux/ipsec.h>
 #include "lib/ipsec/libpfkey.h"
-#include "lib/ipsec/pfkeyv2.h"
 #include "pfkeyapi.h"
 
 
@@ -316,7 +315,7 @@ static int hip_pfkey_policy_modify(int so, const hip_hit_t *src_hit, u_int prefs
                                    const hip_hit_t *dst_hit, u_int prefd,
                                    const struct in6_addr *src_addr,
                                    const struct in6_addr *dst_addr,
-                                   u8 proto, int cmd, int direction)
+                                   uint8_t proto, int cmd, int direction)
 {
     int err                  = 0;
     struct sockaddr_storage ss_addr, dd_addr, ss_hit, dd_hit;
@@ -376,12 +375,12 @@ int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
                           const hip_hit_t *dst_hit,
                           const struct in6_addr *src_addr,
                           const struct in6_addr *dst_addr,
-                          u8 proto,
+                          uint8_t proto,
                           int use_full_prefix,
                           int update)
 {
     int so, err = 0;
-    u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+    uint8_t prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
     int cmd   = update ? SADB_X_SPDUPDATE : SADB_X_SPDADD;
 
     HIP_DEBUG("\n");
@@ -409,7 +408,7 @@ void hip_delete_hit_sp_pair(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
                             const uint8_t proto, const int use_full_prefix)
 {
     int so, err = 0;
-    u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+    uint8_t prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
     HIP_DEBUG("\n");
     HIP_IFEL(((so = pfkey_open()) < 0), -1, "ERROR in opening pfkey socket: %s\n", ipsec_strerror());

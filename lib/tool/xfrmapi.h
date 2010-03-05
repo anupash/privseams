@@ -63,7 +63,7 @@ int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
                           const hip_hit_t *dst_hit,
                           const struct in6_addr *src_addr,
                           const struct in6_addr *dst_addr,
-                          u8 proto,
+                          uint8_t proto,
                           int use_full_prefix,
                           int update);
 

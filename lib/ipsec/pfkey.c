@@ -52,7 +52,7 @@
 
 #include "ipsec_strerror.h"
 #include "libpfkey.h"
-#include "pfkeyv2.h"
+#include "linux/pfkeyv2.h"
 
 #define CALLOC(size, cast) (cast) calloc(1, (size))
 

@@ -26,6 +26,8 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <ifaddrs.h>
 #include "lib/tool/nlink.h"
 #include "netdev.h"
 #include "maintenance.h"
@@ -1178,7 +1180,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
     addr = (struct sockaddr *) &ss_addr;
 
-    for (/* VOID */; NLMSG_OK(msg, (u32) len);
+    for (/* VOID */; NLMSG_OK(msg, (uint32_t) len);
                    msg = NLMSG_NEXT(msg, len)) {
         int ifindex;
         ifinfo  = (struct ifinfomsg *) NLMSG_DATA(msg);

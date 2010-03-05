@@ -6,9 +6,7 @@
 #  define IPV6_2292PKTINFO 2
 #endif
 
-#ifndef __KERNEL__
 #include <netinet/in.h>
-#endif
 #include "protodefs.h"
 
 /* Use this port to send asynchronous/unidirectional messages
@@ -138,7 +136,6 @@
 // free slot
 #define SO_HIP_SET_NAT_PLAIN_UDP                129
 #define SO_HIP_SET_NAT_NONE                     130
-#define SO_HIP_SET_NAT_OFF                      SO_HIP_SET_NAT_NONE // XX FIXME: REMOVE
 /* 131-134 unused, were SO_HIP_SET_HIPPROXY_ON,
  *                      SO_HIP_SET_HIPPROXY_OFF,
  *                      SO_HIP_GET_PROXY_LOCAL_ADDRESS,

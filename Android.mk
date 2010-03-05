@@ -2,7 +2,7 @@
 
 BASE_PATH := $(call my-dir)
 
-BASE_C_INCLUDES := $(addprefix $(BASE_PATH)/, . hipd firewall libhipandroid libhipcore libhipconf libinet6 libinet6/include_glibc23 libhiptool libdht i3 i3/i3_client performance)
+BASE_C_INCLUDES := $(addprefix $(BASE_PATH)/, . hipd firewall libhipandroid libhipcore libhipconf libhiptool libdht i3 i3/i3_client performance)
 
 
 ###########################################################
@@ -79,7 +79,7 @@ LOCAL_C_INCLUDES := $(BASE_C_INCLUDES) \
 
 LOCAL_SHARED_LIBRARIES := libcrypto
 
-LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libhipconf libinet6
+LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libhipconf
 
 LOCAL_MODULE:= hipd
 
@@ -108,7 +108,7 @@ LOCAL_C_INCLUDES := $(BASE_C_INCLUDES) \
 
 LOCAL_SHARED_LIBRARIES := libcrypto
 
-LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libinet6 libhipconf
+LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libhipconf
 
 LOCAL_MODULE:= hipconf
 
@@ -167,7 +167,7 @@ LOCAL_C_INCLUDES := $(BASE_C_INCLUDES) \
 
 LOCAL_SHARED_LIBRARIES := libcrypto
 
-LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libinet6
+LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid
 
 LOCAL_MODULE:= hipfw
 
@@ -254,34 +254,6 @@ LOCAL_MODULE:= libhipcore
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 
 include $(BUILD_STATIC_LIBRARY)
-
-##########################################################
-# libinet6
-##########################################################
-
-
-LOCAL_PATH:= $(BASE_PATH)/libinet6
-
-include $(CLEAR_VARS)
-
-LOCAL_SRC_FILES :=  ifaddrs.c \
-                    ifnames.c
-
-LOCAL_CFLAGS := -include $(BASE_PATH)/libhipandroid/libhipandroid.h \
-                -DANDROID_CHANGES \
-                -g
-
-LOCAL_C_INCLUDES := $(BASE_C_INCLUDES) \
-                    external/openssl/include
-
-LOCAL_SHARED_LIBRARIES :=
-
-LOCAL_MODULE:= libinet6
-
-LOCAL_MODULE_CLASS := STATIC_LIBRARIES
-
-include $(BUILD_STATIC_LIBRARY)
-
 
 # ###########################################################
 # ## libhiptool

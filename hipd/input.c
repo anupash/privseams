@@ -62,10 +62,10 @@
  * @note            Fix the packet len before calling this function!
  */
 static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
-                           u8 *hmac, void *hmac_key, int hmac_type)
+                           uint8_t *hmac, void *hmac_key, int hmac_type)
 {
     int err = 0;
-    u8 hmac_res[HIP_AH_SHA_LEN];
+    uint8_t hmac_res[HIP_AH_SHA_LEN];
 
     HIP_HEXDUMP("HMAC data", buffer, buf_len);
 
@@ -98,7 +98,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
     int err               = 0, len = 0, orig_len = 0;
     struct hip_crypto_key tmpkey;
     struct hip_hmac *hmac = NULL;
-    u8 orig_checksum      = 0;
+    uint8_t orig_checksum      = 0;
 
     HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 
@@ -113,7 +113,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
     orig_checksum = hip_get_msg_checksum(msg);
     hip_zero_msg_checksum(msg);
 
-    len           = (u8 *) hmac - (u8 *) msg;
+    len           = (uint8_t *) hmac - (uint8_t *) msg;
     hip_set_msg_total_len(msg, len);
 
     _HIP_HEXDUMP("HMAC key", crypto_key->key,
@@ -298,13 +298,13 @@ int hip_produce_keying_material(struct hip_packet_context *packet_ctx,
     HIP_DEBUG("Keying material:\n\tminimum length = %u\n\t" \
               "keying material length = %u.\n", keymat_len_min, keymat_len);
 
-    HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, GFP_KERNEL)), -ENOMEM,
+    HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, 0)), -ENOMEM,
              "Error on allocating memory for keying material.\n");
 
     /* 1024 should be enough for shared secret. The length of the shared
      * secret actually depends on the DH Group. */
     /** @todo 1024 -> hip_get_dh_size ? */
-    HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
+    HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_0)),
              -ENOMEM,
              "Error on allocating memory for Diffie-Hellman shared key.\n");
 
@@ -1150,7 +1150,7 @@ int hip_handle_i2(const uint32_t packet_type,
     } else {
          HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
-         if ((ctx->hadb_entry = hip_hadb_create_state(GFP_KERNEL)) == NULL) {
+         if ((ctx->hadb_entry = hip_hadb_create_state(0)) == NULL) {
              err = -ENOMEM;
              HIP_ERROR("Out of memory when allocating memory for a new " \
                        "HIP association. Dropping the I2 packet.\n");
@@ -1920,40 +1920,37 @@ int hip_handle_i1(const uint32_t packet_type,
 
         if (addr4.s_addr == INADDR_BROADCAST) {
             HIP_DEBUG("Received I1 broadcast\n");
-            HIP_IFEBL2(src_hit_is_our,
-                       -1,
-                       ctx->drop_packet = 1,
-                       "Received a copy of own broadcast, dropping\n");
+            HIP_IFF(src_hit_is_our,
+                    -1,
+                    ctx->drop_packet = 1,
+                    "Received a copy of own broadcast, dropping\n");
 
-            HIP_IFEBL2(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
-                       -1,
-                       ctx->drop_packet = 1,
-                       "Could not find source address\n");
+            HIP_IFF(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
+                    -1,
+                    ctx->drop_packet = 1,
+                    "Could not find source address\n");
         }
     } else if (IN6_IS_ADDR_MULTICAST(ctx->dst_addr)) {
-        HIP_IFEBL2(src_hit_is_our,
-                   -1,
-                   ctx->drop_packet = 1,
-                   "Received a copy of own broadcast, dropping\n");
-        HIP_IFEBL2(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
-                   -1,
-                   ctx->drop_packet = 1,
-                   "Could not find source address\n");
+        HIP_IFF(src_hit_is_our,
+                -1,
+                ctx->drop_packet = 1,
+                "Received a copy of own broadcast, dropping\n");
+        HIP_IFF(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
+                -1,
+                ctx->drop_packet = 1,
+                "Could not find source address\n");
     }
 
-    HIP_IFEBL2(!hip_controls_sane(ntohs(ctx->input_msg->control), mask),
-               -1,
-               ctx->drop_packet = 1,
-               "Received illegal controls in I1: 0x%x. Dropping\n",
-               ntohs(ctx->input_msg->control));
+    HIP_IFF(!hip_controls_sane(ntohs(ctx->input_msg->control), mask),
+            -1,
+            ctx->drop_packet = 1,
+            "Received illegal controls in I1: 0x%x. Dropping\n",
+            ntohs(ctx->input_msg->control));
 
     HIP_INFO_HIT("I1 Source HIT:", &(ctx->input_msg)->hits);
     HIP_INFO_IN6ADDR("I1 Source IP :", ctx->src_addr);
 
-/**
- * @todo Change macro HIP_IFEBL2: add goto out_err and uncomment the label.
- * out_err:
- */
+out_err:
     return err;
 }
 

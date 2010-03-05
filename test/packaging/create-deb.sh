@@ -276,7 +276,6 @@ copy_and_package_files ()
     echo "$HIPL"
 
     for suffix in a so so.0 so.0.0.0;do
-        copy -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
         if [ ! "$CORPORATE" ];then
                 copy -d lib/tool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
         fi
@@ -284,7 +283,6 @@ copy_and_package_files ()
         copy -d lib/dht/.libs/libhipdht.$suffix $PKGDIR/usr/lib/
     done
 
-    copy -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
         if [ ! "$CORPORATE" ];then
             copy -L lib/tool/.libs/libhiptool.la $PKGDIR/usr/lib/
         fi

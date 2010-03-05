@@ -38,7 +38,7 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
 /**
  * Handles a user message.
  *
- * @note If you added a SO_HIP_NEWMODE in libinet6/icomm.h, you also need to
+ * @note If you added a SO_HIP_NEWMODE in lib/core/icomm.h, you also need to
  *       add a case block for your SO_HIP_NEWMODE constant in the
  *       switch(msg_type) block in this function.
  * @param  msg  a pointer to the received user message HIP packet.
@@ -924,5 +924,22 @@ out_err:
         HIP_DEBUG("No response sent\n");
     }
 
+    return err;
+}
+
+int hip_handle_netlink_msg(const struct nlmsghdr *msg, int len, void *arg)
+{
+    int err = 0;
+
+    for (; NLMSG_OK(msg, (uint32_t) len); msg = NLMSG_NEXT(msg, len)) {
+        switch (msg->nlmsg_type) {
+        case SO_HIP_ADD_PEER_MAP_HIT_IP:
+            HIP_DEBUG("add hit-ip map\n");
+            break;
+        default:
+            HIP_DEBUG("Unexpected msg type: %d\n", msg->nlmsg_type);
+            break;
+        }
+    }
     return err;
 }

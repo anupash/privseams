@@ -1,9 +1,6 @@
 #!/bin/bash -u
 
-
-
-
-function find_verbous_decls () {
+find_verbous_decls () {
         TAG_FILE=$1
         TEMPFILE=$2
         grep -vE '(djbdns|daemonto|libdht|hipsock|static)' $TAG_FILE  | cut -f 1 | sort -u | while read SYM
@@ -48,4 +45,4 @@ echo "Searching for unused declarations"
 TEMPFILE=$(mktemp)
 find_verbous_decls searchtags_local_headers $TEMPFILE
 
-grep -vE "android|libinet6|i3|_H$" $TEMPFILE | sort -u >| verbose-headers.txt
+grep -vE "android|i3|_H$" $TEMPFILE | sort -u >| verbose-headers.txt

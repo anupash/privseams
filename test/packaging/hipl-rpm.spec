@@ -28,7 +28,7 @@ other related tools and test software.
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
 ./autogen.sh --prefix=/usr
-%configure --prefix=/usr --enable-libinet6
+%configure --prefix=/usr
 make -C doc
 make -j 4 all
 
@@ -216,7 +216,6 @@ rm -rf %{buildroot}
 
 %files daemon
 %{prefix}/sbin/hipd
-%{prefix}/bin/hipsetup
 %config /etc/rc.d/init.d/hipd
 
 %files agent
@@ -239,10 +238,7 @@ rm -rf %{buildroot}
 %files test
 %{prefix}/bin/conntest-client-opp
 %{prefix}/bin/conntest-client-hip
-%{prefix}/bin/conntest-client-native
-%{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
-%{prefix}/bin/conntest-server-native
 
 %files firewall
 %{prefix}/sbin/hipfw

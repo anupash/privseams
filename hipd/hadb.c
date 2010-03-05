@@ -736,7 +736,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
             /*Adding the peer address to the entry->peer_addr_list_to_be_added
              *                          * So that later aftre base exchange it can be transfered to
              *                                                   * SPI OUT's peer address list*/
-            a_item = (struct hip_peer_addr_list_item *) HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+            a_item = (struct hip_peer_addr_list_item *) HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), 0);
             if (!a_item) {
                 HIP_ERROR("item HIP_MALLOC failed\n");
                 err = -ENOMEM;

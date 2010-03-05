@@ -39,6 +39,7 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <sys/ioctl.h>
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "hipconf.h"
@@ -126,7 +127,6 @@ const char *hipconf_usage =
     "load config default\n"
     "mhaddr mode lazy|active\n"
     "handover mode hard|soft\n"
-    "run normal|opp <binary>\n"
     "Server side:\n"
     "\tadd|del service rvs|relay|full-relay\n"
     "\treinit service rvs|relay|full-relay\n"
@@ -1728,6 +1728,9 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
         newVal = atoi(opt[1]);
     }
 
+    /* Build a HIP message with socket option to get puzzle difficulty. */
+    HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
+
     /* attach the hit into the message */
     err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
                                    sizeof(in6_addr_t));
@@ -1738,8 +1741,6 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
 
     /* obtain the result for the get action */
     if (msg_type == SO_HIP_CONF_PUZZLE_GET) {
-        /* Build a HIP message with socket option to get puzzle difficulty. */
-        HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
         /* Send the message to the daemon. The daemon fills the message. */
         HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
@@ -1762,8 +1763,6 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
             inet_ntop(AF_INET6, &hit, hit_s, INET6_ADDRSTRLEN);
             HIP_INFO("for peer hit: %s\n", hit_s);
         }
-    } else {
-        err = hip_build_user_hdr(msg, msg_type, 0);
     }
 
     /* attach new val for the set action */
@@ -1994,7 +1993,8 @@ out_err:
 /**
  * Handle e.g. "hipconf run normal firefox". Enables HIP support
  * for the given application using LD_PRELOAD. This means that
- * all getaddrinfo() calls go through the modified libinet library.
+ * all getaddrinfo() calls go through the modified libinet6 library.
+ * This function is depracated.
  *
  * @param msg input/output message for the query/response for hipd
  * @param action unused
@@ -2003,6 +2003,7 @@ out_err:
  * @param send_only 1 if no response from hipd should be requrested, or 0 if
  *                  should block for a response from hipd
  * @return zero for success and negative on error
+ * @todo remove this and related constants
  */
 static int hip_conf_handle_run_normal(hip_common_t *msg,
                                       int action,
@@ -2010,8 +2011,8 @@ static int hip_conf_handle_run_normal(hip_common_t *msg,
                                       int optc,
                                       int send_only)
 {
-    return hip_handle_exec_application(0, EXEC_LOADLIB_HIP, optc,
-                                       (char **) &opt[0]);
+    HIP_ERROR("Unsupported\n");
+    return -1;
 }
 
 
@@ -2233,16 +2234,14 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
     } else if (err == 0)    {
         HIP_DEBUG("Exec new application.\n");
         if (type == EXEC_LOADLIB_HIP) {
-            libs[0] = "libinet6.so";
-            libs[1] = "libhiptool.so";
-            libs[3] = NULL;
-            libs[4] = NULL;
-            libs[2] = "libhipopendht.so";
+            libs[0] = "libhiptool.so";
+            libs[1] = NULL;
+            libs[2] = NULL;
+            libs[3] = "libhipopendht.so";
         } else if (type == EXEC_LOADLIB_OPP)   {
             libs[0] = "libopphip.so";
-            libs[1] = "libinet6.so";
-            libs[2] = "libhiptool.so";
-            libs[4] = NULL;
+            libs[1] = "libhiptool.so";
+            libs[2] = NULL;
             libs[3] = "libhipopendht.so";
         }
 

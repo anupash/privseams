@@ -10,27 +10,22 @@
 #ifndef HIP_LIB_CORE_BUILDER_H
 #define HIP_LIB_CORE_BUILDER_H
 
-#ifndef __KERNEL__
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
-#endif
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#ifdef __KERNEL__
-#  include "usercompat.h"
-#  include "protodefs.h"
-#else
-#  include "kerncompat.h"
-#  include "debug.h"
-#  include "misc.h"
-#  include "icomm.h"
-#  include "certtools.h"
-#endif
+#include "debug.h"
+#include "misc.h"
+#include "icomm.h"
+#include "certtools.h"
 #include "hipd/registration.h"
 #include "state.h"
+
+#define HIP_MALLOC(size, flags)  malloc(size)
+#define HIP_FREE(obj)            free(obj)
 
 /* Removed in 2.6.11 - why ? */
 extern struct hip_cert_spki_info hip_cert_spki_info;
@@ -190,7 +185,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
                               struct sockaddr *src,
                               struct sockaddr *dst,
                               int len);
-u16 hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
+uint16_t hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
 int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
 void hip_dump_msg(const struct hip_common *);
@@ -226,13 +221,12 @@ void hip_msg_free(struct hip_common *);
 void hip_msg_init(struct hip_common *);
 char *hip_param_type_name(const hip_tlv_type_t);
 void hip_set_msg_err(struct hip_common *, hip_hdr_err_t);
-void hip_set_msg_checksum(struct hip_common *msg, u8 checksum);
+void hip_set_msg_checksum(struct hip_common *msg, uint8_t checksum);
 void hip_set_msg_total_len(struct hip_common *, uint16_t);
 void hip_set_msg_type(struct hip_common *, hip_hdr_type_t);
 void hip_set_param_contents_len(struct hip_tlv_common *, hip_tlv_len_t);
 void hip_set_param_lsi_value(struct hip_esp_info *, uint32_t);
 void hip_zero_msg_checksum(struct hip_common *);
-#ifndef __KERNEL__
 int rsa_to_hip_endpoint(RSA *rsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags_t endpoint_flags,
@@ -243,7 +237,6 @@ int dsa_to_hip_endpoint(DSA *dsa,
                         const char *hostname);
 int hip_build_param_hip_hdrr_info(struct hip_common *msg,
                                   struct hip_hdrr_info *hdrr_info);
-#endif
 int hip_build_param_hip_uadb_info(struct hip_common *msg,
                                   struct hip_uadb_info *uadb_info);
 int hip_build_param_reg_info(hip_common_t *msg,

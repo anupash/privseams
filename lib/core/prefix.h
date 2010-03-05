@@ -5,22 +5,10 @@
   #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#ifdef __KERNEL__
-#  include <linux/un.h>
-#  include <linux/in6.h>
-#  include "usercompat.h"
-#  include "protodefs.h"
-#  include "state.h"
-#  include "icomm.h"
-#  include "ife.h"
-#else
-#  include "kerncompat.h"
-#  include <sys/un.h>
-#  include "protodefs.h"
-#  include <stdlib.h>
-#  include "list.h"
-#endif
-
+#include <sys/un.h>
+#include <stdlib.h>
+#include "protodefs.h"
+#include "list.h"
 #include "debug.h"
 
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
@@ -92,6 +80,14 @@ void set_lsi_prefix(hip_lsi_t *lsi);
 
 #ifndef MAX
 #  define MAX(a, b)      ((a) > (b) ? (a) : (b))
+#endif
+
+#if __BYTE_ORDER == __BIG_ENDIAN
+  #define hton64(i) (i)
+  #define ntoh64(i) (i)
+#else
+  #define hton64(i) (((uint64_t) (htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ))
+  #define ntoh64 hton64
 #endif
 
 #endif /* HIP_LIB_CORE_UTILS_H */

@@ -220,7 +220,7 @@ static struct hip_data *get_hip_data(const struct hip_common *common)
              -1, "Unable to verify HOST_ID mapping to src HIT\n");
 
     // init hi parameter and copy
-    HIP_IFEL(!(data->src_hi = HIP_MALLOC(len, GFP_KERNEL)),
+    HIP_IFEL(!(data->src_hi = HIP_MALLOC(len, 0)),
              -ENOMEM, "Out of memory\n");
     memcpy(data->src_hi, host_id, len);
 
@@ -1073,7 +1073,7 @@ static int hip_handle_esp_in_udp_relay_r2(const struct in6_addr *ip6_src, const 
 {
     struct hip_relay_to *relay_to;
     struct iphdr *iph   = (struct iphdr *) ctx->ipq_packet->payload;
-    struct udphdr *udph = (struct udphdr *) ((u8 *) iph + iph->ihl * 4);
+    struct udphdr *udph = (struct udphdr *) ((uint8_t *) iph + iph->ihl * 4);
     int err             = 0;
 
     relay_to = hip_get_param(common, HIP_PARAM_RELAY_TO);
@@ -1934,7 +1934,7 @@ static int relay_esp_in_udp(const hip_fw_context_t *ctx,
                             const struct tuple *tuple)
 {
     struct iphdr *iph   = (struct iphdr *) ctx->ipq_packet->payload;
-    struct udphdr *udph = (struct udphdr *) ((u8 *) iph + iph->ihl * 4);
+    struct udphdr *udph = (struct udphdr *) ((uint8_t *) iph + iph->ihl * 4);
     int len             = ctx->ipq_packet->data_len - iph->ihl * 4;
     int err             = 0;
 
@@ -1967,7 +1967,7 @@ static int relay_esp_in_udp(const hip_fw_context_t *ctx,
     HIP_DEBUG("Relaying packet\n");
 
     hip_firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
-                                   (u8 *) iph + iph->ihl * 4, len, iph->protocol);
+                                   (uint8_t *) iph + iph->ihl * 4, len, iph->protocol);
 out_err:
     return err;
 }

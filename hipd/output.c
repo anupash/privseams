@@ -38,11 +38,11 @@ enum number_dh_keys_t number_dh_keys = TWO;
  * Standard BSD internet checksum routine from nmap
  * for calculating the checksum field of the TCP header
  */
-unsigned short in_cksum(u16 *ptr, int nbytes)
+unsigned short in_cksum(uint16_t *ptr, int nbytes)
 {
-    register u32 sum;
-    u16 oddbyte;
-    register u16 answer;
+    register uint32_t sum;
+    uint16_t oddbyte;
+    register uint16_t answer;
 
     /*
      * Our algorithm is simple, using a 32-bit accumulator (sum),
@@ -217,7 +217,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
     }
     //the checksum
     if (trafficType == 4) {
-        pseudo = (struct pseudo_hdr *) (void *) ((u8 *) newTcphdr - sizeof(struct pseudo_hdr));
+        pseudo = (struct pseudo_hdr *) (void *) ((uint8_t *) newTcphdr - sizeof(struct pseudo_hdr));
 
         pseudo->s_addr   = newIphdr->ip_src.s_addr;
         pseudo->d_addr   = newIphdr->ip_dst.s_addr;
@@ -228,7 +228,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
         newTcphdr->check = in_cksum((unsigned short *) pseudo, sizeof(struct tcphdr) +
                                     4 * (newTcphdr->doff - 5) + sizeof(struct pseudo_hdr) + 0);
     } else if (trafficType == 6)    {
-        pseudo6 = (struct pseudo6_hdr *) (void *) ((u8 *) newTcphdr - sizeof(struct pseudo6_hdr));
+        pseudo6 = (struct pseudo6_hdr *) (void *) ((uint8_t *) newTcphdr - sizeof(struct pseudo6_hdr));
 
         pseudo6->s_addr   = newIp6_hdr->ip6_src;
         pseudo6->d_addr   = newIp6_hdr->ip6_dst;
@@ -832,7 +832,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 {
     hip_common_t *msg = NULL;
     hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
-    u8 *dh_data1                                = NULL, *dh_data2 = NULL;
+    uint8_t *dh_data1                                = NULL, *dh_data2 = NULL;
     char order[]                                = "000";
     int err                                     = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
     int mask                                    = 0, i = 0;

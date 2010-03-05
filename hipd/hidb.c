@@ -535,11 +535,11 @@ static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv 
     int key_len;
     /* T could easily have been an int, since the compiler will
      * probably add 3 alignment bytes here anyway. */
-    u8 T;
+    uint8_t T;
     struct hip_host_id *ret;
 
     /* check T, Miika won't like this */
-    T = *((u8 *) (hi->key));
+    T = *((uint8_t *) (hi->key));
     if (T > 8) {
         HIP_ERROR("Invalid T-value in DSA key (0x%x)\n", T);
         return NULL;
