@@ -301,13 +301,13 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
     HIP_DEBUG("Keying material:\n\tminimum length = %u\n\t" \
               "keying material length = %u.\n", keymat_len_min, keymat_len);
 
-    HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, GFP_KERNEL)), -ENOMEM,
+    HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, 0)), -ENOMEM,
              "Error on allocating memory for keying material.\n");
 
     /* 1024 should be enough for shared secret. The length of the shared
      * secret actually depends on the DH Group. */
     /** @todo 1024 -> hip_get_dh_size ? */
-    HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
+    HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_0)),
              -ENOMEM,
              "Error on allocating memory for Diffie-Hellman shared key.\n");
 
@@ -1406,7 +1406,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
         HIP_DEBUG("Not a retransmission\n");
     }
 
-    HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)),
+    HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
              -ENOMEM, "Could not allocate memory for context\n");
     memset(ctx, 0, sizeof(struct hip_context));
     ctx->input = r1;
@@ -2194,7 +2194,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
     if (entry == NULL) {
         HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
-        if ((entry = hip_hadb_create_state(GFP_KERNEL)) == NULL) {
+        if ((entry = hip_hadb_create_state(0)) == NULL) {
             err = -ENOMEM;
             HIP_ERROR("Out of memory when allocating memory for a new " \
                       "HIP association. Dropping the I2 packet.\n");
@@ -2705,7 +2705,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
     }
 
     /* assume already locked entry */
-    HIP_IFE(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_ATOMIC)), -ENOMEM);
+    HIP_IFE(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)), -ENOMEM);
     memset(ctx, 0, sizeof(struct hip_context));
     ctx->input = r2;
 

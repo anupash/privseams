@@ -202,8 +202,6 @@ struct hip_peer_addr_list_item {
 /* for HIT-SPI hashtable only */
 struct hip_hit_spi {
 //    hip_list_t list;
-    spinlock_t lock;
-    atomic_t   refcnt;
     hip_hit_t  hit_our;
     hip_hit_t  hit_peer;
     uint32_t   spi;           /* this SPI spi belongs to the HIT hit */
