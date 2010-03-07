@@ -254,9 +254,8 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry)
  */
 hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode)
 {
-#ifdef HIP_USE_ICE
     hip_ha_set_nat_mode(entry, &mode);
-#endif
+
     return 0;
 }
 
