@@ -26,7 +26,6 @@
 #include "user_ipsec_fw_msg.h"
 #include "firewalldb.h"
 #include "sysopp.h"
-#include "sava_api.h"
 
 /**
  * Change the state of hadb state cache in the firewall
@@ -87,9 +86,6 @@ int hip_handle_msg(struct hip_common *msg)
     HIP_DEBUG("of type %d\n", type);
 
     switch (type) {
-    case SO_HIP_FW_I2_DONE:
-        hip_fw_update_sava(msg);
-        break;
     case SO_HIP_FW_BEX_DONE:
     case SO_HIP_FW_UPDATE_DB:
         if (hip_lsi_support) {
@@ -126,22 +122,6 @@ int hip_handle_msg(struct hip_common *msg)
             hip_fw_uninit_proxy();
         }
         hip_proxy_status = 0;
-        break;
-    case SO_HIP_SET_SAVAH_CLIENT_ON:
-        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
-        hip_fw_init_sava_client();
-        break;
-    case SO_HIP_SET_SAVAH_CLIENT_OFF:
-        _HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: OFF message from hipd \n");
-        hip_fw_uninit_sava_client();
-        break;
-    case SO_HIP_SET_SAVAH_SERVER_OFF:
-        _HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: OFF message from hipd \n");
-        hip_fw_uninit_sava_router();
-        break;
-    case SO_HIP_SET_SAVAH_SERVER_ON:
-        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: ON message from hipd \n");
-        hip_fw_init_sava_router();
         break;
     case SO_HIP_SET_OPPTCP_ON:
         HIP_DEBUG("Opptcp on\n");

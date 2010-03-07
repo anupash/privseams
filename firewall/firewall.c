@@ -46,8 +46,6 @@
 #include "user_ipsec_api.h" /* Userspace IPsec */
 #include "esp_prot_conntrack.h" /* ESP Tokens */
 #include "esp_prot_api.h" /* ESP Tokens */
-#include "sava_api.h" /* Sava */
-#include "savah_gateway.h"
 #include "sysopp.h" /* System-based Opportunistic HIP */
 #include "datapkt.h"
 #include "firewalldb.h"
@@ -97,8 +95,6 @@ static hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 /* extension-specific state */
 static int hip_userspace_ipsec            = 0;
 static int hip_esp_protection             = 0;
-static int hip_sava_router                = 0;
-static int hip_sava_client                = 0;
 static int restore_filter_traffic         = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 
@@ -192,152 +188,6 @@ int hip_fw_init_esp_relay(void)
 void hip_fw_uninit_esp_relay(void)
 {
     esp_relay = 0;
-}
-
-/**
- * Initialize sava client packet capture rules
- *
- * @return zero on success, non-zero on error
- */
-int hip_fw_init_sava_client()
-{
-    int err = 0;
-    if (!hip_sava_client && !hip_sava_router) {
-        hip_sava_client = 1;
-        HIP_DEBUG(" hip_fw_init_sava_client() \n");
-        HIP_IFEL(hip_sava_client_init_all(), -1,
-                 "Error initializing SAVA client \n");
-        /* IPv4 packets */
-        system_print("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
-        system_print("iptables -I HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
-        /* IPv6 packets */
-        system_print("ip6tables -I HIPFW-OUTPUT -p tcp ! -d ::1 -j QUEUE 2>/dev/null");
-        system_print("ip6tables -I HIPFW-OUTPUT -p udp ! -d ::1 -j QUEUE 2>/dev/null");
-    }
-out_err:
-    return err;
-}
-
-/**
- * Initialize packet capture rules for sava router
- *
- * @return zero on success, non-zero on error
- */
-int hip_fw_init_sava_router()
-{
-    int err = 0;
-    /*
-     * We need to capture each and every packet
-     * that passes trough the firewall to verify the packet's
-     * source address
-     */
-    if (!hip_sava_client && !hip_sava_router) {
-        hip_sava_router                   = 1;
-        accept_hip_esp_traffic_by_default = 0;
-        if (hip_sava_router) {
-            HIP_DEBUG("Initializing SAVA client mode \n");
-            HIP_IFEL(hip_sava_init_all(), -1,
-                     "Error initializing SAVA IP DB \n");
-
-            system_print("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
-            system_print("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
-
-            system_print("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-            system_print("iptables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-
-            /* IPv6 packets */
-
-            system_print("ip6tables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-            system_print("ip6tables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-
-            /* Queue HIP packets as well */
-            system_print("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
-            system_print("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
-
-            iptables_do_command("iptables -t nat -N %s 2>/dev/null", SAVAH_PREROUTING);
-            iptables_do_command("ip6tables -N %s 2>/dev/null", SAVAH_PREROUTING);
-
-            iptables_do_command("iptables -t nat -I PREROUTING 1 -m mark --mark %d  -j %s", FW_MARK_LOCKED, SAVAH_PREROUTING);
-            iptables_do_command("ip6tables -I PREROUTING 1 -m mark --mark %d -j %s", FW_MARK_LOCKED, SAVAH_PREROUTING);
-            //jump to SAVAH_PREROUTING chain if the packet was marked for FW_MARK_LOCKED
-
-            iptables_do_command("iptables -t nat -I %s 1 -p tcp --dport 80 -j REDIRECT --to-ports 80",
-                                SAVAH_PREROUTING); //this static IPs need to get mode dinamic nature
-            iptables_do_command("ip6tables -I %s 1 -p tcp --dport 80 -j REDIRECT --to-ports 80",
-                                SAVAH_PREROUTING); //the same goes here
-        }
-    }
-out_err:
-    return err;
-}
-
-/**
- * Ununitialize packet capture rules for sava client
- *
- */
-void hip_fw_uninit_sava_client(void)
-{
-    if (hip_sava_client) {
-        hip_sava_client = 0;
-        /* IPv4 packets */
-        system_print("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
-        system_print("iptables -D HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
-        /* IPv6 packets */
-        system_print("ip6tables -D HIPFW-OUTPUT -p tcp ! -d ::1 -j QUEUE 2>/dev/null");
-        system_print("ip6tables -D HIPFW-OUTPUT -p udp ! -d ::1 -j QUEUE 2>/dev/null");
-    }
-}
-
-/**
- * Uninitialize packet capture rules for sava router
- *
- */
-void hip_fw_uninit_sava_router(void)
-{
-    if (!hip_sava_client && !hip_sava_router) {
-        hip_sava_router = 0;
-        if (hip_sava_router) {
-            HIP_DEBUG("Uninitializing SAVA server mode \n");
-            /* IPv4 packets */
-            system_print("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-            system_print("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-            /* IPv6 packets */
-            system_print("ip6tables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
-            system_print("ip6tables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-
-            /* Stop queueing HIP packets */
-            system_print("iptables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
-            system_print("ip6tables -D HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
-
-            iptables_do_command("iptables -t nat -D PREROUTING -j %s 2>/dev/null",
-                                SAVAH_PREROUTING);
-            iptables_do_command("ip6tables -D PREROUTING -j %s 2>/dev/null",
-                                SAVAH_PREROUTING);
-
-            iptables_do_command("iptables -t nat -F %s 2>/dev/null",
-                                SAVAH_PREROUTING);
-            iptables_do_command("ip6tables -F %s 2>/dev/null",
-                                SAVAH_PREROUTING);
-
-            iptables_do_command("iptables -t nat -X %s 2>/dev/null",
-                                SAVAH_PREROUTING);
-            iptables_do_command("ip6tables -X %s 2>/dev/null",
-                                SAVAH_PREROUTING);
-        }
-    }
-    return;
-}
-
-/**
- * update sava state
- *
- * @param msg message containing the sava state
- */
-void hip_fw_update_sava(struct hip_common *msg)
-{
-    if (hip_sava_router || hip_sava_client) {
-        handle_sava_i2_state_update(msg);
-    }
 }
 
 /**
@@ -946,7 +796,6 @@ static void firewall_exit(void)
     hip_fw_uninit_esp_prot();
     hip_fw_uninit_esp_prot_conntrack();
     hip_fw_uninit_lsi_support();
-    hip_fw_uninit_sava_router();
     hip_fw_uninit_datapacket_mode();
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1436,15 +1285,6 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx)
     HIP_DEBUG("hip_fw_handle_hip_output \n");
 
     if (filter_traffic) {
-        if (hip_sava_router) {
-            hip_common_t *buf = ctx->transport_hdr.hip;
-            if (buf->type_hdr == HIP_I2) {
-                if (sava_check_state(&ctx->src, &buf->hits) == 0) {
-                    goto out_err;
-                }
-            }
-        }
-
         verdict = filter_hip(&ctx->src,
                              &ctx->dst,
                              ctx->transport_hdr.hip,
@@ -1458,7 +1298,6 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx)
 
     HIP_INFO("\n");
 
-out_err:
     /* zero return value means that the packet should be dropped */
     return verdict;
 }
@@ -1507,12 +1346,8 @@ static int hip_fw_handle_other_output(hip_fw_context_t *ctx)
         tcphdr   = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
         hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
     }
-    if (hip_sava_client &&
-        !hip_lsi_support &&
-        !hip_userspace_ipsec) {
-        HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
-        verdict = hip_sava_handle_output(ctx);
-    } else if (ctx->ip_version == 6
+
+    if (ctx->ip_version == 6
             && (hip_userspace_ipsec || hip_datapacket_mode)) {
 
         hip_hit_t *def_hit = hip_fw_get_default_hit();
@@ -1637,9 +1472,6 @@ static int hip_fw_handle_other_forward(hip_fw_context_t *ctx)
                                                 &ctx->dst,
                                                 ctx->ip_hdr_len,
                                                 ctx->ip_version);
-    } else if (hip_sava_router) {
-        HIP_DEBUG("hip_sava_router \n");
-        verdict = hip_sava_handle_router_forward(ctx);
     }
 
     /* No need to check default rules as it is handled by the iptables rules */
@@ -2492,7 +2324,6 @@ int main(int argc, char **argv)
 
     /* Starting hipfw does not always work when hipfw starts first -miika */
     if (hip_userspace_ipsec
-            || hip_sava_router
             || hip_lsi_support
             || hip_proxy_status
             || system_based_opp_mode) {
@@ -2573,14 +2404,6 @@ int main(int argc, char **argv)
     request_hipproxy_status();
 #endif /* CONFIG_HIP_HIPPROXY */
 
-#if 0
-    if (!hip_sava_client) {
-        request_savah_status(SO_HIP_SAVAH_SERVER_STATUS_REQUEST);
-    }
-    if (!hip_sava_router) {
-        request_savah_status(SO_HIP_SAVAH_CLIENT_STATUS_REQUEST);
-    }
-#endif
     highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 
     hip_msg_init(msg);

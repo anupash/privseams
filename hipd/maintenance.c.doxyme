@@ -150,15 +150,6 @@ int my_great_function(int firstArg, char **secondArg, int thirdArg)
 
 
 /**
- * hip_firewall_set_savah_status
- *
- *
- * @param status
- * @return
- */
-
-
-/**
  * hip_handle_retransmission
  *
  *

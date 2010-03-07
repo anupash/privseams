@@ -86,7 +86,7 @@
 #define TYPE_HI3           28
 /* free slot (was for TYPE_GET_PEER_LSI  29) */
 #define TYPE_BUDDIES       30
-#define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
+/* free slot */
 #define TYPE_NSUPDATE      32
 #define TYPE_HIT_TO_IP     33
 #define TYPE_HIT_TO_IP_SET 34
@@ -435,9 +435,6 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
     if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_RVS) {
         HIP_INFO(" Peer has granted us rendezvous service\n");
     }
-    if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_SAVAH) {
-        HIP_INFO(" Peer has granted us SAVAH service\n");
-    }
     if (ha->peer_controls & HIP_HA_CTRL_PEER_GRANTED_UNSUP) {
         HIP_DEBUG(" Peer has granted us an unknown service\n");
     }
@@ -449,9 +446,6 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
     }
     if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_RVS) {
         HIP_INFO(" Peer has refused to grant us RVS service\n");
-    }
-    if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_SAVAH) {
-        HIP_INFO(" Peer has refused to grant us SAVAH service\n");
     }
     if (ha->peer_controls & HIP_HA_CTRL_PEER_REFUSED_UNSUP) {
         HIP_DEBUG(" Peer has refused to grant us an unknown service\n");
@@ -1037,8 +1031,6 @@ static int hip_conf_handle_server(hip_common_t *msg,
             reg_types[i] = HIP_SERVICE_RENDEZVOUS;
         } else if (strcmp("relay", lowercase) == 0) {
             reg_types[i] = HIP_SERVICE_RELAY;
-        } else if (strcmp("savah", lowercase) == 0) {
-            reg_types[i] = HIP_SERVICE_SAVAH;
         } else if (strcmp("full-relay", lowercase) == 0)  {
             reg_types[i] = HIP_SERVICE_FULLRELAY;
         }         /* To cope with the atoi() error value we handle the 'zero'
@@ -2383,10 +2375,6 @@ static int hip_conf_handle_service(hip_common_t *msg,
             HIP_INFO("Adding HIP UDP relay service.\n");
             HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPRELAY, 0), -1,
                      "Failed to build user message header.\n");
-        } else if (strcmp(opt[0], "savah") == 0) {
-            HIP_INFO("Adding HIP SAVA service.\n");
-            HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_SAVAH, 0), -1,
-                     "Failed to build user message header.\n");
         } else if (strcmp(opt[0], "full-relay") == 0) {
             HIP_INFO("Adding HIP_FULLRELAY service.\n");
             HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_FULLRELAY, 0), -1,
@@ -2416,11 +2404,6 @@ static int hip_conf_handle_service(hip_common_t *msg,
             HIP_INFO("Deleting HIP UDP relay service.\n");
             HIP_IFEL(hip_build_user_hdr(
                          msg, SO_HIP_CANCEL_HIPRELAY, 0), -1,
-                     "Failed to build user message header.\n");
-        } else if (strcmp(opt[0], "sava") == 0) {
-            HIP_INFO("Deleting SAVAH service.\n");
-            HIP_IFEL(hip_build_user_hdr(
-                         msg, SO_HIP_CANCEL_SAVAH, 0), -1,
                      "Failed to build user message header.\n");
         } else if (strcmp(opt[0], "full-relay") == 0) {
             HIP_INFO("Deleting HIP full relay service.\n");
@@ -3098,56 +3081,6 @@ out_err:
 }
 
 /**
- * handle sava extension
- *
- * @param msg input/output message for the query/response for hipd
- * @param action unused
- * @param opt options arguments as strings
- * @param optc number of arguments
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return zero for success and negative on error
- */
-int hip_conf_handle_sava(struct hip_common *msg, int action,
-                         const char *opt[], int optc)
-{
-    int err = 0;
-    in6_addr_t hit, ip6;
-
-    HIP_DEBUG("action=%d optc=%d\n", action, optc);
-    if (action == ACTION_ADD) {
-        //HIP_IFEL((optc != 0 || optc != 2), -1, "Missing arguments\n");
-
-        if (optc == 2) {
-            HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REGISTER_SAVAHR,
-                                        0), -1, "add peer map failed\n");
-            HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
-                     "string to address conversion failed\n");
-
-            HIP_IFEL((err = convert_string_to_address(opt[1], &ip6)), -1,
-                     "string to address conversion failed\n");
-
-            HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-                                              sizeof(in6_addr_t)), -1,
-                     "build param hit failed\n");
-
-            HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
-                                              HIP_PARAM_IPV6_ADDR,
-                                              sizeof(in6_addr_t)), -1,
-                     "build param hit failed\n");
-        }
-    } else if (action == ACTION_GET) {
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_HIT,
-                                    0), -1, "add peer map failed\n");
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-    }
-out_err:
-    return err;
-}
-
-
-/**
  * Handles the hipconf commands where the type is @c load.
  *
  * @param msg    a pointer to the buffer where the message for hipd will
@@ -3299,7 +3232,7 @@ int (*action_handler[])(hip_common_t *,
     hip_conf_handle_hi3,                /* 28: TYPE_HI3 */
     NULL,                               /* 29: unused */
     hip_conf_handle_buddies_toggle,     /* 30: TYPE_BUDDIES */
-    NULL,     /* 31: TYPE_SAVAHR, reserved for sava */
+    NULL,     /* 31: unused */
     hip_conf_handle_nsupdate,           /* 32: TYPE_NSUPDATE */
     hip_conf_handle_hit_to_ip,          /* 33: TYPE_HIT_TO_IP */
     hip_conf_handle_hit_to_ip_set,      /* 34: TYPE_HIT_TO_IP_SET */

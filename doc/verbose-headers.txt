@@ -6,7 +6,7 @@ agent/hitdb firewall/rule_management libopphip/wrap.h : accept
 firewall/rule_management.h : ACCEPT
 firewall/rule_management.h : accept_mobile
 firewall/rule_management.h : ACCEPT_MOBILE_STR
-firewall/sava_api libhiptool/xfrm.h : action
+libhiptool/xfrm.h : action
 libipsec/policy_parse libipsec/policy_parse.h : ACTION
 libhipconf/hipconf.h : ACTION_ADD
 libhipconf/hipconf.h : ACTION_BOS
@@ -219,7 +219,7 @@ libhiptool/xfrm.h : curlft
 libhipcore/hashchain.h : current_index
 libhiptool/xfrm /usr/include/linux/ipv6 /usr/include/netinet/ip.h : daddr
 libhiptool/nlink.h : d_addr
-agent/str_var firewall/common_types firewall/firewall_defines firewall/sava_api hipd/configfilereader hipd/hipqueue i3/i3_client/i3_client i3/i3_client/ping libhipcore/hashtree libhipcore/protodefs libhiptool/lutil libhiptool/nlink tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/arpa/nameser /usr/include/linux/capability /usr/include/linux/icmp /usr/include/linux/icmpv6 /usr/include/netinet/ip.h : data
+agent/str_var firewall/common_types firewall/firewall_defines  hipd/configfilereader hipd/hipqueue i3/i3_client/i3_client i3/i3_client/ping libhipcore/hashtree libhipcore/protodefs libhiptool/lutil libhiptool/nlink tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/arpa/nameser /usr/include/linux/capability /usr/include/linux/icmp /usr/include/linux/icmpv6 /usr/include/netinet/ip.h : data
 hipd/hipqueue i3/i3_client/i3_client /usr/include/linux/netfilter_ipv4/ip_queue.h : data_len
 libhipcore/debug.h : DEBUG_H
 libhipcore/debug.h : debug_level
@@ -281,7 +281,7 @@ libhiptool/crypto.h : DSA_KEY_DEFAULT_BITS
 libhiptool/crypto.h : DSA_PRIV
 libhipcore/misc.h : dsa_to_dns_key_rr
 libhipcore/builder.h : dsa_to_hip_endpoint
-firewall/firewall_defines firewall/sava_api i3/i3_client/ping libipsec/libpfkey.h : dst
+firewall/firewall_defines  i3/i3_client/ping libipsec/libpfkey.h : dst
 firewall/firewall_defines firewall/user_ipsec_esp firewall/user_ipsec_sadb hipd/input.h : dst_addr
 firewall/firewall_defines.h : dst_addr_list
 firewall/rule_management.h : DST_HI_OPTION
@@ -292,7 +292,7 @@ firewall/firewall_defines.h : dst_ip
 firewall/user_ipsec_sadb firewall/user_ipsec_sadb.h : dst_port
 libhiptool/nlink.h : dump
 libhipcore/misc.h : e
-firewall/sava_api firewall/user_ipsec_sadb firewall/user_ipsec_sadb.h : ealg
+ firewall/user_ipsec_sadb firewall/user_ipsec_sadb.h : ealg
 libhiptool/xfrm.h : ealgos
 libhipgui/events.h : e_button
 libhipgui/events.h : e_button_press

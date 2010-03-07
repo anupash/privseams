@@ -22,8 +22,8 @@ firewall/common_types.h : _SList
 firewall/common_types.h : TimeVal
 firewall/common_types.h : _TimeVal
 firewall/common_types.h : TYPES_H_
-firewall/conndb firewall/proxydb firewall/sava_api firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_COMP_FN
-firewall/conndb firewall/proxydb firewall/sava_api firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_HASH_FN
+firewall/conndb firewall/proxydb  firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_COMP_FN
+firewall/conndb firewall/proxydb  firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_HASH_FN
 firewall/conndb.h : hip_conn
 firewall/conndb.h : hip_conn_key
 firewall/conntrack.h : print_data
@@ -126,8 +126,6 @@ firewall/rule_management.h : test_parse_copy
 firewall/rule_management.h : test_rule_management
 firewall/rule_management.h : TYPE_OPTION
 firewall/rule_management.h : TYPE_STR
-firewall/rule_management.h : VERIFY_RESPONDER_STR
-firewall/sava_api.h : HIP_SAVA_API
 firewall/user_ipsec_api.h : USER_IPSEC_API_H_
 firewall/user_ipsec_api libhipcore/common_defines.h : MAX_ESP_PADDING
 firewall/user_ipsec_esp.h : add_udp_header
@@ -513,7 +511,6 @@ libhipcore/protodefs.h : hip_nat_pacing
 libhipcore/protodefs.h : hip_nat_transform
 libhipcore/protodefs.h : HIP_PARAM_MAX
 libhipcore/protodefs.h : HIP_PARAM_MIN
-libhipcore/protodefs.h : HIP_PARAM_SAVA_CRYPTO_INFO
 libhipcore/protodefs.h : HIP_PARAM_TURN_INFO
 libhipcore/protodefs.h : _HIP_PROTODEFS
 libhipcore/protodefs.h : hip_relay_to_old

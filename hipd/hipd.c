@@ -69,10 +69,6 @@ int hip_icmp_interval                = HIP_NAT_KEEP_ALIVE_INTERVAL;
  *  This value indicates if the HIP PROXY is running. */
 int hipproxy                         = 0;
 
-/*SAVAH modes*/
-int hipsava_client                   = 0;
-int hipsava_server                   = 0;
-
 /* Encrypt host id in I2 */
 int hip_encrypt_i2_hi                = 0;
 
@@ -110,8 +106,6 @@ unsigned char opendht_response[HIP_MAX_PACKET];
 struct addrinfo *opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port         = OPENDHT_PORT;
 int opendht_serving_gateway_ttl          = OPENDHT_TTL;
-
-struct in6_addr *sava_serving_gateway    = NULL;
 
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
 char opendht_host_name[256];
