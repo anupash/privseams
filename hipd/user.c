@@ -46,7 +46,6 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
 int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 {
     hip_hit_t *src_hit           = NULL, *dst_hit = NULL;
-    in6_addr_t *dst_ip           = NULL;
     hip_ha_t *entry              = NULL;
     int err                      = 0, msg_type = 0, n = 0, len = 0, reti = 0;
     int access_ok                = 0, is_root = 0;
@@ -568,6 +567,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         struct hip_reg_request *reg_req    = NULL;
         hip_pending_request_t *pending_req = NULL;
         uint8_t *reg_types                 = NULL;
+        in6_addr_t *dst_ip                 = NULL;
         int i                              = 0, type_count = 0;
         int opp_mode                       = 0;
         int add_to_global                  = 0;
