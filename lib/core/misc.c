@@ -487,8 +487,17 @@ out:
     return tid;
 }
 
-uint16_t ipv4_checksum(uint8_t protocol, uint8_t src[], uint8_t dst[], uint8_t data[], uint16_t len)
+/**
+ * Generate the IPv4 header checksum
+ * @param s     source address
+ * @param d     destination address
+ * @param c     data
+ */
+uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c, uint16_t len)
 {
+    uint8_t *src   = s;
+    uint8_t *dst   = d;
+    uint8_t *data  = c;
     uint16_t word16;
     uint32_t sum;
     uint16_t i;

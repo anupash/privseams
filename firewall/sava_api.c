@@ -413,8 +413,8 @@ out_err:
     return err;
 }
 
-static
-struct sava_ip_option *__hip_sava_build_enc_addr_ipv4_option(struct in6_addr *enc_addr)
+#ifdef CONFIG_SAVAH_IP_OPTION
+static struct sava_ip_option *__hip_sava_build_enc_addr_ipv4_option(struct in6_addr *enc_addr)
 {
     HIP_ASSERT(enc_addr != NULL);
 
@@ -431,10 +431,10 @@ struct sava_ip_option *__hip_sava_build_enc_addr_ipv4_option(struct in6_addr *en
     return opt;
 }
 
-#if 0
-static
-struct in6_addr *__map_enc_ip_addr_to_network_order(struct in6_addr *enc_addr,
-                                                    int ip_version)
+#else
+
+static struct in6_addr *__map_enc_ip_addr_to_network_order(struct in6_addr *enc_addr,
+                                                           int ip_version)
 {
     struct in6_addr *no_addr =
         (struct in6_addr *) malloc(sizeof(struct in6_addr));
@@ -456,10 +456,9 @@ struct in6_addr *__map_enc_ip_addr_to_network_order(struct in6_addr *enc_addr,
     return no_addr;
 }
 
-#endif
+#endif // CONFIG_SAVAH_IP_OPTION
 
-static
-int __hip_sava_conn_db_init()
+static int __hip_sava_conn_db_init()
 {
     int err = 0;
     HIP_IFEL(!(sava_conn_db = hip_ht_init(LHASH_HASH_FN(__hip_sava_conn_entry),
@@ -990,12 +989,17 @@ int hip_sava_handle_output(hip_fw_context_t *ctx)
     struct sockaddr_in *dst4                  = (struct sockaddr_in *) &dst;
     struct sockaddr_in6 *dst6                 = (struct sockaddr_in6 *) &dst;
     struct sava_ip_option *opt                = NULL;
+#ifdef CONFIG_SAVAH_IP_OPTION
     struct sava_tlv_padding *sava_ip6_padding = NULL;
     struct sava_tlv_option *sava_ip6_opt      = NULL;
     struct ip6_hbh *ip6hbh_hdr                = NULL;
+    char *buff_ip_opt                         = NULL;
+#else
+    struct tcphdr *tcp                        = NULL;
+    struct udphdr *udp                        = NULL;
+#endif
     int verdict                               = DROP;
     int err                                   = 0, sent = 0;
-    char *buff_ip_opt                         = NULL;
     int protocol                              = 0;
     int ip_raw_sock                           = 0;
     int on                                    = 1, off = 0;
@@ -1294,7 +1298,6 @@ int hip_sava_handle_router_forward(hip_fw_context_t *ctx)
 {
     int verdict                        = 0, auth_len = 0, sent = 0;
     struct in6_addr *enc_addr          = NULL;
-    struct in6_addr *opt_addr          = NULL;
     hip_sava_enc_ip_entry_t *enc_entry = NULL;
     struct sockaddr_storage dst;
     struct sockaddr_in *dst4           = (struct sockaddr_in *) &dst;
@@ -1302,16 +1305,23 @@ int hip_sava_handle_router_forward(hip_fw_context_t *ctx)
     int dst_len                        = 0;
     struct ip6_hdr *ip6hdr             = NULL;
     struct ip *iphdr                   = NULL;
-    struct ip6_hbh *ip6hbh_hdr         = NULL;
     char *buff                         = (char *) ctx->ipq_packet->payload;
     int buff_len                       = ctx->ipq_packet->data_len;
     int protocol                       = 0;
     int ip_raw_sock                    = 0;
     int on                             = 1, off = 0;
+#ifdef CONFIG_SAVAH_IP_OPTION
+    struct in6_addr *opt_addr          = NULL;
+    struct ip6_hbh *ip6hbh_hdr         = NULL;
     int hdr_offset                     = 0;
     int hdr_len                        = 0;
     char *buff_no_opt                  = NULL;
     struct sava_ip_option *opt         = NULL;
+#else
+    struct tcphdr *tcp                 = NULL;
+    struct udphdr *udp                 = NULL;
+    struct in6_addr *enc_addr_no       = NULL;
+#endif
 
     memset(&dst, 0, sizeof(struct sockaddr_storage));
 
@@ -1592,6 +1602,9 @@ int hip_sava_handle_bex_completed(struct in6_addr *src, struct in6_addr *hitr)
     hip_sava_peer_info_t *info_entry   = NULL;
     hip_sava_enc_ip_entry_t *enc_entry = NULL;
     int err                            = 0;
+#ifndef CONFIG_SAVAH_IP_OPTION
+    struct in6_addr *enc_addr_no       = NULL;
+#endif
 
     HIP_DEBUG_HIT("SRC: ", src);
     HIP_DEBUG_HIT("HIT: ", hitr);
