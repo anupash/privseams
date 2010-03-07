@@ -572,9 +572,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
     HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-    HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size, HIP_DEFAULT_MSG_TIMEOUT)) <= 0),
-             -1, "Bad packet length (%d)\n", len);
-
     memset(msg_info, 0, sizeof(hip_portpair_t));
     memset(&msg, 0, sizeof(msg));
     memset(cbuff, 0, sizeof(cbuff));
@@ -591,7 +588,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
     msg.msg_controllen  = sizeof(cbuff);
     msg.msg_flags       = 0;
 
-    iov.iov_len         = len;
+    iov.iov_len         = HIP_MAX_NETWORK_PACKET;
     iov.iov_base        = hip_msg;
 
     pktinfo.pktinfo_in4 = NULL;
