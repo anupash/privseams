@@ -175,18 +175,6 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
         AH_TEMPLATE(CONFIG_HIP_RVS, [Defined to 1 if RVS is enabled.])
 fi
 
-AC_ARG_ENABLE(ice,
-             AC_HELP_STRING([--enable-ice],
-                            [ICE-based HIP NAT traversal extensions (default is YES)]),
-             [ac_cv_use_ice=$enableval], [ac_cv_use_ice=yes])
-AC_CACHE_CHECK([whether to use ICE],
-               [ac_cv_use_ice], [ac_cv_use_ice=yes])
-if test x"$ac_cv_use_ice" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_ICE)
-        AH_TEMPLATE(CONFIG_HIP_ICE, [Defined to 1 if ICE is enabled.])
-fi
-AM_CONDITIONAL(HIP_ICE, test x"$ac_cv_use_ice" = x"yes")
-
 AC_ARG_ENABLE(hipproxy,
              AC_HELP_STRING([--enable-hipproxy],
                             [HIP Proxy (default is YES)]),
