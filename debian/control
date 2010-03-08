@@ -1,11 +1,9 @@
-Source: hipl
-Section: networt
-Priority: extra
-Maintainer: hummen <rene.hummen@cs.rwth-aachen.de>
-Build-Depends: debhelper (>= 5), autotools-dev
-Standards-Version: 3.7.2
-
 Package: hipl
+Source: hipl
+Version: 1.0.4
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Maintainer: Rene Hummen <rene.hummen@cs.rwth-aachen.de>
 Description: HIP for Linux
+
+Build-Depends: debhelper (>= 5), autotools-dev
+Depends: ${shlibs:Depends}, ${misc:Depends}
