@@ -5,7 +5,6 @@
  * @author Mika Kousa
  * @author Bing Zhou
  * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
- * @see    misc.h
  */
 
 /* required for s6_addr32 */
@@ -76,10 +75,11 @@ out_err:
     return err;
 }
 
-#endif //CONFIG_HIP_OPPORTUNISTIC
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
-
-/** hip_timeval_diff - calculate difference between two timevalues
+/**
+ * calculate difference between two timevalues
+ *
  * @param t1 timevalue 1
  * @param t2 timevalue 2
  * @param result where the result is stored
@@ -116,6 +116,14 @@ int hip_timeval_diff(const struct timeval *t1,
     return _t1.tv_sec >= _t2.tv_sec;
 }
 
+/**
+ * convert a binary HIT into a string
+ *
+ * @param hit a binary HIT
+ * @param prefix an optional HIT prefix as a string
+ * @param hit_str the HIT as a string with the given prefix
+ * @return zero on success and negative on error
+ */
 int hip_convert_hit_to_str(const hip_hit_t *hit,
                            const char *prefix,
                            char *hit_str)
@@ -134,13 +142,13 @@ int hip_convert_hit_to_str(const hip_hit_t *hit,
     return err;
 }
 
-/*
- * function maxof()
+/**
+ * find the maximum value from a variable list of integers
  *
- * in:          num_args = number of items
- *              ... = list of integers
- * out:         Returns the integer with the largest value from the
- *              list provided.
+ * @param num_args number of list items
+ * @param ... the integers from which to find maximum
+ * @return the integer with the largest value from the
+ *         list provided
  */
 int maxof(int num_args, ...)
 {
@@ -158,6 +166,13 @@ int maxof(int num_args, ...)
     return max;
 }
 
+/**
+ * compare two LSIs for equality
+ *
+ * @param lsi1 an LSI
+ * @param lsi2 an LSI
+ * @return one if the LSIs are equal or zero otherwise
+ */
 int hip_lsi_are_equal(const hip_lsi_t *lsi1,
                       const hip_lsi_t *lsi2)
 {
@@ -165,7 +180,8 @@ int hip_lsi_are_equal(const hip_lsi_t *lsi1,
 }
 
 /**
- * hip_hit_is_bigger - compare two HITs
+ * compare two HITs to check which HIT is "bigger"
+ *
  * @param hit1 the first HIT to be compared
  * @param hit2 the second HIT to be compared
  *
@@ -177,14 +193,28 @@ int hip_hit_is_bigger(const struct in6_addr *hit1,
     return ipv6_addr_cmp(hit1, hit2) > 0;
 }
 
+/**
+ * compare two HITs to check which if they are equal
+ *
+ * @param hit1 the first HIT to be compared
+ * @param hit2 the second HIT to be compared
+ *
+ * @return 1 if the HITs were equal and zero otherwise
+ */
 int hip_hit_are_equal(const struct in6_addr *hit1,
                       const struct in6_addr *hit2)
 {
     return ipv6_addr_cmp(hit1, hit2) == 0;
 }
 
-/*
- * return value: 0 = match, >0 means non-match, -1 = error
+/**
+ * check the type of an IPv6 addresses
+ *
+ * @param id an IPv6 address, possibly in IPv6 mapped format
+ * @param type HIP_ID_TYPE_HIT or HIP_ID_TYPE_LSI
+ *
+ * @return zero for type match, greater than zero for mismatch or
+ * negative on error
  */
 int hip_id_type_match(const struct in6_addr *id, int id_type)
 {
@@ -213,6 +243,13 @@ int hip_id_type_match(const struct in6_addr *id, int id_type)
     return ret;
 }
 
+/**
+ * convert a binary IPv6 address to a string
+ *
+ * @param in6 the IPv6 address to convert
+ * @param buf a preallocated buffer where the string will be stored
+ * @return a pointer to the buf
+ */
 char *hip_in6_ntop(const struct in6_addr *in6, char *buf)
 {
     if (!buf) {
@@ -227,19 +264,34 @@ char *hip_in6_ntop(const struct in6_addr *in6, char *buf)
     return buf;
 }
 
+/**
+ * A generic object hashing function for lib/core/hashtable.c
+ *
+ * @param ptr an pointer to hash (must be at least 32 bits)
+ * @return a hash of the first 32-bits of the ptr's data
+ */
 unsigned long hip_hash_generic(const void *ptr)
 {
     unsigned long hash = (unsigned long) (*((uint32_t *) ptr));
     return hash % ULONG_MAX;
 }
 
+/**
+ * A generic matching function for lib/core/hashtable.c
+ *
+ * @param ptr1 a pointer to an item in the hash table
+ * @param ptr2 a pointer to an item in the hash table
+ * @return zero if the pointers match or one otherwise
+ */
 int hip_match_generic(const void *ptr1, const void *ptr2)
 {
     return ptr1 != ptr2;
 }
 
 /**
- * Returns a generic linked list based on the hash table implementation.
+ * Returns a generic linked list based on the hash table implementation
+ *
+ * @return an allocated hash table which is caller is responsible to free
  */
 HIP_HASHTABLE *hip_linked_list_init()
 {
@@ -248,6 +300,7 @@ HIP_HASHTABLE *hip_linked_list_init()
 
 /**
  * hip_hash_hit - calculate a hash from a HIT
+ *
  * @param key pointer to a HIT
  * @param range range of the hash
  *
@@ -259,22 +312,28 @@ unsigned long hip_hash_hit(const void *ptr)
 
     hip_build_digest(HIP_DIGEST_SHA1, ptr + sizeof(uint16_t),
                      7 * sizeof(uint16_t), hash);
-    //hip_build_digest(HIP_DIGEST_SHA1, ptr, sizeof(hip_hit_t), hash);
 
     return *((unsigned long *) hash);
 }
 
+/**
+ * Verify if if two HITs match based on hashing
+ *
+ * @param ptr1 a HIT
+ * @param ptr2 a HIT
+ * @return zero if the HITs match or one otherwise
+ */
 int hip_match_hit(const void *ptr1, const void *ptr2)
 {
     return hip_hash_hit(ptr1) != hip_hash_hit(ptr2);
 }
 
 /**
- * hip_enc_key_length - get encryption key length of a transform
- * @param tid transform
+ * get encryption key length for a transform
  *
- * @return the encryption key length based on the chosen transform,
- * otherwise < 0 on error.
+ * @param tid transform
+ * @return the encryption key length of the chosen transform,
+ *         or negative  on error.
  */
 int hip_enc_key_length(int tid)
 {
@@ -300,6 +359,13 @@ int hip_enc_key_length(int tid)
     return ret;
 }
 
+/**
+ * get hmac key length of a transform
+ *
+ * @param tid transform
+ * @return the encryption key length based of the chosen transform,
+ *         or negative  on error.
+ */
 int hip_hmac_key_length(int tid)
 {
     int ret = -1;
@@ -322,11 +388,11 @@ int hip_hmac_key_length(int tid)
 }
 
 /**
- * hip_transform_key_length - get transform key length of a transform
+ * get transform key length for a transform
  * @param tid transform
  *
- * @return the transform key length based on the chosen transform,
- * otherwise < 0 on error.
+ * @return the transform key length based for the chosen transform,
+ * or negative on error.
  */
 int hip_transform_key_length(int tid)
 {
@@ -352,11 +418,11 @@ int hip_transform_key_length(int tid)
 }
 
 /**
- * hip_auth_key_length_esp - get authentication key length of a transform
- * @param tid transform
+ * get authentication key length for an ESP transform
  *
- * @return the authentication key length based on the chosen transform.
- * otherwise < 0 on error.
+ * @param tid transform
+ * @return the authentication key length for the chosen transform.
+ * or negative on error
  */
 int hip_auth_key_length_esp(int tid)
 {
@@ -364,8 +430,6 @@ int hip_auth_key_length_esp(int tid)
 
     switch (tid) {
     case HIP_ESP_AES_SHA1:
-    //ret = 16;
-    //break;
     case HIP_ESP_NULL_SHA1:
     case HIP_ESP_3DES_SHA1:
         ret = 20;
@@ -383,10 +447,10 @@ int hip_auth_key_length_esp(int tid)
 }
 
 /**
- * hip_select_hip_transform - select a HIP transform to use
- * @param ht HIP_TRANSFORM payload where the transform is selected from
+ * select a HIP transform
  *
- * @return the first acceptable Transform-ID, otherwise < 0 if no
+ * @param ht HIP_TRANSFORM payload where the transform is selected from
+ * @return the first acceptable Transform-ID or negative if no
  * acceptable transform was found. The return value is in host byte order.
  */
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
@@ -435,10 +499,10 @@ out:
 }
 
 /**
- * hip_select_esp_transform - select an ESP transform to use
+ * select an ESP transform to use
  * @param ht ESP_TRANSFORM payload where the transform is selected from
  *
- * @return the first acceptable Suite-ID. otherwise < 0 if no
+ * @return the first acceptable Suite-ID or negative if no
  * acceptable Suite-ID was found.
  */
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
@@ -489,9 +553,11 @@ out:
 
 /**
  * Generate the IPv4 header checksum
+ *
  * @param s     source address
  * @param d     destination address
  * @param c     data
+ * @return the calculated IPv4 header checksum
  */
 uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c, uint16_t len)
 {
@@ -502,17 +568,17 @@ uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c, uint16_t len
     uint32_t sum;
     uint16_t i;
 
-    //initialize sum to zero
+    /* initialize sum to zero */
     sum = 0;
 
-    // make 16 bit words out of every two adjacent 8 bit words and
-    // calculate the sum of all 16 vit words
+    /* make 16 bit words out of every two adjacent 8 bit words and */
+    /* calculate the sum of all 16 vit words */
     for (i = 0; i < len; i = i + 2) {
         word16 = ((((uint16_t) (data[i] << 8))) & 0xFF00) + (((uint16_t) data[i + 1]) & 0xFF);
         sum    = sum + (unsigned long) word16;
     }
-    // add the TCP pseudo header which contains:
-    // the IP source and destination addresses,
+    /* add the TCP pseudo header which contains:
+       the IP source and destination addresses, */
     for (i = 0; i < 4; i = i + 2) {
         word16 = ((src[i] << 8) & 0xFF00) + (src[i + 1] & 0xFF);
         sum    = sum + word16;
@@ -521,19 +587,28 @@ uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c, uint16_t len
         word16 = ((dst[i] << 8) & 0xFF00) + (dst[i + 1] & 0xFF);
         sum    = sum + word16;
     }
-    // the protocol number and the length of the TCP packet
+    /* the protocol number and the length of the TCP packet */
     sum = sum + protocol + len;
 
-    // keep only the last 16 bits of the 32 bit calculated sum and add the carries
+    /* keep only the last 16 bits of the 32 bit calculated sum
+       and add the carries */
     while (sum >> 16) {
         sum = (sum & 0xFFFF) + (sum >> 16);
     }
 
-    // Take the one's complement of sum
+    /* Take the one's complement of sum */
     sum = ~sum;
     return htons((unsigned short) sum);
 }
 
+/**
+ * convert a string into a binary IPv4 address (a wrapper for inet_pton())
+ *
+ * @param str the string to convert
+ * @param ip an output argument that will contain a binary IPv4 calculated
+ *        from the @c str
+ * @return zero on success and negative on error
+ */
 int convert_string_to_address_v4(const char *str, struct in_addr *ip)
 {
     int ret = 0, err = 0;
@@ -547,6 +622,14 @@ out_err:
     return err;
 }
 
+/**
+ * Convert a string to an IPv6 address. This function can handle
+ * also IPv6 mapped addresses.
+ *
+ * @param str the string to convert
+ * @param ip6 An output argument that will contain a binary IPv4 calculated
+ *        from the @c str. Possibly in IPv6 mapped format.
+ */
 int convert_string_to_address(const char *str,
                               struct in6_addr *ip6)
 {
@@ -576,7 +659,15 @@ out_err:
     return err;
 }
 
-/* the lengths are in bits */
+/**
+ * calculate a HIT from a HI without the prefix
+ *
+ * @param orig a pointer to a host identity
+ * @param orig_len the length of the host identity in bits
+ * @param encoded an output argument where the HIT will be stored
+ * @param encoded_len the length of the encoded HIT in bits
+ * @return zero on success or negative on error
+ */
 int khi_encode(unsigned char *orig, int orig_len,
                unsigned char *encoded,
                int encoded_len)
@@ -604,8 +695,6 @@ out_err:
 }
 
 /**
- * Calculates a Host Identity Tag (HIT) from a Host Identifier (HI).
- *
  * Calculates a Host Identity Tag (HIT) from a Host Identifier (HI) using DSA
  * encryption.
  *
@@ -621,7 +710,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
     uint8_t digest[HIP_AH_SHA_LEN];
     uint8_t *key_rr              = (uint8_t *) host_id->key; /* skip the header */
     /* hit excludes rdata but it is included in hi_length;
-     * subtract rdata */
+       subtract rdata */
     unsigned int key_rr_len = ntohs(host_id->hi_length) -
                               sizeof(struct hip_host_id_key_rdata);
     uint8_t *khi_data            = NULL;
@@ -670,6 +759,14 @@ out_err:
     return err;
 }
 
+/**
+ * convert DSA or RSA-based host id to a HIT
+ *
+ * @param host_id a host id
+ * @param hit output argument, the calculated HIT will stored here
+ * @param hit_type the type of the HIT
+ * @return zero on success or negative on error
+ */
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
                        struct in6_addr *hit,
                        int hit_type)
@@ -688,6 +785,14 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
     return err;
 }
 
+/**
+ * convert DSA-based private host id to a HIT
+ *
+ * @param host_id a host id
+ * @param hit output argument, the calculated HIT will stored here
+ * @param hit_type the type of the HIT
+ * @return zero on success or negative on error
+ */
 int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    struct in6_addr *hit,
                                    int hit_type)
@@ -734,6 +839,14 @@ out_err:
     return err;
 }
 
+/**
+ * convert RSA-based private host id to a HIT
+ *
+ * @param host_id a host id
+ * @param hit output argument, the calculated HIT will stored here
+ * @param hit_type the type of the HIT
+ * @return zero on success or negative on error
+ */
 int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    struct in6_addr *hit,
                                    int hit_type)
@@ -771,6 +884,14 @@ out_err:
     return err;
 }
 
+/**
+ * convert RSA or DSA-based private host id to a HIT
+ *
+ * @param host_id a host id
+ * @param hit output argument, the calculated HIT will stored here
+ * @param hit_type the type of the HIT
+ * @return zero on success or negative on error
+ */
 int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                struct in6_addr *hit,
                                int hit_type)
@@ -792,7 +913,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
 }
 
 /**
- * check_and_create_dir - check and create a directory
+ * check and create a directory
  * @param dirname the name of the directory
  * @param mode creation mode for the directory, if it does not exist
  *
@@ -820,7 +941,7 @@ int check_and_create_dir(char *dirname, mode_t mode)
 }
 
 /**
- * check_and_create_file - check and create a file
+ * check and create a file
  * @param file the name of the file
  * @param mode creation mode for the file, if it does not exist
  *
@@ -850,6 +971,13 @@ int check_and_create_file(char *filename, mode_t mode)
     return fd;
 }
 
+/**
+ * check if a given host id just contains a public key (i.e. can
+ * be sent on wire) or if it is piggypacked with the private component
+ *
+ * @param host_id the host id structure
+ * @return 1 if the host id contains the private component or 0 otherwise
+ */
 int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 {
     uint16_t len = hip_get_param_contents_len(host_id);
@@ -859,6 +987,11 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
     return len >= 3 * (64 + 8 * t) + 2 * 20;     /* PQGXY 3*(64+8*t) + 2*20 */
 }
 
+/**
+ * make /etc/hip file permissions more secure
+ *
+ * @param filenamebase the file name based for keys
+ */
 void change_key_file_perms(char *filenamebase)
 {
     char *pubfilename = NULL;
@@ -887,6 +1020,27 @@ out_err:
     return;
 }
 
+/**
+ * (Re)create new host identities or load existing ones, and append the
+ * private identities into a message. This functionality is used by hipd
+ * but can also be invoked with hipconf.
+ *
+ * @param msg an output argument where the identities will be appended
+ * @param action Currently ACTION_ADD and ACTION_NEW are supported. Warning,
+ *               ACTION_NEW will override the existing identities on disk!
+ * @param anon set to one when you want to process only anonymous (short-term)
+ *             identities or zero otherwise
+ * @param use_default One when dealing with default identities in /etc/hip.
+ *                    Zero when user supplies own identities denoted by
+ *                    @c hi_file argument.
+ * @param hi_fmt "dsa" or "rsa" currently supported
+ * @param hi_file an optional location for user-supplied host identities.
+ *                Argument @c use_default must be zero when used.
+ * @param rsa_key_bits size for RSA keys in bits
+ * @param dsa_key_bits size of DSA keys in bits
+ *
+ * @return zero on success and negative on error
+ */
 int hip_serialize_host_id_action(struct hip_common *msg,
                                  int action,
                                  int anon,
@@ -1358,16 +1512,16 @@ void get_random_bytes(void *buf, int n)
 }
 
 /**
- * hip_build_digest - calculate a digest over given data
+ * calculate a digest over given data
  * @param type the type of digest, e.g. "sha1"
  * @param in the beginning of the data to be digested
  * @param in_len the length of data to be digested in octets
  * @param out the digest
  *
- * @param out should be long enough to hold the digest. This cannot be
+ * @note out should be long enough to hold the digest. This cannot be
  * checked!
  *
- * @return 0 on success, otherwise < 0.
+ * @return 0 on success and negative on error.
  */
 int hip_build_digest(const int type, const void *in, int in_len, void *out)
 {
@@ -1396,11 +1550,11 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 }
 
 /**
- * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
+ * create DNS KEY RR record from host DSA key
  * @param dsa the DSA structure from where the KEY RR record is to be created
  * @param dsa_key_rr where the resultin KEY RR is stored
  *
- * Caller must free dsa_key_rr when it is not used anymore.
+ * @note Caller must free dsa_key_rr when it is not used anymore.
  *
  * @return On successful operation, the length of the KEY RR buffer is
  * returned (greater than zero) and pointer to the buffer containing
@@ -1508,18 +1662,16 @@ out_err:
 }
 
 /**
- * rsa_to_dns_key_rr - This is a new version of the function above. This function
- *                     assumes that RSA given as a parameter is always public (Laura/10.4.2006)
- *                     Creates DNS KEY RR record from host RSA public key
+ * create a DNS KEY RR record from a given host RSA public key
+ *
  * @param rsa the RSA structure from where the KEY RR record is to be created
  * @param rsa_key_rr where the resultin KEY RR is stored
- *
- * Caller must free rsa_key_rr when it is not used anymore.
- *
  * @return On successful operation, the length of the KEY RR buffer is
- * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at rsa_key_rr. On error function returns negative
- * and sets rsa_key_rr to NULL.
+ *         returned (greater than zero) and pointer to the buffer containing
+ *         DNS KEY RR is stored at rsa_key_rr. On error function returns
+ *         negative and sets rsa_key_rr to NULL.
+ * @note Caller must free rsa_key_rr when it is not used anymore.
+ * @note This function assumes that RSA given as a parameter is always public.
  */
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr)
 {
@@ -1607,12 +1759,12 @@ out_err:
 }
 
 /**
- * Casts a socket address to an IPv4 or IPv6 address.
+ * cast a socket address to an IPv4 or IPv6 address.
  *
- * The parameter @c sockaddr is first cast to a struct sockaddr and the IP
- * address cast is then done based on the value of the sa_family field in the
- * struct sockaddr. If sa_family is neither AF_INET nor AF_INET6, the cast
- * fails.
+ * @note The parameter @c sockaddr is first cast to a struct sockaddr
+ * and the IP address cast is then done based on the value of the
+ * sa_family field in the struct sockaddr. If sa_family is neither
+ * AF_INET nor AF_INET6, the cast fails.
  *
  * @param  sockaddr a pointer to a socket address that holds the IP address.
  * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
@@ -1638,6 +1790,13 @@ void *hip_cast_sa_addr(const struct sockaddr *sa)
     }
 }
 
+/**
+ * Test if a sockaddr_in6 structure is in IPv6 mapped format (i.e.
+ * contains an IPv4 address)
+ *
+ * @param sa socket address structure
+ * @return one if the structure is in IPv6 mapped format or zero otherwise
+ */
 int hip_sockaddr_is_v6_mapped(struct sockaddr *sa)
 {
     int family = sa->sa_family;
@@ -1650,6 +1809,12 @@ int hip_sockaddr_is_v6_mapped(struct sockaddr *sa)
     }
 }
 
+/**
+ * Calculate the actual length of any sockaddr structure
+ *
+ * @param sockaddr the sockaddr structure
+ * @return the length of the actual sockaddr structure in bytes
+ */
 int hip_sockaddr_len(const void *sockaddr)
 {
     struct sockaddr *sa = (struct sockaddr *) sockaddr;
@@ -1671,6 +1836,12 @@ int hip_sockaddr_len(const void *sockaddr)
     return len;
 }
 
+/**
+ * Calculate the address field length of any sockaddr structure
+ *
+ * @param sockaddr the sockaddr structure
+ * @return the length of the address field in the @c sockaddr structure
+ */
 int hip_sa_addr_len(void *sockaddr)
 {
     struct sockaddr *sa = (struct sockaddr *) sockaddr;
@@ -1689,9 +1860,14 @@ int hip_sa_addr_len(void *sockaddr)
     return len;
 }
 
-/* conversion function from in6_addr to sockaddr_storage
+/**
+ * converts an in6_addr structure to sockaddr_storage
  *
- * NOTE: sockaddr too small to store sockaddr_in6 */
+ * @param addr the in6_addr to convert
+ * @param sa a sockaddr_storage structure where the result is stored
+ * @note remember to fill in the port number by yourself
+ *       if necessary
+ */
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
 {
     memset(sa, 0, sizeof(struct sockaddr_storage));
@@ -1707,11 +1883,25 @@ void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
     }
 }
 
+/**
+ * get rid of a lock file
+ *
+ * @param filename the file name of the lock file
+ * @return zero on success and negative on error
+ */
 int hip_remove_lock_file(char *filename)
 {
     return unlink(filename);
 }
 
+/**
+ * create a new lock file
+ *
+ * @param filename the file name of the lock
+ * @param killold one if the function should steal the lock from
+ *        and existing process and kill it, or zero otherwise
+ * @return zero on success and negative on error
+ */
 int hip_create_lock_file(char *filename, int killold)
 {
     int err     = 0, fd = 0, old_pid = 0, new_pid_str_len = 0;
@@ -1729,7 +1919,7 @@ int hip_create_lock_file(char *filename, int killold)
     fd              = HIP_CREATE_FILE(filename);
     HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
 
-    /* FIXME: This is possibly unsafe: the pid is read from the file without checking
+    /** @todo This is possibly unsafe: the pid is read from the file without checking
      * file permissions and the process with the number is simply killed.
      * THIS COULD BE USED TO ATTACK THE SYSTEM
      */
@@ -1770,14 +1960,6 @@ int hip_create_lock_file(char *filename, int killold)
             HIP_PERROR("errno after kill() is: ");
         }
     }
-    /* else if (killold)
-     * {
-     * lseek(fd,0,SEEK_SET);
-     * write(fd, new_pid_str, new_pid_str_len);
-     * system("NEW_PID=$(sudo awk NR==1 /var/lock/hipd.lock)");
-     * system("OLD_PID=$(/bin/pidof -o $NEW_PID hipd)");
-     * system("kill -9 $OLD_PID");
-     * } */
 
     lseek(fd, 0, SEEK_SET);
 
@@ -1793,16 +1975,17 @@ out_err:
 }
 
 /**
- * hip_solve_puzzle - Solve puzzle.
+ * solve a computational puzzle for HIP
+ *
  * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
  * @param hdr The incoming R1/I2 packet header.
  * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
  *
- * The K and I is read from the @c puzzle_or_solution.
- *
- * The J that solves the puzzle is returned, or 0 to indicate an error.
- * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
- * odds are 1/2^64 to try 0, I don't see the point in improving this now.
+ * @note The K and I is read from the @c puzzle_or_solution.
+ * @note Regarding to return value of zero, I don't see why 0 couldn't solve the
+ *       puzzle too, but since the odds are 1/2^64 to try 0, I don't see the point
+ *       in improving this now.
+ * @return The J that solves the puzzle is returned, or 0 to indicate an error.
  */
 uint64_t hip_solve_puzzle(void *puzzle_or_solution,
                           struct hip_common *hdr,
@@ -1901,6 +2084,19 @@ out_err:
 }
 
 #ifdef CONFIG_HIP_MIDAUTH
+/**
+ * solve a midauth puzzle which is essentially a normal HIP cookie
+ * with some extra whipped cream on the top
+ *
+ * @param out the received R1 message
+ * @param in an I2 message where the solution will be written
+ * @param entry the related host association
+ * @return zero on success and negative on error
+ * @see <a
+ * href="http://tools.ietf.org/id/draft-heer-hip-middle-auth">Heer et
+ * al, End-Host Authentication for HIP Middleboxes, Internet draft,
+ * work in progress, February 2009</a>
+ */
 int hip_solve_puzzle_m(struct hip_common *out,
                        struct hip_common *in,
                        hip_ha_t *entry)
@@ -1944,16 +2140,16 @@ out_err:
 #endif /* CONFIG_HIP_MIDAUTH */
 
 /**
- * Gets the state of the bex for a pair of ip addresses.
+ * get the state of the bex for a pair of ip addresses.
  *
- * @param *src_ip       input for finding the correct entries
- * @param *dst_ip       input for finding the correct entries
- * @param *src_hit      output data of the correct entry
- * @param *dst_hit      output data of the correct entry
- * @param *src_lsi      output data of the correct entry
- * @param *dst_lsi      output data of the correct entry
- * @return              the state of the bex if the entry is found
- *                      otherwise returns -1
+ * @param src_ip       input for finding the correct entries
+ * @param dst_ip       input for finding the correct entries
+ * @param src_hit      output data of the correct entry
+ * @param dst_hit      output data of the correct entry
+ * @param src_lsi      output data of the correct entry
+ * @param dst_lsi      output data of the correct entry
+ * @return             the state of the bex if the entry is found
+ *                     otherwise returns -1
  */
 int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
                                 hip_lsi_t       *dst_lsi,
@@ -2004,13 +2200,21 @@ out_err:
     return res;
 }
 
-/* This builds a msg which will be sent to the HIPd in order to trigger
- * a BEX there.
+/**
+ * build a message for hipd to trigger a base exchange
  *
- * TODO move that to useripsec.c?
- *         No, because this function is called by hip_fw_handle_outgoing_lsi too.
- *
- * NOTE: Either destination HIT or IP (for opportunistic BEX) has to be provided */
+ * @param src_hit an optional source HIT for the I1
+ * @param dst_hit a destination HIT for the I1
+ * @param src_lsi an optional source LSI (corresponding to a local HIT)
+ * @param dst_lsi a destination LSI for the I1
+ * @param src_ip  an optional source IP address for the I1
+ * @param dst_ip  a destination IP for the I1
+ * @return        zero on success or negative on error
+
+ * @note Many of the parameters are optional, but at least a
+ * destination LSI, HIT or IP (for opportunistic BEX) must to be
+ * provided
+ */
 int hip_trigger_bex(const struct in6_addr *src_hit,
                     const struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi,
@@ -2031,7 +2235,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0),
              -1, "build hdr failed\n");
 
-    // destination HIT is obligatory or opportunistic BEX
+    /* destination HIT, LSI or IP are obligatory */
     if (dst_hit) {
         HIP_DEBUG_HIT("dst_hit: ", dst_hit);
         HIP_IFEL(hip_build_param_contents(msg, (void *) (dst_hit),
@@ -2040,7 +2244,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
                  -1, "build param HIP_PARAM_HIT failed\n");
     }
 
-    // source HIT is optional
+    /* source HIT is optional */
     if (src_hit) {
         HIP_DEBUG_HIT("src_hit: ", src_hit);
         HIP_IFEL(hip_build_param_contents(msg, (void *) (src_hit),
@@ -2049,7 +2253,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
                  -1, "build param HIP_PARAM_HIT failed\n");
     }
 
-    // destination LSI is obligatory
+    /* destination LSI is obligatory */
     if (dst_lsi) {
         HIP_DEBUG_IN6ADDR("dst lsi: ", dst_lsi);
         HIP_IFEL(hip_build_param_contents(msg, (void *) (dst_lsi),
@@ -2058,7 +2262,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
                  -1, "build param HIP_PARAM_LSI failed\n");
     }
 
-    // source LSI is optional
+    /* source LSI is optional */
     if (src_lsi) {
         HIP_DEBUG_IN6ADDR("src lsi: ", src_lsi);
         HIP_IFEL(hip_build_param_contents(msg, (void *) (src_lsi),
@@ -2067,7 +2271,8 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
                  -1, "build param HIP_PARAM_LSI failed\n");
     }
 
-    // if no destination HIT is provided this has to be there
+    /* if no destination HIT is provided, at least destination IP must
+       exist */
     if (dst_ip) {
         HIP_DEBUG_IN6ADDR("dst_ip: ", dst_ip);
         HIP_IFEL(hip_build_param_contents(msg, (void *) (dst_ip),
@@ -2076,7 +2281,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
                  -1, "build param HIP_PARAM_IPV6_ADDR failed\n");
     }
 
-    // this again is optional
+    /* this again is optional */
     if (src_ip) {
         HIP_DEBUG_IN6ADDR("src_ip: ", src_ip);
         HIP_IFEL(hip_build_param_contents(msg, (void *) (src_ip),
@@ -2101,8 +2306,17 @@ out_err:
     return err;
 }
 
-//Added by Prabhu to get the Data Packet header from Daemon
-
+/**
+ * ask hipd to sign a hiccups data packet
+ *
+ * @param src_hit the source HIT of the data packet
+ * @param dst_hit the destination HIT of the data packet
+ * @param payload the payload protocol value
+ * @param msg     An input/output parameter. For input, contains the
+ *                data packet with payload. For output, contains the
+ *                same but including a signature from hipd.
+ * @return        zero on success or negative on error
+ */
 int hip_get_data_packet_header(const struct in6_addr *src_hit,
                                const struct in6_addr *dst_hit,
                                int payload,
@@ -2136,13 +2350,15 @@ out_err:
 }
 
 /**
- * Checks whether there is a local ipv6 socket that is:
- *   connected to a particular port
- *   connected to an lsi ip address.
+ * Check from the proc file system whether a local port is attached
+ * to an IPv4 or IPv6 address. This is required to determine whether
+ * incoming packets should be diverted to an LSI.
  *
  * @param port_dest     the port number of the socket
  * @param *proto        protocol type
  * @return              1 if it finds the required socket, 0 otherwise
+ *
+ * @note this is used only from the firewall, so move this there
  */
 int hip_get_proto_info(in_port_t port_dest, char *proto)
 {
@@ -2193,8 +2409,6 @@ int hip_get_proto_info(in_port_t port_dest, char *proto)
         }
 
         sub_string_port_hex = strtok(separator, ":");
-        //sprintf(port_dest_hex, "%x", port_dest);
-        //HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
         sscanf(sub_string_port_hex, "%X", &result);
         HIP_DEBUG("Result %i\n", result);
         HIP_DEBUG("port dest %i\n", port_dest);
@@ -2219,6 +2433,14 @@ int hip_get_proto_info(in_port_t port_dest, char *proto)
     return exists;
 }
 
+/**
+ * dig out RSA key length from an host id
+ *
+ * @param host_id the host id
+ * @param ret the RSA key component lengths will be stored here
+ * @param is_priv one if the host_id contains also the private key
+ *                component or zero otherwise
+ */
 void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
                         struct hip_rsa_keylen *ret,
                         int is_priv)
@@ -2254,6 +2476,15 @@ void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
     ret->n     = bytes;
 }
 
+/**
+ * convert a RSA-based host id into an OpenSSL structure
+ *
+ * @param host_id the host id
+ * @param is_priv one if the host_id contains also the private key
+ *                component or zero otherwise
+ * @return The OpenSSL formatted RSA key corresponding to @c host_id.
+ *         Caller is responsible of freeing.
+ */
 RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv)
 {
     int offset;
@@ -2291,6 +2522,15 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv)
     return rsa;
 }
 
+/**
+ * convert a DSA-based host id into an OpenSSL structure
+ *
+ * @param host_id the host id
+ * @param is_priv one if the host_id contains also the private key
+ *                component or zero otherwise
+ * @return The OpenSSL formatted DSA key corresponding to @c host_id.
+ *         Caller is responsible of freeing.
+ */
 DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
 {
     int offset  = 0;
@@ -2323,6 +2563,13 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
     return dsa;
 }
 
+/**
+ * convert a string containing upper case characters to lower case
+ *
+ * @param to the result of the conversion (minimum length @c count)
+ * @param from a string possibly containing upper case characters
+ * @return zero on success or negative on failure
+ */
 int hip_string_to_lowercase(char *to, const char *from, const size_t count)
 {
     if (to == NULL || from == NULL || count == 0) {
@@ -2341,6 +2588,12 @@ int hip_string_to_lowercase(char *to, const char *from, const size_t count)
     return 0;
 }
 
+/**
+ * test if a given string contains a positive integer
+ *
+ * @param string the string to test
+ * @return zero if the string is digit or negative otherwise
+ */
 int hip_string_is_digit(const char *string)
 {
     if (string == NULL) {
@@ -2358,6 +2611,16 @@ int hip_string_is_digit(const char *string)
     return 0;
 }
 
+/**
+ * A "for-each" iterator function for hosts files that returns the first
+ * hostname that matches the given address
+ *
+ * @param entry a hosts file line entry
+ * @param arg the IPv6 or IPv6-mapped IPv4 address to match
+ * @param result An output argument where the matching hostname will be
+ *        written. Minimum buffer length is HOST_NAME_MAX chars.
+ * @return zero on match or one otherwise
+ */
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
                                             const void *arg,
                                             void *result)
@@ -2373,6 +2636,16 @@ int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
     return err;
 }
 
+/**
+ * A "for-each" iterator function for hosts files that returns the first
+ * hostname that matches the given LSI
+ *
+ * @param entry a hosts file line entry
+ * @param arg an IPv6-mapped LSI to match
+ * @param result An output argument where the matching hostname will be
+ *        written. Minimum buffer length is HOST_NAME_MAX chars.
+ * @return zero on match or one otherwise
+ */
 int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry,
                                              const void *arg,
                                              void *result)
@@ -2389,6 +2662,16 @@ int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry
     return err;
 }
 
+/**
+ * find the hostname matching the given LSI from /etc/hip/hosts and
+ * /etc/hosts (in this particular order)
+ *
+ * @param lsi the LSI to match
+ * @param hostname An output argument where the matching hostname
+ *                 will be written. Minimum buffer length is
+ *                 HOST_NAME_MAX chars.
+ * @return zero on successful match or non-zero otherwise
+ */
 int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname)
 {
     return hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
@@ -2399,6 +2682,16 @@ int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname)
                                         lsi, hostname);
 }
 
+/**
+ * A "for-each" iterator function for hosts files that returns the first
+ * HIT that matches the hostname
+ *
+ * @param entry a hosts file line entry
+ * @param arg a hostname as a string
+ * @param result An output argument where the matching matching HIT will be
+ *        written. Minimum buffer length is sizeof(struct hip_hit_t)
+ * @return zero on match or one otherwise
+ */
 int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
                                              const void *arg,
                                              void *result)
@@ -2424,6 +2717,17 @@ out_err:
     return err;
 }
 
+/**
+ * A "for-each" iterator function for hosts files that returns the first
+ * LSI that matches the hostname
+ *
+ * @param entry a hosts file line entry
+ * @param arg a hostname as a string
+ * @param result An output argument where the matching matching LSI will be
+ *        written in IPv6 mapped format. Minimum buffer length is
+ *        sizeof(struct in6_addr)
+ * @return zero on match or one otherwise
+ */
 int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry,
                                              const void *arg,
                                              void *result)
@@ -2449,6 +2753,17 @@ out_err:
     return err;
 }
 
+/**
+ * A "for-each" iterator function for hosts files that returns the first
+ * routable IP address that matches the hostname
+ *
+ * @param entry a hosts file line entry
+ * @param arg a hostname as a string
+ * @param result An output argument where the matching matching IP address will be
+ *        written. IPv4 addresses are written in IPv6 mapped format and
+ *        the minimum buffer length is sizeof(struct in6_addr)
+ * @return zero on match or one otherwise
+ */
 int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
                                             const void *arg,
                                             void *result)
@@ -2475,6 +2790,16 @@ out_err:
     return err;
 }
 
+/**
+ * A "for-each" iterator function for hosts files to calculate
+ * the number of non-commented lines
+ *
+ * @param entry a hosts file line entry
+ * @param arg unused, but required by the API
+ * @param result an int pointer where the number of lines
+ *               will be calculated
+ * @return always one
+ */
 int hip_calc_lines_in_hosts(const struct hosts_file_line *entry,
                             const void *arg,
                             void *result)
@@ -2484,6 +2809,17 @@ int hip_calc_lines_in_hosts(const struct hosts_file_line *entry,
     return 1;
 }
 
+/**
+ * A "for-each" iterator function for hosts files that returns the Nth
+ * identifier (address, LSI or HIT) from a hosts file
+ *
+ * @param entry a hosts file line entry
+ * @param arg the N as an int pointer
+ * @param result An output argument where the matching matching address will be
+ *        written. IPv4 addresses are written in IPv6 mapped format and
+ *        the minimum buffer length is sizeof(struct in6_addr).
+ * @return zero on match or one otherwise
+ */
 int hip_get_nth_id_from_hosts(const struct hosts_file_line *entry,
                               const void *arg,
                               void *result)
@@ -2501,6 +2837,16 @@ int hip_get_nth_id_from_hosts(const struct hosts_file_line *entry,
     return err;
 }
 
+/**
+ * "For-each" loop to iterate through /etc/hosts or /etc/hip/hosts file, line
+ * by line.
+ *
+ * @param hosts_file the path and name to the hosts file
+ * @param func the iterator function pointer
+ * @param arg an input argument for the function pointer
+ * @param an output argument for the function pointer
+ * @return
+ */
 int hip_for_each_hosts_file_line(const char *hosts_file,
                                  int(*func)(const struct hosts_file_line *line,
                                             const void *arg,
@@ -2641,6 +2987,15 @@ out_err:
     return err;
 }
 
+/**
+ * find the HIT matching to the given LSI from /etc/hip/hosts and
+ * /etc/hosts (in this particular order)
+ *
+ * @param lsi the LSI to match
+ * @param hit An output argument where the matching matching HIT will be
+ *            written. Minimum buffer length is sizeof(struct hip_hit_t)
+ * @return zero on successful match or non-zero otherwise
+ */
 int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 {
     int err = 0;
@@ -2681,6 +3036,15 @@ out_err:
     return err;
 }
 
+/**
+ * find the LSI matching to the given HIT from /etc/hip/hosts and
+ * /etc/hosts (in this particular order)
+ *
+ * @param hit the HIT to match
+ * @param lsi An output argument where the matching matching LSI will
+ *            will be written
+ * @return zero on successful match or non-zero otherwise
+ */
 int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
 {
     int err = 0;
@@ -2715,6 +3079,16 @@ out_err:
     return err;
 }
 
+/**
+ * Fetch a random host name from a hosts file. Currently this
+ * is used for selecting a random DHT node for load balancing.
+ *
+ * @param filename the hosts file path and file name
+ * @param hostname the hostname will be written here
+ * @param id_str The address, LSI or HIT corresponding to the
+ *               the hostname will be written here as a string.
+ * @return zero on successful match or non-zero on failure
+ */
 int hip_get_random_hostname_id_from_hosts(char *filename,
                                           char *hostname,
                                           char *id_str)
@@ -2764,12 +3138,15 @@ out_err:
 }
 
 /**
- *
  * This function maps a HIT or a LSI (nodename) to an IP address using the two hosts files.
  * The function implements this in two steps. First, it maps the HIT or LSI to an hostname
  * from /etc/hip/hosts or /etc/hosts. Second, it maps the hostname to a IP address from
  * /etc/hosts. The IP address is returned in the res argument.
  *
+ * @param hit a HIT to be mapped
+ * @param lsi an LSI to be mapped
+ * @param ip the resulting routable IP address if found
+ * @return zero on successful match or non-zero otherwise
  */
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip)
 {
@@ -2806,16 +3183,32 @@ out_err:
     return err;
 }
 
+/**
+ * Retrieve the default local UDP port
+ *
+ * @return the default local UDP port
+ */
 in_port_t hip_get_local_nat_udp_port()
 {
     return hip_local_nat_udp_port;
 }
 
+/**
+ * Retrieve the default remote UDP port
+ *
+ * @return the default remote UDP port
+ */
 in_port_t hip_get_peer_nat_udp_port()
 {
     return hip_peer_nat_udp_port;
 }
 
+/**
+ * set the default local UDP port
+ *
+ * @param port the port to set as the default local UDP port
+ * @return zero
+ */
 int hip_set_local_nat_udp_port(in_port_t port)
 {
     int err = 0;
@@ -2825,6 +3218,12 @@ int hip_set_local_nat_udp_port(in_port_t port)
     return err;
 }
 
+/**
+ * set the default remote UDP port
+ *
+ * @param port the port to set as the default remote UDP port
+ * @return zero
+ */
 int hip_set_peer_nat_udp_port(in_port_t port)
 {
     int err = 0;
@@ -2834,12 +3233,11 @@ int hip_set_peer_nat_udp_port(in_port_t port)
     return err;
 }
 
-/** hip_verify_packet_signature - verify the signature in a packet
+/**
+ * verify the signature in a HIP control packet
+ *
  * @param pkt the hip packet
  * @param peer_host_id peer host id
- *
- * Depending on the algorithm it checks whether the signature is correct
- *
  * @return zero on success, or negative error value on failure
  */
 int hip_verify_packet_signature(struct hip_common *pkt,
@@ -2876,6 +3274,13 @@ out_err:
     return err;
 }
 
+/**
+ * verify if a given IPv6 address or IPv6 mapped IPv4 address
+ * is a loopback
+ *
+ * @param addr the address to verify
+ * @return one if the address if loopback or zero otherwise
+ */
 int hip_addr_is_loopback(struct in6_addr *addr)
 {
     struct in_addr addr_in;
@@ -2888,7 +3293,8 @@ int hip_addr_is_loopback(struct in6_addr *addr)
 }
 
 /**
- * base64_encode - Encodes given content to Base64
+ * encode the given content to Base64
+ *
  * @param buf Pointer to contents to be encoded
  * @param len How long is the first parameter in bytes
  *
@@ -2913,6 +3319,16 @@ out_err:
     return NULL;
 }
 
+/**
+ * Convert a local host id into LSI/HIT information and write the
+ * result into a HIP message as a HIP_PARAM_HIT_INFO parameter.
+ * Interprocess communications only.
+ *
+ * @param entry an hip_host_id_entry structure
+ * @param msg a HIP user message where the HIP_PARAM_HIT_INFO
+ *            parameter will be written
+ * @return zero on success and negative on error
+ */
 int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
                                   void *msg)
 {
