@@ -12,23 +12,16 @@
 #include "lib/core/state.h"
 #include "lib/modularization/modularization.h"
 
-enum function_types {
-    HANDLE_FUNCTION,
-    MAINTENANCE_FUNCTION
-};
-
 struct handle_function {
     uint32_t            priority;
     int               (*func_ptr)(const uint32_t packet_type,
                                   const uint32_t ha_state,
                                   struct hip_packet_context *ctx);
-    enum function_types type;
 };
 
 struct maint_function {
     uint32_t            priority;
     int               (*func_ptr)(void);
-    enum function_types type;
 };
 
 /**
@@ -78,7 +71,6 @@ int hip_register_handle_function(const uint32_t packet_type,
              -1,
              "Error on allocating memory for a handle function entry.\n");
 
-    new_entry->type        = HANDLE_FUNCTION;
     new_entry->priority    = priority;
     new_entry->func_ptr    = handle_function;
 
@@ -209,7 +201,6 @@ int hip_register_maint_function(int (*maint_function)(void),
              -1,
              "Error on allocating memory for a handle function entry.\n");
 
-    new_entry->type        = MAINTENANCE_FUNCTION;
     new_entry->priority    = priority;
     new_entry->func_ptr    = maint_function;
 
