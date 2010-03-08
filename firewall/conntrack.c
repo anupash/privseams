@@ -30,6 +30,7 @@
 #include "esp_prot_conntrack.h"
 #include "datapkt.h"
 #include "lib/core/misc.h"
+#include "lib/core/hostid.h"
 #include "hipd/hadb.h"
 #include "lib/tool/pk.h"
 #include "firewalldb.h"

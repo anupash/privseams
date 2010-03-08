@@ -38,6 +38,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/builder.h"
+#include "lib/core/hostid.h"
 
 static unsigned char *hip_data_packet = NULL;
 

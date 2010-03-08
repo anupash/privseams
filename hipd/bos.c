@@ -2,6 +2,7 @@
 #define _BSD_SOURCE
 
 #include "bos.h"
+#include "lib/core/hostid.h"
 
 /**
  * hip_create_signature - Calculate SHA1 hash over the data and sign it.

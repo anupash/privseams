@@ -37,6 +37,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/crypto.h"
 #include "lib/core/debug.h"
+#include "lib/core/hostid.h"
 
 /* string tokens for rule parsing */
 #define SRC_HIT_STR "-src_hit"

@@ -1,3 +1,13 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * @brief file manipulation tools
+ *
+ * @author Miika Komu <miika@iki.fi>
+ */
+
 #include "filemanip.h"
 
 #ifdef HAVE_CONFIG_H

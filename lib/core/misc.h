@@ -110,34 +110,8 @@ int khi_encode(unsigned char *orig, int orig_len,
                unsigned char *encoded,
                int encoded_len);
 
-int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-                           struct in6_addr *hit, int hit_type);
-
-/* Useless abstraction, goes to the same function anyway -- SAMU
- *
- * True that. Let's make this a static inline function and move it to the header
- * file. It still remains as useless abstraction, but at least we eliminate the
- * need for a call and return sequence. -Lauri 06.08.2008
- */
-static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-                                         struct in6_addr *hit, int hit_type)
-{
-    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-}
-
-int hip_host_id_to_hit(const struct hip_host_id *host_id,
-                       struct in6_addr *hit, int hit_type);
-int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                   struct in6_addr *hit,
-                                   int hit_type);
-int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                   struct in6_addr *hit,
-                                   int hit_type);
-int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                               struct in6_addr *hit, int hit_type);
 char *hip_in6_ntop(const struct in6_addr *in6, char *buf);
 char *hip_hit_ntop(const hip_hit_t *hit, char *buf);
-int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 uint8_t *hip_host_id_extract_public_key(uint8_t *buffer, struct hip_host_id *data);
 
 int hip_lsi_are_equal(const hip_lsi_t *lsi1,
@@ -159,28 +133,16 @@ int hip_transform_key_length(int tid);
 int hip_hmac_key_length(int tid);
 int hip_enc_key_length(int tid);
 uint64_t hip_get_current_birthday(void);
-int hip_serialize_host_id_action(struct hip_common *msg,
-                                 int action,
-                                 int anon,
-                                 int use_default,
-                                 const char *hi_fmt,
-                                 const char *hi_file,
-                                 int rsa_key_bits,
-                                 int dsa_key_bits);
 int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *str);
 
 int maxof(int num_args, ...);
 
 int addr2ifindx(struct in6_addr *local_address);
 
-int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
-int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
-
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 int hip_solve_puzzle_m(struct hip_common *out,
                        struct hip_common *in,
                        hip_ha_t *entry);
-
 /**
  * Converts a string to lowercase. Converts parameter @c from string to a
  * lowercase string and places the result in @c to. All alphabetic (isalpha())
@@ -204,13 +166,6 @@ int hip_string_to_lowercase(char *to, const char *from, const size_t count);
  *                than digits, zero otherwise.
  */
 int hip_string_is_digit(const char *string);
-
-void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
-                        struct hip_rsa_keylen *ret,
-                        int is_priv);
-
-RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv);
-DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv);
 
 int hip_get_random_hostname_id_from_hosts(char *filename,
                                           char *hostname,
@@ -270,8 +225,5 @@ uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c, uint16_t len
 /* openSSL wrapper functions for base64 encoding and decoding */
 
 unsigned char *base64_encode(unsigned char *, unsigned int);
-
-int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
-                                  void *msg);
 
 #endif /* HIP_LIB_CORE_MISC_H */

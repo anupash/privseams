@@ -22,6 +22,7 @@
 #include "lib/performance/performance.h"
 #include "lib/core/hip_capability.h"
 #include "lib/core/filemanip.h"
+#include "lib/core/hostid.h"
 #include "lib/tool/nlink.h"
 #include "oppdb.h"
 #include "lib/dht/libhipdht.h"

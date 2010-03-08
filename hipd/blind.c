@@ -9,6 +9,7 @@
 #define _BSD_SOURCE
 
 #include "blind.h"
+#include "lib/core/hostid.h"
 
 static int hip_blind_fingerprints(hip_ha_t *entry);
 

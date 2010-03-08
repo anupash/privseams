@@ -12,6 +12,7 @@
 #include "hipd.h"
 #include "lib/core/list.h"
 #include "lib/core/hostsfiles.h"
+#include "lib/core/hostid.h"
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100

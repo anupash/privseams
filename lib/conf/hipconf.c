@@ -45,6 +45,7 @@
 #include "hipconf.h"
 #include "lib/core/prefix.h"
 #include "lib/dht/libhipdht.h"
+#include "lib/core/hostid.h"
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
