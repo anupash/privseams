@@ -14,7 +14,7 @@
 
 struct handle_function {
     uint32_t            priority;
-    int               (*func_ptr)(const uint32_t packet_type,
+    int               (*func_ptr)(const uint8_t packet_type,
                                   const uint32_t ha_state,
                                   struct hip_packet_context *ctx);
 };
@@ -50,9 +50,9 @@ static hip_ll_t *hip_maintenance_functions;
  * @return Success =  0
  *         Error   = -1
  */
-int hip_register_handle_function(const uint32_t packet_type,
+int hip_register_handle_function(const uint8_t packet_type,
                                  const uint32_t ha_state,
-                                 int (*handle_function)(const uint32_t packet_type,
+                                 int (*handle_function)(const uint8_t packet_type,
                                                         const uint32_t ha_state,
                                                         struct hip_packet_context *ctx),
                                  const uint16_t priority)
@@ -99,7 +99,7 @@ out_err:
  * @return Success =  0
  *         Error   = -1
  */
-int hip_unregister_handle_function(const uint32_t packet_type,
+int hip_unregister_handle_function(const uint8_t packet_type,
                                    const uint32_t ha_state,
                                    const void *handle_function)
 {
@@ -134,7 +134,7 @@ out_err:
  * @return Success =  0
  *         Error   = -1
  */
-int hip_run_handle_functions(const uint32_t packet_type,
+int hip_run_handle_functions(const uint8_t packet_type,
                              const uint32_t ha_state,
                              struct hip_packet_context *ctx)
 {

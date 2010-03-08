@@ -173,7 +173,7 @@ out_err:
     return err;
 }
 
-int hip_handle_close(const uint32_t packet_type,
+int hip_handle_close(const uint8_t packet_type,
                      const uint32_t ha_state,
                      struct hip_packet_context *ctx)
 {
@@ -277,7 +277,7 @@ out_err:
     return err;
 }
 
-int hip_handle_close_ack(const uint32_t packet_type,
+int hip_handle_close_ack(const uint8_t packet_type,
                          const uint32_t ha_state,
                          struct hip_packet_context *ctx)
 {

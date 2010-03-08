@@ -712,7 +712,7 @@ out_err:
  *                 initiator should store these addresses to cope with the
  *                 double jump problem.
  */
-int hip_handle_r1(const uint32_t packet_type,
+int hip_handle_r1(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *packet_ctx)
 {
@@ -976,7 +976,7 @@ int hip_handle_r1(const uint32_t packet_type,
  *         Error   = -1
  *
  */
-int hip_handle_i2_in_i2_sent(const uint32_t packet_type,
+int hip_handle_i2_in_i2_sent(const uint8_t packet_type,
                              const uint32_t ha_state,
                              struct hip_packet_context *ctx)
 {
@@ -1018,7 +1018,7 @@ out_err:
  *                 <a href="http://www.rfc-editor.org/rfc/rfc5201.txt">
  *                 RFC 5201</a>.
  */
-int hip_handle_i2(const uint32_t packet_type,
+int hip_handle_i2(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
@@ -1583,7 +1583,7 @@ out_err:
  * On success (payloads are created and IPsec is set up) 0 is
  * returned, otherwise < 0.
  */
-int hip_handle_r2(const uint32_t packet_type,
+int hip_handle_r2(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *packet_ctx)
 {
@@ -1846,7 +1846,7 @@ out_err:
  *                 present in the incoming I1 packet, only the first of a kind
  *                 is parsed.
  */
-int hip_handle_i1(const uint32_t packet_type,
+int hip_handle_i1(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
@@ -1930,7 +1930,7 @@ out_err:
  *                     packet was sent to (own address).
  * @param entry        a pointer to a host association
  */
-int hip_handle_notify(const uint32_t packet_type,
+int hip_handle_notify(const uint8_t packet_type,
                       const uint32_t ha_state,
                       struct hip_packet_context *ctx)
 {

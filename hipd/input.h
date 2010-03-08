@@ -86,27 +86,27 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
                                    struct in6_addr *daddr,
                                    hip_portpair_t *info);
 
-int hip_handle_i1(const uint32_t packet_type,
+int hip_handle_i1(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx);
 
-int hip_handle_i2_in_i2_sent(const uint32_t packet_type,
+int hip_handle_i2_in_i2_sent(const uint8_t packet_type,
                              const uint32_t ha_state,
                              struct hip_packet_context *ctx);
 
-int hip_handle_i2(const uint32_t packet_type,
+int hip_handle_i2(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx);
 
-int hip_handle_notify(const uint32_t packet_type,
+int hip_handle_notify(const uint8_t packet_type,
                       const uint32_t ha_state,
                       struct hip_packet_context *ctx);
 
-int hip_handle_r1(const uint32_t packet_type,
+int hip_handle_r1(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx);
 
-int hip_handle_r2(const uint32_t packet_type,
+int hip_handle_r2(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *packet_ctx);
 

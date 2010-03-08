@@ -684,7 +684,7 @@ out_err:
     }
 }
 
-int hip_handle_update(const uint32_t packet_type,
+int hip_handle_update(const uint8_t packet_type,
                       const uint32_t ha_state,
                       struct hip_packet_context *ctx)
 {

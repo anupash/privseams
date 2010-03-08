@@ -519,7 +519,7 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-int hip_send_i2(const uint32_t packet_type,
+int hip_send_i2(const uint8_t packet_type,
                 const uint32_t ha_state,
                 struct hip_packet_context *packet_ctx)
 {
@@ -1068,7 +1068,7 @@ out_err:
  * @param rvs_count     number of addresses in @c traversed_rvs.
  * @return              zero on success, or negative error value on error.
  */
-int hip_send_r1(const uint32_t packet_type,
+int hip_send_r1(const uint8_t packet_type,
                 const uint32_t ha_state,
                 struct hip_packet_context *ctx)
 {
@@ -1230,7 +1230,7 @@ out_err:
  *                  in use).
  * @return zero on success, negative otherwise.
  */
-int hip_send_r2(const uint32_t packet_type,
+int hip_send_r2(const uint8_t packet_type,
                 const uint32_t ha_state,
                 struct hip_packet_context *packet_ctx)
 {

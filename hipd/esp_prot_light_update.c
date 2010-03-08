@@ -183,7 +183,7 @@ out_err:
  * @param entry     host association for this connection
  * @return          0 in case of succcess, -1 otherwise
  */
-int esp_prot_handle_light_update(const uint32_t packet_type,
+int esp_prot_handle_light_update(const uint8_t packet_type,
                                  const uint32_t ha_state,
                                  struct hip_packet_context *ctx)
 {

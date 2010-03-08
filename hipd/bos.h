@@ -16,7 +16,7 @@ int hip_send_bos(const struct hip_common *msg);
 int hip_verify_packet_signature(struct hip_common *bos,
                                 struct hip_host_id *peer_host_id);
 
-int hip_handle_bos(const uint32_t packet_type,
+int hip_handle_bos(const uint8_t packet_type,
                    const uint32_t ha_state,
                    struct hip_packet_context *packet_ctx);
 

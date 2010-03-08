@@ -200,7 +200,7 @@ out_err:
  * @return On success (BOS payloads are checked) 0 is returned, otherwise < 0.
  */
 
-int hip_handle_bos(const uint32_t packet_type,
+int hip_handle_bos(const uint8_t packet_type,
                    const uint32_t ha_state,
                    struct hip_packet_context *ctx)
 {
