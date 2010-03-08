@@ -31,16 +31,9 @@ extern int hip_firewall_sock_lsi_fd;
 int hip_associate_default_hit_lsi(void);
 
 int hipd_init(int flush_ipsec, int killold);
-/**
- * Creates a UDP socket for NAT traversal.
- *
- * @param  hip_nat_sock_udp a pointer to the UDP socket.
- * @param sockaddr_in the address that will be used to create the
- *                 socket. If NULL is passed, INADDR_ANY is used.
- * @param is_output 1 if the socket is for output, otherwise 0
- *
- * @return zero on success, negative error value on error.
- */
+
+int hip_set_cloexec_flag(int desc, int value);
+
 int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
                             struct sockaddr_in *addr,
                             int is_output);

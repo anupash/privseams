@@ -19,7 +19,6 @@
 
 #include "maintenance.h"
 #include "modularization.h"
-#include "heartbeat.h"
 
 #define FORCE_EXIT_COUNTER_START                5
 
@@ -33,7 +32,6 @@ float opendht_counter        = OPENDHT_REFRESH_INIT;
 float queue_counter          = QUEUE_CHECK_INIT;
 int force_exit_counter       = FORCE_EXIT_COUNTER_START;
 int cert_publish_counter     = CERTIFICATE_PUBLISH_INTERVAL;
-int heartbeat_counter        = 0;
 int hip_firewall_status      = -1;
 int fall, retr;
 
@@ -193,16 +191,9 @@ int hip_periodic_maintenance()
         precreate_counter--;
     }
 
-    /* is heartbeat support on */
-    if (hip_icmp_interval > 0) {
-        /* Check if the heartbeats should be sent */
-        if (heartbeat_counter < 1) {
-            hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
-            heartbeat_counter = hip_icmp_interval;
-        } else {
-            heartbeat_counter--;
-        }
-    } else if (hip_nat_status) {
+
+    /** @todo Disable NOTIFY keepalives, when heartbeat is enabled */
+    if (hip_nat_status) {
         /* Send NOTIFY keepalives for NATs only when ICMPv6
          * keepalives are disabled */
         if (nat_keep_alive_counter < 0) {

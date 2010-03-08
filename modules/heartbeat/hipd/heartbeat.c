@@ -4,7 +4,14 @@
 #include <netinet/icmp6.h>
 
 #include "heartbeat.h"
-#include "maintenance.h"
+#include "hipd/hadb.h"
+#include "hipd/init.h"
+#include "hipd/modularization.h"
+
+#define HIP_HEARTBEAT_INTERVAL 20
+
+int hip_icmp_sock     = 0;
+int heartbeat_counter = 0;
 
 /**
  * This function goes through the HA database and sends an icmp echo to all of them
@@ -158,5 +165,50 @@ out_err:
         free(dst);
     }
 
+    return err;
+}
+
+int hip_heartbeat_maintenance(void)
+{
+    /* Check if the heartbeats should be sent */
+    if (heartbeat_counter < 1) {
+        hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
+        heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
+    } else {
+        heartbeat_counter--;
+    }
+
+    return 0;
+}
+
+/**
+ * Initialize icmpv6 socket.
+ */
+int hip_heartbeat_init(void)
+{
+    int err = 0, on = 1;
+    struct icmp6_filter filter;
+    int *icmpsockfd = &hip_icmp_sock;
+
+    hip_register_maint_function(&hip_heartbeat_maintenance, 10000);
+
+    /* Make sure that hipd does not send icmpv6 immediately after base exchange */
+    heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
+
+    *icmpsockfd       = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+    hip_set_cloexec_flag(*icmpsockfd, 1);
+    HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
+
+    ICMP6_FILTER_SETBLOCKALL(&filter);
+    ICMP6_FILTER_SETPASS(ICMP6_ECHO_REPLY, &filter);
+    err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMP6_FILTER, &filter,
+                     sizeof(struct icmp6_filter));
+    HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
+
+
+    err = setsockopt(*icmpsockfd, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+    HIP_IFEL(err, -1, "setsockopt icmp IPV6_RECVPKTINFO failed\n");
+
+out_err:
     return err;
 }

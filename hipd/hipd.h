@@ -104,9 +104,6 @@ extern int is_hard_handover;
 
 extern int hip_shotgun_status;
 
-extern int hip_icmp_sock;
-extern int hip_icmp_interval;
-
 extern int hip_encrypt_i2_hi;
 
 extern struct addrinfo *opendht_serving_gateway;

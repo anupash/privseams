@@ -99,24 +99,6 @@ static void hip_sig_chld(int signum)
     }
 }
 
-static int set_cloexec_flag(int desc, int value)
-{
-    int oldflags = fcntl(desc, F_GETFD, 0);
-    /* If reading the flags failed, return error indication now.*/
-    if (oldflags < 0) {
-        return oldflags;
-    }
-    /* Set just the flag we want to set. */
-
-    if (value != 0) {
-        oldflags |= FD_CLOEXEC;
-    } else {
-        oldflags &= ~FD_CLOEXEC;
-    }
-    /* Store modified flag word in the descriptor. */
-    return fcntl(desc, F_SETFD, oldflags);
-}
-
 #ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
 static void hip_print_sysinfo(void)
@@ -309,7 +291,7 @@ static int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
     int off = 0;
 
     *hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, proto);
-    set_cloexec_flag(*hip_raw_sock_v4, 1);
+    hip_set_cloexec_flag(*hip_raw_sock_v4, 1);
     HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
     /* see bug id 212 why RECV_ERR is off */
@@ -321,35 +303,6 @@ static int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
     HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
     err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
-
-out_err:
-    return err;
-}
-
-/**
- * Initialize icmpv6 socket.
- */
-static int hip_init_icmp_v6(int *icmpsockfd)
-{
-    int err = 0, on = 1;
-    struct icmp6_filter filter;
-
-    /* Make sure that hipd does not send icmpv6 immediately after base exchange */
-    heartbeat_counter = hip_icmp_interval;
-
-    *icmpsockfd       = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
-    set_cloexec_flag(*icmpsockfd, 1);
-    HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
-
-    ICMP6_FILTER_SETBLOCKALL(&filter);
-    ICMP6_FILTER_SETPASS(ICMP6_ECHO_REPLY, &filter);
-    err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMP6_FILTER, &filter,
-                     sizeof(struct icmp6_filter));
-    HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
-
-
-    err = setsockopt(*icmpsockfd, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt icmp IPV6_RECVPKTINFO failed\n");
 
 out_err:
     return err;
@@ -633,7 +586,6 @@ int hipd_init(int flush_ipsec, int killold)
     HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6, IPPROTO_HIP), -1, "raw sock input v6\n");
     HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4, IPPROTO_HIP), -1, "raw sock input v4\n");
     HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
-    HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
     HIP_DEBUG("hip_raw_sock_v6 input = %d\n", hip_raw_sock_input_v6);
     HIP_DEBUG("hip_raw_sock_v6 output = %d\n", hip_raw_sock_output_v6);
@@ -641,7 +593,6 @@ int hipd_init(int flush_ipsec, int killold)
     HIP_DEBUG("hip_raw_sock_v4 output = %d\n", hip_raw_sock_output_v4);
     HIP_DEBUG("hip_nat_sock_udp input = %d\n", hip_nat_sock_input_udp);
     HIP_DEBUG("hip_nat_sock_udp output = %d\n", hip_nat_sock_output_udp);
-    HIP_DEBUG("hip_icmp_sock = %d\n", hip_icmp_sock);
 
     if (flush_ipsec) {
         hip_flush_all_sa();
@@ -675,7 +626,7 @@ int hipd_init(int flush_ipsec, int killold)
     daemon_addr.sin6_family = AF_INET6;
     daemon_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
     daemon_addr.sin6_addr   = in6addr_loopback;
-    set_cloexec_flag(hip_user_sock, 1);
+    hip_set_cloexec_flag(hip_user_sock, 1);
 
     HIP_IFEL(bind(hip_user_sock, (struct sockaddr *) &daemon_addr,
                   sizeof(daemon_addr)), -1,
@@ -829,7 +780,7 @@ static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
     int on = 1, off = 0, err = 0;
 
     *hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, proto);
-    set_cloexec_flag(*hip_raw_sock_v6, 1);
+    hip_set_cloexec_flag(*hip_raw_sock_v6, 1);
     HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
     /* see bug id 212 why RECV_ERR is off */
@@ -844,6 +795,34 @@ out_err:
     return err;
 }
 
+int hip_set_cloexec_flag(int desc, int value)
+{
+    int oldflags = fcntl(desc, F_GETFD, 0);
+    /* If reading the flags failed, return error indication now.*/
+    if (oldflags < 0) {
+        return oldflags;
+    }
+    /* Set just the flag we want to set. */
+
+    if (value != 0) {
+        oldflags |= FD_CLOEXEC;
+    } else {
+        oldflags &= ~FD_CLOEXEC;
+    }
+    /* Store modified flag word in the descriptor. */
+    return fcntl(desc, F_SETFD, oldflags);
+}
+
+/**
+ * Creates a UDP socket for NAT traversal.
+ *
+ * @param  hip_nat_sock_udp a pointer to the UDP socket.
+ * @param sockaddr_in the address that will be used to create the
+ *                 socket. If NULL is passed, INADDR_ANY is used.
+ * @param is_output 1 if the socket is for output, otherwise 0
+ *
+ * @return zero on success, negative error value on error.
+ */
 int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
                             struct sockaddr_in *addr,
                             int is_output)
@@ -867,7 +846,7 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
         HIP_ERROR("Can not open socket for UDP\n");
         return -1;
     }
-    set_cloexec_flag(*hip_nat_sock_udp, 1);
+    hip_set_cloexec_flag(*hip_nat_sock_udp, 1);
     err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt udp pktinfo failed\n");
     /* see bug id 212 why RECV_ERR is off */
@@ -908,7 +887,6 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
     }
 
     HIP_DEBUG_INADDR("UDP socket created and bound to addr", (struct in_addr *) &myaddr.sin_addr.s_addr);
-    //return 0;
 
 out_err:
     return err;

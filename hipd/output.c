@@ -1373,14 +1373,6 @@ int hip_send_r2(const uint8_t packet_type,
 
     HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
-    /* Send the first heartbeat. Notice that error value is ignored
-     * because we want to to complete the base exchange successfully
-     */
-    if (hip_icmp_interval > 0) {
-        _HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
-        hip_send_icmp(hip_icmp_sock, packet_ctx->hadb_entry);
-    }
-
 out_err:
     if (packet_ctx->output_msg) {
         free(packet_ctx->output_msg);

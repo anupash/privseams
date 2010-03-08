@@ -54,7 +54,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
     int err                      = 0, msg_type = 0, n = 0, len = 0, reti = 0;
     int access_ok                = 0, is_root = 0;
     struct hip_tlv_common *param = NULL;
-    struct hip_heartbeat *heartbeat;
     int send_response            = 0;
 
     HIP_ASSERT(src->sin6_family == AF_INET6);
@@ -157,12 +156,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                   hip_locator_status, SO_HIP_SET_LOCATOR_OFF);
         hip_recreate_all_precreated_r1_packets();
         break;
+    /** @todo Create module heartbeat-upate */
+#if 0
     case SO_HIP_HEARTBEAT:
         heartbeat         = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
         hip_icmp_interval = heartbeat->heartbeat;
         heartbeat_counter = hip_icmp_interval;
         HIP_DEBUG("Received heartbeat interval (%d seconds)\n", hip_icmp_interval);
         break;
+#endif
     case SO_HIP_SET_DEBUG_ALL:
         /* Displays all debugging messages. */
         _HIP_DEBUG("Handling DEBUG ALL user message.\n");

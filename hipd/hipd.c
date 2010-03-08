@@ -15,7 +15,6 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "hipd.h"
-#include "heartbeat.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
@@ -58,10 +57,6 @@ int hip_nat_sock_input_udp_v6        = 0;
 /** Specifies the NAT status of the daemon. This value indicates if the current
  *  machine is behind a NAT. */
 hip_transform_suite_t hip_nat_status = 0;
-
-/** ICMPv6 socket and the interval 0 for interval means off */
-int hip_icmp_sock                    = 0;
-int hip_icmp_interval                = HIP_NAT_KEEP_ALIVE_INTERVAL;
 
 /* Encrypt host id in I2 */
 int hip_encrypt_i2_hi                = 0;
@@ -336,14 +331,14 @@ static int hipd_main(int argc, char *argv[])
     HIP_IFEL(create_configs_and_exit, 0,
              "Configs created, exiting\n");
 
-    highest_descriptor = maxof(7,
+    highest_descriptor = maxof(6,
                                hip_nl_route.fd,
                                hip_raw_sock_input_v6,
                                hip_user_sock,
                                hip_nl_ipsec.fd,
                                hip_raw_sock_input_v4,
-                               hip_nat_sock_input_udp,
-                               hip_icmp_sock);
+                               hip_nat_sock_input_udp);
+//                               hip_icmp_sock);
 
     /* Allocate user message. */
     HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
@@ -365,7 +360,7 @@ static int hipd_main(int argc, char *argv[])
         FD_SET(hip_nat_sock_input_udp, &read_fdset);
         FD_SET(hip_user_sock, &read_fdset);
         FD_SET(hip_nl_ipsec.fd, &read_fdset);
-        FD_SET(hip_icmp_sock, &read_fdset);
+        //FD_SET(hip_icmp_sock, &read_fdset);
         /* FD_SET(hip_firewall_sock, &read_fdset); */
         hip_firewall_sock = hip_user_sock;
 
@@ -499,10 +494,10 @@ static int hipd_main(int argc, char *argv[])
             }
         }
 
-        if (FD_ISSET(hip_icmp_sock, &read_fdset)) {
-            HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
-                     "Failed to recvmsg from ICMPv6\n");
-        }
+//        if (FD_ISSET(hip_icmp_sock, &read_fdset)) {
+//            HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
+//                     "Failed to recvmsg from ICMPv6\n");
+//        }
 
         if (FD_ISSET(hip_nat_sock_input_udp, &read_fdset)) {
             /* Data structures for storing the source and

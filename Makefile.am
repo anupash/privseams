@@ -101,8 +101,7 @@ hipd_hipd_SOURCES = hipd/hipd.c \
                     hipd/esp_prot_light_update.c \
                     hipd/nsupdate.c \
                     hipd/hit_to_ip.c \
-                    hipd/hadb_legacy.c \
-                    hipd/heartbeat.c
+                    hipd/hadb_legacy.c
 
 if HIP_PFKEY
 hipd_hipd_SOURCES += hipd/pfkeyapi.c

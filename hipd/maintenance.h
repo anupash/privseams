@@ -9,8 +9,6 @@
 #include "lib/core/hip_statistics.h"
 #include "nat.h"
 
-extern int heartbeat_counter;
-
 int hip_periodic_maintenance(void);
 void hip_set_firewall_status(void);
 int hip_get_firewall_status(void);

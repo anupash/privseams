@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Mandatory: name, version -->
+<module
+    name="heartbeat"
+    version="0.0.1"
+    description="Heartbeat extension for the hip daemon."
+    developer=""
+    bugaddress="hipl-users@freelists.org"
+    webpage="http://infrahip.hiit.fi/">
+
+    <!-- Mandatory: name, header_file, init_function, linkcommand -->
+    <application
+        name="hipd"
+        header_file="modules/heartbeat/hipd/heartbeat.h"
+        init_function="hip_heartbeat_init"
+        linkcommand="hipd_hipd_LDADD += modules/heartbeat/hipd/libhipheartbeat.la" />
+</module>

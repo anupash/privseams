@@ -1779,12 +1779,6 @@ int hip_handle_r2(const uint8_t packet_type,
                HIP_MAX_NETWORK_PACKET);
     }
 
-    /* Send the first heartbeat. Notice that the error is ignored to complete
-     * the base exchange successfully. */
-    if (hip_icmp_interval > 0) {
-        hip_send_icmp(hip_icmp_sock, packet_ctx->hadb_entry);
-    }
-
 out_err:
     if (packet_ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
         HIP_DEBUG("Send response to firewall.\n");

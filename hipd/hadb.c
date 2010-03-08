@@ -1221,15 +1221,16 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
     ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
     memcpy(&hid.peer_hostname, &entry->peer_hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
+    /** @todo Modularize heartbeat */
+#if 0
     hid.heartbeats_on       = hip_icmp_interval;
     calc_statistics(&entry->heartbeats_statistics, (uint32_t *) &hid.heartbeats_received, NULL, NULL,
                     &hid.heartbeats_mean, &hid.heartbeats_variance, STATS_IN_MSECS);
-#if 0
     hid.heartbeats_mean     = entry->heartbeats_mean;
     hid.heartbeats_variance = entry->heartbeats_variance;
     hid.heartbeats_received = entry->heartbeats_statistics.num_items;
-#endif
     hid.heartbeats_sent     = entry->heartbeats_sent;
+#endif
 
     /*For some reason this gives negative result*/
     /*hip_timeval_diff(&entry->bex_start,

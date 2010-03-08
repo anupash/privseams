@@ -922,6 +922,8 @@ out_err:
     return err;
 }
 
+/** @todo Create module heartbeat-upate */
+#if 0
 static int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
 {
     struct hip_locator_info_addr_item *locators;
@@ -968,6 +970,7 @@ out_err:
 
     return err;
 }
+#endif
 
 int hip_update_maintenance(void)
 {
@@ -991,10 +994,11 @@ int hip_update_maintenance(void)
         }
     }
 
-    if (hip_trigger_update_on_heart_beat_failure &&
-        hip_icmp_interval > 0) {
-        hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
-    }
+    /** @todo Create module heartbeat-upate */
+//    if (hip_trigger_update_on_heart_beat_failure &&
+//        hip_icmp_interval > 0) {
+//        hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
+//    }
 
     return err;
 }
