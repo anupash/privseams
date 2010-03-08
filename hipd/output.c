@@ -29,6 +29,8 @@
 #include "i3/i3_client/i3_client_id.h"
 #endif
 
+#include "lib/core/hip_udp.h"
+
 enum number_dh_keys_t { ONE, TWO };
 
 enum number_dh_keys_t number_dh_keys = TWO;

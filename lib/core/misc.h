@@ -183,27 +183,6 @@ int hip_get_data_packet_header(const struct in6_addr *src_hit,
                                int payload,
                                struct hip_common *msg);
 
-
-/**
- * Get HIP local NAT UDP port.
- */
-in_port_t hip_get_local_nat_udp_port(void);
-
-/**
- * Get HIP peer NAT UDP port.
- */
-in_port_t hip_get_peer_nat_udp_port(void);
-
-/**
- * Set HIP local NAT UDP port.
- */
-int hip_set_local_nat_udp_port(in_port_t port);
-
-/**
- * Set HIP peer NAT UDP port.
- */
-int hip_set_peer_nat_udp_port(in_port_t port);
-
 /**
  * Check if the given address is loopback.
  */

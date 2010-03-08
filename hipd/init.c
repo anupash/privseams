@@ -26,6 +26,7 @@
 #include "lib/tool/nlink.h"
 #include "oppdb.h"
 #include "lib/dht/libhipdht.h"
+#include "lib/core/hip_udp.h"
 
 #ifdef CONFIG_HIP_AGENT
 #include "hipd.h"

@@ -21,6 +21,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "lib/tool/nlink.h"
+#include "lib/core/hip_udp.h"
 
 #include "xfrmapi.h"
 

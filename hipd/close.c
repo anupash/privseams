@@ -12,6 +12,7 @@
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
 #endif
+#include "lib/core/hip_udp.h"
 
 
 static int hip_xmit_close(hip_ha_t *entry, void *opaque)

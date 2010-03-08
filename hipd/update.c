@@ -20,6 +20,7 @@
 #include "update.h"
 
 #include "lib/core/protodefs.h"
+#include "lib/core/hip_udp.h"
 #include "netdev.h"
 #include "lib/core/builder.h"
 #include "update_legacy.h"

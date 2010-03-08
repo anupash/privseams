@@ -20,11 +20,6 @@
 #include "misc.h"
 #include "prefix.h"
 
-/** Port numbers for NAT traversal of hip control packets. */
-in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
-in_port_t hip_peer_nat_udp_port  = HIP_NAT_UDP_PORT;
-
-
 /**
  * convert a binary HIT into a string
  *
@@ -1287,56 +1282,6 @@ int hip_string_is_digit(const char *string)
     return 0;
 }
 
-
-/**
- * Retrieve the default local UDP port
- *
- * @return the default local UDP port
- */
-in_port_t hip_get_local_nat_udp_port()
-{
-    return hip_local_nat_udp_port;
-}
-
-/**
- * Retrieve the default remote UDP port
- *
- * @return the default remote UDP port
- */
-in_port_t hip_get_peer_nat_udp_port()
-{
-    return hip_peer_nat_udp_port;
-}
-
-/**
- * set the default local UDP port
- *
- * @param port the port to set as the default local UDP port
- * @return zero
- */
-int hip_set_local_nat_udp_port(in_port_t port)
-{
-    int err = 0;
-    HIP_DEBUG("set local nat udp port %d\n", port);
-    hip_local_nat_udp_port = port;
-
-    return err;
-}
-
-/**
- * set the default remote UDP port
- *
- * @param port the port to set as the default remote UDP port
- * @return zero
- */
-int hip_set_peer_nat_udp_port(in_port_t port)
-{
-    int err = 0;
-
-    HIP_DEBUG("set peer nat udp port %d\n", port);
-    hip_peer_nat_udp_port = port;
-    return err;
-}
 
 
 /**

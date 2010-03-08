@@ -36,6 +36,7 @@
 #include "lib/tool/lutil.h"
 #include "lib/conf/hipconf.h"
 #include "lib/core/hostsfiles.h"
+#include "lib/core/hip_udp.h"
 #include "hipd.h"
 
 /**

@@ -68,6 +68,7 @@
 #define _BSD_SOURCE
 
 #include "message.h"
+#include "hip_udp.h"
 
 /**
  * Finds out how much data is coming from a socket

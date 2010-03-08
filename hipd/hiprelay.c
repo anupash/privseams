@@ -22,6 +22,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "hiprelay.h"
+#include "lib/core/hip_udp.h"
 
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
  *  cannot be opened for reading, we write a new config file from scratch using

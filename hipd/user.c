@@ -24,6 +24,7 @@
 #include "esp_prot_anchordb.h"
 #include "lib/dht/libhipdht.h"
 #include "lib/core/hostid.h"
+#include "lib/core/hip_udp.h"
 #include "hipd.h"
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)

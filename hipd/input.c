@@ -28,6 +28,7 @@
 #include "keymat.h"
 #include "lib/core/crypto.h"
 #include "lib/core/builder.h"
+#include "lib/core/hip_udp.h"
 #include "dh.h"
 #include "lib/core/misc.h"
 #include "hidb.h"

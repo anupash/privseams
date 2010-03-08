@@ -21,6 +21,7 @@
 #include "update.h"
 #include "heartbeat.h"
 #include "hipd.h"
+#include "lib/core/hip_udp.h"
 
 #define FORCE_EXIT_COUNTER_START                5
 

@@ -43,6 +43,7 @@
 #include "cache_port.h" /* required by opptcp */
 #include "lsi.h" /* LSI */
 #include "lib/core/hip_capability.h" /* Priviledge Separation */
+#include "lib/core/hip_udp.h"
 #include "user_ipsec_api.h" /* Userspace IPsec */
 #include "esp_prot_conntrack.h" /* ESP Tokens */
 #include "esp_prot_api.h" /* ESP Tokens */
