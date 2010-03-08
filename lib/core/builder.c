@@ -4857,3 +4857,41 @@ int hip_build_param_nat_port(hip_common_t *msg,
 
     return err;
 }
+
+/**
+ * calculate a digest over given data
+ * @param type the type of digest, e.g. "sha1"
+ * @param in the beginning of the data to be digested
+ * @param in_len the length of data to be digested in octets
+ * @param out the digest
+ *
+ * @note out should be long enough to hold the digest. This cannot be
+ * checked!
+ *
+ * @return 0 on success and negative on error.
+ */
+int hip_build_digest(const int type, const void *in, int in_len, void *out)
+{
+    SHA_CTX sha;
+    MD5_CTX md5;
+
+    switch (type) {
+    case HIP_DIGEST_SHA1:
+        SHA1_Init(&sha);
+        SHA1_Update(&sha, in, in_len);
+        SHA1_Final(out, &sha);
+        break;
+
+    case HIP_DIGEST_MD5:
+        MD5_Init(&md5);
+        MD5_Update(&md5, in, in_len);
+        MD5_Final(out, &md5);
+        break;
+
+    default:
+        HIP_ERROR("Unknown digest: %x\n", type);
+        return -EFAULT;
+    }
+
+    return 0;
+}

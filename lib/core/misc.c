@@ -24,9 +24,6 @@
 #define HOST_NAME_MAX           64
 #endif
 
-/* Definitions */
-#define HIP_ID_TYPE_HIT     1
-#define HIP_ID_TYPE_LSI     2
 #define HOST_ID_FILENAME_MAX_LEN 256
 
 
@@ -34,87 +31,6 @@
 in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
 in_port_t hip_peer_nat_udp_port  = HIP_NAT_UDP_PORT;
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-/**
- * Convert a given IP address into a pseudo HIT
- *
- * @param ip an IPv4 or IPv6 address address
- * @param hit a pseudo HIT generated from the IP address
- * @param hit_type the type of the HIT
- * @return zero on success and non-zero on failure
- * @see  <a
- * href="http://hipl.hiit.fi/hipl/thesis_teresa_finez.pdf">T. Finez,
- * Backwards Compatibility Experimentation with Host Identity Protocol
- * and Legacy Software and Networks , final project, December 2008</a>
- *
- */
-int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
-                                  struct in6_addr *hit,
-                                  int hit_type)
-{
-    int err              = 0;
-    uint8_t digest[HIP_AH_SHA_LEN];
-    char *key            = (char *) (ip);
-    unsigned int key_len = sizeof(struct in6_addr);
-
-    HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-    _HIP_HEXDUMP("key", key, key_len);
-    HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)),
-             err,
-             "Building of digest failed\n");
-
-    memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
-           sizeof(struct in6_addr));
-
-    hit->s6_addr32[3] = 0; // this separates phit from normal hit
-
-    set_hit_prefix(hit);
-
-out_err:
-
-    return err;
-}
-
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
-
-/**
- * calculate difference between two timevalues
- *
- * @param t1 timevalue 1
- * @param t2 timevalue 2
- * @param result where the result is stored
- *
- * ** CHECK comments **
- * result = t1 - t2
- *
- * Code taken from http://www.gnu.org/manual/glibc-2.2.5/html_node/Elapsed-Time.html
- *
- * @return 1 if t1 is equal or later than t2, else 0.
- */
-int hip_timeval_diff(const struct timeval *t1,
-                     const struct timeval *t2,
-                     struct timeval *result)
-{
-    struct timeval _t1, _t2;
-    _t1 = *t1;
-    _t2 = *t2;
-
-    if (_t1.tv_usec < _t2.tv_usec) {
-        int nsec = (_t2.tv_usec - _t1.tv_usec) / 1000000 + 1;
-        _t2.tv_usec -= 1000000 * nsec;
-        _t2.tv_sec  += nsec;
-    }
-    if (_t1.tv_usec - _t2.tv_usec > 1000000) {
-        int nsec = (_t1.tv_usec - _t2.tv_usec) / 1000000;
-        _t2.tv_usec += 1000000 * nsec;
-        _t2.tv_sec  -= nsec;
-    }
-
-    result->tv_sec  = _t2.tv_sec - _t1.tv_sec;
-    result->tv_usec = _t2.tv_usec - _t1.tv_usec;
-
-    return _t1.tv_sec >= _t2.tv_sec;
-}
 
 /**
  * convert a binary HIT into a string
@@ -205,42 +121,6 @@ int hip_hit_are_equal(const struct in6_addr *hit1,
                       const struct in6_addr *hit2)
 {
     return ipv6_addr_cmp(hit1, hit2) == 0;
-}
-
-/**
- * check the type of an IPv6 addresses
- *
- * @param id an IPv6 address, possibly in IPv6 mapped format
- * @param type HIP_ID_TYPE_HIT or HIP_ID_TYPE_LSI
- *
- * @return zero for type match, greater than zero for mismatch or
- * negative on error
- */
-int hip_id_type_match(const struct in6_addr *id, int id_type)
-{
-    int ret = 0, is_lsi = 0, is_hit = 0;
-    hip_lsi_t lsi;
-
-    if (ipv6_addr_is_hit(id)) {
-        is_hit = 1;
-    } else if (IN6_IS_ADDR_V4MAPPED(id)) {
-        IPV6_TO_IPV4_MAP(id, &lsi);
-        if (IS_LSI32(lsi.s_addr)) {
-            is_lsi = 1;
-        }
-    }
-
-    HIP_ASSERT(!(is_lsi && is_hit));
-
-    if (id_type == HIP_ID_TYPE_HIT) {
-        ret = (is_hit ? 1 : 0);
-    } else if (id_type == HIP_ID_TYPE_LSI) {
-        ret = (is_lsi ? 1 : 0);
-    } else {
-        ret = ((is_hit || is_lsi) ? 0 : 1);
-    }
-
-    return ret;
 }
 
 /**
@@ -1506,49 +1386,6 @@ out_err:
     return err;
 }
 
-void get_random_bytes(void *buf, int n)
-{
-    RAND_bytes(buf, n);
-}
-
-/**
- * calculate a digest over given data
- * @param type the type of digest, e.g. "sha1"
- * @param in the beginning of the data to be digested
- * @param in_len the length of data to be digested in octets
- * @param out the digest
- *
- * @note out should be long enough to hold the digest. This cannot be
- * checked!
- *
- * @return 0 on success and negative on error.
- */
-int hip_build_digest(const int type, const void *in, int in_len, void *out)
-{
-    SHA_CTX sha;
-    MD5_CTX md5;
-
-    switch (type) {
-    case HIP_DIGEST_SHA1:
-        SHA1_Init(&sha);
-        SHA1_Update(&sha, in, in_len);
-        SHA1_Final(out, &sha);
-        break;
-
-    case HIP_DIGEST_MD5:
-        MD5_Init(&md5);
-        MD5_Update(&md5, in, in_len);
-        MD5_Final(out, &md5);
-        break;
-
-    default:
-        HIP_ERROR("Unknown digest: %x\n", type);
-        return -EFAULT;
-    }
-
-    return 0;
-}
-
 /**
  * create DNS KEY RR record from host DSA key
  * @param dsa the DSA structure from where the KEY RR record is to be created
@@ -1758,130 +1595,6 @@ out_err:
     return rsa_key_rr_len;
 }
 
-/**
- * cast a socket address to an IPv4 or IPv6 address.
- *
- * @note The parameter @c sockaddr is first cast to a struct sockaddr
- * and the IP address cast is then done based on the value of the
- * sa_family field in the struct sockaddr. If sa_family is neither
- * AF_INET nor AF_INET6, the cast fails.
- *
- * @param  sockaddr a pointer to a socket address that holds the IP address.
- * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
- *                  NULL if the cast fails.
- */
-
-void *hip_cast_sa_addr(const struct sockaddr *sa)
-{
-    if (sa == NULL) {
-        HIP_ERROR("sockaddr is NULL, skipping type conversion\n");
-
-        return NULL;
-    }
-
-    switch (sa->sa_family) {
-    case AF_INET:
-        return &(((struct sockaddr_in *) sa)->sin_addr);
-    case AF_INET6:
-        return &(((struct sockaddr_in6 *) sa)->sin6_addr);
-    default:
-        HIP_ERROR("unhandled type: %i, skipping cast\n", sa->sa_family);
-        return NULL;
-    }
-}
-
-/**
- * Test if a sockaddr_in6 structure is in IPv6 mapped format (i.e.
- * contains an IPv4 address)
- *
- * @param sa socket address structure
- * @return one if the structure is in IPv6 mapped format or zero otherwise
- */
-int hip_sockaddr_is_v6_mapped(struct sockaddr *sa)
-{
-    int family = sa->sa_family;
-
-    HIP_ASSERT(family == AF_INET || family == AF_INET6);
-    if (family != AF_INET6) {
-        return 0;
-    } else {
-        return IN6_IS_ADDR_V4MAPPED((struct in6_addr *) hip_cast_sa_addr(sa));
-    }
-}
-
-/**
- * Calculate the actual length of any sockaddr structure
- *
- * @param sockaddr the sockaddr structure
- * @return the length of the actual sockaddr structure in bytes
- */
-int hip_sockaddr_len(const void *sockaddr)
-{
-    struct sockaddr *sa = (struct sockaddr *) sockaddr;
-    int len;
-
-    switch (sa->sa_family) {
-    case AF_INET:
-        len = sizeof(struct sockaddr_in);
-        break;
-    case AF_INET6:
-        len = sizeof(struct sockaddr_in6);
-        break;
-    case AF_UNIX:
-        len = sizeof(struct sockaddr_un);
-        break;
-    default:
-        len = 0;
-    }
-    return len;
-}
-
-/**
- * Calculate the address field length of any sockaddr structure
- *
- * @param sockaddr the sockaddr structure
- * @return the length of the address field in the @c sockaddr structure
- */
-int hip_sa_addr_len(void *sockaddr)
-{
-    struct sockaddr *sa = (struct sockaddr *) sockaddr;
-    int len;
-
-    switch (sa->sa_family) {
-    case AF_INET:
-        len = 4;
-        break;
-    case AF_INET6:
-        len = 16;
-        break;
-    default:
-        len = 0;
-    }
-    return len;
-}
-
-/**
- * converts an in6_addr structure to sockaddr_storage
- *
- * @param addr the in6_addr to convert
- * @param sa a sockaddr_storage structure where the result is stored
- * @note remember to fill in the port number by yourself
- *       if necessary
- */
-void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
-{
-    memset(sa, 0, sizeof(struct sockaddr_storage));
-
-    if (IN6_IS_ADDR_V4MAPPED(addr)) {
-        struct sockaddr_in *in = (struct sockaddr_in *) sa;
-        in->sin_family = AF_INET;
-        IPV6_TO_IPV4_MAP(addr, &in->sin_addr);
-    } else {
-        struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) sa;
-        in6->sin6_family = AF_INET6;
-        ipv6_addr_copy(&in6->sin6_addr, addr);
-    }
-}
 
 /**
  * get rid of a lock file

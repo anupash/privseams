@@ -1113,3 +1113,14 @@ int load_rsa_public_key(const char *filename, RSA **rsa)
 out_err:
     return err;
 }
+
+/**
+ * get random bytes
+ *
+ * @param buf a buffer where to write random bytes
+ * @param n write n bytes to @c buf
+ */
+void get_random_bytes(void *buf, int n)
+{
+    RAND_bytes(buf, n);
+}

@@ -303,5 +303,6 @@ int hip_build_param_nat_port(hip_common_t *msg,
                              const in_port_t port,
                              hip_tlv_type_t hipparam);
 struct in6_addr *hip_get_locator_item_address(void *item);
+int hip_build_digest(const int type, const void *in, int in_len, void *out);
 
 #endif /* HIP_LIB_CORE_BUILDER_H */

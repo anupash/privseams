@@ -50,8 +50,6 @@ struct hip_hit_info {
     hip_lsi_t      lsi;
 };
 
-int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
-
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
                                 const struct in_addr *a2)
 {
@@ -85,9 +83,6 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
             a->s6_addr[8] |a->s6_addr[9] |a->s6_addr[10] |a->s6_addr[11] |
             a->s6_addr[12] |a->s6_addr[13] |a->s6_addr[14] |a->s6_addr[15]) == 0;
 }
-
-int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
-                                  struct in6_addr *hit, int hit_type);
 
 static inline void hip_copy_in6addr_null_check(struct in6_addr *to,
                                                struct in6_addr *from)
@@ -154,7 +149,6 @@ int hip_hit_is_bigger(const struct in6_addr *hit1,
                       const struct in6_addr *hit2);
 int hip_hit_are_equal(const struct in6_addr *hit1,
                       const struct in6_addr *hit2);
-int hip_id_type_match(const struct in6_addr *id, int id_type);
 
 unsigned long hip_hash_hit(const void *hit);
 int hip_match_hit(const void *, const void *);
@@ -181,18 +175,11 @@ int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *str);
 int maxof(int num_args, ...);
 
 int addr2ifindx(struct in6_addr *local_address);
-void get_random_bytes(void *buf, int n);
 
-int hip_build_digest(const int type, const void *in, int in_len, void *out);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
-void *hip_cast_sa_addr(const struct sockaddr *sa);
-int hip_sockaddr_len(const void *sockaddr);
-int hip_sa_addr_len(void *sockaddr);
 int hip_create_lock_file(char *filename, int killold);
 int hip_remove_lock_file(char *filename);
-
-void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 int hip_solve_puzzle_m(struct hip_common *out,
