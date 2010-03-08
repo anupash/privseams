@@ -252,6 +252,7 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/esp_prot_common.c \
                                  lib/core/misc.c \
                                  lib/core/hostsfiles.c \
+                                 lib/core/filemanip.c \
                                  lib/core/hashchain.c \
                                  lib/core/sqlitedbapi.c \
                                  lib/core/hashchain_store.c \

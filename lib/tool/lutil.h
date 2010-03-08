@@ -54,6 +54,8 @@ void initlist(List *);
 void insert(List *, char *data);
 void destroy(List *);
 int length(List *);
+int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
+                     struct timeval *result);
 
 /**
  * Gets an item from a linked list. Gets <code>n</code>th item from a linked

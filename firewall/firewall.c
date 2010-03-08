@@ -56,6 +56,7 @@
 #include "lib/performance/performance.h" /* Performance Analysis */
 #endif
 #include "helpers.h"
+#include "lib/core/filemanip.h"
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0

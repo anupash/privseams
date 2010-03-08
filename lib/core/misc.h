@@ -135,9 +135,6 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    int hit_type);
 int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                struct in6_addr *hit, int hit_type);
-int check_and_create_dir(char *dirname, mode_t mode);
-int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
-                     struct timeval *result);
 char *hip_in6_ntop(const struct in6_addr *in6, char *buf);
 char *hip_hit_ntop(const hip_hit_t *hit, char *buf);
 int hip_host_id_contains_private_key(struct hip_host_id *host_id);
@@ -178,8 +175,6 @@ int addr2ifindx(struct in6_addr *local_address);
 
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
-int hip_create_lock_file(char *filename, int killold);
-int hip_remove_lock_file(char *filename);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 int hip_solve_puzzle_m(struct hip_common *out,
