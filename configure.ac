@@ -209,7 +209,7 @@ fi
 AC_ARG_ENABLE(openwrt,
                AC_HELP_STRING([--enable-openwrt],
                               [OpenWRT (default is NO)]),
-               [ac_cv_use_openwrt=$enableval ac_cv_use_altsep=yes],
+               [ac_cv_use_openwrt=$enableval],
                [ac_cv_use_openwrt=no])
 AC_CACHE_CHECK([whether to use OpenWRT],
                [ac_cv_use_openwrt],
@@ -224,28 +224,43 @@ if test x"$ac_cv_use_openwrt" = x"yes"; then
     fi
 fi
 
-# if we already set altsep, then don't check the flags anymore
-if test x"$ac_cv_use_altsep" != x"yes"; then
 AC_ARG_ENABLE(altsep,
-             AC_HELP_STRING([--enable-altsep],
-                            [Alternative privilege separation (default is NO)]),
-             [ac_cv_use_altsep=$enableval],
-             [ac_cv_use_altsep=no])
+               AC_HELP_STRING([--enable-altsep],
+                              [Alternative privilege separation (default is NO)]),
+               [ac_cv_use_altsep=$enableval],
+               [ac_cv_use_altsep=no])
 fi
 AC_CACHE_CHECK([whether to use Alternative privilege separation],
                [ac_cv_use_altsep],
                [ac_cv_use_altsep=no])
 if test x"$ac_cv_use_altsep" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_ALTSEP)
-        AH_TEMPLATE(CONFIG_HIP_ALTSEP, [Defined to 1 if alternative privilege separation is enabled.])
+    AC_DEFINE(CONFIG_HIP_ALTSEP)
+    AH_TEMPLATE(CONFIG_HIP_ALTSEP, [Defined to 1 if alternative privilege separation is enabled.])
 fi
+
+AC_ARG_ENABLE(privsep,
+               AC_HELP_STRING([--enable-privsep],
+                              [Privilege separation (default is YES)]),
+               [ac_cv_use_privsep=$enableval],
+               [ac_cv_use_privsep=yes])
+AC_CACHE_CHECK([whether to use privsep],
+               [ac_cv_use_privsep],
+               [ac_cv_use_privsep=yes])
+if test x"$ac_cv_use_privsep" = x"yes"; then
+    if test x"$ac_cv_use_altsep" != x"yes"; then
+        AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
+    fi
+    AC_DEFINE(CONFIG_HIP_PRIVSEP)
+    AH_TEMPLATE(CONFIG_HIP_PRIVSEP, [Defined to 1 if privilege separation is enabled.])
+fi
+AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 
 # if we already set i3, then don't check the flags anymore
 if test x"$ac_cv_use_i3" != x"no"; then
 AC_ARG_ENABLE(i3,
-              AC_HELP_STRING([--enable-i3],
-              [HIP i3  (default is NO)]),
-              [ac_cv_use_i3=$enableval],)
+               AC_HELP_STRING([--enable-i3],
+               [HIP i3  (default is NO)]),
+               [ac_cv_use_i3=$enableval],)
 fi
 AC_CACHE_CHECK([whether to use i3],
                [ac_cv_use_i3], [ac_cv_use_i3=no])
@@ -254,25 +269,8 @@ if test x"$ac_cv_use_i3" = x"yes"; then
         AC_CHECK_LIB(pthread, pthread_create,, AC_MSG_ERROR(libpthread not found))
         AC_DEFINE(CONFIG_HIP_I3)
         AH_TEMPLATE(CONFIG_HIP_I3, [Defined to 1 if i3 is enabled.])
-
 fi
 AM_CONDITIONAL(HIP_I3, test x"$ac_cv_use_i3" = x"yes")
-
-AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
-AC_ARG_ENABLE(privsep,
-             AC_HELP_STRING([--enable-privsep],
-                            [Privilege separation (default is YES)]),
-             [ac_cv_use_privsep=$enableval], [ac_cv_use_privsep=yes])
-AC_CACHE_CHECK([whether to use privsep],
-               [ac_cv_use_privsep], [ac_cv_use_privsep=yes])
-if test x"$ac_cv_use_privsep" = x"yes"; then
-        if test x"$ac_cv_use_altsep" != x"yes"; then
-                AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
-        fi
-        AC_DEFINE(CONFIG_HIP_PRIVSEP)
-        AH_TEMPLATE(CONFIG_HIP_PRIVSEP, [Defined to 1 if privilege separation is enabled.])
-fi
-AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 
 AC_ARG_ENABLE(opportunistic,
              AC_HELP_STRING([--enable-opportunistic],

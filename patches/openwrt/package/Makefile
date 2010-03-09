@@ -114,6 +114,7 @@ define Build/Configure
             --enable-openwrt \
             --disable-dht \
             --disable-agent \
+            --enable-altsep \
             --disable-privsep \
             --disable-i3 \
             --disable-debug \
