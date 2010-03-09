@@ -90,21 +90,21 @@ glibc_version=2.3
 usagi_libc=23
 AC_SUBST(usagi_libc)
 
+
 AC_ARG_ENABLE(firewall,
-              AC_HELP_STRING([--enable-firewall],
-                             [HIP enabled firewall daemon (default is YES)]),
-              [ac_cv_use_firewall=$enableval],
-              [ac_cv_use_firewall=yes])
+               AC_HELP_STRING([--enable-firewall],
+                              [HIP enabled firewall daemon (default is YES)]),
+               [ac_cv_use_firewall=$enableval],
+               [ac_cv_use_firewall=yes])
 AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall],
                [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
-        AC_CHECK_LIB(ipq, ipq_create_handle,,
-                     [AC_MSG_ERROR([libipq not found])])
-        AC_CHECK_LIB(config, config_setting_index,,
-                     [AC_MSG_WARN([libconfig not found, using default config])])
-        AC_DEFINE(CONFIG_HIP_FIREWALL)
-        AH_TEMPLATE(CONFIG_HIP_FIREWALL, [Defined to 1 if firewall is enabled.])
+    AC_CHECK_LIB(ipq, ipq_create_handle,, [AC_MSG_ERROR([libipq not found])])
+    AC_CHECK_LIB(config, config_setting_index,,
+                 [AC_MSG_WARN([libconfig not found, using default config])])
+    AC_DEFINE(CONFIG_HIP_FIREWALL)
+    AH_TEMPLATE(CONFIG_HIP_FIREWALL, [Defined to 1 if firewall is enabled.])
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
@@ -114,111 +114,115 @@ PKG_CHECK_MODULES(GTK,
                   ac_cv_use_agent=yes,
                   ac_cv_use_agent=no)
 if test x"$ac_cv_use_agent" = x"no"; then
-        PKG_CHECK_MODULES(GTK,
-                          gtk+-2.0 >= 2.8.0,
-                          ac_cv_use_agent=yes,
-                          ac_cv_use_agent=no)
-        if test x"$ac_cv_use_agent" = x"yes"; then
-                AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
-        fi
+    PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, ac_cv_use_agent=yes,
+                      ac_cv_use_agent=no)
+    if test x"$ac_cv_use_agent" = x"yes"; then
+        AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
+    fi
 fi
 
 AC_ARG_ENABLE(agent,
-              AC_HELP_STRING([--enable-agent],
-                             [HIP enable user agent (default is YES)]),
-              [ac_cv_use_agent=$enableval],
-              [ac_cv_use_agent=yes])
+               AC_HELP_STRING([--enable-agent],
+                              [HIP enable user agent (default is YES)]),
+               [ac_cv_use_agent=$enableval],
+               [ac_cv_use_agent=yes])
 AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent],
                [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
-        AC_CHECK_LIB(sqlite3, sqlite3_open,,
-                     AC_MSG_ERROR(libsqlite3-dev not found))
-        AC_DEFINE(CONFIG_HIP_AGENT)
-        AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
+    AC_CHECK_LIB(sqlite3, sqlite3_open,,
+                 AC_MSG_ERROR(libsqlite3-dev not found))
+    AC_DEFINE(CONFIG_HIP_AGENT)
+    AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
 AC_ARG_ENABLE(cookie,
-              AC_HELP_STRING([--enable-cookie],
-                             [HIP cookie extensions (default is NO)]),
-              [ac_cv_use_cookie=$enableval],
-              [ac_cv_use_cookie=no])
+               AC_HELP_STRING([--enable-cookie],
+                              [HIP cookie extensions (default is NO)]),
+               [ac_cv_use_cookie=$enableval],
+               [ac_cv_use_cookie=no])
 AC_CACHE_CHECK([whether to use cookie extensions],
                [ac_cv_use_cookie],
                [ac_cv_use_cookie=no])
 if test x"$ac_cv_use_cookie" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_COOKIE)
-        AH_TEMPLATE(CONFIG_HIP_COOKIE, [Defined to 1 if cookie is enabled.])
+    AC_DEFINE(CONFIG_HIP_COOKIE)
+    AH_TEMPLATE(CONFIG_HIP_COOKIE, [Defined to 1 if cookie is enabled.])
 fi
 
 AC_ARG_ENABLE(pfkey,
-              AC_HELP_STRING([--enable-pfkey],
-                             [HIP pfkey extensions (default is NO)]),
-              [ac_cv_use_pfkey=$enableval],
-              [ac_cv_use_pfkey=no])
+               AC_HELP_STRING([--enable-pfkey],
+                              [HIP pfkey extensions (default is NO)]),
+               [ac_cv_use_pfkey=$enableval],
+               [ac_cv_use_pfkey=no])
 AC_CACHE_CHECK([whether to use pfkey extensions],
                [ac_cv_use_pfkey],
                [ac_cv_use_pfkey=no])
 if test x"$ac_cv_use_pfkey" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_PFKEY)
-        AH_TEMPLATE(CONFIG_HIP_PFKEY, [Defined to 1 if pfkey is enabled.])
-        AM_PROG_LEX
+    AC_DEFINE(CONFIG_HIP_PFKEY)
+    AH_TEMPLATE(CONFIG_HIP_PFKEY, [Defined to 1 if pfkey is enabled.])
+    AM_PROG_LEX
 fi
 AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
 
 AC_ARG_ENABLE(rvs,
-             AC_HELP_STRING([--enable-rvs],
-                            [HIP Rendezvous Extensions (default is YES)]),
-             [ac_cv_use_rvs=$enableval], [ac_cv_use_rvs=yes])
+               AC_HELP_STRING([--enable-rvs],
+                              [HIP Rendezvous Extensions (default is YES)]),
+               [ac_cv_use_rvs=$enableval],
+               [ac_cv_use_rvs=yes])
 AC_CACHE_CHECK([whether to use RVS],
-               [ac_cv_use_rvs], [ac_cv_use_rvs=yes])
+               [ac_cv_use_rvs],
+               [ac_cv_use_rvs=yes])
 if test x"$ac_cv_use_rvs" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_RVS)
-        AH_TEMPLATE(CONFIG_HIP_RVS, [Defined to 1 if RVS is enabled.])
+    AC_DEFINE(CONFIG_HIP_RVS)
+    AH_TEMPLATE(CONFIG_HIP_RVS, [Defined to 1 if RVS is enabled.])
 fi
 
 AC_ARG_ENABLE(hipproxy,
-             AC_HELP_STRING([--enable-hipproxy],
-                            [HIP Proxy (default is YES)]),
-             [ac_cv_use_hipproxy=$enableval], [ac_cv_use_hipproxy=yes])
+               AC_HELP_STRING([--enable-hipproxy],
+                              [HIP Proxy (default is YES)]),
+               [ac_cv_use_hipproxy=$enableval],
+               [ac_cv_use_hipproxy=yes])
 AC_CACHE_CHECK([whether to use HIP proxy],
-               [ac_cv_use_hipproxy], [ac_cv_use_hipproxy=yes])
+               [ac_cv_use_hipproxy],
+               [ac_cv_use_hipproxy=yes])
 if test x"$ac_cv_use_hipproxy" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_HIPPROXY)
-        AH_TEMPLATE(CONFIG_HIP_HIPPROXY, [Defined to 1 if the HIP Proxy is enabled.])
+    AC_DEFINE(CONFIG_HIP_HIPPROXY)
+    AH_TEMPLATE(CONFIG_HIP_HIPPROXY, [Defined to 1 if HIP Proxy is enabled.])
 fi
 
 AC_ARG_ENABLE(maemo,
-             AC_HELP_STRING([--enable-maemo],
-                            [Maemo (default is NO)]),
-             [ac_cv_use_maemo=$enableval \
-              ac_cv_use_altsep=yes, [ac_cv_use_maemo=no])
+               AC_HELP_STRING([--enable-maemo],
+                              [Maemo (default is NO)]),
+               [ac_cv_use_maemo=$enableval,
+               [ac_cv_use_maemo=no])
 AC_CACHE_CHECK([whether to use Maemo],
-               [ac_cv_use_maemo], [ac_cv_use_maemo=no])
+               [ac_cv_use_maemo],
+               [ac_cv_use_maemo=no])
 if test x"$ac_cv_use_maemo" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_MAEMO)
-        AC_SUBST(MAEMO_CFLAGS, "-O2 -g -fgnu89-inline")
-        AC_SUBST(MAEMO_CPPFLAGS, "-I/usr/include/libipq/")
-        AH_TEMPLATE(CONFIG_HIP_MAEMO, [Defined to 1 if maemo build is enabled.])
+    AC_DEFINE(CONFIG_HIP_MAEMO)
+    AH_TEMPLATE(CONFIG_HIP_MAEMO, [Defined to 1 if Maemo build is enabled.])
+    AC_SUBST(MAEMO_CFLAGS, "-O2 -g -fgnu89-inline")
+    AC_SUBST(MAEMO_CPPFLAGS, "-I/usr/include/libipq/")
 fi
 AM_CONDITIONAL(HIP_MAEMO, test x"$ac_cv_use_maemo" = x"yes")
 
 AC_ARG_ENABLE(openwrt,
-             AC_HELP_STRING([--enable-openwrt],
-                            [OpenWRT (default is NO)]),
-             [ac_cv_use_openwrt=$enableval \
-              ac_cv_use_altsep=yes], [ac_cv_use_openwrt=no])
+               AC_HELP_STRING([--enable-openwrt],
+                              [OpenWRT (default is NO)]),
+               [ac_cv_use_openwrt=$enableval ac_cv_use_altsep=yes],
+               [ac_cv_use_openwrt=no])
 AC_CACHE_CHECK([whether to use OpenWRT],
-               [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
+               [ac_cv_use_openwrt],
+               [ac_cv_use_openwrt=no])
 if test x"$ac_cv_use_openwrt" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENWRT)
-        AC_SUBST(OPENWRT_CFLAGS, "-lc")
-        AH_TEMPLATE(CONFIG_HIP_OPENWRT, [Defined to 1 if openwrt support is enabled.])
-        if test x"$TARGET" = x"MIPS_LINUX"; then
-                AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX)
-                AH_TEMPLATE(CONFIG_HIP_OPENWRT_MIPSLINUX, [Defined to 1 if mipslinux is enabled.])
-        fi
+    AC_DEFINE(CONFIG_HIP_OPENWRT)
+    AC_SUBST(OPENWRT_CFLAGS, "-lc")
+    AH_TEMPLATE(CONFIG_HIP_OPENWRT, [Defined to 1 if openwrt support is enabled.])
+    if test x"$TARGET" = x"MIPS_LINUX"; then
+        AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX)
+        AH_TEMPLATE(CONFIG_HIP_OPENWRT_MIPSLINUX, [Defined to 1 if mipslinux is enabled.])
+    fi
 fi
 AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
 
