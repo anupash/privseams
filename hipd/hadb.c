@@ -14,6 +14,7 @@
 #include "lib/core/hostsfiles.h"
 #include "lib/core/hostid.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/solve.h"
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100

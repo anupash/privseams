@@ -21,6 +21,7 @@
 
 #include "lib/core/protodefs.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/solve.h"
 #include "netdev.h"
 #include "lib/core/builder.h"
 #include "update_legacy.h"

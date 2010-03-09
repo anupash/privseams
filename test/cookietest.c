@@ -3,6 +3,7 @@
 
 #include "lib/core/debug.h"
 #include "lib/core/misc.h"
+#include "lib/core/solve.h"
 #include <sys/time.h>
 #include <time.h>
 

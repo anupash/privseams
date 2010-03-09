@@ -30,6 +30,7 @@
 #include "midauth.h"
 #include "pisa.h"
 #include "lib/core/builder.h"
+#include "lib/core/solve.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"

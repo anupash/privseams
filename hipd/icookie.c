@@ -14,6 +14,7 @@
 
 #ifdef CONFIG_HIP_ICOOKIE
 #include "icookie.h"
+#include "lib/core/solve.h"
 
 /* We need maintain a separate table for the K values of cookies because
  * otherwise they are just overwritten when R1s are recreated periodically. */

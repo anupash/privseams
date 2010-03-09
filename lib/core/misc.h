@@ -139,10 +139,6 @@ int maxof(int num_args, ...);
 
 int addr2ifindx(struct in6_addr *local_address);
 
-uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
-int hip_solve_puzzle_m(struct hip_common *out,
-                       struct hip_common *in,
-                       hip_ha_t *entry);
 /**
  * Converts a string to lowercase. Converts parameter @c from string to a
  * lowercase string and places the result in @c to. All alphabetic (isalpha())

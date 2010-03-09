@@ -256,6 +256,7 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hashchain.c \
                                  lib/core/hostid.c \
                                  lib/core/hip_udp.c \
+                                 lib/core/solve.c \
                                  lib/core/sqlitedbapi.c \
                                  lib/core/hashchain_store.c \
                                  lib/core/hip_statistics.c \
