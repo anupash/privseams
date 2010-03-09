@@ -5,12 +5,12 @@ ACLOCAL_AMFLAGS  = -I m4
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  debian doc hipext hipfwmi patches test/packaging test/configs
+EXTRA_DIST =  debian doc hipext hipfwmi lib/android patches
+EXTRA_DIST += test/packaging test/configs
 EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh i3-cfg-PL.xml
 EXTRA_DIST += release.version tcp verbose-headers.txt
 EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard i3/*/*.h)
-EXTRA_DIST += $(wildcard lib/android/*.c)
 EXTRA_DIST += $(wildcard lib/*/*.h)
 EXTRA_DIST += $(wildcard hipd/*.h)
 EXTRA_DIST += $(wildcard firewall/*.h)
