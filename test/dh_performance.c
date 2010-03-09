@@ -24,6 +24,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "lib/core/crypto.h"
+#include "lib/core/filemanip.h"
 #include "lib/core/hashchain.h"
 
 #include "lib/performance/performance.h"
