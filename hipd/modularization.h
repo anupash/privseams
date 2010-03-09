@@ -34,4 +34,12 @@ int hip_run_maint_functions(void);
 
 void hip_uninit_maint_functions(void);
 
+int hip_register_socket(int socketfd, const uint16_t priority);
+
+int hip_get_highest_descriptor(void);
+
+void hip_prepare_fd_set(fd_set *read_fdset);
+
+void hip_uninit_sockets(void);
+
 #endif /* HIP_HIPD_MODULARIZATION_H */

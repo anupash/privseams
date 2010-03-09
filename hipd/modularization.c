@@ -13,15 +13,20 @@
 #include "lib/modularization/modularization.h"
 
 struct handle_function {
-    uint32_t            priority;
-    int               (*func_ptr)(const uint8_t packet_type,
-                                  const uint32_t ha_state,
-                                  struct hip_packet_context *ctx);
+    uint16_t priority;
+    int    (*func_ptr)(const uint8_t packet_type,
+                       const uint32_t ha_state,
+                       struct hip_packet_context *ctx);
 };
 
 struct maint_function {
-    uint32_t            priority;
-    int               (*func_ptr)(void);
+    uint16_t priority;
+    int    (*func_ptr)(void);
+};
+
+struct socketfd {
+    uint16_t priority;
+    int      fd;
 };
 
 /**
@@ -33,6 +38,11 @@ static hip_ll_t *hip_handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
  * @todo add description
  */
 static hip_ll_t *hip_maintenance_functions;
+
+/**
+ * @todo add description
+ */
+static hip_ll_t *hip_sockets;
 
 /**
  * hip_register_handle_function
@@ -199,7 +209,7 @@ int hip_register_maint_function(int (*maint_function)(void),
 
     HIP_IFEL(!(new_entry = malloc(sizeof(struct maint_function))),
              -1,
-             "Error on allocating memory for a handle function entry.\n");
+             "Error on allocating memory for a maintenance function entry.\n");
 
     new_entry->priority    = priority;
     new_entry->func_ptr    = maint_function;
@@ -254,4 +264,87 @@ void hip_uninit_maint_functions(void)
     }
 }
 
+/**
+ * hip_register_socket
+ *
+ */
+int hip_register_socket(int socketfd, const uint16_t priority)
+{
+    int err = 0;
+    struct socketfd *new_socket = NULL;
+
+    HIP_IFEL(!(new_socket = malloc(sizeof(struct socketfd))),
+             -1,
+             "Error on allocating memory for a socket entry.\n");
+
+    new_socket->priority = priority;
+    new_socket->fd       = socketfd;
+
+    hip_sockets = lmod_register_function(hip_sockets,
+                                         new_socket,
+                                         priority);
+    if (!hip_sockets) {
+        HIP_ERROR("Error on registering a maintenance function.\n");
+        err = -1;
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * hip_get_highest_descriptor
+ *
+ */
+int hip_get_highest_descriptor(void)
+{
+    int highest_descriptor = 0;
+    hip_ll_node_t *iter    = NULL;
+
+    if (hip_sockets) {
+        while ((iter = hip_ll_iterate(hip_sockets, iter))) {
+            if (((struct socketfd*) iter->ptr)->fd >= highest_descriptor) {
+                highest_descriptor = ((struct socketfd*) iter->ptr)->fd;
+            }
+        }
+    } else {
+        HIP_DEBUG("No sockets registered.\n");
+    }
+
+    return highest_descriptor;
+}
+
+/**
+ * hip_prepare_fd_set
+ *
+ *
+ */
+void hip_prepare_fd_set(fd_set *read_fdset)
+{
+    hip_ll_node_t *iter = NULL;
+
+    FD_ZERO(read_fdset);
+
+    if (hip_sockets) {
+        while ((iter = hip_ll_iterate(hip_sockets, iter))) {
+            FD_SET(((struct socketfd*) iter->ptr)->fd, read_fdset);
+        }
+    } else {
+        HIP_DEBUG("No sockets registered.\n");
+    }
+}
+
+/**
+ * hip_uninit_sockets
+ *
+ * Free the memory used for storage of socket fd's.
+ *
+ */
+void hip_uninit_sockets(void)
+{
+    if (hip_sockets) {
+        hip_ll_uninit(hip_sockets, free);
+        free(hip_sockets);
+    }
+}
 

@@ -191,6 +191,7 @@ int hip_heartbeat_init(void)
     int *icmpsockfd = &hip_icmp_sock;
 
     hip_register_maint_function(&hip_heartbeat_maintenance, 10000);
+    hip_register_socket(hip_icmp_sock, 30000);
 
     /* Make sure that hipd does not send icmpv6 immediately after base exchange */
     heartbeat_counter = HIP_HEARTBEAT_INTERVAL;

@@ -15,6 +15,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "hipd.h"
+#include "modularization.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
@@ -218,7 +219,7 @@ static int hipd_main(int argc, char *argv[])
     int ch, killold = 0;
     // char buff[HIP_MAX_NETLINK_PACKET];
     fd_set read_fdset;
-    int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
+    int foreground = 1, err = 0, fix_alignment = 0;
     struct timeval timeout;
 
     /* The flushing is enabled by default. The reason for this is that
@@ -331,15 +332,6 @@ static int hipd_main(int argc, char *argv[])
     HIP_IFEL(create_configs_and_exit, 0,
              "Configs created, exiting\n");
 
-    highest_descriptor = maxof(6,
-                               hip_nl_route.fd,
-                               hip_raw_sock_input_v6,
-                               hip_user_sock,
-                               hip_nl_ipsec.fd,
-                               hip_raw_sock_input_v4,
-                               hip_nat_sock_input_udp);
-//                               hip_icmp_sock);
-
     /* Allocate user message. */
     HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
     HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
@@ -352,23 +344,13 @@ static int hipd_main(int argc, char *argv[])
                  "Starting select loop.\n");
     hipd_set_state(HIPD_STATE_EXEC);
     while (hipd_get_state() != HIPD_STATE_CLOSED) {
-        /* prepare file descriptor sets */
-        FD_ZERO(&read_fdset);
-        FD_SET(hip_nl_route.fd, &read_fdset);
-        FD_SET(hip_raw_sock_input_v6, &read_fdset);
-        FD_SET(hip_raw_sock_input_v4, &read_fdset);
-        FD_SET(hip_nat_sock_input_udp, &read_fdset);
-        FD_SET(hip_user_sock, &read_fdset);
-        FD_SET(hip_nl_ipsec.fd, &read_fdset);
-        //FD_SET(hip_icmp_sock, &read_fdset);
-        /* FD_SET(hip_firewall_sock, &read_fdset); */
+
+        hip_prepare_fd_set(&read_fdset);
+
         hip_firewall_sock = hip_user_sock;
 
         timeout.tv_sec  = HIP_SELECT_TIMEOUT;
         timeout.tv_usec = 0;
-
-        //HIP_DEBUG("select loop value hip_raw_socket_v4 = %d \n",hip_raw_sock_v4);
-        /* wait for socket activity */
 
 #ifdef CONFIG_HIP_FIREWALL
         if (hip_firewall_status < 0) {
@@ -384,7 +366,7 @@ static int hipd_main(int argc, char *argv[])
         }
 #endif
 
-        err = select((highest_descriptor + 1), &read_fdset, NULL, NULL, &timeout);
+        err = select((hip_get_highest_descriptor() + 1), &read_fdset, NULL, NULL, &timeout);
 
         if (err < 0) {
             HIP_ERROR("select() error: %s.\n", strerror(errno));
