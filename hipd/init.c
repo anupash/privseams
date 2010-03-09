@@ -359,12 +359,12 @@ static void hip_probe_kernel_modules(void)
 
 static void hip_init_sockets(void)
 {
-    hip_register_socket(hip_nl_route.fd,        10000);
-    hip_register_socket(hip_raw_sock_input_v6,  10100);
-    hip_register_socket(hip_user_sock,          10200);
-    hip_register_socket(hip_nl_ipsec.fd,        10300);
-    hip_register_socket(hip_raw_sock_input_v4,  10400);
-    hip_register_socket(hip_nat_sock_input_udp, 10500);
+    hip_register_socket(hip_nl_route.fd,        NULL, 10000);
+    hip_register_socket(hip_raw_sock_input_v6,  NULL, 10100);
+    hip_register_socket(hip_user_sock,          NULL, 10200);
+    hip_register_socket(hip_nl_ipsec.fd,        NULL, 10300);
+    hip_register_socket(hip_raw_sock_input_v4,  NULL, 10400);
+    hip_register_socket(hip_nat_sock_input_udp, NULL, 10500);
 }
 
 static int hip_init_handle_functions(void)
@@ -945,12 +945,6 @@ void hip_exit(int signal)
     /*reset TCP timeout to be original vaule , added By Tao Wan on 14.Jan.2008. */
     reset_default_tcptimeout_parameters_value();
 #endif
-    if (hipd_msg) {
-        HIP_FREE(hipd_msg);
-    }
-    if (hipd_msg_v4) {
-        HIP_FREE(hipd_msg_v4);
-    }
 
     hip_delete_all_sp();    //empty
 

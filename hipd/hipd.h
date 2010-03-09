@@ -114,9 +114,6 @@ extern int hip_use_userspace_data_packet_mode;
 
 extern int hip_buddies_inuse;
 
-extern struct hip_common *hipd_msg;
-extern struct hip_common *hipd_msg_v4;
-
 extern int esp_prot_active;
 extern int esp_prot_num_transforms;
 extern long esp_prot_num_parallel_hchains;

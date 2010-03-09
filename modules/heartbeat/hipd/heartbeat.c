@@ -181,6 +181,11 @@ int hip_heartbeat_maintenance(void)
     return 0;
 }
 
+//        if (FD_ISSET(hip_icmp_sock, &read_fdset)) {
+//            HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
+//                     "Failed to recvmsg from ICMPv6\n");
+//        }
+
 /**
  * Initialize icmpv6 socket.
  */
@@ -191,7 +196,7 @@ int hip_heartbeat_init(void)
     int *icmpsockfd = &hip_icmp_sock;
 
     hip_register_maint_function(&hip_heartbeat_maintenance, 10000);
-    hip_register_socket(hip_icmp_sock, 30000);
+    hip_register_socket(hip_icmp_sock, NULL, 30000);
 
     /* Make sure that hipd does not send icmpv6 immediately after base exchange */
     heartbeat_counter = HIP_HEARTBEAT_INTERVAL;

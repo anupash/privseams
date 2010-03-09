@@ -36,24 +36,11 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type);
 int hip_read_user_control_msg(int socket,
                               struct hip_common *hip_msg,
                               struct sockaddr_in6 *saddr);
-int hip_read_control_msg_all(int socket,
-                             struct hip_common *hip_msg,
-                             struct in6_addr *saddr,
-                             struct in6_addr *daddr,
-                             hip_portpair_t *msg_info,
-                             int encap_hdr_size,
-                             int is_ipv4);
 int hip_read_control_msg_v6(int socket,
-                            struct hip_common *hip_msg,
-                            struct in6_addr *saddr,
-                            struct in6_addr *daddr,
-                            hip_portpair_t *msg_info,
+                            struct hip_packet_context *packet_ctx,
                             int encap_hdr_size);
 int hip_read_control_msg_v4(int socket,
-                            struct hip_common *hip_msg,
-                            struct in6_addr *saddr,
-                            struct in6_addr *daddr,
-                            hip_portpair_t *msg_info,
+                            struct hip_packet_context *packet_ctx,
                             int encap_hdr_size);
 int hip_sendto(int sock,
                const struct hip_common *msg,

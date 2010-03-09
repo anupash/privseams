@@ -34,7 +34,10 @@ int hip_run_maint_functions(void);
 
 void hip_uninit_maint_functions(void);
 
-int hip_register_socket(int socketfd, const uint16_t priority);
+int hip_register_socket(int socketfd,
+                        int (*func_ptr)(int socketfd,
+                                        struct hip_packet_context *ctx),
+                        const uint16_t priority);
 
 int hip_get_highest_descriptor(void);
 
