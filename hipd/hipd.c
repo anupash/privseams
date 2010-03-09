@@ -19,6 +19,7 @@
 #include "heartbeat.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
+#include "lib/core/filemanip.h"
 #include "lib/performance/performance.h"
 #endif
 
