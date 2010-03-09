@@ -315,7 +315,7 @@ fi
 
 AC_ARG_ENABLE(profiling,
                AC_HELP_STRING([--enable-profiling],
-                              [add gprof profiling support (default is NO)]),
+                              [gprof profiling support (default is NO)]),
                [ac_cv_use_profiling=$enableval],
                [ac_cv_use_profiling=no])
 AC_CACHE_CHECK([whether to use grof support],
@@ -324,28 +324,28 @@ AC_CACHE_CHECK([whether to use grof support],
 if test x"$ac_cv_use_profiling" = x"yes"; then
     AC_SUBST(GPROF_CFLAGS, "-pg")
 fi
-AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
 
 AC_ARG_ENABLE(ecdsa,
-             AC_HELP_STRING([--enable-ecdsa],
-                            [compile in ecdsa support (default is NO)]),
-             [ac_cv_use_ecdsa=$enableval], [ac_cv_use_ecdsa=no])
+               AC_HELP_STRING([--enable-ecdsa],
+                              [compile in ecdsa support (default is NO)]),
+               [ac_cv_use_ecdsa=$enableval],
+               [ac_cv_use_ecdsa=no])
 AC_CACHE_CHECK([whether to use ecdsa support],
-               [ac_cv_use_ecdsa], [ac_cv_use_ecdsa=no])
+               [ac_cv_use_ecdsa],
+               [ac_cv_use_ecdsa=no])
 if test x"$ac_cv_use_ecdsa" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_ECDSA)
-        AH_TEMPLATE(CONFIG_HIP_ECDSA, [Defined to 1 if ECDSA support is enabled.])
-        AC_SUBST(GPROF_CFLAGS, "-pg")
+    AC_DEFINE(CONFIG_HIP_ECDSA)
+    AH_TEMPLATE(CONFIG_HIP_ECDSA, [Defined to 1 if ECDSA support is enabled.])
 fi
-AM_CONDITIONAL(HIP_ECDSA, test x"$ac_cv_use_ecdsa" = x"yes")
 
 AC_ARG_ENABLE(debug,
-             AC_HELP_STRING([--enable-debug],
-                            [Enable debug (default is YES)]),
-             [ac_cv_use_debug=$enableval],
-             [ac_cv_use_debug=yes])
+               AC_HELP_STRING([--enable-debug],
+                              [Enable debug (default is YES)]),
+               [ac_cv_use_debug=$enableval],
+               [ac_cv_use_debug=yes])
 AC_CACHE_CHECK([whether to have verbose debug],
-               [ac_cv_use_debug], [ac_cv_use_debug=yes])
+               [ac_cv_use_debug],
+               [ac_cv_use_debug=yes])
 if test x"$ac_cv_use_debug" = x"yes"; then
         AC_DEFINE(HIP_LOGFMT_LONG)
         AH_TEMPLATE(HIP_LOGFMT_LONG, [Defined to 1 if long log format output is enabled.])
@@ -354,41 +354,45 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(midauth,
-             AC_HELP_STRING([--enable-midauth],
-                            [Enable middlebox authentification (default is NO)]),
-             [ac_cv_use_midauth=$enableval],
-             [ac_cv_use_midauth=no])
+               AC_HELP_STRING([--enable-midauth],
+                              [Enable middlebox authentification (default is NO)]),
+               [ac_cv_use_midauth=$enableval],
+               [ac_cv_use_midauth=no])
 AC_CACHE_CHECK([whether to have middlebox authentification],
-               [ac_cv_use_midauth], [ac_cv_use_midauth=no])
+               [ac_cv_use_midauth],
+               [ac_cv_use_midauth=no])
 if test x"$ac_cv_use_midauth" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_MIDAUTH)
-        AH_TEMPLATE(CONFIG_HIP_MIDAUTH, [Defined to 1 if midauth extensions are enabled.])
+    AC_DEFINE(CONFIG_HIP_MIDAUTH)
+    AH_TEMPLATE(CONFIG_HIP_MIDAUTH, [Defined to 1 if midauth extensions are enabled.])
 fi
 AM_CONDITIONAL(HIP_MIDAUTH, test x"$ac_cv_use_midauth" = x"yes")
 
 AC_ARG_ENABLE(performance,
-             AC_HELP_STRING([--enable-performance],
-                            [Performace measurement support (default is NO)]),
-             [ac_cv_use_performance=$enableval], [ac_cv_use_performance=no])
+               AC_HELP_STRING([--enable-performance],
+                              [Performace measurement support (default is NO)]),
+               [ac_cv_use_performance=$enableval],
+               [ac_cv_use_performance=no])
 AC_CACHE_CHECK([whether to use performance measurement],
-               [ac_cv_use_performance], [ac_cv_use_performance=no])
+               [ac_cv_use_performance],
+               [ac_cv_use_performance=no])
 if test x"$ac_cv_use_performance" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_PERFORMANCE)
-        AH_TEMPLATE(CONFIG_HIP_PERFORMANCE, [Defined to 1 if performance measurements are enabled.])
+    AC_DEFINE(CONFIG_HIP_PERFORMANCE)
+    AH_TEMPLATE(CONFIG_HIP_PERFORMANCE, [Defined to 1 if performance measurements are enabled.])
 fi
 AM_CONDITIONAL(HIP_PERFORMANCE, test x"$ac_cv_use_performance" = x"yes")
 
 AC_ARG_ENABLE(demo,
-             AC_HELP_STRING([--enable-demo],
-                            [Demo output (default is NO)]),
-             [ac_cv_use_demo=$enableval], [ac_cv_use_demo=no])
+               AC_HELP_STRING([--enable-demo],
+                              [Demo output (default is NO)]),
+               [ac_cv_use_demo=$enableval],
+               [ac_cv_use_demo=no])
 AC_CACHE_CHECK([whether to print output for demos],
-               [ac_cv_use_demo], [ac_cv_use_demo=no])
+               [ac_cv_use_demo],
+               [ac_cv_use_demo=no])
 if test x"$ac_cv_use_demo" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_DEMO)
-        AH_TEMPLATE(CONFIG_HIP_DEMO, [Defined to 1 if demo is enabled.])
+    AC_DEFINE(CONFIG_HIP_DEMO)
+    AH_TEMPLATE(CONFIG_HIP_DEMO, [Defined to 1 if demo is enabled.])
 fi
-AM_CONDITIONAL(HIP_DEMO, test x"$ac_cv_use_demo" = x"yes")
 
 # Set default AM_CFLAGS for the complete project.
 AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $OPENWRT_CFLAGS $MAEMO_CFLAGS $GPROF_CFLAGS")
