@@ -479,11 +479,9 @@ int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
                                         hip_ha_t *entry);
 
 
-int hip_relay_handle_relay_to(struct hip_common *msg,
-                              int msg_type,
-                              struct in6_addr *src_addr,
-                              struct in6_addr *dst_addr,
-                              hip_portpair_t *msg_info);
+int hip_relay_handle_relay_to(const uint8_t packet_type,
+                              const uint32_t ha_state,
+                              struct hip_packet_context *packet_ctx);
 
 /**
  * function for full relay service. from I to R

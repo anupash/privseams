@@ -244,15 +244,6 @@ static inline unsigned long hip_hash_func(const hip_hit_t *hit)
     return hash;
 }
 
-static int hip_relay_forward_response(const hip_common_t *r,
-                                      const uint8_t type_hdr,
-                                      const in6_addr_t *r_saddr,
-                                      const in6_addr_t *r_daddr,
-                                      const hip_portpair_t *r_info,
-                                      const in6_addr_t *relay_to_addr,
-                                      const in_port_t relay_to_port);
-
-
 static void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relrec_type_t *type)
 {
     hip_relrec_t *fetch_record = hip_relht_get(rec);
@@ -880,73 +871,6 @@ out_err:
  *           No lines over 80 characters. No capital letters in funcion names
  *           (C-style). Function commmends should be in header file.
  */
-int hip_relay_handle_relay_to(struct hip_common *msg,
-                              int msg_type,
-                              struct in6_addr *src_addr,
-                              struct in6_addr *dst_addr,
-                              hip_portpair_t *msg_info)
-{
-    int err           = 0;
-    hip_relrec_t *rec = NULL, dummy;
-    struct hip_relay_to *relay_to;
-    //check if full relay service is active
-
-    if (hip_relay_get_status() == HIP_RELAY_OFF) {
-        /* Should we set err to -1? */
-        goto out_err;
-    }
-
-    HIP_DEBUG("handle_relay_to: full relay is on\n");
-    // check if the relay has been registered
-
-    /* Check if we have a relay record in our database matching the
-     * I's HIT. We should find one, if the I is
-     * registered to relay.*/
-    HIP_DEBUG_HIT("Searching relay record on HIT:", &msg->hits);
-    memcpy(&(dummy.hit_r), &msg->hits, sizeof(msg->hits));
-    rec = hip_relht_get(&dummy);
-
-    if (rec == NULL) {
-        HIP_DEBUG("handle_relay_to: No matching relay record found.\n");
-        goto out_err;
-    } else if (rec->type == HIP_RVSRELAY) {
-        goto out_err;
-    }
-
-    HIP_DEBUG("handle_relay_to: Matching relay record found:Full-Relay.\n");
-
-    //check if there is a relay_to parameter
-    relay_to = (struct hip_relay_to *) hip_get_param(msg, HIP_PARAM_RELAY_TO);
-    HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
-
-    // check msg type
-    switch (msg_type) {
-    case HIP_R1:
-    case HIP_R2:
-    case HIP_UPDATE:
-    case HIP_NOTIFY:
-        HIP_DEBUG_IN6ADDR("the relay to address: ",
-                          (struct in6_addr *) &relay_to->address);
-        HIP_DEBUG("the relay to ntohs(port): %d",
-                  ntohs(relay_to->port));
-        hip_relay_forward_response(
-            msg, msg_type, src_addr, dst_addr, msg_info,
-            (in6_addr_t *) &relay_to->address, ntohs(relay_to->port));
-        //  state = HIP_STATE_NONE;
-        err = 1;
-        goto out_err;
-    }
-
-out_err:
-    return err;
-}
-
-/**
- * @todo     Xiang! Please, add decent Doxygen comments, check the doxy syntax
- *           from doc/HACKING. Stick to C-coding style using LINUX indendation.
- *           No lines over 80 characters. No capital letters in funcion names
- *           (C-style). Function commmends should be in header file.
- */
 static int hip_relay_forward_response(const hip_common_t *r,
                                       const uint8_t type_hdr,
                                       const in6_addr_t *r_saddr,
@@ -995,6 +919,77 @@ out_err:
     if (r_to_be_relayed != NULL) {
         HIP_FREE(r_to_be_relayed);
     }
+    return err;
+}
+
+/**
+ * @todo     Xiang! Please, add decent Doxygen comments, check the doxy syntax
+ *           from doc/HACKING. Stick to C-coding style using LINUX indendation.
+ *           No lines over 80 characters. No capital letters in funcion names
+ *           (C-style). Function commmends should be in header file.
+ */
+int hip_relay_handle_relay_to(const uint8_t packet_type,
+                              const uint32_t ha_state,
+                              struct hip_packet_context *packet_ctx)
+{
+    int err           = 0;
+    hip_relrec_t *rec = NULL, dummy;
+    struct hip_relay_to *relay_to;
+    //check if full relay service is active
+
+    if (hip_relay_get_status() == HIP_RELAY_OFF) {
+        /* Should we set err to -1? */
+        goto out_err;
+    }
+
+    HIP_DEBUG("handle_relay_to: full relay is on\n");
+    // check if the relay has been registered
+
+    /* Check if we have a relay record in our database matching the
+     * I's HIT. We should find one, if the I is
+     * registered to relay.*/
+    HIP_DEBUG_HIT("Searching relay record on HIT:",
+                  &packet_ctx->input_msg->hits);
+
+    memcpy(&(dummy.hit_r), &packet_ctx->input_msg->hits, sizeof(packet_ctx->input_msg->hits));
+    rec = hip_relht_get(&dummy);
+
+    if (rec == NULL) {
+        HIP_DEBUG("handle_relay_to: No matching relay record found.\n");
+        goto out_err;
+    } else if (rec->type == HIP_RVSRELAY) {
+        goto out_err;
+    }
+
+    HIP_DEBUG("handle_relay_to: Matching relay record found:Full-Relay.\n");
+
+    //check if there is a relay_to parameter
+    relay_to = (struct hip_relay_to *) hip_get_param(packet_ctx->input_msg, HIP_PARAM_RELAY_TO);
+    HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
+
+    // check msg type
+    switch (packet_type) {
+    case HIP_R1:
+    case HIP_R2:
+    case HIP_UPDATE:
+    case HIP_NOTIFY:
+        HIP_DEBUG_IN6ADDR("the relay to address: ",
+                          (struct in6_addr *) &relay_to->address);
+        HIP_DEBUG("the relay to ntohs(port): %d",
+                  ntohs(relay_to->port));
+        hip_relay_forward_response(packet_ctx->input_msg,
+                                   packet_type,
+                                   packet_ctx->src_addr,
+                                   packet_ctx->dst_addr,
+                                   packet_ctx->msg_ports,
+                                   (in6_addr_t *) &relay_to->address,
+                                   ntohs(relay_to->port));
+        //  state = HIP_STATE_NONE;
+        err = 1;
+        goto out_err;
+    }
+
+out_err:
     return err;
 }
 

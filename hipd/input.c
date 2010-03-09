@@ -505,14 +505,10 @@ static int hip_packet_to_drop(hip_ha_t *entry,
  * @param info  a pointer to the source and destination ports.
  * @return      zero on success, or negative error value on error.
  */
-int hip_receive_control_packet(struct hip_common *msg,
-                               struct in6_addr *src_addr,
-                               struct in6_addr *dst_addr,
-                               hip_portpair_t *msg_info)
+int hip_receive_control_packet(struct hip_packet_context *packet_ctx)
 {
     int err = 0;
     struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
-    struct hip_packet_context ctx = {0};
     uint32_t type, state;
 
     /* Debug printing of received packet information. All received HIP
@@ -520,64 +516,67 @@ int hip_receive_control_packet(struct hip_common *msg,
      * printing packet data here works for all packets. To avoid excessive
      * debug printing do not print this information inside the individual
      * receive or handle functions. */
-    HIP_DEBUG_HIT("HIT Sender  ", &msg->hits);
-    HIP_DEBUG_HIT("HIT Receiver", &msg->hitr);
+    HIP_DEBUG_HIT("HIT Sender  ", &packet_ctx->input_msg->hits);
+    HIP_DEBUG_HIT("HIT Receiver", &packet_ctx->input_msg->hitr);
     HIP_DEBUG("source port: %u, destination port: %u\n",
-              msg_info->src_port, msg_info->dst_port);
-    HIP_DUMP_MSG(msg);
+              packet_ctx->msg_ports->src_port,
+              packet_ctx->msg_ports->dst_port);
 
-    if (hip_hidb_hit_is_our(&msg->hits) &&
-        (IN6_ARE_ADDR_EQUAL(&msg->hitr, &msg->hits) ||
-         IN6_ARE_ADDR_EQUAL(&msg->hitr, &ipv6_any_addr)) &&
-        !hip_addr_is_loopback(dst_addr) &&
-        !hip_addr_is_loopback(src_addr) &&
-        !IN6_ARE_ADDR_EQUAL(src_addr, dst_addr)) {
+    HIP_DUMP_MSG(packet_ctx->input_msg);
+
+    if (hip_hidb_hit_is_our(&packet_ctx->input_msg->hits) &&
+        (IN6_ARE_ADDR_EQUAL(&packet_ctx->input_msg->hitr,
+                            &packet_ctx->input_msg->hits) ||
+         IN6_ARE_ADDR_EQUAL(&packet_ctx->input_msg->hitr,
+                            &ipv6_any_addr)) &&
+        !hip_addr_is_loopback(packet_ctx->dst_addr) &&
+        !hip_addr_is_loopback(packet_ctx->src_addr) &&
+        !IN6_ARE_ADDR_EQUAL(packet_ctx->src_addr, packet_ctx->dst_addr)) {
         HIP_DEBUG("Invalid loopback packet. Dropping.\n");
         goto out_err;
     }
 
-    HIP_IFEL(hip_check_network_msg(msg),
+    HIP_IFEL(hip_check_network_msg(packet_ctx->input_msg),
              -1,
              "Checking control message failed.\n");
 
-    type  = hip_get_msg_type(msg);
+    type  = hip_get_msg_type(packet_ctx->input_msg);
 
     /** @todo Check packet csum.*/
 
-    ctx.hadb_entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+    packet_ctx->hadb_entry = hip_hadb_find_byhits(&packet_ctx->input_msg->hits,
+                                                  &packet_ctx->input_msg->hitr);
 
     // Check if we need to drop the packet
-    if (ctx.hadb_entry &&
-        hip_packet_to_drop(ctx.hadb_entry, type, &msg->hitr) == 1) {
+    if (packet_ctx->hadb_entry &&
+        hip_packet_to_drop(packet_ctx->hadb_entry,
+                           type,
+                           &packet_ctx->input_msg->hitr) == 1) {
         HIP_DEBUG("Ignoring the packet sent.\n");
         err = -1;
         goto out_err;
     }
 
-    ctx.input_msg = msg;
-    ctx.src_addr  = src_addr;
-    ctx.dst_addr  = dst_addr;
-    ctx.msg_ports = msg_info;
-
-    if (ctx.hadb_entry) {
-        state = ctx.hadb_entry->state;
+    if (packet_ctx->hadb_entry) {
+        state = packet_ctx->hadb_entry->state;
     } else {
         state = HIP_STATE_NONE;
     }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    if (!ctx.hadb_entry && opportunistic_mode &&
+    if (!packet_ctx->hadb_entry && opportunistic_mode &&
         (type == HIP_I1 || type == HIP_R1)) {
-        ctx.hadb_entry = hip_oppdb_get_hadb_entry_i1_r1(msg,
-                                               src_addr,
-                                               dst_addr,
-                                               msg_info);
+        packet_ctx->hadb_entry =
+                hip_oppdb_get_hadb_entry_i1_r1(packet_ctx->input_msg,
+                                               packet_ctx->src_addr,
+                                               packet_ctx->dst_addr,
+                                               packet_ctx->msg_ports);
     }
 #endif
 
 #ifdef CONFIG_HIP_RVS
     /* check if it a relaying msg */
-    if (hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)) {
+    if (hip_relay_handle_relay_to(type, state, packet_ctx)) {
         err = -ECANCELED;
         goto out_err;
     } else {
@@ -585,7 +584,7 @@ int hip_receive_control_packet(struct hip_common *msg,
     }
 #endif
 
-    hip_run_handle_functions(type, state, &ctx);
+    hip_run_handle_functions(type, state, packet_ctx);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Write PERF_SIGN, PERF_DSA_SIGN_IMPL, PERF_RSA_SIGN_IMPL," \
@@ -630,19 +629,16 @@ out_err:
  * @param info  a pointer to the source and destination ports.
  * @return      zero on success, or negative error value on error.
  */
-int hip_receive_udp_control_packet(struct hip_common *msg,
-                                   struct in6_addr *saddr,
-                                   struct in6_addr *daddr,
-                                   hip_portpair_t *info)
+int hip_receive_udp_control_packet(struct hip_packet_context *packet_ctx)
 {
-    hip_ha_t *entry;
-    int err                       = 0, type;
-    struct in6_addr *saddr_public = saddr;
+    int err         = 0, type;
+    hip_ha_t *entry = NULL;
 
     _HIP_DEBUG("hip_nat_receive_udp_control_packet() invoked.\n");
 
-    type  = hip_get_msg_type(msg);
-    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+    type  = hip_get_msg_type(packet_ctx->input_msg);
+    entry = hip_hadb_find_byhits(&packet_ctx->input_msg->hits,
+                                 &packet_ctx->input_msg->hitr);
 
 #ifndef CONFIG_HIP_RVS
     /* The ip of RVS is taken to be ip of the peer while using RVS server
@@ -657,10 +653,10 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
          * used for setting up the SAs: handle_r1 creates one-way SA and
          * handle_i2 the other way; let's make sure that they are the
          * same. */
-        saddr_public = &entry->peer_addr;
+        packet_ctx->src_addr = &entry->peer_addr;
     }
 #endif
-    HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr, info), -1,
+    HIP_IFEL(hip_receive_control_packet(packet_ctx), -1,
              "receiving of control packet failed\n");
 out_err:
     return err;

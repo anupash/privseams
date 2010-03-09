@@ -403,10 +403,7 @@ static int hipd_main(int argc, char *argv[])
                                         0)) {
                 HIP_ERROR("Reading network msg failed\n");
             } else {
-                err = hip_receive_control_packet(packet_ctx.input_msg,
-                                                 packet_ctx.src_addr,
-                                                 packet_ctx.dst_addr,
-                                                 packet_ctx.msg_ports);
+                err = hip_receive_control_packet(&packet_ctx);
                 if (err) {
                     HIP_ERROR("hip_receive_control_packet()!\n");
                 }
@@ -428,10 +425,7 @@ static int hipd_main(int argc, char *argv[])
                                         IPV4_HDR_SIZE)) {
                 HIP_ERROR("Reading network msg failed\n");
             } else {
-                err = hip_receive_control_packet(packet_ctx.input_msg,
-                                                 packet_ctx.src_addr,
-                                                 packet_ctx.dst_addr,
-                                                 packet_ctx.msg_ports);
+                err = hip_receive_control_packet(&packet_ctx);
                 if (err) {
                     HIP_ERROR("hip_receive_control_packet()!\n");
                 }
@@ -460,10 +454,7 @@ static int hipd_main(int argc, char *argv[])
                 /* If the values were read in successfully, we
                  * do the UDP specific stuff next. */
             } else {
-                err =  hip_receive_udp_control_packet(packet_ctx.input_msg,
-                                                      packet_ctx.src_addr,
-                                                      packet_ctx.dst_addr,
-                                                      packet_ctx.msg_ports);
+                err =  hip_receive_udp_control_packet(&packet_ctx);
             }
         }
 

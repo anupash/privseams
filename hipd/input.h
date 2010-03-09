@@ -76,15 +76,9 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
 int hip_verify_packet_rvs_hmac(struct hip_common *msg,
                                struct hip_crypto_key *crypto_key);
 
-int hip_receive_control_packet(struct hip_common *msg,
-                               struct in6_addr *src_addr,
-                               struct in6_addr *dst_addr,
-                               hip_portpair_t *msg_info);
+int hip_receive_control_packet(struct hip_packet_context *packet_ctx);
 
-int hip_receive_udp_control_packet(struct hip_common *msg,
-                                   struct in6_addr *saddr,
-                                   struct in6_addr *daddr,
-                                   hip_portpair_t *info);
+int hip_receive_udp_control_packet(struct hip_packet_context *packet_ctx);
 
 int hip_handle_i1(const uint8_t packet_type,
                   const uint32_t ha_state,
