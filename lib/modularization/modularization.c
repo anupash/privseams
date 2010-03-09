@@ -33,6 +33,19 @@ struct function {
 static hip_ll_t *state_init_functions;
 
 /**
+ * List of module identifier.
+ *
+ * Used to check, whether a certain module is loaded.
+ *
+ */
+static char **module_list;
+
+/**
+ * Number of enabled modules.
+ */
+static uint16_t num_modules = 0;
+
+/**
  * lmod_init_state
  *
  * Initializes a new data structure for storage of references to state items.
@@ -315,4 +328,76 @@ int lmod_unregister_function(hip_ll_t *list, const void *function)
     }
 
     return 0;
+}
+
+/**
+ * lmod_add_module_id
+ *
+ * Add an identifier to the module list. All modules should register an id.
+ * So everyone else can check, if a certain module is loaded.
+ *
+ * @note Call lmod_uninit_module_list() to free the allocated memory!
+ *
+ * @param *module_id String identifier for the module to register.
+ *
+ * @return Success =  0
+ *         Error   = -1 (if the identifier already exists)
+ */
+int lmod_add_module_id(const char *module_id)
+{
+    if (lmod_module_exists(module_id)) {
+        return -1;
+    }
+
+    module_list = (char **)realloc(module_list,
+                                   (num_modules + 1) * sizeof(char *));
+
+    module_list[num_modules++] = strdup(module_id);
+
+    return num_modules-1;
+}
+
+/**
+ * lmod_module_exists
+ *
+ * Check whether a certain module is enabled.
+ *
+ * @param *module_id String identifier for the module to check.
+ *
+ * @return 0, if module with this id is NOT registered
+ *         1, if module with this id is registered
+ */
+int lmod_module_exists(const char *module_id)
+{
+    unsigned int i;
+
+    for (i = 0; i < num_modules; i++) {
+       if (0 == strcmp(module_id, module_list[i])) {
+           return 1;
+       }
+    }
+
+    return 0;
+}
+
+/**
+ * lmod_uninit_module_list
+ *
+ * Free all allocated memory for storage of the module list.
+ *
+ * @note Call this function, if you have added module id's.
+ *
+ */
+void lmod_uninit_module_list(void)
+{
+    int i;
+
+    if (module_list) {
+        for (i = 0; i < num_modules; i++) {
+            if (module_list[i]) {
+                free(module_list[i]);
+            }
+        }
+        free(module_list);
+    }
 }
