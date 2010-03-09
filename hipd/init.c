@@ -1039,6 +1039,8 @@ void hip_exit(int signal)
 
     hip_dh_uninit();
 
+    lmod_uninit_module_list();
+
     return;
 }
 

@@ -877,6 +877,8 @@ out_err:
  */
 int hip_update_init(void)
 {
+    lmod_add_module_id("update");
+
     lmod_register_state_init_function(&hip_update_init_state);
 
     hip_register_handle_function(HIP_UPDATE,
