@@ -284,6 +284,7 @@ int hip_register_socket(int socketfd,
 
     new_socket->priority = priority;
     new_socket->fd       = socketfd;
+    new_socket->func_ptr = func_ptr;
 
     hip_sockets = lmod_register_function(hip_sockets,
                                          new_socket,
@@ -322,7 +323,6 @@ int hip_get_highest_descriptor(void)
 /**
  * hip_prepare_fd_set
  *
- *
  */
 void hip_prepare_fd_set(fd_set *read_fdset)
 {
@@ -333,6 +333,29 @@ void hip_prepare_fd_set(fd_set *read_fdset)
     if (hip_sockets) {
         while ((iter = hip_ll_iterate(hip_sockets, iter))) {
             FD_SET(((struct socketfd*) iter->ptr)->fd, read_fdset);
+        }
+    } else {
+        HIP_DEBUG("No sockets registered.\n");
+    }
+}
+
+/**
+ * hip_run_socket_handles
+ *
+ */
+void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
+{
+    hip_ll_node_t *iter = NULL;
+    int socketfd;
+
+    if (hip_sockets) {
+        while ((iter = hip_ll_iterate(hip_sockets, iter))) {
+            socketfd = ((struct socketfd*) iter->ptr)->fd;
+
+            HIP_DEBUG("HuSo\n");
+            if (FD_ISSET(socketfd, read_fdset)) {
+//                ((struct socketfd*) iter->ptr)->func_ptr(socketfd, ctx);
+            }
         }
     } else {
         HIP_DEBUG("No sockets registered.\n");

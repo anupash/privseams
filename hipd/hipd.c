@@ -390,6 +390,8 @@ static int hipd_main(int argc, char *argv[])
         hip_perf_start_benchmark(perf_set, PERF_ALL);
 #endif
 
+        hip_run_socket_handles(&read_fdset, &packet_ctx);
+
         if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset)) {
 
             hip_msg_init(packet_ctx.input_msg);

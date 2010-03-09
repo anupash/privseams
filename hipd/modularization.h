@@ -43,6 +43,8 @@ int hip_get_highest_descriptor(void);
 
 void hip_prepare_fd_set(fd_set *read_fdset);
 
+void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx);
+
 void hip_uninit_sockets(void);
 
 #endif /* HIP_HIPD_MODULARIZATION_H */
