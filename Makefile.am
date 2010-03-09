@@ -6,8 +6,8 @@ ACLOCAL_AMFLAGS  = -I m4
 # make sure the check the "make bin" still works)
 #
 EXTRA_DIST =  debian doc hipext hipfwmi patches test/packaging test/configs
-EXTRA_DIST += Android.mk check_header_verbosity.sh tcp verbose-headers.txt
-EXTRA_DIST += autogen.sh i3-cfg-PL.xml release.version
+EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh i3-cfg-PL.xml
+EXTRA_DIST += release.version tcp verbose-headers.txt
 EXTRA_DIST += $(wildcard agent/*.h)
 EXTRA_DIST += $(wildcard i3/*/*.h)
 EXTRA_DIST += $(wildcard lib/android/*.c)
