@@ -93,22 +93,31 @@ AC_SUBST(usagi_libc)
 AC_ARG_ENABLE(firewall,
               AC_HELP_STRING([--enable-firewall],
                              [HIP enabled firewall daemon (default is YES)]),
-             [ac_cv_use_firewall=$enableval],
-             [ac_cv_use_firewall=yes])
+              [ac_cv_use_firewall=$enableval],
+              [ac_cv_use_firewall=yes])
 AC_CACHE_CHECK([whether to use firewall],
-               [ac_cv_use_firewall], [ac_cv_use_firewall=yes])
+               [ac_cv_use_firewall],
+               [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
-        AC_CHECK_LIB(ipq, ipq_create_handle,, [AC_MSG_ERROR([libipq not found])])
-        AC_CHECK_LIB(config, config_setting_index,, [AC_MSG_WARN([libconfig not found, using default configuration of esp token extension])])
+        AC_CHECK_LIB(ipq, ipq_create_handle,,
+                     [AC_MSG_ERROR([libipq not found])])
+        AC_CHECK_LIB(config, config_setting_index,,
+                     [AC_MSG_WARN([libconfig not found, using default config])])
         AC_DEFINE(CONFIG_HIP_FIREWALL)
         AH_TEMPLATE(CONFIG_HIP_FIREWALL, [Defined to 1 if firewall is enabled.])
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
 # Try to automatically detect GTK if not disabled or enabled by user
-PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.10.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
+PKG_CHECK_MODULES(GTK,
+                  gtk+-2.0 >= 2.10.0,
+                  ac_cv_use_agent=yes,
+                  ac_cv_use_agent=no)
 if test x"$ac_cv_use_agent" = x"no"; then
-        PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
+        PKG_CHECK_MODULES(GTK,
+                          gtk+-2.0 >= 2.8.0,
+                          ac_cv_use_agent=yes,
+                          ac_cv_use_agent=no)
         if test x"$ac_cv_use_agent" = x"yes"; then
                 AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
         fi
@@ -116,34 +125,41 @@ fi
 
 AC_ARG_ENABLE(agent,
               AC_HELP_STRING([--enable-agent],
-              [HIP enable user agent (default is YES)]),
-              [ac_cv_use_agent=$enableval],)
+                             [HIP enable user agent (default is YES)]),
+              [ac_cv_use_agent=$enableval],
+              [ac_cv_use_agent=yes])
 AC_CACHE_CHECK([whether to use agent],
-               [ac_cv_use_agent], [ac_cv_use_agent=yes])
+               [ac_cv_use_agent],
+               [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
+        AC_CHECK_LIB(sqlite3, sqlite3_open,,
+                     AC_MSG_ERROR(libsqlite3-dev not found))
         AC_DEFINE(CONFIG_HIP_AGENT)
-    AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
-        AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3-dev not found))
+        AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
 AC_ARG_ENABLE(cookie,
-             AC_HELP_STRING([--enable-cookie],
-                            [HIP cookie extensions (default is NO)]),
-             [ac_cv_use_cookie=$enableval], [ac_cv_use_cookie=no])
+              AC_HELP_STRING([--enable-cookie],
+                             [HIP cookie extensions (default is NO)]),
+              [ac_cv_use_cookie=$enableval],
+              [ac_cv_use_cookie=no])
 AC_CACHE_CHECK([whether to use cookie extensions],
-               [ac_cv_use_cookie], [ac_cv_use_cookie=no])
+               [ac_cv_use_cookie],
+               [ac_cv_use_cookie=no])
 if test x"$ac_cv_use_cookie" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_COOKIE)
         AH_TEMPLATE(CONFIG_HIP_COOKIE, [Defined to 1 if cookie is enabled.])
 fi
 
 AC_ARG_ENABLE(pfkey,
-             AC_HELP_STRING([--enable-pfkey],
-                            [HIP pfkey extensions (default is NO)]),
-             [ac_cv_use_pfkey=$enableval], [ac_cv_use_pfkey=no])
+              AC_HELP_STRING([--enable-pfkey],
+                             [HIP pfkey extensions (default is NO)]),
+              [ac_cv_use_pfkey=$enableval],
+              [ac_cv_use_pfkey=no])
 AC_CACHE_CHECK([whether to use pfkey extensions],
-               [ac_cv_use_pfkey], [ac_cv_use_pfkey=no])
+               [ac_cv_use_pfkey],
+               [ac_cv_use_pfkey=no])
 if test x"$ac_cv_use_pfkey" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_PFKEY)
         AH_TEMPLATE(CONFIG_HIP_PFKEY, [Defined to 1 if pfkey is enabled.])
@@ -190,8 +206,7 @@ AC_ARG_ENABLE(maemo,
              AC_HELP_STRING([--enable-maemo],
                             [Maemo (default is NO)]),
              [ac_cv_use_maemo=$enableval \
-              ac_cv_use_altsep=yes \
-              ac_cv_use_i3=no], [ac_cv_use_maemo=no])
+              ac_cv_use_altsep=yes, [ac_cv_use_maemo=no])
 AC_CACHE_CHECK([whether to use Maemo],
                [ac_cv_use_maemo], [ac_cv_use_maemo=no])
 if test x"$ac_cv_use_maemo" = x"yes"; then
