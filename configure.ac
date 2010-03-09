@@ -205,7 +205,6 @@ if test x"$ac_cv_use_maemo" = x"yes"; then
     AC_SUBST(MAEMO_CFLAGS, "-O2 -g -fgnu89-inline")
     AC_SUBST(MAEMO_CPPFLAGS, "-I/usr/include/libipq/")
 fi
-AM_CONDITIONAL(HIP_MAEMO, test x"$ac_cv_use_maemo" = x"yes")
 
 AC_ARG_ENABLE(openwrt,
                AC_HELP_STRING([--enable-openwrt],
@@ -224,7 +223,6 @@ if test x"$ac_cv_use_openwrt" = x"yes"; then
         AH_TEMPLATE(CONFIG_HIP_OPENWRT_MIPSLINUX, [Defined to 1 if mipslinux is enabled.])
     fi
 fi
-AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
 
 # if we already set altsep, then don't check the flags anymore
 if test x"$ac_cv_use_altsep" != x"yes"; then
