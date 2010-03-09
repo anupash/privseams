@@ -229,18 +229,16 @@ if test x"$ac_cv_use_altsep" != x"yes"; then
 AC_ARG_ENABLE(altsep,
              AC_HELP_STRING([--enable-altsep],
                             [Alternative privilege separation (default is NO)]),
-             [ac_cv_use_altsep=$enableval], [ac_cv_use_altsep=no])
+             [ac_cv_use_altsep=$enableval],
+             [ac_cv_use_altsep=no])
 fi
 AC_CACHE_CHECK([whether to use Alternative privilege separation],
-               [ac_cv_use_altsep], [ac_cv_use_altsep=no])
+               [ac_cv_use_altsep],
+               [ac_cv_use_altsep=no])
 if test x"$ac_cv_use_altsep" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_ALTSEP)
         AH_TEMPLATE(CONFIG_HIP_ALTSEP, [Defined to 1 if alternative privilege separation is enabled.])
 fi
-AM_CONDITIONAL(HIP_ALTSEP, test x"$ac_cv_use_altsep" = x"yes")
-
-# define this iff we have uuid lib
-AM_CONDITIONAL(HIP_UUIDLIB, test "$ac_has_uuid_lib" = "1")
 
 # if we already set i3, then don't check the flags anymore
 if test x"$ac_cv_use_i3" != x"no"; then
