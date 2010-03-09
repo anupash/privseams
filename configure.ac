@@ -163,8 +163,6 @@ AC_CACHE_CHECK([whether to use pfkey extensions],
 if test x"$ac_cv_use_pfkey" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_PFKEY)
         AH_TEMPLATE(CONFIG_HIP_PFKEY, [Defined to 1 if pfkey is enabled.])
-        AC_DEFINE(PATH_IPSEC_H, "netinet/ipsec.h")
-        AH_TEMPLATE(PATH_IPSEC_H, [Path to ipsec.h.])
         AM_PROG_LEX
 fi
 AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
