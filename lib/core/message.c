@@ -492,6 +492,8 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
     int err = 0, bytes = 0, total;
     socklen_t len;
 
+    HIP_DEBUG("Receiving user message.\n");
+
     memset(saddr, 0, sizeof(*saddr));
 
     len = sizeof(*saddr);
@@ -699,6 +701,8 @@ int hip_read_control_msg_v6(int socket,
                             struct hip_packet_context *packet_ctx,
                             int encap_hdr_size)
 {
+    HIP_DEBUG("Receiving a message on raw HIP from IPv6/HIP socket "\
+              " (file descriptor: %d).\n", socket);
     return hip_read_control_msg_all(socket, packet_ctx, encap_hdr_size, 0);
 }
 
@@ -717,5 +721,7 @@ int hip_read_control_msg_v4(int socket,
                             struct hip_packet_context *packet_ctx,
                             int encap_hdr_size)
 {
+    HIP_DEBUG("Receiving a message on raw HIP from IPv4/HIP socket "\
+              " (file descriptor: %d).\n", socket);
     return hip_read_control_msg_all(socket, packet_ctx, encap_hdr_size, 1);
 }

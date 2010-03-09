@@ -376,7 +376,7 @@ static int hipd_main(int argc, char *argv[])
             goto to_maintenance;
         }
 #ifdef CONFIG_HIP_PERFORMANCE
-        if (bench_set) {       //1 = true; 0 = false
+        if (bench_set) {
             HIP_DEBUG("Stop and write PERF_ALL\n");
             hip_perf_stop_benchmark(perf_set, PERF_ALL);
             hip_perf_write_benchmark(perf_set, PERF_ALL);
@@ -385,19 +385,15 @@ static int hipd_main(int argc, char *argv[])
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-                HIP_DEBUG("Start PERF_ALL\n");
-                bench_set = 1;         //1 = true; 0 = false
-                hip_perf_start_benchmark(perf_set, PERF_ALL);
+        HIP_DEBUG("Start PERF_ALL\n");
+        bench_set = 1;
+        hip_perf_start_benchmark(perf_set, PERF_ALL);
 #endif
 
         if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset)) {
-            /* Receiving of a raw HIP message from IPv6 socket. */
 
             hip_msg_init(packet_ctx.input_msg);
 
-            HIP_DEBUG("Receiving a message on raw HIP from " \
-                      "IPv6/HIP socket (file descriptor: %d).\n",
-                      hip_raw_sock_input_v6);
             if (hip_read_control_msg_v6(hip_raw_sock_input_v6,
                                         &packet_ctx,
                                         0)) {
@@ -411,15 +407,9 @@ static int hipd_main(int argc, char *argv[])
         }
 
         if (FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
-            HIP_DEBUG("HIP RAW SOCKET\n");
-            /* Receiving of a raw HIP message from IPv4 socket. */
-            HIP_DEBUG("Receiving a message on raw HIP from " \
-                      "IPv4/HIP socket (file descriptor: %d).\n",
-                      hip_raw_sock_input_v4);
+
             hip_msg_init(packet_ctx.input_msg);
-            HIP_DEBUG("Getting a msg on v4\n");
-            /* Assuming that IPv4 header does not include any
-             * options */
+
             if (hip_read_control_msg_v4(hip_raw_sock_input_v4,
                                         &packet_ctx,
                                         IPV4_HDR_SIZE)) {
@@ -433,17 +423,10 @@ static int hipd_main(int argc, char *argv[])
         }
 
         if (FD_ISSET(hip_nat_sock_input_udp, &read_fdset)) {
-            /* Data structures for storing the source and
-             * destination addresses and ports of the incoming
-             * packet. */
-
-            /* Receiving of a UDP message from NAT socket. */
             HIP_DEBUG("Receiving a message on UDP from NAT " \
                       "socket (file descriptor: %d).\n",
                       hip_nat_sock_input_udp);
 
-            /* Initialization of the hip_common header struct. We'll
-             * store the HIP header data here. */
             hip_msg_init(packet_ctx.input_msg);
 
             err = hip_read_control_msg_v4(hip_nat_sock_input_udp,
@@ -451,18 +434,13 @@ static int hipd_main(int argc, char *argv[])
                                           HIP_UDP_ZERO_BYTES_LEN);
             if (err) {
                 HIP_ERROR("Reading network msg failed\n");
-                /* If the values were read in successfully, we
-                 * do the UDP specific stuff next. */
             } else {
                 err =  hip_receive_udp_control_packet(&packet_ctx);
             }
         }
 
         if (FD_ISSET(hip_user_sock, &read_fdset)) {
-            /* Receiving of a message from user socket. */
             struct sockaddr_in6 app_src;
-
-            HIP_DEBUG("Receiving user message.\n");
 
             hip_msg_init(packet_ctx.input_msg);
 
