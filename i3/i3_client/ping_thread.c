@@ -11,6 +11,7 @@
 
 
 #include <stdio.h>
+#include <arpa/inet.h>
     #include <errno.h>
 #ifndef _WIN32
     #include <pthread.h>

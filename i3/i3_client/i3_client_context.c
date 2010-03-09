@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/types.h>   /* basic system data types */
 #include <time.h>        /* timespec{} for pselect() */
+#include <arpa/inet.h>
 #ifndef _WIN32
     #include <unistd.h>
     #include <sys/errno.h>

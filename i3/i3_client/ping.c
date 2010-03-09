@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 #include <string.h>
+#include <arpa/inet.h>
 #ifndef _WIN32
     #include <unistd.h>
 #endif

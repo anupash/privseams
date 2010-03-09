@@ -13,6 +13,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 #ifndef _WIN32
         #include <pthread.h>
 #endif
