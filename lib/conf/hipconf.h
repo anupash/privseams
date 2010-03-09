@@ -74,7 +74,7 @@ hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
 # hit-to-ip set hit-to-ip.infrahip.net. # resolve HITs to locators in dynamic DNS zone\n\
 nsupdate on # send dynamic DNS updates\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
-opendht on # turn DHT support on (use /etc/hip/dhtservers to define the used server)\n\
+# opendht on # turn DHT support on (use /etc/hip/dhtservers to define the used server)\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # datapacket on # experimental draft hiccups extensions\n\
