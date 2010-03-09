@@ -299,9 +299,8 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
 DISTCLEANFILES = lib/ipsec/policy_token.h
 
-if HIP_PFKEY
-else
 # don't use libipsec, but xfrmapi
+if !HIP_PFKEY
 lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
 endif # HIPPFKEY
 
