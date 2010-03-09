@@ -286,27 +286,31 @@ fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(dht,
-             AC_HELP_STRING([--enable-dht],
-                            [DHT support (default is YES)]),
-             [ac_cv_use_dht=$enableval], [ac_cv_use_dht=yes])
+               AC_HELP_STRING([--enable-dht],
+                              [DHT support (default is YES)]),
+               [ac_cv_use_dht=$enableval],
+               [ac_cv_use_dht=yes])
 AC_CACHE_CHECK([whether to use dht],
-               [ac_cv_use_dht], [ac_cv_use_dht=yes])
+               [ac_cv_use_dht],
+               [ac_cv_use_dht=yes])
 if test x"$ac_cv_use_dht" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_DHT)
-        AH_TEMPLATE(CONFIG_HIP_DHT, [Defined to 1 if dht is enabled.])
-        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
+    AC_DEFINE(CONFIG_HIP_DHT)
+    AH_TEMPLATE(CONFIG_HIP_DHT, [Defined to 1 if dht is enabled.])
+    AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
 fi
 AM_CONDITIONAL(HIP_DHT, test x"$ac_cv_use_dht" = x"yes")
 
 AC_ARG_ENABLE(blind,
-             AC_HELP_STRING([--enable-blind],
-                            [HIP BLIND extensions (default is NO)]),
-             [ac_cv_use_blind=$enableval], [ac_cv_use_blind=no])
+               AC_HELP_STRING([--enable-blind],
+                              [HIP BLIND extensions (default is NO)]),
+               [ac_cv_use_blind=$enableval],
+               [ac_cv_use_blind=no])
 AC_CACHE_CHECK([whether to use BLIND],
-               [ac_cv_use_blind], [ac_cv_use_blind=no])
+               [ac_cv_use_blind],
+               [ac_cv_use_blind=no])
 if test x"$ac_cv_use_blind" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_BLIND)
-        AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if the blind extension is enabled.])
+    AC_DEFINE(CONFIG_HIP_BLIND)
+    AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if the blind extension is enabled.])
 fi
 
 AC_ARG_ENABLE(profiling,
