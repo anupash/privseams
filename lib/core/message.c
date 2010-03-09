@@ -502,12 +502,13 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 
     _HIP_DEBUG("msg total length = %d\n", total);
 
-    /** @todo Compiler warning;
-     *  warning: pointer targets in passing argument 6 of 'recvfrom'
-     *  differ in signedness. */
-    HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0,
+    HIP_IFEL(((bytes = recvfrom(socket,
+                                hip_msg,
+                                total,
+                                0,
                                 (struct sockaddr *) saddr,
-                                &len)) != total), -1, "recv\n");
+                                &len)) != total),
+               -1, "recv\n");
 
     HIP_DEBUG("received user message from local port %d\n",
               ntohs(saddr->sin6_port));
