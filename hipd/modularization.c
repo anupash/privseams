@@ -352,7 +352,6 @@ void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
         while ((iter = hip_ll_iterate(hip_sockets, iter))) {
             socketfd = ((struct socketfd*) iter->ptr)->fd;
 
-            HIP_DEBUG("HuSo\n");
             if (FD_ISSET(socketfd, read_fdset)) {
 //                ((struct socketfd*) iter->ptr)->func_ptr(socketfd, ctx);
             }
