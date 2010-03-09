@@ -126,10 +126,7 @@ int hip_match_hit(const void *, const void *);
 int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 int convert_string_to_address(const char *str, struct in6_addr *ip6);
 
-hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
-hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
 int hip_auth_key_length_esp(int tid);
-int hip_transform_key_length(int tid);
 int hip_hmac_key_length(int tid);
 int hip_enc_key_length(int tid);
 uint64_t hip_get_current_birthday(void);

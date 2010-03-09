@@ -28,6 +28,7 @@
 
 #include "hipd/hidb.h"
 #include "lib/core/debug.h"
+#include "lib/core/transform.h"
 #include "lib/core/ife.h"
 #include "hipd/hadb.h"
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */

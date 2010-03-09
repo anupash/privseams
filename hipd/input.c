@@ -30,6 +30,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
+#include "lib/core/transform.h"
 #include "dh.h"
 #include "lib/core/misc.h"
 #include "hidb.h"
