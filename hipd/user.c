@@ -16,10 +16,7 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "user.h"
 #include "esp_prot_anchordb.h"
 #include "lib/dht/libhipdht.h"

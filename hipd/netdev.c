@@ -21,13 +21,11 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <ifaddrs.h>
+
+#include "config.h"
 #include "lib/tool/nlink.h"
 #include "netdev.h"
 #include "maintenance.h"

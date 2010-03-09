@@ -1,11 +1,9 @@
 #ifndef HIP_LIB_CORE_SOLVE_H
 #define HIP_LIB_CORE_SOLVE_H
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
-
 #include <sys/types.h>
+
+#include "config.h"
 #include "lib/core/crypto.h"
 #include "protodefs.h"
 #include "state.h"

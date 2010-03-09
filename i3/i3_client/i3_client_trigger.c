@@ -18,10 +18,7 @@
     #include <sys/time.h>
 #endif
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "../i3/i3.h"
 #include "../i3/i3_fun.h"
 

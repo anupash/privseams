@@ -23,10 +23,7 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/misc.h"

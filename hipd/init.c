@@ -12,10 +12,7 @@
 #include <sys/types.h>
 #include <netinet/icmp6.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "init.h"

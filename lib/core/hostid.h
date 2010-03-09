@@ -1,9 +1,7 @@
 #ifndef HIP_LIB_CORE_HOSTID_H
 #define HIP_LIB_CORE_HOSTID_H
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
+#include "config.h"
 
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
                            struct in6_addr *hit, int hit_type);

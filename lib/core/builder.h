@@ -13,10 +13,7 @@
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "debug.h"
 #include "misc.h"
 #include "icomm.h"

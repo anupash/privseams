@@ -1,10 +1,6 @@
 #ifndef HIP_LIB_CORE_CRYPTO_H
 #define HIP_LIB_CORE_CRYPTO_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <sys/time.h>
 #include <time.h>
 #include <openssl/dsa.h>
@@ -26,6 +22,7 @@
 #include <string.h>
 #include <netinet/in.h>
 
+#include "config.h"
 #include "hipd/hidb.h"
 #include "lib/core/debug.h"
 #include "lib/core/transform.h"

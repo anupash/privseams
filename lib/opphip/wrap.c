@@ -15,10 +15,6 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
@@ -27,6 +23,7 @@
 #include <pthread.h>
 #include <poll.h>
 
+#include "config.h"
 #include "lib/core/debug.h"
 #include "hipd/hadb.h"
 #include "lib/core/hashtable.h"

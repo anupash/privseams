@@ -1,12 +1,10 @@
 #ifndef HIP_LIB_CORE_UTILS_H
 #define HIP_LIB_CORE_UTILS_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <sys/un.h>
 #include <stdlib.h>
+
+#include "config.h"
 #include "protodefs.h"
 #include "list.h"
 #include "debug.h"

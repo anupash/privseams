@@ -12,10 +12,6 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +27,8 @@
 #  define __user
 #endif
 #include <signal.h>
+
+#include "config.h"
 #include "conntest.h"
 
 static void sig_handler(int signo)

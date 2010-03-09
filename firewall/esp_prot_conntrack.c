@@ -16,11 +16,7 @@
 #define _BSD_SOURCE
 
 #include "lib/core/builder.h"
-
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "esp_prot_conntrack.h"
 #include "esp_prot_api.h"
 #include "hslist.h"

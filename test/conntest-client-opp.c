@@ -7,10 +7,6 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +19,8 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <time.h>
+
+#include "config.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "conntest.h"

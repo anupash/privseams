@@ -8,10 +8,7 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #ifdef CONFIG_HIP_ICOOKIE
 #include "icookie.h"
 #include "lib/core/solve.h"

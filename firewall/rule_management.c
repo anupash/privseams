@@ -28,10 +28,7 @@
 #include <limits.h>
 #include <linux/netfilter_ipv6.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "rule_management.h"
 #include "helpers.h"
 #include "lib/core/builder.h"

@@ -44,10 +44,6 @@ static int yygrowstack(void);
 #define YYPREFIX "__libipsec"
 #line 64 "policy_parse.y"
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -62,6 +58,7 @@ static int yygrowstack(void);
 
 #include <errno.h>
 
+#include "config.h"
 #include "ipsec_strerror.h"
 #include "libpfkey.h"
 

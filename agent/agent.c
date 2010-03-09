@@ -16,10 +16,6 @@
 
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <fcntl.h>
 #include <sys/un.h>
 #include <sys/types.h>
@@ -32,6 +28,7 @@
 #include <unistd.h>
 #include <time.h>
 
+#include "config.h"
 #include "agent.h"
 #include "tools.h"
 #include "gui_interface.h"

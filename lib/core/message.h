@@ -9,17 +9,10 @@
 #ifndef HIP_LIB_CORE_MESSAGE_H
 #define HIP_LIB_CORE_MESSAGE_H
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <errno.h>
 #include <netinet/in.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "lib/tool/nlink.h"
 #include "debug.h"
 #include "icomm.h"

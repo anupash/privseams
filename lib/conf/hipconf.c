@@ -35,11 +35,9 @@
 /* required for ifreq */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <sys/ioctl.h>
+
+#include "config.h"
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "hipconf.h"

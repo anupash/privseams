@@ -7,10 +7,7 @@
 #ifndef HIP_LIB_CORE_STATE_H
 #define HIP_LIB_CORE_STATE_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "hashtable.h"
 #include "esp_prot_common.h"
 #include "hip_statistics.h"

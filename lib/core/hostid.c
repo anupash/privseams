@@ -8,16 +8,14 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
-
 #include <netinet/in.h>
 #include <lib/core/ife.h>
 #include <lib/core/debug.h>
 #include <lib/core/protodefs.h>
 #include <lib/core/crypto.h>
 #include <stdlib.h>
+
+#include "config.h"
 #include "hostid.h"
 #include "filemanip.h"
 

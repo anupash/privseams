@@ -10,13 +10,10 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <string.h>
-#include "filemanip.h"
 
+#include "config.h"
+#include "filemanip.h"
 #include "misc.h"
 #include "prefix.h"
 

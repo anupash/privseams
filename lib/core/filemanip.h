@@ -3,9 +3,7 @@
 
 #include <sys/types.h>
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif /* HAVE_CONFIG_H */
+#include "config.h"
 
 int hip_create_lock_file(char *filename, int killold);
 int hip_remove_lock_file(char *filename);

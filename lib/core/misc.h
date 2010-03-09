@@ -10,13 +10,10 @@
 #ifndef HIP_LIB_CORE_MISC_H
 #define HIP_LIB_CORE_MISC_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
-#include "hipd/hidb.h"
-
 #include <string.h>
+
+#include "config.h"
+#include "hipd/hidb.h"
 #include "hipd/registration.h"
 #include "lib/core/prefix.h"
 #include "icomm.h"

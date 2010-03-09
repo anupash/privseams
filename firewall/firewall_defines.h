@@ -5,10 +5,7 @@
 #include <libipq.h>
 #include <string.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "lib/core/linkedlist.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/esp_prot_common.h"

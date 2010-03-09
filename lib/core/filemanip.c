@@ -10,11 +10,9 @@
 
 #include "filemanip.h"
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <unistd.h>
+
+#include "config.h"
 #include "crypto.h"
 
 /**

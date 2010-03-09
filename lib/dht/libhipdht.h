@@ -1,11 +1,7 @@
 #ifndef HIP_LIB_DHT_LIBHIPDHT_H
 #define HIP_LIB_DHT_LIBHIPDHT_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
-
+#include "config.h"
 #include "lib/core/protodefs.h"
 
 /* Resolve the gateway address using opendht.nyuld.net */

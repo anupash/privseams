@@ -16,9 +16,7 @@
 #ifndef HIP_FIREWALL_ESP_PROT_CONFIG_H
 #define HIP_FIREWALL_ESP_PROT_CONFIG_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
+#include "config.h"
 
 /* WORKAROUND: some platforms don't support libconfig out of the box */
 #ifdef HAVE_LIBCONFIG

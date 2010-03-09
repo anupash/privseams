@@ -7,10 +7,6 @@
 #ifndef HIP_LIB_TOOL_LUTIL_H
 #define HIP_LIB_TOOL_LUTIL_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -20,6 +16,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 
+#include "config.h"
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 

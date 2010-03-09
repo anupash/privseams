@@ -32,11 +32,9 @@
  */
 
 %{
-#ifdef CONFIG_HIP_PFKEY
-
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif
+
+#ifdef CONFIG_HIP_PFKEY
 
 #include <sys/types.h>
 #include <sys/param.h>

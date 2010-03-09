@@ -16,10 +16,8 @@
 #include <stdio.h>              /* printf & co */
 #include <stdlib.h>             /* exit & co */
 #include <unistd.h>
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
 
+#include "config.h"
 #include "lib/core/hip_statistics.h"
 #include "lib/core/crypto.h"
 

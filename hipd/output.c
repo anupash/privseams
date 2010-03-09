@@ -16,10 +16,7 @@
 
 #include <netinet/icmp6.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "output.h"
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"

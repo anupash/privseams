@@ -8,12 +8,10 @@
 /* required for caddr_t */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <linux/pfkeyv2.h>
 #include <linux/ipsec.h>
+
+#include "config.h"
 #include "lib/ipsec/libpfkey.h"
 #include "pfkeyapi.h"
 

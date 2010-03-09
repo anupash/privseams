@@ -1,10 +1,7 @@
 #ifndef HIP_LIB_CORE_HOSTSFILES_H
 #define HIP_LIB_CORE_HOSTSFILES_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "prefix.h"
 #include "lib/conf/hipconf.h"
 //#include "misc.h"
