@@ -283,56 +283,6 @@ int hip_auth_key_length_esp(int tid)
 }
 
 /**
- * Generate the IPv4 header checksum
- *
- * @param s     source address
- * @param d     destination address
- * @param c     data
- * @return the calculated IPv4 header checksum
- */
-uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c, uint16_t len)
-{
-    uint8_t *src   = s;
-    uint8_t *dst   = d;
-    uint8_t *data  = c;
-    uint16_t word16;
-    uint32_t sum;
-    uint16_t i;
-
-    /* initialize sum to zero */
-    sum = 0;
-
-    /* make 16 bit words out of every two adjacent 8 bit words and */
-    /* calculate the sum of all 16 vit words */
-    for (i = 0; i < len; i = i + 2) {
-        word16 = ((((uint16_t) (data[i] << 8))) & 0xFF00) + (((uint16_t) data[i + 1]) & 0xFF);
-        sum    = sum + (unsigned long) word16;
-    }
-    /* add the TCP pseudo header which contains:
-       the IP source and destination addresses, */
-    for (i = 0; i < 4; i = i + 2) {
-        word16 = ((src[i] << 8) & 0xFF00) + (src[i + 1] & 0xFF);
-        sum    = sum + word16;
-    }
-    for (i = 0; i < 4; i = i + 2) {
-        word16 = ((dst[i] << 8) & 0xFF00) + (dst[i + 1] & 0xFF);
-        sum    = sum + word16;
-    }
-    /* the protocol number and the length of the TCP packet */
-    sum = sum + protocol + len;
-
-    /* keep only the last 16 bits of the 32 bit calculated sum
-       and add the carries */
-    while (sum >> 16) {
-        sum = (sum & 0xFFFF) + (sum >> 16);
-    }
-
-    /* Take the one's complement of sum */
-    sum = ~sum;
-    return htons((unsigned short) sum);
-}
-
-/**
  * convert a string into a binary IPv4 address (a wrapper for inet_pton())
  *
  * @param str the string to convert

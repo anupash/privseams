@@ -34,22 +34,6 @@ struct hi3_ipv6_addr {
     struct in6_addr sin6_addr;
 };
 
-struct pseudo_header6 {
-    unsigned char src_addr[16];
-    unsigned char dst_addr[16];
-    uint32_t           packet_length;
-    unsigned char zero[3];
-    uint8_t            next_hdr;
-};
-
-struct pseudo_header {
-    unsigned char src_addr[4];
-    unsigned char dst_addr[4];
-    uint8_t            zero;
-    uint8_t            protocol;
-    uint16_t           packet_length;
-};
-
 /**
  * Checks for illegal controls in a HIP packet Controls field.
  *

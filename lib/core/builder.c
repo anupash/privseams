@@ -73,6 +73,7 @@
 #include "hipd/input.h"
 #include "lib/core/crypto.h"
 #include "lib/core/hostid.h"
+#include "lib/tool/checksum.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
@@ -1987,93 +1988,6 @@ out_err:
     }
 
     return err;
-}
-
-/**
- * Calculates the checksum of a HIP packet with pseudo-header.
- *
- * @param data a pointer to a hip_common structure
- * @param src  The source address of the packet as a sockaddr_in or sockaddr_in6
- *             structure in network byte order. IPv6 mapped addresses are not supported.
- * @param dst  The destination address of the packet as a sockaddr_in or sockaddr_in6
- *             structure in network byte order. IPv6 mapped addresses are not supported.
- * @return     the checksum
- * @note       Checksumming is from Boeing's HIPD.
- */
-uint16_t hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
-{
-    uint16_t checksum      = 0;
-    unsigned long sum = 0;
-    int count         = 0, length = 0;
-    unsigned short *p = NULL;     /* 16-bit */
-    struct pseudo_header pseudoh;
-    struct pseudo_header6 pseudoh6;
-    uint32_t src_network, dst_network;
-    struct in6_addr *src6, *dst6;
-    struct hip_common *hiph = (struct hip_common *) data;
-
-    if (src->sa_family == AF_INET) {
-        /* IPv4 checksum based on UDP-- Section 6.1.2 */
-        src_network = ((struct sockaddr_in *) src)->sin_addr.s_addr;
-        dst_network = ((struct sockaddr_in *) dst)->sin_addr.s_addr;
-
-        memset(&pseudoh, 0, sizeof(struct pseudo_header));
-        memcpy(&pseudoh.src_addr, &src_network, 4);
-        memcpy(&pseudoh.dst_addr, &dst_network, 4);
-        pseudoh.protocol      = IPPROTO_HIP;
-        length                = (hiph->payload_len + 1) * 8;
-        pseudoh.packet_length = htons(length);
-
-        count                 = sizeof(struct pseudo_header); /* count always even number */
-        p                     = (unsigned short *) &pseudoh;
-    } else {
-        /* IPv6 checksum based on IPv6 pseudo-header */
-        src6 = &((struct sockaddr_in6 *) src)->sin6_addr;
-        dst6 = &((struct sockaddr_in6 *) dst)->sin6_addr;
-
-        memset(&pseudoh6, 0, sizeof(struct pseudo_header6));
-        memcpy(&pseudoh6.src_addr[0], src6, 16);
-        memcpy(&pseudoh6.dst_addr[0], dst6, 16);
-        length                 = (hiph->payload_len + 1) * 8;
-        pseudoh6.packet_length = htonl(length);
-        pseudoh6.next_hdr      = IPPROTO_HIP;
-
-        count                  = sizeof(struct pseudo_header6); /* count always even number */
-        p                      = (unsigned short *) &pseudoh6;
-    }
-    /*
-     * this checksum algorithm can be found
-     * in RFC 1071 section 4.1
-     */
-
-    /* sum the pseudo-header */
-    /* count and p are initialized above per protocol */
-    while (count > 1) {
-        sum   += *p++;
-        count -= 2;
-    }
-
-    /* one's complement sum 16-bit words of data */
-    HIP_DEBUG("Checksumming %d bytes of data.\n", length);
-    count = length;
-    p     = (unsigned short *) data;
-    while (count > 1) {
-        sum   += *p++;
-        count -= 2;
-    }
-    /* add left-over byte, if any */
-    if (count > 0) {
-        sum += (unsigned char) *p;
-    }
-
-    /*  Fold 32-bit sum to 16 bits */
-    while (sum >> 16) {
-        sum = (sum & 0xffff) + (sum >> 16);
-    }
-    /* take the one's complement of the sum */
-    checksum = ~sum;
-
-    return checksum;
 }
 
 /**

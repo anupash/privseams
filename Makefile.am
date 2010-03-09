@@ -268,7 +268,8 @@ endif
 
 lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/nlink.c \
-                                 lib/tool/lutil.c
+                                 lib/tool/lutil.c \
+                                 lib/tool/checksum.c
 
 ############################ NOTE ##################################
 #

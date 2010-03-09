@@ -183,7 +183,6 @@ int hip_verify_network_header(struct hip_common *hip_common,
                               struct sockaddr *src,
                               struct sockaddr *dst,
                               int len);
-uint16_t hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
 int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
 void hip_dump_msg(const struct hip_common *);
