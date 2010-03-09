@@ -365,8 +365,6 @@ static void hip_init_sockets(void)
     hip_register_socket(hip_nl_ipsec.fd,        10300);
     hip_register_socket(hip_raw_sock_input_v4,  10400);
     hip_register_socket(hip_nat_sock_input_udp, 10500);
-    //hip_register_socket(hip_opendht_sock_fqdn,  10600);
-    //hip_register_socket(hip_opendht_sock_hit,   10700);
 }
 
 static int hip_init_handle_functions(void)
