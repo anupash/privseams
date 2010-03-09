@@ -314,15 +314,15 @@ if test x"$ac_cv_use_blind" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(profiling,
-             AC_HELP_STRING([--enable-profiling],
-                            [compile in gprof profiling support (default is NO)]),
-             [ac_cv_use_profiling=$enableval], [ac_cv_use_profiling=no])
+               AC_HELP_STRING([--enable-profiling],
+                              [add gprof profiling support (default is NO)]),
+               [ac_cv_use_profiling=$enableval],
+               [ac_cv_use_profiling=no])
 AC_CACHE_CHECK([whether to use grof support],
-               [ac_cv_use_profiling], [ac_cv_use_profiling=no])
+               [ac_cv_use_profiling],
+               [ac_cv_use_profiling=no])
 if test x"$ac_cv_use_profiling" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_PROFILING)
-        AH_TEMPLATE(CONFIG_HIP_PROFILING, [Defined to 1 if profiling is enabled.])
-        AC_SUBST(GPROF_CFLAGS, "-pg")
+    AC_SUBST(GPROF_CFLAGS, "-pg")
 fi
 AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
 
