@@ -194,7 +194,7 @@ fi
 AC_ARG_ENABLE(maemo,
                AC_HELP_STRING([--enable-maemo],
                               [Maemo (default is NO)]),
-               [ac_cv_use_maemo=$enableval,
+               [ac_cv_use_maemo=$enableval],
                [ac_cv_use_maemo=no])
 AC_CACHE_CHECK([whether to use Maemo],
                [ac_cv_use_maemo],
@@ -229,7 +229,6 @@ AC_ARG_ENABLE(altsep,
                               [Alternative privilege separation (default is NO)]),
                [ac_cv_use_altsep=$enableval],
                [ac_cv_use_altsep=no])
-fi
 AC_CACHE_CHECK([whether to use Alternative privilege separation],
                [ac_cv_use_altsep],
                [ac_cv_use_altsep=no])
@@ -265,22 +264,24 @@ fi
 AC_CACHE_CHECK([whether to use i3],
                [ac_cv_use_i3], [ac_cv_use_i3=no])
 if test x"$ac_cv_use_i3" = x"yes"; then
-        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
-        AC_CHECK_LIB(pthread, pthread_create,, AC_MSG_ERROR(libpthread not found))
-        AC_DEFINE(CONFIG_HIP_I3)
-        AH_TEMPLATE(CONFIG_HIP_I3, [Defined to 1 if i3 is enabled.])
+    AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
+    AC_CHECK_LIB(pthread, pthread_create,, AC_MSG_ERROR(libpthread not found))
+    AC_DEFINE(CONFIG_HIP_I3)
+    AH_TEMPLATE(CONFIG_HIP_I3, [Defined to 1 if i3 is enabled.])
 fi
 AM_CONDITIONAL(HIP_I3, test x"$ac_cv_use_i3" = x"yes")
 
 AC_ARG_ENABLE(opportunistic,
-             AC_HELP_STRING([--enable-opportunistic],
-                            [HIP opportunistic extensions (default is YES)]),
-             [ac_cv_use_opportunistic=$enableval], [ac_cv_use_opportunistic=yes])
+               AC_HELP_STRING([--enable-opportunistic],
+                              [HIP opportunistic mode (default is YES)]),
+               [ac_cv_use_opportunistic=$enableval],
+               [ac_cv_use_opportunistic=yes])
 AC_CACHE_CHECK([whether to use opportunistic],
-               [ac_cv_use_opportunistic], [ac_cv_use_opportunistic=yes])
+               [ac_cv_use_opportunistic],
+               [ac_cv_use_opportunistic=yes])
 if test x"$ac_cv_use_opportunistic" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC)
-        AH_TEMPLATE(CONFIG_HIP_OPPORTUNISTIC, [Defined to 1 if oppotunistic mode is enabled.])
+    AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC)
+    AH_TEMPLATE(CONFIG_HIP_OPPORTUNISTIC, [Defined to 1 if oppotunistic mode is enabled.])
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
