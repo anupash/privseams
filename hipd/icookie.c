@@ -17,7 +17,7 @@
  * otherwise they are just overwritten when R1s are recreated periodically. */
 int hip_puzzle_k[HIP_R1TABLESIZE];
 
-void hip_init_puzzle_defaults()
+void hip_init_puzzle_defaults(void)
 {
     int i;
     for (i = 0; i < HIP_R1TABLESIZE; i++) {
