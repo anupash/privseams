@@ -54,11 +54,13 @@ bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR
 cd "$CHECKOUT_DIR"
 
 # Compile HIPL in different configurations
+# vanilla configuration
 compile
 # The following configuration is commented out until HIPL is fixed
-#compile --disable-rvs --disable-hipproxy --disable-opportunistic
-compile --disable-hipproxy --disable-opportunistic
-#compile --enable-agent --enable-cookie --enable-pfkey --disable-rvs --disable-hipproxy --enable-openwrt --enable-altsep --disable-privsep --enable-i3 --disable-opportunistic --disable-dht --enable-blind --enable-profiling --enable-ecdsa --disable-debug --enable-midauth --enable-performance --enable-demo
+# PISA configuration
+#compile --disable-agent --disable-cookie --disable-pfkey --disable-rvs --disable-hipproxy --disable-altsep --enable-privsep --disable-i3 --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
+compile --disable-agent --disable-cookie --disable-pfkey --disable-hipproxy --disable-altsep --enable-privsep --disable-i3 --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
+# Alternative path to vanilla
 compile --enable-agent --enable-cookie --disable-hipproxy --enable-openwrt --enable-altsep --disable-privsep --enable-i3 --disable-opportunistic --disable-dht --enable-blind --enable-profiling --enable-ecdsa --disable-debug --enable-midauth --enable-performance --enable-demo
 
 
