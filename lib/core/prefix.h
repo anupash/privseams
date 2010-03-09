@@ -4,7 +4,6 @@
 #include <sys/un.h>
 #include <stdlib.h>
 
-#include "config.h"
 #include "protodefs.h"
 #include "list.h"
 #include "debug.h"
