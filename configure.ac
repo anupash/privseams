@@ -325,19 +325,6 @@ if test x"$ac_cv_use_profiling" = x"yes"; then
     AC_SUBST(GPROF_CFLAGS, "-pg")
 fi
 
-AC_ARG_ENABLE(ecdsa,
-               AC_HELP_STRING([--enable-ecdsa],
-                              [compile in ecdsa support (default is NO)]),
-               [ac_cv_use_ecdsa=$enableval],
-               [ac_cv_use_ecdsa=no])
-AC_CACHE_CHECK([whether to use ecdsa support],
-               [ac_cv_use_ecdsa],
-               [ac_cv_use_ecdsa=no])
-if test x"$ac_cv_use_ecdsa" = x"yes"; then
-    AC_DEFINE(CONFIG_HIP_ECDSA)
-    AH_TEMPLATE(CONFIG_HIP_ECDSA, [Defined to 1 if ECDSA support is enabled.])
-fi
-
 AC_ARG_ENABLE(debug,
                AC_HELP_STRING([--enable-debug],
                               [Enable debug (default is YES)]),
