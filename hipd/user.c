@@ -156,7 +156,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                   hip_locator_status, SO_HIP_SET_LOCATOR_OFF);
         hip_recreate_all_precreated_r1_packets();
         break;
-    /** @todo Create module heartbeat-upate */
+    /** @todo Modularize user message handling */
 #if 0
     case SO_HIP_HEARTBEAT:
         heartbeat         = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
