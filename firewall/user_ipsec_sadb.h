@@ -20,6 +20,7 @@
 #ifndef ANDROID_CHANGES
 #include <openssl/blowfish.h>   /* bf_key */
 #endif
+#include <sys/time.h>
 #include <pthread.h>
 #include <inttypes.h>
 #include "lib/core/hashchain.h"
