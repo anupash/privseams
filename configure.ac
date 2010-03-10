@@ -28,7 +28,8 @@ AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 
 # Checks for header files.
-# libintl.h and alloca.h are only used in libhipandroid/regex.c - remove if possible
+# libintl.h and alloca.h are only used in libhipandroid/regex.c
+# REMOVE IF POSSIBLE
 AC_CHECK_HEADERS([alloca.h libintl.h])
 
 case "$host" in
@@ -204,10 +205,12 @@ AC_CACHE_CHECK([whether to use OpenWRT],
 if test x"$ac_cv_use_openwrt" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_OPENWRT)
     AC_SUBST(OPENWRT_CFLAGS, "-lc")
-    AH_TEMPLATE(CONFIG_HIP_OPENWRT, [Defined to 1 if openwrt support is enabled.])
+    AH_TEMPLATE(CONFIG_HIP_OPENWRT,
+                [Defined to 1 if openwrt support is enabled.])
     if test x"$TARGET" = x"MIPS_LINUX"; then
         AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX)
-        AH_TEMPLATE(CONFIG_HIP_OPENWRT_MIPSLINUX, [Defined to 1 if mipslinux is enabled.])
+        AH_TEMPLATE(CONFIG_HIP_OPENWRT_MIPSLINUX,
+                    [Defined to 1 if mipslinux is enabled.])
     fi
 fi
 
@@ -221,7 +224,8 @@ AC_CACHE_CHECK([whether to use Alternative privilege separation],
                [ac_cv_use_altsep=no])
 if test x"$ac_cv_use_altsep" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_ALTSEP)
-    AH_TEMPLATE(CONFIG_HIP_ALTSEP, [Defined to 1 if alternative privilege separation is enabled.])
+    AH_TEMPLATE(CONFIG_HIP_ALTSEP,
+                [Defined to 1 if alternative privilege separation is enabled.])
 fi
 
 AC_ARG_ENABLE(privsep,
@@ -234,10 +238,12 @@ AC_CACHE_CHECK([whether to use privsep],
                [ac_cv_use_privsep=yes])
 if test x"$ac_cv_use_privsep" = x"yes"; then
     if test x"$ac_cv_use_altsep" != x"yes"; then
-        AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
+        AC_CHECK_LIB(cap, cap_get_proc,,
+                     AC_MSG_ERROR(libcap-dev developer headers not found))
     fi
     AC_DEFINE(CONFIG_HIP_PRIVSEP)
-    AH_TEMPLATE(CONFIG_HIP_PRIVSEP, [Defined to 1 if privilege separation is enabled.])
+    AH_TEMPLATE(CONFIG_HIP_PRIVSEP,
+                [Defined to 1 if privilege separation is enabled.])
 fi
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 
@@ -268,7 +274,8 @@ AC_CACHE_CHECK([whether to use opportunistic],
                [ac_cv_use_opportunistic=yes])
 if test x"$ac_cv_use_opportunistic" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC)
-    AH_TEMPLATE(CONFIG_HIP_OPPORTUNISTIC, [Defined to 1 if oppotunistic mode is enabled.])
+    AH_TEMPLATE(CONFIG_HIP_OPPORTUNISTIC,
+                [Defined to 1 if oppotunistic mode is enabled.])
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
@@ -297,7 +304,7 @@ AC_CACHE_CHECK([whether to use BLIND],
                [ac_cv_use_blind=no])
 if test x"$ac_cv_use_blind" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_BLIND)
-    AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if the blind extension is enabled.])
+    AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if  blind is enabled.])
 fi
 
 AC_ARG_ENABLE(profiling,
@@ -337,7 +344,8 @@ AC_CACHE_CHECK([whether to have middlebox authentification],
                [ac_cv_use_midauth=no])
 if test x"$ac_cv_use_midauth" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_MIDAUTH)
-    AH_TEMPLATE(CONFIG_HIP_MIDAUTH, [Defined to 1 if midauth extensions are enabled.])
+    AH_TEMPLATE(CONFIG_HIP_MIDAUTH,
+                [Defined to 1 if midauth extension is enabled.])
 fi
 AM_CONDITIONAL(HIP_MIDAUTH, test x"$ac_cv_use_midauth" = x"yes")
 
@@ -351,7 +359,8 @@ AC_CACHE_CHECK([whether to use performance measurement],
                [ac_cv_use_performance=no])
 if test x"$ac_cv_use_performance" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_PERFORMANCE)
-    AH_TEMPLATE(CONFIG_HIP_PERFORMANCE, [Defined to 1 if performance measurements are enabled.])
+    AH_TEMPLATE(CONFIG_HIP_PERFORMANCE,
+                [Defined to 1 if performance measurements are enabled.])
 fi
 AM_CONDITIONAL(HIP_PERFORMANCE, test x"$ac_cv_use_performance" = x"yes")
 
