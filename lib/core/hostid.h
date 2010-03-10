@@ -45,5 +45,8 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                                  const char *hi_file,
                                  int rsa_key_bits,
                                  int dsa_key_bits);
+int khi_encode(unsigned char *orig, int orig_len,
+               unsigned char *encoded,
+               int encoded_len);
 
 #endif /* HIP_LIB_CORE_HOSTID_H */

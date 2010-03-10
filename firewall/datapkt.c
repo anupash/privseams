@@ -82,6 +82,49 @@ out_err:
 }
 
 /**
+ * ask hipd to sign a hiccups data packet
+ *
+ * @param src_hit the source HIT of the data packet
+ * @param dst_hit the destination HIT of the data packet
+ * @param payload the payload protocol value
+ * @param msg     An input/output parameter. For input, contains the
+ *                data packet with payload. For output, contains the
+ *                same but including a signature from hipd.
+ * @return        zero on success or negative on error
+ */
+int hip_get_data_packet_header(const struct in6_addr *src_hit,
+                               const struct in6_addr *dst_hit,
+                               int payload,
+                               struct hip_common *msg)
+{
+    int err = 0;
+
+    hip_build_network_hdr(msg, HIP_DATA, 0, src_hit, dst_hit);
+    msg->payload_proto = payload;
+
+    HIP_DEBUG("PAYLOAD_PROTO in HIP DATA HEADER = %d  ", payload );
+
+    /* @todo: this will assert  */
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET, 0),
+             -1, "build hdr failed\n");
+    _HIP_DUMP_MSG(msg);
+
+    /* send msg to hipd and receive corresponding reply */
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
+
+    /* check error value */
+    HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+    HIP_DEBUG("Send_recv msg succeed \n");
+
+out_err:
+    msg->type_hdr      = HIP_DATA;
+    /* this was overwritten by some mischief.. So reseting it */
+    msg->payload_proto = payload;
+
+    return err;
+}
+
+/**
  * Process an inbound HICCUPS data packet and remove the HIP header. Caller
  * is responsible to reinjecting the decapsulated message back to the networking
  * stack.

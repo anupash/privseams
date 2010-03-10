@@ -27,6 +27,7 @@
 #include "config.h"
 #include "hidb.h"
 #include "nsupdate.h"
+#include "lib/core/hit.h"
 
 // parameters for nsupdate.pl
 #define VAR_IPS "HIPD_IPS"

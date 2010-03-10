@@ -38,6 +38,7 @@
 #include "netdev.h"
 #include "lib/tool/lutil.h"
 #include "lib/core/state.h"
+#include "lib/core/hit.h"
 #include "oppdb.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"

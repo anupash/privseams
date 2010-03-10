@@ -16,6 +16,7 @@
 #include "dht.h"
 #include "hipd.h"
 #include "lib/core/hostid.h"
+#include "lib/core/hit.h"
 
 static void hip_publish_hit(char *, char *);
 static int hip_publish_addr(char *);

@@ -103,20 +103,12 @@ static inline void hip_copy_inaddr_null_check(struct in_addr *to,
     }
 }
 
-int khi_encode(unsigned char *orig, int orig_len,
-               unsigned char *encoded,
-               int encoded_len);
-
 char *hip_in6_ntop(const struct in6_addr *in6, char *buf);
 char *hip_hit_ntop(const hip_hit_t *hit, char *buf);
 uint8_t *hip_host_id_extract_public_key(uint8_t *buffer, struct hip_host_id *data);
 
 int hip_lsi_are_equal(const hip_lsi_t *lsi1,
                       const hip_lsi_t *lsi2);
-int hip_hit_is_bigger(const struct in6_addr *hit1,
-                      const struct in6_addr *hit2);
-int hip_hit_are_equal(const struct in6_addr *hit1,
-                      const struct in6_addr *hit2);
 
 unsigned long hip_hash_hit(const void *hit);
 int hip_match_hit(const void *, const void *);
@@ -124,7 +116,6 @@ int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 int convert_string_to_address(const char *str, struct in6_addr *ip6);
 
 uint64_t hip_get_current_birthday(void);
-int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *str);
 
 int maxof(int num_args, ...);
 
@@ -169,11 +160,6 @@ int hip_get_data_packet_header(const struct in6_addr *src_hit,
                                const struct in6_addr *dst_hit,
                                int payload,
                                struct hip_common *msg);
-
-/**
- * Check if the given address is loopback.
- */
-int hip_addr_is_loopback(struct in6_addr *addr);
 
 HIP_HASHTABLE *hip_linked_list_init(void);
 

@@ -26,6 +26,42 @@
 
 #define HOST_ID_FILENAME_MAX_LEN 256
 
+
+/**
+ * calculate a HIT from a HI without the prefix
+ *
+ * @param orig a pointer to a host identity
+ * @param orig_len the length of the host identity in bits
+ * @param encoded an output argument where the HIT will be stored
+ * @param encoded_len the length of the encoded HIT in bits
+ * @return zero on success or negative on error
+ */
+int khi_encode(unsigned char *orig, int orig_len,
+               unsigned char *encoded,
+               int encoded_len)
+{
+    BIGNUM *bn = NULL;
+    int err    = 0, shift = (orig_len - encoded_len) / 2,
+        len    = encoded_len / 8 + ((encoded_len % 8) ? 1 : 0);
+
+    HIP_IFEL((encoded_len > orig_len), -1, "len mismatch\n");
+    HIP_IFEL((!(bn = BN_bin2bn(orig, orig_len / 8, NULL))), -1,
+             "BN_bin2bn\n");
+    HIP_IFEL(!BN_rshift(bn, bn, shift), -1, "BN_lshift\n");
+    HIP_IFEL(!BN_mask_bits(bn, encoded_len), -1,
+             "BN_mask_bits\n");
+    HIP_IFEL((bn2bin_safe(bn, encoded, len) != len), -1,
+             "BN_bn2bin_safe\n");
+
+    _HIP_HEXDUMP("encoded: ", encoded, len);
+
+out_err:
+    if (bn) {
+        BN_free(bn);
+    }
+    return err;
+}
+
 /**
  * Calculates a Host Identity Tag (HIT) from a Host Identifier (HI) using DSA
  * encryption.

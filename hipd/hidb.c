@@ -15,6 +15,7 @@
 #include "config.h"
 #include "hidb.h"
 #include "lib/core/hostid.h"
+#include "lib/core/hit.h"
 
 HIP_HASHTABLE *hip_local_hostid_db = NULL;
 #define HIP_MAX_HOST_ID_LEN 1600

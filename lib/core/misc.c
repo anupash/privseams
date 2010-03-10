@@ -17,31 +17,6 @@
 #include "misc.h"
 #include "prefix.h"
 
-/**
- * convert a binary HIT into a string
- *
- * @param hit a binary HIT
- * @param prefix an optional HIT prefix as a string
- * @param hit_str the HIT as a string with the given prefix
- * @return zero on success and negative on error
- */
-int hip_convert_hit_to_str(const hip_hit_t *hit,
-                           const char *prefix,
-                           char *hit_str)
-{
-    int err = 0;
-
-    HIP_ASSERT(hit);
-
-    memset(hit_str, 0, INET6_ADDRSTRLEN);
-    err = !hip_in6_ntop(hit, hit_str);
-
-    if (prefix) {
-        memcpy(hit_str + strlen(hit_str), prefix, strlen(prefix));
-    }
-
-    return err;
-}
 
 /**
  * find the maximum value from a variable list of integers
@@ -80,33 +55,6 @@ int hip_lsi_are_equal(const hip_lsi_t *lsi1,
     return ipv4_addr_cmp(lsi1, lsi2) == 0;
 }
 
-/**
- * compare two HITs to check which HIT is "bigger"
- *
- * @param hit1 the first HIT to be compared
- * @param hit2 the second HIT to be compared
- *
- * @return 1 if hit1 was bigger than hit2, or else 0
- */
-int hip_hit_is_bigger(const struct in6_addr *hit1,
-                      const struct in6_addr *hit2)
-{
-    return ipv6_addr_cmp(hit1, hit2) > 0;
-}
-
-/**
- * compare two HITs to check which if they are equal
- *
- * @param hit1 the first HIT to be compared
- * @param hit2 the second HIT to be compared
- *
- * @return 1 if the HITs were equal and zero otherwise
- */
-int hip_hit_are_equal(const struct in6_addr *hit1,
-                      const struct in6_addr *hit2)
-{
-    return ipv6_addr_cmp(hit1, hit2) == 0;
-}
 
 /**
  * convert a binary IPv6 address to a string
@@ -254,102 +202,6 @@ out_err:
 }
 
 /**
- * calculate a HIT from a HI without the prefix
- *
- * @param orig a pointer to a host identity
- * @param orig_len the length of the host identity in bits
- * @param encoded an output argument where the HIT will be stored
- * @param encoded_len the length of the encoded HIT in bits
- * @return zero on success or negative on error
- */
-int khi_encode(unsigned char *orig, int orig_len,
-               unsigned char *encoded,
-               int encoded_len)
-{
-    BIGNUM *bn = NULL;
-    int err    = 0, shift = (orig_len - encoded_len) / 2,
-        len    = encoded_len / 8 + ((encoded_len % 8) ? 1 : 0);
-
-    HIP_IFEL((encoded_len > orig_len), -1, "len mismatch\n");
-    HIP_IFEL((!(bn = BN_bin2bn(orig, orig_len / 8, NULL))), -1,
-             "BN_bin2bn\n");
-    HIP_IFEL(!BN_rshift(bn, bn, shift), -1, "BN_lshift\n");
-    HIP_IFEL(!BN_mask_bits(bn, encoded_len), -1,
-             "BN_mask_bits\n");
-    HIP_IFEL((bn2bin_safe(bn, encoded, len) != len), -1,
-             "BN_bn2bin_safe\n");
-
-    _HIP_HEXDUMP("encoded: ", encoded, len);
-
-out_err:
-    if (bn) {
-        BN_free(bn);
-    }
-    return err;
-}
-
-/**
- * get the state of the bex for a pair of ip addresses.
- *
- * @param src_ip       input for finding the correct entries
- * @param dst_ip       input for finding the correct entries
- * @param src_hit      output data of the correct entry
- * @param dst_hit      output data of the correct entry
- * @param src_lsi      output data of the correct entry
- * @param dst_lsi      output data of the correct entry
- * @return             the state of the bex if the entry is found
- *                     otherwise returns -1
- */
-int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
-                                hip_lsi_t       *dst_lsi,
-                                struct in6_addr *src_ip,
-                                struct in6_addr *dst_ip,
-                                struct in6_addr *src_hit,
-                                struct in6_addr *dst_hit)
-{
-    int err = 0, res = -1;
-    struct hip_tlv_common *current_param = NULL;
-    struct hip_common *msg               = NULL;
-    struct hip_hadb_user_info_state *ha;
-
-    HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
-
-    HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
-    hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
-             -1, "Building of daemon header failed\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send recv daemon info\n");
-
-    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-        ha = hip_get_param_contents_direct(current_param);
-
-        if ((ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0)  &&
-            (ipv4_addr_cmp(src_lsi, &ha->lsi_peer) == 0)) {
-            *src_hit = ha->hit_peer;
-            *dst_hit = ha->hit_our;
-            *src_ip  = ha->ip_peer;
-            *dst_ip  = ha->ip_our;
-            res      = ha->state;
-            break;
-        } else if ((ipv4_addr_cmp(src_lsi, &ha->lsi_our) == 0)  &&
-                   (ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0)) {
-            *src_hit = ha->hit_our;
-            *dst_hit = ha->hit_peer;
-            *src_ip  = ha->ip_our;
-            *dst_ip  = ha->ip_peer;
-            res      = ha->state;
-            break;
-        }
-    }
-
-out_err:
-    if (msg) {
-        HIP_FREE(msg);
-    }
-    return res;
-}
-
-/**
  * build a message for hipd to trigger a base exchange
  *
  * @param src_hit an optional source HIT for the I1
@@ -456,134 +308,6 @@ out_err:
 }
 
 /**
- * ask hipd to sign a hiccups data packet
- *
- * @param src_hit the source HIT of the data packet
- * @param dst_hit the destination HIT of the data packet
- * @param payload the payload protocol value
- * @param msg     An input/output parameter. For input, contains the
- *                data packet with payload. For output, contains the
- *                same but including a signature from hipd.
- * @return        zero on success or negative on error
- */
-int hip_get_data_packet_header(const struct in6_addr *src_hit,
-                               const struct in6_addr *dst_hit,
-                               int payload,
-                               struct hip_common *msg)
-{
-    int err = 0;
-
-    hip_build_network_hdr(msg, HIP_DATA, 0, src_hit, dst_hit);
-    msg->payload_proto = payload;
-
-    HIP_DEBUG("PAYLOAD_PROTO in HIP DATA HEADER = %d  ", payload );
-
-    /* @todo: this will assert  */
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_BUILD_HOST_ID_SIGNATURE_DATAPACKET, 0),
-             -1, "build hdr failed\n");
-    _HIP_DUMP_MSG(msg);
-
-    /* send msg to hipd and receive corresponding reply */
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
-
-    /* check error value */
-    HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
-    HIP_DEBUG("Send_recv msg succeed \n");
-
-out_err:
-    msg->type_hdr      = HIP_DATA;
-    /* this was overwritten by some mischief.. So reseting it */
-    msg->payload_proto = payload;
-
-    return err;
-}
-
-/**
- * Check from the proc file system whether a local port is attached
- * to an IPv4 or IPv6 address. This is required to determine whether
- * incoming packets should be diverted to an LSI.
- *
- * @param port_dest     the port number of the socket
- * @param *proto        protocol type
- * @return              1 if it finds the required socket, 0 otherwise
- *
- * @note this is used only from the firewall, so move this there
- */
-int hip_get_proto_info(in_port_t port_dest, char *proto)
-{
-    FILE *fd       = NULL;
-    char line[500], sub_string_addr_hex[8], path[11 + sizeof(proto)];
-    char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
-    int lineno     = 0, index_addr_port = 0, exists = 0, result;
-    uint32_t result_addr;
-    struct in_addr addr;
-    List list;
-
-    if (!proto) {
-        return 0;
-    }
-
-    if (!strcmp(proto, "tcp6") || !strcmp(proto, "tcp")) {
-        index_addr_port = 15;
-    } else if (!strcmp(proto, "udp6") || !strcmp(proto, "udp")) {
-        index_addr_port = 10;
-    } else {
-        return 0;
-    }
-
-    strcpy(path, "/proc/net/");
-    strcat(path, proto);
-    fd = fopen(path, "r");
-
-    initlist(&list);
-    while (fd && getwithoutnewline(line, 500, fd) != NULL && !exists) {
-        lineno++;
-
-        destroy(&list);
-        initlist(&list);
-
-        if (lineno == 1 || strlen(line) <= 1) {
-            continue;
-        }
-
-        extractsubstrings(line, &list);
-
-        fqdn_str = getitem(&list, index_addr_port);
-        if (fqdn_str) {
-            separator = strrchr(fqdn_str, ':');
-        }
-
-        if (!separator) {
-            continue;
-        }
-
-        sub_string_port_hex = strtok(separator, ":");
-        sscanf(sub_string_port_hex, "%X", &result);
-        HIP_DEBUG("Result %i\n", result);
-        HIP_DEBUG("port dest %i\n", port_dest);
-        if (result == port_dest) {
-            strncpy(sub_string_addr_hex, fqdn_str, 8);
-            sscanf(sub_string_addr_hex, "%X", &result_addr);
-            addr.s_addr = result_addr;
-            if (IS_LSI32(addr.s_addr)) {
-                exists = 2;
-                break;
-            } else {
-                exists = 1;
-                break;
-            }
-        }
-    }     /* end of while */
-    if (fd) {
-        fclose(fd);
-    }
-    destroy(&list);
-
-    return exists;
-}
-
-
-/**
  * convert a string containing upper case characters to lower case
  *
  * @param to the result of the conversion (minimum length @c count)
@@ -631,25 +355,6 @@ int hip_string_is_digit(const char *string)
     return 0;
 }
 
-
-
-/**
- * verify if a given IPv6 address or IPv6 mapped IPv4 address
- * is a loopback
- *
- * @param addr the address to verify
- * @return one if the address if loopback or zero otherwise
- */
-int hip_addr_is_loopback(struct in6_addr *addr)
-{
-    struct in_addr addr_in;
-
-    if (!IN6_IS_ADDR_V4MAPPED(addr)) {
-        return IN6_IS_ADDR_LOOPBACK(addr);
-    }
-    IPV6_TO_IPV4_MAP(addr, &addr_in);
-    return IS_IPV4_LOOPBACK(addr_in.s_addr);
-}
 
 /**
  * encode the given content to Base64

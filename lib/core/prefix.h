@@ -34,7 +34,7 @@ int hip_sockaddr_len(const void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
-
+int hip_addr_is_loopback(struct in6_addr *addr);
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 
