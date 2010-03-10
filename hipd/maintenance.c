@@ -191,11 +191,7 @@ int hip_periodic_maintenance()
         precreate_counter--;
     }
 
-
-    /** @todo Disable NOTIFY keepalives, when heartbeat is enabled */
-    if (hip_nat_status) {
-        /* Send NOTIFY keepalives for NATs only when ICMPv6
-         * keepalives are disabled */
+    if (!lmod_module_exists("heartbeat") && hip_nat_status) {
         if (nat_keep_alive_counter < 0) {
             HIP_IFEL(hip_nat_refresh_port(),
                      -ECOMM,
