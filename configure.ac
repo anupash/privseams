@@ -24,6 +24,10 @@ AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
 # Checks for libraries.
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
+# Check for ec crypto in openssl
+AC_CHECK_FUNC(EC_KEY_new,
+              AC_DEFINE(HAVE_EC_CRYPTO)
+              AH_TEMPLATE(HAVE_EC_CRYPTO, [Defined to 1 if ec is enabled.]),)
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 

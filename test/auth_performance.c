@@ -23,7 +23,7 @@
 #include "lib/core/crypto.h"
 
 // only use ecdsa when available
-#if defined OPENSSL_VERSION_NUMBER && OPENSSL_VERSION_NUMBER > 0x0090800fL
+#ifdef HAVE_EC_CRYPTO
 #include <openssl/ecdsa.h>
 #endif
 
@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     DSA *dsa_key_pool[key_pool_size];
     DSA_SIG *dsa_sig_pool[num_measurements];
 
-#if defined OPENSSL_VERSION_NUMBER && OPENSSL_VERSION_NUMBER > 0x0090800fL
+#ifdef HAVE_EC_CRYPTO
     EC_KEY *ecdsa_key_pool[key_pool_size];
     ECDSA_SIG *ecdsa_sig_pool[num_measurements];
 #endif
@@ -441,7 +441,7 @@ int main(int argc, char **argv)
 #endif
 
 
-#if defined OPENSSL_VERSION_NUMBER && OPENSSL_VERSION_NUMBER > 0x0090800fL
+#ifdef HAVE_EC_CRYPTO
     printf("\n-------------------------------\n"
            "ECDSA performance test\n"
            "-------------------------------\n");
