@@ -24,6 +24,8 @@
 #ifndef HIP_FIREWALL_USER_IPSEC_ESP_H
 #define HIP_FIREWALL_USER_IPSEC_ESP_H
 
+#define _BSD_SOURCE
+
 #include "user_ipsec_sadb.h"
 #include "firewall_defines.h"
 

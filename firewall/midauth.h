@@ -12,10 +12,11 @@
 #ifndef HIP_FIREWALL_MIDAUTH_H
 #define HIP_FIREWALL_MIDAUTH_H
 
+#define _BSD_SOURCE
+
 #include <netinet/ip6.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
-#include <libipq.h>
 #include <linux/netfilter.h>
 #include "lib/core/protodefs.h"
 #include "lib/core/debug.h"

@@ -14,6 +14,8 @@
 #ifndef HIP_FIREWALL_USER_IPSEC_API_H
 #define HIP_FIREWALL_USER_IPSEC_API_H
 
+#define _BSD_SOURCE
+
 #include <netinet/udp.h>
 #include <openssl/evp.h>
 
