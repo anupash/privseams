@@ -178,7 +178,6 @@ define Package/hipl-common/install
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiptool.la $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip.so* $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip.la $(1)/usr/lib/
-	$(INSTALL_BIN)  $(PKG_INSTALL_DIR)/usr/bin/hipsetup $(1)/usr/bin/
 endef
 
 $(eval $(call BuildPackage,hipl-common))
