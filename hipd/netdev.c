@@ -21,6 +21,7 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <net/if.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <ifaddrs.h>
@@ -105,7 +106,7 @@ int hip_netdev_white_list_add(char *device_name)
     int ret  = 0;
 
     ifr.ifr_ifindex = -1;
-    strncpy(ifr.ifr_name, device_name, (size_t) IFNAMSIZ);
+    strncpy(ifr.ifr_name, device_name, (size_t) IF_NAMESIZE);
     sock            = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     if (ioctl(sock, SIOCGIFINDEX, &ifr) == 0) {

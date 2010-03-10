@@ -30,6 +30,7 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <net/if.h>
 #include <sys/ioctl.h>
 
 #include "config.h"
@@ -1361,7 +1362,7 @@ static int do_chflags(const char *dev, uint32_t flags, uint32_t mask)
     int fd;
     int err;
 
-    strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+    strncpy(ifr.ifr_name, dev, IF_NAMESIZE);
     fd  = get_ctl_fd();
     if (fd < 0) {
         return -1;
