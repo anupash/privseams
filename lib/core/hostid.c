@@ -949,3 +949,212 @@ out_err:
 
     return err;
 }
+
+/**
+ * create DNS KEY RR record from host DSA key
+ * @param dsa the DSA structure from where the KEY RR record is to be created
+ * @param dsa_key_rr where the resultin KEY RR is stored
+ *
+ * @note Caller must free dsa_key_rr when it is not used anymore.
+ *
+ * @return On successful operation, the length of the KEY RR buffer is
+ * returned (greater than zero) and pointer to the buffer containing
+ * DNS KEY RR is stored at dsa_key_rr. On error function returns negative
+ * and sets dsa_key_rr to NULL.
+ */
+int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr)
+{
+    int err            = 0;
+    int dsa_key_rr_len = -1;
+    signed char t; /* in units of 8 bytes */
+    unsigned char *p = NULL;
+    int key_len;
+
+    HIP_ASSERT(dsa != NULL); /* should not happen */
+
+    *dsa_key_rr = NULL;
+
+    _HIP_DEBUG("numbytes p=%d\n", BN_num_bytes(dsa->p));
+    _HIP_DEBUG("numbytes q=%d\n", BN_num_bytes(dsa->q));
+    _HIP_DEBUG("numbytes g=%d\n", BN_num_bytes(dsa->g));
+    // shouldn't this be NULL also?
+    _HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key));
+
+
+    /* notice that these functions allocate memory */
+    _HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
+    _HIP_DEBUG("q=%s\n", BN_bn2hex(dsa->q));
+    _HIP_DEBUG("g=%s\n", BN_bn2hex(dsa->g));
+    _HIP_DEBUG("pubkey=%s\n", BN_bn2hex(dsa->pub_key));
+
+    /* ***** is use of BN_num_bytes ok ? ***** */
+    t = (BN_num_bytes(dsa->p) - 64) / 8;
+    HIP_IFEL((t < 0 || t > 8), -EINVAL,
+             "Invalid RSA key length %d bits\n", (64 + t * 8) * 8);
+    _HIP_DEBUG("t=%d\n", t);
+
+    /* RFC 2536 section 2 */
+    /*
+     *       Field     Size
+     *       -----     ----
+     *        T         1  octet
+     *        Q        20  octets
+     *        P        64 + T*8  octets
+     *        G        64 + T*8  octets
+     *        Y        64 + T*8  octets
+     *      [ X        20 optional octets (private key hack) ]
+     *
+     */
+    key_len        = 64 + t * 8;
+    dsa_key_rr_len = 1 + DSA_PRIV + 3 * key_len;
+
+    if (dsa->priv_key) {
+        dsa_key_rr_len += DSA_PRIV; /* private key hack */
+        _HIP_DEBUG("Private key included\n");
+    } else {
+        _HIP_DEBUG("No private key\n");
+    }
+
+    _HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
+    *dsa_key_rr = malloc(dsa_key_rr_len);
+    HIP_IFEL(!*dsa_key_rr, -ENOMEM, "Malloc for *dsa_key_rr failed\n");
+    memset(*dsa_key_rr, 0, dsa_key_rr_len);
+
+    p           = *dsa_key_rr;
+
+    /* set T */
+    memset(p, t, 1); // XX FIX: WTF MEMSET?
+    p++;
+    _HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
+
+    /* add given dsa_param to the *dsa_key_rr */
+
+    bn2bin_safe(dsa->q, p, DSA_PRIV);
+    p += DSA_PRIV;
+    _HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p - *dsa_key_rr);
+
+    bn2bin_safe(dsa->p, p, key_len);
+    p += key_len;
+    _HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p - *dsa_key_rr);
+
+    bn2bin_safe(dsa->g, p, key_len);
+    p += key_len;
+    _HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p - *dsa_key_rr);
+
+    bn2bin_safe(dsa->pub_key, p, key_len);
+    p += key_len;
+    _HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p - *dsa_key_rr);
+
+    if (dsa->priv_key) {
+        bn2bin_safe(dsa->priv_key, p, DSA_PRIV);
+        _HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p - *dsa_key_rr);
+    }
+
+out_err:
+
+    if (err) {
+        if (*dsa_key_rr) {
+            free(*dsa_key_rr);
+        }
+        return err;
+    } else {
+        return dsa_key_rr_len;
+    }
+}
+
+/**
+ * create a DNS KEY RR record from a given host RSA public key
+ *
+ * @param rsa the RSA structure from where the KEY RR record is to be created
+ * @param rsa_key_rr where the resultin KEY RR is stored
+ * @return On successful operation, the length of the KEY RR buffer is
+ *         returned (greater than zero) and pointer to the buffer containing
+ *         DNS KEY RR is stored at rsa_key_rr. On error function returns
+ *         negative and sets rsa_key_rr to NULL.
+ * @note Caller must free rsa_key_rr when it is not used anymore.
+ * @note This function assumes that RSA given as a parameter is always public.
+ */
+int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr)
+{
+    int err            = 0;
+    int rsa_key_rr_len = -1;
+    unsigned char *c = NULL;
+    int public = -1;
+    int e_len_bytes    = 1;
+    int e_len, key_len;
+
+    HIP_ASSERT(rsa != NULL); /* should not happen */
+
+    *rsa_key_rr = NULL;
+
+    e_len       = BN_num_bytes(rsa->e);
+    key_len     = RSA_size(rsa);
+
+    /* RFC 3110 limits e to 4096 bits */
+    HIP_IFEL(e_len > 512, -EINVAL,  "Invalid rsa->e length %d bytes\n", e_len);
+    if (e_len > 255) {
+        e_len_bytes = 3;
+    }
+
+    /* let's check if the RSA key is public or private
+     * private exponent is NULL in public keys */
+    if (rsa->d == NULL) {
+        public         = 1;
+        rsa_key_rr_len = e_len_bytes + e_len + key_len;
+
+        /*
+         * See RFC 2537 for flags, protocol and algorithm and check RFC 3110 for
+         * the RSA public key part ( 1-3 octets defining length of the exponent,
+         * exponent is as many octets as the length defines and the modulus is
+         * all the rest of the bytes).
+         */
+    } else {
+        public         = 0;
+        rsa_key_rr_len = e_len_bytes + e_len + key_len * 9 / 2;
+    }
+
+    *rsa_key_rr = malloc(rsa_key_rr_len);
+    HIP_IFEL(!*rsa_key_rr, -ENOMEM, "Malloc for *rsa_key_rr failed\n");
+    memset(*rsa_key_rr, 0, rsa_key_rr_len);
+
+    c           = *rsa_key_rr;
+
+    if (e_len_bytes == 1) {
+        *c = (unsigned char) e_len;
+    }
+    c++; /* If e_len is more than one byte, first byte is 0. */
+    if (e_len_bytes == 3) {
+        *c = htons((uint16_t) e_len);
+        c += 2;
+    }
+
+    bn2bin_safe(rsa->e, c, e_len);
+    c += e_len;
+    bn2bin_safe(rsa->n, c, key_len);
+    c += key_len;
+
+    if (!public) {
+        bn2bin_safe(rsa->d, c, key_len);
+        c += key_len;
+        bn2bin_safe(rsa->p, c, key_len / 2);
+        c += key_len / 2;
+        bn2bin_safe(rsa->q, c, key_len / 2);
+        c += key_len / 2;
+        bn2bin_safe(rsa->dmp1, c, key_len / 2);
+        c += key_len / 2;
+        bn2bin_safe(rsa->dmq1, c, key_len / 2);
+        c += key_len / 2;
+        bn2bin_safe(rsa->iqmp, c, key_len / 2);
+    }
+
+out_err:
+
+    if (err) {
+        if (*rsa_key_rr) {
+            free(*rsa_key_rr);
+        }
+        return err;
+    }
+
+    return rsa_key_rr_len;
+}
