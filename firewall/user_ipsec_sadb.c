@@ -23,6 +23,7 @@
 #include "firewall.h"
 #include "lib/core/ife.h"
 #include "lib/core/misc.h"
+#include "lib/core/keylen.h"
 
 /* hash functions used for calculating the entries' hashes
  *

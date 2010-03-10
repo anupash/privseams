@@ -33,6 +33,7 @@
 
 #include "config.h"
 #include "crypto.h"
+#include "keylen.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"

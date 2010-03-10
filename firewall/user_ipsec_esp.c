@@ -34,6 +34,7 @@
 #include "lib/core/prefix.h"
 #include "lib/core/misc.h"
 #include "lib/tool/checksum.h"
+#include "lib/core/keylen.h"
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12

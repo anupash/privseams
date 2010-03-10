@@ -19,6 +19,7 @@
 #include "config.h"
 #include "lib/tool/nlink.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/keylen.h"
 
 #include "xfrmapi.h"
 
