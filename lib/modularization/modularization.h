@@ -48,7 +48,7 @@ int   lmod_get_state_item_id(struct modular_state *state,
 
 void  lmod_uninit_state(struct modular_state *state);
 
-int lmod_add_module_id(const char *module_id);
+int lmod_register_module(const char *module_id);
 
 int lmod_module_exists(const char *module_id);
 

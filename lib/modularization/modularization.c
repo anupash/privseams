@@ -331,7 +331,7 @@ int lmod_unregister_function(hip_ll_t *list, const void *function)
 }
 
 /**
- * lmod_add_module_id
+ * lmod_register_module
  *
  * Add an identifier to the module list. All modules should register an id.
  * So everyone else can check, if a certain module is loaded.
@@ -343,7 +343,7 @@ int lmod_unregister_function(hip_ll_t *list, const void *function)
  * @return Success =  0
  *         Error   = -1 (if the identifier already exists)
  */
-int lmod_add_module_id(const char *module_id)
+int lmod_register_module(const char *module_id)
 {
     if (lmod_module_exists(module_id)) {
         return -1;
