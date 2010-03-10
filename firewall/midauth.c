@@ -28,6 +28,7 @@
 #include "pisa.h"
 #include "lib/core/builder.h"
 #include "lib/core/solve.h"
+#include "lib/tool/checksum.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
