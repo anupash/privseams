@@ -17,11 +17,9 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "hiprelay.h"
+#include "lib/core/hip_udp.h"
 
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
  *  cannot be opened for reading, we write a new config file from scratch using
@@ -1189,18 +1187,15 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
     return 1;
 }
 
-int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
-                                        int msg_type,
-                                        struct in6_addr *src_addr,
-                                        struct in6_addr *dst_addr,
-                                        hip_portpair_t *msg_info,
-                                        hip_ha_t *entry)
+int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
+                                        const uint32_t ha_state,
+                                        struct hip_packet_context *packet_ctx)
 {
     int err = 0;
     struct hip_relay_to *relay_to;
     //check if full relay service is active
 
-    if (!entry) {
+    if (!packet_ctx->hadb_entry) {
         HIP_DEBUG("handle relay_to in client is failed\n");
         goto out_err;
     }
@@ -1210,11 +1205,11 @@ int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
     // check if the relay has been registered
 
     //check if there is a relay_to parameter
-    relay_to = (struct hip_relay_to *) hip_get_param(msg, HIP_PARAM_RELAY_TO);
+    relay_to = (struct hip_relay_to *) hip_get_param(packet_ctx->input_msg, HIP_PARAM_RELAY_TO);
     HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
 
     // check msg type
-    switch (msg_type) {
+    switch (packet_type) {
     case HIP_R1:
     case HIP_R2:
         //disable the update and notify message. we need to think about them later
@@ -1223,12 +1218,13 @@ int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
         HIP_DEBUG_IN6ADDR("the relay to address: ",
                           (struct in6_addr *) &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n",
-                  ntohs(relay_to->port), entry->local_udp_port);
+                  ntohs(relay_to->port), packet_ctx->hadb_entry->local_udp_port);
 
-        if (ipv6_addr_cmp((struct in6_addr *) &relay_to->address, &entry->our_addr)) {
+        if (ipv6_addr_cmp((struct in6_addr *) &relay_to->address,
+                          &packet_ctx->hadb_entry->our_addr)) {
             HIP_DEBUG("relay_to address is saved as reflexive addr. \n");
-            entry->local_reflexive_udp_port = ntohs(relay_to->port);
-            memcpy(&entry->local_reflexive_address,
+            packet_ctx->hadb_entry->local_reflexive_udp_port = ntohs(relay_to->port);
+            memcpy(&packet_ctx->hadb_entry->local_reflexive_address,
                    &relay_to->address, sizeof(in6_addr_t));
         }
         //  state = HIP_STATE_NONE;

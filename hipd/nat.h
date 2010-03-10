@@ -27,8 +27,6 @@
  *  @todo Change this value. */
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 20
 /** Port number for NAT traversal of hip control packets. */
-#define HIP_NAT_UDP_PORT 10500
-#define HIP_NAT_TURN_PORT 10500
 
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100

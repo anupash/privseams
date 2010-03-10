@@ -22,14 +22,13 @@
 
 #include <string.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "lib/core/ife.h"
 #include "midauth.h"
 #include "pisa.h"
 #include "lib/core/builder.h"
+#include "lib/core/solve.h"
+#include "lib/tool/checksum.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"

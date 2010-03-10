@@ -1,10 +1,6 @@
 #ifndef HIP_LIB_CORE_CRYPTO_H
 #define HIP_LIB_CORE_CRYPTO_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <sys/time.h>
 #include <time.h>
 #include <openssl/dsa.h>
@@ -26,8 +22,10 @@
 #include <string.h>
 #include <netinet/in.h>
 
+#include "config.h"
 #include "hipd/hidb.h"
 #include "lib/core/debug.h"
+#include "lib/core/transform.h"
 #include "lib/core/ife.h"
 #include "hipd/hadb.h"
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
@@ -103,5 +101,6 @@ int impl_dsa_verify(uint8_t *digest, DSA *dsa, uint8_t *signature);
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
                          void *enc_key, int direction);
+void get_random_bytes(void *buf, int n);
 
 #endif /* HIP_LIB_CORE_CRYPTO_H */

@@ -169,7 +169,7 @@
 #define SO_HIP_BUDDIES_ON                       162
 #define SO_HIP_BUDDIES_OFF                      163
 #define SO_HIP_TURN_INFO                        164
-/* unused, were SAVA slots */
+/* free slots */
 #define SO_HIP_NSUPDATE_OFF                     179
 #define SO_HIP_NSUPDATE_ON                      180
 #define SO_HIP_HIT_TO_IP_OFF                    181

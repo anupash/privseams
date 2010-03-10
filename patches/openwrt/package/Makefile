@@ -104,10 +104,6 @@ CONFIGURE_VARS += \
 define Build/Configure
 	(cd $(PKG_BUILD_DIR); rm -rf config.{cache,status}; ./autogen.sh --host=$(GNU_TARGET_NAME) --target=$(GNU_TARGET_NAME));
 
-#	(cd  $(PKG_BUILD_DIR)/libinet6; test -L include || ln -v -s include_glibc23 include;);
-
-#	(cp $(PKG_BUILD_DIR)/libinet6/include/ifaddrs.h $(STAGING_DIR)/include/);
-
 	(cd ..;);
 
 	$(CONFIGURE_VARS);
@@ -180,12 +176,8 @@ define Package/hipl-common/install
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipconf.la $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiptool.so* $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiptool.la $(1)/usr/lib/
-#	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libinet6.so* $(1)/usr/lib/
-#	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libinet6.la $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip.so* $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip.la $(1)/usr/lib/
-	$(INSTALL_BIN)  $(PKG_INSTALL_DIR)/usr/bin/hipsetup $(1)/usr/bin/
-#	$(INSTALL_BIN)  $(PKG_INSTALL_DIR)/usr/bin/listifaces $(1)/usr/bin/
 endef
 
 $(eval $(call BuildPackage,hipl-common))

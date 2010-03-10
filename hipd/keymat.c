@@ -14,6 +14,7 @@
 #define _BSD_SOURCE
 
 #include "keymat.h"
+#include "lib/core/hit.h"
 
 static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
                                     struct in6_addr *smaller_hit,

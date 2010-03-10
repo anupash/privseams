@@ -4,13 +4,15 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "hadb.h"
 #include "hipd.h"
 #include "lib/core/list.h"
+#include "lib/core/hostsfiles.h"
+#include "lib/core/hostid.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/solve.h"
+#include "lib/core/keylen.h"
 #include "lib/modularization/modularization.h"
 
 #define HIP_HADB_SIZE 53

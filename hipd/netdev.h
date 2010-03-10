@@ -8,10 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/ip6.h>
 #include <openssl/rand.h>
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "lib/tool/nlink.h"
 #include "lib/core/list.h"
 #include "lib/core/debug.h"

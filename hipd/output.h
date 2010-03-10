@@ -17,10 +17,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "dh.h"
 #include "hidb.h"
 #include "hadb.h"

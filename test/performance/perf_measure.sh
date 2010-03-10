@@ -20,15 +20,17 @@ FILE=
 RTT_POSTFIX=
 TCP_POSTFIX=
 UDP_POSTFIX=
+INTERVAL=10
 
 # get the command line options
 if [ $# -eq 0 ]
 then
-  echo "Usage: `basename $0` options: -a <family> [-n <value>] [-p <prefix>] -s|-c <dst> -r|-t <type> [-b <value>] [-l <length>]"
+  echo "Usage: `basename $0` options: -a <family> [-n <value>] [-i <interval> ] [-p <prefix>] -s|-c <dst> -r|-t <type> [-b <value>] [-l <length>]"
   echo
   echo "  -a <family>  = address family (4 - IPv4, 6 - IPv6)"
   echo "  -b <value>   = bandwith to be used for UDP measurements (append K or M)"
   echo "  -c <dst>     = client mode with destination ip address"
+  echo "  -i <value>   = time interval between runs (in sec)"
   echo "  -l <value>   = maximum packet length"
   echo "  -n <value>   = number of sequential measurements"
   echo "  -p <prefix>  = output file prefix (including absolut path)"
@@ -39,7 +41,7 @@ then
   exit 0
 fi
 
-set -- `getopt a:b:c:l:n:p:rst: "$@"`
+set -- `getopt a:b:c:i:l:n:p:rst: "$@"`
 [ $# -lt 1 ] && exit 1    # getopt failed
 
 while [ $# -gt 0 ]
@@ -49,6 +51,7 @@ do
     -b) BANDWIDTH=$2; shift;;
     -c) RUN_MODE=1
         REMOTE_ADDRESS=$2; shift;;
+    -i) INTERVAL=$2; shift;;
     -l) PACKET_LENGTH=$2; shift;;
     -n) MEASUREMENT_COUNT=$2; shift;;
     -p) FILE=$2; shift;;
@@ -128,7 +131,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -c $REMOTE_ADDRESS $TCP_LENGTH | $OUTPUT$TCP_POSTFIX
+        iperf -c $REMOTE_ADDRESS $TCP_LENGTH -t $INTERVAL -i 2 | $OUTPUT$TCP_POSTFIX
         i=`expr $i + 1`
         sleep 2
       done
@@ -136,7 +139,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V -c $REMOTE_ADDRESS $TCP_LENGTH | $OUTPUT$TCP_POSTFIX
+        iperf -V -c $REMOTE_ADDRESS $TCP_LENGTH -t $INTERVAL -i 2 | $OUTPUT$TCP_POSTFIX
         i=`expr $i + 1`
         sleep 2
       done
@@ -185,7 +188,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -c $REMOTE_ADDRESS --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH | $OUTPUT$UDP_POSTFIX
+        iperf -c $REMOTE_ADDRESS --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH -t $INTERVAL | $OUTPUT$UDP_POSTFIX
         i=`expr $i + 1`
         sleep 2
       done
@@ -193,7 +196,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V -c $REMOTE_ADDRESS --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH | $OUTPUT$UDP_POSTFIX
+        iperf -V -c $REMOTE_ADDRESS --udp --len $PACKET_LENGTH --bandwidth $BANDWIDTH -t $INTERVAL | $OUTPUT$UDP_POSTFIX
         i=`expr $i + 1`
         sleep 2
       done

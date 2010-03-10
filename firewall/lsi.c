@@ -59,6 +59,67 @@ out_err:
 }
 
 /**
+ * get the state of the bex for a pair of ip addresses.
+ *
+ * @param src_ip       input for finding the correct entries
+ * @param dst_ip       input for finding the correct entries
+ * @param src_hit      output data of the correct entry
+ * @param dst_hit      output data of the correct entry
+ * @param src_lsi      output data of the correct entry
+ * @param dst_lsi      output data of the correct entry
+ * @return             the state of the bex if the entry is found
+ *                     otherwise returns -1
+ */
+int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
+                                hip_lsi_t       *dst_lsi,
+                                struct in6_addr *src_ip,
+                                struct in6_addr *dst_ip,
+                                struct in6_addr *src_hit,
+                                struct in6_addr *dst_hit)
+{
+    int err = 0, res = -1;
+    struct hip_tlv_common *current_param = NULL;
+    struct hip_common *msg               = NULL;
+    struct hip_hadb_user_info_state *ha;
+
+    HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
+
+    HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
+    hip_msg_init(msg);
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+             -1, "Building of daemon header failed\n");
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send recv daemon info\n");
+
+    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+        ha = hip_get_param_contents_direct(current_param);
+
+        if ((ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0)  &&
+            (ipv4_addr_cmp(src_lsi, &ha->lsi_peer) == 0)) {
+            *src_hit = ha->hit_peer;
+            *dst_hit = ha->hit_our;
+            *src_ip  = ha->ip_peer;
+            *dst_ip  = ha->ip_our;
+            res      = ha->state;
+            break;
+        } else if ((ipv4_addr_cmp(src_lsi, &ha->lsi_our) == 0)  &&
+                   (ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0)) {
+            *src_hit = ha->hit_our;
+            *dst_hit = ha->hit_peer;
+            *src_ip  = ha->ip_our;
+            *dst_ip  = ha->ip_peer;
+            res      = ha->state;
+            break;
+        }
+    }
+
+out_err:
+    if (msg) {
+        HIP_FREE(msg);
+    }
+    return res;
+}
+
+/**
  * Analyzes first whether the ipv6 packet belongs to an ipv6 socket.
  * If not, it then analyzes whether the packet belongs to an
  * ipv4 socket with an LSI as IP address.

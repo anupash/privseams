@@ -4,7 +4,8 @@
  * Distributed under
  * <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
- * @brief String-related and linked list utilities borrowed from libinet6.
+ * @brief Utilities borrowed from libinet6. Function hip_timeval_diff()
+ * is borrowed from glibc project.
  */
 
 /* required for s6_addr32 */
@@ -223,4 +224,43 @@ char *setdataitem(List *ilist, int n, char *data)
         }
     }
     return NULL;
+}
+
+/**
+ * calculate difference between two timevalues
+ *
+ * @param t1 timevalue 1
+ * @param t2 timevalue 2
+ * @param result where the result is stored
+ *
+ * ** CHECK comments **
+ * result = t1 - t2
+ *
+ * Code taken from http://www.gnu.org/manual/glibc-2.2.5/html_node/Elapsed-Time.html
+ *
+ * @return 1 if t1 is equal or later than t2, else 0.
+ */
+int hip_timeval_diff(const struct timeval *t1,
+                     const struct timeval *t2,
+                     struct timeval *result)
+{
+    struct timeval _t1, _t2;
+    _t1 = *t1;
+    _t2 = *t2;
+
+    if (_t1.tv_usec < _t2.tv_usec) {
+        int nsec = (_t2.tv_usec - _t1.tv_usec) / 1000000 + 1;
+        _t2.tv_usec -= 1000000 * nsec;
+        _t2.tv_sec  += nsec;
+    }
+    if (_t1.tv_usec - _t2.tv_usec > 1000000) {
+        int nsec = (_t1.tv_usec - _t2.tv_usec) / 1000000;
+        _t2.tv_usec += 1000000 * nsec;
+        _t2.tv_sec  -= nsec;
+    }
+
+    result->tv_sec  = _t2.tv_sec - _t1.tv_sec;
+    result->tv_usec = _t2.tv_usec - _t1.tv_usec;
+
+    return _t1.tv_sec >= _t2.tv_sec;
 }

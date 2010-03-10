@@ -12,18 +12,17 @@
 #include <sys/types.h>
 #include <netinet/icmp6.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
-/* Required for modularization */
-#include "modules/hipd_modules.h"
-
+#include "config.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "lib/core/hip_capability.h"
+#include "lib/core/hip_udp.h"
 #include "lib/performance/performance.h"
+#include "lib/core/hip_capability.h"
+#include "lib/core/filemanip.h"
+#include "lib/core/hostid.h"
 #include "lib/tool/nlink.h"
+#include "modules/hipd_modules.h"
 
 #include "init.h"
 #include "oppdb.h"

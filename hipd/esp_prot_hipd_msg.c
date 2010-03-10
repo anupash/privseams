@@ -20,6 +20,7 @@
 #include "esp_prot_light_update.h"
 #include "lib/core/esp_prot_common.h"
 #include "lib/core/builder.h"
+#include "lib/core/hip_udp.h"
 #include "hipd.h"
 
 /**

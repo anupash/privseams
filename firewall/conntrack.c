@@ -20,15 +20,14 @@
 
 #include <stdio.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "conntrack.h"
 #include "dlist.h"
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
 #include "lib/core/misc.h"
+#include "lib/core/hostid.h"
+#include "lib/core/hip_udp.h"
 #include "hipd/hadb.h"
 #include "lib/tool/pk.h"
 #include "firewalldb.h"

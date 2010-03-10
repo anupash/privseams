@@ -33,47 +33,11 @@
 #include "esp_prot_api.h"
 #include "lib/core/prefix.h"
 #include "lib/core/misc.h"
+#include "lib/tool/checksum.h"
+#include "lib/core/keylen.h"
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12
-
-/** calculates the IP-checksum
- *
- * @param ip_hdr    packet to be checksumed
- * @param ip_hl     header length field inside the header
- * @return          the IP checksum
- */
-static uint16_t checksum_ip(struct ip *ip_hdr, const unsigned int ip_hl)
-{
-    uint16_t checksum = 0;
-    unsigned long sum = 0;
-    int count         = ip_hl * 4;
-    unsigned short *p = (unsigned short *) ip_hdr;
-
-    /*
-     * this checksum algorithm can be found
-     * in RFC 1071 section 4.1
-     */
-
-    /* one's complement sum 16-bit words of data */
-    while (count > 1) {
-        sum   += *p++;
-        count -= 2;
-    }
-    /* add left-over byte, if any */
-    if (count > 0) {
-        sum += (unsigned char) *p;
-    }
-
-    /*  Fold 32-bit sum to 16 bits */
-    while (sum >> 16) {
-        sum = (sum & 0xffff) + (sum >> 16);
-    }
-    /* take the one's complement of the sum */
-    checksum = (uint16_t) (~sum);
-
-    return checksum;
-}
 
 /** adds an UDP-header to the packet
  *

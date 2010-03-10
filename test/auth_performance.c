@@ -16,15 +16,16 @@
 #include <stdio.h>              /* printf & co */
 #include <stdlib.h>             /* exit & co */
 #include <unistd.h>
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
 
+#include "config.h"
 #include "lib/core/hip_statistics.h"
+#include "lib/core/keylen.h"
 #include "lib/core/crypto.h"
-#ifdef CONFIG_HIP_ECDSA
+
+// only use ecdsa when available
+#ifdef HAVE_EC_CRYPTO
 #include <openssl/ecdsa.h>
-#endif /* CONFIG_HIP_ECDSA  */
+#endif
 
 #define PACKET_LENGTH 1280
 
@@ -97,10 +98,10 @@ int main(int argc, char **argv)
     DSA *dsa_key_pool[key_pool_size];
     DSA_SIG *dsa_sig_pool[num_measurements];
 
-#ifdef CONFIG_HIP_ECDSA
+#ifdef HAVE_EC_CRYPTO
     EC_KEY *ecdsa_key_pool[key_pool_size];
     ECDSA_SIG *ecdsa_sig_pool[num_measurements];
-#endif /* CONFIG_HIP_ECDSA  */
+#endif
 
     hip_set_logdebug(LOGDEBUG_NONE);
 
@@ -440,7 +441,7 @@ int main(int argc, char **argv)
 #endif
 
 
-#ifdef CONFIG_HIP_ECDSA
+#ifdef HAVE_EC_CRYPTO
     printf("\n-------------------------------\n"
            "ECDSA performance test\n"
            "-------------------------------\n");
@@ -486,7 +487,8 @@ int main(int argc, char **argv)
             printf("%i. ecdsa signature: %.3f ms\n", i + 1, timediff / 1000.0);
         }
     }
-#endif /* CONFIG_HIP_ECDSA  */
+#endif
+
 #if 0
     calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
                     STATS_IN_MSECS);

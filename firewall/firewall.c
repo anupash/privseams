@@ -30,10 +30,7 @@
 #include <netinet/in.h> /* in_addr, in6_addr */
 #include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "firewall.h" /* default include */
 #include "firewall_control.h"
 #include "conntrack.h" /* connection tracking */
@@ -41,6 +38,7 @@
 #include "cache_port.h"
 #include "lsi.h" /* LSI */
 #include "lib/core/hip_capability.h" /* Priviledge Separation */
+#include "lib/core/hip_udp.h"
 #include "user_ipsec_api.h" /* Userspace IPsec */
 #include "esp_prot_conntrack.h" /* ESP Tokens */
 #include "esp_prot_api.h" /* ESP Tokens */
@@ -53,6 +51,7 @@
 #include "lib/performance/performance.h" /* Performance Analysis */
 #endif
 #include "helpers.h"
+#include "lib/core/filemanip.h"
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0
@@ -90,9 +89,9 @@ typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
 static hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 /* extension-specific state */
-static int hip_userspace_ipsec = 0;
-static int hip_esp_protection = 0;
-static int restore_filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
+static int hip_userspace_ipsec            = 0;
+static int hip_esp_protection             = 0;
+static int restore_filter_traffic         = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 
 /* externally used state */
@@ -1067,13 +1066,18 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 
     HIP_DEBUG("hip_fw_handle_hip_output \n");
 
-    verdict = filter_hip(&ctx->src,
-                         &ctx->dst,
-                         ctx->transport_hdr.hip,
-                         ctx->ipq_packet->hook,
-                         ctx->ipq_packet->indev_name,
-                         ctx->ipq_packet->outdev_name,
-                         ctx);
+    if (filter_traffic) {
+        verdict = filter_hip(&ctx->src,
+                             &ctx->dst,
+                             ctx->transport_hdr.hip,
+                             ctx->ipq_packet->hook,
+                             ctx->ipq_packet->indev_name,
+                             ctx->ipq_packet->outdev_name,
+                             ctx);
+    } else {
+        verdict = ACCEPT;
+    }
+
     HIP_INFO("\n");
 
     /* zero return value means that the packet should be dropped */
@@ -1115,8 +1119,8 @@ static int hip_fw_handle_other_output(hip_fw_context_t *ctx)
 
     HIP_DEBUG("\n");
 
-    //Prabhu check for datapacket mode too
     if (ctx->ip_version == 6 && hip_userspace_ipsec) {
+
         hip_hit_t *def_hit = hip_fw_get_default_hit();
         HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 

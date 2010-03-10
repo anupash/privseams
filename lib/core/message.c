@@ -68,7 +68,7 @@
 #define _BSD_SOURCE
 
 #include "message.h"
-#include "protodefs.h"
+#include "hip_udp.h"
 
 /**
  * Finds out how much data is coming from a socket
@@ -575,11 +575,6 @@ static int hip_read_control_msg_all(int socket,
 
     HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-    HIP_IFEL(((len = hip_peek_recv_total_len(socket,
-                                             encap_hdr_size,
-                                             HIP_DEFAULT_MSG_TIMEOUT)) <= 0),
-             -1, "Bad packet length (%d)\n", len);
-
 //    memset(msg_info, 0, sizeof(hip_portpair_t));
     memset(&msg, 0, sizeof(msg));
     memset(cbuff, 0, sizeof(cbuff));
@@ -596,7 +591,7 @@ static int hip_read_control_msg_all(int socket,
     msg.msg_controllen  = sizeof(cbuff);
     msg.msg_flags       = 0;
 
-    iov.iov_len         = len;
+    iov.iov_len         = HIP_MAX_NETWORK_PACKET;
     iov.iov_base        = packet_ctx->input_msg;
 
     pktinfo.pktinfo_in4 = NULL;

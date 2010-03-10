@@ -10,13 +10,10 @@
 #ifndef HIP_LIB_CORE_MISC_H
 #define HIP_LIB_CORE_MISC_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
-#include "hipd/hidb.h"
-
 #include <string.h>
+
+#include "config.h"
+#include "hipd/hidb.h"
 #include "hipd/registration.h"
 #include "lib/core/prefix.h"
 #include "icomm.h"
@@ -49,8 +46,6 @@ struct hip_hit_info {
     struct hip_lhi lhi;
     hip_lsi_t      lsi;
 };
-
-int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
 
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
                                 const struct in_addr *a2)
@@ -86,9 +81,6 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
             a->s6_addr[12] |a->s6_addr[13] |a->s6_addr[14] |a->s6_addr[15]) == 0;
 }
 
-int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
-                                  struct in6_addr *hit, int hit_type);
-
 static inline void hip_copy_in6addr_null_check(struct in6_addr *to,
                                                struct in6_addr *from)
 {
@@ -111,92 +103,23 @@ static inline void hip_copy_inaddr_null_check(struct in_addr *to,
     }
 }
 
-int khi_encode(unsigned char *orig, int orig_len,
-               unsigned char *encoded,
-               int encoded_len);
-
-int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-                           struct in6_addr *hit, int hit_type);
-
-/* Useless abstraction, goes to the same function anyway -- SAMU
- *
- * True that. Let's make this a static inline function and move it to the header
- * file. It still remains as useless abstraction, but at least we eliminate the
- * need for a call and return sequence. -Lauri 06.08.2008
- */
-static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-                                         struct in6_addr *hit, int hit_type)
-{
-    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-}
-
-int hip_host_id_to_hit(const struct hip_host_id *host_id,
-                       struct in6_addr *hit, int hit_type);
-int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                   struct in6_addr *hit,
-                                   int hit_type);
-int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                   struct in6_addr *hit,
-                                   int hit_type);
-int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                               struct in6_addr *hit, int hit_type);
-int check_and_create_dir(char *dirname, mode_t mode);
-int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
-                     struct timeval *result);
 char *hip_in6_ntop(const struct in6_addr *in6, char *buf);
 char *hip_hit_ntop(const hip_hit_t *hit, char *buf);
-int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 uint8_t *hip_host_id_extract_public_key(uint8_t *buffer, struct hip_host_id *data);
 
 int hip_lsi_are_equal(const hip_lsi_t *lsi1,
                       const hip_lsi_t *lsi2);
-int hip_hit_is_bigger(const struct in6_addr *hit1,
-                      const struct in6_addr *hit2);
-int hip_hit_are_equal(const struct in6_addr *hit1,
-                      const struct in6_addr *hit2);
 
 unsigned long hip_hash_hit(const void *hit);
 int hip_match_hit(const void *, const void *);
 int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 int convert_string_to_address(const char *str, struct in6_addr *ip6);
 
-hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
-hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
-int hip_auth_key_length_esp(int tid);
-int hip_transform_key_length(int tid);
-int hip_hmac_key_length(int tid);
-int hip_enc_key_length(int tid);
 uint64_t hip_get_current_birthday(void);
-int hip_serialize_host_id_action(struct hip_common *msg,
-                                 int action,
-                                 int anon,
-                                 int use_default,
-                                 const char *hi_fmt,
-                                 const char *hi_file,
-                                 int rsa_key_bits,
-                                 int dsa_key_bits);
-int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *str);
 
 int maxof(int num_args, ...);
 
 int addr2ifindx(struct in6_addr *local_address);
-void get_random_bytes(void *buf, int n);
-
-int hip_build_digest(const int type, const void *in, int in_len, void *out);
-int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
-int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
-void *hip_cast_sa_addr(const struct sockaddr *sa);
-int hip_sockaddr_len(const void *sockaddr);
-int hip_sa_addr_len(void *sockaddr);
-int hip_create_lock_file(char *filename, int killold);
-int hip_remove_lock_file(char *filename);
-
-void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
-
-uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
-int hip_solve_puzzle_m(struct hip_common *out,
-                       struct hip_common *in,
-                       hip_ha_t *entry);
 
 /**
  * Converts a string to lowercase. Converts parameter @c from string to a
@@ -222,13 +145,6 @@ int hip_string_to_lowercase(char *to, const char *from, const size_t count);
  */
 int hip_string_is_digit(const char *string);
 
-void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
-                        struct hip_rsa_keylen *ret,
-                        int is_priv);
-
-RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv);
-DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv);
-
 int hip_get_random_hostname_id_from_hosts(char *filename,
                                           char *hostname,
                                           char *id_str);
@@ -245,56 +161,6 @@ int hip_get_data_packet_header(const struct in6_addr *src_hit,
                                int payload,
                                struct hip_common *msg);
 
-int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
-                                            const void *arg,
-                                            void *result);
-int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
-                                             const void *arg,
-                                             void *result);
-int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry,
-                                             const void *arg,
-                                             void *result);
-int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
-                                            const void *arg,
-                                            void *result);
-int hip_for_each_hosts_file_line(const char *hosts_file,
-                                 int(*func)(const struct hosts_file_line *line,
-                                            const void *arg,
-                                            void *result),
-                                 void *arg,
-                                 void *result);
-int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
-int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi);
-int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit,
-                                      hip_lsi_t *lsi,
-                                      struct in6_addr *ip);
-int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname);
-
-/**
- * Get HIP local NAT UDP port.
- */
-in_port_t hip_get_local_nat_udp_port(void);
-
-/**
- * Get HIP peer NAT UDP port.
- */
-in_port_t hip_get_peer_nat_udp_port(void);
-
-/**
- * Set HIP local NAT UDP port.
- */
-int hip_set_local_nat_udp_port(in_port_t port);
-
-/**
- * Set HIP peer NAT UDP port.
- */
-int hip_set_peer_nat_udp_port(in_port_t port);
-
-/**
- * Check if the given address is loopback.
- */
-int hip_addr_is_loopback(struct in6_addr *addr);
-
 HIP_HASHTABLE *hip_linked_list_init(void);
 
 int hip_get_proto_info(in_port_t port_dest, char *proto);
@@ -306,13 +172,8 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t *src_lsi,
                                 struct in6_addr *src_hit,
                                 struct in6_addr *dst_hit);
 
-uint16_t ipv4_checksum(uint8_t protocol, uint8_t src[], uint8_t dst[], uint8_t data[], uint16_t len);
-
 /* openSSL wrapper functions for base64 encoding and decoding */
 
 unsigned char *base64_encode(unsigned char *, unsigned int);
-
-int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
-                                  void *msg);
 
 #endif /* HIP_LIB_CORE_MISC_H */

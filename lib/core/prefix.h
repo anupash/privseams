@@ -1,12 +1,9 @@
 #ifndef HIP_LIB_CORE_UTILS_H
 #define HIP_LIB_CORE_UTILS_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <sys/un.h>
 #include <stdlib.h>
+
 #include "protodefs.h"
 #include "list.h"
 #include "debug.h"
@@ -29,6 +26,15 @@ int hit_is_real_hit(const struct in6_addr *hit);
 int hit_is_opportunistic_hit(const struct in6_addr *hit);
 void set_hit_prefix(struct in6_addr *hit);
 void set_lsi_prefix(hip_lsi_t *lsi);
+int hip_id_type_match(const struct in6_addr *id, int id_type);
+int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
+                                  struct in6_addr *hit, int hit_type);
+void *hip_cast_sa_addr(const struct sockaddr *sa);
+int hip_sockaddr_len(const void *sockaddr);
+int hip_sa_addr_len(void *sockaddr);
+void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
+int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
+int hip_addr_is_loopback(struct in6_addr *addr);
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 

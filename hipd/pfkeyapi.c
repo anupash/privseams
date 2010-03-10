@@ -8,13 +8,10 @@
 /* required for caddr_t */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
-#ifdef CONFIG_HIP_PFKEY
 #include <linux/pfkeyv2.h>
 #include <linux/ipsec.h>
+
+#include "config.h"
 #include "lib/ipsec/libpfkey.h"
 #include "pfkeyapi.h"
 
@@ -440,5 +437,3 @@ int hip_setup_default_sp_prefix_pair()
     HIP_DEBUG("\n");
     return 0;
 }
-
-#endif /* CONFIG_HIP_PFKEY */

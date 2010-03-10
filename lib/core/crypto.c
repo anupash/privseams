@@ -31,11 +31,9 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "crypto.h"
+#include "keylen.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
@@ -1112,4 +1110,15 @@ int load_rsa_public_key(const char *filename, RSA **rsa)
 
 out_err:
     return err;
+}
+
+/**
+ * get random bytes
+ *
+ * @param buf a buffer where to write random bytes
+ * @param n write n bytes to @c buf
+ */
+void get_random_bytes(void *buf, int n)
+{
+    RAND_bytes(buf, n);
 }

@@ -31,16 +31,13 @@
  * SUCH DAMAGE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <sys/types.h>
 #include <sys/param.h>
-
 #include <string.h>
 #include <inttypes.h>
 #include <linux/ipsec.h>
+
+#include "config.h"
 #include "ipsec_strerror.h"
 
 int __ipsec_errcode;

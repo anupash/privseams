@@ -34,10 +34,6 @@
 /* required for caddr_t */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -50,6 +46,7 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "config.h"
 #include "ipsec_strerror.h"
 #include "libpfkey.h"
 #include "linux/pfkeyv2.h"

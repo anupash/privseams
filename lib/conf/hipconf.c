@@ -35,15 +35,14 @@
 /* required for ifreq */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
 #include <sys/ioctl.h>
+
+#include "config.h"
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "hipconf.h"
 #include "lib/core/prefix.h"
+#include "lib/core/hostid.h"
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -85,7 +84,7 @@
 /* unused, was TYPE_HI3    28 */
 /* free slot (was for TYPE_GET_PEER_LSI  29) */
 #define TYPE_BUDDIES       30
-/* unused, was TYPE_SAVAHR 31 - SAVA router HIT IP pair */
+/* free slot */
 #define TYPE_NSUPDATE      32
 #define TYPE_HIT_TO_IP     33
 #define TYPE_HIT_TO_IP_SET 34

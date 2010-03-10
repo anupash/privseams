@@ -9,10 +9,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <netinet/in.h>
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "protodefs.h"
 #include "prefix.h"
 #include "ife.h"

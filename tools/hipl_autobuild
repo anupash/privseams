@@ -54,9 +54,9 @@ bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR
 cd "$CHECKOUT_DIR"
 
 # Compile HIPL in different configurations
+# vanilla configuration
 compile
 compile --disable-rvs --disable-opportunistic
-compile --enable-cookie --enable-pfkey --enable-cert --disable-rvs --enable-openwrt --enable-altsep --disable-privsep --disable-opportunistic --enable-profiling --enable-ecdsa --disable-debug --enable-midauth --enable-performance --enable-demo
-
+compile --enable-pfkey --disable-rvs --enable-openwrt --enable-altsep --disable-privsep --disable-opportunistic --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
 
 cleanup 0

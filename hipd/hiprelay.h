@@ -76,10 +76,7 @@
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "lib/core/misc.h" /* For debuging macros. */
 #include "registration.h" /* For lifetime conversions. */
 #include "configfilereader.h"
@@ -471,13 +468,9 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
                                 in6_addr_t *relay_ip,
                                 in6_addr_t *dest_ip, in_port_t *dest_port);
 
-int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
-                                        int msg_type,
-                                        struct in6_addr *src_addr,
-                                        struct in6_addr *dst_addr,
-                                        hip_portpair_t *msg_info,
-                                        hip_ha_t *entry);
-
+int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
+                                        const uint32_t ha_state,
+                                        struct hip_packet_context *packet_ctx);
 
 int hip_relay_handle_relay_to(const uint8_t packet_type,
                               const uint32_t ha_state,

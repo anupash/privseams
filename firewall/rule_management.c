@@ -28,15 +28,13 @@
 #include <limits.h>
 #include <linux/netfilter_ipv6.h>
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "rule_management.h"
 #include "helpers.h"
 #include "lib/core/builder.h"
 #include "lib/core/crypto.h"
 #include "lib/core/debug.h"
+#include "lib/core/hostid.h"
 
 /* string tokens for rule parsing */
 #define SRC_HIT_STR "-src_hit"

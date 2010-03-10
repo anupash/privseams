@@ -12,11 +12,10 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "hidb.h"
+#include "lib/core/hostid.h"
+#include "lib/core/hit.h"
 
 HIP_HASHTABLE *hip_local_hostid_db = NULL;
 #define HIP_MAX_HOST_ID_LEN 1600

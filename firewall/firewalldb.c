@@ -25,6 +25,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/hashtable.h"
 #include "lib/core/misc.h"
+#include "lib/tool/checksum.h"
 
 #define DISABLE_hip_firewall_hldb_dump
 #define DISABLE_firewall_init_raw_sock_esp_v6

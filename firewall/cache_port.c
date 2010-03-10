@@ -30,6 +30,90 @@
 static HIP_HASHTABLE *firewall_port_cache_db = NULL;
 
 /**
+ * Check from the proc file system whether a local port is attached
+ * to an IPv4 or IPv6 address. This is required to determine whether
+ * incoming packets should be diverted to an LSI.
+ *
+ * @param port_dest     the port number of the socket
+ * @param *proto        protocol type
+ * @return              1 if it finds the required socket, 0 otherwise
+ *
+ * @note this is used only from the firewall, so move this there
+ */
+int hip_get_proto_info(in_port_t port_dest, char *proto)
+{
+    FILE *fd       = NULL;
+    char line[500], sub_string_addr_hex[8], path[11 + sizeof(proto)];
+    char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
+    int lineno     = 0, index_addr_port = 0, exists = 0, result;
+    uint32_t result_addr;
+    struct in_addr addr;
+    List list;
+
+    if (!proto) {
+        return 0;
+    }
+
+    if (!strcmp(proto, "tcp6") || !strcmp(proto, "tcp")) {
+        index_addr_port = 15;
+    } else if (!strcmp(proto, "udp6") || !strcmp(proto, "udp")) {
+        index_addr_port = 10;
+    } else {
+        return 0;
+    }
+
+    strcpy(path, "/proc/net/");
+    strcat(path, proto);
+    fd = fopen(path, "r");
+
+    initlist(&list);
+    while (fd && getwithoutnewline(line, 500, fd) != NULL && !exists) {
+        lineno++;
+
+        destroy(&list);
+        initlist(&list);
+
+        if (lineno == 1 || strlen(line) <= 1) {
+            continue;
+        }
+
+        extractsubstrings(line, &list);
+
+        fqdn_str = getitem(&list, index_addr_port);
+        if (fqdn_str) {
+            separator = strrchr(fqdn_str, ':');
+        }
+
+        if (!separator) {
+            continue;
+        }
+
+        sub_string_port_hex = strtok(separator, ":");
+        sscanf(sub_string_port_hex, "%X", &result);
+        HIP_DEBUG("Result %i\n", result);
+        HIP_DEBUG("port dest %i\n", port_dest);
+        if (result == port_dest) {
+            strncpy(sub_string_addr_hex, fqdn_str, 8);
+            sscanf(sub_string_addr_hex, "%X", &result_addr);
+            addr.s_addr = result_addr;
+            if (IS_LSI32(addr.s_addr)) {
+                exists = 2;
+                break;
+            } else {
+                exists = 1;
+                break;
+            }
+        }
+    }     /* end of while */
+    if (fd) {
+        fclose(fd);
+    }
+    destroy(&list);
+
+    return exists;
+}
+
+/**
  * add a default entry in the firewall port cache.
  *
  * @param key       the hash key (a string consisting of concatenation of the port, an underscore and the protocol)

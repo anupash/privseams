@@ -1,22 +1,19 @@
 ACLOCAL_AMFLAGS  = -I m4
 
+HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd/*.h i3/*/*.h lib/*/*.h test/*.h))
+
 # For "make dist"
 #
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  debian doc patches test/packaging test/configs process_modules.py
-EXTRA_DIST += Android.mk check_header_verbosity.sh tcp verbose-headers.txt
-EXTRA_DIST += autogen.sh release.version
-EXTRA_DIST += $(wildcard lib/android/*.c)
-EXTRA_DIST += $(wildcard lib/*/*.h)
-EXTRA_DIST += $(wildcard hipd/*.h)
-EXTRA_DIST += $(wildcard firewall/*.h)
-EXTRA_DIST += $(wildcard test/*.h)
-EXTRA_DIST += $(wildcard modules/*.h)
-EXTRA_DIST += $(wildcard modules/*/*/*.h)
+EXTRA_DIST =  debian doc hipext hipfwmi lib/android patches
+EXTRA_DIST += test/packaging test/configs process_modules.py
+EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh
+EXTRA_DIST += release.version tcp verbose-headers.txt
 EXTRA_DIST += tools/gen-python-starter.sh
 EXTRA_DIST += m4 # required for CentOS "make bin" target
+EXTRA_DIST += $(HIPL_HEADER_LIST)
 
 BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
 
@@ -151,7 +148,15 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/message.c \
                                  lib/core/esp_prot_common.c \
                                  lib/core/misc.c \
+                                 lib/core/hostsfiles.c \
+                                 lib/core/filemanip.c \
                                  lib/core/hashchain.c \
+                                 lib/core/hostid.c \
+                                 lib/core/hip_udp.c \
+                                 lib/core/solve.c \
+                                 lib/core/transform.c \
+                                 lib/core/keylen.c \
+                                 lib/core/hit.c \
                                  lib/core/hashchain_store.c \
                                  lib/core/hip_statistics.c \
                                  lib/core/crypto.c
@@ -162,7 +167,8 @@ endif
 
 lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/nlink.c \
-                                 lib/tool/lutil.c
+                                 lib/tool/lutil.c \
+                                 lib/tool/checksum.c
 
 lib_modularization_libmodularization_la_SOURCES = lib/modularization/modularization.c
 
@@ -194,10 +200,8 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
 DISTCLEANFILES = lib/ipsec/policy_token.h
 
-if HIP_PFKEY
-BUILT_SOURCES += lib/ipsec/policy_parse.h
-else
 # don't use libipsec, but xfrmapi
+if !HIP_PFKEY
 lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
 endif # HIPPFKEY
 
@@ -335,4 +339,11 @@ autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
 	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
-.PHONY: bin doxygen increl olddeb syncrepo
+HIPL_HEADER_OBJS = $(HIPL_HEADER_LIST:.h=.ho)
+CLEANFILES += $(HIPL_HEADER_OBJS)
+
+checkheaders: $(HIPL_HEADER_OBJS)
+%.ho: %.h
+	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
+
+.PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo

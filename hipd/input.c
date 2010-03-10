@@ -18,10 +18,7 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "input.h"
 #include "hadb.h"
 #include "oppdb.h"
@@ -29,6 +26,10 @@
 #include "keymat.h"
 #include "lib/core/crypto.h"
 #include "lib/core/builder.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/solve.h"
+#include "lib/core/transform.h"
+#include "lib/core/keylen.h"
 #include "dh.h"
 #include "lib/core/misc.h"
 #include "hidb.h"
@@ -38,6 +39,7 @@
 #include "netdev.h"
 #include "lib/tool/lutil.h"
 #include "lib/core/state.h"
+#include "lib/core/hit.h"
 #include "oppdb.h"
 #include "registration.h"
 #include "hipd.h"
@@ -46,6 +48,10 @@
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
+#endif
+
+#ifdef CONFIG_HIP_BLIND
+#include "lib/core/hostid.h"
 #endif
 
 /**
@@ -774,6 +780,10 @@ int hip_handle_r1(const uint8_t packet_type,
     }
 
     hip_relay_add_rvs_to_ha(packet_ctx->input_msg, packet_ctx->hadb_entry);
+
+#ifdef CONFIG_HIP_RVS
+    hip_relay_handle_relay_to_in_client(packet_type, ha_state, packet_ctx);
+#endif /* CONFIG_HIP_RVS */
 
     /* According to the section 8.6 of the base draft, we must first check
      * signature. */
@@ -1737,6 +1747,10 @@ int hip_handle_r2(const uint8_t packet_type,
     } else {
         HIP_ERROR("Couldn't get device ifindex of address\n");
     }
+
+#ifdef HIP_HIP_RVS
+    hip_relay_handle_relay_to_in_client(packet_type, ha_state, packet_ctx);
+#endif /* HIP_HIP_RVS */
 
     /* Copying address list from temp location in entry
      * "entry->peer_addr_list_to_be_added" */

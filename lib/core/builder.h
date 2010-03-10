@@ -13,10 +13,7 @@
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "debug.h"
 #include "misc.h"
 #include "icomm.h"
@@ -185,7 +182,6 @@ int hip_verify_network_header(struct hip_common *hip_common,
                               struct sockaddr *src,
                               struct sockaddr *dst,
                               int len);
-uint16_t hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
 int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
 void hip_dump_msg(const struct hip_common *);
@@ -302,5 +298,6 @@ int hip_build_param_nat_port(hip_common_t *msg,
                              const in_port_t port,
                              hip_tlv_type_t hipparam);
 struct in6_addr *hip_get_locator_item_address(void *item);
+int hip_build_digest(const int type, const void *in, int in_len, void *out);
 
 #endif /* HIP_LIB_CORE_BUILDER_H */

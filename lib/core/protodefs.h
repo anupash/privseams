@@ -165,7 +165,7 @@
 #define HIP_PARAM_TRANSFORM_ORDER       32813
 #define HIP_PARAM_HDRR_INFO             32814
 #define HIP_PARAM_UADB_INFO             32815
-/* unused, was HIP_PARAM_SAVA_CRYPTO_INFO 32816 */
+/* free slot */
 #define HIP_PARAM_SECRET                32817
 #define HIP_PARAM_BRANCH_NODES          32818
 #define HIP_PARAM_ROOT                  32819
@@ -297,7 +297,6 @@
         HIP_HA_CTRL_LOCAL_REQ_UNSUP | \
         HIP_HA_CTRL_LOCAL_REQ_RELAY | \
         HIP_HA_CTRL_LOCAL_REQ_RVS | \
-        HIP_HA_CTRL_LOCAL_REQ_SAVAH | \
         HIP_HA_CTRL_LOCAL_REQ_FULLRELAY \
         )
 

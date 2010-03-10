@@ -246,7 +246,6 @@ libhipconf/hipconf.h : hip_conf_handle_puzzle
 libhipconf/hipconf.h : hip_conf_handle_restart
 libhipconf/hipconf.h : hip_conf_handle_rst
 libhipconf/hipconf.h : hip_conf_handle_run_normal
-libhipconf/hipconf.h : hip_conf_handle_sava
 libhipconf/hipconf.h : hip_conf_handle_server
 libhipconf/hipconf.h : hip_conf_handle_service
 libhipconf/hipconf.h : hip_conf_handle_set
@@ -449,7 +448,6 @@ libopphip/wrap_db test/hashtest.h : hip_opp_socket_entry
 firewall/opptcp.h : HIP_OPPTCP
 libhipcore/protodefs.h : HIP_PARAM_MAX
 libhipcore/protodefs.h : HIP_PARAM_MIN
-libhipcore/protodefs.h : HIP_PARAM_SAVA_CRYPTO_INFO
 libhipcore/protodefs.h : HIP_PARAM_TURN_INFO
 firewall/user_ipsec_esp.h : hip_payload_decrypt
 firewall/user_ipsec_esp.h : hip_payload_encrypt
@@ -514,9 +512,7 @@ test/unit.h : hip_run_unit_test_case
 test/unit.h : hip_run_unit_test_space
 libhipcore/protodefs.h : hip_rvs_hmac
 firewall/user_ipsec_sadb.h : hip_sadb_print
-firewall/user_ipsec_sadb.h : hip_sa_entry
-firewall/sava_api.h : HIP_SAVA_API
-hipd/maintenance.h : hip_scan_retransmissions
+
 test/escrow.h : hip_send_escrow_update
 libhipcore/builder.h : hip_set_param_spi_value
 libhipcore/builder.h : hip_set_param_type
@@ -764,10 +760,10 @@ libhipgui/widgets.h : ID_TOOLBAR
 libhipgui/widgets.h : ID_TWG_LW
 libhipgui/widgets.h : ID_USERMODEL
 libhipgui/widgets.h : ID_USERVIEW
-firewall/conndb firewall/proxydb firewall/sava_api firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_COMP_FN
+firewall/conndb firewall/proxydb  firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_COMP_FN
 hipd/hiprelay libhipcore/hashtable /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_DOALL_ARG_FN
 hipd/hiprelay libhipcore/hashtable /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_DOALL_FN
-firewall/conndb firewall/proxydb firewall/sava_api firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_HASH_FN
+firewall/conndb firewall/proxydb  firewall/user_ipsec_sadb hipd/hadb hipd/hipqueue hipd/hiprelay libhipcore/hashtable libopphip/wrap_db /usr/include/openssl/lhash.h : IMPLEMENT_LHASH_HASH_FN
 libhiptool/nlink.h : inet_prefix
 firewall/rule_management.h : IN_IF_OPTION
 firewall/rule_management.h : IN_IF_STR
@@ -1248,7 +1244,6 @@ libhipconf/hipconf.h : TYPE_ORDER
 libhipconf/hipconf.h : TYPE_PUZZLE
 libhipconf/hipconf.h : TYPE_RST
 libhipconf/hipconf.h : TYPE_RUN
-libhipconf/hipconf.h : TYPE_SAVAHR
 libhipconf/hipconf.h : TYPE_SERVER
 libhipconf/hipconf.h : TYPE_SERVICE
 libhipconf/hipconf.h : TYPE_SET

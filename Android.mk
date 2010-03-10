@@ -34,7 +34,6 @@ LOCAL_SRC_FILES :=  update.c \
                     netdev.c \
                     bos.c \
                     nat.c \
-                    icookie.c \
                     init.c \
                     maintenance.c \
                     accessor.c \
@@ -67,7 +66,6 @@ LOCAL_CFLAGS := -include $(BASE_PATH)/libhipandroid/libhipandroid.h \
                 -DCONFIG_HIP_RVS \
                 -DCONFIG_HIP_HIPPROXY \
                 -DCONFIG_HIP_OPPORTUNISTIC \
-                -DCONFIG_SAVAH_IP_OPTION \
                 -DCONFIG_HIP_DEBUG \
                 -DHIP_LOGFMT_LONG \
                 -g
@@ -148,7 +146,6 @@ LOCAL_SRC_FILES :=  firewall.c \
                     opptcp.c \
                     firewalldb.c \
                     lsi.c \
-                    sava_api.c \
                     cache.c \
                     cache_port.c \
                     esp_prot_config.c

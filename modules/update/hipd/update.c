@@ -13,14 +13,14 @@
 /* requiread for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "update.h"
 
 #include "lib/core/builder.h"
 #include "lib/core/protodefs.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/solve.h"
+#include "hipd/netdev.h"
 #include "update_legacy.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE

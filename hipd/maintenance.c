@@ -13,12 +13,11 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "maintenance.h"
 #include "modularization.h"
+#include "hipd.h"
+#include "lib/core/hip_udp.h"
 
 #define FORCE_EXIT_COUNTER_START                5
 

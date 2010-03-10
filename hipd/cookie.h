@@ -16,7 +16,6 @@ struct hip_r1entry {
 };
 
 #define HIP_R1TABLESIZE         3 /* precreate only this many R1s */
-#define HIP_PUZZLE_MAX_K        28
 struct hip_common *hip_get_r1(struct in6_addr *ip_i,
                               struct in6_addr *ip_r,
                               struct in6_addr *src_hit,
