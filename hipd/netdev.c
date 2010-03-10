@@ -1166,10 +1166,9 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
  *
  * @param msg a netlink message
  * @param len the length of the netlink message in bytes
- * @param arg currently unused
  * @return zero on success and non-zero on error
  */
-int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
+int hip_netdev_event(const struct nlmsghdr *msg, int len)
 {
     int err = 0, l = 0, is_add = 0, exists;
     struct sockaddr_storage ss_addr;

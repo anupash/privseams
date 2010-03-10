@@ -459,8 +459,7 @@ static int hipd_main(int argc, char *argv[])
             /* Something on IF and address event netlink socket,
              * fetch it. */
             HIP_DEBUG("netlink receive\n");
-            if (hip_netlink_receive(&hip_nl_ipsec,
-                                    hip_netdev_event, NULL)) {
+            if (hip_netlink_receive(&hip_nl_ipsec)) {
                 HIP_ERROR("Netlink receiving failed\n");
             }
         }
@@ -469,8 +468,7 @@ static int hipd_main(int argc, char *argv[])
             /* Something on IF and address event netlink socket,
              * fetch it. */
             HIP_DEBUG("netlink route receive\n");
-            if (hip_netlink_receive(&hip_nl_route,
-                                    hip_netdev_event, NULL)) {
+            if (hip_netlink_receive(&hip_nl_route)) {
                 HIP_ERROR("Netlink receiving failed\n");
             }
         }
