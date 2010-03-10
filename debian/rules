@@ -31,7 +31,14 @@ endif
 ifneq "$(wildcard /usr/share/misc/config.guess)" ""
 	cp -f /usr/share/misc/config.guess config.guess
 endif
-	./configure $(CROSS) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --enable-maemo --disable-firewall --disable-privsep --enable-midauth --disable-agent --disable-opportunistic --disable-dht
+	./configure $(CROSS) --prefix=/usr \
+	                     --enable-midauth \
+                         --enable-maemo \
+                         --disable-dht \
+                         --disable-agent \
+                         --disable-privsep \
+                         --disable-i3 \
+                         --disable-debug
 
 
 build: build-stamp
