@@ -11,11 +11,11 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
+LT_INIT(disable-shared)
 
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
-AC_PROG_LIBTOOL(disable-shared)
 AM_PROG_CC_C_O # Required in CentOS
 
 # Check for python for tools directory
