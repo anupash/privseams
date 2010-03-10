@@ -1,5 +1,7 @@
 ACLOCAL_AMFLAGS  = -I m4
 
+HIPL_HEADER_LIST = $(wildcard agent/*.h firewall/*.h hipd/*.h i3/*/*.h lib/*/*.h test/*.h)
+
 # For "make dist"
 #
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
@@ -9,14 +11,9 @@ EXTRA_DIST =  debian doc hipext hipfwmi lib/android patches
 EXTRA_DIST += test/packaging test/configs
 EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh i3-cfg-PL.xml
 EXTRA_DIST += release.version tcp verbose-headers.txt
-EXTRA_DIST += $(wildcard agent/*.h)
-EXTRA_DIST += $(wildcard i3/*/*.h)
-EXTRA_DIST += $(wildcard lib/*/*.h)
-EXTRA_DIST += $(wildcard hipd/*.h)
-EXTRA_DIST += $(wildcard firewall/*.h)
-EXTRA_DIST += $(wildcard test/*.h)
 EXTRA_DIST += tools/gen-python-starter.sh
 EXTRA_DIST += m4 # required for CentOS "make bin" target
+EXTRA_DIST += $(HIPL_HEADER_LIST)
 
 BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
 
