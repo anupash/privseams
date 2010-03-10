@@ -195,7 +195,9 @@ int hip_heartbeat_init(void)
     struct icmp6_filter filter;
     int *icmpsockfd = &hip_icmp_sock;
 
-    lmod_add_module_id("heartbeat");
+    HIP_IFEL(lmod_add_module_id("heartbeat"),
+             -1,
+             "Error on registering HEATBEAT module.\n");
 
     hip_register_maint_function(&hip_heartbeat_maintenance, 10000);
     hip_register_socket(hip_icmp_sock, NULL, 30000);

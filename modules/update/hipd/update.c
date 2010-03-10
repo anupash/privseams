@@ -873,11 +873,16 @@ out_err:
 /**
  * Initialization function for update module.
  *
- * @return 0
+ * @return Success =  0
+ *         Error   = -1
  */
 int hip_update_init(void)
 {
-    lmod_add_module_id("update");
+    int err = 0;
+
+    HIP_IFEL(lmod_add_module_id("update"),
+             -1,
+             "Error on registering UPDATE module.\n");
 
     lmod_register_state_init_function(&hip_update_init_state);
 
@@ -892,7 +897,8 @@ int hip_update_init(void)
 
     hip_register_maint_function(&hip_update_maintenance, 0);
 
-    return 0;
+out_err:
+    return err;
 }
 
 /**
