@@ -20,6 +20,8 @@
 #  define IPPROTO_HIP             139
 #endif
 
+#define IPV4_HDR_SIZE 20
+
 #define HIP_MAX_PACKET 4096
 #define HIP_MAX_NETWORK_PACKET 2048
 /** @addtogroup hip_msg

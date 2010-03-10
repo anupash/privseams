@@ -15,6 +15,7 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <netinet/udp.h>
 #include "lib/core/builder.h"
 #include "config.h"
 #include "esp_prot_conntrack.h"

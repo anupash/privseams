@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "lib/core/debug.h"
+#include "lib/core/message.h"
 #include "hipd/hadb.h"
 #include "lib/core/hashtable.h"
 #include "lib/tool/lutil.h"

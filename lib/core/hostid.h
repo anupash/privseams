@@ -1,6 +1,22 @@
 #ifndef HIP_LIB_CORE_HOSTID_H
 #define HIP_LIB_CORE_HOSTID_H
 
+#include "state.h"
+
+struct hip_rsa_keylen {
+    int e_len;
+    int e;
+    int n;
+};
+
+struct hip_hit_info {
+    struct hip_lhi lhi;
+    hip_lsi_t      lsi;
+};
+
+int hip_verify_packet_signature(struct hip_common *pkt,
+                                struct hip_host_id *peer_host_id);
+
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
                            struct in6_addr *hit, int hit_type);
 

@@ -13,6 +13,7 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <arpa/inet.h>
 #include <sys/time.h>
 #include <time.h>
 #include <zlib.h>

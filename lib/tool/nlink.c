@@ -32,8 +32,10 @@
 
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 
 #include "config.h"
+#include "lib/core/hip_udp.h"
 #include "nlink.h"
 
 /* New one to prevent netlink overrun */

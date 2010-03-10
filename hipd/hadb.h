@@ -5,11 +5,12 @@
 #include "keymat.h"
 #include "lib/tool/pk.h"
 #include "lib/core/debug.h"
-#include "lib/core/misc.h"
+
 #include "hidb.h"
 #include "lib/core/hashtable.h"
 #include "lib/core/state.h"
 #include "lib/core/builder.h"
+#include "lib/core/straddr.h"
 #include "input.h"      // required for declaration of receive functions
 #include "update.h"     // required for declaration of update function
 #include "user_ipsec_sadb_api.h"

@@ -264,3 +264,27 @@ int hip_timeval_diff(const struct timeval *t1,
 
     return _t1.tv_sec >= _t2.tv_sec;
 }
+
+/**
+ * find the maximum value from a variable list of integers
+ *
+ * @param num_args number of list items
+ * @param ... the integers from which to find maximum
+ * @return the integer with the largest value from the
+ *         list provided
+ */
+int maxof(int num_args, ...)
+{
+    int max, i, a;
+    va_list ap;
+
+    va_start(ap, num_args);
+    max = va_arg(ap, int);
+    for (i = 2; i <= num_args; i++) {
+        if ((a = va_arg(ap, int)) > max) {
+            max = a;
+        }
+    }
+    va_end(ap);
+    return max;
+}

@@ -14,7 +14,6 @@
 #ifndef HIP_HIPD_REGISTRATION_H
 #define HIP_HIPD_REGISTRATION_H
 
-#include "lib/core/misc.h"
 #include "lib/core/builder.h" // For lifetime conversions.
 #include "lib/core/protodefs.h" // For service type values and hip_ha_t
 #include "hiprelay.h" // For relrec lifetimes.

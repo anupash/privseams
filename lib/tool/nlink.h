@@ -18,6 +18,9 @@
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 
+#define HIP_OPTION_KIND 30
+#define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
+
 
 struct pseudo_hdr {
     uint32_t s_addr;
@@ -34,8 +37,6 @@ struct pseudo6_hdr {
     uint8_t              protocol;
     uint16_t             length;
 };
-
-#define HIP_OPTION_KIND 30
 
 struct netdev_address {
     //hip_list_t next;

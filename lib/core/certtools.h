@@ -26,7 +26,7 @@
 #include "config.h"
 #include "debug.h"
 #include "ife.h"
-#include "misc.h"
+
 #include "hashtable.h"
 
 /** Defines */

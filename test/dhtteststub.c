@@ -23,9 +23,10 @@
 #include <netinet/ip.h>
 #include <errno.h>
 #include <time.h>
+#include <sys/time.h>
 #include "lib/dht/libhipdht.h"
 #include "lib/core/debug.h"
-#include "lib/core/misc.h"
+#include "lib/core/straddr.h"
 
 int main(int argc, char *argv[])
 {

@@ -9,11 +9,13 @@
 #define _BSD_SOURCE
 
 #include <stdlib.h>
+#include "dhtqueue.h"
+#include "hipd.h"
 #include "lib/core/hashtable.h"
 #include "lib/core/debug.h"
+#include "lib/core/builder.h"
 
-#include "dhtqueue.h"
-#include "lib/core/misc.h"
+
 
 struct hip_queue {
     void *data;

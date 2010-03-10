@@ -16,6 +16,7 @@
 #include "oppdb.h"
 #include "hadb.h"
 #include "accessor.h"
+#include "lib/core/hit.h"
 
 #define HIP_LOCK_OPP_INIT(entry)
 #define HIP_UNLOCK_OPP_INIT(entry)

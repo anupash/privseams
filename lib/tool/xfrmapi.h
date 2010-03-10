@@ -15,7 +15,7 @@
 #include "lib/core/hashtable.h"
 #include "hipd/hadb.h"
 #include "hipd/user.h"
-#include "lib/core/misc.h"
+
 #include "lib/core/state.h"
 #include "nlink.h"
 

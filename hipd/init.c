@@ -13,17 +13,18 @@
 #include <netinet/icmp6.h>
 
 #include "config.h"
+#include "init.h"
+#include "oppdb.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
-#include "init.h"
 #include "lib/performance/performance.h"
 #include "lib/core/hip_capability.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hostid.h"
 #include "lib/tool/nlink.h"
-#include "oppdb.h"
 #include "lib/dht/libhipdht.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/hostsfiles.h"
 
 #ifdef CONFIG_HIP_AGENT
 #include "hipd.h"

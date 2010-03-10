@@ -67,6 +67,7 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <unistd.h>
 #include "message.h"
 #include "hip_udp.h"
 

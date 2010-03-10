@@ -1,6 +1,10 @@
 #ifndef HIP_LIB_DHT_LIBHIPDHT_H
 #define HIP_LIB_DHT_LIBHIPDHT_H
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include "config.h"
 #include "lib/core/protodefs.h"
 

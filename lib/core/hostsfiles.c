@@ -23,9 +23,9 @@
 #include <netinet/in.h>
 
 #include "config.h"
-#include "misc.h"
-#include "hostsfiles.h"
 
+#include "hostsfiles.h"
+#include "lib/tool/lutil.h"
 
 /**
  * A "for-each" iterator function for hosts files that returns the first

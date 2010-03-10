@@ -27,6 +27,8 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <netinet/ip.h>
+
 #include "config.h"
 #include "datapkt.h"
 #include "user_ipsec_api.h"
@@ -36,6 +38,7 @@
 #include "lib/core/ife.h"
 #include "lib/core/builder.h"
 #include "lib/core/hostid.h"
+#include "lib/core/message.h"
 
 static unsigned char *hip_data_packet = NULL;
 

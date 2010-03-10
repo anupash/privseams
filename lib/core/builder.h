@@ -15,7 +15,7 @@
 
 #include "config.h"
 #include "debug.h"
-#include "misc.h"
+
 #include "icomm.h"
 #include "certtools.h"
 #include "hipd/registration.h"

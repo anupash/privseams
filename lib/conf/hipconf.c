@@ -40,10 +40,13 @@
 #include "config.h"
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
+#include "lib/core/straddr.h"
 #include "hipconf.h"
 #include "lib/core/prefix.h"
 #include "lib/dht/libhipdht.h"
 #include "lib/core/hostid.h"
+#include "lib/core/message.h"
+#include "lib/core/crypto.h"
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.

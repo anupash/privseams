@@ -4,6 +4,7 @@
 #include <openssl/bio.h>
 #include <openssl/crypto.h>
 #include <openssl/lhash.h>
+#include <limits.h>
 #include "debug.h"
 #include "list.h"
 
@@ -35,6 +36,7 @@ int hip_ht_add(void *head, void *data);
 typedef DECLARE_LHASH_OF (HIP_HT) hip_ht_common;
 typedef hip_ht_common HIP_HASHTABLE;
 
+LHASH_OF(HIP_HT) * hip_linked_list_init(void);
 LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc);
 
 #else
@@ -70,6 +72,7 @@ LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE c
 typedef DECLARE_LHASH_OF (HIP_HT) hip_ht_common;
 typedef LHASH HIP_HASHTABLE;
 
+HIP_HASHTABLE *hip_linked_list_init(void);
 HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
                            LHASH_COMP_FN_TYPE cmpfunc);
 #endif

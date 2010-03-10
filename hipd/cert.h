@@ -26,7 +26,7 @@
 #include "config.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
-#include "lib/core/misc.h"
+
 #include "hidb.h"
 #include "lib/core/hashtable.h"
 

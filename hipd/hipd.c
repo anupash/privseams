@@ -13,10 +13,11 @@
 #include "config.h"
 #include "hipd.h"
 #include "lib/dht/libhipdht.h"
+#include "lib/core/filemanip.h"
+#include "lib/core/straddr.h"
 #include "heartbeat.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/core/filemanip.h"
 #include "lib/performance/performance.h"
 #endif
 

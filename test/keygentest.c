@@ -13,7 +13,8 @@
 #include <time.h>
 
 #include "lib/core/debug.h"
-#include "lib/core/misc.h"
+#include "lib/core/crypto.h"
+#include "lib/tool/lutil.h"
 
 int main(int argc, char *argv[])
 {

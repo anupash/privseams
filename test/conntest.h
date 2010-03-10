@@ -16,7 +16,7 @@
 #include <sys/uio.h>
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
-#include "lib/core/misc.h"
+
 
 int create_socket(int proto);
 int create_serversocket(int type, in_port_t port);

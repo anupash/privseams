@@ -13,9 +13,12 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <netinet/udp.h>
+
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/builder.h"
+#include "lib/core/message.h"
 
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_api.h"

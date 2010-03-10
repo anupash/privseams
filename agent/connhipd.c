@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "connhipd.h"
 #include "agent.h"
@@ -30,6 +31,7 @@
 #include "lib/core/icomm.h"
 #include "lib/core/message.h"
 #include "lib/core/builder.h"
+#include "lib/core/straddr.h"
 
 /* This socket is used for communication between agent and HIP daemon. */
 int hip_agent_sock           = 0;

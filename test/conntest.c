@@ -2,6 +2,8 @@
 #define _BSD_SOURCE
 
 #include "conntest.h"
+#include "lib/tool/nlink.h"
+#include "lib/tool/lutil.h"
 
 /**
  * create_serversocket - given the port and the protocol

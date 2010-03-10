@@ -5,6 +5,15 @@
 
 #include "config.h"
 
+#ifdef CONFIG_HIP_OPENWRT
+# define HIP_CREATE_FILE(x)     check_and_create_file(x, 0644)
+#else
+# define HIP_CREATE_FILE(x)     open((x), O_RDWR | O_CREAT, 0644)
+#endif
+
+/* system/bin for Android */
+#define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin:/system/bin"
+
 int hip_create_lock_file(char *filename, int killold);
 int hip_remove_lock_file(char *filename);
 int check_and_create_dir(char *dirname, mode_t mode);

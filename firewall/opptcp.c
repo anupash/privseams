@@ -36,11 +36,13 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <netinet/tcp.h>
 #include "opptcp.h"
 #include "firewalldb.h"
 #include "lib/core/debug.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/builder.h"
+#include "lib/core/message.h"
 #include "common_hipd_msg.h"
 #include "firewall.h"
 

@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <netdb.h>
+#include <unistd.h>
+#include <ctype.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -31,7 +33,10 @@
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/icomm.h"
-#include "lib/core/misc.h"
+#include "lib/core/builder.h"
+#include "lib/core/straddr.h"
+#include "lib/core/message.h"
+
 #include "libhipdht.h"
 #include "libhipdhtxml.h"
 

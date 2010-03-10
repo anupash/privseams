@@ -7,7 +7,7 @@
 #include "lib/core/crypto.h"
 #include "protodefs.h"
 #include "state.h"
-#include "misc.h"
+
 
 #define HIP_PUZZLE_MAX_K        28
 

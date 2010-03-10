@@ -8,6 +8,7 @@
 #include <libxml2/libxml/tree.h>
 #include "libhipdhtxml.h"
 #include "lib/core/debug.h"
+#include "lib/core/straddr.h"
 #include "hipd/netdev.h"
 
 xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value);

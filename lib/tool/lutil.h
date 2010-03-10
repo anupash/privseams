@@ -77,4 +77,6 @@ char *findsubstring(const char *string, const char *substring);
  */
 void extractsubstrings(char *string, List *list);
 
+int maxof(int num_args, ...);
+
 #endif /* HIP_LIB_TOOL_LUTIL_H */
