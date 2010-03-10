@@ -976,15 +976,15 @@ out_err:
     return err;
 }
 
-static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6_addr *dst_addr, uint8_t *buff, uint16_t len)
+static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6_addr *dst_addr, const unsigned char *buff, uint16_t len)
 {
     struct sockaddr_in6 src6, dst6;
-    struct ip *ip;
-    struct ip6_hdr *ip6;
-    struct icmphdr *icmp;
+    struct ip *ip = NULL;
+    struct ip6_hdr *ip6 = NULL;
+    struct icmphdr *icmp = NULL;
     int sa_size, sent;
     int on = 1;
-    uint8_t *msg;
+    unsigned char *msg = NULL;
 
     ip = (struct ip *) buff;
 
@@ -1001,7 +1001,7 @@ static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6
     HIP_DEBUG_IN6ADDR("dst6", &dst6.sin6_addr);
 
     sa_size = sizeof(struct sockaddr_in6);
-    msg = (uint8_t *) HIP_MALLOC((len + sizeof(struct ip6_hdr) - ip->ip_hl), 0);
+    msg = HIP_MALLOC((len + sizeof(struct ip6_hdr) - ip->ip_hl), 0);
     memset(msg, 0, (len + sizeof(struct ip6_hdr) - ip->ip_hl));
 
     ip6 = (struct ip6_hdr *) msg;
@@ -1142,7 +1142,7 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
             }
 
             if ((protocol == IPPROTO_ICMP) || (protocol == IPPROTO_ICMPV6)) {
-                hip_proxy_send_inbound_icmp_pkt(proxy_hit, &entry->hit_peer, (uint8_t *) m->payload, m->data_len);
+                hip_proxy_send_inbound_icmp_pkt(proxy_hit, &entry->hit_peer, m->payload, m->data_len);
                 /* drop packet */
                 err = 0;
             } else {
