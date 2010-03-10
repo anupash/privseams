@@ -117,13 +117,8 @@ const char *hipconf_usage =
     "new hi anon|pub rsa|dsa filebasename keylen\n"
     "new|add hi default (HI must be created as root)\n"
     "new hi default rsa_keybits dsa_keybits\n"
-#ifdef CONFIG_HIP_ICOOKIE
-    "get|inc|dec|new puzzle all|<hit>\n"
-    "set puzzle all|<hit> new_value\n"
-#else
     "get|inc|dec|new puzzle all\n"
     "set puzzle all new_value\n"
-#endif
     "bos all\n"
     "nat none|plain-udp\n"
     "nat port local <port>\n"

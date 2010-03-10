@@ -74,16 +74,6 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
     return err;
 }
 
-#ifndef CONFIG_HIP_ICOOKIE /* see also spam.c for overriding functions */
-
-#if 0
-void hip_init_puzzle_defaults()
-{
-    return;
-}
-
-#endif
-
 int hip_get_cookie_difficulty(hip_hit_t *not_used)
 {
     /* Note: we could return a higher value if we detect DoS */
@@ -141,8 +131,6 @@ int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
     return (base) % HIP_R1TABLESIZE;
 }
-
-#endif /* !CONFIG_HIP_ICOOKIE */
 
 /**
  * hip_fetch_cookie_entry - Get a copy of R1entry structure
@@ -243,7 +231,6 @@ out_err:
     return err;
 }
 
-#ifndef CONFIG_HIP_ICOOKIE
 /*
  * @sign the signing function to use
  */
@@ -272,8 +259,6 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
 err_out:
     return 0;
 }
-
-#endif /* !CONFIG_HIP_ICOOKIE */
 
 void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 {

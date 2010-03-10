@@ -34,7 +34,6 @@ LOCAL_SRC_FILES :=  update.c \
                     netdev.c \
                     bos.c \
                     nat.c \
-                    icookie.c \
                     init.c \
                     maintenance.c \
                     accessor.c \
