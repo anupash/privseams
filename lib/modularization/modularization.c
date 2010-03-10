@@ -354,7 +354,7 @@ int lmod_add_module_id(const char *module_id)
 
     module_list[num_modules++] = strdup(module_id);
 
-    return num_modules-1;
+    return 0;
 }
 
 /**
