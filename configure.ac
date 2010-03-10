@@ -93,7 +93,7 @@ AC_SUBST(usagi_libc)
 
 
 AC_ARG_ENABLE(firewall,
-               AC_HELP_STRING([--enable-firewall],
+               AS_HELP_STRING([--enable-firewall],
                               [HIP enabled firewall daemon (default is YES)]),
                [ac_cv_use_firewall=$enableval],
                [ac_cv_use_firewall=yes])
@@ -123,7 +123,7 @@ if test x"$ac_cv_use_agent" = x"no"; then
 fi
 
 AC_ARG_ENABLE(agent,
-               AC_HELP_STRING([--enable-agent],
+               AS_HELP_STRING([--enable-agent],
                               [HIP enable user agent (default is YES)]),
                [ac_cv_use_agent=$enableval],
                [ac_cv_use_agent=yes])
@@ -139,7 +139,7 @@ fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
 AC_ARG_ENABLE(pfkey,
-               AC_HELP_STRING([--enable-pfkey],
+               AS_HELP_STRING([--enable-pfkey],
                               [HIP pfkey extensions (default is NO)]),
                [ac_cv_use_pfkey=$enableval],
                [ac_cv_use_pfkey=no])
@@ -154,7 +154,7 @@ fi
 AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
 
 AC_ARG_ENABLE(rvs,
-               AC_HELP_STRING([--enable-rvs],
+               AS_HELP_STRING([--enable-rvs],
                               [HIP Rendezvous Extensions (default is YES)]),
                [ac_cv_use_rvs=$enableval],
                [ac_cv_use_rvs=yes])
@@ -167,7 +167,7 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(hipproxy,
-               AC_HELP_STRING([--enable-hipproxy],
+               AS_HELP_STRING([--enable-hipproxy],
                               [HIP Proxy (default is YES)]),
                [ac_cv_use_hipproxy=$enableval],
                [ac_cv_use_hipproxy=yes])
@@ -180,7 +180,7 @@ if test x"$ac_cv_use_hipproxy" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(maemo,
-               AC_HELP_STRING([--enable-maemo],
+               AS_HELP_STRING([--enable-maemo],
                               [Maemo (default is NO)]),
                [ac_cv_use_maemo=$enableval],
                [ac_cv_use_maemo=no])
@@ -195,7 +195,7 @@ if test x"$ac_cv_use_maemo" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(openwrt,
-               AC_HELP_STRING([--enable-openwrt],
+               AS_HELP_STRING([--enable-openwrt],
                               [OpenWRT (default is NO)]),
                [ac_cv_use_openwrt=$enableval],
                [ac_cv_use_openwrt=no])
@@ -215,7 +215,7 @@ if test x"$ac_cv_use_openwrt" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(altsep,
-               AC_HELP_STRING([--enable-altsep],
+               AS_HELP_STRING([--enable-altsep],
                               [Alternative privilege separation (default is NO)]),
                [ac_cv_use_altsep=$enableval],
                [ac_cv_use_altsep=no])
@@ -229,7 +229,7 @@ if test x"$ac_cv_use_altsep" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(privsep,
-               AC_HELP_STRING([--enable-privsep],
+               AS_HELP_STRING([--enable-privsep],
                               [Privilege separation (default is YES)]),
                [ac_cv_use_privsep=$enableval],
                [ac_cv_use_privsep=yes])
@@ -248,7 +248,7 @@ fi
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 
 AC_ARG_ENABLE(i3,
-               AC_HELP_STRING([--enable-i3],
+               AS_HELP_STRING([--enable-i3],
                [HIP i3  (default is NO)]),
                [ac_cv_use_i3=$enableval],)
 AC_CACHE_CHECK([whether to use i3],
@@ -263,7 +263,7 @@ fi
 AM_CONDITIONAL(HIP_I3, test x"$ac_cv_use_i3" = x"yes")
 
 AC_ARG_ENABLE(opportunistic,
-               AC_HELP_STRING([--enable-opportunistic],
+               AS_HELP_STRING([--enable-opportunistic],
                               [HIP opportunistic mode (default is YES)]),
                [ac_cv_use_opportunistic=$enableval],
                [ac_cv_use_opportunistic=yes])
@@ -278,7 +278,7 @@ fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(dht,
-               AC_HELP_STRING([--enable-dht],
+               AS_HELP_STRING([--enable-dht],
                               [DHT support (default is YES)]),
                [ac_cv_use_dht=$enableval],
                [ac_cv_use_dht=yes])
@@ -293,7 +293,7 @@ fi
 AM_CONDITIONAL(HIP_DHT, test x"$ac_cv_use_dht" = x"yes")
 
 AC_ARG_ENABLE(blind,
-               AC_HELP_STRING([--enable-blind],
+               AS_HELP_STRING([--enable-blind],
                               [HIP BLIND extensions (default is NO)]),
                [ac_cv_use_blind=$enableval],
                [ac_cv_use_blind=no])
@@ -306,7 +306,7 @@ if test x"$ac_cv_use_blind" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(profiling,
-               AC_HELP_STRING([--enable-profiling],
+               AS_HELP_STRING([--enable-profiling],
                               [gprof profiling support (default is NO)]),
                [ac_cv_use_profiling=$enableval],
                [ac_cv_use_profiling=no])
@@ -318,7 +318,7 @@ if test x"$ac_cv_use_profiling" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(debug,
-               AC_HELP_STRING([--enable-debug],
+               AS_HELP_STRING([--enable-debug],
                               [Enable debug (default is YES)]),
                [ac_cv_use_debug=$enableval],
                [ac_cv_use_debug=yes])
@@ -333,7 +333,7 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(midauth,
-               AC_HELP_STRING([--enable-midauth],
+               AS_HELP_STRING([--enable-midauth],
                               [Enable middlebox authentification (default is NO)]),
                [ac_cv_use_midauth=$enableval],
                [ac_cv_use_midauth=no])
@@ -348,7 +348,7 @@ fi
 AM_CONDITIONAL(HIP_MIDAUTH, test x"$ac_cv_use_midauth" = x"yes")
 
 AC_ARG_ENABLE(performance,
-               AC_HELP_STRING([--enable-performance],
+               AS_HELP_STRING([--enable-performance],
                               [Performace measurement support (default is NO)]),
                [ac_cv_use_performance=$enableval],
                [ac_cv_use_performance=no])
@@ -363,7 +363,7 @@ fi
 AM_CONDITIONAL(HIP_PERFORMANCE, test x"$ac_cv_use_performance" = x"yes")
 
 AC_ARG_ENABLE(demo,
-               AC_HELP_STRING([--enable-demo],
+               AS_HELP_STRING([--enable-demo],
                               [Demo output (default is NO)]),
                [ac_cv_use_demo=$enableval],
                [ac_cv_use_demo=no])
