@@ -56,12 +56,12 @@ cd "$CHECKOUT_DIR"
 # Compile HIPL in different configurations
 # vanilla configuration
 compile
-# The following configuration is commented out until HIPL is fixed
+
 # PISA configuration
-#compile  --enable-firewall --disable-agent --disable-pfkey --disable-rvs --disable-hipproxy --disable-altsep --enable-privsep --disable-i3 --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
-compile --enable-firewall --disable-agent --disable-pfkey --disable-hipproxy --disable-altsep --enable-privsep --disable-i3 --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
+compile --enable-firewall --disable-agent --disable-pfkey --disable-rvs --disable-hipproxy --disable-altsep --enable-privsep --disable-i3 --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
+
 # Alternative path to vanilla
-compile --enable-firewall --enable-agent --disable-hipproxy --enable-openwrt --enable-altsep --disable-privsep --enable-i3 --disable-opportunistic --disable-dht --enable-blind --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
+compile --enable-firewall --enable-agent --enable-pfkey --disable-rvs --disable-hipproxy --enable-openwrt --enable-altsep --disable-privsep --enable-i3 --disable-opportunistic --disable-dht --enable-blind --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
 
 
 cleanup 0
