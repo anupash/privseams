@@ -213,7 +213,7 @@ static int hipd_main(int argc, char *argv[])
     int ch, killold = 0;
     // char buff[HIP_MAX_NETLINK_PACKET];
     fd_set read_fdset;
-    int foreground = 1, err = 0, fix_alignment = 0;
+    int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
     struct timeval timeout;
     struct hip_packet_context packet_ctx = {0};
 
@@ -326,6 +326,8 @@ static int hipd_main(int argc, char *argv[])
 
     HIP_IFEL(create_configs_and_exit, 0, "Configs created, exiting\n");
 
+    highest_descriptor = hip_get_highest_descriptor();
+
     /* Allocate user message. */
     HIP_IFE(!(packet_ctx.input_msg = hip_msg_alloc()), 1);
     packet_ctx.output_msg  = NULL;
@@ -365,7 +367,7 @@ static int hipd_main(int argc, char *argv[])
         }
 #endif
 
-        err = select((hip_get_highest_descriptor() + 1), &read_fdset, NULL, NULL, &timeout);
+        err = select(highest_descriptor + 1, &read_fdset, NULL, NULL, &timeout);
 
         if (err < 0) {
             HIP_ERROR("select() error: %s.\n", strerror(errno));
