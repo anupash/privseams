@@ -73,7 +73,6 @@ int are_addresses_compatible(const struct in6_addr *src_addr,
 int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_addr,
                  const in_port_t src_port, const in_port_t dst_port,
                  struct hip_common *msg, hip_ha_t *entry, const int retransmit);
-int hip_send_icmp(int sockfd, hip_ha_t *entry);
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
                       in_port_t src_port, in_port_t dst_port,
                       const void *msg, int length);

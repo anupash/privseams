@@ -6,12 +6,145 @@
 #include "heartbeat.h"
 #include "hipd/hadb.h"
 #include "hipd/init.h"
+#include "hipd/hip_socket.h"
 #include "hipd/modularization.h"
 
 #define HIP_HEARTBEAT_INTERVAL 20
 
 int hip_icmp_sock     = 0;
 int heartbeat_counter = 0;
+
+/**
+ * This function sends ICMPv6 echo with timestamp to dsthit
+ *
+ * @param socket to send with
+ * @param srchit HIT to send from
+ * @param dsthit HIT to send to
+ *
+ * @return 0 on success negative on error
+ */
+static int hip_send_icmp(int sockfd, hip_ha_t *entry)
+{
+    int err                = 0, i = 0, identifier = 0;
+    struct icmp6_hdr *icmph = NULL;
+    struct sockaddr_in6 dst6;
+    u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
+    u_char *icmp_pkt       = NULL;
+    struct msghdr mhdr;
+    struct iovec iov[1];
+    struct cmsghdr *chdr;
+    struct inet6_pktinfo *pkti;
+    struct timeval tval;
+
+    HIP_IFEL(!entry, 0, "No entry\n");
+
+    HIP_IFEL((entry->outbound_sa_count == 0), 0,
+             "No outbound sa, ignoring keepalive\n")
+
+    _HIP_DEBUG("Starting to send ICMPv6 heartbeat\n");
+
+    /* memset and malloc everything you need */
+    memset(&mhdr, 0, sizeof(struct msghdr));
+    memset(&tval, 0, sizeof(struct timeval));
+    memset(cmsgbuf, 0, sizeof(cmsgbuf));
+    memset(iov, 0, sizeof(struct iovec));
+    memset(&dst6, 0, sizeof(dst6));
+
+    icmp_pkt         = malloc(HIP_MAX_ICMP_PACKET);
+    HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
+    memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
+
+    chdr             = (struct cmsghdr *) (void *) cmsgbuf;
+    pkti             = (struct inet6_pktinfo *) (void *) (CMSG_DATA(chdr));
+
+    identifier       = getpid() & 0xFFFF;
+
+    /* Build ancillary data */
+    chdr->cmsg_len   = CMSG_LEN(sizeof(struct inet6_pktinfo));
+    chdr->cmsg_level = IPPROTO_IPV6;
+    chdr->cmsg_type  = IPV6_PKTINFO;
+    memcpy(&pkti->ipi6_addr, &entry->hit_our, sizeof(struct in6_addr));
+
+    /* get the destination */
+    memcpy(&dst6.sin6_addr, &entry->hit_peer, sizeof(struct in6_addr));
+    dst6.sin6_family        = AF_INET6;
+    dst6.sin6_flowinfo      = 0;
+
+    /* build icmp header */
+    icmph                   = (struct icmp6_hdr *) (void *) icmp_pkt;
+    icmph->icmp6_type       = ICMP6_ECHO_REQUEST;
+    icmph->icmp6_code       = 0;
+    entry->heartbeats_sent++;
+
+    icmph->icmp6_seq        = htons(entry->heartbeats_sent);
+    icmph->icmp6_id         = identifier;
+
+    gettimeofday(&tval, NULL);
+
+    memset(&icmp_pkt[8], 0xa5, HIP_MAX_ICMP_PACKET - 8);
+    /* put timeval into the packet */
+    memcpy(&icmp_pkt[8], &tval, sizeof(struct timeval));
+
+    /* put the icmp packet to the io vector struct for the msghdr */
+    iov[0].iov_base     = icmp_pkt;
+    iov[0].iov_len      = sizeof(struct icmp6_hdr) + sizeof(struct timeval);
+
+    /* build the msghdr for the sendmsg, put ancillary data also*/
+    mhdr.msg_name       = &dst6;
+    mhdr.msg_namelen    = sizeof(struct sockaddr_in6);
+    mhdr.msg_iov        = iov;
+    mhdr.msg_iovlen     = 1;
+    mhdr.msg_control    = &cmsgbuf;
+    mhdr.msg_controllen = sizeof(cmsgbuf);
+
+    i                   = sendmsg(sockfd, &mhdr, 0);
+    if (i <= 0) {
+        HIP_PERROR("SENDMSG ");
+        /* Set return error, even if 0 bytes sent. */
+        err = (0 > i) ? i : -1;
+    }
+
+    /* Debug information*/
+    _HIP_DEBUG_HIT("src hit", &entry->hit_our);
+    _HIP_DEBUG_HIT("dst hit", &entry->hit_peer);
+    _HIP_DEBUG("i == %d socket = %d\n", i, sockfd);
+    _HIP_PERROR("SENDMSG ");
+
+    HIP_IFEL((i < 0), -1, "Failed to send ICMP into ESP tunnel\n");
+    HIP_DEBUG_HIT("Sent heartbeat to", &entry->hit_peer);
+
+out_err:
+    if (icmp_pkt) {
+        free(icmp_pkt);
+    }
+    return err;
+}
+
+static int hip_heartbeat_handle_icmp_sock(struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    HIP_DEBUG("\n\nhandle icmp sock\n\n");
+
+    HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
+             "Failed to recvmsg from ICMPv6\n");
+
+out_err:
+    return err;
+}
+
+static int hip_heartbeat_maintenance(void)
+{
+    /* Check if the heartbeats should be sent */
+    if (heartbeat_counter < 1) {
+        hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
+        heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
+    } else {
+        heartbeat_counter--;
+    }
+
+    return 0;
+}
 
 /**
  * This function goes through the HA database and sends an icmp echo to all of them
@@ -168,24 +301,6 @@ out_err:
     return err;
 }
 
-int hip_heartbeat_maintenance(void)
-{
-    /* Check if the heartbeats should be sent */
-    if (heartbeat_counter < 1) {
-        hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
-        heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
-    } else {
-        heartbeat_counter--;
-    }
-
-    return 0;
-}
-
-//        if (FD_ISSET(hip_icmp_sock, &read_fdset)) {
-//            HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
-//                     "Failed to recvmsg from ICMPv6\n");
-//        }
-
 /**
  * Initialize icmpv6 socket.
  */
@@ -200,7 +315,7 @@ int hip_heartbeat_init(void)
              "Error on registering HEATBEAT module.\n");
 
     hip_register_maint_function(&hip_heartbeat_maintenance, 10000);
-    hip_register_socket(hip_icmp_sock, NULL, 30000);
+    hip_register_socket(hip_icmp_sock, &hip_heartbeat_handle_icmp_sock, 30000);
 
     /* Make sure that hipd does not send icmpv6 immediately after base exchange */
     heartbeat_counter = HIP_HEARTBEAT_INTERVAL;

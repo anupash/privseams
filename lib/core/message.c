@@ -495,6 +495,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 
     HIP_DEBUG("Receiving user message.\n");
 
+    hip_msg_init(hip_msg);
     memset(saddr, 0, sizeof(*saddr));
 
     len = sizeof(*saddr);
@@ -570,6 +571,8 @@ static int hip_read_control_msg_all(int socket,
     char cbuff[CMSG_SPACE(256)];
     int err = 0, len;
     int cmsg_level, cmsg_type;
+
+    hip_msg_init(packet_ctx->input_msg);
 
     HIP_ASSERT(packet_ctx->src_addr);
     HIP_ASSERT(packet_ctx->dst_addr);

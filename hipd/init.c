@@ -14,6 +14,7 @@
 
 #include "config.h"
 #include "esp_prot_light_update.h"
+#include "hip_socket.h"
 #include "init.h"
 #include "oppdb.h"
 #include "lib/core/common_defines.h"
@@ -352,16 +353,6 @@ static void hip_probe_kernel_modules(void)
 
 #endif /* ANDROID_CHANGES */
 #endif /* CONFIG_HIP_OPENWRT */
-
-static void hip_init_sockets(void)
-{
-    hip_register_socket(hip_nl_route.fd,        NULL, 10000);
-    hip_register_socket(hip_raw_sock_input_v6,  NULL, 10100);
-    hip_register_socket(hip_user_sock,          NULL, 10200);
-    hip_register_socket(hip_nl_ipsec.fd,        NULL, 10300);
-    hip_register_socket(hip_raw_sock_input_v4,  NULL, 10400);
-    hip_register_socket(hip_nat_sock_input_udp, NULL, 10500);
-}
 
 static int hip_init_handle_functions(void)
 {

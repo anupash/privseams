@@ -1,6 +1,6 @@
 /**
  * @file
- * The header file for hipd/modularization.h
+ * The header file for hipd/modularization.c
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  *
@@ -33,18 +33,5 @@ int hip_register_maint_function(int (*maint_function)(void),
 int hip_run_maint_functions(void);
 
 void hip_uninit_maint_functions(void);
-
-int hip_register_socket(int socketfd,
-                        int (*func_ptr)(int socketfd,
-                                        struct hip_packet_context *ctx),
-                        const uint16_t priority);
-
-int hip_get_highest_descriptor(void);
-
-void hip_prepare_fd_set(fd_set *read_fdset);
-
-void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx);
-
-void hip_uninit_sockets(void);
 
 #endif /* HIP_HIPD_MODULARIZATION_H */

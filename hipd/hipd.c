@@ -12,6 +12,7 @@
 
 #include "config.h"
 #include "hipd.h"
+#include "hip_socket.h"
 #include "modularization.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/straddr.h"
@@ -390,87 +391,6 @@ static int hipd_main(int argc, char *argv[])
 #endif
 
         hip_run_socket_handles(&read_fdset, &packet_ctx);
-
-        if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset)) {
-
-            hip_msg_init(packet_ctx.input_msg);
-
-            if (hip_read_control_msg_v6(hip_raw_sock_input_v6,
-                                        &packet_ctx,
-                                        0)) {
-                HIP_ERROR("Reading network msg failed\n");
-            } else {
-                err = hip_receive_control_packet(&packet_ctx);
-                if (err) {
-                    HIP_ERROR("hip_receive_control_packet()!\n");
-                }
-            }
-        }
-
-        if (FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
-
-            hip_msg_init(packet_ctx.input_msg);
-
-            if (hip_read_control_msg_v4(hip_raw_sock_input_v4,
-                                        &packet_ctx,
-                                        IPV4_HDR_SIZE)) {
-                HIP_ERROR("Reading network msg failed\n");
-            } else {
-                err = hip_receive_control_packet(&packet_ctx);
-                if (err) {
-                    HIP_ERROR("hip_receive_control_packet()!\n");
-                }
-            }
-        }
-
-        if (FD_ISSET(hip_nat_sock_input_udp, &read_fdset)) {
-            HIP_DEBUG("Receiving a message on UDP from NAT " \
-                      "socket (file descriptor: %d).\n",
-                      hip_nat_sock_input_udp);
-
-            hip_msg_init(packet_ctx.input_msg);
-
-            err = hip_read_control_msg_v4(hip_nat_sock_input_udp,
-                                          &packet_ctx,
-                                          HIP_UDP_ZERO_BYTES_LEN);
-            if (err) {
-                HIP_ERROR("Reading network msg failed\n");
-            } else {
-                err =  hip_receive_udp_control_packet(&packet_ctx);
-            }
-        }
-
-        if (FD_ISSET(hip_user_sock, &read_fdset)) {
-            struct sockaddr_in6 app_src;
-
-            hip_msg_init(packet_ctx.input_msg);
-
-            if (hip_read_user_control_msg(hip_user_sock,
-                                          packet_ctx.input_msg,
-                                          &app_src)) {
-                HIP_ERROR("Reading user msg failed\n");
-            } else {
-                err = hip_handle_user_msg(packet_ctx.input_msg, &app_src);
-            }
-        }
-
-        if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
-            /* Something on IF and address event netlink socket,
-             * fetch it. */
-            HIP_DEBUG("netlink receive\n");
-            if (hip_netlink_receive(&hip_nl_ipsec)) {
-                HIP_ERROR("Netlink receiving failed\n");
-            }
-        }
-
-        if (FD_ISSET(hip_nl_route.fd, &read_fdset)) {
-            /* Something on IF and address event netlink socket,
-             * fetch it. */
-            HIP_DEBUG("netlink route receive\n");
-            if (hip_netlink_receive(&hip_nl_route)) {
-                HIP_ERROR("Netlink receiving failed\n");
-            }
-        }
 
 to_maintenance:
         err = hip_periodic_maintenance();
