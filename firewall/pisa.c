@@ -22,6 +22,7 @@
 
 #include "config.h"
 #include "lib/core/ife.h"
+#include "lib/core/crypto.h"
 #include "midauth.h"
 
 #include "pisa.h"
