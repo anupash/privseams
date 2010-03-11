@@ -134,6 +134,7 @@ void hip_oppdb_uninit(void)
 {
     hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
     hip_ht_uninit(oppdb);
+    oppdb = NULL;
 }
 
 static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_info,
@@ -839,6 +840,9 @@ hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
     int i = 0;
     hip_opp_block_t *this, *ret = NULL;
     hip_list_t *item, *tmp;
+
+    if (oppdb == NULL)
+        return NULL;
 
     HIP_LOCK_HT(&opp_db);
     list_for_each_safe(item, tmp, oppdb, i)

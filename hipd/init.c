@@ -1099,6 +1099,9 @@ void hip_exit(int signal)
         close(hip_nat_sock_output_udp_v6);
     }
 
+    hip_uninit_hadb();
+    hip_uninit_host_id_dbs();
+
     if (hip_user_sock) {
         HIP_INFO("hip_user_sock\n");
         close(hip_user_sock);
@@ -1111,9 +1114,6 @@ void hip_exit(int signal)
         HIP_INFO("hip_nl_route.fd\n");
         rtnl_close(&hip_nl_route);
     }
-
-    hip_uninit_hadb();
-    hip_uninit_host_id_dbs();
 
     msg = hip_msg_alloc();
     if (msg) {
