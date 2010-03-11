@@ -2012,14 +2012,9 @@ int hip_verify_network_header(struct hip_common *hip_common,
     /** @todo handle the RVS case better. */
     if (ipv6_addr_any(&hip_common->hitr)) {
         /* Required for e.g. BOS */
-        HIP_DEBUG("Received opportunistic HIT\n");
+        HIP_DEBUG("Received a connection to opportunistic HIT\n");
     } else {
-#ifdef CONFIG_HIP_RVS
-        HIP_DEBUG("Received HIT is ours or we are RVS\n");
-#else
-        HIP_IFEL(!hip_hidb_hit_is_our(&hip_common->hitr), -EFAULT,
-                 "Receiver HIT is not ours\n");
-#endif /* CONFIG_HIP_RVS */
+        HIP_DEBUG_HIT("Received a connection to HIT", &hip_common->hitr);
     }
 
     /* Check checksum. */

@@ -91,8 +91,8 @@ uint64_t calc_timeval_diff(const struct timeval *timeval_start,
     HIP_ASSERT(timeval_start != NULL);
     HIP_ASSERT(timeval_end != NULL);
 
-    // check that timeval_high really is higher
-    if ((timeval_end->tv_sec > timeval_start->tv_sec) &&
+    /* check that timeval_high really is higher */
+    if ((timeval_end->tv_sec >= timeval_start->tv_sec) &&
         (timeval_end->tv_usec > timeval_start->tv_usec))
     {
         rel_timeval.tv_sec  = timeval_end->tv_sec - timeval_start->tv_sec;

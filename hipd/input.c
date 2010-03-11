@@ -1748,9 +1748,9 @@ int hip_handle_r2(const uint8_t packet_type,
         HIP_ERROR("Couldn't get device ifindex of address\n");
     }
 
-#ifdef HIP_HIP_RVS
-    hip_relay_handle_relay_to_in_client(packet_type, ha_state, packet_ctx);
-#endif /* HIP_HIP_RVS */
+#ifdef CONFIG_HIP_RVS
+        hip_relay_handle_relay_to_in_client(packet_type, ha_state, packet_ctx);
+#endif /* CONFIG_HIP_RVS */
 
     /* Copying address list from temp location in entry
      * "entry->peer_addr_list_to_be_added" */

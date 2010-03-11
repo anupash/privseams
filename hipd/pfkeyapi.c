@@ -8,12 +8,14 @@
 /* required for caddr_t */
 #define _BSD_SOURCE
 
-#include <linux/pfkeyv2.h>
+#include <lib/ipsec/pfkeyv2.h>
 #include <linux/ipsec.h>
 
 #include "config.h"
 #include "lib/ipsec/libpfkey.h"
 #include "pfkeyapi.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/keylen.h"
 
 
 // FIXME: This must be turned to BEET when BEET will be supported by pfkey as well
