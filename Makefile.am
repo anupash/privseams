@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS  = -I m4
 
-HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd/*.h i3/*/*.h lib/*/*.h test/*.h))
+HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h modules/*.h modules/*/*/*.h test/*.h))
 
 # For "make dist"
 #
