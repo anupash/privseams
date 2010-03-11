@@ -7,7 +7,7 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  debian doc hipext hipfwmi lib/android patches
+EXTRA_DIST =  debian doc lib/android patches
 EXTRA_DIST += test/packaging test/configs process_modules.py
 EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh
 EXTRA_DIST += release.version tcp verbose-headers.txt
