@@ -2859,9 +2859,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
         HIP_ERROR("Couldn't get device ifindex of address\n");
     }
 
-#ifdef HIP_HIP_RVS
+#ifdef CONFIG_HIP_RVS
     hip_relay_handle_relay_to_in_client(r2, HIP_R2, r2_saddr, r2_daddr, r2_info, entry);
-#endif /* HIP_HIP_RVS */
+#endif /* CONFIG_HIP_RVS */
     /* Copying address list from temp location in entry
      * "entry->peer_addr_list_to_be_added" */
     hip_copy_peer_addrlist_changed(entry);
