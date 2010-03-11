@@ -5,6 +5,7 @@
 #include "lib/core/ife.h"
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
+#include "lib/core/message.h"
 #include "firewall.h"
 
 /**

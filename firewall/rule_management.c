@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <net/if.h>
 #include <netinet/in.h>
 //#include <linux/types.h>
 #include <linux/netfilter.h>
@@ -898,12 +899,12 @@ static struct string_option *parse_if(char *token)
     } else {
         option->boolean = 1;
     }
-    if (strlen(token) > IFNAMSIZ) {
+    if (strlen(token) > IF_NAMESIZE) {
         HIP_DEBUG("parse_if error: invalid length interface name\n");
         free(option);
         return NULL;
     } else {
-        option->value = (char *) malloc(IFNAMSIZ);
+        option->value = (char *) malloc(IF_NAMESIZE);
         strcpy(option->value, token);
     }
     return option;

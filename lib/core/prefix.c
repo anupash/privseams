@@ -118,6 +118,19 @@ inline void set_lsi_prefix(hip_lsi_t *lsi)
 }
 
 /**
+ * compare two LSIs for equality
+ *
+ * @param lsi1 an LSI
+ * @param lsi2 an LSI
+ * @return one if the LSIs are equal or zero otherwise
+ */
+int hip_lsi_are_equal(const hip_lsi_t *lsi1,
+                      const hip_lsi_t *lsi2)
+{
+    return ipv4_addr_cmp(lsi1, lsi2) == 0;
+}
+
+/**
  * check the type of an IPv6 addresses
  *
  * @param id an IPv6 address, possibly in IPv6 mapped format
@@ -338,3 +351,54 @@ int hip_addr_is_loopback(struct in6_addr *addr)
     IPV6_TO_IPV4_MAP(addr, &addr_in);
     return IS_IPV4_LOOPBACK(addr_in.s_addr);
 }
+
+int ipv4_addr_cmp(const struct in_addr *a1,
+                                const struct in_addr *a2) {
+    return memcmp((const char *) a1, (const char *) a2,
+                  sizeof(struct in_addr));
+}
+
+void ipv4_addr_copy(struct in_addr *a1,
+                                  const struct in_addr *a2) {
+    memcpy((char *) a1, (const char *) a2, sizeof(struct in_addr));
+}
+
+int ipv6_addr_cmp(const struct in6_addr *a1,
+                  const struct in6_addr *a2) {
+    return memcmp((const char *) a1, (const char *) a2,
+                  sizeof(struct in6_addr));
+}
+
+void ipv6_addr_copy(struct in6_addr *a1,
+               const struct in6_addr *a2) {
+    memcpy((char *) a1, (const char *) a2, sizeof(struct in6_addr));
+}
+
+int ipv6_addr_any(const struct in6_addr *a) {
+    return (a->s6_addr[0] | a->s6_addr[1] | a->s6_addr[2] | a->s6_addr[3] |
+            a->s6_addr[4] |a->s6_addr[5] |a->s6_addr[6] |a->s6_addr[7] |
+            a->s6_addr[8] |a->s6_addr[9] |a->s6_addr[10] |a->s6_addr[11] |
+            a->s6_addr[12] |a->s6_addr[13] |a->s6_addr[14] |a->s6_addr[15]) == 0;
+}
+
+void hip_copy_in6addr_null_check(struct in6_addr *to,
+                                 struct in6_addr *from) {
+    HIP_ASSERT(to);
+    if (from) {
+        ipv6_addr_copy(to, from);
+    } else {
+        memset(to, 0, sizeof(*to));
+    }
+}
+
+void hip_copy_inaddr_null_check(struct in_addr *to,
+                                struct in_addr *from) {
+    HIP_ASSERT(to);
+    if (from) {
+        memcpy(to, from, sizeof(*to));
+    } else {
+        memset(to, 0, sizeof(*to));
+    }
+}
+
+

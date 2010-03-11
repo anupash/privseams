@@ -4,6 +4,10 @@
 #include "prefix.h"
 #include "lib/conf/hipconf.h"
 
+#ifndef HOST_NAME_MAX
+#  define HOST_NAME_MAX 64
+#endif /* HOST_NAME_MAX */
+
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
                                             const void *arg,
                                             void *result);
@@ -28,5 +32,8 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit,
                                       hip_lsi_t *lsi,
                                       struct in6_addr *ip);
 int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname);
+int hip_get_random_hostname_id_from_hosts(char *filename,
+                                          char *hostname,
+                                          char *id_str);
 
 #endif /* HIP_LIB_CORE_HOSTSFILES_H */

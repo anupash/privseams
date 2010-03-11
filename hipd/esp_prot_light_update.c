@@ -17,6 +17,7 @@
 
 #include "esp_prot_light_update.h"
 #include "esp_prot_anchordb.h"
+#include "hipd.h"
 #include "lib/core/builder.h"
 #include "lib/core/hip_udp.h"
 

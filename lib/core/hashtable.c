@@ -24,7 +24,41 @@
  */
 #include "hashtable.h"
 
+/**
+ * A generic object hashing function for lib/core/hashtable.c
+ *
+ * @param ptr an pointer to hash (must be at least 32 bits)
+ * @return a hash of the first 32-bits of the ptr's data
+ */
+unsigned long hip_hash_generic(const void *ptr)
+{
+    unsigned long hash = (unsigned long) (*((uint32_t *) ptr));
+    return hash % ULONG_MAX;
+}
+
+/**
+ * A generic matching function for lib/core/hashtable.c
+ *
+ * @param ptr1 a pointer to an item in the hash table
+ * @param ptr2 a pointer to an item in the hash table
+ * @return zero if the pointers match or one otherwise
+ */
+int hip_match_generic(const void *ptr1, const void *ptr2)
+{
+    return ptr1 != ptr2;
+}
+
 #ifdef HIPL_OPENSSL_100
+
+/**
+ * Returns a generic linked list based on the hash table implementation
+ *
+ * @return an allocated hash table which is caller is responsible to free
+ */
+LHASH_OF(HIP_HT) * hip_linked_list_init(void)
+{
+  return (LHASH_OF(HIP_HT) *) hip_ht_init(hip_hash_generic, hip_match_generic);
+}
 
 /**
  * Initialize hash table (or linked list)
@@ -40,6 +74,11 @@ LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE c
 }
 
 #else /* not HIPL_OPENSSL_100 */
+
+HIP_HASHTABLE *hip_linked_list_init(void)
+{
+    return (HIP_HASHTABLE *) hip_ht_init(hip_hash_generic, hip_match_generic);
+}
 
 HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
                            LHASH_COMP_FN_TYPE cmpfunc)

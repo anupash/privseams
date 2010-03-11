@@ -10,6 +10,7 @@
 #define _BSD_SOURCE
 
 #include "configfilereader.h"
+#include "lib/core/debug.h"
 
 /** Error value for generic config file error. (Everything but -EIO and EOF are
  *  acceptable here.) */

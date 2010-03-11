@@ -13,9 +13,10 @@
 #include "config.h"
 #include "hipd.h"
 #include "modularization.h"
+#include "lib/core/filemanip.h"
+#include "lib/core/straddr.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/core/filemanip.h"
 #include "lib/performance/performance.h"
 #endif
 

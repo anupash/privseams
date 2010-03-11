@@ -29,29 +29,41 @@
 #include <limits.h> /* INT_MIN, INT_MAX */
 #include <netinet/in.h> /* in_addr, in6_addr */
 #include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */
+#include <sys/utsname.h>
+#include <sys/wait.h>
 
-#include "config.h"
 #include "firewall.h" /* default include */
-#include "firewall_control.h"
-#include "conntrack.h" /* connection tracking */
+
+/** @todo This include is needed for HIP_SELECT_TIMEOUT
+ * Maybe the definition of HIP_SELECT_TIMEOUT should be moved to core and this
+ * dependency be removed.
+ */
+#include "hipd/hipd.h"
+
 #include "cache.h"
 #include "cache_port.h"
-#include "lsi.h" /* LSI */
+#include "conntrack.h" /* connection tracking */
+#include "config.h"
+#include "esp_prot_api.h" /* ESP Tokens */
+#include "esp_prot_conntrack.h" /* ESP Tokens */
+#include "firewalldb.h"
+#include "firewall_control.h"
+#include "firewall_defines.h"
+#include "helpers.h"
+#include "lib/core/filemanip.h"
 #include "lib/core/hip_capability.h" /* Priviledge Separation */
 #include "lib/core/hip_udp.h"
-#include "user_ipsec_api.h" /* Userspace IPsec */
-#include "esp_prot_conntrack.h" /* ESP Tokens */
-#include "esp_prot_api.h" /* ESP Tokens */
+#include "lib/core/message.h"
+#include "lib/tool/lutil.h"
+#include "lsi.h" /* LSI */
 #include "sysopp.h" /* System-based Opportunistic HIP */
-#include "firewalldb.h"
+#include "user_ipsec_api.h" /* Userspace IPsec */
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h" /* PISA */
 #endif
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h" /* Performance Analysis */
 #endif
-#include "helpers.h"
-#include "lib/core/filemanip.h"
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0

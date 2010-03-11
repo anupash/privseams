@@ -16,7 +16,9 @@
 
 #include "cache.h"
 #include "lib/core/debug.h"
-#include "lib/core/misc.h"
+#include "lib/core/builder.h"
+#include "lib/core/message.h"
+
 #include "firewall.h"
 #include "user_ipsec_api.h"
 

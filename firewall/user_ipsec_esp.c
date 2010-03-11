@@ -32,7 +32,7 @@
 #include "user_ipsec_esp.h"
 #include "esp_prot_api.h"
 #include "lib/core/prefix.h"
-#include "lib/core/misc.h"
+
 #include "lib/tool/checksum.h"
 #include "lib/core/keylen.h"
 

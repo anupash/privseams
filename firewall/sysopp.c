@@ -1,14 +1,19 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <netinet/ip6.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
-
+#include "lib/core/message.h"
 #include "sysopp.h"
 #include "firewall.h"
 #include "firewalldb.h"
 #include "lsi.h"
 #include "common_hipd_msg.h"
+#include "lib/core/hostid.h"
 
 void hip_fw_flush_system_based_opp_chains(void)
 {

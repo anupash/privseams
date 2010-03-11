@@ -13,7 +13,8 @@
 #include "config.h"
 #include "hit.h"
 #include "debug.h"
-#include "misc.h"
+#include "straddr.h"
+#include "builder.h"
 
 /**
  * convert a binary HIT into a string
@@ -66,4 +67,34 @@ int hip_hit_are_equal(const struct in6_addr *hit1,
                       const struct in6_addr *hit2)
 {
     return ipv6_addr_cmp(hit1, hit2) == 0;
+}
+
+/**
+ * hip_hash_hit - calculate a hash from a HIT
+ *
+ * @param key pointer to a HIT
+ * @param range range of the hash
+ *
+ * Returns value in range: 0 <= x < range
+ */
+unsigned long hip_hash_hit(const void *ptr)
+{
+    uint8_t hash[HIP_AH_SHA_LEN];
+
+    hip_build_digest(HIP_DIGEST_SHA1, ptr + sizeof(uint16_t),
+                     7 * sizeof(uint16_t), hash);
+
+    return *((unsigned long *) hash);
+}
+
+/**
+ * Verify if if two HITs match based on hashing
+ *
+ * @param ptr1 a HIT
+ * @param ptr2 a HIT
+ * @return zero if the HITs match or one otherwise
+ */
+int hip_match_hit(const void *ptr1, const void *ptr2)
+{
+    return hip_hash_hit(ptr1) != hip_hash_hit(ptr2);
 }

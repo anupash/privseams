@@ -14,6 +14,8 @@
 #include "lib/core/icomm.h"
 #include "lib/core/debug.h"
 #include "lib/core/certtools.h"
+#include "lib/core/builder.h"
+#include "lib/core/message.h"
 
 /**
  * Get the default hit of the local HIPD.

@@ -16,6 +16,7 @@
 #include "esp_prot_fw_msg.h"
 #include "firewall.h"
 #include "lib/core/builder.h"
+#include "lib/core/message.h"
 
 #define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
 

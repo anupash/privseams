@@ -63,8 +63,6 @@
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
-#define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
-
 #define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 6 /* seconds */
 #define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 2
 
@@ -139,7 +137,5 @@ int hip_get_opportunistic_tcp_status(void);
 
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
-
-#define IPV4_HDR_SIZE 20
 
 #endif /* HIP_HIPD_HIPD_H */

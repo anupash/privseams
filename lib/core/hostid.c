@@ -9,11 +9,12 @@
  */
 
 #include <netinet/in.h>
-#include <lib/core/ife.h>
-#include <lib/core/debug.h>
-#include <lib/core/protodefs.h>
-#include <lib/core/crypto.h>
 #include <stdlib.h>
+#include "lib/core/ife.h"
+#include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/crypto.h"
+#include "lib/tool/pk.h"
 
 #include "config.h"
 #include "hostid.h"

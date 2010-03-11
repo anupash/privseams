@@ -22,6 +22,7 @@
 #include "user_ipsec_fw_msg.h"
 #include "firewalldb.h"
 #include "sysopp.h"
+#include "lib/core/message.h"
 
 /**
  * Change the state of hadb state cache in the firewall

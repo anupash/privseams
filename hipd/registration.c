@@ -14,6 +14,7 @@
 #define _BSD_SOURCE
 
 #include "registration.h"
+#include "hadb.h"
 
 /**
  * Pending request lifetime. Pending requests are created when the requester

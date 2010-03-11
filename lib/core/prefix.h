@@ -4,9 +4,9 @@
 #include <sys/un.h>
 #include <stdlib.h>
 
+#include "debug.h"
 #include "protodefs.h"
 #include "list.h"
-#include "debug.h"
 
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 
@@ -35,6 +35,22 @@ int hip_sa_addr_len(void *sockaddr);
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
 int hip_addr_is_loopback(struct in6_addr *addr);
+int hip_lsi_are_equal(const hip_lsi_t *lsi1,
+                      const hip_lsi_t *lsi2);
+
+int ipv4_addr_cmp(const struct in_addr *a1,
+                  const struct in_addr *a2);
+void ipv4_addr_copy(struct in_addr *a1,
+                    const struct in_addr *a2);
+int ipv6_addr_cmp(const struct in6_addr *a1,
+                  const struct in6_addr *a2);
+void ipv6_addr_copy(struct in6_addr *a1,
+                    const struct in6_addr *a2);
+int ipv6_addr_any(const struct in6_addr *a);
+void hip_copy_in6addr_null_check(struct in6_addr *to,
+                                 struct in6_addr *from);
+void hip_copy_inaddr_null_check(struct in_addr *to,
+                                struct in_addr *from);
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 

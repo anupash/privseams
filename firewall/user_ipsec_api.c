@@ -21,6 +21,7 @@
 #include "esp_prot_api.h"
 #include "lib/core/ife.h"
 #include "lib/core/debug.h"
+#include "lsi.h"
 
 #define USER_IPSEC_INACTIVE 0
 #define USER_IPSEC_ACTIVE 1

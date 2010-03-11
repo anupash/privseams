@@ -2,7 +2,7 @@
 #define HIP_HIPD_CLOSE_H
 
 #include "hadb.h"
-#include "lib/core/misc.h"
+
 #include "hidb.h"
 #include "lib/core/builder.h"
 #include "cookie.h"
@@ -10,7 +10,7 @@
 #include "lib/core/debug.h"
 #include "keymat.h"
 #include "lib/core/crypto.h"
-#include "lib/core/misc.h"
+
 #include "lib/tool/pk.h"
 
 int hip_send_close(struct hip_common *msg, int delete_ha_info);

@@ -13,20 +13,17 @@
 #include <netinet/icmp6.h>
 
 #include "config.h"
+#include "esp_prot_light_update.h"
+#include "init.h"
+#include "oppdb.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "lib/core/hip_capability.h"
-#include "lib/core/hip_udp.h"
-#include "lib/performance/performance.h"
-#include "lib/core/hip_capability.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hostid.h"
-#include "lib/tool/nlink.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/hostsfiles.h"
 #include "modules/hipd_modules.h"
-
-#include "init.h"
-#include "oppdb.h"
-#include "esp_prot_light_update.h"
 
 /**
  * HIP daemon lock file is used to prevent multiple instances

@@ -1,6 +1,9 @@
 #ifndef HIP_FIREWALL_FIREWALL_DEFINES_H
 #define HIP_FIREWALL_FIREWALL_DEFINES_H
 
+#define _BSD_SOURCE
+
+#include <net/if.h>
 #include <sys/time.h>
 #include <libipq.h>
 #include <string.h>

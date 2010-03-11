@@ -17,13 +17,16 @@
 
 #include <pthread.h>
 #include <openssl/sha.h>
+#include <string.h>
 
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
 #include "firewall.h"
 #include "lib/core/ife.h"
-#include "lib/core/misc.h"
 #include "lib/core/keylen.h"
+#include "lib/core/debug.h"
+#include "lib/core/state.h"
+#include "lib/core/builder.h"
 
 /* hash functions used for calculating the entries' hashes
  *

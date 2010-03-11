@@ -77,7 +77,7 @@
 #include <math.h> /* For pow() */
 
 #include "config.h"
-#include "lib/core/misc.h" /* For debuging macros. */
+ /* For debuging macros. */
 #include "registration.h" /* For lifetime conversions. */
 #include "configfilereader.h"
 #include "lib/core/state.h"

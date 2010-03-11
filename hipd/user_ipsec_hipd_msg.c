@@ -14,6 +14,9 @@
 #define _BSD_SOURCE
 
 #include "user_ipsec_hipd_msg.h"
+#include "hipd.h"
+#include "init.h"
+#include "user_ipsec_sadb_api.h"
 #include "lib/core/builder.h"
 
 /**

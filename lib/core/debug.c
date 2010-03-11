@@ -51,6 +51,7 @@
 
 #include "config.h"
 #include "debug.h"
+#include "straddr.h"
 #include "lib/tool/lutil.h"
 #include "lib/conf/hipconf.h"
 

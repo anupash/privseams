@@ -8,6 +8,8 @@
 #define _BSD_SOURCE
 
 #include "certtools.h"
+#include "straddr.h"
+#include "lib/core/crypto.h"
 
 /*******************************************************************************
 * FUNCTIONS FOR SPKI                                                          *

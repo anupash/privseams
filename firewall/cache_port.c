@@ -23,9 +23,14 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <stdio.h>
+
 #include "cache_port.h"
 #include "cache.h"
-#include "lib/core/misc.h"
+
+#include <lib/tool/lutil.h>
+
+
 
 static HIP_HASHTABLE *firewall_port_cache_db = NULL;
 

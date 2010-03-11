@@ -13,7 +13,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include "lib/core/debug.h"
-#include "lib/core/misc.h"
+
 #include "hidb.h"
 #include "lib/core/hashtable.h"
 #include "lib/core/builder.h"

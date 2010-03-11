@@ -1,11 +1,19 @@
 #ifndef HIP_FIREWALL_LSI_H
 #define HIP_FIREWALL_LSI_H
 
+#define _BSD_SOURCE
+
 #include <libipq.h>
 #include <netinet/ip_icmp.h>
 #include <linux/netfilter_ipv4/ip_queue.h>
 #include "lib/core/protodefs.h"
 
+int hip_trigger_bex(const struct in6_addr *src_hit,
+                    const struct in6_addr *dst_hit,
+                    struct in6_addr *src_lsi,
+                    struct in6_addr *dst_lsi,
+                    struct in6_addr *src_ip,
+                    struct in6_addr *dst_ip);
 int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
                                const struct in6_addr *ip_src,
                                const struct in6_addr *ip_dst,

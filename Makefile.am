@@ -147,7 +147,6 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/debug.c \
                                  lib/core/message.c \
                                  lib/core/esp_prot_common.c \
-                                 lib/core/misc.c \
                                  lib/core/hostsfiles.c \
                                  lib/core/filemanip.c \
                                  lib/core/hashchain.c \
@@ -157,6 +156,7 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/transform.c \
                                  lib/core/keylen.c \
                                  lib/core/hit.c \
+                                 lib/core/straddr.c \
                                  lib/core/hashchain_store.c \
                                  lib/core/hip_statistics.c \
                                  lib/core/crypto.c
@@ -242,9 +242,9 @@ if HIP_PERFORMANCE
 test_modularization_LDADD += lib/performance/libperformance.la
 endif
 
-tools_hipconf_LDADD = lib/core/libhipcore.la \
-                      lib/tool/libhiptool.la \
-                      lib/conf/libhipconf.la
+tools_hipconf_LDADD = lib/conf/libhipconf.la \
+                      lib/core/libhipcore.la \
+                      lib/tool/libhiptool.la
 
 # required by libhipconf
 if HIP_PERFORMANCE

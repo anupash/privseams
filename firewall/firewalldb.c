@@ -17,6 +17,8 @@
 
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
 
 #include "firewalldb.h"
 #include "cache.h"
@@ -24,7 +26,8 @@
 #include "lib/core/icomm.h"
 #include "lib/core/debug.h"
 #include "lib/core/hashtable.h"
-#include "lib/core/misc.h"
+#include "lib/core/builder.h"
+
 #include "lib/tool/checksum.h"
 
 #define DISABLE_hip_firewall_hldb_dump

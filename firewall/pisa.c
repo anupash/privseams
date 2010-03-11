@@ -23,7 +23,7 @@
 #include "config.h"
 #include "lib/core/ife.h"
 #include "midauth.h"
-#include "lib/core/misc.h"
+
 #include "pisa.h"
 #include "pisa_cert.h"
 #define PISA_RANDOM_LEN 16

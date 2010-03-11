@@ -2,7 +2,7 @@
 #define HIP_HIPD_KEYMAT_H
 
 #include "lib/core/list.h"
-#include "lib/core/misc.h"
+
 #include "lib/core/crypto.h"
 #include "lib/core/state.h"
 
