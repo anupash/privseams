@@ -11,7 +11,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
-LT_INIT(disable-shared)
+AC_PROG_LIBTOOL(disable-shared)
 
 # Checks for programs.
 AC_PROG_CC
