@@ -795,10 +795,13 @@ static int hipd_main(int argc, char *argv[])
             if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
                 FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
                 (hip_opendht_inuse == SO_HIP_DHT_ON)) {
-                /* Error with the connect */
-                HIP_ERROR("Error OpenDHT socket is readable and writable\n");
+                HIP_DEBUG("DHT socket waiting for connect (readable and writable)\n");
             } else if (FD_ISSET(hip_opendht_sock_fqdn, &write_fdset)) {
-                hip_opendht_fqdn_sent = STATE_OPENDHT_START_SEND;
+                if (address_count == 0) {
+                    HIP_DEBUG("No addresses do not go to the next state\n");
+                } else {
+                    hip_opendht_fqdn_sent = STATE_OPENDHT_START_SEND;
+                }
             }
             if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
                 (hip_opendht_inuse == SO_HIP_DHT_ON)) {
@@ -827,10 +830,13 @@ static int hipd_main(int argc, char *argv[])
             if (FD_ISSET(hip_opendht_sock_hit, &read_fdset) &&
                 FD_ISSET(hip_opendht_sock_hit, &write_fdset) &&
                 (hip_opendht_inuse == SO_HIP_DHT_ON)) {
-                /* Error with the connect */
-                HIP_ERROR("Error OpenDHT socket is readable and writable\n");
+                HIP_ERROR("DHT socket waiting for connect (readable and writable)\n\n");
             } else if (FD_ISSET(hip_opendht_sock_hit, &write_fdset)) {
-                hip_opendht_hit_sent = STATE_OPENDHT_START_SEND;
+                if (address_count == 0) {
+                    HIP_DEBUG("No addresses do not go to the next state\n");
+                } else {
+                    hip_opendht_hit_sent = STATE_OPENDHT_START_SEND;
+                }
             }
             if ((FD_ISSET(hip_opendht_sock_hit, &read_fdset)) &&
                 (hip_opendht_inuse == SO_HIP_DHT_ON)) {

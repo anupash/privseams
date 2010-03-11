@@ -37,10 +37,11 @@ static int hip_sqlite_callback(void *NotUsed,
  * @param *socket socket to be initialized
  * @param *socket_status updates the status of the socket after every socket operation
  *
- * @return void
+ * @return 0 on success negative otherwise
  */
-void hip_init_dht_sockets(int *socket, int *socket_status)
+int hip_init_dht_sockets(int *socket, int *socket_status)
 {
+    int err = 0;
     if (hip_opendht_inuse == SO_HIP_DHT_ON) {
         if (*socket_status == STATE_OPENDHT_IDLE) {
             HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
@@ -48,18 +49,18 @@ void hip_init_dht_sockets(int *socket, int *socket_status)
                 *socket = init_dht_gateway_socket_gw(*socket,
                                                      opendht_serving_gateway);
             }
-            opendht_error = 0;
-            opendht_error = connect_dht_gateway(*socket,
-                                                opendht_serving_gateway, 0);
+            err = connect_dht_gateway(*socket,
+                                      opendht_serving_gateway, 0);
         }
-        if (opendht_error == EINPROGRESS) {
+        if (err == EINPROGRESS) {
             *socket_status = STATE_OPENDHT_WAITING_CONNECT;
             /* connect not ready */
             HIP_DEBUG("OpenDHT connect unfinished. Socket No: %d \n", *socket);
-        } else if (opendht_error > -1 && opendht_error != EINPROGRESS)   {
+        } else if (err > -1 && err != EINPROGRESS)   {
             *socket_status = STATE_OPENDHT_START_SEND;
         }
     }
+    return err;
 }
 
 /**

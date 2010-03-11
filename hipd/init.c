@@ -783,8 +783,18 @@ int hip_init_dht()
         HIP_DEBUG("gethostname failed\n");
     }
     hip_register_to_dht();
-    hip_init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
-    hip_init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+    err = hip_init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
+    if (err < 0) {
+        close(hip_opendht_sock_fqdn);
+        hip_opendht_sock_fqdn = -1;
+        /* Do not bother trying the other */
+        return err;
+    }
+    err = hip_init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+    if (err < 0) {
+        close(hip_opendht_sock_hit);
+        hip_opendht_sock_hit = -1;
+    }
 
 /* out_err only used by opendht code */
 out_err:

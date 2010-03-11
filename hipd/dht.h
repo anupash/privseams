@@ -18,7 +18,7 @@
 #include "lib/dht/libhipdht.h"
 #include "lib/dht/libhipdhtxml.h"
 
-void hip_init_dht_sockets(int *, int *);
+int hip_init_dht_sockets(int *, int *);
 void hip_register_to_dht(void);
 
 int hip_publish_certificates(void);
