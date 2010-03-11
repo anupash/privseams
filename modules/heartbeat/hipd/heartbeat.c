@@ -12,7 +12,7 @@
 #define HIP_HEARTBEAT_INTERVAL 20
 
 int hip_icmp_sock     = 0;
-int heartbeat_counter = 0;
+int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
 
 /**
  * This function sends ICMPv6 echo with timestamp to dsthit
@@ -123,8 +123,6 @@ out_err:
 static int hip_heartbeat_handle_icmp_sock(struct hip_packet_context *ctx)
 {
     int err = 0;
-
-    HIP_DEBUG("\n\nhandle icmp sock\n\n");
 
     HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
              "Failed to recvmsg from ICMPv6\n");
@@ -316,9 +314,6 @@ int hip_heartbeat_init(void)
 
     hip_register_maint_function(&hip_heartbeat_maintenance, 10000);
     hip_register_socket(hip_icmp_sock, &hip_heartbeat_handle_icmp_sock, 30000);
-
-    /* Make sure that hipd does not send icmpv6 immediately after base exchange */
-    heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
 
     *icmpsockfd       = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
     hip_set_cloexec_flag(*icmpsockfd, 1);
