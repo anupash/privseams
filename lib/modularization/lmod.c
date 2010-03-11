@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "modularization.h"
+#include "lmod.h"
 #include "lib/core/debug.h"
 
 /**

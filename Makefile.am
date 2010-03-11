@@ -41,7 +41,7 @@ endif
 lib_LTLIBRARIES = lib/conf/libhipconf.la \
                   lib/core/libhipcore.la \
                   lib/tool/libhiptool.la \
-                  lib/modularization/libmodularization.la
+                  lib/modularization/libmod.la
 if HIP_PFKEY
 lib_LTLIBRARIES += lib/ipsec/libhipsec.la
 endif
@@ -170,7 +170,7 @@ lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/lutil.c \
                                  lib/tool/checksum.c
 
-lib_modularization_libmodularization_la_SOURCES = lib/modularization/modularization.c
+lib_modularization_libmod_la_SOURCES = lib/modularization/lmod.c
 
 ############################ NOTE ##################################
 #
@@ -234,7 +234,7 @@ test_dh_performance_LDADD = lib/core/libhipcore.la \
                             lib/performance/libperformance.la
 endif
 
-test_modularization_LDADD = lib/modularization/libmodularization.la \
+test_modularization_LDADD = lib/modularization/libmod.la \
                             lib/core/libhipcore.la \
                             lib/tool/libhiptool.la
 
@@ -258,7 +258,7 @@ if HIP_PERFORMANCE
 tools_pisacert_LDADD += lib/performance/libperformance.la
 endif
 
-hipd_hipd_LDADD = lib/modularization/libmodularization.la \
+hipd_hipd_LDADD = lib/modularization/libmod.la \
                   lib/core/libhipcore.la \
                   lib/conf/libhipconf.la \
                   lib/tool/libhiptool.la

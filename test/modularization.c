@@ -13,7 +13,7 @@
 #include <malloc.h>
 #include <sys/types.h>
 
-#include "lib/modularization/modularization.h"
+#include "lib/modularization/lmod.h"
 
 int main(void)
 {

@@ -10,7 +10,7 @@
  */
 #include "lib/core/protodefs.h"
 #include "lib/core/state.h"
-#include "lib/modularization/modularization.h"
+#include "lib/modularization/lmod.h"
 
 struct handle_function {
     uint16_t priority;

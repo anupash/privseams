@@ -13,7 +13,7 @@
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
 #include "lib/core/keylen.h"
-#include "lib/modularization/modularization.h"
+#include "lib/modularization/lmod.h"
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100

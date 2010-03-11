@@ -12,7 +12,7 @@
 #include "esp_prot_common.h"
 #include "hip_statistics.h"
 
-#include "lib/modularization/modularization.h"
+#include "lib/modularization/lmod.h"
 
 #define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1
