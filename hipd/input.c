@@ -1032,7 +1032,6 @@ int hip_handle_i2(const uint8_t packet_type,
     uint16_t mask = HIP_PACKET_CTRL_ANON;
     uint16_t crypto_len                     = 0;
     uint32_t spi_in                         = 0, spi_out = 0;
-    in_port_t dest_port                     = 0; // For the port in RELAY_FROM
     char *tmp_enc                           = NULL, *enc = NULL;
     unsigned char *iv                       = NULL;
     struct hip_hip_transform *hip_transform = NULL;
@@ -1041,7 +1040,6 @@ int hip_handle_i2(const uint8_t packet_type,
     struct hip_esp_info *esp_info           = NULL;
     struct hip_dh_public_value *dhpv        = NULL;
     struct hip_solution *solution           = NULL;
-    in6_addr_t dest;     // dest for the IP address in RELAY_FROM
     hip_transform_suite_t esp_tfm, hip_tfm;
     struct hip_spi_in_item spi_in_data;
     struct hip_locator *locator             = NULL;
@@ -1514,15 +1512,20 @@ int hip_handle_i2(const uint8_t packet_type,
     ctx->hadb_entry->spi_outbound_new = spi_out;
 
 #ifdef CONFIG_HIP_RVS
-    ipv6_addr_copy(&dest, &in6addr_any);
-    if (hip_relay_get_status() == HIP_RELAY_OFF) {
-        ctx->hadb_entry->state = hip_relay_handle_relay_from(ctx->input_msg,
-                                                             ctx->src_addr,
-                                                             &dest,
-                                                             &dest_port);
-        if (ctx->hadb_entry->state == -1) {
-            HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
-            goto out_err;
+    {
+        in6_addr_t dest;
+        in_port_t dest_port = 0;
+
+        ipv6_addr_copy(&dest, &in6addr_any);
+        if (hip_relay_get_status() == HIP_RELAY_OFF) {
+            ctx->hadb_entry->state = hip_relay_handle_relay_from(ctx->input_msg,
+                                                                 ctx->src_addr,
+                                                                 &dest,
+                                                                 &dest_port);
+            if (ctx->hadb_entry->state == -1) {
+                HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
+                goto out_err;
+            }
         }
     }
 #endif
