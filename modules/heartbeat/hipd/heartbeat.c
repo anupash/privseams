@@ -11,7 +11,7 @@
 
 #define HIP_HEARTBEAT_INTERVAL 20
 
-int hip_icmp_sock     = 0;
+int hip_icmp_sock;
 int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
 
 /**
@@ -308,13 +308,6 @@ int hip_heartbeat_init(void)
     struct icmp6_filter filter;
     int *icmpsockfd = &hip_icmp_sock;
 
-    HIP_IFEL(lmod_register_module("heartbeat"),
-             -1,
-             "Error on registering HEATBEAT module.\n");
-
-    hip_register_maint_function(&hip_heartbeat_maintenance, 10000);
-    hip_register_socket(hip_icmp_sock, &hip_heartbeat_handle_icmp_sock, 30000);
-
     *icmpsockfd       = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
     hip_set_cloexec_flag(*icmpsockfd, 1);
     HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
@@ -328,6 +321,14 @@ int hip_heartbeat_init(void)
 
     err = setsockopt(*icmpsockfd, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt icmp IPV6_RECVPKTINFO failed\n");
+
+    HIP_IFEL(lmod_register_module("heartbeat"),
+             -1,
+             "Error on registering HEATBEAT module.\n");
+
+    hip_register_socket(hip_icmp_sock, &hip_heartbeat_handle_icmp_sock, 30000);
+
+    hip_register_maint_function(&hip_heartbeat_maintenance, 10000);
 
 out_err:
     return err;
