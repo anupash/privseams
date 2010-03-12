@@ -4,7 +4,8 @@
  * \brief Primitive performance measurement library.
  * \author Tobias Heer
  *
- * This file provides a set of functions to mneasure execution time.
+ * This file provides a set of functions to measure execution time.
+ * The measurement unit is second.
  *
  * \note Distributed under
  * <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
@@ -16,12 +17,6 @@
 #include "performance.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
-
-int hip_perf_enabled()
-{
-    printf("PERF ENABLED");
-    return 1;
-}
 
 /*!
  * \brief Create a set of performance slots. Each performance measurement type
