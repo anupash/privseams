@@ -1,6 +1,8 @@
 *.ho
 *.la
 *.lo
+*.s
+*.i
 ./compile
 .cproject
 .deps
