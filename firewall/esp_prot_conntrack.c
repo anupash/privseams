@@ -965,10 +965,9 @@ int esp_prot_conntrack_remove_state(struct esp_tuple *esp_tuple)
 /**
  * Tracks an HHL-based update message
  *
- * @param   ip6_src the source address of the packet
- * @param   ip6_dst the destination address of the packet
  * @param   common the HIP message
  * @param   tuple state maintained for this connection
+ * @param   ctx packet context
  * @return  0 on success, -1 in case of an error
  */
 int esp_prot_conntrack_lupdate(const struct hip_common *common,

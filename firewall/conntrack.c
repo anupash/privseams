@@ -933,10 +933,9 @@ out_err:
  * is re-established. In such a case, the old ESP tuples are not removed. If an
  * attacker spoofs an I2 or R2, the valid peers are still able to send data.
  *
- * @param ip6_src the source address of the I2 packet
- * @param ip6_dst the destination address of the I2 packet
  * @param common the I2 packet
  * @param tuple the connection tracking tuple corresponding to the I2 packet
+ * @param ctx packet context
  *
  * @return one on success or zero failure
  */
@@ -1130,8 +1129,6 @@ out_err:
  * tuples are not removed. If an attacker spoofs an I2 or R2, the
  * valid peers are still able to send data.
  *
- * @param ip6_src the source address of the R2
- * @param ip6_dst the destination address of the R2
  * @param common the R2 packet
  * @param tuple the connection tracking tuple corresponding to the R2 packet
  * @param ctx packet context
@@ -1342,10 +1339,9 @@ out_err:
  * @todo: SPI parameters did not work earlier and could not be used for creating
  * connection state for updates - check if the situation is still the same
  *
- * @param ip6_src the source address of the R2
- * @param ip6_dst the destination address of the R2
  * @param common the R2 packet
  * @param tuple the connection tracking tuple corresponding to the R2 packet
+ * @param ctx packet context
  *
  * @return one if packet was processed successfully or zero otherwise
  */
@@ -1681,10 +1677,9 @@ out_err:
 /**
  * Process a CLOSE packet
  *
- * @param ip6_src the source address of the CLOSE packet
- * @param ip6_dst the destination address of the CLOSE packet
  * @param common the CLOSE packet
  * @param tuple the connection tracking tuple corresponding to the CLOSE packet
+ * @param ctx packet context
  *
  * @return one if packet was processed successfully or zero otherwise
  */
@@ -1726,10 +1721,9 @@ out_err:
 /**
  * Process CLOSE_ACK and remove the connection.
  *
- * @param ip6_src the source address of the CLOSE_ACK
- * @param ip6_dst the destination address of the CLOSE_ACK
  * @param common the CLOSE_ACK packet
  * @param tuple the connection tracking tuple corresponding to the CLOSE_ACK packet
+ * @param ctx packet context
  *
  * @return one if packet was processed successfully or zero otherwise
  */
