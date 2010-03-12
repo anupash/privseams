@@ -866,7 +866,7 @@ static int insert_connection_from_update(const struct hip_data *data,
 
 // first check signature then store hi
 static int handle_r1(struct hip_common *common, struct tuple *tuple,
-                     int verify_responder)
+                     int verify_responder, const hip_fw_context_t *ctx)
 {
     struct in6_addr hit;
     struct hip_host_id *host_id = NULL;
@@ -940,8 +940,8 @@ out_err:
  *
  * @return one on success or zero failure
  */
-static int handle_i2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
-                     struct hip_common *common, struct tuple *tuple)
+static int handle_i2(struct hip_common *common, struct tuple *tuple,
+                     const hip_fw_context_t *ctx)
 {
     struct hip_esp_info *spi    = NULL;
     struct tuple *other_dir     = NULL;
@@ -952,6 +952,7 @@ static int handle_i2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_
     // assume correct packet
     int err                     = 1;
     hip_tlv_len_t len           = 0;
+    const struct in6_addr *ip6_src = &ctx->src;
 
     HIP_DEBUG("\n");
 
@@ -1069,7 +1070,7 @@ out_err:
  */
 static int hip_handle_esp_in_udp_relay_r2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
                                           const struct hip_common *common, struct tuple *tuple,
-                                          struct esp_tuple *esp_tuple, hip_fw_context_t *ctx)
+                                          struct esp_tuple *esp_tuple, const hip_fw_context_t *ctx)
 {
     struct hip_relay_to *relay_to;
     struct iphdr *iph   = (struct iphdr *) ctx->ipq_packet->payload;
@@ -1137,14 +1138,15 @@ out_err:
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_r2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
-                     const struct hip_common *common, struct tuple *tuple,
-                     hip_fw_context_t *ctx)
+static int handle_r2(const struct hip_common *common, struct tuple *tuple,
+                     const hip_fw_context_t *ctx)
 {
     struct hip_esp_info *spi    = NULL;
     struct tuple *other_dir     = NULL;
     SList *other_dir_esps       = NULL;
     struct esp_tuple *esp_tuple = NULL;
+    const struct in6_addr *ip6_src = &ctx->src;
+    const struct in6_addr *ip6_dst = &ctx->dst;
     int err                     = 1;
 
     HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO)),
@@ -1347,10 +1349,9 @@ out_err:
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_update(const struct in6_addr *ip6_src,
-                         const struct in6_addr *ip6_dst,
-                         const struct hip_common *common,
-                         struct tuple *tuple)
+static int handle_update(const struct hip_common *common,
+                         struct tuple *tuple,
+                         const hip_fw_context_t *ctx)
 {
     struct hip_seq *seq                = NULL;
     struct hip_esp_info *esp_info      = NULL;
@@ -1360,6 +1361,7 @@ static int handle_update(const struct in6_addr *ip6_src,
     struct hip_echo_request *echo_req  = NULL;
     struct hip_echo_response *echo_res = NULL;
     struct tuple *other_dir_tuple      = NULL;
+    const struct in6_addr *ip6_src = &ctx->src;
     int err                            = 0;
 
     _HIP_DEBUG("handle_update\n");
@@ -1689,7 +1691,8 @@ out_err:
 static int handle_close(const struct in6_addr *ip6_src,
                         const struct in6_addr *ip6_dst,
                         const struct hip_common *common,
-                        struct tuple *tuple)
+                        struct tuple *tuple,
+                        const hip_fw_context_t *ctx)
 {
     int err = 1;
 
@@ -1733,7 +1736,8 @@ out_err:
 int handle_close_ack(const struct in6_addr *ip6_src,
                      const struct in6_addr *ip6_dst,
                      const struct hip_common *common,
-                     struct tuple *tuple)
+                     struct tuple *tuple,
+                     const hip_fw_context_t *ctx)
 {
     int err = 1;
 
@@ -1906,11 +1910,11 @@ static int check_packet(const struct in6_addr *ip6_src,
             goto out_err;
         }
     } else if (common->type_hdr == HIP_R1) {
-        err = handle_r1(common, tuple, verify_responder);
+        err = handle_r1(common, tuple, verify_responder, ctx);
     } else if (common->type_hdr == HIP_I2) {
-        err = handle_i2(ip6_src, ip6_dst, common, tuple);
+        err = handle_i2(common, tuple, ctx);
     } else if (common->type_hdr == HIP_R2) {
-        err = handle_r2(ip6_src, ip6_dst, common, tuple, ctx);
+        err = handle_r2(common, tuple, ctx);
     } else if (common->type_hdr == HIP_UPDATE) {
         if (!(tuple && tuple->hip_tuple->data->src_hi != NULL)) {
             HIP_DEBUG("signature was NOT verified\n");
@@ -1926,7 +1930,7 @@ static int check_packet(const struct in6_addr *ip6_src,
         }
 
         if (err) {
-            err = handle_update(ip6_src, ip6_dst, common, tuple);
+            err = handle_update(common, tuple, ctx);
         }
     } else if (common->type_hdr == HIP_NOTIFY) {
         // don't process and let pass through
@@ -1935,12 +1939,12 @@ static int check_packet(const struct in6_addr *ip6_src,
         // don't process and let pass through
         err = 1;
     } else if (common->type_hdr == HIP_CLOSE) {
-        err = handle_close(ip6_src, ip6_dst, common, tuple);
+        err = handle_close(ip6_src, ip6_dst, common, tuple, ctx);
     } else if (common->type_hdr == HIP_CLOSE_ACK) {
-        err   = handle_close_ack(ip6_src, ip6_dst, common, tuple);
+        err   = handle_close_ack(ip6_src, ip6_dst, common, tuple, ctx);
         tuple = NULL;
     } else if (common->type_hdr == HIP_LUPDATE) {
-        err = esp_prot_conntrack_lupdate(ip6_src, ip6_dst, common, tuple);
+        err = esp_prot_conntrack_lupdate(common, tuple, ctx);
     } else {
         HIP_ERROR("unknown packet type\n");
         err = 0;

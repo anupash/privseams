@@ -971,10 +971,9 @@ int esp_prot_conntrack_remove_state(struct esp_tuple *esp_tuple)
  * @param   tuple state maintained for this connection
  * @return  0 on success, -1 in case of an error
  */
-int esp_prot_conntrack_lupdate(const struct in6_addr *ip6_src,
-                               const struct in6_addr *ip6_dst,
-                               const struct hip_common *common,
-                               struct tuple *tuple)
+int esp_prot_conntrack_lupdate(const struct hip_common *common,
+                               struct tuple *tuple,
+                               const hip_fw_context_t *ctx)
 {
     struct hip_seq *seq          = NULL;
     struct hip_tlv_common *param = NULL;
@@ -984,6 +983,8 @@ int esp_prot_conntrack_lupdate(const struct in6_addr *ip6_src,
     struct esp_prot_root *esp_roots[MAX_NUM_PARALLEL_HCHAINS];
     struct hip_ack *ack           = NULL;
     struct hip_esp_info *esp_info = NULL;
+    const struct in6_addr *ip6_src = &ctx->src;
+    const struct in6_addr *ip6_dst = &ctx->dst;
     int err                       = 0;
     long i;
 

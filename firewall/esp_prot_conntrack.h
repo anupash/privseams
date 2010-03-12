@@ -39,10 +39,9 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 int esp_prot_conntrack_update(const hip_common_t *update,
                               const struct tuple *tuple);
 int esp_prot_conntrack_remove_state(struct esp_tuple *esp_tuple);
-int esp_prot_conntrack_lupdate(const struct in6_addr *ip6_src,
-                               const struct in6_addr *ip6_dst,
-                               const struct hip_common *common,
-                               struct tuple *tuple);
+int esp_prot_conntrack_lupdate(const struct hip_common *common,
+                               struct tuple *tuple,
+                               const hip_fw_context_t *ctx);
 int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
                               struct esp_tuple *esp_tuple);
 
