@@ -11,7 +11,9 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
-# LT_INIT(disable-shared) is not used for OpenWRT compatibility at the momentx
+# AC_PROG_LIBTOOL() could be replaced with LT_INIT(disable-shared) but
+# OpenWRT (Mar 2010) is running too old version of libtool
+# LT_INIT(disable-shared)
 AC_PROG_LIBTOOL(disable-shared)
 
 # Checks for programs.
