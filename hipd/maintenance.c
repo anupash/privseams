@@ -26,7 +26,6 @@ int hip_firewall_sock_lsi_fd = -1;
 float retrans_counter        = HIP_RETRANSMIT_INIT;
 float opp_fallback_counter   = HIP_OPP_FALLBACK_INIT;
 float precreate_counter      = HIP_R1_PRECREATE_INIT;
-int nat_keep_alive_counter   = HIP_NAT_KEEP_ALIVE_INTERVAL;
 float opendht_counter        = OPENDHT_REFRESH_INIT;
 float queue_counter          = QUEUE_CHECK_INIT;
 int force_exit_counter       = FORCE_EXIT_COUNTER_START;
@@ -188,17 +187,6 @@ int hip_periodic_maintenance()
         precreate_counter = HIP_R1_PRECREATE_INIT;
     } else {
         precreate_counter--;
-    }
-
-    if (!lmod_module_exists("heartbeat") && hip_nat_status) {
-        if (nat_keep_alive_counter < 0) {
-            HIP_IFEL(hip_nat_refresh_port(),
-                     -ECOMM,
-                     "Failed to refresh NAT port state.\n");
-            nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
-        } else {
-            nat_keep_alive_counter--;
-        }
     }
 
     hip_run_maint_functions();

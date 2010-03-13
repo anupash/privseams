@@ -17,6 +17,7 @@
 #include "hip_socket.h"
 #include "init.h"
 #include "oppdb.h"
+#include "nat.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "lib/core/hip_capability.h"
@@ -477,8 +478,9 @@ int hipd_init(int flush_ipsec, int killold)
 
     hip_init_handle_functions();
 
-    hip_register_maint_function(&hip_relht_maintenance, 0);
-    hip_register_maint_function(&hip_registration_maintenance, 0);
+    hip_register_maint_function(&hip_nat_refresh_port,         10000);
+    hip_register_maint_function(&hip_relht_maintenance,        20000);
+    hip_register_maint_function(&hip_registration_maintenance, 30000);
 
 #ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG

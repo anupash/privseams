@@ -1017,7 +1017,7 @@ int hip_update_init(void)
                                           0),
              -1, "Error on registering UPDATE handle function.\n");
 
-    HIP_IFEL(hip_register_maint_function(&hip_update_maintenance, 0),
+    HIP_IFEL(hip_register_maint_function(&hip_update_maintenance, 40000),
              -1,
              "Error on registering UPDATE maintenance function.\n");
 

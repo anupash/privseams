@@ -75,6 +75,8 @@
  *        released versions of HIPL.*/
 #define HIP_UDP_PORT_RAND_MAX 65535.0
 
+static int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
+
 /** A transmission function set for NAT traversal. */
 /** File descriptor of socket used for hip control packet NAT traversal on
  *  UDP/IPv4. Defined in hipd.c */
@@ -96,9 +98,19 @@ int hip_nat_refresh_port()
 {
     int err = 0;
 
-    HIP_DEBUG("Sending Keep-Alives to NAT.\n");
-    HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
-             -1, "for_each_ha() err.\n");
+    if (!hip_nat_status) {
+        return 0;
+    }
+
+    if (nat_keep_alive_counter < 0) {
+        HIP_DEBUG("Sending Keep-Alives to NAT.\n");
+        HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
+                 -1, "for_each_ha() err.\n");
+
+        nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
+    } else {
+        nat_keep_alive_counter--;
+    }
 
 out_err:
     return err;
