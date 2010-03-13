@@ -25,6 +25,7 @@
 #include "lib/core/hostid.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hostsfiles.h"
+#include "lib/performance/performance.h"
 #include "modules/hipd_modules.h"
 
 /**
