@@ -217,6 +217,22 @@ out_err:
 }
 
 /**
+ * hip_unregister_maint_function
+ *
+ * Remove a maintenance function from the list.
+ *
+ * @param *maint_function Pointer to the function which should be unregistered.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int hip_unregister_maint_function(int (*maint_function)(void))
+{
+    return lmod_unregister_function(hip_maintenance_functions,
+                                    maint_function);
+}
+
+/**
  * hip_run_maint_functions
  *
  * Run all maintenance functions.

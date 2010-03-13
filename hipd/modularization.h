@@ -30,6 +30,8 @@ void hip_uninit_handle_functions(void);
 int hip_register_maint_function(int (*maint_function)(void),
                                 const uint16_t priority);
 
+int hip_unregister_maint_function(int (*maint_function)(void));
+
 int hip_run_maint_functions(void);
 
 void hip_uninit_maint_functions(void);

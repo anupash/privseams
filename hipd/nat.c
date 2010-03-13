@@ -94,7 +94,7 @@ static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
  *
  * @return zero on success, or negative error value on error.
  */
-int hip_nat_refresh_port()
+int hip_nat_refresh_port(void)
 {
     int err = 0;
 

@@ -324,11 +324,21 @@ int hip_heartbeat_init(void)
 
     HIP_IFEL(lmod_register_module("heartbeat"),
              -1,
-             "Error on registering HEATBEAT module.\n");
+             "Error on registration of HEARTBEAT module.\n");
 
-    hip_register_socket(hip_icmp_sock, &hip_heartbeat_handle_icmp_sock, 30000);
+    HIP_IFEL(hip_register_socket(hip_icmp_sock,
+                                 &hip_heartbeat_handle_icmp_sock,
+                                 30000),
+             -1,
+             "Error on registration of hip_icmp_sock for HEARTBEAT module.\n");
 
-    hip_register_maint_function(&hip_heartbeat_maintenance, 10000);
+    if (hip_unregister_maint_function(&hip_nat_refresh_port)) {
+        HIP_DEBUG("Unregister 'hip_nat_refresh_port() failed.\n");
+    }
+
+    HIP_IFEL(hip_register_maint_function(&hip_heartbeat_maintenance, 10000),
+             -1,
+             "Error on registration of hip_heartbeat_maintenance().\n");
 
 out_err:
     return err;
