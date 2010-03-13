@@ -31,21 +31,52 @@
 #include "hipd/pisa.h"
 #endif
 
-int update_id_window_size = 50;
+struct update_state {
+    /** A kludge to get the UPDATE retransmission to work.
+        @todo Remove this kludge. */
+    int update_state;
 
-int hip_create_locators(hip_common_t *locator_msg,
-                        struct hip_locator_info_addr_item **locators)
+    /** Update function set.
+        @note Do not modify this value directly. Use
+        hip_hadb_set_handle_function_set() instead. */
+    hip_update_func_set_t *hadb_update_func;
+
+    /** This "linked list" includes the locators we recieved in the initial
+     * UPDATE packet. Locators are stored as "struct in6_addr *"s.
+     *
+     * Hipd sends UPDATE packets including ECHO_REQUESTS to all these
+     * addresses.
+     *
+     * Notice that there's a hack that a hash table is used as a linked list
+     * here but this is common allover HIPL and it doesn't seem to cause
+     * performance problems.
+     */
+    HIP_HASHTABLE *addresses_to_send_echo_request;
+
+    /** Stored outgoing UPDATE ID counter. */
+    uint32_t                     update_id_out;
+    /** Stored incoming UPDATE ID counter. */
+    uint32_t                     update_id_in;
+};
+
+int hip_trigger_update_on_heartbeat_failure =  0;
+int update_id_window_size                   = 50;
+
+static int hip_create_locators(hip_common_t *locator_msg,
+                               struct hip_locator_info_addr_item **locators)
 {
     int err = 0;
-    struct hip_locator *loc;
+    struct hip_locator *loc = NULL;
 
     hip_msg_init(locator_msg);
-    HIP_IFEL(hip_build_user_hdr(locator_msg,
-                                SO_HIP_SET_LOCATOR_ON, 0), -1,
+
+    HIP_IFEL(hip_build_user_hdr(locator_msg, SO_HIP_SET_LOCATOR_ON, 0),
+             -1,
              "Failed to add user header\n");
-    HIP_IFEL(hip_build_locators_old(locator_msg, 0), -1,
+    HIP_IFEL(hip_build_locators_old(locator_msg, 0),
+             -1,
              "Failed to build locators\n");
-    loc       = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
+    loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
     hip_print_locator_addresses(locator_msg);
     *locators = hip_get_locator_first_addr_item(loc);
 
@@ -76,9 +107,14 @@ static inline uint32_t hip_update_get_out_id(struct update_state *state)
     return -1;
 }
 
-/// @todo : should we implement base draft update with ifindex 0 stuff ??
-/// @todo :  Divide this function into more pieces, handle_spi, handle_seq, etc
-/// @todo : Remove the uncommented lines?
+/**
+ * hip_create_update_msg
+ *
+ * @todo should we implement base draft update with ifindex 0 stuff ??
+ * @todo Divide this function into more pieces, handle_spi, handle_seq, etc
+ * @todo Remove the uncommented lines?
+ * @todo Complete doxygen header
+ */
 static int hip_create_update_msg(hip_common_t *received_update_packet,
                                  struct hip_hadb_state *ha,
                                  hip_common_t *update_packet_to_send,
@@ -251,17 +287,21 @@ out_err:
 }
 
 static int hip_send_update_pkt(hip_common_t *update_packet_to_send,
-                               struct hip_hadb_state *ha, struct in6_addr *src_addr,
-                               struct in6_addr *dst_addr)
+                               struct hip_hadb_state *ha,
+                               const struct in6_addr *src_addr,
+                               const struct in6_addr *dst_addr)
 {
     int err = 0;
+    const int retransmit = 1;
 
-    // TODO: set the local address unverified for that dst_hit();
-
+    /** @todo set the local address unverified for that dst_hit(); */
     err = hip_send_pkt(src_addr,
                        dst_addr,
                        (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                       ha->peer_udp_port, update_packet_to_send, ha, 1);
+                       ha->peer_udp_port,
+                       update_packet_to_send,
+                       ha,
+                       retransmit);
 
     return err;
 }
@@ -270,12 +310,12 @@ static int hip_send_update_pkt(hip_common_t *update_packet_to_send,
  * Removes all the addresses from the addresses_to_send_echo_request list
  * and deallocates them.
  * @param ha pointer to a host association
-*/
+ */
 static void hip_remove_addresses_to_send_echo_request(struct update_state *state)
 {
     int i = 0;
     hip_list_t *item = NULL, *tmp = NULL;
-    struct in6_addr *address;
+    struct in6_addr *address = NULL;
 
     list_for_each_safe(item, tmp, state->addresses_to_send_echo_request, i) {
         address = (struct in6_addr *)list_entry(item);
@@ -288,8 +328,8 @@ static void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
 {
     int i = 0;
     hip_list_t *item = NULL, *tmp = NULL;
-    struct in6_addr *address;
-    struct update_state *localstate;
+    struct in6_addr *address = NULL;
+    struct update_state *localstate = NULL;
 
     localstate = lmod_get_state_item(ha->hip_modular_state, "update");
 
@@ -305,12 +345,11 @@ static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *h
                                                   const struct in6_addr *dst_addr,
                                                   struct in6_addr *new_src_addr)
 {
-    int err = 0;
+    int err = 0, c;
     struct sockaddr_storage ss;
-    struct netdev_address *na;
-    hip_list_t *n, *t;
-    const struct in6_addr *in6;
-    int c;
+    struct netdev_address *na = NULL;
+    hip_list_t *n = NULL, *t = NULL;
+    const struct in6_addr *in6 = NULL;
 
     memset(&ss, 0, sizeof(ss));
     memset(new_src_addr, 0, sizeof(*new_src_addr));
@@ -425,7 +464,6 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
             break;
         case SEND_UPDATE_ESP_ANCHOR:
             // TODO re-implement sending of esp prot anchors
-
             hip_send_update_pkt(update_packet_to_send, ha, src_addr, dst_addr);
             break;
         }
@@ -450,13 +488,21 @@ out_err:
     return err;
 }
 
-int hip_send_locators_to_all_peers()
+/**
+ * Sends all the locators from our active source address to the active
+ * destination addresses of all peers.
+ *
+ * Notice that the update packet is sent between only one active address pair
+ * between two peers. When shotgun is implemented this will change.
+ *
+ * @return 0 if succeeded, error number otherwise
+ */
+int hip_send_locators_to_all_peers(void)
 {
-    int err                   = 0;
+    int err = 0, i = 0;
     struct hip_locator_info_addr_item *locators;
-    int i                     = 0;
-    hip_ha_t *ha;
-    hip_list_t *item, *tmp;
+    hip_ha_t *ha = NULL;
+    hip_list_t *item = NULL, *tmp = NULL;
     hip_common_t *locator_msg = NULL;
 
     HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
@@ -464,14 +510,17 @@ int hip_send_locators_to_all_peers()
     HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
 
     // Go through all the peers and send update packets
-    list_for_each_safe(item, tmp, hadb_hit, i)
-    {
+    list_for_each_safe(item, tmp, hadb_hit, i) {
         ha = (hip_ha_t *) list_entry(item);
 
         if (ha->hastate == HIP_HASTATE_HITOK &&
             ha->state == HIP_STATE_ESTABLISHED) {
-            err = hip_send_locators_to_one_peer(NULL, ha, &ha->our_addr,
-                                                &ha->peer_addr, locators, HIP_UPDATE_LOCATOR);
+            err = hip_send_locators_to_one_peer(NULL,
+                                                ha,
+                                                &ha->our_addr,
+                                                &ha->peer_addr,
+                                                locators,
+                                                HIP_UPDATE_LOCATOR);
             if (err) {
                 goto out_err;
             }
@@ -486,7 +535,6 @@ out_err:
     if (hip_get_nsupdate_status()) {
         nsupdate(0);
     }
-
     if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
         hip_recreate_all_precreated_r1_packets();
     }
@@ -528,10 +576,10 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
     int err                    = 0;
     int locator_addr_count     = 0;
     int i                      = 0;
-    struct hip_locator_info_addr_item *locator_address_item;
-    union hip_locator_info_addr *locator_info_addr;
-    struct in6_addr *peer_addr = 0;
     int src_addr_included      = 0;
+    union hip_locator_info_addr *locator_info_addr = NULL;
+    struct hip_locator_info_addr_item *locator_address_item = NULL;
+    struct in6_addr *peer_addr = 0;
     struct update_state *localstate = NULL;
 
     HIP_IFEL(!locator, -1, "locator is NULL");
@@ -555,12 +603,11 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
     for (i = 0; i < locator_addr_count; i++) {
         locator_info_addr = hip_get_locator_item(locator_address_item, i);
 
-        peer_addr         = malloc(sizeof(in6_addr_t));
+        peer_addr = malloc(sizeof(in6_addr_t));
         if (!peer_addr) {
             HIP_ERROR("Couldn't allocate memory for peer_addr.\n");
             return -1;
         }
-        ;
 
         ipv6_addr_copy(peer_addr, hip_get_locator_item_address(locator_info_addr));
 
@@ -582,7 +629,6 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
             HIP_ERROR("Couldn't allocate memory for peer_addr.\n");
             return -1;
         }
-        ;
 
         ipv6_addr_copy(peer_addr, src_addr);
         list_add(peer_addr, localstate->addresses_to_send_echo_request);
@@ -595,19 +641,20 @@ out_err:
 }
 
 static int hip_handle_first_update_packet(hip_common_t *received_update_packet,
-                                          hip_ha_t *ha, in6_addr_t *src_addr)
+                                          hip_ha_t *ha,
+                                          in6_addr_t *src_addr)
 {
     int err = 0;
-    struct hip_locator *locator;
-    struct hip_esp_info *esp_info;
+    struct hip_locator *locator = NULL;
+    struct hip_esp_info *esp_info = NULL;
 
-    locator              = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
-    err                  = hip_handle_locator_parameter(ha, src_addr, locator);
+    locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
+    err     = hip_handle_locator_parameter(ha, src_addr, locator);
     if (err) {
         goto out_err;
     }
 
-    esp_info             = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
+    esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
     ha->spi_outbound_new = ntohl(esp_info->new_spi);
 
     // Randomize the echo response opaque data before sending ECHO_REQUESTS.
@@ -615,8 +662,12 @@ static int hip_handle_first_update_packet(hip_common_t *received_update_packet,
     // UPDATE packets sent between different address combinations.
     get_random_bytes(ha->echo_data, sizeof(ha->echo_data));
 
-    err = hip_send_locators_to_one_peer(received_update_packet, ha, &ha->our_addr,
-                                        &ha->peer_addr, NULL, HIP_UPDATE_ECHO_REQUEST);
+    err = hip_send_locators_to_one_peer(received_update_packet,
+                                        ha,
+                                        &ha->our_addr,
+                                        &ha->peer_addr,
+                                        NULL,
+                                        HIP_UPDATE_ECHO_REQUEST);
     if (err) {
         goto out_err;
     }
@@ -630,12 +681,16 @@ static void hip_handle_second_update_packet(hip_common_t *received_update_packet
                                             in6_addr_t *src_addr,
                                             in6_addr_t *dst_addr)
 {
-    struct hip_esp_info *esp_info;
+    struct hip_esp_info *esp_info = NULL;
 
-    hip_send_locators_to_one_peer(received_update_packet, ha, src_addr,
-                                  dst_addr, NULL, HIP_UPDATE_ECHO_RESPONSE);
+    hip_send_locators_to_one_peer(received_update_packet,
+                                  ha,
+                                  src_addr,
+                                  dst_addr,
+                                  NULL,
+                                  HIP_UPDATE_ECHO_RESPONSE);
 
-    esp_info             = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
+    esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
     ha->spi_outbound_new = ntohl(esp_info->new_spi);
 
     hip_recreate_security_associations_and_sp(ha, src_addr, dst_addr);
@@ -645,13 +700,10 @@ static void hip_handle_second_update_packet(hip_common_t *received_update_packet
     ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
-static void hip_handle_third_update_packet(hip_common_t *received_update_packet,
-                                           hip_ha_t *ha,
+static void hip_handle_third_update_packet(hip_ha_t *ha,
                                            in6_addr_t *src_addr,
                                            in6_addr_t *dst_addr)
 {
-    (void) received_update_packet; /* avoid warning about unused parameter */
-
     hip_recreate_security_associations_and_sp(ha, src_addr, dst_addr);
 
     // Set active addresses
@@ -666,7 +718,7 @@ static void hip_empty_oppipdb_old(void)
 #endif
     if (hip_firewall_is_alive()) {
         int err;
-        struct hip_common *msg;
+        struct hip_common *msg = NULL;
 
         msg = hip_msg_alloc();
         HIP_IFEL(!msg, -1, "msg alloc failed\n");
@@ -677,16 +729,88 @@ static void hip_empty_oppipdb_old(void)
         err = err > 0 ? 0 : -1;
 
 out_err:
-        HIP_FREE(msg);
+        if (msg) {
+            HIP_FREE(msg);
+        }
         if (err) {
             HIP_ERROR("Couldn't flush firewall chains\n");
         }
     }
 }
 
-int hip_handle_update(const uint8_t packet_type,
-                      const uint32_t ha_state,
-                      struct hip_packet_context *ctx)
+static int hip_update_maintenance(void)
+{
+    int err = 0;
+
+    if (hip_wait_addr_changes_to_stabilize &&
+        address_change_time_counter != -1) {
+        if (address_change_time_counter == 0) {
+            address_change_time_counter = -1;
+
+            HIP_DEBUG("Triggering UPDATE\n");
+            err = hip_send_locators_to_all_peers();
+
+            if (err) {
+                HIP_ERROR("Error sending UPDATE\n");
+            }
+        } else {
+            HIP_DEBUG("Delay mobility triggering (count %d)\n",
+                      address_change_time_counter - 1);
+            address_change_time_counter--;
+        }
+    }
+
+    if (hip_trigger_update_on_heartbeat_failure) {
+//        hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
+    }
+
+    return err;
+}
+
+/**
+ * Initialize an update_state instance.
+ *
+ * Allocates the required memory and sets the members to the start values.
+ *
+ *  @return Success = Index of the update state item in the global state. (>0)
+ *          Error   = -1
+ */
+static int hip_update_init_state(struct modular_state *state)
+{
+    int err = 0;
+    struct update_state *update_state = NULL;
+
+    HIP_IFEL(!(update_state = malloc(sizeof(struct update_state))),
+             -1,
+             "Error on allocating memory for a update state instance.\n");
+
+    update_state->update_state                   = 0;
+    update_state->hadb_update_func               = NULL;
+    update_state->addresses_to_send_echo_request = hip_linked_list_init();
+    update_state->update_id_out                  = 0;
+    update_state->update_id_in                   = 0;
+
+    err = lmod_add_state_item(state, update_state, "update");
+
+out_err:
+    return err;
+}
+
+/**
+ * Handles a received update packet.
+ *
+ * @param msg: received update packet
+ * @param src_addr: source address from which this received update packet was sent
+ * @param dst_addr: destination address to which this received update packet was sent
+ * @param ha: corresponding host association between the peers update packets was
+ *  transmitted
+ * @param sinfo: port information for the received update packet
+ *
+ * @return 0 if succeeded, error number otherwise
+ */
+static int hip_handle_update(const uint8_t packet_type,
+                             const uint32_t ha_state,
+                             struct hip_packet_context *ctx)
 {
     int err = 0, same_seq = 0;
     unsigned int ack_peer_update_id         = 0;
@@ -846,25 +970,19 @@ int hip_handle_update(const uint8_t packet_type,
                                         ctx->hadb_entry,
                                         ctx->dst_addr,
                                         ctx->src_addr);
-
         goto out_err;
     } else if (echo_response != NULL)   {
-        hip_handle_third_update_packet(ctx->input_msg,
-                                       ctx->hadb_entry,
+        hip_handle_third_update_packet(ctx->hadb_entry,
                                        ctx->dst_addr,
                                        ctx->src_addr);
-
         goto out_err;
     }
 
 out_err:
-    if (err != 0) {
+    if (err) {
         HIP_ERROR("UPDATE handler failed, err=%d\n", err);
     }
 
-    /** @todo Is this needed? */
-
-    // Empty the oppipdb.
     hip_empty_oppipdb_old();
 
     return err;
@@ -884,59 +1002,37 @@ int hip_update_init(void)
              -1,
              "Error on registering UPDATE module.\n");
 
-    lmod_register_state_init_function(&hip_update_init_state);
-
-    hip_register_handle_function(HIP_UPDATE,
-                                 HIP_STATE_ESTABLISHED,
-                                 &hip_handle_update,
-                                 0);
-    hip_register_handle_function(HIP_UPDATE,
-                                 HIP_STATE_R2_SENT,
-                                 &hip_handle_update,
-                                 0);
-
-    hip_register_maint_function(&hip_update_maintenance, 0);
-
-out_err:
-    return err;
-}
-
-/**
- * Initialize an update_state instance.
- *
- * Allocates the required memory and sets the members to the start values.
- *
- *  @return Success = Index of the update state item in the global state. (>0)
- *          Error   = -1
- */
-int hip_update_init_state(struct modular_state *state)
-{
-    int err = 0;
-    struct update_state *update_state;
-
-    HIP_IFEL((update_state = malloc(sizeof(struct update_state))) == NULL,
+    HIP_IFEL(lmod_register_state_init_function(&hip_update_init_state),
              -1,
-             "Error on allocating memory for a update state instance.\n");
+             "Error on registering update state init function.\n");
 
-    update_state->update_state                   = 0;
-    update_state->hadb_update_func               = NULL;
-    update_state->addresses_to_send_echo_request = hip_linked_list_init();
-    update_state->update_id_out                  = 0;
-    update_state->update_id_in                   = 0;
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_ESTABLISHED,
+                                          &hip_handle_update,
+                                          0),
+             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_R2_SENT,
+                                          &hip_handle_update,
+                                          0),
+             -1, "Error on registering UPDATE handle function.\n");
 
-    err = lmod_add_state_item(state, update_state, "update");
+    HIP_IFEL(hip_register_maint_function(&hip_update_maintenance, 0),
+             -1,
+             "Error on registering UPDATE maintenance function.\n");
+
+    hip_trigger_update_on_heartbeat_failure = lmod_module_exists("heartbeat");
 
 out_err:
     return err;
 }
 
-/** @todo Create module heartbeat-upate */
 #if 0
 static int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
 {
-    struct hip_locator_info_addr_item *locators;
+    int err = 0;
     hip_common_t *locator_msg = NULL;
-    int err                   = 0;
+    struct hip_locator_info_addr_item *locators = NULL;
 
     if (!(ha->hastate == HIP_HASTATE_HITOK &&
           ha->state == HIP_STATE_ESTABLISHED &&
@@ -979,34 +1075,3 @@ out_err:
     return err;
 }
 #endif
-
-int hip_update_maintenance(void)
-{
-    int err = 0;
-
-    if (hip_wait_addr_changes_to_stabilize &&
-        address_change_time_counter != -1) {
-        if (address_change_time_counter == 0) {
-            address_change_time_counter = -1;
-
-            HIP_DEBUG("Triggering UPDATE\n");
-            err = hip_send_locators_to_all_peers();
-
-            if (err) {
-                HIP_ERROR("Error sending UPDATE\n");
-            }
-        } else {
-            HIP_DEBUG("Delay mobility triggering (count %d)\n",
-                      address_change_time_counter - 1);
-            address_change_time_counter--;
-        }
-    }
-
-    /** @todo Create module heartbeat-upate */
-//    if (hip_trigger_update_on_heart_beat_failure &&
-//        hip_icmp_interval > 0) {
-//        hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
-//    }
-
-    return err;
-}
