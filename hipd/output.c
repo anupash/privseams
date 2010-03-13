@@ -1747,9 +1747,13 @@ static int hip_send_udp_from_one_src(const struct in6_addr *local_addr,
  * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_udp
  */
-int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_addr,
-                 const in_port_t src_port, const in_port_t dst_port,
-                 struct hip_common *msg, hip_ha_t *entry, const int retransmit)
+int hip_send_pkt(const struct in6_addr *local_addr,
+                 const struct in6_addr *peer_addr,
+                 const in_port_t src_port,
+                 const in_port_t dst_port,
+                 struct hip_common *msg,
+                 hip_ha_t *entry,
+                 const int retransmit)
 {
     int err                                = 0;
     struct netdev_address *netdev_src_addr = NULL;
