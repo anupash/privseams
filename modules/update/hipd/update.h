@@ -17,10 +17,6 @@
 
 int hip_send_locators_to_all_peers(void);
 
-int hip_handle_update(const uint8_t packet_type,
-                      const uint32_t ha_state,
-                      struct hip_packet_context *ctx);
-
 int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
                                   struct hip_hadb_state *ha,
                                   struct in6_addr *src_addr,
