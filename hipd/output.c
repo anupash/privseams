@@ -28,6 +28,7 @@
 #endif
 
 #include "lib/core/hip_udp.h"
+#include "lib/core/solve.h"
 #include "lib/tool/checksum.h"
 
 enum number_dh_keys_t { ONE, TWO };
