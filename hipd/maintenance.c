@@ -329,12 +329,9 @@ int hip_icmp_statistics(struct in6_addr *src, struct in6_addr *dst,
     uint32_t rcvd_heartbeats = 0;
     uint64_t rtt             = 0;
     double avg               = 0.0, std_dev = 0.0;
-#if 0
-    u_int32_t rtt            = 0, usecs = 0, secs = 0, square = 0;
-    u_int32_t sum1           = 0, sum2 = 0;
-#endif
     char hit[INET6_ADDRSTRLEN];
     hip_ha_t *entry          = NULL;
+    uint8_t *heartbeat_counter = NULL;
 
     hip_in6_ntop(src, hit);
 
@@ -352,8 +349,11 @@ int hip_icmp_statistics(struct in6_addr *src, struct in6_addr *dst,
     calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, NULL, NULL, &avg,
                     &std_dev, STATS_IN_MSECS);
 
-    _HIP_DEBUG("Reset heartbeat timer to trigger UPDATE\n");
-    entry->update_trigger_on_heartbeat_counter = 0;
+    heartbeat_counter = lmod_get_state_item(entry->hip_modular_state,
+                                            "heartbeat_update");
+
+    *heartbeat_counter = 0;
+    HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_counter);
 
     HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
               "%.6f ms std dev, packets sent %d recv %d lost %d\n",

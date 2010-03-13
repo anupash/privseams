@@ -1,3 +1,27 @@
+/**
+ * @file
+ * This file defines HEARTBEAT functionality for the HIP daemon.
+ *
+ * Concept
+ * -------
+ * - Send periodic ICMP messages to all associated peers (HEARTBEATs)
+ * - When a HEARTBEAT response is received, calculate roundtrip time and
+ *   maintain statistics.
+ *
+ * If an UPDATE module exists:
+ * - Register a HEARTBEAT counter to the host association database.
+ * - Increment this counter by 1, every time a HEARTBEAT is sent.
+ * - Reset the counter (set to 0), if a HEARTBEAT response is received.
+ * - If counter reaches the threshold value, trigger an UPDATE.
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
+ * @author Miika Komu
+ * @author Samu Varjonen
+ * @author Rene Hummen
+ * @author Tim Just
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -9,10 +33,13 @@
 #include "hipd/hip_socket.h"
 #include "hipd/modularization.h"
 
+#include "modules/update/hipd/update.h"
+
 #define HIP_HEARTBEAT_INTERVAL 20
 
 int hip_icmp_sock;
-int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
+static int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
+static const int hip_heartbeat_trigger_update_threshold = 5;
 
 /**
  * This function sends ICMPv6 echo with timestamp to dsthit
@@ -32,8 +59,8 @@ static int hip_send_icmp(int sockfd, hip_ha_t *entry)
     u_char *icmp_pkt       = NULL;
     struct msghdr mhdr;
     struct iovec iov[1];
-    struct cmsghdr *chdr;
-    struct inet6_pktinfo *pkti;
+    struct cmsghdr *chdr = NULL;
+    struct inet6_pktinfo *pkti = NULL;
     struct timeval tval;
 
     HIP_IFEL(!entry, 0, "No entry\n");
@@ -120,59 +147,6 @@ out_err:
     return err;
 }
 
-static int hip_heartbeat_handle_icmp_sock(struct hip_packet_context *ctx)
-{
-    int err = 0;
-
-    HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
-             "Failed to recvmsg from ICMPv6\n");
-
-out_err:
-    return err;
-}
-
-static int hip_heartbeat_maintenance(void)
-{
-    /* Check if the heartbeats should be sent */
-    if (heartbeat_counter < 1) {
-        hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
-        heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
-    } else {
-        heartbeat_counter--;
-    }
-
-    return 0;
-}
-
-/**
- * This function goes through the HA database and sends an icmp echo to all of them
- *
- * @param socket to send with
- *
- * @return 0 on success negative on error
- */
-int hip_send_heartbeat(hip_ha_t *entry, void *opaq)
-{
-    int err     = 0;
-    int *sockfd = (int *) opaq;
-
-    if (entry->state == HIP_STATE_ESTABLISHED) {
-        if (entry->outbound_sa_count > 0) {
-            _HIP_DEBUG("list_for_each_safe\n");
-            HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
-                     "Error sending heartbeat, ignore\n");
-        } else {
-            /* This can occur when ESP transform is not negotiated
-             * with e.g. a HIP Relay or Rendezvous server */
-            HIP_DEBUG("No SA, sending NOTIFY instead of ICMPv6\n");
-            err = hip_nat_send_keep_alive(entry, NULL);
-        }
-    }
-
-out_err:
-    return err;
-}
-
 /**
  * This function receives ICMPv6 msgs (heartbeats)
  *
@@ -182,7 +156,7 @@ out_err:
  *
  * @note see RFC2292
  */
-int hip_icmp_recvmsg(int sockfd)
+static int hip_icmp_recvmsg(int sockfd)
 {
     int err = 0, ret = 0, identifier = 0;
     struct msghdr mhdr;
@@ -299,6 +273,98 @@ out_err:
     return err;
 }
 
+static int hip_heartbeat_handle_icmp_sock(struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
+             "Failed to recvmsg from ICMPv6\n");
+
+out_err:
+    return err;
+}
+
+/**
+ * This function goes through the HA database and sends an icmp echo to all of them
+ *
+ * @param socket to send with
+ *
+ * @return 0 on success negative on error
+ */
+static int hip_send_heartbeat(hip_ha_t *hadb_entry, void *opaq)
+{
+    int err                                     = 0;
+    int *sockfd                                 = (int *) opaq;
+    uint8_t *heartbeat_counter                  = NULL;
+    hip_common_t *locator_msg                   = NULL;
+    struct hip_locator_info_addr_item *locators = NULL;
+
+    if ((hadb_entry->state == HIP_STATE_ESTABLISHED) &&
+        (hadb_entry->outbound_sa_count > 0)) {
+
+        HIP_IFEL(hip_send_icmp(*sockfd, hadb_entry), 0,
+                     "Error sending heartbeat, ignore\n");
+        heartbeat_counter = lmod_get_state_item(hadb_entry->hip_modular_state,
+                                                "heartbeat_update");
+
+        *heartbeat_counter = *heartbeat_counter + 1;
+        HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_counter);
+
+        if (*heartbeat_counter >= hip_heartbeat_trigger_update_threshold) {
+            HIP_DEBUG("HEARTBEAT counter reached threshold, trigger UPDATE\n");
+
+            HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
+                     "Out of memory while allocation memory for the packet\n");
+            HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
+
+            HIP_IFEL(hip_send_locators_to_one_peer(NULL,
+                                                   hadb_entry,
+                                                   &hadb_entry->our_addr,
+                                                   &hadb_entry->peer_addr,
+                                                   locators,
+                                                   HIP_UPDATE_LOCATOR),
+                     -1, "Failed to trigger update\n");
+
+            *heartbeat_counter = 0;
+        }
+    }
+
+out_err:
+    if (locator_msg) {
+        free(locator_msg);
+    }
+
+    return err;
+}
+
+static int hip_heartbeat_maintenance(void)
+{
+    /* Check if the heartbeats should be sent */
+    if (heartbeat_counter < 1) {
+        hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
+        heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
+    } else {
+        heartbeat_counter--;
+    }
+
+    return 0;
+}
+
+static int hip_heartbeat_update_init_state(struct modular_state *state)
+{
+    int err = 0;
+    uint8_t *heartbeat_counter = NULL;
+
+    HIP_IFEL(!(heartbeat_counter = malloc(sizeof(uint8_t))),
+                -1,
+                "Error on allocating memory for heartbeat_counter.\n");
+
+    err = lmod_add_state_item(state, heartbeat_counter, "heartbeat_update");
+
+out_err:
+    return err;
+}
+
 /**
  * Initialize icmpv6 socket.
  */
@@ -339,6 +405,11 @@ int hip_heartbeat_init(void)
     HIP_IFEL(hip_register_maint_function(&hip_heartbeat_maintenance, 10000),
              -1,
              "Error on registration of hip_heartbeat_maintenance().\n");
+
+    /** @todo This should only be done, if the module UPDATE exists */
+    HIP_IFEL(lmod_register_state_init_function(&hip_heartbeat_update_init_state),
+             -1,
+             "Error on registration of hip_heartbeat_update_init_state().\n");
 
 out_err:
     return err;

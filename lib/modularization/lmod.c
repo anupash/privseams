@@ -146,8 +146,8 @@ void lmod_init_state_items(struct modular_state *state)
  *          Error   = -1
  */
 int lmod_add_state_item(struct modular_state *state,
-                       void *state_item,
-                       const char *item_name)
+                        void *state_item,
+                        const char *item_name)
 {
 
     /* Check if identifier already exists */

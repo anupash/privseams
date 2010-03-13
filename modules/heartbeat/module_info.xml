@@ -8,6 +8,10 @@
     developer=""
     bugaddress="hipl-users@freelists.org"
     webpage="http://infrahip.hiit.fi/">
+    
+    <requires>
+        <module name="update" minversion="0.0.1" />
+    </requires>
 
     <!-- Mandatory: name, header_file, init_function, linkcommand -->
     <application

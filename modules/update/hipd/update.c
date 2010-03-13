@@ -59,11 +59,10 @@ struct update_state {
     uint32_t                     update_id_in;
 };
 
-int hip_trigger_update_on_heartbeat_failure =  0;
-int update_id_window_size                   = 50;
+const static int update_id_window_size = 50;
 
-static int hip_create_locators(hip_common_t *locator_msg,
-                               struct hip_locator_info_addr_item **locators)
+int hip_create_locators(hip_common_t *locator_msg,
+                        struct hip_locator_info_addr_item **locators)
 {
     int err = 0;
     struct hip_locator *loc = NULL;
@@ -760,10 +759,6 @@ static int hip_update_maintenance(void)
         }
     }
 
-    if (hip_trigger_update_on_heartbeat_failure) {
-//        hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
-    }
-
     return err;
 }
 
@@ -1021,57 +1016,6 @@ int hip_update_init(void)
              -1,
              "Error on registering UPDATE maintenance function.\n");
 
-    hip_trigger_update_on_heartbeat_failure = lmod_module_exists("heartbeat");
-
 out_err:
     return err;
 }
-
-#if 0
-static int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
-{
-    int err = 0;
-    hip_common_t *locator_msg = NULL;
-    struct hip_locator_info_addr_item *locators = NULL;
-
-    if (!(ha->hastate == HIP_HASTATE_HITOK &&
-          ha->state == HIP_STATE_ESTABLISHED &&
-          ha->disable_sas == 0)) {
-        goto out_err;
-    }
-
-    ha->update_trigger_on_heartbeat_counter++;
-    _HIP_DEBUG("Trigger count %d/%d\n", ha->update_trigger_on_heartbeat_counter,
-               HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval);
-
-    if (ha->update_trigger_on_heartbeat_counter <
-        HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval) {
-        goto out_err;
-    }
-
-    /* Time to try a handover because heart beats have been failing.
-     * Let's also reset to counter to avoid UPDATE looping in case e.g.
-     * there is just no connectivity at all. */
-    ha->update_trigger_on_heartbeat_counter = 0;
-
-    HIP_DEBUG("Hearbeat counter with ha expired, trigger UPDATE\n");
-
-    HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
-             "Out of memory while allocation memory for the packet\n");
-    HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
-
-    HIP_IFEL(hip_send_locators_to_one_peer(NULL, ha, &ha->our_addr,
-                                           &ha->peer_addr, locators,
-                                           HIP_UPDATE_LOCATOR),
-             -1, "Failed to trigger update\n");
-
-    ha->update_trigger_on_heartbeat_counter = 0;
-
-out_err:
-    if (locator_msg) {
-        free(locator_msg);
-    }
-
-    return err;
-}
-#endif
