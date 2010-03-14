@@ -311,9 +311,6 @@ static int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
  * @return zero on success and negative on failure
  * @note currently the only SOCK_DGRAM and AF_INET6 are supported
  */
-/*
- * Don't call this function directly. Use hip_send_recv_daemon_info instead
- */
 static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket)
 {
     int hip_user_sock = 0, err = 0, n = 0, len = 0;
