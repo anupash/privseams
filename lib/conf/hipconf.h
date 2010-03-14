@@ -82,6 +82,8 @@ opendht on # turn DHT support on (use /etc/hip/dhtservers to define the used ser
 # opp normal|advanced|none\n\
 # transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
 nat plain-udp       # use UDP capsulation (for NATted environments)\n\
+#nat port local 11111 # change local default UDP port\n\
+#nat port peer 22222 # change local peer UDP port\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
 #define HOSTS_FILE "/etc/hosts"
