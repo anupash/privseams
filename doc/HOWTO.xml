@@ -3290,13 +3290,23 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         NATs are commonly referred to as "good" NATs.
       </para>
       <para>
-        The primary objective of the HIP relay extension, on the other hand, is
-        to improve reachability when HIP hosts are separated from each other
-        by a NAT device that performs address dependent mapping. Such NATs are
-        commonly referred to as "bad" NATs. In practice, the HIP relay servers
-        are used to relay the Interactive Connectivity Establishment (ICE)
-        address candidates that are encapsulated in HIP messages.
-      </para>
+        HIPL has two experimental relay modes serving NAT traversal
+        purposes. In the first mode, the HIP control plane relay
+        supports <ulink url="http://www.ietf.org/id/draft-keranen-hip-native-nat-traversal-00.txt">
+        Native NAT Traversal Mode for HIP</ulink> which is only
+        partially supported at the moment. The core idea is that two
+        end-points are behind two different NAT boxes and use a HIP
+        control plane relay to be able to contact each other to
+        exchange their locators. Then the hosts "punch holes" to their
+        NAT boxes to establish direct end-to-end connectivity with
+        each other. The second mode, "full-relay" is supported
+        completely and it relays both HIP and ESP traffic. You should
+        use it carefully and whitelist your /etc/hip/relay_config
+        file. Otherwise you risk your host becoming an open HIP and
+        ESP relay. For additional security measure, you can also use
+        also /etc/hip/firewall_conf to further restrict the allowed
+	clients and servers by their HITs.
+       </para>
       <para>
         The main difference between the rendezvous server and the HIP relay
         server is that the RVS only relays I1 packet of the base exchange while

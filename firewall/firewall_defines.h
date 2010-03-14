@@ -108,8 +108,8 @@ struct tuple {
     struct hip_tuple * hip_tuple;
     struct in6_addr *  src_ip;
     struct in6_addr *  dst_ip;
-    in_port_t          relayed_src_port;
-    in_port_t          relayed_dst_port;
+    in_port_t          src_port;
+    in_port_t          dst_port;
     SList *            esp_tuples;
     int                direction;
     struct connection *connection;
@@ -118,6 +118,9 @@ struct tuple {
 #ifdef CONFIG_HIP_HIPPROXY
     int                hipproxy;
 #endif
+    int esp_relay;
+    struct in6_addr esp_relay_daddr;
+    in_port_t esp_relay_dport;
 };
 
 struct connection {
