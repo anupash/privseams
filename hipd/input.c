@@ -498,13 +498,11 @@ static int hip_packet_to_drop(hip_ha_t *entry,
 /**
  * Decides what action to take for an incoming HIP control packet.
  *
- * @param msg   a pointer to the received HIP control packet common header with
- *              source and destination HITs.
- * @param saddr a pointer to the source address from where the packet was
- *              received.
- * @param daddr a pointer to the destination address where to the packet was
- *              sent to (own address).
- * @param info  a pointer to the source and destination ports.
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
  * @return      zero on success, or negative error value on error.
  */
 int hip_receive_control_packet(struct hip_packet_context *packet_ctx)
@@ -622,13 +620,11 @@ out_err:
  * of hip_receive_control_packet() is the @c saddr of this function.</li>
  * </ol>
  *
- * @param msg   a pointer to the received HIP control packet common header with
- *              source and destination HITs.
- * @param saddr a pointer to the source address from where the packet was
- *              received.
- * @param daddr a pointer to the destination address where to the packet was
- *              sent to (own address).
- * @param info  a pointer to the source and destination ports.
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
  * @return      zero on success, or negative error value on error.
  */
 int hip_receive_udp_control_packet(struct hip_packet_context *packet_ctx)
@@ -689,19 +685,17 @@ out_err:
 /**
  * Handles an incoming R1 packet.
  *
- * Handles an incoming R1 packet and calls hip_send_i2() if the R1 packet
- * passes all tests.
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
  *
- * @param r1       a pointer to the received R1 HIP packet common header with
- *                 source and destination HITs.
- * @param r1_saddr a pointer to the source address from where the R1 packet was
- *                 received.
- * @param r1_daddr a pointer to the destination address where to the R1 packet
- *                 was sent to (own address).
- * @param entry    a pointer to the current host association database state.
- * @param r1_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
- * @return         zero on success, or negative error value on error.
+ * @return Success = 0,
+ *         Error   = -1
+ *
  * @todo           When rendezvous service is used, the I1 packet is relayed
  *                 to the responder via the rendezvous server. Responder then
  *                 replies directly to the initiator with an R1 packet that has
@@ -1004,15 +998,14 @@ out_err:
  * association in the host association database if no previous association
  * matching the search key (source HIT XOR destination HIT) was found.
  *
- * @param i2       a pointer to the I2 HIP packet common header with source and
- *                 destination HITs.
- * @param i2_saddr a pointer to the source address from where the I2 packet was
- *                 received.
- * @param i2_daddr a pointer to the destination address where the I2 packet was
- *                 sent to (own address).
- * @param ha       host association corresponding to the peer.
- * @param i2_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
  * @return         zero on success, or negative error value on error. Success
  *                 indicates that I2 payloads are checked and R2 is created and
  *                 sent.
@@ -1579,14 +1572,21 @@ out_err:
 
 /**
  * hip_handle_r2 - handle incoming R2 packet
- * @param skb sk_buff where the HIP packet is in
- * @param entry HA
  *
  * This function is the actual point from where the processing of R2
- * is started.
- *
- * On success (payloads are created and IPsec is set up) 0 is
+ * is started. On success (payloads are created and IPsec is set up) 0 is
  * returned, otherwise < 0.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return Success = 0,
+ *         Error   = -1
  */
 int hip_handle_r2(const uint8_t packet_type,
                   const uint32_t ha_state,
@@ -1832,15 +1832,14 @@ out_err:
  * nothing else but calls hip_send_r1().</li>
  * </ol>
  *
- * @param i1       a pointer to the received I1 HIP packet common header with
- *                 source and destination HITs.
- * @param i1_saddr a pointer to the source address from where the I1 packet was
- *                 received.
- * @param i1_daddr a pointer to the destination address where to the I1 packet
- *                 was sent to (own address).
- * @param entry    a pointer to the current host association database state.
- * @param i1_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
  * @return         zero on success, or negative error value on error.
  * @warning        This code only handles a single @c FROM or @c RELAY_FROM
  *                 parameter. If there is a mix of @c FROM and @c RELAY_FROM
@@ -1851,7 +1850,7 @@ out_err:
  */
 int hip_handle_i1(const uint8_t packet_type,
                   const uint32_t ha_state,
-                  struct hip_packet_context *ctx)
+                  struct hip_packet_context *packet_ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_BASE\n");
@@ -1861,60 +1860,56 @@ int hip_handle_i1(const uint8_t packet_type,
 #endif
     int err = 0, mask = 0, src_hit_is_our;
 
-    HIP_ASSERT(!ipv6_addr_any(&(ctx->input_msg)->hitr));
+    HIP_ASSERT(!ipv6_addr_any(&(packet_ctx->input_msg)->hitr));
 
     /* In some environments, a copy of broadcast our own I1 packets
      * arrive at the local host too. The following variable handles
      * that special case. Since we are using source HIT (and not
      * destination) it should handle also opportunistic I1 broadcast */
-    src_hit_is_our = hip_hidb_hit_is_our(&(ctx->input_msg)->hits);
+    src_hit_is_our = hip_hidb_hit_is_our(&(packet_ctx->input_msg)->hits);
 
     /* check i1 for broadcast/multicast addresses */
-    if (IN6_IS_ADDR_V4MAPPED(ctx->dst_addr)) {
+    if (IN6_IS_ADDR_V4MAPPED(packet_ctx->dst_addr)) {
         struct in_addr addr4;
 
-        IPV6_TO_IPV4_MAP(ctx->dst_addr, &addr4);
+        IPV6_TO_IPV4_MAP(packet_ctx->dst_addr, &addr4);
 
         if (addr4.s_addr == INADDR_BROADCAST) {
             HIP_DEBUG("Received I1 broadcast\n");
             HIP_IFF(src_hit_is_our,
                     -1,
-                    ctx->drop_packet = 1,
+                    packet_ctx->drop_packet = 1,
                     "Received a copy of own broadcast, dropping\n");
 
-            HIP_IFF(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
+            HIP_IFF(hip_select_source_address(packet_ctx->dst_addr, packet_ctx->src_addr),
                     -1,
-                    ctx->drop_packet = 1,
+                    packet_ctx->drop_packet = 1,
                     "Could not find source address\n");
         }
-    } else if (IN6_IS_ADDR_MULTICAST(ctx->dst_addr)) {
+    } else if (IN6_IS_ADDR_MULTICAST(packet_ctx->dst_addr)) {
         HIP_IFF(src_hit_is_our,
                 -1,
-                ctx->drop_packet = 1,
+                packet_ctx->drop_packet = 1,
                 "Received a copy of own broadcast, dropping\n");
-        HIP_IFF(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
+        HIP_IFF(hip_select_source_address(packet_ctx->dst_addr, packet_ctx->src_addr),
                 -1,
-                ctx->drop_packet = 1,
+                packet_ctx->drop_packet = 1,
                 "Could not find source address\n");
     }
 
-    HIP_IFF(!hip_controls_sane(ntohs(ctx->input_msg->control), mask),
+    HIP_IFF(!hip_controls_sane(ntohs(packet_ctx->input_msg->control), mask),
             -1,
-            ctx->drop_packet = 1,
+            packet_ctx->drop_packet = 1,
             "Received illegal controls in I1: 0x%x. Dropping\n",
-            ntohs(ctx->input_msg->control));
+            ntohs(packet_ctx->input_msg->control));
 
-    HIP_INFO_HIT("I1 Source HIT:", &(ctx->input_msg)->hits);
-    HIP_INFO_IN6ADDR("I1 Source IP :", ctx->src_addr);
+    HIP_INFO_HIT("I1 Source HIT:", &(packet_ctx->input_msg)->hits);
+    HIP_INFO_IN6ADDR("I1 Source IP :", packet_ctx->src_addr);
 
 out_err:
     return err;
 }
 
-/**
- * @addtogroup receive_functions
- * @{
- */
 /**
  * Handles an incoming NOTIFY packet.
  *
@@ -1925,13 +1920,15 @@ out_err:
  * OPTIONAL. If processed, any errors in a received NOTIFICATION parameter
  * SHOULD be logged.
  *
- * @param notify       a pointer to the received NOTIFY HIP packet common header
- *                     with source and destination HITs.
- * @param notify_saddr a pointer to the source address from where the NOTIFY
- *                     packet was received.
- * @param notify_daddr a pointer to the destination address where to the NOTIFY
- *                     packet was sent to (own address).
- * @param entry        a pointer to a host association
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return         zero on success, or negative error value on error.
  */
 int hip_handle_notify(const uint8_t packet_type,
                       const uint32_t ha_state,
@@ -2067,11 +2064,10 @@ int hip_handle_notify(const uint8_t packet_type,
                 /* Calculate the HIP header length */
                 hip_calc_hdr_len(&i1);
 
-                //sleep(3);
-
                 /* This I1 packet must be send only once, which
                  * is why we use NULL entry for sending. */
-                err = hip_send_pkt(&(ctx->hadb_entry)->our_addr, &responder_ip,
+                err = hip_send_pkt(&(ctx->hadb_entry)->our_addr,
+                                   &responder_ip,
                                    (ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                                    port,
                                    &i1, NULL, 0);
