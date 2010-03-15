@@ -9,6 +9,10 @@
 #include "lib/core/hip_statistics.h"
 #include "nat.h"
 
+int hip_register_maint_function(int (*maint_function)(void),
+                                const uint16_t priority);
+int hip_unregister_maint_function(int (*maint_function)(void));
+void hip_uninit_maint_functions(void);
 int hip_periodic_maintenance(void);
 void hip_set_firewall_status(void);
 int hip_get_firewall_status(void);

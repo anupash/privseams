@@ -19,20 +19,10 @@ struct handle_function {
                        struct hip_packet_context *ctx);
 };
 
-struct maint_function {
-    uint16_t priority;
-    int    (*func_ptr)(void);
-};
-
 /**
  * @todo add description
  */
 static hip_ll_t *hip_handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
-
-/**
- * @todo add description
- */
-static hip_ll_t *hip_maintenance_functions;
 
 /**
  * hip_register_handle_function
@@ -184,88 +174,5 @@ void hip_uninit_handle_functions(void)
                 free(hip_handle_functions[i][j]);
             }
         }
-    }
-}
-
-/**
- * hip_register_maint_function
- *
- */
-int hip_register_maint_function(int (*maint_function)(void),
-                                const uint16_t priority)
-{
-    int err = 0;
-    struct maint_function *new_entry = NULL;
-
-    HIP_IFEL(!(new_entry = malloc(sizeof(struct maint_function))),
-             -1,
-             "Error on allocating memory for a maintenance function entry.\n");
-
-    new_entry->priority    = priority;
-    new_entry->func_ptr    = maint_function;
-
-    hip_maintenance_functions = lmod_register_function(hip_maintenance_functions,
-                                                       new_entry,
-                                                       priority);
-    if (!hip_maintenance_functions) {
-        HIP_ERROR("Error on registering a maintenance function.\n");
-        err = -1;
-    }
-
-out_err:
-    return err;
-}
-
-/**
- * hip_unregister_maint_function
- *
- * Remove a maintenance function from the list.
- *
- * @param *maint_function Pointer to the function which should be unregistered.
- *
- * @return Success =  0
- *         Error   = -1
- */
-int hip_unregister_maint_function(int (*maint_function)(void))
-{
-    return lmod_unregister_function(hip_maintenance_functions,
-                                    maint_function);
-}
-
-/**
- * hip_run_maint_functions
- *
- * Run all maintenance functions.
- *
- * @return Success =  0
- *         Error   = -1
- */
-int hip_run_maint_functions(void)
-{
-    int            err  = 0;
-    hip_ll_node_t *iter = NULL;
-
-    if (hip_maintenance_functions) {
-        while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {
-            ((struct maint_function*) iter->ptr)->func_ptr();
-        }
-    } else {
-        HIP_DEBUG("No maintenance function registered.\n");
-    }
-
-    return err;
-}
-
-/**
- * hip_uninit_maint_functions
- *
- * Free the memory used for storage of maintenance functions.
- *
- */
-void hip_uninit_maint_functions(void)
-{
-    if (hip_maintenance_functions) {
-        hip_ll_uninit(hip_maintenance_functions, free);
-        free(hip_maintenance_functions);
     }
 }

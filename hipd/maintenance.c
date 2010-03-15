@@ -15,11 +15,16 @@
 
 #include "config.h"
 #include "maintenance.h"
-#include "modularization.h"
 #include "hipd.h"
 #include "lib/core/hip_udp.h"
+#include "lib/modularization/lmod.h"
 
 #define FORCE_EXIT_COUNTER_START                5
+
+struct maint_function {
+    uint16_t priority;
+    int    (*func_ptr)(void);
+};
 
 int hip_firewall_sock_lsi_fd = -1;
 
@@ -33,10 +38,10 @@ int cert_publish_counter     = CERTIFICATE_PUBLISH_INTERVAL;
 int hip_firewall_status      = -1;
 int fall, retr;
 
-
-
-static int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
-static int hip_scan_retransmissions(void);
+/**
+ * List containing all maintenance functions.
+ */
+static hip_ll_t *hip_maintenance_functions;
 
 /**
  * Handle packet retransmissions.
@@ -134,6 +139,98 @@ static int hip_scan_retransmissions(void)
              "for_each_ha err.\n");
 out_err:
     return err;
+}
+
+/**
+ * hip_register_maint_function
+ *
+ * Register a maintenance function. All maintenance functions are called during
+ * the periodic maintenance cycle.
+ *
+ * @param *maint_function Pointer to the maintenance function.
+ * @param priority Priority of the maintenance function.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ *
+ */
+int hip_register_maint_function(int (*maint_function)(void),
+                                const uint16_t priority)
+{
+    int err = 0;
+    struct maint_function *new_entry = NULL;
+
+    HIP_IFEL(!(new_entry = malloc(sizeof(struct maint_function))),
+             -1,
+             "Error on allocating memory for a maintenance function entry.\n");
+
+    new_entry->priority    = priority;
+    new_entry->func_ptr    = maint_function;
+
+    hip_maintenance_functions = lmod_register_function(hip_maintenance_functions,
+                                                       new_entry,
+                                                       priority);
+    if (!hip_maintenance_functions) {
+        HIP_ERROR("Error on registering a maintenance function.\n");
+        err = -1;
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * hip_unregister_maint_function
+ *
+ * Remove a maintenance function from the list.
+ *
+ * @param *maint_function Pointer to the function which should be unregistered.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int hip_unregister_maint_function(int (*maint_function)(void))
+{
+    return lmod_unregister_function(hip_maintenance_functions,
+                                    maint_function);
+}
+
+/**
+ * hip_run_maint_functions
+ *
+ * Run all maintenance functions.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+static int hip_run_maint_functions(void)
+{
+    int            err  = 0;
+    hip_ll_node_t *iter = NULL;
+
+    if (hip_maintenance_functions) {
+        while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {
+            ((struct maint_function*) iter->ptr)->func_ptr();
+        }
+    } else {
+        HIP_DEBUG("No maintenance function registered.\n");
+    }
+
+    return err;
+}
+
+/**
+ * hip_uninit_maint_functions
+ *
+ * Free the memory used for storage of maintenance functions.
+ *
+ */
+void hip_uninit_maint_functions(void)
+{
+    if (hip_maintenance_functions) {
+        hip_ll_uninit(hip_maintenance_functions, free);
+        free(hip_maintenance_functions);
+    }
 }
 
 /**
