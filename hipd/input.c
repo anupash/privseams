@@ -50,10 +50,6 @@
 #include "lib/performance/performance.h"
 #endif
 
-#ifdef CONFIG_HIP_BLIND
-#include "lib/core/hostid.h"
-#endif
-
 /**
  * Verifies a HMAC.
  *
