@@ -237,8 +237,8 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 static void hip_send_opp_tcp_i1(hip_ha_t *entry)
 {
     int ipType = !IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
-    struct ip *iphdr;
-    struct ip6_hdr *ip6_hdr;
+    struct ip *iphdr = NULL;
+    struct ip6_hdr *ip6_hdr = NULL;
     struct tcphdr *tcphdr = NULL;
     int hdr_size = 0;
     char bytes[sizeof(struct ip) * (1 - ipType) + sizeof(struct ip6_hdr) * ipType + 5 * 4];
@@ -473,13 +473,13 @@ out_err:
 /**
  * @brief Creates an I2 packet and sends it.
  *
- * @param ctx           context that includes the incoming R1 packet
- * @param solved_puzzle a value that solves the puzzle
- * @param r1_saddr      a pointer to R1 packet source IP address
- * @param r1_daddr      a pointer to R1 packet destination IP address
- * @param entry         a pointer to a host association
- * @param r1_info       a pointer to R1 packet source and destination ports
- * @param dhpv          a pointer to the DH public value chosen
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
  *
  * @return zero on success, non-negative on error.
  */
@@ -818,11 +818,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 {
     hip_common_t *msg = NULL;
     hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
-    uint8_t *dh_data1                                = NULL, *dh_data2 = NULL;
-    char order[]                                = "000";
-    int err                                     = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
-    int mask                                    = 0, i = 0;
-    unsigned int service_count                  = 0;
+    uint8_t *dh_data1  = NULL, *dh_data2 = NULL;
+    char order[] = "000";
+    int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
+    int mask = 0, i = 0;
+    unsigned int service_count = 0;
 
     /* Supported HIP and ESP transforms. */
     hip_transform_suite_t transform_hip_suite[] = {
@@ -1015,21 +1015,14 @@ out_err:
  * was relayed through a middlebox (e.g. rendezvous server) @c i1_saddr should
  * have the address of that middlebox.
  *
- * @param i1_saddr      a pointer to the source address from where the I1 packet
- *                      was received.
- * @param i1_daddr      a pointer to the destination address where to the I1
- *                      packet was sent to (own address).
- * @param src_hit       a pointer to the source HIT i.e. responder HIT
- *                      (own HIT).
- * @param dst_ip        a pointer to the destination IPv6 address where the R1
- *                      should be sent (peer ip).
- * @param dst_hit       a pointer to the destination HIT i.e. initiator HIT
- *                      (peer HIT).
- * @param i1_info       a pointer to the source and destination ports
- *                      (when NAT is in use).
- * @param traversed_rvs a pointer to the rvs addresses to be inserted into the
- *                      @c VIA_RVS parameter.
- * @param rvs_count     number of addresses in @c traversed_rvs.
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
  * @return              zero on success, or negative error value on error.
  */
 int hip_send_r1(const uint8_t packet_type,
@@ -1180,18 +1173,14 @@ out_err:
 /**
  * Creates and transmits an R2 packet.
  *
- * @note We haven't handled the REG_REQUEST in hip_handle_i2() yet. This is
- * because we must create an REG_RESPONSE parameter into the R2 packet based
- * on the REG_REQUEST parameter. We handle the REG_REQUEST parameter in
- * hip_send_r2() - although that is somewhat illogical.
- * -Lauri 06.05.2008
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
  *
- * @param  ctx      a pointer to the context of processed I2 packet.
- * @param  i2_saddr a pointer to I2 packet source IP address.
- * @param  i2_daddr a pointer to I2 packet destination IP address.
- * @param  entry    a pointer to the current host association database state.
- * @param  i2_info  a pointer to the source and destination ports (when NAT is
- *                  in use).
  * @return zero on success, negative otherwise.
  */
 int hip_send_r2(const uint8_t packet_type,
@@ -1351,14 +1340,15 @@ out_err:
 }
 
 /* Checks if source and destination IP addresses are compatible for sending
- *  packets between them
+ * packets between them
  *
  * @param src_addr  Source address
  * @param dst_addr  Destination address
  *
  * @return          non-zero on success, zero on failure
  */
-int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_addr *dst_addr)
+int are_addresses_compatible(const struct in6_addr *src_addr,
+                             const struct in6_addr *dst_addr)
 {
     if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr)) {
         return 0;
@@ -1389,8 +1379,10 @@ int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_a
  * @param entry     a pointer to the current host association database state.
  * @return          zero on success, or negative error value on error.
  */
-static int hip_queue_packet(const struct in6_addr *src_addr, const struct in6_addr *peer_addr,
-                            const struct hip_common *msg, hip_ha_t *entry)
+static int hip_queue_packet(const struct in6_addr *src_addr,
+                            const struct in6_addr *peer_addr,
+                            const struct hip_common *msg,
+                            hip_ha_t *entry)
 {
     int err = 0;
     int len = hip_get_msg_total_len(msg);
@@ -1712,8 +1704,10 @@ out_err:
  */
 static int hip_send_udp_from_one_src(const struct in6_addr *local_addr,
                                      const struct in6_addr *peer_addr,
-                                     const in_port_t src_port, const in_port_t dst_port,
-                                     struct hip_common *msg, hip_ha_t *entry,
+                                     const in_port_t src_port,
+                                     const in_port_t dst_port,
+                                     struct hip_common *msg,
+                                     hip_ha_t *entry,
                                      const int retransmit)
 {
     return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
@@ -1777,7 +1771,8 @@ int hip_send_pkt(const struct in6_addr *local_addr,
      */
 
     if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF) {
-        if (IN6_IS_ADDR_V4MAPPED(peer_addr) && ((hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) || dst_port != 0)) {
+        if (IN6_IS_ADDR_V4MAPPED(peer_addr) &&
+            ((hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) || dst_port != 0)) {
             return hip_send_udp_from_one_src(local_addr, peer_addr,
                                              src_port, dst_port,
                                              msg, entry, retransmit);
@@ -1791,7 +1786,7 @@ int hip_send_pkt(const struct in6_addr *local_addr,
     list_for_each_safe(item, tmp, addresses, i)
     {
         netdev_src_addr = (struct netdev_address *) list_entry(item);
-        src_addr        = hip_cast_sa_addr((const struct sockaddr *) &netdev_src_addr->addr);
+        src_addr = hip_cast_sa_addr((const struct sockaddr *) &netdev_src_addr->addr);
 
         if (!are_addresses_compatible(src_addr, peer_addr)) {
             continue;
