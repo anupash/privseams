@@ -880,7 +880,6 @@ static int hipfw_handle_relay_to_r2(const struct hip_common *common,
                                  const hip_fw_context_t *ctx)
 {
     struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
-    struct udphdr *udph = (struct udphdr *) ((uint8_t *) iph + iph->ihl * 4);
     struct hip_relay_to *relay_to = NULL; /* same format as relay_from */
     struct tuple *tuple, *reverse_tuple;
     int err = 0;
@@ -896,10 +895,6 @@ static int hipfw_handle_relay_to_r2(const struct hip_common *common,
             "No relay_to, skip\n");
 
     HIP_DEBUG_IN6ADDR("relay_to_addr", &relay_to->address);
-
-    HIP_DEBUG("relay_to_port=%d udp_src=%d\n",
-              (relay_to ? htons(relay_to->port) : -1),
-              htons(udph->source));
 
     HIP_IFEL(!((ctx->ip_version == 4) &&
                (iph->protocol == IPPROTO_UDP)), 0,
