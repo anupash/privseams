@@ -71,12 +71,6 @@
 
 #endif /* ANDROID_CHANGES */
 
-static int hip_init_host_ids(void);
-static int init_random_seed(void);
-static int hip_init_certs(void);
-static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto);
-static struct hip_host_id_entry *hip_return_first_rsa(void);
-
 /******************************************************************************/
 /** Catch SIGCHLD. */
 static void hip_sig_chld(int signum)
@@ -355,6 +349,245 @@ static void hip_probe_kernel_modules(void)
 
 #endif /* ANDROID_CHANGES */
 #endif /* CONFIG_HIP_OPENWRT */
+
+/**
+ * Initialize random seed.
+ */
+static int init_random_seed(void)
+{
+    struct timeval tv;
+    struct timezone tz;
+    struct {
+        struct timeval tv;
+        pid_t          pid;
+        long int       rand;
+    } rand_data;
+    int err = 0;
+
+    err            = gettimeofday(&tv, &tz);
+    srandom(tv.tv_usec);
+
+    memcpy(&rand_data.tv, &tv, sizeof(tv));
+    rand_data.pid  = getpid();
+    rand_data.rand = random();
+
+    RAND_seed(&rand_data, sizeof(rand_data));
+
+    return err;
+}
+
+/**
+ * Init raw ipv6 socket.
+ */
+static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
+{
+    int on = 1, off = 0, err = 0;
+
+    *hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, proto);
+    hip_set_cloexec_flag(*hip_raw_sock_v6, 1);
+    HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
+
+    /* see bug id 212 why RECV_ERR is off */
+    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+    HIP_IFEL(err, -1, "setsockopt recverr failed\n");
+    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
+    err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
+
+out_err:
+    return err;
+}
+
+static struct hip_host_id_entry *hip_return_first_rsa(void)
+{
+    hip_list_t *curr, *iter;
+    struct hip_host_id_entry *tmp = NULL;
+    int c;
+    uint16_t algo                 = 0;
+
+    HIP_READ_LOCK_DB(hip_local_hostid_db);
+
+    list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
+        tmp  = (struct hip_host_id_entry *) list_entry(curr);
+        HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
+        algo = hip_get_host_id_algo(tmp->host_id);
+        HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",
+                  algo, HIP_HI_RSA);
+        if (algo == HIP_HI_RSA) {
+            goto out_err;
+        }
+    }
+
+out_err:
+    HIP_READ_UNLOCK_DB(hip_local_hostid_db);
+    if (algo == HIP_HI_RSA) {
+        return tmp;
+    }
+    return NULL;
+}
+
+/**
+ * Initialize host IDs.
+ */
+static int hip_init_host_ids(void)
+{
+    int err                     = 0;
+    struct stat status;
+    struct hip_common *user_msg = NULL;
+    hip_hit_t default_hit;
+    hip_lsi_t default_lsi;
+
+    /* We are first serializing a message with HIs and then
+     * deserializing it. This building and parsing causes
+     * a minor overhead, but as a result we can reuse the code
+     * with hipconf. */
+
+    HIP_IFE(!(user_msg = hip_msg_alloc()), -1);
+
+    /* Create default keys if necessary. */
+
+    if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
+        //hip_msg_init(user_msg); already called by hip_msg_alloc()
+
+        HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
+                                              NULL, NULL, RSA_KEY_DEFAULT_BITS, DSA_KEY_DEFAULT_BITS),
+                 1, "Failed to create keys to %s\n", DEFAULT_CONFIG_DIR);
+    }
+
+    /* Retrieve the keys to hipd */
+    /* Three steps because multiple large keys will not fit in the same message */
+
+    /* DSA keys and RSA anonymous are not loaded by default until bug id
+     * 522 is properly solved. Run hipconf add hi default if you want to
+     * enable non-default HITs. */
+#if 0
+    /* dsa anon and pub */
+    hip_msg_init(user_msg);
+    if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
+                                           0, 1, "dsa", NULL, 0, 0)) {
+        HIP_ERROR("Could not load default keys (DSA)\n");
+        goto out_err;
+    }
+    if (err = hip_handle_add_local_hi(user_msg)) {
+        HIP_ERROR("Adding of keys failed (DSA)\n");
+        goto out_err;
+    }
+
+    /* rsa anon */
+    hip_msg_init(user_msg);
+    if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
+                                           1, 1, "rsa", NULL, 0, 0)) {
+        HIP_ERROR("Could not load default keys (RSA anon)\n");
+        goto out_err;
+    }
+    if (err = hip_handle_add_local_hi(user_msg)) {
+        HIP_ERROR("Adding of keys failed (RSA anon)\n");
+        goto out_err;
+    }
+#endif
+
+    /* rsa pub */
+    hip_msg_init(user_msg);
+    if ((err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
+                                            0, 1, "rsa", NULL, 0, 0))) {
+        HIP_ERROR("Could not load default keys (RSA pub)\n");
+        goto out_err;
+    }
+
+    if ((err = hip_handle_add_local_hi(user_msg))) {
+        HIP_ERROR("Adding of keys failed (RSA pub)\n");
+        goto out_err;
+    }
+
+    HIP_DEBUG("Keys added\n");
+    hip_get_default_hit(&default_hit);
+    hip_get_default_lsi(&default_lsi);
+
+    HIP_DEBUG_HIT("default_hit ", &default_hit);
+    HIP_DEBUG_LSI("default_lsi ", &default_lsi);
+    hip_hidb_associate_default_hit_lsi(&default_hit, &default_lsi);
+
+    /*Initializes the hadb with the information contained in /etc/hip/hosts*/
+    //hip_init_hadb_hip_host();
+
+out_err:
+
+    if (user_msg) {
+        HIP_FREE(user_msg);
+    }
+
+    return err;
+}
+
+static int hip_init_certs(void)
+{
+    int err = 0;
+    char hit[41];
+    FILE *conf_file;
+    struct hip_host_id_entry *entry;
+    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+
+    memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+    HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
+             "gethostname failed\n");
+
+    conf_file = fopen(HIP_CERT_CONF_PATH, "r");
+    if (!conf_file) {
+        HIP_DEBUG("Configuration file did NOT exist creating it and "
+                  "filling it with default information\n");
+        HIP_IFEL(!memset(hit, '\0', sizeof(hit)), -1,
+                 "Failed to memset memory for hit presentation format\n");
+        /* Fetch the first RSA HIT */
+        entry = hip_return_first_rsa();
+        if (entry == NULL) {
+            HIP_DEBUG("Failed to get the first RSA HI");
+            goto out_err;
+        }
+        hip_in6_ntop(&entry->lhi.hit, hit);
+        conf_file = fopen(HIP_CERT_CONF_PATH, "w+");
+        fprintf(conf_file,
+                "# Section containing SPKI related information\n"
+                "#\n"
+                "# issuerhit = what hit is to be used when signing\n"
+                "# days = how long is this key valid\n"
+                "\n"
+                "[ hip_spki ]\n"
+                "issuerhit = %s\n"
+                "days = %d\n"
+                "\n"
+                "# Section containing HIP related information\n"
+                "#\n"
+                "# issuerhit = what hit is to be used when signing\n"
+                "# days = how long is this key valid\n"
+                "\n"
+                "[ hip_x509v3 ]\n"
+                "issuerhit = %s\n"
+                "days = %d\n"
+                "\n"
+                "#Section containing the name section for the x509v3 issuer name"
+                "\n"
+                "[ hip_x509v3_name ]\n"
+                "issuerhit = %s\n"
+                "\n"
+                "# Uncomment this section to add x509 extensions\n"
+                "# to the certificate\n"
+                "#\n"
+                "# DO NOT use subjectAltName, issuerAltName or\n"
+                "# basicConstraints implementation uses them already\n"
+                "# All other extensions are allowed\n"
+                "\n"
+                "# [ hip_x509v3_extensions ]\n",
+                hit, HIP_CERT_INIT_DAYS,
+                hit, HIP_CERT_INIT_DAYS,
+                hit /* TODO SAMU: removed because not used:*/  /*, hostname*/);
+        fclose(conf_file);
+    } else {
+        HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");
+    }
+out_err:
+    return err;
+}
 
 static int hip_init_handle_functions(void)
 {
@@ -681,122 +914,6 @@ out_err:
     return err;
 }
 
-/**
- * Initialize host IDs.
- */
-static int hip_init_host_ids()
-{
-    int err                     = 0;
-    struct stat status;
-    struct hip_common *user_msg = NULL;
-    hip_hit_t default_hit;
-    hip_lsi_t default_lsi;
-
-    /* We are first serializing a message with HIs and then
-     * deserializing it. This building and parsing causes
-     * a minor overhead, but as a result we can reuse the code
-     * with hipconf. */
-
-    HIP_IFE(!(user_msg = hip_msg_alloc()), -1);
-
-    /* Create default keys if necessary. */
-
-    if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
-        //hip_msg_init(user_msg); already called by hip_msg_alloc()
-
-        HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
-                                              NULL, NULL, RSA_KEY_DEFAULT_BITS, DSA_KEY_DEFAULT_BITS),
-                 1, "Failed to create keys to %s\n", DEFAULT_CONFIG_DIR);
-    }
-
-    /* Retrieve the keys to hipd */
-    /* Three steps because multiple large keys will not fit in the same message */
-
-    /* DSA keys and RSA anonymous are not loaded by default until bug id
-     * 522 is properly solved. Run hipconf add hi default if you want to
-     * enable non-default HITs. */
-#if 0
-    /* dsa anon and pub */
-    hip_msg_init(user_msg);
-    if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-                                           0, 1, "dsa", NULL, 0, 0)) {
-        HIP_ERROR("Could not load default keys (DSA)\n");
-        goto out_err;
-    }
-    if (err = hip_handle_add_local_hi(user_msg)) {
-        HIP_ERROR("Adding of keys failed (DSA)\n");
-        goto out_err;
-    }
-
-    /* rsa anon */
-    hip_msg_init(user_msg);
-    if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-                                           1, 1, "rsa", NULL, 0, 0)) {
-        HIP_ERROR("Could not load default keys (RSA anon)\n");
-        goto out_err;
-    }
-    if (err = hip_handle_add_local_hi(user_msg)) {
-        HIP_ERROR("Adding of keys failed (RSA anon)\n");
-        goto out_err;
-    }
-#endif
-
-    /* rsa pub */
-    hip_msg_init(user_msg);
-    if ((err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-                                            0, 1, "rsa", NULL, 0, 0))) {
-        HIP_ERROR("Could not load default keys (RSA pub)\n");
-        goto out_err;
-    }
-
-    if ((err = hip_handle_add_local_hi(user_msg))) {
-        HIP_ERROR("Adding of keys failed (RSA pub)\n");
-        goto out_err;
-    }
-
-    HIP_DEBUG("Keys added\n");
-    hip_get_default_hit(&default_hit);
-    hip_get_default_lsi(&default_lsi);
-
-    HIP_DEBUG_HIT("default_hit ", &default_hit);
-    HIP_DEBUG_LSI("default_lsi ", &default_lsi);
-    hip_hidb_associate_default_hit_lsi(&default_hit, &default_lsi);
-
-    /*Initializes the hadb with the information contained in /etc/hip/hosts*/
-    //hip_init_hadb_hip_host();
-
-out_err:
-
-    if (user_msg) {
-        HIP_FREE(user_msg);
-    }
-
-    return err;
-}
-
-/**
- * Init raw ipv6 socket.
- */
-static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
-{
-    int on = 1, off = 0, err = 0;
-
-    *hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, proto);
-    hip_set_cloexec_flag(*hip_raw_sock_v6, 1);
-    HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
-
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
-
-out_err:
-    return err;
-}
-
 int hip_set_cloexec_flag(int desc, int value)
 {
     int oldflags = fcntl(desc, F_GETFD, 0);
@@ -1032,127 +1149,4 @@ void hip_exit(int signal)
     lmod_uninit_module_list();
 
     return;
-}
-
-/**
- * Initialize random seed.
- */
-static int init_random_seed()
-{
-    struct timeval tv;
-    struct timezone tz;
-    struct {
-        struct timeval tv;
-        pid_t          pid;
-        long int       rand;
-    } rand_data;
-    int err = 0;
-
-    err            = gettimeofday(&tv, &tz);
-    srandom(tv.tv_usec);
-
-    memcpy(&rand_data.tv, &tv, sizeof(tv));
-    rand_data.pid  = getpid();
-    rand_data.rand = random();
-
-    RAND_seed(&rand_data, sizeof(rand_data));
-
-    return err;
-}
-
-static int hip_init_certs(void)
-{
-    int err = 0;
-    char hit[41];
-    FILE *conf_file;
-    struct hip_host_id_entry *entry;
-    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-
-    memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
-    HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
-             "gethostname failed\n");
-
-    conf_file = fopen(HIP_CERT_CONF_PATH, "r");
-    if (!conf_file) {
-        HIP_DEBUG("Configuration file did NOT exist creating it and "
-                  "filling it with default information\n");
-        HIP_IFEL(!memset(hit, '\0', sizeof(hit)), -1,
-                 "Failed to memset memory for hit presentation format\n");
-        /* Fetch the first RSA HIT */
-        entry = hip_return_first_rsa();
-        if (entry == NULL) {
-            HIP_DEBUG("Failed to get the first RSA HI");
-            goto out_err;
-        }
-        hip_in6_ntop(&entry->lhi.hit, hit);
-        conf_file = fopen(HIP_CERT_CONF_PATH, "w+");
-        fprintf(conf_file,
-                "# Section containing SPKI related information\n"
-                "#\n"
-                "# issuerhit = what hit is to be used when signing\n"
-                "# days = how long is this key valid\n"
-                "\n"
-                "[ hip_spki ]\n"
-                "issuerhit = %s\n"
-                "days = %d\n"
-                "\n"
-                "# Section containing HIP related information\n"
-                "#\n"
-                "# issuerhit = what hit is to be used when signing\n"
-                "# days = how long is this key valid\n"
-                "\n"
-                "[ hip_x509v3 ]\n"
-                "issuerhit = %s\n"
-                "days = %d\n"
-                "\n"
-                "#Section containing the name section for the x509v3 issuer name"
-                "\n"
-                "[ hip_x509v3_name ]\n"
-                "issuerhit = %s\n"
-                "\n"
-                "# Uncomment this section to add x509 extensions\n"
-                "# to the certificate\n"
-                "#\n"
-                "# DO NOT use subjectAltName, issuerAltName or\n"
-                "# basicConstraints implementation uses them already\n"
-                "# All other extensions are allowed\n"
-                "\n"
-                "# [ hip_x509v3_extensions ]\n",
-                hit, HIP_CERT_INIT_DAYS,
-                hit, HIP_CERT_INIT_DAYS,
-                hit /* TODO SAMU: removed because not used:*/  /*, hostname*/);
-        fclose(conf_file);
-    } else {
-        HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");
-    }
-out_err:
-    return err;
-}
-
-static struct hip_host_id_entry *hip_return_first_rsa(void)
-{
-    hip_list_t *curr, *iter;
-    struct hip_host_id_entry *tmp = NULL;
-    int c;
-    uint16_t algo                 = 0;
-
-    HIP_READ_LOCK_DB(hip_local_hostid_db);
-
-    list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
-        tmp  = (struct hip_host_id_entry *) list_entry(curr);
-        HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
-        algo = hip_get_host_id_algo(tmp->host_id);
-        HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",
-                  algo, HIP_HI_RSA);
-        if (algo == HIP_HI_RSA) {
-            goto out_err;
-        }
-    }
-
-out_err:
-    HIP_READ_UNLOCK_DB(hip_local_hostid_db);
-    if (algo == HIP_HI_RSA) {
-        return tmp;
-    }
-    return NULL;
 }
