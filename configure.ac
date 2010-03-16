@@ -280,7 +280,7 @@ AC_CACHE_CHECK([whether to use opportunistic],
 if test x"$ac_cv_use_opportunistic" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC)
     AH_TEMPLATE(CONFIG_HIP_OPPORTUNISTIC,
-                [Defined to 1 if oppotunistic mode is enabled.])
+                [Defined to 1 if opportunistic mode is enabled.])
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
