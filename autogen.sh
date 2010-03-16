@@ -80,9 +80,6 @@ then
     exit
 fi
 
-# Create empty file needed by automake.
-touch Makefile.modules
-
 display_pre_info
 
 setup_hipl && display_post_info

@@ -8,7 +8,7 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*
 # make sure the check the "make bin" still works)
 #
 EXTRA_DIST =  debian doc lib/android patches
-EXTRA_DIST += test/packaging test/configs process_modules.py
+EXTRA_DIST += test/packaging test/configs process_modules.py project_info.xml
 EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh
 EXTRA_DIST += release.version tcp verbose-headers.txt
 EXTRA_DIST += tools/gen-python-starter.sh
@@ -199,7 +199,7 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #lib_ipsec_la_LIBADD = $(LEXLIB)
 
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
-DISTCLEANFILES = lib/ipsec/policy_token.h
+DISTCLEANFILES = lib/ipsec/policy_token.h Makefile.modules $(wildcard modules/*.h)
 
 # don't use libipsec, but xfrmapi
 if !HIP_PFKEY
@@ -282,7 +282,7 @@ endif
 
 endif # HIP_FIREWALL
 
-include Makefile.modules
+-include Makefile.modules
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
