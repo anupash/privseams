@@ -1,14 +1,12 @@
 #ifndef HIP_HIPD_ACCESSOR_H
 #define HIP_HIPD_ACCESSOR_H
 
-#include "lib/core/hashtable.h"
-
-#include <sys/time.h>
-
-
 #include <openssl/sha.h>
 #include <openssl/md5.h>
 #include <openssl/des.h>
+#include <sys/time.h>
+
+#include "lib/core/hashtable.h"
 
 /** @addtogroup daemon_states
  * @{
@@ -33,28 +31,31 @@
 
 #define INDEX_HASH_FN           HIP_DIGEST_SHA1
 
+/** Specifies the NAT status of the daemon. This value indicates if the current
+ *  machine is behind a NAT. Defined in hipd.c */
+extern int hipproxy;
+
+extern unsigned int opportunistic_mode;
+
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);
 int hipd_get_flag(unsigned int);
 void hipd_set_flag(unsigned int);
 int hip_agent_is_alive(void);
+
+int hip_get_opportunistic_tcp_status(void);
 int hip_set_opportunistic_mode(struct hip_common *msg);
 int hip_query_opportunistic_mode(struct hip_common *msg);
 int hip_query_ip_hit_mapping(struct hip_common *msg);
-int hip_get_hip_proxy_status(void);
-int hip_set_hip_proxy_on(void);
-int hip_set_hip_proxy_off(void);
-int hip_get_opportunistic_tcp_status(void);
 
 #ifdef CONFIG_HIP_I3
 int hip_get_hi3_status(void);
 void hip_set_hi3_status(struct hip_common *msg);
 #endif /* CONFIG_HIP_I3 */
 
-/** Specifies the NAT status of the daemon. This value indicates if the current
- *  machine is behind a NAT. Defined in hipd.c */
-extern int hipproxy;
+int hip_get_hip_proxy_status(void);
+int hip_set_hip_proxy_on(void);
+int hip_set_hip_proxy_off(void);
 
-extern unsigned int opportunistic_mode;
 
 #endif /* HIP_HIPD_ACCESSOR_H */
