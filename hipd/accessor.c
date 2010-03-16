@@ -63,7 +63,7 @@ unsigned int hipd_get_state(void)
  *
  * @return non-zero, if agent is alive.
  */
-int hip_agent_is_alive()
+int hip_agent_is_alive(void)
 {
 #ifdef CONFIG_HIP_AGENT
     return hip_agent_status;
