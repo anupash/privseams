@@ -129,7 +129,7 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg)
  *
  * @return 1 if it is enabled or 0 otherwise
  */
-int hip_get_opportunistic_tcp_status()
+int hip_get_opportunistic_tcp_status(void)
 {
     return hip_use_opptcp;
 }
@@ -254,7 +254,7 @@ void hip_set_hi3_status(struct hip_common *msg)
  *
  * @return 1 if it is enabled or 0 otherwise
  */
-int hip_get_hi3_status()
+int hip_get_hi3_status(void)
 {
     return hip_use_hi3;
 }
