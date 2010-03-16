@@ -12,6 +12,8 @@
  *
  * @author Anthony D. Joseph
  *
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
