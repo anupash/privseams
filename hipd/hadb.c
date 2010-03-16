@@ -462,7 +462,9 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
         entry->is_loopback = 1;
     }
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
     entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 #ifdef CONFIG_HIP_I3
     entry->hip_is_hi3_on    =    hip_get_hi3_status();
 #endif
