@@ -21,6 +21,7 @@ unsigned int hipd_state         = HIPD_STATE_CLOSED;
 unsigned int opportunistic_mode = 1;
 extern int hip_use_opptcp;
 #endif // CONFIG_HIP_OPPORTUNISTIC
+extern int hip_use_hi3;
 
 /**
  * Set global daemon state.
@@ -202,7 +203,7 @@ int hip_query_opportunistic_mode(struct hip_common *msg)
 out_err:
     return err;
 }
-
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 #ifdef CONFIG_HIP_I3
 /**
@@ -259,8 +260,7 @@ int hip_get_hi3_status(void)
 {
     return hip_use_hi3;
 }
-
-#endif
+#endif /* CONFIG_HIP_I3 */
 
 /**
  * Query if a pseudo HIT is stored in the host association
@@ -302,8 +302,6 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 out_err:
     return err;
 }
-
-#endif // CONFIG_HIP_OPPORTUNISTIC
 
 /**
  * Query status of client-side HIP proxy

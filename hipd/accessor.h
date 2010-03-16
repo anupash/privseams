@@ -49,12 +49,12 @@ int hip_get_opportunistic_tcp_status(void);
 int hip_set_opportunistic_mode(struct hip_common *msg);
 int hip_query_opportunistic_mode(struct hip_common *msg);
 int hip_query_ip_hit_mapping(struct hip_common *msg);
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 #ifdef CONFIG_HIP_I3
 int hip_get_hi3_status(void);
 void hip_set_hi3_status(struct hip_common *msg);
 #endif /* CONFIG_HIP_I3 */
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 int hip_get_hip_proxy_status(void);
 int hip_set_hip_proxy_on(void);
