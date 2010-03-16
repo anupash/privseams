@@ -829,8 +829,6 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
      * depending on dst_hit value.
      * If dst_hit is a HIT -> find LSI and hostname
      * If dst_hit is an LSI -> find HIT and hostname
-     * The natural place to handle this is either in the getaddrinfo or
-     * getendpointinfo function with AI_NUMERICHOST flag set.
      * We can fallback to e.g. DHT search if the mapping is not
      * found from local files.*/
 
