@@ -24,10 +24,6 @@
 #include "lib/core/hip_udp.h"
 #include "hipd.h"
 
-/* TODO Remove these includes, when modularization is finished */
-#include "modules/update/hipd/update.h"
-#include "modules/update/hipd/update_legacy.h"
-
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
 {
     HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
@@ -131,14 +127,17 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         hip_recreate_all_precreated_r1_packets();
         break;
     case SO_HIP_LOCATOR_GET:
+        /** @todo Remove dependency to UPDATE code */
+#if 0
         HIP_DEBUG("Got a request for locators\n");
         hip_msg_init(msg);
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1,
                  "Failed to build user message header.: %s\n",
                  strerror(err));
-//        if ((err = hip_build_locators_old(msg, 0)) < 0) {
-//            HIP_DEBUG("LOCATOR parameter building failed\n");
-//        }
+        if ((err = hip_build_locators_old(msg, 0)) < 0) {
+            HIP_DEBUG("LOCATOR parameter building failed\n");
+        }
+#endif
         break;
     case SO_HIP_SET_LOCATOR_ON:
         HIP_DEBUG("Setting LOCATOR ON\n");
@@ -898,8 +897,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         break;
     }
     case SO_HIP_MANUAL_UPDATE_PACKET:
-        /// @todo : 13.11.2009: Should we use the msg?
-//        err = hip_send_locators_to_all_peers();
+        /** @todo Remove dependency to UPDATE code */
+#if 0
+        err = hip_send_locators_to_all_peers();
+#endif
         break;
     default:
         HIP_ERROR("Unknown socket option (%d)\n", msg_type);
