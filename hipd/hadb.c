@@ -7,6 +7,7 @@
 #include "config.h"
 #include "hadb.h"
 #include "hipd.h"
+#include "accessor.h"
 #include "lib/core/list.h"
 #include "lib/core/hostsfiles.h"
 #include "lib/core/hostid.h"

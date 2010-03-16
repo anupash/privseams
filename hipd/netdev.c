@@ -28,6 +28,7 @@
 
 #include "config.h"
 #include "lib/tool/nlink.h"
+#include "accessor.h"
 #include "netdev.h"
 #include "maintenance.h"
 #include "lib/dht/libhipdht.h"

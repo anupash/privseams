@@ -17,6 +17,7 @@
 #define _BSD_SOURCE
 
 #include "config.h"
+#include "accessor.h"
 #include "user.h"
 #include "esp_prot_anchordb.h"
 #include "lib/dht/libhipdht.h"
