@@ -1,7 +1,7 @@
 /**
  * @file firewall/esp_prot_anchordb.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This implementation stores anchor elements to be used as references to
  * the hash structures stored in the BEX store of the hipfw. The elements
