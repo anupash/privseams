@@ -2419,7 +2419,8 @@ $ tools/adb shell # Log into device shell
         DNS proxy running on the host and works using hostnames.
       </para>
       <para>
-        3. You can also use HITs (or LSIs) directly in the application.
+        3. You can also use HITs (or LSIs) directly in the application
+        (DNS proxy is not required for this method).
         For example, you can
         execute "ping6 PEER_HIT". However, hipd must know the mapping from the
         PEER_HIT to the corresponding IP address. Hipd can find this mapping
@@ -2447,7 +2448,7 @@ $ tools/adb shell # Log into device shell
       <para>
         1. Use the opportunistic mode as described in
         <xref linkend="opportunistic" />. This method works with both IPv4 and
-        IPv6 applications. It does not require HIT configuration at all.
+        IPv6 applications. It does not require any HIP name configuration at all.
       </para>
       <para>
         1a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
@@ -2457,7 +2458,8 @@ $ tools/adb shell # Log into device shell
       </para>
       <para>
         2. Use the system-based opportunistic mode as instructed in
-           <xref linkend="sys_based_opp_mode" />.
+           <xref linkend="sys_based_opp_mode" />. Does not require either
+           any kind of HIP name configuration at all.
       </para>
     </section>
 
@@ -3011,7 +3013,7 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
     </para>
 
     <para>
-       Currently HIP daemon performs name resolution in the following order:
+       Currently HIP daemon performs HIP name resolution in the following order:
       <itemizedlist>
         <listitem><para>in /etc/hip/hosts</para></listitem>
         <listitem><para>in /etc/hosts</para></listitem>
