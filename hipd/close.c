@@ -1,5 +1,12 @@
-/* TODO: Doxygen documentation incomplete. Please fix
-**/
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * @brief Processing for CLOSE control packets
+ *
+ * @author Miika Komu <miika@iki.fi>
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -11,7 +18,13 @@
 #endif
 #include "lib/core/hip_udp.h"
 
-
+/**
+ * send a HIP close packet to a peer
+ *
+ * @param entry the host association with the peer
+ * @param opaque a nonce to be included in the CLOSE
+ * @return zero on success or negative on error
+ */
 static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -107,6 +120,13 @@ out_err:
     return err;
 }
 
+/**
+ * a wrapper to send a close message to a peer
+ *
+ * @param msg a message containing a peer HIT to which to send close
+ * @param delete_ha_info a nonce parameter for the CLOSE message
+ * @return zero on success or negative on error
+ */
 int hip_send_close(struct hip_common *msg,
                    int delete_ha_info)
 {
@@ -172,6 +192,13 @@ out_err:
     return err;
 }
 
+/**
+ * process a CLOSE message
+ *
+ * @param close the CLOSE message process
+ * @param entry the corresponding host association
+ * @return zero on success or negative on error
+ */
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -262,6 +289,13 @@ out_err:
     return err;
 }
 
+/**
+ * preprocess a CLOSE message
+ *
+ * @param close the CLOSE message preprocess
+ * @param entry the corresponding host association
+ * @return zero on success or negative on error
+ */
 int hip_receive_close(struct hip_common *close,
                       hip_ha_t          *entry)
 {
@@ -308,6 +342,13 @@ out_err:
     return err;
 }
 
+/**
+ * process a CLOSE ACK message
+ *
+ * @param close_ack the CLOSE ACK message process
+ * @param entry the corresponding host association
+ * @return zero on success or negative on error
+ */
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -371,6 +412,13 @@ out_err:
     return err;
 }
 
+/**
+ * preprocess a CLOSE ACK message
+ *
+ * @param close the CLOSE ACK message process
+ * @param entry the corresponding host association
+ * @return zero on success or negative on error
+ */
 int hip_receive_close_ack(struct hip_common *close_ack,
                           hip_ha_t *entry)
 {
@@ -416,6 +464,13 @@ out_err:
     return err;
 }
 
+/**
+ * tear down a host association after close procedure
+ *
+ * @param ha the corresponding host association
+ * @param notused not used
+ * @return zero on success or negative on error
+ */
 int hip_purge_closing_ha(hip_ha_t *ha, void *notused)
 {
     int err = 0;
