@@ -23,11 +23,24 @@ run_program()
         rm -f log.txt
         return 0
     else
-        SUBJECT="[$BRANCH_NAME] [autobuild] failing command: $@"
-        test $HIPL_NOTIFICATION_EMAIL &&
-            mailx -s "$SUBJECT" $HIPL_NOTIFICATION_EMAIL < log.txt
+        test $HIPL_NOTIFICATION_EMAIL && mail_notify "$1"
         cleanup 1
     fi
+}
+
+mail_notify()
+{
+    COMMAND="$1"
+    cat > msg.txt <<EOF
+branch: $BRANCH_NAME
+configuration: $CONFIGURATION
+command: $COMMAND
+compiler output:
+
+EOF
+    cat log.txt >> msg.txt
+    SUBJECT="[autobuild] [$BRANCH_NAME]"
+    mailx -s "$SUBJECT" $HIPL_NOTIFICATION_EMAIL < msg.txt
 }
 
 cleanup()
@@ -40,11 +53,12 @@ cleanup()
 
 compile()
 {
-    run_program ./autogen.sh &&
-        run_program ./configure --prefix=$(pwd)/local_install $@ &&
-        run_program make -j17 &&
-        run_program make -j17 distcheck &&
-        run_program make install
+    CONFIGURATION="--prefix=$(pwd)/local_install $@"
+    run_program "./autogen.sh" &&
+        run_program "./configure" $CONFIGURATION &&
+        run_program "make -j17" &&
+        run_program "make -j17 distcheck" &&
+        run_program "make install"
 }
 
 test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
