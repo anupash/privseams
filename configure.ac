@@ -308,6 +308,10 @@ echo "+-----------------------------------------------";
 echo "| processing modules...";
 echo "|";
 python ${srcdir}/process_modules.py -s ${srcdir} -d "$DISABLE_MODULES"
+if [[ "$?" != "0" ]]; then
+    echo "configure: error: Module processing failed"
+    exit 1
+fi
 echo "|";
 echo "+-----------------------------------------------"
 echo ""

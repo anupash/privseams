@@ -23,9 +23,14 @@ def parse_info_file(path, disabled_modules):
     apps = {}
     compile_type = 'all'
 
-    file = open(path, "r")
-    dom = xml.dom.minidom.parse(file)
-    file.close()
+    try:
+        file = open(path, "r")
+        try:
+            dom = xml.dom.minidom.parse(file)
+        finally:
+            file.close()
+    except IOError:
+        sys.exit('Error on parsing the info file: ' + path)
 
     for current_app in dom.getElementsByTagName(APPLICATION_TAG_NAME):
         name = str(current_app.attributes[APPLICATION_ATTR_NAME].value)
@@ -211,43 +216,46 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
     for current_app in applications.keys():
 
         hdr_file_path = os.path.join(output_dir, current_app + suffix)
-        hdr_file = open(hdr_file_path, 'w')
 
-        app_string = 'HIP_' + current_app.upper() + '_MODULES_H'
+        try:
+            hdr_file = open(hdr_file_path, 'w')
+            try:
+                app_string = 'HIP_' + current_app.upper() + '_MODULES_H'
 
-        hdr_file.write('#ifndef ' + app_string + '\n')
-        hdr_file.write('#define ' + app_string + '\n')
+                hdr_file.write('#ifndef ' + app_string + '\n')
+                hdr_file.write('#define ' + app_string + '\n')
 
-        if includes.has_key(current_app) and init_functions.has_key(current_app):
+                if includes.has_key(current_app) and init_functions.has_key(current_app):
+                    num_modules = str(len(init_functions[current_app]));
+                    for current in includes[current_app]:
+                        hdr_file.write('\n#include \"' + current + '\"')
 
-            num_modules = str(len(init_functions[current_app]));
-            for current in includes[current_app]:
-                hdr_file.write('\n#include \"' + current + '\"')
+                    hdr_file.write('\n\ntypedef int (*pt2Function)(void);\n')
+                    hdr_file.write('\nconst int num_modules_' + current_app + ' = ')
+                    hdr_file.write(num_modules + ';')
+                    hdr_file.write('\n\nstatic const pt2Function ' + current_app)
+                    hdr_file.write('_init_functions[' + num_modules + '] = {')
 
-            hdr_file.write('\n\ntypedef int (*pt2Function)(void);\n')
-            hdr_file.write('\nconst int num_modules_' + current_app + ' = ')
-            hdr_file.write(num_modules + ';')
-            hdr_file.write('\n\nstatic const pt2Function ' + current_app)
-            hdr_file.write('_init_functions[' + num_modules + '] = {')
+                    first_loop = True
+                    for function in init_functions[current_app]:
+                        if first_loop != True:
+                            hdr_file.write(', ')
+                        hdr_file.write('&' + function)
+                        first_loop = False
+                    hdr_file.write('};')
+                else:
+                    hdr_file.write('\n\ntypedef int (*pt2Function)(void);\n')
+                    hdr_file.write('\nconst int num_modules_' + current_app + ' = 0;')
 
-            first_loop = True
-            for function in init_functions[current_app]:
-                if first_loop != True:
-                    hdr_file.write(', ')
-                hdr_file.write('&' + function)
-                first_loop = False
-            hdr_file.write('};')
-        else:
-            hdr_file.write('\n\ntypedef int (*pt2Function)(void);\n')
-            hdr_file.write('\nconst int num_modules_' + current_app + ' = 0;')
+                    hdr_file.write('\n\nstatic const pt2Function ' + current_app)
+                    hdr_file.write('_init_functions[0] = {};')
 
-            hdr_file.write('\n\nstatic const pt2Function ' + current_app)
-            hdr_file.write('_init_functions[0] = {};')
-
-        hdr_file.write('\n\n#endif /* ' + app_string + ' */')
-        hdr_file.close()
-
-        print '|    created file: ' + hdr_file_path
+                hdr_file.write('\n\n#endif /* ' + app_string + ' */')
+                print '|    created file: ' + hdr_file_path
+            finally:
+                hdr_file.close()
+        except IOError:
+            sys.exit('Error on creating header files')
 
 # Creates a file at file_path and includes a Makefile.am from all given modules
 # sub directories.
