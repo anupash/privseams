@@ -1,11 +1,11 @@
 /**
  * @file
- * HIP cookie handling. Licence: GNU/GPL
+ * HIP cookie handling
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * @author Kristian Slavov <ksl#iki.fi>
  * @author Miika Komu <miika#iki.fi>
- *
- * TODO: Doxygen documentation incomplete. Please fix this.
  *
  */
 
@@ -21,7 +21,14 @@
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
-//get the puzzle difficulty and return result to hipconf
+/**
+ * get the puzzle difficulty and return result (for hipconf)
+ *
+ * @param msg A message containing a HIT for which to query for
+ *            the difficulty. The difficulty will be written
+ *            into the message as a HIP_PARAM_INT parameter.
+ * @return zero on success and negative on error
+ */
 int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
 {
     int err            = 0, diff = 0;
@@ -41,29 +48,50 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
 }
 
 
-/* TODO: This function has no error handling at all! Check if this is right-*/
-//set the puzzle difficulty acc to msg sent by hipconf
+/**
+ * set the puzzle difficulty according to the msg sent by hipconf
+ *
+ * @param msg An input/output message. Should contain the target
+ *            HIT and the required puzzle difficulty.
+ * @return zero on success and negative on error
+ */
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    int err            = 0, *newVal = NULL;
+    int err = 0, *newVal = NULL;
     hip_hit_t *dst_hit = NULL;
     hip_hit_t all_zero_hit;
     bzero(&all_zero_hit, sizeof(all_zero_hit));
 
-    dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-    newVal  = hip_get_param_contents(msg, HIP_PARAM_INT);
+    HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
+             -1, "No HIT set\n");
+    HIP_IFEL(!(newVal = hip_get_param_contents(msg, HIP_PARAM_INT)),
+             -1, "No difficulty set\n");
 
-    hip_set_cookie_difficulty(NULL, *newVal);
+    HIP_IFEL(hip_set_cookie_difficulty(NULL, *newVal), -1,
+             "Setting difficulty failed\n");
 
     return err;
 }
 
+/**
+ * query for current puzzle difficulty
+ *
+ * @param not_used not used
+ * @return the puzzle difficulty
+ */
 int hip_get_cookie_difficulty(hip_hit_t *not_used)
 {
     /* Note: we could return a higher value if we detect DoS */
     return hip_cookie_difficulty;
 }
 
+/**
+ * set puzzle difficulty
+ *
+ * @param not_used not used
+ * @param k the new puzzle difficulty
+ * @return the k value on success or negative on error
+ */
 int hip_set_cookie_difficulty(hip_hit_t *not_used, int k)
 {
     if (k > HIP_PUZZLE_MAX_K || k < 1) {
@@ -76,12 +104,24 @@ int hip_set_cookie_difficulty(hip_hit_t *not_used, int k)
     return k;
 }
 
+/**
+ * increase cookie difficulty by one
+ *
+ * @param not_used not used
+ * @return the new cookie difficulty
+ */
 int hip_inc_cookie_difficulty(hip_hit_t *not_used)
 {
     int k = hip_get_cookie_difficulty(NULL) + 1;
     return hip_set_cookie_difficulty(NULL, k);
 }
 
+/**
+ * decrease cookie difficulty by one
+ *
+ * @param not_used not used
+ * @return the new cookie difficulty
+ */
 int hip_dec_cookie_difficulty(hip_hit_t *not_used)
 {
     int k = hip_get_cookie_difficulty(NULL) - 1;
@@ -89,7 +129,8 @@ int hip_dec_cookie_difficulty(hip_hit_t *not_used)
 }
 
 /**
- * hip_calc_cookie_idx - get an index
+ * calculate the index of a cookie
+ *
  * @param ip_i Initiator's IPv6 address
  * @param ip_r Responder's IPv6 address
  * @param hit_i Initiators HIT
@@ -117,11 +158,12 @@ int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 }
 
 /**
- * hip_fetch_cookie_entry - Get a copy of R1entry structure
+ * get a copy of R1entry structure
+ *
  * @param ip_i Initiator's IPv6
  * @param ip_r Responder's IPv6
  *
- * Comments for the if 0 code are inlined below.
+ * @note Comments for the if 0 code are inlined below.
  *
  * Returns NULL if error.
  */
@@ -203,6 +245,11 @@ out_err:
     return err;
 }
 
+/**
+ * initialize an R1 entry structure
+ *
+ * @return The allocated R1 entry structure. Caller deallocates.
+ */
 struct hip_r1entry *hip_init_r1(void)
 {
     struct hip_r1entry *err;
@@ -215,8 +262,15 @@ out_err:
     return err;
 }
 
-/*
- * @sign the signing function to use
+/**
+ * precreate an R1 packet
+ *
+ * @param r1table a pointer to R1 table structure
+ * @param hit the local HIT
+ * @param sign a signing callback function
+ * @param privkey the private key to use for signing
+ * @param pubkey the host id (public key)
+ * @return zero on success and non-zero on error
  */
 int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
                      int (*sign)(void *key, struct hip_common *m),
@@ -244,6 +298,11 @@ err_out:
     return 0;
 }
 
+/**
+ * uninitialize R1 table
+ *
+ * @param hip_r1table R1 table
+ */
 void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 {
     int i;
@@ -374,6 +433,13 @@ out_err:
     return err;
 }
 
+/**
+ * recreate R1 packets corresponding to one HI
+ *
+ * @param entry the host id entry
+ * @param new_hash unused
+ * @return zero on success or negative on error
+ */
 static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
                                            void *new_hash)
 {
@@ -399,6 +465,11 @@ out_err:
     return err;
 }
 
+/**
+ * precreate all R1 packets
+ *
+ * @return zero on success or negative on error
+ */
 int hip_recreate_all_precreated_r1_packets()
 {
     HIP_HASHTABLE *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
