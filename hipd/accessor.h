@@ -46,6 +46,12 @@ int hip_query_ip_hit_mapping(struct hip_common *msg);
 int hip_get_hip_proxy_status(void);
 int hip_set_hip_proxy_on(void);
 int hip_set_hip_proxy_off(void);
+int hip_get_opportunistic_tcp_status(void);
+
+#ifdef CONFIG_HIP_I3
+int hip_get_hi3_status( void );
+void hip_set_hi3_status(struct hip_common *msg);
+#endif /* CONFIG_HIP_I3 */
 
 /** Specifies the NAT status of the daemon. This value indicates if the current
  *  machine is behind a NAT. Defined in hipd.c */
