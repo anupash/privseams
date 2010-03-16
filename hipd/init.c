@@ -8,16 +8,21 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#include <sys/prctl.h>
-#include <sys/types.h>
 #include <netinet/icmp6.h>
+#include <sys/prctl.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/utsname.h>
+#include <sys/wait.h>
 
 #include "config.h"
+#include "init.h"
 #include "esp_prot_light_update.h"
 #include "hip_socket.h"
-#include "init.h"
-#include "oppdb.h"
-#include "nat.h"
+#include "nsupdate.h"
+#include "modularization.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "lib/core/hip_capability.h"
@@ -26,6 +31,7 @@
 #include "lib/core/hip_udp.h"
 #include "lib/core/hostsfiles.h"
 #include "lib/performance/performance.h"
+#include "lib/tool/xfrmapi.h"
 #include "modules/hipd_modules.h"
 
 /**
@@ -33,13 +39,6 @@
  * of the daemon to start and to record current daemon pid.
  */
 #define HIP_DAEMON_LOCK_FILE    HIPL_LOCKDIR "/hipd.lock"
-
-/* the /etc/hip/dhtservers file*/
-#define HIPL_DHTSERVERS_FILE     HIPL_SYSCONFDIR "/dhtservers"
-
-#define HIPL_DHTSERVERS_FILE_EX \
-    "193.167.187.134 hipdht2.infrahip.net\n"
-
 
 #ifndef ANDROID_CHANGES
 
@@ -71,8 +70,6 @@
 
 #endif /* ANDROID_CHANGES */
 
-/******************************************************************************/
-/** Catch SIGCHLD. */
 static void hip_sig_chld(int signum)
 {
 #ifdef ANDROID_CHANGES
@@ -228,8 +225,6 @@ static void hip_load_configuration(void)
     hip_create_file_unless_exists(HIPL_CONFIG_FILE, HIPL_CONFIG_FILE_EX);
 
     hip_create_file_unless_exists(HIPL_HOSTS_FILE, HIPL_HOSTS_FILE_EX);
-
-    hip_create_file_unless_exists(HIPL_DHTSERVERS_FILE, HIPL_DHTSERVERS_FILE_EX);
 
     hip_create_file_unless_exists(HIPL_NSUPDATE_CONF_FILE, HIPL_NSUPDATE_CONF_FILE_EX);
 

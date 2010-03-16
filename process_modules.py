@@ -1,9 +1,8 @@
 #!/usr/bin/python
 import getopt, glob, os, sys, xml.dom.minidom
 
-
 ### Constants ###
-INFO_FILE_PATH = 'project_info.xml'
+INFO_FILE_NAME = 'project_info.xml'
 
 APPLICATION_TAG_NAME  = 'application'
 APPLICATION_ATTR_NAME = 'name'
@@ -206,6 +205,9 @@ def process_module_info(module_info):
 # pointers for each application
 def create_header_files(output_dir, suffix, applications, includes, init_functions):
 
+    if False == os.path.isdir(output_dir):
+        os.mkdir(output_dir)
+
     for current_app in applications.keys():
 
         hdr_file_path = os.path.join(output_dir, current_app + suffix)
@@ -240,7 +242,7 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
             hdr_file.write('\nconst int num_modules_' + current_app + ' = 0;')
 
             hdr_file.write('\n\nstatic const pt2Function ' + current_app)
-            hdr_file.write('_init_functions[0] = {}')
+            hdr_file.write('_init_functions[0] = {};')
 
         hdr_file.write('\n\n#endif /* ' + app_string + ' */')
         hdr_file.close()
@@ -258,7 +260,10 @@ def create_makefile_modules(file_path,
     makefile_modules = open(file_path, 'w')
 
     enabled_modules = module_info.keys()
-    all_modules = enabled_modules + list(disabled_modules)
+    if not disabled_modules:
+        all_modules = enabled_modules
+    else:
+        all_modules = enabled_modules + disabled_modules
 
     if 'all' == compile_type:
         compile_modules = all_modules
@@ -303,10 +308,13 @@ def main():
         else:
             assert False, "unhandled option"
 
-    disabled_modules = disabled_modules.rsplit(' ')
+    if disabled_modules:
+        disabled_modules = disabled_modules.rsplit(' ')
 
-    (applications, compile_type, disabled_modules) = parse_info_file(INFO_FILE_PATH,
-                                                                     disabled_modules)
+    (applications,
+     compile_type,
+     disabled_modules) = parse_info_file(os.path.join(srcdir, INFO_FILE_NAME),
+                                         disabled_modules)
 
     module_info  = read_module_info(MODULES_DIR,
                                     disabled_modules,

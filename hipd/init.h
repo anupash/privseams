@@ -1,28 +1,8 @@
 #ifndef HIP_HIPD_INIT_H
 #define HIP_HIPD_INIT_H
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/wait.h>
-#include <sys/utsname.h>
-
-#include "lib/tool/xfrmapi.h"
-#include "lib/conf/hipconf.h"
-#include "oppipdb.h"
-#include "lib/core/debug.h"
-#include "hiprelay.h"
-#include "tcptimeout.h"
-#include "hadb.h"
-#include "nsupdate.h"
-
-/*
- * HIP daemon initialization functions.
- *
- */
-
+#include "lib/core/protodefs.h"
 
 extern hip_ipsec_func_set_t default_ipsec_func_set;
 extern int hip_firewall_sock_fd;
@@ -39,5 +19,4 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
                             int is_output);
 void hip_close(int signal);
 void hip_exit(int signal);
-int hip_init_dht(void);
 #endif /* HIP_HIPD_INIT_H */
