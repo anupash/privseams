@@ -1,8 +1,6 @@
 #ifndef HIP_HIPD_ACCESSOR_H
 #define HIP_HIPD_ACCESSOR_H
 
-#include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
-
 #include "lib/core/hashtable.h"
 
 #include <sys/time.h>

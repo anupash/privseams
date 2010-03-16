@@ -14,6 +14,7 @@
 
 #include "config.h"
 #include "accessor.h"
+#include "hipd.h"
 
 unsigned int hipd_state         = HIPD_STATE_CLOSED;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
