@@ -1,3 +1,13 @@
+/** @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * HIP client-side proxy databases. Documented in detail in Weiwei's
+ * thesis when it's finished.
+ *
+ * @author Weiwei Hu
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -5,6 +15,13 @@
 
 HIP_HASHTABLE *hip_proxy_db = NULL;
 
+
+/**
+ * Create a hash of the given entry for the hash table
+ *
+ * @param p the connection entry
+ * @return a hash calculated based on the given entry
+ */
 unsigned long hip_proxy_db_hash(const hip_proxy_t *p)
 {
     hip_hit_t hitpair[2];
@@ -28,6 +45,14 @@ unsigned long hip_proxy_db_hash(const hip_proxy_t *p)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_proxy_db, const hip_proxy_t)
 
+
+/**
+ * Compare two hash keys
+ *
+ * @param ha1 first hash key
+ * @param ha2 second hash key
+ * @return zero if keys match or one otherwise
+ */
 int hip_proxy_db_cmp(const hip_proxy_t *ha1, const hip_proxy_t *ha2)
 {
     if (ha1 == NULL
@@ -45,12 +70,19 @@ int hip_proxy_db_cmp(const hip_proxy_t *ha1, const hip_proxy_t *ha2)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_COMP_FN(hip_proxy_db, const hip_proxy_t)
 
+
+/**
+ * Initialize the proxy database
+ */
 void hip_init_proxy_db(void)
 {
     hip_proxy_db = hip_ht_init(LHASH_HASH_FN(hip_proxy_db),
                                LHASH_COMP_FN(hip_proxy_db));
 }
 
+/**
+ * Unitialize the proxy database
+ */
 void hip_uninit_proxy_db()
 {
     int i = 0;
@@ -64,6 +96,13 @@ void hip_uninit_proxy_db()
     }
 }
 
+/**
+ * Add an entry to the database of the HIP proxy
+ *
+ * @param addr_client Addess of the legacy client
+ * @param addr_peer Address of the HIP server
+ * @return zero on success or non-zero on failure
+ */
 int hip_proxy_add_entry(const struct in6_addr *addr_client,
                         const struct in6_addr *addr_peer)
 {
@@ -89,6 +128,13 @@ int hip_proxy_add_entry(const struct in6_addr *addr_client,
     return err;
 }
 
+/**
+ * Find the proxy database entry corresponding to addresses
+ *
+ * @param addr the address of the legacy client
+ * @param addr2 the address of the HIP server
+ * @return the database entry if found or otherwise NULL
+ */
 hip_proxy_t *hip_proxy_find_by_addr(const struct in6_addr *addr,
                                     const struct in6_addr *addr2)
 {
@@ -99,6 +145,19 @@ hip_proxy_t *hip_proxy_find_by_addr(const struct in6_addr *addr,
     return hip_ht_find(hip_proxy_db, &p);
 }
 
+/**
+ * Update the entry state in the proxy database
+ * Only for known clients
+ *
+ * @param entry the HIP database entry
+ * @param client_addr the IP address of the client
+ * @param peer_addr the IP address of the server
+ * @param proxy_addr the IP address of the HIP proxy
+ * @param proxy_hit the HIT of the HIP proxy
+ * @param peer_hit the HIT of the server
+ * @param state the state of the connection entry
+ * @return zero on success or non-zero on failure
+ */
 int hip_proxy_update_entry_state(hip_proxy_t *entry,
                                  struct in6_addr *client_addr,
                                  struct in6_addr *peer_addr,
@@ -132,6 +191,13 @@ int hip_proxy_update_entry_state(hip_proxy_t *entry,
  * The firewall receives R1 and does not know which client to serve.
  * Updates all clients.
  *
+ * @param client_addr the IP address of the client
+ * @param peer_addr the IP address of the server
+ * @param proxy_addr the IP address of the HIP proxy
+ * @param proxy_hit the HIT of the HIP proxy
+ * @param peer_hit the HIT of the server
+ * @param state the state of the connection entry
+ *
  */
 int hip_proxy_update_state_no_client(struct in6_addr *client_addr,
                                      struct in6_addr *peer_addr,
@@ -159,6 +225,19 @@ int hip_proxy_update_state_no_client(struct in6_addr *client_addr,
     return 0;
 }
 
+
+/**
+ * Update the entry state in the proxy database for all cases.
+ * Available for the known clients and unknow clients
+ *
+ * @param client_addr the IP address of the client
+ * @param peer_addr the IP address of the server
+ * @param proxy_addr the IP address of the HIP proxy
+ * @param proxy_hit the HIT of the HIP proxy
+ * @param peer_hit the HIT of the server
+ * @param state the state of the connection entry
+ *
+ */
 int hip_proxy_update_state(struct in6_addr *client_addr,
                            struct in6_addr *peer_addr,
                            struct in6_addr *proxy_addr,

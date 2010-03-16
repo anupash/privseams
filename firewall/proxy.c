@@ -1,5 +1,11 @@
-/*
- * HIP proxy
+/** @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * HIP client-side proxy. Documented in detail in Weiwei's thesis when
+ * it's finished.
+ *
+ * @author Weiwei Hu
  */
 
 /* required for s6_addr32 */
@@ -22,12 +28,13 @@ int hip_proxy_raw_sock_icmp_inbound    = 0;
 const char hip_proxy_supported_proto[] = { IPPROTO_TCP,
         IPPROTO_ICMP, IPPROTO_UDP };
 
+
+#ifdef CONFIG_HIP_HIPPROXY
 /**
- *
+ * Request the status of the HIP proxy
  *
  * @return zero on success, non-zero on error
  */
-#ifdef CONFIG_HIP_HIPPROXY
 int request_hipproxy_status(void)
 {
     struct hip_common *msg = NULL;
@@ -57,6 +64,14 @@ out_err:
 
 #endif /* CONFIG_HIP_HIPPROXY */
 
+
+/**
+ * Request the peer HIT from HIP Daemon
+ *
+ * @param peer_ip the address of the peer host (HIP Server)
+ * @param local_hit the HIT of the local HIP proxy
+ * @return zero on success, non-zero on error
+ */
 int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
                                          const struct in6_addr *local_hit)
 {
@@ -95,6 +110,12 @@ out_err:
     return err;
 }
 
+/**
+ * Get the local HIT from HIP Daemon
+ *
+ * @param hit the pointer used to store the local HIT
+ * @return zero on success, non-zero on error
+ */
 int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
     int err                = 0;
@@ -118,6 +139,12 @@ out_err:
     return err;
 }
 
+/**
+ * Set the peer HIT into the HIP Proxy Database
+ *
+ * @param msg the received message for the HIT request of the peer host
+ * @return zero on success, non-zero on error
+ */
 int hip_fw_proxy_set_peer_hit(hip_common_t *msg)
 {
     int fallback               = 1, reject = 0, addr_found = 0, err = 0;
@@ -211,6 +238,12 @@ out_err:
     return err;
 }
 
+/**
+ * Initialize the IPv6 socket for TCP connection
+ *
+ * @param hip_raw_sock_v6 the socket pointer used for TCP connection in IPv6
+ * @return zero on success, non-zero on error
+ */
 int hip_init_proxy_raw_sock_tcp_v6(int *hip_raw_sock_v6)
 {
     int on = 1, off = 0, err = 0;
@@ -233,6 +266,12 @@ out_err:
     return err;
 }
 
+/**
+ * Initialize the IPv4 socket for TCP connection
+ *
+ * @param hip_raw_sock_v4 the socket pointer used for TCP connection in IPv4
+ * @return zero on success, non-zero on error
+ */
 int hip_init_proxy_raw_sock_tcp_v4(int *hip_raw_sock_v4)
 {
     int on  = 1, err = 0;
@@ -259,6 +298,12 @@ out_err:
     return err;
 }
 
+/**
+ * Initialize the IPv6 socket for UDP connection
+ *
+ * @param hip_raw_sock_v6 the socket pointer used for UDP connection in IPv6
+ * @return zero on success, non-zero on error
+ */
 int hip_init_proxy_raw_sock_udp_v6(int *hip_raw_sock_v6)
 {
     int on = 1, off = 0, err = 0;
@@ -281,6 +326,12 @@ out_err:
     return err;
 }
 
+/**
+ * Initialize the IPv4 socket for UDP connection
+ *
+ * @param hip_raw_sock_v4 the socket pointer used for UDP connection in IPv4
+ * @return zero on success, non-zero on error
+ */
 int hip_init_proxy_raw_sock_udp_v4(int *hip_raw_sock_v4)
 {
     int on  = 1, err = 0;
@@ -307,6 +358,12 @@ out_err:
     return err;
 }
 
+/**
+ * Initialize the ICMPv6 socket
+ *
+ * @param hip_raw_sock_v6 the socket pointer used for ICMPv6 connection
+ * @return zero on success, non-zero on error
+ */
 int hip_init_proxy_raw_sock_icmp_v6(int *hip_raw_sock_v6)
 {
     int on = 1, off = 0, err = 0;
@@ -330,6 +387,12 @@ out_err:
     return err;
 }
 
+/**
+ * Initialize the ICMP socket
+ *
+ * @param hip_raw_sock_v4 the socket pointer used for ICMP
+ * @return zero on success, non-zero on error
+ */
 int hip_init_proxy_raw_sock_icmp_v4(int *hip_raw_sock_v4)
 {
     int on  = 1, err = 0;
@@ -357,6 +420,12 @@ out_err:
     return err;
 }
 
+/**
+ * Initialize the ICMPV6 socket for Inbound connection
+ *
+ * @param hip_raw_sock_v6 the socket pointer used for ICMPv6 connection in IPv6
+ * @return zero on success, non-zero on error
+ */
 int hip_init_proxy_raw_sock_icmp_inbound(int *hip_raw_sock_v6)
 {
     int on = 1, off = 0, err = 0;
@@ -379,6 +448,11 @@ out_err:
     return err;
 }
 
+/**
+ * Initialize all the sockets
+ *
+ * @return zero on success, non-zero on error
+ */
 int hip_proxy_init_raw_sockets(void)
 {
     hip_init_proxy_raw_sock_tcp_v6(&hip_proxy_raw_sock_tcp_v6);
@@ -392,8 +466,11 @@ int hip_proxy_init_raw_sockets(void)
     return 0;
 }
 
-// TODO add hip_proxy_UNinit_raw_sockets()
-
+/**
+ * Initialize the HIP proxy
+ *
+ * @return zero on success, non-zero on error
+ */
 int init_proxy(void)
 {
     int err = 0;
@@ -405,6 +482,11 @@ int init_proxy(void)
     return err;
 }
 
+/**
+ * Uninitialize the HIP proxy
+ *
+ * @return zero on success, non-zero on error
+ */
 int uninit_proxy(void)
 {
     int err = 0;
@@ -416,6 +498,15 @@ int uninit_proxy(void)
     return err;
 }
 
+/**
+ * Send packets to the HIP server
+ * @param local_addr the HIT of the sender
+ * @param peer_addr the HIT of the receiver
+ * @param msg the payload of the packet
+ * @param len the len of the packet
+ * @param protocol the protocol of the connection
+ * @return zero on success, non-zero on error
+ */
 static int hip_proxy_send_pkt(struct in6_addr *local_addr,
                               struct in6_addr *peer_addr,
                               uint8_t *msg, uint16_t len, int protocol)
@@ -621,6 +712,14 @@ out_err:
     return err;
 }
 
+/**
+ * Send packets to the legacy client
+ * @param local_addr the address of the sender
+ * @param peer_addr the address of the receiver
+ * @param buff the payload of the packet
+ * @param len the len of the packet
+ * @return zero on success, non-zero on error
+ */
 static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
                                         struct in6_addr *peer_addr,
                                         uint8_t *buff, uint16_t len)
@@ -916,6 +1015,12 @@ out_err:
     return err;
 }
 
+/**
+ * Handle the proxy inbound traffic
+ * @param m the ipq packet captured by the hipfw
+ * @param src_addr the source address
+ * @return zero on success, non-zero on error
+ */
 int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
                                  const struct in6_addr *src_addr)
 {
@@ -976,6 +1081,14 @@ out_err:
     return err;
 }
 
+/**
+ * Send the inbound ICMP packet
+ * @param src_addr the ipq packet captured by the hipfw
+ * @param dst_addr the source address inside the packet
+ * @param buff the payload of the packet
+ * @param len the length of the payload
+ * @return zero on success, non-zero on error
+ */
 static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6_addr *dst_addr, const unsigned char *buff, uint16_t len)
 {
     struct sockaddr_in6 src6, dst6;
@@ -1033,6 +1146,15 @@ static int hip_proxy_send_inbound_icmp_pkt(struct in6_addr *src_addr, struct in6
     return 0;
 }
 
+/**
+ * Handle the proxy outbound traffic
+ * @param m the ipq packet captured by the hipfw
+ * @param src_addr the source address
+ * @param dst_addr the destination address
+ * @param hdr_size the header size
+ * @param ip_version the IP protocol version
+ * @return zero on success, non-zero on error
+ */
 int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
                                   const struct in6_addr *src_addr,
                                   const struct in6_addr *dst_addr,
