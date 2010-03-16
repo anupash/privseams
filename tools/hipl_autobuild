@@ -33,13 +33,14 @@ mail_notify()
     COMMAND="$1"
     cat > msg.txt <<EOF
 branch: $BRANCH_NAME
+revision: $BRANCH_REVISION
 configuration: $CONFIGURATION
 command: $COMMAND
 compiler output:
 
 EOF
     cat log.txt >> msg.txt
-    SUBJECT="[autobuild] [$BRANCH_NAME]"
+    SUBJECT="[autobuild] [$BRANCH_NAME] $BRANCH_REVISION"
     mailx -s "$SUBJECT" $HIPL_NOTIFICATION_EMAIL < msg.txt
 }
 
