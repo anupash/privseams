@@ -307,7 +307,7 @@ echo ""
 echo "+-----------------------------------------------";
 echo "| processing modules...";
 echo "|";
-python ${srcdir}/process_modules.py $DISABLE_MODULES
+python ${srcdir}/process_modules.py -s ${srcdir} -d "$DISABLE_MODULES"
 echo "|";
 echo "+-----------------------------------------------"
 echo ""
