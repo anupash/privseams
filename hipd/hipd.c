@@ -171,6 +171,12 @@ sqlite3 *daemon_db;
 
 HIP_HASHTABLE *bex_timestamp_db = NULL;
 
+/**
+ * Set opportunistic TCP status on or off
+ *
+ * @param msg a message with message type as SO_HIP_SET_OPPTCP_ON
+ *            or SO_HIP_SET_OPPTCP_OFF
+ */
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 {
     struct sockaddr_in6 sock_addr;
@@ -216,13 +222,22 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg)
               (hip_use_opptcp ? "on" : "off"));
 }
 
+/**
+ * query status for the opportunistic TCP extensions
+ *
+ * @return 1 if it is enabled or 0 otherwise
+ */
 int hip_get_opportunistic_tcp_status()
 {
     return hip_use_opptcp;
 }
 
-/* hi3 */
 #ifdef CONFIG_HIP_I3
+/**
+ * turn hi3 support on or off
+ *
+ * @param msg a message with type SO_HIP_SET_HI3_ON or SO_HIP_SET_HI3_OFF
+ */
 void hip_set_hi3_status(struct hip_common *msg)
 {
     struct sockaddr_in6 sock_addr;
@@ -263,6 +278,11 @@ void hip_set_hi3_status(struct hip_common *msg)
               (hip_use_hi3 ? "on" : "off"));
 }
 
+/**
+ * query if Hi3 is enabled or not
+ *
+ * @return 1 if it is enabled or 0 otherwise
+ */
 int hip_get_hi3_status()
 {
     return hip_use_hi3;
@@ -270,6 +290,9 @@ int hip_get_hi3_status()
 
 #endif
 
+/**
+ * print hipd usage instructions on stderr
+ */
 static void usage(void)
 {
     fprintf(stderr, "Usage: hipd [options]\n\n");
@@ -282,6 +305,12 @@ static void usage(void)
     fprintf(stderr, "\n");
 }
 
+/**
+ * a function for passing a message to the HIP graphical user agent
+ *
+ * @param msg the message to send
+ * @return zero on success or negative on error
+ */
 int hip_send_agent(struct hip_common *msg)
 {
     struct sockaddr_in6 hip_agent_addr;
@@ -329,6 +358,9 @@ out_err:
 
 /**
  * Receive message from agent socket.
+ *
+ * @param msg the received message will be stored here
+ * @return zero on success or negative on error
  */
 int hip_recv_agent(struct hip_common *msg)
 {
@@ -399,6 +431,12 @@ out_err:
     return err;
 }
 
+/**
+ * send a message to the HIP firewall
+ *
+ * @param msg the message to send
+ * @return zero on success or negative on error
+ */
 int hip_sendto_firewall(const struct hip_common *msg)
 {
 #ifdef CONFIG_HIP_FIREWALL
@@ -426,7 +464,11 @@ int hip_sendto_firewall(const struct hip_common *msg)
 }
 
 /**
- * Daemon main function.
+ * Daemon "main" function.
+ *
+ * @param argc number of command line arguments
+ * @param argv the command line arguments
+ * @return zero on success or negative on error
  */
 static int hipd_main(int argc, char *argv[])
 {
@@ -903,6 +945,13 @@ out_err:
     return err;
 }
 
+/**
+ * the main function for hipd
+ *
+ * @param argc number of command line arguments
+ * @param argv the command line arguments
+ * @return zero on success or negative on error
+ */
 int main(int argc, char *argv[])
 {
     int err = 0;
