@@ -1,8 +1,10 @@
 /** @file
  * This file defines tools of  blind extension for the Host Identity Protocol
+ * See <a href="http://lib.tkk.fi/Diss/2008/isbn9789512295319/article6.pdf">Ylitalo et al, BLIND: a Complete Identity Protection Framework for End-hosts, April 2004</a> and the corresponding IETF draft <a href="http://tools.ietf.org/html/draft-zhang-hip-privacy-protection">Zhang et al,
+An Extension of HIP Base Exchange to Support Identity Privacy, IETF draft, Work in Progress, March 2010</a>.
  *
  * @author  Laura Takkinen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
 /* required for s6_addr32 */
@@ -13,6 +15,15 @@
 
 static int hip_blind_fingerprints(hip_ha_t *entry);
 
+/**
+ * test whether we should use blind or not based on an inbound packet
+ *
+ * @param msg a HIP control message
+ * @param entry related host association
+ * @param use_blind An output argument where the result will be written
+ *                  One if blind should be used or zero otherwise.
+ * @return zero on success or negative on error
+o */
 int hip_check_whether_to_use_blind(hip_common_t *msg, hip_ha_t *entry,  int *use_blind)
 {
     /* Check for error conditions. */
@@ -48,7 +59,13 @@ int hip_check_whether_to_use_blind(hip_common_t *msg, hip_ha_t *entry,  int *use
     }
 }
 
-/* For internal use only */
+/**
+ * enable blind for a given host assocation
+ *
+ * @param entry a host association
+ * @param not_used not used
+ * @return zero
+ */
 static int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
 {
     int err = 0;
@@ -60,7 +77,13 @@ static int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
     return err;
 }
 
-/* For internal use only */
+/**
+ * disable blind for a given host assocation
+ *
+ * @param entry a host association
+ * @param not_used not used
+ * @return zero
+ */
 static int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used)
 {
     int err = 0;
@@ -72,9 +95,12 @@ static int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used)
     return err;
 }
 
-/* This functions is used to set the blind on.
- * "blind" entry of all existing associations is set to 1
- * and hip_blind_status is set to 1.
+/**
+ * Enable blind globally for all host associations
+ *
+ * @return zero
+ * @note this function has no effect if host association
+ *       is in established state
  */
 int hip_set_blind_on(void)
 {
@@ -88,9 +114,12 @@ out_err:
     return err;
 }
 
-/* This functions is used to set the blind off.
- * "blind" entry of all existing associations is set to 0
- * and hip_blind_status is set to 0.
+/**
+ * Disable blind globally for all host associations
+ *
+ * @return zero
+ * @note this function has no effect if host association
+ *       is in established state
  */
 int hip_set_blind_off(void)
 {
@@ -105,7 +134,7 @@ out_err:
 }
 
 /**
- * @brief This functions is used to query if the blind is in use.
+ * This functions is used to query if the blind is in use.
  *
  * @return Zero if blind is off and 1 if blind is on.
  */
@@ -114,10 +143,12 @@ int hip_blind_get_status(void)
     return hip_blind_status;
 }
 
-/* Extracts the uint16_t type nonce from the message.
- * @msg Message from where the nonce is extracted
- * @msg_nonce The nonce that the message included
- * Returns 0 in success, otherwise returns -1.
+/**
+ * Extract uint16_t type blind nonce from HIP control message
+ *
+ * @param msg message the message from where the nonce is extracted
+ * @param msg_nonce the nonce will be written here
+ * @return zero on success or negative on error
  */
 int hip_blind_get_nonce(struct hip_common *msg, uint16_t *msg_nonce)
 {
@@ -133,12 +164,12 @@ out_err:
 }
 
 /**
- * @brief Forms a plain HIT from a blinded one.
+ * Forms a plain HIT from a blinded one.
  *
  * @param  nonce     Nonce that is used to calculate the plain HIT.
  * @param  blind_hit Blinded HIT from where the plain HIT is formed.
  * @param  plain_hit Calculated plain HIT
- * @return           Zero in success, otherwise -1.
+ * @return zero on success or negative on error
  */
 int hip_plain_fingerprint(uint16_t *nonce,  struct in6_addr *blind_hit,
                           struct in6_addr *plain_hit)
@@ -153,12 +184,13 @@ out_err:
     return err;
 }
 
-/* Forms the blinded HIT from the key (SHA1 hash from the key).
- * For internal purposes.
- * @key Key from where the hash is calculated
- * @key_len Length of the key
- * @blind_hit Calculated blind HIT (hash)
- * Returns 0 in success, otherwise returns -1.
+/**
+ * Form the blinded HIT from the key (SHA1 hash from the key).
+ *
+ * @param key Key from where the hash is calculated
+ * @param key_len Length of the key
+ * @param blind_hit Calculated blind HIT (hash)
+ * @return zero on success or negative on error
  */
 int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit)
 {
@@ -186,10 +218,11 @@ out_err:
     return err;
 }
 
-/* Sets nonce and calculates the blinded
- * fingerprints for the hip_ha_t entry.
- * @entry hip_ha_t entry which blind fields are adjusted
- * Returns 0 in success, otherwise returns -1.
+/**
+ * Sets nonce and calculates the blinded fingerprints for the hip_ha_t entry.
+ *
+ * @param entry hip_ha_t entry which blind fields are adjusted
+ * @return zero on success or negative on error
  */
 static int hip_blind_fingerprints(hip_ha_t *entry)
 {
@@ -224,7 +257,15 @@ out_err:
     return err;
 }
 
-/* Tests if @plain_hit blinded with nonce is same as @blind_hit*/
+/**
+ * Tests if plain_hit blinded with nonce is same as @blind_hit
+ *
+ * @param nonce the nonce used for blinding the hit
+ * @param plain_hit the plain HIT to be tested
+ * @param blind_hit the blinded HIT
+ *
+ * @return zero on success or negative on error
+ */
 int hip_blind_verify(uint16_t *nonce, struct in6_addr *plain_hit,
                      struct in6_addr *blind_hit)
 {
@@ -269,7 +310,12 @@ out_err:
     }
     return ret == 0;
 }
-
+/**
+ * build a blinded i1 message
+ *
+ * @param entry the related host association
+ * @param mask a mask template for I1 packet without blind
+ */
 struct hip_common *hip_blind_build_i1(hip_ha_t *entry, uint16_t *mask)
 {
     struct hip_common *i1;
@@ -307,7 +353,16 @@ struct hip_common *hip_blind_build_i1(hip_ha_t *entry, uint16_t *mask)
     return i1;
 }
 
-/* Fills the r2 message with required blind parameters*/
+/**
+ * Fill in the r2 message with required blind parameters
+ *
+ * @param i2 the receive I2 message
+ * @param r2 message to be sent
+ * @param entry the related host association
+ * @param the default control flags mask template
+ *
+ * @return zero on success or negative on error
+ */
 int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *entry, uint16_t *mask)
 {
     int err           = 0, host_id_in_enc_len = 0;
@@ -386,6 +441,14 @@ out_err:
     return err;
 }
 
+/**
+ * verify a blinded R2 message
+ *
+ * @param r2 the R2 control message
+ * @param entry the related host association
+ *
+ * @return zero if the message was ok or negative otherwise
+ */
 int hip_blind_verify_r2(struct hip_common *r2, hip_ha_t *entry)
 {
     int err                            = 0;
@@ -476,7 +539,7 @@ out_err:
 }
 
 /**
- * Constructs a new R1 packet payload.
+ * Constructs a new blinde R1 packet payload
  *
  * @param src_hit      a pointer to the source host identity tag used in the
  *                     packet.
@@ -660,6 +723,16 @@ out_err:
     return NULL;
 }
 
+/**
+ * recreate a blind spool of R1 messages
+ *
+ * @param r1table the R1 table to fill
+ * @param hit the local HIT
+ * @param sign the signature function pointer
+ * @param privkey the private key for signing
+ * @param pubkey the corresponding public key
+ * @return zero on success or negative on error
+ */
 int hip_blind_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
                            int (*sign)(void *key, struct hip_common *m),
                            void *privkey, struct hip_host_id *pubkey)
