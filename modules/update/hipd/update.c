@@ -21,6 +21,7 @@
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
 #include "hipd/netdev.h"
+#include "hipd/nsupdate.h"
 #include "update_legacy.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
