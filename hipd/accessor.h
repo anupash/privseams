@@ -49,7 +49,7 @@ int hip_set_hip_proxy_off(void);
 int hip_get_opportunistic_tcp_status(void);
 
 #ifdef CONFIG_HIP_I3
-int hip_get_hi3_status( void );
+int hip_get_hi3_status(void);
 void hip_set_hi3_status(struct hip_common *msg);
 #endif /* CONFIG_HIP_I3 */
 
