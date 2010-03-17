@@ -1484,47 +1484,21 @@ static int handle_update(const struct hip_common *common,
 
             _HIP_DEBUG("handle_update: esp_info and locator found\n");
 
-            /* TODO check processing of SPI
-             *
-             * old_spi == 0, new_spi = x means that host is requesting a new SA
-             * old_spi == new_spi means only location update
-             * old_spi != new_spi means esp_tuple update */
-            if (esp_info->old_spi != esp_info->new_spi) {          //update existing
-                esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
+            esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 
-                if (!esp_tuple) {
-                    _HIP_DEBUG("No suitable esp_tuple found for updating\n");
+            if (!esp_tuple) {
+                _HIP_DEBUG("No suitable esp_tuple found for updating\n");
 
-                    err = 0;
-                    goto out_err;
-                }
-
-                if (!update_esp_tuple(esp_info, locator, seq, esp_tuple)) {
-                    _HIP_DEBUG("failed to update the esp_tuple\n");
-
-                    err = 0;
-                    goto out_err;
-                }
-            }
-
-/* why would we want to do that? We already know this connection and this is a U1 */
-#if 0
-        } else {       /* create new esp_tuple */
-            new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
-                                                      other_dir_tuple);
-
-            if (new_esp == NULL) {
-                //locator must contain address for this spi
                 err = 0;
                 goto out_err;
             }
 
-            other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
-                                                                    other_dir_esps, (void *) new_esp);
+            if (!update_esp_tuple(esp_info, locator, seq, esp_tuple)) {
+                _HIP_DEBUG("failed to update the esp_tuple\n");
 
-            insert_esp_tuple(new_esp);
-        }
-#endif
+                err = 0;
+                goto out_err;
+            }
         } else if (locator && seq) {
             /* Readdress without rekeying */
 
