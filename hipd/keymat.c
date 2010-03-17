@@ -1,9 +1,9 @@
 /**
  * @file
- * This file contains KEYMAT handling functions for HIPL.
- * Licence: GNU/GPL
  *
- * TODO: Doxygen documentation is incomplete
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * This file contains KEYMAT handling functions for HIPL
  *
  * @author Mika Kousa <mkousa#iki.fi>
  * @author Kristian Slavov <ksl#iki.fi>
@@ -16,6 +16,19 @@
 #include "keymat.h"
 #include "lib/core/hit.h"
 
+/**
+ * allocate and initialize a big enough key material buffer for
+ * drawing symmetric keys for HIP and ESP
+ *
+ * @param kij the diffie hellman session key
+ * @param kij_len the length of kij in bytes
+ * @param hash_len the length of the used hash
+ * @param smaller_hit smaller HIT
+ * @param bigger_hit bigger HIT
+ * @param I the I value from the puzzle
+ * @param J the J value from the puzzle
+ * @return the allocated buffer (caller deallocates) or NULL on failure
+ */
 static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
                                     struct in6_addr *smaller_hit,
                                     struct in6_addr *bigger_hit,
@@ -58,6 +71,15 @@ static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_
     return buffer;
 }
 
+/**
+ * update keymat buffer and index after writing material to it
+ *
+ * @param keybuf a pointer to the key material
+ * @param Kold a the seed
+ * @param Kold_len length of Kold
+ * @param Kij_len length of the Kij
+ * @param cnt index value
+ */
 static void hip_update_keymat_buffer(uint8_t *keybuf, uint8_t *Kold, size_t Kold_len,
                                      size_t Kij_len, uint8_t cnt)
 {
