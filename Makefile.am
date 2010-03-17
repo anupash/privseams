@@ -137,7 +137,6 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/registration.c \
                     hipd/user.c \
                     hipd/hadb.c \
-                    hipd/oppdb.c \
                     hipd/close.c \
                     hipd/configfilereader.c \
                     hipd/input.c \
@@ -179,6 +178,10 @@ endif
 
 if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
+endif
+
+if HIP_OPPORTUNISTIC
+hipd_hipd_SOURCES += hipd/oppdb.c
 endif
 
 firewall_hipfw_SOURCES = firewall/firewall.c \
