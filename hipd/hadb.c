@@ -49,6 +49,7 @@
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
 #include "lib/core/keylen.h"
+#include "lib/core/hostsfiles.h"
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
@@ -1957,29 +1958,6 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 
 #endif
 
-/**
- * check if the given LSI is in the hosts files
- *
- * @param lsi the LSI to be searched for
- * @return one if the LSI exists or zero otherwise
- *
- */
-static int hip_host_file_info_exists_lsi(hip_lsi_t *lsi)
-{
-    uint8_t hostname[HOST_NAME_MAX];
-    struct in6_addr mapped_lsi;
-
-    memset(hostname, 0, sizeof(hostname));
-
-    IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
-
-    return !(hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
-                                          hip_map_first_id_to_hostname_from_hosts,
-                                          &mapped_lsi, hostname) &&
-             hip_for_each_hosts_file_line(HOSTS_FILE,
-                                          hip_map_first_id_to_hostname_from_hosts,
-                                          &mapped_lsi, hostname));
-}
 
 /**
  * An iterator to find a matching remote LSI from HADB.

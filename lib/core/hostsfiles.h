@@ -35,5 +35,6 @@ int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname);
 int hip_get_random_hostname_id_from_hosts(char *filename,
                                           char *hostname,
                                           char *id_str);
+int hip_host_file_info_exists_lsi(hip_lsi_t *lsi);
 
 #endif /* HIP_LIB_CORE_HOSTSFILES_H */
