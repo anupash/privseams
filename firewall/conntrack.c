@@ -2213,13 +2213,14 @@ out_err:
  * @param buf the control packet
  * @param ctx context for the control packet
  */
-void conntrack(const struct in6_addr *ip6_src,
+int conntrack(const struct in6_addr *ip6_src,
                const struct in6_addr *ip6_dst,
                struct hip_common *buf,
                hip_fw_context_t *ctx)
 {
     struct hip_data *data = NULL;
     struct tuple *tuple   = NULL;
+    int verdict = 0;
 
     _HIP_DEBUG("\n");
     //g_mutex_lock(connectionTableMutex);
@@ -2234,12 +2235,14 @@ void conntrack(const struct in6_addr *ip6_src,
 
     // the accept_mobile parameter is true as packets
     // are not filtered here
-    check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1, ctx);
+    verdict = check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1, ctx);
 
     //g_mutex_unlock(connectionTableMutex);
     _HIP_DEBUG("unlocked mutex\n");
 
     free(data);
+
+    return verdict;
 }
 
 /**

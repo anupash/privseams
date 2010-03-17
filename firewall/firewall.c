@@ -1215,13 +1215,8 @@ static int filter_hip(const struct in6_addr *ip6_src,
     //release rule list
     read_rules_exit(0);
 
-    /* FIXME this actually verifies the packet and should be incorporated in the
-     *       resulting verdict!!! */
-    // if packet will be accepted and connection tracking is used
-    // but there is no state for the packet in the conntrack module
-    // yet -> show the packet to conntracking
     if (statefulFiltering && verdict && !conntracked) {
-        conntrack(ip6_src, ip6_dst, buf, ctx);
+        verdict = conntrack(ip6_src, ip6_dst, buf, ctx);
     }
 
     return verdict;
@@ -1306,8 +1301,6 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx)
     } else {
         verdict = ACCEPT;
     }
-
-    HIP_INFO("\n");
 
     /* zero return value means that the packet should be dropped */
     return verdict;

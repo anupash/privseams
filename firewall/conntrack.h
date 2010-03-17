@@ -24,7 +24,7 @@ int filter_state(const struct in6_addr *ip6_src,
                  struct hip_common *buf,
                  const struct state_option *option,
                  const int accept, hip_fw_context_t *ctx);
-void conntrack(const struct in6_addr *ip6_src,
+int conntrack(const struct in6_addr *ip6_src,
                const struct in6_addr *ip6_dst,
                struct hip_common *buf, hip_fw_context_t *ctx);
 
