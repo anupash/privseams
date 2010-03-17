@@ -1375,8 +1375,6 @@ static int handle_update(const struct hip_common *common,
     struct hip_ack *ack                = NULL;
     struct hip_locator *locator        = NULL;
     struct hip_spi *spi                = NULL;
-    struct hip_echo_request *echo_req  = NULL;
-    struct hip_echo_response *echo_res = NULL;
     struct tuple *other_dir_tuple      = NULL;
     const struct in6_addr *ip6_src = &ctx->src;
     int err                            = 0;
@@ -1389,10 +1387,6 @@ static int handle_update(const struct hip_common *common,
     ack      = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
     locator  = (struct hip_locator *) hip_get_param(common, HIP_PARAM_LOCATOR);
     spi      = (struct hip_spi *) hip_get_param(common, HIP_PARAM_ESP_INFO);
-    echo_req = (struct hip_echo_request *) hip_get_param(common,
-                                                         HIP_PARAM_ECHO_REQUEST);
-    echo_res = (struct hip_echo_response *) hip_get_param(common,
-                                                          HIP_PARAM_ECHO_RESPONSE);
 
     if (spi) {
         _HIP_DEBUG("handle_update: spi param, spi: 0x%lx \n", ntohl(spi->spi));
@@ -1678,13 +1672,6 @@ static int handle_update(const struct hip_common *common,
         }
 #endif
 
-        if (echo_req) {
-            _HIP_DEBUG("handle_update: echo found req\n");
-        }
-
-        if (echo_res) {
-            _HIP_DEBUG("handle_update: echo found res\n");
-        }
     }
 
     /* everything should be set now in order to process eventual anchor params */
