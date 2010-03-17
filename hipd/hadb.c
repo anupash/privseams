@@ -1,5 +1,40 @@
-// FIXME: whenever something that is replicated in beet db is
-// modified, the modifications must be written there too.
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * Host Association Database (HADB) is the heart of the hipd and it
+ * contains state information about HIP connectivity with remote
+ * hosts. It shouldn't be confused with Host Identity Data Base (HIDB)
+ * which contains just the local host identities. The Host Association
+ * is an implementation-speficic synonym for HIP association (RFC
+ * terminology).
+ *
+ * HADB is a hash table. It is indexed by a local and remote HIT. For
+ * opportunistic connections, the remote HIT is actually a "pseudo
+ * HIT" at the Initiator side when sending I1. The pseudo HIT consists
+ * of a HIT prefix and a part of the IP address (to avoid demuxing
+ * problems with multiple simultaneous opportunistic connections at
+ * the Initiator side. The Initiator deletes the "pseudo HA" and
+ * creates a new one upon receiving the R1. At the Responder side,
+ * this pseudo trick is not needed because the Responder can just
+ * choose a real HIT when it receives the opportunistic I1.
+ *
+ * The hash table structure is located in lib/core/state.h and it is
+ * called hip_hadb_state. As the structure contains sensitive
+ * information (symmetric key material for IPsec), it should not be
+ * exposed outside of hipd (use hip_hadb_user_info_state instead).
+ *
+ * You can use HADB to store information about negotiated extensions,
+ * local or peer host capabilities, etc. Do not store there
+ * information that is needed to process a single HIP packet, but
+ * instead use the hip_context structure and pass in in function
+ * arguments.
+ *
+ * @brief Host Association Database (HADB) for HIP
+ *
+ * @author Miika Komu <miika@iki.fi>
+ */
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
@@ -77,6 +112,14 @@ static unsigned long hip_ha_hash(const hip_ha_t *ha)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
 
+/**
+ * a comparison function for the hash table algorithm to distinguish
+ * two HAs from each other
+ *
+ * @param ha1 a HA to compare for equality
+ * @param ha2 a HA to compare for equality
+ * @return zero if the HAs match or non-zero otherwise
+ */
 static int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 {
     if (ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
@@ -90,6 +133,12 @@ static int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_COMP_FN(hip_ha, hip_ha_t)
 
+/**
+ * build a digest of a peer address
+ *
+ * @param ptr a pointer to hip_peer_addr_list_item structure
+ * @return a digest of the address in the hip_peer_addr_list_item structure
+ */
 static unsigned long hip_hash_peer_addr(const void *ptr)
 {
     struct in6_addr *addr = &((struct hip_peer_addr_list_item *) ptr)->address;
@@ -100,39 +149,25 @@ static unsigned long hip_hash_peer_addr(const void *ptr)
     return *((unsigned long *) (void *) hash);
 }
 
+/**
+ * test if two peer addresses match
+ *
+ * @param ptr1 a pointer to a hip_peer_addr_list_item
+ * @param ptr2 a pointer to a hip_peer_addr_list_item
+ * @return zero if the addresses match or non-zero otherwise
+ */
 static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
 {
     return hip_hash_peer_addr(ptr1) != hip_hash_peer_addr(ptr2);
 }
 
-/*
- * Support for multiple inbound IPsec SAs:
- *
- * We need a separate hashtable containing elements HIT and SPI, which
- * tells which HIT has the inbound SPI. When an ESP packet is received,
- * we first get the SPI from it and perform a lookup on the HIT-SPI
- * hashtable to get the mapping. Then we perform another lookup from
- * the HIT hashtable using the HIT we got from the previous
- * lookup. This way we get the HA belonging to the connection.
- *
- * hs = HIT-SPI (struct hip_hit_spi)
- *
- * (functions hip_ .. _hs)
- */
-
-
-/*
- *
- * All the primitive functions up to this point are static, to force
- * some information hiding. The construct functions can access these
- * functions directly.
- *
- *
- */
-
-
 /* PRIMITIVES */
 
+/**
+ * assign local and peer LSI to the given host association
+ *
+ * @param entry the host association
+ */
 void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 {
     hip_lsi_t aux;
@@ -151,7 +186,11 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 
 /**
  * This function searches for a hip_ha_t entry from the hip_hadb_hit
- * by a HIT pair (local,peer).
+ * by a HIT pair (local,peer)
+ *
+ * @param hit local HIT
+ * @param hit2 peer HIT
+ * @return the corresponding host association or NULL if not found
  */
 hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
 {
@@ -179,6 +218,10 @@ hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
  * This function simply goes through all local HIs and tries
  * to find a HADB entry that matches the current HI and
  * the given peer hit. First matching HADB entry is then returned.
+ *
+ * @param hit the peer HIT
+ * @return the host association that matches the peer HIT or NULL if
+ *         not found
  *
  * @todo Find a better solution, see the text below:
  * This function is needed because we index the HADB now by
@@ -307,6 +350,19 @@ int hip_hadb_insert_state(hip_ha_t *ha)
     return st;
 }
 
+/**
+ * display debug information on information in host association
+ *
+ * @param local_addr local address
+ * @param peer_addr peer address
+ * @param local_hit local HIT
+ * @param peer_hit peer HIT
+ * @param peer_lsi peer LSI
+ * @param peer_hostname peer host name
+ * @param local_nat_udp_port local UDP port
+ * @param peer_nat_udp_port peer UDP port
+ *
+ */
 static void hip_print_debug_info(const struct in6_addr *local_addr,
                                  const struct in6_addr *peer_addr,
                                  const hip_hit_t  *local_hit,
@@ -347,17 +403,12 @@ static void hip_print_debug_info(const struct in6_addr *local_addr,
 /**
  * Practically called only by when adding a HIT-IP mapping before base exchange.
  *
- * @param  local_hit  a pointer to...
- * @param  peer_hit   a pointer to...
- * @param  local_addr a pointer to...
- * @param  peer_addr  a pointer to...
- * @param  peer_lsi   a pointer to...
- * @return
- * @todo   Allow multiple mappings; base exchange should be initiated to allow
- *         of them in order to prevent local DoS.
- * @todo   Create a security policy for triggering base exchange.
- * @todo   Multiple identities support: alternative a) make generic HIT prefix
- *         based policy to work alternative b) add SP pair for all local HITs.
+ * @param  local_hit local HIT
+ * @param  peer_hit peer HIT
+ * @param  local_addr local address
+ * @param  peer_addr peer address
+ * @param  peer_lsi optional peer LSI (automatically generated if NULL)x
+ * @return zero on success or negative on error
  */
 int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
                                     const hip_hit_t *peer_hit,
@@ -493,11 +544,11 @@ out_err:
 }
 
 /**
- * .
+ * a wrapper to create a host association
  *
- * @param  entry         a pointer to...
- * @param  peer_map_void a pointer to...
- * @return               ...
+ * @param  entry a pointer to a preallocated host association
+ * @param  peer_map_void a pointer to hip_peer_map_info
+ * @return zero on success or negative on error
  */
 static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
                                           void *peer_map_void)
@@ -519,6 +570,15 @@ out_err:
     return err;
 }
 
+/**
+ * create a host association
+ *
+ * @param peer_hit the HIT of the remote host
+ * @param peer_addr the address of the remote host
+ * @param peer_lsi an optional LSI for the remote host
+ * @param peer_hostname an optional host name for the remote host
+ * @return zero on success or negative on error
+ */
 int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
                            hip_lsi_t *peer_lsi, const char *peer_hostname)
 {
@@ -568,6 +628,13 @@ out_err:
     return err;
 }
 
+/**
+ * create a host association based on the parameter in a user message
+ *
+ * @param input an user message containing a HIT, optional LSI and hostname for
+ *              the remote host
+ * @return zero on success or negative on error
+ */
 int hip_add_peer_map(const struct hip_common *input)
 {
     struct in6_addr *hit = NULL, *ip = NULL;
@@ -618,7 +685,7 @@ out_err:
 }
 
 /**
- * Sets function pointer set for an hadb record. Pointer values will not be
+ * set "misc" function pointer set for an hadb record. Pointer values will not be
  * copied!
  *
  * @param entry        pointer to the hadb record.
@@ -636,6 +703,14 @@ static int hip_hadb_set_misc_function_set(hip_ha_t *entry,
     return -1;
 }
 
+/**
+ * change the network delivery function pointer set of a host association
+ *
+ * @param entry the host association
+ * @param new_func_set the new function pointer set
+ * @return zero on success and negative on error
+ *
+ */
 int hip_hadb_set_xmit_function_set(hip_ha_t *entry,
                                    hip_xmit_func_set_t *new_func_set)
 {
@@ -646,6 +721,14 @@ int hip_hadb_set_xmit_function_set(hip_ha_t *entry,
     return -1;
 }
 
+/**
+ * change the input filter function pointer set of a host association
+ *
+ * @param entry the host association
+ * @param new_func_set the new function pointer set
+ * @return zero on success and negative on error
+ *
+ */
 static int hip_hadb_set_input_filter_function_set(hip_ha_t *entry,
                                                   hip_input_filter_func_set_t *new_func_set)
 {
@@ -656,6 +739,14 @@ static int hip_hadb_set_input_filter_function_set(hip_ha_t *entry,
     return -1;
 }
 
+/**
+ * change the output handler function pointer set of a host association
+ *
+ * @param entry the host association
+ * @param new_func_set the new function pointer set
+ * @return zero on success and negative on error
+ *
+ */
 static int hip_hadb_set_output_filter_function_set(hip_ha_t *entry,
                                                    hip_output_filter_func_set_t *new_func_set)
 {
@@ -743,7 +834,7 @@ out_err:
 }
 
 /**
- * Allocates and initializes a new HA structure.
+ * Allocate and initialize a new HA structure.
  *
  * @param  gfpmask a mask passed directly to HIP_MALLOC().
  * @return NULL if memory allocation failed, otherwise the HA.
@@ -767,8 +858,13 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 /* END OF PRIMITIVE FUNCTIONS */
 
 /**
- * Selects the preferred address within the addresses of the given SPI.
- * The selected address is copied to @c addr, it is is non-NULL.
+ * Select the preferred address within the addresses of the given SPI.
+ * The selected address is copied to @c addr, if it is non-NULL.
+ *
+ * @param entry the host association
+ * @param spi_out hip_spi_out_item a pointer to the structure containing outbound SPI information
+ * @param addr the resulting outbound address will be copied here if found
+ * @return zero on success and negative on error
  */
 int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, struct in6_addr *addr)
 {
@@ -849,8 +945,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
  * @param lifetime address lifetime of the address
  * @param state address state
  *
- * @return if @c new_addr already exists, 0 is returned. If address was
- * added successfully 0 is returned, else < 0.
+ * @return zero on success and negative on error
  */
 int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
                            uint32_t spi, uint32_t lifetime, int state,
@@ -918,6 +1013,12 @@ out_err:
     return err;
 }
 
+/**
+ * delete a host association
+ *
+ * @param ha the ha to deinitiliaze and deallocate
+ * @return zero on success and negative on error
+ */
 int hip_del_peer_info_entry(hip_ha_t *ha)
 {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -947,7 +1048,12 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 }
 
 /**
- * Currently deletes the whole entry...
+ * Search and delete a host association based on HITs
+ *
+ * @param our_hit the local HIT
+ * @param peer_hit the remote HIT
+ *
+ * @return zero on success and negative on error
  */
 int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
 {
@@ -1027,12 +1133,12 @@ out_err:
 }
 
 /**
- * .
+ * store a remote host identifier to a host association
  *
- * @param entry ...
- * @param msg for future purposes (KeyNote)
- * @param peer ...
- * @return     ...
+ * @param entry the host association
+ * @param msg unused
+ * @param peer the remote host identifier
+ * @return zero on success and negative on error
  */
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
                   struct hip_host_id *peer)
@@ -1076,9 +1182,7 @@ out_err:
 }
 
 /**
- * Initializes a HIP association.
- *
- * Initializes a new allocated HIP association @c entry.
+ * Initializes a host association
  *
  * @param  a pointer to a HIP association to be initialized.
  * @param  a pointer to a HIT value that is to be bound with the HIP association
@@ -1137,6 +1241,9 @@ out_err:
 
 /* ----------------- */
 
+/**
+ * initialize the host association database
+ */
 void hip_init_hadb(void)
 {
     /** @todo Check for errors. */
@@ -1243,39 +1350,74 @@ void hip_init_hadb(void)
     }
 }
 
+/**
+ * receive a pointer to the default network delivery function pointer
+ * set of a host association
+ *
+ * @return the default function pointer set
+ */
 hip_xmit_func_set_t *hip_get_xmit_default_func_set(void)
 {
     return &default_xmit_func_set;
 }
 
+/**
+ * receive a pointer to the default "misc" function pointer
+ * set of a host association
+ *
+ * @return the default function pointer set
+ */
 hip_misc_func_set_t *hip_get_misc_default_func_set(void)
 {
     return &default_misc_func_set;
 }
 
+/**
+ * receive a pointer to the default input filter function
+ * pointer set of a host association
+ *
+ * @return the default function pointer set
+ */
 hip_input_filter_func_set_t *hip_get_input_filter_default_func_set(void)
 {
     return &default_input_filter_func_set;
 }
 
+/**
+ * receive a pointer to the default output filter function pointer
+ * set of a host association
+ *
+ * @return the default function pointer set
+ */
 hip_output_filter_func_set_t *hip_get_output_filter_default_func_set(void)
 {
     return &default_output_filter_func_set;
 }
 
+/**
+ * receive a pointer to the default preprocessing function pointer
+ * set of a host association
+ *
+ * @return the default function pointer set
+ */
 hip_rcv_func_set_t *hip_get_rcv_default_func_set(void)
 {
     return &default_rcv_func_set;
 }
 
+/**
+ * receive a pointer to the default postprocessing function pointer
+ * set of a host association
+ *
+ * @param entry the host association
+ * @param new_func_set the new function pointer set
+ * @return zero on success and negative on error
+ *
+ */
 hip_handle_func_set_t *hip_get_handle_default_func_set(void)
 {
     return &default_handle_func_set;
 }
-
-/*hip_update_func_set_t *hip_get_update_default_func_set() {
- *      return &default_update_func_set;
- * }*/
 
 /**
  * Sets function pointer set for an hadb record. Pointer values will not be
@@ -1335,15 +1477,15 @@ int hip_hadb_set_update_function_set(hip_ha_t *entry,
     return -1;
 }
 
-/* NOTE! When modifying this function, remember that some control values may
- * not be allowed to co-exist. Therefore the logical OR might not be enough
- * for all controls. */
 /**
  * Switches on a local control bit for a host assosiation entry.
  *
  * @param entry a pointer to a host assosiation.
  * @param mask  a bit mask representing the control value.
  * @note  mask is a single mask, not a logical AND or OR mask.
+ * @note When modifying this function, remember that some control values may
+ *       not be allowed to co-exist. Therefore the logical OR might not be enough
+ *       for all controls.
  */
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
@@ -1370,15 +1512,15 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
     }
 }
 
-/* NOTE! When modifying this function, remember that some control values may
- * not be allowed to co-exist. Therefore the logical OR might not be enough
- * for all controls. */
 /**
  * Switches on a peer control bit for a host assosiation entry.
  *
  * @param entry a pointer to a host assosiation.
  * @param mask  a bit mask representing the control value.
  * @note  mask is a single mask, not a logical AND or OR mask
+ * @note When modifying this function, remember that some control values may
+ *       not be allowed to co-exist. Therefore the logical OR might not be enough
+ *       for all controls.
  */
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
@@ -1398,12 +1540,6 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
         case HIP_HA_CTRL_PEER_REFUSED_RELAY:
         case HIP_HA_CTRL_PEER_REFUSED_RVS:
         case HIP_HA_CTRL_PEER_REFUSED_FULLRELAY:
-#if 0
-            if (mask == HIP_HA_CTRL_PEER_GRANTED_RELAY) {
-                hip_nat_set_control(entry, 1);
-                HIP_DEBUG("nat control has been reset to 1\n");
-            }
-#endif
             entry->peer_controls |= mask;
             break;
         default:
@@ -1445,26 +1581,23 @@ void hip_uninit_hadb()
     hadb_hit = NULL;
 }
 
+/**
+ * flush all security policies
+ *
+ * @todo currently this function is a no-op
+ */
 void hip_delete_all_sp()
 {
-    //struct hip_hit_spi *hs, *tmp_hs;
     HIP_DEBUG("\n");
 
     HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
 
-    /* I think this is not very safe deallocation.
-     * Locking the hadb_spi and hadb_hit could be one option, but I'm not
-     * very sure that it will work, as they are locked later in
-     * hip_hadb_remove_state() for a while.
-     *
-     * The list traversing is not safe in smp way :(
-     */
     HIP_DEBUG("DELETING HA HT\n");
 }
 
 /**
- * Removes all the addresses from the addresses_to_send_echo_request list
- * and deallocates them.
+ * Remove all the addresses from the addresses_to_send_echo_request list
+ * and deallocate them.
  * @param ha pointer to a host association
  */
 void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
@@ -1481,8 +1614,8 @@ void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
 }
 
 /**
- * Deletes a HA state (and deallocate memory) Deletes all associates IPSEC SAs
- * and frees the memory occupied by the HA state.
+ * Delete a HA state (and deallocate memory), all associated IPSEC SAs
+ * and free the memory occupied by the HA state.
  *
  * @param ha HA
  * @note     ASSERT: The HA must be unlinked from the global hadb hash tables
@@ -1558,7 +1691,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 }
 
 /**
- * Maps function @c func to every HA in HIT hash table. The hash table is
+ * Map function @c func to every HA in HIT hash table. The hash table is
  * LOCKED while we process all the entries. This means that the mapper function
  * MUST be very short and _NOT_ do any operations that might sleep!
  *
@@ -1598,7 +1731,13 @@ out_err:
     return fail;
 }
 
-/** Enumeration for hip_count_open_connections */
+/**
+ * Enumeration for hip_count_open_connections
+ *
+ * @param entry a host association
+ * @param cntr a counter used for counting open host associations
+ * @return zero
+ */
 static int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {
     int *counter = cntr;
@@ -1610,7 +1749,9 @@ static int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 }
 
 /**
- * Return number of open connections by calculating hadb entrys.
+ * Return number of open host associations by calculating hadb entrys.
+ *
+ * @return the number of open host associations
  */
 int hip_count_open_connections(void)
 {
@@ -1621,6 +1762,14 @@ int hip_count_open_connections(void)
     return n;
 }
 
+/**
+ * an enumerator to find information on host associations
+ *
+ * @param entry the host association
+ * @param opaq a preallocated HIP message where information on the given
+ *             host association will be written
+ * @return zero on success and negative on error
+ */
 int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 {
     int err                = 0;
@@ -1657,8 +1806,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
     // HIP_ASSERT(duration != NULL);
     // memcpy(&hid.bex_duration,  duration, sizeof(struct timeval));
 
-
-
     _HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
     hid.nat_udp_port_peer  = entry->peer_udp_port;
@@ -1686,7 +1833,14 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 }
 
 /**
+ * an iterator to map an IP address to a HIT
+ *
+ * @param entry the host association to check for match
+ * @param id2 a HIT of a remote host
+ * @return -1 on match or zero otherwise
+ *
  * @todo We could scan through all of the alternative locators as well
+ * @todo this fails in NATted environments
  */
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
 {
@@ -1723,7 +1877,6 @@ int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
  * @return           a pointer to a matching host association or NULL if
  *                   a matching host association was not found.
  * @author           Miika Komu
- * @date             31.08.2006
  */
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
                                             hip_hit_t *rvs_ip)
@@ -1755,7 +1908,12 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 
 #ifdef CONFIG_HIP_BLIND
 /**
- * Defunct
+ * Defunctional. Find a host association based on blinded HITs
+ *
+ * @param local_blind_hit local blinded HIT
+ * @param peer_blind_hit remote blinded HIT
+ * @return the corresponding host association or NULL if not found
+ *
  * @date 22.07.2008
  */
 hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
@@ -1799,6 +1957,13 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 
 #endif
 
+/**
+ * check if the given LSI is in the hosts files
+ *
+ * @param lsi the LSI to be searched for
+ * @return one if the LSI exists or zero otherwise
+ *
+ */
 static int hip_host_file_info_exists_lsi(hip_lsi_t *lsi)
 {
     uint8_t hostname[HOST_NAME_MAX];
@@ -1816,6 +1981,14 @@ static int hip_host_file_info_exists_lsi(hip_lsi_t *lsi)
                                           &mapped_lsi, hostname));
 }
 
+/**
+ * An iterator to find a matching remote LSI from HADB.
+ *
+ * @param entry the host association
+ * @param lsi The LSI to match. Set to zero if a match was found.
+ * @return zero
+ * @note this function overwrites @c lsi, beware!
+ */
 static int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
 {
     int exist_lsi;
@@ -1826,6 +1999,12 @@ static int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
     return 0;
 }
 
+/**
+ * check if a remote LSI exists in the HADB
+ *
+ * @param lsi the LSI to check
+ * @return one if it exists or zero otherwise
+ */
 static int hip_hadb_exists_lsi(hip_lsi_t *lsi)
 {
     int res = 0;
@@ -1841,19 +2020,32 @@ static int hip_hadb_exists_lsi(hip_lsi_t *lsi)
     return res;
 }
 
-static int lsi_assigned(struct in_addr add)
+/**
+ * check if a remote LSI has been already assigned from
+ * HADB and hosts files
+ *
+ * @param addr the LSI to check
+ * @return one if the LSI exists or zero otherwise
+ */
+static int lsi_assigned(struct in_addr addr)
 {
     int exist = 0;
-    exist = hip_hidb_exists_lsi(&add);
+    exist = hip_hidb_exists_lsi(&addr);
     if (!exist) {
-        exist = hip_hadb_exists_lsi(&add);
+        exist = hip_hadb_exists_lsi(&addr);
     }
     if (!exist) {
-        exist = hip_host_file_info_exists_lsi(&add);
+        exist = hip_host_file_info_exists_lsi(&addr);
     }
     return exist;
 }
 
+/**
+ * allocate a free remote LSI
+ *
+ * @param lsi the LSI will be written here
+ * @return zero
+ */
 int hip_generate_peer_lsi(hip_lsi_t *lsi)
 {
     struct in_addr lsi_prefix;
@@ -1875,11 +2067,14 @@ int hip_generate_peer_lsi(hip_lsi_t *lsi)
  * This function simply goes through all HADB to find an entry that
  * matches the given lsi pair. First matching HADB entry is then returned.
  *
+ * @param lsi_src the source LSI
+ * @param lsi_dst the destination LSI
+ * @return the host association corresponding to the LSIs
+ *
  * @note This way of finding HA entries doesn't work properly if we have
  * multiple entries with the same tuple <lsi_src,lsi_dst>. Currently, that's not the case.
  * Our implementation doesn't allow repeated lsi tuples.
  */
-
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst)
 {
     hip_list_t *item, *aux;
@@ -1900,6 +2095,12 @@ hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_ds
     return NULL;
 }
 
+/**
+ * find a remote LSI from from the HADB
+ *
+ * @param lsi_dst the remote LSI
+ * @return the HADB entry or NULL if not found
+ */
 hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi_dst)
 {
     hip_list_t *item, *aux;
@@ -1916,46 +2117,52 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi_dst)
     return NULL;
 }
 
+/**
+ * search for the local address used by the host association denoted
+ * by source and destination HITs in a user message
+ *
+ * @param msg a user message containing source and destination HITs
+ * @return zero on success and negative on error
+ */
 int hip_get_local_addr(struct hip_common *msg)
 {
     hip_ha_t *entry;
-    int err;
+    int err = 0;
     struct in6_addr local_address;
     hip_hit_t *src_hit;
     hip_hit_t *dst_hit;
 
-    src_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
-    dst_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+    HIP_IFEL(!(src_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT)),
+             -1, "No src HIT\n");
+    /** @todo why is this a HIP_PARAM_IPV6_ADDR instead of HIP_PARAM_HIT ? */
+    HIP_IFEL(!(dst_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR)),
+             -1, "No dst HIT\n");
     HIP_DEBUG_HIT("src_hit from local address request: ", src_hit);
     HIP_DEBUG_HIT("dst_hit from local address request: ", dst_hit);
-/*if (ptr) {
- *              memcpy(peer_hit, ptr, sizeof(hip_hit_t));
- *              HIP_DEBUG_HIT("peer_hit", peer_hit);
- *fallback = 0;
- *      }
- */
+
     memset(&local_address, 0, sizeof(struct in6_addr));
-    entry = hip_hadb_find_byhits(src_hit, dst_hit);
+    HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)),
+             -1, "No HA\n");
 
     hip_msg_init(msg);
-    //HIP_DEBUG_IN6ADDR(" local address: ", &entry->our_addr);
-
-    if (!entry) {
-        HIP_DEBUG("Can't find local address because of no entry in hadb!\n");
-    }
 
     ipv6_addr_copy(&local_address, &entry->our_addr);
 
     //hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
-    err = hip_build_param_contents(msg, &local_address, HIP_PARAM_IPV6_ADDR,
-                                   sizeof(struct in6_addr));
-    if (err) {
-        HIP_ERROR("Building local address info failed\n");
-    }
+    HIP_IFEL(hip_build_param_contents(msg, &local_address, HIP_PARAM_IPV6_ADDR,
+                                      sizeof(struct in6_addr)), -1,
+                                      "Building local address info failed\n");
 
-    return 0;
+ out_err:
+
+    return err;
 }
 
+/**
+ * delete all security policies and associations related to the HA
+ *
+ * @param ha the host association
+ */
 void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
 {
     int prev_spi_out = ha->spi_outbound_current;
@@ -1982,6 +2189,14 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
     return;
 };
 
+/**
+ * recreate the security policies and associations related to a HA
+ *
+ * @param ha the host association
+ * @param src_addr the new source address for the SAs
+ * @param dst_addr the new destination address for the SAs
+ * @return zero on success and negative on error
+ */
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,
                                               in6_addr_t *dst_addr)
 {
