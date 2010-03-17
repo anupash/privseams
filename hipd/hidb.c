@@ -1,6 +1,9 @@
 /**
  * @file
- * HIP host id database and accessors.
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * @brief A database to local Host Identifiers and the related accessor functions.
  *
  * @author Janne Lundberg <jlu#tcs.hut.fi>
  * @author Miika Komu <miika#iki.fi>
@@ -46,6 +49,13 @@ static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db,
  */
 
 /* Do not access these databases directly: use the accessors in this file. */
+
+/**
+ * hashing function required by hashtable/linked list implementation
+ *
+ * @param ptr a pointer to a hip_host_id_entry structure
+ * @return the calculated hash value
+ */
 unsigned long hip_hidb_hash(const void *ptr)
 {
     hip_hit_t *hit = &(((struct hip_host_id_entry *) ptr)->lhi.hit);
@@ -56,11 +66,23 @@ unsigned long hip_hidb_hash(const void *ptr)
     return *((unsigned long *) (void *) hash);
 }
 
+/**
+ * matching function required by hashtable/linked list implementation
+ *
+ * @param ptr1 a pointer to hip_host_id_entry
+ * @param ptr2 a pointer to hip_host_id_entry
+ * @return zero on match or non-zero on unmatch
+ */
 int hip_hidb_match(const void *ptr1, const void *ptr2)
 {
     return hip_hidb_hash(ptr1) != hip_hidb_hash(ptr2);
 }
 
+/**
+ * initialize host identity database
+ *
+ * @param db A double pointer to a hip_db_struct_t. Caller deallocates.
+ */
 void hip_init_hostid_db(hip_db_struct_t **db)
 {
     hip_local_hostid_db = hip_ht_init(hip_hidb_hash, hip_hidb_match);
@@ -187,12 +209,26 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
     return NULL;
 }
 
+
+/**
+ * test if a given HIT belongs to the local host
+ *
+ * @param our the hit to be tested
+ * @return one if the HIT belongs to the local host or zero otherwise
+ */
 int hip_hidb_hit_is_our(const hip_hit_t *our)
 {
     return hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db, our,
                                                 HIP_ANY_ALGO, -1) != NULL;
 }
 
+/**
+ * map a local HIT to a local LSI from the local host identifier database
+ *
+ * @param our a local HIT
+ * @param our_lsi the mapped LSI
+ * @return zero on success or non-zero on failure
+ */
 int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
 {
     struct hip_host_id_entry *id_entry;
@@ -227,7 +263,7 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
  */
 
 /**
- * Deletes both host id databases
+ * Delete host id databases
  */
 void hip_uninit_host_id_dbs(void)
 {
@@ -486,56 +522,11 @@ out:
     return err;
 }
 
-#if 0
 /**
- * Returns pointer to newly allocated area that contains a localhost HI. NULL
- * is returned if problems are encountered.
+ * Strips a public key out of DSA a host id with private key component
  *
- * @param db   a pointer to a database.
- * @param lhi  HIT to match, if null, any.
- * @param algo algorithm to match, if HIP_ANY_ALGO, any.
- * @note       Remember to free the host id structure after use.
- */
-static struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
-                                           struct in6_addr *hit, int algo)
-{
-    struct hip_host_id_entry *tmp = NULL;
-    struct hip_host_id *result    = NULL;
-    int t                         = 0;
-
-    HIP_READ_LOCK_DB(db);
-
-    tmp = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
-    if (!tmp) {
-        HIP_READ_UNLOCK_DB(db);
-        HIP_ERROR("No host ID found.\n");
-        return NULL;
-    }
-
-    t = hip_get_param_total_len(tmp->host_id);
-    _HIP_DEBUG("Host ID length is %d bytes.\n", t);
-    if (t > HIP_MAX_HOST_ID_LEN) {
-        HIP_READ_UNLOCK_DB(db);
-        return NULL;
-    }
-
-    result = HIP_MALLOC(t, GFP_ATOMIC);
-    if (!result) {
-        HIP_READ_UNLOCK_DB(db);
-        HIP_ERROR("Out of memory.\n");
-        return NULL;
-    }
-
-    memcpy(result, tmp->host_id, t);
-    HIP_READ_UNLOCK_DB(db);
-
-    return result;
-}
-
-#endif
-
-/**
- * Resolves a public key out of DSA a host id.
+ * @param hi the host identifier with its private key component
+ * @return An allocated hip_host_id structure. Caller must deallocate.
  */
 static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv *hi)
 {
@@ -568,33 +559,12 @@ static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv 
     return ret;
 }
 
-#if 0
 /**
- * .
- *
- * @return a newly allocated area that contains the public key part of the
- * localhost host identity. NULL is returned if errors detected.
- * @note Remember to free the return value.
- */
-static struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
-{
-    struct hip_host_id *res;
-
-    res = hip_get_host_id(hip_local_hostid_db, NULL, HIP_HI_DSA);
-    if (!res) {
-        HIP_ERROR("No host id for localhost\n");
-    }
-
-    return res;
-}
-
-#endif
-
-/**
- * Gets the RSA public key from a Host Identity
+ * Strips the RSA public key from a Host Identity
  *
  * @param tmp a pointer to a Host Identity.
- * @return    a pointer to a newly allocated host identity with only the public key
+ * @return    A pointer to a newly allocated host identity with only the public key.
+ *            Caller deallocates.
  */
 static struct hip_host_id *hip_get_rsa_public_key(const struct hip_host_id_priv *tmp)
 {
@@ -620,28 +590,6 @@ static struct hip_host_id *hip_get_rsa_public_key(const struct hip_host_id_priv 
     return ret;
 }
 
-#if 0
-/**
- * .
- *
- * @return a newly allocated area that contains the public key part of the
- *         localhost host identity. %NULL is returned if errors detected.
- * @note   Remember to free the return value.
- */
-static struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
-{
-    struct hip_host_id *res;
-
-    res = hip_get_host_id(hip_local_hostid_db, NULL, HIP_HI_RSA);
-    if (!res) {
-        HIP_ERROR("No host id for localhost\n");
-    }
-
-    return res;
-}
-
-#endif
-
 /**
  * Transforms a private/public key pair to a public key, private key is deleted.
  *
@@ -664,7 +612,7 @@ static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid
 }
 
 /**
- * Adds a free lsi to the entry
+ * Assign a free LSI to a host id entry
  *
  * @param db database structure
  * @param id_entry contains an entry to the db, will contain an unsigned lsi
@@ -700,9 +648,9 @@ static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_en
 }
 
 /**
- * Search if the lsi exists already in the hidb
+ * Search if a local lsi exists already in the hidb
  *
- * @param lsi lsi we are searching
+ * @param lsi the local lsi we are searching
  * @return 0 if it's not in the hidb, 1 if it is
  */
 int hip_hidb_exists_lsi(hip_lsi_t *lsi)
@@ -721,7 +669,7 @@ int hip_hidb_exists_lsi(hip_lsi_t *lsi)
 }
 
 /**
- * Lists every hit in the database.
+ * Lists every local hit in the database.
  *
  * @param func   a mapper function.
  * @param opaque opaque data for the mapper function.
@@ -754,6 +702,13 @@ out_err:
     return err;
 }
 
+/**
+ * find the local host identifier corresponding to the local LSI
+ *
+ * @param db the local host identifier database to be searched for
+ * @param lsi the local LSI to be matched
+ * @return the local host identifier structure
+ */
 static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db,
                                                            const struct in_addr *lsi)
 {
@@ -770,6 +725,13 @@ static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db,
     return NULL;
 }
 
+/**
+ * associate the given local LSI to the local host identifier denoted by the given HIT
+ *
+ * @param default_hit the HIT to be searched for
+ * @param the LSI to associate with
+ * @return zero on success or negative on error
+ */
 int hip_hidb_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi)
 {
     int err = 0;
@@ -800,6 +762,15 @@ out_err:
 }
 
 //#ifdef CONFIG_HIP_BLIND
+
+/**
+ * find the blinded local host identifier from the HIDB
+ *
+ * @param nonce the nonce used to blind the HIT
+ * @param test_hit the blinded HIT
+ * @param local_hit the unblinded HIT will be copied here
+ * @return zero on success or negative on error
+ */
 int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
                             struct in6_addr *local_hit)
 {
@@ -854,6 +825,16 @@ out_err:
 
 //#endif
 
+/**
+ * find a host identifier from the database
+ *
+ * @param db the host identifier databased
+ * @param hit the HIT to be searched for
+ * @param algo the algorithm for the HI
+ * @param host_id A copy of the host is stored here. Caller deallocates.
+ * @param key a pointer to the private key (caller should not deallocate)
+ * @return zero on success or negative on error
+ */
 int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
                                  int algo, struct hip_host_id **host_id, void **key)
 {
@@ -881,6 +862,13 @@ out_err:
     return err;
 }
 
+/**
+ * append a HOST id parameter and signature into the message to be sent on the wire
+ *
+ * @param msg the msg where the host id and signature should be appended
+ * @param hit the local HIT corresding to the host id
+ * @return zero on success or negative on error
+ */
 int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
 {
     struct hip_host_id *hi_public = NULL;
@@ -933,28 +921,50 @@ out_err:
     return err;
 }
 
+/**
+ * get the default HIT of the local host
+ *
+ * @param hit the local default HIT will be written here
+ * @return zero on success or negative on error
+ */
 int hip_get_default_hit(struct in6_addr *hit)
 {
     return hip_get_any_localhost_hit(hit, HIP_HI_RSA, 0);
 }
 
-/* TDOD; This function has no error handling at all. Check if this is ok */
+/**
+ * get the default HIT of the local host and write into a
+ * user message
+ *
+ * @param msg the message where the HIT will be written
+ * @return zero on success or negative on error
+ */
 int hip_get_default_hit_msg(struct hip_common *msg)
 {
     int err = 0;
     hip_hit_t hit;
     hip_lsi_t lsi;
 
-    hip_get_default_hit(&hit);
-    hip_get_default_lsi(&lsi);
+    HIP_IFE(hip_get_default_hit(&hit), -1);
+    HIP_IFE(hip_get_default_lsi(&lsi), -1);
     HIP_DEBUG_HIT("Default hit is ", &hit);
     HIP_DEBUG_LSI("Default lsi is ", &lsi);
-    hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
-    hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
+    HIP_IFE(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit)),
+            -1);
+    HIP_IFE(hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi)),
+            -1);
+
+ out_err:
 
     return err;
 }
 
+/**
+ * get the default LSI of the local host
+ *
+ * @param lsi the default LSI will be written here
+ * @return zero on success or negative on error
+ */
 int hip_get_default_lsi(struct in_addr *lsi)
 {
     int err                       = 0, family = AF_INET;
