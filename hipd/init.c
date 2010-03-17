@@ -1,7 +1,9 @@
 /** @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
  * This file defines initialization functions for the HIP daemon.
  *
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
 
@@ -70,6 +72,11 @@
 
 #endif /* ANDROID_CHANGES */
 
+/**
+ * Catch SIGCHLD.
+ *
+ * @param signum the signal number to catch
+ */
 static void hip_sig_chld(int signum)
 {
 #ifdef ANDROID_CHANGES
@@ -91,6 +98,9 @@ static void hip_sig_chld(int signum)
 
 #ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
+/**
+ * print information about underlying the system for bug reports
+ */
 static void hip_print_sysinfo(void)
 {
     FILE *fp    = NULL;
@@ -198,8 +208,11 @@ static void hip_print_sysinfo(void)
 #endif
 #endif
 
-/*
+/**
  * Create a file with the given contents unless it already exists
+ *
+ * @param path the file with its path
+ * @param contents a string to write to the file
  */
 static void hip_create_file_unless_exists(const char *path, const char *contents)
 {
@@ -215,6 +228,9 @@ static void hip_create_file_unless_exists(const char *path, const char *contents
     fclose(fp);
 }
 
+/**
+ * load hipd configuration files
+ */
 static void hip_load_configuration(void)
 {
     const char *cfile = "default";
@@ -235,6 +251,9 @@ static void hip_load_configuration(void)
     hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1, 1);
 }
 
+/**
+ * initialize OS-dependent variables
+ */
 static void hip_set_os_dep_variables(void)
 {
     struct utsname un;
@@ -680,6 +699,11 @@ static int hip_init_handle_functions(void)
 
 /**
  * Main initialization function for HIP daemon.
+ *
+ * @param flush_ipsec one if ipsec should be flushed or zero otherwise
+ * @param killold one if an existing hipd process should be killed or
+ *                zero otherwise
+ * @return zero on success or negative on failure
  */
 int hipd_init(int flush_ipsec, int killold)
 {
@@ -1005,7 +1029,9 @@ out_err:
 }
 
 /**
- * Start closing HIP daemon.
+ * exit gracefully by sending CLOSE to all peers
+ *
+ * @param signal the signal hipd received from OS
  */
 void hip_close(int signal)
 {
@@ -1031,6 +1057,8 @@ void hip_close(int signal)
 /**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
+ *
+ * @param signal the signal hipd received
  */
 void hip_exit(int signal)
 {

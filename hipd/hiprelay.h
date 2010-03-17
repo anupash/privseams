@@ -1,71 +1,13 @@
 /** @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
  * A header file for hiprelay.c.
  *
- * The HIP relay combines the functionalites of an rendezvous server (RVS) and
- * a HIP UDP relay. The HIP relay consists of a hashtable for storing IP address
- * to HIT mappings and of functions that do the actual relaying action. The
- * hashtable is based on lhash library and its functionalites are the same
- * except that the HIP relay stores data (allocated memory for relay records)
- * instead of pointers.
- *
- * A few simple rules apply:
- * <ul>
- * <li>Allocate memory for relay records that are to be put into the hashtable
- * only with hip_relrec_alloc().</li>
- * <li>Once a relay record is <b>successfully</b> put into the hashtable, the
- * only way delete it is to call hip_relht_rec_free(). This will remove the
- * entry from the hashtable and free the memory allocated for the relay record.
- * </li>
- * </ul>
- *
- * Usage:
- * <ul>
- * <li>Inserting a new relay record:
- * <pre>
- * hip_relrec_t rr = hip_relrec_alloc(...);
- * hip_relht_put(rr);
- * if(hip_relht_get(rr) == NULL) // The put was unsuccessful.
- * {
- *   if(rr != NULL)
- *     free(rr);
- * }
- * </pre>
- * </li>
- * <li>Fetching a relay record. We do not need (but can use) a fully populated
- * relay record as a search key. A dummy record with hit_r field populated
- * is sufficient. Note that there is no need to re-put the relay record into the
- * hashtable once it has been succesfully inserted into the hashtable - except
- * if we change the hit_r field of the relay record. If a relay record with same
- * HIT is put into the hashtable, the existing element is deleted.
- *
- * <pre>
- * hip_relrec_t dummy, *fetch_record = NULL;
- * memcpy((char *)&(dummy.hit_r), hit, sizeof(hit));
- * fetch_record = hip_relht_get(&dummy);
- * if(fetch_record != NULL)
- * {
- * // Do something with the record.
- * }
- * </pre>
- * </li>
- * <li>Deleting a relay record. A dummy record can be used:
- * <pre>
- * hip_relrec_t dummy;
- * memcpy((char *)&(dummy.hit_r), hit, sizeof(hit));
- * hip_relht_rec_free(&dummy);
- * </pre>
- * </li>
- * </ul>
- *
  * @author  Lauri Silvennoinen
- * @version 1.1
- * @date    31.03.2008
- * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5204.txt">
- *          Host Identity Protocol (HIP) Rendezvous Extension</a>
  * @note    Related draft:
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-03.txt">
  *          draft-ietf-hip-nat-traversal-03</a>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_HIPD_HIPRELAY_H
 #define HIP_HIPD_HIPRELAY_H
@@ -131,339 +73,41 @@ typedef enum { HIP_RELAY_OFF = 0, HIP_RELAY_ON = 1, HIP_RELAY_FULL = 2 } hip_rel
 /** Possible states of the whitelist. */
 typedef enum { HIP_RELAY_WL_OFF = 0, HIP_RELAY_WL_ON = 1 } hip_relay_wl_status_t;
 
-/**
- * Returns relay status.
- *
- * @return HIP_RELAY_ON if the RVS / relay is "on", HIP_RELAY_OFF otherwise.
- */
 hip_relay_status_t hip_relay_get_status(void);
-
-/**
- * Sets the status of the RVS / relay. Sets the relay "on" or "off".
- *
- * @param status zero if the relay is to be disabled, anything else to enable
- *               the relay.
- */
 void hip_relay_set_status(hip_relay_status_t status);
-
-/**
- * Initializes the HIP relay / RVS. Initializes the HIP relay hashtable and
- * whitelist.
- */
 int hip_relay_init(void);
-
-/**
- * Uninitializes the HIP relay / RVS. Uninitializes the HIP relay hashtable and
- * whitelist.
- */
 void hip_relay_uninit(void);
-
-/**
- * Reinitializes the HIP relay / RVS. Deletes the old values from the relay
- * whitelist and reads new values from the configuration file
- * @c HIP_RELAY_CONFIG_FILE. Besides the whitelist values also every other
- * value read from the configuration file is reinitialized. These include the
- * lifetime values etc. However, the existing relay records are left as they
- * were. This means that the relay / RVS clients that have already registered
- * continue to be served as before - even if their HIT nomore exists in the
- * whitelist.
- *
- * @return zero if the configuration file was read succesfully, -1 otherwise.
- */
 int hip_relay_reinit(void);
-
-/**
- * Sets the mode of a relay record. This function sets the @c flags field of a
- * relay record.
- *
- * @param rec  a pointer to a relay record.
- * @param mode the mode to be set for the parameter record. One of the following:
- *             <ul>
- *             <li>HIP_REL_NONE</li>
- *             <li>HIP_REL_UDP</li>
- *             <li>HIP_REL_TCP</li>
- *             </ul>
- * @see        hip_relrec_t for a bitmap.
- */
 void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type);
-
-/**
- * Sets the lifetime of a relay record.
- * The service lifetime is set to 2^((lifetime - 64)/8) seconds.
- *
- * @param rec      a pointer to a relay record.
- * @param lifetime the lifetime of the above formula.
- */
 void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime);
-
-/**
- * Sets the UDP port number of a relay record.
- *
- * @param rec  a pointer to a relay record.
- * @param port UDP port number.
- */
 void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port);
-
-/**
- * Prints info of the parameter relay record using @c HIP_INFO() macro.
- *
- * @param rec a pointer to a relay record.
- */
 void hip_relrec_info(const hip_relrec_t *rec);
-
-/**
- * The compare function of the @c hiprelay_ht hashtable. Compares the hash
- * values calculated from parameters @c rec1 and @c rec2.
- *
- * @param rec1 a pointer to a HIT.
- * @param rec2 a pointer to a HIT.
- * @return     0 if keys are equal and neither is NULL, non-zero otherwise.
- */
-int hip_relht_compare(const hip_relrec_t *rec1, const hip_relrec_t *rec2);
-
-/**
- * Puts a relay record into the hashtable. Puts the relay record pointed by
- * @c rec into the hashtable @c hiprelay_ht. If there already is an entry with
- * the same key the old value is replaced, and <b>the memory allocated for the
- * existing element is freed</b>. Note that we store pointers here, the data are
- * not copied. There should be no need to put a relay record more than once into
- * the hashtable. If the fields of an individual relay record need to be
- * changed, just retrieve the record with @c hip_relht_get() and alter the
- * fields of it, but do not re-put it into the hashtable.
- *
- * @param rec a pointer to a relay record to be inserted into the hashtable.
- * @return    -1 if there was a hash collision i.e. an entry with duplicate HIT
- *            is inserted, zero otherwise.
- * @note      <b style="color: #f00;">Do not put records allocated from stack
- *            into the hashtable.</b> Instead put only records created with
- *            hip_relrec_alloc().
- * @note      In case of a hash collision, the existing relay record is freed.
- *            If you store references to relay records that are in the hashtable
- *            elsewhere outside the hashtable, NULL pointers can result.
- */
 int hip_relht_put(hip_relrec_t *rec);
-
-/**
- * Retrieves a relay record from the hashtable @c hiprelay_ht. The parameter
- * record @c rec only needs to have field @c hit_r populated.
- *
- * @param rec a pointer to a relay record.
- * @return    a pointer to a fully populated relay record if found, NULL
- *            otherwise.
- */
 hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
-
-/**
- * Deletes a single entry from the relay record hashtable and frees the memory
- * allocated for the element. The deletion is based on the hash calculated from
- * the relay fecord @c hit_r field, and therefore the parameter record does not
- * need to be fully populated. If the parameter relay record is the same record
- * that is being deleted (i.e. is located in the same memory location) then
- * the parameter @c rec itself is freed. If a dummy record is used (i.e. is
- * located in a different memory location thatn the hashtable entry), then
- * @c rec is left untouched.
- *
- * @param rec a pointer to a relay record.
- */
 void hip_relht_rec_free_doall(hip_relrec_t *rec);
-
-/**
- * Deletes a single entry from the relay record hashtable and frees the memory
- * allocated for the element if the matching element's type is of @c type. The
- * deletion is based on the hash calculated from the relay fecord
- * @c hit_r field, and therefore the parameter record does not need to be fully
- * populated. If the parameter relay record is the same record that is being
- * deleted (i.e. is located in the same memory location) then the parameter
- * @c rec itself is freed. If a dummy record is used (i.e. is located in a
- * different memory location thatn the hashtable entry), then @c rec is left
- * untouched.
- *
- * @param rec a pointer to a relay record.
- */
 void hip_relht_rec_free_type_doall(hip_relrec_t *rec, const hip_relrec_type_t *type);
-
-/**
- * Returns the number of relay records in the hashtable @c hiprelay_ht.
- *
- * @return  number of relay records in the hashtable.
- */
 unsigned long hip_relht_size(void);
-
-/**
- * Periodic maintenance function of the hip relay. This function should be
- * called once in every maintenance cycle of the hip daemon. It clears the
- * expired relay records by calling @c hip_relht_rec_free_expired() for every
- * element in the hashtable.
- * @todo a REG_RESPONSE with zero lifetime should be sent to each client whose
- *       registration is cancelled.
- */
 int hip_relht_maintenance(void);
 
-/**
- * Allocates a new relay record.
- *
- * @param type     the type of this relay record (HIP_FULLRELAY or
- *                 HIP_RVSRELAY).
- * @param lifetime the lifetime of this relayrecord as defined in registration
- *                 draft.
- * @param hit_r    a pointer to Responder (relay client) HIT.
- * @param ip_r     a pointer to Responder (relay client) IP address.
- * @param port     responder's UDP port.
- * @return         a pointer to a new relay record, or NULL if failed to
- *                 allocate.
- * @note           All records to be put in the hashtable should be created with
- *                 this function.
- */
 hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
                                const uint8_t lifetime,
                                const in6_addr_t *hit_r, const hip_hit_t *ip_r,
                                const in_port_t port,
                                const hip_crypto_key_t *hmac);
-
-/**
- * Deletes all entries of @c type from the relay record hashtable and frees the
- * memory allocated for the deleted elements.
- *
- * @param type the type of the records to be deleted.
- */
 void hip_relht_free_all_of_type(const hip_relrec_type_t type);
-
-/**
- * The compare function of the @c hiprelay_wl hashtable. Compares the hash
- * values calculated from parameter @c hit1 and @c hit2.
- *
- * @param hit1 a pointer to a HIT.
- * @param hit2 a pointer to a HIT.
- * @return     0 if keys are equal and neither is NULL, non-zero otherwise.
- */
 int hip_relwl_compare(const hip_hit_t *hit1, const hip_hit_t *hit2);
-
-/**
- * Retrieves a HIT from the hashtable @c hiprelay_wl.
- *
- * @param hit a pointer to a HIT.
- * @return    a pointer to a matching HIT, NULL otherwise.
- */
 hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
-
-/**
- * Returns the whitelist status.
- *
- * @return HIP_RELAY_ON if the RVS / relay whitelist is "on", HIP_RELAY_OFF
- *         otherwise.
- */
 hip_relay_wl_status_t hip_relwl_get_status(void);
-
-/**
- * Validates a requested RVS service lifetime. If
- * @c requested_lifetime is smaller than @c hiprelay_min_lifetime then
- * @c granted_lifetime is set to @c hiprelay_min_lifetime. If
- * @c requested_lifetime is greater than @c hiprelay_max_lifetime then
- * @c granted_lifetime is set to @c hiprelay_max_lifetime. Else
- * @c granted_lifetime is set to @c requested_lifetime.
- *
- * @param  requested_lifetime the lifetime that is to be validated.
- * @param  granted_lifetime   a target buffer for the validated lifetime.
- * @return                    -1 if @c requested_lifetime is outside boundaries,
- *                            i.e. is smaller than @c hiprelay_min_lifetime or
- *                            is greater than @c hiprelay_max_lifetime. Zero
- *                            otherwise.
- */
 int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
                               uint8_t *granted_lifetime);
-
 int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
                       const in6_addr_t *daddr, hip_relrec_t *rec,
                       const hip_portpair_t *info, const uint8_t type_hdr,
                       const hip_relrec_type_t relay_type);
-
-/**
- * Validates a requested HIP relay service lifetime. If
- * @c requested_lifetime is smaller than @c hiprelay_min_lifetime then
- * @c granted_lifetime is set to @c hiprelay_min_lifetime. If
- * @c requested_lifetime is greater than @c hiprelay_max_lifetime then
- * @c granted_lifetime is set to @c hiprelay_max_lifetime. Else
- * @c granted_lifetime is set to @c requested_lifetime.
- *
- * @param  requested_lifetime the lifetime that is to be validated.
- * @param  granted_lifetime   a target buffer for the validated lifetime.
- * @return                    -1 if @c requested_lifetime is outside boundaries,
- *                            i.e. is smaller than @c hiprelay_min_lifetime or
- *                            is greater than @c hiprelay_max_lifetime. Zero
- *                            otherwise.
- * @note                      Currently this is just a call back wrapper for
- *                            hip_rvs_validate_lifetime() because RVS and relay
- *                            services share the same lifetimes.
- */
-static inline int hip_relay_validate_lifetime(uint8_t requested_lifetime,
-                                              uint8_t *granted_lifetime)
-{
-    return hip_rvs_validate_lifetime(requested_lifetime,
-                                     granted_lifetime);
-}
-
-/**
- * Relays an incoming I1 packet.
- *
- * This function relays an incoming I1 packet to the next node on path
- * to receiver and inserts a @c FROM parameter encapsulating the source IP
- * address. In case there is a NAT between the sender (the initiator or previous
- * RVS) of the I1 packet, a @c RELAY_FROM parameter is inserted instead of a
- * @c FROM parameter. Next node on path is typically the responder, but if the
- * message is to travel multiple rendezvous servers en route to responder, next
- * node can also be another rendezvous server. In this case the @c FROM
- * (@c RELAY_FROM) parameter is appended after the existing ones. Thus current RVS
- * appends the address of previous RVS and the final RVS (n) in the RVS chain
- * sends @c FROM:I, @c FROM:RVS1, ... , <code>FROM:RVS(n-1)</code>. If initiator
- * is located behind a NAT, the first @c FROM parameter is replaced with a
- * @c RELAY_FROM parameter.
- *
- * @param i1       a pointer to the I1 HIP packet common header with source and
- *                 destination HITs.
- * @param i1_saddr a pointer to the source address from where the I1 packet was
- *                 received.
- * @param i1_daddr a pointer to the destination address where the I1 packet was
- *                 sent to (own address).
- * @param rec      a pointer to a relay record matching the HIT of Responder.
- * @param i1_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
- * @return         zero on success, or negative error value on error.
- * @note           This code has not been tested thoroughly with multiple RVSes.
- * @note           This function is a copy-paste from the previous RVS
- *                 implementation
- */
-int hip_relay_rvs(const hip_common_t *i1,
-                  const in6_addr_t *i1_saddr,
-                  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
-                  const hip_portpair_t *i1_info);
-
 int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry);
-
-
-/**
- * Handles a FROM/RELAY_FROM parameter.
- *
- * Checks if the parameter @c source_msg message has a FROM/RELAY_FROM
- * parameter. If a parameter is found, the values are copied to target buffers
- * @c dest_ip and @c dest_port. Next the hmac in RVS_HMAC is verified using
- * the host association created during registration. This host association
- * is searched using hitr from @c source_msg and @c rvs_ip as search keys.
- *
- * @param  source_msg a pointer to the I1 HIP packet common header with source
- *                    and destination HITs.
- * @param rvs_ip      a pointer to the source address from where the I1 packet
- *                    was received.
- * @param dest_ip     a target buffer for the IP address in the FROM/RELAY_FROM
- *                    parameter.
- * @param dest_port   a target buffer for the port number in RELAY_FROM
- *                    parameter.
- * @return            zero
- */
-
 int hip_relay_handle_from(hip_common_t *source_msg,
                           in6_addr_t *rvs_ip,
                           in6_addr_t *dest_ip, in_port_t *dest_port);
-
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
                                 in6_addr_t *relay_ip,
                                 in6_addr_t *dest_ip, in_port_t *dest_port);
@@ -475,15 +119,5 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
 int hip_relay_handle_relay_to(const uint8_t packet_type,
                               const uint32_t ha_state,
                               struct hip_packet_context *packet_ctx);
-
-/**
- * function for full relay service. from I to R
- *
- */
-int hip_relay_forward_I(const hip_common_t *i1,
-                        const in6_addr_t *i1_saddr,
-                        const in6_addr_t *i1_daddr, hip_relrec_t *rec,
-                        const hip_portpair_t *i1_info,
-                        const uint8_t);
 
 #endif /* HIP_HIPD_HIPRELAY_H */

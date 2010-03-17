@@ -11,8 +11,6 @@
 #define _BSD_SOURCE
 
 #include "config.h"
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-
 #include "oppdb.h"
 #include "hadb.h"
 #include "accessor.h"
@@ -836,5 +834,3 @@ hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
     HIP_UNLOCK_HT(&opp_db);
     return ret;
 }
-
-#endif /* CONFIG_HIP_OPPORTUNISTIC */

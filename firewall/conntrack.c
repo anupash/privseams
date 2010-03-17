@@ -1373,8 +1373,6 @@ static int handle_update(const struct hip_common *common,
     struct hip_ack *ack                = NULL;
     struct hip_locator *locator        = NULL;
     struct hip_spi *spi                = NULL;
-    struct hip_echo_request *echo_req  = NULL;
-    struct hip_echo_response *echo_res = NULL;
     struct tuple *other_dir_tuple      = NULL;
     const struct in6_addr *ip6_src = &ctx->src;
     int err                            = 0;
@@ -1387,10 +1385,6 @@ static int handle_update(const struct hip_common *common,
     ack      = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
     locator  = (struct hip_locator *) hip_get_param(common, HIP_PARAM_LOCATOR);
     spi      = (struct hip_spi *) hip_get_param(common, HIP_PARAM_ESP_INFO);
-    echo_req = (struct hip_echo_request *) hip_get_param(common,
-                                                         HIP_PARAM_ECHO_REQUEST);
-    echo_res = (struct hip_echo_response *) hip_get_param(common,
-                                                          HIP_PARAM_ECHO_RESPONSE);
 
     if (spi) {
         _HIP_DEBUG("handle_update: spi param, spi: 0x%lx \n", ntohl(spi->spi));
@@ -1488,47 +1482,21 @@ static int handle_update(const struct hip_common *common,
 
             _HIP_DEBUG("handle_update: esp_info and locator found\n");
 
-            /* TODO check processing of SPI
-             *
-             * old_spi == 0, new_spi = x means that host is requesting a new SA
-             * old_spi == new_spi means only location update
-             * old_spi != new_spi means esp_tuple update */
-            if (esp_info->old_spi != esp_info->new_spi) {          //update existing
-                esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
+            esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 
-                if (!esp_tuple) {
-                    _HIP_DEBUG("No suitable esp_tuple found for updating\n");
+            if (!esp_tuple) {
+                _HIP_DEBUG("No suitable esp_tuple found for updating\n");
 
-                    err = 0;
-                    goto out_err;
-                }
-
-                if (!update_esp_tuple(esp_info, locator, seq, esp_tuple)) {
-                    _HIP_DEBUG("failed to update the esp_tuple\n");
-
-                    err = 0;
-                    goto out_err;
-                }
-            }
-
-/* why would we want to do that? We already know this connection and this is a U1 */
-#if 0
-        } else {       /* create new esp_tuple */
-            new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
-                                                      other_dir_tuple);
-
-            if (new_esp == NULL) {
-                //locator must contain address for this spi
                 err = 0;
                 goto out_err;
             }
 
-            other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
-                                                                    other_dir_esps, (void *) new_esp);
+            if (!update_esp_tuple(esp_info, locator, seq, esp_tuple)) {
+                _HIP_DEBUG("failed to update the esp_tuple\n");
 
-            insert_esp_tuple(new_esp);
-        }
-#endif
+                err = 0;
+                goto out_err;
+            }
         } else if (locator && seq) {
             /* Readdress without rekeying */
 
@@ -1676,13 +1644,6 @@ static int handle_update(const struct hip_common *common,
         }
 #endif
 
-        if (echo_req) {
-            _HIP_DEBUG("handle_update: echo found req\n");
-        }
-
-        if (echo_res) {
-            _HIP_DEBUG("handle_update: echo found res\n");
-        }
     }
 
     /* everything should be set now in order to process eventual anchor params */
@@ -2210,13 +2171,14 @@ out_err:
  * @param buf the control packet
  * @param ctx context for the control packet
  */
-void conntrack(const struct in6_addr *ip6_src,
+int conntrack(const struct in6_addr *ip6_src,
                const struct in6_addr *ip6_dst,
                struct hip_common *buf,
                hip_fw_context_t *ctx)
 {
     struct hip_data *data = NULL;
     struct tuple *tuple   = NULL;
+    int verdict = 0;
 
     _HIP_DEBUG("\n");
     //g_mutex_lock(connectionTableMutex);
@@ -2231,12 +2193,14 @@ void conntrack(const struct in6_addr *ip6_src,
 
     // the accept_mobile parameter is true as packets
     // are not filtered here
-    check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1, ctx);
+    verdict = check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1, ctx);
 
     //g_mutex_unlock(connectionTableMutex);
     _HIP_DEBUG("unlocked mutex\n");
 
     free(data);
+
+    return verdict;
 }
 
 /**
