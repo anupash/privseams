@@ -1,7 +1,14 @@
 /**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * This file contains legacy functions for mobility that should be rewritten for modularity.
  * They are still included in the code base due to locator dependencies with DHT and
- * base exchange code.
+ * base exchange code. See bugzilla item 926 and 927.
+ *
+ * @author Baris Boyvat
+ * @author Miika Komu <miika@iki.fi>
  */
 
 /* required for s6_addr32 */
