@@ -776,7 +776,7 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
     struct in6_addr *addr;
     //HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
 
-#if defined(CONFIG_HIP_AGENT) && defined(CONFIG_HIP_OPPORTUNISTIC)
+#ifdef CONFIG_HIP_AGENT
     /* If agent is prompting user, let's make sure that
     *  the death counter in maintenance does not expire */
     if (hip_agent_is_alive()) {
