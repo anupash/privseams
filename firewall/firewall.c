@@ -767,16 +767,28 @@ static int match_string(const char *match, const char *packet, const int boolean
  */
 static int filter_esp(const hip_fw_context_t *ctx)
 {
-    // drop packet by default
-    int verdict = 0;
+    /* drop packet by default */
+    int verdict = 0, ret;
 
-    if (filter_esp_state(ctx) > 0) {
+    if (esp_relay && ctx->udp_encap_hdr &&
+        ((ret = hipfw_relay_esp(ctx)) <= 0)) {
+         /* 0: drop original and reinject new packet
+            -1: accept reinject packet and avoid filter_esp_state
+            1: just let it pass => proceed to filter */
+        if (ret == 0) {
+            HIP_DEBUG("Drop original and reinject relayed ESP packet\n");
+            verdict = 0;
+        } else if (ret == -1) {
+            HIP_DEBUG("Accept reinjected packet\n");
+            verdict = 1;
+        } else {
+             HIP_ASSERT(0);
+        }
+    } else if (filter_esp_state(ctx) > 0) {
         verdict = 1;
-
         HIP_DEBUG("ESP packet successfully passed filtering\n");
     } else {
         verdict = 0;
-
         HIP_DEBUG("ESP packet NOT authed in ESP filtering\n");
     }
 

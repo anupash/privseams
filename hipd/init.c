@@ -803,14 +803,12 @@ int hipd_init(int flush_ipsec, int killold)
 
     HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");
     HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4, IPPROTO_HIP), -1, "raw sock output v4\n");
-    // Notice that hip_nat_sock_input should be initialized after hip_nat_sock_output
-    // because for the sockets bound to the same address/port, only the last socket seems
-    // to receive the packets.
-#if 0
-    HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0), -1, "raw sock output udp\n");
-#else
+    /* hip_nat_sock_input should be initialized after hip_nat_sock_output
+       because for the sockets bound to the same address/port, only the last socket seems
+       to receive the packets. NAT input socket is a normal UDP socket where as
+       NAT output socket is a raw socket. A raw output socket support better the "shotgun"
+       extension (sending packets from multiple source addresses). */
     HIP_IFEL(hip_init_raw_sock_v4(&hip_nat_sock_output_udp, IPPROTO_UDP), -1, "raw sock output udp\n");
-#endif
     HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6, IPPROTO_HIP), -1, "raw sock input v6\n");
     HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4, IPPROTO_HIP), -1, "raw sock input v4\n");
     HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");

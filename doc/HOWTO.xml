@@ -2108,13 +2108,13 @@ $ tools/adb shell # Log into device shell
         /etc/hosts:
       </para></listitem>
       <listitem><para>
-        3ffe::2 oops
-      </para></listitem>
-      <listitem><para>
-        /etc/hip/hosts:
-      </para></listitem>
-      <listitem><para>
         HIT_OF_OOPS oops
+      </para></listitem>
+      <listitem><para>
+        /etc/hosts:
+      </para></listitem>
+      <listitem><para>
+        3ffe::2 oops
       </para></listitem>
       <listitem><para>
         ifconfig eth0 inet6 add 3ffe::1/64
@@ -2256,7 +2256,7 @@ $ tools/adb shell # Log into device shell
             <itemizedlist>
               <listitem>
               <para>
-                    Add the information in /etc/hip/hosts
+                    Add the information in /etc/hosts
                     <itemizedlist>
                     <listitem><para>OOPS_HIT oops</para></listitem>
                     <listitem><para>OOPS_LSI oops <emphasis>Optional!</emphasis> If it's not defined,
@@ -2410,53 +2410,56 @@ $ tools/adb shell # Log into device shell
     <section id="sec_easy_methods">
       <title>Easy Methods</title>
       <para>
-        1. Run the dnshipproxy to handle mapping from hostnames to HITs from hosts files.
+        1. Run the dnshipproxy to map hostnames transparently to HITs from hosts files and directory services (DNS, DHT).
         See <xref linkend="sec_dns_proxy" /> for more details.
       </para>
       <para>
-        2. Use external nameservices for HIT-IP mapping, such as HIP DNS records
-        as instructed in <xref linkend="ch_dns_data" /> (requires the use of the DNS proxy).
-        Alternatively, use the free DHT name service for automatic host
-        naming as described in <xref linkend="ch_opendht" />.
+        2. Overload your /etc/hosts files by adding HITs or LSIs before the
+        corresponding IP addresses. This method does not require
+        DNS proxy running on the host and works using hostnames.
       </para>
       <para>
-        4. You can also use HITs (or LSIs) directly in the application. For example, you can
-        do "ping6 PEER_HIT". However, hipd must know the mapping from the
-        PEER_HIT to the corresponding IP address. You can tell this mapping to
-        hipd using several ways. First way is to configure the HIT-hostname
-        pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts. Second
-        way is execute "hipconf add map PEER_HIT PEER_IP". You can insert the
-        hipconf command also to /etc/hip/hipd_config and restart hipd when you
-        want the mapping to be permanent.
+        3. You can also use HITs (or LSIs) directly in the application
+        (DNS proxy is not required for this method).
+        For example, you can
+        execute "ping6 PEER_HIT". However, hipd must know the mapping from the
+        PEER_HIT to the corresponding IP address. Hipd can find this mapping
+        from DNS or DHT. Alternatively, this information can be store to
+        hosts files as follows:
       </para>
       <para>
-        5. Overload your /etc/hosts files by adding HITs or LSIs to the
-        file and use the hostname in your application. The file should contain also
-        the IP addresses with the same hostname as HITs and LSIs.
+        3a. If you want to maintain separate files for HIP identifiers,
+        write the HIT-hostname (or LSI-hostname)
+        pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts.
+        See also the method (2) for overloading all addresses in
+        /etc/hosts.
       </para>
       <para>
-        6. Use the opportunistic mode as described in
-        <xref linkend="opportunistic" />. This method works with both IPv4 and
-        IPv6 applications. It does not require HIT configuration at all.
-      </para>
-      <para>
-        6a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
-      </para>
-      <para>
-        6b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so:libhipopendht.so</emphasis>
+        3b. Execute "hipconf add map PEER_HIT PEER_IP" and use the HIT directly
+        in the application. You can insert the
+        hipconf command also to /etc/hip/hipd_config and restart hipd.
       </para>
     </section>
     <section id="sec_advanced_methods">
-      <title>Advanced Methods</title>
-      <para>These methods assume that you have the source code available
-      for the application and the application is IPv6 enabled. You have
-      to relink the application to use the HIP libraries and,
-      in some methods, to modify the source code.
+      <title>Experimental Methods</title>
+      <para>
+        These methods are experimental. Use with care and only if you know what you are doing!
       </para>
       <para>
-        Following applications are IPv6 enabled (and use getaddrinfo for name
-        resolution): telnet, firefox, lynx, ssh. Not using getaddrinfo: ping,
-        ping6, tla, svn.
+        1. Use the opportunistic mode as described in
+        <xref linkend="opportunistic" />. This method works with both IPv4 and
+        IPv6 applications. It does not require any HIP name configuration at all.
+      </para>
+      <para>
+        1a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
+      </para>
+      <para>
+        1b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so:libhipopendht.so</emphasis>
+      </para>
+      <para>
+        2. Use the system-based opportunistic mode as instructed in
+           <xref linkend="sys_based_opp_mode" />. Does not require either
+           any kind of HIP name configuration at all.
       </para>
     </section>
 
@@ -2655,7 +2658,7 @@ $ tools/adb shell # Log into device shell
   <para>
   The name can be
   something found from <emphasis>/etc/hosts</emphasis>
-  and <emphasis>/etc/hip/hosts</emphasis> or you can use DHT to
+  and <emphasis>/etc/hosts</emphasis> or you can use DHT to
   resolve names to HIT and address. Search can also be done directly
   with HIT by command
   </para>
@@ -3010,9 +3013,10 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
     </para>
 
     <para>
-       Currently HIP daemon performs name resolution in the following order:
+       Currently HIP daemon performs HIP name resolution in the following order:
       <itemizedlist>
         <listitem><para>in /etc/hip/hosts</para></listitem>
+        <listitem><para>in /etc/hosts</para></listitem>
         <listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
         <listitem><para>in DHT</para></listitem>
       </itemizedlist>
@@ -3290,13 +3294,23 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         NATs are commonly referred to as "good" NATs.
       </para>
       <para>
-        The primary objective of the HIP relay extension, on the other hand, is
-        to improve reachability when HIP hosts are separated from each other
-        by a NAT device that performs address dependent mapping. Such NATs are
-        commonly referred to as "bad" NATs. In practice, the HIP relay servers
-        are used to relay the Interactive Connectivity Establishment (ICE)
-        address candidates that are encapsulated in HIP messages.
-      </para>
+        HIPL has two experimental relay modes serving NAT traversal
+        purposes. In the first mode, the HIP control plane relay
+        supports <ulink url="http://www.ietf.org/id/draft-keranen-hip-native-nat-traversal-00.txt">
+        Native NAT Traversal Mode for HIP</ulink> which is only
+        partially supported at the moment. The core idea is that two
+        end-points are behind two different NAT boxes and use a HIP
+        control plane relay to be able to contact each other to
+        exchange their locators. Then the hosts "punch holes" to their
+        NAT boxes to establish direct end-to-end connectivity with
+        each other. The second mode, "full-relay" is supported
+        completely and it relays both HIP and ESP traffic. You should
+        use it carefully and whitelist your /etc/hip/relay_config
+        file. Otherwise you risk your host becoming an open HIP and
+        ESP relay. For additional security measure, you can also use
+        also /etc/hip/firewall_conf to further restrict the allowed
+	clients and servers by their HITs.
+       </para>
       <para>
         The main difference between the rendezvous server and the HIP relay
         server is that the RVS only relays I1 packet of the base exchange while
@@ -4796,7 +4810,7 @@ combo-newgroup=&lt;create new...&gt;
   </section>
 
   <section id="sys_based_opp_mode">
-    <title>System-based opportunistic mode</title>
+    <title>System-based opportunistic mode (experimental)</title>
         <para>
         The system-based opportunistic mode enables HIP communication
         without the use of the opportunistic library. If the peer does

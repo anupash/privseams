@@ -1,3 +1,19 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * BOS packet was defined in
+ * <a href="http://tools.ietf.org/html/draft-ietf-hip-base-00">draft-ietf-hip-base-00
+ * </a> but it was removed in later revisions. It can be used to broadcast your
+ * own identity (and IP address) to the local network. Privacy proponents beware!
+ *
+ * @brief BOS packet sending and receiving functionality
+ *
+ * @author Anthony D. Joseph
+ *
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -35,7 +51,8 @@ static int hip_create_bos_signature(void *priv, int algo, struct hip_common *bos
     return err;
 }
 
-/** hip_socket_send_bos - send a BOS packet
+/**
+ * hip_socket_send_bos - send a BOS packet
  * @param msg input message (should be empty)
  *
  * Generate a signed HIP BOS packet containing our HIT, and send

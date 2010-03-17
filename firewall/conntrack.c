@@ -229,7 +229,7 @@ static struct hip_data *get_hip_data(const struct hip_common *common)
     HIP_IFEL(data->verify(data->src_hi, common), -EINVAL,
              "Verification of signature failed\n");
 
-    HIP_DEBUG("verfied BEX signature\n");
+    HIP_DEBUG("verified BEX signature\n");
 #endif
 
     _HIP_DEBUG("get_hip_data:\n");
@@ -392,7 +392,7 @@ static SList *update_esp_address(SList *addr_list,
  * Find esp tuple from espList that matches the argument spi and contains the
  * argument ip address
  *
- * @param dst_addr the destination address to be searched for
+ * @param dst_addr the optional destination address to be searched for
  * @param spi the SPI number to be searched for
  * @return a tuple matching to the address and SPI or NULL if not found
  */
@@ -406,17 +406,18 @@ static struct tuple *get_tuple_by_esp(const struct in6_addr *dst_addr, const uin
     while (list) {
         struct esp_tuple *tuple = (struct esp_tuple *) list->data;
         if (spi == tuple->spi) {
-            if (get_esp_address(tuple->dst_addr_list, dst_addr) != NULL) {
+            if (dst_addr && get_esp_address(tuple->dst_addr_list, dst_addr) != NULL) {
                 HIP_DEBUG("connection found by esp\n");
+                return tuple->tuple;
+            } else if (!dst_addr) {
                 return tuple->tuple;
             }
         }
         list = list->next;
     }
-    HIP_DEBUG("get_tuple_by_esp: dst addr %s spi 0x%lx no connection found\n",
-              addr_to_numeric(dst_addr), spi);
 
-    HIP_DEBUG_IN6ADDR("DST", dst_addr);
+    HIP_DEBUG("get_tuple_by_esp: dst addr %s spi 0x%lx no connection found\n",
+              (dst_addr ? addr_to_numeric(dst_addr) : "NULL"), spi);
 
     return NULL;
 }
@@ -851,6 +852,103 @@ static int insert_connection_from_update(const struct hip_data *data,
 }
 
 /**
+ * Hipfw has an experimental mode which allows it to act as an ESP
+ * Relay to pass e.g.  p2p-unfriendly NAT boxes. The ESP relay mode
+ * assumes that the HIP relay (in hipd) and ESP relay (in hipfw) are
+ * running on the same middlehost in a public network. The responder
+ * has to register to the relay with "hipconf add server full-relay"
+ * which operates as defined in <a
+ * href="http://tools.ietf.org/html/draft-ietf-hip-nat-traversal"> NAT
+ * traversal for HIP</a>. Then the initiator can contact the responder
+ * through the IP address of the HIP/ESP relay. The relay acts as a two-way
+ * NAT and hides the addresses of the initiator and responder. This way,
+ * the the relay supports P2P-unfriendly NAT traversal with the cost of
+ * triangular routing. If the initiator and responder wish to communicate
+ * with each other directly, they can exchange locators either in base exchange
+ * or UPDATE.
+ *
+ * @todo implement the same handling for UPDATE
+ *
+ * @param common the R2 packet
+ * @param ctx packet context
+ *
+ * @return zero on success and non-zero on error
+ */
+static int hipfw_handle_relay_to_r2(const struct hip_common *common,
+                                 const hip_fw_context_t *ctx)
+{
+    struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
+    struct hip_relay_to *relay_to = NULL; /* same format as relay_from */
+    struct tuple *tuple, *reverse_tuple;
+    int err = 0;
+    uint32_t spi;
+    struct hip_esp_info *esp_info;
+
+    HIP_DEBUG_IN6ADDR("ctx->src", &ctx->src);
+    HIP_DEBUG_IN6ADDR("ctx->dst", &ctx->dst);
+
+    HIP_ASSERT((hip_get_msg_type(common) == HIP_R2));
+
+    HIP_IFEL(!(relay_to = hip_get_param(common, HIP_PARAM_RELAY_TO)), -1,
+            "No relay_to, skip\n");
+
+    HIP_DEBUG_IN6ADDR("relay_to_addr", &relay_to->address);
+
+    HIP_IFEL(!((ctx->ip_version == 4) &&
+               (iph->protocol == IPPROTO_UDP)), 0,
+             "Not a relay packet, ignore\n");
+
+    HIP_IFEL((ipv6_addr_cmp(&ctx->dst, &relay_to->address) == 0), 0,
+             "Reinjected control packet, passing it\n");
+
+    esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
+    HIP_IFEL(!esp_info, 0, "No ESP_INFO, pass\n");
+    spi = ntohl(esp_info->new_spi);
+
+    HIP_DEBUG("SPI is 0x%lx\n", spi);
+
+    HIP_IFEL(!(tuple = get_tuple_by_esp(NULL, spi)), 0,
+             "No tuple, skip\n");
+
+    HIP_IFEL(!(reverse_tuple = get_tuple_by_hits(&common->hits, &common->hitr)), 0,
+             "No reverse tuple, skip\n");
+
+    HIP_DEBUG("tuple src=%d dst=%d\n", tuple->src_port, tuple->dst_port);
+    HIP_DEBUG_IN6ADDR("tuple src ip", tuple->src_ip);
+    HIP_DEBUG_IN6ADDR("tuple dst ip", tuple->dst_ip);
+    HIP_DEBUG("tuple dir=%d, sport=%d, dport=%d, rel=%d\n", tuple->direction,
+              tuple->src_port, tuple->dst_port, tuple->esp_relay);
+
+    HIP_DEBUG("reverse tuple src=%d dst=%d\n", reverse_tuple->src_port,
+              reverse_tuple->dst_port);
+    HIP_DEBUG_IN6ADDR("reverse tuple src ip", reverse_tuple->src_ip);
+    HIP_DEBUG_IN6ADDR("reverse tuple dst ip", reverse_tuple->dst_ip);
+    HIP_DEBUG("reverse tuple dir=%d, sport=%d, dport=%d, rel=%d\n",
+              reverse_tuple->direction, reverse_tuple->src_port,
+              reverse_tuple->dst_port, reverse_tuple->esp_relay);
+
+    /* Store Responder's IP address and port */
+    tuple->esp_relay = 1;
+    ipv6_addr_copy(&tuple->esp_relay_daddr,
+                   &ctx->src);
+    tuple->esp_relay_dport = tuple->dst_port;
+    HIP_DEBUG("tuple relay port=%d\n",
+              tuple->esp_relay_dport);
+    HIP_DEBUG_IN6ADDR("tuple relay ip",
+                      &tuple->esp_relay_daddr);
+
+    /* Store Initiator's IP address and port */
+    reverse_tuple->esp_relay = 1;
+    ipv6_addr_copy(&reverse_tuple->esp_relay_daddr, &relay_to->address);
+    reverse_tuple->esp_relay_dport = ntohs(relay_to->port);
+    HIP_DEBUG("reverse_tuple relay port=%d\n", reverse_tuple->esp_relay_dport);
+    HIP_DEBUG_IN6ADDR("reverse_tuple relay ip", &reverse_tuple->esp_relay_daddr);
+
+out_err:
+    return 0;
+}
+
+/**
  * Process an R1 packet. This function also stores the HI of the Responder
  * to be able to verify signatures also later. The HI is stored only if the
  * signature in R1 was valid.
@@ -864,7 +962,7 @@ static int insert_connection_from_update(const struct hip_data *data,
 
 // first check signature then store hi
 static int handle_r1(struct hip_common *common, struct tuple *tuple,
-                     int verify_responder)
+                     int verify_responder, const hip_fw_context_t *ctx)
 {
     struct in6_addr hit;
     struct hip_host_id *host_id = NULL;
@@ -931,15 +1029,14 @@ out_err:
  * is re-established. In such a case, the old ESP tuples are not removed. If an
  * attacker spoofs an I2 or R2, the valid peers are still able to send data.
  *
- * @param ip6_src the source address of the I2 packet
- * @param ip6_dst the destination address of the I2 packet
  * @param common the I2 packet
  * @param tuple the connection tracking tuple corresponding to the I2 packet
+ * @param ctx packet context
  *
  * @return one on success or zero failure
  */
-static int handle_i2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
-                     struct hip_common *common, struct tuple *tuple)
+static int handle_i2(struct hip_common *common, struct tuple *tuple,
+                     const hip_fw_context_t *ctx)
 {
     struct hip_esp_info *spi    = NULL;
     struct tuple *other_dir     = NULL;
@@ -950,6 +1047,7 @@ static int handle_i2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_
     // assume correct packet
     int err                     = 1;
     hip_tlv_len_t len           = 0;
+    const struct in6_addr *ip6_src = &ctx->src;
 
     HIP_DEBUG("\n");
 
@@ -987,7 +1085,7 @@ static int handle_i2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_
         HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
                  -EINVAL, "Verification of signature failed\n");
 
-        HIP_DEBUG("verfied I2 signature\n");
+        HIP_DEBUG("verified I2 signature\n");
     } else {
         HIP_DEBUG("No HOST_ID found in control message\n");
     }
@@ -1045,104 +1143,26 @@ out_err:
 }
 
 /**
- * Hipfw has an experimental mode which allows it to act as an ESP Relay to pass e.g.
- * p2p-unfriendly NAT boxes. It is assumed that the same host is running
- * also a HIP relay. This function adjusts the connection tracking so that
- * the ESP relaying functionality works. As the end-hosts set up their IPsec
- * SAs based on the IP address of the Relay, it must effectively implement
- * source NATting to forward the ESP packets succesfully. At the moment, the relay
- * adjusts connection tracking on based on the R2 packet.
- *
- * @todo implement the same handling for UPDATE
- * @see http://hipl.hiit.fi/bugzilla/show_bug.cgi?id=871
- *
- * @param ip6_src the source address of the R2
- * @param ip6_dst the destination address of the R2
- * @param common the R2 packet
- * @param tuple the connection tracking tuple corresponding to the R2 packet
- * @param esp_tuple the connection tracking ESP tuple corresponding to the R2 packet
- * @param ctx packet context
- *
- * @return zero on success and non-zero on error
- */
-static int hip_handle_esp_in_udp_relay_r2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
-                                          const struct hip_common *common, struct tuple *tuple,
-                                          struct esp_tuple *esp_tuple, hip_fw_context_t *ctx)
-{
-    struct hip_relay_to *relay_to;
-    struct iphdr *iph   = (struct iphdr *) ctx->ipq_packet->payload;
-    struct udphdr *udph = (struct udphdr *) ((uint8_t *) iph + iph->ihl * 4);
-    int err             = 0;
-
-    relay_to = hip_get_param(common, HIP_PARAM_RELAY_TO);
-
-    HIP_IFEL(!((ctx->ip_version == 4) &&
-               (iph->protocol == IPPROTO_UDP)), 0,
-             "Not a relay packet, ignore\n");
-
-    if (!tuple->connection->original.src_ip && relay_to) {
-        HIP_IFE(!(tuple->connection->original.src_ip =
-                      malloc(sizeof(struct in6_addr))), 0);
-        HIP_IFE(!(tuple->connection->reply.dst_ip =
-                      malloc(sizeof(struct in6_addr))), 0);
-        HIP_IFE(!(tuple->connection->original.dst_ip =
-                      malloc(sizeof(struct in6_addr))), 0);
-        HIP_IFE(!(tuple->connection->reply.src_ip =
-                      malloc(sizeof(struct in6_addr))), 0);
-
-        memcpy(tuple->connection->original.src_ip,
-               &relay_to->address, sizeof(struct in6_addr));
-        memcpy(tuple->connection->reply.dst_ip,
-               &relay_to->address, sizeof(struct in6_addr));
-        memcpy(tuple->connection->original.dst_ip,
-               ip6_src, sizeof(struct in6_addr));
-        memcpy(tuple->connection->reply.src_ip,
-               ip6_src, sizeof(struct in6_addr));
-
-        HIP_DEBUG("%d %d\n",
-                  htons(relay_to->port),
-                  htons(udph->source));
-        tuple->connection->original.relayed_src_port = relay_to->port;
-        tuple->connection->original.relayed_dst_port = udph->source;
-        tuple->connection->reply.relayed_src_port    = udph->source;
-        tuple->connection->reply.relayed_dst_port    = relay_to->port;
-    } else {     /* Relayed R2: we are the source address */
-        HIP_DEBUG_IN6ADDR("I", &tuple->connection->original.hip_tuple->data->src_hit);
-        HIP_DEBUG_IN6ADDR("I", tuple->connection->original.src_ip);
-        HIP_DEBUG_IN6ADDR("R", &tuple->connection->original.hip_tuple->data->dst_hit);
-        HIP_DEBUG_IN6ADDR("R", tuple->connection->original.dst_ip);
-
-        esp_tuple->dst_addr_list = update_esp_address(
-            esp_tuple->dst_addr_list, ip6_src, NULL);
-    }
-
-out_err:
-    return 0;
-}
-
-/**
  * Process an R2 packet. If connection already exists, the esp tuple is
  * just added to the existing connection. This occurs, for example, when
  * the connection is re-established. In such a case, the old esp
  * tuples are not removed. If an attacker spoofs an I2 or R2, the
  * valid peers are still able to send data.
  *
- * @param ip6_src the source address of the R2
- * @param ip6_dst the destination address of the R2
  * @param common the R2 packet
  * @param tuple the connection tracking tuple corresponding to the R2 packet
  * @param ctx packet context
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_r2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
-                     const struct hip_common *common, struct tuple *tuple,
-                     hip_fw_context_t *ctx)
+static int handle_r2(const struct hip_common *common, struct tuple *tuple,
+                     const hip_fw_context_t *ctx)
 {
     struct hip_esp_info *spi    = NULL;
     struct tuple *other_dir     = NULL;
     SList *other_dir_esps       = NULL;
     struct esp_tuple *esp_tuple = NULL;
+    const struct in6_addr *ip6_src = &ctx->src;
     int err                     = 1;
 
     HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO)),
@@ -1189,11 +1209,6 @@ static int handle_r2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_
         HIP_DEBUG("ESP tuple already exists!\n");
     }
 
-    if (esp_relay) {
-        HIP_IFEL(hip_handle_esp_in_udp_relay_r2(ip6_src, ip6_dst, common, tuple, esp_tuple, ctx),
-                 -1, "ESP-in-UDP relay failed\n");
-    }
-
     /* check if the R2 contains ESP protection anchor and store state */
     HIP_IFEL(esp_prot_conntrack_R2_anchor(common, tuple), -1,
              "failed to track esp protection extension state\n");
@@ -1204,6 +1219,11 @@ static int handle_r2(const struct in6_addr *ip6_src, const struct in6_addr *ip6_
      * other_dir = &tuple->connection->reply;
      * else
      * other_dir = &tuple->connection->original;*/
+
+    if (esp_relay && ctx->udp_encap_hdr) {
+        HIP_IFEL(hipfw_handle_relay_to_r2(common, ctx),
+                     -1, "handling of relay_to failed\n");
+    }
 
 out_err:
     return err;
@@ -1338,17 +1358,15 @@ out_err:
  * @todo: SPI parameters did not work earlier and could not be used for creating
  * connection state for updates - check if the situation is still the same
  *
- * @param ip6_src the source address of the R2
- * @param ip6_dst the destination address of the R2
  * @param common the R2 packet
  * @param tuple the connection tracking tuple corresponding to the R2 packet
+ * @param ctx packet context
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_update(const struct in6_addr *ip6_src,
-                         const struct in6_addr *ip6_dst,
-                         const struct hip_common *common,
-                         struct tuple *tuple)
+static int handle_update(const struct hip_common *common,
+                         struct tuple *tuple,
+                         const hip_fw_context_t *ctx)
 {
     struct hip_seq *seq                = NULL;
     struct hip_esp_info *esp_info      = NULL;
@@ -1358,6 +1376,7 @@ static int handle_update(const struct in6_addr *ip6_src,
     struct hip_echo_request *echo_req  = NULL;
     struct hip_echo_response *echo_res = NULL;
     struct tuple *other_dir_tuple      = NULL;
+    const struct in6_addr *ip6_src = &ctx->src;
     int err                            = 0;
 
     _HIP_DEBUG("handle_update\n");
@@ -1677,17 +1696,17 @@ out_err:
 /**
  * Process a CLOSE packet
  *
- * @param ip6_src the source address of the CLOSE packet
- * @param ip6_dst the destination address of the CLOSE packet
  * @param common the CLOSE packet
  * @param tuple the connection tracking tuple corresponding to the CLOSE packet
+ * @param ctx packet context
  *
  * @return one if packet was processed successfully or zero otherwise
  */
 static int handle_close(const struct in6_addr *ip6_src,
                         const struct in6_addr *ip6_dst,
                         const struct hip_common *common,
-                        struct tuple *tuple)
+                        struct tuple *tuple,
+                        const hip_fw_context_t *ctx)
 {
     int err = 1;
 
@@ -1721,17 +1740,17 @@ out_err:
 /**
  * Process CLOSE_ACK and remove the connection.
  *
- * @param ip6_src the source address of the CLOSE_ACK
- * @param ip6_dst the destination address of the CLOSE_ACK
  * @param common the CLOSE_ACK packet
  * @param tuple the connection tracking tuple corresponding to the CLOSE_ACK packet
+ * @param ctx packet context
  *
  * @return one if packet was processed successfully or zero otherwise
  */
 int handle_close_ack(const struct in6_addr *ip6_src,
                      const struct in6_addr *ip6_dst,
                      const struct hip_common *common,
-                     struct tuple *tuple)
+                     struct tuple *tuple,
+                     const hip_fw_context_t *ctx)
 {
     int err = 1;
 
@@ -1864,11 +1883,11 @@ static int check_packet(const struct in6_addr *ip6_src,
             goto out_err;
         }
     } else if (common->type_hdr == HIP_R1) {
-        err = handle_r1(common, tuple, verify_responder);
+        err = handle_r1(common, tuple, verify_responder, ctx);
     } else if (common->type_hdr == HIP_I2) {
-        err = handle_i2(ip6_src, ip6_dst, common, tuple);
+        err = handle_i2(common, tuple, ctx);
     } else if (common->type_hdr == HIP_R2) {
-        err = handle_r2(ip6_src, ip6_dst, common, tuple, ctx);
+        err = handle_r2(common, tuple, ctx);
     } else if (common->type_hdr == HIP_UPDATE) {
         if (!(tuple && tuple->hip_tuple->data->src_hi != NULL)) {
             HIP_DEBUG("signature was NOT verified\n");
@@ -1884,7 +1903,7 @@ static int check_packet(const struct in6_addr *ip6_src,
         }
 
         if (err) {
-            err = handle_update(ip6_src, ip6_dst, common, tuple);
+            err = handle_update(common, tuple, ctx);
         }
     } else if (common->type_hdr == HIP_NOTIFY) {
         // don't process and let pass through
@@ -1893,12 +1912,12 @@ static int check_packet(const struct in6_addr *ip6_src,
         // don't process and let pass through
         err = 1;
     } else if (common->type_hdr == HIP_CLOSE) {
-        err = handle_close(ip6_src, ip6_dst, common, tuple);
+        err = handle_close(ip6_src, ip6_dst, common, tuple, ctx);
     } else if (common->type_hdr == HIP_CLOSE_ACK) {
-        err   = handle_close_ack(ip6_src, ip6_dst, common, tuple);
+        err   = handle_close_ack(ip6_src, ip6_dst, common, tuple, ctx);
         tuple = NULL;
     } else if (common->type_hdr == HIP_LUPDATE) {
-        err = esp_prot_conntrack_lupdate(ip6_src, ip6_dst, common, tuple);
+        err = esp_prot_conntrack_lupdate(common, tuple, ctx);
     } else {
         HIP_ERROR("unknown packet type\n");
         err = 0;
@@ -1915,6 +1934,16 @@ static int check_packet(const struct in6_addr *ip6_src,
         }
     }
 
+    HIP_DEBUG("udp_encap_hdr=%p tuple=%p err=%d\n", ctx->udp_encap_hdr, tuple, err);
+
+    /* Cache UDP port numbers (at the moment, used only by the ESP relay) */
+    if (ctx->udp_encap_hdr && (err == 1) && tuple) {
+        tuple->src_port = ntohs(ctx->udp_encap_hdr->source);
+        tuple->dst_port = ntohs(ctx->udp_encap_hdr->dest);
+        HIP_DEBUG("UDP src port %d\n", tuple->src_port);
+        HIP_DEBUG("UDP dst port %d\n", tuple->dst_port);
+    }
+
 out_err:
     return err;
 }
@@ -1926,48 +1955,77 @@ out_err:
  *
  * @param ctx context for the packet
  * @param tuple the tuple corresponding to the packet
- * @return zero on success or non-zero on failure
+ * @return Zero means that a new relay packet was reinjected successfully
+ *         and the original should be dropped.  -1 means that the reinjected
+ *         packet was processed again and should be just accepted without
+ *         ESP filtering. 1 means that the packet was not related to relayin
+ *         and should just proceed to ESP filtering.
  */
-static int relay_esp_in_udp(const hip_fw_context_t *ctx,
-                            const struct tuple *tuple)
+int hipfw_relay_esp(const hip_fw_context_t *ctx)
 {
-    struct iphdr *iph   = (struct iphdr *) ctx->ipq_packet->payload;
+    struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
     struct udphdr *udph = (struct udphdr *) ((uint8_t *) iph + iph->ihl * 4);
-    int len             = ctx->ipq_packet->data_len - iph->ihl * 4;
-    int err             = 0;
+    int len = ctx->ipq_packet->data_len - iph->ihl * 4;
+    SList *list = (SList *) espList;
+    struct tuple *tuple = NULL;
+    struct hip_esp *esp = ctx->transport_hdr.esp;
+    int err = 0;
+    uint32_t spi;
 
-    if (iph->protocol != IPPROTO_UDP) {
-        HIP_DEBUG("Protocol is not UDP. Not relaying packet.\n");
-        goto out_err;
-    }
+    HIP_IFEL(!list, -1, "List is empty\n");
+    HIP_IFEL((iph->protocol != IPPROTO_UDP), -1,
+             "Protocol is not UDP. Not relaying packet.\n\n");
+    HIP_IFEL(!esp, -1, "No ESP header\n");
 
-    _HIP_DEBUG("%d %d %d %d %d %d %d %d %d\n",
-               htons(tuple->connection->original.relayed_src_port),
-               htons(tuple->connection->original.relayed_dst_port),
-               htons(tuple->connection->reply.relayed_src_port),
-               htons(tuple->connection->reply.relayed_dst_port),
-               htons(tuple->relayed_src_port),
-               htons(tuple->relayed_dst_port),
-               htons(udph->source),
-               htons(udph->dest),
-               tuple->direction);
+    spi = ntohl(esp->esp_spi);
+    HIP_IFEL(!(tuple = get_tuple_by_esp(NULL, spi)), 0,
+             "No tuple, skip\n");
 
-    HIP_DEBUG_IN6ADDR("original src", tuple->src_ip);
+    HIP_DEBUG("SPI is 0x%lx\n", spi);
 
-    if (udph->source == tuple->connection->original.relayed_src_port) {
-        udph->dest = tuple->connection->original.relayed_src_port;
-    } else {
-        udph->dest = tuple->connection->original.relayed_dst_port;
-    }
+    HIP_IFEL((tuple->esp_relay == 0), -1, "Relay is off for this tuple\n");
+
+    HIP_IFEL((ipv6_addr_cmp(&ctx->dst, &tuple->esp_relay_daddr) == 0), 1,
+             "Reinjected relayed packet, passing it\n");
+
+    HIP_IFEL(hip_fw_hit_is_our(&tuple->connection->original.hip_tuple->data->dst_hit),
+             0, "Destination HIT belongs to us, no relaying\n");
+
+    HIP_DEBUG_IN6ADDR("I", &tuple->connection->original.hip_tuple->data->src_hit);
+    HIP_DEBUG_IN6ADDR("I", tuple->connection->original.src_ip);
+    HIP_DEBUG_IN6ADDR("R", &tuple->connection->original.hip_tuple->data->dst_hit);
+    HIP_DEBUG_IN6ADDR("R", tuple->connection->original.dst_ip);
+
+    HIP_DEBUG("%d %d %d %d %d %d %d %d %d %d\n",
+              tuple->src_port,
+              tuple->dst_port,
+              tuple->connection->original.src_port,
+              tuple->connection->original.dst_port,
+              tuple->connection->reply.src_port,
+              tuple->connection->reply.dst_port,
+              ntohs(udph->source),
+              ntohs(udph->dest),
+              tuple->direction,
+              tuple->esp_relay_dport);
+
+    HIP_DEBUG_IN6ADDR("src", tuple->src_ip);
+    HIP_DEBUG_IN6ADDR("dst", tuple->dst_ip);
+    HIP_DEBUG_IN6ADDR("esp_relay_addr", &tuple->esp_relay_daddr);
+
     udph->source = htons(HIP_NAT_UDP_PORT);
+    udph->dest = htons(tuple->esp_relay_dport);
     udph->check  = 0;
 
     HIP_DEBUG("Relaying packet\n");
 
-    hip_firewall_send_outgoing_pkt(&ctx->dst, tuple->dst_ip,
-                                   (uint8_t *) iph + iph->ihl * 4, len, iph->protocol);
+    err = hip_firewall_send_outgoing_pkt(&ctx->dst,
+                                         &tuple->esp_relay_daddr,
+                                         (uint8_t *) iph + iph->ihl * 4, len,
+                                         iph->protocol);
+
 out_err:
-    return err;
+
+    return -err;
 }
 
 /**
@@ -2015,13 +2073,6 @@ int filter_esp_state(const hip_fw_context_t *ctx)
                   addr_to_numeric(dst_addr), spi);
 
         err = 1;
-    }
-
-    if (esp_relay && !hip_fw_hit_is_our(&tuple->hip_tuple->data->dst_hit) &&
-        !hip_fw_hit_is_our(&tuple->hip_tuple->data->src_hit) &&
-        ipv6_addr_cmp(dst_addr, tuple->dst_ip) &&
-        ctx->ip_version == 4) {
-        relay_esp_in_udp(ctx, tuple);
     }
 
 #ifdef CONFIG_HIP_MIDAUTH

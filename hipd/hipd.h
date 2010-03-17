@@ -132,9 +132,6 @@ int hip_sock_recv_firewall(void);
 
 //int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
 
-void hip_set_opportunistic_tcp_status(struct hip_common *msg);
-int hip_get_opportunistic_tcp_status(void);
-
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
 

@@ -234,6 +234,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
  *                  the peer. The src and dst ports are included in this parameter
  * @return          nothing
  */
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 static void hip_send_opp_tcp_i1(hip_ha_t *entry)
 {
     int ipType = !IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
@@ -304,6 +305,7 @@ static void hip_send_opp_tcp_i1(hip_ha_t *entry)
         send_tcp_packet(&bytes[0], hdr_size + 4 * tcphdr->doff, 6, hip_raw_sock_output_v6, 1, 0);
     }
 }
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 /**
  * Sends an I1 packet to the peer. Used internally by hip_send_i1
@@ -348,6 +350,7 @@ static int hip_send_i1_pkt(struct hip_common *i1,
         err = 0;
     }
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
     /*send the TCP SYN_i1 packet*/
     if (hip_get_opportunistic_tcp_status() &&
         hit_is_opportunistic_hit(dst_hit)) {
@@ -355,6 +358,7 @@ static int hip_send_i1_pkt(struct hip_common *i1,
         usleep(50);
         hip_send_opp_tcp_i1(entry);
     }
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
     return err;
 }

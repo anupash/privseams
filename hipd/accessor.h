@@ -1,16 +1,13 @@
 #ifndef HIP_HIPD_ACCESSOR_H
 #define HIP_HIPD_ACCESSOR_H
 
-#include "hipd.h" /* @todo: header recursion: hipd.h calls accessor.h */
-
-#include "lib/core/hashtable.h"
-
-#include <sys/time.h>
-
-
 #include <openssl/sha.h>
 #include <openssl/md5.h>
 #include <openssl/des.h>
+#include <sys/time.h>
+
+#include "config.h"
+#include "lib/core/hashtable.h"
 
 /** @addtogroup daemon_states
  * @{
@@ -35,14 +32,22 @@
 
 #define INDEX_HASH_FN           HIP_DIGEST_SHA1
 
+/** Specifies the NAT status of the daemon. This value indicates if the current
+ *  machine is behind a NAT. Defined in hipd.c */
+extern int hipproxy;
+
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);
 int hipd_get_flag(unsigned int);
 void hipd_set_flag(unsigned int);
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+int hip_get_opportunistic_tcp_status(void);
 int hip_set_opportunistic_mode(struct hip_common *msg);
 int hip_query_opportunistic_mode(struct hip_common *msg);
 int hip_query_ip_hit_mapping(struct hip_common *msg);
 
 extern unsigned int opportunistic_mode;
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 #endif /* HIP_HIPD_ACCESSOR_H */
+

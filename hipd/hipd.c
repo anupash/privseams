@@ -118,56 +118,6 @@ int hip_wait_addr_changes_to_stabilize       = 1;
 
 int hip_use_opptcp                           = 0; // false
 
-void hip_set_opportunistic_tcp_status(struct hip_common *msg)
-{
-    struct sockaddr_in6 sock_addr;
-    int retry, type, n;
-
-    type = hip_get_msg_type(msg);
-
-    _HIP_DEBUG("type=%d\n", type);
-
-    memset(&sock_addr, 0, sizeof(sock_addr));
-    sock_addr.sin6_family = AF_INET6;
-    sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    sock_addr.sin6_addr   = in6addr_loopback;
-
-    for (retry = 0; retry < 3; retry++) {
-        /* Switched from hip_sendto() to hip_sendto_user() due to
-         * namespace collision. Both message.h and user.c had functions
-         * hip_sendto(). Introducing a prototype hip_sendto() to user.h
-         * led to compiler errors --> user.c hip_sendto() renamed to
-         * hip_sendto_user().
-         *
-         * Lesson learned: use function prototypes unless functions are
-         * ment only for local (inside the same file where defined) use.
-         * -Lauri 11.07.2008 */
-        n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
-        if (n <= 0) {
-            HIP_ERROR("hipconf opptcp failed (round %d)\n", retry);
-            HIP_DEBUG("Sleeping few seconds to wait for fw\n");
-            sleep(2);
-        } else {
-            HIP_DEBUG("hipconf opptcp ok (sent %d bytes)\n", n);
-            break;
-        }
-    }
-
-    if (type == SO_HIP_SET_OPPTCP_ON) {
-        hip_use_opptcp = 1;
-    } else {
-        hip_use_opptcp = 0;
-    }
-
-    HIP_DEBUG("Opportunistic tcp set %s\n",
-              (hip_use_opptcp ? "on" : "off"));
-}
-
-int hip_get_opportunistic_tcp_status()
-{
-    return hip_use_opptcp;
-}
-
 static void usage(void)
 {
     fprintf(stderr, "Usage: hipd [options]\n\n");
@@ -180,7 +130,14 @@ static void usage(void)
     fprintf(stderr, "\n");
 }
 
-int hip_sendto_firewall(const struct hip_common *msg){
+/**
+ * send a message to the HIP firewall
+ *
+ * @param msg the message to send
+ * @return zero on success or negative on error
+ */
+int hip_sendto_firewall(const struct hip_common *msg)
+{
 #ifdef CONFIG_HIP_FIREWALL
     int n          = 0;
     HIP_DEBUG("CONFIG_HIP_FIREWALL DEFINED AND STATUS IS %d\n", hip_get_firewall_status());
@@ -206,7 +163,11 @@ int hip_sendto_firewall(const struct hip_common *msg){
 }
 
 /**
- * Daemon main function.
+ * Daemon "main" function.
+ *
+ * @param argc number of command line arguments
+ * @param argv the command line arguments
+ * @return zero on success or negative on error
  */
 static int hipd_main(int argc, char *argv[])
 {
@@ -428,6 +389,13 @@ out_err:
     return err;
 }
 
+/**
+ * the main function for hipd
+ *
+ * @param argc number of command line arguments
+ * @param argv the command line arguments
+ * @return zero on success or negative on error
+ */
 int main(int argc, char *argv[])
 {
     int err = 0;

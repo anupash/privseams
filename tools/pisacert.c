@@ -10,6 +10,8 @@
 #include <sys/time.h>
 #include <time.h>
 #include <zlib.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include "lib/core/ife.h"
 #include "lib/core/icomm.h"
 #include "lib/core/debug.h"

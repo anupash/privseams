@@ -17,6 +17,7 @@
 #define _BSD_SOURCE
 
 #include "config.h"
+#include "accessor.h"
 #include "user.h"
 #include "esp_prot_anchordb.h"
 #include "nsupdate.h"
@@ -773,12 +774,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         if (nat_port) {
             HIP_DEBUG("Setting local NAT port\n");
             hip_set_local_nat_udp_port(nat_port->port);
-            // We need to recreate the NAT UDP sockets to bind to the new port.
-            close(hip_nat_sock_output_udp);
+            /* We need to recreate only the input socket to bind to the new
+               port. Output port must be left intact as it is a raw socket */
             close(hip_nat_sock_input_udp);
-            hip_nat_sock_output_udp = 0;
             hip_nat_sock_input_udp  = 0;
-            hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0, 1);
             hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0);
         } else {
             HIP_DEBUG("Setting peer NAT port\n");

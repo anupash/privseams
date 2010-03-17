@@ -1,12 +1,13 @@
-/*
- * HIPL security related functions
+/**
+ * @file
  *
- * Licence: GNU/GPL
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
- * Authors:
- * - Mika Kousa <mkousa@iki.fi>
- * - Kristian Slavov <ksl@iki.fi>
- * - Tobias Heer <heer@tobibox.de>
+ * @brief Diffie-Hellman wrappers for HIP
+ *
+ * @author Mika Kousa <mkousa@iki.fi>
+ * @author Kristian Slavov <ksl@iki.fi>
+ * @author Tobias Heer <heer@tobibox.de>
  */
 
 /* required for s6_addr32 */
@@ -19,7 +20,7 @@ DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
 static void hip_regen_dh_keys(uint32_t bitmask);
 
 /**
- * hip_insert_dh - Insert the current DH-key into the buffer
+ * insert the current DH-key into the buffer
  *
  * If a DH-key does not exist, we will create one.
  * @return >0 if ok, -1 if errors
@@ -62,9 +63,9 @@ err_free:
 }
 
 /**
- * hip_calculate_shared_secret - Creates a shared secret based on the
- * public key of the peer (passed as an argument) and own DH private key
- * (created beforehand).
+ * create a shared secret based on the public key of the peer
+ * (passed as an argument) and own DH private key (created beforehand).
+ *
  * @param public_value Peer's Diffie-Hellman public key
  * @param group_id the Diffie-Hellman group ID
  * @param len the length of the public value
@@ -113,10 +114,10 @@ int hip_calculate_shared_secret(uint8_t *public_value,
 }
 
 /**
- * hip_regen_dh_keys - Regenerate Diffie-Hellman keys for HIP
+ * regenerate Diffie-Hellman keys for HIP
  * @param bitmask Mask of groups to generate.
  *
- * Use only this function to generate DH keys.
+ * @note Use only this function to generate DH keys.
  */
 static void hip_regen_dh_keys(uint32_t bitmask)
 {
@@ -149,6 +150,9 @@ static void hip_regen_dh_keys(uint32_t bitmask)
     HIP_DEBUG("%d keys generated\n", cnt);
 }
 
+/**
+ * uninitialize precreated DH structures
+ */
 void hip_dh_uninit(void)
 {
     int i;
@@ -160,6 +164,9 @@ void hip_dh_uninit(void)
     }
 }
 
+/**
+ * initialize D-H cipher structures
+ */
 int hip_init_cipher(void)
 {
     uint32_t supported_groups;
