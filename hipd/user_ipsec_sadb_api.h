@@ -1,7 +1,7 @@
 /**
  * @file firewall/user_ipsec_sadb_api.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Provides the API used by the hipd to set up and maintain the
  * userspace IPsec state in the hipfw.

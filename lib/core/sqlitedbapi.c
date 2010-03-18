@@ -1,8 +1,10 @@
 /** @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * This file defines the api for sqlite to use with HIPL. Is compiled only with agent.
  *
  * @author Samu Varjonen
- *
  */
 
 #include "config.h"

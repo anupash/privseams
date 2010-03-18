@@ -1,7 +1,7 @@
 /**
  * @file agent/agent.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This file contains all the necessary signal handlers for the agent. The signal handlers
  * defined in this file are only used in the main() of this file.

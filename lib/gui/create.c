@@ -1,7 +1,7 @@
 /**
  * @file libhipgui/create.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This file contains the all the needed functions to create the main window and all
  * the needed dialogs and other widgets for the agent GUI

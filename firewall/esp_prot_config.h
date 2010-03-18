@@ -1,7 +1,7 @@
 /**
  * @file firewall/esp_prot_config.h
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * API for reading of the configuration files for the
  * ESP protection extension. It furthermore provides sanity

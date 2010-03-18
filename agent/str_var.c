@@ -1,7 +1,7 @@
 /**
  * @file agent/str_var.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This file contains functions that are used to create the memory
  * representation (linked list) of the language file.

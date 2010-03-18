@@ -1,7 +1,7 @@
 /**
  * @file firewall/user_ipsec_fw_msg.h
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Inter-process communication with the hipd for userspace IPsec
  *

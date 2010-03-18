@@ -1,7 +1,7 @@
 /**
  * @file firewall/esp_prot_light_update.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Provides messaging functionality required for HHL-based anchor
  * element updates.

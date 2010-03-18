@@ -1,7 +1,7 @@
 /**
  * @file hipd/user_ipsec_hipd_msg.h
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  *
  * Messaging required for the userspace IPsec implementation of the hipfw
  *

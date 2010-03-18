@@ -1,7 +1,7 @@
 /**
  * @file ./hipd/hit_to_ip.c
  *
- *  <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * @brief look for locators in hit-to-ip domain
  * @brief usually invoked by hip_map_id_to_addr

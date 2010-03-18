@@ -1,7 +1,7 @@
 /**
  * @file agent/language.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Functions that load different defined languages and how to search
  * specific strings in that language

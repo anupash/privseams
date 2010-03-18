@@ -1,7 +1,7 @@
 /**
  * @file agent/hitdb.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Functions to manipulate the HIT database and do searcher from it.
  * Also contains the functionality that inserts the records from memory to

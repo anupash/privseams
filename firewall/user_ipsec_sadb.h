@@ -1,7 +1,7 @@
 /**
  * @file firewall/user_ipsec_sadb.h
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Stores security association for IPsec connections and makes them
  * accessasible through HITs and (dst IP, spi).

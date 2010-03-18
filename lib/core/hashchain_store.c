@@ -1,7 +1,7 @@
 /**
  * @file firewall/hashchain_store.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Stores a number of pre-created hash structures and supports HHL-based
  * linking of hash structures in different hierarchy levels.

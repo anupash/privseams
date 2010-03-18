@@ -1,7 +1,7 @@
 /**
  * @file libhipgui/events.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This file contains event handlers for every button etc. in agent GUI excluding
  * drag'n'drop events that are in libhipgui/dragndrop.c

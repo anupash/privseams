@@ -1,7 +1,7 @@
 /**
  * @file libhipgui/hipgui.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This file contains functionality that manipulate the content showed
  * by the GUI also contains the main initialization function for the GUI
