@@ -1,7 +1,7 @@
 /**
  * @file libdht/libhipopendht.c
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * Functions to use OpenDHT/Bamboo-DHT/OpenLookup-v1/OpenLookup-v2. Supports
  * put, get, put-rm and rm messages.
