@@ -1,8 +1,14 @@
-/*
- * Implements interfaces used to set IpSec SA/SP through PFKEY API's
+/**
+ * @file
  *
- * Authors:
- * - Diego Beltrami <diego.beltrami@gmail.com>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * @brief Hipd wrapper interface to access PFKEY APIs
+ *
+ * @author Diego Beltrami <diego.beltrami@gmail.com>
+ *
+ * @todo test this!
+ * @see lib/tool/xfrmapi.c for the wrappers for XFRM API
  */
 
 /* required for caddr_t */
@@ -21,7 +27,12 @@
 // FIXME: This must be turned to BEET when BEET will be supported by pfkey as well
 #define HIP_IPSEC_DEFAULT_MODE IPSEC_MODE_BEET
 
-// Given an in6_addr, this function correctly fills in a sock_addr (needs to be already allocated!)
+/**
+ * Given an in6_addr, this function correctly fills in a sock_addr (needs to be already allocated!)
+ *
+ * @param s_addr the output argument
+ * @param addr the input argument
+ */
 static void get_sock_addr_from_in6(struct sockaddr *s_addr, const struct in6_addr *addr)
 {
     memset(s_addr, 0, sizeof(struct sockaddr_storage));
@@ -35,6 +46,11 @@ static void get_sock_addr_from_in6(struct sockaddr *s_addr, const struct in6_add
     }
 }
 
+/**
+ * Flush all IPsec Security Policies
+ *
+ * @return zero on success and negative on error
+ */
 int hip_flush_all_policy()
 {
     int so, len, err = 0;
@@ -51,6 +67,11 @@ out_err:
     return err;
 }
 
+/**
+ * Flush all IPsec Security Associations
+ *
+ * @return zero on success and negative on error
+ */
 int hip_flush_all_sa()
 {
     int so, len, err = 0;
@@ -65,8 +86,14 @@ out_err:
     return err;
 }
 
-/*
- * todo: dst_addr is unused in the xfrmapi.h
+/**
+ * delete a Security Association
+ *
+ * @param spi the SPI number distinguishing the SA
+ * @param peer_addr the destination address for the SA (unused)
+ * @param not_used not used
+ * @param direction HIP_SPI_DIRECTION_OUT or HIP_SPI_DIRECTION_IN
+ * @param entry corresponding host association
  */
 void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
                    const struct in6_addr *dst_addr,
@@ -126,9 +153,26 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
     return spi;
 }
 
-/* Security associations in the kernel with BEET are bounded to the outer
- * address, meaning IP addresses. As a result the parameters to be given
- * should be such an addresses and not the HITs.
+/**
+ * Add a Security Association for IPsec ESP
+ *
+ * @param saddr outer source address of the SA
+ * @param daddr outer destination address of the SA
+ * @param src_hit inner source address of the SA (source HIT)
+ * @param dst_hit outer destination address of the SA (destination HIT)
+ * @param spi SPI number for the SA
+ * @param ealg encryption algorithm for ESP
+ * @param enckey encryption key for ESP
+ * @param authkey authentication key for ESP
+ * @param already_acquired currently unused
+ * @param direction the direction of the SA (HIP_SPI_DIRECTION_OUT or HIP_SPI_DIRECTION_IN)
+ * @param update zero if new SA or one if an old SA
+ * @param entry corresponding host association
+ * @return zero on success and non-zero on error
+ * @note IPv4 addresses in IPv6 mapped format
+ * @note If you make changes to this function, please change also
+ * hipd/user_ipsec_sadb_api.c:hip_userspace_ipsec_add_sa() and
+ * xfrmapi.c:add_sa()
  */
 uint32_t hip_add_sa(const struct in6_addr *saddr, const struct in6_addr *daddr,
                     const struct in6_addr *src_hit, const struct in6_addr *dst_hit,
@@ -242,9 +286,18 @@ out_err:
     return err;
 }
 
-// This function fills in policy0 and policylen0 according to the given parameters
-// The full implementation can be found in racoon
-// direction IPSEC_DIR_INBOUND | IPSEC_DIR_OUTBOUND
+/**
+ * This function fills in policy0 and policylen0 according to the given parameters
+ * The full implementation can be found in racoon.
+ *
+ * @param policy0 the IPsec policy
+ * @param policylen0 length of the policy
+ * @param direction IPSEC_DIR_INBOUND | IPSEC_DIR_OUTBOUND
+ * @param src the source address for the policy
+ * @param dst the destination address for the policy
+ * @param mode the IPsec mode
+ * @param cmd add or delete
+ */
 static int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
                          struct sockaddr *src, struct sockaddr *dst, u_int mode, int cmd)
 {
@@ -310,6 +363,21 @@ end:
     return 0;
 }
 
+/**
+ * modify an IPsec policy using PFKEY
+ *
+ * @param so the PF_KEY socket
+ * @param src_hit source HIT
+ * @param prefs source preferences
+ * @param dst_hit destination HIT
+ * @param prefd destination preferences
+ * @param src_addr source address
+ * @param dst_addr destination address
+ * @param proto the protocol
+ * @param cmd add or del
+ * @param direction input or output direction
+ * @return zero on success and non-zero on error
+ */
 static int hip_pfkey_policy_modify(int so, const hip_hit_t *src_hit, u_int prefs,
                                    const hip_hit_t *dst_hit, u_int prefd,
                                    const struct in6_addr *src_addr,
@@ -370,6 +438,19 @@ out_err:
     return err;
 }
 
+/**
+ * set up a pair of security policies
+ *
+ * @param src_id  source HIT
+ * @param dst_id destination HIT
+ * @param src_addr source IP address
+ * @param dst_addr destination IP address
+ * @param proto protocol for the SP (IPPROTO_ESP)
+ * @param use_full_prefix one if we should use /128 prefix for HITs
+ *                        or zero otherwise
+ * @param update zero if the the SP is new or one otherwise
+ * @note  IPv4 addresses in IPv6 mapped format
+ */
 int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,
                           const hip_hit_t *dst_hit,
                           const struct in6_addr *src_addr,
@@ -403,6 +484,15 @@ out_err:
     return err;
 }
 
+/**
+ * delete a pair of Security Policies
+ *
+ * @param src_hit source HIT for the SP
+ * @param dst_hit destination HIT for the SP
+ * @param proto the protocol (IPPROTO_ESP)
+ * @param use_full_prefix one if we should use /128 prefix for HITs
+ *                        or zero otherwise
+ */
 void hip_delete_hit_sp_pair(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
                             const uint8_t proto, const int use_full_prefix)
 {
@@ -427,12 +517,22 @@ out_err:
     return;
 }
 
+/**
+ * delete the default Security Policy pair that triggers base exchanges
+ *
+ */
 void hip_delete_default_prefix_sp_pair()
 {
     // Currently unused
     HIP_DEBUG("\n");
 }
 
+/**
+ * add the default security policy pair (based on HIT prefix) that
+ * triggers all base exchanges
+ *
+ * @return zero on success and negative on failure
+ */
 int hip_setup_default_sp_prefix_pair()
 {
     // currently this function is not needed
