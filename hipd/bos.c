@@ -74,7 +74,7 @@ int hip_send_bos(const struct hip_common *msg)
     HIP_DEBUG("\n");
 
     /* Extra consistency test */
-    if (hip_get_msg_type(msg) != SO_HIP_BOS) {
+    if (hip_get_msg_type(msg) != HIP_MSG_BOS) {
         err = -EINVAL;
         HIP_ERROR("Bad message type\n");
         goto out_err;

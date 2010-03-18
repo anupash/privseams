@@ -44,7 +44,7 @@ static int hit_is_local_hit(const struct in6_addr *hit)
     /* Build a HIP message with socket option to get all HITs. */
     HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
     hip_msg_init(msg);
-    HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
+    HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_GET_HITS, 0), -1);
 
     /* Send the message to the daemon.
      * The daemon fills the message. */

@@ -78,8 +78,8 @@ int hip_agent_is_alive(void)
 /**
  * Set opportunistic TCP status on or off
  *
- * @param msg a message with message type as SO_HIP_SET_OPPTCP_ON
- *            or SO_HIP_SET_OPPTCP_OFF
+ * @param msg a message with message type as HIP_MSG_SET_OPPTCP_ON
+ *            or HIP_MSG_SET_OPPTCP_OFF
  */
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 {
@@ -116,7 +116,7 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg)
         }
     }
 
-    if (type == SO_HIP_SET_OPPTCP_ON) {
+    if (type == HIP_MSG_SET_OPPTCP_ON) {
         hip_use_opptcp = 1;
     } else {
         hip_use_opptcp = 0;
@@ -168,8 +168,8 @@ int hip_set_opportunistic_mode(struct hip_common *msg)
     hip_msg_init(msg);
     HIP_IFE(hip_build_user_hdr(msg,
                                (opportunistic_mode == 2 ?
-                                SO_HIP_SET_OPPTCP_ON :
-                                SO_HIP_SET_OPPTCP_OFF),
+                                HIP_MSG_SET_OPPTCP_ON :
+                                HIP_MSG_SET_OPPTCP_OFF),
                                0), -1);
     hip_set_opportunistic_tcp_status(msg);
 
@@ -192,7 +192,7 @@ int hip_query_opportunistic_mode(struct hip_common *msg)
     hip_msg_init(msg);
 
     HIP_IFEL(hip_build_user_hdr(msg,
-                                SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0),
+                                HIP_MSG_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0),
              -1, "build user header failed\n");
 
     HIP_IFEL(hip_build_param_contents(msg, (void *) &opp_mode,
@@ -209,7 +209,7 @@ out_err:
 /**
  * turn hi3 support on or off
  *
- * @param msg a message with type SO_HIP_SET_HI3_ON or SO_HIP_SET_HI3_OFF
+ * @param msg a message with type HIP_MSG_SET_HI3_ON or HIP_MSG_SET_HI3_OFF
  */
 void hip_set_hi3_status(struct hip_common *msg)
 {
@@ -237,12 +237,12 @@ void hip_set_hi3_status(struct hip_common *msg)
         }
     }
 
-    if (type == SO_HIP_SET_HI3_ON) {
+    if (type == HIP_MSG_SET_HI3_ON) {
         hip_i3_init();
         hip_use_hi3        = 1;
-        hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+        hip_locator_status = HIP_MSG_SET_LOCATOR_ON;
     } else {
-        hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
+        hip_locator_status = HIP_MSG_SET_LOCATOR_OFF;
         hip_hi3_clean();
         hip_use_hi3        = 0;
     }
@@ -289,7 +289,7 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_ANSWER_IP_HIT_MAPPING_QUERY, 0),
              -1,
              "build user header failed\n");
     HIP_IFEL(hip_build_param_contents(msg,

@@ -208,7 +208,7 @@ static int hip_agent_add_lhits(void)
     }
     hip_msg_init(msg);
 
-    err = hip_build_user_hdr(msg, SO_HIP_ADD_DB_HI, 0);
+    err = hip_build_user_hdr(msg, HIP_MSG_ADD_DB_HI, 0);
     if (err) {
         HIP_ERROR("build hdr failed: %s\n", strerror(err));
         goto out_err;
@@ -440,7 +440,7 @@ int hip_periodic_maintenance()
         }
     }
 #ifdef CONFIG_HIP_DHT
-    if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+    if (hip_opendht_inuse == HIP_MSG_DHT_ON) {
         if (opendht_counter < 0) {
             hip_register_to_dht();
             opendht_counter = OPENDHT_REFRESH_INIT;
@@ -453,7 +453,7 @@ int hip_periodic_maintenance()
         } else {
             queue_counter--;
         }
-        if (hip_buddies_inuse == SO_HIP_BUDDIES_ON) {
+        if (hip_buddies_inuse == HIP_MSG_BUDDIES_ON) {
             if (cert_publish_counter < 0) {
                 err = hip_publish_certificates();
                 if (err < 0) {
@@ -519,7 +519,7 @@ int hip_firewall_is_alive()
  * Update firewall on host association state. Currently used by the
  * LSI and system-based opportunistic mode in the firewall.
  *
- * @param action SO_HIP_FW_UPDATE_DB or SO_HIP_FW_BEX_DONE
+ * @param action HIP_MSG_FW_UPDATE_DB or HIP_MSG_FW_BEX_DONE
  * @param entry the host association
  * @param hit_s optional source HIT
  * @param hit_r optional destination HIT
@@ -631,7 +631,7 @@ out_err:
 /**
  * tell firewall to turn on or off the ESP relay mode
  *
- * @param action SO_HIP_OFFER_FULLRELAY or SO_HIP_CANCEL_FULLRELAY
+ * @param action HIP_MSG_OFFER_FULLRELAY or HIP_MSG_CANCEL_FULLRELAY
  *
  * @return zero on success or negative on failure
  */
@@ -644,7 +644,7 @@ int hip_firewall_set_esp_relay(int action)
     HIP_DEBUG("Setting ESP relay to %d\n", action);
     HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
     HIP_IFEL(hip_build_user_hdr(msg,
-                                action ? SO_HIP_OFFER_FULLRELAY : SO_HIP_CANCEL_FULLRELAY, 0),
+                                action ? HIP_MSG_OFFER_FULLRELAY : HIP_MSG_CANCEL_FULLRELAY, 0),
              -1, "Build header failed\n");
 
     sent = hip_sendto_firewall(msg);

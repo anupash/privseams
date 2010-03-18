@@ -41,7 +41,7 @@ int hip_create_locators(hip_common_t *locator_msg,
 
     hip_msg_init(locator_msg);
     HIP_IFEL(hip_build_user_hdr(locator_msg,
-                                SO_HIP_SET_LOCATOR_ON, 0), -1,
+                                HIP_MSG_SET_LOCATOR_ON, 0), -1,
              "Failed to add user header\n");
     HIP_IFEL(hip_build_locators_old(locator_msg, 0), -1,
              "Failed to build locators\n");
@@ -320,7 +320,7 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
         goto out_err;
     }
 
-    if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF) {
+    if (hip_shotgun_status == HIP_MSG_SHOTGUN_OFF) {
         switch (type) {
         case HIP_UPDATE_LOCATOR:
             HIP_IFEL(hip_select_local_addr_for_first_update(ha, src_addr, dst_addr, &local_addr), -1,
@@ -423,7 +423,7 @@ out_err:
         nsupdate(0);
     }
 
-    if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+    if (hip_locator_status == HIP_MSG_SET_LOCATOR_ON) {
         hip_recreate_all_precreated_r1_packets();
     }
     if (locator_msg) {
@@ -602,7 +602,7 @@ static void hip_empty_oppipdb_old(void)
 
         msg = hip_msg_alloc();
         HIP_IFEL(!msg, -1, "msg alloc failed\n");
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FW_FLUSH_SYS_OPP_HIP, 0),
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_FW_FLUSH_SYS_OPP_HIP, 0),
                  -1, "build hdr failed\n");
 
         err = hip_sendto_firewall(msg);

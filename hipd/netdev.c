@@ -762,7 +762,7 @@ static int hip_dht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
     bzero(&result, sizeof(result));
     bzero(dht_response, sizeof(dht_response));
 
-    if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+    if (hip_opendht_inuse == HIP_MSG_DHT_ON) {
         memset(dht_locator_last, '\0', sizeof(dht_locator_last));
         HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,
                                      opendht_serving_gateway,
@@ -861,7 +861,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
     }
 
     /* Try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
-    if (hip_opendht_inuse == SO_HIP_DHT_ON && !skip_namelookup) {
+    if (hip_opendht_inuse == HIP_MSG_DHT_ON && !skip_namelookup) {
         char hit_str[INET6_ADDRSTRLEN];
 
         memset(hit_str, 0, sizeof(hit_str));
@@ -1065,7 +1065,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
         HIP_DEBUG("No information of peer found, trying broadcast\n");
         broadcast           = 1;
         shotgun_status_orig = hip_shotgun_status;
-        hip_shotgun_status  = SO_HIP_SHOTGUN_ON;
+        hip_shotgun_status  = HIP_MSG_SHOTGUN_ON;
         IPV4_TO_IPV6_MAP(&bcast, dst_addr);
         err                 = 0;
     }

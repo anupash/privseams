@@ -462,7 +462,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
     HIP_DEBUG("Sending I1 to the following addresses:\n");
     hip_print_peer_addresses_to_be_added(entry);
 
-    if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF ||
+    if (hip_shotgun_status == HIP_MSG_SHOTGUN_OFF ||
         (entry->peer_addr_list_to_be_added == NULL)) {
         HIP_IFEL(hip_hadb_get_peer_addr(entry, &peer_addr), -1,
                  "No preferred IP address for the peer.\n");
@@ -1348,7 +1348,7 @@ int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_
      *
      */
 
-    if (hip_shotgun_status == SO_HIP_SHOTGUN_OFF) {
+    if (hip_shotgun_status == HIP_MSG_SHOTGUN_OFF) {
         if (IN6_IS_ADDR_V4MAPPED(peer_addr) && ((hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) || dst_port != 0)) {
             return hip_send_udp_from_one_src(local_addr, peer_addr,
                                              src_port, dst_port,

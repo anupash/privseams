@@ -127,22 +127,22 @@ static int connhipd_handle_msg(struct hip_common *msg,
     struct in6_addr hitr;
     type = hip_get_msg_type(msg);
 
-    if (type == SO_HIP_AGENT_PING_REPLY) {
+    if (type == HIP_MSG_AGENT_PING_REPLY) {
         HIP_DEBUG("Received ping reply from daemon. " \
                   "Connection to daemon established.\n");
         gui_set_info(lang_get("gui-info-000"));
         hip_agent_connected = 1;
-    } else if (type == SO_HIP_SET_NAT_ON)   {
+    } else if (type == HIP_MSG_SET_NAT_ON)   {
         gui_update_nat(1);
         HIP_DEBUG("NAT extensions on.\n");
-    } else if (type == SO_HIP_SET_NAT_NONE)   {
+    } else if (type == HIP_MSG_SET_NAT_NONE)   {
         gui_update_nat(0);
         HIP_DEBUG("NAT extensions off.\n");
-    } else if (type == SO_HIP_DAEMON_QUIT)   {
+    } else if (type == HIP_MSG_DAEMON_QUIT)   {
         HIP_DEBUG("Daemon quit. Waiting daemon to wake up again...\n");
         gui_set_info(lang_get("gui-info-001"));
         hip_agent_connected = 0;
-    } else if (type == SO_HIP_ADD_DB_HI)   {
+    } else if (type == HIP_MSG_ADD_DB_HI)   {
         HIP_DEBUG("Message received successfully from daemon with type"
                   " HIP_ADD_DB_HI (%d).\n", type);
         n = 0;
@@ -277,7 +277,7 @@ static void *connhipd_thread(void *data)
 
         if (hip_agent_connected < 1) {
             /* Test connection. */
-            hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
+            hip_build_user_hdr(msg, HIP_MSG_AGENT_PING, 0);
             n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
             //if (n < 0) HIP_DEBUG("Could not send ping to daemon, waiting.\n");
             hip_agent_connected--;
@@ -335,7 +335,7 @@ static void *connhipd_thread(void *data)
 
 out_err:
     /* Send quit message to daemon. */
-    hip_build_user_hdr(msg, SO_HIP_AGENT_QUIT, 0);
+    hip_build_user_hdr(msg, HIP_MSG_AGENT_QUIT, 0);
     n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
     if (n < 0) {
         HIP_ERROR("Could not send quit message to daemon.\n");

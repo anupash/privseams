@@ -63,7 +63,7 @@ static int hip_fw_unblock_and_blacklist(const struct in6_addr *peer_ip)
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
     /* build the message header */
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
              -1, "build hdr failed\n");
 
     HIP_IFEL(hip_build_param_contents(msg, (void *) (peer_ip),
@@ -333,7 +333,7 @@ int hip_request_send_tcp_packet(void *hdr,
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
     /* build the message header */
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_SEND_TCP_PACKET, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_OPPTCP_SEND_TCP_PACKET, 0),
              -1, "build hdr failed\n");
 
     HIP_IFEL(hip_build_param_contents(msg, (void *) hdr,

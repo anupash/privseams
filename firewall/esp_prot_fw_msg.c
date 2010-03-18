@@ -56,7 +56,7 @@ static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore,
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_BEX_STORE_UPDATE, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_BEX_STORE_UPDATE, 0), -1,
              "build hdr failed\n");
 
     // first add hash_length and num_hchain for each transform
@@ -170,7 +170,7 @@ int send_esp_prot_to_hipd(const int activate)
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ESP_PROT_TFM, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_ESP_PROT_TFM, 0), -1,
              "build hdr failed\n");
 
     if (activate > 0) {
@@ -331,7 +331,7 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_UPDATE, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_TRIGGER_UPDATE, 0), -1,
              "build hdr failed\n");
 
     HIP_DEBUG_HIT("src_hit", entry->inner_src_addr);
@@ -496,7 +496,7 @@ int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ANCHOR_CHANGE, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_ANCHOR_CHANGE, 0), -1,
              "build hdr failed\n");
 
     HIP_DEBUG_HIT("src_hit", entry->inner_src_addr);

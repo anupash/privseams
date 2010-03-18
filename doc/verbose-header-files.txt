@@ -519,8 +519,8 @@ libhipcore/builder.h : hip_set_param_type
 hipd/registration.h : hip_set_srv_max_lifetime
 hipd/registration.h : hip_set_srv_min_lifetime
 hipd/nat.h : HIP_SIMULATE_NATS
-libhipcore/icomm.h : HIP_SO_ROOT_MAX
-libhipcore/icomm.h : HIP_SO_ROOT_MIN
+libhipcore/icomm.h : HIP_MSG_ROOT_MAX
+libhipcore/icomm.h : HIP_MSG_ROOT_MIN
 libhipcore/sqlitedbapi.h : hip_sqlite_create_table
 libhipcore/sqlitedbapi.h : hip_sqlite_execute_into_db
 hipd/registration.h : hip_srv_status_t
@@ -1154,7 +1154,7 @@ firewall/hslist.h : SLIST_H_
 firewall/hslist.h : slist_last
 libhiptool/xfrm.h : soft_add_expires_seconds
 libhiptool/xfrm.h : soft_use_expires_seconds
-libhipcore/icomm.h : SO_HIP_STUN
+libhipcore/icomm.h : HIP_MSG_STUN
 libhiptool/nlink /usr/include/linux/socket.h : SOL_NETLINK
 libhipcore/kerncompat.h : spin_unlock_irqrestore
 agent/str_var.h : SPRINTHUGESTR

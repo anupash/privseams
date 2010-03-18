@@ -27,7 +27,7 @@
  * <ul>
  * <li>struct hip_common *msg = malloc(HIP_MAX_PACKET);</li>
  * <li>hip_msg_init(msg);</li>
- * <li>err = hip_build_user_hdr(msg, SO_HIP_ADD_MAP_HIT_IP, 0);</li>
+ * <li>err = hip_build_user_hdr(msg, HIP_MSG_ADD_MAP_HIT_IP, 0);</li>
  * <li>err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
  * sizeof(struct in6_addr));</li>
  * <li>err = hip_build_param_contents(msg, &ip, HIP_PARAM_IPV6_ADDR,
@@ -1168,8 +1168,8 @@ void hip_dump_msg(const struct hip_common *msg)
  * Return a sting for a given parameter type number for diagnostics.
  * The returned string should be just the same as its type constant name.
  *
- * @note If you added a SO_HIP_NEWMODE in lib/core/icomm.h, you also need to
- *       add a case block for your SO_HIP_NEWMODE constant in the
+ * @note If you added a HIP_MSG_NEWMODE in lib/core/icomm.h, you also need to
+ *       add a case block for your HIP_MSG_NEWMODE constant in the
  *       switch(msg_type) block in this function.
  * @param msg_type message type number
  * @return the name of the message type
@@ -1190,96 +1190,96 @@ char *hip_message_type_name(const uint8_t msg_type)
     case HIP_PSIG:          return "HIP_PSIG";
     case HIP_TRIG:          return "HIP_TRIG";
 
-    case SO_HIP_ADD_LOCAL_HI:       return "SO_HIP_ADD_LOCAL_HI";
-    case SO_HIP_DEL_LOCAL_HI:       return "SO_HIP_DEL_LOCAL_HI";
-    case SO_HIP_RUN_UNIT_TEST:      return "SO_HIP_RUN_UNIT_TEST";
-    case SO_HIP_RST:                return "SO_HIP_RST";
-    case SO_HIP_UNIT_TEST:          return "SO_HIP_UNIT_TEST";
-    case SO_HIP_BOS:                return "SO_HIP_BOS";
-    case SO_HIP_NETLINK_DUMMY:      return "SO_HIP_NETLINK_DUMMY";
-    case SO_HIP_CONF_PUZZLE_NEW:    return "SO_HIP_CONF_PUZZLE_NEW";
-    case SO_HIP_CONF_PUZZLE_GET:    return "SO_HIP_CONF_PUZZLE_GET";
-    case SO_HIP_CONF_PUZZLE_SET:    return "SO_HIP_CONF_PUZZLE_SET";
-    case SO_HIP_CONF_PUZZLE_INC:    return "SO_HIP_CONF_PUZZLE_INC";
-    case SO_HIP_CONF_PUZZLE_DEC:    return "SO_HIP_CONF_PUZZLE_DEC";
-    case SO_HIP_SET_OPPORTUNISTIC_MODE: return "SO_HIP_SET_OPPORTUNISTIC_MODE";
-    case SO_HIP_SET_BLIND_ON:       return "SO_HIP_SET_BLIND_ON";
-    case SO_HIP_SET_BLIND_OFF:      return "SO_HIP_SET_BLIND_OFF";
-    case SO_HIP_DHT_GW:             return "SO_HIP_DHT_GW";
-    case SO_HIP_SET_DEBUG_ALL:      return "SO_HIP_SET_DEBUG_ALL";
-    case SO_HIP_SET_DEBUG_MEDIUM:   return "SO_HIP_SET_DEBUG_MEDIUM";
-    case SO_HIP_SET_DEBUG_NONE:     return "SO_HIP_SET_DEBUG_NONE";
-    case SO_HIP_MHADDR_ACTIVE:      return "SO_HIP_MHADDR_ACTIVE";
-    case SO_HIP_MHADDR_LAZY:        return "SO_HIP_MHADDR_LAZY";
-    case SO_HIP_RESTART:            return "SO_HIP_RESTART";
-    case SO_HIP_SET_LOCATOR_ON:     return "SO_HIP_SET_LOCATOR_ON";
-    case SO_HIP_SET_LOCATOR_OFF:    return "SO_HIP_SET_LOCATOR_OFF";
-    case SO_HIP_DHT_SET:            return "SO_HIP_DHT_SET";
-    case SO_HIP_DHT_ON:             return "SO_HIP_DHT_ON";
-    case SO_HIP_DHT_OFF:            return "SO_HIP_DHT_OFF";
-    case SO_HIP_HIT_TO_IP_ON:       return "SO_HIP_HIT_TO_IP_ON";
-    case SO_HIP_HIT_TO_IP_OFF:      return "SO_HIP_HIT_TO_IP_OFF";
-    case SO_HIP_HIT_TO_IP_SET:      return "SO_HIP_HIT_TO_IP_SET";
-    case SO_HIP_SET_OPPTCP_ON:      return "SO_HIP_SET_OPPTCP_ON";
-    case SO_HIP_SET_OPPTCP_OFF:     return "SO_HIP_SET_OPPTCP_OFF";
-    case SO_HIP_OPPTCP_SEND_TCP_PACKET: return "SO_HIP_OPPTCP_SEND_TCP_PACKET";
-    case SO_HIP_TRANSFORM_ORDER:    return "SO_HIP_TRANSFORM_ORDER";
-    case SO_HIP_OFFER_RVS:          return "SO_HIP_OFFER_RVS";
-    case SO_HIP_CANCEL_RVS:         return "SO_HIP_CANCEL_RVS";
-    case SO_HIP_REINIT_RVS:         return "SO_HIP_REINIT_RVS";
-    case SO_HIP_ADD_DEL_SERVER:     return "SO_HIP_ADD_DEL_SERVER";
-    case SO_HIP_OFFER_HIPRELAY:     return "SO_HIP_OFFER_HIPRELAY";
-    case SO_HIP_CANCEL_HIPRELAY:    return "SO_HIP_CANCEL_HIPRELAY";
-    case SO_HIP_REINIT_RELAY:       return "SO_HIP_REINIT_RELAY";
-    case SO_HIP_ADD_DB_HI:          return "SO_HIP_ADD_DB_HI";
-    case SO_HIP_FIREWALL_PING:      return "SO_HIP_FIREWALL_PING";
-    case SO_HIP_FIREWALL_PING_REPLY: return "SO_HIP_FIREWALL_PING_REPLY";
-    case SO_HIP_FIREWALL_QUIT:      return "SO_HIP_FIREWALL_QUIT";
-    case SO_HIP_AGENT_PING:         return "SO_HIP_AGENT_PING";
-    case SO_HIP_AGENT_PING_REPLY:   return "SO_HIP_AGENT_PING_REPLY";
-    case SO_HIP_AGENT_QUIT:         return "SO_HIP_AGENT_QUIT";
-    case SO_HIP_DAEMON_QUIT:        return "SO_HIP_DAEMON_QUIT";
-    case SO_HIP_I1_REJECT:          return "SO_HIP_I1_REJECT";
-    case SO_HIP_SET_NAT_PLAIN_UDP:  return "SO_HIP_SET_NAT_PLAIN_UDP";
-    case SO_HIP_SET_NAT_NONE:       return "SO_HIP_SET_NAT_NONE";
-    case SO_HIP_SET_HIPPROXY_ON:    return "SO_HIP_SET_HIPPROXY_ON";
-    case SO_HIP_SET_HIPPROXY_OFF:   return "SO_HIP_SET_HIPPROXY_OFF";
-    case SO_HIP_GET_PROXY_LOCAL_ADDRESS: return "SO_HIP_GET_PROXY_LOCAL_ADDRESS";
-    case SO_HIP_HIPPROXY_STATUS_REQUEST: return "SO_HIP_HIPPROXY_STATUS_REQUEST";
-    case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST: return "SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST";
-    case SO_HIP_FW_BEX_DONE:        return "SO_HIP_FW_BEX_DONE";
-    case SO_HIP_SET_TCPTIMEOUT_ON:  return "SO_HIP_SET_TCPTIMEOUT_ON";
-    case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
-    case SO_HIP_SET_NAT_ICE_UDP:    return "SO_HIP_SET_NAT_ICE_UDP";
-    case SO_HIP_IPSEC_ADD_SA:       return "SO_HIP_IPSEC_ADD_SA";
-    case SO_HIP_USERSPACE_IPSEC:    return "SO_HIP_USERSPACE_IPSEC";
-    case SO_HIP_ESP_PROT_TFM:       return "SO_HIP_ESP_PROT_TFM";
-    case SO_HIP_BEX_STORE_UPDATE:   return "SO_HIP_BEX_STORE_UPDATE";
-    case SO_HIP_TRIGGER_UPDATE:     return "SO_HIP_TRIGGER_UPDATE";
-    case SO_HIP_ANCHOR_CHANGE:      return "SO_HIP_ANCHOR_CHANGE";
-    case SO_HIP_TRIGGER_BEX:        return "SO_HIP_TRIGGER_BEX";
-    //case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
-    case SO_HIP_GET_PEER_HIT:       return "SO_HIP_GET_PEER_HIT";
-    //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
-    case SO_HIP_NSUPDATE_ON:        return "SO_HIP_NSUPDATE_ON";
-    case SO_HIP_NSUPDATE_OFF:       return "SO_HIP_NSUPDATE_OFF";
-    case SO_HIP_SET_HI3_ON:         return "SO_HIP_SET_HI3_ON";
-    case SO_HIP_SET_HI3_OFF:        return "SO_HIP_SET_HI3_OFF";
-    case SO_HIP_HEARTBEAT:          return "SO_HIP_HEARTBEAT";
-    case SO_HIP_DHT_SERVING_GW:     return "SO_HIP_DHT_SERVING_GW";
-    case SO_HIP_SET_NAT_PORT:       return "SO_HIP_SET_NAT_PORT";
-    case SO_HIP_SHOTGUN_ON:         return "SO_HIP_SHOTGUN_ON";
-    case SO_HIP_SHOTGUN_OFF:        return "SO_HIP_SHOTGUN_OFF";
-    case SO_HIP_SIGN_BUDDY_X509V3:  return "SO_HIP_SIGN_BUDDY_X509V3";
-    case SO_HIP_SIGN_BUDDY_SPKI:    return "SO_HIP_SIGN_BUDDY_SPKI";
-    case SO_HIP_VERIFY_BUDDY_X509V3: return "SO_HIP_VERIFY_BUDDY_X509V3";
-    case SO_HIP_VERIFY_BUDDY_SPKI:  return "SO_HIP_VERIFY_BUDDY_SPKI";
-    case SO_HIP_MAP_ID_TO_ADDR:     return "SO_HIP_MAP_ID_TO_ADDR";
-    case SO_HIP_OFFER_FULLRELAY:    return "SO_HIP_OFFER_FULLRELAY";
-    case SO_HIP_CANCEL_FULLRELAY:   return "SO_HIP_CANCEL_FULLRELAY";
-    case SO_HIP_REINIT_FULLRELAY:   return "SO_HIP_REINIT_FULLRELAY";
-    case SO_HIP_FIREWALL_START:     return "SO_HIP_FIREWALL_START";
-    case SO_HIP_MANUAL_UPDATE_PACKET: return "SO_HIP_MANUAL_UPDATE_PACKET";
+    case HIP_MSG_ADD_LOCAL_HI:       return "HIP_MSG_ADD_LOCAL_HI";
+    case HIP_MSG_DEL_LOCAL_HI:       return "HIP_MSG_DEL_LOCAL_HI";
+    case HIP_MSG_RUN_UNIT_TEST:      return "HIP_MSG_RUN_UNIT_TEST";
+    case HIP_MSG_RST:                return "HIP_MSG_RST";
+    case HIP_MSG_UNIT_TEST:          return "HIP_MSG_UNIT_TEST";
+    case HIP_MSG_BOS:                return "HIP_MSG_BOS";
+    case HIP_MSG_NETLINK_DUMMY:      return "HIP_MSG_NETLINK_DUMMY";
+    case HIP_MSG_CONF_PUZZLE_NEW:    return "HIP_MSG_CONF_PUZZLE_NEW";
+    case HIP_MSG_CONF_PUZZLE_GET:    return "HIP_MSG_CONF_PUZZLE_GET";
+    case HIP_MSG_CONF_PUZZLE_SET:    return "HIP_MSG_CONF_PUZZLE_SET";
+    case HIP_MSG_CONF_PUZZLE_INC:    return "HIP_MSG_CONF_PUZZLE_INC";
+    case HIP_MSG_CONF_PUZZLE_DEC:    return "HIP_MSG_CONF_PUZZLE_DEC";
+    case HIP_MSG_SET_OPPORTUNISTIC_MODE: return "HIP_MSG_SET_OPPORTUNISTIC_MODE";
+    case HIP_MSG_SET_BLIND_ON:       return "HIP_MSG_SET_BLIND_ON";
+    case HIP_MSG_SET_BLIND_OFF:      return "HIP_MSG_SET_BLIND_OFF";
+    case HIP_MSG_DHT_GW:             return "HIP_MSG_DHT_GW";
+    case HIP_MSG_SET_DEBUG_ALL:      return "HIP_MSG_SET_DEBUG_ALL";
+    case HIP_MSG_SET_DEBUG_MEDIUM:   return "HIP_MSG_SET_DEBUG_MEDIUM";
+    case HIP_MSG_SET_DEBUG_NONE:     return "HIP_MSG_SET_DEBUG_NONE";
+    case HIP_MSG_MHADDR_ACTIVE:      return "HIP_MSG_MHADDR_ACTIVE";
+    case HIP_MSG_MHADDR_LAZY:        return "HIP_MSG_MHADDR_LAZY";
+    case HIP_MSG_RESTART:            return "HIP_MSG_RESTART";
+    case HIP_MSG_SET_LOCATOR_ON:     return "HIP_MSG_SET_LOCATOR_ON";
+    case HIP_MSG_SET_LOCATOR_OFF:    return "HIP_MSG_SET_LOCATOR_OFF";
+    case HIP_MSG_DHT_SET:            return "HIP_MSG_DHT_SET";
+    case HIP_MSG_DHT_ON:             return "HIP_MSG_DHT_ON";
+    case HIP_MSG_DHT_OFF:            return "HIP_MSG_DHT_OFF";
+    case HIP_MSG_HIT_TO_IP_ON:       return "HIP_MSG_HIT_TO_IP_ON";
+    case HIP_MSG_HIT_TO_IP_OFF:      return "HIP_MSG_HIT_TO_IP_OFF";
+    case HIP_MSG_HIT_TO_IP_SET:      return "HIP_MSG_HIT_TO_IP_SET";
+    case HIP_MSG_SET_OPPTCP_ON:      return "HIP_MSG_SET_OPPTCP_ON";
+    case HIP_MSG_SET_OPPTCP_OFF:     return "HIP_MSG_SET_OPPTCP_OFF";
+    case HIP_MSG_OPPTCP_SEND_TCP_PACKET: return "HIP_MSG_OPPTCP_SEND_TCP_PACKET";
+    case HIP_MSG_TRANSFORM_ORDER:    return "HIP_MSG_TRANSFORM_ORDER";
+    case HIP_MSG_OFFER_RVS:          return "HIP_MSG_OFFER_RVS";
+    case HIP_MSG_CANCEL_RVS:         return "HIP_MSG_CANCEL_RVS";
+    case HIP_MSG_REINIT_RVS:         return "HIP_MSG_REINIT_RVS";
+    case HIP_MSG_ADD_DEL_SERVER:     return "HIP_MSG_ADD_DEL_SERVER";
+    case HIP_MSG_OFFER_HIPRELAY:     return "HIP_MSG_OFFER_HIPRELAY";
+    case HIP_MSG_CANCEL_HIPRELAY:    return "HIP_MSG_CANCEL_HIPRELAY";
+    case HIP_MSG_REINIT_RELAY:       return "HIP_MSG_REINIT_RELAY";
+    case HIP_MSG_ADD_DB_HI:          return "HIP_MSG_ADD_DB_HI";
+    case HIP_MSG_FIREWALL_PING:      return "HIP_MSG_FIREWALL_PING";
+    case HIP_MSG_FIREWALL_PING_REPLY: return "HIP_MSG_FIREWALL_PING_REPLY";
+    case HIP_MSG_FIREWALL_QUIT:      return "HIP_MSG_FIREWALL_QUIT";
+    case HIP_MSG_AGENT_PING:         return "HIP_MSG_AGENT_PING";
+    case HIP_MSG_AGENT_PING_REPLY:   return "HIP_MSG_AGENT_PING_REPLY";
+    case HIP_MSG_AGENT_QUIT:         return "HIP_MSG_AGENT_QUIT";
+    case HIP_MSG_DAEMON_QUIT:        return "HIP_MSG_DAEMON_QUIT";
+    case HIP_MSG_I1_REJECT:          return "HIP_MSG_I1_REJECT";
+    case HIP_MSG_SET_NAT_PLAIN_UDP:  return "HIP_MSG_SET_NAT_PLAIN_UDP";
+    case HIP_MSG_SET_NAT_NONE:       return "HIP_MSG_SET_NAT_NONE";
+    case HIP_MSG_SET_HIPPROXY_ON:    return "HIP_MSG_SET_HIPPROXY_ON";
+    case HIP_MSG_SET_HIPPROXY_OFF:   return "HIP_MSG_SET_HIPPROXY_OFF";
+    case HIP_MSG_GET_PROXY_LOCAL_ADDRESS: return "HIP_MSG_GET_PROXY_LOCAL_ADDRESS";
+    case HIP_MSG_HIPPROXY_STATUS_REQUEST: return "HIP_MSG_HIPPROXY_STATUS_REQUEST";
+    case HIP_MSG_OPPTCP_UNBLOCK_AND_BLACKLIST: return "HIP_MSG_OPPTCP_UNBLOCK_AND_BLACKLIST";
+    case HIP_MSG_FW_BEX_DONE:        return "HIP_MSG_FW_BEX_DONE";
+    case HIP_MSG_SET_TCPTIMEOUT_ON:  return "HIP_MSG_SET_TCPTIMEOUT_ON";
+    case HIP_MSG_SET_TCPTIMEOUT_OFF: return "HIP_MSG_SET_TCPTIMEOUT_OFF";
+    case HIP_MSG_SET_NAT_ICE_UDP:    return "HIP_MSG_SET_NAT_ICE_UDP";
+    case HIP_MSG_IPSEC_ADD_SA:       return "HIP_MSG_IPSEC_ADD_SA";
+    case HIP_MSG_USERSPACE_IPSEC:    return "HIP_MSG_USERSPACE_IPSEC";
+    case HIP_MSG_ESP_PROT_TFM:       return "HIP_MSG_ESP_PROT_TFM";
+    case HIP_MSG_BEX_STORE_UPDATE:   return "HIP_MSG_BEX_STORE_UPDATE";
+    case HIP_MSG_TRIGGER_UPDATE:     return "HIP_MSG_TRIGGER_UPDATE";
+    case HIP_MSG_ANCHOR_CHANGE:      return "HIP_MSG_ANCHOR_CHANGE";
+    case HIP_MSG_TRIGGER_BEX:        return "HIP_MSG_TRIGGER_BEX";
+    //case HIP_MSG_IS_OUR_LSI: return "HIP_MSG_IS_OUR_LSI";
+    case HIP_MSG_GET_PEER_HIT:       return "HIP_MSG_GET_PEER_HIT";
+    //case HIP_MSG_GET_PEER_HIT_BY_LSIS: return "HIP_MSG_GET_PEER_HIT_BY_LSIS";
+    case HIP_MSG_NSUPDATE_ON:        return "HIP_MSG_NSUPDATE_ON";
+    case HIP_MSG_NSUPDATE_OFF:       return "HIP_MSG_NSUPDATE_OFF";
+    case HIP_MSG_SET_HI3_ON:         return "HIP_MSG_SET_HI3_ON";
+    case HIP_MSG_SET_HI3_OFF:        return "HIP_MSG_SET_HI3_OFF";
+    case HIP_MSG_HEARTBEAT:          return "HIP_MSG_HEARTBEAT";
+    case HIP_MSG_DHT_SERVING_GW:     return "HIP_MSG_DHT_SERVING_GW";
+    case HIP_MSG_SET_NAT_PORT:       return "HIP_MSG_SET_NAT_PORT";
+    case HIP_MSG_SHOTGUN_ON:         return "HIP_MSG_SHOTGUN_ON";
+    case HIP_MSG_SHOTGUN_OFF:        return "HIP_MSG_SHOTGUN_OFF";
+    case HIP_MSG_SIGN_BUDDY_X509V3:  return "HIP_MSG_SIGN_BUDDY_X509V3";
+    case HIP_MSG_SIGN_BUDDY_SPKI:    return "HIP_MSG_SIGN_BUDDY_SPKI";
+    case HIP_MSG_VERIFY_BUDDY_X509V3: return "HIP_MSG_VERIFY_BUDDY_X509V3";
+    case HIP_MSG_VERIFY_BUDDY_SPKI:  return "HIP_MSG_VERIFY_BUDDY_SPKI";
+    case HIP_MSG_MAP_ID_TO_ADDR:     return "HIP_MSG_MAP_ID_TO_ADDR";
+    case HIP_MSG_OFFER_FULLRELAY:    return "HIP_MSG_OFFER_FULLRELAY";
+    case HIP_MSG_CANCEL_FULLRELAY:   return "HIP_MSG_CANCEL_FULLRELAY";
+    case HIP_MSG_REINIT_FULLRELAY:   return "HIP_MSG_REINIT_FULLRELAY";
+    case HIP_MSG_FIREWALL_START:     return "HIP_MSG_FIREWALL_START";
+    case HIP_MSG_MANUAL_UPDATE_PACKET: return "HIP_MSG_MANUAL_UPDATE_PACKET";
     default:
         return "UNDEFINED";
     }

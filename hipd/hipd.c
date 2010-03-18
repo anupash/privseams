@@ -113,16 +113,16 @@ hip_common_t *opendht_current_hdrr = NULL;
 char opendht_current_key[INET6_ADDRSTRLEN + 2];
 
 /* now DHT is always off, so you have to set it on if you want to use it */
-int hip_opendht_inuse              = SO_HIP_DHT_OFF;
+int hip_opendht_inuse              = HIP_MSG_DHT_OFF;
 int hip_opendht_error_count        = 0; /* Error count, counting errors from libhipopendht */
 
-int hip_buddies_inuse              = SO_HIP_BUDDIES_OFF;
+int hip_buddies_inuse              = HIP_MSG_BUDDIES_OFF;
 
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
-int hip_locator_status             = SO_HIP_SET_LOCATOR_OFF;
+int hip_locator_status             = HIP_MSG_SET_LOCATOR_OFF;
 
 /* It tells the daemon to set tcp timeout parameters. Added By Tao Wan, on 09.Jan.2008 */
-int hip_tcptimeout_status          = SO_HIP_SET_TCPTIMEOUT_ON;
+int hip_tcptimeout_status          = HIP_MSG_SET_TCPTIMEOUT_ON;
 
 /* Create /etc/hip stuff and exit (used for binary hipfw packaging) */
 int create_configs_and_exit        = 0;
@@ -156,7 +156,7 @@ int esp_prot_num_transforms                  = 0;
 uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 long esp_prot_num_parallel_hchains           = 0;
 
-int hip_shotgun_status                       = SO_HIP_SHOTGUN_OFF;
+int hip_shotgun_status                       = HIP_MSG_SHOTGUN_OFF;
 
 int hip_trigger_update_on_heart_beat_failure = 1;
 int hip_wait_addr_changes_to_stabilize       = 1;
@@ -257,9 +257,9 @@ int hip_recv_agent(struct hip_common *msg)
 
     msg_type = hip_get_msg_type(msg);
 
-    if (msg_type == SO_HIP_AGENT_PING) {
+    if (msg_type == HIP_MSG_AGENT_PING) {
         hip_msg_init(msg);
-        hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
+        hip_build_user_hdr(msg, HIP_MSG_AGENT_PING_REPLY, 0);
         n = hip_send_agent(msg);
         HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");
 
@@ -271,7 +271,7 @@ int hip_recv_agent(struct hip_common *msg)
             }
             hip_agent_status = 1;
         }
-    } else if (msg_type == SO_HIP_AGENT_QUIT)   {
+    } else if (msg_type == HIP_MSG_AGENT_QUIT)   {
         HIP_DEBUG("Agent quit.\n");
         hip_agent_status = 0;
     } else if (msg_type == HIP_R1 || msg_type == HIP_I1)   {
@@ -492,7 +492,7 @@ static int hipd_main(int argc, char *argv[])
     hipd_set_state(HIPD_STATE_EXEC);
     while (hipd_get_state() != HIPD_STATE_CLOSED) {
         /* prepare file descriptor sets */
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+        if (hip_opendht_inuse == HIP_MSG_DHT_ON) {
             FD_ZERO(&write_fdset);
             if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT) {
                 FD_SET(hip_opendht_sock_fqdn, &write_fdset);
@@ -528,7 +528,7 @@ static int hipd_main(int argc, char *argv[])
 #ifdef CONFIG_HIP_FIREWALL
         if (hip_firewall_status < 0) {
             hip_msg_init(hipd_msg);
-            err = hip_build_user_hdr(hipd_msg, SO_HIP_FIREWALL_STATUS, 0);
+            err = hip_build_user_hdr(hipd_msg, HIP_MSG_FIREWALL_STATUS, 0);
             if (err) {
                 HIP_ERROR("hip_build_user_hdr\n");
             } else {
@@ -540,7 +540,7 @@ static int hipd_main(int argc, char *argv[])
 #endif
 
         /* If DHT is on have to use write sets for asynchronic communication */
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+        if (hip_opendht_inuse == HIP_MSG_DHT_ON) {
             err = select((highest_descriptor + 1), &read_fdset,
                          &write_fdset, NULL, &timeout);
         } else {
@@ -715,10 +715,10 @@ static int hipd_main(int argc, char *argv[])
         }
 #ifdef CONFIG_HIP_DHT
         /* DHT SOCKETS HANDLING */
-        if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
+        if (hip_opendht_inuse == HIP_MSG_DHT_ON && hip_opendht_sock_fqdn != -1) {
             if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
                 FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
-                (hip_opendht_inuse == SO_HIP_DHT_ON)) {
+                (hip_opendht_inuse == HIP_MSG_DHT_ON)) {
                 HIP_DEBUG("DHT socket waiting for connect (readable and writable)\n");
             } else if (FD_ISSET(hip_opendht_sock_fqdn, &write_fdset)) {
                 if (address_count == 0) {
@@ -728,7 +728,7 @@ static int hipd_main(int argc, char *argv[])
                 }
             }
             if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
-                (hip_opendht_inuse == SO_HIP_DHT_ON)) {
+                (hip_opendht_inuse == HIP_MSG_DHT_ON)) {
                 /* Receive answer from openDHT FQDN->HIT mapping */
                 if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER) {
                     memset(opendht_response, '\0', sizeof(opendht_response));
@@ -753,7 +753,7 @@ static int hipd_main(int argc, char *argv[])
             }
             if (FD_ISSET(hip_opendht_sock_hit, &read_fdset) &&
                 FD_ISSET(hip_opendht_sock_hit, &write_fdset) &&
-                (hip_opendht_inuse == SO_HIP_DHT_ON)) {
+                (hip_opendht_inuse == HIP_MSG_DHT_ON)) {
                 HIP_ERROR("DHT socket waiting for connect (readable and writable)\n\n");
             } else if (FD_ISSET(hip_opendht_sock_hit, &write_fdset)) {
                 if (address_count == 0) {
@@ -763,7 +763,7 @@ static int hipd_main(int argc, char *argv[])
                 }
             }
             if ((FD_ISSET(hip_opendht_sock_hit, &read_fdset)) &&
-                (hip_opendht_inuse == SO_HIP_DHT_ON)) {
+                (hip_opendht_inuse == HIP_MSG_DHT_ON)) {
                 /* Receive answer from openDHT HIT->IP mapping */
                 if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER) {
                     memset(opendht_response, '\0', sizeof(opendht_response));

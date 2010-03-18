@@ -130,7 +130,7 @@ struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_ADD_SA, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_IPSEC_ADD_SA, 0), -1,
              "build hdr failed\n");
 
     HIP_DEBUG_IN6ADDR("Source IP address: ", saddr);
@@ -248,7 +248,7 @@ struct hip_common *create_delete_sa_msg(const uint32_t spi,
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_DELETE_SA, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_IPSEC_DELETE_SA, 0), -1,
              "build hdr failed\n");
 
     HIP_DEBUG("spi value: %u\n", spi);
@@ -301,7 +301,7 @@ struct hip_common *create_flush_all_sa_msg(void)
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_FLUSH_ALL_SA, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_IPSEC_FLUSH_ALL_SA, 0), -1,
              "build hdr failed\n");
 
     // this triggers the flushing without specifying any parameters

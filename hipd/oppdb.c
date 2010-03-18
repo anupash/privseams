@@ -223,7 +223,7 @@ static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t
     HIP_IFEL((app_id->sin6_port == 0), 0, "Zero port, ignore\n");
 
     HIP_IFE(!(message = hip_msg_alloc()), -1);
-    HIP_IFEL(hip_build_user_hdr(message, SO_HIP_GET_PEER_HIT, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(message, HIP_MSG_GET_PEER_HIT, 0), -1,
              "build user header failed\n");
 
     if (!opp_info) {
@@ -661,7 +661,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 
     if (!opportunistic_mode) {
         hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_PEER_HIT, 0), -1,
                  "Building of user header failed\n");
         err = -11;         /* Force immediately to send message to app */
         goto out_err;
@@ -709,7 +709,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
     ipv6_addr_copy(&id, &dst_ip);
     if (hip_for_each_ha(hip_hadb_map_ip_to_hit, &id)) {
         HIP_DEBUG_HIT("existing HA found with HIT", &id);
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_PEER_HIT, 0), -1,
                  "Building of msg header failed\n");
         HIP_IFEL(hip_build_param_contents(msg,
                                           (void *) (&id),
@@ -738,7 +738,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
     /* Fallback if we have contacted peer before the peer did not
      * support HIP the last time */
     if (hip_oppipdb_find_byip((struct in6_addr *) &dst_ip)) {
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_PEER_HIT, 0), -1,
                  "Building of user header failed\n");
         err = -11;         /* Force immediately to send message to app */
 
@@ -795,7 +795,7 @@ int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockad
 
     if (!opportunistic_mode) {
         hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
                  -1, "Building of user header failed\n");
     }
 

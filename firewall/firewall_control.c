@@ -51,12 +51,12 @@ static int hip_handle_bex_state_update(struct hip_common *msg)
 
     /* update bex_state in firewalldb */
     switch (msg_type) {
-    case SO_HIP_FW_BEX_DONE:
+    case HIP_MSG_FW_BEX_DONE:
         err = hip_firewall_set_bex_state(src_hit,
                                          dst_hit,
                                          (dst_hit ? 1 : -1));
         break;
-    case SO_HIP_FW_UPDATE_DB:
+    case HIP_MSG_FW_UPDATE_DB:
         err = hip_firewall_set_bex_state(src_hit, dst_hit, 0);
         break;
     default:
@@ -83,28 +83,28 @@ int hip_handle_msg(struct hip_common *msg)
     HIP_DEBUG("of type %d\n", type);
 
     switch (type) {
-    case SO_HIP_FW_BEX_DONE:
-    case SO_HIP_FW_UPDATE_DB:
+    case HIP_MSG_FW_BEX_DONE:
+    case HIP_MSG_FW_UPDATE_DB:
         if (hip_lsi_support) {
             hip_handle_bex_state_update(msg);
         }
         break;
-    case SO_HIP_IPSEC_ADD_SA:
+    case HIP_MSG_IPSEC_ADD_SA:
         HIP_DEBUG("Received add sa request from hipd\n");
         HIP_IFEL(handle_sa_add_request(msg), -1,
                  "hip userspace sadb add did NOT succeed\n");
         break;
-    case SO_HIP_IPSEC_DELETE_SA:
+    case HIP_MSG_IPSEC_DELETE_SA:
         HIP_DEBUG("Received delete sa request from hipd\n");
         HIP_IFEL(handle_sa_delete_request(msg), -1,
                  "hip userspace sadb delete did NOT succeed\n");
         break;
-    case SO_HIP_IPSEC_FLUSH_ALL_SA:
+    case HIP_MSG_IPSEC_FLUSH_ALL_SA:
         HIP_DEBUG("Received flush all sa request from hipd\n");
         HIP_IFEL(handle_sa_flush_all_request(msg), -1,
                  "hip userspace sadb flush all did NOT succeed\n");
         break;
-    case SO_HIP_SET_HIPPROXY_ON:
+    case HIP_MSG_SET_HIPPROXY_ON:
         HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n");
         HIP_DEBUG("Proxy is on\n");
         if (!hip_proxy_status) {
@@ -112,7 +112,7 @@ int hip_handle_msg(struct hip_common *msg)
         }
         hip_proxy_status = 1;
         break;
-    case SO_HIP_SET_HIPPROXY_OFF:
+    case HIP_MSG_SET_HIPPROXY_OFF:
         HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n");
         HIP_DEBUG("Proxy is off\n");
         if (hip_proxy_status) {
@@ -120,36 +120,36 @@ int hip_handle_msg(struct hip_common *msg)
         }
         hip_proxy_status = 0;
         break;
-    case SO_HIP_SET_OPPTCP_ON:
+    case HIP_MSG_SET_OPPTCP_ON:
         HIP_DEBUG("Opptcp on\n");
         if (!hip_opptcp) {
             hip_fw_init_opptcp();
         }
         hip_opptcp = 1;
         break;
-    case SO_HIP_SET_OPPTCP_OFF:
+    case HIP_MSG_SET_OPPTCP_OFF:
         HIP_DEBUG("Opptcp on\n");
         if (hip_opptcp) {
             hip_fw_uninit_opptcp();
         }
         hip_opptcp = 0;
         break;
-    case SO_HIP_GET_PEER_HIT:
+    case HIP_MSG_GET_PEER_HIT:
         if (hip_proxy_status) {
             err = hip_fw_proxy_set_peer_hit(msg);
         } else if (system_based_opp_mode) {
             err = hip_fw_sys_opp_set_peer_hit(msg);
         }
         break;
-    case SO_HIP_TURN_INFO:
+    case HIP_MSG_TURN_INFO:
         // struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);
         // save to database
         break;
-    case SO_HIP_RESET_FIREWALL_DB:
+    case HIP_MSG_RESET_FIREWALL_DB:
         hip_firewall_cache_delete_hldb(0);
         hip_firewall_delete_hldb();
         break;
-    case SO_HIP_OFFER_FULLRELAY:
+    case HIP_MSG_OFFER_FULLRELAY:
         if (!esp_relay) {
             HIP_DEBUG("Enabling ESP relay\n");
             hip_fw_init_esp_relay();
@@ -157,28 +157,28 @@ int hip_handle_msg(struct hip_common *msg)
             HIP_DEBUG("ESP relay already enabled\n");
         }
         break;
-    case SO_HIP_CANCEL_FULLRELAY:
+    case HIP_MSG_CANCEL_FULLRELAY:
         HIP_DEBUG("Disabling ESP relay\n");
         hip_fw_uninit_esp_relay();
         break;
-    case SO_HIP_SET_DATAPACKET_MODE_ON:
+    case HIP_MSG_SET_DATAPACKET_MODE_ON:
         HIP_DEBUG("Setting HIP DATA PACKET MODE ON \n ");
         hip_datapacket_mode = 1;
         break;
-    case SO_HIP_SET_DATAPACKET_MODE_OFF:
+    case HIP_MSG_SET_DATAPACKET_MODE_OFF:
         HIP_DEBUG("Setting HIP DATA PACKET MODE OFF \n ");
         hip_datapacket_mode = 0;
         break;
-    case SO_HIP_FW_FLUSH_SYS_OPP_HIP:
+    case HIP_MSG_FW_FLUSH_SYS_OPP_HIP:
         if (system_based_opp_mode) {
             HIP_DEBUG("Flushing system-based opportunistic mode " \
                       "iptables chains\n");
             hip_fw_flush_system_based_opp_chains();
         }
         break;
-    case SO_HIP_FIREWALL_STATUS:
+    case HIP_MSG_FIREWALL_STATUS:
         msg_out = hip_msg_alloc();
-        HIP_IFEL(hip_build_user_hdr(msg_out, SO_HIP_FIREWALL_START, 0), -1,
+        HIP_IFEL(hip_build_user_hdr(msg_out, HIP_MSG_FIREWALL_START, 0), -1,
                  "Couldn't build message to daemon\n");
         HIP_IFEL(hip_send_recv_daemon_info(msg_out, 1, hip_fw_sock), -1,
                  "Couldn't notify daemon of firewall presence\n");

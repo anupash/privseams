@@ -706,7 +706,7 @@ static int hip_query_default_local_hit_from_hipd(void)
     hip_lsi_t *lsi               = NULL;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEFAULT_HIT, 0), -1,
              "build user hdr\n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
              "send/recv daemon info\n");
@@ -777,7 +777,7 @@ static void firewall_exit(void)
     HIP_DEBUG("Firewall exit\n");
 
     msg = hip_msg_alloc();
-    if (hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0) ||
+    if (hip_build_user_hdr(msg, HIP_MSG_FIREWALL_QUIT, 0) ||
         hip_send_recv_daemon_info(msg, 1, hip_fw_sock)) {
         HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
     }
@@ -2112,7 +2112,7 @@ static void hip_fw_wait_for_hipd(void)
     system_print("ip6tables -I FORWARD -j HIPFW-FORWARD");
 
     //HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc\n");
-    //HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_PING, 0), -1, "hdr\n")
+    //HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_PING, 0), -1, "hdr\n")
 
     while (hip_fw_get_default_hit() == NULL) {
         HIP_DEBUG("Sleeping until hipd is running...\n");
@@ -2411,7 +2411,7 @@ int main(int argc, char **argv)
     highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 
     hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_START, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_FIREWALL_START, 0), -1,
              "build user hdr\n");
     if (hip_send_recv_daemon_info(msg, 1, hip_fw_sock)) {
         HIP_DEBUG("Failed to notify hipd of firewall start.\n");
@@ -2482,8 +2482,8 @@ int main(int argc, char **argv)
             if (is_root) {
                 access_ok = 1;
             } else if (!is_root &&
-                       (msg_type >= HIP_SO_ANY_MIN &&
-                        msg_type <= HIP_SO_ANY_MAX)) {
+                       (msg_type >= HIP_MSG_ANY_MIN &&
+                        msg_type <= HIP_MSG_ANY_MAX)) {
                 access_ok = 1;
             }
             if (!access_ok) {
@@ -2512,8 +2512,8 @@ int main(int argc, char **argv)
 
             if (ntohs(sock_addr.sin6_port) != HIP_DAEMON_LOCAL_PORT) {
                 int type = hip_get_msg_type(msg);
-                if (type == SO_HIP_FW_BEX_DONE) {
-                    HIP_DEBUG("SO_HIP_FW_BEX_DONE\n");
+                if (type == HIP_MSG_FW_BEX_DONE) {
+                    HIP_DEBUG("HIP_MSG_FW_BEX_DONE\n");
                     HIP_DEBUG("%d == %d\n", ntohs(sock_addr.sin6_port),
                               HIP_DAEMON_LOCAL_PORT);
                 }

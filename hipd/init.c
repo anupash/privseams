@@ -650,7 +650,7 @@ int hipd_init(int flush_ipsec, int killold)
 
 #ifdef CONFIG_HIP_HI3
     if (hip_use_i3) {
-        hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+        hip_locator_status = HIP_MSG_SET_LOCATOR_ON;
     }
 #endif
 
@@ -732,7 +732,7 @@ int hip_init_dht()
     char port_buf[] = "00000";
     int family;
 
-    HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
+    HIP_IFEL((hip_opendht_inuse == HIP_MSG_DHT_OFF), 0, "No DHT\n");
 
     /* Init the opendht_queue */
     HIP_IFEL((hip_init_dht_queue() == -1), -1, "Failed to initialize opendht queue\n");
@@ -1173,7 +1173,7 @@ void hip_exit(int signal)
 
     msg = hip_msg_alloc();
     if (msg) {
-        hip_build_user_hdr(msg, SO_HIP_DAEMON_QUIT, 0);
+        hip_build_user_hdr(msg, HIP_MSG_DAEMON_QUIT, 0);
         hip_send_agent(msg);
         free(msg);
     }

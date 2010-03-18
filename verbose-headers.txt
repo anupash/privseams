@@ -484,9 +484,9 @@ libhipcore/hip_statistics.h : update_anchor
 libhipcore/icomm.h : firewall_hl
 libhipcore/icomm.h : firewall_port_cache_hl
 libhipcore/icomm.h : _HIP_ICOMM
-libhipcore/icomm.h : HIP_SO_ROOT_MAX
-libhipcore/icomm.h : HIP_SO_ROOT_MIN
-libhipcore/icomm.h : SO_HIP_STUN
+libhipcore/icomm.h : HIP_MSG_ROOT_MAX
+libhipcore/icomm.h : HIP_MSG_ROOT_MIN
+libhipcore/icomm.h : HIP_MSG_STUN
 libhipcore/ife.h : GOTO_OUT
 libhipcore/ife.h : _HIP_IFE
 libhipcore/kerncompat.h : atomic_set

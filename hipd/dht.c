@@ -42,7 +42,7 @@ static int hip_sqlite_callback(void *NotUsed,
 int hip_init_dht_sockets(int *socket, int *socket_status)
 {
     int err = 0;
-    if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+    if (hip_opendht_inuse == HIP_MSG_DHT_ON) {
         if (*socket_status == STATE_OPENDHT_IDLE) {
             HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
             if (*socket < 1) {
@@ -76,7 +76,7 @@ void hip_register_to_dht(void)
     struct in6_addr tmp_hit;
 
     /* Check if OpenDHT is off then out_err*/
-    HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
+    HIP_IFE((hip_opendht_inuse != HIP_MSG_DHT_ON), 0);
 
     HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
 
@@ -106,7 +106,7 @@ static void hip_publish_hit(char *hostname, char *tmp_hit_str)
      * while it may be too long for OpenDHT */
     char out_packet[HIP_MAX_PACKET];
 
-    HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
+    HIP_IFE((hip_opendht_inuse != HIP_MSG_DHT_ON), 0);
 
     memset(out_packet, '\0', HIP_MAX_PACKET);
     opendht_error = opendht_put((unsigned char *) hostname,
@@ -147,7 +147,7 @@ static int hip_publish_addr(char *tmp_hit_str)
      * while OpenDHT max size may be lower */
     int err = 0;
 
-    HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
+    HIP_IFE((hip_opendht_inuse != HIP_MSG_DHT_ON), 0);
 
     memset(out_packet, '\0', HIP_MAX_PACKET);
     opendht_error = hip_dht_put_hdrr((unsigned char *) tmp_hit_str,
@@ -271,7 +271,7 @@ static int hip_send_queue_data(int *socket, int *socket_status)
     int err = 0;
 
     char packet[2048];
-    HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
+    HIP_IFE((hip_opendht_inuse != HIP_MSG_DHT_ON), 0);
 
     if (*socket_status == STATE_OPENDHT_IDLE) {
         HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
@@ -520,7 +520,7 @@ int hip_verify_hdrr(struct hip_common *msg, struct in6_addr *addrkey)
     alg = hip_get_host_id_algo(hostid);
 
     /* Type of the hip msg in header has been modified to
-     * user message type SO_HIP_VERIFY_DHT_HDRR_RESP , to
+     * user message type HIP_MSG_VERIFY_DHT_HDRR_RESP , to
      * get it here. Revert it back to HDRR to give it
      * original shape as returned by the DHT and
      *  then verify signature
@@ -589,7 +589,7 @@ void hip_send_packet_to_lookup_from_queue(void)
 {
     int err = 0;
 
-    HIP_IFE((hip_opendht_inuse != SO_HIP_DHT_ON), 0);
+    HIP_IFE((hip_opendht_inuse != HIP_MSG_DHT_ON), 0);
 
     HIP_DEBUG("DHT error count now %d/%d.\n",
               hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);

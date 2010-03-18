@@ -280,10 +280,10 @@ int hip_user_nat_mode(int nat_mode)
 
     nat = nat_mode;
     switch (nat) {
-    case SO_HIP_SET_NAT_PLAIN_UDP:
+    case HIP_MSG_SET_NAT_PLAIN_UDP:
         nat = HIP_NAT_MODE_PLAIN_UDP;
         break;
-    case SO_HIP_SET_NAT_NONE:
+    case HIP_MSG_SET_NAT_NONE:
         nat = HIP_NAT_MODE_NONE;
         break;
     default:

@@ -38,7 +38,7 @@ int send_userspace_ipsec_to_hipd(const int activate)
 
     /* send this message on activation or for deactivation when -I is specified */
     if (activate || hip_kernel_ipsec_fallback) {
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_USERSPACE_IPSEC, 0), -1,
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_USERSPACE_IPSEC, 0), -1,
                  "build hdr failed\n");
 
         HIP_IFEL(hip_build_param_contents(msg, (void *) &activate,
@@ -48,7 +48,7 @@ int send_userspace_ipsec_to_hipd(const int activate)
 
         HIP_DEBUG("sending userspace ipsec (de-)activation to hipd...\n");
     } else {
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_RST, 0), -1,
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_RST, 0), -1,
                  "build hdr failed\n");
 
         HIP_DEBUG("sending close all connections to hipd...\n");

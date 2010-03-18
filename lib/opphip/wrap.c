@@ -175,7 +175,7 @@ int hip_get_local_hit_wrapper(hip_hit_t *hit)
     struct hip_common *msg = NULL;
 
     HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEFAULT_HIT, 0),
              -1, "Fail to get hits");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send/recv\n");
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1,
@@ -371,7 +371,7 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
     /* build the message header */
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_PEER_HIT, 0), -1,
              "build hdr failed\n");
 
     HIP_IFEL(hip_build_param_contents(msg, (void *) (local_hit),

@@ -509,8 +509,8 @@ struct hip_hadb_state {
     int inbound_sa_count;
 
     /** Variable shoting shotgun status for this host association:
-     *  SO_HIP_SHOTGUN_ON if shotgun is on,
-     *  SO_HIP_SHOTGUN_OFF if it is off.
+     *  HIP_MSG_SHOTGUN_ON if shotgun is on,
+     *  HIP_MSG_SHOTGUN_OFF if it is off.
      */
     int shotgun_status;
 
