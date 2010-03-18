@@ -12,7 +12,6 @@
 #include <string.h>
 
 #include "lmod.h"
-#include "lib/core/debug.h"
 
 /**
  * A generic struct for function pointer.
@@ -76,12 +75,10 @@ struct modular_state *lmod_init_state(void)
     struct modular_state *state;
 
     if (!(state = malloc(sizeof(struct modular_state)))) {
-        HIP_ERROR("Error on allocating memory for a modular_state instance.\n");
         return NULL;
     }
 
     if (!(state->item_list = malloc(sizeof(hip_ll_t)))) {
-        HIP_ERROR("Error on allocating memory for a linked list.\n");
         return NULL;
     }
 
@@ -108,19 +105,22 @@ int lmod_register_state_init_function(void *func)
     int err = 0;
     hip_ll_t *new_func_list = NULL;
 
-    HIP_IFEL(!func, -1, "Invalid init function provided");
+    if (!func) {
+        return -1;
+    }
 
     if (!state_init_functions) {
-        HIP_IFEL(!(new_func_list = malloc(sizeof(hip_ll_t))),
-                 -1,
-                 "Error on allocating memory for a linked list.\n");
+
+        if (!(new_func_list = malloc(sizeof(hip_ll_t)))) {
+            return -1;
+        }
+
         hip_ll_init(new_func_list);
         state_init_functions = new_func_list;
     }
 
     err = hip_ll_add_last(state_init_functions, func);
 
-out_err:
     return err;
 }
 
