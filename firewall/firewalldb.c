@@ -4,6 +4,7 @@
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * @todo THIS DATABASE IS REDUDANT WITH CACHE.C AND CONTAINS ONLY A SUBSET OF IT. REWRITE AND TEST!!!
+ * @note this code is linked to the use of hip_firewall_set_bex_data()
  * @todo move the raw socket initialization to somewhere else
  *
  * @brief Write a short summary
