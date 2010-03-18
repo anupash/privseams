@@ -1,3 +1,26 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * System-based opportunistic mode for HIP. In contrast to the library-based
+ * opportunistic mode, this code hooks by iptables instead of LD_PRELOAD.
+ * See the following papers for more information:
+ *
+ * - <a href="http://hipl.hiit.fi/hipl/thesis_teresa_finez.pdf">T. Finez,
+ * Backwards Compatibility Experimentation with Host Identity Protocol
+ * and Legacy Software and Networks , final project, December 2008</a>
+ * - <a href="http://www.iki.fi/miika/docs/ccnc09.pdf">
+ * Miika Komu and Janne Lindqvist, Leap-of-Faith Security is Enough
+ * for IP Mobility, 6th Annual IEEE Consumer
+ * Communications & Networking Conference IEEE CCNC 2009, Las Vegas,
+ * Nevada, January 2009</a>
+ *
+ * @brief System-based opportunistic mode for HIP
+ * @author Teresa Finez
+ * @author Miika Komu <miika@iki.fi>
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -15,6 +38,9 @@
 #include "common_hipd_msg.h"
 #include "lib/core/hostid.h"
 
+/**
+ * flush iptables rules for system-based opportunistic mode
+ */
 void hip_fw_flush_system_based_opp_chains(void)
 {
     int err;
@@ -27,8 +53,8 @@ void hip_fw_flush_system_based_opp_chains(void)
  * Checks whether a particular hit is one of the local ones.
  * Goes through all the local hits and compares with the given hit.
  *
- * @param *hit  the input src hit
- * @return      1 if *hit is a local hit
+ * @param hit  the input src hit
+ * @return      1 if @c hit is a local hit
  *              0 otherwise
  */
 static int hit_is_local_hit(const struct in6_addr *hit)
@@ -68,6 +94,13 @@ out_err:
     return res;
 }
 
+/**
+ * Add a by-pass rule to skip opportunistic processing for a peer
+ * that was found non-HIP capable. Offers a significant speed up.
+ *
+ * @param ctx the packet context
+ * @param verdict the verdict to assign for the packet
+ */
 static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx,
                                     const int verdict)
 {
@@ -220,6 +253,13 @@ int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx,
     return verdict;
 }
 
+/**
+ * based on the parameters in a message, assign the HITs and IP addresses
+ * to a given firewall entry
+ *
+ * @param msg the message containing HITs and IP addresses
+ * @return zero on success or negative on error
+ */
 int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg)
 {
     int err = 0, state;
