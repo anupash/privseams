@@ -1,16 +1,25 @@
 /** @file
- * This file defines a user message handling function for the Host Identity
- * Protocol (HIP).
  *
- * We don't currently have a workqueue. The functionality in this file mostly
- * covers catching userspace messages only.
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
+ * This file defines a user message (i.e. message from hipconf or hipfw) processing.
+ * The interface sends a response message back if the sender requested one. See
+ * lib/core/message.c for the details.
+ *
+ * No queue has been implemented for the user message. The interface relies on
+ * the user socket internal buffers to have enough space for caching.
+ *
+ * The user socket listens on an UDP port bound to IPv6 loopback.
+ * Processing of user messages includes an access control mechanism based on the
+ * port number. If the sender's port number is below 1024, it is running on
+ * root privileges and has full access. Ports above 1024 have limited access
+ * to functionality.
  *
  * @author  Miika Komu <miika_iki.fi>
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Tao Wan  <twan_cc.hut.fi>
  * @author  Rene Hummen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
 /* required for s6_addr32 */
@@ -1250,22 +1259,5 @@ out_err:
         HIP_DEBUG("No response sent\n");
     }
 
-    return err;
-}
-
-int hip_handle_netlink_msg(const struct nlmsghdr *msg, int len, void *arg)
-{
-    int err = 0;
-
-    for (; NLMSG_OK(msg, (uint32_t) len); msg = NLMSG_NEXT(msg, len)) {
-        switch (msg->nlmsg_type) {
-        case HIP_MSG_ADD_PEER_MAP_HIT_IP:
-            HIP_DEBUG("add hit-ip map\n");
-            break;
-        default:
-            HIP_DEBUG("Unexpected msg type: %d\n", msg->nlmsg_type);
-            break;
-        }
-    }
     return err;
 }
