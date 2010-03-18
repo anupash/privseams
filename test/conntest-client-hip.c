@@ -4,11 +4,12 @@
  *
  * A test client for testing connection between hosts very much
  * similar to nc and nc6. The main difference is that this client can
- * actually handle multihoming properly. Use this in context with
- * conntest-server for testing HIP connectivity or non-HIP connectivity
- * (see the manual for examples). When testing HIP connectivity,
- * you have either have the HITs/LSIs overloaded in /etc/hosts file or
- * use the DNS proxy (see the manual).
+ * actually handle multihoming properly and supports both IPv4 and
+ * IPv6 in the same application . Use this in context with
+ * conntest-server for testing HIP connectivity or non-HIP
+ * connectivity (see the manual for examples). When testing HIP
+ * connectivity, you have either have the HITs/LSIs overloaded in
+ * /etc/hosts file or use the DNS proxy (see the manual).
  *
  * @author  Lauri Silvennoinen
  * @author  Miika Komu <miika@iki.fi>
