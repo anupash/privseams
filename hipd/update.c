@@ -1,13 +1,11 @@
 /**
  * @file
  * This file defines various functions for sending, handling and receiving
- * UPDATE packets for the Host Identity Protocol (HIP). This file is under
- * heavy editing currently.
+ * UPDATE packets for the Host Identity Protocol (HIP)
  *
- * TODO: Doxygen documentation is missing. Please fix this.
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  *
  * @author  Baris Boyvat <baris#boyvat.com>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
 /* requiread for s6_addr32 */
@@ -33,6 +31,13 @@
 
 int update_id_window_size = 50;
 
+/**
+ * build locators in an UPDATE message
+ *
+ * @param locator_msg the message where the LOCATOR should be appended
+ * @param locators an extra pointer that will point to the LOCATOR
+ * @return zero on success or negative on failure
+ */
 int hip_create_locators(hip_common_t *locator_msg,
                         struct hip_locator_info_addr_item **locators)
 {
@@ -53,9 +58,21 @@ out_err:
     return err;
 }
 
-/// @todo : should we implement base draft update with ifindex 0 stuff ??
-/// @todo :  Divide this function into more pieces, handle_spi, handle_seq, etc
-/// @todo : Remove the uncommented lines?
+/**
+ * construct any UPDATE message based on an incoming UPDATE packet
+ *
+ * @param received_update_packet the received UPDATE packet if any
+ * @param ha the related host association
+ * @param update_packet_to_send a preallocated message where the UPDATE
+ *                              packet will be written
+ * @param locators the locators of the local host
+ * @param type the type of the incoming packet
+ * @return zero on success or negative on failure
+ *
+ * @todo : should we implement base draft update with ifindex 0 stuff ??
+ * @todo :  Divide this function into more pieces, handle_spi, handle_seq, etc
+ * @todo : Remove the uncommented lines?
+ */
 static int hip_create_update_msg(hip_common_t *received_update_packet,
                                  struct hip_hadb_state *ha, hip_common_t *update_packet_to_send,
                                  struct hip_locator_info_addr_item *locators,
@@ -223,6 +240,15 @@ out_err:
     return err;
 }
 
+/**
+ * deliver an UPDATE packet to the network
+ *
+ * @param update_packet_to_send the packet to deliver
+ * @param ha host association
+ * @param src_addr the source address to use for sending
+ * @param dst_addr the destination address to use for sending
+ * @return zero on success or negative on failure
+ */
 static int hip_send_update_pkt(hip_common_t *update_packet_to_send,
                                struct hip_hadb_state *ha, struct in6_addr *src_addr,
                                struct in6_addr *dst_addr)
@@ -239,6 +265,15 @@ static int hip_send_update_pkt(hip_common_t *update_packet_to_send,
     return err;
 }
 
+/**
+ * choose a sensible source address for an UPDATE packet with LOCATOR
+ *
+ * @param ha the related host association
+ * @param src_addr currently unused
+ * @param dst_addr the destination address
+ * @param new_src_addr the chosen source address
+ * @return zero on success or negative on failure
+ */
 static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *ha,
                                                   const struct in6_addr *src_addr,
                                                   const struct in6_addr *dst_addr,
@@ -299,7 +334,19 @@ out_err:
     return err;
 }
 
-// Locators should be sent to the whole verified addresses!!!
+/**
+ * a wrapper function to handle any incoming UPDATE packet
+ *
+ * @param received_update_packet the received UPDATE packet if any
+ * @param ha the related host association
+ * @param src_addr the source address of the received packet
+ * @param dst_addr the destination address of the received packet
+ * @param locators the locators of the local host
+ * @param type the type of the received packet
+ * @return zero on success or negative on failure
+ *
+ * @todo locators should be sent to the whole verified addresses?
+ */
 int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
                                   struct hip_hadb_state *ha,
                                   struct in6_addr *src_addr,
@@ -386,6 +433,11 @@ out_err:
     return err;
 }
 
+/**
+ * publish the locator set of the local host to all peers
+ *
+ * @return zero on success or negative on failure
+ */
 int hip_send_locators_to_all_peers()
 {
     int err                   = 0;
@@ -432,6 +484,13 @@ out_err:
     return err;
 }
 
+/**
+ * verify HMAC and signature from an UPDATE message
+ *
+ * @param msg the message to verify
+ * @param entry the related host association
+ * @return zero on success or negative on failure
+ */
 static int hip_check_hmac_and_signature(hip_common_t *msg, hip_ha_t *entry)
 {
     int err = 0;
@@ -458,6 +517,14 @@ out_err:
     return err;
 }
 
+/**
+ * process a LOCATOR paramter
+ *
+ * @param ha the related host association
+ * @param src_addr the source address where the locator arrived from
+ * @param locator the LOCATOR parameter
+ * @return zero on success or negative on failure
+ */
 static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
                                         const struct hip_locator *locator)
 {
@@ -526,6 +593,14 @@ out_err:
     return err;
 }
 
+/**
+ * process the first UPDATE packet (i.e. with a LOCATOR parameter)
+ *
+ * @param received_update_packet the UPDATE packet
+ * @param ha the related host association
+ * @param src_addr the source address of the UPDATE packet
+ * @return zero on success or negative on failure
+ */
 static int hip_handle_first_update_packet(hip_common_t *received_update_packet,
                                           hip_ha_t *ha, in6_addr_t *src_addr)
 {
@@ -557,6 +632,18 @@ out_err:
     return err;
 }
 
+/**
+ * process the second UPDATE packet (i.e. with echo request)
+ *
+ * @param received_update_packet the UPDATE packet
+ * @param ha the related host association
+ * @param src_addr the source address of the received UPDATE packet
+ * @param dst_addr the destination address of the received UPDATE packet
+ * @return zero on success or negative on failure
+ *
+ * @todo The word "second" is misleading. There could be actually multiple
+ *       "second" packets for each address to echo request.
+ */
 static void hip_handle_second_update_packet(hip_common_t *received_update_packet,
                                             hip_ha_t *ha,
                                             in6_addr_t *src_addr,
@@ -577,6 +664,18 @@ static void hip_handle_second_update_packet(hip_common_t *received_update_packet
     ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
+/**
+ * process the third update (i.e. with echo response)
+ *
+ * @param received_update_packet the received UPDATE packet
+ * @param ha the related host association
+ * @param src_addr the source address of the received UPDATE packet
+ * @param dst_addr the destination address of the received UPDATE packet
+ * @return zero on success or negative on failure
+ *
+ * @todo The word "third" is misleading. There could be actually multiple
+ *       "third" packets for each address to echo response.
+ */
 static void hip_handle_third_update_packet(hip_common_t *received_update_packet,
                                            hip_ha_t *ha,
                                            in6_addr_t *src_addr,
@@ -591,6 +690,11 @@ static void hip_handle_third_update_packet(hip_common_t *received_update_packet,
     ipv6_addr_copy(&ha->peer_addr, dst_addr);
 }
 
+/**
+ * Flush the opportunistic mode blacklist at the firewall. It is required
+ * when the host moves e.g. from one private address realm to another and
+ * the IP-address based blacklist becomes unreliable
+ */
 static void hip_empty_oppipdb_old(void)
 {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -616,6 +720,17 @@ out_err:
     }
 }
 
+/**
+ * process any UPDATE packet
+ *
+ * @param received_update_packet the received UPDATE packet
+ * @param src_addr the source address of the received UPDATE packet
+ * @param dst_addr the destination address of the received UPDATE packet
+ * @param ha the related host association
+ * @param sinfo the port numbers of the UDP tunnel (zeroed ports when
+ *              the tunnel is absent)
+ * @return zero on success or negative on failure
+ */
 int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_addr,
                        in6_addr_t *dst_addr, hip_ha_t *ha, hip_portpair_t *sinfo)
 {
