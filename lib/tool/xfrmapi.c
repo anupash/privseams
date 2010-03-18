@@ -23,8 +23,6 @@
 
 #include "xfrmapi.h"
 
-#ifndef CONFIG_HIP_PFKEY
-
 #define RTA_BUF_SIZE     2048
 
 /* New OSes have this, but older ones don't */
@@ -786,5 +784,3 @@ int hip_setup_default_sp_prefix_pair()
 out_err:
     return err;
 }
-
-#endif /* ! CONFIG_HIP_PFKEY */

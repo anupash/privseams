@@ -21,7 +21,6 @@
 #include "lib/core/debug.h"
 #include "pfkeysadb.h"
 
-#ifdef CONFIG_HIP_PFKEY
 /**
  * This function fills in policy0 and policylen0 according to the given parameters
  * The full implementation can be found in racoon.
@@ -98,5 +97,3 @@ end:
     *policylen0                     = policylen;
     return 0;
 }
-
-#endif /* CONFIG_HIP_PFKEY */
