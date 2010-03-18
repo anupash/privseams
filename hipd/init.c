@@ -603,6 +603,25 @@ out_err:
     return err;
 }
 
+static void hip_init_packet_types(void)
+{
+    lmod_register_packet_type(HIP_I1,        "HIP_I1");
+    lmod_register_packet_type(HIP_R1,        "HIP_R1");
+    lmod_register_packet_type(HIP_I2,        "HIP_I2");
+    lmod_register_packet_type(HIP_R2,        "HIP_R2");
+    lmod_register_packet_type(HIP_CER,       "HIP_CER");
+    lmod_register_packet_type(HIP_BOS,       "HIP_BOS");
+    lmod_register_packet_type(HIP_NOTIFY,    "HIP_NOTIFY");
+    lmod_register_packet_type(HIP_CLOSE,     "HIP_CLOSE");
+    lmod_register_packet_type(HIP_CLOSE_ACK, "HIP_CLOSE_ACK");
+    lmod_register_packet_type(HIP_HDRR,      "HIP_HDRR");
+    lmod_register_packet_type(HIP_PSIG,      "HIP_PSIG");
+    lmod_register_packet_type(HIP_TRIG,      "HIP_TRIG");
+    lmod_register_packet_type(HIP_LUPDATE,   "HIP_LUPDATE");
+    lmod_register_packet_type(HIP_DATA,      "HIP_DATA");
+    lmod_register_packet_type(HIP_PAYLOAD,   "HIP_PAYLOAD");
+}
+
 static int hip_init_handle_functions(void)
 {
     int err = 0;
@@ -728,6 +747,8 @@ int hipd_init(int flush_ipsec, int killold)
     hip_init_hostid_db(NULL);
 
     hip_set_os_dep_variables();
+
+    hip_init_packet_types();
 
     hip_init_handle_functions();
 
