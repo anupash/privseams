@@ -473,6 +473,10 @@ int lmod_register_packet_type(const uint16_t packet_type,
  *
  * Check whether a certain packet type was already registered.
  *
+ * @note The return value is not 0 (FALSE), if the packet type not exists.
+ *       Therefore you have to check, if the return value is equal to -1, if you
+ *       want to check whether a packet type exists or not.
+ *
  * @param packet_type The packet type number to search for.
  *
  * @return The index of the packet type, if existing or
