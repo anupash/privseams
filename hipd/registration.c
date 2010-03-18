@@ -1,11 +1,13 @@
 /** @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
  * This file defines a registration mechanism for the Host Identity Protocol
  * (HIP) that allows hosts to register with services.
  *
  * @author  Lauri Silvennoinen
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5203.txt">
  *          Host Identity Protocol (HIP) Registration Extension</a>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     registration.h
  * @see     hiprelay.h
  */
@@ -56,6 +58,9 @@ hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
  */
 hip_ll_t pending_requests;
 
+/**
+ * initialize services
+ */
 void hip_init_services()
 {
     hip_services[0].reg_type     = HIP_SERVICE_RENDEZVOUS;
@@ -74,6 +79,9 @@ void hip_init_services()
     hip_ll_init(&pending_requests);
 }
 
+/**
+ * uninitialize services
+ */
 void hip_uninit_services()
 {
     hip_ll_uninit(&pending_requests, free);
@@ -1491,11 +1499,14 @@ static int hip_get_registration_failure_string(uint8_t failure_type,
     return 0;
 }
 
-// add by santtu from here
-/*
- * Why is this not named consistelty with other parameterhandlers? Why is it not
- * hip_handle_param_reg_from? We have a naming convetion in use...
- * -Lauri 22.07.2008
+/**
+ * process a REG_FROM parameter for HIP relay functionality
+ *
+ * @param entry the related host association
+ * @param msg the control message containing the REG_FROM parameter
+ * @return zero on success or negative on failure
+ *
+ * @todo rename this as hip_handle_param_reg_from()
  */
 int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg)
 {
