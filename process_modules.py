@@ -121,21 +121,23 @@ def read_module_info(MODULES_DIR, disabled_modules, applications, compile_type):
         for disabled in disabled_modules:
             if current_module == os.path.join(MODULES_DIR, disabled) + '/':
                 cont = True
-                print '|    ' + disabled + ' is disabled'
+                print '|    found module: ' + disabled
+                print '|    state:        ' + 'DISABLED'
                 if 'all' == compile_type:
-                    print '|    ...this module will be compiled, but not linked!\n|'
+                    print '|    (this module will be compiled, but not linked)\n|'
                 elif 'enabled' == compile_type:
-                    print '|    ...this module will not be compiled!\n|'
+                    print '|    (this module will not be compiled)\n|'
                 else:
-                    print '|    ...ignoring this directory!\n|'
+                    print '|    (ignoring this directory)\n|'
         if True == cont:
             continue
 
         try:
             path = os.path.join(current_module, MODULE_INFO_FILE)
             (name, info) = parse_module_info(path, applications)
-            print '|    found module: ' + name,
-            print '(version ' + info['version'] + ')'
+            print '|    found module: ' + name
+            print '|    state:        ' + 'ENABLED'
+            print '|    version:      ' + info['version'] + '\n|'
             module_info[name] = info
         except:
             print '|\n|    WARNING parsing of module info file',
