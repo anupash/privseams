@@ -1,3 +1,13 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ *
+ * Utility functionality for conntest-client and conntest-server
+ *
+ * @author Miika Komu <miika@iki.fi>
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -6,13 +16,12 @@
 #include "lib/tool/lutil.h"
 
 /**
- * create_serversocket - given the port and the protocol
- * it binds the socket and listen to it
+ * given the port and the protocol, this function binds the socket and listen to it
+ *
  * @param proto type of protocol
  * @param port the kind of protocol
  *
- * @return the socket id,
- * exits on error.
+ * @return the socket id, exits on error.
  */
 int create_serversocket(int type, in_port_t port)
 {
@@ -80,6 +89,12 @@ out_err:
     return fd;
 }
 
+/**
+ * TCP-based server loop
+ *
+ * @param serversock the server socket
+ * @return zero on success or negative on error
+ */
 int main_server_tcp(int serversock)
 {
     int peerfd = 0, err = 0;
@@ -135,6 +150,12 @@ out_err:
     return err;
 }
 
+/**
+ * create an IPv4-based UDP socket
+ *
+ * @param local_port the local port for which to bind to
+ * @return zero on success or negative on failure
+ */
 int create_udp_ipv4_socket(in_port_t local_port)
 {
     int ipv4_sock = -1, err = 0, on = 1;
@@ -194,6 +215,17 @@ out_err:
     }
 }
 
+/**
+ * Send a message over UDP. Notice that this works on a multihoming
+ * host correctly (in contrast to nc or nc6)
+ *
+ * @param sock the socket to use for sending
+ * @param data the data to send
+ * @param data_len the length of data in bytes
+ * @param local_addr the local address to use for sending
+ * @param peer_addr the peer address to use for sending
+ * @return zero on success or negative on failure
+ */
 int udp_send_msg(int sock, uint8_t *data, size_t data_len,
                  struct sockaddr *local_addr,
                  struct sockaddr *peer_addr)
@@ -267,6 +299,7 @@ out_err:
     return err;
 }
 
+ * @return zero on success or negative on failure
 int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port)
 {
     /* Use recvmsg/sendmsg instead of recvfrom/sendto because
@@ -401,13 +434,12 @@ reset:
 }
 
 /**
- * main_server - given the port and the protocol
- * it handles the functionality of the responder
+ * given the port and the protocol this function handles the functionality of the responder
+ *
  * @param proto type of protocol
  * @param port the kind of protocol
  *
- * @return the socket id,
- * exits on error.
+ * @return the socket id, exits on error.
  */
 int main_server(int type, in_port_t port)
 {
