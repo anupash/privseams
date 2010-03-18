@@ -1,9 +1,17 @@
 /** @file
- * A test client for testing connection between hosts. Use this in context
- * with conntest-server. "gai" stands for "give all information" :D
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
+ * A test client for testing connection between hosts very much
+ * similar to nc and nc6. The main difference is that this client can
+ * actually handle multihoming properly. Use this in context with
+ * conntest-server for testing HIP connectivity or non-HIP connectivity
+ * (see the manual for examples). When testing HIP connectivity,
+ * you have either have the HITs/LSIs overloaded in /etc/hosts file or
+ * use the DNS proxy (see the manual).
  *
  * @author  Lauri Silvennoinen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ * @author  Miika Komu <miika@iki.fi>
  */
 
 /* required for s6_addr32 */
