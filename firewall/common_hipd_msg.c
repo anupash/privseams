@@ -1,3 +1,13 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ *
+ * Contains one function to get the state of a host association.
+ *
+ * @author Miika Komu <miika@iki.fi>
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
