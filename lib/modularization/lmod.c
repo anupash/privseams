@@ -34,7 +34,7 @@ struct packet_type {
  * lmod_init_state_items to initialize all items of a modular state instance.
  *
  */
-static hip_ll_t *state_init_functions;
+static hip_ll_t state_init_functions;
 
 /**
  * List of module identifier.
@@ -102,26 +102,11 @@ struct modular_state *lmod_init_state(void)
  */
 int lmod_register_state_init_function(void *func)
 {
-    int err = 0;
-    hip_ll_t *new_func_list = NULL;
-
     if (!func) {
         return -1;
     }
 
-    if (!state_init_functions) {
-
-        if (!(new_func_list = malloc(sizeof(hip_ll_t)))) {
-            return -1;
-        }
-
-        hip_ll_init(new_func_list);
-        state_init_functions = new_func_list;
-    }
-
-    err = hip_ll_add_last(state_init_functions, func);
-
-    return err;
+    return hip_ll_add_last(&state_init_functions, func);
 }
 
 /**
@@ -140,7 +125,7 @@ void lmod_init_state_items(struct modular_state *state)
     hip_ll_node_t *iter = NULL;
     int (*init_function)(struct modular_state *state) = NULL;
 
-    while ((iter = hip_ll_iterate(state_init_functions, iter))) {
+    while ((iter = hip_ll_iterate(&state_init_functions, iter))) {
         init_function = iter->ptr;
         init_function(state);
     }
