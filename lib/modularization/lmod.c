@@ -22,6 +22,11 @@ struct function {
     void    *func_ptr;
 };
 
+struct packet_type {
+    uint32_t    num;
+    const char *identifier;
+};
+
 
 /**
  * List of initialization functions for the modular state.
@@ -39,6 +44,17 @@ static hip_ll_t *state_init_functions;
  *
  */
 static char **module_list;
+
+/**
+ * List of packet types.
+ *
+ * Used to track all registered packet types. Each module which defines a new
+ * packet type should register it using lmod_register_packet_type. So, two
+ * independent modules cannot unintentionally use the same packet type number
+ * for different purposes.
+ *
+ */
+static hip_ll_t packet_types;
 
 /**
  * Number of enabled modules.
@@ -403,4 +419,115 @@ void lmod_uninit_module_list(void)
         }
         free(module_list);
     }
+}
+
+/**
+ * lmod_register_packet_type
+ *
+ * Register a new packet type and the corresponding identifier. Each module
+ * introducing a new packet type should register it using this function.
+ *
+ * @note Call lmod_uninit_packet_types() to free the allocated memory!
+ *
+ * @param packet_type The packet type number to register.
+ * @param *identifier A name for the packet type.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int lmod_register_packet_type(const uint16_t packet_type,
+                              const char *identifier)
+{
+    int                 index     = 0;
+    hip_ll_node_t      *iter      = NULL;
+    struct packet_type *new_entry = NULL;
+
+    if (!identifier || (lmod_packet_type_exists(packet_type) != -1)) {
+        return -1;
+    }
+
+    if (!(new_entry = malloc(sizeof(struct packet_type)))) {
+        return -1;
+    }
+
+    new_entry->num = packet_type;
+    new_entry->identifier = identifier;
+
+    while ((iter = hip_ll_iterate(&packet_types, iter))) {
+        if (packet_type == ((struct packet_type *) iter->ptr)->num) {
+            return -1;
+        } else if (packet_type < ((struct packet_type *) iter->ptr)->num) {
+            break;
+        } else {
+            index++;
+        }
+    }
+
+    hip_ll_add(&packet_types, index, new_entry);
+
+    return 0;
+}
+
+/**
+ * lmod_packet_type_exists
+ *
+ * Check whether a certain packet type was already registered.
+ *
+ * @param packet_type The packet type number to search for.
+ *
+ * @return The index of the packet type, if existing or
+ *         -1, if the packet type not exists
+ */
+int lmod_packet_type_exists(const uint16_t packet_type)
+{
+    int            index = 0;
+    hip_ll_node_t *iter  = NULL;
+
+    while ((iter = hip_ll_iterate(&packet_types, iter))) {
+        if (packet_type == ((struct packet_type *) iter->ptr)->num) {
+            return index;
+        } else {
+            index++;
+        }
+    }
+
+    return -1;
+}
+
+/**
+ * lmod_get_packet_type_identifier
+ *
+ * Get the identifier corresponding to the provided packet type number.
+ *
+ * @param packet_type The packet type number to search for.
+ *
+ * @return The corresponding identifier, if exists or
+ *         NULL, if the packet type is not registered.
+ */
+const char *lmod_get_packet_type_identifier(const uint16_t packet_type)
+{
+    int index;
+    struct packet_type *entry = NULL;
+
+    index = lmod_packet_type_exists(packet_type);
+
+    if ((index != -1)) {
+        entry = hip_ll_get(&packet_types, index);
+        return entry->identifier;
+    }
+
+    return NULL;
+}
+
+/**
+ * lmod_uninit_packet_types
+ *
+ * Free all allocated memory for storage of the packet type list.
+ *
+ * @note Call this function, if you have added packet types.
+ *
+ */
+void lmod_uninit_packet_types(void)
+{
+    hip_ll_uninit(&packet_types, free);
 }

@@ -54,4 +54,13 @@ int lmod_module_exists(const char *module_id);
 
 void lmod_uninit_module_list(void);
 
+int lmod_register_packet_type(const uint16_t packet_type,
+                              const char *identifier);
+
+int lmod_packet_type_exists(const uint16_t packet_type);
+
+const char *lmod_get_packet_type_identifier(const uint16_t packet_type);
+
+void lmod_uninit_packet_types(void);
+
 #endif /* HIP_LIB_MODULARIZATION_MODULARIZATION_H */
