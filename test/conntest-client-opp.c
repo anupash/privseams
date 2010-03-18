@@ -1,7 +1,13 @@
-/*
- * Echo STDIN to a selected machine via tcp or udp using ipv6. Use this
- * with conntest-server.
+/**
+ * @file
  *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * Connection testing client similar to conntest-client-hip. When the code
+ * is configured with --enable-opportunistic, this code is linked to the
+ * opportunistic mode library and, hence, uses the opportunistic mode.
+ *
+ * @author Miika Komu <miika@iki.fi>
  */
 
 /* required for s6_addr32 */
@@ -25,6 +31,13 @@
 #include "lib/core/ife.h"
 #include "conntest.h"
 
+/**
+ * Main function.
+ *
+ * @param argc command line argument count.
+ * @param argv command line arguments.
+ * @return zero on success or non-zero on failure
+ */
 int main(int argc, char *argv[])
 {
     int socktype, i, err = 0;
