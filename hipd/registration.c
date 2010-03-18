@@ -61,7 +61,7 @@ hip_ll_t pending_requests;
 /**
  * initialize services
  */
-void hip_init_services()
+void hip_init_services(void)
 {
     hip_services[0].reg_type     = HIP_SERVICE_RENDEZVOUS;
     hip_services[0].status       = HIP_SERVICE_OFF;
@@ -82,7 +82,7 @@ void hip_init_services()
 /**
  * uninitialize services
  */
-void hip_uninit_services()
+void hip_uninit_services(void)
 {
     hip_ll_uninit(&pending_requests, free);
 }
