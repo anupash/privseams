@@ -1,5 +1,7 @@
 /** @file
- * oppipdb.c:
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * This file defines handling functions for opportunistic mode to remember
  * IP's which are not HIP capable. This means faster communication in second
  * connection attempts to these hosts. Otherwise it would always take the same
@@ -8,7 +10,6 @@
  *
  * @author  Antti Partanen
  * @author  Alberto Garcia
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
 /* required for s6_addr32 */
@@ -30,7 +31,6 @@ static unsigned long hip_oppipdb_hash_ip(const void *ptr);
 static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused);
 
 /**
- * hip_oppipdb_hash_ip:
  * Generates the hash information that is used to index the table
  *
  * @param ptr: pointer to the ip address used to make the hash
@@ -62,7 +62,6 @@ static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
 }
 
 /**
- * hip_for_each_oppip:
  * Map function @func to every entry in the oppipdb hash table
  *
  * @param func: mapper function to apply to all entries
@@ -98,7 +97,6 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
 }
 
 /**
- * hip_oppipdb_del_entry_by_entry:
  * Deletes an entry that is present in oppipdb hash table
  *
  * @param entry: pointer to the entry to delete
@@ -112,7 +110,6 @@ void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
 }
 
 /**
- * hip_oppipdb_uninit_wrap:
  * Wrap function for hip_oppipdb_del_entry_by_entry()
  *
  * @param entry: pointer to the entry to delete
@@ -126,7 +123,6 @@ static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused)
 }
 
 /**
- * hip_oppipdb_uninit:
  * Deletes the whole oppipdb hash table
  */
 void hip_oppipdb_uninit(void)
@@ -135,7 +131,6 @@ void hip_oppipdb_uninit(void)
 }
 
 /**
- * hip_create_oppip_entry:
  * Allocates and initilizes the node to store the information
  * in the oppipdb hash table
  *
@@ -157,7 +152,6 @@ static hip_oppip_t *hip_create_oppip_entry(void)
 }
 
 /**
- * hip_oppipdb_add_entry:
  * Adds a new entry to the oppipdb hash table.
  * This table stores the ip addresses of the hosts that are not HIP capable.
  *
@@ -188,7 +182,6 @@ int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
 }
 
 /**
- * hip_init_oppip_db:
  * Creates and initializes the oppipdb hash table
  *
  * @return 0 on success
@@ -201,7 +194,6 @@ int hip_init_oppip_db(void)
 
 #if 0
 /**
- * hip_oppipdb_dump:
  * Dumps the whole oppipdb hash table for monitoring purposes
  */
 static void hip_oppipdb_dump(void)
@@ -226,7 +218,6 @@ static void hip_oppipdb_dump(void)
 #endif
 
 /**
- * hip_oppipdb_find_byip:
  * Seeks an ip within the oppipdb hash table.
  * If the ip is found in the table, that host is not HIP capable.
  *
@@ -251,7 +242,6 @@ hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer)
 }
 
 /**
- * hip_oppipdb_delentry:
  * This function should be called after receiving an R1 from the peer and after
  * a successful base exchange in the opportunistic mode. It checks whether an
  * address of a HIP capable host is found from database. If the address is
