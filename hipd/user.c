@@ -20,6 +20,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Tao Wan  <twan_cc.hut.fi>
  * @author  Rene Hummen
+ * @todo split the gigantic hip_handle_user_msg() into an array of handler functions
  */
 
 /* required for s6_addr32 */
@@ -34,6 +35,13 @@
 #include "lib/core/hip_udp.h"
 #include "hipd.h"
 
+/**
+ * send a response message back to the origin
+ *
+ * @param msg the message to send
+ * @param dst the destination of the message
+ * @return zero on success, or negative error value on error.
+ */
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
 {
     HIP_DEBUG("Sending msg type %d\n", hip_get_msg_type(msg));
@@ -48,9 +56,8 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
  *       add a case block for your HIP_MSG_NEWMODE constant in the
  *       switch(msg_type) block in this function.
  * @param  msg  a pointer to the received user message HIP packet.
- * @param  src
+ * @param  src the origin of the sender
  * @return zero on success, or negative error value on error.
- * @see    hip_so.
  */
 int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 {
