@@ -1,3 +1,30 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * Heartbeat code detects problems with the ESP tunnel. It is based on
+ * sending ICMPv6 requests inside the tunnel. Each received ICMPv6
+ * message indicates that the tunnel is in good "health". Correspondingly,
+ * when there are no ICMPv6 messages received it may be a good time
+ * to trigger an UPDATE packet to recover from the disconnectivity.
+ *
+ * The heartbeat code keeps also track of the time stamps for the
+ * ICMPv6 messages. It could be used to implement handovers to switch
+ * to faster paths or even as an utility for load balancing. At the
+ * moment, the heartbeat algorithm is rather simple and used just for
+ * fault tolerance.  It should also noticed that the heartbeat code is
+ * required only at one side of the communications as long as the
+ * other party supports replying to ICMPv6 echo requests.
+ *
+ * @see "Varjonen et al, Secure and Efficient IPv4/IPv6 Handovers Using
+ * Host-Based Identifier-Locator Split, Journal of Communications
+ * Software and Systems, 2010".
+ *
+ * @author Samu Varjonen
+ * @author Miika Komu
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -6,6 +33,14 @@
 #include "heartbeat.h"
 #include "maintenance.h"
 
+/**
+ * an iterator to check and execute handover when ESP tunnel
+ * is not alive
+ *
+ * @param ha the related host association
+ * @param unused unused
+ * @return zero on success or negative on failure
+ */
 int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
 {
     struct hip_locator_info_addr_item *locators;
