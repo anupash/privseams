@@ -78,3 +78,33 @@ out_err:
 
     return err;
 }
+
+/**
+ * Flush the opportunistic mode blacklist at the firewall. It is required
+ * when the host moves e.g. from one private address realm to another and
+ * the IP-address based blacklist becomes unreliable
+ */
+void hip_empty_oppipdb_old(void)
+{
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+    hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
+#endif
+    if (hip_firewall_is_alive()) {
+        int err;
+        struct hip_common *msg;
+
+        msg = hip_msg_alloc();
+        HIP_IFEL(!msg, -1, "msg alloc failed\n");
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_FW_FLUSH_SYS_OPP_HIP, 0),
+                 -1, "build hdr failed\n");
+
+        err = hip_sendto_firewall(msg);
+        err = err > 0 ? 0 : -1;
+
+out_err:
+        HIP_FREE(msg);
+        if (err) {
+            HIP_ERROR("Couldn't flush firewall chains\n");
+        }
+    }
+}
