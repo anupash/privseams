@@ -1,5 +1,5 @@
 /**
- * @file Generic socket library minimally abstracting from differences between POSIX and Windows networking implementations, and whatever deranged variations may lurk out there.
+ * @file
  */
 #ifndef __SYSTEM_NETWRAP_H__
 #define __SYSTEM_NETWRAP_H__

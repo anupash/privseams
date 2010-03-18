@@ -1,5 +1,5 @@
 /**
- * @file firewall/rule_management.c
+ * @file
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
@@ -96,7 +96,7 @@ DList *forward_rules;
  * Writes the default firewall configuration file to the disk if it does
  * not exist
  *
- * @file the configuration file name
+ * @file
  */
 static void check_and_write_default_config(const char *file)
 {

@@ -1,5 +1,5 @@
 /**
- * @file hipd/user_ipsec_hipd_msg.h
+ * @file
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  *
