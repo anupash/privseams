@@ -193,7 +193,6 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/dlist.c \
                          firewall/hslist.c \
                          firewall/user_ipsec_api.c \
-                         firewall/user_ipsec_esp.c \
                          firewall/user_ipsec_sadb.c \
                          firewall/user_ipsec_fw_msg.c \
                          firewall/common_hipd_msg.c \
@@ -270,7 +269,8 @@ endif
 lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/nlink.c \
                                  lib/tool/lutil.c \
-                                 lib/tool/checksum.c
+                                 lib/tool/checksum.c \
+                                 lib/tool/user_ipsec_esp.c
 
 ############################ NOTE ##################################
 #

@@ -30,7 +30,7 @@
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
 #include "user_ipsec_esp.h"
-#include "esp_prot_api.h"
+#include "firewall/esp_prot_api.h"
 #include "lib/core/prefix.h"
 
 #include "lib/tool/checksum.h"
