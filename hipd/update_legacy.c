@@ -1,7 +1,12 @@
 /**
+ * @file
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ *
  * This file contains legacy functions for mobility that should be rewritten for modularity.
  * They are still included in the code base due to locator dependencies with DHT and
- * base exchange code.
+ * base exchange code. See bugzilla ids 926 and 927.
+ *
+ * @author Baris Boyvat
  */
 
 /* required for s6_addr32 */
@@ -9,6 +14,13 @@
 
 #include "update_legacy.h"
 
+/**
+ * build a LOCATOR parameter for an UPDATE packet
+ *
+ * @param msg the LOCATOR parameter will be appended to this UPDATE message
+ * @param spi the SPI number for this UPDATE
+ * @return zero on success on negative on failure
+ */
 int hip_build_locators_old(struct hip_common *msg, uint32_t spi)
 {
     int err                                 = 0, i = 0, count = 0;
@@ -17,16 +29,12 @@ int hip_build_locators_old(struct hip_common *msg, uint32_t spi)
     hip_list_t *item                        = NULL, *tmp = NULL;
     struct hip_locator_info_addr_item *locs = NULL;
 
-    //TODO count the number of UDP relay servers.
-    // check the control state of every hatb_state.
-
     if (address_count == 0) {
         HIP_DEBUG("Host has only one or no addresses no point "
                   "in building LOCATOR2 parameters\n");
         goto out_err;
     }
 
-    //TODO check out the count for UDP and hip raw.
     addr_max = address_count;
 
     HIP_IFEL(!(locs = malloc(addr_max *
