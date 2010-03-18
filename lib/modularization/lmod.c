@@ -362,6 +362,9 @@ int lmod_register_module(const char *module_id)
  *
  * Check whether a certain module is enabled.
  *
+ * @note This function uses string compares. Therefore you should call this
+ *       function only once and cache the result to improve performance.
+ *
  * @param *module_id String identifier for the module to check.
  *
  * @return 0, if module with this id is NOT registered
