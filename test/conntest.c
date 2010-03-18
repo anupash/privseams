@@ -299,7 +299,14 @@ out_err:
     return err;
 }
 
+/**
+ * UDP-based main loop
+ *
+ * @param ipv4_sock the socket to use for IPv6 communications
+ * @param ipv6_sock the socket to use for IPv4 communications
+ * @param local_port the local port to which to bind
  * @return zero on success or negative on failure
+ */
 int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port)
 {
     /* Use recvmsg/sendmsg instead of recvfrom/sendto because
