@@ -1,12 +1,12 @@
-/*
- * Get data from client and send it back (echo server). Use this with
- * conntest-client.
+/**
+ * @file
  *
- * Bugs:
- * - this is a kludge
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
- * Todo:
- * - rewrite/refactor for better modularity
+ * An echo server that receives data from network and echoes it back. Use this with
+ * with conntest-client
+ *
+ * @todo rewrite/refactor for better modularity
  */
 
 /* required for s6_addr32 */
@@ -31,6 +31,11 @@
 #include "config.h"
 #include "conntest.h"
 
+/**
+ * handle signals
+ *
+ * @param signo the signal number
+ */
 static void sig_handler(int signo)
 {
     if (signo == SIGTERM) {
@@ -41,6 +46,13 @@ static void sig_handler(int signo)
     }
 }
 
+/**
+ * Main function.
+ *
+ * @param argc command line argument count.
+ * @param argv command line arguments.
+ * @return zero on success or non-zero on failure
+ */
 int main(int argc, char *argv[])
 {
     int port;
