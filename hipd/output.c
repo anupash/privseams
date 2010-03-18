@@ -1,5 +1,8 @@
 /* @file
- * This file defines handling functions for outgoing packets for the Host
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * This file defines processing of outgoing packets for the Host
  * Identity Protocol (HIP).
  *
  * @author  Janne Lundberg
@@ -8,7 +11,6 @@
  * @author  Kristian Slavov
  * @author  Samu Varjonen
  * @author  Rene Hummen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
 /* required for s6_addr32 */
@@ -311,13 +313,31 @@ static void hip_send_opp_tcp_i1(hip_ha_t *entry)
 #endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 /**
- * Sends an I1 packet to the peer. Used internally by hip_send_i1
- * Check hip_send_i1 & hip_send_pkt for the parameters.
+ * Send an I1 packet to the Responder. Used internally by hip_send_i1().
+ *
+ * @param i1         a pointer to a i1 packet common header with source and
+ *                   destination HITs.
+ * @param dst_hit    destination HIT (used only for the opportunistic TCP extension)
+ * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
+ *                   If local_addr is NULL, the packet is sent from all addresses.
+ * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param src_port   not used.
+ * @param dst_port   not used.
+ * @param entry      a pointer to the current host association database state.
+ * @param retransmit a boolean value indicating if this is a retransmission
+ *                   (@b zero if this is @b not a retransmission).
+ * @return           zero on success, or negative error value on error.
+ * @todo remove the dst_hit parameter? test with the opportunistic TCP extension
  */
-static int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
-                           struct in6_addr *local_addr, struct in6_addr *peer_addr,
-                           in_port_t src_port, in_port_t dst_port, struct hip_common *i1_blind,
-                           hip_ha_t *entry, int retransmit)
+static int hip_send_i1_pkt(struct hip_common *i1,
+                           hip_hit_t *dst_hit,
+                           struct in6_addr *local_addr,
+                           struct in6_addr *peer_addr,
+                           in_port_t src_port,
+                           in_port_t dst_port,
+                           struct hip_common *i1_blind,
+                           hip_ha_t *entry,
+                           int retransmit)
 {
     int err = 0;
 
@@ -382,10 +402,7 @@ static int hip_send_i1_pkt(struct hip_common *i1, hip_hit_t *dst_hit,
 }
 
 /**
- * Sends an I1 packet to the peer.
- *
- * Send an I1 packet to the responder if an IPv6 address for the peer
- * is known.
+ * Send an I1 packet to the Responder
  *
  * @param src_hit a pointer to source host identity tag.
  * @param dst_hit a pointer to destination host identity tag.
@@ -512,14 +529,14 @@ out_err:
 }
 
 /**
- * Constructs a new R1 packet payload.
+ * Construct a new R1 packet payload
  *
  * @param src_hit      a pointer to the source host identity tag used in the
  *                     packet.
  * @param sign         a funtion pointer to a signature funtion.
- * @param private_key  a pointer to ...
- * @param host_id_pub  a pointer to ...
- * @param cookie       a pointer to ...
+ * @param private_key  a pointer to the local host private key
+ * @param host_id_pub  a pointer to the public host id of the local host
+ * @param cookie_k     the difficulty value for the puzzle
  * @return             zero on success, or negative error value on error.
  */
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
@@ -718,9 +735,9 @@ out_err:
 }
 
 /**
- * Transmits an R1 packet to the network.
+ * Transmit an R1 packet to the network.
  *
- * Sends an R1 packet to the peer and stores the cookie information that was
+ * Send an R1 packet to the peer and store the cookie information that was
  * sent. The packet is sent either to @c i1_saddr or  @c dst_ip depending on the
  * value of @c dst_ip. If @c dst_ip is all zeroes (::/128) or NULL, R1 is sent
  * to @c i1_saddr; otherwise it is sent to @c dst_ip. In case the incoming I1
@@ -926,8 +943,9 @@ out_err:
     return err;
 }
 
-/* Checks if source and destination IP addresses are compatible for sending
- *  packets between them
+/**
+ * Check if source and destination IP addresses are compatible for sending
+ * packets between them
  *
  * @param src_addr  Source address
  * @param dst_addr  Destination address
@@ -956,7 +974,7 @@ int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_a
 };
 
 /**
- * ...
+ * Cache a HIP packet for possible retransmission
  *
  * @param src_addr  a pointer to the packet source address.
  * @param peer_addr a pointer to the packet destination address.
@@ -964,6 +982,7 @@ int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_a
  *                  destination HITs.
  * @param entry     a pointer to the current host association database state.
  * @return          zero on success, or negative error value on error.
+ * @note currently the queue length is one and new packets replace old ones
  */
 static int hip_queue_packet(const struct in6_addr *src_addr, const struct in6_addr *peer_addr,
                             const struct hip_common *msg, hip_ha_t *entry)
@@ -992,7 +1011,7 @@ out_err:
 }
 
 /**
- * Sends a HIP message using raw HIP from one source address. Don't use this
+ * Send a HIP message using raw HIP from one source address. Don't use this
  * function directly,  instead use hip_send_pkt(). It's used by hip_send_raw internally.
  *
  * Sends a HIP message to the peer on HIP/IP. This function calculates the
@@ -1020,12 +1039,6 @@ out_err:
  * @todo             remove the sleep code (queuing is enough?)
  *
  * @see              hip_send_udp_from_one_src
- */
-/**
- * Sends a HIP message using raw HIP from one source address. Don't use this
- * function directly. It's used by hip_send_raw internally.
- *
- * @see              hip_send_udp
  */
 static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
                                      const struct in6_addr *peer_addr,
@@ -1249,7 +1262,7 @@ out_err:
 }
 
 /**
- * Sends a HIP message using User Datagram Protocol (UDP). From one address.
+ * Send a HIP message using User Datagram Protocol (UDP) from one address.
  * Don't use this function directly, instead use hip_send_pkt()
  *
  * Sends a HIP message to the peer on UDP/IPv4. IPv6 is not supported, because
@@ -1297,9 +1310,9 @@ static int hip_send_udp_from_one_src(const struct in6_addr *local_addr,
 }
 
 /**
- * Sends a HIP message.
+ * Send a HIP message.
  *
- * Sends a HIP message to the peer on HIP/IP. This function calculates the
+ * Sends a HIP message to the peer on HIP/IP. This function also calculates the
  * HIP packet checksum.
  *
  * Used protocol suite is <code>IPv4(HIP)</code> or <code>IPv6(HIP)</code>.
@@ -1388,7 +1401,8 @@ int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_
 };
 
 /**
- * This function sends ICMPv6 echo with timestamp to dsthit
+ * Send a heatbeat request (ICMPv6 echo request) inside ESP tunnel to
+ * a remote host
  *
  * @param socket to send with
  * @param srchit HIT to send from
@@ -1507,6 +1521,7 @@ out_err:
  *                  Not in use.
  * @param not_used4 a boolean value indicating if this is a retransmission
  *                  (@b zero if this is @b not a retransmission). Not in use.
+ * @return zero on success or negative on failure
  * @note            There are four parameters not used anywhere. However, these
  *                  parameters must exist in the function parameter list
  *                  because all the send-functions must have a uniform parameter
