@@ -121,9 +121,6 @@ int hip_buddies_inuse              = HIP_MSG_BUDDIES_OFF;
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 int hip_locator_status             = HIP_MSG_SET_LOCATOR_OFF;
 
-/* It tells the daemon to set tcp timeout parameters. Added By Tao Wan, on 09.Jan.2008 */
-int hip_tcptimeout_status          = HIP_MSG_SET_TCPTIMEOUT_ON;
-
 /* Create /etc/hip stuff and exit (used for binary hipfw packaging) */
 int create_configs_and_exit        = 0;
 

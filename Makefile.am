@@ -151,7 +151,6 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/accessor.c \
                     hipd/oppipdb.c \
                     hipd/dh.c \
-                    hipd/tcptimeout.c \
                     hipd/cert.c \
                     hipd/user_ipsec_sadb_api.c \
                     hipd/user_ipsec_hipd_msg.c \

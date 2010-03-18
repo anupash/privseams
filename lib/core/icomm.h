@@ -150,8 +150,7 @@
 #define HIP_MSG_HIPPROXY_STATUS_REQUEST          134
 #define HIP_MSG_OPPTCP_UNBLOCK_AND_BLACKLIST     135
 #define HIP_MSG_IPSEC_ADD_SA                     136
-#define HIP_MSG_SET_TCPTIMEOUT_ON                137
-#define HIP_MSG_SET_TCPTIMEOUT_OFF               138
+/* free slots */
 #define HIP_MSG_SET_NAT_ICE_UDP                  139
 #define HIP_PARAM_INT                           140
 #define HIP_MSG_CERT_SPKI_SIGN                   141

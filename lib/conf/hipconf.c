@@ -82,7 +82,7 @@
 #define TYPE_DHT           22
 #define TYPE_OPPTCP        23
 #define TYPE_ORDER         24
-#define TYPE_TCPTIMEOUT    25 /* add By Tao Wan, on 04.01.2008*/
+/* free slot */
 #define TYPE_HIPPROXY      26
 #define TYPE_HEARTBEAT     27
 #define TYPE_HI3           28
@@ -151,7 +151,6 @@ const char *hipconf_usage =
     "locator on|off|get\n"
     "debug all|medium|none\n"
     "restart daemon\n"
-    "set tcptimeout on|off\n" /*added by Tao Wan*/
     "transform order <integer> "
     " (1=AES, 2=3DES, 3=NULL and place them to order\n"
     "  like 213 for the order 3DES, AES and NULL)\n"
@@ -510,8 +509,6 @@ int hip_conf_get_action(char *argv[])
         ret = ACTION_TRANSORDER;
     } else if (!strcmp("restart", argv[1])) {
         ret = ACTION_RESTART;
-    } else if (!strcmp("tcptimeout", argv[1])) { /*added by Tao Wan, 08.Jan.2008 */
-        ret = ACTION_TCPTIMEOUT;
     } else if (!strcmp("reinit", argv[1])) {
         ret = ACTION_REINIT;
     } else if (!strcmp("hi3", argv[1])) {
@@ -586,7 +583,6 @@ int hip_conf_check_action_argc(int action)
     case ACTION_DEBUG:
     case ACTION_RESTART:
     case ACTION_REINIT:
-    case ACTION_TCPTIMEOUT:
     case ACTION_NSUPDATE:
     case ACTION_HIT_TO_IP:
     case ACTION_HIT_TO_IP_SET:
@@ -663,8 +659,6 @@ int hip_conf_get_type(char *text, char *argv[])
         }
     } else if (strcmp("locator", argv[1]) == 0)     {
         ret = TYPE_LOCATOR;
-    } else if (!strcmp("tcptimeout", text)) {
-        ret = TYPE_TCPTIMEOUT;
     } else if ((!strcmp("all", text)) && (strcmp("bos", argv[1]) == 0)) {
         ret = TYPE_BOS;
     } else if (!strcmp("debug", text)) {
@@ -771,7 +765,6 @@ int hip_conf_get_type_arg(int action)
     case ACTION_BOS:
     case ACTION_MHADDR:
     case ACTION_HANDOVER:
-    case ACTION_TCPTIMEOUT:
     case ACTION_TRANSORDER:
     case ACTION_REINIT:
 #ifdef CONFIG_HIP_HIPPROXY
@@ -2754,41 +2747,6 @@ out_err:
     return err;
 }
 
-/**
- * Handles the hipconf commands where the type is @ tcptimeout. Experimental.
- * Tries to pimp up TCP using /proc file system to tolerate mobility better.
- *
- * @param msg    a pointer to the buffer where the message for hipd will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array (@b 0).
- * @return       zero on success, or negative error value on error.
- */
-static int hip_conf_handle_tcptimeout(struct hip_common *msg,
-                                      int action,
-                                      const char *opt[],
-                                      int optc,
-                                      int send_only)
-{
-    int err = 0, status = 0;
-
-    if (!strcmp("on", opt[0])) {
-        HIP_INFO("tcptimeout set on\n");
-        status = HIP_MSG_SET_TCPTIMEOUT_ON;
-    } else if (!strcmp("off", opt[0])) {
-        HIP_INFO("tcptimeout set off\n");
-        status = HIP_MSG_SET_TCPTIMEOUT_OFF;
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-        // err = -1;
-    }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
-
-out_err:
-    return err;
-}
 
 /**
  * Function that is used to set HIP PROXY on or off
@@ -3223,7 +3181,7 @@ int (*action_handler[])(hip_common_t *,
     hip_conf_handle_dht_toggle,         /* 22: TYPE_DHT */
     hip_conf_handle_opptcp,             /* 23: TYPE_OPPTCP */
     hip_conf_handle_trans_order,        /* 24: TYPE_ORDER */
-    hip_conf_handle_tcptimeout,         /* 25: TYPE_TCPTIMEOUT */
+    NULL,
     hip_conf_handle_hipproxy,           /* 26: TYPE_HIPPROXY */
     hip_conf_handle_heartbeat,          /* 27: TYPE_HEARTBEAT */
     hip_conf_handle_hi3,                /* 28: TYPE_HI3 */

@@ -318,18 +318,6 @@ hipd/registration.h : HIP_PENDING_REQUEST_LIFETIME
 hipd/registration.h : hip_set_srv_max_lifetime
 hipd/registration.h : hip_set_srv_min_lifetime
 hipd/registration.h : hip_srv_status_t
-hipd/tcptimeout.h : HIP_TCPTIMEOUT
-hipd/tcptimeout.h : sysctl_set_command
-hipd/tcptimeout.h : SYSCTL_SET_COMMAND
-hipd/tcptimeout.h : TCP_RETRIES_1_DEFAULT
-hipd/tcptimeout.h : TCP_RETRIES_1_NEW
-hipd/tcptimeout.h : TCP_RETRIES_1_STRING
-hipd/tcptimeout.h : TCP_RETRIES_2_DEFAULT
-hipd/tcptimeout.h : TCP_RETRIES_2_NEW
-hipd/tcptimeout.h : TCP_RETRIES_2_STRING
-hipd/tcptimeout.h : TCP_SLOW_START_AFTER_IDLE_DEFAULT
-hipd/tcptimeout.h : TCP_SLOW_START_AFTER_IDLE_NEW
-hipd/tcptimeout.h : TCP_SLOW_START_AFTER_IDLE_STRING
 hipd/user_ipsec_hipd_msg.h : USER_IPSEC_HIPD_MSG_H_
 hipd/user_ipsec_sadb_api.h : hip_userspace_ipsec_send_to_fw
 hipd/user_ipsec_sadb_api.h : USER_IPSEC_SADB_API_H_
@@ -369,7 +357,6 @@ libhipconf/hipconf.h : ACTION_RST
 libhipconf/hipconf.h : ACTION_RUN
 libhipconf/hipconf.h : ACTION_SET
 libhipconf/hipconf.h : ACTION_SHOTGUN
-libhipconf/hipconf.h : ACTION_TCPTIMEOUT
 libhipconf/hipconf.h : ACTION_TRANSORDER
 libhipconf/hipconf.h : LIB_LENGTH
 libhipconf/hipconf.h : OPT_HI_FILE

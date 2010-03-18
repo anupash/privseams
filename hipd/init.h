@@ -14,7 +14,6 @@
 #include "oppipdb.h"
 #include "lib/core/debug.h"
 #include "hiprelay.h"
-#include "tcptimeout.h"
 #include "hadb.h"
 #include "hi3.h"
 #include "nsupdate.h"

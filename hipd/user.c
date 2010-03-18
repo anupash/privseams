@@ -276,29 +276,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
         break;
 #endif
-    case HIP_MSG_SET_TCPTIMEOUT_ON:
-        HIP_DEBUG("Setting TCP TIMEOUT ON\n");
-        hip_tcptimeout_status = HIP_MSG_SET_TCPTIMEOUT_ON;
-        HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
-                  hip_tcptimeout_status, HIP_MSG_SET_TCPTIMEOUT_ON);
-
-        /* paramters setting to do here */
-        HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
-                 "set new tcptimeout parameters error\n");
-        break;
-
-    case HIP_MSG_SET_TCPTIMEOUT_OFF:
-        HIP_DEBUG("Setting TCP TIMEOUT OFF\n");
-        hip_tcptimeout_status = HIP_MSG_SET_TCPTIMEOUT_OFF;
-        HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
-                  hip_tcptimeout_status, HIP_MSG_SET_TCPTIMEOUT_OFF);
-
-        /* paramters resetting */
-        HIP_IFEL(reset_default_tcptimeout_parameters_value(), -1,
-                 "reset tcptimeout parameters to be default error\n");
-
-        break;
-
 #ifdef CONFIG_HIP_DHT
     case HIP_MSG_DHT_GW:
     {

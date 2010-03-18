@@ -671,13 +671,6 @@ int hipd_init(int flush_ipsec, int killold)
         HIP_DEBUG("Initializing cert configuration file returned error\n");
     }
 
-#if 0
-    /* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
-
-    HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
-             "set new tcptimeout parameters error\n");
-#endif
-
     hitdberr = 0;
 #ifdef CONFIG_HIP_AGENT
     hitdberr = hip_init_daemon_hitdb();
@@ -1082,10 +1075,6 @@ void hip_exit(int signal)
     /* Close SAs with all peers */
     // hip_send_close(NULL);
 
-#if 0
-    /*reset TCP timeout to be original vaule , added By Tao Wan on 14.Jan.2008. */
-    reset_default_tcptimeout_parameters_value();
-#endif
     if (hipd_msg) {
         HIP_FREE(hipd_msg);
     }
