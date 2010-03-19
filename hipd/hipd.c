@@ -122,11 +122,14 @@ static void usage(void)
 {
     fprintf(stderr, "Usage: hipd [options]\n\n");
     fprintf(stderr, "  -b run in background\n");
-    fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");
+    fprintf(stderr, "  -i <device name> add interface to the white list. " \
+            "Use additional -i for additional devices.\n");
     fprintf(stderr, "  -k kill existing hipd\n");
     fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
     fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
     fprintf(stderr, "  -f set debug type format to short\n");
+    fprintf(stderr, "  -d <module name> disable this module. " \
+            "Use additional -d for additional modules.\n");
     fprintf(stderr, "\n");
 }
 
@@ -225,7 +228,7 @@ static int hipd_main(int argc, char *argv[])
     hip_set_logfmt(LOGFMT_LONG);
 
     /* Parse command-line options */
-    while ((ch = getopt(argc, argv, ":bi:kNchaf")) != -1) {
+    while ((ch = getopt(argc, argv, ":bi:kNchafd:")) != -1) {
         switch (ch) {
         case 'b':
             foreground = 0;
@@ -252,6 +255,13 @@ static int hipd_main(int argc, char *argv[])
         case 'f':
             HIP_INFO("Setting output format to short\n");
             hip_set_logfmt(LOGFMT_SHORT);
+            break;
+        case 'd':
+            if (!lmod_disable_module(optarg)) {
+                HIP_DEBUG("Module '%s' disabled.\n", optarg);
+            } else {
+                HIP_ERROR("Error while disabling module '%s'.\n", optarg);
+            }
             break;
         case '?':
         case 'h':

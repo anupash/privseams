@@ -994,10 +994,6 @@ int hip_update_init(void)
 {
     int err = 0;
 
-    HIP_IFEL(lmod_register_module("update"),
-             -1,
-             "Error on registering UPDATE module.\n");
-
     lmod_register_packet_type(HIP_UPDATE, "HIP_UPDATE");
 
     HIP_IFEL(lmod_register_state_init_function(&hip_update_init_state),

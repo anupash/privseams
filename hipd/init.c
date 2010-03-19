@@ -939,16 +939,19 @@ int hipd_init(int flush_ipsec, int killold)
     }
 
     /* Initialize modules */
-    HIP_INFO("Initializing modules.\n");
+    HIP_INFO("Initializing modules.\n\n");
     for (i = 0; i < num_modules_hipd; i++) {
+        HIP_DEBUG("module: %s\n", modules_hipd[i]);
+        if (lmod_module_disabled(modules_hipd[i])) {
+            HIP_DEBUG("state:  DISABLED\n\n");
+            continue;
+        } else {
+            HIP_DEBUG("state:  ENABLED\n\n");
             HIP_IFEL(hipd_init_functions[i](),
                      -1,
                      "Module initialization failed.\n");
+        }
     }
-
-    printf("\nThe following modules were loaded:\n\n");
-    lmod_print_registered_modules();
-    printf("\n");
 
     hip_init_sockets();
 
@@ -1194,7 +1197,7 @@ void hip_exit(int signal)
 
     hip_dh_uninit();
 
-    lmod_uninit_module_list();
+    lmod_uninit_disabled_modules();
 
     return;
 }

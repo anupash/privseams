@@ -210,7 +210,7 @@ def process_module_info(module_info):
 # Creates a C header file with the given filename an the needed includes,
 # the number of init functions per application and an array of function
 # pointers for each application
-def create_header_files(output_dir, suffix, applications, includes, init_functions):
+def create_header_files(output_dir, suffix, applications, includes, init_functions, enabled_modules):
 
     if False == os.path.isdir(output_dir):
         os.mkdir(output_dir)
@@ -234,7 +234,17 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
 
                     hdr_file.write('\n\ntypedef int (*pt2Function)(void);\n')
                     hdr_file.write('\nconst int num_modules_' + current_app + ' = ')
-                    hdr_file.write(num_modules + ';')
+                    hdr_file.write(num_modules + ';\n')
+                    hdr_file.write('\nconst char *modules_' + current_app + '[')
+                    hdr_file.write(num_modules + '] = {')
+                    first_loop = True
+                    for module in enabled_modules:
+                        if first_loop != True:
+                            hdr_file.write(', ')
+                        hdr_file.write('"' + module + '"')
+                        first_loop = False
+                    hdr_file.write('};')
+
                     hdr_file.write('\n\nstatic const pt2Function ' + current_app)
                     hdr_file.write('_init_functions[' + num_modules + '] = {')
 
@@ -337,7 +347,8 @@ def main():
                         HEADER_FILE_SUFFIX,
                         applications,
                         includes,
-                        init_functions)
+                        init_functions,
+                        module_info.keys())
 
     create_makefile_modules('Makefile.modules',
                             module_info,

@@ -43,7 +43,7 @@ static hip_ll_t state_init_functions;
  * Used to check, whether a certain module is loaded.
  *
  */
-static char **module_list;
+static char **disabled_modules;
 
 /**
  * List of packet types.
@@ -59,7 +59,7 @@ static hip_ll_t packet_types;
 /**
  * Number of enabled modules.
  */
-static uint16_t num_modules = 0;
+static uint16_t num_disabled_modules = 0;
 
 /**
  * lmod_init_state
@@ -333,51 +333,52 @@ int lmod_unregister_function(hip_ll_t *list, const void *function)
 }
 
 /**
- * lmod_register_module
+ * lmod_disable_module
  *
- * Add an identifier to the module list. All modules should register an id.
- * So everyone else can check, if a certain module is loaded.
+ * Disable the module with the provide name. The initialization functions of
+ * disabled modules will not be executed. Therefore the functionality of these
+ * modules should be completely disabled.
  *
- * @note Call lmod_uninit_module_list() to free the allocated memory!
+ * @note Call lmod_uninit_disabled_modules() to free the allocated memory!
  *
- * @param *module_id String identifier for the module to register.
+ * @param *module_name String identifier for the module to disable.
  *
  * @return Success =  0
- *         Error   = -1 (if the identifier already exists)
+ *         Error   = -1 (if the module was already disabled)
  */
-int lmod_register_module(const char *module_id)
+int lmod_disable_module(const char *module_name)
 {
-    if (lmod_module_exists(module_id)) {
+    if (lmod_module_disabled(module_name)) {
         return -1;
     }
 
-    module_list = (char **)realloc(module_list,
-                                   (num_modules + 1) * sizeof(char *));
+    disabled_modules = (char **)realloc(disabled_modules,
+                                        (num_disabled_modules + 1) * sizeof(char *));
 
-    module_list[num_modules++] = strdup(module_id);
+    disabled_modules[num_disabled_modules++] = strdup(module_name);
 
     return 0;
 }
 
 /**
- * lmod_module_exists
+ * lmod_module_disabled
  *
- * Check whether a certain module is enabled.
+ * Check whether a certain module is disabled.
  *
  * @note This function uses string compares. Therefore you should call this
  *       function only once and cache the result to improve performance.
  *
- * @param *module_id String identifier for the module to check.
+ * @param *module_name String identifier for the module to check.
  *
- * @return 0, if module with this id is NOT registered
- *         1, if module with this id is registered
+ * @return 0, if module with this name is ENABLED
+ *         1, if module with this name is DISABLED
  */
-int lmod_module_exists(const char *module_id)
+int lmod_module_disabled(const char *module_name)
 {
     unsigned int i;
 
-    for (i = 0; i < num_modules; i++) {
-       if (0 == strcmp(module_id, module_list[i])) {
+    for (i = 0; i < num_disabled_modules; i++) {
+       if (0 == strcmp(module_name, disabled_modules[i])) {
            return 1;
        }
     }
@@ -386,38 +387,22 @@ int lmod_module_exists(const char *module_id)
 }
 
 /**
- * lmod_print_registered_modules
+ * lmod_uninit_disabled_modules
  *
- * Print all registered modules to stdout.
- */
-void lmod_print_registered_modules(void)
-{
-    unsigned int i;
-
-    for (i = 0; i < num_modules; i++) {
-        printf("%s\n", module_list[i]);
-    }
-}
-
-/**
- * lmod_uninit_module_list
- *
- * Free all allocated memory for storage of the module list.
- *
- * @note Call this function, if you have added module id's.
+ * Free all allocated memory for storage of disabled modules.
  *
  */
-void lmod_uninit_module_list(void)
+void lmod_uninit_disabled_modules(void)
 {
     int i;
 
-    if (module_list) {
-        for (i = 0; i < num_modules; i++) {
-            if (module_list[i]) {
-                free(module_list[i]);
+    if (disabled_modules) {
+        for (i = 0; i < num_disabled_modules; i++) {
+            if (disabled_modules[i]) {
+                free(disabled_modules[i]);
             }
         }
-        free(module_list);
+        free(disabled_modules);
     }
 }
 

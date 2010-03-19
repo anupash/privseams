@@ -48,13 +48,11 @@ int   lmod_get_state_item_id(struct modular_state *state,
 
 void  lmod_uninit_state(struct modular_state *state);
 
-int lmod_register_module(const char *module_id);
+int lmod_disable_module(const char *module_id);
 
-int lmod_module_exists(const char *module_id);
+int lmod_module_disabled(const char *module_id);
 
-void lmod_print_registered_modules(void);
-
-void lmod_uninit_module_list(void);
+void lmod_uninit_disabled_modules(void);
 
 int lmod_register_packet_type(const uint16_t packet_type,
                               const char *identifier);

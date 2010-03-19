@@ -388,10 +388,6 @@ int hip_heartbeat_init(void)
     err = setsockopt(*icmpsockfd, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt icmp IPV6_RECVPKTINFO failed\n");
 
-    HIP_IFEL(lmod_register_module("heartbeat"),
-             -1,
-             "Error on registration of HEARTBEAT module.\n");
-
     HIP_IFEL(hip_register_socket(hip_icmp_sock,
                                  &hip_heartbeat_handle_icmp_sock,
                                  30000),
