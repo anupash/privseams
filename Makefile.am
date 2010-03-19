@@ -207,7 +207,8 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/sysopp.c \
                          firewall/cache.c \
                          firewall/cache_port.c \
-                         firewall/datapkt.c
+                         firewall/datapkt.c \
+                         firewall/user_ipsec_esp.c
 
 if HIP_MIDAUTH
 firewall_hipfw_SOURCES += firewall/midauth.c \
@@ -269,8 +270,7 @@ endif
 lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/nlink.c \
                                  lib/tool/lutil.c \
-                                 lib/tool/checksum.c \
-                                 lib/tool/user_ipsec_esp.c
+                                 lib/tool/checksum.c
 
 ############################ NOTE ##################################
 #

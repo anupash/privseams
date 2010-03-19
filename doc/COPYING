@@ -1,10 +1,11 @@
 HIPL Licensing Conditions
 =========================
 
-HIPL is licensed under GPLv2 until June 2010. After this, the code
-developed for the HIPL project will change to MIT (Expat
-license). However, the following companies can use the code developed
-for HIPL project earlier using the MIT license:
+HIPL is licensed under GPLv2 until June 2010. After this, the license 
+for the code developed for the HIPL project will change from GPLv2 to 
+MIT (Expat license). However, the following companies can use the code 
+developed for the HIPL project using the MIT license already before the 
+mentioned date:
 
   * Nokia OYJ
   * OY LM Ericsson Ab
@@ -16,28 +17,29 @@ for HIPL project earlier using the MIT license:
 
 The code under the following directories was developed for the HIPL project:
 
-  * test
-  * agent
-  * hipd
-  * firewall
+  * firewall (see an exception below)
   * tools (see exceptions below)
-  * lib/opphip
   * lib/performance
+  * lib/opphip
   * lib/conf
   * lib/gui
   * lib/core
+  * test
+  * agent
+  * hipd
   * doc
 
 The following directories contain code imported from other projects
 and have their own licensing conditions:
 
-  * i3
+  * firewall/user_ipsec_esp.c
   * tools/daemontools
   * tools/djbdns
   * tools/DNS
   * lib/android
   * lib/tool
   * lib/ipsec
+  * i3
 
 MIT (Expat) License
 ===================

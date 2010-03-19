@@ -16,7 +16,7 @@
 
 #include "user_ipsec_api.h"
 #include "user_ipsec_sadb.h"
-#include "lib/tool/user_ipsec_esp.h"
+#include "user_ipsec_esp.h"
 #include "user_ipsec_fw_msg.h"
 #include "esp_prot_api.h"
 #include "lib/core/ife.h"

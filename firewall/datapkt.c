@@ -32,7 +32,7 @@
 #include "config.h"
 #include "datapkt.h"
 #include "user_ipsec_api.h"
-#include "lib/tool/user_ipsec_esp.h"
+#include "user_ipsec_esp.h"
 #include "cache.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
