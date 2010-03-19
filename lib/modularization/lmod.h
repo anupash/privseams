@@ -52,6 +52,8 @@ int lmod_register_module(const char *module_id);
 
 int lmod_module_exists(const char *module_id);
 
+void lmod_print_registered_modules(void);
+
 void lmod_uninit_module_list(void);
 
 int lmod_register_packet_type(const uint16_t packet_type,

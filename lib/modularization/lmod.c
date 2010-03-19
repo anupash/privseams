@@ -8,6 +8,7 @@
  * @author Tim Just <tim.just@rwth-aachen.de>
  *
  */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -382,6 +383,20 @@ int lmod_module_exists(const char *module_id)
     }
 
     return 0;
+}
+
+/**
+ * lmod_print_registered_modules
+ *
+ * Print all registered modules to stdout.
+ */
+void lmod_print_registered_modules(void)
+{
+    unsigned int i;
+
+    for (i = 0; i < num_modules; i++) {
+        printf("%s\n", module_list[i]);
+    }
 }
 
 /**

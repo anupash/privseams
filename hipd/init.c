@@ -946,6 +946,10 @@ int hipd_init(int flush_ipsec, int killold)
                      "Module initialization failed.\n");
     }
 
+    printf("\nThe following modules were loaded:\n\n");
+    lmod_print_registered_modules();
+    printf("\n");
+
     hip_init_sockets();
 
 out_err:
