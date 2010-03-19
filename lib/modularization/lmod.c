@@ -22,8 +22,8 @@ struct function {
 };
 
 struct packet_type {
-    uint32_t    num;
-    const char *identifier;
+    uint16_t    num;
+    char *identifier;
 };
 
 
@@ -423,9 +423,10 @@ void lmod_uninit_module_list(void)
 int lmod_register_packet_type(const uint16_t packet_type,
                               const char *identifier)
 {
-    int                 index     = 0;
-    hip_ll_node_t      *iter      = NULL;
-    struct packet_type *new_entry = NULL;
+    int                 index          = 0;
+    size_t              identifier_len = 0;
+    hip_ll_node_t      *iter           = NULL;
+    struct packet_type *new_entry      = NULL;
 
     if (!identifier || (lmod_packet_type_exists(packet_type) != -1)) {
         return -1;
@@ -436,7 +437,12 @@ int lmod_register_packet_type(const uint16_t packet_type,
     }
 
     new_entry->num = packet_type;
-    new_entry->identifier = identifier;
+
+    identifier_len = strlen(identifier);
+    if (!(new_entry->identifier = malloc(identifier_len))) {
+        return -1;
+    }
+    strncpy(new_entry->identifier, identifier, identifier_len);
 
     while ((iter = hip_ll_iterate(&packet_types, iter))) {
         if (packet_type == ((struct packet_type *) iter->ptr)->num) {
