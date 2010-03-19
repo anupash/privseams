@@ -1,5 +1,5 @@
 /**
- * @file hipd/netdev.c
+ * @file
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
@@ -903,7 +903,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
         HIP_DEBUG("No information of peer found, trying broadcast\n");
         broadcast           = 1;
         shotgun_status_orig = hip_shotgun_status;
-        hip_shotgun_status  = SO_HIP_SHOTGUN_ON;
+        hip_shotgun_status  = HIP_MSG_SHOTGUN_ON;
         IPV4_TO_IPV6_MAP(&bcast, dst_addr);
         err                 = 0;
     }

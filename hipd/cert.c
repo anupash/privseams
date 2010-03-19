@@ -1,4 +1,7 @@
 /** @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * This file defines the certificate signing and verification
  * functions to use with HIP
  *
@@ -251,7 +254,7 @@ int hip_cert_spki_sign(struct hip_common *msg, HIP_HASHTABLE *db)
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_SIGN, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CERT_SPKI_SIGN, 0), -1,
              "Failed to build user header\n");
     HIP_IFEL(hip_build_param_cert_spki_info(msg, cert), -1,
              "Failed to build cert_info\n");
@@ -666,7 +669,7 @@ algo_check_done:
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_SIGN, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CERT_SPKI_SIGN, 0), -1,
              "Failed to build user header\n");
     HIP_IFEL(hip_build_param_cert_spki_info(msg, cert), -1,
              "Failed to build cert_info\n");
@@ -1027,7 +1030,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
 
     hip_msg_init(msg);
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CERT_X509V3_SIGN, 0), -1,
              "Failed to build user header\n");
     HIP_IFEL(hip_build_param_cert_x509_resp(msg, (char *) der_cert, der_cert_len), -1,
              "Failed to create x509 response parameter\n");
@@ -1122,7 +1125,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *msg)
     }
 
     hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, err), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CERT_X509V3_VERIFY, err), -1,
              "Failed to build user header\n");
     HIP_IFEL(hip_build_param_cert_x509_resp(msg, (char *) &der_cert, p->der_len), -1,
              "Failed to create x509 response parameter\n");

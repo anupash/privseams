@@ -36,7 +36,6 @@ libhipconf/hipconf.h : ACTION_RST
 libhipconf/hipconf.h : ACTION_RUN
 libhipconf/hipconf.h : ACTION_SET
 libhipconf/hipconf.h : ACTION_SHOTGUN
-libhipconf/hipconf.h : ACTION_TCPTIMEOUT
 libhipconf/hipconf.h : ACTION_TRANSORDER
 firewall/esp_prot_api firewall/user_ipsec_sadb.h : active_item_length
 libhipcore/hip_statistics.h : added_squared_values
@@ -250,7 +249,6 @@ libhipconf/hipconf.h : hip_conf_handle_server
 libhipconf/hipconf.h : hip_conf_handle_service
 libhipconf/hipconf.h : hip_conf_handle_set
 libhipconf/hipconf.h : hip_conf_handle_shotgun_toggle
-libhipconf/hipconf.h : hip_conf_handle_tcptimeout
 libhipconf/hipconf.h : hip_conf_handle_trans_order
 libhipconf/hipconf.h : hip_conf_handle_ttl
 firewall/conndb.h : hip_conn
@@ -519,8 +517,8 @@ libhipcore/builder.h : hip_set_param_type
 hipd/registration.h : hip_set_srv_max_lifetime
 hipd/registration.h : hip_set_srv_min_lifetime
 hipd/nat.h : HIP_SIMULATE_NATS
-libhipcore/icomm.h : HIP_SO_ROOT_MAX
-libhipcore/icomm.h : HIP_SO_ROOT_MIN
+libhipcore/icomm.h : HIP_MSG_ROOT_MAX
+libhipcore/icomm.h : HIP_MSG_ROOT_MIN
 libhipcore/sqlitedbapi.h : hip_sqlite_create_table
 libhipcore/sqlitedbapi.h : hip_sqlite_execute_into_db
 hipd/registration.h : hip_srv_status_t
@@ -528,7 +526,6 @@ libhipcore/state.h : _HIP_STATE
 libhipcore/state.h : hip_stateless_info
 libhipcore/hip_statistics.h : HIP_STATISTICS_H_
 libhipcore/protodefs.h : hip_stun
-hipd/tcptimeout.h : HIP_TCPTIMEOUT
 libhipcore/protodefs.h : HIP_TEREDO_TYPE_MASK_100
 libhipcore/utils.h : HIP_TMP_FNAME_TEMPLATE
 libhipcore/state.h : hip_turn_info
@@ -1154,7 +1151,7 @@ firewall/hslist.h : SLIST_H_
 firewall/hslist.h : slist_last
 libhiptool/xfrm.h : soft_add_expires_seconds
 libhiptool/xfrm.h : soft_use_expires_seconds
-libhipcore/icomm.h : SO_HIP_STUN
+libhipcore/icomm.h : HIP_MSG_STUN
 libhiptool/nlink /usr/include/linux/socket.h : SOL_NETLINK
 libhipcore/kerncompat.h : spin_unlock_irqrestore
 agent/str_var.h : SPRINTHUGESTR
@@ -1178,20 +1175,10 @@ libhipcore/builder.h : STRONGER_KEY
 agent/str_var.h : str_var_empty
 agent/str_var.h : str_var_find
 libhipandroid/regex.h : syntax
-hipd/tcptimeout.h : sysctl_set_command
-hipd/tcptimeout.h : SYSCTL_SET_COMMAND
+
 libipsec/libpfkey.h : __SYSDEP_SA_LEN__
 libhipcore/debug.h : SYSLOG_FACILITY
 libhipcore/debug.h : SYSLOG_OPT
-hipd/tcptimeout.h : TCP_RETRIES_1_DEFAULT
-hipd/tcptimeout.h : TCP_RETRIES_1_NEW
-hipd/tcptimeout.h : TCP_RETRIES_1_STRING
-hipd/tcptimeout.h : TCP_RETRIES_2_DEFAULT
-hipd/tcptimeout.h : TCP_RETRIES_2_NEW
-hipd/tcptimeout.h : TCP_RETRIES_2_STRING
-hipd/tcptimeout.h : TCP_SLOW_START_AFTER_IDLE_DEFAULT
-hipd/tcptimeout.h : TCP_SLOW_START_AFTER_IDLE_NEW
-hipd/tcptimeout.h : TCP_SLOW_START_AFTER_IDLE_STRING
 test/unittest.h : TEST_CASE
 firewall/rule_management.h : test_parse_copy
 firewall/rule_management.h : test_rule_management
@@ -1250,7 +1237,6 @@ libhipconf/hipconf.h : TYPE_SET
 firewall/common_types.h : TYPES_H_
 libhipconf/hipconf.h : TYPE_SHOTGUN
 firewall/rule_management.h : TYPE_STR
-libhipconf/hipconf.h : TYPE_TCPTIMEOUT
 libhipconf/hipconf.h : TYPE_TTL
 hipd/hiprelay.h : udp_port_r
 test/suite test/unittest.h : unit_test_suite_list_userspace

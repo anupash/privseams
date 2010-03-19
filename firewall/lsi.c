@@ -1,5 +1,5 @@
 /**
- * @file firewall/lsi.c
+ * @file
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
@@ -70,7 +70,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
      * message correctly */
 
     /* build the message header */
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_TRIGGER_BEX, 0),
              -1, "build hdr failed\n");
 
     /* destination HIT, LSI or IP are obligatory */
@@ -196,7 +196,7 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
 
     HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
     hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0),
              -1, "Building of daemon header failed\n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send recv daemon info\n");
 
@@ -485,7 +485,7 @@ int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
     /* build the message header */
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_PEER_HIT, 0),
              -1, "build hdr failed\n");
 
     HIP_IFEL(hip_build_param_contents(msg, (void *) (local_hit),

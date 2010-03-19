@@ -1,7 +1,7 @@
 /**
- * @file firewall/user_ipsec_api.h
+ * @file
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This implementation provides the API for userspace IPsec.
  *

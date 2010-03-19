@@ -39,7 +39,6 @@ LOCAL_SRC_FILES :=  update.c \
                     accessor.c \
                     oppipdb.c \
                     dh.c \
-                    tcptimeout.c \
                     cert.c \
                     user_ipsec_sadb_api.c \
                     user_ipsec_hipd_msg.c \

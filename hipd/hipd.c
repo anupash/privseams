@@ -79,7 +79,7 @@ int hip_firewall_sock                    = 0;
 int hip_transform_order                  = 123;
 
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
-int hip_locator_status             = SO_HIP_SET_LOCATOR_OFF;
+int hip_locator_status             = HIP_MSG_SET_LOCATOR_OFF;
 
 /* Create /etc/hip stuff and exit (used for binary hipfw packaging) */
 int create_configs_and_exit        = 0;
@@ -111,7 +111,7 @@ int esp_prot_num_transforms                  = 0;
 uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 long esp_prot_num_parallel_hchains           = 0;
 
-int hip_shotgun_status                       = SO_HIP_SHOTGUN_OFF;
+int hip_shotgun_status                       = HIP_MSG_SHOTGUN_OFF;
 
 int hip_trigger_update_on_heart_beat_failure = 1;
 int hip_wait_addr_changes_to_stabilize       = 1;
@@ -326,8 +326,11 @@ static int hipd_main(int argc, char *argv[])
 
 #ifdef CONFIG_HIP_FIREWALL
         if (hip_firewall_status < 0) {
+
             hip_msg_init(packet_ctx.input_msg);
-            err = hip_build_user_hdr(packet_ctx.input_msg, SO_HIP_FIREWALL_STATUS, 0);
+            err = hip_build_user_hdr(packet_ctx.input_msg,
+                                     HIP_MSG_FIREWALL_STATUS,
+                                     0);
             if (err) {
                 HIP_ERROR("hip_build_user_hdr\n");
             } else {

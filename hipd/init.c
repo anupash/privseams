@@ -25,6 +25,7 @@
 #include "hip_socket.h"
 #include "nsupdate.h"
 #include "modularization.h"
+#include "output.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "lib/core/hip_capability.h"
@@ -911,13 +912,6 @@ int hipd_init(int flush_ipsec, int killold)
         HIP_DEBUG("Initializing cert configuration file returned error\n");
     }
 
-#if 0
-    /* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
-
-    HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
-             "set new tcptimeout parameters error\n");
-#endif
-
     hitdberr = 0;
 
     /* Service initialization. */
@@ -1090,19 +1084,13 @@ void hip_close(int signal)
  */
 void hip_exit(int signal)
 {
-    struct hip_common *msg = NULL;
     HIP_ERROR("Signal: %d\n", signal);
 
     hip_delete_default_prefix_sp_pair();
     /* Close SAs with all peers */
     // hip_send_close(NULL);
 
-#if 0
-    /*reset TCP timeout to be original vaule , added By Tao Wan on 14.Jan.2008. */
-    reset_default_tcptimeout_parameters_value();
-#endif
-
-    hip_delete_all_sp();    //empty
+    hip_delete_all_sp();
 
     hip_delete_all_addresses();
 
@@ -1180,12 +1168,6 @@ void hip_exit(int signal)
     if (hip_nl_route.fd) {
         HIP_INFO("hip_nl_route.fd\n");
         rtnl_close(&hip_nl_route);
-    }
-
-    msg = hip_msg_alloc();
-    if (msg) {
-        hip_build_user_hdr(msg, SO_HIP_DAEMON_QUIT, 0);
-        free(msg);
     }
 
     hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);

@@ -1,3 +1,76 @@
+HIPL Licensing Conditions
+=========================
+
+HIPL is licensed under GPLv2 until June 2010. After this, the license
+of the code developed for the HIPL project changes from GPLv2 to
+MIT (Expat license). However, the following companies can use the code
+developed for the HIPL project using the MIT license already before the
+mentioned date:
+
+  * Nokia OYJ
+  * OY LM Ericsson Ab
+  * Elisa Oyj
+  * Puolustusvoimat
+  * Birdstep Technology Oy
+  * TeliaSonera Finland Oyj
+  * Tekes
+
+The code under the following directories was developed for the HIPL project:
+
+  * firewall (see an exception below)
+  * tools (see exceptions below)
+  * lib/performance
+  * lib/opphip
+  * lib/conf
+  * lib/gui
+  * lib/core
+  * test
+  * agent
+  * hipd
+  * doc
+
+The following directories contain code imported from other projects
+and have their own licensing conditions:
+
+  * firewall/user_ipsec_esp.c
+  * tools/daemontools
+  * tools/djbdns
+  * tools/DNS
+  * lib/android
+  * lib/tool
+  * lib/ipsec
+  * i3
+
+MIT (Expat) License
+===================
+
+ Copyright (c) 2010 Helsinki University of Technology (Aalto
+ University) and RWTH Aachen University.
+
+ Permission is hereby granted, free of charge, to any person
+ obtaining a copy of this software and associated documentation
+ files (the "Software"), to deal in the Software without
+ restriction, including without limitation the rights to use,
+ copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the
+ Software is furnished to do so, subject to the following
+ conditions:
+
+ The above copyright notice and this permission notice shall be
+ included in all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ OTHER DEALINGS IN THE SOFTWARE.
+
+GPLv2 License
+=============
+
 		    GNU GENERAL PUBLIC LICENSE
 		       Version 2, June 1991
 

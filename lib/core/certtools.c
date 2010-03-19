@@ -1,5 +1,9 @@
 /** @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * This file defines the certificate building and verification functions to use with HIP
+ *
  *
  * @author Samu Varjonen
  */
@@ -483,7 +487,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
 
     /* build the msg to be sent to the daemon */
     hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_SIGN, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CERT_SPKI_SIGN, 0), -1,
              "Failed to build user header\n");
     HIP_IFEL(hip_build_param_cert_spki_info(msg, content), -1,
              "Failed to build cert_info\n");
@@ -675,7 +679,7 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *to_verificatio
              "Malloc for msg failed\n");
     hip_msg_init(msg);
     /* build the msg to be sent to the daemon */
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_VERIFY, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CERT_SPKI_VERIFY, 0), -1,
              "Failed to build user header\n");
     HIP_IFEL(hip_build_param_cert_spki_info(msg, to_verification), -1,
              "Failed to build cert_info\n");
@@ -726,7 +730,7 @@ int hip_cert_x509v3_request_certificate(struct in6_addr *subject,
     hip_msg_init(msg);
     /* build the msg to be sent to the daemon */
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CERT_X509V3_SIGN, 0), -1,
              "Failed to build user header\n");
     HIP_IFEL(hip_build_param_cert_x509_req(msg, subject), -1,
              "Failed to build cert_info\n");
@@ -775,7 +779,7 @@ int hip_cert_x509v3_request_verification(unsigned char *certificate, int len)
     _HIP_DEBUG("DER LEN %d\n", len);
 
     /* build the msg to be sent to the daemon */
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CERT_X509V3_VERIFY, 0), -1,
              "Failed to build user header\n");
     HIP_IFEL(hip_build_param_cert_x509_ver(msg, (char *) certificate, len), -1,
              "Failed to build cert_info\n");

@@ -1,7 +1,7 @@
 /**
- * @file firewall/hashchain.h
+ * @file
  *
- * <LICENSE TEMLPATE LINE - LEAVE THIS LINE INTACT>
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * API for a hash chain API
  *

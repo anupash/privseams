@@ -1,13 +1,19 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+/**
+ * @file
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
+ * Periodically handled "maintenance" actions are processed here by
+ * default roughly once in a second. These actions include
+ * retransmissions of lost HIP control packets, keepalives for NATs,
+ * heartbeats to detect connectivity problems, purging of opportunistic
+ * mode state, delaying of UPDATE triggering until addresses have stabilized
+ * and publishing of hostname/hit/ip mappings in a DHT.
+ *
+ * @brief Hipd maintenance loop
+ *
+ * @note When adding new functionality, make sure that the socket
+ *       calls do not block because hipd is single threaded.
  */
 
 /* required for s6_addr32 */
@@ -44,7 +50,11 @@ int fall, retr;
 static hip_ll_t *hip_maintenance_functions;
 
 /**
- * Handle packet retransmissions.
+ * an iterator to handle packet retransmission for a given host association
+ *
+ * @param entry the host association which to handle
+ * @param current_time current time
+ * @return zero on success or negative on failure
  */
 static int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 {
@@ -113,6 +123,12 @@ out_err:
 }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
+/**
+ * scan for opportunistic connections that should time out
+ * and give up (fall back to normal TCP/IP)
+ *
+ * @return zero on success or negative on failure
+ */
 static int hip_scan_opp_fallback(void)
 {
     int err = 0;
@@ -128,7 +144,9 @@ out_err:
 #endif
 
 /**
- * Find packets, that should be retransmitted.
+ * deliver pending retransmissions for all host associations
+ *
+ * @return zero on success or negative on failure
  */
 static int hip_scan_retransmissions(void)
 {
@@ -236,7 +254,7 @@ void hip_uninit_maint_functions(void)
 /**
  * Periodic maintenance.
  *
- * @return ...
+ * @return zero on success or negative on failure
  */
 int hip_periodic_maintenance()
 {
@@ -293,11 +311,23 @@ out_err:
     return err;
 }
 
+/**
+ * get the current running status of firewall
+ *
+ * @return one if firewall is running or zero otherwise
+ * @todo this is redundant with hip_firewall_is_alive()
+ */
 int hip_get_firewall_status()
 {
     return hip_firewall_status;
 }
 
+/**
+ *
+ * get the current running status of firewall
+ *
+ * @return one if firewall is running or zero otherwise
+ */
 int hip_firewall_is_alive()
 {
 #ifdef CONFIG_HIP_FIREWALL
@@ -313,52 +343,17 @@ int hip_firewall_is_alive()
 #endif // CONFIG_HIP_FIREWALL
 }
 
-int hip_firewall_set_i2_data(int action,  hip_ha_t *entry,
-                             struct in6_addr *hit_s,
-                             struct in6_addr *hit_r,
-                             struct in6_addr *src,
-                             struct in6_addr *dst)
-{
-    struct hip_common *msg = NULL;
-    struct sockaddr_in6 hip_firewall_addr;
-    int err                = 0, n = 0;
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
-    hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, action, 0), -1,
-             "Build hdr failed\n");
-
-    HIP_IFEL(hip_build_param_contents(msg, (void *) hit_r, HIP_PARAM_HIT,
-                                      sizeof(struct in6_addr)), -1, "build param contents failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, (void *) src, HIP_PARAM_HIT,
-                                      sizeof(struct in6_addr)), -1, "build param contents failed\n");
-
-    socklen_t alen = sizeof(hip_firewall_addr);
-
-    bzero(&hip_firewall_addr, alen);
-    hip_firewall_addr.sin6_family = AF_INET6;
-    hip_firewall_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    hip_firewall_addr.sin6_addr   = in6addr_loopback;
-
-    // if (hip_get_firewall_status()) {
-    n                             = sendto(hip_firewall_sock_lsi_fd, (char *) msg, hip_get_msg_total_len(msg),
-                                           0, (struct sockaddr *) &hip_firewall_addr, alen);
-    //}
-
-    if (n < 0) {
-        HIP_DEBUG("Send to firewall failed str errno %s\n", strerror(errno));
-    }
-    HIP_IFEL( n < 0, -1, "Sendto firewall failed.\n");
-
-    HIP_DEBUG("Sendto firewall OK.\n");
-
-out_err:
-    if (msg) {
-        free(msg);
-    }
-
-    return err;
-}
-
+/**
+ * Update firewall on host association state. Currently used by the
+ * LSI and system-based opportunistic mode in the firewall.
+ *
+ * @param action HIP_MSG_FW_UPDATE_DB or HIP_MSG_FW_BEX_DONE
+ * @param entry the host association
+ * @param hit_s optional source HIT
+ * @param hit_r optional destination HIT
+ *
+ * @return zero on success or negative on failure
+ */
 int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r)
 {
     struct hip_common *msg = NULL;
@@ -410,14 +405,14 @@ out_err:
 }
 
 /**
- * This function calculates RTT and ... and then stores them to correct entry
+ * This function calculates RTT and then stores them to correct entry
  *
  * @param src HIT
  * @param dst HIT
  * @param time when sent
  * @param time when received
  *
- * @return 0 if success negative otherwise
+ * @return zero on success or negative on failure
  */
 int hip_icmp_statistics(struct in6_addr *src, struct in6_addr *dst,
                         struct timeval *stval, struct timeval *rtval)
@@ -461,6 +456,13 @@ out_err:
     return err;
 }
 
+/**
+ * tell firewall to turn on or off the ESP relay mode
+ *
+ * @param action HIP_MSG_OFFER_FULLRELAY or HIP_MSG_CANCEL_FULLRELAY
+ *
+ * @return zero on success or negative on failure
+ */
 int hip_firewall_set_esp_relay(int action)
 {
     struct hip_common *msg = NULL;
@@ -470,7 +472,7 @@ int hip_firewall_set_esp_relay(int action)
     HIP_DEBUG("Setting ESP relay to %d\n", action);
     HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
     HIP_IFEL(hip_build_user_hdr(msg,
-                                action ? SO_HIP_OFFER_FULLRELAY : SO_HIP_CANCEL_FULLRELAY, 0),
+                                action ? HIP_MSG_OFFER_FULLRELAY : HIP_MSG_CANCEL_FULLRELAY, 0),
              -1, "Build header failed\n");
 
     sent = hip_sendto_firewall(msg);

@@ -1,5 +1,5 @@
 /**
- * @file firewall/firewall_control.c
+ * @file
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  *
@@ -51,12 +51,12 @@ static int hip_handle_bex_state_update(struct hip_common *msg)
 
     /* update bex_state in firewalldb */
     switch (msg_type) {
-    case SO_HIP_FW_BEX_DONE:
+    case HIP_MSG_FW_BEX_DONE:
         err = hip_firewall_set_bex_state(src_hit,
                                          dst_hit,
                                          (dst_hit ? 1 : -1));
         break;
-    case SO_HIP_FW_UPDATE_DB:
+    case HIP_MSG_FW_UPDATE_DB:
         err = hip_firewall_set_bex_state(src_hit, dst_hit, 0);
         break;
     default:
@@ -83,36 +83,36 @@ int hip_handle_msg(struct hip_common *msg)
     HIP_DEBUG("of type %d\n", type);
 
     switch (type) {
-    case SO_HIP_FW_BEX_DONE:
-    case SO_HIP_FW_UPDATE_DB:
+    case HIP_MSG_FW_BEX_DONE:
+    case HIP_MSG_FW_UPDATE_DB:
         if (hip_lsi_support) {
             hip_handle_bex_state_update(msg);
         }
         break;
-    case SO_HIP_IPSEC_ADD_SA:
+    case HIP_MSG_IPSEC_ADD_SA:
         HIP_DEBUG("Received add sa request from hipd\n");
         HIP_IFEL(handle_sa_add_request(msg), -1,
                  "hip userspace sadb add did NOT succeed\n");
         break;
-    case SO_HIP_IPSEC_DELETE_SA:
+    case HIP_MSG_IPSEC_DELETE_SA:
         HIP_DEBUG("Received delete sa request from hipd\n");
         HIP_IFEL(handle_sa_delete_request(msg), -1,
                  "hip userspace sadb delete did NOT succeed\n");
         break;
-    case SO_HIP_IPSEC_FLUSH_ALL_SA:
+    case HIP_MSG_IPSEC_FLUSH_ALL_SA:
         HIP_DEBUG("Received flush all sa request from hipd\n");
         HIP_IFEL(handle_sa_flush_all_request(msg), -1,
                  "hip userspace sadb flush all did NOT succeed\n");
         break;
-    case SO_HIP_TURN_INFO:
+    case HIP_MSG_TURN_INFO:
         // struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);
         // save to database
         break;
-    case SO_HIP_RESET_FIREWALL_DB:
+    case HIP_MSG_RESET_FIREWALL_DB:
         hip_firewall_cache_delete_hldb(0);
         hip_firewall_delete_hldb();
         break;
-    case SO_HIP_OFFER_FULLRELAY:
+    case HIP_MSG_OFFER_FULLRELAY:
         if (!esp_relay) {
             HIP_DEBUG("Enabling ESP relay\n");
             hip_fw_init_esp_relay();
@@ -120,13 +120,13 @@ int hip_handle_msg(struct hip_common *msg)
             HIP_DEBUG("ESP relay already enabled\n");
         }
         break;
-    case SO_HIP_CANCEL_FULLRELAY:
+    case HIP_MSG_CANCEL_FULLRELAY:
         HIP_DEBUG("Disabling ESP relay\n");
         hip_fw_uninit_esp_relay();
         break;
-    case SO_HIP_FIREWALL_STATUS:
+    case HIP_MSG_FIREWALL_STATUS:
         msg_out = hip_msg_alloc();
-        HIP_IFEL(hip_build_user_hdr(msg_out, SO_HIP_FIREWALL_START, 0), -1,
+        HIP_IFEL(hip_build_user_hdr(msg_out, HIP_MSG_FIREWALL_START, 0), -1,
                  "Couldn't build message to daemon\n");
         HIP_IFEL(hip_send_recv_daemon_info(msg_out, 1, hip_fw_sock), -1,
                  "Couldn't notify daemon of firewall presence\n");

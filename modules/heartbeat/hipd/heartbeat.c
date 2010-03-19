@@ -1,23 +1,40 @@
 /**
  * @file
- * This file defines HEARTBEAT functionality for the HIP daemon.
- *
- * Concept
- * -------
- * - Send periodic ICMP messages to all associated peers (HEARTBEATs)
- * - When a HEARTBEAT response is received, calculate roundtrip time and
- *   maintain statistics.
- *
- * If an UPDATE module exists:
- * - Register a HEARTBEAT counter to the host association database.
- * - Increment this counter by 1, every time a HEARTBEAT is sent.
- * - Reset the counter (set to 0), if a HEARTBEAT response is received.
- * - If counter reaches the threshold value, trigger an UPDATE.
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  *
- * @author Miika Komu
+ * Heartbeat code detects problems with the ESP tunnel. It is based on
+ * sending ICMPv6 requests inside the tunnel. Each received ICMPv6
+ * message indicates that the tunnel is in good "health". Correspondingly,
+ * when there are no ICMPv6 messages received it may be a good time
+ * to trigger an UPDATE packet to recover from the disconnectivity.
+ *
+ * The heartbeat code keeps also track of the time stamps for the
+ * ICMPv6 messages. It could be used to implement handovers to switch
+ * to faster paths or even as an utility for load balancing. At the
+ * moment, the heartbeat algorithm is rather simple and used just for
+ * fault tolerance.  It should also noticed that the heartbeat code is
+ * required only at one side of the communications as long as the
+ * other party supports replying to ICMPv6 echo requests.
+ *
+ * @see "Varjonen et al, Secure and Efficient IPv4/IPv6 Handovers Using
+ * Host-Based Identifier-Locator Split, Journal of Communications
+ * Software and Systems, 2010".
+ *
+ * @note Implementation of the heartbeat concept in tiny branch:
+ *
+ *       - Send periodic ICMP messages to all associated peers (HEARTBEATs)
+ *       - When a HEARTBEAT response is received, calculate roundtrip time and
+ *         maintain statistics.
+ *
+ *       If an UPDATE module exists:
+ *       - Register a HEARTBEAT counter to the host association database.
+ *       - Increment this counter by 1, every time a HEARTBEAT is sent.
+ *       - Reset the counter (set to 0), if a HEARTBEAT response is received.
+ *       - If counter reaches the threshold value, trigger an UPDATE.
+ *
  * @author Samu Varjonen
+ * @author Miika Komu
  * @author Rene Hummen
  * @author Tim Just
  */

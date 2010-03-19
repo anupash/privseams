@@ -1,4 +1,9 @@
 /**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ */
+/**
  * Host Identity Protocol
  * Copyright (C) 2004-06 the Boeing Company
  *
@@ -12,7 +17,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * @file firewall/user_ipsec_esp.c
+ * @file
  *
  * @author Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
  * @author Rene Hummen <rene.hummen@rwth-aachen.de> (ported to HIPL project and major rewrite)
@@ -30,7 +35,7 @@
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
 #include "user_ipsec_esp.h"
-#include "esp_prot_api.h"
+#include "firewall/esp_prot_api.h"
 #include "lib/core/prefix.h"
 
 #include "lib/tool/checksum.h"

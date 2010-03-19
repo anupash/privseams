@@ -1,5 +1,5 @@
 /**
- * @file libhiptool/xfrmapi.c
+ * @file
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
@@ -22,8 +22,6 @@
 #include "lib/core/keylen.h"
 
 #include "xfrmapi.h"
-
-#ifndef CONFIG_HIP_PFKEY
 
 #define RTA_BUF_SIZE     2048
 
@@ -786,5 +784,3 @@ int hip_setup_default_sp_prefix_pair()
 out_err:
     return err;
 }
-
-#endif /* ! CONFIG_HIP_PFKEY */

@@ -550,7 +550,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
     struct endpoint_hip *endpoint_rsa_pub_hip = NULL;
 
     if (action == ACTION_ADD) {
-        numeric_action = SO_HIP_ADD_LOCAL_HI;
+        numeric_action = HIP_MSG_ADD_LOCAL_HI;
     }
 
     if ((err = hip_build_user_hdr(msg, numeric_action, 0))) {

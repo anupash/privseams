@@ -1,3 +1,8 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ */
 /* $Id: cookiesolver.c,v 1.3 2003/10/14 15:50:31 krisu Exp $ */
 
 #include <stdio.h>

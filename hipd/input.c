@@ -474,7 +474,7 @@ static int hip_packet_to_drop(hip_ha_t *entry,
             HIP_DEBUG("Number of items in the peer addr list: %d ",
                       ((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items);
         }
-        if (hip_shotgun_status == SO_HIP_SHOTGUN_ON
+        if (hip_shotgun_status == HIP_MSG_SHOTGUN_ON
             && type == HIP_R1
             && entry->peer_addr_list_to_be_added  &&
             (((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items > 1 ||
@@ -1791,12 +1791,12 @@ int hip_handle_r2(const uint8_t packet_type,
 out_err:
     if (packet_ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
         HIP_DEBUG("Send response to firewall.\n");
-        hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE,
+        hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
                                   packet_ctx->hadb_entry,
                                   &(packet_ctx->hadb_entry)->hit_our,
                                   &(packet_ctx->hadb_entry)->hit_peer);
     } else {
-        hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE,
+        hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
                                   packet_ctx->hadb_entry,
                                   NULL,
                                   NULL);

@@ -69,7 +69,7 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
     HIP_DEBUG("State is ESTABLISHED in current host association, sending " \
               "CLOSE message to peer.\n");
 
-    hip_firewall_set_bex_data(SO_HIP_FW_UPDATE_DB,
+    hip_firewall_set_bex_data(HIP_MSG_FW_UPDATE_DB,
                               entry,
                               &entry->hit_our,
                               &entry->hit_peer);
@@ -161,7 +161,7 @@ int hip_send_close(struct hip_common *msg,
     msg_to_firewall = hip_msg_alloc();
     hip_msg_init(msg_to_firewall);
     HIP_IFE(hip_build_user_hdr(msg_to_firewall,
-                               SO_HIP_RESET_FIREWALL_DB, 0), -1);
+                               HIP_MSG_RESET_FIREWALL_DB, 0), -1);
     bzero(&sock_addr, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);

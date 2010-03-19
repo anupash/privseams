@@ -88,7 +88,6 @@ hipd_hipd_SOURCES = hipd/hipd.c \
                     hipd/accessor.c \
                     hipd/oppipdb.c \
                     hipd/dh.c \
-                    hipd/tcptimeout.c \
                     hipd/cert.c \
                     hipd/user_ipsec_sadb_api.c \
                     hipd/user_ipsec_hipd_msg.c \
@@ -120,7 +119,6 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/dlist.c \
                          firewall/hslist.c \
                          firewall/user_ipsec_api.c \
-                         firewall/user_ipsec_esp.c \
                          firewall/user_ipsec_sadb.c \
                          firewall/user_ipsec_fw_msg.c \
                          firewall/common_hipd_msg.c \
@@ -132,7 +130,9 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/lsi.c \
                          firewall/sysopp.c \
                          firewall/cache.c \
-                         firewall/cache_port.c
+                         firewall/cache_port.c \
+                         firewall/datapkt.c \
+                         firewall/user_ipsec_esp.c
 
 if HIP_MIDAUTH
 firewall_hipfw_SOURCES += firewall/midauth.c \
@@ -205,7 +205,9 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 DISTCLEANFILES = lib/ipsec/policy_token.h Makefile.modules $(wildcard modules/*.h)
 
 # don't use libipsec, but xfrmapi
-if !HIP_PFKEY
+if HIP_PFKEY
+lib_tool_libhiptool_la_SOURCES += lib/tool/pfkeysadb.c
+else
 lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
 endif # HIPPFKEY
 

@@ -2,6 +2,9 @@
 #define DOXYGEN_H
 /**
  * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * There should be no need to include this file anywhere! This is only for
  * defining doxygen related things, such as groups and lists.
  */
@@ -319,7 +322,7 @@
  */
 
 /**
- * @file lib/core/protodefs.h
+ * @file
  * @def HIP_I1
  * @def HIP_R1
  * @def HIP_I2
@@ -405,7 +408,7 @@
  */
 
 /**
- * @file lib/core/protodefs.h
+ * @file
  * @def HIP_PARAM_MIN
  *      Defines the minimum parameter type value.
  * @note exclusive
@@ -548,7 +551,7 @@
  */
 
 /**
- * @file lib/core/protodefs.h
+ * @file
  * @def  HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE
  *       Sent if the parameter type has the "critical" bit set and the
  *       parameter type is not recognized.  Notification Data contains the two
@@ -623,7 +626,7 @@
  */
 
  /**
- * @file lib/core/protodefs.h
+ * @file
  * @def HIP_SERVICE_RENDEZVOUS
  *      Rendezvous service for relaying I1 packets.
  * @def HIP_SERVICE_RELAY
@@ -634,7 +637,7 @@
  */
 
 /**
- * @file   lib/core/protodefs.h
+ * @file
  * @struct hip_rvs_hmac
  *         Rendezvous server hmac. A non-critical parameter whose only difference with
  *         the @c HMAC parameter defined in [I-D.ietf-hip-base] is its @c type code.
@@ -776,7 +779,7 @@
  */
 
 /**
- * @file lib/core/state.h
+ * @file
  * @def HIP_STATE_NONE
  *      No state, structure unused.
  * @def HIP_STATE_UNASSOCIATED

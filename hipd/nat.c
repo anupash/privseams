@@ -262,28 +262,29 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry)
  */
 int hip_user_nat_mode(int nat_mode)
 {
-    int err = 0;
+    int err = 0, nat;
     HIP_DEBUG("hip_user_nat_mode() invoked. mode: %d\n", nat_mode);
 #if HIP_UDP_PORT_RANDOMIZING
     hip_nat_randomize_nat_ports();
 #endif
 
-    switch (nat_mode) {
-    case SO_HIP_SET_NAT_PLAIN_UDP:
-        nat_mode = HIP_NAT_MODE_PLAIN_UDP;
+    nat = nat_mode;
+    switch (nat) {
+    case HIP_MSG_SET_NAT_PLAIN_UDP:
+        nat = HIP_NAT_MODE_PLAIN_UDP;
         break;
-    case SO_HIP_SET_NAT_NONE:
-        nat_mode = HIP_NAT_MODE_NONE;
+    case HIP_MSG_SET_NAT_NONE:
+        nat = HIP_NAT_MODE_NONE;
         break;
     default:
         err = -1;
         HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
     }
-    HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, (void *) &nat_mode), 0,
+    HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, (void *) &nat), 0,
              "Error from for_each_ha().\n");
+    //set the nat mode for the host
+    hip_nat_status = nat;
 
-    /* set the NAT mode for the host */
-    hip_nat_status = nat_mode;
 
     HIP_DEBUG("hip_user_nat_mode() end. mode: %d\n", hip_nat_status);
 

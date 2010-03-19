@@ -1,3 +1,13 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ *
+ * Contains one function to get the state of a host association.
+ *
+ * @author Miika Komu <miika@iki.fi>
+ */
+
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
@@ -36,7 +46,7 @@ int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,
 
     HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
     hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0),
              -1, "Building of daemon header failed\n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
              "send recv daemon info\n");

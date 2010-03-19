@@ -1,4 +1,9 @@
 /**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ */
+/**
  * Host Identity Protocol
  * Copyright (C) 2004-06 the Boeing Company
  *
@@ -12,7 +17,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * @file firewall/user_ipsec_esp.h
+ * @file
  *
  * @author Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
  * @author Rene Hummen <rene.hummen@rwth-aachen.de> (ported to HIPL project and major rewrite)
@@ -26,8 +31,8 @@
 
 #define _BSD_SOURCE
 
-#include "user_ipsec_sadb.h"
-#include "firewall_defines.h"
+#include "firewall/user_ipsec_sadb.h"
+#include "firewall/firewall_defines.h"
 
 
 int hip_beet_mode_output(const hip_fw_context_t *ctx,

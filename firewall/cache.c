@@ -1,5 +1,5 @@
 /**
- * @file firewall/cache.c
+ * @file
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  *
@@ -162,7 +162,7 @@ int hip_firewall_cache_db_match(const struct in6_addr *hit_our,
 
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
     hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0),
              -1, "Building of daemon header failed\n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
              "send recv daemon info\n");

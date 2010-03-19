@@ -1,5 +1,5 @@
 /**
- * @file lib/tool/nlink.c
+ * @file
  *
  * This code originates from <a
  * href="http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2">iproute2
