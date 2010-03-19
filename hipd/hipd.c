@@ -307,13 +307,11 @@ static int hipd_main(int argc, char *argv[])
     packet_ctx.msg_ports   = malloc(sizeof(struct hip_stateless_info));
     packet_ctx.hadb_entry  = NULL;
     packet_ctx.drop_packet = 0;
-    HIP_DEBUG("Daemon running. Entering select loop.\n");
 
     /* Enter to the select-loop */
     HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT,
                  HIP_DEBUG_LEVEL_INFORMATIVE,
-                 "Hipd daemon running.\n"
-                 "Starting select loop.\n");
+                 "Hipd daemon running. Starting select loop.\n");
     hipd_set_state(HIPD_STATE_EXEC);
     while (hipd_get_state() != HIPD_STATE_CLOSED) {
 

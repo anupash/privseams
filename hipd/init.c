@@ -933,14 +933,14 @@ int hipd_init(int flush_ipsec, int killold)
     }
 
     /* Initialize modules */
-    HIP_INFO("Initializing modules.\n\n");
+    HIP_INFO("Initializing modules.\n");
     for (i = 0; i < num_modules_hipd; i++) {
         HIP_DEBUG("module: %s\n", modules_hipd[i]);
         if (lmod_module_disabled(modules_hipd[i])) {
-            HIP_DEBUG("state:  DISABLED\n\n");
+            HIP_DEBUG("state:  DISABLED\n");
             continue;
         } else {
-            HIP_DEBUG("state:  ENABLED\n\n");
+            HIP_DEBUG("state:  ENABLED\n");
             HIP_IFEL(hipd_init_functions[i](),
                      -1,
                      "Module initialization failed.\n");
