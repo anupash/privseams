@@ -286,7 +286,8 @@ int hip_handle_close(const uint8_t packet_type,
     }
 #endif
 
-    HIP_IFEL(hip_del_peer_info(&(ctx->hadb_entry)->hit_our, &(ctx->hadb_entry)->hit_peer), -1,
+    HIP_IFEL(hip_del_peer_info_entry(ctx->hadb_entry),
+             -1,
              "Deleting peer info failed.\n");
 out_err:
 
