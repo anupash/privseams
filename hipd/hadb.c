@@ -680,8 +680,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
     hip_ha_t *entry = NULL;
 
-    entry = (hip_ha_t *) malloc(sizeof(struct hip_hadb_state));
-    if (entry == NULL) {
+    if (!(entry = malloc(sizeof(struct hip_hadb_state)))) {
         return NULL;
     }
 
@@ -1156,7 +1155,7 @@ void hip_delete_all_sp()
 void hip_hadb_delete_state(hip_ha_t *ha)
 {
     hip_list_t *item = NULL, *tmp = NULL;
-    struct hip_peer_addr_list_item *addr_li;
+    struct hip_peer_addr_list_item *addr_li = NULL;
     int i;
 
     HIP_DEBUG("ha=0x%p\n", ha);
