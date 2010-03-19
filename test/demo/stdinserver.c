@@ -1,5 +1,7 @@
-/*
- * $Id: stdinserver.c,v 1.3 2003/10/03 11:40:19 mika Exp $
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 
 #include <stdio.h>

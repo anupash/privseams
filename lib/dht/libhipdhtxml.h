@@ -4,12 +4,13 @@
 /** @file
  * A header file for libhipopendhtxml.c
  *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * All xml-rpc message building functions for opendht.
  * Also contains base 64 encoding and decoding wrappers that should
  * be moved somewhere else because they are used also in cert stuff.
  *
  * @author Samu Varjonen
- * @version 0.2
  *
  */
 

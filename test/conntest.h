@@ -1,3 +1,8 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ */
 #ifndef HIP_TEST_CONNTEST_H
 #define HIP_TEST_CONNTEST_H
 

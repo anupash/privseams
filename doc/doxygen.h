@@ -2,6 +2,9 @@
 #define DOXYGEN_H
 /**
  * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * There should be no need to include this file anywhere! This is only for
  * defining doxygen related things, such as groups and lists.
  */

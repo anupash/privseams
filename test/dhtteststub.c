@@ -1,3 +1,8 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ */
 /** @file
  * Teststub for the DHT interface
  *
