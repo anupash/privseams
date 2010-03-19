@@ -530,6 +530,19 @@ const char *lmod_get_packet_type_identifier(const uint16_t packet_type)
 }
 
 /**
+ * lmod_free_packet_entry
+ *
+ * Free allocated memory for one entry of the packet type list.
+ *
+ */
+static void lmod_free_packet_entry(void *entry)
+{
+    struct packet_type *packte_type_entry = entry;
+    free(packte_type_entry->identifier);
+    free(packte_type_entry);
+}
+
+/**
  * lmod_uninit_packet_types
  *
  * Free all allocated memory for storage of the packet type list.
@@ -539,5 +552,5 @@ const char *lmod_get_packet_type_identifier(const uint16_t packet_type)
  */
 void lmod_uninit_packet_types(void)
 {
-    hip_ll_uninit(&packet_types, free);
+    hip_ll_uninit(&packet_types, lmod_free_packet_entry);
 }

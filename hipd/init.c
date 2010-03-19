@@ -1112,6 +1112,8 @@ void hip_exit(int signal)
 
     hip_uninit_maint_functions();
 
+    lmod_uninit_packet_types();
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     hip_oppdb_uninit();
 #endif
