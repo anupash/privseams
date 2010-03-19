@@ -1,3 +1,8 @@
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ */
 /*
  * The component provides interface to receive IP address and IF
  * events over netlink from the kernel.
