@@ -5,12 +5,13 @@
 # This script relies on the following home directory layout:
 # - $HOME/src/hipl/           - location for HIPL shared repository
 # - $HOME/src/hipl/<branch>   - location for HIPL <branch> to be tested
-# - $HOME/tmp/hipl_autobuild/ - temporary build directory
+# - $HOME/tmp/autobuild/hipl/ - temporary build directory
 #
 # If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
 # for the user running this script, then email will be sent in case of failure.
 
 BRANCH_NAME=$1
+BUILD_DIR=$HOME/tmp/autobuild/hipl
 BUILD_DIR=$HOME/tmp/hipl_autobuild
 BRANCH_URL=$HOME/src/hipl/$BRANCH_NAME
 CHECKOUT_DIR=$BUILD_DIR/$(date +"%Y-%m-%d-%H%M")_$BRANCH_NAME
