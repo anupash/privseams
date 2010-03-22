@@ -12,7 +12,6 @@
 
 BRANCH_NAME=$1
 BUILD_DIR=$HOME/tmp/autobuild/hipl
-BUILD_DIR=$HOME/tmp/hipl_autobuild
 BRANCH_URL=$HOME/src/hipl/$BRANCH_NAME
 CHECKOUT_DIR=$BUILD_DIR/$(date +"%Y-%m-%d-%H%M")_$BRANCH_NAME
 BRANCH_REVISION=$(bzr revno -q $BRANCH_URL)
