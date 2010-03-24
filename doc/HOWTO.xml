@@ -116,13 +116,13 @@
     <title>Compiling the Kernel</title>
 
     <para>
-      Compiling a kernel with HIP-related patches is optional, but
-      there are two benefits in patching your kernel. First, the IPsec
-      protected data traffic will be faster. Second, you can use the
-      native programming interface for HIP to implement HIP-aware
-      applications. The drawback of patching your kernel is that it
+      The kernel modifications for HIP are available in vanilla linux
+      kernel 2.6.27 and above. With older kernel version, it is possible
+      to use the userspace IPsec in HIPL. If you want to optimize performance
+      for an older kernel version, you can patch and compile the kernel.
+      The drawback of patching your kernel is that it
       requires some expertise and possibly installing e.g. some
-      wireless firmware images manually. As compromise, the HIPL
+      wireless firmware images manually. The HIPL
       website has some readily built images, but you may still have to
       install some firmware images manually. If you are unsure, you can
       try the userspace ipsec as described later in this manual.
