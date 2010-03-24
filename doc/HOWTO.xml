@@ -388,7 +388,12 @@
       Run "./configure --enable-FEATURE" to compile those.
       See "./configure --help" for a full list of options.
     </para>
-  </section>
+    <para>
+      It is possible to include measurement code points in the HIPL code
+      with --enable-performance configuration option. If you want to profile
+      HIPL source code, please refer to <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/gprof.html" />.
+    </para> 
+ </section>
   <section id="ch_openwrt">
     <title>Loading HIPL on OpenWRT</title>
     <para>
