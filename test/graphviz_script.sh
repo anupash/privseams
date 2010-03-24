@@ -26,3 +26,4 @@ neato out.txt -Tfig -o gout.fig
 #twopi out.txt -Tfig -o gout.fig
 
 echo "Stopped working on the file and the fig should be done under name include_graph.ps"
+
