@@ -20,34 +20,31 @@
  */
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 
-int main(int argc, char *argv[]) {
-
-	int err = 0;
-
-#if 0
-	const char *cfile = "default";
-#endif
-
-	/* we don't want log messages via syslog */
-	hip_set_logtype(LOGTYPE_STDERR);
-	hip_set_logfmt(LOGFMT_SHORT);
-
-	// workaround for bug #604
-	hip_set_logdebug(LOGDEBUG_ALL);
+int main(int argc, char *argv[])
+{
+    int err = 0;
 
 #if 0
-	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
-		 "Error: Cannot set the debugging parameter.\n");
+    const char *cfile = "default";
 #endif
 
+    /* we don't want log messages via syslog */
+    hip_set_logtype(LOGTYPE_STDERR);
+    hip_set_logfmt(LOGFMT_SHORT);
 
-	HIP_IFEL(hip_do_hipconf(argc, argv, 0), -2,
-		 "Error: Cannot configure the HIP daemon.\n");
+    // workaround for bug #604
+    hip_set_logdebug(LOGDEBUG_ALL);
 
- out_err:
-	return err;
+#if 0
+    HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
+             "Error: Cannot set the debugging parameter.\n");
+#endif
 
+    HIP_IFEL(hip_do_hipconf(argc, argv, 0), -2,
+             "Error: Cannot configure the HIP daemon.\n");
+
+out_err:
+    return err;
 }
 
 #endif /* HIP_UNITTEST_MODE */
-

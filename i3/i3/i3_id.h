@@ -1,14 +1,14 @@
 /***************************************************************************
-                          i3_id.h  -  description
-                             -------------------
-    begin                : Fre Jun 20 2003
-    copyright            : (C) 2003 by Ion
-    email                : istoica@cs.berkeley.edu
- ***************************************************************************/
+*                         i3_id.h  -  description
+*                            -------------------
+*   begin                : Fre Jun 20 2003
+*   copyright            : (C) 2003 by Ion
+*   email                : istoica@cs.berkeley.edu
+***************************************************************************/
 
 #ifndef I3_ID_H
 #define I3_ID_H
- 
+
 #include <stdio.h>
 #include "i3.h"
 
@@ -21,10 +21,10 @@ ID *unpack_i3_id(char *p, unsigned short *length);
 void printf_i3_id(ID *id, int intend);
 void fprintf_i3_id(FILE *fp, ID *id, int intend);
 
-char* sprintf_i3_id(char* s, const ID *id);
-char* sprintf_i3_key(char* s, const Key *key);
-ID* sscanf_i3_id(char *s, ID *id);
-Key* sscanf_i3_key(char *s, Key *key);
+char *sprintf_i3_id(char *s, const ID *id);
+char *sprintf_i3_key(char *s, const Key *key);
+ID *sscanf_i3_id(char *s, ID *id);
+Key *sscanf_i3_key(char *s, Key *key);
 
 ID *duplicate_i3_id(ID *id);
 int compare_ids(ID *id1, ID *id2);

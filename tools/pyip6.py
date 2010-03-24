@@ -7,7 +7,7 @@ it under the same terms as Python itself, so long as this copyright message
 and disclaimer are retained in their original form.
 """
 import struct
-#from spf import RE_IP4 
+#from spf import RE_IP4
 import re
 PAT_IP4 = r'\.'.join([r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])']*4)
 RE_IP4 = re.compile(PAT_IP4+'$')
@@ -35,7 +35,7 @@ def inet_ntop(s):
   """
   # convert to 8 words
   a = struct.unpack("!HHHHHHHH",s)
-  n = (0,0,0,0,0,0,0,0)	# null ip6
+  n = (0,0,0,0,0,0,0,0) # null ip6
   if a == n: return '::'
   # check for ip4 mapped
   if a[:5] == (0,0,0,0,0) and a[5] in (0,0xFFFF):
@@ -48,11 +48,11 @@ def inet_ntop(s):
     e = n[:l]
     for i in range(9-l):
       if a[i:i+l] == e:
-	if i == 0:
-	  return ':'+':%x'*(8-l) % a[l:]
-	if i == 8 - l:
-	  return '%x:'*(8-l) % a[:-l] + ':'
-	return '%x:'*i % a[:i] + ':%x'*(8-l-i) % a[i+l:]
+        if i == 0:
+          return ':'+':%x'*(8-l) % a[l:]
+        if i == 8 - l:
+          return '%x:'*(8-l) % a[:-l] + ':'
+        return '%x:'*i % a[:i] + ':%x'*(8-l-i) % a[i+l:]
   return "%x:%x:%x:%x:%x:%x:%x:%x" % a
 
 def inet_pton(p):
@@ -89,29 +89,29 @@ def inet_pton(p):
   m = RE_IP4.search(s)
   try:
       if m:
-	  pos = m.start()
-	  ip4 = [int(i) for i in s[pos:].split('.')]
-	  if not pos:
-	      return struct.pack('!QLBBBB',0,65535,*ip4)
-	  s = s[:pos]+'%x%02x:%x%02x'%tuple(ip4)
+          pos = m.start()
+          ip4 = [int(i) for i in s[pos:].split('.')]
+          if not pos:
+              return struct.pack('!QLBBBB',0,65535,*ip4)
+          s = s[:pos]+'%x%02x:%x%02x'%tuple(ip4)
       a = s.split('::')
       if len(a) == 2:
-	l,r = a
-	if not l:
-	  r = r.split(':')
-	  return struct.pack('!HHHHHHHH',
-	    *[0]*(8-len(r)) + [int(s,16) for s in r])
-	if not r:
-	  l = l.split(':')
-	  return struct.pack('!HHHHHHHH',
-	    *[int(s,16) for s in l] + [0]*(8-len(l)))
-	l = l.split(':')
-	r = r.split(':')
-	return struct.pack('!HHHHHHHH',
-	    *[int(s,16) for s in l] + [0]*(8-len(l)-len(r))
-	    + [int(s,16) for s in r])
+        l,r = a
+        if not l:
+          r = r.split(':')
+          return struct.pack('!HHHHHHHH',
+            *[0]*(8-len(r)) + [int(s,16) for s in r])
+        if not r:
+          l = l.split(':')
+          return struct.pack('!HHHHHHHH',
+            *[int(s,16) for s in l] + [0]*(8-len(l)))
+        l = l.split(':')
+        r = r.split(':')
+        return struct.pack('!HHHHHHHH',
+            *[int(s,16) for s in l] + [0]*(8-len(l)-len(r))
+            + [int(s,16) for s in r])
       if len(a) == 1:
-	return struct.pack('!HHHHHHHH',
-	    *[int(s,16) for s in a[0].split(':')])
+        return struct.pack('!HHHHHHHH',
+            *[int(s,16) for s in a[0].split(':')])
   except ValueError: pass
   raise ValueError,p

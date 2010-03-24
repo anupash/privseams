@@ -1,9 +1,11 @@
-/*
- * $Id: stdinserver.c,v 1.3 2003/10/03 11:40:19 mika Exp $
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 
-#include <stdio.h> 
-#include <stdlib.h> 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -18,7 +20,7 @@
 int create_serversocket(int proto, int port) {
   int fd;
   struct sockaddr_in6 addr;
-  
+
   if (proto == IPPROTO_TCP) {
     fd = socket(AF_INET6, SOCK_STREAM, 0);
   } else {
@@ -67,8 +69,8 @@ int main(int argc,char *argv[]) {
   int proto;
   int k;
   int peer;
-  int peerlen; 
-   
+  int peerlen;
+
   if (argc != 3) {
     fprintf(stderr, "Usage: %s tcp|udp port\n", argv[0]);
     exit(1);
@@ -107,13 +109,13 @@ int main(int argc,char *argv[]) {
       exit(2);
     }
 
-  while ((k = fread(mylovemostdata,1,sizeof(mylovemostdata),stdin)) > 0) 
+  while ((k = fread(mylovemostdata,1,sizeof(mylovemostdata),stdin)) > 0)
   {
-	sendnum = send(peer, mylovemostdata, k, 0);
-	if (sendnum < 0) {
-		perror("sendnum");
-		break;
-	}
+        sendnum = send(peer, mylovemostdata, k, 0);
+        if (sendnum < 0) {
+                perror("sendnum");
+                break;
+        }
   }
 
   close(peer);

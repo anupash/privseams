@@ -18,5 +18,3 @@ while true; do date +"%S %N"; done >/tmp/clock
 Confidence interval 95%. Low/High bound: -1578/6568
 Dropped at low bound 0 samples, at upper bound 17 samples
 3457 samples qualified, min/avg/max: 1953/2414/6520
-
-

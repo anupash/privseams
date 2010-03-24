@@ -1,11 +1,11 @@
 #!/bin/bash
 ################################################################################
 #
-# Script to grep and clean the grep outputs and then reformats it to a dot 
+# Script to grep and clean the grep outputs and then reformats it to a dot
 # language representation of the graph them for graphviz
 #
 # Calls the cleaning after grepping and draws the fig afterwards
-# 
+#
 # Author: Samu Varjonen
 #
 # NOTE: see man grapviz for more information
@@ -26,3 +26,4 @@ neato out.txt -Tfig -o gout.fig
 #twopi out.txt -Tfig -o gout.fig
 
 echo "Stopped working on the file and the fig should be done under name include_graph.ps"
+

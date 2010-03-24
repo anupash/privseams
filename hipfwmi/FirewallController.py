@@ -29,7 +29,7 @@ class FirewallController(object):
     firewall. Spawns ManagementLogic and reloads the firewall when
     ManagementLogic reports the need for it.
     """
-    
+
     def __init__(self):
         self.load_configuration()
 
@@ -180,7 +180,7 @@ class FirewallController(object):
         else:
             syslog.syslog('Unknown message from ManagementLogic: %s' % repr(line))
         return True
-    
+
     def run(self):
         """Start doing the firewallcorish stuff."""
         self.daemonize()

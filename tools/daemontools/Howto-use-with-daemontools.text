@@ -27,7 +27,7 @@ dnsproxy can be stopped with:
 
 /usr/sbin/svc -d /etc/daemontools/service/dnsproxy/
 
-and restarted with 
+and restarted with
 
 /usr/sbin/svc -u /etc/daemontools/service/dnsproxy/
 

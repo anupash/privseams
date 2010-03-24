@@ -25,19 +25,12 @@ other related tools and test software.
 %prep
 %setup
 
-#added by CentOS
-%ifarch x86_64 ppc64 sparc64 ia64
-%{__perl} -p -i -e 's,/usr/lib/libipq.a,/usr/lib64/libipq.a,g' firewall/Makefile.in
-%endif
-
-%{__perl} -p -i -e 's,/usr/share/pixmaps,\$(DESTDIR)/usr/share/pixmaps,g' libhipgui/Makefile.in
-#end CentOS changes
-
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
 ./autogen.sh --prefix=/usr
-%configure --prefix=/usr --enable-libinet6
-make -C doc all
+%configure --prefix=/usr
+make -C doc
+make -j 4 all
 
 # Currently we are not going to install all includes and test software.
 # As a consequence, we need to tell rpmbuild that we don't want to package
@@ -59,7 +52,7 @@ make -C doc all
 # XX TODO: copy descriptions from hipl-deb.spec and make sure rpm still builds
 
 %package all
-Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines. 
+Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
 Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-test hipl-doc hipl-dnsproxy
 %description all
@@ -97,7 +90,7 @@ Group: System Environment/Kernel
 
 %package test
 Requires: hipl-lib hipl-daemon
-Summary: netcat-like command line tools with built-in HIP support for developers 
+Summary: netcat-like command line tools with built-in HIP support for developers
 Group: System Environment/Kernel
 %description test
 
@@ -152,66 +145,66 @@ install -m 755 tools/hipdnskeyparse %{buildroot}%{prefix}/sbin/hipdnskeyparse
 install -m 755 tools/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
 
 %post lib
-/sbin/ldconfig 
+/sbin/ldconfig
 
 %post daemon
 if [ "$1" = "2" ]
 then
-	# upgrade
-	/sbin/service hipd restart
+        # upgrade
+        /sbin/service hipd restart
 else
-	# first install
-	/sbin/chkconfig --add hipd
-	/sbin/chkconfig --level 2 hipd on
-	/sbin/service hipd start
+        # first install
+        /sbin/chkconfig --add hipd
+        /sbin/chkconfig --level 2 hipd on
+        /sbin/service hipd start
 fi
 
 %preun daemon
 if [ "$1" = "0" ]
 then
-	# removing package completely
-	/sbin/service hipd stop
-	/sbin/chkconfig --del hipd
+        # removing package completely
+        /sbin/service hipd stop
+        /sbin/chkconfig --del hipd
 fi
 
 %post dnsproxy
 if [ "$1" = "2" ]
 then
-	# upgrade
-	/sbin/service hipdnsproxy restart
+        # upgrade
+        /sbin/service hipdnsproxy restart
 else
-	# first install
-	/sbin/chkconfig --add hipdnsproxy
-	/sbin/chkconfig --level 2 hipdnsproxy on
-	/sbin/service hipdnsproxy start
+        # first install
+        /sbin/chkconfig --add hipdnsproxy
+        /sbin/chkconfig --level 2 hipdnsproxy on
+        /sbin/service hipdnsproxy start
 fi
 
 %preun dnsproxy
 if [ "$1" = "0" ]
 then
-	# removing package completely
-	/sbin/service hipdnsproxy stop
-	/sbin/chkconfig --del hipdnsproxy
+        # removing package completely
+        /sbin/service hipdnsproxy stop
+        /sbin/chkconfig --del hipdnsproxy
 fi
 
 %post firewall
 if [ "$1" = "2" ]
 then
-	# upgrade
-	/sbin/service hipfw restart
+        # upgrade
+        /sbin/service hipfw restart
 else
-	# first install
-	/sbin/chkconfig --add hipfw
-	/sbin/chkconfig --level 2 hipfw on
-	/sbin/service hipfw start
+        # first install
+        /sbin/chkconfig --add hipfw
+        /sbin/chkconfig --level 2 hipfw on
+        /sbin/service hipfw start
 fi
 
 %preun firewall
 if [ "$1" = "0" ]
 then
-	# removing package completely
-	/sbin/service hipfw stop
-	/sbin/chkconfig --del hipfw
+        # removing package completely
+        /sbin/service hipfw stop
+        /sbin/chkconfig --del hipfw
 fi
 
 %clean
@@ -223,7 +216,6 @@ rm -rf %{buildroot}
 
 %files daemon
 %{prefix}/sbin/hipd
-%{prefix}/bin/hipsetup
 %config /etc/rc.d/init.d/hipd
 
 %files agent
@@ -246,10 +238,7 @@ rm -rf %{buildroot}
 %files test
 %{prefix}/bin/conntest-client-opp
 %{prefix}/bin/conntest-client-hip
-%{prefix}/bin/conntest-client-native
-%{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
-%{prefix}/bin/conntest-server-native
 
 %files firewall
 %{prefix}/sbin/hipfw
@@ -272,7 +261,7 @@ rm -rf %{buildroot}
 - Rpmbuild fixes for Fedora 8 build
 * Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>
 - added two perl searches and installed one directory in the spec file
-- added libtool, libcap-devel and xmlto to BuildRequires 
+- added libtool, libcap-devel and xmlto to BuildRequires
 * Thu May 29 2008 Juha Jylhakoski <juha.jylhakoski@hiit.fi>
 - Split hipl.spec was split to different packages
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
@@ -283,4 +272,3 @@ rm -rf %{buildroot}
 - Renamed to hipl.spec (original was from Mika) and modularized
 * Tue Feb 14 2006 Miika Komu <miika@iki.fi>
 - added changelog
-

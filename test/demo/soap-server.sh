@@ -26,10 +26,10 @@ sleep 1
 $HIPL_DIR/tools/hipconf add hi default
 sleep 1
 
-$HIPL_DIR/tools/hipconf rvs 7e69:d6c6:5725:3e4c:9728:0966:403e:6114 
+$HIPL_DIR/tools/hipconf rvs 7e69:d6c6:5725:3e4c:9728:0966:403e:6114
 3ffe::36
 sleep 1
-echo foo | nc6 --idle-timeout 5 -w 5 
+echo foo | nc6 --idle-timeout 5 -w 5
 7e69:d6c6:5725:3e4c:9728:0966:403e:6114 12345
 
 cat /proc/net/hip/sdb_state

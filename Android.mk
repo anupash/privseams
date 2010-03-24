@@ -2,7 +2,7 @@
 
 BASE_PATH := $(call my-dir)
 
-BASE_C_INCLUDES := $(addprefix $(BASE_PATH)/, . hipd firewall libhipandroid libhipcore libhipconf libinet6 libinet6/include_glibc23 libhiptool libdht i3 i3/i3_client performance)
+BASE_C_INCLUDES := $(addprefix $(BASE_PATH)/, . hipd firewall libhipandroid libhipcore libhipconf libhiptool libdht i3 i3/i3_client performance)
 
 
 ###########################################################
@@ -34,13 +34,11 @@ LOCAL_SRC_FILES :=  update.c \
                     netdev.c \
                     bos.c \
                     nat.c \
-                    icookie.c \
                     init.c \
                     maintenance.c \
                     accessor.c \
                     oppipdb.c \
                     dh.c \
-                    tcptimeout.c \
                     cert.c \
                     user_ipsec_sadb_api.c \
                     user_ipsec_hipd_msg.c \
@@ -67,7 +65,6 @@ LOCAL_CFLAGS := -include $(BASE_PATH)/libhipandroid/libhipandroid.h \
                 -DCONFIG_HIP_RVS \
                 -DCONFIG_HIP_HIPPROXY \
                 -DCONFIG_HIP_OPPORTUNISTIC \
-                -DCONFIG_SAVAH_IP_OPTION \
                 -DCONFIG_HIP_DEBUG \
                 -DHIP_LOGFMT_LONG \
                 -g
@@ -80,7 +77,7 @@ LOCAL_C_INCLUDES := $(BASE_C_INCLUDES) \
 
 LOCAL_SHARED_LIBRARIES := libcrypto
 
-LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libhipconf libinet6
+LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libhipconf
 
 LOCAL_MODULE:= hipd
 
@@ -109,7 +106,7 @@ LOCAL_C_INCLUDES := $(BASE_C_INCLUDES) \
 
 LOCAL_SHARED_LIBRARIES := libcrypto
 
-LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libinet6 libhipconf
+LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libhipconf
 
 LOCAL_MODULE:= hipconf
 
@@ -149,7 +146,6 @@ LOCAL_SRC_FILES :=  firewall.c \
                     opptcp.c \
                     firewalldb.c \
                     lsi.c \
-                    sava_api.c \
                     cache.c \
                     cache_port.c \
                     esp_prot_config.c
@@ -168,7 +164,7 @@ LOCAL_C_INCLUDES := $(BASE_C_INCLUDES) \
 
 LOCAL_SHARED_LIBRARIES := libcrypto
 
-LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid libinet6
+LOCAL_STATIC_LIBRARIES := libhipcore libhiptool libhipandroid
 
 LOCAL_MODULE:= hipfw
 
@@ -256,34 +252,6 @@ LOCAL_MODULE:= libhipcore
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 
 include $(BUILD_STATIC_LIBRARY)
-
-##########################################################
-# libinet6
-##########################################################
-
-
-LOCAL_PATH:= $(BASE_PATH)/libinet6
-
-include $(CLEAR_VARS)
-
-LOCAL_SRC_FILES :=  ifaddrs.c \
-                    ifnames.c
-
-LOCAL_CFLAGS := -include $(BASE_PATH)/libhipandroid/libhipandroid.h \
-                -DANDROID_CHANGES \
-                -g
-
-LOCAL_C_INCLUDES := $(BASE_C_INCLUDES) \
-                    external/openssl/include
-
-LOCAL_SHARED_LIBRARIES :=
-
-LOCAL_MODULE:= libinet6
-
-LOCAL_MODULE_CLASS := STATIC_LIBRARIES
-
-include $(BUILD_STATIC_LIBRARY)
-
 
 # ###########################################################
 # ## libhiptool

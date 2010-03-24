@@ -12,10 +12,10 @@
     #include <sys/types.h> // _ftime()
     #include <sys/timeb.h> // _ftime()
     #include <Windows.h> // struct timeval
-	#include <time.h>
+        #include <time.h>
 #endif
 
-extern time_t time ( time_t * timer );
+extern time_t time( time_t *timer );
 
 #define UMILLION 1000000ULL
 
@@ -37,7 +37,7 @@ double f_rand(void)
 
     l = (int64_t) (rand() & ((1 << 26) - 1));
     r = (int64_t) (rand() & ((1 << 27) - 1));
-    return ((l << 27) + r) / (double)(1LL << 53);
+    return ((l << 27) + r) / (double) (1LL << 53);
 }
 
 /**********************************************************************/
@@ -51,7 +51,7 @@ double funif_rand(double a, double b)
 /**********************************************************************/
 
 /* n_rand: return a random integer in [0, n),
-   borrowed from Java Random class */
+ * borrowed from Java Random class */
 int n_rand(int n)
 {
     int bits, val;
@@ -59,12 +59,13 @@ int n_rand(int n)
     assert(n >= 0);   /* n must be positive */
 
     /* Special case: power of 2 */
-    if ((n & -n) == n)
-	return rand() & (n - 1);
+    if ((n & - n) == n) {
+        return rand() & (n - 1);
+    }
 
     do {
-	bits = rand();
-	val = bits % n;
+        bits = rand();
+        val  = bits % n;
     } while (bits - val + (n - 1) < 0);
     return val;
 }
@@ -80,7 +81,7 @@ int unif_rand(int a, int b)
 /* return a random number in an one second interval, in usec */
 int random_sec(void)
 {
-  return unif_rand(0, 1000000ULL);
+    return unif_rand(0, 1000000ULL);
 }
 
 /**********************************************************************/
@@ -93,23 +94,22 @@ uint64_t wall_time(void)
     ftime(&t);
     return t.time * 1000000ULL + t.millitm * 1000;
 #else
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  return tv.tv_sec * 1000000ULL + tv.tv_usec;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000000ULL + tv.tv_usec;
 #endif
 }
-
 
 /**********************************************************************/
 
 void sub_wall_time(struct timeval *tv, uint64_t a, uint64_t b)
 {
-  if (a < b) {
-    tv->tv_sec = tv->tv_usec = 0;
-  } else {
-    tv->tv_sec = (a - b) / UMILLION;
-    tv->tv_usec = (a - b) % UMILLION;
-  }
+    if (a < b) {
+        tv->tv_sec = tv->tv_usec = 0;
+    } else {
+        tv->tv_sec  = (a - b) / UMILLION;
+        tv->tv_usec = (a - b) % UMILLION;
+    }
 }
 
 #if defined(_ARCH_PPC) || defined(_WIN32)
@@ -117,9 +117,10 @@ uint64_t get_cycles(void)
 {
     exit(-1);
 }
+
 #else
 #define rdtscll(val) \
-     __asm__ __volatile__("rdtsc" : "=A" (val))
+    __asm__ __volatile__ ("rdtsc" : "=A" (val))
 
 uint64_t get_cycles(void)
 {
@@ -127,4 +128,5 @@ uint64_t get_cycles(void)
     rdtscll(ret);
     return ret;
 }
+
 #endif

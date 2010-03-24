@@ -34,16 +34,16 @@
 #endif
 
 typedef struct _event {
-  uint64_t  time;
-  uint16_t  cancel;   /* specify whether the timeout is canceled */
-  void     (*fun)(void *);  /* function to be called when the evnt occurs */
-  void      *params;  /* address to the parameters to be passed to fun */
+    uint64_t time;
+    uint16_t cancel;  /* specify whether the timeout is canceled */
+    void (*fun)(void *);    /* function to be called when the evnt occurs */
+    void *   params;  /* address to the parameters to be passed to fun */
 } Event;
 
 typedef struct _eventHeap {
-  Event **heap;
-  unsigned int size;
-  unsigned int max_size;
+    Event **     heap;
+    unsigned int size;
+    unsigned int max_size;
 } EventHeap;
 
 

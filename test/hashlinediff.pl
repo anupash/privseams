@@ -2,7 +2,7 @@
 #
 # Author: Miika Komu miika@iki.fi
 # Licence: GNU/GPL
-# 
+#
 # Usage:   hashlinediff file1 file2
 # Purpose: makes a hash of the lines in the given files and prints
 #          the differences
@@ -20,9 +20,9 @@ die("usage: $0 file1 file2\n") if ($#ARGV != 1);
 
 foreach my $key (sort((keys(%hash1), keys(%hash2)))) {
     if (!$hash1{$key}) {
-	print("+$key\n");
+        print("+$key\n");
     } elsif (!$hash2{$key}) {
-	print("-$key\n");
+        print("-$key\n");
     }
 }
 
@@ -32,9 +32,9 @@ sub readhash {
     my %hash = ();
     open($fd, $file) || die("failed to open file $file\n");
     while (defined($line = <$fd>)) {
-	chomp $line;
-	$hash{$line} = 0 if (!$hash{$line});
-	$hash{$line} += 1;
+        chomp $line;
+        $hash{$line} = 0 if (!$hash{$line});
+        $hash{$line} += 1;
     }
     close($fd);
     return %hash;

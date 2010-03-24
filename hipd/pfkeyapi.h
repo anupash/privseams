@@ -1,10 +1,12 @@
-#ifndef PFKEYAPI_H
-#define PFKEYAPI_H
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ */
+#ifndef HIP_HIPD_PFKEYAPI_H
+#define HIP_HIPD_PFKEYAPI_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "lib/tool/xfrmapi.h"
 
-#endif /* PFKEYAPI_H */
+#endif /* HIP_HIPD_PFKEYAPI_H */

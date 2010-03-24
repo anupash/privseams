@@ -191,7 +191,7 @@ class DeSerialize:
 
     def get_dict(self):
         u = Munpacker(self.data)
-        
+
         hdr0 = list(u.getHeader())
         # id, qr, opcode, aa, tc, rd, ra, z, rcode, qdcount, ancount, nscount, arcount = u.getHeader()
 
@@ -222,7 +222,7 @@ class DeSerialize:
         hdr['additional'] = self.get_rrlist(u,hdr['arcount'])
 
         return hdr
-    
+
     def pprint(self,fout):
         d = self.get_dict()
         for fld in ('id','qr','opcode','aa','tc','rd','ra','z','rcode',
@@ -321,11 +321,11 @@ class DeSerialize:
         28: get_AAAA,
         55: get_HI,
         }
-    
+
     def get_rr(self,u):
         rrhdr = list(u.getRRheader())
         rdlength = rrhdr.pop()
-        
+
         df = self.RR_dispatch.get(rrhdr[1])
         if df:
             a = df(self,u)
@@ -359,6 +359,6 @@ def main(argv):
             self.tarfilename = arg
 
     self.doit(args)
-        
+
 if __name__ == '__main__':
     main(sys.argv)

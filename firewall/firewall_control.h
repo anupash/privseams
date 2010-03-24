@@ -1,22 +1,15 @@
-#ifndef FIREWALL_CONTROL_H_
-#define FIREWALL_CONTROL_H_
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ */
+#ifndef HIP_FIREWALL_FIREWALL_CONTROL_H
+#define HIP_FIREWALL_FIREWALL_CONTROL_H
 
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
-
+#include "config.h"
 #include "lib/core/builder.h"
 #include "lib/core/protodefs.h"
 
-int handle_msg(struct hip_common * msg);
+int hip_handle_msg(struct hip_common *msg);
 
-#ifdef CONFIG_HIP_HIPPROXY
-int request_hipproxy_status(void);
-#endif
-
-#if 0
-int request_savah_status(int mode);
-int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support);
-#endif
-
-#endif /*FIREWALL_CONTROL_H_*/
+#endif /*HIP_FIREWALL_FIREWALL_CONTROL_H*/

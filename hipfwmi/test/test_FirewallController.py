@@ -8,7 +8,7 @@ from FirewallController import FirewallController
 class ControllerTest(unittest.TestCase):
     def testbasics(self):
         controller = FirewallController()
-        
+
 
 def test_suite():
     suite = unittest.TestSuite()

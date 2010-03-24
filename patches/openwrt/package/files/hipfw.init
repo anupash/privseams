@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+START=65
+STOP=65
+
+#HIPFW_INIT=/etc/hip/test/firewall.init
+#HIPFW_START=/etc/hip/test/firewall.start # does not work anymore
+HIPFW_START='hipfw -mb'
+
+start() {
+    echo -n "Starting hipfw"
+#   ${HIPFW_INIT}
+    ${HIPFW_START}
+    echo "."
+}
+
+stop() {
+    echo -n "Stopping hipfw"
+    killall hipfw
+    echo "."
+}

@@ -1,5 +1,10 @@
-#ifndef HIPD_DHT_H_
-#define HIPD_DHT_H_
+/**
+ * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ */
+#ifndef HIP_HIPD_DHT_H
+#define HIP_HIPD_DHT_H
 
 /** @file
  * A header file for dht.c
@@ -18,7 +23,7 @@
 #include "lib/dht/libhipdht.h"
 #include "lib/dht/libhipdhtxml.h"
 
-void hip_init_dht_sockets(int *, int *);
+int hip_init_dht_sockets(int *, int *);
 void hip_register_to_dht(void);
 
 int hip_publish_certificates(void);
@@ -28,4 +33,4 @@ void hip_dht_remove_current_hdrr(void);
 
 void hip_send_packet_to_lookup_from_queue(void);
 
-#endif /* HIPD_DHT_H_ */
+#endif /* HIP_HIPD_DHT_H */

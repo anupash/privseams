@@ -1,3 +1,7 @@
+
+/* required for h_addr member of hostent */
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -17,24 +21,26 @@ void join(Server *srv, FILE *fp)
 
     // printf("join\n");
     while (nknown < MAX_WELLKNOWN && fscanf(fp, " %s\n", addr) == 1) {
-        p = strchr(addr, ':');
-	printf("addr=%s\n", addr);
+        p                       = strchr(addr, ':');
+        printf("addr=%s\n", addr);
         assert(p != NULL);
-	*(p++) = '\0';
+        *(p++)                  = '\0';
 
-	/* resolve address */	
-	hp = gethostbyname(addr);
-	if (hp == NULL)
-	    eprintf("gethostbyname(%s) failed:", addr);
+        /* resolve address */
+        hp                      = gethostbyname(addr);
+        if (hp == NULL) {
+            eprintf("gethostbyname(%s) failed:", addr);
+        }
 
-	well_known[nknown].addr = ntohl(*((in_addr_t *) hp->h_addr));
-	well_known[nknown].port = (in_port_t) atoi(p);
-	nknown++;
+        well_known[nknown].addr = ntohl(*((in_addr_t *) hp->h_addr));
+        well_known[nknown].port = (in_port_t) atoi(p);
+        nknown++;
     }
 
-    if (nknown == 0)
+    if (nknown == 0) {
         printf("Didn't find any known hosts.");
-       // eprintf("Didn't find any known hosts."); xxxx
+    }
+    // eprintf("Didn't find any known hosts."); xxxx
 
     chord_update_range(&srv->node.id, &srv->node.id);
     set_stabilize_timer();

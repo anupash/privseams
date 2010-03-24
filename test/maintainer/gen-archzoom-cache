@@ -3,7 +3,7 @@
 # Author:  miika@iki.fi
 # Licence: GNU/GPL
 # Purpose: create tla cacherevisions for the last patch in all branches in
-#          local archive to speed up "tla get" 
+#          local archive to speed up "tla get"
 # Notes:   works only for local archives, not for remote!
 
 ARCHIVE_NAME=hipl-dev@freelists.org--hipl
@@ -26,4 +26,3 @@ do
   done
 
 done
-

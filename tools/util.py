@@ -168,6 +168,6 @@ def main(argv):
             sys.stdout.write('Wantdown\n')
         if wantalarm():
             sys.stdout.write('Wantalarm\n')
-        
+
 if __name__ == '__main__':
     main(sys.argv)

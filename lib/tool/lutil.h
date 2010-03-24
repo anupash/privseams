@@ -1,17 +1,11 @@
 /** @file
- * A header file for util.c.
- * 
- * @author  ?
- * @version ?
- * @date    17.01.2008
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ * A header file for lutil.c. Imported from libinet6.
+ *
+ * Distributed under
+ * <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
-#ifndef _LIBINET6_UTIL_H
-#define _LIBINET6_UTIL_H
-
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif /* HAVE_CONFIG_H */
+#ifndef HIP_LIB_TOOL_LUTIL_H
+#define HIP_LIB_TOOL_LUTIL_H
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -22,46 +16,48 @@
 #include <stdlib.h>
 #include <malloc.h>
 
+#include "config.h"
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 
 #define MAX_ITEM_LEN 256
 
 /* moved this here from getaddrinfo.c because it's used now in
-   getendpointinfo.c too */
+ * getendpointinfo.c too */
 
-struct gaih_addrtuple
-  {
+struct gaih_addrtuple {
     struct gaih_addrtuple *next;
-    int family;
-    char addr[16];
-    uint32_t scopeid;
+    int                    family;
+    char                   addr[16];
+    uint32_t               scopeid;
 };
 
 void free_gaih_addrtuple(struct gaih_addrtuple *tuple);
 
-struct listitem { 
-  char data[256];
-  struct listitem *next;
+struct listitem {
+    char             data[256];
+    struct listitem *next;
 };
 
 typedef struct listitem Listitem;
 
 struct list {
-  Listitem *head;
+    Listitem *head;
 };
 
 typedef struct list List;
 
-void initlist(List *);  
+void initlist(List *);
 void insert(List *, char *data);
 void destroy(List *);
 int length(List *);
+int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
+                     struct timeval *result);
 
 /**
  * Gets an item from a linked list. Gets <code>n</code>th item from a linked
  * list.
- * 
+ *
  * @param ilist a pointer to a linked list.
  * @param n     the index of the item to get.
  * @return      a pointer to <code>n</code>th item in the list, or NULL if
@@ -70,7 +66,6 @@ int length(List *);
 char *getitem(List *, int n);
 char *getwithoutnewline(char *buffer, int count, FILE *f);
 char *findsubstring(const char *string, const char *substring);
-void findkeyfiles(char *path, List *list);
 
 /**
  * Breaks a string into substrings. Breaks @c string into substrings using any
@@ -82,4 +77,6 @@ void findkeyfiles(char *path, List *list);
  */
 void extractsubstrings(char *string, List *list);
 
-#endif
+int maxof(int num_args, ...);
+
+#endif /* HIP_LIB_TOOL_LUTIL_H */

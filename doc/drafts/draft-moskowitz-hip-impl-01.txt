@@ -248,7 +248,7 @@ Moskowitz                                                            4
    I1      I --> R (Hi. Here is my I1, let's talk HIP)
    R1      I <-- R (OK.  Here is my R1, handle this HIP cookie)
    I2      I --> R (Compute, compute, here is my counter I2)
-   R2      I <-- R (OK.  LetÆs finish HIP cookie with my R2)
+   R2      I <-- R (OK.  Let's finish HIP cookie with my R2)
 
    All further packets are without HIP, HIP is implied with the SPIs in
    ESP
@@ -280,7 +280,7 @@ Moskowitz                                                            4
            SPI(R))
         NAT adds Initiator's Responder SPI to I/R state and changes
         addresses.
-   I <-- NAT(I) <-- R (OK, LetÆs finish HIP cookie, and here is SPI(I))
+   I <-- NAT(I) <-- R (OK, Let's finish HIP cookie, and here is SPI(I))
         NAT adds Responder's Initiator SPI to I/R state and changes
         addresses.
 
@@ -331,7 +331,7 @@ Moskowitz                                                            5
         NAT adds Initiator's Responder SPI to I/R state and changes
         addresses.  The NAT will have one responder HIT to address
         state, but potentially many responder SPI to address state.
-   I <-- NAT(R) <-- R (OK, LetÆs finish HIP cookie, and here is SPI(I))
+   I <-- NAT(R) <-- R (OK, Let's finish HIP cookie, and here is SPI(I))
         NAT adds Responder's Initiator SPI to I/R state and changes
         addresses.
 
@@ -390,7 +390,7 @@ Moskowitz                                                            6
         changes addresses.  The NAT will have one responder HIT to
         address state, but potentially many responder SPI to address
         state.
-   I <-- NAT(I) <-- NAT(R) <-- R (OK, LetÆs finish HIP cookie, and here
+   I <-- NAT(I) <-- NAT(R) <-- R (OK, Let's finish HIP cookie, and here
            is SPI(I))
         NAT adds Responder's Initiator SPI to I/R state and changes
         addresses.

@@ -103,7 +103,7 @@ class ASN:
 
         t2 = t & 0x1f
         c = (t & 0x20) != 0
-        
+
         x2 = ord(self.get_byte())
         if x2 & 0x80:
             nx2 = x2 & 0x7f
@@ -191,6 +191,6 @@ def main(argv):
             gp.fetchcount = int(arg)
 
     gp.doit(args)
-        
+
 if __name__ == '__main__':
     main(sys.argv)

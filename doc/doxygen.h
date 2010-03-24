@@ -1,7 +1,10 @@
-#ifndef _DOXYGEN_H
-#define _DOXYGEN_H
+#ifndef DOXYGEN_H
+#define DOXYGEN_H
 /**
  * @file
+ *
+ * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
+ *
  * There should be no need to include this file anywhere! This is only for
  * defining doxygen related things, such as groups and lists.
  */
@@ -12,13 +15,18 @@
  *
  * @section sec_doc Project Documents
  * <ul>
+ * <li><a href="http://hipl.hiit.fi/index.php?index=source">HIPL source code</a></li>
+ * <li><a href="http://hipl.hiit.fi/loggerhead/">Web-based version control browser</a></li>
  * <li>doc/HACKING. This file contains developer information on policies in the
  * HIPL project.</li>
  * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in "doc" directory.
  * The user manual is then available at doc/howto-html/index.html</li>.
+ * Periodically prebuilt <a href="http://hipl.hiit.fi/hipl/manual/index.html">manual</a>
+ * is also available (from the trunk branch).
+ * <li><a href="http://hipl.hiit.fi/bugzilla/">Bugzilla</a></li>
  * <!--<li><a href=""></a>.</li>-->
  * </ul>
- * 
+ *
  * @section sec_links Links
  * <ul>
  * <li><a href="http://infrahip.hiit.fi/">Project home page</a>.</li>
@@ -60,7 +68,7 @@
  *     RFC 2553: Basic Socket Interface Extensions for IPv6</a>.</li>
  *     <li><a href="http://www.kame.net/newsletter/19980604/">
  *     Implementing AF-independent application</a>. A document that describes
- *     how a programmer can handle multiple address families at ease. 
+ *     how a programmer can handle multiple address families at ease.
  *     </li>
  *     <li>
  *     <code>sockaddr_in</code> is defined in /usr/include/linux/in.h. See
@@ -109,7 +117,7 @@
  *     </ul>
  *
  * @date   12.08.2008
- */ 
+ */
 
 /**
  * Error handling macros used for checking errors. To use these macros, define a
@@ -119,7 +127,7 @@
  * int f() {
  *     char *mem = NULL;
  *     HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
- * 
+ *
  *   out_err:
  *     if (mem != NULL) {
  *       free(mem);
@@ -133,40 +141,40 @@
  * as follows:
  *
  * <pre>
- * EPERM            1       Operation not permitted 
- * ENOENT           2       No such file or directory 
- * ESRCH            3       No such process 
- * EINTR            4       Interrupted system call 
- * EIO              5       I/O error 
- * ENXIO            6       No such device or address 
- * E2BIG            7       Argument list too long 
- * ENOEXEC          8       Exec format error 
- * EBADF            9       Bad file number 
- * ECHILD          10       No child processes 
- * EAGAIN          11       Try again 
- * ENOMEM          12       Out of memory 
- * EACCES          13       Permission denied 
- * EFAULT          14       Bad address 
- * ENOTBLK         15       Block device required 
- * EBUSY           16       Device or resource busy 
- * EEXIST          17       File exists 
- * EXDEV           18       Cross-device link 
- * ENODEV          19       No such device 
- * ENOTDIR         20       Not a directory 
- * EISDIR          21       Is a directory 
- * EINVAL          22       Invalid argument 
- * ENFILE          23       File table overflow 
- * EMFILE          24       Too many open files 
- * ENOTTY          25       Not a typewriter 
- * ETXTBSY         26       Text file busy 
- * EFBIG           27       File too large 
- * ENOSPC          28       No space left on device 
- * ESPIPE          29       Illegal seek 
- * EROFS           30       Read-only file system 
- * EMLINK          31       Too many links 
- * EPIPE           32       Broken pipe 
- * EDOM            33       Math argument out of domain of func 
- * ERANGE          34       Math result not representable 
+ * EPERM            1       Operation not permitted
+ * ENOENT           2       No such file or directory
+ * ESRCH            3       No such process
+ * EINTR            4       Interrupted system call
+ * EIO              5       I/O error
+ * ENXIO            6       No such device or address
+ * E2BIG            7       Argument list too long
+ * ENOEXEC          8       Exec format error
+ * EBADF            9       Bad file number
+ * ECHILD          10       No child processes
+ * EAGAIN          11       Try again
+ * ENOMEM          12       Out of memory
+ * EACCES          13       Permission denied
+ * EFAULT          14       Bad address
+ * ENOTBLK         15       Block device required
+ * EBUSY           16       Device or resource busy
+ * EEXIST          17       File exists
+ * EXDEV           18       Cross-device link
+ * ENODEV          19       No such device
+ * ENOTDIR         20       Not a directory
+ * EISDIR          21       Is a directory
+ * EINVAL          22       Invalid argument
+ * ENFILE          23       File table overflow
+ * EMFILE          24       Too many open files
+ * ENOTTY          25       Not a typewriter
+ * ETXTBSY         26       Text file busy
+ * EFBIG           27       File too large
+ * ENOSPC          28       No space left on device
+ * ESPIPE          29       Illegal seek
+ * EROFS           30       Read-only file system
+ * EMLINK          31       Too many links
+ * EPIPE           32       Broken pipe
+ * EDOM            33       Math argument out of domain of func
+ * ERANGE          34       Math result not representable
  * EDEADLK         35       Resource deadlock would occur
  * ENAMETOOLONG    36       File name too long
  * ENOLCK          37       No record locks available
@@ -267,7 +275,7 @@
  * </pre>
  * Following error values are defined in /usr/include/netdb.h:
  * <pre>
- * NETDB_INTERNAL  -1       See errno. 
+ * NETDB_INTERNAL  -1       See errno.
  * NETDB_SUCCESS   0        No problem.
  * HOST_NOT_FOUND  1        Authoritative Answer Host not found.
  * TRY_AGAIN       2        Non-Authoritative Host not found, or SERVERFAIL.
@@ -294,16 +302,16 @@
  * EAI_SYSTEM      -11      System error returned in `errno'.
  * EAI_OVERFLOW    -12      Argument buffer overflow.
  * </pre>
- * 
+ *
  * @defgroup ife Error handling macros
- **/
+ */
 
 /** @defgroup debug HIP debug macros
- *  
+ *
  * Unfortunately Doxygen gets confused when dealing with the extensive '\' and
  * '#' characters that these macros contain. This documentation is therefore
- * messed up. You can find the implementation of these macros from libinet/debug.h.
- **/
+ * messed up. You can find the implementation of these macros from lib/core/debug.h.
+ */
 
 /** @defgroup params TODOs for parameters */
 
@@ -314,7 +322,7 @@
  */
 
 /**
- * @file libinet6/protodefs.h
+ * @file
  * @def HIP_I1
  * @def HIP_R1
  * @def HIP_I2
@@ -366,9 +374,9 @@
 
 /** @defgroup exec_app_types Execute application types */
 
-/** 
+/**
  * Type values used in Host Identity Protocol (HIP) parameters.
- * 
+ *
  * These are the type values used in Host Identity Protocol (HIP) parameters
  * defined in [draft-ietf-hip-base] and other drafts expanding it. Because the
  * ordering (from lowest to highest) of HIP parameters is strictly enforced, the
@@ -389,7 +397,7 @@
  * <li>63488-64511 are used for rendezvous and other relaying services.</li>
  * <li>64512-65535 are reserved.</li>
  * </ul>
- * 
+ *
  * @defgroup hip_param_type_numbers HIP parameter type values
  * @see      hip_tlv
  * @see      hip_param_func
@@ -400,7 +408,7 @@
  */
 
 /**
- * @file libinet6/protodefs.h
+ * @file
  * @def HIP_PARAM_MIN
  *      Defines the minimum parameter type value.
  * @note exclusive
@@ -480,9 +488,9 @@
  * @note exclusive
  */
 
-/** 
+/**
  * Type-length-value data structures in Host Identity Protocol (HIP).
- * 
+ *
  * @defgroup hip_tlv HIP TLV data structures
  * @see      hip_param_type_numbers
  * @see      hip_param_func
@@ -494,58 +502,58 @@
 
 /**
  * HIP host assosiation function pointer data structures.
- * 
+ *
  * Data structures containing function pointers pointing to functions used for
  * sending, receiving and handling data and modifying host assosiation state.
- * 
+ *
  * @defgroup hadb_func HIP host assosiation function sets
  */
 
-/** 
+/**
  * Functions for receiving HIP control packets.
- * 
+ *
  * These functions are called after a HIP control packet is received by
  * hip_receive_control_packet()-function and the packet is detected to be a HIP
  * control packet. The purpose of these functions is to decide whether to
  * handle the packet at all. This decision is based first and foremost on the
  * state of the current host association. If the packet is to be handled, all
  * handling should be done in respective handle-function.
- * 
+ *
  * @defgroup receive_functions HIP receive functions
  * @see      handle_functions
  */
 
-/** 
+/**
  * Functions for handling HIP control packets.
  *
  * These functions do the actual handling of the packet. These functions are
- * called from the corresponding receive functions. 
- * 
+ * called from the corresponding receive functions.
+ *
  * @defgroup handle_functions HIP handle functions
  * @see      receive_functions
  */
 
-/** 
+/**
  * Functions for creating HIP parameters.
- * 
+ *
  * @defgroup hip_param_func HIP parameter functions
  * @see      hip_param_type_numbers
  * @see      hip_tlv
  */
 
-/** 
+/**
  * HIP NOTIFICATION parameter values.
  *
  * NOTIFICATION parameter error types used in the "Notify Message Type"-field of
  * NOTIFICATION parameter as specified in section 5.2.16. of
  * draft-ietf-hip-base-06.
- * 
+ *
  * @defgroup notification NOTIFICATION parameter values
- * @see      hip_notification 
+ * @see      hip_notification
  */
 
 /**
- * @file libinet6/protodefs.h
+ * @file
  * @def  HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE
  *       Sent if the parameter type has the "critical" bit set and the
  *       parameter type is not recognized.  Notification Data contains the two
@@ -618,9 +626,9 @@
 /**
  * @defgroup hip_proxy HIP proxy types
  */
- 
- /** 
- * @file libinet6/protodefs.h
+
+ /**
+ * @file
  * @def HIP_SERVICE_RENDEZVOUS
  *      Rendezvous service for relaying I1 packets.
  * @def HIP_SERVICE_RELAY
@@ -631,7 +639,7 @@
  */
 
 /**
- * @file   libinet6/protodefs.h
+ * @file
  * @struct hip_rvs_hmac
  *         Rendezvous server hmac. A non-critical parameter whose only difference with
  *         the @c HMAC parameter defined in [I-D.ietf-hip-base] is its @c type code.
@@ -666,7 +674,7 @@
  * define the flags of the peer. The flags are used to indicate the state or
  * status of the host. A status can be, for example, that we have requested
  * for a service or that we are capable of offering a service.
- * 
+ *
  * Bitmask for local controls:
  * <pre>
  * 0000 0000 0000 0000
@@ -674,7 +682,7 @@
  * |||| |||| |||| ||+-- 0x0002 - free -
  * |||| |||| |||| |+--- 0x0004 - free -
  * |||| |||| |||| +---- 0x0008 - free -
- * |||| |||| |||+------ 0x0010 We have requested SAVAH service.
+ * |||| |||| |||+------ 0x0010 - free -
  * |||| |||| ||+------- 0x0020 - free -
  * |||| |||| |+-------- 0x0040 - free -
  * |||| |||| +--------- 0x0080 - free -
@@ -694,12 +702,12 @@
  * |||| |||| |||| ||+-- 0x0002 Peer offers an unsupported service.
  * |||| |||| |||| |+--- 0x0004 Peer refused to grant us an unsupported service.
  * |||| |||| |||| +---- 0x0008 - free -
- * |||| |||| |||+------ 0x0010 Peer offers SAVAH service.
+ * |||| |||| |||+------ 0x0010 - free -
  * |||| |||| ||+------- 0x0020 Peer has refused to grant us full relay service
  * |||| |||| |+-------- 0x0040 Peer refused to grant us HIP relay service.
  * |||| |||| +--------- 0x0080 Peer refused to grant us RVS service.
- * |||| |||+----------- 0x0100 Peer refused to grant us SAVAH service.
- * |||| ||+------------ 0x0200 Peer granted SAVAH service to us.
+ * |||| |||+----------- 0x0100 - free -
+ * |||| ||+------------ 0x0200 - free -
  * |||| |+------------- 0x0400 Peer has granted us full relay service
  * |||| +-------------- 0x0800 Peer granted HIP relay service to us.
  * |||+---------------- 0x1000 Peer granted RVS service to us.
@@ -723,7 +731,7 @@
  *      The host association has requested unsupported service in an I1 or an
  *      UPDATE packet. This flag is set if the user requests a service that
  *      is unsupported in HIPL. A service request of such kind is possible using
- *      <code>hipconf add server</code> with service numbers. 
+ *      <code>hipconf add server</code> with service numbers.
  * @def HIP_HA_CTRL_LOCAL_REQ_RELAY
  *      The host association has requested HIP relay service in an I1 or an
  *      UPDATE packet.
@@ -767,13 +775,13 @@
  * @defgroup hip_ha_state HIP association states
  *
  * HIP states as specifed in section 4.4.1.\ of draft-ietf-hip-base-10.
- * 
+ *
  * The states are: UNASSOCIATED, I1-SENT, I2-SENT, R2-SENT ESTABLISHED, CLOSING,
  * CLOSED, E-FAILED.
  */
 
-/** 
- * @file libinet6/state.h
+/**
+ * @file
  * @def HIP_STATE_NONE
  *      No state, structure unused.
  * @def HIP_STATE_UNASSOCIATED
@@ -794,4 +802,4 @@
  *      E-FAILED, HIP exchange failed.
  */
 
-#endif /* _DOXYGEN_H */
+#endif /* DOXYGEN_H */

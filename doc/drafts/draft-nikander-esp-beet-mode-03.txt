@@ -583,7 +583,7 @@ Internet-Draft                ESP BEET MODE                     May 2005
 
    The Host Identity Protocol (HIP) is a piece of more recent
    development.  Its aim is to explore the possibilities created by
-   separating the end-host	identifier and locator of IP addresses.
+   separating the end-host      identifier and locator of IP addresses.
    There are currently five implementations, and the specifications are
    being finalized. [9] [10]
 

@@ -1,0 +1,22 @@
+#!/bin/sh
+
+NET_INTNAT=192.168.6.0/24
+
+iptables -P INPUT   ACCEPT
+iptables -P OUTPUT  ACCEPT
+iptables -P FORWARD ACCEPT
+
+ip6tables -A FORWARD -p 253 -j QUEUE
+ip6tables -A FORWARD -p 50  -j QUEUE
+ip6tables -A FORWARD -p 22  -j ACCEPT
+ip6tables -A INPUT   -p 253 -j QUEUE
+ip6tables -A INPUT   -p 50  -j QUEUE
+ip6tables -A INPUT   -p 22  -j ACCEPT
+ip6tables -A OUTPUT  -p 253 -j QUEUE
+ip6tables -A OUTPUT  -p 50  -j QUEUE
+ip6tables -A OUTPUT  -p 22  -j ACCEPT
+
+iptables -t nat -F
+
+iptables -t nat -A POSTROUTING -s ${NET_INTNAT} -d ${NET_INTNAT} -j ACCEPT
+iptables -t nat -A POSTROUTING -s ${NET_INTNAT} -j MASQUERADE

@@ -1,11 +1,11 @@
 #! /usr/bin/python
 ################################################################################
 #
-# Script to clean the grep outputs and then reformats it to a dot language 
+# Script to clean the grep outputs and then reformats it to a dot language
 # representation of the graph them for graphviz
 #
 # Also prints the macro declared includes but ignores them in the graph
-# 
+#
 # Author: Samu Varjonen
 #
 # NOTE: Call graphviz_script.sh not this!!
@@ -18,7 +18,7 @@ def print_header():
     print >>f, "{"
     print >>f, "    edge [len=20];"
     print >>f, " "
-    return 
+    return
 
 def print_end():
     print >>f, "}"
@@ -47,7 +47,7 @@ def clean_and_store( line ):
     else:
         countodds = countodds + 1
         print line
-        return    
+        return
     what = line[marker + 1:doth + 2]
 
     #remove all the illegal characters dot
@@ -58,7 +58,7 @@ def clean_and_store( line ):
     where = where.replace("-","_")
     what = what.replace("-","_")
 
-    print >>f, "   " + where + ' -> ' + what + ";" 
+    print >>f, "   " + where + ' -> ' + what + ";"
     return
 
 f = open('out.txt','w')

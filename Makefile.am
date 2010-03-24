@@ -1,106 +1,31 @@
 ACLOCAL_AMFLAGS  = -I m4
 
+HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd/*.h i3/*/*.h lib/*/*.h test/*.h))
+
 # For "make dist"
 #
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
-EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
-EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
-EXTRA_DIST += hipsock jip
-EXTRA_DIST += test/packaging/create-package.sh
-EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec 
-EXTRA_DIST += test/packaging/debbuild
-EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/rh-init.d-dnsproxy
-EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hipfw test/packaging/debian-init.d-dnsproxy
-# The design choices doc is currently depracated
-EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
-EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += doc/doxygen.h doc/Doxyfile
-EXTRA_DIST += hipext/hipext.xpi hipext/src/content/hipext.xul hipext/src/content/hipext.js hipext/src/chrome.manifest
-EXTRA_DIST += hipext/src/install.rdf hipext/src/config_build.sh hipext/src/build.sh hipext/hipext.xpi
-EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
-EXTRA_DIST += i3-cfg-PL.xml
-EXTRA_DIST += autogen.sh
-EXTRA_DIST += $(wildcard agent/*.h)
-EXTRA_DIST += $(wildcard i3/aeshash/*.h)
-EXTRA_DIST += $(wildcard i3/chord/*.h)
-EXTRA_DIST += $(wildcard i3/i3/*.h)
-EXTRA_DIST += $(wildcard i3/i3_client/*.h)
-EXTRA_DIST += $(wildcard i3/utils/*.h)
-EXTRA_DIST += $(wildcard lib/android/*.{c,h})
-EXTRA_DIST += $(wildcard lib/conf/*.h)
-EXTRA_DIST += $(wildcard lib/core/*.h)
-EXTRA_DIST += $(wildcard lib/dht/*.h)
-EXTRA_DIST += $(wildcard lib/gui/*.h)
-EXTRA_DIST += $(wildcard lib/ipsec/*.h)
-EXTRA_DIST += $(wildcard lib/opphip/*.h)
-EXTRA_DIST += $(wildcard lib/performance/*.h)
-EXTRA_DIST += $(wildcard lib/tool/*.h)
-EXTRA_DIST += $(wildcard hipd/*.h)
-EXTRA_DIST += $(wildcard firewall/*.h)
-EXTRA_DIST += $(wildcard test/*.h)
-EXTRA_DIST += tools/gen-python-starter.sh \
-              $(wildcard tools/*.h)
-EXTRA_DIST += release.version
+EXTRA_DIST =  debian doc hipext hipfwmi lib/android patches
+EXTRA_DIST += test/packaging test/configs
+EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh i3-cfg-PL.xml
+EXTRA_DIST += release.version tcp verbose-headers.txt
+EXTRA_DIST += tools/gen-python-starter.sh
 EXTRA_DIST += m4 # required for CentOS "make bin" target
+EXTRA_DIST += $(HIPL_HEADER_LIST)
 
-# XX TODO: remove these when maemo building uses spec files
-EXTRA_DIST += test/packaging/create-deb.sh
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/preinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN-FW/preinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/control
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN-gconf/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN/control
-EXTRA_DIST += test/packaging/armel/DEBIAN/prerm
-EXTRA_DIST += test/packaging/armel/DEBIAN/rules
-EXTRA_DIST += test/packaging/armel/DEBIAN/changelog
-EXTRA_DIST += test/packaging/armel/DEBIAN/postinst
-EXTRA_DIST += test/packaging/armel/DEBIAN/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN/postrm
-EXTRA_DIST += test/packaging/armel/DEBIAN/copyright
-EXTRA_DIST += test/packaging/armel/DEBIAN/preinst
-EXTRA_DIST += libinet6/include
+BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
 
 # Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
 # Gtk requires the images without the hipl prefix hence we use ".." below
 imagesdir = $(pkgdatadir)/../pixmaps
 dist_images_DATA = lib/gui/hipmanager.png
 
-# TODO remove libinet6 after next release
-if HIP_LIBINET6
-SUBDIRS = libinet6
-endif
-
 ### bin_PROGRAMS ###
 bin_PROGRAMS = test/conntest-client-opp \
                test/conntest-client-hip \
-               test/conntest-client-native \
-               test/conntest-client-native-user-key \
                test/conntest-server \
-               test/conntest-server-native \
-               test/hipsetup \
-               test/first_test \
                test/cookietest \
                test/keygentest \
                test/hashtest \
@@ -175,23 +100,10 @@ test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
 
 test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
                                    test/conntest.c
-test_conntest_client_native_SOURCES = test/conntest-client-native.c \
-                                      test/conntest.c
-test_conntest_client_native_user_key_SOURCES = test/conntest-client-native-user-key.c
 
 test_conntest_server_SOURCES = test/conntest-server.c \
                                test/conntest.c
 
-test_conntest_server_native_SOURCES = test/conntest-server-native.c \
-                                      test/conntest.c
-
-test_hipsetup_SOURCES = test/hipsetup.c \
-                        test/misc_install.c \
-                        test/conntest.c
-
-test_first_test_SOURCES = test/first_test.c \
-                          test/misc_install.c \
-                          test/conntest.c
 
 test_cookietest_SOURCES = test/cookietest.c
 
@@ -201,9 +113,7 @@ test_hashtest_SOURCES = test/hashtest.c
 
 test_listtest_SOURCES = test/listtest.c
 
-if HIP_DHT
 test_dhtteststub_SOURCES = test/dhtteststub.c
-endif
 
 test_certteststub_SOURCES = test/certteststub.c
 
@@ -213,9 +123,7 @@ test_hc_performance_SOURCES = test/hc_performance.c
 
 test_auth_performance_SOURCES = test/auth_performance.c
 
-if HIP_PERFORMANCE
 test_dh_performance_SOURCES = test/dh_performance.c
-endif
 
 tools_hipconf_SOURCES = tools/hipconftool.c
 
@@ -229,7 +137,6 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/registration.c \
                     hipd/user.c \
                     hipd/hadb.c \
-                    hipd/oppdb.c \
                     hipd/close.c \
                     hipd/configfilereader.c \
                     hipd/input.c \
@@ -239,13 +146,11 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/netdev.c \
                     hipd/bos.c \
                     hipd/nat.c \
-                    hipd/icookie.c \
                     hipd/init.c \
                     hipd/maintenance.c \
                     hipd/accessor.c \
                     hipd/oppipdb.c \
                     hipd/dh.c \
-                    hipd/tcptimeout.c \
                     hipd/cert.c \
                     hipd/user_ipsec_sadb_api.c \
                     hipd/user_ipsec_hipd_msg.c \
@@ -257,7 +162,7 @@ hipd_hipd_SOURCES = hipd/update.c \
                     hipd/hit_to_ip.c \
                     hipd/update_legacy.c \
                     hipd/hadb_legacy.c \
-                    hipd/heartbeat.c 
+                    hipd/heartbeat.c
 if HIP_I3
 hipd_hipd_SOURCES += hipd/hi3.c
 endif
@@ -274,18 +179,20 @@ if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
 
-if HIP_FIREWALL
+if HIP_OPPORTUNISTIC
+hipd_hipd_SOURCES += hipd/oppdb.c
+endif
+
 firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/conntrack.c \
                          firewall/rule_management.c \
                          firewall/helpers.c \
                          firewall/firewall_control.c \
                          firewall/proxydb.c \
-                         firewall/conndb.c \
+                         firewall/proxyconndb.c \
                          firewall/dlist.c \
                          firewall/hslist.c \
                          firewall/user_ipsec_api.c \
-                         firewall/user_ipsec_esp.c \
                          firewall/user_ipsec_sadb.c \
                          firewall/user_ipsec_fw_msg.c \
                          firewall/common_hipd_msg.c \
@@ -298,22 +205,19 @@ firewall_hipfw_SOURCES = firewall/firewall.c \
                          firewall/firewalldb.c \
                          firewall/lsi.c \
                          firewall/sysopp.c \
-                         firewall/sava_api.c \
-                         firewall/savah_gateway.c \
                          firewall/cache.c \
                          firewall/cache_port.c \
-                         firewall/datapkt.c
+                         firewall/datapkt.c \
+                         firewall/user_ipsec_esp.c
 
 if HIP_MIDAUTH
 firewall_hipfw_SOURCES += firewall/midauth.c \
                           firewall/pisa.c \
                           firewall/pisa_cert.c
 endif
-endif # HIP_FIREWALL
 
-if HIP_AGENT
 # NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
+agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
 
 agent_hipagent_SOURCES = agent/agent.c \
                          agent/tools.c \
@@ -324,7 +228,7 @@ agent_hipagent_SOURCES = agent/agent.c \
                          agent/language.c
 
 # NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-lib_gui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing
+lib_gui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
 
 lib_gui_libhipgui_la_SOURCES = lib/gui/hipgui.c \
                                lib/gui/widgets.c \
@@ -332,36 +236,42 @@ lib_gui_libhipgui_la_SOURCES = lib/gui/hipgui.c \
                                lib/gui/events.c \
                                lib/gui/create.c \
                                lib/gui/dragndrop.c
-endif # HIP_AGENT
 
 lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
 
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
                                  lib/core/hashtable.c \
                                  lib/core/hashtree.c \
-                                 lib/core/utils.c \
+                                 lib/core/prefix.c \
                                  lib/core/certtools.c \
                                  lib/core/linkedlist.c \
                                  lib/core/debug.c \
                                  lib/core/message.c \
                                  lib/core/esp_prot_common.c \
-                                 lib/core/misc.c \
+                                 lib/core/hostsfiles.c \
+                                 lib/core/filemanip.c \
                                  lib/core/hashchain.c \
+                                 lib/core/hostid.c \
+                                 lib/core/hip_udp.c \
+                                 lib/core/solve.c \
+                                 lib/core/transform.c \
+                                 lib/core/keylen.c \
+                                 lib/core/hit.c \
+                                 lib/core/straddr.c \
                                  lib/core/sqlitedbapi.c \
                                  lib/core/hashchain_store.c \
                                  lib/core/hip_statistics.c \
-                                 lib/core/getendpointinfo.c
+                                 lib/core/crypto.c
 
 if HIP_PRIVSEP
 lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
 
-lib_tool_libhiptool_la_SOURCES = lib/tool/crypto.c \
-                                 lib/tool/pk.c \
+lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
                                  lib/tool/nlink.c \
-                                 lib/tool/lutil.c
+                                 lib/tool/lutil.c \
+                                 lib/tool/checksum.c
 
-if HIP_PFKEY
 ############################ NOTE ##################################
 #
 # Note: when you upgrade this library, please do the following:
@@ -382,8 +292,6 @@ lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
 AM_YFLAGS = -d -p __libhipsec
 AM_LFLAGS = -P__libhipsec -olex.yy.c
 
-BUILT_SOURCES = lib/ipsec/policy_parse.h
-
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
 #lib_ipsec_la_LDFLAGS = -version-info 0:1:0
@@ -392,31 +300,24 @@ BUILT_SOURCES = lib/ipsec/policy_parse.h
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
 DISTCLEANFILES = lib/ipsec/policy_token.h
 
-else
-
 # don't use libipsec, but xfrmapi
+if HIP_PFKEY
+lib_tool_libhiptool_la_SOURCES += lib/tool/pfkeysadb.c
+else
 lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
-
 endif # HIPPFKEY
 
-if HIP_PERFORMANCE
 lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
-endif
 
-if HIP_OPPORTUNISTIC
 lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
                                    lib/opphip/wrap_db.c
-endif
 
-if HIP_DHT
 # NOTE: this would overwrite AM_CFLAGS, so we need to append it
 lib_dht_libhipdht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
 
 lib_dht_libhipdht_la_SOURCES = lib/dht/libhipdht.c \
                                lib/dht/libhipdhtxml.c
-endif
 
-if HIP_I3
 i3_aeshash_libaes_a_SOURCES = i3/aeshash/aescrypp.c \
                               i3/aeshash/aescrypt.c \
                               i3/aeshash/aeshash.c \
@@ -435,7 +336,7 @@ i3_chord_libchord_a_SOURCES = i3/chord/api.c \
                               i3/chord/process.c \
                               i3/chord/stabilize.c \
                               i3/chord/util.c \
-                              i3/utils/gen_utils.c 
+                              i3/utils/gen_utils.c
 
 
 i3_chord_gen_conf_SOURCES = i3/chord/gen_conf.c
@@ -484,7 +385,7 @@ i3_i3_client_libi3client_a_SOURCES = i3/i3_client/downhill_simplex.c \
                                      i3/i3_client/ping_thread.c \
                                      i3/i3_client/http.c \
                                      i3/i3_client/qsort.c
-                                     
+
 i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c \
                               i3/utils/eprintf.c \
                               i3/utils/gen_utils.c \
@@ -492,16 +393,16 @@ i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c \
                               i3/utils/event.c \
                               i3/utils/netwrap_posix.c
 
-endif # HIP_I3
-
 ### *_LDADD ###
 
-test_conntest_client_opp_LDADD = lib/core/libhipcore.la \
-                                 lib/tool/libhiptool.la
+test_conntest_client_opp_LDADD =
 
 if HIP_OPPORTUNISTIC
 test_conntest_client_opp_LDADD += lib/opphip/libopphip.la
 endif
+
+test_conntest_client_opp_LDADD += lib/core/libhipcore.la \
+                                  lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_conntest_client_opp_LDADD += lib/performance/libperformance.la
@@ -513,53 +414,11 @@ if HIP_PERFORMANCE
 test_conntest_client_hip_LDADD += lib/performance/libperformance.la
 endif
 
-test_conntest_client_native_LDADD = lib/core/libhipcore.la \
-                                    lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_conntest_client_native_LDADD += lib/performance/libperformance.la
-endif
-
-test_conntest_client_native_user_key_LDADD = lib/core/libhipcore.la \
-                                             lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_conntest_client_native_user_key_LDADD += lib/performance/libperformance.la
-endif
-
 test_conntest_server_LDADD = lib/core/libhipcore.la \
                              lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_conntest_server_LDADD += lib/performance/libperformance.la
-endif
-
-test_conntest_server_native_LDADD = lib/core/libhipcore.la \
-                                    lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_conntest_server_native_LDADD += lib/performance/libperformance.la
-endif
-
-test_hipsetup_LDADD = lib/core/libhipcore.la \
-                      lib/tool/libhiptool.la \
-                      lib/conf/libhipconf.la
-if HIP_DHT
-test_hipsetup_LDADD += lib/dht/libhipdht.la
-endif
-
-if HIP_PERFORMANCE
-test_hipsetup_LDADD += lib/performance/libperformance.la
-endif
-
-test_first_test_LDADD = lib/core/libhipcore.la \
-                        lib/tool/libhiptool.la \
-                        lib/conf/libhipconf.la
-if HIP_DHT
-test_first_test_LDADD += lib/dht/libhipdht.la
-endif
-
-if HIP_PERFORMANCE
-test_first_test_LDADD += lib/performance/libperformance.la
 endif
 
 test_cookietest_LDADD = lib/core/libhipcore.la \
@@ -584,9 +443,9 @@ endif
 
 
 if HIP_DHT
-test_dhtteststub_LDADD = lib/core/libhipcore.la \
-                             lib/tool/libhiptool.la \
-                             lib/dht/libhipdht.la
+test_dhtteststub_LDADD = lib/dht/libhipdht.la \
+                         lib/core/libhipcore.la \
+                         lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 test_dhtteststub_LDADD += lib/performance/libperformance.la
@@ -626,9 +485,9 @@ test_dh_performance_LDADD = lib/core/libhipcore.la \
                             lib/performance/libperformance.la
 endif
 
-tools_hipconf_LDADD = lib/core/libhipcore.la \
-                      lib/tool/libhiptool.la \
-                      lib/conf/libhipconf.la
+tools_hipconf_LDADD = lib/conf/libhipconf.la \
+                      lib/core/libhipcore.la \
+                      lib/tool/libhiptool.la
 
 # required by libhipconf
 if HIP_PERFORMANCE
@@ -693,7 +552,7 @@ agent_hipagent_LDADD = lib/gui/libhipgui.la \
 if HIP_DHT
 agent_hipagent_LDADD += lib/dht/libhipdht.la
 endif
-                 
+
 if HIP_PERFORMANCE
 agent_hipagent_LDADD += lib/performance/libperformance.la
 endif
@@ -721,17 +580,8 @@ i3_chord_chord_getfingers_LDADD = $(APP_LADD)
 i3_chord_chord_traceroute_LDADD = $(APP_LADD)
 endif # HIP_I3
 
-if HIP_LIBINET6
-test_conntest_client_hip_LDADD += libinet6/libinet6.la
-test_conntest_client_native_LDADD += libinet6/libinet6.la
-test_conntest_client_native_user_key_LDADD += libinet6/libinet6.la
-test_conntest_server_LDADD += libinet6/libinet6.la
-test_conntest_server_native_LDADD += libinet6/libinet6.la
-test_hipsetup_LDADD += libinet6/libinet6.la
-endif
-
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
-             
+
 ###### PYTHON stuff below ######
 # TODO python parts still needs clean-up
 if HAVE_PYTHON
@@ -753,62 +603,44 @@ dns_PYTHON = tools/DNS/Base.py \
              tools/DNS/lazy.py \
              tools/DNS/Status.py \
              tools/DNS/Serialization.py
-             
+
 dnsdir = $(pyexecdir)/tools/DNS
 
 tools_hipdnsproxy_PYTHON = tools/dnsproxy.py \
                            tools/pyip6.py \
                            tools/hosts.py \
                            tools/util.py
-                           
+
 tools_hipdnsproxydir = $(pyexecdir)/tools/hipdnsproxy
 
 tools_hipdnskeyparse_PYTHON = tools/parse-key-3.py \
                               tools/myasn.py
-                              
+
 tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 
 endif # HAVE_PYTHON
 
-
-
-# TODO directly stating targets seems wrong in Makefile.am - Rene
 doxygen:
-	cd doc && doxygen
-rpm:
-	test/packaging/create-package.sh rpm
+	cd @top_srcdir@/doc && doxygen
 
-olddeb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
+# The olddeb target is for maemo builds only
+bin deb increl olddeb rpm syncrepo:
+	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
 
-deb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb
+tools/hipdnsproxy: tools/dnsproxy.py
+tools/hipdnskeyparse: tools/parse-key-3.py
+tools/hipdnsproxy tools/hipdnskeyparse:
+	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
 
-bin:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh bin
+autotools-clean: maintainer-clean
+	rm -f aclocal.m4 compile config.* configure depcomp install-sh
+	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
-increl:
-	test/packaging/create-package.sh increl
+HIPL_HEADER_OBJS = $(HIPL_HEADER_LIST:.h=.ho)
+CLEANFILES += $(HIPL_HEADER_OBJS)
 
-syncrepo:
-	test/packaging/create-package.sh syncrepo
+checkheaders: $(HIPL_HEADER_OBJS)
+%.ho: %.h
+	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
-# Automake does not build the shell scripts without this
-tools/hipdnsproxy:
-	@sh test -x tools/hipdnsproxy || tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
-
-tools/hipdnskeyparse:
-	@sh test -x tools/hipdnskeyparse || tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
-
-# This is necessary, because otherwise parallel builds may fail.
-all: all-local
-
-# This workaround forces automake to generate the scripts on each run. It is
-# necessary because otherwise "make rpm" target has the old $pyexecdir from
-# "make dist" and it refuses to build the scripts again.
-all-local:
-	@rm -f tools/hipdnsproxy
-	@rm -f tools/hipdnskeyparse
-	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnsproxy tools/dnsproxy.py tools/hipdnsproxy
-	@sh tools/gen-python-starter.sh $(pyexecdir)/tools/hipdnskeyparse tools/parse-key-3.py tools/hipdnskeyparse
+.PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo

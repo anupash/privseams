@@ -46,5 +46,5 @@ echo "Starting server"
 
 #nc6 -n -vv -l -p $PORT --sndbuf-size=1000 < $MP3
 nc6 -n -vv -l -p $PORT < $MP3
-#$HIPL_DIR/test/demo/stdinserver tcp $PORT < $AVI 
-#nc6 -n -vv -l -p $PORT < $AVI 
+#$HIPL_DIR/test/demo/stdinserver tcp $PORT < $AVI
+#nc6 -n -vv -l -p $PORT < $AVI

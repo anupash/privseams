@@ -19,7 +19,7 @@
 
 ## VARIABLES
 
-# START configuration 
+# START configuration
 # Variables that have to be changed to fit network configuration
 
 # start home network
@@ -34,7 +34,7 @@ OUR_ADDRV6="3::1"
 OUR_SECONDARY_ADDRV6="3::10"
 
 # end home network
- 
+
 # start test network
 
 #PEER_HIT="2001:11:8ed8:59b:95ff:c8b:8aba:9c24"
@@ -48,7 +48,7 @@ OUR_SECONDARY_ADDRV6="3::10"
 
 # end test network
 
-# masks 
+# masks
 OUR_MASK4="/24"
 OUR_MASK4_SECONDARY="/32"
 OUR_MASK6="/64"
@@ -86,37 +86,37 @@ pidofvarians=""
 
 function isnum {
     if [ $1 -eq $1 2> /dev/null ]; then
-	return 0
+        return 0
     else
-	return -1
-    fi 
+        return -1
+    fi
 }
 
 function init_maps {
     if [ $1 -eq 4 ] ; then
-	#printf "Adding %s to %s mapping\n" $PEER_HIT $PEER_ADDRV4
-	sudo hipconf add map $PEER_HIT $PEER_ADDRV4
+        #printf "Adding %s to %s mapping\n" $PEER_HIT $PEER_ADDRV4
+        sudo hipconf add map $PEER_HIT $PEER_ADDRV4
     else
-	#printf "Adding %s to %s mapping\n" $PEER_HIT $PEER_ADDRV6
-	sudo hipconf add map $PEER_HIT $PEER_ADDRV6
+        #printf "Adding %s to %s mapping\n" $PEER_HIT $PEER_ADDRV6
+        sudo hipconf add map $PEER_HIT $PEER_ADDRV6
     fi
 }
 
 function check_transform {
     transorder=9
     if [ "$1" = "aes" ] ; then
-	transorder=123
+        transorder=123
     fi
-    if [ "$1" = "3des" ] ; then 
-	transorder=213
+    if [ "$1" = "3des" ] ; then
+        transorder=213
     fi
-    if [ "$1" = "null" ] ; then 
-	# no use just filling in the void
-	transorder=0
+    if [ "$1" = "null" ] ; then
+        # no use just filling in the void
+        transorder=0
     fi
     if [ $transorder == 9 ] ; then
-	echo "Unknown transformation"
-	exit 0
+        echo "Unknown transformation"
+        exit 0
     fi
 }
 
@@ -165,7 +165,7 @@ function del_secondary_v6 {
     sudo ip addr del $OUR_SECONDARY_ADDRV6$OUR_MASK6 dev $DEV
     sleep $1
 }
- 
+
 function add_current_v4 {
     sudo ip addr add $OUR_ADDRV4$OUR_MASK4 dev $DEV
     sleep $1
@@ -202,10 +202,10 @@ function reset_hip {
     sudo hipconf rst all
     sleep 10
     if [ $transorder -eq 0 ] ; then
-	echo "Skipped transformation order setting"
+        echo "Skipped transformation order setting"
     else
-	printf "Setting transorder to %s\n" $transorder
-	sudo hipconf transform order $transorder
+        printf "Setting transorder to %s\n" $transorder
+        sudo hipconf transform order $transorder
     fi
     sleep 15
 }
@@ -219,12 +219,12 @@ function add_results {
     pidofiperf=$(pidof iperf)
     while [ "$pidofiperf" != "" ]
     do
-	pidofiperf=$(pidof iperf)
+        pidofiperf=$(pidof iperf)
     done
 
-    ## strip the results from the file    
+    ## strip the results from the file
 
-    # get the throughput Mbytes/GBytes 
+    # get the throughput Mbytes/GBytes
     # With 10/100 switches Mbytes With 10/100/1000 switches GBytes
     ctmp1=`grep 'MBytes' $TMP_FILE | awk '$6 == "MBytes" {print $5} $7 == "MBytes" {print $6}'`
     # get the throughput per sec
@@ -239,24 +239,24 @@ function add_results {
 
 function calculate_results {
     printf "\n"
-    # count the results	
+    # count the results
     tmp1=$total_throughput
     tmp2=$total_throughput2
     mean=$(echo "scale=5; ($tmp1 / $TEST_COUNT)" | bc -l)
     varians=$(echo "scale=5; (($tmp2 - ($tmp1 * $mean)) / ($TEST_COUNT - 1))" | bc -l)
     varians=$(echo "scale=5; sqrt($varians)" | bc -l)
-    
+
     ## Print the result for MBytes
     echo Mean $mean MBytes Variance $varians MBytes Interval $timing
     total_throughput=0
     total_throughput2=0
-    
+
     tmp1=$total_throughputsec
     tmp2=$total_throughputsec2
     meansec=$(echo "scale=5; ($tmp1 / $TEST_COUNT)" | bc -l)
     varianssec=$(echo "scale=5; (($tmp2 - ($tmp1 * $meansec)) / ($TEST_COUNT - 1))" | bc -l)
     varianssec=$(echo "scale=5; sqrt($varianssec)" | bc -l)
-	
+
     ## Print the result for MBits/sec
     echo Mean $meansec MBits/sec Variance $varianssec MBits/sec Interval $timing
     total_throughputsec=0
@@ -267,121 +267,121 @@ function calculate_results {
 
 function si44 {
     echo "Testing 4to4 soft innerfamily handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_networking
-	    reset_hip
-	    init_maps 4
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 5
-	    add_secondary_v4 $j
-	    del_current_v4 0
-	    droute
-	    add_results $j
-	done
-	calculate_results
-	printf "\n"
-    done 
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_networking
+            reset_hip
+            init_maps 4
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 5
+            add_secondary_v4 $j
+            del_current_v4 0
+            droute
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
+    done
     reset_networking
     exit 0
 }
 
 function si66 {
     echo "Testing 6to6 soft innerfamily handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_networking
-	    add_current_v6 0
-	    del_current_v4 0	    
-	    droute       
-	    sleep 60 # tweaked to higher sleep
-	    reset_hip
-	    sleep 5
-	    init_maps 6
-	    sleep 5
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 5
-	    add_secondary_v6 $j
-	    del_current_v6 0
-	    droute
-	    add_results $j
-	done
-	calculate_results
-	printf "\n"
-    done 
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_networking
+            add_current_v6 0
+            del_current_v4 0
+            droute
+            sleep 60 # tweaked to higher sleep
+            reset_hip
+            sleep 5
+            init_maps 6
+            sleep 5
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 5
+            add_secondary_v6 $j
+            del_current_v6 0
+            droute
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
+    done
     reset_networking
     exit 0
 }
 
 function hi44 {
     echo "Testing 4to4 hard innerfamily handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_networking
-	    reset_hip
-	    init_maps 4
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 5
-	    del_current_v4 $j
-	    add_secondary_v4 0
-	    droute
-	    add_results $j
-	done
-	calculate_results
-	printf "\n"
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_networking
+            reset_hip
+            init_maps 4
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 5
+            del_current_v4 $j
+            add_secondary_v4 0
+            droute
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
     done
     reset_networking
     exit 0
 }
 
-function hi66 { 
+function hi66 {
     echo "Testing 6to6 hard innerfamily handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_networking
-	    add_current_v6 0
-	    del_current_v4 0
-	    droute
-	    sleep 30
-	    reset_hip
-	    init_maps 6
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 5
-	    del_current_v6 $j
-	    add_secondary_v6 0
-	    droute
- 	    add_results $j
-	done
-	calculate_results
-	printf "\n"
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_networking
+            add_current_v6 0
+            del_current_v4 0
+            droute
+            sleep 30
+            reset_hip
+            init_maps 6
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 5
+            del_current_v6 $j
+            add_secondary_v6 0
+            droute
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
     done
     reset_networking
     exit 0
@@ -389,31 +389,31 @@ function hi66 {
 
 function sif46 {
     echo "Testing 4to6 soft interfamily handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_networking
-	    reset_hip
-	    sleep 10
-	    sudo hipconf locator on
-	    sleep 15
-	    init_maps 4
-	    sleep 35
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 5
-	    add_current_v6 $j
-	    del_current_v4 0
-	    droute
-	    add_results $j
-	done
-	calculate_results
-	printf "\n"
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_networking
+            reset_hip
+            sleep 10
+            sudo hipconf locator on
+            sleep 15
+            init_maps 4
+            sleep 35
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 5
+            add_current_v6 $j
+            del_current_v4 0
+            droute
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
     done
     reset_networking
     exit 0
@@ -421,65 +421,65 @@ function sif46 {
 
 function sif64 {
     echo "Testing 6to4 soft interfamily handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_networking
-	    add_current_v6 0
-	    del_current_v4 0
-	    droute
-	    sleep 30
-	    reset_hip
-	    sleep 10
-	    sudo hipconf locator on
-	    sleep 5
-	    init_maps 6
-	    sleep 35
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 5
-	    add_current_v4 $j
-	    del_current_v6 0
-	    droute
-	    add_results $j
-	done
-	calculate_results
-	printf "\n"
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_networking
+            add_current_v6 0
+            del_current_v4 0
+            droute
+            sleep 30
+            reset_hip
+            sleep 10
+            sudo hipconf locator on
+            sleep 5
+            init_maps 6
+            sleep 35
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 5
+            add_current_v4 $j
+            del_current_v6 0
+            droute
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
     done
     reset_networking
     exit 0
 }
- 
-function hif46 { 
+
+function hif46 {
     echo "Testing 4to6 hard interfamily handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_networking
-	    reset_hip
-	    sudo hipconf locator on
-	    sleep 5
-	    init_maps 4
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 5
-	    del_current_v4 $j
-	    add_current_v6 0
-	    droute
-	    add_results $j
-	done
-	calculate_results
-	printf "\n"
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_networking
+            reset_hip
+            sudo hipconf locator on
+            sleep 5
+            init_maps 4
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 5
+            del_current_v4 $j
+            add_current_v6 0
+            droute
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
     done
     reset_networking
     exit 0
@@ -487,33 +487,33 @@ function hif46 {
 
 function hif64 {
     echo "Testing 6to4 hard interfamily handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_networking
-	    add_current_v6 0
-	    del_current_v4 0
-	    droute
-	    sleep 50
-	    reset_hip
-	    sudo hipconf locator on
-	    sleep 5
-	    init_maps 6
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 5
-	    del_current_v6 $j
-	    add_current_v4 0
-	    droute
-	    add_results $j
-	done
-	calculate_results
-	printf "\n"
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_networking
+            add_current_v6 0
+            del_current_v4 0
+            droute
+            sleep 50
+            reset_hip
+            sudo hipconf locator on
+            sleep 5
+            init_maps 6
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 5
+            del_current_v6 $j
+            add_current_v4 0
+            droute
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
     done
     reset_networking
     exit 0
@@ -521,46 +521,46 @@ function hif64 {
 
 function base4 {
     echo "Testing v4 base line without handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     reset_networking
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    iperf $IPERF_OPTIONS4 $PEER_ADDRV4 -t $timing > $TMP_FILE &
-	    echo moi
-	    sleep 1
-	    add_results $j
-	done
-	calculate_results
-	let timing=$IPERF_INTERVAL-$j
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            iperf $IPERF_OPTIONS4 $PEER_ADDRV4 -t $timing > $TMP_FILE &
+            echo moi
+            sleep 1
+            add_results $j
+        done
+        calculate_results
+        let timing=$IPERF_INTERVAL-$j
     done
     exit 0
 }
 
 function base6 {
     echo "Testing v6 base line without handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     reset_networking
     add_current_v6 20
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    iperf $IPERF_OPTIONS6 $PEER_ADDRV6 -t $timing > $TMP_FILE &
-	    sleep 1
-	    add_results $j
-	done
-	calculate_results
-	let timing=$IPERF_INTERVAL-$j
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            iperf $IPERF_OPTIONS6 $PEER_ADDRV6 -t $timing > $TMP_FILE &
+            sleep 1
+            add_results $j
+        done
+        calculate_results
+        let timing=$IPERF_INTERVAL-$j
     done
     reset_networking
     exit 0
@@ -568,25 +568,25 @@ function base6 {
 
 function hbase4 {
     echo "Testing HIP v4 base line without handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     reset_networking
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_hip
-	    init_maps 4
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 1
-	    add_results $j
-	done
-	calculate_results
-	printf "\n"
-	let timing=$IPERF_INTERVAL-$j
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_hip
+            init_maps 4
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 1
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
+        let timing=$IPERF_INTERVAL-$j
     done
     reset_networking
     exit 0
@@ -594,26 +594,26 @@ function hbase4 {
 
 function hbase6 {
     echo "Testing HIP v6 base line without handovers" $TEST_COUNT \
-	 "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
-	 "Transform order" $transorder
+         "tests max gap is" $max "and test duration" $IPERF_INTERVAL \
+         "Transform order" $transorder
     reset_networking
     add_current_v6 20
     timing=$IPERF_INTERVAL
     let max=$max+1
     for (( j=1 ; j<=max ; j++ ))
     do
-	for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
-	do 
-	    pround $i $j
-	    reset_hip
-	    init_maps 6    
-	    iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
-	    sleep 1
-	    add_results $j
-	done
-	calculate_results
-	printf "\n"
-	let timing=$IPERF_INTERVAL-$j
+        for ((  i=1 ;  i<=$TEST_COUNT ;  i++  ))
+        do
+            pround $i $j
+            reset_hip
+            init_maps 6
+            iperf $IPERF_OPTIONS6 $PEER_HIT -t $timing > $TMP_FILE &
+            sleep 1
+            add_results $j
+        done
+        calculate_results
+        printf "\n"
+        let timing=$IPERF_INTERVAL-$j
     done
     reset_networking
     exit 0
@@ -623,12 +623,12 @@ function hbase6 {
 if [ $# -eq 2 ] ; then
     check_transform $2
     case $1 in
-	"si44")  si44  ;;
-	"si66")  si66  ;;
-	"sif46") sif46 ;;
-	"sif64") sif64 ;;
-	*) echo "ERROR: Unknown test type"  
-	    exit 0 ;;
+        "si44")  si44  ;;
+        "si66")  si66  ;;
+        "sif46") sif46 ;;
+        "sif64") sif64 ;;
+        *) echo "ERROR: Unknown test type"
+            exit 0 ;;
     esac
 elif [ $# -eq 3 ] ; then
     check_transform $3
@@ -637,24 +637,22 @@ elif [ $# -eq 3 ] ; then
     returnval=$?
     if [ $returnval -eq 0 ] ; then
         case $1 in
-	    "hi44")  hi44     ;;
-	    "hi66")  hi66     ;;
-	    "hif46") hif46    ;;
-	    "hif64") hif64    ;;
-	    "hb4") hbase4 ;;
-	    "hb6") hbase6 ;;
-	    "b4")  base4  ;;
-	    "b6")  base6  ;;
-	    *) echo "ERROR: Unknown test type"  
-		exit 0 ;;
-	esac 
+            "hi44")  hi44     ;;
+            "hi66")  hi66     ;;
+            "hif46") hif46    ;;
+            "hif64") hif64    ;;
+            "hb4") hbase4 ;;
+            "hb6") hbase6 ;;
+            "b4")  base4  ;;
+            "b6")  base6  ;;
+            *) echo "ERROR: Unknown test type"
+                exit 0 ;;
+        esac
     else
-	usage
-	exit 0
+        usage
+        exit 0
     fi
 else
     usage
     exit 0
 fi
-
-

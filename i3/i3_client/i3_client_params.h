@@ -11,14 +11,14 @@
 #define SERVER_UPDATE_PERIOD 30 /* in seconds */
 
 /** How often should a trigger be refreshed?
-  * This value should always be a little less than
-  * the trigger refresh value at the i3 server.
-  */
-#define TRIGGER_REFRESH_PERIOD	20
-#define ACK_TIMEOUT		2
-#define ID_REFRESH_PERIOD	10
-#define MAX_NUM_TRIG_RETRIES	6
-#define MAX_NUM_ID_RETRIES	3
+ * This value should always be a little less than
+ * the trigger refresh value at the i3 server.
+ */
+#define TRIGGER_REFRESH_PERIOD  20
+#define ACK_TIMEOUT             2
+#define ID_REFRESH_PERIOD       10
+#define MAX_NUM_TRIG_RETRIES    6
+#define MAX_NUM_ID_RETRIES      3
 
 
 #endif

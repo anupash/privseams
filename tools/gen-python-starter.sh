@@ -33,7 +33,7 @@ fi
 
 if echo \$path|grep -q /usr
 then
-  python $PYTHON_PATH/$PYTHON_SCRIPT \$@
+  python $PYTHON_PATH/\`basename $PYTHON_SCRIPT\` \$@
 else
   python \$dev_script \$@
 fi

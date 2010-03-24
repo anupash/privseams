@@ -28,8 +28,9 @@ other related tools and test software.
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
 ./autogen.sh --prefix=/usr
-%configure --prefix=/usr --enable-libinet6
-make -C doc all
+%configure --prefix=/usr
+make -C doc
+make -j 4 all
 
 # Note:
 # This debbuild script is fragile and does not tolerate comments well.
@@ -105,7 +106,7 @@ Group: System Environment/Kernel
 
 %package test
 Requires: hipl-daemon
-Summary: netcat-like command line tools with built-in HIP support for developers 
+Summary: netcat-like command line tools with built-in HIP support for developers
 Group: System Environment/Kernel
 %description test
 
@@ -156,16 +157,22 @@ install -m 755 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post lib
-/sbin/ldconfig 
+/sbin/ldconfig
 
 %post daemon
 update-rc.d hipd defaults 21
+invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop
+invoke-rc.d hipd start
 
 %post firewall
 update-rc.d hipfw defaults 20
+invoke-rc.d --quiet hipfw status >/dev/null && invoke-rc.d --force --quiet hipfw stop
+invoke-rc.d hipfw start
 
 %post dnsproxy
 update-rc.d hipdnsproxy defaults 22
+invoke-rc.d --quiet hipdnsproxy status >/dev/null && invoke-rc.d --force --quiet hipdnsproxy stop
+invoke-rc.d hipdnsproxy start
 
 %preun daemon
 invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop
@@ -187,7 +194,6 @@ rm -rf %{buildroot}
 
 %files daemon
 /usr/sbin/hipd
-/usr/bin/hipsetup
 %config /etc/init.d/hipd
 
 %files agent
@@ -209,10 +215,7 @@ rm -rf %{buildroot}
 %files test
 /usr/bin/conntest-client-opp
 /usr/bin/conntest-client-hip
-/usr/bin/conntest-client-native
-/usr/bin/conntest-client-native-user-key
 /usr/bin/conntest-server
-/usr/bin/conntest-server-native
 
 %files firewall
 /usr/sbin/hipfw
@@ -238,7 +241,7 @@ rm -rf %{buildroot}
 - Rpmbuild fixes for Fedora 8 build
 * Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>
 - added two perl searches and installed one directory in the spec file
-- added libtool, libcap-devel and xmlto to BuildRequires 
+- added libtool, libcap-devel and xmlto to BuildRequires
 * Thu May 29 2008 Juha Jylhakoski <juha.jylhakoski@hiit.fi>
 - Split hipl.spec was split to different packages
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
@@ -249,4 +252,3 @@ rm -rf %{buildroot}
 - Renamed to hipl.spec (original was from Mika) and modularized
 * Tue Feb 14 2006 Miika Komu <miika@iki.fi>
 - added changelog
-

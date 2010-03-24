@@ -277,7 +277,7 @@ class Rule(object):
             elif param == '-state':
                 verify_responder = False
                 accept_mobile = False
-                
+
                 try:
                     next = parts.pop(0)
                     if next == '!':
@@ -337,4 +337,3 @@ class Rule(object):
                     raise ValueError("Invalid char %s in hit." % repr(c))
             return True
         raise ValueError("Expected a hit, got %s." % repr(hit))
-

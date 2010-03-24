@@ -1,0 +1,14 @@
+HIPL 2.6.20 kernel patch notes 12.3.2010
+========================================
+
+This patch adds support for interfamily xfrm (beet, tunnel) as well as
+the sleep-thingy and everything else needed to run HIP(L).
+
+Note:
+
+This patch has NOT been tested thoroughly and is considered
+experimental, only for the brave (or desperate) enough stuck with the
+2.6.20 kernel.
+
+
+- joakim.koskela@hiit.fi

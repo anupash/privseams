@@ -474,7 +474,7 @@ Input and output side of the hooks are visualized in
 \autoref{fig:input_hooks} and \autoref{fig:output_hooks}.
 \autoref{tbl:hook_descriptions} explains each numbered point in the
 figures. An interface name in code and an explanation for each point
-is given in the figure. 
+is given in the figure.
 
 \begin{figure}
    \begin{minipage}[b]{0.5\textwidth}
@@ -537,7 +537,7 @@ f & \verb|hip_handle_inet6_addr_del| &
 This hook is called when an IPv6 address is deleted.\\
 
 g & \verb|hip_get_addr| &
-  
+
 A small modification in routing and neighbor discovery is needed
 because they behave in a rather odd way in Linux: transport protocols
 select the routes to be used even though it should really be selected
@@ -695,11 +695,12 @@ a limited computing capacity.
 \subsubsection{Legacy Sockets API}
 \label{sec:legacy_api_architecture}
 
-Traditional UNIX systems have a library called \verb|libc| which
-contains an implementation for the BSD socket interface~\cite{stevens}
-which are needed by network applications. USAGI has a separate libc
-implementation for testing purposes and it is called
-\verb|libinet6|. It is also used in the \ac{HIPL} project.
+% depracated
+%Traditional UNIX systems have a library called \verb|libc| which
+%contains an implementation for the BSD socket interface~\cite{stevens}
+%which are needed by network applications. USAGI has a separate libc
+%implementation for testing purposes and it is called
+%\verb|libinet6|. It is also used in the \ac{HIPL} project.
 
 Network applications typically use \ac{DNS} names to address
 peers. \ac{DNS} names have to be resolved to IPv6 addresses in libc
@@ -733,9 +734,10 @@ statically linked applications require to be recompiled. The
 recompilation of applications may even be omitted by overriding the
 \verb|libc| as presented in \cite{libcoverride}.
 
-Transparent mode is set or unset by a compile time flag in
-libinet6. This means that transparent mode is system specific instead
-of application specific. Transparent mode is enabled by default.
+% depracated
+%Transparent mode is set or unset by a compile time flag in
+%&libinet6. This means that transparent mode is system specific instead
+%of application specific. Transparent mode is enabled by default.
 
 The other flag is concerned about enforcing the use of \ac{HIP}
 independently of transparent mode. The name of the flag is
@@ -973,7 +975,7 @@ socket. The server application calls \verb|listen|, which calls
 resumes its control and calls \verb|accept| to receive a new socket
 descriptor, which the server application needs in order to communicate
 with the client. The \verb|accept| call translates first to a
-\verb|hip_accept| and then to a \verb|inet_accept| call. The 
+\verb|hip_accept| and then to a \verb|inet_accept| call. The
 \verb|accept| call blocks until the client connects to the server.
 
 \paragraph{Connection Setup on the Client}
@@ -1182,13 +1184,14 @@ Other resolver functions, such as \verb|gethostbyname|, should also be
 modified to support \ac{HIP}. Until then, \verb|getaddrinfo| suffices
 for testing purposes.
 
-Transparent mode is controlled by a static compilation flag in
-libinet6. This means that transparent mode is host specific and not
-application specific. There has been some talk about a more dynamic
-method to control transparent mode, such as using function
-\verb|setsockopt|. This is a bit contradictory because the transparent
-mode is targeted for the legacy applications and the source code in
-legacy applications should not be altered.
+%Depracated
+%Transparent mode is controlled by a static compilation flag in
+%libinet6. This means that transparent mode is host specific and not
+%application specific. There has been some talk about a more dynamic
+%method to control transparent mode, such as using function
+%\verb|setsockopt|. This is a bit contradictory because the transparent
+%mode is targeted for the legacy applications and the source code in
+%legacy applications should not be altered.
 
 Transparent mode may break existing applications, such as IP
 integrated applications. This should be investigated and tested with

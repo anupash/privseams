@@ -49,4 +49,3 @@ lockf(int filedes, int function, off_t size)
 
   return (fcntl(filedes, cmd, &fl));
 }
-

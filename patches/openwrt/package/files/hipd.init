@@ -1,0 +1,26 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+START=65
+STOP=65
+
+HIPD_OPTS="-bk"
+
+start() {
+    echo -n "Starting hipd"
+    hipd ${HIPD_OPTS}
+    echo "."
+}
+
+restart() {
+    echo -n "Restarting hipd"
+    killall hipd
+    hipd ${HIPD_OPTS}
+    echo "."
+}
+
+stop() {
+    echo -n "Stopping hipd"
+    killall hipd
+    echo "."
+}
