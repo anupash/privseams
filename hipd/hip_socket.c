@@ -12,7 +12,7 @@
 #include "hip_socket.h"
 #include "hipd.h"
 #include "input.h"
-#include "modularization.h"
+#include "pkt_handling.h"
 
 struct socketfd {
     uint16_t priority;

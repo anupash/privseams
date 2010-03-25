@@ -24,7 +24,7 @@
 #include "esp_prot_light_update.h"
 #include "hip_socket.h"
 #include "nsupdate.h"
-#include "modularization.h"
+#include "pkt_handling.h"
 #include "output.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"

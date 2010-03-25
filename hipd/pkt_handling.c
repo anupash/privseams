@@ -3,7 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  *
- * @brief HIP daemon related specializations for libmodularization (lmod).
+ * @brief Functionality for dynamic packet handling.
  *
  * @author Tim Just <tim.just@rwth-aachen.de>
  *

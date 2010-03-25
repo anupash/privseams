@@ -1,6 +1,6 @@
 /**
  * @file
- * The header file for hipd/modularization.c
+ * The header file for hipd/pkt_handling.c
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  *

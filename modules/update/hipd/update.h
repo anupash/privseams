@@ -13,7 +13,7 @@
 
 #include "lib/core/builder.h"
 #include "hipd/hadb.h"
-#include "hipd/modularization.h"
+#include "hipd/pkt_handling.h"
 
 int hip_create_locators(hip_common_t *locator_msg,
                         struct hip_locator_info_addr_item **locators);

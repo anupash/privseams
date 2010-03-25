@@ -48,7 +48,7 @@
 #include "hipd/hadb.h"
 #include "hipd/init.h"
 #include "hipd/hip_socket.h"
-#include "hipd/modularization.h"
+#include "hipd/pkt_handling.h"
 
 #include "modules/update/hipd/update.h"
 

@@ -44,7 +44,7 @@
 #include "registration.h"
 #include "hipd.h"
 #include "oppipdb.h"
-#include "modularization.h"
+#include "pkt_handling.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"

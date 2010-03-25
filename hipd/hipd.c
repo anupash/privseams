@@ -13,7 +13,7 @@
 #include "config.h"
 #include "hipd.h"
 #include "hip_socket.h"
-#include "modularization.h"
+#include "pkt_handling.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/straddr.h"
 
