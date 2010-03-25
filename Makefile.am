@@ -644,7 +644,8 @@ checkheaders: $(HIPL_HEADER_OBJS)
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
 autotools-clean: maintainer-clean
-	rm -f aclocal.m4 config.h.in configure m4/*.m4 Makefile.in
+	rm -f aclocal.m4 compile config.guess config.h.in config.sub configure
+	rm -f depcomp install-sh ltmain.sh m4/*.m4 Makefile.in missing py-compile
 	rm -rf config
 
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo
