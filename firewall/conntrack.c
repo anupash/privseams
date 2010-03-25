@@ -2172,9 +2172,9 @@ out_err:
  * @param ctx context for the control packet
  */
 int conntrack(const struct in6_addr *ip6_src,
-               const struct in6_addr *ip6_dst,
-               struct hip_common *buf,
-               hip_fw_context_t *ctx)
+              const struct in6_addr *ip6_dst,
+              struct hip_common *buf,
+              hip_fw_context_t *ctx)
 {
     struct hip_data *data = NULL;
     struct tuple *tuple   = NULL;
