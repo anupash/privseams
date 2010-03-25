@@ -3,6 +3,15 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  *
+ * This is the main source file of the module HEARTBEAT-UPDATE. Its core
+ * functionality is UPDATE triggering if HEARTBEATS fail. You can adjust the
+ * threshold which has to be reached before an UPDATE is triggered.
+ *
+ * During module initialization an maintenance function is registered. This
+ * checks if the threshold value is reached and triggers the UPDATE if needed.
+ *
+ * The heartbeat counter is set to 0, if an UPDATE was triggered.
+ *
  * @author Tim Just
  */
 

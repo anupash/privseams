@@ -23,15 +23,10 @@
  *
  * @note Implementation of the heartbeat concept in tiny branch:
  *
- *       - Send periodic ICMP messages to all associated peers (HEARTBEATs)
+ *       - Send periodic ICMP messages to all associated peers (HEARTBEATs).
+ *       - Increment the heartbeat counter in hadb.
  *       - When a HEARTBEAT response is received, calculate roundtrip time and
- *         maintain statistics.
- *
- *       If an UPDATE module exists:
- *       - Register a HEARTBEAT counter to the host association database.
- *       - Increment this counter by 1, every time a HEARTBEAT is sent.
- *       - Reset the counter (set to 0), if a HEARTBEAT response is received.
- *       - If counter reaches the threshold value, trigger an UPDATE.
+ *         maintain statistics. Reset heartbeat counter to 0.
  *
  * @author Samu Varjonen
  * @author Miika Komu
