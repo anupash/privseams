@@ -351,7 +351,7 @@ def main():
                         init_functions,
                         module_info.keys())
 
-    create_makefile_modules(os.path.join(srcdir, 'Makefile.modules'),
+    create_makefile_modules('Makefile.modules',
                             module_info,
                             disabled_modules,
                             applications,
