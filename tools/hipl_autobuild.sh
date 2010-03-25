@@ -66,9 +66,9 @@ compile()
 
 test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
 
-bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR || exit 1
+bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR || cleanup 1
 
-cd "$CHECKOUT_DIR" || exit 1
+cd "$CHECKOUT_DIR" || cleanup 1
 
 # Compile HIPL in different configurations
 # vanilla configuration
