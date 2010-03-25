@@ -1561,9 +1561,6 @@ out_err:
     if (tmp_enc != NULL) {
         free(tmp_enc);
     }
-    if (ctx->hadb_entry->dh_shared_key != NULL) {
-        free(ctx->hadb_entry->dh_shared_key);
-    }
     if (err) {
         ctx->error = 1;
     }
