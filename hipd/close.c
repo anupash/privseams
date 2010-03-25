@@ -192,20 +192,25 @@ out_err:
 }
 
 /**
- * process a CLOSE message
+ * hip_close_check_packet
  *
- * @param close the CLOSE message process
- * @param entry the corresponding host association
- * @return zero on success or negative on error
+ * Check whether a received control packet is valid or not.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
  */
-int hip_handle_close(const uint8_t packet_type,
-                     const uint32_t ha_state,
-                     struct hip_packet_context *ctx)
+int hip_close_check_packet(const uint8_t packet_type,
+                           const uint32_t ha_state,
+                           struct hip_packet_context *ctx)
 {
-    uint16_t mask = HIP_PACKET_CTRL_ANON;
-    int err = 0, echo_len;
-    struct hip_common *close_ack = NULL;
-    struct hip_echo_request *request;
+    int err = 0;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
     hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE );
@@ -235,35 +240,99 @@ int hip_handle_close(const uint8_t packet_type,
     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key, ctx->input_msg), -EINVAL,
              "Verification of close signature failed.\n");
 
-    HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
+ * hip_close_create_response
+ *
+ * Create an response (CLOSE_ACK) for a received CLOSE packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+int hip_close_create_response(const uint8_t packet_type,
+                              const uint32_t ha_state,
+                              struct hip_packet_context *ctx)
+{
+    int err = 0, echo_len;
+    uint16_t mask = HIP_PACKET_CTRL_ANON;
+    struct hip_echo_request *request;
+
+    HIP_IFE(!(ctx->output_msg = hip_msg_alloc()), -ENOMEM);
 
     HIP_IFEL(!(request =
-                   hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
-             -1, "No echo request under signature.\n");
+                 hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
+           -1, "No echo request under signature.\n");
     echo_len = hip_get_param_contents_len(request);
 
-    hip_build_network_hdr(close_ack,
-                          HIP_CLOSE_ACK,
-                          mask,
-                          &(ctx->hadb_entry)->hit_our,
-                          &(ctx->hadb_entry)->hit_peer);
+    hip_build_network_hdr(ctx->output_msg,
+                        HIP_CLOSE_ACK,
+                        mask,
+                        &(ctx->hadb_entry)->hit_our,
+                        &(ctx->hadb_entry)->hit_peer);
 
-    HIP_IFEL(hip_build_param_echo(close_ack, request + 1,
-                                  echo_len, 1, 0), -1,
-             "Failed to build echo param.\n");
+    HIP_IFEL(hip_build_param_echo(ctx->output_msg, request + 1,
+                                echo_len, 1, 0), -1,
+           "Failed to build echo param.\n");
 
     /************* HMAC ************/
-    HIP_IFEL(hip_build_param_hmac_contents(close_ack,
-                                           &(ctx->hadb_entry)->hip_hmac_out),
-             -1, "Building of HMAC failed.\n");
+    HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
+                                         &(ctx->hadb_entry)->hip_hmac_out),
+           -1, "Building of HMAC failed.\n");
 
     /********** Signature **********/
-    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key, close_ack), -EINVAL,
-             "Could not create signature.\n");
+    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
+                                 ctx->output_msg),
+           -EINVAL,
+           "Could not create signature.\n");
 
-    HIP_IFEL(hip_send_pkt(NULL, &(ctx->hadb_entry)->peer_addr, hip_get_local_nat_udp_port(),
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
+ * hip_close_create_response
+ *
+ * Send a before generated CLOSE_ACK packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+int hip_close_send_response(const uint8_t packet_type,
+                            const uint32_t ha_state,
+                            struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    HIP_IFEL(hip_send_pkt(NULL,
+                          &(ctx->hadb_entry)->peer_addr,
+                          hip_get_local_nat_udp_port(),
                           ctx->hadb_entry->peer_udp_port,
-                          close_ack, ctx->hadb_entry, 0),
+                          ctx->output_msg,
+                          ctx->hadb_entry,
+                          0),
              -ECOMM, "Sending CLOSE ACK message failed.\n");
 
     ctx->hadb_entry->state = HIP_STATE_CLOSED;
@@ -290,16 +359,15 @@ int hip_handle_close(const uint8_t packet_type,
              -1,
              "Deleting peer info failed.\n");
 out_err:
-
-    if (close_ack) {
-        HIP_FREE(close_ack);
+    if (ctx->output_msg) {
+        HIP_FREE(ctx->output_msg);
     }
-
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
     hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE );
     hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE );
 #endif
+
     return err;
 }
 
