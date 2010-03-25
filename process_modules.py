@@ -258,7 +258,8 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                 else:
                     hdr_file.write('\n\ntypedef int (*pt2Function)(void);\n')
                     hdr_file.write('\nconst int num_modules_' + current_app + ' = 0;')
-
+                    hdr_file.write('\n\nconst char *modules_' + current_app)
+                    hdr_file.write('[0] = {};')
                     hdr_file.write('\n\nstatic const pt2Function ' + current_app)
                     hdr_file.write('_init_functions[0] = {};')
 
@@ -336,7 +337,7 @@ def main():
      disabled_modules) = parse_info_file(os.path.join(srcdir, INFO_FILE_NAME),
                                          disabled_modules)
 
-    module_info  = read_module_info(MODULES_DIR,
+    module_info  = read_module_info(os.path.join(srcdir, MODULES_DIR),
                                     disabled_modules,
                                     applications,
                                     compile_type)
