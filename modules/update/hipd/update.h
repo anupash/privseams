@@ -10,10 +10,7 @@
 #define HIP_HIPD_UPDATE_H
 
 #include <stdint.h>
-
-#include "lib/core/builder.h"
-#include "hipd/hadb.h"
-#include "hipd/pkt_handling.h"
+#include "lib/core/protodefs.h"
 
 int hip_create_locators(hip_common_t *locator_msg,
                         struct hip_locator_info_addr_item **locators);

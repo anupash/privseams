@@ -15,11 +15,12 @@
 #include "update.h"
 
 #include "lib/core/builder.h"
-#include "lib/core/protodefs.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
+#include "hipd/hadb.h"
 #include "hipd/netdev.h"
 #include "hipd/nsupdate.h"
+#include "hipd/pkt_handling.h"
 #include "update_legacy.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE

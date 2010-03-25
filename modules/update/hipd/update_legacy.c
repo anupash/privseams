@@ -11,6 +11,9 @@
 
 #include "update.h"
 #include "update_legacy.h"
+#include "hipd/hipd.h"
+#include "lib/core/debug.h"
+#include "lib/core/list.h"
 
 /* required for s6_addr32 */
 #define _BSD_SOURCE
