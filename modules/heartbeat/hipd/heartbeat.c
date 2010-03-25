@@ -50,13 +50,10 @@
 #include "hipd/hip_socket.h"
 #include "hipd/pkt_handling.h"
 
-#include "modules/update/hipd/update.h"
-
 #define HIP_HEARTBEAT_INTERVAL 20
 
 int hip_icmp_sock;
 static int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
-static const int hip_heartbeat_trigger_update_threshold = 5;
 
 /**
  * This function sends ICMPv6 echo with timestamp to dsthit
@@ -310,11 +307,9 @@ out_err:
  */
 static int hip_send_heartbeat(hip_ha_t *hadb_entry, void *opaq)
 {
-    int err                                     = 0;
-    int *sockfd                                 = (int *) opaq;
-    uint8_t *heartbeat_counter                  = NULL;
-    hip_common_t *locator_msg                   = NULL;
-    struct hip_locator_info_addr_item *locators = NULL;
+    int err                    = 0;
+    int *sockfd                = (int *) opaq;
+    uint8_t *heartbeat_counter = NULL;
 
     if ((hadb_entry->state == HIP_STATE_ESTABLISHED) &&
         (hadb_entry->outbound_sa_count > 0)) {
@@ -326,31 +321,9 @@ static int hip_send_heartbeat(hip_ha_t *hadb_entry, void *opaq)
 
         *heartbeat_counter = *heartbeat_counter + 1;
         HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_counter);
-
-        if (*heartbeat_counter >= hip_heartbeat_trigger_update_threshold) {
-            HIP_DEBUG("HEARTBEAT counter reached threshold, trigger UPDATE\n");
-
-            HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
-                     "Out of memory while allocation memory for the packet\n");
-            HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
-
-            HIP_IFEL(hip_send_locators_to_one_peer(NULL,
-                                                   hadb_entry,
-                                                   &hadb_entry->our_addr,
-                                                   &hadb_entry->peer_addr,
-                                                   locators,
-                                                   HIP_UPDATE_LOCATOR),
-                     -1, "Failed to trigger update\n");
-
-            *heartbeat_counter = 0;
-        }
     }
 
 out_err:
-    if (locator_msg) {
-        free(locator_msg);
-    }
-
     return err;
 }
 
@@ -367,7 +340,7 @@ static int hip_heartbeat_maintenance(void)
     return 0;
 }
 
-static int hip_heartbeat_update_init_state(struct modular_state *state)
+static int hip_heartbeat_init_state(struct modular_state *state)
 {
     int err = 0;
     uint8_t *heartbeat_counter = NULL;
@@ -419,10 +392,9 @@ int hip_heartbeat_init(void)
              -1,
              "Error on registration of hip_heartbeat_maintenance().\n");
 
-    /** @todo This should only be done, if the module UPDATE exists */
-    HIP_IFEL(lmod_register_state_init_function(&hip_heartbeat_update_init_state),
+    HIP_IFEL(lmod_register_state_init_function(&hip_heartbeat_init_state),
              -1,
-             "Error on registration of hip_heartbeat_update_init_state().\n");
+             "Error on registration of hip_heartbeat_init_state().\n");
 
 out_err:
     return err;
