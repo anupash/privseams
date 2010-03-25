@@ -11,7 +11,7 @@ EXTRA_DIST =  debian doc hipext hipfwmi lib/android patches
 EXTRA_DIST += test/packaging test/configs
 EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh i3-cfg-PL.xml
 EXTRA_DIST += release.version tcp verbose-headers.txt
-EXTRA_DIST += tools/gen-python-starter.sh
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
