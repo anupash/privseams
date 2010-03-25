@@ -1059,7 +1059,7 @@ struct hip_packet_context {
     struct in6_addr           *dst_addr;
     struct hip_stateless_info *msg_ports;
     struct hip_hadb_state     *hadb_entry;
-    uint8_t                    drop_packet;
+    uint8_t                    error;
 };
 
 

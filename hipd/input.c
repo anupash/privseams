@@ -957,7 +957,7 @@ int hip_handle_r1(const uint8_t packet_type,
  * hip_handle_i2_in_i2_sent
  *
  * Checks wether the received I2 packet in state I2-SENT should be droppped, or
- * not. If the packet should be dropped, the drop_packet flag is set to 1.
+ * not. If the packet should be dropped, the error flag is set to 1.
  *
  * @note See RFC5201, 4.4.2., Table 4 for details.
  *
@@ -978,13 +978,13 @@ int hip_handle_i2_in_i2_sent(const uint8_t packet_type,
 {
     int err = 0;
 
-    HIP_IFEL(ctx->drop_packet,
+    HIP_IFEL(ctx->error,
              -1,
              "Abort packet processing.\n");
 
     if (hip_hit_is_bigger(&ctx->hadb_entry->hit_peer,
                           &ctx->hadb_entry->hit_our)) {
-        ctx->drop_packet = 1;
+        ctx->error = 1;
     }
 out_err:
     return err;
@@ -1037,7 +1037,7 @@ int hip_handle_i2(const uint8_t packet_type,
     struct sockaddr_storage ss_addr;
     struct sockaddr *addr                   = NULL;
 
-    HIP_IFEL(ctx->drop_packet,
+    HIP_IFEL(ctx->error,
              -1,
              "Abort packet processing.\n");
 
@@ -1565,7 +1565,7 @@ out_err:
         free(ctx->hadb_entry->dh_shared_key);
     }
     if (err) {
-        ctx->drop_packet = 1;
+        ctx->error = 1;
     }
     return err;
 }
@@ -1878,28 +1878,28 @@ int hip_handle_i1(const uint8_t packet_type,
             HIP_DEBUG("Received I1 broadcast\n");
             HIP_IFF(src_hit_is_our,
                     -1,
-                    packet_ctx->drop_packet = 1,
+                    packet_ctx->error = 1,
                     "Received a copy of own broadcast, dropping\n");
 
             HIP_IFF(hip_select_source_address(packet_ctx->dst_addr, packet_ctx->src_addr),
                     -1,
-                    packet_ctx->drop_packet = 1,
+                    packet_ctx->error = 1,
                     "Could not find source address\n");
         }
     } else if (IN6_IS_ADDR_MULTICAST(packet_ctx->dst_addr)) {
         HIP_IFF(src_hit_is_our,
                 -1,
-                packet_ctx->drop_packet = 1,
+                packet_ctx->error = 1,
                 "Received a copy of own broadcast, dropping\n");
         HIP_IFF(hip_select_source_address(packet_ctx->dst_addr, packet_ctx->src_addr),
                 -1,
-                packet_ctx->drop_packet = 1,
+                packet_ctx->error = 1,
                 "Could not find source address\n");
     }
 
     HIP_IFF(!hip_controls_sane(ntohs(packet_ctx->input_msg->control), mask),
             -1,
-            packet_ctx->drop_packet = 1,
+            packet_ctx->error = 1,
             "Received illegal controls in I1: 0x%x. Dropping\n",
             ntohs(packet_ctx->input_msg->control));
 

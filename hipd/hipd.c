@@ -306,7 +306,7 @@ static int hipd_main(int argc, char *argv[])
     packet_ctx.dst_addr    = malloc(sizeof(struct in6_addr));
     packet_ctx.msg_ports   = malloc(sizeof(struct hip_stateless_info));
     packet_ctx.hadb_entry  = NULL;
-    packet_ctx.drop_packet = 0;
+    packet_ctx.error = 0;
 
     /* Enter to the select-loop */
     HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT,

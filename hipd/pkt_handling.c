@@ -146,7 +146,7 @@ int hip_run_handle_functions(const uint8_t packet_type,
 
     while ((iter = hip_ll_iterate(hip_handle_functions[packet_type][ha_state],
                                   iter))
-           && !ctx->drop_packet) {
+           && !ctx->error) {
 
         ((struct handle_function *) iter->ptr)->func_ptr(packet_type,
                                                          ha_state,

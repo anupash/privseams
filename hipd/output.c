@@ -514,7 +514,7 @@ int hip_send_i2(const uint8_t packet_type,
     int err = 0, host_id_in_enc_len = 0;
     uint32_t spi_in = 0;
 
-    HIP_IFEL(packet_ctx->drop_packet,
+    HIP_IFEL(packet_ctx->error,
              -1,
              "Abort packet processing.\n");
 
@@ -1054,7 +1054,7 @@ int hip_send_r1(const uint8_t packet_type,
     in_port_t r1_dst_port    = 0;
     uint16_t relay_para_type = 0;
 
-    HIP_IFEL(ctx->drop_packet,
+    HIP_IFEL(ctx->error,
              -1,
              "Abort packet processing and don't send R1 packet.\n")
 
@@ -1207,7 +1207,7 @@ int hip_send_r2(const uint8_t packet_type,
     int err          = 0;
     uint16_t mask    = 0;
 
-    HIP_IFEL(packet_ctx->drop_packet,
+    HIP_IFEL(packet_ctx->error,
              -1,
              "Abort packet processing and don't send R1 packet.\n")
 
