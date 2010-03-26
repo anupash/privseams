@@ -218,7 +218,7 @@ lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
 ### *_LDADD ###
 # Initialize LDADD lists empty, because modules might add entries to LDADD in
 # Makefile.modules. This file needs to be included before the standard LDADDs,
-# because the linking order is from right to left.
+# because modules can depend on the core code.
 hipd_hipd_LDADD =
 firewall_hipfw_LDADD =
 tools_hipconf_LDADD =
