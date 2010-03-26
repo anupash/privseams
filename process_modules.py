@@ -263,7 +263,7 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                     hdr_file.write('\n\nstatic const pt2Function ' + current_app)
                     hdr_file.write('_init_functions[0] = {};')
 
-                hdr_file.write('\n\n#endif /* ' + app_string + ' */')
+                hdr_file.write('\n\n#endif /* ' + app_string + ' */\n')
                 print '|    created file: ' + hdr_file_path
             finally:
                 hdr_file.close()
@@ -330,7 +330,7 @@ def main():
             assert False, "unhandled option"
 
     if disabled_modules:
-        disabled_modules = disabled_modules.rsplit(' ')
+        disabled_modules = disabled_modules.rsplit(',')
 
     (applications,
      compile_type,
