@@ -81,7 +81,9 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 int hip_netlink_open(struct rtnl_handle *nl,
                      unsigned subscriptions,
                      int protocol);
-int hip_netlink_receive(struct rtnl_handle *nl);
+int hip_netlink_receive(struct rtnl_handle *nl,
+                        hip_filter_t handler,
+                        void *arg);
 int rtnl_open_byproto(struct rtnl_handle *rth,
                       unsigned subscriptions,
                       int protocol);

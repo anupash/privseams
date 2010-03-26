@@ -99,7 +99,8 @@ static int hip_handle_user_sock(struct hip_packet_context *packet_ctx)
 static int hip_handle_nl_ipsec_sock(struct hip_packet_context *packet_ctx)
 {
     HIP_DEBUG("netlink receive\n");
-    if (hip_netlink_receive(&hip_nl_ipsec)) {
+    if (hip_netlink_receive(&hip_nl_ipsec,
+                            hip_netdev_event, NULL)) {
         HIP_ERROR("Netlink receiving failed\n");
         return -1;
     }
@@ -110,7 +111,8 @@ static int hip_handle_nl_ipsec_sock(struct hip_packet_context *packet_ctx)
 static int hip_handle_nl_route_sock(struct hip_packet_context *packet_ctx)
 {
     HIP_DEBUG("netlink route receive\n");
-    if (hip_netlink_receive(&hip_nl_route)) {
+    if (hip_netlink_receive(&hip_nl_route,
+                            hip_netdev_event, NULL)) {
         HIP_ERROR("Netlink receiving failed\n");
         return -1;
     }

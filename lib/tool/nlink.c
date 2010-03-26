@@ -37,7 +37,6 @@
 #include "config.h"
 #include "lib/core/hip_udp.h"
 #include "nlink.h"
-#include "hipd/netdev.h"
 
 /* New one to prevent netlink overrun */
 #if 0
@@ -95,13 +94,18 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
  * Retrieve a NETLINK message from a netlink-based file handle
  *
  * @param nl a netlink file handle
+ * @param handler a function pointer to the function that handles the message
+ *        parameter each by each
+ * @param arg an extra value to be passed for the handler function
  * @return always zero
  * @note Unfortunately libnetlink does not provide a generic receive a
  * message function. This is a modified version of the rtnl_listen
  * function that processes only a finite amount of messages and then
  * returns.
  */
-int hip_netlink_receive(struct rtnl_handle *nl)
+int hip_netlink_receive(struct rtnl_handle *nl,
+                        hip_filter_t handler,
+                        void *arg)
 {
     struct nlmsghdr *h;
     struct sockaddr_nl nladdr;
@@ -175,7 +179,7 @@ int hip_netlink_receive(struct rtnl_handle *nl)
                 return -1;
             }
 
-            err     = hip_netdev_event(h, len);
+            err     = handler(h, len, arg);
             if (err < 0) {
                 return err;
             }
