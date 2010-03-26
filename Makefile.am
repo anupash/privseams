@@ -7,11 +7,13 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  debian doc hipext hipfwmi lib/android patches
-EXTRA_DIST += test/packaging test/configs
+EXTRA_DIST =  .vimrc debian doc hipext hipfwmi lib/android patches
+EXTRA_DIST += test/configs test/demo test/maintainer test/openwrt
+EXTRA_DIST += test/packaging test/packets test/performance
 EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh i3-cfg-PL.xml
 EXTRA_DIST += release.version tcp verbose-headers.txt
-EXTRA_DIST += tools/gen-python-starter.sh
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
@@ -642,10 +644,5 @@ CLEANFILES += $(HIPL_HEADER_OBJS)
 checkheaders: $(HIPL_HEADER_OBJS)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
-
-autotools-clean: maintainer-clean
-	rm -f aclocal.m4 compile config.guess config.h.in config.sub configure
-	rm -f depcomp install-sh ltmain.sh m4/*.m4 Makefile.in missing py-compile
-	rm -rf config
 
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo

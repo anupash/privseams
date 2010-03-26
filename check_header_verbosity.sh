@@ -3,7 +3,7 @@
 find_verbous_decls () {
         TAG_FILE=$1
         TEMPFILE=$2
-        grep -vE '(djbdns|daemonto|libdht|hipsock|static)' $TAG_FILE  | cut -f 1 | sort -u | while read SYM
+        grep -vE '(static)' $TAG_FILE  | cut -f 1 | sort -u | while read SYM
         do
                 DEF_FILES="$(cscope -R -L -1 "${SYM}" | cut -d ' ' -f 1 | sort -u | cut -d "." -f1)"
                 if [ "${DEF_FILES}" ]

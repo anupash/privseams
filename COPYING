@@ -33,8 +33,6 @@ The following directories contain code imported from other projects
 and have their own licensing conditions:
 
   * firewall/user_ipsec_esp.c
-  * tools/daemontools
-  * tools/djbdns
   * tools/DNS
   * lib/android
   * lib/tool

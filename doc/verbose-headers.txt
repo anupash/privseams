@@ -63,7 +63,7 @@ firewall/user_ipsec_esp.h : add_ipv4_header
 firewall/user_ipsec_esp.h : add_ipv6_header
 hipd/hadb i3/chord/chord i3/i3_client/i3_client i3/i3_client/i3server_list i3/i3_client/ping i3/i3/i3 libhipcore/protodefs libhiptool/lutil libhiptool/nlink libipsec/test-policy libopphip/wrap /usr/include/linux/ipv6 /usr/include/netax25/ax25 /usr/include/neteconet/ec.h : addr
 firewall/conndb firewall/proxydb.h : addr_client
-libhipcore/protodefs tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/netrose/rose /usr/include/zlib.h : address
+libhipcore/protodefs /usr/include/netrose/rose /usr/include/zlib.h : address
 libhipcore/protodefs.h : address_and_port
 hipd/hipd.h : addresses
 hipd/hadb.h : addr_list
@@ -87,7 +87,7 @@ libhiptool/xfrm.h : alg_key_len
 libhiptool/xfrm.h : alg_name
 libhipcore/protodefs.h : algo
 libhipcore/protodefs.h : algorithm
-libhipcore/utils tools/djbdns/djbdns-1.h : alias
+libhipcore/utils : alias
 libhipcore/utils.h : alias2
 libhipandroid/regex.h : allocated
 firewall/rule_management.h : alloc_empty_rule
@@ -139,12 +139,12 @@ libhiptool/crypto.h : bn2bin_safe
 firewall/rule_management libhipandroid/regex.h : boolean
 libhipcore/protodefs.h : branch_length
 libhipcore/protodefs.h : branch_nodes
-libipsec/policy_parse libipsec/policy_parse libipsec/test-policy libopphip/wrap test/telnet/ring test/ttcp tools/daemontools/admin/daemontools-0 tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/openssl/pem.h : buf
-libhipandroid/regex tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1.h : buffer
+libipsec/policy_parse libipsec/policy_parse libipsec/test-policy libopphip/wrap test/telnet/ring test/ttcp usr/include/openssl/pem.h : buf
+libhipandroid/regex : buffer
 libhipgui/events.h : BUTTON_IDS
 libhipgui/events.h : BUTTON_IDS_N
 libhiptool/nlink.h : bytelen
-firewall/user_ipsec_sadb libhiptool/xfrm tools/daemontools/admin/daemontools-0.h : bytes
+firewall/user_ipsec_sadb libhiptool/xfrm : bytes
 libhipcore/hip_statistics.h : calc_avg
 libhipcore/hip_statistics.h : calc_statistics
 libhipcore/hip_statistics.h : calc_std_dev
@@ -189,11 +189,11 @@ firewall/rule_management.h : CONN_NEW
 test/conntest.h : CONNTEST_H
 firewall/conntrack.h : conntrack
 firewall/conntrack.h : CONNTRACK_H
-libhipcore/protodefs test/telnet/commands tools/djbdns/djbdns-1.h : control
+libhipcore/protodefs test/telnet/commands : control
 libhipcore/misc.h : convert_string_to_address
 libhipcore/misc.h : convert_string_to_address_v4
 hipd/cookie.h : Copaque
-hipd/hadb hipd/output libdht/libhipopendhtxml libopphip/wrap test/hc_performance test/telnet/ring tools/djbdns/djbdns-1.h : count
+hipd/hadb hipd/output libdht/libhipopendhtxml libopphip/wrap test/hc_performance test/telnet/ring : count
 libhipcore/kerncompat /usr/include/arpa/nameser.h : counter
 hipd/user_ipsec_hipd_msg.h : create_add_sa_msg
 libhipgui/create.h : create_content_execdlg
@@ -219,7 +219,7 @@ libhiptool/xfrm.h : curlft
 libhipcore/hashchain.h : current_index
 libhiptool/xfrm /usr/include/linux/ipv6 /usr/include/netinet/ip.h : daddr
 libhiptool/nlink.h : d_addr
-agent/str_var firewall/common_types firewall/firewall_defines  hipd/configfilereader hipd/hipqueue i3/i3_client/i3_client i3/i3_client/ping libhipcore/hashtree libhipcore/protodefs libhiptool/lutil libhiptool/nlink tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 /usr/include/arpa/nameser /usr/include/linux/capability /usr/include/linux/icmp /usr/include/linux/icmpv6 /usr/include/netinet/ip.h : data
+agent/str_var firewall/common_types firewall/firewall_defines  hipd/configfilereader hipd/hipqueue i3/i3_client/i3_client i3/i3_client/ping libhipcore/hashtree libhipcore/protodefs libhiptool/lutil libhiptool/nlink /usr/include/arpa/nameser /usr/include/linux/capability /usr/include/linux/icmp /usr/include/linux/icmpv6 /usr/include/netinet/ip.h : data
 hipd/hipqueue i3/i3_client/i3_client /usr/include/linux/netfilter_ipv4/ip_queue.h : data_len
 libhipcore/debug.h : DEBUG_H
 libhipcore/debug.h : debug_level
@@ -255,7 +255,7 @@ libhipcore/protodefs.h : der
 libhipcore/protodefs.h : der_len
 libhiptool/lutil.h : destroy
 libhipcore/protodefs.h : dht_key
-libhiptool/xfrm tools/daemontools/admin/daemontools-0 tools/daemontools/admin/daemontools-0 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1 tools/djbdns/djbdns-1.h : dir
+libhiptool/xfrm : dir
 libipsec/policy_parse libipsec/policy_parse /usr/include/dirent.h : DIR
 firewall/esp_prot_api firewall/firewall_defines firewall/user_ipsec_sadb firewall/user_ipsec_sadb.h : direction
 libhipcore/protodefs.h : di_type_length
