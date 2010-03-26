@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # Enter configuration parameters below:
 
 # Need to be absolute paths
@@ -84,8 +86,7 @@ if [ "$SSH_PORT_middle2" = "" ]; then
     read SSH_PORT_middle2
 fi
 
-for VM_NAME in "alice" "bob" "middle1" "middle2"
-do
+for VM_NAME in "alice" "bob" "middle1" "middle2" do
     copy_vm ${VM_NAME} "${INPUT_DIR}/${VM_NAME}/${VM_NAME}.vdi" "${OUTPUT_DIR}/${VM_NAME}/${VM_NAME}.vdi" SSH_PORT_${VM_NAME}
 done
 
