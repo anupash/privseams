@@ -850,7 +850,7 @@ libhipandroid/icmp6.h : MLD_MTRACE_RESP
 libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_reserved
 libhipandroid/icmp6 /usr/include/netinet/icmp6.h : mld_type
 libhipgui/tools.h : NAME_INVALID_CHARS
-performance/performance tools/djbdns/djbdns-1.h : names
+performance/performance : names
 hipd/nat.h : __NAT_H__
 libhipandroid/icmp6 /usr/include/netinet/icmp6.h : nd_na_cksum
 libhipandroid/icmp6 /usr/include/netinet/icmp6.h : nd_na_code
@@ -1246,7 +1246,7 @@ firewall/esp_prot_api firewall/user_ipsec_sadb.h : update_item_length
 libhipgui/tools.h : update_list_value
 firewall/conntrack.h : update_peer_opp_info
 test/first_test test/hipsetup.h : usage_f
-libhipandroid/regex tools/djbdns/djbdns-1.h : used
+libhipandroid/regex : used
 firewall/user_ipsec_api.h : USER_IPSEC_API_H_
 firewall/user_ipsec_esp.h : USER_IPSEC_ESP_H_
 firewall/user_ipsec_fw_msg.h : USER_IPSEC_FW_MSG_H_
