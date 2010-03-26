@@ -1374,8 +1374,8 @@ static int handle_update(const struct hip_common *common,
     struct hip_locator *locator        = NULL;
     struct hip_spi *spi                = NULL;
     struct tuple *other_dir_tuple      = NULL;
-    const struct in6_addr *ip6_src = &ctx->src;
-    int err                            = 0;
+    const struct in6_addr *ip6_src     = &ctx->src;
+    int err                            = 1;
 
     _HIP_DEBUG("handle_update\n");
 
@@ -1647,7 +1647,7 @@ static int handle_update(const struct hip_common *common,
     }
 
     /* everything should be set now in order to process eventual anchor params */
-    HIP_IFEL(esp_prot_conntrack_update(common, tuple), -1,
+    HIP_IFEL(esp_prot_conntrack_update(common, tuple), 0,
              "failed to process anchor parameter\n");
 
 out_err:

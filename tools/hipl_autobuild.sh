@@ -57,9 +57,8 @@ cleanup()
 
 compile()
 {
-    CONFIGURATION="--prefix=$(pwd)/local_install $@"
     run_program "./autogen.sh" &&
-        run_program "./configure" $CONFIGURATION &&
+        run_program "./configure" --prefix=$(pwd)/local_install "$@" &&
         run_program "make -j17" &&
         run_program "make -j17 distcheck" &&
         run_program "make install"
@@ -67,9 +66,9 @@ compile()
 
 test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
 
-bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR || exit 1
+bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR || cleanup 1
 
-cd "$CHECKOUT_DIR" || exit 1
+cd "$CHECKOUT_DIR" || cleanup 1
 
 # Compile HIPL in different configurations
 # vanilla configuration

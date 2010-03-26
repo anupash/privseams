@@ -659,7 +659,7 @@ performance/performance.h : performance_h
 performance/performance.h : running
 performance/performance.h : times
 performance/performance.h : writable
-performance/performance tools/djbdns/djbdns-1.h : names
+performance/performance : names
 test/checksum.h : hlen
 test/checksum.h : ip6_ahhdr
 test/checksum.h : ipv6_multiplex

@@ -2968,18 +2968,6 @@ VPN
       "dig -t any hostname".
     </para>
 
-    <!--
-    <para>
-      For faster DNS look ups, you can optionally run the DNS proxy
-      under DJB's daemontools package
-      <ulink url="http://cr.yp.to/daemontools.html" /> which is also
-      used to provide some necessary environment variables (see comments
-      in dnshipproxy). It acts as a DNS cache
-      (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
-      DNS proxy. The use of DNS proxy without DNS cache results in longer
-      look up latencies.
-    </para>
-    -->
   </section>
 
   <section id="ch_dns_data">
