@@ -7,10 +7,12 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  debian doc hipext hipfwmi lib/android patches
-EXTRA_DIST += test/packaging test/configs
+EXTRA_DIST =  .vimrc debian doc hipext hipfwmi lib/android patches
+EXTRA_DIST += test/configs test/demo test/maintainer test/openwrt
+EXTRA_DIST += test/packaging test/packets test/performance
 EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh i3-cfg-PL.xml
 EXTRA_DIST += release.version tcp verbose-headers.txt
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 EXTRA_DIST += $(HIPL_HEADER_LIST)
