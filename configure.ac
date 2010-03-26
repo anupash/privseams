@@ -145,6 +145,8 @@ if test x"$ac_cv_use_agent" = x"yes"; then
                  [AC_MSG_ERROR(libsqlite3-dev not found)])
         AC_DEFINE(CONFIG_HIP_AGENT)
         AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
+    else
+        AC_MSG_WARN([Disabled HIP agent due to unsatisfied dependencies.])
     fi
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
