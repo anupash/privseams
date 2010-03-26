@@ -21,7 +21,7 @@ AUTOBUILD_REVISION=$(cat $BRANCH_REVISION_FILE)
 # helper functions
 run_program()
 {
-    "$@" > log.txt 2>&1
+    $@ > log.txt 2>&1
     if [ $? -eq 0 ] ; then
         rm -f log.txt
         return 0
