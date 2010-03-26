@@ -216,6 +216,15 @@ endif # HIPPFKEY
 lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
 
 ### *_LDADD ###
+# Initialize LDADD lists empty, because modules might add entries to LDADD in
+# Makefile.modules. This file needs to be included before the standard LDADDs,
+# because the linking order is from right to left.
+hipd_hipd_LDADD =
+firewall_hipfw_LDADD =
+tools_hipconf_LDADD =
+
+include Makefile.modules
+
 test_certteststub_LDADD = lib/core/libhipcore.la \
                           lib/tool/libhiptool.la
 if HIP_PERFORMANCE
@@ -250,9 +259,9 @@ if HIP_PERFORMANCE
 test_modularization_LDADD += lib/performance/libperformance.la
 endif
 
-tools_hipconf_LDADD = lib/conf/libhipconf.la \
-                      lib/core/libhipcore.la \
-                      lib/tool/libhiptool.la
+tools_hipconf_LDADD += lib/conf/libhipconf.la \
+                       lib/core/libhipcore.la \
+                       lib/tool/libhiptool.la
 
 # required by libhipconf
 if HIP_PERFORMANCE
@@ -266,10 +275,10 @@ if HIP_PERFORMANCE
 tools_pisacert_LDADD += lib/performance/libperformance.la
 endif
 
-hipd_hipd_LDADD = lib/modularization/libmod.la \
-                  lib/core/libhipcore.la \
-                  lib/conf/libhipconf.la \
-                  lib/tool/libhiptool.la
+hipd_hipd_LDADD += lib/modularization/libmod.la \
+                   lib/core/libhipcore.la \
+                   lib/conf/libhipconf.la \
+                   lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 hipd_hipd_LDADD += lib/performance/libperformance.la
@@ -280,16 +289,14 @@ hipd_hipd_LDADD += lib/ipsec/libhipsec.la
 endif
 
 if HIP_FIREWALL
-firewall_hipfw_LDADD = lib/core/libhipcore.la \
-                       lib/tool/libhiptool.la
+firewall_hipfw_LDADD += lib/core/libhipcore.la \
+                        lib/tool/libhiptool.la
 
 if HIP_PERFORMANCE
 firewall_hipfw_LDADD += lib/performance/libperformance.la
 endif
 
 endif # HIP_FIREWALL
-
-include Makefile.modules
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 

@@ -44,6 +44,7 @@
 #include "hipd/init.h"
 #include "hipd/hip_socket.h"
 #include "hipd/pkt_handling.h"
+#include "lib/core/hip_statistics.h"
 
 #define HIP_HEARTBEAT_INTERVAL 20
 
@@ -153,6 +154,60 @@ out_err:
     if (icmp_pkt) {
         free(icmp_pkt);
     }
+    return err;
+}
+
+/**
+ * This function calculates RTT and then stores them to correct entry
+ *
+ * @param src HIT
+ * @param dst HIT
+ * @param time when sent
+ * @param time when received
+ *
+ * @return zero on success or negative on failure
+ */
+static int hip_icmp_statistics(struct in6_addr *src,
+                               struct in6_addr *dst,
+                               struct timeval *stval,
+                               struct timeval *rtval)
+{
+    int err                  = 0;
+    uint32_t rcvd_heartbeats = 0;
+    uint64_t rtt             = 0;
+    double avg               = 0.0, std_dev = 0.0;
+    char hit[INET6_ADDRSTRLEN];
+    hip_ha_t *entry          = NULL;
+    uint8_t *heartbeat_counter = NULL;
+
+    hip_in6_ntop(src, hit);
+
+    /* Find the correct entry */
+    entry = hip_hadb_find_byhits(src, dst);
+    HIP_IFEL((!entry), -1, "Entry not found\n");
+
+    /* Calculate the RTT from given timevals */
+    rtt   = calc_timeval_diff(stval, rtval);
+
+    /* add the heartbeat item to the statistics */
+    add_statistics_item(&entry->heartbeats_statistics, rtt);
+
+    /* calculate the statistics for immediate output */
+    calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, NULL, NULL, &avg,
+                    &std_dev, STATS_IN_MSECS);
+
+    heartbeat_counter = lmod_get_state_item(entry->hip_modular_state,
+                                            "heartbeat_update");
+
+    *heartbeat_counter = 0;
+    HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_counter);
+
+    HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
+              "%.6f ms std dev, packets sent %d recv %d lost %d\n",
+              hit, ((float) rtt / STATS_IN_MSECS), avg, std_dev, entry->heartbeats_sent,
+              rcvd_heartbeats, (entry->heartbeats_sent - rcvd_heartbeats));
+
+out_err:
     return err;
 }
 
