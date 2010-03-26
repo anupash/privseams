@@ -112,10 +112,7 @@ define Build/Configure
             --enable-shared \
             --enable-midauth \
             --enable-openwrt \
-            --disable-dht \
-            --disable-agent \
             --disable-privsep \
-            --disable-i3 \
             --disable-debug \
     );
 endef
@@ -171,13 +168,8 @@ define Package/hipl-common/install
 
 	$(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipcore.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipcore.la $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipconf.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipconf.la $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiptool.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiptool.la $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip.la $(1)/usr/lib/
 endef
 
 $(eval $(call BuildPackage,hipl-common))
