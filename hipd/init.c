@@ -940,6 +940,14 @@ int hipd_init(int flush_ipsec, int killold)
 
     /* Initialize modules */
     HIP_INFO("Initializing modules.\n");
+    /* Check if a required module was disabled. */
+    for (i = 0; i < num_required_modules_hipd; i++) {
+        HIP_IFEL(lmod_module_disabled(required_modules_hipd[i]),
+                 -1,
+                 "The required module <%s> was disabled.\n",
+                 required_modules_hipd[i]);
+    }
+
     for (i = 0; i < num_modules_hipd; i++) {
         HIP_DEBUG("module: %s\n", modules_hipd[i]);
         if (lmod_module_disabled(modules_hipd[i])) {

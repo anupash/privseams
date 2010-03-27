@@ -49,7 +49,7 @@ def parse_info_file(path, disabled_modules):
     return (apps, compile_type, disabled_modules)
 
 # Parses the XML document at 'path' and returns a dictionary with module info
-def parse_module_info(path, applications):
+def parse_module_info(path, applications, required_modules):
 
     file = open(path, "r")
     dom = xml.dom.minidom.parse(file)
@@ -71,6 +71,7 @@ def parse_module_info(path, applications):
                 current_req['maxversion'] = str(node.attributes['maxversion'].value)
 
             module_info['requires'].append(current_req)
+            required_modules.add(current_req['name'])
 
     module_info['conflicts'] = []
     if 0 < len(dom.getElementsByTagName('conflicts')):
@@ -105,7 +106,7 @@ def parse_module_info(path, applications):
         app_info['linkcommand'] = str(current_app.attributes['linkcommand'].value)
         module_info['application'][name] = app_info
 
-    return (module_name, module_info)
+    return (module_name, module_info, required_modules)
 
 # Tries to read the XML configuration files for all sub-folders in the given
 # directory and returns a dictionary containing the module information
@@ -113,6 +114,7 @@ def read_module_info(MODULES_DIR, disabled_modules, applications, compile_type):
 
     # Initialize output variable
     module_info = {}
+    required_modules = set()
 
     # Iterate through all sub directories in MODULES_DIR
     for current_module in glob.glob(MODULES_DIR + '/*/'):
@@ -134,7 +136,7 @@ def read_module_info(MODULES_DIR, disabled_modules, applications, compile_type):
 
         try:
             path = os.path.join(current_module, MODULE_INFO_FILE)
-            (name, info) = parse_module_info(path, applications)
+            (name, info, required_modules) = parse_module_info(path, applications, required_modules)
             print '|    found module: ' + name
             print '|    state:        ' + 'ENABLED'
             print '|    version:      ' + info['version'] + '\n|'
@@ -144,7 +146,7 @@ def read_module_info(MODULES_DIR, disabled_modules, applications, compile_type):
             print '\'' + path + '\' failed!'
             print '|    ...ignoring this directory\n|'
 
-    return module_info
+    return (module_info, required_modules)
 
 # Checks the module_info data structure for missing dependencies and conflicts
 # between modules. Returns a
@@ -210,7 +212,7 @@ def process_module_info(module_info):
 # Creates a C header file with the given filename an the needed includes,
 # the number of init functions per application and an array of function
 # pointers for each application
-def create_header_files(output_dir, suffix, applications, includes, init_functions, enabled_modules):
+def create_header_files(output_dir, suffix, applications, includes, init_functions, enabled_modules, required_modules):
 
     if False == os.path.isdir(output_dir):
         os.mkdir(output_dir)
@@ -235,10 +237,21 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                     hdr_file.write('\n\ntypedef int (*pt2Function)(void);\n')
                     hdr_file.write('\nconst int num_modules_' + current_app + ' = ')
                     hdr_file.write(num_modules + ';\n')
+                    hdr_file.write('\nconst int num_required_modules_' + current_app + ' = ')
+                    hdr_file.write(str(len(required_modules)) + ';\n')
                     hdr_file.write('\nconst char *modules_' + current_app + '[')
                     hdr_file.write(num_modules + '] = {')
                     first_loop = True
                     for module in enabled_modules:
+                        if first_loop != True:
+                            hdr_file.write(', ')
+                        hdr_file.write('"' + module + '"')
+                        first_loop = False
+                    hdr_file.write('};')
+                    hdr_file.write('\n\nconst char *required_modules_' + current_app + '[')
+                    hdr_file.write(str(len(required_modules)) + '] = {')
+                    first_loop = True
+                    for module in required_modules:
                         if first_loop != True:
                             hdr_file.write(', ')
                         hdr_file.write('"' + module + '"')
@@ -260,6 +273,10 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                     hdr_file.write('\nconst int num_modules_' + current_app + ' = 0;')
                     hdr_file.write('\n\nconst char *modules_' + current_app)
                     hdr_file.write('[0] = {};')
+                    hdr_file.write('\nconst int num_required_modules_')
+                    hdr_file.write(current_app + ' = 0;')
+                    hdr_file.write('\n\nconst char *required_modules_')
+                    hdr_file.write(current_app + '[0] = {};')
                     hdr_file.write('\n\nstatic const pt2Function ' + current_app)
                     hdr_file.write('_init_functions[0] = {};')
 
@@ -337,10 +354,10 @@ def main():
      disabled_modules) = parse_info_file(os.path.join(srcdir, INFO_FILE_NAME),
                                          disabled_modules)
 
-    module_info  = read_module_info(os.path.join(srcdir, MODULES_DIR),
-                                    disabled_modules,
-                                    applications,
-                                    compile_type)
+    (module_info, required_modules) = read_module_info(os.path.join(srcdir, MODULES_DIR),
+                                                       disabled_modules,
+                                                       applications,
+                                                       compile_type)
 
     (includes, init_functions) = process_module_info(module_info)
 
@@ -349,7 +366,8 @@ def main():
                         applications,
                         includes,
                         init_functions,
-                        module_info.keys())
+                        module_info.keys(),
+                        required_modules)
 
     create_makefile_modules('Makefile.modules',
                             module_info,
