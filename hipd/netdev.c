@@ -1267,12 +1267,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
             if (hip_wait_addr_changes_to_stabilize) {
                 address_change_time_counter = HIP_ADDRESS_CHANGE_WAIT_INTERVAL;
             } else {
-            /**
-             * @todo Re-enable UPDATE triggering from here and remove dependency
-             *       between netdev.c and UPDATE.
-             *
-             * See trac Ticket#11 for details.
-             */
+                address_change_time_counter = 1;
             }
 
             if (err) {

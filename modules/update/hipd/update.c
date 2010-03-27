@@ -767,22 +767,19 @@ static int hip_update_maintenance(void)
 {
     int err = 0;
 
-    if (hip_wait_addr_changes_to_stabilize &&
-        address_change_time_counter != -1) {
-        if (address_change_time_counter == 0) {
-            address_change_time_counter = -1;
+    if (address_change_time_counter == 0) {
+        address_change_time_counter = -1;
 
-            HIP_DEBUG("Triggering UPDATE\n");
-            err = hip_send_locators_to_all_peers();
+        HIP_DEBUG("Triggering UPDATE\n");
+        err = hip_send_locators_to_all_peers();
 
-            if (err) {
-                HIP_ERROR("Error sending UPDATE\n");
-            }
-        } else {
-            HIP_DEBUG("Delay mobility triggering (count %d)\n",
-                      address_change_time_counter - 1);
-            address_change_time_counter--;
+        if (err) {
+            HIP_ERROR("Error sending UPDATE\n");
         }
+    } else if (address_change_time_counter > 0) {
+        HIP_DEBUG("Delay mobility triggering (count %d)\n",
+                  address_change_time_counter - 1);
+        address_change_time_counter--;
     }
 
     return err;
