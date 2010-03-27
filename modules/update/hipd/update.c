@@ -584,39 +584,6 @@ out_err:
 }
 
 /**
- * verify HMAC and signature from an UPDATE message
- *
- * @param msg the message to verify
- * @param entry the related host association
- * @return zero on success or negative on failure
- */
-static int hip_check_hmac_and_signature(hip_common_t *msg, hip_ha_t *entry)
-{
-    int err = 0;
-
-    /** @todo Check these references again because these checks are done
-     * separately for ACKs and SEQs */
-
-    /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
-     *  UPDATE Message:
-     * 3. The system MUST verify the HMAC in the UPDATE packet. If
-     * the verification fails, the packet MUST be dropped. */
-    HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1,
-             "HMAC validation on UPDATE failed.\n");
-
-    /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
-     *  UPDATE Message:
-     * 4. The system MAY verify the SIGNATURE in the UPDATE packet.
-     * If the verification fails, the packet SHOULD be dropped and an error
-     * message logged. */
-    HIP_IFEL(entry->verify(entry->peer_pub_key, msg), -1,
-             "Verification of UPDATE signature failed.\n");
-
-out_err:
-    return err;
-}
-
-/**
  * process a LOCATOR paramter
  *
  * @param ha the related host association
@@ -851,7 +818,79 @@ out_err:
 }
 
 /**
- * Process any UPDATE packet
+ * hip_update_check_packet
+ *
+ * Check a received UPDATE packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+static int hip_update_check_packet(const uint8_t packet_type,
+                                   const uint32_t ha_state,
+                                   struct hip_packet_context *ctx)
+{
+    int err = 0;
+    unsigned int has_esp_info = 0;
+    struct hip_esp_info *esp_info = NULL;
+
+    /** @todo Check these references again because these checks are done
+     * separately for ACKs and SEQs
+     */
+
+    /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
+     *  UPDATE Message:
+     * 3. The system MUST verify the HMAC in the UPDATE packet. If
+     * the verification fails, the packet MUST be dropped.
+     */
+    HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
+                                    &ctx->hadb_entry->hip_hmac_in),
+             -1,
+             "HMAC validation on UPDATE failed.\n");
+
+    /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
+     *  UPDATE Message:
+     * 4. The system MAY verify the SIGNATURE in the UPDATE packet.
+     * If the verification fails, the packet SHOULD be dropped and an error
+     * message logged.
+     */
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                     ctx->input_msg),
+             -1,
+             "Verification of UPDATE signature failed.\n");
+
+    esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO);
+    if (esp_info != NULL) {
+        HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
+                  ntohl(esp_info->new_spi));
+        has_esp_info = 1;
+
+        if (esp_info->new_spi != esp_info->old_spi) {
+            HIP_DEBUG("New SPI != Old SPI -> Please notice that "
+                      "rekeying case is not implemented yet.");
+        }
+        /** @todo Further ESP_INFO handling
+         * Done in hip_handle_esp_info() before
+         */
+    }
+
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
+ * hip_update_handle_packet
+ *
+ * Process an received and checked UPDATE packet.
  *
  * @param received_update_packet the received UPDATE packet
  * @param src_addr the source address of the received UPDATE packet
@@ -861,17 +900,15 @@ out_err:
  *              the tunnel is absent)
  * @return zero on success or negative on failure
  */
-static int hip_handle_update(const uint8_t packet_type,
-                             const uint32_t ha_state,
-                             struct hip_packet_context *ctx)
+static int hip_update_handle_packet(const uint8_t packet_type,
+                                    const uint32_t ha_state,
+                                    struct hip_packet_context *ctx)
 {
     int err = 0, same_seq = 0;
     unsigned int ack_peer_update_id         = 0;
     unsigned int seq_update_id              = 0;
-    unsigned int has_esp_info               = 0;
     struct hip_seq *seq                     = NULL;
     struct hip_ack *ack                     = NULL;
-    struct hip_esp_info *esp_info           = NULL;
     struct hip_locator *locator             = NULL;
     struct hip_echo_request *echo_request   = NULL;
     struct hip_echo_response *echo_response = NULL;
@@ -943,12 +980,14 @@ static int hip_handle_update(const uint8_t packet_type,
         HIP_DEBUG("SEQ parameter found with  Update ID %u.\n",
                   seq_update_id);
 
-        /// @todo 15.9.2009: Handle retransmission case
+        /**
+         *  @todo 15.9.2009: Handle retransmission case
+         */
 
         if (localstate->update_id_in != 0 &&
             (seq_update_id < localstate->update_id_in ||
              seq_update_id > localstate->update_id_in + update_id_window_size)) {
-            // RFC 5201 6.12.1 part 1:
+            /* RFC 5201 6.12.1 part 1: */
             HIP_DEBUG("Update ID (%u) in the SEQ parameter is not "
                       "in the window of the previous Update ID (%u). "
                       "Dropping the packet.\n",
@@ -964,7 +1003,6 @@ static int hip_handle_update(const uint8_t packet_type,
          * UPDATE are then processed.  The system MUST record the Update ID
          * in the received SEQ parameter, for replay protection.
          */
-
         if (localstate->update_id_in != 0 &&
             localstate->update_id_in == seq_update_id) {
             same_seq = 1;
@@ -974,57 +1012,40 @@ static int hip_handle_update(const uint8_t packet_type,
         _HIP_DEBUG("Stored peer's incoming UPDATE ID %u\n", ha->update_id_in);
     }
 
-    /* RFC 5201 Section 6.12.1 3th and 4th steps or
-     *          Section 6.12.2 2nd and 3th steps */
-    HIP_IFE(hip_check_hmac_and_signature(ctx->input_msg, ctx->hadb_entry), -1);
-
-    esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO);
-    if (esp_info != NULL) {
-        HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
-                  ntohl(esp_info->new_spi));
-        has_esp_info = 1;
-
-        if (esp_info->new_spi != esp_info->old_spi) {
-            HIP_DEBUG("New SPI != Old SPI -> Please notice that "
-                      "rekeying case is not implemented yet.");
-        }
-        /// @todo Further ESP_INFO handling
-        // Done in hip_handle_esp_info() before
-    }
-
    /* set local UDP port just in case the original communications
       changed from raw to UDP or vice versa */
     ctx->hadb_entry->local_udp_port = ctx->msg_ports->dst_port;
     /* @todo: a workaround for bug id 944 */
     ctx->hadb_entry->peer_udp_port = ctx->msg_ports->src_port;
 
-    /* RFC 5206: End-Host Mobility and Multihoming. */
-    // 3.2.1. Mobility with a Single SA Pair (No Rekeying)
-    locator           = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
-    echo_request      = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
-    echo_response     = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
+    /* RFC 5206: End-Host Mobility and Multihoming.
+     * 3.2.1. Mobility with a Single SA Pair (No Rekeying)
+     */
+    locator       = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
+    echo_request  = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
+    echo_response = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
 
-    if (locator != NULL) {
-        hip_handle_first_update_packet(ctx->input_msg,
-                                       ctx->hadb_entry,
-                                       ctx->src_addr);
-
+    if (locator) {
+        err = hip_handle_first_update_packet(ctx->input_msg,
+                                             ctx->hadb_entry,
+                                             ctx->src_addr);
         goto out_err;
-    } else if (echo_request != NULL)   {
-        // Ignore the ECHO REQUESTS with the same SEQ after processing
-        // the first one.
+    } else if (echo_request) {
+        /* Ignore the ECHO REQUESTS with the same SEQ after processing the first
+         * one.
+         */
         if (same_seq) {
             goto out_err;
         }
-
-        // We handle ECHO_REQUEST by sending an update packet
-        // with reversed source and destination address.
+        /* We handle ECHO_REQUEST by sending an update packet with reversed
+         * source and destination address.
+         */
         hip_handle_second_update_packet(ctx->input_msg,
                                         ctx->hadb_entry,
                                         ctx->dst_addr,
                                         ctx->src_addr);
         goto out_err;
-    } else if (echo_response != NULL)   {
+    } else if (echo_response) {
         hip_handle_third_update_packet(ctx->hadb_entry,
                                        ctx->dst_addr,
                                        ctx->src_addr);
@@ -1059,13 +1080,23 @@ int hip_update_init(void)
 
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_ESTABLISHED,
-                                          &hip_handle_update,
-                                          0),
+                                          &hip_update_check_packet,
+                                          20000),
+             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_ESTABLISHED,
+                                          &hip_update_handle_packet,
+                                          30000),
              -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
-                                          &hip_handle_update,
-                                          0),
+                                          &hip_update_check_packet,
+                                          20000),
+             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_R2_SENT,
+                                          &hip_update_handle_packet,
+                                          30000),
              -1, "Error on registering UPDATE handle function.\n");
 
     HIP_IFEL(hip_register_maint_function(&hip_update_maintenance, 40000),
