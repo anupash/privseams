@@ -75,6 +75,6 @@ cd "$CHECKOUT_DIR" || cleanup 1
 compile
 compile --disable-rvs --disable-opportunistic
 compile --enable-pfkey --disable-rvs --enable-openwrt --enable-altsep --disable-privsep --disable-opportunistic --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
-compile DISABLE_MODULES=heartbeat,update,heartbeat_update
+#compile DISABLE_MODULES=heartbeat,update,heartbeat_update
 
 cleanup 0
