@@ -2291,41 +2291,6 @@ out_err:
     return err;
 }
 
-/**
- * turn on or off opportunistic TCP extension
- *
- * @param msg input/output message for the query/response for hipd
- * @param action unused
- * @param opt "on" or "off"
- * @param optc 1
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return zero for success and negative on error
- */
-static int hip_conf_handle_opptcp(hip_common_t *msg,
-                                  int action,
-                                  const char *opt[],
-                                  int optc,
-                                  int send_only)
-{
-    int err = 0, status = 0;
-
-    if (!strcmp("on", opt[0])) {
-        status = HIP_MSG_SET_OPPTCP_ON;
-    } else if (!strcmp("off", opt[0])) {
-        status = HIP_MSG_SET_OPPTCP_OFF;
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-    }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0),
-             -1,
-             "Failed to build user message header.: %s\n",
-             strerror(err));
-
-out_err:
-    return err;
-}
-
 static int hip_conf_handle_nsupdate(hip_common_t *msg,
                                     int action,
                                     const char *opt[],
@@ -2670,7 +2635,7 @@ int (*action_handler[])(hip_common_t *,
     hip_conf_handle_locator,            /* 20: TYPE_LOCATOR */
     NULL,                               /* 21: unused, was TYPE_SET */
     NULL,                               /* 22: unused, was TYPE_DHT */
-    hip_conf_handle_opptcp,             /* 23: TYPE_OPPTCP */
+    NULL,                               /* 23: unused, was TYPE_OPPTCP */
     hip_conf_handle_trans_order,        /* 24: TYPE_ORDER */
     NULL,                               /* 25: unused, was TYPE_TCPTIMEOUT */
     NULL,                               /* 26: unused, was TYPE_HIPPROXY */

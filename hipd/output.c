@@ -227,89 +227,6 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 }
 
 /**
- * Builds the TCP SYN packet that will be send with the i1 option.
- *
- * Send an I1 packet to the responder if an IPv6 address for the peer
- * is known.
- *
- * @param entry     a pointer to a host association database state reserved for
- *                  the peer. The src and dst ports are included in this parameter
- * @return          nothing
- */
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-static void hip_send_opp_tcp_i1(hip_ha_t *entry)
-{
-    int ipType = !IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
-    struct ip *iphdr = NULL;
-    struct ip6_hdr *ip6_hdr = NULL;
-    struct tcphdr *tcphdr = NULL;
-    int hdr_size = 0;
-    char bytes[sizeof(struct ip) * (1 - ipType) + sizeof(struct ip6_hdr) * ipType + 5 * 4];
-
-    HIP_DEBUG("\n");
-
-    if (ipType == 0) {
-        hdr_size = sizeof(struct ip);
-    } else if (ipType == 1) {
-        hdr_size = sizeof(struct ip6_hdr);
-    }
-
-    //set all bytes of both headers to 0
-    memset(&bytes[0], 0, 40);
-
-    //fill in the ip header fields
-    if (ipType == 0) {  //ipv4
-        //get the ip header
-        iphdr         = (struct ip *) (void *) &bytes[0];
-        //get the tcp header
-        tcphdr        = ((struct tcphdr *) (void *) (((char *) iphdr) + hdr_size));
-
-        iphdr->ip_v   = 4;
-        iphdr->ip_hl  = 5;
-        iphdr->ip_tos = 0;
-        iphdr->ip_len = 44;        //20+20+4 ?????
-        iphdr->ip_id  = 100;       //random
-        //iphdr->FLAGS
-        iphdr->ip_off = 0;
-        iphdr->ip_ttl = 64;
-        iphdr->ip_p   = 6;
-        iphdr->ip_sum = in_cksum((unsigned short *) iphdr, sizeof(struct ip));
-        IPV6_TO_IPV4_MAP(&entry->our_addr, &iphdr->ip_src);
-        IPV6_TO_IPV4_MAP(&entry->peer_addr, &iphdr->ip_dst);
-    } else if (ipType == 1)    { //ipv6
-        //get the ip header
-        ip6_hdr = (struct ip6_hdr *) (void *) &bytes[0];
-        //get the tcp header
-        tcphdr  = ((struct tcphdr *) (void *) (((char *) ip6_hdr) + hdr_size));
-
-        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_flow = 1610612736; //01100000000000000000000000000000;
-        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = 20;
-        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt  = 6;
-        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_hlim = 64;
-        memcpy(&ip6_hdr->ip6_src, &entry->our_addr, sizeof(struct in6_addr));
-        memcpy(&ip6_hdr->ip6_dst, &entry->peer_addr, sizeof(struct in6_addr));
-    }
-
-    //randomize the source port to one of 1024-65535
-    //but different from entry->tcp_opptcp_src_port
-    tcphdr->source  = rand() % (65536 - 1024) + 1024; //entry->tcp_opptcp_src_port;
-    tcphdr->seq     = 0;
-    tcphdr->ack_seq = 0;    //is not important in the SYN packet
-    tcphdr->doff    = 5;
-    tcphdr->syn     = 1;
-    //tcphdr->rst = 1;
-    tcphdr->window  = 34;   //random
-    tcphdr->check   = 0;  //will be set right when sent, no need to calculate it here
-    //tcphdr->urg_ptr = ???????? TO BE FIXED
-    if (ipType == 0) {
-        send_tcp_packet(&bytes[0], hdr_size + 4 * tcphdr->doff, 4, hip_raw_sock_output_v4, 1, 0);
-    } else if (ipType == 1) {
-        send_tcp_packet(&bytes[0], hdr_size + 4 * tcphdr->doff, 6, hip_raw_sock_output_v6, 1, 0);
-    }
-}
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
-
-/**
  * Send an I1 packet to the Responder. Used internally by hip_send_i1().
  *
  * @param i1         a pointer to a i1 packet common header with source and
@@ -364,16 +281,6 @@ static int hip_send_i1_pkt(struct hip_common *i1,
     } else if (err == 1)   {
         err = 0;
     }
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    /*send the TCP SYN_i1 packet*/
-    if (hip_get_opportunistic_tcp_status() &&
-        hit_is_opportunistic_hit(dst_hit)) {
-        /* Ensure that I1 gets first to destination */
-        usleep(50);
-        hip_send_opp_tcp_i1(entry);
-    }
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
     return err;
 }

@@ -116,8 +116,6 @@ int hip_shotgun_status                       = HIP_MSG_SHOTGUN_OFF;
 int hip_trigger_update_on_heart_beat_failure = 1;
 int hip_wait_addr_changes_to_stabilize       = 0;
 
-int hip_use_opptcp                           = 0; // false
-
 static void usage(void)
 {
     fprintf(stderr, "Usage: hipd [options]\n\n");

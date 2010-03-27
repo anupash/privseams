@@ -19,8 +19,7 @@
 unsigned int hipd_state         = HIPD_STATE_CLOSED;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 unsigned int opportunistic_mode = 1;
-extern int hip_use_opptcp;
-#endif // CONFIG_HIP_OPPORTUNISTIC
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 /**
  * Set global daemon state.
@@ -61,67 +60,6 @@ unsigned int hipd_get_state(void)
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 /**
- * Set opportunistic TCP status on or off
- *
- * @param msg a message with message type as HIP_MSG_SET_OPPTCP_ON
- *            or HIP_MSG_SET_OPPTCP_OFF
- */
-void hip_set_opportunistic_tcp_status(struct hip_common *msg)
-{
-    struct sockaddr_in6 sock_addr;
-    int retry, type, n;
-
-    type = hip_get_msg_type(msg);
-
-    _HIP_DEBUG("type=%d\n", type);
-
-    memset(&sock_addr, 0, sizeof(sock_addr));
-    sock_addr.sin6_family = AF_INET6;
-    sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    sock_addr.sin6_addr   = in6addr_loopback;
-
-    for (retry = 0; retry < 3; retry++) {
-        /* Switched from hip_sendto() to hip_sendto_user() due to
-         * namespace collision. Both message.h and user.c had functions
-         * hip_sendto(). Introducing a prototype hip_sendto() to user.h
-         * led to compiler errors --> user.c hip_sendto() renamed to
-         * hip_sendto_user().
-         *
-         * Lesson learned: use function prototypes unless functions are
-         * ment only for local (inside the same file where defined) use.
-         * -Lauri 11.07.2008 */
-        n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
-        if (n <= 0) {
-            HIP_ERROR("hipconf opptcp failed (round %d)\n", retry);
-            HIP_DEBUG("Sleeping few seconds to wait for fw\n");
-            sleep(2);
-        } else {
-            HIP_DEBUG("hipconf opptcp ok (sent %d bytes)\n", n);
-            break;
-        }
-    }
-
-    if (type == HIP_MSG_SET_OPPTCP_ON) {
-        hip_use_opptcp = 1;
-    } else {
-        hip_use_opptcp = 0;
-    }
-
-    HIP_DEBUG("Opportunistic tcp set %s\n",
-              (hip_use_opptcp ? "on" : "off"));
-}
-
-/**
- * query status for the opportunistic TCP extensions
- *
- * @return 1 if it is enabled or 0 otherwise
- */
-int hip_get_opportunistic_tcp_status(void)
-{
-    return hip_use_opptcp;
-}
-
-/**
  * Set opportunistic mode
  *
  * @param msg A message containing a HIP_PARAM_UINT parameter.
@@ -131,7 +69,7 @@ int hip_get_opportunistic_tcp_status(void)
  */
 int hip_set_opportunistic_mode(struct hip_common *msg)
 {
-    int err            =  0;
+    int err =  0;
     unsigned int *mode = NULL;
 
     mode = hip_get_param_contents(msg, HIP_PARAM_UINT);
@@ -149,14 +87,6 @@ int hip_set_opportunistic_mode(struct hip_common *msg)
         err = -EINVAL;
         goto out_err;
     }
-
-    hip_msg_init(msg);
-    HIP_IFE(hip_build_user_hdr(msg,
-                               (opportunistic_mode == 2 ?
-                                HIP_MSG_SET_OPPTCP_ON :
-                                HIP_MSG_SET_OPPTCP_OFF),
-                               0), -1);
-    hip_set_opportunistic_tcp_status(msg);
 
 out_err:
     return err;

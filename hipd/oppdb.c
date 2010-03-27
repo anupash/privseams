@@ -30,9 +30,6 @@
  * process which means that it should proceed without HIP. Consequtive
  * rejects are faster because they are cached.
  *
- * See firewall/opptcp.c extension on how the initial timeout can be
- * reduced to a single round-trip time.
- *
  * Authors:
  * - Bing Zhou <bingzhou@cc.hut.fi>
  */
@@ -635,8 +632,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 
     /* Create an opportunistic HIT from the peer's IP  */
 
-    if (hip_get_opportunistic_tcp_status() &&
-        (ptr = hip_get_param_contents(msg, HIP_PARAM_SRC_TCP_PORT))) {
+    if ((ptr = hip_get_param_contents(msg, HIP_PARAM_SRC_TCP_PORT))) {
         /*get the src tcp port from the message for the TCP SYN
          * i1 packet*/
         HIP_IFEL(!ptr, -1, "No peer port in msg\n");
