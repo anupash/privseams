@@ -28,9 +28,12 @@ int hip_close_create_response(const uint8_t packet_type,
 int hip_close_send_response(const uint8_t packet_type,
                             const uint32_t ha_state,
                             struct hip_packet_context *ctx);
-int hip_handle_close_ack(const uint8_t packet_type,
-                         const uint32_t ha_state,
-                         struct hip_packet_context *ctx);
+int hip_close_ack_check_packet(const uint8_t packet_type,
+                               const uint32_t ha_state,
+                               struct hip_packet_context *ctx);
+int hip_close_ack_handle_packet(const uint8_t packet_type,
+                                const uint32_t ha_state,
+                                struct hip_packet_context *ctx);
 int hip_purge_closing_ha(hip_ha_t *ha, void *notused);
 
 #endif /* HIP_HIPD_CLOSE_H */

@@ -372,47 +372,39 @@ out_err:
 }
 
 /**
- * process a CLOSE ACK message
+ * hip_close_ack_check_packet
  *
- * @param close_ack the CLOSE ACK message process
- * @param entry the corresponding host association
- * @return zero on success or negative on error
+ * Check whether a received CLOSE_ACK packet is valid or not.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
  */
-int hip_handle_close_ack(const uint8_t packet_type,
-                         const uint32_t ha_state,
-                         struct hip_packet_context *ctx)
+int hip_close_ack_check_packet(const uint8_t packet_type,
+                               const uint32_t ha_state,
+                               struct hip_packet_context *ctx)
 {
-    int err       = 0;
-    struct hip_echo_request *echo_resp;
+    int err = 0;
     uint16_t mask = HIP_PACKET_CTRL_ANON;
+    struct hip_echo_request *echo_resp = NULL;
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
     hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
 #endif
 
-    HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hitr), -1,
+    HIP_IFEL(ipv6_addr_any(&ctx->input_msg->hitr), -1,
             "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
-    if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask
-    //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
-    // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
-    )) {
+    if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
         HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
                 ntohs(ctx->input_msg->control));
-        goto out_err;
-    }
-
-    HIP_IFEL(!ctx->hadb_entry, -1,
-             "No entry in host association database when receiving R2." \
-             "Dropping.\n");
-
-    switch (ha_state) {
-    case HIP_STATE_CLOSING:
-    case HIP_STATE_CLOSED:
-        /* Proceed with packet handling */
-        break;
-    default:
-        HIP_ERROR("Internal state (%d) is incorrect\n", ha_state);
         goto out_err;
     }
 
@@ -421,22 +413,60 @@ int hip_handle_close_ack(const uint8_t packet_type,
                    hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN)),
              -1, "Echo response not found\n");
     HIP_IFEL(memcmp(echo_resp + 1, ctx->hadb_entry->echo_data,
-                    sizeof(ctx->hadb_entry->echo_data)), -1,
+                    sizeof(ctx->hadb_entry->echo_data)),
+             -1,
              "Echo response did not match request\n");
 
     /* verify HMAC */
     if (ctx->hadb_entry->is_loopback) {
         HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
-                                        &(ctx->hadb_entry)->hip_hmac_out),
-                 -ENOENT, "HMAC validation on close ack failed\n");
+                                        &ctx->hadb_entry->hip_hmac_out),
+                 -ENOENT,
+                 "HMAC validation on close ack failed\n");
     } else {
         HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
-                                        &(ctx->hadb_entry)->hip_hmac_in),
-                 -ENOENT, "HMAC validation on close ack failed\n");
+                                        &ctx->hadb_entry->hip_hmac_in),
+                 -ENOENT,
+                 "HMAC validation on close ack failed\n");
     }
     /* verify signature */
-    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key, ctx->input_msg),
-             -EINVAL, "Verification of close ack signature failed\n");
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                     ctx->input_msg),
+             -EINVAL,
+             "Verification of close ack signature failed\n");
+
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
+ * hip_close_ack_handle_packet
+ *
+ * Handle a received and checked CLOSE_ACK packet. If a hadb entry exists, the
+ * host association state will be set to HIP_STATE_CLOSED.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *packet_ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+int hip_close_ack_handle_packet(const uint8_t packet_type,
+                                const uint32_t ha_state,
+                                struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    HIP_IFEL(!ctx->hadb_entry, -1,
+             "No entry in host association database when receiving R2." \
+             "Dropping.\n");
 
     ctx->hadb_entry->state = HIP_STATE_CLOSED;
 
@@ -444,16 +474,12 @@ int hip_handle_close_ack(const uint8_t packet_type,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&(ctx->hadb_entry->peer_addr));
+    hip_oppipdb_delentry(&ctx->hadb_entry->peer_addr);
 #endif
 
-    HIP_IFEL(hip_del_peer_info(&(ctx->hadb_entry)->hit_our,
-                               &(ctx->hadb_entry)->hit_peer),
+    HIP_IFEL(hip_del_peer_info(&ctx->hadb_entry->hit_our,
+                               &ctx->hadb_entry->hit_peer),
              -1, "Deleting peer info failed\n");
-
-    /* by now, if everything is according to plans, the refcnt should
-     * be 1 */
-    /* hip_put_ha(entry); */
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
