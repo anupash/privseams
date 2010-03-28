@@ -101,6 +101,10 @@ usagi_libc=23
 AC_SUBST(usagi_libc)
 
 
+AC_ARG_WITH(nomodules,
+            AS_HELP_STRING([--with-nomodules=list],
+                           [comma-separated list of disabled modules]))
+
 AC_ARG_ENABLE(firewall,
                AS_HELP_STRING([--enable-firewall],
                               [HIP enabled firewall daemon (default is YES)]),
@@ -310,7 +314,7 @@ echo ""
 echo "+-----------------------------------------------";
 echo "| processing modules...";
 echo "|";
-python ${srcdir}/process_modules.py -s ${srcdir} -d "${DISABLE_MODULES}"
+python ${srcdir}/process_modules.py -s ${srcdir} -d "${with_nomodules}"
 if [[ "$?" != "0" ]]; then
     echo "configure: error: Module processing failed"
     exit 1
