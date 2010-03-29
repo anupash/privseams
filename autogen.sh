@@ -59,9 +59,6 @@ setup_hipl() {
     autoreconf --install --force || \
         (echo "Missing libtool, automake, autoconf or autoreconf?" && exit 1)
         (echo "" && echo "HIPL has the following dependencies: " && display_dependencies && exit 1)
-    # Clean up generated scripts for "make bin". Otherwise we get
-    # /usr/local/lib/python2.6/dist-packages/ as the path in the scripts.
-    rm -f tools/hipdnsproxy tools/hipdnskeyparse
 }
 
 help() {
