@@ -645,6 +645,7 @@ HIPL_HEADER_OBJS = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.ho))
 CLEANFILES += $(HIPL_HEADER_OBJS)
 
 checkheaders: $(HIPL_HEADER_OBJS)
+vpath %.h $(srcdir)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
