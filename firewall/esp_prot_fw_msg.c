@@ -334,13 +334,13 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_TRIGGER_UPDATE, 0), -1,
              "build hdr failed\n");
 
-    HIP_DEBUG_HIT("src_hit", entry->inner_src_addr);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) entry->inner_src_addr,
+    HIP_DEBUG_HIT("src_hit", &entry->inner_src_addr);
+    HIP_IFEL(hip_build_param_contents(msg, (void *) &entry->inner_src_addr,
                                       HIP_PARAM_HIT, sizeof(struct in6_addr)),
                                       -1, "build param contents failed\n");
 
-    HIP_DEBUG_HIT("dst_hit", entry->inner_dst_addr);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) entry->inner_dst_addr,
+    HIP_DEBUG_HIT("dst_hit", &entry->inner_dst_addr);
+    HIP_IFEL(hip_build_param_contents(msg, (void *) &entry->inner_dst_addr,
                                       HIP_PARAM_HIT, sizeof(struct in6_addr)),
                                       -1, "build param contents failed\n");
 
@@ -499,13 +499,13 @@ int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_ANCHOR_CHANGE, 0), -1,
              "build hdr failed\n");
 
-    HIP_DEBUG_HIT("src_hit", entry->inner_src_addr);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) entry->inner_src_addr,
+    HIP_DEBUG_HIT("src_hit", &entry->inner_src_addr);
+    HIP_IFEL(hip_build_param_contents(msg, (void *) &entry->inner_src_addr,
                                       HIP_PARAM_HIT, sizeof(struct in6_addr)),
                                       -1, "build param contents failed\n");
 
-    HIP_DEBUG_HIT("dst_hit", entry->inner_dst_addr);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) entry->inner_dst_addr,
+    HIP_DEBUG_HIT("dst_hit", &entry->inner_dst_addr);
+    HIP_IFEL(hip_build_param_contents(msg, (void *) &entry->inner_dst_addr,
                                       HIP_PARAM_HIT, sizeof(struct in6_addr)),
                                       -1, "build param contents failed\n");
 

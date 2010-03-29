@@ -22,6 +22,7 @@
 #endif
 #include <sys/time.h>
 #include <inttypes.h>
+#include <netinet/in.h>
 #include "lib/core/hashchain.h"
 #include "esp_prot_defines.h"
 #include "lib/core/esp_prot_common.h"
@@ -33,10 +34,10 @@ typedef struct hip_sa_entry {
     int                    direction;      /* direction of the SA: inbound/outbound */
     uint32_t               spi;            /* IPsec SPI number */
     uint32_t               mode;           /* ESP mode :  1-transport, 2-tunnel, 3-beet */
-    struct in6_addr *      src_addr;       /* source address of outer IP header */
-    struct in6_addr *      dst_addr;       /* destination address of outer IP header */
-    struct in6_addr *      inner_src_addr; /* inner source addresses for tunnel and BEET SAs */
-    struct in6_addr *      inner_dst_addr; /* inner destination addresses for tunnel and BEET SAs */
+    struct in6_addr        src_addr;       /* source address of outer IP header */
+    struct in6_addr        dst_addr;       /* destination address of outer IP header */
+    struct in6_addr        inner_src_addr; /* inner source addresses for tunnel and BEET SAs */
+    struct in6_addr        inner_dst_addr; /* inner destination addresses for tunnel and BEET SAs */
     uint8_t                encap_mode;     /* encapsulation mode: 0 - none, 1 - udp */
     uint16_t               src_port;       /* src port for UDP encaps. ESP */
     uint16_t               dst_port;       /* dst port for UDP encaps. ESP */

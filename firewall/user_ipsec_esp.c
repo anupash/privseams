@@ -306,8 +306,8 @@ int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
     *decrypted_packet_len += decrypted_data_len;
 
     // now we know the next_hdr and can set up the IPv6 header
-    add_ipv6_header((struct ip6_hdr *) decrypted_packet, entry->inner_src_addr,
-                    entry->inner_dst_addr, *decrypted_packet_len, next_hdr);
+    add_ipv6_header((struct ip6_hdr *) decrypted_packet, &entry->inner_src_addr,
+                    &entry->inner_dst_addr, *decrypted_packet_len, next_hdr);
 
     HIP_DEBUG("original packet length: %i \n", *decrypted_packet_len);
 
