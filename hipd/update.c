@@ -438,7 +438,7 @@ out_err:
  *
  * @return zero on success or negative on failure
  */
-int hip_send_locators_to_all_peers()
+int hip_send_locators_to_all_peers(void)
 {
     int err                   = 0;
     struct hip_locator_info_addr_item *locators;

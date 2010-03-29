@@ -195,7 +195,7 @@ int cl_remove_trigger_from_i3(cl_context *ctx, cl_trigger *ctr)
 }
 
 /* basic operations for manipulating triggers on the client side */
-cl_trigger *cl_alloc_trigger()
+cl_trigger *cl_alloc_trigger(void)
 {
     cl_trigger *ctr;
 

@@ -713,7 +713,7 @@ out_err:
  *
  * @return zero on success or negative on failure
  */
-int hip_init_dht()
+int hip_init_dht(void)
 {
     int err         = 0;
 
@@ -836,7 +836,7 @@ out_err:
  *
  * @return zero on success or negative on failure
  */
-static int hip_init_host_ids()
+static int hip_init_host_ids(void)
 {
     int err                     = 0;
     struct stat status;
@@ -1200,7 +1200,7 @@ void hip_exit(int signal)
  *
  * @return zero on success or negative on failure
  */
-static int init_random_seed()
+static int init_random_seed(void)
 {
     struct timeval tv;
     struct timezone tz;

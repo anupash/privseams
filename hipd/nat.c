@@ -92,7 +92,7 @@ static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
  *
  * @return zero on success, or negative error value on error.
  */
-int hip_nat_refresh_port()
+int hip_nat_refresh_port(void)
 {
     int err = 0;
 
@@ -203,7 +203,7 @@ out_err:
  * @note This is needed only for simulation purposes and can be removed from
  *       released versions of HIPL.
  */
-static void hip_nat_randomize_nat_ports()
+static void hip_nat_randomize_nat_ports(void)
 {
     unsigned int secs_since_epoch = (unsigned int) time(NULL);
     HIP_DEBUG("Randomizing UDP ports to be used.\n");

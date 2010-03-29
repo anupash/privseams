@@ -349,7 +349,7 @@ int hip_agent_update(void)
  *
  * @return zero on success or negative on failure
  */
-int hip_periodic_maintenance()
+int hip_periodic_maintenance(void)
 {
     int err = 0;
 
@@ -489,7 +489,7 @@ out_err:
  * @return one if firewall is running or zero otherwise
  * @todo this is redundant with hip_firewall_is_alive()
  */
-int hip_get_firewall_status()
+int hip_get_firewall_status(void)
 {
     return hip_firewall_status;
 }
@@ -500,7 +500,7 @@ int hip_get_firewall_status()
  *
  * @return one if firewall is running or zero otherwise
  */
-int hip_firewall_is_alive()
+int hip_firewall_is_alive(void)
 {
 #ifdef CONFIG_HIP_FIREWALL
     if (hip_firewall_status) {

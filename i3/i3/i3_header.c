@@ -20,7 +20,7 @@
 *    pointer to the allocated data structure
 ***************************************************************************/
 
-i3_header *alloc_i3_header()
+i3_header *alloc_i3_header(void)
 {
     struct i3_header *hdr;
 

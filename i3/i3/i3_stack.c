@@ -20,7 +20,7 @@
 *    pointer to the allocated stack
 ***************************************************************************/
 
-i3_stack *alloc_i3_stack()
+i3_stack *alloc_i3_stack(void)
 {
     i3_stack *stack;
 

@@ -865,7 +865,7 @@ void tval_normalize(struct timeval *t)
 }
 
 /* get local address -- use fn in utils/ */
-struct in_addr get_local_addr_cl()
+struct in_addr get_local_addr_cl(void)
 {
     struct in_addr ia;
     ia.s_addr = ntohl(get_local_addr());

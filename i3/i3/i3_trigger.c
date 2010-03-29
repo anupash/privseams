@@ -22,7 +22,7 @@
 *    pointer to the allocated data structure
 ***************************************************************************/
 
-i3_trigger *alloc_i3_trigger()
+i3_trigger *alloc_i3_trigger(void)
 {
     i3_trigger *trigger;
 

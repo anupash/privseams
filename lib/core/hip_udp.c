@@ -21,7 +21,7 @@ in_port_t hip_peer_nat_udp_port  = HIP_NAT_UDP_PORT;
  *
  * @return the default local UDP port
  */
-in_port_t hip_get_local_nat_udp_port()
+in_port_t hip_get_local_nat_udp_port(void)
 {
     return hip_local_nat_udp_port;
 }
@@ -31,7 +31,7 @@ in_port_t hip_get_local_nat_udp_port()
  *
  * @return the default remote UDP port
  */
-in_port_t hip_get_peer_nat_udp_port()
+in_port_t hip_get_peer_nat_udp_port(void)
 {
     return hip_peer_nat_udp_port;
 }

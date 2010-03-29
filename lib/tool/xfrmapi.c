@@ -511,7 +511,7 @@ void hip_xfrm_set_algo_names(int new_algo_names)
  *
  * @return zero on success and negative on error
  */
-int hip_flush_all_policy()
+int hip_flush_all_policy(void)
 {
     return hip_xfrm_policy_flush(hip_xfrmapi_nl_ipsec);
 }
@@ -521,7 +521,7 @@ int hip_flush_all_policy()
  *
  * @return zero on success and negative on error
  */
-int hip_flush_all_sa()
+int hip_flush_all_sa(void)
 {
     return hip_xfrm_sa_flush(hip_xfrmapi_nl_ipsec);
 }
@@ -746,7 +746,7 @@ void hip_delete_hit_sp_pair(const hip_hit_t *src_hit,
  * delete the default Security Policy pair that triggers base exchanges
  *
  */
-void hip_delete_default_prefix_sp_pair()
+void hip_delete_default_prefix_sp_pair(void)
 {
     hip_hit_t src_hit, dst_hit;
     memset(&src_hit, 0, sizeof(hip_hit_t));
@@ -765,7 +765,7 @@ void hip_delete_default_prefix_sp_pair()
  *
  * @return zero on success and negative on failure
  */
-int hip_setup_default_sp_prefix_pair()
+int hip_setup_default_sp_prefix_pair(void)
 {
     int err = 0;
     hip_hit_t src_hit, dst_hit;

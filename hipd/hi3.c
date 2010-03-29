@@ -54,7 +54,7 @@ static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx)
  *
  * @return 0 on success, terminates program on i3 error
  */
-int hip_i3_init()
+int hip_i3_init(void)
 {
     if (cl_init(HIPL_HI3_FILE) != CL_RET_OK) {
         HIP_ERROR("hi3: error creating context!\n");
@@ -266,7 +266,7 @@ static int hip_hi3_insert_trigger(void)
  *
  * @return 0 always
  */
-int hip_hi3_clean()
+int hip_hi3_clean(void)
 {
     int i = 0;
     for (i = 0; i < hi3_pub_tr_count; i++) {

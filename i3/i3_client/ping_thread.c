@@ -284,7 +284,7 @@ void update_coordinate(I3ServerList *list, I3ServerListNode *next_to_ping)
 
 /** This function is called to close the ping socket
  */
-void close_ping_socket()
+void close_ping_socket(void)
 {
     if (ping_sock != -1) {
         nw_close(ping_sock);

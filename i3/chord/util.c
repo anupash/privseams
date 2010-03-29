@@ -527,7 +527,7 @@ void print_fun(Server *srv, char *fun_name, chordID *id)
     print_current_time(" @ ", "\n");
 }
 
-unsigned long get_current_time()
+unsigned long get_current_time(void)
 {
 #ifdef SIM_CHORD
     return (unsigned long) sim_get_time();

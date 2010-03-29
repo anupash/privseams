@@ -12,7 +12,7 @@
 #include "../i3/i3_debug.h"
 #include "../utils/netwrap.h"
 
-cl_id *cl_alloc_id()
+cl_id *cl_alloc_id(void)
 {
     cl_id *cid;
 

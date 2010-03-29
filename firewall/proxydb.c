@@ -83,7 +83,7 @@ void hip_init_proxy_db(void)
 /**
  * Unitialize the proxy database
  */
-void hip_uninit_proxy_db()
+void hip_uninit_proxy_db(void)
 {
     int i = 0;
     hip_list_t *item, *tmp;

@@ -264,7 +264,7 @@ static void print_rule(const struct rule *rule)
  *
  * @note: caller should take care of synchronization
  */
-void print_rule_tables()
+void print_rule_tables(void)
 {
     struct _DList *list = (struct _DList *) input_rules;
     struct rule *rule   = NULL;

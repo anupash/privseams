@@ -123,7 +123,7 @@ static void sig_chld(int signo)
 /*
  * Close file descriptors except for the standard output and the standard error
  */
-static int close_all_fds_except_stdout_and_stderr()
+static int close_all_fds_except_stdout_and_stderr(void)
 {
     /* get maximum file descriptor number that can be opened */
     struct rlimit rlim;

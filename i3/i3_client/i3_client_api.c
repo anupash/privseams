@@ -84,7 +84,7 @@ int cl_init(char *cfg_file)
  *        This error usually occurs when a cl_init() was initially omitted.
  *        </ul>
  */
-int cl_exit()
+int cl_exit(void)
 {
     int rc;
 

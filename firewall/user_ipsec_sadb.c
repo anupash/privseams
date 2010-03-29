@@ -834,7 +834,7 @@ void hip_sa_entry_print(const hip_sa_entry_t *entry)
  *
  * @return -1, if error occurred, else 0
  */
-int hip_sadb_init()
+int hip_sadb_init(void)
 {
     int err = 0;
 
@@ -856,7 +856,7 @@ out_err:
  *
  * @return -1, if error occurred, else 0
  */
-int hip_sadb_uninit()
+int hip_sadb_uninit(void)
 {
     int err = 0;
 
@@ -981,7 +981,7 @@ out_err:
  *
  * @return      -1, if error occurred, else 0
  */
-int hip_sadb_flush()
+int hip_sadb_flush(void)
 {
     int err               = 0, i = 0;
     hip_list_t *item      = NULL, *tmp = NULL;
@@ -1074,7 +1074,7 @@ out_err:
 /**
  * prints the whole contents of the sadb
  */
-void hip_sadb_print()
+void hip_sadb_print(void)
 {
     int i                 = 0;
     hip_list_t *item      = NULL, *tmp = NULL;

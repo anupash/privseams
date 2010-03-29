@@ -29,7 +29,7 @@
 *  return:
 *    pointer to the allocated data structure
 ***************************************************************************/
-i3_addr *alloc_i3_addr()
+i3_addr *alloc_i3_addr(void)
 {
     i3_addr *addr;
 
