@@ -97,9 +97,7 @@ endef
 # seen when compiling hipl: -lxml2 -lcap -lsqlite3 -lipq -luuid -lm -lcrypto
 CONFIGURE_VARS += \
     LIBS="-lxml2 -lcrypto -lm -lz" \
-    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include -I$(STAGING_DIR)/include -I$(TOOLCHAIN_DIR)/include -I$(STAGING_DIR)/usr/include/libconfig" \
-    LDFLAGS="$$$$LDFLAGS -L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib -L$(TOOLCHAIN_DIR)/lib" \
-    OPENWRT="-L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib -L$(TOOLCHAIN_DIR)/lib" \
+    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include/libconfig"
 
 define Build/Configure
 	(cd $(PKG_BUILD_DIR); rm -rf config.{cache,status}; ./autogen.sh --host=$(GNU_TARGET_NAME) --target=$(GNU_TARGET_NAME));
