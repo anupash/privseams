@@ -2,8 +2,8 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=hipl
 PKG_BRANCHNAME:=main
-PKG_VERSION:=0.9
-PKG_RELEASE:=2
+PKG_VERSION:=1.0.6
+PKG_RELEASE:=6
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_BRANCHNAME).tar.gz
 PKG_SOURCE_URL:=http://hipl.hiit.fi/hipl/contrib/openwrt/
