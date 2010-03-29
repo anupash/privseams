@@ -49,6 +49,7 @@ EOF
 
 cleanup()
 {
+    # The build directory created by make distcheck is read-only.
     chmod -R u+rwx "$CHECKOUT_DIR"
     rm -rf "$CHECKOUT_DIR"
     echo $BRANCH_REVISION > $BRANCH_REVISION_FILE
