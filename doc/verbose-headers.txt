@@ -232,7 +232,7 @@ libhipcore/debug.h : DEBUG_MSG_MAX_LEN
 libhipcore/debug.h : DEBUG_PREFIX_MAX
 firewall/firewall_defines.h : dec_alg
 firewall/firewall_defines.h : dec_data
-firewall/firewall_defines i3/aeshash/aescpp.h : dec_key
+firewall/firewall_defines i3/aeshash/aescpp.hh : dec_key
 libhipcore/hashtable.h : DECLARE_LHASH_OF
 firewall/rule_management.h : decrypt_contents
 firewall/rule_management.h : DECRYPT_CONTENTS_STR
@@ -355,7 +355,7 @@ firewall/user_ipsec_sadb firewall/user_ipsec_sadb.h : encap_mode
 libhiptool/xfrm.h : encap_oa
 libhiptool/xfrm.h : encap_sport
 libhiptool/xfrm.h : encap_type
-firewall/user_ipsec_sadb i3/aeshash/aescpp.h : enc_key
+firewall/user_ipsec_sadb i3/aeshash/aescpp.hh : enc_key
 hipd/hadb libhipandroid/regex /usr/include/regex.h : end
 libhipcore/protodefs.h : endpoint
 libhipcore/protodefs.h : endpoint_hip
