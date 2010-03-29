@@ -104,8 +104,6 @@ define Build/Configure
 
 	(cd ..;);
 
-	$(CONFIGURE_VARS);
-
 	$(call Build/Configure/Default, \
             --enable-shared \
             --enable-midauth \
