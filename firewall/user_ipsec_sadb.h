@@ -21,7 +21,6 @@
 #include <openssl/blowfish.h>   /* bf_key */
 #endif
 #include <sys/time.h>
-//#include <pthread.h>
 #include <inttypes.h>
 #include "lib/core/hashchain.h"
 #include "esp_prot_defines.h"

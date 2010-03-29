@@ -15,9 +15,8 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-//#include <pthread.h>
 #include <openssl/sha.h>
-//#include <string.h>
+#include <string.h>
 
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
