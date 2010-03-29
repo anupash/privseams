@@ -62,6 +62,7 @@ compile()
     run_program "./autogen.sh" &&
         run_program "./configure" $CONFIGURATION &&
         run_program "make -j17" &&
+        run_program "make -j17 checkheaders" &&
         run_program "make -j17 distcheck" &&
         run_program "make install"
 }
