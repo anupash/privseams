@@ -1,11 +1,7 @@
 #ifndef _HOST_LIST_H
 #define _HOST_LIST_H
 
-#if !defined(_WIN32)
-    #include <inttypes.h>
-#else
-    #include "../utils/fwint.h"
-#endif
+#include <stdint.h>
 #include "../i3/i3.h"
 #include "coordinates.h"
 

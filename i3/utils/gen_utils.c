@@ -1,4 +1,5 @@
 #include "gen_utils.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -6,9 +7,7 @@
 #include <assert.h>
 #ifndef _WIN32
     #include <sys/time.h>
-    #include <inttypes.h>
 #else
-    #include "fwint.h"
     #include <sys/types.h> // _ftime()
     #include <sys/timeb.h> // _ftime()
     #include <Windows.h> // struct timeval

@@ -2,11 +2,10 @@
 #define _I3_PING_H
 
 #include "../utils/netwrap.h"
+#include <stdint.h>
 #if !defined(_WIN32)
-    #include <inttypes.h>
     #include <netinet/in.h>
 #else
-    #include "fwint.h"
     #include <Winsock2.h>
 #endif
 
