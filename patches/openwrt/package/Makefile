@@ -117,7 +117,7 @@ define Build/Configure
 endef
 
 define Build/Compile
-	($(CONFIGURE_VARS) $(MAKE) -C $(PKG_BUILD_DIR));
+	$(MAKE) -C $(PKG_BUILD_DIR)
 	$(MAKE) -C $(PKG_BUILD_DIR) DESTDIR="$(PKG_INSTALL_DIR)" INSTALL="install -c" install
 endef
 
