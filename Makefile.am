@@ -638,7 +638,10 @@ autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
 	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
-HIPL_HEADER_OBJS = $(HIPL_HEADER_LIST:.h=.ho)
+# Do not check headers that have issues we cannot fix.
+NOCHECK_HEADER_LIST = $(wildcard $(srcdir)/lib/gui/*.h $(srcdir)/lib/android/*.h)
+HIPL_HEADER_FILTERED = $(filter-out $(NOCHECK_HEADER_LIST),$(HIPL_HEADER_LIST))
+HIPL_HEADER_OBJS = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.ho))
 CLEANFILES += $(HIPL_HEADER_OBJS)
 
 checkheaders: $(HIPL_HEADER_OBJS)
