@@ -63,7 +63,6 @@ compile()
         run_program "./configure" $CONFIGURATION &&
         run_program "make -j17" &&
         run_program "make -j17 checkheaders" &&
-        run_program "make -j17 distcheck" &&
         run_program "make install"
 }
 
@@ -76,6 +75,7 @@ cd "$CHECKOUT_DIR" || cleanup 1
 # Compile HIPL in different configurations
 # vanilla configuration
 compile
+run_program "make -j17 distcheck"
 
 # PISA configuration
 compile --enable-firewall --disable-agent --disable-pfkey --disable-rvs --disable-hipproxy --disable-altsep --enable-privsep --disable-i3 --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
