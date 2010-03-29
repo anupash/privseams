@@ -21,7 +21,7 @@
 #include <openssl/blowfish.h>   /* bf_key */
 #endif
 #include <sys/time.h>
-#include <pthread.h>
+//#include <pthread.h>
 #include <inttypes.h>
 #include "lib/core/hashchain.h"
 #include "esp_prot_defines.h"
@@ -31,7 +31,6 @@
 
 /* IPsec Security Association entry */
 typedef struct hip_sa_entry {
-    pthread_mutex_t        rw_lock;        /* keep other threads from modifying */
     int                    direction;      /* direction of the SA: inbound/outbound */
     uint32_t               spi;            /* IPsec SPI number */
     uint32_t               mode;           /* ESP mode :  1-transport, 2-tunnel, 3-beet */

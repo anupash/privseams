@@ -153,8 +153,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
         elen              = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
 
         /* encrypt data now */
-        pthread_mutex_lock(&entry->rw_lock);
-
         HIP_DEBUG("encrypting data...\n");
 
         /* encrypts the payload and puts the encrypted data right
@@ -164,8 +162,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
         HIP_IFEL(hip_payload_encrypt(in_transport_hdr, in_transport_type, elen,
                                      esp_packet + next_hdr_offset, &encryption_len, entry),
                  -1, "failed to encrypt data");
-
-        pthread_mutex_unlock(&entry->rw_lock);
 
         // this also includes the ESP tail
         *esp_packet_len += encryption_len;
@@ -236,8 +232,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
          * starting at the transport layer header */
         elen              = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
 
-        pthread_mutex_lock(&entry->rw_lock);
-
         HIP_DEBUG("encrypting data...\n");
 
         /* encrypts the payload and puts the encrypted data right
@@ -248,8 +242,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
                                      esp_packet + next_hdr_offset,
                                      &encryption_len, entry),
                  -1, "failed to encrypt data");
-
-        pthread_mutex_unlock(&entry->rw_lock);
 
         // this also includes the ESP tail
         *esp_packet_len += encryption_len;
@@ -267,9 +259,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
              "failed to cache hash of packet for cumulative authentication extension\n");
 
 out_err:
-    // needed in case something breaks during encryption -> unlock for next packet
-    pthread_mutex_unlock(&entry->rw_lock);
-
     return err;
 }
 
@@ -308,15 +297,11 @@ int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
     }
 
     // decrypt now
-    pthread_mutex_lock(&entry->rw_lock);
-
     HIP_DEBUG("decrypting ESP packet...\n");
 
     HIP_IFEL(hip_payload_decrypt((unsigned char *) ctx->transport_hdr.esp, esp_len,
                                  decrypted_packet + next_hdr_offset, &next_hdr,
                                  &decrypted_data_len, entry), -1, "ESP decryption is not successful\n");
-
-    pthread_mutex_unlock(&entry->rw_lock);
 
     *decrypted_packet_len += decrypted_data_len;
 
@@ -327,9 +312,6 @@ int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
     HIP_DEBUG("original packet length: %i \n", *decrypted_packet_len);
 
 out_err:
-    // needed in case something breaks during decryption -> unlock for next packet
-    pthread_mutex_unlock(&entry->rw_lock);
-
     return err;
 }
 

@@ -288,13 +288,11 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
         HIP_DEBUG("dropping original packet...\n");
 
         // update SA statistics for replay protection etc
-        pthread_mutex_lock(&entry->rw_lock);
         entry->bytes             += err;
         entry->usetime.tv_sec     = now.tv_sec;
         entry->usetime.tv_usec    = now.tv_usec;
         entry->usetime_ka.tv_sec  = now.tv_sec;
         entry->usetime_ka.tv_usec = now.tv_usec;
-        pthread_mutex_unlock(&entry->rw_lock);
 
         // the original packet has to be dropped
         err                       = 1;
@@ -371,13 +369,11 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
         HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
         HIP_DEBUG("dropping ESP packet...\n");
 
-        pthread_mutex_lock(&entry->rw_lock);
         entry->bytes             += err;
         entry->usetime.tv_sec     = now.tv_sec;
         entry->usetime.tv_usec    = now.tv_usec;
         entry->usetime_ka.tv_sec  = now.tv_sec;
         entry->usetime_ka.tv_usec = now.tv_usec;
-        pthread_mutex_unlock(&entry->rw_lock);
 
         // the original packet has to be dropped
         err                       = 1;

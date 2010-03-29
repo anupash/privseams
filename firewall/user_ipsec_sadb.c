@@ -15,9 +15,9 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#include <pthread.h>
+//#include <pthread.h>
 #include <openssl/sha.h>
-#include <string.h>
+//#include <string.h>
 
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
@@ -592,7 +592,6 @@ static int hip_sa_entry_update(int direction,
                                                          inner_dst_addr)), -1,
                                                          "failed to retrieve sa entry\n");
 
-    pthread_mutex_lock(&stored_entry->rw_lock);
     /* delete all links
      *
      * XX TODO more efficient to delete entries in inbound db for all (addr, oldspi)
@@ -611,7 +610,6 @@ static int hip_sa_entry_update(int direction,
 
     HIP_IFEL(hip_link_entry_add(stored_entry->dst_addr, stored_entry), -1,
              "failed to add links\n");
-    pthread_mutex_unlock(&stored_entry->rw_lock);
 
     HIP_DEBUG("sa entry updated\n");
 
@@ -760,10 +758,6 @@ static int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_a
     /* find entry in sadb and delete entries in linkdb for all (addr, spi)-matches */
     HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(src_addr, dst_addr)), -1,
              "failed to retrieve sa entry\n");
-
-    /* NOTE: no need to unlock mutex as the entry is already freed and can't be
-     * accessed any more */
-    pthread_mutex_lock(&stored_entry->rw_lock);
 
     HIP_IFEL(hip_link_entry_delete(stored_entry->dst_addr, stored_entry->spi), -1, "failed to delete links\n");
 
