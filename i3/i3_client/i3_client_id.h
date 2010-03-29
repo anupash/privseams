@@ -8,6 +8,7 @@
 #ifndef I3_CLIENT_ID_H
 #define I3_CLIENT_ID_H
 
+#include <stdint.h>
 
 /* functions implemented in i3_client_id.c */
 cl_id *cl_alloc_id(void);
