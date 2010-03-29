@@ -49,7 +49,6 @@ display_post_info() {
   echo "NOTE: The commands above only build the userspace software." && \
   display_kernel_info && \
   echo "NOTE: Run './configure --help' for more information"
-  echo "NOTE: libjip and hipsock need to be compiled separately with make"
 }
 
 display_pre_info() {
