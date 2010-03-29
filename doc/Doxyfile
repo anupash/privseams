@@ -490,7 +490,6 @@ WARN_LOGFILE           =
 INPUT                  = ../agent \
                          ../firewall \
                          ../hipd \
-                         ../hipsock \
                          ../test \
                          ../tools \
                          ../doc \

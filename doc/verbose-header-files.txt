@@ -296,7 +296,7 @@ libhipcore/debug.h : hip_die
 libhipcore/debug.h : _HIP_DIE
 hipd/init.h : _HIPD_INIT
 hipd/maintenance.h : _HIPD_MAINTENANCE
-hipd/hipd hipsock/af_hip.h : HIPD_NL_GROUP
+hipd/hipd : HIPD_NL_GROUP
 hipd/hipd.h : HIPD_SELECT
 hipd/accessor.h : HIPD_STATE_MASK
 libhipcore/debug.h : HIP_DUMP_PACKET
@@ -361,7 +361,7 @@ libhipcore/misc.h : HIP_ID_TYPE_LSI
 libhipcore/ife.h : _HIP_IFE
 libhipcore/misc.h : hip_in6_ntop2
 libhipcore/debug.h : HIP_INFO_INADDR
-hipsock/usercompat libhipcore/debug.h : HIP_INFO_LOCATOR
+libhipcore/debug.h : HIP_INFO_LOCATOR
 libhipcore/debug.h : HIP_INFO_LSI
 hipd/init.h : hip_init_certs
 hipd/hidb.h : HIP_INIT_DB
@@ -461,7 +461,7 @@ hipd/registration.h : HIP_PENDING_REQUEST_LIFETIME
 performance/performance.h : hip_perf_close
 performance/performance.h : hip_perf_enabled
 libhipcore/debug.h : hip_perror_wrapper
-hipsock/debug libhipcore/debug.h : hip_print_hit
+libhipcore/debug.h : hip_print_hit
 libhipcore/debug.h : hip_print_locator
 libhipcore/debug.h : hip_print_lsi
 libhipcore/debug.h : hip_print_sockaddr
@@ -552,8 +552,8 @@ libhipcore/state.h : HIP_UPDATE_STATE_REKEYING
 hipd/user_ipsec_sadb_api.h : hip_userspace_ipsec_send_to_fw
 libhipcore/utils.h : _HIP_UTILS
 libhipcore/debug.h : hip_vlog
-hipd/hidb hipsock/eid_db.h : HIP_WRITE_LOCK_DB
-hipd/hidb hipsock/eid_db.h : HIP_WRITE_UNLOCK_DB
+hipd/hidb : HIP_WRITE_LOCK_DB
+hipd/hidb : HIP_WRITE_UNLOCK_DB
 libhiptool/xfrmapi.h : hip_xfrm_policy_delete
 libhiptool/xfrmapi.h : hip_xfrm_policy_modify
 libhiptool/xfrmapi.h : hip_xfrm_state_delete
