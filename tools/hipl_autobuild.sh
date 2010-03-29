@@ -6,6 +6,7 @@
 # - $HOME/src/hipl/           - location for HIPL shared repository
 # - $HOME/src/hipl/<branch>   - location for HIPL <branch> to be tested
 # - $HOME/tmp/autobuild/hipl/ - temporary build directory
+# - $HOME/tmp/autobuild/openwrt - working OpenWrt tree
 #
 # If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
 # for the user running this script, then email will be sent in case of failure.
@@ -83,5 +84,12 @@ compile --enable-firewall --disable-agent --disable-pfkey --disable-rvs --disabl
 # Alternative path to vanilla
 compile --enable-firewall --enable-agent --enable-pfkey --disable-rvs --disable-hipproxy --enable-openwrt --enable-altsep --disable-privsep --enable-i3 --disable-opportunistic --disable-dht --enable-blind --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
 
+# Compile HIPL within an OpenWrt checkout
+run_program "cp hipl*tar.gz $OPENWRT_DIR/dl"
+cd $OPENWRT_DIR || cleanup 1
+run_program "rm -rf package/hipl"
+run_program "cp -r $CHECKOUT_DIR/patches/openwrt/package package/hipl"
+run_program "make -j17 package/hipl-clean V=99"
+run_program "make -j17 package/hipl-install V=99"
 
 cleanup 0
