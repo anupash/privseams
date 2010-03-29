@@ -661,14 +661,16 @@ CODING CONVENTIONS
 
 - Memory (de)allocation procedure is as follows:
 
-  int f() {
-    char *mem = NULL;
-  HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
+  int f(void)
+  {
+      char *mem = NULL;
+      HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
 
   out_err:
-    if (mem)
-      free(mem);
-    return err;
+      if (mem) {
+          free(mem);
+      }
+      return err;
   }
 
 ECLIPSE
@@ -827,9 +829,9 @@ marker has to start from the same line as the variable. Using the special marker
 
 /** A HIP FROM parameter. */
 struct hip_from {
-     hip_tlv_type_t type;  /**< Type code for the parameter. */
-     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address[16]; /**< IPv6 address */
+     hip_tlv_type_t type;         /**< type code for the parameter */
+     hip_tlv_len_t  length;       /**< length of the parameter contents in bytes */
+     uint8_t        address[16];  /**< IPv6 address */
 } __attribute__ ((packed));
 
 Here the whole structure gets Doxygen comment "A HIP FROM parameter", and the
