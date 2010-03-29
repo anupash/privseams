@@ -645,4 +645,6 @@ checkheaders: $(HIPL_HEADER_OBJS)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
+lib/gui/%.ho: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
+
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo
