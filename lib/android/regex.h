@@ -27,6 +27,8 @@
 /* VMS doesn't have `size_t' in <sys/types.h>, even though POSIX says it
    should be there.  */
 #include <stddef.h>
+#else
+#include <sys/types.h>
 #endif
 
 

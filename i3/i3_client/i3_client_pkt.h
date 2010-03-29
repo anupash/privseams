@@ -9,6 +9,7 @@
 #define I3_CLIENT_PKT_H
 
 #include <stdint.h>
+#include "i3_client.h"
 
 /* functions implemented in i3_client_pkt.c */
 int cl_send_data_packet(cl_context *ctx, i3_stack *stack,

@@ -9,6 +9,7 @@
 #define I3_CLIENT_CALLBACK_H
 
 #include <stdint.h>
+#include "i3_client.h"
 
 int cl_register_context_callback(
     cl_context * ctx, uint16_t cbk_type,

@@ -9,6 +9,8 @@
 #ifndef I3_STACK_H
 #define I3_STACK_H
 
+#include "i3.h"
+
 /* functions implemented in i3_stack.c */
 i3_stack *alloc_i3_stack(void);
 void init_i3_stack(i3_stack *s, ID *ids, int len);

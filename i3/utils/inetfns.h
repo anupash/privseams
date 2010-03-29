@@ -1,6 +1,8 @@
 #ifndef _INET_FNS_H
 #define _INET_FNS_H
 
+#include <stdint.h>
+
 /* Get address of local machine */
 uint32_t get_local_addr_eth(void);
 uint32_t name_to_addr(const char *);

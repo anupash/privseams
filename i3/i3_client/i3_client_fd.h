@@ -8,6 +8,7 @@
 #ifndef I3_CLIENT_FD_H
 #define I3_CLIENT_FD_H
 
+#include <sys/select.h>
 #include <sys/types.h>
 
 typedef struct fd_ {

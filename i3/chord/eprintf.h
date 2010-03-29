@@ -2,6 +2,8 @@
 /* Excerpted from 'The Practice of Programming' */
 /* by Brian W. Kernighan and Rob Pike */
 
+#include <sys/types.h>
+
 /* eprintf.h: error wrapper functions */
 extern void    eprintf(char *, ...);
 extern void    weprintf(char *, ...);

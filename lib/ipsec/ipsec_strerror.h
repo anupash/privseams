@@ -34,6 +34,8 @@
 #ifndef IPSEC_STRERROR_H
 #define IPSEC_STRERROR_H
 
+#include <sys/cdefs.h>
+
 extern int __ipsec_errcode;
 extern void __ipsec_set_strerror __P((const char *));
 

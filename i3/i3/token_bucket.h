@@ -10,6 +10,7 @@
 #define TOKEN_BUCKET_H
 
 #include <stdint.h>
+#include "i3.h"
 
 /* functions implemented in token_bucket.c */
 token_bucket *alloc_token_bucket(void);

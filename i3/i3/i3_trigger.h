@@ -10,6 +10,7 @@
 #define I3_TRIGGER_H
 
 #include <stdint.h>
+#include "i3.h"
 
 /* functions implemented in i3_trigger.c */
 i3_trigger *alloc_i3_trigger(void);

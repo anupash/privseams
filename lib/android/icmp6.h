@@ -65,6 +65,11 @@
 #ifndef _NETINET_ICMP6_H_
 #define _NETINET_ICMP6_H_
 
+#define _BSD_SOURCE
+
+#include <sys/types.h>
+#include <netinet/in.h>
+
 #define ICMPV6_PLD_MAXLEN       1232    /* IPV6_MMTU - sizeof(struct ip6_hdr)
                                            - sizeof(struct icmp6_hdr) */
 
