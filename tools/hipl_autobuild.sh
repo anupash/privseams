@@ -12,6 +12,11 @@
 # for the user running this script, then email will be sent in case of failure.
 
 BRANCH_NAME=$1
+
+AUTOBUILD_DIR=$HOME/tmp/autobuild
+BUILD_DIR=$AUTOBUILD_DIR/hipl
+OPENWRT_DIR=$AUTOBUILD_DIR/openwrt
+
 BUILD_DIR=$HOME/tmp/autobuild/hipl
 BRANCH_URL=$HOME/src/hipl/$BRANCH_NAME
 CHECKOUT_DIR=$BUILD_DIR/$(date +"%Y-%m-%d-%H%M")_$BRANCH_NAME
