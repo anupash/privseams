@@ -182,6 +182,9 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                 app_string = 'HIP_MODULES_' + current_app.upper() + '_MODULES_H'
                 init_function_string = 'static int (*' + current_app
                 init_function_string += '_init_functions[])(void) = {'
+                module_string = 'const char *modules_' + current_app + '[] = {'
+                required_module_string = 'const char *required_modules_'
+                required_module_string += current_app + '[] = {'
 
                 hdr_file.write('/* ' + WARNING_STRING + ' */\n')
                 hdr_file.write('#ifndef ' + app_string + '\n')
@@ -195,22 +198,27 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                     hdr_file.write('\n\nconst int num_modules_' + current_app)
                     hdr_file.write(' = ' + num_modules + ';\n')
                     hdr_file.write('\nconst int num_required_modules_' + current_app + ' = ')
-                    hdr_file.write(str(len(required_modules)) + ';\n')
-                    hdr_file.write('\nconst char *modules_' + current_app + '[')
-                    hdr_file.write(num_modules + '] = {')
+                    hdr_file.write(str(len(required_modules)) + ';\n\n')
+                    hdr_file.write(module_string)
+
                     first_loop = True
                     for module in enabled_modules:
                         if first_loop != True:
-                            hdr_file.write(', ')
+                            hdr_file.write(',\n')
+                            for i in range(len(module_string)):
+                                hdr_file.write(' ')
                         hdr_file.write('"' + module + '"')
                         first_loop = False
-                    hdr_file.write('};')
-                    hdr_file.write('\n\nconst char *required_modules_' + current_app + '[')
-                    hdr_file.write(str(len(required_modules)) + '] = {')
+                    hdr_file.write('};\n\n')
+
+                    hdr_file.write(required_module_string)
+
                     first_loop = True
                     for module in required_modules:
                         if first_loop != True:
-                            hdr_file.write(', ')
+                            hdr_file.write(',\n')
+                            for i in range(len(required_module_string)):
+                                hdr_file.write(' ')
                         hdr_file.write('"' + module + '"')
                         first_loop = False
                     hdr_file.write('};\n\n')
