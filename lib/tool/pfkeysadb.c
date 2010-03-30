@@ -10,6 +10,7 @@
 
 #include "config.h"
 
+#include <sys/types.h>
 #include <linux/ipsec.h>
 
 #include "config.h"
