@@ -247,20 +247,14 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
 # Creates a file at file_path and includes a Makefile.am from all given modules
 # sub directories.
 def create_makefile_modules(srcdir,
-                            file_path,
                             module_info,
                             disabled_modules):
 
+    file_path = 'Makefile.modules'
     makefile_modules = open(file_path, 'w')
 
-    enabled_modules = module_info.keys()
-    if not disabled_modules:
-        all_modules = enabled_modules
-    else:
-        all_modules = enabled_modules + disabled_modules
-
-    # Include compile statements from module Makefile.am's
-    for current in enabled_modules:
+    # Include Makefile.am's from modules
+    for current in module_info.keys():
         path = os.path.join(srcdir, MODULES_DIR, current, 'Makefile.am')
         makefile_modules.write('include ' + path + '\n')
 
@@ -305,7 +299,6 @@ def main():
                         required_modules)
 
     create_makefile_modules(srcdir,
-                            'Makefile.modules',
                             module_info,
                             disabled_modules)
 
