@@ -87,7 +87,7 @@ Requires: openssl, libxml2, libgtk2.0-0, iptables, libcap2, libsqlite3-0
 %description lib
 
 %package daemon
-Requires: hipl-lib, iproute, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
+Requires: hipl-lib, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
