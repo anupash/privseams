@@ -2,8 +2,8 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=hipl
 PKG_BRANCHNAME:=main
-PKG_VERSION:=0.9
-PKG_RELEASE:=2
+PKG_VERSION:=1.0.6
+PKG_RELEASE:=6
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_BRANCHNAME).tar.gz
 PKG_SOURCE_URL:=http://hipl.hiit.fi/hipl/contrib/openwrt/
@@ -96,17 +96,13 @@ endef
 
 # seen when compiling hipl: -lxml2 -lcap -lsqlite3 -lipq -luuid -lm -lcrypto
 CONFIGURE_VARS += \
-    LIBS="-lxml2 -lcrypto -lm -lz" \
-    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include -I$(STAGING_DIR)/include -I$(TOOLCHAIN_DIR)/include -I$(STAGING_DIR)/usr/include/libconfig" \
-    LDFLAGS="$$$$LDFLAGS -L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib -L$(TOOLCHAIN_DIR)/lib" \
-    OPENWRT="-L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib -L$(TOOLCHAIN_DIR)/lib" \
+    LIBS="-lz" \
+    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include/libconfig"
 
 define Build/Configure
 	(cd $(PKG_BUILD_DIR); rm -rf config.{cache,status}; ./autogen.sh --host=$(GNU_TARGET_NAME) --target=$(GNU_TARGET_NAME));
 
 	(cd ..;);
-
-	$(CONFIGURE_VARS);
 
 	$(call Build/Configure/Default, \
             --enable-shared \
@@ -118,8 +114,8 @@ define Build/Configure
 endef
 
 define Build/Compile
-	($(CONFIGURE_VARS) $(MAKE) -C $(PKG_BUILD_DIR));
-	$(MAKE) -C $(PKG_BUILD_DIR) DESTDIR="$(PKG_INSTALL_DIR)" INSTALL="install -c" install
+	$(MAKE) -C $(PKG_BUILD_DIR)
+	$(MAKE) -C $(PKG_BUILD_DIR) DESTDIR="$(PKG_INSTALL_DIR)" install
 endef
 
 define Package/hipl-hipd/install

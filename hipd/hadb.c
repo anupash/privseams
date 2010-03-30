@@ -1118,7 +1118,7 @@ static IMPLEMENT_LHASH_DOALL_FN(hip_hadb_rec_free, hip_ha_t)
 /**
  * Uninitialize host association database
  */
-void hip_uninit_hadb()
+void hip_uninit_hadb(void)
 {
     if (hadb_hit == NULL) {
         return;
@@ -1134,7 +1134,7 @@ void hip_uninit_hadb()
  *
  * @todo currently this function is a no-op
  */
-void hip_delete_all_sp()
+void hip_delete_all_sp(void)
 {
     HIP_DEBUG("\n");
 

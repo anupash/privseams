@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #define DIR 257
 #define PRIORITY 258
 #define PLUS 259
@@ -15,8 +17,8 @@
 #define SLASH 271
 #define HYPHEN 272
 typedef union {
-    u_int     num;
-    u_int32_t num32;
+    unsigned int num;
+    uint32_t num32;
     struct _val {
         int   len;
         char *buf;

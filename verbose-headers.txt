@@ -197,8 +197,8 @@ hipd/hidb.h : hip_hidb_add_lsi
 hipd/hidb.h : hip_hidb_get_entry_by_lsi
 hipd/hidb.h : HIP_INIT_DB
 hipd/hidb.h : HIP_MAX_HOST_ID_LEN
-hipd/hidb hipsock/eid_db.h : HIP_WRITE_LOCK_DB
-hipd/hidb hipsock/eid_db.h : HIP_WRITE_UNLOCK_DB
+hipd/hidb : HIP_WRITE_LOCK_DB
+hipd/hidb : HIP_WRITE_UNLOCK_DB
 hipd/hidb.h : m_arg
 hipd/hidb.h : m_head
 hipd/hipd.h : HIPD_SELECT
@@ -321,7 +321,7 @@ hipd/registration.h : hip_srv_status_t
 hipd/user_ipsec_hipd_msg.h : USER_IPSEC_HIPD_MSG_H_
 hipd/user_ipsec_sadb_api.h : hip_userspace_ipsec_send_to_fw
 hipd/user_ipsec_sadb_api.h : USER_IPSEC_SADB_API_H_
-hipsock/debug libhipcore/debug.h : hip_print_hit
+libhipcore/debug.h : hip_print_hit
 libhipconf/hipconf.h : ACTION_BOS
 libhipconf/hipconf.h : ACTION_BUDDIES
 libhipconf/hipconf.h : ACTION_DATAPACKET

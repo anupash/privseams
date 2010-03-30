@@ -94,7 +94,7 @@ void hip_uninit_services(void)
  * An expired pending requests is one that has not been deleted within
  * @c HIP_PENDING_REQUEST_LIFETIME seconds.
  */
-int hip_registration_maintenance()
+int hip_registration_maintenance(void)
 {
     while (hip_del_pending_request_by_expiration() == 0) {
         ;

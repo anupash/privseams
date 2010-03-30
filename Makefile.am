@@ -7,11 +7,11 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  .vimrc debian doc lib/android patches process_modules.py
+EXTRA_DIST =  .vimrc debian doc patches process_modules.py
 EXTRA_DIST += test/configs test/demo test/maintainer test/packaging
 EXTRA_DIST += test/performance $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
-EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh
+EXTRA_DIST += autogen.sh check_header_verbosity.sh
 EXTRA_DIST += release.version tcp verbose-headers.txt
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
@@ -355,11 +355,17 @@ autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
 	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
-HIPL_HEADER_OBJS = $(HIPL_HEADER_LIST:.h=.ho)
+# Do not check headers that have issues we cannot fix.
+NOCHECK_HEADER_LIST = $(wildcard $(srcdir)/lib/gui/*.h)
+HIPL_HEADER_FILTERED = $(filter-out $(NOCHECK_HEADER_LIST),$(HIPL_HEADER_LIST))
+HIPL_HEADER_OBJS = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.ho))
 CLEANFILES += $(HIPL_HEADER_OBJS)
 
 checkheaders: $(HIPL_HEADER_OBJS)
+vpath %.h $(srcdir)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
+
+lib/gui/%.ho: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo

@@ -36,11 +36,6 @@ AC_CHECK_FUNC(EC_KEY_new,
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 
-# Checks for header files.
-# libintl.h and alloca.h are only used in libhipandroid/regex.c
-# REMOVE IF POSSIBLE
-AC_CHECK_HEADERS([alloca.h libintl.h])
-
 case "$host" in
   alpha*)
     TARGET=ALPHA;
@@ -175,7 +170,6 @@ AC_CACHE_CHECK([whether to use OpenWRT],
                [ac_cv_use_openwrt=no])
 if test x"$ac_cv_use_openwrt" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_OPENWRT)
-    AC_SUBST(OPENWRT_CFLAGS, "-lc")
     AH_TEMPLATE(CONFIG_HIP_OPENWRT,
                 [Defined to 1 if openwrt support is enabled.])
     if test x"$TARGET" = x"MIPS_LINUX"; then
@@ -304,7 +298,7 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $OPENWRT_CFLAGS $MAEMO_CFLAGS $GPROF_CFLAGS")
+AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $MAEMO_CFLAGS $GPROF_CFLAGS")
 
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500 $MAEMO_CPPFLAGS")

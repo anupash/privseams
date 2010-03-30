@@ -97,7 +97,7 @@ static int pisa_read_communit_operator_hit(char *hit)
     return 1;
 }
 
-void pisa_check_for_random_update()
+void pisa_check_for_random_update(void)
 {
     static time_t lastupdate = 0;
     time_t now;

@@ -45,4 +45,4 @@ echo "Searching for unused declarations"
 TEMPFILE=$(mktemp)
 find_verbous_decls searchtags_local_headers $TEMPFILE
 
-grep -vE "android|i3|_H$" $TEMPFILE | sort -u >| verbose-headers.txt
+grep -vE "i3|_H$" $TEMPFILE | sort -u >| verbose-headers.txt

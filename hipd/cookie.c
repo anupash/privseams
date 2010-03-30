@@ -430,7 +430,7 @@ out_err:
  *
  * @return zero on success or negative on error
  */
-int hip_recreate_all_precreated_r1_packets()
+int hip_recreate_all_precreated_r1_packets(void)
 {
     HIP_HASHTABLE *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
     hip_list_t *curr, *iter;

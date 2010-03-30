@@ -43,8 +43,6 @@
  */
 #define HIP_DAEMON_LOCK_FILE    HIPL_LOCKDIR "/hipd.lock"
 
-#ifndef ANDROID_CHANGES
-
 /** ICMPV6_FILTER related stuff */
 #define BIT_CLEAR(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
 #define BIT_SET(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] |= (1U << ((nr) & 31)); } while (0)
@@ -71,8 +69,7 @@
 #endif
 /** end ICMPV6_FILTER related stuff */
 
-#endif /* ANDROID_CHANGES */
-
+/******************************************************************************/
 /**
  * Catch SIGCHLD.
  *
@@ -80,12 +77,7 @@
  */
 static void hip_sig_chld(int signum)
 {
-#ifdef ANDROID_CHANGES
-    int status;
-#else
     union wait status;
-#endif
-
     int pid;
 
     signal(signum, hip_sig_chld);
@@ -321,7 +313,9 @@ out_err:
  */
 
 #ifndef CONFIG_HIP_OPENWRT
-#ifndef ANDROID_CHANGES
+/**
+ * probe for kernel modules (linux specific)
+ */
 static void hip_probe_kernel_modules(void)
 {
     int count, err, status;
@@ -361,8 +355,6 @@ static void hip_probe_kernel_modules(void)
 
     HIP_DEBUG("Probing completed\n");
 }
-
-#endif /* ANDROID_CHANGES */
 #endif /* CONFIG_HIP_OPENWRT */
 
 /**
@@ -767,9 +759,7 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_DEBUG
     hip_print_sysinfo();
 #endif
-#ifndef ANDROID_CHANGES
     hip_probe_kernel_modules();
-#endif
 #endif
 
     /* Register signal handlers */

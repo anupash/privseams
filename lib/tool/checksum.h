@@ -1,8 +1,11 @@
 #ifndef HIP_LIB_CORE_CHECKSUM_H
 #define HIP_LIB_CORE_CHECKSUM_H
 
+#define _BSD_SOURCE
+
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include "lib/core/protodefs.h"
 
 uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c, uint16_t len);

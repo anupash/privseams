@@ -75,7 +75,6 @@ static int esp_prot_wrap_config_lookup_int(const config_t *cfg,
     }
     return success;
 }
-
 #endif /* HAVE_LIBCONFIG */
 
 /**
@@ -98,7 +97,7 @@ config_t *esp_prot_read_config(void)
 
     // init context and read file
     config_init(cfg);
-    HIP_DEBUG("reading config file: %s...\n", config_file);
+    HIP_DEBUG("reading config file: %s\n", config_file);
     HIP_IFEL(!config_read_file(cfg, config_file), -1,
              "unable to read config file, please ensure that esp_prot_config.cfg from tools directory is located in /etc/hip/\n");
 
@@ -142,8 +141,9 @@ int esp_prot_token_config(const config_t *cfg)
 {
     int err = 0;
 
-#ifdef HAVE_LIBCONFIG
     if (cfg) {
+
+#ifdef HAVE_LIBCONFIG
         // process parallel hchains-related settings
         if (!esp_prot_wrap_config_lookup_int(cfg, path_token_transform,
                                              &token_transform)) {
@@ -235,22 +235,26 @@ int esp_prot_token_config(const config_t *cfg)
             goto out_err;
             break;
         }
-    } else {
-        HIP_ERROR("no configuration parameters available\n");
+#else
+        HIP_ERROR("found config file, but libconfig not linked\n");
 
         err = -1;
         goto out_err;
+#endif /* HAVE_LIBCONFIG */
+
+    } else {
+        HIP_ERROR("no configuration file available\n");
+
+        HIP_INFO("using default configuration\n");
+        /* use defaults for plain TFM from above in case of no lib/file */
+        token_transform       = ESP_PROT_TFM_PLAIN;
+        hash_length           = 20;
+        hash_structure_length = 16;
+        num_parallel_hchains  = 1;
+        ring_buffer_size      = 0;
+        num_linear_elements   = 0;
+        num_random_elements   = 0;
     }
-#else
-    /* use defaults for plain TFM from above in case we cannot use libconfig */
-    token_transform       = ESP_PROT_TFM_PLAIN;
-    hash_length           = 20;
-    hash_structure_length = 16;
-    num_parallel_hchains  = 1;
-    ring_buffer_size      = 0;
-    num_linear_elements   = 0;
-    num_random_elements   = 0;
-#endif
 
     // do some sanity checks here
     HIP_IFEL(hash_length <= 0, -1, "hash length has insufficient length\n");
@@ -279,8 +283,9 @@ int esp_prot_sender_config(const config_t *cfg)
 {
     int err = 0;
 
-#ifdef HAVE_LIBCONFIG
     if (cfg) {
+
+#ifdef HAVE_LIBCONFIG
         // process hcstore-related settings
         if (!esp_prot_wrap_config_lookup_int(cfg, path_num_hchains_per_item,
                                              &num_hchains_per_item)) {
@@ -302,19 +307,23 @@ int esp_prot_sender_config(const config_t *cfg)
                                  &update_threshold)) {
             update_threshold = 0.5;
         }
-    } else {
-        HIP_ERROR("no configuration parameters available\n");
+#else
+        HIP_ERROR("found config file, but libconfig not linked\n");
 
         err = -1;
         goto out_err;
+#endif /* HAVE_LIBCONFIG */
+
+    } else {
+        HIP_ERROR("no configuration file available\n");
+
+        HIP_INFO("using default configuration\n");
+        /* use defaults for plain TFM from above in case of no lib/file */
+        num_hchains_per_item = 8;
+        num_hierarchies      = 1;
+        refill_threshold     = 0.5;
+        update_threshold     = 0.5;
     }
-#else
-    /* use defaults for plain TFM from above in case we cannot use libconfig */
-    num_hchains_per_item = 8;
-    num_hierarchies      = 1;
-    refill_threshold     = 0.5;
-    update_threshold     = 0.5;
-#endif
 
     // do some sanity checks here
     HIP_IFEL(num_hchains_per_item <= 0, -1,
@@ -345,23 +354,27 @@ int esp_prot_verifier_config(const config_t *cfg)
 {
     int err = 0;
 
-#ifdef HAVE_LIBCONFIG
     if (cfg) {
+#ifdef HAVE_LIBCONFIG
         // process verification-related setting
         if (!esp_prot_wrap_config_lookup_int(cfg, path_window_size,
                                              &window_size)) {
             window_size = 64;
         }
-    } else {
-        HIP_ERROR("no configuration parameters available\n");
+#else
+        HIP_ERROR("found config file, but libconfig not linked\n");
 
         err = -1;
         goto out_err;
+#endif /* HAVE_LIBCONFIG */
+
+    } else {
+        HIP_ERROR("no configuration file available\n");
+
+        HIP_INFO("using default configuration\n");
+        /* use defaults for plain TFM from above in case of no lib/file */
+        window_size = 64;
     }
-#else
-    /* use defaults for plain TFM from above in case we cannot use libconfig */
-    window_size = 64;
-#endif
 
     // do some sanity checks here
     HIP_IFEL(window_size <= 0, -1, "window size has insufficient length\n");

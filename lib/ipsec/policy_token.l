@@ -185,7 +185,7 @@ __policy__strbuffer__init__(msg)
 }
 
 void
-__policy__strbuffer__free__()
+__policy__strbuffer__free__(void)
 {
         yy_delete_buffer(strbuffer);
 

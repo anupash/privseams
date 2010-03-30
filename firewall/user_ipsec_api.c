@@ -238,8 +238,8 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
     HIP_DEBUG("matching SA entry found\n");
 
     /* get preferred routable addresses */
-    memcpy(&preferred_local_addr, entry->src_addr, sizeof(struct in6_addr));
-    memcpy(&preferred_peer_addr, entry->dst_addr, sizeof(struct in6_addr));
+    memcpy(&preferred_local_addr, &entry->src_addr, sizeof(struct in6_addr));
+    memcpy(&preferred_peer_addr, &entry->dst_addr, sizeof(struct in6_addr));
 
     HIP_DEBUG_HIT("preferred_local_addr", &preferred_local_addr);
     HIP_DEBUG_HIT("preferred_peer_addr", &preferred_peer_addr);
@@ -288,13 +288,11 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
         HIP_DEBUG("dropping original packet...\n");
 
         // update SA statistics for replay protection etc
-        pthread_mutex_lock(&entry->rw_lock);
         entry->bytes             += err;
         entry->usetime.tv_sec     = now.tv_sec;
         entry->usetime.tv_usec    = now.tv_usec;
         entry->usetime_ka.tv_sec  = now.tv_sec;
         entry->usetime_ka.tv_usec = now.tv_usec;
-        pthread_mutex_unlock(&entry->rw_lock);
 
         // the original packet has to be dropped
         err                       = 1;
@@ -339,11 +337,8 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
              "no SA entry found for dst_addr and SPI\n");
     HIP_DEBUG("matching SA entry found\n");
 
-    // do a partial consistency check of the entry
-    HIP_ASSERT(entry->inner_src_addr && entry->inner_dst_addr);
-
-    HIP_DEBUG_HIT("src hit: ", entry->inner_src_addr);
-    HIP_DEBUG_HIT("dst hit: ", entry->inner_dst_addr);
+    HIP_DEBUG_HIT("src hit: ", &entry->inner_src_addr);
+    HIP_DEBUG_HIT("dst hit: ", &entry->inner_dst_addr);
 
     // XX TODO implement check with seq window
     // check for correct SEQ no.
@@ -356,7 +351,7 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
              "failed to recreate original packet\n");
 
     // create sockaddr for sendto
-    hip_addr_to_sockaddr(entry->inner_dst_addr, &local_sockaddr);
+    hip_addr_to_sockaddr(&entry->inner_dst_addr, &local_sockaddr);
 
     // re-insert the original HIT-based (-> IPv6) packet into the network stack
     err = sendto(raw_sock_v6, decrypted_packet, decrypted_packet_len, 0,
@@ -371,13 +366,11 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
         HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
         HIP_DEBUG("dropping ESP packet...\n");
 
-        pthread_mutex_lock(&entry->rw_lock);
         entry->bytes             += err;
         entry->usetime.tv_sec     = now.tv_sec;
         entry->usetime.tv_usec    = now.tv_usec;
         entry->usetime_ka.tv_sec  = now.tv_sec;
         entry->usetime_ka.tv_usec = now.tv_usec;
-        pthread_mutex_unlock(&entry->rw_lock);
 
         // the original packet has to be dropped
         err                       = 1;

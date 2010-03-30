@@ -212,7 +212,7 @@ out_err:
  * @note This is needed only for simulation purposes and can be removed from
  *       released versions of HIPL.
  */
-static void hip_nat_randomize_nat_ports()
+static void hip_nat_randomize_nat_ports(void)
 {
     unsigned int secs_since_epoch = (unsigned int) time(NULL);
     HIP_DEBUG("Randomizing UDP ports to be used.\n");
