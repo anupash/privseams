@@ -4678,7 +4678,7 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
           Compile hipl--main--2.6 with ./configure --enable-hi3 --disable-opendht
     </para></listitem>
     <listitem><para>
-          Start the daemon: hipd -3 i3-cfg-PL.xml
+          Start the daemon: hipd -3 i3/i3-cfg-PL.xml
     </para></listitem>
     <listitem><para>
           Wait until the trigger is inserted (see log file) and continue with e.g.
