@@ -234,13 +234,11 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                         first_loop = False
                     hdr_file.write('};')
                 else:
-                    hdr_file.write('\nconst int num_modules_' + current_app + ' = 0;')
-                    hdr_file.write('\n\nconst char *modules_' + current_app)
-                    hdr_file.write('[0] = {};')
-                    hdr_file.write('\nconst int num_required_modules_')
-                    hdr_file.write(current_app + ' = 0;')
-                    hdr_file.write('\n\nconst char *required_modules_')
-                    hdr_file.write(current_app + '[0] = {};')
+                    hdr_file.write('\nconst int num_modules_' + current_app)
+                    hdr_file.write(' = 0;\n\nconst int num_required_modules_')
+                    hdr_file.write(current_app + ' = 0;\n\n')
+                    hdr_file.write(module_string + '};')
+                    hdr_file.write('\n\n' + required_module_string + '};')
                     hdr_file.write('\n\n' + init_function_string + '};')
 
                 hdr_file.write('\n\n#endif /* ' + app_string + ' */\n')
