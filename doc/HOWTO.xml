@@ -44,7 +44,7 @@
       </para></listitem>
     </orderedlist>
     <para>
-    The HIPL library and header dependencies are not listed here. Type "./autogen.sh --help"
+    The HIPL library and header dependencies are not listed here. Read the INSTALL file
     to see what software you need to install before compilation of HIPL.
     </para>
     <para> Network Requirements</para>
@@ -357,7 +357,7 @@
         and then run the following:
       </para></listitem>
       <listitem><para>
-        ./autogen.sh
+        autoreconf --install
       </para></listitem>
       <listitem><para>
         ./configure
@@ -593,7 +593,8 @@ $ ls -l bin/
   <programlisting>
   $ tla get hipl--main--2.6 hipl--main--2.6
   $ cd hipl--main--2.6
-  $ ./autogen.sh
+  $ autoreconf --install
+  $ ./configure
   $ make dist
   $ cp hipl-main.tar.gz path/to/kamikaze/dl
   </programlisting>
@@ -1564,7 +1565,7 @@ $ make V=99
       commands (assuming a clean source tree): </para>
 
       <para><programlisting>
-        ./autogen.sh --enable-maemo
+        ./configure --enable-maemo
       </programlisting></para>
 
      <para>
@@ -2654,7 +2655,7 @@ VPN
   <section id="ch_dns_data">
     <title>DNS Server with HIP Support</title>
     <para>
-      Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
+      Tools directory contains hipdnskeyparse a script which converts public
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
@@ -4389,10 +4390,16 @@ combo-newgroup=&lt;create new...&gt;
            e.g. cd hipl
     </para></listitem>
     <listitem><para>
-              Run autogen.sh
+              Run autoreconf
     </para></listitem>
     <listitem><para>
-           ./autogen.sh
+           autoreconf --install
+    </para></listitem>
+    <listitem><para>
+              Run configure
+    </para></listitem>
+    <listitem><para>
+           ./configure
     </para></listitem>
     <listitem><para>
               Run make

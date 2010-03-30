@@ -993,7 +993,10 @@ binary packages. The aim for these packages is for easier testing of HIPL
 software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
 packages can be created.
 
-To create the RPM package, type: "./autogen && ./configure && make bin".
+To create the RPM package, type:
+
+autoreconf --install && ./configure && make rpm
+
 This will create a source tar.gz (in the same
 directory) which will be used when building the RPM file. After the
 script has run successfully, follow the instructions given by the
@@ -1018,8 +1021,11 @@ http://fedoraproject.org/wiki/Packaging/Guidelines
 Debian
 ------
 
-DEB package is created similarly: "./autogen && ./configure && make
-bin". Correspondingly, the binary packages are written to /usr/src/debian
+DEB package is created similarly:
+
+autoreconf --install && ./configure && make deb
+
+Correspondingly, the binary packages are written to /usr/src/debian
 
 REPOSITORY MANAGEMENT FOR FEDORA AND UBUNTU
 ===========================================
@@ -1045,7 +1051,7 @@ Updating Fedora Server Repository
 ---------------------------------
 
 You must do the following things first at the server:
-* yum install <./autogen.sh --help>
+* yum install <required packages>
 * yum install createrepo
 * ln -s /usr/src/redhat /home/hipl
 
@@ -1074,7 +1080,7 @@ Updating Ubuntu Server Repository
 ---------------------------------
 
 You must do the following things first at the server:
-* apt-get install <./autogen.sh --help>
+* apt-get install <required packages>
 * apt-get install pax
 
 Install the following tool to the host where building packages:

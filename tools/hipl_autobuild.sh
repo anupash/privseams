@@ -65,7 +65,7 @@ cleanup()
 compile()
 {
     CONFIGURATION="--prefix=$(pwd)/local_install $@"
-    run_program "./autogen.sh" &&
+    run_program "autoreconf --install" &&
         run_program "./configure" $CONFIGURATION &&
         run_program "make -j17" &&
         run_program "make -j17 checkheaders" &&

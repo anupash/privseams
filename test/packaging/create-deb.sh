@@ -618,7 +618,7 @@ if [ $TYPE = "binary" ];then
     # jk: do not re-configure as it messes up any configs we might need.
     cd "$HIPL"
     #echo "** Running make in $HIPL"
-    #./autogen.sh
+    #autoreconf --install
     #./configure --prefix=/usr
     #echo "** Running make in $HIPL"
     #if ! make clean all;then

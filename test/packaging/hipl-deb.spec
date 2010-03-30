@@ -27,7 +27,7 @@ other related tools and test software.
 
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
-./autogen.sh --prefix=/usr
+autoreconf --install
 %configure --prefix=/usr
 make -C doc
 make -j 4 all
