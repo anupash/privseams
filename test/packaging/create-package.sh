@@ -86,8 +86,8 @@ mkindex_rpm()
 {
     test ! -d $PKG_INDEX && mkdir $PKG_INDEX
     # fix this hack -miika
-    test -d  /tmp/hipl--main--2.6/buildenv/RPMS/i586 &&
-        cp -a /tmp/hipl--main--2.6/buildenv/RPMS/i586 /tmp/hipl--main--2.6/buildenv/RPMS/i386
+    test -d  /tmp/hipl-main/buildenv/RPMS/i586 &&
+        cp -a /tmp/hipl-main/buildenv/RPMS/i586 /tmp/hipl-main/buildenv/RPMS/i386
     #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
     $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
