@@ -10,6 +10,9 @@
 #ifndef HIP_HIPD_MODULARIZATION_H
 #define HIP_HIPD_MODULARIZATION_H
 
+#include <stdint.h>
+#include "lib/core/protodefs.h"
+
 int hip_register_handle_function(const uint8_t packet_type,
                                  const uint32_t ha_state,
                                  int (*handle_function)(const uint8_t packet_type,
