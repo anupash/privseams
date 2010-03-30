@@ -131,13 +131,12 @@ static unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
     int err          = 0;
 
     // values have to be present
-    HIP_ASSERT(link_entry != NULL && link_entry->dst_addr != NULL &&
-               link_entry->spi != 0);
+    HIP_ASSERT(link_entry != NULL && link_entry->spi != 0);
 
     memset(hash, 0, INDEX_HASH_LENGTH);
 
     /* concatenate dst_addr and spi */
-    memcpy(&hash_input[0], link_entry->dst_addr, sizeof(struct in6_addr));
+    memcpy(&hash_input[0], &link_entry->dst_addr, sizeof(struct in6_addr));
     memcpy(&hash_input[sizeof(struct in6_addr)], &link_entry->spi,
            sizeof(uint32_t));
 
@@ -172,10 +171,8 @@ static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
     unsigned long hash2 = 0;
 
     // values have to be present
-    HIP_ASSERT(link_entry1 != NULL && link_entry1->dst_addr != NULL
-               && link_entry1->spi != 0);
-    HIP_ASSERT(link_entry2 != NULL && link_entry2->dst_addr != NULL
-               && link_entry2->spi != 0);
+    HIP_ASSERT(link_entry1 != NULL && link_entry1->spi != 0);
+    HIP_ASSERT(link_entry2 != NULL && link_entry2->spi != 0);
 
     _HIP_DEBUG("calculating hash1:\n");
     HIP_IFEL(!(hash1 = hip_link_entry_hash(link_entry1)), -1,
@@ -244,30 +241,24 @@ static IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
 static hip_link_entry_t * hip_link_entry_find(const struct in6_addr *dst_addr,
                                               uint32_t spi)
 {
-    hip_link_entry_t *search_link, *stored_link = NULL;
+    hip_link_entry_t search_link;
+    hip_link_entry_t *stored_link = NULL;
     int err = 0;
 
-    HIP_IFEL(!(search_link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))),
-             -1, "failed to allocate memory\n");
-
     // search the linkdb for the link to the corresponding entry
-    memcpy(search_link->dst_addr, dst_addr, sizeof(struct in6_addr));
-    search_link->spi = spi;
+    memcpy(&search_link.dst_addr, dst_addr, sizeof(struct in6_addr));
+    search_link.spi = spi;
 
     HIP_DEBUG("looking up link entry with following index attributes:\n");
-    HIP_DEBUG_HIT("dst_addr", search_link->dst_addr);
-    HIP_DEBUG("spi: 0x%lx\n", search_link->spi);
+    HIP_DEBUG_HIT("dst_addr", &search_link.dst_addr);
+    HIP_DEBUG("spi: 0x%lx\n", search_link.spi);
 
-    HIP_IFEL(!(stored_link = hip_ht_find(linkdb, search_link)), -1,
+    HIP_IFEL(!(stored_link = hip_ht_find(linkdb, &search_link)), -1,
              "failed to retrieve link entry\n");
 
 out_err:
     if (err) {
         stored_link = NULL;
-    }
-
-    if (search_link) {
-        free(search_link);
     }
 
     return stored_link;
@@ -288,7 +279,7 @@ static int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry)
     HIP_IFEL(!(link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))),
              -1, "failed to allocate memory\n");
 
-    link->dst_addr        = dst_addr;
+    memcpy(&link->dst_addr, dst_addr, sizeof(struct in6_addr));
     link->spi             = entry->spi;
     link->linked_sa_entry = entry;
 
@@ -338,7 +329,7 @@ out_err:
 void hip_link_entry_print(hip_link_entry_t *entry)
 {
     if (entry) {
-        HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
+        HIP_DEBUG_HIT("dst_addr", &entry->dst_addr);
         HIP_DEBUG("spi: 0x%lx\n", entry->spi);
         HIP_DEBUG("> sa entry:\n");
     } else {
