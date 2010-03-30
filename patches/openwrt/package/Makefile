@@ -96,7 +96,7 @@ endef
 
 # seen when compiling hipl: -lxml2 -lcap -lsqlite3 -lipq -luuid -lm -lcrypto
 CONFIGURE_VARS += \
-    LIBS="-lxml2 -lcrypto -lm -lz" \
+    LIBS="-lz" \
     CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include/libconfig"
 
 define Build/Configure
