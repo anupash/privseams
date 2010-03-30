@@ -65,8 +65,7 @@ cleanup()
 compile()
 {
     CONFIGURATION="--prefix=$(pwd)/local_install $@"
-    run_program "autoreconf --install" &&
-        run_program "./configure" $CONFIGURATION &&
+    run_program "./configure" $CONFIGURATION &&
         run_program "make -j17" &&
         run_program "make -j17 checkheaders" &&
         run_program "make install"
@@ -77,6 +76,9 @@ test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
 bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR || cleanup 1
 
 cd "$CHECKOUT_DIR" || cleanup 1
+
+# Bootstrap the autotools build system.
+run_program autoreconf --install
 
 # Compile HIPL in different configurations
 # vanilla configuration
