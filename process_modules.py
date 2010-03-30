@@ -2,8 +2,6 @@
 import getopt, glob, os, sys, xml.dom.minidom
 
 ### Constants ###
-INFO_FILE_NAME = 'project_info.xml'
-
 APPLICATION_TAG_NAME  = 'application'
 APPLICATION_ATTR_NAME = 'name'
 APPLICATION_PATH_NAME = 'path'
@@ -14,39 +12,7 @@ MODULE_INFO_FILE = 'module_info.xml'
 HEADER_FILE_DIR    = MODULES_DIR
 HEADER_FILE_SUFFIX = '_modules.h'
 
-
 ### Functions ###
-
-# Parses the XML document at 'path' and returns the included information
-def parse_info_file(path, disabled_modules):
-
-    apps = {}
-    compile_type = 'all'
-
-    try:
-        file = open(path, "r")
-        try:
-            dom = xml.dom.minidom.parse(file)
-        finally:
-            file.close()
-    except IOError:
-        sys.exit('Error on parsing the info file: ' + path)
-
-    for current_app in dom.getElementsByTagName(APPLICATION_TAG_NAME):
-        name = str(current_app.attributes[APPLICATION_ATTR_NAME].value)
-        path = str(current_app.attributes[APPLICATION_PATH_NAME].value)
-        apps[name] = path
-
-    if 0 < len(dom.getElementsByTagName('compile_type')):
-        node = dom.getElementsByTagName('compile_type')[0];
-        compile_type = node.childNodes[0].nodeValue
-
-    # Read list of disabled modules from configuration file and add to set (unique)
-    if 0 < len(dom.getElementsByTagName('disabled_modules')):
-        for node in dom.getElementsByTagName('disabled_modules')[0].getElementsByTagName('module'):
-            disabled_modules.add(str(node.attributes['name'].value))
-
-    return (apps, compile_type, disabled_modules)
 
 # Parses the XML document at 'path' and returns a dictionary with module info
 def parse_module_info(path, applications, required_modules):
@@ -95,58 +61,50 @@ def parse_module_info(path, applications, required_modules):
     for current_app in dom.getElementsByTagName('application'):
         app_info = {}
         name = str(current_app.attributes['name'].value)
-        if False == (name in applications.keys()):
-            print '|\n|    WARNING in configuration of ' + module_name + ':',
-            print 'unknown application ' + name
-            print '|    Please check configuration file'
-            raise Error()
-
+        applications.add(name)
         app_info['header_file'] = str(current_app.attributes['header_file'].value)
         app_info['init_function'] = str(current_app.attributes['init_function'].value)
         app_info['linkcommand'] = str(current_app.attributes['linkcommand'].value)
         module_info['application'][name] = app_info
 
-    return (module_name, module_info, required_modules)
+    return (applications, module_name, module_info, required_modules)
 
 # Tries to read the XML configuration files for all sub-folders in the given
 # directory and returns a dictionary containing the module information
-def read_module_info(MODULES_DIR, disabled_modules, applications, compile_type):
+def read_module_info(MODULES_DIR, disabled_modules):
 
     # Initialize output variable
     module_info = {}
     required_modules = set()
+    applications = set()
 
     # Iterate through all sub directories in MODULES_DIR
     for current_module in glob.glob(MODULES_DIR + '/*/'):
         cont = False
+        print '|    found module: ' + current_module
         # Check if current_module is disabled
         for disabled in disabled_modules:
             if current_module == os.path.join(MODULES_DIR, disabled) + '/':
                 cont = True
-                print '|    found module: ' + disabled
                 print '|    state:        ' + 'DISABLED'
-                if 'all' == compile_type:
-                    print '|    (this module will be compiled, but not linked)\n|'
-                elif 'enabled' == compile_type:
-                    print '|    (this module will not be compiled)\n|'
-                else:
-                    print '|    (ignoring this directory)\n|'
+                print '|    (ignoring this directory)\n|'
         if True == cont:
             continue
 
         try:
             path = os.path.join(current_module, MODULE_INFO_FILE)
-            (name, info, required_modules) = parse_module_info(path, applications, required_modules)
-            print '|    found module: ' + name
+            (applications, module_name, info, required_modules) = parse_module_info(path,
+                                                                       applications,
+                                                                       required_modules)
             print '|    state:        ' + 'ENABLED'
             print '|    version:      ' + info['version'] + '\n|'
-            module_info[name] = info
+            module_info[module_name] = info
         except:
             print '|\n|    WARNING parsing of module info file',
             print '\'' + path + '\' failed!'
             print '|    ...ignoring this directory\n|'
 
-    return (module_info, required_modules)
+    return (applications, module_info, required_modules)
 
 # Checks the module_info data structure for missing dependencies and conflicts
 # between modules. Returns a
@@ -217,7 +175,7 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
     if False == os.path.isdir(output_dir):
         os.mkdir(output_dir)
 
-    for current_app in applications.keys():
+    for current_app in applications:
 
         hdr_file_path = os.path.join(output_dir, current_app + suffix)
 
@@ -289,11 +247,10 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
 
 # Creates a file at file_path and includes a Makefile.am from all given modules
 # sub directories.
-def create_makefile_modules(file_path,
+def create_makefile_modules(srcdir,
+                            file_path,
                             module_info,
-                            disabled_modules,
-                            applications,
-                            compile_type):
+                            disabled_modules):
 
     makefile_modules = open(file_path, 'w')
 
@@ -303,17 +260,9 @@ def create_makefile_modules(file_path,
     else:
         all_modules = enabled_modules + disabled_modules
 
-    if 'all' == compile_type:
-        compile_modules = all_modules
-    elif 'enabled' == compile_type:
-        compile_modules = enabled_modules
-    else:
-        print '|\n|    ERROR compile_type \'' + compile_type + '\' is unknown.'
-        sys.exit('|    ...abort current run. Please check project configuration\n|')
-
     # Include compile statements from module Makefile.am's
-    for current in compile_modules:
-        path = os.path.join(MODULES_DIR, current, 'Makefile.am')
+    for current in enabled_modules:
+        path = os.path.join(srcdir, MODULES_DIR, current, 'Makefile.am')
         makefile_modules.write('include ' + path + '\n')
 
     makefile_modules.write('\n')
@@ -349,15 +298,8 @@ def main():
     if disabled_modules:
         disabled_modules = disabled_modules.rsplit(',')
 
-    (applications,
-     compile_type,
-     disabled_modules) = parse_info_file(os.path.join(srcdir, INFO_FILE_NAME),
-                                         disabled_modules)
-
-    (module_info, required_modules) = read_module_info(os.path.join(srcdir, MODULES_DIR),
-                                                       disabled_modules,
-                                                       applications,
-                                                       compile_type)
+    (applications, module_info, required_modules) = read_module_info(os.path.join(srcdir, MODULES_DIR),
+                                                                     disabled_modules)
 
     (includes, init_functions) = process_module_info(module_info)
 
@@ -369,11 +311,10 @@ def main():
                         module_info.keys(),
                         required_modules)
 
-    create_makefile_modules('Makefile.modules',
+    create_makefile_modules(srcdir,
+                            'Makefile.modules',
                             module_info,
-                            disabled_modules,
-                            applications,
-                            compile_type)
+                            disabled_modules)
 
 if __name__ == "__main__":
     main()

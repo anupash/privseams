@@ -7,9 +7,10 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  .vimrc debian doc lib/android patches process_modules.py project_info.xml
+EXTRA_DIST =  .vimrc debian doc lib/android patches process_modules.py
 EXTRA_DIST += test/configs test/demo test/maintainer test/packaging
 EXTRA_DIST += test/performance $(wildcard modules/*/module_info.xml)
+EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
 EXTRA_DIST += Android.mk autogen.sh check_header_verbosity.sh
 EXTRA_DIST += release.version tcp verbose-headers.txt
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
