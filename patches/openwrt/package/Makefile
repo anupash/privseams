@@ -100,10 +100,6 @@ CONFIGURE_VARS += \
     CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include/libconfig"
 
 define Build/Configure
-	(cd $(PKG_BUILD_DIR); rm -rf config.{cache,status}; ./autogen.sh --host=$(GNU_TARGET_NAME) --target=$(GNU_TARGET_NAME));
-
-	(cd ..;);
-
 	$(call Build/Configure/Default, \
             --enable-shared \
             --enable-midauth \
