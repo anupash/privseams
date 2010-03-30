@@ -14,11 +14,10 @@
         <module name="update" minversion="0.0.1" />
     </requires>
 
-    <!-- Mandatory: name, header_file, init_function, linkcommand -->
+    <!-- Mandatory: name, header_file, init_function -->
     <application
         name="hipd"
         header_file="modules/heartbeat_update/hipd/hb_update.h"
-        init_function="hip_hb_update_init"
-        linkcommand="hipd_hipd_LDADD += modules/heartbeat_update/hipd/libhiphbupdate.la" />
+        init_function="hip_hb_update_init" />
 </module>
 

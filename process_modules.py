@@ -64,7 +64,6 @@ def parse_module_info(path, applications, required_modules):
         applications.add(name)
         app_info['header_file'] = str(current_app.attributes['header_file'].value)
         app_info['init_function'] = str(current_app.attributes['init_function'].value)
-        app_info['linkcommand'] = str(current_app.attributes['linkcommand'].value)
         module_info['application'][name] = app_info
 
     return (applications, module_name, module_info, required_modules)
@@ -266,12 +265,6 @@ def create_makefile_modules(srcdir,
         makefile_modules.write('include ' + path + '\n')
 
     makefile_modules.write('\n')
-    # Write linker commands to Makefile.modules
-    for current_module in enabled_modules:
-        for current_app in module_info[current_module]['application']:
-            linkcommand = module_info[current_module]['application'][current_app]['linkcommand']
-            makefile_modules.write(linkcommand + '\n')
-
     makefile_modules.close()
     print '|    created file: ' + file_path
 

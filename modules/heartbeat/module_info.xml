@@ -9,10 +9,9 @@
     bugaddress="hipl-users@freelists.org"
     webpage="http://infrahip.hiit.fi/">
     
-    <!-- Mandatory: name, header_file, init_function, linkcommand -->
+    <!-- Mandatory: name, header_file, init_function -->
     <application
         name="hipd"
         header_file="modules/heartbeat/hipd/heartbeat.h"
-        init_function="hip_heartbeat_init"
-        linkcommand="hipd_hipd_LDADD += modules/heartbeat/hipd/libhipheartbeat.la" />
+        init_function="hip_heartbeat_init" />
 </module>

@@ -9,11 +9,10 @@
     bugaddress="hipl-users@freelists.org"
     webpage="http://infrahip.hiit.fi/">
 
-    <!-- Mandatory: name, header_file, init_function, linkcommand -->
+    <!-- Mandatory: name, header_file, init_function -->
     <application
         name="hipd"
         header_file="modules/update/hipd/update.h"
-        init_function="hip_update_init"
-        linkcommand="hipd_hipd_LDADD += modules/update/hipd/libhipupdate.la" />
+        init_function="hip_update_init" />
 </module>
 
