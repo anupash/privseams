@@ -192,9 +192,8 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                     for current in includes[current_app]:
                         hdr_file.write('\n#include \"' + current + '\"')
 
-                    hdr_file.write('\n\ntypedef int (*pt2Function)(void);\n')
-                    hdr_file.write('\nconst int num_modules_' + current_app + ' = ')
-                    hdr_file.write(num_modules + ';\n')
+                    hdr_file.write('\n\nconst int num_modules_' + current_app)
+                    hdr_file.write(' = ' + num_modules + ';\n')
                     hdr_file.write('\nconst int num_required_modules_' + current_app + ' = ')
                     hdr_file.write(str(len(required_modules)) + ';\n')
                     hdr_file.write('\nconst char *modules_' + current_app + '[')
@@ -216,18 +215,22 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                         first_loop = False
                     hdr_file.write('};')
 
-                    hdr_file.write('\n\nstatic const pt2Function ' + current_app)
-                    hdr_file.write('_init_functions[' + num_modules + '] = {')
+                    hdr_file.write('\n\n')
+                    init_function_string = 'static int (*' + current_app
+                    init_function_string += '_init_functions[' + num_modules
+                    init_function_string += '])(void) = {'
+                    hdr_file.write(init_function_string)
 
                     first_loop = True
                     for function in init_functions[current_app]:
                         if first_loop != True:
-                            hdr_file.write(', ')
+                            hdr_file.write(',\n')
+                            for i in range(len(init_function_string)):
+                                hdr_file.write(' ')
                         hdr_file.write('&' + function)
                         first_loop = False
                     hdr_file.write('};')
                 else:
-                    hdr_file.write('\n\ntypedef int (*pt2Function)(void);\n')
                     hdr_file.write('\nconst int num_modules_' + current_app + ' = 0;')
                     hdr_file.write('\n\nconst char *modules_' + current_app)
                     hdr_file.write('[0] = {};')
@@ -235,8 +238,7 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
                     hdr_file.write(current_app + ' = 0;')
                     hdr_file.write('\n\nconst char *required_modules_')
                     hdr_file.write(current_app + '[0] = {};')
-                    hdr_file.write('\n\nstatic const pt2Function ' + current_app)
-                    hdr_file.write('_init_functions[0] = {};')
+                    hdr_file.write('\n\n' + init_function_string + '};')
 
                 hdr_file.write('\n\n#endif /* ' + app_string + ' */\n')
                 print '|    created file: ' + hdr_file_path
