@@ -480,8 +480,6 @@ Base System  --->
  Configuration  --->
   Linux Module Utilities  --->
    [*] modprobe
-Libraries  --->
- &lt;*&gt; libuuid
 Network  --->
  &lt;*&gt; ipsec-tools
  &lt;*&gt; isakmpd
@@ -1009,9 +1007,6 @@ endif
         If you meet an error like "libintl.h: no such file or directory", try rebuilding gcc and uClibc in toolchain.
         </para>
         <para>
-        If you meet an error like "-luuid: cannot find", try rebuilding e2fsprogs.
-        </para>
-        <para>
         Building hipl under the kamikaze devel tree does not go well always. It could cause you to correct numerous errors while building it. You are warned!
         </para>
         <para>
@@ -1041,8 +1036,6 @@ Base System  --->
  Configuration  --->
   Linux Module Utilities  --->
    [*] modprobe
-Libraries  --->
- &lt;*&gt; libuuid
 Network  --->
  &lt;*&gt; ipsec-tools
  &lt;*&gt; isakmpd

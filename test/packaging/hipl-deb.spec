@@ -9,7 +9,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
-BuildRequires: automake, autoconf, libtool, gcc, g++, libgtk2.0-dev, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev, libsqlite3-dev, libuuid1
+BuildRequires: automake, autoconf, libtool, gcc, g++, libgtk2.0-dev, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev, libsqlite3-dev
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
