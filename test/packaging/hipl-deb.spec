@@ -225,7 +225,7 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %files all
-%doc doc/COPYING
+%doc COPYING
 
 %files minimal
 %doc doc/HACKING
