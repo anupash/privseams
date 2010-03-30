@@ -591,8 +591,8 @@ $ ls -l bin/
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--main--2.6 hipl--main--2.6
-  $ cd hipl--main--2.6
+  $ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
+  $ cd trunk
   $ autoreconf --install
   $ ./configure
   $ make dist
@@ -707,9 +707,9 @@ Kernel modules  --->
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--main--2.6 hipl--main--2.6
+  $ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
   $ mkdir -p path/to/kamikaze/dl
-  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
+  $ tar czf path/to/kamikaze/dl/hipl-main.tar.gz trunk
   </programlisting>
           </para>
           <para>
@@ -871,9 +871,9 @@ Network  --->
           </para>
           <para>
 <programlisting>
-$ tla get hipl--main--2.6 hipl--main--2.6
+$ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
 $ mkdir -p path/to/kamikaze/dl
-$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
+$ tar czf path/to/kamikaze/dl/hipl-main.tar.gz trunk
 </programlisting>
           </para>
           <para>
@@ -1176,9 +1176,9 @@ $ bin/openwrt-wgt*
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--main--2.6 hipl--main--2.6
+  $ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
   $ mkdir -p kamikaze_7.09/dl
-  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
+  $ tar czf kamikaze_7.09/dl/hipl-main.tar.gz trunk
   </programlisting>
           </para>
           <para>
@@ -1537,7 +1537,7 @@ $ make V=99
       <para>The wiki <ulink url="http://wiki.maemo.org/Compiling_the_kernel">page</ulink> at the maemo.org contains good instructions
             on how to do this. However, to enable HIPL, the kernel
             needs to be patched to fix a couple of issues in the IPSec
-            stack. These patches can be found from the HIPL arch
+            stack. These patches can be found from the HIPL Bazaar
             repository under patches/kernel/2.6.21. Instructions on
             enabling the HIPL-required options in the kernel can be
             found in the HIPL manual.</para>

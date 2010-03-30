@@ -36,7 +36,7 @@ fi
 
 
 echo "Creating cscope file"
-find . \( -name "*".hh -or -name "*".h -or -name "*".hxx -or -name "*".H -or -name "*".C -or -name "*".cxx -or -name "*".c -or -name "*".cc \) -type f -print | grep -v {arch}> cscope.files
+find . \( -name "*".hh -or -name "*".h -or -name "*".hxx -or -name "*".H -or -name "*".C -or -name "*".cxx -or -name "*".c -or -name "*".cc \) -type f -print > cscope.files
 
 rm -f cscope.out
 cscope -bR
