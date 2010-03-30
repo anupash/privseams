@@ -34,7 +34,6 @@ and have their own licensing conditions:
 
   * firewall/user_ipsec_esp.c
   * tools/DNS
-  * lib/android
   * lib/tool
   * lib/ipsec
   * i3

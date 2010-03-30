@@ -16,8 +16,7 @@
 # define HIP_CREATE_FILE(x)     open((x), O_RDWR | O_CREAT, 0644)
 #endif
 
-/* system/bin for Android */
-#define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin:/system/bin"
+#define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 
 int hip_create_lock_file(char *filename, int killold);
 int hip_remove_lock_file(char *filename);

@@ -46,8 +46,6 @@
     "193.167.187.134 hipdht2.infrahip.net\n"
 
 
-#ifndef ANDROID_CHANGES
-
 /** ICMPV6_FILTER related stuff */
 #define BIT_CLEAR(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
 #define BIT_SET(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] |= (1U << ((nr) & 31)); } while (0)
@@ -74,8 +72,6 @@
 #endif
 /** end ICMPV6_FILTER related stuff */
 
-#endif /* ANDROID_CHANGES */
-
 static int hip_init_host_ids(void);
 static int init_random_seed(void);
 static int hip_init_certs(void);
@@ -90,12 +86,7 @@ static struct hip_host_id_entry *hip_return_first_rsa(void);
  */
 static void hip_sig_chld(int signum)
 {
-#ifdef ANDROID_CHANGES
-    int status;
-#else
     union wait status;
-#endif
-
     int pid;
 
     signal(signum, hip_sig_chld);
@@ -414,7 +405,6 @@ out_err:
 }
 
 #ifndef CONFIG_HIP_OPENWRT
-#ifndef ANDROID_CHANGES
 /**
  * probe for kernel modules (linux specific)
  */
@@ -457,8 +447,6 @@ static void hip_probe_kernel_modules(void)
 
     HIP_DEBUG("Probing completed\n");
 }
-
-#endif /* ANDROID_CHANGES */
 #endif /* CONFIG_HIP_OPENWRT */
 
 /**
@@ -501,9 +489,7 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_DEBUG
     hip_print_sysinfo();
 #endif
-#ifndef ANDROID_CHANGES
     hip_probe_kernel_modules();
-#endif
 #endif
 
     /* Register signal handlers */

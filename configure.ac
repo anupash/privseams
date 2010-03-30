@@ -34,11 +34,6 @@ AC_CHECK_FUNC(EC_KEY_new,
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 
-# Checks for header files.
-# libintl.h and alloca.h are only used in libhipandroid/regex.c
-# REMOVE IF POSSIBLE
-AC_CHECK_HEADERS([alloca.h libintl.h])
-
 case "$host" in
   alpha*)
     TARGET=ALPHA;

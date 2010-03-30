@@ -17,9 +17,7 @@
 
 #include <openssl/des.h>                /* des_key_schedule */
 #include <openssl/aes.h>                /* aes_key */
-#ifndef ANDROID_CHANGES
 #include <openssl/blowfish.h>   /* bf_key */
-#endif
 #include <sys/time.h>
 #include <inttypes.h>
 #include <netinet/in.h>
@@ -47,9 +45,7 @@ typedef struct hip_sa_entry {
     struct hip_crypto_key *enc_key;        /* raw encryption key */
     des_key_schedule       ks[3];          /* 3-DES keys */
     AES_KEY                aes_key;        /* AES key */
-#ifndef ANDROID_CHANGES
     BF_KEY                 bf_key;         /* BLOWFISH key */
-#endif
     /******************** statistics *************************/
     uint64_t               lifetime;       /* seconds until expiration */
     uint64_t               bytes;          /* bytes transmitted */
