@@ -1298,7 +1298,7 @@ int hip_handle_i1(const uint8_t packet_type,
      * arrive at the local host too. The following variable handles
      * that special case. Since we are using source HIT (and not
      * destination) it should handle also opportunistic I1 broadcast */
-    src_hit_is_our = hip_hidb_hit_is_our(&(ctx->input_msg)->hits);
+    src_hit_is_our = hip_hidb_hit_is_our(&ctx->input_msg->hits);
 
     /* check i1 for broadcast/multicast addresses */
     if (IN6_IS_ADDR_V4MAPPED(ctx->dst_addr)) {
@@ -1833,6 +1833,45 @@ out_err:
 }
 
 /**
+ * hip_check_notify
+ *
+ * Check an incoming NOTIFY packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all information for the
+ *             packet handling (received message, source and destination
+ *             address, the ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return     zero on success, or negative error value on error.
+ */
+int hip_check_notify(const uint8_t packet_type,
+                     const uint32_t ha_state,
+                     struct hip_packet_context *ctx)
+{
+    int err = 0;
+    uint16_t mask = HIP_PACKET_CTRL_ANON, notify_controls = 0;
+
+    HIP_IFEL(!ctx->hadb_entry,
+             -EFAULT,
+             "Received a NOTIFY packet from an unknown sender. Dropping\n");
+
+    notify_controls = ntohs(ctx->input_msg->control);
+
+    HIP_IFEL(!hip_controls_sane(notify_controls, mask),
+             -EPROTO,
+           "Received a NOTIFY packet with illegal controls: 0x%x. Dropping\n",
+           notify_controls);
+
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
  * Handles an incoming NOTIFY packet.
  *
  * Handles an incoming NOTIFY packet and parses @c NOTIFICATION parameters and
@@ -1856,9 +1895,7 @@ int hip_handle_notify(const uint8_t packet_type,
                       const uint32_t ha_state,
                       struct hip_packet_context *ctx)
 {
-    int err       = 0;
-    uint16_t mask = HIP_PACKET_CTRL_ANON, notify_controls = 0;
-    struct hip_common i1;
+    int err = 0;
     struct hip_tlv_common *current_param  = NULL;
     struct hip_notification *notification = NULL;
     struct in6_addr responder_ip, responder_hit;
@@ -1866,17 +1903,6 @@ int hip_handle_notify(const uint8_t packet_type,
     hip_tlv_len_t param_len               = 0;
     uint16_t msgtype                      = 0;
     in_port_t port                        = 0;
-
-
-    HIP_IFEL(ctx->hadb_entry == NULL, -EFAULT,
-             "Received a NOTIFY packet from an unknown sender, ignoring " \
-             "the packet.\n");
-
-    notify_controls = ntohs(ctx->input_msg->control);
-
-    HIP_IFEL(!hip_controls_sane(notify_controls, mask), -EPROTO,
-           "Received a NOTIFY packet with illegal controls: 0x%x, ignoring " \
-           "the packet.\n", notify_controls);
 
     /* Loop through all the parameters in the received packet. */
     while ((current_param =
@@ -1975,24 +2001,24 @@ int hip_handle_notify(const uint8_t packet_type,
                 /* We don't need to use hip_msg_alloc(), since
                  * the I1 packet is just the size of struct
                  * hip_common. */
-                memset(&i1, 0, sizeof(i1));
+                memset(ctx->output_msg, 0, sizeof(ctx->output_msg));
 
-                hip_build_network_hdr(&i1,
+                hip_build_network_hdr(ctx->output_msg,
                                       response,
                                       ctx->hadb_entry->local_controls,
-                                      &(ctx->hadb_entry)->hit_our,
-                                      &(ctx->hadb_entry)->hit_peer);
+                                      &ctx->hadb_entry->hit_our,
+                                      &ctx->hadb_entry->hit_peer);
 
                 /* Calculate the HIP header length */
-                hip_calc_hdr_len(&i1);
+                hip_calc_hdr_len(ctx->output_msg);
 
                 /* This I1 packet must be send only once, which
                  * is why we use NULL entry for sending. */
-                err = hip_send_pkt(&(ctx->hadb_entry)->our_addr,
+                err = hip_send_pkt(&ctx->hadb_entry->our_addr,
                                    &responder_ip,
                                    (ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                                    port,
-                                   &i1, NULL, 0);
+                                   ctx->output_msg, NULL, 0);
 
                 break;
             default:
@@ -2008,11 +2034,9 @@ int hip_handle_notify(const uint8_t packet_type,
                         );
             msgtype = 0;
         } else {
-            HIP_INFO("Found unsupported parameter in NOTIFY " \
-                     "packet.\n");
+            HIP_INFO("Found unsupported parameter in NOTIFY packet.\n");
         }
     }
 
-out_err:
     return err;
 }
