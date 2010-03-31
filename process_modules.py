@@ -248,25 +248,6 @@ def create_header_files(output_dir, suffix, applications, includes, init_functio
         except IOError:
             sys.exit('Error on creating header files')
 
-# Creates a file at file_path and includes a Makefile.am from all given modules
-# sub directories.
-def create_makefile_modules(srcdir,
-                            module_info,
-                            disabled_modules):
-
-    file_path = 'Makefile.modules'
-    makefile_modules = open(file_path, 'w')
-    makefile_modules.write('# ' + WARNING_STRING + '\n')
-
-    # Include Makefile.am's from modules
-    for current in module_info.keys():
-        path = os.path.join(srcdir, MODULES_DIR, current, 'Makefile.am')
-        makefile_modules.write('include ' + path + '\n')
-
-    makefile_modules.write('\n')
-    makefile_modules.close()
-    print '|    created file: ' + file_path
-
 ### Main program ###
 def main():
     srcdir = None
@@ -303,10 +284,6 @@ def main():
                         init_functions,
                         module_info.keys(),
                         required_modules)
-
-    create_makefile_modules(srcdir,
-                            module_info,
-                            disabled_modules)
 
 if __name__ == "__main__":
     main()

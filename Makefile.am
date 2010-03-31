@@ -203,7 +203,7 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #lib_ipsec_la_LIBADD = $(LEXLIB)
 
 #DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
-DISTCLEANFILES = lib/ipsec/policy_token.h Makefile.modules $(wildcard modules/*.h)
+DISTCLEANFILES = lib/ipsec/policy_token.h $(wildcard modules/*.h)
 
 # don't use libipsec, but xfrmapi
 if HIP_PFKEY
@@ -215,16 +215,18 @@ endif # HIPPFKEY
 lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
 
 ### *_LDADD ###
-# Initialize LDADD lists empty, because modules might add entries to LDADD in
-# Makefile.modules. This file needs to be included before the standard LDADDs,
-# because modules can depend on the core code.
+# Initialize LDADD lists empty, because modules might add entries to LDADD. The
+# module LDADDs need to be included before the standard LDADDs, because modules
+# can depend on the core code.
 hipd_hipd_LDADD =
 firewall_hipfw_LDADD =
 tools_hipconf_LDADD =
 
-##### START INCLUDE SECTION #####
-include Makefile.modules
-##### END INCLUDE SECTION #####
+# Include module Makefile.am's.
+# TODO: Make this inclusion dynamic
+include modules/heartbeat/Makefile.am
+include modules/heartbeat_update/Makefile.am
+include modules/update/Makefile.am
 
 test_certteststub_LDADD = lib/core/libhipcore.la \
                           lib/tool/libhiptool.la
