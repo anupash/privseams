@@ -24,13 +24,13 @@ TARBALL=
 RSYNC_OPTS=-uvr
 REPO_USER=hipl
 REPO_GROUP=hipl
-SPECFILE_DIR=`mktemp -d`
+SPECFILE_DIR=$(mktemp -d)
 SPECFILE=$SPECFILE_DIR/hipl.spec
 RELEASE_VERSION_FILE=$PKGROOT/release.version
 
 inc_release_number()
 {
-    TMPFILE=`mktemp`
+    TMPFILE=$(mktemp)
     awk \
     '{ \
         if ($1 == "Release:") { \
@@ -38,7 +38,7 @@ inc_release_number()
         } else {                  \
             print              \
         } \
-    }' < $RELEASE_VERSION_FILE >$TMPFILE
+    }' < $RELEASE_VERSION_FILE > $TMPFILE
     mv $TMPFILE $RELEASE_VERSION_FILE
     echo "Now type:"
     echo "bzr update"
@@ -62,16 +62,14 @@ build_rpm()
     echo "Deleting old .rpmmacros"
     echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
 
-    for SUBDIR in $SUBRPMDIRS
-    do
-        if test ! -d $RPMBUILD/$SUBDIR
-        then
+    for SUBDIR in $SUBRPMDIRS; do
+        if test ! -d $RPMBUILD/$SUBDIR; then
             $SUDO mkdir -p $RPMBUILD/$SUBDIR
         fi
     done
 
     # fix this hack -miika
-    test -d $RPMBUILD/RPMS/i586 && \
+    test -d $RPMBUILD/RPMS/i586 &&
         cp -a $RPMBUILD/RPMS/i586 $RPMBUILD/RPMS/i386
 
     $SUDO mv -f $TARBALL $RPMBUILD/SOURCES
@@ -88,8 +86,8 @@ mkindex_rpm()
 {
     test ! -d $PKG_INDEX && mkdir $PKG_INDEX
     # fix this hack -miika
-    test -d  /tmp/hipl--main--2.6/buildenv/RPMS/i586 && \
-        cp -a /tmp/hipl--main--2.6/buildenv/RPMS/i586 /tmp/hipl--main--2.6/buildenv/RPMS/i386
+    test -d  /tmp/hipl-main/buildenv/RPMS/i586 &&
+        cp -a /tmp/hipl-main/buildenv/RPMS/i586 /tmp/hipl-main/buildenv/RPMS/i386
     #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
     $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
@@ -98,7 +96,7 @@ mkindex_deb()
 {
     ORIG=$PWD
     cd $PKG_DIR
-    WD=`echo $PKG_WEB_DIR|sed 's/\//\\\\\//g'`
+    WD=$(echo $PKG_WEB_DIR | sed 's/\//\\\\\//g')
     #dpkg-scanpackages --multiversion . |
     dpkg-scanpackages . | \
         sed "s/Filename: \./Filename: $WD/" | \
@@ -112,11 +110,9 @@ syncrepo()
     ssh ${REPO_USER}@${REPO_SERVER} mkdir -p $PKG_SERVER_DIR
 
     # build index of all packages
-    if test x"$DISTROBASE" = x"debian"
-    then
+    if test x"$DISTROBASE" = x"debian"; then
         mkindex_deb
-    elif test x"$DISTROBASE" = x"redhat"
-    then
+    elif test x"$DISTROBASE" = x"redhat"; then
         mkindex_rpm
     else
         die "Unhandled distro $DISTROBASE"
@@ -132,28 +128,23 @@ syncrepo()
 
 build_deb()
 {
-    if dpkg --print-architecture|grep -q armel
-    then
+    if dpkg --print-architecture | grep -q armel; then
         build_maemo_deb
         exit 0
     fi
 
     test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
-    if test -e ~/debbuild
-    then
+    if test -e ~/debbuild; then
         echo "Warning: ~/debbuild found, could be a problem"
         echo "It should be a link to /usr/src/debian"
     fi
 
-    if test ! -x /usr/bin/pax
-    then
+    if test ! -x /usr/bin/pax; then
         die "apt-get install pax"
     fi
 
-    for SUBDIR in $SUBDEBDIRS
-    do
-        if test ! -d $DEBDIR/$SUBDIR
-        then
+    for SUBDIR in $SUBDEBDIRS; do
+        if test ! -d $DEBDIR/$SUBDIR; then
             mkdir -p $DEBDIR/$SUBDIR
         fi
     done
@@ -172,32 +163,30 @@ set -e
 cp $RELEASE_VERSION_FILE $SPECFILE
 
 # Set architecture, distro and repo details
-if test -r /etc/debian_version
-then
+if test -r /etc/debian_version; then
     DISTROBASE=debian
-    ARCH=`dpkg --print-architecture`
+    ARCH=$(dpkg --print-architecture)
     PKG_DIR=$DEBDIR/DEBS/$ARCH
-    DISTRO_RELEASE=`lsb_release -c|cut -f2`
-    DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
+    DISTRO_RELEASE=$(lsb_release -c | cut -f2)
+    DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
     PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
     cat $PKGEXE/hipl-deb.spec >> $SPECFILE
-    VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
+    VERSION=$(grep Version: $SPECFILE | cut -d" " -f2)
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
     PKG_INDEX_DIR=$PKGEXE
     PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
-elif test -r /etc/redhat-release
-then
+elif test -r /etc/redhat-release; then
     DISTROBASE=redhat
-    ARCH=`uname -i`
+    ARCH=$(uname -i)
     PKG_DIR=$RPMDIR/RPMS/$ARCH
-    DISTRO_RELEASE=`lsb_release -r|cut -f2`
-    DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
+    DISTRO_RELEASE=$(lsb_release -r | cut -f2)
+    DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
     cat $PKGEXE/hipl-rpm.spec >> $SPECFILE
-    VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
+    VERSION=$(grep Version: $SPECFILE | cut -d" " -f2)
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
     PKG_INDEX_DIR=$PKGEXE
@@ -209,27 +198,21 @@ fi
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 
 # Determine action
-if test x"$1" = x"syncrepo"
-then
+if test x"$1" = x"syncrepo"; then
     syncrepo
     exit
-elif test x"$1" = x"increl"
-then
+elif test x"$1" = x"increl"; then
     inc_release_number
     exit
-elif test x"$1" = x"bin"
-then
-    if test x"$DISTROBASE" = x"redhat"
-    then
+elif test x"$1" = x"bin"; then
+    if test x"$DISTROBASE" = x"redhat"; then
         BIN_FORMAT=rpm
-    elif test x"$DISTROBASE" = x"debian"
-    then
+    elif test x"$DISTROBASE" = x"debian"; then
         BIN_FORMAT=deb
     else
         die "Unknown distro"
     fi
-elif test x"$1" = x"olddeb"
-then
+elif test x"$1" = x"olddeb"; then
     build_maemo_deb
     exit
 fi
@@ -256,11 +239,9 @@ ls -ld $TARBALL
 echo "*** Cleaning up ${DEBDIR} ***"
 rm -rf ${DEBDIR}
 
-if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"
-then
+if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"; then
     build_rpm
-elif test x"$1" = x"deb" || test x"$BIN_FORMAT" = x"deb"
-then
+elif test x"$1" = x"deb" || test x"$BIN_FORMAT" = x"deb"; then
     build_deb
 else
     die "*** Unknown platform, aborting ***"

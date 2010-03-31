@@ -1,0 +1,48 @@
+How to get HIPL
+===============
+
+The latest version of HIPL is always available through Bazaar. Run the command
+
+  bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
+
+to get an anonymous read-only checkout or
+
+  bzr checkout bzr+ssh://hipl.hiit.fi/var/archive/hipl-bzr/trunk
+
+if you are a developer with an ssh account on the server.
+
+
+HIPL dependencies
+=================
+
+In order to compile HIPL you need autotools (autoconf, automake, libtool), GNU
+Make and gcc. libgtk2.0, openssl, libxml2, iptables, libcap, libsqlite3 and
+libconfig are required complete with development headers. For Perl, Socket6,
+IO::Socket::INET6, Net::IP and Net::DNS modules are required. You can optionally
+install xmlto to build the HOWTO and doxygen to build the code documentation.
+
+HIPL places certain requirements on your kernel. Starting from Linux kernel
+version 2.6.27, no changes are necessary. If you run an older version, look
+at the patches/kernel directory to find patches for your Linux kernel version.
+Alternatively, you can use userspace ipsec as provided by hipfw. If you want
+to use the optional native programming interface, you need to patch your kernel
+anyway.
+
+
+How to build HIPL
+=================
+
+From the trunk directory in the HIPL sources, run the following command to
+build HIPL:
+
+  ./configure && make
+
+If you are working with a Bazaar checkout, you will have to bootstrap the
+autotools build system with
+
+  autoreconf [--install]
+
+before running configure.
+
+./configure --help will display the multitude of configuration options
+available for HIPL.

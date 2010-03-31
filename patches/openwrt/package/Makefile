@@ -17,7 +17,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/hipl-hipd
     SECTION:=net
     CATEGORY:=Network
-    DEPENDS:=+hipl-common +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +libuuid +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
+    DEPENDS:=+hipl-common +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
              # TODO: probably not needed:
              #+kmod-capi +libpcap +udevtrigger +ipsec-tools +isakmpd
     TITLE:=HIPL deamon
@@ -94,16 +94,11 @@ define Package/hipl-common/description
  The libraries and configs needed for HIPL.
 endef
 
-# seen when compiling hipl: -lxml2 -lcap -lsqlite3 -lipq -luuid -lm -lcrypto
 CONFIGURE_VARS += \
     LIBS="-lz" \
     CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include/libconfig"
 
 define Build/Configure
-	(cd $(PKG_BUILD_DIR); rm -rf config.{cache,status}; ./autogen.sh --host=$(GNU_TARGET_NAME) --target=$(GNU_TARGET_NAME));
-
-	(cd ..;);
-
 	$(call Build/Configure/Default, \
             --enable-shared \
             --enable-midauth \

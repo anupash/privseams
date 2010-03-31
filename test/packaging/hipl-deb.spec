@@ -9,7 +9,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
-BuildRequires: automake, autoconf, libtool, gcc, g++, libgtk2.0-dev, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev, libsqlite3-dev, libuuid1
+BuildRequires: automake, autoconf, libtool, gcc, g++, libgtk2.0-dev, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev, libsqlite3-dev
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -27,7 +27,7 @@ other related tools and test software.
 
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
-./autogen.sh --prefix=/usr
+autoreconf --install
 %configure --prefix=/usr
 make -C doc
 make -j 4 all
@@ -87,7 +87,7 @@ Requires: openssl, libxml2, libgtk2.0-0, iptables, libcap2, libsqlite3-0
 %description lib
 
 %package daemon
-Requires: hipl-lib, iproute, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
+Requires: hipl-lib, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
@@ -225,7 +225,7 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %files all
-%doc doc/COPYING
+%doc COPYING
 
 %files minimal
 %doc doc/HACKING

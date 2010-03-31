@@ -7,12 +7,10 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  .vimrc debian doc patches process_modules.py
+EXTRA_DIST =  .vimrc debian doc patches process_modules.py release.version
 EXTRA_DIST += test/configs test/demo test/maintainer test/packaging
 EXTRA_DIST += test/performance $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
-EXTRA_DIST += autogen.sh check_header_verbosity.sh
-EXTRA_DIST += release.version tcp verbose-headers.txt
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
 EXTRA_DIST += m4 # required for CentOS "make bin" target
@@ -224,7 +222,9 @@ hipd_hipd_LDADD =
 firewall_hipfw_LDADD =
 tools_hipconf_LDADD =
 
+##### START INCLUDE SECTION #####
 include Makefile.modules
+##### END INCLUDE SECTION #####
 
 test_certteststub_LDADD = lib/core/libhipcore.la \
                           lib/tool/libhiptool.la

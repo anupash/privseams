@@ -85,7 +85,7 @@ if [ $DEBARCH = "armel" ]; then
         LIBDEPS="$LIBDEPS, libssl0.9.7"
     fi
 else
-    LIBDEPS="$LIBDEPS, libssl0.9.8, libcap2, libuuid1, libnet-dns-perl, libnet-ip-perl, libsocket6-perl, libio-socket-inet6-perl"
+    LIBDEPS="$LIBDEPS, libssl0.9.8, libcap2, libnet-dns-perl, libnet-ip-perl, libsocket6-perl, libio-socket-inet6-perl"
 fi
 
 LINE0="Depends:"
@@ -618,7 +618,7 @@ if [ $TYPE = "binary" ];then
     # jk: do not re-configure as it messes up any configs we might need.
     cd "$HIPL"
     #echo "** Running make in $HIPL"
-    #./autogen.sh
+    #autoreconf --install
     #./configure --prefix=/usr
     #echo "** Running make in $HIPL"
     #if ! make clean all;then

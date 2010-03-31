@@ -44,7 +44,7 @@
       </para></listitem>
     </orderedlist>
     <para>
-    The HIPL library and header dependencies are not listed here. Type "./autogen.sh --help"
+    The HIPL library and header dependencies are not listed here. Read the INSTALL file
     to see what software you need to install before compilation of HIPL.
     </para>
     <para> Network Requirements</para>
@@ -351,13 +351,10 @@
     </para>
     <itemizedlist>
       <listitem><para>
-        cd hipl--main--2.6
+        Where you run the following:
       </para></listitem>
       <listitem><para>
-        and then run the following:
-      </para></listitem>
-      <listitem><para>
-        ./autogen.sh
+        autoreconf --install
       </para></listitem>
       <listitem><para>
         ./configure
@@ -480,8 +477,6 @@ Base System  --->
  Configuration  --->
   Linux Module Utilities  --->
    [*] modprobe
-Libraries  --->
- &lt;*&gt; libuuid
 Network  --->
  &lt;*&gt; ipsec-tools
  &lt;*&gt; isakmpd
@@ -593,9 +588,10 @@ $ ls -l bin/
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--main--2.6 hipl--main--2.6
-  $ cd hipl--main--2.6
-  $ ./autogen.sh
+  $ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
+  $ cd trunk
+  $ autoreconf --install
+  $ ./configure
   $ make dist
   $ cp hipl-main.tar.gz path/to/kamikaze/dl
   </programlisting>
@@ -708,9 +704,9 @@ Kernel modules  --->
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--main--2.6 hipl--main--2.6
+  $ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
   $ mkdir -p path/to/kamikaze/dl
-  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
+  $ tar czf path/to/kamikaze/dl/hipl-main.tar.gz trunk
   </programlisting>
           </para>
           <para>
@@ -872,9 +868,9 @@ Network  --->
           </para>
           <para>
 <programlisting>
-$ tla get hipl--main--2.6 hipl--main--2.6
+$ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
 $ mkdir -p path/to/kamikaze/dl
-$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
+$ tar czf path/to/kamikaze/dl/hipl-main.tar.gz trunk
 </programlisting>
           </para>
           <para>
@@ -1009,9 +1005,6 @@ endif
         If you meet an error like "libintl.h: no such file or directory", try rebuilding gcc and uClibc in toolchain.
         </para>
         <para>
-        If you meet an error like "-luuid: cannot find", try rebuilding e2fsprogs.
-        </para>
-        <para>
         Building hipl under the kamikaze devel tree does not go well always. It could cause you to correct numerous errors while building it. You are warned!
         </para>
         <para>
@@ -1041,8 +1034,6 @@ Base System  --->
  Configuration  --->
   Linux Module Utilities  --->
    [*] modprobe
-Libraries  --->
- &lt;*&gt; libuuid
 Network  --->
  &lt;*&gt; ipsec-tools
  &lt;*&gt; isakmpd
@@ -1182,9 +1173,9 @@ $ bin/openwrt-wgt*
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--main--2.6 hipl--main--2.6
+  $ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
   $ mkdir -p kamikaze_7.09/dl
-  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
+  $ tar czf kamikaze_7.09/dl/hipl-main.tar.gz trunk
   </programlisting>
           </para>
           <para>
@@ -1321,7 +1312,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
           </para>
           <para>
 <programlisting>
-$ cd hipl--userspace--2.6/patches/kernel/2.6.25
+$ cd userspace/patches/kernel/2.6.25
 $ ls
 beet-bugfix-2.6.25.patch  ipproto_hip.patch
 hipmod-2.6.25.patch       orchid-router-src-addr-sel.patch
@@ -1543,7 +1534,7 @@ $ make V=99
       <para>The wiki <ulink url="http://wiki.maemo.org/Compiling_the_kernel">page</ulink> at the maemo.org contains good instructions
             on how to do this. However, to enable HIPL, the kernel
             needs to be patched to fix a couple of issues in the IPSec
-            stack. These patches can be found from the HIPL arch
+            stack. These patches can be found from the HIPL Bazaar
             repository under patches/kernel/2.6.21. Instructions on
             enabling the HIPL-required options in the kernel can be
             found in the HIPL manual.</para>
@@ -1571,7 +1562,7 @@ $ make V=99
       commands (assuming a clean source tree): </para>
 
       <para><programlisting>
-        ./autogen.sh --enable-maemo
+        ./configure --enable-maemo
       </programlisting></para>
 
      <para>
@@ -2661,7 +2652,7 @@ VPN
   <section id="ch_dns_data">
     <title>DNS Server with HIP Support</title>
     <para>
-      Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
+      Tools directory contains hipdnskeyparse a script which converts public
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
@@ -4396,10 +4387,16 @@ combo-newgroup=&lt;create new...&gt;
            e.g. cd hipl
     </para></listitem>
     <listitem><para>
-              Run autogen.sh
+              Run autoreconf
     </para></listitem>
     <listitem><para>
-           ./autogen.sh
+           autoreconf --install
+    </para></listitem>
+    <listitem><para>
+              Run configure
+    </para></listitem>
+    <listitem><para>
+           ./configure
     </para></listitem>
     <listitem><para>
               Run make
@@ -4675,10 +4672,10 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
     </note>
     <itemizedlist>
     <listitem><para>
-          Compile hipl--main--2.6 with ./configure --enable-hi3 --disable-opendht
+          Compile HIPL with ./configure --enable-hi3 --disable-opendht
     </para></listitem>
     <listitem><para>
-          Start the daemon: hipd -3 i3-cfg-PL.xml
+          Start the daemon: hipd -3 i3/i3-cfg-PL.xml
     </para></listitem>
     <listitem><para>
           Wait until the trigger is inserted (see log file) and continue with e.g.
