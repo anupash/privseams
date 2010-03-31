@@ -1807,6 +1807,32 @@ out_err:
     return err;
 }
 
+int hip_check_i1(const uint8_t packet_type,
+                 const uint32_t ha_state,
+                 struct hip_packet_context *packet_ctx)
+{
+    int err = 0, mask = 0;
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_BASE\n");
+    hip_perf_start_benchmark(perf_set, PERF_BASE);
+    HIP_DEBUG("Start PERF_I1\n");
+    hip_perf_start_benchmark(perf_set, PERF_I1);
+#endif
+    HIP_INFO_HIT("I1 Source HIT:", &(packet_ctx->input_msg)->hits);
+    HIP_INFO_IN6ADDR("I1 Source IP :", packet_ctx->src_addr);
+
+    HIP_ASSERT(!ipv6_addr_any(&(packet_ctx->input_msg)->hitr));
+
+    HIP_IFF(!hip_controls_sane(ntohs(packet_ctx->input_msg->control), mask),
+            -1,
+            packet_ctx->error = 1,
+            "Received illegal controls in I1: 0x%x. Dropping\n",
+            ntohs(packet_ctx->input_msg->control));
+
+out_err:
+    return err;
+}
+
 /**
  * Handles an incoming I1 packet.
  *
@@ -1849,15 +1875,7 @@ int hip_handle_i1(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *packet_ctx)
 {
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_BASE\n");
-    hip_perf_start_benchmark(perf_set, PERF_BASE);
-    HIP_DEBUG("Start PERF_I1\n");
-    hip_perf_start_benchmark(perf_set, PERF_I1);
-#endif
-    int err = 0, mask = 0, src_hit_is_our;
-
-    HIP_ASSERT(!ipv6_addr_any(&(packet_ctx->input_msg)->hitr));
+    int err = 0, src_hit_is_our;
 
     /* In some environments, a copy of broadcast our own I1 packets
      * arrive at the local host too. The following variable handles
@@ -1894,16 +1912,10 @@ int hip_handle_i1(const uint8_t packet_type,
                 "Could not find source address\n");
     }
 
-    HIP_IFF(!hip_controls_sane(ntohs(packet_ctx->input_msg->control), mask),
-            -1,
-            packet_ctx->error = 1,
-            "Received illegal controls in I1: 0x%x. Dropping\n",
-            ntohs(packet_ctx->input_msg->control));
-
-    HIP_INFO_HIT("I1 Source HIT:", &(packet_ctx->input_msg)->hits);
-    HIP_INFO_IN6ADDR("I1 Source IP :", packet_ctx->src_addr);
-
 out_err:
+    if (err) {
+        packet_ctx->error = err;
+    }
     return err;
 }
 
