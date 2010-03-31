@@ -8,6 +8,9 @@
 #ifndef I3_CLIENT_TIMER_H
 #define I3_CLIENT_TIMER_H
 
+#include <stdint.h>
+#include "i3_client.h"
+
 /* functions implemented in i3_client_timer.c */
 void init_timer_heap(cl_context *ctx);
 void free_timer_heap(cl_context *ctx);

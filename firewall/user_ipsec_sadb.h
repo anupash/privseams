@@ -17,12 +17,10 @@
 
 #include <openssl/des.h>                /* des_key_schedule */
 #include <openssl/aes.h>                /* aes_key */
-#ifndef ANDROID_CHANGES
 #include <openssl/blowfish.h>   /* bf_key */
-#endif
 #include <sys/time.h>
-#include <pthread.h>
 #include <inttypes.h>
+#include <netinet/in.h>
 #include "lib/core/hashchain.h"
 #include "esp_prot_defines.h"
 #include "lib/core/esp_prot_common.h"
@@ -31,14 +29,13 @@
 
 /* IPsec Security Association entry */
 typedef struct hip_sa_entry {
-    pthread_mutex_t        rw_lock;        /* keep other threads from modifying */
     int                    direction;      /* direction of the SA: inbound/outbound */
     uint32_t               spi;            /* IPsec SPI number */
     uint32_t               mode;           /* ESP mode :  1-transport, 2-tunnel, 3-beet */
-    struct in6_addr *      src_addr;       /* source address of outer IP header */
-    struct in6_addr *      dst_addr;       /* destination address of outer IP header */
-    struct in6_addr *      inner_src_addr; /* inner source addresses for tunnel and BEET SAs */
-    struct in6_addr *      inner_dst_addr; /* inner destination addresses for tunnel and BEET SAs */
+    struct in6_addr        src_addr;       /* source address of outer IP header */
+    struct in6_addr        dst_addr;       /* destination address of outer IP header */
+    struct in6_addr        inner_src_addr; /* inner source addresses for tunnel and BEET SAs */
+    struct in6_addr        inner_dst_addr; /* inner destination addresses for tunnel and BEET SAs */
     uint8_t                encap_mode;     /* encapsulation mode: 0 - none, 1 - udp */
     uint16_t               src_port;       /* src port for UDP encaps. ESP */
     uint16_t               dst_port;       /* dst port for UDP encaps. ESP */
@@ -48,9 +45,7 @@ typedef struct hip_sa_entry {
     struct hip_crypto_key *enc_key;        /* raw encryption key */
     des_key_schedule       ks[3];          /* 3-DES keys */
     AES_KEY                aes_key;        /* AES key */
-#ifndef ANDROID_CHANGES
     BF_KEY                 bf_key;         /* BLOWFISH key */
-#endif
     /******************** statistics *************************/
     uint64_t               lifetime;       /* seconds until expiration */
     uint64_t               bytes;          /* bytes transmitted */
@@ -73,7 +68,7 @@ typedef struct hip_sa_entry {
 
 /* Structure for demultiplexing inbound ipsec packets, indexed by dst_addr and spi */
 typedef struct hip_link_entry {
-    struct in6_addr *dst_addr;        /* destination address of outer IP header */
+    struct in6_addr  dst_addr;        /* destination address of outer IP header */
     uint32_t         spi;             /* ipsec spi, needed for demultiplexing incoming packets */
     hip_sa_entry_t * linked_sa_entry; /* direct link to sa entry */
 } hip_link_entry_t;

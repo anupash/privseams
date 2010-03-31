@@ -1,13 +1,8 @@
 #ifndef _BYTE_ORDER_H
 #define _BYTE_ORDER_H
 
+#include <stdint.h>
 #include <sys/types.h>
-/* stg: under cygwin, _WIN32 can be defined if win32api header files get included */
-#if defined(_WIN32)
-    #include "fwint.h"
-#else
-    #include <inttypes.h>
-#endif
 
 /***************************************************************************
  * Purpose:     Wrapper functions for byte order conversion

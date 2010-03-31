@@ -8,6 +8,8 @@
 #ifndef I3_CLIENT_TRIGGER_H
 #define I3_CLIENT_TRIGGER_H
 
+#include <stdint.h>
+#include "i3_client.h"
 
 /* functions implemented in i3_client_trigger.c */
 int cl_insert_trigger_into_i3(cl_context *ctx, cl_trigger *ctr);

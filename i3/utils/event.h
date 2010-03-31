@@ -26,12 +26,7 @@
 #ifndef INCL_EVENTS
 #define INCL_EVENTS
 
-/* stg: under cygwin, _WIN32 can be defined if win32api header files get included */
-#if defined(_WIN32)
-    #include "fwint.h"
-#else
-    #include <inttypes.h>
-#endif
+#include <stdint.h>
 
 typedef struct _event {
     uint64_t time;

@@ -99,7 +99,7 @@
  *  The files used to provide AES (Rijndael) are
  *
  *  a. aes.h for the definitions needed for use in C.
- *  b. aescpp.h for the definitions needed for use in C++.
+ *  b. aescpp.hh for the definitions needed for use in C++.
  *  c. aesopt.h for setting compilation options (also includes common
  *     code).
  *  d. aescrypt.c for encryption and decrytpion, or
@@ -118,7 +118,7 @@
  *  To compile AES (Rijndael) for use in C code use aes.h and exclude
  *  the AES_DLL define in aes.h
  *
- *  To compile AES (Rijndael) for use in in C++ code use aescpp.h and
+ *  To compile AES (Rijndael) for use in in C++ code use aescpp.hh and
  *  exclude the AES_DLL define in aes.h
  *
  *  To compile AES (Rijndael) in C as a Dynamic Link Library DLL) use

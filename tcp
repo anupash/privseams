@@ -1,1 +1,0 @@
-sudo tcpdump -p -n -i any esp or proto 139 or port 50500 or port 57000 or port 56000

@@ -1,7 +1,7 @@
-#include "netwrap.h"
+#include <stdint.h>
 #include <string.h>
-#include "fwint.h"
 #include <errno.h>
+#include "netwrap.h"
 
 int inet_pton(const int af,
               const char *src,

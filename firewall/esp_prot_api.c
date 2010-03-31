@@ -232,7 +232,7 @@ int esp_prot_init(void)
     HIP_DEBUG("Initializing the esp protection extension...\n");
 
     // read settings from config-file
-    HIP_IFEL(!(config = esp_prot_read_config()), -1, "failed to read config-file\n");
+    config = esp_prot_read_config();
     HIP_IFEL(esp_prot_token_config(config), -1, "failed to process config-file\n");
     HIP_IFEL(esp_prot_sender_config(config), -1, "failed to process config-file\n");
     HIP_IFEL(esp_prot_release_config(config), -1, "failed to release config-file\n");

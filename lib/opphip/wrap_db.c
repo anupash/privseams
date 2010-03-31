@@ -100,7 +100,7 @@ static IMPLEMENT_LHASH_COMP_FN(hip_socketdb, const void)
  * Initialize the opportunistic database
  *
  */
-void hip_init_socket_db()
+void hip_init_socket_db(void)
 {
     socketdb = hip_ht_init(LHASH_HASH_FN(hip_pid_socket),
                            LHASH_COMP_FN(hip_socketdb));
@@ -128,7 +128,7 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
  * uninitialize the opportunistic mode database
  *
  */
-void hip_uninit_socket_db()
+void hip_uninit_socket_db(void)
 {
     int i = 0;
     hip_list_t *item, *tmp;
@@ -171,7 +171,7 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket, pthread_t tid)
  * display the contents of the database
  *
  */
-void hip_socketdb_dump()
+void hip_socketdb_dump(void)
 {
     int i;
     hip_list_t *item, *tmp;

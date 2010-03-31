@@ -9,6 +9,7 @@
 #ifndef I3_HEADER_H
 #define I3_HEADER_H
 
+#include "i3.h"
 
 /* functions implemented in i3_header.c */
 i3_header *alloc_i3_header(void);

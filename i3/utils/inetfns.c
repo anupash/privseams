@@ -236,7 +236,7 @@ uint32_t get_local_addr(void)
     return addr;
 }
 
-uint32_t get_local_addr_eth()
+uint32_t get_local_addr_eth(void)
 {
     return get_local_addr();
 }
@@ -279,7 +279,7 @@ uint32_t name_to_addr(const char *name)
     }
 }
 
-uint32_t get_local_addr_uname()
+uint32_t get_local_addr_uname(void)
 {
     char *buf;
     int buf_size = 1024;
@@ -300,8 +300,7 @@ uint32_t get_local_addr_uname()
 }
 
 /*
- * uint32_t
- * get_local_addr()
+ * uint32_t get_local_addr(void)
  * {
  *  // - retrieve information about all network adapters
  *  // - look for the first non-loopback interface

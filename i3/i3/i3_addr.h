@@ -9,6 +9,9 @@
 #ifndef I3_ADDR_H
 #define I3_ADDR_H
 
+#include <stdint.h>
+#include "i3.h"
+
 /* functions implemented in i3_addr.c */
 i3_addr *alloc_i3_addr(void);
 

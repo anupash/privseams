@@ -64,7 +64,7 @@ void read_parameters(const char *filename)
     }
 }
 
-void release_params()
+void release_params(void)
 {
     xmlFreeDoc(i3_config_doc);
     //xmlCleanupParser();

@@ -20,7 +20,7 @@
 *  return:
 *    pointer to the allocated data structure
 ***************************************************************************/
-struct i3_option *alloc_i3_option()
+struct i3_option *alloc_i3_option(void)
 {
     struct i3_option *option;
 
@@ -152,7 +152,7 @@ void free_i3_option(i3_option *option)
     free(option);
 }
 
-i3_option_list *alloc_i3_option_list()
+i3_option_list *alloc_i3_option_list(void)
 {
     i3_option_list *option_list;
 

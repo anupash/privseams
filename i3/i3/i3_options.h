@@ -9,6 +9,8 @@
 #ifndef I3_OPTIONS_H
 #define I3_OPTIONS_H
 
+#include "i3.h"
+
 /* functions implemented in i3_options.c */
 i3_option *alloc_i3_option(void);
 void init_i3_option(i3_option *option, char type, void *entry);

@@ -6,11 +6,17 @@
 # - $HOME/src/hipl/           - location for HIPL shared repository
 # - $HOME/src/hipl/<branch>   - location for HIPL <branch> to be tested
 # - $HOME/tmp/autobuild/hipl/ - temporary build directory
+# - $HOME/tmp/autobuild/openwrt - working OpenWrt tree
 #
 # If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
 # for the user running this script, then email will be sent in case of failure.
 
 BRANCH_NAME=$1
+
+AUTOBUILD_DIR=$HOME/tmp/autobuild
+BUILD_DIR=$AUTOBUILD_DIR/hipl
+OPENWRT_DIR=$AUTOBUILD_DIR/openwrt
+
 BUILD_DIR=$HOME/tmp/autobuild/hipl
 BRANCH_URL=$HOME/src/hipl/$BRANCH_NAME
 CHECKOUT_DIR=$BUILD_DIR/$(date +"%Y-%m-%d-%H%M")_$BRANCH_NAME
@@ -49,6 +55,7 @@ EOF
 
 cleanup()
 {
+    # The build directory created by make distcheck is read-only.
     chmod -R u+rwx "$CHECKOUT_DIR"
     rm -rf "$CHECKOUT_DIR"
     echo $BRANCH_REVISION > $BRANCH_REVISION_FILE
@@ -57,10 +64,10 @@ cleanup()
 
 compile()
 {
-    run_program "./autogen.sh" &&
-        run_program "./configure" --prefix=$(pwd)/local_install "$@" &&
+    CONFIGURATION="--prefix=$(pwd)/local_install $@"
+    run_program "./configure" $CONFIGURATION &&
         run_program "make -j17" &&
-        run_program "make -j17 distcheck" &&
+        run_program "make -j17 checkheaders" &&
         run_program "make install"
 }
 
@@ -70,9 +77,13 @@ bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR || cleanup 1
 
 cd "$CHECKOUT_DIR" || cleanup 1
 
+# Bootstrap the autotools build system.
+run_program autoreconf --install
+
 # Compile HIPL in different configurations
 # vanilla configuration
 compile
+run_program "make -j17 distcheck"
 
 # PISA configuration
 compile --enable-firewall --disable-agent --disable-pfkey --disable-rvs --disable-hipproxy --disable-altsep --enable-privsep --disable-i3 --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
@@ -80,5 +91,12 @@ compile --enable-firewall --disable-agent --disable-pfkey --disable-rvs --disabl
 # Alternative path to vanilla
 compile --enable-firewall --enable-agent --enable-pfkey --disable-rvs --disable-hipproxy --enable-openwrt --enable-altsep --disable-privsep --enable-i3 --disable-opportunistic --disable-dht --enable-blind --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
 
+# Compile HIPL within an OpenWrt checkout
+run_program "cp hipl*tar.gz $OPENWRT_DIR/dl"
+cd $OPENWRT_DIR || cleanup 1
+run_program "rm -rf package/hipl"
+run_program "cp -r $CHECKOUT_DIR/patches/openwrt/package package/hipl"
+run_program "make -j17 package/hipl-clean V=99"
+run_program "make -j17 package/hipl-install V=99"
 
 cleanup 0

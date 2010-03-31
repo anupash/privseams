@@ -1,12 +1,11 @@
 #ifndef _GEN_UTILS_H
 #define _GEN_UTILS_H
 
+#include <stdint.h>
 /* stg: under cygwin, _WIN32 can be defined if win32api header files get included */
 #if defined(_WIN32)
-    #include "fwint.h"  // Need uint8_t
     #include <Winsock2.h> // struct timeval
 #else
-    #include <inttypes.h>
     #include <sys/time.h> // struct timeval
 #endif
 

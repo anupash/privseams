@@ -20,7 +20,7 @@
 *    allocated identifier
 ***************************************************************************/
 
-ID *alloc_i3_id()
+ID *alloc_i3_id(void)
 {
     ID *id;
 

@@ -37,6 +37,12 @@
 #ifndef KAME_LIBPFKEY_H
 #define KAME_LIBPFKEY_H
 
+#define _BSD_SOURCE
+
+#include <sys/cdefs.h>
+#include <sys/types.h>
+#include <linux/ipsec.h>
+
 #define PRIORITY_LOW        0xC0000000
 #define PRIORITY_DEFAULT    0x80000000
 #define PRIORITY_HIGH       0x40000000
@@ -51,10 +57,6 @@ extern void pfkey_spdump_withports __P((struct sadb_msg *));
 
 struct sockaddr;
 struct sadb_alg;
-
-/* Accomodate different prototypes in <netinet6/ipsec.h> */
-#include <sys/types.h>
-#include <linux/ipsec.h>
 
 #ifndef HAVE_IPSEC_POLICY_T
 typedef caddr_t ipsec_policy_t;

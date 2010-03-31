@@ -233,7 +233,7 @@ static IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t, hip_r
  *
  * @return HIP_RELAY_ON if the RVS / relay is "on", HIP_RELAY_OFF otherwise.
  */
-hip_relay_status_t hip_relay_get_status()
+hip_relay_status_t hip_relay_get_status(void)
 {
     return relay_enabled;
 }
@@ -415,7 +415,7 @@ static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free_expired, hip_relrec_t)
  *
  * @return  number of relay records in the hashtable.
  */
-unsigned long hip_relht_size()
+unsigned long hip_relht_size(void)
 {
     if (hiprelay_ht == NULL) {
         return 0;
@@ -432,7 +432,7 @@ unsigned long hip_relht_size()
  * @todo a REG_RESPONSE with zero lifetime should be sent to each client whose
  *       registration is cancelled.
  */
-void hip_relht_maintenance()
+void hip_relht_maintenance(void)
 {
     if (hiprelay_ht == NULL) {
         return;
@@ -748,7 +748,7 @@ static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t)
  * @return HIP_RELAY_ON if the RVS / relay whitelist is "on", HIP_RELAY_OFF
  *         otherwise.
  */
-hip_relay_wl_status_t hip_relwl_get_status()
+hip_relay_wl_status_t hip_relwl_get_status(void)
 {
     return whitelist_enabled;
 }
@@ -965,7 +965,7 @@ out_err:
  * @note   The white list @c hiprelay_wl must be initialized before this
  *         function is called.
  */
-static int hip_relay_read_config()
+static int hip_relay_read_config(void)
 {
     FILE *fp    = NULL;
     int lineerr = 0, parseerr = 0, err = 0;
@@ -1075,7 +1075,7 @@ out_err:
  * @return zero on success, -ENOENT if the file could not be opened for writing.
  * @note   Truncates existing file to zero length.
  */
-static int hip_relay_write_config()
+static int hip_relay_write_config(void)
 {
     int err  = 0;
     FILE *fp = NULL;
@@ -1509,7 +1509,7 @@ out_err:
  * @return zero on success, -1 otherwise.
  * @note   do not call this function directly, instead call hip_relay_init().
  */
-static int hip_relht_init()
+static int hip_relht_init(void)
 {
     /* Check that the relay hashtable is not already initialized. */
     if (hiprelay_ht != NULL) {
@@ -1534,7 +1534,7 @@ static int hip_relht_init()
  *
  * @note do not call this function directly, instead call hip_relay_uninit().
  */
-static void hip_relht_uninit()
+static void hip_relht_uninit(void)
 {
     if (hiprelay_ht == NULL) {
         return;
@@ -1549,7 +1549,7 @@ static void hip_relht_uninit()
  * Initializes the HIP relay / RVS. Initializes the HIP relay hashtable and
  * whitelist.
  */
-int hip_relay_init()
+int hip_relay_init(void)
 {
     int err = 0;
 
@@ -1586,7 +1586,7 @@ out_err:
  * Uninitializes the HIP relay / RVS. Uninitializes the HIP relay hashtable and
  * whitelist.
  */
-void hip_relay_uninit()
+void hip_relay_uninit(void)
 {
     hip_relht_uninit();
     hip_relwl_uninit();
@@ -1604,7 +1604,7 @@ void hip_relay_uninit()
  *
  * @return zero if the configuration file was read succesfully, -1 otherwise.
  */
-int hip_relay_reinit()
+int hip_relay_reinit(void)
 {
     int err = 0;
 
@@ -1625,7 +1625,7 @@ out_err:
  * @return zero on success, -1 otherwise.
  * @note   do not call this function directly, instead call hip_relay_init().
  */
-static int hip_relwl_init()
+static int hip_relwl_init(void)
 {
     /* Check that the relay whitelist is not already initialized. */
     if (hiprelay_wl != NULL) {
@@ -1650,7 +1650,7 @@ static int hip_relwl_init()
  *
  * @note do not call this function directly, instead call hip_relay_uninit().
  */
-static void hip_relwl_uninit()
+static void hip_relwl_uninit(void)
 {
     if (hiprelay_wl == NULL) {
         return;

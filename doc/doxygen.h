@@ -124,13 +124,14 @@
  * label named @c out_err at the end of the function. For example, memory
  * allocation/deallocation procedure is as follows:
  * <pre>
- * int f() {
+ * int f(void)
+ * {
  *     char *mem = NULL;
  *     HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
  *
- *   out_err:
+ * out_err:
  *     if (mem != NULL) {
- *       free(mem);
+ *         free(mem);
  *     }
  *     return err;
  * }

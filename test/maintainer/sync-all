@@ -20,7 +20,7 @@ rm hipl.tar.gz;
 wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
 tar xvzf hipl.tar.gz &&
 cd main &&
-./autogen.sh &&
+autoreconf --install &&
 ./configure &&
 make bin syncrepo"
 

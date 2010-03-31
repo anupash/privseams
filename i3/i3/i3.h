@@ -8,13 +8,10 @@
 #ifndef I3_H
 #define I3_H
 
+#include <stdint.h>
 #include <sys/types.h>
-#ifdef _WIN32
-    #include "../utils/fwint.h"
-#endif
 #include "../utils/netwrap.h"
 #ifdef __APPLE__
-#include <inttypes.h>  // Need uint8_t
 #include <sys/time.h>  // Need timeval
 #endif
 #include <assert.h>

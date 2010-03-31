@@ -153,8 +153,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
         elen              = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
 
         /* encrypt data now */
-        pthread_mutex_lock(&entry->rw_lock);
-
         HIP_DEBUG("encrypting data...\n");
 
         /* encrypts the payload and puts the encrypted data right
@@ -164,8 +162,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
         HIP_IFEL(hip_payload_encrypt(in_transport_hdr, in_transport_type, elen,
                                      esp_packet + next_hdr_offset, &encryption_len, entry),
                  -1, "failed to encrypt data");
-
-        pthread_mutex_unlock(&entry->rw_lock);
 
         // this also includes the ESP tail
         *esp_packet_len += encryption_len;
@@ -236,8 +232,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
          * starting at the transport layer header */
         elen              = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
 
-        pthread_mutex_lock(&entry->rw_lock);
-
         HIP_DEBUG("encrypting data...\n");
 
         /* encrypts the payload and puts the encrypted data right
@@ -248,8 +242,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
                                      esp_packet + next_hdr_offset,
                                      &encryption_len, entry),
                  -1, "failed to encrypt data");
-
-        pthread_mutex_unlock(&entry->rw_lock);
 
         // this also includes the ESP tail
         *esp_packet_len += encryption_len;
@@ -267,9 +259,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
              "failed to cache hash of packet for cumulative authentication extension\n");
 
 out_err:
-    // needed in case something breaks during encryption -> unlock for next packet
-    pthread_mutex_unlock(&entry->rw_lock);
-
     return err;
 }
 
@@ -308,28 +297,21 @@ int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
     }
 
     // decrypt now
-    pthread_mutex_lock(&entry->rw_lock);
-
     HIP_DEBUG("decrypting ESP packet...\n");
 
     HIP_IFEL(hip_payload_decrypt((unsigned char *) ctx->transport_hdr.esp, esp_len,
                                  decrypted_packet + next_hdr_offset, &next_hdr,
                                  &decrypted_data_len, entry), -1, "ESP decryption is not successful\n");
 
-    pthread_mutex_unlock(&entry->rw_lock);
-
     *decrypted_packet_len += decrypted_data_len;
 
     // now we know the next_hdr and can set up the IPv6 header
-    add_ipv6_header((struct ip6_hdr *) decrypted_packet, entry->inner_src_addr,
-                    entry->inner_dst_addr, *decrypted_packet_len, next_hdr);
+    add_ipv6_header((struct ip6_hdr *) decrypted_packet, &entry->inner_src_addr,
+                    &entry->inner_dst_addr, *decrypted_packet_len, next_hdr);
 
     HIP_DEBUG("original packet length: %i \n", *decrypted_packet_len);
 
 out_err:
-    // needed in case something breaks during decryption -> unlock for next packet
-    pthread_mutex_unlock(&entry->rw_lock);
-
     return err;
 }
 
@@ -385,7 +367,6 @@ int hip_payload_encrypt(unsigned char *in,
             goto out_err;
         }
         break;
-#ifndef ANDROID_CHANGES
     case HIP_ESP_BLOWFISH_SHA1:
         iv_len = 8;
         if (!entry->enc_key) {
@@ -395,7 +376,6 @@ int hip_payload_encrypt(unsigned char *in,
             goto out_err;
         }
         break;
-#endif
     case HIP_ESP_NULL_SHA1:
     // same encryption chiper as next transform
     case HIP_ESP_NULL_MD5:
@@ -460,13 +440,11 @@ int hip_payload_encrypt(unsigned char *in,
                              (des_cblock *) cbc_iv, DES_ENCRYPT);
 
         break;
-#ifndef ANDROID_CHANGES
     case HIP_ESP_BLOWFISH_SHA1:
         BF_cbc_encrypt(in, &out[esp_data_offset + iv_len], elen,
                        &entry->bf_key, cbc_iv, BF_ENCRYPT);
 
         break;
-#endif
     case HIP_ESP_NULL_SHA1:
     case HIP_ESP_NULL_MD5:
         // NOTE: in this case there is no IV
@@ -676,7 +654,6 @@ int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
             goto out_err;
         }
         break;
-#ifndef ANDROID_CHANGES
     case HIP_ESP_BLOWFISH_SHA1:
         iv_len = 8;
         if (!entry->enc_key) {
@@ -686,7 +663,6 @@ int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
             goto out_err;
         }
         break;
-#endif
     case HIP_ESP_NULL_SHA1:
     case HIP_ESP_NULL_MD5:
         iv_len = 0;
@@ -720,12 +696,10 @@ int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
                              entry->ks[0], entry->ks[1], entry->ks[2],
                              (des_cblock *) cbc_iv, DES_DECRYPT);
         break;
-#ifndef ANDROID_CHANGES
     case HIP_ESP_BLOWFISH_SHA1:
         BF_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
                        &entry->bf_key, cbc_iv, BF_DECRYPT);
         break;
-#endif
     case HIP_ESP_NULL_SHA1:
     case HIP_ESP_NULL_MD5:
         memcpy(out, &in[esp_data_offset], elen);

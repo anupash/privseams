@@ -9,6 +9,9 @@
 #ifndef TOKEN_BUCKET_H
 #define TOKEN_BUCKET_H
 
+#include <stdint.h>
+#include "i3.h"
+
 /* functions implemented in token_bucket.c */
 token_bucket *alloc_token_bucket(void);
 void free_token_bucket(token_bucket *tb);

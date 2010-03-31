@@ -70,7 +70,7 @@ static IMPLEMENT_LHASH_COMP_FN(hip_dht_queue, const struct hip_queue)
  *
  * @return status of the operation 0 on success, -1 on failure
  */
-int hip_init_dht_queue()
+int hip_init_dht_queue(void)
 {
     if (hip_dht_queue == NULL) {
         hip_dht_queue = hip_ht_init(LHASH_HASH_FN(hip_dht_queue),
@@ -107,7 +107,7 @@ void hip_dht_queue_rec_free_doall(struct hip_queue *rec)
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_dht_queue_rec_free, struct hip_queue)
 
-void hip_dht_queue_uninit()
+void hip_dht_queue_uninit(void)
 {
 #ifdef CONFIG_HIP_DHT
     return;
@@ -216,7 +216,7 @@ int hip_read_from_dht_queue(void *read_data)
  *
  * @ return void
  */
-static void hip_debug_print_dht_queue()
+static void hip_debug_print_dht_queue(void)
 {
     int i = 0;
     hip_list_t *item, *tmp;

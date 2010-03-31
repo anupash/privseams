@@ -34,11 +34,6 @@ AC_CHECK_FUNC(EC_KEY_new,
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 
-# Checks for header files.
-# libintl.h and alloca.h are only used in libhipandroid/regex.c
-# REMOVE IF POSSIBLE
-AC_CHECK_HEADERS([alloca.h libintl.h])
-
 case "$host" in
   alpha*)
     TARGET=ALPHA;
@@ -116,19 +111,6 @@ if test x"$ac_cv_use_firewall" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
-# Try to automatically detect GTK if not disabled or enabled by user
-PKG_CHECK_MODULES(GTK,
-                  gtk+-2.0 >= 2.10.0,
-                  ac_cv_use_agent=yes,
-                  ac_cv_use_agent=no)
-if test x"$ac_cv_use_agent" = x"no"; then
-    PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, ac_cv_use_agent=yes,
-                      ac_cv_use_agent=no)
-    if test x"$ac_cv_use_agent" = x"yes"; then
-        AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
-    fi
-fi
-
 AC_ARG_ENABLE(agent,
                AS_HELP_STRING([--enable-agent],
                               [HIP enable user agent (default is YES)]),
@@ -138,10 +120,29 @@ AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent],
                [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
-    AC_CHECK_LIB(sqlite3, sqlite3_open,,
-                 AC_MSG_ERROR(libsqlite3-dev not found))
-    AC_DEFINE(CONFIG_HIP_AGENT)
-    AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
+    # Try to automatically detect GTK
+    PKG_CHECK_MODULES(GTK,
+                      [gtk+-2.0 >= 2.10.0],
+                      [ac_cv_use_agent=yes],
+                      [ac_cv_use_agent=no])
+    if test x"$ac_cv_use_agent" = x"no"; then
+        PKG_CHECK_MODULES(GTK,
+                          [gtk+-2.0 >= 2.8.0],
+                          [ac_cv_use_agent=yes],
+                          [ac_cv_use_agent=no])
+        if test x"$ac_cv_use_agent" = x"yes"; then
+            AC_MSG_WARN([You are missing >= GTK 2.10, it is VERY recommended])
+        fi
+    fi
+
+    if test x"$ac_cv_use_agent" = x"yes"; then
+        AC_CHECK_LIB(sqlite3, sqlite3_open,,
+                 [AC_MSG_ERROR(libsqlite3-dev not found)])
+        AC_DEFINE(CONFIG_HIP_AGENT)
+        AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
+    else
+        AC_MSG_WARN([Disabled HIP agent due to unsatisfied dependencies.])
+    fi
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
@@ -211,7 +212,6 @@ AC_CACHE_CHECK([whether to use OpenWRT],
                [ac_cv_use_openwrt=no])
 if test x"$ac_cv_use_openwrt" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_OPENWRT)
-    AC_SUBST(OPENWRT_CFLAGS, "-lc")
     AH_TEMPLATE(CONFIG_HIP_OPENWRT,
                 [Defined to 1 if openwrt support is enabled.])
     if test x"$TARGET" = x"MIPS_LINUX"; then
@@ -383,7 +383,7 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $OPENWRT_CFLAGS $MAEMO_CFLAGS $GPROF_CFLAGS")
+AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $MAEMO_CFLAGS $GPROF_CFLAGS")
 
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500 $MAEMO_CPPFLAGS")

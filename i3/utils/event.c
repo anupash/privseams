@@ -23,14 +23,9 @@
  *
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef _WIN32
-    #include <inttypes.h>
-#else
-    #include "fwint.h"
-#endif
-
 
 #include "event.h"
 

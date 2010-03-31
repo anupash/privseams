@@ -20,7 +20,7 @@
 *    pointer to the allocated token bucket
 ***************************************************************************/
 
-token_bucket *alloc_token_bucket()
+token_bucket *alloc_token_bucket(void)
 {
     token_bucket *tb;
 
@@ -116,7 +116,7 @@ void pack_token_bucket(char *p, token_bucket *tb, unsigned short *length)
     *length += sizeof(uint32_t);
 }
 
-unsigned short get_token_bucket_len()
+unsigned short get_token_bucket_len(void)
 {
     return 3 * sizeof(uint32_t) + sizeof(uint8_t);
 }

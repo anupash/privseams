@@ -1,8 +1,8 @@
+#include <stdint.h>
 #include <sys/types.h>
 #ifndef _WIN32
     #include <netinet/in.h>
 #else
-    #include "fwint.h"
     #include <Winsock2.h>
 #endif
 

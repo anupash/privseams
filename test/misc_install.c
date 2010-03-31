@@ -8,7 +8,7 @@
 
 #include "misc_install.h"
 
-int init_daemon()
+int init_daemon(void)
 {
     int err = 0;
     /***************************************
@@ -33,7 +33,7 @@ int init_daemon()
     return err;
 }
 
-int install_module()
+int install_module(void)
 {
     int err;
     err = system("grep -q hipmod /proc/modules");

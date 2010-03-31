@@ -27,7 +27,7 @@ other related tools and test software.
 
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
-./autogen.sh --prefix=/usr
+autoreconf --install
 %configure --prefix=/usr
 make -C doc
 make -j 4 all
@@ -70,8 +70,7 @@ Requires: openssl libxml2 gtk2 iptables libcap sqlite
 %description lib
 
 %package daemon
- # miredo
-Requires: hipl-lib iproute perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
+Requires: hipl-lib perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon

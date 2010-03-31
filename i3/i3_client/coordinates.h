@@ -1,11 +1,7 @@
 #ifndef _COORDINATES_H
 #define _COORDINATES_H
 
-#if !defined(_WIN32) || defined(__CYGWIN__)
-    #include <inttypes.h>
-#else
-    #include "../utils/fwint.h"
-#endif
+#include <stdint.h>
 
 #define COORD_UNDEFINED 1000
 

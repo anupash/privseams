@@ -8,6 +8,9 @@
 #ifndef I3_CLIENT_PKT_H
 #define I3_CLIENT_PKT_H
 
+#include <stdint.h>
+#include "i3_client.h"
+
 /* functions implemented in i3_client_pkt.c */
 int cl_send_data_packet(cl_context *ctx, i3_stack *stack,
                         cl_buf *clb, uint16_t flags, char is_total_len);
