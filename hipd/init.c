@@ -697,14 +697,18 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_handle_i2, 30000);
     hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_send_r2,   40000);
 
-    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_handle_r1, 1000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_send_i2, 1100);
-    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_handle_r1, 1000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_send_i2, 1100);
-    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_handle_r1, 1000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_send_i2, 1100);
-    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED,  &hip_handle_r1, 1000);
-    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED,  &hip_send_i2, 1100);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_check_r1,  20000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_send_i2,   40000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_check_r1,  20000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_send_i2,   40000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_check_r1,  20000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSING, &hip_send_i2,   40000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_check_r1,  20000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_handle_r1, 30000);
+    hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_send_i2,   40000);
 
     hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &hip_handle_r2, 1000);
 

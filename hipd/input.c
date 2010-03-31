@@ -683,42 +683,28 @@ out_err:
 }
 
 /**
- * Handles an incoming R1 packet.
+ * hip_check_r1
+ *
+ * Check a received R1 control packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param *ctx Pointer to the packet context, containing all information for
+ *             the packet handling (received message, source and destination
+ *             address, the ports and the corresponding entry from the host
+               association database).
  *
- * @return Success = 0,
- *         Error   = -1
- *
- * @todo           When rendezvous service is used, the I1 packet is relayed
- *                 to the responder via the rendezvous server. Responder then
- *                 replies directly to the initiator with an R1 packet that has
- *                 a @c VIA_RVS parameter. This parameter contains the IP
- *                 addresses of the traversed RVSes (usually just one). The
- *                 initiator should store these addresses to cope with the
- *                 double jump problem.
+ * @return zero on success, or negative error value on error.
  */
-int hip_handle_r1(const uint8_t packet_type,
-                  const uint32_t ha_state,
-                  struct hip_packet_context *ctx)
+int hip_check_r1(const uint8_t packet_type,
+                 const uint32_t ha_state,
+                 struct hip_packet_context *ctx)
 {
-    int mask = HIP_PACKET_CTRL_ANON, err = 0, retransmission = 0, written = 0, len;
-    uint64_t solved_puzzle           = 0, I = 0;
-    struct hip_puzzle *pz            = NULL;
-    struct hip_diffie_hellman *dh_req       = NULL;
-    struct hip_host_id *peer_host_id = NULL;
-    struct hip_r1_counter *r1cntr    = NULL;
-    struct hip_dh_public_value *dhpv = NULL;
-    struct hip_locator *locator      = NULL;
-    char *str                        = NULL;
+    int err = 0, mask = HIP_PACKET_CTRL_ANON, len;
     struct in6_addr daddr;
-    uint16_t i2_mask = 0;
+    struct hip_host_id *peer_host_id  = NULL;
+    char *str                         = NULL;
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R1\n");
     hip_perf_start_benchmark(perf_set, PERF_R1);
@@ -730,43 +716,34 @@ int hip_handle_r1(const uint8_t packet_type,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Check and remove the IP of the peer from the opp non-HIP database */
-   hip_oppipdb_delentry(&(ctx->hadb_entry->peer_addr));
+    hip_oppipdb_delentry(&ctx->hadb_entry->peer_addr);
 #endif
 
-   if (ipv6_addr_any(&(ctx->input_msg)->hitr)) {
-       HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
-   }
+    if (ipv6_addr_any(&ctx->input_msg->hitr)) {
+        HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
+    }
 
-   HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), mask), 0,
-            "Received illegal controls in R1: 0x%x Dropping\n",
-            ntohs(ctx->input_msg->control));
+    HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), mask), 0,
+             "Received illegal controls in R1: 0x%x Dropping\n",
+             ntohs(ctx->input_msg->control));
 
-   /* An implicit and insecure REA. If sender's address is different than
-    * the one that was mapped, then we will overwrite the mapping with the
-    * newer address. This enables us to use the rendezvous server, while
-    * not supporting the REA TLV. */
-   hip_hadb_get_peer_addr(ctx->hadb_entry, &daddr);
-   if (ipv6_addr_cmp(&daddr, ctx->src_addr) != 0) {
-       HIP_DEBUG("Mapped address didn't match received address\n");
-       HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
-       HIP_HEXDUMP("Mapping", &daddr, 16);
-       HIP_HEXDUMP("Received", ctx->src_addr, 16);
-       hip_hadb_delete_peer_addrlist_one_old(ctx->hadb_entry, &daddr);
-       hip_hadb_add_peer_addr(ctx->hadb_entry,
-                              ctx->src_addr,
-                              0,
-                              0,
-                              PEER_ADDR_STATE_ACTIVE,
-                              ctx->msg_ports->src_port);
-   }
-
-   HIP_DEBUG("Received R1 in state %s\n", hip_state_str(ha_state));
-
-   if (ha_state == HIP_STATE_I2_SENT) {
-       HIP_DEBUG("Retransmission\n");
-       retransmission = 1;
-    } else {
-        HIP_DEBUG("Not a retransmission\n");
+    /* An implicit and insecure REA. If sender's address is different than
+     * the one that was mapped, then we will overwrite the mapping with the
+     * newer address. This enables us to use the rendezvous server, while
+     * not supporting the REA TLV. */
+    hip_hadb_get_peer_addr(ctx->hadb_entry, &daddr);
+    if (ipv6_addr_cmp(&daddr, ctx->src_addr) != 0) {
+        HIP_DEBUG("Mapped address didn't match received address\n");
+        HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
+        HIP_HEXDUMP("Mapping", &daddr, 16);
+        HIP_HEXDUMP("Received", ctx->src_addr, 16);
+        hip_hadb_delete_peer_addrlist_one_old(ctx->hadb_entry, &daddr);
+        hip_hadb_add_peer_addr(ctx->hadb_entry,
+                               ctx->src_addr,
+                               0,
+                               0,
+                               PEER_ADDR_STATE_ACTIVE,
+                               ctx->msg_ports->src_port);
     }
 
     hip_relay_add_rvs_to_ha(ctx->input_msg, ctx->hadb_entry);
@@ -784,26 +761,82 @@ int hip_handle_r1(const uint8_t packet_type,
     /** @todo Do not store the key if the verification fails. */
     HIP_IFEL(!(peer_host_id = hip_get_param(ctx->input_msg, HIP_PARAM_HOST_ID)),
              -ENOENT, "No HOST_ID found in R1\n");
-    //copy hostname to hadb entry if local copy is empty
+    /* copy hostname to hadb entry if local copy is empty */
     if (strlen((char *) (ctx->hadb_entry->peer_hostname)) == 0) {
         memcpy(ctx->hadb_entry->peer_hostname,
                hip_get_param_host_id_hostname(peer_host_id),
                HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
     }
-    HIP_IFE(hip_init_peer(ctx->hadb_entry, ctx->input_msg, peer_host_id), -EINVAL);
+    HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
+    HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
+              str,
+              len,
+              hip_get_param_host_id_hostname(peer_host_id));
+    HIP_IFE(hip_init_peer(ctx->hadb_entry, ctx->input_msg, peer_host_id),
+            -EINVAL);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_VERIFY\n");
     hip_perf_start_benchmark(perf_set, PERF_VERIFY);
 #endif
     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
-                                            ctx->input_msg),
-             -EINVAL,
-             "Verification of R1 signature failed\n");
+                                     ctx->input_msg),
+                                     -EINVAL,
+                                     "Verification of R1 signature failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_VERIFY\n");
     hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
 #endif
+
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
+ * Handles an incoming R1 packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all information for
+ *             the packet handling (received message, source and destination
+ *             address, the ports and the corresponding entry from the host
+               association database).
+ *
+ * @return zero on success, or negative error value on error.
+ *
+ * @todo           When rendezvous service is used, the I1 packet is relayed
+ *                 to the responder via the rendezvous server. Responder then
+ *                 replies directly to the initiator with an R1 packet that has
+ *                 a @c VIA_RVS parameter. This parameter contains the IP
+ *                 addresses of the traversed RVSes (usually just one). The
+ *                 initiator should store these addresses to cope with the
+ *                 double jump problem.
+ */
+int hip_handle_r1(const uint8_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *ctx)
+{
+    int err = 0, retransmission = 0, written = 0;
+    uint64_t solved_puzzle = 0, I = 0;
+    struct hip_puzzle *pz             = NULL;
+    struct hip_diffie_hellman *dh_req = NULL;
+    struct hip_r1_counter *r1cntr     = NULL;
+    struct hip_dh_public_value *dhpv  = NULL;
+    struct hip_locator *locator       = NULL;
+    uint16_t i2_mask = 0;
+
+    HIP_DEBUG("Received R1 in state %s\n", hip_state_str(ha_state));
+
+    if (ha_state == HIP_STATE_I2_SENT) {
+        HIP_DEBUG("Retransmission\n");
+        retransmission = 1;
+    } else {
+        HIP_DEBUG("Not a retransmission\n");
+    }
+
 
     /* R1 packet had destination port hip_get_nat_udp_port(), which means that
      * the peer is behind NAT. We set NAT mode "on" and set the send function to
@@ -927,13 +960,6 @@ int hip_handle_r1(const uint8_t packet_type,
                                                      0),
              -1,
              "Building of DH failed.\n");
-
-    /* Everything ok, save host id to HA */
-    HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
-    HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
-              str,
-              len,
-              hip_get_param_host_id_hostname(peer_host_id));
 
     /********* ESP protection preferred transforms [OPTIONAL] *********/
     HIP_IFEL(esp_prot_r1_handle_transforms(ctx),

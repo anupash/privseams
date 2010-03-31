@@ -911,7 +911,8 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
  * @param peer the remote host identifier
  * @return zero on success and negative on error
  */
-int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
+int hip_init_peer(hip_ha_t *entry,
+                  struct hip_common *msg,
                   struct hip_host_id *peer)
 {
     int err = 0;
