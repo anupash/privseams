@@ -103,11 +103,16 @@ static void hip_update_keymat_buffer(uint8_t *keybuf, uint8_t *Kold, size_t Kold
  * @param calc_index where the one byte index is stored (n of Kn)
  *
  */
-void hip_make_keymat(char *kij, size_t kij_len,
+void hip_make_keymat(char *kij,
+                     size_t kij_len,
                      struct hip_keymat_keymat *keymat,
-                     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
-                     struct in6_addr *hit2, uint8_t *calc_index,
-                     uint64_t I, uint64_t J)
+                     void *dstbuf,
+                     size_t dstbuflen,
+                     struct in6_addr *hit1,
+                     struct in6_addr *hit2,
+                     uint8_t *calc_index,
+                     uint64_t I,
+                     uint64_t J)
 {
     int bufsize;
     uint8_t index_nbr = 1;

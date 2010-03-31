@@ -81,6 +81,10 @@ int hip_check_i1(const uint8_t packet_type,
                  const uint32_t ha_state,
                  struct hip_packet_context *packet_ctx);
 
+int hip_check_i2(const uint8_t packet_type,
+                 const uint32_t ha_state,
+                 struct hip_packet_context *ctx);
+
 int hip_handle_i1(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx);
