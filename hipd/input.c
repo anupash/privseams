@@ -216,7 +216,7 @@ out_err:
  * @param dhpv pointer to the DH public value choosen
  * @return zero on success, or negative on error.
  */
-int hip_produce_keying_material(struct hip_packet_context *packet_ctx,
+int hip_produce_keying_material(struct hip_packet_context *ctx,
                                 uint64_t I,
                                 uint64_t J,
                                 struct hip_dh_public_value **dhpv)
@@ -238,12 +238,12 @@ int hip_produce_keying_material(struct hip_packet_context *packet_ctx,
     _HIP_DEBUG("hip_produce_keying_material() invoked.\n");
     /* Perform light operations first before allocating memory or
      * using lots of CPU time */
-    HIP_IFEL(!(param = hip_get_param(packet_ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
+    HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
              -EINVAL,
              "Could not find HIP transform\n");
     HIP_IFEL((hip_tfm = hip_select_hip_transform((struct hip_hip_transform *) param)) == 0,
              -EINVAL, "Could not select HIP transform\n");
-    HIP_IFEL(!(param = hip_get_param(packet_ctx->input_msg, HIP_PARAM_ESP_TRANSFORM)),
+    HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_TRANSFORM)),
              -EINVAL,
              "Could not find ESP transform\n");
     HIP_IFEL((esp_tfm = hip_select_esp_transform((struct hip_esp_transform *) param)) == 0,
@@ -274,7 +274,7 @@ int hip_produce_keying_material(struct hip_packet_context *packet_ctx,
                                hip_transf_length + hmac_transf_length;
 
     /* R1 contains no ESP_INFO */
-    esp_info = hip_get_param(packet_ctx->input_msg, HIP_PARAM_ESP_INFO);
+    esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO);
 
     if (esp_info) {
         esp_keymat_index = ntohs(esp_info->keymat_index);
@@ -311,7 +311,7 @@ int hip_produce_keying_material(struct hip_packet_context *packet_ctx,
     memset(dh_shared_key, 0, dh_shared_len);
 
     HIP_IFEL(!(dhf = (struct hip_diffie_hellman *) hip_get_param(
-                   packet_ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
+                   ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT,  "No Diffie-Hellman parameter found.\n");
 
     /* If the message has two DH keys, select (the stronger, usually) one. */
@@ -341,94 +341,94 @@ int hip_produce_keying_material(struct hip_packet_context *packet_ctx,
                     &km,
                     keymat,
                     keymat_len,
-                    &packet_ctx->input_msg->hits,
-                    &packet_ctx->input_msg->hitr,
-                    &packet_ctx->hadb_entry->keymat_calc_index,
+                    &ctx->input_msg->hits,
+                    &ctx->input_msg->hitr,
+                    &ctx->hadb_entry->keymat_calc_index,
                     I,
                     J);
 
     /* draw from km to keymat, copy keymat to dst, length of
      * keymat is len */
 
-    we_are_HITg = hip_hit_is_bigger(&packet_ctx->input_msg->hitr,
-                                    &packet_ctx->input_msg->hits);
+    we_are_HITg = hip_hit_is_bigger(&ctx->input_msg->hitr,
+                                    &ctx->input_msg->hits);
 
     HIP_DEBUG("We are %s HIT.\n", we_are_HITg ? "greater" : "lesser");
 
     if (we_are_HITg) {
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_enc_out.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->hip_enc_out.key, &km,
                                  hip_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_hmac_out.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->hip_hmac_out.key, &km,
                                  hmac_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_enc_in.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->hip_enc_in.key, &km,
                                  hip_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_hmac_in.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->hip_hmac_in.key, &km,
                                  hmac_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->esp_out.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->esp_out.key, &km,
                                  esp_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->auth_out.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->auth_out.key, &km,
                                  auth_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->esp_in.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->esp_in.key, &km,
                                  esp_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->auth_in.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->auth_in.key, &km,
                                  auth_transf_length);
     } else {
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_enc_in.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->hip_enc_in.key, &km,
                                  hip_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_hmac_in.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->hip_hmac_in.key, &km,
                                  hmac_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_enc_out.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->hip_enc_out.key, &km,
                                  hip_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->hip_hmac_out.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->hip_hmac_out.key, &km,
                                  hmac_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->esp_in.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->esp_in.key, &km,
                                  esp_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->auth_in.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->auth_in.key, &km,
                                  auth_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->esp_out.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->esp_out.key, &km,
                                  esp_transf_length);
-        hip_keymat_draw_and_copy(packet_ctx->hadb_entry->auth_out.key, &km,
+        hip_keymat_draw_and_copy(ctx->hadb_entry->auth_out.key, &km,
                                  auth_transf_length);
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_DH_CREATE\n");
     hip_perf_stop_benchmark(perf_set, PERF_DH_CREATE);
 #endif
-    HIP_HEXDUMP("HIP-gl encryption:", &packet_ctx->hadb_entry->hip_enc_out.key,
+    HIP_HEXDUMP("HIP-gl encryption:", &ctx->hadb_entry->hip_enc_out.key,
                 hip_transf_length);
-    HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &packet_ctx->hadb_entry->hip_hmac_out.key,
+    HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hadb_entry->hip_hmac_out.key,
                 hmac_transf_length);
     _HIP_DEBUG("skipping HIP-lg encryption key, %u bytes\n",
                hip_transf_length);
-    HIP_HEXDUMP("HIP-lg encryption:", &packet_ctx->hadb_entry->hip_enc_in.key,
+    HIP_HEXDUMP("HIP-lg encryption:", &ctx->hadb_entry->hip_enc_in.key,
                 hip_transf_length);
-    HIP_HEXDUMP("HIP-lg integrity (HMAC) key:", &packet_ctx->hadb_entry->hip_hmac_in.key,
+    HIP_HEXDUMP("HIP-lg integrity (HMAC) key:", &ctx->hadb_entry->hip_hmac_in.key,
                 hmac_transf_length);
-    HIP_HEXDUMP("SA-gl ESP encryption key:", &packet_ctx->hadb_entry->esp_out.key,
+    HIP_HEXDUMP("SA-gl ESP encryption key:", &ctx->hadb_entry->esp_out.key,
                 esp_transf_length);
-    HIP_HEXDUMP("SA-gl ESP authentication key:", &packet_ctx->hadb_entry->auth_out.key,
+    HIP_HEXDUMP("SA-gl ESP authentication key:", &ctx->hadb_entry->auth_out.key,
                 auth_transf_length);
-    HIP_HEXDUMP("SA-lg ESP encryption key:", &packet_ctx->hadb_entry->esp_in.key,
+    HIP_HEXDUMP("SA-lg ESP encryption key:", &ctx->hadb_entry->esp_in.key,
                 esp_transf_length);
-    HIP_HEXDUMP("SA-lg ESP authentication key:", &packet_ctx->hadb_entry->auth_in.key,
+    HIP_HEXDUMP("SA-lg ESP authentication key:", &ctx->hadb_entry->auth_in.key,
                 auth_transf_length);
 
     /* the next byte when creating new keymat */
-    packet_ctx->hadb_entry->current_keymat_index = keymat_len_min;     /* offset value, so no +1 ? */
-    packet_ctx->hadb_entry->keymat_calc_index    = (packet_ctx->hadb_entry->current_keymat_index / HIP_AH_SHA_LEN) + 1;
-    packet_ctx->hadb_entry->esp_keymat_index     = esp_keymat_index;
+    ctx->hadb_entry->current_keymat_index = keymat_len_min;     /* offset value, so no +1 ? */
+    ctx->hadb_entry->keymat_calc_index    = (ctx->hadb_entry->current_keymat_index / HIP_AH_SHA_LEN) + 1;
+    ctx->hadb_entry->esp_keymat_index     = esp_keymat_index;
 
-    memcpy(packet_ctx->hadb_entry->current_keymat_K,
-           keymat + (packet_ctx->hadb_entry->keymat_calc_index - 1) * HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
+    memcpy(ctx->hadb_entry->current_keymat_K,
+           keymat + (ctx->hadb_entry->keymat_calc_index - 1) * HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
 
-    _HIP_DEBUG("packet_ctx->hadb_entry: keymat_calc_index=%u current_keymat_index=%u\n",
-               packet_ctx->hadb_entry->keymat_calc_index, packet_ctx->hadb_entry->current_keymat_index);
-    _HIP_HEXDUMP("CTX CURRENT KEYMAT", packet_ctx->hadb_entry->current_keymat_K,
+    _HIP_DEBUG("ctx->hadb_entry: keymat_calc_index=%u current_keymat_index=%u\n",
+               ctx->hadb_entry->keymat_calc_index, ctx->hadb_entry->current_keymat_index);
+    _HIP_HEXDUMP("CTX CURRENT KEYMAT", ctx->hadb_entry->current_keymat_K,
                  HIP_AH_SHA_LEN);
 
     /* store DH shared key */
-    packet_ctx->hadb_entry->dh_shared_key     = dh_shared_key;
-    packet_ctx->hadb_entry->dh_shared_key_len = dh_shared_len;
+    ctx->hadb_entry->dh_shared_key     = dh_shared_key;
+    ctx->hadb_entry->dh_shared_key_len = dh_shared_len;
 
     /* on success HIP_FREE for dh_shared_key is called by caller */
 out_err:
@@ -498,14 +498,14 @@ static int hip_packet_to_drop(hip_ha_t *entry,
 /**
  * Decides what action to take for an incoming HIP control packet.
  *
- * @param *packet_ctx Pointer to the packet context, containing all
+ * @param *ctx Pointer to the packet context, containing all
  *                    information for the packet handling
  *                    (received message, source and destination address, the
  *                    ports and the corresponding entry from the host
  *                    association database).
  * @return      zero on success, or negative error value on error.
  */
-int hip_receive_control_packet(struct hip_packet_context *packet_ctx)
+int hip_receive_control_packet(struct hip_packet_context *ctx)
 {
     int err = 0;
     struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
@@ -516,67 +516,67 @@ int hip_receive_control_packet(struct hip_packet_context *packet_ctx)
      * printing packet data here works for all packets. To avoid excessive
      * debug printing do not print this information inside the individual
      * receive or handle functions. */
-    HIP_DEBUG_HIT("HIT Sender  ", &packet_ctx->input_msg->hits);
-    HIP_DEBUG_HIT("HIT Receiver", &packet_ctx->input_msg->hitr);
+    HIP_DEBUG_HIT("HIT Sender  ", &ctx->input_msg->hits);
+    HIP_DEBUG_HIT("HIT Receiver", &ctx->input_msg->hitr);
     HIP_DEBUG("source port: %u, destination port: %u\n",
-              packet_ctx->msg_ports->src_port,
-              packet_ctx->msg_ports->dst_port);
+              ctx->msg_ports->src_port,
+              ctx->msg_ports->dst_port);
 
-    HIP_DUMP_MSG(packet_ctx->input_msg);
+    HIP_DUMP_MSG(ctx->input_msg);
 
-    if (hip_hidb_hit_is_our(&packet_ctx->input_msg->hits) &&
-        (IN6_ARE_ADDR_EQUAL(&packet_ctx->input_msg->hitr,
-                            &packet_ctx->input_msg->hits) ||
-         IN6_ARE_ADDR_EQUAL(&packet_ctx->input_msg->hitr,
+    if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
+        (IN6_ARE_ADDR_EQUAL(&ctx->input_msg->hitr,
+                            &ctx->input_msg->hits) ||
+         IN6_ARE_ADDR_EQUAL(&ctx->input_msg->hitr,
                             &ipv6_any_addr)) &&
-        !hip_addr_is_loopback(packet_ctx->dst_addr) &&
-        !hip_addr_is_loopback(packet_ctx->src_addr) &&
-        !IN6_ARE_ADDR_EQUAL(packet_ctx->src_addr, packet_ctx->dst_addr)) {
+        !hip_addr_is_loopback(ctx->dst_addr) &&
+        !hip_addr_is_loopback(ctx->src_addr) &&
+        !IN6_ARE_ADDR_EQUAL(ctx->src_addr, ctx->dst_addr)) {
         HIP_DEBUG("Invalid loopback packet. Dropping.\n");
         goto out_err;
     }
 
-    HIP_IFEL(hip_check_network_msg(packet_ctx->input_msg),
+    HIP_IFEL(hip_check_network_msg(ctx->input_msg),
              -1,
              "Checking control message failed.\n");
 
-    type  = hip_get_msg_type(packet_ctx->input_msg);
+    type  = hip_get_msg_type(ctx->input_msg);
 
     /** @todo Check packet csum.*/
 
-    packet_ctx->hadb_entry = hip_hadb_find_byhits(&packet_ctx->input_msg->hits,
-                                                  &packet_ctx->input_msg->hitr);
+    ctx->hadb_entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
+                                                  &ctx->input_msg->hitr);
 
     // Check if we need to drop the packet
-    if (packet_ctx->hadb_entry &&
-        hip_packet_to_drop(packet_ctx->hadb_entry,
+    if (ctx->hadb_entry &&
+        hip_packet_to_drop(ctx->hadb_entry,
                            type,
-                           &packet_ctx->input_msg->hitr) == 1) {
+                           &ctx->input_msg->hitr) == 1) {
         HIP_DEBUG("Ignoring the packet sent.\n");
         err = -1;
         goto out_err;
     }
 
-    if (packet_ctx->hadb_entry) {
-        state = packet_ctx->hadb_entry->state;
+    if (ctx->hadb_entry) {
+        state = ctx->hadb_entry->state;
     } else {
         state = HIP_STATE_NONE;
     }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    if (!packet_ctx->hadb_entry && opportunistic_mode &&
+    if (!ctx->hadb_entry && opportunistic_mode &&
         (type == HIP_I1 || type == HIP_R1)) {
-        packet_ctx->hadb_entry =
-                hip_oppdb_get_hadb_entry_i1_r1(packet_ctx->input_msg,
-                                               packet_ctx->src_addr,
-                                               packet_ctx->dst_addr,
-                                               packet_ctx->msg_ports);
+        ctx->hadb_entry =
+                hip_oppdb_get_hadb_entry_i1_r1(ctx->input_msg,
+                                               ctx->src_addr,
+                                               ctx->dst_addr,
+                                               ctx->msg_ports);
     }
 #endif
 
 #ifdef CONFIG_HIP_RVS
     /* check if it a relaying msg */
-    if (hip_relay_handle_relay_to(type, state, packet_ctx)) {
+    if (hip_relay_handle_relay_to(type, state, ctx)) {
         err = -ECANCELED;
         goto out_err;
     } else {
@@ -584,7 +584,7 @@ int hip_receive_control_packet(struct hip_packet_context *packet_ctx)
     }
 #endif
 
-    hip_run_handle_functions(type, state, packet_ctx);
+    hip_run_handle_functions(type, state, ctx);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Write PERF_SIGN, PERF_DSA_SIGN_IMPL, PERF_RSA_SIGN_IMPL," \
@@ -620,23 +620,23 @@ out_err:
  * of hip_receive_control_packet() is the @c saddr of this function.</li>
  * </ol>
  *
- * @param *packet_ctx Pointer to the packet context, containing all
+ * @param *ctx Pointer to the packet context, containing all
  *                    information for the packet handling
  *                    (received message, source and destination address, the
  *                    ports and the corresponding entry from the host
  *                    association database).
  * @return      zero on success, or negative error value on error.
  */
-int hip_receive_udp_control_packet(struct hip_packet_context *packet_ctx)
+int hip_receive_udp_control_packet(struct hip_packet_context *ctx)
 {
     int err         = 0, type;
     hip_ha_t *entry = NULL;
 
     _HIP_DEBUG("hip_nat_receive_udp_control_packet() invoked.\n");
 
-    type  = hip_get_msg_type(packet_ctx->input_msg);
-    entry = hip_hadb_find_byhits(&packet_ctx->input_msg->hits,
-                                 &packet_ctx->input_msg->hitr);
+    type  = hip_get_msg_type(ctx->input_msg);
+    entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
+                                 &ctx->input_msg->hitr);
 
 #ifndef CONFIG_HIP_RVS
     /* The ip of RVS is taken to be ip of the peer while using RVS server
@@ -651,10 +651,10 @@ int hip_receive_udp_control_packet(struct hip_packet_context *packet_ctx)
          * used for setting up the SAs: handle_r1 creates one-way SA and
          * handle_i2 the other way; let's make sure that they are the
          * same. */
-        packet_ctx->src_addr = &entry->peer_addr;
+        ctx->src_addr = &entry->peer_addr;
     }
 #endif
-    HIP_IFEL(hip_receive_control_packet(packet_ctx), -1,
+    HIP_IFEL(hip_receive_control_packet(ctx), -1,
              "receiving of control packet failed\n");
 out_err:
     return err;
@@ -687,7 +687,7 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *packet_ctx Pointer to the packet context, containing all
+ * @param *ctx Pointer to the packet context, containing all
  *                    information for the packet handling
  *                    (received message, source and destination address, the
  *                    ports and the corresponding entry from the host
@@ -706,7 +706,7 @@ out_err:
  */
 int hip_handle_r1(const uint8_t packet_type,
                   const uint32_t ha_state,
-                  struct hip_packet_context *packet_ctx)
+                  struct hip_packet_context *ctx)
 {
     int mask = HIP_PACKET_CTRL_ANON, err = 0, retransmission = 0, written = 0, len;
     uint64_t solved_puzzle           = 0, I = 0;
@@ -724,40 +724,40 @@ int hip_handle_r1(const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_R1);
 #endif
 
-    HIP_IFEL(!packet_ctx->hadb_entry, -1,
+    HIP_IFEL(!ctx->hadb_entry, -1,
              "No entry in host association database when receiving R1." \
              "Dropping.\n");
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Check and remove the IP of the peer from the opp non-HIP database */
-   hip_oppipdb_delentry(&(packet_ctx->hadb_entry->peer_addr));
+   hip_oppipdb_delentry(&(ctx->hadb_entry->peer_addr));
 #endif
 
-   if (ipv6_addr_any(&(packet_ctx->input_msg)->hitr)) {
+   if (ipv6_addr_any(&(ctx->input_msg)->hitr)) {
        HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
    }
 
-   HIP_IFEL(!hip_controls_sane(ntohs(packet_ctx->input_msg->control), mask), 0,
+   HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), mask), 0,
             "Received illegal controls in R1: 0x%x Dropping\n",
-            ntohs(packet_ctx->input_msg->control));
+            ntohs(ctx->input_msg->control));
 
    /* An implicit and insecure REA. If sender's address is different than
     * the one that was mapped, then we will overwrite the mapping with the
     * newer address. This enables us to use the rendezvous server, while
     * not supporting the REA TLV. */
-   hip_hadb_get_peer_addr(packet_ctx->hadb_entry, &daddr);
-   if (ipv6_addr_cmp(&daddr, packet_ctx->src_addr) != 0) {
+   hip_hadb_get_peer_addr(ctx->hadb_entry, &daddr);
+   if (ipv6_addr_cmp(&daddr, ctx->src_addr) != 0) {
        HIP_DEBUG("Mapped address didn't match received address\n");
        HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
        HIP_HEXDUMP("Mapping", &daddr, 16);
-       HIP_HEXDUMP("Received", packet_ctx->src_addr, 16);
-       hip_hadb_delete_peer_addrlist_one_old(packet_ctx->hadb_entry, &daddr);
-       hip_hadb_add_peer_addr(packet_ctx->hadb_entry,
-                              packet_ctx->src_addr,
+       HIP_HEXDUMP("Received", ctx->src_addr, 16);
+       hip_hadb_delete_peer_addrlist_one_old(ctx->hadb_entry, &daddr);
+       hip_hadb_add_peer_addr(ctx->hadb_entry,
+                              ctx->src_addr,
                               0,
                               0,
                               PEER_ADDR_STATE_ACTIVE,
-                              packet_ctx->msg_ports->src_port);
+                              ctx->msg_ports->src_port);
    }
 
    HIP_DEBUG("Received R1 in state %s\n", hip_state_str(ha_state));
@@ -769,10 +769,10 @@ int hip_handle_r1(const uint8_t packet_type,
         HIP_DEBUG("Not a retransmission\n");
     }
 
-    hip_relay_add_rvs_to_ha(packet_ctx->input_msg, packet_ctx->hadb_entry);
+    hip_relay_add_rvs_to_ha(ctx->input_msg, ctx->hadb_entry);
 
 #ifdef CONFIG_HIP_RVS
-    hip_relay_handle_relay_to_in_client(packet_type, ha_state, packet_ctx);
+    hip_relay_handle_relay_to_in_client(packet_type, ha_state, ctx);
 #endif /* CONFIG_HIP_RVS */
 
     /* According to the section 8.6 of the base draft, we must first check
@@ -782,22 +782,22 @@ int hip_handle_r1(const uint8_t packet_type,
      * verification must be delayed to the R2 */
     /* Store the peer's public key to HA and validate it */
     /** @todo Do not store the key if the verification fails. */
-    HIP_IFEL(!(peer_host_id = hip_get_param(packet_ctx->input_msg, HIP_PARAM_HOST_ID)),
+    HIP_IFEL(!(peer_host_id = hip_get_param(ctx->input_msg, HIP_PARAM_HOST_ID)),
              -ENOENT, "No HOST_ID found in R1\n");
     //copy hostname to hadb entry if local copy is empty
-    if (strlen((char *) (packet_ctx->hadb_entry->peer_hostname)) == 0) {
-        memcpy(packet_ctx->hadb_entry->peer_hostname,
+    if (strlen((char *) (ctx->hadb_entry->peer_hostname)) == 0) {
+        memcpy(ctx->hadb_entry->peer_hostname,
                hip_get_param_host_id_hostname(peer_host_id),
                HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
     }
-    HIP_IFE(hip_init_peer(packet_ctx->hadb_entry, packet_ctx->input_msg, peer_host_id), -EINVAL);
+    HIP_IFE(hip_init_peer(ctx->hadb_entry, ctx->input_msg, peer_host_id), -EINVAL);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_VERIFY\n");
     hip_perf_start_benchmark(perf_set, PERF_VERIFY);
 #endif
-    HIP_IFEL(packet_ctx->hadb_entry->verify(packet_ctx->hadb_entry->peer_pub_key,
-                                            packet_ctx->input_msg),
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                            ctx->input_msg),
              -EINVAL,
              "Verification of R1 signature failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -809,24 +809,24 @@ int hip_handle_r1(const uint8_t packet_type,
      * the peer is behind NAT. We set NAT mode "on" and set the send function to
      * "hip_send_udp". The client UDP port is not stored until the handling
      * of R2 packet. Don't know if the entry is already locked... */
-    if (packet_ctx->msg_ports->dst_port != 0) {
-        HIP_LOCK_HA(packet_ctx->hadb_entry);
-        if (packet_ctx->hadb_entry->nat_mode == HIP_NAT_MODE_NONE) {
-            packet_ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
+    if (ctx->msg_ports->dst_port != 0) {
+        HIP_LOCK_HA(ctx->hadb_entry);
+        if (ctx->hadb_entry->nat_mode == HIP_NAT_MODE_NONE) {
+            ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
         }
         /* @todo Is this alternative xmit function necessary? */
         /* hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set); */
-        HIP_UNLOCK_HA(packet_ctx->hadb_entry);
+        HIP_UNLOCK_HA(ctx->hadb_entry);
     }
 
     /***** LOCATOR PARAMETER ******/
-    locator = (struct hip_locator *) hip_get_param(packet_ctx->input_msg, HIP_PARAM_LOCATOR);
+    locator = (struct hip_locator *) hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
     if (locator) {
         err = handle_locator(locator,
-                             packet_ctx->src_addr,
-                             packet_ctx->dst_addr,
-                             packet_ctx->hadb_entry,
-                             packet_ctx->msg_ports);
+                             ctx->src_addr,
+                             ctx->dst_addr,
+                             ctx->hadb_entry,
+                             ctx->msg_ports);
     } else {
         HIP_DEBUG("R1 did not have locator\n");
     }
@@ -835,16 +835,16 @@ int hip_handle_r1(const uint8_t packet_type,
 
     /* We have problems with creating precreated R1s in reasonable
      * fashion... so we don't mind about generations. */
-    r1cntr = hip_get_param(packet_ctx->input_msg, HIP_PARAM_R1_COUNTER);
+    r1cntr = hip_get_param(ctx->input_msg, HIP_PARAM_R1_COUNTER);
 
     /* Do control bit stuff here... */
 
     /* We must store the R1 generation counter, _IF_ it exists. */
     if (r1cntr) {
-        HIP_LOCK_HA(packet_ctx->hadb_entry);
+        HIP_LOCK_HA(ctx->hadb_entry);
         HIP_DEBUG("Storing R1 generation counter %d\n", r1cntr->generation);
-        packet_ctx->hadb_entry->birthday = ntoh64(r1cntr->generation);
-        HIP_UNLOCK_HA(packet_ctx->hadb_entry);
+        ctx->hadb_entry->birthday = ntoh64(r1cntr->generation);
+        HIP_UNLOCK_HA(ctx->hadb_entry);
     }
 
     /* Solve puzzle: if this is a retransmission, we have to preserve
@@ -852,36 +852,36 @@ int hip_handle_r1(const uint8_t packet_type,
     if (!retransmission) {
         struct hip_puzzle *pz = NULL;
 
-        HIP_IFEL(!(pz = hip_get_param(packet_ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
+        HIP_IFEL(!(pz = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
                  "Malformed R1 packet. PUZZLE parameter missing\n");
         HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz,
-                                                   packet_ctx->input_msg,
+                                                   ctx->input_msg,
                                                    HIP_SOLVE_PUZZLE)) == 0,
                                                    -EINVAL, "Solving of puzzle failed\n");
         I = pz->I;
-        packet_ctx->hadb_entry->puzzle_solution = solved_puzzle;
-        packet_ctx->hadb_entry->puzzle_i        = pz->I;
+        ctx->hadb_entry->puzzle_solution = solved_puzzle;
+        ctx->hadb_entry->puzzle_i        = pz->I;
     } else {
-        I             = packet_ctx->hadb_entry->puzzle_i;
-        solved_puzzle = packet_ctx->hadb_entry->puzzle_solution;
+        I             = ctx->hadb_entry->puzzle_i;
+        solved_puzzle = ctx->hadb_entry->puzzle_solution;
     }
 
     /* Allocate space for a new I2 message. */
-    HIP_IFEL(!(packet_ctx->output_msg = hip_msg_alloc()),
+    HIP_IFEL(!(ctx->output_msg = hip_msg_alloc()),
              -ENOMEM,
              "Allocation of I2 failed\n");
 
     HIP_DEBUG("Build normal I2.\n");
     /* create I2 */
-    hip_build_network_hdr(packet_ctx->output_msg,
+    hip_build_network_hdr(ctx->output_msg,
                           HIP_I2,
                           i2_mask,
-                          &packet_ctx->input_msg->hitr,
-                          &packet_ctx->input_msg->hits);
+                          &ctx->input_msg->hitr,
+                          &ctx->input_msg->hits);
 
     /* note: we could skip keying material generation in the case
      * of a retransmission but then we'd had to fill ctx->hmac etc */
-    HIP_IFEL(hip_produce_keying_material(packet_ctx,
+    HIP_IFEL(hip_produce_keying_material(ctx,
                                          I,
                                          solved_puzzle,
                                          &dhpv),
@@ -890,26 +890,26 @@ int hip_handle_r1(const uint8_t packet_type,
 
     /********** ESP_INFO **********/
     /* SPI is set below */
-    HIP_IFEL(hip_build_param_esp_info(packet_ctx->output_msg,
-                                      packet_ctx->hadb_entry->esp_keymat_index,
+    HIP_IFEL(hip_build_param_esp_info(ctx->output_msg,
+                                      ctx->hadb_entry->esp_keymat_index,
                                       0,
                                       0),
              -1,
              "building of ESP_INFO failed.\n");
 
     /********** SOLUTION **********/
-    HIP_IFEL(!(pz = hip_get_param(packet_ctx->input_msg, HIP_PARAM_PUZZLE)),
+    HIP_IFEL(!(pz = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)),
              -ENOENT,
              "Internal error: PUZZLE parameter mysteriously gone\n");
-    HIP_IFEL(hip_build_param_solution(packet_ctx->output_msg, pz, ntoh64(solved_puzzle)),
+    HIP_IFEL(hip_build_param_solution(ctx->output_msg, pz, ntoh64(solved_puzzle)),
              -1,
              "Building of solution failed\n");
 
     /********** Diffie-Hellman *********/
     /* calculate shared secret and create keying material */
-    packet_ctx->hadb_entry->dh_shared_key = NULL;
+    ctx->hadb_entry->dh_shared_key = NULL;
 
-    HIP_IFEL(!(dh_req = hip_get_param(packet_ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
+    HIP_IFEL(!(dh_req = hip_get_param(ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT,
              "Internal error\n");
     HIP_IFEL((written = hip_insert_dh(dhpv->public_value,
@@ -918,7 +918,7 @@ int hip_handle_r1(const uint8_t packet_type,
                 -1,
                 "Could not extract the DH public key\n");
 
-    HIP_IFEL(hip_build_param_diffie_hellman_contents(packet_ctx->output_msg,
+    HIP_IFEL(hip_build_param_diffie_hellman_contents(ctx->output_msg,
                                                      dhpv->group_id,
                                                      dhpv->public_value,
                                                      written,
@@ -936,15 +936,15 @@ int hip_handle_r1(const uint8_t packet_type,
               hip_get_param_host_id_hostname(peer_host_id));
 
     /********* ESP protection preferred transforms [OPTIONAL] *********/
-    HIP_IFEL(esp_prot_r1_handle_transforms(packet_ctx),
+    HIP_IFEL(esp_prot_r1_handle_transforms(ctx),
              -1,
              "failed to handle preferred esp protection transforms\n");
 
     /******************************************************************/
 
     out_err:
-    if (packet_ctx->hadb_entry->dh_shared_key) {
-        HIP_FREE(packet_ctx->hadb_entry->dh_shared_key);
+    if (ctx->hadb_entry->dh_shared_key) {
+        HIP_FREE(ctx->hadb_entry->dh_shared_key);
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_R1\n");
@@ -993,7 +993,7 @@ int hip_handle_i2_in_i2_sent(const uint8_t packet_type,
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *packet_ctx Pointer to the packet context, containing all
+ * @param *ctx Pointer to the packet context, containing all
  *                    information for the packet handling
  *                    (received message, source and destination address, the
  *                    ports and the corresponding entry from the host
@@ -1004,7 +1004,7 @@ int hip_handle_i2_in_i2_sent(const uint8_t packet_type,
  */
 int hip_handle_r2(const uint8_t packet_type,
                   const uint32_t ha_state,
-                  struct hip_packet_context *packet_ctx)
+                  struct hip_packet_context *ctx)
 {
     int err                         = 0, tfm = 0, retransmission = 0, idx = 0;
     uint16_t mask                   = 0;
@@ -1017,22 +1017,22 @@ int hip_handle_r2(const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_R2);
 #endif
 
-    HIP_IFEL(ipv6_addr_any(&(packet_ctx->input_msg)->hitr), -1,
+    HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hitr), -1,
              "Received NULL receiver HIT in R2. Dropping\n");
 
-    HIP_IFEL(!hip_controls_sane(ntohs(packet_ctx->input_msg->control), mask),
+    HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), mask),
              -1,
              "Received illegal controls in R2: 0x%x. Dropping\n",
-             ntohs(packet_ctx->input_msg->control));
+             ntohs(ctx->input_msg->control));
 
-    HIP_IFEL(!packet_ctx->hadb_entry, -1,
+    HIP_IFEL(!ctx->hadb_entry, -1,
              "No entry in host association database when receiving R2." \
              "Dropping.\n");
 
     /* if the NAT mode is used, update the port numbers of the host association */
-    if (packet_ctx->msg_ports->dst_port == hip_get_local_nat_udp_port()) {
-        packet_ctx->hadb_entry->local_udp_port = packet_ctx->msg_ports->dst_port;
-        packet_ctx->hadb_entry->peer_udp_port  = packet_ctx->msg_ports->src_port;
+    if (ctx->msg_ports->dst_port == hip_get_local_nat_udp_port()) {
+        ctx->hadb_entry->local_udp_port = ctx->msg_ports->dst_port;
+        ctx->hadb_entry->peer_udp_port  = ctx->msg_ports->src_port;
     }
 
     HIP_DEBUG("Received R2 in state %s\n", hip_state_str(ha_state));
@@ -1045,16 +1045,16 @@ int hip_handle_r2(const uint8_t packet_type,
     }
 
     /* Verify HMAC */
-    if (packet_ctx->hadb_entry->is_loopback) {
-        HIP_IFEL(hip_verify_packet_hmac2(packet_ctx->input_msg,
-                                         &packet_ctx->hadb_entry->hip_hmac_out,
-                                         packet_ctx->hadb_entry->peer_pub),
+    if (ctx->hadb_entry->is_loopback) {
+        HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
+                                         &ctx->hadb_entry->hip_hmac_out,
+                                         ctx->hadb_entry->peer_pub),
                  -1,
                  "HMAC validation on R2 failed.\n");
     } else {
-        HIP_IFEL(hip_verify_packet_hmac2(packet_ctx->input_msg,
-                                         &packet_ctx->hadb_entry->hip_hmac_in,
-                                         packet_ctx->hadb_entry->peer_pub),
+        HIP_IFEL(hip_verify_packet_hmac2(ctx->input_msg,
+                                         &ctx->hadb_entry->hip_hmac_in,
+                                         ctx->hadb_entry->peer_pub),
                  -1,
                  "HMAC validation on R2 failed.\n");
     }
@@ -1064,8 +1064,8 @@ int hip_handle_r2(const uint8_t packet_type,
     HIP_DEBUG("Start PERF_VERIFY(3)\n");
     hip_perf_start_benchmark(perf_set, PERF_VERIFY);
 #endif
-    HIP_IFEL(packet_ctx->hadb_entry->verify(packet_ctx->hadb_entry->peer_pub_key,
-                                            packet_ctx->input_msg),
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                            ctx->input_msg),
              -EINVAL,
              "R2 signature verification failed.\n");
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1074,7 +1074,7 @@ int hip_handle_r2(const uint8_t packet_type,
 #endif
 
     /* The rest */
-    HIP_IFEL(!(esp_info = hip_get_param(packet_ctx->input_msg, HIP_PARAM_ESP_INFO)),
+    HIP_IFEL(!(esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO)),
              -EINVAL,
              "Parameter SPI not found.\n");
 
@@ -1082,67 +1082,67 @@ int hip_handle_r2(const uint8_t packet_type,
     memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
     spi_out_data.spi = spi_recvd;
 
-    packet_ctx->hadb_entry->spi_outbound_current = spi_recvd;
+    ctx->hadb_entry->spi_outbound_current = spi_recvd;
     HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
 
     /* Copy SPI out value here or otherwise ICE code has zero SPI */
-    packet_ctx->hadb_entry->spi_outbound_new = spi_recvd;
+    ctx->hadb_entry->spi_outbound_new = spi_recvd;
     HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 
     HIP_DEBUG("entry should have only one spi_in now, test\n");
 
-    spi_in = packet_ctx->hadb_entry->spi_inbound_current;
+    spi_in = ctx->hadb_entry->spi_inbound_current;
     HIP_DEBUG("spi_in: 0x%x\n", spi_in);
 
-    tfm    = packet_ctx->hadb_entry->esp_transform;
+    tfm    = ctx->hadb_entry->esp_transform;
     HIP_DEBUG("esp_transform: %i\n", tfm);
 
     HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
-              packet_ctx->msg_ports->src_port, packet_ctx->msg_ports->dst_port);
+              ctx->msg_ports->src_port, ctx->msg_ports->dst_port);
 
     /********** ESP-PROT anchor [OPTIONAL] **********/
-    HIP_IFEL(esp_prot_r2_handle_anchor(packet_ctx->hadb_entry,
-                                       packet_ctx->input_msg),
+    HIP_IFEL(esp_prot_r2_handle_anchor(ctx->hadb_entry,
+                                       ctx->input_msg),
              -1,
              "failed to handle esp prot anchor\n");
 
     /***** LOCATOR PARAMETER *****/
-    locator = (struct hip_locator *) hip_get_param(packet_ctx->input_msg, HIP_PARAM_LOCATOR);
+    locator = (struct hip_locator *) hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
     if (locator) {
         HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
     }
     //end add
 
     // moved from hip_send_i2
-    HIP_DEBUG_HIT("hit our", &(packet_ctx->hadb_entry)->hit_our);
-    HIP_DEBUG_HIT("hit peer", &(packet_ctx->hadb_entry)->hit_peer);
-    HIP_IFEL(hip_add_sa(packet_ctx->src_addr,
-                        packet_ctx->dst_addr,
-                        &packet_ctx->input_msg->hits,
-                        &packet_ctx->input_msg->hitr,
+    HIP_DEBUG_HIT("hit our", &(ctx->hadb_entry)->hit_our);
+    HIP_DEBUG_HIT("hit peer", &(ctx->hadb_entry)->hit_peer);
+    HIP_IFEL(hip_add_sa(ctx->src_addr,
+                        ctx->dst_addr,
+                        &ctx->input_msg->hits,
+                        &ctx->input_msg->hitr,
                         spi_in,
                         tfm,
-                        &(packet_ctx->hadb_entry)->esp_in,
-                        &(packet_ctx->hadb_entry)->auth_in,
+                        &(ctx->hadb_entry)->esp_in,
+                        &(ctx->hadb_entry)->auth_in,
                         0,
                         HIP_SPI_DIRECTION_IN,
                         0,
-                        packet_ctx->hadb_entry),
+                        ctx->hadb_entry),
             -1,
             "Failed to setup IPsec SPD/SA entries, peer:src\n");
 
-    HIP_IFEL(hip_add_sa(packet_ctx->dst_addr,
-                        packet_ctx->src_addr,
-                        &packet_ctx->input_msg->hitr,
-                        &packet_ctx->input_msg->hits,
+    HIP_IFEL(hip_add_sa(ctx->dst_addr,
+                        ctx->src_addr,
+                        &ctx->input_msg->hitr,
+                        &ctx->input_msg->hits,
                         spi_recvd,
                         tfm,
-                        &packet_ctx->hadb_entry->esp_out,
-                        &packet_ctx->hadb_entry->auth_out,
+                        &ctx->hadb_entry->esp_out,
+                        &ctx->hadb_entry->auth_out,
                         0,
                         HIP_SPI_DIRECTION_OUT,
                         0,
-                        packet_ctx->hadb_entry),
+                        ctx->hadb_entry),
              -1,
              "Failed to setup IPsec SPD/SA entries, peer:dst\n");
 
@@ -1152,40 +1152,40 @@ int hip_handle_r2(const uint8_t packet_type,
     /* Source IPv6 address is implicitly the preferred address after the
      * base exchange. */
 
-    idx = hip_devaddr2ifindex(packet_ctx->dst_addr);
+    idx = hip_devaddr2ifindex(ctx->dst_addr);
 
     if (idx != 0) {
         HIP_DEBUG("ifindex = %d\n", idx);
-        // hip_hadb_set_spi_ifindex_deprecated(packet_ctx->hadb_entry, spi_in, idx);
+        // hip_hadb_set_spi_ifindex_deprecated(ctx->hadb_entry, spi_in, idx);
     } else {
         HIP_ERROR("Couldn't get device ifindex of address\n");
     }
 
 #ifdef CONFIG_HIP_RVS
-        hip_relay_handle_relay_to_in_client(packet_type, ha_state, packet_ctx);
+        hip_relay_handle_relay_to_in_client(packet_type, ha_state, ctx);
 #endif /* CONFIG_HIP_RVS */
 
     /* Copying address list from temp location in entry
      * "entry->peer_addr_list_to_be_added" */
-    hip_copy_peer_addrlist_changed(packet_ctx->hadb_entry);
+    hip_copy_peer_addrlist_changed(ctx->hadb_entry);
 
     /* Handle REG_RESPONSE and REG_FAILED parameters. */
-    hip_handle_param_reg_response(packet_ctx->hadb_entry, packet_ctx->input_msg);
-    hip_handle_param_reg_failed(packet_ctx->hadb_entry, packet_ctx->input_msg);
+    hip_handle_param_reg_response(ctx->hadb_entry, ctx->input_msg);
+    hip_handle_param_reg_failed(ctx->hadb_entry, ctx->input_msg);
 
-    hip_handle_reg_from(packet_ctx->hadb_entry, packet_ctx->input_msg);
+    hip_handle_reg_from(ctx->hadb_entry, ctx->input_msg);
 
     /* These will change SAs' state from ACQUIRE to VALID, and wake up any
      * transport sockets waiting for a SA. */
     // hip_finalize_sa(&entry->hit_peer, spi_recvd);
     // hip_finalize_sa(&entry->hit_our, spi_in);
 
-    packet_ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
-    hip_hadb_insert_state(packet_ctx->hadb_entry);
+    ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
+    hip_hadb_insert_state(ctx->hadb_entry);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&(packet_ctx->hadb_entry->peer_addr));
+    hip_oppipdb_delentry(&(ctx->hadb_entry->peer_addr));
 #endif
     HIP_INFO("Reached ESTABLISHED state\n");
     HIP_INFO("Handshake completed\n");
@@ -1195,23 +1195,23 @@ int hip_handle_r2(const uint8_t packet_type,
     hip_perf_stop_benchmark(perf_set, PERF_BASE);
     hip_perf_write_benchmark(perf_set, PERF_BASE);
 #endif
-    if (packet_ctx->hadb_entry->hip_msg_retrans.buf) {
-        packet_ctx->hadb_entry->hip_msg_retrans.count = 0;
-        memset(packet_ctx->hadb_entry->hip_msg_retrans.buf,
+    if (ctx->hadb_entry->hip_msg_retrans.buf) {
+        ctx->hadb_entry->hip_msg_retrans.count = 0;
+        memset(ctx->hadb_entry->hip_msg_retrans.buf,
                0,
                HIP_MAX_NETWORK_PACKET);
     }
 
 out_err:
-    if (packet_ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
+    if (ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
         HIP_DEBUG("Send response to firewall.\n");
         hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
-                                  packet_ctx->hadb_entry,
-                                  &(packet_ctx->hadb_entry)->hit_our,
-                                  &(packet_ctx->hadb_entry)->hit_peer);
+                                  ctx->hadb_entry,
+                                  &(ctx->hadb_entry)->hit_our,
+                                  &(ctx->hadb_entry)->hit_peer);
     } else {
         hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
-                                  packet_ctx->hadb_entry,
+                                  ctx->hadb_entry,
                                   NULL,
                                   NULL);
     }
@@ -1226,7 +1226,7 @@ out_err:
 
 int hip_check_i1(const uint8_t packet_type,
                  const uint32_t ha_state,
-                 struct hip_packet_context *packet_ctx)
+                 struct hip_packet_context *ctx)
 {
     int err = 0, mask = 0;
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1235,16 +1235,16 @@ int hip_check_i1(const uint8_t packet_type,
     HIP_DEBUG("Start PERF_I1\n");
     hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
-    HIP_INFO_HIT("I1 Source HIT:", &(packet_ctx->input_msg)->hits);
-    HIP_INFO_IN6ADDR("I1 Source IP :", packet_ctx->src_addr);
+    HIP_INFO_HIT("I1 Source HIT:", &(ctx->input_msg)->hits);
+    HIP_INFO_IN6ADDR("I1 Source IP :", ctx->src_addr);
 
-    HIP_ASSERT(!ipv6_addr_any(&(packet_ctx->input_msg)->hitr));
+    HIP_ASSERT(!ipv6_addr_any(&(ctx->input_msg)->hitr));
 
-    HIP_IFF(!hip_controls_sane(ntohs(packet_ctx->input_msg->control), mask),
+    HIP_IFF(!hip_controls_sane(ntohs(ctx->input_msg->control), mask),
             -1,
-            packet_ctx->error = 1,
+            ctx->error = 1,
             "Received illegal controls in I1: 0x%x. Dropping\n",
-            ntohs(packet_ctx->input_msg->control));
+            ntohs(ctx->input_msg->control));
 
 out_err:
     return err;
@@ -1274,7 +1274,7 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *packet_ctx Pointer to the packet context, containing all
+ * @param *ctx Pointer to the packet context, containing all
  *                    information for the packet handling
  *                    (received message, source and destination address, the
  *                    ports and the corresponding entry from the host
@@ -1290,7 +1290,7 @@ out_err:
  */
 int hip_handle_i1(const uint8_t packet_type,
                   const uint32_t ha_state,
-                  struct hip_packet_context *packet_ctx)
+                  struct hip_packet_context *ctx)
 {
     int err = 0, src_hit_is_our;
 
@@ -1298,40 +1298,40 @@ int hip_handle_i1(const uint8_t packet_type,
      * arrive at the local host too. The following variable handles
      * that special case. Since we are using source HIT (and not
      * destination) it should handle also opportunistic I1 broadcast */
-    src_hit_is_our = hip_hidb_hit_is_our(&(packet_ctx->input_msg)->hits);
+    src_hit_is_our = hip_hidb_hit_is_our(&(ctx->input_msg)->hits);
 
     /* check i1 for broadcast/multicast addresses */
-    if (IN6_IS_ADDR_V4MAPPED(packet_ctx->dst_addr)) {
+    if (IN6_IS_ADDR_V4MAPPED(ctx->dst_addr)) {
         struct in_addr addr4;
 
-        IPV6_TO_IPV4_MAP(packet_ctx->dst_addr, &addr4);
+        IPV6_TO_IPV4_MAP(ctx->dst_addr, &addr4);
 
         if (addr4.s_addr == INADDR_BROADCAST) {
             HIP_DEBUG("Received I1 broadcast\n");
             HIP_IFF(src_hit_is_our,
                     -1,
-                    packet_ctx->error = 1,
+                    ctx->error = 1,
                     "Received a copy of own broadcast, dropping\n");
 
-            HIP_IFF(hip_select_source_address(packet_ctx->dst_addr, packet_ctx->src_addr),
+            HIP_IFF(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
                     -1,
-                    packet_ctx->error = 1,
+                    ctx->error = 1,
                     "Could not find source address\n");
         }
-    } else if (IN6_IS_ADDR_MULTICAST(packet_ctx->dst_addr)) {
+    } else if (IN6_IS_ADDR_MULTICAST(ctx->dst_addr)) {
         HIP_IFF(src_hit_is_our,
                 -1,
-                packet_ctx->error = 1,
+                ctx->error = 1,
                 "Received a copy of own broadcast, dropping\n");
-        HIP_IFF(hip_select_source_address(packet_ctx->dst_addr, packet_ctx->src_addr),
+        HIP_IFF(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
                 -1,
-                packet_ctx->error = 1,
+                ctx->error = 1,
                 "Could not find source address\n");
     }
 
 out_err:
     if (err) {
-        packet_ctx->error = err;
+        ctx->error = err;
     }
     return err;
 }
@@ -1620,7 +1620,7 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *packet_ctx Pointer to the packet context, containing all
+ * @param *ctx Pointer to the packet context, containing all
  *                    information for the packet handling
  *                    (received message, source and destination address, the
  *                    ports and the corresponding entry from the host
@@ -1844,7 +1844,7 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *packet_ctx Pointer to the packet context, containing all
+ * @param *ctx Pointer to the packet context, containing all
  *                    information for the packet handling
  *                    (received message, source and destination address, the
  *                    ports and the corresponding entry from the host

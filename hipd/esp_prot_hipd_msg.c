@@ -539,7 +539,7 @@ out_err:
  * @param ctx       packet context for the received R1 message
  * @return          always 0
  */
-int esp_prot_r1_handle_transforms(struct hip_packet_context *packet_ctx)
+int esp_prot_r1_handle_transforms(struct hip_packet_context *ctx)
 {
     struct hip_param *param                         = NULL;
     struct esp_prot_preferred_tfms *prot_transforms = NULL;
@@ -550,35 +550,35 @@ int esp_prot_r1_handle_transforms(struct hip_packet_context *packet_ctx)
     if (hip_use_userspace_ipsec) {
         HIP_DEBUG("userspace IPsec hint: ESP extension might be in use\n");
 
-        param = hip_get_param(packet_ctx->input_msg, HIP_PARAM_ESP_PROT_TRANSFORMS);
+        param = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_PROT_TRANSFORMS);
 
         // check if the transform parameter was sent
         if (param) {
             HIP_DEBUG("received preferred transforms from peer\n");
 
             // store that we received the param for further processing
-            packet_ctx->hadb_entry->esp_prot_param       = 1;
+            ctx->hadb_entry->esp_prot_param       = 1;
 
             prot_transforms           = (struct esp_prot_preferred_tfms *) param;
 
             // select transform and store it for this connection
-            packet_ctx->hadb_entry->esp_prot_transform = esp_prot_select_transform(prot_transforms->num_transforms,
+            ctx->hadb_entry->esp_prot_transform = esp_prot_select_transform(prot_transforms->num_transforms,
                                                                   prot_transforms->transforms);
         } else {
             HIP_DEBUG("R1 does not contain preferred ESP protection " \
                       "transforms, locally setting UNUSED\n");
 
             // store that we didn't received the param
-            packet_ctx->hadb_entry->esp_prot_param       = 0;
+            ctx->hadb_entry->esp_prot_param       = 0;
 
             // if the other end-host does not want to use the extension, we don't either
-            packet_ctx->hadb_entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
+            ctx->hadb_entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
         }
     } else {
         HIP_DEBUG("no userspace IPsec hint for ESP extension, locally setting UNUSED\n");
 
         // make sure we don't add the anchor now and don't add any transform or anchor
-        packet_ctx->hadb_entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
+        ctx->hadb_entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
     }
 
     return err;

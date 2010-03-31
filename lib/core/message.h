@@ -32,10 +32,10 @@ int hip_read_user_control_msg(int socket,
                               struct hip_common *hip_msg,
                               struct sockaddr_in6 *saddr);
 int hip_read_control_msg_v6(int socket,
-                            struct hip_packet_context *packet_ctx,
+                            struct hip_packet_context *ctx,
                             int encap_hdr_size);
 int hip_read_control_msg_v4(int socket,
-                            struct hip_packet_context *packet_ctx,
+                            struct hip_packet_context *ctx,
                             int encap_hdr_size);
 int hip_sendto(int sock,
                const struct hip_common *msg,

@@ -551,7 +551,7 @@ out_err:
  * @return               -1 in case of an error, 0 otherwise.
  */
 static int hip_read_control_msg_all(int socket,
-                                    struct hip_packet_context *packet_ctx,
+                                    struct hip_packet_context *ctx,
                                     int encap_hdr_size,
                                     int is_ipv4)
 {
@@ -569,10 +569,10 @@ static int hip_read_control_msg_all(int socket,
     int err = 0, len;
     int cmsg_level, cmsg_type;
 
-    hip_msg_init(packet_ctx->input_msg);
+    hip_msg_init(ctx->input_msg);
 
-    HIP_ASSERT(packet_ctx->src_addr);
-    HIP_ASSERT(packet_ctx->dst_addr);
+    HIP_ASSERT(ctx->src_addr);
+    HIP_ASSERT(ctx->dst_addr);
 
     HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
@@ -593,7 +593,7 @@ static int hip_read_control_msg_all(int socket,
     msg.msg_flags       = 0;
 
     iov.iov_len         = HIP_MAX_NETWORK_PACKET;
-    iov.iov_base        = packet_ctx->input_msg;
+    iov.iov_base        = ctx->input_msg;
 
     pktinfo.pktinfo_in4 = NULL;
 
@@ -626,44 +626,44 @@ static int hip_read_control_msg_all(int socket,
     /* UDP port numbers */
     if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
         HIP_DEBUG("source port = %d\n", ntohs(addr_from4->sin_port));
-        packet_ctx->msg_ports->src_port = ntohs(addr_from4->sin_port);
+        ctx->msg_ports->src_port = ntohs(addr_from4->sin_port);
         /* Destination port is known from the bound socket. */
-        packet_ctx->msg_ports->dst_port = hip_get_local_nat_udp_port();
+        ctx->msg_ports->dst_port = hip_get_local_nat_udp_port();
     }
 
     /* IPv4 addresses */
     if (is_ipv4) {
         struct sockaddr_in *addr_to4 = (struct sockaddr_in *) &addr_to;
-        IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, packet_ctx->src_addr);
-        IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr, packet_ctx->dst_addr);
+        IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, ctx->src_addr);
+        IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr, ctx->dst_addr);
         addr_to4->sin_family = AF_INET;
         addr_to4->sin_addr   = pktinfo.pktinfo_in4->ipi_addr;
-        addr_to4->sin_port   = packet_ctx->msg_ports->dst_port;
+        addr_to4->sin_port   = ctx->msg_ports->dst_port;
     } else {   /* IPv6 addresses */
         struct sockaddr_in6 *addr_to6 =
             (struct sockaddr_in6 *) &addr_to;
-        memcpy(packet_ctx->src_addr, &addr_from6->sin6_addr,
+        memcpy(ctx->src_addr, &addr_from6->sin6_addr,
                sizeof(struct in6_addr));
-        memcpy(packet_ctx->dst_addr, &pktinfo.pktinfo_in6->ipi6_addr,
+        memcpy(ctx->dst_addr, &pktinfo.pktinfo_in6->ipi6_addr,
                sizeof(struct in6_addr));
         addr_to6->sin6_family = AF_INET6;
-        ipv6_addr_copy(&addr_to6->sin6_addr, packet_ctx->dst_addr);
+        ipv6_addr_copy(&addr_to6->sin6_addr, ctx->dst_addr);
     }
 
     if (is_ipv4 && (encap_hdr_size == IPV4_HDR_SIZE)) {    /* raw IPv4, !UDP */
         /* For some reason, the IPv4 header is always included.
          * Let's remove it here. */
-        memmove(packet_ctx->input_msg,
-                ((char *) packet_ctx->input_msg) + IPV4_HDR_SIZE,
+        memmove(ctx->input_msg,
+                ((char *) ctx->input_msg) + IPV4_HDR_SIZE,
                 HIP_MAX_PACKET - IPV4_HDR_SIZE);
     } else if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
         /* remove 32-bits of zeroes between UDP and HIP headers */
-        memmove(packet_ctx->input_msg,
-                ((char *) packet_ctx->input_msg) + HIP_UDP_ZERO_BYTES_LEN,
+        memmove(ctx->input_msg,
+                ((char *) ctx->input_msg) + HIP_UDP_ZERO_BYTES_LEN,
                 HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
     }
 
-    HIP_IFEL(hip_verify_network_header(packet_ctx->input_msg,
+    HIP_IFEL(hip_verify_network_header(ctx->input_msg,
                                        (struct sockaddr *) &addr_from,
                                        (struct sockaddr *) &addr_to,
                                        len - encap_hdr_size), -1,
@@ -671,11 +671,11 @@ static int hip_read_control_msg_all(int socket,
 
 
 
-    if (packet_ctx->src_addr) {
-        HIP_DEBUG_IN6ADDR("src", packet_ctx->src_addr);
+    if (ctx->src_addr) {
+        HIP_DEBUG_IN6ADDR("src", ctx->src_addr);
     }
-    if (packet_ctx->dst_addr) {
-        HIP_DEBUG_IN6ADDR("dst", packet_ctx->dst_addr);
+    if (ctx->dst_addr) {
+        HIP_DEBUG_IN6ADDR("dst", ctx->dst_addr);
     }
 
 out_err:
@@ -694,12 +694,12 @@ out_err:
  * @return                .
  */
 int hip_read_control_msg_v6(int socket,
-                            struct hip_packet_context *packet_ctx,
+                            struct hip_packet_context *ctx,
                             int encap_hdr_size)
 {
     HIP_DEBUG("Receiving a message on raw HIP from IPv6/HIP socket "\
               " (file descriptor: %d).\n", socket);
-    return hip_read_control_msg_all(socket, packet_ctx, encap_hdr_size, 0);
+    return hip_read_control_msg_all(socket, ctx, encap_hdr_size, 0);
 }
 
 /**
@@ -714,10 +714,10 @@ int hip_read_control_msg_v6(int socket,
  * @return                .
  */
 int hip_read_control_msg_v4(int socket,
-                            struct hip_packet_context *packet_ctx,
+                            struct hip_packet_context *ctx,
                             int encap_hdr_size)
 {
     HIP_DEBUG("Receiving a message on raw HIP from IPv4/HIP socket "\
               " (file descriptor: %d).\n", socket);
-    return hip_read_control_msg_all(socket, packet_ctx, encap_hdr_size, 1);
+    return hip_read_control_msg_all(socket, ctx, encap_hdr_size, 1);
 }

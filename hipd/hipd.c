@@ -177,7 +177,7 @@ static int hipd_main(int argc, char *argv[])
     fd_set read_fdset;
     int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
     struct timeval timeout;
-    struct hip_packet_context packet_ctx = {0};
+    struct hip_packet_context ctx = {0};
 
     /* The flushing is enabled by default. The reason for this is that
      * people are doing some very experimental features on some branches
@@ -298,13 +298,13 @@ static int hipd_main(int argc, char *argv[])
     highest_descriptor = hip_get_highest_descriptor();
 
     /* Allocate user message. */
-    HIP_IFE(!(packet_ctx.input_msg = hip_msg_alloc()), 1);
-    packet_ctx.output_msg  = NULL;
-    packet_ctx.src_addr    = malloc(sizeof(struct in6_addr));
-    packet_ctx.dst_addr    = malloc(sizeof(struct in6_addr));
-    packet_ctx.msg_ports   = malloc(sizeof(struct hip_stateless_info));
-    packet_ctx.hadb_entry  = NULL;
-    packet_ctx.error = 0;
+    HIP_IFE(!(ctx.input_msg = hip_msg_alloc()), 1);
+    ctx.output_msg  = NULL;
+    ctx.src_addr    = malloc(sizeof(struct in6_addr));
+    ctx.dst_addr    = malloc(sizeof(struct in6_addr));
+    ctx.msg_ports   = malloc(sizeof(struct hip_stateless_info));
+    ctx.hadb_entry  = NULL;
+    ctx.error = 0;
 
     /* Enter to the select-loop */
     HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT,
@@ -323,8 +323,8 @@ static int hipd_main(int argc, char *argv[])
 #ifdef CONFIG_HIP_FIREWALL
         if (hip_firewall_status < 0) {
 
-            hip_msg_init(packet_ctx.input_msg);
-            err = hip_build_user_hdr(packet_ctx.input_msg,
+            hip_msg_init(ctx.input_msg);
+            err = hip_build_user_hdr(ctx.input_msg,
                                      HIP_MSG_FIREWALL_STATUS,
                                      0);
             if (err) {
@@ -332,7 +332,7 @@ static int hipd_main(int argc, char *argv[])
             } else {
                 hip_firewall_status = 0;
                 HIP_DEBUG("sent %d bytes to firewall\n",
-                          hip_sendto_firewall(packet_ctx.input_msg));
+                          hip_sendto_firewall(ctx.input_msg));
             }
         }
 #endif
@@ -362,7 +362,7 @@ static int hipd_main(int argc, char *argv[])
         hip_perf_start_benchmark(perf_set, PERF_ALL);
 #endif
 
-        hip_run_socket_handles(&read_fdset, &packet_ctx);
+        hip_run_socket_handles(&read_fdset, &ctx);
 
 to_maintenance:
         err = hip_periodic_maintenance();
@@ -377,20 +377,20 @@ out_err:
     /* free allocated resources */
     hip_exit(err);
 
-    if (packet_ctx.input_msg) {
-        HIP_FREE(packet_ctx.input_msg);
+    if (ctx.input_msg) {
+        HIP_FREE(ctx.input_msg);
     }
 
-    if (packet_ctx.src_addr) {
-        HIP_FREE(packet_ctx.src_addr);
+    if (ctx.src_addr) {
+        HIP_FREE(ctx.src_addr);
     }
 
-    if (packet_ctx.dst_addr) {
-        HIP_FREE(packet_ctx.dst_addr);
+    if (ctx.dst_addr) {
+        HIP_FREE(ctx.dst_addr);
     }
 
-    if (packet_ctx.msg_ports) {
-        HIP_FREE(packet_ctx.msg_ports);
+    if (ctx.msg_ports) {
+        HIP_FREE(ctx.msg_ports);
     }
 
     HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);

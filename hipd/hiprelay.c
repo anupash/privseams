@@ -1083,7 +1083,7 @@ out_err:
  */
 int hip_relay_handle_relay_to(const uint8_t packet_type,
                               const uint32_t ha_state,
-                              struct hip_packet_context *packet_ctx)
+                              struct hip_packet_context *ctx)
 {
     int err           = 0;
     hip_relrec_t *rec = NULL, dummy;
@@ -1102,9 +1102,9 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
      * I's HIT. We should find one, if the I is
      * registered to relay.*/
     HIP_DEBUG_HIT("Searching relay record on HIT:",
-                  &packet_ctx->input_msg->hits);
+                  &ctx->input_msg->hits);
 
-    memcpy(&(dummy.hit_r), &packet_ctx->input_msg->hits, sizeof(packet_ctx->input_msg->hits));
+    memcpy(&(dummy.hit_r), &ctx->input_msg->hits, sizeof(ctx->input_msg->hits));
     rec = hip_relht_get(&dummy);
 
     if (rec == NULL) {
@@ -1117,7 +1117,7 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
     HIP_DEBUG("handle_relay_to: Matching relay record found:Full-Relay.\n");
 
     //check if there is a relay_to parameter
-    relay_to = (struct hip_relay_to *) hip_get_param(packet_ctx->input_msg, HIP_PARAM_RELAY_TO);
+    relay_to = (struct hip_relay_to *) hip_get_param(ctx->input_msg, HIP_PARAM_RELAY_TO);
     HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
 
     // check msg type
@@ -1130,11 +1130,11 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
                           (struct in6_addr *) &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d",
                   ntohs(relay_to->port));
-        hip_relay_forward_response(packet_ctx->input_msg,
+        hip_relay_forward_response(ctx->input_msg,
                                    packet_type,
-                                   packet_ctx->src_addr,
-                                   packet_ctx->dst_addr,
-                                   packet_ctx->msg_ports,
+                                   ctx->src_addr,
+                                   ctx->dst_addr,
+                                   ctx->msg_ports,
                                    (in6_addr_t *) &relay_to->address,
                                    ntohs(relay_to->port));
         //  state = HIP_STATE_NONE;
@@ -1434,13 +1434,13 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
  */
 int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
                                         const uint32_t ha_state,
-                                        struct hip_packet_context *packet_ctx)
+                                        struct hip_packet_context *ctx)
 {
     int err = 0;
     struct hip_relay_to *relay_to;
     //check if full relay service is active
 
-    if (!packet_ctx->hadb_entry) {
+    if (!ctx->hadb_entry) {
         HIP_DEBUG("handle relay_to in client is failed\n");
         goto out_err;
     }
@@ -1450,7 +1450,7 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
     // check if the relay has been registered
 
     //check if there is a relay_to parameter
-    relay_to = (struct hip_relay_to *) hip_get_param(packet_ctx->input_msg, HIP_PARAM_RELAY_TO);
+    relay_to = (struct hip_relay_to *) hip_get_param(ctx->input_msg, HIP_PARAM_RELAY_TO);
     HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
 
     // check msg type
@@ -1463,13 +1463,13 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
         HIP_DEBUG_IN6ADDR("the relay to address: ",
                           (struct in6_addr *) &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n",
-                  ntohs(relay_to->port), packet_ctx->hadb_entry->local_udp_port);
+                  ntohs(relay_to->port), ctx->hadb_entry->local_udp_port);
 
         if (ipv6_addr_cmp((struct in6_addr *) &relay_to->address,
-                          &packet_ctx->hadb_entry->our_addr)) {
+                          &ctx->hadb_entry->our_addr)) {
             HIP_DEBUG("relay_to address is saved as reflexive addr. \n");
-            packet_ctx->hadb_entry->local_reflexive_udp_port = ntohs(relay_to->port);
-            memcpy(&packet_ctx->hadb_entry->local_reflexive_address,
+            ctx->hadb_entry->local_reflexive_udp_port = ntohs(relay_to->port);
+            memcpy(&ctx->hadb_entry->local_reflexive_address,
                    &relay_to->address, sizeof(in6_addr_t));
         }
         //  state = HIP_STATE_NONE;

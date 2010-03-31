@@ -114,10 +114,10 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 
 int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
                                         const uint32_t ha_state,
-                                        struct hip_packet_context *packet_ctx);
+                                        struct hip_packet_context *ctx);
 
 int hip_relay_handle_relay_to(const uint8_t packet_type,
                               const uint32_t ha_state,
-                              struct hip_packet_context *packet_ctx);
+                              struct hip_packet_context *ctx);
 
 #endif /* HIP_HIPD_HIPRELAY_H */

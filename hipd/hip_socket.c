@@ -25,15 +25,15 @@ struct socketfd {
  */
 static hip_ll_t *hip_sockets;
 
-static int hip_handle_raw_input_v6(struct hip_packet_context *packet_ctx)
+static int hip_handle_raw_input_v6(struct hip_packet_context *ctx)
 {
     int err = 0;
 
     if (hip_read_control_msg_v6(hip_raw_sock_input_v6,
-                                packet_ctx,
+                                ctx,
                                 0)) {
         HIP_ERROR("Reading network msg failed\n");
-        err = hip_receive_control_packet(packet_ctx);
+        err = hip_receive_control_packet(ctx);
         if (err) {
             HIP_ERROR("hip_receive_control_packet()!\n");
         }
@@ -42,16 +42,16 @@ static int hip_handle_raw_input_v6(struct hip_packet_context *packet_ctx)
     return err;
 }
 
-static int hip_handle_raw_input_v4(struct hip_packet_context *packet_ctx)
+static int hip_handle_raw_input_v4(struct hip_packet_context *ctx)
 {
     int err = 0;
 
     if (hip_read_control_msg_v4(hip_raw_sock_input_v4,
-                                packet_ctx,
+                                ctx,
                                 IPV4_HDR_SIZE)) {
         HIP_ERROR("Reading network msg failed\n");
     } else {
-        err = hip_receive_control_packet(packet_ctx);
+        err = hip_receive_control_packet(ctx);
         if (err) {
             HIP_ERROR("hip_receive_control_packet()!\n");
         }
@@ -60,7 +60,7 @@ static int hip_handle_raw_input_v4(struct hip_packet_context *packet_ctx)
     return err;
 }
 
-static int hip_handle_nat_input(struct hip_packet_context *packet_ctx)
+static int hip_handle_nat_input(struct hip_packet_context *ctx)
 {
     int err = 0;
 
@@ -69,34 +69,34 @@ static int hip_handle_nat_input(struct hip_packet_context *packet_ctx)
               hip_nat_sock_input_udp);
 
     err = hip_read_control_msg_v4(hip_nat_sock_input_udp,
-                                  packet_ctx,
+                                  ctx,
                                   HIP_UDP_ZERO_BYTES_LEN);
     if (err) {
         HIP_ERROR("Reading network msg failed\n");
     } else {
-        err = hip_receive_udp_control_packet(packet_ctx);
+        err = hip_receive_udp_control_packet(ctx);
     }
 
     return err;
 }
 
-static int hip_handle_user_sock(struct hip_packet_context *packet_ctx)
+static int hip_handle_user_sock(struct hip_packet_context *ctx)
 {
     int err = 0;
     struct sockaddr_in6 app_src;
 
     if (hip_read_user_control_msg(hip_user_sock,
-                                  packet_ctx->input_msg,
+                                  ctx->input_msg,
                                   &app_src)) {
         HIP_ERROR("Reading user msg failed\n");
     } else {
-        err = hip_handle_user_msg(packet_ctx->input_msg, &app_src);
+        err = hip_handle_user_msg(ctx->input_msg, &app_src);
     }
 
     return err;
 }
 
-static int hip_handle_nl_ipsec_sock(struct hip_packet_context *packet_ctx)
+static int hip_handle_nl_ipsec_sock(struct hip_packet_context *ctx)
 {
     HIP_DEBUG("netlink receive\n");
     if (hip_netlink_receive(&hip_nl_ipsec,
@@ -108,7 +108,7 @@ static int hip_handle_nl_ipsec_sock(struct hip_packet_context *packet_ctx)
     return 0;
 }
 
-static int hip_handle_nl_route_sock(struct hip_packet_context *packet_ctx)
+static int hip_handle_nl_route_sock(struct hip_packet_context *ctx)
 {
     HIP_DEBUG("netlink route receive\n");
     if (hip_netlink_receive(&hip_nl_route,
