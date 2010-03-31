@@ -41,12 +41,12 @@ static int hip_hb_update_trigger(hip_ha_t *hadb_entry, void *unused)
                      "Out of memory while allocation memory for the packet\n");
             HIP_IFE(hip_create_locators(locator_msg, &locators), -1);
 
-            HIP_IFEL(hip_send_locators_to_one_peer(NULL,
-                                                   hadb_entry,
-                                                   &hadb_entry->our_addr,
-                                                   &hadb_entry->peer_addr,
-                                                   locators,
-                                                   HIP_UPDATE_LOCATOR),
+            HIP_IFEL(hip_send_update_to_one_peer(NULL,
+                                                 hadb_entry,
+                                                 &hadb_entry->our_addr,
+                                                 &hadb_entry->peer_addr,
+                                                 locators,
+                                                 HIP_UPDATE_LOCATOR),
                      -1, "Failed to trigger update\n");
 
             *heartbeat_counter = 0;

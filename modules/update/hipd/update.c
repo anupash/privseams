@@ -22,6 +22,7 @@
 #include "hipd/nsupdate.h"
 #include "hipd/pkt_handling.h"
 #include "update_legacy.h"
+#include "hipd/esp_prot_hipd_msg.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
@@ -153,7 +154,9 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
                           &ha->hit_peer);
 
     // Add ESP_INFO
-    if (type == HIP_UPDATE_LOCATOR || type == HIP_UPDATE_ECHO_REQUEST) {
+    if (type == HIP_UPDATE_LOCATOR
+            || type == HIP_UPDATE_ECHO_REQUEST
+            || type == HIP_UPDATE_ESP_ANCHOR_ACK) {
         // Handle SPI numbers
         esp_info_old_spi = ha->spi_inbound_current;
         esp_info_new_spi = ha->spi_inbound_current;
@@ -193,7 +196,9 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
 #endif
 
     // Add SEQ
-    if (type == HIP_UPDATE_LOCATOR || type == HIP_UPDATE_ECHO_REQUEST) {
+    if (type == HIP_UPDATE_LOCATOR
+            || type == HIP_UPDATE_ECHO_REQUEST
+            || type == HIP_UPDATE_ESP_ANCHOR) {
         // TODO check the following function!
         /* hip_update_set_new_spi_in_old(ha, esp_info_old_spi,
          *  esp_info_new_spi, 0);*/
@@ -216,12 +221,19 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
     }
 
     // Add ACK
-    if (type == HIP_UPDATE_ECHO_REQUEST || type == HIP_UPDATE_ECHO_RESPONSE) {
+    if (type == HIP_UPDATE_ECHO_REQUEST
+            || type == HIP_UPDATE_ECHO_RESPONSE
+            || type == HIP_UPDATE_ESP_ANCHOR_ACK) {
         HIP_IFEL(!(seq = hip_get_param(received_update_packet,
                                        HIP_PARAM_SEQ)), -1, "SEQ not found\n");
 
         HIP_IFEL(hip_build_param_ack(update_packet_to_send,
                                      ntohl(seq->update_id)), -1, "Building of ACK failed\n");
+    }
+
+    if (type == HIP_UPDATE_ESP_ANCHOR) {
+        HIP_IFEL(esp_prot_update_add_anchor(update_packet_to_send, ha),
+                 -1, "failed to add esp_prot anchor element\n");
     }
 
 #ifdef CONFIG_HIP_MIDAUTH
@@ -442,7 +454,7 @@ out_err:
  *
  * @todo locators should be sent to the whole verified addresses?
  */
-int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
+int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
                                   struct hip_hadb_state *ha,
                                   struct in6_addr *src_addr,
                                   struct in6_addr *dst_addr,
@@ -504,8 +516,12 @@ int hip_send_locators_to_one_peer(hip_common_t *received_update_packet,
             }
 
             break;
-        case SEND_UPDATE_ESP_ANCHOR:
+        case HIP_UPDATE_ESP_ANCHOR:
+        case HIP_UPDATE_ESP_ANCHOR_ACK:
             // TODO re-implement sending of esp prot anchors
+            HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
+            HIP_DEBUG_IN6ADDR("to", dst_addr);
+
             hip_send_update_pkt(update_packet_to_send, ha, src_addr, dst_addr);
             break;
         }
@@ -553,12 +569,12 @@ int hip_send_locators_to_all_peers(void)
 
         if (ha->hastate == HIP_HASTATE_HITOK &&
             ha->state == HIP_STATE_ESTABLISHED) {
-            err = hip_send_locators_to_one_peer(NULL,
-                                                ha,
-                                                &ha->our_addr,
-                                                &ha->peer_addr,
-                                                locators,
-                                                HIP_UPDATE_LOCATOR);
+            err = hip_send_update_to_one_peer(NULL,
+                                              ha,
+                                              &ha->our_addr,
+                                              &ha->peer_addr,
+                                              locators,
+                                              HIP_UPDATE_LOCATOR);
             if (err) {
                 goto out_err;
             }
@@ -691,12 +707,12 @@ static int hip_handle_first_update_packet(hip_common_t *received_update_packet,
     // UPDATE packets sent between different address combinations.
     get_random_bytes(ha->echo_data, sizeof(ha->echo_data));
 
-    err = hip_send_locators_to_one_peer(received_update_packet,
-                                        ha,
-                                        &ha->our_addr,
-                                        &ha->peer_addr,
-                                        NULL,
-                                        HIP_UPDATE_ECHO_REQUEST);
+    err = hip_send_update_to_one_peer(received_update_packet,
+                                      ha,
+                                      &ha->our_addr,
+                                      &ha->peer_addr,
+                                      NULL,
+                                      HIP_UPDATE_ECHO_REQUEST);
     if (err) {
         goto out_err;
     }
@@ -724,12 +740,12 @@ static void hip_handle_second_update_packet(hip_common_t *received_update_packet
 {
     struct hip_esp_info *esp_info = NULL;
 
-    hip_send_locators_to_one_peer(received_update_packet,
-                                  ha,
-                                  src_addr,
-                                  dst_addr,
-                                  NULL,
-                                  HIP_UPDATE_ECHO_RESPONSE);
+    hip_send_update_to_one_peer(received_update_packet,
+                                ha,
+                                src_addr,
+                                dst_addr,
+                                NULL,
+                                HIP_UPDATE_ECHO_RESPONSE);
 
     esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
     ha->spi_outbound_new = ntohl(esp_info->new_spi);
@@ -1048,6 +1064,25 @@ static int hip_update_handle_packet(const uint8_t packet_type,
                                        ctx->src_addr);
         goto out_err;
     }
+    else if (esp_prot_update_type(ctx->input_msg)
+                == ESP_PROT_FIRST_UPDATE_PACKET)
+    {
+       esp_prot_handle_first_update_packet(ctx->input_msg,
+                                           ctx->hadb_entry,
+                                           ctx->src_addr,
+                                           ctx->dst_addr);
+
+       goto out_err;
+    }
+    else if (esp_prot_update_type(ctx->input_msg)
+                == ESP_PROT_SECOND_UPDATE_PACKET)
+   {
+       esp_prot_handle_second_update_packet(ctx->hadb_entry,
+                                            ctx->src_addr,
+                                            ctx->dst_addr);
+
+       goto out_err;
+   }
 
 out_err:
     if (err) {

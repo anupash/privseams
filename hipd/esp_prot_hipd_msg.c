@@ -23,6 +23,9 @@
 #include "lib/core/hip_udp.h"
 #include "hipd.h"
 
+/** @todo Remove this dependency from core to UPDATE module */
+#include "modules/update/hipd/update.h"
+
 /**
  * Sends second update message for a public-key-based anchor element update
  *
@@ -318,19 +321,14 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
     } else {
         /* this should send an update only containing the mandatory params
          * HMAC and HIP_SIGNATURE as well as the ESP_PROT_ANCHOR and the
-         * SEQ param (to garanty freshness of the ANCHOR) in the signed part
-         * of the message
-         *
-         * params used for this call:
-         * - hadb entry matching the HITs passed in the trigger msg
-         * - not sending locators -> list = NULL and count = 0
-         * - no interface triggers this event -> -1
-         * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
-         * - UPDATE not due to adding of a new addresses
-         * - not setting any address, as none is updated */
-        // TODO 10.11.2009: This send_update call should be modified
-        /*HIP_IFEL(hip_send_update_old(entry, NULL, 0, -1, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
-         *              -1, "failed to send anchor update\n");*/
+         * SEQ param (to guaranty freshness of the ANCHOR) in the signed part
+         * of the message */
+         HIP_IFEL(hip_send_update_to_one_peer(NULL, entry,
+                                              &entry->our_addr,
+                                              &entry->peer_addr,
+                                              NULL,
+                                              HIP_UPDATE_ESP_ANCHOR),
+                          -1, "failed to send anchor update\n");
     }
 
 out_err:
@@ -882,72 +880,111 @@ out_err:
 
 /******************** UPDATE parameters *******************/
 
-/**
- * Processes pure ANCHOR-UPDATEs
+/** Classifies update packets belonging to the esp protection extension
  *
- * @param recv_update   the received hip update
+ * @param   recv_update the received hip update
+ * @return              packet type qualifiers
+ */
+int esp_prot_update_type(const hip_common_t *recv_update)
+{
+    struct hip_seq * seq = NULL;
+    struct hip_ack * ack = NULL;
+    struct hip_esp_info * esp_info = NULL;
+
+    HIP_ASSERT(recv_update != NULL);
+
+    seq = (struct hip_seq *) hip_get_param(recv_update, HIP_PARAM_SEQ);
+    ack = (struct hip_ack *) hip_get_param(recv_update, HIP_PARAM_ACK);
+    esp_info = (struct hip_esp_info *) hip_get_param(recv_update, HIP_PARAM_ESP_INFO);
+
+    if (seq && !ack && !esp_info) {
+        return ESP_PROT_FIRST_UPDATE_PACKET;
+
+    } else if (!seq && ack && esp_info) {
+        return ESP_PROT_SECOND_UPDATE_PACKET;
+    } else {
+        HIP_DEBUG("NOT a pure ANCHOR-UPDATE, unhandled\n");
+
+        return ESP_PROT_UNKNOWN_UPDATE_PACKET;
+    }
+}
+
+/**
+ * Processes the first packet of a pure ANCHOR-UPDATE
+ *
+ * @param recv_updat    the received hip update
  * @param entry         hip association for the connection
  * @param src_ip        src ip address
  * @param dst_ip        dst ip address
  * @return              0 on success, -1 in case of an error
- */
-int esp_prot_handle_update(const hip_common_t *recv_update, hip_ha_t *entry,
-                           const in6_addr_t *src_ip, const in6_addr_t *dst_ip)
+ **/
+int esp_prot_handle_first_update_packet(const hip_common_t *recv_update,
+                                        hip_ha_t *entry,
+                                        const in6_addr_t *src_ip,
+                                        const in6_addr_t *dst_ip)
 {
-    struct hip_seq *seq           = NULL;
-    struct hip_ack *ack           = NULL;
-    struct hip_esp_info *esp_info = NULL;
-    uint32_t spi                  = 0;
-    int err                       = 0;
+    uint32_t spi = 0;
+    int err = 0;
 
     HIP_ASSERT(entry != NULL);
 
-    seq      = (struct hip_seq *) hip_get_param(recv_update, HIP_PARAM_SEQ);
-    ack      = (struct hip_ack *) hip_get_param(recv_update, HIP_PARAM_ACK);
-    esp_info = (struct hip_esp_info *) hip_get_param(recv_update, HIP_PARAM_ESP_INFO);
+    /* this is the first ANCHOR-UPDATE msg
+     *
+     * @note contains anchors -> update inbound SA
+     * @note response has to contain corresponding ACK and ESP_INFO */
+    HIP_IFEL(esp_prot_update_handle_anchor(recv_update, entry,
+                                           src_ip, dst_ip, &spi),
+             -1, "failed to handle anchor in UPDATE msg\n");
+    HIP_DEBUG("successfully processed anchors in ANCHOR-UPDATE\n");
 
-    if (seq && !ack && !esp_info) {
-        /* this is the first ANCHOR-UPDATE msg
-         *
-         * @note contains anchors -> update inbound SA
-         * @note response has to contain corresponding ACK and ESP_INFO */
-        HIP_IFEL(esp_prot_update_handle_anchor(recv_update, entry,
-                                               src_ip, dst_ip, &spi), -1,
-                 "failed to handle anchor in UPDATE msg\n");
-        HIP_DEBUG("successfully processed anchors in ANCHOR-UPDATE\n");
+    // send ANCHOR_UPDATE response, when the anchor was verified above
+    HIP_IFEL(esp_prot_send_update_response(recv_update, entry, dst_ip,
+                                           src_ip, spi),
+             -1, "failed to send UPDATE replay");
 
-        // send ANCHOR_UPDATE response, when the anchor was verified above
-        HIP_IFEL(esp_prot_send_update_response(recv_update, entry, dst_ip,
-                                               src_ip, spi), -1, "failed to send UPDATE replay");
-    } else if (!seq && ack && esp_info) {
-        /* this is the second ANCHOR-UPDATE msg
-         *
-         * @note contains ACK for previously sent anchors -> update outbound SA */
-        HIP_DEBUG("received ACK for previously sent ANCHOR-UPDATE\n");
+  out_err:
+    return err;
+}
 
-        // the update was successful, stop retransmission
-        entry->update_state = 0;
+/**
+ * Processes the second packet of a pure ANCHOR-UPDATE
+ *
+ * @param entry     hip association for the connection
+ * @param src_ip    src ip address
+ * @param dst_ip    dst ip address
+ * @return          0 on success, -1 in case of an error
+ **/
+int esp_prot_handle_second_update_packet(hip_ha_t *entry,
+                                         const in6_addr_t *src_ip,
+                                         const in6_addr_t *dst_ip)
+{
+    int err = 0;
 
-        // notify sadb about next anchor
-        HIP_IFEL(hip_add_sa(dst_ip,
-                            src_ip,
-                            &entry->hit_our,
-                            &entry->hit_peer,
-                            entry->spi_outbound_new,
-                            entry->esp_transform,
-                            &entry->esp_out,
-                            &entry->auth_out,
-                            0,
-                            HIP_SPI_DIRECTION_OUT,
-                            1,
-                            entry),
-                 -1,
-                 "failed to notify sadb about next anchor\n");
-    } else {
-        HIP_DEBUG("NOT a pure ANCHOR-UPDATE, unhandled\n");
-    }
+    HIP_ASSERT(entry != NULL);
 
-out_err:
+    /* this is the second ANCHOR-UPDATE msg
+     *
+     * @note contains ACK for previously sent anchors -> update outbound SA */
+    HIP_DEBUG("received ACK for previously sent ANCHOR-UPDATE\n");
+
+    // the update was successful, stop retransmission
+    entry->update_state = 0;
+
+    // notify sadb about next anchor
+    HIP_IFEL(hip_add_sa(dst_ip, src_ip,
+                        &entry->hit_our,
+                        &entry->hit_peer,
+                        entry->spi_outbound_new,
+                        entry->esp_transform,
+                        &entry->esp_out,
+                        &entry->auth_out,
+                        0,
+                        HIP_SPI_DIRECTION_OUT,
+                        1,
+                        entry),
+             -1, "failed to notify sadb about next anchor\n");
+
+  out_err:
     return err;
 }
 
