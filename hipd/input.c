@@ -1009,39 +1009,31 @@ int hip_handle_i2_in_i2_sent(const uint8_t packet_type,
     return ctx->error;
 }
 
-
 /**
- * hip_handle_r2 - handle incoming R2 packet
+ * hip_check_r2
  *
- * This function is the actual point from where the processing of R2
- * is started. On success (payloads are created and IPsec is set up) 0 is
- * returned, otherwise < 0.
+ * Check a received R2 control packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param *ctx Pointer to the packet context, containing all information for
+ *             the packet handling (received message, source and destination
+ *             address, the ports and the corresponding entry from the host
+ *             association database).
  *
- * @return Success = 0,
- *         Error   = -1
+ * @return zero on success, or negative error value on error.
  */
-int hip_handle_r2(const uint8_t packet_type,
-                  const uint32_t ha_state,
-                  struct hip_packet_context *ctx)
+int hip_check_r2(const uint8_t packet_type,
+                 const uint32_t ha_state,
+                 struct hip_packet_context *ctx)
 {
-    int err                         = 0, tfm = 0, retransmission = 0, idx = 0;
-    uint16_t mask                   = 0;
-    uint32_t spi_recvd              = 0, spi_in = 0;
-    struct hip_esp_info *esp_info   = NULL;
-    struct hip_locator *locator     = NULL;
-    struct hip_spi_out_item spi_out_data;
+    int err = 0;
+    uint16_t mask = 0;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R2\n");
     hip_perf_start_benchmark(perf_set, PERF_R2);
 #endif
+    HIP_DEBUG("Received R2 in state %s\n", hip_state_str(ha_state));
 
     HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hitr), -1,
              "Received NULL receiver HIT in R2. Dropping\n");
@@ -1054,21 +1046,6 @@ int hip_handle_r2(const uint8_t packet_type,
     HIP_IFEL(!ctx->hadb_entry, -1,
              "No entry in host association database when receiving R2." \
              "Dropping.\n");
-
-    /* if the NAT mode is used, update the port numbers of the host association */
-    if (ctx->msg_ports->dst_port == hip_get_local_nat_udp_port()) {
-        ctx->hadb_entry->local_udp_port = ctx->msg_ports->dst_port;
-        ctx->hadb_entry->peer_udp_port  = ctx->msg_ports->src_port;
-    }
-
-    HIP_DEBUG("Received R2 in state %s\n", hip_state_str(ha_state));
-
-    if (ha_state == HIP_STATE_ESTABLISHED) {
-        retransmission = 1;
-        HIP_DEBUG("Retransmission\n");
-    } else {
-        HIP_DEBUG("Not a retransmission\n");
-    }
 
     /* Verify HMAC */
     if (ctx->hadb_entry->is_loopback) {
@@ -1099,7 +1076,50 @@ int hip_handle_r2(const uint8_t packet_type,
     hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
 #endif
 
-    /* The rest */
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
+ * hip_handle_r2
+ *
+ * Handle an incoming R2 packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all information for
+ *             the packet handling (received message, source and destination
+ *             address, the ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return zero on success, or negative error value on error.
+ */
+int hip_handle_r2(const uint8_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *ctx)
+{
+    int err = 0, tfm = 0, retransmission = 0, idx = 0;
+    uint32_t spi_recvd = 0, spi_in = 0;
+    struct hip_esp_info *esp_info   = NULL;
+    struct hip_locator *locator     = NULL;
+    struct hip_spi_out_item spi_out_data;
+
+    if (ha_state == HIP_STATE_ESTABLISHED) {
+        retransmission = 1;
+        HIP_DEBUG("Retransmission\n");
+    } else {
+        HIP_DEBUG("Not a retransmission\n");
+    }
+
+    /* if the NAT mode is used, update the port numbers of the host association */
+    if (ctx->msg_ports->dst_port == hip_get_local_nat_udp_port()) {
+        ctx->hadb_entry->local_udp_port = ctx->msg_ports->dst_port;
+        ctx->hadb_entry->peer_udp_port  = ctx->msg_ports->src_port;
+    }
+
     HIP_IFEL(!(esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO)),
              -EINVAL,
              "Parameter SPI not found.\n");
@@ -1137,9 +1157,7 @@ int hip_handle_r2(const uint8_t packet_type,
     if (locator) {
         HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
     }
-    //end add
 
-    // moved from hip_send_i2
     HIP_DEBUG_HIT("hit our", &(ctx->hadb_entry)->hit_our);
     HIP_DEBUG_HIT("hit peer", &(ctx->hadb_entry)->hit_peer);
     HIP_IFEL(hip_add_sa(ctx->src_addr,

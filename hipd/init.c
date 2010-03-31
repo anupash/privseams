@@ -710,7 +710,8 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_handle_r1, 30000);
     hip_register_handle_function(HIP_R1, HIP_STATE_CLOSED, &hip_send_i2,   40000);
 
-    hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &hip_handle_r2, 1000);
+    hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &hip_check_r2,  20000);
+    hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &hip_handle_r2, 30000);
 
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I1_SENT, &hip_check_notify,  20000);
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I1_SENT, &hip_handle_notify, 30000);
