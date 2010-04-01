@@ -624,6 +624,9 @@ endif # HAVE_PYTHON
 doxygen:
 	doxygen Doxyfile
 
+clean-local:
+	rm -rf doxy
+
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
 	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
