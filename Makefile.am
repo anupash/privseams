@@ -622,7 +622,7 @@ tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 endif # HAVE_PYTHON
 
 doxygen:
-	cd @top_srcdir@/doc && doxygen
+	doxygen doc/Doxyfile
 
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
