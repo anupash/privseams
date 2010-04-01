@@ -12,6 +12,6 @@ rm -rf $TMP_DIR
 mkdir $TMP_DIR
 
 tar xvzf $HIPL_TAR
-cd main/doc
-doxygen
+cd main
+make doxygen
 mv doxy/html/* $OUTPUT_DIR
