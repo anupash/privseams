@@ -20,8 +20,6 @@ DOCDIR = $(DOCDIR_PREFIX)/hipl
 
 %.html:  %.xml
 	$(XMLTO) -o $(HOWTO_HTML_DIR) html $<
-	cp docshot-*.png $(HOWTO_HTML_DIR)
-	cp base-exchange-*.png $(HOWTO_HTML_DIR)
 
 ### TARGETS ##################################################################
 
@@ -41,5 +39,7 @@ install: all
 	mkdir -p $(DOCDIR)
 	cp $(HOWTO).txt $(DOCDIR)
 	cp -a $(HOWTO_HTML_DIR) $(DOCDIR)
+	cp docshot-*.png $(DOCDIR)
+	cp base-exchange-*.png $(DOCDIR)
 
 .phony: clean
