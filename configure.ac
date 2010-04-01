@@ -388,6 +388,6 @@ AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimiz
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500 $MAEMO_CPPFLAGS")
 
-AC_CONFIG_FILES([ Makefile ])
+AC_CONFIG_FILES([ Doxyfile Makefile ])
 
 AC_OUTPUT

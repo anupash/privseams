@@ -38,7 +38,7 @@ PROJECT_NUMBER         = 1.0
 # If a relative path is entered, it will be relative to the location
 # where doxygen was started. If left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = doc/doxy
+OUTPUT_DIRECTORY       = doxy
 
 # If the CREATE_SUBDIRS tag is set to YES, then doxygen will create
 # 4096 sub-directories (in 2 levels) under the output directory of each output
@@ -487,20 +487,20 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                  = agent \
-                         doc \
-                         firewall \
-                         hipd \
-                         test \
-                         tools \
-                         lib/conf \
-                         lib/core \
-                         lib/dht \
-                         lib/gui \
-                         lib/ipsec \
-                         lib/opphip \
-                         lib/performance \
-                         lib/tool \
+INPUT                  = @top_srcdir@/agent           \
+                         @top_srcdir@/doc             \
+                         @top_srcdir@/firewall        \
+                         @top_srcdir@/hipd            \
+                         @top_srcdir@/test            \
+                         @top_srcdir@/tools           \
+                         @top_srcdir@/lib/conf        \
+                         @top_srcdir@/lib/core        \
+                         @top_srcdir@/lib/dht         \
+                         @top_srcdir@/lib/gui         \
+                         @top_srcdir@/lib/ipsec       \
+                         @top_srcdir@/lib/opphip      \
+                         @top_srcdir@/lib/performance \
+                         @top_srcdir@/lib/tool        \
 
 # This tag can be used to specify the character encoding of the source files that
 # doxygen parses. Internally doxygen uses the UTF-8 encoding, which is also the default
