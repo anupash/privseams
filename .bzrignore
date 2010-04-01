@@ -8,6 +8,7 @@
 .libs
 .project
 .pydevproject
+Doxyfile
 Makefile
 Makefile.in
 TAGS
