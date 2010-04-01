@@ -1037,52 +1037,52 @@ static int filter_hip(const struct in6_addr *ip6_src,
         HIP_DEBUG("The list of rules is empty!!!???\n");
     }
 
+    HIP_DEBUG("HIP type number is %d\n", buf->type_hdr);
+
+    if (buf->type_hdr == HIP_I1) {
+        HIP_INFO("received packet type: I1\n");
+        print_addr = 1;
+    } else if (buf->type_hdr == HIP_R1)   {
+        HIP_INFO("received packet type: R1\n");
+        print_addr = 1;
+    } else if (buf->type_hdr == HIP_I2)   {
+        HIP_INFO("received packet type: I2\n");
+        print_addr = 1;
+    } else if (buf->type_hdr == HIP_R2)   {
+        HIP_INFO("received packet type: R2\n");
+        print_addr = 1;
+    } else if (buf->type_hdr == HIP_UPDATE)   {
+        HIP_INFO("received packet type: UPDATE\n");
+        print_addr = 1;
+    } else if (buf->type_hdr == HIP_CLOSE)   {
+        HIP_INFO("received packet type: CLOSE\n");
+        print_addr = 1;
+    } else if (buf->type_hdr == HIP_CLOSE_ACK)   {
+        HIP_INFO("received packet type: CLOSE_ACK\n");
+        print_addr = 1;
+    } else if (buf->type_hdr == HIP_NOTIFY)   {
+        HIP_DEBUG("received packet type: NOTIFY\n");
+    } else if (buf->type_hdr == HIP_LUPDATE) {
+        HIP_DEBUG("received packet type: LIGHT UPDATE\n");
+    }
+    //Added by Prabhu to support DATA Packets
+    else if (buf->type_hdr == HIP_DATA) {
+        HIP_DEBUG("received packet type: HIP_DATA");
+    } else {
+        HIP_DEBUG("received packet type: UNKNOWN\n");
+    }
+
+    if (print_addr) {
+        HIP_INFO_HIT("src hit", &(buf->hits));
+        HIP_INFO_HIT("dst hit", &(buf->hitr));
+        HIP_INFO_IN6ADDR("src ip", ip6_src);
+        HIP_INFO_IN6ADDR("dst ip", ip6_dst);
+    }
+
     while (list != NULL) {
         match = 1;
         rule  = (struct rule *) list->data;
-
-        HIP_DEBUG("HIP type number is %d\n", buf->type_hdr);
-
         //print_rule(rule);
-        if (buf->type_hdr == HIP_I1) {
-            HIP_INFO("received packet type: I1\n");
-            print_addr = 1;
-        } else if (buf->type_hdr == HIP_R1)   {
-            HIP_INFO("received packet type: R1\n");
-            print_addr = 1;
-        } else if (buf->type_hdr == HIP_I2)   {
-            HIP_INFO("received packet type: I2\n");
-            print_addr = 1;
-        } else if (buf->type_hdr == HIP_R2)   {
-            HIP_INFO("received packet type: R2\n");
-            print_addr = 1;
-        } else if (buf->type_hdr == HIP_UPDATE)   {
-            HIP_INFO("received packet type: UPDATE\n");
-            print_addr = 1;
-        } else if (buf->type_hdr == HIP_CLOSE)   {
-            HIP_INFO("received packet type: CLOSE\n");
-            print_addr = 1;
-        } else if (buf->type_hdr == HIP_CLOSE_ACK)   {
-            HIP_INFO("received packet type: CLOSE_ACK\n");
-            print_addr = 1;
-        } else if (buf->type_hdr == HIP_NOTIFY)   {
-            HIP_DEBUG("received packet type: NOTIFY\n");
-        } else if (buf->type_hdr == HIP_LUPDATE) {
-            HIP_DEBUG("received packet type: LIGHT UPDATE\n");
-        }
-        //Added by Prabhu to support DATA Packets
-        else if (buf->type_hdr == HIP_DATA) {
-            HIP_DEBUG("received packet type: HIP_DATA");
-        } else {
-            HIP_DEBUG("received packet type: UNKNOWN\n");
-        }
-
-        if (print_addr) {
-            HIP_INFO_HIT("src hit", &(buf->hits));
-            HIP_INFO_HIT("dst hit", &(buf->hitr));
-            HIP_INFO_IN6ADDR("src ip", ip6_src);
-            HIP_INFO_IN6ADDR("dst ip", ip6_dst);
-        }
 
         // check src_hit if defined in rule
         if (match && rule->src_hit) {
