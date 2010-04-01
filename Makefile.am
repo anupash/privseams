@@ -629,12 +629,12 @@ clean-local:
 
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
-	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
+	env PYEXECDIR=$(pyexecdir) @srcdir@/test/packaging/create-package.sh $@
 
 tools/hipdnsproxy: tools/dnsproxy.py
 tools/hipdnskeyparse: tools/parse-key-3.py
 tools/hipdnsproxy tools/hipdnskeyparse:
-	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
+	@srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
 
 autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
