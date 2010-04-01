@@ -33,7 +33,7 @@ debian/hipl.debhelper.log
 debian/hipl.substvars
 depcomp
 doc/HOWTO.txt
-doc/doxy/
+doxy/
 doc/howto-html/
 firewall/hipfw
 hipd/hipd
