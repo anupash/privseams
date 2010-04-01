@@ -760,7 +760,7 @@ static int hip_init_handle_functions(void)
  */
 int hipd_init(int flush_ipsec, int killold)
 {
-    int err              = 0, certerr = 0, hitdberr = 0, i;
+    int err = 0, certerr = 0, hitdberr = 0, i, j;
     unsigned int mtu_val = HIP_HIT_DEV_MTU;
     char str[64];
     char mtu[16];
@@ -965,25 +965,25 @@ int hipd_init(int flush_ipsec, int killold)
 
     /* Initialize modules */
     HIP_INFO("Initializing modules.\n");
-    /* Check if a required module was disabled. */
-    for (i = 0; i < num_required_modules_hipd; i++) {
-        HIP_IFEL(lmod_module_disabled(required_modules_hipd[i]),
-                 -1,
-                 "The required module <%s> was disabled.\n",
-                 required_modules_hipd[i]);
-    }
-
-    for (i = 0; i < num_modules_hipd; i++) {
-        HIP_DEBUG("module: %s\n", modules_hipd[i]);
-        if (lmod_module_disabled(modules_hipd[i])) {
+    for (i = 0; i < hipd_num_modules; i++) {
+        HIP_DEBUG("module: %s\n", hipd_modules[i].name);
+        if (lmod_module_disabled(hipd_modules[i].name)) {
             HIP_DEBUG("state:  DISABLED\n");
             continue;
         } else {
             HIP_DEBUG("state:  ENABLED\n");
-            HIP_IFEL(hipd_init_functions[i](),
-                     -1,
-                     "Module initialization failed.\n");
+            /* Check dependencies */
+            for (j = 0; j < hipd_modules[i].num_required_moduels; j++) {
+                HIP_IFEL(lmod_module_disabled(hipd_modules[i].required_modules_hipd[j]),
+                         -1,
+                         "The module <%s> is required by <%s>, but was disabled.\n",
+                         hipd_modules[i].required_modules_hipd[j],
+                         hipd_modules[i].name);
+            }
         }
+        HIP_IFEL(hipd_modules[i].init_function(),
+                 -1,
+                 "Module initialization failed.\n");
     }
 
     hip_init_sockets();
