@@ -4130,7 +4130,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
                 <para>To compile HIP configuration GUI atleast following packages are needed (asuming you have debian):
                         <itemizedlist>
                                 <listitem><para>
-                                        gcc and g++ compilers, both should be at least version 4.0.
+                                        gcc compiler, should be at least version 4.0
                                 </para></listitem>
                                 <listitem><para>
                                         Package: xbase-clients - miscellaneous X clients
