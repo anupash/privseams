@@ -101,7 +101,6 @@ CONFIGURE_VARS += \
 define Build/Configure
 	$(call Build/Configure/Default, \
             --enable-shared \
-            --enable-midauth \
             --enable-openwrt \
             --disable-dht \
             --disable-agent \
