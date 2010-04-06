@@ -624,8 +624,21 @@ endif # HAVE_PYTHON
 doxygen:
 	doxygen Doxyfile
 
+dist_doc_DATA = doc/HOWTO.txt $(wildcard doc/*.png)
+
+doc/HOWTO.txt: doc/HOWTO.xml
+	xmlto -o $(@D) txt $<
+
+doc/howto-html/index.html:  doc/HOWTO.xml
+	xmlto -o $(@D) html $<
+
+install-data-hook: doc/howto-html/index.html
+	cp -r $(<D) $(DESTDIR)$(docdir)
+
+CLEANFILES += doc/HOWTO.txt
 clean-local:
 	rm -rf doxy
+	rm -rf doc/howto-html
 
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
