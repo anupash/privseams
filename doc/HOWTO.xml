@@ -3194,7 +3194,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </para>
         <mediaobject>
           <imageobject>
-            <imagedata fileref="../base-exchange-rvs.png" scale="100" align="center" format="PNG"/>
+            <imagedata fileref="base-exchange-rvs.png" scale="100" align="center" format="PNG"/>
           </imageobject>
           <caption>
             <para>
@@ -3472,7 +3472,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </para>
         <mediaobject>
           <imageobject>
-            <imagedata fileref="../base-exchange-relay.png" scale="100" align="center" format="PNG"/>
+            <imagedata fileref="base-exchange-relay.png" scale="100" align="center" format="PNG"/>
           </imageobject>
           <caption>
             <para>Base exchange via the relay server</para>
@@ -4076,7 +4076,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
                 <screeninfo>HIP configuration GUI main window</screeninfo>
                 <mediaobject>
                 <imageobject>
-                <imagedata fileref="../docshot-agent-main-window.png" scale="100" align="center" format="PNG"/>
+                <imagedata fileref="docshot-agent-main-window.png" scale="100" align="center" format="PNG"/>
                 </imageobject>
                 <caption>
                 <para>HIP configuration GUI main window</para>
@@ -4118,7 +4118,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
                 <screeninfo>HIP configuration GUI tray icon</screeninfo>
                 <mediaobject>
                 <imageobject>
-                <imagedata fileref="../docshot-agent-tray-icon.png" scale="100" align="center" format="PNG"/>
+                <imagedata fileref="docshot-agent-tray-icon.png" scale="100" align="center" format="PNG"/>
                 </imageobject>
                 <caption>
                 <para>HIP configuration GUI tray icon</para>
