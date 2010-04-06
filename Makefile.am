@@ -7,12 +7,14 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd
 # XX FIX: use dist_doc_DATA for all documentation (if you change this,
 # make sure the check the "make bin" still works)
 #
-EXTRA_DIST =  .vimrc debian doc hipext hipfwmi patches
+EXTRA_DIST =  .vimrc debian doc hipext hipfwmi patches release.version
+EXTRA_DIST += i3/i3-cfg-PL.xml i3/aeshash/aescpp.hh i3/i3/i3_debug.c i3/utils/netwrap_win32.c
+EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
 EXTRA_DIST += test/configs test/demo test/maintainer test/openwrt
 EXTRA_DIST += test/packaging test/packets test/performance
-EXTRA_DIST += i3/i3-cfg-PL.xml release.version
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/agent/,*.lang))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/dht/,*.txt))
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
 EXTRA_DIST += m4 # required for CentOS "make bin" target
