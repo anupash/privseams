@@ -11,6 +11,11 @@
 # If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
 # for the user running this script, then email will be sent in case of failure.
 
+if test "$1" = ""; then
+    echo "usage: $0 <branch_name>"
+    exit 1
+fi
+
 BRANCH_NAME=$1
 
 AUTOBUILD_DIR=$HOME/tmp/autobuild
