@@ -628,7 +628,7 @@ endif # HAVE_PYTHON
 doxygen:
 	doxygen Doxyfile
 
-dist_doc_DATA = doc/HOWTO.txt $(wildcard doc/*.png)
+dist_doc_DATA = doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
 
 doc/HOWTO.txt: doc/HOWTO.xml
 	xmlto -o $(@D) txt $<
