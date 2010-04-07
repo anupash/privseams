@@ -154,7 +154,7 @@ int config_read(const char *file)
         }
 
         /* Find first '=' or '+' character and split string from there. */
-        err = sscanf(buf, "%a[^+=]%c%a[^\n]", &p1, &add, &p2);
+        err = sscanf(buf, "%c[^+=]%c%c[^\n]", p1, &add, p2);
         if (err != 3) {
             goto loop_end;
         }
