@@ -20,6 +20,10 @@ EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
+# These are unused, list them here so they appear in the dist tarball.
+EXTRA_DIST += test/conntest-client-native.c test/hadb_deprecated.c
+EXTRA_DIST += test/hadb_old.c test/misc_install.c
+
 BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
 
 # Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
