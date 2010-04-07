@@ -19,6 +19,7 @@
 #include <sys/un.h>
 #include <sys/types.h>
 
+#include "agent.h"
 #include "hitdb.h"
 #include "language.h"
 #include "tools.h"
@@ -219,7 +220,6 @@ static int hip_agent_db_groups_callback(void *NotUsed, int argc,
 int hit_db_init(char *file)
 {
     int err = 0;
-    extern int init_in_progress;
 
     hit_db_lock      = 0;
     hit_db_clear();
@@ -243,7 +243,6 @@ out_err:
 void hit_db_quit(void)
 {
     int err = 0;
-    extern sqlite3 *agent_db;
 
     HIP_IFEL(hip_sqlite_close_db(agent_db), -1, "Failed to close the db\n");
     hit_db_clear();
@@ -330,8 +329,6 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
     HIT_Remote *r, *err = NULL;
     char insert_into[256];
     int ret = 0;
-    extern sqlite3 *agent_db;
-    extern int init_in_progress;
 
     if (!nolock) {
         HIT_DB_LOCK();
@@ -411,7 +408,6 @@ int hit_db_del(char *n)
     char name[MAX_NAME_LEN + 1], group_name[MAX_NAME_LEN + 1];
     int err        = 0;
     char delete_from[256];
-    extern sqlite3 *agent_db;
 
     /* Check that database is not empty. */
     HIP_IFEL(remote_db_n < 1, -1, "Remote database is empty, should not happen!\n");
@@ -521,8 +517,6 @@ static int hit_db_load_from_file(char *file)
 {
     FILE *db_file = NULL;
     int err       = 0;
-    extern sqlite3 *agent_db;
-    extern int init_in_progress;
 
     hit_db_clear();
     HIT_DB_LOCK();
@@ -658,8 +652,6 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
     HIT_Group *g, *err = NULL;
     char insert_into[256];
     int ret = 0;
-    extern sqlite3 *agent_db;
-    extern int init_in_progress;
 
     /* Check group name length. */
     HIP_IFEL(strlen(name) < 1, NULL, "Remote group name too short.\n");
@@ -720,7 +712,6 @@ int hit_db_del_rgroup(char *name)
     HIT_Group *g, *g2;
     int err = 0;
     char delete_from[256];
-    extern sqlite3 *agent_db;
 
     /* Find group from database first. */
     g = hit_db_find_rgroup(name);
@@ -803,8 +794,6 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
     char lhit[128];
     char insert_into[256];
     int ret = 0;
-    extern sqlite3 *agent_db;
-    extern int init_in_progress;
 
     /* Check HIT name length. */
     HIP_IFEL(strlen(name) < 1, NULL, "Local HIT name too short.\n");
