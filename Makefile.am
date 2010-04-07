@@ -564,8 +564,6 @@ endif #HIP_AGENT
 if HIP_I3
 APP_LDADD = i3/chord/libchord.a
 
-i3_chord_chord_getfingers_LDADD = $(APP_LADD)
-i3_chord_chord_traceroute_LDADD = $(APP_LADD)
 i3_chord_gen_conf_LDADD         = $(APP_LDADD)
 i3_chord_gen_conf_same_LDADD    = $(APP_LDADD)
 i3_chord_test_LDADD             = $(APP_LDADD)
