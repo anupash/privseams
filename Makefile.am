@@ -532,8 +532,8 @@ if HIP_PERFORMANCE
 agent_hipagent_LDADD += lib/performance/libperformance.la
 endif
 
-GTKLDADD     = `pkg-config          --libs    gtk+-2.0`
-GTHREADLDADD = `pkg-config --cflags --libs gthread-2.0`
+GTKLDADD     = `pkg-config --libs    gtk+-2.0`
+GTHREADLDADD = `pkg-config --libs gthread-2.0`
 
 agent_hipagent_LDFLAGS = $(GTKLDADD)     \
                          $(GTHREADLDADD)
