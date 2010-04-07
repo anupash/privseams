@@ -436,8 +436,6 @@ if HIP_PERFORMANCE
 test_hashtest_LDADD += lib/performance/libperformance.la
 endif
 
-
-if HIP_DHT
 test_dhtteststub_LDADD = lib/dht/libhipdht.la \
                          lib/core/libhipcore.la \
                          lib/tool/libhiptool.la
@@ -445,7 +443,6 @@ test_dhtteststub_LDADD = lib/dht/libhipdht.la \
 if HIP_PERFORMANCE
 test_dhtteststub_LDADD += lib/performance/libperformance.la
 endif
-endif # HIP_DHT
 
 test_certteststub_LDADD = lib/core/libhipcore.la \
                           lib/tool/libhiptool.la
@@ -523,7 +520,6 @@ if HIP_PFKEY
 hipd_hipd_LDADD += lib/ipsec/libhipsec.la
 endif
 
-if HIP_FIREWALL
 firewall_hipfw_LDADD = lib/core/libhipcore.la \
                        lib/tool/libhiptool.la
 
@@ -531,9 +527,6 @@ if HIP_PERFORMANCE
 firewall_hipfw_LDADD += lib/performance/libperformance.la
 endif
 
-endif # HIP_FIREWALL
-
-if HIP_AGENT
 # hard dependencies: libhipgui, libhipcore
 # TODO fix dependency between libhipgui and libhipconf if possible
 # TODO fix dependency between libhipcore and libhipconf if possible
@@ -558,13 +551,10 @@ GOBJECTLDADD = `pkg-config --cflags --libs gobject-2.0`
 agent_hipagent_LDFLAGS = $(GTKLDADD)     \
                          $(GTHREADLDADD) \
                          $(GOBJECTLDADD)
-endif #HIP_AGENT
 
-if HIP_I3
 i3_chord_gen_conf_LDADD       = i3/chord/libchord.a
 i3_chord_gen_conf_same_LDADD  = i3/chord/libchord.a
 i3_chord_test_LDADD           = i3/chord/libchord.a
-endif # HIP_I3
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
