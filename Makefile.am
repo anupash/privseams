@@ -24,8 +24,6 @@ EXTRA_DIST += $(HIPL_HEADER_LIST)
 EXTRA_DIST += test/conntest-client-native.c test/hadb_deprecated.c
 EXTRA_DIST += test/hadb_old.c test/misc_install.c
 
-BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
-
 # Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
 # Gtk requires the images without the hipl prefix hence we use ".." below
 imagesdir = $(pkgdatadir)/../pixmaps
