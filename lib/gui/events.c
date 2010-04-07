@@ -12,6 +12,9 @@
  *
  * @note The documentation may be inaccurate please feel free to fix it -Samu
  */
+
+#include <gtk/gtk.h>
+
 #include "events.h"
 #include "hipgui.h"
 #include "widgets.h"
@@ -21,6 +24,11 @@
 #include "agent/hitdb.h"
 #include "agent/connhipd.h"
 #include "lib/core/debug.h"
+
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+#else
+#define GTK_STOCK_ORIENTATION_PORTRAIT GTK_STOCK_FILE
+#endif
 
 /**
  * e_delete - Default window close event. This occurs when user presses that cross

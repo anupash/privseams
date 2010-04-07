@@ -7,13 +7,7 @@
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
 
-#include <gtk/gtk.h>
 #include "agent/hitdb.h"
-
-#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
-#else
-#define GTK_STOCK_ORIENTATION_PORTRAIT GTK_STOCK_FILE
-#endif
 
 /*!
  * \addtogroup libhipgui

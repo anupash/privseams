@@ -213,9 +213,6 @@ firewall_hipfw_SOURCES += firewall/midauth.c   \
                           firewall/pisa_cert.c
 endif
 
-# NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-agent_hipagent_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
-
 agent_hipagent_SOURCES = agent/agent.c          \
                          agent/connhipd.c       \
                          agent/hitdb.c          \
