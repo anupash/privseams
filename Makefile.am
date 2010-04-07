@@ -459,11 +459,9 @@ if HIP_PERFORMANCE
 test_auth_performance_LDADD += lib/performance/libperformance.la
 endif
 
-if HIP_PERFORMANCE
 test_dh_performance_LDADD = lib/core/libhipcore.la            \
                             lib/performance/libperformance.la \
                             lib/tool/libhiptool.la
-endif
 
 tools_hipconf_LDADD = lib/conf/libhipconf.la \
                       lib/core/libhipcore.la \
