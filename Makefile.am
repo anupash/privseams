@@ -534,11 +534,9 @@ endif
 
 GTKLDADD     = `pkg-config          --libs    gtk+-2.0`
 GTHREADLDADD = `pkg-config --cflags --libs gthread-2.0`
-GOBJECTLDADD = `pkg-config --cflags --libs gobject-2.0`
 
 agent_hipagent_LDFLAGS = $(GTKLDADD)     \
-                         $(GTHREADLDADD) \
-                         $(GOBJECTLDADD)
+                         $(GTHREADLDADD)
 
 i3_chord_gen_conf_LDADD       = i3/chord/libchord.a
 i3_chord_gen_conf_same_LDADD  = i3/chord/libchord.a
