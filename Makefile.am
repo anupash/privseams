@@ -632,7 +632,7 @@ endif # HAVE_PYTHON
 doxygen:
 	doxygen Doxyfile
 
-dist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
+nodist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
 
 doc/HOWTO.html:  doc/HOWTO.xml
 	xmlto -o $(@D) html-nochunks $<
