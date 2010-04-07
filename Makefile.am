@@ -532,11 +532,7 @@ if HIP_PERFORMANCE
 agent_hipagent_LDADD += lib/performance/libperformance.la
 endif
 
-GTKLDADD     = `pkg-config --libs    gtk+-2.0`
-GTHREADLDADD = `pkg-config --libs gthread-2.0`
-
-agent_hipagent_LDFLAGS = $(GTKLDADD)     \
-                         $(GTHREADLDADD)
+agent_hipagent_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
 
 i3_chord_gen_conf_LDADD       = i3/chord/libchord.a
 i3_chord_gen_conf_same_LDADD  = i3/chord/libchord.a
