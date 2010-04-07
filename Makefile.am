@@ -221,9 +221,6 @@ agent_hipagent_SOURCES = agent/agent.c          \
                          agent/str_var.c        \
                          agent/tools.c
 
-# NOTE: gtk does not allow for -Wstrict-prototypes, so we need to append AM_CFLAGS
-lib_gui_libhipgui_la_CFLAGS = @GTK_CFLAGS@ -Werror -Wall -Wcast-align -Wdisabled-optimization -Wundef -fno-strict-aliasing -funit-at-a-time
-
 lib_gui_libhipgui_la_SOURCES = lib/gui/create.c     \
                                lib/gui/dragndrop.c  \
                                lib/gui/events.c     \
@@ -629,6 +626,6 @@ vpath %.h $(srcdir)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
-lib/gui/%.ho: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
+lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo
