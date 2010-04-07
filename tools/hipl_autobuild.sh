@@ -48,7 +48,7 @@ run_program()
 mail_notify()
 {
     COMMAND="$1"
-    cat > msg.txt <<EOF
+    cat > $CHECKOUT_DIR/msg.txt <<EOF
 branch: $BRANCH_NAME
 revision: $BRANCH_REVISION
 configuration: $CONFIGURATION
@@ -56,10 +56,9 @@ command: $COMMAND
 compiler output:
 
 EOF
-    cat log.txt >> msg.txt
+    cat log.txt >> $CHECKOUT_DIR/msg.txt
     SUBJECT="[autobuild] [$BRANCH_NAME] revision $BRANCH_REVISION"
-    mailx -s "$SUBJECT" $HIPL_NOTIFICATION_EMAIL < msg.txt
-    rm -f msg.txt
+    mailx -s "$SUBJECT" $HIPL_NOTIFICATION_EMAIL < $CHECKOUT_DIR/msg.txt
 }
 
 cleanup()
