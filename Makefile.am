@@ -71,10 +71,6 @@ if HIP_PFKEY
 lib_LTLIBRARIES += lib/ipsec/libhipsec.la
 endif
 
-if HIP_PERFORMANCE
-lib_LTLIBRARIES += lib/performance/libperformance.la
-endif
-
 if HIP_OPPORTUNISTIC
 lib_LTLIBRARIES += lib/opphip/libopphip.la
 endif
@@ -254,6 +250,10 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c
 
+if HIP_PERFORMANCE
+lib_core_libhipcore_la_LIBADD = lib/performance/libperformance.la
+endif
+
 if HIP_PRIVSEP
 lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
@@ -387,80 +387,38 @@ endif
 test_conntest_client_opp_LDADD += lib/core/libhipcore.la \
                                   lib/tool/libhiptool.la
 
-if HIP_PERFORMANCE
-test_conntest_client_opp_LDADD += lib/performance/libperformance.la
-endif
-
 test_conntest_client_hip_LDADD = lib/core/libhipcore.la \
                                  lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_conntest_client_hip_LDADD += lib/performance/libperformance.la
-endif
 
 test_conntest_server_LDADD = lib/core/libhipcore.la \
                              lib/tool/libhiptool.la
 
-if HIP_PERFORMANCE
-test_conntest_server_LDADD += lib/performance/libperformance.la
-endif
-
 test_cookietest_LDADD = lib/core/libhipcore.la \
                         lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_cookietest_LDADD += lib/performance/libperformance.la
-endif
 
 test_keygentest_LDADD = lib/core/libhipcore.la \
                         lib/tool/libhiptool.la
 
-if HIP_PERFORMANCE
-test_keygentest_LDADD += lib/performance/libperformance.la
-endif
-
 test_hashtest_LDADD = lib/core/libhipcore.la \
                       lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_hashtest_LDADD += lib/performance/libperformance.la
-endif
 
 test_dhtteststub_LDADD = lib/dht/libhipdht.la \
                          lib/core/libhipcore.la \
                          lib/tool/libhiptool.la
 
-if HIP_PERFORMANCE
-test_dhtteststub_LDADD += lib/performance/libperformance.la
-endif
-
 test_certteststub_LDADD = lib/core/libhipcore.la \
                           lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_certteststub_LDADD += lib/performance/libperformance.la
-endif
 
 test_sqliteteststub_LDADD = lib/core/libhipcore.la \
                             lib/tool/libhiptool.la
 
-if HIP_PERFORMANCE
-test_sqliteteststub_LDADD += lib/performance/libperformance.la
-endif
-
 test_hc_performance_LDADD = lib/core/libhipcore.la \
                             lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_hc_performance_LDADD += lib/performance/libperformance.la
-endif
 
 test_auth_performance_LDADD = lib/core/libhipcore.la \
                               lib/tool/libhiptool.la
 
-if HIP_PERFORMANCE
-test_auth_performance_LDADD += lib/performance/libperformance.la
-endif
-
 test_dh_performance_LDADD = lib/core/libhipcore.la            \
-                            lib/performance/libperformance.la \
                             lib/tool/libhiptool.la
 
 tools_hipconf_LDADD = lib/conf/libhipconf.la \
@@ -524,10 +482,6 @@ agent_hipagent_LDADD = lib/gui/libhipgui.la   \
                        lib/tool/libhiptool.la
 if HIP_DHT
 agent_hipagent_LDADD += lib/dht/libhipdht.la
-endif
-
-if HIP_PERFORMANCE
-agent_hipagent_LDADD += lib/performance/libperformance.la
 endif
 
 agent_hipagent_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
