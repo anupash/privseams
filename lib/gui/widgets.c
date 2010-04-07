@@ -14,7 +14,6 @@
 #include "widgets.h"
 #include <stdlib.h>
 #include <string.h>
-#include <gtk/gtk.h>
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 
@@ -39,7 +38,6 @@ int widget_init(void)
     //gui_widgets = (void **)alloc(sizeof(void *) * WIDGET_IDS_N);
     gui_widgets = (void **) calloc(WIDGET_IDS_N, sizeof(void *));
     HIP_IFEL(gui_widgets == NULL, -1, "Failed to allocate widgets pointers.\n");
-    //memset(gui_widgets, sizeof(GtkWidget *) * WIDGET_IDS_N, 0);
 
 out_err:
     return err;
