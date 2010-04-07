@@ -561,10 +561,9 @@ agent_hipagent_LDFLAGS = $(GTKLDADD)     \
 endif #HIP_AGENT
 
 if HIP_I3
-APP_LDADD = i3/chord/libchord.a
-i3_chord_gen_conf_LDADD         = $(APP_LDADD)
-i3_chord_gen_conf_same_LDADD    = $(APP_LDADD)
-i3_chord_test_LDADD             = $(APP_LDADD)
+i3_chord_gen_conf_LDADD       = i3/chord/libchord.a
+i3_chord_gen_conf_same_LDADD  = i3/chord/libchord.a
+i3_chord_test_LDADD           = i3/chord/libchord.a
 endif # HIP_I3
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
