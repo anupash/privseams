@@ -2,11 +2,12 @@
 # HIPL autobuild script for periodic compilation tests.
 # The name of the branch to test needs to be passed as the first parameter.
 #
-# This script relies on the following home directory layout:
+# This script relies on the following directory layout:
 # - $HOME/src/hipl/           - location for HIPL shared repository
 # - $HOME/src/hipl/<branch>   - location for HIPL <branch> to be tested
 # - $HOME/tmp/autobuild/hipl/ - temporary build directory
 # - $HOME/tmp/autobuild/openwrt - working OpenWrt tree
+# - /srv/power/scratchbox/users/${USER}${HOME]} - working scratchbox environment
 #
 # If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
 # for the user running this script, then email will be sent in case of failure.
@@ -21,6 +22,8 @@ BRANCH_NAME=$1
 AUTOBUILD_DIR=$HOME/tmp/autobuild
 BUILD_DIR=$AUTOBUILD_DIR/hipl
 OPENWRT_DIR=$AUTOBUILD_DIR/openwrt
+SCRATCHBOX_DIR="/srv/power/scratchbox"
+SCRATCHBOX_HOME=$SCRATCHBOX_DIR/users/${USER}${HOME}
 
 BUILD_DIR=$HOME/tmp/autobuild/hipl
 BRANCH_URL=$HOME/src/hipl/$BRANCH_NAME
@@ -121,5 +124,12 @@ run_program "rm -rf package/hipl"
 run_program "cp -r $CHECKOUT_DIR/patches/openwrt/package package/hipl"
 run_program "make -j17 package/hipl-clean V=99"
 run_program "make -j17 package/hipl-install V=99"
+
+# Crosscompile HIPL in a scratchbox environment.
+CONFIGURATION="Scratchbox ARM crosscompile"
+cd $SCRATCHBOX_HOME || cleanup 1
+run_program "rm -rf hipl-main* hipl_*.changes hipl_*.deb"
+run_program "tar -xzf $CHECKOUT_DIR/hipl-main.tar.gz"
+run_program "$SCRATCHBOX_DIR/login -d hipl-main dpkg-buildpackage -rfakeroot -b"
 
 cleanup 0
