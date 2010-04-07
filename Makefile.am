@@ -303,9 +303,6 @@ lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
 lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
                                    lib/opphip/wrap_db.c
 
-# NOTE: this would overwrite AM_CFLAGS, so we need to append it
-lib_dht_libhipdht_la_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
-
 lib_dht_libhipdht_la_SOURCES = lib/dht/libhipdht.c      \
                                lib/dht/libhipdhtxml.c
 
@@ -339,9 +336,6 @@ i3_chord_chord_traceroute_SOURCES = i3/chord/chord_traceroute.c   \
 i3_chord_gen_conf_SOURCES      = i3/chord/gen_conf.c
 i3_chord_gen_conf_same_SOURCES = i3/chord/gen_conf_same.c
 i3_chord_test_SOURCES          = i3/chord/test.c
-
-# NOTE: this would overwrite AM_CFLAGS, so we need to append it
-i3_i3_libi3_a_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
 
 i3_i3_libi3_a_SOURCES = i3/i3/i3_addr.c     \
                         i3/i3/i3_api.c      \
@@ -626,6 +620,7 @@ vpath %.h $(srcdir)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
+i3/i3/i3_config.o lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
 lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo
