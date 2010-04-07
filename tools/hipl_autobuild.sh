@@ -114,6 +114,7 @@ compile --enable-firewall --disable-agent --disable-pfkey --disable-rvs --disabl
 compile --enable-firewall --enable-agent --enable-pfkey --disable-rvs --disable-hipproxy --enable-openwrt --enable-altsep --disable-privsep --enable-i3 --disable-opportunistic --disable-dht --enable-blind --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
 
 # Compile HIPL within an OpenWrt checkout
+CONFIGURATION="OpenWrt ARM crosscompile"
 run_program "cp hipl*tar.gz $OPENWRT_DIR/dl"
 cd $OPENWRT_DIR || cleanup 1
 run_program "rm -rf package/hipl"
