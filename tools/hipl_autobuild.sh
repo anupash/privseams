@@ -67,6 +67,21 @@ cleanup()
     exit $1
 }
 
+# Make sure that 'make dist' is complete.
+check_dist()
+{
+# tools/hipdnskeyparse and tools/hipdnsproxy need to be removed manually
+# until the Python tool situation has been cleaned up.
+    find -L . | sed -e 1d -e 's:./::' -e '/\.bzr/d' -e '/autom4te.cache/d' -e '/file_list_checkout/d' |
+        sort > file_list_checkout
+    ./configure && make dist
+    tar -tzf hipl-*.tar.gz |
+        sed -e 1d -e 's:hipl-main/::' -e 's:/$::' -e '/file_list_checkout/d' -e '/version.h/d' |
+        sed -e '/tools\/hipdnskeyparse/d' -e '/tools\/hipdnsproxy/d' |
+        sort > file_list_tarball
+    run_program diff -u file_list_checkout file_list_tarball
+}
+
 compile()
 {
     CONFIGURATION="--prefix=$(pwd)/local_install $@"
@@ -84,6 +99,8 @@ cd "$CHECKOUT_DIR" || cleanup 1
 
 # Bootstrap the autotools build system.
 run_program autoreconf --install
+
+check_dist
 
 # Compile HIPL in different configurations
 # vanilla configuration
