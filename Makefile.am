@@ -425,11 +425,6 @@ tools_hipconf_LDADD = lib/conf/libhipconf.la \
                       lib/core/libhipcore.la \
                       lib/tool/libhiptool.la
 
-# required by libhipconf
-if HIP_PERFORMANCE
-tools_hipconf_LDADD += lib/performance/libperformance.la
-endif
-
 if HIP_DHT
 tools_hipconf_LDADD += lib/dht/libhipdht.la
 endif
@@ -437,17 +432,9 @@ endif
 tools_pisacert_LDADD = lib/core/libhipcore.la \
                        lib/tool/libhiptool.la
 
-if HIP_PERFORMANCE
-tools_pisacert_LDADD += lib/performance/libperformance.la
-endif
-
 hipd_hipd_LDADD = lib/conf/libhipconf.la \
                   lib/core/libhipcore.la \
                   lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-hipd_hipd_LDADD += lib/performance/libperformance.la
-endif
 
 if HIP_I3
 hipd_hipd_LDADD += i3/i3_client/libi3client.a \
@@ -466,10 +453,6 @@ endif
 
 firewall_hipfw_LDADD = lib/core/libhipcore.la \
                        lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-firewall_hipfw_LDADD += lib/performance/libperformance.la
-endif
 
 # hard dependencies: libhipgui, libhipcore
 # TODO fix dependency between libhipgui and libhipconf if possible
