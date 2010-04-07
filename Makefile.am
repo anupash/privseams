@@ -102,14 +102,14 @@ noinst_PROGRAMS = i3/chord/gen_conf         \
 endif # HIP_I3
 
 ### *_SOURCES ###
-test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
-                                   test/conntest.c
-
 test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
                                    test/conntest.c
 
-test_conntest_server_SOURCES = test/conntest-server.c \
-                               test/conntest.c
+test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
+                                   test/conntest.c
+
+test_conntest_server_SOURCES     = test/conntest-server.c     \
+                                   test/conntest.c
 
 test_auth_performance_SOURCES = test/auth_performance.c
 test_certteststub_SOURCES     = test/certteststub.c
@@ -339,12 +339,12 @@ i3_chord_libchord_a_SOURCES = i3/chord/api.c        \
 i3_chord_chord_getfingers_SOURCES = i3/chord/chord_getfingers.c   \
                                     ${i3_chord_libchord_a_SOURCES}
 
+i3_chord_chord_traceroute_SOURCES = i3/chord/chord_traceroute.c   \
+                                    ${i3_chord_libchord_a_SOURCES}
+
 i3_chord_gen_conf_SOURCES      = i3/chord/gen_conf.c
 i3_chord_gen_conf_same_SOURCES = i3/chord/gen_conf_same.c
 i3_chord_test_SOURCES          = i3/chord/test.c
-
-i3_chord_chord_traceroute_SOURCES = i3/chord/chord_traceroute.c   \
-                                    ${i3_chord_libchord_a_SOURCES}
 
 # NOTE: this would overwrite AM_CFLAGS, so we need to append it
 i3_i3_libi3_a_CFLAGS = `xml2-config --cflags` @AM_CFLAGS@
@@ -534,7 +534,6 @@ endif
 endif # HIP_FIREWALL
 
 if HIP_AGENT
-
 # hard dependencies: libhipgui, libhipcore
 # TODO fix dependency between libhipgui and libhipconf if possible
 # TODO fix dependency between libhipcore and libhipconf if possible
@@ -563,7 +562,6 @@ endif #HIP_AGENT
 
 if HIP_I3
 APP_LDADD = i3/chord/libchord.a
-
 i3_chord_gen_conf_LDADD         = $(APP_LDADD)
 i3_chord_gen_conf_same_LDADD    = $(APP_LDADD)
 i3_chord_test_LDADD             = $(APP_LDADD)
@@ -574,7 +572,6 @@ CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 ###### PYTHON stuff below ######
 # TODO python parts still needs clean-up
 if HAVE_PYTHON
-
 # These two scripts are generated in the end to get the python paths correct.
 # Currently, I don't know a better way to deal with the python code. -miika
 dist_sbin_SCRIPTS = tools/hipdnskeyparse \
@@ -595,18 +592,16 @@ dns_PYTHON = tools/DNS/__init__.py      \
 
 dnsdir = $(pyexecdir)/tools/DNS
 
+tools_hipdnskeyparse_PYTHON = tools/myasn.py       \
+                              tools/parse-key-3.py
+
 tools_hipdnsproxy_PYTHON = tools/dnsproxy.py  \
                            tools/hosts.py     \
                            tools/pyip6.py     \
                            tools/util.py
 
-tools_hipdnsproxydir = $(pyexecdir)/tools/hipdnsproxy
-
-tools_hipdnskeyparse_PYTHON = tools/myasn.py       \
-                              tools/parse-key-3.py
-
 tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
-
+tools_hipdnsproxydir    = $(pyexecdir)/tools/hipdnsproxy
 endif # HAVE_PYTHON
 
 doxygen:
