@@ -142,8 +142,6 @@ static void sig_catch_term(int signum)
  */
 int main(int argc, char *argv[])
 {
-    extern char *optarg;
-    extern int optind, optopt;
     int err = 0, fd = 0, c;
 
     HIP_IFEL((geteuid() != 0), -1, "agent must be started with sudo\n");
