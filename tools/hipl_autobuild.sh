@@ -59,6 +59,7 @@ EOF
     cat log.txt >> msg.txt
     SUBJECT="[autobuild] [$BRANCH_NAME] revision $BRANCH_REVISION"
     mailx -s "$SUBJECT" $HIPL_NOTIFICATION_EMAIL < msg.txt
+    rm -f msg.txt
 }
 
 cleanup()
