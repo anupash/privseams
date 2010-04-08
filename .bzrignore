@@ -45,7 +45,6 @@ i3/chord/gen_conf
 i3/chord/gen_conf_same
 i3/chord/test
 install-sh
-libhipcore/
 libtool
 ltmain.sh
 m4/*.m4
