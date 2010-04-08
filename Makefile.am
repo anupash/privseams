@@ -370,10 +370,10 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
-#lib_ipsec_la_LDFLAGS = -version-info 0:1:0
-#lib_ipsec_la_LIBADD = $(LEXLIB)
+#lib_ipsec_libhipsec_la_LDFLAGS = -version-info 0:1:0
+#lib_ipsec_libhipsec_la_LIBADD  = $(LEXLIB)
 
-#DISTCLEANFILES = policy_parse.c policy_token.c
+#DISTCLEANFILES = lib/ipsec/policy_parse.c lib/ipsec/policy_token.c
 
 
 ### *_LDADD ###
