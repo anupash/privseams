@@ -124,7 +124,6 @@ static int set_cloexec_flag(int desc, int value)
     return fcntl(desc, F_SETFD, oldflags);
 }
 
-#ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
 /**
  * print information about underlying the system for bug reports
@@ -233,7 +232,6 @@ static void hip_print_sysinfo(void)
     }
 }
 
-#endif
 #endif
 
 /**
@@ -405,7 +403,6 @@ out_err:
     return err;
 }
 
-#ifndef CONFIG_HIP_OPENWRT
 /**
  * probe for kernel modules (linux specific)
  */
@@ -448,7 +445,6 @@ static void hip_probe_kernel_modules(void)
 
     HIP_DEBUG("Probing completed\n");
 }
-#endif /* CONFIG_HIP_OPENWRT */
 
 /**
  * Main initialization function for HIP daemon.
@@ -486,12 +482,10 @@ int hipd_init(int flush_ipsec, int killold)
     hip_bex_timestamp_db_init();
         #endif
 
-#ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
     hip_print_sysinfo();
 #endif
     hip_probe_kernel_modules();
-#endif
 
     /* Register signal handlers */
     signal(SIGINT, hip_close);
@@ -980,13 +974,11 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
     /* see bug id 212 why RECV_ERR is off */
     err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
-        #ifndef CONFIG_HIP_OPENWRT
     if (!is_output) {
         int encap_on = HIP_UDP_ENCAP_ESPINUDP;
         err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
     }
     HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
-        #endif
     err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
     err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));

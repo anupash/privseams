@@ -22,7 +22,6 @@
 #include "config.h"
 #ifdef CONFIG_HIP_PRIVSEP
 #ifdef CONFIG_HIP_ALTSEP
-/* Note: OpenWRT has to use <linux/capability.h> */
 #include <linux/capability.h>
 int capget(cap_user_header_t header, cap_user_data_t data);
 int capset(cap_user_header_t header, const cap_user_data_t data);
@@ -51,7 +50,6 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
 int hip_user_to_uid(char *name)
 {
     int uid            = -1;
-#ifndef CONFIG_HIP_OPENWRT
     int i;
     struct passwd *pwp = NULL, pw;
     char buf[4096];
@@ -70,7 +68,6 @@ int hip_user_to_uid(char *name)
         }
     }
     endpwent();
-#endif
     return uid;
 }
 
@@ -103,12 +100,8 @@ int hip_set_lowcapability(int run_as_sudo)
 
     HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
-#ifndef CONFIG_HIP_OPENWRT
     uid = hip_user_to_uid(USER_NOBODY);
-#else
-    /* todo: hardcode the uid for a suitable user for openwrt */
-    uid = -1;
-#endif
+
     HIP_IFEL((uid < 0), -1,
              "Error while retrieving USER 'nobody' uid\n");
     HIP_IFEL(capget(&header, &data), -1,
