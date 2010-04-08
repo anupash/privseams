@@ -39,6 +39,8 @@
 /* required for s6_addr32 */
 #define _BSD_SOURCE
 
+#include <limits.h>
+
 #include "config.h"
 #include "hadb.h"
 #include "hipd.h"

@@ -19,6 +19,7 @@
 #define _BSD_SOURCE
 
 #include <arpa/inet.h>
+#include <limits.h>
 #include <time.h>
 #include <netinet/in.h>
 
