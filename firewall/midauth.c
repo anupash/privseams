@@ -30,10 +30,6 @@
 #include "lib/core/solve.h"
 #include "lib/tool/checksum.h"
 
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
-
 static struct midauth_handlers handlers;
 
 /**

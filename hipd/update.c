@@ -22,10 +22,6 @@
 #include "update_legacy.h"
 #include "esp_prot_hipd_msg.h"
 
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
-
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
 #endif
