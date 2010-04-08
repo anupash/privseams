@@ -1,7 +1,8 @@
 How to get HIPL
 ===============
 
-The latest version of HIPL is always available through Bazaar. Run the command
+The latest version of HIPL is always available through Bazaar (version 1.6 or
+later required). Run the command
 
   bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
 
