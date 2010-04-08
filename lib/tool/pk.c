@@ -15,10 +15,7 @@
 
 #include "config.h"
 #include "pk.h"
-
-#ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
-#endif
 
 /**
  * sign a HIP control message with a private RSA key

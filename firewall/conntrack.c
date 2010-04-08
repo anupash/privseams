@@ -34,14 +34,11 @@
 #include "firewalldb.h"
 #include "firewall.h"
 #include "lib/core/debug.h"
+#include "lib/performance/performance.h"
 #include "helpers.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
-#endif
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
 #endif
 
 DList *hipList = NULL;

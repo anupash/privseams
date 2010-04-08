@@ -29,6 +29,7 @@
 #include "lib/core/solve.h"
 #include "lib/core/transform.h"
 #include "lib/core/keylen.h"
+#include "lib/performance/performance.h"
 #include "dh.h"
 
 #include "hidb.h"
@@ -50,10 +51,6 @@
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
-#endif
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
 #endif
 
 #ifdef CONFIG_HIP_BLIND

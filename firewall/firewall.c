@@ -50,9 +50,7 @@
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h" /* PISA */
 #endif
-#ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h" /* Performance Analysis */
-#endif
 #include "helpers.h"
 #include "lib/core/filemanip.h"
 

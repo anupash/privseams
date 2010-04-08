@@ -13,9 +13,7 @@
 
 #include "config.h"
 #include "close.h"
-#ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
-#endif
 #include "lib/core/hip_udp.h"
 
 /**

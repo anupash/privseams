@@ -16,10 +16,7 @@
 #include "lib/core/filemanip.h"
 #include "lib/core/straddr.h"
 #include "heartbeat.h"
-
-#ifdef CONFIG_HIP_PERFORMANCE
 #include "lib/performance/performance.h"
-#endif
 
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
