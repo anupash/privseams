@@ -199,11 +199,6 @@ if test x"$ac_cv_use_openwrt" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_OPENWRT)
     AH_TEMPLATE(CONFIG_HIP_OPENWRT,
                 [Defined to 1 if openwrt support is enabled.])
-    if test x"$TARGET" = x"MIPS_LINUX"; then
-        AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX)
-        AH_TEMPLATE(CONFIG_HIP_OPENWRT_MIPSLINUX,
-                    [Defined to 1 if mipslinux is enabled.])
-    fi
 fi
 
 AC_ARG_ENABLE(altsep,
