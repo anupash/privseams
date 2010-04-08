@@ -114,7 +114,7 @@ run_program "make -j17 distcheck"
 compile --enable-firewall --disable-agent --disable-pfkey --disable-rvs --disable-hipproxy --disable-altsep --enable-privsep --disable-i3 --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
 
 # Alternative path to vanilla
-compile --enable-firewall --enable-agent --enable-pfkey --disable-rvs --disable-hipproxy --enable-openwrt --enable-altsep --disable-privsep --enable-i3 --disable-opportunistic --disable-dht --enable-blind --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
+compile --enable-firewall --enable-agent --enable-pfkey --disable-rvs --disable-hipproxy --enable-altsep --disable-privsep --enable-i3 --disable-opportunistic --disable-dht --enable-blind --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
 
 # Compile HIPL within an OpenWrt checkout
 CONFIGURATION="OpenWrt ARM crosscompile"
