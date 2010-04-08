@@ -376,14 +376,8 @@ i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c      \
 
 ### *_LDADD ###
 
-test_conntest_client_opp_LDADD =
-
-if HIP_OPPORTUNISTIC
-test_conntest_client_opp_LDADD += lib/opphip/libopphip.la
-endif
-
-test_conntest_client_opp_LDADD += lib/core/libhipcore.la \
-                                  lib/tool/libhiptool.la
+test_conntest_client_opp_LDADD = lib/core/libhipcore.la \
+                                 lib/tool/libhiptool.la
 
 test_conntest_client_hip_LDADD = lib/core/libhipcore.la \
                                  lib/tool/libhiptool.la
