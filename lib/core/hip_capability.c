@@ -42,10 +42,8 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
 #include "sqlitedbapi.h"
 #endif
 
-#ifdef CONFIG_HIP_PRIVSEP
 #define USER_NOBODY "nobody"
 #define USER_HIPD "hipd"
-#endif /* CONFIG_HIP_PRIVSEP */
 
 /**
  * map a user name such as "nobody" to the corresponding UID number
