@@ -427,8 +427,7 @@ endif
 # TODO fix dependency between (libhipconf, libhipcore) and libhiptool if possible
 agent_hipagent_LDADD = lib/gui/libhipgui.la   \
                        lib/conf/libhipconf.la \
-                       lib/core/libhipcore.la \
-                       lib/tool/libhiptool.la
+                       lib/core/libhipcore.la
 if HIP_DHT
 agent_hipagent_LDADD += lib/dht/libhipdht.la
 endif
