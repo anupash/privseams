@@ -251,7 +251,7 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/transform.c
 
 if HIP_PERFORMANCE
-lib_core_libhipcore_la_LIBADD = lib/performance/libperformance.la
+lib_core_libhipcore_la_SOURCES += lib/performance/performance.c
 endif
 
 if HIP_PRIVSEP
@@ -297,8 +297,6 @@ lib_tool_libhiptool_la_SOURCES += lib/tool/pfkeysadb.c
 else
 lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
 endif # HIPPFKEY
-
-lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
 
 lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
                                    lib/opphip/wrap_db.c
