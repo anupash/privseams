@@ -104,8 +104,6 @@ int hip_set_lowcapability(int run_as_sudo)
     header.version = _LINUX_CAPABILITY_VERSION_HIPL;
     data.effective = data.permitted = data.inheritable = 0;
 
-    /* openwrt code */
-
     HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
 
     HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
@@ -126,8 +124,6 @@ int hip_set_lowcapability(int run_as_sudo)
     HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
               getuid(), geteuid());
 
-    /* openwrt code */
-
     HIP_IFEL(setreuid(uid, uid), -1, "setruid failed\n");
 
     HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
@@ -146,7 +142,6 @@ int hip_set_lowcapability(int run_as_sudo)
     data.effective |= (1 << CAP_NET_ADMIN);
     data.permitted |= (1 << CAP_NET_ADMIN);
 
-    /* openwrt code */
     HIP_IFEL(capset(&header, &data), -1,
              "error in capset (do you have capabilities kernel module?)");
     HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());
