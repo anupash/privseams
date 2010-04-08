@@ -199,7 +199,6 @@ if test x"$ac_cv_use_maemo" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_MAEMO)
     AH_TEMPLATE(CONFIG_HIP_MAEMO, [Defined to 1 if Maemo build is enabled.])
     AC_SUBST(MAEMO_CFLAGS, "-O2 -g -fgnu89-inline")
-    AC_SUBST(MAEMO_CPPFLAGS, "-I/usr/include/libipq/")
 fi
 
 AC_ARG_ENABLE(openwrt,
@@ -386,7 +385,7 @@ fi
 AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $MAEMO_CFLAGS $GPROF_CFLAGS")
 
 # Set the preprocessor flags for the entire project
-AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500 $MAEMO_CPPFLAGS")
+AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
 
 AC_CONFIG_FILES([ Doxyfile Makefile ])
 
