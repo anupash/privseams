@@ -187,19 +187,6 @@ if test x"$ac_cv_use_hipproxy" = x"yes"; then
     AH_TEMPLATE(CONFIG_HIP_HIPPROXY, [Defined to 1 if HIP Proxy is enabled.])
 fi
 
-AC_ARG_ENABLE(maemo,
-               AS_HELP_STRING([--enable-maemo],
-                              [Maemo (default is NO)]),
-               [ac_cv_use_maemo=$enableval],
-               [ac_cv_use_maemo=no])
-AC_CACHE_CHECK([whether to use Maemo],
-               [ac_cv_use_maemo],
-               [ac_cv_use_maemo=no])
-if test x"$ac_cv_use_maemo" = x"yes"; then
-    AC_DEFINE(CONFIG_HIP_MAEMO)
-    AH_TEMPLATE(CONFIG_HIP_MAEMO, [Defined to 1 if Maemo build is enabled.])
-fi
-
 AC_ARG_ENABLE(openwrt,
                AS_HELP_STRING([--enable-openwrt],
                               [OpenWRT (default is NO)]),

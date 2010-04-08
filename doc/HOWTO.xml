@@ -1562,7 +1562,7 @@ $ make V=99
       commands (assuming a clean source tree): </para>
 
       <para><programlisting>
-        ./configure --enable-maemo
+        ./configure
       </programlisting></para>
 
      <para>
