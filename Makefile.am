@@ -258,6 +258,8 @@ if HIP_PRIVSEP
 lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
 
+lib_core_libhipcore_la_LIBADD = lib/tool/libhiptool.la
+
 lib_tool_libhiptool_la_SOURCES = lib/tool/checksum.c    \
                                  lib/tool/lutil.c       \
                                  lib/tool/nlink.c       \
@@ -376,57 +378,32 @@ i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c      \
 
 ### *_LDADD ###
 
-test_conntest_client_opp_LDADD = lib/core/libhipcore.la \
-                                 lib/tool/libhiptool.la
+firewall_hipfw_LDADD           = lib/core/libhipcore.la
+test_auth_performance_LDADD    = lib/core/libhipcore.la
+test_certteststub_LDADD        = lib/core/libhipcore.la
+test_conntest_client_hip_LDADD = lib/core/libhipcore.la
+test_conntest_client_opp_LDADD = lib/core/libhipcore.la
+test_conntest_server_LDADD     = lib/core/libhipcore.la
+test_cookietest_LDADD          = lib/core/libhipcore.la
+test_dh_performance_LDADD      = lib/core/libhipcore.la
+test_hashtest_LDADD            = lib/core/libhipcore.la
+test_hc_performance_LDADD      = lib/core/libhipcore.la
+test_keygentest_LDADD          = lib/core/libhipcore.la
+test_sqliteteststub_LDADD      = lib/core/libhipcore.la
+tools_pisacert_LDADD           = lib/core/libhipcore.la
 
-test_conntest_client_hip_LDADD = lib/core/libhipcore.la \
-                                 lib/tool/libhiptool.la
-
-test_conntest_server_LDADD = lib/core/libhipcore.la \
-                             lib/tool/libhiptool.la
-
-test_cookietest_LDADD = lib/core/libhipcore.la \
-                        lib/tool/libhiptool.la
-
-test_keygentest_LDADD = lib/core/libhipcore.la \
-                        lib/tool/libhiptool.la
-
-test_hashtest_LDADD = lib/core/libhipcore.la \
-                      lib/tool/libhiptool.la
-
-test_dhtteststub_LDADD = lib/dht/libhipdht.la \
-                         lib/core/libhipcore.la \
-                         lib/tool/libhiptool.la
-
-test_certteststub_LDADD = lib/core/libhipcore.la \
-                          lib/tool/libhiptool.la
-
-test_sqliteteststub_LDADD = lib/core/libhipcore.la \
-                            lib/tool/libhiptool.la
-
-test_hc_performance_LDADD = lib/core/libhipcore.la \
-                            lib/tool/libhiptool.la
-
-test_auth_performance_LDADD = lib/core/libhipcore.la \
-                              lib/tool/libhiptool.la
-
-test_dh_performance_LDADD = lib/core/libhipcore.la            \
-                            lib/tool/libhiptool.la
+test_dhtteststub_LDADD  = lib/dht/libhipdht.la \
+                          lib/core/libhipcore.la
 
 tools_hipconf_LDADD = lib/conf/libhipconf.la \
-                      lib/core/libhipcore.la \
-                      lib/tool/libhiptool.la
+                      lib/core/libhipcore.la
 
 if HIP_DHT
 tools_hipconf_LDADD += lib/dht/libhipdht.la
 endif
 
-tools_pisacert_LDADD = lib/core/libhipcore.la \
-                       lib/tool/libhiptool.la
-
 hipd_hipd_LDADD = lib/conf/libhipconf.la \
-                  lib/core/libhipcore.la \
-                  lib/tool/libhiptool.la
+                  lib/core/libhipcore.la
 
 if HIP_I3
 hipd_hipd_LDADD += i3/i3_client/libi3client.a \
@@ -442,9 +419,6 @@ endif
 if HIP_PFKEY
 hipd_hipd_LDADD += lib/ipsec/libhipsec.la
 endif
-
-firewall_hipfw_LDADD = lib/core/libhipcore.la \
-                       lib/tool/libhiptool.la
 
 # hard dependencies: libhipgui, libhipcore
 # TODO fix dependency between libhipgui and libhipconf if possible
