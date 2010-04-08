@@ -191,30 +191,6 @@ out_err:
 }
 
 /**
- * Verify if domain argument for socket() can be translated using opportunistic
- * mode.
- *
- * @param domain the domain argument for socket() call
- * @return one if the socket is translatable or zero otherwise
- */
-inline int hip_domain_is_inet(int domain)
-{
-    return domain == PF_INET || domain == PF_INET6;
-}
-
-/**
- * Check the type argument for socket() call if it can be translated using
- * opportunistic mode.
- *
- * @param type the type argument for socket() call
- * @return one if the socket is translatable or zero otherwise
- */
-inline int hip_type_is_stream_or_dgram(int type)
-{
-    return type == SOCK_STREAM || type == SOCK_DGRAM;
-}
-
-/**
  * Verify applicability of opportunistic mode translation for the given socket
  * address structure.
  *
