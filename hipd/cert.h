@@ -28,7 +28,6 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 
-#include "config.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 
@@ -49,22 +48,5 @@ int hip_cert_hostid2dsa(struct hip_host_id_priv *, DSA *);
 
 /** ugly hack for supressing warnings in broken environments */
 #define BROKEN_SSL_CONST const
-
-#ifdef CONFIG_HIP_MAEMO
-/* Fix the maemo environment's broken macros */
-
-/* the version of openssl in maemo4 */
-#if OPENSSL_VERSION_NUMBER == 0x90705f
-#undef BROKEN_SSL_CONST
-#define BROKEN_SSL_CONST
-#endif
-
-#undef SKM_sk_value
-#define SKM_sk_value(type, st, i) \
-    ((type *) (void *) sk_value(st, i))
-
-#undef sk_CONF_VALUE_value
-#define sk_CONF_VALUE_value(st, i) SKM_sk_value(CONF_VALUE, (st), (i))
-#endif
 
 #endif /* HIP_HIPD_CERT_H */
