@@ -2156,12 +2156,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
                                           (is_loopback ? &i2_context.hip_enc_out.key :
                                            &i2_context.hip_enc_in.key),
                                           HIP_DIRECTION_DECRYPT),
-#ifdef CONFIG_HIP_OPENWRT
-                     // workaround for non-included errno-base.h in openwrt
-                     -EINVAL,
-#else
                      -EKEYREJECTED,
-#endif
                      "Failed to decrypt the HOST_ID parameter. Dropping the I2 " \
                      "packet.\n");
         }
