@@ -290,8 +290,7 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #lib_ipsec_la_LDFLAGS = -version-info 0:1:0
 #lib_ipsec_la_LIBADD = $(LEXLIB)
 
-#DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
-DISTCLEANFILES = lib/ipsec/policy_token.h
+#DISTCLEANFILES = policy_parse.c policy_token.c
 
 # don't use libipsec, but xfrmapi
 if HIP_PFKEY
