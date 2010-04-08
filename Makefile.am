@@ -265,33 +265,6 @@ lib_tool_libhiptool_la_SOURCES = lib/tool/checksum.c    \
                                  lib/tool/nlink.c       \
                                  lib/tool/pk.c
 
-############################ NOTE ##################################
-#
-# Note: when you upgrade this library, please do the following:
-#
-# 1. uncomment policy_parse.y and policy_token.l lines
-# 2. "make"
-# 3. disable the policy_parse.y and policy_token.l lines again
-# 4. commit the code (including lex/yacc generated c files)
-#
-# I could not make the lex/yacc stuff work with "make dist" which
-# is mandatory for building e.g. rpm packages. -mk
-####################################################################
-lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
-                                 lib/ipsec/pfkey.c \
-                                #lib/ipsec/policy_parse.y \
-                                #lib/ipsec/policy_token.l
-
-AM_YFLAGS = -d -p __libhipsec
-AM_LFLAGS = -P__libhipsec -olex.yy.c
-
-# version is current:revision:age.
-# See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
-#lib_ipsec_la_LDFLAGS = -version-info 0:1:0
-#lib_ipsec_la_LIBADD = $(LEXLIB)
-
-#DISTCLEANFILES = policy_parse.c policy_token.c
-
 # don't use libipsec, but xfrmapi
 if HIP_PFKEY
 lib_tool_libhiptool_la_SOURCES += lib/tool/pfkeysadb.c
@@ -374,6 +347,34 @@ i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c      \
                               i3/utils/gen_utils.c      \
                               i3/utils/inetfns.c        \
                               i3/utils/netwrap_posix.c
+
+############################ NOTE ##################################
+#
+# Note: when you upgrade this library, please do the following:
+#
+# 1. uncomment policy_parse.y and policy_token.l lines
+# 2. "make"
+# 3. disable the policy_parse.y and policy_token.l lines again
+# 4. commit the code (including lex/yacc generated c files)
+#
+# I could not make the lex/yacc stuff work with "make dist" which
+# is mandatory for building e.g. rpm packages. -mk
+####################################################################
+lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
+                                 lib/ipsec/pfkey.c \
+                                #lib/ipsec/policy_parse.y \
+                                #lib/ipsec/policy_token.l
+
+AM_YFLAGS = -d -p __libhipsec
+AM_LFLAGS = -P__libhipsec -olex.yy.c
+
+# version is current:revision:age.
+# See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
+#lib_ipsec_la_LDFLAGS = -version-info 0:1:0
+#lib_ipsec_la_LIBADD = $(LEXLIB)
+
+#DISTCLEANFILES = policy_parse.c policy_token.c
+
 
 ### *_LDADD ###
 
