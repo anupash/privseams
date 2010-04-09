@@ -301,16 +301,6 @@ i3_chord_libchord_a_SOURCES = i3/chord/api.c        \
                               i3/utils/gen_utils.c
 
 
-i3_chord_chord_getfingers_SOURCES = i3/chord/chord_getfingers.c   \
-                                    ${i3_chord_libchord_a_SOURCES}
-
-i3_chord_chord_traceroute_SOURCES = i3/chord/chord_traceroute.c   \
-                                    ${i3_chord_libchord_a_SOURCES}
-
-i3_chord_gen_conf_SOURCES      = i3/chord/gen_conf.c
-i3_chord_gen_conf_same_SOURCES = i3/chord/gen_conf_same.c
-i3_chord_test_SOURCES          = i3/chord/test.c
-
 i3_i3_libi3_a_SOURCES = i3/i3/i3_addr.c     \
                         i3/i3/i3_api.c      \
                         i3/i3/i3_config.c   \
@@ -349,6 +339,12 @@ i3_utils_libutils_a_SOURCES = i3/utils/byteorder.c      \
                               i3/utils/gen_utils.c      \
                               i3/utils/inetfns.c        \
                               i3/utils/netwrap_posix.c
+
+i3_chord_chord_getfingers_SOURCES = i3/chord/chord_getfingers.c
+i3_chord_chord_traceroute_SOURCES = i3/chord/chord_traceroute.c
+i3_chord_gen_conf_SOURCES         = i3/chord/gen_conf.c
+i3_chord_gen_conf_same_SOURCES    = i3/chord/gen_conf_same.c
+i3_chord_test_SOURCES             = i3/chord/test.c
 
 ############################ NOTE ##################################
 #
@@ -436,9 +432,11 @@ endif
 
 agent_hipagent_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
 
-i3_chord_gen_conf_LDADD       = i3/chord/libchord.a
-i3_chord_gen_conf_same_LDADD  = i3/chord/libchord.a
-i3_chord_test_LDADD           = i3/chord/libchord.a
+i3_chord_chord_getfingers_LDADD = i3/chord/libchord.a
+i3_chord_chord_traceroute_LDADD = i3/chord/libchord.a
+i3_chord_gen_conf_LDADD         = i3/chord/libchord.a
+i3_chord_gen_conf_same_LDADD    = i3/chord/libchord.a
+i3_chord_test_LDADD             = i3/chord/libchord.a
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
