@@ -37,38 +37,26 @@
  * HIP daemon lock file is used to prevent multiple instances
  * of the daemon to start and to record current daemon pid.
  */
-#define HIP_DAEMON_LOCK_FILE    HIPL_LOCKDIR "/hipd.lock"
+#define HIP_DAEMON_LOCK_FILE     HIPL_LOCKDIR    "/hipd.lock"
 
-/* the /etc/hip/dhtservers file*/
+/* the /etc/hip/dhtservers file */
 #define HIPL_DHTSERVERS_FILE     HIPL_SYSCONFDIR "/dhtservers"
 
-#define HIPL_DHTSERVERS_FILE_EX \
-    "193.167.187.134 hipdht2.infrahip.net\n"
+#define HIPL_DHTSERVERS_FILE_EX "193.167.187.134 hipdht2.infrahip.net\n"
 
 
 /** ICMPV6_FILTER related stuff */
 #define BIT_CLEAR(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
-#define BIT_SET(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] |= (1U << ((nr) & 31)); } while (0)
-#define BIT_TEST(nr, addr) do { (uint32_t *) (addr))[(nr) >> 5] & (1U << ((nr) & 31)); } while (0)
+#define BIT_SET(nr,   addr) do { ((uint32_t *) (addr))[(nr) >> 5] |=  (1U << ((nr) & 31)); } while (0)
+#define BIT_TEST(nr,  addr) do {  (uint32_t *) (addr))[(nr) >> 5] &   (1U << ((nr) & 31)); } while (0)
 
 #ifndef ICMP6_FILTER_WILLPASS
-#define ICMP6_FILTER_WILLPASS(type, filterp) \
-    (BIT_TEST((type), filterp) == 0)
-
-#define ICMP6_FILTER_WILLBLOCK(type, filterp) \
-    BIT_TEST((type), filterp)
-
-#define ICMP6_FILTER_SETPASS(type, filterp) \
-    BIT_CLEAR((type), filterp)
-
-#define ICMP6_FILTER_SETBLOCK(type, filterp) \
-    BIT_SET((type), filterp)
-
-#define ICMP6_FILTER_SETPASSALL(filterp) \
-    memset(filterp, 0, sizeof(struct icmp6_filter));
-
-#define ICMP6_FILTER_SETBLOCKALL(filterp) \
-    memset(filterp, 0xFF, sizeof(struct icmp6_filter));
+#define ICMP6_FILTER_WILLPASS(type, filterp) (BIT_TEST((type),  filterp) == 0)
+#define ICMP6_FILTER_WILLBLOCK(type, filterp) BIT_TEST((type),  filterp)
+#define ICMP6_FILTER_SETPASS(type, filterp)   BIT_CLEAR((type), filterp)
+#define ICMP6_FILTER_SETBLOCK(type, filterp)  BIT_SET((type),   filterp)
+#define ICMP6_FILTER_SETPASSALL(filterp)  memset(filterp,    0, sizeof(struct icmp6_filter));
+#define ICMP6_FILTER_SETBLOCKALL(filterp) memset(filterp, 0xFF, sizeof(struct icmp6_filter));
 #endif
 /** end ICMPV6_FILTER related stuff */
 
@@ -115,7 +103,7 @@ static int set_cloexec_flag(int desc, int value)
     /* Set just the flag we want to set. */
 
     if (value != 0) {
-        oldflags |= FD_CLOEXEC;
+        oldflags |=  FD_CLOEXEC;
     } else {
         oldflags &= ~FD_CLOEXEC;
     }
@@ -202,7 +190,6 @@ static void hip_print_sysinfo(void)
     if (system("lsmod") == -1) {
         HIP_ERROR("lsmod failed");
     }
-    ;
 
     if (dup2(stdout_fd, 1) < 0) {
         HIP_ERROR("Stdout restore failed\n");
@@ -230,8 +217,8 @@ static void hip_print_sysinfo(void)
         }
     }
 }
+#endif /* CONFIG_HIP_DEBUG */
 
-#endif
 
 /**
  * Create a file with the given contents unless it already exists
@@ -307,7 +294,7 @@ static void hip_set_os_dep_variables(void)
         hip_xfrm_set_beet(2);
         hip_xfrm_set_algo_names(0);
     } else {
-        //hip_xfrm_set_beet(1); /* TUNNEL mode */
+        //hip_xfrm_set_beet(1);       /* TUNNEL mode */
         hip_xfrm_set_beet(4);         /* BEET mode */
         hip_xfrm_set_algo_names(1);
     }
@@ -334,7 +321,6 @@ static int hip_init_daemon_hitdb(void)
 out_err:
     return err;
 }
-
 #endif  /* CONFIG_HIP_AGENT */
 
 /**
@@ -346,8 +332,7 @@ out_err:
  */
 static int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
 {
-    int on  = 1, err = 0;
-    int off = 0;
+    int on  = 1, off = 0, err = 0;
 
     *hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, proto);
     set_cloexec_flag(*hip_raw_sock_v4, 1);
@@ -407,8 +392,7 @@ static void hip_probe_kernel_modules(void)
     int count, err, status;
     char cmd[40];
     int mod_total;
-    char *mod_name[] =
-    {
+    char *mod_name[] = {
         "xfrm6_tunnel",    "xfrm4_tunnel",
         "ip6_tunnel",      "ipip",           "ip4_tunnel",
         "xfrm_user",       "dummy",          "esp6", "esp4",
@@ -433,9 +417,9 @@ static void hip_probe_kernel_modules(void)
             if (freopen("/dev/null", "w", stderr) == NULL) {
                 HIP_ERROR("freopen if /dev/null failed.");
             }
-            ;
             execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *) NULL);
-        } else {waitpid(err, &status, 0);
+        } else {
+            waitpid(err, &status, 0);
         }
     }
 
@@ -474,17 +458,13 @@ int hipd_init(int flush_ipsec, int killold)
 
     hip_set_os_dep_variables();
 
-        #if 0
-    hip_bex_timestamp_db_init();
-        #endif
-
 #ifdef CONFIG_HIP_DEBUG
     hip_print_sysinfo();
 #endif
     hip_probe_kernel_modules();
 
     /* Register signal handlers */
-    signal(SIGINT, hip_close);
+    signal(SIGINT,  hip_close);
     signal(SIGTERM, hip_close);
     signal(SIGCHLD, hip_sig_chld);
 
@@ -568,18 +548,18 @@ int hipd_init(int flush_ipsec, int killold)
        NAT output socket is a raw socket. A raw output socket support better the "shotgun"
        extension (sending packets from multiple source addresses). */
     HIP_IFEL(hip_init_raw_sock_v4(&hip_nat_sock_output_udp, IPPROTO_UDP), -1, "raw sock output udp\n");
-    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6, IPPROTO_HIP), -1, "raw sock input v6\n");
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4, IPPROTO_HIP), -1, "raw sock input v4\n");
+    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6,   IPPROTO_HIP), -1, "raw sock input v6\n");
+    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4,   IPPROTO_HIP), -1, "raw sock input v4\n");
     HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
     HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
-    HIP_DEBUG("hip_raw_sock_v6 input = %d\n", hip_raw_sock_input_v6);
-    HIP_DEBUG("hip_raw_sock_v6 output = %d\n", hip_raw_sock_output_v6);
-    HIP_DEBUG("hip_raw_sock_v4 input = %d\n", hip_raw_sock_input_v4);
-    HIP_DEBUG("hip_raw_sock_v4 output = %d\n", hip_raw_sock_output_v4);
-    HIP_DEBUG("hip_nat_sock_udp input = %d\n", hip_nat_sock_input_udp);
+    HIP_DEBUG("hip_raw_sock_v6 input = %d\n",   hip_raw_sock_input_v6);
+    HIP_DEBUG("hip_raw_sock_v6 output = %d\n",  hip_raw_sock_output_v6);
+    HIP_DEBUG("hip_raw_sock_v4 input = %d\n",   hip_raw_sock_input_v4);
+    HIP_DEBUG("hip_raw_sock_v4 output = %d\n",  hip_raw_sock_output_v4);
+    HIP_DEBUG("hip_nat_sock_udp input = %d\n",  hip_nat_sock_input_udp);
     HIP_DEBUG("hip_nat_sock_udp output = %d\n", hip_nat_sock_output_udp);
-    HIP_DEBUG("hip_icmp_sock = %d\n", hip_icmp_sock);
+    HIP_DEBUG("hip_icmp_sock = %d\n",           hip_icmp_sock);
 
     if (flush_ipsec) {
         default_ipsec_func_set.hip_flush_all_sa();
@@ -688,10 +668,10 @@ out_err:
  */
 int hip_init_dht(void)
 {
-    int err         = 0;
+    int err = 0;
 
 #ifdef CONFIG_HIP_DHT
-    int i           = 0, j = 0, place = 0;
+    int i = 0, j = 0, place = 0;
     char serveraddr_str[INET6_ADDRSTRLEN];
     char servername_str[HOST_NAME_MAX];
     char servername_buf[HOST_NAME_MAX];
@@ -718,8 +698,8 @@ int hip_init_dht(void)
     memset(opendht_hdrr_secret, 0, 40);
     err = RAND_bytes(opendht_hdrr_secret, 40);
 
-    memset(servername_str, 0, sizeof(servername_str));
-    memset(serveraddr_str, 0, sizeof(serveraddr_str));
+    memset(servername_str,    0, sizeof(servername_str));
+    memset(serveraddr_str,    0, sizeof(serveraddr_str));
     memset(servername_buf, '\0', sizeof(servername_buf));
     err = hip_get_random_hostname_id_from_hosts(OPENDHT_SERVERS_FILE,
                                                 servername_buf, serveraddr_str);
@@ -811,7 +791,7 @@ out_err:
  */
 static int hip_init_host_ids(void)
 {
-    int err                     = 0;
+    int err = 0;
     struct stat status;
     struct hip_common *user_msg = NULL;
     hip_hit_t default_hit;
@@ -941,8 +921,7 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
                             struct sockaddr_in *addr,
                             int is_output)
 {
-    int on  = 1, err = 0;
-    int off = 0;
+    int on  = 1, off = 0, err = 0;
     struct sockaddr_in myaddr;
     int type, protocol;
 
@@ -987,7 +966,6 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
         myaddr.sin_family      = AF_INET;
         /** @todo Change this inaddr_any -- Abi */
         myaddr.sin_addr.s_addr = INADDR_ANY;
-
         myaddr.sin_port        = htons(hip_get_local_nat_udp_port());
     }
 
@@ -1182,7 +1160,7 @@ static int init_random_seed(void)
     } rand_data;
     int err = 0;
 
-    err            = gettimeofday(&tv, &tz);
+    err = gettimeofday(&tv, &tz);
     srandom(tv.tv_usec);
 
     memcpy(&rand_data.tv, &tv, sizeof(tv));
@@ -1278,7 +1256,7 @@ static struct hip_host_id_entry *hip_return_first_rsa(void)
     hip_list_t *curr, *iter;
     struct hip_host_id_entry *tmp = NULL;
     int c;
-    uint16_t algo                 = 0;
+    uint16_t algo = 0;
 
     HIP_READ_LOCK_DB(hip_local_hostid_db);
 
