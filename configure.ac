@@ -3,6 +3,15 @@ AC_INIT([HIP for Linux], [main], [hipl-users@freelists.org], [hipl])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
+# This needs to be placed before AM_INIT_AUTOMAKE, otherwise $@ is modified.
+# Note that the value of $@ changes if configure is rerun automatically during
+# a rebuild. In this case "--no-create --no-recursion" appear to get passed to
+# configure in addition to the stored command line options. Since this is a
+# harmless sideeffect, it is ignored. Clean release builds should be made from
+# a pristine tree.
+AC_DEFINE_UNQUOTED(HIPL_CONFIGURATION, "$@")
+AH_TEMPLATE(HIPL_CONFIGURATION, [options passed to configure])
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
