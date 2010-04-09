@@ -311,9 +311,6 @@ static void hip_set_os_dep_variables(void)
         hip_xfrm_set_beet(4);         /* BEET mode */
         hip_xfrm_set_algo_names(1);
     }
-#endif
-
-#ifndef CONFIG_HIP_PFKEY
     /* This requires new kernel versions (the 2.6.18 patch) - jk */
     hip_xfrm_set_default_sa_prefix_len(128);
 #endif
