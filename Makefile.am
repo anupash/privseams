@@ -473,12 +473,12 @@ HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.
 CLEANFILES          += $(HIPL_HEADER_OBJS)
 
 #this macro is not to be used in headers, so use it "globally" just for checkheaders
-CPPFLAGS = -D_BSD_SOURCE
+CH_CPPFLAGS = -D_BSD_SOURCE
 
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
-	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CH_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
 i3/i3/i3_config.lo lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
 lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
