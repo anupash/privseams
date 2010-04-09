@@ -6,8 +6,6 @@
 #ifndef HIP_FIREWALL_CONNTRACK_H
 #define HIP_FIREWALL_CONNTRACK_H
 
-#define _BSD_SOURCE
-
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>

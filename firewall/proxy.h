@@ -6,8 +6,6 @@
 #ifndef HIP_FIREWALL_PROXY_H
 #define HIP_FIREWALL_PROXY_H
 
-#define _BSD_SOURCE
-
 #include <libipq.h>
 
 #include "firewall.h"
