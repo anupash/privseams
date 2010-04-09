@@ -245,6 +245,7 @@ lib_core_libhipcore_la_SOURCES = lib/conf/hipconf.c         \
                                  lib/core/sqlitedbapi.c     \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
+                                 lib/core/util.c            \
                                  lib/tool/checksum.c        \
                                  lib/tool/lutil.c           \
                                  lib/tool/nlink.c           \

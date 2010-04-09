@@ -37,6 +37,7 @@
 #include "language.h"
 #include "lib/core/hip_capability.h"
 #include "lib/core/sqlitedbapi.h"
+#include "lib/core/util.h"
 #include "lib/gui/hipgui.h"
 
 
@@ -198,9 +199,11 @@ int main(int argc, char *argv[])
     signal(SIGTERM, sig_catch_term);
 
     /* Parse command line options. */
-    while ((c = getopt(argc, argv, ":hl")) != -1) {
+    while ((c = getopt(argc, argv, ":hlV")) != -1) {
         switch (c) {
         case ':':
+        case 'V':
+            hip_print_version("hipagent");
         case 'h':
             fprintf(stderr, "no help available currently\n");
             goto out_err;

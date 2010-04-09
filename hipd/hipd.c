@@ -15,6 +15,7 @@
 #include "lib/core/filemanip.h"
 #include "lib/core/performance.h"
 #include "lib/core/straddr.h"
+#include "lib/core/util.h"
 #include "heartbeat.h"
 
 
@@ -401,7 +402,7 @@ static int hipd_main(int argc, char *argv[])
     hip_set_logfmt(LOGFMT_LONG);
 
     /* Parse command-line options */
-    while ((ch = getopt(argc, argv, ":bi:kNchaf")) != -1) {
+    while ((ch = getopt(argc, argv, ":bi:kNchafV")) != -1) {
         switch (ch) {
         case 'b':
             foreground = 0;
@@ -430,6 +431,8 @@ static int hipd_main(int argc, char *argv[])
             HIP_INFO("Setting output format to short\n");
             hip_set_logfmt(LOGFMT_SHORT);
             break;
+        case 'V':
+            hip_print_version("hipd");
         case '?':
         case 'h':
         default:

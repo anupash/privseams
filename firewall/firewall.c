@@ -52,6 +52,7 @@
 #include "helpers.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/performance.h"
+#include "lib/core/util.h"
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0
@@ -2199,7 +2200,7 @@ int main(int argc, char **argv)
 
     hip_set_logdebug(LOGDEBUG_ALL);
 
-    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmopv")) != -1) {
+    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmopvV")) != -1) {
         switch (ch) {
         case 'A':
             accept_hip_esp_traffic_by_default = 1;
@@ -2259,6 +2260,8 @@ int main(int argc, char **argv)
             log_level = LOGDEBUG_MEDIUM;
             hip_set_logfmt(LOGFMT_SHORT);
             break;
+        case 'V':
+            hip_print_version("hipfw");
         case ':':         /* option without operand */
             printf("Option -%c requires an operand\n", optopt);
             errflg++;
