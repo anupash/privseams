@@ -3,10 +3,6 @@ ACLOCAL_AMFLAGS  = -I m4
 HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd/*.h i3/*/*.h lib/*/*.h test/*.h))
 
 # For "make dist"
-#
-# XX FIX: use dist_doc_DATA for all documentation (if you change this,
-# make sure the check the "make bin" still works)
-#
 EXTRA_DIST =  .vimrc debian doc hipext hipfwmi patches release.version
 EXTRA_DIST += i3/i3-cfg-PL.xml i3/aeshash/aescpp.hh i3/i3/i3_debug.c i3/utils/netwrap_win32.c
 EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
@@ -29,7 +25,8 @@ EXTRA_DIST += test/hadb_old.c test/misc_install.c
 imagesdir = $(pkgdatadir)/../pixmaps
 dist_images_DATA = lib/gui/hipmanager.png
 
-### bin_PROGRAMS ###
+
+### user programs ###
 bin_PROGRAMS = test/auth_performance    \
                test/certteststub        \
                test/conntest-client-opp \
@@ -50,7 +47,8 @@ if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
 endif
 
-### sbin_PROGRAMS ###
+
+### superuser programs ###
 sbin_PROGRAMS = hipd/hipd      \
                 tools/hipconf  \
                 tools/pisacert
@@ -63,7 +61,8 @@ if HIP_AGENT
 sbin_PROGRAMS += agent/hipagent
 endif
 
-### lib_LTLIBRARIES ###
+
+### libraries ###
 lib_LTLIBRARIES = lib/conf/libhipconf.la \
                   lib/core/libhipcore.la \
                   lib/tool/libhiptool.la
@@ -97,7 +96,8 @@ noinst_PROGRAMS = i3/chord/gen_conf         \
                   i3/chord/chord_traceroute
 endif # HIP_I3
 
-### *_SOURCES ###
+
+### source declarations ###
 test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
                                    test/conntest.c
 
@@ -376,7 +376,7 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #DISTCLEANFILES = lib/ipsec/policy_parse.c lib/ipsec/policy_token.c
 
 
-### *_LDADD ###
+### library dependencies ###
 
 firewall_hipfw_LDADD           = lib/core/libhipcore.la
 test_auth_performance_LDADD    = lib/core/libhipcore.la
@@ -440,6 +440,7 @@ i3_chord_test_LDADD           = i3/chord/libchord.a
 
 CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
+
 ###### PYTHON stuff below ######
 # TODO python parts still needs clean-up
 if HAVE_PYTHON
@@ -475,6 +476,8 @@ tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 tools_hipdnsproxydir    = $(pyexecdir)/tools/hipdnsproxy
 endif # HAVE_PYTHON
 
+
+### misc stuff ###
 doxygen:
 	doxygen Doxyfile
 
