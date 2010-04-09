@@ -501,10 +501,6 @@ int hipd_init(int flush_ipsec, int killold)
     HIP_IFE(init_random_seed(), -1);
 
     hip_init_hadb();
-    /* hip_init_puzzle_defaults just returns, removed -samu  */
-#if 0
-    hip_init_puzzle_defaults();
-#endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     hip_init_opp_db();
