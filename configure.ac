@@ -1,9 +1,3 @@
-
-#                                               -*- Autoconf -*-
-# Process this file with autoconf to produce a configure script.
-#
-# Generated with autoscan and manually edited -Miika
-
 AC_PREREQ([2.53])
 AC_INIT([HIP for Linux], [main], [hipl-users@freelists.org], [hipl])
 AC_CONFIG_HEADERS([config.h])
