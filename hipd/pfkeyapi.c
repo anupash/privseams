@@ -14,11 +14,11 @@
 /* required for caddr_t */
 #define _BSD_SOURCE
 
-#include <lib/ipsec/pfkeyv2.h>
 #include <linux/ipsec.h>
 
 #include "config.h"
 #include "lib/ipsec/libpfkey.h"
+#include "lib/ipsec/pfkeyv2.h"
 #include "pfkeyapi.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/keylen.h"
