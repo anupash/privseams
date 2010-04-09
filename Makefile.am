@@ -401,8 +401,6 @@ i3_chord_gen_conf_LDADD         = i3/chord/libchord.la
 i3_chord_gen_conf_same_LDADD    = i3/chord/libchord.la
 i3_chord_test_LDADD             = i3/chord/libchord.la
 
-CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
-
 
 ###### PYTHON stuff below ######
 # TODO python parts still needs clean-up
@@ -438,6 +436,8 @@ tools_hipdnsproxy_PYTHON = tools/dnsproxy.py  \
 tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 tools_hipdnsproxydir    = $(pyexecdir)/tools/hipdnsproxy
 endif # HAVE_PYTHON
+
+CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
 
 ### misc stuff ###
