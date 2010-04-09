@@ -60,12 +60,6 @@
 #endif
 /** end ICMPV6_FILTER related stuff */
 
-static int hip_init_host_ids(void);
-static int init_random_seed(void);
-static int hip_init_certs(void);
-static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto);
-static struct hip_host_id_entry *hip_return_first_rsa(void);
-
 /******************************************************************************/
 /**
  * Catch SIGCHLD.
@@ -424,241 +418,6 @@ static void hip_probe_kernel_modules(void)
     }
 
     HIP_DEBUG("Probing completed\n");
-}
-
-/**
- * Main initialization function for HIP daemon.
- *
- * @param flush_ipsec one if ipsec should be flushed or zero otherwise
- * @param killold one if an existing hipd process should be killed or
- *                zero otherwise
- * @return zero on success or negative on failure
- */
-int hipd_init(int flush_ipsec, int killold)
-{
-    int err              = 0, certerr = 0, hitdberr = 0;
-    unsigned int mtu_val = HIP_HIT_DEV_MTU;
-    char str[64];
-    char mtu[16];
-    struct sockaddr_in6 daemon_addr;
-
-    memset(str, 0, 64);
-    memset(mtu, 0, 16);
-
-    /* Make sure that root path is set up correcly (e.g. on Fedora 9).
-     * Otherwise may get warnings from system() commands.
-     * @todo: should append, not overwrite  */
-    setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
-
-    /* Open daemon lock file and read pid from it. */
-    HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
-             "locking failed\n");
-
-    hip_init_hostid_db(NULL);
-
-    hip_set_os_dep_variables();
-
-#ifdef CONFIG_HIP_DEBUG
-    hip_print_sysinfo();
-#endif
-    hip_probe_kernel_modules();
-
-    /* Register signal handlers */
-    signal(SIGINT,  hip_close);
-    signal(SIGTERM, hip_close);
-    signal(SIGCHLD, hip_sig_chld);
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    HIP_IFEL(hip_init_oppip_db(), -1,
-             "Cannot initialize opportunistic mode IP database for " \
-             "non HIP capable hosts!\n");
-#endif
-    HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
-
-    HIP_IFE(init_random_seed(), -1);
-
-    hip_init_hadb();
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    hip_init_opp_db();
-#endif
-
-
-    /* Resolve our current addresses, afterwards the events from kernel
-     * will maintain the list This needs to be done before opening
-     * NETLINK_ROUTE! See the comment about address_count global var. */
-    HIP_DEBUG("Initializing the netdev_init_addresses\n");
-
-    hip_netdev_init_addresses(&hip_nl_ipsec);
-
-    if (rtnl_open_byproto(&hip_nl_route,
-                          RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
-                          | RTMGRP_IPV4_IFADDR | IPPROTO_IP,
-                          NETLINK_ROUTE) < 0) {
-        err = 1;
-        HIP_ERROR("Routing socket error: %s\n", strerror(errno));
-        goto out_err;
-    }
-
-    /* Open the netlink socket for address and IF events */
-    if (rtnl_open_byproto(&hip_nl_ipsec, XFRMGRP_ACQUIRE, NETLINK_XFRM) < 0) {
-        HIP_ERROR("Netlink address and IF events socket error: %s\n",
-                  strerror(errno));
-        err = 1;
-        goto out_err;
-    }
-
-#ifndef CONFIG_HIP_PFKEY
-    hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
-#endif
-
-#if 0
-    {
-        int ret_sockopt            = 0, value = 0;
-        socklen_t value_len        = sizeof(value);
-        int ipsec_buf_size         = 200000;
-        socklen_t ipsec_buf_sizeof = sizeof(ipsec_buf_size);
-        ret_sockopt    = getsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
-                                    &value, &value_len);
-        if (ret_sockopt != 0) {
-            HIP_DEBUG("Getting receive buffer size of hip_nl_ipsec.fd failed\n");
-        }
-        ipsec_buf_size = value * 2;
-        HIP_DEBUG("Default setting of receive buffer size for hip_nl_ipsec was %d.\n"
-                  "Setting it to %d.\n", value, ipsec_buf_size);
-        ret_sockopt    = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
-                                    &ipsec_buf_size, ipsec_buf_sizeof);
-        if (ret_sockopt != 0) {
-            HIP_DEBUG("Setting receive buffer size of hip_nl_ipsec.fd failed\n");
-        }
-        ret_sockopt    = 0;
-        ret_sockopt    = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
-                                    &ipsec_buf_size, ipsec_buf_sizeof);
-        if (ret_sockopt != 0) {
-            HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
-        }
-    }
-#endif
-
-    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4, IPPROTO_HIP), -1, "raw sock output v4\n");
-    /* hip_nat_sock_input should be initialized after hip_nat_sock_output
-       because for the sockets bound to the same address/port, only the last socket seems
-       to receive the packets. NAT input socket is a normal UDP socket where as
-       NAT output socket is a raw socket. A raw output socket support better the "shotgun"
-       extension (sending packets from multiple source addresses). */
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_nat_sock_output_udp, IPPROTO_UDP), -1, "raw sock output udp\n");
-    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6,   IPPROTO_HIP), -1, "raw sock input v6\n");
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4,   IPPROTO_HIP), -1, "raw sock input v4\n");
-    HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
-    HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
-
-    HIP_DEBUG("hip_raw_sock_v6 input = %d\n",   hip_raw_sock_input_v6);
-    HIP_DEBUG("hip_raw_sock_v6 output = %d\n",  hip_raw_sock_output_v6);
-    HIP_DEBUG("hip_raw_sock_v4 input = %d\n",   hip_raw_sock_input_v4);
-    HIP_DEBUG("hip_raw_sock_v4 output = %d\n",  hip_raw_sock_output_v4);
-    HIP_DEBUG("hip_nat_sock_udp input = %d\n",  hip_nat_sock_input_udp);
-    HIP_DEBUG("hip_nat_sock_udp output = %d\n", hip_nat_sock_output_udp);
-    HIP_DEBUG("hip_icmp_sock = %d\n",           hip_icmp_sock);
-
-    if (flush_ipsec) {
-        default_ipsec_func_set.hip_flush_all_sa();
-        default_ipsec_func_set.hip_flush_all_policy();
-    }
-
-    HIP_DEBUG("Setting SP\n");
-    default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
-    HIP_IFE(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1);
-
-    HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
-    set_up_device(HIP_HIT_DEV, 0);
-    HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
-    HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", mtu_val);
-    sprintf(mtu, "%u", mtu_val);
-    strcpy(str, "ifconfig dummy0 mtu ");
-    strcat(str, mtu);
-    /* MTU is set using system call rather than in do_chflags to avoid
-     * chicken and egg problems in hipd start up. */
-    if (system(str) == -1) {
-        HIP_ERROR("Exec %s failed", str);
-    }
-
-
-    HIP_IFE(hip_init_host_ids(), 1);
-
-    hip_user_sock           = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL((hip_user_sock < 0), 1,
-             "Could not create socket for user communication.\n");
-    bzero(&daemon_addr, sizeof(daemon_addr));
-    daemon_addr.sin6_family = AF_INET6;
-    daemon_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
-    daemon_addr.sin6_addr   = in6addr_loopback;
-    set_cloexec_flag(hip_user_sock, 1);
-
-    HIP_IFEL(bind(hip_user_sock, (struct sockaddr *) &daemon_addr,
-                  sizeof(daemon_addr)), -1,
-             "Bind on daemon addr failed\n");
-
-    hip_load_configuration();
-
-#ifdef CONFIG_HIP_HI3
-    if (hip_use_i3) {
-        hip_locator_status = HIP_MSG_SET_LOCATOR_ON;
-    }
-#endif
-
-#ifdef CONFIG_HIP_DHT
-    {
-        memset(opendht_host_name, 0, sizeof(opendht_host_name));
-
-        hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
-        set_cloexec_flag(hip_opendht_sock_fqdn, 1);
-        hip_opendht_sock_hit  = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
-        set_cloexec_flag(hip_opendht_sock_hit, 1);
-    }
-#endif  /* CONFIG_HIP_DHT */
-
-    certerr = 0;
-    certerr = hip_init_certs();
-    if (certerr < 0) {
-        HIP_DEBUG("Initializing cert configuration file returned error\n");
-    }
-
-    hitdberr = 0;
-#ifdef CONFIG_HIP_AGENT
-    hitdberr = hip_init_daemon_hitdb();
-    if (hitdberr < 0) {
-        HIP_DEBUG("Initializing daemon hit database returned error\n");
-    }
-#endif  /* CONFIG_HIP_AGENT */
-
-    /* Service initialization. */
-    hip_init_services();
-
-#ifdef CONFIG_HIP_RVS
-    HIP_INFO("Initializing HIP relay / RVS.\n");
-    hip_relay_init();
-#endif
-
-#ifdef CONFIG_HIP_PRIVSEP
-    HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
-#endif /* CONFIG_HIP_PRIVSEP */
-
-
-#ifdef CONFIG_HIP_HI3
-    if (hip_use_i3) {
-        hip_i3_init();
-    }
-#endif
-
-    hip_firewall_sock_lsi_fd = hip_user_sock;
-
-    if (hip_get_nsupdate_status()) {
-        nsupdate(1);
-    }
-
-out_err:
-    return err;
 }
 
 /**
@@ -1173,6 +932,39 @@ static int init_random_seed(void)
 }
 
 /**
+ * find the first RSA-based host id
+ *
+ * @return the host id or NULL if none found
+ */
+static struct hip_host_id_entry *hip_return_first_rsa(void)
+{
+    hip_list_t *curr, *iter;
+    struct hip_host_id_entry *tmp = NULL;
+    int c;
+    uint16_t algo = 0;
+
+    HIP_READ_LOCK_DB(hip_local_hostid_db);
+
+    list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
+        tmp  = (struct hip_host_id_entry *) list_entry(curr);
+        HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
+        algo = hip_get_host_id_algo(tmp->host_id);
+        HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",
+                  algo, HIP_HI_RSA);
+        if (algo == HIP_HI_RSA) {
+            goto out_err;
+        }
+    }
+
+out_err:
+    HIP_READ_UNLOCK_DB(hip_local_hostid_db);
+    if (algo == HIP_HI_RSA) {
+        return tmp;
+    }
+    return NULL;
+}
+
+/**
  * Initialize certificates for the local host
  *
  * @return zero on success or negative on failure
@@ -1247,34 +1039,236 @@ out_err:
 }
 
 /**
- * find the first RSA-based host id
+ * Main initialization function for HIP daemon.
  *
- * @return the host id or NULL if none found
+ * @param flush_ipsec one if ipsec should be flushed or zero otherwise
+ * @param killold one if an existing hipd process should be killed or
+ *                zero otherwise
+ * @return zero on success or negative on failure
  */
-static struct hip_host_id_entry *hip_return_first_rsa(void)
+int hipd_init(int flush_ipsec, int killold)
 {
-    hip_list_t *curr, *iter;
-    struct hip_host_id_entry *tmp = NULL;
-    int c;
-    uint16_t algo = 0;
+    int err              = 0, certerr = 0, hitdberr = 0;
+    unsigned int mtu_val = HIP_HIT_DEV_MTU;
+    char str[64];
+    char mtu[16];
+    struct sockaddr_in6 daemon_addr;
 
-    HIP_READ_LOCK_DB(hip_local_hostid_db);
+    memset(str, 0, 64);
+    memset(mtu, 0, 16);
 
-    list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
-        tmp  = (struct hip_host_id_entry *) list_entry(curr);
-        HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
-        algo = hip_get_host_id_algo(tmp->host_id);
-        HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",
-                  algo, HIP_HI_RSA);
-        if (algo == HIP_HI_RSA) {
-            goto out_err;
+    /* Make sure that root path is set up correcly (e.g. on Fedora 9).
+     * Otherwise may get warnings from system() commands.
+     * @todo: should append, not overwrite  */
+    setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
+
+    /* Open daemon lock file and read pid from it. */
+    HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
+             "locking failed\n");
+
+    hip_init_hostid_db(NULL);
+
+    hip_set_os_dep_variables();
+
+#ifdef CONFIG_HIP_DEBUG
+    hip_print_sysinfo();
+#endif
+    hip_probe_kernel_modules();
+
+    /* Register signal handlers */
+    signal(SIGINT,  hip_close);
+    signal(SIGTERM, hip_close);
+    signal(SIGCHLD, hip_sig_chld);
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+    HIP_IFEL(hip_init_oppip_db(), -1,
+             "Cannot initialize opportunistic mode IP database for " \
+             "non HIP capable hosts!\n");
+#endif
+    HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
+
+    HIP_IFE(init_random_seed(), -1);
+
+    hip_init_hadb();
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+    hip_init_opp_db();
+#endif
+
+
+    /* Resolve our current addresses, afterwards the events from kernel
+     * will maintain the list This needs to be done before opening
+     * NETLINK_ROUTE! See the comment about address_count global var. */
+    HIP_DEBUG("Initializing the netdev_init_addresses\n");
+
+    hip_netdev_init_addresses(&hip_nl_ipsec);
+
+    if (rtnl_open_byproto(&hip_nl_route,
+                          RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
+                          | RTMGRP_IPV4_IFADDR | IPPROTO_IP,
+                          NETLINK_ROUTE) < 0) {
+        err = 1;
+        HIP_ERROR("Routing socket error: %s\n", strerror(errno));
+        goto out_err;
+    }
+
+    /* Open the netlink socket for address and IF events */
+    if (rtnl_open_byproto(&hip_nl_ipsec, XFRMGRP_ACQUIRE, NETLINK_XFRM) < 0) {
+        HIP_ERROR("Netlink address and IF events socket error: %s\n",
+                  strerror(errno));
+        err = 1;
+        goto out_err;
+    }
+
+#ifndef CONFIG_HIP_PFKEY
+    hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
+#endif
+
+#if 0
+    {
+        int ret_sockopt            = 0, value = 0;
+        socklen_t value_len        = sizeof(value);
+        int ipsec_buf_size         = 200000;
+        socklen_t ipsec_buf_sizeof = sizeof(ipsec_buf_size);
+        ret_sockopt    = getsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                                    &value, &value_len);
+        if (ret_sockopt != 0) {
+            HIP_DEBUG("Getting receive buffer size of hip_nl_ipsec.fd failed\n");
         }
+        ipsec_buf_size = value * 2;
+        HIP_DEBUG("Default setting of receive buffer size for hip_nl_ipsec was %d.\n"
+                  "Setting it to %d.\n", value, ipsec_buf_size);
+        ret_sockopt    = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                                    &ipsec_buf_size, ipsec_buf_sizeof);
+        if (ret_sockopt != 0) {
+            HIP_DEBUG("Setting receive buffer size of hip_nl_ipsec.fd failed\n");
+        }
+        ret_sockopt    = 0;
+        ret_sockopt    = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
+                                    &ipsec_buf_size, ipsec_buf_sizeof);
+        if (ret_sockopt != 0) {
+            HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
+        }
+    }
+#endif
+
+    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");
+    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4, IPPROTO_HIP), -1, "raw sock output v4\n");
+    /* hip_nat_sock_input should be initialized after hip_nat_sock_output
+       because for the sockets bound to the same address/port, only the last socket seems
+       to receive the packets. NAT input socket is a normal UDP socket where as
+       NAT output socket is a raw socket. A raw output socket support better the "shotgun"
+       extension (sending packets from multiple source addresses). */
+    HIP_IFEL(hip_init_raw_sock_v4(&hip_nat_sock_output_udp, IPPROTO_UDP), -1, "raw sock output udp\n");
+    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6,   IPPROTO_HIP), -1, "raw sock input v6\n");
+    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4,   IPPROTO_HIP), -1, "raw sock input v4\n");
+    HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
+    HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
+
+    HIP_DEBUG("hip_raw_sock_v6 input = %d\n",   hip_raw_sock_input_v6);
+    HIP_DEBUG("hip_raw_sock_v6 output = %d\n",  hip_raw_sock_output_v6);
+    HIP_DEBUG("hip_raw_sock_v4 input = %d\n",   hip_raw_sock_input_v4);
+    HIP_DEBUG("hip_raw_sock_v4 output = %d\n",  hip_raw_sock_output_v4);
+    HIP_DEBUG("hip_nat_sock_udp input = %d\n",  hip_nat_sock_input_udp);
+    HIP_DEBUG("hip_nat_sock_udp output = %d\n", hip_nat_sock_output_udp);
+    HIP_DEBUG("hip_icmp_sock = %d\n",           hip_icmp_sock);
+
+    if (flush_ipsec) {
+        default_ipsec_func_set.hip_flush_all_sa();
+        default_ipsec_func_set.hip_flush_all_policy();
+    }
+
+    HIP_DEBUG("Setting SP\n");
+    default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
+    HIP_IFE(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1);
+
+    HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
+    set_up_device(HIP_HIT_DEV, 0);
+    HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
+    HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", mtu_val);
+    sprintf(mtu, "%u", mtu_val);
+    strcpy(str, "ifconfig dummy0 mtu ");
+    strcat(str, mtu);
+    /* MTU is set using system call rather than in do_chflags to avoid
+     * chicken and egg problems in hipd start up. */
+    if (system(str) == -1) {
+        HIP_ERROR("Exec %s failed", str);
+    }
+
+
+    HIP_IFE(hip_init_host_ids(), 1);
+
+    hip_user_sock           = socket(AF_INET6, SOCK_DGRAM, 0);
+    HIP_IFEL((hip_user_sock < 0), 1,
+             "Could not create socket for user communication.\n");
+    bzero(&daemon_addr, sizeof(daemon_addr));
+    daemon_addr.sin6_family = AF_INET6;
+    daemon_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
+    daemon_addr.sin6_addr   = in6addr_loopback;
+    set_cloexec_flag(hip_user_sock, 1);
+
+    HIP_IFEL(bind(hip_user_sock, (struct sockaddr *) &daemon_addr,
+                  sizeof(daemon_addr)), -1,
+             "Bind on daemon addr failed\n");
+
+    hip_load_configuration();
+
+#ifdef CONFIG_HIP_HI3
+    if (hip_use_i3) {
+        hip_locator_status = HIP_MSG_SET_LOCATOR_ON;
+    }
+#endif
+
+#ifdef CONFIG_HIP_DHT
+    {
+        memset(opendht_host_name, 0, sizeof(opendht_host_name));
+
+        hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
+        set_cloexec_flag(hip_opendht_sock_fqdn, 1);
+        hip_opendht_sock_hit  = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
+        set_cloexec_flag(hip_opendht_sock_hit, 1);
+    }
+#endif  /* CONFIG_HIP_DHT */
+
+    certerr = 0;
+    certerr = hip_init_certs();
+    if (certerr < 0) {
+        HIP_DEBUG("Initializing cert configuration file returned error\n");
+    }
+
+    hitdberr = 0;
+#ifdef CONFIG_HIP_AGENT
+    hitdberr = hip_init_daemon_hitdb();
+    if (hitdberr < 0) {
+        HIP_DEBUG("Initializing daemon hit database returned error\n");
+    }
+#endif  /* CONFIG_HIP_AGENT */
+
+    /* Service initialization. */
+    hip_init_services();
+
+#ifdef CONFIG_HIP_RVS
+    HIP_INFO("Initializing HIP relay / RVS.\n");
+    hip_relay_init();
+#endif
+
+#ifdef CONFIG_HIP_PRIVSEP
+    HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
+#endif /* CONFIG_HIP_PRIVSEP */
+
+
+#ifdef CONFIG_HIP_HI3
+    if (hip_use_i3) {
+        hip_i3_init();
+    }
+#endif
+
+    hip_firewall_sock_lsi_fd = hip_user_sock;
+
+    if (hip_get_nsupdate_status()) {
+        nsupdate(1);
     }
 
 out_err:
-    HIP_READ_UNLOCK_DB(hip_local_hostid_db);
-    if (algo == HIP_HI_RSA) {
-        return tmp;
-    }
-    return NULL;
+    return err;
 }
