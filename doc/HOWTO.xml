@@ -1008,7 +1008,11 @@ endif
         Building hipl under the kamikaze devel tree does not go well always. It could cause you to correct numerous errors while building it. You are warned!
         </para>
         <para>
-        If you encounter an error like "SHA: undefined reference", use the macro HIP_SHA() instead of SHA(). Using SHA() does not make any problem with a native compiler, but it causes errors with a cross compiler. For that reason HIP_SHA() is defined in `libhiptool/crypto.h` to be used for any calls to SHA().
+        If you encounter an error like "SHA: undefined reference", use the
+        macro HIP_SHA() instead of SHA(). Using SHA() does not make any
+        problem with a native compiler, but it causes errors with a
+        crosscompiler. For that reason HIP_SHA() is defined in
+        `lib/core/crypto.h` to be used for any calls to SHA().
         </para>
     </section>
     <section id="build_openwrt_wgt">
