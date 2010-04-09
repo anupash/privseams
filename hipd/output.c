@@ -19,7 +19,7 @@
 
 #include "config.h"
 #include "output.h"
-#include "lib/performance/performance.h"
+#include "lib/core/performance.h"
 
 #ifdef CONFIG_HIP_I3
 #include "i3/i3_client/i3_client_id.h"

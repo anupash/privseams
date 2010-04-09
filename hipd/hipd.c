@@ -13,9 +13,9 @@
 #include "hipd.h"
 #include "lib/dht/libhipdht.h"
 #include "lib/core/filemanip.h"
+#include "lib/core/performance.h"
 #include "lib/core/straddr.h"
 #include "heartbeat.h"
-#include "lib/performance/performance.h"
 
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside

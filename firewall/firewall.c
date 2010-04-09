@@ -49,9 +49,9 @@
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h" /* PISA */
 #endif
-#include "lib/performance/performance.h" /* Performance Analysis */
 #include "helpers.h"
 #include "lib/core/filemanip.h"
+#include "lib/core/performance.h"
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0

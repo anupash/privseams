@@ -12,7 +12,7 @@
 
 #include "config.h"
 #include "pk.h"
-#include "lib/performance/performance.h"
+#include "lib/core/performance.h"
 
 /**
  * sign a HIP control message with a private RSA key

@@ -256,7 +256,7 @@ lib_core_libhipcore_la_SOURCES += lib/dht/libhipdht.c      \
 endif
 
 if HIP_PERFORMANCE
-lib_core_libhipcore_la_SOURCES += lib/performance/performance.c
+lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
 
 if HIP_PRIVSEP

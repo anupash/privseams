@@ -31,7 +31,7 @@
 #include "config.h"
 #include "crypto.h"
 #include "keylen.h"
-#include "lib/performance/performance.h"
+#include "performance.h"
 
 
 /*

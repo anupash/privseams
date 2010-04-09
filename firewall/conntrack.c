@@ -33,7 +33,7 @@
 #include "firewalldb.h"
 #include "firewall.h"
 #include "lib/core/debug.h"
-#include "lib/performance/performance.h"
+#include "lib/core/performance.h"
 #include "helpers.h"
 
 #ifdef CONFIG_HIP_MIDAUTH

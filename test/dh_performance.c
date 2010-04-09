@@ -18,14 +18,13 @@
 #include <openssl/dh.h>         /* open ssl library for DH operations */
 #include <openssl/sha.h>        /* open ssl library for SHA operations */
 #include <openssl/dsa.h>        /* open ssl library for DSA operations */
+#include <openssl/sha.h>
 
 #include "config.h"
 #include "lib/core/crypto.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hashchain.h"
-
-#include "lib/performance/performance.h"
-#include <openssl/sha.h>
+#include "lib/core/performance.h"
 
 //int DH_compute_key(unsigned char *key, BIGNUM *pub_key, DH *dh);
 

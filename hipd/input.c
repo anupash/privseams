@@ -28,7 +28,7 @@
 #include "lib/core/solve.h"
 #include "lib/core/transform.h"
 #include "lib/core/keylen.h"
-#include "lib/performance/performance.h"
+#include "lib/core/performance.h"
 #include "dh.h"
 
 #include "hidb.h"
