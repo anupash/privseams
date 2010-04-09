@@ -47,6 +47,14 @@ if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
 endif
 
+if HIP_I3
+noinst_PROGRAMS = i3/chord/chord_getfingers \
+                  i3/chord/chord_traceroute \
+                  i3/chord/gen_conf         \
+                  i3/chord/gen_conf_same    \
+                  i3/chord/test
+endif
+
 
 ### superuser programs ###
 sbin_PROGRAMS = hipd/hipd      \
@@ -88,13 +96,7 @@ noinst_LIBRARIES = i3/aeshash/libaes.a        \
                    i3/i3/libi3.a              \
                    i3/i3_client/libi3client.a \
                    i3/utils/libutils.a
-
-noinst_PROGRAMS = i3/chord/gen_conf         \
-                  i3/chord/gen_conf_same    \
-                  i3/chord/test             \
-                  i3/chord/chord_getfingers \
-                  i3/chord/chord_traceroute
-endif # HIP_I3
+endif
 
 
 ### source declarations ###
