@@ -103,6 +103,7 @@ cd "$CHECKOUT_DIR" || cleanup 1
 # Bootstrap the autotools build system.
 run_program autoreconf --install
 
+CONFIGURATION="distribution tarball completeness"
 check_dist
 
 # Compile HIPL in different configurations
