@@ -7,7 +7,6 @@
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "config.h"

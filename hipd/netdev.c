@@ -18,7 +18,6 @@
  *
  * @author Miika Komu <miika@iki.fi>
  */
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <net/if.h>

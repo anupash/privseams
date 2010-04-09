@@ -14,7 +14,6 @@
  *
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "lib/core/esp_prot_common.h"

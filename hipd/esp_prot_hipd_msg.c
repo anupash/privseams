@@ -12,7 +12,6 @@
  *
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "esp_prot_hipd_msg.h"

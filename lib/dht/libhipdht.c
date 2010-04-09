@@ -11,7 +11,6 @@
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <stdio.h>

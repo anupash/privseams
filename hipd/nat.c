@@ -24,7 +24,6 @@
  * @note    All Doxygen comments have been added in version 1.1.
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "nat.h"

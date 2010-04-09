@@ -13,7 +13,6 @@
  * @author Weiwei Hu
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "hipd/hidb.h"

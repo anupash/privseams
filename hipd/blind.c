@@ -7,7 +7,6 @@ An Extension of HIP Base Exchange to Support Identity Privacy, IETF draft, Work 
  * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "blind.h"

@@ -10,7 +10,6 @@
  * @author Tobias Heer <heer#tobibox.de>
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "keymat.h"

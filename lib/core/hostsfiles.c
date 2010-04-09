@@ -15,7 +15,6 @@
  * @todo is there a standard API for accessing hosts files?
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <arpa/inet.h>

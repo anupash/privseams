@@ -20,7 +20,6 @@
  * @note: HIPU: does not work on MAC OS X
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <stdio.h>

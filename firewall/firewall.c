@@ -23,7 +23,6 @@
  * @note: HIPU: requires libipq, might need pcap libraries
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <limits.h> /* INT_MIN, INT_MAX */

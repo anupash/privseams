@@ -12,7 +12,6 @@
  *      6th Annual IEEE Consumer Communications & Networking Conference IEEE CCNC 2009, Las Vegas, Nevada, January 2009
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <sys/types.h>

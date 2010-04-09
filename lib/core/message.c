@@ -64,7 +64,6 @@
  * @see     The building and parsing functions are located in @c builder.c.
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <unistd.h>
