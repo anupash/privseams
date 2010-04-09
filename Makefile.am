@@ -472,6 +472,9 @@ HIPL_HEADER_FILTERED = $(filter-out $(NOCHECK_HEADER_LIST),$(HIPL_HEADER_LIST))
 HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.ho))
 CLEANFILES          += $(HIPL_HEADER_OBJS)
 
+#this macro is not to be used in headers, so use it "globally" just for checkheaders
+CPPFLAGS = -D_BSD_SOURCE
+
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
