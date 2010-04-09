@@ -9,15 +9,15 @@ AC_INIT([HIP for Linux], [main], [hipl-users@freelists.org], [hipl])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-AM_INIT_AUTOMAKE([foreign subdir-objects])
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_INSTALL
 # AC_PROG_LIBTOOL() could be replaced with LT_INIT(disable-shared) but
 # OpenWRT (Mar 2010) is running too old version of libtool
 # LT_INIT(disable-shared)
 AC_PROG_LIBTOOL(disable-shared)
 
-# Checks for programs.
-AC_PROG_CC
-AC_PROG_INSTALL
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_PROG_CC_C_O # Required in CentOS
 
 # Check for python for tools directory
