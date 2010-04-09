@@ -34,36 +34,6 @@ AC_CHECK_FUNC(EC_KEY_new,
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 
-case "$host" in
-  alpha*)
-    TARGET=ALPHA;
-    ;;
-  arm*)
-    TARGET=ARM;
-    ;;
-  hppa*linux* | parisc*linux*)
-    TARGET=PA_LINUX;
-    ;;
-  i?86*)
-    TARGET=X86;
-    ;;
-  ia64*)
-    TARGET=IA64;
-    ;;
-  mips*linux*)
-    TARGET=MIPS_LINUX;
-    ;;
-  powerpc*linux*)
-    TARGET=POWERPC;
-    ;;
-  x86_64*)
-    TARGET=X86_64;
-    libdir='${exec_prefix}/lib64';
-    ;;
-esac
-
-AC_SUBST(TARGET)
-
 # If no --prefix option is passed to configure, $prefix is empty. But we want
 # to expand $sysconfdir, which defaults to ${prefix}/etc. So set $prefix.
 if test "x$prefix" = "xNONE"; then
