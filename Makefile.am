@@ -483,4 +483,10 @@ vpath %.h $(srcdir)
 i3/i3/i3_config.lo lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
 lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 
+# Ensure that version.h is created before everything else. This does not work
+# when creating specific objects that may depend on version.h directly.
+BUILT_SOURCES = version.h
+$(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
+	echo "#define BZR_REVISION \"$$(bzr revno $(srcdir))\"" > $@
+
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo
