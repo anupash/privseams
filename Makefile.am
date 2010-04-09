@@ -71,19 +71,14 @@ endif
 
 
 ### libraries ###
-lib_LTLIBRARIES = lib/conf/libhipconf.la \
-                  lib/core/libhipcore.la \
-                  lib/tool/libhiptool.la
+lib_LTLIBRARIES = lib/core/libhipcore.la
+
 if HIP_PFKEY
 lib_LTLIBRARIES += lib/ipsec/libhipsec.la
 endif
 
 if HIP_OPPORTUNISTIC
 lib_LTLIBRARIES += lib/opphip/libopphip.la
-endif
-
-if HIP_DHT
-lib_LTLIBRARIES += lib/dht/libhipdht.la
 endif
 
 if HIP_AGENT
@@ -223,9 +218,11 @@ lib_gui_libhipgui_la_SOURCES = lib/gui/create.c     \
                                lib/gui/tools.c      \
                                lib/gui/widgets.c
 
-lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
 
-lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
+# TODO: libhipcore, libhipconf, libhipdht and libhiptool have circular
+# dependencies. This needs to be addressed at some point.
+lib_core_libhipcore_la_SOURCES = lib/conf/hipconf.c         \
+                                 lib/core/builder.c         \
                                  lib/core/certtools.c       \
                                  lib/core/crypto.c          \
                                  lib/core/debug.c           \
@@ -247,7 +244,16 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/solve.c           \
                                  lib/core/sqlitedbapi.c     \
                                  lib/core/straddr.c         \
-                                 lib/core/transform.c
+                                 lib/core/transform.c       \
+                                 lib/tool/checksum.c        \
+                                 lib/tool/lutil.c           \
+                                 lib/tool/nlink.c           \
+                                 lib/tool/pk.c
+
+if HIP_DHT
+lib_core_libhipcore_la_SOURCES += lib/dht/libhipdht.c      \
+                                  lib/dht/libhipdhtxml.c
+endif
 
 if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/performance/performance.c
@@ -257,25 +263,15 @@ if HIP_PRIVSEP
 lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
 
-lib_core_libhipcore_la_LIBADD = lib/tool/libhiptool.la
-
-lib_tool_libhiptool_la_SOURCES = lib/tool/checksum.c    \
-                                 lib/tool/lutil.c       \
-                                 lib/tool/nlink.c       \
-                                 lib/tool/pk.c
-
 # don't use libipsec, but xfrmapi
 if HIP_PFKEY
-lib_tool_libhiptool_la_SOURCES += lib/tool/pfkeysadb.c
+lib_core_libhipcore_la_SOURCES += lib/tool/pfkeysadb.c
 else
-lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
+lib_core_libhipcore_la_SOURCES += lib/tool/xfrmapi.c
 endif # HIPPFKEY
 
 lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
                                    lib/opphip/wrap_db.c
-
-lib_dht_libhipdht_la_SOURCES = lib/dht/libhipdht.c      \
-                               lib/dht/libhipdhtxml.c
 
 i3_libi3_la_SOURCES = i3/aeshash/aescrypp.c              \
                       i3/aeshash/aescrypt.c              \
@@ -370,6 +366,7 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 ### library dependencies ###
 
 firewall_hipfw_LDADD           = lib/core/libhipcore.la
+hipd_hipd_LDADD                = lib/core/libhipcore.la
 test_auth_performance_LDADD    = lib/core/libhipcore.la
 test_certteststub_LDADD        = lib/core/libhipcore.la
 test_conntest_client_hip_LDADD = lib/core/libhipcore.la
@@ -377,48 +374,24 @@ test_conntest_client_opp_LDADD = lib/core/libhipcore.la
 test_conntest_server_LDADD     = lib/core/libhipcore.la
 test_cookietest_LDADD          = lib/core/libhipcore.la
 test_dh_performance_LDADD      = lib/core/libhipcore.la
+test_dhtteststub_LDADD         = lib/core/libhipcore.la
 test_hashtest_LDADD            = lib/core/libhipcore.la
 test_hc_performance_LDADD      = lib/core/libhipcore.la
 test_keygentest_LDADD          = lib/core/libhipcore.la
 test_sqliteteststub_LDADD      = lib/core/libhipcore.la
+tools_hipconf_LDADD            = lib/core/libhipcore.la
 tools_pisacert_LDADD           = lib/core/libhipcore.la
-
-test_dhtteststub_LDADD  = lib/dht/libhipdht.la \
-                          lib/core/libhipcore.la
-
-tools_hipconf_LDADD = lib/conf/libhipconf.la \
-                      lib/core/libhipcore.la
-
-if HIP_DHT
-tools_hipconf_LDADD += lib/dht/libhipdht.la
-endif
-
-hipd_hipd_LDADD = lib/conf/libhipconf.la \
-                  lib/core/libhipcore.la
 
 if HIP_I3
 hipd_hipd_LDADD += i3/libi3.la
-endif
-
-if HIP_DHT
-hipd_hipd_LDADD += lib/dht/libhipdht.la
 endif
 
 if HIP_PFKEY
 hipd_hipd_LDADD += lib/ipsec/libhipsec.la
 endif
 
-# hard dependencies: libhipgui, libhipcore
-# TODO fix dependency between libhipgui and libhipconf if possible
-# TODO fix dependency between libhipcore and libhipconf if possible
-# TODO fix dependency between libhipconf and libhipdht if possible
-# TODO fix dependency between (libhipconf, libhipcore) and libhiptool if possible
 agent_hipagent_LDADD = lib/gui/libhipgui.la   \
-                       lib/conf/libhipconf.la \
                        lib/core/libhipcore.la
-if HIP_DHT
-agent_hipagent_LDADD += lib/dht/libhipdht.la
-endif
 
 agent_hipagent_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
 
