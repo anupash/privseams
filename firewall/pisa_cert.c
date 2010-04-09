@@ -11,6 +11,8 @@
  * @author Thomas Jansen
  */
 
+#define _BSD_SOURCE
+
 #include "pisa_cert.h"
 
 #include <sys/types.h>

@@ -10,8 +10,6 @@
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
  */
 
-#define _BSD_SOURCE
-
 #include "dht.h"
 #include "hipd.h"
 #include "lib/core/hostid.h"

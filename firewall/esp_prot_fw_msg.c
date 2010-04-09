@@ -10,8 +10,6 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
-#define _BSD_SOURCE
-
 #include <netinet/udp.h>
 
 #include "lib/core/debug.h"

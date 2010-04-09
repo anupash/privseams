@@ -11,8 +11,6 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#define _BSD_SOURCE
-
 #include "hadb_legacy.h"
 
 /**

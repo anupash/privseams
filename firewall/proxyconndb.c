@@ -13,8 +13,6 @@
  * @author Weiwei Hu
  */
 
-#define _BSD_SOURCE
-
 #include "hipd/hidb.h"
 #include "lib/core/hashtable.h"
 #include "proxyconndb.h"

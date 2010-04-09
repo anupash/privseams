@@ -8,8 +8,6 @@
  * @author Samu Varjonen
  */
 
-#define _BSD_SOURCE
-
 #include "cert.h"
 
 /****************************************************************************

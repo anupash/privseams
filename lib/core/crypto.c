@@ -28,8 +28,6 @@
  * @todo "Bad signature r or s size" occurs randomly. This should not happen.
  */
 
-#define _BSD_SOURCE
-
 #include "config.h"
 #include "crypto.h"
 #include "keylen.h"

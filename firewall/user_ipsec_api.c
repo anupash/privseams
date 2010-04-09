@@ -11,8 +11,6 @@
  *
  */
 
-#define _BSD_SOURCE
-
 #include "user_ipsec_api.h"
 #include "user_ipsec_sadb.h"
 #include "user_ipsec_esp.h"

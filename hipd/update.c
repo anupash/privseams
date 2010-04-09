@@ -8,7 +8,6 @@
  * @author  Baris Boyvat <baris#boyvat.com>
  */
 
-/* requiread for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "config.h"

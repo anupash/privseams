@@ -9,8 +9,6 @@
  * @author Baris Boyvat
  */
 
-#define _BSD_SOURCE
-
 #include "update_legacy.h"
 
 /**

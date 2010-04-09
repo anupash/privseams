@@ -12,8 +12,6 @@
  * @see     hiprelay.h
  */
 
-#define _BSD_SOURCE
-
 #include "registration.h"
 #include "hadb.h"
 

@@ -20,8 +20,6 @@
  * @note: HIPU: does not work on MAC OS X
  */
 
-#define _BSD_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

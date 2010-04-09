@@ -5,8 +5,6 @@
  * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>. This is actually a singly linked list. -samu
  */
 
-#define _BSD_SOURCE
-
 #include <stdlib.h>
 #include "dhtqueue.h"
 #include "hipd.h"

@@ -24,8 +24,6 @@
  * @note    All Doxygen comments have been added in version 1.1.
  */
 
-#define _BSD_SOURCE
-
 #include "nat.h"
 #include <string.h>
 #include <stdio.h>

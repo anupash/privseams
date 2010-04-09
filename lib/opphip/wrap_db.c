@@ -8,8 +8,6 @@
  *
  */
 
-#define _BSD_SOURCE
-
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>

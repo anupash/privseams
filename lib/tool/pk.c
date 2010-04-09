@@ -10,8 +10,6 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#define _BSD_SOURCE
-
 #include "config.h"
 #include "pk.h"
 #include "lib/performance/performance.h"

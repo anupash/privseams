@@ -10,8 +10,6 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
-#define _BSD_SOURCE
-
 #include "user_ipsec_hipd_msg.h"
 #include "hipd.h"
 #include "init.h"

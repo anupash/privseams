@@ -12,8 +12,6 @@
  * @author  Alberto Garcia
  */
 
-#define _BSD_SOURCE
-
 #include "config.h"
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 

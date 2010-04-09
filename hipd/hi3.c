@@ -12,6 +12,7 @@
  *
  * @author Andrey Lukyanenko
  */
+
 #define _BSD_SOURCE
 
 #include "hi3.h"

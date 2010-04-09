@@ -36,8 +36,6 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#define _BSD_SOURCE
-
 #include <limits.h>
 
 #include "config.h"

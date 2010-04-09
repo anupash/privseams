@@ -10,8 +10,6 @@
  * @author Tobias Heer <heer#tobibox.de>
  */
 
-#define _BSD_SOURCE
-
 #include "keymat.h"
 #include "lib/core/hit.h"
 

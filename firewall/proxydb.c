@@ -8,8 +8,6 @@
  * @author Weiwei Hu
  */
 
-#define _BSD_SOURCE
-
 #include "proxydb.h"
 
 HIP_HASHTABLE *hip_proxy_db = NULL;

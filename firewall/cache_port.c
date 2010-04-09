@@ -20,8 +20,6 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#define _BSD_SOURCE
-
 #include <stdio.h>
 
 #include "cache_port.h"

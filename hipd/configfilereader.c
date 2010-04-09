@@ -6,8 +6,6 @@
  * @see     configfilereader.h for usage instructions.
  */
 
-#define _BSD_SOURCE
-
 #include "configfilereader.h"
 #include "lib/core/debug.h"
 

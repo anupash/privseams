@@ -15,8 +15,6 @@
  *
  */
 
-#define _BSD_SOURCE
-
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <time.h>

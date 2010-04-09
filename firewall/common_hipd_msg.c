@@ -8,8 +8,6 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#define _BSD_SOURCE
-
 #include "common_hipd_msg.h"
 #include "lib/core/ife.h"
 #include "lib/core/debug.h"

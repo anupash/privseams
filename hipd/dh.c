@@ -10,8 +10,6 @@
  * @author Tobias Heer <heer@tobibox.de>
  */
 
-#define _BSD_SOURCE
-
 #include "dh.h"
 
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};

@@ -10,8 +10,6 @@
  * @author Tobias Heer
  */
 
-#define _BSD_SOURCE
-
 #include <stdio.h>              /* printf & co */
 #include <stdlib.h>             /* exit & co */
 #include <unistd.h>

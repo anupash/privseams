@@ -8,8 +8,6 @@
  * is borrowed from glibc project.
  */
 
-#define _BSD_SOURCE
-
 #include "lutil.h"
 #include "lib/conf/hipconf.h"
 

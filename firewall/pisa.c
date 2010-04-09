@@ -13,7 +13,6 @@
  * @author Dominic Gatzen
  */
 
-/* required by the libipq header for IFNAMSZ */
 #define _BSD_SOURCE
 
 #include <string.h>

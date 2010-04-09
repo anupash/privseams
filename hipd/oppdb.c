@@ -37,8 +37,6 @@
  * - Bing Zhou <bingzhou@cc.hut.fi>
  */
 
-#define _BSD_SOURCE
-
 #include "config.h"
 #include "oppdb.h"
 #include "hadb.h"

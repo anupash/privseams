@@ -32,7 +32,6 @@
  * @todo    adding of new extensions should be made simpler
  */
 
-/* required for ifreq */
 #define _BSD_SOURCE
 
 #include <sys/ioctl.h>

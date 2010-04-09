@@ -5,7 +5,7 @@
  *
  * @brief this file contains IPsec management functionality borrowed from Racoon
  */
-/* required for caddr_t */
+
 #define _BSD_SOURCE
 
 #include "config.h"

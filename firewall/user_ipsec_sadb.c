@@ -12,8 +12,6 @@
  *
  */
 
-#define _BSD_SOURCE
-
 #include <openssl/sha.h>
 #include <string.h>
 

@@ -11,9 +11,6 @@
  * @see lib/tool/xfrmapi.c for the wrappers for XFRM API
  */
 
-/* required for caddr_t */
-#define _BSD_SOURCE
-
 #include <linux/ipsec.h>
 
 #include "config.h"

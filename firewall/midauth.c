@@ -17,7 +17,6 @@
  * Currently we do neither.
  */
 
-/* required by the libipq header */
 #define _BSD_SOURCE
 
 #include <string.h>
