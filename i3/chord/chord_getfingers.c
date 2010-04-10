@@ -31,7 +31,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "chord.h"
-//#include "../../utils/gen_utils.h"
 
 #define SELECT_TIMEOUT 2
 #define CLIENT_PORT 11355

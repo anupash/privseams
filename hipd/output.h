@@ -28,11 +28,7 @@
 #include "user.h"
 #include "nat.h"
 #include "registration.h"
-
-
-/* #include <libiptc/libiptc.h> */
-#include "hipd/esp_prot_hipd_msg.h"
-//#include "i3_id.h"
+#include "esp_prot_hipd_msg.h"
 
 #define HIP_MAX_ICMP_PACKET 512
 

@@ -7,7 +7,6 @@
 #define HIP_FIREWALL_RULE_MANAGEMENT_H
 
 #include "dlist.h"
-//#include "helpers.h"
 
 #define DROP 0;
 #define ACCEPT 1;

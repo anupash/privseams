@@ -16,7 +16,6 @@
 #define _BSD_SOURCE
 
 #include "hi3.h"
-//#include "output.h"
 
 #define HI3_TRIGGER_MAX 10
 
