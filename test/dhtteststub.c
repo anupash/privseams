@@ -34,10 +34,6 @@ int main(int argc, char *argv[])
 {
     int s          = 0, ret, error;
     int ttl        = 240;
-    /*
-     * struct in6_addr val_hit_addr;
-     * struct in6_addr val_ip_addr;
-     */
     char opendht[] = "193.167.187.134";
     //char opendht[] = "193.167.187.130";
     //char opendht[] = "opendht.nyuld.net";
@@ -175,7 +171,6 @@ int main(int argc, char *argv[])
                             (unsigned char *) host_addr, port);
         ret   = opendht_read_response(s, dht_response);
         ret   = handle_hit_value(dht_response, (void *) dht_response2);
-        // if (ret == -1) exit (1);
         HIP_DEBUG("Get packet (fqdn) sent and ...\n");
         if (ret == 0) {
             HIP_DEBUG("Teststub: Value received from DHT: %s\n", dht_response2);
@@ -229,7 +224,6 @@ int main(int argc, char *argv[])
         ret   = opendht_get(s, (unsigned char *) val_bogus,
                             (unsigned char *) host_addr, port);
         ret   = opendht_read_response(s, dht_response2);
-        // if (ret == -1) exit (1);
         HIP_DEBUG("Get packet (bogus, will not be found (hopefully)) sent and ...\n");
         HIP_DEBUG("Teststub: Value received from DHT: %s\n", dht_response2);
         close(s);
@@ -268,7 +262,6 @@ int main(int argc, char *argv[])
         ret   = opendht_get(s, (unsigned char *) val_host_test,
                             (unsigned char *) host_addr, port);
         ret   = opendht_read_response(s, dht_response2);
-        // if (ret == -1) exit (1);
         HIP_DEBUG("Get packet sent and (value should be found, just sent it)...\n");
         HIP_DEBUG("Value received from DHT: %s\n", dht_response2);
         close(s);
@@ -304,7 +297,6 @@ int main(int argc, char *argv[])
         ret   = opendht_get(s, (unsigned char *) val_host_test,
                             (unsigned char *) host_addr, port);
         ret   = opendht_read_response(s, dht_response2);
-        // if (ret == -1) exit (1);
         HIP_DEBUG("Get packet (was removed, will not be found (hopefully)) sent and ...\n");
         HIP_DEBUG("Teststub: Value received from DHT: %s\n", dht_response2);
         close(s);

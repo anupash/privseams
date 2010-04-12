@@ -771,9 +771,6 @@ out_err:
  */
 int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 {
-    //struct endpointinfo hints, *epinfo = NULL, *res = NULL;
-    //struct endpointinfo *epinfo;
-    //struct addrinfo hints, *res = NULL;
     struct timeval stats_before, stats_after;
     struct sockaddr_hip peer_sock;
     unsigned long stats_diff_sec, stats_diff_usec;

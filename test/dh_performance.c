@@ -26,9 +26,6 @@
 #include "lib/core/hashchain.h"
 #include "lib/core/performance.h"
 
-//int DH_compute_key(unsigned char *key, BIGNUM *pub_key, DH *dh);
-
-
 
 /*! \brief Number of benchmark runs */
 #define DHP_DEFAULT_LOOPS 100
@@ -407,7 +404,6 @@ int main(int argc, char **argv)
         printf( "-------------------------------\n"
                 "RSA performance test\n"
                 "-------------------------------\n\n");
-        //impl_dsa_sign(uint8_t *digest, uint8_t *private_key, uint8_t *signature)
 
 
         rsa_key_pool = malloc(sw_create_rsa * sizeof(RSA *));
@@ -432,8 +428,6 @@ int main(int argc, char **argv)
             }
             if (sw_print_keys == TRUE) {
                 printf("\nKey %d\n", i + 1);
-            } else {
-                //dhp_load_progress(i, sw_create_dsa, 50);
             }
         }
 
@@ -485,12 +479,6 @@ int main(int argc, char **argv)
             if (!err) {
                 printf("RSA signature is crap\n");
             }
-
-
-            if (sw_print_keys) {
-                //  HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig_pool[i]->r));
-                //  HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig_pool[i]->s));
-            }
         }
         bench_secs = dhp_stop_benchmark(&bench_time);
         printf("\n");
@@ -518,10 +506,6 @@ int main(int argc, char **argv)
                 hip_perf_stop_benchmark(perf_set, PS_RSA_VERIFY);
                 hip_perf_write_benchmark(perf_set, PS_RSA_VERIFY);
             }
-            if (sw_print_keys) {
-                //HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig_pool[i]->r));
-                //HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig_pool[i]->s));
-            }
         }
         bench_secs = dhp_stop_benchmark(&bench_time);
         printf("\n");
@@ -533,7 +517,6 @@ int main(int argc, char **argv)
         printf( "-------------------------------\n"
                 "DSA performance test\n"
                 "-------------------------------\n\n");
-        //impl_dsa_sign(uint8_t *digest, uint8_t *private_key, uint8_t *signature)
 
         dsa_key_pool = malloc(sw_create_dsa * sizeof(DSA *));
         printf("Creating key pool of %d keys of length %d.\n",
@@ -558,8 +541,6 @@ int main(int argc, char **argv)
                 printf("\nKey %d\n", i + 1);
                 printf("pub_key =%s\n", BN_bn2hex(dsa_key_pool[i]->pub_key));
                 printf("priv_key =%s\n", BN_bn2hex(dsa_key_pool[i]->priv_key));
-            } else {
-                //dhp_load_progress(i, sw_create_dsa, 50);
             }
         }
 
@@ -684,8 +665,6 @@ int main(int argc, char **argv)
             printf("\nKey %d\n", i + 1);
             printf("pub_key =%s\n", BN_bn2hex(dh_key_pool[i]->pub_key));
             printf("priv_key =%s\n", BN_bn2hex(dh_key_pool[i]->priv_key));
-        } else {
-            //dhp_load_progress(i, sw_create_dh, 50);
         }
     }
     printf("\n");
