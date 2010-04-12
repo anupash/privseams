@@ -158,16 +158,22 @@ int config_read(const char *file)
         if (err != 3) {
             goto loop_end;
         }
-/*      p1 = strtok(buf, "+=");
- *      if (p1 == NULL) goto loop_end;
- *          p2 = strtok(NULL, "\0");
- *          if (p2 == NULL) goto loop_end;*/
-
+#if 0
+        p1 = strtok(buf, "+=");
+        if (p1 == NULL) {
+            goto loop_end;
+        }
+        p2 = strtok(NULL, "\0");
+        if (p2 == NULL) {
+            goto loop_end;
+        }
+#endif
         /* Set values. */
         p3 = strdup(str_var_get(p1));
         if (add == '+' && strlen(p3) > 0) {
             str_var_set(p1, "%s\n%s", p3, p2);
-        } else {              str_var_set(p1, p2);
+        } else {
+            str_var_set(p1, p2);
         }
         free(p3);
         HIP_DEBUG("config string read: %s%c%s\n", p1, add, p2);
