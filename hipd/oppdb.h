@@ -34,10 +34,10 @@ struct hip_opp_blocking_request_entry {
     //spinlock_t            lock;
     //atomic_t              refcnt;
 
-    time_t          creation_time;
-    struct in6_addr peer_ip;
-    struct in6_addr our_ip;
-    uint8_t         proxy_flag; //0: normal connection, 1: connection through proxy
+    time_t              creation_time;
+    struct in6_addr     peer_ip;
+    struct in6_addr     our_ip;
+    uint8_t             proxy_flag; //0: normal connection, 1: connection through proxy
 };
 
 typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
