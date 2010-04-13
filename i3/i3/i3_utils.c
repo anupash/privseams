@@ -4,6 +4,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include "i3_utils.h"
+
 #define MAXLINE     4096
 
 

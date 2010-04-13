@@ -12,6 +12,8 @@
 #include <stdarg.h>
 #include <errno.h>
 
+#include "i3_misc.h"
+
 void panic(char *fmt, ...)
 {
     va_list args;

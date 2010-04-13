@@ -12,6 +12,7 @@
 
 #include "esp_prot_fw_msg.h"
 #include "firewall.h"
+#include "user_ipsec_fw_msg.h"
 #include "lib/core/builder.h"
 #include "lib/core/message.h"
 

@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "downhill_simplex.h"
+
 #define TINY 1.0e-10
 #define NMAX 500000
 

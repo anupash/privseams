@@ -17,6 +17,7 @@
 #include <linux/ipsec.h>
 
 #include "config.h"
+#include "lib/ipsec/ipsec_strerror.h"
 #include "lib/ipsec/libpfkey.h"
 #include "lib/ipsec/pfkeyv2.h"
 #include "pfkeyapi.h"
