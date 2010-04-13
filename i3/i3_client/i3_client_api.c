@@ -270,6 +270,7 @@ int cl_remove_trigger(cl_trigger *ctr)
     return cl_ctx_remove_trigger(g_ctx, ctr);
 }
 
+#if 0
 /**
  * This function limits the traffic forwarded by a trigger using
  * token-bucket constraints.
@@ -312,6 +313,7 @@ int cl_trigger_ratelimit(cl_trigger *ctr, uint8_t type,
 {
     return cl_ctx_trigger_ratelimit(g_ctx, ctr, type, depth, r, R);
 }
+#endif /* 0 */
 
 /**
  *  This function is used to register a callback associated with the current context.  This

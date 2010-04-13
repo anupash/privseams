@@ -1598,6 +1598,7 @@ out_err:
     return err;
 }
 
+#if 0
 /**
  * Attach the reply to the HIT query from DHT gateway into a HIP user
  * message (for hipconf).
@@ -1763,6 +1764,7 @@ out_err:
 
     return err;
 }
+#endif /* 0 */
 
 /**
  * Copy the addresses stored in entry->peer_addr_list_to_be_added

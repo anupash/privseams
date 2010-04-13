@@ -455,10 +455,12 @@ void generate_l_constraint_addr(Key *rkey, Key *lkey)
     aeshash_l(rkey->x, lkey->x);
 }
 
+#if 0
 void generate_r_constraint_addr(Key *lkey, Key *rkey)
 {
     aeshash_r(lkey->x, rkey->x);
 }
+#endif /* 0 */
 
 static void generate_l_constraint(i3_trigger *t, Key *key)
 {

@@ -155,6 +155,7 @@ static DList *get_rule_list(const int hook)
     }
 }
 
+#if 0
 /**
  * accessor function to set the rule list of the given iptables hook
  *
@@ -171,6 +172,7 @@ static void set_rule_list(DList *list, const int hook)
         forward_rules = list;
     }
 }
+#endif /* 0 */
 
 /*------------- PRINTING -----------------*/
 
@@ -358,6 +360,7 @@ static void free_rule(struct rule *rule)
 
 /*------------- COPYING -----------------*/
 
+#if 0
 /**
  * Replicate a hit_option structure
  *
@@ -629,6 +632,7 @@ static int rules_equal(const struct rule *rule1,
     }
     return 1;
 }
+#endif /* 0 */
 
 /*---------------PARSING---------------*/
 
@@ -1327,6 +1331,7 @@ void read_rule_file(const char *file_name)
     forward_rules = (DList *) forward;
 }
 
+#if 0
 /**
  * Append a rule to an chain's ruleset by copying
  *
@@ -1505,3 +1510,4 @@ void test_parse_copy(void)
     free_rule(rule);
     free_rule(copy);
 }
+#endif /* 0 */

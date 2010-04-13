@@ -270,6 +270,7 @@ char **read_strings_par(char *path, int *num)
     return toret;
 }
 
+#if 0
 int test_main(void)
 {
     char fake[200];
@@ -289,3 +290,4 @@ int test_main(void)
 
     return 0;
 }
+#endif /* 0 */

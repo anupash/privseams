@@ -845,6 +845,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 /* END OF PRIMITIVE FUNCTIONS */
 
+#if 0
 /**
  * Select the preferred address within the addresses of the given SPI.
  * The selected address is copied to @c addr, if it is non-NULL.
@@ -895,6 +896,7 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 
     return err;
 }
+#endif /* 0 */
 
 /**
  * Gets some of the peer's usable IPv6 address.
@@ -1338,6 +1340,7 @@ void hip_init_hadb(void)
     }
 }
 
+#if 0
 /**
  * receive a pointer to the default network delivery function pointer
  * set of a host association
@@ -1381,6 +1384,7 @@ hip_output_filter_func_set_t *hip_get_output_filter_default_func_set(void)
 {
     return &default_output_filter_func_set;
 }
+#endif /* 0 */
 
 /**
  * receive a pointer to the default preprocessing function pointer
@@ -1445,6 +1449,7 @@ int hip_hadb_set_handle_function_set(hip_ha_t *entry,
     return -1;
 }
 
+#if 0
 /**
  * Sets function pointer set for an hadb record. Pointer values will not be
  * copied!
@@ -1464,6 +1469,7 @@ int hip_hadb_set_update_function_set(hip_ha_t *entry,
     //HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
     return -1;
 }
+#endif /* 0 */
 
 /**
  * Switches on a local control bit for a host assosiation entry.

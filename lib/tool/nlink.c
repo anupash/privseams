@@ -1426,6 +1426,7 @@ int set_up_device(char *dev, int up)
     return err;
 }
 
+#if 0
 /**
  * xfrm_selector_upspec - fill port info in the selector.
  * Selector is bound to HITs.
@@ -1452,6 +1453,7 @@ int xfrm_selector_upspec(struct xfrm_selector *sel,
 
     return 0;
 }
+#endif /* 0 */
 
 /**
  * fill the port numbers for the UDP tunnel for IPsec

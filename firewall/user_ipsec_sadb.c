@@ -318,6 +318,7 @@ out_err:
     return err;
 }
 
+#if 0
 /**
  * prints a single link entry in the linkdb
  *
@@ -361,6 +362,7 @@ void hip_linkdb_print(void)
         HIP_DEBUG("linkdb contains no items\n");
     }
 }
+#endif /* 0 */
 
 /**
  * sets the values of a SA entry

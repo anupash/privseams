@@ -488,6 +488,7 @@ out_err:
     return err;
 }
 
+#if 0
 /**
  * get suite id from unit test parameter (interprocess only)
  *
@@ -511,6 +512,7 @@ uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test)
 {
     return ntohs(test->caseid);
 }
+#endif /* 0 */
 
 /**
  * retrive host id public key algorithm
@@ -937,6 +939,7 @@ void *hip_get_param_contents_direct(const void *tlv_common)
     return ((void *) tlv_common) + sizeof(struct hip_tlv_common);
 }
 
+#if 0
 /**
  * get nth parameter of given type from the message
  *
@@ -968,6 +971,7 @@ void *hip_get_nth_param(const struct hip_common *msg,
     }
     return NULL;
 }
+#endif /* 0 */
 
 /**
  * @brief Find the first free parameter position in a message
@@ -2224,6 +2228,7 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
     return err;
 }
 
+#if 0
 /**
  * build a HIP ECHO_M parameter
  *
@@ -2252,8 +2257,8 @@ int hip_build_param_echo_m(struct hip_common *msg, void *opaque, int len,
                                   opaque);
     return err;
 }
-
 #endif /* CONFIG_HIP_MIDAUTH */
+#endif /* 0 */
 
 /**
  * build a HIP R1_COUNTER parameter
@@ -3578,6 +3583,7 @@ void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
                hip_get_param_total_len(host_id_hdr));
 }
 
+#if 0
 /**
  * build and append host id parameter into a message
  * \addtogroup params
@@ -3598,6 +3604,7 @@ int hip_build_param_host_id(struct hip_common *msg,
     err = hip_build_param(msg, host_id_hdr);
     return err;
 }
+#endif /* 0 */
 
 /**
  * encapsulate a host name into a parameter (interprocess communications  only)
@@ -3815,6 +3822,7 @@ int hip_build_param_cert(struct hip_common *msg, uint8_t group, uint8_t count,
     return err;
 }
 
+#if 0
 /**
  * Build a NOTIFICATION parameter.
  *
@@ -3845,6 +3853,7 @@ int hip_build_param_notification(struct hip_common *msg, uint16_t msgtype,
                                   data);
     return err;
 }
+#endif /* 0 */
 
 /**
  * append a blind "nonce" parameter to a message
@@ -4278,6 +4287,7 @@ int rsa_to_hip_endpoint(RSA *rsa,
     return err;
 }
 
+#if 0
 /**
  * allocate memory and write the header for host id parameter
  *
@@ -4346,6 +4356,7 @@ out_err:
 
     return err;
 }
+#endif /* 0 */
 
 /**
  * Translate a host id into a HIT
@@ -4588,6 +4599,7 @@ union hip_locator_info_addr *hip_get_locator_item(void *item_list, int index)
     return (union hip_locator_info_addr *) result;
 }
 
+#if 0
 /**
  * retrieve a @c LOCATOR ADDRESS ITEM@c from a list.
  *
@@ -4647,6 +4659,7 @@ struct hip_locator_info_addr_item *hip_get_locator_item_as_one(struct hip_locato
     }
     return address_pointer;
 }
+#endif /* 0 */
 
 /**
  * retrieve a IP address from a locator item structure
@@ -4669,6 +4682,7 @@ struct in6_addr *hip_get_locator_item_address(void *item)
     }
 }
 
+#if 0
 /**
  * retreive a port number from a type 2 locator item structure
  *
@@ -4707,6 +4721,7 @@ uint32_t hip_get_locator_item_priority(void *item)
         return ntohl(((struct hip_locator_info_addr_item2 *) temp)->priority);
     }
 }
+#endif /* 0 */
 
 /**
  * Build a @c RELAY_TO parameter to the HIP packet @c msg.

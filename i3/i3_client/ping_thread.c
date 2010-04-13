@@ -72,6 +72,7 @@ static int status_unlock(void)
     return 0;
 }
 
+#if 0
 char is_valid(char type)
 {
     if (PING_STATUS_STEADY == type || PING_STATUS_START == type) {
@@ -80,6 +81,7 @@ char is_valid(char type)
         return 0;
     }
 }
+#endif /* 0 */
 
 void set_status(uint64_t *ping_start_time, uint64_t curr_time)
 {
@@ -229,6 +231,7 @@ static void init_coordinates(I3ServerList *list)
     compute_coordinates(num_landmarks, coord_rtt);
 }
 
+#if 0
 /* Update the coordinates of a node using ping information */
 void update_coordinate(I3ServerList *list, I3ServerListNode *next_to_ping)
 {
@@ -282,6 +285,7 @@ void update_coordinate(I3ServerList *list, I3ServerListNode *next_to_ping)
     // repopulate ping list afresh
     change_ping_list(list, &next_to_ping, 1);
 }
+#endif /* 0 */
 
 /** This function is called to close the ping socket
  */

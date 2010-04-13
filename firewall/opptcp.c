@@ -305,6 +305,7 @@ int tcp_packet_has_i1_option(void *tcphdrBytes, int hdrLen)
     return foundHipOpp;
 }
 
+#if 0
 /**
  * Send the necessary data to hipd, so that a tcp packet is sent from there. This was done because it was not possible to send a packet directly from here.
  *
@@ -370,3 +371,4 @@ int hip_request_send_tcp_packet(void *hdr,
 out_err:
     return err;
 }
+#endif /* 0 */

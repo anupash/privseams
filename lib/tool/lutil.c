@@ -192,6 +192,7 @@ char *getitem(List *ilist, int n)
     return NULL;
 }
 
+#if 0
 /**
  * copy the given contents to the Nth element in the linked list
  *
@@ -222,6 +223,7 @@ char *setdataitem(List *ilist, int n, char *data)
     }
     return NULL;
 }
+#endif /* 0 */
 
 /**
  * calculate difference between two timevalues
