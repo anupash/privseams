@@ -40,10 +40,6 @@ typedef struct iditem_ {
     struct iditem_ *next;
 } IDitem;
 
-/*static int unpack_print_getnext(char *buf, int n, unsigned long *succ_addr,
- *                              unsigned short *succ_port);*/
-/*static IDitem *add_chordID(IDitem *head, chordID *id);*/
-/*static int find_chordID(IDitem *head, chordID *id);*/
 static int recv_packet(int in_sock, fd_set fdset, int nfds,
                        char *buf, int buf_len,
                        unsigned long chordsrv_addr, unsigned long chordsrv_port);
@@ -76,7 +72,6 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < ID_LEN; i++) {
         char tmp[3];
-//    char  t;
 
         tmp[0] = argv[1][2 * i];
         tmp[1] = argv[1][2 * i + 1];

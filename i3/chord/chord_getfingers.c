@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
     int nfds;
     int retries = 0;
     byte buf[BUFSIZE];
-//  chordID id;
 
     /* check command line args */
     if (argc < 3) {

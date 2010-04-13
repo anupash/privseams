@@ -131,17 +131,6 @@ int get_entry(char *buf, char *end, char *ip_addr, int *port,
         coord_start++;
     }
 
-    /* lat_start = strstr(status_start, " ");
-     * if (lat_start == NULL || lat_start > end)
-     *  return 0;
-     * else
-     *  lat_start++;
-     * long_start = strstr(lat_start, " ");
-     * if (long_start == NULL || long_start > end)
-     *  return 0;
-     * else
-     *  long_start++;*/
-
     /* look for delimiter between ip address and port number ":" ... */
     port_start = strstr(ip_start, ":");
     if (port_start == NULL || port_start >= id_start) {
