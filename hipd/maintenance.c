@@ -466,10 +466,9 @@ int hip_periodic_maintenance(void)
     }
 #endif
 
-//#ifdef CONFIG_HIP_UDPRELAY
     /* Clear the expired records from the relay hashtable. */
     hip_relht_maintenance();
-//#endif
+
     /* Clear the expired pending service requests. This is by no means time
      * critical operation and is not needed to be done on every maintenance
      * cycle. Once every 10 minutes or so should be enough. Just for the
