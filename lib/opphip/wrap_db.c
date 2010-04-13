@@ -55,7 +55,7 @@ int hip_exists_translation(int pid, int socket, pthread_t tid)
  * @param ptr the key to index the hash
  * @return hash of the @c key
  */
-unsigned long hip_pid_socket_hash(const void *ptr)
+static unsigned long hip_pid_socket_hash(const void *ptr)
 {
     hip_opp_socket_t *entry = (hip_opp_socket_t *) ptr;
     uint8_t hash[HIP_AH_SHA_LEN];
@@ -80,7 +80,7 @@ static IMPLEMENT_LHASH_HASH_FN(hip_pid_socket, const void)
  * @param ptr2 hash table key
  * @return return 0 if @c ptr1 and @cptr2 match, otherwise 1
  */
-int hip_socketdb_cmp(const void *ptr1, const void *ptr2)
+static int hip_socketdb_cmp(const void *ptr1, const void *ptr2)
 {
     unsigned long key1, key2;
 

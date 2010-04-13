@@ -88,7 +88,7 @@ void *dl_function_name[] =
  * using LD_PRELOAD.
  *
  */
-void hip_init_dlsym_functions(void)
+static void hip_init_dlsym_functions(void)
 {
     int err     = 0, i;
     char *error = NULL;
@@ -110,7 +110,7 @@ void hip_init_dlsym_functions(void)
  * Uninitialize the @c dl_function_fd array to stop wrapping of socket calls
  * using LD_PRELOAD.
  */
-void hip_uninit_dlsym_functions(void)
+static void hip_uninit_dlsym_functions(void)
 {
     int i = 0;
     for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
@@ -122,7 +122,7 @@ void hip_uninit_dlsym_functions(void)
  * Uninitialize all databases.
  *
  */
-void hip_uninitialize_db(void)
+static void hip_uninitialize_db(void)
 {
     hip_uninit_dlsym_functions();
     hip_uninit_socket_db();
@@ -132,7 +132,7 @@ void hip_uninitialize_db(void)
  * Initialize the databases on-the-fly when the application makes
  * socket calls.
  */
-void hip_initialize_db_when_not_exist(void)
+static void hip_initialize_db_when_not_exist(void)
 {
     const char *cfile = "default";
     int err           = 0;
@@ -167,7 +167,7 @@ out_err:
  * @param hit the local HIT is written here
  * @return zero on success, non-zero on failure
  */
-int hip_get_local_hit_wrapper(hip_hit_t *hit)
+static int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
     int err                = 0;
     char *param;
@@ -296,11 +296,11 @@ static inline int hip_wrapping_is_applicable(const struct sockaddr *sa,
  * @param sa the socket address structure
  * @param sa_len length of @c sa in bytes
  */
-void hip_store_orig_socket_info(hip_opp_socket_t *entry,
-                                int is_peer,
-                                const int socket,
-                                const struct sockaddr *sa,
-                                const socklen_t sa_len)
+static void hip_store_orig_socket_info(hip_opp_socket_t *entry,
+                                       int is_peer,
+                                       const int socket,
+                                       const struct sockaddr *sa,
+                                       const socklen_t sa_len)
 {
     /* Fill in the information of original socket */
     entry->orig_socket = socket;
@@ -328,13 +328,13 @@ void hip_store_orig_socket_info(hip_opp_socket_t *entry,
  *
  * @return zero on success, non-zero on failure
  */
-int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
-                                   struct in6_addr *peer_hit,
-                                   const struct in6_addr *local_hit,
-                                   in_port_t *src_tcp_port,
-                                   in_port_t *dst_tcp_port,
-                                   int *fallback,
-                                   int *reject)
+static int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
+                                          struct in6_addr *peer_hit,
+                                          const struct in6_addr *local_hit,
+                                          in_port_t *src_tcp_port,
+                                          in_port_t *dst_tcp_port,
+                                          int *fallback,
+                                          int *reject)
 {
     struct hip_common *msg = NULL;
     hip_hit_t *ptr         = NULL;
@@ -408,7 +408,7 @@ out_err:
  * @param entry opportunistic database entry
  * @param is_peer one when setting state for remote host and zero for local host
  */
-void hip_translate_to_original(hip_opp_socket_t *entry, int is_peer)
+static void hip_translate_to_original(hip_opp_socket_t *entry, int is_peer)
 {
     /* translated entries correspond to originals   */
     _HIP_DEBUG("Translating to original %d\n", entry->orig_socket);
@@ -447,9 +447,9 @@ static inline int hip_create_new_hit_socket(hip_opp_socket_t *entry)
  * @param peer one if HIT is remote or zero for local HIT
  * @return
  */
-int hip_set_translation(hip_opp_socket_t *entry,
-                        struct sockaddr_in6 *hit,
-                        int is_peer)
+static int hip_set_translation(hip_opp_socket_t *entry,
+                               struct sockaddr_in6 *hit,
+                               int is_peer)
 {
     int err = 0;
 
@@ -490,7 +490,7 @@ out_err:
  * @param hit a local HIT used for binding
  * @return same return values as bind()
  */
-int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit)
+static int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit)
 {
     int err = 0;
 
@@ -534,12 +534,12 @@ out_err:
  *
  * @return zero on success or non-zero on error
  */
-int hip_translate_new(hip_opp_socket_t *entry,
-                      const int orig_socket,
-                      const struct sockaddr *orig_id,
-                      const socklen_t orig_id_len,
-                      int is_peer, int is_dgram,
-                      int is_translated, int wrap_applicable)
+static int hip_translate_new(hip_opp_socket_t *entry,
+                             const int orig_socket,
+                             const struct sockaddr *orig_id,
+                             const socklen_t orig_id_len,
+                             int is_peer, int is_dgram,
+                             int is_translated, int wrap_applicable)
 {
     int err                   = 0;
     /*the ports needed to send the TCP SYN i1*/
@@ -676,12 +676,13 @@ out_err:
  * @param wrap_applicable one when wrapping seems plausible and zero otherwise
  * @return
  */
-int hip_old_translation_is_ok(hip_opp_socket_t *entry,
-                              const int orig_socket,
-                              const struct sockaddr *orig_id,
-                              const socklen_t orig_id_len,
-                              int is_peer, int is_dgram,
-                              int is_translated, int wrap_applicable)
+static int hip_old_translation_is_ok(hip_opp_socket_t *entry,
+                                     const int orig_socket,
+                                     const struct sockaddr *orig_id,
+                                     const socklen_t orig_id_len,
+                                     int is_peer, int is_dgram,
+                                     int is_translated,
+                                     int wrap_applicable)
 {
     void *translated_id =
         (is_peer ? &entry->translated_peer_id : &entry->translated_local_id);
@@ -720,7 +721,8 @@ int hip_old_translation_is_ok(hip_opp_socket_t *entry,
  * @param tid thread identifier
  * @return the created database entry (must be freed by the invoker)
  */
-hip_opp_socket_t *hip_create_new_opp_entry(int pid, const int fd, pthread_t tid)
+static hip_opp_socket_t *hip_create_new_opp_entry(int pid, const int fd,
+                                                  pthread_t tid)
 {
     hip_opp_socket_t *entry = NULL;
     int err                 = 0;
@@ -755,8 +757,8 @@ out_err:
  * @param  protocol protocol value
  * @return zero on success, non-zero on error
  */
-int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
-                              int protocol)
+static int hip_add_orig_socket_to_db(int socket_fd, int domain,
+                                     int type, int protocol)
 {
     hip_opp_socket_t *entry = NULL;
     int pid                 = 0, err = 0;
@@ -808,11 +810,13 @@ out_err:
  * @param force_orig one if the caller wants to force fall back to the original socket and identifier, zero otherwise
  * @return zero on success, non-zero on error
  */
-int hip_translate_socket(const int *orig_socket, const struct sockaddr *orig_id,
-                         const socklen_t *orig_id_len, int **translated_socket,
-                         struct sockaddr **translated_id,
-                         socklen_t **translated_id_len, int is_peer,
-                         int is_dgram, int force_orig)
+static int hip_translate_socket(const int *orig_socket,
+                                const struct sockaddr *orig_id,
+                                const socklen_t *orig_id_len,
+                                int **translated_socket,
+                                struct sockaddr **translated_id,
+                                socklen_t **translated_id_len, int is_peer,
+                                int is_dgram, int force_orig)
 {
     int err                 = 0, pid = 0, is_translated = 0, wrap_applicable = 0;
     hip_opp_socket_t *entry = NULL;

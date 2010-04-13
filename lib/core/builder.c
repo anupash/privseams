@@ -126,9 +126,9 @@ static void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
  *
  * @see hip_build_endpoint_hdr()
  */
-void hip_build_param_host_id_only_priv(struct hip_host_id_priv *host_id,
-                                       const void *rr_data,
-                                       const char *fqdn)
+static void hip_build_param_host_id_only_priv(struct hip_host_id_priv *host_id,
+                                              const void *rr_data,
+                                              const char *fqdn)
 {
     unsigned int rr_len = ntohs(host_id->hi_length) -
                           sizeof(struct hip_host_id_key_rdata);
@@ -225,7 +225,7 @@ void hip_msg_free(struct hip_common *msg)
  * @note compared to hip_convert_msg_total_len_to_bytes_16(), this
  *       function inputs an 8-bit integer
  */
-uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len_t len)
+static uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len_t len)
 {
     return (len == 0) ? 0 : ((len + 1) << 3);
 }
@@ -239,7 +239,7 @@ uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len_t len)
  * @note compared to hip_convert_msg_total_len_to_bytes(), this
  *       function inputs a 16-bit integer
  */
-uint16_t hip_convert_msg_total_len_to_bytes_16(uint16_t len)
+static uint16_t hip_convert_msg_total_len_to_bytes_16(uint16_t len)
 {
     return (len == 0) ? 0 : ((len + 1) << 3);
 }
@@ -416,7 +416,7 @@ hip_tlv_type_t hip_get_param_type(const void *tlv_common)
  * @param tlv_common pointer to the parameter
  * @param type type of the parameter (in host byte order)
  */
-void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
+static void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
 {
     tlv_generic->type = htons(type);
 }
@@ -600,7 +600,7 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds)
  * @return 1 if the message length is valid, or 0 if the message length is
  *          invalid
  */
-int hip_check_user_msg_len(const struct hip_common *msg)
+static int hip_check_user_msg_len(const struct hip_common *msg)
 {
     uint16_t len;
 
@@ -642,7 +642,7 @@ int hip_check_network_msg_len(const struct hip_common *msg)
  * @return 1 if the message type is valid, or 0 if the message type is
  *          invalid
  */
-int hip_check_network_msg_type(const struct hip_common *msg)
+static int hip_check_network_msg_type(const struct hip_common *msg)
 {
     int ok                     = 0;
     hip_hdr_type_t supported[] =
@@ -677,7 +677,7 @@ int hip_check_network_msg_type(const struct hip_common *msg)
  *
  * @return 1 if parameter type is valid, or 0 if parameter type is invalid
  */
-int hip_check_userspace_param_type(const struct hip_tlv_common *param)
+static int hip_check_userspace_param_type(const struct hip_tlv_common *param)
 {
     return 1;
 }
@@ -698,7 +698,7 @@ int hip_check_userspace_param_type(const struct hip_tlv_common *param)
  *       here only be the parameters listed in Sections 5.2.3 through Section
  *       5.2.18 of the draft-ietf-hip-base-06?
  */
-int hip_check_network_param_type(const struct hip_tlv_common *param)
+static int hip_check_network_param_type(const struct hip_tlv_common *param)
 {
     int ok                 = 0;
     hip_tlv_type_t i;
@@ -790,8 +790,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
  * @note The msg is passed also in to check to the parameter will not cause buffer
  * overflows.
  */
-int hip_check_param_contents_len(const struct hip_common *msg,
-                                 const struct hip_tlv_common *param)
+static int hip_check_param_contents_len(const struct hip_common *msg,
+                                        const struct hip_tlv_common *param)
 {
     int ok        = 0;
     int param_len = hip_get_param_total_len(param);
@@ -1088,9 +1088,9 @@ void hip_calc_hdr_len(struct hip_common *msg)
  * @param contents_size size of the contents after the TLV header
  *                 (in host byte order)
  */
-void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
-                                hip_tlv_len_t tlv_size,
-                                hip_tlv_len_t contents_size)
+static void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
+                                       hip_tlv_len_t tlv_size,
+                                       hip_tlv_len_t contents_size)
 {
     hip_set_param_contents_len(tlv_common,
                                tlv_size + contents_size -
@@ -1108,7 +1108,8 @@ void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
  * @param contents_size size of the contents after type and length fields
  *                 (in host byte order)
  */
-void hip_calc_param_len(struct hip_tlv_common *tlv_common, hip_tlv_len_t contents_size)
+static void hip_calc_param_len(struct hip_tlv_common *tlv_common,
+                               hip_tlv_len_t contents_size)
 {
     hip_calc_generic_param_len(tlv_common,
                                sizeof(struct hip_tlv_common),
@@ -1427,7 +1428,7 @@ out:
  * @todo this function may be unneccessary because the input handlers
  *       already do some checking. Currently they are double checked..
  */
-int hip_check_network_param_attributes(const struct hip_tlv_common *param)
+static int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 {
     hip_tlv_type_t type = hip_get_param_type(param);
     int err             = 0;
@@ -2824,7 +2825,7 @@ out_err:
  * @param transform_type the type of the transform
  * @return the number of suite ids that can be used for transform_type
  */
-uint16_t hip_get_transform_max(hip_tlv_type_t transform_type)
+static uint16_t hip_get_transform_max(hip_tlv_type_t transform_type)
 {
     uint16_t transform_max = 0;
 
@@ -3674,8 +3675,8 @@ char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
  * @param endpoint the endpoint structure
  * @return zero on success and negative on failure
  */
-int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
-                                              const struct endpoint_hip *endpoint)
+static int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
+                                                     const struct endpoint_hip *endpoint)
 {
     int err = 0;
 
@@ -3694,8 +3695,8 @@ int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
  * @param endpoint an endpoint structure containing a HIT
  * @return zero on success and negative on failure
  */
-int hip_build_param_eid_endpoint_from_hit(struct hip_common *msg,
-                                          const struct endpoint_hip *endpoint)
+static int hip_build_param_eid_endpoint_from_hit(struct hip_common *msg,
+                                                 const struct endpoint_hip *endpoint)
 {
     struct hip_eid_endpoint eid_endpoint;
     int err = 0;
@@ -4358,12 +4359,12 @@ out_err:
  * @param is_dsa 1 if the key is DSA or zero for RSA
  * @return zero on success and negative on failure
  */
-int hip_any_key_to_hit(void *any_key,
-                       unsigned char *any_key_rr,
-                       int hit_type,
-                       hip_hit_t *hit,
-                       int is_public,
-                       int is_dsa)
+static int hip_any_key_to_hit(void *any_key,
+                              unsigned char *any_key_rr,
+                              int hit_type,
+                              hip_hit_t *hit,
+                              int is_public,
+                              int is_dsa)
 {
     int err = 0, key_rr_len;
     unsigned char *key_rr = NULL;

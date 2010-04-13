@@ -464,7 +464,7 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
  *           ret = ACTION_NEWACT;
  *       ...
  */
-int hip_conf_get_action(char *argv[])
+static int hip_conf_get_action(char *argv[])
 {
     int ret = -1;
 
@@ -560,7 +560,7 @@ int hip_conf_get_action(char *argv[])
  * @param  action action type
  * @return how many arguments needs to be given at least
  */
-int hip_conf_check_action_argc(int action)
+static int hip_conf_check_action_argc(int action)
 {
     int count = 0;
 
@@ -622,7 +622,7 @@ int hip_conf_check_action_argc(int action)
  * @param  text the type as a string
  * @return the numeric type id correspoding to the symbolic text
  */
-int hip_conf_get_type(char *text, char *argv[])
+static int hip_conf_get_type(char *text, char *argv[])
 {
     int ret = -1;
 
@@ -738,7 +738,7 @@ int hip_conf_get_type(char *text, char *argv[])
  * @return an index for argv[], which indicates the type argument.
  *         Usually either 1 or 2.
  */
-int hip_conf_get_type_arg(int action)
+static int hip_conf_get_type_arg(int action)
 {
     int type_arg = -1;
 
@@ -801,8 +801,8 @@ int hip_conf_get_type_arg(int action)
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
-                           int match_hip)
+static int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
+                                  int match_hip)
 {
     int err              = 1;
     struct addrinfo *res = NULL, *rp;
@@ -2780,10 +2780,10 @@ out_err:
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_hi3(hip_common_t *msg,
-                        int action,
-                        const char *opt[],
-                        int optc, int send_only)
+static int hip_conf_handle_hi3(hip_common_t *msg,
+                               int action,
+                               const char *opt[],
+                               int optc, int send_only)
 {
     int err = 0, status = 0;
 

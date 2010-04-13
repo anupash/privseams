@@ -53,10 +53,9 @@ int hip_build_param_echo(struct hip_common *, void *, int, int, int);
 int hip_build_param_eid_endpoint(struct hip_common *,
                                  const struct endpoint_hip *);
 int hip_build_param_eid_iface(struct hip_common *, hip_eid_iface_type_t);
-int
-        hip_build_param_eid_sockaddr(struct hip_common *,
-                                     struct sockaddr *,
-                                     size_t);
+int hip_build_param_eid_sockaddr(struct hip_common *,
+                                 struct sockaddr *,
+                                 size_t);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *,
                                         struct hip_tlv_common *);
 int hip_build_param_encrypted_aes_sha1(struct hip_common *,

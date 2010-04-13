@@ -30,7 +30,7 @@
  * @param ptr an pointer to hash (must be at least 32 bits)
  * @return a hash of the first 32-bits of the ptr's data
  */
-unsigned long hip_hash_generic(const void *ptr)
+static unsigned long hip_hash_generic(const void *ptr)
 {
     unsigned long hash = (unsigned long) (*((uint32_t *) ptr));
     return hash % ULONG_MAX;
@@ -43,7 +43,7 @@ unsigned long hip_hash_generic(const void *ptr)
  * @param ptr2 a pointer to an item in the hash table
  * @return zero if the pointers match or one otherwise
  */
-int hip_match_generic(const void *ptr1, const void *ptr2)
+static int hip_match_generic(const void *ptr1, const void *ptr2)
 {
     return ptr1 != ptr2;
 }

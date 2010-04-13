@@ -47,7 +47,7 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
  * @param the name to map
  * @return the UID or -1 on error
  */
-int hip_user_to_uid(char *name)
+static int hip_user_to_uid(char *name)
 {
     int uid            = -1;
     int i;

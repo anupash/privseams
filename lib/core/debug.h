@@ -172,6 +172,12 @@ void hip_hexdump(const char *file,
                  const char *prefix,
                  const void *str,
                  int len);
+int hip_hexdump_parsed(const char *file,
+                       int line,
+                       const char *function,
+                       const char *prefix,
+                       const void *str,
+                       int len);
 void hip_print_packet(const char *file,
                       int line,
                       const char *function,
