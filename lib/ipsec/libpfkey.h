@@ -104,7 +104,6 @@ int ipsec_check_keylen2 __P((u_int, u_int, u_int));
 int ipsec_get_keylen __P((u_int, u_int, struct sadb_alg *));
 char *ipsec_dump_policy_withports __P((void *, const char *));
 void ipsec_hexdump __P((const void *, int));
-const char *ipsec_strerror __P((void));
 void kdebug_sadb __P((struct sadb_msg *));
 ipsec_policy_t ipsec_set_policy __P((__ipsec_const char *, int));
 int ipsec_get_policylen __P((ipsec_policy_t));
