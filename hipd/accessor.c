@@ -193,6 +193,47 @@ int hip_query_opportunistic_mode(struct hip_common *msg)
 out_err:
     return err;
 }
+
+/**
+ * Query if a pseudo HIT is stored in the host association
+ * data base.
+ *
+ * @param msg a message containing a HIP_PARAM_PSEUDO_HIT parameter
+ * @return zero on success or negative on error
+ */
+int hip_query_ip_hit_mapping(struct hip_common *msg)
+{
+    int err              = 0;
+    unsigned int mapping = 0;
+    struct in6_addr *hit = NULL;
+    hip_ha_t *entry      = NULL;
+
+
+    hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_PSEUDO_HIT);
+    HIP_ASSERT(hit_is_opportunistic_hit(hit));
+
+    entry = hip_hadb_try_to_find_by_peer_hit(hit);
+    if (entry) {
+        mapping = 1;
+    } else {
+        mapping = 0;
+    }
+
+    hip_msg_init(msg);
+
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_ANSWER_IP_HIT_MAPPING_QUERY, 0),
+             -1,
+             "build user header failed\n");
+    HIP_IFEL(hip_build_param_contents(msg,
+                                      (void *) &mapping,
+                                      HIP_PARAM_UINT,
+                                      sizeof(unsigned int)),
+              -1,
+              "build param mapping failed\n");
+
+out_err:
+    return err;
+}
 #endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 #ifdef CONFIG_HIP_I3
@@ -251,47 +292,6 @@ int hip_get_hi3_status(void)
     return hip_use_hi3;
 }
 #endif /* CONFIG_HIP_I3 */
-
-/**
- * Query if a pseudo HIT is stored in the host association
- * data base.
- *
- * @param msg a message containing a HIP_PARAM_PSEUDO_HIT parameter
- * @return zero on success or negative on error
- */
-int hip_query_ip_hit_mapping(struct hip_common *msg)
-{
-    int err              = 0;
-    unsigned int mapping = 0;
-    struct in6_addr *hit = NULL;
-    hip_ha_t *entry      = NULL;
-
-
-    hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_PSEUDO_HIT);
-    HIP_ASSERT(hit_is_opportunistic_hit(hit));
-
-    entry = hip_hadb_try_to_find_by_peer_hit(hit);
-    if (entry) {
-        mapping = 1;
-    } else {
-        mapping = 0;
-    }
-
-    hip_msg_init(msg);
-
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_ANSWER_IP_HIT_MAPPING_QUERY, 0),
-             -1,
-             "build user header failed\n");
-    HIP_IFEL(hip_build_param_contents(msg,
-                                      (void *) &mapping,
-                                      HIP_PARAM_UINT,
-                                      sizeof(unsigned int)),
-              -1,
-              "build param mapping failed\n");
-
-out_err:
-    return err;
-}
 
 /**
  * Query status of client-side HIP proxy
