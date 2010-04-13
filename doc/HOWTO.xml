@@ -364,8 +364,9 @@
       </para></listitem>
       <listitem><para>
         If you interrupt the build during pjproject compilation,
-        you'll receive an error ".pjlib-hipl.depend: XX: *** missing
-        separator.  Stop" during further builds. If you encounter such
+        you'll receive an error
+        ".pjlib-hipl.depend: XX: *** missing separator.  Stop"
+        during further builds. If you encounter such
         problem, you have to solve it manually by executing rm -f
         `find pjproject -name '*.depend'` or by getting fresh version of the
         source code.
@@ -1915,8 +1916,9 @@ $ make V=99
               See the log messages for information about the result of HIP base
               exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
               tools for dumping the network traffic during the base exchange.
-              For tcpdump, you can use "tcpdump -n -i any esp or proto 139 or
-              port 10500" to catch HIP-only traffic. It should be taken into account
+              For tcpdump, you can use
+              "tcpdump -n -i any esp or proto 139 or port 10500"
+              to catch HIP-only traffic. It should be taken into account
               that LSIs are local identifiers, so they are not in the wire.
             </para>
             <para>
@@ -2699,11 +2701,12 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
       </para>
 
     <para>
-      With "hipconf hit-to-ip on", the HIP daemon uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.
+      With "hipconf hit-to-ip on", the HIP daemon uses IP addresses of
+      5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.
       to contact peer host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
     </para>
-    <para>Default hit-to-ip.infrahip.net. suffix can be changed with "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;.
-          Please note it is independent from HIT_TO_IP_ZONE in /etc/hip/nsupdate.conf"
+    <para>Default hit-to-ip.infrahip.net. suffix can be changed with
+      "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;. Please note it is independent from HIT_TO_IP_ZONE in /etc/hip/nsupdate.conf"
     </para>
     <para>
       With "hipconf nsupdate on", the HIP daemon also maintains
@@ -2946,15 +2949,15 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       <para>
         The rendezvous and relay extensions extend HIP and the HIP
         registration extension for initiating communication between HIP nodes
-        via a HIP rendezvous server or a HIP relay server. The rendezvous server (RVS) and
-        the HIP relay server serve as an initial contact point ("rendezvous
-        point") for its clients. The clients of an RVS / HIP relay server are
-        HIP nodes that use the HIP Registration Protocol to register their
-        HIT to IP address mappings with the server. After this registration,
-        other HIP nodes can initiate a base exchange using the IP address of the
-        server instead of the current IP address of the node they attempt to
-        contact. Essentially, the clients of a server become reachable at the
-        server's IP addresses.
+        via a HIP rendezvous server or a HIP relay server. The rendezvous
+        server (RVS) and the HIP relay server serve as an initial contact point
+        ("rendezvous point") for its clients. The clients of an RVS / HIP relay
+        server are HIP nodes that use the HIP Registration Protocol to register
+        their HIT to IP address mappings with the server. After this
+        registration, other HIP nodes can initiate a base exchange using the
+        IP address of the server instead of the current IP address of the node
+        they attempt to contact. Essentially, the clients of a server become
+        reachable at the server's IP addresses.
       </para>
       <para>
         The primary objective of the rendezvous extension is to improve
@@ -3233,8 +3236,10 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
                   &lt;RESPONDER HIT&gt; &lt;RESPONDER NAME&gt;. This is the line
                   that you would have in a normal base exchange execution not
                   involving an RVS. Please make sure that you use the same HIT
-                  here as &lt;RESPONDER HIT&gt; as what the "<emphasis>hipconf get hi
-                default</emphasis>" outputs at the responder.</para>
+                  here as &lt;RESPONDER HIT&gt; as what the
+                  "<emphasis>hipconf get hi default</emphasis>"
+                  outputs at the responder.
+                </para>
               </listitem>
             </orderedlist>
           </listitem>
@@ -3671,14 +3676,12 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
                 <blockquote>
                   <para>
                     <emphasis>
-                      "The requester MUST NOT include more than one REG_REQUEST
-                      parameter in its I2 or UPDATE packets..."
+                      "The requester MUST NOT include more than one REG_REQUEST parameter in its I2 or UPDATE packets..."
                     </emphasis>
                   </para>
                   <para>
                     <emphasis>
-                      "The registrar MUST NOT include more than one REG_RESPONSE
-                      parameter in its R2 or UPDATE packets..."
+                      "The registrar MUST NOT include more than one REG_RESPONSE parameter in its R2 or UPDATE packets..."
                     </emphasis>
                   </para>
                 </blockquote>
@@ -3729,8 +3732,9 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               "<emphasis>Reg Types</emphasis>", it processes each registration
               type one after other. It is up to each service how the service
               reacts to a duplicate response. If the server receives an
-              REG_REQUEST parameter that includes duplicate "<emphasis>Reg
-              Types</emphasis>", the whole parameter is silently dropped.
+              REG_REQUEST parameter that includes duplicate
+              "<emphasis>Reg Types</emphasis>",
+              the whole parameter is silently dropped.
             </para>
           </listitem>
           <listitem>
@@ -3763,8 +3767,8 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
                   registration extension implemented.
                 </para>
                 <para>
-                  The services are identified by "<emphasis>Reg
-                  Types</emphasis>" i.e. numbers between 0 and 255 (both
+                  The services are identified by "<emphasis>Reg Types</emphasis>"
+                  i.e. numbers between 0 and 255 (both
                   inclusive). Instead of using the predefined strings, you can
                   use these service numbers to request a service. For
                   example, to request a service identified by number 1 (the
@@ -3971,9 +3975,9 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         responder cannot be located behind a NAT.
       </para>
       <para>The NAT traversal can be experimented in a similar way as depicted
-        in earlier sections. The only difference is that you have to
-        tell the initiator manually that it is behind a NAT using "hipconf
-        nat on". After this, you can initiate the base exchange
+        in earlier sections. The only difference is that you have to tell the
+        initiator manually that it is behind a NAT using "hipconf nat on".
+        After this, you can initiate the base exchange
         according to the previous instructions. The manual configuration is
         currently required because support for automatic NAT detection (STUN)
         has not been implemented yet.
