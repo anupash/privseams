@@ -236,7 +236,7 @@ out_err:
  * @param hip_raw_sock_v6 the socket pointer used for TCP connection in IPv6
  * @return zero on success, non-zero on error
  */
-int hip_init_proxy_raw_sock_tcp_v6(int *hip_raw_sock_v6)
+static int hip_init_proxy_raw_sock_tcp_v6(int *hip_raw_sock_v6)
 {
     int on = 1, off = 0, err = 0;
 
