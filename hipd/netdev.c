@@ -132,7 +132,7 @@ int hip_netdev_white_list_add(char *device_name)
  * @param ptr a pointer to a netdev_address structure
  * @return the calculated hash to index the parameter
  */
-unsigned long hip_netdev_hash(const void *ptr)
+static unsigned long hip_netdev_hash(const void *ptr)
 {
     const struct netdev_address *na = (const struct netdev_address *) ptr;
     uint8_t hash[HIP_AH_SHA_LEN];
@@ -902,12 +902,12 @@ out_err:
  *       will be used as a last resort.
  * @todo move this function to some other file
  */
-int hip_netdev_trigger_bex(hip_hit_t *src_hit,
-                           hip_hit_t *dst_hit,
-                           hip_lsi_t *src_lsi,
-                           hip_lsi_t *dst_lsi,
-                           struct in6_addr *src_addr,
-                           struct in6_addr *dst_addr)
+static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
+                                  hip_hit_t *dst_hit,
+                                  hip_lsi_t *src_lsi,
+                                  hip_lsi_t *dst_lsi,
+                                  struct in6_addr *src_addr,
+                                  struct in6_addr *dst_addr)
 {
     int err = 0, if_index = 0, is_ipv4_locator;
     int reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status;

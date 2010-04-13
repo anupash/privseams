@@ -168,7 +168,7 @@ static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
  *
  * @param entry the host association
  */
-void hip_hadb_set_lsi_pair(hip_ha_t *entry)
+static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 {
     hip_lsi_t aux;
     //Assign value to lsi_our searching in hidb by the correspondent hit
@@ -1543,7 +1543,7 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
     }
 }
 
-void hip_hadb_rec_free_doall(hip_ha_t *rec)
+static void hip_hadb_rec_free_doall(hip_ha_t *rec)
 {
     if (hadb_hit == NULL || rec == NULL) {
         return;

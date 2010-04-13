@@ -1049,7 +1049,7 @@ out_err:
     return err;
 }
 
-int verify_callback(int ok, X509_STORE_CTX *stor)
+static int verify_callback(int ok, X509_STORE_CTX *stor)
 {
     /* This is not called from anywhere else than this file */
     if (!ok) {

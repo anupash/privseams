@@ -80,7 +80,7 @@ int hip_agent_is_alive(void)
  * @param msg a message with message type as HIP_MSG_SET_OPPTCP_ON
  *            or HIP_MSG_SET_OPPTCP_OFF
  */
-void hip_set_opportunistic_tcp_status(struct hip_common *msg)
+static void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 {
     struct sockaddr_in6 sock_addr;
     int retry, type, n;

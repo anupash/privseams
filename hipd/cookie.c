@@ -137,8 +137,8 @@ int hip_dec_cookie_difficulty(hip_hit_t *not_used)
  *
  * @return 0 <= x < HIP_R1TABLESIZE
  */
-int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
-                        struct in6_addr *hit_i)
+static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
+                               struct in6_addr *hit_i)
 {
     register uint32_t base = 0;
     int i;

@@ -413,8 +413,8 @@ static void hip_oppdb_dump(void)
  *                  which to calculate the pseudo HIT
  * @return a host assocition or NULL if not found
  */
-hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
-                                   struct in6_addr *resp_addr)
+static hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
+                                          struct in6_addr *resp_addr)
 {
     hip_ha_t *entry_tmp = NULL;
     hip_hit_t phit;

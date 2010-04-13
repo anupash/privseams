@@ -57,7 +57,7 @@ static void hip_debug_print_dht_queue(void)
  *
  * @note only for internal use in this file
  */
-unsigned long hip_dht_queue_hash(const struct hip_queue *item)
+static unsigned long hip_dht_queue_hash(const struct hip_queue *item)
 {
     uint8_t hash[HIP_AH_SHA_LEN];
     hip_build_digest(HIP_DIGEST_SHA1,
@@ -104,7 +104,7 @@ int hip_init_dht_queue(void)
     return 0;
 }
 
-void hip_dht_queue_rec_free_doall(struct hip_queue *rec)
+static void hip_dht_queue_rec_free_doall(struct hip_queue *rec)
 {
     struct hip_queue *deleted_rec;
 

@@ -1284,11 +1284,11 @@ out_err:
 }
 
 //TODO doxygen header missing
-int handle_locator(struct hip_locator *locator,
-                   in6_addr_t         *r1_saddr,
-                   in6_addr_t         *r1_daddr,
-                   hip_ha_t           *entry,
-                   hip_portpair_t     *r1_info)
+static int handle_locator(struct hip_locator *locator,
+                          in6_addr_t         *r1_saddr,
+                          in6_addr_t         *r1_daddr,
+                          hip_ha_t           *entry,
+                          hip_portpair_t     *r1_info)
 {
     int n_addrs = 0, loc_size = 0, err = 0;
 

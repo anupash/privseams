@@ -207,7 +207,7 @@ int hip_send_agent(struct hip_common *msg)
  * @param *uadb_info structure containing data sent by the agent
  * @return 0 on success, -1 on failure
  */
-int add_cert_and_hits_to_db(struct hip_uadb_info *uadb_info)
+static int add_cert_and_hits_to_db(struct hip_uadb_info *uadb_info)
 {
     int err = 0;
     char insert_into[512];
