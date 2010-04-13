@@ -266,12 +266,13 @@ int is_zero(chordID *x)
 /**********************************************************************/
 
 /* greater: a>b? */
-/*
- * static int is_greater(chordID *a, chordID *b)
- * {
- *  return memcmp(a->x, b->x, sizeof(chordID)) > 0;
- * }
- */
+
+#if 0
+static int is_greater(chordID *a, chordID *b)
+{
+    return memcmp(a->x, b->x, sizeof(chordID)) > 0;
+}
+#endif
 
 /* less: a<b? */
 static int is_less(chordID *a, chordID *b)

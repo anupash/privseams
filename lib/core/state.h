@@ -657,42 +657,43 @@ struct hip_hadb_handle_func_set {
                                 hip_ha_t *entry);
 };
 
-/*
- * struct hip_hadb_update_func_set{
- *      int (*hip_handle_update_plain_locator)(hip_ha_t *entry,
- *                                             struct hip_common *msg,
- *                                             struct in6_addr *src_ip,
- *                                             struct in6_addr *dst_ip,
- *                                             struct hip_esp_info *esp_info,
- *                                             struct hip_seq *seq);
- *
- *      int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
- *                                           struct hip_common *msg,
- *                                           struct in6_addr *src_ip,
- *                                           struct in6_addr *dst_ip);
- *
- *      void (*hip_update_handle_ack)(hip_ha_t *entry,
- *                                    struct hip_ack *ack,
- *                                    int have_nes);
- *
- *      int (*hip_handle_update_established)(hip_ha_t *entry,
- *                                           struct hip_common *msg,
- *                                           struct in6_addr *src_ip,
- *                                           struct in6_addr *dst_ip,
- *                                           hip_portpair_t *);
- *      int (*hip_handle_update_rekeying)(hip_ha_t *entry,
- *                                        struct hip_common *msg,
- *                                        struct in6_addr *src_ip);
- *
- *      int (*hip_update_send_addr_verify)(hip_ha_t *entry,
- *                                         struct hip_common *msg,
- *                                         struct in6_addr *src_ip,
- *                                         uint32_t spi);
- *
- *      int (*hip_update_send_echo)(hip_ha_t *entry,
- *                                  uint32_t spi_out,
- *                                  struct hip_peer_addr_list_item *addr);
- * };*/
+#if 0
+struct hip_hadb_update_func_set {
+    int (*hip_handle_update_plain_locator)(hip_ha_t *entry,
+                                           struct hip_common *msg,
+                                           struct in6_addr *src_ip,
+                                           struct in6_addr *dst_ip,
+                                           struct hip_esp_info *esp_info,
+                                           struct hip_seq *seq);
+
+    int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
+                                         struct hip_common *msg,
+                                         struct in6_addr *src_ip,
+                                         struct in6_addr *dst_ip);
+
+    void (*hip_update_handle_ack)(hip_ha_t *entry,
+                                  struct hip_ack *ack,
+                                  int have_nes);
+
+    int (*hip_handle_update_established)(hip_ha_t *entry,
+                                         struct hip_common *msg,
+                                         struct in6_addr *src_ip,
+                                         struct in6_addr *dst_ip,
+                                         hip_portpair_t *);
+    int (*hip_handle_update_rekeying)(hip_ha_t *entry,
+                                      struct hip_common *msg,
+                                      struct in6_addr *src_ip);
+
+    int (*hip_update_send_addr_verify)(hip_ha_t *entry,
+                                       struct hip_common *msg,
+                                       struct in6_addr *src_ip,
+                                       uint32_t spi);
+
+    int (*hip_update_send_echo)(hip_ha_t *entry,
+                                uint32_t spi_out,
+                                struct hip_peer_addr_list_item *addr);
+};
+#endif
 
 struct hip_hadb_misc_func_set {
     uint64_t (*hip_solve_puzzle)(void *puzzle,

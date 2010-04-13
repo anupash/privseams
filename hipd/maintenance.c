@@ -195,10 +195,11 @@ static int hip_agent_add_lhits(void)
     struct hip_common *msg = NULL;
     int n;
 
-/*if (!hip_agent_is_alive())
- *      {
- *              return (-ENOENT);
- *      }*/
+#if 0
+    if (!hip_agent_is_alive()) {
+        return (-ENOENT);
+    }
+#endif
 
     msg = malloc(HIP_MAX_PACKET);
     if (!msg) {

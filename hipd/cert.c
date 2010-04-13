@@ -275,11 +275,13 @@ out_err:
     }
 
     /* openssl structs */
-/*        if (algo == HIP_HI_RSA) {
- *              if (rsa) RSA_free(rsa);
- *      } else if(algo == HIP_HI_DSA) {
- *              if (dsa) DSA_free(dsa);
- *      }*/
+#if 0
+    if (algo == HIP_HI_RSA && rsa) {
+        RSA_free(rsa);
+    } else if (algo == HIP_HI_DSA && dsa) {
+        DSA_free(dsa);
+    }
+#endif
 
     /* RSA pubkey */
     if (e_bin) {

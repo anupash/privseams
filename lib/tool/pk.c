@@ -178,15 +178,17 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
 
     ipv6_addr_copy(&msg->hitr, &tmpaddr);
 
-    /*switch(err) {
-     * case 0:
-     *  err = 0;
-     *  break;
-     * case 1:
-     * default:
-     *  err = -1;
-     *  break;
-     * }*/
+#if 0
+    switch (err) {
+    case 0:
+        err = 0;
+        break;
+    case 1:
+    default:
+        err = -1;
+        break;
+    }
+#endif
 
     if (err) {
         err = -1;

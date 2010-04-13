@@ -299,56 +299,60 @@ uint32_t get_local_addr_uname(void)
     return ret;
 }
 
-/*
- * uint32_t get_local_addr(void)
- * {
- *  // - retrieve information about all network adapters
- *  // - look for the first non-loopback interface
- *  DWORD err = 0;
- *  PIP_ADAPTER_ADDRESSES addresses = NULL;
- *  ULONG size;
- *  uint32_t lb_addr, ret_val;
- *
- *  lb_addr = inet_addr("127.0.0.1");
- *
- *  // allocate a Real Large Buffer hoping that it's big enough
- *  size = sizeof(IP_ADAPTER_ADDRESSES) * 64;
- *  addresses = (PIP_ADAPTER_ADDRESSES)calloc(size, 1);
- *  assert(NULL != addresses);
- *
- *  err = GetAdaptersAddresses(AF_INET, GAA_FLAG_SKIP_ANYCAST || GAA_FLAG_SKIP_FRIENDLY_NAME || GAA_FLAG_SKIP_MULTICAST || GAA_FLAG_SKIP_DNS_SERVER, NULL, addresses, &size);
- *  switch(err)
- *  {
- *      case ERROR_SUCCESS:
- *          while (NULL != addresses) {
- *              PIP_ADAPTER_UNICAST_ADDRESS addr = addresses->FirstUnicastAddress;
- *              while (NULL != addr) {
- *                  if (AF_INET == addr->Address.lpSockaddr->sa_family && ((SOCKADDR_IN*)addr->Address.lpSockaddr)->sin_addr.S_un.S_addr != lb_addr) {
- *                      ret_val = ((SOCKADDR_IN*)addr->Address.lpSockaddr)->sin_addr.S_un.S_addr;
- *                      free(addresses);
- *                      return ret_val;
- *                  }
- *                  addr = addr->Next;
- *              }
- *              addresses = addresses->Next;
- *          }
- *          break;
- *      case ERROR_NOT_ENOUGH_MEMORY:
- *          weprintf("GetAdaptersAddresses returned NOT ENOUGH MEMORY!");
- *          break;
- *      case ERROR_BUFFER_OVERFLOW:
- *          weprintf("GetAdaptersAddresses returned BUFFER OVERFLOW\n");
- *          break;
- *      case ERROR_INVALID_PARAMETER:
- *          weprintf("GetAdaptersAddresses returned INVALID PARAMETER\n");
- *          break;
- *      default:
- *          weprintf("GetAdaptersAddresses returned unknown return code\n");
- *          break;
- *  }
- *  free(addresses);
- *  return 0;
- * }
- */
+#if 0
+uint32_t get_local_addr(void)
+{
+    // - retrieve information about all network adapters
+    // - look for the first non-loopback interface
+    DWORD err = 0;
+    PIP_ADAPTER_ADDRESSES addresses = NULL;
+    ULONG size;
+    uint32_t lb_addr, ret_val;
+
+    lb_addr = inet_addr("127.0.0.1");
+
+    // allocate a Real Large Buffer hoping that it's big enough
+    size = sizeof(IP_ADAPTER_ADDRESSES) * 64;
+    addresses = (PIP_ADAPTER_ADDRESSES)calloc(size, 1);
+    assert(NULL != addresses);
+
+    err = GetAdaptersAddresses(AF_INET, GAA_FLAG_SKIP_ANYCAST ||
+                                        GAA_FLAG_SKIP_FRIENDLY_NAME ||
+                                        GAA_FLAG_SKIP_MULTICAST ||
+                                        GAA_FLAG_SKIP_DNS_SERVER,
+                               NULL, addresses, &size);
+    switch(err) {
+    case ERROR_SUCCESS:
+        while (NULL != addresses) {
+            PIP_ADAPTER_UNICAST_ADDRESS addr = addresses->FirstUnicastAddress;
+            while (NULL != addr) {
+                if (AF_INET == addr->Address.lpSockaddr->sa_family &&
+                    ((SOCKADDR_IN*)addr->Address.lpSockaddr)->sin_addr.S_un.S_addr != lb_addr) {
+                    ret_val = ((SOCKADDR_IN*)addr->Address.lpSockaddr)->sin_addr.S_un.S_addr;
+                    free(addresses);
+                    return ret_val;
+                }
+                addr = addr->Next;
+            }
+            addresses = addresses->Next;
+        }
+        break;
+    case ERROR_NOT_ENOUGH_MEMORY:
+        weprintf("GetAdaptersAddresses returned NOT ENOUGH MEMORY!");
+        break;
+    case ERROR_BUFFER_OVERFLOW:
+        weprintf("GetAdaptersAddresses returned BUFFER OVERFLOW\n");
+        break;
+    case ERROR_INVALID_PARAMETER:
+        weprintf("GetAdaptersAddresses returned INVALID PARAMETER\n");
+        break;
+    default:
+        weprintf("GetAdaptersAddresses returned unknown return code\n");
+        break;
+    }
+    free(addresses);
+    return 0;
+}
+#endif /* 0 */
 
 #endif //_WIN32

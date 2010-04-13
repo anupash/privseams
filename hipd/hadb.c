@@ -790,10 +790,11 @@ static int hip_hadb_init_entry(hip_ha_t *entry)
     HIP_IFEL(hip_hadb_set_handle_function_set(entry,
                                               &default_handle_func_set),
              -1, "Can't set new function pointer set.\n");
-    /*HIP_IFEL(hip_hadb_set_update_function_set(entry,
-     *                                        &default_update_func_set),
-     *       -1, "Can't set new function pointer set\n");*/
-
+#if 0
+    HIP_IFEL(hip_hadb_set_update_function_set(entry,
+                                              &default_update_func_set),
+             -1, "Can't set new function pointer set\n");
+#endif
     HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
              -1, "Can't set new function pointer set.\n");
 
@@ -1294,13 +1295,15 @@ void hip_init_hadb(void)
     /* insert your alternative function sets here!*/
 
     /* initialize default function pointer sets for update functions*/
-    /*default_update_func_set.hip_handle_update_plain_locator  = hip_handle_update_plain_locator_old;
-     * default_update_func_set.hip_handle_update_addr_verify   = hip_handle_update_addr_verify_old;
-     * default_update_func_set.hip_update_handle_ack           = hip_update_handle_ack_old;
-     * default_update_func_set.hip_handle_update_established   = hip_handle_update_established_old;
-     * default_update_func_set.hip_handle_update_rekeying      = hip_handle_update_rekeying_old;
-     * default_update_func_set.hip_update_send_addr_verify     = hip_update_send_addr_verify_deprecated;
-     * default_update_func_set.hip_update_send_echo            = hip_update_send_echo_old;*/
+#if 0
+    default_update_func_set.hip_handle_update_plain_locator  = hip_handle_update_plain_locator_old;
+    default_update_func_set.hip_handle_update_addr_verify    = hip_handle_update_addr_verify_old;
+    default_update_func_set.hip_update_handle_ack            = hip_update_handle_ack_old;
+    default_update_func_set.hip_handle_update_established    = hip_handle_update_established_old;
+    default_update_func_set.hip_handle_update_rekeying       = hip_handle_update_rekeying_old;
+    default_update_func_set.hip_update_send_addr_verify      = hip_update_send_addr_verify_deprecated;
+    default_update_func_set.hip_update_send_echo             = hip_update_send_echo_old;
+#endif
 
     /* xmit function set */
 #ifdef CONFIG_HIP_I3
@@ -2200,9 +2203,13 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_add
 
     HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
 
-    /*HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_our,
-     *      &ha->hit_peer, src_addr, dst_addr, IPPROTO_ESP, 1, 0), -1,
-     *       "Setting up SP pair failed\n");      */
+#if 0
+    HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_our,
+                                                        &ha->hit_peer, src_addr,
+                                                        dst_addr, IPPROTO_ESP,
+                                                        1, 0),
+             -1, "Setting up SP pair failed\n");
+#endif
 
     // Create a new outbound SA
     HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", new_spi_out);

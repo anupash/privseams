@@ -423,18 +423,18 @@ int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
             break;
         }
     }
+#if 0
     // TODO
-    /*else
-     * {
-     *  for go through all local addressses
-     *  {
-     *      for go through all peer addresses
-     *      {
-     *          if (check_if_address_peer_ok)
-     *              send_update_pkt()
-     *      }
-     *  }
-     * }*/
+    else {
+        for (go through all local addresses) {
+            for (go through all peer addresses) {
+                if (check_if_address_peer_ok) {
+                    send_update_pkt();
+                }
+            }
+        }
+    }
+#endif
 
 out_err:
     if (update_packet_to_send) {

@@ -80,14 +80,15 @@ int main(int argc, char *argv[])
     port = atoi(argv[3]);
 
     /* Disabled since this comparison is always true with the current
-     * port number boundaries.
-     * if(port < MINPORTNUM || port > MAXPORTNUM){
-     *      HIP_INFO("Invalid port number, allowed port numbers are "\
-     *               "from %d to %d.\n%s\n", MINPORTNUM, MAXPORTNUM,
-     *               usage);
-     *      return EXIT_FAILURE;
-     * }
-     */
+     * port number boundaries. */
+#if 0
+    if (port < MINPORTNUM || port > MAXPORTNUM) {
+        HIP_INFO("Invalid port number, allowed port numbers are "
+                 "from %d to %d.\n%s\n", MINPORTNUM, MAXPORTNUM,
+                 usage);
+        return EXIT_FAILURE;
+     }
+#endif
 
     HIP_INFO("=== Testing %s connection to '%s' on port %s ===\n",
              (socktype == SOCK_STREAM ? "TCP" : "UDP"), argv[1],

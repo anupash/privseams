@@ -913,30 +913,31 @@ int create_content_nhdlg(void)
     gtk_box_pack_start(GTK_BOX(vb2), hb, FALSE, FALSE, 1);
     gtk_widget_show(GTK_WIDGET(hb));
 
-/*      w = gtk_label_new(lang_get("nhdlg-url"));
- *      gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
- *      gtk_widget_show(GTK_WIDGET(w));
- *      w = gtk_entry_new();
- *      gtk_entry_set_text(GTK_ENTRY(w), "");
- *      gtk_box_pack_start(GTK_BOX(hb), w, TRUE, TRUE, 5);
- *      gtk_entry_set_max_length(GTK_ENTRY(w), MAX_URL_LEN);
- *      gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
- *      gtk_widget_show(GTK_WIDGET(w));
- *      widget_set(ID_NH_URL, w);
- */
+#if 0
+    w = gtk_label_new(lang_get("nhdlg-url"));
+    gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
+    gtk_widget_show(GTK_WIDGET(w));
+    w = gtk_entry_new();
+    gtk_entry_set_text(GTK_ENTRY(w), "");
+    gtk_box_pack_start(GTK_BOX(hb), w, TRUE, TRUE, 5);
+    gtk_entry_set_max_length(GTK_ENTRY(w), MAX_URL_LEN);
+    gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+    gtk_widget_show(GTK_WIDGET(w));
+    widget_set(ID_NH_URL, w);
 
-/*      w = gtk_label_new(lang_get("nhdlg-port"));
- *      gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
- *      gtk_widget_show(GTK_WIDGET(w));
- *      w = gtk_entry_new();
- *      gtk_entry_set_text(GTK_ENTRY(w), "0");
- *      gtk_box_pack_start(GTK_BOX(hb), w, FALSE, TRUE, 5);
- *      gtk_widget_set_size_request(GTK_WIDGET(w), 70, -1);
- *      gtk_entry_set_max_length(GTK_ENTRY(w), 8);
- *      gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
- *      gtk_widget_show(GTK_WIDGET(w));
- *      widget_set(ID_NH_PORT, w);
- */
+
+    w = gtk_label_new(lang_get("nhdlg-port"));
+    gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
+    gtk_widget_show(GTK_WIDGET(w));
+    w = gtk_entry_new();
+    gtk_entry_set_text(GTK_ENTRY(w), "0");
+    gtk_box_pack_start(GTK_BOX(hb), w, FALSE, TRUE, 5);
+    gtk_widget_set_size_request(GTK_WIDGET(w), 70, -1);
+    gtk_entry_set_max_length(GTK_ENTRY(w), 8);
+    gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+    gtk_widget_show(GTK_WIDGET(w));
+    widget_set(ID_NH_PORT, w);
+#endif
 
     frame = gtk_frame_new(NULL);
     gtk_frame_set_label(GTK_FRAME(frame), lang_get("nhdlg-g-info"));

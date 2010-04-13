@@ -403,21 +403,23 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         }
         HIP_DEBUG("Building gw_info complete\n");
 
-        /* NOT the way to do this
-         * int err_value = 0;
-         * if(hip_opendht_inuse != HIP_MSG_DHT_ON){
-         *      err_value = 5;
-         *      hip_build_param_contents(msg, &err_value,
-         *                       HIP_PARAM_INT, sizeof(int));
-         * }else if((opendht_serving_gateway == NULL) ||
-         *       (opendht_serving_gateway->ai_addr == NULL)){
-         *      err_value = 4;
-         *      hip_build_param_contents(msg, &err_value,
-         *                       HIP_PARAM_INT, sizeof(int));
-         * }else{
-         *      err = hip_get_dht_mapping_for_HIT_msg(msg);
-         * }
-         */
+#if 0
+        /* NOT the way to do this */
+        int err_value = 0;
+        if (hip_opendht_inuse != HIP_MSG_DHT_ON){
+            err_value = 5;
+            hip_build_param_contents(msg, &err_value,
+                                     HIP_PARAM_INT, sizeof(int));
+        } else if ((opendht_serving_gateway          == NULL) ||
+                   (opendht_serving_gateway->ai_addr == NULL)) {
+            err_value = 4;
+            hip_build_param_contents(msg, &err_value,
+                                     HIP_PARAM_INT, sizeof(int));
+        } else {
+            err = hip_get_dht_mapping_for_HIT_msg(msg);
+        }
+#endif
+
     }
     break;
     case HIP_MSG_DHT_SET:

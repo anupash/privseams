@@ -54,18 +54,21 @@ int timeoutChecking        = 0;
 unsigned long timeoutValue = 0;
 
 /*------------print functions-------------*/
-/*void print_data(struct hip_data * data)
- * {
- * char src[INET6_ADDRSTRLEN];
- * char dst[INET6_ADDRSTRLEN];
- * hip_in6_ntop(&data->src_hit, src);
- * hip_in6_ntop(&data->dst_hit, dst);
- * HIP_DEBUG("hip data: src %s dst %s\n", src, dst);
- * if(data->src_hi == NULL)
- *  HIP_DEBUG("no hi\n");
- * else
- *  HIP_DEBUG("hi\n");
- * } */
+#if 0
+static void print_data(struct hip_data *data)
+{
+    char src[INET6_ADDRSTRLEN];
+    char dst[INET6_ADDRSTRLEN];
+    hip_in6_ntop(&data->src_hit, src);
+    hip_in6_ntop(&data->dst_hit, dst);
+    HIP_DEBUG("hip data: src %s dst %s\n", src, dst);
+    if (data->src_hi == NULL) {
+        HIP_DEBUG("no hi\n");
+    } else {
+        HIP_DEBUG("hi\n");
+    }
+}
+#endif
 
 /**
  * prints out the list of addresses of esp_addr_list
@@ -183,10 +186,11 @@ static int hip_fw_hit_is_our(const hip_hit_t *hit)
 static struct hip_data *get_hip_data(const struct hip_common *common)
 {
     struct hip_data *data = NULL;
-    /*struct in6_addr hit;
-     * struct hip_host_id * host_id = NULL;
-     * int err = 0;
-     * int len = 0;*/
+#if 0
+    struct in6_addr hit;
+    struct hip_host_id * host_id = NULL;
+    int err = 0, len = 0;
+#endif
 
     // init hip_data for this tuple
     data = (struct hip_data *) malloc(sizeof(struct hip_data));
@@ -1131,10 +1135,13 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
 
     // store in tuple of other direction that will be using
     // this spi and dst address
-    /*if(tuple->direction == ORIGINAL_DIR)
-     * other_dir = &tuple->connection->reply;
-     * else
-     * other_dir = &tuple->connection->original;*/
+#if 0
+    if (tuple->direction == ORIGINAL_DIR) {
+        other_dir = &tuple->connection->reply;
+    } else {
+        other_dir = &tuple->connection->original;
+    }
+#endif
 
 out_err:
     return err;
@@ -1213,10 +1220,13 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
 
     // TEST_END
 
-    /*if(tuple->direction == ORIGINAL_DIR)
-     * other_dir = &tuple->connection->reply;
-     * else
-     * other_dir = &tuple->connection->original;*/
+#if 0
+    if (tuple->direction == ORIGINAL_DIR) {
+        other_dir = &tuple->connection->reply;
+    } else {
+        other_dir = &tuple->connection->original;
+    }
+#endif
 
     if (esp_relay && ctx->udp_encap_hdr) {
         HIP_IFEL(hipfw_handle_relay_to_r2(common, ctx),
