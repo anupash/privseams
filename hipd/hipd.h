@@ -176,9 +176,6 @@ int hip_firewall_is_alive(void);
 /* Functions for handling incoming packets. */
 int hip_sock_recv_agent(void);
 int hip_sock_recv_firewall(void);
-//Merge-may int hip_sendto_firewall(const struct hip_common *msg, size_t len);
-
-//int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
 
 int hip_send_agent(struct hip_common *msg);
 int hip_recv_agent(struct hip_common *msg);
