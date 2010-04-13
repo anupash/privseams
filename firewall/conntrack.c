@@ -1700,11 +1700,11 @@ out_err:
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-int handle_close_ack(const struct in6_addr *ip6_src,
-                     const struct in6_addr *ip6_dst,
-                     const struct hip_common *common,
-                     struct tuple *tuple,
-                     const hip_fw_context_t *ctx)
+static int handle_close_ack(const struct in6_addr *ip6_src,
+                            const struct in6_addr *ip6_dst,
+                            const struct hip_common *common,
+                            struct tuple *tuple,
+                            const hip_fw_context_t *ctx)
 {
     int err = 1;
 

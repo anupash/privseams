@@ -41,7 +41,7 @@ static HIP_HASHTABLE *firewall_port_cache_db = NULL;
  *
  * @note this is used only from the firewall, so move this there
  */
-int hip_get_proto_info(in_port_t port_dest, char *proto)
+static int hip_get_proto_info(in_port_t port_dest, char *proto)
 {
     FILE *fd       = NULL;
     char line[500], sub_string_addr_hex[8], path[11 + sizeof(proto)];

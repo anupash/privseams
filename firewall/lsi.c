@@ -179,12 +179,12 @@ out_err:
  * @return             the state of the bex if the entry is found
  *                     otherwise returns -1
  */
-int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
-                                hip_lsi_t       *dst_lsi,
-                                struct in6_addr *src_ip,
-                                struct in6_addr *dst_ip,
-                                struct in6_addr *src_hit,
-                                struct in6_addr *dst_hit)
+static int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
+                                       hip_lsi_t       *dst_lsi,
+                                       struct in6_addr *src_ip,
+                                       struct in6_addr *dst_ip,
+                                       struct in6_addr *src_hit,
+                                       struct in6_addr *dst_hit)
 {
     int err = 0, res = -1;
     struct hip_tlv_common *current_param = NULL;

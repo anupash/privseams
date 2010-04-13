@@ -244,7 +244,7 @@ out_err:
  *
  * @return the value of the hash
  */
-unsigned long hip_firewall_hash_hit_peer(const void *ptr)
+static unsigned long hip_firewall_hash_hit_peer(const void *ptr)
 {
     struct in6_addr *hit_peer = &((firewall_cache_hl_t *) ptr)->hit_peer;
     uint8_t hash[HIP_AH_SHA_LEN];
@@ -261,7 +261,7 @@ unsigned long hip_firewall_hash_hit_peer(const void *ptr)
  *
  * @return zero if hashes are identical, or one otherwise
  */
-int hip_firewall_match_hit_peer(const void *ptr1, const void *ptr2)
+static int hip_firewall_match_hit_peer(const void *ptr1, const void *ptr2)
 {
     return hip_firewall_hash_hit_peer(ptr1) != hip_firewall_hash_hit_peer(ptr2);
 }

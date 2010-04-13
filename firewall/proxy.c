@@ -65,8 +65,8 @@ out_err:
  * @param local_hit the HIT of the local HIP proxy
  * @return zero on success, non-zero on error
  */
-int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
-                                         const struct in6_addr *local_hit)
+static int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
+                                                const struct in6_addr *local_hit)
 {
     struct hip_common *msg = NULL;
     int err                = 0;
@@ -264,7 +264,7 @@ out_err:
  * @param hip_raw_sock_v4 the socket pointer used for TCP connection in IPv4
  * @return zero on success, non-zero on error
  */
-int hip_init_proxy_raw_sock_tcp_v4(int *hip_raw_sock_v4)
+static int hip_init_proxy_raw_sock_tcp_v4(int *hip_raw_sock_v4)
 {
     int on  = 1, err = 0;
     int off = 0;
@@ -296,7 +296,7 @@ out_err:
  * @param hip_raw_sock_v6 the socket pointer used for UDP connection in IPv6
  * @return zero on success, non-zero on error
  */
-int hip_init_proxy_raw_sock_udp_v6(int *hip_raw_sock_v6)
+static int hip_init_proxy_raw_sock_udp_v6(int *hip_raw_sock_v6)
 {
     int on = 1, off = 0, err = 0;
 
@@ -324,7 +324,7 @@ out_err:
  * @param hip_raw_sock_v4 the socket pointer used for UDP connection in IPv4
  * @return zero on success, non-zero on error
  */
-int hip_init_proxy_raw_sock_udp_v4(int *hip_raw_sock_v4)
+static int hip_init_proxy_raw_sock_udp_v4(int *hip_raw_sock_v4)
 {
     int on  = 1, err = 0;
     int off = 0;
@@ -356,7 +356,7 @@ out_err:
  * @param hip_raw_sock_v6 the socket pointer used for ICMPv6 connection
  * @return zero on success, non-zero on error
  */
-int hip_init_proxy_raw_sock_icmp_v6(int *hip_raw_sock_v6)
+static int hip_init_proxy_raw_sock_icmp_v6(int *hip_raw_sock_v6)
 {
     int on = 1, off = 0, err = 0;
 
@@ -385,7 +385,7 @@ out_err:
  * @param hip_raw_sock_v4 the socket pointer used for ICMP
  * @return zero on success, non-zero on error
  */
-int hip_init_proxy_raw_sock_icmp_v4(int *hip_raw_sock_v4)
+static int hip_init_proxy_raw_sock_icmp_v4(int *hip_raw_sock_v4)
 {
     int on  = 1, err = 0;
     int off = 0;
@@ -418,7 +418,7 @@ out_err:
  * @param hip_raw_sock_v6 the socket pointer used for ICMPv6 connection in IPv6
  * @return zero on success, non-zero on error
  */
-int hip_init_proxy_raw_sock_icmp_inbound(int *hip_raw_sock_v6)
+static int hip_init_proxy_raw_sock_icmp_inbound(int *hip_raw_sock_v6)
 {
     int on = 1, off = 0, err = 0;
 
@@ -445,7 +445,7 @@ out_err:
  *
  * @return zero on success, non-zero on error
  */
-int hip_proxy_init_raw_sockets(void)
+static int hip_proxy_init_raw_sockets(void)
 {
     hip_init_proxy_raw_sock_tcp_v6(&hip_proxy_raw_sock_tcp_v6);
     hip_init_proxy_raw_sock_tcp_v4(&hip_proxy_raw_sock_tcp_v4);

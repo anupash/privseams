@@ -19,7 +19,7 @@ HIP_HASHTABLE *hip_proxy_db = NULL;
  * @param p the connection entry
  * @return a hash calculated based on the given entry
  */
-unsigned long hip_proxy_db_hash(const hip_proxy_t *p)
+static unsigned long hip_proxy_db_hash(const hip_proxy_t *p)
 {
     hip_hit_t hitpair[2];
     uint8_t hash[HIP_AH_SHA_LEN];
@@ -50,7 +50,7 @@ static IMPLEMENT_LHASH_HASH_FN(hip_proxy_db, const hip_proxy_t)
  * @param ha2 second hash key
  * @return zero if keys match or one otherwise
  */
-int hip_proxy_db_cmp(const hip_proxy_t *ha1, const hip_proxy_t *ha2)
+static int hip_proxy_db_cmp(const hip_proxy_t *ha1, const hip_proxy_t *ha2)
 {
     if (ha1 == NULL
             || &(ha1->addr_client) == NULL
@@ -155,13 +155,13 @@ hip_proxy_t *hip_proxy_find_by_addr(const struct in6_addr *addr,
  * @param state the state of the connection entry
  * @return zero on success or non-zero on failure
  */
-int hip_proxy_update_entry_state(hip_proxy_t *entry,
-                                 struct in6_addr *client_addr,
-                                 struct in6_addr *peer_addr,
-                                 struct in6_addr *proxy_addr,
-                                 hip_hit_t *proxy_hit,
-                                 hip_hit_t *peer_hit,
-                                 int state)
+static int hip_proxy_update_entry_state(hip_proxy_t *entry,
+                                        struct in6_addr *client_addr,
+                                        struct in6_addr *peer_addr,
+                                        struct in6_addr *proxy_addr,
+                                        hip_hit_t *proxy_hit,
+                                        hip_hit_t *peer_hit,
+                                        int state)
 {
     HIP_ASSERT(entry);
 
@@ -196,12 +196,12 @@ int hip_proxy_update_entry_state(hip_proxy_t *entry,
  * @param state the state of the connection entry
  *
  */
-int hip_proxy_update_state_no_client(struct in6_addr *client_addr,
-                                     struct in6_addr *peer_addr,
-                                     struct in6_addr *proxy_addr,
-                                     hip_hit_t *proxy_hit,
-                                     hip_hit_t *peer_hit,
-                                     int state)
+static int hip_proxy_update_state_no_client(struct in6_addr *client_addr,
+                                            struct in6_addr *peer_addr,
+                                            struct in6_addr *proxy_addr,
+                                            hip_hit_t *proxy_hit,
+                                            hip_hit_t *peer_hit,
+                                            int state)
 {
     int i = 0;
     hip_proxy_t *this;

@@ -732,7 +732,7 @@ out_err:
  *
  * @param entry     SA entry to be printed
  */
-void hip_sa_entry_print(const hip_sa_entry_t *entry)
+static void hip_sa_entry_print(const hip_sa_entry_t *entry)
 {
     if (entry) {
         HIP_DEBUG("direction: %i\n", entry->direction);

@@ -27,7 +27,7 @@ static HIP_HASHTABLE *hip_proxy_conn_db = NULL;
  * @param p the connection entry
  * @return a hash calculated based on the given entry
  */
-unsigned long hip_proxy_conn_db_hash(const hip_proxy_conn_t *p)
+static unsigned long hip_proxy_conn_db_hash(const hip_proxy_conn_t *p)
 {
     uint8_t hash[HIP_AH_SHA_LEN];
 
@@ -50,8 +50,8 @@ static IMPLEMENT_LHASH_HASH_FN(hip_proxy_conn_db, const hip_proxy_conn_t)
  * @param ha2 second hash key
  * @return zero if keys match or one otherwise
  */
-int hip_proxy_conn_db_cmp(const hip_proxy_conn_t *ha1,
-                          const hip_proxy_conn_t *ha2)
+static int hip_proxy_conn_db_cmp(const hip_proxy_conn_t *ha1,
+                                 const hip_proxy_conn_t *ha2)
 {
     if (ha1 == NULL
             || &(ha1->key) == NULL
