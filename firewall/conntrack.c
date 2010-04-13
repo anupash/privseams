@@ -468,7 +468,6 @@ static void insert_new_connection(const struct hip_data *data, const struct in6_
 
     connection->state = STATE_ESTABLISHED;
     //set time stamp
-    //g_get_current_time(&connection->time_stamp);
     gettimeofday(&connection->time_stamp, NULL);
 #ifdef HIP_CONFIG_MIDAUTH
     connection->pisa_state                       = PISA_STATE_DISALLOW;
@@ -481,7 +480,6 @@ static void insert_new_connection(const struct hip_data *data, const struct in6_
 #ifdef CONFIG_HIP_HIPPROXY
     connection->original.hipproxy                = hip_proxy_status;
 #endif /* CONFIG_HIP_HIPPROXY */
-    //connection->original.esp_tuple->tuple = &connection->original;
     connection->original.connection              = connection;
     connection->original.hip_tuple               = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
     memset(connection->original.hip_tuple, 0, sizeof(struct hip_tuple));
@@ -808,7 +806,6 @@ static int insert_connection_from_update(const struct hip_data *data,
 #ifdef CONFIG_HIP_HIPPROXY
     connection->original.hipproxy                 = hip_proxy_status;
 #endif /* CONFIG_HIP_HIPPROXY */
-    //connection->original.esp_tuple->tuple = &connection->original;
     connection->original.connection               = connection;
     connection->original.hip_tuple                = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
     connection->original.hip_tuple->tuple         = &connection->original;
@@ -973,9 +970,6 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
     hip_tlv_len_t len           = 0;
 
     HIP_DEBUG("verify_responder: %i\n", verify_responder);
-
-    // this should always be done
-    //if (verify_responder)
 
     // handling HOST_ID param
     HIP_IFEL(!(host_id = (struct hip_host_id *) hip_get_param(common,
@@ -1587,13 +1581,12 @@ static int handle_update(const struct hip_common *common,
                 //addresses have the update id
                 temp_tuple_list = esp_tuples;
                 struct esp_tuple *esp_tuple;
-                SList *original_addr_list, *addr_list,
+                SList *addr_list,
                 *delete_addr_list = NULL, *delete_original_list = NULL;
                 int found         = 0;
 
                 while (temp_tuple_list) {
                     esp_tuple = (struct esp_tuple *) temp_tuple_list->data;
-                    //  original_addr_list = esp_tuple->dst_addr_list;
 
                     //is ack for changing spi?
                     if (esp_tuple->spi_update_id == *upd_id) {
@@ -1679,9 +1672,6 @@ static int handle_close(const struct in6_addr *ip6_src,
 {
     int err = 1;
 
-    // set timeout UAL + MSL ++ (?)
-    // long int timeout = 20;  TODO: Should this be UAL + MSL?
-
     HIP_DEBUG("\n");
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1691,11 +1681,6 @@ static int handle_close(const struct in6_addr *ip6_src,
     HIP_IFEL(!tuple, 0, "tuple is NULL\n");
 
     tuple->state = STATE_CLOSING;
-
-    //if (!timeoutChecking)
-    //  init_timeout_checking(timeout);
-    //else
-    //  timeoutValue = timeout;
 
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1935,7 +1920,6 @@ static int check_packet(const struct in6_addr *ip6_src,
     if (err && tuple) {
         // update time_stamp only on valid packets
         // for new connections time_stamp is set when creating
-        //g_get_current_time(&tuple->connection->time_stamp);
         if (tuple->connection) {
             gettimeofday(&tuple->connection->time_stamp, NULL);
         } else {
@@ -2066,9 +2050,6 @@ int filter_esp_state(const hip_fw_context_t *ctx)
     // match packet against known connections
     HIP_DEBUG("filtering ESP packet against known connections...\n");
 
-    //g_mutex_lock(connectionTableMutex);
-    //HIP_DEBUG("filter_esp_state: locked mutex\n");
-
     tuple = get_tuple_by_esp(dst_addr, spi);
     //ESP packet cannot start a connection
     if (!tuple) {
@@ -2118,8 +2099,6 @@ out_err:
         gettimeofday(&tuple->connection->time_stamp, NULL);
     }
 
-    //g_mutex_unlock(connectionTableMutex);
-
     HIP_DEBUG("verdict %d \n", err);
 
     return err;
@@ -2144,10 +2123,6 @@ int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
     struct tuple *tuple   = NULL;
     // FIXME results in unsafe use in filter_hip()
     int return_value      = -1; //invalid value
-
-    _HIP_DEBUG("\n");
-    //g_mutex_lock(connectionTableMutex);
-    _HIP_DEBUG("filter_state:locked mutex\n");
 
     // get data form the buffer and put it in a new data structure
     data  = get_hip_data(buf);
@@ -2203,7 +2178,6 @@ int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
                                 option->accept_mobile, ctx);
 
 out_err:
-    //g_mutex_unlock(connectionTableMutex);
     _HIP_DEBUG("filter state: returning %d \n", return_value);
 
     return return_value;
@@ -2228,10 +2202,6 @@ int conntrack(const struct in6_addr *ip6_src,
     struct tuple *tuple   = NULL;
     int verdict = 0;
 
-    _HIP_DEBUG("\n");
-    //g_mutex_lock(connectionTableMutex);
-    _HIP_DEBUG("locked mutex\n");
-
     // convert to new data type
     data  = get_hip_data(buf);
     // look up tuple in the db
@@ -2242,9 +2212,6 @@ int conntrack(const struct in6_addr *ip6_src,
     // the accept_mobile parameter is true as packets
     // are not filtered here
     verdict = check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1, ctx);
-
-    //g_mutex_unlock(connectionTableMutex);
-    _HIP_DEBUG("unlocked mutex\n");
 
     free(data);
 

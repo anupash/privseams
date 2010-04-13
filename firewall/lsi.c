@@ -273,11 +273,9 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
         break;
     case IPPROTO_ICMPV6:
         HIP_DEBUG("ICMPv6 packet\n");
-        //goto out_err;
         break;
     default:
         HIP_DEBUG("Unhandled packet %d\n", ip6_hdr->ip6_nxt);
-        //goto out_err;
         break;
     }
 

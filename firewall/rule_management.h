@@ -60,8 +60,6 @@ struct rule {
 };
 
 /*-------------- RULES ------------*/
-
-//void print_rule(const struct rule * rule);
 void print_rule_tables(void);
 
 void read_rule_file(const char *file_name);

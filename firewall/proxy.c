@@ -44,12 +44,6 @@ int request_hipproxy_status(void)
     HIP_IFEL(hip_build_user_hdr(msg,
                                 HIP_MSG_HIPPROXY_STATUS_REQUEST, 0),
              -1, "Build hdr failed\n");
-
-    //n = hip_sendto(msg, &hip_firewall_addr);
-
-    //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
-    //      0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
-
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_sock), -1,
              "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
     HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto hipd ok.\n");
@@ -120,7 +114,6 @@ int hip_get_local_hit_wrapper(hip_hit_t *hit)
     int err                = 0;
     char *param            = 0;
     struct hip_common *msg = NULL;
-    //struct gaih_addrtuple *at = NULL;
 
     HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEFAULT_HIT, 0),
@@ -919,10 +912,8 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
     }
 
     HIP_DEBUG("Previous checksum: %X\n", (tcp->check));
-//tcp->check = htons(0);
 
     if (src_is_ipv4 && dst_is_ipv4) {
-        //struct tcphdr * tcptemp;
         HIP_DEBUG("src_addr and dst_aadr are ipv4!\n");
         iphdr->ip_v   = 4;
         iphdr->ip_hl  = sizeof(struct ip) >> 2;
@@ -1053,7 +1044,6 @@ int handle_proxy_inbound_traffic(const ipq_packet_msg_t *m,
     HIP_DEBUG_HIT("proxy_hit:", proxy_hit);
     HIP_DEBUG_IN6ADDR("src_addr:", src_addr);
 
-    //hip_get_local_hit_wrapper(&proxy_hit);
     conn_entry = hip_proxy_conn_find_by_portinfo(proxy_hit, src_addr, protocol, port_client, port_peer);
 
     if (conn_entry) {
@@ -1195,7 +1185,6 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
     HIP_DEBUG("client port %d peer port %d\n", port_client, port_peer);
 
     entry = hip_proxy_find_by_addr(src_addr, dst_addr);
-    //hip_get_local_hit_wrapper(&proxy_hit);
 
     if (entry == NULL) {
         hip_proxy_add_entry(src_addr, dst_addr);

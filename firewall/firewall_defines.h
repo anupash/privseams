@@ -19,8 +19,6 @@
 #include "esp_prot_defines.h"
 #include "common_types.h"
 
-//int hip_proxy_status;
-
 
 typedef struct hip_fw_context {
     // queued packet
@@ -43,7 +41,6 @@ typedef struct hip_fw_context {
         struct tcphdr *    tcp;
     } transport_hdr;
     struct udphdr *udp_encap_hdr;
-    //uint32_t spi;
 
     int            modified;
 } hip_fw_context_t;

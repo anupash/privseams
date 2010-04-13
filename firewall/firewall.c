@@ -817,7 +817,6 @@ static void firewall_close(const int signal)
 #endif
     HIP_DEBUG("Closing firewall...\n");
     //hip_uninit_proxy_db();
-    //hip_uninit_conn_db();
     firewall_exit();
     exit(signal);
 }
@@ -1078,7 +1077,6 @@ static int filter_hip(const struct in6_addr *ip6_src,
     while (list != NULL) {
         match = 1;
         rule  = (struct rule *) list->data;
-        //print_rule(rule);
 
         // check src_hit if defined in rule
         if (match && rule->src_hit) {
@@ -1144,25 +1142,6 @@ static int filter_hip(const struct in6_addr *ip6_src,
                       rule->out_if->value, out_if, rule->out_if->boolean,
                       match);
         }
-
-/* NOTE: HI does not make sense as a filter criteria as filtering by HITs and
- *       matching to transmitted HI is supposed to provide a similar level of
- *       security. Furthermore, signature verification is done in conntracking.
- *       -- Rene
- * TODO think about removing this in firewall_control.conf as well
- */
-#if 0
-        // if HI defined in rule, verify signature now
-        // - late as it's an expensive operation
-        // - checks that the message src is the src defined in the _rule_
-        if (match && rule->src_hi) {
-            _HIP_DEBUG("src_hi\n");
-
-            if (!match_hi(rule->src_hi, buf)) {
-                match = 0;
-            }
-        }
-#endif
 
         /* check if packet matches state from connection tracking
          * must be last, so not called if packet is going to be
@@ -2106,9 +2085,6 @@ static void hip_fw_wait_for_hipd(void)
     system_print("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
     system_print("ip6tables -I FORWARD -j HIPFW-FORWARD");
 
-    //HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc\n");
-    //HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_PING, 0), -1, "hdr\n")
-
     while (hip_fw_get_default_hit() == NULL) {
         HIP_DEBUG("Sleeping until hipd is running...\n");
         sleep(1);
@@ -2396,7 +2372,6 @@ int main(int argc, char **argv)
         HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
     }
 #endif
-    //init_timeout_checking(timeout);
 
 #ifdef CONFIG_HIP_HIPPROXY
     //send hipproxy status request before the control thread running.
@@ -2521,7 +2496,6 @@ int main(int argc, char **argv)
             if (err < 0) {
                 HIP_ERROR("Error handling message\n");
                 continue;
-                //goto out_err;
             }
         }
     }
