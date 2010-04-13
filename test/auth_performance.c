@@ -41,7 +41,7 @@ int dsa_key_len      = 1024;
  *
  * \return void
  */
-void print_timeres(void)
+static void print_timeres(void)
 {
     struct timeval tv1, tv2;
     int i;

@@ -10,8 +10,8 @@
 #include <sys/time.h>
 #include <time.h>
 
-void hip_create_puzzle(struct hip_puzzle *puzzle, uint8_t val_K,
-                       uint32_t opaque, uint64_t random_i)
+static void hip_create_puzzle(struct hip_puzzle *puzzle, uint8_t val_K,
+                              uint32_t opaque, uint64_t random_i)
 {
     /* only the random_j_k is in host byte order */
     puzzle->K         = val_K;
@@ -22,8 +22,8 @@ void hip_create_puzzle(struct hip_puzzle *puzzle, uint8_t val_K,
     puzzle->I         = random_i;
 }
 
-int hip_verify_puzzle(struct hip_common *hdr, struct hip_puzzle *puzzle,
-                      struct hip_solution *solution)
+static int hip_verify_puzzle(struct hip_common *hdr, struct hip_puzzle *puzzle,
+                             struct hip_solution *solution)
 {
     int err = 1;     /* Not really an error: 1=success, 0=failure */
 

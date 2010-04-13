@@ -46,7 +46,7 @@ HIP_HASHTABLE *socketdb = NULL;
 //static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
 // inline int, int range removed //miika
-unsigned long hip_hash_pid_socket(const void *ptr)
+static unsigned long hip_hash_pid_socket(const void *ptr)
 {
     unsigned long key = ((hip_opp_socket_t *) ptr)->hash_key;
     _HIP_DEBUG("hip_hash_pid_socket(%p): 0x%x\n", ptr, key);
@@ -54,7 +54,7 @@ unsigned long hip_hash_pid_socket(const void *ptr)
 }
 
 // removed: inline
-int hip_socketdb_match(const void *ptr1, const void *ptr2)
+static int hip_socketdb_match(const void *ptr1, const void *ptr2)
 {
     unsigned long key1, key2;
     key1 = ((hip_opp_socket_t *) ptr1)->hash_key;
@@ -73,7 +73,7 @@ static inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
     *key = pid ^ socket;
 }
 
-void hip_init_socket_db(void)
+static void hip_init_socket_db(void)
 {
 #if 0
     memset(&socketdb, 0, sizeof(socketdb));
@@ -98,7 +98,7 @@ void hip_init_socket_db(void)
     }
 }
 
-void hip_uninit_socket_db(void)
+static void hip_uninit_socket_db(void)
 {
     int n;
     //int i;
@@ -130,7 +130,7 @@ void hip_uninit_socket_db(void)
     hip_ht_uninit(socketdb);
 }
 
-hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
+static hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 {
     unsigned int key = 0;
 
@@ -140,7 +140,7 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
     return (hip_opp_socket_t *) hip_ht_find(socketdb, (void *) &key);
 }
 
-int hip_socketdb_add_entry(pid_t pid, int socket)
+static int hip_socketdb_add_entry(pid_t pid, int socket)
 {
     int err                    = 0;
     hip_opp_socket_t *new_item = NULL;
@@ -167,7 +167,7 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
     return err;
 }
 
-void hip_socketdb_dump(void)
+static void hip_socketdb_dump(void)
 {
     int n;
     /*int i;
@@ -202,7 +202,7 @@ void hip_socketdb_dump(void)
     HIP_DEBUG("end socketdb dump\n");
 }
 
-void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
+static void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
     _HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
                entry->pid, entry->orig_socket);
@@ -212,7 +212,7 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
     HIP_FREE(entry);
 }
 
-int hip_socketdb_del_entry(int pid, int socket)
+static int hip_socketdb_del_entry(int pid, int socket)
 {
     hip_opp_socket_t *entry = NULL;
 
@@ -225,7 +225,7 @@ int hip_socketdb_del_entry(int pid, int socket)
 }
 
 // used to test socketdb
-void test_db(void)
+static void test_db(void)
 {
     pid_t pid               = getpid();
     int socket              = 1;

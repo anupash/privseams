@@ -155,7 +155,7 @@ out_err:
  * @param local_port the local port for which to bind to
  * @return zero on success or negative on failure
  */
-int create_udp_ipv4_socket(in_port_t local_port)
+static int create_udp_ipv4_socket(in_port_t local_port)
 {
     int ipv4_sock = -1, err = 0, on = 1;
     struct sockaddr_in inaddr_any;
@@ -225,9 +225,9 @@ out_err:
  * @param peer_addr the peer address to use for sending
  * @return zero on success or negative on failure
  */
-int udp_send_msg(int sock, uint8_t *data, size_t data_len,
-                 struct sockaddr *local_addr,
-                 struct sockaddr *peer_addr)
+static int udp_send_msg(int sock, uint8_t *data, size_t data_len,
+                        struct sockaddr *local_addr,
+                        struct sockaddr *peer_addr)
 {
     int err     = 0, sendnum;
     int is_ipv4 = ((peer_addr->sa_family == AF_INET) ? 1 : 0);
@@ -306,7 +306,7 @@ out_err:
  * @param local_port the local port to which to bind
  * @return zero on success or negative on failure
  */
-int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port)
+static int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port)
 {
     /* Use recvmsg/sendmsg instead of recvfrom/sendto because
      * the latter combination may choose a different source

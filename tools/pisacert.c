@@ -25,7 +25,7 @@
  * @param result location to store the result in
  * @return 0 on success
  */
-int get_default_hit(struct in6_addr *result)
+static int get_default_hit(struct in6_addr *result)
 {
     int err                      = 0;
     hip_common_t *msg            = NULL;
@@ -60,8 +60,9 @@ out_err:
  * @param size size of the certificate buffer
  * @return 0 on success
  */
-int create_certificate(time_t *not_before, time_t *not_after,
-                       struct in6_addr *hit, char *certificate, size_t size)
+static int create_certificate(time_t *not_before, time_t *not_after,
+                              struct in6_addr *hit, char *certificate,
+                              size_t size)
 {
     int err                        = 0;
     struct hip_cert_spki_info cert = { 0 };

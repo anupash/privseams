@@ -75,7 +75,7 @@
  * \param progname The name of the executable
  * \return void
  */
-void dhp_usage(char *progname)
+static void dhp_usage(char *progname)
 {
     printf( "Usage: %s -c [NUM] -l [NUM]\n"
             "-c [NUM] : create [NUM] new dh keys for the benchmark\n"
@@ -121,21 +121,21 @@ void dhp_usage(char *progname)
  *
  * \return Returns error code. 0 = Success, 1 = Error.
  */
-int dhp_getopts(int argc,
-                char **argv,
-                int  *sw_create_dh,
-                int  *sw_dh_group_id,
-                int  *sw_create_dsa,
-                int  *sw_create_rsa,
-                int  *sw_rsa_keylen,
-                int  *sw_dsa_keylen,
-                int  *sw_bench_loops,
-                int  *sw_print_keys,
-                int  *sw_shared_key_len,
-                int  *sw_hash_chain_len,
-                int  *sw_file_output,
-                int  *sw_cpuload,
-                int  *sw_hash_loops)
+static int dhp_getopts(int argc,
+                       char **argv,
+                       int  *sw_create_dh,
+                       int  *sw_dh_group_id,
+                       int  *sw_create_dsa,
+                       int  *sw_create_rsa,
+                       int  *sw_rsa_keylen,
+                       int  *sw_dsa_keylen,
+                       int  *sw_bench_loops,
+                       int  *sw_print_keys,
+                       int  *sw_shared_key_len,
+                       int  *sw_hash_chain_len,
+                       int  *sw_file_output,
+                       int  *sw_cpuload,
+                       int  *sw_hash_loops)
 {
     int c;
     opterr = 0;
@@ -281,7 +281,7 @@ static void print_timeres(void)
  * \param timeval timeval struct from the OS.
  * \return void
  */
-void dhp_start_benchmark(struct timeval *bench_time)
+static void dhp_start_benchmark(struct timeval *bench_time)
 {
     gettimeofday(bench_time, NULL);
 }
@@ -296,7 +296,7 @@ void dhp_start_benchmark(struct timeval *bench_time)
  * \param timeval timeval struct from the OS.
  * \return passed time since beginning of the interval.
  */
-double dhp_stop_benchmark(struct timeval *bench_time)
+static double dhp_stop_benchmark(struct timeval *bench_time)
 {
     struct timeval now;
     gettimeofday(&now, NULL);
