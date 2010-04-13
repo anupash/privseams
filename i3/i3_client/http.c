@@ -204,14 +204,13 @@ int get_address(char *web_url, I3ServerList *list)
     char ip_addr[IP_LEN];
     char id[STR_ID_LEN];
     char status;
-    int port;
     Coordinates coord;
     struct sockaddr_in socketaddr;
     struct hostent *hostaddr;
     struct servent *servaddr;
     struct protoent *protocol;
     char *p, *next;
-    int offset = 0;
+    int offset = 0, port = 0;
 
     /* get host name and format the get command */
     get_args(web_url, host, get_cmd, &port, STR_LEN);
