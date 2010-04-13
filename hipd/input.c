@@ -17,6 +17,7 @@
 #define _BSD_SOURCE
 
 #include "config.h"
+#include "blind.h"
 #include "input.h"
 #include "hadb.h"
 #include "oppdb.h"

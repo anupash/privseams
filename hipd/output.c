@@ -18,6 +18,7 @@
 #include <netinet/icmp6.h>
 
 #include "config.h"
+#include "blind.h"
 #include "output.h"
 #include "lib/core/performance.h"
 

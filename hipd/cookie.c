@@ -12,6 +12,7 @@
 #define _BSD_SOURCE
 
 #include "config.h"
+#include "blind.h"
 #include "cookie.h"
 #include "lib/core/solve.h"
 

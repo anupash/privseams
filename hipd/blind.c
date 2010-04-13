@@ -10,9 +10,70 @@ An Extension of HIP Base Exchange to Support Identity Privacy, IETF draft, Work 
 #define _BSD_SOURCE
 
 #include "blind.h"
+#include "lib/core/hit.h"
 #include "lib/core/hostid.h"
 
 static int hip_blind_fingerprints(hip_ha_t *entry);
+
+/**
+ * find the blinded local host identifier from the HIDB
+ *
+ * @param nonce the nonce used to blind the HIT
+ * @param test_hit the blinded HIT
+ * @param local_hit the unblinded HIT will be copied here
+ * @return zero on success or negative on error
+ */
+static int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
+                                   struct in6_addr *local_hit)
+{
+    hip_list_t *curr, *iter;
+    struct hip_host_id_entry *tmp;
+    int err                    = 0, c;
+    char *key                  = NULL;
+    unsigned int key_len       = sizeof(struct in6_addr);
+    struct in6_addr *blind_hit = NULL;
+
+    // generate key = nonce|hit_our
+    HIP_IFEL((key = HIP_MALLOC(sizeof(uint16_t) + sizeof(struct in6_addr), 0)) == NULL,
+             -1, "Couldn't allocate memory\n");
+
+    HIP_IFEL((blind_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+             -1, "Couldn't allocate memory\n");
+
+    HIP_READ_LOCK_DB(hip_local_hostid_db);
+
+    list_for_each_safe(curr, iter, hip_local_hostid_db, c)
+    {
+        tmp = (struct hip_host_id_entry *) list_entry(curr);
+        HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
+
+        // let's test the hit
+        memcpy(key, &tmp->lhi.hit, sizeof(struct in6_addr));
+        memcpy(key + sizeof(struct in6_addr), &nonce, sizeof(uint16_t));
+        HIP_IFEL(hip_do_blind(key, key_len, blind_hit), -1, "hip_do_blind failed \n");
+        if (blind_hit == NULL) {
+            err = -1;
+            goto out_err;
+        }
+        HIP_HEXDUMP("test HIT:", test_hit, 16);
+        if (hip_match_hit(test_hit, blind_hit)) {
+            HIP_HEXDUMP("Plain HIT found:", &tmp->lhi.hit, 16);
+            memcpy(local_hit, &tmp->lhi.hit, sizeof(struct in6_addr));
+            goto out_err;
+        }
+    }
+
+    HIP_READ_UNLOCK_DB(hip_local_hostid_db);
+
+out_err:
+    if (key) {
+        HIP_FREE(key);
+    }
+    if (blind_hit) {
+        HIP_FREE(blind_hit);
+    }
+    return err;
+}
 
 /**
  * test whether we should use blind or not based on an inbound packet
