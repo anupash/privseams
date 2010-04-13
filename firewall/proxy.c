@@ -940,7 +940,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
         ip6_hdr->ip6_dst                        = dst6->sin6_addr;
         ip6_hdr->ip6_ctlun.ip6_un2_vfc          = 0x60;
         ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt  = protocol;
-        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = len - 40;        //htons(len - sizeof(struct ip6_hdr)); ;
+        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = len - 40;
         ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_hlim = 0xff;
         HIP_DEBUG("src_addr and dst_aadr are ipv6!\n");
     }

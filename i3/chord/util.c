@@ -71,7 +71,8 @@ uint64_t wall_time(void)
 }
 
 /**********************************************************************/
-#endif
+#endif /* 0 */
+
 void update_rtt(long *rtt_avg, long *rtt_dev, long new_rtt)
 {
     long err;

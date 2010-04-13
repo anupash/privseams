@@ -324,7 +324,7 @@ static int hip_fw_init_userspace_ipsec(void)
                  "failed to initialize userspace ipsec\n");
 
         // queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
-        system_print("iptables -I HIPFW-INPUT -p 50 -j QUEUE");         /*  */
+        system_print("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
         system_print("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
         system_print("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
@@ -366,7 +366,7 @@ static int hip_fw_uninit_userspace_ipsec(void)
         HIP_IFEL(userspace_ipsec_uninit(), -1, "failed to uninit user ipsec\n");
 
         // delete all rules previously set up for this extension
-        system_print("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");         /*  */
+        system_print("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");
         system_print("iptables -D HIPFW-INPUT -p 17 --dport 10500 -j QUEUE 2>/dev/null");
         system_print("iptables -D HIPFW-INPUT -p 17 --sport 10500 -j QUEUE 2>/dev/null");
 
