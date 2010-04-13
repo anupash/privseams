@@ -297,7 +297,6 @@ i3_libi3_la_SOURCES = i3/aeshash/aescrypt.c              \
                       i3/i3_client/http.c                \
                       i3/i3_client/i3_client_api.c       \
                       i3/i3_client/i3_client_api_ctx.c   \
-                      i3/i3_client/i3_client_api_ext.c   \
                       i3/i3_client/i3_client_callback.c  \
                       i3/i3_client/i3_client_context.c   \
                       i3/i3_client/i3_client_fd.c        \
