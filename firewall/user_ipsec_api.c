@@ -11,7 +11,7 @@
  *
  */
 
-/* required for s6_addr32 */
+/* required for IFNAMSIZ in libipq headers */
 #define _BSD_SOURCE
 
 #include "user_ipsec_api.h"

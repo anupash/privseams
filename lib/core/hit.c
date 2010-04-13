@@ -8,8 +8,6 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#define _BSD_SOURCE
-
 #include "config.h"
 #include "hit.h"
 #include "debug.h"

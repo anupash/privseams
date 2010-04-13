@@ -74,7 +74,6 @@
  *          Host Identity Protocol (HIP) Rendezvous Extension</a>
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "config.h"

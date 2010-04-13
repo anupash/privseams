@@ -20,11 +20,6 @@
 #include "hostid.h"
 #include "filemanip.h"
 
-/* needed due to missing system inlcude for openWRT */
-#ifndef HOST_NAME_MAX
-#define HOST_NAME_MAX           64
-#endif
-
 #define HOST_ID_FILENAME_MAX_LEN 256
 
 

@@ -10,15 +10,9 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-/* required for s6_addr32 */
-#define _BSD_SOURCE
-
 #include "config.h"
 #include "pk.h"
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
+#include "lib/core/performance.h"
 
 /**
  * sign a HIP control message with a private RSA key

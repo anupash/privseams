@@ -14,8 +14,6 @@
 #ifndef HIP_FIREWALL_ESP_PROT_CONNTRACK_H
 #define HIP_FIREWALL_ESP_PROT_CONNTRACK_H
 
-#define _BSD_SOURCE
-
 #include "lib/core/protodefs.h"
 #include "conntrack.h"
 

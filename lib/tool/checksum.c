@@ -9,7 +9,6 @@
  * @note check if some of the checksum algos are redundant
  */
 
-/* required for s6_addr */
 #define _BSD_SOURCE
 
 #include <netinet/ip.h>

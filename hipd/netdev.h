@@ -13,28 +13,13 @@
 #include <sys/socket.h>
 #include <netinet/ip6.h>
 #include <openssl/rand.h>
-#include "config.h"
+
 #include "lib/tool/nlink.h"
 #include "lib/core/list.h"
 #include "lib/core/debug.h"
 #include "lib/core/prefix.h"
 
 #include "hit_to_ip.h"
-
-#ifdef CONFIG_HIP_MAEMO
-/* Fix the maemo environment's broken macros */
-
-#undef NLMSG_NEXT
-#define NLMSG_NEXT(nlh, len)      ((len) -= NLMSG_ALIGN((nlh)->nlmsg_len), \
-                                   (struct nlmsghdr *) (void *) (((char *) (nlh)) + NLMSG_ALIGN((nlh)->nlmsg_len)))
-
-#undef IFA_RTA
-#define IFA_RTA(r)  ((struct rtattr *) (void *) (((char *) (r)) + NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
-
-#undef RTA_NEXT
-#define RTA_NEXT(rta, attrlen)   ((attrlen) -= RTA_ALIGN((rta)->rta_len), \
-                                  (struct rtattr *) (void *) (((char *) (rta)) + RTA_ALIGN((rta)->rta_len)))
-#endif
 
 struct rtnl_handle;
 

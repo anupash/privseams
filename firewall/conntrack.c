@@ -15,7 +15,6 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <stdio.h>
@@ -32,14 +31,11 @@
 #include "firewalldb.h"
 #include "firewall.h"
 #include "lib/core/debug.h"
+#include "lib/core/performance.h"
 #include "helpers.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
-#endif
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
 #endif
 
 DList *hipList = NULL;

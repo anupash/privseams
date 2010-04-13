@@ -34,7 +34,6 @@
  * @author Tim Just
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <netinet/icmp6.h>

@@ -6,8 +6,6 @@
 #ifndef HIP_FIREWALL_LSI_H
 #define HIP_FIREWALL_LSI_H
 
-#define _BSD_SOURCE
-
 #include <libipq.h>
 #include <netinet/ip_icmp.h>
 #include <linux/netfilter_ipv4/ip_queue.h>

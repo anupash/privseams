@@ -16,7 +16,6 @@
  *       calls do not block because hipd is single threaded.
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "config.h"

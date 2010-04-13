@@ -27,16 +27,9 @@
 #endif
 
 /* hash function used for the creation and verification of the hash chain */
-#ifndef HIP_LIB_CORE_HASHCHAIN_H
-typedef unsigned char * (*hash_function_t)(const unsigned char *,
-                                           size_t,
-                                           unsigned char *);
-#else
-/* The maemo environment uses a different version of the OpenSSL library */
 typedef unsigned char * (*hash_function_t)(const unsigned char *,
                                            unsigned long,
                                            unsigned char *);
-#endif
 
 typedef struct hash_chain {
     /* pointer to the hash-function used to create and verify the hchain

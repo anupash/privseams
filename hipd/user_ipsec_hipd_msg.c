@@ -10,9 +10,6 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
-/* required for s6_addr32 */
-#define _BSD_SOURCE
-
 #include "user_ipsec_hipd_msg.h"
 #include "hipd.h"
 #include "init.h"

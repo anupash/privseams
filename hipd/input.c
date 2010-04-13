@@ -15,7 +15,6 @@
  * @author  Tim Just
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "config.h"
@@ -30,6 +29,7 @@
 #include "lib/core/solve.h"
 #include "lib/core/transform.h"
 #include "lib/core/keylen.h"
+#include "lib/core/performance.h"
 #include "dh.h"
 
 #include "hidb.h"
@@ -45,10 +45,6 @@
 #include "hipd.h"
 #include "oppipdb.h"
 #include "pkt_handling.h"
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
 
 /**
  * Verifies a HMAC.

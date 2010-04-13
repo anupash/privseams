@@ -12,9 +12,6 @@
  * @author  Alberto Garcia
  */
 
-/* required for s6_addr32 */
-#define _BSD_SOURCE
-
 #include "config.h"
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 

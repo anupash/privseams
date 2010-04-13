@@ -13,7 +13,6 @@
  * @author Dominic Gatzen
  */
 
-/* required by the libipq header for IFNAMSZ */
 #define _BSD_SOURCE
 
 #include <string.h>
@@ -23,6 +22,7 @@
 #include "config.h"
 #include "lib/core/ife.h"
 #include "lib/core/crypto.h"
+#include "lib/core/performance.h"
 #include "midauth.h"
 
 #include "pisa.h"
@@ -35,10 +35,6 @@
  * seconds. Worst case timer resolution depends on the timeout in the select
  * call */
 #define PISA_RANDOM_TTL 2.0
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
 
 struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit);

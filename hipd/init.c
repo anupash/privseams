@@ -7,10 +7,9 @@
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
-#include <netinet/icmp6.h>
+#include <limits.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
@@ -31,9 +30,10 @@
 #include "lib/core/hip_capability.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hostid.h"
+#include "lib/core/performance.h"
+#include "lib/tool/nlink.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hostsfiles.h"
-#include "lib/performance/performance.h"
 #include "lib/tool/xfrmapi.h"
 #include "modules/hipd_modules.h"
 
@@ -41,31 +41,20 @@
  * HIP daemon lock file is used to prevent multiple instances
  * of the daemon to start and to record current daemon pid.
  */
-#define HIP_DAEMON_LOCK_FILE    HIPL_LOCKDIR "/hipd.lock"
+#define HIP_DAEMON_LOCK_FILE     HIPL_LOCKDIR    "/hipd.lock"
 
 /** ICMPV6_FILTER related stuff */
 #define BIT_CLEAR(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
-#define BIT_SET(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] |= (1U << ((nr) & 31)); } while (0)
-#define BIT_TEST(nr, addr) do { (uint32_t *) (addr))[(nr) >> 5] & (1U << ((nr) & 31)); } while (0)
+#define BIT_SET(nr,   addr) do { ((uint32_t *) (addr))[(nr) >> 5] |=  (1U << ((nr) & 31)); } while (0)
+#define BIT_TEST(nr,  addr) do {  (uint32_t *) (addr))[(nr) >> 5] &   (1U << ((nr) & 31)); } while (0)
 
 #ifndef ICMP6_FILTER_WILLPASS
-#define ICMP6_FILTER_WILLPASS(type, filterp) \
-    (BIT_TEST((type), filterp) == 0)
-
-#define ICMP6_FILTER_WILLBLOCK(type, filterp) \
-    BIT_TEST((type), filterp)
-
-#define ICMP6_FILTER_SETPASS(type, filterp) \
-    BIT_CLEAR((type), filterp)
-
-#define ICMP6_FILTER_SETBLOCK(type, filterp) \
-    BIT_SET((type), filterp)
-
-#define ICMP6_FILTER_SETPASSALL(filterp) \
-    memset(filterp, 0, sizeof(struct icmp6_filter));
-
-#define ICMP6_FILTER_SETBLOCKALL(filterp) \
-    memset(filterp, 0xFF, sizeof(struct icmp6_filter));
+#define ICMP6_FILTER_WILLPASS(type, filterp) (BIT_TEST((type),  filterp) == 0)
+#define ICMP6_FILTER_WILLBLOCK(type, filterp) BIT_TEST((type),  filterp)
+#define ICMP6_FILTER_SETPASS(type, filterp)   BIT_CLEAR((type), filterp)
+#define ICMP6_FILTER_SETBLOCK(type, filterp)  BIT_SET((type),   filterp)
+#define ICMP6_FILTER_SETPASSALL(filterp)  memset(filterp,    0, sizeof(struct icmp6_filter));
+#define ICMP6_FILTER_SETBLOCKALL(filterp) memset(filterp, 0xFF, sizeof(struct icmp6_filter));
 #endif
 /** end ICMPV6_FILTER related stuff */
 
@@ -89,7 +78,31 @@ static void hip_sig_chld(int signum)
     }
 }
 
-#ifndef CONFIG_HIP_OPENWRT
+/**
+ * set or unset close-on-exec flag for a given file descriptor
+ *
+ * @param desc the file descriptor
+ * @param value 1 if to set or zero for unset
+ * @return the previous flags
+ */
+int hip_set_cloexec_flag(int desc, int value)
+{
+    int oldflags = fcntl(desc, F_GETFD, 0);
+    /* If reading the flags failed, return error indication now.*/
+    if (oldflags < 0) {
+        return oldflags;
+    }
+    /* Set just the flag we want to set. */
+
+    if (value != 0) {
+        oldflags |=  FD_CLOEXEC;
+    } else {
+        oldflags &= ~FD_CLOEXEC;
+    }
+    /* Store modified flag word in the descriptor. */
+    return fcntl(desc, F_SETFD, oldflags);
+}
+
 #ifdef CONFIG_HIP_DEBUG
 /**
  * print information about underlying the system for bug reports
@@ -169,7 +182,6 @@ static void hip_print_sysinfo(void)
     if (system("lsmod") == -1) {
         HIP_ERROR("lsmod failed");
     }
-    ;
 
     if (dup2(stdout_fd, 1) < 0) {
         HIP_ERROR("Stdout restore failed\n");
@@ -197,9 +209,8 @@ static void hip_print_sysinfo(void)
         }
     }
 }
+#endif /* CONFIG_HIP_DEBUG */
 
-#endif
-#endif
 
 /**
  * Create a file with the given contents unless it already exists
@@ -270,13 +281,10 @@ static void hip_set_os_dep_variables(void)
         hip_xfrm_set_beet(2);
         hip_xfrm_set_algo_names(0);
     } else {
-        //hip_xfrm_set_beet(1); /* TUNNEL mode */
+        //hip_xfrm_set_beet(1);       /* TUNNEL mode */
         hip_xfrm_set_beet(4);         /* BEET mode */
         hip_xfrm_set_algo_names(1);
     }
-#endif
-
-#ifndef CONFIG_HIP_PFKEY
     /* This requires new kernel versions (the 2.6.18 patch) - jk */
     hip_xfrm_set_default_sa_prefix_len(128);
 #endif
@@ -284,11 +292,14 @@ static void hip_set_os_dep_variables(void)
 
 /**
  * Initialize raw ipv4 socket.
+ *
+ * @param hip_raw_sock_v4 the raw socket to initialize
+ * @param proto the protocol for the raw socket
+ * @return zero on success or negative on failure
  */
 static int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
 {
-    int on  = 1, err = 0;
-    int off = 0;
+    int on  = 1, off = 0, err = 0;
 
     *hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, proto);
     hip_set_cloexec_flag(*hip_raw_sock_v4, 1);
@@ -312,7 +323,6 @@ out_err:
  * Probe kernel modules.
  */
 
-#ifndef CONFIG_HIP_OPENWRT
 /**
  * probe for kernel modules (linux specific)
  */
@@ -321,8 +331,7 @@ static void hip_probe_kernel_modules(void)
     int count, err, status;
     char cmd[40];
     int mod_total;
-    char *mod_name[] =
-    {
+    char *mod_name[] = {
         "xfrm6_tunnel",    "xfrm4_tunnel",
         "ip6_tunnel",      "ipip",           "ip4_tunnel",
         "xfrm_user",       "dummy",          "esp6", "esp4",
@@ -347,15 +356,14 @@ static void hip_probe_kernel_modules(void)
             if (freopen("/dev/null", "w", stderr) == NULL) {
                 HIP_ERROR("freopen if /dev/null failed.");
             }
-            ;
             execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *) NULL);
-        } else {waitpid(err, &status, 0);
+        } else {
+            waitpid(err, &status, 0);
         }
     }
 
     HIP_DEBUG("Probing completed\n");
 }
-#endif /* CONFIG_HIP_OPENWRT */
 
 /**
  * Initialize random seed.
@@ -384,7 +392,12 @@ static int init_random_seed(void)
 }
 
 /**
- * Init raw ipv6 socket.
+ * Init raw ipv6 socket
+ *
+ * @param hip_raw_sock_v6 the socket to initialize
+ * @param proto protocol for the socket
+ *
+ * @return zero on success or negative on failure
  */
 static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
 {
@@ -406,6 +419,11 @@ out_err:
     return err;
 }
 
+/**
+ * find the first RSA-based host id
+ *
+ * @return the host id or NULL if none found
+ */
 static struct hip_host_id_entry *hip_return_first_rsa(void)
 {
     hip_list_t *curr, *iter;
@@ -435,7 +453,9 @@ out_err:
 }
 
 /**
- * Initialize host IDs.
+ * Initialize local host IDs.
+ *
+ * @return zero on success or negative on failure
  */
 static int hip_init_host_ids(void)
 {
@@ -527,6 +547,11 @@ out_err:
     return err;
 }
 
+/**
+ * Initialize certificates for the local host
+ *
+ * @return zero on success or negative on failure
+ */
 static int hip_init_certs(void)
 {
     int err = 0;
@@ -992,40 +1017,22 @@ out_err:
     return err;
 }
 
-int hip_set_cloexec_flag(int desc, int value)
-{
-    int oldflags = fcntl(desc, F_GETFD, 0);
-    /* If reading the flags failed, return error indication now.*/
-    if (oldflags < 0) {
-        return oldflags;
-    }
-    /* Set just the flag we want to set. */
-
-    if (value != 0) {
-        oldflags |= FD_CLOEXEC;
-    } else {
-        oldflags &= ~FD_CLOEXEC;
-    }
-    /* Store modified flag word in the descriptor. */
-    return fcntl(desc, F_SETFD, oldflags);
-}
 
 /**
- * Creates a UDP socket for NAT traversal.
+ * create a socket to handle UDP encapsulation of HIP control
+ * packets
  *
- * @param  hip_nat_sock_udp a pointer to the UDP socket.
- * @param sockaddr_in the address that will be used to create the
- *                 socket. If NULL is passed, INADDR_ANY is used.
- * @param is_output 1 if the socket is for output, otherwise 0
- *
- * @return zero on success, negative error value on error.
+ * @param hip_nat_sock_udp the socket to initialize
+ * @param addr the address to which the socket should be bound
+ * @param is_output one if the socket is to be used for output
+ *                  or zero for input
+ * @return zero on success or negative on failure
  */
 int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
                             struct sockaddr_in *addr,
                             int is_output)
 {
-    int on  = 1, err = 0;
-    int off = 0;
+    int on  = 1, off = 0, err = 0;
     struct sockaddr_in myaddr;
     int type, protocol;
 
@@ -1049,13 +1056,11 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
     /* see bug id 212 why RECV_ERR is off */
     err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
-        #ifndef CONFIG_HIP_OPENWRT
     if (!is_output) {
         int encap_on = HIP_UDP_ENCAP_ESPINUDP;
         err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
     }
     HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
-        #endif
     err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
     err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
@@ -1072,7 +1077,6 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
         myaddr.sin_family      = AF_INET;
         /** @todo Change this inaddr_any -- Abi */
         myaddr.sin_addr.s_addr = INADDR_ANY;
-
         myaddr.sin_port        = htons(hip_get_local_nat_udp_port());
     }
 

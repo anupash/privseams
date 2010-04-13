@@ -3,102 +3,88 @@ ACLOCAL_AMFLAGS  = -I m4
 HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h test/*.h))
 
 # For "make dist"
-#
-# XX FIX: use dist_doc_DATA for all documentation (if you change this,
-# make sure the check the "make bin" still works)
-#
-EXTRA_DIST =  .vimrc debian doc patches process_modules.py release.version
-EXTRA_DIST += test/configs test/demo test/maintainer test/packaging
-EXTRA_DIST += test/performance $(wildcard modules/*/module_info.xml)
-EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
+EXTRA_DIST =  .vimrc debian doc patches release.version version.h process_modules.py
+EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
+EXTRA_DIST += test/configs test/demo test/maintainer test/openwrt
+EXTRA_DIST += test/packaging test/packets test/performance
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
 EXTRA_DIST += m4 # required for CentOS "make bin" target
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/modules/,*))
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
-BUILT_SOURCES = tools/hipdnskeyparse tools/hipdnsproxy
-
-
-### bin_PROGRAMS ###
-bin_PROGRAMS = test/certteststub \
-               test/hc_performance \
-               test/auth_performance \
-               test/modularization
+### user programs ###
+bin_PROGRAMS = test/auth_performance    \
+               test/certteststub        \
+               test/hc_performance
 
 if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
 endif
 
-### sbin_PROGRAMS ###
-sbin_PROGRAMS = hipd/hipd \
-                tools/hipconf \
+### superuser programs ###
+sbin_PROGRAMS = hipd/hipd      \
+                tools/hipconf  \
                 tools/pisacert
 
 if HIP_FIREWALL
 sbin_PROGRAMS += firewall/hipfw
 endif
 
-### lib_LTLIBRARIES ###
-lib_LTLIBRARIES = lib/conf/libhipconf.la \
-                  lib/core/libhipcore.la \
-                  lib/tool/libhiptool.la \
-                  lib/modularization/libmod.la
+
+### libraries ###
+lib_LTLIBRARIES = lib/core/libhipcore.la
+lib_LTLIBRARIES += lib/modularization/libmod.la
+
 if HIP_PFKEY
 lib_LTLIBRARIES += lib/ipsec/libhipsec.la
 endif
 
-if HIP_PERFORMANCE
-lib_LTLIBRARIES += lib/performance/libperformance.la
-endif
-
-### *_SOURCES ###
-test_certteststub_SOURCES = test/certteststub.c
-
-test_hc_performance_SOURCES = test/hc_performance.c
-
+### source declarations ###
 test_auth_performance_SOURCES = test/auth_performance.c
+test_certteststub_SOURCES     = test/certteststub.c
+test_dh_performance_SOURCES   = test/dh_performance.c
+test_hc_performance_SOURCES   = test/hc_performance.c
 
-test_modularization_SOURCES = test/modularization.c
-
-if HIP_PERFORMANCE
-test_dh_performance_SOURCES = test/dh_performance.c
-endif
-
-tools_hipconf_SOURCES = tools/hipconftool.c
-
+tools_hipconf_SOURCES  = tools/hipconftool.c
 tools_pisacert_SOURCES = tools/pisacert.c
 
-hipd_hipd_SOURCES = hipd/hipd.c \
-                    hipd/keymat.c \
-                    hipd/hiprelay.c \
-                    hipd/registration.c \
-                    hipd/user.c \
-                    hipd/hadb.c \
-                    hipd/close.c \
-                    hipd/configfilereader.c \
-                    hipd/input.c \
-                    hipd/output.c \
-                    hipd/hidb.c \
-                    hipd/cookie.c \
-                    hipd/netdev.c \
-                    hipd/bos.c \
-                    hipd/nat.c \
-                    hipd/init.c \
-                    hipd/maintenance.c \
-                    hipd/pkt_handling.c \
-                    hipd/accessor.c \
-                    hipd/oppipdb.c \
-                    hipd/dh.c \
-                    hipd/cert.c \
-                    hipd/user_ipsec_sadb_api.c \
-                    hipd/user_ipsec_hipd_msg.c \
-                    hipd/esp_prot_hipd_msg.c \
-                    hipd/esp_prot_anchordb.c \
+hipd_hipd_SOURCES = hipd/accessor.c              \
+                    hipd/bos.c                   \
+                    hipd/cert.c                  \
+                    hipd/close.c                 \
+                    hipd/configfilereader.c      \
+                    hipd/cookie.c                \
+                    hipd/dh.c                    \
+                    hipd/esp_prot_anchordb.c     \
+                    hipd/esp_prot_hipd_msg.c     \
                     hipd/esp_prot_light_update.c \
-                    hipd/nsupdate.c \
-                    hipd/hit_to_ip.c \
-                    hipd/hadb_legacy.c \
-                    hipd/hip_socket.c
+                    hipd/hadb.c                  \
+                    hipd/hadb_legacy.c           \
+                    hipd/hidb.c                  \
+                    hipd/hip_socket.c            \
+                    hipd/hipd.c                  \
+                    hipd/hiprelay.c              \
+                    hipd/hit_to_ip.c             \
+                    hipd/init.c                  \
+                    hipd/input.c                 \
+                    hipd/keymat.c                \
+                    hipd/maintenance.c           \
+                    hipd/nat.c                   \
+                    hipd/netdev.c                \
+                    hipd/nsupdate.c              \
+                    hipd/oppipdb.c               \
+                    hipd/output.c                \
+                    hipd/pkt_handling.c          \
+                    hipd/registration.c          \
+                    hipd/user.c                  \
+                    hipd/user_ipsec_hipd_msg.c   \
+                    hipd/user_ipsec_sadb_api.c
+
+if HIP_OPPORTUNISTIC
+hipd_hipd_SOURCES += hipd/oppdb.c
+endif
 
 if HIP_PFKEY
 hipd_hipd_SOURCES += hipd/pfkeyapi.c
@@ -108,74 +94,82 @@ if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
 
-if HIP_OPPORTUNISTIC
-hipd_hipd_SOURCES += hipd/oppdb.c
-endif
-
-firewall_hipfw_SOURCES = firewall/firewall.c \
-                         firewall/conntrack.c \
-                         firewall/rule_management.c \
-                         firewall/helpers.c \
-                         firewall/firewall_control.c \
-                         firewall/dlist.c \
-                         firewall/hslist.c \
-                         firewall/user_ipsec_api.c \
-                         firewall/user_ipsec_sadb.c \
-                         firewall/user_ipsec_fw_msg.c \
-                         firewall/common_hipd_msg.c \
-                         firewall/esp_prot_api.c \
-                         firewall/esp_prot_fw_msg.c \
-                         firewall/esp_prot_conntrack.c \
-                         firewall/esp_prot_config.c \
-                         firewall/firewalldb.c \
-                         firewall/lsi.c \
-                         firewall/sysopp.c \
-                         firewall/cache.c \
-                         firewall/cache_port.c \
-                         firewall/datapkt.c \
-                         firewall/user_ipsec_esp.c
+firewall_hipfw_SOURCES = firewall/cache.c               \
+                         firewall/cache_port.c          \
+                         firewall/common_hipd_msg.c     \
+                         firewall/conntrack.c           \
+                         firewall/datapkt.c             \
+                         firewall/dlist.c               \
+                         firewall/esp_prot_api.c        \
+                         firewall/esp_prot_config.c     \
+                         firewall/esp_prot_conntrack.c  \
+                         firewall/esp_prot_fw_msg.c     \
+                         firewall/firewall.c            \
+                         firewall/firewall_control.c    \
+                         firewall/firewalldb.c          \
+                         firewall/helpers.c             \
+                         firewall/hslist.c              \
+                         firewall/lsi.c                 \
+                         firewall/rule_management.c     \
+                         firewall/sysopp.c              \
+                         firewall/user_ipsec_api.c      \
+                         firewall/user_ipsec_esp.c      \
+                         firewall/user_ipsec_fw_msg.c   \
+                         firewall/user_ipsec_sadb.c
 
 if HIP_MIDAUTH
-firewall_hipfw_SOURCES += firewall/midauth.c \
-                          firewall/pisa.c \
+firewall_hipfw_SOURCES += firewall/midauth.c   \
+                          firewall/pisa.c      \
                           firewall/pisa_cert.c
 endif
 
-lib_conf_libhipconf_la_SOURCES = lib/conf/hipconf.c
-
-lib_core_libhipcore_la_SOURCES = lib/core/builder.c \
-                                 lib/core/hashtable.c \
-                                 lib/core/hashtree.c \
-                                 lib/core/prefix.c \
-                                 lib/core/certtools.c \
-                                 lib/core/linkedlist.c \
-                                 lib/core/debug.c \
-                                 lib/core/message.c \
+# TODO: libhipcore, libhipconf and libhiptool have circular
+# dependencies. This needs to be addressed at some point.
+lib_core_libhipcore_la_SOURCES = lib/conf/hipconf.c         \
+                                 lib/core/builder.c         \
+                                 lib/core/certtools.c       \
+                                 lib/core/crypto.c          \
+                                 lib/core/debug.c           \
                                  lib/core/esp_prot_common.c \
-                                 lib/core/hostsfiles.c \
-                                 lib/core/filemanip.c \
-                                 lib/core/hashchain.c \
-                                 lib/core/hostid.c \
-                                 lib/core/hip_udp.c \
-                                 lib/core/solve.c \
-                                 lib/core/transform.c \
-                                 lib/core/keylen.c \
-                                 lib/core/hit.c \
-                                 lib/core/straddr.c \
+                                 lib/core/filemanip.c       \
+                                 lib/core/hashchain.c       \
                                  lib/core/hashchain_store.c \
-                                 lib/core/hip_statistics.c \
-                                 lib/core/crypto.c
+                                 lib/core/hashtable.c       \
+                                 lib/core/hashtree.c        \
+                                 lib/core/hip_statistics.c  \
+                                 lib/core/hip_udp.c         \
+                                 lib/core/hit.c             \
+                                 lib/core/hostid.c          \
+                                 lib/core/hostsfiles.c      \
+                                 lib/core/keylen.c          \
+                                 lib/core/linkedlist.c      \
+                                 lib/core/message.c         \
+                                 lib/core/prefix.c          \
+                                 lib/core/solve.c           \
+                                 lib/core/straddr.c         \
+                                 lib/core/transform.c       \
+                                 lib/core/util.c            \
+                                 lib/tool/checksum.c        \
+                                 lib/tool/lutil.c           \
+                                 lib/tool/nlink.c           \
+                                 lib/tool/pk.c
+
+if HIP_PERFORMANCE
+lib_core_libhipcore_la_SOURCES += lib/core/performance.c
+endif
 
 if HIP_PRIVSEP
 lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
 
-lib_tool_libhiptool_la_SOURCES = lib/tool/pk.c \
-                                 lib/tool/nlink.c \
-                                 lib/tool/lutil.c \
-                                 lib/tool/checksum.c
-
 lib_modularization_libmod_la_SOURCES = lib/modularization/lmod.c
+
+# don't use libipsec, but xfrmapi
+if HIP_PFKEY
+lib_core_libhipcore_la_SOURCES += lib/tool/pfkeysadb.c
+else
+lib_core_libhipcore_la_SOURCES += lib/tool/xfrmapi.c
+endif # HIPPFKEY
 
 ############################ NOTE ##################################
 #
@@ -199,28 +193,17 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
-#lib_ipsec_la_LDFLAGS = -version-info 0:1:0
-#lib_ipsec_la_LIBADD = $(LEXLIB)
+#lib_ipsec_libhipsec_la_LDFLAGS = -version-info 0:1:0
+#lib_ipsec_libhipsec_la_LIBADD  = $(LEXLIB)
 
-#DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h
-DISTCLEANFILES = lib/ipsec/policy_token.h $(wildcard modules/*.h)
+#DISTCLEANFILES = lib/ipsec/policy_parse.c lib/ipsec/policy_token.c
 
-# don't use libipsec, but xfrmapi
-if HIP_PFKEY
-lib_tool_libhiptool_la_SOURCES += lib/tool/pfkeysadb.c
-else
-lib_tool_libhiptool_la_SOURCES += lib/tool/xfrmapi.c
-endif # HIPPFKEY
-
-lib_performance_libperformance_la_SOURCES = lib/performance/performance.c
-
-### *_LDADD ###
 # Initialize LDADD lists empty, because modules might add entries to LDADD. The
 # module LDADDs need to be included before the standard LDADDs, because modules
 # can depend on the core code.
-hipd_hipd_LDADD =
+hipd_hipd_LDADD      =
 firewall_hipfw_LDADD =
-tools_hipconf_LDADD =
+tools_hipconf_LDADD  =
 
 # Include module Makefile.am's.
 # TODO: Make this inclusion dynamic
@@ -228,146 +211,110 @@ include modules/heartbeat/Makefile.am
 include modules/heartbeat_update/Makefile.am
 include modules/update/Makefile.am
 
-test_certteststub_LDADD = lib/core/libhipcore.la \
-                          lib/tool/libhiptool.la
-if HIP_PERFORMANCE
-test_certteststub_LDADD += lib/performance/libperformance.la
-endif
+### library dependencies ###
 
-test_hc_performance_LDADD = lib/core/libhipcore.la \
-                            lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_hc_performance_LDADD += lib/performance/libperformance.la
-endif
-
-test_auth_performance_LDADD = lib/core/libhipcore.la \
-                              lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_auth_performance_LDADD += lib/performance/libperformance.la
-endif
-
-if HIP_PERFORMANCE
-test_dh_performance_LDADD = lib/core/libhipcore.la \
-                            lib/tool/libhiptool.la \
-                            lib/performance/libperformance.la
-endif
-
-test_modularization_LDADD = lib/modularization/libmod.la \
-                            lib/core/libhipcore.la \
-                            lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-test_modularization_LDADD += lib/performance/libperformance.la
-endif
-
-tools_hipconf_LDADD += lib/conf/libhipconf.la \
-                       lib/core/libhipcore.la \
-                       lib/tool/libhiptool.la
-
-# required by libhipconf
-if HIP_PERFORMANCE
-tools_hipconf_LDADD += lib/performance/libperformance.la
-endif
-
-tools_pisacert_LDADD = lib/core/libhipcore.la \
-                       lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-tools_pisacert_LDADD += lib/performance/libperformance.la
-endif
-
-hipd_hipd_LDADD += lib/modularization/libmod.la \
-                   lib/core/libhipcore.la \
-                   lib/conf/libhipconf.la \
-                   lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-hipd_hipd_LDADD += lib/performance/libperformance.la
-endif
+firewall_hipfw_LDADD          += lib/core/libhipcore.la
+hipd_hipd_LDADD               += lib/modularization/libmod.la \
+                                 lib/core/libhipcore.la
+test_auth_performance_LDADD    = lib/core/libhipcore.la
+test_certteststub_LDADD        = lib/core/libhipcore.la
+test_dh_performance_LDADD      = lib/core/libhipcore.la
+test_hc_performance_LDADD      = lib/core/libhipcore.la
+tools_hipconf_LDADD           += lib/core/libhipcore.la
+tools_pisacert_LDADD           = lib/core/libhipcore.la
 
 if HIP_PFKEY
 hipd_hipd_LDADD += lib/ipsec/libhipsec.la
 endif
 
-if HIP_FIREWALL
-firewall_hipfw_LDADD += lib/core/libhipcore.la \
-                        lib/tool/libhiptool.la
-
-if HIP_PERFORMANCE
-firewall_hipfw_LDADD += lib/performance/libperformance.la
-endif
-
-endif # HIP_FIREWALL
-
-CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
-
 ###### PYTHON stuff below ######
 # TODO python parts still needs clean-up
 if HAVE_PYTHON
-
 # These two scripts are generated in the end to get the python paths correct.
 # Currently, I don't know a better way to deal with the python code. -miika
-dist_sbin_SCRIPTS = tools/hipdnsproxy \
-                    tools/hipdnskeyparse \
+dist_sbin_SCRIPTS = tools/hipdnskeyparse \
+                    tools/hipdnsproxy    \
                     tools/nsupdate.pl
 
-dns_PYTHON = tools/DNS/Base.py \
-             tools/DNS/Lib.py \
-             tools/DNS/Type.py \
-             tools/DNS/Class.py \
-             tools/DNS/Opcode.py \
-             tools/DNS/win32dns.py \
-             tools/DNS/__init__.py \
-             tools/DNS/pyip6.py \
-             tools/DNS/lazy.py \
-             tools/DNS/Status.py \
-             tools/DNS/Serialization.py
+dns_PYTHON = tools/DNS/__init__.py      \
+             tools/DNS/Base.py          \
+             tools/DNS/Class.py         \
+             tools/DNS/lazy.py          \
+             tools/DNS/Lib.py           \
+             tools/DNS/Opcode.py        \
+             tools/DNS/pyip6.py         \
+             tools/DNS/Serialization.py \
+             tools/DNS/Status.py        \
+             tools/DNS/Type.py          \
+             tools/DNS/win32dns.py
 
 dnsdir = $(pyexecdir)/tools/DNS
 
-tools_hipdnsproxy_PYTHON = tools/dnsproxy.py \
-                           tools/pyip6.py \
-                           tools/hosts.py \
+tools_hipdnskeyparse_PYTHON = tools/myasn.py       \
+                              tools/parse-key-3.py
+
+tools_hipdnsproxy_PYTHON = tools/dnsproxy.py  \
+                           tools/hosts.py     \
+                           tools/pyip6.py     \
                            tools/util.py
 
-tools_hipdnsproxydir = $(pyexecdir)/tools/hipdnsproxy
-
-tools_hipdnskeyparse_PYTHON = tools/parse-key-3.py \
-                              tools/myasn.py
-
 tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
-
+tools_hipdnsproxydir    = $(pyexecdir)/tools/hipdnsproxy
 endif # HAVE_PYTHON
 
+CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
+
+
+### misc stuff ###
 doxygen:
-	cd @top_srcdir@/doc && doxygen
+	doxygen Doxyfile
+
+nodist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
+
+doc/HOWTO.html:  doc/HOWTO.xml
+	xmlto -o $(@D) html-nochunks $<
+
+doc/HOWTO.txt: doc/HOWTO.xml
+	xmlto -o $(@D) txt $<
+
+CLEANFILES += doc/HOWTO.html doc/HOWTO.txt
+clean-local:
+	rm -rf doxy
 
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
-	env PYEXECDIR=$(pyexecdir) @top_srcdir@/test/packaging/create-package.sh $@
+	env PYEXECDIR=$(pyexecdir) @srcdir@/test/packaging/create-package.sh $@
 
 tools/hipdnsproxy: tools/dnsproxy.py
 tools/hipdnskeyparse: tools/parse-key-3.py
 tools/hipdnsproxy tools/hipdnskeyparse:
-	@top_srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
+	@srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
 
 autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
 	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
 # Do not check headers that have issues we cannot fix.
-NOCHECK_HEADER_LIST = $(wildcard $(srcdir)/lib/gui/*.h)
+NOCHECK_HEADER_LIST  = $(wildcard $(srcdir)/lib/gui/*.h)
 HIPL_HEADER_FILTERED = $(filter-out $(NOCHECK_HEADER_LIST),$(HIPL_HEADER_LIST))
-HIPL_HEADER_OBJS = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.ho))
-CLEANFILES += $(HIPL_HEADER_OBJS)
+HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.ho))
+CLEANFILES          += $(HIPL_HEADER_OBJS)
+
+#this macro is not to be used in headers, so use it "globally" just for checkheaders
+CH_CPPFLAGS = -D_BSD_SOURCE
 
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
-	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CH_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
-lib/gui/%.ho: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
+i3/i3/i3_config.lo lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
+lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
+
+# Ensure that version.h is created before everything else. This does not work
+# when creating specific objects that may depend on version.h directly.
+BUILT_SOURCES = version.h
+$(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
+	echo "#define BZR_REVISION \"$$(bzr revno $(srcdir))\"" > $@
 
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo

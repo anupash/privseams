@@ -46,7 +46,6 @@
  *       append a newline (as in fprinf(3)).
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "config.h"

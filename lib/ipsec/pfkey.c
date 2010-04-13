@@ -31,7 +31,6 @@
  * SUCH DAMAGE.
  */
 
-/* required for caddr_t */
 #define _BSD_SOURCE
 
 #include <sys/types.h>

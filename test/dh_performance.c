@@ -18,14 +18,13 @@
 #include <openssl/dh.h>         /* open ssl library for DH operations */
 #include <openssl/sha.h>        /* open ssl library for SHA operations */
 #include <openssl/dsa.h>        /* open ssl library for DSA operations */
+#include <openssl/sha.h>
 
 #include "config.h"
 #include "lib/core/crypto.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hashchain.h"
-
-#include "lib/performance/performance.h"
-#include <openssl/sha.h>
+#include "lib/core/performance.h"
 
 //int DH_compute_key(unsigned char *key, BIGNUM *pub_key, DH *dh);
 
@@ -804,9 +803,7 @@ int main(int argc, char **argv)
     printf("%4.2f hashes per sec, %4.2f hashes per min\n",
            sw_bench_loops / bench_secs * 1000, sw_hashloops / bench_secs * 60 * 1000);
 
-#ifdef CONFIG_HIP_PERFORMANCE
     /* Deallocate memory of perf_set after finishing all of tests */
     hip_perf_destroy(perf_set);
-#endif
     return err;
 }

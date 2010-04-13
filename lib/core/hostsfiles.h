@@ -9,10 +9,6 @@
 #include "prefix.h"
 #include "lib/conf/hipconf.h"
 
-#ifndef HOST_NAME_MAX
-#  define HOST_NAME_MAX 64
-#endif /* HOST_NAME_MAX */
-
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
                                             const void *arg,
                                             void *result);

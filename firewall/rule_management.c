@@ -11,14 +11,12 @@
  * @author Essi Vehmersalo
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <stdio.h>
 #include <string.h>
 #include <net/if.h>
 #include <netinet/in.h>
-//#include <linux/types.h>
 #include <linux/netfilter.h>
 #include <libipq.h>
 

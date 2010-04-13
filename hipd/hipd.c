@@ -7,7 +7,6 @@
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "config.h"
@@ -15,11 +14,14 @@
 #include "hip_socket.h"
 #include "pkt_handling.h"
 #include "lib/core/filemanip.h"
+#include "lib/core/performance.h"
 #include "lib/core/straddr.h"
+#include "lib/core/util.h"
 
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
+/* Defined as a global just to allow freeing in exit(). Do not use outside
+ * of this file! */
+struct hip_common *hipd_msg          = NULL;
+struct hip_common *hipd_msg_v4       = NULL;
 
 int is_active_mhaddr                 = 1; /**< Which mhaddr to use active or lazy? (default: active) */
 int is_hard_handover                 = 0; /**< if hard handover is forced to be used (default: no) */
@@ -173,7 +175,6 @@ int hip_sendto_firewall(const struct hip_common *msg)
 static int hipd_main(int argc, char *argv[])
 {
     int ch, killold = 0;
-    // char buff[HIP_MAX_NETLINK_PACKET];
     fd_set read_fdset;
     int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
     struct timeval timeout;
@@ -226,7 +227,7 @@ static int hipd_main(int argc, char *argv[])
     hip_set_logfmt(LOGFMT_LONG);
 
     /* Parse command-line options */
-    while ((ch = getopt(argc, argv, ":bi:kNchafd:")) != -1) {
+    while ((ch = getopt(argc, argv, ":bi:kNchafd:V")) != -1) {
         switch (ch) {
         case 'b':
             foreground = 0;
@@ -261,6 +262,8 @@ static int hipd_main(int argc, char *argv[])
                 HIP_ERROR("Error while disabling module '%s'.\n", optarg);
             }
             break;
+        case 'V':
+            hip_print_version("hipd");
         case '?':
         case 'h':
         default:

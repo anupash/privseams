@@ -18,8 +18,6 @@ define Package/hipl-hipd
     SECTION:=net
     CATEGORY:=Network
     DEPENDS:=+hipl-common +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
-             # TODO: probably not needed:
-             #+kmod-capi +libpcap +udevtrigger +ipsec-tools +isakmpd
     TITLE:=HIPL deamon
     URL:=http://hipl.hiit.fi/
 endef
@@ -101,8 +99,6 @@ CONFIGURE_VARS += \
 define Build/Configure
 	$(call Build/Configure/Default, \
             --enable-shared \
-            --enable-midauth \
-            --enable-openwrt \
             --disable-privsep \
             --disable-debug \
     );

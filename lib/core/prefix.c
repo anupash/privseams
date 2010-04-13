@@ -11,7 +11,6 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "prefix.h"
@@ -108,7 +107,7 @@ void set_hit_prefix(struct in6_addr *hit)
  *
  * @param lsi an IPv4 address for which to set the LSI prefix
  */
-inline void set_lsi_prefix(hip_lsi_t *lsi)
+void set_lsi_prefix(hip_lsi_t *lsi)
 {
     hip_closest_prefix_type_t lsi_begin;
     memcpy(&lsi_begin, lsi, sizeof(hip_closest_prefix_type_t));

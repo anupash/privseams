@@ -28,16 +28,10 @@
  * @todo "Bad signature r or s size" occurs randomly. This should not happen.
  */
 
-/* required for s6_addr32 */
-#define _BSD_SOURCE
-
 #include "config.h"
 #include "crypto.h"
 #include "keylen.h"
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
+#include "performance.h"
 
 
 /*

@@ -8,9 +8,6 @@
  * @author Samu Varjonen
  */
 
-/* required for s6_addr32 */
-#define _BSD_SOURCE
-
 #include "certtools.h"
 #include "straddr.h"
 #include "lib/core/crypto.h"

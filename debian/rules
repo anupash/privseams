@@ -32,8 +32,7 @@ ifneq "$(wildcard /usr/share/misc/config.guess)" ""
 	cp -f /usr/share/misc/config.guess config.guess
 endif
 	./configure $(CROSS) --prefix=/usr \
-	                     --enable-midauth \
-                         --enable-maemo \
+                         --enable-shared \
                          --disable-dht \
                          --disable-agent \
                          --disable-privsep \

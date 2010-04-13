@@ -13,22 +13,13 @@
  * @author  Rene Hummen
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <netinet/icmp6.h>
 
 #include "config.h"
 #include "output.h"
-
-#ifdef CONFIG_HIP_MIDAUTH
-#include "pisa.h"
-#endif
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
-
+#include "lib/core/performance.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
 #include "lib/tool/checksum.h"

@@ -839,11 +839,7 @@ int esp_prot_verify_htree_element(const hash_function_t hash_function,
 
     HIP_DEBUG("checking active_root...\n");
 
-#ifdef CONFIG_HIP_OPENWRT
-    data_index = *((uint32_t *) hash_value);
-#else
     data_index = ntohl(*((uint32_t *) hash_value));
-#endif
 
     if ((err = htree_verify_branch(active_root, hash_length,
                                    hash_value + (sizeof(uint32_t) + hash_length),

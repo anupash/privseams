@@ -22,7 +22,6 @@
 #include "config.h"
 #ifdef CONFIG_HIP_PRIVSEP
 #ifdef CONFIG_HIP_ALTSEP
-/* Note: OpenWRT has to use <linux/capability.h> */
 #include <linux/capability.h>
 int capget(cap_user_header_t header, cap_user_data_t data);
 int capset(cap_user_header_t header, const cap_user_data_t data);
@@ -39,10 +38,8 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
 #include "ife.h"
 #include "hip_capability.h"
 
-#ifdef CONFIG_HIP_PRIVSEP
 #define USER_NOBODY "nobody"
 #define USER_HIPD "hipd"
-#endif /* CONFIG_HIP_PRIVSEP */
 
 /**
  * map a user name such as "nobody" to the corresponding UID number
@@ -53,7 +50,6 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
 int hip_user_to_uid(char *name)
 {
     int uid            = -1;
-#ifndef CONFIG_HIP_OPENWRT
     int i;
     struct passwd *pwp = NULL, pw;
     char buf[4096];
@@ -72,7 +68,6 @@ int hip_user_to_uid(char *name)
         }
     }
     endpwent();
-#endif
     return uid;
 }
 
@@ -101,18 +96,12 @@ int hip_set_lowcapability(int run_as_sudo)
     header.version = _LINUX_CAPABILITY_VERSION_HIPL;
     data.effective = data.permitted = data.inheritable = 0;
 
-    /* openwrt code */
-
     HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
 
     HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
-#ifndef CONFIG_HIP_OPENWRT
     uid = hip_user_to_uid(USER_NOBODY);
-#else
-    /* todo: hardcode the uid for a suitable user for openwrt */
-    uid = -1;
-#endif
+
     HIP_IFEL((uid < 0), -1,
              "Error while retrieving USER 'nobody' uid\n");
     HIP_IFEL(capget(&header, &data), -1,
@@ -122,8 +111,6 @@ int hip_set_lowcapability(int run_as_sudo)
 
     HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
               getuid(), geteuid());
-
-    /* openwrt code */
 
     HIP_IFEL(setreuid(uid, uid), -1, "setruid failed\n");
 
@@ -143,7 +130,6 @@ int hip_set_lowcapability(int run_as_sudo)
     data.effective |= (1 << CAP_NET_ADMIN);
     data.permitted |= (1 << CAP_NET_ADMIN);
 
-    /* openwrt code */
     HIP_IFEL(capset(&header, &data), -1,
              "error in capset (do you have capabilities kernel module?)");
     HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());

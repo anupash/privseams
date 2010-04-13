@@ -12,7 +12,6 @@
  *
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <netinet/udp.h>
@@ -420,13 +419,8 @@ static int esp_prot_conntrack_verify_branch(const struct tuple *tuple,
             -1, "failed to look up matching esp_tuple\n");
 
     for (i = 0; i < esp_tuple->num_hchains; i++) {
-#ifdef CONFIG_HIP_OPENWRT
-        branch_length = esp_branches[i]->branch_length;
-        anchor_offset = esp_branches[i]->anchor_offset;
-#else
         branch_length = ntohl(esp_branches[i]->branch_length);
         anchor_offset = ntohl(esp_branches[i]->anchor_offset);
-#endif
 
         // verify the branch
         if (!htree_verify_branch(esp_tuple->active_roots[i],
@@ -638,12 +632,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
                 conntrack_tfm               = esp_prot_conntrack_resolve_transform(
                     esp_tuple->esp_prot_tfm);
                 hash_length                 = conntrack_tfm->hash_length;
-
-#ifdef CONFIG_HIP_OPENWRT
-                esp_tuple->hash_item_length = prot_anchor->hash_item_length;
-#else
                 esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
-#endif
 
                 if (esp_tuple->esp_prot_tfm == ESP_PROT_TFM_TREE) {
                     esp_tuple->hash_tree_depth = ceil(
@@ -794,11 +783,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
                     esp_tuple->esp_prot_tfm);
                 hash_length                 = conntrack_tfm->hash_length;
 
-#ifdef CONFIG_HIP_OPENWRT
-                esp_tuple->hash_item_length = prot_anchor->hash_item_length;
-#else
                 esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
-#endif
 
                 if (esp_tuple->esp_prot_tfm == ESP_PROT_TFM_TREE) {
                     esp_tuple->hash_tree_depth = ceil(

@@ -23,7 +23,6 @@
  * @todo split the gigantic hip_handle_user_msg() into an array of handler functions
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "config.h"

@@ -12,8 +12,6 @@
 #ifndef HIP_FIREWALL_MIDAUTH_H
 #define HIP_FIREWALL_MIDAUTH_H
 
-#define _BSD_SOURCE
-
 #include <netinet/ip6.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>

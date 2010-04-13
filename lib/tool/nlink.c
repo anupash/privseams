@@ -27,7 +27,6 @@
  * @todo change this file into a command line interface to "ip" or "pfkey"
  */
 
-/* required for s6_addr32 */
 #define _BSD_SOURCE
 
 #include <net/if.h>

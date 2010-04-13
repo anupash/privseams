@@ -17,7 +17,6 @@
  * Currently we do neither.
  */
 
-/* required by the libipq header */
 #define _BSD_SOURCE
 
 #include <string.h>
@@ -29,10 +28,6 @@
 #include "lib/core/builder.h"
 #include "lib/core/solve.h"
 #include "lib/tool/checksum.h"
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
 
 static struct midauth_handlers handlers;
 

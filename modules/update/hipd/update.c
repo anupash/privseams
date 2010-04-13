@@ -8,7 +8,6 @@
  * @author  Baris Boyvat <baris#boyvat.com>
  */
 
-/* requiread for s6_addr32 */
 #define _BSD_SOURCE
 
 #include "config.h"
@@ -23,10 +22,6 @@
 #include "hipd/pkt_handling.h"
 #include "update_legacy.h"
 #include "hipd/esp_prot_hipd_msg.h"
-
-#ifdef CONFIG_HIP_PERFORMANCE
-#include "lib/performance/performance.h"
-#endif
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "hipd/pisa.h"
