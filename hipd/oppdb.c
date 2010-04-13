@@ -263,15 +263,6 @@ skip_hit_addr:
                  "build param HIP_PARAM_HIT  failed\n");
         HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
     }
-    /* Switched from hip_sendto() to hip_sendto_user() due to
-     * namespace collision. Both message.h and user.c had functions
-     * hip_sendto(). Introducing a prototype hip_sendto() to user.h
-     * led to compiler errors --> user.c hip_sendto() renamed to
-     * hip_sendto_user().
-     *
-     * Lesson learned: use function prototypes unless functions are
-     * ment only for local (inside the same file where defined) use.
-     * -Lauri 11.07.2008 */
     HIP_DEBUG("Unblocking caller at port %d\n", ntohs(app_id->sin6_port));
     n = hip_sendto_user(message, (struct sockaddr *) app_id);
 
