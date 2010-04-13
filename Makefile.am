@@ -5,13 +5,14 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*
 # For "make dist"
 EXTRA_DIST =  .vimrc debian doc patches release.version version.h process_modules.py
 EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
-EXTRA_DIST += test/configs test/demo test/maintainer test/openwrt
-EXTRA_DIST += test/packaging test/packets test/performance
+EXTRA_DIST += test/configs test/demo test/maintainer
+EXTRA_DIST += test/packaging test/performance
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
+EXTRA_DIST += $(wildcard modules/*/module_info.xml)
+EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
 EXTRA_DIST += m4 # required for CentOS "make bin" target
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/modules/,*))
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
 ### user programs ###
@@ -196,6 +197,7 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #lib_ipsec_libhipsec_la_LDFLAGS = -version-info 0:1:0
 #lib_ipsec_libhipsec_la_LIBADD  = $(LEXLIB)
 
+DISTCLEANFILES = $(wildcard $(builddir)/modules/*.h)
 #DISTCLEANFILES = lib/ipsec/policy_parse.c lib/ipsec/policy_token.c
 
 # Initialize LDADD lists empty, because modules might add entries to LDADD. The
