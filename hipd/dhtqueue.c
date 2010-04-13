@@ -21,6 +21,31 @@ struct hip_queue {
 
 HIP_HASHTABLE *hip_dht_queue = NULL;
 
+
+#if 0
+/**
+ * hip_debug_print_queue
+ *
+ * This function prints all the dht queue members
+ *
+ * @ return void
+ */
+static void hip_debug_print_dht_queue(void)
+{
+    int i = 0;
+    hip_list_t *item, *tmp;
+    struct hip_queue *entry;
+
+    HIP_DEBUG("DEBUGGING QUEUE comment out if left uncommented\n");
+    HIP_DEBUG("Head count %d\n", dht_queue_count);
+    list_for_each_safe(item, tmp, hip_dht_queue, i) {
+        entry = list_entry(item);
+        HIP_DEBUG("Node data_len = %d\n", entry->data_len);
+        HIP_DEBUG("Node data= %s\n", entry->data);
+    }
+}
+#endif
+
 /**
  * hip_dht_queue_hash
  *
@@ -204,28 +229,3 @@ int hip_read_from_dht_queue(void *read_data)
     }
     return 0;
 }
-
-#if 0
-/**
- * hip_debug_print_queue
- *
- * This function prints all the dht queue members
- *
- * @ return void
- */
-static void hip_debug_print_dht_queue(void)
-{
-    int i = 0;
-    hip_list_t *item, *tmp;
-    struct hip_queue *entry;
-
-    HIP_DEBUG("DEBUGGING QUEUE comment out if left uncommented\n");
-    HIP_DEBUG("Head count %d\n", dht_queue_count);
-    list_for_each_safe(item, tmp, hip_dht_queue, i) {
-        entry = list_entry(item);
-        HIP_DEBUG("Node data_len = %d\n", entry->data_len);
-        HIP_DEBUG("Node data= %s\n", entry->data);
-    }
-}
-
-#endif
