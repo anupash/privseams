@@ -104,7 +104,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
     /* This prints numerical addresses until we have separate
      * print function for icomm.h and protodefs.h -miika */
     HIP_DEBUG("HIP user message type is: %d\n", msg_type);
-    //hip_message_type_name(msg_type));
+    //hip_message_type_name(msg_type);
 
     switch (msg_type) {
     case HIP_MSG_NULL_OP:
