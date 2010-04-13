@@ -777,7 +777,7 @@ void hip_exit(int signal)
 
     default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
     /* Close SAs with all peers */
-    // hip_send_close(NULL);
+    // hip_send_close(NULL, FLUSH_HA_INFO_DB);
 
     if (hipd_msg) {
         HIP_FREE(hipd_msg);
