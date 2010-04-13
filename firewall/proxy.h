@@ -18,7 +18,6 @@ int request_hipproxy_status(void);
 
 int init_proxy(void);
 int uninit_proxy(void);
-int hip_fw_proxy_set_peer_hit(hip_common_t *msg);
 int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
                                   const struct in6_addr *src_addr,
                                   const struct in6_addr *dst_addr,

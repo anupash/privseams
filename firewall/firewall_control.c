@@ -65,6 +65,105 @@ static int hip_handle_bex_state_update(struct hip_common *msg)
 }
 
 /**
+ * Set the peer HIT into the HIP Proxy Database
+ *
+ * @param msg the received message for the HIT request of the peer host
+ * @return zero on success, non-zero on error
+ */
+static int hip_fw_proxy_set_peer_hit(hip_common_t *msg)
+{
+    int fallback               = 1, reject = 0, addr_found = 0, err = 0;
+    hip_hit_t local_hit, peer_hit;
+    struct in6_addr local_addr, peer_addr;
+    hip_hit_t *ptr             = NULL;
+    struct in6_addr *proxy_hit = NULL;
+
+    HIP_IFEL( !(proxy_hit = hip_fw_get_default_hit()), 0,
+              "Error while getting the default HIT!\n");
+
+    ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
+    if (ptr) {
+        memcpy(&peer_hit, ptr, sizeof(hip_hit_t));
+        HIP_DEBUG_HIT("peer_hit", &peer_hit);
+        fallback = 0;
+    }
+
+    ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
+    if (ptr) {
+        memcpy(&local_hit, ptr, sizeof(hip_hit_t));
+        HIP_DEBUG_HIT("local_hit", &local_hit);
+    }
+
+    ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
+    if (ptr) {
+        memcpy(&peer_addr, ptr, sizeof(struct in6_addr));
+        HIP_DEBUG_IN6ADDR("peer_addr", &peer_addr);
+        addr_found++;
+    }
+
+    ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_LOCAL);
+    if (ptr) {
+        memcpy(&local_addr, ptr, sizeof(hip_hit_t));
+        HIP_DEBUG_IN6ADDR("local_addr", &local_addr);
+        addr_found++;
+    }
+
+    if (addr_found != 2) {
+        HIP_ERROR("Internal error: two addr not found\n");
+        err = -1;
+    }
+
+    ptr = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
+    if (ptr) {
+        HIP_DEBUG("Connection is to be rejected\n");
+        reject = 1;
+    }
+
+    if (reject) {
+        HIP_DEBUG("Connection should be rejected\n");
+        err = -1;
+        goto out_err;
+    }
+
+    if (fallback) {
+        HIP_DEBUG("Peer does not support HIP, fallback\n");
+        //update the state of the ip pair
+        if (hip_proxy_update_state(NULL, &peer_addr, NULL, NULL, NULL,
+                                   HIP_PROXY_PASSTHROUGH)) {
+            HIP_ERROR("Proxy update Failed!\n");
+        }
+
+        //let the packet pass
+        err = -1;
+    } else {
+        if (hip_proxy_update_state(NULL, &peer_addr, &local_addr, proxy_hit,
+                                   &peer_hit, HIP_PROXY_TRANSLATE)) {
+            HIP_ERROR("Proxy update Failed!\n");
+        }
+
+#if 0
+        if (hip_proxy_conn_add_entry(&local_addr,
+                                     &peer_addr,
+                                     proxy_hit,
+                                     &peer_hit,
+                                     protocol,
+                                     port_client,
+                                     port_peer,
+                                     HIP_PROXY_TRANSLATE)) {
+            HIP_ERROR("ConnDB add entry Failed!\n");
+        }
+#endif
+
+        /* Drop packet. Firewall translates further retransmissions correctly */
+        err = 0;
+    }
+
+out_err:
+
+    return err;
+}
+
+/**
  * distribute a message from hipd to the respective extension handler
  *
  * @param   msg pointer to the received user message
