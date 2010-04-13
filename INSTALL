@@ -43,7 +43,7 @@ autotools build system with
 
   autoreconf [--install]
 
-before running configure.
+before running configure. First time, you must give the install option!
 
 ./configure --help will display the multitude of configuration options
 available for HIPL.
