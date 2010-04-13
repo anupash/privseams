@@ -566,7 +566,7 @@ static int hip_init_host_ids(void)
     /* Create default keys if necessary. */
 
     if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
-        //hip_msg_init(user_msg); already called by hip_msg_alloc()
+        //hip_msg_init(user_msg); //already called by hip_msg_alloc()
 
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
                                               NULL, NULL, RSA_KEY_DEFAULT_BITS, DSA_KEY_DEFAULT_BITS),

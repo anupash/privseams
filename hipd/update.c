@@ -355,11 +355,11 @@ out_err:
  * @todo locators should be sent to the whole verified addresses?
  */
 int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
-                                  struct hip_hadb_state *ha,
-                                  struct in6_addr *src_addr,
-                                  struct in6_addr *dst_addr,
-                                  struct hip_locator_info_addr_item *locators,
-                                  int type)
+                                struct hip_hadb_state *ha,
+                                struct in6_addr *src_addr,
+                                struct in6_addr *dst_addr,
+                                struct hip_locator_info_addr_item *locators,
+                                int type)
 {
     int err                             = 0, i = 0;
     hip_list_t *item                    = NULL, *tmp = NULL;

@@ -211,7 +211,7 @@ int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit)
     set_hit_prefix(blind_hit);
     HIP_DEBUG_HIT("HIT after prefix: ", blind_hit);
 
-    /*memcpy(blind_hit, digest, sizeof(struct in6_addr));*/
+    //memcpy(blind_hit, digest, sizeof(struct in6_addr));
 
 out_err:
     return err;
@@ -707,8 +707,8 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
     return msg;
 
 out_err:
-    // if (host_id_pub)
-    // HIP_FREE(host_id_pub);
+    //if (host_id_pub)
+    //    HIP_FREE(host_id_pub);
     if (msg) {
         HIP_FREE(msg);
     }

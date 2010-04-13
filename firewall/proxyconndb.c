@@ -139,8 +139,8 @@ int hip_proxy_conn_add_entry(const struct in6_addr *addr_client,
     new_item->key.protocol    = protocol;
     new_item->key.port_client = port_client;
     new_item->key.port_peer   = port_peer;
-    //new_item->key.hit_proxy = *hit_proxy;
-    //new_item->key.hit_peer = *hit_peer;
+    //new_item->key.hit_proxy   = *hit_proxy;
+    //new_item->key.hit_peer    = *hit_peer;
     new_item->state           = state;
     err                       = hip_ht_add(hip_proxy_conn_db, new_item);
     HIP_DEBUG("conn adds connection state successfully!\n");

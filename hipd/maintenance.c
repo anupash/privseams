@@ -139,7 +139,6 @@ static int hip_scan_opp_fallback(void)
 out_err:
     return err;
 }
-
 #endif
 
 /**
@@ -179,7 +178,6 @@ static int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 out_err:
     return err;
 }
-
 #endif /* CONFIG_HIP_AGENT */
 
 

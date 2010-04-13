@@ -142,7 +142,6 @@ static int close_all_fds_except_stdout_and_stderr(void)
 
     return OK;
 }
-
 #endif
 
 /**

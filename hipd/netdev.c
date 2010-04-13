@@ -692,8 +692,8 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
                 == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
                 item2 = (struct hip_locator_info_addr_item2 *) address_pointer;
 
-                ////hip_build_param_contents(msg, &item2->address,
-                ////            HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
+                //hip_build_param_contents(in_msg, &item2->address,
+                //                         HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
                 HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item2->address);
                 memcpy(addr, (struct in6_addr *) &item2->address, sizeof(struct in6_addr));
                 address_pointer += sizeof(struct hip_locator_info_addr_item2);
@@ -701,8 +701,8 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
                 item = (struct hip_locator_info_addr_item *) address_pointer;
 
-                ////hip_build_param_contents(msg, &item->address,
-                ////            HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
+                //hip_build_param_contents(in_msg, &item->address,
+                //                         HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
                 HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item->address);
                 memcpy(addr, (struct in6_addr *) &item->address, sizeof(struct in6_addr));
                 address_pointer += sizeof(struct hip_locator_info_addr_item);
@@ -710,8 +710,8 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
                 item = (struct hip_locator_info_addr_item *) address_pointer;
 
-                ////hip_build_param_contents(msg, &item->address,
-                ////            HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
+                //hip_build_param_contents(in_msg, &item->address,
+                //                         HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
                 HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item->address);
                 memcpy(addr, (struct in6_addr *) &item->address, sizeof(struct in6_addr));
                 address_pointer += sizeof(struct hip_locator_info_addr_item);
@@ -723,13 +723,12 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
         memcpy(&((&reply6)->s6_addr), in_msg, sizeof(reply6.s6_addr));
         //HIP_DEBUG_HIT("LOCATOR", &reply6);
         if (ipv6_addr_cmp(&all_zero_ipv6, &reply6)) {
-            ////hip_build_param_contents(msg, &reply6,
-            ////            HIP_PARAM_SRC_ADDR,
-            ////            sizeof(struct in6_addr));
+            //hip_build_param_contents(in_msg, &reply6, HIP_PARAM_SRC_ADDR,
+            //                         sizeof(struct in6_addr));
         } else {
             err_value = 3;    //Entry not found at DHT gateway
-            ////hip_build_param_contents(msg, &err_value,
-            ////            HIP_PARAM_INT, sizeof(int));
+            //hip_build_param_contents(in_msg, &err_value,
+            //                         HIP_PARAM_INT, sizeof(int));
         }
     }
 

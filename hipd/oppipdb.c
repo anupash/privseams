@@ -211,7 +211,6 @@ static void hip_oppipdb_dump(void)
     HIP_UNLOCK_HT(&oppipdb);
     HIP_DEBUG("end oppipdb dump\n");
 }
-
 #endif
 
 /**

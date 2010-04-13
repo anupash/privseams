@@ -1230,7 +1230,7 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
 
     if (esp_relay && ctx->udp_encap_hdr) {
         HIP_IFEL(hipfw_handle_relay_to_r2(common, ctx),
-                     -1, "handling of relay_to failed\n");
+                 -1, "handling of relay_to failed\n");
     }
 
 out_err:
