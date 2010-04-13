@@ -89,7 +89,8 @@ static unsigned long get_addr1(char *name, int *ok_flag)
     return inet_addr("127.0.0.1");
 }
 
-void set_loworder_bits(chordID *id)
+#if 0
+static void set_loworder_bits(chordID *id)
 {
     int i;
 #define ID_SERVER_LEN 6
@@ -97,6 +98,7 @@ void set_loworder_bits(chordID *id)
         id->x[i] = 0xff;
     }
 }
+#endif /* 0 */
 
 int main(int argc, char **argv)
 {
