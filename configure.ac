@@ -317,7 +317,7 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $GPROF_CFLAGS")
+AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $GPROF_CFLAGS")
 
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
