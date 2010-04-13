@@ -332,24 +332,3 @@ int nsupdate(const int start)
     hip_for_each_hi(run_nsupdate_for_hit, (void *) &start);
     return OK;
 }
-
-/*
- * Just calls run_nsupdate with some values for debugging
- */
-#if 0
-int main(void)
-{
-    int ret;
-
-    ret = run_nsupdate("193.167.187.3 193.167.187.5", "def", 1);
-    HIP_DEBUG("ret=%d\n", ret);
-    sleep(1);
-
-    /* wait for children */
-    while (1) {
-        sleep(1);
-    }
-    return 0;
-}
-
-#endif
