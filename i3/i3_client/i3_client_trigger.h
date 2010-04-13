@@ -37,6 +37,7 @@ void cl_process_option_list(cl_context *ctx, i3_header *hdr,
 void cl_make_trigger_packet(cl_context *ctx, i3_trigger *t,
                             char opt_type, buf_struct *buf);
 
+int does_id_match(ID *id1, ID *id2, int prefix_len);
 
 void timeout_ack_insert(void *ctr);
 void timeout_ack_refresh(void *ctr);
