@@ -94,7 +94,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
 int hip_del_peer_info_entry(hip_ha_t *ha);
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
-void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex);
 int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
                                  struct hip_context *ctx, int is_initiator);
 /* Utilities */

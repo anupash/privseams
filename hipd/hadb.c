@@ -194,16 +194,12 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
  */
 hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
 {
-    //int n = 0;
     hip_ha_t ha, *ret;
     memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
     memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
     HIP_DEBUG_HIT("HIT1", hit);
     HIP_DEBUG_HIT("HIT2", hit2);
 
-    //HIP_DEBUG("----------Checking database-----------------\n");
-    //hip_for_each_ha(hip_print_info_hadb, &n);
-    //HIP_DEBUG("----------End Checking database-----------------\n");
     ret = hip_ht_find(hadb_hit, &ha);
     if (!ret) {
         memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
@@ -335,7 +331,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
             HIP_DEBUG("HIP association was inserted " \
                       "successfully.\n");
         } else {
-            /* hip_db_put_ha(tmp, hip_hadb_delete_state); */
             HIP_DEBUG("HIP association was NOT inserted because " \
                       "a HIP association with matching HITs was " \
                       "already present in the database.\n");
@@ -434,7 +429,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     entry = hip_hadb_find_byhits(local_hit, peer_hit);
 
     if (entry) {
-        // hip_hadb_dump_spis_out_old(entry);
         HIP_DEBUG_LSI("    Peer lsi   ", &entry->lsi_peer);
 
 #if 0 /* Required for OpenDHT code of Pardeep?  */
@@ -767,17 +761,10 @@ static int hip_hadb_init_entry(hip_ha_t *entry)
     int err = 0;
     HIP_IFEL(!entry, -1, "HA is NULL\n");
 
-#if 0
-    INIT_LIST_HEAD(&entry->next_hit);
-    INIT_LIST_HEAD(&entry->spis_in_old);
-    INIT_LIST_HEAD(&entry->spis_out_old);
-#endif
-
 #ifdef CONFIG_HIP_HIPPROXY
     entry->hipproxy = 0;
 #endif
     //HIP_LOCK_INIT(entry);
-    //atomic_set(&entry->refcnt,0);
 
     entry->state         = HIP_STATE_UNASSOCIATED;
     entry->hastate       = HIP_HASTATE_INVALID;
@@ -929,10 +916,8 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 {
     int err = 0;
-    // struct hip_spi_out_item *spi_out;
 
     /* assume already locked entry */
-
     HIP_DEBUG_HIT("entry def addr", &entry->peer_addr);
     ipv6_addr_copy(addr, &entry->peer_addr);
     return err;
@@ -1802,10 +1787,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
     /*For some reason this gives negative result*/
     //hip_timeval_diff(&entry->bex_start, &entry->bex_end, &hid.bex_duration);
 
-    // struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
-    // HIP_ASSERT(duration != NULL);
-    // memcpy(&hid.bex_duration,  duration, sizeof(struct timeval));
-
     _HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
     hid.nat_udp_port_peer  = entry->peer_udp_port;
@@ -1920,33 +1901,7 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
                                       hip_hit_t *peer_blind_hit)
 {
     int err          = 0;
-    /* int i = 0; */
-    /* hip_ha_t *this = NULL, *tmp = NULL; */
     hip_ha_t *result = NULL;
-
-    /*
-     * This loop is disabled since &hadb_byhit[i] does not exist anymore and
-     * the code won't compile with CONFIG_HIP_BLIND flag set.
-     * -Lauri 22.07.2008
-     * for(i = 0; i < HIP_HADB_SIZE; i++) {
-     *
-     * list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
-     * {
-     * _HIP_DEBUG("List_for_each_entry_safe\n");
-     * hip_hold_ha(this);
-     * if ((ipv6_addr_cmp(local_blind_hit, &this->hit_our_blind) == 0) &&
-     * (ipv6_addr_cmp(peer_blind_hit, &this->hit_peer_blind) == 0)) {
-     * result = this;
-     * break;
-     * }
-     * hip_db_put_ha(this, hip_hadb_delete_state);
-     * if (err)
-     * break;
-     * }
-     * if (err)
-     * break;
-     * }
-     */
 
     if (err) {
         result = NULL;
@@ -1954,7 +1909,6 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 
     return result;
 }
-
 #endif
 
 
@@ -2125,7 +2079,6 @@ int hip_get_local_addr(struct hip_common *msg)
 
     ipv6_addr_copy(&local_address, &entry->our_addr);
 
-    //hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
     HIP_IFEL(hip_build_param_contents(msg, &local_address, HIP_PARAM_IPV6_ADDR,
                                       sizeof(struct in6_addr)), -1,
                                       "Building local address info failed\n");

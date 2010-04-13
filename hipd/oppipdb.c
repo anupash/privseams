@@ -84,9 +84,7 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
     {
         this = (hip_oppip_t *) list_entry(item);
         _HIP_DEBUG("List_for_each_entry_safe\n");
-        //hip_hold_ha(this);
         func(this, opaque);
-        //hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
     }
 
     HIP_UNLOCK_HT(&oppipdb);
@@ -168,8 +166,6 @@ int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
         return err;
     }
 
-    //HIP_IFEL(!ipv6_addr_copy(new_item, ip_peer), -1,
-    //  "Copy non-HIP host failed\n");
     ipv6_addr_copy(new_item, ip_peer);
 
     err = hip_ht_add(oppipdb, new_item);

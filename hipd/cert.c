@@ -1045,8 +1045,6 @@ out_err:
     if (extlist != NULL) {
         sk_X509_EXTENSION_pop_free(extlist, X509_EXTENSION_free);
     }
-    //BIO_flush(out);
-    //BIO_free_all(out);
 
     return err;
 }

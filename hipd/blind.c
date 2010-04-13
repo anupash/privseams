@@ -368,16 +368,6 @@ int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *e
     char *enc_in_msg  = NULL, *host_id_in_enc = NULL;
     unsigned char *iv = NULL;
 
-    HIP_DEBUG("/n");
-
-    /*
-     *mask |= HIP_PACKET_CTRL_BLIND;
-     *
-     * // Build network header by using blinded HITs
-     * entry->hadb_misc_func->
-     * hip_build_network_hdr(r2, HIP_R2, *mask, &entry->hit_our_blind,
-     * &entry->hit_peer_blind);*/
-
     /************ Encrypted ***********/
     switch (entry->hip_transform) {
     case HIP_HIP_AES_SHA1:
@@ -645,25 +635,6 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
     /********** REG_INFO *********/
     hip_get_active_services(service_list, &service_count);
     hip_build_param_reg_info(msg, service_list, service_count);
-
-    /*
-     * int *list;
-     * int count = 0;
-     *
-     * count = hip_get_services_list(&list);
-     *
-     * HIP_DEBUG("Amount of services is %d.\n", count);
-     *
-     * int i;
-     * for (i = 0; i < count; i++) {
-     * HIP_DEBUG("Service is %d.\n", list[i]);
-     * }
-     *
-     * if (count > 0) {
-     * HIP_DEBUG("Adding REG_INFO parameter.\n");
-     * HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, count), -1,
-     * "Building of reg_info failed\n");
-     * }*/
 
     /********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 

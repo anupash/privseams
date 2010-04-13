@@ -422,8 +422,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
             ?
             1 : 0;
 
-        /*  lhi.algo = eid_endpoint.algo;*/
-
         err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
                               &lsi, host_identity,
                               NULL, NULL, NULL);
@@ -986,8 +984,3 @@ out_err:
 
     return err;
 }
-
-#undef HIP_READ_LOCK_DB
-#undef HIP_WRITE_LOCK_DB
-#undef HIP_READ_UNLOCK_DB
-#undef HIP_WRITE_UNLOCK_DB

@@ -1154,7 +1154,6 @@ int hip_relay_handle_relay_to(struct hip_common *msg,
         hip_relay_forward_response(
             msg, msg_type, src_addr, dst_addr, msg_info,
             (in6_addr_t *) &relay_to->address, ntohs(relay_to->port));
-        //  state = HIP_STATE_NONE;
         err = 1;
         goto out_err;
     }
@@ -1289,7 +1288,6 @@ int hip_relay_handle_from(hip_common_t *source_msg,
                           in6_addr_t *dest_ip, in_port_t *dest_port)
 {
     hip_tlv_type_t param_type;
-    //   struct hip_relay_from *relay_from = NULL;
     struct hip_from *from  = NULL;
 #ifdef CONFIG_HIP_RVS
     hip_ha_t *rvs_ha_entry = NULL;

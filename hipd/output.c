@@ -486,8 +486,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                                      local_addr, &peer_addr,
                                      entry->local_udp_port,
                                      entry->peer_udp_port,
-                                     //(entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                                     //(entry->nat_mode ? hip_get_peer_nat_udp_port() : 0),
                                      i1_blind, entry, 1);
     } else {
         HIP_DEBUG("Number of items in the peer addr list: %d ",
@@ -702,8 +700,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
     /* Packet ready */
 
-    //  if (host_id_pub)
-    //      HIP_FREE(host_id_pub);
     if (dh_data1) {
         HIP_FREE(dh_data1);
     }
@@ -711,13 +707,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         HIP_FREE(dh_data2);
     }
 
-    //HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
-
     return msg;
 
 out_err:
-    // if (host_id_pub)
-    //      HIP_FREE(host_id_pub);
     if (msg) {
         HIP_FREE(msg);
     }
@@ -1198,14 +1190,6 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
 
     _HIP_HEXDUMP("Dumping packet ", msg, len);
 
-#if 0
-    /* Kuptsov: multiple source addresses might not work properly without
-     * the trick below. Note that you should find out the ifname with
-     * getifaddr/if_nameindex. */
-    HIP_IFEL(setsockopt(hip_raw_sock_output, SOL_SOCKET, SO_BINDTODEVICE,
-                        ifname, strlen(ifname) + 1), -1, "Cannot set sockopt");
-#endif
-
     for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
         for (try_again = 0; try_again < 2; try_again++) {
             sent = sendto(hip_raw_sock_output, msg, len, 0,
@@ -1558,9 +1542,6 @@ int hip_send_i3(const struct in6_addr *src_addr, const struct in6_addr *peer_add
     buf = clb->data;
 
     hip_zero_msg_checksum(msg);
-//  msg->checksum = hip_checksum_packet((char *)msg,
-//              (struct sockaddr *)&src,
-//              (struct sockaddr *)&dst);
 
     clb->data_len = msg_len;
 

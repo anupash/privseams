@@ -138,9 +138,6 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
     if (type == HIP_UPDATE_LOCATOR
             || type == HIP_UPDATE_ECHO_REQUEST
             || type == HIP_UPDATE_ESP_ANCHOR) {
-        // TODO check the following function!
-        /* hip_update_set_new_spi_in_old(ha, esp_info_old_spi,
-         *  esp_info_new_spi, 0);*/
 
         ha->update_id_out++;
         update_id_out = ha->update_id_out;
@@ -148,11 +145,6 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
         /** @todo Handle this case. */
         HIP_IFEL(hip_build_param_seq(update_packet_to_send, update_id_out), -1,
                  "Building of SEQ param failed\n");
-
-        /* remember the update id of this update */
-        /* hip_update_set_status(ha, esp_info_old_spi,
-         *  0x1 | 0x2 | 0x8, update_id_out, 0, NULL,
-         *  ha->current_keymat_index); */
 
         /************************************************/
     }
@@ -763,8 +755,6 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
         ack_peer_update_id = ntohl(ack->peer_update_id);
         HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
                   ack_peer_update_id);
-        /*ha->hadb_update_func->hip_update_handle_ack(
-         *      ha, ack, has_esp_info);*/
         if (ack_peer_update_id != ha->update_id_out) {
             // Simplified logic of RFC 5201 6.12.2, 1st step:
             // We drop the packet if the Update ID in the ACK

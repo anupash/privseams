@@ -1099,7 +1099,6 @@ int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
                 HIP_DEBUG("esp prot active peer anchors match\n");
 
                 // set the update anchor as the peer's update anchor
-                //memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
                 memcpy(&entry->esp_peer_update_anchors[i][0], &prot_anchor->anchors[hash_length],
                        hash_length);
                 HIP_DEBUG("peer_update_anchor set\n");
@@ -1125,7 +1124,6 @@ int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
                        hash_length);
 
                 // set the update anchor as the peer's update anchor
-                //memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
                 memcpy(&entry->esp_peer_update_anchors[i][0], &prot_anchor->anchors[hash_length],
                        hash_length);
                 HIP_DEBUG("peer_update_anchor set\n");
@@ -1147,7 +1145,6 @@ int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
                 /**** received newer update for active anchor ****/
 
                 // set the update anchor as the peer's update anchor
-                //memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
                 memcpy(&entry->esp_peer_update_anchors[i][0],
                        &prot_anchor->anchors[hash_length],
                        hash_length);

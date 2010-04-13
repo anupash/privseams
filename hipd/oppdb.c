@@ -60,7 +60,6 @@ struct hip_opp_info {
 typedef struct hip_opp_info hip_opp_info_t;
 
 HIP_HASHTABLE *oppdb;
-//static hip_list_t oppdb_list[HIP_OPPDB_SIZE]= { 0 };
 
 static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
 static hip_opp_block_t *hip_create_opp_block_entry(void);
@@ -150,9 +149,7 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
     {
         this = (hip_opp_block_t *) list_entry(item);
         _HIP_DEBUG("List_for_each_entry_safe\n");
-        /* hip_hold_ha(this); */
         fail = func(this, opaque);
-        //hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
         if (fail) {
             goto out_err;
         }
@@ -397,7 +394,6 @@ void hip_init_opp_db(void)
 static void hip_oppdb_dump(void)
 {
     int i;
-    //  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";
     hip_opp_block_t *this;
     hip_list_t *item, *tmp;
 
@@ -508,9 +504,6 @@ static int hip_receive_opp_r1(struct hip_common *msg,
         goto out_err;
     }
 #endif
-
-    // add new HA with real hit
-    //err = hip_hadb_add_peer_info(&msg->hits, src_addr);
 
     HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
     HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
@@ -761,8 +754,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
     /* Override the receiving function */
     ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
 
-    //entry = hip_oppdb_find_byhits(&phit, src);
-    //HIP_ASSERT(!entry);
     HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, &dst_ip, NULL,
                                  src), -1, "Add db failed\n");
 

@@ -678,10 +678,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 //add by santtu
 #ifdef CONFIG_HIP_RVS
     //check if it a relaying msg
-
-    //add by santtu
-    //if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
-
     if (hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)) {
         //end
         err = -ECANCELED;
@@ -1261,8 +1257,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
     spi_in_data.ifindex = hip_devaddr2ifindex(r1_daddr);
     HIP_LOCK_HA(entry);
 
-    // 99999 HIP_IFEB(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
-
     entry->esp_transform = transform_esp_suite;
     HIP_DEBUG("Saving base exchange encryption data to entry \n");
     HIP_DEBUG_HIT("Our HIT: ", &entry->hit_our);
@@ -1656,8 +1650,6 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
         HIP_ERROR("R1 received in odd state: %d. Dropping.\n", state);
         break;
     }
-
-    /* hip_put_ha(entry); */
 
 out_err:
     return err;
@@ -2199,7 +2191,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         }
     }
 
-    //entry->hip_nat_key = i2_context.hip_nat_key;
     //HIP_DEBUG("hip nat key from context %s", i2_context.hip_nat_key);
     memcpy(entry->hip_nat_key, i2_context.hip_nat_key, HIP_MAX_KEY_LEN);
     //HIP_DEBUG("hip nat key in entry %s", entry->hip_nat_key);
@@ -2347,10 +2338,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
         spi_out_data.spi            = ntohl(esp_info->new_spi);
         entry->spi_outbound_current = spi_out_data.spi;
-        /* 99999
-         * HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
-         * HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT,
-         *                       &spi_out_data), -1);*/
         entry->esp_transform        = hip_select_esp_transform(esp_tf);
         HIP_IFEL((esp_tfm = entry->esp_transform) == 0, -1,
                  "Could not select proper ESP transform\n");
@@ -2436,15 +2423,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
     } else {
         HIP_ERROR("Could not get device ifindex of address.\n");
     }
-
-    /* 99999
-     * err = hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
-     * if (err) {
-     *      HIP_UNLOCK_HA(entry);
-     *      HIP_ERROR("Adding of SPI failed. Not creating an R2 packet.\n");
-     *      goto out_err;
-     * }
-     * */
 
     entry->spi_outbound_new = spi_out;
     HIP_IFE(hip_store_base_exchange_keys(entry, &i2_context, 0), -1);
@@ -2537,8 +2515,6 @@ out_err:
      * the reference. */
     /* 'entry' cannot be NULL here anymore since it has been used in this
      * function directly without NULL check. -Lauri. */
-
-    /* hip_put_ha(entry); */
 
     if (tmp_enc != NULL) {
         free(tmp_enc);
@@ -2648,8 +2624,6 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         break;
     }
 
-    /* hip_put_ha(entry); */
-
 out_err:
     if (err) {
         HIP_ERROR("Error (%d) occurred\n", err);
@@ -2740,7 +2714,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
     spi_recvd                   = ntohl(esp_info->new_spi);
     memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
     spi_out_data.spi            = spi_recvd;
-    // 99999 HIP_IFE(hip_hadb_add_spi_old(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
 
     entry->spi_outbound_current =  spi_recvd;
     HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
@@ -2766,11 +2739,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
     HIP_IFEL(esp_prot_r2_handle_anchor(entry, ctx), -1,
              "failed to handle esp prot anchor\n");
-
-    /************************************************/
-/*comment out for draft v6
- *      hip_nat_handle_pacing(r2, entry);
- */
 
     /***** LOCATOR PARAMETER *****/
     locator = (struct hip_locator *) hip_get_param(r2, HIP_PARAM_LOCATOR);
@@ -2845,7 +2813,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
     if (idx != 0) {
         HIP_DEBUG("ifindex = %d\n", idx);
-        // hip_hadb_set_spi_ifindex_deprecated(entry, spi_in, idx);
     } else {
         HIP_ERROR("Couldn't get device ifindex of address\n");
     }
@@ -2862,11 +2829,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
     hip_handle_param_reg_failed(entry, r2);
 
     hip_handle_reg_from(entry, r2);
-
-    /* These will change SAs' state from ACQUIRE to VALID, and wake up any
-     * transport sockets waiting for a SA. */
-    // hip_finalize_sa(&entry->hit_peer, spi_recvd);
-    // hip_finalize_sa(&entry->hit_our, spi_in);
 
     /** RFC 5201 Section 5.2.13:
      *   Notice that the section says "The Update ID is an unsigned quantity,
@@ -3120,7 +3082,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
     if (entry) {
         state = entry->state;
-        /* hip_put_ha(entry); */
     } else {
 #ifdef CONFIG_HIP_RVS
         if (hip_relay_get_status() != HIP_RELAY_OFF &&
@@ -3255,9 +3216,6 @@ int hip_receive_r2(struct hip_common *hip_common,
     }
 
 out_err:
-
-    /* hip_put_ha(entry); */
-
     return err;
 }
 
@@ -3473,9 +3431,6 @@ int hip_receive_notify(const struct hip_common *notify,
     err = hip_handle_notify(notify, notify_saddr, notify_daddr, entry);
 
 out_err:
-
-    /* hip_put_ha(entry); */
-
     return err;
 }
 
@@ -3532,7 +3487,6 @@ int hip_receive_bos(struct hip_common *bos,
         HIP_IFEL(1, 0, "Internal state (%d) is incorrect\n", state);
     }
 
-    /* hip_put_ha(entry); */
 out_err:
     return err;
 }

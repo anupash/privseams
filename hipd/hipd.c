@@ -134,9 +134,6 @@ time_t load_time;
 
 int address_change_time_counter = -1;
 
-//char *hip_i3_config_file = NULL;
-//int hip_use_i3 = 0; // false
-
 /*Define hip_use_userspace_ipsec variable to indicate whether use
  * userspace ipsec or not. If it is 1, hip uses the user space ipsec.
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
@@ -675,7 +672,6 @@ static int hipd_main(int argc, char *argv[])
 
             /* Read in the values to hip_msg, saddr, daddr and
              * pkt_info. */
-            /* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 0) ) */
             err = hip_read_control_msg_v4(hip_nat_sock_input_udp,
                                           hipd_msg,
                                           &saddr,

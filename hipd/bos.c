@@ -226,7 +226,6 @@ int hip_handle_bos(struct hip_common *bos,
     int err = 0, len;
     struct hip_host_id *peer_host_id;
     hip_lsi_t lsi;
-    //struct hip_lhi peer_lhi;
     struct in6_addr peer_hit;
     char *str;
     struct in6_addr *dstip;

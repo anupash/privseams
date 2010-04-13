@@ -626,9 +626,6 @@ static int hip_init_host_ids(void)
     HIP_DEBUG_LSI("default_lsi ", &default_lsi);
     hip_hidb_associate_default_hit_lsi(&default_hit, &default_lsi);
 
-    /*Initializes the hadb with the information contained in /etc/hip/hosts*/
-    //hip_init_hadb_hip_host();
-
 out_err:
 
     if (user_msg) {
@@ -736,7 +733,6 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
     }
 
     HIP_DEBUG_INADDR("UDP socket created and bound to addr", (struct in_addr *) &myaddr.sin_addr.s_addr);
-    //return 0;
 
 out_err:
     return err;
