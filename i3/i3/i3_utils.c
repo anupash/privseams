@@ -9,7 +9,7 @@
 #define MAXLINE     4096
 
 
-/*static*/ void err_doit(int errnoflag, const char *fmt, va_list ap)
+static void err_doit(int errnoflag, const char *fmt, va_list ap)
 {
     int errno_save;
     char buf[MAXLINE];

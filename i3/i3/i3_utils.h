@@ -14,7 +14,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-/*static*/ void err_doit(int errnoflag, const char *fmt, va_list ap);
 void err_sys(const char *fmt, ...);
 
 
