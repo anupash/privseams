@@ -13,7 +13,7 @@ static Coordinates_RTT *curr_coord_rtt;
 static Coordinates my_coordinates;
 
 /* function to minimize */
-float objective_function(float dim[], int ndim)
+static float objective_function(float dim[], int ndim)
 {
     int i;
     float sum        = 0;

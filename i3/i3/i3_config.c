@@ -70,7 +70,7 @@ void release_params(void)
     //xmlCleanupParser();
 }
 
-xmlXPathObjectPtr getnodeset(xmlChar *xpath)
+static xmlXPathObjectPtr getnodeset(xmlChar *xpath)
 {
     xmlXPathContextPtr context;
     xmlXPathObjectPtr result;
@@ -88,7 +88,7 @@ xmlXPathObjectPtr getnodeset(xmlChar *xpath)
     return result;
 }
 
-void strip_ws(char *str)
+static void strip_ws(char *str)
 {
     char tstr[200];
     int lindex = 0;

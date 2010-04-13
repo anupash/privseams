@@ -87,7 +87,7 @@ static void *__RTTI duplicate_i3_option_entry(char type, void *__RTTI entry)
     }
 }
 
-i3_option *duplicate_i3_option(i3_option *option)
+static i3_option *duplicate_i3_option(i3_option *option)
 {
     i3_option *new_option = alloc_i3_option();
 

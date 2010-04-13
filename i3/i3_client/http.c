@@ -48,8 +48,8 @@
  *   input: www.cs.berkeley.edu/~istoica/index.html
  *   host:  www.cs.berkeley.edu
  *   get_cmd: GET /~istoica/index.html HTTP/1.0 */
-void get_args(char *input, char *host, char *get_cmd,
-              int *port, int buf_len)
+static void get_args(char *input, char *host, char *get_cmd,
+                     int *port, int buf_len)
 {
     char *p1, *p2, *end, *ptemp;
 
@@ -97,8 +97,8 @@ void get_args(char *input, char *host, char *get_cmd,
 }
 
 /* get an entry containing the host IP address, port number, and 20 byte ID */
-int get_entry(char *buf, char *end, char *ip_addr, int *port,
-              char *id, char *status, float *latitude, float *longitude)
+static int get_entry(char *buf, char *end, char *ip_addr, int *port,
+                     char *id, char *status, float *latitude, float *longitude)
 {
     char *ip_start, *port_start, *id_start, *status_start, *coord_start, *temp, *p1, *p2;
     char num_str[PORT_LEN];
@@ -194,7 +194,7 @@ int get_entry(char *buf, char *end, char *ip_addr, int *port,
     return 0;
 }
 
-int get_address(char *web_url, I3ServerList *list)
+static int get_address(char *web_url, I3ServerList *list)
 {
     nw_skt_t sockid;
     int bufsize;

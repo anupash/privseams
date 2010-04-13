@@ -58,7 +58,7 @@ Event **newEventArray(int max_heap_size)
 }
 
 // swap two events in the heap
-void swap_events(EventHeap *h, unsigned int idx, unsigned int idx1)
+static void swap_events(EventHeap *h, unsigned int idx, unsigned int idx1)
 {
     Event *t;
 

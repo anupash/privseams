@@ -16,7 +16,7 @@ static const unsigned char key[2][32] = {{0x23, 0xce, 0x45, 0x19, 0xc5, 0xb6, 0x
                                           0xb6, 0x1d, 0xf6, 0x56, 0xa5, 0xef, 0xfc, 0xe2}};
 static aes_ctx ctx[2];
 
-void aeshash_type(const unsigned char in[], unsigned char out[], int type)
+static void aeshash_type(const unsigned char in[], unsigned char out[], int type)
 {
     memset(out, 0, BLOCK_SIZE);
     aes_enc_blk(in, out, ctx + type);
@@ -34,7 +34,7 @@ void aeshash_r(const unsigned char in[], unsigned char out[])
     aeshash_type(in, out, r_c);
 }
 
-void aeshash_init_type(int type)
+static void aeshash_init_type(int type)
 {
     ctx[type].n_rnd = 0; // ensure all flags are initially set to zero
     ctx[type].n_blk = 0;

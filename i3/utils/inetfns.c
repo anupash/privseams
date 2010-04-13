@@ -72,7 +72,7 @@ uint32_t get_local_addr_eth(void)
  * Return: As an unsigned long in network byte order
  *
  **************************************************************************/
-uint32_t name_to_addr(const char *name)
+static uint32_t name_to_addr(const char *name)
 {
     int i;
     struct hostent *hptr = gethostbyname(name);
@@ -96,7 +96,7 @@ uint32_t name_to_addr(const char *name)
  * Return: As an unsigned long in network byte order
  *
  **************************************************************************/
-uint32_t get_local_addr_uname(void)
+static uint32_t get_local_addr_uname(void)
 {
     struct utsname myname;
     uint32_t addr = 0;
@@ -123,7 +123,7 @@ uint32_t get_local_addr_uname(void)
  * Return: As an unsigned long in network byte order
  *
  **************************************************************************/
-uint32_t get_local_addr_by_interface(char *interfaceName)
+static uint32_t get_local_addr_by_interface(char *interfaceName)
 {
     int i, tempfd;
     struct sockaddr_in addr;
@@ -210,7 +210,7 @@ uint32_t get_local_addr(void)
  * Return: As an unsigned long in network byte order
  *
  **************************************************************************/
-uint32_t get_local_addr(void)
+static uint32_t get_local_addr(void)
 {
     uint32_t addr;
 
@@ -241,7 +241,7 @@ uint32_t get_local_addr_eth(void)
     return get_local_addr();
 }
 
-uint32_t name_to_addr(const char *name)
+static uint32_t name_to_addr(const char *name)
 {
     uint32_t ret_val     = 0;
     int err              = 0;
@@ -279,7 +279,7 @@ uint32_t name_to_addr(const char *name)
     }
 }
 
-uint32_t get_local_addr_uname(void)
+static uint32_t get_local_addr_uname(void)
 {
     char *buf;
     int buf_size = 1024;
@@ -300,7 +300,7 @@ uint32_t get_local_addr_uname(void)
 }
 
 #if 0
-uint32_t get_local_addr(void)
+static uint32_t get_local_addr(void)
 {
     // - retrieve information about all network adapters
     // - look for the first non-loopback interface

@@ -28,7 +28,7 @@
 #define NEWS
 
 /* get_addr: get IP address of server */
-unsigned long get_addr1(char *name, int *ok_flag)
+static unsigned long get_addr1(char *name, int *ok_flag)
 {
     int i, tempfd, ret;
     struct sockaddr_in tmp_addr;

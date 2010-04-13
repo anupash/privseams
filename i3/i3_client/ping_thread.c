@@ -46,7 +46,7 @@ pthread_mutex_t status_mutex = PTHREAD_MUTEX_INITIALIZER;
 HANDLE status_mutex          = NULL;
 #endif
 
-int status_lock(void)
+static int status_lock(void)
 {
 #ifndef _WIN32
     if (pthread_mutex_lock(&status_mutex)) {
@@ -59,7 +59,7 @@ int status_lock(void)
     return 0;
 }
 
-int status_unlock(void)
+static int status_unlock(void)
 {
 #ifndef _WIN32
     if (pthread_mutex_unlock(&status_mutex)) {
@@ -90,7 +90,7 @@ void set_status(uint64_t *ping_start_time, uint64_t curr_time)
     status_unlock();
 }
 
-char get_status(uint64_t *ping_start_time, uint64_t curr_time)
+static char get_status(uint64_t *ping_start_time, uint64_t curr_time)
 {
     char ret = PING_STATUS_STEADY;
     status_lock();
@@ -104,7 +104,8 @@ char get_status(uint64_t *ping_start_time, uint64_t curr_time)
 }
 
 /* Send a set of pings to nodes in order */
-void send_npings(nw_skt_t sock, I3ServerList *list, I3ServerListNode **node, int n)
+static void send_npings(nw_skt_t sock, I3ServerList *list,
+                        I3ServerListNode **node, int n)
 {
     int i;
     static int seq = 1;
@@ -136,7 +137,7 @@ void send_npings(nw_skt_t sock, I3ServerList *list, I3ServerListNode **node, int
 
 /* To determine the coordinates of the local node initially
  * Ping a subset of nodes and determine coordinates */
-void init_coordinates(I3ServerList *list)
+static void init_coordinates(I3ServerList *list)
 {
     int n                  = MIN(NUM_LANDMARKS_COORDINATE, list->num_newservers + list->num_ping_list);
     I3ServerListNode *node = list->list, *temp_node;

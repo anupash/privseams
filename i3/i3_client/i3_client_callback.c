@@ -21,7 +21,7 @@
 #endif
 
 
-void printf_def_cbk(char *str, ID *id, int intend)
+static void printf_def_cbk(char *str, ID *id, int intend)
 {
 #ifdef PRINT_DEF_CBK
     I3_PRINT_DEBUG1(DEBUG_LEVEL_MINIMAL, "Default callback: %s\n", str);

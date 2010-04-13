@@ -49,7 +49,7 @@ int check_addr_change(struct in_addr *ia);
 
 int does_id_match(ID *id1, ID *id2, int prefix_len);
 
-void close_tcp(cl_context *ctx)
+static void close_tcp(cl_context *ctx)
 {
     printf("\nClosing fd = %d\n", ctx->tcp_fd);
     nw_close(ctx->tcp_fd);
@@ -314,7 +314,7 @@ cl_context *cl_create_context(struct in_addr *local_ip_addr,
 }
 
 /* close sockets and re-open them */
-void cl_reinit_context(cl_context *ctx)
+static void cl_reinit_context(cl_context *ctx)
 {
     static int so_reuseaddr = 1;
     uint8_t opt_mask;

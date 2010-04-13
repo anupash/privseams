@@ -460,7 +460,7 @@ void generate_r_constraint_addr(Key *lkey, Key *rkey)
     aeshash_r(lkey->x, rkey->x);
 }
 
-void generate_l_constraint(i3_trigger *t, Key *key)
+static void generate_l_constraint(i3_trigger *t, Key *key)
 {
     if (I3_ADDR_TYPE_STACK == t->to->type) {
         generate_l_constraint_id(t->to->t.stack->ids, key);
@@ -471,7 +471,7 @@ void generate_l_constraint(i3_trigger *t, Key *key)
     }
 }
 
-int is_constrained(ID *id, Key *key)
+static int is_constrained(ID *id, Key *key)
 {
     int retval;
     retval = (0 == memcmp(KEY_ID_PTR(id), key->x, KEY_LEN));

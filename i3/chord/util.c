@@ -190,7 +190,7 @@ void subtract(chordID *a, chordID *b, chordID *res)
 
 /**********************************************************************/
 
-chordID random_from(chordID *a)
+static chordID random_from(chordID *a)
 {
     chordID b;
     int i, m = random() % 10 + 1;

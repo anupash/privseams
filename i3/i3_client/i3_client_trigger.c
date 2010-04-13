@@ -290,7 +290,7 @@ cl_trigger *cl_get_trigger_by_id(cl_trigger *ctr_head, ID *id)
 }
 
 /* get the common prefix length of x and y */
-int num_matched_bits(ID *id1, ID *id2)
+static int num_matched_bits(ID *id1, ID *id2)
 {
     int i, j;
     char mask = 0x80;

@@ -25,7 +25,7 @@ pthread_mutex_t i3server_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 HANDLE i3server_list_mutex          = NULL;
 #endif
 
-int i3server_list_lock(void)
+static int i3server_list_lock(void)
 {
 #ifndef _WIN32
     if (pthread_mutex_lock(&i3server_list_mutex)) {
@@ -38,7 +38,7 @@ int i3server_list_lock(void)
     return 0;
 }
 
-int i3server_list_unlock(void)
+static int i3server_list_unlock(void)
 {
 #ifndef _WIN32
     if (pthread_mutex_unlock(&i3server_list_mutex)) {
@@ -74,8 +74,9 @@ static uint32_t i3server_hash(uint32_t addr, uint32_t n)
 /***************************************************************************
  * Purpose: To initialize an i3server node structure
  **************************************************************************/
-I3ServerListNode *init_i3server_node(uint32_t addr,
-                                     uint16_t port, ID id, Coordinates coord)
+static I3ServerListNode *init_i3server_node(uint32_t addr,
+                                            uint16_t port, ID id,
+                                            Coordinates coord)
 {
     I3ServerListNode *node;
     uint32_t h;
@@ -209,7 +210,7 @@ void delete_dead_i3servers(I3ServerList *i3list)
 /***************************************************************************
  * Purpose: To update ping list with a node
  **************************************************************************/
-void add_to_ping_list(I3ServerList *list, I3ServerListNode *node)
+static void add_to_ping_list(I3ServerList *list, I3ServerListNode *node)
 {
     uint32_t h = i3server_hash(node->addr, I3SERVERHASH);
 
@@ -446,8 +447,9 @@ uint64_t get_rtt_node(I3ServerListNode *node)
 /***************************************************************************
  * Purpose: Sort ping-list based on  rtt
  **************************************************************************/
-int sort_ping_list(I3ServerList *list,
-                   I3ServerListNode *sorted_list[], uint64_t sorted_rtt[])
+static int sort_ping_list(I3ServerList *list,
+                          I3ServerListNode *sorted_list[],
+                          uint64_t sorted_rtt[])
 {
     I3ServerListNode *curr;
     int num = 0, i, j;
@@ -479,8 +481,8 @@ int sort_ping_list(I3ServerList *list,
 /***************************************************************************
  * Purpose: Sort full-list based on coordinates
  **************************************************************************/
-int sort_coord(I3ServerList *list, I3ServerListNode *sorted_list[],
-               float sorted_rtt[])
+static int sort_coord(I3ServerList *list, I3ServerListNode *sorted_list[],
+                      float sorted_rtt[])
 {
     I3ServerListNode *curr;
     int num = 0, i, j;
@@ -571,7 +573,7 @@ int get_top_k_id(I3ServerList *list, int k,
     return num;
 }
 
-int is_between(ID *middle, ID *start, ID *end)
+static int is_between(ID *middle, ID *start, ID *end)
 {
     int a = compare_ids(start, middle);
     int b = compare_ids(middle, end);
@@ -630,7 +632,7 @@ I3ServerListNode *find_next_alive_ping_list(I3ServerList *list,
 /***************************************************************************
  * Purpose: Remove low-performance i3 servers from list. Limit size to top-K
  **************************************************************************/
-void remove_bad_servers_ping_list(I3ServerList *list, int num_remove)
+static void remove_bad_servers_ping_list(I3ServerList *list, int num_remove)
 {
     I3ServerListNode *sorted_list[MAX_PING_LIST_SIZE], *prev, *curr;
     uint64_t sorted_rtt[MAX_PING_LIST_SIZE];
@@ -683,7 +685,8 @@ void remove_bad_servers_ping_list(I3ServerList *list, int num_remove)
  * Fill up the ping list
  *   - closeness based on euclidean dist over the coordinate space
  *****************************************************************/
-void fill_up_ping_list_closest(I3ServerList *list, I3ServerListNode **next_ping)
+static void fill_up_ping_list_closest(I3ServerList *list,
+                                      I3ServerListNode **next_ping)
 {
     int i, num, num_added;
 
@@ -747,7 +750,8 @@ void fill_up_ping_list_closest(I3ServerList *list, I3ServerListNode **next_ping)
  * Fill up the ping list
  *   - closeness based on euclidean dist over the coordinate space
  *****************************************************************/
-void fill_up_ping_list_random(I3ServerList *list, I3ServerListNode **next_ping)
+static void fill_up_ping_list_random(I3ServerList *list,
+                                     I3ServerListNode **next_ping)
 {
     int i, r, num, num_added;
     I3ServerListNode *node = NULL, *prev = NULL;
