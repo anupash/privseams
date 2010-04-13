@@ -826,11 +826,6 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 
 #ifdef CONFIG_HIP_BLIND
     if (hip_blind_get_status()) {
-        /* Compiler error:
-         * 'nonce' undeclared (first use in this function)
-         * introduced nonce here and initialized it zero.
-         * -Lauri 22.07.2008.
-         */
         uint16_t nonce = 0;
         if ((local_plain_hit =
                  (in6_addr_t *) malloc(sizeof(struct in6_addr))) == NULL) {
