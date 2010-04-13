@@ -323,7 +323,7 @@ out_err:
  *
  * @param entry  link entry to be printed
  */
-void hip_link_entry_print(hip_link_entry_t *entry)
+static void hip_link_entry_print(hip_link_entry_t *entry)
 {
     if (entry) {
         HIP_DEBUG_HIT("dst_addr", &entry->dst_addr);
