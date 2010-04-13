@@ -133,7 +133,6 @@ struct hip_in6_addr_port {
 } __attribute__ ((packed));
 
 struct hip_context {
-    //struct sk_buff *skb_in;         /* received skbuff */
     struct hip_common *   input;        /**< Received packet. */
     struct hip_common *   output;       /**< Packet to be built and sent. */
     struct hip_crypto_key hip_enc_out;
@@ -168,7 +167,6 @@ struct hip_context {
  */
 /// @todo Check if all these fields are used and needed
 struct hip_peer_addr_list_item {
-//    hip_list_t list;
     uint32_t        padding;
     unsigned long   hash_key;
     struct in6_addr address;
@@ -196,14 +194,12 @@ struct hip_peer_addr_list_item {
 
 /* for HIT-SPI hashtable only */
 struct hip_hit_spi {
-//    hip_list_t list;
     hip_hit_t  hit_our;
     hip_hit_t  hit_peer;
     uint32_t   spi;           /* this SPI spi belongs to the HIT hit */
 };
 
 struct hip_spi_in_item {
-//    hip_list_t list;
     uint32_t      spi;
     uint32_t      new_spi;        /* SPI is changed to this when rekeying */
     /* ifindex if the netdev to which this is related to */
@@ -229,7 +225,6 @@ struct hip_spi_in_item {
 };
 
 struct hip_spi_out_item {
-//    hip_list_t list;
     uint32_t        spi;
     uint32_t        new_spi;        /* spi is changed to this when rekeying */
 
@@ -245,9 +240,6 @@ struct hip_spi_out_item {
 /* this struct is here instead of hidb.h to avoid some weird compilation
  * warnings */
 struct hip_host_id_entry {
-    /* this needs to be first (list_for_each_entry, list
-     * head being of different type) */
-    //hip_list_t next;
     struct hip_lhi      lhi;
     hip_lsi_t           lsi;
     /* struct in6_addr ipv6_addr[MAXIP]; */
@@ -298,8 +290,6 @@ struct hip_hadb_state {
     /** If this host association is from a local HIT to a local HIT this
      *  is non-zero, otherwise zero. */
     int                   is_loopback;
-    /** Default SPI for outbound SAs. */
-    //uint32_t                     default_spi_out;
     /** Preferred peer IP address to use when sending data to peer. */
     struct in6_addr       peer_addr;
     /** Our IP address. */
@@ -486,8 +476,6 @@ struct hip_hadb_state {
 
     //pointer for ice engine
     void *                                     ice_session;
-    /** a 16 bits flag for nat connectiviy checking engine control*/
-    //uint16_t                     nat_control;
 
     uint32_t                                   pacing;
     uint8_t                                    ice_control_role;

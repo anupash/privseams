@@ -575,7 +575,6 @@ static int _create_menubar(GtkWidget *parent)
     iconw = gtk_image_new_from_stock(GTK_STOCK_PROPERTIES, GTK_ICON_SIZE_MENU);
     gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
     gtk_menu_shell_append(GTK_MENU_SHELL(w2), label);
-//      g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
     gtk_widget_show(GTK_WIDGET(label));
 
     /* Submenu for locals. */
@@ -834,7 +833,6 @@ int create_content_nhdlg(void)
 {
     GtkWidget *window = (GtkWidget *) widget(ID_NHDLG);
     GtkWidget *frame, *w, *vb, *vb2, *hb, *exp;
-    //GtkWidget *hp, *sw, *vb1;
 
     gtk_container_set_border_width(GTK_CONTAINER(window), 1);
 

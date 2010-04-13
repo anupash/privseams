@@ -204,7 +204,6 @@ static __inline u_int8_t sysdep_sa_len(const struct sockaddr *sa)
     case AF_INET6:
         return sizeof(struct sockaddr_in6);
     }
-    // log_print ("sysdep_sa_len: unknown sa family %d", sa->sa_family);
     return sizeof(struct sockaddr_in);
 #else
     return sa->sa_len;

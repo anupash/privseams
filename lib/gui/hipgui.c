@@ -46,7 +46,6 @@ static int _hit_remote_add(const char *group, const char *name)
     GtkWidget *w;
     GtkTreeIter iter, gtop;
     GtkTreePath *path;
-    //GtkTreeModel *model;
     int err = 0;
     char *str;
 
@@ -343,9 +342,7 @@ int gui_hit_remote_ask(HIT_Remote *hit, int inout)
         hit->g = group;
         ps     = (char *) gtk_entry_get_text(GTK_ENTRY(widget(ID_NH_NAME)));
         NAMECPY(hit->name, ps);
-//              ps = gtk_entry_get_text(GTK_ENTRY(widget(ID_NH_URL)));
         URLCPY(hit->url, "none");
-//              ps = gtk_entry_get_text(GTK_ENTRY(widget(ID_NH_PORT)));
         URLCPY(hit->port, "0");
         /* If HIT added manually. */
         if (inout == 2) {

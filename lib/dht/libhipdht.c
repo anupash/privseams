@@ -104,8 +104,6 @@ int resolve_dht_gateway_info(char *gateway_name,
     memset(&hints, 0, sizeof(hints));
     hints.ai_family   = af;
     hints.ai_socktype = SOCK_STREAM;
-    /* For some reason this does not work anymore -samu */
-    /* hints.ai_flags = AI_NODHT; */
     error = 0;
 
     sprintf(opendht_serving_gateway_port_str, "%d", gateway_port);

@@ -1598,26 +1598,6 @@ static int hip_conf_handle_nat(hip_common_t *msg, int action,
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
              "Failed to build user message header.: %s\n", strerror(err));
 
-#if 0 /* Not used currently */
-    else {
-        ret = inet_pton(AF_INET6, opt[0], &hit);
-        if (ret < 0 && errno == EAFNOSUPPORT) {
-            HIP_PERROR("inet_pton: not a valid address family\n");
-            err = -EAFNOSUPPORT;
-            goto out_err;
-        } else if (ret == 0) {
-            HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-            err = -EINVAL;
-            goto out_err;
-        }
-        status = HIP_MSG_SET_NAT_ON;
-    }
-
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-                                      sizeof(in6_addr_t)), -1,
-             "build param hit failed: %s\n", strerror(err));
-#endif
-
 out_err:
     return err;
 }
@@ -3218,7 +3198,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
     int err           = 0, type_arg = 0;
     long int action   = 0, type = 0;
     hip_common_t *msg = NULL;
-    //char *text = NULL;
 
     /* Check that we have at least one command line argument. */
     HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",

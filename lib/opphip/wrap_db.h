@@ -45,7 +45,6 @@ typedef struct hip_opp_socket_entry hip_opp_socket_t;
 void hip_init_socket_db(void);
 void hip_uninit_socket_db(void);
 void hip_socketdb_dump(void);
-//void hip_socketdb_get_entry(hip_opp_socket_t *entry, int pid, int socket);
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket, pthread_t tid);
 int hip_socketdb_add_entry(int pid, int socket, pthread_t tid);
 int hip_socketdb_del_entry(int pid, int socket, pthread_t tid);

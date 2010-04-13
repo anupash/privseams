@@ -643,13 +643,6 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
     HIP_IFEL((enckey_len < 0 || authkey_len < 0), 1,
              "Bad enc or auth key len\n");
 
-#if 0
-    /* XX CHECK: is there some kind of range for the SPIs ? */
-    if (!already_acquired) {
-        get_random_bytes(spi, sizeof(uint32_t));
-    }
-#endif
-
     HIP_DEBUG("************************************\n");
     HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
     HIP_DEBUG_HIT("src_hit", src_hit);

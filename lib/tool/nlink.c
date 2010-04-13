@@ -855,8 +855,6 @@ int hip_iproute_modify(struct rtnl_handle *rth,
                   ip, dev, family);
     }
     HIP_IFEL(get_prefix_1(&dst, ip, req1.r.rtm_family), -1, "prefix\n");
-    //if (req.r.rtm_family == AF_UNSPEC)
-    //req.r.rtm_family = dst.family;
     req1.r.rtm_dst_len = dst.bitlen;
     dst_ok             = 1;
     if (dst.bytelen) {
