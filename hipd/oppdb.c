@@ -267,7 +267,7 @@ skip_hit_addr:
     n = hip_sendto_user(message, (struct sockaddr *) app_id);
 
     if (n < 0) {
-        HIP_ERROR("hip_sendto() failed.\n");
+        HIP_ERROR("hip_sendto_user() failed.\n");
         err = -1;
         goto out_err;
     }
