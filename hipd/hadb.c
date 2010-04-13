@@ -1800,10 +1800,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
     hid.heartbeats_sent     = entry->heartbeats_sent;
 
     /*For some reason this gives negative result*/
-    /*hip_timeval_diff(&entry->bex_start,
-     *               &entry->bex_end,
-     *               &hid.bex_duration);*/
-
+    //hip_timeval_diff(&entry->bex_start, &entry->bex_end, &hid.bex_duration);
 
     // struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
     // HIP_ASSERT(duration != NULL);
