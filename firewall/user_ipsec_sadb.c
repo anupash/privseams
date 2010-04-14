@@ -748,39 +748,6 @@ static void hip_sa_entry_print(const hip_sa_entry_t *entry)
         HIP_DEBUG("src_port: %u\n", entry->src_port);
         HIP_DEBUG("dst_port: %u\n", entry->dst_port);
         HIP_DEBUG("... (more members)\n");
-
-// XX TODO print the rest in case this information is needed
-#if 0
-        /****************** crypto parameters *******************/
-        int ealg;                                                                       /* crypto transform in use */
-        uint32_t a_keylen;                                                      /* length of raw keys */
-        uint32_t e_keylen;
-        unsigned char *a_key;                                           /* raw crypto keys */
-        unsigned char *e_key;
-        des_key_schedule ks[3];                                         /* 3-DES keys */
-        AES_KEY *aes_key;                                                       /* AES key */
-        BF_KEY *bf_key;                                                         /* BLOWFISH key */
-        /*********************************************************/
-        uint64_t lifetime;                              /* seconds until expiration */
-        uint64_t bytes;                                 /* bytes transmitted */
-        struct timeval usetime;                 /* last used timestamp */
-        struct timeval usetime_ka;              /* last used timestamp, incl keep-alives */
-        uint32_t sequence;                              /* sequence number counter */
-        uint32_t replay_win;                    /* anti-replay window */
-        uint32_t replay_map;                    /* anti-replay bitmap */
-        /*********** esp protection extension params *************/
-        /* hash chain parameters for this SA used in secure ESP extension */
-        /* for outgoing SA */
-        hash_chain_t *active_hchain;
-        hash_chain_t *next_hchain;
-        /* for incoming SA */
-        int tolerance;
-        unsigned char *active_anchor;
-        unsigned char *next_anchor;
-        /* for both */
-        uint8_t active_transform;
-        uint8_t next_transform;
-#endif
     } else {
         HIP_DEBUG("sa entry is NULL\n");
     }
