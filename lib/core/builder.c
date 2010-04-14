@@ -3354,8 +3354,7 @@ int hip_build_param_esp_prot_root(struct hip_common *msg,
 
 /**
  * hip_build_param_esp_info - build esp_info parameter
- * \addtogroup params
- * @{ \todo Properly comment parameters of hip_build_param_esp_info() @}
+ * \todo Properly comment parameters of hip_build_param_esp_info()
  *
  * @param msg the message where the parameter will be appended
  * @param keymat_index no desription
@@ -3586,7 +3585,6 @@ void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
 #if 0
 /**
  * build and append host id parameter into a message
- * \addtogroup params
  *
  * @param msg the message where the host id should be appended
  * @param host_id_hdr a hip_host_id structure (public key)

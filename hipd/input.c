@@ -2997,10 +2997,19 @@ out_err:
 }
 
 /**
- * @addtogroup receive_functions
+ * Functions for receiving HIP control packets.
+ *
+ * These functions are called after a HIP control packet is received by
+ * hip_receive_control_packet()-function and the packet is detected to be a HIP
+ * control packet. The purpose of these functions is to decide whether to
+ * handle the packet at all. This decision is based first and foremost on the
+ * state of the current host association. If the packet is to be handled, all
+ * handling should be done in respective handle-function.
+ *
+ * @defgroup receive_functions HIP receive functions
+ * @see      handle_functions
  * @{
- */
-/**
+ *
  * Determines the action to be executed for an incoming I1 packet.
  *
  * This function is called when a HIP control packet is received by

@@ -9,8 +9,7 @@
 
 #include "agent/hitdb.h"
 
-/*!
- * \addtogroup libhipgui
+/** @defgroup libhipgui HIP GUI library
  * @{
  */
 
@@ -34,8 +33,7 @@ void gui_update_nat(int);
 void gui_hiu_clear(void);
 void gui_hiu_add(HIT_Remote *);
 void gui_hiu_count(int);
-
-/*! @} addtogroup libhipgui */
+/* @} */
 
 
 #endif /* HIP_LIB_GUI_HIPGUI_H */

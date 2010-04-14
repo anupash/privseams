@@ -20,20 +20,27 @@
 #define HIP_HI_REUSE_ANY                  16
 /* Other flags: keep them to the power of two! */
 
-/** @addtogroup hip_ha_state
+
+/**
+ * @defgroup hip_ha_state HIP association states
+ *
+ * HIP states as specifed in section 4.4.1.\ of draft-ietf-hip-base-10.
+ *
+ * The states are: UNASSOCIATED, I1-SENT, I2-SENT, R2-SENT ESTABLISHED, CLOSING,
+ * CLOSED, E-FAILED.
  * @{
  */
 /* When adding new states update debug.h hip_state_str(). Doxygen comments to
  * these states are available at doc/doxygen.h */
-#define HIP_STATE_NONE                   0
-#define HIP_STATE_UNASSOCIATED           1
-#define HIP_STATE_I1_SENT                2
-#define HIP_STATE_I2_SENT                3
-#define HIP_STATE_R2_SENT                4
-#define HIP_STATE_ESTABLISHED            5
-#define HIP_STATE_FAILED                 7
-#define HIP_STATE_CLOSING                8
-#define HIP_STATE_CLOSED                 9
+#define HIP_STATE_NONE                   0 /**< no state, structure unused */
+#define HIP_STATE_UNASSOCIATED           1 /**< state machine start */
+#define HIP_STATE_I1_SENT                2 /**< initiating base exchange */
+#define HIP_STATE_I2_SENT                3 /**< waiting to complete base exchange */
+#define HIP_STATE_R2_SENT                4 /**< waiting to complete base exchange */
+#define HIP_STATE_ESTABLISHED            5 /**< HIP association established */
+#define HIP_STATE_FAILED                 7 /**< HIP exchange failed */
+#define HIP_STATE_CLOSING                8 /**< HIP association closing, no data can be sent */
+#define HIP_STATE_CLOSED                 9 /**< HIP association closed, no data can be sent */
 /* @} */
 
 #define HIP_UPDATE_STATE_REKEYING        1 /**< @todo REMOVE */
@@ -553,7 +560,13 @@ struct hip_turn_info {
     in_port_t       peer_port;
 };
 
-/** @addtogroup hadb_func
+/**
+ * HIP host assosiation function pointer data structures.
+ *
+ * Data structures containing function pointers pointing to functions used for
+ * sending, receiving and handling data and modifying host assosiation state.
+ *
+ * @defgroup hadb_func HIP host assosiation function sets
  * @{
  */
 struct hip_hadb_rcv_func_set {

@@ -25,11 +25,8 @@
  * These values are used for TYPE_xxx macros.
  */
 
-/**
- * @addtogroup exec_app_types
+/** @defgroup exec_app_types Execute application types
  * @{
- */
-/**
  * Execute application with opportunistic library preloaded.
  * @see handle_exec_application()
  */
@@ -53,7 +50,7 @@
  * @see handle_exec_application()
  */
 #define LIB_LENGTH      200
-/** @} addtogroup exec_app_types */
+/* @} */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0

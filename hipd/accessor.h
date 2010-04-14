@@ -14,10 +14,9 @@
 #include "config.h"
 #include "lib/core/hashtable.h"
 
-/** @addtogroup daemon_states
+/** @defgroup daemon_states HIP daemon states
  * @{
  */
-
 /** Low mask for daemon states. */
 #define HIPD_STATE_MASK         0xff
 /** Daemon is ok and executing. */
@@ -29,9 +28,7 @@
 
 /** Daemon is restarting. */
 #define HIPD_FLAG_RESTART       0x00000100
-
-
-/* @}  */
+/* @} */
 
 #define INDEX_HASH_LENGTH       SHA_DIGEST_LENGTH
 
