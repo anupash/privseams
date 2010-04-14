@@ -499,7 +499,6 @@ INPUT                  = @top_srcdir@/agent           \
                          @top_srcdir@/lib/gui         \
                          @top_srcdir@/lib/ipsec       \
                          @top_srcdir@/lib/opphip      \
-                         @top_srcdir@/lib/performance \
                          @top_srcdir@/lib/tool        \
 
 # This tag can be used to specify the character encoding of the source files that
