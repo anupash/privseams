@@ -590,10 +590,6 @@ int hip_icmp_statistics(struct in6_addr *src, struct in6_addr *dst,
     uint32_t rcvd_heartbeats = 0;
     uint64_t rtt             = 0;
     double avg               = 0.0, std_dev = 0.0;
-#if 0
-    u_int32_t rtt            = 0, usecs = 0, secs = 0, square = 0;
-    u_int32_t sum1           = 0, sum2 = 0;
-#endif
     char hit[INET6_ADDRSTRLEN];
     hip_ha_t *entry          = NULL;
 
