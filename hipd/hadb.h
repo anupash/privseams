@@ -100,27 +100,6 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 
-#if 0
-typedef struct hip_peer_addr_opaque {
-    struct in6_addr              addr;
-    struct hip_peer_addr_opaque *next;
-} hip_peer_addr_opaque_t;         /* Structure to record peer addresses */
-
-typedef struct hip_peer_entry_opaque {
-    unsigned int                  count;
-    struct hip_host_id *          host_id;
-    hip_hit_t                     hit;
-    hip_peer_addr_opaque_t *      addr_list;
-    struct hip_peer_entry_opaque *next;
-} hip_peer_entry_opaque_t;         /* Structure to record kernel peer entry */
-
-typedef struct hip_peer_opaque {
-    unsigned int                  count;
-    struct hip_peer_entry_opaque *head;
-    struct hip_peer_entry_opaque *end;
-} hip_peer_opaque_t;         /* Structure to record kernel peer list */
-#endif
-
 int hip_for_each_ha(int(func) (hip_ha_t * entry, void *opaq), void *opaque);
 
 /* next 2 functions are not called from outside but make sense and are
