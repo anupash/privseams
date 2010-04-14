@@ -800,7 +800,7 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
  * the server has granted us the services we requested and
  * hip_add_registration_client() is called.
  *
- * @parameter entry a pointer to a host association which is registering.
+ * @param     entry a pointer to a host association which is registering.
  * @param     msg   a pointer to HIP message from where to dig out the
  *                  REG_RESPONSE parameter.
  * @return          -1 if the message @c msg did not contain a
@@ -846,7 +846,7 @@ out_err:
  * contents of the current REG_FAILED parameter. The function first cancels the
  * 'request' bit and then removes the corresponding pending request.
  *
- * @parameter entry a pointer to a host association which is registering.
+ * @param  entry    a pointer to a host association which is registering.
  * @param  msg      a pointer to HIP message from where to dig out the
  *                  REG_FAILED parameters.
  * @return          -1 if the message @c msg did not contain a REG_FAILED
