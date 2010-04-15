@@ -817,7 +817,6 @@ static void firewall_close(const int signal)
     hip_perf_write_benchmark(perf_set, PERF_ALL);
 #endif
     HIP_DEBUG("Closing firewall...\n");
-    //hip_uninit_proxy_db();
     firewall_exit();
     exit(signal);
 }
@@ -2138,32 +2137,22 @@ int main(int argc, char **argv)
     check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
 
     /* To keep things simple, we use a subset of the performance set originally created for the HIP daemon. */
-    //hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
     hip_perf_set_name(perf_set, PERF_I1, "results/PERF_I1.csv");
     hip_perf_set_name(perf_set, PERF_R1, "results/PERF_R1.csv");
     hip_perf_set_name(perf_set, PERF_I2, "results/PERF_I2.csv");
     hip_perf_set_name(perf_set, PERF_R2, "results/PERF_R2.csv");
-    //hip_perf_set_name(perf_set, PERF_DH_CREATE,"results/PERF_DH_CREATE.csv");
-    //hip_perf_set_name(perf_set, PERF_SIGN,"results/PERF_SIGN.csv");
-    //hip_perf_set_name(perf_set, PERF_DSA_SIGN_IMPL,"results/PERF_DSA_SIGN_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_VERIFY, "results/PERF_VERIFY.csv");
     hip_perf_set_name(perf_set, PERF_BASE, "results/PERF_BASE.csv");
     hip_perf_set_name(perf_set, PERF_ALL, "results/PERF_ALL.csv");
-    //hip_perf_set_name(perf_set, PERF_UPDATE_SEND,"results/PERF_UPDATE_SEND.csv");
-    //hip_perf_set_name(perf_set, PERF_VERIFY_UPDATE,"results/PERF_VERIFY_UPDATE.csv");
     hip_perf_set_name(perf_set, PERF_UPDATE_COMPLETE, "results/PERF_UPDATE_COMPLETE.csv");
-    //hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_ESTABLISHED,"results/PERF_HANDLE_UPDATE_ESTABLISHED.csv");
-    //hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_REKEYING,"results/PERF_HANDLE_UPDATE_REKEYING.csv");
-    //hip_perf_set_name(perf_set, PERF_UPDATE_FINISH_REKEYING,"results/PERF_UPDATE_FINISH_REKEYING.csv");
+
     hip_perf_set_name(perf_set, PERF_CLOSE_SEND, "results/PERF_CLOSE_SEND.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE, "results/PERF_HANDLE_CLOSE.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE_ACK, "results/PERF_HANDLE_CLOSE_ACK.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_1, "results/PERF_HANDLE_UPDATE_1.csv");
-    //hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_2,"results/PERF_HANDLE_UPDATE_2.csv");
     hip_perf_set_name(perf_set, PERF_CLOSE_COMPLETE, "results/PERF_CLOSE_COMPLETE.csv");
     hip_perf_set_name(perf_set, PERF_DSA_VERIFY_IMPL, "results/PERF_DSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_RSA_VERIFY_IMPL, "results/PERF_RSA_VERIFY_IMPL.csv");
-    //hip_perf_set_name(perf_set, PERF_RSA_SIGN_IMPL,"results/PERF_RSA_SIGN_IMPL.csv");
 
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);

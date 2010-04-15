@@ -128,9 +128,6 @@ static int hip_port_cache_add_new_entry(const char *key, int value)
     int err = 0;
 
     HIP_DEBUG("\n");
-/*
- *      HIP_ASSERT(ha_entry != NULL);
- */
     new_entry = (firewall_port_cache_hl_t *) (hip_cache_create_hl_entry());
     memcpy(new_entry->port_and_protocol, key, strlen(key));
     new_entry->traffic_type = value;

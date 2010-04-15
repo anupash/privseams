@@ -744,7 +744,7 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
                       sent, (len + sizeof(struct ip)));
             HIP_DEBUG("Packet sent ok\n");
         }
-    }    //if !is_ipv6
+    }
 
 out_err:
     if (is_ipv6) {

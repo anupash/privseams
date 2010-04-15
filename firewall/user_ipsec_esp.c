@@ -613,7 +613,6 @@ int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
              in, elen, hmac_md, &hmac_md_len);
 
         // actual auth verification
-        //if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
         if (memcmp(&in[elen], hmac_md, alen) != 0) {
             HIP_DEBUG("ESP packet could not be authenticated\n");
 

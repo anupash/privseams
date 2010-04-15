@@ -17,10 +17,6 @@ void hip_firewall_cache_init_hldb(void);
 
 firewall_cache_hl_t *hip_cache_create_hl_entry(void);
 
-//unsigned long hip_firewall_cache_hash_ip_peer(const void *ptr);
-
-//int hip_firewall_cache_match_ip_peer(const void *ptr1, const void *ptr2);
-
 void hip_firewall_cache_delete_hldb(int);
 
 

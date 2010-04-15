@@ -141,19 +141,6 @@ static int hip_fw_proxy_set_peer_hit(hip_common_t *msg)
             HIP_ERROR("Proxy update Failed!\n");
         }
 
-#if 0
-        if (hip_proxy_conn_add_entry(&local_addr,
-                                     &peer_addr,
-                                     proxy_hit,
-                                     &peer_hit,
-                                     protocol,
-                                     port_client,
-                                     port_peer,
-                                     HIP_PROXY_TRANSLATE)) {
-            HIP_ERROR("ConnDB add entry Failed!\n");
-        }
-#endif
-
         /* Drop packet. Firewall translates further retransmissions correctly */
         err = 0;
     }
@@ -240,8 +227,6 @@ int hip_handle_msg(struct hip_common *msg)
         }
         break;
     case HIP_MSG_TURN_INFO:
-        // struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);
-        // save to database
         break;
     case HIP_MSG_RESET_FIREWALL_DB:
         hip_firewall_cache_delete_hldb(0);
