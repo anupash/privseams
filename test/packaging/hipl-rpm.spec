@@ -1,3 +1,4 @@
+
 Name: hipl
 Summary: HIP IPsec key management and mobility daemon.
 # Note: Version and Release are read automatically from topdir release.version
@@ -29,7 +30,6 @@ other related tools and test software.
 %build
 autoreconf --install
 %configure --prefix=/usr
-make -C doc
 make -j 4 all
 
 # Currently we are not going to install all includes and test software.

@@ -29,7 +29,6 @@ other related tools and test software.
 %build
 autoreconf --install
 %configure --prefix=/usr
-make -C doc
 make -j 4 all
 
 # Note:

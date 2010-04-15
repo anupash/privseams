@@ -360,7 +360,7 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #lib_ipsec_libhipsec_la_LIBADD  = $(LEXLIB)
 
 #DISTCLEANFILES = lib/ipsec/policy_parse.c lib/ipsec/policy_token.c
-
+DISTCLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
 ### library dependencies ###
 
