@@ -175,7 +175,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 
     /* Allocate enough space for host id; there will be 20 bytes extra
      * to avoid hassle with padding. */
-    host_id_pub = (struct hip_host_id *) HIP_MALLOC(total_len, 0);
+    host_id_pub = HIP_MALLOC(total_len, 0);
     HIP_IFE(!host_id_pub, -EFAULT);
     memset(host_id_pub, 0, total_len);
 

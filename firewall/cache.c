@@ -33,7 +33,7 @@ firewall_cache_hl_t *hip_cache_create_hl_entry(void)
     firewall_cache_hl_t *entry = NULL;
     int err = 0;
 
-    HIP_IFEL(!(entry = (firewall_cache_hl_t *) HIP_MALLOC(sizeof(firewall_cache_hl_t), 0)),
+    HIP_IFEL(!(entry = HIP_MALLOC(sizeof(firewall_cache_hl_t), 0)),
              -ENOMEM, "No memory available for firewall database entry\n");
     memset(entry, 0, sizeof(*entry));
 out_err:

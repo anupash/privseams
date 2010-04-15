@@ -676,7 +676,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
         if (protocol == IPPROTO_TCP) {
             hip_raw_sock = hip_proxy_raw_sock_tcp_v4;
             sa_size      = sizeof(struct sockaddr_in);
-            msg          = (uint8_t *) HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
+            msg          = HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
             memset(msg, 0, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
 
             HIP_DEBUG_INADDR("ipv4 src address  inbound: ", &src4->sin_addr);
@@ -691,7 +691,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
         if (protocol == IPPROTO_UDP) {
             hip_raw_sock = hip_proxy_raw_sock_udp_v4;
             sa_size      = sizeof(struct sockaddr_in);
-            msg          = (uint8_t *) HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
+            msg          = HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
             memset(msg, 0, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
 
             HIP_DEBUG_INADDR("ipv4 src address  inbound: ", &src4->sin_addr);
@@ -706,7 +706,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
         if (protocol == IPPROTO_ICMP) {
             hip_raw_sock = hip_proxy_raw_sock_icmp_v4;
             sa_size      = sizeof(struct sockaddr_in);
-            msg          = (uint8_t *) HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
+            msg          = HIP_MALLOC((len - sizeof(struct ip6_hdr) + sizeof(struct ip)), 0);
             memset(msg, 0, (len - sizeof(struct ip6_hdr) + sizeof(struct ip)));
 
             HIP_DEBUG_INADDR("ipv4 src address  inbound: ", &src4->sin_addr);
@@ -723,7 +723,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
             HIP_DEBUG("Using IPv6 raw socket (TCP)\n");
             hip_raw_sock = hip_proxy_raw_sock_tcp_v6;
             sa_size      = sizeof(struct sockaddr_in6);
-            msg          = (uint8_t *) HIP_MALLOC(len, 0);
+            msg          = HIP_MALLOC(len, 0);
             //memset(msg, 0, len);
             tcp->check   =  htons(0);
             tcp->check   = ipv6_checksum(IPPROTO_TCP, &(src6->sin6_addr), &(dst6->sin6_addr), tcp, (len - sizeof(struct ip6_hdr)));           //checksum is ok for ipv6
@@ -734,7 +734,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
             HIP_DEBUG("Using IPv6 raw socket (UDP)\n");
             hip_raw_sock = hip_proxy_raw_sock_udp_v6;
             sa_size      = sizeof(struct sockaddr_in6);
-            msg          = (uint8_t *) HIP_MALLOC(len, 0);
+            msg          = HIP_MALLOC(len, 0);
             //memset(msg, 0, len);
             udp->check   =  htons(0);
             udp->check   = ipv6_checksum(IPPROTO_UDP, &(src6->sin6_addr), &(dst6->sin6_addr), udp, (len - sizeof(struct ip6_hdr)));           //checksum is ok for ipv6
@@ -745,7 +745,7 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
             HIP_DEBUG("Using IPv6 raw socket (ICMPV6)\n");
             hip_raw_sock        = hip_proxy_raw_sock_icmp_v6;
             sa_size             = sizeof(struct sockaddr_in6);
-            msg                 = (uint8_t *) HIP_MALLOC(len, 0);
+            msg                 = HIP_MALLOC(len, 0);
             //memset(msg, 0, len);
             icmpv6->icmp6_cksum =  htons(0);
             icmpv6->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &(src6->sin6_addr), &(dst6->sin6_addr), icmpv6, (len - sizeof(struct ip6_hdr)));             //checksum is ok for ipv6
@@ -1130,7 +1130,7 @@ int handle_proxy_outbound_traffic(const ipq_packet_msg_t *m,
                 err = 0;
             } else {
                 packet_length = m->data_len - hdr_size;
-                msg           = (uint8_t *) HIP_MALLOC(packet_length, 0);
+                msg           = HIP_MALLOC(packet_length, 0);
                 memcpy(msg, (m->payload) + hdr_size,
                        packet_length);
 

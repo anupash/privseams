@@ -299,9 +299,8 @@ static int hip_add_host_id(hip_db_struct_t *db,
 
     HIP_ASSERT(&lhi->hit != NULL);
     _HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
-    HIP_IFEL(!(id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(struct hip_host_id_entry),
-                                                                  0)), -ENOMEM,
-             "No memory available for host id\n");
+    HIP_IFEL(!(id_entry = HIP_MALLOC(sizeof(struct hip_host_id_entry), 0)),
+             -ENOMEM, "No memory available for host id\n");
     memset(id_entry, 0, sizeof(struct hip_host_id_entry));
 
     ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);

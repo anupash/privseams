@@ -961,7 +961,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
             /*Adding the peer address to the entry->peer_addr_list_to_be_added
              *                          * So that later aftre base exchange it can be transfered to
              *                                                   * SPI OUT's peer address list*/
-            a_item = (struct hip_peer_addr_list_item *) HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), 0);
+            a_item = HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), 0);
             if (!a_item) {
                 HIP_ERROR("item HIP_MALLOC failed\n");
                 err = -ENOMEM;
@@ -982,7 +982,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
         goto out_err;
     }
 
-    a_item = (struct hip_peer_addr_list_item *) HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+    a_item = HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
     if (!a_item) {
         HIP_ERROR("item HIP_MALLOC failed\n");
         err = -ENOMEM;
@@ -1098,7 +1098,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
     entry->dh_shared_key_len = 0;
     /** @todo reuse pointer, no HIP_MALLOC */
-    entry->dh_shared_key     = (char *) HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
+    entry->dh_shared_key     = HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
     if (!entry->dh_shared_key) {
         HIP_ERROR("entry dh_shared HIP_MALLOC failed\n");
         err = -ENOMEM;
