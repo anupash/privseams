@@ -372,8 +372,6 @@ static int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port)
         }
         printf("Received %d bytes\n", recvnum);
 
-        //is_ipv4 = IN6_IS_ADDR_V4MAPPED(&peer_addr.in6.sin6_addr);
-
         cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
         cmsg_type  = (is_ipv4) ? IP_PKTINFO : IPV6_2292PKTINFO;
 
@@ -394,7 +392,6 @@ static int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port)
         if (is_ipv4) {
             local_addr.in4.sin_family      = AF_INET;
             local_addr.in4.sin_port        = htons(local_port);
-            //local_addr.in4.sin_port = peer_addr.in6.sin6_port;
             local_addr.in4.sin_addr.s_addr =
                 pktinfo.in4->ipi_addr.s_addr;
             HIP_DEBUG_INADDR("local addr",

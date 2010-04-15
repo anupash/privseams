@@ -18,7 +18,6 @@ static void hip_create_puzzle(struct hip_puzzle *puzzle, uint8_t val_K,
     puzzle->lifetime  = 0;
     puzzle->opaque[0] = opaque & 0xFF;
     puzzle->opaque[1] = (opaque & 0xFF00) >> 8;
-    /* puzzle.opaque[2] = (opaque & 0xFF0000) >> 16; */
     puzzle->I         = random_i;
 }
 

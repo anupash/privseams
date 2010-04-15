@@ -413,7 +413,6 @@ int main(int argc, char **argv)
         dhp_start_benchmark(&bench_time);
         /* create new DH keys */
         for (i = 0; i < sw_create_rsa; i++) {
-            //printf("Create key %d\n", i);
             if (sw_file_output) {
                 hip_perf_start_benchmark(perf_set, PS_RSA_CREATE);
             }
@@ -744,8 +743,6 @@ int main(int argc, char **argv)
            bench_secs, bench_secs / sw_bench_loops);
     printf("%4.2f hash chains per sec, %4.2f hash chains per min\n",
            sw_bench_loops / bench_secs, sw_bench_loops / bench_secs * 60 * 1000);
-
-    //if(sw_file_output) hip_perf_close(perf_set);
 
 #endif
 
