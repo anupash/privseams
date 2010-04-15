@@ -378,7 +378,7 @@
       It is possible to include measurement code points in the HIPL code
       with --enable-performance configuration option. If you want to profile
       HIPL source code, please refer to <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/gprof.html" />.
-    </para> 
+    </para>
  </section>
   <section id="ch_openwrt">
     <title>Loading HIPL on OpenWRT</title>
@@ -1656,28 +1656,6 @@ $ make V=99
     backtrace
     </programlisting>
     -->
-
-  <section id="ch_mozilla_addon">
-    <title>Mozilla/firefox extension</title> <itemizedlist>
-
-     <listitem><para>
-                &nbsp; The HIP firefox extension displays the lock icon when
-                HIP is used instead of IPv4 or IPv6 addresses. HITs are simply determined from
-                IP address information. When using opportunistic mode, detecting
-                whether using HIP or not wont work.
-        </para></listitem>
-     <listitem><para>
-                &nbsp; Download the firefox extension from <ulink url="https://addons.mozilla.org/en-US/firefox/addon/10551" />.
-     </para></listitem>
-     <listitem><para>
-                &nbsp; If you have HIPL source code:
-                To install the addon, open firefox and browse to folder where
-                you have HIPL sources and go to folder hipext. Then select
-                hipext.xpi from that folder. Firefox should now prompt you
-                with installation instructions.
-        </para></listitem>
-    </itemizedlist>
-  </section>
 
   </section>
   <section id="ch_test_servers">
