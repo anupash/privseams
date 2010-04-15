@@ -26,7 +26,7 @@ i3_header *alloc_i3_header(void)
 
     /* XXX: just simply call alloc for now; preallocate a pool of buffers
      * in the future */
-    hdr = (i3_header *) calloc(1, sizeof(i3_header));
+    hdr = calloc(1, sizeof(i3_header));
     if (hdr) {
         return hdr;
     }

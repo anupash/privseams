@@ -493,7 +493,7 @@ int group_remote_create(const char *name)
             HIP_DEBUG("Failed to find local HIT named: %s\n", psl);
             err = -1;
         } else if (strlen(psn) > 0)   {
-            g              = (HIT_Group *) malloc(sizeof(HIT_Group));
+            g              = malloc(sizeof(HIT_Group));
             memset(g, 0, sizeof(HIT_Group));
             NAMECPY(g->name, psn);
             g->l           = l;

@@ -397,9 +397,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
         return;
     }
 
-    if ((n = (struct netdev_address *) malloc(sizeof(struct netdev_address)))
-        == NULL)
-    {
+    if ((n = malloc(sizeof(struct netdev_address))) == NULL) {
         HIP_ERROR("Error when allocating memory to a network device " \
                   "address.\n");
         return;

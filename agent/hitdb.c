@@ -344,7 +344,7 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
     HIP_IFEL(r != NULL, r, "Remote HIT already found from database, returning it.\n");
 
     /* Allocate new remote HIT. */
-    r = (HIT_Remote *) malloc(sizeof(HIT_Remote));
+    r = malloc(sizeof(HIT_Remote));
     HIP_IFEL(r == NULL, NULL, "Failed to allocate new remote HIT.\n");
 
     /* Copy info. */
@@ -661,7 +661,7 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
     HIP_IFE(g != NULL, g);
 
     /* Allocate new remote group item. */
-    g = (HIT_Group *) malloc(sizeof(HIT_Group));
+    g = malloc(sizeof(HIT_Group));
     HIP_IFEL(g == NULL, NULL, "Failed to allocate new remote group item.\n");
 
     /* Setup remote group item. */
@@ -805,7 +805,7 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
     HIP_IFE(h != NULL, h);
 
     /* Allocate new remote group item. */
-    h = (HIT_Local *) malloc(sizeof(HIT_Local));
+    h = malloc(sizeof(HIT_Local));
     HIP_IFEL(h == NULL, NULL, "Failed to allocate new local HIT.\n");
 
     /* Setup local HIT. */

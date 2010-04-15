@@ -28,7 +28,7 @@ i3_trigger *alloc_i3_trigger(void)
 
     /* XXX: just simply call alloc for now; preallocate a pool of buffers
      * in the future */
-    trigger        = (i3_trigger *) calloc(1, sizeof(i3_trigger));
+    trigger        = calloc(1, sizeof(i3_trigger));
     trigger->flags = 0;
     trigger->tb    = NULL;
 

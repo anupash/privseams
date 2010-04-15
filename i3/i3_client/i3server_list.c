@@ -83,7 +83,7 @@ static I3ServerListNode *init_i3server_node(uint32_t addr,
 
     h            = i3server_hash(addr, I3SERVERHASH);
 
-    node         = (I3ServerListNode *) malloc(sizeof(I3ServerListNode));
+    node         = malloc(sizeof(I3ServerListNode));
     node->addr   = addr;
     node->port   = port;
     node->id     = id;

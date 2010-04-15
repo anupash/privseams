@@ -655,7 +655,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         }
 #ifdef CONFIG_HIP_OPPORTUNISTIC
         else {
-            hit_local = (struct in6_addr *) malloc(sizeof(struct in6_addr));
+            hit_local = malloc(sizeof(struct in6_addr));
             HIP_IFEL(hip_get_default_hit(hit_local), -1,
                      "Error retrieving default HIT \n");
             entry     = hip_opp_add_map(dst_ip, hit_local, src);
@@ -667,8 +667,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                      sizeof(reg_req->lifetime);
 
         for (; i < type_count; i++) {
-            pending_req = (hip_pending_request_t *)
-                          malloc(sizeof(hip_pending_request_t));
+            pending_req = malloc(sizeof(hip_pending_request_t));
             if (pending_req == NULL) {
                 HIP_ERROR("Error on allocating memory for a " \
                           "pending registration request.\n");

@@ -61,7 +61,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
     struct sockaddr_in sin_addr;
     struct sockaddr_in6 sin6_addr;
 
-    in6_addr_t *defaultHit      = (in6_addr_t *) malloc(sizeof(char) * 16);
+    in6_addr_t *defaultHit      = malloc(sizeof(char) * 16);
     char newHdr[newSize + 4 * addOption + (sizeof(struct in6_addr)) * addHIT];
 
     if (addOption) {
@@ -828,8 +828,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 #ifdef CONFIG_HIP_BLIND
     if (hip_blind_get_status()) {
         uint16_t nonce = 0;
-        if ((local_plain_hit =
-                 (in6_addr_t *) malloc(sizeof(struct in6_addr))) == NULL) {
+        if ((local_plain_hit = malloc(sizeof(struct in6_addr))) == NULL) {
             err = -1;
             HIP_ERROR("Error when allocating memory to local " \
                       "plain HIT.\n");

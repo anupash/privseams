@@ -59,9 +59,8 @@ hash_tree_t *htree_init(const int num_data_blocks,
 
 
     // allocate the memory for the tree
-    HIP_IFEL(!(tree = (hash_tree_t *) malloc(sizeof(hash_tree_t))),
-             -1,
-             "failed to allocate memory\n");
+    HIP_IFEL(!(tree = malloc(sizeof(hash_tree_t))),
+             -1, "failed to allocate memory\n");
     memset(tree, 0, sizeof(hash_tree_t));
 
     // check here whether leaf_set_size is a power of 2 and compute correct value if it is not
@@ -76,13 +75,11 @@ hash_tree_t *htree_init(const int num_data_blocks,
     HIP_DEBUG("num_data_blocks: %i\n", num_data_blocks);
     HIP_DEBUG("tree->leaf_set_size: %i\n", tree->leaf_set_size);
 
-    HIP_IFEL(!(tree->data = (unsigned char *) malloc(max_data_length * tree->leaf_set_size)),
-             -1,
-             "failed to allocate memory\n");
+    HIP_IFEL(!(tree->data = malloc(max_data_length * tree->leaf_set_size)),
+             -1, "failed to allocate memory\n");
     // a binary tree with n leafs has got 2n-1 total nodes
-    HIP_IFEL(!(tree->nodes = (unsigned char *) malloc(node_length * tree->leaf_set_size * 2)),
-             -1,
-             "failed to allocate memory\n");
+    HIP_IFEL(!(tree->nodes = malloc(node_length * tree->leaf_set_size * 2)),
+             -1, "failed to allocate memory\n");
 
     // if link_tree is set, overwrite secret_length
     if (link_tree) {
@@ -114,9 +111,8 @@ hash_tree_t *htree_init(const int num_data_blocks,
 
     // now we can init the secret array
     if (secret_length > 0) {
-        HIP_IFEL(!(tree->secrets = (unsigned char *) malloc(secret_length * tree->leaf_set_size)),
-                 -1,
-                "failed to allocate memory\n");
+        HIP_IFEL(!(tree->secrets = malloc(secret_length * tree->leaf_set_size)),
+                 -1, "failed to allocate memory\n");
 
         if (link_tree) {
             // add the root as secret for each leaf
@@ -456,7 +452,7 @@ unsigned char *htree_get_branch(const hash_tree_t *tree,
 
     // use provided buffer, if available; else alloc
     if (!nodes) {
-        branch_nodes = (unsigned char *) malloc(*branch_length);
+        branch_nodes = malloc(*branch_length);
     } else {
         branch_nodes = nodes;
     }

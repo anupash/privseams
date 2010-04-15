@@ -609,16 +609,16 @@ static int yygrowstack(void)
 
     i = yyssp - yyss;
     newss = (yyss != 0)
-          ? (short *)realloc(yyss, newsize * sizeof(*newss))
-          : (short *)malloc(newsize * sizeof(*newss));
+          ? realloc(yyss, newsize * sizeof(*newss))
+          : malloc(newsize * sizeof(*newss));
     if (newss == 0)
         return -1;
 
     yyss  = newss;
     yyssp = newss + i;
     newvs = (yyvs != 0)
-          ? (YYSTYPE *)realloc(yyvs, newsize * sizeof(*newvs))
-          : (YYSTYPE *)malloc(newsize * sizeof(*newvs));
+          ? realloc(yyvs, newsize * sizeof(*newvs))
+          : malloc(newsize * sizeof(*newvs));
     if (newvs == 0)
         return -1;
 

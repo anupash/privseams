@@ -33,7 +33,7 @@ Event *newEvent(void (*fun)(void *), void *params, uint64_t time)
 {
     Event *ev;
 
-    if (!(ev = (Event *) calloc(1, sizeof(Event)))) {
+    if (!(ev = calloc(1, sizeof(Event)))) {
         printf("newEvent: memory alloc. error.\n");
         exit(-1);
     }
@@ -50,7 +50,7 @@ Event **newEventArray(int max_heap_size)
 {
     Event **q;
 
-    if (!(q = (Event **) calloc(1, max_heap_size * sizeof(Event * *)))) {
+    if (!(q = calloc(1, max_heap_size * sizeof(Event * *)))) {
         printf("initEventQueue: memory alloc. error.\n");
         exit(-1);
     }

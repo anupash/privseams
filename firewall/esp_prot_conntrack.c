@@ -181,8 +181,7 @@ static int esp_prot_conntrack_cache_anchor(const struct tuple *tuple,
             tuple, &esp_anchors[0]->anchors[0], hash_length)), -1,
              "failed to look up matching esp_tuple\n");
 
-    HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
-                             malloc(sizeof(struct esp_anchor_item))), -1,
+    HIP_IFEL(!(anchor_item = malloc(sizeof(struct esp_anchor_item))), -1,
              "failed to allocate memory\n");
 
     memset(anchor_item, 0, sizeof(struct esp_anchor_item));
@@ -193,17 +192,15 @@ static int esp_prot_conntrack_cache_anchor(const struct tuple *tuple,
     anchor_item->hash_item_length = esp_anchors[0]->hash_item_length;
 
     // malloc and set cmp_value to be 0
-    HIP_IFEL(!(cmp_value = (unsigned char *)
-                           malloc(hash_length)), -1,
-                           "failed to allocate memory\n");
+    HIP_IFEL(!(cmp_value = malloc(hash_length)), -1,
+             "failed to allocate memory\n");
     memset(cmp_value, 0, hash_length);
 
     // set all received anchor elements
     for (i = 0; i < esp_tuple->num_hchains; i++) {
         // active_anchors have to be present at least
-        HIP_IFEL(!(anchor_item->active_anchors[i] = (unsigned char *)
-                                                    malloc(hash_length)), -1,
-                                                    "failed to allocate memory\n");
+        HIP_IFEL(!(anchor_item->active_anchors[i] = malloc(hash_length)), -1,
+                 "failed to allocate memory\n");
 
         memcpy(anchor_item->active_anchors[i], &esp_anchors[i]->anchors[0],
                hash_length);
@@ -216,9 +213,8 @@ static int esp_prot_conntrack_cache_anchor(const struct tuple *tuple,
                         hash_length);
 
             // also copy this anchor as it is set
-            HIP_IFEL(!(anchor_item->next_anchors[i] = (unsigned char *)
-                                                      malloc(hash_length)), -1,
-                                                      "failed to allocate memory\n");
+            HIP_IFEL(!(anchor_item->next_anchors[i] = malloc(hash_length)), -1,
+                     "failed to allocate memory\n");
 
             memcpy(anchor_item->next_anchors[i],
                    &esp_anchors[i]->anchors[hash_length],
@@ -234,9 +230,8 @@ static int esp_prot_conntrack_cache_anchor(const struct tuple *tuple,
             HIP_HEXDUMP("setting cache->roots[i]: ", esp_roots[i]->root,
                         esp_roots[i]->root_length);
 
-            HIP_IFEL(!(anchor_item->roots[i] =
-                    (unsigned char *) malloc(esp_roots[i]->root_length)), -1,
-                    "failed to allocate memory\n");
+            HIP_IFEL(!(anchor_item->roots[i] = malloc(esp_roots[i]->root_length)), -1,
+                     "failed to allocate memory\n");
 
             anchor_item->root_length = esp_roots[i]->root_length;
             memcpy(anchor_item->roots[i], &esp_roots[i]->root[0],

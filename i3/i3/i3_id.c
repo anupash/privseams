@@ -24,7 +24,7 @@ ID *alloc_i3_id(void)
 {
     ID *id;
 
-    if ((id = (ID *) malloc(sizeof(ID))) == NULL) {
+    if ((id = malloc(sizeof(ID))) == NULL) {
         I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, "alloc_i3_id: memory allocation error.\n");
     }
     return id;

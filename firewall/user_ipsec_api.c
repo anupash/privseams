@@ -114,9 +114,9 @@ int userspace_ipsec_init(void)
         HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
 
         // allocate memory for the packet buffers
-        HIP_IFEL(!(esp_packet = (unsigned char *) malloc(ESP_PACKET_SIZE)), -1,
+        HIP_IFEL(!(esp_packet = malloc(ESP_PACKET_SIZE)), -1,
                  "failed to allocate memory");
-        HIP_IFEL(!(decrypted_packet = (unsigned char *) malloc(ESP_PACKET_SIZE)),
+        HIP_IFEL(!(decrypted_packet = malloc(ESP_PACKET_SIZE)),
                  -1, "failed to allocate memory");
 
         // create required sockets

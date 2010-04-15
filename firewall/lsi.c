@@ -584,7 +584,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
     /* Note: using calloc to zero memory region here because I think
      * firewall_send_incoming_pkt() calculates checksum
      * from too long region sometimes. See bug id 874 */
-    msg = (uint8_t *) calloc((packet_length + sizeof(struct ip)), 1);
+    msg = calloc((packet_length + sizeof(struct ip)), 1);
     memcpy(msg, (m->payload) + ip_hdr_size, packet_length);
 
     if (protocol == IPPROTO_ICMP && incoming) {

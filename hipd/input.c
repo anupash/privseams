@@ -2054,7 +2054,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
          * forced to do some temporary copying. If ultimate speed is required,
          * then calculate the digest here as usual and feed it to signature
          * verifier. */
-        if ((tmp_enc = (char *) malloc(hip_get_param_total_len(enc))) == NULL) {
+        if ((tmp_enc = malloc(hip_get_param_total_len(enc))) == NULL) {
             err = -ENOMEM;
             HIP_ERROR("Out of memory when allocating memory for temporary " \
                       "ENCRYPTED parameter. Dropping the I2 packet.\n");

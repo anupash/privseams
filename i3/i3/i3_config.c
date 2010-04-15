@@ -220,7 +220,7 @@ char **read_i3server_list(int *num)
     }
 
     nodeset = result->nodesetval;
-    toret   = (char **) malloc(nodeset->nodeNr * sizeof(char *));
+    toret   = malloc(nodeset->nodeNr * sizeof(char *));
     *num    = nodeset->nodeNr;
 
     for (i = 0; i < nodeset->nodeNr; i++) {
@@ -228,7 +228,7 @@ char **read_i3server_list(int *num)
         xmlChar *portStr = xmlGetProp(nodeset->nodeTab[i], (xmlChar *) "PortNum");
         xmlChar *i3IdStr = xmlGetProp(nodeset->nodeTab[i], (xmlChar *) "I3Id");
 
-        toret[i] = (char *) malloc(1000); /* TODO */
+        toret[i] = malloc(1000); /* TODO */
         sprintf(toret[i], "%s %s %s\n", (char *) ipStr, (char *) portStr, (char *) i3IdStr);
 
         strip_ws(toret[i]);
@@ -256,7 +256,7 @@ char **read_strings_par(char *path, int *num)
     }
 
     nodeset = result->nodesetval;
-    toret   = (char **) malloc(nodeset->nodeNr * sizeof(char *));
+    toret   = malloc(nodeset->nodeNr * sizeof(char *));
     *num    = nodeset->nodeNr;
 
     for (i = 0; i < nodeset->nodeNr; i++) {

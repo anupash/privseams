@@ -123,8 +123,9 @@ int anchor_db_update(const struct hip_common *msg)
             HIP_DEBUG("transform %u:\n", esp_transforms[i]);
 
             for (j = 0; j < anchor_db.num_anchors[esp_transforms[i]]; j++) {
-                HIP_IFEL(!(anchor_db.anchors[esp_transforms[i]][j] = (unsigned char *) malloc(anchor_db.
-                                                                                              anchor_lengths[esp_transforms[i]])), -1, "failed to allocate memory\n");
+                HIP_IFEL(!(anchor_db.anchors[esp_transforms[i]][j] =
+                           malloc(anchor_db.anchor_lengths[esp_transforms[i]])),
+                         -1, "failed to allocate memory\n");
 
                 anchor = (unsigned char *) hip_get_param_contents_direct(param);
                 memcpy(anchor_db.anchors[esp_transforms[i]][j], anchor,

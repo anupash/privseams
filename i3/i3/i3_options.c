@@ -24,7 +24,7 @@ struct i3_option *alloc_i3_option(void)
 {
     struct i3_option *option;
 
-    option = (i3_option *) calloc(1, sizeof(i3_option));
+    option = calloc(1, sizeof(i3_option));
     if (option) {
         return option;
     }
@@ -156,7 +156,7 @@ i3_option_list *alloc_i3_option_list(void)
 {
     i3_option_list *option_list;
 
-    option_list = (i3_option_list *) malloc(sizeof(i3_option_list));
+    option_list = malloc(sizeof(i3_option_list));
     if (option_list) {
         option_list->head = option_list->tail = NULL;
         return option_list;

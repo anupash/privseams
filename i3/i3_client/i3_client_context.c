@@ -161,13 +161,13 @@ cl_context *cl_create_context(struct in_addr *local_ip_addr,
         I3_PRINT_DEBUG1(I3_DEBUG_LEVEL_VERBOSE, "i3 port number: %d\n", local_port);
     }
 
-    if (!(ctx = (cl_context *) calloc(1, sizeof(cl_context)))) {
+    if (!(ctx = calloc(1, sizeof(cl_context)))) {
         I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, "cl_init_context: memory allocation error (1)\n");
     }
 
     uint64_to_tval(&ctx->now, wall_time());
 
-    if (!(ctx->s_array = (srv_address *) calloc(MAX_NUM_SRV, sizeof(srv_address)))) {
+    if (!(ctx->s_array = calloc(MAX_NUM_SRV, sizeof(srv_address)))) {
         I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, "cl_init_context: memory allocation error (2)\n");
     }
 

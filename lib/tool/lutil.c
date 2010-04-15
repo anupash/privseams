@@ -115,7 +115,7 @@ void initlist(List *ilist)
 void insert(List *ilist, char *data)
 {
     Listitem *new;
-    new         = (Listitem *) malloc(sizeof(Listitem));
+    new         = malloc(sizeof(Listitem));
     new->next   = ilist->head;
     strncpy(new->data, data, MAX_ITEM_LEN);
     ilist->head = new;

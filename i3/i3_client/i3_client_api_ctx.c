@@ -65,8 +65,8 @@ static int cl_init_ping(cl_context *ctx, char *url)
         return CL_RET_DUP_CONTEXT;
     }
 
-    ctx->list            = (I3ServerList *) malloc(sizeof(I3ServerList));
-    ctx->ping_start_time = (uint64_t *) malloc(sizeof(uint64_t));
+    ctx->list            = malloc(sizeof(I3ServerList));
+    ctx->ping_start_time = malloc(sizeof(uint64_t));
     init_i3server_list(ctx->list);
 
     coord.latitude       = COORD_UNDEFINED;
@@ -76,8 +76,8 @@ static int cl_init_ping(cl_context *ctx, char *url)
                         ctx->s_array[i].port, ctx->s_array[i].id, coord);
     }
 
-    data                  = (PingThreadData *) malloc(sizeof(PingThreadData));
-    temp_str              = (char *) malloc(strlen(url) + 1);
+    data                  = malloc(sizeof(PingThreadData));
+    temp_str              = malloc(strlen(url) + 1);
     strcpy(temp_str, url);
     data->url             = temp_str;
     data->list            = ctx->list;

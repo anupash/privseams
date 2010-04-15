@@ -24,7 +24,7 @@ token_bucket *alloc_token_bucket(void)
 {
     token_bucket *tb;
 
-    tb = (token_bucket *) calloc(1, sizeof(token_bucket));
+    tb = calloc(1, sizeof(token_bucket));
     if (tb) {
         return tb;
     }

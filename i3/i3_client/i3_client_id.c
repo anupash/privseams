@@ -16,7 +16,7 @@ cl_id *cl_alloc_id(void)
 {
     cl_id *cid;
 
-    if ((cid = (cl_id *) calloc(1, sizeof(cl_id))) != NULL) {
+    if ((cid = calloc(1, sizeof(cl_id))) != NULL) {
         return cid;
     }
 

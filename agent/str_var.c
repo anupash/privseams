@@ -111,7 +111,7 @@ void str_var_set(const char *name, const char *string, ...)
     st = str_var_find(name);
 
     if (!st) {
-        st = (StringData *) malloc(sizeof(StringData));
+        st = malloc(sizeof(StringData));
         HIP_IFEL(!st, NULL, "malloc()");
         memset(st, 0, sizeof(StringData));
         STRCPY(st->name, name);

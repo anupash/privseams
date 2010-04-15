@@ -135,7 +135,7 @@ static hip_oppip_t *hip_create_oppip_entry(void)
 {
     hip_oppip_t *entry = NULL;
 
-    entry = (hip_oppip_t *) malloc(sizeof(hip_oppip_t));
+    entry = malloc(sizeof(hip_oppip_t));
     if (!entry) {
         HIP_ERROR("hip_oppip_t memory allocation failed.\n");
         return NULL;

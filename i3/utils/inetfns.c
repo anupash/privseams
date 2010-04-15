@@ -223,7 +223,7 @@ static uint32_t get_local_addr(void)
     addr         = inet_addr(TRIVIAL_LOCAL_ADDR);
 
     GetAdaptersInfo(NULL, &OutBufLen);
-    pAdapterInfo = (PIP_ADAPTER_INFO) malloc(OutBufLen);
+    pAdapterInfo = malloc(OutBufLen);
     GetAdaptersInfo(pAdapterInfo, &OutBufLen);
 
     pai          = pAdapterInfo;
@@ -314,7 +314,7 @@ static uint32_t get_local_addr(void)
 
     // allocate a Real Large Buffer hoping that it's big enough
     size = sizeof(IP_ADAPTER_ADDRESSES) * 64;
-    addresses = (PIP_ADAPTER_ADDRESSES)calloc(size, 1);
+    addresses = calloc(size, 1);
     assert(NULL != addresses);
 
     err = GetAdaptersAddresses(AF_INET, GAA_FLAG_SKIP_ANYCAST ||

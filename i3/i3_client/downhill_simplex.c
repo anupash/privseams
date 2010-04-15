@@ -53,7 +53,7 @@ void downhill_simplex(float **simplex, float *values, int d, float ftol,
 
     /* for each dimension, pre-compute the sum of all points */
     /* this is used later to compute the average coordinates */
-    simplex_sum = (float *) malloc(sizeof(float) * (d + 1)); /* array starts at 1 */
+    simplex_sum = malloc(sizeof(float) * (d + 1)); /* array starts at 1 */
     for (i = 1; i <= d; i++) {
         sum            = 0.0;
         for (j = 1; j <= ssize; j++) {
@@ -63,7 +63,7 @@ void downhill_simplex(float **simplex, float *values, int d, float ftol,
     }
 
     /* create a test point */
-    test_point = (float *) malloc(sizeof(float) * (d + 1)); /* array starts at 1 */
+    test_point = malloc(sizeof(float) * (d + 1)); /* array starts at 1 */
 
 
     /* begin algorithm */

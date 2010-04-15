@@ -34,7 +34,7 @@ int widget_init(void)
      * /usr/include/bits/string3.h:82: error: call to ‘__warn_memset_zero_len’
      * declared with attribute warning: memset used with constant zero length
      * parameter; this could be due to transposed parameters -miika */
-    gui_widgets = (void **) calloc(WIDGET_IDS_N, sizeof(void *));
+    gui_widgets = calloc(WIDGET_IDS_N, sizeof(void *));
     HIP_IFEL(gui_widgets == NULL, -1, "Failed to allocate widgets pointers.\n");
 
 out_err:

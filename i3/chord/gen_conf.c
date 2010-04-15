@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 
     srandom(getpid() ^ time(0));
 
-    nodes = (Node *) malloc(MAX_NUM_NODES * sizeof(Node));
+    nodes = malloc(MAX_NUM_NODES * sizeof(Node));
 
     fd    = fopen(argv[1], "r");
     k     = 0;

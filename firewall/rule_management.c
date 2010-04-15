@@ -297,7 +297,7 @@ void print_rule_tables(void)
  */
 static struct rule *alloc_empty_rule(void)
 {
-    struct rule *rule = (struct rule *) malloc(sizeof(struct rule));
+    struct rule *rule = malloc(sizeof(struct rule));
     rule->src_hit = NULL;
     rule->dst_hit = NULL;
     rule->src_hi  = NULL;
@@ -372,7 +372,7 @@ static struct hit_option *copy_hit_option(const struct hit_option *hit)
 {
     struct hit_option *copy = NULL;
     if (hit) {
-        copy          = (struct hit_option *) malloc(sizeof(struct hit_option));
+        copy          = malloc(sizeof(struct hit_option));
         memcpy(&copy->value, &hit->value, sizeof(struct in6_addr));
         copy->boolean = hit->boolean;
     }
@@ -390,7 +390,7 @@ static struct int_option *copy_int_option(const struct int_option *int_option)
 {
     struct int_option *copy = NULL;
     if (int_option) {
-        copy          = (struct int_option *) malloc(sizeof(struct int_option));
+        copy          = malloc(sizeof(struct int_option));
         copy->value   = int_option->value;
         copy->boolean = int_option->boolean;
     }
@@ -408,8 +408,7 @@ static struct state_option *copy_state_option(const struct state_option *state)
 {
     struct state_option *copy = NULL;
     if (state) {
-        copy                   = (struct state_option *)
-                malloc(sizeof(struct state_option));
+        copy                   = malloc(sizeof(struct state_option));
         copy->int_opt.value    = state->int_opt.value;
         copy->int_opt.boolean  = state->int_opt.boolean;
         copy->verify_responder = state->verify_responder;
@@ -430,7 +429,7 @@ static struct string_option *copy_string_option(
 {
     struct string_option *copy = NULL;
     if (string_option) {
-        copy = (struct string_option *) malloc(sizeof(struct string_option));
+        copy = malloc(sizeof(struct string_option));
         copy->value = malloc(sizeof(string_option->value));
         strcpy(copy->value, string_option->value);
         copy->boolean = string_option->boolean;
@@ -646,8 +645,7 @@ static int rules_equal(const struct rule *rule1,
  */
 static struct hit_option *parse_hit(char *token)
 {
-    struct hit_option *option = (struct hit_option *)
-            malloc(sizeof(struct hit_option));
+    struct hit_option *option = malloc(sizeof(struct hit_option));
     struct in6_addr *hit      = NULL;
 
     if (!strcmp(token, NEGATE_STR)) {
@@ -810,8 +808,7 @@ static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
  */
 static struct int_option *parse_type(char *token)
 {
-    struct int_option *option = (struct int_option *)
-            malloc(sizeof(struct int_option));
+    struct int_option *option = malloc(sizeof(struct int_option));
 
     if (!strcmp(token, NEGATE_STR)) {
         option->boolean = 0;
@@ -858,8 +855,7 @@ static struct int_option *parse_type(char *token)
  */
 static struct state_option *parse_state(char *token)
 {
-    struct state_option *option =
-            (struct state_option *) malloc(sizeof(struct state_option));
+    struct state_option *option = malloc(sizeof(struct state_option));
 
     if (!strcmp(token, NEGATE_STR)) {
         option->int_opt.boolean = 0;
@@ -892,8 +888,7 @@ static struct state_option *parse_state(char *token)
  */
 static struct string_option *parse_if(char *token)
 {
-    struct string_option *option =
-            (struct string_option *) malloc(sizeof(struct string_option));
+    struct string_option *option = malloc(sizeof(struct string_option));
 
     if (!strcmp(token, NEGATE_STR)) {
         option->boolean = 0;
@@ -906,7 +901,7 @@ static struct string_option *parse_if(char *token)
         free(option);
         return NULL;
     } else {
-        option->value = (char *) malloc(IF_NAMESIZE);
+        option->value = malloc(IF_NAMESIZE);
         strcpy(option->value, token);
     }
     return option;
@@ -1270,7 +1265,7 @@ void read_rule_file(const char *file_name)
         while ((line_length = read_line(line, s, file)) > 0) {
             char *comment;
 
-            original_line = (char *) malloc(line_length + sizeof(char) + 1);
+            original_line = malloc(line_length + sizeof(char) + 1);
             original_line = strcpy(original_line, line);
 
             HIP_DEBUG("line read: %s\n", line);

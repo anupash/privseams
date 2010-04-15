@@ -312,7 +312,7 @@ static hip_opp_block_t *hip_create_opp_block_entry(void)
 {
     hip_opp_block_t *entry = NULL;
 
-    entry = (hip_opp_block_t *) malloc(sizeof(hip_opp_block_t));
+    entry = malloc(sizeof(hip_opp_block_t));
     if (!entry) {
         HIP_ERROR("hip_opp_block_t memory allocation failed.\n");
         return NULL;

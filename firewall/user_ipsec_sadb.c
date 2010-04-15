@@ -273,7 +273,7 @@ static int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry)
     hip_link_entry_t *link = NULL;
     int err                = 0;
 
-    HIP_IFEL(!(link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))),
+    HIP_IFEL(!(link = malloc(sizeof(hip_link_entry_t))),
              -1, "failed to allocate memory\n");
 
     memcpy(&link->dst_addr, dst_addr, sizeof(struct in6_addr));
@@ -655,16 +655,16 @@ static int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
     int err               = 0;
 
     /* initialize members to 0/NULL */
-    HIP_IFEL(!(entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
+    HIP_IFEL(!(entry = malloc(sizeof(hip_sa_entry_t))), -1,
              "failed to allocate memory\n");
     memset(entry, 0, sizeof(hip_sa_entry_t));
 
-    HIP_IFEL(!(entry->auth_key = (struct hip_crypto_key *)
-                                 malloc(hip_auth_key_length_esp(ealg))), -1, "failed to allocate memory\n");
+    HIP_IFEL(!(entry->auth_key = malloc(hip_auth_key_length_esp(ealg))),
+             -1, "failed to allocate memory\n");
     memset(entry->auth_key, 0, hip_auth_key_length_esp(ealg));
     if (hip_enc_key_length(ealg) > 0) {
-        HIP_IFEL(!(entry->enc_key = (struct hip_crypto_key *)
-                                    malloc(hip_enc_key_length(ealg))), -1, "failed to allocate memory\n");
+        HIP_IFEL(!(entry->enc_key = malloc(hip_enc_key_length(ealg))),
+                 -1, "failed to allocate memory\n");
         memset(entry->enc_key, 0, hip_enc_key_length(ealg));
     }
 

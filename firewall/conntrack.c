@@ -193,7 +193,7 @@ static struct hip_data *get_hip_data(const struct hip_common *common)
 #endif
 
     // init hip_data for this tuple
-    data = (struct hip_data *) malloc(sizeof(struct hip_data));
+    data = malloc(sizeof(struct hip_data));
     memset(data, 0, sizeof(struct hip_data));
 
     memcpy(&data->src_hit, &common->hits, sizeof(struct in6_addr));
@@ -377,7 +377,7 @@ static SList *update_esp_address(SList *addr_list,
         HIP_DEBUG("update_esp_address: found and updated\n");
         return addr_list;
     }
-    esp_addr = (struct esp_address *) malloc(sizeof(struct esp_address));
+    esp_addr = malloc(sizeof(struct esp_address));
     memcpy(&esp_addr->dst_addr, addr, sizeof(struct in6_addr));
     if (upd_id != NULL) {
         esp_addr->update_id  = malloc(sizeof(uint32_t));
@@ -463,7 +463,7 @@ static void insert_new_connection(const struct hip_data *data, const struct in6_
 
     HIP_DEBUG("insert_new_connection\n");
 
-    connection = (struct connection *) malloc(sizeof(struct connection));
+    connection = malloc(sizeof(struct connection));
     memset(connection, 0, sizeof(struct connection));
 
     connection->state = STATE_ESTABLISHED;
@@ -481,10 +481,10 @@ static void insert_new_connection(const struct hip_data *data, const struct in6_
     connection->original.hipproxy                = hip_proxy_status;
 #endif /* CONFIG_HIP_HIPPROXY */
     connection->original.connection              = connection;
-    connection->original.hip_tuple               = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
+    connection->original.hip_tuple               = malloc(sizeof(struct hip_tuple));
     memset(connection->original.hip_tuple, 0, sizeof(struct hip_tuple));
     connection->original.hip_tuple->tuple        = &connection->original;
-    connection->original.hip_tuple->data         = (struct hip_data *) malloc(sizeof(struct hip_data));
+    connection->original.hip_tuple->data         = malloc(sizeof(struct hip_data));
     memset(connection->original.hip_tuple->data, 0, sizeof(struct hip_data));
     memcpy(&connection->original.hip_tuple->data->src_hit, &data->src_hit, sizeof(struct in6_addr));
     memcpy(&connection->original.hip_tuple->data->dst_hit, &data->dst_hit, sizeof(struct in6_addr));
@@ -499,10 +499,10 @@ static void insert_new_connection(const struct hip_data *data, const struct in6_
     connection->reply.hipproxy                   = hip_proxy_status;
 #endif /* CONFIG_HIP_HIPPROXY */
     connection->reply.connection                 = connection;
-    connection->reply.hip_tuple                  = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
+    connection->reply.hip_tuple                  = malloc(sizeof(struct hip_tuple));
     memset(connection->reply.hip_tuple, 0, sizeof(struct hip_tuple));
     connection->reply.hip_tuple->tuple           = &connection->reply;
-    connection->reply.hip_tuple->data            = (struct hip_data *) malloc(sizeof(struct hip_data));
+    connection->reply.hip_tuple->data            = malloc(sizeof(struct hip_data));
     memset(connection->reply.hip_tuple->data, 0, sizeof(struct hip_data));
     memcpy(&connection->reply.hip_tuple->data->src_hit, &data->dst_hit, sizeof(struct in6_addr));
     memcpy(&connection->reply.hip_tuple->data->dst_hit, &data->src_hit, sizeof(struct in6_addr));
@@ -691,7 +691,7 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
     if (esp_info && locator && esp_info->new_spi == esp_info->old_spi) {
         HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi 0x%lx\n", esp_info->new_spi);
         /* check that old spi is found */
-        new_esp        = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
+        new_esp        = malloc(sizeof(struct esp_tuple));
         memset(new_esp, 0, sizeof(struct esp_tuple));
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
@@ -740,7 +740,7 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *esp_
 {
     struct esp_tuple *new_esp = NULL;
     if (esp_info) {
-        new_esp        = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
+        new_esp        = malloc(sizeof(struct esp_tuple));
         memset(new_esp, 0, sizeof(struct esp_tuple));
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
@@ -773,7 +773,7 @@ static int insert_connection_from_update(const struct hip_data *data,
                                          const struct hip_locator *locator,
                                          const struct hip_seq *seq)
 {
-    struct connection *connection = (struct connection *) malloc(sizeof(struct connection));
+    struct connection *connection = malloc(sizeof(struct connection));
     struct esp_tuple *esp_tuple   = NULL;
 
 
@@ -807,9 +807,9 @@ static int insert_connection_from_update(const struct hip_data *data,
     connection->original.hipproxy                 = hip_proxy_status;
 #endif /* CONFIG_HIP_HIPPROXY */
     connection->original.connection               = connection;
-    connection->original.hip_tuple                = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
+    connection->original.hip_tuple                = malloc(sizeof(struct hip_tuple));
     connection->original.hip_tuple->tuple         = &connection->original;
-    connection->original.hip_tuple->data          = (struct hip_data *) malloc(sizeof(struct hip_data));
+    connection->original.hip_tuple->data          = malloc(sizeof(struct hip_data));
     connection->original.hip_tuple->data->src_hit = data->src_hit;
     connection->original.hip_tuple->data->dst_hit = data->dst_hit;
     connection->original.hip_tuple->data->src_hi  = NULL;
@@ -830,9 +830,9 @@ static int insert_connection_from_update(const struct hip_data *data,
     insert_esp_tuple(esp_tuple);
 
     connection->reply.connection               = connection;
-    connection->reply.hip_tuple                = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
+    connection->reply.hip_tuple                = malloc(sizeof(struct hip_tuple));
     connection->reply.hip_tuple->tuple         = &connection->reply;
-    connection->reply.hip_tuple->data          = (struct hip_data *) malloc(sizeof(struct hip_data));
+    connection->reply.hip_tuple->data          = malloc(sizeof(struct hip_data));
     connection->reply.hip_tuple->data->src_hit = data->dst_hit;
     connection->reply.hip_tuple->data->dst_hit = data->src_hit;
     connection->reply.hip_tuple->data->src_hi  = NULL;
@@ -992,7 +992,7 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
     HIP_DEBUG("verifying signature...\n");
 
     // init hi parameter and copy
-    HIP_IFEL(!(tuple->hip_tuple->data->src_hi = (struct hip_host_id *) malloc(len)),
+    HIP_IFEL(!(tuple->hip_tuple->data->src_hi = malloc(len)),
              -ENOMEM, "Out of memory\n");
     memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
 
@@ -1064,7 +1064,7 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
                  -1, "Unable to verify HOST_ID mapping to src HIT\n");
 
         // init hi parameter and copy
-        HIP_IFEL(!(tuple->hip_tuple->data->src_hi = (struct hip_host_id *) malloc(len)),
+        HIP_IFEL(!(tuple->hip_tuple->data->src_hi = malloc(len)),
                  -ENOMEM, "Out of memory\n");
         memcpy(tuple->hip_tuple->data->src_hi, host_id, len);
 

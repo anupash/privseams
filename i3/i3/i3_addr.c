@@ -35,7 +35,7 @@ i3_addr *alloc_i3_addr(void)
 
     /* TODO: just simply call alloc for now;
      * preallocate a pool of buffers in the future */
-    addr = (i3_addr *) malloc(sizeof(i3_addr));
+    addr = malloc(sizeof(i3_addr));
     if (addr) {
         return addr;
     }

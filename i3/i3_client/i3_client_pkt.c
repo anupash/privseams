@@ -37,14 +37,14 @@ cl_buf *cl_alloc_buf(unsigned int len)
     cl_buf *clb;
     int tmp_internal_buf_len = 0;
 
-    if ((clb = (cl_buf *) malloc(sizeof(cl_buf))) == NULL) {
+    if ((clb = malloc(sizeof(cl_buf))) == NULL) {
         I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, "cl_alloc_buf(1): memory allocation error\n");
     } else {
         memset(clb, 0, sizeof(cl_buf));
     }
 
     tmp_internal_buf_len = len + 2 * CL_PREFIX_LEN;
-    if ((clb->internal_buf = (char *) malloc(tmp_internal_buf_len)) == NULL) {
+    if ((clb->internal_buf = malloc(tmp_internal_buf_len)) == NULL) {
         I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, "cl_alloc_buf(2): memory allocation error\n");
     } else {
         memset(clb->internal_buf, 0, tmp_internal_buf_len);
@@ -331,7 +331,7 @@ void make_data_opt(cl_context *ctx, uint8_t opt_mask, buf_struct *b)
     len = get_i3_option_list_len(ol);
 
     /* ... allocate memory ... */
-    if ((b->p = (char *) malloc(len)) == NULL) {
+    if ((b->p = malloc(len)) == NULL) {
         I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, "make_data_hdr: memory allocation error\n");
     }
 

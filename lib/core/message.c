@@ -100,7 +100,7 @@ int hip_peek_recv_total_len(int socket,
     /* We're using system call here add thus reseting errno. */
     errno      = 0;
 
-    msg        = (char *) malloc(hdr_size);
+    msg        = malloc(hdr_size);
     HIP_IFEL(!msg, -ENOMEM, "Error allocating memory.\n");
 
     /* Make sure the socket does not block (bug id 806) */

@@ -22,7 +22,7 @@
  */
 DList *alloc_list(void)
 {
-    DList *list = (DList *) malloc(sizeof(DList));
+    DList *list = malloc(sizeof(DList));
     list->data = NULL;
     list->next = NULL;
     list->prev = NULL;

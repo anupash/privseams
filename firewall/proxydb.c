@@ -106,7 +106,7 @@ int hip_proxy_add_entry(const struct in6_addr *addr_client,
     hip_proxy_t *new_item = NULL;
     int err               = 0;
 
-    new_item = (hip_proxy_t *) malloc(sizeof(hip_proxy_t));
+    new_item = malloc(sizeof(hip_proxy_t));
     if (!new_item) {
         HIP_ERROR("new_item malloc failed\n");
         err = -ENOMEM;

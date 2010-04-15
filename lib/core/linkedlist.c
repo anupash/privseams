@@ -122,8 +122,7 @@ int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr)
     hip_ll_node_t *newnode     = NULL, *pointer = NULL;
     unsigned int current_index = 0;
 
-    if ((newnode =
-             (hip_ll_node_t *) malloc(sizeof(hip_ll_node_t))) == NULL) {
+    if ((newnode = malloc(sizeof(hip_ll_node_t))) == NULL) {
         HIP_ERROR("Error on allocating memory for a linked list node.\n");
         return -1;
     }

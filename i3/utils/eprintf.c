@@ -91,7 +91,7 @@ char *estrdup(char *s)
 {
     char *t;
 
-    t = (char *) malloc(strlen(s) + 1);
+    t = malloc(strlen(s) + 1);
     if (t == NULL) {
         eprintf("estrdup(\"%.20s\") failed:", s);
     }

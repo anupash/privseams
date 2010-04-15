@@ -289,7 +289,7 @@ int hip_datapacket_mode_init(void)
         HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
 
         // allocate memory for the packet buffers
-        HIP_IFEL(!(hip_data_packet = (unsigned char *) malloc(ESP_PACKET_SIZE)),
+        HIP_IFEL(!(hip_data_packet = malloc(ESP_PACKET_SIZE)),
                  -1, "failed to allocate memory");
 
         // create required sockets

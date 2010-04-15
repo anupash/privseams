@@ -46,10 +46,10 @@ void compute_coordinates(int num, Coordinates_RTT coord_rtt[])
     int width[]          = {0, 180, 360, 20};
 
     if (firsttime) {
-        p         = (float **) malloc(sizeof(float *) * (DIM + 2));
-        y         = (float *) malloc(sizeof(float) * (DIM + 2));
+        p         = malloc(sizeof(float *) * (DIM + 2));
+        y         = malloc(sizeof(float) * (DIM + 2));
         for (i = 1; i <= DIM + 1; ++i) {
-            p[i] = (float *) malloc(sizeof(float) * (DIM + 1));
+            p[i] = malloc(sizeof(float) * (DIM + 1));
         }
         firsttime = 0;
     }

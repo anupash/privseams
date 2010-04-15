@@ -24,7 +24,7 @@ i3_stack *alloc_i3_stack(void)
 {
     i3_stack *stack;
 
-    stack = (i3_stack *) malloc(sizeof(i3_stack));
+    stack = malloc(sizeof(i3_stack));
     if (stack) {
         stack->ids = NULL;
         return stack;
@@ -44,7 +44,7 @@ i3_stack *alloc_i3_stack(void)
 void init_i3_stack(i3_stack *s, ID *ids, int len)
 {
     s->len = len;
-    s->ids = (ID *) malloc(sizeof(ID) * len);
+    s->ids = malloc(sizeof(ID) * len);
     if (s->ids) {
         memcpy((char *) s->ids, ids, sizeof(ID) * len);
         return;
@@ -58,7 +58,7 @@ void init_i3_stack2(i3_stack *s, ID **ids, int len)
     int i;
 
     s->len = len;
-    s->ids = (ID *) malloc(sizeof(ID) * len);
+    s->ids = malloc(sizeof(ID) * len);
 
     if (s->ids) {
         for (i = 0; i < len; i++) {
@@ -100,7 +100,7 @@ i3_stack *duplicate_i3_stack(i3_stack *s)
     i3_stack *snew = alloc_i3_stack();
 
     snew->len = s->len;
-    if ((snew->ids = (ID *) malloc(sizeof(ID) * s->len))) {
+    if ((snew->ids = malloc(sizeof(ID) * s->len))) {
         memcpy((char *) snew->ids, (char *) s->ids, sizeof(ID) * s->len);
         return snew;
     }
@@ -184,7 +184,7 @@ i3_stack *unpack_i3_stack(char *p, unsigned short *length)
     *length    = sizeof(char);
     p         += sizeof(char); /* skip stack len field */
 
-    if (!(stack->ids = (ID *) malloc(stack->len * sizeof(ID)))) {
+    if (!(stack->ids = malloc(stack->len * sizeof(ID)))) {
         panic("unpack_i3_stack: memory allocation error!\n");
     }
 

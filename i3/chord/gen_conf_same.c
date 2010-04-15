@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 
     addr  = ntohl(get_addr());
 
-    nodes = (Node *) malloc(n * sizeof(Node));
+    nodes = malloc(n * sizeof(Node));
     for (i = 0; i < n; i++) {
         nodes[i].id   = rand_ID();
         nodes[i].addr = addr;

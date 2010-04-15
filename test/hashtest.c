@@ -145,7 +145,7 @@ static int hip_socketdb_add_entry(pid_t pid, int socket)
     int err                    = 0;
     hip_opp_socket_t *new_item = NULL;
 
-    new_item = (hip_opp_socket_t *) malloc(sizeof(hip_opp_socket_t));
+    new_item = malloc(sizeof(hip_opp_socket_t));
     if (!new_item) {
         HIP_ERROR("new_item malloc failed\n");
         err = -ENOMEM;

@@ -199,7 +199,7 @@ cl_trigger *cl_alloc_trigger(void)
 {
     cl_trigger *ctr;
 
-    if ((ctr = (cl_trigger *) calloc(1, sizeof(cl_trigger))) != NULL) {
+    if ((ctr = calloc(1, sizeof(cl_trigger))) != NULL) {
         return ctr;
     }
 
@@ -630,7 +630,7 @@ void cl_make_trigger_packet(cl_context *ctx, i3_trigger *t,
 
     buf->len = get_i3_header_len(h);
 
-    if ((buf->p = (char *) malloc(buf->len)) == NULL) {
+    if ((buf->p = malloc(buf->len)) == NULL) {
         I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL,
                         "cl_make_trigger_packet: memory allocation error\n");
     }

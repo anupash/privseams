@@ -23,7 +23,7 @@ i3_fds *alloc_i3_fds(void)
 {
     i3_fds *n;
 
-    if ((n = (i3_fds *) calloc(1, sizeof(i3_fds))) != NULL) {
+    if ((n = calloc(1, sizeof(i3_fds))) != NULL) {
         return n;
     }
     I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, "alloc_i3_fds: memory allocation error.\n");
@@ -69,7 +69,7 @@ fd_node *alloc_fd_node(int fd, void (*fun)(int, void *), void *params)
 {
     fd_node *n;
 
-    if ((n = (fd_node *) calloc(1, sizeof(fd_node))) != NULL) {
+    if ((n = calloc(1, sizeof(fd_node))) != NULL) {
         n->fd     = fd;
         n->params = params;
         n->fun    = fun;

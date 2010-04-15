@@ -831,7 +831,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
     hip_ha_t *entry = NULL;
 
-    entry = (hip_ha_t *) malloc(sizeof(struct hip_hadb_state));
+    entry = malloc(sizeof(struct hip_hadb_state));
     if (entry == NULL) {
         return NULL;
     }

@@ -447,7 +447,7 @@ void hip_hexdump(const char *file, int line, const char *function,
     hexdump_max_size = len * 2 + 1;
     hexdump_count    = hexdump_max_size;
 
-    hexdump          = (char *) calloc(hexdump_max_size, sizeof(char));
+    hexdump          = calloc(hexdump_max_size, sizeof(char));
     if (hexdump == NULL) {
         HIP_DIE("hexdump memory allocation failed\n");
     }
@@ -533,8 +533,8 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
     hexdump_count      = hexdump_total_size;
     pad_length         = (hexdump_total_size - bytes_per_line) - pad_start_position;
 
-    hexdump            = (char *) calloc(hexdump_total_size, sizeof(char));
-    asciidump          = (char *) calloc((bytes_per_line + 2), sizeof(char));
+    hexdump            = calloc(hexdump_total_size, sizeof(char));
+    asciidump          = calloc((bytes_per_line + 2), sizeof(char));
 
     _HIP_DEBUG("hexdump_total_size: %d, pad_start_position: %d, pad_length: %d\n",
                hexdump_total_size, pad_start_position, pad_length);
@@ -581,7 +581,7 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
                 _HIP_DEBUG("Line ready\n");
                 if ((char_index + 1) == len && pad_length > 0
                     && ((hexdump_index + line_index + pad_length) < hexdump_total_size)) {
-                    char *padding = (char *) calloc(pad_length + 1, sizeof(char));
+                    char *padding = calloc(pad_length + 1, sizeof(char));
                     _HIP_DEBUG("Creating padding for the last line... \n");
                     _HIP_DEBUG("hexdump_index: %d, line_index: %d\n", hexdump_index, line_index);
                     memset(padding, ' ', pad_length);

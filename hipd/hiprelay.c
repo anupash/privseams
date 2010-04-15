@@ -487,7 +487,7 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
         return NULL;
     }
 
-    hip_relrec_t *rec = (hip_relrec_t *) malloc(sizeof(hip_relrec_t));
+    hip_relrec_t *rec = malloc(sizeof(hip_relrec_t));
 
     if (rec == NULL) {
         HIP_ERROR("Error allocating memory for HIP relay record.\n");
@@ -998,8 +998,7 @@ static int hip_relay_read_config(void)
                     if (inet_pton(AF_INET6, current->data,
                                   &hit) > 0) {
                         /* store the HIT to the whitelist. */
-                        wl_hit = (hip_hit_t *)
-                                 malloc(sizeof(hip_hit_t));
+                        wl_hit = malloc(sizeof(hip_hit_t));
                         if (wl_hit == NULL) {
                             HIP_ERROR("Error " \
                                       "allocating " \
