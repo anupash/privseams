@@ -21,6 +21,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
@@ -507,7 +508,7 @@ void hip_delete_all_addresses(void)
             n = (struct netdev_address *) list_entry(item);
             HIP_DEBUG_HIT("address to be deleted\n", hip_cast_sa_addr((struct sockaddr *) &n->addr));
             list_del(n, addresses);
-            HIP_FREE(n);
+            free(n);
             address_count--;
         }
         if (address_count != 0) {

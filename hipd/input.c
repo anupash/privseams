@@ -16,6 +16,8 @@
  */
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "blind.h"
 #include "input.h"
@@ -207,7 +209,7 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
 
 out_err:
     if (msg_copy) {
-        HIP_FREE(msg_copy);
+        free(msg_copy);
     }
 
     return err;
@@ -304,13 +306,13 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
     HIP_DEBUG("Keying material:\n\tminimum length = %u\n\t" \
               "keying material length = %u.\n", keymat_len_min, keymat_len);
 
-    HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, 0)), -ENOMEM,
+    HIP_IFEL(!(keymat = malloc(keymat_len)), -ENOMEM,
              "Error on allocating memory for keying material.\n");
 
     /* 1024 should be enough for shared secret. The length of the shared
      * secret actually depends on the DH Group. */
     /** @todo 1024 -> hip_get_dh_size ? */
-    HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_0)),
+    HIP_IFEL(!(dh_shared_key = malloc(dh_shared_len)),
              -ENOMEM,
              "Error on allocating memory for Diffie-Hellman shared key.\n");
 
@@ -372,7 +374,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
             /* Responder produces keying material for handling I2:
              * uses own plain hit and blinded initiator hit */
             else if (type == HIP_I2) {
-                HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+                HIP_IFEL((plain_local_hit = malloc(sizeof(struct in6_addr))) == NULL,
                          -1, "Couldn't allocate memory\n");
                 HIP_IFEL(hip_blind_get_nonce(msg, &nonce), -1, "hip_blind_get_nonce failed\n");
                 HIP_IFEL(hip_plain_fingerprint(&nonce, &msg->hitr, plain_local_hit),
@@ -473,16 +475,16 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
     ctx->dh_shared_key     = dh_shared_key;
     ctx->dh_shared_key_len = dh_shared_len;
 
-    /* on success HIP_FREE for dh_shared_key is called by caller */
+    /* on success free for dh_shared_key is called by caller */
 out_err:
     if (err && dh_shared_key) {
-        HIP_FREE(dh_shared_key);
+        free(dh_shared_key);
     }
     if (keymat) {
-        HIP_FREE(keymat);
+        free(keymat);
     }
     if (plain_local_hit) {
-        HIP_FREE(plain_local_hit);
+        free(plain_local_hit);
     }
     return err;
 }
@@ -1277,7 +1279,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 out_err:
     if (i2) {
-        HIP_FREE(i2);
+        free(i2);
     }
 
     return err;
@@ -1403,7 +1405,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
         HIP_DEBUG("Not a retransmission\n");
     }
 
-    HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
+    HIP_IFEL(!(ctx = malloc(sizeof(struct hip_context))),
              -ENOMEM, "Could not allocate memory for context\n");
     memset(ctx, 0, sizeof(struct hip_context));
     ctx->input = r1;
@@ -1545,10 +1547,10 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 out_err:
     if (ctx->dh_shared_key) {
-        HIP_FREE(ctx->dh_shared_key);
+        free(ctx->dh_shared_key);
     }
     if (ctx) {
-        HIP_FREE(ctx);
+        free(ctx);
     }
 
     return err;
@@ -2673,7 +2675,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
     }
 
     /* assume already locked entry */
-    HIP_IFE(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)), -ENOMEM);
+    HIP_IFE(!(ctx = malloc(sizeof(struct hip_context))), -ENOMEM);
     memset(ctx, 0, sizeof(struct hip_context));
     ctx->input = r2;
 
@@ -2881,7 +2883,7 @@ out_err:
     }
 
     if (ctx) {
-        HIP_FREE(ctx);
+        free(ctx);
     }
     return err;
 }

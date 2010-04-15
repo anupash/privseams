@@ -29,6 +29,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -875,7 +876,7 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 out_err:
     for (i = 0; i < 16; i++) {
         if (idxmap[i]) {
-            HIP_FREE(idxmap[i]);
+            free(idxmap[i]);
         }
     }
 
@@ -1218,7 +1219,7 @@ static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
     int err = 0;
 
     if (slash) {
-        HIP_IFEL(!(aux_slash = HIP_MALLOC(sizeof(slash), 0)), -1, "alloc\n");
+        HIP_IFEL(!(aux_slash = malloc(sizeof(slash))), -1, "alloc\n");
         strcpy(aux_slash, slash);
         *slash = 0;
     }
@@ -1233,7 +1234,7 @@ static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
 
 out_err:
     if (aux_slash) {
-        HIP_FREE(aux_slash);
+        free(aux_slash);
     }
     return err;
 }
@@ -1314,7 +1315,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 
 out_err:
     if (res) {
-        HIP_FREE(res);
+        free(res);
     }
     return 0;
 }
@@ -1417,7 +1418,7 @@ int set_up_device(char *dev, int up)
             strcat(strcat(res, dev), label);
             err      = do_chflags(res, flags, mask);
             if (res) {
-                HIP_FREE(res);
+                free(res);
             }
         }
     }

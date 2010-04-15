@@ -21,9 +21,6 @@
 #include "hipd/registration.h"
 #include "state.h"
 
-#define HIP_MALLOC(size, flags)  malloc(size)
-#define HIP_FREE(obj)            free(obj)
-
 /* Removed in 2.6.11 - why ? */
 extern struct hip_cert_spki_info hip_cert_spki_info;
 

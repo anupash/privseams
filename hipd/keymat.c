@@ -10,6 +10,8 @@
  * @author Tobias Heer <heer#tobibox.de>
  */
 
+#include <stdlib.h>
+
 #include "keymat.h"
 #include "lib/core/hit.h"
 
@@ -43,7 +45,7 @@ static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_
         requiredmem = kij_len + 2 * sizeof(struct in6_addr) +
                       sizeof(uint8_t) + 2 * sizeof(uint64_t);
     }
-    buffer = HIP_MALLOC(requiredmem, 0);
+    buffer = malloc(requiredmem);
     if (!buffer) {
         HIP_ERROR("Out of memory\n");
         return buffer;
@@ -187,7 +189,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
     _HIP_DEBUG("keymat index_nbr=%u\n", index_nbr);
     _HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);
     if (shabuffer) {
-        HIP_FREE(shabuffer);
+        free(shabuffer);
     }
 
     return;
@@ -327,14 +329,14 @@ static int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_l
     _HIP_DEBUG("need %d bytes more data\n", key_len - copied);
 
     tmp_data_len = kij_len + HIP_AH_SHA_LEN + 1;
-    tmp_data     = HIP_MALLOC(tmp_data_len, 0);
+    tmp_data     = malloc(tmp_data_len);
     if (!tmp_data) {
-        HIP_ERROR("HIP_MALLOC failed\n");
+        HIP_ERROR("malloc failed\n");
         err = -ENOMEM;
         goto out_err;
     }
 
-    memcpy(tmp_data, kij, kij_len);     /* fixed part of every Kn round */
+    memcpy(tmp_data);     /* fixed part of every Kn round */
 
     while (copied < key_len) {
         (*calc_index)++;
@@ -379,7 +381,7 @@ out:
                *keymat_index, *calc_index);
 out_err:
     if (tmp_data) {
-        HIP_FREE(tmp_data);
+        free(tmp_data);
     }
     return err;
 }

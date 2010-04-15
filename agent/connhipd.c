@@ -13,6 +13,7 @@
  * @author Antti Partanen <aehparta@cc.hut.fi>
  */
 
+#include <stdlib.h>
 #include <sys/un.h>
 #include <pthread.h>
 #include <errno.h>
@@ -345,7 +346,7 @@ out_err:
         close(hip_agent_sock);
     }
     if (msg != NULL) {
-        HIP_FREE(msg);
+        free(msg);
     }
 
     hip_agent_thread_started = 0;
@@ -383,7 +384,7 @@ out_err:
         close(hip_agent_sock);
     }
     if (err && msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
 
     return err;

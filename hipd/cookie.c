@@ -11,6 +11,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "blind.h"
 #include "cookie.h"
@@ -238,7 +240,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 out_err:
     if (!err && r1) {
-        HIP_FREE(r1);
+        free(r1);
     }
 
     HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
@@ -254,7 +256,7 @@ struct hip_r1entry *hip_init_r1(void)
 {
     struct hip_r1entry *err;
 
-    HIP_IFE(!(err = HIP_MALLOC(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE, 0)),
+    HIP_IFE(!(err = malloc(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE)),
             NULL);
     memset(err, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
 
@@ -316,10 +318,10 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
     if (hip_r1table) {
         for (i = 0; i < HIP_R1TABLESIZE; i++) {
             if (hip_r1table[i].r1) {
-                HIP_FREE(hip_r1table[i].r1);
+                free(hip_r1table[i].r1);
             }
         }
-        HIP_FREE(hip_r1table);
+        free(hip_r1table);
         hip_r1table = NULL;
     }
 }

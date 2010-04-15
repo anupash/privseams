@@ -37,6 +37,8 @@
  * - Bing Zhou <bingzhou@cc.hut.fi>
  */
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "oppdb.h"
 #include "hadb.h"
@@ -173,7 +175,7 @@ static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
     deleted = hip_ht_delete(oppdb, entry);
     HIP_UNLOCK_OPP(entry);
     free(deleted);
-    //HIP_FREE(entry);
+    //free(entry);
 }
 
 /**
@@ -273,7 +275,7 @@ skip_hit_addr:
     }
 out_err:
     if (message) {
-        HIP_FREE(message);
+        free(message);
     }
     return err;
 }

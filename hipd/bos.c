@@ -16,6 +16,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "bos.h"
 #include "lib/core/hostid.h"
 #include "lib/core/hip_udp.h"
@@ -198,10 +200,10 @@ int hip_send_bos(const struct hip_common *msg)
 
 out_err:
     if (host_id_pub) {
-        HIP_FREE(host_id_pub);
+        free(host_id_pub);
     }
     if (bos) {
-        HIP_FREE(bos);
+        free(bos);
     }
     return err;
 }

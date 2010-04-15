@@ -25,6 +25,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <limits.h> /* INT_MIN, INT_MAX */
 #include <netinet/in.h> /* in_addr, in6_addr */
 #include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */
@@ -2508,7 +2509,7 @@ out_err:
         close(hip_fw_sock);
     }
     if (msg != NULL) {
-        HIP_FREE(msg);
+        free(msg);
     }
 
     firewall_exit();

@@ -9,6 +9,8 @@ An Extension of HIP Base Exchange to Support Identity Privacy, IETF draft, Work 
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "blind.h"
 #include "lib/core/hit.h"
 #include "lib/core/hostid.h"
@@ -34,10 +36,10 @@ static int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
     struct in6_addr *blind_hit = NULL;
 
     // generate key = nonce|hit_our
-    HIP_IFEL((key = HIP_MALLOC(sizeof(uint16_t) + sizeof(struct in6_addr), 0)) == NULL,
+    HIP_IFEL((key = malloc(sizeof(uint16_t) + sizeof(struct in6_addr))) == NULL,
              -1, "Couldn't allocate memory\n");
 
-    HIP_IFEL((blind_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+    HIP_IFEL((blind_hit = malloc(sizeof(struct in6_addr))) == NULL,
              -1, "Couldn't allocate memory\n");
 
     HIP_READ_LOCK_DB(hip_local_hostid_db);
@@ -67,10 +69,10 @@ static int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
 
 out_err:
     if (key) {
-        HIP_FREE(key);
+        free(key);
     }
     if (blind_hit) {
-        HIP_FREE(blind_hit);
+        free(blind_hit);
     }
     return err;
 }
@@ -296,13 +298,13 @@ static int hip_blind_fingerprints(hip_ha_t *entry)
     get_random_bytes(&entry->blind_nonce_i, sizeof(uint16_t));
 
     // generate key = nonce|hit_our
-    HIP_IFEL((key_our = HIP_MALLOC(sizeof(uint16_t) + sizeof(struct in6_addr), 0)) == NULL,
+    HIP_IFEL((key_our = malloc(sizeof(uint16_t) + sizeof(struct in6_addr))) == NULL,
              -1, "Couldn't allocate memory\n");
     memcpy(key_our, &entry->hit_our, sizeof(struct in6_addr));
     memcpy(key_our + sizeof(struct in6_addr), &entry->blind_nonce_i, sizeof(uint16_t));
 
     // generate key = nonce|hit_peer
-    HIP_IFEL((key_peer = HIP_MALLOC(sizeof(uint16_t) + sizeof(struct in6_addr), 0)) == NULL,
+    HIP_IFEL((key_peer = malloc(sizeof(uint16_t) + sizeof(struct in6_addr))) == NULL,
              -1, "Couldn't allocate memory\n");
     memcpy(key_peer, &entry->hit_peer, sizeof(struct in6_addr));
     memcpy(key_peer + sizeof(struct in6_addr), &entry->blind_nonce_i, sizeof(uint16_t));
@@ -336,7 +338,7 @@ int hip_blind_verify(uint16_t *nonce, struct in6_addr *plain_hit,
 
     HIP_DEBUG("\n");
 
-    test_hit = HIP_MALLOC(sizeof(struct in6_addr), 0);
+    test_hit = malloc(sizeof(struct in6_addr));
     if (test_hit == NULL) {
         HIP_ERROR("Couldn't allocate memory\n");
         ret = -1;
@@ -344,7 +346,7 @@ int hip_blind_verify(uint16_t *nonce, struct in6_addr *plain_hit,
     }
 
     // generate key = nonce|hit_our
-    key = HIP_MALLOC(sizeof(uint16_t) + sizeof(struct in6_addr), 0);
+    key = malloc(sizeof(uint16_t) + sizeof(struct in6_addr));
     if (key == NULL) {
         HIP_ERROR("Couldn't allocate memory\n");
         ret = -1;
@@ -366,7 +368,7 @@ int hip_blind_verify(uint16_t *nonce, struct in6_addr *plain_hit,
 
 out_err:
     if (test_hit) {
-        HIP_FREE(test_hit);
+        free(test_hit);
     }
     return ret == 0;
 }
@@ -519,8 +521,7 @@ int hip_blind_verify_r2(struct hip_common *r2, hip_ha_t *entry)
     HIP_IFEL(!(enc = hip_get_param(r2, HIP_PARAM_ENCRYPTED)),
              -ENOENT, "Could not find enc parameter\n");
 
-    HIP_IFEL(!(tmp_enc = HIP_MALLOC(hip_get_param_total_len(enc),
-                                    GFP_KERNEL)), -ENOMEM,
+    HIP_IFEL(!(tmp_enc = malloc(hip_get_param_total_len(enc))), -ENOMEM,
              "No memory for temporary host_id\n");
     memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
 
@@ -564,7 +565,7 @@ int hip_blind_verify_r2(struct hip_common *r2, hip_ha_t *entry)
     HIP_IFEL(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID, -EINVAL,
              "The decrypted parameter is not a host id\n");
 
-    HIP_IFEL((plain_peer_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+    HIP_IFEL((plain_peer_hit = malloc(sizeof(struct in6_addr))) == NULL,
              -1, "Couldn't allocate memory\n");
     HIP_IFEL(hip_host_id_to_hit(host_id_in_enc, plain_peer_hit, HIP_HIT_TYPE_HASH100),
              -1, "hip_host_id_to_hit faile\n");
@@ -580,10 +581,10 @@ int hip_blind_verify_r2(struct hip_common *r2, hip_ha_t *entry)
 
 out_err:
     if (tmp_enc) {
-        HIP_FREE(tmp_enc);
+        free(tmp_enc);
     }
     if (plain_peer_hit) {
-        HIP_FREE(plain_peer_hit);
+        free(plain_peer_hit);
     }
     return err;
 }
@@ -631,7 +632,7 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
     HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size1\n");
-    HIP_IFEL(!(dh_data1 = HIP_MALLOC(dh_size1, GFP_ATOMIC)),
+    HIP_IFEL(!(dh_data1 = malloc(dh_size1)),
              -1, "Failed to alloc memory for dh_data1\n");
     memset(dh_data1, 0, dh_size1);
 
@@ -640,7 +641,7 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
     /* Allocate memory for writing the second Diffie-Hellman shared secret */
     HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size2\n");
-    HIP_IFEL(!(dh_data2 = HIP_MALLOC(dh_size2, GFP_ATOMIC)),
+    HIP_IFEL(!(dh_data2 = malloc(dh_size2)),
              -1, "Failed to alloc memory for dh_data2\n");
     memset(dh_data2, 0, dh_size2);
 
@@ -730,25 +731,25 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
     /************** Packet ready ***************/
 
     if (dh_data1) {
-        HIP_FREE(dh_data1);
+        free(dh_data1);
     }
     if (dh_data2) {
-        HIP_FREE(dh_data2);
+        free(dh_data2);
     }
 
     return msg;
 
 out_err:
     //if (host_id_pub)
-    //    HIP_FREE(host_id_pub);
+    //    free(host_id_pub);
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     if (dh_data1) {
-        HIP_FREE(dh_data1);
+        free(dh_data1);
     }
     if (dh_data2) {
-        HIP_FREE(dh_data2);
+        free(dh_data2);
     }
 
     return NULL;

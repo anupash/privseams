@@ -87,7 +87,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
     _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
     /* Hash Input :=  Context ID | Input */
-    khi_data   = HIP_MALLOC(khi_data_len, 0);
+    khi_data   = malloc(khi_data_len);
     khi_index  = 0;
     memcpy(khi_data + khi_index, khi_context_id, sizeof(khi_context_id));
     khi_index += sizeof(khi_context_id);
@@ -117,7 +117,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
 out_err:
     if (khi_data) {
-        HIP_FREE(khi_data);
+        free(khi_data);
     }
 
     return err;
@@ -175,7 +175,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 
     /* Allocate enough space for host id; there will be 20 bytes extra
      * to avoid hassle with padding. */
-    host_id_pub = HIP_MALLOC(total_len, 0);
+    host_id_pub = malloc(total_len);
     HIP_IFE(!host_id_pub, -EFAULT);
     memset(host_id_pub, 0, total_len);
 
@@ -197,7 +197,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 out_err:
 
     if (host_id_pub) {
-        HIP_FREE(host_id_pub);
+        free(host_id_pub);
     }
 
     return err;
@@ -438,7 +438,7 @@ int hip_verify_packet_signature(struct hip_common *pkt,
     int len                      = hip_get_param_total_len(peer_host_id);
     char *key                    = NULL;
 
-    HIP_IFEL(!(peer_pub = HIP_MALLOC(len, 0)),
+    HIP_IFEL(!(peer_pub = malloc(len)),
              -ENOMEM, "Out of memory\n");
 
     memcpy(peer_pub, peer_host_id, len);

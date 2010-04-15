@@ -14,6 +14,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "hidb.h"
 #include "lib/core/hostid.h"
@@ -133,9 +135,9 @@ static int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
         DSA_free(id->private_key);
     }
 
-    HIP_FREE(id->host_id);
+    free(id->host_id);
     list_del(id, db);
-    HIP_FREE(id);
+    free(id);
     id  = NULL;
 
     err = 0;
@@ -299,7 +301,7 @@ static int hip_add_host_id(hip_db_struct_t *db,
 
     HIP_ASSERT(&lhi->hit != NULL);
     _HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
-    HIP_IFEL(!(id_entry = HIP_MALLOC(sizeof(struct hip_host_id_entry), 0)),
+    HIP_IFEL(!(id_entry = malloc(sizeof(struct hip_host_id_entry))),
              -ENOMEM, "No memory available for host id\n");
     memset(id_entry, 0, sizeof(struct hip_host_id_entry));
 
@@ -361,9 +363,9 @@ out_err:
                     DSA_free(id_entry->private_key);
                 }
             }
-            HIP_FREE(id_entry->host_id);
+            free(id_entry->host_id);
         }
-        HIP_FREE(id_entry);
+        free(id_entry);
     }
 
     HIP_WRITE_UNLOCK_DB(db);
@@ -782,7 +784,7 @@ int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
     host_id_len = hip_get_param_total_len(entry->host_id);
     HIP_IFE(host_id_len > HIP_MAX_HOST_ID_LEN, -1);
 
-    *host_id    = HIP_MALLOC(host_id_len, GFP_ATOMIC);
+    *host_id    = malloc(host_id_len);
     HIP_IFE(!*host_id, -ENOMEM);
     memcpy(*host_id, entry->host_id, host_id_len);
 

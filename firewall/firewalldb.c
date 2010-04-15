@@ -15,6 +15,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
 #include <netinet/udp.h>
@@ -100,7 +101,7 @@ static firewall_hl_t *hip_create_hl_entry(void)
 {
     firewall_hl_t *entry = NULL;
     int err              = 0;
-    HIP_IFEL(!(entry = HIP_MALLOC(sizeof(firewall_hl_t), 0)),
+    HIP_IFEL(!(entry = malloc(sizeof(firewall_hl_t))),
              -ENOMEM, "No memory available for firewall database entry\n");
     memset(entry, 0, sizeof(*entry));
 out_err:

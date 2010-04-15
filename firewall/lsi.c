@@ -24,6 +24,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
@@ -138,7 +139,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
 
 out_err:
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     return err;
 }
@@ -223,7 +224,7 @@ static int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
 
 out_err:
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     return res;
 }
@@ -621,7 +622,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
     }
 
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     return err;
 }

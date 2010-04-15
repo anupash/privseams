@@ -123,7 +123,7 @@ static void hip_uninit_socket_db(void)
 //      if (atomic_read(&item->refcnt) > 2)
 //          HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
         //hip_socketdb_put_entry(item);
-        HIP_FREE((void *) list_entry(item));
+        free((void *) list_entry(item));
     }
 //}
 
@@ -209,7 +209,7 @@ static void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
     //HIP_LOCK_SOCKET(entry);
     hip_ht_delete(socketdb, entry);
     //HIP_UNLOCK_SOCKET(entry);
-    HIP_FREE(entry);
+    free(entry);
 }
 
 static int hip_socketdb_del_entry(int pid, int socket)

@@ -10,6 +10,8 @@
  * @author: Samu Varjonen <samu.varjonen@hiit.fi>
  */
 
+#include <stdlib.h>
+
 #include "dht.h"
 #include "hipd.h"
 #include "lib/core/hostid.h"
@@ -249,7 +251,7 @@ static int hip_dht_put_hdrr(unsigned char *key,
     err = 0;
 out_err:
     if (hdrr_msg) {
-        HIP_FREE(hdrr_msg);
+        free(hdrr_msg);
     }
     return err;
 }

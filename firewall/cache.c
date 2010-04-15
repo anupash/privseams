@@ -13,6 +13,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "cache.h"
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
@@ -33,7 +35,7 @@ firewall_cache_hl_t *hip_cache_create_hl_entry(void)
     firewall_cache_hl_t *entry = NULL;
     int err = 0;
 
-    HIP_IFEL(!(entry = HIP_MALLOC(sizeof(firewall_cache_hl_t), 0)),
+    HIP_IFEL(!(entry = malloc(sizeof(firewall_cache_hl_t))),
              -ENOMEM, "No memory available for firewall database entry\n");
     memset(entry, 0, sizeof(*entry));
 out_err:

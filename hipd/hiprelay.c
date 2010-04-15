@@ -75,6 +75,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "hiprelay.h"
 #include "output.h"
@@ -1218,7 +1220,7 @@ static int hip_relay_forward_response(const hip_common_t *r,
 
 out_err:
     if (r_to_be_relayed != NULL) {
-        HIP_FREE(r_to_be_relayed);
+        free(r_to_be_relayed);
     }
     return err;
 }

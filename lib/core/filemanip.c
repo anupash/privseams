@@ -8,12 +8,12 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#include "filemanip.h"
-
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "config.h"
 #include "crypto.h"
+#include "filemanip.h"
 
 /**
  * get rid of a lock file
@@ -192,7 +192,7 @@ void change_key_file_perms(char *filenamebase)
 
 out_err:
     if (pubfilename) {
-        HIP_FREE(pubfilename);
+        free(pubfilename);
     }
 
     return;

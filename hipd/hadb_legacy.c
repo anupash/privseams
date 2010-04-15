@@ -11,6 +11,8 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <stdlib.h>
+
 #include "hadb_legacy.h"
 
 /**
@@ -82,7 +84,7 @@ void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr)
         if (!ipv6_addr_cmp(&peer_addr_list_item->address, addr)) {
             _HIP_DEBUG("deleting address\n");
             list_del(item, ha->peer_addresses_old);
-            HIP_FREE(item);
+            free(item);
             /* if address is on more than one spi list then do not goto out */
             goto out;
         }

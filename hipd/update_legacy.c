@@ -9,6 +9,8 @@
  * @author Baris Boyvat
  */
 
+#include <stdlib.h>
+
 #include "update_legacy.h"
 
 /**
@@ -99,7 +101,7 @@ void hip_empty_oppipdb_old(void)
         err = err > 0 ? 0 : -1;
 
 out_err:
-        HIP_FREE(msg);
+        free(msg);
         if (err) {
             HIP_ERROR("Couldn't flush firewall chains\n");
         }

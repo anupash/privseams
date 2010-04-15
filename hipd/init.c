@@ -10,6 +10,7 @@
 #define _BSD_SOURCE
 
 #include <limits.h>
+#include <stdlib.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <netinet/icmp6.h>
@@ -629,7 +630,7 @@ static int hip_init_host_ids(void)
 out_err:
 
     if (user_msg) {
-        HIP_FREE(user_msg);
+        free(user_msg);
     }
 
     return err;
@@ -780,10 +781,10 @@ void hip_exit(int signal)
     // hip_send_close(NULL, FLUSH_HA_INFO_DB);
 
     if (hipd_msg) {
-        HIP_FREE(hipd_msg);
+        free(hipd_msg);
     }
     if (hipd_msg_v4) {
-        HIP_FREE(hipd_msg_v4);
+        free(hipd_msg_v4);
     }
 
     hip_delete_all_sp();    //empty

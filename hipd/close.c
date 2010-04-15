@@ -10,6 +10,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "close.h"
 #include "lib/core/hip_udp.h"
@@ -111,7 +113,7 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 out_err:
     if (close) {
-        HIP_FREE(close);
+        free(close);
     }
 
     return err;
@@ -181,10 +183,10 @@ int hip_send_close(struct hip_common *msg,
 
 out_err:
     if (msg_to_firewall) {
-        HIP_FREE(msg_to_firewall);
+        free(msg_to_firewall);
     }
     if (opaque) {
-        HIP_FREE(opaque);
+        free(opaque);
     }
     return err;
 }
@@ -280,7 +282,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 out_err:
 
     if (close_ack) {
-        HIP_FREE(close_ack);
+        free(close_ack);
     }
 
     return err;

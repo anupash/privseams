@@ -15,6 +15,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <netinet/icmp6.h>
 
 #include "config.h"
@@ -214,7 +215,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
     err = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *) &sin_addr, sizeof(sin_addr));
 
     if (defaultHit) {
-        HIP_FREE(defaultHit);
+        free(defaultHit);
     }
 
     setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *) &off, sizeof(off));
@@ -589,7 +590,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
     HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size1\n");
-    HIP_IFEL(!(dh_data1 = HIP_MALLOC(dh_size1, GFP_ATOMIC)),
+    HIP_IFEL(!(dh_data1 = malloc(dh_size1)),
              -1, "Failed to alloc memory for dh_data1\n");
     memset(dh_data1, 0, dh_size1);
 
@@ -598,7 +599,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Allocate memory for writing the second Diffie-Hellman shared secret */
     HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size2\n");
-    HIP_IFEL(!(dh_data2 = HIP_MALLOC(dh_size2, GFP_ATOMIC)),
+    HIP_IFEL(!(dh_data2 = malloc(dh_size2)),
              -1, "Failed to alloc memory for dh_data2\n");
     memset(dh_data2, 0, dh_size2);
 
@@ -702,23 +703,23 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Packet ready */
 
     if (dh_data1) {
-        HIP_FREE(dh_data1);
+        free(dh_data1);
     }
     if (dh_data2) {
-        HIP_FREE(dh_data2);
+        free(dh_data2);
     }
 
     return msg;
 
 out_err:
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     if (dh_data1) {
-        HIP_FREE(dh_data1);
+        free(dh_data1);
     }
     if (dh_data2) {
-        HIP_FREE(dh_data2);
+        free(dh_data2);
     }
 
     return NULL;
@@ -919,10 +920,10 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 
 out_err:
     if (r1pkt) {
-        HIP_FREE(r1pkt);
+        free(r1pkt);
     }
     if (local_plain_hit) {
-        HIP_FREE(local_plain_hit);
+        free(local_plain_hit);
     }
     return err;
 }

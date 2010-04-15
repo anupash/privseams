@@ -67,6 +67,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "builder.h"
 #include "hipd/input.h"
@@ -200,7 +202,7 @@ struct hip_common *hip_msg_alloc(void)
 {
     struct hip_common *ptr;
 
-    ptr = HIP_MALLOC(HIP_MAX_PACKET, 0);
+    ptr = malloc(HIP_MAX_PACKET);
     if (ptr) {
         hip_msg_init(ptr);
     }
@@ -213,7 +215,7 @@ struct hip_common *hip_msg_alloc(void)
  */
 void hip_msg_free(struct hip_common *msg)
 {
-    HIP_FREE(msg);
+    free(msg);
 }
 
 /**
@@ -1986,7 +1988,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
     err = hip_build_param(msg, &hmac2);
 out_err:
     if (msg_copy) {
-        HIP_FREE(msg_copy);
+        free(msg_copy);
     }
 
     return err;
@@ -2089,7 +2091,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
     if (rem) {
         HIP_DEBUG("Adjusting param size to AES block size\n");
 
-        param_padded = HIP_MALLOC(param_len + rem, 0);
+        param_padded = malloc(param_len + rem);
         if (!param_padded) {
             err = -ENOMEM;
             goto out_err;
@@ -2114,7 +2116,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 out_err:
 
     if (param_padded) {
-        HIP_FREE(param_padded);
+        free(param_padded);
     }
 
     return err;
@@ -2784,7 +2786,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
     }
 
     /* Allocating memory for the "value" packet */
-    HIP_IFEL(!(value = value_tmp = HIP_MALLOC((pubkey_len), 0)),
+    HIP_IFEL(!(value = value_tmp = malloc((pubkey_len))),
              -1, "Failed to alloc memory for value\n");
 
     hip_calc_generic_param_len((struct hip_tlv_common *) &diffie_hellman,
@@ -2818,7 +2820,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 out_err:
 
     if (value) {
-        HIP_FREE(value);
+        free(value);
     }
 
     return err;
@@ -4307,7 +4309,7 @@ int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
     struct hip_host_id host_id_hdr;
     hip_build_param_host_id_hdr(&host_id_hdr, hostname, key_rr_len, algo);
 
-    *host_id = HIP_MALLOC(hip_get_param_total_len(&host_id_hdr), 0);
+    *host_id = malloc(hip_get_param_total_len(&host_id_hdr));
     if (!host_id) {
         err = -ENOMEM;
     }
@@ -4349,7 +4351,7 @@ int alloc_and_build_param_host_id_only(struct hip_host_id **host_id,
 out_err:
     if (err && *host_id) {
         *host_id = NULL;
-        HIP_FREE(host_id);
+        free(host_id);
     }
 
     return err;
@@ -4451,13 +4453,13 @@ static int hip_any_key_to_hit(void *any_key,
 out_err:
 
     if (key_rr) {
-        HIP_FREE(key_rr);
+        free(key_rr);
     }
     if (host_id) {
-        HIP_FREE(host_id);
+        free(host_id);
     }
     if (host_id_pub) {
-        HIP_FREE(host_id_pub);
+        free(host_id_pub);
     }
 
     return err;

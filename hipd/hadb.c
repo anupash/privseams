@@ -37,6 +37,7 @@
  */
 
 #include <limits.h>
+#include <stdlib.h>
 
 #include "config.h"
 #include "hadb.h"
@@ -824,7 +825,7 @@ out_err:
 /**
  * Allocate and initialize a new HA structure.
  *
- * @param  gfpmask a mask passed directly to HIP_MALLOC().
+ * @param  gfpmask a mask passed directly to malloc().
  * @return NULL if memory allocation failed, otherwise the HA.
  */
 hip_ha_t *hip_hadb_create_state(int gfpmask)
@@ -961,9 +962,9 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
             /*Adding the peer address to the entry->peer_addr_list_to_be_added
              *                          * So that later aftre base exchange it can be transfered to
              *                                                   * SPI OUT's peer address list*/
-            a_item = HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), 0);
+            a_item = malloc(sizeof(struct hip_peer_addr_list_item));
             if (!a_item) {
-                HIP_ERROR("item HIP_MALLOC failed\n");
+                HIP_ERROR("item malloc failed\n");
                 err = -ENOMEM;
                 goto out_err;
             }
@@ -982,9 +983,9 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
         goto out_err;
     }
 
-    a_item = HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+    a_item = malloc(sizeof(struct hip_peer_addr_list_item));
     if (!a_item) {
-        HIP_ERROR("item HIP_MALLOC failed\n");
+        HIP_ERROR("item malloc failed\n");
         err = -ENOMEM;
         goto out_err;
     }
@@ -1091,16 +1092,16 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
                             ctx->current_keymat_K);
 
     if (entry->dh_shared_key) {
-        HIP_DEBUG("HIP_FREEing old dh_shared_key\n");
-        HIP_FREE(entry->dh_shared_key);
+        HIP_DEBUG("freeing old dh_shared_key\n");
+        free(entry->dh_shared_key);
         entry->dh_shared_key = NULL;
     }
 
     entry->dh_shared_key_len = 0;
-    /** @todo reuse pointer, no HIP_MALLOC */
-    entry->dh_shared_key     = HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
+    /** @todo reuse pointer, no malloc */
+    entry->dh_shared_key     = malloc(ctx->dh_shared_key_len);
     if (!entry->dh_shared_key) {
-        HIP_ERROR("entry dh_shared HIP_MALLOC failed\n");
+        HIP_ERROR("entry dh_shared malloc failed\n");
         err = -ENOMEM;
         goto out_err;
     }
@@ -1113,7 +1114,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 out_err:
     if (entry->dh_shared_key) {
-        HIP_FREE(entry->dh_shared_key);
+        free(entry->dh_shared_key);
         entry->dh_shared_key = NULL;
     }
 
@@ -1147,7 +1148,7 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
              ipv6_addr_cmp(&hit, &entry->hit_peer),
              -1, "Unable to verify sender's HOST_ID\n");
 
-    HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)),
+    HIP_IFEL(!(entry->peer_pub = malloc(len)),
              -ENOMEM, "Out of memory\n");
 
     memcpy(entry->peer_pub, peer, len);
@@ -1220,7 +1221,7 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 out_err:
 
     if (err && entry->our_pub) {
-        HIP_FREE(entry->our_pub);
+        free(entry->our_pub);
         entry->our_pub = NULL;
     }
 
@@ -1603,7 +1604,7 @@ void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
     list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
         address = (struct in6_addr *) list_entry(item);
         list_del(address, ha->addresses_to_send_echo_request);
-        HIP_FREE(address);
+        free(address);
     }
 }
 
@@ -1627,10 +1628,10 @@ void hip_hadb_delete_state(hip_ha_t *ha)
     /* Delete SAs */
 
     if (ha->dh_shared_key) {
-        HIP_FREE(ha->dh_shared_key);
+        free(ha->dh_shared_key);
     }
     if (ha->hip_msg_retrans.buf) {
-        HIP_FREE(ha->hip_msg_retrans.buf);
+        free(ha->hip_msg_retrans.buf);
     }
     if (ha->peer_pub) {
         if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
@@ -1639,16 +1640,16 @@ void hip_hadb_delete_state(hip_ha_t *ha)
         } else if (ha->peer_pub_key) {
             DSA_free(ha->peer_pub_key);
         }
-        HIP_FREE(ha->peer_pub);
+        free(ha->peer_pub);
     }
     if (ha->our_priv) {
-        HIP_FREE(ha->our_priv);
+        free(ha->our_priv);
     }
     if (ha->our_pub) {
-        HIP_FREE(ha->our_pub);
+        free(ha->our_pub);
     }
     if (ha->rendezvous_addr) {
-        HIP_FREE(ha->rendezvous_addr);
+        free(ha->rendezvous_addr);
     }
 
     if (ha->addresses_to_send_echo_request) {
@@ -1681,7 +1682,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
     }
 
     list_del(ha, hadb_hit);
-    HIP_FREE(ha);
+    free(ha);
 }
 
 /**
