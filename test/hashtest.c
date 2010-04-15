@@ -17,9 +17,6 @@
 
 struct hip_opp_socket_entry {
     unsigned long           hash_key;     /* pid XOR old_socket */
-    //hip_list_t        next_entry;
-    //spinlock_t            lock;
-    //atomic_t                refcnt;
     pid_t                   pid;
     int                     orig_socket;
     int                     translated_socket;
@@ -41,11 +38,8 @@ struct hip_opp_socket_entry {
 
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
 
-//HIP_HASHTABLE socketdb;
 HIP_HASHTABLE *socketdb = NULL;
-//static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
-// inline int, int range removed //miika
 static unsigned long hip_hash_pid_socket(const void *ptr)
 {
     unsigned long key = ((hip_opp_socket_t *) ptr)->hash_key;
@@ -53,7 +47,6 @@ static unsigned long hip_hash_pid_socket(const void *ptr)
     return key;
 }
 
-// removed: inline
 static int hip_socketdb_match(const void *ptr1, const void *ptr2)
 {
     unsigned long key1, key2;
@@ -101,31 +94,12 @@ static void hip_init_socket_db(void)
 static void hip_uninit_socket_db(void)
 {
     int n;
-    //int i;
-    //hip_opp_socket_t *item = NULL;
-    //hip_opp_socket_t *tmp = NULL;
     hip_list_t *item, *tmp;
 
-    _HIP_DEBUG("DEBUG: DUMP SOCKETDB LISTS\n");
-    //hip_socketdb_dump();
-
-    _HIP_DEBUG("DELETING\n");
-    //  hip_ht_uninit();
-#if 0
-    for (i = 0; i < HIP_SOCKETDB_SIZE; i++) {
-        list_for_each_entry_safe(item, tmp,
-                                 socketdb[i],
-                                 socketdb,
-                                 next_entry) {
-#endif
     list_for_each_safe(item, tmp, socketdb, n)
     {
-//      if (atomic_read(&item->refcnt) > 2)
-//          HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
-        //hip_socketdb_put_entry(item);
         free(list_entry(item));
     }
-//}
 
     hip_ht_uninit(socketdb);
 }
@@ -162,7 +136,6 @@ static int hip_socketdb_add_entry(pid_t pid, int socket)
     if (err) {
         HIP_ERROR("hip_ht_add() failed!\n");
     }
-    //hip_socketdb_dump();
 
     return err;
 }
@@ -170,24 +143,11 @@ static int hip_socketdb_add_entry(pid_t pid, int socket)
 static void hip_socketdb_dump(void)
 {
     int n;
-    /*int i;
-     * char src_ip[INET6_ADDRSTRLEN] = "\0";
-     * char dst_ip[INET6_ADDRSTRLEN] = "\0";
-     * char src_hit[INET6_ADDRSTRLEN] = "\0";
-     * char dst_hit[INET6_ADDRSTRLEN] = "\0";*/
     hip_list_t *item, *tmp;
     hip_opp_socket_t *data;
 
     HIP_DEBUG("start socketdb dump\n");
 
-    //HIP_LOCK_HT(socketdb);
-
-#if 0
-    for (i = 0; i < HIP_SOCKETDB_SIZE; i++) {
-        //if (!list_empty(socketdb[i]))
-        {
-            HIP_DEBUG("HT[%d]\n", i);
-#endif
     list_for_each_safe(item, tmp, socketdb, n)
     {
         data = (hip_opp_socket_t *) list_entry(item);
@@ -196,9 +156,6 @@ static void hip_socketdb_dump(void)
                   " src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
                   data->pid, data->orig_socket);
     }
-//              }
-//      }
-    //HIP_UNLOCK_HT(socketdb);
     HIP_DEBUG("end socketdb dump\n");
 }
 
@@ -206,9 +163,7 @@ static void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
     _HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
                entry->pid, entry->orig_socket);
-    //HIP_LOCK_SOCKET(entry);
     hip_ht_delete(socketdb, entry);
-    //HIP_UNLOCK_SOCKET(entry);
     free(entry);
 }
 
@@ -231,7 +186,6 @@ static void test_db(void)
     int socket              = 1;
     int err                 = 0;
     hip_opp_socket_t *entry = NULL;
-    //  struct hip_opp_socket_entry *entry = NULL;
 
     HIP_DEBUG("testing db\n");
 
@@ -244,7 +198,6 @@ static void test_db(void)
     HIP_ASSERT(entry);
     hip_socketdb_dump();
 
-    //  pid++;
     socket++;
     HIP_DEBUG("2222 pid=%d, socket=%d\n", pid, socket);
     entry                    = NULL;
@@ -257,8 +210,6 @@ static void test_db(void)
     entry->translated_socket = socket + 100;
     hip_socketdb_dump();
 
-
-    //pid++;
     socket++;
     HIP_DEBUG("3333 pid=%d, socket=%d\n", pid, socket);
     entry = NULL;
