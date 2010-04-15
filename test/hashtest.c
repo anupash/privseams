@@ -68,22 +68,6 @@ static inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
 
 static void hip_init_socket_db(void)
 {
-#if 0
-    memset(&socketdb, 0, sizeof(socketdb));
-
-    socketdb.head     =      socketdb;
-    socketdb.hashsize =  HIP_SOCKETDB_SIZE;
-    socketdb.offset   =    offsetof(hip_opp_socket_t, next_entry);
-    socketdb.hash     =      hip_hash_pid_socket;
-    socketdb.compare  =   hip_socketdb_match;
-    socketdb.hold     =      hip_socketdb_hold_entry;
-    socketdb.put      =       hip_socketdb_put_entry;
-    socketdb.get_key  =   hip_socketdb_get_key;
-
-    strncpy(socketdb.name, "SOCKETDB_BYPSOC", 15);
-    socketdb.name[15] = 0;
-
-#endif
     socketdb          = (HIP_HASHTABLE *) hip_ht_init(hip_hash_pid_socket,
                                                       hip_socketdb_match);
     if (!socketdb) {
