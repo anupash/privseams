@@ -31,11 +31,6 @@ int main(int argc, char *argv[])
     // workaround for bug #604
     hip_set_logdebug(LOGDEBUG_ALL);
 
-#if 0
-    HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
-             "Error: Cannot set the debugging parameter.\n");
-#endif
-
     HIP_IFEL(hip_do_hipconf(argc, argv, 0), -2,
              "Error: Cannot configure the HIP daemon.\n");
 
