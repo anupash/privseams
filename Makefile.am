@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS  = -I m4
 HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd/*.h i3/*/*.h lib/*/*.h test/*.h))
 
 # For "make dist"
-EXTRA_DIST =  .vimrc debian doc hipfwmi patches release.version version.h
+EXTRA_DIST =  .vimrc debian doc patches release.version version.h
 EXTRA_DIST += i3/i3-cfg-PL.xml i3/aeshash/aescpp.hh i3/i3/i3_debug.c i3/utils/netwrap_win32.c
 EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
 EXTRA_DIST += test/demo test/maintainer test/packaging test/packets test/performance
