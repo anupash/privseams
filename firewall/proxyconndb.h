@@ -19,8 +19,8 @@ struct hip_proxy_conn_key {
 typedef struct hip_proxy_conn {
     struct hip_proxy_conn_key key;
     int                       state;
-    struct in6_addr           addr_client; // addr_proxy_client
-    struct in6_addr           addr_peer; // addr_proxy_peer
+    struct in6_addr           addr_client;
+    struct in6_addr           addr_peer;
 } hip_proxy_conn_t;
 
 void hip_proxy_init_conn_db(void);

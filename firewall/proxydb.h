@@ -21,11 +21,11 @@
 #include "firewall_control.h"
 
 typedef struct hip_proxy_t {
-    hip_hit_t       hit_proxy; // hit_proxy_client
-    hip_hit_t       hit_peer; // hit_proxy_peer
-    struct in6_addr addr_client;     // addr_proxy_client
-    struct in6_addr addr_peer;     // addr_proxy_peer
-    struct in6_addr addr_proxy;     // addr_proxy_server
+    hip_hit_t       hit_proxy;
+    hip_hit_t       hit_peer;
+    struct in6_addr addr_client;
+    struct in6_addr addr_peer;
+    struct in6_addr addr_proxy;
     int             state;
     int             hip_capable;
 } hip_proxy_t;
