@@ -131,10 +131,7 @@
     <para>
       If you haven't configured linux kernel before, please use the userspace
       ipsec instead (as described later in this document), or at least consult
-      linux/README. We have some example
-      configurations files in test/configs for "typical" systems. You
-      can use one of those as a template, and modify it to suite the needs
-      of your system. Read test/configs/README before doing so.
+      linux/README.
     </para>
     <para>
       The 2.6 kernel series should be compilable with both gcc 2.9x and 3.x
