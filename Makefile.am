@@ -15,10 +15,6 @@ EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
 EXTRA_DIST += m4 # required for CentOS "make bin" target
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
-# This file is unused. Declare it here to silence the autobuilder
-# until its fate is decided.
-EXTRA_DIST += i3/aeshash/aescrypp.c
-
 # Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
 # Gtk requires the images without the hipl prefix hence we use ".." below
 imagesdir = $(pkgdatadir)/../pixmaps
