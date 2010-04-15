@@ -318,52 +318,6 @@ out_err:
     return err;
 }
 
-#if 0
-/**
- * prints a single link entry in the linkdb
- *
- * @param entry  link entry to be printed
- */
-static void hip_link_entry_print(hip_link_entry_t *entry)
-{
-    if (entry) {
-        HIP_DEBUG_HIT("dst_addr", &entry->dst_addr);
-        HIP_DEBUG("spi: 0x%lx\n", entry->spi);
-        HIP_DEBUG("> sa entry:\n");
-    } else {
-        HIP_DEBUG("link entry is NULL\n");
-    }
-}
-
-/**
- * prints the complete linkdb
- */
-void hip_linkdb_print(void)
-{
-    int i                   = 0;
-    hip_list_t *item        = NULL;
-    hip_list_t *tmp         = NULL;
-    hip_link_entry_t *entry = NULL;
-
-    HIP_DEBUG("printing linkdb...\n");
-
-    // iterating over all elements
-    list_for_each_safe(item, tmp, linkdb, i)
-    {
-        if (!(entry = (hip_link_entry_t *) list_entry(item))) {
-            HIP_ERROR("failed to get list entry\n");
-            break;
-        }
-        HIP_DEBUG("link entry %i:\n", i + 1);
-        hip_link_entry_print(entry);
-    }
-
-    if (i == 0) {
-        HIP_DEBUG("linkdb contains no items\n");
-    }
-}
-#endif /* 0 */
-
 /**
  * sets the values of a SA entry
  *
@@ -973,8 +927,6 @@ hip_sa_entry_t *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
     HIP_DEBUG_HIT("inner_src_addr", &search_entry.inner_src_addr);
     HIP_DEBUG_HIT("inner_dst_addr", &search_entry.inner_dst_addr);
     HIP_DEBUG("mode: %i\n", search_entry.mode);
-
-    //hip_sadb_print();
 
     // find entry in sadb db
     HIP_IFEL(!(stored_entry = (hip_sa_entry_t *) hip_ht_find(sadb, &search_entry)), -1,
