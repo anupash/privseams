@@ -1091,7 +1091,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *msg)
     _HIP_DEBUG("DER length %d\n", verify.der_len);
 
     vessel = &der_cert;
-    HIP_IFEL(((cert = d2i_X509(NULL, (BROKEN_SSL_CONST unsigned char **) vessel, verify.der_len)) == NULL), -1,
+    HIP_IFEL(((cert = d2i_X509(NULL, (const unsigned char **) vessel, verify.der_len)) == NULL), -1,
              "Failed to convert cert from DER to internal format\n");
     /*
      * HIP_IFEL(!X509_print_fp(stdout, cert), -1,
