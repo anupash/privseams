@@ -158,16 +158,7 @@ int config_read(const char *file)
         if (err != 3) {
             goto loop_end;
         }
-#if 0
-        p1 = strtok(buf, "+=");
-        if (p1 == NULL) {
-            goto loop_end;
-        }
-        p2 = strtok(NULL, "\0");
-        if (p2 == NULL) {
-            goto loop_end;
-        }
-#endif
+
         /* Set values. */
         p3 = strdup(str_var_get(p1));
         if (add == '+' && strlen(p3) > 0) {

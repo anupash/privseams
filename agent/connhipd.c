@@ -116,7 +116,7 @@ static int connhipd_send_hitdata_to_daemon(struct hip_common *msg,
 static int connhipd_handle_msg(struct hip_common *msg,
                                struct sockaddr_un *addr)
 {
-    struct hip_tlv_common *param = NULL;    //, *param2 = NULL;
+    struct hip_tlv_common *param = NULL;
     struct hip_common *emsg;
     hip_hdr_type_t type;
     HIT_Remote hit;
@@ -200,13 +200,6 @@ static int connhipd_handle_msg(struct hip_common *msg,
             } else if (ret == 0)                   {
                 connhipd_send_hitdata_to_daemon(msg, &hitr, &hit.g->l->lhit);
             }
-            /* Reset local HIT, if outgoing I1. */
-            /*
-             * HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
-             * HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
-             * HIP_HEXDUMP("Old remote HIT: ", &msg->hitr, 16);
-             * HIP_HEXDUMP("New remote HIT: ", &hit.hit, 16);
-             */
         }
         /* If neither HIT in message was local HIT, then drop the packet! */
         else {
@@ -280,7 +273,6 @@ static void *connhipd_thread(void *data)
             /* Test connection. */
             hip_build_user_hdr(msg, HIP_MSG_AGENT_PING, 0);
             n = hip_send_recv_daemon_info(msg, 1, hip_agent_sock);
-            //if (n < 0) HIP_DEBUG("Could not send ping to daemon, waiting.\n");
             hip_agent_connected--;
         }
 
