@@ -1135,12 +1135,6 @@ http://newbiedoc.sourceforge.net/system/kernel-pkg.html
 Redhat notes
 ------------
 
-The instructions below did not work anymore. Instead, I followed these
-instructions:
-
-http://grid-it.cnaf.infn.it/index.php?rpmbuild&type=1
-see: test/packaging/kernel-2.6.17.14.spec
-
 To create the package from vanilla sources (preferred method) for
 Fedora, follow the instructions of this document:
 
