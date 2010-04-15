@@ -123,7 +123,7 @@ static void hip_uninit_socket_db(void)
 //      if (atomic_read(&item->refcnt) > 2)
 //          HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
         //hip_socketdb_put_entry(item);
-        free((void *) list_entry(item));
+        free(list_entry(item));
     }
 //}
 
