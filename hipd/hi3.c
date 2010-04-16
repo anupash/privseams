@@ -116,16 +116,6 @@ static void hip_hi3_receive_payload(void *t, void *data, void *fun_ctx)
     _HIP_HEXDUMP("HIP PACKET", hip_common,
                  hip_get_msg_total_len(hip_common));
 
-#if 0
-    if (hip_verify_network_header(hip_common,
-                                  (struct sockaddr *)&src,
-                                  (struct sockaddr *)&dst,
-                                  len)) {
-        HIP_ERROR("Verifying of the network header failed\n");
-        goto out_err;
-    }
-#endif
-
     if (hip_check_network_msg(hip_common)) {
         HIP_ERROR("HIP packet is invalid\n");
         goto out_err;
@@ -143,7 +133,6 @@ static void hip_hi3_receive_payload(void *t, void *data, void *fun_ctx)
     }
 
 out_err:
-    //cl_free_buf(clb);
     ;
 }
 
@@ -206,15 +195,6 @@ static int hip_hi3_insert_trigger(void)
 {
     Key key[HI3_TRIGGER_MAX];
     int i;
-
-#if 0
-    hip_hit_t peer_hit;
-
-    hip_get_default_hit(&peer_hit);
-    hip_i3_init(/*&peer_hit*/);
-    hi3_pub_tr_count = 1;
-    memcpy(&hi3_pub_id[0], &peer_hit, sizeof(hip_hit_t));
-#endif
 
     hip_for_each_hi(hip_hi3_add_pub_trigger_id, &hi3_pub_tr_count );
 
