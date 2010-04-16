@@ -22,30 +22,6 @@ struct hip_queue {
 HIP_HASHTABLE *hip_dht_queue = NULL;
 
 
-#if 0
-/**
- * hip_debug_print_queue
- *
- * This function prints all the dht queue members
- *
- * @ return void
- */
-static void hip_debug_print_dht_queue(void)
-{
-    int i = 0;
-    hip_list_t *item, *tmp;
-    struct hip_queue *entry;
-
-    HIP_DEBUG("DEBUGGING QUEUE comment out if left uncommented\n");
-    HIP_DEBUG("Head count %d\n", dht_queue_count);
-    list_for_each_safe(item, tmp, hip_dht_queue, i) {
-        entry = list_entry(item);
-        HIP_DEBUG("Node data_len = %d\n", entry->data_len);
-        HIP_DEBUG("Node data= %s\n", entry->data);
-    }
-}
-#endif
-
 /**
  * hip_dht_queue_hash
  *
@@ -173,8 +149,6 @@ int hip_write_to_dht_queue(void *write_data, int data_size_in_bytes)
     err                = hip_ht_add(hip_dht_queue, new_item);
     dht_queue_count    = dht_queue_count + 1;
 
-    /* Debug line do not leave uncommented */
-    //hip_debug_print_dht_queue();
     _HIP_DEBUG("Write, Items in dht_queue %d on exit\n", dht_queue_count);
 
 out_err:
@@ -219,8 +193,6 @@ int hip_read_from_dht_queue(void *read_data)
         // ugly way but I need only one item at a time and this was fast
         return 0;
     }
-    /* Debug line do not leave uncommented */
-    //hip_debug_print_dht_queue();
     if (this && this->data) {
         free(this->data);
     }
