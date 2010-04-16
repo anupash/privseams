@@ -299,10 +299,8 @@ static void hip_send_opp_tcp_i1(hip_ha_t *entry)
     tcphdr->ack_seq = 0;    //is not important in the SYN packet
     tcphdr->doff    = 5;
     tcphdr->syn     = 1;
-    //tcphdr->rst   = 1;
     tcphdr->window  = 34;   //random
     tcphdr->check   = 0;  //will be set right when sent, no need to calculate it here
-    //tcphdr->urg_ptr = ???????? TO BE FIXED
     if (ipType == 0) {
         send_tcp_packet(&bytes[0], hdr_size + 4 * tcphdr->doff, 4, hip_raw_sock_output_v4, 1, 0);
     } else if (ipType == 1) {
@@ -688,9 +686,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         HIP_IFEL(!(pz = hip_get_param(msg, HIP_PARAM_PUZZLE)), -1,
                  "Internal error\n");
 
-        // FIX ME: this does not always work:
-        //get_random_bytes(pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
-
         /* hardcode kludge */
         pz->opaque[0] = 'H';
         pz->opaque[1] = 'I';
@@ -778,11 +773,6 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
             //from relay
             r1_dst_addr = i1_saddr;
             r1_dst_port = i1_info->src_port;
-            // I---> NAT--> RVS-->R is not supported yet
-            /*
-             * r1_dst_addr =  dst_ip;
-             * r1_dst_port = dst_port;
-             */
         } else if (relay_para_type == HIP_PARAM_FROM)    {
             HIP_DEBUG("Param from\n");
             //from RVS, answer to I
@@ -802,10 +792,6 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
         r1_dst_port = i1_info->src_port;
     }
 
-/* removed by santtu because relay supported
- *      r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
- *      r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
- */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* It should not be null hit, null hit has been replaced by real local
      * hit. */
