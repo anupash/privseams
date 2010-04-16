@@ -175,7 +175,6 @@ static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
     deleted = hip_ht_delete(oppdb, entry);
     HIP_UNLOCK_OPP(entry);
     free(deleted);
-    //free(entry);
 }
 
 /**
@@ -457,7 +456,6 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
             goto out_err;
         }
         hip_get_default_hit(&msg->hitr);
-        //hip_get_any_localhost_hit(&msg->hitr, HIP_HI_DEFAULT_ALGO, 0);
     } else if (type == HIP_R1) {
         entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
     } else {
@@ -488,15 +486,6 @@ static int hip_receive_opp_r1(struct hip_common *msg,
     hip_ha_t *entry;
     hip_hit_t phit;
     int err = 0;
-
-#if 0
-    opp_entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
-    if (!opp_entry) {
-        HIP_ERROR("Cannot find HA entry after receive r1\n");
-        err = -1;
-        goto out_err;
-    }
-#endif
 
     HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
     HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
@@ -786,8 +775,6 @@ int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockad
     memcpy(&dst_ip, ptr, sizeof(dst_ip));
     HIP_DEBUG_HIT("dst ip = ", &dst_ip);
 
-    //hip_msg_init(msg);//?????
-
     err = hip_for_each_opp(hip_force_opptcp_fallback, &dst_ip);
     HIP_IFEL(err, 0, "for_each_ha err.\n");
 
@@ -910,7 +897,6 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
     int err     = 0, disable_fallback = 0;
     time_t *now = (time_t *) current_time;
     struct in6_addr *addr;
-    //HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
 
 #ifdef CONFIG_HIP_AGENT
     /* If agent is prompting user, let's make sure that
