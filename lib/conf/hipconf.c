@@ -2015,8 +2015,6 @@ static int hip_conf_handle_gw(hip_common_t *msg,
     ret_HIT = inet_pton(AF_INET6, opt[0], &ip_gw_mapped);
 
     if (!(ret_IP || ret_HIT)) {
-        //HIP_ERROR("Gateway address not correct\n");
-        //goto out_err;
         memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
         hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX - 1] = '\0';
         ret_HOSTNAME                               = 1;
@@ -2643,13 +2641,6 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
             libs[2] = NULL;
             libs[3] = "libhipopendht.so";
         }
-
-#if 0
-        if (type != EXEC_LOADLIB_NONE) {
-            setenv("LD_PRELOAD", libs, 1);
-            HIP_DEBUG("LD_PRELOADing\n");
-        }
-#endif
 
         hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
         setenv("LD_PRELOAD", lib_all, 1);
