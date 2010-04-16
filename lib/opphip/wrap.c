@@ -31,7 +31,6 @@
 #include "lib/core/icomm.h"
 #include "wrap_db.h"
 
-//static
 int hip_db_exist = 0;
 
 // used for dlsym_util
@@ -144,7 +143,6 @@ static void hip_initialize_db_when_not_exist(void)
     srand(getpid());
 
     hip_set_logtype(LOGTYPE_SYSLOG);
-    //hip_set_logtype(LOGTYPE_STDERR);
     hip_set_logfmt(LOGFMT_LONG);
     HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
              "Error: Cannot set the debugging parameter.\n");
@@ -969,8 +967,6 @@ int close(int orig_fd)
 
     _HIP_DEBUG("close() orig fd %d\n", orig_fd);
 
-    //if (hip_db_exist) hip_socketdb_dump();
-
     /* close original socket */
     err   = dl_function_ptr.close_dlsym(orig_fd);
 
@@ -980,8 +976,6 @@ int close(int orig_fd)
     if (!entry) {
         goto out_err;
     }
-
-    //HIP_ASSERT(entry);
 
     /* close new_socket */
     if (entry->translated_socket &&
@@ -1000,7 +994,6 @@ int close(int orig_fd)
     if (err) {
         HIP_ERROR("Err %d close trans socket\n", err);
     }
-    //hip_socketdb_dump();
 out_err:
     _HIP_DEBUG("close_dlsym called with err %d\n", err);
 
@@ -1553,56 +1546,6 @@ out_err:
     return chars;
 }
 
-#if 0
-/* poll (and maybe ppoll) should be wrapped conveniently for
- * applications such as ssh.*/
-int poll(struct pollfd *orig_fds, nfds_t nfds, int timeout)
-{
-    int n, err = 0, zero = 0;
-    int *translated_socket;
-    struct pollfd *translated_fds;
-    socklen_t *translated_id_len;
-    struct sockaddr *translated_id;
-    pthread_t tid = pthread_self();
-    pid_t pid     = getpid();
-
-    for (n = 0; n < nfds; n++) {
-        HIP_DEBUG("poll: orig_socket=%d\n", orig_fds[n].fd);
-        HIP_DEBUG("poll: events=%d\n", orig_fds[n].events);
-        HIP_DEBUG("poll: revents=%d\n", orig_fds[n].revents);
-        HIP_DEBUG("poll:  nfds=%d\n", nfds);
-        hip_socketdb_dump();
-
-        if (hip_exists_translation(pid, orig_fds[n].fd, tid)) {
-            err            = hip_translate_socket(&orig_fds[n].fd, NULL, &zero,
-                                                  &translated_socket,
-                                                  &translated_id,
-                                                  &translated_id_len, 1, 0, 0);
-            orig_fds[n].fd = *translated_socket;
-            HIP_DEBUG("poll: translation happened\n");
-        }
-        HIP_DEBUG("poll: translated_socket=%d\n", orig_fds[n].fd);
-        _HIP_DEBUG("poll: events=%d\n", translated_fds[n].events);
-        _HIP_DEBUG("poll: revents=%d\n", translated_fds[n].revents);
-        if (err) {
-            HIP_ERROR("Translation failure\n");
-            goto out_err;
-        }
-    }
-    HIP_DEBUG("calling poll: timeout=%d\n", timeout);
-    err = dl_function_ptr.poll_dlsym(orig_fds, nfds, timeout);
-    HIP_DEBUG("coming back from  poll: err=%d\n", err);
-    if (err) {
-        HIP_PERROR("connect error\n");
-    }
-
-out_err:
-    return err;
-}
-
-#endif
-
-
 /**
  * A wrapper for recvmsg(2) in the sockets API
  * @param s as in man 2 recvmsg
@@ -1623,91 +1566,3 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 
     return charnum;
 }
-
-#if 0
-void test_db(void)
-{
-    int pid                 = getpid();
-    int socket              = 1;
-    int err                 = 0;
-    hip_opp_socket_t *entry = NULL;
-    //  struct hip_opp_socket_entry *entry = NULL;
-
-    HIP_DEBUG("1111 pid=%d, socket=%d\n", pid, socket);
-    entry =   hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!entry);
-    err   = hip_socketdb_add_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!err);
-    entry =  hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(entry);
-    hip_socketdb_dump();
-
-    //  pid++;
-    socket++;
-    HIP_DEBUG("2222 pid=%d, socket=%d\n", pid, socket);
-    entry = NULL;
-    entry = hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!entry);
-    err = hip_socketdb_add_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!err);
-    entry = hip_socketdb_find_entry(pid, socket, pthread_self());
-    entry->translated_socket = socket + 100;
-    HIP_ASSERT(entry);
-    hip_socketdb_dump();
-
-
-    //pid++;
-    socket++;
-    HIP_DEBUG("3333 pid=%d, socket=%d\n", pid, socket);
-    entry = NULL;
-    entry = hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!entry);
-    err   = hip_socketdb_add_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!err);
-    entry = NULL;
-    entry =  hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(entry);
-    hip_socketdb_dump();
-
-    HIP_DEBUG("3333  testing del entry\n\n");
-    HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
-    entry = NULL;
-    entry = hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(entry);
-    entry = NULL;
-    err   = hip_socketdb_del_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!err);
-    entry = NULL;
-    entry = hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!entry);
-    hip_socketdb_dump();
-
-
-    HIP_DEBUG("2222 testing del entry by entry\n\n");
-    socket--;
-    HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
-    entry = NULL;
-    entry = hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(entry);
-    hip_socketdb_del_entry_by_entry(entry);
-    entry = NULL;
-    entry = NULL;
-    entry = hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!entry);
-    hip_socketdb_dump();
-
-    HIP_DEBUG("1111 testing del entry by entry\n\n");
-    socket--;
-    HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
-    entry = NULL;
-    entry = hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(entry);
-    hip_socketdb_del_entry_by_entry(entry);
-    entry = NULL;
-    entry =  hip_socketdb_find_entry(pid, socket, pthread_self());
-    HIP_ASSERT(!entry);
-    hip_socketdb_dump();
-    HIP_DEBUG("end of testing db\n");
-}
-
-#endif
