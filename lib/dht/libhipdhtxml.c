@@ -423,7 +423,6 @@ int read_packet_content(char *in_buffer, char *out_value)
             if (xml_node->next) {
                 xml_node_value = xml_node->next;   /* value */
                 xml_data       = xmlNodeGetContent(xml_node_value);
-                /* strcpy((char *)out_value, (char *)xml_data); */
                 xmlFree(xml_data);
                 HIP_DEBUG("Error from the openDHT: %s\n", xml_data);
                 ret            = -1;
