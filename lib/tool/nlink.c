@@ -38,10 +38,6 @@
 #include "lib/core/hip_udp.h"
 #include "nlink.h"
 
-/* New one to prevent netlink overrun */
-#if 0
-#define HIP_MAX_NETLINK_PACKET 3072
-#endif
 #define HIP_MAX_NETLINK_PACKET 65537
 
 #define PREFIXLEN_SPECIFIED 1
@@ -143,7 +139,6 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 
         status      = recvfrom(nl->fd, buf, sizeof(buf),
                                0, NULL, NULL);
-        //status = recvmsg(nl->fd, &msg, 0);
 
         if (status < 0) {
             HIP_PERROR("perror: ");
@@ -799,9 +794,7 @@ static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
         return -1;
     }
 
-    if (rtnl_dump_filter(rth,
-                         /*ll_remember_index*/ NULL,
-                         idxmap, NULL, NULL) < 0) {
+    if (rtnl_dump_filter(rth, NULL, idxmap, NULL, NULL) < 0) {
         HIP_ERROR("Dump terminated\n");
         return -1;
     }
@@ -940,7 +933,6 @@ static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
     _HIP_HEXDUMP("rtmsg : ", r, sizeof(struct rtmsg));
     _HIP_HEXDUMP("nlmsg : ", n, n->nlmsg_len);
     _HIP_HEXDUMP("tb[RTA_SRC] : ", &tb[RTA_SRC], sizeof(struct rtattr));
-    //entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
     addr.in6 = (struct in6_addr *) RTA_DATA(tb[2]);
     entry    = 7;
     addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
@@ -1427,35 +1419,6 @@ int set_up_device(char *dev, int up)
     return err;
 }
 
-#if 0
-/**
- * xfrm_selector_upspec - fill port info in the selector.
- * Selector is bound to HITs.
- *
- * @param sel a pointer to xfrm_selector to be filled in
- * @param src_port source port
- * @param dst_port destination port
- *
- * @return 0
- */
-
-int xfrm_selector_upspec(struct xfrm_selector *sel,
-                         uint32_t src_port, uint32_t dst_port)
-{
-    sel->sport = htons(src_port);
-    if (sel->sport) {
-        sel->sport_mask = ~((__uint16_t) 0);
-    }
-
-    sel->dport = htons(dst_port);
-    if (sel->dport) {
-        sel->dport_mask = ~((__uint16_t) 0);
-    }
-
-    return 0;
-}
-#endif /* 0 */
-
 /**
  * fill the port numbers for the UDP tunnel for IPsec
  *
@@ -1519,8 +1482,6 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 
     sel->prefixlen_d = id_prefix;
     sel->prefixlen_s = id_prefix;
-
-    //xfrm_selector_upspec(sel, src_port, dst_port);
 
     return 0;
 }
