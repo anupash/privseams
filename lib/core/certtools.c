@@ -983,12 +983,6 @@ int hip_cert_regex(char *what, char *from, int *start, int *stop)
     *start = answer[0].rm_so;
     *stop  = answer[0].rm_eo;
 
-    /* Just for debugging do NOT leave these 2 lines uncommented */
-    /*
-     * int i = 0;
-     * for (i = answer[0].rm_so; i < answer[0].rm_eo; i++) HIP_DEBUG("%c", from[i]);
-     * HIP_DEBUG("\n");
-     */
 out_err:
     regfree(&re);
     return err;

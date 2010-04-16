@@ -458,22 +458,6 @@ static int hcstore_fill_item(hchain_store_t *hcstore,
                                 hchains[hchain_length_id][hierarchy_level], hchain), -1,
                         "failed to store new hchain\n");
             }
-
-// useful for testing
-#if 0
-            if (hchain->link_tree) {
-                /* if the next_hchain has got a link_tree, we need its root for
-                 * the verification of the next_hchain's elements */
-                root = htree_get_root(hchain->link_tree, &root_length);
-            }
-
-            if (!hchain_verify(hchain->source_element->hash,
-                               hchain->anchor_element->hash, hash_function,
-                               hash_length, hchain->hchain_length,
-                               root, root_length)) {
-                HIP_DEBUG("failed to verify next_hchain\n");
-            }
-#endif
         }
 
         err += create_hchains;
@@ -570,10 +554,6 @@ void *hcstore_get_hash_item(hchain_store_t *hcstore,
 
 out_err:
     if (err) {
-        // TODO modify this to support htrees
-        //if (stored_hchain)
-        //  hchain_free(stored_hchain);
-
         stored_item = NULL;
     }
 
@@ -640,7 +620,6 @@ void *hcstore_get_item_by_anchor(hchain_store_t *hcstore,
                                    NULL);
 
                     HIP_DEBUG("hash-tree matching the anchor found\n");
-                    //hchain_print(stored_hchain);
 
                     goto out_err;
                 }
@@ -653,7 +632,6 @@ void *hcstore_get_item_by_anchor(hchain_store_t *hcstore,
                                              hchains[i][hierarchy_level], j, NULL);
 
                     HIP_DEBUG("hash-chain matching the anchor found\n");
-                    //hchain_print(stored_hchain);
 
                     goto out_err;
                 }
@@ -667,10 +645,6 @@ void *hcstore_get_item_by_anchor(hchain_store_t *hcstore,
 
 out_err:
     if (err) {
-        // TODO modify this to support htrees
-        //if (stored_item)
-        //  hchain_free(stored_hchain);
-
         stored_item = NULL;
     }
 

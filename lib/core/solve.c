@@ -59,7 +59,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
     if (mode == HIP_VERIFY_PUZZLE) {
         ipv6_addr_copy((hip_hit_t *) (cookie + 8), &hdr->hits);
         ipv6_addr_copy((hip_hit_t *) (cookie + 24), &hdr->hitr);
-        //randval = ntoh64(u->sl.J);
         randval  = u->sl.J;
         _HIP_DEBUG("u->sl.J: 0x%llx\n", randval);
         maxtries = 1;
