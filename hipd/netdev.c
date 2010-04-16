@@ -217,11 +217,6 @@ static int hip_filter_address(struct sockaddr *addr)
         } else if (IN6_IS_ADDR_LINKLOCAL(a_in6)) {
             HIP_DEBUG("Address ignored: LINKLOCAL.\n");
             return FA_IGNORE;
-#if 0 /* For Juha-Matti's experiments  */
-        } else if (IN6_IS_ADDR_SITELOCAL(a_in6)) {
-            HIP_DEBUG("Address ignored: SITELOCAL.\n");
-            return FA_IGNORE;
-#endif
         } else if (IN6_IS_ADDR_V4MAPPED(a_in6)) {
             HIP_DEBUG("Address ignored: V4MAPPED.\n");
             return FA_IGNORE;
@@ -691,8 +686,6 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
                 == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
                 item2 = (struct hip_locator_info_addr_item2 *) address_pointer;
 
-                //hip_build_param_contents(in_msg, &item2->address,
-                //                         HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
                 HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item2->address);
                 memcpy(addr, (struct in6_addr *) &item2->address, sizeof(struct in6_addr));
                 address_pointer += sizeof(struct hip_locator_info_addr_item2);
@@ -700,8 +693,6 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
                 item = (struct hip_locator_info_addr_item *) address_pointer;
 
-                //hip_build_param_contents(in_msg, &item->address,
-                //                         HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
                 HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item->address);
                 memcpy(addr, (struct in6_addr *) &item->address, sizeof(struct in6_addr));
                 address_pointer += sizeof(struct hip_locator_info_addr_item);
@@ -709,8 +700,6 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
                 item = (struct hip_locator_info_addr_item *) address_pointer;
 
-                //hip_build_param_contents(in_msg, &item->address,
-                //                         HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
                 HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item->address);
                 memcpy(addr, (struct in6_addr *) &item->address, sizeof(struct in6_addr));
                 address_pointer += sizeof(struct hip_locator_info_addr_item);
@@ -720,14 +709,8 @@ static void hip_get_suitable_locator_address(struct hip_common *in_msg,
         }
     } else {
         memcpy(&((&reply6)->s6_addr), in_msg, sizeof(reply6.s6_addr));
-        //HIP_DEBUG_HIT("LOCATOR", &reply6);
-        if (ipv6_addr_cmp(&all_zero_ipv6, &reply6)) {
-            //hip_build_param_contents(in_msg, &reply6, HIP_PARAM_SRC_ADDR,
-            //                         sizeof(struct in6_addr));
-        } else {
+        if (!ipv6_addr_cmp(&all_zero_ipv6, &reply6)) {
             err_value = 3;    //Entry not found at DHT gateway
-            //hip_build_param_contents(in_msg, &err_value,
-            //                         HIP_PARAM_INT, sizeof(int));
         }
     }
 
@@ -1444,16 +1427,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
             HIP_DEBUG("received expiration, ignored\n");
             return 0;
             break;
-#if 0
-        case XFRMGRP_SA:
-            /* This seems never to occur */
-            return -1;
-            break;
-        case XFRMGRP_POLICY:
-            /* This seems never to occur */
-            return -1;
-            break;
-#endif
         case XFRM_MSG_GETSA:
             return -1;
             break;
@@ -1476,14 +1449,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
         case XFRM_MSG_POLEXPIRE:
             return -1;
             break;
-#if 0
-        case XFRM_MSG_FLUSHSA:
-            return -1;
-            break;
-        case XFRM_MSG_FLUSHPOLICY:
-            return -1;
-            break;
-#endif
         default:
             HIP_DEBUG("unhandled msg type %d\n", msg->nlmsg_type);
             break;
@@ -1596,174 +1561,6 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 out_err:
     return err;
 }
-
-#if 0
-/**
- * Attach the reply to the HIT query from DHT gateway into a HIP user
- * message (for hipconf).
- *
- * @param in_msg the response from DHT gateway
- * @param msg a HIP user message where the locators will be attached
- *            in an LOCATOR parameter
- */
-#ifdef CONFIG_HIP_DHT
-static void hip_attach_locator_addresses(struct hip_common *in_msg,
-                                         struct hip_common *msg)
-{
-    struct hip_locator *locator;
-    int err_value                             = 0;
-    struct hip_locator_info_addr_item *item   = NULL;
-    struct hip_locator_info_addr_item2 *item2 = NULL;
-    char *address_pointer;
-    struct in6_addr reply6;
-    struct in6_addr all_zero_ipv6;
-    bzero(&all_zero_ipv6, sizeof(all_zero_ipv6));
-
-    _HIP_DUMP_MSG(in_msg);
-
-    locator = hip_get_param((struct hip_common *) in_msg,
-                            HIP_PARAM_LOCATOR);
-    if (locator) {
-        address_pointer = (char *) (locator + 1);
-        for (; address_pointer < ((char *) locator) + hip_get_param_contents_len(locator); ) {
-            if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-                item2            = (struct hip_locator_info_addr_item2 *) address_pointer;
-                hip_build_param_contents(msg, &item2->address,
-                                         HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
-                _HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
-                address_pointer += sizeof(struct hip_locator_info_addr_item2);
-            } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                       == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-                item             = (struct hip_locator_info_addr_item *) address_pointer;
-                hip_build_param_contents(msg, &item->address,
-                                         HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
-                _HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
-                address_pointer += sizeof(struct hip_locator_info_addr_item);
-            } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                       == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-                item             = (struct hip_locator_info_addr_item *) address_pointer;
-                hip_build_param_contents(msg, &item->address,
-                                         HIP_PARAM_SRC_ADDR, sizeof(struct in6_addr));
-                _HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
-                address_pointer += sizeof(struct hip_locator_info_addr_item);
-            } else {
-                address_pointer += sizeof(struct hip_locator_info_addr_item);
-            }
-        }
-    } else {
-        memcpy(&((&reply6)->s6_addr), in_msg, sizeof(reply6.s6_addr));
-        _HIP_DEBUG_HIT("LOCATOR", &reply6);
-        if (ipv6_addr_cmp(&all_zero_ipv6, &reply6)) {
-            hip_build_param_contents(msg, &reply6,
-                                     HIP_PARAM_SRC_ADDR,
-                                     sizeof(struct in6_addr));
-        } else {
-            err_value = 3; /* Entry not found at DHT gateway */
-            hip_build_param_contents(msg, &err_value,
-                                     HIP_PARAM_INT, sizeof(int));
-        }
-    }
-}
-
-#endif /* CONFIG_HIP_DHT */
-
-
-/**
- * Map a HIT to its corresponding locators. Used by hipconf dht get <HIT>
- *
- * @param msg Input/output argument. The HIT to be queried must be contained
- *            as a parameter inside this message. The locatotors will be stored
- *            as a LOCATOR parameter into the same message
- * @return zero on success and non-zero on error
- * @todo move this to some other file
- */
-int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg)
-{
-    int err = 0;
-#ifdef CONFIG_HIP_DHT
-    int socket = -1, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
-    char ip_str[INET_ADDRSTRLEN], hit_str[INET6_ADDRSTRLEN + 2], *hostname = NULL;
-    hip_hit_t *dst_hit                         = NULL;
-    unsigned char dht_response[HIP_MAX_PACKET] = {0};
-    hip_tlv_type_t param_type                  = 0;
-    struct hip_tlv_common *current_param       = NULL;
-
-    HIP_DEBUG("\n");
-
-    HIP_IFEL((msg == NULL), -1, "msg null, skip\n");
-
-    current_param = hip_get_next_param(msg, current_param);
-    if (current_param) {
-        param_type = hip_get_param_type(current_param);
-    } else {
-        goto out_err;
-    }
-    if (param_type == HIP_PARAM_HOSTNAME) {
-        ret_HOSTNAME = 1;
-        /* get hostname */
-        HIP_IFEL(((hostname = hip_get_param(msg, HIP_PARAM_HOSTNAME)) == NULL), -1,
-                 "hostname null\n");
-        hostname     = hip_get_param_contents_direct(hostname);
-    } else if (param_type == HIP_PARAM_HIT)   {
-        ret_HIT = 1;
-        HIP_IFEL(((dst_hit = hip_get_param(msg, HIP_PARAM_HIT)) == NULL),
-                 -1, "dst hit null\n");
-        dst_hit = hip_get_param_contents_direct(dst_hit);
-        hip_convert_hit_to_str(dst_hit, NULL, hit_str);
-    }
-
-    /* convert hw addr to str */
-    inet_ntop(AF_INET,
-              &(((struct sockaddr_in *) (void *) opendht_serving_gateway->ai_addr)->sin_addr),
-              ip_str,
-              INET_ADDRSTRLEN);
-
-    /* init the dht gw socket */
-    socket = init_dht_gateway_socket_gw(socket, opendht_serving_gateway);
-    /* the connection to the gw here should be done using binding */
-    err    = connect_dht_gateway(socket, opendht_serving_gateway, 1);
-
-    if (err != 0) {
-        err_value = 1;
-        err       = 0;
-        hip_build_param_contents(msg, &err_value,
-                                 HIP_PARAM_INT, sizeof(int));
-        goto out_err;
-    }
-
-    /* obtain value from dht gateway */
-    err = 0;
-
-    if (ret_HIT) {
-        err = opendht_get(socket, (unsigned char *) hit_str,
-                          (unsigned char *) ip_str, opendht_serving_gateway_port);
-    } else if (ret_HOSTNAME)    {
-        err = opendht_get(socket, (unsigned char *) hostname,
-                          (unsigned char *) ip_str, opendht_serving_gateway_port);
-    }
-    /* get response from dht server */
-    err = opendht_read_response(socket, dht_response);
-
-    if (err != 0) {
-        err_value = 2;
-        err       = 0;
-        hip_build_param_contents(msg, &err_value,
-                                 HIP_PARAM_INT, sizeof(int));
-        goto out_err;
-    }
-
-    /* attach output to the msg back to hipconf */
-    hip_attach_locator_addresses((struct hip_common *) dht_response, msg);
-
-out_err:
-
-    close(socket);
-#endif  /* CONFIG_HIP_DHT */
-
-    return err;
-}
-#endif /* 0 */
 
 /**
  * Copy the addresses stored in entry->peer_addr_list_to_be_added
