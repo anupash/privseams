@@ -104,7 +104,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
     /* This prints numerical addresses until we have separate
      * print function for icomm.h and protodefs.h -miika */
     HIP_DEBUG("HIP user message type is: %d\n", msg_type);
-    //hip_message_type_name(msg_type);
 
     switch (msg_type) {
     case HIP_MSG_NULL_OP:
@@ -127,7 +126,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         }
         break;
     case HIP_MSG_RST:
-        //send_response = 0;
         err                = hip_send_close(msg, 1);
         break;
     case HIP_MSG_BOS:
@@ -231,13 +229,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         err = hip_opp_get_peer_hit(msg, src);
         if (err) {
             _HIP_ERROR("get pseudo hit failed.\n");
-            //send_response = 1;
             if (err == -11) {           /* immediate fallback, do not pass */
                 err = 0;
             }
             goto out_err;
-        } else {
-            //send_response = 0;
         }
         /* skip sending of return message; will be sent later in R1 */
         goto out_err;
@@ -402,24 +397,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
             goto out_err;
         }
         HIP_DEBUG("Building gw_info complete\n");
-
-#if 0
-        /* NOT the way to do this */
-        int err_value = 0;
-        if (hip_opendht_inuse != HIP_MSG_DHT_ON){
-            err_value = 5;
-            hip_build_param_contents(msg, &err_value,
-                                     HIP_PARAM_INT, sizeof(int));
-        } else if ((opendht_serving_gateway          == NULL) ||
-                   (opendht_serving_gateway->ai_addr == NULL)) {
-            err_value = 4;
-            hip_build_param_contents(msg, &err_value,
-                                     HIP_PARAM_INT, sizeof(int));
-        } else {
-            err = hip_get_dht_mapping_for_HIT_msg(msg);
-        }
-#endif
-
     }
     break;
     case HIP_MSG_DHT_SET:
@@ -616,12 +593,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         }
 
         if (dst_hit == NULL) {
-#if 0
-            HIP_ERROR("No HIT parameter found from the user " \
-                      "message.\n");
-            err = -1;
-            goto out_err;
-#endif
             HIP_DEBUG("No HIT parameter found from the user " \
                       "message. Trying opportunistic mode \n");
             opp_mode = 1;
@@ -878,18 +849,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         err              = hip_for_each_ha(hip_handle_get_ha_info, msg);
         break;
     case HIP_MSG_DEFAULT_HIT:
-        //hip_msg_init(msg);
         err              =  hip_get_default_hit_msg(msg);
         break;
     case HIP_MSG_MHADDR_ACTIVE:
-        //hip_msg_init(msg);
         is_active_mhaddr = 1;
-        //hip_build_user_hdr(msg, HIP_MSG_MHADDR_ACTIVE, 0);
         break;
     case HIP_MSG_MHADDR_LAZY:
-        //hip_msg_init(msg);
         is_active_mhaddr = 0;
-        //hip_build_user_hdr(msg,HIP_MSG_MHADDR_LAZY, 0);
         break;
     case HIP_MSG_HANDOVER_HARD:
         is_hard_handover = 1;
@@ -1012,7 +978,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 #endif
     case HIP_MSG_USERSPACE_IPSEC:
         HIP_DUMP_MSG(msg);
-        //send_response = 0;
         err = hip_userspace_ipsec_activate(msg);
         break;
     case HIP_MSG_RESTART_DUMMY_INTERFACE:
