@@ -1791,12 +1791,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 #ifdef CONFIG_HIP_RVS
     if (!ipv6_addr_any(dest)) {
-        //if(hip_relay_get_status() == HIP_RELAY_ON) {
-
         HIP_INFO("create replay_to parameter in R2\n");
         hip_build_param_relay_to(
             r2, dest, dest_port);
-        //}
     }
 
 #endif
@@ -2194,9 +2191,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         }
     }
 
-    //HIP_DEBUG("hip nat key from context %s", i2_context.hip_nat_key);
     memcpy(entry->hip_nat_key, i2_context.hip_nat_key, HIP_MAX_KEY_LEN);
-    //HIP_DEBUG("hip nat key in entry %s", entry->hip_nat_key);
 
     if (spi_in == 0) {
         spi_in = entry->spi_inbound_current;
@@ -2256,8 +2251,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
     memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
            hip_sa_addr_len(addr));
     hip_add_address_to_list(addr, if_index, 0);
-
-    //hip_hadb_insert_state(entry);
 
     /* If there was already state, these may be uninitialized */
     entry->hip_transform = hip_tfm;
@@ -2429,7 +2422,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
     entry->spi_outbound_new = spi_out;
     HIP_IFE(hip_store_base_exchange_keys(entry, &i2_context, 0), -1);
-    //hip_hadb_insert_state(entry);
 
     HIP_DEBUG("\nInserted a new host association state.\n"
               "\tHIP state: %s\n" \
@@ -3180,9 +3172,6 @@ int hip_receive_r2(struct hip_common *hip_common,
 
     HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), -1,
              "Received illegal controls in R2: 0x%x. Dropping\n", ntohs(hip_common->control));
-    //HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits,
-    //                                        &hip_common->hitr)), -EFAULT,
-    //         "Received R2 by unknown sender\n");
 
     HIP_IFEL(!entry, -EFAULT,
              "Received R2 by unknown sender\n");
@@ -3373,8 +3362,6 @@ static inline int hip_handle_notify(const struct hip_common *notify,
 
                 /* Calculate the HIP header length */
                 hip_calc_hdr_len(&i1);
-
-                //sleep(3);
 
                 /* This I1 packet must be send only once, which
                  * is why we use NULL entry for sending. */
