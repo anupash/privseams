@@ -415,18 +415,6 @@ int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
             break;
         }
     }
-#if 0
-    // TODO
-    else {
-        for (go through all local addresses) {
-            for (go through all peer addresses) {
-                if (check_if_address_peer_ok) {
-                    send_update_pkt();
-                }
-            }
-        }
-    }
-#endif
 
 out_err:
     if (update_packet_to_send) {
@@ -545,9 +533,6 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
 
     HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
               locator_addr_count, hip_get_param_total_len(locator));
-
-    _HIP_DEBUG("The previous addresses to send update request:\n");
-    // hip_print_addresses_to_send_update_request(ha);
 
     // Empty the addresses_to_send_echo_request list before adding the
     // new addresses
