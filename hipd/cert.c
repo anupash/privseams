@@ -274,15 +274,6 @@ out_err:
         free(host_id);
     }
 
-    /* openssl structs */
-#if 0
-    if (algo == HIP_HI_RSA && rsa) {
-        RSA_free(rsa);
-    } else if (algo == HIP_HI_DSA && dsa) {
-        DSA_free(dsa);
-    }
-#endif
-
     /* RSA pubkey */
     if (e_bin) {
         free(e_bin);
@@ -868,16 +859,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
         HIP_IFEL((!X509_REQ_add_extensions(req, extlist)), -1,
                  "Failed to add extensions to the request\n");
     }
-#if 0
-    /* DEBUG PART START for the certificate request */
-    HIP_DEBUG("x.509v3 certificate request in readable format\n\n");
-    HIP_IFEL(!X509_REQ_print_fp(stdout, req), -1,
-             "Failed to print x.509v3 request in human readable format\n");
-    HIP_DEBUG("x.509v3 certificate request in PEM format\n\n");
-    HIP_IFEL((PEM_write_X509_REQ(stdout, req) != 1), -1,
-             "Failed to write the x509 request in PEM to stdout\n");
-    /* DEBUG PART END for the certificate request*/
-#endif
 
     /** NOW WE ARE READY TO CREATE A CERTIFICATE FROM THE REQUEST */
     HIP_DEBUG("Starting the certificate creation\n");
@@ -1009,16 +990,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
 
     HIP_IFEL(!(X509_sign(cert, pkey, digest)), -1,
              "Failed to sign x509v3 certificate\n");
-#if 0
-    /* DEBUG PART START for the certificate */
-    HIP_DEBUG("x.509v3 certificate in readable format\n\n");
-    HIP_IFEL(!X509_print_fp(stdout, cert), -1,
-             "Failed to print x.509v3 in human readable format\n");
-    HIP_DEBUG("x.509v3 certificate in PEM format\n\n");
-    HIP_IFEL((PEM_write_X509(stdout, cert) != 1), -1,
-             "Failed to write the x509 in PEM to stdout\n");
-    /* DEBUG PART END for the certificate */
-#endif
 
     /** DER */
     HIP_IFEL(((der_cert_len = i2d_X509(cert, &der_cert)) < 0), -1,
