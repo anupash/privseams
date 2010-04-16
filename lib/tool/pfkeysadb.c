@@ -66,8 +66,6 @@ int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
     xpl->sadb_x_policy_dir     = direction;
     xpl->sadb_x_policy_id      = 0;
 
-    //xpl->sadb_x_policy_priority = PRIORITY_DEFAULT;
-
     if (cmd == SADB_X_SPDDELETE) {
         goto end;
     }
