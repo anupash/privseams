@@ -783,33 +783,6 @@ int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
     }
 }
 
-#if 0
-/**
- * Validates a requested HIP relay service lifetime. If
- * @c requested_lifetime is smaller than @c hiprelay_min_lifetime then
- * @c granted_lifetime is set to @c hiprelay_min_lifetime. If
- * @c requested_lifetime is greater than @c hiprelay_max_lifetime then
- * @c granted_lifetime is set to @c hiprelay_max_lifetime. Else
- * @c granted_lifetime is set to @c requested_lifetime.
- *
- * @param  requested_lifetime the lifetime that is to be validated.
- * @param  granted_lifetime   a target buffer for the validated lifetime.
- * @return                    -1 if @c requested_lifetime is outside boundaries,
- *                            i.e. is smaller than @c hiprelay_min_lifetime or
- *                            is greater than @c hiprelay_max_lifetime. Zero
- *                            otherwise.
- * @note                      Currently this is just a call back wrapper for
- *                            hip_rvs_validate_lifetime() because RVS and relay
- *                            services share the same lifetimes.
- */
-static int hip_relay_validate_lifetime(uint8_t requested_lifetime,
-                                              uint8_t *granted_lifetime)
-{
-    return hip_rvs_validate_lifetime(requested_lifetime,
-                                     granted_lifetime);
-}
-#endif
-
 /**
  * forward a control packet in relay or rvs mode
  *
@@ -1385,7 +1358,6 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 
         memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
         *dest_port = ntohs(relay_from->port);
-        // *dest_port = relay_from->port;
         HIP_DEBUG("RELAY_FROM port in I. %d \n", *dest_port);
     }
 
@@ -1428,7 +1400,6 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
          * all HMAC keys. See bug id 753 */
         HIP_DEBUG("Full_Relay_HMAC verification failed.\n");
         HIP_DEBUG("Ignoring HMAC verification\n");
-        //return -1;
     }
 
     HIP_DEBUG("RVS_HMAC or Full_Relay verified.\n");
@@ -1476,9 +1447,6 @@ int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
     switch (msg_type) {
     case HIP_R1:
     case HIP_R2:
-        //disable the update and notify message. we need to think about them later
-        // case HIP_UPDATE:
-        // case HIP_NOTIFY:
         HIP_DEBUG_IN6ADDR("the relay to address: ",
                           (struct in6_addr *) &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n",
@@ -1490,7 +1458,6 @@ int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
             memcpy(&entry->local_reflexive_address,
                    &relay_to->address, sizeof(in6_addr_t));
         }
-        //  state = HIP_STATE_NONE;
         err = 1;
         goto out_err;
     }
