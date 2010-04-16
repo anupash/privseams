@@ -113,36 +113,8 @@ static void sig_chld(int signo)
     pid_t child_pid;
     int child_status;     // child exit code
     child_pid = waitpid(0, &child_status, WNOHANG);
-    /* Commented the following line to see if it helps with bug id 884
-     * -miika */
     _HIP_DEBUG("child pid: %d, status: %d\n", child_pid, child_status);
 }
-
-#if 0 /* See bug id 805  */
-/*
- * Close file descriptors except for the standard output and the standard error
- */
-static int close_all_fds_except_stdout_and_stderr(void)
-{
-    /* get maximum file descriptor number that can be opened */
-    struct rlimit rlim;
-    if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
-        HIP_PERROR("getrlimit");
-        return ERR;
-    }
-
-    int fd;     // no C99 :(
-    for (fd = 0; fd < rlim.rlim_cur; fd++) {
-        switch (fd) {
-        case STDOUT_FILENO: break;
-        case STDERR_FILENO: break;
-        default: close(fd);
-        }
-    }
-
-    return OK;
-}
-#endif
 
 /**
  * netdev_address_to_str
@@ -233,10 +205,6 @@ static int run_nsupdate(char *ips, char *hit, int start)
         return ERR;
     } else if (child_pid == 0)   { // CHILD
         char start_str[2];
-#if 0
-        /* Close open sockets since FD_CLOEXEC was not used */
-        close_all_fds_except_stdout_and_stderr();
-#endif
 
         snprintf(start_str, sizeof(start_str), "%i", start);
 
