@@ -289,7 +289,6 @@ static void hip_set_os_dep_variables(void)
         hip_xfrm_set_beet(2);
         hip_xfrm_set_algo_names(0);
     } else {
-        //hip_xfrm_set_beet(1);       /* TUNNEL mode */
         hip_xfrm_set_beet(4);         /* BEET mode */
         hip_xfrm_set_algo_names(1);
     }
@@ -567,8 +566,6 @@ static int hip_init_host_ids(void)
     /* Create default keys if necessary. */
 
     if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
-        //hip_msg_init(user_msg); //already called by hip_msg_alloc()
-
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
                                               NULL, NULL, RSA_KEY_DEFAULT_BITS, DSA_KEY_DEFAULT_BITS),
                  1, "Failed to create keys to %s\n", DEFAULT_CONFIG_DIR);
@@ -580,31 +577,6 @@ static int hip_init_host_ids(void)
     /* DSA keys and RSA anonymous are not loaded by default until bug id
      * 522 is properly solved. Run hipconf add hi default if you want to
      * enable non-default HITs. */
-#if 0
-    /* dsa anon and pub */
-    hip_msg_init(user_msg);
-    if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-                                           0, 1, "dsa", NULL, 0, 0)) {
-        HIP_ERROR("Could not load default keys (DSA)\n");
-        goto out_err;
-    }
-    if (err = hip_handle_add_local_hi(user_msg)) {
-        HIP_ERROR("Adding of keys failed (DSA)\n");
-        goto out_err;
-    }
-
-    /* rsa anon */
-    hip_msg_init(user_msg);
-    if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-                                           1, 1, "rsa", NULL, 0, 0)) {
-        HIP_ERROR("Could not load default keys (RSA anon)\n");
-        goto out_err;
-    }
-    if (err = hip_handle_add_local_hi(user_msg)) {
-        HIP_ERROR("Adding of keys failed (RSA anon)\n");
-        goto out_err;
-    }
-#endif
 
     /* rsa pub */
     hip_msg_init(user_msg);
@@ -777,8 +749,6 @@ void hip_exit(int signal)
     HIP_ERROR("Signal: %d\n", signal);
 
     default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
-    /* Close SAs with all peers */
-    // hip_send_close(NULL, FLUSH_HA_INFO_DB);
 
     if (hipd_msg) {
         free(hipd_msg);
@@ -1119,34 +1089,6 @@ int hipd_init(int flush_ipsec, int killold)
 
 #ifndef CONFIG_HIP_PFKEY
     hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
-#endif
-
-#if 0
-    {
-        int ret_sockopt            = 0, value = 0;
-        socklen_t value_len        = sizeof(value);
-        int ipsec_buf_size         = 200000;
-        socklen_t ipsec_buf_sizeof = sizeof(ipsec_buf_size);
-        ret_sockopt    = getsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
-                                    &value, &value_len);
-        if (ret_sockopt != 0) {
-            HIP_DEBUG("Getting receive buffer size of hip_nl_ipsec.fd failed\n");
-        }
-        ipsec_buf_size = value * 2;
-        HIP_DEBUG("Default setting of receive buffer size for hip_nl_ipsec was %d.\n"
-                  "Setting it to %d.\n", value, ipsec_buf_size);
-        ret_sockopt    = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
-                                    &ipsec_buf_size, ipsec_buf_sizeof);
-        if (ret_sockopt != 0) {
-            HIP_DEBUG("Setting receive buffer size of hip_nl_ipsec.fd failed\n");
-        }
-        ret_sockopt    = 0;
-        ret_sockopt    = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
-                                    &ipsec_buf_size, ipsec_buf_sizeof);
-        if (ret_sockopt != 0) {
-            HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
-        }
-    }
 #endif
 
     HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");
