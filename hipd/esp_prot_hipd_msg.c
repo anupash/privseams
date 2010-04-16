@@ -260,7 +260,6 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
         param = hip_get_next_param(msg, param);
     }
 
-    //param = hip_get_next_param(msg, param);
     root_length            = *((int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("root_length: %i\n", root_length);
     entry->esp_root_length = root_length;
@@ -278,7 +277,6 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
         }
     }
 
-    //param = hip_get_next_param(msg, param);
     soft_update = *((int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("soft_update: %i\n", soft_update);
 

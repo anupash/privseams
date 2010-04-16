@@ -424,10 +424,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
     HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
              "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
-    if (!hip_controls_sane(ntohs(close_ack->control), mask
-                           //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
-                           // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
-                           )) {
+    if (!hip_controls_sane(ntohs(close_ack->control), mask)) {
         HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
                   ntohs(close_ack->control));
         goto out_err;

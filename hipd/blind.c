@@ -274,8 +274,6 @@ int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit)
     set_hit_prefix(blind_hit);
     HIP_DEBUG_HIT("HIT after prefix: ", blind_hit);
 
-    //memcpy(blind_hit, digest, sizeof(struct in6_addr));
-
 out_err:
     return err;
 }
@@ -716,9 +714,6 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
         HIP_IFEL(!(pz = hip_get_param(msg, HIP_PARAM_PUZZLE)), -1,
                  "Internal error\n");
 
-        // FIX ME: this does not always work:
-        //get_random_bytes(pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
-
         /* hardcode kludge */
         pz->opaque[0] = 'H';
         pz->opaque[1] = 'I';
@@ -740,8 +735,6 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
     return msg;
 
 out_err:
-    //if (host_id_pub)
-    //    free(host_id_pub);
     if (msg) {
         free(msg);
     }

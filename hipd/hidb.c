@@ -778,7 +778,6 @@ int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
     HIP_READ_LOCK_DB(db);
 
     entry       = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
-    //HIP_IFEL(!entry, "Host ID not found\n", -1);
     HIP_IFE(!entry, -1);
 
     host_id_len = hip_get_param_total_len(entry->host_id);

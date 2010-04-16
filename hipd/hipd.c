@@ -501,7 +501,6 @@ static int hipd_main(int argc, char *argv[])
         FD_SET(hip_user_sock, &read_fdset);
         FD_SET(hip_nl_ipsec.fd, &read_fdset);
         FD_SET(hip_icmp_sock, &read_fdset);
-        /* FD_SET(hip_firewall_sock, &read_fdset); */
         hip_firewall_sock = hip_user_sock;
 
         if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER) {
@@ -513,9 +512,6 @@ static int hipd_main(int argc, char *argv[])
 
         timeout.tv_sec  = HIP_SELECT_TIMEOUT;
         timeout.tv_usec = 0;
-
-        //HIP_DEBUG("select loop value hip_raw_socket_v4 = %d \n",hip_raw_sock_v4);
-        /* wait for socket activity */
 
 #ifdef CONFIG_HIP_FIREWALL
         if (hip_firewall_status < 0) {
