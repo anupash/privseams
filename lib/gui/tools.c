@@ -501,7 +501,6 @@ int group_remote_create(const char *name)
             g->lightweight = lw;
 
             pthread_create(&pt, NULL, _group_remote_add_thread, g);
-            //pthread_join(pt, NULL);
             err            = 0;
         } else {err = -1;
         }
@@ -968,12 +967,6 @@ void edit_apply(void)
             NAMECPY(ud.old_name, r->name);
             NAMECPY(ud.new_name, str);
             NAMECPY(r->name, str);
-#if 0
-            ps = (char *) gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_URL)));
-            URLCPY(r->url, ps);
-            ps = (char *) gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_PORT)));
-            URLCPY(r->port, ps);
-#endif
 
             ud.depth         = 2;
             ud.indices_first = -1;

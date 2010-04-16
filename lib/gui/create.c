@@ -367,8 +367,6 @@ static int _create_status_icon(void)
 
     /* When user right clicks status icon. */
     g_signal_connect(status_icon, "popup-menu", G_CALLBACK(e_menu_status_icon), (gpointer) "popup-menu");
-    /* When user double clicks status icon. */
-//      g_signal_connect(status_icon, "activate", G_CALLBACK(e_button), (gpointer)IDB_SYSTRAY);
 
     /* Create menu for status icon. */
     w     = gtk_menu_new();
@@ -442,12 +440,8 @@ static int _create_remote_list(GtkWidget *parent)
     model  = gtk_tree_store_new(1, G_TYPE_STRING);
 
     list   = gtk_tree_view_new();
-    /* This signal occurs when user double clicks item in list. */
-//      g_signal_connect(list, "row-activated", G_CALLBACK(e_row_activated), (gpointer)"remote-hit-list");
     /* Check when user changes selection in list. */
     g_signal_connect(list, "cursor-changed", G_CALLBACK(e_cursor_changed), (gpointer) "remote-hit-list");
-    /* This could be used to example popup a menu when user click right mouse button. */
-//  g_signal_connect(list, "button-press-event", G_CALLBACK(e_button_press), (gpointer)"remote-hit-list");
     widget_set(ID_RLISTVIEW, list);
 
     /* Setup list for dragndrop. */
@@ -910,32 +904,6 @@ int create_content_nhdlg(void)
     hb  = gtk_hbox_new(FALSE, 1);
     gtk_box_pack_start(GTK_BOX(vb2), hb, FALSE, FALSE, 1);
     gtk_widget_show(GTK_WIDGET(hb));
-
-#if 0
-    w = gtk_label_new(lang_get("nhdlg-url"));
-    gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
-    gtk_widget_show(GTK_WIDGET(w));
-    w = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(w), "");
-    gtk_box_pack_start(GTK_BOX(hb), w, TRUE, TRUE, 5);
-    gtk_entry_set_max_length(GTK_ENTRY(w), MAX_URL_LEN);
-    gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
-    gtk_widget_show(GTK_WIDGET(w));
-    widget_set(ID_NH_URL, w);
-
-
-    w = gtk_label_new(lang_get("nhdlg-port"));
-    gtk_box_pack_start(GTK_BOX(hb), w, FALSE, FALSE, 5);
-    gtk_widget_show(GTK_WIDGET(w));
-    w = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(w), "0");
-    gtk_box_pack_start(GTK_BOX(hb), w, FALSE, TRUE, 5);
-    gtk_widget_set_size_request(GTK_WIDGET(w), 70, -1);
-    gtk_entry_set_max_length(GTK_ENTRY(w), 8);
-    gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
-    gtk_widget_show(GTK_WIDGET(w));
-    widget_set(ID_NH_PORT, w);
-#endif
 
     frame = gtk_frame_new(NULL);
     gtk_frame_set_label(GTK_FRAME(frame), lang_get("nhdlg-g-info"));

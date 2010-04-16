@@ -124,7 +124,6 @@ int gui_init(void)
 
     /* Set default icon. */
     gtk_window_set_default_icon_from_file(HIP_DEBIAN_DIR_PIXMAPS "/hipmanager.png", NULL);
-//      gtk_window_set_default_icon_name("hipmanager.png");
 
     /* Initialize tooltips. */
     widget_set(ID_TOOLTIPS, gtk_tooltips_new());
@@ -221,7 +220,6 @@ void gui_main(void)
 
     /* Clear HIT/group edit. */
     edit_group_remote(lang_get("default-group-name"));
-//      edit_reset();
 
     /* Close all groups as default. */
     gtk_tree_view_collapse_all(GTK_TREE_VIEW(widget(ID_RLISTVIEW)));
@@ -304,7 +302,6 @@ int gui_hit_remote_ask(HIT_Remote *hit, int inout)
     /* If manual input wanted. */
     if (inout == 2) {
         gtk_editable_set_editable(widget(ID_NH_HIT), TRUE);
-//              gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_NH_HIT)), TRUE);
         gtk_entry_set_text(GTK_ENTRY(widget(ID_NH_HIT)),
                            "2001:0010:0000:0000:0000:0000:0000:0000");
         gtk_editable_select_region(widget(ID_NH_HIT), 0, -1);
@@ -313,7 +310,6 @@ int gui_hit_remote_ask(HIT_Remote *hit, int inout)
         memset(hit, 0, sizeof(HIT_Remote));
     } else {
         gtk_editable_set_editable(widget(ID_NH_HIT), FALSE);
-//              gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_NH_HIT)), FALSE);
         print_hit_to_buffer(phit, &hit->hit);
         gtk_entry_set_text(GTK_ENTRY(widget(ID_NH_HIT)), phit);
         gtk_entry_set_text(GTK_ENTRY(widget(ID_NH_NAME)), hit->name);
@@ -360,7 +356,6 @@ int gui_hit_remote_ask(HIT_Remote *hit, int inout)
                 gtk_widget_destroy(GTK_WIDGET(d));
             } else if (check_name_hit(hit->name, NULL))   {
                 pthread_create(&pt, NULL, _hit_remote_add_thread, hit);
-                //pthread_join(pt, NULL);
                 break;
             }
         } else if (check_name_hit(hit->name, NULL))   {
