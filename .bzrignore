@@ -35,7 +35,7 @@ depcomp
 doc/Doxyfile
 doc/HOWTO.html
 doc/HOWTO.txt
-doxy/
+doc/doxy/
 firewall/hipfw
 hipd/hipd
 hipl-main.tar.gz
