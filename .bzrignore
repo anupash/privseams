@@ -8,7 +8,6 @@
 .libs
 .project
 .pydevproject
-Doxyfile
 Makefile
 Makefile.in
 TAGS
@@ -33,6 +32,7 @@ debian/hipl
 debian/hipl.debhelper.log
 debian/hipl.substvars
 depcomp
+doc/Doxyfile
 doc/HOWTO.html
 doc/HOWTO.txt
 doxy/
