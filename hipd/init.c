@@ -25,6 +25,7 @@
 #include "nsupdate.h"
 #include "pkt_handling.h"
 #include "output.h"
+#include "user.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "lib/core/hip_capability.h"
@@ -1143,6 +1144,8 @@ void hip_exit(int signal)
     hip_uninit_services();
 
     hip_uninit_handle_functions();
+
+    hip_user_uninit_handles();
 
     hip_uninit_maint_functions();
 

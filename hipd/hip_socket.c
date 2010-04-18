@@ -82,17 +82,43 @@ static int hip_handle_nat_input(struct hip_packet_context *ctx)
 
 static int hip_handle_user_sock(struct hip_packet_context *ctx)
 {
-    int err = 0;
+    int err = 0, send_response = 0, n = 0, len = 0;
+    uint8_t msg_type = 0;
     struct sockaddr_in6 app_src;
 
-    if (hip_read_user_control_msg(hip_user_sock,
-                                  ctx->input_msg,
-                                  &app_src)) {
-        HIP_ERROR("Reading user msg failed\n");
-    } else {
-        err = hip_handle_user_msg(ctx->input_msg, &app_src);
+
+    HIP_IFEL(hip_read_user_control_msg(hip_user_sock,
+                                       ctx->input_msg,
+                                       &app_src),
+             -1,
+             "Reading user msg failed\n");
+
+    msg_type      = hip_get_msg_type(ctx->input_msg);
+    send_response = hip_get_msg_response(ctx->input_msg);
+
+    if (hip_user_run_handles(msg_type, ctx->input_msg, &app_src)) {
+        err = hip_handle_user_msg(ctx->input_msg, &app_src, &send_response);
     }
 
+    if (send_response) {
+        HIP_DEBUG("Send response\n");
+        if (err) {
+            hip_set_msg_err(ctx->input_msg, 1);
+        }
+        len = hip_get_msg_total_len(ctx->input_msg);
+        HIP_DEBUG("Sending message (type=%d) response to port %d \n",
+                  hip_get_msg_type(ctx->input_msg), ntohs(app_src.sin6_port));
+        HIP_DEBUG_HIT("To address", &app_src.sin6_addr);
+        n   = hip_sendto_user(ctx->input_msg, (struct sockaddr *)  &app_src);
+        if (n != len) {
+            err = -1;
+        } else {
+            HIP_DEBUG("Response sent ok\n");
+        }
+    } else {
+        HIP_DEBUG("No response sent\n");
+    }
+out_err:
     return err;
 }
 

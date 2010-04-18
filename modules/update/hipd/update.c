@@ -20,6 +20,7 @@
 #include "hipd/netdev.h"
 #include "hipd/nsupdate.h"
 #include "hipd/pkt_handling.h"
+#include "hipd/user.h"
 #include "update_legacy.h"
 #include "hipd/esp_prot_hipd_msg.h"
 
@@ -577,7 +578,6 @@ int hip_send_locators_to_all_peers(void)
     }
 
 out_err:
-
     /* Update DNS data in hit-to-ip domain name. This is done after
      * sending UPDATE packets. See the discussion for the reasoning:
      * http://www.freelists.org/post/hipl-users/HIP-UPDATE-select-error-Interrupted-system-call,2 */
@@ -772,6 +772,23 @@ static void hip_handle_third_update_packet(hip_ha_t *ha,
     // Set active addresses
     ipv6_addr_copy(&ha->our_addr, src_addr);
     ipv6_addr_copy(&ha->peer_addr, dst_addr);
+}
+
+/**
+ * hip_update_manual_update
+ *
+ * Thin wrapper function around hip_send_locators_to_all_peers. Needed for
+ * registration as user message handle function.
+ *
+ * @param *msg unused, needed due to type check of handle functions
+ * @param *src unused, needed due to type check of handle functions
+ *
+ * @return zero on success or negative on failure
+ */
+static int hip_update_manual_update(hip_common_t *msg, struct sockaddr_in6 *src)
+{
+    HIP_DEBUG("Manual UPDATE triggered.\n");
+    return hip_send_locators_to_all_peers();
 }
 
 static int hip_update_maintenance(void)
@@ -1125,6 +1142,23 @@ int hip_update_init(void)
                                           &hip_update_handle_packet,
                                           30000),
              -1, "Error on registering UPDATE handle function.\n");
+
+    HIP_IFEL(hip_user_register_handle(HIP_MSG_MANUAL_UPDATE_PACKET,
+                                      &hip_update_manual_update,
+                                      20000),
+             -1, "Error on registering UPDATE user message handle function.\n");
+#if 0
+    case HIP_MSG_LOCATOR_GET:
+        HIP_DEBUG("Got a request for locators\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_LOCATOR_GET, 0), -1,
+                 "Failed to build user message header.: %s\n",
+                 strerror(err));
+        if ((err = hip_build_locators_old(msg, 0)) < 0) {
+            HIP_DEBUG("LOCATOR parameter building failed\n");
+        }
+
+#endif
 
     HIP_IFEL(hip_register_maint_function(&hip_update_maintenance, 40000),
              -1,

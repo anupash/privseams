@@ -20,19 +20,170 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Tao Wan  <twan_cc.hut.fi>
  * @author  Rene Hummen
+ * @author  Tim Just
  * @todo split the gigantic hip_handle_user_msg() into an array of handler functions
  */
 
 #define _BSD_SOURCE
 
 #include "config.h"
-#include "accessor.h"
 #include "user.h"
+#include "accessor.h"
 #include "esp_prot_anchordb.h"
-#include "nsupdate.h"
-#include "lib/core/hostid.h"
-#include "lib/core/hip_udp.h"
 #include "hipd.h"
+#include "nsupdate.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/hostid.h"
+#include "lib/core/icomm.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/state.h"
+#include "lib/modularization/lmod.h"
+
+struct usr_msg_handle {
+    uint16_t priority;
+    int    (*func_ptr)(hip_common_t *msg, struct sockaddr_in6 *src);
+};
+
+static hip_ll_t *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
+
+/**
+ * hip_register_handle_function
+ *
+ * Register a function for handling of the specified combination from packet
+ * type and host association state.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *handle_function Pointer to the function which should be called
+ *                         when the combination of packet type and host
+ *                         association state is reached.
+ * @param priority Execution priority for the handle function.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int hip_user_register_handle(const uint8_t msg_type,
+                             int (*handle_func)(hip_common_t *msg,
+                                                struct sockaddr_in6 *src),
+                             const uint16_t priority)
+{
+    int err = 0;
+    struct usr_msg_handle *new_entry = NULL;
+
+    HIP_IFEL(msg_type > HIP_MSG_ROOT_MAX,
+             -1,
+             "Maximum message type exceeded.\n");
+
+    HIP_IFEL(!(new_entry = malloc(sizeof(struct usr_msg_handle))),
+             -1,
+             "Error on allocating memory for a handle function entry.\n");
+
+    new_entry->priority    = priority;
+    new_entry->func_ptr    = handle_func;
+
+    hip_user_msg_handles[msg_type] =
+            lmod_register_function(hip_user_msg_handles[msg_type],
+                                   new_entry,
+                                   priority);
+    if (!hip_user_msg_handles[msg_type]) {
+        HIP_ERROR("Error on registering a handle function.\n");
+        err = -1;
+    }
+out_err:
+    return err;
+}
+
+/**
+ * hip_unregister_handle_function
+ *
+ * Unregister a function for handling of the specified combination from packet
+ * type and host association state.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *handle_function Pointer to the function which should be unregistered.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int hip_user_unregister_handle(const uint8_t msg_type,
+                               const int (*handle_func)(hip_common_t *msg,
+                                                        struct sockaddr_in6 *src))
+{
+    int err = 0;
+
+    HIP_IFEL(msg_type > HIP_MSG_ROOT_MAX,
+             -1,
+             "Maximum message type exceeded.\n");
+
+    err = lmod_unregister_function(hip_user_msg_handles[msg_type],
+                                   handle_func);
+
+out_err:
+    return err;
+}
+
+/**
+ * hip_run_handle_functions
+ *
+ * Run all handle functions for specified combination from packet type and host
+ * association state.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx The packet context containing the received message, source and
+ *             destination address, the ports and the corresponding entry from
+ *             the host association database.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int hip_user_run_handles(const uint8_t msg_type,
+                         hip_common_t *msg,
+                         struct sockaddr_in6 *src)
+{
+    int            err  = 0;
+    hip_ll_node_t *iter = NULL;
+
+    HIP_IFEL(msg_type > HIP_MSG_ROOT_MAX,
+             -1,
+             "Maximum message type exceeded.\n");
+
+    if (!hip_user_msg_handles[msg_type] ||
+        !hip_ll_get_size(hip_user_msg_handles[msg_type])) {
+        HIP_DEBUG("User message (type: %d) not dynamically handled -> " \
+                  "trigger static handling.\n", msg_type);
+        return 1;
+    }
+
+    while ((iter = hip_ll_iterate(hip_user_msg_handles[msg_type],
+                                  iter))) {
+
+        ((struct usr_msg_handle *) iter->ptr)->func_ptr(msg, src);
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * hip_uninit_handle_functions
+ *
+ * Free the memory used for storage of handle functions.
+ *
+ */
+void hip_user_uninit_handles(void)
+{
+    int i;
+
+    for (i = 0; i < HIP_MSG_ROOT_MAX; i++) {
+        if (hip_user_msg_handles[i]) {
+            hip_ll_uninit(hip_user_msg_handles[i], free);
+            free(hip_user_msg_handles[i]);
+        }
+    }
+}
+
 
 /**
  * send a response message back to the origin
@@ -58,14 +209,15 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
  * @param  src the origin of the sender
  * @return zero on success, or negative error value on error.
  */
-int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
+int hip_handle_user_msg(hip_common_t *msg,
+                        struct sockaddr_in6 *src,
+                        int *send_response)
 {
     hip_hit_t *src_hit           = NULL, *dst_hit = NULL;
     hip_ha_t *entry              = NULL;
-    int err                      = 0, msg_type = 0, n = 0, len = 0, reti = 0;
+    int err                      = 0, msg_type = 0, n = 0, reti = 0;
     int access_ok                = 0, is_root = 0;
     struct hip_tlv_common *param = NULL;
-    int send_response            = 0;
 
     HIP_ASSERT(src->sin6_family == AF_INET6);
     HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -76,8 +228,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         HIP_ERROR("HIP socket option was invalid.\n");
         goto out_err;
     }
-
-    send_response = hip_get_msg_response(msg);
 
     msg_type      = hip_get_msg_type(msg);
 
@@ -122,7 +272,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         }
         break;
     case HIP_MSG_RST:
-        //send_response = 0;
+        //*send_response = 0;
         err                = hip_send_close(msg, 1);
         break;
     case HIP_MSG_BOS:
@@ -135,19 +285,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                  "Error when setting daemon NAT status to \"on\"\n");
         HIP_DEBUG("Recreate all R1s\n");
         hip_recreate_all_precreated_r1_packets();
-        break;
-        /** @todo Remove dependency to UPDATE code */
-#if 0
-    case HIP_MSG_LOCATOR_GET:
-        HIP_DEBUG("Got a request for locators\n");
-        hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_LOCATOR_GET, 0), -1,
-                 "Failed to build user message header.: %s\n",
-                 strerror(err));
-        if ((err = hip_build_locators_old(msg, 0)) < 0) {
-            HIP_DEBUG("LOCATOR parameter building failed\n");
-        }
-#endif
         break;
     case HIP_MSG_SET_LOCATOR_ON:
         HIP_DEBUG("Setting LOCATOR ON\n");
@@ -164,15 +301,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                   hip_locator_status, HIP_MSG_SET_LOCATOR_OFF);
         hip_recreate_all_precreated_r1_packets();
         break;
-    /** @todo Modularize user message handling */
-#if 0
-    case HIP_MSG_HEARTBEAT:
-        heartbeat         = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
-        hip_icmp_interval = heartbeat->heartbeat;
-        heartbeat_counter = hip_icmp_interval;
-        HIP_DEBUG("Received heartbeat interval (%d seconds)\n", hip_icmp_interval);
-        break;
-#endif
     case HIP_MSG_SET_DEBUG_ALL:
         /* Displays all debugging messages. */
         _HIP_DEBUG("Handling DEBUG ALL user message.\n");
@@ -216,13 +344,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         err = hip_opp_get_peer_hit(msg, src);
         if (err) {
             _HIP_ERROR("get pseudo hit failed.\n");
-            //send_response = 1;
+            //*send_response = 1;
             if (err == -11) {           /* immediate fallback, do not pass */
                 err = 0;
             }
             goto out_err;
         } else {
-            //send_response = 0;
+            //*send_response = 0;
         }
         /* skip sending of return message; will be sent later in R1 */
         goto out_err;
@@ -648,7 +776,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
             HIP_DEBUG("hipconf datapacket ok (sent %d bytes)\n", n);
             break;
         }
-        send_response = 1;
+        *send_response = 1;
         break;
     }
 
@@ -672,7 +800,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         } else {
             HIP_DEBUG("hipconf datapacket ok (sent %d bytes)\n", n);
         }
-        send_response = 1;
+        *send_response = 1;
         break;
     }
 
@@ -694,7 +822,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         err           = hip_build_host_id_and_signature(msg, &data_hit);
         msg->type_hdr = original_type;
 
-        send_response = 1;
+        *send_response = 1;
         goto out_err;
     }
     break;
@@ -707,7 +835,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         break;
     case HIP_MSG_USERSPACE_IPSEC:
         HIP_DUMP_MSG(msg);
-        //send_response = 0;
+        //*send_response = 0;
         err = hip_userspace_ipsec_activate(msg);
         break;
     case HIP_MSG_RESTART_DUMMY_INTERFACE:
@@ -896,37 +1024,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                  -1, "Build param failed\n");
         break;
     }
-        /** @todo Remove dependency to UPDATE code */
-#if 0
-    case HIP_MSG_MANUAL_UPDATE_PACKET:
-        /// @todo : 13.11.2009: Should we use the msg?
-        err = hip_send_locators_to_all_peers();
-        break;
-#endif
     default:
         HIP_ERROR("Unknown socket option (%d)\n", msg_type);
         err = -ESOCKTNOSUPPORT;
     }
 
 out_err:
-    if (send_response) {
-        HIP_DEBUG("Send response\n");
-        if (err) {
-            hip_set_msg_err(msg, 1);
-        }
-        len = hip_get_msg_total_len(msg);
-        HIP_DEBUG("Sending message (type=%d) response to port %d \n",
-                  hip_get_msg_type(msg), ntohs(src->sin6_port));
-        HIP_DEBUG_HIT("To address", &src->sin6_addr);
-        n   = hip_sendto_user(msg, (struct sockaddr *)  src);
-        if (n != len) {
-            err = -1;
-        } else {
-            HIP_DEBUG("Response sent ok\n");
-        }
-    } else {
-        HIP_DEBUG("No response sent\n");
-    }
-
     return err;
 }

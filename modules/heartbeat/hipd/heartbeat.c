@@ -389,6 +389,21 @@ static int hip_heartbeat_maintenance(void)
     return 0;
 }
 
+static int hip_heartbeat_handle_usr_msg(hip_common_t *msg,
+                                        struct sockaddr_in6 *src)
+{
+    int err = 0;
+
+#if 0
+    heartbeat         = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
+    hip_icmp_interval = heartbeat->heartbeat;
+    heartbeat_counter = hip_icmp_interval;
+    HIP_DEBUG("Received heartbeat interval (%d seconds)\n", hip_icmp_interval);
+#endif
+
+    return err;
+}
+
 static int hip_heartbeat_init_state(struct modular_state *state)
 {
     int err = 0;
@@ -444,6 +459,12 @@ int hip_heartbeat_init(void)
     HIP_IFEL(lmod_register_state_init_function(&hip_heartbeat_init_state),
              -1,
              "Error on registration of hip_heartbeat_init_state().\n");
+
+    HIP_IFEL(hip_user_register_handle(HIP_MSG_HEARTBEAT,
+                                      &hip_heartbeat_handle_usr_msg,
+                                      20000),
+             -1,
+             "Error on registering HEARTBEAT user message handle function.\n");
 
 out_err:
     return err;
