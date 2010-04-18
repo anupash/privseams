@@ -24,6 +24,10 @@
 #include "lib/core/solve.h"
 #include "lib/tool/checksum.h"
 
+#ifdef CONFIG_HIP_MIDAUTH
+#include "pisa.h"
+#endif
+
 enum number_dh_keys_t { ONE, TWO };
 
 enum number_dh_keys_t number_dh_keys = TWO;
