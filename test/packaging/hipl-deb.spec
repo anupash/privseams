@@ -221,7 +221,7 @@ rm -rf %{buildroot}
 %config /etc/init.d/hipfw
 
 %files doc
-%doc doc/HOWTO.txt doc/howto-html
+%doc doc/HOWTO.txt doc/HOWTO.html
 
 %files all
 %doc COPYING
