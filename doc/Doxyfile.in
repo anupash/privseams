@@ -487,19 +487,19 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                  = @abs_srcdir@/agent           \
-                         @abs_srcdir@/doc             \
-                         @abs_srcdir@/firewall        \
-                         @abs_srcdir@/hipd            \
-                         @abs_srcdir@/test            \
-                         @abs_srcdir@/tools           \
-                         @abs_srcdir@/lib/conf        \
-                         @abs_srcdir@/lib/core        \
-                         @abs_srcdir@/lib/dht         \
-                         @abs_srcdir@/lib/gui         \
-                         @abs_srcdir@/lib/ipsec       \
-                         @abs_srcdir@/lib/opphip      \
-                         @abs_srcdir@/lib/tool        \
+INPUT                  = @abs_top_srcdir@/agent           \
+                         @abs_top_srcdir@/doc             \
+                         @abs_top_srcdir@/firewall        \
+                         @abs_top_srcdir@/hipd            \
+                         @abs_top_srcdir@/test            \
+                         @abs_top_srcdir@/tools           \
+                         @abs_top_srcdir@/lib/conf        \
+                         @abs_top_srcdir@/lib/core        \
+                         @abs_top_srcdir@/lib/dht         \
+                         @abs_top_srcdir@/lib/gui         \
+                         @abs_top_srcdir@/lib/ipsec       \
+                         @abs_top_srcdir@/lib/opphip      \
+                         @abs_top_srcdir@/lib/tool        \
 
 # This tag can be used to specify the character encoding of the source files that
 # doxygen parses. Internally doxygen uses the UTF-8 encoding, which is also the default
