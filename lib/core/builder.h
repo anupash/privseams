@@ -114,13 +114,13 @@ int hip_build_param_puzzle(struct hip_common *,
                            uint8_t,
                            uint32_t,
                            uint64_t);
-#ifdef CONFIG_HIP_MIDAUTH
+
 int hip_build_param_challenge_request(struct hip_common *,
                                       uint8_t,
                                       uint8_t,
                                       uint8_t *,
                                       uint8_t);
-#endif
+
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 
 int hip_build_param_seq(struct hip_common *, uint32_t);
@@ -136,11 +136,11 @@ int
         hip_build_param_solution(struct hip_common *,
                                  struct hip_puzzle *,
                                  uint64_t);
-#ifdef CONFIG_HIP_MIDAUTH
+
 int hip_build_param_challenge_response(struct hip_common *,
                                        struct hip_challenge_request *,
                                        uint64_t);
-#endif
+
 int hip_build_param(struct hip_common *, const void *);
 void hip_set_msg_response(struct hip_common *msg, uint8_t on);
 uint8_t hip_get_msg_response(struct hip_common *msg);
