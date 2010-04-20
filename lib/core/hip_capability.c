@@ -74,8 +74,6 @@ static int hip_user_to_uid(char *name)
 
 #define _LINUX_CAPABILITY_VERSION_HIPL  0x19980330
 
-#define _LINUX_CAPABILITY_VERSION_HIPL  0x19980330
-
 /**
  * lower the privileges of the running process
  *
