@@ -38,6 +38,9 @@
  */
 #define HIP_DAEMON_LOCK_FILE     HIPL_LOCKDIR    "/hipd.lock"
 
+/** Maximum size of a modprobe command line */
+#define MODPROBE_MAX_LINE       64
+
 /* the /etc/hip/dhtservers file */
 #define HIPL_DHTSERVERS_FILE     HIPL_SYSCONFDIR "/dhtservers"
 
@@ -288,7 +291,7 @@ static char *kernel_net_mod[] = {
 static int hip_probe_kernel_modules(void)
 {
     int count;
-    char cmd[64];
+    char cmd[MODPROBE_MAX_LINE];
     int net_total, crypto_total;
 
     net_total    = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
@@ -323,6 +326,28 @@ static int hip_probe_kernel_modules(void)
     }
 
     return 0;
+}
+
+/**
+ * Cleanup/unload the kernel modules on hipd exit.
+ * Unused for now because of unprivileged executions.
+ * @todo Make hip_exit call it with root privileges in order to clean up.
+ */
+static void __attribute__((unused)) hip_remove_kernel_modules(void) {
+    char **mods[] = {kernel_crypto_mod, kernel_net_mod};
+    char cmd[MODPROBE_MAX_LINE];
+    int count[2], type, i;
+
+    count[0] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
+    count[1] = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
+
+    for (type = 0; type < 2; type++) {
+        for (i = 0; i < count[type]; i++) {
+            HIP_DEBUG("Removing %s\n", mods[type][i]);
+            snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s", mods[type][i]);
+            system(cmd);
+        }
+    }
 }
 
 /**
