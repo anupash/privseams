@@ -72,7 +72,7 @@ static int hip_user_to_uid(char *name)
 
 #ifdef CONFIG_HIP_ALTSEP
 
-#define _LINUX_CAPABILITY_VERSION_HIPL  0x19980330
+#define LINUX_CAPABILITY_VERSION_HIPL  0x19980330
 
 /**
  * lower the privileges of the running process
@@ -88,7 +88,7 @@ int hip_set_lowcapability(int run_as_sudo)
     struct __user_cap_data_struct data;
 
     header.pid     = 0;
-    header.version = _LINUX_CAPABILITY_VERSION_HIPL;
+    header.version = LINUX_CAPABILITY_VERSION_HIPL;
     data.effective = data.permitted = data.inheritable = 0;
 
     HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
