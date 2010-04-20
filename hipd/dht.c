@@ -366,9 +366,6 @@ static int hip_prepare_send_cert_put(unsigned char *key,
     return 0;
 }
 
-#endif /* CONFIG_HIP_AGENT */
-
-#ifdef CONFIG_HIP_AGENT
 /**
  * hip_sqlite_callback - callback function called by sqliteselect
  *                       The function processes the data returned by select
