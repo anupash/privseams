@@ -2514,6 +2514,7 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
     return err;
 }
 
+#ifdef CONFIG_HIP_MIDAUTH
 /**
  * Build and append a HIP challenge_request to the message.
  *
@@ -2530,7 +2531,6 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
  *
  * @return zero for success, or non-zero on error
  */
-#ifdef CONFIG_HIP_MIDAUTH
 int hip_build_param_challenge_request(struct hip_common *msg,
                                       uint8_t val_K,
                                       uint8_t lifetime,
@@ -2560,6 +2560,46 @@ int hip_build_param_challenge_request(struct hip_common *msg,
     return err;
 }
 
+
+/**
+ * Build and append a HIP solution into the message.
+ *
+ * The puzzle mechanism assumes that every value is in network byte order
+ * except for the hip_birthday_cookie.cv union, where the value is in
+ * host byte order. This is an exception to the normal builder rules, where
+ * input arguments are normally always in host byte order.
+ *
+ * @param msg the message where the solution is to be appended
+ * @param pz values from the corresponding hip_challenge_request copied to the solution
+ * @param val_J J value for the solution (in host byte order)
+ *
+ * @return zero for success, or non-zero on error
+ */
+int hip_build_param_challenge_response(struct hip_common *msg, struct hip_challenge_request *pz,
+                                       uint64_t val_J)
+{
+    struct hip_challenge_response cookie;
+    int err = 0, opaque_len = 0;
+
+    /* note: the length cannot be calculated with calc_param_len() */
+    hip_set_param_contents_len((struct hip_tlv_common *) &cookie,
+                               sizeof(struct hip_challenge_response) -
+                               sizeof(struct hip_tlv_common));
+    /* Type 2 (in R1) or 3 (in I2) */
+    hip_set_param_type((struct hip_tlv_common *) &cookie, HIP_PARAM_CHALLENGE_RESPONSE);
+
+    cookie.J        = hton64(val_J);
+    cookie.K        = pz->K;
+    cookie.lifetime = pz->K;
+    opaque_len      = (sizeof(pz->opaque) / sizeof(pz->opaque[0]));
+    memcpy(&cookie.opaque, pz->opaque, opaque_len);
+
+    err = hip_build_generic_param(msg,
+                                  &cookie,
+                                  sizeof(struct hip_tlv_common),
+                                  hip_get_param_contents_direct(&cookie));
+    return err;
+}
 #endif /* CONFIG_HIP_MIDAUTH */
 
 /**
@@ -2599,49 +2639,6 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
                                   hip_get_param_contents_direct(&cookie));
     return err;
 }
-
-/**
- * Build and append a HIP solution into the message.
- *
- * The puzzle mechanism assumes that every value is in network byte order
- * except for the hip_birthday_cookie.cv union, where the value is in
- * host byte order. This is an exception to the normal builder rules, where
- * input arguments are normally always in host byte order.
- *
- * @param msg the message where the solution is to be appended
- * @param pz values from the corresponding hip_challenge_request copied to the solution
- * @param val_J J value for the solution (in host byte order)
- *
- * @return zero for success, or non-zero on error
- */
-#ifdef CONFIG_HIP_MIDAUTH
-int hip_build_param_challenge_response(struct hip_common *msg, struct hip_challenge_request *pz,
-                                       uint64_t val_J)
-{
-    struct hip_challenge_response cookie;
-    int err = 0, opaque_len = 0;
-
-    /* note: the length cannot be calculated with calc_param_len() */
-    hip_set_param_contents_len((struct hip_tlv_common *) &cookie,
-                               sizeof(struct hip_challenge_response) -
-                               sizeof(struct hip_tlv_common));
-    /* Type 2 (in R1) or 3 (in I2) */
-    hip_set_param_type((struct hip_tlv_common *) &cookie, HIP_PARAM_CHALLENGE_RESPONSE);
-
-    cookie.J        = hton64(val_J);
-    cookie.K        = pz->K;
-    cookie.lifetime = pz->K;
-    opaque_len      = (sizeof(pz->opaque) / sizeof(pz->opaque[0]));
-    memcpy(&cookie.opaque, pz->opaque, opaque_len);
-
-    err = hip_build_generic_param(msg,
-                                  &cookie,
-                                  sizeof(struct hip_tlv_common),
-                                  hip_get_param_contents_direct(&cookie));
-    return err;
-}
-
-#endif /* CONFIG_HIP_MIDAUTH */
 
 /**
  * Fill HIP DH contents (excludes type and length fields) with one or
