@@ -448,7 +448,7 @@ doc/HOWTO.txt: doc/HOWTO.xml
 
 CLEANFILES += doc/HOWTO.html doc/HOWTO.txt
 clean-local:
-	rm -rf doxy
+	rm -rf doc/doxy
 
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
