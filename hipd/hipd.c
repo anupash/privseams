@@ -154,9 +154,6 @@ int hip_wait_addr_changes_to_stabilize       = 1;
 
 int hip_use_opptcp                           = 0; // false
 int hip_use_hi3                              = 0; // false
-#ifdef CONFIG_HIP_AGENT
-sqlite3 *daemon_db;
-#endif
 
 /* the opp tcp */
 
@@ -201,6 +198,9 @@ int hip_send_agent(struct hip_common *msg)
 }
 
 #ifdef CONFIG_HIP_AGENT
+
+sqlite3 *daemon_db;
+
 /**
  * add_cert_and_hits_to_db - Adds information recieved from the agent to
  * the daemon database
