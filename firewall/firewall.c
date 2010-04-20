@@ -47,9 +47,7 @@
 #include "sysopp.h" /* System-based Opportunistic HIP */
 #include "datapkt.h"
 #include "firewalldb.h"
-#ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h" /* PISA */
-#endif
 #include "helpers.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/performance.h"

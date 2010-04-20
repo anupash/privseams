@@ -36,10 +36,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/performance.h"
 #include "helpers.h"
-
-#ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
-#endif
 
 DList *hipList = NULL;
 DList *espList = NULL;

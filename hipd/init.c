@@ -16,6 +16,7 @@
 #include <netinet/icmp6.h>
 
 #include "config.h"
+#include "hipd.h"
 #include "init.h"
 #include "oppdb.h"
 #include "lib/core/common_defines.h"
@@ -28,10 +29,6 @@
 #include "lib/dht/libhipdht.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hostsfiles.h"
-
-#ifdef CONFIG_HIP_AGENT
-#include "hipd.h"
-#endif
 
 
 /**

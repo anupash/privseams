@@ -36,12 +36,10 @@
         #include "lib/core/sqlitedbapi.h"
 #endif
 #include "dhtqueue.h"
+#include "blind.h"
 
 #include "i3/i3_client/i3_client_api.h"
 
-#ifdef CONFIG_HIP_BLIND
-#include "blind.h"
-#endif
 
 #define HIP_HIT_DEV "dummy0"
 

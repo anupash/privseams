@@ -20,10 +20,7 @@
 #include "lib/core/builder.h"
 #include "update_legacy.h"
 #include "esp_prot_hipd_msg.h"
-
-#ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
-#endif
 
 int update_id_window_size = 50;
 

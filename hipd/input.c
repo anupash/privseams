@@ -28,6 +28,7 @@
 #include "lib/core/crypto.h"
 #include "lib/core/builder.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/hostid.h"
 #include "lib/core/solve.h"
 #include "lib/core/transform.h"
 #include "lib/core/keylen.h"
@@ -50,14 +51,7 @@
 
 #include "i3/i3_client/i3_client_api.h"
 #include "oppipdb.h"
-
-#ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
-#endif
-
-#ifdef CONFIG_HIP_BLIND
-#include "lib/core/hostid.h"
-#endif
 
 /**
  * Verifies a HMAC.

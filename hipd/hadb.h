@@ -22,10 +22,7 @@
 #include "lib/tool/xfrmapi.h"
 #include "nat.h"
 #include "hadb_legacy.h"
-
-#ifdef CONFIG_HIP_BLIND
 #include "blind.h"
-#endif
 
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha)
