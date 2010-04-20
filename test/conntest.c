@@ -22,7 +22,7 @@
  *
  * @return the socket id, exits on error.
  */
-int create_serversocket(int type, in_port_t port)
+static int create_serversocket(int type, in_port_t port)
 {
     int fd = -1, on = 1, err = 0;
     struct sockaddr_in6 addr;
@@ -94,7 +94,7 @@ out_err:
  * @param serversock the server socket
  * @return zero on success or negative on error
  */
-int main_server_tcp(int serversock)
+static int main_server_tcp(int serversock)
 {
     int peerfd = 0, err = 0;
     socklen_t locallen;
@@ -498,7 +498,7 @@ out_err:
  *                are the @c errno values of socket(), connect() and close()
  *                with a minus sign.
  */
-int hip_connect_func(struct addrinfo *peer_ai, int *sock)
+static int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 {
     int err                    = 0, connect_err = 0;
     unsigned long microseconds = 0;

@@ -23,16 +23,9 @@
 #include "lib/core/ife.h"
 
 
-int create_socket(int proto);
-int create_serversocket(int type, in_port_t port);
 int main_server(int type, in_port_t port);
-int main_server_tcp(int serversock);
-int main_server_native(int socktype, char *port_name, char *name);
-
-int hip_connect_func(struct addrinfo *res, int *sock);
 int main_client_gai(int socktype, char *peer_name,
                     char *peer_port_name,
                     int hints);
-int main_client_native(int socktype, char *peer_name, char *peer_port_name);
 
 #endif /* HIP_TEST_CONNTEST_H */
