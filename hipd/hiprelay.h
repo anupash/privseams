@@ -13,7 +13,6 @@
 #define HIP_HIPD_HIPRELAY_H
 
 #include <time.h> /* For timing. */
-#include <openssl/lhash.h> /* For LHASH. */
 #include <netinet/in.h> /* For IPv6 addresses etc. */
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
