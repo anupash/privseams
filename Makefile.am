@@ -237,7 +237,6 @@ lib_core_libhipcore_la_SOURCES = lib/conf/hipconf.c         \
                                  lib/core/message.c         \
                                  lib/core/prefix.c          \
                                  lib/core/solve.c           \
-                                 lib/core/sqlitedbapi.c     \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
                                  lib/core/util.c            \
@@ -245,6 +244,10 @@ lib_core_libhipcore_la_SOURCES = lib/conf/hipconf.c         \
                                  lib/tool/lutil.c           \
                                  lib/tool/nlink.c           \
                                  lib/tool/pk.c
+
+if HIP_AGENT
+lib_core_libhipcore_la_SOURCES += lib/core/sqlitedbapi.c
+endif
 
 if HIP_DHT
 lib_core_libhipcore_la_SOURCES += lib/dht/libhipdht.c      \
