@@ -18,10 +18,7 @@ extern int hip_opptcp;
 extern int hip_kernel_ipsec_fallback;
 extern int hip_lsi_support;
 extern int esp_relay;
-#ifdef CONFIG_HIP_MIDAUTH
 extern int use_midauth;
-#endif
-
 extern int hip_fw_sock;
 extern int hip_fw_async_sock;
 
