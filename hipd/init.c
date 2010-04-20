@@ -11,6 +11,7 @@
 
 #include <limits.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <netinet/icmp6.h>
@@ -266,28 +267,55 @@ out_err:
     return err;
 }
 
+/** CryptoAPI cipher and hashe modules */
+static char *kernel_crypto_mod[] = {
+    "crypto_null", "aes", "des"
+};
+
+/** Tunneling, IPsec, interface and control modules */
+static char *kernel_net_mod[] = {
+        "xfrm4_mode_beet", "xfrm6_mode_beet",
+        "xfrm4_tunnel",    "xfrm6_tunnel",
+        "ip4_tunnel",      "ip6_tunel",
+        "esp4",            "esp6",
+        "xfrm_user",       "dummy",
+};
+
 /**
- * probe for kernel modules (linux specific)
+ * Probe for kernel modules (Linux specific).
+ * @return  0 on success
  */
-static void hip_probe_kernel_modules(void)
+static int hip_probe_kernel_modules(void)
 {
     int count, err, status;
-    char cmd[40];
-    int mod_total;
-    char *mod_name[] = {
-        "xfrm6_tunnel",    "xfrm4_tunnel",
-        "ip6_tunnel",      "ipip",          "ip4_tunnel",
-        "xfrm_user",       "dummy",         "esp6",     "esp4",
-        "crypto_null",     "aes",           "sha1",
-        "xfrm4_mode_beet", "xfrm6_mode_beet",
-    };
+    char cmd[64];
+    int net_total;
+    int crypto_total;
 
-    mod_total = sizeof(mod_name) / sizeof(char *);
+    net_total    = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
+    crypto_total = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
 
-    HIP_DEBUG("Probing for %d modules. When the modules are built-in, the errors can be ignored\n", mod_total);
+    /* Crypto module loading is treated separately, because algorithms
+     * show up in procfs. If they are not there and modprobe also fails,
+     * then overall failure is guaranteed
+     */
+    for (count = 0; count < crypto_total; count++) {
+        snprintf(cmd, sizeof(cmd), "grep %s /proc/crypto > /dev/null",
+                 kernel_crypto_mod[count]);
+        if (system(cmd)) {
+            HIP_DEBUG("Crypto module %s not present, attempting modprobe\n");
+            snprintf(cmd, sizeof(cmd), "/sbin/modprobe %s 2> /dev/null",
+                     kernel_crypto_mod[count]);
+            if (system(cmd)) {
+                HIP_ERROR("Unable to load %s!\n", kernel_crypto_mod[count]);
+                return ENOENT;
+            }
+        }
+    }
 
-    for (count = 0; count < mod_total; count++) {
-        snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe", mod_name[count]);
+    /* network module loading */
+    for (count = 0; count < net_total; count++) {
+        snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe", kernel_net_mod[count]);
         HIP_DEBUG("%s\n", cmd);
         err = fork();
         if (err < 0) {
@@ -297,13 +325,13 @@ static void hip_probe_kernel_modules(void)
             if (freopen("/dev/null", "w", stderr) == NULL) {
                 HIP_ERROR("freopen if /dev/null failed.");
             }
-            execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *) NULL);
+            execlp("/sbin/modprobe", "/sbin/modprobe", kernel_net_mod[count], (char *) NULL);
         } else {
             waitpid(err, &status, 0);
         }
     }
 
-    HIP_DEBUG("Probing completed\n");
+    return 0;
 }
 
 /**
@@ -923,7 +951,11 @@ int hipd_init(int flush_ipsec, int killold)
 
     hip_set_os_dep_variables();
 
-    hip_probe_kernel_modules();
+    err = hip_probe_kernel_modules();
+    if (err) {
+        HIP_ERROR("Unable to load the required kernel modules!\n");
+        goto out_err;
+    }
 
     /* Register signal handlers */
     signal(SIGINT,  hip_close);
