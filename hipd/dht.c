@@ -17,18 +17,6 @@
 #include "lib/core/hostid.h"
 #include "lib/core/hit.h"
 
-static void hip_publish_hit(char *, char *);
-static int hip_publish_addr(char *);
-static int hip_dht_put_hdrr(unsigned char *, unsigned char *, int, int, void *);
-
-#ifdef CONFIG_HIP_AGENT
-static int hip_prepare_send_cert_put(unsigned char *, unsigned char *, int, int);
-static int hip_sqlite_callback(void *NotUsed,
-                               int argc,
-                               char **argv,
-                               char **azColName);
-#endif /* CONFIG_HIP_AGENT */
-
 /**
  * hip_init_dht_sockets - The function initalized two sockets used for
  *                        connection with lookup service(opendht)
@@ -60,33 +48,6 @@ int hip_init_dht_sockets(int *socket, int *socket_status)
         }
     }
     return err;
-}
-
-/**
- * hip_register_to_dht - Insert mapping for local host IP addresses to HITs to
- *                       the queue.
- *
- * @return void
- */
-void hip_register_to_dht(void)
-{
-    int pub_addr_ret = 0, err = 0;
-    char tmp_hit_str[INET6_ADDRSTRLEN + 2];
-    struct in6_addr tmp_hit;
-
-    /* Check if OpenDHT is off then out_err*/
-    HIP_IFE((hip_opendht_inuse != HIP_MSG_DHT_ON), 0);
-
-    HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
-
-    hip_convert_hit_to_str(&tmp_hit, NULL, opendht_current_key);
-    hip_convert_hit_to_str(&tmp_hit, NULL, tmp_hit_str);
-
-    hip_publish_hit(opendht_name_mapping, tmp_hit_str);
-    pub_addr_ret = hip_publish_addr(tmp_hit_str);
-
-out_err:
-    return;
 }
 
 /**
@@ -127,45 +88,6 @@ static void hip_publish_hit(char *hostname, char *tmp_hit_str)
     }
 out_err:
     return;
-}
-
-/**
- * hip_publish address - This function creates HTTP packet for publish address
- *                       and writes it in the queue for sending
- *
- * @param *tmp_hit_str
- *
- * @return 0 on success and -1 on errors
- *
- * @note Keep in mind that id opendht is not enabled this function returns zero
- */
-static int hip_publish_addr(char *tmp_hit_str)
-{
-    char out_packet[HIP_MAX_PACKET];
-    /* Assuming HIP Max packet length, max for DHT put
-     * while OpenDHT max size may be lower */
-    int err = 0;
-
-    HIP_IFE((hip_opendht_inuse != HIP_MSG_DHT_ON), 0);
-
-    memset(out_packet, '\0', HIP_MAX_PACKET);
-    opendht_error = hip_dht_put_hdrr((unsigned char *) tmp_hit_str,
-                                     (unsigned char *) opendht_host_name,
-                                     opendht_serving_gateway_port,
-                                     opendht_serving_gateway_ttl, out_packet);
-    if (opendht_error < 0) {
-        HIP_DEBUG("HTTP packet creation for HIT->IP PUT failed.\n");
-        return -1;
-    } else {
-        HIP_DEBUG("Sending HTTP HIT->IP PUT packet to queue.\n");
-        opendht_error = hip_write_to_dht_queue(out_packet, strlen(out_packet) + 1);
-        if (opendht_error < 0) {
-            HIP_DEBUG("Failed to insert HIT->IP PUT data in queue \n");
-            return -1;
-        }
-    }
-out_err:
-    return 0;
 }
 
 /**
@@ -254,6 +176,72 @@ out_err:
         free(hdrr_msg);
     }
     return err;
+}
+
+/**
+ * hip_publish address - This function creates HTTP packet for publish address
+ *                       and writes it in the queue for sending
+ *
+ * @param *tmp_hit_str
+ *
+ * @return 0 on success and -1 on errors
+ *
+ * @note Keep in mind that id opendht is not enabled this function returns zero
+ */
+static int hip_publish_addr(char *tmp_hit_str)
+{
+    char out_packet[HIP_MAX_PACKET];
+    /* Assuming HIP Max packet length, max for DHT put
+     * while OpenDHT max size may be lower */
+    int err = 0;
+
+    HIP_IFE((hip_opendht_inuse != HIP_MSG_DHT_ON), 0);
+
+    memset(out_packet, '\0', HIP_MAX_PACKET);
+    opendht_error = hip_dht_put_hdrr((unsigned char *) tmp_hit_str,
+                                     (unsigned char *) opendht_host_name,
+                                     opendht_serving_gateway_port,
+                                     opendht_serving_gateway_ttl, out_packet);
+    if (opendht_error < 0) {
+        HIP_DEBUG("HTTP packet creation for HIT->IP PUT failed.\n");
+        return -1;
+    } else {
+        HIP_DEBUG("Sending HTTP HIT->IP PUT packet to queue.\n");
+        opendht_error = hip_write_to_dht_queue(out_packet, strlen(out_packet) + 1);
+        if (opendht_error < 0) {
+            HIP_DEBUG("Failed to insert HIT->IP PUT data in queue \n");
+            return -1;
+        }
+    }
+out_err:
+    return 0;
+}
+
+/**
+ * hip_register_to_dht - Insert mapping for local host IP addresses to HITs to
+ *                       the queue.
+ *
+ * @return void
+ */
+void hip_register_to_dht(void)
+{
+    int pub_addr_ret = 0, err = 0;
+    char tmp_hit_str[INET6_ADDRSTRLEN + 2];
+    struct in6_addr tmp_hit;
+
+    /* Check if OpenDHT is off then out_err*/
+    HIP_IFE((hip_opendht_inuse != HIP_MSG_DHT_ON), 0);
+
+    HIP_IFEL(hip_get_default_hit(&tmp_hit), -1, "No HIT found\n");
+
+    hip_convert_hit_to_str(&tmp_hit, NULL, opendht_current_key);
+    hip_convert_hit_to_str(&tmp_hit, NULL, tmp_hit_str);
+
+    hip_publish_hit(opendht_name_mapping, tmp_hit_str);
+    pub_addr_ret = hip_publish_addr(tmp_hit_str);
+
+out_err:
+    return;
 }
 
 /**
