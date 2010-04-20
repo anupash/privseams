@@ -276,10 +276,10 @@ static void hip_probe_kernel_modules(void)
     int mod_total;
     char *mod_name[] = {
         "xfrm6_tunnel",    "xfrm4_tunnel",
-        "ip6_tunnel",      "ipip",           "ip4_tunnel",
-        "xfrm_user",       "dummy",          "esp6",    "esp4",
-        "crypto_null",     "cbc",            "des",     "aes",
-        "xfrm4_mode_beet", "xfrm6_mode_beet","sha1",
+        "ip6_tunnel",      "ipip",          "ip4_tunnel",
+        "xfrm_user",       "dummy",         "esp6",     "esp4",
+        "crypto_null",     "aes",           "sha1",
+        "xfrm4_mode_beet", "xfrm6_mode_beet",
         "capability"
     };
 
