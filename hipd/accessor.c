@@ -16,9 +16,6 @@
 #include "hipd.h"
 
 unsigned int hipd_state         = HIPD_STATE_CLOSED;
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-unsigned int opportunistic_mode = 1;
-#endif // CONFIG_HIP_OPPORTUNISTIC
 
 /**
  * Set global daemon state.
@@ -72,6 +69,9 @@ int hip_agent_is_alive(void)
 }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
+
+unsigned int opportunistic_mode = 1;
+
 /**
  * Set opportunistic TCP status on or off
  *
