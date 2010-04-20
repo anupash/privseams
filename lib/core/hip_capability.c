@@ -20,7 +20,7 @@
 #define _BSD_SOURCE
 
 #include "config.h"
-#ifdef CONFIG_HIP_PRIVSEP
+
 #ifdef CONFIG_HIP_ALTSEP
 #include <linux/capability.h>
 int capget(cap_user_header_t header, cap_user_data_t data);
@@ -28,7 +28,6 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
 #else
 #include <sys/capability.h>
 #endif /* CONFIG_HIP_ALTSEP */
-#endif /* CONFIG_HIP_PRIVSEP */
 
 #include <pwd.h>
 #include <sys/prctl.h>
@@ -86,8 +85,6 @@ static int hip_user_to_uid(char *name)
 int hip_set_lowcapability(int run_as_sudo)
 {
     int err = 0;
-
-#ifdef CONFIG_HIP_PRIVSEP
     uid_t uid;
     struct __user_cap_header_struct header;
     struct __user_cap_data_struct data;
@@ -135,7 +132,6 @@ int hip_set_lowcapability(int run_as_sudo)
     HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());
     HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
               data.effective, data.permitted, data.inheritable);
-#endif /* CONFIG_HIP_PRIVSEP */
 
 out_err:
     return err;
@@ -153,8 +149,6 @@ out_err:
 int hip_set_lowcapability(int run_as_sudo)
 {
     int err                = 0;
-
-#ifdef CONFIG_HIP_PRIVSEP
     uid_t uid              = -1;
     cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
     int ncap_list          = 2;
@@ -222,9 +216,6 @@ int hip_set_lowcapability(int run_as_sudo)
 
 out_err:
     cap_free(cap_p);
-
-#endif /* CONFIG_HIP_PRIVSEP */
-
     return err;
 }
 
