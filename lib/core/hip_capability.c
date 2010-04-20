@@ -70,20 +70,22 @@ static int hip_user_to_uid(char *name)
     return uid;
 }
 
+/**
+ * Lower the privileges of the currently running process.
+ *
+ * @param run_as_sudo 1 if the process was started with "sudo" or
+ *                    0 otherwise
+ * @return zero on success and negative on error
+ */
+int hip_set_lowcapability(int run_as_sudo)
+{
+    int err   = 0;
+    uid_t uid = -1;
+
 #ifdef CONFIG_HIP_ALTSEP
 
 #define LINUX_CAPABILITY_VERSION_HIPL  0x19980330
 
-/**
- * lower the privileges of the running process
- *
- * @param run_as_sudo
- * @return
- */
-int hip_set_lowcapability(int run_as_sudo)
-{
-    int err = 0;
-    uid_t uid;
     struct __user_cap_header_struct header;
     struct __user_cap_data_struct data;
 
@@ -132,22 +134,9 @@ int hip_set_lowcapability(int run_as_sudo)
               data.effective, data.permitted, data.inheritable);
 
 out_err:
-    return err;
-}
 
 #else /* ! ALTSEP */
 
-/**
- * Lower the privileges of the currently running process.
- *
- * @param run_as_sudo 1 if the process was started with "sudo" or
- *                    0 otherwise
- * @return zero on success and negative on error
- */
-int hip_set_lowcapability(int run_as_sudo)
-{
-    int err                = 0;
-    uid_t uid              = -1;
     cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
     int ncap_list          = 2;
     cap_t cap_p            = NULL;
@@ -214,7 +203,7 @@ int hip_set_lowcapability(int run_as_sudo)
 
 out_err:
     cap_free(cap_p);
-    return err;
-}
 
 #endif
+    return err;
+}
