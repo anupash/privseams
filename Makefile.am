@@ -441,8 +441,8 @@ CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
 
 ### misc stuff ###
-doxygen:
-	doxygen doc/Doxyfile
+doxygen: doc/Doxyfile
+	doxygen $<
 
 nodist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
 
