@@ -492,4 +492,9 @@ BUILT_SOURCES = version.h
 $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
 	echo "#define BZR_REVISION \"$$(bzr revno $(srcdir))\"" > $@
 
+# The complete doc/ subdirectory is in EXTRA_DIST, so files that should
+# not be distributed need to be deleted manually from the distribution.
+dist-hook:
+	rm -f $(distdir)/doc/Doxyfile
+
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo
