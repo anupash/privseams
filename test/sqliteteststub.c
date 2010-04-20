@@ -13,9 +13,6 @@
  *
  */
 
-#include "config.h"
-#ifdef CONFIG_HIP_AGENT
-
 #include "lib/core/prefix.h"
 #include "lib/core/sqlitedbapi.h"
 
@@ -63,16 +60,3 @@ int main(int argc, char *argv[])
 out_err:
     return err;
 }
-
-#else
-
-#include <stdio.h>
-
-
-int main(int argc, char *argv[])
-{
-    printf("You need to configure HIP with agent support\n");
-    return -1;
-}
-
-#endif /* sqlitedbapi.h */

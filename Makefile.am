@@ -31,8 +31,11 @@ bin_PROGRAMS = test/auth_performance    \
                test/hashtest            \
                test/hc_performance      \
                test/keygentest          \
-               test/listtest            \
-               test/sqliteteststub
+               test/listtest
+
+if HIP_AGENT
+bin_PROGRAMS += test/sqliteteststub
+endif
 
 if HIP_DHT
 bin_PROGRAMS += test/dhtteststub
