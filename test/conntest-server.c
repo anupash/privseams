@@ -19,10 +19,6 @@
 #include <netinet/ip.h>
 #include <unistd.h>
 #include <netdb.h>
-/* Workaround for some compilation problems on Debian */
-#ifndef __user
-#  define __user
-#endif
 #include <signal.h>
 
 #include "lib/core/debug.h"
