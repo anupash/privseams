@@ -83,6 +83,8 @@
 
 #define HIPD_NL_GROUP 32
 
+extern int hip_use_opptcp;
+extern int hip_use_hi3;
 #ifdef CONFIG_HIP_AGENT
 extern sqlite3 *daemon_db;
 #endif

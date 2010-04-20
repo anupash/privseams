@@ -18,9 +18,7 @@
 unsigned int hipd_state         = HIPD_STATE_CLOSED;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 unsigned int opportunistic_mode = 1;
-extern int hip_use_opptcp;
 #endif // CONFIG_HIP_OPPORTUNISTIC
-extern int hip_use_hi3;
 
 /**
  * Set global daemon state.
