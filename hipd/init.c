@@ -279,7 +279,7 @@ static void hip_probe_kernel_modules(void)
         "ip6_tunnel",      "ipip",           "ip4_tunnel",
         "xfrm_user",       "dummy",          "esp6", "esp4",
         "ipv6",            "crypto_null",    "cbc",
-        "blkcipher",       "des",            "aes",
+        "des",             "aes",
         "xfrm4_mode_beet", "xfrm6_mode_beet","sha1",
         "capability"
     };
