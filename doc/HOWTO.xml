@@ -1548,14 +1548,26 @@ $ make V=99
 
       </section>
 
+      <section><title>Supported features</title>
+
+      <para>
+      
+      The maemo/diablo version of HIPL supports most features of HIPL, except
+      the firewall extensions and the GUI control application.
+
+      </para>
+
+      </section>
+
       <section><title>Compiling HIPL from Source</title>
 
       <para>
-      HIPL can be compiled from source for maemo with the following
+      HIPL can be compiled from source for maemo/diablo with the following
       commands (assuming a clean source tree): </para>
 
       <para><programlisting>
-        ./configure
+        ./configure --enable-maemo --disable-firewall --enable-altsep
+        make
       </programlisting></para>
 
      <para>
