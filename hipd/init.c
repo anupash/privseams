@@ -280,7 +280,6 @@ static void hip_probe_kernel_modules(void)
         "xfrm_user",       "dummy",         "esp6",     "esp4",
         "crypto_null",     "aes",           "sha1",
         "xfrm4_mode_beet", "xfrm6_mode_beet",
-        "capability"
     };
 
     mod_total = sizeof(mod_name) / sizeof(char *);
