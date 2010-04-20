@@ -12,9 +12,6 @@
  * @author  Alberto Garcia
  */
 
-#include "config.h"
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-
 #include "oppipdb.h"
 
 #define HIP_LOCK_OPPIP(entry)
@@ -225,5 +222,3 @@ void hip_oppipdb_delentry(const struct in6_addr *ip_peer)
         hip_oppipdb_del_entry_by_entry(ret, NULL);
     }
 }
-
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
