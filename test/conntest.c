@@ -10,6 +10,14 @@
 
 #define _BSD_SOURCE
 
+#include <stdio.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include "conntest.h"
 #include "lib/tool/nlink.h"
 #include "lib/tool/lutil.h"

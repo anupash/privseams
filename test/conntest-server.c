@@ -25,7 +25,7 @@
 #endif
 #include <signal.h>
 
-#include "config.h"
+#include "lib/core/debug.h"
 #include "conntest.h"
 
 /**
