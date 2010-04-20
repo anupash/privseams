@@ -287,10 +287,9 @@ static char *kernel_net_mod[] = {
  */
 static int hip_probe_kernel_modules(void)
 {
-    int count, err, status;
+    int count;
     char cmd[64];
-    int net_total;
-    int crypto_total;
+    int net_total, crypto_total;
 
     net_total    = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
     crypto_total = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
@@ -315,19 +314,11 @@ static int hip_probe_kernel_modules(void)
 
     /* network module loading */
     for (count = 0; count < net_total; count++) {
-        snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe", kernel_net_mod[count]);
-        HIP_DEBUG("%s\n", cmd);
-        err = fork();
-        if (err < 0) {
-            HIP_ERROR("Failed to fork() for modprobe!\n");
-        } else if (err == 0) {
-            /* Redirect stderr, so few non fatal errors wont show up. */
-            if (freopen("/dev/null", "w", stderr) == NULL) {
-                HIP_ERROR("freopen if /dev/null failed.");
-            }
-            execlp("/sbin/modprobe", "/sbin/modprobe", kernel_net_mod[count], (char *) NULL);
-        } else {
-            waitpid(err, &status, 0);
+        /* we still suppress false alarms from modproble */
+        snprintf(cmd, sizeof(cmd), "/sbin/modprobe %s 2> /dev/null",
+                 kernel_net_mod[count]);
+        if (system(cmd)) {
+            HIP_INFO("Unable to load %s, please check if it's built it!\n");
         }
     }
 
