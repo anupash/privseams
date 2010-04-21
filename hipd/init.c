@@ -317,7 +317,7 @@ static int hip_probe_kernel_modules(void)
 
     /* network module loading */
     for (count = 0; count < net_total; count++) {
-        /* we still suppress false alarms from modproble */
+        /* we still suppress false alarms from modprobe */
         snprintf(cmd, sizeof(cmd), "/sbin/modprobe %s 2> /dev/null",
                  kernel_net_mod[count]);
         if (system(cmd)) {
