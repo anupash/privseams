@@ -343,9 +343,10 @@ static void __attribute__((unused)) hip_remove_kernel_modules(void) {
 
     for (type = 0; type < 2; type++) {
         for (i = 0; i < count[type]; i++) {
-            HIP_DEBUG("Removing %s\n", mods[type][i]);
             snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s", mods[type][i]);
-            system(cmd);
+            if (system(cmd)) {
+                HIP_DEBUG("Unable to remove the %s module!\n", mods[type][i]);
+            }
         }
     }
 }
