@@ -34,8 +34,6 @@ struct hip_opp_socket_entry {
 
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
 
-#define SOFILE "libc.so.6"
-
 void hip_init_socket_db(void);
 void hip_uninit_socket_db(void);
 void hip_socketdb_dump(void);

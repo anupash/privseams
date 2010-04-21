@@ -35,6 +35,7 @@ int hip_db_exist = 0;
 
 // used for dlsym_util
 #define NUMBER_OF_DLSYM_FUNCTIONS 17
+#define SOFILE "libc.so.6"
 
 /** List of wrapped socket calls. Some of them are not implemented which means
  * that not all networking applications are supported. Functions read() and
