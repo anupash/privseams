@@ -151,9 +151,6 @@ int hip_build_param_hip_transform(struct hip_common *,
                                   const hip_transform_suite_t[],
                                   const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
-int hip_build_param_via_rvs_nat(struct hip_common *,
-                                const struct hip_in6_addr_port[],
-                                const int);
 int hip_build_param_relay_to(struct hip_common *msg,
                              const in6_addr_t *rvs_addr,
                              const in_port_t port);
