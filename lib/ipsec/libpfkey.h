@@ -37,6 +37,8 @@
 #ifndef KAME_LIBPFKEY_H
 #define KAME_LIBPFKEY_H
 
+#define _BSD_SOURCE
+
 #include <sys/cdefs.h>
 #include <sys/types.h>
 #include <linux/ipsec.h>

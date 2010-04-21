@@ -1,6 +1,8 @@
 #ifndef HIP_LIB_TOOL_PFKEYSADB_H
 #define HIP_LIB_TOOL_PFKEYSADB_H
 
+#define _BSD_SOURCE
+
 #include <sys/socket.h>
 #include <sys/types.h>
 
