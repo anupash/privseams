@@ -99,11 +99,6 @@ typedef struct {
     void *     next;
 } HIT_Remote;
 
-/* Set up for C function definitions, even when using C++ */
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 int hit_db_init(char *);
 void hit_db_quit(void);
 
@@ -121,10 +116,5 @@ HIT_Local *hit_db_find_local(char *, struct in6_addr *);
 int hit_db_enum_locals(int (*)(HIT_Local *));
 
 int hit_db_count_locals(void);
-
-/* Ends C function definitions when using C++ */
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* HIP_AGENT_HITDB_H */

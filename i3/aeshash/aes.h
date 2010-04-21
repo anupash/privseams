@@ -68,11 +68,6 @@ typedef   unsigned long aes_32t;
 #define KS_LENGTH   4 * BLOCK_SIZE
 #endif
 
-#if defined(__cplusplus)
-extern "C"
-{
-#endif
-
 typedef unsigned int aes_fret;   /* type for function return value       */
 #define aes_bad      0           /* bad function return value            */
 #define aes_good     1           /* good function return value           */
@@ -102,9 +97,5 @@ aes_rval aes_dec_blk(const unsigned char in_blk[], unsigned char out_blk[], cons
 void aeshash_l(const unsigned char in[], unsigned char out[]);
 void aeshash_r(const unsigned char in[], unsigned char out[]);
 void aeshash_init(void);
-
-#if defined(__cplusplus)
-}
-#endif
 
 #endif
