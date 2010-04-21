@@ -77,11 +77,10 @@ void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
 /** Symbolic names for wrapper handler array. Must be filled in the same order as
  * @c dl_function_ptr array.
  */
-void *dl_function_name[] =
-{"socket",  "bind", "connect",  "send",    "sendto",
- "sendmsg", "recv", "recvfrom", "recvmsg", "accept",
- "write",   "read", "close",    "listen",  "readv",
- "writev",  "poll"};
+void *dl_function_name[] = { "socket",  "bind", "connect",  "send",    "sendto",
+                             "sendmsg", "recv", "recvfrom", "recvmsg", "accept",
+                             "write",   "read", "close",    "listen",  "readv",
+                             "writev",  "poll"};
 
 /**
  * Initialize the @c dl_function_fd array to support wrapping of socket calls
@@ -94,7 +93,7 @@ static void hip_init_dlsym_functions(void)
     char *error = NULL;
 
     for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
-        dl_function_fd[i]                = dlopen(SOFILE, RTLD_LAZY);
+        dl_function_fd[i] = dlopen(SOFILE, RTLD_LAZY);
         HIP_ASSERT(dl_function_fd[i]);
         ((int **) (&dl_function_ptr))[i] =
             dlsym(dl_function_fd[i], dl_function_name[i]);
@@ -231,9 +230,9 @@ static inline int hip_wrapping_is_applicable(const struct sockaddr *sa,
 {
     HIP_ASSERT(entry);
 
-    if (!(entry->protocol == 0 ||
-          entry->protocol == IPPROTO_TCP ||
-          entry->protocol == IPPROTO_UDP ||
+    if (!(entry->protocol == 0            ||
+          entry->protocol == IPPROTO_TCP  ||
+          entry->protocol == IPPROTO_UDP  ||
           entry->protocol == IPPROTO_ICMP ||
           entry->protocol == IPPROTO_ICMPV6)) {
         return 0;
@@ -244,7 +243,7 @@ static inline int hip_wrapping_is_applicable(const struct sockaddr *sa,
     }
 
     if (!(entry->type == SOCK_STREAM ||
-          entry->type == SOCK_DGRAM ||
+          entry->type == SOCK_DGRAM  ||
           entry->type == SOCK_RAW)) {
         return 0;
     }
@@ -893,7 +892,7 @@ static int hip_translate_socket(const int *orig_socket,
         *translated_socket = &entry->translated_socket;
         *translated_id     = (struct sockaddr *)
                              (is_peer ? &entry->translated_peer_id :
-                          &entry->translated_local_id);
+                              &entry->translated_local_id);
         *translated_id_len =
             (is_peer ? &entry->translated_peer_id_len :
              &entry->translated_local_id_len);
