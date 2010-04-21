@@ -35,7 +35,8 @@
  * @param cmd add or delete
  */
 int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
-                  struct sockaddr *src, struct sockaddr *dst, u_int mode, int cmd)
+                  struct sockaddr *src, struct sockaddr *dst,
+                  unsigned int mode, int cmd)
 {
     struct sadb_x_policy *xpl;
     struct sadb_x_ipsecrequest *xisr;

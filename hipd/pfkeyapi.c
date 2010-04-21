@@ -186,24 +186,24 @@ uint32_t hip_add_sa(const struct in6_addr *saddr, const struct in6_addr *daddr,
 {
     int so, len, err = 0, e_keylen, a_keylen;
     int aalg              = ealg;
-    u_int wsize           = 4; /* XXX static size of window */
+    unsigned int wsize    = 4; /* XXX static size of window */
     struct sockaddr_storage ss_addr, dd_addr;
     struct sockaddr *s_saddr;
     struct sockaddr *d_saddr;
     uint32_t reqid        = 0;
-    u_int32_t seq         = 0;
-    u_int flags           = 0; // always zero
-    u_int64_t lifebyte    = 0, lifetime = 0;
-    u_int8_t l_natt_type  = HIP_UDP_ENCAP_ESPINUDP;
+    uint32_t seq          = 0;
+    unsigned int flags    = 0; // always zero
+    uint64_t lifebyte     = 0, lifetime = 0;
+    uint8_t l_natt_type   = HIP_UDP_ENCAP_ESPINUDP;
     // FIXME: this parameter maybe should be related to some esp parameters (according to racoon source code)
-    u_int16_t l_natt_frag = 0;
+    uint16_t l_natt_frag  = 0;
     /* Mappings from HIP to PFKEY algo names */
-    u_int e_types[]       = {SADB_EALG_NULL,    SADB_X_EALG_AESCBC, SADB_EALG_3DESCBC, SADB_EALG_3DESCBC,
-                             SADB_X_EALG_BLOWFISHCBC, SADB_EALG_NULL,     SADB_EALG_NULL};
-    u_int a_algos[]       = {SADB_AALG_NONE, SADB_AALG_SHA1HMAC, SADB_AALG_SHA1HMAC, SADB_AALG_MD5HMAC,
-                             SADB_AALG_SHA1HMAC,   SADB_AALG_SHA1HMAC, SADB_AALG_MD5HMAC};
-    u_int e_type          = e_types[ealg];
-    u_int a_type          = a_algos[aalg];
+    unsigned int e_types[] = {SADB_EALG_NULL,    SADB_X_EALG_AESCBC, SADB_EALG_3DESCBC, SADB_EALG_3DESCBC,
+                              SADB_X_EALG_BLOWFISHCBC, SADB_EALG_NULL,     SADB_EALG_NULL};
+    unsigned int a_algos[] = {SADB_AALG_NONE, SADB_AALG_SHA1HMAC, SADB_AALG_SHA1HMAC, SADB_AALG_MD5HMAC,
+                              SADB_AALG_SHA1HMAC,   SADB_AALG_SHA1HMAC, SADB_AALG_MD5HMAC};
+    unsigned int e_type   = e_types[ealg];
+    unsigned int a_type   = a_algos[aalg];
     in_port_t sport       = entry->local_udp_port;
     in_port_t dport       = entry->peer_udp_port;
 
@@ -301,8 +301,9 @@ out_err:
  * @param direction input or output direction
  * @return zero on success and non-zero on error
  */
-static int hip_pfkey_policy_modify(int so, const hip_hit_t *src_hit, u_int prefs,
-                                   const hip_hit_t *dst_hit, u_int prefd,
+static int hip_pfkey_policy_modify(int so, const hip_hit_t *src_hit,
+                                   unsigned int prefs,
+                                   const hip_hit_t *dst_hit, unsigned int prefd,
                                    const struct in6_addr *src_addr,
                                    const struct in6_addr *dst_addr,
                                    uint8_t proto, int cmd, int direction)
@@ -314,7 +315,7 @@ static int hip_pfkey_policy_modify(int so, const hip_hit_t *src_hit, u_int prefs
     caddr_t policy           = NULL;
     int policylen            = 0;
     int len                  = 0;
-    u_int mode;
+    unsigned int mode;
     HIP_DEBUG("\n");
     // Sanity check
     HIP_IFEL((src_hit == NULL || dst_hit == NULL), -1, "Invalid hit's\n");

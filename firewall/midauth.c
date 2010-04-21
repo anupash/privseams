@@ -83,8 +83,8 @@ static void update_ipv6_header(struct ip6_hdr *ip, int len)
 static void update_udp_header(struct iphdr *ip, int len)
 {
     unsigned long sum;
-    u_int16_t *w       = (u_int16_t *) ((unsigned char *) ip + (ip->ihl * 4));
-    u_int16_t protocol = ntohs(IPPROTO_UDP);
+    uint16_t *w       = (uint16_t *) ((unsigned char *) ip + (ip->ihl * 4));
+    uint16_t protocol = ntohs(IPPROTO_UDP);
     int i;
     struct udphdr *udp = (struct udphdr *) w;
 
@@ -106,7 +106,7 @@ static void update_udp_header(struct iphdr *ip, int len)
     }
 
     /* add UDP pseudoheader */
-    w          = (u_int16_t *) &ip->saddr;
+    w          = (uint16_t *) &ip->saddr;
     for (i = 0; i < 4; w++, i++) {
         sum += *w;
     }
@@ -134,10 +134,10 @@ static void update_hip_checksum_ipv4(struct iphdr *ip)
     memset(&dst, 0, sizeof(dst));
 
     src.sin_family = AF_INET;
-    memcpy(&src.sin_addr, &ip->saddr, sizeof(u_int32_t));
+    memcpy(&src.sin_addr, &ip->saddr, sizeof(uint32_t));
 
     dst.sin_family = AF_INET;
-    memcpy(&dst.sin_addr, &ip->daddr, sizeof(u_int32_t));
+    memcpy(&dst.sin_addr, &ip->daddr, sizeof(uint32_t));
 
     hip_zero_msg_checksum(msg);
     msg->checksum  = hip_checksum_packet((char *) msg,

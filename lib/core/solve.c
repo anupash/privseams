@@ -66,7 +66,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
         ipv6_addr_copy((hip_hit_t *) (cookie + 8), &hdr->hitr);
         ipv6_addr_copy((hip_hit_t *) (cookie + 24), &hdr->hits);
         maxtries = 1ULL << (u->pz.K + 3);
-        get_random_bytes(&randval, sizeof(u_int64_t));
+        get_random_bytes(&randval, sizeof(uint64_t));
     } else {
         HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
     }
