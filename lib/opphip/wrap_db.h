@@ -34,12 +34,6 @@ struct hip_opp_socket_entry {
 
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
 
-// not implemented for hs either
-#define HIP_LOCK_SOCKET_INIT(entry)
-#define HIP_UNLOCK_SOCKET_INIT(entry)
-#define HIP_LOCK_SOCKET(entry)
-#define HIP_UNLOCK_SOCKET(entry)
-#define HIP_SOCKETDB_SIZE 533
 #define SOFILE "libc.so.6"
 
 void hip_init_socket_db(void);
