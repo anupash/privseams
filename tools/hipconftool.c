@@ -18,8 +18,6 @@
  *               the action and type.
  * @return       zero on success, or negative error value on error.
  */
-#ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
-
 int main(int argc, char *argv[])
 {
     int err = 0;
@@ -37,5 +35,3 @@ int main(int argc, char *argv[])
 out_err:
     return err;
 }
-
-#endif /* HIP_UNITTEST_MODE */
