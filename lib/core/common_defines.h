@@ -2,11 +2,8 @@
  * @file
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
- */
-/*
- * common_defines.h
  *
- * Author: Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author: Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_LIB_CORE_COMMON_DEFINES_H
