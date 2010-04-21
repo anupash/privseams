@@ -514,7 +514,7 @@ struct hip_hadb_state {
 
     // Has struct hip_peer_addr_list_item s
     HIP_HASHTABLE *peer_addresses_old;
-};
+} __attribute__((packed));
 
 /** A data structure defining host association information that is sent
  *  to the userspace */
