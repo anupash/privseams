@@ -715,37 +715,6 @@ int main(int argc, char **argv)
     printf("%4.2f keys per sec, %4.2f keys per min\n\n",
            sw_bench_loops / bench_secs, sw_bench_loops / bench_secs * 60);
 
-#ifdef HASHCHAIN
-    printf( "-------------------------------\n"
-            "Hash chain performance test\n"
-            "-------------------------------\n\n");
-
-    printf("Creating %d hash chains of length %d\n", sw_bench_loops, sw_hash_chain_len);
-    hash_chain_t *current_chain;
-    dhp_start_benchmark(&bench_time);
-
-    for (i = 0; i < sw_bench_loops; i++) {
-        if (sw_file_output) {
-            hip_perf_start_benchmark(perf_set, PS_HC_CREATE);
-        }
-        current_chain = hchain_create(sw_hash_chain_len);
-        if (sw_file_output) {
-            hip_perf_stop_benchmark(perf_set, PS_HC_CREATE);
-            hip_perf_write_benchmark(perf_set, PS_HC_CREATE);
-        }
-        if (sw_print_keys) {
-            hchain_print(current_chain);
-        }
-    }
-    printf("\n");
-    bench_secs = dhp_stop_benchmark(&bench_time);
-    printf("Hash chain generation took %.3f sec (%.10f sec per hash chain)\n",
-           bench_secs, bench_secs / sw_bench_loops);
-    printf("%4.2f hash chains per sec, %4.2f hash chains per min\n",
-           sw_bench_loops / bench_secs, sw_bench_loops / bench_secs * 60 * 1000);
-
-#endif
-
     printf( "-------------------------------\n"
             "Hash function (SHA-1) performance test\n"
             "-------------------------------\n\n");
