@@ -17,13 +17,6 @@
 #include "debug.h"
 #include "list.h"
 
-/* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
- * These backwards compatibility hacks can be removed when all platforms
- * support OpenSSL 1.0.0 by default. */
-#ifdef LHASH_OF
-#define HIPL_OPENSSL_100
-#endif /* LHASH_OF */
-
 #undef MIN_NODES
 #define MIN_NODES       16
 
@@ -35,7 +28,7 @@ void *hip_ht_find(void *head, void *data);
 void *hip_ht_delete(void *head, void *data);
 int hip_ht_add(void *head, void *data);
 
-#ifdef HIPL_OPENSSL_100
+#ifdef LHASH_OF
 
 #define LHASH100_CAST _LHASH
 
