@@ -126,19 +126,6 @@ typedef struct hip_msg_retrans {
     struct hip_common *buf;
 } hip_msg_retrans_t;
 
-/**
- * A binder structure for storing an IPv6 address and transport layer port
- * number. This structure is used in hip_build_param_relay_to_old().
- *
- * @note This has to be packed since it is used in building @c RELAY_FROM and
- *       @c RELAY_TO parameters.
- * @note obsolete
- */
-struct hip_in6_addr_port {
-    struct in6_addr sin6_addr;     /**< IPv6 address. */
-    in_port_t       sin6_port;     /**< Transport layer port number. */
-} __attribute__ ((packed));
-
 struct hip_context {
     struct hip_common *   input;        /**< Received packet. */
     struct hip_common *   output;       /**< Packet to be built and sent. */
