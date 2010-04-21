@@ -321,7 +321,8 @@ static int hip_probe_kernel_modules(void)
         snprintf(cmd, sizeof(cmd), "/sbin/modprobe %s 2> /dev/null",
                  kernel_net_mod[count]);
         if (system(cmd)) {
-            HIP_INFO("Unable to load %s, please check if it's built it!\n");
+            HIP_INFO("Unable to load %s, please check if it's built it!\n",
+                     kernel_net_mod[count]);
         }
     }
 
