@@ -3,6 +3,10 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
+#ifndef HIP_LIB_CORE_HASHTABLE_H
+#define HIP_LIB_CORE_HASHTABLE_H
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -12,9 +16,6 @@
 #include <limits.h>
 #include "debug.h"
 #include "list.h"
-
-#ifndef HIP_LIB_CORE_HASHTABLE_H
-#define HIP_LIB_CORE_HASHTABLE_H
 
 /* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
  * These backwards compatibility hacks can be removed when all platforms
@@ -85,4 +86,4 @@ HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
 void hip_ht_doall(void *head, LHASH_DOALL_FN_TYPE func);
 void hip_ht_doall_arg(void *head, LHASH_DOALL_ARG_FN_TYPE func, void *arg);
 
-#endif /* LHASHTABLE_H */
+#endif /* HIP_LIB_CORE_HASHTABLE_H */
