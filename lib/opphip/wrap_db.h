@@ -50,4 +50,4 @@ int exists_mapping(int pid, int socket);
 int hip_exists_translation(int pid, int socket, pthread_t tid);
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
 
-#endif
+#endif /* HIP_LIB_OPPHIP_WRAP_DB_H */

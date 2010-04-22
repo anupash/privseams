@@ -32,4 +32,4 @@ void set_stateful_filtering(const int active);
 hip_hit_t *hip_fw_get_default_hit(void);
 hip_lsi_t *hip_fw_get_default_lsi(void);
 
-#endif
+#endif /* HIP_FIREWALL_FIREWALL_H */

@@ -201,4 +201,5 @@ int hip_conf_handle_hi(hip_common_t *msg,
                        const char *opt[],
                        int optc,
                        int send_only);
-#endif /* HIPCONF */
+
+#endif /* HIP_LIB_CONF_HIPCONF_H */

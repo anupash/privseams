@@ -29,4 +29,4 @@ struct pisa_cert {
  */
 void pisa_split_cert(char *cert, struct pisa_cert *pc);
 
-#endif
+#endif /* HIP_FIREWALL_PISA_CERT_H */

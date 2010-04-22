@@ -38,4 +38,4 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit);
 int hipfw_relay_esp(const hip_fw_context_t *ctx);
 
-#endif
+#endif /* HIP_FIREWALL_CONNTRACK_H */

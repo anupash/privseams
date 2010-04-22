@@ -85,4 +85,4 @@ void midauth_init(void);
 
 int midauth_filter_hip(hip_fw_context_t *ctx);
 
-#endif
+#endif /* HIP_FIREWALL_MIDAUTH_H */

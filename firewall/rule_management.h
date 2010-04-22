@@ -66,4 +66,4 @@ void read_rule_file(const char *file_name);
 DList *read_rules(const int hook);
 void read_rules_exit(const int hook);
 
-#endif
+#endif /* HIP_FIREWALL_RULE_MANAGEMENT_H */

@@ -28,4 +28,4 @@ void pisa_init(struct midauth_handlers *h);
  */
 void pisa_check_for_random_update(void);
 
-#endif
+#endif /* HIP_FIREWALL_PISA_H */

@@ -15,4 +15,5 @@
 char *addr_to_numeric(const struct in6_addr *addrp);
 struct in6_addr *numeric_to_addr(const char *num);
 void system_print(char *command);
-#endif //helpers
+
+#endif /* HIP_FIREWALL_HELPERS_H */
