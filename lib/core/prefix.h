@@ -3,8 +3,9 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
-#ifndef HIP_LIB_CORE_UTILS_H
-#define HIP_LIB_CORE_UTILS_H
+
+#ifndef HIP_LIB_CORE_PREFIX_H
+#define HIP_LIB_CORE_PREFIX_H
 
 #include <sys/un.h>
 #include <stdlib.h>
@@ -117,4 +118,4 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
   #define ntoh64 hton64
 #endif
 
-#endif /* HIP_LIB_CORE_UTILS_H */
+#endif /* HIP_LIB_CORE_PREFIX_H */
