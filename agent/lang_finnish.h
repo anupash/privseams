@@ -13,8 +13,7 @@
 #include <stdio.h>
 
 /* LANGUAGE TABLE */
-char *lang_finnish[] =
-{
+char *lang_finnish[] = {
     /* Set language prefix. */
     "fi",
     /* Set language description. */
@@ -167,6 +166,5 @@ char *lang_finnish[] =
 
     NULL
 };
-
 
 #endif /* HIP_AGENT_LANG_FINNISH_H */

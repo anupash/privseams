@@ -13,8 +13,7 @@
 #include <stdio.h>
 
 /* LANGUAGE TABLE */
-char *lang_english[] =
-{
+char *lang_english[] = {
     /* Set language prefix. */
     "en",
     /* Set language description. */
@@ -167,6 +166,5 @@ char *lang_english[] =
 
     NULL
 };
-
 
 #endif /* HIP_AGENT_LANG_ENGLISH_H */
