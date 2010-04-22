@@ -47,4 +47,4 @@ int hip_blind_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
                            int (*sign)(void *key, struct hip_common *m),
                            void *privkey, struct hip_host_id *pubkey);
 
-#endif
+#endif /* HIP_HIPD_BLIND_H */

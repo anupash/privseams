@@ -86,4 +86,4 @@ void hip_perf_destroy(perf_set_t *perf_set);
 
 perf_set_t *perf_set;
 
-#endif
+#endif /* HIP_LIB_PERFORMANCE_PERFORMANCE_H */

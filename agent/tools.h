@@ -16,4 +16,4 @@ int read_hit_from_buffer(struct in6_addr *, char *);
 
 int config_read(const char *);
 
-#endif
+#endif /* HIP_AGENT_TOOLS_H */
