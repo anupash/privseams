@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_FIREWALL_CACHE_H
 #define HIP_FIREWALL_CACHE_H
 
@@ -18,7 +19,5 @@ void hip_firewall_cache_init_hldb(void);
 firewall_cache_hl_t *hip_cache_create_hl_entry(void);
 
 void hip_firewall_cache_delete_hldb(int);
-
-
 
 #endif /* HIP_FIREWALL_CACHE_H */

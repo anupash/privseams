@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_HIPD_DH_H
 #define HIP_HIPD_DH_H
 
@@ -16,4 +17,5 @@ int hip_calculate_shared_secret(uint8_t *public_value,
                                 signed int len,
                                 unsigned char *buffer,
                                 int bufsize);
+
 #endif /* HIP_HIPD_DH_H */

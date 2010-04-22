@@ -6,6 +6,7 @@
  *
  * @author Rene Hummen
  */
+
 #ifndef HIP_LIB_CORE_HIP_STATISTICS_H
 #define HIP_LIB_CORE_HIP_STATISTICS_H
 

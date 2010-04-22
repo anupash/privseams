@@ -1,11 +1,12 @@
-#ifndef HIP_LIB_GUI_TOOLS_H
-#define HIP_LIB_GUI_TOOLS_H
 /*
  * HIPL GTK GUI
  *
  * License: GNU/GPL
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
+
+#ifndef HIP_LIB_GUI_TOOLS_H
+#define HIP_LIB_GUI_TOOLS_H
 
 #include <gtk/gtk.h>
 

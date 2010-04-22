@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_HIPD_KEYMAT_H
 #define HIP_HIPD_KEYMAT_H
 
@@ -23,4 +24,5 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
 int hip_keymat_draw_and_copy(unsigned char *dst,
                              struct hip_keymat_keymat *keymat,
                              int len);
+
 #endif /* HIP_HIPD_KEYMAT_H */

@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_HIPD_INIT_H
 #define HIP_HIPD_INIT_H
 
@@ -52,4 +53,5 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
 void hip_close(int signal);
 void hip_exit(int signal);
 int hip_init_dht(void);
+
 #endif /* HIP_HIPD_INIT_H */

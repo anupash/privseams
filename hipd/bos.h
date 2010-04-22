@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_HIPD_BOS_H
 #define HIP_HIPD_BOS_H
 
@@ -22,6 +23,5 @@ int hip_handle_bos(struct hip_common *bos,
                    struct in6_addr *bos_saddr,
                    struct in6_addr *bos_daddr,
                    hip_ha_t *entry, hip_portpair_t *);
-
 
 #endif /* HIP_HIPD_BOS_H */

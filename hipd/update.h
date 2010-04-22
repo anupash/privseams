@@ -6,6 +6,7 @@
  * @date    3.5.2009
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+
 #ifndef HIP_HIPD_UPDATE_H
 #define HIP_HIPD_UPDATE_H
 

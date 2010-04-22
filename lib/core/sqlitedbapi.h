@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_LIB_CORE_SQLITEDBAPI_H
 #define HIP_LIB_CORE_SQLITEDBAPI_H
 
@@ -75,4 +76,5 @@ int hip_sqlite_execute_into_db(sqlite3 *, const char *);
 int hip_sqlite_delete_from_table(sqlite3 *, const char *);
 int hip_sqlite_insert_into_table(sqlite3 *, const char *);
 int hip_sqlite_create_table(sqlite3 *, const char *);
+
 #endif /* HIP_LIB_CORE_SQLITEDBAPI_H */

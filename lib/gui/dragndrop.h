@@ -1,11 +1,13 @@
-#ifndef HIP_LIB_GUI_DRAGNDROP_H
-#define HIP_LIB_GUI_DRAGNDROP_H
 /*
  * HIPL GTK GUI
  *
  * License: GNU/GPL
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
+
+#ifndef HIP_LIB_GUI_DRAGNDROP_H
+#define HIP_LIB_GUI_DRAGNDROP_H
+
 #include <gtk/gtk.h>
 
 void dnd_drag_begin(GtkWidget *widget, GdkDragContext *dc, gpointer data);
@@ -38,4 +40,5 @@ void dnd_drag_data_received(GtkWidget *widget,
                             guint info,
                             guint t,
                             gpointer data);
+
 #endif /* HIP_LIB_GUI_DRAGNDROP_H */

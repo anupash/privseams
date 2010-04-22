@@ -1,11 +1,12 @@
-#ifndef HIP_LIB_GUI_HIPGUI_H
-#define HIP_LIB_GUI_HIPGUI_H
 /*
  * HIPL GTK GUI
  *
  * License: GNU/GPL
  * Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
+
+#ifndef HIP_LIB_GUI_HIPGUI_H
+#define HIP_LIB_GUI_HIPGUI_H
 
 #include "agent/hitdb.h"
 
@@ -34,6 +35,5 @@ void gui_hiu_clear(void);
 void gui_hiu_add(HIT_Remote *);
 void gui_hiu_count(int);
 /* @} */
-
 
 #endif /* HIP_LIB_GUI_HIPGUI_H */

@@ -1,11 +1,12 @@
-#ifndef HIP_AGENT_TOOLS_H
-#define HIP_AGENT_TOOLS_H
 /*
  *  HIP Agent
  *
  *  License: GNU/GPL
  *  Authors: Antti Partanen <aehparta@cc.hut.fi>
  */
+
+#ifndef HIP_AGENT_TOOLS_H
+#define HIP_AGENT_TOOLS_H
 
 #include <netinet/in.h>
 

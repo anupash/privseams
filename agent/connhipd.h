@@ -13,4 +13,4 @@ int connhipd_init_sock(void);
 int connhipd_run_thread(void);
 void connhipd_quit(void);
 
-#endif /*HIP_AGENT_CONNHIPD_H */
+#endif /* HIP_AGENT_CONNHIPD_H */

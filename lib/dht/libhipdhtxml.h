@@ -1,6 +1,3 @@
-#ifndef HIP_LIB_DHT_LIBHIPDHTXML_H
-#define HIP_LIB_DHT_LIBHIPDHTXML_H
-
 /** @file
  * A header file for libhipopendhtxml.c
  *
@@ -13,6 +10,9 @@
  * @author Samu Varjonen
  *
  */
+
+#ifndef HIP_LIB_DHT_LIBHIPDHTXML_H
+#define HIP_LIB_DHT_LIBHIPDHTXML_H
 
 /* All XML RPC packet creation and reading functions */
 

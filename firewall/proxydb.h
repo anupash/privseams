@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_FIREWALL_PROXYDB_H
 #define HIP_FIREWALL_PROXYDB_H
 
@@ -45,6 +46,5 @@ int hip_proxy_update_state(struct in6_addr *client_addr,
                            int state);
 
 void hip_uninit_proxy_db(void);
-
 
 #endif /* HIP_FIREWALL_PROXYDB_H */

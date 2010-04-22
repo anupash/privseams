@@ -7,6 +7,7 @@
  * This file defines a Host Identity Protocol (HIP) header and parameter
  * related constants and structures.
  */
+
 #ifndef HIP_LIB_CORE_PROTODEFS_H
 #define HIP_LIB_CORE_PROTODEFS_H
 

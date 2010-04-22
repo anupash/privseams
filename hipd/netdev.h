@@ -7,6 +7,7 @@
  * The component provides interface to receive IP address and IF
  * events over netlink from the kernel.
  */
+
 #ifndef HIP_HIPD_NETDEV_H
 #define HIP_HIPD_NETDEV_H
 

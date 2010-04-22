@@ -72,4 +72,5 @@ int handle_cert_key(struct in6_addr *lhit,
                     struct in6_addr *rhit,
                     void *final_key);
 int verify_hddr_lib(struct hip_common *hipcommonmsg, struct in6_addr *addrkey);
+
 #endif /* HIP_LIB_DHT_LIBHIPDHT_H */
