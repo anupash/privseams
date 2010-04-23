@@ -29,7 +29,6 @@ other related tools and test software.
 %build
 autoreconf --install
 %configure --prefix=/usr
-make -C doc
 make -j 4 all
 
 # Note:
@@ -222,7 +221,7 @@ rm -rf %{buildroot}
 %config /etc/init.d/hipfw
 
 %files doc
-%doc doc/HOWTO.txt doc/howto-html
+%doc doc/HOWTO.txt doc/HOWTO.html
 
 %files all
 %doc COPYING

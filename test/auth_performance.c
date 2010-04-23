@@ -41,7 +41,7 @@ int dsa_key_len      = 1024;
  *
  * \return void
  */
-void print_timeres(void)
+static void print_timeres(void)
 {
     struct timeval tv1, tv2;
     int i;
@@ -69,13 +69,6 @@ int main(int argc, char **argv)
     struct timeval start_time;
     struct timeval stop_time;
     uint64_t timediff    = 0;
-#if 0
-    statistics_data_t creation_stats;
-    statistics_data_t verify_stats;
-    uint32_t num_items   = 0;
-    double min           = 0.0, max = 0.0, avg = 0.0;
-    double std_dev       = 0.0;
-#endif
 
     unsigned int sig_len = 0;
     unsigned char data[PACKET_LENGTH * num_measurements];
@@ -102,11 +95,6 @@ int main(int argc, char **argv)
 
     hip_set_logdebug(LOGDEBUG_NONE);
 
-#if 0
-    memset(&creation_stats, 0, sizeof(statistics_data_t));
-    memset(&verify_stats, 0, sizeof(statistics_data_t));
-#endif
-
     print_timeres();
 
     // data to be signed
@@ -129,7 +117,6 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&creation_stats, timediff);
         printf("%i. sha1-20: %.3f ms\n", i + 1, timediff / 1000.0);
     }
 
@@ -148,7 +135,6 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&creation_stats, timediff);
         printf("%i. sha1-40: %.3f ms\n", i + 1, timediff / 1000.0);
     }
 
@@ -167,7 +153,6 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&creation_stats, timediff);
         printf("%i. sha1-1280: %.3f ms\n", i + 1, timediff / 1000.0);
     }
 
@@ -190,16 +175,8 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&creation_stats, timediff);
         printf("%i. sha1-hmac: %.3f ms\n", i + 1, timediff / 1000.0);
     }
-
-#if 0
-    calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
-                    STATS_IN_MSECS);
-    printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-           num_items, min, max, avg, std_dev);
-#endif
 
 
     printf("\n-------------------------------\n"
@@ -225,7 +202,6 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&creation_stats, timediff);
 
         printf("%i. AES encrypt: %.3f ms\n", i + 1, timediff / 1000.0);
     }
@@ -243,18 +219,9 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&creation_stats, timediff);
-
 
         printf("%i. AES decrypt: %.3f ms\n", i + 1, timediff / 1000.0);
     }
-
-    // reinitialize statistics
-#if 0
-    memset(&creation_stats, 0, sizeof(statistics_data_t));
-    memset(&verify_stats, 0, sizeof(statistics_data_t));
-#endif
-
 
 
     printf("\n-------------------------------\n"
@@ -289,7 +256,6 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&creation_stats, timediff);
 
         if (err <= 0) {
             printf("RSA signature unsuccessful\n");
@@ -297,21 +263,6 @@ int main(int argc, char **argv)
             printf("%i. rsa signature: %.3f ms\n", i + 1, timediff / 1000.0);
         }
     }
-#if 0
-    calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
-                    STATS_IN_MSECS);
-    printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-           num_items, min, max, avg, std_dev);
-#endif
-
-#if 0
-    printf("\n");
-    printf("Signature generation took %.3f sec (%.5f sec per key)\n",
-           bench_secs, bench_secs / sw_bench_loops);
-    printf("%4.2f signatures per sec, %4.2f signatures per min\n\n",
-           sw_bench_loops / bench_secs, sw_bench_loops / bench_secs * 60);
-#endif
-
 
     printf("\nVerifying %d RSA signatures\n", num_measurements);
     for (i = 0; i < num_measurements; i++) {
@@ -329,7 +280,6 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&verify_stats, timediff);
 
         if (err <= 0) {
             printf("Verification failed\n");
@@ -337,21 +287,6 @@ int main(int argc, char **argv)
             printf("%i. rsa verification: %.3f ms\n", i + 1, timediff / 1000.0);
         }
     }
-
-#if 0
-    calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
-                    STATS_IN_MSECS);
-    printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-           num_items, min, max, avg, std_dev);
-#endif
-
-
-    // reinitialize statistics
-#if 0
-    memset(&creation_stats, 0, sizeof(statistics_data_t));
-    memset(&verify_stats, 0, sizeof(statistics_data_t));
-#endif
-
 
 
     printf("\n-------------------------------\n"
@@ -384,7 +319,6 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&creation_stats, timediff);
 
         if (!dsa_sig_pool[i]) {
             printf("DSA signature not successful\n");
@@ -392,12 +326,6 @@ int main(int argc, char **argv)
             printf("%i. dsa signature: %.3f ms\n", i + 1, timediff / 1000.0);
         }
     }
-#if 0
-    calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
-                    STATS_IN_MSECS);
-    printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-           num_items, min, max, avg, std_dev);
-#endif
 
     printf("\nVerifying %d DSA signatures\n", num_measurements);
     for (i = 0; i < num_measurements; i++) {
@@ -414,7 +342,6 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&verify_stats, timediff);
 
         if (err <= 0) {
             printf("Verification failed\n");
@@ -422,20 +349,6 @@ int main(int argc, char **argv)
             printf("%i. dsa verification: %.3f ms\n", i + 1, timediff / 1000.0);
         }
     }
-#if 0
-    calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
-                    STATS_IN_MSECS);
-    printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-           num_items, min, max, avg, std_dev);
-#endif
-
-
-
-    // reinitialize statistics
-#if 0
-    memset(&creation_stats, 0, sizeof(statistics_data_t));
-    memset(&verify_stats, 0, sizeof(statistics_data_t));
-#endif
 
 
 #ifdef HAVE_EC_CRYPTO
@@ -476,7 +389,6 @@ int main(int argc, char **argv)
         gettimeofday(&stop_time, NULL);
 
         timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&creation_stats, timediff);
 
         if (!ecdsa_sig_pool[i]) {
             printf("ECDSA signature not successful\n");
@@ -484,45 +396,6 @@ int main(int argc, char **argv)
             printf("%i. ecdsa signature: %.3f ms\n", i + 1, timediff / 1000.0);
         }
     }
-#endif
-
-#if 0
-    calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
-                    STATS_IN_MSECS);
-    printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-           num_items, min, max, avg, std_dev);
-
-    printf("\nVerifying %d ECDSA signatures\n", num_measurements);
-    for (i = 0; i < num_measurements; i++) {
-        gettimeofday(&start_time, NULL);
-
-        SHA1(&data[i * PACKET_LENGTH], PACKET_LENGTH,
-             &hashed_data[i * SHA_DIGEST_LENGTH]);
-
-        err = ECDSA_do_verify(&hashed_data[i * SHA_DIGEST_LENGTH],
-                              SHA_DIGEST_LENGTH,
-                              ecdsa_sig_pool[i],
-                              ecdsa_key_pool[i % key_pool_size]);
-
-        gettimeofday(&stop_time, NULL);
-
-        timediff = calc_timeval_diff(&start_time, &stop_time);
-        //add_statistics_item(&verify_stats, timediff);
-
-        if (err <= 0) {
-            printf("Verification failed\n");
-        } else {
-            printf("%i. ecdsa verification: %.3f ms\n", i + 1,
-                   timediff / 1000.0);
-        }
-    }
-#endif
-
-#if 0
-    calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
-                    STATS_IN_MSECS);
-    printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-           num_items, min, max, avg, std_dev);
 #endif
 
     return err;

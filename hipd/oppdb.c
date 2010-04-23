@@ -34,6 +34,8 @@
  * - Bing Zhou <bingzhou@cc.hut.fi>
  */
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "oppdb.h"
 #include "hadb.h"
@@ -57,7 +59,6 @@ struct hip_opp_info {
 typedef struct hip_opp_info hip_opp_info_t;
 
 HIP_HASHTABLE *oppdb;
-//static hip_list_t oppdb_list[HIP_OPPDB_SIZE]= { 0 };
 
 static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
 static hip_opp_block_t *hip_create_opp_block_entry(void);
@@ -141,9 +142,7 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
     {
         this = (hip_opp_block_t *) list_entry(item);
         _HIP_DEBUG("List_for_each_entry_safe\n");
-        /* hip_hold_ha(this); */
         fail = func(this, opaque);
-        //hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
         if (fail) {
             goto out_err;
         }
@@ -167,7 +166,6 @@ static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
     deleted = hip_ht_delete(oppdb, entry);
     HIP_UNLOCK_OPP(entry);
     free(deleted);
-    //HIP_FREE(entry);
 }
 
 /**
@@ -256,26 +254,17 @@ skip_hit_addr:
                  "build param HIP_PARAM_HIT  failed\n");
         HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
     }
-    /* Switched from hip_sendto() to hip_sendto_user() due to
-     * namespace collision. Both message.h and user.c had functions
-     * hip_sendto(). Introducing a prototype hip_sendto() to user.h
-     * led to compiler errors --> user.c hip_sendto() renamed to
-     * hip_sendto_user().
-     *
-     * Lesson learned: use function prototypes unless functions are
-     * ment only for local (inside the same file where defined) use.
-     * -Lauri 11.07.2008 */
     HIP_DEBUG("Unblocking caller at port %d\n", ntohs(app_id->sin6_port));
     n = hip_sendto_user(message, (struct sockaddr *) app_id);
 
     if (n < 0) {
-        HIP_ERROR("hip_sendto() failed.\n");
+        HIP_ERROR("hip_sendto_user() failed.\n");
         err = -1;
         goto out_err;
     }
 out_err:
     if (message) {
-        HIP_FREE(message);
+        free(message);
     }
     return err;
 }
@@ -289,7 +278,7 @@ static hip_opp_block_t *hip_create_opp_block_entry(void)
 {
     hip_opp_block_t *entry = NULL;
 
-    entry = (hip_opp_block_t *) malloc(sizeof(hip_opp_block_t));
+    entry = malloc(sizeof(hip_opp_block_t));
     if (!entry) {
         HIP_ERROR("hip_opp_block_t memory allocation failed.\n");
         return NULL;
@@ -362,7 +351,6 @@ void hip_init_opp_db(void)
 static void hip_oppdb_dump(void)
 {
     int i;
-    //  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";
     hip_opp_block_t *this;
     hip_list_t *item, *tmp;
 
@@ -391,8 +379,8 @@ static void hip_oppdb_dump(void)
  *                  which to calculate the pseudo HIT
  * @return a host assocition or NULL if not found
  */
-hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
-                                   struct in6_addr *resp_addr)
+static hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
+                                          struct in6_addr *resp_addr)
 {
     hip_ha_t *entry_tmp = NULL;
     hip_hit_t phit;
@@ -433,7 +421,6 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
             goto out_err;
         }
         hip_get_default_hit(&msg->hitr);
-        //hip_get_any_localhost_hit(&msg->hitr, HIP_HI_DEFAULT_ALGO, 0);
     } else if (type == HIP_R1) {
         entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
     } else {
@@ -466,18 +453,6 @@ static int hip_receive_opp_r1(struct hip_common *msg,
     hip_ha_t *entry;
     hip_hit_t phit;
     int err = 0;
-
-#if 0
-    opp_entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
-    if (!opp_entry) {
-        HIP_ERROR("Cannot find HA entry after receive r1\n");
-        err = -1;
-        goto out_err;
-    }
-#endif
-
-    // add new HA with real hit
-    //err = hip_hadb_add_peer_info(&msg->hits, src_addr);
 
     HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
     HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
@@ -722,8 +697,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
     /* @todo is this function set needed? */
     //ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
 
-    //entry = hip_oppdb_find_byhits(&phit, src);
-    //HIP_ASSERT(!entry);
     HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, &dst_ip, NULL,
                                  src), -1, "Add db failed\n");
 
@@ -748,7 +721,6 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
     int err     = 0, disable_fallback = 0;
     time_t *now = (time_t *) current_time;
     struct in6_addr *addr;
-    //HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
 
     if (!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
         hip_opp_info_t info;

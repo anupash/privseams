@@ -100,7 +100,7 @@ int hip_peek_recv_total_len(int socket,
     /* We're using system call here add thus reseting errno. */
     errno      = 0;
 
-    msg        = (char *) malloc(hdr_size);
+    msg        = malloc(hdr_size);
     HIP_IFEL(!msg, -ENOMEM, "Error allocating memory.\n");
 
     /* Make sure the socket does not block (bug id 806) */
@@ -291,7 +291,7 @@ static int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
     HIP_DEBUG("Sending user message %d to HIPD on socket %d\n",
               hip_get_msg_type(msg), socket);
 
-    n = sendto(socket, msg, /*hip_get_msg_total_len(msg)*/ len, MSG_NOSIGNAL,
+    n = sendto(socket, msg, len, MSG_NOSIGNAL,
                (struct sockaddr *) &sock_addr, alen);
     HIP_DEBUG("Sent %d bytes\n", n);
 

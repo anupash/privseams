@@ -1,3 +1,6 @@
+#ifndef IPSEC_POLICY_PARSE_H
+#define IPSEC_POLICY_PARSE_H
+
 #include <stdint.h>
 
 #define DIR 257
@@ -25,3 +28,5 @@ typedef union {
     } val;
 } YYSTYPE;
 extern YYSTYPE __libipseclval;
+
+#endif /* IPSEC_POLICY_PARSE_H */

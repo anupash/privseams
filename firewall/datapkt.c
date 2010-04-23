@@ -94,10 +94,10 @@ out_err:
  *                same but including a signature from hipd.
  * @return        zero on success or negative on error
  */
-int hip_get_data_packet_header(const struct in6_addr *src_hit,
-                               const struct in6_addr *dst_hit,
-                               int payload,
-                               struct hip_common *msg)
+static int hip_get_data_packet_header(const struct in6_addr *src_hit,
+                                      const struct in6_addr *dst_hit,
+                                      int payload,
+                                      struct hip_common *msg)
 {
     int err = 0;
 
@@ -289,7 +289,7 @@ int hip_datapacket_mode_init(void)
         HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
 
         // allocate memory for the packet buffers
-        HIP_IFEL(!(hip_data_packet = (unsigned char *) malloc(ESP_PACKET_SIZE)),
+        HIP_IFEL(!(hip_data_packet = malloc(ESP_PACKET_SIZE)),
                  -1, "failed to allocate memory");
 
         // create required sockets

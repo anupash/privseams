@@ -29,6 +29,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -37,10 +38,6 @@
 #include "lib/core/hip_udp.h"
 #include "nlink.h"
 
-/* New one to prevent netlink overrun */
-#if 0
-#define HIP_MAX_NETLINK_PACKET 3072
-#endif
 #define HIP_MAX_NETLINK_PACKET 65537
 
 #define PREFIXLEN_SPECIFIED 1
@@ -142,7 +139,6 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 
         status      = recvfrom(nl->fd, buf, sizeof(buf),
                                0, NULL, NULL);
-        //status = recvmsg(nl->fd, &msg, 0);
 
         if (status < 0) {
             HIP_PERROR("perror: ");
@@ -798,9 +794,7 @@ static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
         return -1;
     }
 
-    if (rtnl_dump_filter(rth,
-                         /*ll_remember_index*/ NULL,
-                         idxmap, NULL, NULL) < 0) {
+    if (rtnl_dump_filter(rth, NULL, idxmap, NULL, NULL) < 0) {
         HIP_ERROR("Dump terminated\n");
         return -1;
     }
@@ -855,8 +849,6 @@ int hip_iproute_modify(struct rtnl_handle *rth,
                   ip, dev, family);
     }
     HIP_IFEL(get_prefix_1(&dst, ip, req1.r.rtm_family), -1, "prefix\n");
-    //if (req.r.rtm_family == AF_UNSPEC)
-    //req.r.rtm_family = dst.family;
     req1.r.rtm_dst_len = dst.bitlen;
     dst_ok             = 1;
     if (dst.bytelen) {
@@ -877,7 +869,7 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 out_err:
     for (i = 0; i < 16; i++) {
         if (idxmap[i]) {
-            HIP_FREE(idxmap[i]);
+            free(idxmap[i]);
         }
     }
 
@@ -941,7 +933,6 @@ static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
     _HIP_HEXDUMP("rtmsg : ", r, sizeof(struct rtmsg));
     _HIP_HEXDUMP("nlmsg : ", n, n->nlmsg_len);
     _HIP_HEXDUMP("tb[RTA_SRC] : ", &tb[RTA_SRC], sizeof(struct rtattr));
-    //entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
     addr.in6 = (struct in6_addr *) RTA_DATA(tb[2]);
     entry    = 7;
     addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
@@ -1220,7 +1211,7 @@ static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
     int err = 0;
 
     if (slash) {
-        HIP_IFEL(!(aux_slash = HIP_MALLOC(sizeof(slash), 0)), -1, "alloc\n");
+        HIP_IFEL(!(aux_slash = malloc(sizeof(slash))), -1, "alloc\n");
         strcpy(aux_slash, slash);
         *slash = 0;
     }
@@ -1235,7 +1226,7 @@ static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
 
 out_err:
     if (aux_slash) {
-        HIP_FREE(aux_slash);
+        free(aux_slash);
     }
     return err;
 }
@@ -1288,7 +1279,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 
     if (ip_is_v4 && lsi_total > 0) {
         size_dev = sizeof(dev) + sizeof(label);
-        res      = (char *) malloc(size_dev + 1);
+        res      = malloc(size_dev + 1);
         memset(res, '\0', size_dev + 1);
         strcat(res, dev);
         strcat(res, label);
@@ -1316,7 +1307,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 
 out_err:
     if (res) {
-        HIP_FREE(res);
+        free(res);
     }
     return 0;
 }
@@ -1414,45 +1405,18 @@ int set_up_device(char *dev, int up)
         for (total_add = lsi_total; total_add > 0; total_add--) {
             sprintf(label, ":%d", total_add);
             size_dev = sizeof(dev) + sizeof(label);
-            res      = (char *) malloc(size_dev + 1);
+            res      = malloc(size_dev + 1);
             memset(res, '\0', size_dev + 1);
             strcat(strcat(res, dev), label);
             err      = do_chflags(res, flags, mask);
             if (res) {
-                HIP_FREE(res);
+                free(res);
             }
         }
     }
     err = do_chflags(dev, flags, mask);
 
     return err;
-}
-
-/**
- * xfrm_selector_upspec - fill port info in the selector.
- * Selector is bound to HITs.
- *
- * @param sel a pointer to xfrm_selector to be filled in
- * @param src_port source port
- * @param dst_port destination port
- *
- * @return 0
- */
-
-int xfrm_selector_upspec(struct xfrm_selector *sel,
-                         uint32_t src_port, uint32_t dst_port)
-{
-    sel->sport = htons(src_port);
-    if (sel->sport) {
-        sel->sport_mask = ~((__uint16_t) 0);
-    }
-
-    sel->dport = htons(dst_port);
-    if (sel->dport) {
-        sel->dport_mask = ~((__uint16_t) 0);
-    }
-
-    return 0;
 }
 
 /**
@@ -1518,8 +1482,6 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 
     sel->prefixlen_d = id_prefix;
     sel->prefixlen_s = id_prefix;
-
-    //xfrm_selector_upspec(sel, src_port, dst_port);
 
     return 0;
 }

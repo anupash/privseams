@@ -50,8 +50,6 @@
 #include "libpfkey.h"
 #include "pfkeyv2.h"
 
-#define CALLOC(size, cast) (cast) calloc(1, (size))
-
 static int findsupportedmap __P((int));
 static int setsupportedmap __P((struct sadb_supported *));
 static struct sadb_alg *findsupportedalg __P((u_int, u_int));
@@ -422,7 +420,7 @@ u_int32_t min, max, reqid, seq;
         len += sizeof(struct sadb_spirange);
     }
 
-    if ((newmsg = CALLOC((size_t) len, struct sadb_msg *)) == NULL) {
+    if ((newmsg = calloc(1, (size_t) len)) == NULL) {
         __ipsec_set_strerror(strerror(errno));
         return -1;
     }
@@ -603,7 +601,7 @@ struct sockaddr *src, *dst;
           + sizeof(struct sadb_address)
           + PFKEY_ALIGN8(sysdep_sa_len(dst));
 
-    if ((newmsg = CALLOC((size_t) len, struct sadb_msg *)) == NULL) {
+    if ((newmsg = calloc(1, (size_t) len)) == NULL) {
         __ipsec_set_strerror(strerror(errno));
         return -1;
     }
@@ -1172,7 +1170,7 @@ u_int32_t seq;
           + PFKEY_ALIGN8(sysdep_sa_len(dst))
           + policylen;
 
-    if ((newmsg = CALLOC(len, struct sadb_msg *)) == NULL) {
+    if ((newmsg = calloc(1, len)) == NULL) {
         __ipsec_set_strerror(strerror(errno));
         return -1;
     }
@@ -1340,7 +1338,7 @@ struct pfkey_send_sa_args *sa_parms;
     }
 #endif
 
-    if ((newmsg = CALLOC((size_t) len, struct sadb_msg *)) == NULL) {
+    if ((newmsg = calloc(1, (size_t) len)) == NULL) {
         __ipsec_set_strerror(strerror(errno));
         return -1;
     }
@@ -1531,7 +1529,7 @@ u_int32_t spi;
           + sizeof(struct sadb_address)
           + PFKEY_ALIGN8(sysdep_sa_len(dst));
 
-    if ((newmsg = CALLOC((size_t) len, struct sadb_msg *)) == NULL) {
+    if ((newmsg = calloc(1, (size_t) len)) == NULL) {
         __ipsec_set_strerror(strerror(errno));
         return -1;
     }
@@ -1613,7 +1611,7 @@ u_int type, satype;
     /* create new sadb_msg to send. */
     len = sizeof(struct sadb_msg);
 
-    if ((newmsg = CALLOC((size_t) len, struct sadb_msg *)) == NULL) {
+    if ((newmsg = calloc(1, (size_t) len)) == NULL) {
         __ipsec_set_strerror(strerror(errno));
         return -1;
     }
@@ -1690,7 +1688,7 @@ u_int32_t seq;
           + sizeof(struct sadb_lifetime)
           + policylen;
 
-    if ((newmsg = CALLOC((size_t) len, struct sadb_msg *)) == NULL) {
+    if ((newmsg = calloc(1, (size_t) len)) == NULL) {
         __ipsec_set_strerror(strerror(errno));
         return -1;
     }
@@ -1748,7 +1746,7 @@ u_int32_t spid;
     len = sizeof(struct sadb_msg)
           + sizeof(xpl);
 
-    if ((newmsg = CALLOC((size_t) len, struct sadb_msg *)) == NULL) {
+    if ((newmsg = calloc(1, (size_t) len)) == NULL) {
         __ipsec_set_strerror(strerror(errno));
         return -1;
     }
@@ -1861,7 +1859,7 @@ int so;
 
     /* read real message */
     reallen = PFKEY_UNUNIT64(buf.sadb_msg_len);
-    if ((newmsg = CALLOC((size_t) reallen, struct sadb_msg *)) == 0) {
+    if ((newmsg = calloc(1, (size_t) reallen)) == 0) {
         __ipsec_set_strerror(strerror(errno));
         return NULL;
     }

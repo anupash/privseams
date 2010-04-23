@@ -41,7 +41,7 @@ static HIP_HASHTABLE *firewall_port_cache_db = NULL;
  *
  * @note this is used only from the firewall, so move this there
  */
-int hip_get_proto_info(in_port_t port_dest, char *proto)
+static int hip_get_proto_info(in_port_t port_dest, char *proto)
 {
     FILE *fd       = NULL;
     char line[500], sub_string_addr_hex[8], path[11 + sizeof(proto)];
@@ -128,9 +128,6 @@ static int hip_port_cache_add_new_entry(const char *key, int value)
     int err = 0;
 
     HIP_DEBUG("\n");
-/*
- *      HIP_ASSERT(ha_entry != NULL);
- */
     new_entry = (firewall_port_cache_hl_t *) (hip_cache_create_hl_entry());
     memcpy(new_entry->port_and_protocol, key, strlen(key));
     new_entry->traffic_type = value;

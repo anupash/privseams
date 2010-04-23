@@ -12,9 +12,6 @@
  * @author  Alberto Garcia
  */
 
-#include "config.h"
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-
 #include "oppipdb.h"
 
 #define HIP_LOCK_OPPIP(entry)
@@ -84,9 +81,7 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
     {
         this = (hip_oppip_t *) list_entry(item);
         _HIP_DEBUG("List_for_each_entry_safe\n");
-        //hip_hold_ha(this);
         func(this, opaque);
-        //hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
     }
 
     HIP_UNLOCK_HT(&oppipdb);
@@ -137,7 +132,7 @@ static hip_oppip_t *hip_create_oppip_entry(void)
 {
     hip_oppip_t *entry = NULL;
 
-    entry = (hip_oppip_t *) malloc(sizeof(hip_oppip_t));
+    entry = malloc(sizeof(hip_oppip_t));
     if (!entry) {
         HIP_ERROR("hip_oppip_t memory allocation failed.\n");
         return NULL;
@@ -168,12 +163,9 @@ int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
         return err;
     }
 
-    //HIP_IFEL(!ipv6_addr_copy(new_item, ip_peer), -1,
-    //  "Copy non-HIP host failed\n");
     ipv6_addr_copy(new_item, ip_peer);
 
     err = hip_ht_add(oppipdb, new_item);
-    //hip_oppipdb_dump();
 
     return err;
 }
@@ -189,31 +181,6 @@ int hip_init_oppip_db(void)
     return 0;
 }
 
-#if 0
-/**
- * Dumps the whole oppipdb hash table for monitoring purposes
- */
-static void hip_oppipdb_dump(void)
-{
-    int i;
-    hip_oppip_t *this;
-    hip_list_t *item, *tmp;
-
-    HIP_DEBUG("Start oppipdb dump. Non-HIP peers are:\n");
-    HIP_LOCK_HT(&oppipdb);
-
-    list_for_each_safe(item, tmp, oppipdb, i)
-    {
-        this = list_entry(item);
-        HIP_DEBUG_IN6ADDR("", this);
-    }
-
-    HIP_UNLOCK_HT(&oppipdb);
-    HIP_DEBUG("end oppipdb dump\n");
-}
-
-#endif
-
 /**
  * Seeks an ip within the oppipdb hash table.
  * If the ip is found in the table, that host is not HIP capable.
@@ -226,7 +193,6 @@ hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer)
 {
     hip_oppip_t *ret = NULL;
 
-    //hip_oppipdb_dump();
     _HIP_DEBUG_IN6ADDR("Searching in oppipdb for ip:", ip_peer);
     ret = hip_ht_find(oppipdb, (void *) ip_peer);
     if (!ret) {
@@ -256,5 +222,3 @@ void hip_oppipdb_delentry(const struct in6_addr *ip_peer)
         hip_oppipdb_del_entry_by_entry(ret, NULL);
     }
 }
-
-#endif /* CONFIG_HIP_OPPORTUNISTIC */

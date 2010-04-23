@@ -145,12 +145,8 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
     }
 
     {
-        /*void *x = malloc(sizeof(req.n) * 10);
-         * memcpy(x, &req.n, sizeof(req.n));*/
         HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
                  "netlink_talk failed\n");
-        ///if (x)
-        //free(x);
     }
 
 out_err:
@@ -246,10 +242,6 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
     /* SELECTOR <--> HITs */
     HIP_IFE(xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
                                hit_prefix, 0, 0, preferred_family), -1);
-/*
- *      if (req.xpid.sel.family == AF_UNSPEC)
- *              req.xpid.sel.family = AF_INET6;
- */
     HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
              "No associated policies to be deleted\n");
 
@@ -317,8 +309,6 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
     req.xsinfo.mode     = XFRM_MODE_BEET;
     req.xsinfo.id.proto = IPPROTO_ESP;
 
-    //memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
-    //memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
     req.xsinfo.id.spi   = htonl(spi);
 
     /* Selector */
@@ -401,7 +391,6 @@ static int hip_xfrm_state_delete(struct rtnl_handle *rth,
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xsid));
     req.n.nlmsg_flags = NLM_F_REQUEST;
     req.n.nlmsg_type  = XFRM_MSG_DELSA;
-    //req.xsid.family = preferred_family;
 
     if (IN6_IS_ADDR_V4MAPPED(peer_addr)) {
         HIP_DEBUG("IPV4 SA deletion\n");
@@ -642,13 +631,6 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
 
     HIP_IFEL((enckey_len < 0 || authkey_len < 0), 1,
              "Bad enc or auth key len\n");
-
-#if 0
-    /* XX CHECK: is there some kind of range for the SPIs ? */
-    if (!already_acquired) {
-        get_random_bytes(spi, sizeof(uint32_t));
-    }
-#endif
 
     HIP_DEBUG("************************************\n");
     HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));

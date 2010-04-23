@@ -8,8 +8,10 @@
  * @author Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+
 #ifndef HIP_HIPD_OUTPUT_H
 #define HIP_HIPD_OUTPUT_H
+
 #include <netinet/ip6.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>

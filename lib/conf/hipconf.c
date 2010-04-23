@@ -458,7 +458,7 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
  *           ret = ACTION_NEWACT;
  *       ...
  */
-int hip_conf_get_action(char *argv[])
+static int hip_conf_get_action(char *argv[])
 {
     int ret = -1;
 
@@ -540,7 +540,7 @@ int hip_conf_get_action(char *argv[])
  * @param  action action type
  * @return how many arguments needs to be given at least
  */
-int hip_conf_check_action_argc(int action)
+static int hip_conf_check_action_argc(int action)
 {
     int count = 0;
 
@@ -595,7 +595,7 @@ int hip_conf_check_action_argc(int action)
  * @param  text the type as a string
  * @return the numeric type id correspoding to the symbolic text
  */
-int hip_conf_get_type(char *text, char *argv[])
+static int hip_conf_get_type(char *text, char *argv[])
 {
     int ret = -1;
 
@@ -696,7 +696,7 @@ int hip_conf_get_type(char *text, char *argv[])
  * @return an index for argv[], which indicates the type argument.
  *         Usually either 1 or 2.
  */
-int hip_conf_get_type_arg(int action)
+static int hip_conf_get_type_arg(int action)
 {
     int type_arg = -1;
 
@@ -752,8 +752,8 @@ int hip_conf_get_type_arg(int action)
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
-                           int match_hip)
+static int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
+                                  int match_hip)
 {
     int err              = 1;
     struct addrinfo *res = NULL, *rp;
@@ -1546,26 +1546,6 @@ static int hip_conf_handle_nat(hip_common_t *msg, int action,
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
              "Failed to build user message header.: %s\n", strerror(err));
 
-#if 0 /* Not used currently */
-    else {
-        ret = inet_pton(AF_INET6, opt[0], &hit);
-        if (ret < 0 && errno == EAFNOSUPPORT) {
-            HIP_PERROR("inet_pton: not a valid address family\n");
-            err = -EAFNOSUPPORT;
-            goto out_err;
-        } else if (ret == 0) {
-            HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-            err = -EINVAL;
-            goto out_err;
-        }
-        status = HIP_MSG_SET_NAT_ON;
-    }
-
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-                                      sizeof(in6_addr_t)), -1,
-             "build param hit failed: %s\n", strerror(err));
-#endif
-
 out_err:
     return err;
 }
@@ -2243,13 +2223,6 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
             libs[3] = "libhipopendht.so";
         }
 
-#if 0
-        if (type != EXEC_LOADLIB_NONE) {
-            setenv("LD_PRELOAD", libs, 1);
-            HIP_DEBUG("LD_PRELOADing\n");
-        }
-#endif
-
         hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
         setenv("LD_PRELOAD", lib_all, 1);
         HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
@@ -2673,7 +2646,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
     int err           = 0, type_arg = 0;
     long int action   = 0, type = 0;
     hip_common_t *msg = NULL;
-    //char *text = NULL;
 
     /* Check that we have at least one command line argument. */
     HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",

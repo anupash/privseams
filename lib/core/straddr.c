@@ -161,7 +161,7 @@ unsigned char *base64_encode(unsigned char *buf, unsigned int len)
     unsigned int b64_len;
 
     b64_len = (((len + 2) / 3) * 4) + 1;
-    ret     = (unsigned char *) malloc(b64_len);
+    ret     = malloc(b64_len);
     if (ret == NULL) {
         goto out_err;
     }

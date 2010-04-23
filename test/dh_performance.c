@@ -26,9 +26,6 @@
 #include "lib/core/hashchain.h"
 #include "lib/core/performance.h"
 
-//int DH_compute_key(unsigned char *key, BIGNUM *pub_key, DH *dh);
-
-
 
 /*! \brief Number of benchmark runs */
 #define DHP_DEFAULT_LOOPS 100
@@ -78,7 +75,7 @@
  * \param progname The name of the executable
  * \return void
  */
-void dhp_usage(char *progname)
+static void dhp_usage(char *progname)
 {
     printf( "Usage: %s -c [NUM] -l [NUM]\n"
             "-c [NUM] : create [NUM] new dh keys for the benchmark\n"
@@ -124,21 +121,21 @@ void dhp_usage(char *progname)
  *
  * \return Returns error code. 0 = Success, 1 = Error.
  */
-int dhp_getopts(int argc,
-                char **argv,
-                int  *sw_create_dh,
-                int  *sw_dh_group_id,
-                int  *sw_create_dsa,
-                int  *sw_create_rsa,
-                int  *sw_rsa_keylen,
-                int  *sw_dsa_keylen,
-                int  *sw_bench_loops,
-                int  *sw_print_keys,
-                int  *sw_shared_key_len,
-                int  *sw_hash_chain_len,
-                int  *sw_file_output,
-                int  *sw_cpuload,
-                int  *sw_hash_loops)
+static int dhp_getopts(int argc,
+                       char **argv,
+                       int  *sw_create_dh,
+                       int  *sw_dh_group_id,
+                       int  *sw_create_dsa,
+                       int  *sw_create_rsa,
+                       int  *sw_rsa_keylen,
+                       int  *sw_dsa_keylen,
+                       int  *sw_bench_loops,
+                       int  *sw_print_keys,
+                       int  *sw_shared_key_len,
+                       int  *sw_hash_chain_len,
+                       int  *sw_file_output,
+                       int  *sw_cpuload,
+                       int  *sw_hash_loops)
 {
     int c;
     opterr = 0;
@@ -284,7 +281,7 @@ static void print_timeres(void)
  * \param timeval timeval struct from the OS.
  * \return void
  */
-void dhp_start_benchmark(struct timeval *bench_time)
+static void dhp_start_benchmark(struct timeval *bench_time)
 {
     gettimeofday(bench_time, NULL);
 }
@@ -299,7 +296,7 @@ void dhp_start_benchmark(struct timeval *bench_time)
  * \param timeval timeval struct from the OS.
  * \return passed time since beginning of the interval.
  */
-double dhp_stop_benchmark(struct timeval *bench_time)
+static double dhp_stop_benchmark(struct timeval *bench_time)
 {
     struct timeval now;
     gettimeofday(&now, NULL);
@@ -407,7 +404,6 @@ int main(int argc, char **argv)
         printf( "-------------------------------\n"
                 "RSA performance test\n"
                 "-------------------------------\n\n");
-        //impl_dsa_sign(uint8_t *digest, uint8_t *private_key, uint8_t *signature)
 
 
         rsa_key_pool = malloc(sw_create_rsa * sizeof(RSA *));
@@ -417,7 +413,6 @@ int main(int argc, char **argv)
         dhp_start_benchmark(&bench_time);
         /* create new DH keys */
         for (i = 0; i < sw_create_rsa; i++) {
-            //printf("Create key %d\n", i);
             if (sw_file_output) {
                 hip_perf_start_benchmark(perf_set, PS_RSA_CREATE);
             }
@@ -432,8 +427,6 @@ int main(int argc, char **argv)
             }
             if (sw_print_keys == TRUE) {
                 printf("\nKey %d\n", i + 1);
-            } else {
-                //dhp_load_progress(i, sw_create_dsa, 50);
             }
         }
 
@@ -485,12 +478,6 @@ int main(int argc, char **argv)
             if (!err) {
                 printf("RSA signature is crap\n");
             }
-
-
-            if (sw_print_keys) {
-                //  HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig_pool[i]->r));
-                //  HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig_pool[i]->s));
-            }
         }
         bench_secs = dhp_stop_benchmark(&bench_time);
         printf("\n");
@@ -518,10 +505,6 @@ int main(int argc, char **argv)
                 hip_perf_stop_benchmark(perf_set, PS_RSA_VERIFY);
                 hip_perf_write_benchmark(perf_set, PS_RSA_VERIFY);
             }
-            if (sw_print_keys) {
-                //HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig_pool[i]->r));
-                //HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig_pool[i]->s));
-            }
         }
         bench_secs = dhp_stop_benchmark(&bench_time);
         printf("\n");
@@ -533,7 +516,6 @@ int main(int argc, char **argv)
         printf( "-------------------------------\n"
                 "DSA performance test\n"
                 "-------------------------------\n\n");
-        //impl_dsa_sign(uint8_t *digest, uint8_t *private_key, uint8_t *signature)
 
         dsa_key_pool = malloc(sw_create_dsa * sizeof(DSA *));
         printf("Creating key pool of %d keys of length %d.\n",
@@ -558,8 +540,6 @@ int main(int argc, char **argv)
                 printf("\nKey %d\n", i + 1);
                 printf("pub_key =%s\n", BN_bn2hex(dsa_key_pool[i]->pub_key));
                 printf("priv_key =%s\n", BN_bn2hex(dsa_key_pool[i]->priv_key));
-            } else {
-                //dhp_load_progress(i, sw_create_dsa, 50);
             }
         }
 
@@ -684,8 +664,6 @@ int main(int argc, char **argv)
             printf("\nKey %d\n", i + 1);
             printf("pub_key =%s\n", BN_bn2hex(dh_key_pool[i]->pub_key));
             printf("priv_key =%s\n", BN_bn2hex(dh_key_pool[i]->priv_key));
-        } else {
-            //dhp_load_progress(i, sw_create_dh, 50);
         }
     }
     printf("\n");
@@ -736,39 +714,6 @@ int main(int argc, char **argv)
            bench_secs, bench_secs / sw_bench_loops);
     printf("%4.2f keys per sec, %4.2f keys per min\n\n",
            sw_bench_loops / bench_secs, sw_bench_loops / bench_secs * 60);
-
-#ifdef HASHCHAIN
-    printf( "-------------------------------\n"
-            "Hash chain performance test\n"
-            "-------------------------------\n\n");
-
-    printf("Creating %d hash chains of length %d\n", sw_bench_loops, sw_hash_chain_len);
-    hash_chain_t *current_chain;
-    dhp_start_benchmark(&bench_time);
-
-    for (i = 0; i < sw_bench_loops; i++) {
-        if (sw_file_output) {
-            hip_perf_start_benchmark(perf_set, PS_HC_CREATE);
-        }
-        current_chain = hchain_create(sw_hash_chain_len);
-        if (sw_file_output) {
-            hip_perf_stop_benchmark(perf_set, PS_HC_CREATE);
-            hip_perf_write_benchmark(perf_set, PS_HC_CREATE);
-        }
-        if (sw_print_keys) {
-            hchain_print(current_chain);
-        }
-    }
-    printf("\n");
-    bench_secs = dhp_stop_benchmark(&bench_time);
-    printf("Hash chain generation took %.3f sec (%.10f sec per hash chain)\n",
-           bench_secs, bench_secs / sw_bench_loops);
-    printf("%4.2f hash chains per sec, %4.2f hash chains per min\n",
-           sw_bench_loops / bench_secs, sw_bench_loops / bench_secs * 60 * 1000);
-
-    //if(sw_file_output) hip_perf_close(perf_set);
-
-#endif
 
     printf( "-------------------------------\n"
             "Hash function (SHA-1) performance test\n"

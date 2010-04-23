@@ -18,6 +18,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "maintenance.h"
 #include "hipd.h"
@@ -139,7 +141,6 @@ static int hip_scan_opp_fallback(void)
 out_err:
     return err;
 }
-
 #endif
 
 /**
@@ -367,7 +368,7 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
     /* Makes sure that the hits are sent always in the same order */
     r_is_our = hip_hidb_hit_is_our(hit_r);
 
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "alloc\n");
     hip_msg_init(msg);
     HIP_IFEL(hip_build_user_hdr(msg, action, 0), -1,
              "Build hdr failed\n");

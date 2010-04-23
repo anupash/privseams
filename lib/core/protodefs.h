@@ -7,6 +7,7 @@
  * This file defines a Host Identity Protocol (HIP) header and parameter
  * related constants and structures.
  */
+
 #ifndef HIP_LIB_CORE_PROTODEFS_H
 #define HIP_LIB_CORE_PROTODEFS_H
 
@@ -29,7 +30,11 @@
 
 #define HIP_MAX_PACKET 4096
 #define HIP_MAX_NETWORK_PACKET 2048
-/** @addtogroup hip_msg
+
+/**
+ * @defgroup hip_msg HIP daemon message types
+ * @note Don't make these values higher than 255.
+ *       The variable, which stores this type, is 8 bits.
  * @{
  */
 #define HIP_I1                  1
@@ -37,15 +42,15 @@
 #define HIP_I2                  3
 #define HIP_R2                  4
 #define HIP_CER                 5
-#define HIP_BOS                 11 /* removed from ietf-hip-base-01 */
+#define HIP_BOS                 11 ///< removed from ietf-hip-base-01
 #define HIP_UPDATE              16
 #define HIP_NOTIFY              17
 #define HIP_CLOSE               18
 #define HIP_CLOSE_ACK           19
 /* 20 was already occupied by HIP_PSIG so shifting HIP_PSIG and HIP_TRIG plus 1*/
 #define HIP_HDRR                20
-#define HIP_PSIG                21 /* lightweight HIP pre signature */
-#define HIP_TRIG                22 /* lightweight HIP signature trigger*/
+#define HIP_PSIG                21 ///< lightweight HIP pre signature
+#define HIP_TRIG                22 ///< lightweight HIP signature trigger
 #define HIP_LUPDATE             23
 #define HIP_DATA                32
 #define HIP_PAYLOAD             64
@@ -77,21 +82,55 @@
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0, 0xEF, 0xF0, 0x2F, 0xBF, 0xF4, 0x3D, 0x0F, \
                                   0xE7, 0x93, 0x0C, 0x3C, 0x6E, 0x61, 0x74, 0xEA }
 
-/** @addtogroup hip_param_type_numbers
+
+/**
+ * Type values used in Host Identity Protocol (HIP) parameters.
+ *
+ * These are the type values used in Host Identity Protocol (HIP) parameters
+ * defined in [draft-ietf-hip-base] and other drafts expanding it. Because the
+ * ordering (from lowest to highest) of HIP parameters is strictly enforced, the
+ * parameter type values for existing parameters have been spaced to allow for
+ * future protocol extensions.
+ *
+ * <b>Type values are grouped as follows:</b>
+ * <ul>
+ * <li>0-1023 are used in HIP handshake and update procedures and are covered
+ * by signatures.</li>
+ * <li>1024-2047 are reserved.</li>
+ * <li>2048-4095 are used for parameters related to HIP transform types.</li>
+ * <li>4096-61439 are reserved. However, a subset (32768 - 49141) of this can be
+ * used for HIPL private parameters.</li>
+ * <li>61440-62463 are used for signatures and signed MACs.</li>
+ * <li>62464-63487 are used for parameters that fall outside of the signed area
+ * of the packet.</li>
+ * <li>63488-64511 are used for rendezvous and other relaying services.</li>
+ * <li>64512-65535 are reserved.</li>
+ * </ul>
+ *
+ * @defgroup hip_param_type_numbers HIP parameter type values
+ * @see      hip_tlv
+ * @see      hip_param_func
+ * @see      <a href="http://hip4inter.net/documentation/drafts/draft-ietf-hip-base-06-pre180506.txt">
+ *           draft-ietf-hip-base-06-pre180506</a> section 5.2.
+ * @note     The order of the parameters is strictly enforced. The parameters
+ *           @b must be in order from lowest to highest.
  * @{
  */
+
+/** Defines the minimum parameter type value.
+ * @note exclusive */
 #define HIP_PARAM_MIN                  -1
 
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
-//NAT branch
-/*195 is temp value, check me later**/
-#define HIP_PARAM_STUN                     195
-//end NAT branch
-#define HIP_PARAM_HASH_CHAIN_VALUE     221
-#define HIP_PARAM_HASH_CHAIN_ANCHORS   222
-#define HIP_PARAM_HASH_CHAIN_PSIG      223
+// NAT branch
+/* 195 is temp value, check me later */
+#define HIP_PARAM_STUN                 195
+// end NAT branch
+#define HIP_PARAM_HASH_CHAIN_VALUE     221 ///< lhip hash chain. 221 is is temporary.
+#define HIP_PARAM_HASH_CHAIN_ANCHORS   222 ///< lhip hash chain anchors. 222 is temporary.
+#define HIP_PARAM_HASH_CHAIN_PSIG      223 ///< lhip hash chain signature. 223 is temporary.
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
 #define HIP_PARAM_CHALLENGE_RESPONSE   322
@@ -187,8 +226,8 @@
 #define HIP_PARAM_HIP_SIGNATURE         61697
 #define HIP_PARAM_ECHO_RESPONSE         63425
 #define HIP_PARAM_ECHO_REQUEST          63661
-#define HIP_PARAM_RELAY_FROM            63998
-#define HIP_PARAM_RELAY_TO              64002
+#define HIP_PARAM_RELAY_FROM            63998 ///< HIP relay related parameter @note former FROM_NAT
+#define HIP_PARAM_RELAY_TO              64002 ///< HIP relay related parameter @note Former VIA_RVS_NAT
 //#define HIP_PARAM_REG_FROM            64010
 #define HIP_PARAM_TO_PEER               64006
 #define HIP_PARAM_FROM_PEER             64008
@@ -197,29 +236,78 @@
 #define HIP_PARAM_FROM                  65498
 #define HIP_PARAM_RVS_HMAC              65500
 #define HIP_PARAM_VIA_RVS               65502
-#define HIP_PARAM_RELAY_HMAC            65520
+#define HIP_PARAM_RELAY_HMAC            65520 ///< HIP relay related parameter
 #define HIP_PARAM_HOSTNAME              65521
 #define HIP_PARAM_HIT_INFO              65524
 
-#define HIP_PARAM_MAX                   65536
+#define HIP_PARAM_MAX                   65536 ///< Defines the maximum parameter type value. @note exclusive
 /* @} */
 
-/** @addtogroup notification
+/**
+ * HIP NOTIFICATION parameter values.
+ *
+ * NOTIFICATION parameter error types used in the "Notify Message Type"-field of
+ * NOTIFICATION parameter as specified in section 5.2.16. of
+ * draft-ietf-hip-base-06.
+ *
+ * @defgroup notification NOTIFICATION parameter values
+ * @see      hip_notification
  * @{
  */
-#define HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE 1
-#define HIP_NTF_INVALID_SYNTAX                      7
+/** Sent if the parameter type has the "critical" bit set and the
+ *  parameter type is not recognized.  Notification Data contains the
+ *  two octet parameter type. */
+#define HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE  1
+/** Indicates that the HIP message received was invalid because some
+ *  type, length, or value was out of range or because the request was
+ *  rejected for policy reasons.  To avoid a denial of service attack
+ *  using forged messages, this status may only be returned for
+ *  packets whose HMAC (if present) and SIGNATURE have been verified.
+ *  This status MUST be sent in response to any error not covered by
+ *  one of the other status types, and should not contain details to
+ *  avoid leaking information to someone probing a node.  To aid
+ *  debugging, more detailed error information SHOULD be written to a
+ *  console or log. */
+#define HIP_NTF_INVALID_SYNTAX                       7
+/** None of the proposed group IDs was acceptable. */
 #define HIP_NTF_NO_DH_PROPOSAL_CHOSEN               14
+/** The D-H Group ID field does not correspond to one offered
+ *  by the Responder. */
 #define HIP_NTF_INVALID_DH_CHOSEN                   15
+/** None of the proposed HIP Transform crypto suites was acceptable. */
 #define HIP_NTF_NO_HIP_PROPOSAL_CHOSEN              16
+/** The HIP Transform crypto suite does not correspond to one offered
+ *  by the Responder. */
 #define HIP_NTF_INVALID_HIP_TRANSFORM_CHOSEN        17
+/** Sent in response to a HIP signature failure, except when the
+ *  signature verification fails in a NOTIFY message. */
 #define HIP_NTF_AUTHENTICATION_FAILED               24
+/** Sent in response to a HIP checksum failure. */
 #define HIP_NTF_CHECKSUM_FAILED                     26
+/** Sent in response to a HIP HMAC failure. */
 #define HIP_NTF_HMAC_FAILED                         28
+/** The Responder could not successfully decrypt the ENCRYPTED
+ *  parameter. */
 #define HIP_NTF_ENCRYPTION_FAILED                   32
+/** Sent in response to a failure to validate the peer's HIT from the
+ *  corresponding HI. */
 #define HIP_NTF_INVALID_HIT                         40
+/** The Responder is unwilling to set up an association for some
+ *  policy reason (e.g.\ received HIT is NULL and policy does not
+ *  allow opportunistic mode). */
 #define HIP_NTF_BLOCKED_BY_POLICY                   42
+/** The Responder is unwilling to set up an association as it is
+ *  suffering under some kind of overload and has chosen to shed load
+ *  by rejecting your request.  You may retry if you wish, however you
+ *  MUST find another (different) puzzle solution for any such
+ *  retries.  Note that you may need to obtain a new puzzle with a new
+ *  I1/R1 exchange. */
 #define HIP_NTF_SERVER_BUSY_PLEASE_RETRY            44
+/** The Responder has received your I2 but had to queue the I2 for
+ *  processing.  The puzzle was correctly solved and the Responder is
+ *  willing to set up an association but has currently a number of I2s
+ *  in processing queue.  R2 will be sent after the I2 has been
+ *  processed. */
 #define HIP_NTF_I2_ACKNOWLEDGEMENT                  46
 /* @} */
 
@@ -289,61 +377,146 @@
 #define HIP_USER_VER_RES            0x02       /* Internal messages */
 
 /**
- * @addtogroup hip_ha_controls
+ * @defgroup hip_ha_controls HIP host association controls
+ *
+ * These are bitmasks used in the @c hip_hadb_state stucture fields
+ * @c local_controls and @c peer_controls.
+ *
+ * @c local_controls defines the flags of the current host, while peer_controls
+ * define the flags of the peer. The flags are used to indicate the state or
+ * status of the host. A status can be, for example, that we have requested
+ * for a service or that we are capable of offering a service.
+ *
+ * Bitmask for local controls:
+ * <pre>
+ * 0000 0000 0000 0000
+ * |||| |||| |||| |||+- 0x0001 We have requested an unsupported service.
+ * |||| |||| |||| ||+-- 0x0002 - free -
+ * |||| |||| |||| |+--- 0x0004 - free -
+ * |||| |||| |||| +---- 0x0008 - free -
+ * |||| |||| |||+------ 0x0010 - free -
+ * |||| |||| ||+------- 0x0020 - free -
+ * |||| |||| |+-------- 0x0040 - free -
+ * |||| |||| +--------- 0x0080 - free -
+ * |||| |||+----------- 0x0100 - free -
+ * |||| ||+------------ 0x0200 - free -
+ * |||| |+------------- 0x0400 - free -
+ * |||| +-------------- 0x0800 We have granted the peer full relay service
+ * |||+---------------- 0x1000 We have requested full relay service.
+ * ||+----------------- 0x2000 Unused
+ * |+------------------ 0x4000 We have requested HIP relay service.
+ * +------------------- 0x8000 We have requested RVS service.
+ * </pre>
+ * Bitmask for peer controls:
+ * <pre>
+ * 0000 0000 0000 0000
+ * |||| |||| |||| |||+- 0x0001 Peer granted an unsupported service to us.
+ * |||| |||| |||| ||+-- 0x0002 Peer offers an unsupported service.
+ * |||| |||| |||| |+--- 0x0004 Peer refused to grant us an unsupported service.
+ * |||| |||| |||| +---- 0x0008 - free -
+ * |||| |||| |||+------ 0x0010 - free -
+ * |||| |||| ||+------- 0x0020 Peer has refused to grant us full relay service
+ * |||| |||| |+-------- 0x0040 Peer refused to grant us HIP relay service.
+ * |||| |||| +--------- 0x0080 Peer refused to grant us RVS service.
+ * |||| |||+----------- 0x0100 - free -
+ * |||| ||+------------ 0x0200 - free -
+ * |||| |+------------- 0x0400 Peer has granted us full relay service
+ * |||| +-------------- 0x0800 Peer granted HIP relay service to us.
+ * |||+---------------- 0x1000 Peer granted RVS service to us.
+ * ||+----------------- 0x2000 Peer offers full relay service
+ * |+------------------ 0x4000 Peer offers HIP relay service.
+ * +------------------- 0x8000 Peer offers RVS service.
+ * </pre>
+ *
+ * @note There has been some confusion about which bit does what and which of
+ * the control fields to alter. To avoid this confusion, please do not alter
+ * the @c local_controls and @c peer_controls fields directly. Instead use
+ * functions hip_hadb_set_local_controls(), hip_hadb_set_peer_controls(),
+ * hip_hadb_cancel_local_controls(), hip_hadb_cancel_peer_controls().
+ * @note Do not confuse these values with HIP packet Controls values.
  * @{
  */
 /* REMEMBER TO UPDATE BITMAP IN DOC/DOXYGEN.H WHEN YOU ADD/CHANGE THESE! */
-#define HIP_HA_CTRL_NONE                 0x0000
-
-#define HIP_HA_CTRL_LOCAL_REQ_UNSUP      0x0001
-#define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
-#define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
-#define HIP_HA_CTRL_LOCAL_REQ_FULLRELAY  0x1000
+#define HIP_HA_CTRL_NONE                    0x0000 ///< Clears all control values. To clear all local controls call hip_hadb_set_local_controls() with this mask. To clear all peer controls call hip_hadb_set_peer_controls() with this mask.
+#define HIP_HA_CTRL_LOCAL_REQ_UNSUP         0x0001 ///< The host association has requested unsupported service in an I1 or an UPDATE packet. This flag is set if the user requests a service that is unsupported in HIPL. A service request of such kind is possible using <code>hipconf add server</code> with service numbers.
+#define HIP_HA_CTRL_LOCAL_REQ_RELAY         0x4000 ///< The host association has requested HIP relay service in an I1 or an UPDATE packet.
+#define HIP_HA_CTRL_LOCAL_REQ_RVS           0x8000 ///< The host association has requested rendezvous service in an I1 or an UPDATE packet.
+#define HIP_HA_CTRL_LOCAL_REQ_FULLRELAY     0x1000
+/** An OR mask of every existing local request mask. */
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        ( \
         HIP_HA_CTRL_LOCAL_REQ_UNSUP | \
         HIP_HA_CTRL_LOCAL_REQ_RELAY | \
-        HIP_HA_CTRL_LOCAL_REQ_RVS | \
+        HIP_HA_CTRL_LOCAL_REQ_RVS   | \
         HIP_HA_CTRL_LOCAL_REQ_FULLRELAY \
         )
 
 #define HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY 0x0800
 
-#define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001
-#define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800
-#define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
-#define HIP_HA_CTRL_PEER_GRANTED_FULLRELAY 0x400
+/** The peer has granted us unsupported service in a REG_RESPONSE parameter
+ *  received in an R2 packet or an UPDATE packet. The peer has granted us a
+ *  service that HIPL does not support. */
+#define HIP_HA_CTRL_PEER_GRANTED_UNSUP      0x0001
+/** The peer has granted us relay service in a REG_RESPONSE parameter
+ *  received in an R2 packet or an UPDATE packet. */
+#define HIP_HA_CTRL_PEER_GRANTED_RELAY      0x0800
+/** The peer has granted us rendezvous service in a REG_RESPONSE parameter
+ *  received in an R2 packet or an UPDATE packet. */
+#define HIP_HA_CTRL_PEER_GRANTED_RVS        0x1000
+/** The peer has announced in an R1 or UPDATE packet that it offers an
+ *  unsupported service. */
+#define HIP_HA_CTRL_PEER_GRANTED_FULLRELAY   0x400
 
-#define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002
-#define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000
-#define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
-#define HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE 0x2000
+#define HIP_HA_CTRL_PEER_UNSUP_CAPABLE      0x0002
+/** The peer has announced in an R1 or UPDATE packet that it offers HIP
+ *  relay service. */
+#define HIP_HA_CTRL_PEER_RELAY_CAPABLE      0x4000
+/** The peer has announced in an R1 or UPDATE packet that it offers
+ *  rendezvous service. */
+#define HIP_HA_CTRL_PEER_RVS_CAPABLE        0x8000
+#define HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE  0x2000
 
-#define HIP_HA_CTRL_PEER_REFUSED_UNSUP   0x0004
-#define HIP_HA_CTRL_PEER_REFUSED_RELAY   0x0040
-#define HIP_HA_CTRL_PEER_REFUSED_RVS     0x0080
-#define HIP_HA_CTRL_PEER_REFUSED_FULLRELAY 0x0020
+#define HIP_HA_CTRL_PEER_REFUSED_UNSUP      0x0004
+#define HIP_HA_CTRL_PEER_REFUSED_RELAY      0x0040
+#define HIP_HA_CTRL_PEER_REFUSED_RVS        0x0080
+#define HIP_HA_CTRL_PEER_REFUSED_FULLRELAY  0x0020
 
 /* @} */
 
-/** @addtogroup hip_packet_controls
+/**
+ * @defgroup hip_packet_controls HIP packet Controls field values
+ *
+ * These are the values that are used in the HIP message Controls field. More
+ * importantantly, these are <span style="color:#f00;">the only values allowed
+ * in that field.</span> Do not put any other bits on wire in the Controls
+ * field.
+ * @note Do not confuse these values with HIP host association ontrol values.
  * @{
  */
 #define HIP_PACKET_CTRL_ANON             0x0001 /**< HIP packet Controls value */
 /* unused, was HIP_PACKET_CTRL_BLIND 0x0004 */
 /* @} */
 
-/** @addtogroup hip_services
+/**
+ * @defgroup hip_services Additional HIP services
+ *
+ * Registration types for registering to a service as specified in
+ * draft-ietf-hip-registration-02. These are the registration types used in
+ * @c REG_INFO, @c REG_REQUEST, @c REG_RESPONSE and @c REG_FAILED parameters.
+ * Numbers 0-200 are reserved by IANA.
+ * Numbers 201 - 255 are reserved by IANA for private use.
  * @{
  */
-#define HIP_SERVICE_RENDEZVOUS           1
-#define HIP_SERVICE_RELAY                2
+#define HIP_SERVICE_RENDEZVOUS             1 ///< Rendezvous service for relaying I1 packets
+#define HIP_SERVICE_RELAY                  2 ///< UDP encapsulated relay service for HIP packets
 #define HIP_SERVICE_FULLRELAY            204
+/** Total number of services, which must equal the sum of all existing services. */
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      3
+#define HIP_TOTAL_EXISTING_SERVICES        3
 /* @} */
 
-/** @addtogroup hip_proxy
+/**
+ * @defgroup hip_proxy HIP proxy types
  * @{
  */
 #define HIP_PROXY_PASSTHROUGH           0
@@ -523,13 +696,6 @@ struct hip_locator_info_addr_item {
     uint8_t         reserved; /**< last bit is P (prefered) */
     uint32_t        lifetime;
     struct in6_addr address;
-
-    /** Removed the state because it is against the nat-draft and mobility rfc
-     * Same in the type 2 locator below --SAMU**/
-    /* end of fixed part - locator of arbitrary length follows but
-     * currently support only IPv6 */
-    //int state; /**<State of our addresses, possible states are:
-    //        WAITING_ECHO_REQUEST, ACTIVE */
 }  __attribute__ ((packed));
 //add by santtu
 /**
@@ -547,9 +713,6 @@ struct hip_locator_info_addr_item2 {
     uint32_t        priority;
     uint32_t        spi;
     struct in6_addr address;
-
-    // int state; /**<State of our addresses, possible states are:
-    //      WAITING_ECHO_REQUEST, ACTIVE */
 }  __attribute__ ((packed));
 
 
@@ -634,7 +797,16 @@ struct hip_esp_info {
     uint32_t       new_spi;
 } __attribute__ ((packed));
 
-/** @addtogroup hip_tlv
+/**
+ * Type-length-value data structures in Host Identity Protocol (HIP).
+ *
+ * @defgroup hip_tlv HIP TLV data structures
+ * @see      hip_param_type_numbers
+ * @see      hip_param_func
+ * @see      <a href="http://hip4inter.net/documentation/drafts/draft-ietf-hip-base-06-pre180506.txt">
+ *           draft-ietf-hip-base-06-pre180506</a> section 5.2.
+ * @note     The order of the parameters is strictly enforced. The parameters
+ *           @b must be in order from lowest to highest.
  * @{
  */
 struct hip_r1_counter {
@@ -815,6 +987,11 @@ struct hip_echo_response {
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-rvs-05 */
+/** Rendezvous server hmac.
+ *  A non-critical parameter whose only difference with the @c HMAC
+ *  parameter defined in [I-D.ietf-hip-base] is its @c type code.
+ *  This change causes it to be located after the @c FROM parameter (as
+ *  opposed to the @c HMAC) */
 struct hip_rvs_hmac {
     hip_tlv_type_t type;  /**< Type code for the parameter. */
     hip_tlv_len_t  length;  /**< Length of the parameter contents in bytes. */
@@ -824,6 +1001,7 @@ struct hip_rvs_hmac {
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-rvs-05 */
+/** Parameter containing the original source IP address of a HIP packet. */
 struct hip_from {
     hip_tlv_type_t type;   /**< Type code for the parameter. */
     hip_tlv_len_t  length;  /**< Length of the parameter contents in bytes. */
@@ -831,6 +1009,7 @@ struct hip_from {
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-rvs-05 */
+/** Parameter containing the IP addresses of traversed rendezvous servers. */
 struct hip_via_rvs {
     hip_tlv_type_t type;   /**< Type code for the parameter. */
     hip_tlv_len_t  length;  /**< Length of the parameter contents in bytes. */
@@ -838,6 +1017,8 @@ struct hip_via_rvs {
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
+/** Parameter containing the original source IP address and port number
+ * of a HIP packet. */
 struct hip_relay_from {
     hip_tlv_type_t type;  /**< Type code for the parameter. */
     hip_tlv_len_t  length;  /**< Length of the parameter contents in bytes. */
@@ -848,6 +1029,8 @@ struct hip_relay_from {
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
+/** Parameter containing the IP addresses and source ports of traversed
+ *  rendezvous servers. */
 struct hip_relay_to {
     hip_tlv_type_t  type; /**< Type code for the parameter. */
     hip_tlv_len_t   length; /**< Length of the parameter contents in bytes. */
@@ -875,6 +1058,11 @@ struct hip_relay_to_old {
     uint8_t        address_and_port[0]; /**< Rendezvous server addresses and ports. */
 } __attribute__ ((packed));
 
+/** This structure is used by the native API to carry local and peer
+ *  identities from libc (setmyeid and setpeereid calls) to the HIP
+ *  socket handler (setsockopt). It is almost the same as endpoint_hip,
+ *  but it is length-padded like HIP parameters to make it usable with
+ *  the builder interface. */
 struct hip_eid_endpoint {
     hip_tlv_type_t      type;
     hip_tlv_len_t       length;

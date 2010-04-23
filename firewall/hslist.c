@@ -22,7 +22,7 @@
  */
 SList *alloc_slist(void)
 {
-    SList *list = (SList *) malloc(sizeof(SList));
+    SList *list = malloc(sizeof(SList));
     list->next = NULL;
     list->data = NULL;
     return list;

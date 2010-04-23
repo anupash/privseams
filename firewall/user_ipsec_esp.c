@@ -569,7 +569,6 @@ int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
     case HIP_ESP_NULL_MD5:
         // even if hash digest might be longer, we are only using this much here
         alen = ICV_LENGTH;
-        //alen = MD5_DIGEST_LENGTH;
 
         // length of the authenticated payload, includes ESP header
         elen = in_len - alen;
@@ -598,7 +597,6 @@ int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
     case HIP_ESP_AES_SHA1:
         // even if hash digest might be longer, we are only using this much here
         alen = ICV_LENGTH;
-        //alen = SHA_DIGEST_LENGTH;
 
         // length of the encrypted payload
         elen = in_len - alen;
@@ -615,7 +613,6 @@ int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
              in, elen, hmac_md, &hmac_md_len);
 
         // actual auth verification
-        //if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
         if (memcmp(&in[elen], hmac_md, alen) != 0) {
             HIP_DEBUG("ESP packet could not be authenticated\n");
 

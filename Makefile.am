@@ -5,8 +5,7 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*
 # For "make dist"
 EXTRA_DIST =  .vimrc debian doc patches release.version version.h process_modules.py
 EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
-EXTRA_DIST += test/configs test/demo test/maintainer
-EXTRA_DIST += test/packaging test/performance
+EXTRA_DIST += test/demo test/maintainer test/packaging test/performance
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
 EXTRA_DIST += $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
@@ -75,8 +74,8 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/nat.c                   \
                     hipd/netdev.c                \
                     hipd/nsupdate.c              \
-                    hipd/oppipdb.c               \
                     hipd/output.c                \
+                    hipd/oppipdb.c               \
                     hipd/pkt_handling.c          \
                     hipd/registration.c          \
                     hipd/user.c                  \
@@ -197,7 +196,7 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #lib_ipsec_libhipsec_la_LDFLAGS = -version-info 0:1:0
 #lib_ipsec_libhipsec_la_LIBADD  = $(LEXLIB)
 
-DISTCLEANFILES = $(wildcard $(builddir)/modules/*.h)
+DISTCLEANFILES = $(wildcard $(builddir)/modules/*.h) tools/hipdnsproxy tools/hipdnskeyparse
 #DISTCLEANFILES = lib/ipsec/policy_parse.c lib/ipsec/policy_token.c
 
 # Initialize LDADD lists empty, because modules might add entries to LDADD. The
@@ -268,8 +267,8 @@ CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
 
 ### misc stuff ###
-doxygen:
-	doxygen Doxyfile
+doxygen: doc/Doxyfile
+	doxygen $<
 
 nodist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
 
@@ -281,7 +280,7 @@ doc/HOWTO.txt: doc/HOWTO.xml
 
 CLEANFILES += doc/HOWTO.html doc/HOWTO.txt
 clean-local:
-	rm -rf doxy
+	rm -rf doc/doxy
 
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
@@ -302,13 +301,10 @@ HIPL_HEADER_FILTERED = $(filter-out $(NOCHECK_HEADER_LIST),$(HIPL_HEADER_LIST))
 HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.ho))
 CLEANFILES          += $(HIPL_HEADER_OBJS)
 
-#this macro is not to be used in headers, so use it "globally" just for checkheaders
-CH_CPPFLAGS = -D_BSD_SOURCE
-
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
-	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(CH_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
 i3/i3/i3_config.lo lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
 lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
@@ -318,5 +314,10 @@ lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 BUILT_SOURCES = version.h
 $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
 	echo "#define BZR_REVISION \"$$(bzr revno $(srcdir))\"" > $@
+
+# The complete doc/ subdirectory is in EXTRA_DIST, so files that should
+# not be distributed need to be deleted manually from the distribution.
+dist-hook:
+	rm -f $(distdir)/doc/Doxyfile
 
 .PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo

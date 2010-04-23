@@ -114,9 +114,9 @@ int userspace_ipsec_init(void)
         HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
 
         // allocate memory for the packet buffers
-        HIP_IFEL(!(esp_packet = (unsigned char *) malloc(ESP_PACKET_SIZE)), -1,
+        HIP_IFEL(!(esp_packet = malloc(ESP_PACKET_SIZE)), -1,
                  "failed to allocate memory");
-        HIP_IFEL(!(decrypted_packet = (unsigned char *) malloc(ESP_PACKET_SIZE)),
+        HIP_IFEL(!(decrypted_packet = malloc(ESP_PACKET_SIZE)),
                  -1, "failed to allocate memory");
 
         // create required sockets
@@ -359,8 +359,6 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
                  hip_sockaddr_len(&local_sockaddr));
     if (err < decrypted_packet_len) {
         HIP_DEBUG("sendto() failed\n");
-        //printf("sendto() failed\n");
-
         err = -1;
     } else {
         HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");

@@ -11,6 +11,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "cookie.h"
 #include "lib/core/solve.h"
@@ -136,8 +138,8 @@ int hip_dec_cookie_difficulty(hip_hit_t *not_used)
  *
  * @return 0 <= x < HIP_R1TABLESIZE
  */
-int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
-                        struct in6_addr *hit_i)
+static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
+                               struct in6_addr *hit_i)
 {
     register uint32_t base = 0;
     int i;
@@ -184,42 +186,6 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
     idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);
     HIP_DEBUG("Calculated index: %d\n", idx);
 
-    /* the code under if 0 periodically changes the puzzle. It is not included
-     * in compilation as there is currently no easy way of signing the R1 packet
-     * after having changed its puzzle.
-     */
-#if 0
-    /* generating opaque data */
-    do_gettimeofday(&tv);
-
-    /* extract the puzzle */
-    if (!(pz = hip_get_param(err->r1, HIP_PARAM_PUZZLE)), NULL,
-        "Internal error: Could not find PUZZLE parameter in precreated R1 packet\n") {
-        ;
-    }
-
-    ts  = pz->opaque[0];
-    ts |= ((int) pz->opaque[1] << 8);
-
-    if (ts != 0) {
-        /* check if the cookie is too old */
-        diff = (tv.tv_sec & 0xFFFFFF) - ts;
-        if (diff < 0) {
-            diff += 0x1000000;
-        }
-
-        HIP_DEBUG("Old puzzle still valid\n");
-        if (diff <= HIP_PUZZLE_MAX_LIFETIME) {
-            return err;
-        }
-    }
-
-    /* either ts == 0 or diff > HIP_PUZZLE_MAX_LIFETIME */
-    _HIP_DEBUG("Creating new puzzle\n");
-    hip_create_new_puzzle(pz, r1, &tv);
-
-    /* XXX: sign the R1 */
-#endif
     /* Create a copy of the found entry */
     len = hip_get_msg_total_len(hip_r1table[idx].r1);
     r1  = hip_msg_alloc();
@@ -228,7 +194,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 out_err:
     if (!err && r1) {
-        HIP_FREE(r1);
+        free(r1);
     }
 
     HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
@@ -244,8 +210,8 @@ struct hip_r1entry *hip_init_r1(void)
 {
     struct hip_r1entry *err;
 
-    HIP_IFE(!(err = (struct hip_r1entry *) HIP_MALLOC(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE,
-                                                      0)), NULL);
+    HIP_IFE(!(err = malloc(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE)),
+            NULL);
     memset(err, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
 
 out_err:
@@ -306,10 +272,10 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
     if (hip_r1table) {
         for (i = 0; i < HIP_R1TABLESIZE; i++) {
             if (hip_r1table[i].r1) {
-                HIP_FREE(hip_r1table[i].r1);
+                free(hip_r1table[i].r1);
             }
         }
-        HIP_FREE(hip_r1table);
+        free(hip_r1table);
         hip_r1table = NULL;
     }
 }

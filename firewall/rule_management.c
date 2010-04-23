@@ -155,23 +155,6 @@ static DList *get_rule_list(const int hook)
     }
 }
 
-/**
- * accessor function to set the rule list of the given iptables hook
- *
- * @param list a rule list
- * @param hook NF_IP6_LOCAL_IN, NF_IP6_LOCAL_OUT or NF_IP6_LOCAL_FORWARD
- */
-static void set_rule_list(DList *list, const int hook)
-{
-    if (hook == NF_IP6_LOCAL_IN) {
-        input_rules = list;
-    } else if (hook == NF_IP6_LOCAL_OUT) {
-        output_rules = list;
-    } else {
-        forward_rules = list;
-    }
-}
-
 /*------------- PRINTING -----------------*/
 
 /**
@@ -295,7 +278,7 @@ void print_rule_tables(void)
  */
 static struct rule *alloc_empty_rule(void)
 {
-    struct rule *rule = (struct rule *) malloc(sizeof(struct rule));
+    struct rule *rule = malloc(sizeof(struct rule));
     rule->src_hit = NULL;
     rule->dst_hit = NULL;
     rule->src_hi  = NULL;
@@ -356,280 +339,6 @@ static void free_rule(struct rule *rule)
     }
 }
 
-/*------------- COPYING -----------------*/
-
-/**
- * Replicate a hit_option structure
- *
- * @param hit the hit option structure to be replicated
- *
- * @return the replicated structure (caller deallocates) or NULL on failure
- */
-static struct hit_option *copy_hit_option(const struct hit_option *hit)
-{
-    struct hit_option *copy = NULL;
-    if (hit) {
-        copy          = (struct hit_option *) malloc(sizeof(struct hit_option));
-        memcpy(&copy->value, &hit->value, sizeof(struct in6_addr));
-        copy->boolean = hit->boolean;
-    }
-    return copy;
-}
-
-/**
- * Replicate a hit_option structure
- *
- * @param hit the hit option structure to be replicated
- *
- * @return the replicated structure (caller deallocates) or NULL on failure
- */
-static struct int_option *copy_int_option(const struct int_option *int_option)
-{
-    struct int_option *copy = NULL;
-    if (int_option) {
-        copy          = (struct int_option *) malloc(sizeof(struct int_option));
-        copy->value   = int_option->value;
-        copy->boolean = int_option->boolean;
-    }
-    return copy;
-}
-
-/**
- * Replicate a state_option structure
- *
- * @param state the state_option structure to be replicated
- *
- * @return the replicated structure (caller deallocates) or NULL on failure
- */
-static struct state_option *copy_state_option(const struct state_option *state)
-{
-    struct state_option *copy = NULL;
-    if (state) {
-        copy                   = (struct state_option *)
-                malloc(sizeof(struct state_option));
-        copy->int_opt.value    = state->int_opt.value;
-        copy->int_opt.boolean  = state->int_opt.boolean;
-        copy->verify_responder = state->verify_responder;
-        copy->accept_mobile    = state->accept_mobile;
-    }
-    return copy;
-}
-
-/**
- * Replicate string_option structure
- *
- * @param string_option the string_option structure to be replicated
- *
- * @return the replicated structure (caller deallocates) or NULL on failure
- */
-static struct string_option *copy_string_option(
-        const struct string_option *string_option)
-{
-    struct string_option *copy = NULL;
-    if (string_option) {
-        copy = (struct string_option *) malloc(sizeof(struct string_option));
-        copy->value = malloc(sizeof(string_option->value));
-        strcpy(copy->value, string_option->value);
-        copy->boolean = string_option->boolean;
-    }
-    return copy;
-}
-
-/**
- * Replicate a rule structure
- *
- * @param rule the rule structure to be replicated
- *
- * @return the replicated structure (caller deallocates) or NULL on failure
- */
-static struct rule *copy_rule(const struct rule *rule)
-{
-    struct rule *copy = NULL;
-    if (rule) {
-        copy         = alloc_empty_rule();
-        copy->hook   = rule->hook;
-        copy->accept = rule->accept;
-        if (rule->src_hit != NULL) {
-            copy->src_hit = copy_hit_option(rule->src_hit);
-        }
-        if (rule->dst_hit != NULL) {
-            copy->dst_hit = copy_hit_option(rule->dst_hit);
-        }
-        if (rule->src_hi != NULL) {
-            copy->src_hi = malloc(hip_get_param_total_len(rule->src_hi));
-            memcpy(copy->src_hi,
-                   rule->src_hi,
-                   hip_get_param_total_len(rule->src_hi));
-        }
-        if (rule->type != NULL) {
-            copy->type = copy_int_option(rule->type);
-        }
-        if (rule->state != NULL) {
-            copy->state = copy_state_option(rule->state);
-        }
-        if (rule->in_if != NULL) {
-            copy->in_if = copy_string_option(rule->in_if);
-        }
-        if (rule->out_if != NULL) {
-            copy->out_if = copy_string_option(rule->out_if);
-        }
-    }
-    HIP_DEBUG("copy_rule: original ");
-    print_rule(rule);
-    HIP_DEBUG("copy_rule: copy ");
-    print_rule(copy);
-    return copy;
-}
-
-/*------------- COMPARISON -----------------*/
-
-/**
- * test if two hit_option structures for equality
- *
- * @param hit1 the first hit to compare
- * @param hit2 the second hit to compare
- *
- * @return 1 if hit options are equal otherwise 0
- * @note hit_options may also be NULL
- */
-static int hit_options_equal(const struct hit_option *hit1,
-                             const struct hit_option *hit2)
-{
-    if (hit1 == NULL && hit2 == NULL) {
-        return 1;
-    } else if (hit1 == NULL || hit2 == NULL) { /* only one is NULL */
-        return 0;
-    } else {
-        if (IN6_ARE_ADDR_EQUAL(&hit1->value, &hit2->value) &&
-            hit1->boolean == hit2->boolean) {
-            return 1;
-        }
-        return 0;
-    }
-}
-
-/**
- * test if tow int_option structures for equality
- *
- * @param int_option1 the first int_option to compare
- * @param int_option2 the second int_option to compare
- *
- * @return 1 if int options are equal otherwise 0
- * @note hit_options may also be NULL
- */
-static int int_options_equal(const struct int_option *int_option1,
-                             const struct int_option *int_option2)
-{
-    if (int_option1 == NULL && int_option2 == NULL) {
-        return 1;
-    } else if (int_option1 == NULL || int_option2 == NULL) { /* only one is NULL */
-        return 0;
-    } else {
-        if (int_option1->value == int_option2->value &&
-            int_option1->boolean == int_option2->boolean) {
-            return 1;
-        }
-        return 0;
-    }
-}
-
-/**
- * test two state_option structures for equality
- *
- * @param state_option1 the first state option to compare
- * @param state_option2 the second state option to compare
- *
- * @returns  if state_options are equal otherwise 0
- * @note hit_options may also be NULL
- */
-static int state_options_equal(const struct state_option *state_option1,
-                               const struct state_option *state_option2)
-{
-    if (state_option1 == NULL && state_option2 == NULL) {
-        return 1;
-    } else if (state_option1 == NULL || state_option2 == NULL) { /* only one is NULL */
-        return 0;
-    } else {
-        if (int_options_equal(&state_option1->int_opt,
-                              &state_option2->int_opt)
-            && state_option1->verify_responder == state_option2->verify_responder
-            && state_option1->accept_mobile == state_option2->accept_mobile
-            && state_option1->decrypt_contents == state_option2->decrypt_contents) {
-
-            return 1;
-        }
-        return 0;
-    }
-}
-
-/**
- * test two string_option structures for equality
- *
- * @param string_option1 the first string_option to compare
- * @param string_option1 the second string_option to compare
- *
- * @return 1 if hit options are equal otherwise 0
- * @note hit_options may also be NULL
- */
-static int string_options_equal(const struct string_option *string_option1,
-                                const struct string_option *string_option2)
-{
-    if (string_option1 == NULL && string_option2 == NULL) {
-        return 1;
-    } else if (string_option1 == NULL || string_option2 == NULL) { /* only one is NULL */
-        return 0;
-    } else {
-        if (!strcmp(string_option1->value, string_option2->value) &&
-            string_option1->boolean == string_option2->boolean) {
-            return 1;
-        }
-        return 0;
-    }
-}
-
-/**
- * test two ACL rules for equality
- *
- * @param rule1 the first rule to compare
- * @param rule2 the second rule to compare
- *
- * @return 1 if the rules match or zero otherwise
- */
-static int rules_equal(const struct rule *rule1,
-                       const struct rule *rule2)
-{
-    if (rule1->hook != rule2->hook) {
-        return 0;
-    }
-    if (rule1->accept != rule2->accept) {
-        return 0;
-    }
-    if (!hit_options_equal(rule1->src_hit, rule2->src_hit)) {
-        return 0;
-    }
-    if (!hit_options_equal(rule1->dst_hit, rule2->dst_hit)) {
-        return 0;
-    }
-    /* no need to compare HIs as src_hits have been compared */
-    if ((rule1->src_hi != NULL && rule2->src_hi == NULL) ||
-        (rule1->src_hi == NULL && rule2->src_hi != NULL)) {
-        return 0;
-    }
-    if (!int_options_equal(rule1->type, rule2->type)) {
-        return 0;
-    }
-    if (!state_options_equal(rule1->state, rule2->state)) {
-        return 0;
-    }
-    if (!string_options_equal(rule1->in_if, rule2->in_if)) {
-        return 0;
-    }
-    if (!string_options_equal(rule1->out_if, rule2->out_if)) {
-        return 0;
-    }
-    return 1;
-}
-
 /*---------------PARSING---------------*/
 
 /**
@@ -642,8 +351,7 @@ static int rules_equal(const struct rule *rule1,
  */
 static struct hit_option *parse_hit(char *token)
 {
-    struct hit_option *option = (struct hit_option *)
-            malloc(sizeof(struct hit_option));
+    struct hit_option *option = malloc(sizeof(struct hit_option));
     struct in6_addr *hit      = NULL;
 
     if (!strcmp(token, NEGATE_STR)) {
@@ -806,8 +514,7 @@ static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
  */
 static struct int_option *parse_type(char *token)
 {
-    struct int_option *option = (struct int_option *)
-            malloc(sizeof(struct int_option));
+    struct int_option *option = malloc(sizeof(struct int_option));
 
     if (!strcmp(token, NEGATE_STR)) {
         option->boolean = 0;
@@ -854,8 +561,7 @@ static struct int_option *parse_type(char *token)
  */
 static struct state_option *parse_state(char *token)
 {
-    struct state_option *option =
-            (struct state_option *) malloc(sizeof(struct state_option));
+    struct state_option *option = malloc(sizeof(struct state_option));
 
     if (!strcmp(token, NEGATE_STR)) {
         option->int_opt.boolean = 0;
@@ -888,8 +594,7 @@ static struct state_option *parse_state(char *token)
  */
 static struct string_option *parse_if(char *token)
 {
-    struct string_option *option =
-            (struct string_option *) malloc(sizeof(struct string_option));
+    struct string_option *option = malloc(sizeof(struct string_option));
 
     if (!strcmp(token, NEGATE_STR)) {
         option->boolean = 0;
@@ -902,7 +607,7 @@ static struct string_option *parse_if(char *token)
         free(option);
         return NULL;
     } else {
-        option->value = (char *) malloc(IF_NAMESIZE);
+        option->value = malloc(IF_NAMESIZE);
         strcpy(option->value, token);
     }
     return option;
@@ -1266,7 +971,7 @@ void read_rule_file(const char *file_name)
         while ((line_length = read_line(line, s, file)) > 0) {
             char *comment;
 
-            original_line = (char *) malloc(line_length + sizeof(char) + 1);
+            original_line = malloc(line_length + sizeof(char) + 1);
             original_line = strcpy(original_line, line);
 
             HIP_DEBUG("line read: %s\n", line);
@@ -1307,9 +1012,6 @@ void read_rule_file(const char *file_name)
                                                        (void *) rule);
                     print_rule((struct rule *) ((DList *) forward)->data);
                 }
-
-                /* this leads to getline to malloc new memory and the current block is lost */
-                //rule = NULL;
             } else if (tmp_line)   {
                 HIP_DEBUG("unable to parse rule: %s\n", original_line);
             }
@@ -1325,183 +1027,4 @@ void read_rule_file(const char *file_name)
     set_stateful_filtering(state);
     output_rules  = (DList *) output;
     forward_rules = (DList *) forward;
-}
-
-/**
- * Append a rule to an chain's ruleset by copying
- *
- * @param rule The rule to be appended. This argument can be deallocated after the
- *             call because this function makes a duplicate of the rule.
- * @param hook append the rule to the end of the ruleset corresponding to this hook
- */
-static void insert_rule(const struct rule *rule, const int hook)
-{
-    struct rule *copy;
-
-    HIP_DEBUG("insert_rule\n");
-    if (!rule) {
-        return;
-    }
-    copy = copy_rule(rule);
-
-    set_rule_list(append_to_list(get_rule_list(hook),
-                                 (void *) copy),
-                  hook);
-
-    if (rule->state) {
-        set_stateful_filtering(1);
-    }
-}
-
-/**
- * Delete a rule from the given ruleset.
- *
- * @param rule the rule to be removed from the ruleset
- * @param hook the ruleset from which to remove
- *
- * @return 0 if deleted succefully or -1 if rule was not found
- */
-static int delete_rule(const struct rule *rule, const int hook)
-{
-    DList *temp;
-    int val = -1, state = 0;
-    HIP_DEBUG("delete_rule\n");
-    temp = get_rule_list(hook);
-    while (temp) {
-        /* delete first match */
-        if (rules_equal((struct rule *) temp->data, rule)) {
-            free_rule((struct rule *) temp->data);
-            HIP_DEBUG("delete_rule freed\n");
-            set_rule_list((struct _DList *)
-                          remove_from_list((struct _DList *) get_rule_list(hook),
-                                           temp->data),
-                          hook);
-            HIP_DEBUG("delete_rule removed\n");
-            val = 0;
-            break;
-        }
-        temp = temp->next;
-    }
-    HIP_DEBUG("delete_rule looped\n");
-    set_stateful_filtering(state);
-    HIP_DEBUG("delete_rule exit\n");
-    return val;
-}
-
-/**
- * create local copy of the rule list and return it
- *
- * @param hook the ruleset to be copied
- *
- * @return the list corresponding to the ruleset
- *
- * @note caller is responsible for freeing rules
- */
-static struct _DList *list_rules(const int hook)
-{
-    DList *temp = NULL, *ret = NULL;
-    HIP_DEBUG("list_rules\n");
-    temp = (DList *) get_rule_list(hook);
-    while (temp) {
-        ret  = append_to_list(ret,
-                              (void *) copy_rule((struct rule *) temp->data));
-        temp = temp->next;
-    }
-    return ret;
-}
-
-/**
- * Delete the rule list for the given ruleset
- *
- * @param hook the ruleset to delete
- *
- * @return zero on success and non-zero on error
- */
-static int flush(const int hook)
-{
-    HIP_DEBUG("flush\n");
-    DList *temp = (DList *) get_rule_list(hook);
-    set_rule_list(NULL, hook);
-    set_stateful_filtering(0);
-    while (temp) {
-        free_rule((struct rule *) temp->data);
-        temp = temp->next;
-    }
-    free_list(temp);
-
-    return 0;
-}
-
-/**
- * system diagnostics for rules
- */
-void test_rule_management(void)
-{
-    struct _DList *list = NULL,  *orig = NULL;
-    HIP_DEBUG("\n\ntesting rule management functions\n");
-    list = (struct _DList *) list_rules(NF_IP6_FORWARD);
-    orig = list;
-    HIP_DEBUG("ORIGINAL \n");
-    print_rule_tables();
-    flush(NF_IP6_FORWARD);
-    HIP_DEBUG("FLUSHING \n");
-    print_rule_tables();
-    while (list) {
-        insert_rule((struct rule *) list->data, NF_IP6_FORWARD);
-        list = list->next;
-    }
-    HIP_DEBUG("INSERTING \n");
-    print_rule_tables();
-
-    list = orig;
-    HIP_DEBUG("INSERTING AND DELETING\n");
-    while (list) {
-        insert_rule((struct rule *) list->data, NF_IP6_FORWARD);
-        print_rule_tables();
-        delete_rule((struct rule *) list->data, NF_IP6_FORWARD);
-        list = list->next;
-    }
-    HIP_DEBUG("FINAL \n");
-    print_rule_tables();
-}
-
-/**
- * system diagnostics for parsing
- */
-void test_parse_copy(void)
-{
-    char rule_str1[200] = "FORWARD -src_hit 7dac:74f2:8b16:ca1c:f96c:bae6:c61f:c7 --hi ../oops_rsa_key.pub ACCEPT";
-    char rule_str2[200] = "FORWARD -src_hit 7dac:74f2:8b16:ca1c:f96c:bae6:c61f:c7 -dst_hit 7dac:74f2:8b16:ca1c:f96c:bae6:c61f:c7 -type I2 DROP";
-    char rule_str3[200] = "FORWARD -src_hit 7dac:74f2:8b16:ca1c:f96c:bae6:c61f:c7 -state NEW -type I2 ACCEPT";
-    struct rule *rule   = NULL, *copy = NULL;
-    HIP_DEBUG("\n\n\ntest_parse_copy \n");
-    HIP_DEBUG("rule string 1 %s \n", &rule_str1);
-    rule = parse_rule(rule_str1);
-    HIP_DEBUG("PARSED ");
-    print_rule(rule);
-    copy = copy_rule(rule);
-    HIP_DEBUG("COPIED ");
-    print_rule(copy);
-    free_rule(rule);
-    free_rule(copy);
-
-    HIP_DEBUG("rule string 2 %s \n", &rule_str2);
-    rule = parse_rule(rule_str2);
-    HIP_DEBUG("PARSED ");
-    print_rule(rule);
-    copy = copy_rule(rule);
-    HIP_DEBUG("COPIED ");
-    print_rule(copy);
-    free_rule(rule);
-    free_rule(copy);
-
-    HIP_DEBUG("rule string 3 %s \n", &rule_str3);
-    rule = parse_rule(rule_str3);
-    HIP_DEBUG("PARSED ");
-    print_rule(rule);
-    copy = copy_rule(rule);
-    HIP_DEBUG("COPIED ");
-    print_rule(copy);
-    free_rule(rule);
-    free_rule(copy);
 }

@@ -10,6 +10,8 @@
 #define _BSD_SOURCE
 
 #include <limits.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
@@ -19,6 +21,7 @@
 #include <sys/wait.h>
 
 #include "config.h"
+#include "hipd.h"
 #include "init.h"
 #include "esp_prot_light_update.h"
 #include "hip_socket.h"
@@ -35,7 +38,6 @@
 #include "lib/tool/nlink.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hostsfiles.h"
-#include "lib/tool/xfrmapi.h"
 #include "modules/hipd_modules.h"
 
 /**
@@ -43,6 +45,9 @@
  * of the daemon to start and to record current daemon pid.
  */
 #define HIP_DAEMON_LOCK_FILE     HIPL_LOCKDIR    "/hipd.lock"
+
+/** Maximum size of a modprobe command line */
+#define MODPROBE_MAX_LINE       64
 
 /** ICMPV6_FILTER related stuff */
 #define BIT_CLEAR(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
@@ -103,115 +108,6 @@ int hip_set_cloexec_flag(int desc, int value)
     /* Store modified flag word in the descriptor. */
     return fcntl(desc, F_SETFD, oldflags);
 }
-
-#ifdef CONFIG_HIP_DEBUG
-/**
- * print information about underlying the system for bug reports
- */
-static void hip_print_sysinfo(void)
-{
-    FILE *fp    = NULL;
-    char str[256];
-    int current = 0;
-    int pipefd[2];
-    int stdout_fd;
-    int ch;
-
-    fp = fopen("/etc/debian_version", "r");
-    if (!fp) {
-        fp = fopen("/etc/redhat-release", "r");
-    }
-
-    if (fp) {
-        while (fgets(str, sizeof(str), fp)) {
-            HIP_DEBUG("version=%s", str);
-        }
-        if (fclose(fp)) {
-            HIP_ERROR("Error closing version file\n");
-        }
-        fp = NULL;
-    }
-
-    fp = fopen("/proc/cpuinfo", "r");
-    if (fp) {
-        HIP_DEBUG("Printing /proc/cpuinfo\n");
-
-        /* jk: char != int !!! */
-        while ((ch = fgetc(fp)) != EOF) {
-            str[current] = ch;
-            /* Tabs end up broken in syslog: remove */
-            if (str[current] == '\t') {
-                continue;
-            }
-            if (str[current++] == '\n' || current == sizeof(str) - 1) {
-                str[current] = '\0';
-                HIP_DEBUG(str);
-                current      = 0;
-            }
-        }
-
-        if (fclose(fp)) {
-            HIP_ERROR("Error closing /proc/cpuinfo\n");
-        }
-        fp = NULL;
-    } else {
-        HIP_ERROR("Failed to open file /proc/cpuinfo\n");
-    }
-
-    /* Route stdout into a pipe to capture lsmod output */
-
-    stdout_fd = dup(1);
-    if (stdout_fd < 0) {
-        HIP_ERROR("Stdout backup failed\n");
-        return;
-    }
-    if (pipe(pipefd)) {
-        HIP_ERROR("Pipe creation failed\n");
-        return;
-    }
-    if (dup2(pipefd[1], 1) < 0) {
-        HIP_ERROR("Stdout capture failed\n");
-        if (close(pipefd[1])) {
-            HIP_ERROR("Error closing write end of pipe\n");
-        }
-        if (close(pipefd[0])) {
-            HIP_ERROR("Error closing read end of pipe\n");
-        }
-        return;
-    }
-
-    if (system("lsmod") == -1) {
-        HIP_ERROR("lsmod failed");
-    }
-
-    if (dup2(stdout_fd, 1) < 0) {
-        HIP_ERROR("Stdout restore failed\n");
-    }
-    if (close(stdout_fd)) {
-        HIP_ERROR("Error closing stdout backup\n");
-    }
-    if (close(pipefd[1])) {
-        HIP_ERROR("Error closing write end of pipe\n");
-    }
-
-    fp = fdopen(pipefd[0], "r");
-    if (fp) {
-        HIP_DEBUG("Printing lsmod output\n");
-        while (fgets(str, sizeof(str), fp)) {
-            HIP_DEBUG(str);
-        }
-        if (fclose(fp)) {
-            HIP_ERROR("Error closing read end of pipe\n");
-        }
-    } else {
-        HIP_ERROR("Error opening pipe for reading\n");
-        if (close(pipefd[0])) {
-            HIP_ERROR("Error closing read end of pipe\n");
-        }
-    }
-}
-#endif /* CONFIG_HIP_DEBUG */
-
 
 /**
  * Create a file with the given contents unless it already exists
@@ -282,7 +178,6 @@ static void hip_set_os_dep_variables(void)
         hip_xfrm_set_beet(2);
         hip_xfrm_set_algo_names(0);
     } else {
-        //hip_xfrm_set_beet(1);       /* TUNNEL mode */
         hip_xfrm_set_beet(4);         /* BEET mode */
         hip_xfrm_set_algo_names(1);
     }
@@ -324,46 +219,86 @@ out_err:
  * Probe kernel modules.
  */
 
+/** CryptoAPI cipher and hashe modules */
+static char *kernel_crypto_mod[] = {
+    "crypto_null", "aes", "des"
+};
+
+/** Tunneling, IPsec, interface and control modules */
+static char *kernel_net_mod[] = {
+        "xfrm4_mode_beet", "xfrm6_mode_beet",
+        "xfrm4_tunnel",    "xfrm6_tunnel",
+        "ip4_tunnel",      "ip6_tunel",
+        "esp4",            "esp6",
+        "xfrm_user",       "dummy",
+};
+
 /**
- * probe for kernel modules (linux specific)
+ * Probe for kernel modules (Linux specific).
+ * @return  0 on success
  */
-static void hip_probe_kernel_modules(void)
+static int hip_probe_kernel_modules(void)
 {
-    int count, err, status;
-    char cmd[40];
-    int mod_total;
-    char *mod_name[] = {
-        "xfrm6_tunnel",    "xfrm4_tunnel",
-        "ip6_tunnel",      "ipip",           "ip4_tunnel",
-        "xfrm_user",       "dummy",          "esp6", "esp4",
-        "ipv6",            "crypto_null",    "cbc",
-        "blkcipher",       "des",            "aes",
-        "xfrm4_mode_beet", "xfrm6_mode_beet","sha1",
-        "capability"
-    };
+    int count;
+    char cmd[MODPROBE_MAX_LINE];
+    int net_total, crypto_total;
 
-    mod_total = sizeof(mod_name) / sizeof(char *);
+    net_total    = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
+    crypto_total = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
 
-    HIP_DEBUG("Probing for %d modules. When the modules are built-in, the errors can be ignored\n", mod_total);
-
-    for (count = 0; count < mod_total; count++) {
-        snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe", mod_name[count]);
-        HIP_DEBUG("%s\n", cmd);
-        err = fork();
-        if (err < 0) {
-            HIP_ERROR("Failed to fork() for modprobe!\n");
-        } else if (err == 0) {
-            /* Redirect stderr, so few non fatal errors wont show up. */
-            if (freopen("/dev/null", "w", stderr) == NULL) {
-                HIP_ERROR("freopen if /dev/null failed.");
+    /* Crypto module loading is treated separately, because algorithms
+     * show up in procfs. If they are not there and modprobe also fails,
+     * then overall failure is guaranteed
+     */
+    for (count = 0; count < crypto_total; count++) {
+        snprintf(cmd, sizeof(cmd), "grep %s /proc/crypto > /dev/null",
+                 kernel_crypto_mod[count]);
+        if (system(cmd)) {
+            HIP_DEBUG("Crypto module %s not present, attempting modprobe\n");
+            snprintf(cmd, sizeof(cmd), "/sbin/modprobe %s 2> /dev/null",
+                     kernel_crypto_mod[count]);
+            if (system(cmd)) {
+                HIP_ERROR("Unable to load %s!\n", kernel_crypto_mod[count]);
+                return ENOENT;
             }
-            execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *) NULL);
-        } else {
-            waitpid(err, &status, 0);
         }
     }
 
-    HIP_DEBUG("Probing completed\n");
+    /* network module loading */
+    for (count = 0; count < net_total; count++) {
+        /* we still suppress false alarms from modprobe */
+        snprintf(cmd, sizeof(cmd), "/sbin/modprobe %s 2> /dev/null",
+                 kernel_net_mod[count]);
+        if (system(cmd)) {
+            HIP_INFO("Unable to load %s, please check if it's built it!\n",
+                     kernel_net_mod[count]);
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Cleanup/unload the kernel modules on hipd exit.
+ * Unused for now because of unprivileged executions.
+ * @todo Make hip_exit call it with root privileges in order to clean up.
+ */
+static void __attribute__((unused)) hip_remove_kernel_modules(void) {
+    char **mods[] = {kernel_crypto_mod, kernel_net_mod};
+    char cmd[MODPROBE_MAX_LINE];
+    int count[2], type, i;
+
+    count[0] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
+    count[1] = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
+
+    for (type = 0; type < 2; type++) {
+        for (i = 0; i < count[type]; i++) {
+            snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s", mods[type][i]);
+            if (system(cmd)) {
+                HIP_DEBUG("Unable to remove the %s module!\n", mods[type][i]);
+            }
+        }
+    }
 }
 
 /**
@@ -476,8 +411,6 @@ static int hip_init_host_ids(void)
     /* Create default keys if necessary. */
 
     if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
-        //hip_msg_init(user_msg); already called by hip_msg_alloc()
-
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
                                               NULL, NULL, RSA_KEY_DEFAULT_BITS, DSA_KEY_DEFAULT_BITS),
                  1, "Failed to create keys to %s\n", DEFAULT_CONFIG_DIR);
@@ -489,31 +422,6 @@ static int hip_init_host_ids(void)
     /* DSA keys and RSA anonymous are not loaded by default until bug id
      * 522 is properly solved. Run hipconf add hi default if you want to
      * enable non-default HITs. */
-#if 0
-    /* dsa anon and pub */
-    hip_msg_init(user_msg);
-    if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-                                           0, 1, "dsa", NULL, 0, 0)) {
-        HIP_ERROR("Could not load default keys (DSA)\n");
-        goto out_err;
-    }
-    if (err = hip_handle_add_local_hi(user_msg)) {
-        HIP_ERROR("Adding of keys failed (DSA)\n");
-        goto out_err;
-    }
-
-    /* rsa anon */
-    hip_msg_init(user_msg);
-    if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-                                           1, 1, "rsa", NULL, 0, 0)) {
-        HIP_ERROR("Could not load default keys (RSA anon)\n");
-        goto out_err;
-    }
-    if (err = hip_handle_add_local_hi(user_msg)) {
-        HIP_ERROR("Adding of keys failed (RSA anon)\n");
-        goto out_err;
-    }
-#endif
 
     /* rsa pub */
     hip_msg_init(user_msg);
@@ -536,13 +444,10 @@ static int hip_init_host_ids(void)
     HIP_DEBUG_LSI("default_lsi ", &default_lsi);
     hip_hidb_associate_default_hit_lsi(&default_hit, &default_lsi);
 
-    /*Initializes the hadb with the information contained in /etc/hip/hosts*/
-    //hip_init_hadb_hip_host();
-
 out_err:
 
     if (user_msg) {
-        HIP_FREE(user_msg);
+        free(user_msg);
     }
 
     return err;
@@ -816,12 +721,11 @@ int hipd_init(int flush_ipsec, int killold)
     hip_register_maint_function(&hip_relht_maintenance,        20000);
     hip_register_maint_function(&hip_registration_maintenance, 30000);
 
-#ifndef CONFIG_HIP_OPENWRT
-#ifdef CONFIG_HIP_DEBUG
-    hip_print_sysinfo();
-#endif
-    hip_probe_kernel_modules();
-#endif
+    err = hip_probe_kernel_modules();
+    if (err) {
+        HIP_ERROR("Unable to load the required kernel modules!\n");
+        goto out_err;
+    }
 
     /* Register signal handlers */
     signal(SIGINT, hip_close);
@@ -838,10 +742,6 @@ int hipd_init(int flush_ipsec, int killold)
     HIP_IFE(init_random_seed(), -1);
 
     hip_init_hadb();
-    /* hip_init_puzzle_defaults just returns, removed -samu  */
-#if 0
-    hip_init_puzzle_defaults();
-#endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     hip_init_opp_db();
@@ -874,34 +774,6 @@ int hipd_init(int flush_ipsec, int killold)
 
 #ifndef CONFIG_HIP_PFKEY
     hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
-#endif
-
-#if 0
-    {
-        int ret_sockopt            = 0, value = 0;
-        socklen_t value_len        = sizeof(value);
-        int ipsec_buf_size         = 200000;
-        socklen_t ipsec_buf_sizeof = sizeof(ipsec_buf_size);
-        ret_sockopt    = getsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
-                                    &value, &value_len);
-        if (ret_sockopt != 0) {
-            HIP_DEBUG("Getting receive buffer size of hip_nl_ipsec.fd failed\n");
-        }
-        ipsec_buf_size = value * 2;
-        HIP_DEBUG("Default setting of receive buffer size for hip_nl_ipsec was %d.\n"
-                  "Setting it to %d.\n", value, ipsec_buf_size);
-        ret_sockopt    = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
-                                    &ipsec_buf_size, ipsec_buf_sizeof);
-        if (ret_sockopt != 0) {
-            HIP_DEBUG("Setting receive buffer size of hip_nl_ipsec.fd failed\n");
-        }
-        ret_sockopt    = 0;
-        ret_sockopt    = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
-                                    &ipsec_buf_size, ipsec_buf_sizeof);
-        if (ret_sockopt != 0) {
-            HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
-        }
-    }
 #endif
 
     HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");

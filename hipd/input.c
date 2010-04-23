@@ -17,6 +17,8 @@
  */
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "input.h"
 #include "hadb.h"
@@ -26,6 +28,7 @@
 #include "lib/core/crypto.h"
 #include "lib/core/builder.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/hostid.h"
 #include "lib/core/solve.h"
 #include "lib/core/transform.h"
 #include "lib/core/keylen.h"
@@ -45,6 +48,7 @@
 #include "hipd.h"
 #include "oppipdb.h"
 #include "pkt_handling.h"
+#include "pisa.h"
 
 /**
  * Verifies a HMAC.
@@ -196,7 +200,7 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
 
 out_err:
     if (msg_copy) {
-        HIP_FREE(msg_copy);
+        free(msg_copy);
     }
 
     return err;
@@ -294,13 +298,13 @@ int hip_produce_keying_material(struct hip_packet_context *ctx,
     HIP_DEBUG("Keying material:\n\tminimum length = %u\n\t" \
               "keying material length = %u.\n", keymat_len_min, keymat_len);
 
-    HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, 0)), -ENOMEM,
+    HIP_IFEL(!(keymat = malloc(keymat_len)), -ENOMEM,
              "Error on allocating memory for keying material.\n");
 
     /* 1024 should be enough for shared secret. The length of the shared
      * secret actually depends on the DH Group. */
     /** @todo 1024 -> hip_get_dh_size ? */
-    HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_0)),
+    HIP_IFEL(!(dh_shared_key = malloc(dh_shared_len)),
              -ENOMEM,
              "Error on allocating memory for Diffie-Hellman shared key.\n");
 
@@ -426,16 +430,16 @@ int hip_produce_keying_material(struct hip_packet_context *ctx,
     ctx->hadb_entry->dh_shared_key     = dh_shared_key;
     ctx->hadb_entry->dh_shared_key_len = dh_shared_len;
 
-    /* on success HIP_FREE for dh_shared_key is called by caller */
+    /* on success free for dh_shared_key is called by caller */
 out_err:
     if (err && dh_shared_key) {
-        HIP_FREE(dh_shared_key);
+        free(dh_shared_key);
     }
     if (keymat) {
-        HIP_FREE(keymat);
+        free(keymat);
     }
     if (plain_local_hit) {
-        HIP_FREE(plain_local_hit);
+        free(plain_local_hit);
     }
     return err;
 }
@@ -657,11 +661,11 @@ out_err:
 }
 
 //TODO doxygen header missing
-int handle_locator(struct hip_locator *locator,
-                   in6_addr_t         *r1_saddr,
-                   in6_addr_t         *r1_daddr,
-                   hip_ha_t           *entry,
-                   hip_portpair_t     *r1_info)
+static int handle_locator(struct hip_locator *locator,
+                          in6_addr_t         *r1_saddr,
+                          in6_addr_t         *r1_daddr,
+                          hip_ha_t           *entry,
+                          hip_portpair_t     *r1_info)
 {
     int n_addrs = 0, loc_size = 0, err = 0;
 
@@ -833,7 +837,6 @@ int hip_handle_r1(const uint8_t packet_type,
         HIP_DEBUG("Not a retransmission\n");
     }
 
-
     /* R1 packet had destination port hip_get_nat_udp_port(), which means that
      * the peer is behind NAT. We set NAT mode "on" and set the send function to
      * "hip_send_udp". The client UDP port is not stored until the handling
@@ -966,7 +969,7 @@ int hip_handle_r1(const uint8_t packet_type,
 
     out_err:
     if (ctx->hadb_entry->dh_shared_key) {
-        HIP_FREE(ctx->hadb_entry->dh_shared_key);
+        free(ctx->hadb_entry->dh_shared_key);
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_R1\n");
@@ -1530,7 +1533,7 @@ int hip_check_i2(const uint8_t packet_type,
          * forced to do some temporary copying. If ultimate speed is required,
          * then calculate the digest here as usual and feed it to signature
          * verifier. */
-        if ((tmp_enc = (char *) malloc(hip_get_param_total_len(enc))) == NULL) {
+        if ((tmp_enc = malloc(hip_get_param_total_len(enc))) == NULL) {
             err = -ENOMEM;
             HIP_ERROR("Out of memory when allocating memory for temporary " \
                       "ENCRYPTED parameter. Dropping the I2 packet.\n");

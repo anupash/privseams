@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_LIB_CORE_ICOMM_H
 #define HIP_LIB_CORE_ICOMM_H
 
@@ -27,8 +28,8 @@
 #define HIP_MSG_SOCKET_OPT 2
 #define HIP_MSG_GET_HIT_LIST 3
 
-/** @addtogroup hip_so
- * HIP socket options. Define a constant HIP_MSG_NEWMODE which has value
+/** @defgroup hip_so HIP socket options
+ * Define a constant HIP_MSG_NEWMODE which has value
  * between 0 and HIP_MSG_ROOT_MAX. You may also need to increase the value of
  * HIP_MSG_ROOT_MAX.
  *
@@ -68,12 +69,6 @@
 #define HIP_MSG_MAP_ID_TO_ADDR                   34
 #define HIP_MSG_LSI_TO_HIT                       35
 #define HIP_MSG_ANY_MAX                          63
-
-
-/** @addtogroup hip_so
- * HIP socket options.
- * @{
- */
 #define HIP_MSG_ROOT_MIN                         64
 #define HIP_MSG_ADD_LOCAL_HI                     65
 #define HIP_MSG_DEL_LOCAL_HI                     66
@@ -190,8 +185,8 @@
 #define HIP_MSG_HANDOVER_SOFT                    200
 #define HIP_MSG_FIREWALL_STATUS                  201
 #define HIP_MSG_FW_FLUSH_SYS_OPP_HIP             202
+/* @} */
 
-/** @} */
 /* inclusive */
 #define HIP_MSG_ROOT_MAX                         255
 

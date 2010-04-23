@@ -249,7 +249,6 @@ int hip_handle_user_msg(hip_common_t *msg,
     /* This prints numerical addresses until we have separate
      * print function for icomm.h and protodefs.h -miika */
     HIP_DEBUG("HIP user message type is: %d\n", msg_type);
-    //hip_message_type_name(msg_type));
 
     switch (msg_type) {
     case HIP_MSG_NULL_OP:
@@ -272,7 +271,6 @@ int hip_handle_user_msg(hip_common_t *msg,
         }
         break;
     case HIP_MSG_RST:
-        //*send_response = 0;
         err                = hip_send_close(msg, 1);
         break;
     case HIP_MSG_BOS:
@@ -344,13 +342,10 @@ int hip_handle_user_msg(hip_common_t *msg,
         err = hip_opp_get_peer_hit(msg, src);
         if (err) {
             _HIP_ERROR("get pseudo hit failed.\n");
-            //*send_response = 1;
             if (err == -11) {           /* immediate fallback, do not pass */
                 err = 0;
             }
             goto out_err;
-        } else {
-            //*send_response = 0;
         }
         /* skip sending of return message; will be sent later in R1 */
         goto out_err;
@@ -480,12 +475,6 @@ int hip_handle_user_msg(hip_common_t *msg,
         }
 
         if (dst_hit == NULL) {
-#if 0
-            HIP_ERROR("No HIT parameter found from the user " \
-                      "message.\n");
-            err = -1;
-            goto out_err;
-#endif
             HIP_DEBUG("No HIT parameter found from the user " \
                       "message. Trying opportunistic mode \n");
             opp_mode = 1;
@@ -519,7 +508,7 @@ int hip_handle_user_msg(hip_common_t *msg,
         }
 #ifdef CONFIG_HIP_OPPORTUNISTIC
         else {
-            hit_local = (struct in6_addr *) malloc(sizeof(struct in6_addr));
+            hit_local = malloc(sizeof(struct in6_addr));
             HIP_IFEL(hip_get_default_hit(hit_local), -1,
                      "Error retrieving default HIT \n");
             entry     = hip_opp_add_map(dst_ip, hit_local, src);
@@ -530,8 +519,7 @@ int hip_handle_user_msg(hip_common_t *msg,
                      sizeof(reg_req->lifetime);
 
         for (; i < type_count; i++) {
-            pending_req = (hip_pending_request_t *)
-                          malloc(sizeof(hip_pending_request_t));
+            pending_req = malloc(sizeof(hip_pending_request_t));
             if (pending_req == NULL) {
                 HIP_ERROR("Error on allocating memory for a " \
                           "pending registration request.\n");
@@ -732,18 +720,13 @@ int hip_handle_user_msg(hip_common_t *msg,
         err              = hip_for_each_ha(hip_handle_get_ha_info, msg);
         break;
     case HIP_MSG_DEFAULT_HIT:
-        //hip_msg_init(msg);
         err              =  hip_get_default_hit_msg(msg);
         break;
     case HIP_MSG_MHADDR_ACTIVE:
-        //hip_msg_init(msg);
         is_active_mhaddr = 1;
-        //hip_build_user_hdr(msg, HIP_MSG_MHADDR_ACTIVE, 0);
         break;
     case HIP_MSG_MHADDR_LAZY:
-        //hip_msg_init(msg);
         is_active_mhaddr = 0;
-        //hip_build_user_hdr(msg,HIP_MSG_MHADDR_LAZY, 0);
         break;
     case HIP_MSG_HANDOVER_HARD:
         is_hard_handover = 1;
@@ -835,7 +818,6 @@ int hip_handle_user_msg(hip_common_t *msg,
         break;
     case HIP_MSG_USERSPACE_IPSEC:
         HIP_DUMP_MSG(msg);
-        //*send_response = 0;
         err = hip_userspace_ipsec_activate(msg);
         break;
     case HIP_MSG_RESTART_DUMMY_INTERFACE:

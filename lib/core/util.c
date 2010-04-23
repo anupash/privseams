@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "config.h"
+#include "util.h"
 #include "version.h"
 
 /**

@@ -4,6 +4,7 @@
  * @author  Tobias Heer  <heer@cs.rwth-aachen.de> (header file only)
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+
 #ifndef HIP_LIB_CORE_HIP_CAPABILITY_H
 #define HIP_LIB_CORE_HIP_CAPABILITY_H
 

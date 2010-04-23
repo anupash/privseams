@@ -10,10 +10,13 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "close.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/performance.h"
+#include "oppipdb.h"
 
 /**
  * send a HIP close packet to a peer
@@ -110,7 +113,7 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 out_err:
     if (close) {
-        HIP_FREE(close);
+        free(close);
     }
 
     return err;
@@ -134,7 +137,7 @@ int hip_send_close(struct hip_common *msg,
 
     HIP_DEBUG("msg=%p\n", msg);
 
-    HIP_IFEL(!(opaque = (char *) malloc(sizeof(hip_hit_t) + sizeof(int))),
+    HIP_IFEL(!(opaque = malloc(sizeof(hip_hit_t) + sizeof(int))),
              -1, "failed to allocate memory");
 
     if (msg) {
@@ -180,10 +183,10 @@ int hip_send_close(struct hip_common *msg,
 
 out_err:
     if (msg_to_firewall) {
-        HIP_FREE(msg_to_firewall);
+        free(msg_to_firewall);
     }
     if (opaque) {
-        HIP_FREE(opaque);
+        free(opaque);
     }
     return err;
 }
@@ -357,7 +360,7 @@ int hip_close_send_response(const uint8_t packet_type,
              "Deleting peer info failed.\n");
 out_err:
     if (ctx->output_msg) {
-        HIP_FREE(ctx->output_msg);
+        free(ctx->output_msg);
     }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
@@ -477,7 +480,6 @@ int hip_close_ack_handle_packet(const uint8_t packet_type,
     HIP_IFEL(hip_del_peer_info(&ctx->hadb_entry->hit_our,
                                &ctx->hadb_entry->hit_peer),
              -1, "Deleting peer info failed\n");
-
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK, PERF_CLOSE_COMPLETE\n");

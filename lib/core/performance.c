@@ -207,7 +207,6 @@ int hip_perf_write_benchmark(perf_set_t *perf_set, int slot)
             err = 1;
         }
     }
-    //HIP_DEBUG("Performance written: %4d\t%8.8lf\n", perf_set->linecount[slot], perf_set->result[slot]);
 out_err:
     return err;
 }

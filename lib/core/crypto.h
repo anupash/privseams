@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_LIB_CORE_CRYPTO_H
 #define HIP_LIB_CORE_CRYPTO_H
 
@@ -46,24 +47,24 @@
 #define HIP_DH_OAKLEY_15              4 /* 3072-bit MODP group */
 #define HIP_DH_OAKLEY_17              5 /* 6144-bit MODP group */
 #define HIP_DH_OAKLEY_18              6 /* 8192-bit MODP group */
-#define HIP_FIRST_DH_GROUP_ID       HIP_DH_OAKLEY_5
-#define HIP_SECOND_DH_GROUP_ID      HIP_DH_384
-#define HIP_MAX_DH_GROUP_ID 7
+#define HIP_FIRST_DH_GROUP_ID         HIP_DH_OAKLEY_5
+#define HIP_SECOND_DH_GROUP_ID        HIP_DH_384
+#define HIP_MAX_DH_GROUP_ID           7
 
-#define HIP_MAX_DSA_KEY_LEN 1024
+#define HIP_MAX_DSA_KEY_LEN        1024
 /* Moved to protodefs.h
  * #define HIP_MAX_RSA_KEY_LEN 4096 */
-#define DSA_KEY_DEFAULT_BITS    1024
-#define RSA_KEY_DEFAULT_BITS    1024
+#define DSA_KEY_DEFAULT_BITS       1024
+#define RSA_KEY_DEFAULT_BITS       1024
 
-#define DEFAULT_CONFIG_DIR        HIPL_SYSCONFDIR
+#define DEFAULT_CONFIG_DIR         HIPL_SYSCONFDIR
 
-#define DEFAULT_CONFIG_DIR_MODE   0755
+#define DEFAULT_CONFIG_DIR_MODE        0755
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE "hip_host_dsa_key"
 #define DEFAULT_HOST_RSA_KEY_FILE_BASE "hip_host_rsa_key"
-#define DEFAULT_PUB_FILE_SUFFIX ".pub"
+#define DEFAULT_PUB_FILE_SUFFIX        ".pub"
 
-#define DEFAULT_PUB_HI_FILE_NAME_SUFFIX "_pub"
+#define DEFAULT_PUB_HI_FILE_NAME_SUFFIX  "_pub"
 #define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
 
 #ifdef OPENSSL_NO_SHA0

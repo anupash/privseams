@@ -6,12 +6,6 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <linux/netlink.h>
-/* CentOS 5.4 and some other legacy systems are broken. Including
-   linux/rtnetlink.h complains that __uint32_t or __64 is undefine */
-#ifndef __uint32_t
-#define __uint32_t uint32_t
-#define __u64 uint64_t
-#endif /* __uint32_t */
 #include <linux/xfrm.h>
 #include <linux/rtnetlink.h>
 
@@ -39,7 +33,6 @@ struct pseudo6_hdr {
 };
 
 struct netdev_address {
-    //hip_list_t next;
     struct sockaddr_storage addr;
     int                     if_index;
     unsigned char           secret[40];

@@ -113,8 +113,6 @@ static void sig_chld(int signo)
     pid_t child_pid;
     int child_status;     // child exit code
     child_pid = waitpid(0, &child_status, WNOHANG);
-    /* Commented the following line to see if it helps with bug id 884
-     * -miika */
     _HIP_DEBUG("child pid: %d, status: %d\n", child_pid, child_status);
 }
 
@@ -207,10 +205,6 @@ static int run_nsupdate(char *ips, char *hit, int start)
         return ERR;
     } else if (child_pid == 0)   { // CHILD
         char start_str[2];
-#if 0
-        /* Close open sockets since FD_CLOEXEC was not used */
-        close_all_fds_except_stdout_and_stderr();
-#endif
 
         snprintf(start_str, sizeof(start_str), "%i", start);
 
@@ -306,24 +300,3 @@ int nsupdate(const int start)
     hip_for_each_hi(run_nsupdate_for_hit, (void *) &start);
     return 1;
 }
-
-/*
- * Just calls run_nsupdate with some values for debugging
- */
-#if 0
-int main(void)
-{
-    int ret;
-
-    ret = run_nsupdate("193.167.187.3 193.167.187.5", "def", 1);
-    HIP_DEBUG("ret=%d\n", ret);
-    sleep(1);
-
-    /* wait for children */
-    while (1) {
-        sleep(1);
-    }
-    return 0;
-}
-
-#endif

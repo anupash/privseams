@@ -35,7 +35,8 @@
  * @param cmd add or delete
  */
 int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
-                  struct sockaddr *src, struct sockaddr *dst, u_int mode, int cmd)
+                  struct sockaddr *src, struct sockaddr *dst,
+                  unsigned int mode, int cmd)
 {
     struct sadb_x_policy *xpl;
     struct sadb_x_ipsecrequest *xisr;
@@ -65,8 +66,6 @@ int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
     xpl->sadb_x_policy_type    = IPSEC_POLICY_IPSEC;
     xpl->sadb_x_policy_dir     = direction;
     xpl->sadb_x_policy_id      = 0;
-
-    //xpl->sadb_x_policy_priority = PRIORITY_DEFAULT;
 
     if (cmd == SADB_X_SPDDELETE) {
         goto end;

@@ -37,6 +37,7 @@
  */
 
 #include <limits.h>
+#include <stdlib.h>
 
 #include "config.h"
 #include "hadb.h"
@@ -152,7 +153,7 @@ static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
  *
  * @param entry the host association
  */
-void hip_hadb_set_lsi_pair(hip_ha_t *entry)
+static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 {
     hip_lsi_t aux;
     //Assign value to lsi_our searching in hidb by the correspondent hit
@@ -178,16 +179,13 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
  */
 hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
 {
-    //int n = 0;
     hip_ha_t ha, *ret = NULL;
+
     memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
     memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
     HIP_DEBUG_HIT("HIT1", hit);
     HIP_DEBUG_HIT("HIT2", hit2);
 
-    //HIP_DEBUG("----------Checking database-----------------\n");
-    //hip_for_each_ha(hip_print_info_hadb, &n);
-    //HIP_DEBUG("----------End Checking database-----------------\n");
     ret = hip_ht_find(hadb_hit, &ha);
     if (!ret) {
         memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
@@ -319,7 +317,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
             HIP_DEBUG("HIP association was inserted " \
                       "successfully.\n");
         } else {
-            /* hip_db_put_ha(tmp, hip_hadb_delete_state); */
             HIP_DEBUG("HIP association was NOT inserted because " \
                       "a HIP association with matching HITs was " \
                       "already present in the database.\n");
@@ -418,7 +415,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     entry = hip_hadb_find_byhits(local_hit, peer_hit);
 
     if (entry) {
-        // hip_hadb_dump_spis_out_old(entry);
         HIP_DEBUG_LSI("    Peer lsi   ", &entry->lsi_peer);
     } else {
         HIP_DEBUG("hip_hadb_create_state\n");
@@ -673,7 +669,7 @@ out_err:
 /**
  * Allocate and initialize a new HA structure.
  *
- * @param  gfpmask a mask passed directly to HIP_MALLOC().
+ * @param  gfpmask a mask passed directly to malloc().
  * @return NULL if memory allocation failed, otherwise the HA.
  */
 hip_ha_t *hip_hadb_create_state(int gfpmask)
@@ -692,57 +688,6 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 }
 
 /* END OF PRIMITIVE FUNCTIONS */
-
-/**
- * Select the preferred address within the addresses of the given SPI.
- * The selected address is copied to @c addr, if it is non-NULL.
- *
- * @param entry the host association
- * @param spi_out hip_spi_out_item a pointer to the structure containing outbound SPI information
- * @param addr the resulting outbound address will be copied here if found
- * @return zero on success and negative on error
- */
-int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, struct in6_addr *addr)
-{
-    int err = 0, i;
-    struct hip_peer_addr_list_item *s, *candidate = NULL;
-    struct timeval latest, dt;
-    hip_list_t *item, *tmp;
-
-    list_for_each_safe(item, tmp, spi_out->peer_addr_list, i)
-    {
-        s = (struct hip_peer_addr_list_item *) list_entry(item);
-        if (s->address_state != PEER_ADDR_STATE_ACTIVE) {
-            _HIP_DEBUG("skipping non-active address %s\n", addrstr);
-            continue;
-        }
-
-        if (candidate) {
-            int this_is_later;
-            this_is_later = hip_timeval_diff(&s->modified_time, &latest, &dt);
-            _HIP_DEBUG("latest=%ld.%06ld\n", latest.tv_sec, latest.tv_usec);
-            _HIP_DEBUG("dt=%ld.%06ld\n", dt.tv_sec, dt.tv_usec);
-            if (this_is_later) {
-                _HIP_DEBUG("is later, change\n");
-                memcpy(&latest, &s->modified_time, sizeof(struct timeval));
-                candidate = s;
-            }
-        } else {
-            candidate = s;
-            memcpy(&latest, &s->modified_time, sizeof(struct timeval));
-        }
-    }
-
-    if (!candidate) {
-        HIP_ERROR("did not find usable peer address\n");
-        HIP_DEBUG("todo: select from other SPIs ?\n");
-        /* todo: select other SPI as the default SPI out */
-        err = -ENOMSG;
-    } else {ipv6_addr_copy(addr, &candidate->address);
-    }
-
-    return err;
-}
 
 /**
  * Gets some of the peer's usable IPv6 address.
@@ -764,10 +709,8 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 {
     int err = 0;
-    // struct hip_spi_out_item *spi_out;
 
     /* assume already locked entry */
-
     HIP_DEBUG_HIT("entry def addr", &entry->peer_addr);
     ipv6_addr_copy(addr, &entry->peer_addr);
     return err;
@@ -809,9 +752,9 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
             /*Adding the peer address to the entry->peer_addr_list_to_be_added
              *                          * So that later aftre base exchange it can be transfered to
              *                                                   * SPI OUT's peer address list*/
-            a_item = (struct hip_peer_addr_list_item *) HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), 0);
+            a_item = malloc(sizeof(struct hip_peer_addr_list_item));
             if (!a_item) {
-                HIP_ERROR("item HIP_MALLOC failed\n");
+                HIP_ERROR("item malloc failed\n");
                 err = -ENOMEM;
                 goto out_err;
             }
@@ -830,9 +773,9 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
         goto out_err;
     }
 
-    a_item = (struct hip_peer_addr_list_item *) HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+    a_item = malloc(sizeof(struct hip_peer_addr_list_item));
     if (!a_item) {
-        HIP_ERROR("item HIP_MALLOC failed\n");
+        HIP_ERROR("item malloc failed\n");
         err = -ENOMEM;
         goto out_err;
     }
@@ -931,7 +874,7 @@ int hip_init_peer(hip_ha_t *entry,
              ipv6_addr_cmp(&hit, &entry->hit_peer),
              -1, "Unable to verify sender's HOST_ID\n");
 
-    HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)),
+    HIP_IFEL(!(entry->peer_pub = malloc(len)),
              -ENOMEM, "Out of memory\n");
 
     memcpy(entry->peer_pub, peer, len);
@@ -1004,7 +947,7 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 out_err:
 
     if (err && entry->our_pub) {
-        HIP_FREE(entry->our_pub);
+        free(entry->our_pub);
         entry->our_pub = NULL;
     }
 
@@ -1047,12 +990,6 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
         case HIP_HA_CTRL_LOCAL_REQ_FULLRELAY:
         case HIP_HA_CTRL_LOCAL_REQ_RVS:
         case HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY:
-#if 0
-            if (mask == HIP_HA_CTRL_LOCAL_REQ_RELAY) {
-                hip_nat_set_control(entry, 1);
-                HIP_DEBUG("nat control has been reset to 1\n");
-            }
-#endif
             entry->local_controls |= mask;
             break;
         default:
@@ -1104,7 +1041,7 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
     }
 }
 
-void hip_hadb_rec_free_doall(hip_ha_t *rec)
+static void hip_hadb_rec_free_doall(hip_ha_t *rec)
 {
     if (hadb_hit == NULL || rec == NULL) {
         return;
@@ -1164,10 +1101,10 @@ void hip_hadb_delete_state(hip_ha_t *ha)
     /* Delete SAs */
 
     if (ha->dh_shared_key) {
-        HIP_FREE(ha->dh_shared_key);
+        free(ha->dh_shared_key);
     }
     if (ha->hip_msg_retrans.buf) {
-        HIP_FREE(ha->hip_msg_retrans.buf);
+        free(ha->hip_msg_retrans.buf);
     }
     if (ha->peer_pub) {
         if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
@@ -1176,16 +1113,16 @@ void hip_hadb_delete_state(hip_ha_t *ha)
         } else if (ha->peer_pub_key) {
             DSA_free(ha->peer_pub_key);
         }
-        HIP_FREE(ha->peer_pub);
+        free(ha->peer_pub);
     }
     if (ha->our_priv) {
-        HIP_FREE(ha->our_priv);
+        free(ha->our_priv);
     }
     if (ha->our_pub) {
-        HIP_FREE(ha->our_pub);
+        free(ha->our_pub);
     }
     if (ha->rendezvous_addr) {
-        HIP_FREE(ha->rendezvous_addr);
+        free(ha->rendezvous_addr);
     }
 
     lmod_uninit_state(ha->hip_modular_state);
@@ -1215,7 +1152,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
     }
 
     list_del(ha, hadb_hit);
-    HIP_FREE(ha);
+    free(ha);
 }
 
 /**
@@ -1324,16 +1261,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
     hid.heartbeats_received = entry->heartbeats_statistics.num_items;
     hid.heartbeats_sent     = entry->heartbeats_sent;
 #endif
-
-    /*For some reason this gives negative result*/
-    /*hip_timeval_diff(&entry->bex_start,
-     *               &entry->bex_end,
-     *               &hid.bex_duration);*/
-
-
-    // struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
-    // HIP_ASSERT(duration != NULL);
-    // memcpy(&hid.bex_duration,  duration, sizeof(struct timeval));
 
     _HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
@@ -1599,7 +1526,6 @@ int hip_get_local_addr(struct hip_common *msg)
 
     ipv6_addr_copy(&local_address, &entry->our_addr);
 
-    //hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
     HIP_IFEL(hip_build_param_contents(msg, &local_address, HIP_PARAM_IPV6_ADDR,
                                       sizeof(struct in6_addr)), -1,
                                       "Building local address info failed\n");
@@ -1690,10 +1616,6 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_add
              -1, "Error while changing inbound security association\n");
 
     HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
-
-    /*HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_our,
-     *      &ha->hit_peer, src_addr, dst_addr, IPPROTO_ESP, 1, 0), -1,
-     *       "Setting up SP pair failed\n");      */
 
     // Create a new outbound SA
     HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", new_spi_out);

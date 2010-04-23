@@ -3,8 +3,6 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
-#ifndef HIP_LIB_CORE_CERTTOOLS_H
-#define HIP_LIB_CORE_CERTTOOLS_H
 
 /** @file
  * A header file for certtools.c
@@ -16,6 +14,10 @@
  * @date 31.3.2008
  *
  */
+
+#ifndef HIP_LIB_CORE_CERTTOOLS_H
+#define HIP_LIB_CORE_CERTTOOLS_H
+
 #include <sys/types.h>
 #include <sys/time.h>
 #include <time.h>

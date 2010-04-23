@@ -38,6 +38,7 @@
 
 extern int __ipsec_errcode;
 extern void __ipsec_set_strerror __P((const char *));
+extern const char *ipsec_strerror __P((void));
 
 #define EIPSEC_NO_ERROR         0       /*success*/
 #define EIPSEC_NOT_SUPPORTED    1       /*not supported*/

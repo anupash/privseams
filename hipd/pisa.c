@@ -12,6 +12,7 @@
  */
 
 #include "hipd.h"
+#include "pisa.h"
 
 #define CERT_MAX_SIZE 1024
 

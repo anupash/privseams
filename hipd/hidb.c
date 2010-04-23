@@ -14,6 +14,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "hidb.h"
 #include "lib/core/hostid.h"
@@ -24,7 +26,7 @@ HIP_HASHTABLE *hip_local_hostid_db = NULL;
 
 static char *lsi_addresses[] = {"1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4"};
 
-static int hip_add_host_id(hip_db_struct_t *db,
+static int hip_add_host_id(HIP_HASHTABLE *db,
                            const struct hip_lhi *lhi,
                            hip_lsi_t *lsi,
                            const struct hip_host_id_priv *host_id,
@@ -32,8 +34,8 @@ static int hip_add_host_id(hip_db_struct_t *db,
                            int (*remove)(struct hip_host_id_entry *, void **arg),
                            void *arg);
 static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid);
-static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry);
-static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db,
+static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct hip_host_id_entry *id_entry);
+static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(HIP_HASHTABLE *db,
                                                            const struct in_addr *lsi);
 
 
@@ -80,9 +82,9 @@ int hip_hidb_match(const void *ptr1, const void *ptr2)
 /**
  * initialize host identity database
  *
- * @param db A double pointer to a hip_db_struct_t. Caller deallocates.
+ * @param db A double pointer to a HIP_HASHTABLE. Caller deallocates.
  */
-void hip_init_hostid_db(hip_db_struct_t **db)
+void hip_init_hostid_db(HIP_HASHTABLE **db)
 {
     hip_local_hostid_db = hip_ht_init(hip_hidb_hash, hip_hidb_match);
 }
@@ -95,7 +97,7 @@ void hip_init_hostid_db(hip_db_struct_t **db)
  * @param lhi the HIT to be deleted from the database.
  * @return    zero on success, otherwise negative.
  */
-static int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
+static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
 {
     int err                      = -ENOENT;
     struct hip_host_id_entry *id = NULL;
@@ -128,9 +130,9 @@ static int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
         DSA_free(id->private_key);
     }
 
-    HIP_FREE(id->host_id);
+    free(id->host_id);
     list_del(id, db);
-    HIP_FREE(id);
+    free(id);
     id  = NULL;
 
     err = 0;
@@ -144,7 +146,7 @@ static int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
  *
  * @param db database structure to delete.
  */
-static void hip_uninit_hostid_db(hip_db_struct_t *db)
+static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
 {
     hip_list_t *curr, *iter;
     struct hip_host_id_entry *tmp;
@@ -178,7 +180,7 @@ static void hip_uninit_hostid_db(hip_db_struct_t *db)
  * @param anon -1 if you don't care, 1 if anon, 0 if public
  * @return     NULL, if failed or non-NULL if succeeded.
  */
-struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *db,
+struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db,
                                                                const struct in6_addr *hit,
                                                                int algo,
                                                                int anon)
@@ -276,7 +278,7 @@ void hip_uninit_host_id_dbs(void)
  * @param arg     argument passed for the handlers
  * @return        0 on success, otherwise an negative error value is returned.
  */
-static int hip_add_host_id(hip_db_struct_t *db,
+static int hip_add_host_id(HIP_HASHTABLE *db,
                            const struct hip_lhi *lhi,
                            hip_lsi_t *lsi,
                            const struct hip_host_id_priv *host_id,
@@ -294,9 +296,8 @@ static int hip_add_host_id(hip_db_struct_t *db,
 
     HIP_ASSERT(&lhi->hit != NULL);
     _HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
-    HIP_IFEL(!(id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(struct hip_host_id_entry),
-                                                                  0)), -ENOMEM,
-             "No memory available for host id\n");
+    HIP_IFEL(!(id_entry = malloc(sizeof(struct hip_host_id_entry))),
+             -ENOMEM, "No memory available for host id\n");
     memset(id_entry, 0, sizeof(struct hip_host_id_entry));
 
     ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
@@ -354,9 +355,9 @@ out_err:
                     DSA_free(id_entry->private_key);
                 }
             }
-            HIP_FREE(id_entry->host_id);
+            free(id_entry->host_id);
         }
-        HIP_FREE(id_entry);
+        free(id_entry);
     }
 
     HIP_WRITE_UNLOCK_DB(db);
@@ -413,8 +414,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
             (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON)
             ?
             1 : 0;
-
-        /*  lhi.algo = eid_endpoint.algo;*/
 
         err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
                               &lsi, host_identity,
@@ -609,7 +608,7 @@ static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid
  * @param id_entry contains an entry to the db, will contain an unsigned lsi
  * @return zero on success, or negative error value on failure.
  */
-static int hip_hidb_add_lsi(hip_db_struct_t *db, struct hip_host_id_entry *id_entry)
+static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct hip_host_id_entry *id_entry)
 {
     struct hip_host_id_entry *id_entry_aux;
     hip_list_t *item;
@@ -700,7 +699,7 @@ out_err:
  * @param lsi the local LSI to be matched
  * @return the local host identifier structure
  */
-static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db,
+static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(HIP_HASHTABLE *db,
                                                            const struct in_addr *lsi)
 {
     struct hip_host_id_entry *id_entry;
@@ -762,7 +761,7 @@ out_err:
  * @param key a pointer to the private key (caller should not deallocate)
  * @return zero on success or negative on error
  */
-int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
+int hip_get_host_id_and_priv_key(HIP_HASHTABLE *db, struct in6_addr *hit,
                                  int algo, struct hip_host_id **host_id, void **key)
 {
     int err                         = 0, host_id_len;
@@ -771,13 +770,12 @@ int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
     HIP_READ_LOCK_DB(db);
 
     entry       = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
-    //HIP_IFEL(!entry, "Host ID not found\n", -1);
     HIP_IFE(!entry, -1);
 
     host_id_len = hip_get_param_total_len(entry->host_id);
     HIP_IFE(host_id_len > HIP_MAX_HOST_ID_LEN, -1);
 
-    *host_id    = HIP_MALLOC(host_id_len, GFP_ATOMIC);
+    *host_id    = malloc(host_id_len);
     HIP_IFE(!*host_id, -ENOMEM);
     memcpy(*host_id, entry->host_id, host_id_len);
 
@@ -914,8 +912,3 @@ out_err:
 
     return err;
 }
-
-#undef HIP_READ_LOCK_DB
-#undef HIP_WRITE_LOCK_DB
-#undef HIP_READ_UNLOCK_DB
-#undef HIP_WRITE_UNLOCK_DB

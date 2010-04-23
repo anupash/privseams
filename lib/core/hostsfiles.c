@@ -62,9 +62,9 @@ int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
  *        written. Minimum buffer length is HOST_NAME_MAX chars.
  * @return zero on match or one otherwise
  */
-int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry,
-                                             const void *arg,
-                                             void *result)
+static int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line *entry,
+                                                    const void *arg,
+                                                    void *result)
 {
     int err    = 1;
     int is_lsi = hip_id_type_match(&entry->id, 2);
@@ -216,9 +216,9 @@ out_err:
  *               will be calculated
  * @return always one
  */
-int hip_calc_lines_in_hosts(const struct hosts_file_line *entry,
-                            const void *arg,
-                            void *result)
+static int hip_calc_lines_in_hosts(const struct hosts_file_line *entry,
+                                   const void *arg,
+                                   void *result)
 {
     int *res = (int *) result;
     (*res)++;
@@ -236,9 +236,9 @@ int hip_calc_lines_in_hosts(const struct hosts_file_line *entry,
  *        the minimum buffer length is sizeof(struct in6_addr).
  * @return zero on match or one otherwise
  */
-int hip_get_nth_id_from_hosts(const struct hosts_file_line *entry,
-                              const void *arg,
-                              void *result)
+static int hip_get_nth_id_from_hosts(const struct hosts_file_line *entry,
+                                     const void *arg,
+                                     void *result)
 {
     int err         = 1;
     const int *nth  = (const int *) arg;

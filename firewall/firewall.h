@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_FIREWALL_FIREWALL_H
 #define HIP_FIREWALL_FIREWALL_H
 
@@ -13,10 +14,7 @@ extern int filter_traffic;
 extern int hip_kernel_ipsec_fallback;
 extern int hip_lsi_support;
 extern int esp_relay;
-#ifdef CONFIG_HIP_MIDAUTH
 extern int use_midauth;
-#endif
-
 extern int hip_fw_sock;
 extern int hip_fw_async_sock;
 
@@ -30,4 +28,4 @@ void set_stateful_filtering(const int active);
 hip_hit_t *hip_fw_get_default_hit(void);
 hip_lsi_t *hip_fw_get_default_lsi(void);
 
-#endif
+#endif /* HIP_FIREWALL_FIREWALL_H */

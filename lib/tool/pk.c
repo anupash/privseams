@@ -128,7 +128,6 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
         HIP_IFEL(!(sig = hip_get_param(msg, HIP_PARAM_HIP_SIGNATURE2)),
                  -ENOENT, "Could not find signature2\n");
 
-        //ipv6_addr_copy(&tmpaddr, &msg->hitr);
         memset(&msg->hitr, 0, sizeof(struct in6_addr));
 
         HIP_IFEL(!(pz = hip_get_param(msg, HIP_PARAM_PUZZLE)),
@@ -143,14 +142,10 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
                  -ENOENT, "Could not find signature\n");
     }
 
-    //HIP_HEXDUMP("SIG", sig, hip_get_param_total_len(sig));
     len = ((uint8_t *) sig) - ((uint8_t *) msg);
     hip_zero_msg_checksum(msg);
     HIP_IFEL(len < 0, -ENOENT, "Invalid signature len\n");
     hip_set_msg_total_len(msg, len);
-
-    //HIP_HEXDUMP("Verifying:", msg, len);
-    //HIP_HEXDUMP("Pubkey:", peer_pub, hip_get_param_total_len(peer_pub));
 
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest),
              -1, "Could not calculate SHA1 digest\n");
@@ -178,16 +173,6 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
     }
 
     ipv6_addr_copy(&msg->hitr, &tmpaddr);
-
-    /*switch(err) {
-     * case 0:
-     *  err = 0;
-     *  break;
-     * case 1:
-     * default:
-     *  err = -1;
-     *  break;
-     * }*/
 
     if (err) {
         err = -1;

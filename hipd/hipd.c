@@ -118,6 +118,9 @@ int hip_shotgun_status                       = HIP_MSG_SHOTGUN_OFF;
 int hip_trigger_update_on_heart_beat_failure = 1;
 int hip_wait_addr_changes_to_stabilize       = 1;
 
+/**
+ * print hipd usage instructions on stderr
+ */
 static void usage(void)
 {
     fprintf(stderr, "Usage: hipd [options]\n\n");
@@ -381,19 +384,19 @@ out_err:
     hip_exit(err);
 
     if (ctx.input_msg) {
-        HIP_FREE(ctx.input_msg);
+        free(ctx.input_msg);
     }
 
     if (ctx.src_addr) {
-        HIP_FREE(ctx.src_addr);
+        free(ctx.src_addr);
     }
 
     if (ctx.dst_addr) {
-        HIP_FREE(ctx.dst_addr);
+        free(ctx.dst_addr);
     }
 
     if (ctx.msg_ports) {
-        HIP_FREE(ctx.msg_ports);
+        free(ctx.msg_ports);
     }
 
     HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);

@@ -2,17 +2,26 @@
  * @file
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
- */
-/*
- * common_defines.h
  *
- * Author: Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author: Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
 #ifndef HIP_LIB_CORE_COMMON_DEFINES_H
 #define HIP_LIB_CORE_COMMON_DEFINES_H
 
 #include <stdint.h>
+
+/*********** ESP structures *************/
+
+struct hip_esp {
+    uint32_t esp_spi;
+    uint32_t esp_seq;
+} __attribute__ ((packed));
+
+struct hip_esp_tail {
+    uint8_t esp_padlen;
+    uint8_t esp_next;
+} __attribute__ ((packed));
 
 /* maximum packet size of a packet to be sent on the wire */
 #define MAX_PACKET_SIZE         1500
@@ -64,18 +73,5 @@
 #define HIP_MTU                 MAX_PACKET_SIZE - (BEET_OVERHEAD)
 
 #define HIP_HIT_DEV_MTU         HIP_MTU >= MIN_HIP_MTU ? HIP_MTU : MIN_HIP_MTU
-
-
-/*********** ESP structures *************/
-
-struct hip_esp {
-    uint32_t esp_spi;
-    uint32_t esp_seq;
-} __attribute__ ((packed));
-
-struct hip_esp_tail {
-    uint8_t esp_padlen;
-    uint8_t esp_next;
-} __attribute__ ((packed));
 
 #endif /* HIP_LIB_CORE_COMMON_DEFINES_H */

@@ -3,8 +3,11 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_FIREWALL_LSI_H
 #define HIP_FIREWALL_LSI_H
+
+#define _BSD_SOURCE
 
 #include <libipq.h>
 #include <netinet/ip_icmp.h>
@@ -41,4 +44,5 @@ int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
                                                in_port_t *dst_tcp_port,
                                                int *fallback,
                                                int *reject);
-#endif
+
+#endif /* HIP_FIREWALL_LSI_H */

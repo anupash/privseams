@@ -6,6 +6,7 @@
  * @version 1.0
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+
 #ifndef HIP_LIB_CORE_MESSAGE_H
 #define HIP_LIB_CORE_MESSAGE_H
 
@@ -37,9 +38,6 @@ int hip_read_control_msg_v6(int socket,
 int hip_read_control_msg_v4(int socket,
                             struct hip_packet_context *ctx,
                             int encap_hdr_size);
-int hip_sendto(int sock,
-               const struct hip_common *msg,
-               const struct sockaddr_in6 *dst);
 int hip_read_control_msg_plugin_handler(void *msg,
                                         int len,
                                         in6_addr_t *src_addr,

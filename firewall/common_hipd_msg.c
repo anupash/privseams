@@ -8,6 +8,8 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <stdlib.h>
+
 #include "common_hipd_msg.h"
 #include "lib/core/ife.h"
 #include "lib/core/debug.h"
@@ -72,7 +74,7 @@ int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,
 
 out_err:
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     return res;
 }

@@ -273,7 +273,7 @@ static int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry)
     hip_link_entry_t *link = NULL;
     int err                = 0;
 
-    HIP_IFEL(!(link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))),
+    HIP_IFEL(!(link = malloc(sizeof(hip_link_entry_t))),
              -1, "failed to allocate memory\n");
 
     memcpy(&link->dst_addr, dst_addr, sizeof(struct in6_addr));
@@ -316,50 +316,6 @@ static int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi)
 
 out_err:
     return err;
-}
-
-/**
- * prints a single link entry in the linkdb
- *
- * @param entry  link entry to be printed
- */
-void hip_link_entry_print(hip_link_entry_t *entry)
-{
-    if (entry) {
-        HIP_DEBUG_HIT("dst_addr", &entry->dst_addr);
-        HIP_DEBUG("spi: 0x%lx\n", entry->spi);
-        HIP_DEBUG("> sa entry:\n");
-    } else {
-        HIP_DEBUG("link entry is NULL\n");
-    }
-}
-
-/**
- * prints the complete linkdb
- */
-void hip_linkdb_print(void)
-{
-    int i                   = 0;
-    hip_list_t *item        = NULL;
-    hip_list_t *tmp         = NULL;
-    hip_link_entry_t *entry = NULL;
-
-    HIP_DEBUG("printing linkdb...\n");
-
-    // iterating over all elements
-    list_for_each_safe(item, tmp, linkdb, i)
-    {
-        if (!(entry = (hip_link_entry_t *) list_entry(item))) {
-            HIP_ERROR("failed to get list entry\n");
-            break;
-        }
-        HIP_DEBUG("link entry %i:\n", i + 1);
-        hip_link_entry_print(entry);
-    }
-
-    if (i == 0) {
-        HIP_DEBUG("linkdb contains no items\n");
-    }
 }
 
 /**
@@ -653,16 +609,16 @@ static int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
     int err               = 0;
 
     /* initialize members to 0/NULL */
-    HIP_IFEL(!(entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
+    HIP_IFEL(!(entry = malloc(sizeof(hip_sa_entry_t))), -1,
              "failed to allocate memory\n");
     memset(entry, 0, sizeof(hip_sa_entry_t));
 
-    HIP_IFEL(!(entry->auth_key = (struct hip_crypto_key *)
-                                 malloc(hip_auth_key_length_esp(ealg))), -1, "failed to allocate memory\n");
+    HIP_IFEL(!(entry->auth_key = malloc(hip_auth_key_length_esp(ealg))),
+             -1, "failed to allocate memory\n");
     memset(entry->auth_key, 0, hip_auth_key_length_esp(ealg));
     if (hip_enc_key_length(ealg) > 0) {
-        HIP_IFEL(!(entry->enc_key = (struct hip_crypto_key *)
-                                    malloc(hip_enc_key_length(ealg))), -1, "failed to allocate memory\n");
+        HIP_IFEL(!(entry->enc_key = malloc(hip_enc_key_length(ealg))),
+                 -1, "failed to allocate memory\n");
         memset(entry->enc_key, 0, hip_enc_key_length(ealg));
     }
 
@@ -732,7 +688,7 @@ out_err:
  *
  * @param entry     SA entry to be printed
  */
-void hip_sa_entry_print(const hip_sa_entry_t *entry)
+static void hip_sa_entry_print(const hip_sa_entry_t *entry)
 {
     if (entry) {
         HIP_DEBUG("direction: %i\n", entry->direction);
@@ -746,39 +702,6 @@ void hip_sa_entry_print(const hip_sa_entry_t *entry)
         HIP_DEBUG("src_port: %u\n", entry->src_port);
         HIP_DEBUG("dst_port: %u\n", entry->dst_port);
         HIP_DEBUG("... (more members)\n");
-
-// XX TODO print the rest in case this information is needed
-#if 0
-        /****************** crypto parameters *******************/
-        int ealg;                                                                       /* crypto transform in use */
-        uint32_t a_keylen;                                                      /* length of raw keys */
-        uint32_t e_keylen;
-        unsigned char *a_key;                                           /* raw crypto keys */
-        unsigned char *e_key;
-        des_key_schedule ks[3];                                         /* 3-DES keys */
-        AES_KEY *aes_key;                                                       /* AES key */
-        BF_KEY *bf_key;                                                         /* BLOWFISH key */
-        /*********************************************************/
-        uint64_t lifetime;                              /* seconds until expiration */
-        uint64_t bytes;                                 /* bytes transmitted */
-        struct timeval usetime;                 /* last used timestamp */
-        struct timeval usetime_ka;              /* last used timestamp, incl keep-alives */
-        uint32_t sequence;                              /* sequence number counter */
-        uint32_t replay_win;                    /* anti-replay window */
-        uint32_t replay_map;                    /* anti-replay bitmap */
-        /*********** esp protection extension params *************/
-        /* hash chain parameters for this SA used in secure ESP extension */
-        /* for outgoing SA */
-        hash_chain_t *active_hchain;
-        hash_chain_t *next_hchain;
-        /* for incoming SA */
-        int tolerance;
-        unsigned char *active_anchor;
-        unsigned char *next_anchor;
-        /* for both */
-        uint8_t active_transform;
-        uint8_t next_transform;
-#endif
     } else {
         HIP_DEBUG("sa entry is NULL\n");
     }
@@ -1004,8 +927,6 @@ hip_sa_entry_t *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
     HIP_DEBUG_HIT("inner_src_addr", &search_entry.inner_src_addr);
     HIP_DEBUG_HIT("inner_dst_addr", &search_entry.inner_dst_addr);
     HIP_DEBUG("mode: %i\n", search_entry.mode);
-
-    //hip_sadb_print();
 
     // find entry in sadb db
     HIP_IFEL(!(stored_entry = (hip_sa_entry_t *) hip_ht_find(sadb, &search_entry)), -1,

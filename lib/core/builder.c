@@ -67,6 +67,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "config.h"
 #include "builder.h"
 #include "hipd/input.h"
@@ -126,9 +128,9 @@ static void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
  *
  * @see hip_build_endpoint_hdr()
  */
-void hip_build_param_host_id_only_priv(struct hip_host_id_priv *host_id,
-                                       const void *rr_data,
-                                       const char *fqdn)
+static void hip_build_param_host_id_only_priv(struct hip_host_id_priv *host_id,
+                                              const void *rr_data,
+                                              const char *fqdn)
 {
     unsigned int rr_len = ntohs(host_id->hi_length) -
                           sizeof(struct hip_host_id_key_rdata);
@@ -200,7 +202,7 @@ struct hip_common *hip_msg_alloc(void)
 {
     struct hip_common *ptr;
 
-    ptr = HIP_MALLOC(HIP_MAX_PACKET, 0);
+    ptr = malloc(HIP_MAX_PACKET);
     if (ptr) {
         hip_msg_init(ptr);
     }
@@ -213,7 +215,7 @@ struct hip_common *hip_msg_alloc(void)
  */
 void hip_msg_free(struct hip_common *msg)
 {
-    HIP_FREE(msg);
+    free(msg);
 }
 
 /**
@@ -225,7 +227,7 @@ void hip_msg_free(struct hip_common *msg)
  * @note compared to hip_convert_msg_total_len_to_bytes_16(), this
  *       function inputs an 8-bit integer
  */
-uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len_t len)
+static uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len_t len)
 {
     return (len == 0) ? 0 : ((len + 1) << 3);
 }
@@ -239,7 +241,7 @@ uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len_t len)
  * @note compared to hip_convert_msg_total_len_to_bytes(), this
  *       function inputs a 16-bit integer
  */
-uint16_t hip_convert_msg_total_len_to_bytes_16(uint16_t len)
+static uint16_t hip_convert_msg_total_len_to_bytes_16(uint16_t len)
 {
     return (len == 0) ? 0 : ((len + 1) << 3);
 }
@@ -416,7 +418,7 @@ hip_tlv_type_t hip_get_param_type(const void *tlv_common)
  * @param tlv_common pointer to the parameter
  * @param type type of the parameter (in host byte order)
  */
-void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
+static void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
 {
     tlv_generic->type = htons(type);
 }
@@ -486,30 +488,6 @@ struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *d
     }
 out_err:
     return err;
-}
-
-/**
- * get suite id from unit test parameter (interprocess only)
- *
- * @param test pointer to the unit test parameter
- * @return the id of the test suite (in host byte order) of the unit test
- *          parameter
- */
-uint16_t hip_get_unit_test_suite_param_id(const struct hip_unit_test *test)
-{
-    return ntohs(test->suiteid);
-}
-
-/**
- * get test case id from unit test parameter (interprocess only)
- *
- * @param test pointer to the unit test parameter
- * @return the id of the test case (in host byte order) of the unit test
- *          parameter
- */
-uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test)
-{
-    return ntohs(test->caseid);
 }
 
 /**
@@ -600,7 +578,7 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds)
  * @return 1 if the message length is valid, or 0 if the message length is
  *          invalid
  */
-int hip_check_user_msg_len(const struct hip_common *msg)
+static int hip_check_user_msg_len(const struct hip_common *msg)
 {
     uint16_t len;
 
@@ -642,7 +620,7 @@ int hip_check_network_msg_len(const struct hip_common *msg)
  * @return 1 if the message type is valid, or 0 if the message type is
  *          invalid
  */
-int hip_check_network_msg_type(const struct hip_common *msg)
+static int hip_check_network_msg_type(const struct hip_common *msg)
 {
     int ok                     = 0;
     hip_hdr_type_t supported[] =
@@ -677,7 +655,7 @@ int hip_check_network_msg_type(const struct hip_common *msg)
  *
  * @return 1 if parameter type is valid, or 0 if parameter type is invalid
  */
-int hip_check_userspace_param_type(const struct hip_tlv_common *param)
+static int hip_check_userspace_param_type(const struct hip_tlv_common *param)
 {
     return 1;
 }
@@ -698,7 +676,7 @@ int hip_check_userspace_param_type(const struct hip_tlv_common *param)
  *       here only be the parameters listed in Sections 5.2.3 through Section
  *       5.2.18 of the draft-ietf-hip-base-06?
  */
-int hip_check_network_param_type(const struct hip_tlv_common *param)
+static int hip_check_network_param_type(const struct hip_tlv_common *param)
 {
     int ok                 = 0;
     hip_tlv_type_t i;
@@ -790,8 +768,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
  * @note The msg is passed also in to check to the parameter will not cause buffer
  * overflows.
  */
-int hip_check_param_contents_len(const struct hip_common *msg,
-                                 const struct hip_tlv_common *param)
+static int hip_check_param_contents_len(const struct hip_common *msg,
+                                        const struct hip_tlv_common *param)
 {
     int ok        = 0;
     int param_len = hip_get_param_total_len(param);
@@ -938,38 +916,6 @@ void *hip_get_param_contents_direct(const void *tlv_common)
 }
 
 /**
- * get nth parameter of given type from the message
- *
- * @param msg pointer to the beginning of the message header
- * @param param_type the type of the parameter to be searched from msg
- *              (in host byte order)
- * @param n index number to be get
- *
- * @return the nth parameter from the message if found, else %NULL.
- */
-void *hip_get_nth_param(const struct hip_common *msg,
-                        hip_tlv_type_t param_type, int n)
-{
-    struct hip_tlv_common *param = NULL;
-    int i                        = 0;
-
-    if (n < 1) {
-        HIP_ERROR("n < 1 (n=%d)\n", n);
-        return NULL;
-    }
-
-    while ((param = hip_get_next_param(msg, param))) {
-        if (hip_get_param_type(param) == param_type) {
-            i++;
-            if (i == n) {
-                return param;
-            }
-        }
-    }
-    return NULL;
-}
-
-/**
  * @brief Find the first free parameter position in a message
  *
  * This function does not check whether the new parameter to be appended
@@ -1088,9 +1034,9 @@ void hip_calc_hdr_len(struct hip_common *msg)
  * @param contents_size size of the contents after the TLV header
  *                 (in host byte order)
  */
-void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
-                                hip_tlv_len_t tlv_size,
-                                hip_tlv_len_t contents_size)
+static void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
+                                       hip_tlv_len_t tlv_size,
+                                       hip_tlv_len_t contents_size)
 {
     hip_set_param_contents_len(tlv_common,
                                tlv_size + contents_size -
@@ -1108,7 +1054,8 @@ void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
  * @param contents_size size of the contents after type and length fields
  *                 (in host byte order)
  */
-void hip_calc_param_len(struct hip_tlv_common *tlv_common, hip_tlv_len_t contents_size)
+static void hip_calc_param_len(struct hip_tlv_common *tlv_common,
+                               hip_tlv_len_t contents_size)
 {
     hip_calc_generic_param_len(tlv_common,
                                sizeof(struct hip_tlv_common),
@@ -1239,9 +1186,7 @@ char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_TRIGGER_UPDATE:     return "HIP_MSG_TRIGGER_UPDATE";
     case HIP_MSG_ANCHOR_CHANGE:      return "HIP_MSG_ANCHOR_CHANGE";
     case HIP_MSG_TRIGGER_BEX:        return "HIP_MSG_TRIGGER_BEX";
-    //case HIP_MSG_IS_OUR_LSI: return "HIP_MSG_IS_OUR_LSI";
     case HIP_MSG_GET_PEER_HIT:       return "HIP_MSG_GET_PEER_HIT";
-    //case HIP_MSG_GET_PEER_HIT_BY_LSIS: return "HIP_MSG_GET_PEER_HIT_BY_LSIS";
     case HIP_MSG_NSUPDATE_ON:        return "HIP_MSG_NSUPDATE_ON";
     case HIP_MSG_NSUPDATE_OFF:       return "HIP_MSG_NSUPDATE_OFF";
     case HIP_MSG_HEARTBEAT:          return "HIP_MSG_HEARTBEAT";
@@ -1405,7 +1350,7 @@ out:
  * @todo this function may be unneccessary because the input handlers
  *       already do some checking. Currently they are double checked..
  */
-int hip_check_network_param_attributes(const struct hip_tlv_common *param)
+static int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 {
     hip_tlv_type_t type = hip_get_param_type(param);
     int err             = 0;
@@ -1959,7 +1904,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
     err = hip_build_param(msg, &hmac2);
 out_err:
     if (msg_copy) {
-        HIP_FREE(msg_copy);
+        free(msg_copy);
     }
 
     return err;
@@ -2062,7 +2007,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
     if (rem) {
         HIP_DEBUG("Adjusting param size to AES block size\n");
 
-        param_padded = (char *) HIP_MALLOC(param_len + rem, 0);
+        param_padded = malloc(param_len + rem);
         if (!param_padded) {
             err = -ENOMEM;
             goto out_err;
@@ -2087,7 +2032,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 out_err:
 
     if (param_padded) {
-        HIP_FREE(param_padded);
+        free(param_padded);
     }
 
     return err;
@@ -2200,37 +2145,6 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
                                   opaque);
     return err;
 }
-
-/**
- * build a HIP ECHO_M parameter
- *
- * @param msg the message
- * @param opaque opaque data copied to the parameter
- * @param len      the length of the parameter
- * @param request true if parameter is ECHO_REQUEST_M, otherwise parameter is ECHO_RESPONSE_M
- *
- * @return zero for success, or non-zero on error
- */
-#ifdef CONFIG_HIP_MIDAUTH
-int hip_build_param_echo_m(struct hip_common *msg, void *opaque, int len,
-                           int request)
-{
-    struct hip_echo_request_m ping;
-    int err;
-
-    if (request) {
-        hip_set_param_type((struct hip_tlv_common *) &ping, HIP_PARAM_ECHO_REQUEST_M);
-    } else {
-        hip_set_param_type((struct hip_tlv_common *) &ping, HIP_PARAM_ECHO_RESPONSE_M);
-    }
-
-    hip_set_param_contents_len((struct hip_tlv_common *) &ping, len);
-    err = hip_build_generic_param(msg, &ping, sizeof(struct hip_echo_request_m),
-                                  opaque);
-    return err;
-}
-
-#endif /* CONFIG_HIP_MIDAUTH */
 
 /**
  * build a HIP R1_COUNTER parameter
@@ -2568,12 +2482,8 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
     /* only the random_j_k is in host byte order */
     puzzle.K         = val_K;
     puzzle.lifetime  = lifetime;
-
-    // The following line to create random bytes are tried but didn't work!
-    // get_random_bytes(puzzle.opaque, sizeof(puzzle.opaque));
     puzzle.opaque[0] = opaque & 0xFF;
     puzzle.opaque[1] = (opaque & 0xFF00) >> 8;
-    /* puzzle.opaque[2] = (opaque & 0xFF0000) >> 16; */
     puzzle.I         = random_i;
 
     err = hip_build_generic_param(msg, &puzzle,
@@ -2582,6 +2492,7 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
     return err;
 }
 
+#ifdef CONFIG_HIP_MIDAUTH
 /**
  * Build and append a HIP challenge_request to the message.
  *
@@ -2598,7 +2509,6 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
  *
  * @return zero for success, or non-zero on error
  */
-#ifdef CONFIG_HIP_MIDAUTH
 int hip_build_param_challenge_request(struct hip_common *msg,
                                       uint8_t val_K,
                                       uint8_t lifetime,
@@ -2628,6 +2538,46 @@ int hip_build_param_challenge_request(struct hip_common *msg,
     return err;
 }
 
+
+/**
+ * Build and append a HIP solution into the message.
+ *
+ * The puzzle mechanism assumes that every value is in network byte order
+ * except for the hip_birthday_cookie.cv union, where the value is in
+ * host byte order. This is an exception to the normal builder rules, where
+ * input arguments are normally always in host byte order.
+ *
+ * @param msg the message where the solution is to be appended
+ * @param pz values from the corresponding hip_challenge_request copied to the solution
+ * @param val_J J value for the solution (in host byte order)
+ *
+ * @return zero for success, or non-zero on error
+ */
+int hip_build_param_challenge_response(struct hip_common *msg, struct hip_challenge_request *pz,
+                                       uint64_t val_J)
+{
+    struct hip_challenge_response cookie;
+    int err = 0, opaque_len = 0;
+
+    /* note: the length cannot be calculated with calc_param_len() */
+    hip_set_param_contents_len((struct hip_tlv_common *) &cookie,
+                               sizeof(struct hip_challenge_response) -
+                               sizeof(struct hip_tlv_common));
+    /* Type 2 (in R1) or 3 (in I2) */
+    hip_set_param_type((struct hip_tlv_common *) &cookie, HIP_PARAM_CHALLENGE_RESPONSE);
+
+    cookie.J        = hton64(val_J);
+    cookie.K        = pz->K;
+    cookie.lifetime = pz->K;
+    opaque_len      = (sizeof(pz->opaque) / sizeof(pz->opaque[0]));
+    memcpy(&cookie.opaque, pz->opaque, opaque_len);
+
+    err = hip_build_generic_param(msg,
+                                  &cookie,
+                                  sizeof(struct hip_tlv_common),
+                                  hip_get_param_contents_direct(&cookie));
+    return err;
+}
 #endif /* CONFIG_HIP_MIDAUTH */
 
 /**
@@ -2667,49 +2617,6 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
                                   hip_get_param_contents_direct(&cookie));
     return err;
 }
-
-/**
- * Build and append a HIP solution into the message.
- *
- * The puzzle mechanism assumes that every value is in network byte order
- * except for the hip_birthday_cookie.cv union, where the value is in
- * host byte order. This is an exception to the normal builder rules, where
- * input arguments are normally always in host byte order.
- *
- * @param msg the message where the solution is to be appended
- * @param pz values from the corresponding hip_challenge_request copied to the solution
- * @param val_J J value for the solution (in host byte order)
- *
- * @return zero for success, or non-zero on error
- */
-#ifdef CONFIG_HIP_MIDAUTH
-int hip_build_param_challenge_response(struct hip_common *msg, struct hip_challenge_request *pz,
-                                       uint64_t val_J)
-{
-    struct hip_challenge_response cookie;
-    int err = 0, opaque_len = 0;
-
-    /* note: the length cannot be calculated with calc_param_len() */
-    hip_set_param_contents_len((struct hip_tlv_common *) &cookie,
-                               sizeof(struct hip_challenge_response) -
-                               sizeof(struct hip_tlv_common));
-    /* Type 2 (in R1) or 3 (in I2) */
-    hip_set_param_type((struct hip_tlv_common *) &cookie, HIP_PARAM_CHALLENGE_RESPONSE);
-
-    cookie.J        = hton64(val_J);
-    cookie.K        = pz->K;
-    cookie.lifetime = pz->K;
-    opaque_len      = (sizeof(pz->opaque) / sizeof(pz->opaque[0]));
-    memcpy(&cookie.opaque, pz->opaque, opaque_len);
-
-    err = hip_build_generic_param(msg,
-                                  &cookie,
-                                  sizeof(struct hip_tlv_common),
-                                  hip_get_param_contents_direct(&cookie));
-    return err;
-}
-
-#endif /* CONFIG_HIP_MIDAUTH */
 
 /**
  * Fill HIP DH contents (excludes type and length fields) with one or
@@ -2756,7 +2663,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
     }
 
     /* Allocating memory for the "value" packet */
-    HIP_IFEL(!(value = value_tmp = HIP_MALLOC((pubkey_len), 0)),
+    HIP_IFEL(!(value = value_tmp = malloc((pubkey_len))),
              -1, "Failed to alloc memory for value\n");
 
     hip_calc_generic_param_len((struct hip_tlv_common *) &diffie_hellman,
@@ -2790,7 +2697,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 out_err:
 
     if (value) {
-        HIP_FREE(value);
+        free(value);
     }
 
     return err;
@@ -2802,7 +2709,7 @@ out_err:
  * @param transform_type the type of the transform
  * @return the number of suite ids that can be used for transform_type
  */
-uint16_t hip_get_transform_max(hip_tlv_type_t transform_type)
+static uint16_t hip_get_transform_max(hip_tlv_type_t transform_type)
 {
     uint16_t transform_max = 0;
 
@@ -3326,8 +3233,7 @@ int hip_build_param_esp_prot_root(struct hip_common *msg,
 
 /**
  * hip_build_param_esp_info - build esp_info parameter
- * \addtogroup params
- * @{ \todo Properly comment parameters of hip_build_param_esp_info() @}
+ * \todo Properly comment parameters of hip_build_param_esp_info()
  *
  * @param msg the message where the parameter will be appended
  * @param keymat_index no desription
@@ -3556,27 +3462,6 @@ void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
 }
 
 /**
- * build and append host id parameter into a message
- * \addtogroup params
- *
- * @param msg the message where the host id should be appended
- * @param host_id_hdr a hip_host_id structure (public key)
- * @param rr_data_len the length of the DNS RR field to be appended separately into
- *                    the message
- * @param fqdn a string containing a hostname or NAI (URI)
- */
-int hip_build_param_host_id(struct hip_common *msg,
-                            struct hip_host_id *host_id_hdr,
-                            const void *rr_data,
-                            const char *fqdn)
-{
-    int err = 0;
-    hip_build_param_host_id_only(host_id_hdr, rr_data, fqdn);
-    err = hip_build_param(msg, host_id_hdr);
-    return err;
-}
-
-/**
  * encapsulate a host name into a parameter (interprocess communications  only)
  *
  * @param msg the message where the parameter should be appended to
@@ -3652,8 +3537,8 @@ char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
  * @param endpoint the endpoint structure
  * @return zero on success and negative on failure
  */
-int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
-                                              const struct endpoint_hip *endpoint)
+static int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
+                                                     const struct endpoint_hip *endpoint)
 {
     int err = 0;
 
@@ -3672,8 +3557,8 @@ int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
  * @param endpoint an endpoint structure containing a HIT
  * @return zero on success and negative on failure
  */
-int hip_build_param_eid_endpoint_from_hit(struct hip_common *msg,
-                                          const struct endpoint_hip *endpoint)
+static int hip_build_param_eid_endpoint_from_hit(struct hip_common *msg,
+                                                 const struct endpoint_hip *endpoint)
 {
     struct hip_eid_endpoint eid_endpoint;
     int err = 0;
@@ -3793,36 +3678,15 @@ int hip_build_param_cert(struct hip_common *msg, uint8_t group, uint8_t count,
 }
 
 /**
- * Build a NOTIFICATION parameter.
+ * Append heartbeat interval value to a message. Interprocess
+ * communications only.
  *
- * @param msg              a pointer to the message where the parameter will be
- *                         appended
- * @param msgtype          NOTIFY message type
- * @param notification     the Notification data that will contained in the HIP
- *                         NOTIFICATION parameter
- * @param notification_len length of @c notification_data
+ * @param msg     a pointer to the message where the parameter will be
+ *                appended
+ * @param seconds set the heartbeat interval to this value
  * @return zero on success, or negative on failure
+ *
  */
-int hip_build_param_notification(struct hip_common *msg, uint16_t msgtype,
-                                 void *data, size_t data_len)
-{
-    int err = 0;
-    struct hip_notification notification;
-
-    hip_set_param_type((struct hip_tlv_common *) &notification, HIP_PARAM_NOTIFICATION);
-    hip_calc_param_len((struct hip_tlv_common *) &notification,
-                       sizeof(struct hip_notification)
-                               - sizeof(struct hip_tlv_common) + data_len);
-    notification.reserved = 0;
-    notification.msgtype  = htons(msgtype);
-
-    err = hip_build_generic_param(msg,
-                                  &notification,
-                                  sizeof(struct hip_notification),
-                                  data);
-    return err;
-}
-
 int hip_build_param_heartbeat(struct hip_common *msg, int seconds)
 {
     int err = 0;
@@ -4222,75 +4086,6 @@ int rsa_to_hip_endpoint(RSA *rsa,
 }
 
 /**
- * allocate memory and write the header for host id parameter
- *
- * @param host_id    A double pointer that will be allocted by this
- *                   function. It will contain the resulting host_id
- *                   parameter and the caller is responsible for freeing
- *                   the result.
- * @param key_rr_len length of the DNS record field
- * @param algo       public key algorithm
- * @param hostname   the host name for the host id
- * @return zero on success and negative on failure
- */
-int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
-                                    unsigned int key_rr_len,
-                                    uint8_t algo,
-                                    const char *hostname)
-{
-    int err = 0;
-    struct hip_host_id host_id_hdr;
-    hip_build_param_host_id_hdr(&host_id_hdr, hostname, key_rr_len, algo);
-
-    *host_id = HIP_MALLOC(hip_get_param_total_len(&host_id_hdr), 0);
-    if (!host_id) {
-        err = -ENOMEM;
-    }
-
-    memcpy(*host_id, &host_id_hdr, sizeof(host_id_hdr));
-
-    return err;
-}
-
-/**
- * allocate memory and write a complete host id parameter
- *
- * @param host_id    A double pointer that will be allocted by this
- *                   function. It will contain the resulting host_id
- *                   parameter and the caller is responsible for freeing
- *                   the result.
- * @param key_rr     the DNS HI record
- * @param key_rr_len length of the DNS record field
- * @param algo       public key algorithm
- * @param hostname   the host name for the host id
- * @return zero on success and negative on failure
- */
-int alloc_and_build_param_host_id_only(struct hip_host_id **host_id,
-                                       unsigned char *key_rr,
-                                       int key_rr_len,
-                                       int algo,
-                                       char *hostname)
-{
-    int err = 0;
-    HIP_IFEL(alloc_and_set_host_id_param_hdr(host_id,
-                                             key_rr_len,
-                                             algo,
-                                             hostname),
-            -1,
-            "alloc\n");
-
-    hip_build_param_host_id_only(*host_id, key_rr, "hostname");
-
-out_err:
-    if (err && *host_id) {
-        *host_id = NULL;
-        HIP_FREE(host_id);
-    }
-
-    return err;
-}
-
-/**
  * Translate a host id into a HIT
  *
  * @param any_key a pointer to DSA or RSA key in OpenSSL format
@@ -4302,12 +4097,12 @@ out_err:
  * @param is_dsa 1 if the key is DSA or zero for RSA
  * @return zero on success and negative on failure
  */
-int hip_any_key_to_hit(void *any_key,
-                       unsigned char *any_key_rr,
-                       int hit_type,
-                       hip_hit_t *hit,
-                       int is_public,
-                       int is_dsa)
+static int hip_any_key_to_hit(void *any_key,
+                              unsigned char *any_key_rr,
+                              int hit_type,
+                              hip_hit_t *hit,
+                              int is_public,
+                              int is_dsa)
 {
     int err = 0, key_rr_len;
     unsigned char *key_rr = NULL;
@@ -4385,13 +4180,13 @@ int hip_any_key_to_hit(void *any_key,
 out_err:
 
     if (key_rr) {
-        HIP_FREE(key_rr);
+        free(key_rr);
     }
     if (host_id) {
-        HIP_FREE(host_id);
+        free(host_id);
     }
     if (host_id_pub) {
-        HIP_FREE(host_id_pub);
+        free(host_id_pub);
     }
 
     return err;
@@ -4532,66 +4327,6 @@ union hip_locator_info_addr *hip_get_locator_item(void *item_list, int index)
 }
 
 /**
- * retrieve a @c LOCATOR ADDRESS ITEM@c from a list.
- *
- * @param item_list      a pointer to the first item in the list
- * @param index     the index of the item in the list
- * @return a pointer to a hip_locator_info_addr_item
- * @note do not give too large index
- */
-struct hip_locator_info_addr_item *hip_get_locator_item_as_one(struct hip_locator_info_addr_item *item_list,
-                                                               int index)
-{
-    struct hip_locator_info_addr_item *address_pointer;
-    int i                                     = 0;
-    struct hip_locator_info_addr_item *item   = NULL;
-    struct hip_locator_info_addr_item2 *item2 = NULL;
-
-    address_pointer = item_list;
-
-    HIP_DEBUG("LOCATOR TYPE %d\n",
-              ((struct hip_locator_info_addr_item *) address_pointer)->locator_type);
-    if (index ==  0) {
-        if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-            == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-            item2 = (struct hip_locator_info_addr_item2 *) address_pointer;
-            HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *) &item2->address);
-        } else {
-            item = (struct hip_locator_info_addr_item *) address_pointer;
-            HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *) &item->address);
-        }
-        return address_pointer;
-    }
-
-    for (i = 0; i < index; i++) {
-        if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-            == HIP_LOCATOR_LOCATOR_TYPE_UDP)
-        {
-            address_pointer += sizeof(struct hip_locator_info_addr_item2);
-            item2            = (struct hip_locator_info_addr_item2 *) address_pointer;
-            HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *) &item2->address);
-
-        } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                   == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
-        {
-            address_pointer += sizeof(struct hip_locator_info_addr_item);
-            item             = (struct hip_locator_info_addr_item *) address_pointer;
-            HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *) &item->address);
-
-        } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                   == HIP_LOCATOR_LOCATOR_TYPE_IPV6)
-        {
-            address_pointer += sizeof(struct hip_locator_info_addr_item);
-            item             = (struct hip_locator_info_addr_item *) address_pointer;
-            HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *) &item->address);
-        } else {
-            address_pointer += sizeof(struct hip_locator_info_addr_item);
-        }
-    }
-    return address_pointer;
-}
-
-/**
  * retrieve a IP address from a locator item structure
  *
  * @param item      a pointer to the item
@@ -4609,45 +4344,6 @@ struct in6_addr *hip_get_locator_item_address(void *item)
         return &temp->address;
     } else {
         return &((struct hip_locator_info_addr_item2 *) temp)->address;
-    }
-}
-
-/**
- * retreive a port number from a type 2 locator item structure
- *
- * @param item      a pointer to the item
- * @return the port number
- */
-uint16_t hip_get_locator_item_port(void *item)
-{
-    struct hip_locator_info_addr_item *temp;
-
-
-    temp = (struct hip_locator_info_addr_item *) item;
-    if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-        return 0;
-    } else {
-        return ntohs(((struct hip_locator_info_addr_item2 *) temp)->port);
-    }
-}
-
-/**
- * retreive priority field from a type 2 locator item structure
- *
- * @param item      a pointer to the item
- * @return the priority
- */
-uint32_t hip_get_locator_item_priority(void *item)
-{
-    struct hip_locator_info_addr_item *temp;
-
-
-    temp = (struct hip_locator_info_addr_item *) item;
-    if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-        //todo check the constant value
-        return HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY;
-    } else {
-        return ntohl(((struct hip_locator_info_addr_item2 *) temp)->priority);
     }
 }
 

@@ -7,6 +7,7 @@
  * @version 1.0
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+
 #ifndef HIP_LIB_CORE_BUILDER_H
 #define HIP_LIB_CORE_BUILDER_H
 
@@ -20,9 +21,6 @@
 #include "certtools.h"
 #include "hipd/registration.h"
 #include "state.h"
-
-#define HIP_MALLOC(size, flags)  malloc(size)
-#define HIP_FREE(obj)            free(obj)
 
 /* Removed in 2.6.11 - why ? */
 extern struct hip_cert_spki_info hip_cert_spki_info;
@@ -52,10 +50,9 @@ int hip_build_param_echo(struct hip_common *, void *, int, int, int);
 int hip_build_param_eid_endpoint(struct hip_common *,
                                  const struct endpoint_hip *);
 int hip_build_param_eid_iface(struct hip_common *, hip_eid_iface_type_t);
-int
-        hip_build_param_eid_sockaddr(struct hip_common *,
-                                     struct sockaddr *,
-                                     size_t);
+int hip_build_param_eid_sockaddr(struct hip_common *,
+                                 struct sockaddr *,
+                                 size_t);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *,
                                         struct hip_tlv_common *);
 int hip_build_param_encrypted_aes_sha1(struct hip_common *,
@@ -117,13 +114,13 @@ int hip_build_param_puzzle(struct hip_common *,
                            uint8_t,
                            uint32_t,
                            uint64_t);
-#ifdef CONFIG_HIP_MIDAUTH
+
 int hip_build_param_challenge_request(struct hip_common *,
                                       uint8_t,
                                       uint8_t,
                                       uint8_t *,
                                       uint8_t);
-#endif
+
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 
 int hip_build_param_seq(struct hip_common *, uint32_t);
@@ -135,15 +132,14 @@ int hip_build_param_signature_contents(struct hip_common *,
                                        const void *,
                                        hip_tlv_len_t,
                                        uint8_t);
-int
-        hip_build_param_solution(struct hip_common *,
-                                 struct hip_puzzle *,
-                                 uint64_t);
-#ifdef CONFIG_HIP_MIDAUTH
+int hip_build_param_solution(struct hip_common *,
+                             struct hip_puzzle *,
+                             uint64_t);
+
 int hip_build_param_challenge_response(struct hip_common *,
                                        struct hip_challenge_request *,
                                        uint64_t);
-#endif
+
 int hip_build_param(struct hip_common *, const void *);
 void hip_set_msg_response(struct hip_common *msg, uint8_t on);
 uint8_t hip_get_msg_response(struct hip_common *msg);
@@ -154,9 +150,6 @@ int hip_build_param_hip_transform(struct hip_common *,
                                   const hip_transform_suite_t[],
                                   const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
-int hip_build_param_via_rvs_nat(struct hip_common *,
-                                const struct hip_in6_addr_port[],
-                                const int);
 int hip_build_param_relay_to(struct hip_common *msg,
                              const in6_addr_t *rvs_addr,
                              const in_port_t port);

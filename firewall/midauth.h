@@ -12,6 +12,8 @@
 #ifndef HIP_FIREWALL_MIDAUTH_H
 #define HIP_FIREWALL_MIDAUTH_H
 
+#define _BSD_SOURCE
+
 #include <netinet/ip6.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
@@ -83,4 +85,4 @@ void midauth_init(void);
 
 int midauth_filter_hip(hip_fw_context_t *ctx);
 
-#endif
+#endif /* HIP_FIREWALL_MIDAUTH_H */

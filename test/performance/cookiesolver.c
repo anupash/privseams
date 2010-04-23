@@ -36,15 +36,15 @@ struct hip_birthday_cookie {
 } __attribute__ ((packed));
 
 
-u_int64_t calculate_digest(unsigned char *data, const u_int64_t j)
+uint64_t calculate_digest(unsigned char *data, const uint64_t j)
 {
         unsigned char buf[SHA_DIGEST_LENGTH]; // openssl
-        u_int64_t result = 0;
+        uint64_t result = 0;
 
-        memcpy(&(data[40]), &j, sizeof(u_int64_t));
+        memcpy(&(data[40]), &j, sizeof(uint64_t));
 
         SHA1((unsigned char *)data,48,buf);
-        memcpy(&result,buf+(SHA_DIGEST_LENGTH-sizeof(u_int64_t)),sizeof(u_int64_t));
+        memcpy(&result,buf+(SHA_DIGEST_LENGTH-sizeof(uint64_t)),sizeof(uint64_t));
         return (ntoh64(result));
 }
 
@@ -60,10 +60,10 @@ u_int64_t calculate_digest(unsigned char *data, const u_int64_t j)
 int solve_puzzle(struct hip_birthday_cookie *cookie, const struct in6_addr *initiator,
                  const struct in6_addr *responder)
 {
-    u_int64_t challenge_resp = 0;
-    u_int64_t randval = 0; /* j */
-    u_int64_t mask = 0;
-    u_int64_t maxtries = 0;
+    uint64_t challenge_resp = 0;
+    uint64_t randval = 0; /* j */
+    uint64_t mask = 0;
+    uint64_t maxtries = 0;
     unsigned char cookiebuffer[48];
 
     if (cookie->random_j_k > 64) {
@@ -79,7 +79,7 @@ int solve_puzzle(struct hip_birthday_cookie *cookie, const struct in6_addr *init
         maxtries = (1ULL << (cookie->random_j_k + 2));
 
     /* prepare the cookie digest note: random_i must be in MSB order (network).
-     * sizeof(u_int64_t) is not used instead of 8 since we are dependent on getting
+     * sizeof(uint64_t) is not used instead of 8 since we are dependent on getting
      * 8 bytes of data. no less and/or no more.
      */
 

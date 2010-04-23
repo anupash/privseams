@@ -8,7 +8,7 @@
  * @author Tim Just <tim.just@rwth-aachen.de>
  *
  */
-#include "lib/core/protodefs.h"
+#include "pkt_handling.h"
 #include "lib/core/state.h"
 #include "lib/modularization/lmod.h"
 

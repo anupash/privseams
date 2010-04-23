@@ -10,6 +10,8 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
+#include <stdlib.h>
+
 #include "user_ipsec_hipd_msg.h"
 #include "hipd.h"
 #include "init.h"
@@ -48,14 +50,6 @@ int hip_userspace_ipsec_activate(const struct hip_common *msg)
         hip_flush_all_sa();
     }
 
-#if 0 /* see bug id 816 */
-      // send close to all peers in order to reset peer state
-      // This removes HA from HADB as well as it removes mapping
-      // BUG
-    HIP_IFEL(hip_send_close(NULL, 0), -1, "failed to close all connections");
-out_err:
-#endif
-
     return err;
 }
 
@@ -89,7 +83,7 @@ struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
     struct hip_common *msg = NULL;
     int err                = 0;
 
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "alloc memory for adding sa entry\n");
 
     hip_msg_init(msg);
@@ -207,7 +201,7 @@ struct hip_common *create_delete_sa_msg(const uint32_t spi,
     struct hip_common *msg = NULL;
     int err                = 0;
 
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "alloc memory for adding sa entry\n");
 
     hip_msg_init(msg);
@@ -260,7 +254,7 @@ struct hip_common *create_flush_all_sa_msg(void)
     struct hip_common *msg = NULL;
     int err                = 0;
 
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "alloc memory for adding sa entry\n");
 
     hip_msg_init(msg);

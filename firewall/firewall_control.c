@@ -104,8 +104,6 @@ int hip_handle_msg(struct hip_common *msg)
                  "hip userspace sadb flush all did NOT succeed\n");
         break;
     case HIP_MSG_TURN_INFO:
-        // struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);
-        // save to database
         break;
     case HIP_MSG_RESET_FIREWALL_DB:
         hip_firewall_cache_delete_hldb(0);

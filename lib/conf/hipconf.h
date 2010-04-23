@@ -12,6 +12,7 @@
  * @author  Tao Wan <twan@cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_LIB_CONF_HIPCONF_H
 #define HIP_LIB_CONF_HIPCONF_H
 
@@ -25,11 +26,8 @@
  * These values are used for TYPE_xxx macros.
  */
 
-/**
- * @addtogroup exec_app_types
+/** @defgroup exec_app_types Execute application types
  * @{
- */
-/**
  * Execute application with opportunistic library preloaded.
  * @see handle_exec_application()
  */
@@ -53,7 +51,7 @@
  * @see handle_exec_application()
  */
 #define LIB_LENGTH      200
-/** @} addtogroup exec_app_types */
+/* @} */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -204,4 +202,5 @@ int hip_conf_handle_hi(hip_common_t *msg,
                        const char *opt[],
                        int optc,
                        int send_only);
-#endif /* HIPCONF */
+
+#endif /* HIP_LIB_CONF_HIPCONF_H */

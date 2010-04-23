@@ -10,8 +10,11 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
+#include <stdlib.h>
+
 #include "esp_prot_fw_msg.h"
 #include "firewall.h"
+#include "user_ipsec_fw_msg.h"
 #include "lib/core/builder.h"
 #include "lib/core/message.h"
 
@@ -28,7 +31,7 @@ int send_userspace_ipsec_to_hipd(const int activate)
     int err                = 0;
     struct hip_common *msg = NULL;
 
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "alloc memory for adding sa entry\n");
 
     hip_msg_init(msg);

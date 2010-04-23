@@ -3,13 +3,13 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_LIB_CORE_HIP_UDP_H
 #define HIP_LIB_CORE_HIP_UDP_H
 
 #include <netinet/in.h>
 
 #define HIP_NAT_UDP_PORT 10500
-//#define HIP_NAT_TURN_PORT 10500
 
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100

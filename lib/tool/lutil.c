@@ -115,7 +115,7 @@ void initlist(List *ilist)
 void insert(List *ilist, char *data)
 {
     Listitem *new;
-    new         = (Listitem *) malloc(sizeof(Listitem));
+    new         = malloc(sizeof(Listitem));
     new->next   = ilist->head;
     strncpy(new->data, data, MAX_ITEM_LEN);
     ilist->head = new;
@@ -186,37 +186,6 @@ char *getitem(List *ilist, int n)
         ptr = ptr->next;
         count++;
         if (n == count) {
-            return ptr->data;
-        }
-    }
-    return NULL;
-}
-
-/**
- * copy the given contents to the Nth element in the linked list
- *
- * @param ilist the linked list
- * @param n denotes which Nth item to insert the contents
- * @return NULL (on failure) or the a pointer to the contents
- */
-char *setdataitem(List *ilist, int n, char *data)
-{
-    Listitem *ptr;
-    int count = 0;
-
-    if (!ilist->head) {
-        return NULL;
-    }
-    ptr = ilist->head;
-    if (n == 0) {
-        return ptr->data;
-    }
-    while (ptr->next) {
-        ptr = ptr->next;
-        count++;
-        if (n == count) {
-            //memset(new->data, 0, MAX_ITEM_LEN);
-            strncpy(ptr->data, data, MAX_ITEM_LEN);
             return ptr->data;
         }
     }

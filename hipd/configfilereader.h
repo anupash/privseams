@@ -55,6 +55,7 @@
  * @date    14.02.2008
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+
 #ifndef HIP_HIPD_CONFIGFILEREADER_H
 #define HIP_HIPD_CONFIGFILEREADER_H
 

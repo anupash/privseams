@@ -16,13 +16,13 @@
 #include "lib/core/builder.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
+#include "hipd/esp_prot_hipd_msg.h"
 #include "hipd/hadb.h"
 #include "hipd/netdev.h"
 #include "hipd/nsupdate.h"
 #include "hipd/pkt_handling.h"
 #include "hipd/user.h"
 #include "update_legacy.h"
-#include "hipd/esp_prot_hipd_msg.h"
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "hipd/pisa.h"
@@ -195,9 +195,6 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
     if (type == HIP_UPDATE_LOCATOR
             || type == HIP_UPDATE_ECHO_REQUEST
             || type == HIP_UPDATE_ESP_ANCHOR) {
-        // TODO check the following function!
-        /* hip_update_set_new_spi_in_old(ha, esp_info_old_spi,
-         *  esp_info_new_spi, 0);*/
 
         localstate = lmod_get_state_item(ha->hip_modular_state, "update");
         localstate->update_id_out++;
@@ -207,11 +204,6 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
                                      hip_update_get_out_id(localstate)),
                  -1,
                  "Building of SEQ parameter failed\n");
-
-        /* remember the update id of this update */
-        /* hip_update_set_status(ha, esp_info_old_spi,
-         *  0x1 | 0x2 | 0x8, update_id_out, 0, NULL,
-         *  ha->current_keymat_index); */
 
         /************************************************/
     }
@@ -349,7 +341,7 @@ static void hip_remove_addresses_to_send_echo_request(struct update_state *state
     list_for_each_safe(item, tmp, state->addresses_to_send_echo_request, i) {
         address = (struct in6_addr *)list_entry(item);
         list_del(address, state->addresses_to_send_echo_request);
-        HIP_FREE(address);
+        free(address);
     }
 }
 
@@ -451,11 +443,11 @@ out_err:
  * @todo locators should be sent to the whole verified addresses?
  */
 int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
-                                  struct hip_hadb_state *ha,
-                                  struct in6_addr *src_addr,
-                                  struct in6_addr *dst_addr,
-                                  struct hip_locator_info_addr_item *locators,
-                                  int type)
+                                struct hip_hadb_state *ha,
+                                struct in6_addr *src_addr,
+                                struct in6_addr *dst_addr,
+                                struct hip_locator_info_addr_item *locators,
+                                int type)
 {
     int err                             = 0, i = 0;
     hip_list_t *item                    = NULL, *tmp = NULL;
@@ -522,18 +514,6 @@ int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
             break;
         }
     }
-    // TODO
-    /*else
-     * {
-     *  for go through all local addressses
-     *  {
-     *      for go through all peer addresses
-     *      {
-     *          if (check_if_address_peer_ok)
-     *              send_update_pkt()
-     *      }
-     *  }
-     * }*/
 
 out_err:
     if (update_packet_to_send) {
@@ -621,9 +601,6 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
 
     HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
               locator_addr_count, hip_get_param_total_len(locator));
-
-    _HIP_DEBUG("The previous addresses to send update request:\n");
-    // hip_print_addresses_to_send_update_request(ha);
 
     // Empty the addresses_to_send_echo_request list before adding the
     // new addresses

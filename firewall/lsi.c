@@ -24,6 +24,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
@@ -138,7 +139,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
 
 out_err:
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     return err;
 }
@@ -179,12 +180,12 @@ out_err:
  * @return             the state of the bex if the entry is found
  *                     otherwise returns -1
  */
-int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
-                                hip_lsi_t       *dst_lsi,
-                                struct in6_addr *src_ip,
-                                struct in6_addr *dst_ip,
-                                struct in6_addr *src_hit,
-                                struct in6_addr *dst_hit)
+static int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
+                                       hip_lsi_t       *dst_lsi,
+                                       struct in6_addr *src_ip,
+                                       struct in6_addr *dst_ip,
+                                       struct in6_addr *src_hit,
+                                       struct in6_addr *dst_hit)
 {
     int err = 0, res = -1;
     struct hip_tlv_common *current_param = NULL;
@@ -223,7 +224,7 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
 
 out_err:
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     return res;
 }
@@ -272,11 +273,9 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
         break;
     case IPPROTO_ICMPV6:
         HIP_DEBUG("ICMPv6 packet\n");
-        //goto out_err;
         break;
     default:
         HIP_DEBUG("Unhandled packet %d\n", ip6_hdr->ip6_nxt);
-        //goto out_err;
         break;
     }
 
@@ -569,7 +568,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
     /* Note: using calloc to zero memory region here because I think
      * firewall_send_incoming_pkt() calculates checksum
      * from too long region sometimes. See bug id 874 */
-    msg = (uint8_t *) calloc((packet_length + sizeof(struct ip)), 1);
+    msg = calloc((packet_length + sizeof(struct ip)), 1);
     memcpy(msg, (m->payload) + ip_hdr_size, packet_length);
 
     if (protocol == IPPROTO_ICMP && incoming) {
@@ -606,7 +605,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
     }
 
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     return err;
 }

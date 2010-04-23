@@ -3,8 +3,11 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_FIREWALL_FIREWALL_DEFINES_H
 #define HIP_FIREWALL_FIREWALL_DEFINES_H
+
+#define _BSD_SOURCE
 
 #include <net/if.h>
 #include <sys/time.h>
@@ -18,6 +21,7 @@
 #include "lib/core/protodefs.h"
 #include "esp_prot_defines.h"
 #include "common_types.h"
+
 
 typedef struct hip_fw_context {
     // queued packet
@@ -40,7 +44,6 @@ typedef struct hip_fw_context {
         struct tcphdr *    tcp;
     } transport_hdr;
     struct udphdr *udp_encap_hdr;
-    //uint32_t spi;
 
     int            modified;
 } hip_fw_context_t;
@@ -139,4 +142,4 @@ struct hip_esp_packet {
     struct hip_esp *esp_data;
 };
 
-#endif /*HIP_FIREWALL_FIREWALL_DEFINES_H*/
+#endif /* HIP_FIREWALL_FIREWALL_DEFINES_H */

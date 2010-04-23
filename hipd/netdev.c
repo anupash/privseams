@@ -21,6 +21,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
@@ -131,7 +132,7 @@ int hip_netdev_white_list_add(char *device_name)
  * @param ptr a pointer to a netdev_address structure
  * @return the calculated hash to index the parameter
  */
-unsigned long hip_netdev_hash(const void *ptr)
+static unsigned long hip_netdev_hash(const void *ptr)
 {
     const struct netdev_address *na = (const struct netdev_address *) ptr;
     uint8_t hash[HIP_AH_SHA_LEN];
@@ -215,11 +216,6 @@ static int hip_filter_address(struct sockaddr *addr)
         } else if (IN6_IS_ADDR_LINKLOCAL(a_in6)) {
             HIP_DEBUG("Address ignored: LINKLOCAL.\n");
             return FA_IGNORE;
-#if 0 /* For Juha-Matti's experiments  */
-        } else if (IN6_IS_ADDR_SITELOCAL(a_in6)) {
-            HIP_DEBUG("Address ignored: SITELOCAL.\n");
-            return FA_IGNORE;
-#endif
         } else if (IN6_IS_ADDR_V4MAPPED(a_in6)) {
             HIP_DEBUG("Address ignored: V4MAPPED.\n");
             return FA_IGNORE;
@@ -505,7 +501,7 @@ void hip_delete_all_addresses(void)
             n = (struct netdev_address *) list_entry(item);
             HIP_DEBUG_HIT("address to be deleted\n", hip_cast_sa_addr((struct sockaddr *) &n->addr));
             list_del(n, addresses);
-            HIP_FREE(n);
+            free(n);
             address_count--;
         }
         if (address_count != 0) {
@@ -749,12 +745,12 @@ out_err:
  *       will be used as a last resort.
  * @todo move this function to some other file
  */
-int hip_netdev_trigger_bex(hip_hit_t *src_hit,
-                           hip_hit_t *dst_hit,
-                           hip_lsi_t *src_lsi,
-                           hip_lsi_t *dst_lsi,
-                           struct in6_addr *src_addr,
-                           struct in6_addr *dst_addr)
+static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
+                                  hip_hit_t *dst_hit,
+                                  hip_lsi_t *src_lsi,
+                                  hip_lsi_t *dst_lsi,
+                                  struct in6_addr *src_addr,
+                                  struct in6_addr *dst_addr)
 {
     int err = 0, if_index = 0, is_ipv4_locator;
     int reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status;
@@ -1284,16 +1280,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
             HIP_DEBUG("received expiration, ignored\n");
             return 0;
             break;
-#if 0
-        case XFRMGRP_SA:
-            /* This seems never to occur */
-            return -1;
-            break;
-        case XFRMGRP_POLICY:
-            /* This seems never to occur */
-            return -1;
-            break;
-#endif
         case XFRM_MSG_GETSA:
             return -1;
             break;
@@ -1316,14 +1302,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
         case XFRM_MSG_POLEXPIRE:
             return -1;
             break;
-#if 0
-        case XFRM_MSG_FLUSHSA:
-            return -1;
-            break;
-        case XFRM_MSG_FLUSHPOLICY:
-            return -1;
-            break;
-#endif
         default:
             HIP_DEBUG("unhandled msg type %d\n", msg->nlmsg_type);
             break;

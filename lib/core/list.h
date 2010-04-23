@@ -3,21 +3,13 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_LIB_CORE_LIST_H
 #define HIP_LIB_CORE_LIST_H
 
 #include <openssl/lhash.h>
 
 typedef LHASH_NODE hip_list_t;
-
-/* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
- * These backwards compatibility hacks can be removed when all platforms
- * support OpenSSL 1.0.0 by default. */
-#ifdef LHASH_OF
-#ifndef HIPL_OPENSSL_100
-#define HIPL_OPENSSL_100
-#endif /* HIPL_OPENSSL_100 */
-#endif /* LHASH_OF */
 
 /**
  * list_entry - get the struct for this entry
@@ -32,7 +24,7 @@ typedef LHASH_NODE hip_list_t;
  * @param entry the entry to find from the list
  * @param head the head for your list.
  */
-#ifdef HIPL_OPENSSL_100
+#ifdef LHASH_OF
 #define list_find(entry, head) lh_retrieve((_LHASH *) head, entry)
 #else
 #define list_find(entry, head) lh_retrieve(head, entry)
@@ -68,7 +60,7 @@ typedef LHASH_NODE hip_list_t;
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-#ifdef HIPL_OPENSSL_100
+#ifdef LHASH_OF
 #define list_add(entry, head) lh_insert((_LHASH *) head, entry)
 #else
 #define list_add(entry, head) lh_insert(head, entry)
@@ -80,7 +72,7 @@ typedef LHASH_NODE hip_list_t;
  * Note: list_empty on entry does not return true after this, the entry is
  * in an undefined state.
  */
-#ifdef HIPL_OPENSSL_100
+#ifdef LHASH_OF
 #define list_del(entry, head) lh_delete((_LHASH *) head, entry)
 #else
 #define list_del(entry, head) lh_delete(head, entry)

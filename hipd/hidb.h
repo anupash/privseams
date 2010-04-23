@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_HIPD_HIDB
 #define HIP_HIPD_HIDB
 
@@ -37,8 +38,6 @@
 #define HIP_WRITE_UNLOCK_DB(db)
 #endif
 
-typedef  HIP_HASHTABLE hip_db_struct_t;
-
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
@@ -54,13 +53,13 @@ struct hip_entry_list {
 #define HIP_DB_LOCAL_HID   (hip_local_hostid_db)
 
 /* ... and not this! */
-extern hip_db_struct_t *hip_local_hostid_db;
+extern HIP_HASHTABLE *hip_local_hostid_db;
 
-struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *db,
+struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db,
                                                                const struct in6_addr *hit,
                                                                int algo, int anon);
 int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon);
-int hip_get_host_id_and_priv_key(hip_db_struct_t *db, struct in6_addr *hit,
+int hip_get_host_id_and_priv_key(HIP_HASHTABLE *db, struct in6_addr *hit,
                                  int algo, struct hip_host_id **host_id, void **key);
 int hip_hit_is_our(struct in6_addr *hit);
 
@@ -82,7 +81,7 @@ int hip_hidb_hit_is_our(const hip_hit_t *src);
 
 unsigned long hip_hidb_hash(const void *ptr);
 int hip_hidb_match(const void *ptr1, const void *ptr2);
-void hip_init_hostid_db(hip_db_struct_t **db);
+void hip_init_hostid_db(HIP_HASHTABLE **db);
 int hip_for_all_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);

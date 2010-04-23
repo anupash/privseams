@@ -4,6 +4,7 @@
  *
  * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+
 #ifndef HIP_LIB_CORE_STATE_H
 #define HIP_LIB_CORE_STATE_H
 
@@ -22,20 +23,27 @@
 #define HIP_HI_REUSE_ANY                  16
 /* Other flags: keep them to the power of two! */
 
-/** @addtogroup hip_ha_state
+
+/**
+ * @defgroup hip_ha_state HIP association states
+ *
+ * HIP states as specifed in section 4.4.1.\ of draft-ietf-hip-base-10.
+ *
+ * The states are: UNASSOCIATED, I1-SENT, I2-SENT, R2-SENT ESTABLISHED, CLOSING,
+ * CLOSED, E-FAILED.
  * @{
  */
 /* When adding new states update debug.h hip_state_str(). Doxygen comments to
  * these states are available at doc/doxygen.h */
-#define HIP_STATE_NONE                   0
-#define HIP_STATE_UNASSOCIATED           1
-#define HIP_STATE_I1_SENT                2
-#define HIP_STATE_I2_SENT                3
-#define HIP_STATE_R2_SENT                4
-#define HIP_STATE_ESTABLISHED            5
-#define HIP_STATE_FAILED                 7
-#define HIP_STATE_CLOSING                8
-#define HIP_STATE_CLOSED                 9
+#define HIP_STATE_NONE                   0 /**< no state, structure unused */
+#define HIP_STATE_UNASSOCIATED           1 /**< state machine start */
+#define HIP_STATE_I1_SENT                2 /**< initiating base exchange */
+#define HIP_STATE_I2_SENT                3 /**< waiting to complete base exchange */
+#define HIP_STATE_R2_SENT                4 /**< waiting to complete base exchange */
+#define HIP_STATE_ESTABLISHED            5 /**< HIP association established */
+#define HIP_STATE_FAILED                 7 /**< HIP exchange failed */
+#define HIP_STATE_CLOSING                8 /**< HIP association closing, no data can be sent */
+#define HIP_STATE_CLOSED                 9 /**< HIP association closed, no data can be sent */
 /* @} */
 
 /**
@@ -112,26 +120,12 @@ typedef struct hip_msg_retrans {
     struct hip_common *buf;
 } hip_msg_retrans_t;
 
-/**
- * A binder structure for storing an IPv6 address and transport layer port
- * number. This structure is used in hip_build_param_relay_to_old().
- *
- * @note This has to be packed since it is used in building @c RELAY_FROM and
- *       @c RELAY_TO parameters.
- * @note obsolete
- */
-struct hip_in6_addr_port {
-    struct in6_addr sin6_addr;     /**< IPv6 address. */
-    in_port_t       sin6_port;     /**< Transport layer port number. */
-} __attribute__ ((packed));
-
 /*
  * Fixed start of this struct must match to struct hip_locator_info_addr_item
  * for the part of address item. It is used in hip_update_locator_match().
  */
 /// @todo Check if all these fields are used and needed
 struct hip_peer_addr_list_item {
-//    hip_list_t list;
     uint32_t        padding;
     unsigned long   hash_key;
     struct in6_addr address;
@@ -159,14 +153,12 @@ struct hip_peer_addr_list_item {
 
 /* for HIT-SPI hashtable only */
 struct hip_hit_spi {
-//    hip_list_t list;
     hip_hit_t  hit_our;
     hip_hit_t  hit_peer;
     uint32_t   spi;           /* this SPI spi belongs to the HIT hit */
 };
 
 struct hip_spi_in_item {
-//    hip_list_t list;
     uint32_t      spi;
     uint32_t      new_spi;        /* SPI is changed to this when rekeying */
     /* ifindex if the netdev to which this is related to */
@@ -192,7 +184,6 @@ struct hip_spi_in_item {
 };
 
 struct hip_spi_out_item {
-//    hip_list_t list;
     uint32_t        spi;
     uint32_t        new_spi;        /* spi is changed to this when rekeying */
 
@@ -208,12 +199,8 @@ struct hip_spi_out_item {
 /* this struct is here instead of hidb.h to avoid some weird compilation
  * warnings */
 struct hip_host_id_entry {
-    /* this needs to be first (list_for_each_entry, list
-     * head being of different type) */
-    //hip_list_t next;
     struct hip_lhi      lhi;
     hip_lsi_t           lsi;
-    /* struct in6_addr ipv6_addr[MAXIP]; */
     struct hip_host_id *host_id;     /* allocated dynamically */
     void *              private_key; /* RSA or DSA */
     struct hip_r1entry *r1;     /* precreated R1s */
@@ -260,8 +247,6 @@ struct hip_hadb_state {
     /** If this host association is from a local HIT to a local HIT this
      *  is non-zero, otherwise zero. */
     int                   is_loopback;
-    /** Default SPI for outbound SAs. */
-    //uint32_t                     default_spi_out;
     /** Preferred peer IP address to use when sending data to peer. */
     struct in6_addr       peer_addr;
     /** Our IP address. */
@@ -415,7 +400,7 @@ struct hip_hadb_state {
 
     /* modular state */
     struct modular_state *hip_modular_state;
-};
+} __attribute__((packed));
 
 /** A data structure defining host association information that is sent
  *  to the userspace */

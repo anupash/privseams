@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_HIPD_CERT_H
 #define HIP_HIPD_CERT_H
 
@@ -45,8 +46,5 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *);
 /** utilitary functions */
 int hip_cert_hostid2rsa(struct hip_host_id_priv *, RSA *);
 int hip_cert_hostid2dsa(struct hip_host_id_priv *, DSA *);
-
-/** ugly hack for supressing warnings in broken environments */
-#define BROKEN_SSL_CONST const
 
 #endif /* HIP_HIPD_CERT_H */

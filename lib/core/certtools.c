@@ -825,7 +825,7 @@ X509 *hip_cert_der_to_x509(const unsigned char *der, int length)
     _HIP_HEXDUMP("DER:\n", der, length);
     _HIP_DEBUG("DER length %d\n", length);
 
-    HIP_IFEL(((cert = d2i_X509(NULL, (BROKEN_SSL_CONST unsigned char **) &der, length)) == NULL), -1,
+    HIP_IFEL(((cert = d2i_X509(NULL, (const unsigned char **) &der, length)) == NULL), -1,
              "Failed to convert cert from DER to internal format\n");
 out_err:
     if (err == -1) {
@@ -983,12 +983,6 @@ int hip_cert_regex(char *what, char *from, int *start, int *stop)
     *start = answer[0].rm_so;
     *stop  = answer[0].rm_eo;
 
-    /* Just for debugging do NOT leave these 2 lines uncommented */
-    /*
-     * int i = 0;
-     * for (i = answer[0].rm_so; i < answer[0].rm_eo; i++) HIP_DEBUG("%c", from[i]);
-     * HIP_DEBUG("\n");
-     */
 out_err:
     regfree(&re);
     return err;

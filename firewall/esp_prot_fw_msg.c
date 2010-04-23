@@ -10,6 +10,7 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
+#include <stdlib.h>
 #include <netinet/udp.h>
 
 #include "lib/core/debug.h"
@@ -48,7 +49,7 @@ static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore,
 
     HIP_ASSERT(hcstore != NULL);
 
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "failed to allocate memory\n");
 
     hip_msg_init(msg);
@@ -162,7 +163,7 @@ int send_esp_prot_to_hipd(const int activate)
 
     HIP_ASSERT(activate >= 0);
 
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "failed to allocate memory\n");
 
     hip_msg_init(msg);
@@ -323,7 +324,7 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
     HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
              -1, "error or tried to resolve UNUSED transform\n");
 
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "failed to allocate memory\n");
 
     hip_msg_init(msg);
@@ -488,7 +489,7 @@ int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
     HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
              -1, "error or tried to resolve UNUSED transform\n");
 
-    HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "failed to allocate memory\n");
 
     hip_msg_init(msg);

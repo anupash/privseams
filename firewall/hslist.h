@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_FIREWALL_HSLIST_H
 #define HIP_FIREWALL_HSLIST_H
 
@@ -24,4 +25,4 @@ SList *remove_link_slist(SList *list,
 
 SList *slist_last(SList *list);
 
-#endif /*HIP_FIREWALL_HSLIST_H*/
+#endif /* HIP_FIREWALL_HSLIST_H */

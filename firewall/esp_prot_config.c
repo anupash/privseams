@@ -91,7 +91,7 @@ config_t *esp_prot_read_config(void)
 #ifdef HAVE_LIBCONFIG
     int err       = 0;
 
-    HIP_IFEL(!(cfg = (config_t *) malloc(sizeof(config_t))), -1,
+    HIP_IFEL(!(cfg = malloc(sizeof(config_t))), -1,
              "Unable to allocate memory!\n");
 
     // init context and read file

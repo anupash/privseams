@@ -15,6 +15,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <netinet/icmp6.h>
 
 #include "config.h"
@@ -60,7 +61,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
     struct sockaddr_in sin_addr;
     struct sockaddr_in6 sin6_addr;
 
-    in6_addr_t *defaultHit      = (in6_addr_t *) malloc(sizeof(char) * 16);
+    in6_addr_t *defaultHit      = malloc(sizeof(char) * 16);
     char newHdr[newSize + 4 * addOption + (sizeof(struct in6_addr)) * addHIT];
 
     if (addOption) {
@@ -213,7 +214,7 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
     err = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *) &sin_addr, sizeof(sin_addr));
 
     if (defaultHit) {
-        HIP_FREE(defaultHit);
+        free(defaultHit);
     }
 
     setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *) &off, sizeof(off));
@@ -711,7 +712,7 @@ int hip_send_i2(const uint8_t packet_type,
 
 out_err:
     if (ctx->output_msg) {
-        HIP_FREE(ctx->output_msg);
+        free(ctx->output_msg);
     }
 
     return err;
@@ -782,7 +783,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
     HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size1\n");
-    HIP_IFEL(!(dh_data1 = HIP_MALLOC(dh_size1, GFP_ATOMIC)),
+    HIP_IFEL(!(dh_data1 = malloc(dh_size1)),
              -1, "Failed to alloc memory for dh_data1\n");
     memset(dh_data1, 0, dh_size1);
 
@@ -791,7 +792,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Allocate memory for writing the second Diffie-Hellman shared secret */
     HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size2\n");
-    HIP_IFEL(!(dh_data2 = HIP_MALLOC(dh_size2, GFP_ATOMIC)),
+    HIP_IFEL(!(dh_data2 = malloc(dh_size2)),
              -1, "Failed to alloc memory for dh_data2\n");
     memset(dh_data2, 0, dh_size2);
 
@@ -880,9 +881,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         HIP_IFEL(!(pz = hip_get_param(msg, HIP_PARAM_PUZZLE)), -1,
                  "Internal error\n");
 
-        // FIX ME: this does not always work:
-        //get_random_bytes(pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
-
         /* hardcode kludge */
         pz->opaque[0] = 'H';
         pz->opaque[1] = 'I';
@@ -894,30 +892,24 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
     /* Packet ready */
 
-    //  if (host_id_pub)
-    //      HIP_FREE(host_id_pub);
     if (dh_data1) {
-        HIP_FREE(dh_data1);
+        free(dh_data1);
     }
     if (dh_data2) {
-        HIP_FREE(dh_data2);
+        free(dh_data2);
     }
-
-    //HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
 
     return msg;
 
 out_err:
-    // if (host_id_pub)
-    //      HIP_FREE(host_id_pub);
     if (msg) {
-        HIP_FREE(msg);
+        free(msg);
     }
     if (dh_data1) {
-        HIP_FREE(dh_data1);
+        free(dh_data1);
     }
     if (dh_data2) {
-        HIP_FREE(dh_data2);
+        free(dh_data2);
     }
 
     return NULL;
@@ -974,11 +966,6 @@ int hip_send_r1(const uint8_t packet_type,
             //from relay
             r1_dst_addr = ctx->src_addr;
             r1_dst_port = ctx->msg_ports->src_port;
-            // I---> NAT--> RVS-->R is not supported yet
-            /*
-             * r1_dst_addr =  dst_ip;
-             * r1_dst_port = dst_port;
-             */
         } else if (relay_para_type == HIP_PARAM_FROM)    {
             HIP_DEBUG("Param from\n");
             //from RVS, answer to I
@@ -998,10 +985,6 @@ int hip_send_r1(const uint8_t packet_type,
         r1_dst_port = ctx->msg_ports->src_port;
     }
 
-/* removed by santtu because relay supported
- *      r1_dst_addr = (ipv6_addr_any(dst_ip) ? ctx->src_addr : dst_ip);
- *      r1_dst_port = (dst_port == 0 ? ctx->msg_info->src_port : dst_port);
- */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* It should not be null hit, null hit has been replaced by real local
      * hit. */
@@ -1080,10 +1063,10 @@ out_err:
     hip_perf_write_benchmark(perf_set, PERF_I1);
 #endif
     if (r1pkt) {
-        HIP_FREE(r1pkt);
+        free(r1pkt);
     }
     if (local_plain_hit) {
-        HIP_FREE(local_plain_hit);
+        free(local_plain_hit);
     }
     return err;
 }
@@ -1517,14 +1500,6 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
     }
 
     _HIP_HEXDUMP("Dumping packet ", msg, len);
-
-#if 0
-    /* Kuptsov: multiple source addresses might not work properly without
-     * the trick below. Note that you should find out the ifname with
-     * getifaddr/if_nameindex. */
-    HIP_IFEL(setsockopt(hip_raw_sock_output, SOL_SOCKET, SO_BINDTODEVICE,
-                        ifname, strlen(ifname) + 1), -1, "Cannot set sockopt");
-#endif
 
     for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
         for (try_again = 0; try_again < 2; try_again++) {

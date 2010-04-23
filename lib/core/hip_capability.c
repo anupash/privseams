@@ -20,7 +20,7 @@
 #define _BSD_SOURCE
 
 #include "config.h"
-#ifdef CONFIG_HIP_PRIVSEP
+
 #ifdef CONFIG_HIP_ALTSEP
 #include <linux/capability.h>
 int capget(cap_user_header_t header, cap_user_data_t data);
@@ -28,7 +28,6 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
 #else
 #include <sys/capability.h>
 #endif /* CONFIG_HIP_ALTSEP */
-#endif /* CONFIG_HIP_PRIVSEP */
 
 #include <pwd.h>
 #include <sys/prctl.h>
@@ -47,7 +46,7 @@ int capset(cap_user_header_t header, const cap_user_data_t data);
  * @param the name to map
  * @return the UID or -1 on error
  */
-int hip_user_to_uid(char *name)
+static int hip_user_to_uid(char *name)
 {
     int uid            = -1;
     int i;
@@ -71,29 +70,27 @@ int hip_user_to_uid(char *name)
     return uid;
 }
 
-#ifdef CONFIG_HIP_ALTSEP
-
-#define _LINUX_CAPABILITY_VERSION_HIPL  0x19980330
-
-#define _LINUX_CAPABILITY_VERSION_HIPL  0x19980330
-
 /**
- * lower the privileges of the running process
+ * Lower the privileges of the currently running process.
  *
- * @param run_as_sudo
- * @return
+ * @param run_as_sudo 1 if the process was started with "sudo" or
+ *                    0 otherwise
+ * @return zero on success and negative on error
  */
 int hip_set_lowcapability(int run_as_sudo)
 {
-    int err = 0;
+    int err   = 0;
+    uid_t uid = -1;
 
-#ifdef CONFIG_HIP_PRIVSEP
-    uid_t uid;
+#ifdef CONFIG_HIP_ALTSEP
+
+#define LINUX_CAPABILITY_VERSION_HIPL  0x19980330
+
     struct __user_cap_header_struct header;
     struct __user_cap_data_struct data;
 
     header.pid     = 0;
-    header.version = _LINUX_CAPABILITY_VERSION_HIPL;
+    header.version = LINUX_CAPABILITY_VERSION_HIPL;
     data.effective = data.permitted = data.inheritable = 0;
 
     HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
@@ -135,27 +132,11 @@ int hip_set_lowcapability(int run_as_sudo)
     HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());
     HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
               data.effective, data.permitted, data.inheritable);
-#endif /* CONFIG_HIP_PRIVSEP */
 
 out_err:
-    return err;
-}
 
 #else /* ! ALTSEP */
 
-/**
- * Lower the privileges of the currently running process.
- *
- * @param run_as_sudo 1 if the process was started with "sudo" or
- *                    0 otherwise
- * @return zero on success and negative on error
- */
-int hip_set_lowcapability(int run_as_sudo)
-{
-    int err                = 0;
-
-#ifdef CONFIG_HIP_PRIVSEP
-    uid_t uid              = -1;
     cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
     int ncap_list          = 2;
     cap_t cap_p            = NULL;
@@ -223,9 +204,6 @@ int hip_set_lowcapability(int run_as_sudo)
 out_err:
     cap_free(cap_p);
 
-#endif /* CONFIG_HIP_PRIVSEP */
-
+#endif
     return err;
 }
-
-#endif

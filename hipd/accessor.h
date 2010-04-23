@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_HIPD_ACCESSOR_H
 #define HIP_HIPD_ACCESSOR_H
 
@@ -14,10 +15,9 @@
 #include "config.h"
 #include "lib/core/hashtable.h"
 
-/** @addtogroup daemon_states
+/** @defgroup daemon_states HIP daemon states
  * @{
  */
-
 /** Low mask for daemon states. */
 #define HIPD_STATE_MASK         0xff
 /** Daemon is ok and executing. */
@@ -29,9 +29,7 @@
 
 /** Daemon is restarting. */
 #define HIPD_FLAG_RESTART       0x00000100
-
-
-/* @}  */
+/* @} */
 
 #define INDEX_HASH_LENGTH       SHA_DIGEST_LENGTH
 
@@ -46,7 +44,6 @@ void hipd_set_state(unsigned int);
 int hipd_get_flag(unsigned int);
 void hipd_set_flag(unsigned int);
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-int hip_get_opportunistic_tcp_status(void);
 int hip_set_opportunistic_mode(struct hip_common *msg);
 int hip_query_opportunistic_mode(struct hip_common *msg);
 int hip_query_ip_hit_mapping(struct hip_common *msg);

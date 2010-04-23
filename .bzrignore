@@ -10,7 +10,6 @@
 .libs
 .project
 .pydevproject
-Doxyfile
 Makefile
 Makefile.in
 TAGS
@@ -35,9 +34,10 @@ debian/hipl
 debian/hipl.debhelper.log
 debian/hipl.substvars
 depcomp
+doc/Doxyfile
 doc/HOWTO.html
 doc/HOWTO.txt
-doxy/
+doc/doxy/
 firewall/hipfw
 hipd/hipd
 hipl-main.tar.gz
@@ -91,3 +91,4 @@ cscope.in.out
 cscope.out
 cscope.po.out
 version.h
+Doxyfile

@@ -3,8 +3,11 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_FIREWALL_CONNTRACK_H
 #define HIP_FIREWALL_CONNTRACK_H
+
+#define _BSD_SOURCE
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -31,11 +34,9 @@ int conntrack(const struct in6_addr *ip6_src,
               const struct in6_addr *ip6_dst,
               struct hip_common *buf, hip_fw_context_t *ctx);
 
-void init_timeout_checking(long int timeout_val);
-
 struct esp_tuple *find_esp_tuple(const SList *esp_list, const uint32_t spi);
 struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit);
 int hipfw_relay_esp(const hip_fw_context_t *ctx);
 
-#endif
+#endif /* HIP_FIREWALL_CONNTRACK_H */

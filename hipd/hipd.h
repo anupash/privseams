@@ -3,6 +3,7 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
+
 #ifndef HIP_HIPD_HIPD_H
 #define HIP_HIPD_HIPD_H
 
@@ -132,9 +133,6 @@ int hip_firewall_is_alive(void);
 
 /* Functions for handling incoming packets. */
 int hip_sock_recv_firewall(void);
-//Merge-may int hip_sendto_firewall(const struct hip_common *msg, size_t len);
-
-//int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
 
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);

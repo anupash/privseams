@@ -13,14 +13,12 @@
  * @author  Tim Just
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
+
 #ifndef HIP_HIPD_INPUT_H
 #define HIP_HIPD_INPUT_H
 
 #include "config.h"
-#ifdef CONFIG_HIP_RVS
-  #include "hiprelay.h"
-#endif
-
+#include "hiprelay.h"
 #include "lib/core/state.h"
 #include "lib/core/debug.h"
 #include "lib/core/protodefs.h"

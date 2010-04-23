@@ -25,6 +25,7 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
 #include <limits.h> /* INT_MIN, INT_MAX */
 #include <netinet/in.h> /* in_addr, in6_addr */
 #include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */
@@ -43,6 +44,7 @@
 #include "cache_port.h"
 #include "conntrack.h" /* connection tracking */
 #include "config.h"
+#include "datapkt.h"
 #include "esp_prot_api.h" /* ESP Tokens */
 #include "esp_prot_conntrack.h" /* ESP Tokens */
 #include "firewalldb.h"
@@ -53,17 +55,13 @@
 #include "lib/core/hip_capability.h" /* Priviledge Separation */
 #include "lib/core/hip_udp.h"
 #include "lib/core/message.h"
-#include "lib/tool/lutil.h"
-#include "lsi.h" /* LSI */
-#include "sysopp.h" /* System-based Opportunistic HIP */
-#include "user_ipsec_api.h" /* Userspace IPsec */
-#ifdef CONFIG_HIP_MIDAUTH
-#include "pisa.h" /* PISA */
-#endif
-#include "helpers.h"
-#include "lib/core/filemanip.h"
 #include "lib/core/performance.h"
 #include "lib/core/util.h"
+#include "lib/tool/lutil.h"
+#include "lsi.h" /* LSI */
+#include "pisa.h" /* PISA */
+#include "sysopp.h" /* System-based Opportunistic HIP */
+#include "user_ipsec_api.h" /* Userspace IPsec */
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0
@@ -221,7 +219,7 @@ static int hip_fw_init_userspace_ipsec(void)
                  "failed to initialize userspace ipsec\n");
 
         // queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
-        system_print("iptables -I HIPFW-INPUT -p 50 -j QUEUE");         /*  */
+        system_print("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
         system_print("iptables -I HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
         system_print("iptables -I HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
 
@@ -263,7 +261,7 @@ static int hip_fw_uninit_userspace_ipsec(void)
         HIP_IFEL(userspace_ipsec_uninit(), -1, "failed to uninit user ipsec\n");
 
         // delete all rules previously set up for this extension
-        system_print("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");         /*  */
+        system_print("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");
         system_print("iptables -D HIPFW-INPUT -p 17 --dport 10500 -j QUEUE 2>/dev/null");
         system_print("iptables -D HIPFW-INPUT -p 17 --sport 10500 -j QUEUE 2>/dev/null");
 
@@ -877,7 +875,6 @@ static int filter_hip(const struct in6_addr *ip6_src,
     while (list != NULL) {
         match = 1;
         rule  = (struct rule *) list->data;
-        //print_rule(rule);
 
         // check src_hit if defined in rule
         if (match && rule->src_hit) {
@@ -943,25 +940,6 @@ static int filter_hip(const struct in6_addr *ip6_src,
                       rule->out_if->value, out_if, rule->out_if->boolean,
                       match);
         }
-
-/* NOTE: HI does not make sense as a filter criteria as filtering by HITs and
- *       matching to transmitted HI is supposed to provide a similar level of
- *       security. Furthermore, signature verification is done in conntracking.
- *       -- Rene
- * TODO think about removing this in firewall_control.conf as well
- */
-#if 0
-        // if HI defined in rule, verify signature now
-        // - late as it's an expensive operation
-        // - checks that the message src is the src defined in the _rule_
-        if (match && rule->src_hi) {
-            _HIP_DEBUG("src_hi\n");
-
-            if (!match_hi(rule->src_hi, buf)) {
-                match = 0;
-            }
-        }
-#endif
 
         /* check if packet matches state from connection tracking
          * must be last, so not called if packet is going to be
@@ -1747,7 +1725,6 @@ static int hip_fw_handle_packet(unsigned char *buf,
     // assume DROP
     int verdict = 0;
 
-
     /* waits for queue messages to arrive from ip_queue and
      * copies them into a supplied buffer */
     if (ipq_read(hndl, buf, HIP_MAX_PACKET, 0) < 0) {
@@ -1842,9 +1819,6 @@ static void hip_fw_wait_for_hipd(void)
     system_print("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
     system_print("ip6tables -I FORWARD -j HIPFW-FORWARD");
 
-    //HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc\n");
-    //HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_PING, 0), -1, "hdr\n")
-
     while (hip_fw_get_default_hit() == NULL) {
         HIP_DEBUG("Sleeping until hipd is running...\n");
         sleep(1);
@@ -1897,32 +1871,22 @@ int main(int argc, char **argv)
     check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
 
     /* To keep things simple, we use a subset of the performance set originally created for the HIP daemon. */
-    //hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
     hip_perf_set_name(perf_set, PERF_I1, "results/PERF_I1.csv");
     hip_perf_set_name(perf_set, PERF_R1, "results/PERF_R1.csv");
     hip_perf_set_name(perf_set, PERF_I2, "results/PERF_I2.csv");
     hip_perf_set_name(perf_set, PERF_R2, "results/PERF_R2.csv");
-    //hip_perf_set_name(perf_set, PERF_DH_CREATE,"results/PERF_DH_CREATE.csv");
-    //hip_perf_set_name(perf_set, PERF_SIGN,"results/PERF_SIGN.csv");
-    //hip_perf_set_name(perf_set, PERF_DSA_SIGN_IMPL,"results/PERF_DSA_SIGN_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_VERIFY, "results/PERF_VERIFY.csv");
     hip_perf_set_name(perf_set, PERF_BASE, "results/PERF_BASE.csv");
     hip_perf_set_name(perf_set, PERF_ALL, "results/PERF_ALL.csv");
-    //hip_perf_set_name(perf_set, PERF_UPDATE_SEND,"results/PERF_UPDATE_SEND.csv");
-    //hip_perf_set_name(perf_set, PERF_VERIFY_UPDATE,"results/PERF_VERIFY_UPDATE.csv");
     hip_perf_set_name(perf_set, PERF_UPDATE_COMPLETE, "results/PERF_UPDATE_COMPLETE.csv");
-    //hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_ESTABLISHED,"results/PERF_HANDLE_UPDATE_ESTABLISHED.csv");
-    //hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_REKEYING,"results/PERF_HANDLE_UPDATE_REKEYING.csv");
-    //hip_perf_set_name(perf_set, PERF_UPDATE_FINISH_REKEYING,"results/PERF_UPDATE_FINISH_REKEYING.csv");
+
     hip_perf_set_name(perf_set, PERF_CLOSE_SEND, "results/PERF_CLOSE_SEND.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE, "results/PERF_HANDLE_CLOSE.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE_ACK, "results/PERF_HANDLE_CLOSE_ACK.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_1, "results/PERF_HANDLE_UPDATE_1.csv");
-    //hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_2,"results/PERF_HANDLE_UPDATE_2.csv");
     hip_perf_set_name(perf_set, PERF_CLOSE_COMPLETE, "results/PERF_CLOSE_COMPLETE.csv");
     hip_perf_set_name(perf_set, PERF_DSA_VERIFY_IMPL, "results/PERF_DSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_RSA_VERIFY_IMPL, "results/PERF_RSA_VERIFY_IMPL.csv");
-    //hip_perf_set_name(perf_set, PERF_RSA_SIGN_IMPL,"results/PERF_RSA_SIGN_IMPL.csv");
 
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);
@@ -2125,7 +2089,6 @@ int main(int argc, char **argv)
         HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
     }
 #endif
-    //init_timeout_checking(timeout);
 
     highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 
@@ -2245,7 +2208,6 @@ int main(int argc, char **argv)
             if (err < 0) {
                 HIP_ERROR("Error handling message\n");
                 continue;
-                //goto out_err;
             }
         }
     }
@@ -2258,7 +2220,7 @@ out_err:
         close(hip_fw_sock);
     }
     if (msg != NULL) {
-        HIP_FREE(msg);
+        free(msg);
     }
 
     firewall_exit();

@@ -38,7 +38,7 @@
  * @note this is just a test function for the certteststub and not very usefull for
  *       anything else unless modified
  */
-void compression_test(unsigned char *orig, int len)
+static void compression_test(unsigned char *orig, int len)
 {
     unsigned char original[1024];
     unsigned char compressed[1024];

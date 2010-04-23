@@ -670,7 +670,7 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
  * the server has granted us the services we requested and
  * hip_add_registration_client() is called.
  *
- * @parameter entry a pointer to a host association which is registering.
+ * @param     entry a pointer to a host association which is registering.
  * @param     msg   a pointer to HIP message from where to dig out the
  *                  REG_RESPONSE parameter.
  * @return          -1 if the message @c msg did not contain a
@@ -716,7 +716,7 @@ out_err:
  * contents of the current REG_FAILED parameter. The function first cancels the
  * 'request' bit and then removes the corresponding pending request.
  *
- * @parameter entry a pointer to a host association which is registering.
+ * @param  entry    a pointer to a host association which is registering.
  * @param  msg      a pointer to HIP message from where to dig out the
  *                  REG_FAILED parameters.
  * @return          -1 if the message @c msg did not contain a REG_FAILED
@@ -878,18 +878,6 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
                 failure_types[*refused_count]    =
                     HIP_REG_TYPE_UNAVAILABLE;
                 (*refused_count)++;
-#if 0
-                /* Commented this part of the code out to
-                 * allow consequtive registration without
-                 * service cancellation to support host reboots
-                 * -miika */
-            } else if (fetch_record != NULL) {
-                HIP_DEBUG("Cancellation required.\n");
-                refused_requests[*refused_count] = reg_types[i];
-                failure_types[*refused_count]    =
-                    HIP_REG_CANCEL_REQUIRED;
-                (*refused_count)++;
-#endif
             } else if (hip_relwl_get_status() ==  HIP_RELAY_WL_ON &&
                        hip_relwl_get(&dummy.hit_r) == NULL) {
                 HIP_DEBUG("Client is not whitelisted.\n");

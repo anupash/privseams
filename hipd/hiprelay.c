@@ -30,10 +30,10 @@
  * <pre>
  * hip_relrec_t rr = hip_relrec_alloc(...);
  * hip_relht_put(rr);
- * if(hip_relht_get(rr) == NULL) // The put was unsuccessful.
- * {
- *   if(rr != NULL)
- *     free(rr);
+ * if (hip_relht_get(rr) == NULL) { // The put was unsuccessful.
+ *     if (rr != NULL) {
+ *         free(rr);
+ *     }
  * }
  * </pre>
  * </li>
@@ -48,16 +48,15 @@
  * hip_relrec_t dummy, *fetch_record = NULL;
  * memcpy((char *)&(dummy.hit_r), hit, sizeof(hit));
  * fetch_record = hip_relht_get(&dummy);
- * if(fetch_record != NULL)
- * {
- * // Do something with the record.
+ * if (fetch_record != NULL) {
+ *     // Do something with the record.
  * }
  * </pre>
  * </li>
  * <li>Deleting a relay record. A dummy record can be used:
  * <pre>
  * hip_relrec_t dummy;
- * memcpy((char *)&(dummy.hit_r), hit, sizeof(hit));
+ * memcpy((char *) &(dummy.hit_r), hit, sizeof(hit));
  * hip_relht_rec_free(&dummy);
  * </pre>
  * </li>
@@ -75,6 +74,8 @@
  */
 
 #define _BSD_SOURCE
+
+#include <stdlib.h>
 
 #include "config.h"
 #include "hiprelay.h"
@@ -493,7 +494,7 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
         return NULL;
     }
 
-    hip_relrec_t *rec = (hip_relrec_t *) malloc(sizeof(hip_relrec_t));
+    hip_relrec_t *rec = malloc(sizeof(hip_relrec_t));
 
     if (rec == NULL) {
         HIP_ERROR("Error allocating memory for HIP relay record.\n");
@@ -976,8 +977,7 @@ static int hip_relay_read_config(void)
                     if (inet_pton(AF_INET6, current->data,
                                   &hit) > 0) {
                         /* store the HIT to the whitelist. */
-                        wl_hit = (hip_hit_t *)
-                                 malloc(sizeof(hip_hit_t));
+                        wl_hit = malloc(sizeof(hip_hit_t));
                         if (wl_hit == NULL) {
                             HIP_ERROR("Error " \
                                       "allocating " \
@@ -1202,7 +1202,7 @@ static int hip_relay_forward_response(const hip_common_t *r,
 
 out_err:
     if (r_to_be_relayed != NULL) {
-        HIP_FREE(r_to_be_relayed);
+        free(r_to_be_relayed);
     }
     return err;
 }
@@ -1271,7 +1271,6 @@ int hip_relay_handle_from(hip_common_t *source_msg,
                           in6_addr_t *dest_ip, in_port_t *dest_port)
 {
     hip_tlv_type_t param_type;
-    //   struct hip_relay_from *relay_from = NULL;
     struct hip_from *from  = NULL;
 #ifdef CONFIG_HIP_RVS
     hip_ha_t *rvs_ha_entry = NULL;
@@ -1368,7 +1367,6 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 
         memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
         *dest_port = ntohs(relay_from->port);
-        // *dest_port = relay_from->port;
         HIP_DEBUG("RELAY_FROM port in I. %d \n", *dest_port);
     }
 
@@ -1411,7 +1409,6 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
          * all HMAC keys. See bug id 753 */
         HIP_DEBUG("Full_Relay_HMAC verification failed.\n");
         HIP_DEBUG("Ignoring HMAC verification\n");
-        //return -1;
     }
 
     HIP_DEBUG("RVS_HMAC or Full_Relay verified.\n");
@@ -1456,9 +1453,6 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
     switch (packet_type) {
     case HIP_R1:
     case HIP_R2:
-        //disable the update and notify message. we need to think about them later
-        // case HIP_UPDATE:
-        // case HIP_NOTIFY:
         HIP_DEBUG_IN6ADDR("the relay to address: ",
                           (struct in6_addr *) &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n",
@@ -1471,7 +1465,6 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
             memcpy(&ctx->hadb_entry->local_reflexive_address,
                    &relay_to->address, sizeof(in6_addr_t));
         }
-        //  state = HIP_STATE_NONE;
         err = 1;
         goto out_err;
     }
