@@ -243,13 +243,9 @@ int hip_fw_uninit_opptcp(void)
 int hip_fw_init_proxy(void)
 {
     int err = 0;
-
-    if (hip_proxy_status) {
+    if (!hip_proxy_status) {
         system_print("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");
         system_print("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
-
-        system_print("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
-        system_print("ip6tables -I HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
 
         system_print("ip6tables -I HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
         system_print("ip6tables -I HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");

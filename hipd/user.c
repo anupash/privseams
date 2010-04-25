@@ -494,7 +494,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         HIP_DEBUG("Setting HIP PROXY ON\n");
         hip_set_hip_proxy_on();
+        hip_msg_init(msg);
         hip_build_user_hdr(msg, HIP_MSG_SET_HIPPROXY_ON, 0);
+        hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
     }
     break;
 
@@ -509,7 +511,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         HIP_DEBUG("Setting HIP PROXY OFF\n");
         hip_set_hip_proxy_off();
+        hip_msg_init(msg);
         hip_build_user_hdr(msg, HIP_MSG_SET_HIPPROXY_OFF, 0);
+        hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
     }
     break;
 
@@ -527,11 +531,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         memset(msg, 0, sizeof(struct hip_common));
 
         if (hip_get_hip_proxy_status() == 0) {
+            hip_msg_init(msg);
             hip_build_user_hdr(msg, HIP_MSG_SET_HIPPROXY_OFF, 0);
+            hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
         }
 
         if (hip_get_hip_proxy_status() == 1) {
+            hip_msg_init(msg);
             hip_build_user_hdr(msg, HIP_MSG_SET_HIPPROXY_ON, 0);
+            hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
         }
     }
     break;
