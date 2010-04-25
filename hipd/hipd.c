@@ -197,6 +197,7 @@ static int hipd_main(int argc, char *argv[])
 
     check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
 
+    hip_perf_set_name(perf_set, PERF_STARTUP, "results/PERF_STARTUP.csv");
     hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
     hip_perf_set_name(perf_set, PERF_I1, "results/PERF_I1.csv");
     hip_perf_set_name(perf_set, PERF_R1, "results/PERF_R1.csv");
@@ -224,6 +225,9 @@ static int hipd_main(int argc, char *argv[])
     hip_perf_set_name(perf_set, PERF_RSA_VERIFY_IMPL, "results/PERF_RSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_RSA_SIGN_IMPL, "results/PERF_RSA_SIGN_IMPL.csv");
     hip_perf_open(perf_set);
+
+    HIP_DEBUG("Start PERF_STARTUP\n");
+    hip_perf_start_benchmark(perf_set, PERF_STARTUP);
 #endif
 
     /* default is long format */
@@ -317,6 +321,11 @@ static int hipd_main(int argc, char *argv[])
                  HIP_DEBUG_LEVEL_INFORMATIVE,
                  "Hipd daemon running. Starting select loop.\n");
     hipd_set_state(HIPD_STATE_EXEC);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_STARTUP\n");
+    hip_perf_stop_benchmark(perf_set, PERF_STARTUP);
+    hip_perf_write_benchmark(perf_set, PERF_STARTUP);
+#endif
     while (hipd_get_state() != HIPD_STATE_CLOSED) {
 
         hip_prepare_fd_set(&read_fdset);
