@@ -81,9 +81,10 @@ void hip_perf_destroy(perf_set_t *perf_set);
 #define PERF_UPDATE_FINISH_REKEYING     23
 #define PERF_HANDLE_UPDATE_2            24
 #define PERF_RSA_SIGN_IMPL              25
+#define PERF_STARTUP                    26
 
 /* Number of sensors for the HIP daemon. */
-#define PERF_MAX                        26
+#define PERF_MAX                        27
 
 perf_set_t *perf_set;
 
