@@ -5,6 +5,8 @@
  */
 /* $Id: cookiesolver.c,v 1.3 2003/10/14 15:50:31 krisu Exp $ */
 
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
