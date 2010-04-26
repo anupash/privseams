@@ -243,15 +243,15 @@ int hip_fw_uninit_opptcp(void)
 int hip_fw_init_proxy(void)
 {
     int err = 0;
-    if (!hip_proxy_status) {
-        system_print("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");
-        system_print("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
 
-        system_print("ip6tables -I HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
-        system_print("ip6tables -I HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");
+    system_print("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");
+    system_print("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
 
-        HIP_IFEL(init_proxy(), -1, "failed to initialize proxy\n");
-    }
+    system_print("ip6tables -I HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
+    system_print("ip6tables -I HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");
+
+    HIP_IFEL(init_proxy(), -1, "failed to initialize proxy\n");
+
 out_err:
 
     return err;
