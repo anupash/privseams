@@ -50,7 +50,6 @@ int main(int argc,char *argv[]) {
   int sendnum;
   int port = 0;
   int proto;
-  int k;
 
   if (argc != 4) {
     fprintf(stderr, "Usage: %s host tcp|udp port\n", argv[0]);
