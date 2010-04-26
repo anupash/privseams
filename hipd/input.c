@@ -971,11 +971,6 @@ int hip_handle_r1(const uint8_t packet_type,
     if (ctx->hadb_entry->dh_shared_key) {
         free(ctx->hadb_entry->dh_shared_key);
     }
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_R1\n");
-    hip_perf_stop_benchmark(perf_set, PERF_R1);
-    hip_perf_write_benchmark(perf_set, PERF_R1);
-#endif
     return err;
 }
 /**

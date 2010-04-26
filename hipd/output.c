@@ -714,7 +714,11 @@ out_err:
     if (ctx->output_msg) {
         free(ctx->output_msg);
     }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_R1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R1);
+    hip_perf_write_benchmark(perf_set, PERF_R1);
+#endif
     return err;
 }
 
