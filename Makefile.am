@@ -444,7 +444,9 @@ CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 doxygen: doc/Doxyfile
 	doxygen $<
 
+if HAVE_XMLTO
 nodist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
+endif
 
 doc/HOWTO.html:  doc/HOWTO.xml
 	xmlto -o $(@D) html-nochunks $<

@@ -20,6 +20,9 @@ AC_PROG_INSTALL
 # LT_INIT(disable-shared)
 AC_PROG_LIBTOOL(disable-shared)
 
+AC_CHECK_PROG(have_xmlto, xmlto, yes)
+AM_CONDITIONAL(HAVE_XMLTO, test x"$have_xmlto" = x"yes")
+
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_PROG_CC_C_O # Required in CentOS
 
