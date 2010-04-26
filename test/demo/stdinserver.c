@@ -17,7 +17,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-int create_serversocket(int proto, int port) {
+static int create_serversocket(int proto, int port) {
   int fd;
   struct sockaddr_in6 addr;
 

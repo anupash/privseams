@@ -36,7 +36,7 @@ struct hip_birthday_cookie {
 } __attribute__ ((packed));
 
 
-uint64_t calculate_digest(unsigned char *data, const uint64_t j)
+static uint64_t calculate_digest(unsigned char *data, const uint64_t j)
 {
         unsigned char buf[SHA_DIGEST_LENGTH]; // openssl
         uint64_t result = 0;
@@ -57,8 +57,9 @@ uint64_t calculate_digest(unsigned char *data, const uint64_t j)
  * errors
 */
 /* Unportable code ? */
-int solve_puzzle(struct hip_birthday_cookie *cookie, const struct in6_addr *initiator,
-                 const struct in6_addr *responder)
+static int solve_puzzle(struct hip_birthday_cookie *cookie,
+                        const struct in6_addr *initiator,
+                        const struct in6_addr *responder)
 {
     uint64_t challenge_resp = 0;
     uint64_t randval = 0; /* j */

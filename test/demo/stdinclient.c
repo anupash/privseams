@@ -17,7 +17,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-int create_socket(int proto) {
+static int create_socket(int proto) {
   int fd;
 
   if (proto == IPPROTO_TCP) {
