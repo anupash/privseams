@@ -2838,14 +2838,12 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
     HIP_INFO("Reached ESTABLISHED state\n");
     HIP_INFO("Handshake completed\n");
 
-
-
-
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_BASE\n");
     hip_perf_stop_benchmark(perf_set, PERF_BASE);
     hip_perf_write_benchmark(perf_set, PERF_BASE);
 #endif
+
     if (entry->hip_msg_retrans.buf) {
         entry->hip_msg_retrans.count = 0;
         memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
