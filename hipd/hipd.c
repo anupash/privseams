@@ -434,7 +434,7 @@ static int hipd_main(int argc, char *argv[])
 
     if (fix_alignment) {
         HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
-        if (system("echo 3 > /proc/cpu/alignment == -1")) {
+        if (system("echo 3 > /proc/cpu/alignment")) {
             HIP_ERROR("Setting alignment traps failed.");
         }
     }
