@@ -325,6 +325,6 @@ AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimiz
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
 
-AC_CONFIG_FILES([ Makefile doc/Doxyfile ])
+AC_CONFIG_FILES([ Makefile doc/Doxyfile tools/hipdnskeyparse tools/hipdnsproxy ])
 
 AC_OUTPUT

@@ -361,7 +361,6 @@ AM_LFLAGS = -P__libhipsec -olex.yy.c
 #lib_ipsec_libhipsec_la_LIBADD  = $(LEXLIB)
 
 #DISTCLEANFILES = lib/ipsec/policy_parse.c lib/ipsec/policy_token.c
-DISTCLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
 ### library dependencies ###
 
@@ -437,8 +436,6 @@ tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
 tools_hipdnsproxydir    = $(pyexecdir)/tools/hipdnsproxy
 endif # HAVE_PYTHON
 
-CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
-
 
 ### misc stuff ###
 doxygen: doc/Doxyfile
@@ -454,18 +451,13 @@ doc/HOWTO.html:  doc/HOWTO.xml
 doc/HOWTO.txt: doc/HOWTO.xml
 	xmlto -o $(@D) txt $<
 
-CLEANFILES += doc/HOWTO.html doc/HOWTO.txt
+CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
 	rm -rf doc/doxy
 
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
 	env PYEXECDIR=$(pyexecdir) @srcdir@/test/packaging/create-package.sh $@
-
-tools/hipdnsproxy: tools/dnsproxy.py
-tools/hipdnskeyparse: tools/parse-key-3.py
-tools/hipdnsproxy tools/hipdnskeyparse:
-	@srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
 
 autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh

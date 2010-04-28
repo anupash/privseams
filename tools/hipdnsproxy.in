@@ -1,0 +1,32 @@
+#!/bin/sh
+
+# This shell script invokes a python script from the right directory.
+# The reason for this indirection is that "make install" and
+# "dpkg -i dnsproxy.deb" (or rpm) store python scripts to different paths
+# (/usr/local vs. /usr). Thus, this script adjusts the paths of the generated
+# script according to configure.
+#
+# If you discover a better way to wrap python software with automake and
+# deb/rpm binary packages, please make sure that all the four invocation
+# methods to the python scripts still work:
+#
+# 1. tools/hipdnsproxy
+# 2. cd tools && ./hipdnsproxy
+# 3. make install && hipdnsproxy
+# 4. make deb && dpkg -i hipl-dnsproxy-version.deb && hipdnsproxy
+# 5. all the previous use cases with command line arguments to
+#    hipdnsproxy - required for deb/rpm packaging
+
+path=$(dirname $0)
+dev_script=tools/dnsproxy.py
+prefix=@prefix@
+
+if test ! -x $dev_script; then
+    dev_script=$(basename tools/dnsproxy.py)
+fi
+
+if echo $path | grep -q /usr; then
+    python @pythondir@/hipdnsproxy/dnsproxy.py $@
+else
+    python $dev_script $@
+fi

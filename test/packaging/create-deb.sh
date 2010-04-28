@@ -373,8 +373,8 @@ copy_and_package_files ()
     inst tools/myasn.py* $PKGDIR/$PYEXECDIR/hipdnskeyparse
     inst tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
 
-    $SUDO tools/gen-python-starter.sh $PYEXECDIR/hipdnsproxy dnsproxy.py $PKGDIR/usr/sbin/hipdnsproxy
-    $SUDO tools/gen-python-starter.sh $PYEXECDIR/hipdnskeyparse parse-key-3.py $PKGDIR/usr/sbin/hipdnskeyparse
+    inst tools/hipdnsproxy $PKGDIR/usr/sbin/hipdnsproxy
+    inst tools/hipdnskeyparse $PKGDIR/usr/sbin/hipdnskeyparse
 
     inst tools/nsupdate.pl $PKGDIR/usr/sbin
 
