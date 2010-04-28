@@ -110,7 +110,7 @@ test_keygentest_SOURCES       = test/keygentest.c
 test_listtest_SOURCES         = test/listtest.c
 test_sqliteteststub_SOURCES   = test/sqliteteststub.c
 
-tools_hipconf_SOURCES  = tools/hipconftool.c
+tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
 
 hipd_hipd_SOURCES = hipd/accessor.c              \
