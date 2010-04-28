@@ -65,6 +65,13 @@ AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}hipd_config)")
 AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
 
 
+# Set default AM_CFLAGS for the complete project.
+AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-deprecated-declarations -fno-strict-aliasing")
+
+# Set the preprocessor flags for the entire project
+AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
+
+
 AC_ARG_ENABLE(firewall,
                AS_HELP_STRING([--enable-firewall],
                               [HIP enabled firewall daemon (default is YES)]),
@@ -258,7 +265,7 @@ AC_CACHE_CHECK([whether to use grof support],
                [ac_cv_use_profiling],
                [ac_cv_use_profiling=no])
 if test x"$ac_cv_use_profiling" = x"yes"; then
-    AC_SUBST(GPROF_CFLAGS, "-pg")
+    AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -pg")
 fi
 
 AC_ARG_ENABLE(debug,
@@ -319,11 +326,6 @@ if test x"$ac_cv_use_demo" = x"yes"; then
     AH_TEMPLATE(CONFIG_HIP_DEMO, [Defined to 1 if demo is enabled.])
 fi
 
-# Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $GPROF_CFLAGS")
-
-# Set the preprocessor flags for the entire project
-AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
 
 AC_CONFIG_FILES([ Makefile doc/Doxyfile tools/hipdnskeyparse tools/hipdnsproxy ])
 
