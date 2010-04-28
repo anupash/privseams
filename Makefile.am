@@ -422,7 +422,7 @@ dns_PYTHON = tools/DNS/__init__.py      \
              tools/DNS/Type.py          \
              tools/DNS/win32dns.py
 
-dnsdir = $(pyexecdir)/tools/DNS
+dnsdir = $(pyexecdir)/hipdnsproxy/DNS
 
 tools_hipdnskeyparse_PYTHON = tools/myasn.py       \
                               tools/parse-key-3.py
