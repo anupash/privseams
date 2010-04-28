@@ -292,10 +292,8 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 
     HIP_IFEL(ipv6_addr_cmp(&pc.hit_issuer, &community_operator_hit) != 0,
              -1, "Certificate not issued by the community operator.\n");
-#if 0
     HIP_IFEL(ipv6_addr_cmp(&pc.hit_subject, &hip->hits) != 0, -1,
              "Certificate does not belong to subject.\n");
-#endif
 
     HIP_INFO("Certificate successfully verified.\n");
 
