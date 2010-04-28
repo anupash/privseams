@@ -432,8 +432,8 @@ tools_hipdnsproxy_PYTHON = tools/dnsproxy.py  \
                            tools/pyip6.py     \
                            tools/util.py
 
-tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
-tools_hipdnsproxydir    = $(pyexecdir)/tools/hipdnsproxy
+tools_hipdnskeyparsedir = $(pyexecdir)/hipdnskeyparse
+tools_hipdnsproxydir    = $(pyexecdir)/hipdnsproxy
 endif # HAVE_PYTHON
 
 
