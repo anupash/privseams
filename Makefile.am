@@ -407,31 +407,30 @@ if HAVE_PYTHON
 # These two scripts are generated in the end to get the python paths correct.
 # Currently, I don't know a better way to deal with the python code. -miika
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
-                    tools/hipdnsproxy    \
+                    tools/hipdnsproxy/hipdnsproxy       \
                     tools/nsupdate.pl
 
-dns_PYTHON = tools/dnsproxy/DNS/__init__.py      \
-             tools/dnsproxy/DNS/Base.py          \
-             tools/dnsproxy/DNS/Class.py         \
-             tools/dnsproxy/DNS/lazy.py          \
-             tools/dnsproxy/DNS/Lib.py           \
-             tools/dnsproxy/DNS/Opcode.py        \
-             tools/dnsproxy/DNS/Serialization.py \
-             tools/dnsproxy/DNS/Status.py        \
-             tools/dnsproxy/DNS/Type.py          \
-             tools/dnsproxy/DNS/win32dns.py
+dns_PYTHON = tools/hipdnsproxy/DNS/__init__.py      \
+             tools/hipdnsproxy/DNS/Base.py          \
+             tools/hipdnsproxy/DNS/Class.py         \
+             tools/hipdnsproxy/DNS/lazy.py          \
+             tools/hipdnsproxy/DNS/Lib.py           \
+             tools/hipdnsproxy/DNS/Opcode.py        \
+             tools/hipdnsproxy/DNS/Serialization.py \
+             tools/hipdnsproxy/DNS/Status.py        \
+             tools/hipdnsproxy/DNS/Type.py          \
+             tools/hipdnsproxy/DNS/win32dns.py
 
-dnsdir = $(pyexecdir)/dnsproxy/DNS
+dnsdir = $(pyexecdir)/hipdnsproxy/DNS
 
 tools_hipdnskeyparse_PYTHON = tools/hipdnskeyparse/myasn.py
 
-tools_hipdnsproxy_PYTHON = tools/dnsproxy/dnsproxy.py          \
-                           tools/dnsproxy/hosts.py             \
-                           tools/dnsproxy/pyip6.py             \
-                           tools/dnsproxy/util.py
+tools_hipdnsproxy_PYTHON = tools/hipdnsproxy/hosts.py       \
+                           tools/hipdnsproxy/pyip6.py       \
+                           tools/hipdnsproxy/util.py
 
 tools_hipdnskeyparsedir = $(pyexecdir)
-tools_hipdnsproxydir    = $(pyexecdir)/dnsproxy
+tools_hipdnsproxydir    = $(pyexecdir)
 endif # HAVE_PYTHON
 
 

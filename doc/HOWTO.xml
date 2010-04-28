@@ -2577,7 +2577,7 @@ VPN
 
     <para>
       The DNS proxy is located in
-      the tools directory (dnsproxy.py) and has to be started with
+      the tools directory (hipdnsproxy) and has to be started with
       root priviledges. After you start the script, it will rewrite
       /etc/resolv.conf to redirect all DNS look ups to itself so that
       it can return HITs to applications when applicable.

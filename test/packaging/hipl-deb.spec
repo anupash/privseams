@@ -142,15 +142,14 @@ install -m 755 test/packaging/debian-init.d-hipd %{buildroot}/etc/init.d/hipd
 install -m 755 test/packaging/debian-init.d-dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}/usr/lib/python2.6/dist-packages/DNS
-install -t %{buildroot}/usr/lib/python2.6/dist-packages/DNS tools/DNS/*py*
-install -d %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy
-install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/dnsproxy.py*
-install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/pyip6.py*
-install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hosts.py*
-install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/util.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/DNS tools/hipdnsproxy/DNS/*py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/pyip6.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/hosts.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/util.py*
 install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnskeyparse/myasn.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hipdnsproxy/hipdnsproxy
 install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
-install -m 755 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
+install -m 755 tools/hipdnsproxy/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post lib

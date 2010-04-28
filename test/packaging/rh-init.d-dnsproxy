@@ -4,8 +4,8 @@
 #
 # description: HIP DNS proxy
 #
-# processname: dnsproxy.py
-# pidfile: /var/run/dnsproxy.pid
+# processname: hipdnsproxy
+# pidfile: /var/run/hipdnsproxy.pid
 # chkconfig: 2345 22 78
 
 # source function library

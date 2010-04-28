@@ -242,7 +242,7 @@ class ResolvConf:
         keys.sort()
         tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
         tf = open(tmp,'w')
-        tf.write('# This is written by dnsproxy.py\n')
+        tf.write('# This is written by hipdnsproxy\n')
         for k in keys:
             v = params.get(k)
             if type(v) == type(''):
