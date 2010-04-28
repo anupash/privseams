@@ -18,15 +18,15 @@
 #    hipdnsproxy - required for deb/rpm packaging
 
 path=$(dirname $0)
-dev_script=tools/dnsproxy.py
+dev_script=tools/dnsproxy/dnsproxy.py
 prefix=@prefix@
 
 if test ! -x $dev_script; then
-    dev_script=dnsproxy.py
+    dev_script=dnsproxy/dnsproxy.py
 fi
 
 if echo $path | grep -q /usr; then
-    python @pythondir@/hipdnsproxy/dnsproxy.py $@
+    python @pythondir@/dnsproxy/dnsproxy.py $@
 else
     python $dev_script $@
 fi

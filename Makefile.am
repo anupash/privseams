@@ -410,29 +410,29 @@ dist_sbin_SCRIPTS = tools/hipdnskeyparse \
                     tools/hipdnsproxy    \
                     tools/nsupdate.pl
 
-dns_PYTHON = tools/DNS/__init__.py      \
-             tools/DNS/Base.py          \
-             tools/DNS/Class.py         \
-             tools/DNS/lazy.py          \
-             tools/DNS/Lib.py           \
-             tools/DNS/Opcode.py        \
-             tools/DNS/Serialization.py \
-             tools/DNS/Status.py        \
-             tools/DNS/Type.py          \
-             tools/DNS/win32dns.py
+dns_PYTHON = tools/dnsproxy/DNS/__init__.py      \
+             tools/dnsproxy/DNS/Base.py          \
+             tools/dnsproxy/DNS/Class.py         \
+             tools/dnsproxy/DNS/lazy.py          \
+             tools/dnsproxy/DNS/Lib.py           \
+             tools/dnsproxy/DNS/Opcode.py        \
+             tools/dnsproxy/DNS/Serialization.py \
+             tools/dnsproxy/DNS/Status.py        \
+             tools/dnsproxy/DNS/Type.py          \
+             tools/dnsproxy/DNS/win32dns.py
 
-dnsdir = $(pyexecdir)/hipdnsproxy/DNS
+dnsdir = $(pyexecdir)/dnsproxy/DNS
 
 tools_hipdnskeyparse_PYTHON = tools/myasn.py       \
                               tools/parse-key-3.py
 
-tools_hipdnsproxy_PYTHON = tools/dnsproxy.py  \
-                           tools/hosts.py     \
-                           tools/pyip6.py     \
-                           tools/util.py
+tools_hipdnsproxy_PYTHON = tools/dnsproxy/dnsproxy.py          \
+                           tools/dnsproxy/hosts.py             \
+                           tools/dnsproxy/pyip6.py             \
+                           tools/dnsproxy/util.py
 
 tools_hipdnskeyparsedir = $(pyexecdir)/hipdnskeyparse
-tools_hipdnsproxydir    = $(pyexecdir)/hipdnsproxy
+tools_hipdnsproxydir    = $(pyexecdir)/dnsproxy
 endif # HAVE_PYTHON
 
 
