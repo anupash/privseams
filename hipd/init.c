@@ -277,11 +277,10 @@ static char *kernel_crypto_mod[] = {
 
 /** Tunneling, IPsec, interface and control modules */
 static char *kernel_net_mod[] = {
-        "xfrm4_mode_beet", "xfrm6_mode_beet",
-        "xfrm4_tunnel",    "xfrm6_tunnel",
-        "ip4_tunnel",      "ip6_tunnel",
-        "esp4",            "esp6",
-        "xfrm_user",       "dummy",
+    "xfrm4_mode_beet", "xfrm6_mode_beet",
+    "ip4_tunnel",      "ip6_tunnel",
+    "esp4",            "esp6",
+    "xfrm_user",       "dummy",
 };
 
 /**
