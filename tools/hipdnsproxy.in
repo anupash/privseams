@@ -22,7 +22,7 @@ dev_script=tools/dnsproxy.py
 prefix=@prefix@
 
 if test ! -x $dev_script; then
-    dev_script=$(basename tools/dnsproxy.py)
+    dev_script=dnsproxy.py
 fi
 
 if echo $path | grep -q /usr; then
