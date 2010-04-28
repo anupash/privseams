@@ -45,12 +45,9 @@ import getopt
 import os
 import stat
 import time
-import util
 import socket
 import traceback
-import DNS
 import binascii
-import hosts
 import re
 import signal
 import syslog
@@ -59,6 +56,11 @@ import subprocess
 import select
 import copy
 import errno
+
+#local imports
+import hosts
+import util
+import DNS
 
 Serialize = DNS.Serialize
 DeSerialize = DNS.DeSerialize
