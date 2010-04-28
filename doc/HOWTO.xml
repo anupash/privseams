@@ -2653,7 +2653,7 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
 .... | sed -n -e '/^DJBDNS */s///p'
       </programlisting>
       a line for Dan Bernstein's tinydns is output. For further
-      information, please refer to parse-key-3.py and myasn.py.
+      information, please refer to hipdnskeyparse and myasn.py.
     </para>
   </section>
 

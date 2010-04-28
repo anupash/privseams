@@ -327,6 +327,6 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 
 
-AC_CONFIG_FILES([ Makefile doc/Doxyfile tools/hipdnskeyparse tools/hipdnsproxy ])
+AC_CONFIG_FILES([ Makefile doc/Doxyfile tools/hipdnsproxy ])
 
 AC_OUTPUT

@@ -368,14 +368,14 @@ copy_and_package_files ()
     inst tools/pyip6.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
     inst tools/hosts.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
     inst tools/util.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
-    inst tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
 
-    inst tools/myasn.py* $PKGDIR/$PYEXECDIR/hipdnskeyparse
+    inst tools/hipdnskeyparse/myasn.py* $PKGDIR/$PYEXECDIR
     inst tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
 
     inst tools/hipdnsproxy $PKGDIR/usr/sbin/hipdnsproxy
     inst tools/hipdnskeyparse $PKGDIR/usr/sbin/hipdnskeyparse
 
+    inst tools/hipdnskeyparse/hipdnskeyparse $PKGDIR/usr/sbin
     inst tools/nsupdate.pl $PKGDIR/usr/sbin
 
     echo "** Copying init.d script to $PKGDIR"

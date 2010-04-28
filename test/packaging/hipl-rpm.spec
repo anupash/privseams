@@ -136,11 +136,9 @@ install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/dnsproxy.py*
 install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/pyip6.py*
 install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/hosts.py*
 install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/util.py*
-install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
-install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/parse-key-3.py*
-install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/myasn.py*
+install -t %{buildroot}%{python_sitelib} tools/hipdnskeyparse/myasn.py*
 # required in CentOS release 5.2
-install -m 755 tools/hipdnskeyparse %{buildroot}%{prefix}/sbin/hipdnskeyparse
+install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}%{prefix}/sbin/hipdnskeyparse
 install -m 755 tools/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
 
 %post lib

@@ -148,10 +148,8 @@ install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/dnspro
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/pyip6.py*
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hosts.py*
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/util.py*
-install -d %{buildroot}/usr/lib/python2.6/dist-packages/hipdnskeyparse
-install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnskeyparse tools/parse-key-3.py*
-install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnskeyparse tools/myasn.py*
-install -m 755 tools/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
+install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnskeyparse/myasn.py*
+install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
 install -m 755 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
