@@ -80,7 +80,7 @@ check_dist()
     ./configure && make dist
     tar -tzf hipl-*.tar.gz |
         sed -e 1d -e 's:hipl-main/::' -e 's:/$::' -e '/file_list_checkout/d' -e '/version.h/d' |
-        sed -e '/tools\/hipdnskeyparse/d' -e '/tools\/hipdnsproxy/d' |
+        sed -e '/tools\/hipdnskeyparse$/d' -e '/tools\/hipdnsproxy$/d' |
         sort > file_list_tarball
     run_program diff -u file_list_checkout file_list_tarball
 }
