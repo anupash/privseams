@@ -416,7 +416,6 @@ dns_PYTHON = tools/DNS/__init__.py      \
              tools/DNS/lazy.py          \
              tools/DNS/Lib.py           \
              tools/DNS/Opcode.py        \
-             tools/DNS/pyip6.py         \
              tools/DNS/Serialization.py \
              tools/DNS/Status.py        \
              tools/DNS/Type.py          \
