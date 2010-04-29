@@ -40,7 +40,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/straddr.h"
-#include "hipconf.h"
+#include "conf.h"
 #include "lib/core/prefix.h"
 #include "lib/dht/libhipdht.h"
 #include "lib/core/hostid.h"
@@ -456,7 +456,7 @@ static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
  *
  * @param argv an array of strings (command line args to hipconf)
  * @return the numeric action id correspoding to the symbolic text
- * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ * @note If you defined a constant ACTION_NEWACT in conf.h,
  *       you also need to add a proper sentence in the strcmp() series,
  *       like that:
  *       ...
@@ -554,7 +554,7 @@ static int hip_conf_get_action(char *argv[])
 /**
  * Get the minimum amount of arguments needed to be given to the action.
  *
- * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ * @note If you defined a constant ACTION_NEWACT in conf.h,
  *       you also need to add a case block for the constant
  *       here in the switch(action) block.
  * @param  action action type
@@ -731,7 +731,7 @@ static int hip_conf_get_type(char *text, char *argv[])
 /**
  * Get a type argument index, in argv[].
  *
- * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ * @note If you defined a constant ACTION_NEWACT in conf.h,
  *       you also need to add a case block for the constant
  *       here in the switch(action) block.
  * @param  integer value for an action
@@ -3115,7 +3115,7 @@ out_err:
  *       hip_conf_get_action(), hip_conf_check_action_argc() and
  *       hip_conf_get_type()
  * @note Keep the elements in the same order as the @c TYPE values are defined
- *       in hipconf.h because type values are used as @c action_handler array
+ *       in conf.h because type values are used as @c action_handler array
  *       index. Locations and order of these handlers are important.
  */
 int (*action_handler[])(hip_common_t *,

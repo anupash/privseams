@@ -16,7 +16,7 @@
 #include <sys/utsname.h>
 
 #include "lib/tool/xfrmapi.h"
-#include "lib/conf/hipconf.h"
+#include "lib/conf/conf.h"
 #include "oppipdb.h"
 #include "lib/core/debug.h"
 #include "hiprelay.h"

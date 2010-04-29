@@ -27,7 +27,7 @@
 #include "agent/tools.h"
 #include "agent/str_var.h"
 #include "agent/language.h"
-#include "lib/conf/hipconf.h"
+#include "lib/conf/conf.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 

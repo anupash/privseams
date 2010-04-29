@@ -219,7 +219,7 @@ lib_gui_libhipgui_la_SOURCES = lib/gui/create.c     \
 
 # TODO: libhipcore, libhipconf, libhipdht and libhiptool have circular
 # dependencies. This needs to be addressed at some point.
-lib_core_libhipcore_la_SOURCES = lib/conf/hipconf.c         \
+lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/builder.c         \
                                  lib/core/certtools.c       \
                                  lib/core/crypto.c          \

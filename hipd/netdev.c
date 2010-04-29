@@ -35,7 +35,7 @@
 #include "lib/dht/libhipdht.h"
 #include "lib/core/debug.h"
 #include "lib/tool/lutil.h"
-#include "lib/conf/hipconf.h"
+#include "lib/conf/conf.h"
 #include "lib/core/hostsfiles.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hit.h"

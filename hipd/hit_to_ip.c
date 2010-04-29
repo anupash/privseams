@@ -22,7 +22,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/prefix.h"
 #include "maintenance.h"
-#include "lib/conf/hipconf.h"
+#include "lib/conf/conf.h"
 
 //  value to return by the function
 #define ERR -1
