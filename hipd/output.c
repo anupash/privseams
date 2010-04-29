@@ -22,13 +22,10 @@
 #include "blind.h"
 #include "output.h"
 #include "lib/core/performance.h"
-
-#ifdef CONFIG_HIP_I3
-#include "i3/i3_client/i3_client_id.h"
-#endif
-
 #include "lib/core/hip_udp.h"
 #include "lib/tool/checksum.h"
+#include "i3/i3_client/i3_client_id.h"
+
 
 enum number_dh_keys_t { ONE, TWO };
 
