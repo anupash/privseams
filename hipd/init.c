@@ -226,11 +226,10 @@ static char *kernel_crypto_mod[] = {
 
 /** Tunneling, IPsec, interface and control modules */
 static char *kernel_net_mod[] = {
-        "xfrm4_mode_beet", "xfrm6_mode_beet",
-        "xfrm4_tunnel",    "xfrm6_tunnel",
-        "ip4_tunnel",      "ip6_tunel",
-        "esp4",            "esp6",
-        "xfrm_user",       "dummy",
+    "xfrm4_mode_beet", "xfrm6_mode_beet",
+    "ip4_tunnel",      "ip6_tunnel",
+    "esp4",            "esp6",
+    "xfrm_user",       "dummy",
 };
 
 /**
@@ -243,7 +242,7 @@ static int hip_probe_kernel_modules(void)
     char cmd[MODPROBE_MAX_LINE];
     int net_total, crypto_total;
 
-    net_total    = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
+    net_total    = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
     crypto_total = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
 
     /* Crypto module loading is treated separately, because algorithms
@@ -283,13 +282,14 @@ static int hip_probe_kernel_modules(void)
  * Unused for now because of unprivileged executions.
  * @todo Make hip_exit call it with root privileges in order to clean up.
  */
-static void __attribute__((unused)) hip_remove_kernel_modules(void) {
+static void __attribute__((unused)) hip_remove_kernel_modules(void)
+{
     char **mods[] = {kernel_crypto_mod, kernel_net_mod};
     char cmd[MODPROBE_MAX_LINE];
     int count[2], type, i;
 
     count[0] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
-    count[1] = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
+    count[1] = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
 
     for (type = 0; type < 2; type++) {
         for (i = 0; i < count[type]; i++) {
@@ -412,7 +412,8 @@ static int hip_init_host_ids(void)
 
     if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
-                                              NULL, NULL, RSA_KEY_DEFAULT_BITS, DSA_KEY_DEFAULT_BITS),
+                                              NULL, NULL, RSA_KEY_DEFAULT_BITS,
+                                              DSA_KEY_DEFAULT_BITS),
                  1, "Failed to create keys to %s\n", DEFAULT_CONFIG_DIR);
     }
 

@@ -47,7 +47,7 @@ test_certteststub_SOURCES     = test/certteststub.c
 test_dh_performance_SOURCES   = test/dh_performance.c
 test_hc_performance_SOURCES   = test/hc_performance.c
 
-tools_hipconf_SOURCES  = tools/hipconftool.c
+tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
 
 hipd_hipd_SOURCES = hipd/accessor.c              \
@@ -125,7 +125,7 @@ endif
 
 # TODO: libhipcore, libhipconf and libhiptool have circular
 # dependencies. This needs to be addressed at some point.
-lib_core_libhipcore_la_SOURCES = lib/conf/hipconf.c         \
+lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/builder.c         \
                                  lib/core/certtools.c       \
                                  lib/core/crypto.c          \
@@ -233,44 +233,41 @@ endif
 if HAVE_PYTHON
 # These two scripts are generated in the end to get the python paths correct.
 # Currently, I don't know a better way to deal with the python code. -miika
-dist_sbin_SCRIPTS = tools/hipdnskeyparse \
-                    tools/hipdnsproxy    \
+dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
+                    tools/hipdnsproxy/hipdnsproxy       \
                     tools/nsupdate.pl
 
-dns_PYTHON = tools/DNS/__init__.py      \
-             tools/DNS/Base.py          \
-             tools/DNS/Class.py         \
-             tools/DNS/lazy.py          \
-             tools/DNS/Lib.py           \
-             tools/DNS/Opcode.py        \
-             tools/DNS/pyip6.py         \
-             tools/DNS/Serialization.py \
-             tools/DNS/Status.py        \
-             tools/DNS/Type.py          \
-             tools/DNS/win32dns.py
+dns_PYTHON = tools/hipdnsproxy/DNS/__init__.py      \
+             tools/hipdnsproxy/DNS/Base.py          \
+             tools/hipdnsproxy/DNS/Class.py         \
+             tools/hipdnsproxy/DNS/lazy.py          \
+             tools/hipdnsproxy/DNS/Lib.py           \
+             tools/hipdnsproxy/DNS/Opcode.py        \
+             tools/hipdnsproxy/DNS/Serialization.py \
+             tools/hipdnsproxy/DNS/Status.py        \
+             tools/hipdnsproxy/DNS/Type.py          \
+             tools/hipdnsproxy/DNS/win32dns.py
 
-dnsdir = $(pyexecdir)/tools/DNS
+dnsdir = $(pyexecdir)/hipdnsproxy/DNS
 
-tools_hipdnskeyparse_PYTHON = tools/myasn.py       \
-                              tools/parse-key-3.py
+tools_hipdnskeyparse_PYTHON = tools/hipdnskeyparse/myasn.py
 
-tools_hipdnsproxy_PYTHON = tools/dnsproxy.py  \
-                           tools/hosts.py     \
-                           tools/pyip6.py     \
-                           tools/util.py
+tools_hipdnsproxy_PYTHON = tools/hipdnsproxy/hosts.py       \
+                           tools/hipdnsproxy/pyip6.py       \
+                           tools/hipdnsproxy/util.py
 
-tools_hipdnskeyparsedir = $(pyexecdir)/tools/hipdnskeyparse
-tools_hipdnsproxydir    = $(pyexecdir)/tools/hipdnsproxy
+tools_hipdnskeyparsedir = $(pyexecdir)
+tools_hipdnsproxydir    = $(pyexecdir)
 endif # HAVE_PYTHON
-
-CLEANFILES = tools/hipdnsproxy tools/hipdnskeyparse
 
 
 ### misc stuff ###
 doxygen: doc/Doxyfile
 	doxygen $<
 
+if HAVE_XMLTO
 nodist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
+endif
 
 doc/HOWTO.html:  doc/HOWTO.xml
 	xmlto -o $(@D) html-nochunks $<
@@ -278,18 +275,13 @@ doc/HOWTO.html:  doc/HOWTO.xml
 doc/HOWTO.txt: doc/HOWTO.xml
 	xmlto -o $(@D) txt $<
 
-CLEANFILES += doc/HOWTO.html doc/HOWTO.txt
+CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
 	rm -rf doc/doxy
 
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
 	env PYEXECDIR=$(pyexecdir) @srcdir@/test/packaging/create-package.sh $@
-
-tools/hipdnsproxy: tools/dnsproxy.py
-tools/hipdnskeyparse: tools/parse-key-3.py
-tools/hipdnsproxy tools/hipdnskeyparse:
-	@srcdir@/tools/gen-python-starter.sh $(pyexecdir)/$(@F) $^ $@
 
 autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh

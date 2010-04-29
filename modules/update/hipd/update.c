@@ -15,6 +15,7 @@
 
 #include "lib/core/builder.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/performance.h"
 #include "lib/core/solve.h"
 #include "hipd/esp_prot_hipd_msg.h"
 #include "hipd/hadb.h"
@@ -841,6 +842,10 @@ static int hip_update_check_packet(const uint8_t packet_type,
     int err = 0;
     unsigned int has_esp_info = 0;
     struct hip_esp_info *esp_info = NULL;
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_UPDATE\n");
+        hip_perf_start_benchmark(perf_set, PERF_UPDATE);
+#endif
 
     /** @todo Check these references again because these checks are done
      * separately for ACKs and SEQs
@@ -1079,6 +1084,12 @@ out_err:
     }
 
     hip_empty_oppipdb_old();
+
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop and write PERF_UPDATE\n");
+        hip_perf_stop_benchmark(perf_set, PERF_UPDATE);
+        hip_perf_write_benchmark(perf_set, PERF_UPDATE);
+#endif
 
     return err;
 }

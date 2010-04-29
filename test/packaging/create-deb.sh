@@ -364,18 +364,18 @@ copy_and_package_files ()
     inst -d $PKGDIR/$PYEXECDIR/hipdnskeyparse
     inst -d $PKGDIR/$PYEXECDIR/DNS
 
-    inst tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
-    inst tools/pyip6.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
-    inst tools/hosts.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
-    inst tools/util.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
-    inst tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
+    inst tools/hipdnsproxy/pyip6.py* $PKGDIR/$PYEXECDIR
+    inst tools/hipdnsproxy/hosts.py* $PKGDIR/$PYEXECDIR
+    inst tools/hipdnsproxy/util.py*  $PKGDIR/$PYEXECDIR
 
-    inst tools/myasn.py* $PKGDIR/$PYEXECDIR/hipdnskeyparse
-    inst tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
+    inst tools/hipdnskeyparse/myasn.py* $PKGDIR/$PYEXECDIR
+    inst tools/hipdnsproxy/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
 
-    $SUDO tools/gen-python-starter.sh $PYEXECDIR/hipdnsproxy dnsproxy.py $PKGDIR/usr/sbin/hipdnsproxy
-    $SUDO tools/gen-python-starter.sh $PYEXECDIR/hipdnskeyparse parse-key-3.py $PKGDIR/usr/sbin/hipdnskeyparse
+    inst tools/hipdnsproxy $PKGDIR/usr/sbin/hipdnsproxy
+    inst tools/hipdnskeyparse $PKGDIR/usr/sbin/hipdnskeyparse
 
+    inst tools/hipdnskeyparse/hipdnskeyparse $PKGDIR/usr/sbin
+    inst tools/hipdnsproxy/hipdnsproxy $PKGDIR/usr/sbin
     inst tools/nsupdate.pl $PKGDIR/usr/sbin
 
     echo "** Copying init.d script to $PKGDIR"

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -17,7 +18,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-int create_serversocket(int proto, int port) {
+static int create_serversocket(int proto, int port) {
   int fd;
   struct sockaddr_in6 addr;
 
@@ -69,7 +70,7 @@ int main(int argc,char *argv[]) {
   int proto;
   int k;
   int peer;
-  int peerlen;
+  socklen_t peerlen;
 
   if (argc != 3) {
     fprintf(stderr, "Usage: %s tcp|udp port\n", argv[0]);

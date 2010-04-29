@@ -22,7 +22,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/prefix.h"
 #include "maintenance.h"
-#include "lib/conf/hipconf.h"
+#include "lib/conf/conf.h"
 
 int hip_hit_to_ip_status = 0;
 

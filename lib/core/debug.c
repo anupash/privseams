@@ -52,7 +52,7 @@
 #include "debug.h"
 #include "straddr.h"
 #include "lib/tool/lutil.h"
-#include "lib/conf/hipconf.h"
+#include "lib/conf/conf.h"
 
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,

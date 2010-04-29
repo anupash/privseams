@@ -20,10 +20,10 @@
 #include "lib/ipsec/ipsec_strerror.h"
 #include "lib/ipsec/libpfkey.h"
 #include "lib/ipsec/pfkeyv2.h"
-#include "pfkeyapi.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/keylen.h"
 #include "lib/tool/pfkeysadb.h"
+#include "lib/tool/xfrmapi.h"
 
 // FIXME: This must be turned to BEET when BEET will be supported by pfkey as well
 #define HIP_IPSEC_DEFAULT_MODE IPSEC_MODE_BEET

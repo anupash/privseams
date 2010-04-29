@@ -2,7 +2,6 @@ AC_PREREQ([2.53])
 AC_INIT([HIP for Linux], [main], [hipl-users@freelists.org], [hipl])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([tools/hipconftool.c])
 
 # This needs to be placed before AM_INIT_AUTOMAKE, otherwise $@ is modified.
 # Note that the value of $@ changes if configure is rerun automatically during
@@ -20,6 +19,9 @@ AC_PROG_INSTALL
 # OpenWRT (Mar 2010) is running too old version of libtool
 # LT_INIT(disable-shared)
 AC_PROG_LIBTOOL(disable-shared)
+
+AC_CHECK_PROG(have_xmlto, xmlto, yes)
+AM_CONDITIONAL(HAVE_XMLTO, test x"$have_xmlto" = x"yes")
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_PROG_CC_C_O # Required in CentOS
@@ -66,6 +68,13 @@ AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
 AC_ARG_WITH(nomodules,
             AS_HELP_STRING([--with-nomodules=list],
                            [comma-separated list of disabled modules]))
+
+# Set default AM_CFLAGS for the complete project.
+AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-deprecated-declarations -fno-strict-aliasing")
+
+# Set the preprocessor flags for the entire project
+AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
+
 
 AC_ARG_ENABLE(firewall,
                AS_HELP_STRING([--enable-firewall],
@@ -169,7 +178,7 @@ AC_CACHE_CHECK([whether to use grof support],
                [ac_cv_use_profiling],
                [ac_cv_use_profiling=no])
 if test x"$ac_cv_use_profiling" = x"yes"; then
-    AC_SUBST(GPROF_CFLAGS, "-pg")
+    AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -pg")
 fi
 
 AC_ARG_ENABLE(debug,
@@ -230,11 +239,6 @@ if test x"$ac_cv_use_demo" = x"yes"; then
     AH_TEMPLATE(CONFIG_HIP_DEMO, [Defined to 1 if demo is enabled.])
 fi
 
-# Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-deprecated-declarations -fno-strict-aliasing $GPROF_CFLAGS")
-
-# Set the preprocessor flags for the entire project
-AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
 
 # Parse modules directory
 echo ""

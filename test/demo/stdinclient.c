@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -17,7 +18,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-int create_socket(int proto) {
+static int create_socket(int proto) {
   int fd;
 
   if (proto == IPPROTO_TCP) {
@@ -50,7 +51,6 @@ int main(int argc,char *argv[]) {
   int sendnum;
   int port = 0;
   int proto;
-  int k;
 
   if (argc != 4) {
     fprintf(stderr, "Usage: %s host tcp|udp port\n", argv[0]);

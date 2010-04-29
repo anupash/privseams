@@ -47,3 +47,12 @@ before running configure. First time, you must give the install option!
 
 ./configure --help will display the multitude of configuration options
 available for HIPL.
+
+To keep the developers sharp and honest HIPL is built with -Werror in CFLAGS.
+gcc will just error out when issuing a warning. If you experience compilation
+failures and just need to get HIPL to build on a combination of platform and
+compiler that does produce warnings, you can override -Werror as follows:
+
+  CFLAGS=-Wno-error ./configure
+
+Then run make as usual.

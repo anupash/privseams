@@ -25,7 +25,7 @@
 #include "user.h"
 #include "lib/core/debug.h"
 #include "netdev.h"
-#include "lib/conf/hipconf.h"
+#include "lib/conf/conf.h"
 #include "nat.h"
 #include "init.h"
 #include "hidb.h"

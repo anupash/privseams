@@ -610,11 +610,6 @@ static void firewall_exit(void)
  */
 static void firewall_close(const int signal)
 {
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop and write PERF_ALL\n");
-    hip_perf_stop_benchmark(perf_set, PERF_ALL);
-    hip_perf_write_benchmark(perf_set, PERF_ALL);
-#endif
     HIP_DEBUG("Closing firewall...\n");
     firewall_exit();
     exit(signal);
@@ -1870,28 +1865,23 @@ int main(int argc, char **argv)
 
     check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
 
-    /* To keep things simple, we use a subset of the performance set originally created for the HIP daemon. */
+    /* To keep things simple, we use a subset of the performance set originally
+     * created for the HIP daemon. */
     hip_perf_set_name(perf_set, PERF_I1, "results/PERF_I1.csv");
     hip_perf_set_name(perf_set, PERF_R1, "results/PERF_R1.csv");
     hip_perf_set_name(perf_set, PERF_I2, "results/PERF_I2.csv");
     hip_perf_set_name(perf_set, PERF_R2, "results/PERF_R2.csv");
     hip_perf_set_name(perf_set, PERF_VERIFY, "results/PERF_VERIFY.csv");
     hip_perf_set_name(perf_set, PERF_BASE, "results/PERF_BASE.csv");
-    hip_perf_set_name(perf_set, PERF_ALL, "results/PERF_ALL.csv");
-    hip_perf_set_name(perf_set, PERF_UPDATE_COMPLETE, "results/PERF_UPDATE_COMPLETE.csv");
-
     hip_perf_set_name(perf_set, PERF_CLOSE_SEND, "results/PERF_CLOSE_SEND.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE, "results/PERF_HANDLE_CLOSE.csv");
     hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE_ACK, "results/PERF_HANDLE_CLOSE_ACK.csv");
-    hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_1, "results/PERF_HANDLE_UPDATE_1.csv");
     hip_perf_set_name(perf_set, PERF_CLOSE_COMPLETE, "results/PERF_CLOSE_COMPLETE.csv");
     hip_perf_set_name(perf_set, PERF_DSA_VERIFY_IMPL, "results/PERF_DSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_RSA_VERIFY_IMPL, "results/PERF_RSA_VERIFY_IMPL.csv");
 
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);
-    HIP_DEBUG("Start PERF_ALL\n");
-    hip_perf_start_benchmark(perf_set, PERF_ALL);
 #endif
 
     memset(&default_hit, 0, sizeof(default_hit));
