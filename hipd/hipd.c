@@ -371,6 +371,7 @@ static int hipd_main(int argc, char *argv[])
     hip_perf_set_name(perf_set, PERF_R1, "results/PERF_R1.csv");
     hip_perf_set_name(perf_set, PERF_I2, "results/PERF_I2.csv");
     hip_perf_set_name(perf_set, PERF_R2, "results/PERF_R2.csv");
+    hip_perf_set_name(perf_set, PERF_UPDATE, "results/PERF_UPDATE.csv");
     hip_perf_set_name(perf_set, PERF_DH_CREATE, "results/PERF_DH_CREATE.csv");
     hip_perf_set_name(perf_set, PERF_SIGN, "results/PERF_SIGN.csv");
     hip_perf_set_name(perf_set, PERF_DSA_SIGN_IMPL, "results/PERF_DSA_SIGN_IMPL.csv");

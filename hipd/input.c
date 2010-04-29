@@ -765,6 +765,10 @@ int hip_receive_control_packet(struct hip_common *msg,
         break;
 
     case HIP_UPDATE:
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_UPDATE\n");
+        hip_perf_start_benchmark(perf_set, PERF_UPDATE);
+#endif
         HIP_DEBUG_HIT("received an UPDATE:  ", src_addr );
         if (entry) {
             HIP_IFCS(entry, err = entry->hadb_rcv_func->hip_receive_update(msg,
@@ -777,6 +781,11 @@ int hip_receive_control_packet(struct hip_common *msg,
             HIP_DEBUG("FOUND A UPDATE FROM FIREWALL \n");
             hip_receive_update(msg, src_addr, dst_addr, entry, msg_info);
         }
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop and write PERF_UPDATE\n");
+        hip_perf_stop_benchmark(perf_set, PERF_UPDATE);
+        hip_perf_write_benchmark(perf_set, PERF_UPDATE);
+#endif
         break;
 
     case HIP_NOTIFY:
@@ -807,7 +816,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         HIP_IFCS(entry, err = entry->hadb_rcv_func->
                               hip_receive_close(msg, entry));
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE");
+        HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
         hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE);
         hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE);
 #endif
