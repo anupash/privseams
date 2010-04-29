@@ -14,12 +14,12 @@
 #include <linux/ipsec.h>
 
 #include "config.h"
-#include "hipd/pfkeyapi.h"
 #include "lib/ipsec/libpfkey.h"
 #include "lib/ipsec/pfkeyv2.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/keylen.h"
 #include "lib/core/debug.h"
+#include "lib/tool/xfrmapi.h"
 #include "pfkeysadb.h"
 
 /**
