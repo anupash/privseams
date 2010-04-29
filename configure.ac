@@ -81,7 +81,7 @@ AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall],
                [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
-    AC_CHECK_LIB(ipq, ipq_create_handle,, [AC_MSG_ERROR([libipq not found])])
+    #AC_CHECK_LIB(ipq, ipq_create_handle,, [AC_MSG_ERROR([libipq not found])])
     AC_CHECK_LIB(config, config_setting_index,,
                  [AC_MSG_WARN([libconfig not found, using default config])])
     AC_DEFINE(CONFIG_HIP_FIREWALL)

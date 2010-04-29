@@ -293,7 +293,7 @@ static int hip_probe_kernel_modules(void)
     char cmd[MODPROBE_MAX_LINE];
     int net_total, crypto_total;
 
-    net_total    = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
+    net_total    = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
     crypto_total = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
 
     /* Crypto module loading is treated separately, because algorithms
@@ -333,13 +333,14 @@ static int hip_probe_kernel_modules(void)
  * Unused for now because of unprivileged executions.
  * @todo Make hip_exit call it with root privileges in order to clean up.
  */
-static void __attribute__((unused)) hip_remove_kernel_modules(void) {
+static void __attribute__((unused)) hip_remove_kernel_modules(void)
+{
     char **mods[] = {kernel_crypto_mod, kernel_net_mod};
     char cmd[MODPROBE_MAX_LINE];
     int count[2], type, i;
 
     count[0] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
-    count[1] = sizeof(kernel_net_mod) / sizeof(kernel_net_mod[0]);
+    count[1] = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
 
     for (type = 0; type < 2; type++) {
         for (i = 0; i < count[type]; i++) {
@@ -498,7 +499,8 @@ static int hip_init_host_ids(void)
 
     if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
-                                              NULL, NULL, RSA_KEY_DEFAULT_BITS, DSA_KEY_DEFAULT_BITS),
+                                              NULL, NULL, RSA_KEY_DEFAULT_BITS,
+                                              DSA_KEY_DEFAULT_BITS),
                  1, "Failed to create keys to %s\n", DEFAULT_CONFIG_DIR);
     }
 
@@ -1094,9 +1096,11 @@ int hipd_init(int flush_ipsec, int killold)
     {
         memset(opendht_host_name, 0, sizeof(opendht_host_name));
 
-        hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
+        hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn,
+                                                           opendht_serving_gateway);
         set_cloexec_flag(hip_opendht_sock_fqdn, 1);
-        hip_opendht_sock_hit  = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
+        hip_opendht_sock_hit  = init_dht_gateway_socket_gw(hip_opendht_sock_hit,
+                                                           opendht_serving_gateway);
         set_cloexec_flag(hip_opendht_sock_hit, 1);
     }
 #endif  /* CONFIG_HIP_DHT */
