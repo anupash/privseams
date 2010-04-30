@@ -70,10 +70,6 @@ int hip_user_register_handle(const uint8_t msg_type,
     int err = 0;
     struct usr_msg_handle *new_entry = NULL;
 
-    HIP_IFEL(msg_type > HIP_MSG_ROOT_MAX,
-             -1,
-             "Maximum message type exceeded.\n");
-
     HIP_IFEL(!(new_entry = malloc(sizeof(struct usr_msg_handle))),
              -1,
              "Error on allocating memory for a handle function entry.\n");
@@ -107,20 +103,11 @@ out_err:
  *         Error   = -1
  */
 int hip_user_unregister_handle(const uint8_t msg_type,
-                               const int (*handle_func)(hip_common_t *msg,
-                                                        struct sockaddr_in6 *src))
+                               int (*handle_func)(hip_common_t *msg,
+                                                  struct sockaddr_in6 *src))
 {
-    int err = 0;
-
-    HIP_IFEL(msg_type > HIP_MSG_ROOT_MAX,
-             -1,
-             "Maximum message type exceeded.\n");
-
-    err = lmod_unregister_function(hip_user_msg_handles[msg_type],
-                                   handle_func);
-
-out_err:
-    return err;
+    return lmod_unregister_function(hip_user_msg_handles[msg_type],
+                                    handle_func);
 }
 
 /**
@@ -142,12 +129,7 @@ int hip_user_run_handles(const uint8_t msg_type,
                          hip_common_t *msg,
                          struct sockaddr_in6 *src)
 {
-    int            err  = 0;
     hip_ll_node_t *iter = NULL;
-
-    HIP_IFEL(msg_type > HIP_MSG_ROOT_MAX,
-             -1,
-             "Maximum message type exceeded.\n");
 
     if (!hip_user_msg_handles[msg_type] ||
         !hip_ll_get_size(hip_user_msg_handles[msg_type])) {
@@ -162,8 +144,7 @@ int hip_user_run_handles(const uint8_t msg_type,
         ((struct usr_msg_handle *) iter->ptr)->func_ptr(msg, src);
     }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
