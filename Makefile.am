@@ -478,7 +478,7 @@ lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 # when creating specific objects that may depend on version.h directly.
 BUILT_SOURCES = version.h
 $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
-	echo "#define BZR_REVISION \"$$(bzr revno $(srcdir))\"" > $@
+	echo "$$(bzr version-info $(srcdir) --custom --template="#define BZR_REVISION \"{revno}\"\n\n#define BZR_BRANCH \"{branch_nick}\"")" > $@
 
 # The complete doc/ subdirectory is in EXTRA_DIST, so files that should
 # not be distributed need to be deleted manually from the distribution.

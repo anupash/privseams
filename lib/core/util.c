@@ -15,7 +15,8 @@
  */
 int hip_print_version(const char *name)
 {
-    printf("%s %s (Bazaar revision %s)\n", name, VERSION, BZR_REVISION);
+    printf("%s %s (Bazaar branch-nick: '%s', revision: %s)\n",
+           name, VERSION, BZR_BRANCH, BZR_REVISION);
     printf("build configuration: %s\n", HIPL_CONFIGURATION);
     exit(EXIT_SUCCESS);
 }
