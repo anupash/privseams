@@ -108,14 +108,11 @@ int hip_set_lowcapability(int run_as_sudo)
     uid_t uid = -1;
 
 #ifdef CONFIG_HIP_ALTSEP
-
-#define LINUX_CAPABILITY_VERSION_HIPL  0x19980330
-
     struct __user_cap_header_struct header;
     struct __user_cap_data_struct data;
 
     header.pid     = 0;
-    header.version = LINUX_CAPABILITY_VERSION_HIPL;
+    header.version = _LINUX_CAPABILITY_VERSION_1;
     data.effective = data.permitted = data.inheritable = 0;
 
     HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
