@@ -19,23 +19,22 @@
 
 #define _BSD_SOURCE
 
-#include "config.h"
-
-#ifdef CONFIG_HIP_ALTSEP
-#include <linux/capability.h>
-int capget(cap_user_header_t header, cap_user_data_t data);
-int capset(cap_user_header_t header, const cap_user_data_t data);
-#else
-#include <sys/capability.h>
-#endif /* CONFIG_HIP_ALTSEP */
-
 #include <pwd.h>
+#include <unistd.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
-#include <unistd.h>
+
+#include "config.h"
 #include "debug.h"
 #include "ife.h"
 #include "hip_capability.h"
+
+#ifdef CONFIG_HIP_ALTSEP
+#include <linux/capability.h>
+#include <linux/unistd.h>
+#else
+#include <sys/capability.h>
+#endif /* CONFIG_HIP_ALTSEP */
 
 #define USER_NOBODY "nobody"
 #define USER_HIPD "hipd"
@@ -70,6 +69,32 @@ static int hip_user_to_uid(char *name)
     return uid;
 }
 
+#ifdef CONFIG_HIP_ALTSEP
+
+/**
+ * Wrapper for the capget system call.
+ * @param hdrp  pointer to a __user_cap_header_struct
+ * @param datap pointer to a __user_cap_data_struct
+ * @return      0 on success, negative otherwise.
+ */
+static inline int hip_capget(cap_user_header_t hdrp, cap_user_data_t datap)
+{
+    return syscall(__NR_capget, hdrp, datap);
+}
+
+/**
+ * Wrapper for the capset system call.
+ * @param hdrp  pointer to a __user_cap_header_struct
+ * @param datap pointer to a __user_cap_data_struct
+ * @retuen      0 on success, negative otherwise.
+ */
+static inline int hip_capset(cap_user_header_t hdrp, cap_user_data_t datap)
+{
+    return syscall(__NR_capset, hdrp, datap);
+}
+
+#endif /* CONFIG_HIP_ALTSEP */
+
 /**
  * Lower the privileges of the currently running process.
  *
@@ -101,7 +126,7 @@ int hip_set_lowcapability(int run_as_sudo)
 
     HIP_IFEL((uid < 0), -1,
              "Error while retrieving USER 'nobody' uid\n");
-    HIP_IFEL(capget(&header, &data), -1,
+    HIP_IFEL(hip_capget(&header, &data), -1,
              "error while retrieving capabilities through capget()\n");
     HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
               data.effective, data.permitted, data.inheritable);
@@ -113,7 +138,7 @@ int hip_set_lowcapability(int run_as_sudo)
 
     HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
               getuid(), geteuid());
-    HIP_IFEL(capget(&header, &data), -1,
+    HIP_IFEL(hip_capget(&header, &data), -1,
              "error while retrieving capabilities through 'capget()'\n");
 
     HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
@@ -127,7 +152,7 @@ int hip_set_lowcapability(int run_as_sudo)
     data.effective |= (1 << CAP_NET_ADMIN);
     data.permitted |= (1 << CAP_NET_ADMIN);
 
-    HIP_IFEL(capset(&header, &data), -1,
+    HIP_IFEL(hip_capset(&header, &data), -1,
              "error in capset (do you have capabilities kernel module?)");
     HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());
     HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
