@@ -393,6 +393,9 @@ static int hipd_main(int argc, char *argv[])
     /* default is long format */
     hip_set_logfmt(LOGFMT_LONG);
 
+    /* getopt(3) was first used in main(), so reset the start index */
+    optind = 1;
+
     /* Parse command-line options */
     while ((ch = getopt(argc, argv, ":bi:kNchafV")) != -1) {
         switch (ch) {
@@ -809,19 +812,34 @@ out_err:
  */
 int main(int argc, char *argv[])
 {
-    int err = 0;
-    uid_t euid;
 
-    euid = geteuid();
+    /* One should be able to check the hipd version and usage,
+     * even without having root privileges. Enforce the _first_
+     * parameter to be -h or -V in such a case.
+     */
+    switch (getopt(argc, argv, "hV")) {
+    case 'h':
+        usage();
+        return EXIT_SUCCESS;
+    case 'V':
+        hip_print_version("hipd");
+        return EXIT_SUCCESS;
+    }
+
     /* We need to recreate the NAT UDP sockets to bind to the new port. */
-    HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");
+    if (getuid()) {
+        HIP_ERROR("hipd must be started as root!\n");
+        return EXIT_FAILURE;
+    }
 
-    HIP_IFE(hipd_main(argc, argv), -1);
+    if (hipd_main(argc, argv)) {
+        return EXIT_FAILURE;
+    }
+
     if (hipd_get_flag(HIPD_FLAG_RESTART)) {
         HIP_INFO(" !!!!! HIP DAEMON RESTARTING !!!!! \n");
         hip_handle_exec_application(0, EXEC_LOADLIB_NONE, argc, argv);
     }
 
-out_err:
-    return err;
+    return EXIT_SUCCESS;
 }
