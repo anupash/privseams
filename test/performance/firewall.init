@@ -1,8 +1,0 @@
-#!/bin/sh
-
-ip6tables -A FORWARD -p 253 -j QUEUE
-ip6tables -A FORWARD -p 50 -j QUEUE
-ip6tables -A INPUT -p 253 -j QUEUE
-ip6tables -A INPUT -p 50 -j QUEUE
-ip6tables -A OUTPUT -p 253 -j QUEUE
-ip6tables -A OUTPUT -p 50 -j QUEUE
