@@ -33,17 +33,18 @@ anyway.
 How to build HIPL
 =================
 
+If you are working with a Bazaar checkout, you will have to bootstrap the
+autotools build system with
+
+  autoreconf --install
+
+before running configure. On subsequent times, you don't have give the
+install option.
+
 From the trunk directory in the HIPL sources, run the following command to
 build HIPL:
 
   ./configure && make
-
-If you are working with a Bazaar checkout, you will have to bootstrap the
-autotools build system with
-
-  autoreconf [--install]
-
-before running configure. First time, you must give the install option!
 
 ./configure --help will display the multitude of configuration options
 available for HIPL.
