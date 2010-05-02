@@ -11,10 +11,13 @@
 
 #include <limits.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
-#include <sys/prctl.h>
+//#include <sys/prctl.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <netinet/icmp6.h>
+#include <linux/unistd.h>
 
 #include "config.h"
 #include "hipd.h"
@@ -271,12 +274,12 @@ out_err:
 }
 
 /** CryptoAPI cipher and hashe modules */
-static char *kernel_crypto_mod[] = {
+static const char *kernel_crypto_mod[] = {
     "crypto_null", "aes", "des"
 };
 
 /** Tunneling, IPsec, interface and control modules */
-static char *kernel_net_mod[] = {
+static const char *kernel_net_mod[] = {
     "xfrm4_mode_beet", "xfrm6_mode_beet",
     "ip4_tunnel",      "ip6_tunnel",
     "esp4",            "esp6",
@@ -328,25 +331,59 @@ static int hip_probe_kernel_modules(void)
     return 0;
 }
 
+#if defined(CONFIG_HIP_PRIVSEP) || defined(CONFIG_HIP_ALTSEP)
+/**
+ * Remove a single module from the kernel, rmmod style (not modprobe).
+ * @param name  name of the module
+ * @return      0 on success, negative otherwise
+ */
+static inline int hip_rmmod(const char *name)
+{
+    return syscall(__NR_delete_module, name, O_NONBLOCK);
+}
+
+#endif
+
 /**
  * Cleanup/unload the kernel modules on hipd exit.
  * Unused for now because of unprivileged executions.
  * @todo Make hip_exit call it with root privileges in order to clean up.
  */
-static void __attribute__((unused)) hip_remove_kernel_modules(void)
+static void hip_remove_kernel_modules(void)
 {
-    char **mods[] = {kernel_crypto_mod, kernel_net_mod};
+    /* some net modules depend on crypto, so keep net modules first */
+    const char **mods[] = {kernel_net_mod, kernel_crypto_mod};
+    int count[2], type, i, ret;
+#if ! (defined(CONFIG_HIP_PRIVSEP) || defined(CONFIG_HIP_ALTSEP))
     char cmd[MODPROBE_MAX_LINE];
-    int count[2], type, i;
+#endif
 
-    count[0] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
-    count[1] = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
+    count[0] = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
+    count[1] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
 
     for (type = 0; type < 2; type++) {
         for (i = 0; i < count[type]; i++) {
-            snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s", mods[type][i]);
-            if (system(cmd)) {
-                HIP_DEBUG("Unable to remove the %s module!\n", mods[type][i]);
+#if defined(CONFIG_HIP_PRIVSEP) || defined(CONFIG_HIP_ALTSEP)
+            /* Although we still retain the CAP_SYS_MODULE capability,
+             * because of the new (post-2.6.24) rules governing capability
+             * inheritance (i.e. "permitted" and "effective") on execve
+             * we cannot call modprobe or rmmod, because their thread
+             * will run without CAP_SYS_MODULE and thus fail to do the job.
+             * Not as good as 'modprobe -r', but (way) better that nothing.
+             */
+            ret = hip_rmmod(mods[type][i]);
+#else
+            /* no privilege separation whatsoever, we are almighty */
+            snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s 2> /dev/null",
+                     mods[type][i]);
+            ret = system(cmd);
+#endif
+            if (ret) {
+                /* the errno is relevant in the hip_rmmod() case */
+                HIP_DEBUG("Unable to remove the %s module: %s.\n",
+                          mods[type][i], strerror(errno));
+            } else {
+                HIP_DEBUG("Removed the %s module.\n", mods[type][i]);
             }
         }
     }
@@ -800,7 +837,7 @@ void hip_exit(int signal)
 
     hip_dht_queue_uninit();
 
-    return;
+    hip_remove_kernel_modules();
 }
 
 /**

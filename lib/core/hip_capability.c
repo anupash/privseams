@@ -142,12 +142,15 @@ int hip_set_lowcapability(int run_as_sudo)
               data.effective, data.permitted, data.inheritable);
     HIP_DEBUG("Going to clear all capabilities except the ones needed\n");
     data.effective  = data.permitted = data.inheritable = 0;
-    // for CAP_NET_RAW capability
+    /* for CAP_NET_RAW capability */
     data.effective |= (1 << CAP_NET_RAW);
     data.permitted |= (1 << CAP_NET_RAW);
-    // for CAP_NET_ADMIN capability
+    /* for CAP_NET_ADMIN capability */
     data.effective |= (1 << CAP_NET_ADMIN);
     data.permitted |= (1 << CAP_NET_ADMIN);
+    /* kernel module loading and removal capability */
+    data.effective |= (1 << CAP_SYS_MODULE);
+    data.permitted |= (1 << CAP_SYS_MODULE);
 
     HIP_IFEL(hip_capset(&header, &data), -1,
              "error in capset (do you have capabilities kernel module?)");
@@ -159,8 +162,8 @@ out_err:
 
 #else /* ! ALTSEP */
 
-    cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
-    int ncap_list          = 2;
+    cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN, CAP_SYS_MODULE};
+    int ncap_list          = sizeof(cap_list) / sizeof(cap_list[0]);
     cap_t cap_p            = NULL;
     char *cap_s            = NULL;
     char *name             = NULL;
