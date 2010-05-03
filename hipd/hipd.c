@@ -174,7 +174,7 @@ static void usage(void)
     fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
     fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
     fprintf(stderr, "  -f set debug type format to short\n");
-    fprintf(stderr, "  -d set initial (pre-config) debug level to ALL\n");
+    fprintf(stderr, "  -d set the initial (pre-config) debug level to ALL (default is MEDIUM)\n");
     fprintf(stderr, "\n");
 }
 
@@ -831,6 +831,9 @@ int main(int argc, char *argv[])
      * that may crash the daemon and leave the SAs floating around to
      * disturb further base exchanges. Use -N flag to disable this. */
     sflags         |= HIPD_START_FLUSH_IPSEC;
+
+    /* set the initial verbosity level */
+    hip_set_logdebug(LOGDEBUG_MEDIUM);
 
     /* One should be able to check the hipd version and usage,
      * even without having root privileges.
