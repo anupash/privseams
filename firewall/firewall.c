@@ -2211,6 +2211,7 @@ int main(int argc, char **argv)
             break;
         case 'V':
             hip_print_version("hipfw");
+            return 0;
         case ':':         /* option without operand */
             printf("Option -%c requires an operand\n", optopt);
             errflg++;

@@ -243,7 +243,6 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/solve.c           \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
-                                 lib/core/util.c            \
                                  lib/tool/checksum.c        \
                                  lib/tool/lutil.c           \
                                  lib/tool/nlink.c           \

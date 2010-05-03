@@ -390,6 +390,7 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
             break;
         case 'V':
             hip_print_version("hipd");
+            return 0;
         case '?':
         case 'h':
         default:

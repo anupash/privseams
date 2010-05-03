@@ -203,6 +203,7 @@ int main(int argc, char *argv[])
         case ':':
         case 'V':
             hip_print_version("hipagent");
+            goto out_err;
         case 'h':
             fprintf(stderr, "no help available currently\n");
             goto out_err;
