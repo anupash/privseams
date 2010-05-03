@@ -9,7 +9,6 @@
 #include <stdio.h>
 
 #include "config.h"
-#include "util.h"
 #include "version.h"
 
 /**
