@@ -174,6 +174,7 @@ static void usage(void)
     fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
     fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
     fprintf(stderr, "  -f set debug type format to short\n");
+    fprintf(stderr, "  -d set initial (pre-config) debug level to ALL\n");
     fprintf(stderr, "\n");
 }
 
@@ -379,6 +380,9 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
         case 'f':
             HIP_INFO("Setting output format to short\n");
             hip_set_logfmt(LOGFMT_SHORT);
+            break;
+        case 'd':
+            hip_set_logdebug(LOGDEBUG_ALL);
             break;
         case 'V':
             hip_print_version("hipd");
