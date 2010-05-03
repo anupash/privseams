@@ -10,6 +10,7 @@
 #define _BSD_SOURCE
 
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -64,6 +65,9 @@
 #define ICMP6_FILTER_SETBLOCKALL(filterp) memset(filterp, 0xFF, sizeof(struct icmp6_filter));
 #endif
 /** end ICMPV6_FILTER related stuff */
+
+/* Startup flags of the HIPD. Keep the around, for they will be used at exit */
+static uint64_t sflags;
 
 /******************************************************************************/
 /**
@@ -331,7 +335,6 @@ static int hip_probe_kernel_modules(void)
     return 0;
 }
 
-#if defined(CONFIG_HIP_PRIVSEP) || defined(CONFIG_HIP_ALTSEP)
 /**
  * Remove a single module from the kernel, rmmod style (not modprobe).
  * @param name  name of the module
@@ -341,8 +344,6 @@ static inline int hip_rmmod(const char *name)
 {
     return syscall(__NR_delete_module, name, O_NONBLOCK);
 }
-
-#endif
 
 /**
  * Cleanup/unload the kernel modules on hipd exit.
@@ -354,30 +355,29 @@ static void hip_remove_kernel_modules(void)
     /* some net modules depend on crypto, so keep net modules first */
     const char **mods[] = {kernel_net_mod, kernel_crypto_mod};
     int count[2], type, i, ret;
-#if ! (defined(CONFIG_HIP_PRIVSEP) || defined(CONFIG_HIP_ALTSEP))
     char cmd[MODPROBE_MAX_LINE];
-#endif
 
     count[0] = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
     count[1] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
 
     for (type = 0; type < 2; type++) {
         for (i = 0; i < count[type]; i++) {
-#if defined(CONFIG_HIP_PRIVSEP) || defined(CONFIG_HIP_ALTSEP)
-            /* Although we still retain the CAP_SYS_MODULE capability,
-             * because of the new (post-2.6.24) rules governing capability
-             * inheritance (i.e. "permitted" and "effective") on execve
-             * we cannot call modprobe or rmmod, because their thread
-             * will run without CAP_SYS_MODULE and thus fail to do the job.
-             * Not as good as 'modprobe -r', but (way) better that nothing.
-             */
-            ret = hip_rmmod(mods[type][i]);
-#else
-            /* no privilege separation whatsoever, we are almighty */
-            snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s 2> /dev/null",
-                     mods[type][i]);
-            ret = system(cmd);
-#endif
+            if (sflags & HIPD_START_LOWCAP) {
+                /* Although we still retain the CAP_SYS_MODULE capability,
+                 * because of the new (post-2.6.24) rules governing capability
+                 * inheritance (i.e. "permitted" and "effective") on execve
+                 * we cannot call modprobe or rmmod, because their thread
+                 * will run without CAP_SYS_MODULE and thus fail to do the job.
+                 * Not as good as 'modprobe -r', but (way) better that nothing.
+                 */
+                ret = hip_rmmod(mods[type][i]);
+            } else {
+                /* no privilege separation whatsoever, we are almighty */
+                snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s 2> /dev/null",
+                         mods[type][i]);
+                ret = system(cmd);
+            }
+
             if (ret) {
                 /* the errno is relevant in the hip_rmmod() case */
                 HIP_DEBUG("Unable to remove the %s module: %s.\n",
@@ -989,6 +989,9 @@ int hipd_init(const uint64_t flags)
     char mtu[16];
     struct sockaddr_in6 daemon_addr;
 
+    /* Keep the flags around: they will be used at kernel module removal */
+    sflags = flags;
+
     memset(str, 0, 64);
     memset(mtu, 0, 16);
 
@@ -1162,10 +1165,9 @@ int hipd_init(const uint64_t flags)
     hip_relay_init();
 #endif
 
-#ifdef CONFIG_HIP_PRIVSEP
-    HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
-#endif /* CONFIG_HIP_PRIVSEP */
-
+    if (flags & HIPD_START_LOWCAP) {
+        HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
+    }
 
 #ifdef CONFIG_HIP_HI3
     if (hip_use_i3) {

@@ -230,6 +230,7 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/hashchain_store.c \
                                  lib/core/hashtable.c       \
                                  lib/core/hashtree.c        \
+                                 lib/core/hip_capability.c  \
                                  lib/core/hip_statistics.c  \
                                  lib/core/hip_udp.c         \
                                  lib/core/hit.c             \
@@ -259,10 +260,6 @@ endif
 
 if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/core/performance.c
-endif
-
-if HIP_PRIVSEP
-lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
 
 # don't use libipsec, but xfrmapi

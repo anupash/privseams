@@ -1194,14 +1194,6 @@ This is what I did:
    * rpmbuild --target i686 -ba --without kabichk /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
 
 
-VALGRIND AND HIPD
-=================
-
-On some machines, valgrind does not work without the following:
-
-  ./configure --disable-privsep && make clean all
-
-
 TEST MATRIX
 ===========
 

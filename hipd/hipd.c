@@ -351,7 +351,7 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
 {
     int c;
 
-    while ((c = getopt(argc, argv, ":bi:kNchafV")) != -1) {
+    while ((c = getopt(argc, argv, ":bi:kNchafVdp")) != -1) {
         switch (c) {
         case 'b':
             /* run in the "background" */
@@ -383,6 +383,10 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
             break;
         case 'd':
             hip_set_logdebug(LOGDEBUG_ALL);
+            break;
+        case 'p':
+            /* do _not_ use low capabilies ("privilege separation") */
+            *flags &= ~HIPD_START_LOWCAP;
             break;
         case 'V':
             hip_print_version("hipd");
@@ -824,7 +828,7 @@ out_err:
  */
 int main(int argc, char *argv[])
 {
-    uint64_t sflags = HIPD_START_FOREGROUND;
+    uint64_t sflags = HIPD_START_FOREGROUND | HIPD_START_LOWCAP;
 
     /* The flushing is enabled by default. The reason for this is that
      * people are doing some very experimental features on some branches

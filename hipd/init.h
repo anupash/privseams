@@ -30,6 +30,7 @@
 #define HIPD_START_FLUSH_IPSEC              (1 << 2)
 #define HIPD_START_KILL_OLD                 (1 << 3)
 #define HIPD_START_FIX_ALIGNMENT            (1 << 4)
+#define HIPD_START_LOWCAP                   (1 << 5)
 
 /*
  * HIP daemon initialization functions.

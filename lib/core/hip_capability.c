@@ -8,9 +8,7 @@
  * the damage of a exploit to the software. The code is Linux
  * specific.
  *
- * The capability code has been problematic with valgrind, the memory leak
- * detector. If you experience problems with valgrind, you can disable
- * capability code with ./configure --disable-privsep && make clean all
+ * This code causes problems with valgrind, because of setpwent(3).
  *
  * @brief Functionality to lower the privileges of a daemon
  *
@@ -29,12 +27,8 @@
 #include "ife.h"
 #include "hip_capability.h"
 
-#ifdef CONFIG_HIP_ALTSEP
 #include <linux/capability.h>
 #include <linux/unistd.h>
-#else
-#include <sys/capability.h>
-#endif /* CONFIG_HIP_ALTSEP */
 
 #define USER_NOBODY "nobody"
 #define USER_HIPD "hipd"
@@ -69,8 +63,6 @@ static int hip_user_to_uid(char *name)
     return uid;
 }
 
-#ifdef CONFIG_HIP_ALTSEP
-
 /**
  * Wrapper for the capget system call.
  * @param hdrp  pointer to a __user_cap_header_struct
@@ -93,8 +85,6 @@ static inline int hip_capset(cap_user_header_t hdrp, cap_user_data_t datap)
     return syscall(__NR_capset, hdrp, datap);
 }
 
-#endif /* CONFIG_HIP_ALTSEP */
-
 /**
  * Lower the privileges of the currently running process.
  *
@@ -107,7 +97,6 @@ int hip_set_lowcapability(int run_as_sudo)
     int err   = 0;
     uid_t uid = -1;
 
-#ifdef CONFIG_HIP_ALTSEP
     struct __user_cap_header_struct header;
     struct __user_cap_data_struct data;
 
@@ -159,76 +148,5 @@ int hip_set_lowcapability(int run_as_sudo)
               data.effective, data.permitted, data.inheritable);
 
 out_err:
-
-#else /* ! ALTSEP */
-
-    cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN, CAP_SYS_MODULE};
-    int ncap_list          = sizeof(cap_list) / sizeof(cap_list[0]);
-    cap_t cap_p            = NULL;
-    char *cap_s            = NULL;
-    char *name             = NULL;
-
-    /* @todo: does this work when you start hipd as root (without sudo) */
-
-    if (run_as_sudo) {
-        HIP_IFEL(!(name = getenv("SUDO_USER")), -1,
-                 "Failed to determine current username\n");
-    } else {
-        /* Check if user "hipd" exists if it does use it
-         * otherwise use "nobody" */
-        if (hip_user_to_uid(USER_HIPD) >= 0) {
-            name = USER_HIPD;
-        } else if (hip_user_to_uid(USER_NOBODY) >= 0) {
-            name = USER_NOBODY;
-        } else {
-            HIP_IFEL(1, -1, "System does not have nobody account\n");
-        }
-    }
-
-    HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
-
-    HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
-
-    uid = hip_user_to_uid(name);
-    HIP_IFEL((uid < 0), -1,
-             "Error while retrieving USER '%s' uid\n", name);
-
-    HIP_IFEL(!(cap_p = cap_get_proc()), -1,
-             "Error getting capabilities\n");
-    HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
-    /* It would be better to use #if DEBUG */
-    if (cap_s != NULL) {
-        cap_free(cap_s);
-        cap_s = NULL;
-    }
-
-    HIP_DEBUG("Before setreuid UID=%d and EFF_UID=%d\n",
-              getuid(), geteuid());
-
-    HIP_IFEL(setreuid(uid, uid), -1, "setruid failed\n");
-
-    HIP_DEBUG("After setreuid UID=%d and EFF_UID=%d\n",
-              getuid(), geteuid());
-
-    HIP_DEBUG("Going to clear all capabilities except the ones needed\n");
-    HIP_IFEL(cap_clear(cap_p) < 0, -1, "Error clearing capabilities\n");
-
-    HIP_IFEL(cap_set_flag(cap_p, CAP_EFFECTIVE, ncap_list, cap_list, CAP_SET) < 0,
-             -1, "Error setting capability flags\n");
-    HIP_IFEL(cap_set_flag(cap_p, CAP_PERMITTED, ncap_list, cap_list, CAP_SET) < 0,
-             -1, "Error setting capability flags\n");
-    HIP_IFEL(cap_set_proc(cap_p) < 0, -1, "Error modifying capabilities\n");
-    HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());
-    HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
-    /* It would be better to use #if DEBUG */
-    if (cap_s != NULL) {
-        cap_free(cap_s);
-        cap_s = NULL;
-    }
-
-out_err:
-    cap_free(cap_p);
-
-#endif
     return err;
 }

@@ -2341,11 +2341,9 @@ int main(int argc, char **argv)
         return err;
     }
 
-#ifdef CONFIG_HIP_PRIVSEP
     if (limit_capabilities) {
         HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
     }
-#endif
 
 #ifdef CONFIG_HIP_HIPPROXY
     //send hipproxy status request before the control thread running.
