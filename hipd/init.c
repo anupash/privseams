@@ -977,15 +977,13 @@ out_err:
 
 /**
  * Main initialization function for HIP daemon.
- *
- * @param flush_ipsec one if ipsec should be flushed or zero otherwise
- * @param killold one if an existing hipd process should be killed or
- *                zero otherwise
- * @return zero on success or negative on failure
+ * @param flags startup flags
+ * @return      zero on success or negative on failure
  */
-int hipd_init(int flush_ipsec, int killold)
+int hipd_init(const uint64_t flags)
 {
-    int err              = 0, certerr = 0, hitdberr = 0;
+    int err     = 0, certerr = 0, hitdberr = 0;
+    int killold = ((flags & HIPD_START_KILL_OLD) > 0);
     unsigned int mtu_val = HIP_HIT_DEV_MTU;
     char str[64];
     char mtu[16];
@@ -1083,7 +1081,7 @@ int hipd_init(int flush_ipsec, int killold)
     HIP_DEBUG("hip_nat_sock_udp output = %d\n", hip_nat_sock_output_udp);
     HIP_DEBUG("hip_icmp_sock = %d\n",           hip_icmp_sock);
 
-    if (flush_ipsec) {
+    if (flags & HIPD_START_FLUSH_IPSEC) {
         default_ipsec_func_set.hip_flush_all_sa();
         default_ipsec_func_set.hip_flush_all_policy();
     }

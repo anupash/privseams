@@ -24,11 +24,16 @@
 #include "hi3.h"
 #include "nsupdate.h"
 
+/* startup flags options to be configured via the command line */
+#define HIPD_START_FOREGROUND               (1 << 0)
+#define HIPD_START_CREATE_CONFIG_AND_EXIT   (1 << 1)
+#define HIPD_START_FLUSH_IPSEC              (1 << 2)
+#define HIPD_START_KILL_OLD                 (1 << 3)
+#define HIPD_START_FIX_ALIGNMENT            (1 << 4)
+
 /*
  * HIP daemon initialization functions.
- *
  */
-
 extern int hip_use_i3;
 extern hip_ipsec_func_set_t default_ipsec_func_set;
 extern int hip_firewall_sock_fd;
@@ -36,7 +41,7 @@ extern int hip_firewall_sock_lsi_fd;
 
 int hip_associate_default_hit_lsi(void);
 
-int hipd_init(int flush_ipsec, int killold);
+int hipd_init(const uint64_t flags);
 /**
  * Creates a UDP socket for NAT traversal.
  *
