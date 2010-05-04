@@ -3,7 +3,7 @@
 VERSION=
 NAME=hipl
 PKGROOT=$PWD
-PKGEXE=$PKGROOT/test/packaging
+PKGEXE=$PKGROOT/packaging
 PKG_WEB_DIR=
 PKG_SERVER_DIR=
 DEBDIR=$PWD/debbuild

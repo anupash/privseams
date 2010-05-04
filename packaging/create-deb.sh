@@ -51,7 +51,7 @@ NAMEGPL=libhiptool
 DEBIAN=${DEBARCH}/DEBIAN
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
-PKGROOT=$PWD/test/packaging
+PKGROOT=$PWD/packaging
 PKGDIR=$PKGROOT/${NAME}${PKG_SUFFIX}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}${PKG_SUFFIX}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
@@ -316,7 +316,7 @@ copy_and_package_files ()
 
     inst hipd/hipd $PKGDIR/usr/sbin/
     echo "** Copying init.d script to $PKGDIR"
-    inst test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
+    inst packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -337,7 +337,7 @@ copy_and_package_files ()
     inst firewall/hipfw $PKGDIR/usr/sbin/
 
     echo "** Copying init.d script to $PKGDIR"
-    inst test/packaging/debian-init.d-hipfw $PKGDIR/etc/init.d/hipfw
+    inst packaging/debian-init.d-hipfw $PKGDIR/etc/init.d/hipfw
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -379,7 +379,7 @@ copy_and_package_files ()
     inst tools/nsupdate.pl $PKGDIR/usr/sbin
 
     echo "** Copying init.d script to $PKGDIR"
-    inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/hipdnsproxy
+    inst packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/hipdnsproxy
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -400,7 +400,7 @@ copy_and_package_files ()
     inst tools/hipconf $PKGDIR/usr/sbin/
 
     echo "** Copying init.d script to $PKGDIR"
-    inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/hipdnsproxy
+    inst packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/hipdnsproxy
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;

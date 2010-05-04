@@ -1579,7 +1579,7 @@ $ make V=99
       </programlisting></para>
 
       <para>
-      The packages will be created in test/packaging/
+      The packages will be created in packaging/
       </para>
 
       </section>

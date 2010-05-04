@@ -41,7 +41,7 @@ Also, the min_replica_count value should be set to 1, since only one gateway is 
 
 
 
-In test/packaging/ inside hipd code, there are some sample /etc/init.d/ scripts for running both bamboo versions (ipv4 and ipv6) on fedora and ubuntu:
+In packaging/ inside hipl code, there are some sample /etc/init.d/ scripts for running both bamboo versions (ipv4 and ipv6) on fedora and ubuntu:
         ubuntu-init.d-bamboo_v4
         ubuntu-init.d-bamboo_v6
         fedora-init.d-bamboo_v4

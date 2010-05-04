@@ -1,19 +1,18 @@
-
 Name: hipl
 Summary: HIP IPsec key management and mobility daemon.
 # Note: Version and Release are read automatically from topdir release.version
-URL: http://infrahip.hiit.fi/
+# To check that this file is in correct format, type
+# ./debbuild --showpkgs hipl-deb.spec
+URL: http://infrahip.hiit.fi
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
-#Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: gcc gcc-c++ openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpm-build
+BuildRequires: automake, autoconf, libtool, gcc, libgtk2.0-dev, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev, libsqlite3-dev
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
-
 %description
 
 Host Identity Protocol (HIP) provides cryptographic authentication to
@@ -32,6 +31,12 @@ autoreconf --install
 %configure --prefix=/usr
 make -j 4 all
 
+# Note:
+# This debbuild script is fragile and does not tolerate comments well.
+# Keep all comments and notes here.
+#
+# Note:
+#
 # Currently we are not going to install all includes and test software.
 # As a consequence, we need to tell rpmbuild that we don't want to package
 # everything and need the following two lines. In fact, the build fails
@@ -39,22 +44,33 @@ make -j 4 all
 # before building the final release just to check that you have not discarded
 # any essential files.
 #
-#%define _unpackaged_files_terminate_build 0
-#%define _missing_doc_files_terminate_build 0
-%define python_sitelib %(%{__python} -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
-
-
-# Note: we are not distributing everything from test directory, just essentials
-
+#define _unpackaged_files_terminate_build 0
+#define _missing_doc_files_terminate_build 0
+#define python_sitelib __python -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
+#
+# Note:
+# we are not distributing everything from test directory, just essentials
+#
 # create subpackage
 # list of files with the name of subpackage
+#
+# Note: earlier the contents of "all" and "minimal" was just "."
+# It doesn't work anymore with Rene's changes to the update version of
+# debbuild. Currently they include some files to get the binaries compiled.
+# Fix this workaround.
+#
+# Note:
+# - 64-bit binaries should go to lib64
+#
+# Note: the post rules used to be like this (does not work anymore)
+# - update-rc.d hipfw start 20 S . stop 80 0 6 .
+# - invoke-rc.d --quiet hipdnsproxy start
 
-# XX TODO: copy descriptions from hipl-deb.spec and make sure rpm still builds
 
 %package all
-Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
+Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
 Group: System Environment/Kernel
-Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-test hipl-doc hipl-dnsproxy
+Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-test, hipl-doc, hipl-dnsproxy
 %description all
 
 %package minimal
@@ -66,17 +82,17 @@ Requires: hipl-lib hipl-daemon hipl-tools
 %package lib
 Summary: HIP for Linux libraries
 Group: System Environment/Kernel
-Requires: openssl libxml2 gtk2 iptables libcap sqlite
+Requires: openssl, libxml2, libgtk2.0-0, iptables, libcap2, libsqlite3-0
 %description lib
 
 %package daemon
-Requires: hipl-lib perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
+Requires: hipl-lib, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
 
 %package tools
-Requires: hipl-lib hipl-daemon
+Requires: hipl-lib, hipl-daemon
 Summary: Command line tools to control hipd from command line
 Group: System Environment/Kernel
 %description tools
@@ -88,7 +104,7 @@ Group: System Environment/Kernel
 %description firewall
 
 %package test
-Requires: hipl-lib hipl-daemon
+Requires: hipl-daemon
 Summary: netcat-like command line tools with built-in HIP support for developers
 Group: System Environment/Kernel
 %description test
@@ -99,13 +115,13 @@ Group: System Environment/Kernel
 %description doc
 
 %package dnsproxy
-Requires: python hipl-lib
+Requires: python, hipl-lib
 Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS, DHT or hosts files
 Group: System Environment/Kernel
 %description dnsproxy
 
 %package agent
-Requires: hipl-lib hipl-daemon
+Requires: hipl-lib, hipl-daemon
 Summary: Graphical user interface for HIP for Linux. Provides user-friendly access control "buddy" lists for HIP.
 Group: System Environment/Kernel
 %description agent
@@ -113,142 +129,106 @@ Group: System Environment/Kernel
 %install
 rm -rf %{buildroot}
 
-#added by CentOS
-install -d %{buildroot}%{prefix}/share/pixmaps
-#end CentOS add
-
-# XX FIXME: add more python stuff from tools directory
-
-install -d %{buildroot}%{prefix}/bin
-install -d %{buildroot}%{prefix}/sbin
-install -d %{buildroot}%{prefix}/lib
-install -d %{buildroot}/etc/rc.d/init.d
+install -d %{buildroot}/usr/share/pixmaps
+install -m 644 lib/gui/hipmanager.png %{buildroot}/usr/share/pixmaps
+install -d %{buildroot}/usr/bin
+install -d %{buildroot}/usr/sbin
+install -d %{buildroot}/usr/lib
+install -d %{buildroot}/etc/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
-install -m 755 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
-install -m 755 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
-install -m 755 test/packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
+install -m 755 packaging/debian-init.d-hipfw %{buildroot}/etc/init.d/hipfw
+install -m 755 packaging/debian-init.d-hipd %{buildroot}/etc/init.d/hipd
+install -m 755 packaging/debian-init.d-dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
-install -d %{buildroot}%{python_sitelib}/DNS
-install -t %{buildroot}%{python_sitelib}/DNS tools/hipdnsproxy/DNS/*py*
-install -d %{buildroot}%{python_sitelib}
-install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/pyip6.py*
-install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/hosts.py*
-install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/util.py*
-install -t %{buildroot}%{python_sitelib} tools/hipdnskeyparse/myasn.py*
-# required in CentOS release 5.2
-install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}%{prefix}/sbin/hipdnskeyparse
-install -m 755 tools/hipdnsproxy/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
+install -d %{buildroot}/usr/lib/python2.6/dist-packages/DNS
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/DNS tools/hipdnsproxy/DNS/*py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/pyip6.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/hosts.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/util.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnskeyparse/myasn.py*
+install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hipdnsproxy/hipdnsproxy
+install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
+install -m 755 tools/hipdnsproxy/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
+install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post lib
 /sbin/ldconfig
 
 %post daemon
-if [ "$1" = "2" ]
-then
-        # upgrade
-        /sbin/service hipd restart
-else
-        # first install
-        /sbin/chkconfig --add hipd
-        /sbin/chkconfig --level 2 hipd on
-        /sbin/service hipd start
-fi
-
-%preun daemon
-if [ "$1" = "0" ]
-then
-        # removing package completely
-        /sbin/service hipd stop
-        /sbin/chkconfig --del hipd
-fi
-
-%post dnsproxy
-if [ "$1" = "2" ]
-then
-        # upgrade
-        /sbin/service hipdnsproxy restart
-else
-        # first install
-        /sbin/chkconfig --add hipdnsproxy
-        /sbin/chkconfig --level 2 hipdnsproxy on
-        /sbin/service hipdnsproxy start
-fi
-
-%preun dnsproxy
-if [ "$1" = "0" ]
-then
-        # removing package completely
-        /sbin/service hipdnsproxy stop
-        /sbin/chkconfig --del hipdnsproxy
-fi
+update-rc.d hipd defaults 21
+invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop
+invoke-rc.d hipd start
 
 %post firewall
-if [ "$1" = "2" ]
-then
-        # upgrade
-        /sbin/service hipfw restart
-else
-        # first install
-        /sbin/chkconfig --add hipfw
-        /sbin/chkconfig --level 2 hipfw on
-        /sbin/service hipfw start
-fi
+update-rc.d hipfw defaults 20
+invoke-rc.d --quiet hipfw status >/dev/null && invoke-rc.d --force --quiet hipfw stop
+invoke-rc.d hipfw start
+
+%post dnsproxy
+update-rc.d hipdnsproxy defaults 22
+invoke-rc.d --quiet hipdnsproxy status >/dev/null && invoke-rc.d --force --quiet hipdnsproxy stop
+invoke-rc.d hipdnsproxy start
+
+%preun daemon
+invoke-rc.d --quiet hipd status >/dev/null && invoke-rc.d --force --quiet hipd stop
+update-rc.d -f hipd remove
 
 %preun firewall
-if [ "$1" = "0" ]
-then
-        # removing package completely
-        /sbin/service hipfw stop
-        /sbin/chkconfig --del hipfw
-fi
+invoke-rc.d --quiet hipfw status >/dev/null && invoke-rc.d --force --quiet hipfw stop
+update-rc.d -f hipfw remove
+
+%preun dnsproxy
+invoke-rc.d --quiet hipdnsproxy status >/dev/null && invoke-rc.d --force --quiet hipdnsproxy stop
+update-rc.d -f hipdnsproxy remove
 
 %clean
 rm -rf %{buildroot}
 
-# XX TODO: 64-bit binaries should go to lib64 not lib
 %files lib
 %{_libdir}
 
 %files daemon
-%{prefix}/sbin/hipd
-%config /etc/rc.d/init.d/hipd
+/usr/sbin/hipd
+%config /etc/init.d/hipd
 
 %files agent
-%{prefix}/sbin/hipagent
+/usr/share/pixmaps/hipmanager.png
+/usr/sbin/hipagent
 
 %files dnsproxy
-%{prefix}/sbin/hipdnsproxy
-%{prefix}/sbin/hipdnskeyparse
-%{python_sitelib}/hipdnsproxy
-%{python_sitelib}/hipdnskeyparse
-%{python_sitelib}/DNS
+/usr/sbin/hipdnsproxy
+/usr/sbin/hipdnskeyparse
 %defattr(755,root,root)
-%config /etc/rc.d/init.d/hipdnsproxy
+%config /etc/init.d/hipdnsproxy
+
 
 %files tools
-%{prefix}/sbin/hipconf
-%{prefix}/sbin/nsupdate.pl
+/usr/sbin/hipconf
+/usr/sbin/nsupdate.pl
 %defattr(755,root,root)
 
 %files test
-%{prefix}/bin/conntest-client-opp
-%{prefix}/bin/conntest-client-hip
-%{prefix}/bin/conntest-server
+/usr/bin/conntest-client-opp
+/usr/bin/conntest-client-hip
+/usr/bin/conntest-server
 
 %files firewall
-%{prefix}/sbin/hipfw
-%config /etc/rc.d/init.d/hipfw
+/usr/sbin/hipfw
+%config /etc/init.d/hipfw
 
 %files doc
-%doc doc/HOWTO.txt doc/howto-html
+%doc doc/HOWTO.txt doc/HOWTO.html
 
 %files all
+%doc COPYING
 
 %files minimal
-
+%doc doc/HACKING
 
 %changelog
+* Fri Nov 20 2009 Miika Komu <miika@iki.fi>
+- Loads of new stuff, including enhanced mobility
 * Wed Dec 31 2008 Miika Komu <miika@iki.fi>
 - Packaging improvements and lots of testing
 * Wed Aug 20 2008 Miika Komu <miika@iki.fi>

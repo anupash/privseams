@@ -6,7 +6,7 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd
 EXTRA_DIST =  .vimrc debian doc patches release.version version.h
 EXTRA_DIST += i3/i3-cfg-PL.xml i3/aeshash/aescpp.hh i3/i3/i3_debug.c i3/utils/netwrap_win32.c
 EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
-EXTRA_DIST += test/maintainer test/packaging
+EXTRA_DIST += packaging test/maintainer
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/agent/,*.lang))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/dht/,*.txt))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
@@ -450,7 +450,7 @@ clean-local:
 
 # The olddeb target is for maemo builds only
 bin deb increl olddeb rpm syncrepo:
-	env PYEXECDIR=$(pyexecdir) @srcdir@/test/packaging/create-package.sh $@
+	env PYEXECDIR=$(pyexecdir) @srcdir@/packaging/create-package.sh $@
 
 autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
@@ -473,7 +473,7 @@ lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 # Ensure that version.h is created before everything else. This does not work
 # when creating specific objects that may depend on version.h directly.
 BUILT_SOURCES = version.h
-$(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
+$(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision) Makefile
 	echo "$$(bzr version-info $(srcdir) --custom --template="#define BZR_REVISION \"{revno}\"\n\n#define BZR_BRANCH \"{branch_nick}\"")" > $@
 
 # The complete doc/ subdirectory is in EXTRA_DIST, so files that should
