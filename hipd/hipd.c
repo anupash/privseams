@@ -344,8 +344,7 @@ int hip_sendto_firewall(const struct hip_common *msg)
  * @param argc  number of command line parameters
  * @param argc  command line parameters
  * @param flags pointer to the startup flags container
- * @return      0 on success, negative if an option is not recognized or
-                if the user requested the usage message
+ * @return      nonzero if the caller should exit, 0 otherwise
  */
 static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
 {
@@ -390,7 +389,7 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
             break;
         case 'V':
             hip_print_version("hipd");
-            return 0;
+            return -1;
         case '?':
         case 'h':
         default:
@@ -844,7 +843,7 @@ int main(int argc, char *argv[])
      * even without having root privileges.
      */
     if (hipd_parse_cmdline_opts(argc, argv, &sflags)) {
-        return EXIT_FAILURE;
+        return EXIT_SUCCESS;
     }
 
     /* We need to recreate the NAT UDP sockets to bind to the new port. */
