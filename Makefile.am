@@ -314,7 +314,6 @@ i3_libi3_la_SOURCES = i3/aeshash/aescrypt.c              \
 
 i3_chord_libchord_la_SOURCES = i3/chord/api.c        \
                                i3/chord/chord.c      \
-                               i3/chord/eprintf.c    \
                                i3/chord/finger.c     \
                                i3/chord/hosts.c      \
                                i3/chord/join.c       \
@@ -323,6 +322,7 @@ i3_chord_libchord_la_SOURCES = i3/chord/api.c        \
                                i3/chord/sendpkt.c    \
                                i3/chord/stabilize.c  \
                                i3/chord/util.c       \
+                               i3/utils/eprintf.c    \
                                i3/utils/gen_utils.c
 
 i3_chord_chord_getfingers_SOURCES = i3/chord/chord_getfingers.c

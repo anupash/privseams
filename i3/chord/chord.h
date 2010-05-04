@@ -343,6 +343,6 @@ int sim_chord_is_local(Server *srv, chordID *x);
 double sim_get_time(void);
 #endif
 
-#include "eprintf.h"
+#include "i3/utils/eprintf.h"
 
 #endif /* INCL_CHORD_H */
