@@ -473,7 +473,7 @@ lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 # Ensure that version.h is created before everything else. This does not work
 # when creating specific objects that may depend on version.h directly.
 BUILT_SOURCES = version.h
-$(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision) Makefile
+$(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
 	echo "$$(bzr version-info $(srcdir) --custom --template="#define BZR_REVISION \"{revno}\"\n\n#define BZR_BRANCH \"{branch_nick}\"")" > $@
 
 # The complete doc/ subdirectory is in EXTRA_DIST, so files that should
