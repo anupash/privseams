@@ -99,7 +99,7 @@ CONFIGURE_VARS += \
 define Build/Configure
 	$(call Build/Configure/Default, \
             --enable-shared \
-            --disable-privsep \
+            --enable-performance \
             --disable-debug \
     );
 endef

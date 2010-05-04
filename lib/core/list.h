@@ -9,6 +9,12 @@
 
 #include <openssl/lhash.h>
 
+#ifdef LHASH_OF
+#define LHASH_CAST (_LHASH *)
+#else
+#define LHASH_CAST
+#endif
+
 typedef LHASH_NODE hip_list_t;
 
 /**
@@ -24,11 +30,7 @@ typedef LHASH_NODE hip_list_t;
  * @param entry the entry to find from the list
  * @param head the head for your list.
  */
-#ifdef LHASH_OF
-#define list_find(entry, head) lh_retrieve((_LHASH *) head, entry)
-#else
-#define list_find(entry, head) lh_retrieve(head, entry)
-#endif
+#define list_find(entry, head) lh_retrieve(LHASH_CAST head, entry)
 
 /**
  * list_for_each - iterate over list of given type
@@ -60,11 +62,7 @@ typedef LHASH_NODE hip_list_t;
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-#ifdef LHASH_OF
-#define list_add(entry, head) lh_insert((_LHASH *) head, entry)
-#else
-#define list_add(entry, head) lh_insert(head, entry)
-#endif
+#define list_add(entry, head) lh_insert(LHASH_CAST head, entry)
 
 /**
  * list_del - deletes entry from list.
@@ -72,10 +70,6 @@ typedef LHASH_NODE hip_list_t;
  * Note: list_empty on entry does not return true after this, the entry is
  * in an undefined state.
  */
-#ifdef LHASH_OF
-#define list_del(entry, head) lh_delete((_LHASH *) head, entry)
-#else
-#define list_del(entry, head) lh_delete(head, entry)
-#endif
+#define list_del(entry, head) lh_delete(LHASH_CAST head, entry)
 
 #endif /* HIP_LIB_CORE_LIST_H */

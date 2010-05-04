@@ -1948,6 +1948,7 @@ int main(int argc, char **argv)
             break;
         case 'V':
             hip_print_version("hipfw");
+            return 0;
         case ':':         /* option without operand */
             printf("Option -%c requires an operand\n", optopt);
             errflg++;
@@ -2074,11 +2075,9 @@ int main(int argc, char **argv)
         return err;
     }
 
-#ifdef CONFIG_HIP_PRIVSEP
     if (limit_capabilities) {
         HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
     }
-#endif
 
     highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
 

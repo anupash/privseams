@@ -10,15 +10,15 @@
 #define _BSD_SOURCE
 
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
-#include <sys/prctl.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/time.h>
+
+#include <sys/syscall.h>
 #include <sys/types.h>
-#include <sys/utsname.h>
-#include <sys/wait.h>
+#include <netinet/icmp6.h>
+#include <linux/unistd.h>
 
 #include "config.h"
 #include "hipd.h"
@@ -63,6 +63,9 @@
 #define ICMP6_FILTER_SETBLOCKALL(filterp) memset(filterp, 0xFF, sizeof(struct icmp6_filter));
 #endif
 /** end ICMPV6_FILTER related stuff */
+
+/* Startup flags of the HIPD. Keep the around, for they will be used at exit */
+static uint64_t sflags;
 
 /******************************************************************************/
 /**
@@ -220,12 +223,12 @@ out_err:
  */
 
 /** CryptoAPI cipher and hashe modules */
-static char *kernel_crypto_mod[] = {
+static const char *kernel_crypto_mod[] = {
     "crypto_null", "aes", "des"
 };
 
 /** Tunneling, IPsec, interface and control modules */
-static char *kernel_net_mod[] = {
+static const char *kernel_net_mod[] = {
     "xfrm4_mode_beet", "xfrm6_mode_beet",
     "ip4_tunnel",      "ip6_tunnel",
     "esp4",            "esp6",
@@ -278,24 +281,54 @@ static int hip_probe_kernel_modules(void)
 }
 
 /**
+ * Remove a single module from the kernel, rmmod style (not modprobe).
+ * @param name  name of the module
+ * @return      0 on success, negative otherwise
+ */
+static inline int hip_rmmod(const char *name)
+{
+    return syscall(__NR_delete_module, name, O_NONBLOCK);
+}
+
+/**
  * Cleanup/unload the kernel modules on hipd exit.
  * Unused for now because of unprivileged executions.
  * @todo Make hip_exit call it with root privileges in order to clean up.
  */
-static void __attribute__((unused)) hip_remove_kernel_modules(void)
+static void hip_remove_kernel_modules(void)
 {
-    char **mods[] = {kernel_crypto_mod, kernel_net_mod};
+    /* some net modules depend on crypto, so keep net modules first */
+    const char **mods[] = {kernel_net_mod, kernel_crypto_mod};
+    int count[2], type, i, ret;
     char cmd[MODPROBE_MAX_LINE];
-    int count[2], type, i;
 
-    count[0] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
-    count[1] = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
+    count[0] = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
+    count[1] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
 
     for (type = 0; type < 2; type++) {
         for (i = 0; i < count[type]; i++) {
-            snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s", mods[type][i]);
-            if (system(cmd)) {
-                HIP_DEBUG("Unable to remove the %s module!\n", mods[type][i]);
+            if (sflags & HIPD_START_LOWCAP) {
+                /* Although we still retain the CAP_SYS_MODULE capability,
+                 * because of the new (post-2.6.24) rules governing capability
+                 * inheritance (i.e. "permitted" and "effective") on execve
+                 * we cannot call modprobe or rmmod, because their thread
+                 * will run without CAP_SYS_MODULE and thus fail to do the job.
+                 * Not as good as 'modprobe -r', but (way) better that nothing.
+                 */
+                ret = hip_rmmod(mods[type][i]);
+            } else {
+                /* no privilege separation whatsoever, we are almighty */
+                snprintf(cmd, sizeof(cmd), "/sbin/modprobe -r %s 2> /dev/null",
+                         mods[type][i]);
+                ret = system(cmd);
+            }
+
+            if (ret) {
+                /* the errno is relevant in the hip_rmmod() case */
+                HIP_DEBUG("Unable to remove the %s module: %s.\n",
+                          mods[type][i], strerror(errno));
+            } else {
+                HIP_DEBUG("Removed the %s module.\n", mods[type][i]);
             }
         }
     }
@@ -684,19 +717,20 @@ static int hip_init_handle_functions(void)
 
 /**
  * Main initialization function for HIP daemon.
- *
- * @param flush_ipsec one if ipsec should be flushed or zero otherwise
- * @param killold one if an existing hipd process should be killed or
- *                zero otherwise
- * @return zero on success or negative on failure
+ * @param flags startup flags
+ * @return      zero on success or negative on failure
  */
-int hipd_init(int flush_ipsec, int killold)
+int hipd_init(const uint64_t flags)
 {
     int err = 0, certerr = 0, hitdberr = 0, i, j;
+    int killold = ((flags & HIPD_START_KILL_OLD) > 0);
     unsigned int mtu_val = HIP_HIT_DEV_MTU;
     char str[64];
     char mtu[16];
     struct sockaddr_in6 daemon_addr;
+
+    /* Keep the flags around: they will be used at kernel module removal */
+    sflags = flags;
 
     memset(str, 0, 64);
     memset(mtu, 0, 16);
@@ -796,7 +830,7 @@ int hipd_init(int flush_ipsec, int killold)
     HIP_DEBUG("hip_nat_sock_udp input = %d\n", hip_nat_sock_input_udp);
     HIP_DEBUG("hip_nat_sock_udp output = %d\n", hip_nat_sock_output_udp);
 
-    if (flush_ipsec) {
+    if (flags & HIPD_START_FLUSH_IPSEC) {
         hip_flush_all_sa();
         hip_flush_all_policy();
     }
@@ -852,9 +886,9 @@ int hipd_init(int flush_ipsec, int killold)
     hip_relay_init();
 #endif
 
-#ifdef CONFIG_HIP_PRIVSEP
-    HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
-#endif /* CONFIG_HIP_PRIVSEP */
+    if (flags & HIPD_START_LOWCAP) {
+        HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
+    }
 
     hip_firewall_sock_lsi_fd = hip_user_sock;
 
@@ -1099,6 +1133,8 @@ void hip_exit(int signal)
     hip_dh_uninit();
 
     lmod_uninit_disabled_modules();
+
+    hip_remove_kernel_modules();
 
     return;
 }

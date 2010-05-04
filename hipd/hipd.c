@@ -9,6 +9,8 @@
 
 #define _BSD_SOURCE
 
+#include <stdint.h>
+
 #include "config.h"
 #include "hipd.h"
 #include "hip_socket.h"
@@ -131,8 +133,9 @@ static void usage(void)
     fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
     fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
     fprintf(stderr, "  -f set debug type format to short\n");
-    fprintf(stderr, "  -d <module name> disable this module. " \
-            "Use additional -d for additional modules.\n");
+    fprintf(stderr, "  -d set the initial (pre-config) debug level to ALL (default is MEDIUM)\n");
+    fprintf(stderr, "  -D <module name> disable this module. " \
+            "Use additional -D for additional modules.\n");
     fprintf(stderr, "\n");
 }
 
@@ -169,26 +172,85 @@ int hip_sendto_firewall(const struct hip_common *msg)
 }
 
 /**
- * Daemon "main" function.
- *
- * @param argc number of command line arguments
- * @param argv the command line arguments
- * @return zero on success or negative on error
+ * Parse the command line options
+ * @param argc  number of command line parameters
+ * @param argc  command line parameters
+ * @param flags pointer to the startup flags container
+ * @return      nonzero if the caller should exit, 0 otherwise
  */
-static int hipd_main(int argc, char *argv[])
+static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
 {
-    int ch, killold = 0;
-    fd_set read_fdset;
-    int foreground = 1, highest_descriptor = 0, err = 0, fix_alignment = 0;
+    int c;
+
+    while ((c = getopt(argc, argv, ":bi:kNchafVdpD:")) != -1) {
+        switch (c) {
+        case 'b':
+            /* run in the "background" */
+            *flags &= ~HIPD_START_FOREGROUND;
+            break;
+        case 'i':
+            if (hip_netdev_white_list_add(optarg)) {
+                HIP_INFO("Successfully added device <%s> to white list.\n", optarg);
+            } else {
+                HIP_DIE("Error adding device <%s> to white list. Dying...\n", optarg);
+            }
+            break;
+        case 'k':
+            *flags |= HIPD_START_KILL_OLD;
+            break;
+        case 'N':
+            /* do NOT flush IPsec DBs */
+            *flags &= ~HIPD_START_FLUSH_IPSEC;
+            break;
+        case 'c':
+            *flags |= HIPD_START_CREATE_CONFIG_AND_EXIT;
+            break;
+        case 'a':
+            *flags |= HIPD_START_FIX_ALIGNMENT;
+            break;
+        case 'f':
+            HIP_INFO("Setting output format to short\n");
+            hip_set_logfmt(LOGFMT_SHORT);
+            break;
+        case 'd':
+            hip_set_logdebug(LOGDEBUG_ALL);
+            break;
+        case 'D':
+            if (!lmod_disable_module(optarg)) {
+               HIP_DEBUG("Module '%s' disabled.\n", optarg);
+            } else {
+               HIP_ERROR("Error while disabling module '%s'.\n", optarg);
+            }
+            break;
+        case 'p':
+            /* do _not_ use low capabilies ("privilege separation") */
+            *flags &= ~HIPD_START_LOWCAP;
+            break;
+        case 'V':
+            hip_print_version("hipd");
+            return -1;
+        case '?':
+        case 'h':
+        default:
+            usage();
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Daemon "main" function.
+ * @param flags startup flags
+ * @return      0 on success, negative error code otherwise
+ */
+static int hipd_main(uint64_t flags)
+{
+    int highest_descriptor = 0, err = 0;
     struct timeval timeout;
+    fd_set read_fdset;
     struct hip_packet_context ctx = {0};
-
-    /* The flushing is enabled by default. The reason for this is that
-     * people are doing some very experimental features on some branches
-     * that may crash the daemon and leave the SAs floating around to
-     * disturb further base exchanges. Use -N flag to disable this. */
-    int flush_ipsec = 1;
-
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Creating perf set\n");
@@ -224,53 +286,7 @@ static int hipd_main(int argc, char *argv[])
     /* default is long format */
     hip_set_logfmt(LOGFMT_LONG);
 
-    /* Parse command-line options */
-    while ((ch = getopt(argc, argv, ":bi:kNchafd:V")) != -1) {
-        switch (ch) {
-        case 'b':
-            foreground = 0;
-            break;
-        case 'i':
-            if (hip_netdev_white_list_add(optarg)) {
-                HIP_INFO("Successfully added device <%s> to white list.\n", optarg);
-            } else {
-                HIP_DIE("Error adding device <%s> to white list. Dying...\n", optarg);
-            }
-            break;
-        case 'k':
-            killold                 = 1;
-            break;
-        case 'N':
-            flush_ipsec             = 0;
-            break;
-        case 'c':
-            create_configs_and_exit = 1;
-            break;
-        case 'a':
-            fix_alignment           = 1;
-            break;
-        case 'f':
-            HIP_INFO("Setting output format to short\n");
-            hip_set_logfmt(LOGFMT_SHORT);
-            break;
-        case 'd':
-            if (!lmod_disable_module(optarg)) {
-                HIP_DEBUG("Module '%s' disabled.\n", optarg);
-            } else {
-                HIP_ERROR("Error while disabling module '%s'.\n", optarg);
-            }
-            break;
-        case 'V':
-            hip_print_version("hipd");
-        case '?':
-        case 'h':
-        default:
-            usage();
-            return err;
-        }
-    }
-
-    if (fix_alignment) {
+    if (flags & HIPD_START_FIX_ALIGNMENT) {
         HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
         if (system("echo 3 > /proc/cpu/alignment")) {
             HIP_ERROR("Setting alignment traps failed.");
@@ -278,7 +294,7 @@ static int hipd_main(int argc, char *argv[])
     }
 
     /* Configuration is valid! Fork a daemon, if so configured */
-    if (foreground) {
+    if (flags & HIPD_START_FOREGROUND) {
         hip_set_logtype(LOGTYPE_STDERR);
         HIP_DEBUG("foreground\n");
     } else {
@@ -292,9 +308,12 @@ static int hipd_main(int argc, char *argv[])
     time(&load_time);
 
     /* Default initialization function. */
-    HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
+    HIP_IFEL(hipd_init(flags), 1, "hipd_init() failed!\n");
 
-    HIP_IFEL(create_configs_and_exit, 0, "Configs created, exiting\n");
+    if (flags & HIPD_START_CREATE_CONFIG_AND_EXIT) {
+        HIP_ERROR("Config files create, exiting...\n");
+        return 0;
+    }
 
     highest_descriptor = hip_get_highest_descriptor();
 
@@ -399,19 +418,38 @@ out_err:
  */
 int main(int argc, char *argv[])
 {
-    int err = 0;
-    uid_t euid;
+    uint64_t sflags = HIPD_START_FOREGROUND | HIPD_START_LOWCAP;
 
-    euid = geteuid();
+    /* The flushing is enabled by default. The reason for this is that
+     * people are doing some very experimental features on some branches
+     * that may crash the daemon and leave the SAs floating around to
+     * disturb further base exchanges. Use -N flag to disable this. */
+    sflags         |= HIPD_START_FLUSH_IPSEC;
+
+    /* set the initial verbosity level */
+    hip_set_logdebug(LOGDEBUG_MEDIUM);
+
+    /* One should be able to check the hipd version and usage,
+     * even without having root privileges.
+     */
+    if (hipd_parse_cmdline_opts(argc, argv, &sflags)) {
+        return EXIT_SUCCESS;
+    }
+
     /* We need to recreate the NAT UDP sockets to bind to the new port. */
-    HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");
+    if (getuid()) {
+        HIP_ERROR("hipd must be started as root!\n");
+        return EXIT_FAILURE;
+    }
 
-    HIP_IFE(hipd_main(argc, argv), -1);
+    if (hipd_main(sflags)) {
+        return EXIT_FAILURE;
+    }
+
     if (hipd_get_flag(HIPD_FLAG_RESTART)) {
         HIP_INFO(" !!!!! HIP DAEMON RESTARTING !!!!! \n");
         hip_handle_exec_application(0, EXEC_LOADLIB_NONE, argc, argv);
     }
 
-out_err:
-    return err;
+    return EXIT_SUCCESS;
 }

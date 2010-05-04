@@ -121,39 +121,6 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
     AH_TEMPLATE(CONFIG_HIP_RVS, [Defined to 1 if RVS is enabled.])
 fi
 
-AC_ARG_ENABLE(altsep,
-               AS_HELP_STRING([--enable-altsep],
-                              [Alternative privilege separation (default is NO)]),
-               [ac_cv_use_altsep=$enableval],
-               [ac_cv_use_altsep=no])
-AC_CACHE_CHECK([whether to use Alternative privilege separation],
-               [ac_cv_use_altsep],
-               [ac_cv_use_altsep=no])
-if test x"$ac_cv_use_altsep" = x"yes"; then
-    AC_DEFINE(CONFIG_HIP_ALTSEP)
-    AH_TEMPLATE(CONFIG_HIP_ALTSEP,
-                [Defined to 1 if alternative privilege separation is enabled.])
-fi
-
-AC_ARG_ENABLE(privsep,
-               AS_HELP_STRING([--enable-privsep],
-                              [Privilege separation (default is YES)]),
-               [ac_cv_use_privsep=$enableval],
-               [ac_cv_use_privsep=yes])
-AC_CACHE_CHECK([whether to use privsep],
-               [ac_cv_use_privsep],
-               [ac_cv_use_privsep=yes])
-if test x"$ac_cv_use_privsep" = x"yes"; then
-    if test x"$ac_cv_use_altsep" != x"yes"; then
-        AC_CHECK_LIB(cap, cap_get_proc,,
-                     AC_MSG_ERROR(libcap-dev developer headers not found))
-    fi
-    AC_DEFINE(CONFIG_HIP_PRIVSEP)
-    AH_TEMPLATE(CONFIG_HIP_PRIVSEP,
-                [Defined to 1 if privilege separation is enabled.])
-fi
-AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
-
 AC_ARG_ENABLE(opportunistic,
                AS_HELP_STRING([--enable-opportunistic],
                               [HIP opportunistic mode (default is YES)]),

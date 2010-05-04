@@ -5,7 +5,7 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*
 # For "make dist"
 EXTRA_DIST =  .vimrc debian doc patches release.version version.h process_modules.py
 EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
-EXTRA_DIST += test/demo test/maintainer test/packaging test/performance
+EXTRA_DIST += test/maintainer test/packaging
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
 EXTRA_DIST += $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
@@ -136,6 +136,7 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/hashchain_store.c \
                                  lib/core/hashtable.c       \
                                  lib/core/hashtree.c        \
+                                 lib/core/hip_capability.c  \
                                  lib/core/hip_statistics.c  \
                                  lib/core/hip_udp.c         \
                                  lib/core/hit.c             \
@@ -148,7 +149,6 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/solve.c           \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
-                                 lib/core/util.c            \
                                  lib/tool/checksum.c        \
                                  lib/tool/lutil.c           \
                                  lib/tool/nlink.c           \
@@ -156,10 +156,6 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
 
 if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/core/performance.c
-endif
-
-if HIP_PRIVSEP
-lib_core_libhipcore_la_SOURCES += lib/core/hip_capability.c
 endif
 
 lib_modularization_libmod_la_SOURCES = lib/modularization/lmod.c
@@ -305,7 +301,7 @@ lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 # when creating specific objects that may depend on version.h directly.
 BUILT_SOURCES = version.h
 $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
-	echo "#define BZR_REVISION \"$$(bzr revno $(srcdir))\"" > $@
+	echo "$$(bzr version-info $(srcdir) --custom --template="#define BZR_REVISION \"{revno}\"\n\n#define BZR_BRANCH \"{branch_nick}\"")" > $@
 
 # The complete doc/ subdirectory is in EXTRA_DIST, so files that should
 # not be distributed need to be deleted manually from the distribution.

@@ -367,7 +367,7 @@
       ./configure &amp;&amp; make install
     </para>
     <para>
-      Notes: you can optionally compile a binary package with "make deb" or "make rpm". If you want to use valgrind with hipd, you may need execute ./configure --disable-privsep (and make clean all)
+      Notes: you can optionally compile a binary package with "make deb" or "make rpm".
     </para>
     <para>
       Some features, like the HIP firewall are not compiled by default.
@@ -1566,7 +1566,7 @@ $ make V=99
       commands (assuming a clean source tree): </para>
 
       <para><programlisting>
-        ./configure --enable-maemo --disable-firewall --enable-altsep
+        ./configure --enable-maemo --disable-firewall
         make
       </programlisting></para>
 

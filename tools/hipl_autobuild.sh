@@ -110,10 +110,10 @@ compile
 run_program "make -j17 distcheck"
 
 # PISA configuration
-compile --enable-firewall --disable-pfkey --disable-rvs  --disable-altsep --enable-privsep --disable-opportunistic --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
+compile --enable-firewall --disable-pfkey --disable-rvs  --disable-opportunistic --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
 
 # Alternative path to vanilla
-compile --enable-firewall --enable-pfkey --disable-rvs --enable-altsep --disable-privsep --disable-opportunistic --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
+compile --enable-firewall --enable-pfkey --disable-rvs --disable-opportunistic --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
 
 # Without modules
 compile --with-nomodules=heartbeat,update,heartbeat_update
