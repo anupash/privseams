@@ -7,6 +7,11 @@
 #ifndef HIP_LIB_CORE_HOSTID_H
 #define HIP_LIB_CORE_HOSTID_H
 
+#include <netinet/in.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
+
+#include "protodefs.h"
 #include "state.h"
 
 struct hip_rsa_keylen {
