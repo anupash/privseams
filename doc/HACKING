@@ -1041,7 +1041,7 @@ uploading any binaries!!!
 * make increl
 
 Create binaries and synchronise to repository:
-* make bin syncrepo
+* make deb rpm syncrepo
 
 Fedora Client-side Configuration
 --------------------------------

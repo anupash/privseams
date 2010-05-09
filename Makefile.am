@@ -443,7 +443,7 @@ CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
 	rm -rf doc/doxy
 
-bin deb increl rpm syncrepo:
+deb increl rpm syncrepo:
 	env PYEXECDIR=$(pyexecdir) @srcdir@/packaging/create-package.sh $@
 
 autotools-clean: maintainer-clean
@@ -475,4 +475,4 @@ $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
 dist-hook:
 	rm -f $(distdir)/doc/Doxyfile
 
-.PHONY: bin checkheaders deb doxygen increl rpm syncrepo
+.PHONY: checkheaders deb doxygen increl rpm syncrepo

@@ -22,7 +22,7 @@ tar xvzf hipl.tar.gz &&
 cd main &&
 autoreconf --install &&
 ./configure &&
-make bin syncrepo"
+make deb rpm syncrepo"
 
 #set -e
 
