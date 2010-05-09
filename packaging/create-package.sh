@@ -157,32 +157,29 @@ if test -r /etc/debian_version; then
     ARCH=$(dpkg --print-architecture)
     PKG_DIR=$DEBDIR/DEBS/$ARCH
     DISTRO_RELEASE=$(lsb_release -c | cut -f2)
-    DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
     PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
     cat $PKGEXE/hipl-deb.spec >> $SPECFILE
-    VERSION=$(grep Version: $SPECFILE | cut -d" " -f2)
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
-    PKG_INDEX_DIR=$PKGEXE
-    PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
 elif test -r /etc/redhat-release; then
     DISTROBASE=redhat
     ARCH=$(uname -i)
     PKG_DIR=$RPMDIR/RPMS/$ARCH
     DISTRO_RELEASE=$(lsb_release -r | cut -f2)
-    DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
     cat $PKGEXE/hipl-rpm.spec >> $SPECFILE
-    VERSION=$(grep Version: $SPECFILE | cut -d" " -f2)
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
-    PKG_INDEX_DIR=$PKGEXE
-    PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
 else
     die "Unknown architecture"
 fi
+
+DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
+PKG_INDEX_DIR=$PKGEXE
+PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
+VERSION=$(grep Version: $SPECFILE | cut -d" " -f2)
 
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 
