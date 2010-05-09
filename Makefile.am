@@ -12,7 +12,6 @@ EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/dht/,*.txt))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
-EXTRA_DIST += m4 # required for CentOS "make bin" target
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
 # Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
