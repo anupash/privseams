@@ -444,8 +444,7 @@ CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
 	rm -rf doc/doxy
 
-# The olddeb target is for maemo builds only
-bin deb increl olddeb rpm syncrepo:
+bin deb increl rpm syncrepo:
 	env PYEXECDIR=$(pyexecdir) @srcdir@/packaging/create-package.sh $@
 
 autotools-clean: maintainer-clean
@@ -477,4 +476,4 @@ $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
 dist-hook:
 	rm -f $(distdir)/doc/Doxyfile
 
-.PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo
+.PHONY: bin checkheaders deb doxygen increl rpm syncrepo

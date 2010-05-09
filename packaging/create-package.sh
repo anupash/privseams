@@ -51,12 +51,6 @@ die()
     exit 1
 }
 
-build_maemo_deb()
-{
-    env PYEXECDIR=$PYEXECDIR $PKGEXE/create-deb.sh
-    env PYEXECDIR=$PYEXECDIR $PKGEXE/create-deb.sh -s
-}
-
 build_rpm()
 {
     echo "Deleting old .rpmmacros"
@@ -128,11 +122,6 @@ syncrepo()
 
 build_deb()
 {
-    if dpkg --print-architecture | grep -q armel; then
-        build_maemo_deb
-        exit 0
-    fi
-
     test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
     if test -e ~/debbuild; then
         echo "Warning: ~/debbuild found, could be a problem"
@@ -212,9 +201,6 @@ elif test x"$1" = x"bin"; then
     else
         die "Unknown distro"
     fi
-elif test x"$1" = x"olddeb"; then
-    build_maemo_deb
-    exit
 fi
 echo "Architecture: $ARCH"
 
