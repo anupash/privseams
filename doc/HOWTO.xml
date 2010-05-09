@@ -1566,7 +1566,7 @@ $ make V=99
       commands (assuming a clean source tree): </para>
 
       <para><programlisting>
-        ./configure --enable-maemo --disable-firewall
+        ./configure --disable-firewall
         make
       </programlisting></para>
 
