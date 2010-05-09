@@ -397,11 +397,7 @@ i3_chord_gen_conf_same_LDADD    = i3/chord/libchord.la
 i3_chord_test_LDADD             = i3/chord/libchord.la
 
 
-###### PYTHON stuff below ######
-# TODO python parts still needs clean-up
 if HAVE_PYTHON
-# These two scripts are generated in the end to get the python paths correct.
-# Currently, I don't know a better way to deal with the python code. -miika
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \
                     tools/nsupdate.pl
