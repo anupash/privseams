@@ -64,18 +64,6 @@ define Package/hipl-hipproxy/description
  The scripts for running the hipproxy.
 endef
 
-define Package/hipl-test
-    SECTION:=net
-    CATEGORY:=Network
-    DEPENDS:=+hipl-hipd
-    TITLE:=HIPL testing application
-    URL:=http://hipl.hiit.fi/
-endef
-
-define Package/hipl-test/description
- Some applications and configs needed for testing HIPL.
-endef
-
 define Package/hipl-common
     SECTION:=net
     CATEGORY:=Network
@@ -139,14 +127,6 @@ define Package/hipl-hipproxy/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipdnsproxy $(1)/usr/sbin/
 endef
 
-define Package/hipl-test/install
-	$(INSTALL_DIR) $(1)/etc/hip/test/
-	$(INSTALL_DIR) $(1)/usr/bin/
-
-	$(INSTALL_BIN) ./files/test/* $(1)/etc/hip/test/
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/conntest* $(1)/usr/bin/
-endef
-
 define Package/hipl-common/install
 	$(INSTALL_DIR) $(1)/etc/hip/
 	$(INSTALL_DIR) $(1)/etc/modules.d/
@@ -167,4 +147,3 @@ $(eval $(call BuildPackage,hipl-hipd))
 $(eval $(call BuildPackage,hipl-hipfw))
 $(eval $(call BuildPackage,hipl-hipconf))
 $(eval $(call BuildPackage,hipl-hipproxy))
-$(eval $(call BuildPackage,hipl-test))

@@ -22,7 +22,7 @@ extensions support also mobility and multihoming, and traversal of NATs.
 
 HIP for Linux (HIPL) is an implementation of a HIP implementation that
 consists of the key and mobility management daemon. It includes also
-other related tools and test software.
+other related tools.
 %prep
 %setup
 
@@ -54,7 +54,7 @@ make -j 4 all
 %package all
 Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
-Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-test hipl-doc hipl-dnsproxy
+Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-doc hipl-dnsproxy
 %description all
 
 %package minimal
@@ -86,12 +86,6 @@ Requires: hipl-lib
 Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control, Local Scope Identifier support, userspace BEET-mode IPsec (for kernels below < 2.6.27) and system-based opportunistic mode for HIP.
 Group: System Environment/Kernel
 %description firewall
-
-%package test
-Requires: hipl-lib hipl-daemon
-Summary: netcat-like command line tools with built-in HIP support for developers
-Group: System Environment/Kernel
-%description test
 
 %package doc
 Summary: documentation for HIP for Linux
@@ -125,9 +119,9 @@ install -d %{buildroot}%{prefix}/lib
 install -d %{buildroot}/etc/rc.d/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
-install -m 755 packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
-install -m 755 packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
-install -m 755 packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
+install -m 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
+install -m 755 packaging/fedora-init.d/hipd %{buildroot}/etc/rc.d/init.d/hipd
+install -m 755 packaging/fedora-init.d/dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
 install -t %{buildroot}%{python_sitelib}/DNS tools/hipdnsproxy/DNS/*py*
@@ -230,11 +224,6 @@ rm -rf %{buildroot}
 %{prefix}/sbin/hipconf
 %{prefix}/sbin/nsupdate.pl
 %defattr(755,root,root)
-
-%files test
-%{prefix}/bin/conntest-client-opp
-%{prefix}/bin/conntest-client-hip
-%{prefix}/bin/conntest-server
 
 %files firewall
 %{prefix}/sbin/hipfw

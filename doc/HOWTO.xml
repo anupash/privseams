@@ -980,9 +980,6 @@ define Package/hipl/install
     $(INSTALL_DATA) ./files/hipfw.init $(1)/etc/init.d/hipfw
     $(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
     $(INSTALL_DATA) ./files/test/* $(1)/etc/init.d/test/
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/conntest* $(1)/usr/bin/
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hipsetup* $(1)/usr/bin/
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/listifaces* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/* $(1)/usr/sbin/
 endif
 </programlisting>
@@ -1678,7 +1675,7 @@ $ make V=99
     </table>
 
     <para>
-      The servers are running public http service and respond to ICMPv4 and ICMPv6. They are not running "conntest-server" software as described elsewhere in this document.
+      The servers are running public http service and respond to ICMPv4 and ICMPv6.
     </para>
 
     <para>To use access the servers using HIP behind a NAT box, you
@@ -1728,10 +1725,9 @@ $ make V=99
     <section id="ipv6_appl">
             <title>Testing a HIP connection with an IPv6 application</title>
             <para> You can test HIP with any networking application, but in this
-              section we will demonstrate few development-oriented test
-              applications.</para>
-            <para> You should run conntest-client-hip and conntest-server with root privileges
-              if conntest-server port number is less than 1024.</para>
+              section we will demonstrate few command line applications.</para>
+            <para> You should run nc6 with root privileges at the server side
+              if the port number is less than 1024.</para>
             <para>In this section we will use ipv6 addresses, but you can use also ipv4 addresses.
               Furthermore, the use of hipfw is optional.</para>
     <para>
@@ -1748,7 +1744,7 @@ $ make V=99
         hipd/hipd # (to start as a background daemon process, add -b flag)
       </para></listitem>
       <listitem><para>
-        conntest-server tcp 1111
+        nc6 -l -p 1111
       </para></listitem>
     </itemizedlist>
     <para>
@@ -1781,10 +1777,10 @@ $ make V=99
         hipd/hipd
       </para></listitem>
       <listitem><para>
-        conntest-client-hip oops tcp 1111
+        nc6 oops 1111
       </para></listitem>
       <listitem><para>
-        ;&lt;Type some text in crash, press enter and ctrl+d and you
+        ;&lt;Type some text in crash, press enter and you
         should see some text appearing in the output of the hosts&gt;
       </para></listitem>
     </itemizedlist>
@@ -2723,8 +2719,8 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           "hipconf dht get &lt;hostname|HIT&gt;".
       </para></listitem>
       <listitem><para>
-          To test, just run normally conntest-server
-          and conntest-client-hip between hosts. You would see messages
+          To test, just run normally nc6
+          between the two hosts. You would see messages
           from hipd and conntest showing DNS->HIT->IP lookups. Everything
           should work without additional actions.
       </para></listitem>
@@ -3138,9 +3134,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       <abstract>
         <para>
           In this section, we show how to use the rendezvous server to establish
-          a HIP connection between two HIP hosts using the "<emphasis>conntest-server</emphasis>"
-          connection test server and the "<emphasis>conntest-client-hip</emphasis>" connection
-          test client.
+          a HIP connection between two HIP hosts using nc6.
         </para>
       </abstract>
       <section id="sec_rvs_prelim">
@@ -3268,11 +3262,11 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           <listitem><para>
             At the responder, start a server listening for incoming connections
             (5000 is an example port number):
-            <programlisting>conntest-server tcp 5000</programlisting>
+            <programlisting>nc6 -l -p 5000</programlisting>
           </para></listitem>
           <listitem><para>
-            At the initiator, start a connection test client:
-            <programlisting>conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000</programlisting>
+            At the initiator, start a client:
+            <programlisting>nc6 &lt;RESPONDER-HOSTNAME&gt; 5000</programlisting>
           </para></listitem>
           <listitem><para>
             At the initiator, type some text and press <command>CTRL + d</command>. If everything
@@ -3402,9 +3396,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       <abstract>
         <para>
           In this section, we show how to use the relay server to establish a
-          HIP connection between two HIP hosts using the
-          "<emphasis>conntest-server</emphasis>" connection test server and the
-          "<emphasis>conntest-client-hip</emphasis>" connection test client.
+          HIP connection between two HIP hosts using nc6.
         </para>
       </abstract>
       <section id="sec_relay_prelim">
@@ -3441,9 +3433,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </para>
         <para>
           In this section, we show how to use the HIP relay server to establish a
-          HIP connection between two HIP hosts using the "<emphasis>conntest-server</emphasis>"
-          connection test server and the "<emphasis>conntest-client-hip</emphasis>" connection
-          test client.
+          HIP connection between two HIP hosts using nc6.
         </para>
         <mediaobject>
           <imageobject>
@@ -3502,17 +3492,17 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
             At the responder, start a server listening for incoming connections
             (5000 is an example port number):
             <programlisting>
-              conntest-server tcp 5000
+              nc6 -l -p 5000
             </programlisting>
           </para></listitem>
           <listitem><para>
             At the initiator, start a connection test client:
             <programlisting>
-              conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000
+              nc6 &lt;RESPONDER-HOSTNAME&gt; 5000
             </programlisting>
           </para></listitem>
           <listitem><para>
-            At the initiator, type some text and press <command>CTRL + d</command>. If everything
+            At the initiator, type some text and press enter. If everything
             works as it should, the typed text should now be echoed at
             the responder.
           </para></listitem>
@@ -3949,7 +3939,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         has not been implemented yet.
       </para>
       <para>If you have problems in even getting I1 triggered using NAT code
-        e.g. with conntest-client-hip (occurred on 2.6.16.5), you may have
+        e.g. with nc6 (occurred on 2.6.16.5 kernel version), you may have
         to specify the source HIT explicitly. The procedure to initiate a connection
         behind NAT is as follows:
       </para>
@@ -4653,7 +4643,7 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
     </para></listitem>
     <listitem><para>
           Wait until the trigger is inserted (see log file) and continue with e.g.
-          ping6 or conntest-client-hip with testing.
+          ping6 or nc6 with testing.
     </para></listitem>
         </itemizedlist>
 

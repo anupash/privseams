@@ -23,18 +23,7 @@ dist_images_DATA = lib/gui/hipmanager.png
 ### user programs ###
 bin_PROGRAMS = test/auth_performance    \
                test/certteststub        \
-               test/conntest-client-opp \
-               test/conntest-client-hip \
-               test/conntest-server     \
-               test/cookietest          \
-               test/hashtest            \
-               test/hc_performance      \
-               test/keygentest          \
-               test/listtest
-
-if HIP_AGENT
-bin_PROGRAMS += test/sqliteteststub
-endif
+               test/hc_performance
 
 if HIP_DHT
 bin_PROGRAMS += test/dhtteststub
@@ -88,26 +77,11 @@ lib_LTLIBRARIES += i3/libi3.la \
 endif
 
 
-### source declarations ###
-test_conntest_client_hip_SOURCES = test/conntest-client-hip.c \
-                                   test/conntest.c
-
-test_conntest_client_opp_SOURCES = test/conntest-client-opp.c \
-                                   test/conntest.c
-
-test_conntest_server_SOURCES     = test/conntest-server.c     \
-                                   test/conntest.c
-
 test_auth_performance_SOURCES = test/auth_performance.c
 test_certteststub_SOURCES     = test/certteststub.c
-test_cookietest_SOURCES       = test/cookietest.c
 test_dh_performance_SOURCES   = test/dh_performance.c
 test_dhtteststub_SOURCES      = test/dhtteststub.c
-test_hashtest_SOURCES         = test/hashtest.c
 test_hc_performance_SOURCES   = test/hc_performance.c
-test_keygentest_SOURCES       = test/keygentest.c
-test_listtest_SOURCES         = test/listtest.c
-test_sqliteteststub_SOURCES   = test/sqliteteststub.c
 
 tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
@@ -363,16 +337,9 @@ firewall_hipfw_LDADD           = lib/core/libhipcore.la
 hipd_hipd_LDADD                = lib/core/libhipcore.la
 test_auth_performance_LDADD    = lib/core/libhipcore.la
 test_certteststub_LDADD        = lib/core/libhipcore.la
-test_conntest_client_hip_LDADD = lib/core/libhipcore.la
-test_conntest_client_opp_LDADD = lib/core/libhipcore.la
-test_conntest_server_LDADD     = lib/core/libhipcore.la
-test_cookietest_LDADD          = lib/core/libhipcore.la
 test_dh_performance_LDADD      = lib/core/libhipcore.la
 test_dhtteststub_LDADD         = lib/core/libhipcore.la
-test_hashtest_LDADD            = lib/core/libhipcore.la
 test_hc_performance_LDADD      = lib/core/libhipcore.la
-test_keygentest_LDADD          = lib/core/libhipcore.la
-test_sqliteteststub_LDADD      = lib/core/libhipcore.la
 tools_hipconf_LDADD            = lib/core/libhipcore.la
 tools_pisacert_LDADD           = lib/core/libhipcore.la
 

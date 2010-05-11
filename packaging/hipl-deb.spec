@@ -21,7 +21,7 @@ extensions support also mobility and multihoming, and traversal of NATs.
 
 HIP for Linux (HIPL) is an implementation of a HIP implementation that
 consists of the key and mobility management daemon. It includes also
-other related tools and test software.
+other related tools.
 %prep
 %setup
 
@@ -70,7 +70,7 @@ make -j 4 all
 %package all
 Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
 Group: System Environment/Kernel
-Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-test, hipl-doc, hipl-dnsproxy
+Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-doc, hipl-dnsproxy
 %description all
 
 %package minimal
@@ -103,12 +103,6 @@ Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control
 Group: System Environment/Kernel
 %description firewall
 
-%package test
-Requires: hipl-daemon
-Summary: netcat-like command line tools with built-in HIP support for developers
-Group: System Environment/Kernel
-%description test
-
 %package doc
 Summary: documentation for HIP for Linux
 Group: System Environment/Kernel
@@ -137,9 +131,9 @@ install -d %{buildroot}/usr/lib
 install -d %{buildroot}/etc/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
-install -m 755 packaging/debian-init.d-hipfw %{buildroot}/etc/init.d/hipfw
-install -m 755 packaging/debian-init.d-hipd %{buildroot}/etc/init.d/hipd
-install -m 755 packaging/debian-init.d-dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
+install -m 755 packaging/debian-init.d/hipfw %{buildroot}/etc/init.d/hipfw
+install -m 755 packaging/debian-init.d/hipd %{buildroot}/etc/init.d/hipd
+install -m 755 packaging/debian-init.d/dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}/usr/lib/python2.6/dist-packages/DNS
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/DNS tools/hipdnsproxy/DNS/*py*
@@ -207,11 +201,6 @@ rm -rf %{buildroot}
 /usr/sbin/hipconf
 /usr/sbin/nsupdate.pl
 %defattr(755,root,root)
-
-%files test
-/usr/bin/conntest-client-opp
-/usr/bin/conntest-client-hip
-/usr/bin/conntest-server
 
 %files firewall
 /usr/sbin/hipfw

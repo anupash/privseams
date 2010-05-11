@@ -1212,33 +1212,13 @@ TEST MATRIX
 2. Applications
 ---------------
 
-Test with conntest-server BOTH tcp and udp:
-
-* conntest-client-gai peer_host_name_that_maps_to_hit_in_hosts
-* conntest-client-gai peer_host_name_that_maps_to_hit_in_opendht
-* conntest-client-gai peer_hostname_without_hit_map
-* conntest-client-gai hit-in-hosts
-* conntest-client-gai hit-in-broadcast
-* conntest-client-gai hit-in-opendht
-* conntest-client-gai ipv6-addr
-* conntest-client ipv4-addr
-* conntest-client ipv6-addr
-* conntest-client ipv4_of_non_hip_host
-* conntest-client ipv6_of_non_hip_host
-* conntest-client peer_hit
-
 Applications:
 
 * ping6 HIT
-* hipconf run normal firefox
-* hipconf run normal firefox + use www proxy
-* hipconf run normal ssh peer_host_name_that_maps_to_hit
-* hipconf run opp firefox
-* hipconf run normal iperf -V hit
-* hipconf run opp iperf ipv4-addr
-* hipconf run opp iperf -V ipv6-addr
-
-* hi3 support?
+* nc6 HIT
+* nc LSI
+* use dnsproxy to obtain HITs from DNS or DHT
+* hipconf run opp nc/nc6 (both client & server side)
 
 3. Base Exchange
 ----------------
