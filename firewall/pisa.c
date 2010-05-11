@@ -210,41 +210,6 @@ static struct hip_challenge_response *pisa_check_challenge_response(
 }
 
 /**
- * Check the signature of the packet.
- *
- * @param ctx context of the packet with the signature to check
- * @return success (0) or failure
- */
-/* This function is not used */
-#if 0
-static int pisa_check_signature(hip_fw_context_t *ctx)
-{
-    struct hip_common *hip = ctx->transport_hdr.hip;
-    int err                = -1;
-    struct hip_host_id *host_id;
-
-    host_id = hip_get_param(hip, HIP_PARAM_HOST_ID);
-    HIP_IFEL(host_id == 0, -1, "Cannot check signature: No HOST_ID found.\n");
-
-    if (hip_get_host_id_algo(host_id) == HIP_HI_RSA) {
-        RSA *rsa;
-        rsa = hip_key_rr_to_rsa(host_id, 0);
-        err = hip_rsa_verify(rsa, hip);
-        RSA_free(rsa);
-    } else {
-        DSA *dsa;
-        dsa = hip_key_rr_to_dsa(host_id, 0);
-        err = hip_dsa_verify(dsa, hip);
-        DSA_free(dsa);
-    }
-
-out_err:
-    return err;
-}
-
-#endif /* 0 */
-
-/**
  * Check the certificate of the packet.
  *
  * @param ctx context of the packet with the certificate to check
@@ -437,8 +402,6 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 #endif
 
     solution = pisa_check_challenge_response(ctx);
-    // Done in conntrack.c
-    //sig = pisa_check_signature(ctx);
     cert     = pisa_check_certificate(ctx);
 
     if (solution == NULL || sig != 0 || cert != 0) {
@@ -491,9 +454,7 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
     struct hip_challenge_response *solution = NULL;
 
     solution = pisa_check_challenge_response(ctx);
-    // Done in conntrack.c
-    //sig = pisa_check_signature(ctx);
-    cert = pisa_check_certificate(ctx);
+    cert     = pisa_check_certificate(ctx);
 
     if (solution == NULL || sig != 0 || cert != 0) {
         HIP_DEBUG("U2 packet did not match criteria:  "

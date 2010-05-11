@@ -1566,21 +1566,9 @@ $ make V=99
       commands (assuming a clean source tree): </para>
 
       <para><programlisting>
-        ./configure --enable-maemo --disable-firewall
+        ./configure --disable-firewall
         make
       </programlisting></para>
-
-     <para>
-     The maemo packages are created with the 'olddeb' make target;
-      </para>
-
-      <para><programlisting>
-      make olddeb
-      </programlisting></para>
-
-      <para>
-      The packages will be created in test/packaging/
-      </para>
 
       </section>
 

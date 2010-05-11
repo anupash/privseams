@@ -3,7 +3,7 @@
 VERSION=
 NAME=hipl
 PKGROOT=$PWD
-PKGEXE=$PKGROOT/test/packaging
+PKGEXE=$PKGROOT/packaging
 PKG_WEB_DIR=
 PKG_SERVER_DIR=
 DEBDIR=$PWD/debbuild
@@ -19,7 +19,6 @@ DISTROBASE=
 DISTRO_PKG_SUFFIX=
 REPO_SERVER=hipl.infrahip.net
 REPO_BASE=/var/www/packages/html
-BIN_FORMAT=
 TARBALL=
 RSYNC_OPTS=-uvr
 REPO_USER=hipl
@@ -49,12 +48,6 @@ die()
 {
     echo $@
     exit 1
-}
-
-build_maemo_deb()
-{
-    env PYEXECDIR=$PYEXECDIR $PKGEXE/create-deb.sh
-    env PYEXECDIR=$PYEXECDIR $PKGEXE/create-deb.sh -s
 }
 
 build_rpm()
@@ -128,11 +121,6 @@ syncrepo()
 
 build_deb()
 {
-    if dpkg --print-architecture | grep -q armel; then
-        build_maemo_deb
-        exit 0
-    fi
-
     test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
     if test -e ~/debbuild; then
         echo "Warning: ~/debbuild found, could be a problem"
@@ -168,32 +156,29 @@ if test -r /etc/debian_version; then
     ARCH=$(dpkg --print-architecture)
     PKG_DIR=$DEBDIR/DEBS/$ARCH
     DISTRO_RELEASE=$(lsb_release -c | cut -f2)
-    DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
     PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
     cat $PKGEXE/hipl-deb.spec >> $SPECFILE
-    VERSION=$(grep Version: $SPECFILE | cut -d" " -f2)
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
-    PKG_INDEX_DIR=$PKGEXE
-    PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
 elif test -r /etc/redhat-release; then
     DISTROBASE=redhat
     ARCH=$(uname -i)
     PKG_DIR=$RPMDIR/RPMS/$ARCH
     DISTRO_RELEASE=$(lsb_release -r | cut -f2)
-    DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
     cat $PKGEXE/hipl-rpm.spec >> $SPECFILE
-    VERSION=$(grep Version: $SPECFILE | cut -d" " -f2)
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
-    PKG_INDEX_DIR=$PKGEXE
-    PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
 else
     die "Unknown architecture"
 fi
+
+DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
+PKG_INDEX_DIR=$PKGEXE
+PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
+VERSION=$(grep Version: $SPECFILE | cut -d" " -f2)
 
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 
@@ -203,17 +188,6 @@ if test x"$1" = x"syncrepo"; then
     exit
 elif test x"$1" = x"increl"; then
     inc_release_number
-    exit
-elif test x"$1" = x"bin"; then
-    if test x"$DISTROBASE" = x"redhat"; then
-        BIN_FORMAT=rpm
-    elif test x"$DISTROBASE" = x"debian"; then
-        BIN_FORMAT=deb
-    else
-        die "Unknown distro"
-    fi
-elif test x"$1" = x"olddeb"; then
-    build_maemo_deb
     exit
 fi
 echo "Architecture: $ARCH"
@@ -239,10 +213,8 @@ ls -ld $TARBALL
 echo "*** Cleaning up ${DEBDIR} ***"
 rm -rf ${DEBDIR}
 
-if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"; then
+if test x"$1" = x"rpm"; then
     build_rpm
-elif test x"$1" = x"deb" || test x"$BIN_FORMAT" = x"deb"; then
+elif test x"$1" = x"deb"; then
     build_deb
-else
-    die "*** Unknown platform, aborting ***"
 fi

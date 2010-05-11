@@ -5,13 +5,12 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*
 # For "make dist"
 EXTRA_DIST =  .vimrc debian doc patches release.version version.h process_modules.py
 EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
-EXTRA_DIST += test/maintainer test/packaging
+EXTRA_DIST += packaging tools/maintainer
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
 EXTRA_DIST += $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
-EXTRA_DIST += m4 # required for CentOS "make bin" target
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
 ### user programs ###
@@ -224,11 +223,7 @@ if HIP_PFKEY
 hipd_hipd_LDADD += lib/ipsec/libhipsec.la
 endif
 
-###### PYTHON stuff below ######
-# TODO python parts still needs clean-up
 if HAVE_PYTHON
-# These two scripts are generated in the end to get the python paths correct.
-# Currently, I don't know a better way to deal with the python code. -miika
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \
                     tools/nsupdate.pl
@@ -275,9 +270,8 @@ CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
 	rm -rf doc/doxy
 
-# The olddeb target is for maemo builds only
-bin deb increl olddeb rpm syncrepo:
-	env PYEXECDIR=$(pyexecdir) @srcdir@/test/packaging/create-package.sh $@
+deb increl rpm syncrepo:
+	env PYEXECDIR=$(pyexecdir) @srcdir@/packaging/create-package.sh $@
 
 autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
@@ -308,4 +302,4 @@ $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
 dist-hook:
 	rm -f $(distdir)/doc/Doxyfile
 
-.PHONY: bin checkheaders deb doxygen increl olddeb rpm syncrepo
+.PHONY: checkheaders deb doxygen increl rpm syncrepo
