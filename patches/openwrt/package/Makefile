@@ -156,6 +156,14 @@ define Package/hipl-common/install
 	$(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipcore.so* $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipcore.la $(1)/usr/lib/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libmod.so* $(1)/usr/lib/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libmod.la $(1)/usr/lib/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipheartbeat.so* $(1)/usr/lib/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipheartbeat.la $(1)/usr/lib/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiphbupdate.so* $(1)/usr/lib/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiphbupdate.la $(1)/usr/lib/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipupdate.so* $(1)/usr/lib/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipupdate.la $(1)/usr/lib/
 endef
 
 $(eval $(call BuildPackage,hipl-common))
