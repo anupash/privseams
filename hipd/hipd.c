@@ -175,6 +175,7 @@ static void usage(void)
     fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
     fprintf(stderr, "  -f set debug type format to short\n");
     fprintf(stderr, "  -d set the initial (pre-config) debug level to ALL (default is MEDIUM)\n");
+    fprintf(stderr, "  -p disable privilege separation\n");
     fprintf(stderr, "\n");
 }
 
