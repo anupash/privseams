@@ -611,7 +611,7 @@ int hip_receive_control_packet(struct hip_common *msg,
             entry->hip_opp_fallback_disable = filter;
         }
     } else {
-        /* Ugly bug fix for "conntest-client hostname tcp 12345"
+        /* Ugly bug fix for "nc6 hostname tcp 12345"
          * where hostname maps to HIT and IP in hosts files.
          * Why the heck the receive function points here to
          * receive_opp_r1 even though we have a regular entry? */

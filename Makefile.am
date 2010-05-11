@@ -77,6 +77,7 @@ lib_LTLIBRARIES += i3/libi3.la \
                    i3/chord/libchord.la
 endif
 
+### source declarations ###
 
 test_auth_performance_SOURCES = test/auth_performance.c
 test_certteststub_SOURCES     = test/certteststub.c
