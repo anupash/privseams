@@ -8,8 +8,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
-#Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: gcc gcc-c++ openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpm-build
+BuildRequires: gcc gcc-c++ openssl-devel libxml2-devel iptables-devel xmlto libtool libcap-devel autoconf automake xmlto rpm-build
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -54,7 +53,7 @@ make -j 4 all
 %package all
 Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
-Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-doc hipl-dnsproxy
+Requires: hipl-lib hipl-firewall hipl-daemon hipl-tools hipl-doc hipl-dnsproxy
 %description all
 
 %package minimal
@@ -66,7 +65,7 @@ Requires: hipl-lib hipl-daemon hipl-tools
 %package lib
 Summary: HIP for Linux libraries
 Group: System Environment/Kernel
-Requires: openssl libxml2 gtk2 iptables libcap sqlite
+Requires: openssl libxml2 iptables libcap
 %description lib
 
 %package daemon
@@ -97,12 +96,6 @@ Requires: python hipl-lib
 Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS, DHT or hosts files
 Group: System Environment/Kernel
 %description dnsproxy
-
-%package agent
-Requires: hipl-lib hipl-daemon
-Summary: Graphical user interface for HIP for Linux. Provides user-friendly access control "buddy" lists for HIP.
-Group: System Environment/Kernel
-%description agent
 
 %install
 rm -rf %{buildroot}
@@ -207,9 +200,6 @@ rm -rf %{buildroot}
 %files daemon
 %{prefix}/sbin/hipd
 %config /etc/rc.d/init.d/hipd
-
-%files agent
-%{prefix}/sbin/hipagent
 
 %files dnsproxy
 %{prefix}/sbin/hipdnsproxy

@@ -205,12 +205,10 @@ void hip_oppdb_uninit(void)
  *
  * @param app_id the UDP port of the local library process
  * @param opp_info information related to the opportunistic connection
- * @param reject Zero if Responder supports HIP or one if Responder
- *               did not respond within a certain timeout (should fallback to TCP/IP).
  * @return zero on success or negative on failure
  */
-static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_info,
-                               int reject)
+static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id,
+                               hip_opp_info_t *opp_info)
 {
     struct hip_common *message = NULL;
     int err                    = 0, n;
@@ -255,15 +253,6 @@ static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t
 
 skip_hit_addr:
 
-    if (reject) {
-        n = 1;
-        HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
-        HIP_IFEL(hip_build_param_contents(message, &n,
-                                          HIP_PARAM_AGENT_REJECT,
-                                          sizeof(n)), -1,
-                 "build param HIP_PARAM_HIT  failed\n");
-        HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
-    }
     HIP_DEBUG("Unblocking caller at port %d\n", ntohs(app_id->sin6_port));
     n = hip_sendto_user(message, (struct sockaddr *) app_id);
 
@@ -295,7 +284,7 @@ static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
         goto out_err;
     }
 
-    HIP_IFEL(hip_opp_unblock_app(&entry->caller, opp_info, 0), -1,
+    HIP_IFEL(hip_opp_unblock_app(&entry->caller, opp_info), -1,
              "unblock failed\n");
 
     hip_oppdb_del_entry_by_entry(entry);
@@ -875,7 +864,7 @@ static int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *data)
     HIP_DEBUG_HIT("entry initiator hit:", &entry->our_real_hit);
     HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
     HIP_DEBUG("Rejecting blocked opp entry\n");
-    err = hip_opp_unblock_app(&entry->caller, &info, 0);
+    err = hip_opp_unblock_app(&entry->caller, &info);
     HIP_DEBUG("Reject returned %d\n", err);
     err = hip_oppdb_entry_clean_up(entry);
 
@@ -898,18 +887,6 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
     time_t *now = (time_t *) current_time;
     struct in6_addr *addr;
 
-#ifdef CONFIG_HIP_AGENT
-    /* If agent is prompting user, let's make sure that
-    *  the death counter in maintenance does not expire */
-    if (hip_agent_is_alive()) {
-        hip_ha_t *ha = NULL;
-        ha = hip_oppdb_get_hadb_entry(&entry->our_real_hit,
-                                      &entry->peer_ip);
-        if (ha) {
-            disable_fallback = ha->hip_opp_fallback_disable;
-        }
-    }
-#endif
     if (!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
         hip_opp_info_t info;
 
@@ -919,39 +896,12 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
         addr = (struct in6_addr *) &entry->peer_ip;
         hip_oppipdb_add_entry(addr);
         HIP_DEBUG("Timeout for opp entry, falling back to\n");
-        err  = hip_opp_unblock_app(&entry->caller, &info, 0);
+        err  = hip_opp_unblock_app(&entry->caller, &info);
         HIP_DEBUG("Fallback returned %d\n", err);
         err  = hip_oppdb_entry_clean_up(entry);
         memset(&now, 0, sizeof(now));
     }
 
-    return err;
-}
-
-/**
- * reject an opportunistic mode connection
- *
- * @param entry the connection to reject
- * @param data the remote IP address of the Responder
- * @return zero on success or negative on failure
- */
-int hip_handle_opp_reject(hip_opp_block_t *entry, void *data)
-{
-    int err                  = 0;
-    struct in6_addr *resp_ip = data;
-
-    if (ipv6_addr_cmp(&entry->peer_ip, resp_ip)) {
-        goto out_err;
-    }
-
-    HIP_DEBUG_HIT("entry initiator hit:", &entry->our_real_hit);
-    HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
-    HIP_DEBUG("Rejecting blocked opp entry\n");
-    err = hip_opp_unblock_app(&entry->caller, NULL, 1);
-    HIP_DEBUG("Reject returned %d\n", err);
-    err = hip_oppdb_entry_clean_up(entry);
-
-out_err:
     return err;
 }
 

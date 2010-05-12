@@ -4,7 +4,7 @@
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * This file contains functionality to lower the privileges (or
- * capabilities) of agent, hipd and hipfw. It is important to restrict
+ * capabilities) of hipd and hipfw. It is important to restrict
  * the damage of a exploit to the software. The code is Linux
  * specific.
  *

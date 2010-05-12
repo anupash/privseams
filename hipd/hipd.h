@@ -33,9 +33,6 @@
 #include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
 #include "lib/core/message.h"
 #include "lib/core/esp_prot_common.h"
-#ifdef CONFIG_HIP_AGENT
-        #include "lib/core/sqlitedbapi.h"
-#endif
 #include "dhtqueue.h"
 #include "blind.h"
 
@@ -81,9 +78,6 @@
 #define HIPD_NL_GROUP 32
 
 extern int hip_use_opptcp;
-#ifdef CONFIG_HIP_AGENT
-extern sqlite3 *daemon_db;
-#endif
 
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
@@ -106,8 +100,6 @@ extern int address_change_time_counter;
 extern int hip_wait_addr_changes_to_stabilize;
 
 extern int hip_user_sock;
-extern int hip_agent_sock, hip_agent_status;
-extern struct sockaddr_un hip_agent_addr;
 
 extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
@@ -172,11 +164,7 @@ extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 int hip_firewall_is_alive(void);
 
 /* Functions for handling incoming packets. */
-int hip_sock_recv_agent(void);
 int hip_sock_recv_firewall(void);
-
-int hip_send_agent(struct hip_common *msg);
-int hip_recv_agent(struct hip_common *msg);
 
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);

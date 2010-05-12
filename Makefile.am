@@ -1,21 +1,15 @@
 ACLOCAL_AMFLAGS  = -I m4
 
-HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd/*.h lib/*/*.h))
+HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h))
 
 # For "make dist"
 EXTRA_DIST =  .vimrc debian doc patches release.version version.h
 EXTRA_DIST += packaging tools/maintainer
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/agent/,*.lang))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/dht/,*.txt))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/firewall/,*.cfg))
 EXTRA_DIST += $(HIPL_HEADER_LIST)
-
-# Default pkgdatadir is /usr/[local]/share/hipl/pixmaps/hipmanager.png.
-# Gtk requires the images without the hipl prefix hence we use ".." below
-imagesdir = $(pkgdatadir)/../pixmaps
-dist_images_DATA = lib/gui/hipmanager.png
 
 
 ### user programs ###
@@ -41,20 +35,12 @@ if HIP_FIREWALL
 sbin_PROGRAMS += firewall/hipfw
 endif
 
-if HIP_AGENT
-sbin_PROGRAMS += agent/hipagent
-endif
-
 
 ### libraries ###
 lib_LTLIBRARIES = lib/core/libhipcore.la
 
 if HIP_OPPORTUNISTIC
 lib_LTLIBRARIES += lib/opphip/libopphip.la
-endif
-
-if HIP_AGENT
-lib_LTLIBRARIES += lib/gui/libhipgui.la
 endif
 
 
@@ -149,21 +135,6 @@ firewall_hipfw_SOURCES += firewall/midauth.c   \
                           firewall/pisa_cert.c
 endif
 
-agent_hipagent_SOURCES = agent/agent.c          \
-                         agent/connhipd.c       \
-                         agent/hitdb.c          \
-                         agent/gui_interface.c  \
-                         agent/language.c       \
-                         agent/str_var.c        \
-                         agent/tools.c
-
-lib_gui_libhipgui_la_SOURCES = lib/gui/create.c     \
-                               lib/gui/dragndrop.c  \
-                               lib/gui/events.c     \
-                               lib/gui/hipgui.c     \
-                               lib/gui/tools.c      \
-                               lib/gui/widgets.c
-
 
 # TODO: libhipcore, libhipconf, libhipdht and libhiptool have circular
 # dependencies. This needs to be addressed at some point.
@@ -197,10 +168,6 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/tool/pk.c              \
                                  lib/tool/xfrmapi.c
 
-if HIP_AGENT
-lib_core_libhipcore_la_SOURCES += lib/core/sqlitedbapi.c
-endif
-
 if HIP_DHT
 lib_core_libhipcore_la_SOURCES += lib/dht/libhipdht.c      \
                                   lib/dht/libhipdhtxml.c
@@ -225,11 +192,6 @@ test_dhtteststub_LDADD         = lib/core/libhipcore.la
 test_hc_performance_LDADD      = lib/core/libhipcore.la
 tools_hipconf_LDADD            = lib/core/libhipcore.la
 tools_pisacert_LDADD           = lib/core/libhipcore.la
-
-agent_hipagent_LDADD = lib/gui/libhipgui.la   \
-                       lib/core/libhipcore.la
-
-agent_hipagent_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
 
 
 if HAVE_PYTHON
@@ -286,10 +248,7 @@ autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
 	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
-# Do not check headers that have issues we cannot fix.
-NOCHECK_HEADER_LIST  = $(wildcard $(srcdir)/lib/gui/*.h)
-HIPL_HEADER_FILTERED = $(filter-out $(NOCHECK_HEADER_LIST),$(HIPL_HEADER_LIST))
-HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.ho))
+HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_LIST:.h=.ho))
 CLEANFILES          += $(HIPL_HEADER_OBJS)
 
 checkheaders: $(HIPL_HEADER_OBJS)
@@ -298,7 +257,6 @@ vpath %.h $(srcdir)
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
 lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
-lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 
 # Ensure that version.h is created before everything else. This does not work
 # when creating specific objects that may depend on version.h directly.

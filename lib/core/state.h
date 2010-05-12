@@ -429,18 +429,8 @@ struct hip_hadb_state {
      *  @note Do not modify this value directly. Use
      *  hip_ipsec_set_handle_function_set() instead. */
     hip_ipsec_func_set_t *                     hadb_ipsec_func;
-    /** Input filter function set. Input filter used in the GUI agent.
-     *  @note Do not modify this value directly. Use
-     *  hip_hadb_set_input_filter_function_set() instead. */
-    hip_input_filter_func_set_t *              hadb_input_filter_func;
-    /** Output filter function set. Output filter used in the GUI agent.
-     *  @note Do not modify this value directly. Use
-     *  hip_hadb_set_output_filter_function_set() instead. */
-    hip_output_filter_func_set_t *             hadb_output_filter_func;
     /** peer hostname */
     uint8_t                                    peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-    /** True when agent is prompting user and fall back is disabled. */
-    int                                        hip_opp_fallback_disable;
     /** Non-zero if opportunistic TCP mode is on. */
     int                                        hip_is_opptcp_on;
     /** The local port from where the TCP SYN I1 packet will be sent */
@@ -712,14 +702,6 @@ struct hip_ipsec_func_set {
     uint32_t (*hip_acquire_spi)(hip_hit_t *srchit, hip_hit_t *dsthit);
     void (*hip_delete_default_prefix_sp_pair)(void);
     int (*hip_setup_default_sp_prefix_pair)(void);
-};
-
-struct hip_hadb_input_filter_func_set {
-    int (*hip_input_filter)(struct hip_common *msg);
-};
-
-struct hip_hadb_output_filter_func_set {
-    int (*hip_output_filter)(struct hip_common *msg);
 };
 
 /* @} */

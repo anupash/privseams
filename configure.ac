@@ -89,41 +89,6 @@ if test x"$ac_cv_use_firewall" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
-AC_ARG_ENABLE(agent,
-               AS_HELP_STRING([--enable-agent],
-                              [HIP enable user agent (default is YES)]),
-               [ac_cv_use_agent=$enableval],
-               [ac_cv_use_agent=yes])
-AC_CACHE_CHECK([whether to use agent],
-               [ac_cv_use_agent],
-               [ac_cv_use_agent=yes])
-if test x"$ac_cv_use_agent" = x"yes"; then
-    # Try to automatically detect GTK
-    PKG_CHECK_MODULES(GTK,
-                      [gtk+-2.0 >= 2.10.0],
-                      [ac_cv_use_agent=yes],
-                      [ac_cv_use_agent=no])
-    if test x"$ac_cv_use_agent" = x"no"; then
-        PKG_CHECK_MODULES(GTK,
-                          [gtk+-2.0 >= 2.8.0],
-                          [ac_cv_use_agent=yes],
-                          [ac_cv_use_agent=no])
-        if test x"$ac_cv_use_agent" = x"yes"; then
-            AC_MSG_WARN([You are missing >= GTK 2.10, it is VERY recommended])
-        fi
-    fi
-
-    if test x"$ac_cv_use_agent" = x"yes"; then
-        AC_CHECK_LIB(sqlite3, sqlite3_open,,
-                 [AC_MSG_ERROR(libsqlite3-dev not found)])
-        AC_DEFINE(CONFIG_HIP_AGENT)
-        AH_TEMPLATE(CONFIG_HIP_AGENT, [Defined to 1 if agent is enabled.])
-    else
-        AC_MSG_WARN([Disabled HIP agent due to unsatisfied dependencies.])
-    fi
-fi
-AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
-
 AC_ARG_ENABLE(rvs,
                AS_HELP_STRING([--enable-rvs],
                               [HIP Rendezvous Extensions (default is YES)]),

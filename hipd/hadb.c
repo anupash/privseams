@@ -77,8 +77,6 @@ hip_xmit_func_set_t nat_xmit_func_set;
 hip_ipsec_func_set_t default_ipsec_func_set;
 
 static hip_misc_func_set_t default_misc_func_set;
-static hip_input_filter_func_set_t default_input_filter_func_set;
-static hip_output_filter_func_set_t default_output_filter_func_set;
 static hip_rcv_func_set_t default_rcv_func_set;
 static hip_handle_func_set_t default_handle_func_set;
 
@@ -705,42 +703,6 @@ int hip_hadb_set_xmit_function_set(hip_ha_t *entry,
 }
 
 /**
- * change the input filter function pointer set of a host association
- *
- * @param entry the host association
- * @param new_func_set the new function pointer set
- * @return zero on success and negative on error
- *
- */
-static int hip_hadb_set_input_filter_function_set(hip_ha_t *entry,
-                                                  hip_input_filter_func_set_t *new_func_set)
-{
-    if (entry) {
-        entry->hadb_input_filter_func = new_func_set;
-        return 0;
-    }
-    return -1;
-}
-
-/**
- * change the output handler function pointer set of a host association
- *
- * @param entry the host association
- * @param new_func_set the new function pointer set
- * @return zero on success and negative on error
- *
- */
-static int hip_hadb_set_output_filter_function_set(hip_ha_t *entry,
-                                                   hip_output_filter_func_set_t *new_func_set)
-{
-    if (entry) {
-        entry->hadb_output_filter_func = new_func_set;
-        return 0;
-    }
-    return -1;
-}
-
-/**
  * Inits a Host Association after memory allocation.
  *
  * @param  entry pointer to a host association
@@ -771,13 +733,6 @@ static int hip_hadb_init_entry(hip_ha_t *entry)
     /* Set the xmit function set as function set for sending raw HIP. */
     HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
              -1, "Can't set new function pointer set.\n");
-
-    HIP_IFEL(hip_hadb_set_input_filter_function_set(
-                 entry, &default_input_filter_func_set), -1,
-             "Can't set new input filter function pointer set.\n");
-    HIP_IFEL(hip_hadb_set_output_filter_function_set(
-                 entry, &default_output_filter_func_set), -1,
-             "Can't set new output filter function pointer set.\n");
 
     /* added by Tao Wan, on 24, Jan, 2008 */
     entry->hadb_ipsec_func = &default_ipsec_func_set;
@@ -1214,15 +1169,6 @@ void hip_init_hadb(void)
     /* xmit function set */
     default_xmit_func_set.hip_send_pkt = hip_send_pkt;
     nat_xmit_func_set.hip_send_pkt     = hip_send_pkt;
-
-    /* filter function sets */
-    /* Compiler warning: assignment from incompatible pointer type.
-     * Please fix this, if you know what is the correct value.
-     * -Lauri 25.09.2007 15:11. */
-    /* Wirtz 27/11/09 pointers are completely incomp. ( 1param to 4 params )
-     *  uncommented, please fix or remove completely */
-    // default_input_filter_func_set.hip_input_filter = hip_agent_filter;
-    // default_output_filter_func_set.hip_output_filter = hip_agent_filter;
 
     /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)
      *

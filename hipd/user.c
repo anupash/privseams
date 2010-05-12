@@ -97,10 +97,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         goto out_err;
     }
 
-    if (ntohs(src->sin6_port) == HIP_AGENT_PORT) {
-        return hip_recv_agent(msg);
-    }
-
     /* This prints numerical addresses until we have separate
      * print function for icomm.h and protodefs.h -miika */
     HIP_DEBUG("HIP user message type is: %d\n", msg_type);
@@ -142,7 +138,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         HIP_IFEL(hip_user_nat_mode(msg_type),
                  -1,
                  "Error when setting daemon NAT status to \"on\"\n");
-        hip_agent_update_status(msg_type, NULL, 0);
 
         HIP_DEBUG("Recreate all R1s\n");
         hip_recreate_all_precreated_r1_packets();

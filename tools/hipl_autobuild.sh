@@ -109,10 +109,10 @@ compile
 run_program "make -j17 distcheck"
 
 # PISA configuration
-compile --enable-firewall --disable-agent --disable-rvs --disable-hipproxy --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
+compile --enable-firewall --disable-rvs --disable-hipproxy --disable-opportunistic --disable-dht --disable-blind --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
 
 # Alternative path to vanilla
-compile --enable-firewall --enable-agent --disable-rvs --disable-hipproxy --disable-opportunistic --disable-dht --enable-blind --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
+compile --enable-firewall --disable-rvs --disable-hipproxy --disable-opportunistic --disable-dht --enable-blind --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
 
 # Compile HIPL within an OpenWrt checkout
 CONFIGURATION="OpenWrt ARM crosscompile"

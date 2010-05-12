@@ -1181,9 +1181,6 @@ char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_FIREWALL_PING:      return "HIP_MSG_FIREWALL_PING";
     case HIP_MSG_FIREWALL_PING_REPLY: return "HIP_MSG_FIREWALL_PING_REPLY";
     case HIP_MSG_FIREWALL_QUIT:      return "HIP_MSG_FIREWALL_QUIT";
-    case HIP_MSG_AGENT_PING:         return "HIP_MSG_AGENT_PING";
-    case HIP_MSG_AGENT_PING_REPLY:   return "HIP_MSG_AGENT_PING_REPLY";
-    case HIP_MSG_AGENT_QUIT:         return "HIP_MSG_AGENT_QUIT";
     case HIP_MSG_DAEMON_QUIT:        return "HIP_MSG_DAEMON_QUIT";
     case HIP_MSG_I1_REJECT:          return "HIP_MSG_I1_REJECT";
     case HIP_MSG_SET_NAT_PLAIN_UDP:  return "HIP_MSG_SET_NAT_PLAIN_UDP";
@@ -1235,7 +1232,6 @@ char *hip_param_type_name(const hip_tlv_type_t param_type)
 {
     switch (param_type) {
     case HIP_PARAM_ACK:             return "HIP_PARAM_ACK";
-    case HIP_PARAM_AGENT_REJECT:    return "HIP_PARAM_AGENT_REJECT";
     case HIP_PARAM_BLIND_NONCE:     return "HIP_PARAM_BLIND_NONCE";
     case HIP_PARAM_CERT:            return "HIP_PARAM_CERT";
     case HIP_PARAM_DH_SHARED_KEY:   return "HIP_PARAM_DH_SHARED_KEY";
@@ -3960,27 +3956,6 @@ int hip_build_param_hip_hdrr_info(struct hip_common *msg,
                        sizeof(struct hip_hdrr_info)
                                - sizeof(struct hip_tlv_common));
     err = hip_build_param(msg, hdrr_info);
-    return err;
-}
-
-/**
- * Build and append a UADB info parameter into a message. Used by the HIP
- * user agent to inform hipd on HIP connections accepted by hipd.
- *
- * @param msg a pointer to the message where the parameter will be
- *            appended
- * @param uadb_info uadb_info structure
- * @return zero on success, or negative on failure
- */
-int hip_build_param_hip_uadb_info(struct hip_common *msg,
-                                  struct hip_uadb_info *uadb_info)
-{
-    int err = 0;
-    hip_set_param_type((struct hip_tlv_common *) uadb_info, HIP_PARAM_UADB_INFO);
-    hip_calc_param_len((struct hip_tlv_common *) uadb_info,
-                       sizeof(struct hip_uadb_info)
-                               - sizeof(struct hip_tlv_common));
-    err = hip_build_param(msg, uadb_info);
     return err;
 }
 

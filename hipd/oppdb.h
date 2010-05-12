@@ -65,6 +65,4 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
                      void *opaque);
 
-int hip_handle_opp_reject(hip_opp_block_t *entry, void *ips);
-
 #endif /* HIP_HIPD_OPPDB_H */

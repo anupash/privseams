@@ -22,10 +22,8 @@ The code under the following directories was developed for the HIPL project:
   * lib/performance
   * lib/opphip
   * lib/conf
-  * lib/gui
   * lib/core
   * test
-  * agent
   * hipd
   * doc
 

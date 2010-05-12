@@ -9,7 +9,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
-BuildRequires: automake, autoconf, libtool, gcc, libgtk2.0-dev, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev, libsqlite3-dev
+BuildRequires: automake, autoconf, libtool, gcc, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -70,7 +70,7 @@ make -j 4 all
 %package all
 Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
 Group: System Environment/Kernel
-Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-doc, hipl-dnsproxy
+Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-tools, hipl-doc, hipl-dnsproxy
 %description all
 
 %package minimal
@@ -82,7 +82,7 @@ Requires: hipl-lib hipl-daemon hipl-tools
 %package lib
 Summary: HIP for Linux libraries
 Group: System Environment/Kernel
-Requires: openssl, libxml2, libgtk2.0-0, iptables, libcap2, libsqlite3-0
+Requires: openssl, libxml2, iptables, libcap2
 %description lib
 
 %package daemon
@@ -114,17 +114,10 @@ Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and retur
 Group: System Environment/Kernel
 %description dnsproxy
 
-%package agent
-Requires: hipl-lib, hipl-daemon
-Summary: Graphical user interface for HIP for Linux. Provides user-friendly access control "buddy" lists for HIP.
-Group: System Environment/Kernel
-%description agent
-
 %install
 rm -rf %{buildroot}
 
 install -d %{buildroot}/usr/share/pixmaps
-install -m 644 lib/gui/hipmanager.png %{buildroot}/usr/share/pixmaps
 install -d %{buildroot}/usr/bin
 install -d %{buildroot}/usr/sbin
 install -d %{buildroot}/usr/lib
@@ -144,7 +137,6 @@ install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnskeyparse/mya
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hipdnsproxy/hipdnsproxy
 install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
 install -m 755 tools/hipdnsproxy/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
-install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post lib
 /sbin/ldconfig
@@ -185,10 +177,6 @@ rm -rf %{buildroot}
 %files daemon
 /usr/sbin/hipd
 %config /etc/init.d/hipd
-
-%files agent
-/usr/share/pixmaps/hipmanager.png
-/usr/sbin/hipagent
 
 %files dnsproxy
 /usr/sbin/hipdnsproxy

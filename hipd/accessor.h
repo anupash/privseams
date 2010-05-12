@@ -45,7 +45,6 @@ unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);
 int hipd_get_flag(unsigned int);
 void hipd_set_flag(unsigned int);
-int hip_agent_is_alive(void);
 
 int hip_get_opportunistic_tcp_status(void);
 int hip_set_opportunistic_mode(struct hip_common *msg);

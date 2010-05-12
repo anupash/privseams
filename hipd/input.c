@@ -542,14 +542,12 @@ static int hip_packet_to_drop(hip_ha_t *entry,
  * @param daddr a pointer to the destination address where to the packet was
  *              sent to (own address).
  * @param info  a pointer to the source and destination ports.
- * @param filter Whether to filter trough agent or not.
  * @return      zero on success, or negative error value on error.
  */
 int hip_receive_control_packet(struct hip_common *msg,
                                struct in6_addr *src_addr,
                                struct in6_addr *dst_addr,
-                               hip_portpair_t *msg_info,
-                               int filter)
+                               hip_portpair_t *msg_info)
 {
     hip_ha_t tmp, *entry = NULL;
     int err = 0, type, skip_sync = 0;
@@ -603,11 +601,6 @@ int hip_receive_control_packet(struct hip_common *msg,
         entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr,
                                                dst_addr,
                                                msg_info);
-        /* If agent is prompting user, let's make sure that
-        *  the death counter in maintenance does not expire */
-        if (hip_agent_is_alive() && entry) {
-            entry->hip_opp_fallback_disable = filter;
-        }
     } else {
         /* Ugly bug fix for "nc6 hostname tcp 12345"
          * where hostname maps to HIT and IP in hosts files.
@@ -618,19 +611,6 @@ int hip_receive_control_packet(struct hip_common *msg,
          * Not to mention a SET of them... */
         if (entry) {
             entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
-        }
-    }
-#endif
-
-#ifdef CONFIG_HIP_AGENT
-    /** Filter packet trough agent here. */
-    if ((type == HIP_I1 || type == HIP_R1) && filter) {
-        HIP_DEBUG("Filtering packet trough agent now (packet is %s).\n",
-                  type == HIP_I1 ? "I1" : "R1");
-        err = hip_agent_filter(msg, src_addr, dst_addr, msg_info);
-        /* If packet filtering OK, return and wait for agent reply. */
-        if (err == 0) {
-            goto out_err;
         }
     }
 #endif
@@ -914,7 +894,7 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
         saddr_public = &entry->peer_addr;
     }
 #endif
-    HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr, info, 1), -1,
+    HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr, info), -1,
              "receiving of control packet failed\n");
 out_err:
     return err;

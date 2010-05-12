@@ -34,7 +34,6 @@ endif
 	./configure $(CROSS) --prefix=/usr --sysconfdir=/etc \
                          --enable-shared \
                          --disable-dht \
-                         --disable-agent \
                          --disable-debug
 
 

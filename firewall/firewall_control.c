@@ -72,7 +72,7 @@ static int hip_handle_bex_state_update(struct hip_common *msg)
  */
 static int hip_fw_proxy_set_peer_hit(hip_common_t *msg)
 {
-    int fallback               = 1, reject = 0, addr_found = 0, err = 0;
+    int fallback               = 1, addr_found = 0, err = 0;
     hip_hit_t local_hit, peer_hit;
     struct in6_addr local_addr, peer_addr;
     hip_hit_t *ptr             = NULL;
@@ -111,18 +111,6 @@ static int hip_fw_proxy_set_peer_hit(hip_common_t *msg)
     if (addr_found != 2) {
         HIP_ERROR("Internal error: two addr not found\n");
         err = -1;
-    }
-
-    ptr = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
-    if (ptr) {
-        HIP_DEBUG("Connection is to be rejected\n");
-        reject = 1;
-    }
-
-    if (reject) {
-        HIP_DEBUG("Connection should be rejected\n");
-        err = -1;
-        goto out_err;
     }
 
     if (fallback) {

@@ -321,8 +321,6 @@ static void hip_store_orig_socket_info(hip_opp_socket_t *entry,
  * @param dst_tcp_port the TCP port at the peer needed for the TCP i1 option negotiation
  * @param fallback set to one by the function if the connection should
  *                 fall back to non-HIP communications, or zero otherwise
- * @param reject set to one by the function if HIP GUI agent decided to reject the connection
- *               or zero otherwise
  *
  * @return zero on success, non-zero on failure
  */
@@ -331,15 +329,13 @@ static int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
                                           const struct in6_addr *local_hit,
                                           in_port_t *src_tcp_port,
                                           in_port_t *dst_tcp_port,
-                                          int *fallback,
-                                          int *reject)
+                                          int *fallback)
 {
     struct hip_common *msg = NULL;
     hip_hit_t *ptr         = NULL;
     int err                = 0;
 
     *fallback = 1;
-    *reject   = 0;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
@@ -382,12 +378,6 @@ static int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
         memcpy(peer_hit, ptr, sizeof(hip_hit_t));
         HIP_DEBUG_HIT("peer_hit", peer_hit);
         *fallback = 0;
-    }
-
-    ptr = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
-    if (ptr) {
-        HIP_DEBUG("Connection is to be rejected\n");
-        *reject = 1;
     }
 
 out_err:
@@ -603,7 +593,7 @@ static int hip_translate_new(hip_opp_socket_t *entry,
 
     /* Try opportunistic base exchange to retrieve peer's HIT */
     if (is_peer) {
-        int fallback, reject;
+        int fallback;
         /* Request a HIT of the peer from hipd. This will possibly
          * launch an I1 with NULL HIT that will block until R1 is
          * received. Called e.g. in connect() or sendto(). If
@@ -616,15 +606,8 @@ static int hip_translate_new(hip_opp_socket_t *entry,
                                                 &src_hit.sin6_addr,
                                                 (in_port_t *) &src_opptcp_port,
                                                 (in_port_t *) &dst_opptcp_port,
-                                                &fallback,
-                                                &reject),
+                                                &fallback),
                  -1, "Request from hipd failed\n");
-        if (reject) {
-            HIP_DEBUG("Connection should be rejected\n");
-            err = -1;
-            goto out_err;
-        }
-
         if (fallback) {
             HIP_DEBUG("Peer does not support HIP, fallback\n");
             goto out_err;

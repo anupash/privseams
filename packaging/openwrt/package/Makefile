@@ -88,7 +88,6 @@ define Build/Configure
 	$(call Build/Configure/Default, \
             --enable-shared \
             --disable-dht \
-            --disable-agent \
             --disable-debug \
     );
 endef
