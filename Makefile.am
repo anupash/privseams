@@ -196,6 +196,7 @@ lib_gui_libhipgui_la_SOURCES = lib/gui/create.c     \
 # dependencies. This needs to be addressed at some point.
 lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/builder.c         \
+                                 lib/core/capability.c      \
                                  lib/core/certtools.c       \
                                  lib/core/crypto.c          \
                                  lib/core/debug.c           \
@@ -205,7 +206,6 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/hashchain_store.c \
                                  lib/core/hashtable.c       \
                                  lib/core/hashtree.c        \
-                                 lib/core/hip_capability.c  \
                                  lib/core/hip_udp.c         \
                                  lib/core/hit.c             \
                                  lib/core/hostid.c          \

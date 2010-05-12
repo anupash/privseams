@@ -25,7 +25,7 @@
 #include "config.h"
 #include "debug.h"
 #include "ife.h"
-#include "hip_capability.h"
+#include "capability.h"
 
 #include <linux/capability.h>
 #include <linux/unistd.h>

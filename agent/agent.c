@@ -35,7 +35,7 @@
 #include "connhipd.h"
 #include "str_var.h"
 #include "language.h"
-#include "lib/core/hip_capability.h"
+#include "lib/core/capability.h"
 #include "lib/core/sqlitedbapi.h"
 #include "lib/core/util.h"
 #include "lib/gui/hipgui.h"
