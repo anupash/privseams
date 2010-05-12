@@ -233,7 +233,7 @@ static int run_nsupdate(char *ips, char *hit, int start)
         exit(1);         // just in case
     } else {  // PARENT
               /* We execute waitpid in SIGCHLD handler */
-        return OK;
+        return 0;
     }
 }
 
@@ -298,5 +298,5 @@ int nsupdate(const int start)
 {
     HIP_DEBUG("Updating dns records...\n");
     hip_for_each_hi(run_nsupdate_for_hit, (void *) &start);
-    return OK;
+    return 0;
 }

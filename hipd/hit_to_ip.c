@@ -24,8 +24,6 @@
 #include "maintenance.h"
 #include "lib/conf/conf.h"
 
-//  value to return by the function
-#define ERR -1
 
 int hip_hit_to_ip_status = 0;
 
@@ -95,7 +93,7 @@ static const char hex_digits[] = {
 static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const int hostname_len)
 {
     if ((hit == NULL) || (hostname == NULL)) {
-        return ERR;
+        return -1;
     }
 
     uint8_t *bytes = (uint8_t *) hit->s6_addr;
@@ -114,7 +112,7 @@ static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname
         strncpy(cp, hip_hit_to_ip_zone, hostname_len - 64);
     }
 
-    return OK;
+    return 0;
 }
 
 /**
@@ -137,11 +135,11 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval)
     int res;
 
     if ((hit == NULL) || (retval == NULL)) {
-        return ERR;
+        return -1;
     }
 
-    if (hip_get_hit_to_ip_hostname(hit, hit_to_ip_hostname, sizeof(hit_to_ip_hostname)) != OK) {
-        return ERR;
+    if (hip_get_hit_to_ip_hostname(hit, hit_to_ip_hostname, sizeof(hit_to_ip_hostname)) != 0) {
+        return -1;
     }
 
     memset(&hints, 0, sizeof(hints));
@@ -159,7 +157,7 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval)
 
     if (res != 0) {
         HIP_DEBUG("getaddrinfo error %s\n", gai_strerror(res));
-        return ERR;
+        return -1;
     }
 
     /* Look at the list and return only one address, let us prefer AF_INET */
@@ -183,8 +181,8 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval)
     }
 
     if (found_addr) {
-        return OK;
+        return 0;
     } else {
-        return ERR;
+        return -1;
     }
 }

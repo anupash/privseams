@@ -834,7 +834,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
         HIP_DEBUG("operation may take a while..\n");
         int res = hip_hit_to_ip(hit, addr);
 
-        if (res == OK) {
+        if (res == 0) {
             HIP_DEBUG_IN6ADDR("found hit-to-ip addr ", addr);
             err = 0;
             goto out_err;
