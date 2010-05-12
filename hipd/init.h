@@ -21,7 +21,6 @@
 #include "lib/core/debug.h"
 #include "hiprelay.h"
 #include "hadb.h"
-#include "hi3.h"
 #include "nsupdate.h"
 
 /* startup flags options to be configured via the command line */
@@ -35,7 +34,6 @@
 /*
  * HIP daemon initialization functions.
  */
-extern int hip_use_i3;
 extern hip_ipsec_func_set_t default_ipsec_func_set;
 extern int hip_firewall_sock_fd;
 extern int hip_firewall_sock_lsi_fd;

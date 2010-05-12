@@ -234,63 +234,6 @@ out_err:
 }
 #endif /* CONFIG_HIP_OPPORTUNISTIC */
 
-#ifdef CONFIG_HIP_I3
-/**
- * turn hi3 support on or off
- *
- * @param msg a message with type HIP_MSG_SET_HI3_ON or HIP_MSG_SET_HI3_OFF
- */
-void hip_set_hi3_status(struct hip_common *msg)
-{
-    struct sockaddr_in6 sock_addr;
-    int retry, type, n;
-
-    type = hip_get_msg_type(msg);
-
-    _HIP_DEBUG("type=%d\n", type);
-
-    bzero(&sock_addr, sizeof(sock_addr));
-    sock_addr.sin6_family = AF_INET6;
-    sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    sock_addr.sin6_addr   = in6addr_loopback;
-
-    for (retry = 0; retry < 3; retry++) {
-        n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
-        if (n <= 0) {
-            HIP_ERROR("hipconf hi3 failed (round %d)\n", retry);
-            HIP_DEBUG("Sleeping few seconds to wait for fw\n");
-            sleep(2);
-        } else {
-            HIP_DEBUG("hipconf hi3 ok (sent %d bytes)\n", n);
-            break;
-        }
-    }
-
-    if (type == HIP_MSG_SET_HI3_ON) {
-        hip_i3_init();
-        hip_use_hi3        = 1;
-        hip_locator_status = HIP_MSG_SET_LOCATOR_ON;
-    } else {
-        hip_locator_status = HIP_MSG_SET_LOCATOR_OFF;
-        hip_hi3_clean();
-        hip_use_hi3        = 0;
-    }
-
-    HIP_DEBUG("hi3 set %s\n",
-              (hip_use_hi3 ? "on" : "off"));
-}
-
-/**
- * query if Hi3 is enabled or not
- *
- * @return 1 if it is enabled or 0 otherwise
- */
-int hip_get_hi3_status(void)
-{
-    return hip_use_hi3;
-}
-#endif /* CONFIG_HIP_I3 */
-
 /**
  * Query status of client-side HIP proxy
  *

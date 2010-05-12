@@ -4481,30 +4481,6 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
 
   </section>
 
-  <section id="ch_hi3_support">
-    <title>Hi3 Support</title>
-    <note><title>NOTE:</title>
-      <para>
-        It has been a while since this extension was implementated and tested.
-        As of 24th July 2008, the code compiles but HIP daemon does not respond
-        to hipconf commands. This extension is defunct.
-      </para>
-    </note>
-    <itemizedlist>
-    <listitem><para>
-          Compile HIPL with ./configure --enable-hi3 --disable-opendht
-    </para></listitem>
-    <listitem><para>
-          Start the daemon: hipd -3 i3/i3-cfg-PL.xml
-    </para></listitem>
-    <listitem><para>
-          Wait until the trigger is inserted (see log file) and continue with e.g.
-          ping6 or nc6 with testing.
-    </para></listitem>
-        </itemizedlist>
-
-  </section>
-
   <section id="ch_shotgun">
     <title>"Shotgun" Extension</title>
 

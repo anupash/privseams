@@ -39,8 +39,6 @@
 #include "dhtqueue.h"
 #include "blind.h"
 
-#include "i3/i3_client/i3_client_api.h"
-
 
 #define HIP_HIT_DEV "dummy0"
 
@@ -83,7 +81,6 @@
 #define HIPD_NL_GROUP 32
 
 extern int hip_use_opptcp;
-extern int hip_use_hi3;
 #ifdef CONFIG_HIP_AGENT
 extern sqlite3 *daemon_db;
 #endif

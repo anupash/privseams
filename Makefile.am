@@ -1,10 +1,9 @@
 ACLOCAL_AMFLAGS  = -I m4
 
-HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd/*.h i3/*/*.h lib/*/*.h))
+HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd/*.h lib/*/*.h))
 
 # For "make dist"
 EXTRA_DIST =  .vimrc debian doc patches release.version version.h
-EXTRA_DIST += i3/i3-cfg-PL.xml i3/aeshash/aescpp.hh i3/i3/i3_debug.c i3/utils/netwrap_win32.c
 EXTRA_DIST += packaging tools/maintainer
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/agent/,*.lang))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/dht/,*.txt))
@@ -30,14 +29,6 @@ endif
 
 if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
-endif
-
-if HIP_I3
-noinst_PROGRAMS = i3/chord/chord_getfingers \
-                  i3/chord/chord_traceroute \
-                  i3/chord/gen_conf         \
-                  i3/chord/gen_conf_same    \
-                  i3/chord/test
 endif
 
 
@@ -66,10 +57,6 @@ if HIP_AGENT
 lib_LTLIBRARIES += lib/gui/libhipgui.la
 endif
 
-if HIP_I3
-lib_LTLIBRARIES += i3/libi3.la \
-                   i3/chord/libchord.la
-endif
 
 ### source declarations ###
 
@@ -115,10 +102,6 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/user.c                  \
                     hipd/user_ipsec_hipd_msg.c   \
                     hipd/user_ipsec_sadb_api.c
-
-if HIP_I3
-hipd_hipd_SOURCES += hipd/hi3.c
-endif
 
 if HIP_DHT
 hipd_hipd_SOURCES += hipd/dht.c
@@ -230,66 +213,6 @@ endif
 lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
                                    lib/opphip/wrap_db.c
 
-i3_libi3_la_SOURCES = i3/aeshash/aescrypt.c              \
-                      i3/aeshash/aeshash.c               \
-                      i3/aeshash/aeskey.c                \
-                      i3/aeshash/aeskeypp.c              \
-                      i3/aeshash/aestab.c                \
-                      i3/i3/i3_addr.c                    \
-                      i3/i3/i3_api.c                     \
-                      i3/i3/i3_config.c                  \
-                      i3/i3/i3_header.c                  \
-                      i3/i3/i3_id.c                      \
-                      i3/i3/i3_misc.c                    \
-                      i3/i3/i3_options.c                 \
-                      i3/i3/i3_ping.c                    \
-                      i3/i3/i3_stack.c                   \
-                      i3/i3/i3_tcp_fns.c                 \
-                      i3/i3/i3_trigger.c                 \
-                      i3/i3/i3_utils.c                   \
-                      i3/i3/token_bucket.c               \
-                      i3/i3_client/coordinates.c         \
-                      i3/i3_client/downhill_simplex.c    \
-                      i3/i3_client/http.c                \
-                      i3/i3_client/i3_client_api.c       \
-                      i3/i3_client/i3_client_api_ctx.c   \
-                      i3/i3_client/i3_client_callback.c  \
-                      i3/i3_client/i3_client_context.c   \
-                      i3/i3_client/i3_client_fd.c        \
-                      i3/i3_client/i3_client_id.c        \
-                      i3/i3_client/i3_client_pkt.c       \
-                      i3/i3_client/i3_client_timer.c     \
-                      i3/i3_client/i3_client_trigger.c   \
-                      i3/i3_client/i3server_list.c       \
-                      i3/i3_client/ping.c                \
-                      i3/i3_client/ping_thread.c         \
-                      i3/i3_client/qsort.c               \
-                      i3/utils/byteorder.c               \
-                      i3/utils/eprintf.c                 \
-                      i3/utils/event.c                   \
-                      i3/utils/gen_utils.c               \
-                      i3/utils/inetfns.c                 \
-                      i3/utils/netwrap_posix.c
-
-i3_chord_libchord_la_SOURCES = i3/chord/api.c        \
-                               i3/chord/chord.c      \
-                               i3/chord/finger.c     \
-                               i3/chord/hosts.c      \
-                               i3/chord/join.c       \
-                               i3/chord/pack.c       \
-                               i3/chord/process.c    \
-                               i3/chord/sendpkt.c    \
-                               i3/chord/stabilize.c  \
-                               i3/chord/util.c       \
-                               i3/utils/eprintf.c    \
-                               i3/utils/gen_utils.c
-
-i3_chord_chord_getfingers_SOURCES = i3/chord/chord_getfingers.c
-i3_chord_chord_traceroute_SOURCES = i3/chord/chord_traceroute.c
-i3_chord_gen_conf_SOURCES         = i3/chord/gen_conf.c
-i3_chord_gen_conf_same_SOURCES    = i3/chord/gen_conf_same.c
-i3_chord_test_SOURCES             = i3/chord/test.c
-
 
 ### library dependencies ###
 
@@ -303,20 +226,10 @@ test_hc_performance_LDADD      = lib/core/libhipcore.la
 tools_hipconf_LDADD            = lib/core/libhipcore.la
 tools_pisacert_LDADD           = lib/core/libhipcore.la
 
-if HIP_I3
-hipd_hipd_LDADD += i3/libi3.la
-endif
-
 agent_hipagent_LDADD = lib/gui/libhipgui.la   \
                        lib/core/libhipcore.la
 
 agent_hipagent_LDFLAGS = `pkg-config --libs gtk+-2.0 gthread-2.0`
-
-i3_chord_chord_getfingers_LDADD = i3/chord/libchord.la
-i3_chord_chord_traceroute_LDADD = i3/chord/libchord.la
-i3_chord_gen_conf_LDADD         = i3/chord/libchord.la
-i3_chord_gen_conf_same_LDADD    = i3/chord/libchord.la
-i3_chord_test_LDADD             = i3/chord/libchord.la
 
 
 if HAVE_PYTHON
@@ -384,7 +297,7 @@ vpath %.h $(srcdir)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
-i3/i3/i3_config.lo lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
+lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
 lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
 
 # Ensure that version.h is created before everything else. This does not work

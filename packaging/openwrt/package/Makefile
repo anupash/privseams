@@ -89,7 +89,6 @@ define Build/Configure
             --enable-shared \
             --disable-dht \
             --disable-agent \
-            --disable-i3 \
             --disable-debug \
     );
 endef

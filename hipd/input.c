@@ -48,8 +48,6 @@
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_light_update.h"
 #include "hipd.h"
-
-#include "i3/i3_client/i3_client_api.h"
 #include "oppipdb.h"
 #include "pisa.h"
 
@@ -1306,59 +1304,6 @@ static int handle_locator(struct hip_locator *locator,
              -1, "Malloc for entry->locators failed\n");
     memcpy(entry->locator, locator, loc_size);
 
-#ifdef CONFIG_HIP_I3
-    {
-        int ii                                   = 0, use_ip4 = 1;
-        hip_list_t *item                         = NULL, *tmp = NULL;
-        struct netdev_address *n                 = NULL;
-        struct hip_locator_info_addr_item *first = NULL;
-
-        if (entry && entry->hip_is_hi3_on) {
-            if (r1_info->hi3_in_use && n_addrs > 0) {
-                first = (struct hip_locator_info_addr_item *) locator + sizeof(struct hip_locator);
-                memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));
-
-                list_for_each_safe(item, tmp, addresses, ii) {
-                    n = list_entry(item);
-                    if (ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *) &n->addr))) {
-                        continue;
-                    }
-                    if (!hip_sockaddr_is_v6_mapped(hip_cast_sa_addr((struct sockaddr *) &n->addr))) {
-                        memcpy(r1_daddr, hip_cast_sa_addr((struct sockaddr *) &n->addr),
-                               hip_sa_addr_len(&n->addr));
-                        ii      = -1;
-                        use_ip4 = 0;
-                        break;
-                    }
-                }
-                if (use_ip4) {
-                    list_for_each_safe(item, tmp, addresses, ii) {
-                        n = list_entry(item);
-                        if (ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *) &n->addr))) {
-                            continue;
-                        }
-                        if (hip_sockaddr_is_v6_mapped(hip_cast_sa_addr((struct sockaddr *) &n->addr))) {
-                            memcpy(r1_daddr, hip_cast_sa_addr((struct sockaddr *) &n->addr),
-                                   hip_sa_addr_len(&n->addr));
-                            ii = -1;
-                            break;
-                        }
-                    }
-                }
-
-                struct in6_addr daddr;
-
-                memcpy(&entry->our_addr, r1_daddr, sizeof(struct in6_addr));
-
-                hip_hadb_get_peer_addr(entry, &daddr);
-                hip_hadb_delete_peer_addrlist_one_old(entry, &daddr);
-                hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
-                                       PEER_ADDR_STATE_ACTIVE,
-                                       entry->peer_udp_port);
-            }
-        }
-    }
-#endif
 out_err:
     return err;
 }
@@ -1979,13 +1924,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
     HIP_IFEL(hip_verify_cookie(i2_saddr, i2_daddr, i2, solution), -EPROTO,
              "Cookie solution rejected. Dropping the I2 packet.\n");
-
-#ifdef CONFIG_HIP_I3
-    if (entry && entry->hip_is_hi3_on) {
-        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        hip_do_i3_stuff_for_i2(locator, i2_info, i2_saddr, i2_daddr);
-    }
-#endif
 
     if (entry != NULL) {
         spi_in = entry->spi_inbound_current;
@@ -2650,17 +2588,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
     int err                       = 0, tfm = 0, retransmission = 0, idx = 0;
     uint32_t spi_recvd            = 0, spi_in = 0;
     struct hip_locator *locator   = NULL;
-
-#ifdef CONFIG_HIP_I3
-    if (entry && entry->hip_is_hi3_on) {
-        if (r2_info->hi3_in_use) {
-            /* In hi3 real addresses should already be in entry, received on
-             * r1 phase. */
-            memcpy(r2_saddr, &entry->peer_addr, sizeof(struct in6_addr));
-            memcpy(r2_daddr, &entry->our_addr, sizeof(struct in6_addr));
-        }
-    }
-#endif
 
     if (entry->state == HIP_STATE_ESTABLISHED) {
         retransmission = 1;

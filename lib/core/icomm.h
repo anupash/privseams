@@ -106,8 +106,8 @@
 #define HIP_MSG_DHT_OFF                          93
 #define HIP_MSG_SET_OPPTCP_ON                    94
 #define HIP_MSG_SET_OPPTCP_OFF                   95
-#define HIP_MSG_SET_HI3_ON                       96
-#define HIP_MSG_SET_HI3_OFF                      97
+
+
 #define HIP_MSG_RESET_FIREWALL_DB                98
 
 #define HIP_MSG_OPPTCP_SEND_TCP_PACKET           99

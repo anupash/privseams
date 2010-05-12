@@ -52,9 +52,6 @@ int hip_set_opportunistic_mode(struct hip_common *msg);
 int hip_query_opportunistic_mode(struct hip_common *msg);
 int hip_query_ip_hit_mapping(struct hip_common *msg);
 
-int hip_get_hi3_status(void);
-void hip_set_hi3_status(struct hip_common *msg);
-
 int hip_get_hip_proxy_status(void);
 int hip_set_hip_proxy_on(void);
 int hip_set_hip_proxy_off(void);

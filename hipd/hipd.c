@@ -155,7 +155,6 @@ int hip_trigger_update_on_heart_beat_failure = 1;
 int hip_wait_addr_changes_to_stabilize       = 1;
 
 int hip_use_opptcp                           = 0; // false
-int hip_use_hi3                              = 0; // false
 
 /* the opp tcp */
 

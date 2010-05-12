@@ -22,15 +22,6 @@
 #include "lib/core/debug.h"
 #include "lib/core/protodefs.h"
 
-struct hi3_ipv4_addr {
-    uint8_t             sin_family;
-    struct in_addr sin_addr;
-};
-
-struct hi3_ipv6_addr {
-    uint8_t              sin6_family;
-    struct in6_addr sin6_addr;
-};
 
 /**
  * Checks for illegal controls in a HIP packet Controls field.

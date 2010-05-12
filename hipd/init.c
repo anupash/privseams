@@ -148,9 +148,6 @@ static void hip_load_configuration(void)
 
     hip_create_file_unless_exists(HIPL_HOSTS_FILE, HIPL_HOSTS_FILE_EX);
 
-#ifdef CONFIG_HIP_I3
-    hip_create_file_unless_exists(HIPL_HI3_FILE, HIPL_HI3_FILE_EX);
-#endif
     hip_create_file_unless_exists(HIPL_DHTSERVERS_FILE, HIPL_DHTSERVERS_FILE_EX);
 
     hip_create_file_unless_exists(HIPL_NSUPDATE_CONF_FILE, HIPL_NSUPDATE_CONF_FILE_EX);
@@ -737,10 +734,6 @@ void hip_exit(int signal)
     hip_oppdb_uninit();
 #endif
 
-#ifdef CONFIG_HIP_I3
-    hip_hi3_clean();
-#endif
-
 #ifdef CONFIG_HIP_RVS
     HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
     hip_relay_uninit();
@@ -1119,12 +1112,6 @@ int hipd_init(const uint64_t flags)
 
     hip_load_configuration();
 
-#ifdef CONFIG_HIP_HI3
-    if (hip_use_i3) {
-        hip_locator_status = HIP_MSG_SET_LOCATOR_ON;
-    }
-#endif
-
 #ifdef CONFIG_HIP_DHT
     {
         memset(opendht_host_name, 0, sizeof(opendht_host_name));
@@ -1163,12 +1150,6 @@ int hipd_init(const uint64_t flags)
     if (flags & HIPD_START_LOWCAP) {
         HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
     }
-
-#ifdef CONFIG_HIP_HI3
-    if (hip_use_i3) {
-        hip_i3_init();
-    }
-#endif
 
     hip_firewall_sock_lsi_fd = hip_user_sock;
 

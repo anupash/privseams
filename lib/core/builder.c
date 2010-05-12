@@ -1205,8 +1205,6 @@ char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_GET_PEER_HIT:       return "HIP_MSG_GET_PEER_HIT";
     case HIP_MSG_NSUPDATE_ON:        return "HIP_MSG_NSUPDATE_ON";
     case HIP_MSG_NSUPDATE_OFF:       return "HIP_MSG_NSUPDATE_OFF";
-    case HIP_MSG_SET_HI3_ON:         return "HIP_MSG_SET_HI3_ON";
-    case HIP_MSG_SET_HI3_OFF:        return "HIP_MSG_SET_HI3_OFF";
     case HIP_MSG_HEARTBEAT:          return "HIP_MSG_HEARTBEAT";
     case HIP_MSG_DHT_SERVING_GW:     return "HIP_MSG_DHT_SERVING_GW";
     case HIP_MSG_SET_NAT_PORT:       return "HIP_MSG_SET_NAT_PORT";

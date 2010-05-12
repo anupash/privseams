@@ -866,7 +866,7 @@ out_err:
  * Create a HIP association (if one does not exist already) and
  * trigger a base exchange with an I1 packet using the given
  * arguments. This function also supports HIP-based loopback
- * connectivity, i3 and hiccups (data packet) extensions.
+ * connectivity and hiccups (data packet) extensions.
  *
  * @param src_hit The source HIT for the I1. Alternatively, NULL if default
  *                HIT is suitable
@@ -993,14 +993,6 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
      * Assume that look up fails by default. */
     err = 1;
     HIP_DEBUG("No entry found; find first IP matching\n");
-
-#ifdef CONFIG_HIP_I3
-    if (hip_get_hi3_status()) {
-        struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
-        memcpy(dst_addr, &lpback, sizeof(struct in6_addr));
-        err = 0;
-    }
-#endif
 
     if (err && !ipv6_addr_any(dst_addr)) {
         /* Destination address given; no need to look up */
