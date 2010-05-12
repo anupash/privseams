@@ -592,18 +592,6 @@ $ ls -l bin/
 
         <listitem>
           <para>
-          Apply patches for HIPL on OpenWRT into the kamikaze_7.09 source tree, which produce Makefiles and configuration files for the required packages.
-          </para>
-          <para>
-  <programlisting>
-  $ cd /path/to/kamikaze
-  $ patch -p1 &lt; /path/to/hipl/patches/openwrt/2.6.23/kamikaze_7.09-kernel.patch
-  $ patch -p1 &lt; /path/to/hipl/patches/openwrt/2.6.23/kamikaze_7.09-hipl.patch
-  </programlisting>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
           Select the packages, which you want to build for OpenWRT. The following command will allow you to do this in a similar way to configuring a custom kernel.
           </para>
           <para>
