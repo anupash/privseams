@@ -10,8 +10,8 @@ EXTRA_DIST += packaging tools/maintainer
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/agent/,*.lang))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/dht/,*.txt))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.pl *.sh))
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/firewall/,*.cfg))
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
