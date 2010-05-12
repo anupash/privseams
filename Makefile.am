@@ -5,11 +5,9 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,agent/*.h firewall/*.h hipd
 # For "make dist"
 EXTRA_DIST =  .vimrc debian doc patches release.version version.h
 EXTRA_DIST += i3/i3-cfg-PL.xml i3/aeshash/aescpp.hh i3/i3/i3_debug.c i3/utils/netwrap_win32.c
-EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
 EXTRA_DIST += packaging tools/maintainer
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/agent/,*.lang))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/dht/,*.txt))
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/firewall/,*.cfg))
@@ -59,10 +57,6 @@ endif
 
 ### libraries ###
 lib_LTLIBRARIES = lib/core/libhipcore.la
-
-if HIP_PFKEY
-lib_LTLIBRARIES += lib/ipsec/libhipsec.la
-endif
 
 if HIP_OPPORTUNISTIC
 lib_LTLIBRARIES += lib/opphip/libopphip.la
@@ -128,10 +122,6 @@ endif
 
 if HIP_DHT
 hipd_hipd_SOURCES += hipd/dht.c
-endif
-
-if HIP_PFKEY
-hipd_hipd_SOURCES += hipd/pfkeyapi.c
 endif
 
 if HIP_MIDAUTH
@@ -221,7 +211,8 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/tool/checksum.c        \
                                  lib/tool/lutil.c           \
                                  lib/tool/nlink.c           \
-                                 lib/tool/pk.c
+                                 lib/tool/pk.c              \
+                                 lib/tool/xfrmapi.c
 
 if HIP_AGENT
 lib_core_libhipcore_la_SOURCES += lib/core/sqlitedbapi.c
@@ -235,13 +226,6 @@ endif
 if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
-
-# don't use libipsec, but xfrmapi
-if HIP_PFKEY
-lib_core_libhipcore_la_SOURCES += lib/tool/pfkeysadb.c
-else
-lib_core_libhipcore_la_SOURCES += lib/tool/xfrmapi.c
-endif # HIPPFKEY
 
 lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
                                    lib/opphip/wrap_db.c
@@ -306,32 +290,6 @@ i3_chord_gen_conf_SOURCES         = i3/chord/gen_conf.c
 i3_chord_gen_conf_same_SOURCES    = i3/chord/gen_conf_same.c
 i3_chord_test_SOURCES             = i3/chord/test.c
 
-############################ NOTE ##################################
-#
-# Note: when you upgrade this library, please do the following:
-#
-# 1. uncomment policy_parse.y and policy_token.l lines
-# 2. "make"
-# 3. disable the policy_parse.y and policy_token.l lines again
-# 4. commit the code (including lex/yacc generated c files)
-#
-# I could not make the lex/yacc stuff work with "make dist" which
-# is mandatory for building e.g. rpm packages. -mk
-####################################################################
-lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
-                                 lib/ipsec/pfkey.c \
-                                #lib/ipsec/policy_parse.y \
-                                #lib/ipsec/policy_token.l
-
-AM_YFLAGS = -d -p __libhipsec
-AM_LFLAGS = -P__libhipsec -olex.yy.c
-
-# version is current:revision:age.
-# See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
-#lib_ipsec_libhipsec_la_LDFLAGS = -version-info 0:1:0
-#lib_ipsec_libhipsec_la_LIBADD  = $(LEXLIB)
-
-#DISTCLEANFILES = lib/ipsec/policy_parse.c lib/ipsec/policy_token.c
 
 ### library dependencies ###
 
@@ -347,10 +305,6 @@ tools_pisacert_LDADD           = lib/core/libhipcore.la
 
 if HIP_I3
 hipd_hipd_LDADD += i3/libi3.la
-endif
-
-if HIP_PFKEY
-hipd_hipd_LDADD += lib/ipsec/libhipsec.la
 endif
 
 agent_hipagent_LDADD = lib/gui/libhipgui.la   \

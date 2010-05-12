@@ -124,21 +124,6 @@ if test x"$ac_cv_use_agent" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
-AC_ARG_ENABLE(pfkey,
-               AS_HELP_STRING([--enable-pfkey],
-                              [HIP pfkey extensions (default is NO)]),
-               [ac_cv_use_pfkey=$enableval],
-               [ac_cv_use_pfkey=no])
-AC_CACHE_CHECK([whether to use pfkey extensions],
-               [ac_cv_use_pfkey],
-               [ac_cv_use_pfkey=no])
-if test x"$ac_cv_use_pfkey" = x"yes"; then
-    AC_DEFINE(CONFIG_HIP_PFKEY)
-    AH_TEMPLATE(CONFIG_HIP_PFKEY, [Defined to 1 if pfkey is enabled.])
-    AM_PROG_LEX
-fi
-AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
-
 AC_ARG_ENABLE(rvs,
                AS_HELP_STRING([--enable-rvs],
                               [HIP Rendezvous Extensions (default is YES)]),

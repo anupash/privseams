@@ -35,7 +35,6 @@ and have their own licensing conditions:
   * firewall/user_ipsec_esp.c
   * tools/DNS
   * lib/tool
-  * lib/ipsec
   * i3
 
 MIT (Expat) License

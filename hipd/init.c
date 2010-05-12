@@ -182,8 +182,6 @@ static void hip_set_os_dep_variables(void)
      * - XFRM_BEET changed from 2 to 4
      * - crypto algo names changed
      */
-
-#ifndef CONFIG_HIP_PFKEY
     if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19) {
         hip_xfrm_set_beet(2);
         hip_xfrm_set_algo_names(0);
@@ -193,7 +191,6 @@ static void hip_set_os_dep_variables(void)
     }
     /* This requires new kernel versions (the 2.6.18 patch) - jk */
     hip_xfrm_set_default_sa_prefix_len(128);
-#endif
 }
 
 #ifdef CONFIG_HIP_AGENT
@@ -1059,9 +1056,7 @@ int hipd_init(const uint64_t flags)
         goto out_err;
     }
 
-#ifndef CONFIG_HIP_PFKEY
     hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
-#endif
 
     HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");
     HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4, IPPROTO_HIP), -1, "raw sock output v4\n");
