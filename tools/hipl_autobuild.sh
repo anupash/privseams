@@ -7,7 +7,7 @@
 # - $HOME/src/hipl/<branch>   - location for HIPL <branch> to be tested
 # - $HOME/tmp/autobuild/hipl/ - temporary build directory
 # - $HOME/tmp/autobuild/openwrt - working OpenWrt tree
-# - /srv/power/scratchbox/users/${USER}${HOME]} - working scratchbox environment
+# - /srv/power/scratchbox/users/${LOGNAME}${HOME]} - working scratchbox environment
 #
 # If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
 # for the user running this script, then email will be sent in case of failure.
@@ -23,7 +23,7 @@ AUTOBUILD_DIR=$HOME/tmp/autobuild
 BUILD_DIR=$AUTOBUILD_DIR/hipl
 OPENWRT_DIR=$AUTOBUILD_DIR/openwrt
 SCRATCHBOX_DIR="/srv/power/scratchbox"
-SCRATCHBOX_HOME=$SCRATCHBOX_DIR/users/${USER}${HOME}
+SCRATCHBOX_HOME=$SCRATCHBOX_DIR/users/${LOGNAME}${HOME}
 
 BUILD_DIR=$HOME/tmp/autobuild/hipl
 BRANCH_URL=$HOME/src/hipl/$BRANCH_NAME
