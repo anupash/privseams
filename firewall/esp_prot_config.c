@@ -98,7 +98,7 @@ config_t *esp_prot_read_config(void)
     config_init(cfg);
     HIP_DEBUG("reading config file: %s\n", config_file);
     HIP_IFEL(!config_read_file(cfg, config_file), -1,
-             "unable to read config file, please ensure that esp_prot_config.cfg from tools directory is located in /etc/hip/\n");
+             "unable to read config file, please ensure that esp_prot_config.cfg is located in /etc/hip/\n");
 
 out_err:
     if (err) {
