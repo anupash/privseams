@@ -9,8 +9,8 @@
 
 #include <math.h>
 
-#include "hip_statistics.h"
 #include "debug.h"
+#include "statistics.h"
 
 /**
  * Convert a timeval struct to milliseconds

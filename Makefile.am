@@ -206,7 +206,6 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/hashtable.c       \
                                  lib/core/hashtree.c        \
                                  lib/core/hip_capability.c  \
-                                 lib/core/hip_statistics.c  \
                                  lib/core/hip_udp.c         \
                                  lib/core/hit.c             \
                                  lib/core/hostid.c          \
@@ -216,6 +215,7 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/message.c         \
                                  lib/core/prefix.c          \
                                  lib/core/solve.c           \
+                                 lib/core/statistics.c      \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
                                  lib/tool/checksum.c        \

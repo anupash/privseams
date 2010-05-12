@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 #include "config.h"
-#include "lib/core/hip_statistics.h"
+#include "lib/core/statistics.h"
 #include "lib/core/keylen.h"
 #include "lib/core/crypto.h"
 
