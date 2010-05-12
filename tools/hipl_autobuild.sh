@@ -119,7 +119,7 @@ CONFIGURATION="OpenWrt ARM crosscompile"
 run_program "cp hipl*tar.gz $OPENWRT_DIR/dl"
 cd $OPENWRT_DIR || cleanup 1
 run_program "rm -rf package/hipl"
-run_program "cp -r $CHECKOUT_DIR/patches/openwrt/package package/hipl"
+run_program "cp -r $CHECKOUT_DIR/packaging/openwrt/package package/hipl"
 run_program "make -j17 package/hipl-clean V=99"
 run_program "make -j17 package/hipl-install V=99"
 
