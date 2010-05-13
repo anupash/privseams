@@ -126,8 +126,8 @@ run_program "make -j17 package/hipl-install V=99"
 
 # Crosscompile HIPL in a scratchbox environment.
 
-# scratchbox complains if USER is undefined
-USER=$LOGNAME
+# scratchbox complains if USER is missing from the environment
+export USER=$LOGNAME
 
 CONFIGURATION="Scratchbox ARM crosscompile"
 cd $SCRATCHBOX_HOME || cleanup 1
