@@ -646,6 +646,16 @@ CODING CONVENTIONS
       return err;
   }
 
+EMACS
+=====
+
+To adjust emacs to the right spacing conventions for the code, you can
+add the following lines to your .emacs configuration file:
+
+(setq c-default-style "k&r")
+(setq-default c-basic-offset 4)
+(setq-default indent-tabs-mode nil)
+
 ECLIPSE
 ========
 
