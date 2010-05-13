@@ -72,7 +72,7 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
 
 #define IPV6_EQ_IPV4(in6_addr_a, in_addr_b)   \
     (IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
-    (((__const uint32_t *) (in6_addr_a))[3] == (in_addr_b)->s_addr))
+    (((const uint32_t *) (in6_addr_a))[3] == (in_addr_b)->s_addr))
 
 /**
  * Checks if a uint32_t represents a Local Scope Identifier (LSI).
