@@ -9,7 +9,7 @@
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 
-#include "lib/core/hip_statistics.h"
+#include "lib/core/statistics.h"
 #include "lib/core/hashchain.h"
 #include "lib/core/hashtree.h"
 #include "lib/core/debug.h"

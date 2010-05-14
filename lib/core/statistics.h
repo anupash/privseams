@@ -2,13 +2,13 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
- * Header file for hip_statistics.c
+ * Header file for statistics.c
  *
  * @author Rene Hummen
  */
 
-#ifndef HIP_LIB_CORE_HIP_STATISTICS_H
-#define HIP_LIB_CORE_HIP_STATISTICS_H
+#ifndef HIP_LIB_CORE_STATISTICS_H
+#define HIP_LIB_CORE_STATISTICS_H
 
 #include <stdlib.h>
 #include <inttypes.h>
@@ -40,4 +40,4 @@ void calc_statistics(const statistics_data_t *statistics_data,
                      double *std_dev,
                      double scaling_factor);
 
-#endif /* HIP_LIB_CORE_HIP_STATISTICS_H */
+#endif /* HIP_LIB_CORE_STATISTICS_H */

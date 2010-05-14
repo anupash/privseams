@@ -530,7 +530,6 @@ void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
     in_port_t sport, dport;
 
     // Ignore the dst_addr, because xfrm accepts only one address.
-    // dst_addr is used only in pfkeyapi.c
     _HIP_DEBUG("spi=0x%x\n", spi);
     _HIP_DEBUG_IN6ADDR("SA daddr", peer_addr);
 
@@ -589,8 +588,7 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  * @return zero on success and non-zero on error
  * @note IPv4 addresses in IPv6 mapped format
  * @note If you make changes to this function, please change also
- * hipd/user_ipsec_sadb_api.c:hip_userspace_ipsec_add_sa() and
- * pfkeyapi.c:add_sa()
+ * hipd/user_ipsec_sadb_api.c:hip_userspace_ipsec_add_sa().
  */
 uint32_t hip_add_sa(const struct in6_addr *saddr,
                     const struct in6_addr *daddr,

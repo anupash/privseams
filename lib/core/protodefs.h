@@ -186,7 +186,7 @@
 #define HIP_PARAM_PORTPAIR              32788
 #define HIP_PARAM_SRC_ADDR              32789
 #define HIP_PARAM_DST_ADDR              32790
-/* unused, was HIP_PARAM_AGENT_REJECT 32791 */
+/* free slot */
 #define HIP_PARAM_HA_INFO               32792
 #define HIP_PARAM_OPENDHT_SET           32793
 #define HIP_PARAM_CERT_SPKI_INFO        32794
@@ -210,8 +210,7 @@
 #define HIP_PARAM_ESP_PROT_TFM          32812
 #define HIP_PARAM_TRANSFORM_ORDER       32813
 #define HIP_PARAM_HDRR_INFO             32814
-#define HIP_PARAM_UADB_INFO             32815
-/* free slot */
+/* free slots */
 #define HIP_PARAM_SECRET                32817
 #define HIP_PARAM_BRANCH_NODES          32818
 #define HIP_PARAM_ROOT                  32819
@@ -575,8 +574,6 @@ typedef struct hip_hadb_update_func_set hip_update_func_set_t;
 typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
 typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
 typedef struct hip_ipsec_func_set hip_ipsec_func_set_t;
-typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
-typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
 typedef struct hip_common hip_common_t;
 typedef struct hip_tlv_common hip_tlv_common_t;
 
@@ -1174,14 +1171,6 @@ struct hip_hdrr_info {
     /* 0 if succesfully verified otherwise negative */
     int             sig_verified;
     int             hit_verified;
-} __attribute__ ((packed));
-
-struct hip_uadb_info {
-    hip_tlv_type_t  type;
-    hip_tlv_len_t   length;
-    struct in6_addr hitr;
-    struct in6_addr hitl;
-    char            cert[512];
 } __attribute__ ((packed));
 
 struct hip_heartbeat {

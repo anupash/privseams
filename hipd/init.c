@@ -29,9 +29,9 @@
 #include "pkt_handling.h"
 #include "output.h"
 #include "user.h"
+#include "lib/core/capability.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
-#include "lib/core/hip_capability.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hostid.h"
 #include "lib/core/performance.h"
@@ -175,8 +175,6 @@ static void hip_set_os_dep_variables(void)
      * - XFRM_BEET changed from 2 to 4
      * - crypto algo names changed
      */
-
-#ifndef CONFIG_HIP_PFKEY
     if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19) {
         hip_xfrm_set_beet(2);
         hip_xfrm_set_algo_names(0);
@@ -186,11 +184,10 @@ static void hip_set_os_dep_variables(void)
     }
     /* This requires new kernel versions (the 2.6.18 patch) - jk */
     hip_xfrm_set_default_sa_prefix_len(128);
-#endif
 }
 
 /**
- * Initialize raw ipv4 socket.
+ * initialize a raw ipv4 socket
  *
  * @param hip_raw_sock_v4 the raw socket to initialize
  * @param proto the protocol for the raw socket
@@ -756,10 +753,12 @@ int hipd_init(const uint64_t flags)
     hip_register_maint_function(&hip_relht_maintenance,        20000);
     hip_register_maint_function(&hip_registration_maintenance, 30000);
 
-    err = hip_probe_kernel_modules();
-    if (err) {
-        HIP_ERROR("Unable to load the required kernel modules!\n");
-        goto out_err;
+    if (sflags & HIPD_START_LOAD_KMOD) {
+        err = hip_probe_kernel_modules();
+        if (err) {
+            HIP_ERROR("Unable to load the required kernel modules!\n");
+            goto out_err;
+        }
     }
 
     /* Register signal handlers */
@@ -807,9 +806,7 @@ int hipd_init(const uint64_t flags)
         goto out_err;
     }
 
-#ifndef CONFIG_HIP_PFKEY
     hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
-#endif
 
     HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");
     HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4, IPPROTO_HIP), -1, "raw sock output v4\n");

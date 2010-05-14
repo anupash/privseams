@@ -11,7 +11,7 @@
 #include "config.h"
 #include "hashtable.h"
 #include "esp_prot_common.h"
-#include "hip_statistics.h"
+#include "statistics.h"
 
 #include "lib/modularization/lmod.h"
 

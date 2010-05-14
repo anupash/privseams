@@ -12,7 +12,7 @@
 #include "hidb.h"
 #include "hipd.h"
 #include "oppdb.h"
-#include "lib/core/hip_statistics.h"
+#include "lib/core/statistics.h"
 #include "nat.h"
 
 int hip_register_maint_function(int (*maint_function)(void),

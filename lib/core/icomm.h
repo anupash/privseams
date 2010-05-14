@@ -98,8 +98,8 @@
 /* Free slots here */
 #define HIP_MSG_SET_OPPTCP_ON                    94
 #define HIP_MSG_SET_OPPTCP_OFF                   95
-#define HIP_MSG_SET_HI3_ON                       96
-#define HIP_MSG_SET_HI3_OFF                      97
+
+
 #define HIP_MSG_RESET_FIREWALL_DB                98
 
 #define HIP_MSG_OPPTCP_SEND_TCP_PACKET           99
@@ -128,7 +128,7 @@
 #define HIP_MSG_FIREWALL_PING                    120
 #define HIP_MSG_FIREWALL_PING_REPLY              121
 #define HIP_MSG_FIREWALL_QUIT                    122
-/* Free slots here */
+/* free slots */
 #define HIP_MSG_DAEMON_QUIT                      126
 #define HIP_MSG_I1_REJECT                        127
 /* Free slot */

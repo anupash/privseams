@@ -22,10 +22,8 @@ The code under the following directories was developed for the HIPL project:
   * lib/performance
   * lib/opphip
   * lib/conf
-  * lib/gui
   * lib/core
   * test
-  * agent
   * hipd
   * doc
 
@@ -33,10 +31,8 @@ The following directories contain code imported from other projects
 and have their own licensing conditions:
 
   * firewall/user_ipsec_esp.c
-  * tools/DNS
+  * tools/hipdnsproxy/DNS
   * lib/tool
-  * lib/ipsec
-  * i3
 
 MIT (Expat) License
 ===================

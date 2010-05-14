@@ -1,17 +1,17 @@
 ACLOCAL_AMFLAGS  = -I m4
 
-HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h test/*.h))
+HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h))
 
 # For "make dist"
-EXTRA_DIST =  .vimrc debian doc patches release.version version.h process_modules.py
-EXTRA_DIST += lib/ipsec/policy_parse.c lib/ipsec/policy_parse.y lib/ipsec/policy_token.l
-EXTRA_DIST += packaging tools/maintainer
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/ipsec/,*.3))
+EXTRA_DIST =  .vimrc debian doc patches release.version version.h
+EXTRA_DIST += packaging process_modules.py tools/maintainer
 EXTRA_DIST += $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.cgi *.pl *.py *.sh))
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.py *.sh))
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.pl *.sh))
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh))
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/firewall/,*.cfg))
 EXTRA_DIST += $(HIPL_HEADER_LIST)
+
 
 ### user programs ###
 bin_PROGRAMS = test/auth_performance    \
@@ -21,6 +21,7 @@ bin_PROGRAMS = test/auth_performance    \
 if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
 endif
+
 
 ### superuser programs ###
 sbin_PROGRAMS = hipd/hipd      \
@@ -36,11 +37,9 @@ endif
 lib_LTLIBRARIES = lib/core/libhipcore.la
 lib_LTLIBRARIES += lib/modularization/libmod.la
 
-if HIP_PFKEY
-lib_LTLIBRARIES += lib/ipsec/libhipsec.la
-endif
 
 ### source declarations ###
+
 test_auth_performance_SOURCES = test/auth_performance.c
 test_certteststub_SOURCES     = test/certteststub.c
 test_dh_performance_SOURCES   = test/dh_performance.c
@@ -85,10 +84,6 @@ if HIP_OPPORTUNISTIC
 hipd_hipd_SOURCES += hipd/oppdb.c
 endif
 
-if HIP_PFKEY
-hipd_hipd_SOURCES += hipd/pfkeyapi.c
-endif
-
 if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
@@ -122,10 +117,12 @@ firewall_hipfw_SOURCES += firewall/midauth.c   \
                           firewall/pisa_cert.c
 endif
 
+
 # TODO: libhipcore, libhipconf and libhiptool have circular
 # dependencies. This needs to be addressed at some point.
 lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/builder.c         \
+                                 lib/core/capability.c      \
                                  lib/core/certtools.c       \
                                  lib/core/crypto.c          \
                                  lib/core/debug.c           \
@@ -135,8 +132,6 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/hashchain_store.c \
                                  lib/core/hashtable.c       \
                                  lib/core/hashtree.c        \
-                                 lib/core/hip_capability.c  \
-                                 lib/core/hip_statistics.c  \
                                  lib/core/hip_udp.c         \
                                  lib/core/hit.c             \
                                  lib/core/hostid.c          \
@@ -146,53 +141,20 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/message.c         \
                                  lib/core/prefix.c          \
                                  lib/core/solve.c           \
+                                 lib/core/statistics.c      \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
                                  lib/tool/checksum.c        \
                                  lib/tool/lutil.c           \
                                  lib/tool/nlink.c           \
-                                 lib/tool/pk.c
+                                 lib/tool/pk.c              \
+                                 lib/tool/xfrmapi.c
 
 if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
 
 lib_modularization_libmod_la_SOURCES = lib/modularization/lmod.c
-
-# don't use libipsec, but xfrmapi
-if HIP_PFKEY
-lib_core_libhipcore_la_SOURCES += lib/tool/pfkeysadb.c
-else
-lib_core_libhipcore_la_SOURCES += lib/tool/xfrmapi.c
-endif # HIPPFKEY
-
-############################ NOTE ##################################
-#
-# Note: when you upgrade this library, please do the following:
-#
-# 1. uncomment policy_parse.y and policy_token.l lines
-# 2. "make"
-# 3. disable the policy_parse.y and policy_token.l lines again
-# 4. commit the code (including lex/yacc generated c files)
-#
-# I could not make the lex/yacc stuff work with "make dist" which
-# is mandatory for building e.g. rpm packages. -mk
-####################################################################
-lib_ipsec_libhipsec_la_SOURCES = lib/ipsec/ipsec_strerror.c \
-                                 lib/ipsec/pfkey.c \
-                                #lib/ipsec/policy_parse.y \
-                                #lib/ipsec/policy_token.l
-
-AM_YFLAGS = -d -p __libhipsec
-AM_LFLAGS = -P__libhipsec -olex.yy.c
-
-# version is current:revision:age.
-# See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
-#lib_ipsec_libhipsec_la_LDFLAGS = -version-info 0:1:0
-#lib_ipsec_libhipsec_la_LIBADD  = $(LEXLIB)
-
-DISTCLEANFILES = $(wildcard $(builddir)/modules/*.h) tools/hipdnsproxy tools/hipdnskeyparse
-#DISTCLEANFILES = lib/ipsec/policy_parse.c lib/ipsec/policy_token.c
 
 # Initialize LDADD lists empty, because modules might add entries to LDADD. The
 # module LDADDs need to be included before the standard LDADDs, because modules
@@ -218,10 +180,6 @@ test_dh_performance_LDADD      = lib/core/libhipcore.la
 test_hc_performance_LDADD      = lib/core/libhipcore.la
 tools_hipconf_LDADD           += lib/core/libhipcore.la
 tools_pisacert_LDADD           = lib/core/libhipcore.la
-
-if HIP_PFKEY
-hipd_hipd_LDADD += lib/ipsec/libhipsec.la
-endif
 
 if HAVE_PYTHON
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
@@ -277,10 +235,7 @@ autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
 	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
-# Do not check headers that have issues we cannot fix.
-NOCHECK_HEADER_LIST  = $(wildcard $(srcdir)/lib/gui/*.h)
-HIPL_HEADER_FILTERED = $(filter-out $(NOCHECK_HEADER_LIST),$(HIPL_HEADER_LIST))
-HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_FILTERED:.h=.ho))
+HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_LIST:.h=.ho))
 CLEANFILES          += $(HIPL_HEADER_OBJS)
 
 checkheaders: $(HIPL_HEADER_OBJS)
@@ -288,8 +243,7 @@ vpath %.h $(srcdir)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
-i3/i3/i3_config.lo lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
-lib/gui/%: CFLAGS += @GTK_CFLAGS@ -Wno-strict-prototypes
+lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
 
 # Ensure that version.h is created before everything else. This does not work
 # when creating specific objects that may depend on version.h directly.

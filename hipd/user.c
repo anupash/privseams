@@ -262,6 +262,7 @@ int hip_handle_user_msg(hip_common_t *msg,
         HIP_IFEL(hip_user_nat_mode(msg_type),
                  -1,
                  "Error when setting daemon NAT status to \"on\"\n");
+
         HIP_DEBUG("Recreate all R1s\n");
         hip_recreate_all_precreated_r1_packets();
         break;
@@ -315,43 +316,6 @@ int hip_handle_user_msg(hip_common_t *msg,
         dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
         hip_dec_cookie_difficulty(dst_hit);
         break;
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    case HIP_MSG_SET_OPPORTUNISTIC_MODE:
-        err = hip_set_opportunistic_mode(msg);
-        break;
-    case HIP_MSG_GET_PEER_HIT:
-        err = hip_opp_get_peer_hit(msg, src);
-        if (err) {
-            _HIP_ERROR("get pseudo hit failed.\n");
-            if (err == -11) {           /* immediate fallback, do not pass */
-                err = 0;
-            }
-            goto out_err;
-        }
-        /* skip sending of return message; will be sent later in R1 */
-        goto out_err;
-        break;
-    case HIP_MSG_QUERY_IP_HIT_MAPPING:
-    {
-        err = hip_query_ip_hit_mapping(msg);
-        if (err) {
-            HIP_ERROR("query ip hit mapping failed.\n");
-            goto out_err;
-        }
-    }
-    break;
-    case HIP_MSG_QUERY_OPPORTUNISTIC_MODE:
-    {
-        err = hip_query_opportunistic_mode(msg);
-        if (err) {
-            HIP_ERROR("query opportunistic mode failed.\n");
-            goto out_err;
-        }
-
-        HIP_DEBUG("opportunistic mode value is sent\n");
-    }
-    break;
-#endif
     case HIP_MSG_CERT_SPKI_VERIFY:
     {
         HIP_DEBUG("Got an request to verify SPKI cert\n");

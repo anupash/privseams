@@ -592,18 +592,6 @@ $ ls -l bin/
 
         <listitem>
           <para>
-          Apply patches for HIPL on OpenWRT into the kamikaze_7.09 source tree, which produce Makefiles and configuration files for the required packages.
-          </para>
-          <para>
-  <programlisting>
-  $ cd /path/to/kamikaze
-  $ patch -p1 &lt; /path/to/hipl/patches/openwrt/2.6.23/kamikaze_7.09-kernel.patch
-  $ patch -p1 &lt; /path/to/hipl/patches/openwrt/2.6.23/kamikaze_7.09-hipl.patch
-  </programlisting>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
           Select the packages, which you want to build for OpenWRT. The following command will allow you to do this in a similar way to configuring a custom kernel.
           </para>
           <para>
@@ -979,10 +967,6 @@ define Package/hipl/install
     $(INSTALL_DATA) ./files/hipd.init $(1)/etc/init.d/hipd
     $(INSTALL_DATA) ./files/hipfw.init $(1)/etc/init.d/hipfw
     $(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
-    $(INSTALL_DATA) ./files/test/* $(1)/etc/init.d/test/
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/conntest* $(1)/usr/bin/
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hipsetup* $(1)/usr/bin/
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/listifaces* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/* $(1)/usr/sbin/
 endif
 </programlisting>
@@ -1553,7 +1537,7 @@ $ make V=99
       <para>
       
       The maemo/diablo version of HIPL supports most features of HIPL, except
-      the firewall extensions and the GUI control application.
+      the firewall extensions.
 
       </para>
 
@@ -1678,7 +1662,7 @@ $ make V=99
     </table>
 
     <para>
-      The servers are running public http service and respond to ICMPv4 and ICMPv6. They are not running "conntest-server" software as described elsewhere in this document.
+      The servers are running public http service and respond to ICMPv4 and ICMPv6.
     </para>
 
     <para>To use access the servers using HIP behind a NAT box, you
@@ -1728,10 +1712,9 @@ $ make V=99
     <section id="ipv6_appl">
             <title>Testing a HIP connection with an IPv6 application</title>
             <para> You can test HIP with any networking application, but in this
-              section we will demonstrate few development-oriented test
-              applications.</para>
-            <para> You should run conntest-client-hip and conntest-server with root privileges
-              if conntest-server port number is less than 1024.</para>
+              section we will demonstrate few command line applications.</para>
+            <para> You should run nc6 with root privileges at the server side
+              if the port number is less than 1024.</para>
             <para>In this section we will use ipv6 addresses, but you can use also ipv4 addresses.
               Furthermore, the use of hipfw is optional.</para>
     <para>
@@ -1748,7 +1731,7 @@ $ make V=99
         hipd/hipd # (to start as a background daemon process, add -b flag)
       </para></listitem>
       <listitem><para>
-        conntest-server tcp 1111
+        nc6 -l -p 1111
       </para></listitem>
     </itemizedlist>
     <para>
@@ -1781,10 +1764,10 @@ $ make V=99
         hipd/hipd
       </para></listitem>
       <listitem><para>
-        conntest-client-hip oops tcp 1111
+        nc6 oops 1111
       </para></listitem>
       <listitem><para>
-        ;&lt;Type some text in crash, press enter and ctrl+d and you
+        ;&lt;Type some text in crash, press enter and you
         should see some text appearing in the output of the hosts&gt;
       </para></listitem>
     </itemizedlist>
@@ -1886,11 +1869,6 @@ $ make V=99
               "tcpdump -n -i any esp or proto 139 or port 10500"
               to catch HIP-only traffic. It should be taken into account
               that LSIs are local identifiers, so they are not in the wire.
-            </para>
-            <para>
-              There is also a program called "hipsetup" in "test" directory for
-              quick testing of the base exchange. Run it without arguments to see
-              how it is used.
             </para>
             <para>
               It should be noticed that starting a new hipd process automatically
@@ -2723,9 +2701,9 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           "hipconf dht get &lt;hostname|HIT&gt;".
       </para></listitem>
       <listitem><para>
-          To test, just run normally conntest-server
-          and conntest-client-hip between hosts. You would see messages
-          from hipd and conntest showing DNS->HIT->IP lookups. Everything
+          To test, just run normally nc6 with -v flag
+          between the two hosts. You would see messages
+          from hipd and nc6 connecting to a HIT. Everything
           should work without additional actions.
       </para></listitem>
      </itemizedlist>
@@ -2736,23 +2714,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
      same format as hosts files, with the addition of port definition
      with the servername (IP_address servername&lt;:port&gt;).
     </para>
-
-    <!--
-    <para>
-    By default DHT support uses opendht.nyuld.net to resolve
-    proximate gateway address. Some times this returns unstable servers
-    address. After a few connection or status errors from DHT, will the
-    gateway be resolved again (hopefully getting a stable
-    one). Gateway addresses can be defined by hand to a file
-    /etc/hip/dhtservers. This file follows the same syntax as
-    /etc/hosts and can contain multiple gateway address-name pairs. If
-    this file exists hipd chooses gateways from the file by
-    random (NOTE do NOT leave empty lines to the end of the file).
-    currently running servers list is at <ulink
-    url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
-    script can create you the list automatically (in tools directory).
-    </para>
-    -->
 
     <para>
     There is multiple DHT related hipconf commands that you can
@@ -2789,115 +2750,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
     </para>
 </section>
-
-<!--
-
-    <section id="sec_opendht_bamboo">
-      <title>Bamboo OpenDHT server with IPv6 Support</title>
-      <para>
-        This section describes how to set up up an own IPv6 enabled
-        Bamboo server to look up hostnames, HITs and IP addresses.
-        Bamboo can be used as an alternative name look up instructure
-        to DNS. InfraHIP servers are also already running bamboo
-        service if you don't want to run your own service (see
-        <xref linkend="ch_opendht" />).  The clients can contact the
-        server through HIP if necessary.
-      </para>
-      <para>
-        To start the Bamboo opendht server, first the code has to be obtained.
-        You can obtain Bamboo with IPv4 support from the Bamboo website,
-        http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
-        be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
-        The code is compiled by executing make in the downloaded directory.
-        Some instructions and patches are also in patches/opendht directory of
-        HIPL software bundle.
-      </para>
-      <para>
-        In order to run the Bamboo server, a configuration file needs to be
-        created. You can find a sample in this link:
-        http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
-      </para>
-      <para>
-        Bamboo opendht server for a single machine:
-      </para>
-      <para>
-        If you want to try the bamboo opendht server on a single machine,
-        you have to assign 1 to the min_replica_count argument.
-      </para>
-      <para>
-        For IPV6 Bamboo:
-      </para>
-      <para>
-        Sample configuration files for IPv6 Bamboo can also be found at
-        http://lxpworkroom.googlepages.com/bambooipv6version. One change to
-        notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
-        Bamboo configuration file requires also the setting of the network
-        argument, as shown in the IPv6 configuration samples.
-      </para>
-      <para>
-        In case you want to configure Bamboo based on HIP, you have to put a HIT
-        in the configuration file insted of the IPv6 address.
-      </para>
-    </section>
-
-    <section id="sec_opendht_several_bamboos">
-      <title>Joining Several Bamboo Servers into a Single Ring</title>
-      <para>
-        This section describes how to join two or more bamboo servers to a
-        single ring.
-      </para>
-      <para>
-        The first thing to note is that Bamboo servers that support different
-        ip versions cannot be configured to run together successfully.
-        All Bamboo servers should suport either ipv4 or ipv6.
-      </para>
-      <para>
-        In order to configure several bamboo servers together, there are several
-        changes to be made to each configuration file of each instance.
-      </para>
-      <para>
-        First of all, inside 'Router', in the 'initargs', we have to add the
-        'gateway_count' argument followed by the overall number of servers to be
-        configured together. After that, we should specify a list of the gateways.
-        The following paragraph illustrates a sample for configuring two servers
-        together, at the configuration file of one of the servers.
-      </para>
-      <para>
-        &lt;Router&gt;</para><para>
-            class bamboo.router.Router</para><para>
-            &lt;initargs&gt;</para><para>
-                gateway_count 2</para><para>
-                gateway_0 193.167.187.133:5850</para><para>
-                gateway_1 193.167.187.31:5850</para><para>
-                leaf_set_size  4</para><para>
-                digit_values   2</para><para>
-                immediate_join true</para><para>
-            &lt;/initargs&gt;</para><para>
-        &lt;/Router&gt;</para><para>
-      </para>
-
-      <para>
-      </para>
-
-      <para>
-        An additional change to be made is assigning the 'min_replica_count'
-        argument to the overall number of servers that are to be configured
-        together. This is illustrated below:
-      </para>
-      <para>
-        &lt;Dht&gt;</para><para>
-            class bamboo.dht.Dht</para><para>
-            &lt;initargs&gt;</para><para>
-                storage_manager_stage StorageManager</para><para>
-                min_replica_count     2</para><para>
-            &lt;/initargs&gt;</para><para>
-        &lt;/Dht&gt;</para><para>
-      </para>
-
-    </section>
-
--->
-
   </section>
 
 </chapter> <!-- Name Look-up -->
@@ -3138,9 +2990,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       <abstract>
         <para>
           In this section, we show how to use the rendezvous server to establish
-          a HIP connection between two HIP hosts using the "<emphasis>conntest-server</emphasis>"
-          connection test server and the "<emphasis>conntest-client-hip</emphasis>" connection
-          test client.
+          a HIP connection between two HIP hosts using nc6.
         </para>
       </abstract>
       <section id="sec_rvs_prelim">
@@ -3268,11 +3118,11 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           <listitem><para>
             At the responder, start a server listening for incoming connections
             (5000 is an example port number):
-            <programlisting>conntest-server tcp 5000</programlisting>
+            <programlisting>nc6 -l -p 5000</programlisting>
           </para></listitem>
           <listitem><para>
-            At the initiator, start a connection test client:
-            <programlisting>conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000</programlisting>
+            At the initiator, start a client:
+            <programlisting>nc6 &lt;RESPONDER-HOSTNAME&gt; 5000</programlisting>
           </para></listitem>
           <listitem><para>
             At the initiator, type some text and press <command>CTRL + d</command>. If everything
@@ -3402,9 +3252,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       <abstract>
         <para>
           In this section, we show how to use the relay server to establish a
-          HIP connection between two HIP hosts using the
-          "<emphasis>conntest-server</emphasis>" connection test server and the
-          "<emphasis>conntest-client-hip</emphasis>" connection test client.
+          HIP connection between two HIP hosts using nc6.
         </para>
       </abstract>
       <section id="sec_relay_prelim">
@@ -3441,9 +3289,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </para>
         <para>
           In this section, we show how to use the HIP relay server to establish a
-          HIP connection between two HIP hosts using the "<emphasis>conntest-server</emphasis>"
-          connection test server and the "<emphasis>conntest-client-hip</emphasis>" connection
-          test client.
+          HIP connection between two HIP hosts using nc6.
         </para>
         <mediaobject>
           <imageobject>
@@ -3502,17 +3348,17 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
             At the responder, start a server listening for incoming connections
             (5000 is an example port number):
             <programlisting>
-              conntest-server tcp 5000
+              nc6 -l -p 5000
             </programlisting>
           </para></listitem>
           <listitem><para>
             At the initiator, start a connection test client:
             <programlisting>
-              conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000
+              nc6 &lt;RESPONDER-HOSTNAME&gt; 5000
             </programlisting>
           </para></listitem>
           <listitem><para>
-            At the initiator, type some text and press <command>CTRL + d</command>. If everything
+            At the initiator, type some text and press enter. If everything
             works as it should, the typed text should now be echoed at
             the responder.
           </para></listitem>
@@ -3949,7 +3795,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         has not been implemented yet.
       </para>
       <para>If you have problems in even getting I1 triggered using NAT code
-        e.g. with conntest-client-hip (occurred on 2.6.16.5), you may have
+        e.g. with nc6 (occurred on 2.6.16.5 kernel version), you may have
         to specify the source HIT explicitly. The procedure to initiate a connection
         behind NAT is as follows:
       </para>
@@ -4029,313 +3875,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
   </section>
 
   </chapter>
-
-
-<chapter id="ch_hip_configuration_gui">
-  <title>HIP configuration GUI</title>
-        <section id="sec_hip_conf_gui_general">
-          <title>General</title>
-        <formalpara><title>About</title><para></para></formalpara>
-                <para>Manage HITs with graphical user interface.</para>
-                <para>
-                        When new HIT is received, it and local HIT is filtered
-                        trough configuration GUI, which asks user for accepting the HIT pair.
-                        Then HIT is saved into database and accept/reject is
-                        returned to daemon. User can also manage HITs trough graphical
-                        user interface. The interface is under development,
-                        and is quite in alpha state yet.
-                </para>
-
-        <screenshot>
-                <screeninfo>HIP configuration GUI main window</screeninfo>
-                <mediaobject>
-                <imageobject>
-                <imagedata fileref="docshot-agent-main-window.png" scale="100" align="center" format="PNG"/>
-                </imageobject>
-                <caption>
-                <para>HIP configuration GUI main window</para>
-                </caption>
-                </mediaobject>
-        </screenshot>
-
-        <formalpara><title>Usage</title><para></para></formalpara>
-                <para>
-                        Configuration GUI uses '$HOMEDIR/.hipagent/' -directory to store
-                        per user configuration files. There should be atleast 'database'
-                        file which contains information about configured local and remote hits
-                        and remote groups. Optionally user can create file called 'config'.
-                        This file can contain different options to change GUI behaviour.
-                        Following paragraphs tell more.
-                </para>
-
-                <itemizedlist>
-                        <listitem><para>
-                                'lang=...' can be used to select one of compiled-in languages. These are
-                                currently 'en' and 'fi'. 'en' means english and is default.
-                                'fi' means finnish. If you want to change GUI language to finnish,
-                                type line 'lang=fi' into your config-file in .hipagent-dir.
-                        </para></listitem>
-
-                        <listitem><para>
-                        'lang-file=...' can be used to define external language file, which
-                        can override some or all compiled-in language strings.
-                        This language file should contain lines which are somewhat like this:
-                        'value-name=value'. Example line 'title-main=HIPL Graphical Config' would
-                        change GUI main window title to 'HIPL Graphical Config'.
-                        </para></listitem>
-                </itemizedlist>
-                <para>
-                        The configuration GUI executable is called "hipagent". You should run it using sudo.
-                </para>
-
-        <screenshot>
-                <screeninfo>HIP configuration GUI tray icon</screeninfo>
-                <mediaobject>
-                <imageobject>
-                <imagedata fileref="docshot-agent-tray-icon.png" scale="100" align="center" format="PNG"/>
-                </imageobject>
-                <caption>
-                <para>HIP configuration GUI tray icon</para>
-                </caption>
-                </mediaobject>
-        </screenshot>
-
-        <formalpara><title>Compilation</title><para></para></formalpara>
-                <para>To compile HIP configuration GUI atleast following packages are needed (asuming you have debian):
-                        <itemizedlist>
-                                <listitem><para>
-                                        gcc compiler, should be at least version 4.0
-                                </para></listitem>
-                                <listitem><para>
-                                        Package: xbase-clients - miscellaneous X clients
-                                </para></listitem>
-                                <listitem><para>
-                                        GTK 2.x and development files for it (Package called libgtk2.0-dev).
-                                </para></listitem>
-                                <listitem><para>
-                                        Automake 1.9
-                                </para></listitem>
-                        </itemizedlist>
-                        <note><title>Notes</title>
-                                <para>
-                                        If you want to use 'system  tray' icon, you need atleast 2.10.0 version of GTK.
-                                </para>
-                                <para>
-                                        In order to the configuration GUI start properly with right window and system tray icon,
-                                        you must first do 'make install' to install the data files in right directory.
-                                        System tray icon will not be shown at all, if you don't do this.
-                                </para>
-                        </note>
-                </para>
-</section>
-<section id="sec_agent_database">
-  <title>Agent database</title>
-        <para>
-        Agent uses Sqlite3 database. You can view and alter data
-        with sqlite3 command line tool. On most distros 'aptitude
-        install sqlite3' will install it. Usage of the slqite3
-        comandline is simple. '$ sqlite3
-        ~/.hipagent/database.db' will start
-        the command line tool with the correct database.  You can
-        check the contents with simple select querys and so on. You can
-        get more information on the program from its man page (man
-        sqlitebrowser).
-        </para>
-        <para>
-        Alternatively you can use the graphical user interface called
-        sqlitebrowser. On most Linux distros 'aptitude install sqlitebrowser' will
-        install it. To start it write to the terminal '$ sqlitebrowser
-        ~/.hipagent/database.db' and you
-        should see the tables and their content from the UI. You can
-        get more information on the program from its man page (man sqlitebrowser).
-        </para>
-        <para>
-        The database contains three tables: local, remote and
-        groups. Local table contains local HITs and their
-        names. Remote contains remote HITs and their names. It also
-        contains some extra information like the group name. Group
-        table contains groups name and information on the group like
-        are these HITs to be accepted or not.
-        </para>
-
-</section>
-
-
-<section id="sec_hip_conf_gui_language"><title>Language files</title>
-        <para>
-                As described in previous section,
-                'lang-file=...' can be used to define external language file, which can override some or all compiled-in language strings.
-                This language file should contain lines which are somewhat like this: 'value-name=value'. Example line 'title-main=HIPL
-                Graphical Config' would change GUI main window title to 'HIPL Graphical Config'.
-        </para>
-        <para>
-                As said, language files contains lines, which define different variables in GUI.
-                Format of those lines is following:
-                <itemizedlist>
-                        <listitem><para>Commented line starts with '#'-character</para></listitem>
-                        <listitem><para>To create/reset value, use 'value-name=value'</para></listitem>
-                        <listitem><para>
-                                To add new line to value (also creates new value, if not yet defined), use 'value-name+value'
-                        </para></listitem>
-                </itemizedlist>
-        </para>
-<example id="ex_hip_conf_gui"><title>Here is a complete english version of a example language file:</title>
-<programlisting>
-
-# Example language file for HIP configuration GUI.
-# Language: English
-
-# Different window titles.
-title-main=HIP configuration
-title-newhit=New HIT
-title-newgroup=Create new group
-title-runapp=Execute application
-title-locals=Local HIT
-title-msgdlg=Question
-
-# System tray menu.
-systray-show=Configuration
-systray-exec=Execute
-systray-exit=Exit
-systray-about=About
-
-# Main window menu.
-menu-file=File
-menu-file-exit=Exit
-menu-file-runapp=Execute
-
-menu-edit=Edit
-menu-edit-locals=Local HITs
-menu-edit-newgroup=Create new group
-menu-edit-addhit=Add new HIT
-
-menu-help=Help
-menu-help-about=About
-
-# Toolbar items.
-tb-newgroup=New group
-tb-newgroup-tooltip=Create new group
-tb-newgroup-tooltip+Groups help in ordering and managing HIT's.
-tb-runapp=Execute
-tb-runapp-tooltip=Execute new application using HIP libraries
-tb-newhit=New HIT
-tb-newhit-tooltip=Add new HIT
-
-# Tabs.
-tabs-hits=HITs
-tabs-options=Options
-tabs-connections=Connections
-
-# New HIT dialog.
-nhdlg-button-accept=Accept
-nhdlg-button-drop=Drop
-nhdlg-err-invalid=Invalid HIT name given!
-nhdlg-err-exists=HIT with given name already exists!
-nhdlg-err-reserved=Given HIT name is reserved!
-nhdlg-err-reserved+Choose another one.
-nhdlg-err-invchar=HIT name contains invalid characters!
-nhdlg-err-invchar+Rename.
-nhdlg-err-hit=HIT is invalid!
-nhdlg-newinfo=New HIT information
-nhdlg-newhit=New HIT:
-nhdlg-name=Name:
-nhdlg-group=Group:
-nhdlg-advanced=Advanced
-nhdlg-url=URL:
-nhdlg-port=Port:
-nhdlg-g-info=Group info
-nhdlg-g-localhit=Local HIT:
-nhdlg-g-type=Type:
-nhdlg-g-lightweight=Lightweight:
-nhdlg-tt-hit=The fingerprint (HIT, Host Identity Tag) of the remote host.
-nhdlg-tt-hit-priv=HIT (Host Identity Tag) identifies hosts from each other.
-
-# New group dialog.
-ngdlg-name=Name:
-ngdlg-localhit=Local HIT:
-ngdlg-type=Type:
-ngdlg-type2=Encryption:
-ngdlg-button-create=Create
-ngdlg-button-cancel=Cancel
-ngdlg-err-invalid=Invalid group name!
-ngdlg-err-exists=Group already exists!
-ngdlg-err-reserved=Given group name is reserved!
-ngdlg-err-reserved+Choose another one.
-ngdlg-err-invchar=Group name contains invalid characters!
-ngdlg-err-invchar+Rename.
-
-# Tool window (HIT handling).
-tw-button-apply=Apply
-tw-button-cancel=Cancel
-tw-button-delete=Delete
-tw-button-edit=Edit
-tw-hit-info=HIT information
-tw-hit-name=Name:
-tw-hit-group=Group:
-tw-hit-advanced=Advanced
-tw-hit-hit=HIT:
-tw-hit-port=Port:
-tw-hit-url=URL:
-tw-hit-groupinfo=Group info:
-tw-hit-local=Local HIT:
-tw-group-info=Group information
-tw-group-name=Name:
-tw-group-advanced=Advanced
-tw-group-local=Local HIT:
-
-tw-hitgroup-type=Type:
-tw-hitgroup-lightweight=Encryption:
-
-# Local HIT handling.
-lhdlg-button-apply=Apply
-lhdlg-button-cancel=Cancel
-lh-info=Local HIT information:
-lh-hit= HIT:
-lh-name=Name:
-lhdlg-err-invalid=Invalid name for local HIT!
-lhdlg-err-exists=Local HIT name is already in use!
-lhdlg-err-invchar=Name of local HIT contains invalid characters!
-
-# General message dialog.
-msgdlg-button-ok=OK
-msgdlg-button-cancel=Cancel
-
-# GUI info (status bar) strings.
-gui-info-000=HIP service available on this computer.
-gui-info-001=HIP service unavailable.
-gui-info-002=HIP GUI started.
-
-# Other strings.
-newgroup-error-nolocals=Can't create new group,
-newgroup-error-nolocals+no local HITs defined.
-newgroup-error-nolocals+Check HIP daemon.
-newhit-error-nolocals=Can't add new remote HIT,
-newhit-error-nolocals+no local HITs defined.
-newhit-error-nolocals+Check HIP daemon.
-# NOTE! Empty group must have spaces in both sides of the item name!
-hits-group-emptyitem= &lt;empty&gt;
-ask-delete-hit=Are you sure you want to delete selected HIT?
-ask-delete-group=Are you sure you want to delete selected group?
-ask-apply-hit=Are you sure you want to apply the changes?
-ask-apply-hit-move=Are you sure you want move the hit?
-ask-apply-group=Are you sure you want to apply the changes?
-
-group-type-accept=accept
-group-type-deny=deny
-group-type2-lightweight=lightweight
-group-type2-normal=normal
-
-hits-number-of-used=Number of HITs in use
-default-group-name=ungrouped
-combo-newgroup=&lt;create new...&gt;
-</programlisting>
-</example>
-
-</section>
-
-
-
-</chapter>
 
 <chapter id="ch_exp_extensions">
     <title>Other Experimental HIP Extensions</title>
@@ -4632,30 +4171,6 @@ ping6 &gt;HIT_OF_THE_SERVER&lt;
      The ssh connection should be tunneled over ESP. Note that this example
      requires the proxy to be located on the path between the client and server.
    </para>
-
-  </section>
-
-  <section id="ch_hi3_support">
-    <title>Hi3 Support</title>
-    <note><title>NOTE:</title>
-      <para>
-        It has been a while since this extension was implementated and tested.
-        As of 24th July 2008, the code compiles but HIP daemon does not respond
-        to hipconf commands. This extension is defunct.
-      </para>
-    </note>
-    <itemizedlist>
-    <listitem><para>
-          Compile HIPL with ./configure --enable-hi3 --disable-opendht
-    </para></listitem>
-    <listitem><para>
-          Start the daemon: hipd -3 i3/i3-cfg-PL.xml
-    </para></listitem>
-    <listitem><para>
-          Wait until the trigger is inserted (see log file) and continue with e.g.
-          ping6 or conntest-client-hip with testing.
-    </para></listitem>
-        </itemizedlist>
 
   </section>
 

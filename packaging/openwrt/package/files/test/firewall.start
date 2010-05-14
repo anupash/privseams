@@ -10,7 +10,7 @@
 #          -state [!] <state> --verify_responder --accept_mobile
 # TARGET::= <ACCEPT|DROP>
 
-export PATH=.:../../firewall:$PWD/test/performance:$PWD/firewall:$PATH
+export PATH=.:../../firewall:$PWD/firewall:$PATH
 
 RULE_FILE=/tmp/fw.tmp
 TIMEOUT=0

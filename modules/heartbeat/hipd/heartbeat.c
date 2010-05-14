@@ -43,7 +43,7 @@
 #include "hipd/init.h"
 #include "hipd/hip_socket.h"
 #include "hipd/pkt_handling.h"
-#include "lib/core/hip_statistics.h"
+#include "lib/core/statistics.h"
 
 #define HIP_HEARTBEAT_INTERVAL 20
 

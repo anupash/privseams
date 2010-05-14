@@ -3920,27 +3920,6 @@ int hip_build_param_hip_hdrr_info(struct hip_common *msg,
 }
 
 /**
- * Build and append a UADB info parameter into a message. Used by the HIP
- * user agent to inform hipd on HIP connections accepted by hipd.
- *
- * @param msg a pointer to the message where the parameter will be
- *            appended
- * @param uadb_info uadb_info structure
- * @return zero on success, or negative on failure
- */
-int hip_build_param_hip_uadb_info(struct hip_common *msg,
-                                  struct hip_uadb_info *uadb_info)
-{
-    int err = 0;
-    hip_set_param_type((struct hip_tlv_common *) uadb_info, HIP_PARAM_UADB_INFO);
-    hip_calc_param_len((struct hip_tlv_common *) uadb_info,
-                       sizeof(struct hip_uadb_info)
-                               - sizeof(struct hip_tlv_common));
-    err = hip_build_param(msg, uadb_info);
-    return err;
-}
-
-/**
  * Build an append a zone parameter for hit-to-ip extension.
  *
  * @param msg a pointer to the message where the parameter will be

@@ -32,33 +32,6 @@ TODO
 
 - xx
 
-AUTOCONF AND AUTOMAKE
-=====================
-
-Autoconf and automake tools help developers to avoid from "include
-header dependency hell" so they are also used by HIPL in "tools" and
-"test" directories. Standard linux kernel supports only plain old
-Makefiles, so "linux" subdirectory is not controlled with
-autoconf/automake. The "doc" directory uses plain old Makefile because
-it uses the same documentation building system as "linux".
-
-If you need to add or remove source/header files or modify build
-rules, edit "Makefile.am". If you need to modify dependencies, edit
-"configure.ac". After editing the files, run "autoreconf". Autoreconf
-may then update some files (config.h.in, config.sub, configure,
-Makefile, Makefile.in) and you need to commit them too into the CVS
-along with your new source and header files.
-
-If you need to share a file between userspace and kernelspace, place
-it in the kernelspace and modify userspace Makefile.am to create a
-link to it from userspace (CVS does not accept links). For example,
-"tools/Makefile.am" makes a local link to
-"hipl/linux/net/ipv6/builder.c" by the following rule:
-
-    builder.c:
-            $(LN_S) ../linux/net/ipv6/hip/builder.c .
-
-
 HOWTO Bazaar VCS
 ===========================================
 
@@ -673,6 +646,16 @@ CODING CONVENTIONS
       return err;
   }
 
+EMACS
+=====
+
+To adjust emacs to the right spacing conventions for the code, you can
+add the following lines to your .emacs configuration file:
+
+(setq c-default-style "k&r")
+(setq-default c-basic-offset 4)
+(setq-default indent-tabs-mode nil)
+
 ECLIPSE
 ========
 
@@ -1212,33 +1195,13 @@ TEST MATRIX
 2. Applications
 ---------------
 
-Test with conntest-server BOTH tcp and udp:
-
-* conntest-client-gai peer_host_name_that_maps_to_hit_in_hosts
-* conntest-client-gai peer_host_name_that_maps_to_hit_in_opendht
-* conntest-client-gai peer_hostname_without_hit_map
-* conntest-client-gai hit-in-hosts
-* conntest-client-gai hit-in-broadcast
-* conntest-client-gai hit-in-opendht
-* conntest-client-gai ipv6-addr
-* conntest-client ipv4-addr
-* conntest-client ipv6-addr
-* conntest-client ipv4_of_non_hip_host
-* conntest-client ipv6_of_non_hip_host
-* conntest-client peer_hit
-
 Applications:
 
 * ping6 HIT
-* hipconf run normal firefox
-* hipconf run normal firefox + use www proxy
-* hipconf run normal ssh peer_host_name_that_maps_to_hit
-* hipconf run opp firefox
-* hipconf run normal iperf -V hit
-* hipconf run opp iperf ipv4-addr
-* hipconf run opp iperf -V ipv6-addr
-
-* hi3 support?
+* nc6 HIT
+* nc LSI
+* use dnsproxy to obtain HITs from DNS or DHT
+* hipconf run opp nc/nc6 (both client & server side)
 
 3. Base Exchange
 ----------------
@@ -1429,20 +1392,11 @@ NAT handover in hard IPv4-Only Handover, no locators in base exchange
 7. Firewall
 -----------
 
-8. Agent
---------
-
-* prompting
-* reject
-  * normal mode
-  * opp mode
-* test configuration gui
-
-9. Blind support
+8. Blind support
 ----------------
 
-10. Closing of connections
-----------------------
+9. Closing of connections
+-------------------------
 
 * tools/hipconf rst all
 

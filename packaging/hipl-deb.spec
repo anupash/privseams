@@ -9,7 +9,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
-BuildRequires: automake, autoconf, libtool, gcc, libgtk2.0-dev, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev, libsqlite3-dev
+BuildRequires: automake, autoconf, libtool, gcc, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -21,7 +21,7 @@ extensions support also mobility and multihoming, and traversal of NATs.
 
 HIP for Linux (HIPL) is an implementation of a HIP implementation that
 consists of the key and mobility management daemon. It includes also
-other related tools and test software.
+other related tools.
 %prep
 %setup
 
@@ -70,7 +70,7 @@ make -j 4 all
 %package all
 Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
 Group: System Environment/Kernel
-Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-test, hipl-doc, hipl-dnsproxy
+Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-tools, hipl-doc, hipl-dnsproxy
 %description all
 
 %package minimal
@@ -82,7 +82,7 @@ Requires: hipl-lib hipl-daemon hipl-tools
 %package lib
 Summary: HIP for Linux libraries
 Group: System Environment/Kernel
-Requires: openssl, libxml2, libgtk2.0-0, iptables, libcap2, libsqlite3-0
+Requires: openssl, libxml2, iptables, libcap2
 %description lib
 
 %package daemon
@@ -103,12 +103,6 @@ Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control
 Group: System Environment/Kernel
 %description firewall
 
-%package test
-Requires: hipl-daemon
-Summary: netcat-like command line tools with built-in HIP support for developers
-Group: System Environment/Kernel
-%description test
-
 %package doc
 Summary: documentation for HIP for Linux
 Group: System Environment/Kernel
@@ -120,26 +114,19 @@ Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and retur
 Group: System Environment/Kernel
 %description dnsproxy
 
-%package agent
-Requires: hipl-lib, hipl-daemon
-Summary: Graphical user interface for HIP for Linux. Provides user-friendly access control "buddy" lists for HIP.
-Group: System Environment/Kernel
-%description agent
-
 %install
 rm -rf %{buildroot}
 
 install -d %{buildroot}/usr/share/pixmaps
-install -m 644 lib/gui/hipmanager.png %{buildroot}/usr/share/pixmaps
 install -d %{buildroot}/usr/bin
 install -d %{buildroot}/usr/sbin
 install -d %{buildroot}/usr/lib
 install -d %{buildroot}/etc/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
-install -m 755 packaging/debian-init.d-hipfw %{buildroot}/etc/init.d/hipfw
-install -m 755 packaging/debian-init.d-hipd %{buildroot}/etc/init.d/hipd
-install -m 755 packaging/debian-init.d-dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
+install -m 755 packaging/debian-init.d/hipfw %{buildroot}/etc/init.d/hipfw
+install -m 755 packaging/debian-init.d/hipd %{buildroot}/etc/init.d/hipd
+install -m 755 packaging/debian-init.d/dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}/usr/lib/python2.6/dist-packages/DNS
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/DNS tools/hipdnsproxy/DNS/*py*
@@ -150,7 +137,6 @@ install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnskeyparse/mya
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hipdnsproxy/hipdnsproxy
 install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
 install -m 755 tools/hipdnsproxy/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
-install -m 755 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post lib
 /sbin/ldconfig
@@ -192,10 +178,6 @@ rm -rf %{buildroot}
 /usr/sbin/hipd
 %config /etc/init.d/hipd
 
-%files agent
-/usr/share/pixmaps/hipmanager.png
-/usr/sbin/hipagent
-
 %files dnsproxy
 /usr/sbin/hipdnsproxy
 /usr/sbin/hipdnskeyparse
@@ -207,11 +189,6 @@ rm -rf %{buildroot}
 /usr/sbin/hipconf
 /usr/sbin/nsupdate.pl
 %defattr(755,root,root)
-
-%files test
-/usr/bin/conntest-client-opp
-/usr/bin/conntest-client-hip
-/usr/bin/conntest-server
 
 %files firewall
 /usr/sbin/hipfw

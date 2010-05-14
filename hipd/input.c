@@ -564,7 +564,7 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    if (!ctx->hadb_entry && opportunistic_mode &&
+    if (!ctx->hadb_entry &&
         (type == HIP_I1 || type == HIP_R1)) {
         ctx->hadb_entry =
                 hip_oppdb_get_hadb_entry_i1_r1(ctx->input_msg,

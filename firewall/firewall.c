@@ -43,16 +43,20 @@
 #include "cache.h"
 #include "cache_port.h"
 #include "conntrack.h" /* connection tracking */
-#include "config.h"
-#include "datapkt.h"
-#include "esp_prot_api.h" /* ESP Tokens */
+#include "cache.h" /* required by opptcp */
+#include "cache_port.h" /* required by opptcp */
+#include "lsi.h" /* LSI */
+#include "lib/core/capability.h" /* priviledge separation */
+#include "lib/core/hip_udp.h"
+#include "user_ipsec_api.h" /* Userspace IPsec */
+#include "esp_prot_api.h"
 #include "esp_prot_conntrack.h" /* ESP Tokens */
 #include "firewalldb.h"
 #include "firewall_control.h"
 #include "firewall_defines.h"
 #include "helpers.h"
+#include "lib/core/capability.h" /* Priviledge Separation */
 #include "lib/core/filemanip.h"
-#include "lib/core/hip_capability.h" /* Priviledge Separation */
 #include "lib/core/hip_udp.h"
 #include "lib/core/message.h"
 #include "lib/core/performance.h"

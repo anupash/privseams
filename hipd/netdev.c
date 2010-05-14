@@ -710,7 +710,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
         HIP_DEBUG("operation may take a while..\n");
         int res = hip_hit_to_ip(hit, addr);
 
-        if (res == 1) {
+        if (res == 0) {
             HIP_DEBUG_IN6ADDR("found hit-to-ip addr ", addr);
             err = 0;
             goto out_err;
@@ -727,7 +727,7 @@ out_err:
  * Create a HIP association (if one does not exist already) and
  * trigger a base exchange with an I1 packet using the given
  * arguments. This function also supports HIP-based loopback
- * connectivity, i3 and hiccups (data packet) extensions.
+ * connectivity and hiccups (data packet) extensions.
  *
  * @param src_hit The source HIT for the I1. Alternatively, NULL if default
  *                HIT is suitable

@@ -83,7 +83,7 @@
 #define TYPE_TCPTIMEOUT    25 /* add By Tao Wan, on 04.01.2008*/
 /* free slot */
 #define TYPE_HEARTBEAT     27
-/* unused, was TYPE_HI3    28 */
+
 /* free slot (was for TYPE_GET_PEER_LSI  29) */
 #define TYPE_BUDDIES       30
 /* free slot */
@@ -150,7 +150,6 @@ const char *hipconf_usage =
     " (1=AES, 2=3DES, 3=NULL and place them to order\n"
     "  like 213 for the order 3DES, AES and NULL)\n"
     "manual-update <interface>\n"
-    "hi3 on|off\n"
     "nsupdate on|off\n"
     "hit-to-ip on|off\n"
     "hit-to-ip-zone <hit-to-ip.zone.>\n"
@@ -500,8 +499,6 @@ static int hip_conf_get_action(char *argv[])
         ret = ACTION_RESTART;
     } else if (!strcmp("reinit", argv[1])) {
         ret = ACTION_REINIT;
-    } else if (!strcmp("manual-update", argv[1])) {
-        ret = ACTION_MANUAL_UPDATE;
     } else if (!strcmp("hit-to-lsi", argv[1])) {
         ret = ACTION_HIT_TO_LSI;
     } else if (!strcmp("buddies", argv[1])) {
@@ -2612,7 +2609,7 @@ int (*action_handler[])(hip_common_t *,
     NULL,                               /* 25: unused, was TYPE_TCPTIMEOUT */
     NULL,                               /* 26: unused, was TYPE_HIPPROXY */
     hip_conf_handle_heartbeat,          /* 27: TYPE_HEARTBEAT */
-    NULL,                               /* 28: unused, was TYPE_HI3 */
+    NULL,                               /* 28: unused */
     NULL,                               /* 29: unused */
     NULL,                               /* 30: unused, was TYPE_BUDDIES */
     NULL,                               /* 31: TYPE_SAVAHR, reserved for sava */

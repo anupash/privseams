@@ -469,164 +469,161 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
         entry->is_loopback = 1;
     }
 
-    /* @todo: lock ha when we have threads */
+    HIP_DEBUG_LSI("entry->lsi_peer \n", &entry->lsi_peer);
+    hip_hadb_insert_state(entry);
 
-        HIP_DEBUG_LSI("entry->lsi_peer \n", &entry->lsi_peer);
-        hip_hadb_insert_state(entry);
+    /* Add initial HIT-IP mapping. */
+    HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE, hip_get_peer_nat_udp_port()),
+             -2, "error while adding a new peer address\n");
 
-        /* Add initial HIT-IP mapping. */
-        HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE, hip_get_peer_nat_udp_port()),
-                 -2, "error while adding a new peer address\n");
+    HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
+                                   local_addr, peer_addr, 0, 1, 0),
+             -1, "Error in setting the SPs\n");
 
-        /* @todo: unlock ha when we have threads */
+out_err:
+    return err;
+}
 
-        HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit, local_addr, peer_addr, 0, 1, 0),
-                -1, "Error in setting the SPs\n");
+/**
+ * a wrapper to create a host association
+ *
+ * @param  entry a pointer to a preallocated host association
+ * @param  peer_map_void a pointer to hip_peer_map_info
+ * @return zero on success or negative on error
+ */
+static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
+                                          void *peer_map_void)
+{
+    struct hip_peer_map_info *peer_map = peer_map_void;
+    int err                            = 0;
 
-    out_err:
-        return err;
+    HIP_DEBUG("hip_hadb_add_peer_info_wrapper() invoked.\n");
+    HIP_IFEL(hip_hadb_add_peer_info_complete(&entry->lhi.hit,
+                                             &peer_map->peer_hit,
+                                             &peer_map->peer_lsi,
+                                             &peer_map->our_addr,
+                                             &peer_map->peer_addr,
+                                             (char *) &peer_map->peer_hostname),
+             -1,
+             "Failed to add peer info\n");
+
+out_err:
+    return err;
+}
+
+/**
+ * create a host association
+ *
+ * @param peer_hit the HIT of the remote host
+ * @param peer_addr the address of the remote host
+ * @param peer_lsi an optional LSI for the remote host
+ * @param peer_hostname an optional host name for the remote host
+ * @return zero on success or negative on error
+ */
+int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
+                           hip_lsi_t *peer_lsi, const char *peer_hostname)
+{
+    int err = 0;
+    struct hip_peer_map_info peer_map;
+
+    HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
+
+    in_port_t nat_local_udp_port = hip_get_local_nat_udp_port();
+    in_port_t nat_peer_udp_port  = hip_get_peer_nat_udp_port();
+    hip_print_debug_info(NULL,
+                         peer_addr,
+                         NULL,
+                         peer_hit,
+                         peer_lsi,
+                         peer_hostname,
+                         &nat_local_udp_port,
+                         &nat_peer_udp_port);
+
+    HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
+
+    memset(&peer_map, 0, sizeof(peer_map));
+
+    memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
+    if (peer_addr) {
+        memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+    }
+    memset(peer_map.peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
+
+    if (peer_lsi) {
+        memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
     }
 
-    /**
-     * a wrapper to create a host association
-     *
-     * @param  entry a pointer to a preallocated host association
-     * @param  peer_map_void a pointer to hip_peer_map_info
-     * @return zero on success or negative on error
-     */
-    static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
-                                              void *peer_map_void)
-    {
-        struct hip_peer_map_info *peer_map = peer_map_void;
-        int err                            = 0;
-
-        HIP_DEBUG("hip_hadb_add_peer_info_wrapper() invoked.\n");
-        HIP_IFEL(hip_hadb_add_peer_info_complete(&entry->lhi.hit,
-                                                 &peer_map->peer_hit,
-                                                 &peer_map->peer_lsi,
-                                                 &peer_map->our_addr,
-                                                 &peer_map->peer_addr,
-                                                 (char *) &peer_map->peer_hostname),
-                 -1,
-                 "Failed to add peer info\n");
-
-    out_err:
-        return err;
+    if (peer_hostname) {
+        memcpy(peer_map.peer_hostname, peer_hostname,
+               HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
     }
 
-    /**
-     * create a host association
-     *
-     * @param peer_hit the HIT of the remote host
-     * @param peer_addr the address of the remote host
-     * @param peer_lsi an optional LSI for the remote host
-     * @param peer_hostname an optional host name for the remote host
-     * @return zero on success or negative on error
-     */
-    int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
-                               hip_lsi_t *peer_lsi, const char *peer_hostname)
-    {
-        int err = 0;
-        struct hip_peer_map_info peer_map;
+    HIP_IFEL(hip_select_source_address(
+                 &peer_map.our_addr, &peer_map.peer_addr),
+             -1, "Cannot find source address\n");
 
-        HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
+    HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
+             "for_each_hi err.\n");
 
-        in_port_t nat_local_udp_port = hip_get_local_nat_udp_port();
-        in_port_t nat_peer_udp_port  = hip_get_peer_nat_udp_port();
-        hip_print_debug_info(NULL,
-                             peer_addr,
-                             NULL,
-                             peer_hit,
-                             peer_lsi,
-                             peer_hostname,
-                             &nat_local_udp_port,
-                             &nat_peer_udp_port);
+out_err:
+    return err;
+}
 
-        HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
+/**
+ * create a host association based on the parameter in a user message
+ *
+ * @param input an user message containing a HIT, optional LSI and hostname for
+ *              the remote host
+ * @return zero on success or negative on error
+ */
+int hip_add_peer_map(const struct hip_common *input)
+{
+    struct in6_addr *hit = NULL, *ip = NULL;
+    hip_lsi_t *lsi       = NULL;
+    char *peer_hostname  = NULL;
+    int err              = 0;
+    _HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
 
-        memset(&peer_map, 0, sizeof(peer_map));
+    hit           = (struct in6_addr *)
+                    hip_get_param_contents(input, HIP_PARAM_HIT);
 
-        memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
-        if (peer_addr) {
-            memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
-        }
-        memset(peer_map.peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
+    lsi           = (hip_lsi_t *)
+                    hip_get_param_contents(input, HIP_PARAM_LSI);
 
-        if (peer_lsi) {
-            memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
-        }
+    ip            = (struct in6_addr *)
+                    hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
 
-        if (peer_hostname) {
-            memcpy(peer_map.peer_hostname, peer_hostname,
-                   HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-        }
+    peer_hostname = (char *)
+                    hip_get_param_contents(input, HIP_PARAM_HOSTNAME);
 
-        HIP_IFEL(hip_select_source_address(
-                     &peer_map.our_addr, &peer_map.peer_addr),
-                 -1, "Cannot find source address\n");
-
-        HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
-                 "for_each_hi err.\n");
-
-    out_err:
-        return err;
+    if (!ip && (!lsi || !hit)) {
+        HIP_ERROR("handle async map: no ip and maybe no lsi or hit\n");
+        err = -ENODATA;
+        goto out_err;
     }
 
-    /**
-     * create a host association based on the parameter in a user message
-     *
-     * @param input an user message containing a HIT, optional LSI and hostname for
-     *              the remote host
-     * @return zero on success or negative on error
-     */
-    int hip_add_peer_map(const struct hip_common *input)
-    {
-        struct in6_addr *hit = NULL, *ip = NULL;
-        hip_lsi_t *lsi       = NULL;
-        char *peer_hostname  = NULL;
-        int err              = 0;
-        _HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
-
-        hit           = (struct in6_addr *)
-                        hip_get_param_contents(input, HIP_PARAM_HIT);
-
-        lsi           = (hip_lsi_t *)
-                        hip_get_param_contents(input, HIP_PARAM_LSI);
-
-        ip            = (struct in6_addr *)
-                        hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
-
-        peer_hostname = (char *)
-                        hip_get_param_contents(input, HIP_PARAM_HOSTNAME);
-
-        if (!ip && (!lsi || !hit)) {
-            HIP_ERROR("handle async map: no ip and maybe no lsi or hit\n");
-            err = -ENODATA;
-            goto out_err;
-        }
-
-        if (lsi) {
-            HIP_DEBUG_LSI("lsi value is\n", lsi);
-        }
-
-        if (peer_hostname) {
-            HIP_DEBUG("Peer hostname value is %s\n", peer_hostname);
-        }
-
-        err = hip_hadb_add_peer_info(hit, ip, lsi, peer_hostname);
-
-        _HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
-        _HIP_ASSERT(hit_is_opportunistic_hit(hit));
-
-        if (err) {
-            HIP_ERROR("Failed to insert peer map (%d)\n", err);
-            goto out_err;
-        }
-
-    out_err:
-
-        return err;
+    if (lsi) {
+        HIP_DEBUG_LSI("lsi value is\n", lsi);
     }
+
+    if (peer_hostname) {
+        HIP_DEBUG("Peer hostname value is %s\n", peer_hostname);
+    }
+
+    err = hip_hadb_add_peer_info(hit, ip, lsi, peer_hostname);
+
+    _HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
+    _HIP_ASSERT(hit_is_opportunistic_hit(hit));
+
+    if (err) {
+        HIP_ERROR("Failed to insert peer map (%d)\n", err);
+        goto out_err;
+    }
+
+out_err:
+
+    return err;
+}
 
 /**
  * Inits a Host Association after memory allocation.
