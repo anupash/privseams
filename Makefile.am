@@ -236,7 +236,7 @@ autotools-clean: maintainer-clean
 	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
 HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_LIST:.h=.ho))
-CLEANFILES          += $(HIPL_HEADER_OBJS)
+CLEANFILES          += $(HIPL_HEADER_OBJS) $(wildcard modules/*.h)
 
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
