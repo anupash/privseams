@@ -800,7 +800,9 @@ void hip_exit(int signal)
 
     hip_dht_queue_uninit();
 
-    hip_remove_kernel_modules();
+    if (sflags & HIPD_START_LOAD_KMOD) {
+        hip_remove_kernel_modules();
+    }
 }
 
 /**
@@ -971,10 +973,12 @@ int hipd_init(const uint64_t flags)
 
     hip_set_os_dep_variables();
 
-    err = hip_probe_kernel_modules();
-    if (err) {
-        HIP_ERROR("Unable to load the required kernel modules!\n");
-        goto out_err;
+    if (sflags & HIPD_START_LOAD_KMOD) {
+        err = hip_probe_kernel_modules();
+        if (err) {
+            HIP_ERROR("Unable to load the required kernel modules!\n");
+            goto out_err;
+        }
     }
 
     /* Register signal handlers */

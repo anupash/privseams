@@ -30,6 +30,7 @@
 #define HIPD_START_KILL_OLD                 (1 << 3)
 #define HIPD_START_FIX_ALIGNMENT            (1 << 4)
 #define HIPD_START_LOWCAP                   (1 << 5)
+#define HIPD_START_LOAD_KMOD                (1 << 6)
 
 /*
  * HIP daemon initialization functions.

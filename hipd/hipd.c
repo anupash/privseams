@@ -173,6 +173,7 @@ static void usage(void)
     fprintf(stderr, "  -f set debug type format to short\n");
     fprintf(stderr, "  -d set the initial (pre-config) debug level to ALL (default is MEDIUM)\n");
     fprintf(stderr, "  -p disable privilege separation\n");
+    fprintf(stderr, "  -m disable the loading/unloading of kernel modules\n");
     fprintf(stderr, "\n");
 }
 
@@ -219,7 +220,7 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
 {
     int c;
 
-    while ((c = getopt(argc, argv, ":bi:kNchafVdp")) != -1) {
+    while ((c = getopt(argc, argv, ":bi:kNchafVdpm")) != -1) {
         switch (c) {
         case 'b':
             /* run in the "background" */
@@ -255,6 +256,10 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
         case 'p':
             /* do _not_ use low capabilies ("privilege separation") */
             *flags &= ~HIPD_START_LOWCAP;
+            break;
+        case 'm':
+            /* do _not_ load/unload kernel modules/drivers */
+            *flags &= ~HIPD_START_LOAD_KMOD;
             break;
         case 'V':
             hip_print_version("hipd");
@@ -706,6 +711,11 @@ int main(int argc, char *argv[])
      * that may crash the daemon and leave the SAs floating around to
      * disturb further base exchanges. Use -N flag to disable this. */
     sflags         |= HIPD_START_FLUSH_IPSEC;
+
+    /* The default behaviour is to allow hipd to load the required modules
+     * and unload them when exiting.
+     */
+    sflags         |= HIPD_START_LOAD_KMOD;
 
     /* set the initial verbosity level */
     hip_set_logdebug(LOGDEBUG_MEDIUM);
