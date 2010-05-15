@@ -541,9 +541,6 @@ $ ls -l bin/
   $ cp hipl-main.tar.gz path/to/kamikaze/dl
   </programlisting>
           </para>
-          <para>
-          NOTE: The "main" repository contains the most stable sources. If you encounter problems when running HIPL on OpenWRT, you may want to try the "userspace" repository instead. However, "userspace" is more experimental and might not compile for OpenWRT.
-          </para>
         </listitem>
 
         <listitem>
