@@ -908,26 +908,6 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
         As La Fonera has only limited flash memory space, you should limit the final rootfs image up to 4 MB at most. It means you are not afford to add packages as you wish. If you are just about to add all of the hipl binary files into your rootfs image, your flash memory would not able to load the oversized image. Therefore the hipl install part in Makefile is carefully designed to copy only necessary files into the rootfs image.
         </para>
         <para>
-<programlisting>
-define Package/hipl/install
-    $(INSTALL_DIR) $(1)/etc/init.d/
-    $(INSTALL_DIR) $(1)/etc/hip/
-    $(INSTALL_DIR) $(1)/etc/hip/test/
-    $(INSTALL_DIR) $(1)/etc/modules.d/
-    $(INSTALL_DIR) $(1)/usr/bin/
-    $(INSTALL_DIR) $(1)/usr/sbin/
-
-    $(INSTALL_DATA) ./files/hipd.init $(1)/etc/init.d/hipd
-    $(INSTALL_DATA) ./files/hipfw.init $(1)/etc/init.d/hipfw
-    $(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/* $(1)/usr/sbin/
-endif
-</programlisting>
-        </para>
-        <para>
-        As you see above, /usr/local directory is totally excluded, and only limited numbers of files in /usr/bin are included, to decrease the total image size as much as possible. If hipl deploys additional binaries besides them, this Makefile also needs to be updated as long as the size of final rootfs image does not exceed 4 MB.
-        </para>
-        <para>
         If you meet an error like "libintl.h: no such file or directory", try rebuilding gcc and uClibc in toolchain.
         </para>
         <para>
