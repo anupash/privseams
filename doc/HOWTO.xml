@@ -335,10 +335,10 @@
       </para></listitem>
     </itemizedlist>
     <para>
-      Next, build HIPL software as follows:
+      Next, install HIPL as follows:
     </para>
     <para>
-      ./configure &amp;&amp; make install
+      make install
     </para>
     <para>
       Notes: you can optionally compile a binary package with "make deb" or "make rpm".
