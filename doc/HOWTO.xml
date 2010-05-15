@@ -87,29 +87,8 @@
   <section id="ch_building_doc">
     <title> Building the HIPL Documentation</title>
     <para>
-      Architectural documentation:
+      The XML documentation is built automatically if xmlto is installed.
     </para>
-    <itemizedlist>
-      <listitem><para>
-        % cd doc
-      </para></listitem>
-      <listitem><para>
-        % make design_choices.dvi design_choices.ps design_choices.pdf
-      </para></listitem>
-    </itemizedlist>
-
-    <para>
-      Source code documentation:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-        % cd doc
-      </para></listitem>
-      <listitem><para>
-        % doxygen
-      </para></listitem>
-    </itemizedlist>
-
   </section>
   <section id="ch_kernel">
     <title>Compiling the Kernel</title>
