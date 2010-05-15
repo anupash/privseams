@@ -344,7 +344,7 @@
       Notes: you can optionally compile a binary package with "make deb" or "make rpm".
     </para>
     <para>
-      Some features, like the HIP firewall are not compiled by default.
+      Some features are not compiled by default.
       Run "./configure --enable-FEATURE" to compile those.
       See "./configure --help" for a full list of options.
     </para>
@@ -3601,8 +3601,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
   <chapter id="ch_hip_firewall">
     <title>HIP Firewall</title>
       <para>This section describes how to use the HIP firewall.
-            The firewall needs to be compiled with the
-            --enable-firewall option to configure.
       </para>
 
        <para>If firewall is killed, it leaves rules dangling which may drop
