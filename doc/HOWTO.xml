@@ -366,24 +366,6 @@
       <orderedlist>
         <listitem>
           <para>
-        Install required packages on your system:
-          </para>
-          <para>
-        gcc, binutils, patch, bzip2, flex, bison, make, gettext, pkg-config, unzip, libz-dev and libc.
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-        In Debian/Ubuntu Linux, for example, do like this:
-          </para>
-          <para>
-<programlisting>
-# apt-get install gcc binutils-dev patch bzip2 libbz2-dev flex bison make gettext pkg-config unzip zlib1g-dev libc6-dev
-</programlisting>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
         If you are using bash, make sure that your shell option does not include the noclobber option. First check if noclobber is included in your shell option.
           </para>
           <para>
