@@ -112,10 +112,6 @@
       linux/README.
     </para>
     <para>
-      The 2.6 kernel series should be compilable with both gcc 2.9x and 3.x
-      series. We recommend the latter.
-    </para>
-    <para>
       Download linux kernel 2.6.x.y. Compile the kernel with
       at least the following options:
     </para>
