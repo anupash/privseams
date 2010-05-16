@@ -2366,10 +2366,10 @@ VPN
     server % iperf -V -s
   </programlisting>
   <programlisting>
-    client % iperf -V -c &gt;hit-of-the-server&lt;
+    client % iperf -V -c &lt;hit-of-the-server&gt;
   </programlisting>
   <para>
-    Notice that &gt;hit-of-the-server&lt; should not be taken literally. Replace
+    Notice that &lt;hit-of-the-server&gt; should not be taken literally. Replace
     it with the HIT of the server (run "hipconf get hi default" at the server).
     If you want to use LSIs instead of HITs, you shouldn't use the -V option
     and use LSIs as instructed in <xref linkend="interop_ip_v4_v6" />.
@@ -4043,11 +4043,11 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     </para>
 
 <programlisting>
-ping6 &gt;HIT_OF_THE_SERVER&lt;
+ping6 &lt;HIT_OF_THE_SERVER&gt;
 </programlisting>
 
   <para>
-  Please do not take &gt;HIT_OF_THE_SERVER&lt; literally. You should replace it with the
+  Please do not take &lt;HIT_OF_THE_SERVER&gt; literally. You should replace it with the
   actual HIT of the server.
   </para>
   </section>
