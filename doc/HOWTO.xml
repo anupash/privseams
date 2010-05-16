@@ -2467,7 +2467,7 @@ VPN
 
     <para>
       The DNS proxy is located in
-      the tools directory (hipdnsproxy) and has to be started with
+      the tools/hipdnsproxy directory and has to be started with
       root priviledges. After you start the script, it will rewrite
       /etc/resolv.conf to redirect all DNS look ups to itself so that
       it can return HITs to applications when applicable.
@@ -2526,7 +2526,7 @@ VPN
   <section id="ch_dns_data">
     <title>DNS Server with HIP Support</title>
     <para>
-      Tools directory contains hipdnskeyparse a script which converts public
+      The tools/hipdnskeyparse directory contains a script which converts public
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
