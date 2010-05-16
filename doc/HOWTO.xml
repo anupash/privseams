@@ -1638,8 +1638,8 @@ $ make V=99
     </para>
     <para>
       This section show to developers and maintainers how to test your
-      HIPL installation. The section starts with a IPv6 test applications
-      applications, continues with IPv4-IPv6 interoperability and concludes
+      HIPL installation. The section starts with IPv6 test applications,
+      continues with IPv4-IPv6 interoperability and concludes
       with IPv4 test applications.
     </para>
     <section id="ipv6_appl">
@@ -1897,7 +1897,7 @@ $ make V=99
     </para>
     <para>
       The handover code is based on RFC5206.
-      Not all of the features all yet implemented and the
+      Not all of the features are implemented yet and the
       code quality is still far from bullet proof.
     </para>
     <para>
