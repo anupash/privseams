@@ -1057,8 +1057,8 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
-                       int optc, int send_only)
+static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
+                              int optc, int send_only)
 {
     int err          = 0, anon = 0, use_default = 0, rsa_key_bits = 0;
     int dsa_key_bits = 0;
