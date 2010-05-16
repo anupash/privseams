@@ -2769,7 +2769,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           </para>
         </listitem>
       </itemizedlist>
-      <para>17th of July 2008</para>
     </section>
     <section id="sec_relay_conf">
       <title>The RVS and HIP Relay Configuration File</title>
@@ -2905,7 +2904,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               </para>
             </listitem>
           </itemizedlist>
-          <para>17th of July 2008</para>
         </section>
       </section>
     </section>
@@ -3160,7 +3158,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               </para>
             </listitem>
           </itemizedlist>
-          <para>17th of July 2008</para>
         </section>
       </section>
     </section>
@@ -3168,7 +3165,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       <title>HIP Relay Mechanisms</title>
       <note><title>NOTE:</title>
       <para>
-        As of 17th July 2008, the HIP relay mechanisms is under implementation.
+        The HIP relay mechanisms are still under construction.
         Therefore, the forwarding mechanisms presented herein do not work. Only
         the relay service registration works.
       </para>
@@ -3376,7 +3373,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               </para>
             </listitem>
           </itemizedlist>
-          <para>17th of July 2008</para>
         </section>
       </section>
     </section>
@@ -3543,7 +3539,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
             </itemizedlist>
           </listitem>
         </itemizedlist>
-        <para>17th of July 2008</para>
       </section>
     </section>
   </chapter>
