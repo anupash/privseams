@@ -1046,6 +1046,11 @@ out_err:
     return err;
 }
 
+#define OPT_HI_TYPE   0
+#define OPT_HI_FMT    1
+#define OPT_HI_FILE   2
+#define OPT_HI_KEYLEN 3
+
 /**
  * Handles the hipconf commands where the type is @c hi.
  *

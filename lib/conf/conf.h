@@ -47,12 +47,6 @@
 #define EXEC_LOADLIB_NONE       13
 /* @} */
 
-/* for handle_hi() only */
-#define OPT_HI_TYPE 0
-#define OPT_HI_FMT  1
-#define OPT_HI_FILE 2
-#define OPT_HI_KEYLEN 3
-
 
 #define HIPL_CONFIG_FILE_EX \
     "# Format of this file is as with hipconf, but without hipconf prefix\n\
