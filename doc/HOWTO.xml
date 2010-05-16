@@ -1700,7 +1700,7 @@ $ make V=99
         nc6 oops 1111
       </para></listitem>
       <listitem><para>
-        ;&lt;Type some text in crash, press enter and you
+        &lt;Type some text in crash, press enter and you
         should see some text appearing in the output of the hosts&gt;
       </para></listitem>
     </itemizedlist>
@@ -1753,8 +1753,8 @@ $ make V=99
             </para>
               <itemizedlist>
                 <listitem><para>nc OOPS_LSI -u 5555</para></listitem>
-                <listitem><para>;&lt;Type some text, press enter and you should see some text
-                appearing in the output of the host oops</para></listitem>
+                <listitem><para>&lt;Type some text, press enter and you should see some text
+                appearing in the output of the host oops&gt;</para></listitem>
               </itemizedlist>
 
             <para>
@@ -1771,8 +1771,8 @@ $ make V=99
             </para>
               <itemizedlist>
                 <listitem><para>nc6 OOPS_HIT -u 5555</para></listitem>
-                <listitem><para>;&lt;Type some text, press enter and you should see some text
-                appearing in the output of the host oops</para></listitem>
+                <listitem><para>&lt;Type some text, press enter and you should see some text
+                appearing in the output of the host oops&gt;</para></listitem>
               </itemizedlist>
 
             <formalpara><title>Tips: Displaying log information and traffic</title><para></para></formalpara>
