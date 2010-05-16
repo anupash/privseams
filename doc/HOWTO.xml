@@ -1803,10 +1803,6 @@ $ make V=99
               to catch HIP-only traffic. It should be taken into account
               that LSIs are local identifiers, so they are not in the wire.
             </para>
-            <para>
-              It should be noticed that starting a new hipd process automatically
-              kills the previous one.
-            </para>
 
     </section>
     <section id="ipv4_appl">
