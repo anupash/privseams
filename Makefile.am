@@ -5,7 +5,6 @@ HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*
 # For "make dist"
 EXTRA_DIST =  .vimrc debian doc patches release.version version.h
 EXTRA_DIST += packaging tools/maintainer
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/lib/dht/,*.txt))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/firewall/,*.cfg))
@@ -16,10 +15,6 @@ EXTRA_DIST += $(HIPL_HEADER_LIST)
 bin_PROGRAMS = test/auth_performance    \
                test/certteststub        \
                test/hc_performance
-
-if HIP_DHT
-bin_PROGRAMS += test/dhtteststub
-endif
 
 if HIP_PERFORMANCE
 bin_PROGRAMS += test/dh_performance
@@ -49,7 +44,6 @@ endif
 test_auth_performance_SOURCES = test/auth_performance.c
 test_certteststub_SOURCES     = test/certteststub.c
 test_dh_performance_SOURCES   = test/dh_performance.c
-test_dhtteststub_SOURCES      = test/dhtteststub.c
 test_hc_performance_SOURCES   = test/hc_performance.c
 
 tools_hipconf_SOURCES  = tools/hipconf.c
@@ -63,7 +57,6 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/configfilereader.c      \
                     hipd/cookie.c                \
                     hipd/dh.c                    \
-                    hipd/dhtqueue.c              \
                     hipd/esp_prot_anchordb.c     \
                     hipd/esp_prot_hipd_msg.c     \
                     hipd/esp_prot_light_update.c \
@@ -88,10 +81,6 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/user.c                  \
                     hipd/user_ipsec_hipd_msg.c   \
                     hipd/user_ipsec_sadb_api.c
-
-if HIP_DHT
-hipd_hipd_SOURCES += hipd/dht.c
-endif
 
 if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
@@ -136,7 +125,7 @@ firewall_hipfw_SOURCES += firewall/midauth.c   \
 endif
 
 
-# TODO: libhipcore, libhipconf, libhipdht and libhiptool have circular
+# TODO: libhipcore, libhipconf and libhiptool have circular
 # dependencies. This needs to be addressed at some point.
 lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/core/builder.c         \
@@ -168,11 +157,6 @@ lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
                                  lib/tool/pk.c              \
                                  lib/tool/xfrmapi.c
 
-if HIP_DHT
-lib_core_libhipcore_la_SOURCES += lib/dht/libhipdht.c      \
-                                  lib/dht/libhipdhtxml.c
-endif
-
 if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
@@ -188,7 +172,6 @@ hipd_hipd_LDADD                = lib/core/libhipcore.la
 test_auth_performance_LDADD    = lib/core/libhipcore.la
 test_certteststub_LDADD        = lib/core/libhipcore.la
 test_dh_performance_LDADD      = lib/core/libhipcore.la
-test_dhtteststub_LDADD         = lib/core/libhipcore.la
 test_hc_performance_LDADD      = lib/core/libhipcore.la
 tools_hipconf_LDADD            = lib/core/libhipcore.la
 tools_pisacert_LDADD           = lib/core/libhipcore.la
@@ -255,8 +238,6 @@ checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
-
-lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
 
 # Ensure that version.h is created before everything else. This does not work
 # when creating specific objects that may depend on version.h directly.

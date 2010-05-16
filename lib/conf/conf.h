@@ -72,7 +72,6 @@ hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
 # hit-to-ip set hit-to-ip.infrahip.net. # resolve HITs to locators in dynamic DNS zone\n\
 nsupdate on # send dynamic DNS updates\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
-opendht on # turn DHT support on (use /etc/hip/dhtservers to define the used server)\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # datapacket on # experimental draft hiccups extensions\n\
@@ -151,7 +150,7 @@ debug medium        # debug verbosity: all, medium or none\n"
 #define ACTION_GET 9
 #define ACTION_RUN 10
 #define ACTION_LOAD 11
-#define ACTION_DHT 12
+/* free slot */
 #define ACTION_HA  13
 #define ACTION_RST 14
 #define ACTION_BOS 15
@@ -159,7 +158,7 @@ debug medium        # debug verbosity: all, medium or none\n"
 #define ACTION_MHADDR 17
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
-#define ACTION_OPENDHT 20
+/* free slot */
 /* free slot (was for ACTION_OPPTCP  21) */
 #define ACTION_TRANSORDER 22
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */

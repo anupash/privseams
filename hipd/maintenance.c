@@ -7,8 +7,7 @@
  * default roughly once in a second. These actions include
  * retransmissions of lost HIP control packets, keepalives for NATs,
  * heartbeats to detect connectivity problems, purging of opportunistic
- * mode state, delaying of UPDATE triggering until addresses have stabilized
- * and publishing of hostname/hit/ip mappings in a DHT.
+ * mode state, delaying of UPDATE triggering until addresses have stabilized.
  *
  * @brief Hipd maintenance loop
  *
@@ -35,7 +34,6 @@ float retrans_counter        = HIP_RETRANSMIT_INIT;
 float opp_fallback_counter   = HIP_OPP_FALLBACK_INIT;
 float precreate_counter      = HIP_R1_PRECREATE_INIT;
 int nat_keep_alive_counter   = HIP_NAT_KEEP_ALIVE_INTERVAL;
-float opendht_counter        = OPENDHT_REFRESH_INIT;
 float queue_counter          = QUEUE_CHECK_INIT;
 int force_exit_counter       = FORCE_EXIT_COUNTER_START;
 int cert_publish_counter     = CERTIFICATE_PUBLISH_INTERVAL;
@@ -253,34 +251,6 @@ int hip_periodic_maintenance(void)
             address_change_time_counter--;
         }
     }
-#ifdef CONFIG_HIP_DHT
-    if (hip_opendht_inuse == HIP_MSG_DHT_ON) {
-        if (opendht_counter < 0) {
-            hip_register_to_dht();
-            opendht_counter = OPENDHT_REFRESH_INIT;
-        } else {
-            opendht_counter--;
-        }
-        if (queue_counter < 0) {
-            hip_send_packet_to_lookup_from_queue();
-            queue_counter = QUEUE_CHECK_INIT;
-        } else {
-            queue_counter--;
-        }
-        if (hip_buddies_inuse == HIP_MSG_BUDDIES_ON) {
-            if (cert_publish_counter < 0) {
-                err = hip_publish_certificates();
-                if (err < 0) {
-                    HIP_ERROR("Publishing certificates to the lookup returned an error\n");
-                    err = 0;
-                }
-                cert_publish_counter = opendht_serving_gateway_ttl;
-            } else {
-                cert_publish_counter--;
-            }
-        }
-    }
-#endif
 
     /* Clear the expired records from the relay hashtable. */
     hip_relht_maintenance();

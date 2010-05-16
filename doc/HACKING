@@ -1200,7 +1200,7 @@ Applications:
 * ping6 HIT
 * nc6 HIT
 * nc LSI
-* use dnsproxy to obtain HITs from DNS or DHT
+* use dnsproxy to obtain HITs from DNS
 * hipconf run opp nc/nc6 (both client & server side)
 
 3. Base Exchange

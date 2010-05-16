@@ -71,7 +71,7 @@ define Package/hipl-common
     #note: modules will be automatically selected for compilation and
     #will be required by ipkg on the openwrt box
     #TODO remove unnecessary modules
-    DEPENDS:=+libconfig +kmod-crypto-aes +kmod-crypto-hmac +kmod-crypto-null +kmod-crypto-sha1 +kmod-ipv6 +libgcc +libopenssl +libxml2
+    DEPENDS:=+libconfig +kmod-crypto-aes +kmod-crypto-hmac +kmod-crypto-null +kmod-crypto-sha1 +kmod-ipv6 +libgcc +libopenssl
     TITLE:=HIPL common files
     URL:=http://hipl.hiit.fi/
 endef
@@ -82,12 +82,11 @@ endef
 
 CONFIGURE_VARS += \
     LIBS="-lz" \
-    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include/libconfig"
+    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig"
 
 define Build/Configure
 	$(call Build/Configure/Default, \
             --enable-shared \
-            --disable-dht \
             --disable-debug \
     );
 endef

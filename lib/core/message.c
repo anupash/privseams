@@ -36,19 +36,6 @@
  * initializing itself. So, the use of asynchronous messages avoided
  * the chicken-egg-problem here.
  *
- * It is also possible to send a synchronous message but process it
- * asynchronously on the other end with the help of queues. An example
- * of this is "hipconf dht get <hostname>" which is
- * synchronous. However, hipd cannot process immediately because it
- * has to wait for a response from DHT. As hipd is currently single
- * threaded, it cannot block until it gets a response from the DHT
- * because it could take for ever and other HIP connections should not
- * be punished for this. As a solution, the DHT code in hipd implements a
- * queue for the query messages and stores also the sender (hipconf
- * process) port numbers. Hipd delivers the responses as soon as information
- * is retrieved from the DHT. A similar solution was implemented for
- * opportunistic mode connections.
- *
  * It should be also noticed the there is an optional timeout period
  * to wait for responses of synchronous messages. When the timeout is
  * exceeded, the called function will return an error and unblocks the

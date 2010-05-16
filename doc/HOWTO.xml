@@ -1580,7 +1580,7 @@ $ make V=99
     <title>HIPL Internet Test Servers</title>
     <para>
     Below is a list of public InfraHIP test servers. Crossroads and ashenvale are also running
-    free DHT-based name look up services (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
+    HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
     </para>
     <table id="table_servers" frame="all"><title>Test Servers</title>
     <tgroup cols="1">
@@ -1722,8 +1722,7 @@ $ make V=99
     </para>
     <para>
       You can also add the mapping to "/etc/hip/hipd_config" and restart hipd.
-      It is also possible to use DNS or DHT (<xref linkend="ch_opendht" />)
-      for the mappings.
+      It is also possible to use DNS for the mappings.
     </para>
     <para>
       Link local IPv6 addresses are not supported well, so do not use
@@ -1967,7 +1966,8 @@ $ make V=99
     <section id="sec_easy_methods">
       <title>Easy Methods</title>
       <para>
-        1. Run the dnshipproxy to map hostnames transparently to HITs from hosts files and directory services (DNS, DHT).
+        1. Run the hipdnsproxy to map hostnames transparently to HITs
+        from hosts files and directory services (DNS).
         See <xref linkend="sec_dns_proxy" /> for more details.
       </para>
       <para>
@@ -1981,7 +1981,7 @@ $ make V=99
         For example, you can
         execute "ping6 PEER_HIT". However, hipd must know the mapping from the
         PEER_HIT to the corresponding IP address. Hipd can find this mapping
-        from DNS or DHT. Alternatively, this information can be store to
+        from DNS. Alternatively, this information can be store to
         hosts files as follows:
       </para>
       <para>
@@ -2011,7 +2011,7 @@ $ make V=99
         1a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
       </para>
       <para>
-        1b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so:libhipopendht.so</emphasis>
+        1b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so</emphasis>
       </para>
       <para>
         2. Use the system-based opportunistic mode as instructed in
@@ -2217,11 +2217,8 @@ $ make V=99
   ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
   </programlisting>
   <para>
-  The name can be
-  something found from <emphasis>/etc/hosts</emphasis>
-  and <emphasis>/etc/hosts</emphasis> or you can use DHT to
-  resolve names to HIT and address. Search can also be done directly
-  with HIT by command
+  The name can be something found in <emphasis>/etc/hosts</emphasis>.
+  Search can also be done directly with HIT by command
   </para>
   <programlisting>
   ldapsearch -x -H ldap://[&lt;HIT&gt;] -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
@@ -2477,10 +2474,10 @@ VPN
     </para>
 
     <para>
-     The DNS proxy tries to find host identities from three places:
-     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
-     and Openlookup DHT (experimental). It returns the host identities as
-     HITs or LSIs to the requesting application.
+     The DNS proxy tries to find host identities from two places:
+     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS.
+     It returns the host identities as HITs or LSIs to the requesting
+     application.
     </para>
 
     <para>
@@ -2538,11 +2535,6 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
       <programlisting>
-.... | sed -n -e '/^HIPBIND */s///p'
-      </programlisting>
-      an HIP RR entry suitable for OpenDHT version of BIND9 is output
-      and with
-      <programlisting>
 .... | sed -n -e '/^DJBDNS */s///p'
       </programlisting>
       a line for Dan Bernstein's tinydns is output. For further
@@ -2567,7 +2559,6 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
         <listitem><para>in /etc/hip/hosts</para></listitem>
         <listitem><para>in /etc/hosts</para></listitem>
         <listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
-        <listitem><para>in DHT</para></listitem>
       </itemizedlist>
       </para>
 
@@ -2610,73 +2601,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
      our DNS server as we do not have global delegation yet.
   </para>
 
-  </section>
-<section id="ch_opendht">
-  <title>Openlookup-based Name Lookup for HIP</title>
-  <section>
-    <title>DHT Client Support (Experimental!)</title>
-    <itemizedlist>
-      <listitem><para>
-          With DHT support, the hip daemon pushes the hostname,
-          RSA public HIT and public IP address to the DHT. The resolver
-          can then look up this information automatically without DNS or manual
-          /etc/(hip)/hosts configuration.
-      </para></listitem>
-      <listitem><para>
-          Once you start hipd, it will send its hostname, HIT and IP address
-          to DHT. You can query this information with
-          "hipconf dht get &lt;hostname|HIT&gt;".
-      </para></listitem>
-      <listitem><para>
-          To test, just run normally nc6 with -v flag
-          between the two hosts. You would see messages
-          from hipd and nc6 connecting to a HIT. Everything
-          should work without additional actions.
-      </para></listitem>
-     </itemizedlist>
-
-    <para>
-     HIP daemon creates a file called /etc/hip/dhtservers when you
-     execute it. You can add there DHT servers. The file has almost the
-     same format as hosts files, with the addition of port definition
-     with the servername (IP_address servername&lt;:port&gt;).
-    </para>
-
-    <para>
-    There is multiple DHT related hipconf commands that you can
-    use to affect the behaviour of the DHT code of HIPL.
-    </para>
-
-    <itemizedlist>
-      <listitem><para>
-        hipconf opendht on|off
-      </para></listitem>
-      <listitem><para>
-        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (DHT default = 5851)&gt; &lt;TTL&gt;
-      </para></listitem>
-      <listitem><para>
-        hipconf dht get &lt;fqdn/hit&gt;
-      </para></listitem>
-      <listitem><para>
-        hipconf dht set &lt;name&gt;
-      </para></listitem>
-    </itemizedlist>
-
-    <para>
-    First one of these commands toggles the on/off status of the
-    code. Second one forces the DHT code to change current serving
-    gateway eith a new one. This command allows to change port and TTL
-    definitions of DHT code on the fly. Third command is a simple
-    get of value under a key. Fourth command lets you set a
-    userdefined name to be sent to the DHT. By default result of
-    "uname -n" is sent to the DHT.
-    </para>
-
-    <para>
-    For documentation,
-    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
-    </para>
-</section>
   </section>
 
 </chapter> <!-- Name Look-up -->
@@ -3867,7 +3791,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     HIPL supports also opportunistic mode that is uses TCP options to
     detect whether peer supports HIP or not. This is particularly
     useful in networking environments without HIP look up
-    infrastructure (OpenDHT/DNS/etc) and where the number of HIP hosts
+    infrastructure (DNS/etc) and where the number of HIP hosts
     is small. This "advanced" version of the opportunistic mode
     enables fast and backwards compatible fallback to non-HIP
     communications for TCP connections when the peer does not support

@@ -11,7 +11,7 @@
  * - automatic determination of source address for a packet if one has not been given (source
  *   routing)
  * - automatic mapping of a remote HIT or LSI to its corresponding IP address(es) through
- *   HADB, hosts files, DHT or DNS when no mapping was not given (e.g. in referral scenarios)
+ *   HADB, hosts files or DNS when no mapping was not given (e.g. in referral scenarios)
  * - triggering of base exchange
  *
  * @brief Localhost address cache and related management functions
@@ -32,7 +32,6 @@
 #include "accessor.h"
 #include "netdev.h"
 #include "maintenance.h"
-#include "lib/dht/libhipdht.h"
 #include "lib/core/debug.h"
 #include "lib/tool/lutil.h"
 #include "lib/conf/conf.h"
@@ -413,7 +412,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
         memcpy(&n->addr, addr, hip_sockaddr_len(addr));
     }
 
-    /* Add secret to address. Used with openDHT removable puts. */
+    /* Add secret to address. */
     memset(tmp_secret, 0, sizeof(tmp_secret));
     err_rand = RAND_bytes(tmp_secret, 40);
     memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
@@ -650,131 +649,9 @@ out_err:
     return err;
 }
 
-#ifdef CONFIG_HIP_DHT
-/**
- * Choose one address amongst multiple peer addresses obtained from a
- * DHT server.
- *
- * @param in_msg the message from the DHT
- * @param addr the DHT message (HIP control message format) @param
- *             addr The function writes the chosen address here. IPv4
- *             adresses are in IPv6 mapped format. Set to zeroes when
- *             in_msg contained no addresses.
- */
-static void hip_get_suitable_locator_address(struct hip_common *in_msg,
-                                             struct in6_addr *addr)
-{
-    struct hip_locator *locator;
-    int err_value                             = 0;
-    struct hip_locator_info_addr_item *item   = NULL;
-    struct hip_locator_info_addr_item2 *item2 = NULL;
-    char *address_pointer;
-    struct in6_addr reply6;
-    struct in6_addr all_zero_ipv6;
-
-    memset(&all_zero_ipv6, 0, sizeof(all_zero_ipv6));
-    memset(addr, 0, sizeof(*addr));
-
-    _HIP_DUMP_MSG(in_msg);
-
-    locator = hip_get_param((struct hip_common *) in_msg,
-                            HIP_PARAM_LOCATOR);
-    if (locator) {
-        address_pointer = (char *) (locator + 1);
-        for (/* VOID */; address_pointer < ((char *) locator) + hip_get_param_contents_len(locator); ) {
-            if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-                item2 = (struct hip_locator_info_addr_item2 *) address_pointer;
-
-                HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item2->address);
-                memcpy(addr, (struct in6_addr *) &item2->address, sizeof(struct in6_addr));
-                address_pointer += sizeof(struct hip_locator_info_addr_item2);
-            } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                       == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-                item = (struct hip_locator_info_addr_item *) address_pointer;
-
-                HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item->address);
-                memcpy(addr, (struct in6_addr *) &item->address, sizeof(struct in6_addr));
-                address_pointer += sizeof(struct hip_locator_info_addr_item);
-            } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                       == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-                item = (struct hip_locator_info_addr_item *) address_pointer;
-
-                HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item->address);
-                memcpy(addr, (struct in6_addr *) &item->address, sizeof(struct in6_addr));
-                address_pointer += sizeof(struct hip_locator_info_addr_item);
-            } else {
-                address_pointer += sizeof(struct hip_locator_info_addr_item);
-            }
-        }
-    } else {
-        memcpy(&((&reply6)->s6_addr), in_msg, sizeof(reply6.s6_addr));
-        if (!ipv6_addr_cmp(&all_zero_ipv6, &reply6)) {
-            err_value = 3;    //Entry not found at DHT gateway
-        }
-    }
-
-    HIP_DEBUG_IN6ADDR("####", addr);
-}
-
-#endif /* CONFIG_HIP_DHT */
-
-/**
- * Look up value from DHT corresponding to the key. The key is a HIT and the
- * value is a locator (IP address).
- *
- * @param node_hit The key for the look up (a HIT)
- * @param addr The value corresponding to the key (an IP address). IPv4 addresses
- *             are in IPv6 mapped format.
- * @return Zero on success and negative on error
- */
-static int hip_dht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
-{
-    int err                = -1;
-#ifdef CONFIG_HIP_DHT
-    char dht_locator_last[1024];
-    int locator_item_count = 0;
-    struct in6_addr addr6, result;
-    struct hip_locator *locator;
-    unsigned char dht_response[HIP_MAX_PACKET];
-
-    /* Initialize vars with zero */
-    bzero(&addr6, sizeof(addr6));
-    bzero(&result, sizeof(result));
-    bzero(dht_response, sizeof(dht_response));
-
-    if (hip_opendht_inuse == HIP_MSG_DHT_ON) {
-        memset(dht_locator_last, '\0', sizeof(dht_locator_last));
-        HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,
-                                     opendht_serving_gateway,
-                                     node_hit,
-                                     dht_response,
-                                     1),
-                 -1, "DHT get in opendht_get_endpoint failed!\n");
-        inet_pton(AF_INET6, node_hit, &addr6.s6_addr);
-
-        /* HDRR verification */
-        HIP_IFEL(hip_verify_hdrr((struct hip_common *) dht_response, &addr6),
-                 -1, "HDRR Signature and/or host id verification failed!\n");
-
-        locator            = hip_get_param((struct hip_common *) dht_response,
-                                           HIP_PARAM_LOCATOR);
-        locator_item_count = hip_get_locator_addr_item_count(locator);
-        if (locator_item_count > 0) {
-            err = 0;
-        }
-        hip_get_suitable_locator_address(
-            (struct hip_common *) dht_response, addr);
-    }
-
-out_err:
-#endif  /* CONFIG_HIP_DHT */
-    return err;
-}
-
 /**
  * Try to map a given HIT or an LSI to a routable IP address using local host association
- * data base, hosts files, DNS or DHT (in the presented order).
+ * data base, hosts files or DNS (in the presented order).
  *
  * @param hit a HIT to map to a LSI
  * @param lsi an LSI to map to an IP address
@@ -801,7 +678,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
 
     if (ha && !ipv6_addr_any(&ha->peer_addr)) {
         ipv6_addr_copy(addr, &ha->peer_addr);
-        HIP_DEBUG("Found peer address from hadb, skipping hosts and opendht look up\n");
+        HIP_DEBUG("Found peer address from hadb, skipping hosts look up\n");
         err = 0;
         goto out_err;
     }
@@ -810,9 +687,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
      * then resolve the hostname to an IP, and a HIT or LSI,
      * depending on dst_hit value.
      * If dst_hit is a HIT -> find LSI and hostname
-     * If dst_hit is an LSI -> find HIT and hostname
-     * We can fallback to e.g. DHT search if the mapping is not
-     * found from local files.*/
+     * If dst_hit is an LSI -> find HIT and hostname */
 
     /* try to resolve HIT to IPv4/IPv6 address by '/etc/hip/hosts'
      * and '/etc/hosts' files
@@ -840,21 +715,6 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
             goto out_err;
         }
     }
-
-    /* Try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
-    if (hip_opendht_inuse == HIP_MSG_DHT_ON && !skip_namelookup) {
-        char hit_str[INET6_ADDRSTRLEN];
-
-        memset(hit_str, 0, sizeof(hit_str));
-        hip_in6_ntop(&hit2, hit_str);
-        _HIP_DEBUG("### HIT STRING ### %s\n", (const char *) hit_str);
-        err = hip_dht_get_endpointinfo((const char *) hit_str, addr);
-        _HIP_DEBUG_IN6ADDR("### ADDR ###", addr);
-        if (err) {
-            HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
-        }
-    }
-
 
     HIP_DEBUG_IN6ADDR("Found addr: ", addr);
 
@@ -1024,11 +884,6 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
         }
     }
 
-    /* Try to look up peer ip from hosts and opendht */
-    if (err) {
-        err = hip_map_id_to_addr(dst_hit, dst_lsi, dst_addr);
-    }
-
     /* No peer address found; set it to broadcast address
      * as a last resource */
     if (err) {
@@ -1051,7 +906,7 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
     /** @todo changing global state won't work with threads */
     hip_nat_status = ha_nat_mode;
 
-    /* To make it follow the same route as it was doing before HDRR/loactors */
+    /* To make it follow the same route as it was doing before locators */
     HIP_IFEL(hip_hadb_add_peer_info(dst_hit, dst_addr,
                                     dst_lsi, NULL), -1,
              "map failed\n");

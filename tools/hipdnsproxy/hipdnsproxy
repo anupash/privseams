@@ -18,7 +18,7 @@
 #   - Non-HIP records
 #   - Hostname to HIT resolution
 #     - HITs and LSIs from /etc/hip/hosts
-#     - On-the-fly generated LSI; HIT either from from DNS, DHT or hosts
+#     - On-the-fly generated LSI; HIT either from from DNS or hosts
 #     - HI records from DNS
 #     - HITs from Bamboo via hipd
 #   - PTR records: maps HITs to hostnames from /etc/hip/hosts
@@ -312,7 +312,6 @@ class Global:
         gp.sent_queue = []
         gp.sent_queue_d = {}            # Keyed by ('server_ip',server_port,query_id) tuple
         gp.prefix = None
-        gp.disable_dht = False
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
         os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
@@ -515,21 +514,6 @@ class Global:
         f.write('%s\n' % myid)
         f.close()
 
-    def dht_lookup(gp, nam):
-        #gp.fout.write("DHT look up\n")
-        cmd = "hipconf dht get " + nam + " 2>&1"
-        #gp.fout.write("Command: %s\n" % (cmd))
-        p = Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
-        result = p.readline()
-        # xx fixme: we should query cache for PTR records
-        while result:
-            start = result.find("2001:001")
-            end = result.find('\n')
-            if start != -1 and end != -1:
-                return result[start:end]
-            result = p.readline()
-        return None
-
     # Add local HITs to hosts files (bug id 737).
     # xx fixme: should we really write the local hits
     #           to a file rather than just adding them
@@ -661,15 +645,8 @@ class Global:
                 dns_hit_found = True
                 break
 
-        dhthit = None
-        if not gp.disable_dht and not dns_hit_found:
-            dhthit = gp.dht_lookup(qname)
-            if dhthit is not None:
-                gp.fout.write('DHT match: %s %s\n' % (qname, dhthit))
-                g1['answers'].append([qname, 55, 1, gp.hosts_ttl ,dhthit])
-
         lsi = None
-        hit_found = dns_hit_found or dhthit is not None
+        hit_found = dns_hit_found is not None
         if hit_found:
             hit_ans = []
             lsi_ans = []
@@ -678,13 +655,8 @@ class Global:
                 if a1[1] != 55:
                     continue
 
-                if dhthit is not None: # already an AAAA record
-                    hit = dhthit
-                    a1[1] = 28
-                    hit_ans.append(a1)
-                else:
-                    hit = socket.inet_ntop(socket.AF_INET6, a1[7])
-                    hit_ans.append([qname, 28, 1, a1[3], hit])
+                hit = socket.inet_ntop(socket.AF_INET6, a1[7])
+                hit_ans.append([qname, 28, 1, a1[3], hit])
 
                 if qtype == 1 and not gp.disable_lsi:
                     lsi = gp.map_hit_to_lsi(hit)
@@ -1000,7 +972,6 @@ def main(argv):
                                     'dns-timeout=',
                                     'leave-resolv-conf',
                                     'hip-domain-prefix=',
-                                    'nodht',
                                     ])
     except getopt.error, msg:
         usage(1, msg)
@@ -1036,8 +1007,6 @@ def main(argv):
             gp.overwrite_resolv_conf = False
         elif opt == '--hip-domain-prefix':
             gp.prefix = arg + '.'
-        elif opt == '--nodht':
-            gp.disable_dht = True
 
     child = False;
     if (gp.fork):

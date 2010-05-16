@@ -58,8 +58,7 @@
 /* Free slots here */
 #define HIP_MSG_GET_HITS                         21
 #define HIP_MSG_GET_HA_INFO                      22
-#define HIP_MSG_DHT_SERVING_GW                   24
-/* free slot */
+/* free slots */
 #define HIP_MSG_GET_LSI_PEER                     26
 /* several free slots here */
 #define HIP_MSG_HEARTBEAT                        31
@@ -86,12 +85,10 @@
 #define HIP_MSG_SET_OPPORTUNISTIC_MODE           78
 #define HIP_MSG_SET_BLIND_ON                     79
 #define HIP_MSG_SET_BLIND_OFF                    80
-/** Socket option for hipconf to change the used gateway with OpenDHT */
-#define HIP_MSG_DHT_GW                           81
+/* free slot */
 #define HIP_MSG_SET_DEBUG_ALL                    82
 #define HIP_MSG_SET_DEBUG_MEDIUM                 83
 #define HIP_MSG_SET_DEBUG_NONE                   84
-/** Socket option for hipconf to ask about the used gateway with OpenDHT */
 #define HIP_MSG_LOCATOR_GET                      85
 #define HIP_MSG_MHADDR_ACTIVE                    86
 #define HIP_MSG_MHADDR_LAZY                      87
@@ -99,9 +96,7 @@
 #define HIP_MSG_RESTART                          88
 #define HIP_MSG_SET_LOCATOR_ON                   89
 #define HIP_MSG_SET_LOCATOR_OFF                  90
-#define HIP_MSG_DHT_SET                          91
-#define HIP_MSG_DHT_ON                           92
-#define HIP_MSG_DHT_OFF                          93
+/* free slots */
 #define HIP_MSG_SET_OPPTCP_ON                    94
 #define HIP_MSG_SET_OPPTCP_OFF                   95
 
@@ -165,7 +160,6 @@
 /* free slot */
 #define HIP_MSG_FW_BEX_DONE                      157
 #define HIP_MSG_RESTART_DUMMY_INTERFACE          158
-#define HIP_MSG_VERIFY_DHT_HDRR_RESP             159
 /* free slots */
 #define HIP_MSG_BUDDIES_ON                       162
 #define HIP_MSG_BUDDIES_OFF                      163

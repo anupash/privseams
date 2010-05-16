@@ -57,6 +57,5 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
                             int is_output);
 void hip_close(int signal);
 void hip_exit(int signal);
-int hip_init_dht(void);
 
 #endif /* HIP_HIPD_INIT_H */

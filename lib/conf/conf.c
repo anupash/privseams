@@ -42,7 +42,6 @@
 #include "lib/core/straddr.h"
 #include "conf.h"
 #include "lib/core/prefix.h"
-#include "lib/dht/libhipdht.h"
 #include "lib/core/hostid.h"
 #include "lib/core/message.h"
 #include "lib/core/crypto.h"
@@ -70,15 +69,13 @@
 #define TYPE_CONFIG        11
 #define TYPE_RUN           EXEC_LOADLIB_HIP /* Should be 12 */
 #define TYPE_TTL           13
-#define TYPE_GW            14
-#define TYPE_GET           15
+/* free slots */
 #define TYPE_HA            16
 #define TYPE_MHADDR        17
 #define TYPE_DEBUG         18
 #define TYPE_DAEMON        19
 #define TYPE_LOCATOR       20
-#define TYPE_SET           21 /* DHT set <name> */
-#define TYPE_DHT           22
+/* free slots */
 #define TYPE_OPPTCP        23
 #define TYPE_ORDER         24
 /* free slot */
@@ -143,10 +140,6 @@ const char *hipconf_usage =
 #endif
     "heartbeat <seconds> (0 seconds means off)\n"
     "get ha all|HIT\n"
-    "opendht on|off\n"
-    "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
-    "dht get <fqdn/hit>\n"
-    "dht set <name>\n"
     "locator on|off|get\n"
     "debug all|medium|none\n"
     "restart daemon\n"
@@ -489,10 +482,6 @@ static int hip_conf_get_action(char *argv[])
         ret = ACTION_RUN;
     } else if (!strcmp("load", argv[1])) {
         ret = ACTION_LOAD;
-    } else if (!strcmp("dht", argv[1])) {
-        ret = ACTION_DHT;
-    } else if (!strcmp("opendht", argv[1])) {
-        ret = ACTION_OPENDHT;
     } else if (!strcmp("heartbeat", argv[1])) {
         ret = ACTION_HEARTBEAT;
     } else if (!strcmp("locator", argv[1])) {
@@ -568,7 +557,6 @@ static int hip_conf_check_action_argc(int action)
     case ACTION_RST:
     case ACTION_BOS:
     case ACTION_LOCATOR:
-    case ACTION_OPENDHT:
     case ACTION_HEARTBEAT:
     case ACTION_HIT_TO_LSI:
     case ACTION_DATAPACKET:
@@ -592,7 +580,6 @@ static int hip_conf_check_action_argc(int action)
     case ACTION_GET:
     case ACTION_RUN:
     case ACTION_LOAD:
-    case ACTION_DHT:
     case ACTION_HA:
     case ACTION_MHADDR:
     case ACTION_TRANSORDER:
@@ -678,18 +665,10 @@ static int hip_conf_get_type(char *text, char *argv[])
 #endif
     else if (!strcmp("order", text)) {
         ret = TYPE_ORDER;
-    } else if (strcmp("opendht", argv[1]) == 0) {
-        ret = TYPE_DHT;
     } else if (strcmp("heartbeat", argv[1]) == 0) {
         ret = TYPE_HEARTBEAT;
     } else if (!strcmp("ttl", text)) {
         ret = TYPE_TTL;
-    } else if (!strcmp("gw", text)) {
-        ret = TYPE_GW;
-    } else if (!strcmp("get", text)) {
-        ret = TYPE_GET;
-    } else if (!strcmp("set", text)) {
-        ret = TYPE_SET;
     } else if (!strcmp("config", text)) {
         ret = TYPE_CONFIG;
     }
@@ -750,8 +729,6 @@ static int hip_conf_get_type_arg(int action)
     case ACTION_GET:
     case ACTION_RUN:
     case ACTION_LOAD:
-    case ACTION_DHT:
-    case ACTION_OPENDHT:
     case ACTION_BUDDIES:
     case ACTION_HEARTBEAT:
     case ACTION_LOCATOR:
@@ -1928,260 +1905,6 @@ out:
 }
 
 /**
- * Function that is used to set the name sent to DHT in name/fqdn -> HIT -> IP mappings
- *
- * @param msg input/output message for the query/response for hipd
- * @param action unused
- * @param opt hostname
- * @param optc 1
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return       zero on success, or negative error value on error.
- */
-static int hip_conf_handle_set(hip_common_t *msg,
-                               int action,
-                               const char *opt[],
-                               int optc,
-                               int send_only)
-{
-    int err      = 0;
-    int len_name = 0;
-    len_name = strlen(opt[0]);
-    HIP_DEBUG("Name received from user: %s (len = %d (max 256))\n", opt[0], len_name);
-    HIP_IFEL((len_name > 255), -1, "Name too long, max 256\n");
-
-    err      = hip_build_user_hdr(msg, HIP_MSG_DHT_SET, 0);
-    if (err) {
-        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out_err;
-    }
-
-    err = hip_build_param_opendht_set(msg, opt[0]);
-    if (err) {
-        HIP_ERROR("build param hit failed: %s\n", strerror(err));
-        goto out_err;
-    }
-out_err:
-    return err;
-}
-
-/**
- * Function that is used to set the used gateway addr port and ttl with DHT
- * e.g. hipconf dht gw <hostname|HIT|IP> 5851 600
- *
- * @param msg input/output message for the query/response for hipd
- * @param action unused
- * @param opt hostname|HIT|IP, port and ttl (as strings)
- * @param optc 3
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return zero on success, or negative error value on error.
- */
-static int hip_conf_handle_gw(hip_common_t *msg,
-                              int action,
-                              const char *opt[],
-                              int optc,
-                              int send_only)
-{
-    int err;
-    int ret_HIT = 0, ret_IP = 0, ret_HOSTNAME = 0;
-    struct in_addr ip_gw;
-    struct in6_addr ip_gw_mapped;
-    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-
-    HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
-
-    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-
-    if (optc != 3) {
-        HIP_ERROR("Missing arguments\n");
-        err = -EINVAL;
-        goto out_err;
-    }
-
-    if (strlen(opt[0]) > 39) { //address longer than size of ipv6 address
-        HIP_ERROR("Address longer than maximum allowed\n");
-        err = -EINVAL;
-        goto out_err;
-    }
-
-    ret_IP  = inet_pton(AF_INET, opt[0], &ip_gw);
-    ret_HIT = inet_pton(AF_INET6, opt[0], &ip_gw_mapped);
-
-    if (!(ret_IP || ret_HIT)) {
-        memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-        hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX - 1] = '\0';
-        ret_HOSTNAME                               = 1;
-    }
-
-    if (ret_IP) {
-        IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-    }
-
-    if (ret_IP || ret_HIT) {
-        HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
-    } else {
-        HIP_DEBUG("Host name : %s\n", hostname);
-    }
-
-    err = hip_build_user_hdr(msg, HIP_MSG_DHT_GW, 0);
-    if (err) {
-        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out_err;
-    }
-
-    err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
-                                          atoi(opt[2]), atoi(opt[1]), hostname);
-    if (err) {
-        HIP_ERROR("build param hit failed: %s\n", strerror(err));
-        goto out_err;
-    }
-
-out_err:
-    return err;
-}
-
-/**
- * Function that gets data from DHT
- *
- * @param msg input/output message for the query/response for hipd
- * @param action unused
- * @param opt hostname or HIT as a string
- * @param optc 1
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return zero for success and negative on error
- */
-static int hip_conf_handle_get(hip_common_t *msg,
-                               int action,
-                               const char *opt[],
-                               int optc,
-                               int send_only)
-{
-#ifdef CONFIG_HIP_DHT
-    int err = 0, is_hit = 0, socket = 0;
-    hip_hit_t hit;
-    unsigned char dht_response[HIP_MAX_PACKET];
-    struct addrinfo *serving_gateway;
-    struct hip_opendht_gw_info *gw_info;
-    struct hip_host_id *hid;
-    struct in_addr tmp_v4;
-    struct in6_addr reply6;
-    char tmp_ip_str[INET_ADDRSTRLEN];
-    int tmp_ttl, tmp_port;
-    const char *pret;
-
-    memset(&hit, 0, sizeof(hip_hit_t));
-
-    /* ASK THIS INFO FROM DAEMON */
-    HIP_INFO("Asking serving gateway info from daemon...\n");
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DHT_SERVING_GW, 0), -1,
-             "Building daemon header failed\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
-             "Send recv daemon info failed\n");
-    HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
-             "No gw struct found\n");
-
-    /* Check if DHT was on */
-    if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
-        HIP_INFO("DHT is not in use\n");
-        goto out_err;
-    }
-    memset(&tmp_ip_str, '\0', sizeof(tmp_ip_str));
-    tmp_ttl  = gw_info->ttl;
-    tmp_port = htons(gw_info->port);
-    IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-    pret     = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
-    HIP_INFO("Got address %s, port %d, TTL %d from daemon\n",
-             tmp_ip_str, tmp_port, tmp_ttl);
-
-    is_hit   = inet_pton(AF_INET6, opt[0], &hit);
-
-    /* If this is 1 then it is hit (actually any ipv6 would do), if 0 then hostname */
-    if (is_hit < 0 && errno == EAFNOSUPPORT) {
-        HIP_PERROR("inet_pton: not a valid address family\n");
-        err = -EAFNOSUPPORT;
-        goto out_err;
-    }
-
-    HIP_DEBUG("Resolve the gateway address\n");
-    HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, tmp_port, AF_INET), 0,
-             "Resolve error!\n");
-
-    HIP_DEBUG("Initialize socket\n");
-    socket = init_dht_gateway_socket_gw(socket, serving_gateway);
-
-    _HIP_DEBUG("Connect the DHT socket\n");
-    err    = connect_dht_gateway(socket, serving_gateway, 1);
-
-    HIP_DEBUG("Send get msg\n");
-    HIP_IFEL((err = opendht_get(socket, (unsigned char *) opt[0],
-                                (unsigned char *) tmp_ip_str, tmp_port)), 0, "DHT get error\n");
-
-    HIP_DEBUG("Read response\n");
-    HIP_IFE((err = opendht_read_response(socket, dht_response)), -1);
-
-    _HIP_DEBUG("is_hit %d err %d\n", is_hit, err);
-
-    if (is_hit == 1 && err >= 0) {
-        _HIP_DUMP_MSG(dht_response);
-        _HIP_DEBUG("Returned locators above\n");
-        /* hip_print_locator_addresses((struct hip_common *)dht_response); */
-        /* Verify signature */
-        HIP_IFEL(!(hid = hip_get_param((struct hip_common *) dht_response,
-                                       HIP_PARAM_HOST_ID)), -ENOENT,
-                 "No HOST_ID found in DHT response\n");
-
-        HIP_IFEL((err = hip_verify_packet_signature((struct hip_common *) dht_response,
-                                                    hid)), -1,
-                 "Failed to verify the signature in HDRR\n");
-        HIP_DEBUG("HDRR signature successfully verified\n");
-    } else if (is_hit == 0 && err >= 0)   {
-        memcpy(&((&reply6)->s6_addr), dht_response, sizeof(reply6.s6_addr));
-        HIP_DEBUG_HIT("Returned HIT", &reply6);
-    }
-    hip_msg_init(msg);
-out_err:
-    return err;
-#else /* CONFIG_HIP_DHT */
-    return -1;
-#endif /* CONFIG_HIP_DHT */
-}
-
-/**
- * Function that is used to set DHT on or off
- *
- * @param msg input/output message for the query/response for hipd
- * @param action unused
- * @param opt "on" or "off"
- * @param optc 1
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
- * @return zero for success and negative on error
- */
-static int hip_conf_handle_dht_toggle(hip_common_t *msg,
-                                      int action,
-                                      const char *opt[],
-                                      int optc,
-                                      int send_only)
-{
-    int err = 0, status = 0;
-
-    if (!strcmp("on", opt[0])) {
-        status = HIP_MSG_DHT_ON;
-    } else if (!strcmp("off", opt[0])) {
-        status = HIP_MSG_DHT_OFF;
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-    }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
-
-out_err:
-    return err;
-}
-
-/**
  * Set BUDDIES extension on or off
  *
  * @param msg input/output message for the query/response for hipd
@@ -2628,12 +2351,10 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
             libs[0] = "libhiptool.so";
             libs[1] = NULL;
             libs[2] = NULL;
-            libs[3] = "libhipopendht.so";
         } else if (type == EXEC_LOADLIB_OPP)   {
             libs[0] = "libopphip.so";
             libs[1] = "libhiptool.so";
             libs[2] = NULL;
-            libs[3] = "libhipopendht.so";
         }
 
         hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
@@ -2754,8 +2475,8 @@ out_err:
 
 /**
  * Turn nsupdate extension on or off. The nsupdate extension publishes
- * the HIT and IP address of the host on a given DNS server (as an alternative
- * to DHT). Useful especially with mobility.
+ * the HIT and IP address of the host on a given DNS server.
+ * Useful especially with mobility.
  *
  * @param msg    a pointer to the buffer where the message for hipd will
  *               be written.
@@ -3100,15 +2821,15 @@ int (*action_handler[])(hip_common_t *,
     hip_conf_handle_load,               /* 11: TYPE_CONFIG */
     hip_conf_handle_run_normal,         /* 12: TYPE_RUN */
     NULL,                               /* was 13: TYPE_TTL */
-    hip_conf_handle_gw,                 /* 14: TYPE_GW */
-    hip_conf_handle_get,                /* 15: TYPE_GET */
+    NULL,                               /* 14: unused */
+    NULL,                               /* 15: unused */
     hip_conf_handle_ha,                 /* 16: TYPE_HA */
     hip_conf_handle_mhaddr,             /* 17: TYPE_MHADDR */
     hip_conf_handle_debug,              /* 18: TYPE_DEBUG */
     hip_conf_handle_restart,            /* 19: TYPE_DAEMON */
     hip_conf_handle_locator,            /* 20: TYPE_LOCATOR */
-    hip_conf_handle_set,                /* 21: TYPE_SET */
-    hip_conf_handle_dht_toggle,         /* 22: TYPE_DHT */
+    NULL,                               /* 21: unused */
+    NULL,                               /* 22: unused */
     hip_conf_handle_opptcp,             /* 23: TYPE_OPPTCP */
     hip_conf_handle_trans_order,        /* 24: TYPE_ORDER */
     NULL,

@@ -8,7 +8,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
-BuildRequires: gcc gcc-c++ openssl-devel libxml2-devel iptables-devel xmlto libtool libcap-devel autoconf automake xmlto rpm-build
+BuildRequires: gcc gcc-c++ openssl-devel iptables-devel xmlto libtool libcap-devel autoconf automake xmlto rpm-build
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -65,7 +65,7 @@ Requires: hipl-lib hipl-daemon hipl-tools
 %package lib
 Summary: HIP for Linux libraries
 Group: System Environment/Kernel
-Requires: openssl libxml2 iptables libcap
+Requires: openssl iptables libcap
 %description lib
 
 %package daemon
@@ -93,7 +93,7 @@ Group: System Environment/Kernel
 
 %package dnsproxy
 Requires: python hipl-lib
-Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS, DHT or hosts files
+Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS or hosts files
 Group: System Environment/Kernel
 %description dnsproxy
 

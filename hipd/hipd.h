@@ -33,7 +33,6 @@
 #include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
 #include "lib/core/message.h"
 #include "lib/core/esp_prot_common.h"
-#include "dhtqueue.h"
 #include "blind.h"
 
 
@@ -55,8 +54,6 @@
 
 #define HIP_R1_PRECREATE_INTERVAL 60 * 60 /* seconds */
 #define HIP_R1_PRECREATE_INIT (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-#define OPENDHT_REFRESH_INTERVAL 30 /* seconds Original 60 using 1 with sockaddrs */
-#define OPENDHT_REFRESH_INIT (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
 #define QUEUE_CHECK_INTERVAL 15 /* seconds */
 #define QUEUE_CHECK_INIT (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
@@ -116,26 +113,6 @@ extern int hip_icmp_interval;
 extern int hip_encrypt_i2_hi;
 
 extern int hip_tcptimeout_status;
-
-extern struct addrinfo *opendht_serving_gateway;
-extern int opendht_serving_gateway_ttl;
-extern int opendht_serving_gateway_port;
-
-extern int dht_queue_count;
-
-extern int opendht_error;
-extern char opendht_current_key[INET6_ADDRSTRLEN + 2];
-extern char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-extern hip_common_t *opendht_current_hdrr;
-extern unsigned char opendht_hdrr_secret[40];
-extern char opendht_host_name[256];
-
-extern int hip_opendht_inuse;
-extern int hip_opendht_error_count;
-extern int hip_opendht_sock_fqdn;
-extern int hip_opendht_sock_hit;
-extern int hip_opendht_fqdn_sent;
-extern int hip_opendht_hit_sent;
 
 extern hip_transform_suite_t hip_nat_status;
 

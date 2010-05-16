@@ -31,7 +31,6 @@
 #include "lib/core/hostid.h"
 #include "lib/core/performance.h"
 #include "lib/tool/nlink.h"
-#include "lib/dht/libhipdht.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hostsfiles.h"
 
@@ -44,11 +43,6 @@
 
 /** Maximum size of a modprobe command line */
 #define MODPROBE_MAX_LINE       64
-
-/* the /etc/hip/dhtservers file */
-#define HIPL_DHTSERVERS_FILE     HIPL_SYSCONFDIR "/dhtservers"
-
-#define HIPL_DHTSERVERS_FILE_EX "193.167.187.134 hipdht2.infrahip.net\n"
 
 
 /** ICMPV6_FILTER related stuff */
@@ -147,8 +141,6 @@ static void hip_load_configuration(void)
     hip_create_file_unless_exists(HIPL_CONFIG_FILE, HIPL_CONFIG_FILE_EX);
 
     hip_create_file_unless_exists(HIPL_HOSTS_FILE, HIPL_HOSTS_FILE_EX);
-
-    hip_create_file_unless_exists(HIPL_DHTSERVERS_FILE, HIPL_DHTSERVERS_FILE_EX);
 
     hip_create_file_unless_exists(HIPL_NSUPDATE_CONF_FILE, HIPL_NSUPDATE_CONF_FILE_EX);
 
@@ -361,129 +353,6 @@ static void hip_remove_kernel_modules(void)
             }
         }
     }
-}
-
-/**
- * initialize the needed variables for DHT
- *
- * @return zero on success or negative on failure
- */
-int hip_init_dht(void)
-{
-    int err = 0;
-
-#ifdef CONFIG_HIP_DHT
-    int i = 0, j = 0, place = 0;
-    char serveraddr_str[INET6_ADDRSTRLEN];
-    char servername_str[HOST_NAME_MAX];
-    char servername_buf[HOST_NAME_MAX];
-    char port_buf[] = "00000";
-    int family;
-
-    HIP_IFEL((hip_opendht_inuse == HIP_MSG_DHT_OFF), 0, "No DHT\n");
-
-    /* Init the opendht_queue */
-    HIP_IFEL((hip_init_dht_queue() == -1), -1, "Failed to initialize opendht queue\n");
-
-    hip_opendht_error_count      = 0;
-    /* Initializing variable for dht gateway port used in
-     * resolve_dht_gateway_info in libhipopendht */
-
-    /* Needs to be init here, because of gateway change after
-     * threshold error count*/
-    opendht_serving_gateway_port = OPENDHT_PORT;
-
-    memcpy(opendht_host_name, OPENDHT_GATEWAY, strlen(OPENDHT_GATEWAY));
-
-    /* Initialize the HDRR secret for OpenDHT put-rm.*/
-    HIP_ASSERT(opendht_hdrr_secret != NULL);
-    memset(opendht_hdrr_secret, 0, 40);
-    err = RAND_bytes(opendht_hdrr_secret, 40);
-
-    memset(servername_str,    0, sizeof(servername_str));
-    memset(serveraddr_str,    0, sizeof(serveraddr_str));
-    memset(servername_buf, '\0', sizeof(servername_buf));
-    err = hip_get_random_hostname_id_from_hosts(OPENDHT_SERVERS_FILE,
-                                                servername_buf, serveraddr_str);
-
-    for (i = 0; i < strlen(servername_buf); i++) {
-        if (servername_buf[i] == ':') {
-            break;
-        }
-        place++;
-    }
-    for (i = 0; i < place; i++) {
-        servername_str[i] = servername_buf[i];
-    }
-    if (place < strlen(servername_buf) - 1) {
-        place++;
-        for (i = 0, j = place; i < strlen(servername_buf); i++, j++) {
-            port_buf[i] = servername_buf[j];
-        }
-        opendht_serving_gateway_port = atoi(port_buf);
-    }
-
-    HIP_IFEL(err, 0, "Failed to get random dht server\n");
-    HIP_DEBUG("DHT gateway from dhtservers:\n %s (addr = %s, port = %d)\n",
-              servername_str, serveraddr_str, opendht_serving_gateway_port);
-
-    if (strchr(serveraddr_str, ':') == NULL) {
-        family = AF_INET;
-    } else {
-        family = AF_INET6;
-    }
-
-    /* resolve it */
-    memset(opendht_host_name, '\0', sizeof(opendht_host_name));
-    memcpy(opendht_host_name, servername_str, strlen(servername_str));
-    err = resolve_dht_gateway_info(serveraddr_str,
-                                   &opendht_serving_gateway,
-                                   opendht_serving_gateway_port, family);
-    if (err < 0) {
-        hip_opendht_error_count++;
-        HIP_DEBUG("Error resolving openDHT gateway!\n");
-    }
-    err = 0;
-
-    /* check the condition of the sockets, we may have come here in middle
-     * of something so re-initializing might be needed */
-    if (hip_opendht_sock_fqdn > 0) {
-        close(hip_opendht_sock_fqdn);
-        hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn,
-                                                           opendht_serving_gateway);
-        hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
-    }
-
-    if (hip_opendht_sock_hit > 0) {
-        close(hip_opendht_sock_hit);
-        hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit,
-                                                          opendht_serving_gateway);
-        hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
-    }
-
-    memset(opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-    if (gethostname(opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX)) {
-        HIP_DEBUG("gethostname failed\n");
-    }
-    hip_register_to_dht();
-    err = hip_init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
-    if (err < 0) {
-        close(hip_opendht_sock_fqdn);
-        hip_opendht_sock_fqdn = -1;
-        /* Do not bother trying the other */
-        return err;
-    }
-    err = hip_init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
-    if (err < 0) {
-        close(hip_opendht_sock_hit);
-        hip_opendht_sock_hit = -1;
-    }
-
-/* out_err only used by opendht code */
-out_err:
-#endif  /* CONFIG_HIP_DHT */
-
-    return err;
 }
 
 /**
@@ -783,22 +652,12 @@ void hip_exit(int signal)
 
     hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
 
-    if (opendht_serving_gateway) {
-        freeaddrinfo(opendht_serving_gateway);
-    }
-
-    if (opendht_current_hdrr) {
-        free(opendht_current_hdrr);
-    }
-
 #ifdef CONFIG_HIP_PERFORMANCE
     /* Deallocate memory of perf_set after finishing all of tests */
     hip_perf_destroy(perf_set);
 #endif
 
     hip_dh_uninit();
-
-    hip_dht_queue_uninit();
 
     if (sflags & HIPD_START_LOAD_KMOD) {
         hip_remove_kernel_modules();
@@ -1088,19 +947,6 @@ int hipd_init(const uint64_t flags)
              "Bind on daemon addr failed\n");
 
     hip_load_configuration();
-
-#ifdef CONFIG_HIP_DHT
-    {
-        memset(opendht_host_name, 0, sizeof(opendht_host_name));
-
-        hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn,
-                                                           opendht_serving_gateway);
-        set_cloexec_flag(hip_opendht_sock_fqdn, 1);
-        hip_opendht_sock_hit  = init_dht_gateway_socket_gw(hip_opendht_sock_hit,
-                                                           opendht_serving_gateway);
-        set_cloexec_flag(hip_opendht_sock_hit, 1);
-    }
-#endif  /* CONFIG_HIP_DHT */
 
     certerr = 0;
     certerr = hip_init_certs();

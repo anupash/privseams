@@ -1151,7 +1151,6 @@ char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_SET_OPPORTUNISTIC_MODE: return "HIP_MSG_SET_OPPORTUNISTIC_MODE";
     case HIP_MSG_SET_BLIND_ON:       return "HIP_MSG_SET_BLIND_ON";
     case HIP_MSG_SET_BLIND_OFF:      return "HIP_MSG_SET_BLIND_OFF";
-    case HIP_MSG_DHT_GW:             return "HIP_MSG_DHT_GW";
     case HIP_MSG_SET_DEBUG_ALL:      return "HIP_MSG_SET_DEBUG_ALL";
     case HIP_MSG_SET_DEBUG_MEDIUM:   return "HIP_MSG_SET_DEBUG_MEDIUM";
     case HIP_MSG_SET_DEBUG_NONE:     return "HIP_MSG_SET_DEBUG_NONE";
@@ -1160,9 +1159,6 @@ char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_RESTART:            return "HIP_MSG_RESTART";
     case HIP_MSG_SET_LOCATOR_ON:     return "HIP_MSG_SET_LOCATOR_ON";
     case HIP_MSG_SET_LOCATOR_OFF:    return "HIP_MSG_SET_LOCATOR_OFF";
-    case HIP_MSG_DHT_SET:            return "HIP_MSG_DHT_SET";
-    case HIP_MSG_DHT_ON:             return "HIP_MSG_DHT_ON";
-    case HIP_MSG_DHT_OFF:            return "HIP_MSG_DHT_OFF";
     case HIP_MSG_HIT_TO_IP_ON:       return "HIP_MSG_HIT_TO_IP_ON";
     case HIP_MSG_HIT_TO_IP_OFF:      return "HIP_MSG_HIT_TO_IP_OFF";
     case HIP_MSG_HIT_TO_IP_SET:      return "HIP_MSG_HIT_TO_IP_SET";
@@ -1203,7 +1199,6 @@ char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_NSUPDATE_ON:        return "HIP_MSG_NSUPDATE_ON";
     case HIP_MSG_NSUPDATE_OFF:       return "HIP_MSG_NSUPDATE_OFF";
     case HIP_MSG_HEARTBEAT:          return "HIP_MSG_HEARTBEAT";
-    case HIP_MSG_DHT_SERVING_GW:     return "HIP_MSG_DHT_SERVING_GW";
     case HIP_MSG_SET_NAT_PORT:       return "HIP_MSG_SET_NAT_PORT";
     case HIP_MSG_SHOTGUN_ON:         return "HIP_MSG_SHOTGUN_ON";
     case HIP_MSG_SHOTGUN_OFF:        return "HIP_MSG_SHOTGUN_OFF";
@@ -1275,8 +1270,6 @@ char *hip_param_type_name(const hip_tlv_type_t param_type)
     case HIP_PARAM_KEYS:            return "HIP_PARAM_KEYS";
     case HIP_PARAM_LOCATOR:         return "HIP_PARAM_LOCATOR";
     case HIP_PARAM_NOTIFICATION:    return "HIP_PARAM_NOTIFICATION";
-    case HIP_PARAM_OPENDHT_GW_INFO: return "HIP_PARAM_OPENDHT_GW_INFO";
-    case HIP_PARAM_OPENDHT_SET:     return "HIP_PARAM_OPENDHT_SET";
     case HIP_PARAM_PORTPAIR:        return "HIP_PARAM_PORTPAIR";
     case HIP_PARAM_PUZZLE:          return "HIP_PARAM_PUZZLE";
     case HIP_PARAM_CHALLENGE_REQUEST:       return "HIP_PARAM_CHALLENGE_REQUEST";
@@ -3768,69 +3761,6 @@ int hip_build_param_transform_order(struct hip_common *msg, int order)
 }
 
 /**
- * Append a parameter into a message that defines the hostname under
- * which to publish HIT-IP records in a Distribute Hash Table (DHT).
- * Can be used only for interprocess communications.
- *
- * @param msg a pointer to the message where the parameter will be
- *            appended
- * @param name the hostname
- * @return zero on success, or negative on failure
- */
-int hip_build_param_opendht_set(struct hip_common *msg, const char *name)
-{
-    int err = 0;
-    struct hip_opendht_set name_info;
-    hip_set_param_type((struct hip_tlv_common *) &name_info,
-                       HIP_PARAM_OPENDHT_SET);
-    hip_calc_param_len((struct hip_tlv_common *) &name_info,
-                       sizeof(struct hip_opendht_set)
-                               - sizeof(struct hip_tlv_common));
-    strcpy(name_info.name, name);
-    err = hip_build_param(msg, &name_info);
-    return err;
-}
-
-/**
- * Append a parameter into a message to set the DHT gateway.
- * Can be used only for interprocess communications.
- *
- * @param msg a pointer to the message where the parameter will be
- *            appended
- * @param addr the address of the DTH gateway
- * @param ttl time to live (TTL) value for published records in the DHT
- * @param port the the transport layer port of the DHT service
- * @param host_name optional hostname for the DHT gateway
- * @return zero on success, or negative on failure
- */
-int hip_build_param_opendht_gw_info(struct hip_common *msg,
-                                    struct in6_addr *addr,
-                                    uint32_t ttl,
-                                    uint16_t port,
-                                    char *host_name)
-{
-    int err = 0;
-    struct hip_opendht_gw_info gw_info;
-
-    hip_set_param_type((struct hip_tlv_common *) &gw_info,
-                       HIP_PARAM_OPENDHT_GW_INFO);
-    hip_calc_param_len((struct hip_tlv_common *) &gw_info,
-                       sizeof(struct hip_opendht_gw_info)
-                               - sizeof(struct hip_tlv_common));
-    gw_info.ttl = ttl;
-    gw_info.port = htons(port);
-    //added +1 because the \0 was not being copied at the end of the string
-    if (host_name != NULL) {
-        memcpy(&gw_info.host_name, host_name, strlen(host_name) + 1);
-    } else {
-        memset(&gw_info.host_name, '\0', sizeof(gw_info.host_name));
-    }
-    ipv6_addr_copy(&gw_info.addr, addr);
-    err = hip_build_param(msg, &gw_info);
-    return err;
-}
-
-/**
  * Build and append a SPKI infor parameter into a HIP control message (on-the-wire)
  *
  * @param msg a pointer to the message where the parameter will be
@@ -3933,29 +3863,6 @@ int hip_build_param_cert_x509_resp(struct hip_common *msg, char *der, int len)
     memcpy(&local.der, der, len);
     local.der_len = len;
     err           = hip_build_param(msg, &local);
-    return err;
-}
-
-/**
- * Build and append a HDRR parameter into a HIP control message. Used for
- * publishing host identifiers in a DHT.
- *
- * @param msg       a pointer to the message where the parameter will be
- *                  appended
- * @param hdrr_info a prefilled hdrr_info structure
- * @return zero on success, or negative on failure
- * @see <a href="http://tools.ietf.org/html/draft-ahrenholz-hiprg-dht">
- *         draft-ahrenholz-hiprg-dht</a>
- */
-int hip_build_param_hip_hdrr_info(struct hip_common *msg,
-                                  struct hip_hdrr_info *hdrr_info)
-{
-    int err = 0;
-    hip_set_param_type((struct hip_tlv_common *) hdrr_info, HIP_PARAM_HDRR_INFO);
-    hip_calc_param_len((struct hip_tlv_common *) hdrr_info,
-                       sizeof(struct hip_hdrr_info)
-                               - sizeof(struct hip_tlv_common));
-    err = hip_build_param(msg, hdrr_info);
     return err;
 }
 

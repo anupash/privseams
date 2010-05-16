@@ -163,12 +163,6 @@ int hip_build_param_cert_x509_req(struct hip_common *, struct in6_addr *);
 int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
 int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);
 
-int hip_build_param_opendht_set(struct hip_common *, const char *);
-int hip_build_param_opendht_gw_info(struct hip_common *,
-                                    struct in6_addr *,
-                                    uint32_t,
-                                    uint16_t,
-                                    char *);
 int hip_build_param_hit_to_ip_set(struct hip_common *, const char *);
 int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
 void hip_calc_hdr_len(struct hip_common *);
@@ -226,8 +220,6 @@ int dsa_to_hip_endpoint(DSA *dsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags_t endpoint_flags,
                         const char *hostname);
-int hip_build_param_hip_hdrr_info(struct hip_common *msg,
-                                  struct hip_hdrr_info *hdrr_info);
 int hip_build_param_reg_info(hip_common_t *msg,
                              const void *service_list,
                              const unsigned int service_count);
