@@ -45,12 +45,6 @@
  * @see handle_exec_application()
  */
 #define EXEC_LOADLIB_NONE       13
-
-/**
- * Maximum length of the string for that stores all libraries.
- * @see handle_exec_application()
- */
-#define LIB_LENGTH      200
 /* @} */
 
 /* for handle_hi() only */

@@ -2271,6 +2271,9 @@ out_err:
     return err;
 }
 
+/** Maximum length of the string for that stores all libraries. */
+#define LIB_LENGTH 200
+
 /**
  * Handle the hipconf commands where the type is @c run. Execute new
  * application and set environment variable "LD_PRELOAD" to as type
