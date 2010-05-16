@@ -123,9 +123,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
     case HIP_MSG_RST:
         err                = hip_send_close(msg, 1);
         break;
-    case HIP_MSG_BOS:
-        err                = hip_send_bos(msg);
-        break;
     case HIP_MSG_SET_NAT_ICE_UDP:
         HIP_DEBUG("Setting LOCATOR ON, when ice is on\n");
         hip_locator_status = HIP_MSG_SET_LOCATOR_ON;

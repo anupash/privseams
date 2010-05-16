@@ -3901,19 +3901,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </para>
   </section>
 
-  <section id="ch_hip_bos">
-    <title> Using HIP BOS support</title>
-    <para>
-        To generate a BOS packet (sent to the global multicast address
-      on all interfaces), use the following command:
-    </para>
-    <para>
-                  hipconf hip bos
-    </para>
-    <para>
-            BOS-aware hosts will record the machine's HOST ID, HIT, and IP address.
-    </para>
-  </section>
 <!--
   <section>
 

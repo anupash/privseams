@@ -74,7 +74,7 @@
 #define HIP_MSG_RUN_UNIT_TEST                    67
 #define HIP_MSG_RST                              68
 #define HIP_MSG_UNIT_TEST                        69
-#define HIP_MSG_BOS                              70
+/* free slot */
 #define HIP_MSG_NETLINK_DUMMY                    71
 #define HIP_MSG_CONF_PUZZLE_NEW                  72
 #define HIP_MSG_CONF_PUZZLE_GET                  73

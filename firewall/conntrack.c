@@ -1725,9 +1725,6 @@ static int check_packet(const struct in6_addr *ip6_src,
     } else if (common->type_hdr == HIP_NOTIFY) {
         // don't process and let pass through
         err = 1;
-    } else if (common->type_hdr == HIP_BOS) {   //removed from base01
-        // don't process and let pass through
-        err = 1;
     } else if (common->type_hdr == HIP_CLOSE) {
         err = handle_close(ip6_src, ip6_dst, common, tuple, ctx);
     } else if (common->type_hdr == HIP_CLOSE_ACK) {

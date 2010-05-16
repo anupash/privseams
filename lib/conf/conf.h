@@ -153,7 +153,7 @@ debug medium        # debug verbosity: all, medium or none\n"
 /* free slot */
 #define ACTION_HA  13
 #define ACTION_RST 14
-#define ACTION_BOS 15
+/* free slot */
 #define ACTION_DEBUG 16
 #define ACTION_MHADDR 17
 #define ACTION_RESTART 18
@@ -191,11 +191,6 @@ int hip_conf_handle_load(hip_common_t *msg,
                          const char *opt[],
                          int optc,
                          int send_only);
-int hip_conf_handle_bos(hip_common_t *msg,
-                        int type,
-                        const char *opt[],
-                        int optc,
-                        int send_only);
 int hip_conf_handle_hi(hip_common_t *msg,
                        int type,
                        const char *opt[],

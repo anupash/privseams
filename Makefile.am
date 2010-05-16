@@ -51,7 +51,6 @@ tools_pisacert_SOURCES = tools/pisacert.c
 
 hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/blind.c                 \
-                    hipd/bos.c                   \
                     hipd/cert.c                  \
                     hipd/close.c                 \
                     hipd/configfilereader.c      \

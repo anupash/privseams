@@ -888,7 +888,7 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
      * as a last resource */
     if (err) {
         struct in_addr bcast = { INADDR_BROADCAST };
-        /* IPv6 multicast (see bos.c) failed to bind() to link local,
+        /* IPv6 multicast failed to bind() to link local,
          * so using IPv4 here -mk */
         HIP_DEBUG("No information of peer found, trying broadcast\n");
         broadcast           = 1;

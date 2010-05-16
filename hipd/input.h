@@ -85,9 +85,6 @@ int hip_receive_notify(const struct hip_common *notify,
                        const struct in6_addr *notify_saddr, const struct in6_addr *notify_daddr,
                        hip_ha_t *entry);
 
-int hip_receive_bos(struct hip_common *bos, struct in6_addr *bos_saddr,
-                    struct in6_addr *bos_daddr, hip_ha_t *entry, hip_portpair_t *bos_info);
-
 int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
                   struct in6_addr *i1_daddr, hip_ha_t *entry, hip_portpair_t *i1_info);
 

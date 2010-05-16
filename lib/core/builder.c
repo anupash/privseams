@@ -631,7 +631,6 @@ static int hip_check_network_msg_type(const struct hip_common *msg)
         HIP_R2,
         HIP_UPDATE,
         HIP_NOTIFY,
-        HIP_BOS,
         HIP_CLOSE,
         HIP_CLOSE_ACK,
         HIP_LUPDATE
@@ -1141,7 +1140,6 @@ char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_RUN_UNIT_TEST:      return "HIP_MSG_RUN_UNIT_TEST";
     case HIP_MSG_RST:                return "HIP_MSG_RST";
     case HIP_MSG_UNIT_TEST:          return "HIP_MSG_UNIT_TEST";
-    case HIP_MSG_BOS:                return "HIP_MSG_BOS";
     case HIP_MSG_NETLINK_DUMMY:      return "HIP_MSG_NETLINK_DUMMY";
     case HIP_MSG_CONF_PUZZLE_NEW:    return "HIP_MSG_CONF_PUZZLE_NEW";
     case HIP_MSG_CONF_PUZZLE_GET:    return "HIP_MSG_CONF_PUZZLE_GET";
@@ -1959,7 +1957,6 @@ int hip_verify_network_header(struct hip_common *hip_common,
 
     /** @todo handle the RVS case better. */
     if (ipv6_addr_any(&hip_common->hitr)) {
-        /* Required for e.g. BOS */
         HIP_DEBUG("Received a connection to opportunistic HIT\n");
     } else {
         HIP_DEBUG_HIT("Received a connection to HIT", &hip_common->hitr);

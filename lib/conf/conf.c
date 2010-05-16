@@ -60,7 +60,7 @@
 #define TYPE_MAP           2
 #define TYPE_RST           3
 #define TYPE_SERVER        4
-#define TYPE_BOS           5
+/* free slot */
 #define TYPE_PUZZLE        6
 #define TYPE_NAT           7
 #define TYPE_OPP           EXEC_LOADLIB_OPP /* Should be 8 */
@@ -118,7 +118,6 @@ const char *hipconf_usage =
     "new hi default rsa_keybits dsa_keybits\n"
     "get|inc|dec|new puzzle all\n"
     "set puzzle all new_value\n"
-    "bos all\n"
     "nat none|plain-udp\n"
     "nat port local <port>\n"
     "nat port peer <port>\n"
@@ -474,8 +473,6 @@ static int hip_conf_get_action(char *argv[])
         ret = ACTION_INC;
     } else if (!strcmp("dec", argv[1])) {
         ret = ACTION_DEC;
-    } else if (!strcmp("bos", argv[1])) {
-        ret = ACTION_BOS;
     } else if (!strcmp("rst", argv[1])) {
         ret = ACTION_RST;
     } else if (!strcmp("run", argv[1])) {
@@ -555,7 +552,6 @@ static int hip_conf_check_action_argc(int action)
     case ACTION_NAT:
     case ACTION_DEC:
     case ACTION_RST:
-    case ACTION_BOS:
     case ACTION_LOCATOR:
     case ACTION_HEARTBEAT:
     case ACTION_HIT_TO_LSI:
@@ -642,8 +638,6 @@ static int hip_conf_get_type(char *text, char *argv[])
         }
     } else if (strcmp("locator", argv[1]) == 0)     {
         ret = TYPE_LOCATOR;
-    } else if ((!strcmp("all", text)) && (strcmp("bos", argv[1]) == 0)) {
-        ret = TYPE_BOS;
     } else if (!strcmp("debug", text)) {
         ret = TYPE_DEBUG;
     } else if ((!strcmp("mode", text)) && (strcmp("mhaddr", argv[1]) == 0)) {
@@ -733,7 +727,6 @@ static int hip_conf_get_type_arg(int action)
     case ACTION_HEARTBEAT:
     case ACTION_LOCATOR:
     case ACTION_RST:
-    case ACTION_BOS:
     case ACTION_MHADDR:
     case ACTION_HANDOVER:
     case ACTION_TRANSORDER:
@@ -1419,40 +1412,6 @@ static int hip_conf_handle_debug(hip_common_t *msg, int action,
              "Failed to build user message header.: %s\n", strerror(err));
 
 out_err:
-    return err;
-}
-
-/**
- * Handles the hipconf commands where the type is @c bos.
- *
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array (@b 0).
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_bos(hip_common_t *msg, int action,
-                        const char *opt[], int optc, int send_only)
-{
-    int err;
-
-    /* Check that there are no extra args */
-    if (optc != 0) {
-        HIP_ERROR("Extra arguments\n");
-        err = -EINVAL;
-        goto out;
-    }
-
-    /* Build the message header */
-    err = hip_build_user_hdr(msg, HIP_MSG_BOS, 0);
-    if (err) {
-        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out;
-    }
-
-out:
     return err;
 }
 
@@ -2811,7 +2770,7 @@ int (*action_handler[])(hip_common_t *,
     hip_conf_handle_rst,                /* 3: TYPE_RST */
     hip_conf_handle_server,             /* 4: TYPE_SERVER */
     /* Any client side registration action. */
-    hip_conf_handle_bos,                /* 5: TYPE_BOS */
+    NULL,                               /* 5: unused */
     hip_conf_handle_puzzle,             /* 6: TYPE_PUZZLE */
     hip_conf_handle_nat,                /* 7: TYPE_NAT */
     hip_conf_handle_opp,                /* 8: TYPE_OPP */
