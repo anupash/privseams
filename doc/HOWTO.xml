@@ -1658,10 +1658,7 @@ $ make V=99
         ifconfig eth0 inet6 add 3ffe::2/64
       </para></listitem>
       <listitem><para>
-        cd somewhere/hipl
-      </para></listitem>
-      <listitem><para>
-        hipd/hipd # (to start as a background daemon process, add -b flag)
+        hipd # (to start as a background daemon process, add -b flag)
       </para></listitem>
       <listitem><para>
         nc6 -l -p 1111
@@ -1691,10 +1688,7 @@ $ make V=99
         ifconfig eth0 inet6 add 3ffe::1/64
       </para></listitem>
       <listitem><para>
-        cd somewhere/hipl
-      </para></listitem>
-      <listitem><para>
-        hipd/hipd
+        hipd
       </para></listitem>
       <listitem><para>
         nc6 oops 1111
@@ -1845,13 +1839,10 @@ $ make V=99
             </para>
             <itemizedlist>
               <listitem><para>
-                  cd somewhere/hipl
+                  hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
               </para></listitem>
               <listitem><para>
-                  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
-              </para></listitem>
-              <listitem><para>
-                  hipd/hipd # (to start as a background daemon process, add -b flag)
+                  hipd # (to start as a background daemon process, add -b flag)
               </para></listitem>
             </itemizedlist>
             <para>
@@ -3031,7 +3022,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </para>
         <orderedlist>
           <listitem><para>
-            Start HIP daemon at each host:<programlisting>hipd/hipd</programlisting>
+            Start HIP daemon at each host:<programlisting>hipd</programlisting>
           </para></listitem>
           <listitem><para>
             At the rendezvous server, we have to indicate that we are willing to offer
@@ -3254,7 +3245,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           <listitem><para>
             Start HIP daemon at each host:
             <programlisting>
-              hipd/hipd
+              hipd
             </programlisting>
           </para></listitem>
           <listitem><para>
@@ -3852,10 +3843,16 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
            make
     </para></listitem>
     <listitem><para>
+              Run make install
+    </para></listitem>
+    <listitem><para>
+           make install
+    </para></listitem>
+    <listitem><para>
               Run hip daemon on both "crash" and "oops"
     </para></listitem>
     <listitem><para>
-           hipd/hipd
+           hipd
     </para></listitem>
     <listitem><para>
             . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "hipconf set opp on|off" command is used to enable/disable opportunistic mode. By default it is on.
