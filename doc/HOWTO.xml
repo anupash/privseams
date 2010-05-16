@@ -354,6 +354,7 @@
       HIPL source code, please refer to <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/gprof.html" />.
     </para>
  </section>
+<!-- FIXME: the OpenWrt subsections are redundant and should be merged -->
   <section id="ch_openwrt">
     <title>Loading HIPL on OpenWRT</title>
     <para>
@@ -1671,6 +1672,7 @@ $ make V=99
     <para>
       crash:
     </para>
+<!-- FIXME: /etc/hosts is not a command, what to do with it? -->
     <itemizedlist>
       <listitem><para>
         /etc/hosts:
@@ -1834,6 +1836,7 @@ $ make V=99
              <itemizedlist>
                     <listitem><para>OOPS_IP oops</para></listitem>
                     </itemizedlist>
+<!-- FIXME: the example contradicts the daemon start order claim -->
             <para>Apart from starting the hipd process, the hipfw process must be also
                 started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
             </para>
@@ -3730,6 +3733,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
             ping6 -I source_hit dst_hit
         </para>  </listitem>
       </itemizedlist>
+<!-- FIXME: bug 161 is resolved - what gives? -->
       <para>Make sure that the source is the same as in "ip xfrm policy" output.
         We are aware of the problem (see bug id 161) and it is being solved.
         Also, it seemed like the responder could not route packets
