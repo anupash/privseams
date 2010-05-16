@@ -135,9 +135,6 @@ static void hip_load_configuration(void)
 {
     const char *cfile = "default";
 
-    /* HIPL_CONFIG_FILE, HIPL_CONFIG_FILE_EX and so on are defined in
-     * the auto-generated config.h */
-
     hip_create_file_unless_exists(HIPL_CONFIG_FILE, HIPL_CONFIG_FILE_EX);
 
     hip_create_file_unless_exists(HIPL_HOSTS_FILE, HIPL_HOSTS_FILE_EX);
