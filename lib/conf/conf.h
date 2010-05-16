@@ -71,7 +71,6 @@ nat plain-udp       # use UDP capsulation (for NATted environments)\n\
 #nat port peer 22222 # change local peer UDP port\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
-#define HOSTS_FILE "/etc/hosts"
 #define HIPL_HOSTS_FILE_EX \
     "# This file stores the HITs of the hosts, in a similar fashion to /etc/hosts.\n\
 # The aliases are optional.  Examples:\n\

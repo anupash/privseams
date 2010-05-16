@@ -27,6 +27,10 @@
 #include "hostsfiles.h"
 #include "lib/tool/lutil.h"
 
+
+#define HOSTS_FILE "/etc/hosts"
+
+
 /**
  * A "for-each" iterator function for hosts files that returns the first
  * hostname that matches the given address
