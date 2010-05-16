@@ -2163,9 +2163,10 @@ $ make V=99
     used because tested applications did not support IPv6. It seems
     that most of the VNC applications do not support IPv6.
   </para>
-  <para>
-    VINO/VINAGRE
-  </para>
+  <section id="sec_vino_vinagre">
+  <title>
+    vino / vinagre
+  </title>
   <para>
   Setup LSIs as the manual instructs and remember the daemons and so
   on. Then do the following.
@@ -2182,9 +2183,11 @@ $ make V=99
   <programlisting>
     vinagre &lt;LSI-of-Server&gt;
   </programlisting>
-  <para>
-    THIGHTVNCSERVER/XTIGHTVNCVIEWER
-  </para>
+  </section>
+  <section id="sec_tightvncserver_xtightvncviewer">
+  <title>
+    tightvncserver / xtightvncviewer
+  </title>
   <para>
   Setup LSIs as the manual instructs and remember the daemons and so
   on. Then do the following.
@@ -2206,6 +2209,7 @@ $ make V=99
   <para>
   Longer how-to can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/vnc.htm" />
   </para>
+  </section>
   </section>
   <section id="sec_openldap">
   <title>OpenLDAP</title>
