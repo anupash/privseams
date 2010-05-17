@@ -425,9 +425,10 @@ struct hip_common *hip_blind_build_i1(hip_ha_t *entry, uint16_t *mask)
  */
 int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *entry, uint16_t *mask)
 {
-    int err           = 0, host_id_in_enc_len = 0;
-    char *enc_in_msg  = NULL, *host_id_in_enc = NULL;
-    unsigned char *iv = NULL;
+    int err                 = 0, host_id_in_enc_len = 0;
+    uint8_t *enc_in_msg     = NULL;
+    uint8_t *host_id_in_enc = NULL;
+    unsigned char *iv       = NULL;
 
     /************ Encrypted ***********/
     switch (entry->hip_transform) {
@@ -438,8 +439,7 @@ int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *e
         HIP_ASSERT(enc_in_msg); /* Builder internal error. */
         iv             = ((struct hip_encrypted_aes_sha1 *) enc_in_msg)->iv;
         get_random_bytes(iv, 16);
-        host_id_in_enc = enc_in_msg +
-                         sizeof(struct hip_encrypted_aes_sha1);
+        host_id_in_enc = enc_in_msg + sizeof(struct hip_encrypted_aes_sha1);
         break;
     case HIP_HIP_3DES_SHA1:
         HIP_IFEL(hip_build_param_encrypted_3des_sha1(r2, (struct hip_tlv_common *) entry->our_pub),
@@ -448,8 +448,7 @@ int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *e
         HIP_ASSERT(enc_in_msg); /* Builder internal error. */
         iv             = ((struct hip_encrypted_3des_sha1 *) enc_in_msg)->iv;
         get_random_bytes(iv, 8);
-        host_id_in_enc = enc_in_msg +
-                         sizeof(struct hip_encrypted_3des_sha1);
+        host_id_in_enc = enc_in_msg + sizeof(struct hip_encrypted_3des_sha1);
         break;
     case HIP_HIP_NULL_SHA1:
         HIP_IFEL(hip_build_param_encrypted_null_sha1(r2, (struct hip_tlv_common *) entry->our_pub),
@@ -457,8 +456,7 @@ int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *e
         enc_in_msg     = hip_get_param(r2, HIP_PARAM_ENCRYPTED);
         HIP_ASSERT(enc_in_msg); /* Builder internal error. */
         iv             = NULL;
-        host_id_in_enc = enc_in_msg +
-                         sizeof(struct hip_encrypted_null_sha1);
+        host_id_in_enc = enc_in_msg + sizeof(struct hip_encrypted_null_sha1);
         break;
     default:
         HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
@@ -483,7 +481,7 @@ int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *e
     HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv,
                                   entry->hip_transform,
                                   host_id_in_enc_len,
-                                  &entry->hip_enc_out.key,
+                                  entry->hip_enc_out.key,
                                   HIP_DIRECTION_ENCRYPT), -1,
              "Building of param encrypted failed\n");
 
@@ -553,7 +551,7 @@ int hip_blind_verify_r2(struct hip_common *r2, hip_ha_t *entry)
     }
 
     HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, entry->hip_transform,
-                                  crypto_len, &entry->hip_enc_in.key,
+                                  crypto_len, entry->hip_enc_in.key,
                                   HIP_DIRECTION_DECRYPT), -EINVAL,
              "Decryption of Host ID failed\n");
 

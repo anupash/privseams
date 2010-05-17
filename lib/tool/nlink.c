@@ -43,7 +43,7 @@
 #define PREFIXLEN_SPECIFIED 1
 
 #define NLMSG_TAIL(nmsg) \
-    ((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
+    ((struct rtattr *) (((uint8_t *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
 typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
                              const struct nlmsghdr *n, void **);

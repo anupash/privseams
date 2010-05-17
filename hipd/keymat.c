@@ -167,8 +167,8 @@ void hip_make_keymat(char *kij, size_t kij_len,
     while (dstoffset < dstbuflen) {
         hip_build_digest(HIP_DIGEST_SHA1, shabuffer,
                          kij_len + HIP_AH_SHA_LEN + 1,
-                         dstbuf + dstoffset);
-        seedkey    = dstbuf + dstoffset;
+                         (uint8_t *) dstbuf + dstoffset);
+        seedkey    = (uint8_t *) dstbuf + dstoffset;
         dstoffset += HIP_AH_SHA_LEN;
         index_nbr++;
         hip_update_keymat_buffer(shabuffer, seedkey, HIP_AH_SHA_LEN,
@@ -212,7 +212,7 @@ static void *hip_keymat_draw(struct hip_keymat_keymat *keymat, int length)
         goto out_err;
     }
 
-    ret             = keymat->keymatdst + keymat->offset;
+    ret             = (uint8_t *) keymat->keymatdst + keymat->offset;
 
     keymat->offset += length;
 

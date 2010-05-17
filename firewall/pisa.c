@@ -140,7 +140,7 @@ static int pisa_append_hmac(struct in6_addr *hit1, struct in6_addr *hit2,
     memcpy(key + 32, &pisa_random_data[rnd][0], PISA_RANDOM_LEN);
 
     HMAC(EVP_sha1(), key, 32 + PISA_RANDOM_LEN, data, data_len,
-         data + data_len, &len);
+         (uint8_t *) data + data_len, &len);
 
 out_err:
     return err;

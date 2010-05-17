@@ -357,7 +357,7 @@ int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out)
  *                  otherwise.
  */
 int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
-                         void *key, int direction)
+                         uint8_t *key, int direction)
 {
     void *result = NULL;
     int err      = -1;

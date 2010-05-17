@@ -33,7 +33,7 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 #endif
     int err                  = 0, mask = 0;
     hip_hit_t *peer          = (hip_hit_t *) opaque;
-    int delete_ha_info       = *(int *) (opaque + sizeof(hip_hit_t));
+    int delete_ha_info       = *(int *) ((uint8_t *)opaque + sizeof(hip_hit_t));
 
     struct hip_common *close = NULL;
 

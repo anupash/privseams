@@ -639,7 +639,8 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
                          sizeof(struct hip_locator_info_addr_item);
         HIP_DEBUG("esp_tuple_from_esp_info_locator: %d addresses in locator\n", n);
         if (n > 0) {
-            locator_addr = (void *) locator + sizeof(struct hip_locator);
+            locator_addr = (struct hip_locator_info_addr_item *)
+                           ((uint8_t *) locator + sizeof(struct hip_locator));
             while (n > 0) {
                 struct esp_address *esp_address = malloc(sizeof(struct esp_address));
                 memcpy(&esp_address->dst_addr,
@@ -1195,7 +1196,8 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
             goto out_err;
         }
 
-        locator_addr = (void *) locator + sizeof(struct hip_locator);
+        locator_addr = (struct hip_locator_info_addr_item *)
+                       ((uint8_t *) locator + sizeof(struct hip_locator));
 
         while (n > 0) {
             esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
@@ -1235,7 +1237,8 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
                 / sizeof(struct hip_locator_info_addr_item);
         HIP_DEBUG(" %d locator addresses\n", n);
 
-        locator_addr = (void *) locator + sizeof(struct hip_locator);
+        locator_addr = (struct hip_locator_info_addr_item *)
+                       ((uint8_t *) locator + sizeof(struct hip_locator));
         _HIP_DEBUG("locator addr: old tuple");
         print_esp_tuple(esp_tuple);
 

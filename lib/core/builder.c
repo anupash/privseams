@@ -771,15 +771,16 @@ static int hip_check_param_contents_len(const struct hip_common *msg,
                                         const struct hip_tlv_common *param)
 {
     int ok        = 0;
+    /* length in bytes */
     int param_len = hip_get_param_total_len(param);
-    void *pos     = (void *) param;
+    uint8_t *pos  = (uint8_t *) param;
 
     /* Note: the lower limit is not checked, because there really is no
      * lower limit. */
 
-    if (pos == ((void *) msg)) {
+    if (pos == ((uint8_t *) msg)) {
         HIP_ERROR("not a parameter\n");
-    } else if (pos + param_len > ((void *) msg) + HIP_MAX_PACKET) {
+    } else if (pos + param_len > ((uint8_t *) msg) + HIP_MAX_PACKET) {
         HIP_DEBUG("param far too long (%d)\n", param_len);
     } else if (param_len > hip_get_msg_total_len(msg)) {
         HIP_DEBUG("param too long (%d) msg_len %d\n", param_len,
@@ -805,7 +806,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
                                           const struct hip_tlv_common *current_param)
 {
     struct hip_tlv_common *next_param = NULL;
-    void *pos                         = (void *) current_param;
+    uint8_t *pos                      = (uint8_t *) current_param;
 
     if (!msg) {
         HIP_ERROR("msg null\n");
@@ -813,10 +814,10 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
     }
 
     if (current_param == NULL) {
-        pos = (void *) msg;
+        pos = (uint8_t *) msg;
     }
 
-    if (pos == msg) {
+    if (pos == (void *) msg) {
         pos += sizeof(struct hip_common);
     } else {
         pos += hip_get_param_total_len(current_param);
@@ -895,7 +896,7 @@ void *hip_get_param(const struct hip_common *msg, hip_tlv_type_t param_type)
 void *hip_get_param_contents(const struct hip_common *msg,
                              hip_tlv_type_t param_type)
 {
-    void *contents = hip_get_param(msg, param_type);
+    uint8_t *contents = hip_get_param(msg, param_type);
     if (contents) {
         contents += sizeof(struct hip_tlv_common);
     }
@@ -911,7 +912,7 @@ void *hip_get_param_contents(const struct hip_common *msg,
  */
 void *hip_get_param_contents_direct(const void *tlv_common)
 {
-    return ((void *) tlv_common) + sizeof(struct hip_tlv_common);
+    return ((uint8_t *) tlv_common) + sizeof(struct hip_tlv_common);
 }
 
 /**
@@ -934,7 +935,7 @@ static void *hip_find_free_param(const struct hip_common *msg)
     struct hip_tlv_common *current_param = NULL;
     struct hip_tlv_common *last_used_pos = NULL;
     void *free_pos                       = NULL;
-    void *first_pos                      = ((void *) msg) + sizeof(struct hip_common);
+    uint8_t *first_pos                   = ((uint8_t *) msg) + sizeof(struct hip_common);
 
     /* Check for no parameters: this has to be checked separately because
      * we cannot tell from the return value of get_next_param() whether
@@ -960,7 +961,7 @@ static void *hip_find_free_param(const struct hip_common *msg)
     if (last_used_pos == NULL) {
         free_pos = NULL;         /* the message was full */
     } else {
-        free_pos = ((void *) last_used_pos) +
+        free_pos = ((uint8_t *) last_used_pos) +
                    hip_get_param_total_len(last_used_pos);
     }
 
@@ -980,7 +981,7 @@ out:
 void hip_calc_hdr_len(struct hip_common *msg)
 {
     struct hip_tlv_common *param = NULL;
-    void *pos                    = (void *) msg;
+    uint8_t *pos                 = (uint8_t *) msg;
 
     /* We cannot call get_next() or get_free() because they need a valid
      * header length which is to be (possibly) calculated now. So, the
@@ -1071,7 +1072,7 @@ static void hip_calc_param_len(struct hip_tlv_common *tlv_common,
 void hip_dump_msg(const struct hip_common *msg)
 {
     struct hip_tlv_common *current_param = NULL;
-    void *contents                       = NULL;
+    uint8_t *contents                    = NULL;
     /* The value of the "Length"-field in current parameter. */
     hip_tlv_len_t len                    = 0;
     /* Total length of the parameter (type+length+value+padding), and the
@@ -1489,9 +1490,10 @@ static int hip_build_generic_param(struct hip_common *msg,
                                    const void *contents)
 {
     const struct hip_tlv_common *param = (struct hip_tlv_common *) parameter_hdr;
-    void *src                          = NULL, *dst = NULL;
+    void *src                          = NULL;
+    uint8_t *dst                       = NULL;
     int err                            = 0, size = 0;
-    void *max_dst                      = ((void *) msg) + HIP_MAX_PACKET;
+    uint8_t *max_dst                   = ((uint8_t *) msg) + HIP_MAX_PACKET;
 
     _HIP_DEBUG("\n");
 
@@ -1626,7 +1628,7 @@ int hip_build_param_contents(struct hip_common *msg,
 int hip_build_param(struct hip_common *msg, const void *tlv_common)
 {
     int err        = 0;
-    void *contents = ((void *) tlv_common) + sizeof(struct hip_tlv_common);
+    uint8_t *contents = ((uint8_t *) tlv_common) + sizeof(struct hip_tlv_common);
 
     if (tlv_common == NULL) {
         err = -EFAULT;
@@ -2863,12 +2865,13 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
     if (type == HIP_PARAM_HIP_TRANSFORM) {
         table    = supported_hip_tf;
         table_n  = sizeof(supported_hip_tf) / sizeof(uint16_t);
-        tfm      = (void *) transform_tlv + sizeof(struct hip_tlv_common);
+        tfm      = (uint16_t*) ((uint8_t *) transform_tlv + sizeof(struct hip_tlv_common));
         pkt_tfms = hip_get_param_contents_len(transform_tlv) / sizeof(uint16_t);
     } else if (type == HIP_PARAM_ESP_TRANSFORM) {
         table    = supported_esp_tf;
         table_n  = sizeof(supported_esp_tf) / sizeof(uint16_t);
-        tfm      = (void *) transform_tlv + sizeof(struct hip_tlv_common) + sizeof(uint16_t);
+        tfm      = (uint16_t*) ((uint8_t *) transform_tlv +
+                   sizeof(struct hip_tlv_common) + sizeof(uint16_t));
         pkt_tfms = (hip_get_param_contents_len(transform_tlv) - sizeof(uint16_t)) / sizeof(uint16_t);
     } else {
         HIP_ERROR("Invalid type %u\n", type);

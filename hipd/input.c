@@ -1122,7 +1122,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv,
                                       transform_hip_suite,
                                       host_id_in_enc_len,
-                                      &ctx->hip_enc_out.key,
+                                      ctx->hip_enc_out.key,
                                       HIP_DIRECTION_ENCRYPT), -1,
                  "Building of param encrypted failed\n");
 
@@ -2050,8 +2050,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
          * Note, that the original packet has the data still encrypted. */
         if (!host_id_found) {
             HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
-                                          (is_loopback ? &i2_context.hip_enc_out.key :
-                                           &i2_context.hip_enc_in.key),
+                                          (is_loopback ? i2_context.hip_enc_out.key :
+                                          i2_context.hip_enc_in.key),
                                           HIP_DIRECTION_DECRYPT),
                      -EKEYREJECTED,
                      "Failed to decrypt the HOST_ID parameter. Dropping the I2 " \
