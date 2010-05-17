@@ -51,7 +51,7 @@ typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
 typedef struct {
     uint8_t  family;
     uint8_t  bytelen;
-    __s16 bitlen;
+    uint16_t bitlen;
     uint32_t flags;
     uint32_t data[4];
 } inet_prefix;
