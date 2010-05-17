@@ -296,12 +296,12 @@ static inline int hip_wrapping_is_applicable(const struct sockaddr *sa,
  */
 static void hip_store_orig_socket_info(hip_opp_socket_t *entry,
                                        int is_peer,
-                                       const int socket,
+                                       const int sockfd,
                                        const struct sockaddr *sa,
                                        const socklen_t sa_len)
 {
     /* Fill in the information of original socket */
-    entry->orig_socket = socket;
+    entry->orig_socket = sockfd;
     if (is_peer) {
         memcpy(&entry->orig_peer_id, sa, sa_len);
         entry->orig_peer_id_len = sa_len;

@@ -339,7 +339,7 @@ int main(int argc, char **argv)
     float bench_secs      = 0.0;
     struct timeval bench_time;
     unsigned int sig_len;
-    perf_set_t *perf_set = NULL;
+    perf_set_t *perfset = NULL;
 
     printf("Default settings RSA: key pool of %d keys of length %d.\n",
            sw_create_rsa,
@@ -364,20 +364,20 @@ int main(int argc, char **argv)
     }
 
     if (sw_file_output) {
-        perf_set = hip_perf_create(PS_MAX);
+        perfset = hip_perf_create(PS_MAX);
 
         check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
 
-        hip_perf_set_name(perf_set, PS_DH_CREATE, "PS_DH_CREATE.csv");
-        hip_perf_set_name(perf_set, PS_DH_SHARE, "PS_DH_SHARE.csv");
-        hip_perf_set_name(perf_set, PS_RSA_CREATE, "PS_RSA_CREATE.csv");
-        hip_perf_set_name(perf_set, PS_RSA_SIGN, "PS_RSA_SIGN.csv");
-        hip_perf_set_name(perf_set, PS_RSA_VERIFY, "PS_RSA_VERIFY.csv");
-        hip_perf_set_name(perf_set, PS_DSA_CREATE, "PS_DSA_CREATE.csv");
-        hip_perf_set_name(perf_set, PS_DSA_SIGN, "PS_DSA_SIGN.csv");
-        hip_perf_set_name(perf_set, PS_DSA_VERIFY, "PS_DSA_VERIFY.csv");
-        hip_perf_set_name(perf_set, PS_HC_CREATE, "PS_HC_CREATE.csv");
-        hip_perf_set_name(perf_set, PS_HASH,
+        hip_perf_set_name(perfset, PS_DH_CREATE, "PS_DH_CREATE.csv");
+        hip_perf_set_name(perfset, PS_DH_SHARE, "PS_DH_SHARE.csv");
+        hip_perf_set_name(perfset, PS_RSA_CREATE, "PS_RSA_CREATE.csv");
+        hip_perf_set_name(perfset, PS_RSA_SIGN, "PS_RSA_SIGN.csv");
+        hip_perf_set_name(perfset, PS_RSA_VERIFY, "PS_RSA_VERIFY.csv");
+        hip_perf_set_name(perfset, PS_DSA_CREATE, "PS_DSA_CREATE.csv");
+        hip_perf_set_name(perfset, PS_DSA_SIGN, "PS_DSA_SIGN.csv");
+        hip_perf_set_name(perfset, PS_DSA_VERIFY, "PS_DSA_VERIFY.csv");
+        hip_perf_set_name(perfset, PS_HC_CREATE, "PS_HC_CREATE.csv");
+        hip_perf_set_name(perfset, PS_HASH,
                           "PS_HC_HASHLOOPS_100_PER_ENTRY.csv");
 
         printf( "-------------------------------\n"
@@ -395,7 +395,7 @@ int main(int argc, char **argv)
                 "          PS_HC_CREATE:  Hash chain creation\n"
                 "          PS_HC_HASHLOOPS_100_PER_ENTRY: Hash performance. 100 hashes per row!\n"
                 "-------------------------------\n\n");
-        hip_perf_open(perf_set);
+        hip_perf_open(perfset);
     }
 
     if (!sw_cpuload) {

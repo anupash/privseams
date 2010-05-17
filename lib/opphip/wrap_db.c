@@ -31,14 +31,14 @@ HIP_HASHTABLE *socketdb;
  * @param tid thread id
  * @return one if socket existists in the database or zero otherwise
  */
-int hip_exists_translation(int pid, int socket, pthread_t tid)
+int hip_exists_translation(int pid, int sockfd, pthread_t tid)
 {
     hip_opp_socket_t *entry = NULL;
 
-    entry = hip_socketdb_find_entry(pid, socket, tid);
+    entry = hip_socketdb_find_entry(pid, sockfd, tid);
 
     if (entry) {
-        if (entry->pid == pid && entry->orig_socket == socket &&
+        if (entry->pid == pid && entry->orig_socket == sockfd &&
             entry->tid == tid) {
             return 1;
         } else {
@@ -145,19 +145,19 @@ void hip_uninit_socket_db(void)
  * This function searches for a hip_opp_socket_t entry from the socketdb
  * by pid and orig_socket.
  *
- * @param pid the pid of the calling sockets API function
- * @param the socket of the calling sockets API function
- * @param tid the thread id of the calling sockets API function
- * @return NULL or the database entry if found
+ * @param pid       the pid of the calling sockets API function
+ * @param sockfd    fd of the calling sockets API function
+ * @param tid       the thread id of the calling sockets API function
+ * @return          NULL or the database entry if found
  */
-hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket, pthread_t tid)
+hip_opp_socket_t *hip_socketdb_find_entry(int pid, int sockfd, pthread_t tid)
 {
     hip_opp_socket_t opp, *ret;
 
     opp.pid         = pid;
-    opp.orig_socket = socket;
+    opp.orig_socket = sockfd;
     opp.tid         = tid;
-    _HIP_DEBUG("pid %d socket %d computed key\n", pid, socket);
+    _HIP_DEBUG("pid %d socket %d computed key\n", pid, sockfd);
 
     ret             = (hip_opp_socket_t *) hip_ht_find(socketdb, (void *) &opp);
 
@@ -197,7 +197,7 @@ void hip_socketdb_dump(void)
  * @param tid thread id of the sockets API function caller
  * @return zero on success or non-zero on error
  */
-int hip_socketdb_add_entry(int pid, int socket, pthread_t tid)
+int hip_socketdb_add_entry(int pid, int sockfd, pthread_t tid)
 {
     hip_opp_socket_t *new_item = NULL;
     int err                    = 0;
@@ -212,7 +212,7 @@ int hip_socketdb_add_entry(int pid, int socket, pthread_t tid)
     memset(new_item, 0, sizeof(hip_opp_socket_t));
 
     new_item->pid         = pid;
-    new_item->orig_socket = socket;
+    new_item->orig_socket = sockfd;
     new_item->tid         = tid;
     err                   = hip_ht_add(socketdb, new_item);
     _HIP_DEBUG("pid %d, orig_sock %d, tid %d are added to HT socketdb, entry=%p\n",
@@ -229,11 +229,11 @@ int hip_socketdb_add_entry(int pid, int socket, pthread_t tid)
  * @param tid thread id of the sockets API function caller
  * @return zero on success or non-zero on error
  */
-int hip_socketdb_del_entry(int pid, int socket, pthread_t tid)
+int hip_socketdb_del_entry(int pid, int sockfd, pthread_t tid)
 {
     hip_opp_socket_t *entry = NULL;
 
-    entry = hip_socketdb_find_entry(pid, socket, tid);
+    entry = hip_socketdb_find_entry(pid, sockfd, tid);
     if (!entry) {
         return -ENOENT;
     }

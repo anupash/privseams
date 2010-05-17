@@ -2839,7 +2839,7 @@ out_err:
  * @todo                Remove index and rename.
  */
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv,
-                                                       const uint16_t index)
+                                                       const uint16_t idx)
 {
     /** @todo Why do we have hip_select_esp_transform separately? */
 
@@ -2897,18 +2897,18 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 /**
  * build a HIP locator parameter
  *
- * @param msg the message where the REA will be appended
- * @param addresses list of addresses
+ * @param msg           the message where the REA will be appended
+ * @param addrs         list of addresses
  * @param address_count number of addresses
  * @return 0 on success, otherwise < 0.
  */
 int hip_build_param_locator(struct hip_common *msg,
-                            struct hip_locator_info_addr_item *addresses,
-                            int address_count)
+                            struct hip_locator_info_addr_item *addrs,
+                            int addr_count)
 {
     int err                          = 0;
     struct hip_locator *locator_info = NULL;
-    int addrs_len = address_count * (sizeof(struct hip_locator_info_addr_item));
+    int addrs_len = addr_count * (sizeof(struct hip_locator_info_addr_item));
 
     HIP_IFE(!(locator_info = malloc(sizeof(struct hip_locator) + addrs_len)), -1);
 
@@ -2922,7 +2922,7 @@ int hip_build_param_locator(struct hip_common *msg,
                sizeof(struct hip_tlv_common) +
                addrs_len);
 
-    memcpy(locator_info + 1, addresses, addrs_len);
+    memcpy(locator_info + 1, addrs, addrs_len);
     HIP_IFE(hip_build_param(msg, locator_info), -1);
 
     _HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
@@ -4221,15 +4221,13 @@ int hip_get_locator_addr_item_count(const struct hip_locator *locator)
 }
 
 /**
- * retreive a locator address item from a list
+ * Retreive a @c LOCATOR ADDRESS ITEM@c from a list.
  *
- * retreive a @c LOCATOR ADDRESS ITEM@c from a list.
- *
- * @param item_list      a pointer to the first item in the list
- * @param index     the index of the item in the list
- * @return the locator addres item
+ * @param item_list a pointer to the first item in the list
+ * @param idx       the index of the item in the list
+ * @return          the locator addres item
  */
-union hip_locator_info_addr *hip_get_locator_item(void *item_list, int index)
+union hip_locator_info_addr *hip_get_locator_item(void *item_list, int idx)
 {
     int i = 0;
     struct hip_locator_info_addr_item *temp;
@@ -4237,7 +4235,7 @@ union hip_locator_info_addr *hip_get_locator_item(void *item_list, int index)
     result = (char *) item_list;
 
 
-    for (i = 0; i <= index - 1; i++) {
+    for (i = 0; i <= idx - 1; i++) {
         temp = (struct hip_locator_info_addr_item *) result;
         if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI ||
             temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
@@ -4247,8 +4245,7 @@ union hip_locator_info_addr *hip_get_locator_item(void *item_list, int index)
         }
     }
     _HIP_DEBUG("*****locator %d has offset :%d \n",
-               index,
-               (char *) result - (char *) item_list);
+               idx, (char *) result - (char *) item_list);
     return (union hip_locator_info_addr *) result;
 }
 

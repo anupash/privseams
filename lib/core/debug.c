@@ -220,9 +220,9 @@ out_err:
  * @note Do not use this function outside of this file at all.
  *
  */
-void hip_handle_log_error(int logtype)
+void hip_handle_log_error(int log_type)
 {
-    fprintf(stderr, "log (type=%d) failed, ignoring\n", logtype);
+    fprintf(stderr, "log (type=%d) failed, ignoring\n", log_type);
 }
 
 /**

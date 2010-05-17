@@ -812,20 +812,20 @@ out_err:
 /**
  * hip_cert_der_to_x509 - Function that converts the DER encoded X509 to X509 struct
  *
- * @param der points to DER encoded certificate
- * @param length of the DER given in bytes
+ * @param der   pointer to DER encoded certificate
+ * @param len   length of the DER given in bytes
  *
  * @return * X509 or on error NULL is returned
  */
-X509 *hip_cert_der_to_x509(const unsigned char *der, int length)
+X509 *hip_cert_der_to_x509(const unsigned char *der, int len)
 {
     int err    = 0;
     X509 *cert = NULL;
 
-    _HIP_HEXDUMP("DER:\n", der, length);
-    _HIP_DEBUG("DER length %d\n", length);
+    _HIP_HEXDUMP("DER:\n", der, len);
+    _HIP_DEBUG("DER length %d\n", len);
 
-    HIP_IFEL(((cert = d2i_X509(NULL, (const unsigned char **) &der, length)) == NULL), -1,
+    HIP_IFEL(((cert = d2i_X509(NULL, (const unsigned char **) &der, len)) == NULL), -1,
              "Failed to convert cert from DER to internal format\n");
 out_err:
     if (err == -1) {

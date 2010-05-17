@@ -931,7 +931,6 @@ static int hip_conf_handle_server(hip_common_t *msg,
     if (inet_pton(AF_INET6, opt[index_of_ip], &ipv6) <= 0) {
         struct in_addr ipv4;
         if (inet_pton(AF_INET, opt[index_of_ip], &ipv4) <= 0) {
-            int i;
             /* First try to find an IPv4 or IPv6 address. Second,
              * settle for HIT if no routable address found.
              * The second step is required with dnsproxy

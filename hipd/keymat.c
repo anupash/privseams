@@ -198,23 +198,23 @@ void hip_make_keymat(char *kij, size_t kij_len,
  * hip_keymat_draw - draw keying material
  * @param keymat pointer to the keymat structure which contains information
  *          about the actual
- * @param length size of keymat structure
+ * @param len size of keymat structure
  *
  * @return pointer the next point where one can draw the next keymaterial
  */
-static void *hip_keymat_draw(struct hip_keymat_keymat *keymat, int length)
+static void *hip_keymat_draw(struct hip_keymat_keymat *keymat, int len)
 {
     /* todo: remove this function */
     void *ret = NULL;
 
-    if (length > keymat->keymatlen - keymat->offset) {
+    if (len > keymat->keymatlen - keymat->offset) {
         HIP_DEBUG("Tried to draw more keys than are available\n");
         goto out_err;
     }
 
     ret             = (uint8_t *) keymat->keymatdst + keymat->offset;
 
-    keymat->offset += length;
+    keymat->offset += len;
 
 out_err:
     return ret;

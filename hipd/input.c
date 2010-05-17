@@ -1101,10 +1101,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
          * build_param_encrypted_aes has already taken care that there is
          * enough padding */
         if (transform_hip_suite == HIP_HIP_AES_SHA1) {
-            int remainder = host_id_in_enc_len % 16;
-            if (remainder) {
+            /* remainder */
+            int rem = host_id_in_enc_len % 16;
+            if (rem) {
                 HIP_DEBUG("Remainder %d (for AES)\n", remainder);
-                host_id_in_enc_len += remainder;
+                host_id_in_enc_len += rem;
             }
         }
 

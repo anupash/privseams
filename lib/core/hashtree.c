@@ -51,7 +51,7 @@ hash_tree_t *htree_init(const int num_data_blocks,
     hash_tree_t *tree = NULL;
     int tmp_length    = 0;
     int err           = 0, i;
-    double log        = 0.0;
+    double loga       = 0.0;
 
     HIP_ASSERT(num_data_blocks > 0);
     HIP_ASSERT(max_data_length > 0);
@@ -64,11 +64,11 @@ hash_tree_t *htree_init(const int num_data_blocks,
     memset(tree, 0, sizeof(hash_tree_t));
 
     // check here whether leaf_set_size is a power of 2 and compute correct value if it is not
-    log = log_x(2, num_data_blocks);
+    loga = log_x(2, num_data_blocks);
     if (num_data_blocks == 1) {
         tree->leaf_set_size = 2;
-    } else if (floor(log) != ceil(log)) {
-        tree->leaf_set_size = pow(2, ceil(log));
+    } else if (floor(loga) != ceil(loga)) {
+        tree->leaf_set_size = pow(2, ceil(loga));
     } else {
         tree->leaf_set_size = num_data_blocks;
     }

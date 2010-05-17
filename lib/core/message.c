@@ -60,7 +60,7 @@
 /**
  * Finds out how much data is coming from a socket
  *
- * @param  socket         a file descriptor.
+ * @param  sockfd         the socked file descriptor.
  * @param  encap_hdr_size udp etc header size
  * @param  timeout        -1 for blocking sockets, 0 or positive nonblocking
  * @return Number of bytes received on success or a negative error value on
@@ -70,7 +70,7 @@
  *       actual bytes read. If you decide to reimplement this functionality,
  *       remember to preserve the timeout property.
  */
-int hip_peek_recv_total_len(int socket,
+int hip_peek_recv_total_len(int sockfd,
                             int encap_hdr_size,
                             unsigned long timeout)
 {
@@ -98,7 +98,7 @@ int hip_peek_recv_total_len(int socket,
     do {
         errno         = 0;
         nanosleep(&ts, NULL);
-        bytes         = recv(socket, msg, hdr_size, flags);
+        bytes         = recv(sockfd, msg, hdr_size, flags);
         timeout_left -= ts.tv_nsec;
         _HIP_DEBUG("tol=%ld, ts=%ld, bytes=%d errno=%d\n",
                    timeout_left, ts.tv_nsec, bytes, errno);
@@ -111,7 +111,7 @@ int hip_peek_recv_total_len(int socket,
     } else if (bytes < hdr_size) {
         HIP_ERROR("Packet payload is smaller than HIP header. Dropping.\n");
         /* Read and discard the datagram */
-        recv(socket, msg, 0, 0);
+        recv(sockfd, msg, 0, 0);
         err = -bytes;
         goto out_err;
     }
@@ -121,7 +121,7 @@ int hip_peek_recv_total_len(int socket,
 
     if (bytes == 0) {
         HIP_ERROR("HIP message is of zero length. Dropping.\n");
-        recv(socket, msg, 0, 0);
+        recv(sockfd, msg, 0, 0);
         err   = -EBADMSG;
         errno = EBADMSG;
         goto out_err;
@@ -181,7 +181,7 @@ out_err:
  * ports if it fails to obtain a privileged port and then hipd allows
  * only certain operations for the calling process.
  *
- * @param socket the socket to bind to
+ * @param sockfd the socket to bind to
  * @param sa     An IPv6-based socket address structure. The sin6_port
  *               field may be filled in in the case of e.g. sockets
  *               remaining open for long time periods. Alternetively,
@@ -190,7 +190,7 @@ out_err:
  *               of the function).
  * @return zero on success and negative on failure
  */
-int hip_daemon_bind_socket(int socket, struct sockaddr *sa)
+int hip_daemon_bind_socket(int sockfd, struct sockaddr *sa)
 {
     int err                   = 0, port = 0, on = 1;
     struct sockaddr_in6 *addr = (struct sockaddr_in6 *) sa;
@@ -199,14 +199,14 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa)
 
     errno = 0;
 
-    if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1) {
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1) {
         HIP_DEBUG("Failed to set socket option SO_REUSEADDR %s \n",
                   strerror(errno));
     }
 
     if (addr->sin6_port) {
         HIP_DEBUG("Bind to fixed port %d\n", addr->sin6_port);
-        err = bind(socket, (struct sockaddr *) addr,
+        err = bind(sockfd, (struct sockaddr *) addr,
                    sizeof(struct sockaddr_in6));
         err = -errno;
         goto out_err;
@@ -217,7 +217,7 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa)
     while (port++ < 61000) {
         _HIP_DEBUG("trying bind() to port %d\n", port);
         addr->sin6_port = htons(port);
-        err             = bind(socket, (struct sockaddr *) addr,
+        err             = bind(sockfd, (struct sockaddr *) addr,
                                hip_sockaddr_len(addr));
         if (err == -1) {
             if (errno == EACCES) {
@@ -256,13 +256,13 @@ out_err:
  * Send one-way data to hipd. Do not call this function directly, use
  * hip_send_recv_daemon_info instead!
  *
- * @param socket the socket to use for sending
- * @param msg the message to send to hipd
- * @param len the length of the message in bytes
- * @return zero on success and negative on failure
+ * @param sockfd    the socket to use for sending
+ * @param msg       the message to send to hipd
+ * @param len       the length of the message in bytes
+ * @return          zero on success and negative on failure
  * @note currently the only SOCK_DGRAM and AF_INET6 are supported
  */
-static int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
+static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
 {
     /* Variables. */
     struct sockaddr_in6 sock_addr;
@@ -276,9 +276,9 @@ static int hip_sendto_hipd(int socket, struct hip_common *msg, int len)
     alen                  = sizeof(sock_addr);
 
     HIP_DEBUG("Sending user message %d to HIPD on socket %d\n",
-              hip_get_msg_type(msg), socket);
+              hip_get_msg_type(msg), sockfd);
 
-    n = sendto(socket, msg, len, MSG_NOSIGNAL,
+    n = sendto(sockfd, msg, len, MSG_NOSIGNAL,
                (struct sockaddr *) &sock_addr, alen);
     HIP_DEBUG("Sent %d bytes\n", n);
 
@@ -464,13 +464,13 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type)
 /**
  * Read an interprocess (user) message
  *
- * @param  socket a socket from where to read
- * @param  hip_msg the message will be written here
- * @param  saddr the sender information is stored here
- * @return zero on success and negative on error
+ * @param  socket   a socket from where to read
+ * @param  hip_msg  the message will be written here
+ * @param  saddr    the sender information is stored here
+ * @return          zero on success and negative on error
  * @note currently the only SOCK_DGRAM and AF_INET6 are supported
  */
-int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
+int hip_read_user_control_msg(int sockfd, struct hip_common *hip_msg,
                               struct sockaddr_in6 *saddr)
 {
     int err = 0, bytes = 0, total;
@@ -480,7 +480,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 
     len = sizeof(*saddr);
 
-    HIP_IFEL(((total = hip_peek_recv_total_len(socket, 0, HIP_DEFAULT_MSG_TIMEOUT)) <= 0),
+    HIP_IFEL(((total = hip_peek_recv_total_len(sockfd, 0, HIP_DEFAULT_MSG_TIMEOUT)) <= 0),
              -1,
              "recv peek failed\n");
 
@@ -489,7 +489,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
     /** @todo Compiler warning;
      *  warning: pointer targets in passing argument 6 of 'recvfrom'
      *  differ in signedness. */
-    HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0,
+    HIP_IFEL(((bytes = recvfrom(sockfd, hip_msg, total, 0,
                                 (struct sockaddr *) saddr,
                                 &len)) != total), -1, "recv\n");
 
@@ -532,7 +532,7 @@ out_err:
  *                       on IPv4.
  * @return               -1 in case of an error, 0 otherwise.
  */
-int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
+int hip_read_control_msg_all(int sockfd, struct hip_common *hip_msg,
                              struct in6_addr *saddr,
                              struct in6_addr *daddr,
                              hip_portpair_t *msg_info,
@@ -578,7 +578,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
     pktinfo.pktinfo_in4 = NULL;
 
-    len                 = recvmsg(socket, &msg, 0);
+    len                 = recvmsg(sockfd, &msg, 0);
 
     HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
              (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
@@ -666,7 +666,7 @@ out_err:
 /**
  * Read an IPv6 control message
  *
- * @param  socket         a socket file descriptor.
+ * @param  sockfd         a socket file descriptor.
  * @param  hip_msg        a pointer to a HIP message.
  * @param  saddr          source IPv6 address.
  * @param  daddr          destination IPv6 address.
@@ -674,20 +674,20 @@ out_err:
  * @param  encap_hdr_size .
  * @return                .
  */
-int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
+int hip_read_control_msg_v6(int sockfd, struct hip_common *hip_msg,
                             struct in6_addr *saddr,
                             struct in6_addr *daddr,
                             hip_portpair_t *msg_info,
                             int encap_hdr_size)
 {
-    return hip_read_control_msg_all(socket, hip_msg, saddr,
+    return hip_read_control_msg_all(sockfd, hip_msg, saddr,
                                     daddr, msg_info, encap_hdr_size, 0);
 }
 
 /**
  * Read an IPv4 control message
  *
- * @param  socket         a socket file descriptor.
+ * @param  sockfd         a socket file descriptor.
  * @param  hip_msg        a pointer to a HIP message.
  * @param  saddr          source IPv4 address.
  * @param  daddr          destination IPv4 address.
@@ -695,12 +695,12 @@ int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
  * @param  encap_hdr_size .
  * @return                .
  */
-int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
+int hip_read_control_msg_v4(int sockfd, struct hip_common *hip_msg,
                             struct in6_addr *saddr,
                             struct in6_addr *daddr,
                             hip_portpair_t *msg_info,
                             int encap_hdr_size)
 {
-    return hip_read_control_msg_all(socket, hip_msg, saddr,
+    return hip_read_control_msg_all(sockfd, hip_msg, saddr,
                                     daddr, msg_info, encap_hdr_size, 1);
 }

@@ -248,32 +248,33 @@ static void hip_set_os_dep_variables(void)
 }
 
 /**
- * initialize a raw ipv4 socket
- *
- * @param hip_raw_sock_v4 the raw socket to initialize
+ * Initialize a raw ipv4 socket.
  * @param proto the protocol for the raw socket
- * @return zero on success or negative on failure
+ * @return      positive fd on success, -1 otherwise
  */
-static int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
+static int hip_init_raw_sock_v4(int proto)
 {
     int on  = 1, off = 0, err = 0;
+    int sock;
 
-    *hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, proto);
-    set_cloexec_flag(*hip_raw_sock_v4, 1);
-    HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+    sock = socket(AF_INET, SOCK_RAW, proto);
+    set_cloexec_flag(sock, 1);
+    HIP_IFEL(sock <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
     /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
+    err = setsockopt(sock, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
+    err = setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+    err = setsockopt(sock, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
 
+    return sock;
+
 out_err:
-    return err;
+    return -1;
 }
 
 /**
@@ -488,30 +489,30 @@ out_err:
 
 /**
  * Init raw ipv6 socket
- *
- * @param hip_raw_sock_v6 the socket to initialize
  * @param proto protocol for the socket
- *
- * @return zero on success or negative on failure
+ * @return      positive socket fd on success, -1 otherwise
  */
-static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
+static int hip_init_raw_sock_v6(int proto)
 {
     int on = 1, off = 0, err = 0;
+    int sock;
 
-    *hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, proto);
-    set_cloexec_flag(*hip_raw_sock_v6, 1);
-    HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
+    sock = socket(AF_INET6, SOCK_RAW, proto);
+    set_cloexec_flag(sock, 1);
+    HIP_IFEL(sock <= 0, 1, "Raw socket creation failed. Not root?\n");
 
     /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+    err = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+    err = setsockopt(sock, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
 
+    return sock;
+
 out_err:
-    return err;
+    return -1;
 }
 
 /**
@@ -592,13 +593,13 @@ out_err:
 /**
  * exit gracefully by sending CLOSE to all peers
  *
- * @param signal the signal hipd received from OS
+ * @param sig the signal hipd received from OS
  */
-void hip_close(int signal)
+void hip_close(int sig)
 {
     static int terminate = 0;
 
-    HIP_ERROR("Signal: %d\n", signal);
+    HIP_ERROR("Signal: %d\n", sig);
     terminate++;
 
     /* Close SAs with all peers */
@@ -610,8 +611,9 @@ void hip_close(int signal)
         HIP_DEBUG("Send still once this signal to force daemon exit...\n");
     } else if (terminate > 2) {
         HIP_DEBUG("Terminating daemon.\n");
-        hip_exit(signal);
-        exit(signal);
+        hip_exit(sig);
+        /*TODO why exit with non-zero ? */
+        exit(sig);
     }
 }
 
@@ -621,10 +623,9 @@ void hip_close(int signal)
  *
  * @param signal the signal hipd received
  */
-void hip_exit(int signal)
+void hip_exit(int sig)
 {
     struct hip_common *msg = NULL;
-    HIP_ERROR("Signal: %d\n", signal);
 
     default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
 
@@ -952,16 +953,27 @@ int hipd_init(const uint64_t flags)
 
     hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
 
-    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4, IPPROTO_HIP), -1, "raw sock output v4\n");
+    hip_raw_sock_output_v6  = hip_init_raw_sock_v6(IPPROTO_HIP);
+    HIP_IFEL(hip_raw_sock_output_v6, -1, "raw sock output v6\n");
+
+    hip_raw_sock_output_v4  = hip_init_raw_sock_v4(IPPROTO_HIP);
+    HIP_IFEL(hip_raw_sock_output_v4, -1, "raw sock output v4\n");
+
     /* hip_nat_sock_input should be initialized after hip_nat_sock_output
        because for the sockets bound to the same address/port, only the last socket seems
        to receive the packets. NAT input socket is a normal UDP socket where as
        NAT output socket is a raw socket. A raw output socket support better the "shotgun"
        extension (sending packets from multiple source addresses). */
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_nat_sock_output_udp, IPPROTO_UDP), -1, "raw sock output udp\n");
-    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6,   IPPROTO_HIP), -1, "raw sock input v6\n");
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4,   IPPROTO_HIP), -1, "raw sock input v4\n");
+
+    hip_nat_sock_output_udp = hip_init_raw_sock_v4(IPPROTO_UDP);
+    HIP_IFEL(hip_nat_sock_output_udp, -1, "raw sock output udp\n");
+
+    hip_raw_sock_input_v6   = hip_init_raw_sock_v6(IPPROTO_HIP);
+    HIP_IFEL(hip_raw_sock_input_v6, -1, "raw sock input v6\n");
+
+    hip_raw_sock_input_v4   = hip_init_raw_sock_v4(IPPROTO_HIP);
+    HIP_IFEL(hip_raw_sock_input_v4, -1, "raw sock input v4\n");
+
     HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
     HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 

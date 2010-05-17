@@ -26,16 +26,16 @@
  */
 static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
+    int err                      = 0, mask = 0;
+    int delete_ha_info           = *(int *) ((uint8_t *)opaque + sizeof(hip_hit_t));
+    hip_hit_t *peer              = (hip_hit_t *) opaque;
+    struct hip_common *msg_close = NULL;
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_CLOSE_SEND, PERF_CLOSE_COMPLETE\n");
     hip_perf_start_benchmark( perf_set, PERF_CLOSE_SEND );
     hip_perf_start_benchmark( perf_set, PERF_CLOSE_COMPLETE );
 #endif
-    int err                  = 0, mask = 0;
-    hip_hit_t *peer          = (hip_hit_t *) opaque;
-    int delete_ha_info       = *(int *) ((uint8_t *)opaque + sizeof(hip_hit_t));
-
-    struct hip_common *close = NULL;
 
     if (peer) {
         HIP_DEBUG_HIT("Peer HIT to be closed", peer);
@@ -73,9 +73,9 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
                               &entry->hit_our,
                               &entry->hit_peer);
 
-    HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
+    HIP_IFE(!(msg_close = hip_msg_alloc()), -ENOMEM);
 
-    entry->hadb_misc_func->hip_build_network_hdr(close,
+    entry->hadb_misc_func->hip_build_network_hdr(msg_close,
                                                  HIP_CLOSE,
                                                  mask,
                                                  &entry->hit_our,
@@ -85,23 +85,23 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
     get_random_bytes(entry->echo_data, sizeof(entry->echo_data));
 
-    HIP_IFEL(hip_build_param_echo(close, entry->echo_data, sizeof(entry->echo_data), 1, 1),
+    HIP_IFEL(hip_build_param_echo(msg_close, entry->echo_data, sizeof(entry->echo_data), 1, 1),
              -1,
              "Failed to build echo param.\n");
 
     /************* HMAC ************/
-    HIP_IFEL(hip_build_param_hmac_contents(close, &entry->hip_hmac_out),
+    HIP_IFEL(hip_build_param_hmac_contents(msg_close, &entry->hip_hmac_out),
              -1,
              "Building of HMAC failed.\n");
     /********** Signature **********/
-    HIP_IFEL(entry->sign(entry->our_priv_key, close),
+    HIP_IFEL(entry->sign(entry->our_priv_key, msg_close),
              -EINVAL,
              "Could not create signature.\n");
 
     HIP_IFEL(entry->hadb_xmit_func->
              hip_send_pkt(NULL, &entry->peer_addr,
                           (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                          entry->peer_udp_port, close, entry, 0),
+                          entry->peer_udp_port, msg_close, entry, 0),
              -ECOMM, "Sending CLOSE message failed.\n");
 
     entry->state = HIP_STATE_CLOSING;
@@ -112,8 +112,8 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 #endif
 
 out_err:
-    if (close) {
-        free(close);
+    if (msg_close) {
+        free(msg_close);
     }
 
     return err;
@@ -194,11 +194,11 @@ out_err:
 /**
  * process a CLOSE message
  *
- * @param close the CLOSE message process
- * @param entry the corresponding host association
- * @return zero on success or negative on error
+ * @param close_msg the CLOSE message process
+ * @param entry     the corresponding host association
+ * @return          zero on success or negative on error
  */
-int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
+int hip_handle_close(struct hip_common *close_msg, hip_ha_t *entry)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
@@ -211,21 +211,21 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
     /* verify HMAC */
     if (entry->is_loopback) {
-        HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_out),
+        HIP_IFEL(hip_verify_packet_hmac(close_msg, &entry->hip_hmac_out),
                  -ENOENT, "HMAC validation on close failed.\n");
     } else {
-        HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
+        HIP_IFEL(hip_verify_packet_hmac(close_msg, &entry->hip_hmac_in),
                  -ENOENT, "HMAC validation on close failed.\n");
     }
 
     /* verify signature */
-    HIP_IFEL(entry->verify(entry->peer_pub_key, close), -EINVAL,
+    HIP_IFEL(entry->verify(entry->peer_pub_key, close_msg), -EINVAL,
              "Verification of close signature failed.\n");
 
     HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
 
     HIP_IFEL(!(request =
-                   hip_get_param(close, HIP_PARAM_ECHO_REQUEST_SIGN)),
+                   hip_get_param(close_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
              -1, "No echo request under signature.\n");
     echo_len = hip_get_param_contents_len(request);
 
@@ -261,13 +261,13 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status()) {
         hip_relrec_t dummy;
-        memcpy(&(dummy.hit_r), &(close->hits),
-               sizeof(close->hits));
+        memcpy(&(dummy.hit_r), &(close_msg->hits),
+               sizeof(close_msg->hits));
         hip_relht_rec_free_doall(&dummy);
         /* Check that the element really got deleted. */
         if (hip_relht_get(&dummy) == NULL) {
             HIP_DEBUG_HIT("Deleted relay record for HIT",
-                          &(close->hits));
+                          &(close_msg->hits));
         }
     }
 #endif
@@ -295,7 +295,7 @@ out_err:
  * @param entry the corresponding host association
  * @return zero on success or negative on error
  */
-int hip_receive_close(struct hip_common *close,
+int hip_receive_close(struct hip_common *close_msg,
                       hip_ha_t          *entry)
 {
     int state     = 0;
@@ -305,12 +305,12 @@ int hip_receive_close(struct hip_common *close,
     /* XX FIX: CHECK THE SIGNATURE */
 
     HIP_DEBUG("\n");
-    HIP_IFEL(ipv6_addr_any(&close->hitr), -1,
+    HIP_IFEL(ipv6_addr_any(&close_msg->hitr), -1,
              "Received NULL receiver HIT in CLOSE. Dropping\n");
 
-    if (!hip_controls_sane(ntohs(close->control), mask)) {
+    if (!hip_controls_sane(ntohs(close_msg->control), mask)) {
         HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
-                  ntohs(close->control));
+                  ntohs(close_msg->control));
         goto out_err;
     }
 
@@ -325,7 +325,7 @@ int hip_receive_close(struct hip_common *close,
     switch (state) {
     case HIP_STATE_ESTABLISHED:
     case HIP_STATE_CLOSING:
-        err = entry->hadb_handle_func->hip_handle_close(close, entry);
+        err = entry->hadb_handle_func->hip_handle_close(close_msg, entry);
         break;
     default:
         HIP_ERROR("Internal state (%d) is incorrect\n", state);

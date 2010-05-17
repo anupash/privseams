@@ -161,10 +161,10 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    struct in6_addr *hit,
                                    int hit_type)
 {
+    uint16_t temp;
+    int contents_len,  total_len;
     int err                         = 0;
     struct hip_host_id *host_id_pub = NULL;
-    int contents_len;
-    int total_len;
 
     contents_len = hip_get_param_contents_len(host_id);
     total_len    = hip_get_param_total_len(host_id);
@@ -182,7 +182,8 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
     memcpy(host_id_pub, host_id,
            sizeof(struct hip_tlv_common) + contents_len - DSA_PRIV);
 
-    host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - DSA_PRIV);
+    temp = ntohs(host_id_pub->hi_length) - DSA_PRIV;
+    host_id_pub->hi_length = htons(temp);
     hip_set_param_contents_len((struct hip_tlv_common *) host_id_pub,
                                contents_len - DSA_PRIV);
 
@@ -216,8 +217,9 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    int hit_type)
 {
     int err = 0;
-    struct hip_host_id host_id_pub;
     int rsa_pub_len, rsa_priv_len;
+    uint16_t temp;
+    struct hip_host_id host_id_pub;
     struct hip_rsa_keylen keylen;
 
     /* Length of the private part of the RSA key d + p + q
@@ -231,8 +233,9 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
     memcpy(&host_id_pub, host_id, sizeof(host_id_pub)
            - sizeof(host_id_pub.key) - sizeof(host_id_pub.hostname));
 
-    host_id_pub.hi_length =
-        htons(ntohs(host_id_pub.hi_length) - rsa_priv_len);
+
+    temp = ntohs(host_id_pub.hi_length) - rsa_priv_len;
+    host_id_pub.hi_length = htons(temp);
     memcpy(host_id_pub.key, host_id->key, rsa_pub_len);
 
     _HIP_HEXDUMP("extracted pubkey", &host_id_pub,

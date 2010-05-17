@@ -471,10 +471,11 @@ int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *e
      * build_param_encrypted_aes has already taken care that there is
      * enough padding */
     if (entry->hip_transform == HIP_HIP_AES_SHA1) {
-        int remainder = host_id_in_enc_len % 16;
-        if (remainder) {
+        /* remainder */
+        int rem = host_id_in_enc_len % 16;
+        if (rem) {
             HIP_DEBUG("Remainder %d (for AES)\n", remainder);
-            host_id_in_enc_len += remainder;
+            host_id_in_enc_len += rem;
         }
     }
 

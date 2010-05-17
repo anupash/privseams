@@ -278,8 +278,8 @@ void hip_uninit_host_id_dbs(void)
  * @param db      database structure.
  * @param lhi     HIT
  * @param host_id HI
- * @param insert  the handler to call right after the host id is added
- * @param remove  the handler to call right before the host id is removed
+ * @param add     the handler to call right after the host id is added
+ * @param del     the handler to call right before the host id is removed
  * @param arg     argument passed for the handlers
  * @return        0 on success, otherwise an negative error value is returned.
  */
@@ -287,8 +287,8 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
                            const struct hip_lhi *lhi,
                            hip_lsi_t *lsi,
                            const struct hip_host_id_priv *host_id,
-                           int (*insert)(struct hip_host_id_entry *, void **arg),
-                           int (*remove)(struct hip_host_id_entry *, void **arg),
+                           int (*add)(struct hip_host_id_entry *, void **arg),
+                           int (*del)(struct hip_host_id_entry *, void **arg),
                            void *arg)
 {
     int err                            = 0;
@@ -322,8 +322,8 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     HIP_IFEL((hip_hidb_add_lsi(db, id_entry)) < 0, -EEXIST, "No LSI free\n");
 
     memcpy(lsi, &id_entry->lsi, sizeof(hip_lsi_t));
-    id_entry->insert = insert;
-    id_entry->remove = remove;
+    id_entry->insert = add;
+    id_entry->remove = del;
     id_entry->arg    = arg;
 
     list_add(id_entry, db);
@@ -349,8 +349,8 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 
     /* Called while the database is locked, perhaps not the best
      * option but HIs are not added often */
-    if (insert) {
-        insert(id_entry, &arg);
+    if (add) {
+        add(id_entry, &arg);
     }
 
 out_err:
@@ -532,6 +532,7 @@ static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv 
     /* T could easily have been an int, since the compiler will
      * probably add 3 alignment bytes here anyway. */
     uint8_t T;
+    uint16_t temp;
     struct hip_host_id *ret;
 
     /* check T, Miika won't like this */
@@ -549,7 +550,8 @@ static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv 
     memcpy(ret, hi, sizeof(struct hip_host_id));
 
     /* the secret component of the DSA key is always 20 bytes */
-    ret->hi_length = htons(ntohs(hi->hi_length) - DSA_PRIV);
+    temp = ntohs(hi->hi_length) - DSA_PRIV;
+    ret->hi_length = htons(temp);
     memset((char *) (&ret->key) + ntohs(ret->hi_length) - sizeof(hi->rdata),
            0, sizeof(ret->key) - ntohs(ret->hi_length));
     ret->length    = htons(sizeof(struct hip_host_id));
