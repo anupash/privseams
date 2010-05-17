@@ -1432,7 +1432,7 @@ Add a case block for your ACTION_NEWACT constant in the switch(action) block.
 -----------------------------------------------
 Add a case block for your ACTION_NEWACT constant in the switch(action) block.
 
-2.1. HIP_MSG_NEWMODE in lib/conf/icomm.h
+2.1. HIP_MSG_NEWMODE in lib/core/icomm.h
 ---------------------------------------
 Define a constant HIP_MSG_NEWMODE which has value between 0 and
 HIP_MSG_ROOT_MAX. Take also care of the value of HIP_MSG_ROOT_MAX.
@@ -1441,7 +1441,7 @@ HIP_MSG_ROOT_MAX. Take also care of the value of HIP_MSG_ROOT_MAX.
 -----------------------------------------
 Add a case block for your HIP_MSG_NEWMODE constant in the switch(msg_type) block.
 
-2.3. hip_message_type_name() in lib/conf/builder.c
+2.3. hip_message_type_name() in lib/core/builder.c
 --------------------------------------------------
 Add a case block for your HIP_MSG_NEWMODE constant in the switch(msg_type) block.
 In this case, you just need to return the same string as the constant.
