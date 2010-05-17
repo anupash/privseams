@@ -3654,13 +3654,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
             ping6 -I source_hit dst_hit
         </para>  </listitem>
       </itemizedlist>
-<!-- FIXME: bug 161 is resolved - what gives? -->
-      <para>Make sure that the source is the same as in "ip xfrm policy" output.
-        We are aware of the problem (see bug id 161) and it is being solved.
-        Also, it seemed like the responder could not route packets
-        automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
-        was necessary at the responder (occurred on 2.6.16.5).
-      </para>
       <para>
         Three cases of mobility of the initiator have been implemented for the NAT code.
       </para>
