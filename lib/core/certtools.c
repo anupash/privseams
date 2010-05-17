@@ -382,8 +382,8 @@ out_err:
  * @return 0 if ok -1 if error
  */
 int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
-                              char *issuer_type, struct in6_addr *issuer,
-                              char *subject_type, struct in6_addr *subject,
+                              const char *issuer_type, struct in6_addr *issuer,
+                              const char *subject_type, struct in6_addr *subject,
                               time_t *not_before, time_t *not_after)
 {
     int err           = 0;
@@ -556,7 +556,7 @@ int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content)
  * @return 0 if ok and negative if error. -1 returned for example when after is NOT found
  */
 int hip_cert_spki_inject(struct hip_cert_spki_info *to,
-                         char *after, char *what)
+                         const char *after, const char *what)
 {
     int err = 0, status = 0;
     regex_t re;
@@ -876,7 +876,7 @@ out_err:
  *       the conf with the hip_cert_free_conf
  *
  */
-STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char *section_name,
+STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *section_name,
                                                   CONF * conf)
 {
     long err = 0;

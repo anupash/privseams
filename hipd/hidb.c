@@ -24,7 +24,7 @@
 HIP_HASHTABLE *hip_local_hostid_db = NULL;
 #define HIP_MAX_HOST_ID_LEN 1600
 
-static char *lsi_addresses[] = {"1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4"};
+static const char *lsi_addresses[] = {"1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4"};
 
 static int hip_add_host_id(HIP_HASHTABLE *db,
                            const struct hip_lhi *lhi,

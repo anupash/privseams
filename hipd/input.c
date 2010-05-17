@@ -1429,7 +1429,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
      */
     if (!hip_blind_get_status()) {
         /* Everything ok, save host id to HA */
-        char *str = NULL;
+        const char *str = NULL;
         int len;
         HIP_IFE(hip_get_param_host_id_di_type_len(
                     peer_host_id, &str, &len) < 0, -1);

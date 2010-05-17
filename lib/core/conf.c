@@ -2235,7 +2235,7 @@ static int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
 {
     int c_count   = lib_all_length, err = 0;
     char *lib_aux = lib_all;
-    char *prefix  = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
+    const char *prefix  = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
 
     while (*libs != NULL) {
         /* Copying prefix to lib_all */
@@ -2315,12 +2315,12 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
     } else if (err == 0)    {
         HIP_DEBUG("Exec new application.\n");
         if (type == EXEC_LOADLIB_HIP) {
-            libs[0] = "libhiptool.so";
+            libs[0] = strdup("libhiptool.so");
             libs[1] = NULL;
             libs[2] = NULL;
         } else if (type == EXEC_LOADLIB_OPP)   {
-            libs[0] = "libopphip.so";
-            libs[1] = "libhiptool.so";
+            libs[0] = strdup("libopphip.so");
+            libs[1] = strdup("libhiptool.so");
             libs[2] = NULL;
         }
 
@@ -2674,15 +2674,16 @@ int hip_conf_handle_load(struct hip_common *msg,
     FILE *hip_config = NULL;
 
     List list;
-    char *c, line[128], *hip_arg, str[128], *fname, *args[64],
-    *comment, *nl;
+    char *c, line[128], *hip_arg, str[128], *args[64];
+    char *comment, *nl;
+    char fname[sizeof(HIPL_CONFIG_FILE) << 1];
 
     HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
     if (!strcmp(opt[0], "default")) {
-        fname = HIPL_CONFIG_FILE;
+        strcpy(fname, HIPL_CONFIG_FILE);
     } else {
-        fname = (char *) opt[0];
+        strcpy(fname, opt[0]);
     }
 
 

@@ -49,6 +49,9 @@
 #define FA_IGNORE 0
 #define FA_ADD 1
 
+/** Maximum lenght of the address family string */
+#define FAM_STR_MAX               32
+
 /**
  * This is the white list. For every interface, which is in our white list,
  * this array has a fixed size, because there seems to be no need at this
@@ -528,20 +531,21 @@ static int hip_netdev_find_if(struct sockaddr *addr)
 
 #ifdef CONFIG_HIP_DEBUG /* Debug block. */
     {
-        char ipv6_str[INET6_ADDRSTRLEN], *fam_str = NULL;
+        char ipv6_str[INET6_ADDRSTRLEN];
+        char fam_str[FAM_STR_MAX];
 
         if (addr->sa_family == AF_INET6) {
-            fam_str = "AF_INET6";
+            strncpy(fam_str, "AF_INET6", FAM_STR_MAX);
             inet_ntop(AF_INET6,
                       &(((struct sockaddr_in6 *) (void *) addr)->sin6_addr),
                       ipv6_str, INET6_ADDRSTRLEN);
         } else if (addr->sa_family == AF_INET) {
-            fam_str = "AF_INET";
+            strncpy(fam_str, "AF_INET", FAM_STR_MAX);
             inet_ntop(AF_INET,
                       &(((struct sockaddr_in *) (void *) addr)->sin_addr),
                       ipv6_str, INET6_ADDRSTRLEN);
         } else {
-            fam_str = "not AF_INET or AF_INET6";
+            strncpy(fam_str, "not AF_INET or AF_INET6", FAM_STR_MAX);
             memset(ipv6_str, 0, INET6_ADDRSTRLEN);
         }
 

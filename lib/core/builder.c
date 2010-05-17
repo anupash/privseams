@@ -1120,7 +1120,7 @@ void hip_dump_msg(const struct hip_common *msg)
  * @param msg_type message type number
  * @return the name of the message type
  */
-char *hip_message_type_name(const uint8_t msg_type)
+const char *hip_message_type_name(const uint8_t msg_type)
 {
     switch (msg_type) {
     case HIP_I1:            return "HIP_I1";
@@ -1222,7 +1222,7 @@ char *hip_message_type_name(const uint8_t msg_type)
  * @param param_type parameter type number
  * @return      name of the message type
  */
-char *hip_param_type_name(const hip_tlv_type_t param_type)
+const char *hip_param_type_name(const hip_tlv_type_t param_type)
 {
     switch (param_type) {
     case HIP_PARAM_ACK:             return "HIP_PARAM_ACK";
@@ -3508,11 +3508,11 @@ int hip_build_param_hostname(struct hip_common *msg, const char *hostname)
  * @return zero on success and negative on error
  */
 int hip_get_param_host_id_di_type_len(struct hip_host_id *host,
-                                      char **id,
+                                      const char **id,
                                       int *len)
 {
     int type;
-    static char *debuglist[3] = {"none", "FQDN", "NAI"};
+    static const char *debuglist[3] = {"none", "FQDN", "NAI"};
 
     type = ntohs(host->di_type_length);
     *len = type & 0x0FFF;

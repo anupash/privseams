@@ -30,7 +30,7 @@
  * @param size size of the buffer result
  * @return 0 on success
  */
-static char *pisa_cert_get_part(char *cert, char *name, char *r, size_t size)
+static char *pisa_cert_get_part(char *cert, const char *name, char *r, size_t size)
 {
     int level = 0, len = 0;
     char *p   = cert, *start = NULL;
@@ -113,7 +113,7 @@ out_err:
  * @param size size of the buffer result
  * @return 0 on success
  */
-static void pisa_cert_get_content(char *cert, char *name, char *r, size_t size)
+static void pisa_cert_get_content(char *cert, const char *name, char *r, size_t size)
 {
     char *start = cert;
     int len     = 0;

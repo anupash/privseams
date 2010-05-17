@@ -77,10 +77,10 @@ void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
 /** Symbolic names for wrapper handler array. Must be filled in the same order as
  * @c dl_function_ptr array.
  */
-void *dl_function_name[] = { "socket",  "bind", "connect",  "send",    "sendto",
-                             "sendmsg", "recv", "recvfrom", "recvmsg", "accept",
-                             "write",   "read", "close",    "listen",  "readv",
-                             "writev",  "poll"};
+const char *dl_function_name[] = { "socket",  "bind", "connect",  "send",    "sendto",
+                                   "sendmsg", "recv", "recvfrom", "recvmsg", "accept",
+                                   "write",   "read", "close",    "listen",  "readv",
+                                   "writev",  "poll"};
 
 /**
  * Initialize the @c dl_function_fd array to support wrapping of socket calls

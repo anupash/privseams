@@ -814,7 +814,7 @@ static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
  */
 int hip_iproute_modify(struct rtnl_handle *rth,
                        int cmd, int flags, int family, char *ip,
-                       char *dev)
+                       const char *dev)
 {
     struct {
         struct nlmsghdr n;
@@ -1243,7 +1243,7 @@ out_err:
  * @return zero on success and negative on failure
  */
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
-                      char *dev, struct idxmap **idxmap)
+                      const char *dev, struct idxmap **idxmap)
 {
     struct {
         struct nlmsghdr  n;
@@ -1387,7 +1387,7 @@ static int do_chflags(const char *dev, uint32_t flags, uint32_t mask)
  * @param up 1 when setting interface up and 0 for down
  * @return zero on success and negative on failure
  */
-int set_up_device(char *dev, int up)
+int set_up_device(const char *dev, int up)
 {
     int err     = -1, total_add;
     uint32_t mask  = 0;
@@ -1515,7 +1515,8 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft)
  * @return zero
  */
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
-                    char *name, const unsigned char *key, int key_len, int max)
+                    const char *name, const unsigned char *key, int key_len,
+                    int max)
 {
     int len  = 0;
     int slen = key_len;

@@ -848,7 +848,7 @@ static void firewall_probe_kernel_modules(void)
     int count, err, status;
     char cmd[40];
     int mod_total;
-    char *mod_name[] =
+    const char *mod_name[] =
     { "ip_queue", "ip6_queue", "iptable_filter", "ip6table_filter" };
 
     mod_total = sizeof(mod_name) / sizeof(char *);

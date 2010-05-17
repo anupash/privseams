@@ -66,7 +66,7 @@ AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
 
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-deprecated-declarations -Wpointer-arith -fno-strict-aliasing")
+AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall -Wredundant-decls -Wdisabled-optimization -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wno-deprecated-declarations -Wpointer-arith -Wwrite-strings -fno-strict-aliasing")
 
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")

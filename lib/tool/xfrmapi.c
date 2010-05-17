@@ -40,22 +40,22 @@ struct rtnl_handle *hip_xfrmapi_nl_ipsec;
 int hip_xfrmapi_beet;
 int hip_xfrmapi_sa_default_prefix;
 
-char **e_algo_names;
-char **a_algo_names;
+const char **e_algo_names;
+const char **a_algo_names;
 
 /* Mappings from HIP to XFRM algo names < 2.6.19 */
-char *e_algo_names_old[] =
+const char *e_algo_names_old[] =
 {"reserved",   "aes",         "des3_ede", "des3_ede",
  "blowfish", "cipher_null", "cipher_null"};
-char *a_algo_names_old[] =
+const char *a_algo_names_old[] =
 {"reserved", "sha1", "sha1", "md5",
  "sha1",   "sha1", "md5"};
 
 /* Mappings from HIP to XFRM algo names >= 2.6.19 */
-char *e_algo_names_new[] =
+const char *e_algo_names_new[] =
 {"reserved",        "cbc(aes)",         "cbc(des3_ede)", "cbc(des3_ede)",
  "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)"};
-char *a_algo_names_new[] =
+const char *a_algo_names_new[] =
 {"reserved",     "hmac(sha1)", "hmac(sha1)", "hmac(md5)",
  "hmac(sha1)", "hmac(sha1)", "hmac(md5)"};
 
@@ -327,8 +327,8 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
             struct xfrm_algo algo;
             char             buf[XFRM_ALGO_KEY_BUF_SIZE];
         } alg;
-        char *e_name = e_algo_names[ealg];
-        char *a_name = a_algo_names[aalg];
+        const char *e_name = e_algo_names[ealg];
+        const char *a_name = a_algo_names[aalg];
         int len;
 
         HIP_ASSERT(ealg < sizeof(e_algo_names));
