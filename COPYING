@@ -20,7 +20,6 @@ The code under the following directories was developed for the HIPL project:
   * firewall (see an exception below)
   * tools (see exceptions below)
   * lib/opphip
-  * lib/conf
   * lib/core
   * test
   * hipd

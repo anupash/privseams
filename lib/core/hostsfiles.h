@@ -7,8 +7,8 @@
 #ifndef HIP_LIB_CORE_HOSTSFILES_H
 #define HIP_LIB_CORE_HOSTSFILES_H
 
+#include "conf.h"
 #include "prefix.h"
-#include "lib/conf/conf.h"
 
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
                                             const void *arg,

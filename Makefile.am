@@ -126,10 +126,10 @@ endif
 
 # TODO: libhipcore, libhipconf and libhiptool have circular
 # dependencies. This needs to be addressed at some point.
-lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
-                                 lib/core/builder.c         \
+lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/capability.c      \
                                  lib/core/certtools.c       \
+                                 lib/core/conf.c            \
                                  lib/core/crypto.c          \
                                  lib/core/debug.c           \
                                  lib/core/esp_prot_common.c \

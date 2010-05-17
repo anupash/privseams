@@ -1410,12 +1410,12 @@ but also for hipd.
 
 Assume that you want to add an action named as 'NEWACT'.
 
-1.1. ACTION_NEWACT in lib/conf/conf.h
+1.1. ACTION_NEWACT in lib/core/conf.h
 -------------------------------------
 Define a constant ACTION_NEWACT which has value between 0 and ACTION_MAX.
 Probably you also need to increase the value of ACTION_MAX.
 
-1.2. hip_conf_get_action() in lib/conf/conf.c
+1.2. hip_conf_get_action() in lib/core/conf.c
 ---------------------------------------------
 Add a proper sentence in the strcmp() series, like that:
 
@@ -1424,11 +1424,11 @@ Add a proper sentence in the strcmp() series, like that:
         ret = ACTION_NEWACT;
     ...
 
-1.3. hip_conf_check_action_argc() in lib/conf/conf.c
+1.3. hip_conf_check_action_argc() in lib/core/conf.c
 ----------------------------------------------------
 Add a case block for your ACTION_NEWACT constant in the switch(action) block.
 
-1.4. hip_conf_get_type_arg() in lib/conf/conf.c
+1.4. hip_conf_get_type_arg() in lib/core/conf.c
 -----------------------------------------------
 Add a case block for your ACTION_NEWACT constant in the switch(action) block.
 
@@ -1446,13 +1446,13 @@ Add a case block for your HIP_MSG_NEWMODE constant in the switch(msg_type) block
 Add a case block for your HIP_MSG_NEWMODE constant in the switch(msg_type) block.
 In this case, you just need to return the same string as the constant.
 
-3.1. action_handler[] in lib/conf/conf.c
+3.1. action_handler[] in lib/core/conf.c
 ----------------------------------------
 Add a handler function for your new action in the action_handler[] array.
 NOTE: the location and the order of these handlers are important, because
 each entry of the handler array is to be accessed via type index.
 
-3.2. TYPE_NEWTYPE in lib/conf/conf.h
+3.2. TYPE_NEWTYPE in lib/core/conf.h
 ------------------------------------
 Define a constant TYPE_NEWTYPE which has value between 0 and TYPE_MAX.
 Probably you also need to increase the value of TYPE_MAX.
@@ -1465,15 +1465,15 @@ NOTE: the value of TYPE_NEWTYPE must be a correct index for looking up
 each handler function in action_handler[], which you just added above
 at the step 3.1.
 
-3.3. hip_conf_handle_NEWACT() in lib/conf/conf.c
+3.3. hip_conf_handle_NEWACT() in lib/core/conf.c
 ------------------------------------------------
 Define a handler function added above at the step 3.1, somewhere in conf.c.
 
-3.4. hip_conf_handle_NEWACT() in lib/conf/conf.h
+3.4. hip_conf_handle_NEWACT() in lib/core/conf.h
 ------------------------------------------------
 Declare a prototype for your new handler function hip_conf_handle_NEWACT
 defined above at the step 3.1.
 
-4. hipconf_usage in lib/conf/conf.c
+4. hipconf_usage in lib/core/conf.c
 -----------------------------------
 Add a simple usage for your new action in the usage string.
