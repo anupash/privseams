@@ -1669,23 +1669,21 @@ $ make V=99
       Crash will act as the connection initiator, so we need to configure
       the hosts files of crash:
     </para>
+    <informaltable>
+      <tgroup cols='2'>
+        <thead>
+          <row><entry>File</entry><entry>Line to add</entry></row>
+        </thead>
+        <tbody>
+          <row><entry>/etc/hosts</entry><entry>HIT_OF_OOPS oops</entry></row>
+          <row><entry>/etc/hosts</entry><entry>3ffe::2 oops</entry></row>
+        </tbody>
+      </tgroup>
+    </informaltable>
     <para>
-      crash:
+      You need to run also the following commands at the crash host:
     </para>
-<!-- FIXME: /etc/hosts is not a command, what to do with it? -->
     <itemizedlist>
-      <listitem><para>
-        /etc/hosts:
-      </para></listitem>
-      <listitem><para>
-        HIT_OF_OOPS oops
-      </para></listitem>
-      <listitem><para>
-        /etc/hosts:
-      </para></listitem>
-      <listitem><para>
-        3ffe::2 oops
-      </para></listitem>
       <listitem><para>
         ifconfig eth0 inet6 add 3ffe::1/64
       </para></listitem>
