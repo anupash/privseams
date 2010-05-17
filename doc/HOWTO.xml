@@ -1622,7 +1622,7 @@ $ make V=99
   </section>
 
   <section id="ch_basictest">
-    <title>For Hackers: How to Test HIP Connectivity using Custom Test Software using two Locally Connected Hosts</title>
+    <title>For Hackers: How to Test HIP Connectivity from Command Line using two Locally Connected Hosts</title>
     <para>
       We will show in this section how to connect two hosts using HIP.
       This section is oriented towards hackers and developers.
