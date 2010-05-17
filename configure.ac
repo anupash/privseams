@@ -66,11 +66,11 @@ AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
 
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Werror -Wall")
+AC_SUBST(AM_CFLAGS, "-std=c99 -Wall")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wredundant-decls -Wdisabled-optimization")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wundef -Wstrict-prototypes -Wmissing-prototypes")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-deprecated-declarations -Wpointer-arith")
-AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings")
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings -Wshadow")
 
 #TODO fix the code and get rid of this one
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -fno-strict-aliasing")
