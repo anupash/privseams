@@ -7,17 +7,19 @@
  * @author Thomas Jansen <mithi@mithi.net>
  */
 
-#include <sys/time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
-#include <zlib.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include "lib/core/ife.h"
-#include "lib/core/icomm.h"
-#include "lib/core/debug.h"
-#include "lib/core/certtools.h"
+
 #include "lib/core/builder.h"
+#include "lib/core/certtools.h"
+#include "lib/core/ife.h"
 #include "lib/core/message.h"
+#include "lib/core/protodefs.h"
+
 
 /**
  * Get the default hit of the local HIPD.

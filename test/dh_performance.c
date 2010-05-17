@@ -12,19 +12,23 @@
  *
  */
 
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <stdio.h>              /* printf & co */
-#include <stdlib.h>             /* exit & co */
-#include <openssl/dh.h>         /* open ssl library for DH operations */
-#include <openssl/sha.h>        /* open ssl library for SHA operations */
-#include <openssl/dsa.h>        /* open ssl library for DSA operations */
+#include <openssl/dh.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
 #include <openssl/sha.h>
+#include <sys/time.h>
 
-#include "config.h"
 #include "lib/core/crypto.h"
+#include "lib/core/debug.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hashchain.h"
 #include "lib/core/performance.h"
+#include "lib/tool/pk.h"
 
 
 /*! \brief Number of benchmark runs */

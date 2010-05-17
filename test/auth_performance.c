@@ -10,19 +10,29 @@
  * @author Tobias Heer
  */
 
-#include <stdio.h>              /* printf & co */
-#include <stdlib.h>             /* exit & co */
-#include <unistd.h>
-
 #include "config.h"
-#include "lib/core/statistics.h"
-#include "lib/core/keylen.h"
-#include "lib/core/crypto.h"
 
-// only use ecdsa when available
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <openssl/aes.h>
+#include <openssl/dsa.h>
+#include <openssl/ecdsa.h>
+#include <openssl/hmac.h>
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+
 #ifdef HAVE_EC_CRYPTO
 #include <openssl/ecdsa.h>
 #endif
+
+#include "lib/core/crypto.h"
+#include "lib/core/keylen.h"
+#include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/statistics.h"
 
 #define PACKET_LENGTH 1280
 

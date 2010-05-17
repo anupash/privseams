@@ -15,15 +15,18 @@
  *
  */
 
-#include <arpa/inet.h>
-#include <sys/time.h>
-#include <time.h>
-#include <zlib.h>
 #include <stdio.h>
-#include "lib/core/ife.h"
-#include "lib/core/icomm.h"
-#include "lib/core/debug.h"
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <openssl/conf.h>
+#include <openssl/ossl_typ.h>
+#include <openssl/safestack.h>
+
 #include "lib/core/certtools.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/protodefs.h"
 
 
 int main(int argc, char *argv[])

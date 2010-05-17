@@ -3,16 +3,20 @@
  *
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
-#include <stdio.h>              /* printf & co */
-#include <stdlib.h>             /* exit & co */
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
+#include <sys/time.h>
 
-#include "lib/core/statistics.h"
+#include "lib/core/debug.h"
 #include "lib/core/hashchain.h"
 #include "lib/core/hashtree.h"
-#include "lib/core/debug.h"
+#include "lib/core/statistics.h"
 
 const hash_function_t hash_functions[2] = {(hash_function_t) SHA1,
                                            (hash_function_t) MD5};
