@@ -34,13 +34,16 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 
 #include "config.h"
+#include "conf.h"
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/straddr.h"
-#include "conf.h"
 #include "lib/core/prefix.h"
 #include "lib/core/hostid.h"
 #include "lib/core/message.h"
@@ -1784,7 +1787,7 @@ static int hip_conf_handle_opp(hip_common_t *msg,
     int err              = 0;
 
     if (action == ACTION_RUN) {
-        return hip_handle_exec_application(0, EXEC_LOADLIB_OPP, optc, (char **) &opt[0]);
+        return hip_handle_exec_app(0, EXEC_LOADLIB_OPP, optc, (char **) &opt[0]);
     }
     if (optc != 1) {
         HIP_ERROR("Incorrect number of arguments\n");
@@ -2296,45 +2299,53 @@ out_err:
  *      EXEC_LOADLIB_NONE
  *
  */
-int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
+int hip_handle_exec_app(int do_fork, int type, int argc, char *argv[])
 {
-    /* Variables. */
+    int ret = 0;
+    int i;
     char lib_all[LIB_LENGTH];
-    int err = 0;
     char *libs[5];
 
+    memset(libs, 0, sizeof(libs));
 
     if (do_fork) {
-        err = fork();
-    }
-    if (err < 0) {
-        HIP_ERROR("Failed to exec new application.\n");
-    } else if (err > 0)   {
-        err = 0;
-    } else if (err == 0)    {
-        HIP_DEBUG("Exec new application.\n");
-        if (type == EXEC_LOADLIB_HIP) {
-            libs[0] = strdup("libhiptool.so");
-            libs[1] = NULL;
-            libs[2] = NULL;
-        } else if (type == EXEC_LOADLIB_OPP)   {
-            libs[0] = strdup("libopphip.so");
-            libs[1] = strdup("libhiptool.so");
-            libs[2] = NULL;
-        }
-
-        hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
-        setenv("LD_PRELOAD", lib_all, 1);
-        HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
-        err = execvp(argv[0], argv);
-
-        if (err != 0) {
-            HIP_DEBUG("Executing new application failed!\n");
-            exit(1);
-        }
+         ret = fork();
     }
 
-    return err;
+    if (ret < 0) {
+        HIP_ERROR("Failed to fork a new process: %s!\n",
+                  strerror(errno));
+        return ret;
+    } else if (ret > 0)   {
+        return 0;
+    }
+
+    /* fork returned zero, so we're in the child process now */
+    HIP_DEBUG("Executing %s.\n", argv[0]);
+    if (type == EXEC_LOADLIB_HIP) {
+        libs[0] = strdup("libhiptool.so");
+    } else if (type == EXEC_LOADLIB_OPP)   {
+        libs[0] = strdup("libopphip.so");
+        libs[1] = strdup("libhiptool.so");
+    }
+
+    hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
+    setenv("LD_PRELOAD", lib_all, 1);
+    HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
+
+    if (execvp(argv[0], argv)) {
+        HIP_DEBUG("Failed to execvp new application: %s!\n",
+                  strerror(errno));
+
+        for (i = 0; i < sizeof(libs) / sizeof(libs[0]); i++) {
+            if (libs[i])
+                free(libs[i]);
+        }
+
+        exit(EXIT_FAILURE);
+    }
+
+    return 0;
 }
 
 /**

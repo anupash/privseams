@@ -99,7 +99,7 @@
 #define ACTION_MANUAL_UPDATE 40
 #define ACTION_MAX 41 /* exclusive */
 
-int hip_handle_exec_application(int fork, int type, int argc, char **argv);
+int hip_handle_exec_app(int fork, int type, int argc, char **argv);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
 
 /* Externally used handler functions */
