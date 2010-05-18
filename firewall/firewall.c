@@ -803,11 +803,11 @@ static void firewall_exit(void)
  * and clean up all packet capture rules.
  *
  */
-static void firewall_close(const int signal)
+static void firewall_close(const int sig)
 {
-    HIP_DEBUG("Closing firewall...\n");
+    HIP_DEBUG("Caught signal %d, closing firewall.\n", sig);
     firewall_exit();
-    exit(signal);
+    exit(EXIT_SUCCESS);
 }
 
 static void die(struct ipq_handle *h)
