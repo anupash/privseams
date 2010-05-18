@@ -696,11 +696,11 @@ int main(int argc, char **argv)
         if (sw_file_output) {
             hip_perf_start_benchmark(perf_set, PS_DH_SHARE);
         }
-        hip_gen_dh_shared_key(  dh_key_pool[i % sw_create_dh],
-                                pub_key,
-                                dh_size,
-                                shared_key,
-                                sw_shared_key_len);
+        hip_gen_dh_shared_key(dh_key_pool[i % sw_create_dh],
+                              pub_key,
+                              dh_size,
+                              shared_key,
+                              sw_shared_key_len);
         if (sw_file_output) {
             hip_perf_stop_benchmark(perf_set, PS_DH_SHARE);
             hip_perf_write_benchmark(perf_set, PS_DH_SHARE);
