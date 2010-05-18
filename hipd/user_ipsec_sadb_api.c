@@ -27,18 +27,18 @@
  */
 static int hip_userspace_ipsec_send_to_fw(const struct hip_common *msg)
 {
-    struct sockaddr_in6 hip_firewall_addr;
+    struct sockaddr_in6 hip_fw_addr;
     struct in6_addr loopback = in6addr_loopback;
     int err                  = 0;
 
     HIP_ASSERT(msg != NULL);
 
     // destination is firewall
-    hip_firewall_addr.sin6_family = AF_INET6;
-    hip_firewall_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    ipv6_addr_copy(&hip_firewall_addr.sin6_addr, &loopback);
+    hip_fw_addr.sin6_family = AF_INET6;
+    hip_fw_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
+    ipv6_addr_copy(&hip_fw_addr.sin6_addr, &loopback);
 
-    err = hip_sendto_user(msg, (struct sockaddr *) &hip_firewall_addr);
+    err = hip_sendto_user(msg, (struct sockaddr *) &hip_fw_addr);
     if (err < 0) {
         HIP_ERROR("sending of message to firewall failed\n");
 
