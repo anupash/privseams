@@ -543,16 +543,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         /* Workaround for bug id 880 until bug id 589 is implemented.
          * -miika  */
         if (entry->state != HIP_STATE_NONE || HIP_STATE_UNASSOCIATED) {
-            hip_common_t *msg = calloc(HIP_MAX_PACKET, 1);
-            HIP_IFE((msg == 0), -1);
-            HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_RST, 0), -1);
-            HIP_IFE(hip_build_param_contents(msg,
+            hip_common_t *msg2 = calloc(HIP_MAX_PACKET, 1);
+            HIP_IFE((msg2 == 0), -1);
+            HIP_IFE(hip_build_user_hdr(msg2, HIP_MSG_RST, 0), -1);
+            HIP_IFE(hip_build_param_contents(msg2,
                                              &entry->hit_peer,
                                              HIP_PARAM_HIT,
                                              sizeof(hip_hit_t)),
                     -1);
-            hip_send_close(msg, 0);
-            free(msg);
+            hip_send_close(msg2, 0);
+            free(msg2);
         }
 
         /* Send a I1 packet to the server (registrar). */
