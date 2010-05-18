@@ -1921,17 +1921,18 @@ out_err:
 /**
  * Filter connection tracking state (in general)
  *
- * @param ip6_src source IP address of the control packet
- * @param ip6_dst destination IP address of the packet
- * @param buf the control packet
- * @param option special state options to be checked
- * @param accept force accepting of the packet if set to one
- * @param ctx context for the control packet
- * @return verdict for the packet (zero means drop, one means pass, negative error)
+ * @param ip6_src       source IP address of the control packet
+ * @param ip6_dst       destination IP address of the packet
+ * @param buf           the control packet
+ * @param option        special state options to be checked
+ * @param must_accept   force accepting of the packet if set to one
+ * @param ctx context   for the control packet
+ * @return              verdict for the packet (zero means drop, one means pass,
+ *                      negative error)
  */
 int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
-                 struct hip_common *buf, const struct state_option *option, const int accept,
-                 hip_fw_context_t *ctx)
+                 struct hip_common *buf, const struct state_option *option,
+                 const int must_accept, hip_fw_context_t *ctx)
 {
     struct hip_data *data = NULL;
     struct tuple *tuple   = NULL;
@@ -1965,18 +1966,18 @@ int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
     if (!tuple) {
         HIP_DEBUG("filter_state: no tuple found \n");
 
-        if (option->int_opt.value == CONN_NEW && option->int_opt.boolean && !accept) {
+        if (option->int_opt.value == CONN_NEW && option->int_opt.boolean && !must_accept) {
             return_value = 1;
             goto out_err;
         } else if (option->int_opt.value == CONN_ESTABLISHED &&
-                   !option->int_opt.boolean && !accept) {
+                   !option->int_opt.boolean && !must_accept) {
             return_value = 1;
             goto out_err;
         }
     } else {
         if ((option->int_opt.value == CONN_ESTABLISHED && option->int_opt.boolean
-             && !accept) || (option->int_opt.value == CONN_NEW &&
-                             !option->int_opt.boolean && !accept)) {
+             && !must_accept) || (option->int_opt.value == CONN_NEW &&
+                                 !option->int_opt.boolean && !must_accept)) {
             remove_connection(tuple->connection);
             tuple->connection = NULL;
 
