@@ -7,10 +7,12 @@
 #ifndef HIP_LIB_OPPHIP_WRAP_DB_H
 #define HIP_LIB_OPPHIP_WRAP_DB_H
 
+#include <pthread.h>
+#include <sys/socket.h>
 #include <sys/types.h>
-#include <netinet/in.h>
 
 #include "lib/core/protodefs.h"
+
 
 struct hip_opp_socket_entry {
     pid_t                   pid;

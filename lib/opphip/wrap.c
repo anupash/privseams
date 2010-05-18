@@ -14,22 +14,34 @@
 
 #define _BSD_SOURCE
 
-#include <sys/types.h>
+#include <dlfcn.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/message.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+
+#include "wrap_db.h"
+
 #include <errno.h>
 #include <netinet/tcp.h>
-#include <dlfcn.h>
 #include <pthread.h>
 #include <poll.h>
 
 #include "config.h"
-#include "lib/core/debug.h"
-#include "lib/core/message.h"
 #include "hipd/hadb.h"
 #include "lib/core/hashtable.h"
 #include "lib/tool/lutil.h"
 #include "lib/core/icomm.h"
-#include "wrap_db.h"
 
 int hip_db_exist = 0;
 

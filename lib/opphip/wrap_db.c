@@ -8,17 +8,17 @@
  *
  */
 
-#include <sys/types.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stddef.h>
-#include <sys/socket.h>
 #include <pthread.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "config.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
 #include "lib/core/hashtable.h"
-#include "hipd/hadb.h"
+#include "lib/core/list.h"
 #include "wrap_db.h"
+
 
 /** Hash table to store information on translated sockets */
 HIP_HASHTABLE *socketdb;
