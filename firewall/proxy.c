@@ -20,14 +20,14 @@
 #include "firewall/firewall_defines.h"
 #include "lib/tool/checksum.h"
 
-int hip_proxy_raw_sock_tcp_v4          = 0;
-int hip_proxy_raw_sock_tcp_v6          = 0;
-int hip_proxy_raw_sock_udp_v4          = 0;
-int hip_proxy_raw_sock_udp_v6          = 0;
-int hip_proxy_raw_sock_icmp_v4         = 0;
-int hip_proxy_raw_sock_icmp_v6         = 0;
-int hip_proxy_raw_sock_icmp_inbound    = 0;
-const char hip_proxy_supported_proto[] = { IPPROTO_TCP,
+static int hip_proxy_raw_sock_tcp_v4          = 0;
+static int hip_proxy_raw_sock_tcp_v6          = 0;
+static int hip_proxy_raw_sock_udp_v4          = 0;
+static int hip_proxy_raw_sock_udp_v6          = 0;
+static int hip_proxy_raw_sock_icmp_v4         = 0;
+static int hip_proxy_raw_sock_icmp_v6         = 0;
+static int hip_proxy_raw_sock_icmp_inbound    = 0;
+static const char hip_proxy_supported_proto[] = { IPPROTO_TCP,
         IPPROTO_ICMP, IPPROTO_UDP };
 
 
