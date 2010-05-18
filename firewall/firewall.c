@@ -889,14 +889,14 @@ static void firewall_probe_kernel_modules(void)
  * @return 1 if HITs match and 0 otherwise when boolean is 1. The return value is reversed when the boolean
  *         value is 0.
  */
-static int match_hit(const struct in6_addr match_hit,
+static int match_hit(const struct in6_addr matching_hit,
                      const struct in6_addr packet_hit,
                      const int boolean)
 {
-    int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
+    int i = IN6_ARE_ADDR_EQUAL(&matching_hit, &packet_hit);
 
     HIP_DEBUG("match_hit: hit1: %s hit2: %s bool: %d match: %d\n",
-              addr_to_numeric(&match_hit), addr_to_numeric(&packet_hit),
+              addr_to_numeric(&matching_hit), addr_to_numeric(&packet_hit),
               boolean, i);
     if (boolean) {
         return i;
