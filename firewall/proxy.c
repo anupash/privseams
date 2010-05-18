@@ -10,7 +10,9 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <netinet/icmp6.h>
 
 #include "firewall/proxy.h"
@@ -104,214 +106,73 @@ out_err:
     return err;
 }
 
-/**
- * Initialize the IPv6 socket for TCP connection
- *
- * @param hip_raw_sock_v6 the socket pointer used for TCP connection in IPv6
- * @return zero on success, non-zero on error
- */
-static int hip_init_proxy_raw_sock_tcp_v6(int *hip_raw_sock_v6)
-{
-    int on = 1, off = 0, err = 0;
-
-    *hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
-    HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
-
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
-                     IPV6_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
-                     IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET,
-                     SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
-
-out_err:
-    return err;
-}
 
 /**
- * Initialize the IPv4 socket for TCP connection
- *
- * @param hip_raw_sock_v4 the socket pointer used for TCP connection in IPv4
- * @return zero on success, non-zero on error
+ * Create a raw socket and set the appropriate options
+ * @param fam   socket family (AF_INET of AF_INET6)
+ * @param prot  socket protocol (IPPROTO_TCP or IPPROTO_UDP)
+ * @return      positive socket fd on success, -1 on error, with errno set
  */
-static int hip_init_proxy_raw_sock_tcp_v4(int *hip_raw_sock_v4)
+static int hip_proxy_raw_sock(int fam, int prot)
 {
-    int on  = 1, err = 0;
+    int on  = 1;
     int off = 0;
+    int sock;
 
-    *hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
-    HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+    if ((fam != AF_INET) && (fam != AF_INET6)) {
+        errno = EINVAL;
+        return -1;
+    }
 
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP,
-                     IP_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET,
-                     SO_BROADCAST, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP,
-                     IP_PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET,
-                     SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
+    if ((prot != IPPROTO_TCP)  && (prot != IPPROTO_UDP) &&
+        (prot != IPPROTO_ICMP) && (prot != IPPROTO_ICMPV6)) {
+        errno = EINVAL;
+        return -1;
+    }
 
-out_err:
-    return err;
-}
+    sock = socket(fam, SOCK_RAW, prot);
+    if (sock <= 0) {
+        HIP_ERROR("Raw socket creation failed: %s.", strerror(errno));
+        goto err;
+    }
 
-/**
- * Initialize the IPv6 socket for UDP connection
- *
- * @param hip_raw_sock_v6 the socket pointer used for UDP connection in IPv6
- * @return zero on success, non-zero on error
- */
-static int hip_init_proxy_raw_sock_udp_v6(int *hip_raw_sock_v6)
-{
-    int on = 1, off = 0, err = 0;
+    if (fam == AF_INET6) {
+        /* check bug 212 to see why RECV_ERR is off */
+        if (setsockopt(sock, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(off))) {
+            HIP_ERROR("setsockopt recverror6 failed: %s.\n", strerror(errno));
+            goto csock;
+        }
+        if (setsockopt(sock, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on))) {
+            HIP_ERROR("setsockopt pktinfo6 failed: %s.\n", strerror(errno));
+            goto csock;
+        }
+    } else {
+        /* IPv4 socket */
+        if (setsockopt(sock, IPPROTO_IP, IP_RECVERR, &on, sizeof(on))) {
+            HIP_ERROR("setsockopt recverror failed: %s.\n", strerror(errno));
+            goto csock;
+        }
+        if (setsockopt(sock, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on))) {
+            HIP_ERROR("setsockopt pktinfo failed: %s.\n", strerror(errno));
+            goto csock;
+        }
+        if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on))) {
+            HIP_ERROR("setsockopt broadcast failed: %s.\n", &on, sizeof(on));
+            goto csock;
+        }
+    }
 
-    *hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_UDP);
-    HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on))) {
+        HIP_ERROR("setsockopt reuseaddr failed: %s.\n", &on, sizeof(on));
+        goto csock;
+    }
 
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
-                     IPV6_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
-                     IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET,
-                     SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
+    return sock;
 
-out_err:
-    return err;
-}
-
-/**
- * Initialize the IPv4 socket for UDP connection
- *
- * @param hip_raw_sock_v4 the socket pointer used for UDP connection in IPv4
- * @return zero on success, non-zero on error
- */
-static int hip_init_proxy_raw_sock_udp_v4(int *hip_raw_sock_v4)
-{
-    int on  = 1, err = 0;
-    int off = 0;
-
-    *hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
-    HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
-
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP,
-                     IP_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET,
-                     SO_BROADCAST, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP,
-                     IP_PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET,
-                     SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
-
-out_err:
-    return err;
-}
-
-/**
- * Initialize the ICMPv6 socket
- *
- * @param hip_raw_sock_v6 the socket pointer used for ICMPv6 connection
- * @return zero on success, non-zero on error
- */
-static int hip_init_proxy_raw_sock_icmp_v6(int *hip_raw_sock_v6)
-{
-    int on = 1, off = 0, err = 0;
-
-    *hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
-    HIP_IFEL(*hip_raw_sock_v6 <= 0, 1,
-             "Raw socket creation failed. Not root?\n");
-
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
-                     IPV6_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
-                     IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET,
-                     SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
-
-out_err:
-    return err;
-}
-
-/**
- * Initialize the ICMP socket
- *
- * @param hip_raw_sock_v4 the socket pointer used for ICMP
- * @return zero on success, non-zero on error
- */
-static int hip_init_proxy_raw_sock_icmp_v4(int *hip_raw_sock_v4)
-{
-    int on  = 1, err = 0;
-    int off = 0;
-
-    *hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-    HIP_IFEL(*hip_raw_sock_v4 <= 0, 1,
-             "Raw socket v4 creation failed. Not root?\n");
-
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP,
-                     IP_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET,
-                     SO_BROADCAST, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP,
-                     IP_PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET,
-                     SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
-
-out_err:
-    return err;
-}
-
-/**
- * Initialize the ICMPV6 socket for Inbound connection
- *
- * @param hip_raw_sock_v6 the socket pointer used for ICMPv6 connection in IPv6
- * @return zero on success, non-zero on error
- */
-static int hip_init_proxy_raw_sock_icmp_inbound(int *hip_raw_sock_v6)
-{
-    int on = 1, off = 0, err = 0;
-
-    *hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMP);
-    HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
-
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
-                     IPV6_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
-                     IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET,
-                     SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
-
-out_err:
-    return err;
+csock:
+    close(sock);
+err:
+    return -1;
 }
 
 /**
@@ -321,13 +182,14 @@ out_err:
  */
 static int hip_proxy_init_raw_sockets(void)
 {
-    hip_init_proxy_raw_sock_tcp_v6(&hip_proxy_raw_sock_tcp_v6);
-    hip_init_proxy_raw_sock_tcp_v4(&hip_proxy_raw_sock_tcp_v4);
-    hip_init_proxy_raw_sock_udp_v6(&hip_proxy_raw_sock_udp_v6);
-    hip_init_proxy_raw_sock_udp_v4(&hip_proxy_raw_sock_udp_v4);
-    hip_init_proxy_raw_sock_icmp_v6(&hip_proxy_raw_sock_icmp_v6);
-    hip_init_proxy_raw_sock_icmp_v4(&hip_proxy_raw_sock_icmp_v4);
-    hip_init_proxy_raw_sock_icmp_inbound(&hip_proxy_raw_sock_icmp_inbound);
+    hip_proxy_raw_sock_tcp_v6       = hip_proxy_raw_sock(AF_INET6, IPPROTO_TCP);
+    hip_proxy_raw_sock_udp_v6       = hip_proxy_raw_sock(AF_INET6, IPPROTO_UDP);
+    hip_proxy_raw_sock_icmp_v6      = hip_proxy_raw_sock(AF_INET6, IPPROTO_ICMPV6);
+    hip_proxy_raw_sock_icmp_inbound = hip_proxy_raw_sock(AF_INET6, IPPROTO_ICMP);
+
+    hip_proxy_raw_sock_tcp_v4       = hip_proxy_raw_sock(AF_INET, IPPROTO_TCP);
+    hip_proxy_raw_sock_udp_v4       = hip_proxy_raw_sock(AF_INET, IPPROTO_UDP);
+    hip_proxy_raw_sock_icmp_v4      = hip_proxy_raw_sock(AF_INET, IPPROTO_ICMP);
 
     return 0;
 }
