@@ -932,7 +932,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         hip_hit_t *hit      = NULL;
         hip_lsi_t lsi;
         struct in6_addr addr;
-        void *param         = NULL;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR)), -1);
         HIP_IFE(!(id = hip_get_param_contents_direct(param)), -1);
@@ -969,7 +968,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
     case HIP_MSG_LSI_TO_HIT:
     {
         hip_lsi_t *lsi;
-        struct hip_tlv_common *param;
         hip_ha_t *ha;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1);
