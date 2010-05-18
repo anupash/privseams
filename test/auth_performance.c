@@ -19,7 +19,6 @@
 #include <sys/time.h>
 #include <openssl/aes.h>
 #include <openssl/dsa.h>
-#include <openssl/ecdsa.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
