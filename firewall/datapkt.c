@@ -194,17 +194,17 @@ static int hip_data_packet_mode_input(const hip_fw_context_t *ctx,
 /**
  * Encapsulate a HIT-based transport packet from the hipfw into a HICCUPS packet
  *
- * @param packet context
- * @param preferred_local_addr local IP address for sending
- * @param preferred_peer_addr remote IP address for sending
- * @param hip_data_packet encapsulated packet will be written here
- * @param hip_packet_len length of the encapsulated packet is written here
- * @return zero on success and non-zero on error
+ * @param ctx                   packet context
+ * @param preferred_local_addr  local IP address for sending
+ * @param preferred_peer_addr   remote IP address for sending
+ * @param hip_data_pkt          storage for the encapsulated packet
+ * @param hip_packet_len        storage for the length of the encapsulated packet
+ * @return                      zero on success and non-zero on error
  */
 static int hip_data_packet_mode_output(const hip_fw_context_t *ctx,
                                        struct in6_addr *preferred_local_addr,
                                        struct in6_addr *preferred_peer_addr,
-                                       unsigned char *hip_data_packet,
+                                       unsigned char *hip_data_pkt,
                                        uint16_t *hip_packet_len)
 {
     struct ip *out_ip_hdr           = NULL;
@@ -227,7 +227,7 @@ static int hip_data_packet_mode_output(const hip_fw_context_t *ctx,
     if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr)) {
         /* NOTE: this does _not_ include IPv4 options for the original packet */
         /* calculate offset at which esp data should be located */
-        out_ip_hdr        = (struct ip *) hip_data_packet;
+        out_ip_hdr        = (struct ip *) hip_data_pkt;
         next_hdr_offset   = sizeof(struct ip);
 
         /* NOTE: we are only dealing with HIT-based (-> IPv6) data traffic */
@@ -250,8 +250,8 @@ static int hip_data_packet_mode_output(const hip_fw_context_t *ctx,
                   in_transport_len, in_transport_type,
                   data_header->payload_proto, data_header_len, *hip_packet_len);
 
-        memcpy(hip_data_packet + next_hdr_offset, data_header, data_header_len);
-        memcpy(hip_data_packet + next_hdr_offset + data_header_len,
+        memcpy(hip_data_pkt + next_hdr_offset, data_header, data_header_len);
+        memcpy(hip_data_pkt + next_hdr_offset + data_header_len,
                in_transport_hdr, in_transport_len);
 
         HIP_DEBUG("Just Checking if we have copied the data correctly ... original packets next header in encapsulated packed = %d",
