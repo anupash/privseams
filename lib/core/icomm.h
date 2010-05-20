@@ -58,8 +58,7 @@
 /* Free slots here */
 #define HIP_MSG_GET_HITS                         21
 #define HIP_MSG_GET_HA_INFO                      22
-#define HIP_MSG_DHT_SERVING_GW                   24
-/* Free slots here */
+/* free slots */
 #define HIP_MSG_GET_LSI_PEER                     26
 /* several free slots here */
 #define HIP_MSG_HEARTBEAT                        31
@@ -75,7 +74,7 @@
 #define HIP_MSG_RUN_UNIT_TEST                    67
 #define HIP_MSG_RST                              68
 #define HIP_MSG_UNIT_TEST                        69
-#define HIP_MSG_BOS                              70
+/* free slot */
 #define HIP_MSG_NETLINK_DUMMY                    71
 #define HIP_MSG_CONF_PUZZLE_NEW                  72
 #define HIP_MSG_CONF_PUZZLE_GET                  73
@@ -154,8 +153,7 @@
 /* Free slot */
 #define HIP_MSG_FW_BEX_DONE                      157
 #define HIP_MSG_RESTART_DUMMY_INTERFACE          158
-#define HIP_MSG_VERIFY_DHT_HDRR_RESP             159
-/* Free slots here */
+/* free slots */
 #define HIP_MSG_BUDDIES_ON                       162
 #define HIP_MSG_BUDDIES_OFF                      163
 #define HIP_MSG_TURN_INFO                        164

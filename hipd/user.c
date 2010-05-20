@@ -27,16 +27,12 @@
 #define _BSD_SOURCE
 
 #include "config.h"
-#include "user.h"
 #include "accessor.h"
+#include "user.h"
 #include "esp_prot_anchordb.h"
-#include "hipd.h"
-#include "nsupdate.h"
-#include "lib/core/hip_udp.h"
 #include "lib/core/hostid.h"
-#include "lib/core/icomm.h"
-#include "lib/core/protodefs.h"
-#include "lib/core/state.h"
+#include "lib/core/hip_udp.h"
+#include "hipd.h"
 #include "lib/modularization/lmod.h"
 
 struct usr_msg_handle {
@@ -253,9 +249,6 @@ int hip_handle_user_msg(hip_common_t *msg,
         break;
     case HIP_MSG_RST:
         err                = hip_send_close(msg, 1);
-        break;
-    case HIP_MSG_BOS:
-        err                = hip_send_bos(msg);
         break;
     case HIP_MSG_SET_NAT_NONE:
     case HIP_MSG_SET_NAT_PLAIN_UDP:
@@ -544,16 +537,16 @@ int hip_handle_user_msg(hip_common_t *msg,
         /* Workaround for bug id 880 until bug id 589 is implemented.
          * -miika  */
         if (entry->state != HIP_STATE_NONE || HIP_STATE_UNASSOCIATED) {
-            hip_common_t *msg = calloc(HIP_MAX_PACKET, 1);
-            HIP_IFE((msg == 0), -1);
-            HIP_IFE(hip_build_user_hdr(msg, HIP_MSG_RST, 0), -1);
-            HIP_IFE(hip_build_param_contents(msg,
+            hip_common_t *msg2 = calloc(HIP_MAX_PACKET, 1);
+            HIP_IFE((msg2 == 0), -1);
+            HIP_IFE(hip_build_user_hdr(msg2, HIP_MSG_RST, 0), -1);
+            HIP_IFE(hip_build_param_contents(msg2,
                                              &entry->hit_peer,
                                              HIP_PARAM_HIT,
                                              sizeof(hip_hit_t)),
                     -1);
-            hip_send_close(msg, 0);
-            free(msg);
+            hip_send_close(msg2, 0);
+            free(msg2);
         }
 
         /* Send a I1 packet to the server (registrar). */
@@ -897,7 +890,6 @@ int hip_handle_user_msg(hip_common_t *msg,
         hip_hit_t *hit      = NULL;
         hip_lsi_t lsi;
         struct in6_addr addr;
-        void *param         = NULL;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR)), -1);
         HIP_IFE(!(id = hip_get_param_contents_direct(param)), -1);
@@ -934,7 +926,6 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_LSI_TO_HIT:
     {
         hip_lsi_t *lsi;
-        struct hip_tlv_common *param;
         hip_ha_t *ha;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1);

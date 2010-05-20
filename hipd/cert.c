@@ -949,15 +949,15 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
          * hash to the X509_EXT_conf it knows what to do with it */
 
         HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx,
-                                         "basicConstraints",
-                                         "CA:true")), -1,
+                                         (char *)"basicConstraints",
+                                         (char *)"CA:true")), -1,
                  "Failed to create extension\n");
         HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
                  "Failed to add extensions to the cert\n");
 
         HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx,
-                                         "subjectKeyIdentifier",
-                                         "hash")), -1,
+                                         (char *)"subjectKeyIdentifier",
+                                         (char *)"hash")), -1,
                  "Failed to create extension\n");
         HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
                  "Failed to add extensions to the cert\n");
@@ -966,7 +966,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
     /* add subjectAltName = IP:<HIT> */
     sprintf(ialtname, "IP:%s", issuer_hit);
     HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx,
-                                     "issuerAltName",
+                                     (char *)"issuerAltName",
                                      ialtname)), -1,
              "Failed to create extension\n");
     HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
@@ -974,7 +974,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABL
     /* add subjectAltName = IP:<HIT> */
     sprintf(saltname, "IP:%s", subject_hit);
     HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx,
-                                     "subjectAltName",
+                                     (char *)"subjectAltName",
                                      saltname)), -1,
              "Failed to create extension\n");
     HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,

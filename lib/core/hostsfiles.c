@@ -27,6 +27,10 @@
 #include "hostsfiles.h"
 #include "lib/tool/lutil.h"
 
+
+#define HOSTS_FILE "/etc/hosts"
+
+
 /**
  * A "for-each" iterator function for hosts files that returns the first
  * hostname that matches the given address
@@ -203,53 +207,6 @@ int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
 
 out_err:
 
-    return err;
-}
-
-/**
- * A "for-each" iterator function for hosts files to calculate
- * the number of non-commented lines
- *
- * @param entry a hosts file line entry
- * @param arg unused, but required by the API
- * @param result an int pointer where the number of lines
- *               will be calculated
- * @return always one
- */
-static int hip_calc_lines_in_hosts(const struct hosts_file_line *entry,
-                                   const void *arg,
-                                   void *result)
-{
-    int *res = (int *) result;
-    (*res)++;
-    return 1;
-}
-
-/**
- * A "for-each" iterator function for hosts files that returns the Nth
- * identifier (address, LSI or HIT) from a hosts file
- *
- * @param entry a hosts file line entry
- * @param arg the N as an int pointer
- * @param result An output argument where the matching matching address will be
- *        written. IPv4 addresses are written in IPv6 mapped format and
- *        the minimum buffer length is sizeof(struct in6_addr).
- * @return zero on match or one otherwise
- */
-static int hip_get_nth_id_from_hosts(const struct hosts_file_line *entry,
-                                     const void *arg,
-                                     void *result)
-{
-    int err         = 1;
-    const int *nth  = (const int *) arg;
-    int *total_past = (int *) result;
-
-    if (*nth == *total_past) {
-        ipv6_addr_copy(result, &entry->id);
-        err = 0;
-    } else {
-        (*total_past)++;
-    }
     return err;
 }
 
@@ -492,64 +449,6 @@ int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
 
 out_err:
 
-    return err;
-}
-
-/**
- * Fetch a random host name from a hosts file. Currently this
- * is used for selecting a random DHT node for load balancing.
- *
- * @param filename the hosts file path and file name
- * @param hostname the hostname will be written here
- * @param id_str The address, LSI or HIT corresponding to the
- *               the hostname will be written here as a string.
- * @return zero on successful match or non-zero on failure
- */
-int hip_get_random_hostname_id_from_hosts(char *filename,
-                                          char *hostname,
-                                          char *id_str)
-{
-    int lines = 0, err = 0, nth;
-    struct in6_addr id;
-
-    memset(&id, 0, sizeof(struct in6_addr));
-
-    /* ignore return value, returns always error */
-    hip_for_each_hosts_file_line(filename,
-                                 hip_calc_lines_in_hosts,
-                                 NULL,
-                                 &lines);
-    HIP_IFEL((lines == 0), -1,
-             "No lines in host file %s\n", filename);
-
-    srand(time(NULL));
-    nth = rand() % lines;
-
-    err = hip_for_each_hosts_file_line(filename,
-                                       hip_get_nth_id_from_hosts,
-                                       &nth,
-                                       &id);
-    HIP_IFEL(err, -1, "Failed to get random id\n");
-
-    err = hip_for_each_hosts_file_line(filename,
-                                       hip_map_first_id_to_hostname_from_hosts,
-                                       &id,
-                                       hostname);
-    HIP_IFEL(err, -1, "Failed to map to hostname\n");
-
-    if (IN6_IS_ADDR_V4MAPPED(&id)) {
-        struct in_addr id4;
-        IPV6_TO_IPV4_MAP(&id, &id4);
-        HIP_IFEL(!inet_ntop(AF_INET, &id4, id_str,
-                            INET_ADDRSTRLEN), -1,
-                 "inet_ntop failed\n");
-    } else {
-        HIP_IFEL(!inet_ntop(AF_INET6, &id, id_str,
-                            INET6_ADDRSTRLEN), -1,
-                 "inet_ntop failed\n");
-    }
-
-out_err:
     return err;
 }
 

@@ -16,7 +16,6 @@
 #include "close.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/performance.h"
-#include "oppipdb.h"
 
 /**
  * send a HIP close packet to a peer
@@ -27,16 +26,16 @@
  */
 static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
+    int err                      = 0, mask = 0;
+    int delete_ha_info           = *(int *) ((uint8_t *)opaque + sizeof(hip_hit_t));
+    hip_hit_t *peer              = (hip_hit_t *) opaque;
+    struct hip_common *msg_close = NULL;
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_CLOSE_SEND, PERF_CLOSE_COMPLETE\n");
     hip_perf_start_benchmark( perf_set, PERF_CLOSE_SEND );
     hip_perf_start_benchmark( perf_set, PERF_CLOSE_COMPLETE );
 #endif
-    int err                  = 0, mask = 0;
-    hip_hit_t *peer          = (hip_hit_t *) opaque;
-    int delete_ha_info       = *(int *) (opaque + sizeof(hip_hit_t));
-
-    struct hip_common *close = NULL;
 
     if (peer) {
         HIP_DEBUG_HIT("Peer HIT to be closed", peer);
@@ -74,9 +73,9 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
                               &entry->hit_our,
                               &entry->hit_peer);
 
-    HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
+    HIP_IFE(!(msg_close = hip_msg_alloc()), -ENOMEM);
 
-    hip_build_network_hdr(close,
+    hip_build_network_hdr(msg_close,
                           HIP_CLOSE,
                           mask,
                           &entry->hit_our,
@@ -86,22 +85,22 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
     get_random_bytes(entry->echo_data, sizeof(entry->echo_data));
 
-    HIP_IFEL(hip_build_param_echo(close, entry->echo_data, sizeof(entry->echo_data), 1, 1),
+    HIP_IFEL(hip_build_param_echo(msg_close, entry->echo_data, sizeof(entry->echo_data), 1, 1),
              -1,
              "Failed to build echo param.\n");
 
     /************* HMAC ************/
-    HIP_IFEL(hip_build_param_hmac_contents(close, &entry->hip_hmac_out),
+    HIP_IFEL(hip_build_param_hmac_contents(msg_close, &entry->hip_hmac_out),
              -1,
              "Building of HMAC failed.\n");
     /********** Signature **********/
-    HIP_IFEL(entry->sign(entry->our_priv_key, close),
+    HIP_IFEL(entry->sign(entry->our_priv_key, msg_close),
              -EINVAL,
              "Could not create signature.\n");
 
     HIP_IFEL(hip_send_pkt(NULL, &entry->peer_addr,
                           (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                          entry->peer_udp_port, close, entry, 0),
+                          entry->peer_udp_port, msg_close, entry, 0),
              -ECOMM, "Sending CLOSE message failed.\n");
 
     entry->state = HIP_STATE_CLOSING;
@@ -112,8 +111,8 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 #endif
 
 out_err:
-    if (close) {
-        free(close);
+    if (msg_close) {
+        free(msg_close);
     }
 
     return err;
@@ -274,7 +273,8 @@ int hip_close_create_response(const uint8_t packet_type,
 
     HIP_IFEL(!(request =
                  hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
-           -1, "No echo request under signature.\n");
+             -1, "No echo request under signature.\n");
+
     echo_len = hip_get_param_contents_len(request);
 
     hip_build_network_hdr(ctx->output_msg,

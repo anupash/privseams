@@ -9,7 +9,7 @@
  */
 
 #include "lutil.h"
-#include "lib/conf/conf.h"
+#include "lib/core/conf.h"
 
 /**
  * Read characters to a buffer from a file. Works like fgets() but

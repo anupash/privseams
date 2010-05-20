@@ -703,7 +703,7 @@ int hip_check_r1(const uint8_t packet_type,
     int err = 0, mask = HIP_PACKET_CTRL_ANON, len;
     struct in6_addr daddr;
     struct hip_host_id *peer_host_id  = NULL;
-    char *str                         = NULL;
+    const char *str                         = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R1\n");
@@ -1615,8 +1615,8 @@ int hip_check_i2(const uint8_t packet_type,
          * Note, that the original packet has the data still encrypted. */
         HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, ctx->hadb_entry->hip_transform, crypto_len,
                                       (is_loopback ?
-                                          &ctx->hadb_entry->hip_enc_out.key :
-                                          &ctx->hadb_entry->hip_enc_in.key),
+                                          ctx->hadb_entry->hip_enc_out.key :
+                                          ctx->hadb_entry->hip_enc_in.key),
                                       HIP_DIRECTION_DECRYPT),
                  -1,
                  "Failed to decrypt the HOST_ID parameter. Dropping\n");

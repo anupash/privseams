@@ -7,8 +7,8 @@
 #ifndef HIP_LIB_CORE_HOSTSFILES_H
 #define HIP_LIB_CORE_HOSTSFILES_H
 
+#include "conf.h"
 #include "prefix.h"
-#include "lib/conf/conf.h"
 
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
                                             const void *arg,
@@ -34,9 +34,6 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit,
                                       hip_lsi_t *lsi,
                                       struct in6_addr *ip);
 int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname);
-int hip_get_random_hostname_id_from_hosts(char *filename,
-                                          char *hostname,
-                                          char *id_str);
 int hip_host_file_info_exists_lsi(hip_lsi_t *lsi);
 
 #endif /* HIP_LIB_CORE_HOSTSFILES_H */

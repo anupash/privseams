@@ -39,7 +39,7 @@
  * @param the name to map
  * @return the UID or -1 on error
  */
-static int hip_user_to_uid(char *name)
+static int hip_user_to_uid(const char *name)
 {
     int uid            = -1;
     int i;

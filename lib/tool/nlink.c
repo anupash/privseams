@@ -43,7 +43,7 @@
 #define PREFIXLEN_SPECIFIED 1
 
 #define NLMSG_TAIL(nmsg) \
-    ((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
+    ((struct rtattr *) (((uint8_t *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
 typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
                              const struct nlmsghdr *n, void **);
@@ -51,7 +51,7 @@ typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
 typedef struct {
     uint8_t  family;
     uint8_t  bytelen;
-    __s16 bitlen;
+    uint16_t bitlen;
     uint32_t flags;
     uint32_t data[4];
 } inet_prefix;
@@ -296,7 +296,6 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
             goto out_err;
         }
         for (h = (struct nlmsghdr *) buf; status >= sizeof(*h); ) {
-            int err;
             int len = h->nlmsg_len;
             int l   = len - sizeof(*h);
 
@@ -750,11 +749,11 @@ static int rtnl_dump_filter(struct rtnl_handle *rth,
                 return 0;
             }
             if (h->nlmsg_type == NLMSG_ERROR) {
-                struct nlmsgerr *err = (struct nlmsgerr *) NLMSG_DATA(h);
+                struct nlmsgerr *nlerr = (struct nlmsgerr *) NLMSG_DATA(h);
                 if (h->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr))) {
                     HIP_ERROR("ERROR truncated\n");
                 } else {
-                    errno = -err->error;
+                    errno = -nlerr->error;
                     HIP_PERROR("RTNETLINK answers");
                 }
                 return -1;
@@ -814,7 +813,7 @@ static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
  */
 int hip_iproute_modify(struct rtnl_handle *rth,
                        int cmd, int flags, int family, char *ip,
-                       char *dev)
+                       const char *dev)
 {
     struct {
         struct nlmsghdr n;
@@ -1075,11 +1074,11 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
             }
 
             if (h->nlmsg_type == NLMSG_ERROR) {
-                struct nlmsgerr *err = (struct nlmsgerr *) NLMSG_DATA(h);
+                struct nlmsgerr *nlerr = (struct nlmsgerr *) NLMSG_DATA(h);
                 if (l < sizeof(struct nlmsgerr)) {
                     HIP_ERROR("ERROR truncated\n");
                 } else {
-                    errno = -err->error;
+                    errno = -nlerr->error;
                     if (errno == 0) {
                         if (answer) {
                             memcpy(answer, h, h->nlmsg_len);
@@ -1243,7 +1242,7 @@ out_err:
  * @return zero on success and negative on failure
  */
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
-                      char *dev, struct idxmap **idxmap)
+                      const char *dev, struct idxmap **idxmap)
 {
     struct {
         struct nlmsghdr  n;
@@ -1387,7 +1386,7 @@ static int do_chflags(const char *dev, uint32_t flags, uint32_t mask)
  * @param up 1 when setting interface up and 0 for down
  * @return zero on success and negative on failure
  */
-int set_up_device(char *dev, int up)
+int set_up_device(const char *dev, int up)
 {
     int err     = -1, total_add;
     uint32_t mask  = 0;
@@ -1515,7 +1514,8 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft)
  * @return zero
  */
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
-                    char *name, const unsigned char *key, int key_len, int max)
+                    const char *name, const unsigned char *key, int key_len,
+                    int max)
 {
     int len  = 0;
     int slen = key_len;

@@ -15,9 +15,9 @@
 
 #include "config.h"
 #include "lib/tool/nlink.h"
+#include "conf.h"
 #include "debug.h"
 #include "icomm.h"
-#include "lib/conf/conf.h"
 
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
 

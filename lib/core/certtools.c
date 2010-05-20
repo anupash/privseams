@@ -382,8 +382,8 @@ out_err:
  * @return 0 if ok -1 if error
  */
 int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
-                              char *issuer_type, struct in6_addr *issuer,
-                              char *subject_type, struct in6_addr *subject,
+                              const char *issuer_type, struct in6_addr *issuer,
+                              const char *subject_type, struct in6_addr *subject,
                               time_t *not_before, time_t *not_after)
 {
     int err           = 0;
@@ -556,7 +556,7 @@ int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content)
  * @return 0 if ok and negative if error. -1 returned for example when after is NOT found
  */
 int hip_cert_spki_inject(struct hip_cert_spki_info *to,
-                         char *after, char *what)
+                         const char *after, const char *what)
 {
     int err = 0, status = 0;
     regex_t re;
@@ -812,20 +812,20 @@ out_err:
 /**
  * hip_cert_der_to_x509 - Function that converts the DER encoded X509 to X509 struct
  *
- * @param der points to DER encoded certificate
- * @param length of the DER given in bytes
+ * @param der   pointer to DER encoded certificate
+ * @param len   length of the DER given in bytes
  *
  * @return * X509 or on error NULL is returned
  */
-X509 *hip_cert_der_to_x509(const unsigned char *der, int length)
+X509 *hip_cert_der_to_x509(const unsigned char *der, int len)
 {
     int err    = 0;
     X509 *cert = NULL;
 
-    _HIP_HEXDUMP("DER:\n", der, length);
-    _HIP_DEBUG("DER length %d\n", length);
+    _HIP_HEXDUMP("DER:\n", der, len);
+    _HIP_DEBUG("DER length %d\n", len);
 
-    HIP_IFEL(((cert = d2i_X509(NULL, (const unsigned char **) &der, length)) == NULL), -1,
+    HIP_IFEL(((cert = d2i_X509(NULL, (const unsigned char **) &der, len)) == NULL), -1,
              "Failed to convert cert from DER to internal format\n");
 out_err:
     if (err == -1) {
@@ -876,7 +876,7 @@ out_err:
  *       the conf with the hip_cert_free_conf
  *
  */
-STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char *section_name,
+STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *section_name,
                                                   CONF * conf)
 {
     long err = 0;

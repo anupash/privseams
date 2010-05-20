@@ -7,8 +7,7 @@
  * default roughly once in a second. These actions include
  * retransmissions of lost HIP control packets, keepalives for NATs,
  * heartbeats to detect connectivity problems, purging of opportunistic
- * mode state, delaying of UPDATE triggering until addresses have stabilized
- * and publishing of hostname/hit/ip mappings in a DHT.
+ * mode state, delaying of UPDATE triggering until addresses have stabilized.
  *
  * @brief Hipd maintenance loop
  *
@@ -38,7 +37,6 @@ int hip_firewall_sock_lsi_fd = -1;
 float retrans_counter        = HIP_RETRANSMIT_INIT;
 float opp_fallback_counter   = HIP_OPP_FALLBACK_INIT;
 float precreate_counter      = HIP_R1_PRECREATE_INIT;
-float opendht_counter        = OPENDHT_REFRESH_INIT;
 float queue_counter          = QUEUE_CHECK_INIT;
 int force_exit_counter       = FORCE_EXIT_COUNTER_START;
 int cert_publish_counter     = CERTIFICATE_PUBLISH_INTERVAL;
@@ -357,9 +355,9 @@ int hip_firewall_is_alive(void)
 int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r)
 {
     struct hip_common *msg = NULL;
-    struct sockaddr_in6 hip_firewall_addr;
+    struct sockaddr_in6 hip_fw_addr;
     int err                = 0, n = 0, r_is_our;
-    socklen_t alen         = sizeof(hip_firewall_addr);
+    socklen_t alen         = sizeof(hip_fw_addr);
 
     if (!hip_get_firewall_status()) {
         goto out_err;
@@ -380,10 +378,10 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
                                       (void *) (r_is_our ? hit_r : hit_s), HIP_PARAM_HIT,
                                       sizeof(struct in6_addr)), -1, "build param contents failed\n");
 
-    bzero(&hip_firewall_addr, alen);
-    hip_firewall_addr.sin6_family = AF_INET6;
-    hip_firewall_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    hip_firewall_addr.sin6_addr   = in6addr_loopback;
+    bzero(&hip_fw_addr, alen);
+    hip_fw_addr.sin6_family = AF_INET6;
+    hip_fw_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
+    hip_fw_addr.sin6_addr   = in6addr_loopback;
 
     n = sendto(hip_firewall_sock_lsi_fd,
                (char *) msg,

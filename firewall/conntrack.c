@@ -637,7 +637,8 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
                          sizeof(struct hip_locator_info_addr_item);
         HIP_DEBUG("esp_tuple_from_esp_info_locator: %d addresses in locator\n", n);
         if (n > 0) {
-            locator_addr = (void *) locator + sizeof(struct hip_locator);
+            locator_addr = (struct hip_locator_info_addr_item *)
+                           ((uint8_t *) locator + sizeof(struct hip_locator));
             while (n > 0) {
                 struct esp_address *esp_address = malloc(sizeof(struct esp_address));
                 memcpy(&esp_address->dst_addr,
@@ -1193,7 +1194,8 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
             goto out_err;
         }
 
-        locator_addr = (void *) locator + sizeof(struct hip_locator);
+        locator_addr = (struct hip_locator_info_addr_item *)
+                       ((uint8_t *) locator + sizeof(struct hip_locator));
 
         while (n > 0) {
             esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
@@ -1233,7 +1235,8 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
                 / sizeof(struct hip_locator_info_addr_item);
         HIP_DEBUG(" %d locator addresses\n", n);
 
-        locator_addr = (void *) locator + sizeof(struct hip_locator);
+        locator_addr = (struct hip_locator_info_addr_item *)
+                       ((uint8_t *) locator + sizeof(struct hip_locator));
         _HIP_DEBUG("locator addr: old tuple");
         print_esp_tuple(esp_tuple);
 
@@ -1683,9 +1686,6 @@ static int check_packet(const struct in6_addr *ip6_src,
     } else if (common->type_hdr == HIP_NOTIFY) {
         // don't process and let pass through
         err = 1;
-    } else if (common->type_hdr == HIP_BOS) {   //removed from base01
-        // don't process and let pass through
-        err = 1;
     } else if (common->type_hdr == HIP_CLOSE) {
         err = handle_close(ip6_src, ip6_dst, common, tuple, ctx);
     } else if (common->type_hdr == HIP_CLOSE_ACK) {
@@ -1879,17 +1879,18 @@ out_err:
 /**
  * Filter connection tracking state (in general)
  *
- * @param ip6_src source IP address of the control packet
- * @param ip6_dst destination IP address of the packet
- * @param buf the control packet
- * @param option special state options to be checked
- * @param accept force accepting of the packet if set to one
- * @param ctx context for the control packet
- * @return verdict for the packet (zero means drop, one means pass, negative error)
+ * @param ip6_src       source IP address of the control packet
+ * @param ip6_dst       destination IP address of the packet
+ * @param buf           the control packet
+ * @param option        special state options to be checked
+ * @param must_accept   force accepting of the packet if set to one
+ * @param ctx context   for the control packet
+ * @return              verdict for the packet (zero means drop, one means pass,
+ *                      negative error)
  */
 int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
-                 struct hip_common *buf, const struct state_option *option, const int accept,
-                 hip_fw_context_t *ctx)
+                 struct hip_common *buf, const struct state_option *option,
+                 const int must_accept, hip_fw_context_t *ctx)
 {
     struct hip_data *data = NULL;
     struct tuple *tuple   = NULL;
@@ -1923,18 +1924,18 @@ int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
     if (!tuple) {
         HIP_DEBUG("filter_state: no tuple found \n");
 
-        if (option->int_opt.value == CONN_NEW && option->int_opt.boolean && !accept) {
+        if (option->int_opt.value == CONN_NEW && option->int_opt.boolean && !must_accept) {
             return_value = 1;
             goto out_err;
         } else if (option->int_opt.value == CONN_ESTABLISHED &&
-                   !option->int_opt.boolean && !accept) {
+                   !option->int_opt.boolean && !must_accept) {
             return_value = 1;
             goto out_err;
         }
     } else {
         if ((option->int_opt.value == CONN_ESTABLISHED && option->int_opt.boolean
-             && !accept) || (option->int_opt.value == CONN_NEW &&
-                             !option->int_opt.boolean && !accept)) {
+             && !must_accept) || (option->int_opt.value == CONN_NEW &&
+                                 !option->int_opt.boolean && !must_accept)) {
             remove_connection(tuple->connection);
             tuple->connection = NULL;
 

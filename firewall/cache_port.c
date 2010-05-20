@@ -150,7 +150,7 @@ firewall_port_cache_hl_t *hip_firewall_port_cache_db_match(in_port_t port,
     firewall_port_cache_hl_t *found_entry = NULL;
     char key[FIREWALL_PORT_CACHE_KEY_LENGTH];
     char protocol[10], proto_for_bind[10];
-    int bind = FIREWALL_PORT_CACHE_IPV4_TRAFFIC; //3 - default to ipv4, non-LSI traffic
+    int bindto = FIREWALL_PORT_CACHE_IPV4_TRAFFIC; //3 - default to ipv4, non-LSI traffic
 
     memset(protocol, 0, sizeof(protocol));
     memset(proto_for_bind, 0, sizeof(proto_for_bind));
@@ -187,8 +187,8 @@ firewall_port_cache_hl_t *hip_firewall_port_cache_db_match(in_port_t port,
     }
 
     if (!found_entry) {
-        bind        = hip_get_proto_info(ntohs(port), proto_for_bind);
-        hip_port_cache_add_new_entry(key, bind);
+        bindto      = hip_get_proto_info(ntohs(port), proto_for_bind);
+        hip_port_cache_add_new_entry(key, bindto);
         found_entry = (firewall_port_cache_hl_t *) hip_ht_find(
             firewall_port_cache_db,
             (void *) key);

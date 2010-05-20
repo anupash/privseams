@@ -16,7 +16,7 @@
 #include "lib/tool/xfrmapi.h"
 #include "lib/core/debug.h"
 #include "lib/core/protodefs.h"
-#include "lib/conf/conf.h"
+#include "lib/core/conf.h"
 #include "oppipdb.h"
 #include "hiprelay.h"
 #include "hadb.h"
@@ -36,7 +36,7 @@
  */
 extern int hip_firewall_sock_lsi_fd;
 
-int hip_set_cloexec_flag(int desc, int value);
+int set_cloexec_flag(int desc, int value);
 
 int hipd_init(const uint64_t flags);
 /**

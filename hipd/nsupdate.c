@@ -80,7 +80,7 @@ int hip_get_nsupdate_status(void)
  * @return          newly allocated string with result or NULL in case of error
  */
 
-static char *make_env(char *name, char *value)
+static char *make_env(const char *name, char *value)
 {
     char *result = NULL;
     int err      = 0;
@@ -212,11 +212,11 @@ static int run_nsupdate(char *ips, char *hit, int start)
         char *env_hit   = make_env(VAR_HIT, hit);
         char *env_start = make_env(VAR_START, start_str);
 
-        char *cmd[]     = { NSUPDATE_ARG0, NULL };
-        char *env[]     = { env_ips, env_hit, env_start, NULL };
+        const char *cmd[]     = { NSUPDATE_ARG0, NULL };
+        char *const env[]     = { env_ips, env_hit, env_start, NULL };
 
         HIP_DEBUG("Executing %s with %s; %s; %s\n", NSUPDATE_PL, env_hit, env_ips, env_start);
-        execve(NSUPDATE_PL, cmd, env);
+        execve(NSUPDATE_PL, (char **) cmd, env);
 
         if (env_ips) {
             free(env_ips);

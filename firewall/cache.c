@@ -279,11 +279,10 @@ void hip_firewall_cache_init_hldb(void)
 
 /**
  * Uninitialize cache database
- *
- * @param exit 1 if the firewall is exiting and the hashtable should be
- *               freed or zero otherwise
+ * @param exiting   1 if the firewall is exiting and the hashtable should be
+ *                  freed or zero otherwise
  */
-void hip_firewall_cache_delete_hldb(int exit)
+void hip_firewall_cache_delete_hldb(int exiting)
 {
     int i;
     firewall_cache_hl_t *this = NULL;
@@ -305,7 +304,7 @@ void hip_firewall_cache_delete_hldb(int exit)
      * we handle it in firewall_exit(). */
 
     HIP_UNLOCK_HT(&firewall_cache_db);
-    if (exit)
+    if (exiting)
         hip_ht_uninit(firewall_cache_db);
     HIP_DEBUG("End hldbdb delete\n");
 }

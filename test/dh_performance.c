@@ -12,19 +12,23 @@
  *
  */
 
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <stdio.h>              /* printf & co */
-#include <stdlib.h>             /* exit & co */
-#include <openssl/dh.h>         /* open ssl library for DH operations */
-#include <openssl/sha.h>        /* open ssl library for SHA operations */
-#include <openssl/dsa.h>        /* open ssl library for DSA operations */
+#include <openssl/dh.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
 #include <openssl/sha.h>
+#include <sys/time.h>
 
-#include "config.h"
 #include "lib/core/crypto.h"
+#include "lib/core/debug.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hashchain.h"
 #include "lib/core/performance.h"
+#include "lib/tool/pk.h"
 
 
 /*! \brief Number of benchmark runs */
@@ -339,7 +343,7 @@ int main(int argc, char **argv)
     float bench_secs      = 0.0;
     struct timeval bench_time;
     unsigned int sig_len;
-    perf_set_t *perf_set = NULL;
+    perf_set_t *perfset = NULL;
 
     printf("Default settings RSA: key pool of %d keys of length %d.\n",
            sw_create_rsa,
@@ -364,20 +368,20 @@ int main(int argc, char **argv)
     }
 
     if (sw_file_output) {
-        perf_set = hip_perf_create(PS_MAX);
+        perfset = hip_perf_create(PS_MAX);
 
         check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
 
-        hip_perf_set_name(perf_set, PS_DH_CREATE, "PS_DH_CREATE.csv");
-        hip_perf_set_name(perf_set, PS_DH_SHARE, "PS_DH_SHARE.csv");
-        hip_perf_set_name(perf_set, PS_RSA_CREATE, "PS_RSA_CREATE.csv");
-        hip_perf_set_name(perf_set, PS_RSA_SIGN, "PS_RSA_SIGN.csv");
-        hip_perf_set_name(perf_set, PS_RSA_VERIFY, "PS_RSA_VERIFY.csv");
-        hip_perf_set_name(perf_set, PS_DSA_CREATE, "PS_DSA_CREATE.csv");
-        hip_perf_set_name(perf_set, PS_DSA_SIGN, "PS_DSA_SIGN.csv");
-        hip_perf_set_name(perf_set, PS_DSA_VERIFY, "PS_DSA_VERIFY.csv");
-        hip_perf_set_name(perf_set, PS_HC_CREATE, "PS_HC_CREATE.csv");
-        hip_perf_set_name(perf_set, PS_HASH,
+        hip_perf_set_name(perfset, PS_DH_CREATE, "PS_DH_CREATE.csv");
+        hip_perf_set_name(perfset, PS_DH_SHARE, "PS_DH_SHARE.csv");
+        hip_perf_set_name(perfset, PS_RSA_CREATE, "PS_RSA_CREATE.csv");
+        hip_perf_set_name(perfset, PS_RSA_SIGN, "PS_RSA_SIGN.csv");
+        hip_perf_set_name(perfset, PS_RSA_VERIFY, "PS_RSA_VERIFY.csv");
+        hip_perf_set_name(perfset, PS_DSA_CREATE, "PS_DSA_CREATE.csv");
+        hip_perf_set_name(perfset, PS_DSA_SIGN, "PS_DSA_SIGN.csv");
+        hip_perf_set_name(perfset, PS_DSA_VERIFY, "PS_DSA_VERIFY.csv");
+        hip_perf_set_name(perfset, PS_HC_CREATE, "PS_HC_CREATE.csv");
+        hip_perf_set_name(perfset, PS_HASH,
                           "PS_HC_HASHLOOPS_100_PER_ENTRY.csv");
 
         printf( "-------------------------------\n"
@@ -395,7 +399,7 @@ int main(int argc, char **argv)
                 "          PS_HC_CREATE:  Hash chain creation\n"
                 "          PS_HC_HASHLOOPS_100_PER_ENTRY: Hash performance. 100 hashes per row!\n"
                 "-------------------------------\n\n");
-        hip_perf_open(perf_set);
+        hip_perf_open(perfset);
     }
 
     if (!sw_cpuload) {
@@ -692,11 +696,11 @@ int main(int argc, char **argv)
         if (sw_file_output) {
             hip_perf_start_benchmark(perf_set, PS_DH_SHARE);
         }
-        hip_gen_dh_shared_key(  dh_key_pool[i % sw_create_dh],
-                                pub_key,
-                                dh_size,
-                                shared_key,
-                                sw_shared_key_len);
+        hip_gen_dh_shared_key(dh_key_pool[i % sw_create_dh],
+                              pub_key,
+                              dh_size,
+                              shared_key,
+                              sw_shared_key_len);
         if (sw_file_output) {
             hip_perf_stop_benchmark(perf_set, PS_DH_SHARE);
             hip_perf_write_benchmark(perf_set, PS_DH_SHARE);

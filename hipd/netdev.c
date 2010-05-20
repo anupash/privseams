@@ -11,7 +11,7 @@
  * - automatic determination of source address for a packet if one has not been given (source
  *   routing)
  * - automatic mapping of a remote HIT or LSI to its corresponding IP address(es) through
- *   HADB, hosts files, DHT or DNS when no mapping was not given (e.g. in referral scenarios)
+ *   HADB, hosts files or DNS when no mapping was not given (e.g. in referral scenarios)
  * - triggering of base exchange
  *
  * @brief Localhost address cache and related management functions
@@ -34,7 +34,7 @@
 #include "maintenance.h"
 #include "lib/core/debug.h"
 #include "lib/tool/lutil.h"
-#include "lib/conf/conf.h"
+#include "lib/core/conf.h"
 #include "lib/core/hostsfiles.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hit.h"
@@ -48,6 +48,9 @@
 
 #define FA_IGNORE 0
 #define FA_ADD 1
+
+/** Maximum lenght of the address family string */
+#define FAM_STR_MAX               32
 
 /**
  * This is the white list. For every interface, which is in our white list,
@@ -411,7 +414,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
         memcpy(&n->addr, addr, hip_sockaddr_len(addr));
     }
 
-    /* Add secret to address. Used with openDHT removable puts. */
+    /* Add secret to address. */
     memset(tmp_secret, 0, sizeof(tmp_secret));
     err_rand = RAND_bytes(tmp_secret, 40);
     memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
@@ -527,20 +530,21 @@ static int hip_netdev_find_if(struct sockaddr *addr)
 
 #ifdef CONFIG_HIP_DEBUG /* Debug block. */
     {
-        char ipv6_str[INET6_ADDRSTRLEN], *fam_str = NULL;
+        char ipv6_str[INET6_ADDRSTRLEN];
+        char fam_str[FAM_STR_MAX];
 
         if (addr->sa_family == AF_INET6) {
-            fam_str = "AF_INET6";
+            strncpy(fam_str, "AF_INET6", FAM_STR_MAX);
             inet_ntop(AF_INET6,
                       &(((struct sockaddr_in6 *) (void *) addr)->sin6_addr),
                       ipv6_str, INET6_ADDRSTRLEN);
         } else if (addr->sa_family == AF_INET) {
-            fam_str = "AF_INET";
+            strncpy(fam_str, "AF_INET", FAM_STR_MAX);
             inet_ntop(AF_INET,
                       &(((struct sockaddr_in *) (void *) addr)->sin_addr),
                       ipv6_str, INET6_ADDRSTRLEN);
         } else {
-            fam_str = "not AF_INET or AF_INET6";
+            strncpy(fam_str, "not AF_INET or AF_INET6", FAM_STR_MAX);
             memset(ipv6_str, 0, INET6_ADDRSTRLEN);
         }
 
@@ -650,7 +654,7 @@ out_err:
 
 /**
  * Try to map a given HIT or an LSI to a routable IP address using local host association
- * data base, hosts files, DNS or DHT (in the presented order).
+ * data base, hosts files or DNS (in the presented order).
  *
  * @param hit a HIT to map to a LSI
  * @param lsi an LSI to map to an IP address
@@ -677,7 +681,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
 
     if (ha && !ipv6_addr_any(&ha->peer_addr)) {
         ipv6_addr_copy(addr, &ha->peer_addr);
-        HIP_DEBUG("Found peer address from hadb, skipping hosts and opendht look up\n");
+        HIP_DEBUG("Found peer address from hadb, skipping hosts look up\n");
         err = 0;
         goto out_err;
     }
@@ -686,9 +690,7 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
      * then resolve the hostname to an IP, and a HIT or LSI,
      * depending on dst_hit value.
      * If dst_hit is a HIT -> find LSI and hostname
-     * If dst_hit is an LSI -> find HIT and hostname
-     * We can fallback to e.g. DHT search if the mapping is not
-     * found from local files.*/
+     * If dst_hit is an LSI -> find HIT and hostname */
 
     /* try to resolve HIT to IPv4/IPv6 address by '/etc/hip/hosts'
      * and '/etc/hosts' files
@@ -885,16 +887,11 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
         }
     }
 
-    /* Try to look up peer ip from hosts and opendht */
-    if (err) {
-        err = hip_map_id_to_addr(dst_hit, dst_lsi, dst_addr);
-    }
-
     /* No peer address found; set it to broadcast address
      * as a last resource */
     if (err) {
         struct in_addr bcast = { INADDR_BROADCAST };
-        /* IPv6 multicast (see bos.c) failed to bind() to link local,
+        /* IPv6 multicast failed to bind() to link local,
          * so using IPv4 here -mk */
         HIP_DEBUG("No information of peer found, trying broadcast\n");
         broadcast           = 1;
@@ -912,7 +909,7 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
     /** @todo changing global state won't work with threads */
     hip_nat_status = ha_nat_mode;
 
-    /* To make it follow the same route as it was doing before HDRR/loactors */
+    /* To make it follow the same route as it was doing before locators */
     HIP_IFEL(hip_hadb_add_peer_info(dst_hit, dst_addr,
                                     dst_lsi, NULL), -1,
              "map failed\n");

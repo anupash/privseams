@@ -38,6 +38,8 @@
 
 #define BUFSIZE HIP_MAX_PACKET
 
+#define PROTO_STRING_MAX    16
+
 /**
  * build a message for hipd to trigger a base exchange
  *
@@ -252,9 +254,9 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int ip_hdr_size                            = 0;
     int portDest                               = 0;
     int process_as_lsi                         = 0;
-    char *proto                                = NULL;
     hip_lsi_t lsi_our                          = {0};
     hip_lsi_t lsi_peer                         = {0};
+    char proto[PROTO_STRING_MAX];
     struct in6_addr src_addr, dst_addr;
     struct in_addr src_v4, dst_v4;
     struct ip6_hdr *ip6_hdr                    = (struct ip6_hdr *) m->payload;
@@ -265,11 +267,11 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     switch (ip6_hdr->ip6_nxt) {
     case IPPROTO_UDP:
         portDest = ((struct udphdr *) ((m->payload) + ip_hdr_size))->dest;
-        proto    = "udp6";
+        strcpy(proto, "udp6");
         break;
     case IPPROTO_TCP:
         portDest = ((struct tcphdr *) ((m->payload) + ip_hdr_size))->dest;
-        proto    = "tcp6";
+        strcpy(proto, "tcp6");
         break;
     case IPPROTO_ICMPV6:
         HIP_DEBUG("ICMPv6 packet\n");

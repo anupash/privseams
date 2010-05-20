@@ -18,11 +18,11 @@
 #include <sys/socket.h>
 
 #include "hit_to_ip.h"
+#include "lib/core/conf.h"
 #include "lib/core/list.h"
 #include "lib/core/debug.h"
 #include "lib/core/prefix.h"
 #include "maintenance.h"
-#include "lib/conf/conf.h"
 
 
 int hip_hit_to_ip_status = 0;

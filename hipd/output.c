@@ -592,7 +592,7 @@ int hip_send_i2(const uint8_t packet_type,
         HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv,
                                       transform_hip_suite,
                                       host_id_in_enc_len,
-                                      &ctx->hadb_entry->hip_enc_out.key,
+                                      ctx->hadb_entry->hip_enc_out.key,
                                       HIP_DIRECTION_ENCRYPT), -1,
                  "Building of param encrypted failed\n");
 

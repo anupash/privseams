@@ -49,10 +49,10 @@
 #define _BSD_SOURCE
 
 #include "config.h"
+#include "conf.h"
 #include "debug.h"
 #include "straddr.h"
 #include "lib/tool/lutil.h"
-#include "lib/conf/conf.h"
 
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,
@@ -133,12 +133,13 @@ int hip_set_auto_logdebug(const char *cfile)
     FILE *hip_config = NULL;
 
     List list;
-    char *c, line[128], *fname, *args[64], *comment;
+    char *c, line[128], *args[64], *comment;
+    char fname[2 * sizeof(HIPL_CONFIG_FILE)];
 
     if (!strcmp(cfile, "default")) {
-        fname = HIPL_CONFIG_FILE;
+        strcpy(fname, HIPL_CONFIG_FILE);
     } else {
-        fname = (char *) cfile;
+        strncpy(fname, cfile, sizeof(fname));
     }
 
     HIP_IFEL(!(hip_config = fopen(fname, "r")), -1,
@@ -219,9 +220,9 @@ out_err:
  * @note Do not use this function outside of this file at all.
  *
  */
-void hip_handle_log_error(int logtype)
+void hip_handle_log_error(int log_type)
 {
-    fprintf(stderr, "log (type=%d) failed, ignoring\n", logtype);
+    fprintf(stderr, "log (type=%d) failed, ignoring\n", log_type);
 }
 
 /**
@@ -643,7 +644,7 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
                         const char *prefix,
                         const struct sockaddr *sockaddr)
 {
-    char *default_str = "<unknown>";
+    const char *default_str = "<unknown>";
     int maxlen;
     void *addr;
     int family        = sockaddr->sa_family;

@@ -172,8 +172,8 @@ void hip_make_keymat(char *kij,
     while (dstoffset < dstbuflen) {
         hip_build_digest(HIP_DIGEST_SHA1, shabuffer,
                          kij_len + HIP_AH_SHA_LEN + 1,
-                         dstbuf + dstoffset);
-        seedkey    = dstbuf + dstoffset;
+                         (uint8_t *) dstbuf + dstoffset);
+        seedkey    = (uint8_t *) dstbuf + dstoffset;
         dstoffset += HIP_AH_SHA_LEN;
         index_nbr++;
         hip_update_keymat_buffer(shabuffer, seedkey, HIP_AH_SHA_LEN,
@@ -203,23 +203,23 @@ void hip_make_keymat(char *kij,
  * hip_keymat_draw - draw keying material
  * @param keymat pointer to the keymat structure which contains information
  *          about the actual
- * @param length size of keymat structure
+ * @param len size of keymat structure
  *
  * @return pointer the next point where one can draw the next keymaterial
  */
-static void *hip_keymat_draw(struct hip_keymat_keymat *keymat, int length)
+static void *hip_keymat_draw(struct hip_keymat_keymat *keymat, int len)
 {
     /* todo: remove this function */
     void *ret = NULL;
 
-    if (length > keymat->keymatlen - keymat->offset) {
+    if (len > keymat->keymatlen - keymat->offset) {
         HIP_DEBUG("Tried to draw more keys than are available\n");
         goto out_err;
     }
 
-    ret             = keymat->keymatdst + keymat->offset;
+    ret             = (uint8_t *) keymat->keymatdst + keymat->offset;
 
-    keymat->offset += length;
+    keymat->offset += len;
 
 out_err:
     return ret;

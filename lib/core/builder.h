@@ -161,12 +161,6 @@ int hip_build_param_cert_x509_req(struct hip_common *, struct in6_addr *);
 int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
 int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);
 
-int hip_build_param_opendht_set(struct hip_common *, const char *);
-int hip_build_param_opendht_gw_info(struct hip_common *,
-                                    struct in6_addr *,
-                                    uint32_t,
-                                    uint16_t,
-                                    char *);
 int hip_build_param_hit_to_ip_set(struct hip_common *, const char *);
 int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
 void hip_calc_hdr_len(struct hip_common *);
@@ -197,18 +191,18 @@ void *hip_get_param(const struct hip_common *, hip_tlv_type_t);
 void *hip_get_param_contents(const struct hip_common *, hip_tlv_type_t);
 void *hip_get_param_contents_direct(const void *);
 hip_tlv_len_t hip_get_param_contents_len(const void *);
-int hip_get_param_host_id_di_type_len(struct hip_host_id *, char **, int *);
+int hip_get_param_host_id_di_type_len(struct hip_host_id *, const char **, int *);
 char *hip_get_param_host_id_hostname(struct hip_host_id *);
 hip_tlv_len_t hip_get_param_total_len(const void *);
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *,
                                                        const uint16_t);
 hip_tlv_type_t hip_get_param_type(const void *);
 uint16_t hip_get_msg_checksum(struct hip_common *msg);
-char *hip_message_type_name(const uint8_t);
+const char *hip_message_type_name(const uint8_t);
 struct hip_common *hip_msg_alloc(void);
 void hip_msg_free(struct hip_common *);
 void hip_msg_init(struct hip_common *);
-char *hip_param_type_name(const hip_tlv_type_t);
+const char *hip_param_type_name(const hip_tlv_type_t);
 void hip_set_msg_err(struct hip_common *, hip_hdr_err_t);
 void hip_set_msg_checksum(struct hip_common *msg, uint8_t checksum);
 void hip_set_msg_total_len(struct hip_common *, uint16_t);
@@ -224,8 +218,6 @@ int dsa_to_hip_endpoint(DSA *dsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags_t endpoint_flags,
                         const char *hostname);
-int hip_build_param_hip_hdrr_info(struct hip_common *msg,
-                                  struct hip_hdrr_info *hdrr_info);
 int hip_build_param_reg_info(hip_common_t *msg,
                              const void *service_list,
                              const unsigned int service_count);

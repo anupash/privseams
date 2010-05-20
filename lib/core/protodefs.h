@@ -42,13 +42,13 @@
 #define HIP_I2                  3
 #define HIP_R2                  4
 #define HIP_CER                 5
-#define HIP_BOS                 11 ///< removed from ietf-hip-base-01
+
 #define HIP_UPDATE              16
 #define HIP_NOTIFY              17
 #define HIP_CLOSE               18
 #define HIP_CLOSE_ACK           19
 /* 20 was already occupied by HIP_PSIG so shifting HIP_PSIG and HIP_TRIG plus 1*/
-#define HIP_HDRR                20
+/* free slot */
 #define HIP_PSIG                21 ///< lightweight HIP pre signature
 #define HIP_TRIG                22 ///< lightweight HIP signature trigger
 #define HIP_LUPDATE             23
@@ -181,14 +181,14 @@
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PARAM_PSEUDO_HIT            32780
 /* unused, was HIP_PARAM_BLIND_NONCE 32785 */
-#define HIP_PARAM_OPENDHT_GW_INFO       32786
+/* unused, was HIP_PARAM_OPENDHT_GW_INFO 32786 */
 #define HIP_PARAM_ENCAPS_MSG            32787
 #define HIP_PARAM_PORTPAIR              32788
 #define HIP_PARAM_SRC_ADDR              32789
 #define HIP_PARAM_DST_ADDR              32790
 /* free slot */
 #define HIP_PARAM_HA_INFO               32792
-#define HIP_PARAM_OPENDHT_SET           32793
+/* free slot */
 #define HIP_PARAM_CERT_SPKI_INFO        32794
 #define HIP_PARAM_SRC_TCP_PORT          32795
 #define HIP_PARAM_DST_TCP_PORT          32796
@@ -209,7 +209,6 @@
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM          32812
 #define HIP_PARAM_TRANSFORM_ORDER       32813
-#define HIP_PARAM_HDRR_INFO             32814
 /* free slots */
 #define HIP_PARAM_SECRET                32817
 #define HIP_PARAM_BRANCH_NODES          32818
@@ -578,7 +577,7 @@ typedef struct hip_common hip_common_t;
 typedef struct hip_tlv_common hip_tlv_common_t;
 
 struct hip_crypto_key {
-    unsigned char key[HIP_MAX_KEY_LEN];
+    uint8_t key[HIP_MAX_KEY_LEN];
 };
 
 typedef struct hip_crypto_key hip_crypto_key_t;
@@ -1121,15 +1120,6 @@ struct hip_keys {
     struct hip_crypto_key enc;
 } __attribute__ ((packed));
 
-struct hip_opendht_gw_info {
-    hip_tlv_type_t  type;
-    hip_tlv_len_t   length;
-    struct in6_addr addr;
-    uint32_t        ttl;
-    uint16_t        port;
-    char            host_name[256];
-} __attribute__ ((packed));
-
 struct hip_cert_x509_req {
     hip_tlv_type_t  type;
     hip_tlv_len_t   length;
@@ -1149,12 +1139,6 @@ struct hip_transformation_order {
     int            transorder;
 } __attribute__ ((packed));
 
-struct hip_opendht_set {
-    hip_tlv_type_t type;
-    hip_tlv_len_t  length;
-    char           name[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-} __attribute__ ((packed));
-
 
 #define HIT_TO_IP_ZONE_MAX_LEN 256
 
@@ -1162,15 +1146,6 @@ struct hip_hit_to_ip_set {
     hip_tlv_type_t type;
     hip_tlv_len_t  length;
     char           name[HIT_TO_IP_ZONE_MAX_LEN];
-} __attribute__ ((packed));
-
-struct hip_hdrr_info {
-    hip_tlv_type_t  type;
-    hip_tlv_len_t   length;
-    struct in6_addr dht_key;
-    /* 0 if succesfully verified otherwise negative */
-    int             sig_verified;
-    int             hit_verified;
 } __attribute__ ((packed));
 
 struct hip_heartbeat {

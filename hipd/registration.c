@@ -560,7 +560,7 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
     /* Allocate memory for types */
 
     /* Get a pointer to the actual registration types. */
-    reg_types = hip_get_param_contents_direct(reg_request) +
+    reg_types = (uint8_t *) hip_get_param_contents_direct(reg_request) +
                 sizeof(reg_request->lifetime);
 
     HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, " \
@@ -696,7 +696,7 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 
     type_count = hip_get_param_contents_len(reg_response) -
                  sizeof(reg_response->lifetime);
-    reg_types  = hip_get_param_contents_direct(reg_response) +
+    reg_types  = (uint8_t *) hip_get_param_contents_direct(reg_response) +
                  sizeof(reg_response->lifetime);
 
     if (reg_response->lifetime == 0) {
@@ -743,7 +743,7 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
     while (hip_get_param_type(reg_failed) == HIP_PARAM_REG_FAILED) {
         type_count = hip_get_param_contents_len(reg_failed) -
                      sizeof(reg_failed->failure_type);
-        reg_types  = hip_get_param_contents_direct(reg_failed) +
+        reg_types  = (uint8_t *) hip_get_param_contents_direct(reg_failed) +
                      sizeof(reg_failed->failure_type);
         hip_get_registration_failure_string(reg_failed->failure_type,
                                             reason);

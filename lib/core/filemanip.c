@@ -21,7 +21,7 @@
  * @param filename the file name of the lock file
  * @return zero on success and negative on error
  */
-int hip_remove_lock_file(char *filename)
+int hip_remove_lock_file(const char *filename)
 {
     return unlink(filename);
 }
@@ -34,7 +34,7 @@ int hip_remove_lock_file(char *filename)
  *        and existing process and kill it, or zero otherwise
  * @return zero on success and negative on error
  */
-int hip_create_lock_file(char *filename, int killold)
+int hip_create_lock_file(const char *filename, int killold)
 {
     int err     = 0, fd = 0, old_pid = 0, new_pid_str_len = 0;
     char old_pid_str[64], new_pid_str[64];
@@ -113,7 +113,7 @@ out_err:
  *
  * @return 0 if successful, or negative on error.
  */
-int check_and_create_dir(char *dirname, mode_t mode)
+int check_and_create_dir(const char *dirname, mode_t mode)
 {
     int err = 0;
     struct stat dir_stat;
@@ -141,7 +141,7 @@ int check_and_create_dir(char *dirname, mode_t mode)
  *
  * @return file descriptor of the created file
  */
-int check_and_create_file(char *filename, mode_t mode)
+int check_and_create_file(const char *filename, mode_t mode)
 {
     int err = 0, fd = 0;
     struct stat file_stat;
@@ -170,7 +170,7 @@ int check_and_create_file(char *filename, mode_t mode)
  *
  * @param filenamebase the file name based for keys
  */
-void change_key_file_perms(char *filenamebase)
+void change_key_file_perms(const char *filenamebase)
 {
     char *pubfilename = NULL;
     int pubfilename_len;

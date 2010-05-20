@@ -24,11 +24,9 @@
 #include "hipd.h"
 #include "init.h"
 #include "esp_prot_light_update.h"
+#include "oppdb.h"
 #include "hip_socket.h"
-#include "nsupdate.h"
 #include "pkt_handling.h"
-#include "output.h"
-#include "user.h"
 #include "lib/core/capability.h"
 #include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
@@ -48,6 +46,7 @@
 
 /** Maximum size of a modprobe command line */
 #define MODPROBE_MAX_LINE       64
+
 
 /** ICMPV6_FILTER related stuff */
 #define BIT_CLEAR(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
@@ -88,31 +87,6 @@ static void hip_sig_chld(int signum)
 }
 
 /**
- * set or unset close-on-exec flag for a given file descriptor
- *
- * @param desc the file descriptor
- * @param value 1 if to set or zero for unset
- * @return the previous flags
- */
-int hip_set_cloexec_flag(int desc, int value)
-{
-    int oldflags = fcntl(desc, F_GETFD, 0);
-    /* If reading the flags failed, return error indication now.*/
-    if (oldflags < 0) {
-        return oldflags;
-    }
-    /* Set just the flag we want to set. */
-
-    if (value != 0) {
-        oldflags |=  FD_CLOEXEC;
-    } else {
-        oldflags &= ~FD_CLOEXEC;
-    }
-    /* Store modified flag word in the descriptor. */
-    return fcntl(desc, F_SETFD, oldflags);
-}
-
-/**
  * Create a file with the given contents unless it already exists
  *
  * @param path the file with its path
@@ -132,15 +106,80 @@ static void hip_create_file_unless_exists(const char *path, const char *contents
     fclose(fp);
 }
 
+#define HIPL_CONFIG_FILE_EX \
+    "# Format of this file is as with hipconf, but without hipconf prefix\n\
+# add hi default    # add all four HITs (see bug id 522)\n\
+# add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
+# add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
+# add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
+# add server relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\
+# add server full-relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\
+hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
+# hit-to-ip set hit-to-ip.infrahip.net. # resolve HITs to locators in dynamic DNS zone\n\
+nsupdate on # send dynamic DNS updates\n\
+# add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
+# heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
+# locator on        # host sends all of its locators in base exchange\n\
+# datapacket on # experimental draft hiccups extensions\n\
+# shotgun on # use all possible src/dst IP combinations to send I1/UPDATE\n\
+# opp normal|advanced|none\n\
+# transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
+nat plain-udp       # use UDP capsulation (for NATted environments)\n\
+#nat port local 11111 # change local default UDP port\n\
+#nat port peer 22222 # change local peer UDP port\n\
+debug medium        # debug verbosity: all, medium or none\n"
+
+#define HIPL_HOSTS_FILE_EX \
+    "# This file stores the HITs of the hosts, in a similar fashion to /etc/hosts.\n\
+# The aliases are optional.  Examples:\n\
+#2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
+#2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
+
+#define HIPL_NSUPDATE_CONF_FILE     HIPL_SYSCONFDIR "/nsupdate.conf"
+
+#define HIPL_NSUPDATE_CONF_FILE_EX \
+    "##########################################################\n" \
+    "# configuration examples\n" \
+    "##########################################################\n" \
+    "# update records for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.\n" \
+    "# $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';\n" \
+    "# or in some other zone\n" \
+    "# $HIT_TO_IP_ZONE = 'hit-to-ip.example.org.';\n" \
+    "\n" \
+    "# update is sent to SOA if server empty\n" \
+    "# $HIT_TO_IP_SERVER = '';\n" \
+    "# or you may define it \n" \
+    "# $HIT_TO_IP_SERVER = 'ns.example.net.';\n" \
+    "\n" \
+    "# name of key if you configured it on the server\n" \
+    "# please also chown this file to nobody and chmod 400\n" \
+    "# $HIT_TO_IP_KEY_NAME='key.hit-to-ip';\n" \
+    "# $HIT_TO_IP_KEY_NAME = '';\n" \
+    "\n" \
+    "# secret of that key\n" \
+    "# $HIT_TO_IP_KEY_SECRET='Ousu6700S9sfYSL4UIKtvnxY4FKwYdgXrnEgDAu/rmUAoyBGFwGs0eY38KmYGLT1UbcL/O0igGFpm+NwGftdEQ==';\n" \
+    "# $HIT_TO_IP_KEY_SECRET = '';\n" \
+    "\n" \
+    "# TTL inserted for the records\n" \
+    "# $HIT_TO_IP_TTL = 1;\n" \
+    "###########################################################\n" \
+    "# domain with ORCHID prefix \n" \
+    "# $REVERSE_ZONE = '1.0.0.1.0.0.2.ip6.arpa.'; \n" \
+    "# \n" \
+    "# $REVERSE_SERVER = 'ptr-soa-hit.infrahip.net.'; # since SOA 1.0.0.1.0.0.2.ip6.arpa. is dns1.icann.org. now\n" \
+    "# $REVERSE_KEY_NAME = '';\n" \
+    "# $REVERSE_KEY_SECRET = '';\n" \
+    "# $REVERSE_TTL = 86400;\n" \
+    "# System hostname is used if empty\n" \
+    "# $REVERSE_HOSTNAME = 'stargazer-hit.pc.infrahip.net';\n" \
+    "###########################################################\n"
+
 /**
  * load hipd configuration files
  */
 static void hip_load_configuration(void)
 {
     const char *cfile = "default";
-
-    /* HIPL_CONFIG_FILE, HIPL_CONFIG_FILE_EX and so on are defined in
-     * the auto-generated config.h */
 
     hip_create_file_unless_exists(HIPL_CONFIG_FILE, HIPL_CONFIG_FILE_EX);
 
@@ -187,32 +226,33 @@ static void hip_set_os_dep_variables(void)
 }
 
 /**
- * initialize a raw ipv4 socket
- *
- * @param hip_raw_sock_v4 the raw socket to initialize
+ * Initialize a raw ipv4 socket.
  * @param proto the protocol for the raw socket
- * @return zero on success or negative on failure
+ * @return      positive fd on success, -1 otherwise
  */
-static int hip_init_raw_sock_v4(int *hip_raw_sock_v4, int proto)
+static int hip_init_raw_sock_v4(int proto)
 {
     int on  = 1, off = 0, err = 0;
+    int sock;
 
-    *hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, proto);
-    hip_set_cloexec_flag(*hip_raw_sock_v4, 1);
-    HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+    sock = socket(AF_INET, SOCK_RAW, proto);
+    set_cloexec_flag(sock, 1);
+    HIP_IFEL(sock <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
     /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
+    err = setsockopt(sock, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
+    err = setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
-    err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+    err = setsockopt(sock, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
 
+    return sock;
+
 out_err:
-    return err;
+    return -1;
 }
 
 /**
@@ -359,30 +399,30 @@ static int init_random_seed(void)
 
 /**
  * Init raw ipv6 socket
- *
- * @param hip_raw_sock_v6 the socket to initialize
  * @param proto protocol for the socket
- *
- * @return zero on success or negative on failure
+ * @return      positive socket fd on success, -1 otherwise
  */
-static int hip_init_raw_sock_v6(int *hip_raw_sock_v6, int proto)
+static int hip_init_raw_sock_v6(int proto)
 {
     int on = 1, off = 0, err = 0;
+    int sock;
 
-    *hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, proto);
-    hip_set_cloexec_flag(*hip_raw_sock_v6, 1);
-    HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
+    sock = socket(AF_INET6, SOCK_RAW, proto);
+    set_cloexec_flag(sock, 1);
+    HIP_IFEL(sock <= 0, 1, "Raw socket creation failed. Not root?\n");
 
     /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+    err = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+    err = setsockopt(sock, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
 
+    return sock;
+
 out_err:
-    return err;
+    return -1;
 }
 
 /**
@@ -425,7 +465,7 @@ out_err:
  */
 static int hip_init_host_ids(void)
 {
-    int err                     = 0;
+    int err = 0;
     struct stat status;
     struct hip_common *user_msg = NULL;
     hip_hit_t default_hit;
@@ -565,11 +605,9 @@ static void hip_init_packet_types(void)
     lmod_register_packet_type(HIP_I2,        "HIP_I2");
     lmod_register_packet_type(HIP_R2,        "HIP_R2");
     lmod_register_packet_type(HIP_CER,       "HIP_CER");
-    lmod_register_packet_type(HIP_BOS,       "HIP_BOS");
     lmod_register_packet_type(HIP_NOTIFY,    "HIP_NOTIFY");
     lmod_register_packet_type(HIP_CLOSE,     "HIP_CLOSE");
     lmod_register_packet_type(HIP_CLOSE_ACK, "HIP_CLOSE_ACK");
-    lmod_register_packet_type(HIP_HDRR,      "HIP_HDRR");
     lmod_register_packet_type(HIP_PSIG,      "HIP_PSIG");
     lmod_register_packet_type(HIP_TRIG,      "HIP_TRIG");
     lmod_register_packet_type(HIP_LUPDATE,   "HIP_LUPDATE");
@@ -702,14 +740,35 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_CLOSED,  &hip_close_ack_check_packet,  20000);
     hip_register_handle_function(HIP_CLOSE_ACK, HIP_STATE_CLOSED,  &hip_close_ack_handle_packet, 30000);
 
-    hip_register_handle_function(HIP_BOS, HIP_STATE_UNASSOCIATED, &hip_handle_bos, 20000);
-    hip_register_handle_function(HIP_BOS, HIP_STATE_I1_SENT,      &hip_handle_bos, 20000);
-    hip_register_handle_function(HIP_BOS, HIP_STATE_I2_SENT,      &hip_handle_bos, 20000);
-
     hip_register_handle_function(HIP_LUPDATE, HIP_STATE_ESTABLISHED, &esp_prot_handle_light_update, 20000);
     hip_register_handle_function(HIP_LUPDATE, HIP_STATE_R2_SENT,     &esp_prot_handle_light_update, 20000);
 
     return err;
+}
+
+/**
+ * set or unset close-on-exec flag for a given file descriptor
+ *
+ * @param desc the file descriptor
+ * @param value 1 if to set or zero for unset
+ * @return the previous flags
+ */
+int set_cloexec_flag(int desc, int value)
+{
+    int oldflags = fcntl(desc, F_GETFD, 0);
+    /* If reading the flags failed, return error indication now.*/
+    if (oldflags < 0) {
+        return oldflags;
+    }
+    /* Set just the flag we want to set. */
+
+    if (value != 0) {
+        oldflags |=  FD_CLOEXEC;
+    } else {
+        oldflags &= ~FD_CLOEXEC;
+    }
+    /* Store modified flag word in the descriptor. */
+    return fcntl(desc, F_SETFD, oldflags);
 }
 
 /**
@@ -808,23 +867,34 @@ int hipd_init(const uint64_t flags)
 
     hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
 
-    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6, IPPROTO_HIP), -1, "raw sock output v6\n");
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4, IPPROTO_HIP), -1, "raw sock output v4\n");
+    hip_raw_sock_output_v6  = hip_init_raw_sock_v6(IPPROTO_HIP);
+    HIP_IFEL(hip_raw_sock_output_v6, -1, "raw sock output v6\n");
+
+    hip_raw_sock_output_v4  = hip_init_raw_sock_v4(IPPROTO_HIP);
+    HIP_IFEL(hip_raw_sock_output_v4, -1, "raw sock output v4\n");
+
     /* hip_nat_sock_input should be initialized after hip_nat_sock_output
        because for the sockets bound to the same address/port, only the last socket seems
        to receive the packets. NAT input socket is a normal UDP socket where as
        NAT output socket is a raw socket. A raw output socket support better the "shotgun"
        extension (sending packets from multiple source addresses). */
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_nat_sock_output_udp, IPPROTO_UDP), -1, "raw sock output udp\n");
-    HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6, IPPROTO_HIP), -1, "raw sock input v6\n");
-    HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4, IPPROTO_HIP), -1, "raw sock input v4\n");
+
+    hip_nat_sock_output_udp = hip_init_raw_sock_v4(IPPROTO_UDP);
+    HIP_IFEL(hip_nat_sock_output_udp, -1, "raw sock output udp\n");
+
+    hip_raw_sock_input_v6   = hip_init_raw_sock_v6(IPPROTO_HIP);
+    HIP_IFEL(hip_raw_sock_input_v6, -1, "raw sock input v6\n");
+
+    hip_raw_sock_input_v4   = hip_init_raw_sock_v4(IPPROTO_HIP);
+    HIP_IFEL(hip_raw_sock_input_v4, -1, "raw sock input v4\n");
+
     HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
 
-    HIP_DEBUG("hip_raw_sock_v6 input = %d\n", hip_raw_sock_input_v6);
-    HIP_DEBUG("hip_raw_sock_v6 output = %d\n", hip_raw_sock_output_v6);
-    HIP_DEBUG("hip_raw_sock_v4 input = %d\n", hip_raw_sock_input_v4);
-    HIP_DEBUG("hip_raw_sock_v4 output = %d\n", hip_raw_sock_output_v4);
-    HIP_DEBUG("hip_nat_sock_udp input = %d\n", hip_nat_sock_input_udp);
+    HIP_DEBUG("hip_raw_sock_v6 input = %d\n",   hip_raw_sock_input_v6);
+    HIP_DEBUG("hip_raw_sock_v6 output = %d\n",  hip_raw_sock_output_v6);
+    HIP_DEBUG("hip_raw_sock_v4 input = %d\n",   hip_raw_sock_input_v4);
+    HIP_DEBUG("hip_raw_sock_v4 output = %d\n",  hip_raw_sock_output_v4);
+    HIP_DEBUG("hip_nat_sock_udp input = %d\n",  hip_nat_sock_input_udp);
     HIP_DEBUG("hip_nat_sock_udp output = %d\n", hip_nat_sock_output_udp);
 
     if (flags & HIPD_START_FLUSH_IPSEC) {
@@ -859,7 +929,7 @@ int hipd_init(const uint64_t flags)
     daemon_addr.sin6_family = AF_INET6;
     daemon_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
     daemon_addr.sin6_addr   = in6addr_loopback;
-    hip_set_cloexec_flag(hip_user_sock, 1);
+    set_cloexec_flag(hip_user_sock, 1);
 
     HIP_IFEL(bind(hip_user_sock, (struct sockaddr *) &daemon_addr,
                   sizeof(daemon_addr)), -1,
@@ -955,7 +1025,7 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
         HIP_ERROR("Can not open socket for UDP\n");
         return -1;
     }
-    hip_set_cloexec_flag(*hip_nat_sock_udp, 1);
+    set_cloexec_flag(*hip_nat_sock_udp, 1);
     err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt udp pktinfo failed\n");
     /* see bug id 212 why RECV_ERR is off */

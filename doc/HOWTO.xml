@@ -2,7 +2,6 @@
 <!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
 "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
 <book>
-  <!-- NOTE: the encoding is not UTF-8 due to bug id 712 -->
   <!-- NOTE: TO GET A TEXT VERSION FROM THIS, TYPE "xmlto txt HOWTO.xml"  -->
   <!-- http://www.docbook.org/tdg/en/html/docbook.html -->
   <!-- http://www.xmlmind.com/xmleditor/  -->
@@ -88,29 +87,8 @@
   <section id="ch_building_doc">
     <title> Building the HIPL Documentation</title>
     <para>
-      Architectural documentation:
+      The XML documentation is built automatically if xmlto is installed.
     </para>
-    <itemizedlist>
-      <listitem><para>
-        % cd doc
-      </para></listitem>
-      <listitem><para>
-        % make design_choices.dvi design_choices.ps design_choices.pdf
-      </para></listitem>
-    </itemizedlist>
-
-    <para>
-      Source code documentation:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-        % cd doc
-      </para></listitem>
-      <listitem><para>
-        % doxygen
-      </para></listitem>
-    </itemizedlist>
-
   </section>
   <section id="ch_kernel">
     <title>Compiling the Kernel</title>
@@ -132,10 +110,6 @@
       If you haven't configured linux kernel before, please use the userspace
       ipsec instead (as described later in this document), or at least consult
       linux/README.
-    </para>
-    <para>
-      The 2.6 kernel series should be compilable with both gcc 2.9x and 3.x
-      series. We recommend the latter.
     </para>
     <para>
       Download linux kernel 2.6.x.y. Compile the kernel with
@@ -361,16 +335,16 @@
       </para></listitem>
     </itemizedlist>
     <para>
-      Next, build HIPL software as follows:
+      Next, install HIPL as follows:
     </para>
     <para>
-      ./configure &amp;&amp; make install
+      make install
     </para>
     <para>
       Notes: you can optionally compile a binary package with "make deb" or "make rpm".
     </para>
     <para>
-      Some features, like the HIP firewall are not compiled by default.
+      Some features are not compiled by default.
       Run "./configure --enable-FEATURE" to compile those.
       See "./configure --help" for a full list of options.
     </para>
@@ -380,6 +354,7 @@
       HIPL source code, please refer to <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/gprof.html" />.
     </para>
  </section>
+<!-- FIXME: the OpenWrt subsections are redundant and should be merged -->
   <section id="ch_openwrt">
     <title>Loading HIPL on OpenWRT</title>
     <para>
@@ -390,24 +365,6 @@
         This is a common part for both La Fonera and Netgear WGT634U.
       </para>
       <orderedlist>
-        <listitem>
-          <para>
-        Install required packages on your system:
-          </para>
-          <para>
-        gcc, binutils, patch, bzip2, flex, bison, make, gettext, pkg-config, unzip, libz-dev and libc.
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-        In Debian/Ubuntu Linux, for example, do like this:
-          </para>
-          <para>
-<programlisting>
-# apt-get install gcc binutils-dev patch bzip2 libbz2-dev flex bison make gettext pkg-config unzip zlib1g-dev libc6-dev
-</programlisting>
-          </para>
-        </listitem>
         <listitem>
           <para>
         If you are using bash, make sure that your shell option does not include the noclobber option. First check if noclobber is included in your shell option.
@@ -584,9 +541,6 @@ $ ls -l bin/
   $ make dist
   $ cp hipl-main.tar.gz path/to/kamikaze/dl
   </programlisting>
-          </para>
-          <para>
-          NOTE: The "main" repository contains the most stable sources. If you encounter problems when running HIPL on OpenWRT, you may want to try the "userspace" repository instead. However, "userspace" is more experimental and might not compile for OpenWRT.
           </para>
         </listitem>
 
@@ -953,26 +907,6 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
         </para>
         <para>
         As La Fonera has only limited flash memory space, you should limit the final rootfs image up to 4 MB at most. It means you are not afford to add packages as you wish. If you are just about to add all of the hipl binary files into your rootfs image, your flash memory would not able to load the oversized image. Therefore the hipl install part in Makefile is carefully designed to copy only necessary files into the rootfs image.
-        </para>
-        <para>
-<programlisting>
-define Package/hipl/install
-    $(INSTALL_DIR) $(1)/etc/init.d/
-    $(INSTALL_DIR) $(1)/etc/hip/
-    $(INSTALL_DIR) $(1)/etc/hip/test/
-    $(INSTALL_DIR) $(1)/etc/modules.d/
-    $(INSTALL_DIR) $(1)/usr/bin/
-    $(INSTALL_DIR) $(1)/usr/sbin/
-
-    $(INSTALL_DATA) ./files/hipd.init $(1)/etc/init.d/hipd
-    $(INSTALL_DATA) ./files/hipfw.init $(1)/etc/init.d/hipfw
-    $(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
-    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/* $(1)/usr/sbin/
-endif
-</programlisting>
-        </para>
-        <para>
-        As you see above, /usr/local directory is totally excluded, and only limited numbers of files in /usr/bin are included, to decrease the total image size as much as possible. If hipl deploys additional binaries besides them, this Makefile also needs to be updated as long as the size of final rootfs image does not exceed 4 MB.
         </para>
         <para>
         If you meet an error like "libintl.h: no such file or directory", try rebuilding gcc and uClibc in toolchain.
@@ -1646,7 +1580,7 @@ $ make V=99
     <title>HIPL Internet Test Servers</title>
     <para>
     Below is a list of public InfraHIP test servers. Crossroads and ashenvale are also running
-    free DHT-based name look up services (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
+    HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
     </para>
     <table id="table_servers" frame="all"><title>Test Servers</title>
     <tgroup cols="1">
@@ -1688,7 +1622,7 @@ $ make V=99
   </section>
 
   <section id="ch_basictest">
-    <title>For Hackers: How to Test HIP Connectivity using Custom Test Software using two Locally Connected Hosts</title>
+    <title>For Hackers: How to Test HIP Connectivity from Command Line using two Locally Connected Hosts</title>
     <para>
       We will show in this section how to connect two hosts using HIP.
       This section is oriented towards hackers and developers.
@@ -1705,8 +1639,8 @@ $ make V=99
     </para>
     <para>
       This section show to developers and maintainers how to test your
-      HIPL installation. The section starts with a IPv6 test applications
-      applications, continues with IPv4-IPv6 interoperability and concludes
+      HIPL installation. The section starts with IPv6 test applications,
+      continues with IPv4-IPv6 interoperability and concludes
       with IPv4 test applications.
     </para>
     <section id="ipv6_appl">
@@ -1725,10 +1659,7 @@ $ make V=99
         ifconfig eth0 inet6 add 3ffe::2/64
       </para></listitem>
       <listitem><para>
-        cd somewhere/hipl
-      </para></listitem>
-      <listitem><para>
-        hipd/hipd # (to start as a background daemon process, add -b flag)
+        hipd # (to start as a background daemon process, add -b flag)
       </para></listitem>
       <listitem><para>
         nc6 -l -p 1111
@@ -1738,36 +1669,32 @@ $ make V=99
       Crash will act as the connection initiator, so we need to configure
       the hosts files of crash:
     </para>
+    <informaltable>
+      <tgroup cols='2'>
+        <thead>
+          <row><entry>File</entry><entry>Line to add</entry></row>
+        </thead>
+        <tbody>
+          <row><entry>/etc/hosts</entry><entry>HIT_OF_OOPS oops</entry></row>
+          <row><entry>/etc/hosts</entry><entry>3ffe::2 oops</entry></row>
+        </tbody>
+      </tgroup>
+    </informaltable>
     <para>
-      crash:
+      You need to run also the following commands at the crash host:
     </para>
     <itemizedlist>
-      <listitem><para>
-        /etc/hosts:
-      </para></listitem>
-      <listitem><para>
-        HIT_OF_OOPS oops
-      </para></listitem>
-      <listitem><para>
-        /etc/hosts:
-      </para></listitem>
-      <listitem><para>
-        3ffe::2 oops
-      </para></listitem>
       <listitem><para>
         ifconfig eth0 inet6 add 3ffe::1/64
       </para></listitem>
       <listitem><para>
-        cd somewhere/hipl
-      </para></listitem>
-      <listitem><para>
-        hipd/hipd
+        hipd
       </para></listitem>
       <listitem><para>
         nc6 oops 1111
       </para></listitem>
       <listitem><para>
-        ;&lt;Type some text in crash, press enter and you
+        &lt;Type some text in crash, press enter and you
         should see some text appearing in the output of the hosts&gt;
       </para></listitem>
     </itemizedlist>
@@ -1793,8 +1720,7 @@ $ make V=99
     </para>
     <para>
       You can also add the mapping to "/etc/hip/hipd_config" and restart hipd.
-      It is also possible to use DNS or DHT (<xref linkend="ch_opendht" />)
-      for the mappings.
+      It is also possible to use DNS for the mappings.
     </para>
     <para>
       Link local IPv6 addresses are not supported well, so do not use
@@ -1820,8 +1746,8 @@ $ make V=99
             </para>
               <itemizedlist>
                 <listitem><para>nc OOPS_LSI -u 5555</para></listitem>
-                <listitem><para>;&lt;Type some text, press enter and you should see some text
-                appearing in the output of the host oops</para></listitem>
+                <listitem><para>&lt;Type some text, press enter and you should see some text
+                appearing in the output of the host oops&gt;</para></listitem>
               </itemizedlist>
 
             <para>
@@ -1838,8 +1764,8 @@ $ make V=99
             </para>
               <itemizedlist>
                 <listitem><para>nc6 OOPS_HIT -u 5555</para></listitem>
-                <listitem><para>;&lt;Type some text, press enter and you should see some text
-                appearing in the output of the host oops</para></listitem>
+                <listitem><para>&lt;Type some text, press enter and you should see some text
+                appearing in the output of the host oops&gt;</para></listitem>
               </itemizedlist>
 
             <formalpara><title>Tips: Displaying log information and traffic</title><para></para></formalpara>
@@ -1869,10 +1795,6 @@ $ make V=99
               "tcpdump -n -i any esp or proto 139 or port 10500"
               to catch HIP-only traffic. It should be taken into account
               that LSIs are local identifiers, so they are not in the wire.
-            </para>
-            <para>
-              It should be noticed that starting a new hipd process automatically
-              kills the previous one.
             </para>
 
     </section>
@@ -1912,17 +1834,14 @@ $ make V=99
                     <listitem><para>OOPS_IP oops</para></listitem>
                     </itemizedlist>
             <para>Apart from starting the hipd process, the hipfw process must be also
-                started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
+                started in both machines, oops and crash. Notice that hipfw must be started always before hipd!
             </para>
             <itemizedlist>
               <listitem><para>
-                  cd somewhere/hipl
+                  hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
               </para></listitem>
               <listitem><para>
-                  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
-              </para></listitem>
-              <listitem><para>
-                  hipd/hipd # (to start as a background daemon process, add -b flag)
+                  hipd # (to start as a background daemon process, add -b flag)
               </para></listitem>
             </itemizedlist>
             <para>
@@ -1968,7 +1887,7 @@ $ make V=99
     </para>
     <para>
       The handover code is based on RFC5206.
-      Not all of the features all yet implemented and the
+      Not all of the features are implemented yet and the
       code quality is still far from bullet proof.
     </para>
     <para>
@@ -2044,7 +1963,8 @@ $ make V=99
     <section id="sec_easy_methods">
       <title>Easy Methods</title>
       <para>
-        1. Run the dnshipproxy to map hostnames transparently to HITs from hosts files and directory services (DNS, DHT).
+        1. Run the hipdnsproxy to map hostnames transparently to HITs
+        from hosts files and directory services (DNS).
         See <xref linkend="sec_dns_proxy" /> for more details.
       </para>
       <para>
@@ -2058,7 +1978,7 @@ $ make V=99
         For example, you can
         execute "ping6 PEER_HIT". However, hipd must know the mapping from the
         PEER_HIT to the corresponding IP address. Hipd can find this mapping
-        from DNS or DHT. Alternatively, this information can be store to
+        from DNS. Alternatively, this information can be store to
         hosts files as follows:
       </para>
       <para>
@@ -2088,7 +2008,7 @@ $ make V=99
         1a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
       </para>
       <para>
-        1b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so:libhipopendht.so</emphasis>
+        1b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so</emphasis>
       </para>
       <para>
         2. Use the system-based opportunistic mode as instructed in
@@ -2227,56 +2147,60 @@ $ make V=99
   </para>
   </section>
   <section id="sec_vnc">
-  <title>VNC applications</title>
-  <para>
-    Vino-server/Vinagre-client and tightVNCserver/xtightVNCviewer
-    applications work just fine with the LSI support of HIPL. LSIs are
-    used because tested applications did not support IPv6. It seems
-    that most of the VNC applications do not support IPv6.
-  </para>
-  <para>
-    VINO/VINAGRE
-  </para>
-  <para>
-  Setup LSIs as the manual instructs and remember the daemons and so
-  on. Then do the following.
-  </para>
-  <para>
-    For server side (Remember Ubuntu was used when testing). Open the
-    settings GUI from Gnome System->Preferences->Remote Desktop then
-    allow other users to view and or control the desktop. You can
-    also set a password for the desktop.
-  </para>
-  <para>
-    For the client side do the following and everything should work.
-  </para>
-  <programlisting>
-    vinagre &lt;LSI-of-Server&gt;
-  </programlisting>
-  <para>
-    THIGHTVNCSERVER/XTIGHTVNCVIEWER
-  </para>
-  <para>
-  Setup LSIs as the manual instructs and remember the daemons and so
-  on. Then do the following.
-  </para>
-  <para>
-    For the server side install package tightvncsercer. To start the
-    server just write tightvncserver on the terminal and the server
-    will start with default options. Refer to the official
-    documentation or the man pages of tightvnc for more information on
-    the configuration.
-  </para>
-  <para>
-    On the client side install package xtightvncviewer. Then with the
-    following command you should have an successfull connection.
-  </para>
-  <programlisting>
-    xtightvncviewer &lt;LSI-of-server&gt;:1
-  </programlisting>
-  <para>
-  Longer how-to can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/vnc.htm" />
-  </para>
+    <title>VNC applications</title>
+    <para>
+      Vino-server/Vinagre-client and tightVNCserver/xtightVNCviewer
+      applications work just fine with the LSI support of HIPL. LSIs are
+      used because tested applications did not support IPv6. It seems
+      that most of the VNC applications do not support IPv6.
+    </para>
+    <section id="sec_vino_vinagre">
+      <title>
+        vino / vinagre
+      </title>
+      <para>
+        Setup LSIs as the manual instructs and remember the daemons and so
+        on. Then do the following.
+      </para>
+      <para>
+        For server side (Remember Ubuntu was used when testing). Open the
+        settings GUI from Gnome System->Preferences->Remote Desktop then
+        allow other users to view and or control the desktop. You can
+        also set a password for the desktop.
+      </para>
+      <para>
+        For the client side do the following and everything should work.
+      </para>
+      <programlisting>
+        vinagre &lt;LSI-of-Server&gt;
+      </programlisting>
+    </section>
+    <section id="sec_tightvncserver_xtightvncviewer">
+      <title>
+        tightvncserver / xtightvncviewer
+      </title>
+      <para>
+        Setup LSIs as the manual instructs and remember the daemons and so
+        on. Then do the following.
+      </para>
+      <para>
+        For the server side install package tightvncsercer. To start the
+        server just write tightvncserver on the terminal and the server
+        will start with default options. Refer to the official
+        documentation or the man pages of tightvnc for more information on
+        the configuration.
+      </para>
+      <para>
+        On the client side install package xtightvncviewer. Then with the
+        following command you should have an successfull connection.
+      </para>
+      <programlisting>
+        xtightvncviewer &lt;LSI-of-server&gt;:1
+      </programlisting>
+      <para>
+        Longer how-to can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/vnc.htm" />
+      </para>
+    </section>
   </section>
   <section id="sec_openldap">
   <title>OpenLDAP</title>
@@ -2290,11 +2214,8 @@ $ make V=99
   ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
   </programlisting>
   <para>
-  The name can be
-  something found from <emphasis>/etc/hosts</emphasis>
-  and <emphasis>/etc/hosts</emphasis> or you can use DHT to
-  resolve names to HIT and address. Search can also be done directly
-  with HIT by command
+  The name can be something found in <emphasis>/etc/hosts</emphasis>.
+  Search can also be done directly with HIT by command
   </para>
   <programlisting>
   ldapsearch -x -H ldap://[&lt;HIT&gt;] -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
@@ -2309,7 +2230,7 @@ $ make V=99
   Ldapadd can be used similarly with LDAPURI and HITs.
   </para>
   <para>
-  Maybe the most intereseting part are the ACL rules with OpenLDAP. In
+  Maybe the most interesting parts are the ACL rules with OpenLDAP. In
   the newer versions you can use IPv6 formatted peername rules, so it
   is interesting when we remember that HITs are IPv6 formatted. Below
   is the basic example of a rule that grants write/read/search
@@ -2442,10 +2363,10 @@ VPN
     server % iperf -V -s
   </programlisting>
   <programlisting>
-    client % iperf -V -c &gt;hit-of-the-server&lt;
+    client % iperf -V -c &lt;hit-of-the-server&gt;
   </programlisting>
   <para>
-    Notice that &gt;hit-of-the-server&lt; should not be taken literally. Replace
+    Notice that &lt;hit-of-the-server&gt; should not be taken literally. Replace
     it with the HIT of the server (run "hipconf get hi default" at the server).
     If you want to use LSIs instead of HITs, you shouldn't use the -V option
     and use LSIs as instructed in <xref linkend="interop_ip_v4_v6" />.
@@ -2483,10 +2404,10 @@ VPN
     }
 
     define service {
-        use                             local-service
-        host_name                       crossroads.infrahip.net
-        service_description             PING
-        check_command                   check_ping6
+        use                     local-service
+        host_name               crossroads.infrahip.net
+        service_description     PING
+        check_command           check_ping6
     }
 
     define host {
@@ -2543,17 +2464,17 @@ VPN
 
     <para>
       The DNS proxy is located in
-      the tools directory (hipdnsproxy) and has to be started with
+      the tools/hipdnsproxy directory and has to be started with
       root priviledges. After you start the script, it will rewrite
       /etc/resolv.conf to redirect all DNS look ups to itself so that
       it can return HITs to applications when applicable.
     </para>
 
     <para>
-     The DNS proxy tries to find host identities from three places:
-     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
-     and Openlookup DHT (experimental). It returns the host identities as
-     HITs or LSIs to the requesting application.
+     The DNS proxy tries to find host identities from two places:
+     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS.
+     It returns the host identities as HITs or LSIs to the requesting
+     application.
     </para>
 
     <para>
@@ -2602,7 +2523,7 @@ VPN
   <section id="ch_dns_data">
     <title>DNS Server with HIP Support</title>
     <para>
-      Tools directory contains hipdnskeyparse a script which converts public
+      The tools/hipdnskeyparse directory contains a script which converts public
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
@@ -2610,11 +2531,6 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
-      <programlisting>
-.... | sed -n -e '/^HIPBIND */s///p'
-      </programlisting>
-      an HIP RR entry suitable for OpenDHT version of BIND9 is output
-      and with
       <programlisting>
 .... | sed -n -e '/^DJBDNS */s///p'
       </programlisting>
@@ -2640,7 +2556,6 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
         <listitem><para>in /etc/hip/hosts</para></listitem>
         <listitem><para>in /etc/hosts</para></listitem>
         <listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
-        <listitem><para>in DHT</para></listitem>
       </itemizedlist>
       </para>
 
@@ -2683,73 +2598,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
      our DNS server as we do not have global delegation yet.
   </para>
 
-  </section>
-<section id="ch_opendht">
-  <title>Openlookup-based Name Lookup for HIP</title>
-  <section>
-    <title>DHT Client Support (Experimental!)</title>
-    <itemizedlist>
-      <listitem><para>
-          With DHT support, the hip daemon pushes the hostname,
-          RSA public HIT and public IP address to the DHT. The resolver
-          can then look up this information automatically without DNS or manual
-          /etc/(hip)/hosts configuration.
-      </para></listitem>
-      <listitem><para>
-          Once you start hipd, it will send its hostname, HIT and IP address
-          to DHT. You can query this information with
-          "hipconf dht get &lt;hostname|HIT&gt;".
-      </para></listitem>
-      <listitem><para>
-          To test, just run normally nc6 with -v flag
-          between the two hosts. You would see messages
-          from hipd and nc6 connecting to a HIT. Everything
-          should work without additional actions.
-      </para></listitem>
-     </itemizedlist>
-
-    <para>
-     HIP daemon creates a file called /etc/hip/dhtservers when you
-     execute it. You can add there DHT servers. The file has almost the
-     same format as hosts files, with the addition of port definition
-     with the servername (IP_address servername&lt;:port&gt;).
-    </para>
-
-    <para>
-    There is multiple DHT related hipconf commands that you can
-    use to affect the behaviour of the DHT code of HIPL.
-    </para>
-
-    <itemizedlist>
-      <listitem><para>
-        hipconf opendht on|off
-      </para></listitem>
-      <listitem><para>
-        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (DHT default = 5851)&gt; &lt;TTL&gt;
-      </para></listitem>
-      <listitem><para>
-        hipconf dht get &lt;fqdn/hit&gt;
-      </para></listitem>
-      <listitem><para>
-        hipconf dht set &lt;name&gt;
-      </para></listitem>
-    </itemizedlist>
-
-    <para>
-    First one of these commands toggles the on/off status of the
-    code. Second one forces the DHT code to change current serving
-    gateway eith a new one. This command allows to change port and TTL
-    definitions of DHT code on the fly. Third command is a simple
-    get of value under a key. Fourth command lets you set a
-    userdefined name to be sent to the DHT. By default result of
-    "uname -n" is sent to the DHT.
-    </para>
-
-    <para>
-    For documentation,
-    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
-    </para>
-</section>
   </section>
 
 </chapter> <!-- Name Look-up -->
@@ -2845,7 +2693,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           </para>
         </listitem>
       </itemizedlist>
-      <para>17th of July 2008</para>
     </section>
     <section id="sec_relay_conf">
       <title>The RVS and HIP Relay Configuration File</title>
@@ -2895,7 +2742,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           <programlisting>
             whitelist = "2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c"
           </programlisting>
-          ,where 2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c is the HIT of the
+          where 2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c is the HIT of the
           responder. Multiple HITs are separated with commas:
           <programlisting>
             whitelist = "2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c","2001:11:91e3:528e:7c41:9560:82ae:630f"
@@ -2981,7 +2828,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               </para>
             </listitem>
           </itemizedlist>
-          <para>17th of July 2008</para>
         </section>
       </section>
     </section>
@@ -3098,7 +2944,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </para>
         <orderedlist>
           <listitem><para>
-            Start HIP daemon at each host:<programlisting>hipd/hipd</programlisting>
+            Start HIP daemon at each host:<programlisting>hipd</programlisting>
           </para></listitem>
           <listitem><para>
             At the rendezvous server, we have to indicate that we are willing to offer
@@ -3236,7 +3082,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               </para>
             </listitem>
           </itemizedlist>
-          <para>17th of July 2008</para>
         </section>
       </section>
     </section>
@@ -3244,7 +3089,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       <title>HIP Relay Mechanisms</title>
       <note><title>NOTE:</title>
       <para>
-        As of 17th July 2008, the HIP relay mechanisms is under implementation.
+        The HIP relay mechanisms are still under construction.
         Therefore, the forwarding mechanisms presented herein do not work. Only
         the relay service registration works.
       </para>
@@ -3321,7 +3166,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           <listitem><para>
             Start HIP daemon at each host:
             <programlisting>
-              hipd/hipd
+              hipd
             </programlisting>
           </para></listitem>
           <listitem><para>
@@ -3452,7 +3297,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               </para>
             </listitem>
           </itemizedlist>
-          <para>17th of July 2008</para>
         </section>
       </section>
     </section>
@@ -3619,14 +3463,14 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
             </itemizedlist>
           </listitem>
         </itemizedlist>
-        <para>17th of July 2008</para>
       </section>
     </section>
   </chapter>
 
   <chapter id="ch_hip_firewall">
     <title>HIP Firewall</title>
-        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a Python interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
+      <para>This section describes how to use the HIP firewall.
+      </para>
 
        <para>If firewall is killed, it leaves rules dangling which may drop
              some traffic. Check with "iptables -L -n" if there are some HIPFW
@@ -3810,12 +3654,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
             ping6 -I source_hit dst_hit
         </para>  </listitem>
       </itemizedlist>
-      <para>Make sure that the source is the same as in "ip xfrm policy" output.
-        We are aware of the problem (see bug id 161) and it is being solved.
-        Also, it seemed like the responder could not route packets
-        automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
-        was necessary at the responder (occurred on 2.6.16.5).
-      </para>
       <para>
         Three cases of mobility of the initiator have been implemented for the NAT code.
       </para>
@@ -3833,7 +3671,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         by installing the Miredo client software. Then, establish HIP connections
         to Teredo addresses (check ifconfig teredo) at the client side as
         instructed in <xref linkend="ch_basictest" />. As Teredo is a NAT traversal
-        solution by itself, you don't have use UDP encapsulation for HIP (hipconf nnat none).
+        solution by itself, you don't have use UDP encapsulation for HIP (hipconf nat none).
       </para>
       <para>
         See
@@ -3918,13 +3756,21 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
            make
     </para></listitem>
     <listitem><para>
+              Run make install
+    </para></listitem>
+    <listitem><para>
+           make install
+    </para></listitem>
+    <listitem><para>
               Run hip daemon on both "crash" and "oops"
     </para></listitem>
     <listitem><para>
-           hipd/hipd
+           hipd
     </para></listitem>
     <listitem><para>
-            . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "hipconf set opp on|off" command is used to enable/disable opportunistic mode. By default it is on.
+            Use the hipconf tool to set up HIP Opportunistic mode on both
+            hosts manually. "hipconf set opp on|off" is used to
+            enable/disable opportunistic mode. By default it is on.
     </para></listitem>
     <listitem><para>
            Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="ch_basictest" />.
@@ -3935,7 +3781,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     HIPL supports also opportunistic mode that is uses TCP options to
     detect whether peer supports HIP or not. This is particularly
     useful in networking environments without HIP look up
-    infrastructure (OpenDHT/DNS/etc) and where the number of HIP hosts
+    infrastructure (DNS/etc) and where the number of HIP hosts
     is small. This "advanced" version of the opportunistic mode
     enables fast and backwards compatible fallback to non-HIP
     communications for TCP connections when the peer does not support
@@ -4045,19 +3891,6 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </para>
   </section>
 
-  <section id="ch_hip_bos">
-    <title> Using HIP BOS support</title>
-    <para>
-        To generate a BOS packet (sent to the global multicast address
-      on all interfaces), use the following command:
-    </para>
-    <para>
-                  hipconf hip bos
-    </para>
-    <para>
-            BOS-aware hosts will record the machine's HOST ID, HIT, and IP address.
-    </para>
-  </section>
 <!--
   <section>
 
@@ -4117,11 +3950,11 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     </para>
 
 <programlisting>
-ping6 &gt;HIT_OF_THE_SERVER&lt;
+ping6 &lt;HIT_OF_THE_SERVER&gt;
 </programlisting>
 
   <para>
-  Please do not take &gt;HIT_OF_THE_SERVER&lt; literally. You should replace it with the
+  Please do not take &lt;HIT_OF_THE_SERVER&gt; literally. You should replace it with the
   actual HIT of the server.
   </para>
   </section>

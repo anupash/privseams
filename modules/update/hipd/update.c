@@ -277,11 +277,10 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
         HIP_DEBUG("echo opaque data len=%d\n",
                   hip_get_param_contents_len(echo_request));
         HIP_HEXDUMP("ECHO_REQUEST ",
-                    (void *) echo_request +
-                    sizeof(struct hip_tlv_common),
+                    (uint8_t *) echo_request + sizeof(struct hip_tlv_common),
                     hip_get_param_contents_len(echo_request));
-        HIP_IFEL(hip_build_param_echo(update_packet_to_send, (void *) echo_request +
-                                      sizeof(struct hip_tlv_common),
+        HIP_IFEL(hip_build_param_echo(update_packet_to_send,
+                                      (uint8_t *) echo_request + sizeof(struct hip_tlv_common),
                                       hip_get_param_contents_len(echo_request), 1, 0),
                  -1, "Building of ECHO_RESPONSE failed\n");
     }

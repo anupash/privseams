@@ -49,7 +49,6 @@ tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
 
 hipd_hipd_SOURCES = hipd/accessor.c              \
-                    hipd/bos.c                   \
                     hipd/cert.c                  \
                     hipd/close.c                 \
                     hipd/configfilereader.c      \
@@ -73,19 +72,19 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/netdev.c                \
                     hipd/nsupdate.c              \
                     hipd/output.c                \
-                    hipd/oppipdb.c               \
                     hipd/pkt_handling.c          \
                     hipd/registration.c          \
                     hipd/user.c                  \
                     hipd/user_ipsec_hipd_msg.c   \
                     hipd/user_ipsec_sadb_api.c
 
-if HIP_OPPORTUNISTIC
-hipd_hipd_SOURCES += hipd/oppdb.c
-endif
-
 if HIP_MIDAUTH
 hipd_hipd_SOURCES +=  hipd/pisa.c
+endif
+
+if HIP_OPPORTUNISTIC
+hipd_hipd_SOURCES += hipd/oppdb.c                \
+                     hipd/oppipdb.c
 endif
 
 firewall_hipfw_SOURCES = firewall/cache.c               \
@@ -120,10 +119,10 @@ endif
 
 # TODO: libhipcore, libhipconf and libhiptool have circular
 # dependencies. This needs to be addressed at some point.
-lib_core_libhipcore_la_SOURCES = lib/conf/conf.c            \
-                                 lib/core/builder.c         \
+lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/capability.c      \
                                  lib/core/certtools.c       \
+                                 lib/core/conf.c            \
                                  lib/core/crypto.c          \
                                  lib/core/debug.c           \
                                  lib/core/esp_prot_common.c \
@@ -242,8 +241,6 @@ checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
 	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
-
-lib/dht/libhipdhtxml.lo: CFLAGS += `xml2-config --cflags`
 
 # Ensure that version.h is created before everything else. This does not work
 # when creating specific objects that may depend on version.h directly.

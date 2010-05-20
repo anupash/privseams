@@ -23,9 +23,9 @@
 #include "lib/core/crypto.h"
 #include "cookie.h"
 #include "user.h"
+#include "lib/core/conf.h"
 #include "lib/core/debug.h"
 #include "netdev.h"
-#include "lib/conf/conf.h"
 #include "nat.h"
 #include "init.h"
 #include "hidb.h"
@@ -52,8 +52,6 @@
 
 #define HIP_R1_PRECREATE_INTERVAL 60 * 60 /* seconds */
 #define HIP_R1_PRECREATE_INIT (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-#define OPENDHT_REFRESH_INTERVAL 30 /* seconds Original 60 using 1 with sockaddrs */
-#define OPENDHT_REFRESH_INIT (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
 #define QUEUE_CHECK_INTERVAL 15 /* seconds */
 #define QUEUE_CHECK_INIT (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
@@ -106,13 +104,9 @@ extern int hip_shotgun_status;
 
 extern int hip_encrypt_i2_hi;
 
-extern struct addrinfo *opendht_serving_gateway;
-
 extern hip_transform_suite_t hip_nat_status;
 
 extern int hip_use_userspace_data_packet_mode;
-
-extern int hip_buddies_inuse;
 
 extern int esp_prot_active;
 extern int esp_prot_num_transforms;

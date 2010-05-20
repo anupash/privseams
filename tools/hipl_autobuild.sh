@@ -106,11 +106,10 @@ check_dist
 # Compile HIPL in different configurations
 # vanilla configuration
 compile
-
 run_program "make -j17 distcheck"
 
 # PISA configuration
-compile --enable-firewall --disable-rvs  --disable-opportunistic --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
+compile --enable-firewall --disable-rvs --disable-opportunistic --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
 
 # Alternative path to vanilla
 compile --enable-firewall --disable-rvs --disable-opportunistic --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo

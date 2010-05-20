@@ -63,7 +63,7 @@ struct in6_addr *numeric_to_addr(const char *num)
  *                command does not contain malicious
  *                code.
  */
-void system_print(char *command)
+void system_print(const char *command)
 {
     if (system(command) == -1) {
         HIP_ERROR("Could not execute system command %s", command);
