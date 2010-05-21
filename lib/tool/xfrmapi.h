@@ -7,16 +7,10 @@
 #ifndef HIP_LIB_TOOL_XFRMAPI_H
 #define HIP_LIB_TOOL_XFRMAPI_H
 
-#include <time.h>
-#include <netdb.h>
-#include <errno.h>
+#include <stdint.h>
+#include <netinet/in.h>
 
-#include "hipd/netdev.h"
-#include "lib/core/debug.h"
-#include "lib/core/hashtable.h"
-#include "hipd/hadb.h"
-#include "hipd/user.h"
-
+#include "lib/core/protodefs.h"
 #include "lib/core/state.h"
 #include "nlink.h"
 

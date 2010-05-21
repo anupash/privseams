@@ -10,14 +10,13 @@
 #ifndef HIP_LIB_CORE_MESSAGE_H
 #define HIP_LIB_CORE_MESSAGE_H
 
-#include <errno.h>
+#include <stdint.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 
-#include "config.h"
-#include "lib/tool/nlink.h"
-#include "conf.h"
-#include "debug.h"
-#include "icomm.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/state.h"
+
 
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
 

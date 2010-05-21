@@ -21,10 +21,14 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
+#include "lib/tool/lutil.h"
 #include "cache_port.h"
 #include "cache.h"
-#include "lib/tool/lutil.h"
 
 
 

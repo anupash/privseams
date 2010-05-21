@@ -42,6 +42,7 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/builder.h"
 #include "lib/core/message.h"
+#include "lib/tool/nlink.h"
 #include "common_hipd_msg.h"
 #include "firewall.h"
 

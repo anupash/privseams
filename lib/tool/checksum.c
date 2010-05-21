@@ -11,12 +11,16 @@
 
 #define _BSD_SOURCE
 
-#include <netinet/ip.h>
-#include <sys/types.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
-#include "config.h"
-#include "checksum.h"
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+
 #include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
+#include "checksum.h"
 
 struct pseudo_header {
     unsigned char src_addr[4];

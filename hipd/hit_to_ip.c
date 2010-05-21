@@ -13,8 +13,9 @@
 
 #define _BSD_SOURCE
 
-#include <netinet/in.h>
+#include <netdb.h>
 #include <string.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
 
 #include "hit_to_ip.h"

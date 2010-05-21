@@ -35,18 +35,32 @@
 #define _BSD_SOURCE
 
 #include <errno.h>
-#include <string.h>
+#include <netdb.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <netinet/in.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
-#include "config.h"
-#include "conf.h"
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
-#include "lib/core/straddr.h"
-#include "lib/core/prefix.h"
 #include "lib/core/hostid.h"
+#include "lib/core/ife.h"
 #include "lib/core/message.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/straddr.h"
+#include "lib/tool/lutil.h"
+#include "config.h"
+#include "conf.h"
+
+
 #include "lib/core/crypto.h"
 
 /**

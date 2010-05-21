@@ -8,18 +8,9 @@
 #ifndef HIP_LIB_TOOL_LUTIL_H
 #define HIP_LIB_TOOL_LUTIL_H
 
-#include <dirent.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/param.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <malloc.h>
-
-#include "config.h"
-#include "lib/core/builder.h"
-#include "lib/core/debug.h"
+#include <sys/time.h>
 
 #define MAX_ITEM_LEN 256
 

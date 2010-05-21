@@ -18,6 +18,7 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <netinet/icmp6.h>
+#include <linux/rtnetlink.h>
 #include <linux/unistd.h>
 
 #include "config.h"

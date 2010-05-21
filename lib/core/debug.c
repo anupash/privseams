@@ -48,11 +48,21 @@
 
 #define _BSD_SOURCE
 
-#include "config.h"
-#include "conf.h"
-#include "debug.h"
-#include "straddr.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <syslog.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
 #include "lib/tool/lutil.h"
+#include "builder.h"
+#include "ife.h"
+#include "state.h"
+#include "straddr.h"
+#include "debug.h"
 
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,

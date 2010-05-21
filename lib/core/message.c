@@ -53,9 +53,28 @@
 
 #define _BSD_SOURCE
 
+#include <error.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include <unistd.h>
-#include "message.h"
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+
+#include "lib/tool/nlink.h"
+#include "builder.h"
+#include "debug.h"
 #include "hip_udp.h"
+#include "icomm.h"
+#include "ife.h"
+#include "prefix.h"
+#include "protodefs.h"
+#include "message.h"
+
 
 /**
  * Finds out how much data is coming from a socket

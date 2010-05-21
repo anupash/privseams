@@ -29,13 +29,26 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/uio.h>
 
-#include "config.h"
+#include "lib/core/debug.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
 #include "nlink.h"
 
 #define HIP_MAX_NETLINK_PACKET 65537

@@ -26,6 +26,7 @@
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <ifaddrs.h>
+#include <linux/rtnetlink.h>
 
 #include "config.h"
 #include "lib/tool/nlink.h"

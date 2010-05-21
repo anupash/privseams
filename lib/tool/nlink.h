@@ -1,16 +1,13 @@
 #ifndef HIP_LIB_TOOL_NLINK_H
 #define HIP_LIB_TOOL_NLINK_H
 
-#include <stdio.h>
 #include <stdint.h>
-#include <net/if.h>
 #include <netinet/in.h>
 #include <linux/netlink.h>
 #include <linux/xfrm.h>
-#include <linux/rtnetlink.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
-#include "lib/core/builder.h"
-#include "lib/core/debug.h"
 
 #define HIP_OPTION_KIND 30
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */

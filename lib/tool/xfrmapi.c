@@ -13,14 +13,24 @@
  *
  * @author Miika Komu <miika@iki.fi>
  */
+
 #define _BSD_SOURCE
 
-#include "config.h"
-#include "lib/tool/nlink.h"
-#include "lib/core/hip_udp.h"
-#include "lib/core/keylen.h"
+#include <stdint.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <linux/netlink.h>
+#include <linux/xfrm.h>
 
+#include "lib/core/crypto.h"
+#include "lib/core/debug.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
+#include "lib/core/keylen.h"
+#include "lib/core/prefix.h"
+#include "nlink.h"
 #include "xfrmapi.h"
+
 
 #define RTA_BUF_SIZE     2048
 

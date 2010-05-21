@@ -1,8 +1,9 @@
 #ifndef HIP_LIB_TOOL_PK_H
 #define HIP_LIB_TOOL_PK_H
 
-#include "hipd/hidb.h"
-#include "lib/core/crypto.h"
+#include <openssl/bn.h>
+
+#include "lib/core/protodefs.h"
 
 int hip_dsa_verify(void *priv_key, struct hip_common *msg);
 int hip_dsa_sign(void *peer_pub, struct hip_common *msg);
