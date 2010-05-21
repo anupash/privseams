@@ -868,10 +868,10 @@ int hipd_init(const uint64_t flags)
     hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
 
     hip_raw_sock_output_v6  = hip_init_raw_sock_v6(IPPROTO_HIP);
-    HIP_IFEL(hip_raw_sock_output_v6, -1, "raw sock output v6\n");
+    HIP_IFEL(hip_raw_sock_output_v6 < 0, -1, "raw sock output v6\n");
 
     hip_raw_sock_output_v4  = hip_init_raw_sock_v4(IPPROTO_HIP);
-    HIP_IFEL(hip_raw_sock_output_v4, -1, "raw sock output v4\n");
+    HIP_IFEL(hip_raw_sock_output_v4 < 0, -1, "raw sock output v4\n");
 
     /* hip_nat_sock_input should be initialized after hip_nat_sock_output
        because for the sockets bound to the same address/port, only the last socket seems
@@ -880,13 +880,13 @@ int hipd_init(const uint64_t flags)
        extension (sending packets from multiple source addresses). */
 
     hip_nat_sock_output_udp = hip_init_raw_sock_v4(IPPROTO_UDP);
-    HIP_IFEL(hip_nat_sock_output_udp, -1, "raw sock output udp\n");
+    HIP_IFEL(hip_nat_sock_output_udp < 0, -1, "raw sock output udp\n");
 
     hip_raw_sock_input_v6   = hip_init_raw_sock_v6(IPPROTO_HIP);
-    HIP_IFEL(hip_raw_sock_input_v6, -1, "raw sock input v6\n");
+    HIP_IFEL(hip_raw_sock_input_v6 < 0, -1, "raw sock input v6\n");
 
     hip_raw_sock_input_v4   = hip_init_raw_sock_v4(IPPROTO_HIP);
-    HIP_IFEL(hip_raw_sock_input_v4, -1, "raw sock input v4\n");
+    HIP_IFEL(hip_raw_sock_input_v4 < 0, -1, "raw sock input v4\n");
 
     HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
 
