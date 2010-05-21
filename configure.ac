@@ -171,10 +171,10 @@ AC_CACHE_CHECK([whether to have verbose debug],
                [ac_cv_use_debug],
                [ac_cv_use_debug=yes])
 if test x"$ac_cv_use_debug" = x"yes"; then
-        AC_DEFINE(HIP_LOGFMT_LONG)
-        AH_TEMPLATE(HIP_LOGFMT_LONG, [Defined to 1 if long log format output is enabled.])
-        AC_DEFINE(CONFIG_HIP_DEBUG)
-        AH_TEMPLATE(CONFIG_HIP_DEBUG, [Defined to 1 if debug output is enabled.])
+    AC_DEFINE(HIP_LOGFMT_LONG)
+    AH_TEMPLATE(HIP_LOGFMT_LONG, [Defined to 1 if long log format output is enabled.])
+    AC_DEFINE(CONFIG_HIP_DEBUG)
+    AH_TEMPLATE(CONFIG_HIP_DEBUG, [Defined to 1 if debug output is enabled.])
 fi
 
 AC_ARG_ENABLE(midauth,
