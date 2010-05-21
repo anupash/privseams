@@ -229,7 +229,7 @@ unsigned short in_cksum(uint16_t *ptr, int nbytes)
     /* mop up an odd byte, if necessary */
     if (nbytes == 1) {
         oddbyte                = 0;     /* make sure top half is zero */
-        *((u_char *) &oddbyte) = *(u_char *) ptr;          /* one byte only */
+        *((unsigned char *) &oddbyte) = *(unsigned char *) ptr; /* one byte only */
         sum                   += oddbyte;
     }
 

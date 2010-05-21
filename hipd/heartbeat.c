@@ -131,8 +131,8 @@ int hip_icmp_recvmsg(int sockfd)
     struct msghdr mhdr;
     struct cmsghdr *chdr;
     struct iovec iov[1];
-    u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    u_char iovbuf[HIP_MAX_ICMP_PACKET];
+    unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
+    unsigned char iovbuf[HIP_MAX_ICMP_PACKET];
     struct icmp6_hdr *icmph = NULL;
     struct inet6_pktinfo *pktinfo;
     struct sockaddr_in6 src_sin6;

@@ -1365,8 +1365,8 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry)
     int err                = 0, i = 0, identifier = 0;
     struct icmp6_hdr *icmph = NULL;
     struct sockaddr_in6 dst6;
-    u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    u_char *icmp_pkt       = NULL;
+    unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
+    unsigned char *icmp_pkt = NULL;
     struct msghdr mhdr;
     struct iovec iov[1];
     struct cmsghdr *chdr;
