@@ -1176,9 +1176,6 @@ static int filter_hip(const struct in6_addr *ip6_src,
         verdict = accept_hip_esp_traffic_by_default;
     }
 
-    //release rule list
-    read_rules_exit(0);
-
     if (statefulFiltering && verdict && !conntracked) {
         verdict = conntrack(ip6_src, ip6_dst, buf, ctx);
     }

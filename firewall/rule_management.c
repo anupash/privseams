@@ -826,14 +826,6 @@ DList *read_rules(const int hook)
     return (DList *) get_rule_list(hook);
 }
 
-/**
- * releases rules after reading. must be called
- * after read_rules.
- */
-void read_rules_exit(const int hook)
-{
-}
-
 /*----------- RULE MANAGEMENT -----------*/
 
 /*
