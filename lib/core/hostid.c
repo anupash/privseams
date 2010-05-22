@@ -578,7 +578,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
          * adding is called separately for DSA, RSA anon and RSA pub */
         if (hi_fmt == NULL || !strcmp(hi_fmt, "dsa")) {
             dsa_filenamebase_len =
-                strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
+                strlen(HIPL_SYSCONFDIR) + strlen("/") +
                 strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
             dsa_filenamebase     = malloc(HOST_ID_FILENAME_MAX_LEN);
             HIP_IFEL(!dsa_filenamebase, -ENOMEM,
@@ -588,7 +588,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                            dsa_filenamebase_len +
                            strlen(DEFAULT_ANON_HI_FILE_NAME_SUFFIX),
                            "%s/%s%s",
-                           DEFAULT_CONFIG_DIR,
+                           HIPL_SYSCONFDIR,
                            DEFAULT_HOST_DSA_KEY_FILE_BASE,
                            DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
 
@@ -600,7 +600,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
 
             ret = snprintf(dsa_filenamebase_pub,
                            HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
-                           DEFAULT_CONFIG_DIR,
+                           HIPL_SYSCONFDIR,
                            DEFAULT_HOST_DSA_KEY_FILE_BASE,
                            DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
 
@@ -614,7 +614,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
 
         if (hi_fmt == NULL || !strcmp(hi_fmt, "rsa")) {
             rsa_filenamebase_len =
-                strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
+                strlen(HIPL_SYSCONFDIR) + strlen("/") +
                 strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
 
             if (anon || hi_fmt == NULL) {
@@ -626,7 +626,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 ret = snprintf(
                     rsa_filenamebase,
                     HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
-                    DEFAULT_CONFIG_DIR,
+                    HIPL_SYSCONFDIR,
                     DEFAULT_HOST_RSA_KEY_FILE_BASE,
                     DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
 
@@ -647,7 +647,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                     rsa_filenamebase_pub,
                     rsa_filenamebase_len +
                     strlen(DEFAULT_PUB_HI_FILE_NAME_SUFFIX),
-                    "%s/%s%s", DEFAULT_CONFIG_DIR,
+                    "%s/%s%s", HIPL_SYSCONFDIR,
                     DEFAULT_HOST_RSA_KEY_FILE_BASE,
                     DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
 
@@ -663,8 +663,8 @@ int hip_serialize_host_id_action(struct hip_common *msg,
     case ACTION_NEW:
         /* Default directory is created only in "hipconf new default hi" */
         if (use_default) {
-            if ((err = check_and_create_dir(DEFAULT_CONFIG_DIR,
-                                            DEFAULT_CONFIG_DIR_MODE))) {
+            if ((err = check_and_create_dir(HIPL_SYSCONFDIR,
+                                            HIP_DIR_MODE))) {
                 HIP_ERROR("Could not create default directory.\n");
                 goto out_err;
             }

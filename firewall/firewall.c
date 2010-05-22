@@ -2113,7 +2113,7 @@ int main(int argc, char **argv)
     HIP_DEBUG("Creating perf set\n");
     perf_set = hip_perf_create(PERF_MAX_FIREWALL);
 
-    check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
+    check_and_create_dir("results", HIP_DIR_MODE);
 
     /* To keep things simple, we use a subset of the performance set originally
      * created for the HIP daemon. */

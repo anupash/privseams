@@ -105,10 +105,10 @@ static void check_and_write_default_config(const char *file)
 
     /* Firewall depends on hipd to create /etc/hip */
     for (i = 0; i < 5; i++) {
-        if (stat(DEFAULT_CONFIG_DIR, &status) &&
+        if (stat(HIPL_SYSCONFDIR, &status) &&
             errno == ENOENT) {
             HIP_INFO("%s does not exist. Waiting for hipd to start...\n",
-                     DEFAULT_CONFIG_DIR);
+                     HIPL_SYSCONFDIR);
             sleep(2);
         } else {
             break;
