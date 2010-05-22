@@ -7,9 +7,8 @@
 #ifndef HIP_LIB_CORE_FILEMANIP_H
 #define HIP_LIB_CORE_FILEMANIP_H
 
+#include <fcntl.h>
 #include <sys/types.h>
-
-#include "config.h"
 
 #define HIP_CREATE_FILE(x)     open((x), O_RDWR | O_CREAT, 0644)
 
