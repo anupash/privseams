@@ -740,17 +740,6 @@ instead, the statements have to passed via syslog. On the other hand,
 the developer wants to run the daemon interactively. The wrappers make
 it possible to please both of the groups easily.
 
-Debug statements should not be removed from code because someone may
-have use for the debug statement later on. The preferred way is to put a
-"_" in front of the debug function name to prevent the debug statement
-to ever to be shown (indepently of whether the build is a development
-or production build):
-
-- _HIP_DIE(..)
-- _HIP_ERROR(..)
-- _HIP_INFO(..)
-- _HIP_DEBUG(..)
-
 COMMENTING AND DOCUMENTING THE CODE
 ===================================
 

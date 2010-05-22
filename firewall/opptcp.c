@@ -75,7 +75,6 @@ static int hip_fw_unblock_and_blacklist(const struct in6_addr *peer_ip)
     /* send and receive msg to/from hipd */
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock), -1,
              "send_recv msg failed\n");
-    _HIP_DEBUG("send_recv msg succeed\n");
     /* check error value */
     HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 

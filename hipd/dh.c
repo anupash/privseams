@@ -53,8 +53,6 @@ int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
         goto err_free;
     }
 
-    _HIP_HEXDUMP("DH public key: ", buffer, res);
-
 err_free:
     return res;
 }
@@ -88,7 +86,6 @@ int hip_calculate_shared_secret(uint8_t *public_value,
 
     if (dh_table[group_id] == NULL) {
         tmp                = hip_generate_dh_key(group_id);
-        _HIP_DEBUG("Generating key\n");
         dh_table[group_id] = tmp;
 
         if (dh_table[group_id] == NULL) {
@@ -103,9 +100,6 @@ int hip_calculate_shared_secret(uint8_t *public_value,
         HIP_ERROR("Could not create shared secret\n");
         return -1;
     }
-
-    _HIP_HEXDUMP("Peer DH pubkey", public_value, len);
-    _HIP_HEXDUMP("Shared key", buffer, bufsize);
 
     return err;
 }

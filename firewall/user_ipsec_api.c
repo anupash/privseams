@@ -200,8 +200,6 @@ int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
 
     HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
-    _HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload,
-                 ctx->ipq_packet->data_len);
 
     ip6_hdr = (struct ip6_hdr *) ctx->ipq_packet->payload;
 
@@ -339,11 +337,6 @@ int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
 
     HIP_DEBUG_HIT("src hit: ", &entry->inner_src_addr);
     HIP_DEBUG_HIT("dst hit: ", &entry->inner_dst_addr);
-
-    // XX TODO implement check with seq window
-    // check for correct SEQ no.
-    _HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
-    _HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 
     // decrypt the packet and create a new HIT-based one
     HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet,

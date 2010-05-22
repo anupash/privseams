@@ -540,9 +540,6 @@ void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
     in_port_t sport, dport;
 
     // Ignore the dst_addr, because xfrm accepts only one address.
-    _HIP_DEBUG("spi=0x%x\n", spi);
-    _HIP_DEBUG_IN6ADDR("SA daddr", peer_addr);
-
     if (direction == HIP_SPI_DIRECTION_OUT) {
         sport = entry->local_udp_port;
         dport = entry->peer_udp_port;
@@ -647,8 +644,6 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
     HIP_DEBUG_IN6ADDR("saddr", saddr);
     HIP_DEBUG_IN6ADDR("daddr", daddr);
 
-    _HIP_DEBUG("sport %d\n", sport);
-    _HIP_DEBUG("dport %d\n", dport);
     HIP_DEBUG("direction %d\n", direction);
     HIP_DEBUG("SPI=0x%x\n", spi);
     HIP_DEBUG("************************************\n");

@@ -80,7 +80,6 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
     list_for_each_safe(item, tmp, oppipdb, i)
     {
         this = (hip_oppip_t *) list_entry(item);
-        _HIP_DEBUG("List_for_each_entry_safe\n");
         func(this, opaque);
     }
 
@@ -193,7 +192,6 @@ hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer)
 {
     hip_oppip_t *ret = NULL;
 
-    _HIP_DEBUG_IN6ADDR("Searching in oppipdb for ip:", ip_peer);
     ret = hip_ht_find(oppipdb, (void *) ip_peer);
     if (!ret) {
         HIP_DEBUG("The ip was not present in oppipdb. Peer HIP capable.\n");
@@ -215,7 +213,6 @@ hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer)
 void hip_oppipdb_delentry(const struct in6_addr *ip_peer)
 {
     hip_oppip_t *ret;
-    _HIP_DEBUG("beginning of hip_oppipdb_delentry\n");
 
     if ((ret = hip_oppipdb_find_byip(ip_peer))) {
         HIP_DEBUG_IN6ADDR("HIP capable host found in oppipbd (non-HIP hosts database). Deleting it from oppipdb.", ip_peer);

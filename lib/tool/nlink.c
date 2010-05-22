@@ -175,8 +175,6 @@ int hip_netlink_receive(struct rtnl_handle *nl,
             int len = h->nlmsg_len;
             int l   = len - sizeof(*h);
 
-            _HIP_DEBUG("l=%d, len=%d status=%d\n", l, len, status);
-
             if (l < 0 || len > status) {
                 if (msg.msg_flags & MSG_TRUNC) {
                     HIP_ERROR("Truncated netlink message\n");
@@ -406,13 +404,11 @@ int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
         HIP_PERROR("Cannot open a netlink socket");
         return -1;
     }
-    _HIP_DEBUG("setsockopt SO_SNDBUF\n");
     if (setsockopt(rth->fd, SOL_SOCKET, SO_SNDBUF,
                    &sndbuf, sizeof(sndbuf)) < 0) {
         HIP_PERROR("SO_SNDBUF");
         return -1;
     }
-    _HIP_DEBUG("setsockopt SO_RCVBUF\n");
     if (setsockopt(rth->fd, SOL_SOCKET, SO_RCVBUF,
                    &rcvbuf, sizeof(rcvbuf)) < 0) {
         HIP_PERROR("SO_RCVBUF");
@@ -938,13 +934,6 @@ static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 
     /* see print_route() in ip/iproute.c */
     parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
-    _HIP_DEBUG("sizeof(struct nlmsghdr) =%d\n", sizeof(struct nlmsghdr));
-    _HIP_DEBUG("sizeof(struct rtmsg) =%d\n", sizeof(struct rtmsg));
-    _HIP_DEBUG("sizeof  n->nlmsg_len =%d\n",  n->nlmsg_len );
-    _HIP_HEXDUMP("nlmsghdr : ", n, sizeof(struct nlmsghdr));
-    _HIP_HEXDUMP("rtmsg : ", r, sizeof(struct rtmsg));
-    _HIP_HEXDUMP("nlmsg : ", n, n->nlmsg_len);
-    _HIP_HEXDUMP("tb[RTA_SRC] : ", &tb[RTA_SRC], sizeof(struct rtattr));
     addr.in6 = (struct in6_addr *) RTA_DATA(tb[2]);
     entry    = 7;
     addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
@@ -1027,7 +1016,6 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
     }
 
     status = sendmsg(rtnl->fd, &msg, 0);
-    _HIP_HEXDUMP("Msg sent : ", &msg, sizeof(struct nlmsghdr));
     if (status < 0) {
         HIP_PERROR("Cannot talk to rtnetlink");
         return -1;
@@ -1104,7 +1092,6 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
             }
             if (answer) {
                 memcpy(answer, h, h->nlmsg_len);
-                _HIP_HEXDUMP("Answer : ", h, h->nlmsg_len);
                 return 0;
             }
 
@@ -1232,7 +1219,6 @@ static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
 
     if ((err = IN6_IS_ADDR_V4MAPPED(&ip6_aux))) {
         IPV6_TO_IPV4_MAP(&ip6_aux, ip4);
-        _HIP_DEBUG("ip4 value is %s\n", inet_ntoa(*ip4));
     }
     *slash = *aux_slash;
 
@@ -1295,7 +1281,6 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         memset(res, '\0', size_dev + 1);
         strcat(res, dev);
         strcat(res, label);
-        _HIP_DEBUG("Name device inserted %s\n", res);
         addattr_l(&req.n, sizeof(req), IFA_LABEL, res,
                   strlen(dev) + strlen(label) + 1);
     }

@@ -109,7 +109,6 @@ static int hip_get_data_packet_header(const struct in6_addr *src_hit,
     /* @todo: this will assert  */
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_BUILD_HOST_ID_SIGNATURE_DATAPACKET, 0),
              -1, "build hdr failed\n");
-    _HIP_DUMP_MSG(msg);
 
     /* send msg to hipd and receive corresponding reply */
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");

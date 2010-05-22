@@ -119,9 +119,6 @@ int hip_cert_spki_lib_verify(struct hip_cert_spki_info *cert)
      */
     char s_rule[]   = "[)][|][A-Za-z0-9+/()#=-]*[|]";
 
-    _HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n"
-               "%s\n\n", cert->public_key);
-
     /* check the algo DSA or RSA  */
     HIP_DEBUG("Verifying\nRunning regexps to identify algo\n");
     start = stop = 0;
@@ -152,17 +149,14 @@ algo_check_done:
         start = stop = 0;
         HIP_IFEL(hip_cert_regex(e_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex (exponent)\n");
-        _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
         e_hex = malloc(stop - start);
         HIP_IFEL((!e_hex), -1, "Malloc for e_hex failed\n");
         snprintf((char *) e_hex, (stop - start - 1), "%s", &cert->public_key[start + 1]);
-        _HIP_DEBUG("E_HEX %s\n", e_hex);
 
         /* public modulus */
         start       = stop = 0;
         HIP_IFEL(hip_cert_regex(n_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex (modulus)\n");
-        _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
         modulus_b64 = malloc(stop - start + 1);
         HIP_IFEL((!modulus_b64), -1, "Malloc for modulus_b64 failed\n");
         memset(modulus_b64, 0, (stop - start + 1));
@@ -170,7 +164,6 @@ algo_check_done:
         HIP_IFEL((!modulus), -1, "Malloc for modulus failed\n");
         memset(modulus, 0, (stop - start + 1));
         snprintf((char *) modulus_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
-        _HIP_DEBUG("modulus_b64 %s\n", modulus_b64);
 
         /* put the stuff into the RSA struct */
         BN_hex2bn(&rsa->e, e_hex);
@@ -183,13 +176,9 @@ algo_check_done:
             --keylen;
             keylen = keylen - keylen % 2;
         }
-        _HIP_DEBUG("keylen = %d (%d bits)\n", keylen, keylen * 8);
         signature = malloc(keylen);
         HIP_IFEL((!signature), -1, "Malloc for signature failed.\n");
         rsa->n    = BN_bin2bn(modulus, keylen, 0);
-
-        _HIP_DEBUG("In verification RSA e=%s\n", BN_bn2hex(rsa->e));
-        _HIP_DEBUG("In verification RSA n=%s\n", BN_bn2hex(rsa->n));
     } else if (algo == HIP_HI_DSA) {
         /* malloc space for new dsa */
         dsa = DSA_new();
@@ -201,7 +190,6 @@ algo_check_done:
         start = stop = 0;
         HIP_IFEL(hip_cert_regex(p_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->p\n");
-        _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
         p_b64 = malloc(stop - start + 1);
         HIP_IFEL((!p_b64), -1, "Malloc for p_b64 failed\n");
         memset(p_b64, 0, (stop - start + 1));
@@ -209,14 +197,12 @@ algo_check_done:
         HIP_IFEL((!p_bin), -1, "Malloc for p_bin failed\n");
         memset(p_bin, 0, (stop - start + 1));
         snprintf((char *) p_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
-        _HIP_DEBUG("p_b64 %s\n", p_b64);
         evpret = EVP_DecodeBlock(p_bin, p_b64, strlen((char *) p_b64));
 
         /* dsa->q */
         start  = stop = 0;
         HIP_IFEL(hip_cert_regex(q_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->q\n");
-        _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
         q_b64  = malloc(stop - start + 1);
         HIP_IFEL((!q_b64), -1, "Malloc for q_b64 failed\n");
         memset(q_b64, 0, (stop - start + 1));
@@ -224,14 +210,12 @@ algo_check_done:
         HIP_IFEL((!q_bin), -1, "Malloc for q_bin failed\n");
         memset(q_bin, 0, (stop - start + 1));
         snprintf((char *) q_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
-        _HIP_DEBUG("q_b64 %s\n", q_b64);
         evpret = EVP_DecodeBlock(q_bin, q_b64, strlen((char *) q_b64));
 
         /* dsa->g */
         start  = stop = 0;
         HIP_IFEL(hip_cert_regex(g_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->g\n");
-        _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
         g_b64  = malloc(stop - start + 1);
         HIP_IFEL((!g_b64), -1, "Malloc for g_b64 failed\n");
         memset(g_b64, 0, (stop - start + 1));
@@ -239,14 +223,12 @@ algo_check_done:
         HIP_IFEL((!g_bin), -1, "Malloc for g_bin failed\n");
         memset(g_bin, 0, (stop - start + 1));
         snprintf((char *) g_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
-        _HIP_DEBUG("g_b64 %s\n", g_b64);
         evpret = EVP_DecodeBlock(g_bin, g_b64, strlen((char *) g_b64));
 
         /* dsa->y */
         start  = stop = 0;
         HIP_IFEL(hip_cert_regex(y_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->y\n");
-        _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
         y_b64  = malloc(stop - start + 1);
         HIP_IFEL((!y_b64), -1, "Malloc for y_b64 failed\n");
         memset(y_b64, 0, (stop - start + 1));
@@ -254,7 +236,6 @@ algo_check_done:
         HIP_IFEL((!y_bin), -1, "Malloc for y_bin failed\n");
         memset(y_bin, 0, (stop - start + 1));
         snprintf((char *) y_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
-        _HIP_DEBUG("y_b64 %s\n", y_b64);
         evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *) y_b64));
     } else {HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
     }
@@ -264,13 +245,11 @@ algo_check_done:
     HIP_IFEL(!(sha_retval = SHA1((unsigned char *) cert->cert,
                                  strlen((char *) cert->cert), sha_digest)),
              -1, "SHA1 error when creating digest.\n");
-    _HIP_HEXDUMP("SHA1 digest of cert sequence ", sha_digest, 20);
 
     /* Get the signature hash and compare it to the sha_digest we just made */
     start              = stop = 0;
     HIP_IFEL(hip_cert_regex(h_rule, cert->signature, &start, &stop), -1,
              "Failed to run hip_cert_regex (signature hash)\n");
-    _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
     signature_hash_b64 = malloc(stop - start + 1);
     HIP_IFEL((!signature_hash_b64), -1, "Failed to malloc signature_hash_b64\n");
     memset(signature_hash_b64, '\0', (stop - start + 1));
@@ -278,7 +257,6 @@ algo_check_done:
     HIP_IFEL((!signature_hash), -1, "Failed to malloc signature_hash\n");
     snprintf((char *) signature_hash_b64, (stop - start - 1), "%s",
              &cert->signature[start + 1]);
-    _HIP_DEBUG("SIG HASH B64 %s\n", signature_hash_b64);
     evpret = EVP_DecodeBlock(signature_hash, signature_hash_b64,
                              strlen((char *) signature_hash_b64));
     HIP_IFEL(memcmp(sha_digest, signature_hash, 20), -1,
@@ -289,19 +267,16 @@ algo_check_done:
     start         = stop = 0;
     HIP_IFEL(hip_cert_regex(s_rule, cert->signature, &start, &stop), -1,
              "Failed to run hip_cert_regex (signature)\n");
-    _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
     signature_b64 = malloc(stop - start + 1);
     HIP_IFEL((!signature_b64), -1, "Failed to malloc signature_b64\n");
     memset(signature_b64, '\0', keylen);
     snprintf((char *) signature_b64, (stop - start - 2), "%s", &cert->signature[start + 2]);
-    _HIP_DEBUG("SIG_B64 %s\n", signature_b64);
     if (algo == HIP_HI_DSA) {
         signature = malloc(stop - start + 1);
         HIP_IFEL(!signature, -1, "Failed to malloc signature (dsa)\n");
     }
     evpret = EVP_DecodeBlock(signature, signature_b64,
                              strlen((char *) signature_b64));
-    _HIP_HEXDUMP("SIG\n", signature, keylen);
 
     if (algo == HIP_HI_RSA) {
         /* do the verification */
@@ -310,15 +285,6 @@ algo_check_done:
         e_code = ERR_get_error();
         ERR_load_crypto_strings();
         ERR_error_string(e_code, buf);
-
-        _HIP_DEBUG("***********RSA ERROR*************\n");
-        _HIP_DEBUG("RSA_size(rsa) = %d\n", RSA_size(rsa));
-        _HIP_DEBUG("Signature length :%d\n", strlen((char *) signature));
-        _HIP_DEBUG("Error string :%s\n", buf);
-        _HIP_DEBUG("LIB error :%s\n", ERR_lib_error_string(e_code));
-        _HIP_DEBUG("func error :%s\n", ERR_func_error_string(e_code));
-        _HIP_DEBUG("Reason error :%s\n", ERR_reason_error_string(e_code));
-        _HIP_DEBUG("***********RSA ERROR*************\n");
 
         /* RSA_verify returns 1 if success. */
         cert->success = err == 1 ? 0 : -1;
@@ -438,15 +404,12 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
              "Failed to memset memory for tmp variables\n");
 
     /* Make needed transforms to the date */
-    _HIP_DEBUG("not_before %d not_after %d\n", *not_before, *not_after);
     /*  Format and print the time, "yyyy-mm-dd hh:mm:ss"
      * (not-after "1998-04-15_00:00:00") */
     ts = localtime(not_before);
     strftime(buf_before, sizeof(buf_before), "%Y-%m-%d_%H:%M:%S", ts);
     ts = localtime(not_after);
     strftime(buf_after, sizeof(buf_after), "%Y-%m-%d_%H:%M:%S", ts);
-    _HIP_DEBUG("Not before %s\n", buf_before);
-    _HIP_DEBUG("Not after %s\n", buf_after);
 
     sprintf(tmp_before, "(not-before \"%s\")", buf_before);
     sprintf(tmp_after, "(not-after \"%s\")", buf_after);
@@ -494,12 +457,9 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
     hip_send_recv_daemon_info(msg, 0, 0);
 
     /* get the struct from the message sent back by the daemon */
-    _HIP_DUMP_MSG(msg);
     HIP_IFEL(!(returned = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)),
              -1, "No hip_cert_spki_info struct found from daemons msg\n");
 
-    _HIP_DEBUG("PUBLIC-KEY\n%s\nCERT\n%s\nSIGNATURE\n%s\n", returned->public_key,
-               returned->cert, returned->signature);
     memcpy(content, returned, sizeof(struct hip_cert_spki_info));
 
 out_err:
@@ -563,8 +523,6 @@ int hip_cert_spki_inject(struct hip_cert_spki_info *to,
     regmatch_t pm[1];
     char *tmp_cert;
 
-    _HIP_DEBUG("Before inject:\n%s\n", to->cert);
-    _HIP_DEBUG("Inserting \"%s\" after \"%s\"\n", what, after);
     tmp_cert = malloc(strlen(to->cert) + strlen(what) + 1);
     if (!tmp_cert) {
         return -1;
@@ -577,8 +535,6 @@ int hip_cert_spki_inject(struct hip_cert_spki_info *to,
     /* Running the regular expression */
     HIP_IFEL((status = regexec(&re, to->cert, 1, pm, 0)), -1,
              "Handling of regular expression failed\n");
-    _HIP_DEBUG("Found \"%s\" at %d and it ends at %d\n",
-               after, pm[0].rm_so, pm[0].rm_eo);
     /* Using tmp char table to do the inject (remember the terminators)
      * first the beginning */
     snprintf(tmp_cert, pm[0].rm_eo + 2, "%s", to->cert);
@@ -589,7 +545,6 @@ int hip_cert_spki_inject(struct hip_cert_spki_info *to,
              (strlen(to->cert) - pm[0].rm_eo), "%s", &to->cert[pm[0].rm_eo + 1]);
     /* move tmp to the result */
     sprintf(to->cert, "%s", tmp_cert);
-    _HIP_DEBUG("After inject:\n%s\n", to->cert);
 out_err:
     free(tmp_cert);
     regfree(&re);
@@ -627,30 +582,22 @@ int hip_cert_spki_char2certinfo(char *from, struct hip_cert_spki_info *to)
      */
     char s_rule[] = "[(]signature [ A-Za-z0-9+/|()=]*[|][)][)]";
 
-    _HIP_DEBUG("FROM %s\n", from);
-
     /* Look for the public key */
     HIP_IFEL(hip_cert_regex(p_rule, from, &start, &stop), -1,
              "Failed to run hip_cert_regex (public-key)\n");
-    _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
     snprintf(to->public_key, (stop - start) + 1, "%s", &from[start]);
 
     /* Look for the cert sequence */
     start = stop = 0;
     HIP_IFEL(hip_cert_regex(c_rule, from, &start, &stop), -1,
              "Failed to run hip_cert_regex (cert)\n");
-    _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
     snprintf(to->cert, (stop - start) + 1, "%s", &from[start]);
 
     /* look for the signature sequence */
     start = stop = 0;
     HIP_IFEL(hip_cert_regex(s_rule, from, &start, &stop), -1,
              "Failed to run hip_cert_regex (signature)\n");
-    _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
     snprintf(to->signature, (stop - start) + 1, "%s", &from[start]);
-
-    _HIP_DEBUG("PK %s\nCert %s\nSign %s\n",
-               to->public_key, to->cert, to->signature);
 
 out_err:
     return err;
@@ -689,7 +636,6 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *to_verificatio
     HIP_IFEL(!(returned = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)),
              -1, "No hip_cert_spki_info struct found from daemons msg\n");
 
-    _HIP_DEBUG("Success = %d (should be 0 if OK\n", returned->success);
     memcpy(to_verification, returned, sizeof(struct hip_cert_spki_info));
 
 out_err:
@@ -738,11 +684,8 @@ int hip_cert_x509v3_request_certificate(struct in6_addr *subject,
     /* get the struct from the message sent back by the daemon */
     HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
              "No name x509 struct found\n");
-    _HIP_HEXDUMP("DER:\n", p->der, p->der_len);
-    _HIP_DEBUG("DER length %d\n", p->der_len);
     memcpy(certificate, p->der, p->der_len);
     err = p->der_len;
-    _HIP_DUMP_MSG(msg);
 
 out_err:
     if (msg) {
@@ -772,9 +715,6 @@ int hip_cert_x509v3_request_verification(unsigned char *certificate, int len)
              "Malloc for msg failed\n");
     hip_msg_init(msg);
 
-    _HIP_HEXDUMP("DER DUMP:\n", certificate, len);
-    _HIP_DEBUG("DER LEN %d\n", len);
-
     /* build the msg to be sent to the daemon */
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CERT_X509V3_VERIFY, 0), -1,
              "Failed to build user header\n");
@@ -784,7 +724,6 @@ int hip_cert_x509v3_request_verification(unsigned char *certificate, int len)
     /* send and wait */
     HIP_DEBUG("Sending request to verify x509  cert to "
               "daemon and waiting for answer\n");
-    _HIP_DUMP_MSG(msg);
     hip_send_recv_daemon_info(msg, 0, 0);
 
     /* get the struct from the message sent back by the daemon */
@@ -795,7 +734,6 @@ int hip_cert_x509v3_request_verification(unsigned char *certificate, int len)
         HIP_DEBUG("Verified successfully\n");
     } else {      HIP_DEBUG("Verification failed\n");
     }
-    _HIP_DUMP_MSG(msg);
 
 out_err:
     if (msg) {
@@ -822,9 +760,6 @@ X509 *hip_cert_der_to_x509(const unsigned char *der, int len)
     int err    = 0;
     X509 *cert = NULL;
 
-    _HIP_HEXDUMP("DER:\n", der, len);
-    _HIP_DEBUG("DER length %d\n", len);
-
     HIP_IFEL(((cert = d2i_X509(NULL, (const unsigned char **) &der, len)) == NULL), -1,
              "Failed to convert cert from DER to internal format\n");
 out_err:
@@ -847,7 +782,6 @@ X509 *hip_cert_pem_to_x509(char *pem)
     BIO *out   = NULL;
     X509 *cert = NULL;
 
-    _HIP_DEBUG("PEM:\n%s\nLength of PEM %d\n", pem, strlen(pem));
     out = BIO_new_mem_buf(pem, -1);
     HIP_IFEL((NULL == (cert = PEM_read_bio_X509(out, NULL, 0, NULL))), -1,
              "Cert variable is NULL\n");
@@ -884,8 +818,6 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *section_name,
     STACK_OF(CONF_VALUE) * sec = NULL;
     CONF_VALUE *item;
 
-    _HIP_DEBUG("Started to read cert configuration file\n");
-
     /* XXTODO conf is opened and reopened here why -Samu */
     conf = NCONF_new(NCONF_default());
     HIP_IFEL(!NCONF_load(conf, HIP_CERT_CONF_PATH, &err),
@@ -897,8 +829,6 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *section_name,
 
     for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
         item = (void *) sk_CONF_VALUE_value(sec, i);
-        _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n",
-                   item->section, item->name, item->value);
     }
 out_err:
     if (err == -1) {
@@ -918,8 +848,6 @@ CONF *hip_cert_open_conf(void)
 {
     long err   = 0;
     CONF *conf = NULL;
-
-    _HIP_DEBUG("Started to read cert configuration file\n");
 
     conf = NCONF_new(NCONF_default());
     HIP_IFEL(!NCONF_load(conf, HIP_CERT_CONF_PATH, &err),
@@ -972,13 +900,9 @@ int hip_cert_regex(char *what, char *from, int *start, int *stop)
     // TODO this might need to be an error!?
     // this needs to be separated to found, not found, and error -Samu
     if ((status = regexec(&re, from, 1, answer, 0))) {
-        _HIP_DEBUG("No match for regexp or failed to run it\n");
         err = -1;
         goto out_err;
     }
-
-    _HIP_DEBUG("Found \"%s\" at %d and it ends at %d\n",
-               what, answer[0].rm_so, answer[0].rm_eo);
 
     *start = answer[0].rm_so;
     *stop  = answer[0].rm_eo;

@@ -63,17 +63,8 @@ static int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
         goto out_err;
     }
 
-    _HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %s\n",
-               entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
-               entry->hip_msg_retrans.count, hip_state_str(entry->state));
-
-    _HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
-    _HIP_DEBUG_HIT("hit_our", &entry->hit_our);
-
     /* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
     if (*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit) {
-        _HIP_DEBUG("%d %d %d\n", entry->hip_msg_retrans.count,
-                   entry->state, entry->retrans_state);
         if ((entry->hip_msg_retrans.count > 0) && entry->hip_msg_retrans.buf &&
             ((entry->state != HIP_STATE_ESTABLISHED && entry->retrans_state != entry->state) ||
              (entry->update_state != 0 && entry->retrans_state != entry->update_state) ||
@@ -395,7 +386,6 @@ int hip_icmp_statistics(struct in6_addr *src, struct in6_addr *dst,
     calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, NULL, NULL, &avg,
                     &std_dev, STATS_IN_MSECS);
 
-    _HIP_DEBUG("Reset heartbeat timer to trigger UPDATE\n");
     entry->update_trigger_on_heartbeat_counter = 0;
 
     HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "

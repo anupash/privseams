@@ -96,8 +96,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
     int esp_prot_hash_length        = 0;
     int err                         = 0;
 
-    _HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
-
     // distinguish IPv4 and IPv6 output
     if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr)) {
         // calculate offset at which esp data should be located
@@ -425,8 +423,6 @@ int hip_payload_encrypt(unsigned char *in,
 
     /* padding and esp_tail are encrypted too */
     elen += pad_len + sizeof(struct hip_esp_tail);
-
-    _HIP_HEXDUMP("data to be encrypted: ", in, elen);
 
     /* Apply the encryption cipher directly into out buffer
      * to avoid extra copying */

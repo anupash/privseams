@@ -117,10 +117,6 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
     len           = (uint8_t *) hmac - (uint8_t *) msg;
     hip_set_msg_total_len(msg, len);
 
-    _HIP_HEXDUMP("HMAC key", crypto_key->key,
-                 hip_hmac_key_length(HIP_ESP_AES_SHA1));
-    _HIP_HEXDUMP("HMACced data:", msg, len);
-
     memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
     HIP_IFEL(hip_verify_hmac(msg, hip_get_msg_total_len(msg),
                              hmac->hmac_data, tmpkey.key,
@@ -182,7 +178,6 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
     struct hip_common *msg_copy = NULL;
     int err                     = 0;
 
-    _HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
     HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
 
     HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
@@ -235,7 +230,6 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
     struct hip_diffie_hellman *dhf;
     struct in6_addr *plain_local_hit = NULL;
 
-    _HIP_DEBUG("hip_produce_keying_material() invoked.\n");
     /* Perform light operations first before allocating memory or
      * using lots of CPU time */
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIP_TRANSFORM)),
@@ -317,9 +311,6 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
     /* If the message has two DH keys, select (the stronger, usually) one. */
     *dhpv = hip_dh_select_key(dhf);
 
-    _HIP_DEBUG("dhpv->group_id= %d\n", (*dhpv)->group_id);
-    _HIP_DEBUG("dhpv->pub_len= %d\n", ntohs((*dhpv)->pub_len));
-
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_DH_CREATE\n");
     hip_perf_start_benchmark(perf_set, PERF_DH_CREATE);
@@ -330,11 +321,6 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
                   (unsigned char *) dh_shared_key,
                   dh_shared_len)) < 0,
              -EINVAL, "Calculation of shared secret failed.\n");
-
-    _HIP_HEXDUMP("Diffie-Hellman shared parameter:\n", param,
-                 hip_get_param_total_len(param));
-    _HIP_HEXDUMP("Diffie-Hellman shared key:\n", dh_shared_key,
-                 dh_shared_len);
 
 #ifdef CONFIG_HIP_BLIND
     {
@@ -435,8 +421,6 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
                 hip_transf_length);
     HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hip_hmac_out.key,
                 hmac_transf_length);
-    _HIP_DEBUG("skipping HIP-lg encryption key, %u bytes\n",
-               hip_transf_length);
     HIP_HEXDUMP("HIP-lg encryption:", &ctx->hip_enc_in.key,
                 hip_transf_length);
     HIP_HEXDUMP("HIP-lg integrity (HMAC) key:", &ctx->hip_hmac_in.key,
@@ -457,11 +441,6 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 
     memcpy(ctx->current_keymat_K,
            keymat + (ctx->keymat_calc_index - 1) * HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
-
-    _HIP_DEBUG("ctx: keymat_calc_index=%u current_keymat_index=%u\n",
-               ctx->keymat_calc_index, ctx->current_keymat_index);
-    _HIP_HEXDUMP("CTX CURRENT KEYMAT", ctx->current_keymat_K,
-                 HIP_AH_SHA_LEN);
 
     /* store DH shared key */
     ctx->dh_shared_key     = dh_shared_key;
@@ -558,7 +537,6 @@ int hip_receive_control_packet(struct hip_common *msg,
      * printing packet data here works for all packets. To avoid excessive
      * debug printing do not print this information inside the individual
      * receive or handle functions. */
-    _HIP_DEBUG("hip_receive_control_packet() invoked.\n");
     HIP_DEBUG_IN6ADDR("Source IP", src_addr);
     HIP_DEBUG_IN6ADDR("Destination IP", dst_addr);
     HIP_DEBUG_HIT("HIT Sender", &msg->hits);
@@ -858,8 +836,6 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
     int err                       = 0, type;
     struct in6_addr *saddr_public = saddr;
 
-    _HIP_DEBUG("hip_nat_receive_udp_control_packet() invoked.\n");
-
     type  = hip_get_msg_type(msg);
     entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
@@ -915,8 +891,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
     int err = 0, host_id_in_enc_len = 0, written = 0;
     uint16_t mask = 0;
     uint32_t spi_in = 0;
-
-    _HIP_DEBUG("hip_create_i2() invoked.\n");
 
     HIP_DEBUG("R1 source port %u, destination port %d\n",
               r1_info->src_port, r1_info->dst_port);
@@ -1060,9 +1034,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
                    -1,
                    "Unknown HIT\n");
 
-        _HIP_DEBUG("This HOST ID belongs to: %s\n",
-                   hip_get_param_host_id_hostname(host_id_entry->host_id));
-
         HIP_IFEL(hip_build_param(i2, host_id_entry->host_id),
                  -1,
                  "Building of host id failed\n");
@@ -1109,16 +1080,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
             }
         }
 
-        _HIP_HEXDUMP("hostidinmsg", host_id_in_enc,
-                     hip_get_param_total_len(host_id_in_enc));
-        _HIP_HEXDUMP("encinmsg", enc_in_msg,
-                     hip_get_param_total_len(enc_in_msg));
         HIP_HEXDUMP("enc key", &ctx->hip_enc_out.key, HIP_MAX_KEY_LEN);
-        _HIP_HEXDUMP("IV", iv, 16);         // or 8
         HIP_DEBUG("host id type: %d\n",
                   hip_get_host_id_algo((struct hip_host_id *) host_id_in_enc));
-        _HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
-
 
         HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv,
                                       transform_hip_suite,
@@ -1126,10 +1090,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
                                       ctx->hip_enc_out.key,
                                       HIP_DIRECTION_ENCRYPT), -1,
                  "Building of param encrypted failed\n");
-
-        _HIP_HEXDUMP("encinmsg 2", enc_in_msg,
-                     hip_get_param_total_len(enc_in_msg));
-        _HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
     }
 
     /* Now that almost everything is set up except the signature, we can
@@ -1309,8 +1269,6 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
     struct hip_dh_public_value *dhpv = NULL;
     struct hip_locator *locator      = NULL;
     /** A function set for NAT travelsal. */
-
-    _HIP_DEBUG("hip_handle_r1() invoked.\n");
 
     if (entry->state == HIP_STATE_I2_SENT) {
         HIP_DEBUG("Retransmission\n");
@@ -1595,7 +1553,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
     uint16_t mask    = 0;
     uint32_t spi_in  = 0;
 
-    _HIP_DEBUG("hip_create_r2() invoked.\n");
     /* Assume already locked entry */
     i2 = ctx->input;
 
@@ -1687,9 +1644,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
     /* Create HMAC2 parameter. */
     if (entry->our_pub == NULL) {
         HIP_DEBUG("entry->our_pub is NULL.\n");
-    } else {
-        _HIP_HEXDUMP("Host ID for HMAC2", entry->our_pub,
-                     hip_get_param_total_len(entry->our_pub));
     }
 
     memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
@@ -1758,7 +1712,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
      * because we want to to complete the base exchange successfully */
     /* for ICE , we do not need it*/
     if (hip_icmp_interval > 0) {
-        _HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
         hip_send_icmp(hip_icmp_sock, entry);
     }
 
@@ -1842,8 +1795,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
     HIP_INFO("\n\nReceived I2 from:");
     HIP_INFO_HIT("Source HIT:", &i2->hits);
     HIP_INFO_IN6ADDR("Source IP :", i2_saddr);
-
-    _HIP_DEBUG("hip_handle_i2() invoked.\n");
 
     /* The context structure is used to gather the context created from
      * processing the I2 packet, as well as storing the original packet.
@@ -2448,7 +2399,6 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 {
     int state     = 0, err = 0;
     uint16_t mask = HIP_PACKET_CTRL_ANON;
-    _HIP_DEBUG("hip_receive_i2() invoked.\n");
 
     HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
              "Received NULL receiver HIT in I2. Dropping\n");
@@ -2936,8 +2886,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 {
     int err = 0, state, mask = 0, src_hit_is_our;
 
-    _HIP_DEBUG("hip_receive_i1() invoked.\n");
-
 #ifdef CONFIG_HIP_BLIND
     if (hip_blind_get_status()) {
         mask |= HIP_PACKET_CTRL_BLIND;
@@ -3059,8 +3007,6 @@ int hip_receive_r2(struct hip_common *hip_common,
     int err       = 0, state;
     uint16_t mask = 0;
 
-    _HIP_DEBUG("hip_receive_r2() invoked.\n");
-
     HIP_IFEL(ipv6_addr_any(&hip_common->hitr), -1,
              "Received NULL receiver HIT in R2. Dropping\n");
 
@@ -3145,8 +3091,6 @@ static inline int hip_handle_notify(const struct hip_common *notify,
     /* draft-ietf-hip-base-06, Section 6.13: Processing NOTIFY packets is
      * OPTIONAL. If processed, any errors in a received NOTIFICATION parameter
      * SHOULD be logged. */
-
-    _HIP_DEBUG("hip_receive_notify() invoked.\n");
 
     /* Loop through all the parameters in the received I1 packet. */
     while ((current_param =
@@ -3308,8 +3252,6 @@ int hip_receive_notify(const struct hip_common *notify,
 {
     int err       = 0;
     uint16_t mask = HIP_PACKET_CTRL_ANON, notify_controls = 0;
-
-    _HIP_DEBUG("hip_receive_notify() invoked.\n");
 
     HIP_IFEL(entry == NULL, -EFAULT,
              "Received a NOTIFY packet from an unknown sender, ignoring " \

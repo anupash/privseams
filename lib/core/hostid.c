@@ -49,8 +49,6 @@ int khi_encode(unsigned char *orig, int orig_len,
     HIP_IFEL((bn2bin_safe(bn, encoded, len) != len), -1,
              "BN_bn2bin_safe\n");
 
-    _HIP_HEXDUMP("encoded: ", encoded, len);
-
 out_err:
     if (bn) {
         BN_free(bn);
@@ -82,9 +80,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
     int khi_data_len        = key_rr_len + sizeof(khi_context_id);
     int khi_index           = 0;
 
-    _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
     HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-    _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
     /* Hash Input :=  Context ID | Input */
     khi_data   = malloc(khi_data_len);
@@ -96,14 +92,10 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
     HIP_ASSERT(khi_index == khi_data_len);
 
-    _HIP_HEXDUMP("khi data", khi_data, khi_data_len);
-
     /* Hash :=  SHA1( Expand( Hash Input ) ) */
     HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, khi_data,
                                      khi_data_len, digest)), err,
              "Building of digest failed\n");
-
-    _HIP_HEXDUMP("digest", digest, sizeof(digest));
 
     memset(hit, 0, sizeof(hip_hit_t));
     HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
@@ -111,9 +103,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
                         sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
              -1, "encoding failed\n");
 
-    _HIP_DEBUG_HIT("HIT before prefix: ", hit);
     set_hit_prefix(hit);
-    _HIP_DEBUG_HIT("HIT after prefix: ", hit);
 
 out_err:
     if (khi_data) {
@@ -187,9 +177,6 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
     hip_set_param_contents_len((struct hip_tlv_common *) host_id_pub,
                                contents_len - DSA_PRIV);
 
-    _HIP_HEXDUMP("extracted pubkey", host_id_pub,
-                 hip_get_param_total_len(host_id_pub));
-
     if ((err = hip_dsa_host_id_to_hit(host_id_pub, hit, hit_type))) {
         HIP_ERROR("Failed to convert HI to HIT.\n");
         goto out_err;
@@ -237,9 +224,6 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
     temp = ntohs(host_id_pub.hi_length) - rsa_priv_len;
     host_id_pub.hi_length = htons(temp);
     memcpy(host_id_pub.key, host_id->key, rsa_pub_len);
-
-    _HIP_HEXDUMP("extracted pubkey", &host_id_pub,
-                 hip_get_param_total_len(host_id_pub));
 
     if ((err = hip_rsa_host_id_to_hit(&host_id_pub, hit, hit_type))) {
         HIP_ERROR("Failed to convert HI to HIT.\n");
@@ -1009,24 +993,10 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr)
 
     *dsa_key_rr = NULL;
 
-    _HIP_DEBUG("numbytes p=%d\n", BN_num_bytes(dsa->p));
-    _HIP_DEBUG("numbytes q=%d\n", BN_num_bytes(dsa->q));
-    _HIP_DEBUG("numbytes g=%d\n", BN_num_bytes(dsa->g));
-    // shouldn't this be NULL also?
-    _HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key));
-
-
-    /* notice that these functions allocate memory */
-    _HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
-    _HIP_DEBUG("q=%s\n", BN_bn2hex(dsa->q));
-    _HIP_DEBUG("g=%s\n", BN_bn2hex(dsa->g));
-    _HIP_DEBUG("pubkey=%s\n", BN_bn2hex(dsa->pub_key));
-
     /* ***** is use of BN_num_bytes ok ? ***** */
     t = (BN_num_bytes(dsa->p) - 64) / 8;
     HIP_IFEL((t < 0 || t > 8), -EINVAL,
              "Invalid RSA key length %d bits\n", (64 + t * 8) * 8);
-    _HIP_DEBUG("t=%d\n", t);
 
     /* RFC 2536 section 2 */
     /*
@@ -1045,12 +1015,8 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr)
 
     if (dsa->priv_key) {
         dsa_key_rr_len += DSA_PRIV; /* private key hack */
-        _HIP_DEBUG("Private key included\n");
-    } else {
-        _HIP_DEBUG("No private key\n");
     }
 
-    _HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
     *dsa_key_rr = malloc(dsa_key_rr_len);
     HIP_IFEL(!*dsa_key_rr, -ENOMEM, "Malloc for *dsa_key_rr failed\n");
     memset(*dsa_key_rr, 0, dsa_key_rr_len);
@@ -1060,29 +1026,23 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr)
     /* set T */
     memset(p, t, 1); // XX FIX: WTF MEMSET?
     p++;
-    _HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
 
     /* add given dsa_param to the *dsa_key_rr */
 
     bn2bin_safe(dsa->q, p, DSA_PRIV);
     p += DSA_PRIV;
-    _HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p - *dsa_key_rr);
 
     bn2bin_safe(dsa->p, p, key_len);
     p += key_len;
-    _HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p - *dsa_key_rr);
 
     bn2bin_safe(dsa->g, p, key_len);
     p += key_len;
-    _HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p - *dsa_key_rr);
 
     bn2bin_safe(dsa->pub_key, p, key_len);
     p += key_len;
-    _HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p - *dsa_key_rr);
 
     if (dsa->priv_key) {
         bn2bin_safe(dsa->priv_key, p, DSA_PRIV);
-        _HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p - *dsa_key_rr);
     }
 
 out_err:

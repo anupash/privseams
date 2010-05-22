@@ -516,8 +516,6 @@ int esp_prot_r1_add_transforms(hip_common_t *msg)
         HIP_DEBUG("userspace IPsec hint: esp protection extension UNUSED, skip\n");
     }
 
-    _HIP_DUMP_MSG(msg);
-
 out_err:
     return err;
 }

@@ -95,7 +95,6 @@ static int hip_proxy_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
      * prevent receiving of R1 message. This message has to be delivered
      * with the async socket because opportunistic mode responds asynchronously */
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock), -1, "sending msg failed\n");
-    _HIP_DEBUG("send_recv msg succeed\n");
 
 out_err:
 
@@ -246,9 +245,6 @@ static int hip_proxy_send_pkt(struct in6_addr *local_addr,
     struct in6_addr my_addr;
     /* Points either to v4 or v6 raw sock */
     int hip_raw_sock = 0;
-
-
-    _HIP_DEBUG("hip_send_raw() invoked.\n");
 
     /* Verify the existence of obligatory parameters. */
     HIP_ASSERT(peer_addr != NULL && msg != NULL);
@@ -470,8 +466,6 @@ static int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr,
     /* Points either to v4 or v6 raw sock */
     int hip_raw_sock            = 0;
 
-
-    _HIP_DEBUG("hip_send_raw() invoked.\n");
     HIP_HEXDUMP("ip msg dump: ", buff, len);
 
     /* Verify the existence of obligatory parameters. */

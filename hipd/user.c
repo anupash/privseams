@@ -171,7 +171,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         break;
     case HIP_MSG_SET_DEBUG_ALL:
         /* Displays all debugging messages. */
-        _HIP_DEBUG("Handling DEBUG ALL user message.\n");
         HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
                  "Error when setting daemon DEBUG status to ALL\n");
         break;
@@ -211,7 +210,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
     case HIP_MSG_GET_PEER_HIT:
         err = hip_opp_get_peer_hit(msg, src);
         if (err) {
-            _HIP_ERROR("get pseudo hit failed.\n");
             if (err == -11) {           /* immediate fallback, do not pass */
                 err = 0;
             }
@@ -381,8 +379,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 #ifdef CONFIG_HIP_OPPORTUNISTIC
         struct in6_addr *hit_local;
 #endif
-
-        _HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
         /* Get RVS IP address, HIT and requested lifetime given as
          * commandline parameters to hipconf. */

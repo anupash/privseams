@@ -84,8 +84,6 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
         item = (void *) sk_CONF_VALUE_value(sec, i);
-        _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n",
-                   item->section, item->name, item->value);
         if (!strcmp(item->name, "issuerhit")) {
             err = inet_pton(AF_INET6, item->value, defhit);
             if (err < 1) {
@@ -94,7 +92,6 @@ int main(int argc, char *argv[])
             }
         }
         if (!strcmp(item->name, "days")) {
-            _HIP_DEBUG("Days in sec = %d\n", HIP_CERT_DAY * atoi(item->value));
             not_after += HIP_CERT_DAY * atoi(item->value);
         }
     }
@@ -106,14 +103,6 @@ int main(int argc, char *argv[])
                               &not_before,
                               &not_after);
 
-    _HIP_DEBUG("\n\nPublic-key sequence contents after all is done:\n\n"
-               "%s\n\n", cert->public_key);
-
-    _HIP_DEBUG("Cert sequence contents after all is done:\n\n"
-               "%s\n\n", cert->cert);
-
-    _HIP_DEBUG("Signature sequence contents after all is done:\n\n"
-               "%s\n\n", cert->signature);
     /*
      * Concatenate everything together as if we would have gotten
      * it from someone else and we would be starting to verify.
@@ -166,8 +155,6 @@ skip_spki:
 
     for (i = 0; i < sk_CONF_VALUE_num(sec_name); i++) {
         item = (void *) sk_CONF_VALUE_value(sec_name, i);
-        _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n",
-                   item->section, item->name, item->value);
         if (!strcmp(item->name, "issuerhit")) {
             err = inet_pton(AF_INET6, item->value, defhit);
             if (err < 1) {

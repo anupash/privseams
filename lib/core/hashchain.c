@@ -97,23 +97,13 @@ int hchain_verify(const unsigned char *current_hash,
         HIP_HEXDUMP("secret: ", secret, secret_length);
     }
 
-    _HIP_HEXDUMP("comparing given hash: ", buffer, hash_length);
-    _HIP_DEBUG("\t<->\n");
-    _HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
-
     for (i = 1; i <= tolerance; i++) {
-        _HIP_DEBUG("Calculating round %i:\n", i);
-
         // add the secret
         if (secret != NULL && secret_length > 0) {
             memcpy(&buffer[hash_length], secret, secret_length);
         }
 
         hash_function(buffer, hash_length + secret_length, buffer);
-
-        _HIP_HEXDUMP("comparing buffer: ", buffer, hash_length);
-        _HIP_DEBUG("\t<->\n");
-        _HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
 
         // compare the elements
         if (!(memcmp(buffer, last_hash, hash_length))) {
@@ -198,8 +188,6 @@ hash_chain_t *hchain_create(const hash_function_t hash_function,
         if (link_tree) {
             memcpy(&hash_value[hash_length], link_tree->root, link_tree->node_length);
         }
-
-        _HIP_HEXDUMP("element created: ", &hchain->elements[i], hash_length);
     }
 
     hchain->hash_function    = hash_function;

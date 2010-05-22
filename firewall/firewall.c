@@ -1689,8 +1689,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
     ctx->ip_version = ip_version;
 
     if (ctx->ip_version == 4) {
-        _HIP_DEBUG("IPv4 packet\n");
-
         struct ip *iphdr = (struct ip *) ctx->ipq_packet->payload;
         // add pointer to IPv4 header to context
         ctx->ip_hdr.ipv4 = iphdr;
@@ -1758,8 +1756,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
         // add UDP header to context
         ctx->udp_encap_hdr = udphdr;
     } else if (ctx->ip_version == 6) {
-        _HIP_DEBUG("IPv6 packet\n");
-
         struct ip6_hdr *ip6_hdr = (struct ip6_hdr *) ctx->ipq_packet->payload;
         // add pointer to IPv4 header to context
         ctx->ip_hdr.ipv6 = ip6_hdr;
@@ -1865,9 +1861,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
             goto end_init;
         }
     }
-
-    _HIP_DEBUG("udp hdr len %d\n", ntohs(udphdr->len));
-    _HIP_HEXDUMP("hexdump ", udphdr, 20);
 
     // HIP packets have zero bytes (IPv4 only right now)
     if (ctx->ip_version == 4 && udphdr
@@ -2318,8 +2311,6 @@ int main(int argc, char **argv)
     // FIXME memleak - not free'd on exit
     h6 = ipq_create_handle(0, PF_INET6);
 
-    _HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
-
     if (!h6) {
         die(h6);
     }
@@ -2378,8 +2369,6 @@ int main(int argc, char **argv)
         timeout.tv_sec  = HIP_SELECT_TIMEOUT;
         timeout.tv_usec = 0;
 
-        _HIP_DEBUG("HIP fw select\n");
-
         // get handle with queued packet and process
         /* @todo: using HIPD_SELECT blocks hipfw with R1 */
         if ((err = select((highest_descriptor + 1), &read_fdset,
@@ -2435,8 +2424,6 @@ int main(int argc, char **argv)
                 continue;
             }
 
-
-            _HIP_DEBUG("Header received successfully\n");
             alen = sizeof(sock_addr);
             len  = hip_get_msg_total_len(msg);
 
@@ -2513,7 +2500,6 @@ hip_hit_t *hip_fw_get_default_hit(void)
 {
     // only query for default hit if global variable is not set
     if (ipv6_addr_is_null(&default_hit)) {
-        _HIP_DEBUG("Querying hipd for default hit\n");
         if (hip_query_default_local_hit_from_hipd()) {
             return NULL;
         }
@@ -2533,7 +2519,6 @@ hip_lsi_t *hip_fw_get_default_lsi(void)
 {
     // only query for default lsi if global variable is not set
     if (default_lsi.s_addr == 0) {
-        _HIP_DEBUG("Querying hipd for default lsi\n");
         if (hip_query_default_local_hit_from_hipd()) {
             return NULL;
         }

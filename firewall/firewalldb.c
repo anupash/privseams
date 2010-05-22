@@ -645,7 +645,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
 
     switch (proto) {
     case IPPROTO_UDP:
-        _HIP_DEBUG("IPPROTO_UDP\n");
         if (is_ipv6) {
             HIP_DEBUG(" IPPROTO_UDP v6\n");
             firewall_raw_sock              = firewall_raw_sock_udp_v6;
@@ -669,7 +668,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
         }
         break;
     case IPPROTO_TCP:
-        _HIP_DEBUG("IPPROTO_TCP\n");
         tcp        = (struct tcphdr *) msg;
         tcp->check = htons(0);
 
@@ -686,9 +684,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
                                               (uint8_t *) &(sock_src4->sin_addr),
                                               (uint8_t *) &(sock_dst4->sin_addr),
                                               (uint8_t *) tcp, len);
-            _HIP_DEBUG("checksum %x, len=%d\n", htons(tcp->check), len);
-            _HIP_DEBUG_LSI("src", &(sock_src4->sin_addr));
-            _HIP_DEBUG_LSI("dst", &(sock_dst4->sin_addr));
 
             memmove((char *) (msg + sizeof(struct ip)), (uint8_t *) tcp, len);
         }
@@ -699,8 +694,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
         icmp->checksum    = htons(0);
         icmp->checksum    = inchksum(icmp, len);
         memmove((char *) (msg + sizeof(struct ip)), (uint8_t *) icmp, len);
-        _HIP_DEBUG("icmp->type = %d\n", icmp->type);
-        _HIP_DEBUG("icmp->code = %d\n", icmp->code);
         break;
     case IPPROTO_ICMPV6:
         goto not_sending;
@@ -730,8 +723,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
             HIP_IFEL(err, -1, "setsockopt IP_HDRINCL ERROR\n");
         }
 
-
-        _HIP_HEXDUMP("hex", iphdr, (len + sizeof(struct ip)));
         sent = sendto(firewall_raw_sock, iphdr,
                       iphdr->ip_len, 0,
                       (struct sockaddr *) &dst, sa_size);
@@ -819,7 +810,6 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
 
     switch (proto) {
     case IPPROTO_TCP:
-        _HIP_DEBUG("IPPROTO_TCP\n");
         ((struct tcphdr *) msg)->check = htons(0);
         if (is_ipv6) {
             firewall_raw_sock = firewall_raw_sock_tcp_v6;

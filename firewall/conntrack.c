@@ -176,8 +176,6 @@ static struct hip_data *get_hip_data(const struct hip_common *common)
     memcpy(&data->src_hit, &common->hits, sizeof(struct in6_addr));
     memcpy(&data->dst_hit, &common->hitr, sizeof(struct in6_addr));
 
-    _HIP_DEBUG("get_hip_data:\n");
-
     return data;
 }
 
@@ -712,17 +710,6 @@ static int insert_connection_from_update(const struct hip_data *data,
     struct connection *connection = malloc(sizeof(struct connection));
     struct esp_tuple *esp_tuple   = NULL;
 
-
-    _HIP_DEBUG("insert_connection_from_update\n");
-    if (esp_info) {
-        _HIP_DEBUG(" esp_info ");
-    }
-    if (locator) {
-        _HIP_DEBUG(" locator ");
-    }
-    if (esp_info) {
-        _HIP_DEBUG(" esp_info ");
-    }
     esp_tuple = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
                                                 &connection->reply);
     if (esp_tuple == NULL) {
@@ -1052,8 +1039,6 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
                                    append_to_slist((SList *) other_dir->esp_tuples, esp_tuple);
 
         insert_esp_tuple(esp_tuple);
-    } else {
-        _HIP_DEBUG("ESP tuple already exists!\n");
     }
 
     // TEST_END
@@ -1187,7 +1172,6 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
 
         n                        = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))
                                    / sizeof(struct hip_locator_info_addr_item);
-        _HIP_DEBUG(" %d locator addresses\n", n);
 
         if (n < 1) {
             HIP_DEBUG("no locator param found\n");
@@ -1239,7 +1223,6 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
 
         locator_addr = (struct hip_locator_info_addr_item *)
                        ((uint8_t *) locator + sizeof(struct hip_locator));
-        _HIP_DEBUG("locator addr: old tuple");
         print_esp_tuple(esp_tuple);
 
         while (n > 0) {
@@ -1256,8 +1239,6 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
         HIP_DEBUG("locator addr: new tuple ");
         print_esp_tuple(esp_tuple);
     }
-
-    _HIP_DEBUG("done, ");
 
 out_err:
     return err;
@@ -1290,8 +1271,6 @@ static int handle_update(const struct hip_common *common,
     const struct in6_addr *ip6_src     = &ctx->src;
     int err                            = 1;
 
-    _HIP_DEBUG("handle_update\n");
-
     /* get params from UPDATE message */
     seq      = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
     esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
@@ -1299,14 +1278,8 @@ static int handle_update(const struct hip_common *common,
     locator  = (struct hip_locator *) hip_get_param(common, HIP_PARAM_LOCATOR);
     spi      = (struct hip_spi *) hip_get_param(common, HIP_PARAM_ESP_INFO);
 
-    if (spi) {
-        _HIP_DEBUG("handle_update: spi param, spi: 0x%lx \n", ntohl(spi->spi));
-    }
-
     /* connection changed to a path going through this firewall */
     if (tuple == NULL) {
-        _HIP_DEBUG("unknown connection\n");
-
         // @todo this should only be the case, if (old_spi == 0) != new_spi -> check
 
         /* attempt to create state for new connection */
@@ -1379,12 +1352,6 @@ static int handle_update(const struct hip_common *common,
             other_dir_esps  = tuple->connection->original.esp_tuples;
         }
 
-        if (seq != NULL) {
-            /* announces something new */
-
-            _HIP_DEBUG("handle_update: seq found, update id %d\n", seq->update_id);
-        }
-
         /* distinguishing different UPDATE types and type combinations
          *
          * TODO check processing of parameter combinations
@@ -1392,33 +1359,22 @@ static int handle_update(const struct hip_common *common,
         if (esp_info && locator && seq) {
             /* Handling single esp_info and locator parameters
              * Readdress with mobile-initiated rekey */
-
-            _HIP_DEBUG("handle_update: esp_info and locator found\n");
-
             esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 
             if (!esp_tuple) {
-                _HIP_DEBUG("No suitable esp_tuple found for updating\n");
-
                 err = 0;
                 goto out_err;
             }
 
             if (!update_esp_tuple(esp_info, locator, seq, esp_tuple)) {
-                _HIP_DEBUG("failed to update the esp_tuple\n");
-
                 err = 0;
                 goto out_err;
             }
         } else if (locator && seq) {
             /* Readdress without rekeying */
-
-            _HIP_DEBUG("handle_update: locator found\n");
             esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->new_spi));
 
             if (esp_tuple == NULL) {
-                _HIP_DEBUG("No suitable esp_tuple found for updating\n");
-
                 err = 0;
                 goto out_err;
                 /* if mobile host spi not intercepted, but valid */
@@ -1430,17 +1386,11 @@ static int handle_update(const struct hip_common *common,
             }
         } else if (esp_info && seq) {
             /* replying to Readdress with mobile-initiated rekey */
-
-            _HIP_DEBUG("handle_update: esp_info found old:0x%lx new:0x%lx\n",
-                       ntohl(esp_info->old_spi), ntohl(esp_info->new_spi));
-
             if (ntohl(esp_info->old_spi) != ntohl(esp_info->new_spi)) {
                 esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 
                 if (esp_tuple == NULL) {
                     if (tuple->connection->state != STATE_ESTABLISHING_FROM_UPDATE) {
-                        _HIP_DEBUG("No suitable esp_tuple found for updating\n");
-
                         err = 0;
                         goto out_err;
                     } else {                   /* connection state is being established from update */
@@ -1990,8 +1940,6 @@ int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
                                 option->accept_mobile, ctx);
 
 out_err:
-    _HIP_DEBUG("filter state: returning %d \n", return_value);
-
     return return_value;
 }
 
@@ -2018,8 +1966,6 @@ int conntrack(const struct in6_addr *ip6_src,
     data  = get_hip_data(buf);
     // look up tuple in the db
     tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
-
-    _HIP_DEBUG("checking packet...\n");
 
     // the accept_mobile parameter is true as packets
     // are not filtered here

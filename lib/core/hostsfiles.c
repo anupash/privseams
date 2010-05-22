@@ -48,7 +48,6 @@ int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
     int err = 1;
 
     if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id)) {
-        _HIP_DEBUG("Match on line %d\n", entry->lineno);
         memcpy(result, entry->hostname, strlen(entry->hostname));
         err = 0; /* Stop at the first match */
     }
@@ -74,7 +73,6 @@ static int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line
     int is_lsi = hip_id_type_match(&entry->id, 2);
 
     if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id) && is_lsi) {
-        _HIP_DEBUG("Match on line %d\n", entry->lineno);
         memcpy(result, entry->hostname, strlen(entry->hostname));
         err = 0; /* Stop at the first match */
     }
@@ -127,7 +125,6 @@ int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry
 
         HIP_IFE(!is_hit, 1);
 
-        _HIP_DEBUG("Match on line %d\n", entry->lineno);
         ipv6_addr_copy(result, &entry->id);
         err = 0; /* Stop at the first match */
     }
@@ -163,7 +160,6 @@ int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry
 
         HIP_IFE(!is_lsi, 1);
 
-        _HIP_DEBUG("Match on line %d\n", entry->lineno);
         ipv6_addr_copy(result, &entry->id);
         err = 0; /* Stop at the first match */
     }
@@ -200,7 +196,6 @@ int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
 
         HIP_IFE((is_hit || is_lsi), 1);
 
-        _HIP_DEBUG("Match on line %d\n", entry->lineno);
         ipv6_addr_copy(result, &entry->id);
         err = 0; /* Stop at the first match */
     }
@@ -282,8 +277,6 @@ int hip_for_each_hosts_file_line(const char *hosts_file,
             continue;
         }
 
-        _HIP_DEBUG("lineno=%d, str=%s\n", lineno, c);
-
         /* Split line into list */
         extractsubstrings(c, &mylist);
 
@@ -340,7 +333,6 @@ int hip_for_each_hosts_file_line(const char *hosts_file,
         /* Finally, call the handler function to handle the line */
 
         if (func(&entry, arg, result) == 0) {
-            _HIP_DEBUG("Match on line %d in %s\n", lineno, hosts_file);
             err = 0;
             break;
         }

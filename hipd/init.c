@@ -80,7 +80,6 @@ static void hip_sig_chld(int signum)
     /* Get child process status, so it wont be left as zombie for long time. */
     while ((pid = wait3(&status, WNOHANG, 0)) > 0) {
         /* Maybe do something.. */
-        _HIP_DEBUG("Child quit with pid %d\n", pid);
     }
 }
 

@@ -86,7 +86,6 @@ static int hip_socketdb_cmp(const void *ptr1, const void *ptr2)
 
     key1 = hip_pid_socket_hash(ptr1);
     key2 = hip_pid_socket_hash(ptr2);
-    _HIP_DEBUG("key1=0x%x key2=0x%x\n", key1, key2);
     return key1 != key2;
 }
 
@@ -114,8 +113,6 @@ void hip_init_socket_db(void)
  */
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
-    _HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
-               entry->pid, entry->orig_socket);
     if (!hip_ht_delete(socketdb, entry)) {
         HIP_DEBUG("No entry was found to delete.\n");
     }
@@ -131,9 +128,6 @@ void hip_uninit_socket_db(void)
     hip_list_t *item, *tmp;
     hip_opp_socket_t *entry;
 
-    _HIP_DEBUG("DEBUG: DUMP SOCKETDB LISTS\n");
-
-    _HIP_DEBUG("DELETING\n");
     list_for_each_safe(item, tmp, socketdb, i)
     {
         entry = (hip_opp_socket_t *) list_entry(item);
@@ -157,7 +151,6 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int sockfd, pthread_t tid)
     opp.pid         = pid;
     opp.orig_socket = sockfd;
     opp.tid         = tid;
-    _HIP_DEBUG("pid %d socket %d computed key\n", pid, sockfd);
 
     ret             = (hip_opp_socket_t *) hip_ht_find(socketdb, (void *) &opp);
 
@@ -215,8 +208,6 @@ int hip_socketdb_add_entry(int pid, int sockfd, pthread_t tid)
     new_item->orig_socket = sockfd;
     new_item->tid         = tid;
     err                   = hip_ht_add(socketdb, new_item);
-    _HIP_DEBUG("pid %d, orig_sock %d, tid %d are added to HT socketdb, entry=%p\n",
-               new_item->pid, new_item->orig_socket, new_item->tid, new_item);
 
     return err;
 }

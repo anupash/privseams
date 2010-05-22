@@ -53,8 +53,6 @@ int hip_handle_update_heartbeat_trigger(hip_ha_t *ha, void *unused)
     }
 
     ha->update_trigger_on_heartbeat_counter++;
-    _HIP_DEBUG("Trigger count %d/%d\n", ha->update_trigger_on_heartbeat_counter,
-               HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval);
 
     if (ha->update_trigger_on_heartbeat_counter <
         HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER * hip_icmp_interval) {
@@ -101,7 +99,6 @@ int hip_send_heartbeat(hip_ha_t *entry, void *opaq)
 
     if (entry->state == HIP_STATE_ESTABLISHED) {
         if (entry->outbound_sa_count > 0) {
-            _HIP_DEBUG("list_for_each_safe\n");
             HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
                      "Error sending heartbeat, ignore\n");
         } else {
@@ -181,10 +178,8 @@ int hip_icmp_recvmsg(int sockfd)
     mhdr.msg_controllen = sizeof(cmsgbuf);
 
     ret                 = recvmsg(sockfd, &mhdr, MSG_DONTWAIT);
-    _HIP_PERROR("RECVMSG ");
     if (errno == EAGAIN) {
         err = 0;
-        _HIP_DEBUG("Asynchronous, maybe next time\n");
         goto out_err;
     }
     if (ret < 0) {

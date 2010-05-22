@@ -77,9 +77,6 @@ out_err:
         memset(&hash, 0, INDEX_HASH_LENGTH);
     }
 
-    _HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
-    _HIP_DEBUG("hash (converted): %lu\n", *((unsigned long *) hash));
-
     // just consider sub-string of 4 bytes here
     return *((unsigned long *) hash);
 }
@@ -101,10 +98,8 @@ static int hip_sa_entries_cmp(const hip_sa_entry_t *sa_entry1,
     // values have to be present
     HIP_ASSERT(sa_entry1 && sa_entry2);
 
-    _HIP_DEBUG("calculating hash1:\n");
     HIP_IFEL(!(hash1 = hip_sa_entry_hash(sa_entry1)), -1,
              "failed to hash sa entry\n");
-    _HIP_DEBUG("calculating hash2:\n");
     HIP_IFEL(!(hash2 = hip_sa_entry_hash(sa_entry2)), -1,
              "failed to hash sa entry\n");
 
@@ -146,9 +141,6 @@ out_err:
         memset(&hash, 0, INDEX_HASH_LENGTH);
     }
 
-    _HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
-    _HIP_DEBUG("hash (converted): %lu\n", *((unsigned long *) hash));
-
     // just consider sub-string of 4 bytes here
     return *((unsigned long *) hash);
 }
@@ -171,10 +163,8 @@ static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
     HIP_ASSERT(link_entry1 != NULL && link_entry1->spi != 0);
     HIP_ASSERT(link_entry2 != NULL && link_entry2->spi != 0);
 
-    _HIP_DEBUG("calculating hash1:\n");
     HIP_IFEL(!(hash1 = hip_link_entry_hash(link_entry1)), -1,
              "failed to hash link entry\n");
-    _HIP_DEBUG("calculating hash2:\n");
     HIP_IFEL(!(hash2 = hip_link_entry_hash(link_entry2)), -1,
              "failed to hash link entry\n");
 

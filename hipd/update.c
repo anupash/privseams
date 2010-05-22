@@ -138,7 +138,6 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
 
         ha->update_id_out++;
         update_id_out = ha->update_id_out;
-        _HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
         /** @todo Handle this case. */
         HIP_IFEL(hip_build_param_seq(update_packet_to_send, update_id_out), -1,
                  "Building of SEQ param failed\n");
@@ -385,9 +384,6 @@ int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
         case HIP_UPDATE_ECHO_REQUEST:
             list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
                 dst_addr = (struct in6_addr *) list_entry(item);
-
-                _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
-                _HIP_DEBUG_IN6ADDR("to", dst_addr);
 
                 if (!are_addresses_compatible(src_addr, dst_addr)) {
                     continue;
@@ -788,7 +784,6 @@ int hip_receive_update(hip_common_t *received_update_packet, in6_addr_t *src_add
         }
 
         ha->update_id_in = seq_update_id;
-        _HIP_DEBUG("Stored peer's incoming UPDATE ID %u\n", ha->update_id_in);
     }
 
     /* RFC 5201 Section 6.12.1 3th and 4th steps or

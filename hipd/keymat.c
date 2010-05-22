@@ -65,8 +65,6 @@ static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_
     *(cur) = 1;
     cur   += sizeof(uint8_t);
 
-    _HIP_HEXDUMP("beginning of keymat", buffer, cur - buffer);
-
     return buffer;
 }
 
@@ -122,20 +120,12 @@ void hip_make_keymat(char *kij, size_t kij_len,
         return;
     }
 
-    _HIP_ASSERT(dstbuflen % 32 == 0);
     HIP_ASSERT(sizeof(index_nbr) == HIP_KEYMAT_INDEX_NBR_SIZE);
 
     hit1_is_bigger = hip_hit_is_bigger(hit1, hit2);
 
     bigger_hit     =  hit1_is_bigger ? hit1 : hit2;
     smaller_hit    = hit1_is_bigger ? hit2 : hit1;
-
-    _HIP_HEXDUMP("kij", kij, kij_len);
-    _HIP_DEBUG("I=0x%llx J=0x%llx\n", I, J);
-    _HIP_HEXDUMP("bigger hit", bigger_hit, 16);
-    _HIP_HEXDUMP("smaller hit", smaller_hit, 16);
-    _HIP_HEXDUMP("index_nbr", (char *) &index_nbr,
-                 HIP_KEYMAT_INDEX_NBR_SIZE);
 
     shabuffer = hip_create_keymat_buffer(kij, kij_len, HIP_AH_SHA_LEN,
                                          smaller_hit, bigger_hit, I, J);
@@ -149,8 +139,6 @@ void hip_make_keymat(char *kij, size_t kij_len,
 
     // XX FIXME: is this correct
     hip_build_digest(HIP_DIGEST_SHA1, shabuffer, bufsize, dstbuf);
-
-    _HIP_HEXDUMP("keymat digest", dstbuf, HIP_AH_SHA_LEN);
 
     dstoffset = HIP_AH_SHA_LEN;
     index_nbr++;
@@ -185,8 +173,6 @@ void hip_make_keymat(char *kij, size_t kij_len,
         HIP_ERROR("NULL calc_index\n");
     }
 
-    _HIP_DEBUG("keymat index_nbr=%u\n", index_nbr);
-    _HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);
     if (shabuffer) {
         free(shabuffer);
     }
@@ -257,10 +243,7 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
     entry->current_keymat_index = new_keymat_index;
     entry->keymat_calc_index    = new_calc_index;
     entry->esp_keymat_index     = esp_keymat_index;
-    _HIP_DEBUG("New Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
-               entry->current_keymat_index, entry->keymat_calc_index);
     if (new_current_keymat) {
         memcpy(entry->current_keymat_K, new_current_keymat, HIP_AH_SHA_LEN);
-        _HIP_HEXDUMP("new_current_keymat", new_current_keymat, HIP_AH_SHA_LEN);
     }
 }

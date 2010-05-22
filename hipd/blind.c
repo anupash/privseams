@@ -240,7 +240,6 @@ int hip_plain_fingerprint(uint16_t *nonce,  struct in6_addr *blind_hit,
 
     HIP_IFEL(hip_blind_find_local_hi(nonce, blind_hit, plain_hit),
              -1, "hip_blind_find_local_hit failed\n");
-    _HIP_DEBUG_HIT("local hit_found", plain_hit);
 
 out_err:
     return err;
@@ -633,16 +632,12 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
              -1, "Failed to alloc memory for dh_data1\n");
     memset(dh_data1, 0, dh_size1);
 
-    _HIP_DEBUG("dh_size=%d\n", dh_size1);
-
     /* Allocate memory for writing the second Diffie-Hellman shared secret */
     HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size2\n");
     HIP_IFEL(!(dh_data2 = malloc(dh_size2)),
              -1, "Failed to alloc memory for dh_data2\n");
     memset(dh_data2, 0, dh_size2);
-
-    _HIP_DEBUG("dh_size=%d\n", dh_size2);
 
     /* Ready to begin building of the R1 packet */
     mask |= HIP_PACKET_CTRL_BLIND;
@@ -701,7 +696,6 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 
     /********** Signature 2 **********/
     HIP_IFEL(sign(private_key, msg), -1, "Signing of R1 failed.\n");
-    _HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
     /********** ECHO_REQUEST (OPTIONAL) *********/
 

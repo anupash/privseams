@@ -1510,8 +1510,6 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg)
         if (!ipv6_addr_cmp(&rfrom->address, &entry->our_addr)) {
             HIP_DEBUG("the host is not behind nat \n");
         } else {
-            _HIP_DEBUG("found a nat @port %d \n ",
-                       ntohs(rfrom->port));
             memcpy(&entry->local_reflexive_address,
                    &rfrom->address, sizeof(struct in6_addr));
             entry->local_reflexive_udp_port = ntohs(rfrom->port);
@@ -1519,7 +1517,6 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg)
                           &entry->local_reflexive_address);
             HIP_DEBUG("set reflexive port: %d \n",
                       entry->local_reflexive_udp_port);
-            _HIP_DEBUG("the entry address is %d \n", entry);
         }
     } else {
         err = 1;

@@ -11,7 +11,6 @@
  *<pre>
  * HIP_INFO("test foobar");
  * HIP_INFO("%s\n", "debug test");
- * _HIP_INFO("%s\n", "this is not printed, but may be important in future");
  * HIP_ERROR("%s%d\n", "serious error!", 123);
  * HIP_DIE("%s\n", "really bad error, exiting!");
  * HIP_PERROR("socket");
@@ -547,8 +546,6 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
     hexdump            = calloc(hexdump_total_size, sizeof(char));
     asciidump          = calloc((bytes_per_line + 2), sizeof(char));
 
-    _HIP_DEBUG("hexdump_total_size: %d, pad_start_position: %d, pad_length: %d\n",
-               hexdump_total_size, pad_start_position, pad_length);
     if (hexdump == NULL || asciidump == NULL) {
         HIP_DIE("memory allocation failed\n");
     }
@@ -589,12 +586,9 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
             /* If line is full or input is all read, copy data to hexdump */
             if (line_index >= 16 || (char_index + 1) == len) {
                 /* Add padding */
-                _HIP_DEBUG("Line ready\n");
                 if ((char_index + 1) == len && pad_length > 0
                     && ((hexdump_index + line_index + pad_length) < hexdump_total_size)) {
                     char *padding = calloc(pad_length + 1, sizeof(char));
-                    _HIP_DEBUG("Creating padding for the last line... \n");
-                    _HIP_DEBUG("hexdump_index: %d, line_index: %d\n", hexdump_index, line_index);
                     memset(padding, ' ', pad_length);
                     memset(padding + pad_length, '\0', 1);
                     hexdump_written = snprintf((char *) (hexdump + hexdump_index),
@@ -752,8 +746,6 @@ void hip_print_locator_addresses(struct hip_common *in_msg)
     struct hip_locator_info_addr_item *item   = NULL;
     struct hip_locator_info_addr_item2 *item2 = NULL;
     char *address_pointer;
-
-    _HIP_DUMP_MSG(in_msg);
 
     locator = hip_get_param((struct hip_common *) in_msg,
                             HIP_PARAM_LOCATOR);

@@ -384,7 +384,6 @@ static int hipd_main(uint64_t flags)
             goto to_maintenance;
         } else if (err == 0) {
             /* idle cycle - select() timeout */
-            _HIP_DEBUG("Idle.\n");
             goto to_maintenance;
         }
 

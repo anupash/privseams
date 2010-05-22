@@ -578,7 +578,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         }
     }
 
-    _HIP_DEBUG("hip_create_r1() invoked.\n");
     HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
@@ -587,8 +586,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     HIP_IFEL(!(dh_data1 = malloc(dh_size1)),
              -1, "Failed to alloc memory for dh_data1\n");
     memset(dh_data1, 0, dh_size1);
-
-    _HIP_DEBUG("dh_size=%d\n", dh_size1);
 
     /* Allocate memory for writing the second Diffie-Hellman shared secret */
     HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
@@ -640,8 +637,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
              "Building of HIP transform failed\n");
 
     /* Parameter HOST_ID */
-    _HIP_DEBUG("This HOST ID belongs to: %s\n",
-               hip_get_param_host_id_hostname(host_id_pub));
     HIP_IFEL(hip_build_param(msg, host_id_pub), -1,
              "Building of host id failed\n");
 
@@ -669,8 +664,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Parameter Signature 2 */
 
     HIP_IFEL(sign(private_key, msg), -1, "Signing of R1 failed.\n");
-
-    _HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
     /* Parameter ECHO_REQUEST (OPTIONAL) */
 
@@ -752,8 +745,6 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
     *r1_src_addr            = i1_daddr;
     in_port_t r1_dst_port   = 0;
     int err                 = 0;
-
-    _HIP_DEBUG("hip_xmit_r1() invoked.\n");
 
     HIP_DEBUG_IN6ADDR("i1_saddr", i1_saddr);
     HIP_DEBUG_IN6ADDR("i1_daddr", i1_daddr);
@@ -948,7 +939,6 @@ static int hip_queue_packet(const struct in6_addr *src_addr, const struct in6_ad
     int err = 0;
     int len = hip_get_msg_total_len(msg);
 
-    _HIP_DEBUG("hip_queue_packet() invoked.\n");
     /* Not reusing the old entry as the new packet may have
      * different length */
     if (!entry) {
@@ -1014,8 +1004,6 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
     struct in6_addr my_addr;
     /* Points either to v4 or v6 raw sock */
     int hip_raw_sock_output   = 0;
-
-    _HIP_DEBUG("hip_send_raw() invoked.\n");
 
     /* Verify the existence of obligatory parameters. */
     HIP_ASSERT(peer_addr != NULL && msg != NULL);
@@ -1140,7 +1128,6 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
      * do not seem to work properly. Thus, we use just sendto() */
 
     len = hip_get_msg_total_len(msg);
-    _HIP_HEXDUMP("Dumping packet ", msg, len);
 
     if (udp) {
         struct udphdr *uh = (struct udphdr *) (void *) msg;
@@ -1156,8 +1143,6 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
         uh->check  = 0;
         memmoved   = 1;
     }
-
-    _HIP_HEXDUMP("Dumping packet ", msg, len);
 
     for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
         for (try_again = 0; try_again < 2; try_again++) {
@@ -1297,8 +1282,6 @@ int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_
     hip_list_t *item                       = NULL, *tmp = NULL;
     int i                                  = 0;
 
-    _HIP_DEBUG_IN6ADDR("Destination address:", peer_addr);
-
     /* Notice that the shotgun logic requires us to check always the address family.
      *  Depending on the address family, we send the packet using UDP encapsulation or
      *  without it. Here's the current logic for UDP encapsulation (note that we
@@ -1378,8 +1361,6 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry)
     HIP_IFEL((entry->outbound_sa_count == 0), 0,
              "No outbound sa, ignoring keepalive\n")
 
-    _HIP_DEBUG("Starting to send ICMPv6 heartbeat\n");
-
     /* memset and malloc everything you need */
     memset(&mhdr, 0, sizeof(struct msghdr));
     memset(&tval, 0, sizeof(struct timeval));
@@ -1441,10 +1422,6 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry)
         err = (0 > i) ? i : -1;
     }
 
-    /* Debug information*/
-    _HIP_DEBUG_HIT("src hit", &entry->hit_our);
-    _HIP_DEBUG_HIT("dst hit", &entry->hit_peer);
-    _HIP_DEBUG("i == %d socket = %d\n", i, sockfd);
     HIP_PERROR("SENDMSG ");
 
     HIP_IFEL((i < 0), -1, "Failed to send ICMP into ESP tunnel\n");

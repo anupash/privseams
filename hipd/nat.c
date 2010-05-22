@@ -127,11 +127,6 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 
     HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Alloc\n");
 
-    _HIP_DEBUG("hip_nat_send_keep_alive() invoked.\n");
-    _HIP_DEBUG("entry @ %p, entry->nat_mode %d.\n",
-               entry, entry->nat_mode);
-    _HIP_DEBUG_HIT("&entry->hit_our", &entry->hit_our);
-
     /* Check that the host association is in correct state and that there is
      * a NAT between this host and the peer. Note, that there is no error
      * (err is set to zero) if the condition does not hold. We just don't
