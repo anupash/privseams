@@ -37,40 +37,6 @@
 #include "user.h"
 #include "lib/core/debug.h"
 
-/** default value for ICE pacing, unit is 0.001 s**/
-#define HIP_NAT_RELAY_LATENCY  200
-
-/** Boolean which indicates if random port simulation is on.
- *  <ul>
- *  <li>0: port randomizing is off.</li>
- *  <li>1: port randomizing is on.</li>
- *  </ul>
- *  @note Not used currently.
- *  @note This is needed only for simulation purposes and can be removed from
- *        released versions of HIPL.*/
-#define HIP_SIMULATE_NATS 0
-/** Minimum port number a NAT can randomize.
- *  Has to be float as it is used in rand().
- *  @note This is needed only for simulation purposes and can be removed from
- *        released versions of HIPL.*/
-#define HIP_UDP_PORT_RANDOMIZING 0
-/** Boolean to indicate if a NATed network is simulated.
- *  <ul>
- *  <li>0: NATed network is not simulated, real life NATs exist in the network.
- *  </li>
- *  <li>1: NATed network is simulated, real life NATs do not exist in the
- *  network, but UDP encapsulation is still used.</li>
- *  </ul>
- *  @note This has no effect if HIP_UDP_PORT_RANDOMIZING is off
- *  @note Not used currently.
- *  @note This is needed only for simulation purposes and can be removed from
- *        released versions of HIPL.*/
-#define HIP_UDP_PORT_RAND_MIN 49152.0
-/** Maximum port number a NAT can randomize.
- *  Has to be float as it is used in rand().
- *  @note This is needed only for simulation purposes and can be removed from
- *        released versions of HIPL.*/
-#define HIP_UDP_PORT_RAND_MAX 65535.0
 
 /** A transmission function set for NAT traversal. */
 /** File descriptor of socket used for hip control packet NAT traversal on
@@ -173,49 +139,6 @@ out_err:
     return err;
 }
 
-#if HIP_UDP_PORT_RANDOMIZING
-/**
- * Randomizes @b source ports 11111 and 22222.
- *
- * This function randomizes ports @c hip_nat_rand_port1 and
- * @c hip_nat_rand_port2 used in NAT-travelsal. NATs choose randomly a port
- * when HIP control traffic goes through them. Internet Draft
- * [draft-schmitt-hip-nat-traversal-02] defines these random chosen ports as
- * 11111 and 22222. This function serves as a helper function to simulate
- * these random chosen ports in a non-NATed environment where UPD encapsulation
- * is used.
- *
- * @note According to [draft-schmitt-hip-nat-traversal-02] HIP daemons use
- *       one random port and NATs use two random ports. The value of
- *       @c hip_nat_rand_port1 can be considered as the random port of
- *       HIP daemon also. A scenario where HIP daemons use random source port
- *       and real life NATs randomize the NAT-P and NAT-P' ports is achieved by
- *       removing the @c hip_nat_rand_port2 randomization from this function.
- * @note Not used currently.
- * @note This is needed only for simulation purposes and can be removed from
- *       released versions of HIPL.
- */
-static void hip_nat_randomize_nat_ports(void)
-{
-    unsigned int secs_since_epoch = (unsigned int) time(NULL);
-    HIP_DEBUG("Randomizing UDP ports to be used.\n");
-    srand(secs_since_epoch);
-    hip_nat_rand_port1 = HIP_UDP_PORT_RAND_MIN + (int)
-                         (((HIP_UDP_PORT_RAND_MAX - HIP_UDP_PORT_RAND_MIN + 1) *
-                           rand()) / (RAND_MAX + 1.0));
-#if HIP_SIMULATE_NATS
-    hip_nat_rand_port2 = HIP_UDP_PORT_RAND_MIN + (int)
-                         (((HIP_UDP_PORT_RAND_MAX - HIP_UDP_PORT_RAND_MIN + 1) *
-                           rand()) / (RAND_MAX + 1.0));
-#else
-    hip_nat_rand_port2 = hip_nat_rand_port1;
-#endif
-    HIP_DEBUG("Randomized ports are NAT-P: %u, NAT-P': %u.\n",
-              hip_nat_rand_port1, hip_nat_rand_port2);
-}
-
-#endif
-
 /**
  * get the NAT mode for a host association
  *
@@ -266,9 +189,6 @@ int hip_user_nat_mode(int nat_mode)
 {
     int err = 0, nat;
     HIP_DEBUG("hip_user_nat_mode() invoked. mode: %d\n", nat_mode);
-#if HIP_UDP_PORT_RANDOMIZING
-    hip_nat_randomize_nat_ports();
-#endif
 
     nat = nat_mode;
     switch (nat) {
