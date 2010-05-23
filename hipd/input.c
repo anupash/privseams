@@ -1622,7 +1622,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
     /************************************************/
 
-#if defined(CONFIG_HIP_RVS)
+#ifdef CONFIG_HIP_RVS
     /********** REG_REQUEST **********/
     /* This part should only be executed at server offering rvs or relay
      * services.
@@ -1633,7 +1633,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 #endif
 
-#if defined(CONFIG_HIP_RVS)
+#ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status() != HIP_RELAY_OFF) {
         hip_build_param_reg_from(r2, i2_saddr, i2_info->src_port);
     }
