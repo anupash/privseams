@@ -38,12 +38,6 @@
 #include "lib/core/debug.h"
 
 
-/** A transmission function set for NAT traversal. */
-/** File descriptor of socket used for hip control packet NAT traversal on
- *  UDP/IPv4. Defined in hipd.c */
-/** Specifies the NAT status of the daemon. This value indicates if the current
- *  machine is behind a NAT. Defined in hipd.c */
-
 static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
 
 /**
