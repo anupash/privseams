@@ -14,13 +14,27 @@
 
 #define _BSD_SOURCE
 
-#include <netinet/udp.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+
 #include "lib/core/builder.h"
-#include "config.h"
-#include "esp_prot_conntrack.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtree.h"
+#include "lib/core/ife.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/protodefs.h"
+#include "common_types.h"
+#include "conntrack.h"
 #include "esp_prot_api.h"
-#include "hslist.h"
 #include "esp_prot_config.h"
+#include "esp_prot_defines.h"
+#include "firewall_defines.h"
+#include "hslist.h"
+#include "esp_prot_conntrack.h"
+
 
 /* cached anchor element updates */
 struct esp_anchor_item {

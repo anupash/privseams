@@ -25,33 +25,60 @@
 
 #define _BSD_SOURCE
 
+#include <libipq.h>
+#include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <limits.h> /* INT_MIN, INT_MAX */
-#include <netinet/in.h> /* in_addr, in6_addr */
-#include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/utsname.h>
+#include <sys/wait.h>
+#include <linux/netfilter_ipv4.h>
 
-#include "config.h"
-#include "firewall.h" /* default include */
-#include "conntrack.h" /* connection tracking */
-#include "proxy.h" /* HIP Proxy */
-#include "opptcp.h" /* Opportunistic TCP */
-// TODO move functions to opptcp
-#include "cache.h" /* required by opptcp */
-#include "cache_port.h" /* required by opptcp */
-#include "lsi.h" /* LSI */
-#include "lib/core/capability.h" /* priviledge separation */
-#include "lib/core/hip_udp.h"
-#include "user_ipsec_api.h" /* Userspace IPsec */
-#include "esp_prot_conntrack.h" /* ESP Tokens */
-#include "esp_prot_api.h" /* ESP Tokens */
-#include "sysopp.h" /* System-based Opportunistic HIP */
-#include "datapkt.h"
-#include "firewalldb.h"
-#include "pisa.h" /* PISA */
-#include "helpers.h"
+#include "lib/core/builder.h"
+#include "lib/core/capability.h"
+#include "lib/core/debug.h"
 #include "lib/core/filemanip.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
+#include "lib/core/message.h"
 #include "lib/core/performance.h"
+#include "lib/core/prefix.h"
 #include "lib/core/util.h"
+#include "lib/tool/lutil.h"
+#include "hipd/hipd.h"
+#include "config.h"
+#include "cache.h"
+#include "cache_port.h"
+#include "common_types.h"
+#include "conntrack.h"
+#include "datapkt.h"
+#include "esp_prot_api.h"
+#include "esp_prot_conntrack.h"
+#include "firewall_control.h"
+#include "firewall_defines.h"
+#include "firewalldb.h"
+#include "helpers.h"
+#include "lsi.h"
+#include "midauth.h"
+#include "opptcp.h"
+#include "pisa.h"
+#include "proxy.h"
+#include "rule_management.h"
+#include "sysopp.h"
+#include "user_ipsec_api.h"
+#include "firewall.h"
+
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0

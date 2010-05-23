@@ -14,14 +14,29 @@
 /* required for IFNAMSIZ in libipq headers */
 #define _BSD_SOURCE
 
-#include "user_ipsec_api.h"
-#include "user_ipsec_sadb.h"
+#include "esp_prot_api.h"
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+
+#include "lib/core/common_defines.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/prefix.h"
+#include "datapkt.h"
+#include "firewall_defines.h"
+#include "lsi.h"
 #include "user_ipsec_esp.h"
 #include "user_ipsec_fw_msg.h"
-#include "esp_prot_api.h"
-#include "lib/core/ife.h"
-#include "lib/core/debug.h"
-#include "lsi.h"
+#include "user_ipsec_sadb.h"
+#include "user_ipsec_api.h"
+
 
 #define USER_IPSEC_INACTIVE 0
 #define USER_IPSEC_ACTIVE 1

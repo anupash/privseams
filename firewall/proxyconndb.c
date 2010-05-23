@@ -13,8 +13,17 @@
  * @author Weiwei Hu
  */
 
-#include "hipd/hidb.h"
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
 #include "lib/core/hashtable.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
+#include "hipd/hidb.h"
 #include "proxyconndb.h"
 
 

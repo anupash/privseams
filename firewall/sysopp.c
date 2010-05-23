@@ -23,19 +23,27 @@
 
 #define _BSD_SOURCE
 
-#include <netinet/ip6.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
-#include "lib/core/debug.h"
 #include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/hostid.h"
+#include "lib/core/ife.h"
 #include "lib/core/message.h"
-#include "sysopp.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "common_hipd_msg.h"
 #include "firewall.h"
+#include "firewall_defines.h"
 #include "firewalldb.h"
 #include "lsi.h"
-#include "common_hipd_msg.h"
-#include "lib/core/hostid.h"
+#include "sysopp.h"
+
 
 /**
  * flush iptables rules for system-based opportunistic mode

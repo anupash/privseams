@@ -15,18 +15,29 @@
 
 #define _BSD_SOURCE
 
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <stdio.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <linux/netfilter.h>
 
 #include "config.h"
-#include "lib/core/ife.h"
+#include "lib/core/builder.h"
+#include "lib/core/certtools.h"
 #include "lib/core/crypto.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 #include "lib/core/performance.h"
+#include "lib/core/prefix.h"
+#include "firewall_defines.h"
 #include "midauth.h"
-
-#include "pisa.h"
 #include "pisa_cert.h"
+#include "pisa.h"
+
+
 #define PISA_RANDOM_LEN 16
 #define PISA_PUZZLE_SEED 0xDEADC0DE
 #define PISA_PUZZLE_OPAQUE_LEN (4 + HIP_AH_SHA_LEN)

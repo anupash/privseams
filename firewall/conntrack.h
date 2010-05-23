@@ -9,13 +9,13 @@
 
 #define _BSD_SOURCE
 
+#include <stdint.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/ip6.h>
 
+#include "lib/core/protodefs.h"
+#include "common_types.h"
 #include "firewall_defines.h"
 #include "rule_management.h"
-#include "common_types.h"
 
 
 /*-------------- CONNECTION TRACKING ------------*/

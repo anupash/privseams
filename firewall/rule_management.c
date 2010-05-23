@@ -13,27 +13,32 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <linux/netfilter.h>
-#include <libipq.h>
-
-#include <stdio.h>
-#include <openssl/dsa.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <limits.h>
 #include <linux/netfilter_ipv6.h>
+#include <openssl/dsa.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
 
-#include "config.h"
-#include "rule_management.h"
-#include "helpers.h"
 #include "lib/core/builder.h"
-#include "lib/core/crypto.h"
 #include "lib/core/debug.h"
 #include "lib/core/hostid.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "dlist.h"
+#include "firewall.h"
+#include "helpers.h"
+#include "rule_management.h"
+
 
 /* string tokens for rule parsing */
 #define SRC_HIT_STR "-src_hit"

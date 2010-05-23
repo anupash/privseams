@@ -7,6 +7,9 @@
 #ifndef HIP_FIREWALL_RULE_MANAGEMENT_H
 #define HIP_FIREWALL_RULE_MANAGEMENT_H
 
+#include <netinet/in.h>
+
+#include "lib/core/protodefs.h"
 #include "dlist.h"
 
 #define DROP 0;

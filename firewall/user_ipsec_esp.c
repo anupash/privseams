@@ -28,17 +28,25 @@
 
 #define _BSD_SOURCE
 
+#include <stdint.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
-#include <openssl/rand.h>
 #include <openssl/hmac.h>
-#include <openssl/evp.h>
+#include <openssl/rand.h>
 
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/keylen.h"
 #include "lib/core/prefix.h"
 #include "lib/tool/checksum.h"
-#include "lib/core/keylen.h"
 #include "esp_prot_api.h"
+#include "firewall_defines.h"
+#include "user_ipsec_sadb.h"
 #include "user_ipsec_esp.h"
+
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12

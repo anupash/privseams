@@ -35,16 +35,22 @@
 
 #define _BSD_SOURCE
 
+#include <netinet/in.h>
+#include <netinet/ip.h>
 #include <netinet/tcp.h>
-#include "opptcp.h"
-#include "firewalldb.h"
-#include "lib/core/debug.h"
-#include "lib/core/protodefs.h"
+
 #include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
 #include "lib/core/message.h"
+#include "lib/core/protodefs.h"
 #include "lib/tool/nlink.h"
 #include "common_hipd_msg.h"
 #include "firewall.h"
+#include "firewalldb.h"
+#include "opptcp.h"
+
 
 /**
  * Send the ip of a peer to hipd, so that it can:

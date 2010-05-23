@@ -7,6 +7,8 @@
 #ifndef HIP_FIREWALL_COMMON_HIPD_MSG_H
 #define HIP_FIREWALL_COMMON_HIPD_MSG_H
 
+#include <netinet/in.h>
+
 #include "lib/core/protodefs.h"
 
 int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,

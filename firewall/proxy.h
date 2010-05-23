@@ -10,10 +10,7 @@
 #define _BSD_SOURCE
 
 #include <libipq.h>
-
-#include "firewall.h"
-#include "proxydb.h"
-#include "config.h"
+#include <netinet/in.h>
 
 int request_hipproxy_status(void);
 

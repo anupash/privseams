@@ -15,10 +15,14 @@
 
 #define _BSD_SOURCE
 
+#include <stdlib.h>
+
 #include "lib/core/debug.h"
+#include "lib/core/ife.h"
 #include "esp_prot_api.h"
-#include "esp_prot_config.h"
 #include "esp_prot_conntrack.h"
+#include "esp_prot_config.h"
+#include "config.h"
 
 
 const char *config_file = {"/etc/hip/esp_prot_config.cfg"};

@@ -15,15 +15,17 @@
 #ifndef HIP_FIREWALL_USER_IPSEC_SADB_H
 #define HIP_FIREWALL_USER_IPSEC_SADB_H
 
-#include <openssl/des.h>                /* des_key_schedule */
-#include <openssl/aes.h>                /* aes_key */
-#include <openssl/blowfish.h>   /* bf_key */
-#include <sys/time.h>
-#include <inttypes.h>
+#include <stdint.h>
 #include <netinet/in.h>
+#include <openssl/aes.h>
+#include <openssl/blowfish.h>
+#include <openssl/des.h>
+#include <sys/time.h>
+
+#include "lib/core/esp_prot_common.h"
 #include "lib/core/hashchain.h"
 #include "esp_prot_defines.h"
-#include "lib/core/esp_prot_common.h"
+
 
 #define BEET_MODE 3 /* mode: 1-transport, 2-tunnel, 3-beet -> right now we only support mode 3 */
 

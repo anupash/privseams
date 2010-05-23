@@ -15,21 +15,30 @@
 
 #define _BSD_SOURCE
 
+#include <stdint.h>
 #include <stdlib.h>
-#include <netinet/ip_icmp.h>
+#include <string.h>
 #include <netinet/icmp6.h>
-#include <netinet/udp.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
-#include "firewalldb.h"
-#include "cache.h"
-#include "firewall_defines.h"
-#include "lib/core/icomm.h"
+#include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/hashtable.h"
-#include "lib/core/builder.h"
-
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "lib/tool/checksum.h"
+#include "cache.h"
+#include "firewalldb.h"
+
 
 static int firewall_raw_sock_tcp_v4        = 0;
 static int firewall_raw_sock_udp_v4        = 0;

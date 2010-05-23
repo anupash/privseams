@@ -7,19 +7,9 @@
 #ifndef HIP_FIREWALL_PROXYDB_H
 #define HIP_FIREWALL_PROXYDB_H
 
-#include <sys/types.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stddef.h>
-#include <sys/socket.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
-#include <netinet/ip_icmp.h>
+#include <netinet/in.h>
 
-#include "lib/core/debug.h"
-#include "hipd/hidb.h"
-#include "lib/core/hashtable.h"
-#include "firewall_control.h"
+#include "lib/core/protodefs.h"
 
 typedef struct hip_proxy_t {
     hip_hit_t       hit_proxy;

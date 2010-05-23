@@ -7,7 +7,6 @@
 #ifndef HIP_FIREWALL_FIREWALL_H
 #define HIP_FIREWALL_FIREWALL_H
 
-#include "config.h"
 #include "lib/core/protodefs.h"
 
 /** globally used variables defined in firewall.c */

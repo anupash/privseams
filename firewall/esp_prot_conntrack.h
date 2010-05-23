@@ -17,7 +17,8 @@
 #define _BSD_SOURCE
 
 #include "lib/core/protodefs.h"
-#include "conntrack.h"
+#include "firewall_defines.h"
+
 
 typedef struct esp_prot_conntrack_tfm {
     hash_function_t hash_function;     /* pointer to the hash function */

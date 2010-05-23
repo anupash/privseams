@@ -7,6 +7,9 @@
 #ifndef HIP_FIREWALL_PROXYCONNDB_H
 #define HIP_FIREWALL_PROXYCONNDB_H
 
+#include <stdint.h>
+#include <netinet/in.h>
+
 #include "lib/core/debug.h"
 
 struct hip_proxy_conn_key {

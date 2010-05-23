@@ -9,18 +9,20 @@
 
 #define _BSD_SOURCE
 
-#include <net/if.h>
-#include <sys/time.h>
 #include <libipq.h>
-#include <string.h>
+#include <stdint.h>
+#include <netinet/in.h>
+#include <netinet/ip6.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
 
-#include "config.h"
-#include "lib/core/linkedlist.h"
 #include "lib/core/common_defines.h"
-#include "lib/core/esp_prot_common.h"
+#include "lib/core/linkedlist.h"
 #include "lib/core/protodefs.h"
-#include "esp_prot_defines.h"
+#include "config.h"
 #include "common_types.h"
+#include "esp_prot_defines.h"
+#include "firewall_defines.h"
 
 
 typedef struct hip_fw_context {

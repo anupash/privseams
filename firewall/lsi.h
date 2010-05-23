@@ -10,8 +10,8 @@
 #define _BSD_SOURCE
 
 #include <libipq.h>
-#include <netinet/ip_icmp.h>
-#include <linux/netfilter_ipv4/ip_queue.h>
+#include <netinet/in.h>
+
 #include "lib/core/protodefs.h"
 
 int hip_trigger_bex(const struct in6_addr *src_hit,

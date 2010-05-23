@@ -26,18 +26,27 @@
 
 #define _BSD_SOURCE
 
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
 #include <netinet/ip.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
-#include "config.h"
-#include "datapkt.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/hostid.h"
+#include "lib/core/ife.h"
+#include "lib/core/message.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "cache.h"
+#include "firewall_defines.h"
 #include "user_ipsec_api.h"
 #include "user_ipsec_esp.h"
-#include "cache.h"
-#include "lib/core/debug.h"
-#include "lib/core/ife.h"
-#include "lib/core/builder.h"
-#include "lib/core/hostid.h"
-#include "lib/core/message.h"
+#include "datapkt.h"
 
 static unsigned char *hip_data_packet = NULL;
 

@@ -24,17 +24,28 @@
 
 #define _BSD_SOURCE
 
+#include <libipq.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <netinet/ip6.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/message.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "cache.h"
 #include "cache_port.h"
 #include "firewall.h"
 #include "firewalldb.h"
 #include "lsi.h"
-#include "lib/core/builder.h"
-#include "lib/core/message.h"
+
 
 #define BUFSIZE HIP_MAX_PACKET
 

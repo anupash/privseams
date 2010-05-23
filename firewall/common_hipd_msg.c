@@ -9,13 +9,17 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
 
-#include "common_hipd_msg.h"
-#include "lib/core/ife.h"
-#include "lib/core/debug.h"
 #include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 #include "lib/core/message.h"
+#include "lib/core/protodefs.h"
 #include "firewall.h"
+#include "common_hipd_msg.h"
+
 
 /**
  * Gets the state of the bex for a pair of ip addresses.

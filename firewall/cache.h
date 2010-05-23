@@ -7,6 +7,9 @@
 #ifndef HIP_FIREWALL_CACHE_H
 #define HIP_FIREWALL_CACHE_H
 
+#include <netinet/in.h>
+
+#include "lib/core/protodefs.h"
 #include "lib/core/icomm.h"
 
 int hip_firewall_cache_db_match(const struct in6_addr *, const struct in6_addr *,

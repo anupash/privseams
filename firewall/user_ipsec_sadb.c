@@ -12,17 +12,29 @@
  *
  */
 
-#include <openssl/sha.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
+#include <netinet/in.h>
+#include <openssl/aes.h>
+#include <openssl/blowfish.h>
+#include <openssl/des.h>
+#include <openssl/sha.h>
+#include <sys/time.h>
 
-#include "user_ipsec_sadb.h"
-#include "esp_prot_api.h"
-#include "firewall.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
 #include "lib/core/ife.h"
 #include "lib/core/keylen.h"
-#include "lib/core/debug.h"
-#include "lib/core/state.h"
-#include "lib/core/builder.h"
+#include "lib/core/list.h"
+#include "lib/core/esp_prot_common.h"
+#include "lib/core/hashchain.h"
+#include "esp_prot_api.h"
+#include "esp_prot_defines.h"
+#include "firewall.h"
+#include "user_ipsec_sadb.h"
+
 
 /* hash functions used for calculating the entries' hashes
  *

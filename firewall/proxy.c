@@ -11,14 +11,32 @@
 #define _BSD_SOURCE
 
 #include <errno.h>
+#include <libipq.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <netinet/icmp6.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
+#include "config.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/message.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "lib/tool/checksum.h"
-#include "proxy.h"
-#include "proxyconndb.h"
+#include "firewall.h"
 #include "firewall_defines.h"
+#include "proxyconndb.h"
+#include "proxydb.h"
+#include "proxy.h"
 
 static int hip_proxy_raw_sock_tcp_v4          = 0;
 static int hip_proxy_raw_sock_tcp_v6          = 0;
