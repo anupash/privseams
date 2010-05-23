@@ -38,8 +38,6 @@
 #include "lib/core/debug.h"
 
 
-static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
-
 /**
  * Refreshes the port state of all NATs related to this host.
  *
@@ -134,6 +132,18 @@ out_err:
 }
 
 /**
+ * Get HIP NAT status.
+ * TODO doxygen header
+ */
+hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
+{
+    if (entry) {
+        return entry->nat_mode;
+    }
+    return hip_nat_status;
+}
+
+/**
  * get the NAT mode for a host association
  *
  *
@@ -147,6 +157,28 @@ out_err:
 hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry)
 {
     return hip_get_nat_mode(entry);
+}
+
+/**
+ * Sets NAT status "on" for a single host association.
+ *
+ * @param entry    a pointer to a host association for which to set NAT status.
+ * @param mode     nat mode
+ * @return         zero.
+ * @note           the status is changed just for the parameter host
+ *                 association. This function does @b not insert the host
+ *                 association into the host association database.
+ */
+static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
+{
+    int err = 0;
+    if (entry && mode != HIP_NAT_MODE_NONE) {
+        hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+        entry->nat_mode = *((hip_transform_suite_t *) mode);
+        HIP_DEBUG("NAT status of host association %p: %d\n",
+                  entry, entry->nat_mode);
+    }
+    return err;
 }
 
 /**
@@ -205,39 +237,5 @@ int hip_user_nat_mode(int nat_mode)
     HIP_DEBUG("hip_user_nat_mode() end. mode: %d\n", hip_nat_status);
 
 out_err:
-    return err;
-}
-
-/**
- * Get HIP NAT status.
- * TODO doxygen header
- */
-hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
-{
-    if (entry) {
-        return entry->nat_mode;
-    }
-    return hip_nat_status;
-}
-
-/**
- * Sets NAT status "on" for a single host association.
- *
- * @param entry    a pointer to a host association for which to set NAT status.
- * @param mode     nat mode
- * @return         zero.
- * @note           the status is changed just for the parameter host
- *                 association. This function does @b not insert the host
- *                 association into the host association database.
- */
-static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
-{
-    int err = 0;
-    if (entry && mode != HIP_NAT_MODE_NONE) {
-        hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-        entry->nat_mode = *((hip_transform_suite_t *) mode);
-        HIP_DEBUG("NAT status of host association %p: %d\n",
-                  entry, entry->nat_mode);
-    }
     return err;
 }
