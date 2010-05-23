@@ -9,8 +9,8 @@
  */
 
 #include "certtools.h"
+#include "crypto.h"
 #include "straddr.h"
-#include "lib/core/crypto.h"
 
 /*******************************************************************************
 * FUNCTIONS FOR SPKI                                                          *

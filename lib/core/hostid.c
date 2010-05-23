@@ -10,15 +10,16 @@
 
 #include <netinet/in.h>
 #include <stdlib.h>
-#include "lib/core/ife.h"
-#include "lib/core/debug.h"
-#include "lib/core/protodefs.h"
-#include "lib/core/crypto.h"
-#include "lib/tool/pk.h"
 
 #include "config.h"
-#include "hostid.h"
+#include "lib/tool/pk.h"
+#include "crypto.h"
+#include "debug.h"
 #include "filemanip.h"
+#include "hostid.h"
+#include "ife.h"
+#include "protodefs.h"
+
 
 #define HOST_ID_FILENAME_MAX_LEN 256
 

@@ -48,20 +48,19 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/core/builder.h"
-#include "lib/core/debug.h"
-#include "lib/core/hostid.h"
-#include "lib/core/ife.h"
-#include "lib/core/message.h"
-#include "lib/core/prefix.h"
-#include "lib/core/protodefs.h"
-#include "lib/core/straddr.h"
 #include "lib/tool/lutil.h"
 #include "config.h"
+#include "builder.h"
+#include "crypto.h"
+#include "debug.h"
+#include "hostid.h"
+#include "ife.h"
+#include "message.h"
+#include "prefix.h"
+#include "protodefs.h"
+#include "straddr.h"
 #include "conf.h"
 
-
-#include "lib/core/crypto.h"
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.

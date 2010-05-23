@@ -33,12 +33,12 @@
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
-#include "user_ipsec_esp.h"
-#include "firewall/esp_prot_api.h"
-#include "lib/core/prefix.h"
 
+#include "lib/core/prefix.h"
 #include "lib/tool/checksum.h"
 #include "lib/core/keylen.h"
+#include "esp_prot_api.h"
+#include "user_ipsec_esp.h"
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12

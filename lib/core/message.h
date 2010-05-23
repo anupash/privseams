@@ -14,8 +14,8 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#include "lib/core/protodefs.h"
-#include "lib/core/state.h"
+#include "protodefs.h"
+#include "state.h"
 
 
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */

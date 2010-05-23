@@ -69,12 +69,13 @@
 
 #include <stdlib.h>
 
+#include "hipd/input.h"
+#include "lib/tool/checksum.h"
 #include "config.h"
 #include "builder.h"
-#include "hipd/input.h"
-#include "lib/core/crypto.h"
-#include "lib/core/hostid.h"
-#include "lib/tool/checksum.h"
+#include "crypto.h"
+#include "hostid.h"
+
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE

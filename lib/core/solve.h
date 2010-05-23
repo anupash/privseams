@@ -10,7 +10,7 @@
 #include <sys/types.h>
 
 #include "config.h"
-#include "lib/core/crypto.h"
+#include "crypto.h"
 #include "protodefs.h"
 #include "state.h"
 
