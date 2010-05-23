@@ -23,6 +23,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <linux/netfilter.h>
+#include <openssl/hmac.h>
 
 #include "config.h"
 #include "lib/core/builder.h"

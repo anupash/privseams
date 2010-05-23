@@ -14,8 +14,10 @@
 
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
+#include "lib/core/icomm.h"
 #include "lib/core/ife.h"
 #include "lib/core/message.h"
+#include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
 #include "firewall.h"
 #include "common_hipd_msg.h"

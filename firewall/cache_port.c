@@ -30,6 +30,7 @@
 #include "lib/core/hashtable.h"
 #include "lib/core/icomm.h"
 #include "lib/core/list.h"
+#include "lib/core/prefix.h"
 #include "lib/tool/lutil.h"
 #include "cache.h"
 #include "cache_port.h"
