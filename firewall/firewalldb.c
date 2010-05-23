@@ -31,9 +31,6 @@
 
 #include "lib/tool/checksum.h"
 
-#define DISABLE_hip_firewall_hldb_dump
-#define DISABLE_firewall_init_raw_sock_esp_v6
-
 static int firewall_raw_sock_tcp_v4        = 0;
 static int firewall_raw_sock_udp_v4        = 0;
 static int firewall_raw_sock_icmp_v4       = 0;
@@ -43,15 +40,11 @@ static int firewall_raw_sock_icmp_v6       = 0;
 static int firewall_raw_sock_icmp_outbound = 0;
 
 static int firewall_raw_sock_esp_v4        = 0;
-
-#ifndef DISABLE_firewall_init_raw_sock_esp_v6
 static int firewall_raw_sock_esp_v6        = 0;
-#endif
 
 HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 
 
-#ifndef DISABLE_hip_firewall_hldb_dump
 /**
  * display the contents of the database
  */
@@ -74,8 +67,6 @@ static void hip_firewall_hldb_dump(void)
     HIP_UNLOCK_HT(&firewall_lsi_hit_db);
 }
 
-#endif
-
 /**
  * Search in the database the given peer ip
  *
@@ -84,9 +75,7 @@ static void hip_firewall_hldb_dump(void)
  */
 firewall_hl_t *hip_firewall_ip_db_match(const struct in6_addr *ip_peer)
 {
-#ifndef DISABLE_hip_firewall_hldb_dump
     hip_firewall_hldb_dump();
-#endif
     HIP_DEBUG_IN6ADDR("peer ip", ip_peer);
     return (firewall_hl_t *) hip_ht_find(firewall_hit_lsi_ip_db,
                                          (void *) ip_peer);
@@ -477,7 +466,6 @@ out_err:
     return err;
 }
 
-#ifndef DISABLE_firewall_init_raw_sock_esp_v6
 /**
  * Initialize ESPv6-based raw socket
  *
@@ -501,8 +489,6 @@ out_err:
     return err;
 }
 
-#endif
-
 /**
  * Initialize all raw sockets
  *
@@ -517,9 +503,7 @@ static void hip_firewall_init_raw_sockets(void)
     hip_firewall_init_raw_sock_udp_v6(&firewall_raw_sock_udp_v6);
     hip_firewall_init_raw_sock_icmp_v6(&firewall_raw_sock_icmp_v6);
     hip_firewall_init_raw_sock_esp_v4(&firewall_raw_sock_esp_v4);
-#ifndef DISABLE_firewall_init_raw_sock_esp_v6
     hip_firewall_init_raw_sock_esp_v6(&firewall_raw_sock_esp_v6);
-#endif
 }
 
 /**
