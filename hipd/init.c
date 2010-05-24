@@ -317,7 +317,7 @@ static const char *kernel_crypto_mod[] = {
 /** Tunneling, IPsec, interface and control modules */
 static const char *kernel_net_mod[] = {
     "xfrm4_mode_beet", "xfrm6_mode_beet",
-    "ip4_tunnel",      "ip6_tunnel",
+    "tunnel4",      "ip6_tunnel",
     "esp4",            "esp6",
     "xfrm_user",       "dummy",
 };
