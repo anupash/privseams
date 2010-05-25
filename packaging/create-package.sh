@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/bin/sh -xv
 
-VERSION=
+VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
+RELEASE=
 NAME=hipl
 PKGROOT=$PWD
 PKGEXE=$PKGROOT/packaging
@@ -25,29 +26,21 @@ REPO_USER=hipl
 REPO_GROUP=hipl
 SPECFILE_DIR=$(mktemp -d)
 SPECFILE=$SPECFILE_DIR/hipl.spec
-RELEASE_VERSION_FILE=$PKGROOT/release.version
-
-inc_release_number()
-{
-    TMPFILE=$(mktemp)
-    awk \
-    '{ \
-        if ($1 == "Release:") { \
-            print $1 " " ($2 + 1) \
-        } else {                  \
-            print              \
-        } \
-    }' < $RELEASE_VERSION_FILE > $TMPFILE
-    mv $TMPFILE $RELEASE_VERSION_FILE
-    echo "Now type:"
-    echo "bzr update"
-    echo "bzr commit -m 'Increased release version number'"
-}
+OPT_CHANGELOG='doc/ChangeLog'
 
 die()
 {
     echo $@
     exit 1
+}
+
+set_release_version()
+{
+    if test -r $OPT_CHANGELOG; then
+        RELEASE=$(head -2 $OPT_CHANGELOG | tail -1 | cut -d" " -f2)
+    else
+        RELEASE=$(bzr log --line -l 1 | cut -d: -f1)
+    fi
 }
 
 build_rpm()
@@ -148,7 +141,9 @@ build_deb()
 
 set -e
 
-cp $RELEASE_VERSION_FILE $SPECFILE
+set_release_version
+echo "Version: $VERSION" > $SPECFILE
+echo "Release: $RELEASE" >> $SPECFILE
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
@@ -178,16 +173,12 @@ fi
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 PKG_INDEX_DIR=$PKGEXE
 PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
-VERSION=$(grep Version: $SPECFILE | cut -d" " -f2)
 
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 
 # Determine action
 if test x"$1" = x"syncrepo"; then
     syncrepo
-    exit
-elif test x"$1" = x"increl"; then
-    inc_release_number
     exit
 fi
 echo "Architecture: $ARCH"
@@ -202,12 +193,6 @@ echo <<EOF
 EOF
 
 make dist
-rm -rf ${NAME}-${VERSION}
-tar xzf ${NAME}-main.tar.gz
-#find ${NAME}-main -name '.arch*' | xargs rm -rf
-mv -v ${NAME}-main ${NAME}-${VERSION}
-tar czf $TARBALL ${NAME}-${VERSION}
-#mv $PKGROOT/${NAME}-main.tar.gz $TARBALL
 ls -ld $TARBALL
 
 echo "*** Cleaning up ${DEBDIR} ***"

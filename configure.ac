@@ -1,5 +1,5 @@
 AC_PREREQ([2.53])
-AC_INIT([HIP for Linux], [main], [hipl-users@freelists.org], [hipl])
+AC_INIT([HIP for Linux], [1.0.6], [hipl-users@freelists.org], [hipl])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 

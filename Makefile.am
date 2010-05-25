@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS  = -I m4
 HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h))
 
 # For "make dist"
-EXTRA_DIST =  .vimrc debian doc patches release.version version.h
+EXTRA_DIST =  .vimrc debian doc patches version.h
 EXTRA_DIST += packaging tools/maintainer
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh))
