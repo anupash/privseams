@@ -876,6 +876,11 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
         }
     }
 
+    /* Try to look up peer ip from hosts files and DNS */
+    if (err) {
+        err = hip_map_id_to_addr(dst_hit, dst_lsi, dst_addr);
+    }
+
     /* No peer address found; set it to broadcast address
      * as a last resource */
     if (err) {
