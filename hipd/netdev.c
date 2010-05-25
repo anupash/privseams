@@ -1157,7 +1157,7 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
  * @param arg currently unused
  * @return zero on success and non-zero on error
  */
-int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
+int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg)
 {
     int err            = 0, l = 0, is_add = 0, exists;
     struct ifinfomsg *ifinfo;     /* link layer specific message */
@@ -1388,7 +1388,7 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 
         list_for_each_safe(n, t, addresses, c) {
             na  = list_entry(n);
-            in6 = hip_cast_sa_addr((struct sockaddr *) &na->addr);
+            in6 = hip_cast_sa_addr((const struct sockaddr *) &na->addr);
             if (ipv6_addr_is_teredo(in6)) {
                 ipv6_addr_copy(src, in6);
                 match = 1;

@@ -62,7 +62,7 @@ struct inet6_pktinfo {
     unsigned int    ipi6_ifindex;
 };
 
-typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
+typedef int (*hip_filter_t)(struct nlmsghdr *n, int len, void *arg);
 
 int set_up_device(const char *dev, int up);
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
