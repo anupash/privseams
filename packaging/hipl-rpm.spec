@@ -213,6 +213,7 @@ rm -rf %{buildroot}
 
 %files tools
 %{prefix}/sbin/hipconf
+%{prefix}/sbin/pisacert
 %{prefix}/sbin/nsupdate.pl
 %defattr(755,root,root)
 
