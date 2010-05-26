@@ -116,13 +116,14 @@ install -m 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 755 packaging/fedora-init.d/hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 755 packaging/fedora-init.d/dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
+install -m 644 doc/HOWTO.html %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
 install -t %{buildroot}%{python_sitelib}/DNS tools/hipdnsproxy/DNS/*py*
-install -d %{buildroot}%{python_sitelib}
+install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/pyip6.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/hosts.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/util.py*
-install -t %{buildroot}%{python_sitelib} tools/hipdnskeyparse/myasn.py*
+install -t %{buildroot}%{python_sitelib} tools/hipdnskeyparse/myasn.py* # XX FIXME
 # required in CentOS release 5.2
 install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}%{prefix}/sbin/hipdnskeyparse
 install -m 755 tools/hipdnsproxy/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
@@ -220,7 +221,7 @@ rm -rf %{buildroot}
 %config /etc/rc.d/init.d/hipfw
 
 %files doc
-%doc doc/HOWTO.txt doc/howto-html
+%doc doc/HOWTO.txt doc/HOWTO.html
 
 %files all
 
