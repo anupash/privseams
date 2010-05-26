@@ -9,8 +9,8 @@ TMP_DIR=~/.bzr-hipl-cache
 REVISION=trunk
 WWW_DIR=/var/www/infrahip/html/hipl
 OUTPUT_FILE=$WWW_DIR/hipl.tar.gz
-TMP_OUTPUT_FILE=~/temp/bzr-update-hipl.tmp
-CHANGE_LOG_FILE=ChangeLog
+CHANGE_LOG_FILE=/tmp/ChangeLog
+VERSION=
 
 # Update to the latest version and check out what patches need to be generated
 #
@@ -26,18 +26,32 @@ else
     cd $REVISION
 fi
 
+VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
+
 # Generate a ChangeLog file
 #
-bzr log >$TMP_DIR/hipl-bzr/$REVISION/doc/$CHANGE_LOG_FILE
+bzr log > $CHANGE_LOG_FILE
 
-cd $TMP_DIR/hipl-bzr
 # Make a HIP tarball
 #
-tar --exclude .bzr --exclude .bzrignore -czf $TMP_OUTPUT_FILE $REVISION
+autoreconf --install
+./configure 
+make dist
 
-mv $TMP_OUTPUT_FILE $OUTPUT_FILE
-chmod a+r $OUTPUT_FILE
+# Add ChangeLog file and rename as "trunk"
+tar xzf hipl-${VERSION}.tar.gz
+mv hipl-${VERSION} trunk
+cp $CHANGE_LOG_FILE trunk/doc
+tar czf hipl.tar.gz trunk
+chmod a+r hipl.tar.gz
 
-# Copy the ChangeLog to web
+# Move the tarball to the web
+mv hipl.tar.gz $WWW_DIR
+
+# Move the ChangeLog to web
 #
-cp $TMP_DIR/hipl-bzr/$REVISION/doc/$CHANGE_LOG_FILE $WWW_DIR
+mv $CHANGE_LOG_FILE $WWW_DIR
+
+# Remove temporary files
+rm -rf hipl-${VERSION} trunk
+

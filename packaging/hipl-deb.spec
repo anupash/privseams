@@ -77,7 +77,7 @@ Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-tools, hipl-doc, hipl-dnspr
 %package minimal
 Summary: Minimal HIPL software bundle for servers. This virtual package is suitable for e.g. servers.
 Group: System Environment/Kernel
-Requires: hipl-lib hipl-daemon hipl-tools
+Requires: hipl-lib, hipl-daemon, hipl-tools
 %description minimal
 
 %package lib

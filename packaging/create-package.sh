@@ -83,7 +83,7 @@ mkindex_deb()
 {
     ORIG=$PWD
     cd $PKG_DIR
-    WD=$(echo $PKG_WEB_DIR | sed 's/\//\\\\\//g')
+    WD=$(echo $PKG_WEB_DIR | sed 's/\//\\\//g')
     #dpkg-scanpackages --multiversion . |
     dpkg-scanpackages . | \
         sed "s/Filename: \./Filename: $WD/" | \
@@ -152,7 +152,7 @@ if test -r /etc/debian_version; then
     ARCH=$(dpkg --print-architecture)
     PKG_DIR=$DEBDIR/DEBS/$ARCH
     DISTRO_RELEASE=$(lsb_release -c | cut -f2)
-    PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
+    PKG_WEB_DIR=ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
     cat $PKGEXE/hipl-deb.spec >> $SPECFILE
     DISTRO_PKG_SUFFIX=deb

@@ -7,38 +7,41 @@ terokkar.infrahip.net
 shadowmoon.infrahip.net
 stonebreaker.infrahip.net
 hellfire.infrahip.net
-ironforge.infrahip.net
-nagrand.infrahip.net
 zangarmash.infrahip.net
 blacktemple.infrahip.net
 "
 
 COMMANDS="
 cd /tmp;
-sudo rm -rf main;
+sudo rm -rf trunk;
 rm hipl.tar.gz;
 wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
 tar xvzf hipl.tar.gz &&
-cd main &&
+cd trunk &&
 autoreconf --install &&
 ./configure &&
 make bin syncrepo"
 
 #set -e
 
-# FC11-i386           hipserver (real host)
-# Ubuntu 8.10, i386   terokkar.infrahip.net
-# Ubuntu 8.10, amd64  halko.pc.infrahip.net (real host)
-# F10-x86_64          nagrand.infrahip.net
+# unconfigured:
+# ubuntu lucid 32-bit allerian
+# ubuntu lucid 64-bit cenarion 64-bit
+# ubuntu lucid 64-bit garadar
+#
+# configured:
+# Ubuntu lucid 32-bit terokkar.infrahip.net
+# Ubuntu lucid 64-bit halko.pc.infrahip.net (real host)
+# f12-i386            netherstorm.infrahip.net
 # F12-x86_64          shadowmoon.infrahip.net
 # CentOS-5.4 i386     hellfire.infrahip.net
 # CentOS-5.4 x86_64   zangarmash.infrahip.net
-# --
-# F10-i386                ironforge.infrahip.net
-# f12-i386                netherstorm.infrahip.net
-# fc11-x86_64             stonebreaker
-# fc11-i386               blacktemple
+# fc11-i386           blacktemple
+# fc11-x86_64         stonebreaker
 #
+# disabled:
+# F10-x86_64	      nagrand.infrahip.net
+# FC11-i386           hipserver (real host)
 
 if test $# != 0
 then
