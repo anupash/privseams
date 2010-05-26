@@ -78,7 +78,7 @@ check_dist()
         sort > file_list_checkout
     ./configure && make dist
     tar -tzf hipl-*.tar.gz |
-        sed -e 1d -e "s:${VERSION}/::" -e 's:/$::' -e '/file_list_checkout/d' -e '/version.h/d' |
+        sed -e 1d -e "s:hipl-${VERSION}/::" -e 's:/$::' -e '/file_list_checkout/d' -e '/version.h/d' |
         sort > file_list_tarball
     run_program diff -u file_list_checkout file_list_tarball
 }
