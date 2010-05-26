@@ -7,7 +7,6 @@
 #ifndef HIP_FIREWALL_HSLIST_H
 #define HIP_FIREWALL_HSLIST_H
 
-#include <stdlib.h>
 #include "common_types.h"
 
 SList *alloc_slist(void);

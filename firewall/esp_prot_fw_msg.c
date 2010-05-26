@@ -10,16 +10,26 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashchain.h"
+#include "lib/core/hashchain_store.h"
+#include "lib/core/hashtree.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/message.h"
+#include "lib/core/protodefs.h"
+#include "esp_prot_api.h"
+#include "user_ipsec_sadb.h"
+#include "esp_prot_fw_msg.h"
+
 #include <netinet/udp.h>
 
-#include "lib/core/debug.h"
-#include "lib/core/ife.h"
-#include "lib/core/builder.h"
-#include "lib/core/message.h"
-
-#include "esp_prot_fw_msg.h"
-#include "esp_prot_api.h"
 #include "firewall.h"
 
 

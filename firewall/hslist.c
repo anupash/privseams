@@ -13,6 +13,9 @@
  * @author Essi Vehmersalo
  */
 
+#include <stdlib.h>
+
+#include "common_types.h"
 #include "hslist.h"
 
 /**

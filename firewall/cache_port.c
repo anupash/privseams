@@ -21,11 +21,19 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <netinet/in.h>
 
-#include "cache_port.h"
-#include "cache.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
+#include "lib/core/icomm.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
 #include "lib/tool/lutil.h"
-
+#include "cache.h"
+#include "cache_port.h"
 
 
 static HIP_HASHTABLE *firewall_port_cache_db = NULL;

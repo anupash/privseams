@@ -7,6 +7,9 @@
 #ifndef HIP_FIREWALL_RULE_MANAGEMENT_H
 #define HIP_FIREWALL_RULE_MANAGEMENT_H
 
+#include <netinet/in.h>
+
+#include "lib/core/protodefs.h"
 #include "dlist.h"
 
 #define DROP 0;
@@ -65,6 +68,5 @@ void print_rule_tables(void);
 
 void read_rule_file(const char *file_name);
 DList *read_rules(const int hook);
-void read_rules_exit(const int hook);
 
 #endif /* HIP_FIREWALL_RULE_MANAGEMENT_H */

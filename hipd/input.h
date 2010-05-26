@@ -41,7 +41,6 @@
  */
 static inline int hip_controls_sane(uint16_t controls, uint16_t legal)
 {
-    _HIP_DEBUG("hip_controls_sane() invoked.\n");
     return ((controls & HIP_PACKET_CTRL_ANON) | legal) == legal;
 }
 

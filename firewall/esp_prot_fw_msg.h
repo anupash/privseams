@@ -14,9 +14,12 @@
 #ifndef HIP_FIREWALL_ESP_PROT_FW_MSG_H
 #define HIP_FIREWALL_ESP_PROT_FW_MSG_H
 
+#include <stdint.h>
+
 #include "lib/core/hashchain_store.h"
-#include "user_ipsec_sadb.h"
+#include "lib/core/hashtree.h"
 #include "lib/core/protodefs.h"
+#include "user_ipsec_sadb.h"
 
 int send_esp_prot_to_hipd(const int active);
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore,

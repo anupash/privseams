@@ -1,16 +1,13 @@
 #ifndef HIP_LIB_TOOL_NLINK_H
 #define HIP_LIB_TOOL_NLINK_H
 
-#include <stdio.h>
 #include <stdint.h>
-#include <net/if.h>
 #include <netinet/in.h>
 #include <linux/netlink.h>
 #include <linux/xfrm.h>
-#include <linux/rtnetlink.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
-#include "lib/core/builder.h"
-#include "lib/core/debug.h"
 
 #define HIP_OPTION_KIND 30
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
@@ -65,7 +62,7 @@ struct inet6_pktinfo {
     unsigned int    ipi6_ifindex;
 };
 
-typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
+typedef int (*hip_filter_t)(struct nlmsghdr *n, int len, void *arg);
 
 int set_up_device(const char *dev, int up);
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,

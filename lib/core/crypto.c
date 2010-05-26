@@ -367,26 +367,18 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
     /* OpenSSL modifies the IV it is passed during the encryption/decryption */
     uint8_t iv[20];
     HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
-    _HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
-
-    _HIP_DEBUG("algo: %d\n", alg);
 
     switch (alg) {
     case HIP_HIP_AES_SHA1:
         /* AES key must be 128, 192, or 256 bits in length */
         memcpy(iv, iv_orig, 16);
         if (direction == HIP_DIRECTION_ENCRYPT) {
-            _HIP_DEBUG("d3\n");
             HIP_IFEL((err = AES_set_encrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err,
                      "Unable to use calculated DH secret for AES key (%d)\n", err);
-            _HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
-            _HIP_HEXDUMP("AES IV: ", iv, 16);
             AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *) iv, AES_ENCRYPT);
         } else {
             HIP_IFEL((err = AES_set_decrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err,
                      "Unable to use calculated DH secret for AES key (%d)\n", err);
-            _HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
-            _HIP_HEXDUMP("AES IV: ", iv, 16);
             AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *) iv, AES_DECRYPT);
         }
         memcpy(data, result, len);
@@ -421,7 +413,6 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
         HIP_IFEL(1, -EINVAL, "Attempted to use unknown CI (alg = %d)\n", alg);
     }
 
-    _HIP_HEXDUMP("hip_crypto_encrypted decrypt data: ", result, len);
     err = 0;
 
 out_err:
@@ -625,7 +616,6 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 {
     uint16_t ret = -1;
 
-    _HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
     if (hip_dh_group_type == 0) {
         HIP_ERROR("Trying to use reserved DH group type 0\n");
     } else if (hip_dh_group_type > ARRAY_SIZE(dhprime_len)) {
@@ -947,15 +937,7 @@ int load_dsa_private_key(const char *filename, DSA **dsa)
         goto out_err;
     }
 
-    _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-    _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-    _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
-
     HIP_IFEL(!*dsa, -EINVAL, "Read failed for %s\n", filename);
-
-    _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
-    _HIP_DEBUG("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
-
 
 out_err:
 
@@ -995,12 +977,6 @@ int load_rsa_private_key(const char *filename, RSA **rsa)
     }
     HIP_IFEL(!*rsa, -EINVAL, "Read failed for %s\n", filename);
 
-    _HIP_DEBUG("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
-    _HIP_DEBUG("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
-    _HIP_DEBUG("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
-    _HIP_DEBUG("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
-    _HIP_DEBUG("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
-
 out_err:
 
     return err;
@@ -1022,8 +998,6 @@ int load_dsa_public_key(const char *filename, DSA **dsa)
     FILE *fp = NULL;
     int err  = 0;
 
-    _HIP_DEBUG("load_dsa_public_key called\n");
-
     *dsa = NULL;
 
     HIP_IFEL(!filename, -ENOENT, "NULL filename %s\n", filename);
@@ -1039,11 +1013,6 @@ int load_dsa_public_key(const char *filename, DSA **dsa)
     }
     /** @todo use errno */
     HIP_IFEL(!*dsa, -EINVAL, "Read failed for %s\n", filename);
-
-    _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
-    _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-    _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-    _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
 out_err:
     return err;
@@ -1067,8 +1036,6 @@ int load_rsa_public_key(const char *filename, RSA **rsa)
 
     *rsa = NULL;
 
-    _HIP_DEBUG("load_rsa_public_key called\n");
-
     HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
 
     fp   = fopen(filename, "rb");
@@ -1082,9 +1049,6 @@ int load_rsa_public_key(const char *filename, RSA **rsa)
     }
     /** @todo use errno */
     HIP_IFEL(!*rsa, -EINVAL, "Read failed for %s\n", filename);
-
-    _HIP_DEBUG("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
-    _HIP_DEBUG("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
 
 out_err:
     return err;

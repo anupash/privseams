@@ -12,17 +12,31 @@
  *
  */
 
-#include <openssl/sha.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
+#include <netinet/in.h>
+#include <openssl/aes.h>
+#include <openssl/blowfish.h>
+#include <openssl/des.h>
+#include <openssl/sha.h>
+#include <sys/time.h>
 
-#include "user_ipsec_sadb.h"
-#include "esp_prot_api.h"
-#include "firewall.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/esp_prot_common.h"
+#include "lib/core/hashchain.h"
+#include "lib/core/hashtable.h"
 #include "lib/core/ife.h"
 #include "lib/core/keylen.h"
-#include "lib/core/debug.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
 #include "lib/core/state.h"
-#include "lib/core/builder.h"
+#include "esp_prot_api.h"
+#include "esp_prot_defines.h"
+#include "firewall.h"
+#include "user_ipsec_sadb.h"
+
 
 /* hash functions used for calculating the entries' hashes
  *
@@ -77,9 +91,6 @@ out_err:
         memset(&hash, 0, INDEX_HASH_LENGTH);
     }
 
-    _HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
-    _HIP_DEBUG("hash (converted): %lu\n", *((unsigned long *) hash));
-
     // just consider sub-string of 4 bytes here
     return *((unsigned long *) hash);
 }
@@ -101,10 +112,8 @@ static int hip_sa_entries_cmp(const hip_sa_entry_t *sa_entry1,
     // values have to be present
     HIP_ASSERT(sa_entry1 && sa_entry2);
 
-    _HIP_DEBUG("calculating hash1:\n");
     HIP_IFEL(!(hash1 = hip_sa_entry_hash(sa_entry1)), -1,
              "failed to hash sa entry\n");
-    _HIP_DEBUG("calculating hash2:\n");
     HIP_IFEL(!(hash2 = hip_sa_entry_hash(sa_entry2)), -1,
              "failed to hash sa entry\n");
 
@@ -146,9 +155,6 @@ out_err:
         memset(&hash, 0, INDEX_HASH_LENGTH);
     }
 
-    _HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
-    _HIP_DEBUG("hash (converted): %lu\n", *((unsigned long *) hash));
-
     // just consider sub-string of 4 bytes here
     return *((unsigned long *) hash);
 }
@@ -171,10 +177,8 @@ static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
     HIP_ASSERT(link_entry1 != NULL && link_entry1->spi != 0);
     HIP_ASSERT(link_entry2 != NULL && link_entry2->spi != 0);
 
-    _HIP_DEBUG("calculating hash1:\n");
     HIP_IFEL(!(hash1 = hip_link_entry_hash(link_entry1)), -1,
              "failed to hash link entry\n");
-    _HIP_DEBUG("calculating hash2:\n");
     HIP_IFEL(!(hash2 = hip_link_entry_hash(link_entry2)), -1,
              "failed to hash link entry\n");
 

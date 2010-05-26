@@ -19,7 +19,7 @@
 #include <stdlib.h>
 
 #include "config.h"
-#include "lib/core/protodefs.h"
+#include "protodefs.h"
 
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.

@@ -116,10 +116,6 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
     len           = (uint8_t *) hmac - (uint8_t *) msg;
     hip_set_msg_total_len(msg, len);
 
-    _HIP_HEXDUMP("HMAC key", crypto_key->key,
-                 hip_hmac_key_length(HIP_ESP_AES_SHA1));
-    _HIP_HEXDUMP("HMACced data:", msg, len);
-
     memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
     HIP_IFEL(hip_verify_hmac(msg, hip_get_msg_total_len(msg),
                              hmac->hmac_data, tmpkey.key,
@@ -181,7 +177,6 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
     struct hip_common *msg_copy = NULL;
     int err                     = 0;
 
-    _HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
     HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
 
     HIP_IFEL(hip_create_msg_pseudo_hmac2(msg, msg_copy, host_id), -1,
@@ -235,7 +230,6 @@ int hip_produce_keying_material(struct hip_packet_context *ctx,
     struct hip_diffie_hellman *dhf;
     struct in6_addr *plain_local_hit = NULL;
 
-    _HIP_DEBUG("hip_produce_keying_material() invoked.\n");
     /* Perform light operations first before allocating memory or
      * using lots of CPU time */
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
@@ -317,9 +311,6 @@ int hip_produce_keying_material(struct hip_packet_context *ctx,
     /* If the message has two DH keys, select (the stronger, usually) one. */
     *dhpv = hip_dh_select_key(dhf);
 
-    _HIP_DEBUG("dhpv->group_id= %d\n", (*dhpv)->group_id);
-    _HIP_DEBUG("dhpv->pub_len= %d\n", ntohs((*dhpv)->pub_len));
-
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_DH_CREATE\n");
     hip_perf_start_benchmark(perf_set, PERF_DH_CREATE);
@@ -330,11 +321,6 @@ int hip_produce_keying_material(struct hip_packet_context *ctx,
                   (unsigned char *) dh_shared_key,
                   dh_shared_len)) < 0,
              -EINVAL, "Calculation of shared secret failed.\n");
-
-    _HIP_HEXDUMP("Diffie-Hellman shared parameter:\n", param,
-                 hip_get_param_total_len(param));
-    _HIP_HEXDUMP("Diffie-Hellman shared key:\n", dh_shared_key,
-                 dh_shared_len);
 
     hip_make_keymat(dh_shared_key,
                     dh_shared_len,
@@ -398,8 +384,6 @@ int hip_produce_keying_material(struct hip_packet_context *ctx,
                 hip_transf_length);
     HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hadb_entry->hip_hmac_out.key,
                 hmac_transf_length);
-    _HIP_DEBUG("skipping HIP-lg encryption key, %u bytes\n",
-               hip_transf_length);
     HIP_HEXDUMP("HIP-lg encryption:", &ctx->hadb_entry->hip_enc_in.key,
                 hip_transf_length);
     HIP_HEXDUMP("HIP-lg integrity (HMAC) key:", &ctx->hadb_entry->hip_hmac_in.key,
@@ -420,11 +404,6 @@ int hip_produce_keying_material(struct hip_packet_context *ctx,
 
     memcpy(ctx->hadb_entry->current_keymat_K,
            keymat + (ctx->hadb_entry->keymat_calc_index - 1) * HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
-
-    _HIP_DEBUG("ctx->hadb_entry: keymat_calc_index=%u current_keymat_index=%u\n",
-               ctx->hadb_entry->keymat_calc_index, ctx->hadb_entry->current_keymat_index);
-    _HIP_HEXDUMP("CTX CURRENT KEYMAT", ctx->hadb_entry->current_keymat_K,
-                 HIP_AH_SHA_LEN);
 
     /* store DH shared key */
     ctx->hadb_entry->dh_shared_key     = dh_shared_key;
@@ -633,8 +612,6 @@ int hip_receive_udp_control_packet(struct hip_packet_context *ctx)
     int err         = 0, type;
     hip_ha_t *entry = NULL;
 
-    _HIP_DEBUG("hip_nat_receive_udp_control_packet() invoked.\n");
-
     type  = hip_get_msg_type(ctx->input_msg);
     entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
                                  &ctx->input_msg->hitr);
@@ -824,8 +801,8 @@ int hip_handle_r1(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int err = 0, retransmission = 0, written = 0;
-    uint64_t solved_puzzle = 0, I = 0;
+    int err                           = 0, retransmission = 0, written = 0;
+    uint64_t solved_puzzle            = 0, I = 0;
     struct hip_puzzle *pz             = NULL;
     struct hip_diffie_hellman *dh_req = NULL;
     struct hip_r1_counter *r1cntr     = NULL;

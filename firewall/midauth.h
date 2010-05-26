@@ -14,12 +14,9 @@
 
 #define _BSD_SOURCE
 
-#include <netinet/ip6.h>
-#include <netinet/ip.h>
-#include <netinet/udp.h>
-#include <linux/netfilter.h>
+#include <stdint.h>
+
 #include "lib/core/protodefs.h"
-#include "lib/core/debug.h"
 #include "firewall_defines.h"
 
 typedef int (*midauth_handler)(hip_fw_context_t *ctx);

@@ -7,9 +7,7 @@
 #ifndef HIP_FIREWALL_DLIST_H
 #define HIP_FIREWALL_DLIST_H
 
-#include <stdlib.h>
 #include "common_types.h"
-#include "lib/core/debug.h"
 
 DList *alloc_list(void);
 

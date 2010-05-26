@@ -113,7 +113,6 @@ static void sig_chld(int signo)
     pid_t child_pid;
     int child_status;     // child exit code
     child_pid = waitpid(0, &child_status, WNOHANG);
-    _HIP_DEBUG("child pid: %d, status: %d\n", child_pid, child_status);
 }
 
 /**

@@ -28,17 +28,25 @@
 
 #define _BSD_SOURCE
 
+#include <stdint.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
-#include <openssl/rand.h>
 #include <openssl/hmac.h>
-#include <openssl/evp.h>
-#include "user_ipsec_esp.h"
-#include "firewall/esp_prot_api.h"
-#include "lib/core/prefix.h"
+#include <openssl/rand.h>
 
-#include "lib/tool/checksum.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
 #include "lib/core/keylen.h"
+#include "lib/core/prefix.h"
+#include "lib/tool/checksum.h"
+#include "esp_prot_api.h"
+#include "firewall_defines.h"
+#include "user_ipsec_sadb.h"
+#include "user_ipsec_esp.h"
+
 
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12
@@ -95,8 +103,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
     // length of the hash value used by the esp protection extension
     int esp_prot_hash_length        = 0;
     int err                         = 0;
-
-    _HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
 
     // distinguish IPv4 and IPv6 output
     if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr)) {
@@ -425,8 +431,6 @@ int hip_payload_encrypt(unsigned char *in,
 
     /* padding and esp_tail are encrypted too */
     elen += pad_len + sizeof(struct hip_esp_tail);
-
-    _HIP_HEXDUMP("data to be encrypted: ", in, elen);
 
     /* Apply the encryption cipher directly into out buffer
      * to avoid extra copying */

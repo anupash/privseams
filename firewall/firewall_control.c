@@ -14,14 +14,22 @@
 
 #define _BSD_SOURCE
 
-#include "config.h"
-#include "firewall_control.h"
-#include "firewall.h" /* extern int esp_relay */
+#include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/message.h"
+#include "lib/core/protodefs.h"
 #include "cache.h"
-#include "user_ipsec_fw_msg.h"
+#include "firewall.h"
 #include "firewalldb.h"
 #include "sysopp.h"
-#include "lib/core/message.h"
+#include "user_ipsec_fw_msg.h"
+#include "firewall_control.h"
+
 
 /**
  * Change the state of hadb state cache in the firewall

@@ -13,14 +13,24 @@
  *
  * @author Miika Komu <miika@iki.fi>
  */
+
 #define _BSD_SOURCE
 
-#include "config.h"
-#include "lib/tool/nlink.h"
-#include "lib/core/hip_udp.h"
-#include "lib/core/keylen.h"
+#include <stdint.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <linux/netlink.h>
+#include <linux/xfrm.h>
 
+#include "lib/core/crypto.h"
+#include "lib/core/debug.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
+#include "lib/core/keylen.h"
+#include "lib/core/prefix.h"
+#include "nlink.h"
 #include "xfrmapi.h"
+
 
 #define RTA_BUF_SIZE     2048
 
@@ -530,9 +540,6 @@ void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
     in_port_t sport, dport;
 
     // Ignore the dst_addr, because xfrm accepts only one address.
-    _HIP_DEBUG("spi=0x%x\n", spi);
-    _HIP_DEBUG_IN6ADDR("SA daddr", peer_addr);
-
     if (direction == HIP_SPI_DIRECTION_OUT) {
         sport = entry->local_udp_port;
         dport = entry->peer_udp_port;
@@ -637,8 +644,6 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
     HIP_DEBUG_IN6ADDR("saddr", saddr);
     HIP_DEBUG_IN6ADDR("daddr", daddr);
 
-    _HIP_DEBUG("sport %d\n", sport);
-    _HIP_DEBUG("dport %d\n", dport);
     HIP_DEBUG("direction %d\n", direction);
     HIP_DEBUG("SPI=0x%x\n", spi);
     HIP_DEBUG("************************************\n");

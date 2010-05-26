@@ -44,7 +44,6 @@ int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
         peer_addr_list_item = (struct hip_peer_addr_list_item *) list_entry(item);
 
         if (!ipv6_addr_cmp(&peer_addr_list_item->address, addr)) {
-            _HIP_DEBUG("found\n");
             if (lifetime) {
                 *lifetime = peer_addr_list_item->lifetime;
             }
@@ -60,7 +59,6 @@ int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
         i++;
     }
 
-    _HIP_DEBUG("not found\n");
     return 0;
 }
 
@@ -82,7 +80,6 @@ void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr)
     {
         peer_addr_list_item = (struct hip_peer_addr_list_item *) list_entry(item);
         if (!ipv6_addr_cmp(&peer_addr_list_item->address, addr)) {
-            _HIP_DEBUG("deleting address\n");
             list_del(item, ha->peer_addresses_old);
             free(item);
             /* if address is on more than one spi list then do not goto out */

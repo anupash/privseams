@@ -13,6 +13,7 @@
  * @author Essi Vehmersalo
  */
 
+#include "lib/core/debug.h"
 #include "dlist.h"
 
 /**

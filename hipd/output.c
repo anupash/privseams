@@ -524,9 +524,6 @@ int hip_send_i2(const uint8_t packet_type,
                    -1,
                    "Unknown HIT\n");
 
-        _HIP_DEBUG("This HOST ID belongs to: %s\n",
-                   hip_get_param_host_id_hostname(host_id_entry->host_id));
-
         HIP_IFEL(hip_build_param(ctx->output_msg, host_id_entry->host_id),
                  -1,
                  "Building of host id failed\n");
@@ -578,16 +575,9 @@ int hip_send_i2(const uint8_t packet_type,
             }
         }
 
-        _HIP_HEXDUMP("hostidinmsg", host_id_in_enc,
-                     hip_get_param_total_len(host_id_in_enc));
-        _HIP_HEXDUMP("encinmsg", enc_in_msg,
-                     hip_get_param_total_len(enc_in_msg));
         HIP_HEXDUMP("enc key", &ctx->hadb_entry->hip_enc_out.key, HIP_MAX_KEY_LEN);
-        _HIP_HEXDUMP("IV", iv, 16);         // or 8
         HIP_DEBUG("host id type: %d\n",
                   hip_get_host_id_algo((struct hip_host_id *) host_id_in_enc));
-        _HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
-
 
         HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv,
                                       transform_hip_suite,
@@ -595,10 +585,6 @@ int hip_send_i2(const uint8_t packet_type,
                                       ctx->hadb_entry->hip_enc_out.key,
                                       HIP_DIRECTION_ENCRYPT), -1,
                  "Building of param encrypted failed\n");
-
-        _HIP_HEXDUMP("encinmsg 2", enc_in_msg,
-                     hip_get_param_total_len(enc_in_msg));
-        _HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
     }
 
     /* Now that almost everything is set up except the signature, we can
@@ -781,7 +767,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         }
     }
 
-    _HIP_DEBUG("hip_create_r1() invoked.\n");
     HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
@@ -790,8 +775,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     HIP_IFEL(!(dh_data1 = malloc(dh_size1)),
              -1, "Failed to alloc memory for dh_data1\n");
     memset(dh_data1, 0, dh_size1);
-
-    _HIP_DEBUG("dh_size=%d\n", dh_size1);
 
     /* Allocate memory for writing the second Diffie-Hellman shared secret */
     HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
@@ -843,8 +826,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
              "Building of HIP transform failed\n");
 
     /* Parameter HOST_ID */
-    _HIP_DEBUG("This HOST ID belongs to: %s\n",
-               hip_get_param_host_id_hostname(host_id_pub));
     HIP_IFEL(hip_build_param(msg, host_id_pub), -1,
              "Building of host id failed\n");
 
@@ -872,8 +853,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Parameter Signature 2 */
 
     HIP_IFEL(sign(private_key, msg), -1, "Signing of R1 failed.\n");
-
-    _HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
     /* Parameter ECHO_REQUEST (OPTIONAL) */
 
@@ -945,10 +924,10 @@ int hip_send_r1(const uint8_t packet_type,
 {
     int err = 0;
     hip_common_t *r1pkt     = NULL;
-    struct in6_addr dst_ip = IN6ADDR_ANY_INIT,
-                   *r1_dst_addr = NULL,
-                   *local_plain_hit = NULL,
-                   *r1_src_addr = ctx->dst_addr;
+    in6_addr_t dst_ip           = IN6ADDR_ANY_INIT,
+               *r1_dst_addr     = NULL,
+               *local_plain_hit = NULL,
+               *r1_src_addr     = ctx->dst_addr;
     in_port_t r1_dst_port    = 0;
     uint16_t relay_para_type = 0;
 
@@ -1170,9 +1149,6 @@ int hip_send_r2(const uint8_t packet_type,
     /* Create HMAC2 parameter. */
     if (ctx->hadb_entry->our_pub == NULL) {
         HIP_DEBUG("ctx->hadb_entry->our_pub is NULL.\n");
-    } else {
-        _HIP_HEXDUMP("Host ID for HMAC2", ctx->hadb_entry->our_pub,
-                     hip_get_param_total_len(ctx->hadb_entry->our_pub));
     }
 
     memcpy(&hmac, &ctx->hadb_entry->hip_hmac_out, sizeof(hmac));
@@ -1294,7 +1270,6 @@ static int hip_queue_packet(const struct in6_addr *src_addr,
     int err = 0;
     int len = hip_get_msg_total_len(msg);
 
-    _HIP_DEBUG("hip_queue_packet() invoked.\n");
     /* Not reusing the old entry as the new packet may have
      * different length */
     if (!entry) {
@@ -1360,8 +1335,6 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
     struct in6_addr my_addr;
     /* Points either to v4 or v6 raw sock */
     int hip_raw_sock_output   = 0;
-
-    _HIP_DEBUG("hip_send_raw() invoked.\n");
 
     /* Verify the existence of obligatory parameters. */
     HIP_ASSERT(peer_addr != NULL && msg != NULL);
@@ -1486,7 +1459,6 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
      * do not seem to work properly. Thus, we use just sendto() */
 
     len = hip_get_msg_total_len(msg);
-    _HIP_HEXDUMP("Dumping packet ", msg, len);
 
     if (udp) {
         struct udphdr *uh = (struct udphdr *) (void *) msg;
@@ -1502,8 +1474,6 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
         uh->check  = 0;
         memmoved   = 1;
     }
-
-    _HIP_HEXDUMP("Dumping packet ", msg, len);
 
     for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
         for (try_again = 0; try_again < 2; try_again++) {
@@ -1649,8 +1619,6 @@ int hip_send_pkt(const struct in6_addr *local_addr,
     hip_list_t *item                       = NULL, *tmp = NULL;
     int i                                  = 0;
 
-    _HIP_DEBUG_IN6ADDR("Destination address:", peer_addr);
-
     /* Notice that the shotgun logic requires us to check always the address family.
      *  Depending on the address family, we send the packet using UDP encapsulation or
      *  without it. Here's the current logic for UDP encapsulation (note that we
@@ -1701,4 +1669,4 @@ int hip_send_pkt(const struct in6_addr *local_addr,
     }
 
     return err;
-};
+}

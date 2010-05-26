@@ -19,15 +19,24 @@
 
 #define _BSD_SOURCE
 
+#include <stdint.h>
 #include <string.h>
+#include <arpa/inet.h>
+#include <netinet/ip.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <linux/netfilter.h>
 
-#include "config.h"
-#include "lib/core/ife.h"
-#include "midauth.h"
-#include "pisa.h"
 #include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
 #include "lib/tool/checksum.h"
+#include "firewall_defines.h"
+#include "pisa.h"
+#include "midauth.h"
+
 
 static struct midauth_handlers handlers;
 

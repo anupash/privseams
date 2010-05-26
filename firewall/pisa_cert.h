@@ -12,7 +12,7 @@
 #define HIP_FIREWALL_PISA_CERT_H
 
 #include <time.h>
-#include <arpa/inet.h>
+#include <netinet/in.h>
 
 struct pisa_cert {
     struct in6_addr hit_issuer;

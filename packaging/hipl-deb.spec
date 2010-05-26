@@ -1,7 +1,8 @@
 Name: hipl
 Summary: HIP IPsec key management and mobility daemon.
-# Note: Version and Release are read automatically from topdir release.version
-# To check that this file is in correct format, type
+# Note: Version and Release are generated and prefixed automatically to this file
+#       by packaging/create-package.sh
+# Note: To check that this file is in correct format, type
 # ./debbuild --showpkgs hipl-deb.spec
 URL: http://infrahip.hiit.fi
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz

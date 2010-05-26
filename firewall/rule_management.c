@@ -13,27 +13,32 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <linux/netfilter.h>
-#include <libipq.h>
-
-#include <stdio.h>
-#include <openssl/dsa.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <limits.h>
 #include <linux/netfilter_ipv6.h>
+#include <openssl/dsa.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
 
-#include "config.h"
-#include "rule_management.h"
-#include "helpers.h"
 #include "lib/core/builder.h"
-#include "lib/core/crypto.h"
 #include "lib/core/debug.h"
 #include "lib/core/hostid.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "dlist.h"
+#include "firewall.h"
+#include "helpers.h"
+#include "rule_management.h"
+
 
 /* string tokens for rule parsing */
 #define SRC_HIT_STR "-src_hit"
@@ -101,17 +106,14 @@ static void check_and_write_default_config(const char *file)
     struct stat status;
     FILE *fp = NULL;
     ssize_t items;
-
     int i    = 0;
-
-    _HIP_DEBUG("\n");
 
     /* Firewall depends on hipd to create /etc/hip */
     for (i = 0; i < 5; i++) {
-        if (stat(DEFAULT_CONFIG_DIR, &status) &&
+        if (stat(HIPL_SYSCONFDIR, &status) &&
             errno == ENOENT) {
             HIP_INFO("%s does not exist. Waiting for hipd to start...\n",
-                     DEFAULT_CONFIG_DIR);
+                     HIPL_SYSCONFDIR);
             sleep(2);
         } else {
             break;
@@ -191,9 +193,6 @@ static void print_rule(const struct rule *rule)
         }
         if (rule->src_hi != NULL) {
             HIP_DEBUG("src_hi exists ");
-            _HIP_HEXDUMP("hi ",
-                         rule->src_hi,
-                         hip_get_param_total_len(rule->src_hi));
         }
         if (rule->type != NULL) {
             HIP_DEBUG(" %s ", TYPE_STR);
@@ -266,7 +265,6 @@ void print_rule_tables(void)
         print_rule(rule);
         list = list->next;
     }
-    _HIP_DEBUG("stateful filtering %d\n", get_stateful_filtering());
 }
 
 /*------------- ALLOCATING & FREEING -----------------*/
@@ -355,7 +353,6 @@ static struct hit_option *parse_hit(char *token)
     struct in6_addr *hit      = NULL;
 
     if (!strcmp(token, NEGATE_STR)) {
-        _HIP_DEBUG("found ! \n");
         option->boolean = 0;
         token           = (char *) strtok(NULL, " ");
     } else {
@@ -386,7 +383,6 @@ static struct hip_host_id *load_rsa_file(FILE *fp)
     unsigned char *rsa_key_rr = NULL;
     int rsa_key_rr_len;
 
-    _HIP_DEBUG("load_rsa_file: \n");
     rsa = RSA_new();
     rsa = PEM_read_RSA_PUBKEY(fp, &rsa, NULL, NULL);
     if (!rsa) {
@@ -394,19 +390,11 @@ static struct hip_host_id *load_rsa_file(FILE *fp)
         RSA_free(rsa);
         return NULL;
     }
-    _HIP_HEXDUMP("load_rsa_file: rsa : ", rsa,
-                 RSA_size(rsa));
-    _HIP_DEBUG("load_rsa_file: \n");
     rsa_key_rr     = malloc(sizeof(struct hip_host_id));
-    _HIP_DEBUG("load_rsa_file: size allocated\n");
     rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
     hi             = malloc(sizeof(struct hip_host_id));
-    _HIP_DEBUG("load_rsa_file: rsa_key_len %d\n", rsa_key_rr_len);
     hip_build_param_host_id_hdr(hi, NULL, rsa_key_rr_len, HIP_HI_RSA);
-    _HIP_DEBUG("load_rsa_file: build param hi hdr \n");
     hip_build_param_host_id_only(hi, rsa_key_rr, NULL);
-    _HIP_HEXDUMP("load_rsa_file: host identity : ", hi,
-                 hip_get_param_total_len(hi));
 
     return hi;
 }
@@ -425,28 +413,18 @@ static struct hip_host_id *load_dsa_file(FILE *fp)
     unsigned char *dsa_key_rr = NULL;
     int dsa_key_rr_len;
 
-    _HIP_DEBUG("load_dsa_file: \n");
     dsa = DSA_new();
-    _HIP_DEBUG("load_dsa_file: new\n");
     dsa = PEM_read_DSA_PUBKEY(fp, &dsa, NULL, NULL);
     if (!dsa) {
         HIP_DEBUG("reading RSA file failed \n");
         DSA_free(dsa);
         return NULL;
     }
-    _HIP_HEXDUMP("load_dsa_file: dsa : ", dsa,
-                 DSA_size(dsa));
-    _HIP_DEBUG("load_dsa_file: \n");
     dsa_key_rr     = malloc(sizeof(struct hip_host_id));
-    _HIP_DEBUG("load_dsa_file: size allocated\n");
     dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
     hi             = malloc(sizeof(struct hip_host_id));
-    _HIP_DEBUG("load_dsa_file: dsa_key_len %d\n", dsa_key_rr_len);
     hip_build_param_host_id_hdr(hi, NULL, dsa_key_rr_len, HIP_HI_DSA);
-    _HIP_DEBUG("load_dsa_file: build param hi hdr \n");
     hip_build_param_host_id_only(hi, dsa_key_rr, NULL);
-    _HIP_HEXDUMP("load_dsa_file: host identity : ", hi,
-                 hip_get_param_total_len(hi));
     return hi;
 }
 
@@ -480,7 +458,6 @@ static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
         HIP_DEBUG("Invalid filename for HI: missing _rsa_ or _dsa_ \n");
         return NULL;
     }
-    _HIP_DEBUG("parse_hi: algo found %d\n", algo);
     if (algo == HIP_HI_RSA) {
         hi = load_rsa_file(fp);
     } else {
@@ -493,9 +470,7 @@ static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
 
     /* verify hi => hit */
     hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH100);
-    if (!ipv6_addr_cmp(&temp_hit, hit)) {
-        _HIP_DEBUG("parse hi: hi-hit match\n");
-    } else {
+    if (ipv6_addr_cmp(&temp_hit, hit)) {
         HIP_DEBUG("HI in file %s does not match hit %s \n",
                   token, addr_to_numeric(hit));
         free(hi);
@@ -627,7 +602,6 @@ static struct rule *parse_rule(char *string)
     char *token;
     int option_found  = NO_OPTION;
 
-    _HIP_DEBUG("parse rule string: %s\n", string);
     token = (char *) strtok(string, " ");
     if (token == NULL) {
         return NULL;
@@ -636,13 +610,10 @@ static struct rule *parse_rule(char *string)
     /* rule needs to start with a hook */
     if (!strcmp(token, INPUT_STR)) {
         rule->hook = NF_IP6_LOCAL_IN;
-        _HIP_DEBUG("INPUT found \n");
     } else if (!strcmp(token, OUTPUT_STR)) {
         rule->hook = NF_IP6_LOCAL_OUT;
-        _HIP_DEBUG("OUTPUT found \n");
     } else if (!strcmp(token, FORWARD_STR)) {
         rule->hook = NF_IP6_FORWARD;
-        _HIP_DEBUG("FORWARD found \n");
     } else {
         HIP_DEBUG("rule is missing netfilter hook\n");
         free_rule(rule);
@@ -664,7 +635,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 option_found = SRC_HIT_OPTION;
-                _HIP_DEBUG("src_hit found\n");
             } else if (!strcmp(token, DST_HIT_STR))      {
                 /* option already defined */
                 if (rule->dst_hit != NULL) {
@@ -673,7 +643,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 option_found = DST_HIT_OPTION;
-                _HIP_DEBUG("dst_hit found\n");
             } else if (!strcmp(token, SRC_HI_STR))      {
                 /* option already defined */
                 if (rule->src_hit == NULL || /* no hit for hi */
@@ -684,7 +653,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 option_found = SRC_HI_OPTION;
-                _HIP_DEBUG("src_hi found\n");
             } else if (!strcmp(token, TYPE_STR))      {
                 /* option already defined */
                 if (rule->type != NULL) {
@@ -693,7 +661,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 option_found = TYPE_OPTION;
-                _HIP_DEBUG("type found\n");
             } else if (!strcmp(token, STATE_STR))      {
                 /* option already defined */
                 if (rule->state != NULL) {
@@ -702,7 +669,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 option_found = STATE_OPTION;
-                _HIP_DEBUG("state found\n");
             } else if (!strcmp(token, VERIFY_RESPONDER_STR))      {
                 /* related state option must be defined */
                 if (rule->state == NULL) {
@@ -712,7 +678,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 rule->state->verify_responder = 1;
-                _HIP_DEBUG("%s found\n", VERIFY_RESPONDER_STR);
             } else if (!strcmp(token, ACCEPT_MOBILE_STR))      {
                 /* related state option must be defined */
                 if (rule->state == NULL) {
@@ -722,7 +687,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 rule->state->accept_mobile = 1;
-                _HIP_DEBUG("%s found\n", ACCEPT_MOBILE_STR);
             } else if (!strcmp(token, DECRYPT_CONTENTS_STR))      {
                 /* related state option must be defined */
                 if (rule->state == NULL) {
@@ -732,7 +696,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 rule->state->decrypt_contents = 1;
-                _HIP_DEBUG("%s found\n", DECRYPT_CONTENTS_STR);
             } else if (!strcmp(token, IN_IF_STR))      {
                 /* option already defined */
                 /* rule in output hook can't have incoming if */
@@ -742,7 +705,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 option_found = IN_IF_OPTION;
-                _HIP_DEBUG("-i found\n");
             } else if (!strcmp(token, OUT_IF_STR))      {
                 /* option already defined */
                 /* rule in input hook can't have outcoming if */
@@ -752,7 +714,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 option_found = OUT_IF_OPTION;
-                _HIP_DEBUG("-o found\n");
             } else if (!strcmp(token, "ACCEPT"))      {
                 /* target already defined */
                 if (rule->accept > -1) {
@@ -761,7 +722,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 rule->accept = 1;
-                _HIP_DEBUG("accept found \n");
                 break;
             } else if (!strcmp(token, "DROP"))      {
                 /* target already defined */
@@ -771,7 +731,6 @@ static struct rule *parse_rule(char *string)
                     return NULL;
                 }
                 rule->accept = 0;
-                _HIP_DEBUG("drop found \n");
                 break;
             } else {
                 /* invalid option */
@@ -783,8 +742,6 @@ static struct rule *parse_rule(char *string)
             /* matching value for previous option */
             if (option_found == SRC_HIT_OPTION) {
                 rule->src_hit = parse_hit(token);
-                _HIP_DEBUG("parse_rule : src hit %d %s \n", rule->src_hit,
-                           addr_to_numeric(&rule->src_hit->value));
                 if (rule->src_hit == NULL) {
                     HIP_DEBUG("error parsing rule: src_hit value \n");
                     free_rule(rule);
@@ -801,7 +758,6 @@ static struct rule *parse_rule(char *string)
                 option_found = NO_OPTION;
             }
             if (option_found == SRC_HI_OPTION) {
-                _HIP_DEBUG("parse_rule: src hi \n");
                 rule->src_hi = parse_hi(token, &rule->src_hit->value);
                 if (rule->src_hi == NULL) {
                     HIP_DEBUG("error parsing rule: src_hi value \n");
@@ -857,7 +813,6 @@ static struct rule *parse_rule(char *string)
         return NULL;
     }
 
-    _HIP_DEBUG("done with parsing rule ");
     //print_rule(rule);
     return rule;
 }
@@ -873,17 +828,7 @@ static struct rule *parse_rule(char *string)
  */
 DList *read_rules(const int hook)
 {
-    _HIP_DEBUG("read_rules\n");
     return (DList *) get_rule_list(hook);
-}
-
-/**
- * releases rules after reading. must be called
- * after read_rules.
- */
-void read_rules_exit(const int hook)
-{
-    _HIP_DEBUG("read_rules_exit\n");
 }
 
 /*----------- RULE MANAGEMENT -----------*/

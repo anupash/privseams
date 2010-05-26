@@ -11,12 +11,16 @@
 
 #define _BSD_SOURCE
 
-#include <netinet/ip.h>
-#include <sys/types.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
-#include "config.h"
-#include "checksum.h"
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+
 #include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
+#include "checksum.h"
 
 struct pseudo_header {
     unsigned char src_addr[4];
@@ -229,7 +233,7 @@ unsigned short in_cksum(uint16_t *ptr, int nbytes)
     /* mop up an odd byte, if necessary */
     if (nbytes == 1) {
         oddbyte                = 0;     /* make sure top half is zero */
-        *((u_char *) &oddbyte) = *(u_char *) ptr;          /* one byte only */
+        *((unsigned char *) &oddbyte) = *(unsigned char *) ptr; /* one byte only */
         sum                   += oddbyte;
     }
 

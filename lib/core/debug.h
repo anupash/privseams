@@ -301,21 +301,6 @@ enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
 #define HIP_DEBUG_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, lsi)
 #define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in)
 
-/* these are used for disabling a debugging command temporarily */
-#define _HIP_DEBUG(...) do {} while (0)
-#define _HIP_INFO(...) do {} while (0)
-#define _HIP_ERROR(...) do {} while (0)
-#define _HIP_DIE(...) do {} while (0)
-#define _HIP_HEXDUMP(prefix, str, len) do {} while (0)
-#define _HIP_DUMP_MSG(msg) do {} while (0)
-#define _HIP_PERROR(s) do {} while (0)
-#define _HIP_ASSERT(s) do {} while (0)
-#define _HIP_DEBUG_HIT(str, hit) do {} while (0)
-#define _HIP_DEBUG_IN6ADDR(str, hit) do {} while (0)
-#define _HIP_DEBUG_LSI(str, lsi) do {} while (0)
-#define _HIP_DEBUG_INADDR(str, in) do {} while (0)
-#define _HIP_DEBUG_SOCKADDR(a, b ) do {} while (0)
-
 enum logtype_t { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
 enum logfmt_t { LOGFMT_SHORT, LOGFMT_LONG };
 enum logdebug_t { LOGDEBUG_ALL, LOGDEBUG_MEDIUM, LOGDEBUG_NONE };

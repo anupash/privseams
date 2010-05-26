@@ -10,9 +10,11 @@
  * @todo the actual utility of this file seems questionable (should be removed)
  */
 
-#include <limits.h>
+#include <stdlib.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
+#include "lib/core/debug.h"
 #include "helpers.h"
 
 /**

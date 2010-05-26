@@ -10,9 +10,24 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <errno.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <openssl/bn.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/crypto.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/performance.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "config.h"
 #include "pk.h"
-#include "lib/core/performance.h"
 
 /**
  * sign a HIP control message with a private RSA key

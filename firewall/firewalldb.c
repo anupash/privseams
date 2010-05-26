@@ -15,24 +15,31 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <netinet/ip_icmp.h>
+#include <string.h>
 #include <netinet/icmp6.h>
-#include <netinet/udp.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
-#include "firewalldb.h"
-#include "cache.h"
-#include "firewall_defines.h"
-#include "lib/core/icomm.h"
+#include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/hashtable.h"
-#include "lib/core/builder.h"
-
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "lib/tool/checksum.h"
+#include "cache.h"
+#include "firewalldb.h"
 
-#define DISABLE_hip_firewall_hldb_dump
-#define DISABLE_firewall_init_raw_sock_esp_v6
 
 static int firewall_raw_sock_tcp_v4        = 0;
 static int firewall_raw_sock_udp_v4        = 0;
@@ -43,15 +50,11 @@ static int firewall_raw_sock_icmp_v6       = 0;
 static int firewall_raw_sock_icmp_outbound = 0;
 
 static int firewall_raw_sock_esp_v4        = 0;
-
-#ifndef DISABLE_firewall_init_raw_sock_esp_v6
 static int firewall_raw_sock_esp_v6        = 0;
-#endif
 
 HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 
 
-#ifndef DISABLE_hip_firewall_hldb_dump
 /**
  * display the contents of the database
  */
@@ -74,8 +77,6 @@ static void hip_firewall_hldb_dump(void)
     HIP_UNLOCK_HT(&firewall_lsi_hit_db);
 }
 
-#endif
-
 /**
  * Search in the database the given peer ip
  *
@@ -84,9 +85,7 @@ static void hip_firewall_hldb_dump(void)
  */
 firewall_hl_t *hip_firewall_ip_db_match(const struct in6_addr *ip_peer)
 {
-#ifndef DISABLE_hip_firewall_hldb_dump
     hip_firewall_hldb_dump();
-#endif
     HIP_DEBUG_IN6ADDR("peer ip", ip_peer);
     return (firewall_hl_t *) hip_ht_find(firewall_hit_lsi_ip_db,
                                          (void *) ip_peer);
@@ -477,7 +476,6 @@ out_err:
     return err;
 }
 
-#ifndef DISABLE_firewall_init_raw_sock_esp_v6
 /**
  * Initialize ESPv6-based raw socket
  *
@@ -501,8 +499,6 @@ out_err:
     return err;
 }
 
-#endif
-
 /**
  * Initialize all raw sockets
  *
@@ -517,9 +513,7 @@ static void hip_firewall_init_raw_sockets(void)
     hip_firewall_init_raw_sock_udp_v6(&firewall_raw_sock_udp_v6);
     hip_firewall_init_raw_sock_icmp_v6(&firewall_raw_sock_icmp_v6);
     hip_firewall_init_raw_sock_esp_v4(&firewall_raw_sock_esp_v4);
-#ifndef DISABLE_firewall_init_raw_sock_esp_v6
     hip_firewall_init_raw_sock_esp_v6(&firewall_raw_sock_esp_v6);
-#endif
 }
 
 /**
@@ -645,7 +639,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
 
     switch (proto) {
     case IPPROTO_UDP:
-        _HIP_DEBUG("IPPROTO_UDP\n");
         if (is_ipv6) {
             HIP_DEBUG(" IPPROTO_UDP v6\n");
             firewall_raw_sock              = firewall_raw_sock_udp_v6;
@@ -669,7 +662,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
         }
         break;
     case IPPROTO_TCP:
-        _HIP_DEBUG("IPPROTO_TCP\n");
         tcp        = (struct tcphdr *) msg;
         tcp->check = htons(0);
 
@@ -686,9 +678,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
                                               (uint8_t *) &(sock_src4->sin_addr),
                                               (uint8_t *) &(sock_dst4->sin_addr),
                                               (uint8_t *) tcp, len);
-            _HIP_DEBUG("checksum %x, len=%d\n", htons(tcp->check), len);
-            _HIP_DEBUG_LSI("src", &(sock_src4->sin_addr));
-            _HIP_DEBUG_LSI("dst", &(sock_dst4->sin_addr));
 
             memmove((char *) (msg + sizeof(struct ip)), (uint8_t *) tcp, len);
         }
@@ -699,8 +688,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
         icmp->checksum    = htons(0);
         icmp->checksum    = inchksum(icmp, len);
         memmove((char *) (msg + sizeof(struct ip)), (uint8_t *) icmp, len);
-        _HIP_DEBUG("icmp->type = %d\n", icmp->type);
-        _HIP_DEBUG("icmp->code = %d\n", icmp->code);
         break;
     case IPPROTO_ICMPV6:
         goto not_sending;
@@ -730,8 +717,6 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
             HIP_IFEL(err, -1, "setsockopt IP_HDRINCL ERROR\n");
         }
 
-
-        _HIP_HEXDUMP("hex", iphdr, (len + sizeof(struct ip)));
         sent = sendto(firewall_raw_sock, iphdr,
                       iphdr->ip_len, 0,
                       (struct sockaddr *) &dst, sa_size);
@@ -819,7 +804,6 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
 
     switch (proto) {
     case IPPROTO_TCP:
-        _HIP_DEBUG("IPPROTO_TCP\n");
         ((struct tcphdr *) msg)->check = htons(0);
         if (is_ipv6) {
             firewall_raw_sock = firewall_raw_sock_tcp_v6;

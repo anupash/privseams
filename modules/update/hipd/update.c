@@ -489,9 +489,6 @@ int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
             list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
                 dst_addr = (struct in6_addr *) list_entry(item);
 
-                _HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
-                _HIP_DEBUG_IN6ADDR("to", dst_addr);
-
                 if (!are_addresses_compatible(src_addr, dst_addr)) {
                     continue;
                 }
@@ -1015,7 +1012,6 @@ static int hip_update_handle_packet(const uint8_t packet_type,
         }
 
         localstate->update_id_in = seq_update_id;
-        _HIP_DEBUG("Stored peer's incoming UPDATE ID %u\n", ha->update_id_in);
     }
 
    /* set local UDP port just in case the original communications

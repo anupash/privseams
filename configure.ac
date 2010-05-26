@@ -1,5 +1,5 @@
 AC_PREREQ([2.53])
-AC_INIT([HIP for Linux], [main], [hipl-users@freelists.org], [hipl])
+AC_INIT([HIP for Linux], [1.0.6], [hipl-users@freelists.org], [hipl])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -70,11 +70,16 @@ AC_ARG_WITH(nomodules,
                            [comma-separated list of disabled modules]))
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Wall -Werror -Wno-error=shadow")
+AC_SUBST(AM_CFLAGS, "-std=c99 -Wall -Werror")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wredundant-decls -Wdisabled-optimization")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wundef -Wstrict-prototypes -Wmissing-prototypes")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-deprecated-declarations -Wpointer-arith")
-AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings -Wshadow")
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings")
+
+# The flags below should be converted into errors once all warnings are fixed.
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wshadow -Wno-error=shadow")
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wcast-qual -Wno-error=cast-qual")
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Winline -Wno-error=inline")
 
 #TODO fix the code and get rid of this one
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -fno-strict-aliasing")
@@ -149,10 +154,10 @@ AC_CACHE_CHECK([whether to have verbose debug],
                [ac_cv_use_debug],
                [ac_cv_use_debug=yes])
 if test x"$ac_cv_use_debug" = x"yes"; then
-        AC_DEFINE(HIP_LOGFMT_LONG)
-        AH_TEMPLATE(HIP_LOGFMT_LONG, [Defined to 1 if long log format output is enabled.])
-        AC_DEFINE(CONFIG_HIP_DEBUG)
-        AH_TEMPLATE(CONFIG_HIP_DEBUG, [Defined to 1 if debug output is enabled.])
+    AC_DEFINE(HIP_LOGFMT_LONG)
+    AH_TEMPLATE(HIP_LOGFMT_LONG, [Defined to 1 if long log format output is enabled.])
+    AC_DEFINE(CONFIG_HIP_DEBUG)
+    AH_TEMPLATE(CONFIG_HIP_DEBUG, [Defined to 1 if debug output is enabled.])
 fi
 
 AC_ARG_ENABLE(midauth,

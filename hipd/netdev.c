@@ -26,6 +26,7 @@
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <ifaddrs.h>
+#include <linux/rtnetlink.h>
 
 #include "config.h"
 #include "lib/tool/nlink.h"
@@ -199,9 +200,6 @@ static int hip_filter_address(struct sockaddr *addr)
                   INET6_ADDRSTRLEN);
 
         HIP_DEBUG("IPv6 address to filter is %s.\n", s);
-
-        _HIP_DEBUG("Address is%san Teredo address\n",
-                   ipv6_addr_is_teredo(a_in6) == 1 ? " " : " not ");
 
         if (suppress_af_family == AF_INET) {
             HIP_DEBUG("Address ignored: address family " \
@@ -469,8 +467,6 @@ static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
             }
         } else {
             /* remove from list if address matches */
-            _HIP_DEBUG_IN6ADDR("Address to compare",
-                               hip_cast_sa_addr((struct sockaddr *) &n->addr));
             if (ipv6_addr_cmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
                               hip_cast_sa_addr((struct sockaddr *) &addr_sin6)) == 0) {
                 HIP_DEBUG_IN6ADDR("Deleting address",
@@ -559,14 +555,6 @@ static int hip_netdev_find_if(struct sockaddr *addr)
     list_for_each_safe(item, tmp, addresses, i)
     {
         n = (struct netdev_address *) list_entry(item);
-
-        _HIP_DEBUG("Search item address family %s, interface " \
-                   "index %d.\n", (n->addr.ss_family == AF_INET)
-                   ? "AF_INET" : "AF_INET6", n->if_index);
-        _HIP_DEBUG_IN6ADDR("Search item IP address",
-                           &(((struct sockaddr_in6 *)
-                              &(n->addr))->sin6_addr));
-
         if (((n->addr.ss_family == addr->sa_family) &&
              ((memcmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
                       hip_cast_sa_addr(addr),
@@ -887,6 +875,11 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
         }
     }
 
+    /* Try to look up peer ip from hosts files and DNS */
+    if (err) {
+        err = hip_map_id_to_addr(dst_hit, dst_lsi, dst_addr);
+    }
+
     /* No peer address found; set it to broadcast address
      * as a last resource */
     if (err) {
@@ -1162,7 +1155,7 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
  * @param len the length of the netlink message in bytes
  * @return zero on success and non-zero on error
  */
-int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
+int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg)
 {
     int err = 0, l = 0, is_add = 0, exists;
     struct sockaddr_storage ss_addr;
@@ -1375,7 +1368,6 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
     struct idxmap *idxmap[16] = { 0 };
     struct in6_addr lpback    = IN6ADDR_LOOPBACK_INIT;
 
-    _HIP_DEBUG_IN6ADDR("Source", src);
     HIP_DEBUG_IN6ADDR("dst", dst);
 
     /* Required for loopback connections */
@@ -1394,7 +1386,7 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 
         list_for_each_safe(n, t, addresses, c) {
             na  = list_entry(n);
-            in6 = hip_cast_sa_addr((struct sockaddr *) &na->addr);
+            in6 = hip_cast_sa_addr((const struct sockaddr *) &na->addr);
             if (ipv6_addr_is_teredo(in6)) {
                 ipv6_addr_copy(src, in6);
                 match = 1;

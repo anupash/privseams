@@ -26,18 +26,27 @@
 
 #define _BSD_SOURCE
 
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
 #include <netinet/ip.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
-#include "config.h"
-#include "datapkt.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/hostid.h"
+#include "lib/core/ife.h"
+#include "lib/core/message.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "cache.h"
+#include "firewall_defines.h"
 #include "user_ipsec_api.h"
 #include "user_ipsec_esp.h"
-#include "cache.h"
-#include "lib/core/debug.h"
-#include "lib/core/ife.h"
-#include "lib/core/builder.h"
-#include "lib/core/hostid.h"
-#include "lib/core/message.h"
+#include "datapkt.h"
 
 static unsigned char *hip_data_packet = NULL;
 
@@ -109,7 +118,6 @@ static int hip_get_data_packet_header(const struct in6_addr *src_hit,
     /* @todo: this will assert  */
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_BUILD_HOST_ID_SIGNATURE_DATAPACKET, 0),
              -1, "build hdr failed\n");
-    _HIP_DUMP_MSG(msg);
 
     /* send msg to hipd and receive corresponding reply */
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");

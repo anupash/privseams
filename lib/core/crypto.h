@@ -29,11 +29,13 @@
 #include <netinet/in.h>
 
 #include "config.h"
-#include "hipd/hidb.h"
-#include "lib/core/debug.h"
-#include "lib/core/transform.h"
-#include "lib/core/ife.h"
 #include "hipd/hadb.h"
+#include "hipd/hidb.h"
+#include "debug.h"
+#include "ife.h"
+#include "transform.h"
+
+
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
 
@@ -57,9 +59,6 @@
 #define DSA_KEY_DEFAULT_BITS       1024
 #define RSA_KEY_DEFAULT_BITS       1024
 
-#define DEFAULT_CONFIG_DIR         HIPL_SYSCONFDIR
-
-#define DEFAULT_CONFIG_DIR_MODE        0755
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE "hip_host_dsa_key"
 #define DEFAULT_HOST_RSA_KEY_FILE_BASE "hip_host_rsa_key"
 #define DEFAULT_PUB_FILE_SUFFIX        ".pub"

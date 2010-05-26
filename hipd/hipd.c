@@ -260,7 +260,7 @@ static int hipd_main(uint64_t flags)
     HIP_DEBUG("Creating perf set\n");
     perf_set = hip_perf_create(PERF_MAX);
 
-    check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
+    check_and_create_dir("results", HIP_DIR_MODE);
 
     hip_perf_set_name(perf_set, PERF_STARTUP, "results/PERF_STARTUP.csv");
     hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
@@ -373,7 +373,6 @@ static int hipd_main(uint64_t flags)
             goto to_maintenance;
         } else if (err == 0) {
             /* idle cycle - select() timeout */
-            _HIP_DEBUG("Idle.\n");
             goto to_maintenance;
         }
 

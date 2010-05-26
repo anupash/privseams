@@ -10,13 +10,22 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
+#include <stdint.h>
 #include <stdlib.h>
+#include <netinet/in.h>
 
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/message.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "esp_prot_fw_msg.h"
 #include "firewall.h"
+#include "user_ipsec_sadb.h"
 #include "user_ipsec_fw_msg.h"
-#include "lib/core/builder.h"
-#include "lib/core/message.h"
+
 
 #define DEFAULT_LIFETIME 0 /* place holder as timeout not implemented yet */
 

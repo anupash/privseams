@@ -17,8 +17,11 @@
 #define _BSD_SOURCE
 
 #include <netinet/udp.h>
+#include <openssl/aes.h>
 #include <openssl/evp.h>
 
+#include "lib/core/hashchain.h"
+#include "lib/core/protodefs.h"
 #include "firewall_defines.h"
 
 /* this is the maximum buffer-size needed for an userspace ipsec esp packet

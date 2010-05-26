@@ -13,13 +13,14 @@
 
 #define _BSD_SOURCE
 
+#include <string.h>
+#include <time.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+
 #include "pisa_cert.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <stdio.h>
 
 /**
  * Extract parts of a SPKI certificate.

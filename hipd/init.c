@@ -18,6 +18,7 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <netinet/icmp6.h>
+#include <linux/rtnetlink.h>
 #include <linux/unistd.h>
 
 #include "config.h"
@@ -82,7 +83,6 @@ static void hip_sig_chld(int signum)
     /* Get child process status, so it wont be left as zombie for long time. */
     while ((pid = wait3(&status, WNOHANG, 0)) > 0) {
         /* Maybe do something.. */
-        _HIP_DEBUG("Child quit with pid %d\n", pid);
     }
 }
 
@@ -267,7 +267,7 @@ static const char *kernel_crypto_mod[] = {
 /** Tunneling, IPsec, interface and control modules */
 static const char *kernel_net_mod[] = {
     "xfrm4_mode_beet", "xfrm6_mode_beet",
-    "ip4_tunnel",      "ip6_tunnel",
+    "tunnel4",         "ip6_tunnel",
     "esp4",            "esp6",
     "xfrm_user",       "dummy",
 };
@@ -480,11 +480,11 @@ static int hip_init_host_ids(void)
 
     /* Create default keys if necessary. */
 
-    if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
+    if (stat(HIPL_SYSCONFDIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
                                               NULL, NULL, RSA_KEY_DEFAULT_BITS,
                                               DSA_KEY_DEFAULT_BITS),
-                 1, "Failed to create keys to %s\n", DEFAULT_CONFIG_DIR);
+                 1, "Failed to create keys to %s\n", HIPL_SYSCONFDIR);
     }
 
     /* Retrieve the keys to hipd */

@@ -11,7 +11,6 @@
  *<pre>
  * HIP_INFO("test foobar");
  * HIP_INFO("%s\n", "debug test");
- * _HIP_INFO("%s\n", "this is not printed, but may be important in future");
  * HIP_ERROR("%s%d\n", "serious error!", 123);
  * HIP_DIE("%s\n", "really bad error, exiting!");
  * HIP_PERROR("socket");
@@ -48,11 +47,21 @@
 
 #define _BSD_SOURCE
 
-#include "config.h"
-#include "conf.h"
-#include "debug.h"
-#include "straddr.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <syslog.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
 #include "lib/tool/lutil.h"
+#include "builder.h"
+#include "ife.h"
+#include "state.h"
+#include "straddr.h"
+#include "debug.h"
 
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,
@@ -537,8 +546,6 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
     hexdump            = calloc(hexdump_total_size, sizeof(char));
     asciidump          = calloc((bytes_per_line + 2), sizeof(char));
 
-    _HIP_DEBUG("hexdump_total_size: %d, pad_start_position: %d, pad_length: %d\n",
-               hexdump_total_size, pad_start_position, pad_length);
     if (hexdump == NULL || asciidump == NULL) {
         HIP_DIE("memory allocation failed\n");
     }
@@ -579,12 +586,9 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
             /* If line is full or input is all read, copy data to hexdump */
             if (line_index >= 16 || (char_index + 1) == len) {
                 /* Add padding */
-                _HIP_DEBUG("Line ready\n");
                 if ((char_index + 1) == len && pad_length > 0
                     && ((hexdump_index + line_index + pad_length) < hexdump_total_size)) {
                     char *padding = calloc(pad_length + 1, sizeof(char));
-                    _HIP_DEBUG("Creating padding for the last line... \n");
-                    _HIP_DEBUG("hexdump_index: %d, line_index: %d\n", hexdump_index, line_index);
                     memset(padding, ' ', pad_length);
                     memset(padding + pad_length, '\0', 1);
                     hexdump_written = snprintf((char *) (hexdump + hexdump_index),
@@ -743,8 +747,6 @@ void hip_print_locator_addresses(struct hip_common *in_msg)
     struct hip_locator_info_addr_item2 *item2 = NULL;
     char *address_pointer;
 
-    _HIP_DUMP_MSG(in_msg);
-
     locator = hip_get_param((struct hip_common *) in_msg,
                             HIP_PARAM_LOCATOR);
     if (locator) {
@@ -823,32 +825,21 @@ void hip_print_locator(int debug_level, const char *file, int line, const char *
         for (i = 0; i < n_addrs; i++) {
             locator_address_item = (struct hip_locator_info_addr_item *)
                                    hip_get_locator_item(first_address_item, i);
-            _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
-                         sizeof(struct hip_locator_info_addr_item));
             HIP_DEBUG("locator items index %d, type is %d \n", i,
                       locator_address_item->locator_type );
             if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
                 HIP_INFO_HIT("locator",
                              (struct in6_addr *) &locator_address_item->address);
-                _HIP_HEXDUMP("Should be in6_addr",
-                             &locator_address_item[i].address,
-                             sizeof(struct in6_addr));
             }
             if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
                 HIP_INFO_HIT("LOCATOR from ESP SPI(type 1)",
                              (struct in6_addr *) &locator_address_item->address);
-                _HIP_HEXDUMP("Should be in6_addr",
-                             &locator_address_item[i].address,
-                             sizeof(struct in6_addr));
             }
             if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
                 locator_address_item2 = (struct hip_locator_info_addr_item2 *) locator_address_item;
                 HIP_INFO_HIT("LOCATOR from UDP",
                              (struct in6_addr *) &locator_address_item2->address);
                 HIP_DEBUG("LOCATOR port for UDP: %d\n",  ntohs(locator_address_item2->port));
-                _HIP_HEXDUMP("Should be in6_addr",
-                             &locator_address_item[i].address,
-                             sizeof(struct in6_addr));
             }
         }
     }

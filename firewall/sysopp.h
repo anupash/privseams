@@ -7,8 +7,10 @@
 #ifndef HIP_FIREWALL_SYSOPP_H
 #define HIP_FIREWALL_SYSOPP_H
 
-#include "firewall_defines.h"
+#define _BSD_SOURCE
+
 #include "lib/core/protodefs.h"
+#include "firewall_defines.h"
 
 int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx,
                                             const int default_verdict);

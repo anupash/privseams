@@ -25,47 +25,56 @@
 
 #define _BSD_SOURCE
 
+#include <libipq.h>
+#include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <limits.h> /* INT_MIN, INT_MAX */
-#include <netinet/in.h> /* in_addr, in6_addr */
-#include <linux/netfilter_ipv4.h> /* NF_IP_LOCAL_IN, etc */
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
-
-#include "firewall.h" /* default include */
-
-/** @todo This include is needed for HIP_SELECT_TIMEOUT
- * Maybe the definition of HIP_SELECT_TIMEOUT should be moved to core and this
- * dependency be removed.
- */
-#include "hipd/hipd.h"
-
-#include "cache.h"
-#include "cache_port.h"
-#include "conntrack.h" /* connection tracking */
-#include "cache.h" /* required by opptcp */
-#include "cache_port.h" /* required by opptcp */
-#include "lsi.h" /* LSI */
-#include "lib/core/capability.h" /* priviledge separation */
-#include "lib/core/hip_udp.h"
-#include "user_ipsec_api.h" /* Userspace IPsec */
-#include "esp_prot_api.h"
-#include "esp_prot_conntrack.h" /* ESP Tokens */
-#include "firewalldb.h"
-#include "firewall_control.h"
-#include "firewall_defines.h"
-#include "helpers.h"
-#include "lib/core/capability.h" /* Priviledge Separation */
+#include <linux/netfilter_ipv4.h>
+#include "lib/core/builder.h"
+#include "lib/core/capability.h"
+#include "lib/core/debug.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
 #include "lib/core/message.h"
 #include "lib/core/performance.h"
+#include "lib/core/prefix.h"
 #include "lib/core/util.h"
 #include "lib/tool/lutil.h"
-#include "lsi.h" /* LSI */
-#include "pisa.h" /* PISA */
-#include "sysopp.h" /* System-based Opportunistic HIP */
-#include "user_ipsec_api.h" /* Userspace IPsec */
+#include "hipd/hipd.h"
+#include "config.h"
+#include "cache.h"
+#include "cache_port.h"
+#include "common_types.h"
+#include "conntrack.h"
+#include "datapkt.h"
+#include "esp_prot_api.h"
+#include "esp_prot_conntrack.h"
+#include "firewall_control.h"
+#include "firewall_defines.h"
+#include "firewalldb.h"
+#include "helpers.h"
+#include "lsi.h"
+#include "midauth.h"
+#include "pisa.h"
+#include "rule_management.h"
+#include "sysopp.h"
+#include "user_ipsec_api.h"
+#include "firewall.h"
 
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0
@@ -984,9 +993,6 @@ static int filter_hip(const struct in6_addr *ip6_src,
         verdict = accept_hip_esp_traffic_by_default;
     }
 
-    //release rule list
-    read_rules_exit(0);
-
     if (statefulFiltering && verdict && !conntracked) {
         verdict = conntrack(ip6_src, ip6_dst, buf, ctx);
     }
@@ -1433,8 +1439,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
     ctx->ip_version = ip_version;
 
     if (ctx->ip_version == 4) {
-        _HIP_DEBUG("IPv4 packet\n");
-
         struct ip *iphdr = (struct ip *) ctx->ipq_packet->payload;
         // add pointer to IPv4 header to context
         ctx->ip_hdr.ipv4 = iphdr;
@@ -1502,8 +1506,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
         // add UDP header to context
         ctx->udp_encap_hdr = udphdr;
     } else if (ctx->ip_version == 6) {
-        _HIP_DEBUG("IPv6 packet\n");
-
         struct ip6_hdr *ip6_hdr = (struct ip6_hdr *) ctx->ipq_packet->payload;
         // add pointer to IPv4 header to context
         ctx->ip_hdr.ipv6 = ip6_hdr;
@@ -1609,9 +1611,6 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
             goto end_init;
         }
     }
-
-    _HIP_DEBUG("udp hdr len %d\n", ntohs(udphdr->len));
-    _HIP_HEXDUMP("hexdump ", udphdr, 20);
 
     // HIP packets have zero bytes (IPv4 only right now)
     if (ctx->ip_version == 4 && udphdr
@@ -1867,7 +1866,7 @@ int main(int argc, char **argv)
     HIP_DEBUG("Creating perf set\n");
     perf_set = hip_perf_create(PERF_MAX_FIREWALL);
 
-    check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
+    check_and_create_dir("results", HIP_DIR_MODE);
 
     /* To keep things simple, we use a subset of the performance set originally
      * created for the HIP daemon. */
@@ -2055,8 +2054,6 @@ int main(int argc, char **argv)
     // FIXME memleak - not free'd on exit
     h6 = ipq_create_handle(0, PF_INET6);
 
-    _HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
-
     if (!h6) {
         die(h6);
     }
@@ -2109,8 +2106,6 @@ int main(int argc, char **argv)
 
         timeout.tv_sec = HIP_SELECT_TIMEOUT;
         timeout.tv_usec = 0;
-
-        _HIP_DEBUG("HIP fw select\n");
 
         // get handle with queued packet and process
         /* @todo: using HIPD_SELECT blocks hipfw with R1 */
@@ -2167,8 +2162,6 @@ int main(int argc, char **argv)
                 continue;
             }
 
-
-            _HIP_DEBUG("Header received successfully\n");
             alen = sizeof(sock_addr);
             len  = hip_get_msg_total_len(msg);
 
@@ -2245,7 +2238,6 @@ hip_hit_t *hip_fw_get_default_hit(void)
 {
     // only query for default hit if global variable is not set
     if (ipv6_addr_is_null(&default_hit)) {
-        _HIP_DEBUG("Querying hipd for default hit\n");
         if (hip_query_default_local_hit_from_hipd()) {
             return NULL;
         }
@@ -2265,7 +2257,6 @@ hip_lsi_t *hip_fw_get_default_lsi(void)
 {
     // only query for default lsi if global variable is not set
     if (default_lsi.s_addr == 0) {
-        _HIP_DEBUG("Querying hipd for default lsi\n");
         if (hip_query_default_local_hit_from_hipd()) {
             return NULL;
         }

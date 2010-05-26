@@ -52,8 +52,6 @@ static int hip_user_to_uid(const char *name)
         if (i) {
             break;
         }
-        _HIP_DEBUG("%s (%d)\tHOME %s\tSHELL %s\n", pwp->pw_name,
-                   pwp->pw_uid, pwp->pw_dir, pwp->pw_shell);
         if (!strcmp(pwp->pw_name, name)) {
             uid = pwp->pw_uid;
             break;

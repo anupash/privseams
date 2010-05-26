@@ -37,50 +37,7 @@
 #include "user.h"
 #include "lib/core/debug.h"
 
-/** default value for ICE pacing, unit is 0.001 s**/
-#define HIP_NAT_RELAY_LATENCY  200
-
-/** Boolean which indicates if random port simulation is on.
- *  <ul>
- *  <li>0: port randomizing is off.</li>
- *  <li>1: port randomizing is on.</li>
- *  </ul>
- *  @note Not used currently.
- *  @note This is needed only for simulation purposes and can be removed from
- *        released versions of HIPL.*/
-#define HIP_SIMULATE_NATS 0
-/** Minimum port number a NAT can randomize.
- *  Has to be float as it is used in rand().
- *  @note This is needed only for simulation purposes and can be removed from
- *        released versions of HIPL.*/
-#define HIP_UDP_PORT_RANDOMIZING 0
-/** Boolean to indicate if a NATed network is simulated.
- *  <ul>
- *  <li>0: NATed network is not simulated, real life NATs exist in the network.
- *  </li>
- *  <li>1: NATed network is simulated, real life NATs do not exist in the
- *  network, but UDP encapsulation is still used.</li>
- *  </ul>
- *  @note This has no effect if HIP_UDP_PORT_RANDOMIZING is off
- *  @note Not used currently.
- *  @note This is needed only for simulation purposes and can be removed from
- *        released versions of HIPL.*/
-#define HIP_UDP_PORT_RAND_MIN 49152.0
-/** Maximum port number a NAT can randomize.
- *  Has to be float as it is used in rand().
- *  @note This is needed only for simulation purposes and can be removed from
- *        released versions of HIPL.*/
-#define HIP_UDP_PORT_RAND_MAX 65535.0
-
 static int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
-
-/** A transmission function set for NAT traversal. */
-/** File descriptor of socket used for hip control packet NAT traversal on
- *  UDP/IPv4. Defined in hipd.c */
-/** Specifies the NAT status of the daemon. This value indicates if the current
- *  machine is behind a NAT. Defined in hipd.c */
-
-static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
 
 /**
  * Refreshes the port state of all NATs related to this host.
@@ -139,11 +96,6 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 
     HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Alloc\n");
 
-    _HIP_DEBUG("hip_nat_send_keep_alive() invoked.\n");
-    _HIP_DEBUG("entry @ %p, entry->nat_mode %d.\n",
-               entry, entry->nat_mode);
-    _HIP_DEBUG_HIT("&entry->hit_our", &entry->hit_our);
-
     /* Check that the host association is in correct state and that there is
      * a NAT between this host and the peer. Note, that there is no error
      * (err is set to zero) if the condition does not hold. We just don't
@@ -187,48 +139,17 @@ out_err:
     return err;
 }
 
-#if HIP_UDP_PORT_RANDOMIZING
 /**
- * Randomizes @b source ports 11111 and 22222.
- *
- * This function randomizes ports @c hip_nat_rand_port1 and
- * @c hip_nat_rand_port2 used in NAT-travelsal. NATs choose randomly a port
- * when HIP control traffic goes through them. Internet Draft
- * [draft-schmitt-hip-nat-traversal-02] defines these random chosen ports as
- * 11111 and 22222. This function serves as a helper function to simulate
- * these random chosen ports in a non-NATed environment where UPD encapsulation
- * is used.
- *
- * @note According to [draft-schmitt-hip-nat-traversal-02] HIP daemons use
- *       one random port and NATs use two random ports. The value of
- *       @c hip_nat_rand_port1 can be considered as the random port of
- *       HIP daemon also. A scenario where HIP daemons use random source port
- *       and real life NATs randomize the NAT-P and NAT-P' ports is achieved by
- *       removing the @c hip_nat_rand_port2 randomization from this function.
- * @note Not used currently.
- * @note This is needed only for simulation purposes and can be removed from
- *       released versions of HIPL.
+ * Get HIP NAT status.
+ * TODO doxygen header
  */
-static void hip_nat_randomize_nat_ports(void)
+hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
 {
-    unsigned int secs_since_epoch = (unsigned int) time(NULL);
-    HIP_DEBUG("Randomizing UDP ports to be used.\n");
-    srand(secs_since_epoch);
-    hip_nat_rand_port1 = HIP_UDP_PORT_RAND_MIN + (int)
-                         (((HIP_UDP_PORT_RAND_MAX - HIP_UDP_PORT_RAND_MIN + 1) *
-                           rand()) / (RAND_MAX + 1.0));
-#if HIP_SIMULATE_NATS
-    hip_nat_rand_port2 = HIP_UDP_PORT_RAND_MIN + (int)
-                         (((HIP_UDP_PORT_RAND_MAX - HIP_UDP_PORT_RAND_MIN + 1) *
-                           rand()) / (RAND_MAX + 1.0));
-#else
-    hip_nat_rand_port2 = hip_nat_rand_port1;
-#endif
-    HIP_DEBUG("Randomized ports are NAT-P: %u, NAT-P': %u.\n",
-              hip_nat_rand_port1, hip_nat_rand_port2);
+    if (entry) {
+        return entry->nat_mode;
+    }
+    return hip_nat_status;
 }
-
-#endif
 
 /**
  * get the NAT mode for a host association
@@ -247,6 +168,28 @@ hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry)
 }
 
 /**
+ * Sets NAT status "on" for a single host association.
+ *
+ * @param entry    a pointer to a host association for which to set NAT status.
+ * @param mode     nat mode
+ * @return         zero.
+ * @note           the status is changed just for the parameter host
+ *                 association. This function does @b not insert the host
+ *                 association into the host association database.
+ */
+static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
+{
+    int err = 0;
+    if (entry && mode != HIP_NAT_MODE_NONE) {
+        //hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+        entry->nat_mode = *((hip_transform_suite_t *) mode);
+        HIP_DEBUG("NAT status of host association %p: %d\n",
+                  entry, entry->nat_mode);
+    }
+    return err;
+}
+
+/**
  * Sets NAT status
  *
  * Sets NAT mode for each host association in the host association
@@ -261,9 +204,6 @@ int hip_user_nat_mode(int nat_mode)
 {
     int err = 0, nat;
     HIP_DEBUG("hip_user_nat_mode() invoked. mode: %d\n", nat_mode);
-#if HIP_UDP_PORT_RANDOMIZING
-    hip_nat_randomize_nat_ports();
-#endif
 
     nat = nat_mode;
     switch (nat) {
@@ -286,39 +226,5 @@ int hip_user_nat_mode(int nat_mode)
     HIP_DEBUG("hip_user_nat_mode() end. mode: %d\n", hip_nat_status);
 
 out_err:
-    return err;
-}
-
-/**
- * Get HIP NAT status.
- * TODO doxygen header
- */
-hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
-{
-    if (entry) {
-        return entry->nat_mode;
-    }
-    return hip_nat_status;
-}
-
-/**
- * Sets NAT status "on" for a single host association.
- *
- * @param entry    a pointer to a host association for which to set NAT status.
- * @param mode     nat mode
- * @return         zero.
- * @note           the status is changed just for the parameter host
- *                 association. This function does @b not insert the host
- *                 association into the host association database.
- */
-static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
-{
-    int err = 0;
-    if (entry && mode != HIP_NAT_MODE_NONE) {
-        //hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-        entry->nat_mode = *((hip_transform_suite_t *) mode);
-        HIP_DEBUG("NAT status of host association %p: %d\n",
-                  entry, entry->nat_mode);
-    }
     return err;
 }

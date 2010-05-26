@@ -24,17 +24,29 @@
 
 #define _BSD_SOURCE
 
+#include <libipq.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/message.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "cache.h"
 #include "cache_port.h"
 #include "firewall.h"
 #include "firewalldb.h"
 #include "lsi.h"
-#include "lib/core/builder.h"
-#include "lib/core/message.h"
+
 
 #define BUFSIZE HIP_MAX_PACKET
 
@@ -503,8 +515,6 @@ int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock),
              -1, "send msg failed\n");
 
-    _HIP_DEBUG("send_recv msg succeed\n");
-
 out_err:
     if (msg) {
         free(msg);
@@ -562,10 +572,6 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
         packet_length = BUFSIZE - ip_hdr_size;
         HIP_DEBUG("HIP packet size greater than buffer size\n");
     }
-
-    _HIP_DEBUG("Reinject packet packet length (%d)\n", packet_length);
-    _HIP_DEBUG("      Protocol %d\n", protocol);
-    _HIP_DEBUG("      ipOrigTraffic %d \n", ipOrigTraffic);
 
     /* Note: using calloc to zero memory region here because I think
      * firewall_send_incoming_pkt() calculates checksum

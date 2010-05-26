@@ -53,9 +53,28 @@
 
 #define _BSD_SOURCE
 
+#include <error.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include <unistd.h>
-#include "message.h"
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+
+#include "lib/tool/nlink.h"
+#include "builder.h"
+#include "debug.h"
 #include "hip_udp.h"
+#include "icomm.h"
+#include "ife.h"
+#include "prefix.h"
+#include "protodefs.h"
+#include "message.h"
+
 
 /**
  * Finds out how much data is coming from a socket
@@ -100,8 +119,6 @@ int hip_peek_recv_total_len(int sockfd,
         nanosleep(&ts, NULL);
         bytes         = recv(sockfd, msg, hdr_size, flags);
         timeout_left -= ts.tv_nsec;
-        _HIP_DEBUG("tol=%ld, ts=%ld, bytes=%d errno=%d\n",
-                   timeout_left, ts.tv_nsec, bytes, errno);
     } while (timeout_left > 0 && errno == EAGAIN && bytes < 0);
 
     if (bytes < 0) {
@@ -215,7 +232,6 @@ int hip_daemon_bind_socket(int sockfd, struct sockaddr *sa)
     /* try to bind first to a priviledged port and then to ephemeral */
     port = 1000;
     while (port++ < 61000) {
-        _HIP_DEBUG("trying bind() to port %d\n", port);
         addr->sin6_port = htons(port);
         err             = bind(sockfd, (struct sockaddr *) addr,
                                hip_sockaddr_len(addr));
@@ -223,12 +239,10 @@ int hip_daemon_bind_socket(int sockfd, struct sockaddr *sa)
             if (errno == EACCES) {
                 /* Ephemeral ports:
                  * /proc/sys/net/ipv4/ip_local_port_range */
-                _HIP_DEBUG("Skipping to ephemeral range\n");
                 port  = 32768;
                 errno = 0;
                 err   = 0;
             } else if (errno == EADDRINUSE) {
-                _HIP_DEBUG("Port %d in use, skip\n", port);
                 errno = 0;
                 err   = 0;
             } else {
@@ -238,7 +252,6 @@ int hip_daemon_bind_socket(int sockfd, struct sockaddr *sa)
                 goto out_err;
             }
         } else {
-            _HIP_DEBUG("Bind() to port %d successful\n", port);
             goto out_err;
         }
     }
@@ -373,8 +386,6 @@ static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_so
         err = -EHIP;
     }
 
-    _HIP_DEBUG("Message received successfully\n");
-
 out_err:
 
     if (!opt_socket && hip_user_sock) {
@@ -487,21 +498,16 @@ int hip_read_user_control_msg(int sockfd, struct hip_common *hip_msg,
              -1,
              "recv peek failed\n");
 
-    _HIP_DEBUG("msg total length = %d\n", total);
-
-    HIP_IFEL(((bytes = recvfrom(sockfd,
-                                hip_msg,
-                                total,
-                                0,
+    /** @todo Compiler warning;
+     *  warning: pointer targets in passing argument 6 of 'recvfrom'
+     *  differ in signedness. */
+    HIP_IFEL(((bytes = recvfrom(sockfd, hip_msg, total, 0,
                                 (struct sockaddr *) saddr,
                                 &len)) != total),
                -1, "recv\n");
 
     HIP_DEBUG("received user message from local port %d\n",
               ntohs(saddr->sin6_port));
-    _HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
-    _HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
-    _HIP_DEBUG("read %d bytes succesfully\n", bytes);
 out_err:
     if (bytes < 0 || err) {
         HIP_PERROR("perror: ");

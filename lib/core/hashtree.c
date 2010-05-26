@@ -269,7 +269,6 @@ int htree_add_secret(hash_tree_t *tree,
     HIP_ASSERT(tree->is_open > 0);
 
     memcpy(&tree->secrets[secret_index * secret_length], secret, secret_length);
-    _HIP_DEBUG("added secret block\n");
 
     return 0;
 }
@@ -324,8 +323,6 @@ int htree_calc_nodes(hash_tree_t *tree,
     HIP_DEBUG("computing leaf nodes: %i\n", tree->leaf_set_size);
 
     for (i = 0; i < tree->leaf_set_size; i++) {
-        _HIP_DEBUG("calling leaf generator function...\n");
-
         // only use secrets if they are defined
         if (tree->secret_length > 0) {
             secret = &tree->secrets[i * tree->secret_length];
@@ -354,8 +351,6 @@ int htree_calc_nodes(hash_tree_t *tree,
 
         /* we always handle two elements at once */
         for (i = 0; i < level_width; i += 2) {
-            _HIP_DEBUG("calling node generator function...\n");
-
             HIP_IFEL(node_gen(&tree->nodes[source_index + (i * tree->node_length)],
                               &tree->nodes[source_index + ((i + 1) * tree->node_length)],
                               tree->node_length,
@@ -480,8 +475,6 @@ unsigned char *htree_get_branch(const hash_tree_t *tree,
         tree_level++;
     }
 
-    _HIP_HEXDUMP("verification branch: ", branch_nodes, tree->depth * tree->node_length);
-
     if (err) {
         free(branch_nodes);
         branch_nodes = NULL;
@@ -605,13 +598,6 @@ int htree_verify_branch(const unsigned char *root,
     tmp_index = data_index;
 
     num_nodes = branch_length / root_length;
-
-    _HIP_DEBUG("num_nodes: %i\n", num_nodes);
-    _HIP_DEBUG("data_index: %i\n", data_index);
-    _HIP_DEBUG("data_length: %i\n", data_length);
-    _HIP_HEXDUMP("verify_data: ", verify_data, data_length);
-    _HIP_DEBUG("branch_length: %i\n", branch_length);
-    _HIP_HEXDUMP("verify_data: ", branch_nodes, branch_length);
 
     // +1 as we have to calculate the leaf too
     for (i = 0; i < num_nodes + 1; i++) {

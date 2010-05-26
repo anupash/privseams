@@ -14,19 +14,27 @@
  *
  */
 
-#include <openssl/rand.h>
-#include <openssl/sha.h>
 #include <math.h>
+#include <stdint.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <openssl/rand.h>
 
-#include "config.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashchain.h"
+#include "lib/core/hashchain_store.h"
+#include "lib/core/hashtree.h"
+#include "lib/core/ife.h"
+#include "esp_prot_config.h"
+#include "esp_prot_fw_msg.h"
+#include "user_ipsec_sadb.h"
+#include "esp_prot_api.h"
+
+#include <openssl/sha.h>
 
 #include "lib/core/common_defines.h"
-#include "lib/core/debug.h"
 #include "lib/core/state.h"
 
-#include "esp_prot_api.h"
-#include "esp_prot_fw_msg.h"
-#include "esp_prot_config.h"
 
 /********* esp protection modes config *********/
 int token_transform;

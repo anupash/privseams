@@ -7,8 +7,8 @@
  */
 #include <stdlib.h> /* For malloc(). */
 
+#include "debug.h"
 #include "linkedlist.h"
-#include "lib/core/debug.h" /* For debuging macros. */
 
 /**
  * Initializes a linked list. Sets the parameter @c linkedlist head to NULL if

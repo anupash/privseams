@@ -190,9 +190,6 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db
     int c;
     list_for_each(item, db, c) {
         id_entry = (struct hip_host_id_entry *) list_entry(item);
-        _HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
-                   algo, hip_get_host_id_algo(id_entry->host_id));
-        _HIP_DEBUG_HIT("Comparing HIT", &id_entry->lhi.hit);
 
         if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
             (algo == HIP_ANY_ALGO ||
@@ -292,10 +289,7 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 
     HIP_WRITE_LOCK_DB(db);
 
-    _HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
-
     HIP_ASSERT(&lhi->hit != NULL);
-    _HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
     HIP_IFEL(!(id_entry = malloc(sizeof(struct hip_host_id_entry))),
              -ENOMEM, "No memory available for host id\n");
     memset(id_entry, 0, sizeof(struct hip_host_id_entry));
@@ -402,9 +396,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
         HIP_IFEL(!eid_endpoint, -ENOENT, "No host endpoint in input\n");
 
         host_identity = &eid_endpoint->endpoint.id.host_id;
-
-        _HIP_HEXDUMP("host id\n", host_identity,
-                     hip_get_param_total_len(host_identity));
 
         HIP_IFEL(hip_private_host_id_to_hit(host_identity, &lhi.hit,
                                             HIP_HIT_TYPE_HASH100),
@@ -566,8 +557,6 @@ static struct hip_host_id *hip_get_rsa_public_key(const struct hip_host_id_priv 
 
     /** @todo check some value in the RSA key? */
 
-    _HIP_HEXDUMP("HOSTID...", tmp, hip_get_param_total_len(tmp));
-
     hip_get_rsa_keylen(tmp, &keylen, 1);
     rsa_pub_len    = keylen.e_len + keylen.e + keylen.n;
 
@@ -632,7 +621,6 @@ static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct hip_host_id_entry *id_entr
 
         if (!used_lsi) {
             memcpy(&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
-            _HIP_DEBUG("LSI assigned:%s\n", inet_ntoa(id_entry->lsi));
             break;
         }
     }
@@ -823,7 +811,6 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
     }
 
     HIP_IFE(hip_build_param(msg, hi_public), -1);
-    _HIP_DUMP_MSG(msg);
 
     alg = hip_get_host_id_algo(hi_public);
     switch (alg) {
@@ -837,8 +824,6 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
         HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
         break;
     }
-
-    _HIP_DUMP_MSG(msg);
 
 out_err:
     if (hi_public) {

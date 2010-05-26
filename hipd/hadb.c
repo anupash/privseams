@@ -157,7 +157,6 @@ static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 {
     hip_lsi_t aux;
     //Assign value to lsi_our searching in hidb by the correspondent hit
-    _HIP_DEBUG("hip_hadb_set_lsi_pair\n");
     if (entry) {
         hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
         //Assign lsi_peer
@@ -165,7 +164,6 @@ static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
             hip_generate_peer_lsi(&aux);
         }
         memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
-        _HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
     }
 }
 
@@ -231,7 +229,6 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
     hip_get_default_hit(&our_hit);
 
     if ((entry = hip_hadb_find_byhits(hit, &our_hit))) {
-        _HIP_DEBUG_HIT("Returning default HIT", our_hit);
         return entry;
     }
 
@@ -240,8 +237,6 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
     {
         e     = (struct hip_host_id_entry *) list_entry(item);
         ipv6_addr_copy(&our_hit, &e->lhi.hit);
-        _HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
-        _HIP_DEBUG_HIT("hit:", hit);
         entry = hip_hadb_find_byhits(hit, &our_hit);
         if (!entry) {
             continue;
@@ -420,7 +415,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
         HIP_DEBUG("hip_hadb_create_state\n");
         entry                             = hip_hadb_create_state(0);
         HIP_IFEL(!entry, -1, "Unable to create a new entry");
-        _HIP_DEBUG("created a new sdb entry\n");
 
         entry->peer_addr_list_to_be_added =
             hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
@@ -582,7 +576,6 @@ int hip_add_peer_map(const struct hip_common *input)
     hip_lsi_t *lsi       = NULL;
     char *peer_hostname  = NULL;
     int err              = 0;
-    _HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
 
     hit           = (struct in6_addr *)
                     hip_get_param_contents(input, HIP_PARAM_HIT);
@@ -611,9 +604,6 @@ int hip_add_peer_map(const struct hip_common *input)
     }
 
     err = hip_hadb_add_peer_info(hit, ip, lsi, peer_hostname);
-
-    _HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
-    _HIP_ASSERT(hit_is_opportunistic_hit(hit));
 
     if (err) {
         HIP_ERROR("Failed to insert peer map (%d)\n", err);
@@ -1179,7 +1169,6 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
     list_for_each_safe(item, tmp, hadb_hit, i)
     {
         this = (hip_ha_t *) list_entry(item);
-        _HIP_DEBUG("list_for_each_safe\n");
         /* @todo: lock ha when we have threads */
         fail = func(this, opaque);
         /* @todo: unlock ha when we have threads */
@@ -1259,8 +1248,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
     hid.heartbeats_sent     = entry->heartbeats_sent;
 #endif
 
-    _HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
-
     hid.nat_udp_port_peer  = entry->peer_udp_port;
     hid.nat_udp_port_local = entry->local_udp_port;
 
@@ -1277,8 +1264,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
     if (err) {
         HIP_ERROR("Building ha info failed\n");
     }
-
-    _HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
     return err;
 }
@@ -1340,7 +1325,6 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
     list_for_each_safe(item, tmp, hadb_hit, i)
     {
         this = (hip_ha_t *) list_entry(item);
-        _HIP_DEBUG("List_for_each_entry_safe\n");
         /* @todo: lock ha when we have threads */
         if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
             (ipv6_addr_cmp(rvs_ip, &this->peer_addr) == 0)) {
@@ -1431,8 +1415,6 @@ int hip_generate_peer_lsi(hip_lsi_t *lsi)
         lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX | index++);
     } while (lsi_assigned(lsi_prefix) ||
              !hip_map_lsi_to_hostname_from_hosts(lsi, (char *) hostname));
-
-    _HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
 
     *lsi = lsi_prefix;
     return 0;

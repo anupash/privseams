@@ -16,6 +16,9 @@
 #ifndef HIP_FIREWALL_ESP_PROT_API_H
 #define HIP_FIREWALL_ESP_PROT_API_H
 
+#include <stdint.h>
+
+#include "lib/core/hashchain.h"
 #include "user_ipsec_sadb.h"
 
 /* maps from the transform_id defined above to the hash-function id

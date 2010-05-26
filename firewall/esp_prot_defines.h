@@ -7,6 +7,8 @@
 #ifndef HIP_FIREWALL_ESP_PROT_DEFINES_H
 #define HIP_FIREWALL_ESP_PROT_DEFINES_H
 
+#include <stdint.h>
+
 #include "lib/core/hashchain.h"
 
 

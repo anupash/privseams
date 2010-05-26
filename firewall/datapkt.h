@@ -7,6 +7,9 @@
 #ifndef HIP_FIREWALL_DATAPKT_H
 #define HIP_FIREWALL_DATAPKT_H
 
+#define _BSD_SOURCE
+
+#include "lib/core/protodefs.h"
 #include "firewall_defines.h"
 
 int hip_datapacket_mode_init(void);

@@ -276,7 +276,6 @@ int hip_handle_user_msg(hip_common_t *msg,
         break;
     case HIP_MSG_SET_DEBUG_ALL:
         /* Displays all debugging messages. */
-        _HIP_DEBUG("Handling DEBUG ALL user message.\n");
         HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
                  "Error when setting daemon DEBUG status to ALL\n");
         break;
@@ -376,8 +375,6 @@ int hip_handle_user_msg(hip_common_t *msg,
 #ifdef CONFIG_HIP_OPPORTUNISTIC
         struct in6_addr *hit_local;
 #endif
-
-        _HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
         /* Get RVS IP address, HIT and requested lifetime given as
          * commandline parameters to hipconf. */

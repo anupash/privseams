@@ -189,7 +189,6 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
     unsigned int key_len = sizeof(struct in6_addr);
 
     HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-    _HIP_HEXDUMP("key", key, key_len);
     HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)),
              err,
              "Building of digest failed\n");

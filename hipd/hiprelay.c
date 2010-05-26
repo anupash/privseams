@@ -961,7 +961,6 @@ static int hip_relay_read_config(void)
         lineerr  = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
 
         if (parseerr == 0) {
-            _HIP_DEBUG("param: '%s'\n", parameter);
             hip_configfilevalue_t *current = NULL;
             if (strcmp(parameter, "whitelist_enabled") == 0) {
                 current = hip_cvl_get_next(&values, current);
@@ -1226,7 +1225,6 @@ int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry)
               hip_get_param(source_msg, HIP_PARAM_VIA_RVS);
 
     if (!via_rvs) {
-        _HIP_DEBUG("No VIA_RVS parameter.");
         return -1;
     }
 

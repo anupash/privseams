@@ -35,19 +35,32 @@
 #define _BSD_SOURCE
 
 #include <errno.h>
-#include <string.h>
+#include <netdb.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <netinet/in.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
+#include "lib/tool/lutil.h"
 #include "config.h"
+#include "builder.h"
+#include "crypto.h"
+#include "debug.h"
+#include "hostid.h"
+#include "ife.h"
+#include "message.h"
+#include "prefix.h"
+#include "protodefs.h"
+#include "straddr.h"
 #include "conf.h"
-#include "lib/core/builder.h"
-#include "lib/core/debug.h"
-#include "lib/core/straddr.h"
-#include "lib/core/prefix.h"
-#include "lib/core/hostid.h"
-#include "lib/core/message.h"
-#include "lib/core/crypto.h"
+
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -378,8 +391,6 @@ out_err:
  */
 static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 {
-    _HIP_HEXDUMP("HEXHID ", ha, sizeof(struct hip_hadb_user_info_state));
-
     HIP_INFO("HA is %s\n", hip_state_str(ha->state));
     if (ha->shotgun_status == HIP_MSG_SHOTGUN_ON) {
         HIP_INFO(" Shotgun mode is on.\n");
@@ -744,30 +755,17 @@ static int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
     for (rp = res; rp != NULL; rp = rp->ai_next) {
         in4 = &((struct sockaddr_in *) rp->ai_addr)->sin_addr;
         in6 = &((struct sockaddr_in6 *) rp->ai_addr)->sin6_addr;
-        if (rp->ai_family == AF_INET6) {
-            _HIP_DEBUG_IN6ADDR("addr", in6);
-            _HIP_DEBUG("hit=%s\n",
-                       (ipv6_addr_is_hit(in6) ? "yes" : "no"));
-        }
-
-        if (rp->ai_family == AF_INET) {
-            _HIP_DEBUG_INADDR("addr", in4);
-            _HIP_DEBUG("lsi=%s\n",
-                       (IS_LSI32(in4->s_addr) ? "yes" : "no"));
-        }
 
         if (rp->ai_family == AF_INET6 &&
             (ipv6_addr_is_hit(in6) ? match_hip : !match_hip)) {
             ipv6_addr_copy(id, in6);
             err = 0;
-            _HIP_DEBUG("Match\n");
             break;
         } else if (rp->ai_family == AF_INET &&
                    (IS_LSI32(in4->s_addr) ? match_hip : !match_hip)) {
             IPV4_TO_IPV6_MAP(in4, id);
             err = 0;
             break;
-            _HIP_DEBUG("Match\n");
         }
     }
 
@@ -821,8 +819,6 @@ static int hip_conf_handle_server(hip_common_t *msg,
     uint8_t lifetime             = 0, *reg_types = NULL;
     time_t seconds_from_lifetime = 0;
     char lowercase[30];
-
-    _HIP_DEBUG("hip_conf_handle_server() invoked.\n");
 
     memset(&hit, 0, sizeof(hit));
     memset(&ipv6, 0, sizeof(ipv6));
@@ -2460,7 +2456,6 @@ int hip_conf_handle_load(struct hip_common *msg,
              "Error: can't open config file %s.\n", fname);
 
     while (err == 0 && fgets(line, sizeof(line), hip_config) != NULL) {
-        _HIP_DEBUG("line %s\n", line);
         /* Remove whitespace */
         c = line;
         while (*c == ' ' || *c == '\t') {
@@ -2627,7 +2622,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
     HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
              "Could not parse type\n");
 
-    _HIP_DEBUG("ARGV[TYPE_ARG] = %s ", argv[type_arg]);
     type = hip_conf_get_type(argv[type_arg], argv);
     HIP_IFEL((type <= 0 || type > TYPE_MAX), -1,
              "Invalid type argument '%s' %d\n", argv[type_arg], type);

@@ -7,6 +7,8 @@
 #ifndef HIP_FIREWALL_CACHE_PORT_H
 #define HIP_FIREWALL_CACHE_PORT_H
 
+#include <netinet/in.h>
+
 #include "lib/core/icomm.h"
 
 void hip_firewall_port_cache_init_hldb(void);

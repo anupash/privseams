@@ -42,7 +42,6 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
 
     diff = hip_get_cookie_difficulty(NULL);
 
-    _HIP_DEBUG("Puzzle difficulty is %d\n", diff);
     hip_build_param_contents(msg, &diff, HIP_PARAM_INT, sizeof(diff));
 
     return err;
@@ -313,27 +312,12 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 
     puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
     HIP_IFEL(!puzzle, -1, "Internal error: could not find the cookie\n");
-
-    _HIP_HEXDUMP("opaque in solution", solution->opaque,
-                 HIP_PUZZLE_OPAQUE_LEN);
-    _HIP_HEXDUMP("Copaque in result", result->Copaque,
-                 HIP_PUZZLE_OPAQUE_LEN);
-    _HIP_HEXDUMP("opaque in puzzle", puzzle->opaque,
-                 HIP_PUZZLE_OPAQUE_LEN);
-
     HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
                     HIP_PUZZLE_OPAQUE_LEN), -1,
              "Received cookie opaque does not match the sent opaque\n");
 
     HIP_DEBUG("Solution's I (0x%llx), sent I (0x%llx)\n",
               solution->I, puzzle->I);
-
-    _HIP_HEXDUMP("opaque in solution", solution->opaque,
-                 HIP_PUZZLE_OPAQUE_LEN);
-    _HIP_HEXDUMP("opaque in result", result->Copaque,
-                 HIP_PUZZLE_OPAQUE_LEN);
-    _HIP_HEXDUMP("opaque in puzzle", puzzle->opaque,
-                 HIP_PUZZLE_OPAQUE_LEN);
 
     if (solution->K != puzzle->K) {
         HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",

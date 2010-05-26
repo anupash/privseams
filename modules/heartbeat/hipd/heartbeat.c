@@ -77,8 +77,6 @@ static int hip_send_icmp(int sockfd, hip_ha_t *entry)
     HIP_IFEL((entry->outbound_sa_count == 0), 0,
              "No outbound sa, ignoring keepalive\n")
 
-    _HIP_DEBUG("Starting to send ICMPv6 heartbeat\n");
-
     /* memset and malloc everything you need */
     memset(&mhdr, 0, sizeof(struct msghdr));
     memset(&tval, 0, sizeof(struct timeval));
@@ -139,12 +137,6 @@ static int hip_send_icmp(int sockfd, hip_ha_t *entry)
         /* Set return error, even if 0 bytes sent. */
         err = (0 > i) ? i : -1;
     }
-
-    /* Debug information*/
-    _HIP_DEBUG_HIT("src hit", &entry->hit_our);
-    _HIP_DEBUG_HIT("dst hit", &entry->hit_peer);
-    _HIP_DEBUG("i == %d socket = %d\n", i, sockfd);
-    _HIP_PERROR("SENDMSG ");
 
     HIP_IFEL((i < 0), -1, "Failed to send ICMP into ESP tunnel\n");
     HIP_DEBUG_HIT("Sent heartbeat to", &entry->hit_peer);
@@ -225,8 +217,8 @@ static int hip_icmp_recvmsg(int sockfd)
     struct msghdr mhdr;
     struct cmsghdr *chdr;
     struct iovec iov[1];
-    u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    u_char iovbuf[HIP_MAX_ICMP_PACKET];
+    unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
+    unsigned char iovbuf[HIP_MAX_ICMP_PACKET];
     struct icmp6_hdr *icmph = NULL;
     struct inet6_pktinfo *pktinfo;
     struct sockaddr_in6 src_sin6;
@@ -275,10 +267,8 @@ static int hip_icmp_recvmsg(int sockfd)
     mhdr.msg_controllen = sizeof(cmsgbuf);
 
     ret                 = recvmsg(sockfd, &mhdr, MSG_DONTWAIT);
-    _HIP_PERROR("RECVMSG ");
     if (errno == EAGAIN) {
         err = 0;
-        _HIP_DEBUG("Asynchronous, maybe next time\n");
         goto out_err;
     }
     if (ret < 0) {

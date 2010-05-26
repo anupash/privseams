@@ -141,7 +141,6 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
     list_for_each_safe(item, tmp, oppdb, i)
     {
         this = (hip_opp_block_t *) list_entry(item);
-        _HIP_DEBUG("List_for_each_entry_safe\n");
         fail = func(this, opaque);
         if (fail) {
             goto out_err;
@@ -160,7 +159,6 @@ out_err:
 static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 {
     hip_opp_block_t *deleted;
-    _HIP_HEXDUMP("caller", &entry->caller, sizeof(struct sockaddr_un));
 
     HIP_LOCK_OPP(entry);
     deleted = hip_ht_delete(oppdb, entry);

@@ -14,9 +14,9 @@
 
 #include <sys/time.h>
 
+#include "debug.h"
+#include "ife.h"
 #include "performance.h"
-#include "lib/core/debug.h"
-#include "lib/core/ife.h"
 
 /*!
  * \brief Create a set of performance slots. Each performance measurement type

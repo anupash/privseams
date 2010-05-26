@@ -42,11 +42,9 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
                 (mode == HIP_VERIFY_PUZZLE ? sizeof(struct hip_solution) :
                                              sizeof(struct hip_puzzle)));
 
-    _HIP_DEBUG("\n");
     /* pre-create cookie */
     u = puzzle_or_solution;
 
-    _HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
     HIP_IFEL(u->pz.K > HIP_PUZZLE_MAX_K, 0,
              "Cookie K %u is higher than we are willing to calculate"
              " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
@@ -60,7 +58,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
         ipv6_addr_copy((hip_hit_t *) (cookie + 8), &hdr->hits);
         ipv6_addr_copy((hip_hit_t *) (cookie + 24), &hdr->hitr);
         randval  = u->sl.J;
-        _HIP_DEBUG("u->sl.J: 0x%llx\n", randval);
         maxtries = 1;
     } else if (mode == HIP_SOLVE_PUZZLE) {
         ipv6_addr_copy((hip_hit_t *) (cookie + 8), &hdr->hitr);
@@ -102,9 +99,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
          * order (above).
          */
         if ((digest & mask) == 0) {
-            _HIP_DEBUG("*** Puzzle solved ***: 0x%llx\n", randval);
-            _HIP_HEXDUMP("digest", sha_digest, HIP_AH_SHA_LEN);
-            _HIP_HEXDUMP("cookie", cookie, sizeof(cookie));
             return randval;
         }
 

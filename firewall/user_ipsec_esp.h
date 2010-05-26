@@ -31,8 +31,11 @@
 
 #define _BSD_SOURCE
 
-#include "firewall/user_ipsec_sadb.h"
-#include "firewall/firewall_defines.h"
+#include <stdint.h>
+#include <netinet/in.h>
+
+#include "firewall_defines.h"
+#include "user_ipsec_sadb.h"
 
 
 int hip_beet_mode_output(const hip_fw_context_t *ctx,
