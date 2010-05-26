@@ -31,6 +31,7 @@ CHECKOUT_DIR=$BUILD_DIR/$(date +"%Y-%m-%d-%H%M")_$BRANCH_NAME
 BRANCH_REVISION=$(bzr revno -q $BRANCH_URL)
 BRANCH_REVISION_FILE=$BUILD_DIR/HIPL_REVISION_$BRANCH_NAME
 AUTOBUILD_REVISION=$(cat $BRANCH_REVISION_FILE)
+VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
 
 # helper functions
 run_program()
@@ -77,7 +78,7 @@ check_dist()
         sort > file_list_checkout
     ./configure && make dist
     tar -tzf hipl-*.tar.gz |
-        sed -e 1d -e 's:hipl-main/::' -e 's:/$::' -e '/file_list_checkout/d' -e '/version.h/d' |
+        sed -e 1d -e "s:${VERSION}/::" -e 's:/$::' -e '/file_list_checkout/d' -e '/version.h/d' |
         sort > file_list_tarball
     run_program diff -u file_list_checkout file_list_tarball
 }
@@ -131,8 +132,8 @@ export USER=$LOGNAME
 
 CONFIGURATION="Scratchbox ARM crosscompile"
 cd $SCRATCHBOX_HOME || cleanup 1
-run_program "rm -rf hipl-main* hipl_*.changes hipl_*.deb"
-run_program "tar -xzf $CHECKOUT_DIR/hipl-main.tar.gz"
-run_program "$SCRATCHBOX_DIR/login -d hipl-main dpkg-buildpackage -rfakeroot -b"
+run_program "rm -rf hipl-${VERSION}* hipl_*.changes hipl_*.deb"
+run_program "tar -xzf $CHECKOUT_DIR/hipl-${VERSION}.tar.gz"
+run_program "$SCRATCHBOX_DIR/login -d hipl-$VERSION dpkg-buildpackage -rfakeroot -b"
 
 cleanup 0
