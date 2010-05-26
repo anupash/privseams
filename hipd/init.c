@@ -84,31 +84,6 @@ static void hip_sig_chld(int signum)
 }
 
 /**
- * set or unset close-on-exec flag for a given file descriptor
- *
- * @param desc the file descriptor
- * @param value 1 if to set or zero for unset
- * @return the previous flags
- */
-static int set_cloexec_flag(int desc, int value)
-{
-    int oldflags = fcntl(desc, F_GETFD, 0);
-    /* If reading the flags failed, return error indication now.*/
-    if (oldflags < 0) {
-        return oldflags;
-    }
-    /* Set just the flag we want to set. */
-
-    if (value != 0) {
-        oldflags |=  FD_CLOEXEC;
-    } else {
-        oldflags &= ~FD_CLOEXEC;
-    }
-    /* Store modified flag word in the descriptor. */
-    return fcntl(desc, F_SETFD, oldflags);
-}
-
-/**
  * Create a file with the given contents unless it already exists
  *
  * @param path the file with its path
@@ -513,6 +488,31 @@ static int hip_init_raw_sock_v6(int proto)
 
 out_err:
     return -1;
+}
+
+/**
+ * set or unset close-on-exec flag for a given file descriptor
+ *
+ * @param desc the file descriptor
+ * @param value 1 if to set or zero for unset
+ * @return the previous flags
+ */
+int set_cloexec_flag(int desc, int value)
+{
+    int oldflags = fcntl(desc, F_GETFD, 0);
+    /* If reading the flags failed, return error indication now.*/
+    if (oldflags < 0) {
+        return oldflags;
+    }
+    /* Set just the flag we want to set. */
+
+    if (value != 0) {
+        oldflags |=  FD_CLOEXEC;
+    } else {
+        oldflags &= ~FD_CLOEXEC;
+    }
+    /* Store modified flag word in the descriptor. */
+    return fcntl(desc, F_SETFD, oldflags);
 }
 
 /**
