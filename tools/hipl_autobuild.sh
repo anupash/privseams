@@ -78,7 +78,7 @@ cleanup()
     exit $1
 }
 
-# Make sure that 'make dist' is complete.
+# Check if 'make dist' contains all files that are under version control.
 check_dist()
 {
     # TODO I'm not a sed user, please explain
@@ -101,6 +101,7 @@ compile()
         run_program "make install"
 }
 
+# only run the autobuilder for newer revisions than the last one checked
 test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
 
 # TODO why is the repo up-to-date?
@@ -143,8 +144,10 @@ export USER=$LOGNAME
 
 CONFIGURATION="Scratchbox ARM crosscompile"
 cd $SCRATCHBOX_HOME || cleanup 1
+# clean-up previous run and get fresh sources for compilation (in host env)
 run_program "rm -rf hipl-[0-9.]* hipl_*.changes hipl_*.deb"
 run_program "tar -xzf $CHECKOUT_DIR/hipl-[0-9.]*.tar.gz"
+# perform debian packaging (in maemo sdk env)
 run_program "$SCRATCHBOX_DIR/login -d hipl-[0-9.]* dpkg-buildpackage -rfakeroot -b"
 
 cleanup 0
