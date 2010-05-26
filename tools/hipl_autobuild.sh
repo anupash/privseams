@@ -9,6 +9,15 @@
 # - $HOME/tmp/autobuild/openwrt - working OpenWrt tree
 # - /srv/power/scratchbox/users/${LOGNAME}${HOME]} - working scratchbox environment
 #
+# TODO      Shortly describe the different stages (as in check-out, compare, ...)
+#           of the autobuilder, especially when/why the autobuilder uses which
+#           directory.
+# RATIONALE I was not sure where the VERSION info added by Miika should have been
+#           extracted from in the first place.
+# TODO      Which are the system dependencies for this script?
+# TODO      What should cron-jobs typically look like and why?
+#           - Rene (26.05.2010)
+#
 # If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
 # for the user running this script, then email will be sent in case of failure.
 
@@ -72,6 +81,7 @@ cleanup()
 # Make sure that 'make dist' is complete.
 check_dist()
 {
+    # TODO I'm not a sed user, please explain
     find -L . | sed -e 1d -e 's:./::' -e '/\.bzr/d' -e '/autom4te.cache/d' -e '/file_list_checkout/d' |
         sort > file_list_checkout
     ./configure && make dist
@@ -83,6 +93,7 @@ check_dist()
 
 compile()
 {
+    # TODO add short description - what is tested in which directory?
     CONFIGURATION="--prefix=$(pwd)/local_install $@"
     run_program "./configure" $CONFIGURATION &&
         run_program "make -j17" &&
@@ -92,6 +103,7 @@ compile()
 
 test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
 
+# TODO why is the repo up-to-date?
 bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR || cleanup 1
 
 cd "$CHECKOUT_DIR" || cleanup 1
@@ -105,6 +117,7 @@ check_dist
 # Compile HIPL in different configurations
 # vanilla configuration
 compile
+# TODO what does this do compared to check_dist?
 run_program "make -j17 distcheck"
 
 # PISA configuration
