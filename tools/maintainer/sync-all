@@ -40,7 +40,7 @@ make bin syncrepo"
 # fc11-x86_64         stonebreaker
 #
 # disabled:
-# F10-x86_64	      nagrand.infrahip.net
+# F10-x86_64          nagrand.infrahip.net
 # FC11-i386           hipserver (real host)
 
 if test $# != 0
