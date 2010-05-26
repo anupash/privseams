@@ -20,6 +20,7 @@ DISTROBASE=
 DISTRO_PKG_SUFFIX=
 REPO_SERVER=hipl.infrahip.net
 REPO_BASE=/var/www/packages/html
+BIN_FORMAT=
 TARBALL=
 RSYNC_OPTS=-uvr
 REPO_USER=hipl
@@ -180,6 +181,14 @@ TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 if test x"$1" = x"syncrepo"; then
     syncrepo
     exit
+elif test x"$1" = x"bin"; then
+    if test x"$DISTROBASE" = x"redhat"; then
+        BIN_FORMAT=rpm
+    elif test x"$DISTROBASE" = x"debian"; then
+        BIN_FORMAT=deb
+    else
+        die "Unknown distro"
+    fi
 fi
 echo "Architecture: $ARCH"
 
@@ -198,8 +207,10 @@ ls -ld $TARBALL
 echo "*** Cleaning up ${DEBDIR} ***"
 rm -rf ${DEBDIR}
 
-if test x"$1" = x"rpm"; then
+if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"; then
     build_rpm
-elif test x"$1" = x"deb"; then
+elif test x"$1" = x"deb" || test x"$BIN_FORMAT" = x"deb"; then
     build_deb
+else
+    die "*** Unknown platform, aborting ***"
 fi
