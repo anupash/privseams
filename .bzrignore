@@ -40,7 +40,7 @@ doc/HOWTO.txt
 doc/doxy/
 firewall/hipfw
 hipd/hipd
-hipl-main.tar.gz
+hipl-*.tar.gz
 install-sh
 libtool
 ltmain.sh

@@ -9,6 +9,15 @@
 # - $HOME/tmp/autobuild/openwrt - working OpenWrt tree
 # - /srv/power/scratchbox/users/${LOGNAME}${HOME]} - working scratchbox environment
 #
+# TODO      Shortly describe the different stages (as in check-out, compare, ...)
+#           of the autobuilder, especially when/why the autobuilder uses which
+#           directory.
+# RATIONALE I was not sure where the VERSION info added by Miika should have been
+#           extracted from in the first place.
+# TODO      Which are the system dependencies for this script?
+# TODO      What should cron-jobs typically look like and why?
+#           - Rene (26.05.2010)
+#
 # If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
 # for the user running this script, then email will be sent in case of failure.
 
@@ -25,7 +34,6 @@ OPENWRT_DIR=$AUTOBUILD_DIR/openwrt
 SCRATCHBOX_DIR="/srv/power/scratchbox"
 SCRATCHBOX_HOME=$SCRATCHBOX_DIR/users/${LOGNAME}${HOME}
 
-BUILD_DIR=$HOME/tmp/autobuild/hipl
 BRANCH_URL=$HOME/src/hipl/$BRANCH_NAME
 CHECKOUT_DIR=$BUILD_DIR/$(date +"%Y-%m-%d-%H%M")_$BRANCH_NAME
 BRANCH_REVISION=$(bzr revno -q $BRANCH_URL)
@@ -70,20 +78,22 @@ cleanup()
     exit $1
 }
 
-# Make sure that 'make dist' is complete.
+# Check if 'make dist' contains all files that are under version control.
 check_dist()
 {
+    # TODO I'm not a sed user, please explain
     find -L . | sed -e 1d -e 's:./::' -e '/\.bzr/d' -e '/autom4te.cache/d' -e '/file_list_checkout/d' |
         sort > file_list_checkout
     ./configure && make dist
     tar -tzf hipl-*.tar.gz |
-        sed -e 1d -e 's:hipl-main/::' -e 's:/$::' -e '/file_list_checkout/d' -e '/version.h/d' |
+        sed -e 1d -e "s:hipl-[0-9.]*/::" -e 's:/$::' -e '/file_list_checkout/d' -e '/version.h/d' |
         sort > file_list_tarball
     run_program diff -u file_list_checkout file_list_tarball
 }
 
 compile()
 {
+    # TODO add short description - what is tested in which directory?
     CONFIGURATION="--prefix=$(pwd)/local_install $@"
     run_program "./configure" $CONFIGURATION &&
         run_program "make -j17" &&
@@ -91,8 +101,10 @@ compile()
         run_program "make install"
 }
 
+# only run the autobuilder for newer revisions than the last one checked
 test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
 
+# TODO why is the repo up-to-date?
 bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR || cleanup 1
 
 cd "$CHECKOUT_DIR" || cleanup 1
@@ -106,6 +118,7 @@ check_dist
 # Compile HIPL in different configurations
 # vanilla configuration
 compile
+# TODO what does this do compared to check_dist?
 run_program "make -j17 distcheck"
 
 # PISA configuration
@@ -134,8 +147,10 @@ export USER=$LOGNAME
 
 CONFIGURATION="Scratchbox ARM crosscompile"
 cd $SCRATCHBOX_HOME || cleanup 1
-run_program "rm -rf hipl-main* hipl_*.changes hipl_*.deb"
-run_program "tar -xzf $CHECKOUT_DIR/hipl-main.tar.gz"
-run_program "$SCRATCHBOX_DIR/login -d hipl-main dpkg-buildpackage -rfakeroot -b"
+# clean-up previous run and get fresh sources for compilation (in host env)
+run_program "rm -rf hipl-[0-9.]* hipl_*.changes hipl_*.deb"
+run_program "tar -xzf $CHECKOUT_DIR/hipl-[0-9.]*.tar.gz"
+# perform debian packaging (in maemo sdk env)
+run_program "$SCRATCHBOX_DIR/login -d hipl-[0-9.]* dpkg-buildpackage -rfakeroot -b"
 
 cleanup 0

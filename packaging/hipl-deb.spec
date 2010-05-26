@@ -77,7 +77,7 @@ Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-tools, hipl-doc, hipl-dnspr
 %package minimal
 Summary: Minimal HIPL software bundle for servers. This virtual package is suitable for e.g. servers.
 Group: System Environment/Kernel
-Requires: hipl-lib hipl-daemon hipl-tools
+Requires: hipl-lib, hipl-daemon, hipl-tools
 %description minimal
 
 %package lib
@@ -129,6 +129,7 @@ install -m 755 packaging/debian-init.d/hipfw %{buildroot}/etc/init.d/hipfw
 install -m 755 packaging/debian-init.d/hipd %{buildroot}/etc/init.d/hipd
 install -m 755 packaging/debian-init.d/dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
+install -m 644 doc/HOWTO.html %{buildroot}/doc
 install -d %{buildroot}/usr/lib/python2.6/dist-packages/DNS
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/DNS tools/hipdnsproxy/DNS/*py*
 install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/pyip6.py*
@@ -188,6 +189,7 @@ rm -rf %{buildroot}
 
 %files tools
 /usr/sbin/hipconf
+/usr/sbin/pisacert
 /usr/sbin/nsupdate.pl
 %defattr(755,root,root)
 

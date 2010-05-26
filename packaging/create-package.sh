@@ -1,4 +1,4 @@
-#!/bin/sh -xv
+#!/bin/sh
 
 VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
 RELEASE=
@@ -20,6 +20,7 @@ DISTROBASE=
 DISTRO_PKG_SUFFIX=
 REPO_SERVER=hipl.infrahip.net
 REPO_BASE=/var/www/packages/html
+BIN_FORMAT=
 TARBALL=
 RSYNC_OPTS=-uvr
 REPO_USER=hipl
@@ -72,8 +73,8 @@ mkindex_rpm()
 {
     test ! -d $PKG_INDEX && mkdir $PKG_INDEX
     # fix this hack -miika
-    test -d  /tmp/hipl-main/buildenv/RPMS/i586 &&
-        cp -a /tmp/hipl-main/buildenv/RPMS/i586 /tmp/hipl-main/buildenv/RPMS/i386
+    test -d  /tmp/hipl-${VERSION}/buildenv/RPMS/i586 &&
+        cp -a /tmp/hipl-${VERSION}/buildenv/RPMS/i586 /tmp/hipl-${VERSION}/buildenv/RPMS/i386
     #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
     $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
@@ -82,7 +83,7 @@ mkindex_deb()
 {
     ORIG=$PWD
     cd $PKG_DIR
-    WD=$(echo $PKG_WEB_DIR | sed 's/\//\\\\\//g')
+    WD=$(echo $PKG_WEB_DIR | sed 's/\//\\\//g')
     #dpkg-scanpackages --multiversion . |
     dpkg-scanpackages . | \
         sed "s/Filename: \./Filename: $WD/" | \
@@ -151,7 +152,7 @@ if test -r /etc/debian_version; then
     ARCH=$(dpkg --print-architecture)
     PKG_DIR=$DEBDIR/DEBS/$ARCH
     DISTRO_RELEASE=$(lsb_release -c | cut -f2)
-    PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
+    PKG_WEB_DIR=ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
     cat $PKGEXE/hipl-deb.spec >> $SPECFILE
     DISTRO_PKG_SUFFIX=deb
@@ -180,6 +181,14 @@ TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 if test x"$1" = x"syncrepo"; then
     syncrepo
     exit
+elif test x"$1" = x"bin"; then
+    if test x"$DISTROBASE" = x"redhat"; then
+        BIN_FORMAT=rpm
+    elif test x"$DISTROBASE" = x"debian"; then
+        BIN_FORMAT=deb
+    else
+        die "Unknown distro"
+    fi
 fi
 echo "Architecture: $ARCH"
 
@@ -198,8 +207,10 @@ ls -ld $TARBALL
 echo "*** Cleaning up ${DEBDIR} ***"
 rm -rf ${DEBDIR}
 
-if test x"$1" = x"rpm"; then
+if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"; then
     build_rpm
-elif test x"$1" = x"deb"; then
+elif test x"$1" = x"deb" || test x"$BIN_FORMAT" = x"deb"; then
     build_deb
+else
+    die "*** Unknown platform, aborting ***"
 fi

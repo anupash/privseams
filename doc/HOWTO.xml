@@ -530,7 +530,7 @@ $ ls -l bin/
         </listitem>
         <listitem>
           <para>
-          Get the newest hipl source tree from the hipl repository and place the tarball that you are going to create in the kamikaze download directory.
+          Get the newest hipl source tree from the hipl repository and place the tarball that you are going to create in the kamikaze download directory. Note that VERSION string should not be taken literally in the instructions below. It refers to the tarball version number (as denoted by AC_INIT line in configure.ac).
           </para>
           <para>
   <programlisting>
@@ -539,7 +539,7 @@ $ ls -l bin/
   $ autoreconf --install
   $ ./configure
   $ make dist
-  $ cp hipl-main.tar.gz path/to/kamikaze/dl
+  $ cp hipl-VERSION.tar.gz path/to/kamikaze/dl
   </programlisting>
           </para>
         </listitem>
@@ -637,7 +637,7 @@ Kernel modules  --->
   <programlisting>
   $ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
   $ mkdir -p path/to/kamikaze/dl
-  $ tar czf path/to/kamikaze/dl/hipl-main.tar.gz trunk
+  $ tar czf path/to/kamikaze/dl/hipl-VERSION.tar.gz trunk
   </programlisting>
           </para>
           <para>
@@ -801,7 +801,7 @@ Network  --->
 <programlisting>
 $ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
 $ mkdir -p path/to/kamikaze/dl
-$ tar czf path/to/kamikaze/dl/hipl-main.tar.gz trunk
+$ tar czf path/to/kamikaze/dl/hipl-VERSION.tar.gz trunk
 </programlisting>
           </para>
           <para>
@@ -1086,7 +1086,7 @@ $ bin/openwrt-wgt*
   <programlisting>
   $ bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
   $ mkdir -p kamikaze_7.09/dl
-  $ tar czf kamikaze_7.09/dl/hipl-main.tar.gz trunk
+  $ tar czf kamikaze_7.09/dl/hipl-VERSION.tar.gz trunk
   </programlisting>
           </para>
           <para>

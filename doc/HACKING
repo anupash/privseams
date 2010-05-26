@@ -1013,7 +1013,7 @@ uploading any binaries!!!
 * make increl
 
 Create binaries and synchronise to repository:
-* make deb rpm syncrepo
+* make bin syncrepo
 
 Fedora Client-side Configuration
 --------------------------------

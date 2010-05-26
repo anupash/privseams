@@ -15,7 +15,7 @@ HIPL="$HOME/src/hipl/trunk"
 ### DON'T CHANGE BELOW THIS LINE ###
 
 SCRATCHBOX_HOME=$SCRATCHBOX/users/$USER/home/$USER
-
+VERSION=$(grep '^AC_INIT' ${HIPL}/configure.ac|cut -d'[' -f 3|cut -d']' -f1)
 
 if [ ! -e $SCRATCHBOX ]; then
     echo "ERROR: There seems to be no ScratchBox installation at $SCRATCHBOX"
@@ -49,11 +49,11 @@ if [ -e $HIPL ]; then
     echo "-> Building HIPL"
     echo "    Unpacking tarball..."
     rm -rf $SCRATCHBOX_HOME/hipl*
-    tar -xvzf $HIPL/hipl-main.tar.gz -C $SCRATCHBOX_HOME
+    tar -xvzf $HIPL/hipl-${VERSION}.tar.gz -C $SCRATCHBOX_HOME
     echo "    Done."
 
     echo "    Compiling HIPL for Maemo..."
-    $SCRATCHBOX/login -d hipl-main dpkg-buildpackage -rfakeroot -b
+    $SCRATCHBOX/login -d hipl-${VERSION} dpkg-buildpackage -rfakeroot -b
     echo "    Done."
 else
     echo "ERROR: $HIPL does not exist."
