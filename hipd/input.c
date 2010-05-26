@@ -584,6 +584,7 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     }
 #endif
 
+    HIP_DEBUG("packet type: %u, state: %u\n", type, state);
     hip_run_handle_functions(type, state, ctx);
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -710,6 +711,8 @@ int hip_check_r1(const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_R1);
 #endif
 
+    HIP_DEBUG("Verifying R1\n");
+
     HIP_IFEL(!ctx->hadb_entry, -1,
              "No entry in host association database when receiving R1." \
              "Dropping.\n");
@@ -791,6 +794,8 @@ int hip_check_r1(const uint8_t packet_type,
 out_err:
     if (err) {
         ctx->error = err;
+    } else {
+        HIP_DEBUG("successfully verified R1\n");
     }
     return err;
 }
