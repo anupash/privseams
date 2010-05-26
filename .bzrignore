@@ -38,7 +38,7 @@ doc/HOWTO.txt
 doc/doxy/
 firewall/hipfw
 hipd/hipd
-hipl-main.tar.gz
+hipl-*.tar.gz
 i3/chord/chord_getfingers
 i3/chord/chord_traceroute
 i3/chord/gen_conf
