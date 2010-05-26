@@ -13,12 +13,12 @@
 
 #include "config.h"
 #include "hipd.h"
+#include "hip_socket.h"
+#include "pkt_handling.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/performance.h"
 #include "lib/core/straddr.h"
 #include "lib/core/util.h"
-#include "heartbeat.h"
-
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
  * of this file! */
@@ -27,7 +27,6 @@ struct hip_common *hipd_msg_v4       = NULL;
 
 int is_active_mhaddr                 = 1; /**< Which mhaddr to use active or lazy? (default: active) */
 int is_hard_handover                 = 0; /**< if hard handover is forced to be used (default: no) */
-int hip_blind_status                 = 0; /**< Blind status */
 
 /** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
  *  0 = none = default, AF_INET, AF_INET6 */
@@ -58,14 +57,6 @@ int hip_nat_sock_input_udp_v6        = 0;
  *  machine is behind a NAT. */
 hip_transform_suite_t hip_nat_status = 0;
 
-/** ICMPv6 socket and the interval 0 for interval means off */
-int hip_icmp_sock                    = 0;
-int hip_icmp_interval                = HIP_NAT_KEEP_ALIVE_INTERVAL;
-
-/** Specifies the HIP PROXY status of the daemon.
- *  This value indicates if the HIP PROXY is running. */
-int hipproxy                         = 0;
-
 /* Encrypt host id in I2 */
 int hip_encrypt_i2_hi                = 0;
 
@@ -89,8 +80,6 @@ int hip_firewall_sock                    = 0;
  */
 int hip_transform_order                  = 123;
 
-int hip_buddies_inuse              = HIP_MSG_BUDDIES_OFF;
-
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 int hip_locator_status             = HIP_MSG_SET_LOCATOR_OFF;
 
@@ -102,7 +91,8 @@ int create_configs_and_exit        = 0;
  * a new netlink socket and seems like only one can be open per process).
  * Feel free to experiment by porting the required functionality from
  * iproute2/ip/ipaddrs.c:ipaddr_list_or_flush(). It would make these global
- * variable and most of the functions referencing them unnecessary -miika */
+ * variable and most of the functions referencing them unnecessary -miika
+ */
 
 int address_count;
 HIP_HASHTABLE *addresses;
@@ -128,13 +118,6 @@ int hip_shotgun_status                       = HIP_MSG_SHOTGUN_OFF;
 int hip_trigger_update_on_heart_beat_failure = 1;
 int hip_wait_addr_changes_to_stabilize       = 1;
 
-int hip_use_opptcp                           = 0; // false
-
-/* the opp tcp */
-
-HIP_HASHTABLE *bex_timestamp_db = NULL;
-
-
 /**
  * print hipd usage instructions on stderr
  */
@@ -142,12 +125,15 @@ static void usage(void)
 {
     fprintf(stderr, "Usage: hipd [options]\n\n");
     fprintf(stderr, "  -b run in background\n");
-    fprintf(stderr, "  -i <device name> add interface to the white list. Use additional -i for additional devices.\n");
+    fprintf(stderr, "  -i <device name> add interface to the white list. " \
+            "Use additional -i for additional devices.\n");
     fprintf(stderr, "  -k kill existing hipd\n");
     fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
     fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
     fprintf(stderr, "  -f set debug type format to short\n");
     fprintf(stderr, "  -d set the initial (pre-config) debug level to ALL (default is MEDIUM)\n");
+    fprintf(stderr, "  -D <module name> disable this module. " \
+            "Use additional -D for additional modules.\n");
     fprintf(stderr, "  -p disable privilege separation\n");
     fprintf(stderr, "  -m disable the loading/unloading of kernel modules\n");
     fprintf(stderr, "\n");
@@ -196,7 +182,7 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
 {
     int c;
 
-    while ((c = getopt(argc, argv, ":bi:kNchafVdpm")) != -1) {
+    while ((c = getopt(argc, argv, ":bi:kNchafVdD:pm")) != -1) {
         switch (c) {
         case 'b':
             /* run in the "background" */
@@ -228,6 +214,13 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
             break;
         case 'd':
             hip_set_logdebug(LOGDEBUG_ALL);
+            break;
+        case 'D':
+            if (!lmod_disable_module(optarg)) {
+               HIP_DEBUG("Module '%s' disabled.\n", optarg);
+            } else {
+               HIP_ERROR("Error while disabling module '%s'.\n", optarg);
+            }
             break;
         case 'p':
             /* do _not_ use low capabilies ("privilege separation") */
@@ -261,6 +254,7 @@ static int hipd_main(uint64_t flags)
     int highest_descriptor = 0, err = 0;
     struct timeval timeout;
     fd_set read_fdset;
+    struct hip_packet_context ctx = {0};
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Creating perf set\n");
@@ -296,7 +290,6 @@ static int hipd_main(uint64_t flags)
     /* default is long format */
     hip_set_logfmt(LOGFMT_LONG);
 
-
     if (flags & HIPD_START_FIX_ALIGNMENT) {
         HIP_DEBUG("Setting alignment traps to 3(fix+ warn)\n");
         if (system("echo 3 > /proc/cpu/alignment")) {
@@ -326,21 +319,21 @@ static int hipd_main(uint64_t flags)
         return 0;
     }
 
-    highest_descriptor = maxof(7, hip_nl_route.fd, hip_raw_sock_input_v6,
-                               hip_user_sock, hip_nl_ipsec.fd,
-                               hip_raw_sock_input_v4, hip_nat_sock_input_udp,
-                               hip_icmp_sock);
+    highest_descriptor = hip_get_highest_descriptor();
 
     /* Allocate user message. */
-    HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
-    HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
-    HIP_DEBUG("Daemon running. Entering select loop.\n");
+    HIP_IFE(!(ctx.input_msg = hip_msg_alloc()), 1);
+    ctx.output_msg  = NULL;
+    ctx.src_addr    = malloc(sizeof(struct in6_addr));
+    ctx.dst_addr    = malloc(sizeof(struct in6_addr));
+    ctx.msg_ports   = malloc(sizeof(struct hip_stateless_info));
+    ctx.hadb_entry  = NULL;
+    ctx.error = 0;
 
     /* Enter to the select-loop */
     HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT,
                  HIP_DEBUG_LEVEL_INFORMATIVE,
-                 "Hipd daemon running.\n"
-                 "Starting select loop.\n");
+                 "Hipd daemon running. Starting select loop.\n");
     hipd_set_state(HIPD_STATE_EXEC);
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_STARTUP\n");
@@ -348,15 +341,9 @@ static int hipd_main(uint64_t flags)
     hip_perf_write_benchmark(perf_set, PERF_STARTUP);
 #endif
     while (hipd_get_state() != HIPD_STATE_CLOSED) {
-        /* prepare file descriptor sets */
-        FD_ZERO(&read_fdset);
-        FD_SET(hip_nl_route.fd, &read_fdset);
-        FD_SET(hip_raw_sock_input_v6, &read_fdset);
-        FD_SET(hip_raw_sock_input_v4, &read_fdset);
-        FD_SET(hip_nat_sock_input_udp, &read_fdset);
-        FD_SET(hip_user_sock, &read_fdset);
-        FD_SET(hip_nl_ipsec.fd, &read_fdset);
-        FD_SET(hip_icmp_sock, &read_fdset);
+
+        hip_prepare_fd_set(&read_fdset);
+
         hip_firewall_sock = hip_user_sock;
 
         timeout.tv_sec  = HIP_SELECT_TIMEOUT;
@@ -364,20 +351,22 @@ static int hipd_main(uint64_t flags)
 
 #ifdef CONFIG_HIP_FIREWALL
         if (hip_firewall_status < 0) {
-            hip_msg_init(hipd_msg);
-            err = hip_build_user_hdr(hipd_msg, HIP_MSG_FIREWALL_STATUS, 0);
+
+            hip_msg_init(ctx.input_msg);
+            err = hip_build_user_hdr(ctx.input_msg,
+                                     HIP_MSG_FIREWALL_STATUS,
+                                     0);
             if (err) {
                 HIP_ERROR("hip_build_user_hdr\n");
             } else {
                 hip_firewall_status = 0;
                 HIP_DEBUG("sent %d bytes to firewall\n",
-                          hip_sendto_firewall(hipd_msg));
+                          hip_sendto_firewall(ctx.input_msg));
             }
         }
 #endif
 
-        err = select((highest_descriptor + 1), &read_fdset,
-                     NULL, NULL, &timeout);
+        err = select(highest_descriptor + 1, &read_fdset, NULL, NULL, &timeout);
 
         if (err < 0) {
             HIP_ERROR("select() error: %s.\n", strerror(errno));
@@ -387,169 +376,7 @@ static int hipd_main(uint64_t flags)
             goto to_maintenance;
         }
 
-        /* see bugzilla bug id 392 to see why */
-        if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset) &&
-            FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
-            int type, err_v6 = 0, err_v4 = 0;
-            struct in6_addr saddr, daddr;
-            struct in6_addr saddr_v4, daddr_v4;
-            hip_portpair_t pkt_info;
-            HIP_DEBUG("Receiving messages on raw HIP from IPv6/HIP and IPv4/HIP\n");
-            hip_msg_init(hipd_msg);
-            hip_msg_init(hipd_msg_v4);
-            err_v4 = hip_read_control_msg_v4(hip_raw_sock_input_v4, hipd_msg_v4,
-                                             &saddr_v4, &daddr_v4,
-                                             &pkt_info, IPV4_HDR_SIZE);
-            err_v6 = hip_read_control_msg_v6(hip_raw_sock_input_v6, hipd_msg,
-                                             &saddr, &daddr, &pkt_info, 0);
-            if (err_v4 > -1) {
-                type = hip_get_msg_type(hipd_msg_v4);
-                if (type == HIP_R2) {
-                    err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4,
-                                                     &daddr_v4, &pkt_info);
-                    if (err) {
-                        HIP_ERROR("hip_receive_control_packet()!\n");
-                    }
-                    err = hip_receive_control_packet(hipd_msg, &saddr, &daddr,
-                                                     &pkt_info);
-                    if (err) {
-                        HIP_ERROR("hip_receive_control_packet()!\n");
-                    }
-                } else {
-                    err = hip_receive_control_packet(hipd_msg, &saddr, &daddr,
-                                                     &pkt_info);
-                    if (err) {
-                        HIP_ERROR("hip_receive_control_packet()!\n");
-                    }
-                    err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4,
-                                                     &daddr_v4, &pkt_info);
-                    if (err) {
-                        HIP_ERROR("hip_receive_control_packet()!\n");
-                    }
-                }
-            }
-        } else {
-            if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset)) {
-                /* Receiving of a raw HIP message from IPv6 socket. */
-                struct in6_addr saddr, daddr;
-                hip_portpair_t pkt_info;
-                HIP_DEBUG("Receiving a message on raw HIP from " \
-                          "IPv6/HIP socket (file descriptor: %d).\n",
-                          hip_raw_sock_input_v6);
-                hip_msg_init(hipd_msg);
-                if (hip_read_control_msg_v6(hip_raw_sock_input_v6, hipd_msg,
-                                            &saddr, &daddr, &pkt_info, 0)) {
-                    HIP_ERROR("Reading network msg failed\n");
-                } else {
-                    err = hip_receive_control_packet(hipd_msg, &saddr,
-                                                     &daddr, &pkt_info);
-                    if (err) {
-                        HIP_ERROR("hip_receive_control_packet()!\n");
-                    }
-                }
-            }
-
-            if (FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
-                HIP_DEBUG("HIP RAW SOCKET\n");
-                /* Receiving of a raw HIP message from IPv4 socket. */
-                struct in6_addr saddr, daddr;
-                hip_portpair_t pkt_info;
-                HIP_DEBUG("Receiving a message on raw HIP from " \
-                          "IPv4/HIP socket (file descriptor: %d).\n",
-                          hip_raw_sock_input_v4);
-                hip_msg_init(hipd_msg);
-                HIP_DEBUG("Getting a msg on v4\n");
-                /* Assuming that IPv4 header does not include any
-                 * options */
-                if (hip_read_control_msg_v4(hip_raw_sock_input_v4, hipd_msg,
-                                            &saddr, &daddr, &pkt_info, IPV4_HDR_SIZE)) {
-                    HIP_ERROR("Reading network msg failed\n");
-                } else {
-                    err = hip_receive_control_packet(hipd_msg, &saddr,
-                                                     &daddr, &pkt_info);
-                    if (err) {
-                        HIP_ERROR("hip_receive_control_packet()!\n");
-                    }
-                }
-            }
-        }
-
-
-        if (FD_ISSET(hip_icmp_sock, &read_fdset)) {
-            HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1,
-                     "Failed to recvmsg from ICMPv6\n");
-        }
-
-        if (FD_ISSET(hip_nat_sock_input_udp, &read_fdset)) {
-            /* Data structures for storing the source and
-             * destination addresses and ports of the incoming
-             * packet. */
-            struct in6_addr saddr, daddr;
-            hip_portpair_t pkt_info;
-
-            /* Receiving of a UDP message from NAT socket. */
-            HIP_DEBUG("Receiving a message on UDP from NAT " \
-                      "socket (file descriptor: %d).\n",
-                      hip_nat_sock_input_udp);
-
-            /* Initialization of the hip_common header struct. We'll
-             * store the HIP header data here. */
-            hip_msg_init(hipd_msg);
-
-            /* Read in the values to hip_msg, saddr, daddr and
-             * pkt_info. */
-            err = hip_read_control_msg_v4(hip_nat_sock_input_udp,
-                                          hipd_msg,
-                                          &saddr,
-                                          &daddr,
-                                          &pkt_info,
-                                          HIP_UDP_ZERO_BYTES_LEN);
-            if (err) {
-                HIP_ERROR("Reading network msg failed\n");
-                /* If the values were read in successfully, we
-                 * do the UDP specific stuff next. */
-            } else {
-                err =  hip_receive_udp_control_packet(hipd_msg,
-                                                      &saddr,
-                                                      &daddr,
-                                                      &pkt_info);
-            }
-        }
-
-        if (FD_ISSET(hip_user_sock, &read_fdset)) {
-            /* Receiving of a message from user socket. */
-            struct sockaddr_in6 app_src;
-
-            HIP_DEBUG("Receiving user message.\n");
-
-            hip_msg_init(hipd_msg);
-
-            if (hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src)) {
-                HIP_ERROR("Reading user msg failed\n");
-            } else {
-                err = hip_handle_user_msg(hipd_msg, &app_src);
-            }
-        }
-
-        if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
-            /* Something on IF and address event netlink socket,
-             * fetch it. */
-            HIP_DEBUG("netlink receive\n");
-            if (hip_netlink_receive(&hip_nl_ipsec,
-                                    hip_netdev_event, NULL)) {
-                HIP_ERROR("Netlink receiving failed\n");
-            }
-        }
-
-        if (FD_ISSET(hip_nl_route.fd, &read_fdset)) {
-            /* Something on IF and address event netlink socket,
-             * fetch it. */
-            HIP_DEBUG("netlink route receive\n");
-            if (hip_netlink_receive(&hip_nl_route,
-                                    hip_netdev_event, NULL)) {
-                HIP_ERROR("Netlink receiving failed\n");
-            }
-        }
+        hip_run_socket_handles(&read_fdset, &ctx);
 
 to_maintenance:
         err = hip_periodic_maintenance();
@@ -563,6 +390,22 @@ to_maintenance:
 out_err:
     /* free allocated resources */
     hip_exit(err);
+
+    if (ctx.input_msg) {
+        free(ctx.input_msg);
+    }
+
+    if (ctx.src_addr) {
+        free(ctx.src_addr);
+    }
+
+    if (ctx.dst_addr) {
+        free(ctx.dst_addr);
+    }
+
+    if (ctx.msg_ports) {
+        free(ctx.msg_ports);
+    }
 
     HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 

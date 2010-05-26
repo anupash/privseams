@@ -14,7 +14,6 @@
 #include <stdlib.h>
 
 #include "config.h"
-#include "blind.h"
 #include "cookie.h"
 #include "lib/core/solve.h"
 
@@ -182,16 +181,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
     HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO, -1)),
              NULL, "Unknown HIT\n");
 
-#ifdef CONFIG_HIP_BLIND
-    if (hip_blind_get_status()) {
-        hip_r1table = hid->blindr1;
-    }
-#endif
-    if (!hip_blind_get_status()) {
-        hip_r1table = hid->r1;
-    }
-
-    // BLIND TODO: indexing?
+    hip_r1table = hid->r1;
     idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);
     HIP_DEBUG("Calculated index: %d\n", idx);
 
@@ -313,34 +303,12 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
     struct hip_host_id_entry *hid = NULL;
     int err                       = 0;
 
-#ifdef CONFIG_HIP_BLIND
-    if (hip_blind_get_status()) {
-        struct in6_addr plain_local_hit;
-        uint16_t nonce;
-        HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1,
-                 "hip_blind_get_nonce failed\n");
-        HIP_IFEL(hip_plain_fingerprint(&nonce,
-                                       &hdr->hitr, &plain_local_hit),
-                 -1, "hip_plain_fingerprint failed\n");
-
-        /* Find the proper R1 table, use plain hit */
-        HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
-                       HIP_DB_LOCAL_HID, &plain_local_hit,
-                       HIP_ANY_ALGO, -1)),
-                 -1, "Requested source HIT not (any more) available.\n");
-
-        result = &hid->blindr1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
-    }
-#endif
-
-    /* Find the proper R1 table, no blind used */
-    if (!hip_blind_get_status()) {
-        HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
-                       HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO,
-                       -1)),
-                 -1, "Requested source HIT not (any more) available.\n");
-        result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
-    }
+    /* Find the proper R1 table */
+    HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
+                   HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO,
+                   -1)),
+             -1, "Requested source HIT not (any more) available.\n");
+    result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 
     puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
     HIP_IFEL(!puzzle, -1, "Internal error: could not find the cookie\n");
@@ -401,15 +369,6 @@ static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
                               (hip_get_host_id_algo(entry->host_id) ==
                                HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
                               entry->private_key, entry->host_id), -1);
-
-#ifdef CONFIG_HIP_BLIND
-    hip_uninit_r1(entry->blindr1);
-    HIP_IFE(!(entry->r1 = hip_init_r1()), -ENOMEM);
-    HIP_IFE(!hip_precreate_r1(entry->blindr1, &entry->lhi.hit,
-                              (hip_get_host_id_algo(entry->host_id) ==
-                               HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-                              entry->private_key, entry->host_id), -1);
-#endif
 
 out_err:
     return err;

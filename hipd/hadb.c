@@ -43,13 +43,14 @@
 #include "hadb.h"
 #include "hipd.h"
 #include "accessor.h"
+#include "oppdb.h"
 #include "lib/core/list.h"
 #include "lib/core/hostsfiles.h"
 #include "lib/core/hostid.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
 #include "lib/core/keylen.h"
-#include "lib/core/hostsfiles.h"
+#include "lib/modularization/lmod.h"
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
@@ -64,21 +65,6 @@ struct hip_peer_map_info {
     struct in6_addr our_addr;
     uint8_t         peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 };
-
-/* default set of miscellaneous function pointers. This has to be in the global
- * scope. */
-
-/** A transmission function set for sending raw HIP packets. */
-hip_xmit_func_set_t default_xmit_func_set;
-/** A transmission function set for NAT traversal. */
-hip_xmit_func_set_t nat_xmit_func_set;
-
-/* added by Tao Wan, 24 Jan, 2008, For IPsec (user_space/kernel) */
-hip_ipsec_func_set_t default_ipsec_func_set;
-
-static hip_misc_func_set_t default_misc_func_set;
-static hip_rcv_func_set_t default_rcv_func_set;
-static hip_handle_func_set_t default_handle_func_set;
 
 /**
  * The hash function of the hashtable. Calculates a hash from parameter host
@@ -191,7 +177,8 @@ static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
  */
 hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
 {
-    hip_ha_t ha, *ret;
+    hip_ha_t ha, *ret = NULL;
+
     memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
     memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
     HIP_DEBUG_HIT("HIT1", hit);
@@ -424,9 +411,7 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
 
     if (entry) {
         HIP_DEBUG_LSI("    Peer lsi   ", &entry->lsi_peer);
-    }
-
-    if (!entry) {
+    } else {
         HIP_DEBUG("hip_hadb_create_state\n");
         entry                             = hip_hadb_create_state(0);
         HIP_IFEL(!entry, -1, "Unable to create a new entry");
@@ -471,35 +456,12 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
         entry->nat_mode       = hip_nat_status;
         entry->peer_udp_port  = hip_get_peer_nat_udp_port();
         entry->local_udp_port = hip_get_local_nat_udp_port();
-        entry->hadb_xmit_func = &nat_xmit_func_set;
-    } else {
-        /* NAT mode is not reset here due to "shotgun" support.
-         * Hipd may get multiple locator mappings of which some can be
-         * IPv4 and others IPv6. If NAT mode is on and the last
-         * added address is IPv6, we don't want to reset NAT mode.
-         * Note that send_udp() function can shortcut to send_raw()
-         * when it gets an IPv6 address. */
-        entry->hadb_xmit_func = &default_xmit_func_set;
     }
 
-#ifdef CONFIG_HIP_BLIND
-    if (hip_blind_status) {
-        entry->blind = 1;
-    }
-#endif
     if (hip_hidb_hit_is_our(peer_hit)) {
         HIP_DEBUG("Peer HIT is ours (loopback)\n");
         entry->is_loopback = 1;
     }
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
-#ifdef CONFIG_HIP_HIPPROXY
-    entry->hipproxy         = hip_get_hip_proxy_status();
-#endif
-
-    /* @todo: lock ha when we have threads */
 
     HIP_DEBUG_LSI("entry->lsi_peer \n", &entry->lsi_peer);
     hip_hadb_insert_state(entry);
@@ -508,10 +470,8 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE, hip_get_peer_nat_udp_port()),
              -2, "error while adding a new peer address\n");
 
-    /* @todo: unlock ha when we have threads */
-
-    HIP_IFEL(default_ipsec_func_set.hip_setup_hit_sp_pair(peer_hit, local_hit,
-                                                          local_addr, peer_addr, 0, 1, 0),
+    HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
+                                   local_addr, peer_addr, 0, 1, 0),
              -1, "Error in setting the SPs\n");
 
 out_err:
@@ -656,94 +616,38 @@ out_err:
 }
 
 /**
- * set "misc" function pointer set for an hadb record. Pointer values will not be
- * copied!
- *
- * @param entry        pointer to the hadb record.
- * @param new_func_set pointer to the new function set.
- * @return             0 if everything was stored successfully, otherwise < 0.
- */
-static int hip_hadb_set_misc_function_set(hip_ha_t *entry,
-                                          hip_misc_func_set_t *new_func_set)
-{
-    /** @todo add check whether all function pointers are set. */
-    if (entry) {
-        entry->hadb_misc_func = new_func_set;
-        return 0;
-    }
-    return -1;
-}
-
-/**
- * change the network delivery function pointer set of a host association
- *
- * @param entry the host association
- * @param new_func_set the new function pointer set
- * @return zero on success and negative on error
- *
- */
-int hip_hadb_set_xmit_function_set(hip_ha_t *entry,
-                                   hip_xmit_func_set_t *new_func_set)
-{
-    if (entry) {
-        entry->hadb_xmit_func = new_func_set;
-        return 0;
-    }
-    return -1;
-}
-
-/**
  * Inits a Host Association after memory allocation.
  *
  * @param  entry pointer to a host association
  */
 static int hip_hadb_init_entry(hip_ha_t *entry)
 {
-    int err = 0;
-    HIP_IFEL(!entry, -1, "HA is NULL\n");
+    int   err          = 0;
 
-#ifdef CONFIG_HIP_HIPPROXY
-    entry->hipproxy = 0;
-#endif
+    HIP_IFEL(!entry, -1, "HA is NULL\n");
 
     entry->state         = HIP_STATE_UNASSOCIATED;
     entry->hastate       = HIP_HASTATE_INVALID;
     entry->purge_timeout = HIP_HA_PURGE_TIMEOUT;
 
-    /* Function pointer sets which define HIP behavior in respect to the
-     * hadb_entry. */
-    HIP_IFEL(hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
-             -1, "Can't set new function pointer set.\n");
-    HIP_IFEL(hip_hadb_set_handle_function_set(entry,
-                                              &default_handle_func_set),
-             -1, "Can't set new function pointer set.\n");
-    HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
-             -1, "Can't set new function pointer set.\n");
-
-    /* Set the xmit function set as function set for sending raw HIP. */
-    HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
-             -1, "Can't set new function pointer set.\n");
-
-    /* added by Tao Wan, on 24, Jan, 2008 */
-    entry->hadb_ipsec_func = &default_ipsec_func_set;
-
-    //initialize the peer hostname
+    /* Initialize the peer host name */
     memset(entry->peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-    entry->shotgun_status                 = hip_shotgun_status;
+    entry->peer_addresses_old = hip_linked_list_init();
 
-    entry->addresses_to_send_echo_request = hip_linked_list_init();
-
-    entry->peer_addresses_old             = hip_linked_list_init();
-
-    // Randomize inbound SPI
+    /* Randomize inbound SPI */
     get_random_bytes(&entry->spi_inbound_current,
                      sizeof(entry->spi_inbound_current));
 
-    HIP_IFE(!(entry->hip_msg_retrans.buf =
-                  malloc(HIP_MAX_NETWORK_PACKET)), -ENOMEM);
+    HIP_IFE(!(entry->hip_msg_retrans.buf = malloc(HIP_MAX_NETWORK_PACKET)),
+            -ENOMEM);
     entry->hip_msg_retrans.count = 0;
     memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
+
+    /* Initialize module states */
+    entry->hip_modular_state = lmod_init_state();
+    lmod_init_state_items(entry->hip_modular_state);
+    HIP_DEBUG("Modular state initialized.\n");
 
 out_err:
     return err;
@@ -759,8 +663,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
     hip_ha_t *entry = NULL;
 
-    entry = malloc(sizeof(struct hip_hadb_state));
-    if (entry == NULL) {
+    if (!(entry = malloc(sizeof(struct hip_hadb_state)))) {
         return NULL;
     }
 
@@ -931,69 +834,6 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
 }
 
 /**
- * Stores the keys negotiated in base exchange.
- *
- * @param ctx          the context inside which the key data will copied around.
- * @param is_initiator true if the localhost is the initiator, or false if the
- *                     localhost is the Responder
- * @return             0 if everything was stored successfully, otherwise < 0.
- */
-int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
-                                 struct hip_context *ctx, int is_initiator)
-{
-    int err = 0;
-    int hmac_key_len, enc_key_len, auth_key_len, hip_enc_key_len;
-
-    hmac_key_len    = hip_hmac_key_length(entry->esp_transform);
-    enc_key_len     = hip_enc_key_length(entry->esp_transform);
-    auth_key_len    = hip_auth_key_length_esp(entry->esp_transform);
-    hip_enc_key_len = hip_transform_key_length(entry->hip_transform);
-
-    memcpy(&entry->hip_hmac_out, &ctx->hip_hmac_out, hmac_key_len);
-    memcpy(&entry->hip_hmac_in, &ctx->hip_hmac_in, hmac_key_len);
-
-    memcpy(&entry->esp_in.key, &ctx->esp_in.key, enc_key_len);
-    memcpy(&entry->auth_in.key, &ctx->auth_in.key, auth_key_len);
-
-    memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
-    memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
-
-    memcpy(&entry->hip_enc_out.key, &ctx->hip_enc_out.key, hip_enc_key_len);
-    memcpy(&entry->hip_enc_in.key, &ctx->hip_enc_in.key, hip_enc_key_len);
-
-    hip_update_entry_keymat(entry, ctx->current_keymat_index,
-                            ctx->keymat_calc_index, ctx->esp_keymat_index,
-                            ctx->current_keymat_K);
-
-    if (entry->dh_shared_key) {
-        HIP_DEBUG("freeing old dh_shared_key\n");
-        free(entry->dh_shared_key);
-        entry->dh_shared_key = NULL;
-    }
-
-    entry->dh_shared_key_len = 0;
-    /** @todo reuse pointer, no malloc */
-    entry->dh_shared_key     = malloc(ctx->dh_shared_key_len);
-    if (!entry->dh_shared_key) {
-        HIP_ERROR("entry dh_shared malloc failed\n");
-        err = -ENOMEM;
-        goto out_err;
-    }
-
-    entry->dh_shared_key_len = ctx->dh_shared_key_len;
-    memcpy(entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
-    return err;
-
-out_err:
-    if (entry->dh_shared_key) {
-        free(entry->dh_shared_key);
-        entry->dh_shared_key = NULL;
-    }
-
-    return err;
-}
-
-/**
  * store a remote host identifier to a host association
  *
  * @param entry the host association
@@ -1001,7 +841,8 @@ out_err:
  * @param peer the remote host identifier
  * @return zero on success and negative on error
  */
-int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
+int hip_init_peer(hip_ha_t *entry,
+                  struct hip_common *msg,
                   struct hip_host_id *peer)
 {
     int err = 0;
@@ -1107,142 +948,12 @@ out_err:
  */
 void hip_init_hadb(void)
 {
-    /** @todo Check for errors. */
-
     /* The next line initializes the hash table for host associations. Note
      * that we are using callback wrappers IMPLEMENT_LHASH_HASH_FN and
      * IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
      * provide automagic variable casts, so that all elements stored in the
      * hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
-
-    hadb_hit                                   = hip_ht_init(LHASH_HASH_FN(hip_ha),
-                                                             LHASH_COMP_FN(hip_ha));
-
-    /* initialize default function pointer sets for receiving messages*/
-    default_rcv_func_set.hip_receive_i1        = hip_receive_i1;
-    default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
-    default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
-    default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
-    default_rcv_func_set.hip_receive_update    = hip_receive_update;
-    default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
-    default_rcv_func_set.hip_receive_close     = hip_receive_close;
-    default_rcv_func_set.hip_receive_close_ack = hip_receive_close_ack;
-
-    /* initialize alternative function pointer sets for receiving messages*/
-    /* insert your alternative function sets here!*/
-
-    /* initialize default function pointer sets for handling messages*/
-    default_handle_func_set.hip_handle_i1        = hip_handle_i1;
-    default_handle_func_set.hip_handle_r1        = hip_handle_r1;
-    default_handle_func_set.hip_handle_i2        = hip_handle_i2;
-    default_handle_func_set.hip_handle_r2        = hip_handle_r2;
-    default_handle_func_set.hip_handle_close     = hip_handle_close;
-    default_handle_func_set.hip_handle_close_ack = hip_handle_close_ack;
-
-    /* initialize alternative function pointer sets for handling messages*/
-    /* insert your alternative function sets here!*/
-
-    /* initialize default function pointer sets for misc functions*/
-    default_misc_func_set.hip_solve_puzzle            = hip_solve_puzzle;
-    default_misc_func_set.hip_produce_keying_material = hip_produce_keying_material;
-    default_misc_func_set.hip_create_i2               = hip_create_i2;
-    default_misc_func_set.hip_create_r2               = hip_create_r2;
-    default_misc_func_set.hip_build_network_hdr       = hip_build_network_hdr;
-
-    /* initialize alternative function pointer sets for misc functions*/
-    /* insert your alternative function sets here!*/
-
-    /* xmit function set */
-    default_xmit_func_set.hip_send_pkt = hip_send_pkt;
-    nat_xmit_func_set.hip_send_pkt     = hip_send_pkt;
-
-    /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)
-     *
-     * copy in user_ipsec_hipd_msg.c */
-    if (hip_use_userspace_ipsec) {
-        default_ipsec_func_set.hip_add_sa                        = hip_userspace_ipsec_add_sa;
-        default_ipsec_func_set.hip_delete_sa                     = hip_userspace_ipsec_delete_sa;
-        default_ipsec_func_set.hip_setup_hit_sp_pair             = hip_userspace_ipsec_setup_hit_sp_pair;
-        default_ipsec_func_set.hip_delete_hit_sp_pair            = hip_userspace_ipsec_delete_hit_sp_pair;
-        default_ipsec_func_set.hip_flush_all_policy              = hip_userspace_ipsec_flush_all_policy;
-        default_ipsec_func_set.hip_flush_all_sa                  = hip_userspace_ipsec_flush_all_sa;
-        default_ipsec_func_set.hip_acquire_spi                   = hip_acquire_spi;
-        default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_userspace_ipsec_delete_default_prefix_sp_pair;
-        default_ipsec_func_set.hip_setup_default_sp_prefix_pair  = hip_userspace_ipsec_setup_default_sp_prefix_pair;
-    } else {
-        default_ipsec_func_set.hip_add_sa                        = hip_add_sa;
-        default_ipsec_func_set.hip_delete_sa                     = hip_delete_sa;
-        default_ipsec_func_set.hip_setup_hit_sp_pair             = hip_setup_hit_sp_pair;
-        default_ipsec_func_set.hip_delete_hit_sp_pair            = hip_delete_hit_sp_pair;
-        default_ipsec_func_set.hip_flush_all_policy              = hip_flush_all_policy;
-        default_ipsec_func_set.hip_flush_all_sa                  = hip_flush_all_sa;
-        default_ipsec_func_set.hip_acquire_spi                   = hip_acquire_spi;
-        default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_delete_default_prefix_sp_pair;
-        default_ipsec_func_set.hip_setup_default_sp_prefix_pair  = hip_setup_default_sp_prefix_pair;
-    }
-}
-
-/**
- * receive a pointer to the default preprocessing function pointer
- * set of a host association
- *
- * @return the default function pointer set
- */
-hip_rcv_func_set_t *hip_get_rcv_default_func_set(void)
-{
-    return &default_rcv_func_set;
-}
-
-/**
- * receive a pointer to the default postprocessing function pointer
- * set of a host association
- *
- * @param entry the host association
- * @param new_func_set the new function pointer set
- * @return zero on success and negative on error
- *
- */
-hip_handle_func_set_t *hip_get_handle_default_func_set(void)
-{
-    return &default_handle_func_set;
-}
-
-/**
- * Sets function pointer set for an hadb record. Pointer values will not be
- * copied!
- *
- * @param entry         a pointer to the hadb record
- * @param new_func_set  a pointer to the new function set
- * @return              0 if everything was stored successfully, otherwise < 0.
- */
-int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
-                                  hip_rcv_func_set_t *new_func_set)
-{
-    /** @todo add check whether all function pointers are set */
-    if (entry) {
-        entry->hadb_rcv_func = new_func_set;
-        return 0;
-    }
-    return -1;
-}
-
-/**
- * Sets function pointer set for an hadb record. Pointer values will not be
- * copied!
- *
- * @param entry        a pointer to the hadb record.
- * @param new_func_set a pointer to the new function set.
- * @return             0 if everything was stored successfully, otherwise < 0.
- */
-int hip_hadb_set_handle_function_set(hip_ha_t *entry,
-                                     hip_handle_func_set_t *new_func_set)
-{
-    /** @todo add check whether all function pointers are set. */
-    if (entry) {
-        entry->hadb_handle_func = new_func_set;
-        return 0;
-    }
-    return -1;
+    hadb_hit = hip_ht_init(LHASH_HASH_FN(hip_ha), LHASH_COMP_FN(hip_ha));
 }
 
 /**
@@ -1358,24 +1069,6 @@ void hip_delete_all_sp(void)
 }
 
 /**
- * Remove all the addresses from the addresses_to_send_echo_request list
- * and deallocate them.
- * @param ha pointer to a host association
- */
-void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
-{
-    int i = 0;
-    struct in6_addr *address;
-    hip_list_t *item, *tmp;
-
-    list_for_each_safe(item, tmp, ha->addresses_to_send_echo_request, i) {
-        address = (struct in6_addr *) list_entry(item);
-        list_del(address, ha->addresses_to_send_echo_request);
-        free(address);
-    }
-}
-
-/**
  * Delete a HA state (and deallocate memory), all associated IPSEC SAs
  * and free the memory occupied by the HA state.
  *
@@ -1387,7 +1080,7 @@ void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha)
 void hip_hadb_delete_state(hip_ha_t *ha)
 {
     hip_list_t *item = NULL, *tmp = NULL;
-    struct hip_peer_addr_list_item *addr_li;
+    struct hip_peer_addr_list_item *addr_li = NULL;
     int i;
 
     HIP_DEBUG("ha=0x%p\n", ha);
@@ -1419,10 +1112,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
         free(ha->rendezvous_addr);
     }
 
-    if (ha->addresses_to_send_echo_request) {
-        hip_remove_addresses_to_send_echo_request(ha);
-        hip_ht_uninit(ha->addresses_to_send_echo_request);
-    }
+    lmod_uninit_state(ha->hip_modular_state);
 
     if (ha->locator) {
         free(ha->locator);
@@ -1547,10 +1237,16 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
     ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
     memcpy(&hid.peer_hostname, &entry->peer_hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
+    /** @todo Modularize heartbeat */
+#if 0
     hid.heartbeats_on       = hip_icmp_interval;
     calc_statistics(&entry->heartbeats_statistics, (uint32_t *) &hid.heartbeats_received, NULL, NULL,
                     &hid.heartbeats_mean, &hid.heartbeats_variance, STATS_IN_MSECS);
+    hid.heartbeats_mean     = entry->heartbeats_mean;
+    hid.heartbeats_variance = entry->heartbeats_variance;
+    hid.heartbeats_received = entry->heartbeats_statistics.num_items;
     hid.heartbeats_sent     = entry->heartbeats_sent;
+#endif
 
     hid.nat_udp_port_peer  = entry->peer_udp_port;
     hid.nat_udp_port_local = entry->local_udp_port;
@@ -1562,8 +1258,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
                          &hid.hit_our,  &hid.hit_peer,
                          &hid.lsi_peer, (char *) &hid.peer_hostname,
                          &hid.nat_udp_port_local, &hid.nat_udp_port_peer);
-
-    hid.shotgun_status = entry->shotgun_status;
 
     err                = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
                                                   sizeof(hid));
@@ -1645,32 +1339,6 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 }
 
 #endif
-
-
-#ifdef CONFIG_HIP_BLIND
-/**
- * Defunctional. Find a host association based on blinded HITs
- *
- * @param local_blind_hit local blinded HIT
- * @param peer_blind_hit remote blinded HIT
- * @return the corresponding host association or NULL if not found
- *
- * @date 22.07.2008
- */
-hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
-                                      hip_hit_t *peer_blind_hit)
-{
-    int err          = 0;
-    hip_ha_t *result = NULL;
-
-    if (err) {
-        result = NULL;
-    }
-
-    return result;
-}
-#endif
-
 
 /**
  * An iterator to find a matching remote LSI from HADB.
@@ -1857,10 +1525,8 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
     int prev_spi_in  = ha->spi_inbound_current;
 
     // Delete previous security policies
-    ha->hadb_ipsec_func->hip_delete_hit_sp_pair(&ha->hit_our, &ha->hit_peer,
-                                                IPPROTO_ESP, 1);
-    ha->hadb_ipsec_func->hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our,
-                                                IPPROTO_ESP, 1);
+    hip_delete_hit_sp_pair(&ha->hit_our, &ha->hit_peer, IPPROTO_ESP, 1);
+    hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
 
     // Delete the previous SAs
     HIP_DEBUG("Previous SPI out =0x%x\n", prev_spi_out);
@@ -1869,10 +1535,16 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
     HIP_DEBUG_IN6ADDR("Our current active addr", &ha->our_addr);
     HIP_DEBUG_IN6ADDR("Peer's current active addr", &ha->peer_addr);
 
-    default_ipsec_func_set.hip_delete_sa(prev_spi_out, &ha->peer_addr,
-                                         &ha->our_addr, HIP_SPI_DIRECTION_OUT, ha);
-    default_ipsec_func_set.hip_delete_sa(prev_spi_in, &ha->our_addr,
-                                         &ha->peer_addr, HIP_SPI_DIRECTION_IN, ha);
+    hip_delete_sa(prev_spi_out,
+                  &ha->peer_addr,
+                  &ha->our_addr,
+                  HIP_SPI_DIRECTION_OUT,
+                  ha);
+    hip_delete_sa(prev_spi_in,
+                  &ha->our_addr,
+                  &ha->peer_addr,
+                  HIP_SPI_DIRECTION_IN,
+                  ha);
 
     return;
 };
@@ -1896,18 +1568,31 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_add
     hip_delete_security_associations_and_sp(ha);
 
     // Create a new security policy
-    HIP_IFEL(ha->hadb_ipsec_func->hip_setup_hit_sp_pair(&ha->hit_peer,
-                                                        &ha->hit_our, dst_addr, src_addr, IPPROTO_ESP, 1, 0),
-             -1, "Setting up SP pair failed\n");
+    HIP_IFEL(hip_setup_hit_sp_pair(&ha->hit_peer,
+                                   &ha->hit_our,
+                                   dst_addr,
+                                   src_addr,
+                                   IPPROTO_ESP,
+                                   1,
+                                   0),
+            -1, "Setting up SP pair failed\n");
 
     // Create a new inbound SA
     HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
 
-    HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(dst_addr, src_addr,
-                                             &ha->hit_peer, &ha->hit_our, new_spi_in, ha->esp_transform,
-                                             &ha->esp_in, &ha->auth_in, 1, HIP_SPI_DIRECTION_IN, 0,
-                                             ha), -1,
-             "Error while changing inbound security association\n");
+    HIP_IFEL(hip_add_sa(dst_addr,
+                        src_addr,
+                        &ha->hit_peer,
+                        &ha->hit_our,
+                        new_spi_in,
+                        ha->esp_transform,
+                        &ha->esp_in,
+                        &ha->auth_in,
+                        1,
+                        HIP_SPI_DIRECTION_IN,
+                        0,
+                        ha),
+             -1, "Error while changing inbound security association\n");
 
     HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
 
@@ -1915,11 +1600,19 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_add
     HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", new_spi_out);
     ha->local_udp_port = ha->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
-    HIP_IFEL(ha->hadb_ipsec_func->hip_add_sa(src_addr, dst_addr,
-                                             &ha->hit_our, &ha->hit_peer, new_spi_out, ha->esp_transform,
-                                             &ha->esp_out, &ha->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0,
-                                             ha), -1,
-             "Error while changing outbound security association\n");
+    HIP_IFEL(hip_add_sa(src_addr,
+                        dst_addr,
+                        &ha->hit_our,
+                        &ha->hit_peer,
+                        new_spi_out,
+                        ha->esp_transform,
+                        &ha->esp_out,
+                        &ha->auth_out,
+                        1,
+                        HIP_SPI_DIRECTION_OUT,
+                        0,
+                        ha),
+             -1, "Error while changing outbound security association\n");
 
     HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 

@@ -60,6 +60,7 @@ int hip_rsa_sign(void *priv_key, struct hip_common *msg)
     HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature,
                        &sig_len, rsa), -1, "Signing error\n");
 
+
     if (hip_get_msg_type(msg) == HIP_R1) {
         HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
                                                      len, HIP_SIG_RSA),

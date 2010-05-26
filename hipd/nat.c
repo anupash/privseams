@@ -37,6 +37,7 @@
 #include "user.h"
 #include "lib/core/debug.h"
 
+static int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 
 /**
  * Refreshes the port state of all NATs related to this host.
@@ -51,9 +52,19 @@ int hip_nat_refresh_port(void)
 {
     int err = 0;
 
-    HIP_DEBUG("Sending Keep-Alives to NAT.\n");
-    HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
-             -1, "for_each_ha() err.\n");
+    if (!hip_nat_status) {
+        return 0;
+    }
+
+    if (nat_keep_alive_counter < 0) {
+        HIP_DEBUG("Sending Keep-Alives to NAT.\n");
+        HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
+                 -1, "for_each_ha() err.\n");
+
+        nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
+    } else {
+        nat_keep_alive_counter--;
+    }
 
 out_err:
     return err;
@@ -104,8 +115,6 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
         goto out_err;
     }
 
-
-    entry->hadb_misc_func->
     hip_build_network_hdr(msg, HIP_NOTIFY,
                           0, &entry->hit_our,
                           &entry->hit_peer);
@@ -118,7 +127,6 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
      * choose to use other than hip_get_nat_udp_port() as source port, but we must use hip_get_nat_udp_port()
      * as destination port. However, because it is recommended to use
      * hip_get_nat_udp_port() as source port also, we choose to do so here. */
-    entry->hadb_xmit_func->
     hip_send_pkt(&entry->our_addr, &entry->peer_addr,
                  entry->local_udp_port, entry->peer_udp_port, msg,
                  entry, 0);
@@ -173,31 +181,12 @@ static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 {
     int err = 0;
     if (entry && mode != HIP_NAT_MODE_NONE) {
-        hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+        //hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
         entry->nat_mode = *((hip_transform_suite_t *) mode);
         HIP_DEBUG("NAT status of host association %p: %d\n",
                   entry, entry->nat_mode);
     }
     return err;
-}
-
-/**
- * Set the NAT mode for a host association
- *
- *
- * Similar to hip_ha_set_nat_mode, but skip the setting when RVS mode is on, this
- * function is for ICE code
- *
- * @param entry    a pointer to a host association which links current host and
- *                 the peer.
- * @param mode     a integer for NAT mode.
- * @return         zero on success.
- */
-hip_transform_suite_t hip_nat_set_control(hip_ha_t *entry, hip_transform_suite_t mode)
-{
-    hip_ha_set_nat_mode(entry, &mode);
-
-    return 0;
 }
 
 /**

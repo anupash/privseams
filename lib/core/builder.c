@@ -660,7 +660,6 @@ static int hip_check_network_param_type(const struct hip_tlv_common *param)
     hip_tlv_type_t valid[] =
     {
         HIP_PARAM_ACK,
-        HIP_PARAM_BLIND_NONCE,
         HIP_PARAM_CERT,
         HIP_PARAM_DIFFIE_HELLMAN,
         HIP_PARAM_ECHO_REQUEST,
@@ -710,7 +709,8 @@ static int hip_check_network_param_type(const struct hip_tlv_common *param)
         HIP_PARAM_ESP_PROT_SECRET,
         HIP_PARAM_ESP_PROT_ROOT
 #ifdef CONFIG_HIP_MIDAUTH
-        ,                             HIP_PARAM_ECHO_REQUEST_M,
+        ,
+        HIP_PARAM_ECHO_REQUEST_M,
         HIP_PARAM_ECHO_RESPONSE_M,
         HIP_PARAM_CHALLENGE_REQUEST,
         HIP_PARAM_CHALLENGE_RESPONSE
@@ -1087,7 +1087,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_PAYLOAD:       return "HIP_PAYLOAD";
     case HIP_PSIG:          return "HIP_PSIG";
     case HIP_TRIG:          return "HIP_TRIG";
-
     case HIP_MSG_ADD_LOCAL_HI:       return "HIP_MSG_ADD_LOCAL_HI";
     case HIP_MSG_DEL_LOCAL_HI:       return "HIP_MSG_DEL_LOCAL_HI";
     case HIP_MSG_RUN_UNIT_TEST:      return "HIP_MSG_RUN_UNIT_TEST";
@@ -1100,8 +1099,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_CONF_PUZZLE_INC:    return "HIP_MSG_CONF_PUZZLE_INC";
     case HIP_MSG_CONF_PUZZLE_DEC:    return "HIP_MSG_CONF_PUZZLE_DEC";
     case HIP_MSG_SET_OPPORTUNISTIC_MODE: return "HIP_MSG_SET_OPPORTUNISTIC_MODE";
-    case HIP_MSG_SET_BLIND_ON:       return "HIP_MSG_SET_BLIND_ON";
-    case HIP_MSG_SET_BLIND_OFF:      return "HIP_MSG_SET_BLIND_OFF";
     case HIP_MSG_SET_DEBUG_ALL:      return "HIP_MSG_SET_DEBUG_ALL";
     case HIP_MSG_SET_DEBUG_MEDIUM:   return "HIP_MSG_SET_DEBUG_MEDIUM";
     case HIP_MSG_SET_DEBUG_NONE:     return "HIP_MSG_SET_DEBUG_NONE";
@@ -1132,13 +1129,7 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_I1_REJECT:          return "HIP_MSG_I1_REJECT";
     case HIP_MSG_SET_NAT_PLAIN_UDP:  return "HIP_MSG_SET_NAT_PLAIN_UDP";
     case HIP_MSG_SET_NAT_NONE:       return "HIP_MSG_SET_NAT_NONE";
-    case HIP_MSG_SET_HIPPROXY_ON:    return "HIP_MSG_SET_HIPPROXY_ON";
-    case HIP_MSG_SET_HIPPROXY_OFF:   return "HIP_MSG_SET_HIPPROXY_OFF";
-    case HIP_MSG_GET_PROXY_LOCAL_ADDRESS: return "HIP_MSG_GET_PROXY_LOCAL_ADDRESS";
-    case HIP_MSG_HIPPROXY_STATUS_REQUEST: return "HIP_MSG_HIPPROXY_STATUS_REQUEST";
-    case HIP_MSG_OPPTCP_UNBLOCK_AND_BLACKLIST: return "HIP_MSG_OPPTCP_UNBLOCK_AND_BLACKLIST";
     case HIP_MSG_FW_BEX_DONE:        return "HIP_MSG_FW_BEX_DONE";
-    case HIP_MSG_SET_NAT_ICE_UDP:    return "HIP_MSG_SET_NAT_ICE_UDP";
     case HIP_MSG_IPSEC_ADD_SA:       return "HIP_MSG_IPSEC_ADD_SA";
     case HIP_MSG_USERSPACE_IPSEC:    return "HIP_MSG_USERSPACE_IPSEC";
     case HIP_MSG_ESP_PROT_TFM:       return "HIP_MSG_ESP_PROT_TFM";
@@ -1151,8 +1142,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_NSUPDATE_OFF:       return "HIP_MSG_NSUPDATE_OFF";
     case HIP_MSG_HEARTBEAT:          return "HIP_MSG_HEARTBEAT";
     case HIP_MSG_SET_NAT_PORT:       return "HIP_MSG_SET_NAT_PORT";
-    case HIP_MSG_SHOTGUN_ON:         return "HIP_MSG_SHOTGUN_ON";
-    case HIP_MSG_SHOTGUN_OFF:        return "HIP_MSG_SHOTGUN_OFF";
     case HIP_MSG_SIGN_BUDDY_X509V3:  return "HIP_MSG_SIGN_BUDDY_X509V3";
     case HIP_MSG_SIGN_BUDDY_SPKI:    return "HIP_MSG_SIGN_BUDDY_SPKI";
     case HIP_MSG_VERIFY_BUDDY_X509V3: return "HIP_MSG_VERIFY_BUDDY_X509V3";
@@ -1178,7 +1167,6 @@ const char *hip_param_type_name(const hip_tlv_type_t param_type)
 {
     switch (param_type) {
     case HIP_PARAM_ACK:             return "HIP_PARAM_ACK";
-    case HIP_PARAM_BLIND_NONCE:     return "HIP_PARAM_BLIND_NONCE";
     case HIP_PARAM_CERT:            return "HIP_PARAM_CERT";
     case HIP_PARAM_DH_SHARED_KEY:   return "HIP_PARAM_DH_SHARED_KEY";
     case HIP_PARAM_DIFFIE_HELLMAN:  return "HIP_PARAM_DIFFIE_HELLMAN";
@@ -3573,30 +3561,6 @@ int hip_build_param_cert(struct hip_common *msg, uint8_t group, uint8_t count,
     cert.cert_type  = type;
 
     err = hip_build_generic_param(msg, &cert, sizeof(struct hip_cert), data);
-    return err;
-}
-
-/**
- * append a blind "nonce" parameter to a message
- *
- * @param msg   a pointer to the message where the parameter will be
- *              appended
- * @param nonce the contents of the nonce
- * @return zero on success, or negative on failure
- *
- */
-int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
-{
-    struct hip_blind_nonce param;
-    int err = 0;
-
-    hip_set_param_type((struct hip_tlv_common *) &param, HIP_PARAM_BLIND_NONCE);
-    hip_calc_generic_param_len((struct hip_tlv_common *) &param,
-                               sizeof(param),
-                               0);
-    param.nonce = htons(nonce);
-    err         = hip_build_param(msg, &param);
-
     return err;
 }
 

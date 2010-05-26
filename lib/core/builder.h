@@ -25,7 +25,6 @@
 /* Removed in 2.6.11 - why ? */
 extern struct hip_cert_spki_info hip_cert_spki_info;
 
-int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce);
 int hip_build_netlink_dummy_header(struct hip_common *);
 int hip_build_param_heartbeat(struct hip_common *msg, int seconds);
 int hip_build_param_transform_order(struct hip_common *msg, int order);
@@ -133,10 +132,9 @@ int hip_build_param_signature_contents(struct hip_common *,
                                        const void *,
                                        hip_tlv_len_t,
                                        uint8_t);
-int
-        hip_build_param_solution(struct hip_common *,
-                                 struct hip_puzzle *,
-                                 uint64_t);
+int hip_build_param_solution(struct hip_common *,
+                             struct hip_puzzle *,
+                             uint64_t);
 
 int hip_build_param_challenge_response(struct hip_common *,
                                        struct hip_challenge_request *,

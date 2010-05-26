@@ -57,6 +57,11 @@
 /* only hip network message types here */
 /* @} */
 
+/**
+ * @todo add description
+ */
+#define HIP_MAX_PACKET_TYPE      64
+
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_MASK_100   0x20010010
 #define HIP_TEREDO_TYPE_MASK_100 0x20010000
@@ -175,8 +180,8 @@
 #define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PARAM_PSEUDO_HIT            32780
-#define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
-/* free slot */
+/* unused, was HIP_PARAM_BLIND_NONCE 32785 */
+/* unused, was HIP_PARAM_OPENDHT_GW_INFO 32786 */
 #define HIP_PARAM_ENCAPS_MSG            32787
 #define HIP_PARAM_PORTPAIR              32788
 #define HIP_PARAM_SRC_ADDR              32789
@@ -443,6 +448,7 @@
         HIP_HA_CTRL_LOCAL_REQ_RVS   | \
         HIP_HA_CTRL_LOCAL_REQ_FULLRELAY \
         )
+
 #define HIP_HA_CTRL_LOCAL_GRANTED_FULLRELAY 0x0800
 
 /** The peer has granted us unsupported service in a REG_RESPONSE parameter
@@ -486,7 +492,7 @@
  * @{
  */
 #define HIP_PACKET_CTRL_ANON             0x0001 /**< HIP packet Controls value */
-#define HIP_PACKET_CTRL_BLIND            0x0004 /**< HIP packet Controls value */
+/* unused, was HIP_PACKET_CTRL_BLIND 0x0004 */
 /* @} */
 
 /**
@@ -1114,12 +1120,6 @@ struct hip_keys {
     struct hip_crypto_key enc;
 } __attribute__ ((packed));
 
-struct hip_blind_nonce {
-    hip_tlv_type_t type;
-    hip_tlv_len_t  length;
-    uint16_t       nonce;
-} __attribute__ ((packed));
-
 struct hip_cert_x509_req {
     hip_tlv_type_t  type;
     hip_tlv_len_t   length;
@@ -1154,8 +1154,6 @@ struct hip_heartbeat {
     int            heartbeat;
 } __attribute__ ((packed));
 
-//add by santtu from here
-
 struct hip_nat_transform {
     hip_tlv_type_t        type;
     hip_tlv_len_t         length;
@@ -1163,7 +1161,6 @@ struct hip_nat_transform {
     hip_transform_suite_t suite_id[6];
 } __attribute__ ((packed));
 /* @} */
-
 
 struct hip_nat_pacing {
     hip_tlv_type_t type;
@@ -1201,6 +1198,21 @@ struct hip_port_info {
     hip_tlv_len_t  length;      /**< Length of the parameter contents in bytes. */
     in_port_t      port;      /**< Port number. */
 } __attribute__ ((packed));
+
+/**
+ * Structure used during packet handling to store the incoming message,
+ * source address, destination address, the used ports, the host association
+ * database entry and a flag indicating the packet handling should be aborted.
+ */
+struct hip_packet_context {
+    struct hip_common         *input_msg;
+    struct hip_common         *output_msg;
+    struct in6_addr           *src_addr;
+    struct in6_addr           *dst_addr;
+    struct hip_stateless_info *msg_ports;
+    struct hip_hadb_state     *hadb_entry;
+    uint8_t                    error;
+};
 
 
 #endif /* HIP_LIB_CORE_PROTODEFS_H */

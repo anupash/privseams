@@ -11,7 +11,11 @@
 
 #include <stdlib.h>
 
+#include "update.h"
 #include "update_legacy.h"
+#include "hipd/hipd.h"
+#include "lib/core/debug.h"
+#include "lib/core/list.h"
 
 /**
  * build a LOCATOR parameter for an UPDATE packet

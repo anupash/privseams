@@ -425,6 +425,10 @@ unsigned long hip_relht_size(void)
 }
 
 /**
+ * hip_relht_maintenance
+ *
+ * @brief Clear the expired records from the relay hashtable.
+ *
  * Periodic maintenance function of the hip relay. This function should be
  * called once in every maintenance cycle of the hip daemon. It clears the
  * expired relay records by calling @c hip_relht_rec_free_expired() for every
@@ -432,16 +436,18 @@ unsigned long hip_relht_size(void)
  * @todo a REG_RESPONSE with zero lifetime should be sent to each client whose
  *       registration is cancelled.
  */
-void hip_relht_maintenance(void)
+int hip_relht_maintenance(void)
 {
     if (hiprelay_ht == NULL) {
-        return;
+        return 0;
     }
 
     unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
     ((struct lhash_st *) hiprelay_ht)->down_load = 0;
     hip_ht_doall(hiprelay_ht, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(hip_relht_rec_free_expired));
     ((struct lhash_st *) hiprelay_ht)->down_load = tmp;
+
+    return 0;
 }
 
 /**
@@ -482,10 +488,9 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
                                const uint8_t lifetime,
                                const in6_addr_t *hit_r, const hip_hit_t *ip_r,
                                const in_port_t port,
-                               const hip_crypto_key_t *hmac,
-                               const hip_xmit_func_t func)
+                               const hip_crypto_key_t *hmac)
 {
-    if (hit_r == NULL || ip_r == NULL || hmac == NULL || func == NULL) {
+    if (hit_r == NULL || ip_r == NULL || hmac == NULL) {
         return NULL;
     }
 
@@ -500,7 +505,6 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
     memcpy(&(rec->ip_r), ip_r, sizeof(*ip_r));
     rec->udp_port_r = port;
     memcpy(&(rec->hmac_relay), hmac, sizeof(*hmac));
-    rec->send_fn    = func;
     hip_relrec_set_lifetime(rec, lifetime);
     rec->created    = time(NULL);
 
@@ -911,7 +915,7 @@ int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
                               rec->udp_port_r, msg_to_be_relayed, NULL, 0),
                  -ECOMM, "Relaying the packet failed.\n");
     } else {
-        HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
+        HIP_IFEL(hip_send_pkt(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
                               rec->udp_port_r, msg_to_be_relayed, NULL, 0),
                  -ECOMM, "Relaying the packet failed.\n");
     }
@@ -1075,11 +1079,9 @@ out_err:
  * @param msg_info transport port numbers
  * @return zero on success or negative on error
  */
-int hip_relay_handle_relay_to(struct hip_common *msg,
-                              int msg_type,
-                              struct in6_addr *src_addr,
-                              struct in6_addr *dst_addr,
-                              hip_portpair_t *msg_info)
+int hip_relay_handle_relay_to(const uint8_t packet_type,
+                              const uint32_t ha_state,
+                              struct hip_packet_context *ctx)
 {
     int err           = 0;
     hip_relrec_t *rec = NULL, dummy;
@@ -1097,8 +1099,10 @@ int hip_relay_handle_relay_to(struct hip_common *msg,
     /* Check if we have a relay record in our database matching the
      * I's HIT. We should find one, if the I is
      * registered to relay.*/
-    HIP_DEBUG_HIT("Searching relay record on HIT:", &msg->hits);
-    memcpy(&(dummy.hit_r), &msg->hits, sizeof(msg->hits));
+    HIP_DEBUG_HIT("Searching relay record on HIT:",
+                  &ctx->input_msg->hits);
+
+    memcpy(&(dummy.hit_r), &ctx->input_msg->hits, sizeof(ctx->input_msg->hits));
     rec = hip_relht_get(&dummy);
 
     if (rec == NULL) {
@@ -1111,11 +1115,11 @@ int hip_relay_handle_relay_to(struct hip_common *msg,
     HIP_DEBUG("handle_relay_to: Matching relay record found:Full-Relay.\n");
 
     //check if there is a relay_to parameter
-    relay_to = (struct hip_relay_to *) hip_get_param(msg, HIP_PARAM_RELAY_TO);
+    relay_to = (struct hip_relay_to *) hip_get_param(ctx->input_msg, HIP_PARAM_RELAY_TO);
     HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
 
     // check msg type
-    switch (msg_type) {
+    switch (packet_type) {
     case HIP_R1:
     case HIP_R2:
     case HIP_UPDATE:
@@ -1124,9 +1128,14 @@ int hip_relay_handle_relay_to(struct hip_common *msg,
                           (struct in6_addr *) &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d",
                   ntohs(relay_to->port));
-        hip_relay_forward_response(
-            msg, msg_type, src_addr, dst_addr, msg_info,
-            (in6_addr_t *) &relay_to->address, ntohs(relay_to->port));
+        hip_relay_forward_response(ctx->input_msg,
+                                   packet_type,
+                                   ctx->src_addr,
+                                   ctx->dst_addr,
+                                   ctx->msg_ports,
+                                   (in6_addr_t *) &relay_to->address,
+                                   ntohs(relay_to->port));
+        //  state = HIP_STATE_NONE;
         err = 1;
         goto out_err;
     }
@@ -1417,18 +1426,15 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
  * @param entry the host association
  * @return zero on success or negative on error
  */
-int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
-                                        int msg_type,
-                                        struct in6_addr *src_addr,
-                                        struct in6_addr *dst_addr,
-                                        hip_portpair_t *msg_info,
-                                        hip_ha_t *entry)
+int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
+                                        const uint32_t ha_state,
+                                        struct hip_packet_context *ctx)
 {
     int err = 0;
     struct hip_relay_to *relay_to;
     //check if full relay service is active
 
-    if (!entry) {
+    if (!ctx->hadb_entry) {
         HIP_DEBUG("handle relay_to in client is failed\n");
         goto out_err;
     }
@@ -1438,22 +1444,23 @@ int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
     // check if the relay has been registered
 
     //check if there is a relay_to parameter
-    relay_to = (struct hip_relay_to *) hip_get_param(msg, HIP_PARAM_RELAY_TO);
+    relay_to = (struct hip_relay_to *) hip_get_param(ctx->input_msg, HIP_PARAM_RELAY_TO);
     HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
 
     // check msg type
-    switch (msg_type) {
+    switch (packet_type) {
     case HIP_R1:
     case HIP_R2:
         HIP_DEBUG_IN6ADDR("the relay to address: ",
                           (struct in6_addr *) &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n",
-                  ntohs(relay_to->port), entry->local_udp_port);
+                  ntohs(relay_to->port), ctx->hadb_entry->local_udp_port);
 
-        if (ipv6_addr_cmp((struct in6_addr *) &relay_to->address, &entry->our_addr)) {
+        if (ipv6_addr_cmp((struct in6_addr *) &relay_to->address,
+                          &ctx->hadb_entry->our_addr)) {
             HIP_DEBUG("relay_to address is saved as reflexive addr. \n");
-            entry->local_reflexive_udp_port = ntohs(relay_to->port);
-            memcpy(&entry->local_reflexive_address,
+            ctx->hadb_entry->local_reflexive_udp_port = ntohs(relay_to->port);
+            memcpy(&ctx->hadb_entry->local_reflexive_address,
                    &relay_to->address, sizeof(in6_addr_t));
         }
         err = 1;

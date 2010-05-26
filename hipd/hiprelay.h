@@ -59,8 +59,6 @@ typedef struct {
     in_port_t        udp_port_r;
     /** Integrity key established while registration occurred. */
     hip_crypto_key_t hmac_relay;
-    /** Function pointer to send function (raw or udp). */
-    hip_xmit_func_t  send_fn;
 } hip_relrec_t;
 
 /**
@@ -89,13 +87,13 @@ hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
 void hip_relht_rec_free_doall(hip_relrec_t *rec);
 void hip_relht_rec_free_type_doall(hip_relrec_t *rec, const hip_relrec_type_t *type);
 unsigned long hip_relht_size(void);
-void hip_relht_maintenance(void);
+int hip_relht_maintenance(void);
+
 hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
                                const uint8_t lifetime,
                                const in6_addr_t *hit_r, const hip_hit_t *ip_r,
                                const in_port_t port,
-                               const hip_crypto_key_t *hmac,
-                               const hip_xmit_func_t func);
+                               const hip_crypto_key_t *hmac);
 void hip_relht_free_all_of_type(const hip_relrec_type_t type);
 int hip_relwl_compare(const hip_hit_t *hit1, const hip_hit_t *hit2);
 hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
@@ -113,16 +111,13 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
                                 in6_addr_t *relay_ip,
                                 in6_addr_t *dest_ip, in_port_t *dest_port);
-int hip_relay_handle_relay_to_in_client(struct hip_common *msg,
-                                        int msg_type,
-                                        struct in6_addr *src_addr,
-                                        struct in6_addr *dst_addr,
-                                        hip_portpair_t *msg_info,
-                                        hip_ha_t *entry);
-int hip_relay_handle_relay_to(struct hip_common *msg,
-                              int msg_type,
-                              struct in6_addr *src_addr,
-                              struct in6_addr *dst_addr,
-                              hip_portpair_t *msg_info);
+
+int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
+                                        const uint32_t ha_state,
+                                        struct hip_packet_context *ctx);
+
+int hip_relay_handle_relay_to(const uint8_t packet_type,
+                              const uint32_t ha_state,
+                              struct hip_packet_context *ctx);
 
 #endif /* HIP_HIPD_HIPRELAY_H */

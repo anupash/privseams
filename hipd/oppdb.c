@@ -30,9 +30,6 @@
  * process which means that it should proceed without HIP. Consequtive
  * rejects are faster because they are cached.
  *
- * See firewall/opptcp.c extension on how the initial timeout can be
- * reduced to a single round-trip time.
- *
  * Authors:
  * - Bing Zhou <bingzhou@cc.hut.fi>
  */
@@ -71,12 +68,6 @@ static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
                                const struct in6_addr *ip_peer,
                                const struct in6_addr *ip_our,
                                const struct sockaddr_in6 *caller);
-static int hip_receive_opp_r1(struct hip_common *msg,
-                              struct in6_addr *src_addr,
-                              struct in6_addr *dst_addr,
-                              hip_ha_t *opp_entry,
-                              hip_portpair_t *msg_info);
-static int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *ips);
 
 /**
  * hashing function for the hashtable implementation
@@ -267,31 +258,6 @@ out_err:
 }
 
 /**
- * unblock all opportunistic connections with a certain remote host
- *
- * @param entry the opportunistic mode connection
- * @param ptr the pseudo HIT denoting the remote host
- * @return zero on success or negative on error
- */
-static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
-{
-    hip_opp_info_t *opp_info = (hip_opp_info_t *) ptr;
-    int err                  = 0;
-
-    if (ipv6_addr_cmp(&entry->peer_phit, &opp_info->pseudo_peer_hit) != 0) {
-        goto out_err;
-    }
-
-    HIP_IFEL(hip_opp_unblock_app(&entry->caller, opp_info), -1,
-             "unblock failed\n");
-
-    hip_oppdb_del_entry_by_entry(entry);
-
-out_err:
-    return err;
-}
-
-/**
  * create a opportunistic mode database entry
  *
  * @return the created databased entry (caller deallocates)
@@ -453,6 +419,8 @@ out_err:
     return entry;
 }
 
+
+#if 0
 /**
  * process an incoming R1 packet
  *
@@ -515,21 +483,18 @@ static int hip_receive_opp_r1(struct hip_common *msg,
     ipv6_addr_copy(&opp_info.peer_addr, src_addr);
     hip_for_each_opp(hip_oppdb_unblock_group, &opp_info);
 
-
     /* why is the receive entry still pointing to hip_receive_opp_r1 ? */
-    entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
+    /* @todo is this function set needed? */
+    //entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
     HIP_IFCS(entry,
-             (err = entry->hadb_rcv_func->hip_receive_r1(msg,
-                                                         src_addr,
-                                                         dst_addr,
-                                                         entry,
-                                                         msg_info)));
+             (err = hip_receive_r1(msg, src_addr, dst_addr, entry, msg_info)));
     hip_del_peer_info_entry(opp_entry);
 
 out_err:
 
     return err;
 }
+#endif
 
 /**
  * add an entry to the opportunistic mode dabase and host association
@@ -582,16 +547,13 @@ hip_ha_t *hip_opp_add_map(const struct in6_addr *dst_ip,
              "Did not find entry\n");
 
     /* Override the receiving function */
-    ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
+    /* @todo is this function set needed? */
+    //ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
 
     HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, &src_ip,
                                  caller), -1, "Add db failed\n");
 
-    ha->tcp_opptcp_src_port = 0;
-    ha->tcp_opptcp_dst_port = 0;
-
 out_err:
-
     return ha;
 }
 
@@ -618,20 +580,11 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 
     memset(&hit_our, 0, sizeof(struct in6_addr));
 
-    if (!opportunistic_mode) {
-        hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_PEER_HIT, 0), -1,
-                 "Building of user header failed\n");
-        err = -11;         /* Force immediately to send message to app */
-        goto out_err;
-    }
-
     /* Check each HA for the peer hit, if so, create the header of the message */
 
     /* Create an opportunistic HIT from the peer's IP  */
 
-    if (hip_get_opportunistic_tcp_status() &&
-        (ptr = hip_get_param_contents(msg, HIP_PARAM_SRC_TCP_PORT))) {
+    if ((ptr = hip_get_param_contents(msg, HIP_PARAM_SRC_TCP_PORT))) {
         /*get the src tcp port from the message for the TCP SYN
          * i1 packet*/
         HIP_IFEL(!ptr, -1, "No peer port in msg\n");
@@ -721,150 +674,14 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
              "Did not find entry\n");
 
     /* Override the receiving function */
-    ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
+    /* @todo is this function set needed? */
+    //ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
 
     HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, &dst_ip, NULL,
                                  src), -1, "Add db failed\n");
 
-    ha->tcp_opptcp_src_port = src_tcp_port;
-    ha->tcp_opptcp_dst_port = dst_tcp_port;
-
     HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
              "sending of I1 failed\n");
-
-out_err:
-    return err;
-}
-
-/**
- * Processes a message that has been sent to hipd from the firewall,
- * telling it to unblock the applications that connect to a particular peer
- * and to add the ip of a peer to the blacklist database.
- *
- * @param *msg  the message.
- * @param *src  the source of the message.
- * @return      an error, if any, during the processing.
- */
-int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockaddr_in6 *src)
-{
-    int err              = 0;
-    struct in6_addr *ptr = NULL, dst_ip;
-
-    if (!opportunistic_mode) {
-        hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
-                 -1, "Building of user header failed\n");
-    }
-
-    memset(&dst_ip, 0, sizeof(struct in6_addr *));
-    ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
-    HIP_IFEL(!ptr, -1, "No ip in msg\n");
-    memcpy(&dst_ip, ptr, sizeof(dst_ip));
-    HIP_DEBUG_HIT("dst ip = ", &dst_ip);
-
-    err = hip_for_each_opp(hip_force_opptcp_fallback, &dst_ip);
-    HIP_IFEL(err, 0, "for_each_ha err.\n");
-
-    err = hip_oppipdb_add_entry(&dst_ip);
-    HIP_IFEL(err, 0, "for_each_ha err.\n");
-
-out_err:
-    return err;
-}
-
-/**
- * Processes a message that has been sent to hipd from the firewall,
- * telling it to send a tcp packet.
- *
- * @param *msg  the message.
- * @param *src  the source of the message.
- * @return      an error, if any, during the processing.
- */
-int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src)
-{
-    int err              = 0;
-    uint16_t *ptr        = NULL;
-    char *hdr            = NULL;
-    uint16_t packet_size = 0;
-    uint16_t trafficType = 0;
-    uint16_t addHit      = 0;
-    uint16_t addOption   = 0;
-
-    /* todo: rewrite this code to bundle traffic type, hit and option
-     * into a single builder parameter */
-
-    if (!opportunistic_mode) {
-        HIP_DEBUG("Opportunistic mode disabled\n");
-        return -1;
-    }
-
-    //get the size of the packet
-    ptr         = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_PACKET_SIZE);
-    HIP_IFEL(!ptr, -1, "No packet size in msg\n");
-    packet_size = *ptr;
-
-    //get the pointer to the ip header that is to be sent
-    hdr         = malloc(packet_size);
-    memset(hdr, 0, packet_size);
-    ptr         = hip_get_param_contents(msg, HIP_PARAM_IP_HEADER);
-    HIP_IFEL(!ptr, -1, "No ip header in msg\n");
-    memcpy(hdr, ptr, packet_size);
-
-    //get the type of traffic
-    ptr         = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_TRAFFIC_TYPE);
-    HIP_IFEL(!ptr, -1, "No traffic type in msg\n");
-    trafficType = *ptr;
-
-    //get whether hit option is to be added
-    ptr         = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_ADD_HIT);
-    HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
-    addHit      = *ptr;
-
-    //get the size of the packet
-    ptr         = (uint16_t *) hip_get_param_contents(msg, HIP_PARAM_ADD_OPTION);
-    HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
-    addOption   = *ptr;
-
-    hip_msg_init(msg);
-
-    err         = send_tcp_packet(hdr, packet_size, trafficType,
-                                  hip_raw_sock_output_v4, addHit,
-                                  addOption);
-
-    HIP_IFEL(err, -1, "error sending tcp packet\n");
-
-out_err:
-    return err;
-}
-
-/**
- * Used by opportunistic tcp option to force an application fallback
- * immediately (without timeout) to non-hip communications. This occurs
- * when the firewall detects that peer does not support HIP.
- *
- * @param entry the opportunistic mode connection entry
- * @param data in6_addr the IP address of the Responder
- * @return zero on success or negative on failure
- */
-static int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *data)
-{
-    int err                  = 0;
-    struct in6_addr *resp_ip = data;
-    hip_opp_info_t info;
-
-    if (ipv6_addr_cmp(&entry->peer_ip, resp_ip)) {
-        goto out_err;
-    }
-
-    memset(&info, 0, sizeof(info));
-    ipv6_addr_copy(&info.peer_addr, &entry->peer_ip);
-
-    HIP_DEBUG_HIT("entry initiator hit:", &entry->our_real_hit);
-    HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
-    HIP_DEBUG("Rejecting blocked opp entry\n");
-    err = hip_opp_unblock_app(&entry->caller, &info);
-    HIP_DEBUG("Reject returned %d\n", err);
-    err = hip_oppdb_entry_clean_up(entry);
 
 out_err:
     return err;

@@ -21,30 +21,32 @@
 
 #include "config.h"
 #include "maintenance.h"
-#include "update.h"
-#include "heartbeat.h"
 #include "hipd.h"
 #include "lib/core/hip_udp.h"
+#include "lib/modularization/lmod.h"
 
 #define FORCE_EXIT_COUNTER_START                5
+
+struct maint_function {
+    uint16_t priority;
+    int    (*func_ptr)(void);
+};
 
 int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter        = HIP_RETRANSMIT_INIT;
 float opp_fallback_counter   = HIP_OPP_FALLBACK_INIT;
 float precreate_counter      = HIP_R1_PRECREATE_INIT;
-int nat_keep_alive_counter   = HIP_NAT_KEEP_ALIVE_INTERVAL;
 float queue_counter          = QUEUE_CHECK_INIT;
 int force_exit_counter       = FORCE_EXIT_COUNTER_START;
 int cert_publish_counter     = CERTIFICATE_PUBLISH_INTERVAL;
-int heartbeat_counter        = 0;
 int hip_firewall_status      = -1;
 int fall, retr;
 
-
-
-static int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
-static int hip_scan_retransmissions(void);
+/**
+ * List containing all maintenance functions.
+ */
+static hip_ll_t *hip_maintenance_functions;
 
 /**
  * an iterator to handle packet retransmission for a given host association
@@ -73,8 +75,7 @@ static int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
                       entry->state, entry->retrans_state, entry->update_state, entry->retrans_state);
 
             /* @todo: verify that this works over slow ADSL line */
-            err = entry->hadb_xmit_func->
-                  hip_send_pkt(&entry->hip_msg_retrans.saddr,
+            err = hip_send_pkt(&entry->hip_msg_retrans.saddr,
                                &entry->hip_msg_retrans.daddr,
                                (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                                entry->peer_udp_port,
@@ -148,6 +149,98 @@ out_err:
 }
 
 /**
+ * hip_register_maint_function
+ *
+ * Register a maintenance function. All maintenance functions are called during
+ * the periodic maintenance cycle.
+ *
+ * @param *maint_function Pointer to the maintenance function.
+ * @param priority Priority of the maintenance function.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ *
+ */
+int hip_register_maint_function(int (*maint_function)(void),
+                                const uint16_t priority)
+{
+    int err = 0;
+    struct maint_function *new_entry = NULL;
+
+    HIP_IFEL(!(new_entry = malloc(sizeof(struct maint_function))),
+             -1,
+             "Error on allocating memory for a maintenance function entry.\n");
+
+    new_entry->priority    = priority;
+    new_entry->func_ptr    = maint_function;
+
+    hip_maintenance_functions = lmod_register_function(hip_maintenance_functions,
+                                                       new_entry,
+                                                       priority);
+    if (!hip_maintenance_functions) {
+        HIP_ERROR("Error on registering a maintenance function.\n");
+        err = -1;
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * hip_unregister_maint_function
+ *
+ * Remove a maintenance function from the list.
+ *
+ * @param *maint_function Pointer to the function which should be unregistered.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int hip_unregister_maint_function(int (*maint_function)(void))
+{
+    return lmod_unregister_function(hip_maintenance_functions,
+                                    maint_function);
+}
+
+/**
+ * hip_run_maint_functions
+ *
+ * Run all maintenance functions.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+static int hip_run_maint_functions(void)
+{
+    int            err  = 0;
+    hip_ll_node_t *iter = NULL;
+
+    if (hip_maintenance_functions) {
+        while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {
+            ((struct maint_function*) iter->ptr)->func_ptr();
+        }
+    } else {
+        HIP_DEBUG("No maintenance function registered.\n");
+    }
+
+    return err;
+}
+
+/**
+ * hip_uninit_maint_functions
+ *
+ * Free the memory used for storage of maintenance functions.
+ *
+ */
+void hip_uninit_maint_functions(void)
+{
+    if (hip_maintenance_functions) {
+        hip_ll_uninit(hip_maintenance_functions, free);
+        free(hip_maintenance_functions);
+    }
+}
+
+/**
  * Periodic maintenance.
  *
  * @return zero on success or negative on failure
@@ -200,57 +293,7 @@ int hip_periodic_maintenance(void)
         precreate_counter--;
     }
 
-    /* is heartbeat support on */
-    if (hip_icmp_interval > 0) {
-        /* Check if the heartbeats should be sent */
-        if (heartbeat_counter < 1) {
-            hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
-            heartbeat_counter = hip_icmp_interval;
-        } else {
-            heartbeat_counter--;
-        }
-    } else if (hip_nat_status) {
-        /* Send NOTIFY keepalives for NATs only when ICMPv6
-         * keepalives are disabled */
-        if (nat_keep_alive_counter < 0) {
-            HIP_IFEL(hip_nat_refresh_port(),
-                     -ECOMM,
-                     "Failed to refresh NAT port state.\n");
-            nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
-        } else {
-            nat_keep_alive_counter--;
-        }
-    }
-
-    if (hip_trigger_update_on_heart_beat_failure &&
-        hip_icmp_interval > 0) {
-        hip_for_each_ha(hip_handle_update_heartbeat_trigger, NULL);
-    }
-
-    if (hip_wait_addr_changes_to_stabilize &&
-        address_change_time_counter != -1) {
-        if (address_change_time_counter == 0) {
-            address_change_time_counter = -1;
-            HIP_DEBUG("Triggering UPDATE\n");
-            err                         = hip_send_locators_to_all_peers();
-            if (err) {
-                HIP_ERROR("Error sending UPDATE\n");
-            }
-        } else {
-            HIP_DEBUG("Delay mobility triggering (count %d)\n",
-                      address_change_time_counter - 1);
-            address_change_time_counter--;
-        }
-    }
-
-    /* Clear the expired records from the relay hashtable. */
-    hip_relht_maintenance();
-
-    /* Clear the expired pending service requests. This is by no means time
-     * critical operation and is not needed to be done on every maintenance
-     * cycle. Once every 10 minutes or so should be enough. Just for the
-     * record, if periodic_maintenance() is ever to be optimized. */
-    hip_registration_maintenance();
+    hip_run_maint_functions();
 
 out_err:
 
@@ -347,53 +390,6 @@ out_err:
         free(msg);
     }
 
-    return err;
-}
-
-/**
- * This function calculates RTT and then stores them to correct entry
- *
- * @param src HIT
- * @param dst HIT
- * @param time when sent
- * @param time when received
- *
- * @return zero on success or negative on failure
- */
-int hip_icmp_statistics(struct in6_addr *src, struct in6_addr *dst,
-                        struct timeval *stval, struct timeval *rtval)
-{
-    int err                  = 0;
-    uint32_t rcvd_heartbeats = 0;
-    uint64_t rtt             = 0;
-    double avg               = 0.0, std_dev = 0.0;
-    char hit[INET6_ADDRSTRLEN];
-    hip_ha_t *entry          = NULL;
-
-    hip_in6_ntop(src, hit);
-
-    /* Find the correct entry */
-    entry = hip_hadb_find_byhits(src, dst);
-    HIP_IFEL((!entry), -1, "Entry not found\n");
-
-    /* Calculate the RTT from given timevals */
-    rtt   = calc_timeval_diff(stval, rtval);
-
-    /* add the heartbeat item to the statistics */
-    add_statistics_item(&entry->heartbeats_statistics, rtt);
-
-    /* calculate the statistics for immediate output */
-    calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, NULL, NULL, &avg,
-                    &std_dev, STATS_IN_MSECS);
-
-    entry->update_trigger_on_heartbeat_counter = 0;
-
-    HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
-              "%.6f ms std dev, packets sent %d recv %d lost %d\n",
-              hit, ((float) rtt / STATS_IN_MSECS), avg, std_dev, entry->heartbeats_sent,
-              rcvd_heartbeats, (entry->heartbeats_sent - rcvd_heartbeats));
-
-out_err:
     return err;
 }
 

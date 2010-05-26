@@ -123,11 +123,6 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
     if (id->r1) {
         hip_uninit_r1(id->r1);
     }
-#ifdef CONFIG_HIP_BLIND
-    if (id->blindr1) {
-        hip_uninit_r1(id->blindr1);
-    }
-#endif
 
     if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA && id->private_key) {
         RSA_free(id->private_key);
@@ -331,15 +326,12 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     HIP_DEBUG("Generating a new R1 set.\n");
     HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
     id_entry->host_id = hip_get_public_key(host_id);
-    HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *) &lhi->hit,
+    HIP_IFEL(!hip_precreate_r1(id_entry->r1,
+                               (struct in6_addr *) &lhi->hit,
                                (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-                               id_entry->private_key, id_entry->host_id), -ENOENT, "Unable to precreate R1s.\n");
-#ifdef CONFIG_HIP_BLIND
-    HIP_IFEL(!(id_entry->blindr1 = hip_init_r1()), -ENOMEM, "Unable to allocate blind R1s.\n");
-    HIP_IFEL(!hip_blind_precreate_r1(id_entry->blindr1, (struct in6_addr *) &lhi->hit,
-                                     (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-                                     id_entry->private_key, id_entry->host_id), -ENOENT, "Unable to precreate R1s.\n");
-#endif
+                               id_entry->private_key, id_entry->host_id),
+             -ENOENT,
+             "Unable to precreate R1s.\n");
 
     /* Called while the database is locked, perhaps not the best
      * option but HIs are not added often */

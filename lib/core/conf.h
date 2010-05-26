@@ -68,19 +68,19 @@
 #define ACTION_GET 9
 #define ACTION_RUN 10
 #define ACTION_LOAD 11
-/* free slot */
+/* unused, was ACTION_DHT 12 */
 #define ACTION_HA  13
 #define ACTION_RST 14
-/* free slot */
+/* unused, was ACTION_BOS 15 */
 #define ACTION_DEBUG 16
 #define ACTION_MHADDR 17
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
-/* free slot */
-/* free slot (was for ACTION_OPPTCP  21) */
+/* unused, was ACTION_OPENDHT 20 */
+/* unused, was for ACTION_OPPTCP 21 */
 #define ACTION_TRANSORDER 22
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
-#define ACTION_HIPPROXY 24
+/* unused, was ACTION_HIPPROXY 24 */
 #define ACTION_REINIT 25
 #define ACTION_HEARTBEAT 26
 

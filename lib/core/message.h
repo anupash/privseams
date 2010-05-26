@@ -23,30 +23,19 @@
 int hip_peek_recv_total_len(int socket, int encap_hdr_size, unsigned long timeout);
 int hip_daemon_connect(int hip_user_sock);
 int hip_daemon_bind_socket(int socket, struct sockaddr *sa);
-int hip_send_recv_daemon_info(struct hip_common *msg, int send_only, int socket);
+int hip_send_recv_daemon_info(struct hip_common *msg,
+                              int send_only,
+                              int opt_socket);
 int hip_send_daemon_info(const struct hip_common *msg, int only_send);
 int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type);
 int hip_read_user_control_msg(int socket,
                               struct hip_common *hip_msg,
                               struct sockaddr_in6 *saddr);
-int hip_read_control_msg_all(int socket,
-                             struct hip_common *hip_msg,
-                             struct in6_addr *saddr,
-                             struct in6_addr *daddr,
-                             hip_portpair_t *msg_info,
-                             int encap_hdr_size,
-                             int is_ipv4);
 int hip_read_control_msg_v6(int socket,
-                            struct hip_common *hip_msg,
-                            struct in6_addr *saddr,
-                            struct in6_addr *daddr,
-                            hip_portpair_t *msg_info,
+                            struct hip_packet_context *ctx,
                             int encap_hdr_size);
 int hip_read_control_msg_v4(int socket,
-                            struct hip_common *hip_msg,
-                            struct in6_addr *saddr,
-                            struct in6_addr *daddr,
-                            hip_portpair_t *msg_info,
+                            struct hip_packet_context *ctx,
                             int encap_hdr_size);
 int hip_read_control_msg_plugin_handler(void *msg,
                                         int len,

@@ -394,8 +394,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
     }
 
     if ((n = malloc(sizeof(struct netdev_address))) == NULL) {
-        HIP_ERROR("Error when allocating memory to a network device " \
-                  "address.\n");
+        HIP_ERROR("Error when allocating memory to a network device address.\n");
         return;
     }
 
@@ -1154,17 +1153,16 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
  *
  * @param msg a netlink message
  * @param len the length of the netlink message in bytes
- * @param arg currently unused
  * @return zero on success and non-zero on error
  */
 int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg)
 {
-    int err            = 0, l = 0, is_add = 0, exists;
-    struct ifinfomsg *ifinfo;     /* link layer specific message */
-    struct ifaddrmsg *ifa;     /* interface address message */
-    struct rtattr *rta = NULL, *tb[IFA_MAX + 1];
+    int err = 0, l = 0, is_add = 0, exists;
     struct sockaddr_storage ss_addr;
-    struct sockaddr *addr;
+    struct ifinfomsg *ifinfo  = NULL;     /* link layer specific message */
+    struct ifaddrmsg *ifa     = NULL;     /* interface address message */
+    struct rtattr *rta        = NULL, *tb[IFA_MAX + 1];
+    struct sockaddr *addr     = NULL;
 
     addr = (struct sockaddr *) &ss_addr;
 
@@ -1247,7 +1245,7 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg)
              * address */
             exists = hip_exists_address_in_list(addr, ifa->ifa_index);
             HIP_IFEL(((exists && is_add) || (!exists && !is_add)), -1,
-                     "Address change discarded (exists=%d, is_add=%d)",
+                     "Address change discarded (exists=%d, is_add=%d)\n",
                      exists, is_add);
 
             hip_update_address_list(addr, is_add, ifa->ifa_index);
@@ -1255,8 +1253,9 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg)
             if (hip_wait_addr_changes_to_stabilize) {
                 address_change_time_counter = HIP_ADDRESS_CHANGE_WAIT_INTERVAL;
             } else {
-                err = hip_send_locators_to_all_peers();
+                address_change_time_counter = 1;
             }
+
             if (err) {
                 goto out_err;
             }
@@ -1300,7 +1299,6 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg)
     }
 
 out_err:
-
     return 0;
 }
 

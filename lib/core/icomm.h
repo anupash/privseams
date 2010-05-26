@@ -83,9 +83,7 @@
 #define HIP_MSG_CONF_PUZZLE_DEC                  76
 #define HIP_MSG_STUN                             77
 #define HIP_MSG_SET_OPPORTUNISTIC_MODE           78
-#define HIP_MSG_SET_BLIND_ON                     79
-#define HIP_MSG_SET_BLIND_OFF                    80
-/* free slot */
+/* Free slots here */
 #define HIP_MSG_SET_DEBUG_ALL                    82
 #define HIP_MSG_SET_DEBUG_MEDIUM                 83
 #define HIP_MSG_SET_DEBUG_NONE                   84
@@ -96,7 +94,7 @@
 #define HIP_MSG_RESTART                          88
 #define HIP_MSG_SET_LOCATOR_ON                   89
 #define HIP_MSG_SET_LOCATOR_OFF                  90
-/* free slots */
+/* Free slots here */
 #define HIP_MSG_SET_OPPTCP_ON                    94
 #define HIP_MSG_SET_OPPTCP_OFF                   95
 
@@ -132,18 +130,13 @@
 /* free slots */
 #define HIP_MSG_DAEMON_QUIT                      126
 #define HIP_MSG_I1_REJECT                        127
-// free slot
+/* Free slot */
 #define HIP_MSG_SET_NAT_PLAIN_UDP                129
 #define HIP_MSG_SET_NAT_NONE                     130
-#define HIP_MSG_SET_HIPPROXY_ON                  131
-#define HIP_MSG_SET_HIPPROXY_OFF                 132
-#define HIP_MSG_GET_PROXY_LOCAL_ADDRESS          133
-#define HIP_MSG_HIPPROXY_STATUS_REQUEST          134
-#define HIP_MSG_OPPTCP_UNBLOCK_AND_BLACKLIST     135
+/* Free slots here */
 #define HIP_MSG_IPSEC_ADD_SA                     136
-/* free slots */
-#define HIP_MSG_SET_NAT_ICE_UDP                  139
-#define HIP_PARAM_INT                           140
+/* Free slots here */
+#define HIP_PARAM_INT                            140
 #define HIP_MSG_CERT_SPKI_SIGN                   141
 #define HIP_MSG_CERT_SPKI_VERIFY                 142
 #define HIP_MSG_CERT_X509V3_SIGN                 143
@@ -151,20 +144,20 @@
 #define HIP_MSG_USERSPACE_IPSEC                  145
 #define HIP_MSG_ESP_PROT_TFM                     146
 #define HIP_MSG_BEX_STORE_UPDATE                 147
-// free slot
+/* Free slot */
 #define HIP_MSG_TRIGGER_UPDATE                   149
 #define HIP_MSG_FW_UPDATE_DB                     152
 #define HIP_MSG_IPSEC_DELETE_SA                  153
 #define HIP_MSG_IPSEC_FLUSH_ALL_SA               154
 #define HIP_MSG_ANCHOR_CHANGE                    155
-/* free slot */
+/* Free slot */
 #define HIP_MSG_FW_BEX_DONE                      157
 #define HIP_MSG_RESTART_DUMMY_INTERFACE          158
 /* free slots */
 #define HIP_MSG_BUDDIES_ON                       162
 #define HIP_MSG_BUDDIES_OFF                      163
 #define HIP_MSG_TURN_INFO                        164
-/* free slots */
+/* Free slots here */
 #define HIP_MSG_NSUPDATE_OFF                     179
 #define HIP_MSG_NSUPDATE_ON                      180
 #define HIP_MSG_HIT_TO_IP_OFF                    181

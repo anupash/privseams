@@ -7,7 +7,8 @@
 #ifndef HIP_HIPD_UPDATE_LEGACY_H
 #define HIP_HIPD_UPDATE_LEGACY_H
 
-#include "update.h"
+#include <stdint.h>
+#include "lib/core/protodefs.h"
 
 int hip_build_locators_old(struct hip_common *msg, uint32_t spi);
 

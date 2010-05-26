@@ -487,6 +487,9 @@ int hip_read_user_control_msg(int sockfd, struct hip_common *hip_msg,
     int err = 0, bytes = 0, total;
     socklen_t len;
 
+    HIP_DEBUG("Receiving user message.\n");
+
+    hip_msg_init(hip_msg);
     memset(saddr, 0, sizeof(*saddr));
 
     len = sizeof(*saddr);
@@ -500,7 +503,8 @@ int hip_read_user_control_msg(int sockfd, struct hip_common *hip_msg,
      *  differ in signedness. */
     HIP_IFEL(((bytes = recvfrom(sockfd, hip_msg, total, 0,
                                 (struct sockaddr *) saddr,
-                                &len)) != total), -1, "recv\n");
+                                &len)) != total),
+               -1, "recv\n");
 
     HIP_DEBUG("received user message from local port %d\n",
               ntohs(saddr->sin6_port));
@@ -538,11 +542,10 @@ out_err:
  *                       on IPv4.
  * @return               -1 in case of an error, 0 otherwise.
  */
-int hip_read_control_msg_all(int sockfd, struct hip_common *hip_msg,
-                             struct in6_addr *saddr,
-                             struct in6_addr *daddr,
-                             hip_portpair_t *msg_info,
-                             int encap_hdr_size, int is_ipv4)
+static int hip_read_control_msg_all(int sockfd,
+                                    struct hip_packet_context *ctx,
+                                    int encap_hdr_size,
+                                    int is_ipv4)
 {
     struct sockaddr_storage addr_from, addr_to;
     struct sockaddr_in *addr_from4  = ((struct sockaddr_in *) &addr_from);
@@ -558,12 +561,14 @@ int hip_read_control_msg_all(int sockfd, struct hip_common *hip_msg,
     int err = 0, len;
     int cmsg_level, cmsg_type;
 
-    HIP_ASSERT(saddr);
-    HIP_ASSERT(daddr);
+    hip_msg_init(ctx->input_msg);
+
+    HIP_ASSERT(ctx->src_addr);
+    HIP_ASSERT(ctx->dst_addr);
 
     HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-    memset(msg_info, 0, sizeof(hip_portpair_t));
+//    memset(msg_info, 0, sizeof(hip_portpair_t));
     memset(&msg, 0, sizeof(msg));
     memset(cbuff, 0, sizeof(cbuff));
     memset(&addr_to, 0, sizeof(addr_to));
@@ -580,7 +585,7 @@ int hip_read_control_msg_all(int sockfd, struct hip_common *hip_msg,
     msg.msg_flags       = 0;
 
     iov.iov_len         = HIP_MAX_NETWORK_PACKET;
-    iov.iov_base        = hip_msg;
+    iov.iov_base        = ctx->input_msg;
 
     pktinfo.pktinfo_in4 = NULL;
 
@@ -612,45 +617,45 @@ int hip_read_control_msg_all(int sockfd, struct hip_common *hip_msg,
 
     /* UDP port numbers */
     if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
-        HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
-                  ntohs(addr_from4->sin_port));
-        msg_info->src_port = ntohs(addr_from4->sin_port);
+        HIP_DEBUG("source port = %d\n", ntohs(addr_from4->sin_port));
+        ctx->msg_ports->src_port = ntohs(addr_from4->sin_port);
         /* Destination port is known from the bound socket. */
-        msg_info->dst_port = hip_get_local_nat_udp_port();
+        ctx->msg_ports->dst_port = hip_get_local_nat_udp_port();
     }
 
     /* IPv4 addresses */
     if (is_ipv4) {
         struct sockaddr_in *addr_to4 = (struct sockaddr_in *) &addr_to;
-        IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, saddr);
-        IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr,
-                         daddr);
+        IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, ctx->src_addr);
+        IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr, ctx->dst_addr);
         addr_to4->sin_family = AF_INET;
         addr_to4->sin_addr   = pktinfo.pktinfo_in4->ipi_addr;
-        addr_to4->sin_port   = msg_info->dst_port;
+        addr_to4->sin_port   = ctx->msg_ports->dst_port;
     } else {   /* IPv6 addresses */
         struct sockaddr_in6 *addr_to6 =
             (struct sockaddr_in6 *) &addr_to;
-        memcpy(saddr, &addr_from6->sin6_addr,
+        memcpy(ctx->src_addr, &addr_from6->sin6_addr,
                sizeof(struct in6_addr));
-        memcpy(daddr, &pktinfo.pktinfo_in6->ipi6_addr,
+        memcpy(ctx->dst_addr, &pktinfo.pktinfo_in6->ipi6_addr,
                sizeof(struct in6_addr));
         addr_to6->sin6_family = AF_INET6;
-        ipv6_addr_copy(&addr_to6->sin6_addr, daddr);
+        ipv6_addr_copy(&addr_to6->sin6_addr, ctx->dst_addr);
     }
 
     if (is_ipv4 && (encap_hdr_size == IPV4_HDR_SIZE)) {    /* raw IPv4, !UDP */
         /* For some reason, the IPv4 header is always included.
          * Let's remove it here. */
-        memmove(hip_msg, ((char *) hip_msg) + IPV4_HDR_SIZE,
+        memmove(ctx->input_msg,
+                ((char *) ctx->input_msg) + IPV4_HDR_SIZE,
                 HIP_MAX_PACKET - IPV4_HDR_SIZE);
     } else if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
         /* remove 32-bits of zeroes between UDP and HIP headers */
-        memmove(hip_msg, ((char *) hip_msg) + HIP_UDP_ZERO_BYTES_LEN,
+        memmove(ctx->input_msg,
+                ((char *) ctx->input_msg) + HIP_UDP_ZERO_BYTES_LEN,
                 HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
     }
 
-    HIP_IFEL(hip_verify_network_header(hip_msg,
+    HIP_IFEL(hip_verify_network_header(ctx->input_msg,
                                        (struct sockaddr *) &addr_from,
                                        (struct sockaddr *) &addr_to,
                                        len - encap_hdr_size), -1,
@@ -658,11 +663,11 @@ int hip_read_control_msg_all(int sockfd, struct hip_common *hip_msg,
 
 
 
-    if (saddr) {
-        HIP_DEBUG_IN6ADDR("src", saddr);
+    if (ctx->src_addr) {
+        HIP_DEBUG_IN6ADDR("src", ctx->src_addr);
     }
-    if (daddr) {
-        HIP_DEBUG_IN6ADDR("dst", daddr);
+    if (ctx->dst_addr) {
+        HIP_DEBUG_IN6ADDR("dst", ctx->dst_addr);
     }
 
 out_err:
@@ -680,14 +685,13 @@ out_err:
  * @param  encap_hdr_size .
  * @return                .
  */
-int hip_read_control_msg_v6(int sockfd, struct hip_common *hip_msg,
-                            struct in6_addr *saddr,
-                            struct in6_addr *daddr,
-                            hip_portpair_t *msg_info,
+int hip_read_control_msg_v6(int socket,
+                            struct hip_packet_context *ctx,
                             int encap_hdr_size)
 {
-    return hip_read_control_msg_all(sockfd, hip_msg, saddr,
-                                    daddr, msg_info, encap_hdr_size, 0);
+    HIP_DEBUG("Receiving a message on raw HIP from IPv6/HIP socket "\
+              " (file descriptor: %d).\n", socket);
+    return hip_read_control_msg_all(socket, ctx, encap_hdr_size, 0);
 }
 
 /**
@@ -701,12 +705,11 @@ int hip_read_control_msg_v6(int sockfd, struct hip_common *hip_msg,
  * @param  encap_hdr_size .
  * @return                .
  */
-int hip_read_control_msg_v4(int sockfd, struct hip_common *hip_msg,
-                            struct in6_addr *saddr,
-                            struct in6_addr *daddr,
-                            hip_portpair_t *msg_info,
+int hip_read_control_msg_v4(int socket,
+                            struct hip_packet_context *ctx,
                             int encap_hdr_size)
 {
-    return hip_read_control_msg_all(sockfd, hip_msg, saddr,
-                                    daddr, msg_info, encap_hdr_size, 1);
+    HIP_DEBUG("Receiving a message on raw HIP from IPv4/HIP socket "\
+              " (file descriptor: %d).\n", socket);
+    return hip_read_control_msg_all(socket, ctx, encap_hdr_size, 1);
 }

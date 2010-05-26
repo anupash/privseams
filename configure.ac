@@ -65,6 +65,10 @@ AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}hipd_config)")
 AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
 
 
+AC_ARG_WITH(nomodules,
+            AS_HELP_STRING([--with-nomodules=list],
+                           [comma-separated list of disabled modules]))
+
 # Set default AM_CFLAGS for the complete project.
 AC_SUBST(AM_CFLAGS, "-std=c99 -Wall -Werror")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wredundant-decls -Wdisabled-optimization")
@@ -114,19 +118,6 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
     AH_TEMPLATE(CONFIG_HIP_RVS, [Defined to 1 if RVS is enabled.])
 fi
 
-AC_ARG_ENABLE(hipproxy,
-               AS_HELP_STRING([--enable-hipproxy],
-                              [HIP Proxy (default is YES)]),
-               [ac_cv_use_hipproxy=$enableval],
-               [ac_cv_use_hipproxy=yes])
-AC_CACHE_CHECK([whether to use HIP proxy],
-               [ac_cv_use_hipproxy],
-               [ac_cv_use_hipproxy=yes])
-if test x"$ac_cv_use_hipproxy" = x"yes"; then
-    AC_DEFINE(CONFIG_HIP_HIPPROXY)
-    AH_TEMPLATE(CONFIG_HIP_HIPPROXY, [Defined to 1 if HIP Proxy is enabled.])
-fi
-
 AC_ARG_ENABLE(opportunistic,
                AS_HELP_STRING([--enable-opportunistic],
                               [HIP opportunistic mode (default is YES)]),
@@ -141,19 +132,6 @@ if test x"$ac_cv_use_opportunistic" = x"yes"; then
                 [Defined to 1 if opportunistic mode is enabled.])
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
-
-AC_ARG_ENABLE(blind,
-               AS_HELP_STRING([--enable-blind],
-                              [HIP BLIND extensions (default is NO)]),
-               [ac_cv_use_blind=$enableval],
-               [ac_cv_use_blind=no])
-AC_CACHE_CHECK([whether to use BLIND],
-               [ac_cv_use_blind],
-               [ac_cv_use_blind=no])
-if test x"$ac_cv_use_blind" = x"yes"; then
-    AC_DEFINE(CONFIG_HIP_BLIND)
-    AH_TEMPLATE(CONFIG_HIP_BLIND, [Defined to 1 if  blind is enabled.])
-fi
 
 AC_ARG_ENABLE(profiling,
                AS_HELP_STRING([--enable-profiling],
@@ -225,6 +203,20 @@ if test x"$ac_cv_use_demo" = x"yes"; then
     AH_TEMPLATE(CONFIG_HIP_DEMO, [Defined to 1 if demo is enabled.])
 fi
 
+
+# Parse modules directory
+echo ""
+echo "+-----------------------------------------------";
+echo "| processing modules...";
+echo "|";
+python ${srcdir}/process_modules.py -s ${srcdir} -d "${with_nomodules}"
+if [[ "$?" != "0" ]]; then
+    echo "configure: error: Module processing failed"
+    exit 1
+fi
+echo "|";
+echo "+-----------------------------------------------"
+echo ""
 
 AC_CONFIG_FILES([ Makefile doc/Doxyfile ])
 

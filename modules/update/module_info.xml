@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Mandatory: name, version -->
+<module
+    name="update"
+    version="0.0.1"
+    description="Update functionality for the hip daemon."
+    developer=""
+    bugaddress="hipl-users@freelists.org"
+    webpage="http://infrahip.hiit.fi/">
+
+    <!-- Mandatory: name, header_file, init_function -->
+    <application
+        name="hipd"
+        header_file="modules/update/hipd/update.h"
+        init_function="hip_update_init" />
+</module>
+

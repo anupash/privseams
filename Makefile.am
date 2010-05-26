@@ -1,10 +1,12 @@
 ACLOCAL_AMFLAGS  = -I m4
 
-HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h))
+HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h))
 
 # For "make dist"
 EXTRA_DIST =  .vimrc debian doc patches version.h
-EXTRA_DIST += packaging tools/maintainer
+EXTRA_DIST += packaging process_modules.py tools/maintainer
+EXTRA_DIST += $(wildcard modules/*/module_info.xml)
+EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/test/,*.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/firewall/,*.cfg))
@@ -33,10 +35,7 @@ endif
 
 ### libraries ###
 lib_LTLIBRARIES = lib/core/libhipcore.la
-
-if HIP_OPPORTUNISTIC
-lib_LTLIBRARIES += lib/opphip/libopphip.la
-endif
+lib_LTLIBRARIES += lib/modularization/libmod.la
 
 
 ### source declarations ###
@@ -50,7 +49,6 @@ tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
 
 hipd_hipd_SOURCES = hipd/accessor.c              \
-                    hipd/blind.c                 \
                     hipd/cert.c                  \
                     hipd/close.c                 \
                     hipd/configfilereader.c      \
@@ -61,8 +59,8 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/esp_prot_light_update.c \
                     hipd/hadb.c                  \
                     hipd/hadb_legacy.c           \
-                    hipd/heartbeat.c             \
                     hipd/hidb.c                  \
+                    hipd/hip_socket.c            \
                     hipd/hipd.c                  \
                     hipd/hiprelay.c              \
                     hipd/hit_to_ip.c             \
@@ -74,9 +72,8 @@ hipd_hipd_SOURCES = hipd/accessor.c              \
                     hipd/netdev.c                \
                     hipd/nsupdate.c              \
                     hipd/output.c                \
+                    hipd/pkt_handling.c          \
                     hipd/registration.c          \
-                    hipd/update.c                \
-                    hipd/update_legacy.c         \
                     hipd/user.c                  \
                     hipd/user_ipsec_hipd_msg.c   \
                     hipd/user_ipsec_sadb_api.c
@@ -106,10 +103,6 @@ firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/helpers.c             \
                          firewall/hslist.c              \
                          firewall/lsi.c                 \
-                         firewall/opptcp.c              \
-                         firewall/proxy.c               \
-                         firewall/proxyconndb.c         \
-                         firewall/proxydb.c             \
                          firewall/rule_management.c     \
                          firewall/sysopp.c              \
                          firewall/user_ipsec_api.c      \
@@ -160,21 +153,32 @@ if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
 
-lib_opphip_libopphip_la_SOURCES  = lib/opphip/wrap.c \
-                                   lib/opphip/wrap_db.c
+lib_modularization_libmod_la_SOURCES = lib/modularization/lmod.c
 
+# Initialize LDADD lists empty, because modules might add entries to LDADD. The
+# module LDADDs need to be included before the standard LDADDs, because modules
+# can depend on the core code.
+hipd_hipd_LDADD      =
+firewall_hipfw_LDADD =
+tools_hipconf_LDADD  =
+
+# Include module Makefile.am's.
+# TODO: Make this inclusion dynamic
+include modules/heartbeat/Makefile.am
+include modules/heartbeat_update/Makefile.am
+include modules/update/Makefile.am
 
 ### library dependencies ###
 
-firewall_hipfw_LDADD           = lib/core/libhipcore.la
-hipd_hipd_LDADD                = lib/core/libhipcore.la
+firewall_hipfw_LDADD          += lib/core/libhipcore.la
+hipd_hipd_LDADD               += lib/modularization/libmod.la \
+                                 lib/core/libhipcore.la
 test_auth_performance_LDADD    = lib/core/libhipcore.la
 test_certteststub_LDADD        = lib/core/libhipcore.la
 test_dh_performance_LDADD      = lib/core/libhipcore.la
 test_hc_performance_LDADD      = lib/core/libhipcore.la
-tools_hipconf_LDADD            = lib/core/libhipcore.la
+tools_hipconf_LDADD           += lib/core/libhipcore.la
 tools_pisacert_LDADD           = lib/core/libhipcore.la
-
 
 if HAVE_PYTHON
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
@@ -231,7 +235,7 @@ autotools-clean: maintainer-clean
 	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
 
 HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_LIST:.h=.ho))
-CLEANFILES          += $(HIPL_HEADER_OBJS)
+CLEANFILES          += $(HIPL_HEADER_OBJS) $(wildcard modules/*.h)
 
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)

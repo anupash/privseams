@@ -259,8 +259,7 @@ out_err:
 int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
                                const struct in6_addr *ip_src,
                                const struct in6_addr *ip_dst,
-                               const int lsi_support,
-                               const int sys_opp_support)
+                               const int lsi_support)
 {
     int err                                    = 0;
     int verdict                                = 1;
@@ -306,13 +305,9 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
         goto out_err;
     }
 
-    if (sys_opp_support && lsi_support) {
+    if (lsi_support) {
         /* Currently preferring LSIs over opp. connections */
         process_as_lsi = 1;
-    } else if (lsi_support) {
-        process_as_lsi = 1;
-    } else if (sys_opp_support) {
-        process_as_lsi = 0;
     } else {
         HIP_ASSERT(1);
     }
@@ -372,7 +367,7 @@ out_err:
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
                                struct in_addr *lsi_dst)
 {
-    int err                   = 0, state_ha, new_fw_entry_state;
+    int err = 0, state_ha, new_fw_entry_state;
     struct in6_addr src_lsi, dst_lsi;
     struct in6_addr src_hit, dst_hit;
     struct in6_addr src_ip, dst_ip;
@@ -509,18 +504,6 @@ int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
                                       HIP_PARAM_HIT_LOCAL,
                                       sizeof(struct in6_addr)),
              -1, "build param HIP_PARAM_HIT  failed\n");
-
-    if (hip_opptcp) {
-        HIP_IFEL(hip_build_param_contents(msg, (void *) (src_tcp_port),
-                                          HIP_PARAM_SRC_TCP_PORT,
-                                          sizeof(in_port_t)),
-                 -1, "build param HIP_PARAM_SRC_TCP_PORT failed\n");
-
-        HIP_IFEL(hip_build_param_contents(msg, (void *) (dst_tcp_port),
-                                          HIP_PARAM_DST_TCP_PORT,
-                                          sizeof(in_port_t)),
-                 -1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
-    }
 
     HIP_IFEL(hip_build_param_contents(msg, (void *) (peer_ip),
                                       HIP_PARAM_IPV6_ADDR_PEER,

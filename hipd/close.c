@@ -75,11 +75,11 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
     HIP_IFE(!(msg_close = hip_msg_alloc()), -ENOMEM);
 
-    entry->hadb_misc_func->hip_build_network_hdr(msg_close,
-                                                 HIP_CLOSE,
-                                                 mask,
-                                                 &entry->hit_our,
-                                                 &entry->hit_peer);
+    hip_build_network_hdr(msg_close,
+                          HIP_CLOSE,
+                          mask,
+                          &entry->hit_our,
+                          &entry->hit_peer);
 
     /********ECHO (SIGNED) **********/
 
@@ -98,8 +98,7 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
              -EINVAL,
              "Could not create signature.\n");
 
-    HIP_IFEL(entry->hadb_xmit_func->
-             hip_send_pkt(NULL, &entry->peer_addr,
+    HIP_IFEL(hip_send_pkt(NULL, &entry->peer_addr,
                           (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                           entry->peer_udp_port, msg_close, entry, 0),
              -ECOMM, "Sending CLOSE message failed.\n");
@@ -192,67 +191,151 @@ out_err:
 }
 
 /**
- * process a CLOSE message
+ * hip_close_check_packet
  *
- * @param close_msg the CLOSE message process
- * @param entry     the corresponding host association
- * @return          zero on success or negative on error
+ * Check whether a received control packet is valid or not.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
  */
-int hip_handle_close(struct hip_common *close_msg, hip_ha_t *entry)
+int hip_close_check_packet(const uint8_t packet_type,
+                           const uint32_t ha_state,
+                           struct hip_packet_context *ctx)
 {
+    int err = 0;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
     hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE );
 #endif
-    int err                      = 0, mask = 0;
-    struct hip_common *close_ack = NULL;
-    struct hip_echo_request *request;
-    int echo_len;
+
+    HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hitr), -1,
+             "Received NULL receiver HIT in CLOSE. Dropping\n");
+
+    HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), 0), -1,
+             "Received illegal controls in CLOSE: 0x%x. Dropping\n",
+             ntohs(ctx->input_msg->control));
+
+    HIP_IFEL(!ctx->hadb_entry, -1,
+             "No entry in host association database when receiving R2." \
+             "Dropping.\n");
 
     /* verify HMAC */
-    if (entry->is_loopback) {
-        HIP_IFEL(hip_verify_packet_hmac(close_msg, &entry->hip_hmac_out),
+    if (ctx->hadb_entry->is_loopback) {
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &(ctx->hadb_entry)->hip_hmac_out),
                  -ENOENT, "HMAC validation on close failed.\n");
     } else {
-        HIP_IFEL(hip_verify_packet_hmac(close_msg, &entry->hip_hmac_in),
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg, &(ctx->hadb_entry)->hip_hmac_in),
                  -ENOENT, "HMAC validation on close failed.\n");
     }
 
     /* verify signature */
-    HIP_IFEL(entry->verify(entry->peer_pub_key, close_msg), -EINVAL,
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key, ctx->input_msg), -EINVAL,
              "Verification of close signature failed.\n");
 
-    HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
+ * hip_close_create_response
+ *
+ * Create an response (CLOSE_ACK) for a received CLOSE packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+int hip_close_create_response(const uint8_t packet_type,
+                              const uint32_t ha_state,
+                              struct hip_packet_context *ctx)
+{
+    int err = 0, echo_len;
+    uint16_t mask = HIP_PACKET_CTRL_ANON;
+    struct hip_echo_request *request;
+
+    HIP_IFE(!(ctx->output_msg = hip_msg_alloc()), -ENOMEM);
 
     HIP_IFEL(!(request =
-                   hip_get_param(close_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
+                 hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
              -1, "No echo request under signature.\n");
+
     echo_len = hip_get_param_contents_len(request);
 
-    entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
-                                                 mask, &entry->hit_our,
-                                                 &entry->hit_peer);
+    hip_build_network_hdr(ctx->output_msg,
+                        HIP_CLOSE_ACK,
+                        mask,
+                        &(ctx->hadb_entry)->hit_our,
+                        &(ctx->hadb_entry)->hit_peer);
 
-    HIP_IFEL(hip_build_param_echo(close_ack, request + 1,
-                                  echo_len, 1, 0), -1,
-             "Failed to build echo param.\n");
+    HIP_IFEL(hip_build_param_echo(ctx->output_msg, request + 1,
+                                echo_len, 1, 0), -1,
+           "Failed to build echo param.\n");
 
     /************* HMAC ************/
-    HIP_IFEL(hip_build_param_hmac_contents(close_ack,
-                                           &entry->hip_hmac_out),
-             -1, "Building of HMAC failed.\n");
+    HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
+                                         &(ctx->hadb_entry)->hip_hmac_out),
+           -1, "Building of HMAC failed.\n");
 
     /********** Signature **********/
-    HIP_IFEL(entry->sign(entry->our_priv_key, close_ack), -EINVAL,
-             "Could not create signature.\n");
+    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
+                                 ctx->output_msg),
+           -EINVAL,
+           "Could not create signature.\n");
 
-    HIP_IFEL(entry->hadb_xmit_func->
-             hip_send_pkt(NULL, &entry->peer_addr, hip_get_local_nat_udp_port(),
-                          entry->peer_udp_port,
-                          close_ack, entry, 0),
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
+ * hip_close_create_response
+ *
+ * Send a before generated CLOSE_ACK packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+int hip_close_send_response(const uint8_t packet_type,
+                            const uint32_t ha_state,
+                            struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    HIP_IFEL(hip_send_pkt(NULL,
+                          &(ctx->hadb_entry)->peer_addr,
+                          hip_get_local_nat_udp_port(),
+                          ctx->hadb_entry->peer_udp_port,
+                          ctx->output_msg,
+                          ctx->hadb_entry,
+                          0),
              -ECOMM, "Sending CLOSE ACK message failed.\n");
 
-    entry->state = HIP_STATE_CLOSED;
+    ctx->hadb_entry->state = HIP_STATE_CLOSED;
 
     HIP_DEBUG("CLOSED.\n");
 
@@ -261,135 +344,143 @@ int hip_handle_close(struct hip_common *close_msg, hip_ha_t *entry)
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status()) {
         hip_relrec_t dummy;
-        memcpy(&(dummy.hit_r), &(close_msg->hits),
-               sizeof(close_msg->hits));
+        memcpy(&(dummy.hit_r), &(ctx->input_msg->hits),
+               sizeof(ctx->input_msg->hits));
         hip_relht_rec_free_doall(&dummy);
         /* Check that the element really got deleted. */
         if (hip_relht_get(&dummy) == NULL) {
             HIP_DEBUG_HIT("Deleted relay record for HIT",
-                          &(close_msg->hits));
+                          &(ctx->input_msg->hits));
         }
     }
 #endif
 
-    HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
+    HIP_IFEL(hip_del_peer_info_entry(ctx->hadb_entry),
+             -1,
              "Deleting peer info failed.\n");
+out_err:
+    if (ctx->output_msg) {
+        free(ctx->output_msg);
+    }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
     hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE );
     hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE );
 #endif
-out_err:
-
-    if (close_ack) {
-        free(close_ack);
-    }
 
     return err;
 }
 
 /**
- * preprocess a CLOSE message
+ * hip_close_ack_check_packet
  *
- * @param close the CLOSE message preprocess
- * @param entry the corresponding host association
- * @return zero on success or negative on error
+ * Check whether a received CLOSE_ACK packet is valid or not.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
  */
-int hip_receive_close(struct hip_common *close_msg,
-                      hip_ha_t          *entry)
+int hip_close_ack_check_packet(const uint8_t packet_type,
+                               const uint32_t ha_state,
+                               struct hip_packet_context *ctx)
 {
-    int state     = 0;
-    int err       = 0;
+    int err = 0;
     uint16_t mask = HIP_PACKET_CTRL_ANON;
+    struct hip_echo_request *echo_resp = NULL;
 
-    /* XX FIX: CHECK THE SIGNATURE */
-
-    HIP_DEBUG("\n");
-    HIP_IFEL(ipv6_addr_any(&close_msg->hitr), -1,
-             "Received NULL receiver HIT in CLOSE. Dropping\n");
-
-    if (!hip_controls_sane(ntohs(close_msg->control), mask)) {
-        HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
-                  ntohs(close_msg->control));
-        goto out_err;
-    }
-
-    if (!entry) {
-        HIP_DEBUG("No HA for the received close\n");
-        goto out_err;
-    } else {
-        HIP_LOCK_HA(entry);
-        state = entry->state;
-    }
-
-    switch (state) {
-    case HIP_STATE_ESTABLISHED:
-    case HIP_STATE_CLOSING:
-        err = entry->hadb_handle_func->hip_handle_close(close_msg, entry);
-        break;
-    default:
-        HIP_ERROR("Internal state (%d) is incorrect\n", state);
-        break;
-    }
-
-    if (entry) {
-        /* XX CHECK: is the put done twice? once already in handle? */
-        HIP_UNLOCK_HA(entry);
-    }
-out_err:
-    return err;
-}
-
-/**
- * process a CLOSE ACK message
- *
- * @param close_ack the CLOSE ACK message process
- * @param entry the corresponding host association
- * @return zero on success or negative on error
- */
-int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
-{
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
     hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
 #endif
-    int err = 0;
-    struct hip_echo_request *echo_resp;
+
+    HIP_IFEL(ipv6_addr_any(&ctx->input_msg->hitr), -1,
+            "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
+
+    if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
+        HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
+                ntohs(ctx->input_msg->control));
+        goto out_err;
+    }
 
     /* verify ECHO */
     HIP_IFEL(!(echo_resp =
-                   hip_get_param(close_ack, HIP_PARAM_ECHO_RESPONSE_SIGN)),
+                   hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN)),
              -1, "Echo response not found\n");
-    HIP_IFEL(memcmp(echo_resp + 1, entry->echo_data,
-                    sizeof(entry->echo_data)), -1,
+    HIP_IFEL(memcmp(echo_resp + 1, ctx->hadb_entry->echo_data,
+                    sizeof(ctx->hadb_entry->echo_data)),
+             -1,
              "Echo response did not match request\n");
 
     /* verify HMAC */
-    if (entry->is_loopback) {
-        HIP_IFEL(hip_verify_packet_hmac(close_ack,
-                                        &entry->hip_hmac_out),
-                 -ENOENT, "HMAC validation on close ack failed\n");
+    if (ctx->hadb_entry->is_loopback) {
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
+                                        &ctx->hadb_entry->hip_hmac_out),
+                 -ENOENT,
+                 "HMAC validation on close ack failed\n");
     } else {
-        HIP_IFEL(hip_verify_packet_hmac(close_ack,
-                                        &entry->hip_hmac_in),
-                 -ENOENT, "HMAC validation on close ack failed\n");
+        HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
+                                        &ctx->hadb_entry->hip_hmac_in),
+                 -ENOENT,
+                 "HMAC validation on close ack failed\n");
     }
     /* verify signature */
-    HIP_IFEL(entry->verify(entry->peer_pub_key, close_ack), -EINVAL,
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                     ctx->input_msg),
+             -EINVAL,
              "Verification of close ack signature failed\n");
 
-    entry->state = HIP_STATE_CLOSED;
+out_err:
+    if (err) {
+        ctx->error = err;
+    }
+    return err;
+}
+
+/**
+ * hip_close_ack_handle_packet
+ *
+ * Handle a received and checked CLOSE_ACK packet. If a hadb entry exists, the
+ * host association state will be set to HIP_STATE_CLOSED.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+int hip_close_ack_handle_packet(const uint8_t packet_type,
+                                const uint32_t ha_state,
+                                struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    HIP_IFEL(!ctx->hadb_entry, -1,
+             "No entry in host association database when receiving R2." \
+             "Dropping.\n");
+
+    ctx->hadb_entry->state = HIP_STATE_CLOSED;
 
     HIP_DEBUG("CLOSED\n");
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&(entry->peer_addr));
+    hip_oppipdb_delentry(&ctx->hadb_entry->peer_addr);
 #endif
 
-    HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
-             "Deleting peer info failed\n");
-
+    HIP_IFEL(hip_del_peer_info(&ctx->hadb_entry->hit_our,
+                               &ctx->hadb_entry->hit_peer),
+             -1, "Deleting peer info failed\n");
+out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK, PERF_CLOSE_COMPLETE\n");
     hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
@@ -398,57 +489,6 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
     hip_perf_write_benchmark( perf_set, PERF_CLOSE_COMPLETE );
 #endif
 
-out_err:
-
-    return err;
-}
-
-/**
- * preprocess a CLOSE ACK message
- *
- * @param close the CLOSE ACK message process
- * @param entry the corresponding host association
- * @return zero on success or negative on error
- */
-int hip_receive_close_ack(struct hip_common *close_ack,
-                          hip_ha_t *entry)
-{
-    int state     = 0;
-    int err       = 0;
-    uint16_t mask = HIP_PACKET_CTRL_ANON;
-
-    /* XX FIX:  */
-
-    HIP_DEBUG("\n");
-
-    HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
-             "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
-
-    if (!hip_controls_sane(ntohs(close_ack->control), mask)) {
-        HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
-                  ntohs(close_ack->control));
-        goto out_err;
-    }
-
-    if (!entry) {
-        HIP_DEBUG("No HA for the received close ack\n");
-        goto out_err;
-    } else {
-        HIP_LOCK_HA(entry);
-        state = entry->state;
-    }
-
-    switch (state) {
-    case HIP_STATE_CLOSING:
-    case HIP_STATE_CLOSED:
-        err = entry->hadb_handle_func->hip_handle_close_ack(close_ack, entry);
-        break;
-    default:
-        HIP_ERROR("Internal state (%d) is incorrect\n", state);
-        break;
-    }
-
-out_err:
     return err;
 }
 

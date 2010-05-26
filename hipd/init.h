@@ -7,8 +7,6 @@
 #ifndef HIP_HIPD_INIT_H
 #define HIP_HIPD_INIT_H
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -16,9 +14,10 @@
 #include <sys/utsname.h>
 
 #include "lib/tool/xfrmapi.h"
+#include "lib/core/debug.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/conf.h"
 #include "oppipdb.h"
-#include "lib/core/debug.h"
 #include "hiprelay.h"
 #include "hadb.h"
 #include "nsupdate.h"
@@ -35,11 +34,9 @@
 /*
  * HIP daemon initialization functions.
  */
-extern hip_ipsec_func_set_t default_ipsec_func_set;
-extern int hip_firewall_sock_fd;
 extern int hip_firewall_sock_lsi_fd;
 
-int hip_associate_default_hit_lsi(void);
+int set_cloexec_flag(int desc, int value);
 
 int hipd_init(const uint64_t flags);
 /**

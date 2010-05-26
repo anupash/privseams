@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include "lib/core/list.h"
 #include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
 #include "cookie.h"
 
 #if 0

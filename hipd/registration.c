@@ -26,9 +26,6 @@
 #define HIP_PENDING_REQUEST_LIFETIME 120
 
 static int hip_del_pending_request_by_expiration(void);
-static int hip_get_pending_requests(hip_ha_t *entry,
-                                    hip_pending_request_t *requests[]);
-static int hip_get_pending_request_count(hip_ha_t *entry);
 static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
                                        uint8_t *reg_types, int type_count,
                                        uint8_t accepted_requests[],
@@ -68,10 +65,6 @@ void hip_init_services(void)
     hip_services[1].status       = HIP_SERVICE_OFF;
     hip_services[1].min_lifetime = HIP_RELREC_MIN_LIFETIME;
     hip_services[1].max_lifetime = HIP_RELREC_MAX_LIFETIME;
-    hip_services[2].reg_type     = HIP_FULLRELAY;
-    hip_services[2].status       = HIP_SERVICE_OFF;
-    hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
-    hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
     hip_ll_init(&pending_requests);
 }
@@ -91,14 +84,20 @@ void hip_uninit_services(void)
  * calling @c hip_del_pending_request_by_expiration() until there are no expired
  * pending requests left.
  *
+ * @note This is by no means time critical operation and is not needed to be
+ * done on every maintenance cycle. Once every 10 minutes or so should be enough.
+ * Just for the record, if periodic_maintenance() is ever to be optimized.
+ *
  * An expired pending requests is one that has not been deleted within
  * @c HIP_PENDING_REQUEST_LIFETIME seconds.
  */
-void hip_registration_maintenance(void)
+int hip_registration_maintenance(void)
 {
     while (hip_del_pending_request_by_expiration() == 0) {
         ;
     }
+
+    return 0;
 }
 
 /**
@@ -383,68 +382,6 @@ static int hip_del_pending_request_by_expiration(void)
 }
 
 /**
- * Gets all pending requests for given host association. Gets all pending
- * requests for host association @c entry.
- *
- * Make sure that the target buffer @c requests has room for at least as many
- * pending requests that the host association @c entry has currently. You can
- * have this number by calling hip_get_pending_request_count().
- *
- * @param  entry    a pointer to a host association whose pending requests are
- *                  to be get.
- * @param  requests a target buffer for the pending requests.
- * @return          -1 if @c requests is NULL or if no pending requests were
- *                  found, zero otherwise.
- * @see             hip_get_pending_request_count().
- */
-static int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
-{
-    if (requests == NULL) {
-        return -1;
-    }
-
-    hip_ll_node_t *iter = 0;
-    int request_count   = 0;
-
-    while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry
-            == entry) {
-            requests[request_count] =
-                (hip_pending_request_t *) (iter->ptr);
-            request_count++;
-        }
-    }
-
-    if (request_count == 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- * Gets the number of pending requests for a given host association.
- *
- * @param  entry a pointer to a host association whose count of pending requests
- *               is to be get.
- * @return       the number of pending requests for the host association.
- */
-static int hip_get_pending_request_count(hip_ha_t *entry)
-{
-    hip_ll_node_t *iter = 0;
-    int request_count   = 0;
-
-    while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry
-            == entry) {
-            request_count++;
-        }
-    }
-
-    return request_count;
-}
-
-/**
  * Moves a pending request to a new entry. This is handy for opportunistic mode
  *
  * @param  entry_old a pointer to the old  host association from which the pending request
@@ -545,78 +482,11 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
                 entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
 
             break;
-        case HIP_SERVICE_FULLRELAY:
-            HIP_INFO("Responder offers full relay service.\n");
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE);
-
-            break;
         default:
             HIP_INFO("Responder offers unsupported service.\n");
             hip_hadb_set_peer_controls(
                 entry, HIP_HA_CTRL_PEER_UNSUP_CAPABLE);
         }
-    }
-
-    /* This far we have stored the information of what services the server
-     * offers. Next we check if we have requested any of those services from
-     * command line using hipconf. If we have requested, we have pending
-     * requests stored. We build a REG_REQUEST parameter containing each
-     * service that we have requested and the server offers. */
-
-    if (entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
-        int request_count = hip_get_pending_request_count(entry);
-        if (request_count > 0) {
-            int j = 0, types_to_request = 0;
-            uint8_t type_array[request_count], valid_lifetime = 0;
-            hip_pending_request_t *requests[request_count];
-
-            i = 0;
-            hip_get_pending_requests(entry, requests);
-
-            /* If we have requested for a cancellation of a service
-             * we use lifetime of zero. Otherwise we must check
-             * that the requested lifetime falls between the offered
-             * lifetime boundaries. */
-            if (requests[0]->lifetime == 0) {
-                HIP_DEBUG("SERVICE CANCELATION \n");
-                valid_lifetime = 0;
-            } else {
-                valid_lifetime = MIN(requests[0]->lifetime,
-                                     reg_info->max_lifetime);
-                valid_lifetime = MAX(valid_lifetime,
-                                     reg_info->min_lifetime);
-            }
-
-            /* Copy the Reg Types to an array. Outer loop for the
-             * services we have requested, inner loop for the
-             * services the server offers. */
-            for (i = 0; i < request_count; i++) {
-                for (j = 0; j < type_count; j++) {
-                    if (requests[i]->reg_type ==
-                        reg_types[j]) {
-                        type_array[types_to_request] =
-                            requests[i]->reg_type;
-
-                        types_to_request++;
-                        break;
-                    }
-                }
-            }
-            HIP_DEBUG("VALID SERVICE LIFETIME %d\n", valid_lifetime);
-            if (types_to_request > 0) {
-                HIP_IFEL(hip_build_param_reg_request(
-                             target_msg, valid_lifetime,
-                             type_array, types_to_request),
-                         -1,
-                         "Failed to build a REG_REQUEST " \
-                         "parameter.\n");
-            }
-        }
-        /* We do not delete the pending requests for this entry yet, but
-         * only after R2 has arrived. We do not need pending requests
-         * when R2 arrives, but in case the I2 is to be retransmitted,
-         * we must be able to produce the REG_REQUEST parameter. */
     }
 
 out_err:
@@ -904,18 +774,6 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
                     entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
                 break;
             }
-            case HIP_SERVICE_FULLRELAY:
-            {
-                HIP_DEBUG("The server has refused to grant us " \
-                          "full relay service.\n%s\n", reason);
-                hip_hadb_cancel_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
-                hip_del_pending_request_by_type(
-                    entry, HIP_SERVICE_FULLRELAY);
-                hip_hadb_set_peer_controls(
-                    entry, HIP_HA_CTRL_PEER_REFUSED_FULLRELAY);
-                break;
-            }
             default:
                 HIP_DEBUG("The server has refused to grant us " \
                           "an unknown service (%u).\n%s\n",
@@ -1034,9 +892,6 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
                 case HIP_SERVICE_RELAY:
                     type = HIP_RELAY;
                     break;
-                case HIP_SERVICE_FULLRELAY:
-                    type = HIP_FULLRELAY;
-                    break;
                 case HIP_SERVICE_RENDEZVOUS:
                 default:
                     type = HIP_RVSRELAY;
@@ -1055,8 +910,7 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
                     type, granted_lifetime, &(entry->hit_peer),
                     &(entry->peer_addr),
                     entry->peer_udp_port,
-                    &(entry->hip_hmac_in),
-                    entry->hadb_xmit_func->hip_send_pkt);
+                    &(entry->hip_hmac_in));
 
                 hip_relht_put(new_record);
 
@@ -1302,25 +1156,6 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
                 entry, HIP_HA_CTRL_PEER_GRANTED_RELAY);
             hip_del_pending_request_by_type(
                 entry, HIP_SERVICE_RELAY);
-
-            break;
-        }
-        case HIP_SERVICE_FULLRELAY:
-        {
-            HIP_DEBUG("The server has granted us relay " \
-                      "service for %u seconds (lifetime 0x%x.)\n",
-                      seconds, lifetime);
-            hip_hadb_cancel_local_controls(
-                entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_GRANTED_FULLRELAY);
-            hip_del_pending_request_by_type(
-                entry, HIP_SERVICE_FULLRELAY);
-            /* Delete SAs with relay server to
-             * avoid problems with ESP relay*/
-            entry->disable_sas = 1;
-            /* SAs are added before registration completes*/
-            hip_delete_security_associations_and_sp(entry);
             break;
         }
         default:
@@ -1382,17 +1217,6 @@ static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
                 entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
             hip_del_pending_request_by_type(
                 entry, HIP_SERVICE_RELAY);
-
-            break;
-        }
-        case HIP_SERVICE_FULLRELAY:
-        {
-            HIP_DEBUG("The server has cancelled our relay " \
-                      "service.\n");
-            hip_hadb_cancel_local_controls(
-                entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
-            hip_del_pending_request_by_type(
-                entry, HIP_SERVICE_FULLRELAY);
 
             break;
         }

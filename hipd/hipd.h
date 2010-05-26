@@ -33,8 +33,6 @@
 #include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
 #include "lib/core/message.h"
 #include "lib/core/esp_prot_common.h"
-#include "blind.h"
-
 
 #define HIP_HIT_DEV "dummy0"
 
@@ -69,12 +67,9 @@
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
-#define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 6 /* seconds */
-#define HIP_ADDRESS_CHANGE_HB_COUNT_TRIGGER 2
+#define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 3 /* seconds */
 
 #define HIPD_NL_GROUP 32
-
-extern int hip_use_opptcp;
 
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
@@ -107,21 +102,11 @@ extern int is_hard_handover;
 
 extern int hip_shotgun_status;
 
-extern int hip_icmp_sock;
-extern int hip_icmp_interval;
-
 extern int hip_encrypt_i2_hi;
-
-extern int hip_tcptimeout_status;
 
 extern hip_transform_suite_t hip_nat_status;
 
 extern int hip_use_userspace_data_packet_mode;
-
-extern int hip_buddies_inuse;
-
-extern struct hip_common *hipd_msg;
-extern struct hip_common *hipd_msg_v4;
 
 extern int esp_prot_active;
 extern int esp_prot_num_transforms;

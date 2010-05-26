@@ -46,35 +46,14 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                                  void *private_key,
                                  const struct hip_host_id *host_id_pub,
                                  int cookie_k);
-/**
- * Transmits an R1 packet to the network.
- *
- * Sends an R1 packet to the peer and stores the cookie information that was
- * sent. The packet is sent either to @c i1_saddr or  @c dst_ip depending on the
- * value of @c dst_ip. If @c dst_ip is all zeroes (::/128) or NULL, R1 is sent
- * to @c i1_saddr; otherwise it is sent to @c dst_ip. In case the incoming I1
- * was relayed through a middlebox (e.g. rendezvous server) @c i1_saddr should
- * have the address of that middlebox.
- *
- * @param i1_saddr      a pointer to the source address from where the I1 packet
- *                      was received.
- * @param i1_daddr      a pointer to the destination address where to the I1
- *                      packet was sent to (own address).
- * @param src_hit       a pointer to the source HIT i.e. responder HIT
- *                      (own HIT).
- * @param dst_ip        a pointer to the destination IPv6 address where the R1
- *                      should be sent (peer ip).
- * @param dst_port      Destination port for R1. If zero, I1 source port is
- *                      used.
- * @param dst_hit       a pointer to the destination HIT i.e. initiator HIT
- *                      (peer HIT).
- * @param i1_info       a pointer to the source and destination ports
- *                      (when NAT is in use).
- * @return              zero on success, or negative error value on error.
- */
-int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
-                in6_addr_t *dst_ip, const in_port_t dst_port,
-                hip_portpair_t *i1_info, uint16_t relay_para_type);
+
+int hip_send_r1(const uint8_t packet_type,
+                const uint32_t ha_state,
+                struct hip_packet_context *ctx);
+
+int hip_send_r2(const uint8_t packet_type,
+                const uint32_t ha_state,
+                struct hip_packet_context *ctx);
 
 int hip_send_r2_response(struct hip_common *r2,
                          struct in6_addr *r2_saddr,
@@ -83,12 +62,16 @@ int hip_send_r2_response(struct hip_common *r2,
                          hip_portpair_t *r2_info);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
+
+int hip_send_i2(const uint8_t packet_type,
+                const uint32_t ha_state,
+                struct hip_packet_context *ctx);
+
 int are_addresses_compatible(const struct in6_addr *src_addr,
                              const struct in6_addr *dst_addr);
 int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_addr,
                  const in_port_t src_port, const in_port_t dst_port,
                  struct hip_common *msg, hip_ha_t *entry, const int retransmit);
-int hip_send_icmp(int sockfd, hip_ha_t *entry);
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
                       in_port_t src_port, in_port_t dst_port,
                       const void *msg, int length);

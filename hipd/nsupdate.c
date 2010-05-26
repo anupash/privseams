@@ -231,7 +231,7 @@ static int run_nsupdate(char *ips, char *hit, int start)
         HIP_PERROR("execve");
         exit(1);         // just in case
     } else {  // PARENT
-              /* We execute waitpid in SIGCHLD handler */
+        /* We execute waitpid in SIGCHLD handler */
         return 0;
     }
 }

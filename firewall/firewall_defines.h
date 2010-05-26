@@ -120,9 +120,6 @@ struct tuple {
     struct connection *connection;
     int                state;
     uint32_t           lupdate_seq;
-#ifdef CONFIG_HIP_HIPPROXY
-    int                hipproxy;
-#endif
     int esp_relay;
     struct in6_addr esp_relay_daddr;
     in_port_t esp_relay_dport;

@@ -18,12 +18,10 @@
 #include "lib/core/builder.h"
 #include "lib/core/straddr.h"
 #include "input.h"      // required for declaration of receive functions
-#include "update.h"     // required for declaration of update function
 #include "user_ipsec_sadb_api.h"
 #include "lib/tool/xfrmapi.h"
 #include "nat.h"
 #include "hadb_legacy.h"
-#include "blind.h"
 
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha)
@@ -92,8 +90,7 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
 int hip_del_peer_info_entry(hip_ha_t *ha);
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
-int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
-                                 struct hip_context *ctx, int is_initiator);
+
 /* Utilities */
 
 hip_ha_t *hip_hadb_create_state(int gfpmask);
@@ -104,25 +101,13 @@ int hip_for_each_ha(int(func) (hip_ha_t * entry, void *opaq), void *opaque);
  * 'proposed' in libhipcore/state.h
  */
 
-int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
-                                  hip_rcv_func_set_t *new_func_set);
-int hip_hadb_set_handle_function_set(hip_ha_t *entry,
-                                     hip_handle_func_set_t *new_func_set);
-
-int hip_hadb_set_xmit_function_set(hip_ha_t *entry,
-                                   hip_xmit_func_set_t *new_func_set);
-
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask);
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask);
 void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
 
-void hip_remove_addresses_to_send_echo_request(hip_ha_t *ha);
-
 int hip_count_open_connections(void);
 
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
-hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
-                                      hip_hit_t *peer_blind_hit);
 
 int hip_handle_get_ha_info(hip_ha_t *entry, void *);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
@@ -136,8 +121,5 @@ int hip_get_local_addr(struct hip_common *msg);
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
                                               in6_addr_t *src_addr,
                                               in6_addr_t *dst_addr);
-
-hip_rcv_func_set_t *hip_get_rcv_default_func_set(void);
-hip_handle_func_set_t *hip_get_handle_default_func_set(void);
 
 #endif /* HIP_HIPD_HADB_H */

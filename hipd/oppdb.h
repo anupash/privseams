@@ -40,8 +40,6 @@ struct hip_opp_blocking_request_entry {
 typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
 
 void hip_init_opp_db(void);
-int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src);
-int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockaddr_in6 *src);
 int hip_handle_opp_fallback(hip_opp_block_t *entry,
                             void *current_time);
 hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *phit, struct sockaddr_in6 *src);

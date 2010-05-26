@@ -19,12 +19,15 @@
 #include <netinet/icmp6.h>
 
 #include "config.h"
-#include "blind.h"
 #include "output.h"
 #include "lib/core/performance.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/solve.h"
 #include "lib/tool/checksum.h"
 
+#ifdef CONFIG_HIP_MIDAUTH
+#include "pisa.h"
+#endif
 
 enum number_dh_keys_t { ONE, TWO };
 
@@ -220,92 +223,6 @@ int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
 }
 
 /**
- * Builds the TCP SYN packet that will be send with the i1 option.
- *
- * Send an I1 packet to the responder if an IPv6 address for the peer
- * is known.
- *
- * @param entry     a pointer to a host association database state reserved for
- *                  the peer. The src and dst ports are included in this parameter
- * @return          nothing
- */
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-static void hip_send_opp_tcp_i1(hip_ha_t *entry)
-{
-    int ipType = !IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
-    struct ip *iphdr;
-    struct ip6_hdr *ip6_hdr;
-    struct tcphdr *tcphdr = NULL;
-    int hdr_size = 0;
-    char bytes[sizeof(struct ip) * (1 - ipType) + sizeof(struct ip6_hdr) * ipType + 5 * 4];
-
-    HIP_DEBUG("\n");
-
-    if (ipType == 0) {
-        hdr_size = sizeof(struct ip);
-    } else if (ipType == 1) {
-        hdr_size = sizeof(struct ip6_hdr);
-    }
-
-    //set all bytes of both headers to 0
-    memset(&bytes[0], 0, 40);
-
-    //fill in the ip header fields
-    if (ipType == 0) {  //ipv4
-        //get the ip header
-        iphdr         = (struct ip *) (void *) &bytes[0];
-        //get the tcp header
-        tcphdr        = ((struct tcphdr *) (void *) (((char *) iphdr) + hdr_size));
-
-        iphdr->ip_v   = 4;
-        iphdr->ip_hl  = 5;
-        iphdr->ip_tos = 0;
-        iphdr->ip_len = 44;        //20+20+4 ?????
-        iphdr->ip_id  = 100;       //random
-        //iphdr->FLAGS
-        iphdr->ip_off = 0;
-        iphdr->ip_ttl = 64;
-        iphdr->ip_p   = 6;
-        iphdr->ip_sum = in_cksum((unsigned short *) iphdr, sizeof(struct ip));
-        IPV6_TO_IPV4_MAP(&entry->our_addr, &iphdr->ip_src);
-        IPV6_TO_IPV4_MAP(&entry->peer_addr, &iphdr->ip_dst);
-    } else if (ipType == 1)    { //ipv6
-        //get the ip header
-        ip6_hdr = (struct ip6_hdr *) (void *) &bytes[0];
-        //get the tcp header
-        tcphdr  = ((struct tcphdr *) (void *) (((char *) ip6_hdr) + hdr_size));
-
-        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_flow = 1610612736; //01100000000000000000000000000000;
-        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = 20;
-        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt  = 6;
-        ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_hlim = 64;
-        memcpy(&ip6_hdr->ip6_src, &entry->our_addr, sizeof(struct in6_addr));
-        memcpy(&ip6_hdr->ip6_dst, &entry->peer_addr, sizeof(struct in6_addr));
-    }
-
-    //randomize the source port to one of 1024-65535
-    //but different from entry->tcp_opptcp_src_port
-    tcphdr->source  = rand() % (65536 - 1024) + 1024; //entry->tcp_opptcp_src_port;
-    while (tcphdr->source == entry->tcp_opptcp_src_port) {
-        tcphdr->source = rand() % (65536 - 1024) + 1024;
-    }
-
-    tcphdr->dest    = entry->tcp_opptcp_dst_port;
-    tcphdr->seq     = 0;
-    tcphdr->ack_seq = 0;    //is not important in the SYN packet
-    tcphdr->doff    = 5;
-    tcphdr->syn     = 1;
-    tcphdr->window  = 34;   //random
-    tcphdr->check   = 0;  //will be set right when sent, no need to calculate it here
-    if (ipType == 0) {
-        send_tcp_packet(&bytes[0], hdr_size + 4 * tcphdr->doff, 4, hip_raw_sock_output_v4, 1, 0);
-    } else if (ipType == 1) {
-        send_tcp_packet(&bytes[0], hdr_size + 4 * tcphdr->doff, 6, hip_raw_sock_output_v6, 1, 0);
-    }
-}
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
-
-/**
  * Send an I1 packet to the Responder. Used internally by hip_send_i1().
  *
  * @param i1         a pointer to a i1 packet common header with source and
@@ -328,7 +245,6 @@ static int hip_send_i1_pkt(struct hip_common *i1,
                            struct in6_addr *peer_addr,
                            in_port_t src_port,
                            in_port_t dst_port,
-                           struct hip_common *i1_blind,
                            hip_ha_t *entry,
                            int retransmit)
 {
@@ -349,27 +265,8 @@ static int hip_send_i1_pkt(struct hip_common *i1,
 
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
-
-#ifdef CONFIG_HIP_BLIND
-    // Send blinded i1
-    if (hip_blind_get_status()) {
-        err = entry->hadb_xmit_func->hip_send_pkt(local_addr,
-                                                  peer_addr,
-                                                  src_port,
-                                                  dst_port,
-                                                  i1_blind, entry, 1);
-    }
-#endif
-
     HIP_DEBUG_HIT("BEFORE sending", peer_addr);
-    if (!hip_blind_get_status()) {
-        err = entry->hadb_xmit_func->
-              hip_send_pkt(local_addr,
-                           peer_addr,
-                           src_port,
-                           dst_port,
-                           i1, entry, 1);
-    }
+    err = hip_send_pkt(local_addr, peer_addr, src_port, dst_port, i1, entry, 1);
 
     HIP_DEBUG("err after sending: %d.\n", err);
 
@@ -380,16 +277,6 @@ static int hip_send_i1_pkt(struct hip_common *i1,
     } else if (err == 1)   {
         err = 0;
     }
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    /*send the TCP SYN_i1 packet*/
-    if (hip_get_opportunistic_tcp_status() &&
-        hit_is_opportunistic_hit(dst_hit)) {
-        /* Ensure that I1 gets first to destination */
-        usleep(50);
-        hip_send_opp_tcp_i1(entry);
-    }
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
     return err;
 }
@@ -410,7 +297,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
     int err                     = 0;
     hip_list_t *item            = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr;
-    struct hip_common *i1_blind = NULL;
     int i                       = 0;
     struct in6_addr *local_addr = NULL;
     struct in6_addr peer_addr;
@@ -431,19 +317,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
              "Could not assign a local host id\n");
     HIP_DEBUG_HIT("entry->src_hit", &entry->hit_our);
 
-#ifdef CONFIG_HIP_BLIND
-
-    if (hip_blind_get_status()) {
-        HIP_DEBUG("Blind is activated, building blinded I1 packet.\n");
-
-        if ((i1_blind = hip_blind_build_i1(entry, &mask)) == NULL) {
-            err = -1;
-            HIP_ERROR("hip_blind_build_i1() failed.\n");
-            goto out_err;
-        }
-    }
-#endif
-
     /* We don't need to use hip_msg_alloc(), since the I1
      * packet is just the size of struct hip_common. */
 
@@ -457,11 +330,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
     i1 = hip_msg_alloc();
 
-    if (!hip_blind_get_status()) {
-        entry->hadb_misc_func->
-        hip_build_network_hdr(i1, HIP_I1,
-                              mask, &entry->hit_our, dst_hit);
-    }
+    hip_build_network_hdr(i1, HIP_I1, mask, &entry->hit_our, dst_hit);
 
     /* Calculate the HIP header length */
     hip_calc_hdr_len(i1);
@@ -478,11 +347,14 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                  "No preferred IP address for the peer.\n");
 
         local_addr = &entry->our_addr;
-        err        = hip_send_i1_pkt(i1, dst_hit,
-                                     local_addr, &peer_addr,
+        err        = hip_send_i1_pkt(i1,
+                                     dst_hit,
+                                     local_addr,
+                                     &peer_addr,
                                      entry->local_udp_port,
                                      entry->peer_udp_port,
-                                     i1_blind, entry, 1);
+                                     entry,
+                                     1);
     } else {
         HIP_DEBUG("Number of items in the peer addr list: %d ",
                   ((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items);
@@ -491,11 +363,14 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
             addr = (struct hip_peer_addr_list_item *) list_entry(item);
             ipv6_addr_copy(&peer_addr, &addr->address);
 
-            err  = hip_send_i1_pkt(i1, dst_hit,
-                                   NULL, &peer_addr,
+            err  = hip_send_i1_pkt(i1,
+                                   dst_hit,
+                                   NULL,
+                                   &peer_addr,
                                    entry->local_udp_port,
                                    entry->peer_udp_port,
-                                   i1_blind, entry, 1);
+                                   entry,
+                                   1);
 
             /* Do not bail out on error with shotgun. Some
              * address pairs just might fail. */
@@ -511,10 +386,324 @@ out_err:
     if (i1 != NULL) {
         free(i1);
     }
-#ifdef CONFIG_HIP_BLIND
-    if (i1_blind != NULL) {
-        free(i1_blind);
+    return err;
+}
+
+/**
+ * @brief Creates an I2 packet and sends it.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+int hip_send_i2(const uint8_t packet_type,
+                const uint32_t ha_state,
+                struct hip_packet_context *ctx)
+{
+    hip_transform_suite_t transform_hip_suite, transform_esp_suite;
+    struct hip_spi_in_item spi_in_data;
+    in6_addr_t daddr;
+    struct hip_param *param                 = NULL;
+    struct hip_esp_info *esp_info           = NULL;
+    struct hip_host_id_entry *host_id_entry = NULL;
+    char *enc_in_msg                        = NULL, *host_id_in_enc = NULL;
+    unsigned char *iv                       = NULL;
+    int err = 0, host_id_in_enc_len = 0;
+    uint32_t spi_in = 0;
+
+    HIP_IFEL(ctx->error,
+             -1,
+             "Abort packet processing.\n");
+
+    /* We haven't handled REG_INFO parameter. We do that in hip_send_i2()
+     * because we must create an REG_REQUEST parameter based on the data
+     * of the REG_INFO parameter. */
+
+    HIP_DEBUG("R1 source port %u, destination port %d\n",
+              ctx->msg_ports->src_port,
+              ctx->msg_ports->dst_port);
+
+    HIP_ASSERT(ctx->hadb_entry);
+
+    spi_in = ctx->hadb_entry->spi_inbound_current;
+
+    /* TLV sanity checks are are already done by the caller of this
+     * function. Now, begin to build I2 piece by piece. */
+
+    /* Delete old SPDs and SAs, if present */
+    hip_delete_security_associations_and_sp(ctx->hadb_entry);
+
+    /********** R1 COUNTER (OPTIONAL) ********/
+    /* we build this, if we have recorded some value (from previous R1s) */
+    {
+        uint64_t rtmp;
+
+        HIP_LOCK_HA(ctx->hadb_entry);
+        rtmp = ctx->hadb_entry->birthday;
+        HIP_UNLOCK_HA(ctx->hadb_entry);
+
+        HIP_IFEL(rtmp && hip_build_param_r1_counter(ctx->output_msg, rtmp), -1,
+                 "Could not build R1 GENERATION parameter\n");
     }
+
+    /********** HIP transform. **********/
+    HIP_IFE(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
+            -ENOENT);
+    HIP_IFEL((transform_hip_suite =
+                  hip_select_hip_transform((struct hip_hip_transform *) param)) == 0,
+             -EINVAL,
+             "Could not find acceptable hip transform suite\n");
+
+    /* Select only one transform */
+    HIP_IFEL(hip_build_param_hip_transform(ctx->output_msg,
+                                           &transform_hip_suite,
+                                           1),
+             -1,
+             "Building of HIP transform failed\n");
+
+    HIP_DEBUG("HIP transform: %d\n", transform_hip_suite);
+
+    /************ Encrypted ***********/
+    if (hip_encrypt_i2_hi) {
+        switch (transform_hip_suite) {
+        case HIP_HIP_AES_SHA1:
+            HIP_IFEL(hip_build_param_encrypted_aes_sha1(ctx->output_msg,
+                                                        (struct hip_tlv_common *) ctx->hadb_entry->our_pub),
+                     -1,
+                     "Building of param encrypted failed.\n");
+            enc_in_msg     = hip_get_param(ctx->output_msg,
+                                           HIP_PARAM_ENCRYPTED);
+            HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
+            iv             = ((struct hip_encrypted_aes_sha1 *) enc_in_msg)->iv;
+            get_random_bytes(iv, 16);
+            host_id_in_enc = enc_in_msg + sizeof(struct hip_encrypted_aes_sha1);
+            break;
+        case HIP_HIP_3DES_SHA1:
+            HIP_IFEL(hip_build_param_encrypted_3des_sha1(ctx->output_msg,
+                                                         (struct hip_tlv_common *) ctx->hadb_entry->our_pub),
+                     -1,
+                     "Building of param encrypted failed.\n");
+            enc_in_msg     = hip_get_param(ctx->output_msg,
+                                           HIP_PARAM_ENCRYPTED);
+            HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
+            iv             = ((struct hip_encrypted_3des_sha1 *) enc_in_msg)->iv;
+            get_random_bytes(iv, 8);
+            host_id_in_enc = enc_in_msg +
+                             sizeof(struct hip_encrypted_3des_sha1);
+            break;
+        case HIP_HIP_NULL_SHA1:
+            HIP_IFEL(hip_build_param_encrypted_null_sha1(ctx->output_msg,
+                                                         (struct hip_tlv_common *) ctx->hadb_entry->our_pub),
+                     -1,
+                     "Building of param encrypted failed.\n");
+            enc_in_msg     = hip_get_param(ctx->output_msg,
+                                           HIP_PARAM_ENCRYPTED);
+            HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
+            iv             = NULL;
+            host_id_in_enc = enc_in_msg +
+                             sizeof(struct hip_encrypted_null_sha1);
+            break;
+        default:
+            HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
+                     transform_hip_suite);
+        }
+    } else {   /* add host id in plaintext without encrypted wrapper */
+               /* Parameter HOST_ID. Notice that hip_get_public_key overwrites
+                * the argument pointer, so we have to allocate some extra memory */
+
+        HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
+                                                                        &ctx->input_msg->hitr,
+                                                                        HIP_ANY_ALGO,
+                                                                        -1)),
+                   -1,
+                   "Unknown HIT\n");
+
+        HIP_IFEL(hip_build_param(ctx->output_msg, host_id_entry->host_id),
+                 -1,
+                 "Building of host id failed\n");
+    }
+
+    /* REG_INFO parameter. This builds a REG_REQUEST parameter in the I2
+     * packet. */
+    hip_handle_param_reg_info(ctx->hadb_entry,
+                              ctx->input_msg,
+                              ctx->output_msg);
+
+    /********** ESP-ENC transform. **********/
+    HIP_IFE(!(param = hip_get_param(ctx->input_msg,
+                                    HIP_PARAM_ESP_TRANSFORM)),
+            -ENOENT);
+
+    /* Select only one transform */
+    HIP_IFEL((transform_esp_suite =
+                  hip_select_esp_transform((struct hip_esp_transform *) param)) == 0,
+             -1, "Could not find acceptable hip transform suite\n");
+    HIP_IFEL(hip_build_param_esp_transform(ctx->output_msg,
+                                           &transform_esp_suite, 1), -1,
+             "Building of ESP transform failed\n");
+
+    /********** ESP-PROT anchor [OPTIONAL] **********/
+
+    /** @todo Modularize esp_prot_* */
+    HIP_IFEL(esp_prot_i2_add_anchor(ctx), -1,
+             "failed to add esp protection anchor\n");
+
+    /************************************************/
+
+    if (hip_encrypt_i2_hi) {
+        HIP_HEXDUMP("enc(host_id)",
+                    host_id_in_enc,
+                    hip_get_param_total_len(host_id_in_enc));
+
+        /* Calculate the length of the host id inside the encrypted param */
+        host_id_in_enc_len = hip_get_param_total_len(host_id_in_enc);
+
+        /* Adjust the host id length for AES (block size 16).
+         * build_param_encrypted_aes has already taken care that there is
+         * enough padding */
+        if (transform_hip_suite == HIP_HIP_AES_SHA1) {
+            int remainder = host_id_in_enc_len % 16;
+            if (remainder) {
+                HIP_DEBUG("Remainder %d (for AES)\n", remainder);
+                host_id_in_enc_len += remainder;
+            }
+        }
+
+        HIP_HEXDUMP("enc key", &ctx->hadb_entry->hip_enc_out.key, HIP_MAX_KEY_LEN);
+        HIP_DEBUG("host id type: %d\n",
+                  hip_get_host_id_algo((struct hip_host_id *) host_id_in_enc));
+
+        HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv,
+                                      transform_hip_suite,
+                                      host_id_in_enc_len,
+                                      ctx->hadb_entry->hip_enc_out.key,
+                                      HIP_DIRECTION_ENCRYPT), -1,
+                 "Building of param encrypted failed\n");
+    }
+
+    /* Now that almost everything is set up except the signature, we can
+     * try to set up inbound IPsec SA, similarly as in hip_send_r2 */
+
+    HIP_DEBUG("src %d, dst %d\n",
+              ctx->msg_ports->src_port,
+              ctx->msg_ports->dst_port);
+
+    ctx->hadb_entry->local_udp_port = ctx->msg_ports->src_port;
+    ctx->hadb_entry->peer_udp_port  = ctx->msg_ports->dst_port;
+
+    ctx->hadb_entry->hip_transform  = transform_hip_suite;
+
+    /* XXX: -EAGAIN */
+    HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+
+    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input_msg->hits,
+                                   &ctx->input_msg->hitr,
+                                   ctx->src_addr, ctx->dst_addr,
+                                   IPPROTO_ESP,
+                                   1,
+                                   1),
+             -1,
+             "Setting up SP pair failed\n");
+
+    esp_info = hip_get_param(ctx->output_msg, HIP_PARAM_ESP_INFO);
+    HIP_ASSERT(esp_info);     /* Builder internal error */
+    esp_info->new_spi = htonl(spi_in);
+    /* LSI not created, as it is local, and we do not support IPv4 */
+
+    /********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
+    /* must reply... */
+    {
+        struct hip_echo_request *ping;
+
+        ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
+        if (ping) {
+            int ln = hip_get_param_contents_len(ping);
+            HIP_IFEL(hip_build_param_echo(ctx->output_msg, ping + 1, ln, 1, 0), -1,
+                     "Error while creating echo reply parameter\n");
+        }
+    }
+
+    /************* HMAC ************/
+    HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
+                                           &ctx->hadb_entry->hip_hmac_out),
+             -1,
+             "Building of HMAC failed\n");
+
+    /********** Signature **********/
+    /* Build a digest of the packet built so far. Signature will
+     * be calculated over the digest. */
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_SIGN\n");
+    hip_perf_start_benchmark(perf_set, PERF_SIGN);
+#endif
+    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
+                                          ctx->output_msg),
+             -EINVAL,
+             "Could not create signature\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_SIGN\n");
+    hip_perf_stop_benchmark(perf_set, PERF_SIGN);
+#endif
+
+    /********** ECHO_RESPONSE (OPTIONAL) ************/
+    /* must reply */
+    {
+        struct hip_echo_request *ping;
+
+        ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST);
+        if (ping) {
+            int ln = hip_get_param_contents_len(ping);
+            HIP_IFEL(hip_build_param_echo(ctx->output_msg, (ping + 1), ln, 0, 0), -1,
+                     "Error while creating echo reply parameter\n");
+        }
+    }
+
+    /********** I2 packet complete **********/
+    memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
+    spi_in_data.spi     = spi_in;
+    spi_in_data.ifindex = hip_devaddr2ifindex(ctx->dst_addr);
+    HIP_LOCK_HA(ctx->hadb_entry);
+
+    /* 99999 HIP_IFEB(hip_hadb_add_spi_old(ctx->hadb_entry,
+                                           HIP_SPI_DIRECTION_IN, &spi_in_data),
+                      -1,
+                      HIP_UNLOCK_HA(ctx->hadb_entry));
+    */
+
+    ctx->hadb_entry->esp_transform = transform_esp_suite;
+    HIP_DEBUG("Saving base exchange encryption data to hadb_entry \n");
+    HIP_DEBUG_HIT("Our HIT: ", &ctx->hadb_entry->hit_our);
+    HIP_DEBUG_HIT("Peer HIT: ", &ctx->hadb_entry->hit_peer);
+
+    /** @todo Also store the keys that will be given to ESP later */
+    HIP_IFE(hip_hadb_get_peer_addr(ctx->hadb_entry, &daddr), -1);
+
+    /* R1 packet source port becomes the I2 packet destination port. */
+    err = hip_send_pkt(ctx->dst_addr, &daddr,
+                       (ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ctx->msg_ports->src_port, ctx->output_msg, ctx->hadb_entry, 1);
+    HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
+
+    HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
+
+    if (ctx->hadb_entry->state == HIP_STATE_I1_SENT) {
+        ctx->hadb_entry->state = HIP_STATE_I2_SENT;
+    }
+
+out_err:
+    if (ctx->output_msg) {
+        free(ctx->output_msg);
+    }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_R1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_R1);
+    hip_perf_write_benchmark(perf_set, PERF_R1);
 #endif
     return err;
 }
@@ -538,11 +727,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 {
     hip_common_t *msg = NULL;
     hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
-    uint8_t *dh_data1                                = NULL, *dh_data2 = NULL;
-    char order[]                                = "000";
-    int err                                     = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
-    int mask                                    = 0, i = 0;
-    unsigned int service_count                  = 0;
+    uint8_t *dh_data1  = NULL, *dh_data2 = NULL;
+    char order[] = "000";
+    int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
+    int mask = 0, i = 0;
+    unsigned int service_count = 0;
 
     /* Supported HIP and ESP transforms. */
     hip_transform_suite_t transform_hip_suite[] = {
@@ -719,52 +908,52 @@ out_err:
  * was relayed through a middlebox (e.g. rendezvous server) @c i1_saddr should
  * have the address of that middlebox.
  *
- * @param i1_saddr      a pointer to the source address from where the I1 packet
- *                      was received.
- * @param i1_daddr      a pointer to the destination address where to the I1
- *                      packet was sent to (own address).
- * @param src_hit       a pointer to the source HIT i.e. responder HIT
- *                      (own HIT).
- * @param dst_ip        a pointer to the destination IPv6 address where the R1
- *                      should be sent (peer ip).
- * @param dst_hit       a pointer to the destination HIT i.e. initiator HIT
- *                      (peer HIT).
- * @param i1_info       a pointer to the source and destination ports
- *                      (when NAT is in use).
- * @param traversed_rvs a pointer to the rvs addresses to be inserted into the
- *                      @c VIA_RVS parameter.
- * @param rvs_count     number of addresses in @c traversed_rvs.
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
  * @return              zero on success, or negative error value on error.
  */
-int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
-                in6_addr_t *dst_ip, const in_port_t dst_port,
-                hip_portpair_t *i1_info, uint16_t relay_para_type)
+int hip_send_r1(const uint8_t packet_type,
+                const uint32_t ha_state,
+                struct hip_packet_context *ctx)
 {
+    int err = 0;
     hip_common_t *r1pkt     = NULL;
-    in6_addr_t *r1_dst_addr = NULL, *local_plain_hit = NULL,
-    *r1_src_addr            = i1_daddr;
-    in_port_t r1_dst_port   = 0;
-    int err                 = 0;
+    in6_addr_t dst_ip           = IN6ADDR_ANY_INIT,
+               *r1_dst_addr     = NULL,
+               *local_plain_hit = NULL,
+               *r1_src_addr     = ctx->dst_addr;
+    in_port_t r1_dst_port    = 0;
+    uint16_t relay_para_type = 0;
 
-    HIP_DEBUG_IN6ADDR("i1_saddr", i1_saddr);
-    HIP_DEBUG_IN6ADDR("i1_daddr", i1_daddr);
-    HIP_DEBUG_IN6ADDR("dst_ip", dst_ip);
+    HIP_IFEL(ctx->error,
+             -1,
+             "Abort packet processing and don't send R1 packet.\n")
+
+    HIP_DEBUG_IN6ADDR("i1_saddr", ctx->src_addr);
+    HIP_DEBUG_IN6ADDR("i1_daddr", ctx->dst_addr);
+    HIP_DEBUG_IN6ADDR("dst_ip", &dst_ip);
 
     /* Get the final destination address and port for the outgoing R1.
      * dst_ip and dst_port have values only if the incoming I1 had
      * FROM/FROM_NAT parameter. */
-    if (!ipv6_addr_any(dst_ip) && relay_para_type) {
+    if (!ipv6_addr_any(&dst_ip) && relay_para_type) {
         //from RVS or relay
         if (relay_para_type == HIP_PARAM_RELAY_FROM) {
             HIP_DEBUG("Param relay from\n");
             //from relay
-            r1_dst_addr = i1_saddr;
-            r1_dst_port = i1_info->src_port;
+            r1_dst_addr = ctx->src_addr;
+            r1_dst_port = ctx->msg_ports->src_port;
         } else if (relay_para_type == HIP_PARAM_FROM)    {
             HIP_DEBUG("Param from\n");
             //from RVS, answer to I
-            r1_dst_addr =  dst_ip;
-            if (i1_info->src_port) {
+            r1_dst_addr =  &dst_ip;
+            if (ctx->msg_ports->src_port) {
                 // R and RVS is in the UDP mode or I send UDP to RVS with incoming port hip_get_peer_nat_udp_port()
                 r1_dst_port =  hip_get_peer_nat_udp_port();
             } else {
@@ -775,14 +964,14 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
     } else {
         HIP_DEBUG("No RVS or relay\n");
         /* no RVS or RELAY found;  direct connection */
-        r1_dst_addr = i1_saddr;
-        r1_dst_port = i1_info->src_port;
+        r1_dst_addr = ctx->src_addr;
+        r1_dst_port = ctx->msg_ports->src_port;
     }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* It should not be null hit, null hit has been replaced by real local
      * hit. */
-    HIP_ASSERT(!hit_is_opportunistic_hit(&i1->hitr));
+    HIP_ASSERT(!hit_is_opportunistic_hit(&ctx->input_msg->hitr));
 #endif
 
     /* Case: I ----->IPv4---> RVS ---IPv6---> R */
@@ -799,43 +988,12 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
         }
     }
 
-#ifdef CONFIG_HIP_BLIND
-    if (hip_blind_get_status()) {
-        uint16_t nonce = 0;
-        if ((local_plain_hit = malloc(sizeof(struct in6_addr))) == NULL) {
-            err = -1;
-            HIP_ERROR("Error when allocating memory to local " \
-                      "plain HIT.\n");
-            goto out_err;
-        }
-        HIP_IFEL(hip_plain_fingerprint(
-                     &nonce, &i1->hitr, local_plain_hit), -1,
-                 "hip_plain_fingerprints() failed.\n");
+    HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, ctx->dst_addr,
+                                  &ctx->input_msg->hitr, &ctx->input_msg->hits)),
+             -ENOENT, "No precreated R1\n");
 
-        if (r1_dst_addr) {
-            HIP_DEBUG_HIT("r1_dst_addr", r1_dst_addr);
-        }
-        if (r1_src_addr) {
-            HIP_DEBUG_HIT("r1_src_addr", r1_src_addr);
-        }
-
-        if ((r1pkt = hip_get_r1(r1_dst_addr, r1_src_addr, local_plain_hit,
-                                &i1->hits)) == NULL) {
-            HIP_ERROR("Unable to get a precreated R1 packet.\n");
-        }
-
-        /* Replace the plain HIT with the blinded HIT. */
-        ipv6_addr_copy(&r1pkt->hits, &i1->hitr);
-    }
-#endif
-    if (!hip_blind_get_status()) {
-        HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr,
-                                      &i1->hitr, &i1->hits)),
-                 -ENOENT, "No precreated R1\n");
-    }
-
-    if (&i1->hits) {
-        ipv6_addr_copy(&r1pkt->hitr, &i1->hits);
+    if (&ctx->input_msg->hits) {
+        ipv6_addr_copy(&r1pkt->hitr, &ctx->input_msg->hits);
     } else {
         memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
     }
@@ -850,20 +1008,19 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
      *  parameter is the last parameter. */
     /* If I1 had a FROM/RELAY_FROM, then we must build a RELAY_TO/VIA_RVS
      * parameter. */
-    if (!ipv6_addr_any(dst_ip) && relay_para_type) { // dst_port has the value of RELAY_FROM port.
+    if (!ipv6_addr_any(&dst_ip) && relay_para_type) { // dst_port has the value of RELAY_FROM port.
                                                     //there is port no value for FROM parameter
                                                     //here condition is not enough
         if (relay_para_type == HIP_PARAM_RELAY_FROM) {
             HIP_DEBUG("Build param relay from\n");
             hip_build_param_relay_to(
-                r1pkt, dst_ip, dst_port);
+                r1pkt, &dst_ip, r1_dst_port);
         } else if (relay_para_type == HIP_PARAM_FROM)    {
             HIP_DEBUG("Build param from\n");
-            hip_build_param_via_rvs(r1pkt, i1_saddr);
+            hip_build_param_via_rvs(r1pkt, ctx->src_addr);
         }
     }
 #endif
-
     /* R1 is send on UDP if R1 destination port is hip_get_peer_nat_udp_port(). This is if:
      * a) the I1 was received on UDP.
      * b) the received I1 packet had a RELAY_FROM parameter. */
@@ -883,12 +1040,183 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
     }
 
 out_err:
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_I1\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I1);
+    hip_perf_write_benchmark(perf_set, PERF_I1);
+#endif
     if (r1pkt) {
         free(r1pkt);
     }
     if (local_plain_hit) {
         free(local_plain_hit);
     }
+    return err;
+}
+
+/**
+ * Creates and transmits an R2 packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, negative otherwise.
+ */
+int hip_send_r2(const uint8_t packet_type,
+                const uint32_t ha_state,
+                struct hip_packet_context *ctx)
+{
+    struct hip_crypto_key hmac;
+    int err          = 0;
+    uint16_t mask    = 0;
+
+    HIP_IFEL(ctx->error,
+             -1,
+             "Abort packet processing and don't send R1 packet.\n")
+
+    /* Build and send R2: IP ( HIP ( SPI, HMAC, HIP_SIGNATURE ) ) */
+    HIP_IFEL(!(ctx->output_msg = hip_msg_alloc()), -ENOMEM, "No memory for R2\n");
+
+    /* Just swap the addresses to use the I2's destination HIT as the R2's
+     * source HIT. */
+    hip_build_network_hdr(ctx->output_msg,
+                          HIP_R2,
+                          mask,
+                          &ctx->hadb_entry->hit_our,
+                          &ctx->hadb_entry->hit_peer);
+
+    HIP_DUMP_MSG(ctx->output_msg);
+
+    /* ESP_INFO */
+    HIP_IFEL(hip_build_param_esp_info(ctx->output_msg,
+                                      ctx->hadb_entry->esp_keymat_index,
+                                      0,
+                                      ctx->hadb_entry->spi_inbound_current),
+             -1,
+             "building of ESP_INFO failed.\n");
+
+    /********** CHALLENGE_RESPONSE **********/
+#ifdef CONFIG_HIP_MIDAUTH
+    /** @todo no caching is done for PUZZLE_M parameters. This may be
+     *        a DOS attack vector.
+     */
+    HIP_IFEL(hip_solve_puzzle_m(ctx->output_msg,
+                                ctx->input_msg,
+                                ctx->hadb_entry),
+             -1,
+             "Building of Challenge_Response failed\n");
+    char *midauth_cert = hip_pisa_get_certificate();
+
+    HIP_IFEL(hip_build_param(ctx->output_msg, ctx->hadb_entry->our_pub), -1,
+             "Building of host id failed\n");
+
+    /* For now we just add some random data to see if it works */
+    HIP_IFEL(hip_build_param_cert(ctx->output_msg, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)),
+            -1,
+            "Building of cert failed\n");
+
+#endif
+
+    /********** ESP-PROT anchor [OPTIONAL] **********/
+    HIP_IFEL(esp_prot_r2_add_anchor(ctx->output_msg, ctx->hadb_entry), -1,
+             "failed to add esp protection anchor\n");
+    /************************************************/
+
+#if defined(CONFIG_HIP_RVS)
+    /********** REG_REQUEST **********/
+    /* This part should only be executed at server offering rvs or relay
+     * services.
+     */
+
+    /* Handle REG_REQUEST parameter. */
+    hip_handle_param_reg_request(ctx->hadb_entry, ctx->input_msg, ctx->output_msg);
+
+#endif
+
+#if defined(CONFIG_HIP_RVS)
+    if (hip_relay_get_status() != HIP_RELAY_OFF) {
+        hip_build_param_reg_from(ctx->output_msg, ctx->src_addr, ctx->msg_ports->src_port);
+    }
+
+#endif
+
+
+    /* Create HMAC2 parameter. */
+    if (ctx->hadb_entry->our_pub == NULL) {
+        HIP_DEBUG("ctx->hadb_entry->our_pub is NULL.\n");
+    }
+
+    memcpy(&hmac, &ctx->hadb_entry->hip_hmac_out, sizeof(hmac));
+    HIP_IFEL(hip_build_param_hmac2_contents(ctx->output_msg,
+                                            &hmac,
+                                            ctx->hadb_entry->our_pub),
+             -1,
+             "Failed to build parameter HMAC2 contents.\n");
+
+    /* Why is err reset to zero? -Lauri 11.06.2008 */
+    if (err == 1) {
+        err = 0;
+    }
+
+    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
+                                          ctx->output_msg),
+             -EINVAL,
+             "Could not sign R2. Failing\n");
+
+    err = hip_add_sa(ctx->dst_addr,
+                     ctx->src_addr,
+                     &ctx->input_msg->hitr,
+                     &ctx->input_msg->hits,
+                     ctx->hadb_entry->spi_outbound_current,
+                     ctx->hadb_entry->esp_transform,
+                     &ctx->hadb_entry->esp_out,
+                     &ctx->hadb_entry->auth_out,
+                     1,
+                     HIP_SPI_DIRECTION_OUT,
+                     0,
+                     ctx->hadb_entry);
+    if (err) {
+        HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
+                  ctx->hadb_entry->spi_outbound_current);
+
+        /* delete all IPsec related SPD/SA for this ctx->hadb_entry*/
+        hip_delete_security_associations_and_sp(ctx->hadb_entry);
+        goto out_err;
+    }
+
+    /* @todo Check if err = -EAGAIN... */
+    HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n",
+              ctx->hadb_entry->spi_outbound_new);
+
+    err = hip_send_pkt(ctx->dst_addr,
+                       ctx->src_addr,
+                       (ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ctx->hadb_entry->peer_udp_port,
+                       ctx->output_msg,
+                       ctx->hadb_entry,
+                       1);
+
+    if (err == 1) {
+        err = 0;
+    }
+
+    HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
+
+out_err:
+    if (ctx->output_msg) {
+        free(ctx->output_msg);
+    }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_I2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_I2);
+    hip_perf_write_benchmark(perf_set, PERF_I2);
+#endif
+
     return err;
 }
 
@@ -901,7 +1229,8 @@ out_err:
  *
  * @return          non-zero on success, zero on failure
  */
-int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_addr *dst_addr)
+int are_addresses_compatible(const struct in6_addr *src_addr,
+                             const struct in6_addr *dst_addr)
 {
     if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr)) {
         return 0;
@@ -933,8 +1262,10 @@ int are_addresses_compatible(const struct in6_addr *src_addr, const struct in6_a
  * @return          zero on success, or negative error value on error.
  * @note currently the queue length is one and new packets replace old ones
  */
-static int hip_queue_packet(const struct in6_addr *src_addr, const struct in6_addr *peer_addr,
-                            const struct hip_common *msg, hip_ha_t *entry)
+static int hip_queue_packet(const struct in6_addr *src_addr,
+                            const struct in6_addr *peer_addr,
+                            const struct hip_common *msg,
+                            hip_ha_t *entry)
 {
     int err = 0;
     int len = hip_get_msg_total_len(msg);
@@ -1236,8 +1567,10 @@ out_err:
  */
 static int hip_send_udp_from_one_src(const struct in6_addr *local_addr,
                                      const struct in6_addr *peer_addr,
-                                     const in_port_t src_port, const in_port_t dst_port,
-                                     struct hip_common *msg, hip_ha_t *entry,
+                                     const in_port_t src_port,
+                                     const in_port_t dst_port,
+                                     struct hip_common *msg,
+                                     hip_ha_t *entry,
                                      const int retransmit)
 {
     return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
@@ -1272,9 +1605,13 @@ static int hip_send_udp_from_one_src(const struct in6_addr *local_addr,
  * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_udp
  */
-int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_addr,
-                 const in_port_t src_port, const in_port_t dst_port,
-                 struct hip_common *msg, hip_ha_t *entry, const int retransmit)
+int hip_send_pkt(const struct in6_addr *local_addr,
+                 const struct in6_addr *peer_addr,
+                 const in_port_t src_port,
+                 const in_port_t dst_port,
+                 struct hip_common *msg,
+                 hip_ha_t *entry,
+                 const int retransmit)
 {
     int err                                = 0;
     struct netdev_address *netdev_src_addr = NULL;
@@ -1295,7 +1632,8 @@ int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_
      */
 
     if (hip_shotgun_status == HIP_MSG_SHOTGUN_OFF) {
-        if (IN6_IS_ADDR_V4MAPPED(peer_addr) && ((hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) || dst_port != 0)) {
+        if (IN6_IS_ADDR_V4MAPPED(peer_addr) &&
+            ((hip_get_nat_mode(entry) != HIP_NAT_MODE_NONE) || dst_port != 0)) {
             return hip_send_udp_from_one_src(local_addr, peer_addr,
                                              src_port, dst_port,
                                              msg, entry, retransmit);
@@ -1309,7 +1647,7 @@ int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_
     list_for_each_safe(item, tmp, addresses, i)
     {
         netdev_src_addr = (struct netdev_address *) list_entry(item);
-        src_addr        = hip_cast_sa_addr((const struct sockaddr *) &netdev_src_addr->addr);
+        src_addr = hip_cast_sa_addr((const struct sockaddr *) &netdev_src_addr->addr);
 
         if (!are_addresses_compatible(src_addr, peer_addr)) {
             continue;
@@ -1330,106 +1668,5 @@ int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_
         }
     }
 
-    return err;
-};
-
-/**
- * Send a heatbeat request (ICMPv6 echo request) inside ESP tunnel to
- * a remote host
- *
- * @param socket to send with
- * @param srchit HIT to send from
- * @param dsthit HIT to send to
- *
- * @return 0 on success negative on error
- */
-int hip_send_icmp(int sockfd, hip_ha_t *entry)
-{
-    int err                = 0, i = 0, identifier = 0;
-    struct icmp6_hdr *icmph = NULL;
-    struct sockaddr_in6 dst6;
-    unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    unsigned char *icmp_pkt = NULL;
-    struct msghdr mhdr;
-    struct iovec iov[1];
-    struct cmsghdr *chdr;
-    struct inet6_pktinfo *pkti;
-    struct timeval tval;
-
-    HIP_IFEL(!entry, 0, "No entry\n");
-
-    HIP_IFEL((entry->outbound_sa_count == 0), 0,
-             "No outbound sa, ignoring keepalive\n")
-
-    /* memset and malloc everything you need */
-    memset(&mhdr, 0, sizeof(struct msghdr));
-    memset(&tval, 0, sizeof(struct timeval));
-    memset(cmsgbuf, 0, sizeof(cmsgbuf));
-    memset(iov, 0, sizeof(struct iovec));
-    memset(&dst6, 0, sizeof(dst6));
-
-    icmp_pkt         = malloc(HIP_MAX_ICMP_PACKET);
-    HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
-    memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
-
-    chdr             = (struct cmsghdr *) (void *) cmsgbuf;
-    pkti             = (struct inet6_pktinfo *) (void *) (CMSG_DATA(chdr));
-
-    identifier       = getpid() & 0xFFFF;
-
-    /* Build ancillary data */
-    chdr->cmsg_len   = CMSG_LEN(sizeof(struct inet6_pktinfo));
-    chdr->cmsg_level = IPPROTO_IPV6;
-    chdr->cmsg_type  = IPV6_PKTINFO;
-    memcpy(&pkti->ipi6_addr, &entry->hit_our, sizeof(struct in6_addr));
-
-    /* get the destination */
-    memcpy(&dst6.sin6_addr, &entry->hit_peer, sizeof(struct in6_addr));
-    dst6.sin6_family        = AF_INET6;
-    dst6.sin6_flowinfo      = 0;
-
-    /* build icmp header */
-    icmph                   = (struct icmp6_hdr *) (void *) icmp_pkt;
-    icmph->icmp6_type       = ICMP6_ECHO_REQUEST;
-    icmph->icmp6_code       = 0;
-    entry->heartbeats_sent++;
-
-    icmph->icmp6_seq        = htons(entry->heartbeats_sent);
-    icmph->icmp6_id         = identifier;
-
-    gettimeofday(&tval, NULL);
-
-    memset(&icmp_pkt[8], 0xa5, HIP_MAX_ICMP_PACKET - 8);
-    /* put timeval into the packet */
-    memcpy(&icmp_pkt[8], &tval, sizeof(struct timeval));
-
-    /* put the icmp packet to the io vector struct for the msghdr */
-    iov[0].iov_base     = icmp_pkt;
-    iov[0].iov_len      = sizeof(struct icmp6_hdr) + sizeof(struct timeval);
-
-    /* build the msghdr for the sendmsg, put ancillary data also*/
-    mhdr.msg_name       = &dst6;
-    mhdr.msg_namelen    = sizeof(struct sockaddr_in6);
-    mhdr.msg_iov        = iov;
-    mhdr.msg_iovlen     = 1;
-    mhdr.msg_control    = &cmsgbuf;
-    mhdr.msg_controllen = sizeof(cmsgbuf);
-
-    i                   = sendmsg(sockfd, &mhdr, 0);
-    if (i <= 0) {
-        HIP_PERROR("SENDMSG ");
-        /* Set return error, even if 0 bytes sent. */
-        err = (0 > i) ? i : -1;
-    }
-
-    HIP_PERROR("SENDMSG ");
-
-    HIP_IFEL((i < 0), -1, "Failed to send ICMP into ESP tunnel\n");
-    HIP_DEBUG_HIT("Succesfully sent heartbeat to", &entry->hit_peer);
-
-out_err:
-    if (icmp_pkt) {
-        free(icmp_pkt);
-    }
     return err;
 }

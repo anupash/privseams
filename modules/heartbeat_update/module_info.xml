@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Mandatory: name, version -->
+<module
+    name="heartbeat_update"
+    version="0.0.1"
+    description="This module enables UPDATE triggering on HEATBEAT failure."
+    developer=""
+    bugaddress="hipl-users@freelists.org"
+    webpage="http://infrahip.hiit.fi/">
+
+     <requires>
+        <module name="heartbeat" minversion="0.0.1" />
+        <module name="update" minversion="0.0.1" />
+    </requires>
+
+    <!-- Mandatory: name, header_file, init_function -->
+    <application
+        name="hipd"
+        header_file="modules/heartbeat_update/hipd/hb_update.h"
+        init_function="hip_hb_update_init" />
+</module>
+
