@@ -231,10 +231,9 @@ bin deb increl rpm syncrepo:
 autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
 	rm -f ltmain.sh m4/*.m4 Makefile.in missing py-compile
-	rm -f $(wildcard modules/*.h)
 
 HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_LIST:.h=.ho))
-CLEANFILES          += $(HIPL_HEADER_OBJS)
+CLEANFILES          += $(HIPL_HEADER_OBJS) $(wildcard modules/*.h)
 
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
