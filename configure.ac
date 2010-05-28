@@ -27,8 +27,7 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_PROG_CC_C_O # Required in CentOS
 
 # Check for python for build-system and tools directory
-AM_PATH_PYTHON([2.4.3],, [:])
-AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
+AM_PATH_PYTHON([2.4.3],, [AC_MSG_ERROR([min. required python version not found])])
 
 # Checks for libraries.
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))

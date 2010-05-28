@@ -180,7 +180,6 @@ test_hc_performance_LDADD      = lib/core/libhipcore.la
 tools_hipconf_LDADD           += lib/core/libhipcore.la
 tools_pisacert_LDADD           = lib/core/libhipcore.la
 
-if HAVE_PYTHON
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \
                     tools/nsupdate.pl
@@ -206,7 +205,6 @@ tools_hipdnsproxy_PYTHON = tools/hipdnsproxy/hosts.py       \
 
 tools_hipdnskeyparsedir = $(pyexecdir)
 tools_hipdnsproxydir    = $(pyexecdir)
-endif # HAVE_PYTHON
 
 
 ### misc stuff ###
