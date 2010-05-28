@@ -26,7 +26,7 @@ AM_CONDITIONAL(HAVE_XMLTO, test x"$have_xmlto" = x"yes")
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_PROG_CC_C_O # Required in CentOS
 
-# Check for python for tools directory
+# Check for python for build-system and tools directory
 AM_PATH_PYTHON([2.4.3],, [:])
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 

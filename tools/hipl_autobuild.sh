@@ -151,6 +151,6 @@ cd $SCRATCHBOX_HOME || cleanup 1
 run_program "rm -rf hipl-[0-9.]* hipl_*.changes hipl_*.deb"
 run_program "tar -xzf $CHECKOUT_DIR/hipl-[0-9.]*.tar.gz"
 # perform debian packaging (in maemo sdk env)
-run_program "$SCRATCHBOX_DIR/login -d hipl-[0-9.]* dpkg-buildpackage -rfakeroot -b"
+run_program "$SCRATCHBOX_DIR/login -d hipl-[0-9.]* packaging/build-maemo-helper.sh"
 
 cleanup 0

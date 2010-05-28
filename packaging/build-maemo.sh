@@ -49,11 +49,11 @@ if [ -e $HIPL ]; then
     echo "-> Building HIPL"
     echo "    Unpacking tarball..."
     rm -rf $SCRATCHBOX_HOME/hipl*
-    tar -xvzf $HIPL/hipl-${VERSION}.tar.gz -C $SCRATCHBOX_HOME
+    tar -xvzf $HIPL/hipl-[0-9.]*.tar.gz -C $SCRATCHBOX_HOME
     echo "    Done."
 
     echo "    Compiling HIPL for Maemo..."
-    $SCRATCHBOX/login -d hipl-${VERSION} dpkg-buildpackage -rfakeroot -b
+    $SCRATCHBOX/login -d hipl-${VERSION} packaging/build-maemo-helper.sh
     echo "    Done."
 else
     echo "ERROR: $HIPL does not exist."
