@@ -219,7 +219,7 @@ echo ""
 echo "+-----------------------------------------------";
 echo "| processing modules...";
 echo "|";
-python ${srcdir}/process_modules.py -s ${srcdir} -d "${with_nomodules}"
+$PYTHON ${srcdir}/process_modules.py -s ${srcdir} -d "${with_nomodules}"
 if [[ "$?" != "0" ]]; then
     echo "configure: error: Module processing failed"
     exit 1
