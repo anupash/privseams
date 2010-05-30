@@ -273,6 +273,43 @@ static const char *kernel_net_mod[] = {
 };
 
 /**
+ * Firm check of the required kernel modules.
+ * This function assumes the all the required modules are compiled as
+ * "modules" (as opposed to "built-in").
+ * @return  0 if all the required modules are loaded, nonzero otherwise
+ */
+static int hip_check_kernel_modules(void)
+{
+    int net_total, crypto_total, count;
+    char str[MODPROBE_MAX_LINE];
+    struct stat sbuf;
+
+    net_total    = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
+    crypto_total = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
+
+    for (count = 0; count < crypto_total; count++) {
+        snprintf(str, sizeof(str), "grep %s /proc/crypto > /dev/null",
+                 kernel_crypto_mod[count]);
+        if (system(str)) {
+            HIP_ERROR("The %s kernel module is not loaded\n",
+                      kernel_crypto_mod[count]);
+            return ENOENT;
+        }
+    }
+
+    for (count = 0; count < net_total; count++) {
+        snprintf(str, sizeof(str), "/sys/module/%s", kernel_net_mod[count]);
+        if (stat(str, &sbuf)) {
+            HIP_ERROR("The %s kernel module is not loaded\n",
+                      kernel_net_mod[count]);
+            return ENOENT;
+        }
+    }
+
+    return 0;
+}
+
+/**
  * Probe for kernel modules (Linux specific).
  * @return  0 on success
  */
@@ -281,9 +318,18 @@ static int hip_probe_kernel_modules(void)
     int count;
     char cmd[MODPROBE_MAX_LINE];
     int net_total, crypto_total;
+    struct stat sbuf;
 
     net_total    = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
     crypto_total = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
+
+    /* no, this check shoult NOT be performed at ./configure time */
+    if (stat("/sbin/modprobe", &sbuf)) {
+        HIP_INFO("The modprobe tool is not installed, will not load modules\n");
+        if (hip_check_kernel_modules()) {
+            return -1;
+        }
+    }
 
     /* Crypto module loading is treated separately, because algorithms
      * show up in procfs. If they are not there and modprobe also fails,
