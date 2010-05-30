@@ -864,17 +864,17 @@ int hip_handle_r1(const uint8_t packet_type,
     /* Solve puzzle: if this is a retransmission, we have to preserve
      * the old solution. */
     if (!retransmission) {
-        struct hip_puzzle *pz = NULL;
+        struct hip_puzzle *pz2 = NULL;
 
-        HIP_IFEL(!(pz = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
+        HIP_IFEL(!(pz2 = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
                  "Malformed R1 packet. PUZZLE parameter missing\n");
-        HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz,
+        HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz2,
                                                    ctx->input_msg,
                                                    HIP_SOLVE_PUZZLE)) == 0,
                                                    -EINVAL, "Solving of puzzle failed\n");
-        I = pz->I;
+        I = pz2->I;
         ctx->hadb_entry->puzzle_solution = solved_puzzle;
-        ctx->hadb_entry->puzzle_i        = pz->I;
+        ctx->hadb_entry->puzzle_i        = pz2->I;
     } else {
         I             = ctx->hadb_entry->puzzle_i;
         solved_puzzle = ctx->hadb_entry->puzzle_solution;
