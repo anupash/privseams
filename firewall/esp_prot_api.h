@@ -39,7 +39,7 @@ extern int num_parallel_hchains;
 extern int ring_buffer_size;
 extern int num_linear_elements;
 extern int num_random_elements;
-extern int hash_length;
+extern int hash_length_g;
 extern int hash_structure_length;
 extern int num_hchains_per_item;
 extern int num_hierarchies;

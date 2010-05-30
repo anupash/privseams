@@ -481,7 +481,7 @@ int esp_prot_conntrack_init(void)
     /* setting config-files values for internal usage
      * NOTE internal structure partially more flexible than interface provided by
      *      config-file */
-    hash_lengths[NUM_HASH_FUNCTIONS - 1][NUM_HASH_LENGTHS - 1] = hash_length;
+    hash_lengths[NUM_HASH_FUNCTIONS - 1][NUM_HASH_LENGTHS - 1] = hash_length_g;
 
     // init all possible transforms
     memset(esp_prot_conntrack_tfms, 0, MAX_NUM_TRANSFORMS

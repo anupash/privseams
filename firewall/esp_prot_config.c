@@ -155,8 +155,8 @@ int esp_prot_token_config(const config_t *cfg)
 
         // process hash tree-based setting
         if (!esp_prot_wrap_config_lookup_int(cfg, path_hash_length,
-                                             &hash_length)) {
-            hash_length = 20;
+                                             &hash_length_g)) {
+            hash_length_g = 20;
         }
 
         // process hash tree-based setting
@@ -251,7 +251,7 @@ int esp_prot_token_config(const config_t *cfg)
         HIP_INFO("using default configuration\n");
         /* use defaults for plain TFM from above in case of no lib/file */
         token_transform       = ESP_PROT_TFM_PLAIN;
-        hash_length           = 20;
+        hash_length_g         = 20;
         hash_structure_length = 16;
         num_parallel_hchains  = 1;
         ring_buffer_size      = 0;
@@ -260,12 +260,12 @@ int esp_prot_token_config(const config_t *cfg)
     }
 
     // do some sanity checks here
-    HIP_IFEL(hash_length <= 0, -1, "hash length has insufficient length\n");
+    HIP_IFEL(hash_length_g <= 0, -1, "hash length has insufficient length\n");
     HIP_IFEL(hash_structure_length <= 0, -1,
              "hash structure length has insufficient length\n");
 
     HIP_DEBUG("token_transform: %i\n", token_transform);
-    HIP_DEBUG("hash_length: %i\n", hash_length);
+    HIP_DEBUG("hash_length: %i\n", hash_length_g);
     HIP_DEBUG("hash_structure_length: %i\n", hash_structure_length);
     HIP_DEBUG("num_parallel_hchains: %i\n", num_parallel_hchains);
     HIP_DEBUG("ring_buffer_size: %i\n", ring_buffer_size);

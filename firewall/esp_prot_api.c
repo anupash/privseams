@@ -51,7 +51,7 @@ int num_linear_elements;
 int num_random_elements;
 
 //hash_function_t hash_function;
-int hash_length;
+int hash_length_g;
 int hash_structure_length;
 
 
@@ -248,7 +248,7 @@ int esp_prot_init(void)
     /* setting config-files values for internal usage
      * NOTE internal structure partially more flexible than interface provided by
      *      config-file */
-    hash_lengths[NUM_HASH_FUNCTIONS - 1][NUM_HASH_LENGTHS - 1] = hash_length;
+    hash_lengths[NUM_HASH_FUNCTIONS - 1][NUM_HASH_LENGTHS - 1] = hash_length_g;
     bex_hchain_length                                    = hash_structure_length;
     update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS - 1] = hash_structure_length;
 
