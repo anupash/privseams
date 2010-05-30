@@ -16,6 +16,7 @@
 #include <openssl/rand.h>
 #include <math.h>
 
+#include "common_defines.h"
 #include "hashtree.h"
 #include "ife.h"
 #include "debug.h"
@@ -663,7 +664,7 @@ int htree_leaf_generator(const unsigned char *data,
                          const unsigned char *secret,
                          const int secret_length,
                          unsigned char *dst_buffer,
-                         const htree_gen_args_t *gen_args)
+                         UNUSED const htree_gen_args_t *gen_args)
 {
     int err                        = 0;
     unsigned char buffer[data_length + secret_length];
@@ -701,10 +702,10 @@ out_err:
  *       subsequent memory blocks
  */
 int htree_node_generator(const unsigned char *left_node,
-                         const unsigned char *right_node,
+                         UNUSED const unsigned char *right_node,
                          const int node_length,
                          unsigned char *dst_buffer,
-                         const htree_gen_args_t *gen_args)
+                         UNUSED const htree_gen_args_t *gen_args)
 {
     int err = 0;
 
