@@ -106,13 +106,13 @@ out_err:
  */
 int hip_string_to_lowercase(char *to, const char *from, const size_t count)
 {
+    unsigned i;
+
     if (to == NULL || from == NULL || count == 0) {
         return -1;
     }
 
-    int i = 0;
-
-    for (; i < count; i++) {
+    for (i = 0; i < count; i++) {
         if (isalpha(from[i])) {
             to[i] = tolower(from[i]);
         } else {
