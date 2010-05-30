@@ -90,7 +90,7 @@ static inline int hip_capset(cap_user_header_t hdrp, cap_user_data_t datap)
  *                    0 otherwise
  * @return zero on success and negative on error
  */
-int hip_set_lowcapability(int run_as_sudo)
+int hip_set_lowcapability(void)
 {
     int err = 0;
     int uid = -1;

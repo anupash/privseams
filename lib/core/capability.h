@@ -8,6 +8,6 @@
 #ifndef HIP_LIB_CORE_CAPABILITY_H
 #define HIP_LIB_CORE_CAPABILITY_H
 
-int hip_set_lowcapability(int run_as_sudo);
+int hip_set_lowcapability(void);
 
 #endif /* HIP_LIB_CORE_CAPABILITY_H */
