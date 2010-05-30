@@ -685,13 +685,13 @@ out_err:
  * @param  encap_hdr_size .
  * @return                .
  */
-int hip_read_control_msg_v6(int socket,
+int hip_read_control_msg_v6(int sockfd,
                             struct hip_packet_context *ctx,
                             int encap_hdr_size)
 {
     HIP_DEBUG("Receiving a message on raw HIP from IPv6/HIP socket "\
-              " (file descriptor: %d).\n", socket);
-    return hip_read_control_msg_all(socket, ctx, encap_hdr_size, 0);
+              " (file descriptor: %d).\n", sockfd);
+    return hip_read_control_msg_all(sockfd, ctx, encap_hdr_size, 0);
 }
 
 /**
@@ -705,11 +705,11 @@ int hip_read_control_msg_v6(int socket,
  * @param  encap_hdr_size .
  * @return                .
  */
-int hip_read_control_msg_v4(int socket,
+int hip_read_control_msg_v4(int sockfd,
                             struct hip_packet_context *ctx,
                             int encap_hdr_size)
 {
     HIP_DEBUG("Receiving a message on raw HIP from IPv4/HIP socket "\
               " (file descriptor: %d).\n", socket);
-    return hip_read_control_msg_all(socket, ctx, encap_hdr_size, 1);
+    return hip_read_control_msg_all(sockfd, ctx, encap_hdr_size, 1);
 }
