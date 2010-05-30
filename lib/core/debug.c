@@ -645,8 +645,9 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
  * HIP_DEBUG_SOCKADDR macro instead.
  * @note Currently this function supports only INET and INET6 addresses.
  */
-void hip_print_sockaddr(UNUSED const char *file, int line, const char *function,
-                        const char *prefix, const struct sockaddr *sockaddr)
+void hip_print_sockaddr(UNUSED const char *file, UNUSED int line,
+                        UNUSED const char *function, const char *prefix,
+                        const struct sockaddr *sockaddr)
 {
     const char *default_str = "<unknown>";
     int maxlen;
@@ -804,7 +805,8 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
  * @param str string to be printed before the HIT
  * @param hit the HIT to be printed
  */
-void hip_print_locator(int debug_level, const char *file, int line, const char *function,
+void hip_print_locator(UNUSED int debug_level, UNUSED const char *file,
+                       UNUSED int line, UNUSED const char *function,
                        const char *str, const struct hip_locator *locator)
 {
 /* XXTRASHXX Totally useless does anything but what it is supposed to do -SAMU */
