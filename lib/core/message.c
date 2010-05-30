@@ -67,6 +67,7 @@
 
 #include "lib/tool/nlink.h"
 #include "builder.h"
+#include "common_defines.h"
 #include "debug.h"
 #include "hip_udp.h"
 #include "icomm.h"
@@ -467,7 +468,8 @@ out_err:
  * @note currently the only SOCK_DGRAM and AF_INET6 are supported
  * @todo required by the native HIP API
  */
-int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type)
+int hip_recv_daemon_info(UNUSED struct hip_common *msg,
+                         UNUSED uint16_t info_type)
 {
     return -1;
 }
