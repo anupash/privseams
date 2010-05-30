@@ -134,7 +134,8 @@ void hcstore_uninit(hchain_store_t *hcstore, const int use_hash_trees)
 int hcstore_register_function(hchain_store_t *hcstore,
                               const hash_function_t hash_function)
 {
-    int err = 0, i;
+    int err = 0;
+    unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
     HIP_ASSERT(hash_function != NULL);
@@ -175,10 +176,11 @@ out_err:
 int hcstore_register_hash_length(hchain_store_t *hcstore, const int function_id,
                                  const int hash_length)
 {
-    int err = 0, i;
+    int err = 0;
+    unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
     HIP_ASSERT(hash_length > 0);
 
     // first check that there's still some space left
@@ -187,7 +189,7 @@ int hcstore_register_hash_length(hchain_store_t *hcstore, const int function_id,
 
     // also check if the hash length is already stored for this function
     for (i = 0; i < hcstore->num_hash_lengths[function_id]; i++) {
-        if (hcstore->hash_lengths[function_id][i] == hash_length) {
+        if ((int)hcstore->hash_lengths[function_id][i] == hash_length) {
             HIP_DEBUG("hchain store already contains this hash length\n");
 
             err = i;
@@ -220,12 +222,13 @@ int hcstore_register_hash_item_length(hchain_store_t *hcstore,
                                       const int hash_length_id,
                                       const int hitem_length)
 {
-    int err = 0, i;
+    int err = 0;
+    unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
     HIP_ASSERT(hitem_length > 0);
 
     // first check that there's still some space left
@@ -236,7 +239,7 @@ int hcstore_register_hash_item_length(hchain_store_t *hcstore,
     for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
          num_hchain_lengths; i++) {
         if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
-            == hitem_length) {
+            == (unsigned)hitem_length) {
             HIP_DEBUG("hchain store already contains this hchain length\n");
 
             err = i;
@@ -272,12 +275,13 @@ int hcstore_register_hash_item_hierarchy(hchain_store_t *hcstore,
                                          const int addtional_hierarchies)
 {
     int item_offset = -1;
-    int err         = 0, i;
+    int err         = 0;
+    unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
     HIP_ASSERT(hitem_length > 0);
     HIP_ASSERT(addtional_hierarchies > 0);
 
@@ -285,7 +289,7 @@ int hcstore_register_hash_item_hierarchy(hchain_store_t *hcstore,
     for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
          num_hchain_lengths; i++) {
         if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
-            == hitem_length) {
+            == (unsigned)hitem_length) {
             // set item_offset
             item_offset = i;
 
@@ -337,13 +341,15 @@ static int hcstore_fill_item(hchain_store_t *hcstore,
     hash_tree_t *htree            = NULL;
     hash_tree_t *link_tree        = NULL;
     hash_function_t hash_function = NULL;
-    int hash_length               = 0, hchain_length = 0;
-    int create_hchains            = 0;
+    int hash_length               = 0;
+    int hchain_length             = 0;
+    unsigned create_hchains       = 0;
     hash_chain_t *tmp_hchain      = NULL;
     hash_tree_t *tmp_htree        = NULL;
     unsigned char *root           = NULL;
     int root_length               = 0;
-    int err                       = 0, i, j;
+    int err                       = 0;
+    unsigned i, j;
 
     // set necessary parameters
     hash_function  = hcstore->hash_functions[hash_func_id];
@@ -478,7 +484,8 @@ out_err:
  */
 int hcstore_refill(hchain_store_t *hcstore, const int use_hash_trees)
 {
-    int err = 0, i, j, g, h;
+    int err = 0;
+    unsigned i, j, g, h;
 
     HIP_ASSERT(hcstore != NULL);
 
@@ -518,19 +525,20 @@ void *hcstore_get_hash_item(hchain_store_t *hcstore,
     int item_offset     = -1;
     void *stored_item   = NULL;
     int hierarchy_level = 0;
-    int err             = 0, i;
+    int err             = 0;
+    unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
     HIP_ASSERT(hchain_length > 0);
 
     // first find the correct hchain item
     for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
          num_hchain_lengths; i++) {
         if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
-            == hchain_length) {
+            == (unsigned)hchain_length) {
             // set item_offset
             item_offset = i;
 
@@ -581,12 +589,13 @@ void *hcstore_get_item_by_anchor(hchain_store_t *hcstore,
     hash_chain_t *hchain = NULL;
     hash_tree_t *htree   = NULL;
     void *stored_item    = NULL;
-    int err              = 0, i, j;
+    int err              = 0;
+    unsigned i, j;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
     HIP_ASSERT(hierarchy_level >= 0);
     HIP_ASSERT(anchor != NULL);
 
@@ -599,8 +608,8 @@ void *hcstore_get_item_by_anchor(hchain_store_t *hcstore,
     for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
          num_hchain_lengths; i++) {
         // look for the anchor at each hchain_length with the respective hierarchy level
-        HIP_ASSERT(hierarchy_level < hcstore->hchain_shelves[function_id][hash_length_id].
-                   num_hierarchies[i]);
+        HIP_ASSERT((unsigned)hierarchy_level < hcstore->hchain_shelves
+                   [function_id][hash_length_id].num_hierarchies[i]);
 
         for (j = 0; j < hip_ll_get_size(&hcstore->hchain_shelves[function_id]
                                         [hash_length_id].hchains[i][hierarchy_level]); j++) {
@@ -661,7 +670,7 @@ hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore,
                                           const int function_id)
 {
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
 
     return hcstore->hash_functions[function_id];
 }
@@ -678,9 +687,9 @@ int hcstore_get_hash_length(hchain_store_t *hcstore,
                             const int hash_length_id)
 {
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
 
     return hcstore->hash_lengths[function_id][hash_length_id];
 }
