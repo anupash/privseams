@@ -588,7 +588,6 @@ int htree_verify_branch(const unsigned char *root,
     HIP_ASSERT(branch_length > 0);
     HIP_ASSERT(verify_data != NULL);
     HIP_ASSERT(data_length > 0);
-    HIP_ASSERT(data_index >= 0);
 
     if (secret_length > 0) {
         HIP_ASSERT(secret != NULL);
