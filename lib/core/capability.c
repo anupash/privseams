@@ -92,8 +92,8 @@ static inline int hip_capset(cap_user_header_t hdrp, cap_user_data_t datap)
  */
 int hip_set_lowcapability(int run_as_sudo)
 {
-    int err   = 0;
-    uid_t uid = -1;
+    int err = 0;
+    int uid = -1;
 
     struct __user_cap_header_struct header;
     struct __user_cap_data_struct data;
@@ -107,9 +107,11 @@ int hip_set_lowcapability(int run_as_sudo)
     HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
     uid = hip_user_to_uid(USER_NOBODY);
+    if (uid == -1) {
+        HIP_ERROR("User 'nodoby' could not be found\n");
+        goto out_err;
+    }
 
-    HIP_IFEL((uid < 0), -1,
-             "Error while retrieving USER 'nobody' uid\n");
     HIP_IFEL(hip_capget(&header, &data), -1,
              "error while retrieving capabilities through capget()\n");
     HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
