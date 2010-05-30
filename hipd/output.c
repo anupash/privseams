@@ -568,10 +568,11 @@ int hip_send_i2(const uint8_t packet_type,
          * build_param_encrypted_aes has already taken care that there is
          * enough padding */
         if (transform_hip_suite == HIP_HIP_AES_SHA1) {
-            int remainder = host_id_in_enc_len % 16;
-            if (remainder) {
-                HIP_DEBUG("Remainder %d (for AES)\n", remainder);
-                host_id_in_enc_len += remainder;
+            /* remainder */
+            int rem = host_id_in_enc_len % 16;
+            if (rem) {
+                HIP_DEBUG("Remainder %d (for AES)\n", rem);
+                host_id_in_enc_len += rem;
             }
         }
 
