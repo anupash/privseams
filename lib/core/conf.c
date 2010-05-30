@@ -48,6 +48,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include "lib/core/common_defines.h"
 #include "lib/tool/lutil.h"
 #include "config.h"
 #include "builder.h"
@@ -176,7 +177,8 @@ const char *hipconf_usage =
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-static int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
+static int hip_get_hits(hip_common_t *msg, const char *opt,
+                        UNUSED int optc, int send_only)
 {
     int err                              = 0;
     struct hip_tlv_common *current_param = NULL;
@@ -286,9 +288,9 @@ out_err:
  * @note this does not flush the host identities from disk
  */
 static int hip_conf_handle_hi_del_all(hip_common_t *msg,
-                                      int action,
-                                      const char *opt[],
-                                      int optc,
+                                      UNUSED int action,
+                                      UNUSED const char *opt[],
+                                      UNUSED int optc,
                                       int send_only)
 {
     int err                      = 0;
@@ -808,7 +810,7 @@ static int hip_conf_handle_server(hip_common_t *msg,
                                   int action,
                                   const char *opt[],
                                   int optc,
-                                  int send_only)
+                                  UNUSED int send_only)
 {
     hip_hit_t hit;
     in6_addr_t ipv6;
@@ -1131,7 +1133,7 @@ out_err:
  * @note         Does not support @c del action.
  */
 static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
-                               int optc, int send_only)
+                               int optc, UNUSED int send_only)
 {
     int err = 0;
     struct in_addr lsi, aux;
@@ -1201,8 +1203,9 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_heartbeat(hip_common_t *msg, int action,
-                                     const char *opt[], int optc, int send_only)
+static int hip_conf_handle_heartbeat(hip_common_t *msg, UNUSED int action,
+                                     const char *opt[], UNUSED int optc,
+                                     UNUSED int send_only)
 {
     int err = 0, seconds = 0;
 
@@ -1234,8 +1237,9 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_trans_order(hip_common_t *msg, int action,
-                                       const char *opt[], int optc, int send_only)
+static int hip_conf_handle_trans_order(hip_common_t *msg, UNUSED int action,
+                                       const char *opt[], int optc,
+                                       UNUSED int send_only)
 {
     int err = 0, transorder = 0, i = 0, k = 0;
 
@@ -1292,8 +1296,9 @@ out:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_rst(hip_common_t *msg, int action,
-                               const char *opt[], int optc, int send_only)
+static int hip_conf_handle_rst(hip_common_t *msg, UNUSED int action,
+                               const char *opt[], UNUSED int optc,
+                               UNUSED int send_only)
 {
     int err;
     int ret;
@@ -1342,8 +1347,9 @@ out:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_debug(hip_common_t *msg, int action,
-                                 const char *opt[], int optc, int send_only)
+static int hip_conf_handle_debug(hip_common_t *msg, UNUSED int action,
+                                 const char *opt[], int optc,
+                                 UNUSED int send_only)
 {
     int err    = 0;
     int status = 0;
@@ -1390,8 +1396,9 @@ out_err:
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_manual_update(hip_common_t *msg, int action,
-                                         const char *opt[], int optc, int send_only)
+static int hip_conf_handle_manual_update(hip_common_t *msg, UNUSED int action,
+                                         const char *opt[], int optc,
+                                         UNUSED int send_only)
 {
     int err = 0, s = 0;
     unsigned int ifidx;
@@ -1434,7 +1441,9 @@ out_err:
  */
 
 static int hip_conf_handle_nat_port(hip_common_t *msg, int action,
-                                    const char *opt[], int optc, int send_only)
+                                    const char *opt[],
+                                    UNUSED int optc,
+                                    UNUSED int send_only)
 {
     int err        = 0;
 
@@ -1471,8 +1480,9 @@ out_err:
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_nat(hip_common_t *msg, int action,
-                               const char *opt[], int optc, int send_only)
+static int hip_conf_handle_nat(hip_common_t *msg, UNUSED int action,
+                               const char *opt[], UNUSED int optc,
+                               UNUSED int send_only)
 {
     int err    = 0;
     int status = 0;
@@ -1499,10 +1509,10 @@ out_err:
  */
 
 static int hip_conf_handle_datapacket(hip_common_t *msg,
-                                      int action,
+                                      UNUSED int action,
                                       const char *opt[],
-                                      int optc,
-                                      int send_only)
+                                      UNUSED int optc,
+                                      UNUSED int send_only)
 {
     int err = 0, status = 0;
 
@@ -1535,8 +1545,8 @@ out_err:
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_locator(hip_common_t *msg, int action,
-                                   const char *opt[], int optc, int send_only)
+static int hip_conf_handle_locator(hip_common_t *msg, UNUSED int action,
+                                   const char *opt[], UNUSED int optc, int send_only)
 {
     int err                     = 0, status = 0;
     struct hip_locator *locator = NULL;
@@ -1735,7 +1745,7 @@ static int hip_conf_handle_opp(hip_common_t *msg,
                                int action,
                                const char *opt[],
                                int optc,
-                               int send_only)
+                               UNUSED int send_only)
 {
     unsigned int oppmode = 0;
     int err              = 0;
@@ -1791,9 +1801,9 @@ out:
  * @return zero for success and negative on error
  */
 static int hip_conf_handle_get_peer_lsi(hip_common_t *msg,
-                                        int action,
+                                        UNUSED int action,
                                         const char *opt[],
-                                        int optc,
+                                        UNUSED int optc,
                                         int send_only)
 {
     int err = 0;
@@ -1846,7 +1856,7 @@ static int hip_conf_handle_service(hip_common_t *msg,
                                    int action,
                                    const char *opt[],
                                    int optc,
-                                   int send_only)
+                                   UNUSED int send_only)
 {
     int err = 0;
 
@@ -1926,11 +1936,11 @@ out_err:
  * @return zero for success and negative on error
  * @todo remove this and related constants
  */
-static int hip_conf_handle_run_normal(hip_common_t *msg,
-                                      int action,
-                                      const char *opt[],
-                                      int optc,
-                                      int send_only)
+static int hip_conf_handle_run_normal(UNUSED hip_common_t *msg,
+                                      UNUSED int action,
+                                      UNUSED const char *opt[],
+                                      UNUSED int optc,
+                                      UNUSED int send_only)
 {
     HIP_ERROR("Unsupported\n");
     return -1;
@@ -1949,7 +1959,7 @@ static int hip_conf_handle_run_normal(hip_common_t *msg,
  * @return zero for success and negative on error
  */
 static int hip_conf_handle_ha(hip_common_t *msg,
-                              int action,
+                              UNUSED int action,
                               const char *opt[],
                               int optc,
                               int send_only)
@@ -2001,9 +2011,9 @@ out_err:
  * @return zero for success and negative on error
  */
 static int hip_conf_handle_mhaddr(hip_common_t *msg,
-                                  int action,
+                                  UNUSED int action,
                                   const char *opt[],
-                                  int optc,
+                                  UNUSED int optc,
                                   int send_only)
 {
     int err = 0;
@@ -2037,9 +2047,9 @@ out_err:
  * @return zero for success and negative on error
  */
 static int hip_conf_handle_handover(hip_common_t *msg,
-                                    int action,
+                                    UNUSED int action,
                                     const char *opt[],
-                                    int optc,
+                                    UNUSED int optc,
                                     int send_only)
 {
     int err = 0;
@@ -2077,7 +2087,8 @@ out_err:
 
 static int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
 {
-    int c_count   = lib_all_length, err = 0;
+    unsigned c_count = lib_all_length;
+    int err          = 0;
     char *lib_aux = lib_all;
     const char *prefix  = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
 
@@ -2141,10 +2152,10 @@ out_err:
  *      EXEC_LOADLIB_NONE
  *
  */
-int hip_handle_exec_app(int do_fork, int type, int argc, char *argv[])
+int hip_handle_exec_app(int do_fork, int type, UNUSED int argc, char *argv[])
 {
     int ret = 0;
-    int i;
+    unsigned i;
     char lib_all[LIB_LENGTH];
     char *libs[5];
 
@@ -2202,10 +2213,10 @@ int hip_handle_exec_app(int do_fork, int type, int argc, char *argv[])
  * @return zero for success and negative on error
  */
 static int hip_conf_handle_restart(hip_common_t *msg,
-                                   int type,
-                                   const char *opt[],
-                                   int optc,
-                                   int send_only)
+                                   UNUSED int type,
+                                   UNUSED const char *opt[],
+                                   UNUSED int optc,
+                                   UNUSED int send_only)
 {
     int err = 0;
 
@@ -2217,9 +2228,10 @@ out_err:
 }
 
 static int hip_conf_handle_nsupdate(hip_common_t *msg,
-                                    int action,
+                                    UNUSED int action,
                                     const char *opt[],
-                                    int optc, int send_only)
+                                    UNUSED int optc,
+                                    UNUSED int send_only)
 {
     int err = 0, status;
 
@@ -2249,9 +2261,9 @@ out_err:
  * @return zero for success and negative on error
  */
 static int hip_conf_handle_map_id_to_addr(struct hip_common *msg,
-                                          int action,
+                                          UNUSED int action,
                                           const char *opt[],
-                                          int optc,
+                                          UNUSED int optc,
                                           int send_only)
 {
     int err = 0;
@@ -2347,10 +2359,10 @@ out_err:
  * @see hip_conf_handle_hit_to_ip
  */
 static int hip_conf_handle_hit_to_ip_set(hip_common_t *msg,
-                                         int action,
+                                         UNUSED int action,
                                          const char *opt[],
-                                         int optc,
-                                         int send_only)
+                                         UNUSED int optc,
+                                         UNUSED int send_only)
 {
     int err      = 0;
     int len_name = 0;
@@ -2384,9 +2396,9 @@ out_err:
  * @return zero for success and negative on error
  */
 static int hip_conf_handle_lsi_to_hit(struct hip_common *msg,
-                                      int action,
+                                      UNUSED int action,
                                       const char *opt[],
-                                      int optc,
+                                      UNUSED int optc,
                                       int send_only)
 {
     int err                      = 0;
@@ -2427,11 +2439,11 @@ out_err:
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_load(struct hip_common *msg,
-                         int action,
+int hip_conf_handle_load(UNUSED struct hip_common *msg,
+                         UNUSED int action,
                          const char *opt[],
                          int optc,
-                         int send_only)
+                         UNUSED int send_only)
 {
     int err          = 0, i, len;
     FILE *hip_config = NULL;
