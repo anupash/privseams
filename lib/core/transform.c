@@ -80,11 +80,6 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
     length     = hip_get_param_contents_len(ht);
     suggestion = (uint16_t *) &ht->suite_id[0];
 
-    if (length > sizeof(struct hip_esp_transform) - sizeof(struct hip_common)) {
-        HIP_ERROR("Too many transforms\n");
-        goto out;
-    }
-
     for (i = 0; i < length; i++) {
         switch (ntohs(*suggestion)) {
         case HIP_ESP_AES_SHA1:
