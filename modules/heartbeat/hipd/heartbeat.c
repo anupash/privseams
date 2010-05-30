@@ -169,7 +169,7 @@ static int hip_icmp_statistics(struct in6_addr *src,
     double avg               = 0.0, std_dev = 0.0;
     char hit[INET6_ADDRSTRLEN];
     hip_ha_t *entry          = NULL;
-    uint8_t *heartbeat_counter = NULL;
+    uint8_t *heartbeat_count = NULL;
 
     hip_in6_ntop(src, hit);
 
@@ -187,11 +187,11 @@ static int hip_icmp_statistics(struct in6_addr *src,
     calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, NULL, NULL, &avg,
                     &std_dev, STATS_IN_MSECS);
 
-    heartbeat_counter = lmod_get_state_item(entry->hip_modular_state,
+    heartbeat_count = lmod_get_state_item(entry->hip_modular_state,
                                             "heartbeat_update");
 
-    *heartbeat_counter = 0;
-    HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_counter);
+    *heartbeat_count = 0;
+    HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_count);
 
     HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
               "%.6f ms std dev, packets sent %d recv %d lost %d\n",
@@ -346,20 +346,20 @@ out_err:
  */
 static int hip_send_heartbeat(hip_ha_t *hadb_entry, void *opaq)
 {
-    int err                    = 0;
-    int *sockfd                = (int *) opaq;
-    uint8_t *heartbeat_counter = NULL;
+    int err                  = 0;
+    int *sockfd              = (int *) opaq;
+    uint8_t *heartbeat_count = NULL;
 
     if ((hadb_entry->state == HIP_STATE_ESTABLISHED) &&
         (hadb_entry->outbound_sa_count > 0)) {
 
         HIP_IFEL(hip_send_icmp(*sockfd, hadb_entry), 0,
                      "Error sending heartbeat, ignore\n");
-        heartbeat_counter = lmod_get_state_item(hadb_entry->hip_modular_state,
+        heartbeat_count = lmod_get_state_item(hadb_entry->hip_modular_state,
                                                 "heartbeat_update");
 
-        *heartbeat_counter = *heartbeat_counter + 1;
-        HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_counter);
+        *heartbeat_count = *heartbeat_count + 1;
+        HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_count);
     }
 
 out_err:
@@ -397,13 +397,13 @@ static int hip_heartbeat_handle_usr_msg(hip_common_t *msg,
 static int hip_heartbeat_init_state(struct modular_state *state)
 {
     int err = 0;
-    uint8_t *heartbeat_counter = NULL;
+    uint8_t *heartbeat_count = NULL;
 
-    HIP_IFEL(!(heartbeat_counter = malloc(sizeof(uint8_t))),
+    HIP_IFEL(!(heartbeat_count = malloc(sizeof(uint8_t))),
                 -1,
                 "Error on allocating memory for heartbeat_counter.\n");
 
-    err = lmod_add_state_item(state, heartbeat_counter, "heartbeat_update");
+    err = lmod_add_state_item(state, heartbeat_count, "heartbeat_update");
 
 out_err:
     return err;

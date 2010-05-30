@@ -242,7 +242,7 @@ static uint16_t hip_convert_msg_total_len_to_bytes_16(uint16_t len)
 uint16_t hip_get_msg_total_len(const struct hip_common *msg)
 {
     if (msg->ver_res == HIP_USER_VER_RES) {
-        struct hip_common_user *umsg = (struct hip_common_user *) msg;
+        const struct hip_common_user *umsg = (const struct hip_common_user *) msg;
         return hip_convert_msg_total_len_to_bytes_16(umsg->len);
     } else {
         return hip_convert_msg_total_len_to_bytes(msg->payload_len);
