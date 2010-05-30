@@ -20,7 +20,7 @@
 
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
 
-int hip_peek_recv_total_len(int socket, int encap_hdr_size, unsigned long timeout);
+int hip_peek_recv_total_len(int socket, int encap_hdr_size, long timeout);
 int hip_daemon_connect(int hip_user_sock);
 int hip_daemon_bind_socket(int socket, struct sockaddr *sa);
 int hip_send_recv_daemon_info(struct hip_common *msg,

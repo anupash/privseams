@@ -91,7 +91,7 @@
  */
 int hip_peek_recv_total_len(int sockfd,
                             int encap_hdr_size,
-                            unsigned long timeout)
+                            long timeout)
 {
     int bytes                  = 0, err = 0, flags = MSG_PEEK;
     unsigned long timeout_left = timeout;
@@ -376,7 +376,7 @@ static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_so
                  "orderly shutdown.\n");
         // Note. This is not an error condition, thus we return zero.
         goto out_err;
-    } else if (n < sizeof(struct hip_common)) {
+    } else if (n < (int)sizeof(struct hip_common)) {
         HIP_ERROR("Could not receive message from daemon.\n");
         goto out_err;
     }
