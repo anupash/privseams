@@ -818,6 +818,142 @@ int set_cloexec_flag(int desc, int value)
 }
 
 /**
+ * Cleanup and signal handler to free userspace and kernel space
+ * resource allocations.
+ *
+ * @param signal the signal hipd received
+ */
+void hip_exit(void)
+{
+    hip_delete_default_prefix_sp_pair();
+    /* Close SAs with all peers */
+    // hip_send_close(NULL);
+
+    hip_delete_all_sp();
+
+    hip_delete_all_addresses();
+
+    set_up_device(HIP_HIT_DEV, 0);
+
+    /* Next line is needed only if RVS or hiprelay is in use. */
+    hip_uninit_services();
+
+    hip_uninit_handle_functions();
+
+    hip_user_uninit_handles();
+
+    hip_uninit_maint_functions();
+
+    lmod_uninit_packet_types();
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+    hip_oppdb_uninit();
+#endif
+
+#ifdef CONFIG_HIP_RVS
+    HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
+    hip_relay_uninit();
+#endif
+
+    if (hip_raw_sock_input_v6) {
+        HIP_INFO("hip_raw_sock_input_v6\n");
+        close(hip_raw_sock_input_v6);
+    }
+
+    if (hip_raw_sock_output_v6) {
+        HIP_INFO("hip_raw_sock_output_v6\n");
+        close(hip_raw_sock_output_v6);
+    }
+
+    if (hip_raw_sock_input_v4) {
+        HIP_INFO("hip_raw_sock_input_v4\n");
+        close(hip_raw_sock_input_v4);
+    }
+
+    if (hip_raw_sock_output_v4) {
+        HIP_INFO("hip_raw_sock_output_v4\n");
+        close(hip_raw_sock_output_v4);
+    }
+
+    if (hip_nat_sock_input_udp) {
+        HIP_INFO("hip_nat_sock_input_udp\n");
+        close(hip_nat_sock_input_udp);
+    }
+
+    if (hip_nat_sock_output_udp) {
+        HIP_INFO("hip_nat_sock_output_udp\n");
+        close(hip_nat_sock_output_udp);
+    }
+
+    if (hip_nat_sock_input_udp_v6) {
+        HIP_INFO("hip_nat_sock_input_udp_v6\n");
+        close(hip_nat_sock_input_udp_v6);
+    }
+
+    if (hip_nat_sock_output_udp_v6) {
+        HIP_INFO("hip_nat_sock_output_udp_v6\n");
+        close(hip_nat_sock_output_udp_v6);
+    }
+
+    hip_uninit_hadb();
+    hip_uninit_host_id_dbs();
+
+    if (hip_user_sock) {
+        HIP_INFO("hip_user_sock\n");
+        close(hip_user_sock);
+    }
+    if (hip_nl_ipsec.fd) {
+        HIP_INFO("hip_nl_ipsec.fd\n");
+        rtnl_close(&hip_nl_ipsec);
+    }
+    if (hip_nl_route.fd) {
+        HIP_INFO("hip_nl_route.fd\n");
+        rtnl_close(&hip_nl_route);
+    }
+
+    hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    /* Deallocate memory of perf_set after finishing all of tests */
+    hip_perf_destroy(perf_set);
+#endif
+
+    hip_dh_uninit();
+
+    lmod_uninit_disabled_modules();
+
+    hip_remove_kernel_modules();
+
+    return;
+}
+
+/**
+ * Signal handler: exit gracefully by sending CLOSE to all peers
+ *
+ * @param signal the signal hipd received from OS
+ */
+static void hip_close(int signum)
+{
+    static int terminate = 0;
+
+    HIP_ERROR("Caught signal: %d\n", signum);
+    terminate++;
+
+    /* Close SAs with all peers */
+    if (terminate == 1) {
+        hip_send_close(NULL, FLUSH_HA_INFO_DB);
+        hipd_set_state(HIPD_STATE_CLOSING);
+        HIP_DEBUG("Starting to close HIP daemon...\n");
+    } else if (terminate == 2) {
+        HIP_DEBUG("Send still once this signal to force daemon exit...\n");
+    } else if (terminate > 2) {
+        HIP_DEBUG("Terminating daemon.\n");
+        hip_exit();
+        exit(EXIT_SUCCESS);
+    }
+}
+
+/**
  * Main initialization function for HIP daemon.
  * @param flags startup flags
  * @return      zero on success or negative on failure
@@ -1114,140 +1250,4 @@ out_err:
     return err;
 }
 
-/**
- * exit gracefully by sending CLOSE to all peers
- *
- * @param signal the signal hipd received from OS
- */
-void hip_close(int signal)
-{
-    static int terminate = 0;
 
-    HIP_ERROR("Signal: %d\n", signal);
-    terminate++;
-
-    /* Close SAs with all peers */
-    if (terminate == 1) {
-        hip_send_close(NULL, FLUSH_HA_INFO_DB);
-        hipd_set_state(HIPD_STATE_CLOSING);
-        HIP_DEBUG("Starting to close HIP daemon...\n");
-    } else if (terminate == 2) {
-        HIP_DEBUG("Send still once this signal to force daemon exit...\n");
-    } else if (terminate > 2) {
-        HIP_DEBUG("Terminating daemon.\n");
-        hip_exit(signal);
-        exit(signal);
-    }
-}
-
-/**
- * Cleanup and signal handler to free userspace and kernel space
- * resource allocations.
- *
- * @param signal the signal hipd received
- */
-void hip_exit(int signal)
-{
-    HIP_ERROR("Signal: %d\n", signal);
-
-    hip_delete_default_prefix_sp_pair();
-    /* Close SAs with all peers */
-    // hip_send_close(NULL);
-
-    hip_delete_all_sp();
-
-    hip_delete_all_addresses();
-
-    set_up_device(HIP_HIT_DEV, 0);
-
-    /* Next line is needed only if RVS or hiprelay is in use. */
-    hip_uninit_services();
-
-    hip_uninit_handle_functions();
-
-    hip_user_uninit_handles();
-
-    hip_uninit_maint_functions();
-
-    lmod_uninit_packet_types();
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    hip_oppdb_uninit();
-#endif
-
-#ifdef CONFIG_HIP_RVS
-    HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
-    hip_relay_uninit();
-#endif
-
-    if (hip_raw_sock_input_v6) {
-        HIP_INFO("hip_raw_sock_input_v6\n");
-        close(hip_raw_sock_input_v6);
-    }
-
-    if (hip_raw_sock_output_v6) {
-        HIP_INFO("hip_raw_sock_output_v6\n");
-        close(hip_raw_sock_output_v6);
-    }
-
-    if (hip_raw_sock_input_v4) {
-        HIP_INFO("hip_raw_sock_input_v4\n");
-        close(hip_raw_sock_input_v4);
-    }
-
-    if (hip_raw_sock_output_v4) {
-        HIP_INFO("hip_raw_sock_output_v4\n");
-        close(hip_raw_sock_output_v4);
-    }
-
-    if (hip_nat_sock_input_udp) {
-        HIP_INFO("hip_nat_sock_input_udp\n");
-        close(hip_nat_sock_input_udp);
-    }
-
-    if (hip_nat_sock_output_udp) {
-        HIP_INFO("hip_nat_sock_output_udp\n");
-        close(hip_nat_sock_output_udp);
-    }
-
-    if (hip_nat_sock_input_udp_v6) {
-        HIP_INFO("hip_nat_sock_input_udp_v6\n");
-        close(hip_nat_sock_input_udp_v6);
-    }
-
-    if (hip_nat_sock_output_udp_v6) {
-        HIP_INFO("hip_nat_sock_output_udp_v6\n");
-        close(hip_nat_sock_output_udp_v6);
-    }
-
-    hip_uninit_hadb();
-    hip_uninit_host_id_dbs();
-
-    if (hip_user_sock) {
-        HIP_INFO("hip_user_sock\n");
-        close(hip_user_sock);
-    }
-    if (hip_nl_ipsec.fd) {
-        HIP_INFO("hip_nl_ipsec.fd\n");
-        rtnl_close(&hip_nl_ipsec);
-    }
-    if (hip_nl_route.fd) {
-        HIP_INFO("hip_nl_route.fd\n");
-        rtnl_close(&hip_nl_route);
-    }
-
-    hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    /* Deallocate memory of perf_set after finishing all of tests */
-    hip_perf_destroy(perf_set);
-#endif
-
-    hip_dh_uninit();
-
-    lmod_uninit_disabled_modules();
-
-    hip_remove_kernel_modules();
-
-    return;
-}

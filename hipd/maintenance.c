@@ -256,8 +256,8 @@ int hip_periodic_maintenance(void)
                 hipd_set_state(HIPD_STATE_CLOSED);
             }
         } else {
-            hip_exit(SIGINT);
-            exit(SIGINT);
+            hip_exit();
+            exit(EXIT_SUCCESS);
         }
         force_exit_counter--;
     }

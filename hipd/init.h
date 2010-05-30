@@ -52,7 +52,6 @@ int hipd_init(const uint64_t flags);
 int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
                             struct sockaddr_in *addr,
                             int is_output);
-void hip_close(int signal);
-void hip_exit(int signal);
+void hip_exit(void);
 
 #endif /* HIP_HIPD_INIT_H */

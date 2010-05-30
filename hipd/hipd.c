@@ -389,7 +389,7 @@ to_maintenance:
 
 out_err:
     /* free allocated resources */
-    hip_exit(err);
+    hip_exit();
 
     if (ctx.input_msg) {
         free(ctx.input_msg);

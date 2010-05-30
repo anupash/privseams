@@ -26,6 +26,10 @@
 
 #define _BSD_SOURCE
 
+#include <signal.h>
+#include <unistd.h>
+#include <sys/types.h>
+
 #include "config.h"
 #include "accessor.h"
 #include "user.h"
@@ -672,7 +676,8 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_RESTART:
         HIP_DEBUG("Restart message received, restarting HIP daemon now!!!\n");
         hipd_set_flag(HIPD_FLAG_RESTART);
-        hip_close(SIGINT);
+        /* invoking the signal handler directly is not a sane thing to do */
+        kill(getpid(), SIGINT);
         break;
     case HIP_MSG_SET_DATAPACKET_MODE_ON:
     {
