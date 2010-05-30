@@ -1490,7 +1490,7 @@ int hip_check_i2(const uint8_t packet_type,
              "HIP_TRANSFORM parameter missing from I2 packet. Dropping\n");
 
     HIP_IFEL(!(ctx->hadb_entry->hip_transform =
-                            hip_get_param_transform_suite_id(hip_transform, 0)),
+                            hip_get_param_transform_suite_id(hip_transform)),
              -EPROTO,
              "Bad HIP transform. Dropping the I2 packet.\n");
 

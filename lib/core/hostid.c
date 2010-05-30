@@ -789,8 +789,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 goto out_err;
             }
 
-            if ((err = hip_private_dsa_to_hit(dsa_key, dsa_key_rr,
-                                              HIP_HIT_TYPE_HASH100, &dsa_lhi.hit))) {
+            if ((err = hip_private_dsa_to_hit(dsa_key, &dsa_lhi.hit))) {
                 HIP_ERROR("Conversion from DSA to HIT failed\n");
                 goto out_err;
             }
@@ -805,8 +804,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
 
             HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
 
-            if ((err = hip_private_dsa_to_hit(dsa_pub_key, dsa_pub_key_rr,
-                                              HIP_HIT_TYPE_HASH100, &dsa_pub_lhi.hit))) {
+            if ((err = hip_private_dsa_to_hit(dsa_pub_key, &dsa_pub_lhi.hit))) {
                 HIP_ERROR("Conversion from DSA to HIT failed\n");
                 goto out_err;
             }
@@ -832,8 +830,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 goto out_err;
             }
 
-            if ((err = hip_private_rsa_to_hit(rsa_key, rsa_key_rr,
-                                              HIP_HIT_TYPE_HASH100,  &rsa_lhi.hit))) {
+            if ((err = hip_private_rsa_to_hit(rsa_key, &rsa_lhi.hit))) {
                 HIP_ERROR("Conversion from RSA to HIT failed\n");
                 goto out_err;
             }
@@ -853,8 +850,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 goto out_err;
             }
 
-            if ((err = hip_private_rsa_to_hit(rsa_pub_key, rsa_pub_key_rr,
-                                              HIP_HIT_TYPE_HASH100, &rsa_pub_lhi.hit))) {
+            if ((err = hip_private_rsa_to_hit(rsa_pub_key, &rsa_pub_lhi.hit))) {
                 HIP_ERROR("Conversion from RSA to HIT failed\n");
                 goto out_err;
             }

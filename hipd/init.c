@@ -1136,7 +1136,7 @@ int hipd_init(const uint64_t flags)
 #endif
 
     if (flags & HIPD_START_LOWCAP) {
-        HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
+        HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
     }
 
     hip_firewall_sock_lsi_fd = hip_user_sock;

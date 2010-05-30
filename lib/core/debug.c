@@ -56,6 +56,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include "lib/core/common_defines.h"
 #include "lib/tool/lutil.h"
 #include "builder.h"
 #include "ife.h"
@@ -631,20 +632,21 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
 }
 
 /**
- * print a socket address structure
+ * Print a socket address structure.
  *
- * @param line the line of the debug call in the source file
- * @param function the name of function where the debug call is located
- * @param prefix the prefix string will printed before the sockaddr
- * @param family the family of the sockaddr
- * @param sockaddr pointer to the sockaddr to be printed
+ * @param file      source file.
+ * @param line      the line of the debug call in the source file
+ * @param function  the name of function where the debug call is located
+ * @param prefix    the prefix string will printed before the sockaddr
+ * @param family    the family of the sockaddr
+ * @param sockaddr  pointer to the sockaddr to be printed
  *
  * @note Do not call this function from the outside of the debug module, use the
  * HIP_DEBUG_SOCKADDR macro instead.
  * @note Currently this function supports only INET and INET6 addresses.
  */
-void hip_print_sockaddr(int line, const char *function, const char *prefix,
-                        const struct sockaddr *sockaddr)
+void hip_print_sockaddr(UNUSED const char *file, int line, const char *function,
+                        const char *prefix, const struct sockaddr *sockaddr)
 {
     const char *default_str = "<unknown>";
     int maxlen;

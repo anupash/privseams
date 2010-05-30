@@ -356,7 +356,8 @@ void hip_print_packet(const char *file,
                       const char *prefix,
                       const void *str,
                       int len);
-void hip_print_sockaddr(int line,
+void hip_print_sockaddr(const char *file,
+                        int line,
                         const char *function,
                         const char *prefix,
                         const struct sockaddr *sockaddr);

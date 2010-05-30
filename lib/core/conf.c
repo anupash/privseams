@@ -176,7 +176,7 @@ const char *hipconf_usage =
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-static int hip_get_hits(hip_common_t *msg, const char *opt, int send_only)
+static int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
 {
     int err                              = 0;
     struct hip_tlv_common *current_param = NULL;
@@ -286,6 +286,7 @@ out_err:
  * @note this does not flush the host identities from disk
  */
 static int hip_conf_handle_hi_del_all(hip_common_t *msg,
+                                      int action,
                                       const char *opt[],
                                       int optc,
                                       int send_only)

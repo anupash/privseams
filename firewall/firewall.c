@@ -2077,7 +2077,7 @@ int main(int argc, char **argv)
     }
 
     if (limit_capabilities) {
-        HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
+        HIP_IFEL(hip_set_lowcapability(), -1, "Failed to reduce priviledges");
     }
 
     highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
