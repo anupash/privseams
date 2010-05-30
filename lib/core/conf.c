@@ -172,12 +172,11 @@ const char *hipconf_usage =
  *
  * @param msg input/output message for the query/response for hipd
  * @param opt "all" to query for all HITs or "default" for the default
- * @param optc currently 1
  * @param send_only 1 if no response from hipd should be requrested, or 0 if
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-static int hip_get_hits(hip_common_t *msg, const char *opt, int optc, int send_only)
+static int hip_get_hits(hip_common_t *msg, const char *opt, int send_only)
 {
     int err                              = 0;
     struct hip_tlv_common *current_param = NULL;
@@ -279,7 +278,6 @@ out_err:
  * Flush all run-time host identities from hipd
  *
  * @param msg input/output message for the query/response for hipd
- * @param action unused
  * @param opt currently unused
  * @param optc currently unused
  * @param send_only 1 if no response from hipd should be requrested, or 0 if
@@ -288,7 +286,6 @@ out_err:
  * @note this does not flush the host identities from disk
  */
 static int hip_conf_handle_hi_del_all(hip_common_t *msg,
-                                      int action,
                                       const char *opt[],
                                       int optc,
                                       int send_only)

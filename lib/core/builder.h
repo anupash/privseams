@@ -194,8 +194,7 @@ hip_tlv_len_t hip_get_param_contents_len(const void *);
 int hip_get_param_host_id_di_type_len(struct hip_host_id *, const char **, int *);
 char *hip_get_param_host_id_hostname(struct hip_host_id *);
 hip_tlv_len_t hip_get_param_total_len(const void *);
-hip_transform_suite_t hip_get_param_transform_suite_id(const void *,
-                                                       const uint16_t);
+hip_transform_suite_t hip_get_param_transform_suite_id(const void *);
 hip_tlv_type_t hip_get_param_type(const void *);
 uint16_t hip_get_msg_checksum(struct hip_common *msg);
 const char *hip_message_type_name(const uint8_t);
@@ -233,20 +232,12 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                              struct hip_crypto_key *);
 
 int hip_public_rsa_to_hit(RSA *rsa_key,
-                          unsigned char *rsa,
-                          int type,
                           struct in6_addr *hit);
 int hip_private_rsa_to_hit(RSA *rsa_key,
-                           unsigned char *rsa,
-                           int type,
                            struct in6_addr *hit);
 int hip_public_dsa_to_hit(DSA *dsa_key,
-                          unsigned char *dsa,
-                          int type,
                           struct in6_addr *hit);
 int hip_private_dsa_to_hit(DSA *dsa_key,
-                           unsigned char *dsa,
-                           int type,
                            struct in6_addr *hit);
 int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta);
 

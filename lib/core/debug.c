@@ -633,7 +633,6 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
 /**
  * print a socket address structure
  *
- * @param file the file from where the debug call was made
  * @param line the line of the debug call in the source file
  * @param function the name of function where the debug call is located
  * @param prefix the prefix string will printed before the sockaddr
@@ -644,8 +643,7 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
  * HIP_DEBUG_SOCKADDR macro instead.
  * @note Currently this function supports only INET and INET6 addresses.
  */
-void hip_print_sockaddr(const char *file, int line, const char *function,
-                        const char *prefix,
+void hip_print_sockaddr(int line, const char *function, const char *prefix,
                         const struct sockaddr *sockaddr)
 {
     const char *default_str = "<unknown>";

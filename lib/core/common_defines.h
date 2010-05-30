@@ -11,6 +11,13 @@
 
 #include <stdint.h>
 
+/** unused attribute marking */
+#ifdef __GNUC__
+# define UNUSED __attribute__((unused))
+#else
+# define UNUSED
+#endif
+
 /*********** ESP structures *************/
 
 struct hip_esp {

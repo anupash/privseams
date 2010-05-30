@@ -70,6 +70,7 @@
 #include <stdlib.h>
 
 #include "hipd/input.h"
+#include "lib/core/common_defines.h"
 #include "lib/tool/checksum.h"
 #include "config.h"
 #include "builder.h"
@@ -156,8 +157,7 @@ static void hip_build_param_host_id_only_priv(struct hip_host_id_priv *host_id,
 static void hip_build_endpoint(struct endpoint_hip *endpoint,
                                const struct endpoint_hip *endpoint_hdr,
                                const char *hostname,
-                               const unsigned char *key_rr,
-                               unsigned int key_rr_len)
+                               const unsigned char *key_rr)
 {
     HIP_ASSERT(endpoint_hdr->length == sizeof(struct endpoint_hip) +
                hip_get_param_total_len(&endpoint_hdr->id.host_id) -
@@ -632,7 +632,7 @@ static int hip_check_network_msg_type(const struct hip_common *msg)
  *
  * @return 1 if parameter type is valid, or 0 if parameter type is invalid
  */
-static int hip_check_userspace_param_type(const struct hip_tlv_common *param)
+static int hip_check_userspace_param_type(const struct hip_tlv_common *param UNUSED)
 {
     return 1;
 }
@@ -1310,7 +1310,7 @@ static int hip_check_network_param_attributes(const struct hip_tlv_common *param
         /* Search for one supported transform */
         hip_transform_suite_t suite;
 
-        suite = hip_get_param_transform_suite_id(param, 0);
+        suite = hip_get_param_transform_suite_id(param);
         if (suite == 0) {
             HIP_ERROR("Could not find suitable %s transform\n",
                       type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
@@ -2113,7 +2113,7 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
  */
 int hip_build_param_from(struct hip_common *msg,
                          const struct in6_addr *addr,
-                         const in_port_t not_used)
+                         const in_port_t not_used UNUSED)
 {
     struct hip_from from;
     int err = 0;
@@ -2745,12 +2745,10 @@ out_err:
  * retrieve a suite id from a transform structure.
  *
  * @param transform_tlv a pointer to a transform structure
- * @param index         the index of the suite ID in transform_tlv
  * @return              the suite id on transform_tlv on index
  * @todo                Remove index and rename.
  */
-hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv,
-                                                       const uint16_t idx)
+hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv)
 {
     /** @todo Why do we have hip_select_esp_transform separately? */
 
@@ -3786,8 +3784,7 @@ int dsa_to_hip_endpoint(DSA *dsa,
     hip_build_endpoint(*endpoint,
                        &endpoint_hdr,
                        hostname,
-                       dsa_key_rr,
-                       dsa_key_rr_len);
+                       dsa_key_rr);
 
     out_err:
 
@@ -3844,8 +3841,7 @@ int rsa_to_hip_endpoint(RSA *rsa,
     hip_build_endpoint(*endpoint,
                        &endpoint_hdr,
                        hostname,
-                       rsa_key_rr,
-                       rsa_key_rr_len);
+                       rsa_key_rr);
 
     out_err:
 
@@ -3860,8 +3856,6 @@ int rsa_to_hip_endpoint(RSA *rsa,
  * Translate a host id into a HIT
  *
  * @param any_key a pointer to DSA or RSA key in OpenSSL format
- * @param any_key_rr currently unused
- * @param hit_type currently unused
  * @param hit the resulting HIT will be stored here
  * @param is_public 0 if the host id constains the private key
  *                  or 1 otherwise
@@ -3869,8 +3863,6 @@ int rsa_to_hip_endpoint(RSA *rsa,
  * @return zero on success and negative on failure
  */
 static int hip_any_key_to_hit(void *any_key,
-                              unsigned char *any_key_rr,
-                              int hit_type,
                               hip_hit_t *hit,
                               int is_public,
                               int is_dsa)
@@ -3967,68 +3959,52 @@ out_err:
  * translate a public RSA key to a HIT
  *
  * @param rsa_key the RSA key in OpenSSL format
- * @param rsa currently unused
- * @param type currently unused
  * @param hit the resulting HIT will be stored here
  * @return zero on success and negative on failure
  */
 int hip_public_rsa_to_hit(RSA *rsa_key,
-                          unsigned char *rsa,
-                          int type,
                           struct in6_addr *hit)
 {
-    return hip_any_key_to_hit(rsa_key, rsa, type, hit, 1, 0);
+    return hip_any_key_to_hit(rsa_key, hit, 1, 0);
 }
 
 /**
  * translate a private RSA key to a HIT
  *
  * @param rsa_key the RSA key in OpenSSL format
- * @param rsa currently unused
- * @param type currently unused
  * @param hit the resulting HIT will be stored here
  * @return zero on success and negative on failure
  */
 int hip_private_rsa_to_hit(RSA *rsa_key,
-                           unsigned char *rsa,
-                           int type,
                            struct in6_addr *hit)
 {
-    return hip_any_key_to_hit(rsa_key, rsa, type, hit, 0, 0);
+    return hip_any_key_to_hit(rsa_key, hit, 0, 0);
 }
 
 /**
  * translate a public DSA key to a HIT
  *
  * @param dsa_key the DSA key in OpenSSL format
- * @param dsa currently unused
- * @param type currently unused
  * @param hit the resulting HIT will be stored here
  * @return zero on success and negative on failure
  */
 int hip_public_dsa_to_hit(DSA *dsa_key,
-                          unsigned char *dsa,
-                          int type,
                           struct in6_addr *hit)
 {
-    return hip_any_key_to_hit(dsa_key, dsa, type, hit, 1, 1);
+    return hip_any_key_to_hit(dsa_key, hit, 1, 1);
 }
 
 /**
  * translate a private DSA key to a HIT
  *
  * @param dsa_key the DSA key in OpenSSL format
- * @param dsa currently unused
- * @param type currently unused
  * @param hit the resulting HIT will be stored here
  * @return zero on success and negative on failure
  */
 int hip_private_dsa_to_hit(DSA *dsa_key,
-                           unsigned char *dsa,
-                           int type,
                            struct in6_addr *hit)
 {
-    return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
+    return hip_any_key_to_hit(dsa_key, hit, 0, 1);
 }
 
 /**
