@@ -36,7 +36,7 @@
 /**
  * map a user name such as "nobody" to the corresponding UID number
  *
- * @param the name to map
+ * @param name the name to map
  * @return the UID or -1 on error
  */
 static int hip_user_to_uid(const char *name)
@@ -76,7 +76,7 @@ static inline int hip_capget(cap_user_header_t hdrp, cap_user_data_t datap)
  * Wrapper for the capset system call.
  * @param hdrp  pointer to a __user_cap_header_struct
  * @param datap pointer to a __user_cap_data_struct
- * @retuen      0 on success, negative otherwise.
+ * @return      0 on success, negative otherwise.
  */
 static inline int hip_capset(cap_user_header_t hdrp, cap_user_data_t datap)
 {
@@ -86,8 +86,6 @@ static inline int hip_capset(cap_user_header_t hdrp, cap_user_data_t datap)
 /**
  * Lower the privileges of the currently running process.
  *
- * @param run_as_sudo 1 if the process was started with "sudo" or
- *                    0 otherwise
  * @return zero on success and negative on error
  */
 int hip_set_lowcapability(void)

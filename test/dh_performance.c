@@ -106,6 +106,7 @@ static void dhp_usage(char *progname)
  * \author Tobias Heer
  *
  * \param argv The arguments array.
+ * \param argc The length of the arguments array.
  * \param sw_create_dh How many DH keys should be used?
  * \param sw_dh_group_id Which DH group ID (key type) should be used?
  * \param sw_create_dsa How many DSA keys should be used?
@@ -282,7 +283,7 @@ static void print_timeres(void)
  *
  * \author Tobias Heer
  *
- * \param timeval timeval struct from the OS.
+ * \param bench_time timeval struct from the OS.
  * \return void
  */
 static void dhp_start_benchmark(struct timeval *bench_time)
@@ -297,7 +298,7 @@ static void dhp_start_benchmark(struct timeval *bench_time)
  *
  * \author Tobias Heer
  *
- * \param timeval timeval struct from the OS.
+ * \param bench_time timeval struct from the OS.
  * \return passed time since beginning of the interval.
  */
 static double dhp_stop_benchmark(struct timeval *bench_time)
@@ -315,7 +316,7 @@ static double dhp_stop_benchmark(struct timeval *bench_time)
  *
  * \param argc Number of command line arguments
  * \param argv Command line argument array
- * .
+ *
  * \return Returns error code. 0 = Success, 1 = Error.
  */
 int main(int argc, char **argv)

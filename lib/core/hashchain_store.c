@@ -266,6 +266,7 @@ out_err:
  * @param       function_id index to the hash function, where the structure length should be added
  * @param       hash_length_id index to the hash length, where the structure length should be added
  * @param       hitem_length hash length to be added
+ * @param       addtional_hierarchies
  * @return      returns the hierarchy count, -1 if MAX_NUM_HIERARCHIES is reached
  */
 int hcstore_register_hash_item_hierarchy(hchain_store_t *hcstore,

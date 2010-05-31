@@ -176,11 +176,10 @@ out_err:
  *
  * Handles an HHL-based update message
  *
- * @param msg       received hip message
- * @param src_addr  src ip address
- * @param dst_addr  dst ip address
- * @param entry     host association for this connection
- * @return          0 in case of succcess, -1 otherwise
+ * @param packet_type the packet type
+ * @param ha_state    the HA state
+ * @param ctx         the context
+ * @return            0 in case of succcess, -1 otherwise
  */
 int esp_prot_handle_light_update(const uint8_t packet_type,
                                  const uint32_t ha_state,

@@ -123,7 +123,7 @@ static void sig_chld(int signo)
  * which is cnt bytes long.
  *
  * @param src       address in netdev_address structure
- * @param dst[out]  buffer to store the address as string
+ * @param dst       buffer to store the address as string
  * @param cnt       length of the buffer dst
  * @return          On success, a non-null pointer to dst. NULL is returned
  *                  if there was an error, with errno set to indicate the error

@@ -54,6 +54,7 @@
  * Verifies a HMAC.
  *
  * @param buffer    the packet data used in HMAC calculation.
+ * @param buf_len   the length of the packet.
  * @param hmac      the HMAC to be verified.
  * @param hmac_key  integrity key used with HMAC.
  * @param hmac_type type of the HMAC digest algorithm.
@@ -86,7 +87,7 @@ out_err:
  * Verifies gerenal HMAC in HIP msg
  *
  * @param msg HIP packet
- * @param entry HA
+ * @param crypto_key The crypto key
  * @param parameter_type
  * @return 0 if HMAC was validated successfully, < 0 if HMAC could
  * not be validated.
@@ -134,7 +135,7 @@ out_err:
  * Verifies packet HMAC
  *
  * @param msg HIP packet
- * @param entry HA
+ * @param crypto_key the key
  * @return 0 if HMAC was validated successfully, < 0 if HMAC could
  * not be validated.
  */
@@ -147,7 +148,7 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 /**
  * Verifies packet RVS_HMAC
  * @param msg HIP packet
- * @param entry HA
+ * @param crypto_key the crypto key
  *
  * @return 0 if HMAC was validated successfully, < 0 if HMAC could
  * not be validated.
@@ -163,7 +164,8 @@ int hip_verify_packet_rvs_hmac(struct hip_common *msg,
  * Verifies packet HMAC
  *
  * @param msg HIP packet
- * @param entry HA
+ * @param key The crypto key
+ * @param host_id The Host Identity
  * @return 0 if HMAC was validated successfully, < 0 if HMAC could
  * not be validated. Assumes that the hmac includes only the header
  * and host id.
@@ -205,10 +207,10 @@ out_err:
  * Creates shared secret and produce keying material
  * The initial ESP keys are drawn out of the keying material.
  *
- * TODO doxygen header incomplete
- * @param msg the HIP packet received from the peer
  * @param ctx context
  * @param dhpv pointer to the DH public value choosen
+ * @param I I value from puzzle
+ * @param J J value from puzzle
  * @return zero on success, or negative on error.
  */
 int hip_produce_keying_material(struct hip_packet_context *ctx,

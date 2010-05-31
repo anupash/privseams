@@ -150,8 +150,8 @@ static unsigned long hip_netdev_hash(const void *ptr)
 /**
  * equality function for the addresses hash table
  *
- * @param ptr a pointer to a netdev_address structure
- * @param ptr a pointer to a netdev_address structure
+ * @param ptr1 a pointer to a netdev_address structure
+ * @param ptr2 a pointer to a netdev_address structure
  * @return 0 if the given pointers match or 1 otherwise
  */
 static int hip_netdev_match(const void *ptr1, const void *ptr2)
@@ -371,8 +371,9 @@ out_err:
  * advertisements (UPDATE control message with a LOCATOR parameter) to
  * peers.
  *
- * @param  a pointer to a socket address structure.
- * @param  network device interface index.
+ * @param addr a pointer to a socket address structure.
+ * @param ifindex network device interface index.
+ * @param flags flags
  */
 void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 {
@@ -434,7 +435,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
  *
  * @param addr A sockaddr structure containing the address to be deleted.
  *             IPv4 addresses can be in IPv6-mapped format.
- * @param ifdex the network interface on which the address is attached to
+ * @param ifindex the network interface on which the address is attached to
  */
 static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
 {
@@ -1153,6 +1154,7 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
  *
  * @param msg a netlink message
  * @param len the length of the netlink message in bytes
+ * @param arg argument to pass
  * @return zero on success and non-zero on error
  */
 int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg)
@@ -1407,7 +1409,7 @@ out_err:
  * Copy the addresses stored in entry->peer_addr_list_to_be_added
  * into entry->spi_out->peer_addr_list after R2 has been received.
  *
- * @param entry ha state after base exchange
+ * @param ha ha state after base exchange
  */
 void hip_copy_peer_addrlist_changed(hip_ha_t *ha)
 {

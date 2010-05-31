@@ -28,7 +28,7 @@
  * <pre>
  * do {
  *     parseerr = 0;
- *     memset(parameter, '\0', sizeof(parameter));
+ *     memset(parameter, '\\0', sizeof(parameter));
  *     hip_cvl_init(&values);
  *     lineerr = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
  *

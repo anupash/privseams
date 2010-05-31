@@ -330,7 +330,7 @@ static int hip_send_update_pkt(hip_common_t *update_packet_to_send,
 /**
  * Removes all the addresses from the addresses_to_send_echo_request list
  * and deallocates them.
- * @param ha pointer to a host association
+ * @param state pointer to a host association
  */
 static void hip_remove_addresses_to_send_echo_request(struct update_state *state)
 {
@@ -895,12 +895,9 @@ out_err:
  *
  * Process an received and checked UPDATE packet.
  *
- * @param received_update_packet the received UPDATE packet
- * @param src_addr the source address of the received UPDATE packet
- * @param dst_addr the destination address of the received UPDATE packet
- * @param ha the related host association
- * @param sinfo the port numbers of the UDP tunnel (zeroed ports when
- *              the tunnel is absent)
+ * @param packet_type the packet type
+ * @param ha_state the HA state
+ * @param ctx the packet context
  * @return zero on success or negative on failure
  */
 static int hip_update_handle_packet(const uint8_t packet_type,

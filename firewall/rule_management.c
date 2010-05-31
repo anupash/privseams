@@ -162,7 +162,7 @@ static DList *get_rule_list(const int hook)
 /**
  * display (or log) the given rule for diagnostics
  *
- * @param the rule to be displayed
+ * @param rule the rule to be displayed
  */
 static void print_rule(const struct rule *rule)
 {
@@ -305,7 +305,7 @@ static void free_string_option(struct string_option *string)
 /**
  * Deallocate a rule structure and all non NULL members
  *
- * @rule the rule to be deallocated
+ * @param rule the rule to be deallocated
  */
 static void free_rule(struct rule *rule)
 {
@@ -482,7 +482,7 @@ static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
 /**
  * convert control parameter type from string to numeric format
  *
- * @token the type as a character array
+ * @param token the type as a character array
  *
  * @return The type as a numeric int_option structure or NULL on error.
  *         The caller is responsible to deallocate the return value.
@@ -591,7 +591,7 @@ static struct string_option *parse_if(char *token)
 /**
  * parse a string into a rule structure
  *
- * @param a string containing a rule
+ * @param string a string containing a rule
  *
  * @return pointer to allocated rule structure (caller
  *         deallocates or NULL on error)
@@ -845,7 +845,7 @@ DList *read_rules(const int hook)
  * @param buflen the length of the buffer
  * @param file a handle to the firewall configuration file
  *
- * @return the length of the line (excluding trailing \0)
+ * @return the length of the line (excluding trailing 0)
  * @todo check correctness of this function
  */
 static size_t read_line(char *buf, int buflen, FILE *file)

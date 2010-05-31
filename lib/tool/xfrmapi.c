@@ -78,6 +78,10 @@ const char *a_algo_names_new[] =
  * @param tmpl_saddr source IP address
  * @param tmpl_daddr dst IP address
  * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
+ * @param rth
+ * @param proto
+ * @param id_prefix
+ * @param preferred_family
  *
  * @return 0 if successful, else < 0
  */
@@ -225,6 +229,10 @@ out_err:
  * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
  * @param hit_our Source HIT
  * @param hit_peer Peer HIT
+ * @param rth
+ * @param proto
+ * @param hit_prefix
+ * @param preferred_family
  *
  * @return 0 if successful, negative on error
  */
@@ -264,10 +272,21 @@ out_err:
  * modify a Security Association
  *
  * @param cmd command. %XFRM_MSG_NEWSA | %XFRM_MSG_UPDSA
- * @param id_our Source HIT or LSI
- * @param id_peer Peer HIT or LSI
- * @param tmpl_saddr source IP address
- * @param tmpl_daddr dst IP address
+ * @param rth
+ * @param saddr source IP address
+ * @param daddr destination IP address
+ * @param src_id Source HIT or LSI
+ * @param dst_id Peer HIT or LSI
+ * @param spi
+ * @param ealg
+ * @param enckey
+ * @param enckey_len
+ * @param aalg
+ * @param authkey
+ * @param authkey_len
+ * @param preferred_family
+ * @param sport
+ * @param dport
  *
  * @return 0 if successful, negative on error
  */
@@ -380,6 +399,10 @@ out_err:
  *
  * @param peer_addr Peer IP address
  * @param spi Security Parameter Index
+ * @param rth
+ * @param preferred_family
+ * @param sport
+ * @param dport
  *
  * @return 0 on success or negative on error
  */
@@ -465,7 +488,7 @@ static int hip_calc_sp_prefix(const struct in6_addr *src_id,
 /**
  * Set the netlink socket to control IPsec
  *
- * @param rtnl_handle netlink socket containing an initialized netlink socket
+ * @param nl_ipsec netlink socket containing an initialized netlink socket
  */
 void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec)
 {
@@ -496,7 +519,7 @@ void hip_xfrm_set_default_sa_prefix_len(int len)
 /**
  * Set algorithm names (according to linux kernel version)
  *
- * @param 0 to use old naming convention and 1 for new
+ * @param new_algo_names 0 to use old naming convention and 1 for new
  */
 void hip_xfrm_set_algo_names(int new_algo_names)
 {

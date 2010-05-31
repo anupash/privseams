@@ -146,7 +146,8 @@ static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx,
  * in the local database the necessary information for
  * doing the packet reinjection with HITs.
  *
- * @param *ctx  the contect of the packet
+ * @param ctx  the context of the packet
+ * @param default_verdict  the default verdict
  * @return      the verdict for the packet
  */
 int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx,

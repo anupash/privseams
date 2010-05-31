@@ -528,7 +528,6 @@ out_err:
 /**
  * Handles the esp protection transforms included in an R1 message
  *
- * @param entry     hip association for the received R1 message
  * @param ctx       packet context for the received R1 message
  * @return          always 0
  */
@@ -580,8 +579,6 @@ int esp_prot_r1_handle_transforms(struct hip_packet_context *ctx)
 /**
  * Adds an anchor element with the negotiated transform to an I2 message
  *
- * @param i2        the hip message to be sent
- * @param entry     hip association for the connection
  * @param ctx       packet context for the I2 message
  * @return          0 on success, -1 in case of an error
  */
@@ -658,7 +655,6 @@ out_err:
 /**
  * Handles the received anchor element of an I2 message
  *
- * @param entry     hip association for the connection
  * @param ctx       packet context for the I2 message
  * @return          0 on success, -1 in case of an error
  */
@@ -801,7 +797,7 @@ out_err:
  * Handles the received anchor element of an R2 message
  *
  * @param entry     hip association for the connection
- * @param ctx       packet context for the R2 message
+ * @param input_msg the input message
  * @return          0 on success, -1 in case of an error
  */
 int esp_prot_r2_handle_anchor(hip_ha_t *entry,
@@ -905,7 +901,7 @@ int esp_prot_update_type(const hip_common_t *recv_update)
 /**
  * Processes the first packet of a pure ANCHOR-UPDATE
  *
- * @param recv_updat    the received hip update
+ * @param recv_update   the received hip update
  * @param entry         hip association for the connection
  * @param src_ip        src ip address
  * @param dst_ip        dst ip address

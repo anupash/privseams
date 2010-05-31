@@ -133,7 +133,7 @@ int hip_lsi_are_equal(const hip_lsi_t *lsi1,
  * check the type of an IPv6 addresses
  *
  * @param id an IPv6 address, possibly in IPv6 mapped format
- * @param type HIP_ID_TYPE_HIT or HIP_ID_TYPE_LSI
+ * @param id_type HIP_ID_TYPE_HIT or HIP_ID_TYPE_LSI
  *
  * @return zero for type match, greater than zero for mismatch or
  * negative on error
@@ -215,7 +215,7 @@ out_err:
  * sa_family field in the struct sockaddr. If sa_family is neither
  * AF_INET nor AF_INET6, the cast fails.
  *
- * @param  sockaddr a pointer to a socket address that holds the IP address.
+ * @param  sa a pointer to a socket address that holds the IP address.
  * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
  *                  NULL if the cast fails.
  */

@@ -232,8 +232,8 @@ int hip_get_active_services(hip_srv_t *active_services,
  *
  * Make sure that the target buffer @c informartion is at least 256 bytes long.
  *
- * @param  srv    a pointer to the service whose information is to be get.
- * @param  status a target buffer where to store the information string.
+ * @param  srv         a pointer to the service whose information is to be get.
+ * @param  information a target buffer where to store the information string.
  */
 void hip_get_srv_info(const hip_srv_t *srv, char *information)
 {
@@ -992,6 +992,7 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
  *                           succeed.
  * @param  refused_count     a target buffer that will store the number of Reg
  *                           Types in @c refused_requests.
+ * @param  failure_types     the failure types
  * @return                   zero on success, -1 otherwise.
  * @see                      hip_del_registration_client().
  */
@@ -1236,7 +1237,7 @@ static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
  * Checks if the value list has duplicate values. Checks whether the value list
  * @c values has duplicate service values.
  *
- * @param  values     the value list to check.
+ * @param  reg_types  the value list to check.
  * @param  type_count number of values in the value list.
  * @return            zero if there are no duplicate values, -1 otherwise.
  */

@@ -655,7 +655,7 @@ out_err:
  *
  * @param subject is the subjects HIT
  *
- * @param cert is pointer to a buffer to which this function writes the completed cert
+ * @param certificate is pointer to a buffer to which this function writes the completed cert
  *
  * @return positive on success negative otherwise
  *
@@ -840,8 +840,6 @@ out_err:
 /**
  * hip_cert_open_conf - Function that opens an configuration file from HIP_CERT_CONF_PATH,
  *
- * @param void
- *
  * @return CONF pointer if ok and NULL if error or unsuccesfull.
  */
 CONF *hip_cert_open_conf(void)
@@ -862,7 +860,7 @@ out_err:
 /**
  * hip_cert_free_conf - Function that frees the memory of a allocated configuration
  *
- * @param CONF pointer to the to be freed configuration
+ * @param conf pointer to the to be freed configuration
  *
  * @return void
  */

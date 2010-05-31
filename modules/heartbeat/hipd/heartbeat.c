@@ -51,11 +51,10 @@ int hip_icmp_sock;
 static int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
 
 /**
- * This function sends ICMPv6 echo with timestamp to dsthit
+ * This function sends ICMPv6 echo with timestamp
  *
- * @param socket to send with
- * @param srchit HIT to send from
- * @param dsthit HIT to send to
+ * @param sockfd to send with
+ * @param entry the HA entry
  *
  * @return 0 on success negative on error
  */
@@ -153,8 +152,8 @@ out_err:
  *
  * @param src HIT
  * @param dst HIT
- * @param time when sent
- * @param time when received
+ * @param stval time when sent
+ * @param rtval time when received
  *
  * @return zero on success or negative on failure
  */
@@ -340,7 +339,8 @@ out_err:
 /**
  * This function goes through the HA database and sends an icmp echo to all of them
  *
- * @param socket to send with
+ * @param hadb_entry
+ * @param opaq
  *
  * @return 0 on success negative on error
  */

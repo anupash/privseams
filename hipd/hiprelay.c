@@ -215,6 +215,7 @@ static inline unsigned long hip_hash_func(const hip_hit_t *hit)
  * untouched.
  *
  * @param rec a pointer to a relay record.
+ * @param type the type to match
  */
 static void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relrec_type_t *type)
 {

@@ -161,7 +161,7 @@ out_err:
  * Sends the preferred transform to hipd implicitely turning on
  * the esp protection extension there
  *
- * @param   active 1 to activate, 0 to deactivate the extension in the hipd
+ * @param   activate 1 to activate, 0 to deactivate the extension in the hipd
  * @return  0 on success, -1 on error
  */
 int send_esp_prot_to_hipd(const int activate)

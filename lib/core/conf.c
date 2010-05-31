@@ -173,6 +173,7 @@ const char *hipconf_usage =
  *
  * @param msg input/output message for the query/response for hipd
  * @param opt "all" to query for all HITs or "default" for the default
+ * @param optc currently unused
  * @param send_only 1 if no response from hipd should be requrested, or 0 if
  *                  should block for a response from hipd
  * @return zero for success and negative on error
@@ -282,6 +283,7 @@ out_err:
  * @param msg input/output message for the query/response for hipd
  * @param opt currently unused
  * @param optc currently unused
+ * @param action currently unused
  * @param send_only 1 if no response from hipd should be requrested, or 0 if
  *                  should block for a response from hipd
  * @return zero for success and negative on error
@@ -339,9 +341,10 @@ out_err:
  * Handles the hipconf commands where the type is @c del.
  *
  * @param msg    input/output message for the query/response for hipd
- * @öaram action currently unused
+ * @param action currently unused
  * @param opt    "all" or a specific HIT
  * @param optc   1
+ * @param send_only
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_hi_del(hip_common_t *msg,
@@ -594,6 +597,7 @@ static int hip_conf_check_action_argc(int action)
  * map a symbolic hipconf type (=lhi/map/etc) name to numeric type
  *
  * @param  text the type as a string
+ * @param  argv arguments
  * @return the numeric type id correspoding to the symbolic text
  */
 static int hip_conf_get_type(char *text, char *argv[])
@@ -683,7 +687,7 @@ static int hip_conf_get_type(char *text, char *argv[])
  * @note If you defined a constant ACTION_NEWACT in conf.h,
  *       you also need to add a case block for the constant
  *       here in the switch(action) block.
- * @param  integer value for an action
+ * @param action integer value for an action
  * @return an index for argv[], which indicates the type argument.
  *         Usually either 1 or 2.
  */
@@ -735,11 +739,9 @@ static int hip_conf_get_type_arg(int action)
 /**
  * Resolve a given hostname to a HIT/LSI or IP address depending on match_hip flag
  *
- * @param msg input/output message for the query/response for hipd
- * @param opt options arguments as strings
- * @param optc number of arguments
- * @param send_only 1 if no response from hipd should be requrested, or 0 if
- *                  should block for a response from hipd
+ * @param hostname the hostname
+ * @param id the address
+ * @param match_hip
  * @return zero for success and negative on error
  */
 static int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
@@ -797,6 +799,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in array @c opt.
+ * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  * @note         Currently only action @c add is supported.
  * @todo         If the current machine has more than one IP address
@@ -1021,6 +1024,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array.
+ * @param send_only
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
@@ -1129,6 +1133,7 @@ out_err:
  *               the action and type. (should be the HIT and the corresponding
  *               IPv6 address).
  * @param optc   the number of elements in the array (@b 2).
+ * @param send_only
  * @return       zero on success, or negative error value on error.
  * @note         Does not support @c del action.
  */
@@ -1193,7 +1198,7 @@ out_err:
 }
 
 /**
- * Handles the hipconf command heartbeat <seconds>.
+ * Handles the hipconf command heartbeat.
  *
  * @param msg    a pointer to the buffer where the message for kernel will
  *               be written.
@@ -1201,6 +1206,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array.
+ * @param send_only unused
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_heartbeat(hip_common_t *msg, UNUSED int action,
@@ -1235,6 +1241,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array.
+ * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_trans_order(hip_common_t *msg, UNUSED int action,
@@ -1294,6 +1301,7 @@ out:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array.
+ * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_rst(hip_common_t *msg, UNUSED int action,
@@ -1345,6 +1353,7 @@ out:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array.
+ * @param send_only currently unused parameter
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_debug(hip_common_t *msg, UNUSED int action,
@@ -1394,6 +1403,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array (@b 0).
+ * @param send_only currently_unused
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_manual_update(hip_common_t *msg, UNUSED int action,
@@ -1437,6 +1447,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array (@b 0).
+ * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
 
@@ -1478,6 +1489,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array (@b 0).
+ * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_nat(hip_common_t *msg, UNUSED int action,
@@ -1543,6 +1555,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array (@b 0).
+ * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_locator(hip_common_t *msg, UNUSED int action,
@@ -1585,6 +1598,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array.
+ * @param send_only
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_puzzle(hip_common_t *msg,
@@ -1739,6 +1753,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array.
+ * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_opp(hip_common_t *msg,
@@ -1850,6 +1865,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type (pointer to @b "rvs" or @b "relay").
  * @param optc   the number of elements in the array.
+ * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
 static int hip_conf_handle_service(hip_common_t *msg,
@@ -2205,7 +2221,7 @@ int hip_handle_exec_app(int do_fork, int type, UNUSED int argc, char *argv[])
  * trigger HIP CLOSE to close all SAs and HAs
  *
  * @param msg input/output message for the query/response for hipd
- * @param action unused
+ * @param type unused
  * @param opt ignored
  * @param optc ignored
  * @param send_only 1 if no response from hipd should be requrested, or 0 if
@@ -2437,6 +2453,7 @@ out_err:
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
  * @param optc   the number of elements in the array (@b 0).
+ * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_load(UNUSED struct hip_common *msg,
@@ -2599,9 +2616,8 @@ int (*action_handler[])(hip_common_t *,
 /**
  * hipconf stub used by the hipconf tool and hipd (to read conf file)
  *
- * @param msg input/output message for the query/response for hipd
- * @param opt options arguments as strings
- * @param optc number of arguments
+ * @param argc the number of arguments
+ * @param argv the arguments
  * @param send_only 1 if no response from hipd should be requrested, or 0 if
  *                  should block for a response from hipd
  * @return zero for success and negative on error

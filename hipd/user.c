@@ -47,14 +47,11 @@ struct usr_msg_handle {
 static hip_ll_t *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
 
 /**
- * hip_register_handle_function
- *
  * Register a function for handling of the specified combination from packet
  * type and host association state.
  *
- * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
- * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *handle_function Pointer to the function which should be called
+ * @param msg_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param *handle_func Pointer to the function which should be called
  *                         when the combination of packet type and host
  *                         association state is reached.
  * @param priority Execution priority for the handle function.
@@ -95,9 +92,8 @@ out_err:
  * Unregister a function for handling of the specified combination from packet
  * type and host association state.
  *
- * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
- * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *handle_function Pointer to the function which should be unregistered.
+ * @param msg_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param *handle_func Pointer to the function which should be unregistered.
  *
  * @return Success =  0
  *         Error   = -1
@@ -111,16 +107,12 @@ int hip_user_unregister_handle(const uint8_t msg_type,
 }
 
 /**
- * hip_run_handle_functions
- *
  * Run all handle functions for specified combination from packet type and host
  * association state.
  *
- * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
- * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx The packet context containing the received message, source and
- *             destination address, the ports and the corresponding entry from
- *             the host association database.
+ * @param msg_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param msg The message
+ * @param src The source address
  *
  * @return Success =  0
  *         Error   = -1
@@ -188,6 +180,7 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
  *       switch(msg_type) block in this function.
  * @param  msg  a pointer to the received user message HIP packet.
  * @param  src the origin of the sender
+ * @param  send_response response
  * @return zero on success, or negative error value on error.
  */
 int hip_handle_user_msg(hip_common_t *msg,

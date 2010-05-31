@@ -820,8 +820,6 @@ int set_cloexec_flag(int desc, int value)
 /**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
- *
- * @param signal the signal hipd received
  */
 void hip_exit(void)
 {
@@ -930,7 +928,7 @@ void hip_exit(void)
 /**
  * Signal handler: exit gracefully by sending CLOSE to all peers
  *
- * @param signal the signal hipd received from OS
+ * @param signum signal the signal hipd received from OS
  */
 static void hip_close(int signum)
 {

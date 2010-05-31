@@ -161,7 +161,7 @@ out_err:
 /**
  * Checks if the packet is a reinjection
  *
- * @param ip_src      pointer to the source address
+ * @param lsi         pointer to the source address
  * @return            1 if the dst id is a local lsi
  *                    0 otherwise
  */
@@ -252,6 +252,7 @@ out_err:
  * @param m           pointer to the packet
  * @param ip_src      ipv6 source address
  * @param ip_dst      ipv6 destination address
+ * @param lsi_support lsi support
  * @return            1 if translation not done
  *                    0 if packet reinjected with lsis as addresses
  */

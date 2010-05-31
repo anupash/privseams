@@ -178,6 +178,7 @@ static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
  *             HIP_DB_LOCAL_HID
  * @param hit  the local host id to be searched
  * @param anon -1 if you don't care, 1 if anon, 0 if public
+ * @param algo the algorithm
  * @return     NULL, if failed or non-NULL if succeeded.
  */
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db,
@@ -273,6 +274,7 @@ void hip_uninit_host_id_dbs(void)
  * @param add     the handler to call right after the host id is added
  * @param del     the handler to call right before the host id is removed
  * @param arg     argument passed for the handlers
+ * @param lsi     the LSI
  * @return        0 on success, otherwise an negative error value is returned.
  */
 static int hip_add_host_id(HIP_HASHTABLE *db,
@@ -709,7 +711,7 @@ static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(HIP_HASHTABLE *db,
  * associate the given local LSI to the local host identifier denoted by the given HIT
  *
  * @param default_hit the HIT to be searched for
- * @param the LSI to associate with
+ * @param default_lsi the LSI to associate with
  * @return zero on success or negative on error
  */
 int hip_hidb_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi)

@@ -43,7 +43,7 @@ int hipd_init(const uint64_t flags);
  * Creates a UDP socket for NAT traversal.
  *
  * @param  hip_nat_sock_udp a pointer to the UDP socket.
- * @param sockaddr_in the address that will be used to create the
+ * @param addr the address that will be used to create the
  *                 socket. If NULL is passed, INADDR_ANY is used.
  * @param is_output 1 if the socket is for output, otherwise 0
  *

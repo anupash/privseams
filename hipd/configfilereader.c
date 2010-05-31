@@ -238,8 +238,8 @@ static int hip_cf_parse_val(char *line, hip_configvaluelist_t *values)
 /**
  * Parses parameter from a line. Parses parameter from the parameter @c line and
  * stores the value into @c parameter. The target buffer @c parameter is not
- * terminated with '\0' thus it should be initialized with '\0' before calling
- * this function. The source buffer must terminate to '\0'.
+ * terminated with '\\0' thus it should be initialized with '\\0' before calling
+ * this function. The source buffer must terminate to '\\0'.
  *
  * Parameter is the string on the lefthandside of @c HIP_RELAY_PAR_SEP. The
  * parameter may <b>NOT</b> contain spaces and it can be at most
@@ -307,7 +307,7 @@ static int hip_cf_parse_par(char *line, char *parameter)
  * target buffer @c buf. One input line is terminated to '\n' or EOF. The
  * target buffer must be preallocated and must be at least @c
  * HIP_RELAY_MAX_LINE_LEN + 1 bytes long. The target buffer @c buf is not
- * terminated with '\0' thus it should be initialized with '\0' before calling
+ * terminated with '\\0' thus it should be initialized with '\\0' before calling
  * this function. The return value is the number of characters read or EOF if
  * the line ends the file. The return value is therefore always EOF, zero or
  * positive. The return values does <b>not</b> indicate whether there was an
@@ -479,7 +479,7 @@ hip_configfilevalue_t *hip_cvl_get_next(hip_configvaluelist_t *linkedlist,
 /**
  * Prints node data to stdout. This function is intended for debug use.
  *
- * @param the node whose contents are to be printed.
+ * @param node the node whose contents are to be printed.
  */
 void print_node(hip_configfilevalue_t *node)
 {

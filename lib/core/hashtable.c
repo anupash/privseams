@@ -133,7 +133,7 @@ int hip_ht_add(void *head, void *data)
  * delete an element from a hash table
  *
  * @param head the hashtable
- * @param a pointer to the key to delete from the hash table
+ * @param data a pointer to the key to delete from the hash table
  * @return the deleted element or NULL when the element was missing
  *         from the hashtable
  */
@@ -145,7 +145,7 @@ void *hip_ht_delete(void *head, void *data)
 /**
  * a callback iterator for a hash table
  *
- * @param the hastable
+ * @param head the hastable
  * @param func a callback function pointer that will be called for each
  *             element in the hash table
  */

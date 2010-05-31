@@ -7,7 +7,7 @@
  * them with the related ESP connections with SPIs. This way, the hipfw can support access control
  * for mobile devices based on their public keys (or HITs). Please see the following documentation
  * on the basic funtionality of the hipfw:
- *  * - <a href="http://hipl.hiit.fi/papers/essi_dippa.pdf">E. Vehmersalo, Host Identity Protocol Enabled Firewall: A Prototype Implementation and Analysis, Master's thesis, September 2005</a>
+ * - <a href="http://hipl.hiit.fi/papers/essi_dippa.pdf">E. Vehmersalo, Host Identity Protocol Enabled Firewall: A Prototype Implementation and Analysis, Master's thesis, September 2005</a>
  * - <a href="http://www.usenix.org/events/usenix07/poster.html">Lindqvist, Janne; Vehmersalo, Essi; Komu, Miika; Manner, Jukka, Enterprise Network Packet Filtering for Mobile Cryptographic Identities,
  * Usenix 2007 Annual Technical Conference, Santa Clara, CA, June 20, 2007</a>
  * - Rene Hummen. Secure Identity-based Middlebox Functions using the Host Identity Protocol. Master's thesis, RWTH Aachen, 2009.
@@ -699,7 +699,7 @@ static void firewall_probe_kernel_modules(void)
 /**
  * Test if two HITs match
  *
- * @param match_hit the first HIT
+ * @param matching_hit the first HIT
  * @param packet_hit the second HIT
  * @param boolean boolean flag (0 or 1)
  *
@@ -1405,8 +1405,9 @@ out_err:
  *
  * Unsupported types -> type 0
  *
- * @param  hdr        a pointer to a IP packet.
- * @param ipVersion   the IP version for this packet
+ * @param  ctx        the context.
+ * @param  buf        a pointer to a IP packet.
+ * @param ip_version  the IP version for this packet
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */
 static int hip_fw_init_context(hip_fw_context_t *ctx,

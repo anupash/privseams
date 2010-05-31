@@ -77,7 +77,7 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
 /**
  * Checks if a uint32_t represents a Local Scope Identifier (LSI).
  *
- * @param       the uint32_t to test
+ * @param       a the uint32_t to test
  * @return      true if @c a is from 1.0.0.0/8
  * @note        This macro tests directly uint32_t, not struct in_addr or a pointer
  *              to a struct in_addr. To use this macro in context with struct

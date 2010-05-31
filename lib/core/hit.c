@@ -70,8 +70,7 @@ int hip_hit_are_equal(const struct in6_addr *hit1,
 /**
  * hip_hash_hit - calculate a hash from a HIT
  *
- * @param key pointer to a HIT
- * @param range range of the hash
+ * @param ptr pointer to a HIT
  *
  * Returns value in range: 0 <= x < range
  */

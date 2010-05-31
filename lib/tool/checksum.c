@@ -53,6 +53,8 @@ struct pseudo_header6 {
  * @param s     source address
  * @param d     destination address
  * @param c     data
+ * @param len length
+ * @param protocol protocol
  * @return the calculated IPv4 header checksum
  */
 uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c, uint16_t len)

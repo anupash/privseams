@@ -28,7 +28,7 @@ void hipd_set_state(unsigned int state)
 
 /**
  * Get global daemon flag status.
- * @param state @see daemon_states
+ * @param flag @see daemon_states
  * @return 1 if flag is on, 0 if not.
  */
 int hipd_get_flag(unsigned int flag)
@@ -38,7 +38,7 @@ int hipd_get_flag(unsigned int flag)
 
 /**
  * Set global daemon flag.
- * @param state @see daemon_states
+ * @param flag @see daemon_states
  */
 void hipd_set_flag(unsigned int flag)
 {

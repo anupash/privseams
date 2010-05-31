@@ -174,7 +174,7 @@ int hip_sendto_firewall(const struct hip_common *msg)
 /**
  * Parse the command line options
  * @param argc  number of command line parameters
- * @param argc  command line parameters
+ * @param argv  command line parameters
  * @param flags pointer to the startup flags container
  * @return      nonzero if the caller should exit, 0 otherwise
  */

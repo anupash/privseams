@@ -4,7 +4,7 @@
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * @brief The header file for firewall/pisa_cert.c
- * *
+ *
  * @author Thomas Jansen
  */
 
@@ -25,7 +25,7 @@ struct pisa_cert {
  * Split the hip_cert_spki_info.cert part into small chunks
  *
  * @param cert the hip_cert_spki_info.cert part of the certificate
- * @param pc datastructure that will contain the chunks
+ * @param pc   datastructure that will contain the chunks
  */
 void pisa_split_cert(char *cert, struct pisa_cert *pc);
 

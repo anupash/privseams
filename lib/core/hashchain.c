@@ -65,7 +65,7 @@ void hchain_print(const hash_chain_t *hash_chain)
 /** checks if a hash is verifiable by a hash chain
  *
  * @param       current_hash the hash value to be verified
- * @param       lasl_hash the last known hash value
+ * @param       last_hash the last known hash value
  * @param       hash_function the hash function to be used
  * @param       hash_length length of the hash values
  * @param       tolerance the maximum number of hash calculations

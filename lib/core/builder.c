@@ -151,7 +151,6 @@ static void hip_build_param_host_id_only_priv(struct hip_host_id_priv *host_id,
  * @param endpoint_hdr should be filled with hip_build_endpoint_hdr()
  * @param hostname a string containing the hostname (or URI/NAI) for the endpoint
  * @param key_rr DNS resource record for HIP (contains the public or private key)
- * @param key_rr_len length of the @c key_rr in bytes
  * @note endpoint is not padded because it for internal messaging only
  */
 static void hip_build_endpoint(struct endpoint_hip *endpoint,
@@ -378,7 +377,7 @@ hip_tlv_len_t hip_get_param_contents_len(const void *tlv_common)
 /**
  * set parameter length into the header of the message
  *
- * @param tlv_common pointer to the parameter
+ * @param tlv_generic pointer to the parameter
  * @param len the length of the parameter in bytes (in host byte order),
  *              excluding padding and the length of "type" and "length" fields
  */
@@ -402,7 +401,7 @@ hip_tlv_type_t hip_get_param_type(const void *tlv_common)
 /**
  * set parameter type
  *
- * @param tlv_common pointer to the parameter
+ * @param tlv_generic pointer to the parameter
  * @param type type of the parameter (in host byte order)
  */
 static void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
@@ -628,7 +627,7 @@ static int hip_check_network_msg_type(const struct hip_common *msg)
 
 /**
  * hip_check_userspace_param_type - check the userspace parameter type
- * @param param pointer to the parameter
+ * @param UNUSED pointer to the parameter
  *
  * @return 1 if parameter type is valid, or 0 if parameter type is invalid
  */
@@ -1842,6 +1841,7 @@ out_err:
 /**
  * sanity checking for a HIP control packet originating from the network
  *
+ * @param hip_common
  * @param src  The source address of the packet as a sockaddr_in or sockaddr_in6
  *             structure in network byte order. IPv6 mapped addresses are not supported.
  * @param dst  The destination address of the packet as a sockaddr_in or sockaddr_in6
@@ -2106,7 +2106,7 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
  *
  * @param msg      a pointer to a HIP packet common header
  * @param addr     a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param not_used this parameter is not used, but it is needed to make the
+ * @param UNUSED   this parameter is not used, but it is needed to make the
  *                 parameter list uniform with hip_build_param_relay_from().
  * @return         zero on success, or negative error value on error.
  * @see            RFC5204 section 4.2.2.
@@ -2244,7 +2244,7 @@ static inline int hip_reg_param_core(hip_common_t *msg,
  * Build a REG_INFO parameter.
  *
  * @param msg           a pointer to a HIP message where to build the parameter.
- * @param service_list  a pointer to a structure containing all active services.
+ * @param srv_list  a pointer to a structure containing all active services.
  * @param service_count number of registration services in @c service_list.
  * @return              zero on success, non-zero otherwise.
  * @todo gcc gives a weird warning if we use struct srv in the arguments of this function.
@@ -2343,7 +2343,7 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
  * Build a REG_FAILED parameter.
  *
  * @param msg        a pointer to a HIP message where to build the parameter.
- * @param lifetime   the failure type to be put into the parameter.
+ * @param failure_type   the failure type to be put into the parameter.
  * @param type_list  a pointer to an array containing the registration types to
  *                   be put into the parameter.
  * @param type_count number of registration types in @c type_list.
@@ -2651,8 +2651,6 @@ static uint16_t hip_get_transform_max(hip_tlv_type_t transform_type)
  * Build an ESP transform parameter
  *
  * @param msg the message where the parameter will be appended
- * @param transform_type HIP_PARAM_HIP_TRANSFORM or HIP_PARAM_ESP_TRANSFORM
- *                       in host byte order
  * @param transform_suite an array of transform suite ids in host byte order
  * @param transform_count number of transform suites in transform_suite (in host
  *                        byte order)
@@ -2699,8 +2697,6 @@ out_err:
  * build a HIP transform parameter
  *
  * @param msg the message where the parameter will be appended
- * @param transform_type HIP_PARAM_HIP_TRANSFORM or HIP_PARAM_ESP_TRANSFORM
- *                       in host byte order
  * @param transform_suite an array of transform suite ids in host byte order
  * @param transform_count number of transform suites in transform_suite (in host
  *                        byte order)
@@ -2804,7 +2800,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  *
  * @param msg           the message where the REA will be appended
  * @param addrs         list of addresses
- * @param address_count number of addresses
+ * @param addr_count number of addresses
  * @return 0 on success, otherwise < 0.
  */
 int hip_build_param_locator(struct hip_common *msg,
@@ -2881,7 +2877,8 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
  * build and append a ESP PROT transform parameter
  *
  * @param msg the message where the parameter will be appended
- * @param transform the transform to be used for the esp extension header
+ * @param transforms the transforms to be used for the esp extension header
+ * @param num_transforms the number of transforms
  * @return 0 on success, otherwise < 0.
  */
 int hip_build_param_esp_prot_transform(struct hip_common *msg,
@@ -2919,8 +2916,11 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg,
  * @param msg the message where the parameter will be appended
  * @param transform the esp protection transform used for this anchor,
  *        if UNUSED 1 byte of 0 is sent
- * @param anchor the anchor for the hchain to be used for extended esp protection,
+ * @param active_anchor the anchor for the hchain to be used for extended esp protection,
  *        if NULL
+ * @param next_anchor the next anchor
+ * @param hash_length the length of the hash
+ * @param hash_item_length the length of the hash item
  * @return 0 on success, otherwise < 0.
  */
 int hip_build_param_esp_prot_anchor(struct hip_common *msg,
@@ -3237,6 +3237,7 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
 /**
  * build the header of a host id parameter
  *
+ * @param host_id_hdr the header
  * @param hostname a string containing a hostname or NAI (URI)
  * @param rr_data_len the length of the DNS RR field to be appended separately into
  *                    the message
@@ -3281,11 +3282,10 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
  * build a host id parameter containing a public key for on-the-wire
  * transmission
  *
- * @param host_id_hdr a hip_host_id structure (public key)
- * @param hostname a string containing a hostname or NAI (URI)
- * @param rr_data_len the length of the DNS RR field to be appended separately into
+ * @param host_id a hip_host_id structure (public key)
+ * @param fqdn a string containing a hostname or NAI (URI)
+ * @param rr_data the length of the DNS RR field to be appended separately into
  *                    the message
- * @param algorithm the public key algorithm
  */
 void hip_build_param_host_id_only(struct hip_host_id *host_id,
                                   const void *rr_data,
@@ -3519,7 +3519,8 @@ int hip_build_param_eid_iface(struct hip_common *msg,
  * communications only)
  *
  * @param msg the message where the sockaddr paramater will be appended
- * @param if_index the interface number
+ * @param sockaddr the sockaddr structure
+ * @param sockaddr_len the length of the sockaddr structure
  * @return zero on success or negative on failure
  */
 int hip_build_param_eid_sockaddr(struct hip_common *msg,
@@ -3542,7 +3543,7 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
  * @param id id value
  * @param type certificate subtype
  * @param data the certificate itself
- * @param the length of @c data in bytes
+ * @param size the length of @c data in bytes
  * @return zero on success or negative on failure
  */
 int hip_build_param_cert(struct hip_common *msg, uint8_t group, uint8_t count,
@@ -3749,6 +3750,7 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
  * @param endpoint An output argument. This function allocates and
  *                 stores the result of the conversion here. Caller
  *                 is responsible of deallocation.
+ * @param endpoint_flags
  * @param hostname host name for the DSA key
  * @return zero on success and negative on failure
  */
@@ -3804,6 +3806,7 @@ int dsa_to_hip_endpoint(DSA *dsa,
  * @param endpoint An output argument. This function allocates and
  *                 stores the result of the conversion here. Caller
  *                 is responsible of deallocation.
+ * @param endpoint_flags The endpoint flags
  * @param hostname host name for the DSA key
  * @return zero on success and negative on failure
  */
@@ -4125,7 +4128,7 @@ int hip_build_param_reg_from(struct hip_common *msg,
  *
  * @param msg a pointer to a HIP packet common header
  * @param port NAT port number
- * @param param parameter to create. Currently it is either
+ * @param hipparam parameter to create. Currently it is either
  *              HIP_SET_SRC_NAT_PORT or HIP_SET_DST_NAT_PORT
  *
  * @return zero on success, non-zero otherwise.

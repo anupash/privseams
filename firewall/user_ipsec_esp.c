@@ -56,6 +56,8 @@
  * @param udp_hdr       location of the udp_hdr
  * @param packet_len    packet length
  * @param entry         corresponding host association entry
+ * @param src_addr      source address
+ * @param dst_addr      destination address
  */
 static void add_udp_header(struct udphdr *udp_hdr,
                            const uint16_t packet_len,
@@ -766,7 +768,7 @@ void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
 
 /** adds an IPv6-header to the packet
  *
- * @param ip_hdr        pointer to location where IPv6 header should be written to
+ * @param ip6_hdr       pointer to location where IPv6 header should be written to
  * @param src_addr      IPv6 source address
  * @param dst_addr      IPv6 destination address
  * @param packet_len    packet length

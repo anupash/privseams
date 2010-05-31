@@ -307,7 +307,6 @@ static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
  * @param opt_socket Optional socket to use for the message exchange. When
  *                   set to zero, the function creates a temporary socket
  *                   and closes it after the transaction is completed.
- * @param len the length of the message in bytes
  * @return zero on success and negative on failure
  * @note currently the only SOCK_DGRAM and AF_INET6 are supported
  */
@@ -477,7 +476,7 @@ int hip_recv_daemon_info(UNUSED struct hip_common *msg,
 /**
  * Read an interprocess (user) message
  *
- * @param  socket   a socket from where to read
+ * @param  sockfd   a socket from where to read
  * @param  hip_msg  the message will be written here
  * @param  saddr    the sender information is stored here
  * @return          zero on success and negative on error
@@ -525,20 +524,8 @@ out_err:
  * use hip_read_control_msg_v4() and hip_read_control_msg_v6() wrappers
  * instead!
  *
- * @param socket         a socket to read from.
- * @param hip_msg        a pointer to a buffer where to put the received HIP
- *                       common header. This is returned as filled struct.
- * @param read_addr      a flag whether the adresses should be read from the
- *                       received packet. <b>1</b>:read addresses,
- *                       <b>0</b>:don't read addresses.
- * @param saddr          a pointer to a buffer where to put the source IP
- *                       address of the received message (if @c read_addr is set
- *                       to 1).
- * @param daddr          a pointer to a buffer where to put the destination IP
- *                       address of the received message (if @c read_addr is set
- *                       to 1).
- * @param msg_info       a pointer to a buffer where to put the source and
- *                       destination ports of the received message.
+ * @param sockfd         a socket to read from.
+ * @param ctx            a pointer to the packet context
  * @param encap_hdr_size size of encapsulated header in bytes.
  * @param is_ipv4        a boolean value to indicate whether message is received
  *                       on IPv4.
@@ -680,10 +667,7 @@ out_err:
  * Read an IPv6 control message
  *
  * @param  sockfd         a socket file descriptor.
- * @param  hip_msg        a pointer to a HIP message.
- * @param  saddr          source IPv6 address.
- * @param  daddr          destination IPv6 address.
- * @param  msg_info       transport layer source and destination port numbers.
+ * @param  ctx            .
  * @param  encap_hdr_size .
  * @return                .
  */
@@ -700,10 +684,7 @@ int hip_read_control_msg_v6(int sockfd,
  * Read an IPv4 control message
  *
  * @param  sockfd         a socket file descriptor.
- * @param  hip_msg        a pointer to a HIP message.
- * @param  saddr          source IPv4 address.
- * @param  daddr          destination IPv4 address.
- * @param  msg_info       transport layer source and destination port numbers.
+ * @param  ctx            .
  * @param  encap_hdr_size .
  * @return                .
  */

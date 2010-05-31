@@ -58,14 +58,14 @@ out_err:
 /** adds a new SA entry for the specified direction to the sadb in userspace ipsec
  * @note  If you make changes to this function, please change also hip_add_sa()
  *
- * @param src_addr          outer globally routable source ip address
- * @param dst_addr          outer globally routable destination ip address
- * @param inner_src_addr    inner source address
- * @param inner_dst_addr    inner destination address
+ * @param saddr          outer globally routable source ip address
+ * @param daddr          outer globally routable destination ip address
+ * @param src_hit    inner source address
+ * @param dst_hit    inner destination address
  * @param spi               ipsec spi for demultiplexing
  * @param ealg              crypto transform to be used for the SA
- * @param enc_key           raw encryption key
- * @param auth_key          raw authentication key
+ * @param enckey           raw encryption key
+ * @param authkey          raw authentication key
  * @param retransmission    notification if this event is due to retransmission
  * @param direction         represents inbound or outbound direction
  * @param update            notification if this event derives from an update
@@ -114,12 +114,11 @@ out_err:
 
 /** deletes the specified SA entry from the sadb in userspace ipsec
  *
- * @param spi ipsec     spi for demultiplexing
- * @param src_addr      outer globally routable source ip address
+ * @param spi           ipsec spi for demultiplexing
+ * @param not_used      outer globally routable source ip address
  * @param dst_addr      outer globally routable destination ip address
- * @param family        protocol family of above addresses
- * @param src_port      local port for this host association
- * @param dst_port      peer port for this host association
+ * @param direction    direction
+ * @param entry        HA entry
  */
 void hip_userspace_ipsec_delete_sa(const uint32_t spi,
                                    const struct in6_addr *not_used,

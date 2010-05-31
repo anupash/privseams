@@ -65,7 +65,7 @@ int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
 /**
  * Deletes IPv6 address from the entry's list of peer addresses
  *
- * @param entry corresponding hadb entry of the peer
+ * @param ha corresponding hadb entry of the peer
  * @param addr IPv6 address to be deleted
  */
 void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr)

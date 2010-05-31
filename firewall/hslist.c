@@ -34,7 +34,7 @@ SList *alloc_slist(void)
 /**
  * deallocate and unlink a linked list element
  *
- * @param the linked list element to be deallocated
+ * @param list the linked list element to be deallocated
  */
 void free_slist(SList *list)
 {
@@ -130,7 +130,7 @@ SList *remove_link_slist(SList *list,
 /**
  * remove and deallocated an element from the linked list
  *
- * @list the linked list
+ * @param list the linked list
  * @param data a pointer to the contents of an element to be removed
  * @return a pointer to the linked list
  */

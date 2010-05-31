@@ -43,7 +43,7 @@ static struct midauth_handlers handlers;
 /**
  * Changes IPv4 header to match new length and updates the checksum.
  *
- * @param data a pointer to the IPv4 header
+ * @param ip  a pointer to the IPv4 header
  * @param len new payload length
  */
 static void update_ipv4_header(struct iphdr *ip, int len)

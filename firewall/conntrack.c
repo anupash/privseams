@@ -379,8 +379,8 @@ static struct tuple *get_tuple_by_esp(const struct in6_addr *dst_addr, const uin
 /**
  * find esp_tuple from a list that matches the argument spi value
  *
- * @esp_list the list to be searched for
- * @spi the SPI number to the matched from the list
+ * @param esp_list the list to be searched for
+ * @param spi the SPI number to the matched from the list
  * @return the matching ESP tuple or NULL if not found
  */
 struct esp_tuple *find_esp_tuple(const SList *esp_list, const uint32_t spi)
@@ -890,6 +890,7 @@ out_err:
  * @param common the R1 packet
  * @param tuple the corresponding connection tuple
  * @param verify_responder currently unused
+ * @param ctx the context
  *
  * @return one if the packet was ok or zero otherwise
  */
@@ -1450,6 +1451,8 @@ out_err:
  * @param common the CLOSE packet
  * @param tuple the connection tracking tuple corresponding to the CLOSE packet
  * @param ctx packet context
+ * @param ip6_src the source address
+ * @param ip6_dst the destination address
  *
  * @return one if packet was processed successfully or zero otherwise
  */
@@ -1486,6 +1489,8 @@ out_err:
  * @param common the CLOSE_ACK packet
  * @param tuple the connection tracking tuple corresponding to the CLOSE_ACK packet
  * @param ctx packet context
+ * @param ip6_src the source address
+ * @param ip6_dst the destination address
  *
  * @return one if packet was processed successfully or zero otherwise
  */
@@ -1693,7 +1698,6 @@ out_err:
  * @todo Currently works only with UDP encapsulated IPv4 packets.
  *
  * @param ctx context for the packet
- * @param tuple the tuple corresponding to the packet
  * @return Zero means that a new relay packet was reinjected successfully
  *         and the original should be dropped.  -1 means that the reinjected
  *         packet was processed again and should be just accepted without

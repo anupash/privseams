@@ -70,7 +70,7 @@ struct hip_peer_map_info {
  * The hash function of the hashtable. Calculates a hash from parameter host
  * assosiation HITs (hit_our and hit_peer).
  *
- * @param rec a pointer to a host assosiation.
+ * @param ha  rec a pointer to a host assosiation.
  * @return    the calculated hash or zero if ha, hit_our or hit_peer is NULL.
  */
 static unsigned long hip_ha_hash(const hip_ha_t *ha)
@@ -384,6 +384,7 @@ static void hip_print_debug_info(const struct in6_addr *local_addr,
  * @param  local_addr local address
  * @param  peer_addr peer address
  * @param  peer_lsi optional peer LSI (automatically generated if NULL)x
+ * @param  peer_hostname peer hostname
  * @return zero on success or negative on error
  */
 int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
@@ -710,6 +711,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
  * @param spi outbound SPI to which the @c new_addr is related to
  * @param lifetime address lifetime of the address
  * @param state address state
+ * @param port the port
  *
  * @return zero on success and negative on error
  */
@@ -886,8 +888,8 @@ out_err:
 /**
  * Initializes a host association
  *
- * @param  a pointer to a HIP association to be initialized.
- * @param  a pointer to a HIT value that is to be bound with the HIP association
+ * @param entry a pointer to a HIP association to be initialized.
+ * @param hit_our a pointer to a HIT value that is to be bound with the HIP association
  *         @c entry
  * @return zero if success, negative otherwise.
  */

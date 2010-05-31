@@ -96,7 +96,7 @@ struct modular_state *lmod_init_state(void)
  * Registers a new state initialization function. These functions are called,
  * when a new host association database entry is created.
  *
- * @param  Pointer to the state initialization function.
+ * @param  func Pointer to the state initialization function.
  *
  * @return Success = 0
  *         Error   = -1

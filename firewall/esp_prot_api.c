@@ -102,7 +102,7 @@ static hchain_store_t update_store;
  * Adds buffered packet hashes to a protected IPsec packet
  *
  * @param   esp_packet buffer where to write to
- * @param   esp_length length of the output (return value)
+ * @param   out_length length of the output (return value)
  * @param   entry the corresponding outbound IPsec SA
  */
 static int esp_prot_add_packet_hashes(unsigned char *esp_packet,
@@ -564,7 +564,7 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 /** cache the hash of a complete protected IPsec packet
  *
  * @param   esp_packet buffer where to write to
- * @param   eso_length length of the packet
+ * @param   esp_length length of the packet
  * @param   entry the corresponding outbound IPsec SA
  */
 int esp_prot_cache_packet_hash(unsigned char *esp_packet,
@@ -602,7 +602,7 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet,
 /** adds an esp protection token to a protected IPsec packet
  *
  * @param   esp_packet buffer where to write to
- * @param   esp_length length of the output (return value)
+ * @param   out_length length of the output (return value)
  * @param   entry the corresponding outbound IPsec SA
  */
 int esp_prot_add_hash(unsigned char *esp_packet, int *out_length,

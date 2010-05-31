@@ -9,7 +9,6 @@
  *
  * @brief Write a short summary
  *
- * @author <Put all existing author information here>
  * @author another Author another@author.net
  */
 
@@ -241,7 +240,7 @@ static int hip_firewall_match_ip_peer(const void *ptr1, const void *ptr2)
 /**
  * Initialize an ICMP raw socket
  *
- * @param the raw socket is written into this pointer
+ * @param firewall_raw_sock_v6 the raw socket is written into this pointer
  *
  * @return zero on success, non-zero on error
  */
@@ -427,7 +426,7 @@ out_err:
 /**
  * Initialize ICMPv6-based raw socket
  *
- * @param hip_firewall_init_raw_sock_icmp_v6 the created raw socket will be written here
+ * @param firewall_raw_sock_v6 the created raw socket will be written here
  *
  * @return zero on success, non-zero on error
  */
@@ -588,7 +587,7 @@ void hip_firewall_delete_hldb(void)
  * @param msg a pointer to the transport layer header of the packet
  * @param len the length of the packet in bytes
  * @param proto the transport layer protocol of the packet
- * @param new ttl value for the transformed packet
+ * @param ttl new ttl value for the transformed packet
  *
  * @todo this function could also be used by the proxy?
  *

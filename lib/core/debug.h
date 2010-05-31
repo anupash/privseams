@@ -391,8 +391,8 @@ void hip_print_lsi(int debug_level,
 /**
  * Gets a binary string representation from an uint8_t value.
  *
- * @val    the value to convert.
- * @buffer a target buffer where to put the binary string.
+ * @param val    the value to convert.
+ * @param buffer a target buffer where to put the binary string.
  * @note   make sure the buffer has at least size of 8 * sizeof(char).
  */
 void uint8_to_binstring(uint8_t val, char *buffer);
@@ -400,8 +400,8 @@ void uint8_to_binstring(uint8_t val, char *buffer);
 /**
  * Gets a binary string representation from an uint16_t value.
  *
- * @val    the value to convert.
- * @buffer a target buffer where to put the binary string.
+ * @param val    the value to convert.
+ * @param buffer a target buffer where to put the binary string.
  * @note   make sure the buffer has at least size of 17 * sizeof(char).
  */
 void uint16_to_binstring(uint16_t val, char *buffer);
@@ -409,8 +409,8 @@ void uint16_to_binstring(uint16_t val, char *buffer);
 /**
  * Gets a binary string representation from an uint32_t value.
  *
- * @val    the value to convert.
- * @buffer a target buffer where to put the binary string.
+ * @param val    the value to convert.
+ * @param buffer a target buffer where to put the binary string.
  * @note   make sure the buffer has at least size of 33 * sizeof(char).
  */
 void uint32_to_binstring(uint32_t val, char *buffer);
@@ -430,7 +430,7 @@ void hip_print_locator(int debug_level,
 /**
  * Gets the name of a state.
  *
- * @param  a state state value
+ * @param  state a state state value
  * @return a state name as a string.
  */
 static inline const char *hip_state_str(unsigned int state)

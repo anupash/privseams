@@ -156,7 +156,7 @@ out_err:
  * sensible binary representations.
  *
  * @param cert    the original certificate
- * @param pc[out] internal representation of the certificate
+ * @param pc internal representation of the certificate
  */
 void pisa_split_cert(char *cert, struct pisa_cert *pc)
 {

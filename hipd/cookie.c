@@ -162,6 +162,8 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
  *
  * @param ip_i Initiator's IPv6
  * @param ip_r Responder's IPv6
+ * @param our_hit Our HIT
+ * @param peer_hit The peer's HIT
  *
  * @note Comments for the if 0 code are inlined below.
  *

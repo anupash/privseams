@@ -72,7 +72,7 @@ static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 /**
  * hashing function for the hashtable implementation
  *
- * @param a pointer to a hip_opp_block_t structure
+ * @param ptr a pointer to a hip_opp_block_t structure
  * @return the calculated hash
  */
 static unsigned long hip_oppdb_hash_hit(const void *ptr)

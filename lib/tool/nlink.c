@@ -574,8 +574,8 @@ static int get_addr_1(inet_prefix *addr, const char *name, int family)
 /**
  * construct an inet_prefix structure (including prefix) based the given string
  *
- * @param addr inet_prefix structure to be filled in (caller allocates)
- * @param name an address string to be converted to the addr argument
+ * @param dst inet_prefix structure to be filled in (caller allocates)
+ * @param arg an address string to be converted to the addr argument
  * @param family address family of the name
  * @return zero success and negative on error
  */
@@ -791,7 +791,7 @@ skip_it:
 /**
  * Fill in an idxmap structure (a list of network interfaces and related info)
  *
- * @param rtnl_handle structure containing a netlink socket
+ * @param rth structure containing a netlink socket
  * @param idxmap idxmap structure to be filled
  * @return zero on success and negative on error
  */
@@ -889,7 +889,7 @@ out_err:
  * point to the attributes contained in the structure
  *
  * @param tb the resulting array of pointers (can contain NULL pointers)
- * @param size of tb array
+ * @param max of tb array
  * @param rta the routing attribute structure to be parsed
  * @param len the length of the rta structure
  * @return zero
@@ -951,8 +951,8 @@ static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
  * A wrapper for get_prefix_1. Does the same thing but also checks
  * AF_PACKET.
  *
- * @param addr inet_prefix structure to be filled in (caller allocates)
- * @param name an address string to be converted to the addr argument
+ * @param dst inet_prefix structure to be filled in (caller allocates)
+ * @param arg an address string to be converted to the addr argument
  * @param family address family of the name
  * @return zero success and negative on error
  */
@@ -1442,8 +1442,8 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
  * Selector is bound to HITs
  *
  * @param sel pointer to xfrm_selector to be filled in
- * @param hit_our Source HIT or LSI, if the last is defined
- * @param hit_peer Peer HIT or LSI, if the last is defined
+ * @param id_our Source HIT or LSI, if the last is defined
+ * @param id_peer Peer HIT or LSI, if the last is defined
  * @param proto inclusive protocol filter (zero for any protocol)
  * @param id_prefix Length of the identifier's prefix
  * @param src_port inclusive source port filter (zero for any)

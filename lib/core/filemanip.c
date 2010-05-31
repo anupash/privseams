@@ -136,7 +136,7 @@ int check_and_create_dir(const char *dirname, mode_t mode)
 
 /**
  * check and create a file
- * @param file the name of the file
+ * @param filename the name of the file
  * @param mode creation mode for the file, if it does not exist
  *
  * @return file descriptor of the created file

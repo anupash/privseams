@@ -20,8 +20,6 @@ typedef LHASH_NODE hip_list_t;
 /**
  * list_entry - get the struct for this entry
  * @param ptr the &hip_list_t pointer.
- * @param type the type of the struct this is embedded in.
- * @param member the name of the list_struct within the struct.
  */
 #define list_entry(ptr) (ptr->data)
 
@@ -36,7 +34,7 @@ typedef LHASH_NODE hip_list_t;
  * list_for_each - iterate over list of given type
  * @param pos the type * to use as a loop counter.
  * @param head the head for your list.
- * @param member the name of the list_struct within the struct.
+ * @param counter counter
  */
 #define list_for_each(pos, head, counter) \
     for ((counter = ((struct lhash_st *) (head))->num_nodes - 1); counter >= 0; counter--) \
@@ -47,7 +45,8 @@ typedef LHASH_NODE hip_list_t;
  * Iterates over a list of given type safe against removal of list entry.
  * @param pos the type * to use as a loop counter.
  * @param head the head for your list.
- * @param member the name of the list_struct within the struct.
+ * @param iter iter
+ * @param counter counter
  */
 #define list_for_each_safe(pos, iter, head, counter) \
     for ((counter = (((struct lhash_st *) (head)))->num_nodes - 1); counter >= 0; counter--) \
@@ -56,8 +55,8 @@ typedef LHASH_NODE hip_list_t;
 
 /**
  * list_add - add a new entry
- * @param lnew new entry to be added
- * @param lhead list head to add it after
+ * @param entry new entry to be added
+ * @param head list head to add it after
  *
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
@@ -67,6 +66,7 @@ typedef LHASH_NODE hip_list_t;
 /**
  * list_del - deletes entry from list.
  * @param entry the element to delete from the list.
+ * @param head list head
  * Note: list_empty on entry does not return true after this, the entry is
  * in an undefined state.
  */

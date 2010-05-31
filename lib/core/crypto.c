@@ -515,7 +515,7 @@ out_err:
  * @param dh Diffie-Hellman key
  * @param peer_key peer's public key
  * @param peer_len length of the peer_key
- * @param shared_key shared key to generate
+ * @param dh_shared_key shared key to generate
  * @param outlen the length of the shared key
  * @return 1 on success, 0 otherwise
  */
@@ -907,7 +907,7 @@ out_err:
 
 /**
  * load host DSA private keys from disk
- * @param filenamebase the file name base of the host DSA key
+ * @param filename the file name base of the host DSA key
  * @param dsa Pointer to the DSA key structure.
  *
  * Loads DSA private key from file filename. DSA struct
@@ -946,7 +946,7 @@ out_err:
 
 /**
  * load host RSA private keys from disk
- * @param filenamebase the file name base of the host RSA key
+ * @param filename the file name base of the host RSA key
  * @param rsa Pointer to the RSA key structure.
  *
  * Loads RSA private key from file filename. RSA struct

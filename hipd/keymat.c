@@ -95,9 +95,12 @@ static void hip_update_keymat_buffer(uint8_t *keybuf, uint8_t *Kold, size_t Kold
  * @param keymat pointer to a keymat structure which will be updated according
  *           to the generated keymaterial
  * @param dstbuf the generated keymaterial will be written here
+ * @param dstbuflen the length of the buffer to which to write to
  * @param hit1 source HIT
  * @param hit2 destination HIT
  * @param calc_index where the one byte index is stored (n of Kn)
+ * @param I the I value
+ * @param J the J value
  *
  */
 void hip_make_keymat(char *kij,
@@ -216,7 +219,7 @@ out_err:
  * @param dst destination buffer
  * @param keymat pointer to the keymat structure which contains information
  *          about the actual
- * @param length size of keymat structure
+ * @param len size of keymat structure
  *
  * @return pointer the next point where one can draw the next keymaterial
  */
@@ -237,6 +240,7 @@ out_err:
  * @param new_keymat_index new Keymat Index value
  * @param new_calc_index new one byte value
  * @param new_current_keymat Kn related to @c new_calc_index
+ * @param esp_keymat_index the esp Keymat index value
  */
 void hip_update_entry_keymat(struct hip_hadb_state *entry,
                              uint16_t new_keymat_index,

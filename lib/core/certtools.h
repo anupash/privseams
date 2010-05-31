@@ -68,7 +68,7 @@ int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
 int hip_cert_spki_char2certinfo(char *, struct hip_cert_spki_info *);
 int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *);
 
-/** x509v3 cert related functions */
+/* x509v3 cert related functions */
 int hip_cert_x509v3_request_certificate(struct in6_addr *, unsigned char *);
 int hip_cert_x509v3_request_verification(unsigned char *, int);
 

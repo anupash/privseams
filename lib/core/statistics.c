@@ -163,11 +163,11 @@ out_err:
  * data structure
  *
  * @param statistics_data   data set
- * @param num_items[out]    number of samples in the data set
- * @param min[out]          minimal value in the data set
- * @param max[out]          maximal value in the data set
- * @param avg[out]          mean value of the data set
- * @param std_dev[out]      standard deviation from the mean value
+ * @param num_items    number of samples in the data set
+ * @param min          minimal value in the data set
+ * @param max          maximal value in the data set
+ * @param avg          mean value of the data set
+ * @param std_dev      standard deviation from the mean value
  * @param scaling_factor    scale values by this constant factor
  */
 void calc_statistics(const statistics_data_t *statistics_data,

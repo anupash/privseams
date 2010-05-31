@@ -55,7 +55,7 @@ out_err:
 /**
  * Add an cache entry into the firewall db.
  *
- * @param h_entry cache database entry
+ * @param ha_entry cache database entry
  *
  * @return zero on success and non-zero on error
  */

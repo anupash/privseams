@@ -126,8 +126,8 @@ out_err:
 /**
  * hashes the outer dst address and IPsec SPI to lookup the corresponding SA entry
  *
- * @param sa_entry  link entry containing outer dst address and IPsec SPI
- * @return          hash of outer dst address and IPsec SPI
+ * @param link_entry  link entry containing outer dst address and IPsec SPI
+ * @return            hash of outer dst address and IPsec SPI
  */
 static unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
 {
@@ -225,7 +225,7 @@ static IMPLEMENT_LHASH_HASH_FN(hip_link_entry, hip_link_entry_t)
  * callback wrappers providing per-variable casts before calling the
  * type-specific callbacks
  *
- * @param hip_sa_entries    function pointer
+ * @param hip_link_entries  function pointer
  * @param hip_link_entry_t  type to be casted to
  *
  * @note appends _cmp to given function
@@ -295,7 +295,7 @@ out_err:
  * removes a link entry from the linkdb
  *
  * @param dst_addr  outer destination address
- * @param entry     SA entry this link points to
+ * @param spi       SPI number
  * @return          0 on success, else -1
  */
 static int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi)
@@ -480,7 +480,6 @@ out_err:
 /**
  * updates an existing SA entry
  *
- * @param entry             SA entry for which the values should be set
  * @param direction         direction of the SA
  * @param spi               IPsec SPI number
  * @param mode              ESP mode
@@ -578,7 +577,6 @@ static void hip_sa_entry_free(hip_sa_entry_t *entry)
 /**
  * adds an SA entry
  *
- * @param entry             SA entry for which the values should be set
  * @param direction         direction of the SA
  * @param spi               IPsec SPI number
  * @param mode              ESP mode
@@ -661,7 +659,8 @@ out_err:
 /**
  * deletes a single SA entry
  *
- * @param
+ * @param src_addr the source address
+ * @param dst_addr the destination address
  */
 static int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 {
@@ -758,7 +757,6 @@ int hip_sadb_uninit(void)
 /**
  * adds or updates SA entry
  *
- * @param entry             SA entry for which the values should be set
  * @param direction         direction of the SA
  * @param spi               IPsec SPI number
  * @param mode              ESP mode
@@ -767,8 +765,8 @@ int hip_sadb_uninit(void)
  * @param inner_src_addr    inner source addresses for tunnel and BEET SAs
  * @param inner_dst_addr    inner destination addresses for tunnel and BEET SAs
  * @param encap_mode        encapsulation mode
- * @param src_port          src port for UDP encaps. ESP
- * @param dst_port          dst port for UDP encaps. ESP
+ * @param local_port          src port for UDP encaps. ESP
+ * @param peer_port          dst port for UDP encaps. ESP
  * @param ealg              crypto transform in use
  * @param auth_key          raw authentication key
  * @param enc_key           raw encryption key
@@ -778,6 +776,9 @@ int hip_sadb_uninit(void)
  * @param esp_num_anchors   number of anchors for parallel mode
  * @param esp_prot_anchors  hash item anchors
  * @param update            notification if this is an update
+ * @param local_port        local port
+ * @param peer_port         peer port
+ * @param retransmission    retransmission
  * @return                  0 on success, else -1
  */
 int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,

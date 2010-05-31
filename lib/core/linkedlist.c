@@ -288,7 +288,7 @@ void *hip_ll_del(hip_ll_t *linkedlist, const unsigned int index,
  *                     itself is not to be freed.
  * @return             a pointer to the data stored at the deleted node or NULL
  *                     if there are no nodes in the list. NULL is returned when
- *                     @free_element is not NULL i.e. the element itself is
+ *                     @c free_element is not NULL i.e. the element itself is
  *                     deleted. NULL is also returned when the list
  *                     @c linkedlist itself is NULL.
  */
@@ -313,7 +313,7 @@ void *hip_ll_del_first(hip_ll_t *linkedlist,
  *                     itself is not to be freed.
  * @return             a pointer to the data stored at the deleted node or NULL
  *                     if there are no nodes in the list. NULL is returned when
- *                     @free_element is not NULL i.e. the element itself is
+ *                     @c free_element is not NULL i.e. the element itself is
  *                     deleted. NULL is also returned when the list
  *                     @c linkedlist itself is NULL.
  */

@@ -212,7 +212,7 @@ out_err:
  * @param hosts_file the path and name to the hosts file
  * @param func the iterator function pointer
  * @param arg an input argument for the function pointer
- * @param an output argument for the function pointer
+ * @param result an output argument for the function pointer
  * @return zero on success or non-zero on failure
  */
 int hip_for_each_hosts_file_line(const char *hosts_file,

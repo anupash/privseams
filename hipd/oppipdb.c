@@ -56,10 +56,10 @@ static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
 }
 
 /**
- * Map function @func to every entry in the oppipdb hash table
+ * Map a function to every entry in the oppipdb hash table
  *
- * @param func: mapper function to apply to all entries
- * @param opaque: opaque data for the mapper function
+ * @param func mapper function to apply to all entries
+ * @param opaque opaque data for the mapper function
  *
  * @return negative value if an error occurs. If an error occurs during traversal of
  * the oppipdb hash table, then the traversal is stopped and function returns.
@@ -90,7 +90,8 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
 /**
  * Deletes an entry that is present in oppipdb hash table
  *
- * @param entry: pointer to the entry to delete
+ * @param entry pointer to the entry to delete
+ * @param not_used
  */
 void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
 {
@@ -103,8 +104,8 @@ void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
 /**
  * Wrap function for hip_oppipdb_del_entry_by_entry()
  *
- * @param entry: pointer to the entry to delete
- * @param void: unused pointer
+ * @param entry pointer to the entry to delete
+ * @param unused unused pointer
  *
  * @return 0 on success
  */

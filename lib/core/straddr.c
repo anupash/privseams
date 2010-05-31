@@ -102,6 +102,7 @@ out_err:
  *
  * @param to the result of the conversion (minimum length @c count)
  * @param from a string possibly containing upper case characters
+ * @param count count
  * @return zero on success or negative on failure
  */
 int hip_string_to_lowercase(char *to, const char *from, const size_t count)

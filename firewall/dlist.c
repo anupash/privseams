@@ -34,7 +34,7 @@ DList *alloc_list(void)
 /**
  * Remove a link from the list
  *
- * @param the link to be removed
+ * @param list the list to be removed
  * @return a pointer to the original list
  */
 DList *free_list_chain(DList *list)
@@ -208,7 +208,8 @@ DList *remove_from_list(DList *list,
 /**
  * remove a given link from the linked list
  *
- * @param the linked list
+ * @param list the linked list
+ * @param link the link to be removed
  * @return link the link to be removed
  */
 DList *remove_link_dlist(DList *list,
