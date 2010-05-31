@@ -81,7 +81,7 @@ int lsi_total = 0;
  * @param alen the length of the message
  * @return zero
  */
-int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
+int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
               int alen)
 {
     int len = RTA_LENGTH(alen);
@@ -125,7 +125,8 @@ int hip_netlink_receive(struct rtnl_handle *nl,
         NULL,             0,
         0
     };
-    int msg_len = 0, status = 0;
+    unsigned msg_len = 0;
+    int status = 0;
     char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
     memset(&nladdr, 0, sizeof(nladdr));
@@ -170,7 +171,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
             HIP_ERROR("Sender address length == %d\n", msg.msg_namelen);
             return -1;
         }
-        for (h = (struct nlmsghdr *) buf; status >= sizeof(*h); ) {
+        for (h = (struct nlmsghdr *) buf; status >= (int)sizeof(*h); ) {
             int err;
             int len = h->nlmsg_len;
             int l   = len - sizeof(*h);
@@ -306,7 +307,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
             err = -1;
             goto out_err;
         }
-        for (h = (struct nlmsghdr *) buf; status >= sizeof(*h); ) {
+        for (h = (struct nlmsghdr *) buf; status >= (int)sizeof(*h); ) {
             int len = h->nlmsg_len;
             int l   = len - sizeof(*h);
 
@@ -321,8 +322,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                 goto out_err;
             }
 
-            if (nladdr.nl_pid != peer ||
-                h->nlmsg_seq != seq) {
+            if (nladdr.nl_pid != (unsigned)peer || h->nlmsg_seq != seq) {
                 HIP_DEBUG("%d %d %d %d\n", nladdr.nl_pid,
                           peer, h->nlmsg_seq, seq);
                 if (junk) {
@@ -339,9 +339,8 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
             }
 
             if (h->nlmsg_type == NLMSG_ERROR) {
-                struct nlmsgerr *nl_err =
-                    (struct nlmsgerr *) NLMSG_DATA(h);
-                if (l < sizeof(struct nlmsgerr)) {
+                struct nlmsgerr *nl_err = (struct nlmsgerr *) NLMSG_DATA(h);
+                if (l < (int)sizeof(struct nlmsgerr)) {
                     HIP_ERROR("Truncated\n");
                 } else {
                     errno = -nl_err->error;
@@ -642,7 +641,7 @@ done:
  * @param data the attribute
  * @return zero on success and negative on error
  */
-static int addattr32(struct nlmsghdr *n, int maxlen, int type, uint32_t data)
+static int addattr32(struct nlmsghdr *n, unsigned maxlen, int type, uint32_t data)
 {
     int len = RTA_LENGTH(4);
     struct rtattr *rta;
@@ -739,7 +738,7 @@ static int rtnl_dump_filter(struct rtnl_handle *rth,
         }
 
         h = (struct nlmsghdr *) buf;
-        while (NLMSG_OK(h, status)) {
+        while (NLMSG_OK(h, (unsigned)status)) {
             int err = 0;
 
             if (nladdr.nl_pid != 0 ||
@@ -1044,7 +1043,7 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
             HIP_ERROR("sender address length == %d\n", msg.msg_namelen);
             return -1;
         }
-        for (h = (struct nlmsghdr *) buf; status >= sizeof(*h); ) {
+        for (h = (struct nlmsghdr *) buf; status >= (int)sizeof(*h); ) {
             int err;
             int len = h->nlmsg_len;
             int l   = len - sizeof(*h);
@@ -1058,7 +1057,7 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                 return -1;
             }
 
-            if (nladdr.nl_pid != peer ||
+            if (nladdr.nl_pid != (unsigned)peer ||
                 h->nlmsg_pid != rtnl->local.nl_pid ||
                 h->nlmsg_seq != seq) {
                 if (junk) {
@@ -1076,7 +1075,7 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
 
             if (h->nlmsg_type == NLMSG_ERROR) {
                 struct nlmsgerr *nlerr = (struct nlmsgerr *) NLMSG_DATA(h);
-                if (l < sizeof(struct nlmsgerr)) {
+                if (l < (int)sizeof(struct nlmsgerr)) {
                     HIP_ERROR("ERROR truncated\n");
                 } else {
                     errno = -nlerr->error;

@@ -65,7 +65,7 @@ struct inet6_pktinfo {
 typedef int (*hip_filter_t)(struct nlmsghdr *n, int len, void *arg);
 
 int set_up_device(const char *dev, int up);
-int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
+int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
               int alen);
 
 int hip_netlink_open(struct rtnl_handle *nl,
