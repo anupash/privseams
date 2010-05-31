@@ -120,6 +120,7 @@ install -m 644 doc/HOWTO.html %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
 install -t %{buildroot}%{python_sitelib}/DNS tools/hipdnsproxy/DNS/*py*
 install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
+install -d %{buildroot}%{python_sitelib}/hipdnsproxy
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/pyip6.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/hosts.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/util.py*
