@@ -686,30 +686,6 @@ out_err:
     return err;
 }
 
-/**
- * prints a single SA entry
- *
- * @param entry     SA entry to be printed
- */
-static void hip_sa_entry_print(const hip_sa_entry_t *entry)
-{
-    if (entry) {
-        HIP_DEBUG("direction: %i\n", entry->direction);
-        HIP_DEBUG("spi: 0x%lx\n", entry->spi);
-        HIP_DEBUG("mode: %u\n", entry->mode);
-        HIP_DEBUG_HIT("src_addr", &entry->src_addr);
-        HIP_DEBUG_HIT("dst_addr", &entry->dst_addr);
-        HIP_DEBUG_HIT("inner_src_addr", &entry->inner_src_addr);
-        HIP_DEBUG_HIT("inner_dst_addr", &entry->inner_dst_addr);
-        HIP_DEBUG("encap_mode: %u\n", entry->encap_mode);
-        HIP_DEBUG("src_port: %u\n", entry->src_port);
-        HIP_DEBUG("dst_port: %u\n", entry->dst_port);
-        HIP_DEBUG("... (more members)\n");
-    } else {
-        HIP_DEBUG("sa entry is NULL\n");
-    }
-}
-
 /** initializes the sadb and the linkdb
  *
  * @return -1, if error occurred, else 0
@@ -943,31 +919,4 @@ out_err:
     }
 
     return stored_entry;
-}
-
-/**
- * prints the whole contents of the sadb
- */
-void hip_sadb_print(void)
-{
-    int i                 = 0;
-    hip_list_t *item      = NULL, *tmp = NULL;
-    hip_sa_entry_t *entry = NULL;
-
-    HIP_DEBUG("printing sadb...\n");
-
-    // iterating over all elements
-    list_for_each_safe(item, tmp, sadb, i)
-    {
-        if (!(entry = (hip_sa_entry_t *) list_entry(item))) {
-            HIP_ERROR("failed to get list entry\n");
-            break;
-        }
-        HIP_DEBUG("sa entry %i:\n", i + 1);
-        hip_sa_entry_print(entry);
-    }
-
-    if (i == 0) {
-        HIP_DEBUG("sadb contains no items\n");
-    }
 }

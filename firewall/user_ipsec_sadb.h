@@ -104,6 +104,5 @@ hip_sa_entry_t *hip_sa_entry_find_inbound(const struct in6_addr *dst_addr,
                                           uint32_t spi);
 hip_sa_entry_t *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
                                            const struct in6_addr *dst_hit);
-void hip_sadb_print(void);
 
 #endif /* HIP_FIREWALL_USER_IPSEC_SADB_H */
