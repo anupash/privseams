@@ -46,7 +46,6 @@ int hip_ll_add_last(hip_ll_t *linkedlist, void *ptr);
 void *hip_ll_del(hip_ll_t *linkedlist, const unsigned int index,
                  free_elem_fn_t free_element);
 void *hip_ll_del_first(hip_ll_t *linkedlist, free_elem_fn_t free_element);
-void *hip_ll_del_last(hip_ll_t *linkedlist, free_elem_fn_t free_element);
 void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index);
 hip_ll_node_t *hip_ll_iterate(const hip_ll_t *linkedlist,
                               hip_ll_node_t *current);

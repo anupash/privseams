@@ -299,32 +299,6 @@ void *hip_ll_del_first(hip_ll_t *linkedlist,
 }
 
 /**
- * Deletes the last node from a linked list. If there are no nodes in the list,
- * no action will be taken. If @c free_element is non-NULL the memory allocated
- * for the element itself is also freed. When @c free_element is non-NULL, make
- * sure that the element being freed is included in the list only once. When there
- * are duplicate entries (i.e. nodes whose @c ptr is pointing to the same memory
- * region) in the @c linkedlist, you will end up having nodes that have NULL
- * pointer as payload. This will mess up further calls of this function.
- *
- * @param linkedlist   the list where from to remove the element.
- * @param free_element a function pointer to a function for freeing the memory
- *                     allocated for an element at a node or NULL if the element
- *                     itself is not to be freed.
- * @return             a pointer to the data stored at the deleted node or NULL
- *                     if there are no nodes in the list. NULL is returned when
- *                     @c free_element is not NULL i.e. the element itself is
- *                     deleted. NULL is also returned when the list
- *                     @c linkedlist itself is NULL.
- */
-void *hip_ll_del_last(hip_ll_t *linkedlist,
-                      free_elem_fn_t free_element)
-{
-    return hip_ll_del(linkedlist, linkedlist->element_count - 1,
-                      free_element);
-}
-
-/**
  * Gets an element from a linked list. Returns a pointer to the payload data
  * stored in node at @c index. When there are less than (<code>index  -1</code>)
  * nodes in the list, no action will be taken.
