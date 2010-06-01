@@ -40,6 +40,8 @@
 
 static struct midauth_handlers handlers;
 
+static int midauth_handler_drop(hip_fw_context_t *ctx);
+
 /**
  * Changes IPv4 header to match new length and updates the checksum.
  *
@@ -334,7 +336,13 @@ int midauth_handler_accept(hip_fw_context_t *ctx)
     return NF_ACCEPT;
 }
 
-int midauth_handler_drop(hip_fw_context_t *ctx)
+/**
+ * Drops a packet. Used in midauth_handlers as a default handler.
+ *
+ * @param ctx context of the packet
+ * @return NF_DROP
+ */
+static int midauth_handler_drop(hip_fw_context_t *ctx)
 {
     return NF_DROP;
 }

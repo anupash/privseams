@@ -42,14 +42,6 @@ struct midauth_handlers {
 int midauth_handler_accept(hip_fw_context_t *ctx);
 
 /**
- * Drops a packet. Used in midauth_handlers as a default handler.
- *
- * @param ctx context of the packet
- * @return NF_DROP
- */
-int midauth_handler_drop(hip_fw_context_t *ctx);
-
-/**
  * Check the correctness of a hip_solution_m
  *
  * @param hip the hip_common that contains the solution
