@@ -20,19 +20,6 @@
 #include "hiprelay.h" // For relrec lifetimes.
 #include "lib/core/linkedlist.h" // For pending service requests.
 
-/** Possible service states. */
-typedef enum { HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1 } hip_srv_status_t;
-
-/* Need to define a name here too because of a stupid linking error in
- * builder.h */
-/** HIP service. */
-typedef struct hip_srv {
-    hip_srv_status_t status;     /**< Service status */
-    uint8_t          reg_type;
-    uint8_t          min_lifetime;
-    uint8_t          max_lifetime;
-} hip_srv_t;
-
 /** A pending service request coupled with a host association. */
 typedef struct {
     hip_ha_t *entry;
