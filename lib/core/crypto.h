@@ -29,7 +29,6 @@
 #include <netinet/in.h>
 
 #include "config.h"
-#include "hipd/hadb.h"
 #include "hipd/hidb.h"
 #include "debug.h"
 #include "ife.h"
