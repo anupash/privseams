@@ -36,8 +36,6 @@ int hip_precreate_r1(struct hip_r1entry *r1table,
                      struct hip_host_id *pubkey);
 int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,  hip_common_t *hdr,
                       struct hip_solution *cookie);
-int hip_set_cookie_difficulty(hip_hit_t *not_used, int k);
-int hip_get_cookie_difficulty(hip_hit_t *not_used);
 int hip_inc_cookie_difficulty(hip_hit_t *not_used);
 int hip_dec_cookie_difficulty(hip_hit_t *not_used);
 int hip_get_puzzle_difficulty_msg(struct hip_common *msg);
