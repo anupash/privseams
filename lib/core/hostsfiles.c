@@ -30,6 +30,24 @@
 
 #define HOSTS_FILE "/etc/hosts"
 
+static int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
+                                                   const void *arg,
+                                                   void *result);
+static int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
+                                                   const void *arg,
+                                                   void *result);
+static int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry,
+                                                   const void *arg,
+                                                   void *result);
+static int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
+                                                   const void *arg,
+                                                   void *result);
+static int hip_for_each_hosts_file_line(const char *hosts_file,
+                                                   int(*func)(const struct hosts_file_line *line,
+                                                              const void *arg,
+                                                              void *result),
+                                                   void *arg,
+                                                   void *result);
 
 /**
  * A "for-each" iterator function for hosts files that returns the first
@@ -41,9 +59,9 @@
  *        written. Minimum buffer length is HOST_NAME_MAX chars.
  * @return zero on match or one otherwise
  */
-int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
-                                            const void *arg,
-                                            void *result)
+static int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
+                                                   const void *arg,
+                                                   void *result)
 {
     int err = 1;
 
@@ -110,9 +128,9 @@ int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname)
  *        written. Minimum buffer length is sizeof(struct hip_hit_t)
  * @return zero on match or one otherwise
  */
-int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
-                                             const void *arg,
-                                             void *result)
+static int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
+                                                    const void *arg,
+                                                    void *result)
 {
     int err = 1;
     int is_hit;
@@ -145,9 +163,9 @@ out_err:
  *        sizeof(struct in6_addr)
  * @return zero on match or one otherwise
  */
-int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry,
-                                             const void *arg,
-                                             void *result)
+static int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry,
+                                                    const void *arg,
+                                                    void *result)
 {
     int err = 1;
     int is_lsi;
@@ -180,9 +198,9 @@ out_err:
  *        the minimum buffer length is sizeof(struct in6_addr)
  * @return zero on match or one otherwise
  */
-int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
-                                            const void *arg,
-                                            void *result)
+static int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
+                                                   const void *arg,
+                                                   void *result)
 {
     int err = 1;
     int is_lsi, is_hit;
@@ -215,12 +233,12 @@ out_err:
  * @param result an output argument for the function pointer
  * @return zero on success or non-zero on failure
  */
-int hip_for_each_hosts_file_line(const char *hosts_file,
-                                 int(*func)(const struct hosts_file_line *line,
-                                            const void *arg,
-                                            void *result),
-                                 void *arg,
-                                 void *result)
+static int hip_for_each_hosts_file_line(const char *hosts_file,
+                                                   int(*func)(const struct hosts_file_line *line,
+                                                              const void *arg,
+                                                              void *result),
+                                                   void *arg,
+                                                   void *result)
 {
     FILE *hip_hosts = NULL;
     List mylist;

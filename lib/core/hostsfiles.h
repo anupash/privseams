@@ -10,24 +10,6 @@
 #include "conf.h"
 #include "prefix.h"
 
-int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
-                                            const void *arg,
-                                            void *result);
-int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
-                                             const void *arg,
-                                             void *result);
-int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry,
-                                             const void *arg,
-                                             void *result);
-int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
-                                            const void *arg,
-                                            void *result);
-int hip_for_each_hosts_file_line(const char *hosts_file,
-                                 int(*func)(const struct hosts_file_line *line,
-                                            const void *arg,
-                                            void *result),
-                                 void *arg,
-                                 void *result);
 int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
 int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi);
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit,
