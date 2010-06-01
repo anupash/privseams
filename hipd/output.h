@@ -38,9 +38,6 @@ extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 
 
-int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
-                    int addOption, int addHIT);
-
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                                  int (*sign)(void *key, struct hip_common *m),
                                  void *private_key,
