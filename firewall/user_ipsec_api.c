@@ -29,7 +29,6 @@
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/prefix.h"
-#include "datapkt.h"
 #include "firewall_defines.h"
 #include "lsi.h"
 #include "user_ipsec_esp.h"

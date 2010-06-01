@@ -61,7 +61,6 @@
 #include "cache_port.h"
 #include "common_types.h"
 #include "conntrack.h"
-#include "datapkt.h"
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
 #include "firewall_control.h"

@@ -90,7 +90,6 @@ endif
 firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/cache_port.c          \
                          firewall/conntrack.c           \
-                         firewall/datapkt.c             \
                          firewall/dlist.c               \
                          firewall/esp_prot_api.c        \
                          firewall/esp_prot_config.c     \

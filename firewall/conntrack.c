@@ -37,7 +37,6 @@
 #include "lib/core/protodefs.h"
 #include "lib/tool/pk.h"
 #include "common_types.h"
-#include "datapkt.h"
 #include "dlist.h"
 #include "esp_prot_conntrack.h"
 #include "firewall_defines.h"
