@@ -83,15 +83,3 @@ unsigned long hip_hash_hit(const void *ptr)
 
     return *((unsigned long *) hash);
 }
-
-/**
- * Verify if if two HITs match based on hashing
- *
- * @param ptr1 a HIT
- * @param ptr2 a HIT
- * @return zero if the HITs match or one otherwise
- */
-int hip_match_hit(const void *ptr1, const void *ptr2)
-{
-    return hip_hash_hit(ptr1) != hip_hash_hit(ptr2);
-}
