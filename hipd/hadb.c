@@ -66,6 +66,8 @@ struct hip_peer_map_info {
     uint8_t         peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 };
 
+static void hip_hadb_delete_state(hip_ha_t *ha);
+
 /**
  * The hash function of the hashtable. Calculates a hash from parameter host
  * assosiation HITs (hit_our and hit_peer).
@@ -1079,7 +1081,7 @@ void hip_delete_all_sp(void)
  *           (SPI and HIT). This function should only be called when absolutely
  *           sure that nobody else has a reference to it.
  */
-void hip_hadb_delete_state(hip_ha_t *ha)
+static void hip_hadb_delete_state(hip_ha_t *ha)
 {
     hip_list_t *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr_li = NULL;
@@ -1270,34 +1272,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
     return err;
 }
 
-/**
- * an iterator to map an IP address to a HIT
- *
- * @param entry the host association to check for match
- * @param id2 a HIT of a remote host
- * @return -1 on match or zero otherwise
- *
- * @todo We could scan through all of the alternative locators as well
- * @todo this fails in NATted environments
- */
-int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
-{
-    struct in6_addr *id = id2;
-    int err             = 0;
-
-    if (ipv6_addr_cmp(&entry->peer_addr, id) == 0 &&
-        !ipv6_addr_any(&entry->hit_peer) &&
-        !hit_is_opportunistic_hit(&entry->hit_peer)) {
-        ipv6_addr_copy(id, &entry->hit_peer);
-        HIP_DEBUG_HIT("hit", &entry->hit_peer);
-        HIP_DEBUG_HIT("pref", &entry->peer_addr);
-        HIP_DEBUG_HIT("id", id);
-        err = -1;         /* break iteration */
-    }
-
-    return err;
-}
-
 #ifdef CONFIG_HIP_RVS
 /**
  * Finds a rendezvous server candidate host association entry.
@@ -1474,46 +1448,6 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi_dst)
         }
     }
     return NULL;
-}
-
-/**
- * search for the local address used by the host association denoted
- * by source and destination HITs in a user message
- *
- * @param msg a user message containing source and destination HITs
- * @return zero on success and negative on error
- */
-int hip_get_local_addr(struct hip_common *msg)
-{
-    hip_ha_t *entry;
-    int err = 0;
-    struct in6_addr local_address;
-    hip_hit_t *src_hit;
-    hip_hit_t *dst_hit;
-
-    HIP_IFEL(!(src_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT)),
-             -1, "No src HIT\n");
-    /** @todo why is this a HIP_PARAM_IPV6_ADDR instead of HIP_PARAM_HIT ? */
-    HIP_IFEL(!(dst_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR)),
-             -1, "No dst HIT\n");
-    HIP_DEBUG_HIT("src_hit from local address request: ", src_hit);
-    HIP_DEBUG_HIT("dst_hit from local address request: ", dst_hit);
-
-    memset(&local_address, 0, sizeof(struct in6_addr));
-    HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)),
-             -1, "No HA\n");
-
-    hip_msg_init(msg);
-
-    ipv6_addr_copy(&local_address, &entry->our_addr);
-
-    HIP_IFEL(hip_build_param_contents(msg, &local_address, HIP_PARAM_IPV6_ADDR,
-                                      sizeof(struct in6_addr)), -1,
-                                      "Building local address info failed\n");
-
- out_err:
-
-    return err;
 }
 
 /**
