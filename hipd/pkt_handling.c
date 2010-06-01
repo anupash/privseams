@@ -77,39 +77,6 @@ out_err:
 }
 
 /**
- * hip_unregister_handle_function
- *
- * Unregister a function for handling of the specified combination from packet
- * type and host association state.
- *
- * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
- * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *handle_function Pointer to the function which should be unregistered.
- *
- * @return Success =  0
- *         Error   = -1
- */
-int hip_unregister_handle_function(const uint8_t packet_type,
-                                   const uint32_t ha_state,
-                                   const void *handle_function)
-{
-    int err = 0;
-
-    HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
-             -1,
-             "Maximum packet type exceeded.\n");
-    HIP_IFEL(ha_state    > HIP_MAX_HA_STATE,
-             -1,
-             "Maximum host association state exceeded.\n");
-
-    err = lmod_unregister_function(hip_handle_functions[packet_type][ha_state],
-                                   handle_function);
-
-out_err:
-    return err;
-}
-
-/**
  * hip_run_handle_functions
  *
  * Run all handle functions for specified combination from packet type and host

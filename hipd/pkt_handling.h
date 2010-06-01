@@ -20,10 +20,6 @@ int hip_register_handle_function(const uint8_t packet_type,
                                                         struct hip_packet_context *ctx),
                                  const uint16_t priority);
 
-int hip_unregister_handle_function(const uint8_t packet_type,
-                                   const uint32_t ha_state,
-                                   const void *handle_function);
-
 int hip_run_handle_functions(const uint8_t packet_type,
                              const uint32_t ha_state,
                              struct hip_packet_context *ctx);
