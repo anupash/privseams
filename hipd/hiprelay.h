@@ -78,10 +78,6 @@ void hip_relay_set_status(hip_relay_status_t status);
 int hip_relay_init(void);
 void hip_relay_uninit(void);
 int hip_relay_reinit(void);
-void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type);
-void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime);
-void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port);
-void hip_relrec_info(const hip_relrec_t *rec);
 int hip_relht_put(hip_relrec_t *rec);
 hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
 void hip_relht_rec_free_doall(hip_relrec_t *rec);
@@ -100,14 +96,7 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
 hip_relay_wl_status_t hip_relwl_get_status(void);
 int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
                               uint8_t *granted_lifetime);
-int hip_relay_forward(const hip_common_t *msg, const in6_addr_t *saddr,
-                      const in6_addr_t *daddr, hip_relrec_t *rec,
-                      const hip_portpair_t *info, const uint8_t type_hdr,
-                      const hip_relrec_type_t relay_type);
 int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry);
-int hip_relay_handle_from(hip_common_t *source_msg,
-                          in6_addr_t *rvs_ip,
-                          in6_addr_t *dest_ip, in_port_t *dest_port);
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
                                 in6_addr_t *relay_ip,
                                 in6_addr_t *dest_ip, in_port_t *dest_port);
