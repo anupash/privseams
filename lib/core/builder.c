@@ -69,7 +69,6 @@
 
 #include <stdlib.h>
 
-#include "hipd/input.h"
 #include "lib/core/common_defines.h"
 #include "lib/tool/checksum.h"
 #include "config.h"
