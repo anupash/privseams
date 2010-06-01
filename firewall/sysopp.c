@@ -37,7 +37,6 @@
 #include "lib/core/message.h"
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
-#include "common_hipd_msg.h"
 #include "firewall.h"
 #include "firewall_defines.h"
 #include "firewalldb.h"
