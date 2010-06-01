@@ -16,8 +16,6 @@
 int hip_create_locators(hip_common_t *locator_msg,
                         struct hip_locator_info_addr_item **locators);
 
-int hip_send_locators_to_all_peers(void);
-
 int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
                                 struct hip_hadb_state *ha,
                                 struct in6_addr *src_addr,
