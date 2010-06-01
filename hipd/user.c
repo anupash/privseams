@@ -87,26 +87,6 @@ out_err:
 }
 
 /**
- * hip_unregister_handle_function
- *
- * Unregister a function for handling of the specified combination from packet
- * type and host association state.
- *
- * @param msg_type The packet type of the control message (RFC 5201, 5.3.)
- * @param *handle_func Pointer to the function which should be unregistered.
- *
- * @return Success =  0
- *         Error   = -1
- */
-int hip_user_unregister_handle(const uint8_t msg_type,
-                               int (*handle_func)(hip_common_t *msg,
-                                                  struct sockaddr_in6 *src))
-{
-    return lmod_unregister_function(hip_user_msg_handles[msg_type],
-                                    handle_func);
-}
-
-/**
  * Run all handle functions for specified combination from packet type and host
  * association state.
  *
