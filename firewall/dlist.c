@@ -16,12 +16,15 @@
 #include "lib/core/debug.h"
 #include "dlist.h"
 
+static DList *list_first(DList *list);
+static unsigned int list_length(DList *list);
+
 /**
  * Initialize and allocate memory for a new linked list.
  *
  * @return the linked list (caller frees)
  */
-DList *alloc_list(void)
+static DList *alloc_list(void)
 {
     DList *list = malloc(sizeof(DList));
     list->data = NULL;
@@ -32,66 +35,12 @@ DList *alloc_list(void)
 }
 
 /**
- * Remove a link from the list
- *
- * @param list the list to be removed
- * @return a pointer to the original list
- */
-DList *free_list_chain(DList *list)
-{
-    DList *tmp = NULL;
-
-    if (!list) {
-        return NULL;
-    }
-
-    if (list->prev) {
-        tmp        = list->prev;
-        tmp->next  = list->next;
-        list->next = NULL;
-        list->prev = NULL;
-        free(list->data);
-        list->data = NULL;
-        free(list);
-    }
-
-    return tmp;
-}
-
-/**
- * Deallocate the memory allocated for the entire linked list.
- * If the linked list items contain pointer to other allocated
- * items, the caller must free them beforehand!
- *
- * @todo (what's the difference to the previous function?)
- *
- * @param list the list to be deallocated
- * @return a pointer to the original list
- */
-void free_list(DList *list)
-{
-    DList *head = list_first(list);
-
-    DList *tmp  = NULL;
-
-    while (head) {
-        tmp       = head;
-        head      = tmp->next;
-        tmp->prev = NULL;
-        tmp->next = NULL;
-        free(tmp->data);
-        tmp->data = NULL;
-        free(tmp);
-    }
-}
-
-/**
  * get a pointer to the previous list item
  *
  * @param list a pointer to the list
  * @return a pointer to the previous list item
  */
-DList *list_first(DList *list)
+static DList *list_first(DList *list)
 {
     if (list) {
         while (list->prev) {
@@ -125,7 +74,7 @@ DList *list_last(DList *list)
  * @param list the linked list
  * @return the number of items on the linked list
  */
-unsigned int list_length(DList *list)
+static unsigned int list_length(DList *list)
 {
     unsigned int length = 0;
     list = list_first(list);
@@ -167,42 +116,6 @@ DList *append_to_list(DList *list,
         HIP_DEBUG("List is empty inserting first node\n");
         return new_list;
     }
-}
-
-/**
- * remove an element from the linked list by searching
- *
- * @param list the linked list
- * @param data the element to be removed
- * @return a pointer to the linked list
- */
-DList *remove_from_list(DList *list,
-                        const void *data)
-{
-    DList *tmp;
-    tmp = list;
-
-    while (tmp) {
-        if (tmp->data != data) {
-            tmp = tmp->next;
-        } else {
-            if (tmp->prev) {
-                tmp->prev->next = tmp->next;
-            }
-            if (tmp->next) {
-                tmp->next->prev = tmp->prev;
-            }
-
-            if (list == tmp) {
-                list = list->next;
-            }
-
-            free_list_chain(tmp);
-
-            break;
-        }
-    }
-    return list;
 }
 
 /**
