@@ -98,8 +98,6 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa);
 int save_rsa_private_key(const char *filenamebase, RSA *rsa);
 int load_dsa_private_key(const char *filenamebase, DSA **dsa);
 int load_rsa_private_key(const char *filename, RSA **rsa);
-int load_dsa_public_key(const char *filenamebase, DSA **dsa);
-int load_rsa_public_key(const char *filename, RSA **rsa);
 int impl_dsa_sign(uint8_t *digest, DSA *dsa, uint8_t *signature);
 int impl_dsa_verify(uint8_t *digest, DSA *dsa, uint8_t *signature);
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out);
