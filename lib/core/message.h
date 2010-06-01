@@ -20,12 +20,7 @@
 
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
 
-int hip_peek_recv_total_len(int socket, int encap_hdr_size, long timeout);
 int hip_daemon_connect(int hip_user_sock);
-int hip_daemon_bind_socket(int socket, struct sockaddr *sa);
-int hip_send_recv_daemon_info(struct hip_common *msg,
-                              int send_only,
-                              int opt_socket);
 int hip_send_daemon_info(const struct hip_common *msg, int only_send);
 int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type);
 int hip_read_user_control_msg(int socket,
@@ -41,5 +36,8 @@ int hip_read_control_msg_plugin_handler(void *msg,
                                         int len,
                                         in6_addr_t *src_addr,
                                         in_port_t port);
+int hip_send_recv_daemon_info(struct hip_common *msg,
+                              int send_only,
+                              int opt_socket);
 
 #endif /* HIP_LIB_CORE_MESSAGE_H */

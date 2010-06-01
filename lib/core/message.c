@@ -90,9 +90,9 @@
  *       actual bytes read. If you decide to reimplement this functionality,
  *       remember to preserve the timeout property.
  */
-int hip_peek_recv_total_len(int sockfd,
-                            int encap_hdr_size,
-                            long timeout)
+static int hip_peek_recv_total_len(int sockfd,
+                                   int encap_hdr_size,
+                                   long timeout)
 {
     int bytes                  = 0, err = 0, flags = MSG_PEEK;
     unsigned long timeout_left = timeout;
@@ -208,7 +208,7 @@ out_err:
  *               of the function).
  * @return zero on success and negative on failure
  */
-int hip_daemon_bind_socket(int sockfd, struct sockaddr *sa)
+static int hip_daemon_bind_socket(int sockfd, struct sockaddr *sa)
 {
     int err                   = 0, port = 0, on = 1;
     struct sockaddr_in6 *addr = (struct sockaddr_in6 *) sa;
@@ -455,22 +455,6 @@ out_err:
     }
 
     return err;
-}
-
-/**
- * Receive information from the daemon. Call first send_daemon_info
- * with info_type and then recvfrom.
- *
- * @param msg currently unused
- * @param info_type currently unused
- * @return always -1
- * @note currently the only SOCK_DGRAM and AF_INET6 are supported
- * @todo required by the native HIP API
- */
-int hip_recv_daemon_info(UNUSED struct hip_common *msg,
-                         UNUSED uint16_t info_type)
-{
-    return -1;
 }
 
 /**
