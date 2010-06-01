@@ -235,24 +235,3 @@ out_err:
     return err;
 }
 
-/** hip_update_entry_keymat - update HADB's KEYMAT related information
- * @param entry HADB entry to be update
- * @param new_keymat_index new Keymat Index value
- * @param new_calc_index new one byte value
- * @param new_current_keymat Kn related to @c new_calc_index
- * @param esp_keymat_index the esp Keymat index value
- */
-void hip_update_entry_keymat(struct hip_hadb_state *entry,
-                             uint16_t new_keymat_index,
-                             uint8_t new_calc_index,
-                             uint16_t esp_keymat_index,
-                             unsigned char *new_current_keymat)
-{
-    /* must have the hadb lock when calling this function */
-    entry->current_keymat_index = new_keymat_index;
-    entry->keymat_calc_index    = new_calc_index;
-    entry->esp_keymat_index     = esp_keymat_index;
-    if (new_current_keymat) {
-        memcpy(entry->current_keymat_K, new_current_keymat, HIP_AH_SHA_LEN);
-    }
-}
