@@ -191,7 +191,7 @@ static void hip_load_configuration(void)
      * of hipd system calls. Assumably the user socket buffer is large
      * enough to buffer all of the hipconf commands.. */
 
-    hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1, 1);
+    hip_conf_handle_load(NULL, 0, &cfile, 1, 1);
 }
 
 /**

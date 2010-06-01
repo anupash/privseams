@@ -47,57 +47,9 @@
 #define EXEC_LOADLIB_NONE       13
 /* @} */
 
-/**
- * hipconf tool actions. These are numerical values for the first commandline
- * argument. For example in "tools/hipconf get hi default" -command "get"
- * is the action. If you want a new action named as 'NEWACT', define a
- * constant variable which has value between 0 and ACTION_MAX.
- * Probably you also need to increase the value of ACTION_MAX.
- * @see hip_conf_get_action()
- */
-
-/* 0 is reserved */
+/* hipconf tool actions also used outside of conf.c */
 #define ACTION_ADD 1
-#define ACTION_DEL 2
 #define ACTION_NEW 3
-#define ACTION_NAT 4
-#define ACTION_HIP 5
-#define ACTION_SET 6
-#define ACTION_INC 7
-#define ACTION_DEC 8
-#define ACTION_GET 9
-#define ACTION_RUN 10
-#define ACTION_LOAD 11
-/* unused, was ACTION_DHT 12 */
-#define ACTION_HA  13
-#define ACTION_RST 14
-/* unused, was ACTION_BOS 15 */
-#define ACTION_DEBUG 16
-#define ACTION_MHADDR 17
-#define ACTION_RESTART 18
-#define ACTION_LOCATOR 19
-/* unused, was ACTION_OPENDHT 20 */
-/* unused, was for ACTION_OPPTCP 21 */
-#define ACTION_TRANSORDER 22
-#define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
-/* unused, was ACTION_HIPPROXY 24 */
-#define ACTION_REINIT 25
-#define ACTION_HEARTBEAT 26
-
-#define ACTION_HIT_TO_LSI 28
-#define ACTION_BUDDIES 29
-#define ACTION_NSUPDATE 30
-#define ACTION_HIT_TO_IP 31
-#define ACTION_HIT_TO_IP_SET 32
-#define ACTION_NAT_LOCAL_PORT 33
-#define ACTION_NAT_PEER_PORT 34
-#define ACTION_DATAPACKET 35  /*Support for datapacket--Prabhu */
-#define ACTION_SHOTGUN 36
-#define ACTION_MAP_ID_TO_ADDR 37
-#define ACTION_LSI_TO_HIT 38
-#define ACTION_HANDOVER 39
-#define ACTION_MANUAL_UPDATE 40
-#define ACTION_MAX 41 /* exclusive */
 
 int hip_handle_exec_app(int fork, int type, int argc, char **argv);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
