@@ -26,7 +26,6 @@
 #include "cache.h"
 #include "firewall.h"
 #include "firewalldb.h"
-#include "sysopp.h"
 #include "user_ipsec_fw_msg.h"
 #include "firewall_control.h"
 

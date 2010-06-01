@@ -71,7 +71,6 @@
 #include "midauth.h"
 #include "pisa.h"
 #include "rule_management.h"
-#include "sysopp.h"
 #include "user_ipsec_api.h"
 #include "firewall.h"
 
