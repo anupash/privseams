@@ -13,6 +13,10 @@
 #include "straddr.h"
 #include "message.h"
 
+static int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content);
+static int hip_cert_spki_inject(struct hip_cert_spki_info *to,
+                                const char *after, const char *what);
+
 /*******************************************************************************
 * FUNCTIONS FOR SPKI                                                          *
 *******************************************************************************/
@@ -495,7 +499,7 @@ out_err:
  *
  * @return 0 if ok -1 if error
  */
-int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content)
+static int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content)
 {
     int err       = 0;
     char needed[] = "(cert )";
@@ -516,8 +520,8 @@ int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content)
  *
  * @return 0 if ok and negative if error. -1 returned for example when after is NOT found
  */
-int hip_cert_spki_inject(struct hip_cert_spki_info *to,
-                         const char *after, const char *what)
+static int hip_cert_spki_inject(struct hip_cert_spki_info *to,
+                                const char *after, const char *what)
 {
     int err = 0, status = 0;
     regex_t re;
@@ -746,57 +750,6 @@ out_err:
 /*******************************************************************************
 * UTILITARY FUNCTIONS                                                         *
 *******************************************************************************/
-
-
-/**
- * hip_cert_der_to_x509 - Function that converts the DER encoded X509 to X509 struct
- *
- * @param der   pointer to DER encoded certificate
- * @param len   length of the DER given in bytes
- *
- * @return * X509 or on error NULL is returned
- */
-X509 *hip_cert_der_to_x509(const unsigned char *der, int len)
-{
-    int err    = 0;
-    X509 *cert = NULL;
-
-    HIP_IFEL(((cert = d2i_X509(NULL, (const unsigned char **) &der, len)) == NULL), -1,
-             "Failed to convert cert from DER to internal format\n");
-out_err:
-    if (err == -1) {
-        return NULL;
-    }
-    return cert;
-}
-
-/**
- * hip_cert_pem_to_x509 - Function that converts the PEM encoded X509 to X509 struct
- *
- * @param pem points to PEM encoded certificate
- *
- * @return *X509 or on error NULL is returned
- */
-X509 *hip_cert_pem_to_x509(char *pem)
-{
-    int err    = 0;
-    BIO *out   = NULL;
-    X509 *cert = NULL;
-
-    out = BIO_new_mem_buf(pem, -1);
-    HIP_IFEL((NULL == (cert = PEM_read_bio_X509(out, NULL, 0, NULL))), -1,
-             "Cert variable is NULL\n");
-out_err:
-
-    if (out) {
-        err = BIO_flush(out);
-        err = 0;         /* We are not interested in the return value here */
-    }
-    if (err == -1) {
-        return NULL;
-    }
-    return cert;
-}
 
 /**
  * hip_cert_read_conf_section - Function that reads configuration

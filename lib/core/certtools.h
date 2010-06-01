@@ -62,8 +62,6 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
                               const char *, struct in6_addr *,
                               const char *, struct in6_addr *,
                               time_t *, time_t *);
-int hip_cert_spki_build_cert(struct hip_cert_spki_info *);
-int hip_cert_spki_inject(struct hip_cert_spki_info *, const char *, const char *);
 int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
 int hip_cert_spki_char2certinfo(char *, struct hip_cert_spki_info *);
 int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *);
@@ -73,8 +71,6 @@ int hip_cert_x509v3_request_certificate(struct in6_addr *, unsigned char *);
 int hip_cert_x509v3_request_verification(unsigned char *, int);
 
 /** Utilitary functions */
-X509 *hip_cert_der_to_x509(const unsigned char *, int);
-X509 *hip_cert_pem_to_x509(char *);
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *, CONF *);
 CONF *hip_cert_open_conf(void);
 void hip_cert_free_conf(CONF *);
