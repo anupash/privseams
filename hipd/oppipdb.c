@@ -22,7 +22,6 @@ HIP_HASHTABLE *oppipdb;
 static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2);
 static hip_oppip_t *hip_create_oppip_entry(void);
 static unsigned long hip_oppipdb_hash_ip(const void *ptr);
-static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused);
 
 /**
  * Generates the hash information that is used to index the table
@@ -99,27 +98,6 @@ void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
     hip_ht_delete(oppipdb, entry);
     HIP_UNLOCK_OPPIP(entry);
     free(entry);
-}
-
-/**
- * Wrap function for hip_oppipdb_del_entry_by_entry()
- *
- * @param entry pointer to the entry to delete
- * @param unused unused pointer
- *
- * @return 0 on success
- */
-static void hip_oppipdb_uninit_wrap(hip_oppip_t *entry, void *unused)
-{
-    hip_oppipdb_del_entry_by_entry(entry, NULL);
-}
-
-/**
- * Deletes the whole oppipdb hash table
- */
-void hip_oppipdb_uninit(void)
-{
-    hip_for_each_oppip(hip_oppipdb_uninit_wrap, NULL);
 }
 
 /**
