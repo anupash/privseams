@@ -40,9 +40,6 @@ void hip_init_services(void);
 void hip_uninit_services(void);
 int hip_registration_maintenance(void);
 int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status);
-int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime);
-int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime);
-void hip_get_srv_info(const hip_srv_t *srv, char *information);
 int hip_get_active_services(hip_srv_t *active_services,
                             unsigned int *active_service_count);
 int hip_add_pending_request(hip_pending_request_t *request);

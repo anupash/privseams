@@ -125,70 +125,6 @@ int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
 }
 
 /**
- * Sets the minimum service lifetime for a given service. Sets minimum service
- * lifetype to value identified by @c lifetime for a service identified by
- * @c reg_type in the @c hip_services array. This is the minimum lifetime value
- * that the server is able to grant. According to Chapter 5 of RFC 5203, this
- * value should be at least 10 seconds (note, that the parameter @c lifetime
- * is not in seconds).
- *
- * @param  reg_type the registration type of the service for which the status
- *                  is to be set.
- * @param  lifetime the minimum lifetime to set.
- * @return          zero if the status was set succesfully, -1 otherwise.
- */
-
-int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime)
-{
-    if (lifetime == 0) {
-        return -1;
-    }
-
-    int i = 0;
-
-    for (; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
-        if (hip_services[i].reg_type == reg_type) {
-            hip_services[i].min_lifetime = lifetime;
-            return 0;
-        }
-    }
-
-    return -1;
-}
-
-/**
- * Sets the maximum service lifetime for a given service. Sets maximum service
- * lifetype to value identified by @c lifetime for a service identified by
- * @c reg_type in the @c hip_services array. This is the maximum lifetime value
- * that the server is able to grant. According to Chapter 5 of RFC 5203, this
- * value should be at least 120 seconds (note, that the parameter @c lifetime
- * is not in seconds).
- *
- * @param  reg_type the registration type of the service for which the status
- *                  is to be set.
- * @param  lifetime the maximum lifetime to set.
- * @return          zero if the status was set succesfully, -1 otherwise.
- */
-
-int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime)
-{
-    if (lifetime == 0) {
-        return -1;
-    }
-
-    int i = 0;
-
-    for (; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
-        if (hip_services[i].reg_type == reg_type) {
-            hip_services[i].max_lifetime = lifetime;
-            return 0;
-        }
-    }
-
-    return -1;
-}
-
-/**
  * Gets the active services. Gets all services from the @c hip_services array
  * whose status is ON.
  *
@@ -225,47 +161,6 @@ int hip_get_active_services(hip_srv_t *active_services,
     *active_service_count = j;
 
     return 0;
-}
-
-/**
- * Gets service informartion. Gets a string representing the service @c srv.
- *
- * Make sure that the target buffer @c informartion is at least 256 bytes long.
- *
- * @param  srv         a pointer to the service whose information is to be get.
- * @param  information a target buffer where to store the information string.
- */
-void hip_get_srv_info(const hip_srv_t *srv, char *information)
-{
-    if (srv == NULL || information == NULL) {
-        return;
-    }
-
-    char *cursor = information;
-    cursor += sprintf(cursor, "Service info:\n");
-
-    cursor += sprintf(cursor, " reg_type: ");
-    if (srv->reg_type == HIP_SERVICE_RENDEZVOUS) {
-        cursor += sprintf(cursor, "rendezvous\n");
-    } else if (srv->reg_type == HIP_SERVICE_RELAY) {
-        cursor += sprintf(cursor, "relay\n");
-    } else if (srv->reg_type == HIP_SERVICE_FULLRELAY) {
-        cursor += sprintf(cursor, "fullrelay\n");
-    } else {
-        cursor += sprintf(cursor, "unknown\n");
-    }
-
-    cursor += sprintf(cursor, " status: ");
-    if (srv->status == HIP_SERVICE_ON) {
-        cursor += sprintf(cursor, "on\n");
-    } else if (srv->status == HIP_SERVICE_OFF)   {
-        cursor += sprintf(cursor, "off\n");
-    } else {
-        cursor += sprintf(cursor, "unknown\n");
-    }
-
-    cursor += sprintf(cursor, " minimum lifetime: %u\n", srv->min_lifetime);
-    cursor += sprintf(cursor, " maximum lifetime: %u\n", srv->max_lifetime);
 }
 
 /**
