@@ -43,8 +43,6 @@ void initlist(List *);
 void insert(List *, char *data);
 void destroy(List *);
 int length(List *);
-int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
-                     struct timeval *result);
 
 /**
  * Gets an item from a linked list. Gets <code>n</code>th item from a linked
@@ -57,7 +55,6 @@ int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
  */
 char *getitem(List *, int n);
 char *getwithoutnewline(char *buffer, int count, FILE *f);
-char *findsubstring(const char *string, const char *substring);
 
 /**
  * Breaks a string into substrings. Breaks @c string into substrings using any

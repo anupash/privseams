@@ -4,8 +4,7 @@
  * Distributed under
  * <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
- * @brief Utilities borrowed from libinet6. Function hip_timeval_diff()
- * is borrowed from glibc project.
+ * @brief Utilities borrowed from libinet6.
  */
 
 #include <stdarg.h>
@@ -39,39 +38,6 @@ char *getwithoutnewline(char *buffer, int count, FILE *f)
         }
     }
     return result;
-}
-
-/**
- * Checks if a string contains a particular substring.
- *
- * @param string a string
- * @param substring match this substring to the given @c string
- *
- * @return If string contains substring, the return value is the location of
- * the first matching instance of substring in string.  If string doesn't
- * contain substring, the return value is NULL.
- */
-char *findsubstring(const char *string, const char *substring)
-{
-    char *str = (char *) string, *sub = (char *) substring;
-    char *a, *b;
-
-    for (b = sub; *str != 0; str += 1) {
-        if (*str != *b) {
-            continue;
-        }
-        a = str;
-        for (;; ) {
-            if (*b == 0) {
-                return str;
-            }
-            if (*a++ != *b++) {
-                break;
-            }
-        }
-        b = sub;
-    }
-    return (char *) NULL;
 }
 
 /**
@@ -196,45 +162,6 @@ char *getitem(List *ilist, int n)
         }
     }
     return NULL;
-}
-
-/**
- * calculate difference between two timevalues
- *
- * @param t1 timevalue 1
- * @param t2 timevalue 2
- * @param result where the result is stored
- *
- * ** CHECK comments **
- * result = t1 - t2
- *
- * Code taken from http://www.gnu.org/manual/glibc-2.2.5/html_node/Elapsed-Time.html
- *
- * @return 1 if t1 is equal or later than t2, else 0.
- */
-int hip_timeval_diff(const struct timeval *t1,
-                     const struct timeval *t2,
-                     struct timeval *result)
-{
-    struct timeval _t1, _t2;
-    _t1 = *t1;
-    _t2 = *t2;
-
-    if (_t1.tv_usec < _t2.tv_usec) {
-        int nsec = (_t2.tv_usec - _t1.tv_usec) / 1000000 + 1;
-        _t2.tv_usec -= 1000000 * nsec;
-        _t2.tv_sec  += nsec;
-    }
-    if (_t1.tv_usec - _t2.tv_usec > 1000000) {
-        int nsec = (_t1.tv_usec - _t2.tv_usec) / 1000000;
-        _t2.tv_usec += 1000000 * nsec;
-        _t2.tv_sec  -= nsec;
-    }
-
-    result->tv_sec  = _t2.tv_sec - _t1.tv_sec;
-    result->tv_usec = _t2.tv_usec - _t1.tv_usec;
-
-    return _t1.tv_sec >= _t2.tv_sec;
 }
 
 /**
