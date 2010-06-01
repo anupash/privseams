@@ -34,9 +34,6 @@ int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr,
                     uint32_t spi, int state, int dir, hip_portpair_t *sa_info);
 int hip_xfrm_delete(hip_hit_t *hit, uint32_t spi, int dir);
 
-/* Allocates SPI for fixed time */
-uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
-
 /* Setups the SA (with a given SPI if so said) */
 uint32_t hip_add_sa(const struct in6_addr *saddr,
                     const struct in6_addr *daddr,

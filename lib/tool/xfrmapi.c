@@ -586,21 +586,6 @@ void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
 }
 
 /**
- * select a random SPI number
- *
- * @param srchit source HIT of the SA
- * @param dsthit destination HIT of the SA
- * @return a random SPI number
- * @todo rewrite using XFRM to avoid collisions?
- */
-uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
-{
-    uint32_t spi;
-    get_random_bytes(&spi, sizeof(uint32_t));
-    return spi;
-}
-
-/**
  * Add a Security Association for IPsec ESP
  *
  * @param saddr outer source address of the SA
