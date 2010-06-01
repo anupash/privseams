@@ -88,6 +88,15 @@ enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
+static const char *hip_param_type_name(const hip_tlv_type_t param_type);
+static int hip_build_param_hmac(struct hip_common *msg,
+                                const struct hip_crypto_key *key,
+                                hip_tlv_type_t param_type);
+static void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
+                                             const char *hostname,
+                                             hip_tlv_len_t rr_data_len,
+                                             uint8_t algorithm);
+
 /**
  * Fill in an endpoint header that can contain a DSA or RSA key in HIP
  * RR format. This is used for sending new private keys to hipd
@@ -197,15 +206,6 @@ struct hip_common *hip_msg_alloc(void)
 }
 
 /**
- * hip_msg_free - deallocate a HIP packet
- * @param msg the packet to be deallocated
- */
-void hip_msg_free(struct hip_common *msg)
-{
-    free(msg);
-}
-
-/**
  * convert on-the-wire message length total length to bytes
  *
  * @param len the length of the HIP header as it is in the header
@@ -284,7 +284,7 @@ hip_hdr_type_t hip_get_msg_type(const struct hip_common *msg)
  * @param msg pointer to the beginning of the message header
  * @param type the type of the message (in host byte order)
  */
-void hip_set_msg_type(struct hip_common *msg, hip_hdr_type_t type)
+static void hip_set_msg_type(struct hip_common *msg, hip_hdr_type_t type)
 {
     msg->type_hdr = type;
 }
@@ -1163,7 +1163,7 @@ const char *hip_message_type_name(const uint8_t msg_type)
  * @param param_type parameter type number
  * @return      name of the message type
  */
-const char *hip_param_type_name(const hip_tlv_type_t param_type)
+static const char *hip_param_type_name(const hip_tlv_type_t param_type)
 {
     switch (param_type) {
     case HIP_PARAM_ACK:             return "HIP_PARAM_ACK";
@@ -1712,9 +1712,9 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
  * @see       hip_build_param_hmac2_contents()
  * @see       hip_write_hmac().
  */
-int hip_build_param_hmac(struct hip_common *msg,
-                         const struct hip_crypto_key *key,
-                         hip_tlv_type_t param_type)
+static int hip_build_param_hmac(struct hip_common *msg,
+                                const struct hip_crypto_key *key,
+                                hip_tlv_type_t param_type)
 {
     int err = 0;
     struct hip_hmac hmac;
@@ -2099,56 +2099,6 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
     r1gen.generation = hton64(generation);
 
     err              = hip_build_param(msg, &r1gen);
-    return err;
-}
-
-/**
- * Build a @c FROM parameter to the HIP packet @c msg.
- *
- * @param msg      a pointer to a HIP packet common header
- * @param addr     a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param UNUSED   this parameter is not used, but it is needed to make the
- *                 parameter list uniform with hip_build_param_relay_from().
- * @return         zero on success, or negative error value on error.
- * @see            RFC5204 section 4.2.2.
- */
-int hip_build_param_from(struct hip_common *msg,
-                         const struct in6_addr *addr,
-                         const in_port_t not_used UNUSED)
-{
-    struct hip_from from;
-    int err = 0;
-
-    hip_set_param_type((struct hip_tlv_common *) &from, HIP_PARAM_FROM);
-    memcpy((struct in6_addr *) &from.address, addr, 16);
-
-    hip_calc_generic_param_len((struct hip_tlv_common *) &from, sizeof(struct hip_from), 0);
-    err = hip_build_param(msg, &from);
-    return err;
-}
-
-/**
- * Build a @c RELAY_FROM parameter to the HIP packet @c msg.
- *
- * @param msg  a pointer to a HIP packet common header
- * @param addr a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param port port number (host byte order).
- * @return     zero on success, or negative error value on error.
- */
-int hip_build_param_relay_from(struct hip_common *msg, const struct in6_addr *addr,
-                               const in_port_t port)
-{
-    struct hip_relay_from relay_from;
-    int err = 0;
-
-    hip_set_param_type((struct hip_tlv_common *) &relay_from, HIP_PARAM_RELAY_FROM);
-    ipv6_addr_copy((struct in6_addr *) &relay_from.address, addr);
-    relay_from.port     = htons(port);
-    relay_from.reserved = 0;
-    relay_from.protocol = HIP_NAT_PROTO_UDP;
-    hip_calc_generic_param_len((struct hip_tlv_common *) &relay_from, sizeof(relay_from), 0);
-    err                 = hip_build_param(msg, &relay_from);
-
     return err;
 }
 
@@ -2986,35 +2936,6 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg,
 }
 
 /**
- * build and insert an unit test parameter (interprocess only)
- *
- * This parameter is used for triggering the unit test suite in hipd.
- * It is only for implementation internal purposes only.
- *
- * @param msg the message where the parameter will be appended
- * @param suiteid the id of the test suite
- * @param caseid the id of the test case
- * @return 0 on success, otherwise < 0.
- */
-int hip_build_param_unit_test(struct hip_common *msg,
-                              uint16_t suiteid,
-                              uint16_t caseid)
-{
-    int err = 0;
-    struct hip_unit_test ut;
-
-    hip_set_param_type((struct hip_tlv_common *) &ut, HIP_PARAM_UNIT_TEST);
-    hip_calc_generic_param_len((struct hip_tlv_common *) &ut,
-                               sizeof(struct hip_unit_test),
-                               0);
-    ut.suiteid = htons(suiteid);
-    ut.caseid  = htons(caseid);
-
-    err        = hip_build_param(msg, &ut);
-    return err;
-}
-
-/**
  * build a branch parameter for the ESP extensions
  *
  * @param msg the message where the parameter is appended
@@ -3314,10 +3235,10 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
  *                    the message
  * @param algorithm the public key algorithm
  */
-void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
-                                      const char *hostname,
-                                      hip_tlv_len_t rr_data_len,
-                                      uint8_t algorithm)
+static void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
+                                             const char *hostname,
+                                             hip_tlv_len_t rr_data_len,
+                                             uint8_t algorithm)
 {
     uint16_t hi_len = sizeof(struct hip_host_id_key_rdata) + rr_data_len;
     uint16_t fqdn_len;
@@ -3347,34 +3268,6 @@ void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
     host_id_hdr->rdata.protocol  = 0xFF;    /* RFC 2535 */
     /* algo is 8 bits, no htons */
     host_id_hdr->rdata.algorithm = algorithm;
-}
-
-/**
- * encapsulate a host name into a parameter (interprocess communications  only)
- *
- * @param msg the message where the parameter should be appended to
- * @param hostname a hostname
- * @return zero on success or negative on error
- */
-int hip_build_param_hostname(struct hip_common *msg, const char *hostname)
-{
-    struct hip_tlv_common param;
-    size_t namelen;
-
-    hip_set_param_type(&param, HIP_PARAM_HOSTNAME);
-
-    namelen = strlen(hostname) + 1;
-    if (namelen > HIP_HOST_ID_HOSTNAME_LEN_MAX) {
-        namelen = HIP_HOST_ID_HOSTNAME_LEN_MAX;
-    }
-
-    hip_set_param_contents_len((struct hip_tlv_common *) &param,
-                               namelen);
-
-    return hip_build_generic_param(msg,
-                                   &param,
-                                   sizeof(struct hip_tlv_common),
-                                   hostname);
 }
 
 /**
@@ -3490,48 +3383,6 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
         err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
     }
 
-    return err;
-}
-
-/**
- * build an interface id parameter into a message (interprocess
- * communications only)
- *
- * @param msg the message where the interface id parameter will be appended
- * @param if_index the interface number
- * @return zero on success and negative on failure
- */
-int hip_build_param_eid_iface(struct hip_common *msg,
-                              hip_eid_iface_type_t if_index)
-{
-    int err = 0;
-    struct hip_eid_iface param;
-
-    hip_set_param_type((struct hip_tlv_common *) &param, HIP_PARAM_EID_IFACE);
-    hip_calc_generic_param_len((struct hip_tlv_common *) &param, sizeof(param), 0);
-    param.if_index = htons(if_index);
-    err            = hip_build_param(msg, &param);
-
-    return err;
-}
-
-/**
- * build sockaddr parameter into a message (interprocess
- * communications only)
- *
- * @param msg the message where the sockaddr paramater will be appended
- * @param sockaddr the sockaddr structure
- * @param sockaddr_len the length of the sockaddr structure
- * @return zero on success or negative on failure
- */
-int hip_build_param_eid_sockaddr(struct hip_common *msg,
-                                 struct sockaddr *sockaddr,
-                                 size_t sockaddr_len)
-{
-    int err = 0;
-
-    err = hip_build_param_contents(msg, sockaddr, HIP_PARAM_EID_SOCKADDR,
-                                   sockaddr_len);
     return err;
 }
 
@@ -3961,19 +3812,6 @@ out_err:
 }
 
 /**
- * translate a public RSA key to a HIT
- *
- * @param rsa_key the RSA key in OpenSSL format
- * @param hit the resulting HIT will be stored here
- * @return zero on success and negative on failure
- */
-int hip_public_rsa_to_hit(RSA *rsa_key,
-                          struct in6_addr *hit)
-{
-    return hip_any_key_to_hit(rsa_key, hit, 1, 0);
-}
-
-/**
  * translate a private RSA key to a HIT
  *
  * @param rsa_key the RSA key in OpenSSL format
@@ -3984,19 +3822,6 @@ int hip_private_rsa_to_hit(RSA *rsa_key,
                            struct in6_addr *hit)
 {
     return hip_any_key_to_hit(rsa_key, hit, 0, 0);
-}
-
-/**
- * translate a public DSA key to a HIT
- *
- * @param dsa_key the DSA key in OpenSSL format
- * @param hit the resulting HIT will be stored here
- * @return zero on success and negative on failure
- */
-int hip_public_dsa_to_hit(DSA *dsa_key,
-                          struct in6_addr *hit)
-{
-    return hip_any_key_to_hit(dsa_key, hit, 1, 1);
 }
 
 /**

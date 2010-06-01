@@ -59,10 +59,6 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *,
 int hip_build_param_echo(struct hip_common *, void *, int, int, int);
 int hip_build_param_eid_endpoint(struct hip_common *,
                                  const struct endpoint_hip *);
-int hip_build_param_eid_iface(struct hip_common *, hip_eid_iface_type_t);
-int hip_build_param_eid_sockaddr(struct hip_common *,
-                                 struct sockaddr *,
-                                 size_t);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *,
                                         struct hip_tlv_common *);
 int hip_build_param_encrypted_aes_sha1(struct hip_common *,
@@ -70,12 +66,6 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *,
 int hip_build_param_encrypted_null_sha1(struct hip_common *,
                                         struct hip_tlv_common *);
 int hip_build_param_esp_info(struct hip_common *, uint16_t, uint32_t, uint32_t);
-int hip_build_param_relay_from(struct hip_common *,
-                               const struct in6_addr *,
-                               const in_port_t);
-int hip_build_param_from(struct hip_common *,
-                         const struct in6_addr *,
-                         const in_port_t);
 int hip_build_param_hmac2_contents(struct hip_common *,
                                    struct hip_crypto_key *,
                                    struct hip_host_id *);
@@ -84,9 +74,6 @@ int hip_build_param_hmac_contents(struct hip_common *,
 int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
                                 struct hip_common *msg_copy,
                                 struct hip_host_id *host_id);
-int hip_build_param_hmac(struct hip_common *,
-                         const struct hip_crypto_key *,
-                         hip_tlv_type_t);
 void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
                                  const char *hostname,
                                  hip_tlv_len_t rr_data_len,
@@ -94,11 +81,6 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
 void hip_build_param_host_id_only(struct hip_host_id *host_id,
                                   const void *rr_data,
                                   const char *fqdn);
-void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
-                                      const char *hostname,
-                                      hip_tlv_len_t rr_data_len,
-                                      uint8_t algorithm);
-int hip_build_param_hostname(struct hip_common *, const char *);
 int hip_build_param_keys_hdr(struct hip_keys *,
                              uint16_t,
                              uint16_t,
@@ -159,7 +141,6 @@ int hip_build_param_esp_transform(struct hip_common *,
 int hip_build_param_hip_transform(struct hip_common *,
                                   const hip_transform_suite_t[],
                                   const uint16_t);
-int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
 int hip_build_param_relay_to(struct hip_common *msg,
                              const in6_addr_t *rvs_addr,
                              const in_port_t port);
@@ -209,13 +190,10 @@ hip_tlv_type_t hip_get_param_type(const void *);
 uint16_t hip_get_msg_checksum(struct hip_common *msg);
 const char *hip_message_type_name(const uint8_t);
 struct hip_common *hip_msg_alloc(void);
-void hip_msg_free(struct hip_common *);
 void hip_msg_init(struct hip_common *);
-const char *hip_param_type_name(const hip_tlv_type_t);
 void hip_set_msg_err(struct hip_common *, hip_hdr_err_t);
 void hip_set_msg_checksum(struct hip_common *msg, uint8_t checksum);
 void hip_set_msg_total_len(struct hip_common *, uint16_t);
-void hip_set_msg_type(struct hip_common *, hip_hdr_type_t);
 void hip_set_param_contents_len(struct hip_tlv_common *, hip_tlv_len_t);
 void hip_set_param_lsi_value(struct hip_esp_info *, uint32_t);
 void hip_zero_msg_checksum(struct hip_common *);
@@ -241,12 +219,8 @@ int hip_build_param_reg_response(hip_common_t *msg,
 int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                              struct hip_crypto_key *);
 
-int hip_public_rsa_to_hit(RSA *rsa_key,
-                          struct in6_addr *hit);
 int hip_private_rsa_to_hit(RSA *rsa_key,
                            struct in6_addr *hit);
-int hip_public_dsa_to_hit(DSA *dsa_key,
-                          struct in6_addr *hit);
 int hip_private_dsa_to_hit(DSA *dsa_key,
                            struct in6_addr *hit);
 int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta);
