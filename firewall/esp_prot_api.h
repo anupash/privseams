@@ -85,7 +85,6 @@ int esp_prot_verify_htree_element(const hash_function_t hash_function,
                                   const int next_uroot_length,
                                   const unsigned char *hash_value);
 esp_prot_tfm_t *esp_prot_resolve_transform(const uint8_t transform);
-hash_function_t esp_prot_get_hash_function(const uint8_t transform);
 int esp_prot_get_hash_length(const uint8_t transform);
 int esp_prot_get_data_offset(const hip_sa_entry_t *entry);
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry);

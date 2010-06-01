@@ -98,6 +98,8 @@ static hchain_store_t bex_store;
 static hchain_store_t update_store;
 
 
+static hash_function_t esp_prot_get_hash_function(const uint8_t transform);
+
 /**
  * Adds buffered packet hashes to a protected IPsec packet
  *
@@ -925,7 +927,7 @@ esp_prot_tfm_t *esp_prot_resolve_transform(const uint8_t transform)
  * @param   transform the TPA transform
  * @return  resolved hash function, NULL for UNUSED transform
  */
-hash_function_t esp_prot_get_hash_function(const uint8_t transform)
+static hash_function_t esp_prot_get_hash_function(const uint8_t transform)
 {
     esp_prot_tfm_t *prot_transform = NULL;
     hash_function_t hash_function  = NULL;
