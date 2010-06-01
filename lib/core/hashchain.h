@@ -45,7 +45,6 @@ typedef struct hash_chain {
     hash_tree_t *   link_tree;  /* pointer to a hash tree for linking hchains */
 } hash_chain_t;
 
-void hchain_print(const hash_chain_t *hash_chain);
 int hchain_verify(const unsigned char *current_hash,
                   const unsigned char *last_hash,
                   const hash_function_t hash_function,
@@ -60,15 +59,7 @@ hash_chain_t *hchain_create(const hash_function_t hash_function,
                             hash_tree_t *link_tree);
 unsigned char *hchain_get_anchor(const hash_chain_t *hash_chain);
 unsigned char *hchain_get_seed(const hash_chain_t *hash_chain);
-unsigned char *hchain_element_by_index(const hash_chain_t *hash_chain,
-                                       const int index);
-unsigned char *hchain_next(const hash_chain_t *hash_chain);
-unsigned char *hchain_previous(const hash_chain_t *hash_chain);
-int hchain_set_current_index(hash_chain_t *hash_chain, const int index);
-unsigned char *hchain_current(const hash_chain_t *hash_chain);
 unsigned char *hchain_pop(hash_chain_t *hash_chain);
-unsigned char *hchain_push(hash_chain_t *hash_chain);
-int hchain_reset(hash_chain_t *hash_chain);
 int hchain_free(hash_chain_t *hash_chain);
 int hchain_get_num_remaining(const hash_chain_t *hash_chain);
 

@@ -25,42 +25,9 @@
 #define HCHAIN_LOCK(lock_id)
 #define HCHAIN_UNLOCK(lock_id)
 
-/** prints the hash chain
- *
- * @param       hash_chain the hash chain to be printed
- */
-void hchain_print(const hash_chain_t *hash_chain)
-{
-    int i;
-
-    if (hash_chain) {
-        HIP_DEBUG("Hash chain: %p\n", hash_chain);
-
-        if (hash_chain->current_index < hash_chain->hchain_length) {
-            HIP_HEXDUMP("currrent element: ",
-                        hchain_element_by_index(hash_chain, hash_chain->current_index),
-                        hash_chain->hash_length);
-        } else {
-            HIP_DEBUG(" -- hash chain not in use -- \n");
-        }
-
-        HIP_DEBUG("Remaining elements: %d\n", hchain_get_num_remaining(hash_chain));
-        HIP_DEBUG(" - Contents:\n");
-
-        for (i = 0; i < hash_chain->hchain_length; i++) {
-            if (i < hash_chain->current_index) {
-                HIP_DEBUG("(+) element %i:\n", i + 1);
-            } else {
-                HIP_DEBUG("(-) element %i:\n", i + 1);
-            }
-
-            HIP_HEXDUMP("\t", hchain_element_by_index(hash_chain, i),
-                        hash_chain->hash_length);
-        }
-    } else {
-        HIP_DEBUG("Given hash chain was NULL!\n");
-    }
-}
+static unsigned char *hchain_element_by_index(const hash_chain_t *hash_chain,
+                                              const int index);
+static unsigned char *hchain_next(const hash_chain_t *hash_chain);
 
 /** checks if a hash is verifiable by a hash chain
  *
@@ -240,7 +207,8 @@ unsigned char *hchain_get_seed(const hash_chain_t *hash_chain)
  * @param       index index to the hash chain element
  * @return      element of the given hash chain
  */
-unsigned char *hchain_element_by_index(const hash_chain_t *hash_chain, const int index)
+static unsigned char *hchain_element_by_index(const hash_chain_t *hash_chain,
+                                              const int index)
 {
     unsigned char *element = NULL;
     int err                = 0;
@@ -266,24 +234,6 @@ out_err:
     return element;
 }
 
-/* setter function for a specific index of the given hash chain
- *
- * @param       hash_chain hash chain from which the element should be returned
- * @param       index index to the hash chain element
- * @return      always 0
- */
-int hchain_set_current_index(hash_chain_t *hash_chain, const int index)
-{
-    int err = 0;
-
-    HIP_ASSERT(hash_chain);
-    HIP_ASSERT(index >= 0 && index <= hash_chain->hchain_length);
-
-    hash_chain->current_index = index;
-
-    return err;
-}
-
 /** returns the next element of the hash chain but does not advance the current element
  * pointer. This function should only be used if the next element is kept secret and has to
  * be used for special purposes like message signatures.
@@ -291,41 +241,11 @@ int hchain_set_current_index(hash_chain_t *hash_chain, const int index)
  * @param       hash_chain the hash chain
  * @return      next element of the hash chain or NULL if the hash chain reached boundary
  */
-unsigned char *hchain_next(const hash_chain_t *hash_chain)
+static unsigned char *hchain_next(const hash_chain_t *hash_chain)
 {
     unsigned char *element = NULL;
 
     element = hchain_element_by_index(hash_chain, hash_chain->current_index - 1);
-
-    return element;
-}
-
-/** returns the previous element of the hash chain but does not advance the current element
- * pointer.
- *
- * @param       hash_chain given hash chain
- * @return      previous element of the hash chain or NULL if the hash chain reached boundary
- */
-unsigned char *hchain_previous(const hash_chain_t *hash_chain)
-{
-    unsigned char *element = NULL;
-
-    element = hchain_element_by_index(hash_chain, hash_chain->current_index + 1);
-
-    return element;
-}
-
-/** returns the current element of the hash chain but does not advance the current element
- * pointer.
- *
- * @param       hash_chain given hash chain
- * @return      current element of the hash chain or NULL if the hash chain reached boundary
- */
-unsigned char *hchain_current(const hash_chain_t *hash_chain)
-{
-    unsigned char *element = NULL;
-
-    element = hchain_element_by_index(hash_chain, hash_chain->current_index);
 
     return element;
 }
@@ -347,39 +267,6 @@ unsigned char *hchain_pop(hash_chain_t *hash_chain)
     HCHAIN_UNLOCK(&hash_chain);
 
     return element;
-}
-
-/** returns the previous element from the hash chain and decreases current element pointer
- *
- * @param       hash_chain hash chain which has to be popped
- * @return      pointer to the previous hashchain element or NULL if the hash chain is depleted
- */
-unsigned char *hchain_push(hash_chain_t *hash_chain)
-{
-    unsigned char *element = NULL;
-
-    HIP_ASSERT(hash_chain);
-
-    HCHAIN_LOCK(&hash_chain);
-    element = hchain_previous(hash_chain);
-    hash_chain->current_index++;
-    HCHAIN_UNLOCK(&hash_chain);
-
-    return element;
-}
-
-/** resets the pointer to the current element
- *
- * @param       hash_chain hash chain that should be reset
- * @return      always 0
- */
-int hchain_reset(hash_chain_t *hash_chain)
-{
-    int err = 0;
-
-    hash_chain->current_index = hash_chain->hchain_length;
-
-    return err;
 }
 
 /** delete hash chain and free memory
