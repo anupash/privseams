@@ -249,17 +249,3 @@ void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
         HIP_DEBUG("No sockets registered.\n");
     }
 }
-
-/**
- * hip_uninit_sockets
- *
- * Free the memory used for storage of socket fd's.
- *
- */
-void hip_uninit_sockets(void)
-{
-    if (hip_sockets) {
-        hip_ll_uninit(hip_sockets, free);
-        free(hip_sockets);
-    }
-}
