@@ -61,6 +61,13 @@ static hip_ll_t packet_types;
  */
 static uint16_t num_disabled_modules = 0;
 
+
+static void *lmod_get_state_item_by_id(struct modular_state *state,
+                                       const unsigned int index);
+static int lmod_get_state_item_id(struct modular_state *state,
+                                  const char *item_name);
+static int lmod_packet_type_exists(const uint16_t packet_type);
+
 /**
  * lmod_init_state
  *
@@ -198,8 +205,8 @@ void *lmod_get_state_item(struct modular_state *state, const char *item_name)
  *  @return Success = Pointer to the requested state item (if exists)
  *          Error   = NULL
  */
-void *lmod_get_state_item_by_id(struct modular_state *state,
-                                const unsigned int id)
+static void *lmod_get_state_item_by_id(struct modular_state *state,
+                                       const unsigned int id)
 {
     return hip_ll_get(state->item_list, id);
 }
@@ -215,7 +222,8 @@ void *lmod_get_state_item_by_id(struct modular_state *state,
  *  @return Success = id (index number) of the state item as unsigned int
  *          Error   = -1
  */
-int lmod_get_state_item_id(struct modular_state *state, const char *item_name)
+static int lmod_get_state_item_id(struct modular_state *state,
+                                  const char *item_name)
 {
     unsigned int i;
 
@@ -473,7 +481,7 @@ int lmod_register_packet_type(const uint16_t packet_type,
  * @return The index of the packet type, if existing or
  *         -1, if the packet type not exists
  */
-int lmod_packet_type_exists(const uint16_t packet_type)
+static int lmod_packet_type_exists(const uint16_t packet_type)
 {
     int            index = 0;
     hip_ll_node_t *iter  = NULL;
@@ -487,31 +495,6 @@ int lmod_packet_type_exists(const uint16_t packet_type)
     }
 
     return -1;
-}
-
-/**
- * lmod_get_packet_type_identifier
- *
- * Get the identifier corresponding to the provided packet type number.
- *
- * @param packet_type The packet type number to search for.
- *
- * @return The corresponding identifier, if exists or
- *         NULL, if the packet type is not registered.
- */
-const char *lmod_get_packet_type_identifier(const uint16_t packet_type)
-{
-    int index;
-    struct packet_type *entry = NULL;
-
-    index = lmod_packet_type_exists(packet_type);
-
-    if ((index != -1)) {
-        entry = hip_ll_get(&packet_types, index);
-        return entry->identifier;
-    }
-
-    return NULL;
 }
 
 /**
