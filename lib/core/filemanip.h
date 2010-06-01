@@ -17,7 +17,6 @@
 int hip_create_lock_file(const char *filename, int killold);
 int hip_remove_lock_file(const char *filename);
 int check_and_create_dir(const char *dirname, mode_t mode);
-int check_and_create_file(const char *filename, mode_t mode);
 void change_key_file_perms(const char *filenamebase);
 
 #endif /* HIP_LIB_CORE_FILEMANIP_H */

@@ -136,37 +136,6 @@ int check_and_create_dir(const char *dirname, mode_t mode)
 }
 
 /**
- * check and create a file
- * @param filename the name of the file
- * @param mode creation mode for the file, if it does not exist
- *
- * @return file descriptor of the created file
- */
-int check_and_create_file(const char *filename, mode_t mode)
-{
-    int err = 0, fd = 0;
-    struct stat file_stat;
-
-    HIP_INFO("filename=%s mode=%o\n", filename, mode);
-    err = stat(filename, &file_stat);
-    if (err && errno == ENOENT) {     /* no such file or file */
-        fd = open(filename, O_RDWR | O_CREAT, 0644);
-        if (fd < 0) {
-            HIP_ERROR("creating file %s failed: %s\n", filename,
-                      strerror(errno));
-        }
-    } else {
-        fd = open(filename, O_RDWR);
-        if (fd < 0) {
-            HIP_ERROR("opening file %s failed: %s\n", filename,
-                      strerror(errno));
-        }
-    }
-
-    return fd;
-}
-
-/**
  * make /etc/hip file permissions more secure
  *
  * @param filenamebase the file name based for keys
