@@ -51,6 +51,19 @@
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12
 
+static int hip_payload_encrypt(unsigned char *in,
+                               const uint8_t in_type,
+                               const uint16_t in_len,
+                               unsigned char *out,
+                               uint16_t *out_len,
+                               hip_sa_entry_t *entry);
+static int hip_payload_decrypt(const unsigned char *in,
+                               const uint16_t in_len,
+                               unsigned char *out,
+                               uint8_t *out_type,
+                               uint16_t *out_len,
+                               hip_sa_entry_t *entry);
+
 /** adds an UDP-header to the packet
  *
  * @param udp_hdr       location of the udp_hdr
@@ -333,12 +346,12 @@ out_err:
  *                  and key to be used
  * @return          0, if correct, != 0 else
  */
-int hip_payload_encrypt(unsigned char *in,
-                        const uint8_t in_type,
-                        const uint16_t in_len,
-                        unsigned char *out,
-                        uint16_t *out_len,
-                        hip_sa_entry_t *entry)
+static int hip_payload_encrypt(unsigned char *in,
+                               const uint8_t in_type,
+                               const uint16_t in_len,
+                               unsigned char *out,
+                               uint16_t *out_len,
+                               hip_sa_entry_t *entry)
 {
     /* elen is length of data to encrypt */
     uint16_t elen                 = in_len;
@@ -541,9 +554,9 @@ out_err:
  *                  and key to be used
  * @return          0, if correct, != 0 else
  */
-int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
-                        unsigned char *out, uint8_t *out_type, uint16_t *out_len,
-                        hip_sa_entry_t *entry)
+static int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
+                               unsigned char *out, uint8_t *out_type, uint16_t *out_len,
+                               hip_sa_entry_t *entry)
 {
     /* elen is length of data to encrypt */
     uint16_t elen                 = 0;

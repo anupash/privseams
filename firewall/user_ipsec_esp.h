@@ -47,17 +47,6 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx,
 int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
                         unsigned char *decrypted_packet,
                         uint16_t *decrypted_packet_len);
-int hip_payload_encrypt(unsigned char *in,
-                        const uint8_t in_type,
-                        const uint16_t in_len,
-                        unsigned char *out,
-                        uint16_t *out_len,
-                        hip_sa_entry_t *entry);
-int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
-                        unsigned char *out,
-                        uint8_t *out_type,
-                        uint16_t *out_len,
-                        hip_sa_entry_t *entry);
 void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
                      const struct in6_addr *dst_addr, const uint16_t packet_len,
                      const uint8_t next_hdr);
