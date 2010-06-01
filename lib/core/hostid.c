@@ -35,9 +35,9 @@
  * @param encoded_len the length of the encoded HIT in bits
  * @return zero on success or negative on error
  */
-int khi_encode(unsigned char *orig, int orig_len,
-               unsigned char *encoded,
-               int encoded_len)
+static int khi_encode(unsigned char *orig, int orig_len,
+                      unsigned char *encoded,
+                      int encoded_len)
 {
     BIGNUM *bn = NULL;
     int err    = 0, shift = (orig_len - encoded_len) / 2,
@@ -266,23 +266,6 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
     return err;
 }
 
-
-/**
- * check if a given host id just contains a public key (i.e. can
- * be sent on wire) or if it is piggypacked with the private component
- *
- * @param host_id the host id structure
- * @return 1 if the host id contains the private component or 0 otherwise
- */
-int hip_host_id_contains_private_key(struct hip_host_id *host_id)
-{
-    uint16_t len = hip_get_param_contents_len(host_id);
-    uint8_t *buf      = (uint8_t *) host_id->key;
-    uint8_t t         = *buf;
-
-    return len >= 3 * (64 + 8 * t) + 2 * 20;     /* PQGXY 3*(64+8*t) + 2*20 */
-}
-
 /**
  * dig out RSA key length from an host id
  *
@@ -411,47 +394,6 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
     }
 
     return dsa;
-}
-
-/**
- * verify the signature in a HIP control packet
- *
- * @param pkt the hip packet
- * @param peer_host_id peer host id
- * @return zero on success, or negative error value on failure
- */
-int hip_verify_packet_signature(struct hip_common *pkt,
-                                struct hip_host_id *peer_host_id)
-{
-    int err                      = 0;
-    struct hip_host_id *peer_pub = NULL;
-    int len                      = hip_get_param_total_len(peer_host_id);
-    char *key                    = NULL;
-
-    HIP_IFEL(!(peer_pub = malloc(len)),
-             -ENOMEM, "Out of memory\n");
-
-    memcpy(peer_pub, peer_host_id, len);
-
-    if (peer_host_id->rdata.algorithm == HIP_HI_DSA) {
-        key = (char *) hip_key_rr_to_rsa(
-            (struct hip_host_id_priv *) peer_pub, 0);
-        err = hip_dsa_verify((DSA *) key, pkt);
-    } else if (peer_host_id->rdata.algorithm == HIP_HI_RSA) {
-        key = (char *) hip_key_rr_to_rsa(
-            (struct hip_host_id_priv *) peer_pub, 0);
-        err = hip_rsa_verify((RSA *) key, pkt);
-    } else {
-        HIP_ERROR("Unknown algorithm\n");
-        err = -1;
-    }
-
-out_err:
-    if (peer_pub) {
-        free(peer_pub);
-    }
-
-    return err;
 }
 
 /**

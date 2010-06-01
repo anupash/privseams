@@ -25,9 +25,6 @@ struct hip_hit_info {
     hip_lsi_t      lsi;
 };
 
-int hip_verify_packet_signature(struct hip_common *pkt,
-                                struct hip_host_id *peer_host_id);
-
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
                            struct in6_addr *hit, int hit_type);
 
@@ -53,7 +50,6 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    int hit_type);
 int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                struct in6_addr *hit, int hit_type);
-int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
                         struct hip_rsa_keylen *ret,
                         int is_priv);
@@ -72,8 +68,5 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                                  const char *hi_file,
                                  int rsa_key_bits,
                                  int dsa_key_bits);
-int khi_encode(unsigned char *orig, int orig_len,
-               unsigned char *encoded,
-               int encoded_len);
 
 #endif /* HIP_LIB_CORE_HOSTID_H */
