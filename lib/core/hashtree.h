@@ -80,10 +80,6 @@ int htree_add_data(hash_tree_t *tree,
                    const unsigned char *data,
                    const int data_length);
 int htree_add_random_data(hash_tree_t *tree, const int num_random_blocks);
-int htree_add_secret(hash_tree_t *tree,
-                     const unsigned char *secret,
-                     const int secret_length,
-                     const int secret_index);
 int htree_add_random_secrets(hash_tree_t *tree);
 int htree_calc_nodes(hash_tree_t *tree,
                      const htree_leaf_gen_t leaf_gen,
@@ -126,7 +122,5 @@ int htree_node_generator(const unsigned char *left_node,
                          const int node_length,
                          unsigned char *dst_buffer,
                          const htree_gen_args_t *gen_args);
-void htree_print_data(const hash_tree_t *tree);
-void htree_print_nodes(const hash_tree_t *tree);
 
 #endif /* HIP_LIB_CORE_HASHTREE_H */

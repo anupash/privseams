@@ -21,6 +21,11 @@
 #include "ife.h"
 #include "debug.h"
 
+static int htree_add_secret(hash_tree_t *tree,
+                            const unsigned char *secret,
+                            const int secret_length,
+                            const int secret_index);
+
 /** calculates the logarithm for a given base
  *
  * @param       base the base of the logarithm
@@ -258,10 +263,10 @@ int htree_add_random_data(hash_tree_t *tree, const int num_random_blocks)
  * @param       secret_index position of the secret in the leaf set
  * @return      always 0
  */
-int htree_add_secret(hash_tree_t *tree,
-                     const unsigned char *secret,
-                     const int secret_length,
-                     const int secret_index)
+static int htree_add_secret(hash_tree_t *tree,
+                            const unsigned char *secret,
+                            const int secret_length,
+                            const int secret_index)
 {
     HIP_ASSERT(tree != NULL);
     HIP_ASSERT(secret != NULL);
@@ -716,57 +721,4 @@ int htree_node_generator(const unsigned char *left_node,
 
 out_err:
     return err;
-}
-
-/** prints the data set
- *
- * @param       tree pointer to the tree
- */
-void htree_print_data(const hash_tree_t *tree)
-{
-    int i;
-
-    HIP_ASSERT(tree != NULL);
-
-    HIP_DEBUG("printing data blocks...\n");
-
-    for (i = 0; i < tree->num_data_blocks; i++) {
-        HIP_HEXDUMP("data block: ",
-                    &tree->data[i * tree->max_data_length],
-                    tree->max_data_length);
-    }
-}
-
-/** prints a hash tree
- *
- * @param       tree pointer to the tree
- */
-void htree_print_nodes(const hash_tree_t *tree)
-{
-    int level_width  = 0;
-    int target_index = 0;
-    int source_index = 0;
-    int i            = 0;
-
-    HIP_ASSERT(tree != NULL);
-
-    level_width = tree->leaf_set_size;
-
-    HIP_DEBUG("printing hash tree nodes...\n");
-
-    while (level_width > 0) {
-        i++;
-        HIP_DEBUG("printing level %i:\n", i);
-
-        target_index = source_index + (level_width * tree->node_length);
-
-        for (i = 0; i < level_width; i++) {
-            HIP_HEXDUMP("node: ",
-                        &tree->nodes[source_index + (i * tree->node_length)],
-                        tree->node_length);
-        }
-
-        source_index = target_index;
-        level_width  = level_width / 2;
-    }
 }
