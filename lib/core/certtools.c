@@ -11,6 +11,7 @@
 #include "certtools.h"
 #include "crypto.h"
 #include "straddr.h"
+#include "message.h"
 
 /*******************************************************************************
 * FUNCTIONS FOR SPKI                                                          *

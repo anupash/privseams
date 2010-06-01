@@ -21,6 +21,7 @@
 #include <openssl/aes.h>
 #include <openssl/des.h>
 #include <openssl/hmac.h>
+#include <openssl/rand.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -29,11 +30,10 @@
 #include <netinet/in.h>
 
 #include "config.h"
-#include "hipd/hidb.h"
 #include "debug.h"
 #include "ife.h"
 #include "transform.h"
-
+#include "builder.h"
 
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */

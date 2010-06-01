@@ -28,11 +28,13 @@
  * @todo "Bad signature r or s size" occurs randomly. This should not happen.
  */
 
+#include <unistd.h>
+
 #include "config.h"
 #include "crypto.h"
 #include "keylen.h"
 #include "performance.h"
-
+#include "lib/tool/pk.h"
 
 /*
  * Diffie-Hellman primes

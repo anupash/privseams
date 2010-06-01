@@ -68,6 +68,8 @@
 #define _BSD_SOURCE
 
 #include <stdlib.h>
+#include <math.h>
+#include <unistd.h>
 
 #include "lib/core/common_defines.h"
 #include "lib/tool/checksum.h"

@@ -1733,8 +1733,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
     if (all) {
         HIP_INFO("New puzzle difficulty effective immediately\n");
     } else {
-        HIP_INFO("New puzzle difficulty is effective in %d seconds\n",
-                 HIP_R1_PRECREATE_INTERVAL);
+        HIP_INFO("New puzzle difficulty is effective when R1s are next updated\n");
     }
 
 out_err:

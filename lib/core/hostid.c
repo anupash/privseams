@@ -10,6 +10,7 @@
 
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "config.h"
 #include "lib/tool/pk.h"
@@ -20,9 +21,10 @@
 #include "ife.h"
 #include "protodefs.h"
 
+/* ACTION_ADD, ACTION_NEW are used by hip_serialize_host_id_action() */
+#include "conf.h"
 
 #define HOST_ID_FILENAME_MAX_LEN 256
-
 
 /**
  * calculate a HIT from a HI without the prefix
