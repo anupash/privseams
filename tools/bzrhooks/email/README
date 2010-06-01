@@ -1,0 +1,44 @@
+This is a plugin which implements post commmit emails for bzr.
+
+The plugin is activated by:
+ - installing it
+ - configuring an address to send emails to (see ``bzr help email``).
+
+Installation
+------------
+
+To install this plug in system wide, copy it into the plugins directory of the bzrlib.
+You can find out the directory of the bzrlib by executing
+    bzr version | grep bzrlib
+This should be something like
+    /usr/lib/python2.6/dist-packages/bzrlib
+Then you put the plugin into
+    /usr/lib/python2.6/dist-packages/bzrlib/plugins/email
+That's all.
+
+You can check the installation by executing
+    bzr plugins
+(email plugin should be displayed with a short message)
+or
+    bzr hooks
+(post_change_branch_tip, pre_change_branch_tip should have entries from email-notification now)
+
+Configuration
+------------
+
+To have bzr send an email you need to configure an address to send mail
+to for that branch. To do this set the configuration option
+    commit_notification_to
+in the bazaar.conf, locations.conf or branch.conf. If there is no such address
+configured for a specific branch, no email-notifications will be sent when changes
+in this branch occur. Preferably, this option should be set in the branch.conf of each branch
+separately.
+
+The address from which the mail is sent is read from the configuration option
+    ``commit_notification_sender``
+If not supplied the name of the committer is taken as the originator.
+
+Help
+------------
+All this should be displayed too, by executing
+bzr email help
