@@ -212,44 +212,11 @@ out_err:
 }
 
 /*!
- * \brief Close the result files.
- *
- * Close the result files before exiting.
- * \author      Tobias Heer
- *
- * \note This function does not free the memory of perf_set.
- *
- * \see hip_perf_write_benchmark
- * \see hip_perf_create
- *
- * \param set The respective performance measurement created by hip_perf_create.
- * \return Returns error code. 0 = Success, 1 = Error.
- */
-int hip_perf_close(perf_set_t *set)
-{
-    int err = 0, i = 0;
-
-    for (i = 0; i < set->num_files; i++) {
-        if (set->files[i]) {
-            fclose(set->files[i]);
-            set->files[i] = NULL;
-        } else {
-            HIP_ERROR("Name for slot %d not set \n");
-            err = 1;
-        }
-    }
-
-    return err;
-}
-
-/*!
  * \brief Deallocate memory of a performance set
  *
  * Deallocate memory of the given performance set, including each member of
  * the perf_set_t data structure.
  * \author      Dongsu Park
- *
- * \see hip_perf_close
  *
  * \param set The respective performance measurement created by hip_perf_create.
  * \return Nothing.

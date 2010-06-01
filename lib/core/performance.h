@@ -47,7 +47,6 @@ int hip_perf_open(perf_set_t *perf_set);
 void hip_perf_start_benchmark(perf_set_t *perf_set, int slot);
 void hip_perf_stop_benchmark(perf_set_t *perf_set, int slot);
 int hip_perf_write_benchmark(perf_set_t *perf_set, int slot);
-int hip_perf_close(perf_set_t *perf_set);
 void hip_perf_destroy(perf_set_t *perf_set);
 
 enum perf_sensor {PERF_I1,
