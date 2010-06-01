@@ -50,8 +50,6 @@ int hip_oppdb_del_entry(const hip_hit_t *phit, const struct sockaddr_in6 *src);
 void hip_oppdb_uninit(void);
 int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry);
 
-int hip_opp_get_peer_hit(struct hip_common *msg,
-                         const struct sockaddr_in6 *src);
 hip_ha_t *hip_opp_add_map(const struct in6_addr *dst_ip,
                           const struct in6_addr *hit_our,
                           const struct sockaddr_in6 *caller);
