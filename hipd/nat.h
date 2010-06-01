@@ -32,8 +32,6 @@
 extern HIP_HASHTABLE *hadb_hit;
 hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry);
 int hip_nat_refresh_port(void);
-int hip_nat_send_keep_alive(hip_ha_t *, void *);
 int hip_user_nat_mode(int nat_mode);
-hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry);
 
 #endif /* HIP_HIPD_NAT_H */

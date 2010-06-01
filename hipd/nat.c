@@ -39,6 +39,8 @@
 
 static int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 
+static int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used);
+
 /**
  * Refreshes the port state of all NATs related to this host.
  *
@@ -89,7 +91,7 @@ out_err:
  *                 value is only returned when the creation of the new UPDATE
  *                 message fails in some way.
  */
-int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
+static int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 {
     int err                = 0;
     struct hip_common *msg = NULL;
@@ -149,22 +151,6 @@ hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
         return entry->nat_mode;
     }
     return hip_nat_status;
-}
-
-/**
- * get the NAT mode for a host association
- *
- *
- * Similar to hip_ha_set, but skip the setting when RVS mode is on, this
- * function is for ICE code
- *
- * @param entry    a pointer to a host association which links current host and
- *                 the peer.
- * @return         the value of the NAT mode.
- */
-hip_transform_suite_t hip_nat_get_control(hip_ha_t *entry)
-{
-    return hip_get_nat_mode(entry);
 }
 
 /**
