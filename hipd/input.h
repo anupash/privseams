@@ -51,9 +51,6 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
                                    const struct hip_crypto_key *crypto_key,
                                    const hip_tlv_type_t parameter_type);
 
-int hip_verify_packet_rvs_hmac(struct hip_common *msg,
-                               struct hip_crypto_key *crypto_key);
-
 int hip_receive_control_packet(struct hip_packet_context *ctx);
 
 int hip_receive_udp_control_packet(struct hip_packet_context *ctx);
@@ -101,10 +98,5 @@ int hip_check_r2(const uint8_t packet_type,
 int hip_handle_r2(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx);
-
-int hip_produce_keying_material(struct hip_packet_context *ctx,
-                                uint64_t I,
-                                uint64_t J,
-                                struct hip_dh_public_value **dhpv);
 
 #endif /* HIP_HIPD_INPUT_H */

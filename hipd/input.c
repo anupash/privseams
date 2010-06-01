@@ -50,6 +50,12 @@
 #include "pkt_handling.h"
 #include "pisa.h"
 
+/* forwards */
+static int hip_produce_keying_material(struct hip_packet_context *ctx,
+                                       uint64_t I,
+                                       uint64_t J,
+                                       struct hip_dh_public_value **dhpv);
+
 /**
  * Verifies a HMAC.
  *
@@ -146,21 +152,6 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 }
 
 /**
- * Verifies packet RVS_HMAC
- * @param msg HIP packet
- * @param crypto_key the crypto key
- *
- * @return 0 if HMAC was validated successfully, < 0 if HMAC could
- * not be validated.
- */
-int hip_verify_packet_rvs_hmac(struct hip_common *msg,
-                               struct hip_crypto_key *crypto_key)
-{
-    return hip_verify_packet_hmac_general(msg, crypto_key,
-                                          HIP_PARAM_RVS_HMAC);
-}
-
-/**
  * Verifies packet HMAC
  *
  * @param msg HIP packet
@@ -213,10 +204,10 @@ out_err:
  * @param J J value from puzzle
  * @return zero on success, or negative on error.
  */
-int hip_produce_keying_material(struct hip_packet_context *ctx,
-                                uint64_t I,
-                                uint64_t J,
-                                struct hip_dh_public_value **dhpv)
+static int hip_produce_keying_material(struct hip_packet_context *ctx,
+                                       uint64_t I,
+                                       uint64_t J,
+                                       struct hip_dh_public_value **dhpv)
 {
     char *dh_shared_key = NULL;
     int hip_transf_length, hmac_transf_length;
