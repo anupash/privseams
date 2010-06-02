@@ -20,11 +20,4 @@ struct _DList {
     struct _DList *prev;
 };
 
-typedef struct _TimeVal TimeVal;
-
-struct _TimeVal {
-    long tv_sec;
-    long tv_usec;
-};
-
 #endif /*HIP_FIREWALL_COMMON_TYPES_H*/
