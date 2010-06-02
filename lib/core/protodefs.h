@@ -214,7 +214,7 @@
 #define HIP_PARAM_BRANCH_NODES          32818
 #define HIP_PARAM_ROOT                  32819
 #define HIP_PARAM_HIT_TO_IP_SET         32820
-#define HIP_PARAM_TURN_INFO             32821
+/* #define HIP_PARAM_TURN_INFO             32821 */
 #define HIP_PARAM_ITEM_LENGTH           32822
 /* End of HIPL private parameters. */
 
@@ -319,7 +319,6 @@
 
 #define HIP_TRANSFORM_HIP_MAX           6
 #define HIP_TRANSFORM_ESP_MAX           6
-#define HIP_TRANSFORM_NAT_MAX           6
 #define HIP_LOWER_TRANSFORM_TYPE 2048
 #define HIP_UPPER_TRANSFORM_TYPE 4095
 
@@ -359,9 +358,6 @@
 #define HIP_PUZZLE_OPAQUE_LEN         2
 
 #define HIP_DSA_SIGNATURE_LEN        41
-/* Assume that RSA key is 1024 bits. RSA signature is as long as the key
- * (1024 bits -> 128 bytes) */
-#define HIP_RSA_SIGNATURE_LEN       128
 
 #define HIP_AH_SHA_LEN               20
 
@@ -560,7 +556,6 @@ typedef uint16_t hip_hdr_err_t;
 typedef uint16_t hip_tlv_type_t;
 typedef uint16_t hip_tlv_len_t;
 typedef uint16_t hip_transform_suite_t;
-typedef uint16_t hip_eid_iface_type_t;
 typedef uint16_t hip_controls_t;
 typedef uint32_t sa_eid_t;
 typedef struct in6_addr hip_hit_t;
@@ -850,18 +845,6 @@ struct hip_challenge_response {
     uint8_t        opaque[24];        /**< variable length */
 } __attribute__ ((packed));
 
-struct hip_echo_request_m {
-    hip_tlv_type_t type;
-    hip_tlv_len_t  length;
-    /* opaque */
-} __attribute__ ((packed));
-
-struct hip_echo_response_m {
-    hip_tlv_type_t type;
-    hip_tlv_len_t  length;
-    /* opaque */
-} __attribute__ ((packed));
-
 struct hip_dh_public_value {
     uint8_t  group_id;
     uint16_t pub_len;
@@ -983,20 +966,6 @@ struct hip_echo_response {
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-rvs-05 */
-/** Rendezvous server hmac.
- *  A non-critical parameter whose only difference with the @c HMAC
- *  parameter defined in [I-D.ietf-hip-base] is its @c type code.
- *  This change causes it to be located after the @c FROM parameter (as
- *  opposed to the @c HMAC) */
-struct hip_rvs_hmac {
-    hip_tlv_type_t type;  /**< Type code for the parameter. */
-    hip_tlv_len_t  length;  /**< Length of the parameter contents in bytes. */
-    uint8_t        hmac_data[HIP_AH_SHA_LEN]; /**< Computed over the HIP packet,
-                                         * excluding @c RVS_HMAC
-                                         * and any following parameters. */
-} __attribute__ ((packed));
-
-/** draft-ietf-hip-rvs-05 */
 /** Parameter containing the original source IP address of a HIP packet. */
 struct hip_from {
     hip_tlv_type_t type;   /**< Type code for the parameter. */
@@ -1036,24 +1005,6 @@ struct hip_relay_to {
     struct in6_addr address;  /**< IPv6 address */
 } __attribute__ ((packed));
 
-/** draft-ietf-hip-nat-traversal-02 */
-struct hip_relay_via {
-    hip_tlv_type_t type;  /**< Type code for the parameter. */
-    hip_tlv_len_t  length;  /**< Length of the parameter contents in bytes. */
-    uint8_t        address[16]; /**< IPv6 address */
-    in_port_t      port; /**< Port number. */
-} __attribute__ ((packed));
-
-/**
- * draft-ietf-hip-nat-traversal-01
- * @note obsolete.
- */
-struct hip_relay_to_old {
-    hip_tlv_type_t type;     /**< Type code for the parameter. */
-    hip_tlv_len_t  length;     /**< Length of the parameter contents in bytes. */
-    uint8_t        address_and_port[0]; /**< Rendezvous server addresses and ports. */
-} __attribute__ ((packed));
-
 /** This structure is used by the native API to carry local and peer
  *  identities from libc (setmyeid and setpeereid calls) to the HIP
  *  socket handler (setsockopt). It is almost the same as endpoint_hip,
@@ -1063,18 +1014,6 @@ struct hip_eid_endpoint {
     hip_tlv_type_t      type;
     hip_tlv_len_t       length;
     struct endpoint_hip endpoint;
-} __attribute__ ((packed));
-
-struct hip_eid_iface {
-    hip_tlv_type_t       type;
-    hip_tlv_len_t        length;
-    hip_eid_iface_type_t if_index;
-} __attribute__ ((packed));
-
-struct hip_eid_sockaddr {
-    hip_tlv_type_t  type;
-    hip_tlv_len_t   length;
-    struct sockaddr sockaddr;
 } __attribute__ ((packed));
 
 struct hip_reg_info {
@@ -1154,20 +1093,6 @@ struct hip_heartbeat {
     int            heartbeat;
 } __attribute__ ((packed));
 
-struct hip_nat_transform {
-    hip_tlv_type_t        type;
-    hip_tlv_len_t         length;
-    hip_transform_suite_t reserved;
-    hip_transform_suite_t suite_id[6];
-} __attribute__ ((packed));
-/* @} */
-
-struct hip_nat_pacing {
-    hip_tlv_type_t type;
-    hip_tlv_len_t  length;
-    uint32_t       min_ta;
-} __attribute__ ((packed));
-
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_reg_from {
     hip_tlv_type_t  type;    /**< Type code for the parameter. */
@@ -1176,12 +1101,6 @@ struct hip_reg_from {
     uint8_t         protocol; /**< Protocol */
     uint8_t         reserved; /**< Reserved */
     struct in6_addr address;     /**< IPv6 address */
-} __attribute__ ((packed));
-
-
-struct hip_stun {
-    hip_tlv_type_t type;  /**< Type code for the parameter. */
-    hip_tlv_len_t  length;  /**< Length of the parameter contents in bytes. */
 } __attribute__ ((packed));
 
 struct sockaddr_hip {
