@@ -24,4 +24,10 @@ DList *find_in_dlist(DList *list,
 
 DList *list_last(DList *list);
 
+/* These aren't currently used outside dlist.c, but are declared
+   public for uniformity (and so debug-less builds would succeed) */
+unsigned int list_length(DList *list);
+DList *list_first(DList *list);
+
+
 #endif /*HIP_FIREWALL_DLIST_H*/

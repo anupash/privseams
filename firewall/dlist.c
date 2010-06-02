@@ -16,9 +16,6 @@
 #include "lib/core/debug.h"
 #include "dlist.h"
 
-static DList *list_first(DList *list);
-static unsigned int list_length(DList *list);
-
 /**
  * Initialize and allocate memory for a new linked list.
  *
@@ -40,7 +37,7 @@ static DList *alloc_list(void)
  * @param list a pointer to the list
  * @return a pointer to the previous list item
  */
-static DList *list_first(DList *list)
+DList *list_first(DList *list)
 {
     if (list) {
         while (list->prev) {
@@ -74,7 +71,7 @@ DList *list_last(DList *list)
  * @param list the linked list
  * @return the number of items on the linked list
  */
-static unsigned int list_length(DList *list)
+unsigned int list_length(DList *list)
 {
     unsigned int length = 0;
     list = list_first(list);
