@@ -33,6 +33,8 @@
 #include "user_ipsec_api.h"
 #include "cache.h"
 
+typedef struct hip_hadb_user_info_state firewall_cache_hl_t;
+
 static HIP_HASHTABLE *firewall_cache_db = NULL;
 
 /**

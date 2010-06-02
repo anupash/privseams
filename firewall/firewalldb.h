@@ -13,6 +13,15 @@
 #include "lib/core/icomm.h"
 #include "lib/core/protodefs.h"
 
+//definition of firewall db records
+typedef struct firewall_hl {
+    struct in6_addr ip_peer;
+    hip_lsi_t       lsi;
+    hip_hit_t       hit_our;
+    hip_hit_t       hit_peer;
+    int             bex_state;
+} firewall_hl_t;
+
 void hip_firewall_init_hldb(void);
 firewall_hl_t *hip_firewall_ip_db_match(const struct in6_addr *ip_peer);
 int hip_firewall_set_bex_state(struct in6_addr *hit_s,
