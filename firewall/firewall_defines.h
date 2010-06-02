@@ -139,9 +139,4 @@ struct connection {
 #endif
 };
 
-struct hip_esp_packet {
-    int             packet_length;
-    struct hip_esp *esp_data;
-};
-
 #endif /* HIP_FIREWALL_FIREWALL_DEFINES_H */
