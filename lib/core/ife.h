@@ -7,7 +7,6 @@
 #ifndef HIP_LIB_CORE_IFE_H
 #define HIP_LIB_CORE_IFE_H
 
-#define GOTO_OUT -3
 /** A generic HIP error. This should be a value whose value does not overlap
  *  with the global errno values. */
 #define EHIP       500
