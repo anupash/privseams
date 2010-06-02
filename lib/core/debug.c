@@ -64,6 +64,11 @@
 #include "straddr.h"
 #include "debug.h"
 
+#define SYSLOG_OPT        (LOG_PID)
+//#define SYSLOG_FACILITY   LOG_DAEMON
+// oleg 2006-11-22
+#define SYSLOG_FACILITY   LOG_LOCAL6
+
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,
                                  LOG_ERR,

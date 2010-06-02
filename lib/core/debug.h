@@ -27,11 +27,6 @@
  * syslog:   includes msg and \0 */
 #define DEBUG_MSG_MAX_LEN     1024
 
-#define SYSLOG_OPT        (LOG_PID)
-//#define SYSLOG_FACILITY   LOG_DAEMON
-// oleg 2006-11-22
-#define SYSLOG_FACILITY   LOG_LOCAL6
-
 /**
  * Error handling macros used for checking errors. To use these macros, define a
  * label named @c out_err at the end of the function. For example, memory
