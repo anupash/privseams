@@ -12,6 +12,8 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/icomm.h"
 
+typedef struct hip_hadb_user_info_state firewall_cache_hl_t;
+
 int hip_firewall_cache_db_match(const struct in6_addr *, const struct in6_addr *,
                                 hip_lsi_t *, hip_lsi_t *,
                                 struct in6_addr *, struct in6_addr *, int *);
