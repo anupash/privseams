@@ -40,7 +40,6 @@ struct perf_set {
 
 typedef struct perf_set perf_set_t;
 
-int hip_perf_enabled(void);
 perf_set_t *hip_perf_create(int num);
 int hip_perf_set_name(perf_set_t *perf_set,  int slot, const char *name);
 int hip_perf_open(perf_set_t *perf_set);
