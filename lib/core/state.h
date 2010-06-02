@@ -51,19 +51,11 @@
  */
 #define HIP_MAX_HA_STATE                16
 
-#define HIP_UPDATE_STATE_REKEYING        1 /**< @todo REMOVE */
-#define HIP_UPDATE_STATE_DEPRECATING     2
-
-#define PEER_ADDR_STATE_UNVERIFIED       1
+/* #define PEER_ADDR_STATE_UNVERIFIED       1 */
 #define PEER_ADDR_STATE_ACTIVE           2
-#define PEER_ADDR_STATE_DEPRECATED       3
-
-#define ADDR_STATE_ACTIVE                1
-#define ADDR_STATE_WAITING_ECHO_REQ      2
 
 #define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
 #define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
-#define HIP_LOCATOR_TRAFFIC_TYPE_DATA    2
 
 #define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
@@ -71,7 +63,7 @@
 #define HIP_LOCATOR_LOCATOR_TYPE_UDP 2
 
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY 126
-#define HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY 120
+/* #define HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY 120 */
 /** for the triple nat mode*/
 #define HIP_NAT_MODE_NONE               0
 #define HIP_NAT_MODE_PLAIN_UDP          1
@@ -89,14 +81,10 @@
 
 /**
  * HIP host association state.
- *
- * @todo remove HIP_HASTATE_SPIOK
  */
 typedef enum {
     HIP_HASTATE_INVALID = 0,
-    HIP_HASTATE_SPIOK   = 1,
-    HIP_HASTATE_HITOK   = 2,
-    HIP_HASTATE_VALID   = 3
+    HIP_HASTATE_VALID   = 1,
 } hip_hastate_t;
 
 /**
@@ -149,13 +137,6 @@ struct hip_peer_addr_list_item {
 
     uint8_t         kind;
 //end NAT branch
-};
-
-/* for HIT-SPI hashtable only */
-struct hip_hit_spi {
-    hip_hit_t  hit_our;
-    hip_hit_t  hit_peer;
-    uint32_t   spi;           /* this SPI spi belongs to the HIT hit */
 };
 
 struct hip_spi_in_item {
@@ -423,12 +404,6 @@ struct hip_hadb_user_info_state {
     int             shotgun_status;
     hip_controls_t  peer_controls;
     struct timeval  bex_duration;
-};
-
-struct hip_turn_info {
-    uint32_t        spi;
-    struct in6_addr peer_address;
-    in_port_t       peer_port;
 };
 
 #endif /* HIP_LIB_CORE_STATE_H */

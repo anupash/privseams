@@ -299,10 +299,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
     }
 #endif
 
-    /* We're using hastate here as if it was a binary mask. hastate,
-     * however, is of signed type and all of the predefined values are not
-     * in the power of two. -Lauri 07.08.2008 */
-    if (!(st & HIP_HASTATE_HITOK)) {
+    if (st != HIP_HASTATE_VALID) {
         tmp = hip_ht_find(hadb_hit, ha);
 
         if (tmp == NULL) {
@@ -310,7 +307,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
                 hip_hadb_set_lsi_pair(ha);
             }
             hip_ht_add(hadb_hit, ha);
-            st |= HIP_HASTATE_HITOK;
+            st = HIP_HASTATE_VALID;
             HIP_DEBUG("HIP association was inserted " \
                       "successfully.\n");
         } else {

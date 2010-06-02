@@ -540,7 +540,7 @@ static int hip_send_locators_to_all_peers(void)
     list_for_each_safe(item, tmp, hadb_hit, i) {
         ha = (hip_ha_t *) list_entry(item);
 
-        if (ha->hastate == HIP_HASTATE_HITOK &&
+        if (ha->hastate == HIP_HASTATE_VALID &&
             ha->state == HIP_STATE_ESTABLISHED) {
             err = hip_send_update_to_one_peer(NULL,
                                               ha,
