@@ -113,9 +113,8 @@ int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry)
         connections: a better solution might be trash collection  */
 
     HIP_ASSERT(opp_entry);
-    err = hip_del_peer_info(&opp_entry->peer_phit,
+    hip_del_peer_info(&opp_entry->peer_phit,
                             &opp_entry->our_real_hit);
-    HIP_DEBUG("Del peer info returned %d\n", err);
     hip_oppdb_del_entry_by_entry(opp_entry);
     return err;
 }

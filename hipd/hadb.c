@@ -802,12 +802,16 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
+#endif
+
+    /* Delete hadb entry before oppdb entry to avoid a loop */
+    hip_hadb_delete_state(ha);
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
     if (opp_entry) {
         hip_oppdb_entry_clean_up(opp_entry);
     }
 #endif
-
-    hip_hadb_delete_state(ha);
 
     HIP_UNLOCK_HA(ha);
 
