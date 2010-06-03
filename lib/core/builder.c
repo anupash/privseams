@@ -87,8 +87,6 @@
 enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
-
-static const char *hip_param_type_name(const hip_tlv_type_t param_type);
 static int hip_build_param_hmac(struct hip_common *msg,
                                 const struct hip_crypto_key *key,
                                 hip_tlv_type_t param_type);
@@ -1018,51 +1016,6 @@ static void hip_calc_param_len(struct hip_tlv_common *tlv_common,
 }
 
 /**
- * Print the contents of a message using HIP debug interface for diagnostics
- *
- * @param msg a pointer to the message to be printed.
- * @note      Do not call this function directly, use the HIP_DUMP_MSG() macro
- *            instead.
- */
-void hip_dump_msg(const struct hip_common *msg)
-{
-    struct hip_tlv_common *current_param = NULL;
-    uint8_t *contents                    = NULL;
-    /* The value of the "Length"-field in current parameter. */
-    hip_tlv_len_t len                    = 0;
-    /* Total length of the parameter (type+length+value+padding), and the
-     * length of padding. */
-    size_t total_len                     = 0, pad_len = 0;
-    HIP_DEBUG("--------------- MSG START ------------------\n");
-
-    HIP_DEBUG("Msg type :      %s (%d)\n",
-              hip_message_type_name(hip_get_msg_type(msg)),
-              hip_get_msg_type(msg));
-    HIP_DEBUG("Msg length:     %d\n", hip_get_msg_total_len(msg));
-    HIP_DEBUG("Msg err:        %d\n", hip_get_msg_err(msg));
-    HIP_DEBUG("Msg controls:   0x%04x\n", msg->control);
-
-    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-        len       = hip_get_param_contents_len(current_param);
-        /* Formula from base draft section 5.2.1. */
-        total_len = 11 + len - (len + 3) % 8;
-        pad_len   = total_len - len - sizeof(hip_tlv_type_t)
-                    - sizeof(hip_tlv_len_t);
-        contents  = hip_get_param_contents_direct(current_param);
-        HIP_DEBUG("Parameter type:%s (%d). Total length: %d (4 type+" \
-                  "length, %d content, %d padding).\n",
-                  hip_param_type_name(hip_get_param_type(current_param)),
-                  hip_get_param_type(current_param),
-                  total_len,
-                  len,
-                  pad_len);
-        HIP_HEXDUMP("Contents:", contents, len);
-        HIP_HEXDUMP("Padding:", contents + len, pad_len);
-    }
-    HIP_DEBUG("---------------- MSG END --------------------\n");
-}
-
-/**
  * Return a sting for a given parameter type number for diagnostics.
  * The returned string should be just the same as its type constant name.
  *
@@ -1157,6 +1110,7 @@ const char *hip_message_type_name(const uint8_t msg_type)
     }
 }
 
+#ifdef CONFIG_HIP_DEBUG
 /**
  * Return a string for a given parameter type number for diagnostics.
  *
@@ -1249,6 +1203,52 @@ static const char *hip_param_type_name(const hip_tlv_type_t param_type)
         //end add
     }
     return "UNDEFINED";
+}
+#endif /* CONFIG_HIP_DEBUG */
+
+/**
+ * Print the contents of a message using HIP debug interface for diagnostics
+ *
+ * @param msg a pointer to the message to be printed.
+ * @note      Do not call this function directly, use the HIP_DUMP_MSG() macro
+ *            instead.
+ */
+void hip_dump_msg(const struct hip_common *msg)
+{
+    struct hip_tlv_common *current_param = NULL;
+    uint8_t *contents                    = NULL;
+    /* The value of the "Length"-field in current parameter. */
+    hip_tlv_len_t len                    = 0;
+    /* Total length of the parameter (type+length+value+padding), and the
+     * length of padding. */
+    size_t total_len                     = 0, pad_len = 0;
+    HIP_DEBUG("--------------- MSG START ------------------\n");
+
+    HIP_DEBUG("Msg type :      %s (%d)\n",
+              hip_message_type_name(hip_get_msg_type(msg)),
+              hip_get_msg_type(msg));
+    HIP_DEBUG("Msg length:     %d\n", hip_get_msg_total_len(msg));
+    HIP_DEBUG("Msg err:        %d\n", hip_get_msg_err(msg));
+    HIP_DEBUG("Msg controls:   0x%04x\n", msg->control);
+
+    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+        len       = hip_get_param_contents_len(current_param);
+        /* Formula from base draft section 5.2.1. */
+        total_len = 11 + len - (len + 3) % 8;
+        pad_len   = total_len - len - sizeof(hip_tlv_type_t)
+                    - sizeof(hip_tlv_len_t);
+        contents  = hip_get_param_contents_direct(current_param);
+        HIP_DEBUG("Parameter type:%s (%d). Total length: %d (4 type+" \
+                  "length, %d content, %d padding).\n",
+                  hip_param_type_name(hip_get_param_type(current_param)),
+                  hip_get_param_type(current_param),
+                  total_len,
+                  len,
+                  pad_len);
+        HIP_HEXDUMP("Contents:", contents, len);
+        HIP_HEXDUMP("Padding:", contents + len, pad_len);
+    }
+    HIP_DEBUG("---------------- MSG END --------------------\n");
 }
 
 /**
