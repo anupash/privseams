@@ -17,12 +17,9 @@
 #include "protodefs.h"
 #include "state.h"
 
-
 #define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
 
 int hip_daemon_connect(int hip_user_sock);
-int hip_send_daemon_info(const struct hip_common *msg, int only_send);
-int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type);
 int hip_read_user_control_msg(int socket,
                               struct hip_common *hip_msg,
                               struct sockaddr_in6 *saddr);
@@ -32,10 +29,6 @@ int hip_read_control_msg_v6(int socket,
 int hip_read_control_msg_v4(int socket,
                             struct hip_packet_context *ctx,
                             int encap_hdr_size);
-int hip_read_control_msg_plugin_handler(void *msg,
-                                        int len,
-                                        in6_addr_t *src_addr,
-                                        in_port_t port);
 int hip_send_recv_daemon_info(struct hip_common *msg,
                               int send_only,
                               int opt_socket);
