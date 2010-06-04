@@ -3387,14 +3387,19 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 }
 
 /**
- * build a certificate parameter
+ * Build a CERT parameter
  *
- * @param msg the message where the eid endpoint paramater will be appended
- * @param group group id of the certificate
- * @param count certificate counter value
- * @param id id value
- * @param type certificate subtype
- * @param data the certificate itself
+ * The CERT parameter is a container for X.509.v3 certificates and for
+ * Simple Public Key Infrastructure (SPKI) certificates.  It is used for
+ * carrying these certificates in HIP control packets.
+ * See draft-ietf-hip-cert for more information.
+ *
+ * @param msg the message where the CERT parameter will be appended.
+ * @param group Group ID grouping multiple related CERT parameters.
+ * @param count Total count of certificates that are sent.
+ * @param id The sequence number for this certificate.
+ * @param type Describes the type of the certificate.
+ * @param data The certificate
  * @param size the length of @c data in bytes
  * @return zero on success or negative on failure
  */
