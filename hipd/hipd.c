@@ -65,11 +65,11 @@ int hip_user_sock                    = 0;
 struct sockaddr_un hip_user_addr;
 
 /** For receiving netlink IPsec events (acquire, expire, etc) */
-struct rtnl_handle hip_nl_ipsec      = {0};
+struct rtnl_handle hip_nl_ipsec;
 
 /** For getting/setting routes and adding HITs (it was not possible to use
  *  nf_ipsec for this purpose). */
-struct rtnl_handle hip_nl_route = { 0 };
+struct rtnl_handle hip_nl_route;
 
 struct sockaddr_in6 hip_firewall_addr;
 int hip_firewall_sock                    = 0;
