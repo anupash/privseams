@@ -71,7 +71,7 @@ static void print_timeres(void)
     printf( "-------------------------------\n\n");
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
     int i;
     int err              = 0;
