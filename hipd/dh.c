@@ -24,7 +24,7 @@ static void hip_regen_dh_keys(uint32_t bitmask);
  */
 int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
 {
-    size_t res;
+    int res;
     DH *tmp;
 
     /*
