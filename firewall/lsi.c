@@ -183,6 +183,102 @@ out_err:
 }
 
 /**
+ * Executes the packet reinjection
+ *
+ *
+ * @param src_hit              ipv6 source address
+ * @param dst_hit              ipv6 destination address
+ * @param m                    pointer to the packet
+ * @param ipOrigTraffic        type of Traffic (IPv4 or IPv6)
+ * @param incoming             packet direction
+ * @return                     err during the reinjection
+ */
+static int hip_reinject_packet(const struct in6_addr *src_hit,
+                        const struct in6_addr *dst_hit,
+                        const ipq_packet_msg_t *m,
+                        const int ipOrigTraffic,
+                        const int incoming)
+{
+    int err              = 0;
+    int ip_hdr_size      = 0;
+    int packet_length    = 0;
+    int protocol         = 0;
+    int ttl              = 0;
+    uint8_t *msg              = NULL;
+    struct icmphdr *icmp = NULL;
+
+    if (ipOrigTraffic == 4) {
+        struct ip *iphdr = (struct ip *) m->payload;
+        ip_hdr_size = (iphdr->ip_hl * 4);
+        protocol    = iphdr->ip_p;
+        ttl         = iphdr->ip_ttl;
+        HIP_DEBUG_LSI("Ipv4 address src ", &(iphdr->ip_src));
+        HIP_DEBUG_LSI("Ipv4 address dst ", &(iphdr->ip_dst));
+    } else {
+        struct ip6_hdr *ip6_hdr = (struct ip6_hdr *) m->payload;
+        ip_hdr_size = sizeof(struct ip6_hdr);         //Fixed size
+        protocol    = ip6_hdr->ip6_nxt;
+        ttl         = ip6_hdr->ip6_hlim;
+        HIP_DEBUG_IN6ADDR("Orig packet src address: ", &(ip6_hdr->ip6_src));
+        HIP_DEBUG_IN6ADDR("Orig packet dst address: ", &(ip6_hdr->ip6_dst));
+        HIP_DEBUG_IN6ADDR("New packet src address:", src_hit);
+        HIP_DEBUG_IN6ADDR("New packet dst address: ", dst_hit);
+    }
+
+    if (m->data_len <= (BUFSIZE - ip_hdr_size)) {
+        packet_length = m->data_len - ip_hdr_size;
+        HIP_DEBUG("packet size smaller than buffer size\n");
+    } else {
+        packet_length = BUFSIZE - ip_hdr_size;
+        HIP_DEBUG("HIP packet size greater than buffer size\n");
+    }
+
+    /* Note: using calloc to zero memory region here because I think
+     * firewall_send_incoming_pkt() calculates checksum
+     * from too long region sometimes. See bug id 874 */
+    msg = calloc((packet_length + sizeof(struct ip)), 1);
+    memcpy(msg, (m->payload) + ip_hdr_size, packet_length);
+
+    if (protocol == IPPROTO_ICMP && incoming) {
+        icmp = (struct icmphdr *) msg;
+        HIP_DEBUG("incoming ICMP type=%d code=%d\n",
+                  icmp->type, icmp->code);
+        /* Manually built due to kernel messed up with the
+         * ECHO_REPLY message. Kernel was building an answer
+         * message with equals @src and @dst*/
+        if (icmp->type == ICMP_ECHO) {
+            icmp->type = ICMP_ECHOREPLY;
+            err        = hip_firewall_send_outgoing_pkt(dst_hit, src_hit,
+                                                        msg, packet_length,
+                                                        protocol);
+        } else {
+            err = hip_firewall_send_incoming_pkt(src_hit, dst_hit,
+                                                 msg, packet_length,
+                                                 protocol, ttl);
+        }
+    } else {
+        if (incoming) {
+            HIP_DEBUG("Firewall send to the kernel an incoming packet\n");
+            err = hip_firewall_send_incoming_pkt(src_hit,
+                                                 dst_hit, msg,
+                                                 packet_length,
+                                                 protocol, ttl);
+        } else {
+            HIP_DEBUG("Firewall send to the kernel an outgoing packet\n");
+            err = hip_firewall_send_outgoing_pkt(src_hit,
+                                                 dst_hit, msg,
+                                                 packet_length,
+                                                 protocol);
+        }
+    }
+
+    if (msg) {
+        free(msg);
+    }
+    return err;
+}
+
+/**
  * get the state of the bex for a pair of ip addresses.
  *
  * @param src_ip       input for finding the correct entries
@@ -463,158 +559,5 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
         }
     }
 out_err:
-    return err;
-}
-
-/**
- * Ask hipd the HIT of the peer corresponding to the give IP address. Works
- * similarly to the hip_request_peer_hit_from_hipd() function.
- *
- * @param peer_ip IP address of the peer
- * @param peer_hit write the HIT of the peer to this output variable
- * @param local_hit local HIT being used
- * @param src_tcp_port TCP source port
- * @param dst_tcp_port TCP destination port
- * @param fallback unused variable
- * @param reject unused variable
- *
- * @note the TCP ports are relevant only for the TCP extensions for opp. mode
- * @todo remove fallback and reject variables
- */
-int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
-                                               struct in6_addr *peer_hit,
-                                               const struct in6_addr *local_hit,
-                                               in_port_t *src_tcp_port,
-                                               in_port_t *dst_tcp_port,
-                                               int *fallback,
-                                               int *reject)
-{
-    struct hip_common *msg = NULL;
-    int err                = 0;
-
-    *fallback = 1;
-    *reject   = 0;
-
-    HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-    /* build the message header */
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_PEER_HIT, 0),
-             -1, "build hdr failed\n");
-
-    HIP_IFEL(hip_build_param_contents(msg, (void *) (local_hit),
-                                      HIP_PARAM_HIT_LOCAL,
-                                      sizeof(struct in6_addr)),
-             -1, "build param HIP_PARAM_HIT  failed\n");
-
-    HIP_IFEL(hip_build_param_contents(msg, (void *) (peer_ip),
-                                      HIP_PARAM_IPV6_ADDR_PEER,
-                                      sizeof(struct in6_addr)),
-             -1, "build param HIP_PARAM_IPV6_ADDR failed\n");
-
-    /* this message has to be delivered with the async socket because
-     * opportunistic mode responds asynchronously */
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 1, hip_fw_async_sock),
-             -1, "send msg failed\n");
-
-out_err:
-    if (msg) {
-        free(msg);
-    }
-    return err;
-}
-
-/**
- * Executes the packet reinjection
- *
- *
- * @param src_hit              ipv6 source address
- * @param dst_hit              ipv6 destination address
- * @param m                    pointer to the packet
- * @param ipOrigTraffic        type of Traffic (IPv4 or IPv6)
- * @param incoming             packet direction
- * @return                     err during the reinjection
- */
-int hip_reinject_packet(const struct in6_addr *src_hit,
-                        const struct in6_addr *dst_hit,
-                        const ipq_packet_msg_t *m,
-                        const int ipOrigTraffic,
-                        const int incoming)
-{
-    int err              = 0;
-    int ip_hdr_size      = 0;
-    int packet_length    = 0;
-    int protocol         = 0;
-    int ttl              = 0;
-    uint8_t *msg              = NULL;
-    struct icmphdr *icmp = NULL;
-
-    if (ipOrigTraffic == 4) {
-        struct ip *iphdr = (struct ip *) m->payload;
-        ip_hdr_size = (iphdr->ip_hl * 4);
-        protocol    = iphdr->ip_p;
-        ttl         = iphdr->ip_ttl;
-        HIP_DEBUG_LSI("Ipv4 address src ", &(iphdr->ip_src));
-        HIP_DEBUG_LSI("Ipv4 address dst ", &(iphdr->ip_dst));
-    } else {
-        struct ip6_hdr *ip6_hdr = (struct ip6_hdr *) m->payload;
-        ip_hdr_size = sizeof(struct ip6_hdr);         //Fixed size
-        protocol    = ip6_hdr->ip6_nxt;
-        ttl         = ip6_hdr->ip6_hlim;
-        HIP_DEBUG_IN6ADDR("Orig packet src address: ", &(ip6_hdr->ip6_src));
-        HIP_DEBUG_IN6ADDR("Orig packet dst address: ", &(ip6_hdr->ip6_dst));
-        HIP_DEBUG_IN6ADDR("New packet src address:", src_hit);
-        HIP_DEBUG_IN6ADDR("New packet dst address: ", dst_hit);
-    }
-
-    if (m->data_len <= (BUFSIZE - ip_hdr_size)) {
-        packet_length = m->data_len - ip_hdr_size;
-        HIP_DEBUG("packet size smaller than buffer size\n");
-    } else {
-        packet_length = BUFSIZE - ip_hdr_size;
-        HIP_DEBUG("HIP packet size greater than buffer size\n");
-    }
-
-    /* Note: using calloc to zero memory region here because I think
-     * firewall_send_incoming_pkt() calculates checksum
-     * from too long region sometimes. See bug id 874 */
-    msg = calloc((packet_length + sizeof(struct ip)), 1);
-    memcpy(msg, (m->payload) + ip_hdr_size, packet_length);
-
-    if (protocol == IPPROTO_ICMP && incoming) {
-        icmp = (struct icmphdr *) msg;
-        HIP_DEBUG("incoming ICMP type=%d code=%d\n",
-                  icmp->type, icmp->code);
-        /* Manually built due to kernel messed up with the
-         * ECHO_REPLY message. Kernel was building an answer
-         * message with equals @src and @dst*/
-        if (icmp->type == ICMP_ECHO) {
-            icmp->type = ICMP_ECHOREPLY;
-            err        = hip_firewall_send_outgoing_pkt(dst_hit, src_hit,
-                                                        msg, packet_length,
-                                                        protocol);
-        } else {
-            err = hip_firewall_send_incoming_pkt(src_hit, dst_hit,
-                                                 msg, packet_length,
-                                                 protocol, ttl);
-        }
-    } else {
-        if (incoming) {
-            HIP_DEBUG("Firewall send to the kernel an incoming packet\n");
-            err = hip_firewall_send_incoming_pkt(src_hit,
-                                                 dst_hit, msg,
-                                                 packet_length,
-                                                 protocol, ttl);
-        } else {
-            HIP_DEBUG("Firewall send to the kernel an outgoing packet\n");
-            err = hip_firewall_send_outgoing_pkt(src_hit,
-                                                 dst_hit, msg,
-                                                 packet_length,
-                                                 protocol);
-        }
-    }
-
-    if (msg) {
-        free(msg);
-    }
     return err;
 }

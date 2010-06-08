@@ -66,7 +66,6 @@ struct esp_tuple {
     uint32_t                spi_update_id;
     SList *                 dst_addr_list;
     struct tuple *          tuple;
-    struct decryption_data *dec_data;
     /* tracking of the ESP SEQ number */
     uint32_t                seq_no;
     /* members needed for ESP protection extension */
@@ -87,13 +86,6 @@ struct esp_tuple {
     hip_ll_t                anchor_cache;
     /* buffer storing hashes of previous packets for cumulative authentication */
     esp_cumulative_item_t   hash_buffer[MAX_RING_BUFFER_SIZE];
-};
-
-struct decryption_data {
-    int                   dec_alg;
-    int                   auth_len;
-    int                   key_len;
-    struct hip_crypto_key dec_key;
 };
 
 struct hip_data {

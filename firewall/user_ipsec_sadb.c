@@ -46,6 +46,13 @@
 /* the length of the hash value used for indexing */
 #define INDEX_HASH_LENGTH       SHA_DIGEST_LENGTH
 
+/* Structure for demultiplexing inbound ipsec packets, indexed by dst_addr and spi */
+typedef struct hip_link_entry {
+    struct in6_addr  dst_addr;        /* destination address of outer IP header */
+    uint32_t         spi;             /* ipsec spi, needed for demultiplexing incoming packets */
+    hip_sa_entry_t * linked_sa_entry; /* direct link to sa entry */
+} hip_link_entry_t;
+
 /* database storing the sa entries, indexed by src _and_ dst hits */
 HIP_HASHTABLE *sadb   = NULL;
 /* database storing shortcuts to sa entries for incoming packets */

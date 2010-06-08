@@ -68,14 +68,6 @@ typedef struct hip_sa_entry {
     uint32_t               next_free;           /* next buffer entry to be used for cumulative packet auth */
 } hip_sa_entry_t;
 
-/* Structure for demultiplexing inbound ipsec packets, indexed by dst_addr and spi */
-typedef struct hip_link_entry {
-    struct in6_addr  dst_addr;        /* destination address of outer IP header */
-    uint32_t         spi;             /* ipsec spi, needed for demultiplexing incoming packets */
-    hip_sa_entry_t * linked_sa_entry; /* direct link to sa entry */
-} hip_link_entry_t;
-
-
 int hip_sadb_init(void);
 int hip_sadb_uninit(void);
 int hip_sadb_add(int direction,

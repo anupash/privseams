@@ -112,10 +112,6 @@ static void print_esp_tuple(const struct esp_tuple *esp_tuple)
               esp_tuple->tuple->direction);
 
     print_esp_addr_list(esp_tuple->dst_addr_list);
-
-    if (esp_tuple->dec_data) {
-        HIP_DEBUG("Decryption data for esp_tuple exists\n");
-    }
 }
 
 /**
@@ -537,10 +533,6 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
             free(addr->update_id);
             free(addr);
             list = esp_tuple->dst_addr_list;
-        }
-
-        if (esp_tuple->dec_data) {
-            free(esp_tuple->dec_data);
         }
 
         esp_tuple->tuple = NULL;
@@ -1046,7 +1038,6 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
                                                       ip6_src, NULL);
         esp_tuple->tuple         = other_dir;
-        esp_tuple->dec_data      = NULL;
 
         other_dir->esp_tuples    = (SList *)
                                    append_to_slist((SList *) other_dir->esp_tuples, esp_tuple);
@@ -1120,8 +1111,6 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
         esp_tuple->dst_addr_list = NULL;
         esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
                                                       ip6_src, NULL);
-
-        esp_tuple->dec_data      = NULL;
         esp_tuple->tuple         = other_dir;
 
         insert_esp_tuple(esp_tuple);

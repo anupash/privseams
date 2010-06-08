@@ -88,6 +88,66 @@ static void add_udp_header(struct udphdr *udp_hdr,
     udp_hdr->check = 0;
 }
 
+/* XX TODO copy as much header information as possible */
+
+/** adds an IPv4-header to the packet
+ *
+ * @param ip_hdr        pointer to location where IPv4 header should be written to
+ * @param src_addr      IPv4 source address
+ * @param dst_addr      IPv4 destination address
+ * @param packet_len    packet length
+ * @param next_hdr      next header value
+ */
+static void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
+                     const struct in6_addr *dst_addr, const uint16_t packet_len,
+                     const uint8_t next_hdr)
+{
+    struct in_addr src_in_addr;
+    struct in_addr dst_in_addr;
+    IPV6_TO_IPV4_MAP(src_addr, &src_in_addr);
+    IPV6_TO_IPV4_MAP(dst_addr, &dst_in_addr);
+
+    // set changed values
+    ip_hdr->ip_v          = 4;
+    /* assume no options */
+    ip_hdr->ip_hl         = 5;
+    ip_hdr->ip_tos        = 0;
+    ip_hdr->ip_len        = packet_len;
+    /* assume that we have no fragmentation */
+    ip_hdr->ip_id         = 0;
+    ip_hdr->ip_off        = 0;
+    ip_hdr->ip_ttl        = 255;
+    ip_hdr->ip_p          = next_hdr;
+    ip_hdr->ip_sum        = 0;
+    ip_hdr->ip_src.s_addr = src_in_addr.s_addr;
+    ip_hdr->ip_dst.s_addr = dst_in_addr.s_addr;
+
+    /* recalculate the header checksum, does not include payload */
+    ip_hdr->ip_sum        = checksum_ip(ip_hdr, ip_hdr->ip_hl);
+}
+
+/** adds an IPv6-header to the packet
+ *
+ * @param ip6_hdr       pointer to location where IPv6 header should be written to
+ * @param src_addr      IPv6 source address
+ * @param dst_addr      IPv6 destination address
+ * @param packet_len    packet length
+ * @param next_hdr      next header value
+ */
+static void add_ipv6_header(struct ip6_hdr *ip6_hdr, const struct in6_addr *src_addr,
+                     const struct in6_addr *dst_addr, const uint16_t packet_len,
+                     const uint8_t next_hdr)
+{
+    ip6_hdr->ip6_flow = 0;     /* zero the version (4), TC (8) and flow-ID (20) */
+    /* set version to 6 and leave first 4 bits of TC at 0 */
+    ip6_hdr->ip6_vfc  = 0x60;
+    ip6_hdr->ip6_plen = htons(packet_len - sizeof(struct ip6_hdr));
+    ip6_hdr->ip6_nxt  = next_hdr;
+    ip6_hdr->ip6_hlim = 255;
+    memcpy(&ip6_hdr->ip6_src, src_addr, sizeof(struct in6_addr));
+    memcpy(&ip6_hdr->ip6_dst, dst_addr, sizeof(struct in6_addr));
+}
+
 /** creates a packet according to BEET mode ESP specification
  *
  * @param ctx                   packet context
@@ -739,64 +799,4 @@ static int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
 
 out_err:
     return err;
-}
-
-/* XX TODO copy as much header information as possible */
-
-/** adds an IPv4-header to the packet
- *
- * @param ip_hdr        pointer to location where IPv4 header should be written to
- * @param src_addr      IPv4 source address
- * @param dst_addr      IPv4 destination address
- * @param packet_len    packet length
- * @param next_hdr      next header value
- */
-void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
-                     const struct in6_addr *dst_addr, const uint16_t packet_len,
-                     const uint8_t next_hdr)
-{
-    struct in_addr src_in_addr;
-    struct in_addr dst_in_addr;
-    IPV6_TO_IPV4_MAP(src_addr, &src_in_addr);
-    IPV6_TO_IPV4_MAP(dst_addr, &dst_in_addr);
-
-    // set changed values
-    ip_hdr->ip_v          = 4;
-    /* assume no options */
-    ip_hdr->ip_hl         = 5;
-    ip_hdr->ip_tos        = 0;
-    ip_hdr->ip_len        = packet_len;
-    /* assume that we have no fragmentation */
-    ip_hdr->ip_id         = 0;
-    ip_hdr->ip_off        = 0;
-    ip_hdr->ip_ttl        = 255;
-    ip_hdr->ip_p          = next_hdr;
-    ip_hdr->ip_sum        = 0;
-    ip_hdr->ip_src.s_addr = src_in_addr.s_addr;
-    ip_hdr->ip_dst.s_addr = dst_in_addr.s_addr;
-
-    /* recalculate the header checksum, does not include payload */
-    ip_hdr->ip_sum        = checksum_ip(ip_hdr, ip_hdr->ip_hl);
-}
-
-/** adds an IPv6-header to the packet
- *
- * @param ip6_hdr       pointer to location where IPv6 header should be written to
- * @param src_addr      IPv6 source address
- * @param dst_addr      IPv6 destination address
- * @param packet_len    packet length
- * @param next_hdr      next header value
- */
-void add_ipv6_header(struct ip6_hdr *ip6_hdr, const struct in6_addr *src_addr,
-                     const struct in6_addr *dst_addr, const uint16_t packet_len,
-                     const uint8_t next_hdr)
-{
-    ip6_hdr->ip6_flow = 0;     /* zero the version (4), TC (8) and flow-ID (20) */
-    /* set version to 6 and leave first 4 bits of TC at 0 */
-    ip6_hdr->ip6_vfc  = 0x60;
-    ip6_hdr->ip6_plen = htons(packet_len - sizeof(struct ip6_hdr));
-    ip6_hdr->ip6_nxt  = next_hdr;
-    ip6_hdr->ip6_hlim = 255;
-    memcpy(&ip6_hdr->ip6_src, src_addr, sizeof(struct in6_addr));
-    memcpy(&ip6_hdr->ip6_dst, dst_addr, sizeof(struct in6_addr));
 }

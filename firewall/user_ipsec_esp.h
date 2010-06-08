@@ -47,11 +47,5 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx,
 int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
                         unsigned char *decrypted_packet,
                         uint16_t *decrypted_packet_len);
-void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
-                     const struct in6_addr *dst_addr, const uint16_t packet_len,
-                     const uint8_t next_hdr);
-void add_ipv6_header(struct ip6_hdr *ip6_hdr, const struct in6_addr *src_addr,
-                     const struct in6_addr *dst_addr, const uint16_t packet_len,
-                     const uint8_t next_hdr);
 
 #endif /* HIP_FIREWALL_USER_IPSEC_ESP_H*/
