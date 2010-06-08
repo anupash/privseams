@@ -745,7 +745,7 @@ int hip_check_r1(const uint8_t packet_type,
               str,
               len,
               hip_get_param_host_id_hostname(peer_host_id));
-    HIP_IFE(hip_init_peer(ctx->hadb_entry, ctx->input_msg, peer_host_id),
+    HIP_IFE(hip_init_peer(ctx->hadb_entry, peer_host_id),
             -EINVAL);
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1425,7 +1425,7 @@ int hip_check_i2(const uint8_t packet_type,
      if (!ctx->hadb_entry) {
          HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
-         HIP_IFEL(!(ctx->hadb_entry = hip_hadb_create_state(0)),
+         HIP_IFEL(!(ctx->hadb_entry = hip_hadb_create_state()),
                   -ENOMEM,
                   "Out of memory when allocating memory for a new HIP " \
                   "association. Dropping the I2 packet.\n");
@@ -1606,7 +1606,7 @@ int hip_check_i2(const uint8_t packet_type,
                 hip_get_param_total_len(host_id_in_enc));
 
     /* Store peer's public key and HIT to HA */
-     HIP_IFE(hip_init_peer(ctx->hadb_entry, ctx->input_msg, host_id_in_enc), -EINVAL);
+     HIP_IFE(hip_init_peer(ctx->hadb_entry, host_id_in_enc), -EINVAL);
      /* Validate signature */
  #ifdef CONFIG_HIP_PERFORMANCE
      HIP_DEBUG("Start PERF_VERIFY(2)\n");

@@ -980,7 +980,7 @@ int hipd_init(const uint64_t flags)
     HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
              "locking failed\n");
 
-    hip_init_hostid_db(NULL);
+    hip_init_hostid_db();
 
     hip_set_os_dep_variables();
 
