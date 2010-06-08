@@ -989,7 +989,6 @@ int hip_send_r2(const uint8_t packet_type,
                      ctx->hadb_entry->esp_transform,
                      &ctx->hadb_entry->esp_out,
                      &ctx->hadb_entry->auth_out,
-                     1,
                      HIP_SPI_DIRECTION_OUT,
                      0,
                      ctx->hadb_entry);

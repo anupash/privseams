@@ -798,7 +798,7 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
      * should be 1 */
     HIP_DEBUG_HIT("our HIT", &ha->hit_our);
     HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
-    hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
+    hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, 1);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
@@ -1462,8 +1462,8 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
     int prev_spi_in  = ha->spi_inbound_current;
 
     // Delete previous security policies
-    hip_delete_hit_sp_pair(&ha->hit_our, &ha->hit_peer, IPPROTO_ESP, 1);
-    hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
+    hip_delete_hit_sp_pair(&ha->hit_our, &ha->hit_peer, 1);
+    hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, 1);
 
     // Delete the previous SAs
     HIP_DEBUG("Previous SPI out =0x%x\n", prev_spi_out);
@@ -1474,12 +1474,10 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
 
     hip_delete_sa(prev_spi_out,
                   &ha->peer_addr,
-                  &ha->our_addr,
                   HIP_SPI_DIRECTION_OUT,
                   ha);
     hip_delete_sa(prev_spi_in,
                   &ha->our_addr,
-                  &ha->peer_addr,
                   HIP_SPI_DIRECTION_IN,
                   ha);
 
@@ -1525,7 +1523,6 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_add
                         ha->esp_transform,
                         &ha->esp_in,
                         &ha->auth_in,
-                        1,
                         HIP_SPI_DIRECTION_IN,
                         0,
                         ha),
@@ -1545,7 +1542,6 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_add
                         ha->esp_transform,
                         &ha->esp_out,
                         &ha->auth_out,
-                        1,
                         HIP_SPI_DIRECTION_OUT,
                         0,
                         ha),
