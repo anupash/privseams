@@ -359,8 +359,8 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         const char *a_name = a_algo_names[aalg];
         int len;
 
-        HIP_ASSERT(ealg < sizeof(e_algo_names));
-        HIP_ASSERT(aalg < sizeof(a_algo_names));
+        HIP_ASSERT(ealg < (int)sizeof(e_algo_names));
+        HIP_ASSERT(aalg < (int)sizeof(a_algo_names));
 
         memset(alg.buf, 0, sizeof(alg.buf));
 
