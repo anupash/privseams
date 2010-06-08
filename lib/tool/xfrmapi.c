@@ -367,7 +367,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
         /* XFRMA_ALG_AUTH */
         memset(&alg, 0, sizeof(alg));
-        HIP_IFE(xfrm_algo_parse((void *) &alg, XFRMA_ALG_AUTH, a_name,
+        HIP_IFE(xfrm_algo_parse((void *) &alg, a_name,
                                 authkey->key, authkey_len,
                                 sizeof(alg.buf)), -1);
         len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
@@ -377,7 +377,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
         /* XFRMA_ALG_CRYPT */
         memset(&alg, 0, sizeof(alg));
-        HIP_IFE(xfrm_algo_parse((void *) &alg, XFRMA_ALG_CRYPT, e_name,
+        HIP_IFE(xfrm_algo_parse((void *) &alg, e_name,
                                 enckey->key, enckey_len,
                                 sizeof(alg.buf)), -1);
 
