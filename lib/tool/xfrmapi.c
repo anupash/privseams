@@ -117,7 +117,7 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 
     /* SELECTOR <--> HITs  SELECTOR <--> LSIs*/
     HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, id_peer, id_our, 0,
-                               id_prefix, 0, 0, preferred_family), -1);
+                               id_prefix, preferred_family), -1);
 
     /* TEMPLATE */
     tmpl = (struct xfrm_user_tmpl *) ((char *) tmpls_buf);
@@ -259,7 +259,7 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 
     /* SELECTOR <--> HITs */
     HIP_IFE(xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
-                               hit_prefix, 0, 0, preferred_family), -1);
+                               hit_prefix, preferred_family), -1);
     HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
              "No associated policies to be deleted\n");
 
@@ -342,7 +342,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
     /* Selector */
     HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_id, dst_id,
-                               0, hip_xfrmapi_sa_default_prefix, 0, 0,
+                               0, hip_xfrmapi_sa_default_prefix,
                                AF_INET6), -1);
     if (req.xsinfo.family == AF_INET && (sport || dport)) {
         xfrm_fill_encap(&encap, (sport ? sport : hip_get_local_nat_udp_port()),

@@ -65,7 +65,7 @@ struct inet6_pktinfo {
 typedef int (*hip_filter_t)(struct nlmsghdr *n, int len, void *arg);
 
 int set_up_device(const char *dev, int up);
-int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
+int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
               int alen);
 
 int hip_netlink_open(struct rtnl_handle *nl,
@@ -97,15 +97,13 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
                        const struct in6_addr *id_our,
                        const struct in6_addr *id_peer,
                        uint8_t proto, uint8_t id_prefix,
-                       uint32_t src_port, uint32_t dst_port,
                        int preferred_family);
 int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
                     int sport,
                     int dport,
                     const struct in6_addr *oa);
 
-int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
-                    const char *name, const unsigned char *key,
-                    int key_len, int max);
+int xfrm_algo_parse(struct xfrm_algo *alg, const char *name,
+                    const unsigned char *key, int key_len, int max);
 
 #endif /* HIP_LIB_TOOL_NLINK_H */
