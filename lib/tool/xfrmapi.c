@@ -230,7 +230,6 @@ out_err:
  * @param hit_our Source HIT
  * @param hit_peer Peer HIT
  * @param rth
- * @param proto
  * @param hit_prefix
  * @param preferred_family
  *
@@ -239,7 +238,7 @@ out_err:
 static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
                                   const struct in6_addr *hit_our,
                                   const struct in6_addr *hit_peer,
-                                  const int dir, const uint8_t proto,
+                                  const int dir,
                                   const uint8_t hit_prefix,
                                   const int preferred_family)
 {
@@ -552,12 +551,10 @@ int hip_flush_all_sa(void)
  *
  * @param spi the SPI number distinguishing the SA
  * @param peer_addr the destination address for the SA
- * @param not_used not used
  * @param direction HIP_SPI_DIRECTION_OUT or HIP_SPI_DIRECTION_IN
  * @param entry corresponding host association
  */
 void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
-                   const struct in6_addr *not_used,
                    const int direction, hip_ha_t *entry)
 {
     in_port_t sport, dport;
@@ -596,7 +593,6 @@ void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
  * @param ealg encryption algorithm for ESP
  * @param enckey encryption key for ESP
  * @param authkey authentication key for ESP
- * @param already_acquired currently unused
  * @param direction the direction of the SA (HIP_SPI_DIRECTION_OUT or HIP_SPI_DIRECTION_IN)
  * @param update zero if new SA or one if an old SA
  * @param entry corresponding host association
@@ -613,7 +609,6 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
                     const int ealg,
                     const struct hip_crypto_key *enckey,
                     const struct hip_crypto_key *authkey,
-                    const int already_acquired,
                     const int direction,
                     const int update,
                     hip_ha_t *entry)
@@ -717,21 +712,19 @@ out_err:
  *
  * @param src_hit source HIT for the SP
  * @param dst_hit destination HIT for the SP
- * @param proto the protocol (IPPROTO_ESP)
  * @param use_full_prefix one if we should use /128 prefix for HITs
  *                        or zero otherwise
  */
 void hip_delete_hit_sp_pair(const hip_hit_t *src_hit,
                             const hip_hit_t *dst_hit,
-                            const uint8_t proto,
                             const int use_full_prefix)
 {
     uint8_t prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
     hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, dst_hit, src_hit,
-                           XFRM_POLICY_IN, proto, prefix, AF_INET6);
+                           XFRM_POLICY_IN, prefix, AF_INET6);
     hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, src_hit, dst_hit,
-                           XFRM_POLICY_OUT, proto, prefix, AF_INET6);
+                           XFRM_POLICY_OUT, prefix, AF_INET6);
 }
 
 /**
@@ -748,7 +741,7 @@ void hip_delete_default_prefix_sp_pair(void)
     set_hit_prefix(&src_hit);
     set_hit_prefix(&dst_hit);
 
-    hip_delete_hit_sp_pair(&src_hit, &dst_hit, 0, 0);
+    hip_delete_hit_sp_pair(&src_hit, &dst_hit, 0);
 }
 
 /**
