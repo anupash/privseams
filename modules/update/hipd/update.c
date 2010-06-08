@@ -14,6 +14,7 @@
 #include "update.h"
 
 #include "lib/core/builder.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/performance.h"
 #include "lib/core/solve.h"
@@ -76,7 +77,7 @@ int hip_create_locators(hip_common_t *locator_msg,
     HIP_IFEL(hip_build_user_hdr(locator_msg,
                                 HIP_MSG_SET_LOCATOR_ON, 0), -1,
              "Failed to add user header\n");
-    HIP_IFEL(hip_build_locators_old(locator_msg, 0),
+    HIP_IFEL(hip_build_locators_old(locator_msg),
              -1,
              "Failed to build locators\n");
     loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
@@ -759,7 +760,8 @@ static void hip_handle_third_update_packet(hip_ha_t *ha,
  *
  * @return zero on success or negative on failure
  */
-static int hip_update_manual_update(hip_common_t *msg, struct sockaddr_in6 *src)
+static int hip_update_manual_update(UNUSED hip_common_t *msg,
+                                    UNUSED struct sockaddr_in6 *src)
 {
     HIP_DEBUG("Manual UPDATE triggered.\n");
     return hip_send_locators_to_all_peers();
@@ -831,8 +833,8 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-static int hip_update_check_packet(const uint8_t packet_type,
-                                   const uint32_t ha_state,
+static int hip_update_check_packet(UNUSED const uint8_t packet_type,
+                                   UNUSED const uint32_t ha_state,
                                    struct hip_packet_context *ctx)
 {
     int err = 0;
@@ -900,8 +902,8 @@ out_err:
  * @param ctx the packet context
  * @return zero on success or negative on failure
  */
-static int hip_update_handle_packet(const uint8_t packet_type,
-                                    const uint32_t ha_state,
+static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
+                                    UNUSED const uint32_t ha_state,
                                     struct hip_packet_context *ctx)
 {
     int err = 0, same_seq = 0;

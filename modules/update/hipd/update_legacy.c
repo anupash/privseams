@@ -21,10 +21,9 @@
  * build a LOCATOR parameter for an UPDATE packet
  *
  * @param msg the LOCATOR parameter will be appended to this UPDATE message
- * @param spi the SPI number for this UPDATE
  * @return zero on success on negative on failure
  */
-int hip_build_locators_old(struct hip_common *msg, uint32_t spi)
+int hip_build_locators_old(struct hip_common *msg)
 {
     int err                                 = 0, i = 0, count = 0;
     int addr_max;

@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include "lib/core/protodefs.h"
 
-int hip_build_locators_old(struct hip_common *msg, uint32_t spi);
+int hip_build_locators_old(struct hip_common *msg);
 
 void hip_empty_oppipdb_old(void);
 
