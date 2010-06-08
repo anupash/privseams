@@ -17,11 +17,12 @@
 
 #include "hb_update.h"
 #include "hipd/maintenance.h"
+#include "lib/core/common_defines.h"
 #include "modules/update/hipd/update.h"
 
 static const int hip_heartbeat_trigger_update_threshold = 5;
 
-static int hip_hb_update_trigger(hip_ha_t *hadb_entry, void *unused)
+static int hip_hb_update_trigger(hip_ha_t *hadb_entry, UNUSED void *opaque)
 {
     int err                                     = 0;
     uint8_t *heartbeat_counter                  = NULL;
