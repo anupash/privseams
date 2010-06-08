@@ -22,9 +22,36 @@
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
-/* forwards */
-static int hip_get_cookie_difficulty(hip_hit_t *not_used);
-static int hip_set_cookie_difficulty(hip_hit_t *not_used, int k);
+/**
+ * query for current puzzle difficulty
+ *
+ * @param not_used not used
+ * @return the puzzle difficulty
+ */
+static int hip_get_cookie_difficulty(hip_hit_t *not_used)
+{
+    /* Note: we could return a higher value if we detect DoS */
+    return hip_cookie_difficulty;
+}
+
+/**
+ * set puzzle difficulty
+ *
+ * @param not_used not used
+ * @param k the new puzzle difficulty
+ * @return the k value on success or negative on error
+ */
+static int hip_set_cookie_difficulty(hip_hit_t *not_used, int k)
+{
+    if (k > HIP_PUZZLE_MAX_K || k < 1) {
+        HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
+                  k, 1, HIP_PUZZLE_MAX_K);
+        return -1;
+    }
+    hip_cookie_difficulty = k;
+    HIP_DEBUG("HIP cookie value set to %d\n", k);
+    return k;
+}
 
 /**
  * get the puzzle difficulty and return result (for hipconf)
@@ -77,36 +104,6 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
     return err;
 }
 
-/**
- * query for current puzzle difficulty
- *
- * @param not_used not used
- * @return the puzzle difficulty
- */
-static int hip_get_cookie_difficulty(hip_hit_t *not_used)
-{
-    /* Note: we could return a higher value if we detect DoS */
-    return hip_cookie_difficulty;
-}
-
-/**
- * set puzzle difficulty
- *
- * @param not_used not used
- * @param k the new puzzle difficulty
- * @return the k value on success or negative on error
- */
-static int hip_set_cookie_difficulty(hip_hit_t *not_used, int k)
-{
-    if (k > HIP_PUZZLE_MAX_K || k < 1) {
-        HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
-                  k, 1, HIP_PUZZLE_MAX_K);
-        return -1;
-    }
-    hip_cookie_difficulty = k;
-    HIP_DEBUG("HIP cookie value set to %d\n", k);
-    return k;
-}
 
 /**
  * increase cookie difficulty by one
