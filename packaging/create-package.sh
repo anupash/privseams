@@ -83,7 +83,7 @@ mkindex_deb()
 {
     ORIG=$PWD
     cd $PKG_DIR
-    WD=$(echo $PKG_WEB_DIR | sed 's/\//\\\//g' | sed 's/ubuntu\///')
+    WD=$(echo $PKG_WEB_DIR | sed 's/ubuntu\///' | sed 's/\//\\\//g')
     #dpkg-scanpackages --multiversion . |
     dpkg-scanpackages . | \
         sed "s/Filename: \./Filename: $WD/" | \
