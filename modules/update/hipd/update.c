@@ -57,7 +57,7 @@ struct update_state {
     uint32_t                     update_id_in;
 };
 
-const static int update_id_window_size = 50;
+static const int update_id_window_size = 50;
 
 /**
  * build locators in an UPDATE message
