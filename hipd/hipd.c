@@ -254,7 +254,9 @@ static int hipd_main(uint64_t flags)
     int highest_descriptor = 0, err = 0;
     struct timeval timeout;
     fd_set read_fdset;
-    struct hip_packet_context ctx = {0};
+    struct hip_packet_context ctx;
+
+    memset(&ctx, 0, sizeof(ctx));
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Creating perf set\n");
