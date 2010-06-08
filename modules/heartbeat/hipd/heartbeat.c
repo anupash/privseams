@@ -43,6 +43,7 @@
 #include "hipd/init.h"
 #include "hipd/hip_socket.h"
 #include "hipd/pkt_handling.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/statistics.h"
 
 #define HIP_HEARTBEAT_INTERVAL 20
@@ -325,7 +326,7 @@ out_err:
     return err;
 }
 
-static int hip_heartbeat_handle_icmp_sock(struct hip_packet_context *ctx)
+static int hip_heartbeat_handle_icmp_sock(UNUSED struct hip_packet_context *ctx)
 {
     int err = 0;
 
@@ -379,19 +380,10 @@ static int hip_heartbeat_maintenance(void)
     return 0;
 }
 
-static int hip_heartbeat_handle_usr_msg(hip_common_t *msg,
-                                        struct sockaddr_in6 *src)
+static int hip_heartbeat_handle_usr_msg(UNUSED hip_common_t *msg,
+                                        UNUSED struct sockaddr_in6 *src)
 {
-    int err = 0;
-
-#if 0
-    heartbeat         = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
-    hip_icmp_interval = heartbeat->heartbeat;
-    heartbeat_counter = hip_icmp_interval;
-    HIP_DEBUG("Received heartbeat interval (%d seconds)\n", hip_icmp_interval);
-#endif
-
-    return err;
+    return 0;
 }
 
 static int hip_heartbeat_init_state(struct modular_state *state)
