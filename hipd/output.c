@@ -802,7 +802,7 @@ int hip_send_r1(const uint8_t packet_type,
     }
 
     HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, ctx->dst_addr,
-                                  &ctx->input_msg->hitr, &ctx->input_msg->hits)),
+                                  &ctx->input_msg->hitr)),
              -ENOENT, "No precreated R1\n");
 
     if (&ctx->input_msg->hits) {

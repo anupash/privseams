@@ -16,6 +16,7 @@
 #include "esp_prot_anchordb.h"
 #include "hipd.h"
 #include "lib/core/builder.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/hip_udp.h"
 
 /**
@@ -181,8 +182,8 @@ out_err:
  * @param ctx         the context
  * @return            0 in case of succcess, -1 otherwise
  */
-int esp_prot_handle_light_update(const uint8_t packet_type,
-                                 const uint32_t ha_state,
+int esp_prot_handle_light_update(UNUSED const uint8_t packet_type,
+                                 UNUSED const uint32_t ha_state,
                                  struct hip_packet_context *ctx)
 {
     struct hip_seq *seq = NULL;
@@ -227,8 +228,6 @@ int esp_prot_handle_light_update(const uint8_t packet_type,
         /********** ANCHOR ***********/
         HIP_IFEL(esp_prot_update_handle_anchor(ctx->input_msg,
                                                ctx->hadb_entry,
-                                               ctx->src_addr,
-                                               ctx->dst_addr,
                                                &spi),
                  -1, "failed to handle anchors\n");
 

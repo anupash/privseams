@@ -279,11 +279,11 @@ int hip_handle_user_msg(hip_common_t *msg,
         break;
     case HIP_MSG_CONF_PUZZLE_INC:
         dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-        hip_inc_cookie_difficulty(dst_hit);
+        hip_inc_cookie_difficulty();
         break;
     case HIP_MSG_CONF_PUZZLE_DEC:
         dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-        hip_dec_cookie_difficulty(dst_hit);
+        hip_dec_cookie_difficulty();
         break;
     case HIP_MSG_CERT_SPKI_VERIFY:
     {
@@ -296,7 +296,7 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_CERT_SPKI_SIGN:
     {
         HIP_DEBUG("Got an request to sign SPKI cert sequence\n");
-        reti = hip_cert_spki_sign(msg, hip_local_hostid_db);
+        reti = hip_cert_spki_sign(msg);
         HIP_IFEL(reti, -1, "Signing SPKI cert returned an error\n");
         HIP_DEBUG("SPKI cert signed sending it back to requester\n");
     }
@@ -304,8 +304,7 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_CERT_X509V3_SIGN:
     {
         HIP_DEBUG("Got an request to sign X509v3 cert\n");
-        reti = hip_cert_x509v3_handle_request_to_sign(msg,
-                                                      hip_local_hostid_db);
+        reti = hip_cert_x509v3_handle_request_to_sign(msg);
         HIP_IFEL(reti, -1, "Signing of x509v3 cert returned an error\n");
         HIP_DEBUG("X509v3 cert signed sending it back to requester\n");
     }

@@ -413,7 +413,7 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
         HIP_DEBUG_LSI("    Peer lsi   ", &entry->lsi_peer);
     } else {
         HIP_DEBUG("hip_hadb_create_state\n");
-        entry                             = hip_hadb_create_state(0);
+        entry = hip_hadb_create_state();
         HIP_IFEL(!entry, -1, "Unable to create a new entry");
 
         entry->peer_addr_list_to_be_added =
@@ -656,10 +656,9 @@ out_err:
 /**
  * Allocate and initialize a new HA structure.
  *
- * @param  gfpmask a mask passed directly to malloc().
  * @return NULL if memory allocation failed, otherwise the HA.
  */
-hip_ha_t *hip_hadb_create_state(int gfpmask)
+hip_ha_t *hip_hadb_create_state(void)
 {
     hip_ha_t *entry = NULL;
 
@@ -842,12 +841,10 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
  * store a remote host identifier to a host association
  *
  * @param entry the host association
- * @param msg unused
  * @param peer the remote host identifier
  * @return zero on success and negative on error
  */
 int hip_init_peer(hip_ha_t *entry,
-                  struct hip_common *msg,
                   struct hip_host_id *peer)
 {
     int err = 0;

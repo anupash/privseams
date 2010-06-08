@@ -921,8 +921,7 @@ int esp_prot_handle_first_update_packet(const hip_common_t *recv_update,
      *
      * @note contains anchors -> update inbound SA
      * @note response has to contain corresponding ACK and ESP_INFO */
-    HIP_IFEL(esp_prot_update_handle_anchor(recv_update, entry,
-                                           src_ip, dst_ip, &spi),
+    HIP_IFEL(esp_prot_update_handle_anchor(recv_update, entry, &spi),
              -1, "failed to handle anchor in UPDATE msg\n");
     HIP_DEBUG("successfully processed anchors in ANCHOR-UPDATE\n");
 
@@ -1046,15 +1045,11 @@ out_err:
  *
  * @param recv_update   the received hip update
  * @param entry         hip association for the connection
- * @param src_ip        src ip address
- * @param dst_ip        dst ip address
  * @param spi           the ipsec spi number
  * @return              0 on success, -1 in case of an error
  */
 int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
                                   hip_ha_t *entry,
-                                  const in6_addr_t *src_ip,
-                                  const in6_addr_t *dst_ip,
                                   uint32_t *spi)
 {
     struct esp_prot_anchor *prot_anchor = NULL;

@@ -81,10 +81,8 @@ int hip_hidb_match(const void *ptr1, const void *ptr2)
 
 /**
  * initialize host identity database
- *
- * @param db A double pointer to a HIP_HASHTABLE. Caller deallocates.
  */
-void hip_init_hostid_db(HIP_HASHTABLE **db)
+void hip_init_hostid_db(void)
 {
     hip_local_hostid_db = hip_ht_init(hip_hidb_hash, hip_hidb_match);
 }

@@ -60,8 +60,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit);
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
 void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
-int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
-                  struct hip_host_id *peer);
+int hip_init_peer(hip_ha_t *entry, struct hip_host_id *peer);
 int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our);
 
 
@@ -92,7 +91,7 @@ int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 /* Utilities */
 
-hip_ha_t *hip_hadb_create_state(int gfpmask);
+hip_ha_t *hip_hadb_create_state(void);
 
 int hip_for_each_ha(int(func) (hip_ha_t * entry, void *opaq), void *opaque);
 

@@ -35,6 +35,6 @@ int hip_close_ack_check_packet(const uint8_t packet_type,
 int hip_close_ack_handle_packet(const uint8_t packet_type,
                                 const uint32_t ha_state,
                                 struct hip_packet_context *ctx);
-int hip_purge_closing_ha(hip_ha_t *ha, void *notused);
+int hip_purge_closing_ha(hip_ha_t *ha, void *opaque);
 
 #endif /* HIP_HIPD_CLOSE_H */

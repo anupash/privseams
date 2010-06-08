@@ -81,7 +81,7 @@ int hip_hidb_hit_is_our(const hip_hit_t *src);
 
 unsigned long hip_hidb_hash(const void *ptr);
 int hip_hidb_match(const void *ptr1, const void *ptr2);
-void hip_init_hostid_db(HIP_HASHTABLE **db);
+void hip_init_hostid_db(void);
 int hip_for_all_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);

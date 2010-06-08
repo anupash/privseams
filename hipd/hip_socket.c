@@ -13,6 +13,7 @@
 #include "hipd.h"
 #include "input.h"
 #include "pkt_handling.h"
+#include "lib/core/common_defines.h"
 
 struct socketfd {
     uint16_t priority;
@@ -122,7 +123,7 @@ out_err:
     return err;
 }
 
-static int hip_handle_nl_ipsec_sock(struct hip_packet_context *ctx)
+static int hip_handle_nl_ipsec_sock(UNUSED struct hip_packet_context *ctx)
 {
     HIP_DEBUG("netlink receive\n");
     if (hip_netlink_receive(&hip_nl_ipsec,
@@ -134,7 +135,7 @@ static int hip_handle_nl_ipsec_sock(struct hip_packet_context *ctx)
     return 0;
 }
 
-static int hip_handle_nl_route_sock(struct hip_packet_context *ctx)
+static int hip_handle_nl_route_sock(UNUSED struct hip_packet_context *ctx)
 {
     HIP_DEBUG("netlink route receive\n");
     if (hip_netlink_receive(&hip_nl_route,

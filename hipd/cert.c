@@ -22,13 +22,11 @@
  *
  * @param msg points to the msg gotten from "client" that should
  *            contain HIP_PARAM_CERT_SPKI_INFO
- * @param db is the HIP_HASHTABLE to
- *           query for the hostid entry
  *
  * @return 0 if signature was created without errors, negative value
  *         is returned on errors
  */
-int hip_cert_spki_sign(struct hip_common *msg, HIP_HASHTABLE *db)
+int hip_cert_spki_sign(struct hip_common *msg)
 {
     int err                      = 0, sig_len = 0, algo = 0, t = 0;
     struct hip_cert_spki_info *p_cert;
@@ -650,11 +648,10 @@ out_err:
  * Function that creates the certificate and sends it to back to the client.
  *
  * @param msg is a pointer to the msg containing a x509v3 cert in cert parameter
- * @param db is the HIP_HASHTABLE to query for the hostid entry
  *
  * @return 0 on success negative otherwise.
  */
-int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg,  HIP_HASHTABLE *db)
+int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
 {
     int err = 0, i = 0, nid = 0, ret = 0, secs = 0, algo = 0;
     CONF *conf;

@@ -14,6 +14,7 @@
 
 #include "config.h"
 #include "close.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/performance.h"
 
@@ -205,8 +206,8 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-int hip_close_check_packet(const uint8_t packet_type,
-                           const uint32_t ha_state,
+int hip_close_check_packet(UNUSED const uint8_t packet_type,
+                           UNUSED const uint32_t ha_state,
                            struct hip_packet_context *ctx)
 {
     int err = 0;
@@ -261,8 +262,8 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-int hip_close_create_response(const uint8_t packet_type,
-                              const uint32_t ha_state,
+int hip_close_create_response(UNUSED const uint8_t packet_type,
+                              UNUSED const uint32_t ha_state,
                               struct hip_packet_context *ctx)
 {
     int err = 0, echo_len;
@@ -320,8 +321,8 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-int hip_close_send_response(const uint8_t packet_type,
-                            const uint32_t ha_state,
+int hip_close_send_response(UNUSED const uint8_t packet_type,
+                            UNUSED const uint32_t ha_state,
                             struct hip_packet_context *ctx)
 {
     int err = 0;
@@ -386,8 +387,8 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-int hip_close_ack_check_packet(const uint8_t packet_type,
-                               const uint32_t ha_state,
+int hip_close_ack_check_packet(UNUSED const uint8_t packet_type,
+                               UNUSED const uint32_t ha_state,
                                struct hip_packet_context *ctx)
 {
     int err = 0;
@@ -458,8 +459,8 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-int hip_close_ack_handle_packet(const uint8_t packet_type,
-                                const uint32_t ha_state,
+int hip_close_ack_handle_packet(UNUSED const uint8_t packet_type,
+                                UNUSED const uint32_t ha_state,
                                 struct hip_packet_context *ctx)
 {
     int err = 0;
@@ -496,10 +497,9 @@ out_err:
  * tear down a host association after close procedure
  *
  * @param ha the corresponding host association
- * @param notused not used
  * @return zero on success or negative on error
  */
-int hip_purge_closing_ha(hip_ha_t *ha, void *notused)
+int hip_purge_closing_ha(hip_ha_t *ha, UNUSED void *opaque)
 {
     int err = 0;
 

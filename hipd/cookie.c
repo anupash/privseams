@@ -15,6 +15,7 @@
 
 #include "config.h"
 #include "cookie.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/solve.h"
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
@@ -25,10 +26,9 @@ int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 /**
  * query for current puzzle difficulty
  *
- * @param not_used not used
  * @return the puzzle difficulty
  */
-static int hip_get_cookie_difficulty(hip_hit_t *not_used)
+static int hip_get_cookie_difficulty(void)
 {
     /* Note: we could return a higher value if we detect DoS */
     return hip_cookie_difficulty;
@@ -37,11 +37,10 @@ static int hip_get_cookie_difficulty(hip_hit_t *not_used)
 /**
  * set puzzle difficulty
  *
- * @param not_used not used
  * @param k the new puzzle difficulty
  * @return the k value on success or negative on error
  */
-static int hip_set_cookie_difficulty(hip_hit_t *not_used, int k)
+static int hip_set_cookie_difficulty(int k)
 {
     if (k > HIP_PUZZLE_MAX_K || k < 1) {
         HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
@@ -71,7 +70,7 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
     /* obtain the hit */
     dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 
-    diff = hip_get_cookie_difficulty(NULL);
+    diff = hip_get_cookie_difficulty();
 
     hip_build_param_contents(msg, &diff, HIP_PARAM_INT, sizeof(diff));
 
@@ -98,7 +97,7 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
     HIP_IFEL(!(newVal = hip_get_param_contents(msg, HIP_PARAM_INT)),
              -1, "No difficulty set\n");
 
-    HIP_IFEL(hip_set_cookie_difficulty(NULL, *newVal), -1,
+    HIP_IFEL(hip_set_cookie_difficulty(*newVal), -1,
              "Setting difficulty failed\n");
  out_err:
     return err;
@@ -108,25 +107,23 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 /**
  * increase cookie difficulty by one
  *
- * @param not_used not used
  * @return the new cookie difficulty
  */
-int hip_inc_cookie_difficulty(hip_hit_t *not_used)
+int hip_inc_cookie_difficulty(void)
 {
-    int k = hip_get_cookie_difficulty(NULL) + 1;
-    return hip_set_cookie_difficulty(NULL, k);
+    int k = hip_get_cookie_difficulty() + 1;
+    return hip_set_cookie_difficulty(k);
 }
 
 /**
  * decrease cookie difficulty by one
  *
- * @param not_used not used
  * @return the new cookie difficulty
  */
-int hip_dec_cookie_difficulty(hip_hit_t *not_used)
+int hip_dec_cookie_difficulty()
 {
-    int k = hip_get_cookie_difficulty(NULL) - 1;
-    return hip_set_cookie_difficulty(NULL, k);
+    int k = hip_get_cookie_difficulty() - 1;
+    return hip_set_cookie_difficulty(k);
 }
 
 /**
@@ -134,12 +131,10 @@ int hip_dec_cookie_difficulty(hip_hit_t *not_used)
  *
  * @param ip_i Initiator's IPv6 address
  * @param ip_r Responder's IPv6 address
- * @param hit_i Initiators HIT
  *
  * @return 0 <= x < HIP_R1TABLESIZE
  */
-static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
-                               struct in6_addr *hit_i)
+static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 {
     register uint32_t base = 0;
     int i;
@@ -164,15 +159,13 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
  * @param ip_i Initiator's IPv6
  * @param ip_r Responder's IPv6
  * @param our_hit Our HIT
- * @param peer_hit The peer's HIT
  *
  * @note Comments for the if 0 code are inlined below.
  *
  * Returns NULL if error.
  */
 struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
-                              struct in6_addr *our_hit,
-                              struct in6_addr *peer_hit)
+                              struct in6_addr *our_hit)
 {
     struct hip_common *err          = NULL, *r1 = NULL;
     struct hip_r1entry *hip_r1table = NULL;
@@ -185,7 +178,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
              NULL, "Unknown HIT\n");
 
     hip_r1table = hid->r1;
-    idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);
+    idx = hip_calc_cookie_idx(ip_i, ip_r);
     HIP_DEBUG("Calculated index: %d\n", idx);
 
     /* Create a copy of the found entry */
@@ -238,7 +231,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
     for (i = 0; i < HIP_R1TABLESIZE; i++) {
         int cookie_k;
 
-        cookie_k      = hip_get_cookie_difficulty(NULL);
+        cookie_k      = hip_get_cookie_difficulty();
 
         r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey,
                                       cookie_k);
@@ -311,7 +304,7 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
                    HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO,
                    -1)),
              -1, "Requested source HIT not (any more) available.\n");
-    result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+    result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r)];
 
     puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
     HIP_IFEL(!puzzle, -1, "Internal error: could not find the cookie\n");
@@ -358,11 +351,10 @@ out_err:
  * recreate R1 packets corresponding to one HI
  *
  * @param entry the host id entry
- * @param new_hash unused
  * @return zero on success or negative on error
  */
 static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
-                                           void *new_hash)
+                                           UNUSED void *opaque)
 {
     int err = 0;
 
