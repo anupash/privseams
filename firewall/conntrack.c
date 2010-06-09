@@ -232,8 +232,8 @@ static void update_peer_opp_info(const struct hip_data *data,
  * @return the tuple or NULL, if not found.
  */
 static struct tuple *get_tuple_by_hip(const struct hip_data *data,
-                                      const uint8_t type_hdr,
-                                      const struct in6_addr *ip6_from)
+                                      OPP const uint8_t type_hdr,
+                                      OPP const struct in6_addr *ip6_from)
 {
     struct hip_tuple *tuple = NULL;
     DList *list = (DList *) hipList;

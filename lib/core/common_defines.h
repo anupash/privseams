@@ -18,6 +18,20 @@
 # define UNUSED
 #endif
 
+/** marking for RVS-specific function parameters */
+#ifdef CONFIG_HIP_RVS
+# define RVS
+#else
+# define RVS UNUSED
+#endif
+
+/** marking for OPPORTUNISTIC-specific function parameters */
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+# define OPP
+#else
+# define OPP UNUSED
+#endif
+
 /*********** ESP structures *************/
 
 struct hip_esp {

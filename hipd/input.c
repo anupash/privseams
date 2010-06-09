@@ -663,8 +663,8 @@ out_err:
  *
  * @return zero on success, or negative error value on error.
  */
-int hip_check_r1(const uint8_t packet_type,
-                 const uint32_t ha_state,
+int hip_check_r1(RVS const uint8_t packet_type,
+                 RVS const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
     int err = 0, mask = HIP_PACKET_CTRL_ANON, len;
@@ -1059,7 +1059,7 @@ out_err:
  *
  * @return zero on success, or negative error value on error.
  */
-int hip_handle_r2(const uint8_t packet_type,
+int hip_handle_r2(RVS const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {

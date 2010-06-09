@@ -1024,7 +1024,7 @@ out_err:
  * @param dest_port the relayed destination port will be written here
  */
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
-                                in6_addr_t *relay_ip,
+                                RVS in6_addr_t *relay_ip,
                                 in6_addr_t *dest_ip, in_port_t *dest_port)
 {
     hip_tlv_type_t param_type;
