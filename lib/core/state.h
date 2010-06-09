@@ -18,9 +18,6 @@
 #define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
-#define HIP_HI_REUSE_UID                   4
-#define HIP_HI_REUSE_GID                   8
-#define HIP_HI_REUSE_ANY                  16
 /* Other flags: keep them to the power of two! */
 
 
@@ -62,7 +59,7 @@
 //NAT branch
 #define HIP_LOCATOR_LOCATOR_TYPE_UDP 2
 
-#define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY 126
+/* #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY 126 */
 /* #define HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY 120 */
 /** for the triple nat mode*/
 #define HIP_NAT_MODE_NONE               0

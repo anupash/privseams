@@ -739,12 +739,6 @@ struct endpoint_hip {
     } id;
 };
 
-struct sockaddr_eid {
-    unsigned short int eid_family;
-    uint16_t           eid_port;
-    sa_eid_t           eid_val;
-} __attribute__ ((packed));
-
 /**
  * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.

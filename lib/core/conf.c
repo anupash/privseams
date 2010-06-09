@@ -101,7 +101,7 @@
 #define ACTION_HEARTBEAT 26
 
 #define ACTION_HIT_TO_LSI 28
-#define ACTION_BUDDIES 29
+/* unused, was ACTION_BUDDIES 29 */
 #define ACTION_NSUPDATE 30
 #define ACTION_HIT_TO_IP 31
 #define ACTION_HIT_TO_IP_SET 32
@@ -149,10 +149,7 @@
 #define TYPE_ORDER         24
 /* free slots */
 #define TYPE_HEARTBEAT     27
-
-/* free slot (was for TYPE_GET_PEER_LSI  29) */
-#define TYPE_BUDDIES       30
-/* free slot */
+/* free slots */
 #define TYPE_NSUPDATE      32
 #define TYPE_HIT_TO_IP     33
 #define TYPE_HIT_TO_IP_SET 34
@@ -214,7 +211,6 @@ const char *hipconf_usage =
     "nsupdate on|off\n"
     "hit-to-ip on|off\n"
     "hit-to-ip-zone <hit-to-ip.zone.>\n"
-    "buddies on|off\n"
     "datapacket on|off\n"
     "shotgun on|off\n"
     "id-to-addr hit|lsi\n"
@@ -561,8 +557,6 @@ static int hip_conf_get_action(char *argv[])
         ret = ACTION_MANUAL_UPDATE;
     } else if (!strcmp("hit-to-lsi", argv[1])) {
         ret = ACTION_HIT_TO_LSI;
-    } else if (!strcmp("buddies", argv[1])) {
-        ret = ACTION_BUDDIES;
     } else if (!strcmp("nsupdate", argv[1])) {
         ret = ACTION_NSUPDATE;
     } else if (!strcmp("hit-to-ip-set", argv[1])) {
@@ -714,8 +708,6 @@ static int hip_conf_get_type(char *text, char *argv[])
         ret = TYPE_MANUAL_UPDATE;
     } else if (strcmp("hit-to-lsi", argv[1]) == 0) {
         ret = TYPE_HIT_TO_LSI;
-    } else if (strcmp("buddies", argv[1]) == 0) {
-        ret = TYPE_BUDDIES;
     } else if (strcmp("nsupdate", argv[1]) == 0) {
         ret = TYPE_NSUPDATE;
     } else if (strcmp("hit-to-ip-set", argv[1]) == 0) {
@@ -760,7 +752,6 @@ static int hip_conf_get_type_arg(int action)
     case ACTION_GET:
     case ACTION_RUN:
     case ACTION_LOAD:
-    case ACTION_BUDDIES:
     case ACTION_HEARTBEAT:
     case ACTION_LOCATOR:
     case ACTION_RST:

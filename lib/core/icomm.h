@@ -41,20 +41,12 @@
 #define HIP_MSG_ANY_MIN                          1
 #define HIP_MSG_ADD_PEER_MAP_HIT_IP              2
 #define HIP_MSG_DEL_PEER_MAP_HIT_IP              3
-/* slot free */
-#define HIP_MSG_SET_MY_EID                       5
-/* slot free */
-#define HIP_MSG_SET_PEER_EID                     7
+/* free slots */
 #define HIP_MSG_NULL_OP                          8
-#define HIP_MSG_QUERY_OPPORTUNISTIC_MODE         9
-#define HIP_MSG_ANSWER_OPPORTUNISTIC_MODE_QUERY  10
-/* slot free */
-#define HIP_MSG_QUERY_IP_HIT_MAPPING             12
-#define HIP_MSG_ANSWER_IP_HIT_MAPPING_QUERY      13
+/* free slots */
 #define HIP_MSG_GET_PEER_HIT                     14
 /* free slot */
 #define HIP_MSG_DEFAULT_HIT                      16
-#define HIP_MSG_GET_PEER_LIST                    17
 /* Free slots here */
 #define HIP_MSG_GET_HITS                         21
 #define HIP_MSG_GET_HA_INFO                      22
@@ -81,7 +73,7 @@
 #define HIP_MSG_CONF_PUZZLE_SET                  74
 #define HIP_MSG_CONF_PUZZLE_INC                  75
 #define HIP_MSG_CONF_PUZZLE_DEC                  76
-#define HIP_MSG_STUN                             77
+/* free slot */
 #define HIP_MSG_SET_OPPORTUNISTIC_MODE           78
 /* Free slots here */
 #define HIP_MSG_SET_DEBUG_ALL                    82
@@ -154,8 +146,6 @@
 #define HIP_MSG_FW_BEX_DONE                      157
 #define HIP_MSG_RESTART_DUMMY_INTERFACE          158
 /* free slots */
-#define HIP_MSG_BUDDIES_ON                       162
-#define HIP_MSG_BUDDIES_OFF                      163
 #define HIP_MSG_TURN_INFO                        164
 /* Free slots here */
 #define HIP_MSG_NSUPDATE_OFF                     179
@@ -188,7 +178,6 @@
 /* inclusive */
 #define HIP_MSG_ROOT_MAX                         255
 
-#define HIP_MSG_SET_NAT_ON                     HIP_MSG_SET_NAT_PLAIN_UDP
 #define FLUSH_HA_INFO_DB                        1
 
 
