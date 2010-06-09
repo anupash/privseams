@@ -178,7 +178,7 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
      * a DOS attack vector.
      */
     if (received_update_packet && type == HIP_UPDATE_ECHO_REQUEST) {
-        HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet, ha), -1,
+        HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet), -1,
                  "Building of Challenge_Response failed\n");
     } else {
         HIP_DEBUG("msg is NULL, midauth parameters not included in reply\n");
@@ -188,7 +188,7 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
      * a DOS attack vector.
      */
     if (type == HIP_UPDATE_ECHO_RESPONSE) {
-        HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet, ha), -1,
+        HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet), -1,
                  "Building of Challenge_Response failed\n");
     }
 #endif

@@ -119,16 +119,13 @@ out_err:
  *
  * @param out the received R1 message
  * @param in an I2 message where the solution will be written
- * @param entry the related host association
  * @return zero on success and negative on error
  * @see <a
  * href="http://tools.ietf.org/id/draft-heer-hip-middle-auth">Heer et
  * al, End-Host Authentication for HIP Middleboxes, Internet draft,
  * work in progress, February 2009</a>
  */
-int hip_solve_puzzle_m(struct hip_common *out,
-                       struct hip_common *in,
-                       hip_ha_t *entry)
+int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
 {
     struct hip_challenge_request *pz;
     struct hip_puzzle tmp;

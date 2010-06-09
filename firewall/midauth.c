@@ -331,7 +331,7 @@ out_err:
     return err;
 }
 
-int midauth_handler_accept(hip_fw_context_t *ctx)
+int midauth_handler_accept(UNUSED hip_fw_context_t *ctx)
 {
     return NF_ACCEPT;
 }
@@ -342,7 +342,7 @@ int midauth_handler_accept(hip_fw_context_t *ctx)
  * @param ctx context of the packet
  * @return NF_DROP
  */
-static int midauth_handler_drop(hip_fw_context_t *ctx)
+static int midauth_handler_drop(UNUSED hip_fw_context_t *ctx)
 {
     return NF_DROP;
 }

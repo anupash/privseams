@@ -914,9 +914,7 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
     /** @todo no caching is done for PUZZLE_M parameters. This may be
      *        a DOS attack vector.
      */
-    HIP_IFEL(hip_solve_puzzle_m(ctx->output_msg,
-                                ctx->input_msg,
-                                ctx->hadb_entry),
+    HIP_IFEL(hip_solve_puzzle_m(ctx->output_msg, ctx->input_msg),
              -1,
              "Building of Challenge_Response failed\n");
     char *midauth_cert = hip_pisa_get_certificate();
