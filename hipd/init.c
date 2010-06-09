@@ -1026,7 +1026,7 @@ int hipd_init(const uint64_t flags)
      * NETLINK_ROUTE! See the comment about address_count global var. */
     HIP_DEBUG("Initializing the netdev_init_addresses\n");
 
-    hip_netdev_init_addresses(&hip_nl_ipsec);
+    hip_netdev_init_addresses();
 
     if (rtnl_open_byproto(&hip_nl_route,
                           RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6

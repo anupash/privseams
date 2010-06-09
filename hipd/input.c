@@ -1212,12 +1212,10 @@ out_err:
     if (ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
         HIP_DEBUG("Send response to firewall.\n");
         hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
-                                  ctx->hadb_entry,
                                   &(ctx->hadb_entry)->hit_our,
                                   &(ctx->hadb_entry)->hit_peer);
     } else {
         hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
-                                  ctx->hadb_entry,
                                   NULL,
                                   NULL);
     }

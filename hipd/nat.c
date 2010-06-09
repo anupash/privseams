@@ -24,7 +24,6 @@
  * @note    All Doxygen comments have been added in version 1.1.
  */
 
-#include "nat.h"
 #include <string.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -34,8 +33,11 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <netinet/in.h>
-#include "user.h"
+
 #include "lib/core/debug.h"
+#include "lib/core/common_defines.h"
+#include "nat.h"
+#include "user.h"
 
 static int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 
@@ -83,7 +85,7 @@ out_err:
  *
  * @param entry    a pointer to a host association which links current host and
  *                 the peer.
- * @param not_used this parameter is not used (but it's needed).
+ * @param opaque   this parameter is not used (but it's needed).
  * @return         zero on success, or negative error value on error.
  * @note           If the state of @c entry is not ESTABLISHED or if
  *                 @c entry->nat_mode = 0 this function still returns zero
@@ -91,7 +93,7 @@ out_err:
  *                 value is only returned when the creation of the new UPDATE
  *                 message fails in some way.
  */
-static int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
+static int hip_nat_send_keep_alive(hip_ha_t *entry, UNUSED void *opaque)
 {
     int err                = 0;
     struct hip_common *msg = NULL;

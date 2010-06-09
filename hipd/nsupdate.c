@@ -26,6 +26,7 @@
 #include "config.h"
 #include "hidb.h"
 #include "nsupdate.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/hit.h"
 
 // parameters for nsupdate.pl
@@ -107,8 +108,9 @@ out_err:
  * Handle child exits to avoid zombies
  *
  * @param signo number of the signal triggered the function
+ *        Needed because of the signal-handler signature.
  */
-static void sig_chld(int signo)
+static void sig_chld(UNUSED int signo)
 {
     pid_t child_pid;
     int child_status;     // child exit code

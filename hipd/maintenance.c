@@ -337,13 +337,12 @@ int hip_firewall_is_alive(void)
  * LSI and system-based opportunistic mode in the firewall.
  *
  * @param action HIP_MSG_FW_UPDATE_DB or HIP_MSG_FW_BEX_DONE
- * @param entry the host association
  * @param hit_s optional source HIT
  * @param hit_r optional destination HIT
  *
  * @return zero on success or negative on failure
  */
-int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r)
+int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_addr *hit_r)
 {
     struct hip_common *msg = NULL;
     struct sockaddr_in6 hip_fw_addr;

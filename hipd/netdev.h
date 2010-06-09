@@ -25,7 +25,7 @@
 struct rtnl_handle;
 
 int hip_devaddr2ifindex(struct in6_addr *addr);
-int hip_netdev_init_addresses(struct rtnl_handle *nl);
+int hip_netdev_init_addresses(void);
 void hip_delete_all_addresses(void);
 int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg);
 int hip_add_iface_local_hit(const hip_hit_t *local_hit);

@@ -70,7 +70,6 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
               "CLOSE message to peer.\n");
 
     hip_firewall_set_bex_data(HIP_MSG_FW_UPDATE_DB,
-                              entry,
                               &entry->hit_our,
                               &entry->hit_peer);
 

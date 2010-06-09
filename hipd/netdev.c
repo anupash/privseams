@@ -29,17 +29,18 @@
 #include <linux/rtnetlink.h>
 
 #include "config.h"
-#include "lib/tool/nlink.h"
+#include "hipd.h"
 #include "accessor.h"
 #include "netdev.h"
 #include "maintenance.h"
 #include "lib/core/debug.h"
-#include "lib/tool/lutil.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/conf.h"
 #include "lib/core/hostsfiles.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hit.h"
-#include "hipd.h"
+#include "lib/tool/lutil.h"
+#include "lib/tool/nlink.h"
 
 /**
  * We really don't expect more than a handfull of interfaces to be on
@@ -599,13 +600,12 @@ int hip_devaddr2ifindex(struct in6_addr *addr)
 /**
  * Initialize the address cache of localhost addresses
  *
- * @param nl a handle to netlink socket (currently unused)
  * @return zero on success and non-zero on error
  * @todo This creates a new NETLINK socket (via getifaddrs), so this has to be
  *       run before the global NETLINK socket is opened. We did not have the time
  *       and energy to import all of the necessary functionality from iproute2.
  */
-int hip_netdev_init_addresses(struct rtnl_handle *nl)
+int hip_netdev_init_addresses(void)
 {
     struct ifaddrs *g_ifaces = NULL, *g_iface = NULL;
     int err                  = 0, if_index = 0;
@@ -1154,10 +1154,10 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
  *
  * @param msg a netlink message
  * @param len the length of the netlink message in bytes
- * @param arg argument to pass
+ * @param arg argument to pass (needed because of the callaback nature)
  * @return zero on success and non-zero on error
  */
-int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg)
+int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
 {
     int err = 0, l = 0, is_add = 0, exists;
     struct sockaddr_storage ss_addr;

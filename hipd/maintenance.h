@@ -24,8 +24,7 @@ void hip_set_firewall_status(void);
 int hip_get_firewall_status(void);
 
 /*Communication with firewall daemon*/
-int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s,
-                              struct in6_addr *hit_r);
+int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_addr *hit_r);
 int hip_firewall_set_esp_relay(int action);
 
 #endif /* HIP_HIPD_MAINTENANCE_H */

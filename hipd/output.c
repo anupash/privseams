@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include "output.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/performance.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
@@ -46,19 +47,16 @@ enum number_dh_keys_t number_dh_keys = TWO;
  * @param src_port   not used.
  * @param dst_port   not used.
  * @param entry      a pointer to the current host association database state.
- * @param retransmit a boolean value indicating if this is a retransmission
- *                   (@b zero if this is @b not a retransmission).
  * @return           zero on success, or negative error value on error.
  * @todo remove the dst_hit parameter? test with the opportunistic TCP extension
  */
 static int hip_send_i1_pkt(struct hip_common *i1,
-                           hip_hit_t *dst_hit,
+                           UNUSED hip_hit_t *dst_hit,
                            struct in6_addr *local_addr,
                            struct in6_addr *peer_addr,
                            in_port_t src_port,
                            in_port_t dst_port,
-                           hip_ha_t *entry,
-                           int retransmit)
+                           hip_ha_t *entry)
 {
     int err = 0;
 
@@ -165,8 +163,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                                      &peer_addr,
                                      entry->local_udp_port,
                                      entry->peer_udp_port,
-                                     entry,
-                                     1);
+                                     entry);
     } else {
         HIP_DEBUG("Number of items in the peer addr list: %d ",
                   ((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items);
@@ -181,8 +178,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
                                    &peer_addr,
                                    entry->local_udp_port,
                                    entry->peer_udp_port,
-                                   entry,
-                                   1);
+                                   entry);
 
             /* Do not bail out on error with shotgun. Some
              * address pairs just might fail. */
@@ -214,8 +210,8 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-int hip_send_i2(const uint8_t packet_type,
-                const uint32_t ha_state,
+int hip_send_i2(UNUSED const uint8_t packet_type,
+                UNUSED const uint32_t ha_state,
                 struct hip_packet_context *ctx)
 {
     hip_transform_suite_t transform_hip_suite, transform_esp_suite;
@@ -731,8 +727,8 @@ out_err:
  *
  * @return              zero on success, or negative error value on error.
  */
-int hip_send_r1(const uint8_t packet_type,
-                const uint32_t ha_state,
+int hip_send_r1(UNUSED const uint8_t packet_type,
+                UNUSED const uint32_t ha_state,
                 struct hip_packet_context *ctx)
 {
     int err = 0;
@@ -880,8 +876,8 @@ out_err:
  *
  * @return zero on success, negative otherwise.
  */
-int hip_send_r2(const uint8_t packet_type,
-                const uint32_t ha_state,
+int hip_send_r2(UNUSED const uint8_t packet_type,
+                UNUSED const uint32_t ha_state,
                 struct hip_packet_context *ctx)
 {
     struct hip_crypto_key hmac;
