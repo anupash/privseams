@@ -1257,11 +1257,13 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
     HIP_IFEL(bind(hip_raw_sock_output, (struct sockaddr *) &src, sa_size),
              -1, "Binding to raw sock failed\n");
 
+#if (HIP_SIMULATE_PACKET_LOSS_PROBABILITY > 0)
     if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
         HIP_DEBUG("Packet loss probability: %f\n", ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100.f);
         HIP_DEBUG("Packet was lost (simulation)\n");
         goto out_err;
     }
+#endif
 
     /* For some reason, neither sendmsg or send (with bind+connect)
      * do not seem to work properly. Thus, we use just sendto() */
