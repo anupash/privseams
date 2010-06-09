@@ -80,6 +80,7 @@
 #include "config.h"
 #include "hiprelay.h"
 #include "output.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/hip_udp.h"
 
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
@@ -163,7 +164,6 @@ static int hip_relay_forward_response(const hip_common_t *r,
                                       const uint8_t type_hdr,
                                       const in6_addr_t *r_saddr,
                                       const in6_addr_t *r_daddr,
-                                      const hip_portpair_t *r_info,
                                       const in6_addr_t *relay_to_addr,
                                       const in_port_t relay_to_port);
 static void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime);
@@ -853,7 +853,7 @@ out_err:
  * @return zero on success or negative on error
  */
 int hip_relay_handle_relay_to(const uint8_t packet_type,
-                              const uint32_t ha_state,
+                              UNUSED const uint32_t ha_state,
                               struct hip_packet_context *ctx)
 {
     int err           = 0;
@@ -905,7 +905,6 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
                                    packet_type,
                                    ctx->src_addr,
                                    ctx->dst_addr,
-                                   ctx->msg_ports,
                                    (in6_addr_t *) &relay_to->address,
                                    ntohs(relay_to->port));
         //  state = HIP_STATE_NONE;
@@ -923,7 +922,6 @@ out_err:
  * @param r the HIP control message to be relayed
  * @param r_saddr the original source address
  * @param r_daddr the original destination address
- * @param r_info the transport layer ports
  * @param relay_to_addr the address where to relay the packet
  * @param relay_to_port the port where to relay the packet
  * @return zero on success or negative on error
@@ -932,7 +930,6 @@ static int hip_relay_forward_response(const hip_common_t *r,
                                       const uint8_t type_hdr,
                                       const in6_addr_t *r_saddr,
                                       const in6_addr_t *r_daddr,
-                                      const hip_portpair_t *r_info,
                                       const in6_addr_t *relay_to_addr,
                                       const in_port_t relay_to_port)
 {
@@ -1113,7 +1110,7 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
  * @return zero on success or negative on error
  */
 int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
-                                        const uint32_t ha_state,
+                                        UNUSED const uint32_t ha_state,
                                         struct hip_packet_context *ctx)
 {
     int err = 0;

@@ -25,14 +25,15 @@
 #include "oppdb.h"
 #include "user.h"
 #include "keymat.h"
-#include "lib/core/crypto.h"
 #include "lib/core/builder.h"
+#include "lib/core/common_defines.h"
+#include "lib/core/crypto.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hostid.h"
-#include "lib/core/solve.h"
-#include "lib/core/transform.h"
 #include "lib/core/keylen.h"
 #include "lib/core/performance.h"
+#include "lib/core/solve.h"
+#include "lib/core/transform.h"
 #include "dh.h"
 
 #include "hidb.h"
@@ -633,10 +634,7 @@ out_err:
 
 //TODO doxygen header missing
 static int handle_locator(struct hip_locator *locator,
-                          in6_addr_t         *r1_saddr,
-                          in6_addr_t         *r1_daddr,
-                          hip_ha_t           *entry,
-                          hip_portpair_t     *r1_info)
+                          hip_ha_t           *entry)
 {
     int n_addrs = 0, loc_size = 0, err = 0;
 
@@ -790,7 +788,7 @@ out_err:
  *                 initiator should store these addresses to cope with the
  *                 double jump problem.
  */
-int hip_handle_r1(const uint8_t packet_type,
+int hip_handle_r1(UNUSED const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
@@ -830,10 +828,7 @@ int hip_handle_r1(const uint8_t packet_type,
     locator = (struct hip_locator *) hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
     if (locator) {
         err = handle_locator(locator,
-                             ctx->src_addr,
-                             ctx->dst_addr,
-                             ctx->hadb_entry,
-                             ctx->msg_ports);
+                             ctx->hadb_entry);
     } else {
         HIP_DEBUG("R1 did not have locator\n");
     }
@@ -967,8 +962,8 @@ int hip_handle_r1(const uint8_t packet_type,
  *         Error   = -1
  *
  */
-int hip_handle_i2_in_i2_sent(const uint8_t packet_type,
-                             const uint32_t ha_state,
+int hip_handle_i2_in_i2_sent(UNUSED const uint8_t packet_type,
+                             UNUSED const uint32_t ha_state,
                              struct hip_packet_context *ctx)
 {
     if (hip_hit_is_bigger(&ctx->hadb_entry->hit_peer,
@@ -992,7 +987,7 @@ int hip_handle_i2_in_i2_sent(const uint8_t packet_type,
  *
  * @return zero on success, or negative error value on error.
  */
-int hip_check_r2(const uint8_t packet_type,
+int hip_check_r2(UNUSED const uint8_t packet_type,
                  const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
@@ -1249,8 +1244,8 @@ out_err:
  *
  * @return zero on success, or negative error value on error.
  */
-int hip_check_i1(const uint8_t packet_type,
-                 const uint32_t ha_state,
+int hip_check_i1(UNUSED const uint8_t packet_type,
+                 UNUSED const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
     int err = 0, mask = 0;
@@ -1313,8 +1308,8 @@ out_err:
  *                 present in the incoming I1 packet, only the first of a kind
  *                 is parsed.
  */
-int hip_handle_i1(const uint8_t packet_type,
-                  const uint32_t ha_state,
+int hip_handle_i1(UNUSED const uint8_t packet_type,
+                  UNUSED const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
     int err = 0, src_hit_is_our;
@@ -1375,7 +1370,7 @@ out_err:
  *
  * @return zero on success, or negative error value on error.
  */
-int hip_check_i2(const uint8_t packet_type,
+int hip_check_i2(UNUSED const uint8_t packet_type,
                  const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
@@ -1658,8 +1653,8 @@ out_err:
  *                 <a href="http://www.rfc-editor.org/rfc/rfc5201.txt">
  *                 RFC 5201</a>.
  */
-int hip_handle_i2(const uint8_t packet_type,
-                  const uint32_t ha_state,
+int hip_handle_i2(UNUSED const uint8_t packet_type,
+                  UNUSED const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
     int err = 0, retransmission = 0;
@@ -1870,8 +1865,8 @@ out_err:
  *
  * @return     zero on success, or negative error value on error.
  */
-int hip_check_notify(const uint8_t packet_type,
-                     const uint32_t ha_state,
+int hip_check_notify(UNUSED const uint8_t packet_type,
+                     UNUSED const uint32_t ha_state,
                      struct hip_packet_context *ctx)
 {
     int err = 0;
@@ -1915,8 +1910,8 @@ out_err:
  *
  * @return         zero on success, or negative error value on error.
  */
-int hip_handle_notify(const uint8_t packet_type,
-                      const uint32_t ha_state,
+int hip_handle_notify(UNUSED const uint8_t packet_type,
+                      UNUSED const uint32_t ha_state,
                       struct hip_packet_context *ctx)
 {
     int err = 0;
