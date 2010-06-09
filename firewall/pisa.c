@@ -334,7 +334,7 @@ static void pisa_reject_connection(const hip_fw_context_t *ctx)
  * @param ctx context of the packet containing the I1
  * @return NF_ACCEPT verdict
  */
-static int pisa_handler_i1(hip_fw_context_t *ctx)
+static int pisa_handler_i1(UNUSED hip_fw_context_t *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_BASE, PERF_I1\n");
@@ -357,7 +357,7 @@ static int pisa_handler_i1(hip_fw_context_t *ctx)
  * @param ctx context of the packet containing the R1
  * @return NF_ACCEPT verdict
  */
-static int pisa_handler_r1(hip_fw_context_t *ctx)
+static int pisa_handler_r1(UNUSED hip_fw_context_t *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R1\n");

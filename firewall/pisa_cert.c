@@ -28,10 +28,9 @@
  * @param cert pointer to the certificate text or part of a certificate text
  * @param name pointer to the pattern we are looking for
  * @param r pointer to a buffer that the search result will be copied to
- * @param size size of the buffer result
  * @return 0 on success
  */
-static char *pisa_cert_get_part(char *cert, const char *name, char *r, size_t size)
+static char *pisa_cert_get_part(char *cert, const char *name, char *r)
 {
     int level = 0, len = 0;
     char *p   = cert, *start = NULL;
@@ -111,10 +110,9 @@ out_err:
  * @param cert pointer to the certificate text or part of a certificate text
  * @param name pointer to the pattern we are looking for
  * @param r pointer to a buffer that the search result will be copied to
- * @param size size of the buffer result
  * @return 0 on success
  */
-static void pisa_cert_get_content(char *cert, const char *name, char *r, size_t size)
+static void pisa_cert_get_content(char *cert, const char *name, char *r)
 {
     char *start = cert;
     int len     = 0;
@@ -164,25 +162,25 @@ void pisa_split_cert(char *cert, struct pisa_cert *pc)
     char buffer1[224], buffer2[224];
     struct in6_addr addr;
 
-    pisa_cert_get_part(cert, "not-before", buffer1, sizeof(buffer1));
-    pisa_cert_get_content(buffer1, "not-before", buffer2, sizeof(buffer2));
+    pisa_cert_get_part(cert, "not-before", buffer1);
+    pisa_cert_get_content(buffer1, "not-before", buffer2);
     strptime(buffer2, "\"%Y-%m-%d_%H:%M:%S\"", &t);
     pc->not_before = mktime(&t);
 
-    pisa_cert_get_part(cert, "not-after", buffer1, sizeof(buffer1));
-    pisa_cert_get_content(buffer1, "not-after", buffer2, sizeof(buffer2));
+    pisa_cert_get_part(cert, "not-after", buffer1);
+    pisa_cert_get_content(buffer1, "not-after", buffer2);
     strptime(buffer2, "\"%Y-%m-%d_%H:%M:%S\"", &t);
     pc->not_after = mktime(&t);
 
-    pisa_cert_get_part(cert, "issuer", buffer1, sizeof(buffer1));
-    pisa_cert_get_part(buffer1, "hash hit", buffer2, sizeof(buffer2));
-    pisa_cert_get_content(buffer2, "hash hit", buffer1, sizeof(buffer1));
+    pisa_cert_get_part(cert, "issuer", buffer1);
+    pisa_cert_get_part(buffer1, "hash hit", buffer2);
+    pisa_cert_get_content(buffer2, "hash hit", buffer1);
     inet_pton(AF_INET6, buffer1, &addr);
     memcpy(&pc->hit_issuer, &addr, sizeof(struct in6_addr));
 
-    pisa_cert_get_part(cert, "subject", buffer1, sizeof(buffer1));
-    pisa_cert_get_part(buffer1, "hash hit", buffer2, sizeof(buffer2));
-    pisa_cert_get_content(buffer2, "hash hit", buffer1, sizeof(buffer1));
+    pisa_cert_get_part(cert, "subject", buffer1);
+    pisa_cert_get_part(buffer1, "hash hit", buffer2);
+    pisa_cert_get_content(buffer2, "hash hit", buffer1);
     inet_pton(AF_INET6, buffer1, &addr);
     memcpy(&pc->hit_subject, &addr, sizeof(struct in6_addr));
 }
