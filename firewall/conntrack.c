@@ -401,10 +401,8 @@ struct esp_tuple *find_esp_tuple(const SList *esp_list, const uint32_t spi)
  * initialize and store a new HIP/ESP connnection into the connection table
  *
  * @param data the connection-related data to be inserted
- * @param src source IP address from the packet
- * @param dst destination IP address from the packet
  */
-static void insert_new_connection(const struct hip_data *data, const struct in6_addr *src, const struct in6_addr *dst)
+static void insert_new_connection(const struct hip_data *data)
 {
     struct connection *connection = NULL;
 
@@ -888,7 +886,7 @@ out_err:
 
 // first check signature then store hi
 static int handle_r1(struct hip_common *common, struct tuple *tuple,
-                     int verify_responder, const hip_fw_context_t *ctx)
+                     int verify_responder, UNUSED const hip_fw_context_t *ctx)
 {
     struct in6_addr hit;
     struct hip_host_id *host_id = NULL;
@@ -1444,11 +1442,11 @@ out_err:
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_close(const struct in6_addr *ip6_src,
-                        const struct in6_addr *ip6_dst,
-                        const struct hip_common *common,
+static int handle_close(UNUSED const struct in6_addr *ip6_src,
+                        UNUSED const struct in6_addr *ip6_dst,
+                        UNUSED const struct hip_common *common,
                         struct tuple *tuple,
-                        const hip_fw_context_t *ctx)
+                        UNUSED const hip_fw_context_t *ctx)
 {
     int err = 1;
 
@@ -1482,11 +1480,11 @@ out_err:
  *
  * @return one if packet was processed successfully or zero otherwise
  */
-static int handle_close_ack(const struct in6_addr *ip6_src,
-                            const struct in6_addr *ip6_dst,
-                            const struct hip_common *common,
+static int handle_close_ack(UNUSED const struct in6_addr *ip6_src,
+                            UNUSED const struct in6_addr *ip6_dst,
+                            UNUSED const struct hip_common *common,
                             struct tuple *tuple,
-                            const hip_fw_context_t *ctx)
+                            UNUSED const hip_fw_context_t *ctx)
 {
     int err = 1;
 
@@ -1607,7 +1605,7 @@ static int check_packet(const struct in6_addr *ip6_src,
             }
 #endif
 
-            insert_new_connection(data, ip6_src, ip6_dst);
+            insert_new_connection(data);
 
             // TODO call free for all pointer members of data - comment by Rene
             free(data);
