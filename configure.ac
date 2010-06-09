@@ -73,7 +73,7 @@ AC_SUBST(AM_CFLAGS, "-std=c99 -Wall -Wextra -Werror")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wredundant-decls -Wdisabled-optimization")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wundef -Wstrict-prototypes -Wmissing-prototypes")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-deprecated-declarations -Wpointer-arith")
-AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings -Wshadow")
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings -Wshadow -Winline")
 
 
 #TODO fix the code and get rid of this one
@@ -94,7 +94,6 @@ AC_CACHE_CHECK([whether to use gcc-warn],
                [ac_cv_use_gcc_warn=yes])
 if test x"$ac_cv_use_gcc_warn" = x"yes"; then
     AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wcast-qual -Wno-error=cast-qual")
-    AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Winline -Wno-error=inline")
 fi
 
 AC_ARG_ENABLE(firewall,
