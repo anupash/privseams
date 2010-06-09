@@ -53,7 +53,7 @@ static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore,
     hash_tree_t *htree        = NULL;
     unsigned char *anchor     = NULL;
     int err                   = 0;
-    int j                     = 0;
+    unsigned  j               = 0;
     uint8_t i                 = 0;
     int hash_item_length      = 0;
 

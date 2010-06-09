@@ -292,7 +292,7 @@ static int esp_prot_conntrack_update_anchor(const struct tuple *tuple,
     int hash_length                         = 0;
     // assume not found
     int err                                 = 0;
-    int element_index                       = 0;
+    unsigned  element_index                 = 0;
     int found                               = 0;
     long i;
 
@@ -1138,7 +1138,7 @@ int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
             /* calculate difference of SEQ no in order to determine how many hashes
              * we have to calculate */
             if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
-                ntohl(esp->esp_seq) - esp_tuple->seq_no <= window_size) {
+                ntohl(esp->esp_seq) - esp_tuple->seq_no <= (unsigned)window_size) {
                 HIP_DEBUG("seq number within verification window\n");
 
                 num_verify = ntohl(esp->esp_seq) - esp_tuple->seq_no;
