@@ -986,7 +986,7 @@ int hip_handle_i2_in_i2_sent(UNUSED const uint8_t packet_type,
  * @return zero on success, or negative error value on error.
  */
 int hip_check_r2(UNUSED const uint8_t packet_type,
-                 const uint32_t ha_state,
+                 DBG const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
     int err = 0;
@@ -1367,7 +1367,7 @@ out_err:
  * @return zero on success, or negative error value on error.
  */
 int hip_check_i2(UNUSED const uint8_t packet_type,
-                 const uint32_t ha_state,
+                 DBG const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
     int err = 0, is_loopback = 0;

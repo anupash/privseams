@@ -32,6 +32,12 @@
 # define OPP UNUSED
 #endif
 
+/** marking for DEBUG-specific function parameters */
+#ifdef CONFIG_HIP_DEBUG
+# define DBG
+#else
+# define DBG UNUSED
+#endif
 /*********** ESP structures *************/
 
 struct hip_esp {

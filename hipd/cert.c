@@ -9,6 +9,8 @@
  */
 
 #include "cert.h"
+#include "lib/core/common_defines.h"
+
 
 /****************************************************************************
  *
@@ -944,7 +946,7 @@ out_err:
     return err;
 }
 
-static int verify_callback(int ok, X509_STORE_CTX *stor)
+static int verify_callback(int ok, DBG X509_STORE_CTX *stor)
 {
     /* This is not called from anywhere else than this file */
     if (!ok) {

@@ -726,7 +726,7 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
  */
 void hip_print_locator(UNUSED int debug_level, UNUSED const char *file,
                        UNUSED int line, UNUSED const char *function,
-                       const char *str, const struct hip_locator *locator)
+                       DBG const char *str, const struct hip_locator *locator)
 {
 /* XXTRASHXX Totally useless does anything but what it is supposed to do -SAMU */
 

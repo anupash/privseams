@@ -886,7 +886,8 @@ out_err:
 
 // first check signature then store hi
 static int handle_r1(struct hip_common *common, struct tuple *tuple,
-                     int verify_responder, UNUSED const hip_fw_context_t *ctx)
+                     DBG int verify_responder,
+                     UNUSED const hip_fw_context_t *ctx)
 {
     struct in6_addr hit;
     struct hip_host_id *host_id = NULL;

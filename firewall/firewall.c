@@ -621,7 +621,7 @@ static void firewall_exit(void)
  * and clean up all packet capture rules.
  *
  */
-static void firewall_close(const int sig)
+static void firewall_close(DBG const int sig)
 {
     HIP_DEBUG("Caught signal %d, closing firewall.\n", sig);
     firewall_exit();
