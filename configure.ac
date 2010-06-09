@@ -69,7 +69,7 @@ AC_ARG_WITH(nomodules,
                            [comma-separated list of disabled modules]))
 
 # Set default AM_CFLAGS for the complete project.
-AC_SUBST(AM_CFLAGS, "-std=c99 -Wall -Werror")
+AC_SUBST(AM_CFLAGS, "-std=c99 -Wall -Wextra -Werror")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wredundant-decls -Wdisabled-optimization")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wundef -Wstrict-prototypes -Wmissing-prototypes")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-deprecated-declarations -Wpointer-arith")
