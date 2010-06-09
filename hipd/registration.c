@@ -390,7 +390,8 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
     struct hip_reg_info *reg_info = NULL;
     uint8_t *reg_types            = NULL;
     unsigned int type_count       = 0;
-    int err                       = 0, i = 0;
+    unsigned int i;
+    int err                       = 0;
 
     reg_info = hip_get_param(source_msg, HIP_PARAM_REG_INFO);
 
@@ -455,8 +456,10 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
     if (entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
         int request_count = hip_get_pending_request_count(entry);
         if (request_count > 0) {
-            int j = 0, types_to_request = 0;
-            uint8_t type_array[request_count], valid_lifetime = 0;
+            unsigned int j         = 0;
+            int types_to_request   = 0;
+            uint8_t valid_lifetime = 0;
+            uint8_t type_array[request_count];
             hip_pending_request_t *requests[request_count];
 
             i = 0;
@@ -479,7 +482,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
             /* Copy the Reg Types to an array. Outer loop for the
              * services we have requested, inner loop for the
              * services the server offers. */
-            for (i = 0; i < request_count; i++) {
+            for (i = 0; i < (unsigned)request_count; i++) {
                 for (j = 0; j < type_count; j++) {
                     if (requests[i]->reg_type ==
                         reg_types[j]) {
