@@ -116,7 +116,7 @@ void hip_make_keymat(char *kij,
 {
     int bufsize;
     uint8_t index_nbr = 1;
-    int dstoffset     = 0;
+    size_t dstoffset  = 0;
     void *seedkey;
     struct in6_addr *smaller_hit, *bigger_hit;
     int hit1_is_bigger;
@@ -201,7 +201,7 @@ static void *hip_keymat_draw(struct hip_keymat_keymat *keymat, int len)
     /* todo: remove this function */
     void *ret = NULL;
 
-    if (len > keymat->keymatlen - keymat->offset) {
+    if (len > (int)(keymat->keymatlen - keymat->offset)) {
         HIP_DEBUG("Tried to draw more keys than are available\n");
         goto out_err;
     }
