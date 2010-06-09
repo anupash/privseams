@@ -225,7 +225,7 @@ static int hip_reinject_packet(const struct in6_addr *src_hit,
         HIP_DEBUG_IN6ADDR("New packet dst address: ", dst_hit);
     }
 
-    if (m->data_len <= (BUFSIZE - ip_hdr_size)) {
+    if ((int)m->data_len <= (BUFSIZE - ip_hdr_size)) {
         packet_length = m->data_len - ip_hdr_size;
         HIP_DEBUG("packet size smaller than buffer size\n");
     } else {

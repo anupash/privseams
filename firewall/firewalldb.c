@@ -719,7 +719,7 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
         sent = sendto(firewall_raw_sock, iphdr,
                       iphdr->ip_len, 0,
                       (struct sockaddr *) &dst, sa_size);
-        if (sent != (len + sizeof(struct ip))) {
+        if (sent != (int)(len + sizeof(struct ip))) {
             HIP_ERROR("Could not send the all requested" \
                       " data (%d/%d)\n", sent,
                       iphdr->ip_len);

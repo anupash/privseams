@@ -870,7 +870,7 @@ static size_t read_line(char *buf, int buflen, FILE *file)
     len = strlen(buf);
     if (buf[len - 1] == '\n') {         /* clear any trailing newline */
         buf[--len] = '\0';
-    } else if (len == buflen - 1) {     /* line too long */
+    } else if ((int)len == buflen - 1) {     /* line too long */
         while ((ch = getchar()) != '\n' && ch != EOF) {
             continue;
         }
