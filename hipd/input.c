@@ -541,9 +541,7 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         (type == HIP_I1 || type == HIP_R1)) {
         ctx->hadb_entry =
                 hip_oppdb_get_hadb_entry_i1_r1(ctx->input_msg,
-                                               ctx->src_addr,
-                                               ctx->dst_addr,
-                                               ctx->msg_ports);
+                                               ctx->src_addr);
     }
 #endif
 

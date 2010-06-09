@@ -12,6 +12,7 @@
  * @author  Alberto Garcia
  */
 
+#include "lib/core/common_defines.h"
 #include "oppipdb.h"
 
 #define HIP_LOCK_OPPIP(entry)
@@ -90,9 +91,9 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
  * Deletes an entry that is present in oppipdb hash table
  *
  * @param entry pointer to the entry to delete
- * @param not_used
+ * @param arg   needed because of the the iterator signature
  */
-void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, void *not_used)
+void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, UNUSED void *arg)
 {
     HIP_LOCK_OPPIP(entry);
     hip_ht_delete(oppipdb, entry);

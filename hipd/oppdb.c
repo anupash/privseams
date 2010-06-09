@@ -40,6 +40,7 @@
 #include "oppdb.h"
 #include "hadb.h"
 #include "accessor.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/hit.h"
 
 #define HIP_LOCK_OPP_INIT(entry)
@@ -169,10 +170,10 @@ static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
  * an iterator function for uninitializing the opportunistic database
  *
  * @param entry the entry to be uninitialized
- * @param unused unused
+ * @param arg   needed because of the iterator signature
  * @return zero
  */
-static int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused)
+static int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, UNUSED void *arg)
 {
     hip_oppdb_del_entry_by_entry(entry);
     return 0;
@@ -391,14 +392,10 @@ out_err:
  *
  * @param msg the I1 or R2 message
  * @param src_addr the source address of the message
- * @param dst_addr the destination address of the message
- * @param msg_info the transport layer port numbers (UDP tunnel)
  * @return the host association or NULL if not found
  */
 hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
-                                         struct in6_addr *src_addr,
-                                         struct in6_addr *dst_addr,
-                                         hip_portpair_t *msg_info)
+                                         struct in6_addr *src_addr)
 {
     hip_hdr_type_t type = hip_get_msg_type(msg);
     hip_ha_t *entry     = NULL;
