@@ -26,7 +26,7 @@
 #include "config.h"
 #include "hidb.h"
 #include "nsupdate.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/hit.h"
 
 // parameters for nsupdate.pl

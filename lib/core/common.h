@@ -4,10 +4,11 @@
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  *
  * @author: Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author  Mircea Gherzan <mircea.gherzan@rwth-aachen.de>
  */
 
-#ifndef HIP_LIB_CORE_COMMON_DEFINES_H
-#define HIP_LIB_CORE_COMMON_DEFINES_H
+#ifndef HIP_LIB_CORE_COMMON_H
+#define HIP_LIB_CORE_COMMON_H
 
 #include <stdint.h>
 
@@ -101,4 +102,4 @@ struct hip_esp_tail {
 
 #define HIP_HIT_DEV_MTU         HIP_MTU >= MIN_HIP_MTU ? HIP_MTU : MIN_HIP_MTU
 
-#endif /* HIP_LIB_CORE_COMMON_DEFINES_H */
+#endif /* HIP_LIB_CORE_COMMON_H */

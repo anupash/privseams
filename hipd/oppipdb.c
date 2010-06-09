@@ -12,7 +12,7 @@
  * @author  Alberto Garcia
  */
 
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "oppipdb.h"
 
 #define HIP_LOCK_OPPIP(entry)

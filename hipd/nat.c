@@ -35,7 +35,7 @@
 #include <netinet/in.h>
 
 #include "lib/core/debug.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "nat.h"
 #include "user.h"
 

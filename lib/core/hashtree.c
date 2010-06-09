@@ -16,7 +16,7 @@
 #include <openssl/rand.h>
 #include <math.h>
 
-#include "common_defines.h"
+#include "common.h"
 #include "hashtree.h"
 #include "ife.h"
 #include "debug.h"

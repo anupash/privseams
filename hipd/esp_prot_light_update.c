@@ -16,7 +16,7 @@
 #include "esp_prot_anchordb.h"
 #include "hipd.h"
 #include "lib/core/builder.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/hip_udp.h"
 
 /**

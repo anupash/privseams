@@ -13,7 +13,7 @@
 #include "hipd.h"
 #include "input.h"
 #include "pkt_handling.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 
 struct socketfd {
     uint16_t priority;

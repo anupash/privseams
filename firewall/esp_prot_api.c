@@ -32,7 +32,7 @@
 
 #include <openssl/sha.h>
 
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/state.h"
 
 

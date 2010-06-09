@@ -40,7 +40,7 @@
 #include "oppdb.h"
 #include "hadb.h"
 #include "accessor.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/hit.h"
 
 #define HIP_LOCK_OPP_INIT(entry)

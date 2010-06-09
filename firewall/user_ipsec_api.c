@@ -25,7 +25,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
 #include "lib/core/prefix.h"

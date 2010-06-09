@@ -16,7 +16,7 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/linkedlist.h"
 #include "lib/core/protodefs.h"
 #include "config.h"

@@ -23,7 +23,7 @@
 #include <sys/time.h>
 
 #include "lib/core/builder.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/debug.h"
 #include "lib/core/esp_prot_common.h"
 #include "lib/core/hashchain.h"

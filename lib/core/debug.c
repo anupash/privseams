@@ -56,7 +56,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/tool/lutil.h"
 #include "builder.h"
 #include "ife.h"

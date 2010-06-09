@@ -34,7 +34,7 @@
 #include "netdev.h"
 #include "maintenance.h"
 #include "lib/core/debug.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/conf.h"
 #include "lib/core/hostsfiles.h"
 #include "lib/core/hip_udp.h"

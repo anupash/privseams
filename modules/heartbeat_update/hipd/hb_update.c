@@ -17,7 +17,7 @@
 
 #include "hb_update.h"
 #include "hipd/maintenance.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "modules/update/hipd/update.h"
 
 static const int hip_heartbeat_trigger_update_threshold = 5;

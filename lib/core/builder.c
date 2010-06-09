@@ -71,7 +71,7 @@
 #include <math.h>
 #include <unistd.h>
 
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/tool/checksum.h"
 #include "config.h"
 #include "builder.h"

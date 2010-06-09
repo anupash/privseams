@@ -20,7 +20,7 @@
 
 #include "config.h"
 #include "output.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/performance.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"

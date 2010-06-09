@@ -14,7 +14,7 @@
 
 #include "config.h"
 #include "close.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/performance.h"
 

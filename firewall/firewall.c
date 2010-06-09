@@ -47,7 +47,7 @@
 
 #include "lib/core/builder.h"
 #include "lib/core/capability.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/debug.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hip_udp.h"

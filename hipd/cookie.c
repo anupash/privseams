@@ -15,7 +15,7 @@
 
 #include "config.h"
 #include "cookie.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/solve.h"
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */

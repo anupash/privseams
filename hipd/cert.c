@@ -9,7 +9,7 @@
  */
 
 #include "cert.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 
 
 /****************************************************************************

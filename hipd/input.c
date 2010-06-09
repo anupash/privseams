@@ -26,7 +26,7 @@
 #include "user.h"
 #include "keymat.h"
 #include "lib/core/builder.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/crypto.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hostid.h"

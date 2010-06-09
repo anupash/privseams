@@ -67,7 +67,7 @@
 
 #include "lib/tool/nlink.h"
 #include "builder.h"
-#include "common_defines.h"
+#include "common.h"
 #include "debug.h"
 #include "hip_udp.h"
 #include "icomm.h"

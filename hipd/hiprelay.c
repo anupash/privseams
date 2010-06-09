@@ -80,7 +80,7 @@
 #include "config.h"
 #include "hiprelay.h"
 #include "output.h"
-#include "lib/core/common_defines.h"
+#include "lib/core/common.h"
 #include "lib/core/hip_udp.h"
 
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
