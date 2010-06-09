@@ -44,8 +44,10 @@
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <linux/netfilter_ipv4.h>
+
 #include "lib/core/builder.h"
 #include "lib/core/capability.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "lib/core/filemanip.h"
 #include "lib/core/hip_udp.h"
@@ -1214,11 +1216,11 @@ static int hip_fw_handle_esp_forward(hip_fw_context_t *ctx)
 /**
  * Process a TCP packet from the forward packet capture queue
  *
- * @param ctx the packet context
+ * @param ctx the packet context, required because of the handler format
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx)
+static int hip_fw_handle_tcp_forward(UNUSED hip_fw_context_t *ctx)
 {
     HIP_DEBUG("\n");
 
@@ -2221,7 +2223,7 @@ out_err:
  * @todo This doesn't make sense. However, setting 0 prevents connection
  *       tracking.
  */
-void set_stateful_filtering(const int active)
+void set_stateful_filtering(void)
 {
     statefulFiltering = 1;
 }

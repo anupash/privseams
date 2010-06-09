@@ -23,6 +23,7 @@
 #include <sys/time.h>
 
 #include "lib/core/builder.h"
+#include "lib/core/common_defines.h"
 #include "lib/core/debug.h"
 #include "lib/core/esp_prot_common.h"
 #include "lib/core/hashchain.h"
@@ -771,7 +772,7 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
                  int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
                  uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
                  uint16_t esp_num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
-                 int retransmission, int update)
+                 UNUSED int retransmission, int update)
 {
     int err                          = 0;
     struct in6_addr *check_local_hit = NULL;

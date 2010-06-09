@@ -969,7 +969,7 @@ void read_rule_file(const char *file_name)
     }
 
     input_rules   = (DList *) input;
-    set_stateful_filtering(state);
+    set_stateful_filtering();
     output_rules  = (DList *) output;
     forward_rules = (DList *) forward;
 }

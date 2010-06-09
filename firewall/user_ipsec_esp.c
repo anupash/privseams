@@ -74,9 +74,7 @@ static int hip_payload_decrypt(const unsigned char *in,
  */
 static void add_udp_header(struct udphdr *udp_hdr,
                            const uint16_t packet_len,
-                           const hip_sa_entry_t *entry,
-                           const struct in6_addr *src_addr,
-                           const struct in6_addr *dst_addr)
+                           const hip_sa_entry_t *entry)
 {
     udp_hdr->source = htons(entry->src_port);
 
@@ -250,7 +248,7 @@ int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
         if (entry->encap_mode == 1) {
             // the length field covers everything starting with UDP header
             add_udp_header(out_udp_hdr, *esp_packet_len - sizeof(struct ip),
-                           entry, preferred_local_addr, preferred_peer_addr);
+                           entry);
 
             // now we can also calculate the csum of the new packet
             add_ipv4_header(out_ip_hdr, preferred_local_addr,

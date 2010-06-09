@@ -107,7 +107,7 @@ int hip_handle_msg(struct hip_common *msg)
         break;
     case HIP_MSG_IPSEC_FLUSH_ALL_SA:
         HIP_DEBUG("Received flush all sa request from hipd\n");
-        HIP_IFEL(handle_sa_flush_all_request(msg), -1,
+        HIP_IFEL(handle_sa_flush_all_request(), -1,
                  "hip userspace sadb flush all did NOT succeed\n");
         break;
     case HIP_MSG_TURN_INFO:

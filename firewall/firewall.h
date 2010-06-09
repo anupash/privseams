@@ -24,7 +24,7 @@ int hip_fw_init_opptcp(void);
 int hip_fw_uninit_opptcp(void);
 int hip_fw_init_proxy(void);
 int hip_fw_uninit_proxy(void);
-void set_stateful_filtering(const int active);
+void set_stateful_filtering(void);
 hip_hit_t *hip_fw_get_default_hit(void);
 hip_lsi_t *hip_fw_get_default_lsi(void);
 
