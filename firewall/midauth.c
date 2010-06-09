@@ -277,7 +277,7 @@ static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
     len       = hip_get_param_total_len(last);
     type      = hip_get_param_type(last);
 
-    HIP_IFEL(len > sizeof(buffer), -1,
+    HIP_IFEL(len > (int)sizeof(buffer), -1,
              "Last parameter's length exceeds HIP_MAX_PACKET\n");
 
     /* @todo check for signature parameter to avoid broken packets */
