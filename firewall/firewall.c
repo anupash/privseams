@@ -630,10 +630,10 @@ static void firewall_close(DBG const int sig)
 
 static void die(struct ipq_handle *h)
 {
-    HIP_DEBUG("dying\n");
+    HIP_DEBUG("Dying by sending SIGTERM to self\n");
     ipq_perror("passer");
     ipq_destroy_handle(h);
-    firewall_close(1);
+    kill(getpid(), SIGTERM);
 }
 
 /**
