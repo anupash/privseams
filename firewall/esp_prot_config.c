@@ -124,12 +124,12 @@ int esp_prot_release_config(config_t *cfg)
 {
     int err = 0;
 
-#ifdef HAVE_LIBCONFIG
     if (cfg) {
+#ifdef HAVE_LIBCONFIG
         config_destroy(cfg);
         free(cfg);
-    }
 #endif
+    }
 
     return err;
 }
