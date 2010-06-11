@@ -40,8 +40,6 @@
 
 static struct midauth_handlers handlers;
 
-static int midauth_handler_drop(hip_fw_context_t *ctx);
-
 /**
  * Changes IPv4 header to match new length and updates the checksum.
  *

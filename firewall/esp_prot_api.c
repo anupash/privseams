@@ -97,9 +97,6 @@ static hchain_store_t bex_store;
 // this stores hchains used during UPDATE
 static hchain_store_t update_store;
 
-
-static hash_function_t esp_prot_get_hash_function(const uint8_t transform);
-
 /**
  * Adds buffered packet hashes to a protected IPsec packet
  *
@@ -563,6 +560,54 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
     }
 }
 
+/** resolves an esp protection transform to the hash function in use
+ *
+ * @param   transform the TPA transform
+ * @return  resolved hash function, NULL for UNUSED transform
+ */
+static hash_function_t esp_prot_get_hash_function(const uint8_t transform)
+{
+    esp_prot_tfm_t *prot_transform = NULL;
+    hash_function_t hash_function  = NULL;
+    int err                        = 0;
+
+    HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
+             "tried to resolve UNUSED or UNKNOWN transform\n");
+
+    // as both stores' meta-data are in sync, we can use any
+    hash_function = hcstore_get_hash_function(&bex_store,
+                                              prot_transform->hash_func_id);
+
+out_err:
+    if (err) {
+        hash_function = NULL;
+    }
+
+    return hash_function;
+}
+
+/** resolves an esp protection transform to the hash length in use
+ *
+ * @param   transform the TPA transform
+ * @return  resolved hash length, 0 for UNUSED transform
+ */
+int esp_prot_get_hash_length(const uint8_t transform)
+{
+    esp_prot_tfm_t *prot_transform = NULL;
+    int err                        = 0;
+
+    // return length 0 for UNUSED transform
+    HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 0,
+             "tried to resolve UNUSED transform\n");
+
+    // as both stores' meta-data are in sync, we can use any
+    err = hcstore_get_hash_length(&bex_store, prot_transform->hash_func_id,
+                                  prot_transform->hash_length_id);
+
+out_err:
+    return err;
+}
+
 /** cache the hash of a complete protected IPsec packet
  *
  * @param   esp_packet buffer where to write to
@@ -920,54 +965,6 @@ esp_prot_tfm_t *esp_prot_resolve_transform(const uint8_t transform)
     } else {
         return NULL;
     }
-}
-
-/** resolves an esp protection transform to the hash function in use
- *
- * @param   transform the TPA transform
- * @return  resolved hash function, NULL for UNUSED transform
- */
-static hash_function_t esp_prot_get_hash_function(const uint8_t transform)
-{
-    esp_prot_tfm_t *prot_transform = NULL;
-    hash_function_t hash_function  = NULL;
-    int err                        = 0;
-
-    HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
-             "tried to resolve UNUSED or UNKNOWN transform\n");
-
-    // as both stores' meta-data are in sync, we can use any
-    hash_function = hcstore_get_hash_function(&bex_store,
-                                              prot_transform->hash_func_id);
-
-out_err:
-    if (err) {
-        hash_function = NULL;
-    }
-
-    return hash_function;
-}
-
-/** resolves an esp protection transform to the hash length in use
- *
- * @param   transform the TPA transform
- * @return  resolved hash length, 0 for UNUSED transform
- */
-int esp_prot_get_hash_length(const uint8_t transform)
-{
-    esp_prot_tfm_t *prot_transform = NULL;
-    int err                        = 0;
-
-    // return length 0 for UNUSED transform
-    HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 0,
-             "tried to resolve UNUSED transform\n");
-
-    // as both stores' meta-data are in sync, we can use any
-    err = hcstore_get_hash_length(&bex_store, prot_transform->hash_func_id,
-                                  prot_transform->hash_length_id);
-
-out_err:
-    return err;
 }
 
 /** gets the data offset of the ESP IV and payload
