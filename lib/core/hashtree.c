@@ -21,11 +21,6 @@
 #include "ife.h"
 #include "debug.h"
 
-static int htree_add_secret(hash_tree_t *tree,
-                            const unsigned char *secret,
-                            const int secret_length,
-                            const int secret_index);
-
 /** calculates the logarithm for a given base
  *
  * @param       base the base of the logarithm
@@ -35,6 +30,30 @@ static int htree_add_secret(hash_tree_t *tree,
 double log_x(const int base, const double value)
 {
     return log(value) / log(base);
+}
+
+/** adds a secret to the tree.
+ *
+ * @param       tree pointer to the tree
+ * @param   secret the secret to be added
+ * @param       secret_length length of the secret
+ * @param       secret_index position of the secret in the leaf set
+ * @return      always 0
+ */
+static int htree_add_secret(hash_tree_t *tree,
+                            const unsigned char *secret,
+                            const int secret_length,
+                            const int secret_index)
+{
+    HIP_ASSERT(tree != NULL);
+    HIP_ASSERT(secret != NULL);
+    HIP_ASSERT(secret_length == tree->secret_length);
+    HIP_ASSERT(secret_index >= 0 && secret_index < tree->num_data_blocks);
+    HIP_ASSERT(tree->is_open > 0);
+
+    memcpy(&tree->secrets[secret_index * secret_length], secret, secret_length);
+
+    return 0;
 }
 
 /** creates an empty hash tree.
@@ -251,30 +270,6 @@ int htree_add_random_data(hash_tree_t *tree, const int num_random_blocks)
         tree->is_open       = 0;
         tree->data_position = 0;
     }
-
-    return 0;
-}
-
-/** adds a secret to the tree.
- *
- * @param       tree pointer to the tree
- * @param   secret the secret to be added
- * @param       secret_length length of the secret
- * @param       secret_index position of the secret in the leaf set
- * @return      always 0
- */
-static int htree_add_secret(hash_tree_t *tree,
-                            const unsigned char *secret,
-                            const int secret_length,
-                            const int secret_index)
-{
-    HIP_ASSERT(tree != NULL);
-    HIP_ASSERT(secret != NULL);
-    HIP_ASSERT(secret_length == tree->secret_length);
-    HIP_ASSERT(secret_index >= 0 && secret_index < tree->num_data_blocks);
-    HIP_ASSERT(tree->is_open > 0);
-
-    memcpy(&tree->secrets[secret_index * secret_length], secret, secret_length);
 
     return 0;
 }

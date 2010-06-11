@@ -13,10 +13,6 @@
 #include "straddr.h"
 #include "message.h"
 
-static int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content);
-static int hip_cert_spki_inject(struct hip_cert_spki_info *to,
-                                const char *after, const char *what);
-
 /*******************************************************************************
 * FUNCTIONS FOR SPKI                                                          *
 *******************************************************************************/
@@ -337,6 +333,75 @@ out_err:
 }
 
 /**
+ * hip_cert_spki_build_cert - Function to build the basic cert object
+ * of SPKI clears public-key object and signature in
+ * hip_cert_spki_header
+ *
+ * @param minimal_content holds the struct hip_cert_spki_header
+ *                        containing the minimal needed information for
+ *                        cert object, also contains the char table where
+ *                        the cert object is to be stored
+ *
+ * @return 0 if ok -1 if error
+ */
+static int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content)
+{
+    int err       = 0;
+    char needed[] = "(cert )";
+    memset(minimal_content->public_key, '\0', sizeof(minimal_content->public_key));
+    memset(minimal_content->cert, '\0', sizeof(minimal_content->cert));
+    memset(minimal_content->signature, '\0', sizeof(minimal_content->signature));
+    sprintf(minimal_content->cert, "%s", needed);
+
+    return err;
+}
+
+/**
+ * hip_cert_spki_inject - Function for injecting objects to cert object
+ *
+ * @param to hip_cert_spki_info containing the char table where to insert
+ * @param after is a char pointer for the regcomp after which the inject happens
+ * @param what is char pointer of what to
+ *
+ * @return 0 if ok and negative if error. -1 returned for example when after is NOT found
+ */
+static int hip_cert_spki_inject(struct hip_cert_spki_info *to,
+                                const char *after, const char *what)
+{
+    int err = 0, status = 0;
+    regex_t re;
+    regmatch_t pm[1];
+    char *tmp_cert;
+
+    tmp_cert = malloc(strlen(to->cert) + strlen(what) + 1);
+    if (!tmp_cert) {
+        return -1;
+    }
+    HIP_IFEL(!memset(tmp_cert, 0, sizeof(tmp_cert)), -1,
+             "Failed to memset temporary workspace\n");
+    /* Compiling the regular expression */
+    HIP_IFEL(regcomp(&re, after, REG_EXTENDED), -1,
+             "Compilation of the regular expression failed\n");
+    /* Running the regular expression */
+    HIP_IFEL((status = regexec(&re, to->cert, 1, pm, 0)), -1,
+             "Handling of regular expression failed\n");
+    /* Using tmp char table to do the inject (remember the terminators)
+     * first the beginning */
+    snprintf(tmp_cert, pm[0].rm_eo + 2, "%s", to->cert);
+    /* Then the middle part to be injected */
+    snprintf(&tmp_cert[pm[0].rm_eo + 1], strlen(what) + 1, "%s", what);
+    /* then glue back the rest of the original at the end */
+    snprintf(&tmp_cert[(pm[0].rm_eo + strlen(what) + 1)],
+             (strlen(to->cert) - pm[0].rm_eo), "%s", &to->cert[pm[0].rm_eo + 1]);
+    /* move tmp to the result */
+    sprintf(to->cert, "%s", tmp_cert);
+out_err:
+    free(tmp_cert);
+    regfree(&re);
+    return err;
+}
+
+/**
  * hip_cert_spki_create_cert - Function to build the create minimal SPKI cert
  *
  * @param content holds the struct hip_cert_spki_info containing
@@ -484,75 +549,6 @@ out_err:
     if (msg) {
         free(msg);
     }
-    return err;
-}
-
-/**
- * hip_cert_spki_build_cert - Function to build the basic cert object
- * of SPKI clears public-key object and signature in
- * hip_cert_spki_header
- *
- * @param minimal_content holds the struct hip_cert_spki_header
- *                        containing the minimal needed information for
- *                        cert object, also contains the char table where
- *                        the cert object is to be stored
- *
- * @return 0 if ok -1 if error
- */
-static int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content)
-{
-    int err       = 0;
-    char needed[] = "(cert )";
-    memset(minimal_content->public_key, '\0', sizeof(minimal_content->public_key));
-    memset(minimal_content->cert, '\0', sizeof(minimal_content->cert));
-    memset(minimal_content->signature, '\0', sizeof(minimal_content->signature));
-    sprintf(minimal_content->cert, "%s", needed);
-
-    return err;
-}
-
-/**
- * hip_cert_spki_inject - Function for injecting objects to cert object
- *
- * @param to hip_cert_spki_info containing the char table where to insert
- * @param after is a char pointer for the regcomp after which the inject happens
- * @param what is char pointer of what to
- *
- * @return 0 if ok and negative if error. -1 returned for example when after is NOT found
- */
-static int hip_cert_spki_inject(struct hip_cert_spki_info *to,
-                                const char *after, const char *what)
-{
-    int err = 0, status = 0;
-    regex_t re;
-    regmatch_t pm[1];
-    char *tmp_cert;
-
-    tmp_cert = malloc(strlen(to->cert) + strlen(what) + 1);
-    if (!tmp_cert) {
-        return -1;
-    }
-    HIP_IFEL(!memset(tmp_cert, 0, sizeof(tmp_cert)), -1,
-             "Failed to memset temporary workspace\n");
-    /* Compiling the regular expression */
-    HIP_IFEL(regcomp(&re, after, REG_EXTENDED), -1,
-             "Compilation of the regular expression failed\n");
-    /* Running the regular expression */
-    HIP_IFEL((status = regexec(&re, to->cert, 1, pm, 0)), -1,
-             "Handling of regular expression failed\n");
-    /* Using tmp char table to do the inject (remember the terminators)
-     * first the beginning */
-    snprintf(tmp_cert, pm[0].rm_eo + 2, "%s", to->cert);
-    /* Then the middle part to be injected */
-    snprintf(&tmp_cert[pm[0].rm_eo + 1], strlen(what) + 1, "%s", what);
-    /* then glue back the rest of the original at the end */
-    snprintf(&tmp_cert[(pm[0].rm_eo + strlen(what) + 1)],
-             (strlen(to->cert) - pm[0].rm_eo), "%s", &to->cert[pm[0].rm_eo + 1]);
-    /* move tmp to the result */
-    sprintf(to->cert, "%s", tmp_cert);
-out_err:
-    free(tmp_cert);
-    regfree(&re);
     return err;
 }
 

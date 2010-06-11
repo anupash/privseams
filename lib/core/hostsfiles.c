@@ -30,24 +30,152 @@
 
 #define HOSTS_FILE "/etc/hosts"
 
-static int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
-                                                   const void *arg,
-                                                   void *result);
-static int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
-                                                   const void *arg,
-                                                   void *result);
-static int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry,
-                                                   const void *arg,
-                                                   void *result);
-static int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
-                                                   const void *arg,
-                                                   void *result);
+/**
+ * "For-each" loop to iterate through /etc/hosts or /etc/hip/hosts file, line
+ * by line.
+ *
+ * @param hosts_file the path and name to the hosts file
+ * @param func the iterator function pointer
+ * @param arg an input argument for the function pointer
+ * @param result an output argument for the function pointer
+ * @return zero on success or non-zero on failure
+ */
 static int hip_for_each_hosts_file_line(const char *hosts_file,
                                                    int(*func)(const struct hosts_file_line *line,
                                                               const void *arg,
                                                               void *result),
                                                    void *arg,
-                                                   void *result);
+                                                   void *result)
+{
+    FILE *hip_hosts = NULL;
+    List mylist;
+    char line[500];
+    int err         = 0, lineno = 0;
+    struct in_addr in_addr;
+    struct hosts_file_line entry;
+    char *hostname  = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr = NULL;
+
+    initlist(&mylist);
+    memset(line, 0, sizeof(line));
+
+    /* check whether  given hit_str is actually a HIT */
+
+    hip_hosts = fopen(hosts_file, "r");
+
+    HIP_IFEL(!hip_hosts, -1, "Failed to open hosts file\n");
+
+    /* For each line in the given hosts file, convert the line into binary format and
+     * call the given the handler  */
+
+    err = 1;
+    while (fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
+        char *eofline, *c, *comment;
+        int len;
+
+        lineno++;
+        c = line;
+
+        /* Remove whitespace */
+        while (*c == ' ' || *c == '\t') {
+            c++;
+        }
+
+        /* Line is a comment or empty */
+        if (*c == '#' || *c == '\n' || *c == '\0') {
+            continue;
+        }
+
+        eofline = strchr(c, '\n');
+        if (eofline) {
+            *eofline = '\0';
+        }
+
+        /* Terminate before (the first) trailing comment */
+        comment = strchr(c, '#');
+        if (comment) {
+            *comment = '\0';
+        }
+
+        /* shortest hostname: ":: a" = 4 */
+        if ((len = strlen(c)) < 4) {
+            HIP_DEBUG("skip line\n");
+            continue;
+        }
+
+        /* Split line into list */
+        extractsubstrings(c, &mylist);
+
+        len = length(&mylist);
+        if (len < 2 || len > 4) {
+            HIP_ERROR("Bad number of items on line %d in %s, skipping\n",
+                      lineno, hosts_file);
+            continue;
+        }
+
+        /* The list contains hosts line in reverse order. Let's sort it. */
+        switch (len) {
+        case (2):
+            alias    = NULL;
+            hostname = getitem(&mylist, 0);
+            addr_ptr = getitem(&mylist, 1);
+            break;
+        case (3):
+            alias    = getitem(&mylist, 0);
+            hostname = getitem(&mylist, 1);
+            addr_ptr = getitem(&mylist, 2);
+            break;
+        case (4):
+            alias2   = getitem(&mylist, 0);
+            alias    = getitem(&mylist, 1);
+            hostname = getitem(&mylist, 2);
+            addr_ptr = getitem(&mylist, 3);
+            break;
+        }
+
+        /* Initialize entry */
+
+        memset(&entry, 0, sizeof(entry));
+
+        HIP_ASSERT(addr_ptr);
+        err = inet_pton(AF_INET6, addr_ptr, &entry.id);
+        if (err <= 0) {
+            err = inet_pton(AF_INET, addr_ptr, &in_addr);
+            if (err <= 0) {
+                HIP_ERROR("Bad address %s on line %d in %s, skipping\n",
+                          addr_ptr, lineno, hosts_file);
+                continue;
+            }
+            IPV4_TO_IPV6_MAP(&in_addr, &entry.id);
+        }
+
+        entry.hostname = hostname;
+        HIP_ASSERT(entry.hostname)
+
+        entry.alias2   = alias2;
+        entry.alias    = alias;
+        entry.lineno   = lineno;
+
+        /* Finally, call the handler function to handle the line */
+
+        if (func(&entry, arg, result) == 0) {
+            err = 0;
+            break;
+        }
+
+        memset(line, 0, sizeof(line));
+        destroy(&mylist);
+    }
+
+out_err:
+
+    destroy(&mylist);
+
+    if (hip_hosts) {
+        fclose(hip_hosts);
+    }
+
+    return err;
+}
 
 /**
  * A "for-each" iterator function for hosts files that returns the first
@@ -219,153 +347,6 @@ static int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line 
     }
 
 out_err:
-
-    return err;
-}
-
-/**
- * "For-each" loop to iterate through /etc/hosts or /etc/hip/hosts file, line
- * by line.
- *
- * @param hosts_file the path and name to the hosts file
- * @param func the iterator function pointer
- * @param arg an input argument for the function pointer
- * @param result an output argument for the function pointer
- * @return zero on success or non-zero on failure
- */
-static int hip_for_each_hosts_file_line(const char *hosts_file,
-                                                   int(*func)(const struct hosts_file_line *line,
-                                                              const void *arg,
-                                                              void *result),
-                                                   void *arg,
-                                                   void *result)
-{
-    FILE *hip_hosts = NULL;
-    List mylist;
-    char line[500];
-    int err         = 0, lineno = 0;
-    struct in_addr in_addr;
-    struct hosts_file_line entry;
-    char *hostname  = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr = NULL;
-
-    initlist(&mylist);
-    memset(line, 0, sizeof(line));
-
-    /* check whether  given hit_str is actually a HIT */
-
-    hip_hosts = fopen(hosts_file, "r");
-
-    HIP_IFEL(!hip_hosts, -1, "Failed to open hosts file\n");
-
-    /* For each line in the given hosts file, convert the line into binary format and
-     * call the given the handler  */
-
-    err = 1;
-    while (fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
-        char *eofline, *c, *comment;
-        int len;
-
-        lineno++;
-        c = line;
-
-        /* Remove whitespace */
-        while (*c == ' ' || *c == '\t') {
-            c++;
-        }
-
-        /* Line is a comment or empty */
-        if (*c == '#' || *c == '\n' || *c == '\0') {
-            continue;
-        }
-
-        eofline = strchr(c, '\n');
-        if (eofline) {
-            *eofline = '\0';
-        }
-
-        /* Terminate before (the first) trailing comment */
-        comment = strchr(c, '#');
-        if (comment) {
-            *comment = '\0';
-        }
-
-        /* shortest hostname: ":: a" = 4 */
-        if ((len = strlen(c)) < 4) {
-            HIP_DEBUG("skip line\n");
-            continue;
-        }
-
-        /* Split line into list */
-        extractsubstrings(c, &mylist);
-
-        len = length(&mylist);
-        if (len < 2 || len > 4) {
-            HIP_ERROR("Bad number of items on line %d in %s, skipping\n",
-                      lineno, hosts_file);
-            continue;
-        }
-
-        /* The list contains hosts line in reverse order. Let's sort it. */
-        switch (len) {
-        case (2):
-            alias    = NULL;
-            hostname = getitem(&mylist, 0);
-            addr_ptr = getitem(&mylist, 1);
-            break;
-        case (3):
-            alias    = getitem(&mylist, 0);
-            hostname = getitem(&mylist, 1);
-            addr_ptr = getitem(&mylist, 2);
-            break;
-        case (4):
-            alias2   = getitem(&mylist, 0);
-            alias    = getitem(&mylist, 1);
-            hostname = getitem(&mylist, 2);
-            addr_ptr = getitem(&mylist, 3);
-            break;
-        }
-
-        /* Initialize entry */
-
-        memset(&entry, 0, sizeof(entry));
-
-        HIP_ASSERT(addr_ptr);
-        err = inet_pton(AF_INET6, addr_ptr, &entry.id);
-        if (err <= 0) {
-            err = inet_pton(AF_INET, addr_ptr, &in_addr);
-            if (err <= 0) {
-                HIP_ERROR("Bad address %s on line %d in %s, skipping\n",
-                          addr_ptr, lineno, hosts_file);
-                continue;
-            }
-            IPV4_TO_IPV6_MAP(&in_addr, &entry.id);
-        }
-
-        entry.hostname = hostname;
-        HIP_ASSERT(entry.hostname)
-
-        entry.alias2   = alias2;
-        entry.alias    = alias;
-        entry.lineno   = lineno;
-
-        /* Finally, call the handler function to handle the line */
-
-        if (func(&entry, arg, result) == 0) {
-            err = 0;
-            break;
-        }
-
-        memset(line, 0, sizeof(line));
-        destroy(&mylist);
-    }
-
-out_err:
-
-    destroy(&mylist);
-
-    if (hip_hosts) {
-        fclose(hip_hosts);
-    }
 
     return err;
 }

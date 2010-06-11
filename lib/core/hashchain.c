@@ -25,10 +25,6 @@
 #define HCHAIN_LOCK(lock_id)
 #define HCHAIN_UNLOCK(lock_id)
 
-static unsigned char *hchain_element_by_index(const hash_chain_t *hash_chain,
-                                              const int index);
-static unsigned char *hchain_next(const hash_chain_t *hash_chain);
-
 /** checks if a hash is verifiable by a hash chain
  *
  * @param       current_hash the hash value to be verified
@@ -177,30 +173,6 @@ out_err:
     return hchain;
 }
 
-/* getter function for the hash chain anchor element
- *
- * @param       hash_chain hash chain from which the anchor should be returned
- * @return      anchor element of the given hash chain
- */
-unsigned char *hchain_get_anchor(const hash_chain_t *hash_chain)
-{
-    HIP_ASSERT(hash_chain);
-
-    return hchain_element_by_index(hash_chain, hash_chain->hchain_length - 1);
-}
-
-/* getter function for the hash chain seed element
- *
- * @param       hash_chain hash chain from which the seed should be returned
- * @return      seed element of the given hash chain
- */
-unsigned char *hchain_get_seed(const hash_chain_t *hash_chain)
-{
-    HIP_ASSERT(hash_chain);
-
-    return hchain_element_by_index(hash_chain, 0);
-}
-
 /* getter function for a specific element of the given hash chain
  *
  * @param       hash_chain hash chain from which the element should be returned
@@ -233,6 +205,32 @@ out_err:
 
     return element;
 }
+
+/* getter function for the hash chain anchor element
+ *
+ * @param       hash_chain hash chain from which the anchor should be returned
+ * @return      anchor element of the given hash chain
+ */
+unsigned char *hchain_get_anchor(const hash_chain_t *hash_chain)
+{
+    HIP_ASSERT(hash_chain);
+
+    return hchain_element_by_index(hash_chain, hash_chain->hchain_length - 1);
+}
+
+/* getter function for the hash chain seed element
+ *
+ * @param       hash_chain hash chain from which the seed should be returned
+ * @return      seed element of the given hash chain
+ */
+unsigned char *hchain_get_seed(const hash_chain_t *hash_chain)
+{
+    HIP_ASSERT(hash_chain);
+
+    return hchain_element_by_index(hash_chain, 0);
+}
+
+
 
 /** returns the next element of the hash chain but does not advance the current element
  * pointer. This function should only be used if the next element is kept secret and has to

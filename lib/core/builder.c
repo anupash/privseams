@@ -87,42 +87,6 @@
 enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
-static int hip_build_param_hmac(struct hip_common *msg,
-                                const struct hip_crypto_key *key,
-                                hip_tlv_type_t param_type);
-static void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
-                                             const char *hostname,
-                                             hip_tlv_len_t rr_data_len,
-                                             uint8_t algorithm);
-
-/**
- * Fill in an endpoint header that can contain a DSA or RSA key in HIP
- * RR format. This is used for sending new private keys to hipd
- * using hipconf.
- *
- * @param endpoint_hdr the endpoint header that should be filled in
- * @param hostname an optional hostname to be written into the endpoint
- * @param endpoint_flags flags for the endpoint
- * @param host_id_algo the public key algorithm
- * @param rr_data_len length of the HIP Resource Record that will be
- *                    appended after the header later.
- *
- * @note: @c endpoint_hip structure is not padded because it is not
- *           sent on wire
- */
-static void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
-                                   const char *hostname,
-                                   se_hip_flags_t endpoint_flags,
-                                   uint8_t host_id_algo,
-                                   unsigned int rr_data_len)
-{
-    hip_build_param_host_id_hdr_priv(&endpoint_hdr->id.host_id,
-                                     hostname, rr_data_len, host_id_algo);
-    endpoint_hdr->family = PF_HIP;
-    endpoint_hdr->length = sizeof(struct endpoint_hip);
-    endpoint_hdr->flags  = endpoint_flags;
-    endpoint_hdr->algo   = host_id_algo;
-}
 
 /**
  * attach a HIP RR and a hostname into a hip_host_id_priv parameter
@@ -3309,6 +3273,35 @@ int hip_get_param_host_id_di_type_len(struct hip_host_id *host,
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
 {
     return hostid->hostname;
+}
+
+/**
+ * Fill in an endpoint header that can contain a DSA or RSA key in HIP
+ * RR format. This is used for sending new private keys to hipd
+ * using hipconf.
+ *
+ * @param endpoint_hdr the endpoint header that should be filled in
+ * @param hostname an optional hostname to be written into the endpoint
+ * @param endpoint_flags flags for the endpoint
+ * @param host_id_algo the public key algorithm
+ * @param rr_data_len length of the HIP Resource Record that will be
+ *                    appended after the header later.
+ *
+ * @note: @c endpoint_hip structure is not padded because it is not
+ *           sent on wire
+ */
+static void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
+                                   const char *hostname,
+                                   se_hip_flags_t endpoint_flags,
+                                   uint8_t host_id_algo,
+                                   unsigned int rr_data_len)
+{
+    hip_build_param_host_id_hdr_priv(&endpoint_hdr->id.host_id,
+                                     hostname, rr_data_len, host_id_algo);
+    endpoint_hdr->family = PF_HIP;
+    endpoint_hdr->length = sizeof(struct endpoint_hip);
+    endpoint_hdr->flags  = endpoint_flags;
+    endpoint_hdr->algo   = host_id_algo;
 }
 
 /**
