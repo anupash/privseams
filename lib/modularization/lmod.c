@@ -61,13 +61,6 @@ static hip_ll_t packet_types;
  */
 static uint16_t num_disabled_modules = 0;
 
-
-static void *lmod_get_state_item_by_id(struct modular_state *state,
-                                       const unsigned int index);
-static int lmod_get_state_item_id(struct modular_state *state,
-                                  const char *item_name);
-static int lmod_packet_type_exists(const uint16_t packet_type);
-
 /**
  * lmod_init_state
  *
@@ -140,6 +133,69 @@ void lmod_init_state_items(struct modular_state *state)
 }
 
 /**
+ * lmod_get_state_item_id
+ *
+ * Retrieve a void pointer to a state variable from the global state set using
+ * the state item name.
+ *
+ *  @param      state       Pointer to the global state.
+ *  @param      item_name   String identifying a state.
+ *  @return Success = id (index number) of the state item as unsigned int
+ *          Error   = -1
+ */
+static int lmod_get_state_item_id(struct modular_state *state,
+                                  const char *item_name)
+{
+    unsigned int i;
+
+    for (i = 0; i < state->num_items; i++) {
+       if (0 == strcmp(item_name, state->item_names[i])) {
+           return i;
+       }
+    }
+
+    return -1;
+}
+
+/**
+ * lmod_get_state_item_by_id
+ *
+ * Returns a void pointer to a state item from the global state set using
+ * the id (index number).
+ *
+ *  @param      state       Pointer to the global state.
+ *  @param      id          Index number of the requested state.
+ *  @return Success = Pointer to the requested state item (if exists)
+ *          Error   = NULL
+ */
+static void *lmod_get_state_item_by_id(struct modular_state *state,
+                                       const unsigned int id)
+{
+    return hip_ll_get(state->item_list, id);
+}
+
+/**
+ * lmod_get_state_item
+ *
+ * Returns a void pointer to a state item from the global state set using
+ * the string identifier.
+ *
+ *  @param      state       Pointer to the global state.
+ *  @param      item_name   String identifying the state.
+ *  @return Success = Pointer to the requested state item (if exists)
+ *          Error   = NULL
+ */
+void *lmod_get_state_item(struct modular_state *state, const char *item_name)
+{
+    unsigned int state_id;
+
+    state_id = lmod_get_state_item_id(state, item_name);
+
+    return lmod_get_state_item_by_id(state, state_id);
+}
+
+
+/**
  * lmod_add_state_item
  *
  * Registers a new state item to the global state. The state item can be of any
@@ -172,68 +228,6 @@ int lmod_add_state_item(struct modular_state *state,
     state->item_names[state->num_items++] = strdup(item_name);
 
     return state->num_items-1;
-}
-
-/**
- * lmod_get_state_item
- *
- * Returns a void pointer to a state item from the global state set using
- * the string identifier.
- *
- *  @param      state       Pointer to the global state.
- *  @param      item_name   String identifying the state.
- *  @return Success = Pointer to the requested state item (if exists)
- *          Error   = NULL
- */
-void *lmod_get_state_item(struct modular_state *state, const char *item_name)
-{
-    unsigned int state_id;
-
-    state_id = lmod_get_state_item_id(state, item_name);
-
-    return lmod_get_state_item_by_id(state, state_id);
-}
-
-/**
- * lmod_get_state_item_by_id
- *
- * Returns a void pointer to a state item from the global state set using
- * the id (index number).
- *
- *  @param      state       Pointer to the global state.
- *  @param      id          Index number of the requested state.
- *  @return Success = Pointer to the requested state item (if exists)
- *          Error   = NULL
- */
-static void *lmod_get_state_item_by_id(struct modular_state *state,
-                                       const unsigned int id)
-{
-    return hip_ll_get(state->item_list, id);
-}
-
-/**
- * lmod_get_state_item_id
- *
- * Retrieve a void pointer to a state variable from the global state set using
- * the state item name.
- *
- *  @param      state       Pointer to the global state.
- *  @param      item_name   String identifying a state.
- *  @return Success = id (index number) of the state item as unsigned int
- *          Error   = -1
- */
-static int lmod_get_state_item_id(struct modular_state *state,
-                                  const char *item_name)
-{
-    unsigned int i;
-
-    for (i = 0; i < state->num_items; i++) {
-       if (0 == strcmp(item_name, state->item_names[i])) {
-           return i;
-       }
-    }
-
-    return -1;
 }
 
 /**
@@ -415,6 +409,36 @@ void lmod_uninit_disabled_modules(void)
 }
 
 /**
+ * lmod_packet_type_exists
+ *
+ * Check whether a certain packet type was already registered.
+ *
+ * @note The return value is not 0 (FALSE), if the packet type not exists.
+ *       Therefore you have to check, if the return value is equal to -1, if you
+ *       want to check whether a packet type exists or not.
+ *
+ * @param packet_type The packet type number to search for.
+ *
+ * @return The index of the packet type, if existing or
+ *         -1, if the packet type not exists
+ */
+static int lmod_packet_type_exists(const uint16_t packet_type)
+{
+    int            index = 0;
+    hip_ll_node_t *iter  = NULL;
+
+    while ((iter = hip_ll_iterate(&packet_types, iter))) {
+        if (packet_type == ((struct packet_type *) iter->ptr)->num) {
+            return index;
+        } else {
+            index++;
+        }
+    }
+
+    return -1;
+}
+
+/**
  * lmod_register_packet_type
  *
  * Register a new packet type and the corresponding identifier. Each module
@@ -465,36 +489,6 @@ int lmod_register_packet_type(const uint16_t packet_type,
     hip_ll_add(&packet_types, index, new_entry);
 
     return 0;
-}
-
-/**
- * lmod_packet_type_exists
- *
- * Check whether a certain packet type was already registered.
- *
- * @note The return value is not 0 (FALSE), if the packet type not exists.
- *       Therefore you have to check, if the return value is equal to -1, if you
- *       want to check whether a packet type exists or not.
- *
- * @param packet_type The packet type number to search for.
- *
- * @return The index of the packet type, if existing or
- *         -1, if the packet type not exists
- */
-static int lmod_packet_type_exists(const uint16_t packet_type)
-{
-    int            index = 0;
-    hip_ll_node_t *iter  = NULL;
-
-    while ((iter = hip_ll_iterate(&packet_types, iter))) {
-        if (packet_type == ((struct packet_type *) iter->ptr)->num) {
-            return index;
-        } else {
-            index++;
-        }
-    }
-
-    return -1;
 }
 
 /**
