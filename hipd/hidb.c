@@ -26,18 +26,94 @@ HIP_HASHTABLE *hip_local_hostid_db = NULL;
 
 static const char *lsi_addresses[] = {"1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4"};
 
-static int hip_add_host_id(HIP_HASHTABLE *db,
-                           const struct hip_lhi *lhi,
-                           hip_lsi_t *lsi,
-                           const struct hip_host_id_priv *host_id,
-                           int (*insert)(struct hip_host_id_entry *, void **arg),
-                           int (*remove)(struct hip_host_id_entry *, void **arg),
-                           void *arg);
-static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid);
-static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct hip_host_id_entry *id_entry);
-static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(HIP_HASHTABLE *db,
-                                                           const struct in_addr *lsi);
+/**
+ * Strips a public key out of DSA a host id with private key component
+ *
+ * @param hi the host identifier with its private key component
+ * @return An allocated hip_host_id structure. Caller must deallocate.
+ */
+static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv *hi)
+{
+    int key_len;
+    /* T could easily have been an int, since the compiler will
+     * probably add 3 alignment bytes here anyway. */
+    uint8_t T;
+    uint16_t temp;
+    struct hip_host_id *ret;
 
+    /* check T, Miika won't like this */
+    T = *((uint8_t *) (hi->key));
+    if (T > 8) {
+        HIP_ERROR("Invalid T-value in DSA key (0x%x)\n", T);
+        return NULL;
+    }
+    if (T != 8) {
+        HIP_DEBUG("T-value in DSA-key not 8 (0x%x)!\n", T);
+    }
+    key_len        = 64 + (T * 8);
+
+    ret            = malloc(sizeof(struct hip_host_id));
+    memcpy(ret, hi, sizeof(struct hip_host_id));
+
+    /* the secret component of the DSA key is always 20 bytes */
+    temp = ntohs(hi->hi_length) - DSA_PRIV;
+    ret->hi_length = htons(temp);
+    memset((char *) (&ret->key) + ntohs(ret->hi_length) - sizeof(hi->rdata),
+           0, sizeof(ret->key) - ntohs(ret->hi_length));
+    ret->length    = htons(sizeof(struct hip_host_id));
+
+    return ret;
+}
+
+/**
+ * Strips the RSA public key from a Host Identity
+ *
+ * @param tmp a pointer to a Host Identity.
+ * @return    A pointer to a newly allocated host identity with only the public key.
+ *            Caller deallocates.
+ */
+static struct hip_host_id *hip_get_rsa_public_key(const struct hip_host_id_priv *tmp)
+{
+    int rsa_pub_len;
+    struct hip_rsa_keylen keylen;
+    struct hip_host_id *ret;
+
+    /** @todo check some value in the RSA key? */
+
+    hip_get_rsa_keylen(tmp, &keylen, 1);
+    rsa_pub_len    = keylen.e_len + keylen.e + keylen.n;
+
+    ret            = malloc(sizeof(struct hip_host_id));
+    memcpy(ret, tmp, sizeof(struct hip_host_id) -
+           sizeof(ret->key) - sizeof(ret->hostname));
+    ret->hi_length = htons(rsa_pub_len + sizeof(struct hip_host_id_key_rdata));
+    memcpy(ret->key, tmp->key, rsa_pub_len);
+    memcpy(ret->hostname, tmp->hostname, sizeof(ret->hostname));
+    ret->length    = htons(sizeof(struct hip_host_id));
+
+    return ret;
+}
+
+/**
+ * Transforms a private/public key pair to a public key, private key is deleted.
+ *
+ * @param hid a pointer to a host identity.
+ * @return    a pointer to a host identity if the transformation was
+ *            successful, NULL otherwise.
+ */
+static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid)
+{
+    int alg = hip_get_host_id_algo((struct hip_host_id *) hid);
+    switch (alg) {
+    case HIP_HI_RSA:
+        return hip_get_rsa_public_key(hid);
+    case HIP_HI_DSA:
+        return hip_get_dsa_public_key(hid);
+    default:
+        HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
+        return NULL;
+    }
+}
 
 /** @todo All get_any's should be removed (tkoponen). */
 /** @todo These should be hashes instead of plain linked lists. */
@@ -232,6 +308,41 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
         if (hip_hit_are_equal(&id_entry->lhi.hit, our)) {
             memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
             return 0;
+        }
+    }
+    return err;
+}
+
+/**
+ * Assign a free LSI to a host id entry
+ *
+ * @param db database structure
+ * @param id_entry contains an entry to the db, will contain an unsigned lsi
+ * @return zero on success, or negative error value on failure.
+ */
+static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct hip_host_id_entry *id_entry)
+{
+    struct hip_host_id_entry *id_entry_aux;
+    hip_list_t *item;
+    hip_lsi_t lsi_aux;
+    int err = 0, used_lsi, c, i;
+    int len = sizeof(lsi_addresses) / sizeof(*lsi_addresses);
+
+    for (i = 0; i < len; i++) {
+        inet_aton(lsi_addresses[i], &lsi_aux);
+        used_lsi = 0;
+
+        list_for_each(item, db, c) {
+            id_entry_aux = (struct hip_host_id_entry *) list_entry(item);
+            if (hip_lsi_are_equal(&lsi_aux, &id_entry_aux->lsi)) {
+                used_lsi = 1;
+                c        = -1;
+            }
+        }
+
+        if (!used_lsi) {
+            memcpy(&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
+            break;
         }
     }
     return err;
@@ -500,130 +611,6 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 
 out:
     HIP_READ_UNLOCK_DB(hip_local_hostid_db);
-    return err;
-}
-
-/**
- * Strips a public key out of DSA a host id with private key component
- *
- * @param hi the host identifier with its private key component
- * @return An allocated hip_host_id structure. Caller must deallocate.
- */
-static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv *hi)
-{
-    int key_len;
-    /* T could easily have been an int, since the compiler will
-     * probably add 3 alignment bytes here anyway. */
-    uint8_t T;
-    uint16_t temp;
-    struct hip_host_id *ret;
-
-    /* check T, Miika won't like this */
-    T = *((uint8_t *) (hi->key));
-    if (T > 8) {
-        HIP_ERROR("Invalid T-value in DSA key (0x%x)\n", T);
-        return NULL;
-    }
-    if (T != 8) {
-        HIP_DEBUG("T-value in DSA-key not 8 (0x%x)!\n", T);
-    }
-    key_len        = 64 + (T * 8);
-
-    ret            = malloc(sizeof(struct hip_host_id));
-    memcpy(ret, hi, sizeof(struct hip_host_id));
-
-    /* the secret component of the DSA key is always 20 bytes */
-    temp = ntohs(hi->hi_length) - DSA_PRIV;
-    ret->hi_length = htons(temp);
-    memset((char *) (&ret->key) + ntohs(ret->hi_length) - sizeof(hi->rdata),
-           0, sizeof(ret->key) - ntohs(ret->hi_length));
-    ret->length    = htons(sizeof(struct hip_host_id));
-
-    return ret;
-}
-
-/**
- * Strips the RSA public key from a Host Identity
- *
- * @param tmp a pointer to a Host Identity.
- * @return    A pointer to a newly allocated host identity with only the public key.
- *            Caller deallocates.
- */
-static struct hip_host_id *hip_get_rsa_public_key(const struct hip_host_id_priv *tmp)
-{
-    int rsa_pub_len;
-    struct hip_rsa_keylen keylen;
-    struct hip_host_id *ret;
-
-    /** @todo check some value in the RSA key? */
-
-    hip_get_rsa_keylen(tmp, &keylen, 1);
-    rsa_pub_len    = keylen.e_len + keylen.e + keylen.n;
-
-    ret            = malloc(sizeof(struct hip_host_id));
-    memcpy(ret, tmp, sizeof(struct hip_host_id) -
-           sizeof(ret->key) - sizeof(ret->hostname));
-    ret->hi_length = htons(rsa_pub_len + sizeof(struct hip_host_id_key_rdata));
-    memcpy(ret->key, tmp->key, rsa_pub_len);
-    memcpy(ret->hostname, tmp->hostname, sizeof(ret->hostname));
-    ret->length    = htons(sizeof(struct hip_host_id));
-
-    return ret;
-}
-
-/**
- * Transforms a private/public key pair to a public key, private key is deleted.
- *
- * @param hid a pointer to a host identity.
- * @return    a pointer to a host identity if the transformation was
- *            successful, NULL otherwise.
- */
-static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid)
-{
-    int alg = hip_get_host_id_algo((struct hip_host_id *) hid);
-    switch (alg) {
-    case HIP_HI_RSA:
-        return hip_get_rsa_public_key(hid);
-    case HIP_HI_DSA:
-        return hip_get_dsa_public_key(hid);
-    default:
-        HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
-        return NULL;
-    }
-}
-
-/**
- * Assign a free LSI to a host id entry
- *
- * @param db database structure
- * @param id_entry contains an entry to the db, will contain an unsigned lsi
- * @return zero on success, or negative error value on failure.
- */
-static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct hip_host_id_entry *id_entry)
-{
-    struct hip_host_id_entry *id_entry_aux;
-    hip_list_t *item;
-    hip_lsi_t lsi_aux;
-    int err = 0, used_lsi, c, i;
-    int len = sizeof(lsi_addresses) / sizeof(*lsi_addresses);
-
-    for (i = 0; i < len; i++) {
-        inet_aton(lsi_addresses[i], &lsi_aux);
-        used_lsi = 0;
-
-        list_for_each(item, db, c) {
-            id_entry_aux = (struct hip_host_id_entry *) list_entry(item);
-            if (hip_lsi_are_equal(&lsi_aux, &id_entry_aux->lsi)) {
-                used_lsi = 1;
-                c        = -1;
-            }
-        }
-
-        if (!used_lsi) {
-            memcpy(&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
-            break;
-        }
-    }
     return err;
 }
 

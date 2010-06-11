@@ -66,8 +66,6 @@ struct hip_peer_map_info {
     uint8_t         peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 };
 
-static void hip_hadb_delete_state(hip_ha_t *ha);
-
 /**
  * The hash function of the hashtable. Calculates a hash from parameter host
  * assosiation HITs (hit_our and hit_peer).
@@ -780,6 +778,80 @@ out_err:
 }
 
 /**
+ * Delete a HA state (and deallocate memory), all associated IPSEC SAs
+ * and free the memory occupied by the HA state.
+ *
+ * @param ha HA
+ * @note     ASSERT: The HA must be unlinked from the global hadb hash tables
+ *           (SPI and HIT). This function should only be called when absolutely
+ *           sure that nobody else has a reference to it.
+ */
+static void hip_hadb_delete_state(hip_ha_t *ha)
+{
+    hip_list_t *item = NULL, *tmp = NULL;
+    struct hip_peer_addr_list_item *addr_li = NULL;
+    int i;
+
+    HIP_DEBUG("ha=0x%p\n", ha);
+
+    /* Delete SAs */
+
+    if (ha->dh_shared_key) {
+        free(ha->dh_shared_key);
+    }
+    if (ha->hip_msg_retrans.buf) {
+        free(ha->hip_msg_retrans.buf);
+    }
+    if (ha->peer_pub) {
+        if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
+            ha->peer_pub_key) {
+            RSA_free(ha->peer_pub_key);
+        } else if (ha->peer_pub_key) {
+            DSA_free(ha->peer_pub_key);
+        }
+        free(ha->peer_pub);
+    }
+    if (ha->our_priv) {
+        free(ha->our_priv);
+    }
+    if (ha->our_pub) {
+        free(ha->our_pub);
+    }
+    if (ha->rendezvous_addr) {
+        free(ha->rendezvous_addr);
+    }
+
+    lmod_uninit_state(ha->hip_modular_state);
+
+    if (ha->locator) {
+        free(ha->locator);
+    }
+
+    if (ha->peer_addr_list_to_be_added) {
+        list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
+            addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
+            list_del(addr_li, ha->peer_addr_list_to_be_added);
+            free(addr_li);
+            HIP_DEBUG_HIT("SPI out address", &addr_li->address);
+        }
+        hip_ht_uninit(ha->peer_addr_list_to_be_added);
+    }
+
+    if (ha->peer_addresses_old) {
+        list_for_each_safe(item, tmp, ha->peer_addresses_old, i) {
+            addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
+            list_del(addr_li, ha->peer_addresses_old);
+            free(addr_li);
+            HIP_DEBUG_HIT("SPI out address", &addr_li->address);
+        }
+        hip_ht_uninit(ha->peer_addresses_old);
+    }
+
+    list_del(ha, hadb_hit);
+    free(ha);
+}
+
+/**
  * delete a host association
  *
  * @param ha the ha to deinitiliaze and deallocate
@@ -1068,80 +1140,6 @@ void hip_delete_all_sp(void)
     HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
 
     HIP_DEBUG("DELETING HA HT\n");
-}
-
-/**
- * Delete a HA state (and deallocate memory), all associated IPSEC SAs
- * and free the memory occupied by the HA state.
- *
- * @param ha HA
- * @note     ASSERT: The HA must be unlinked from the global hadb hash tables
- *           (SPI and HIT). This function should only be called when absolutely
- *           sure that nobody else has a reference to it.
- */
-static void hip_hadb_delete_state(hip_ha_t *ha)
-{
-    hip_list_t *item = NULL, *tmp = NULL;
-    struct hip_peer_addr_list_item *addr_li = NULL;
-    int i;
-
-    HIP_DEBUG("ha=0x%p\n", ha);
-
-    /* Delete SAs */
-
-    if (ha->dh_shared_key) {
-        free(ha->dh_shared_key);
-    }
-    if (ha->hip_msg_retrans.buf) {
-        free(ha->hip_msg_retrans.buf);
-    }
-    if (ha->peer_pub) {
-        if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
-            ha->peer_pub_key) {
-            RSA_free(ha->peer_pub_key);
-        } else if (ha->peer_pub_key) {
-            DSA_free(ha->peer_pub_key);
-        }
-        free(ha->peer_pub);
-    }
-    if (ha->our_priv) {
-        free(ha->our_priv);
-    }
-    if (ha->our_pub) {
-        free(ha->our_pub);
-    }
-    if (ha->rendezvous_addr) {
-        free(ha->rendezvous_addr);
-    }
-
-    lmod_uninit_state(ha->hip_modular_state);
-
-    if (ha->locator) {
-        free(ha->locator);
-    }
-
-    if (ha->peer_addr_list_to_be_added) {
-        list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
-            addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
-            list_del(addr_li, ha->peer_addr_list_to_be_added);
-            free(addr_li);
-            HIP_DEBUG_HIT("SPI out address", &addr_li->address);
-        }
-        hip_ht_uninit(ha->peer_addr_list_to_be_added);
-    }
-
-    if (ha->peer_addresses_old) {
-        list_for_each_safe(item, tmp, ha->peer_addresses_old, i) {
-            addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
-            list_del(addr_li, ha->peer_addresses_old);
-            free(addr_li);
-            HIP_DEBUG_HIT("SPI out address", &addr_li->address);
-        }
-        hip_ht_uninit(ha->peer_addresses_old);
-    }
-
-    list_del(ha, hadb_hit);
-    free(ha);
 }
 
 /**

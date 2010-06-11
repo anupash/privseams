@@ -41,39 +41,6 @@
 
 static int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 
-static int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used);
-
-/**
- * Refreshes the port state of all NATs related to this host.
- *
- * Refreshes the port state of all NATs between current host and all its peer
- * hosts by calling hip_nat_send_keep_alive() for each host association in
- * the host association database.
- *
- * @return zero on success, or negative error value on error.
- */
-int hip_nat_refresh_port(void)
-{
-    int err = 0;
-
-    if (!hip_nat_status) {
-        return 0;
-    }
-
-    if (nat_keep_alive_counter < 0) {
-        HIP_DEBUG("Sending Keep-Alives to NAT.\n");
-        HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
-                 -1, "for_each_ha() err.\n");
-
-        nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
-    } else {
-        nat_keep_alive_counter--;
-    }
-
-out_err:
-    return err;
-}
-
 /**
  * Sends an NAT Keep-Alive packet.
  *
@@ -140,6 +107,37 @@ out_err:
         free(msg);
     }
 
+    return err;
+}
+
+/**
+ * Refreshes the port state of all NATs related to this host.
+ *
+ * Refreshes the port state of all NATs between current host and all its peer
+ * hosts by calling hip_nat_send_keep_alive() for each host association in
+ * the host association database.
+ *
+ * @return zero on success, or negative error value on error.
+ */
+int hip_nat_refresh_port(void)
+{
+    int err = 0;
+
+    if (!hip_nat_status) {
+        return 0;
+    }
+
+    if (nat_keep_alive_counter < 0) {
+        HIP_DEBUG("Sending Keep-Alives to NAT.\n");
+        HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
+                 -1, "for_each_ha() err.\n");
+
+        nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
+    } else {
+        nat_keep_alive_counter--;
+    }
+
+out_err:
     return err;
 }
 

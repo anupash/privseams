@@ -14,8 +14,6 @@
 
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
 
-static void hip_regen_dh_keys(uint32_t bitmask);
-
 /**
  * insert the current DH-key into the buffer
  *

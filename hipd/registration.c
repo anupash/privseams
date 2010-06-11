@@ -25,26 +25,6 @@
  */
 #define HIP_PENDING_REQUEST_LIFETIME 120
 
-static int hip_del_pending_request_by_expiration(void);
-static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
-                                       uint8_t *reg_types, int type_count,
-                                       uint8_t accepted_requests[],
-                                       uint8_t accepted_lifetimes[],
-                                       int *accepted_count, uint8_t refused_requests[],
-                                       uint8_t failure_types[], int *refused_count);
-static int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
-                                       int type_count, uint8_t accepted_requests[],
-                                       int *accepted_count, uint8_t refused_requests[],
-                                       uint8_t failure_types[], int *refused_count);
-static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
-                                       uint8_t *reg_types, int type_count);
-static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
-                                       int type_count);
-static int hip_has_duplicate_services(uint8_t *values, int type_count);
-static int hip_get_registration_failure_string(uint8_t failure_type,
-                                               char *type_string);
-
-
 /** An array for storing all existing services. */
 hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
 /** A linked list for storing pending requests on the client side.
@@ -75,6 +55,33 @@ void hip_init_services(void)
 void hip_uninit_services(void)
 {
     hip_ll_uninit(&pending_requests, free);
+}
+
+/**
+ * Deletes one expired pending request. Deletes the first exipired pending
+ * request from the pending request linked list @c pending_requests.
+ */
+static int hip_del_pending_request_by_expiration(void)
+{
+    int index                      = 0;
+    hip_ll_node_t *iter            = NULL;
+    hip_pending_request_t *request = NULL;
+    time_t now                     = time(NULL);
+
+    /* See hip_del_pending_request() for a comment. */
+    while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+        request = (hip_pending_request_t *) (iter->ptr);
+        if (now - request->created > HIP_PENDING_REQUEST_LIFETIME) {
+            HIP_DEBUG("Deleting and freeing a pending request by " \
+                      "expiration (%u seconds) at index %u.\n",
+                      now - request->created, index);
+            hip_ll_del(&pending_requests, index, free);
+            return 0;
+        }
+        index++;
+    }
+
+    return -1;
 }
 
 /**
@@ -250,33 +257,6 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 }
 
 /**
- * Deletes one expired pending request. Deletes the first exipired pending
- * request from the pending request linked list @c pending_requests.
- */
-static int hip_del_pending_request_by_expiration(void)
-{
-    int index                      = 0;
-    hip_ll_node_t *iter            = NULL;
-    hip_pending_request_t *request = NULL;
-    time_t now                     = time(NULL);
-
-    /* See hip_del_pending_request() for a comment. */
-    while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        request = (hip_pending_request_t *) (iter->ptr);
-        if (now - request->created > HIP_PENDING_REQUEST_LIFETIME) {
-            HIP_DEBUG("Deleting and freeing a pending request by " \
-                      "expiration (%u seconds) at index %u.\n",
-                      now - request->created, index);
-            hip_ll_del(&pending_requests, index, free);
-            return 0;
-        }
-        index++;
-    }
-
-    return -1;
-}
-
-/**
  * Moves a pending request to a new entry. This is handy for opportunistic mode
  *
  * @param  entry_old a pointer to the old  host association from which the pending request
@@ -363,464 +343,6 @@ static int hip_get_pending_request_count(hip_ha_t *entry)
     }
 
     return request_count;
-}
-
-/**
- * Handles param REG_INFO. Digs out the REG_INFO parameter from the HIP message
- * @c source_msg, sets the peer control bits accordingly and builds REG_REQUEST
- * in response to the HIP message @c target_msg. The peer controls are set to
- * indicate which services the peer offers.
- *
- * REG_REQUEST is build only if the server offers at least one of the services
- * we have requested. Only those services as requested that the server offers.
- *
- * @param source_msg a pointer to HIP message from where to dig out the
- *                   REG_INFO parameter.
- * @param target_msg a pointer to HIP message where to build the REG_REQUEST
- *                   parameter.
- * @param entry      a pointer to a host association for which to set the peer
- *                   control bits.
- * @return           -1 if the message @c msg did not contain a REG_INFO
- *                   parameter zero otherwise.
- * @see              peer_controls
- */
-int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
-                              hip_common_t *target_msg)
-{
-    struct hip_reg_info *reg_info = NULL;
-    uint8_t *reg_types            = NULL;
-    unsigned int type_count       = 0;
-    unsigned int i;
-    int err                       = 0;
-
-    reg_info = hip_get_param(source_msg, HIP_PARAM_REG_INFO);
-
-    if (reg_info == NULL) {
-        HIP_DEBUG("No REG_INFO parameter found. The server offers " \
-                  "no services.\n");
-
-        err = -1;
-        goto out_err;
-    }
-
-    HIP_DEBUG("REG_INFO parameter found.\n");
-
-    HIP_DEBUG("REG INFO MIN LIFETIME %d\n", reg_info->min_lifetime);
-    HIP_DEBUG("REG INFO MAX LIFETIME %d\n", reg_info->max_lifetime);
-
-    /* Get a pointer registration types and the type count. */
-    reg_types  = reg_info->reg_type;
-    type_count = hip_get_param_contents_len(reg_info) -
-                 (sizeof(reg_info->min_lifetime) +
-                  sizeof(reg_info->max_lifetime));
-
-    /* Check RFC 5203 Chapter 3.1. */
-    if (type_count == 0) {
-        HIP_INFO("The server is currently unable to provide services " \
-                 "due to transient conditions.\n");
-        err = 0;
-        goto out_err;
-    }
-
-    /* Loop through all the registration types found in REG_INFO parameter
-     * and store the information of responder's capability to offer a
-     * service. */
-    for (i = 0; i < type_count; i++) {
-        switch (reg_types[i]) {
-        case HIP_SERVICE_RENDEZVOUS:
-            HIP_INFO("Responder offers rendezvous service.\n");
-
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
-
-            break;
-        case HIP_SERVICE_RELAY:
-            HIP_INFO("Responder offers relay service.\n");
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
-
-            break;
-        default:
-            HIP_INFO("Responder offers unsupported service.\n");
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_UNSUP_CAPABLE);
-        }
-    }
-
-    /* This far we have stored the information of what services the server
-     * offers. Next we check if we have requested any of those services from
-     * command line using hipconf. If we have requested, we have pending
-     * requests stored. We build a REG_REQUEST parameter containing each
-     * service that we have requested and the server offers. */
-
-    if (entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
-        int request_count = hip_get_pending_request_count(entry);
-        if (request_count > 0) {
-            unsigned int j         = 0;
-            int types_to_request   = 0;
-            uint8_t valid_lifetime = 0;
-            uint8_t type_array[request_count];
-            hip_pending_request_t *requests[request_count];
-
-            i = 0;
-            hip_get_pending_requests(entry, requests);
-
-            /* If we have requested for a cancellation of a service
-             * we use lifetime of zero. Otherwise we must check
-             * that the requested lifetime falls between the offered
-             * lifetime boundaries. */
-            if (requests[0]->lifetime == 0) {
-                HIP_DEBUG("SERVICE CANCELATION \n");
-                valid_lifetime = 0;
-            } else {
-                valid_lifetime = MIN(requests[0]->lifetime,
-                                     reg_info->max_lifetime);
-                valid_lifetime = MAX(valid_lifetime,
-                                     reg_info->min_lifetime);
-            }
-
-            /* Copy the Reg Types to an array. Outer loop for the
-             * services we have requested, inner loop for the
-             * services the server offers. */
-            for (i = 0; i < (unsigned)request_count; i++) {
-                for (j = 0; j < type_count; j++) {
-                    if (requests[i]->reg_type ==
-                        reg_types[j]) {
-                        type_array[types_to_request] =
-                            requests[i]->reg_type;
-
-                        types_to_request++;
-                        break;
-                    }
-                }
-            }
-            HIP_DEBUG("VALID SERVICE LIFETIME %d\n", valid_lifetime);
-            if (types_to_request > 0) {
-                HIP_IFEL(hip_build_param_reg_request(
-                             target_msg, valid_lifetime,
-                             type_array, types_to_request),
-                         -1,
-                         "Failed to build a REG_REQUEST " \
-                         "parameter.\n");
-            }
-        }
-        /* We do not delete the pending requests for this entry yet, but
-         * only after R2 has arrived. We do not need pending requests
-         * when R2 arrives, but in case the I2 is to be retransmitted,
-         * we must be able to produce the REG_REQUEST parameter. */
-    }
-
-out_err:
-    return err;
-}
-
-/**
- * Handles param REG_REQUEST. Digs out the REG_REQUEST parameter from the HIP
- * message @c source_msg, takes action based on the contents of the REG_REQUEST
- * parameter and builds parameters in response to the HIP message @c target_msg.
- *
- * First hip_has_duplicate_services() is called to check whether the
- * parameter is malformed in a way that it has the same services listed more
- * than once. If the parameter proves to be malformed, the whole parameter is
- * omitted, none of the Reg Types in the REG_REQUEST are handled, and no
- * parameters are build as response. The initiator might be rogue and trying to
- * stress the server with malformed service requests. This is considered as a
- * protocol error and errno is set to EPROTO.
- *
- * If the parameter passes the hip_has_duplicate_services() test, the parameter
- * lifetime is investigated next. If it is zero i.e. the client is canceling a
- * service, hip_del_registration_server() is called. Otherwise the client is
- * registering to new services and hip_add_registration_server() is called.
- *
- * Once the aforementioned functions return, a REG_RESPONSE and/or a required
- * number of REG_FAILED parameters are built to
- *
- * @param entry      a pointer to a host association which is registering.
- * @param source_msg a pointer to HIP message from where to dig out the
- *                   REG_INFO parameter.
- * @param target_msg a pointer to HIP message where to build the REG_RESPONSE
- *                   and/or REG_FAILED parameters.
- * @return           -1 if the message @c source_msg did not contain a
- *                   REG_REQUEST parameter or the parameter had duplicate
- *                   services, zero otherwise.
- * @see              hip_has_duplicate_services().
- * @see              hip_add_registration_server().
- * @see              hip_del_registration_server().
- */
-
-int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
-                                 hip_common_t *target_msg)
-{
-    int err                             = 0, type_count = 0, accepted_count = 0, refused_count = 0;
-    struct hip_reg_request *reg_request = NULL;
-    uint8_t *reg_types                  = NULL;
-    /* Arrays for storing the type reg_types of the accepted and refused
-     * request types. */
-    uint8_t *accepted_requests          = NULL, *accepted_lifetimes = NULL;
-    uint8_t *refused_requests           = NULL, *failure_types = NULL;
-
-    reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
-
-    if (reg_request == NULL) {
-        err = -1;
-        /* Have to use return instead of 'goto out_err' because of
-         * the arrays initialised later. Otherwise this won't compile:
-         * error: jump into scope of identifier with variably modified
-         * type. */
-        return err;
-    }
-
-    /* Get the number of registration types. */
-    type_count         = hip_get_param_contents_len(reg_request) -
-                         sizeof(reg_request->lifetime);
-    accepted_requests  = malloc(sizeof(uint8_t) * type_count);
-    accepted_lifetimes = malloc(sizeof(uint8_t) * type_count);
-    refused_requests   = malloc(sizeof(uint8_t) * type_count);
-    failure_types      = malloc(sizeof(uint8_t) * type_count);
-
-    /* Allocate memory for types */
-
-    /* Get a pointer to the actual registration types. */
-    reg_types = (uint8_t *) hip_get_param_contents_direct(reg_request) +
-                sizeof(reg_request->lifetime);
-
-    HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, " \
-              "number of service types requested: %d.\n",
-              reg_request->lifetime, type_count);
-
-    /* Check that the request has at most one value of each type. */
-    if (hip_has_duplicate_services(reg_types, type_count)) {
-        /* We consider this as a protocol error, and do not build
-         * REG_FAILED parameters. The initiator may be rogue and
-         * trying to stress the server with malformed service
-         * requests. */
-        err   = -1;
-        errno = EPROTO;
-        HIP_ERROR("The REG_REQUEST parameter has duplicate services. " \
-                  "The whole parameter is omitted.\n");
-        /* As above. */
-        return err;
-    }
-
-    memset(accepted_requests,  0, sizeof(uint8_t) * type_count);
-    memset(accepted_lifetimes, 0, sizeof(uint8_t) * type_count);
-    memset(refused_requests,   0, sizeof(uint8_t) * type_count);
-    memset(failure_types,      0, sizeof(uint8_t) * type_count);
-
-    if (reg_request->lifetime == 0) {
-        hip_del_registration_server(
-            entry, reg_types, type_count, accepted_requests,
-            &accepted_count, refused_requests, failure_types,
-            &refused_count);
-    } else {
-        hip_add_registration_server(
-            entry, reg_request->lifetime, reg_types, type_count,
-            accepted_requests, accepted_lifetimes, &accepted_count,
-            refused_requests, failure_types, &refused_count);
-    }
-
-    HIP_DEBUG("Number of accepted service requests: %d, number of refused " \
-              "service requests: %d.\n", accepted_count, refused_count);
-
-    /* The registration is now done. Next, we build the REG_RESPONSE and
-     * REG_FAILED parameters. */
-    if (accepted_count > 0) {
-        /* There is an issue related to the building of REG_RESPONSE
-         * parameters in RFC 5203. In Section 4.4 it is said: "The
-         * registrar MUST NOT include more than one REG_RESPONSE
-         * parameter in its R2 or UPDATE packets..." Now, how can we
-         * inform the requester that it has been granted two or more
-         * services with different lifetimes? We cannot. Therefore we
-         * just take the first accepted lifetime and use that with all
-         * services. -Lauri 20.05.2008 */
-        hip_build_param_reg_response(target_msg, accepted_lifetimes[0],
-                                     accepted_requests, accepted_count);
-    }
-    if (refused_count > 0) {
-        /* We must add as many REG_FAILED parameters as there are
-         * different failure types. */
-        int i, j, to_be_build_count;
-        uint8_t reg_types_to_build[refused_count];
-        uint8_t type_to_check[HIP_TOTAL_EXISTING_FAILURE_TYPES] =
-            HIP_ARRAY_INIT_REG_FAILURES;
-
-        /* We have to get an continuous memory region holding all the
-         * registration types having the same failure type. This memory
-         * region is the 'reg_types_to_build' array and it will hold
-         * 'to_be_build_count' elements in it. This is done for each
-         * existing failure type. After each failure type check, we
-         * build a REG_FAILED parameter. */
-        for (i = 0; i < HIP_TOTAL_EXISTING_FAILURE_TYPES; i++) {
-            to_be_build_count = 0;
-            for (j = 0; j < refused_count; j++) {
-                if (failure_types[j] == type_to_check[i]) {
-                    reg_types_to_build[to_be_build_count] =
-                        refused_requests[j];
-                    to_be_build_count++;
-                }
-            }
-            if (to_be_build_count > 0) {
-                hip_build_param_reg_failed(
-                    target_msg, type_to_check[i],
-                    reg_types_to_build, to_be_build_count);
-            }
-        }
-    }
-
-    free(accepted_requests);
-    free(accepted_lifetimes);
-    free(refused_requests);
-    free(failure_types);
-
-    return err;
-}
-
-/**
- * Handles param REG_RESPONSE. Digs out the REG_RESPONSE parameter from the HIP
- * message @c msg and takes action based on the contents of the
- * REG_RESPONSE parameter.
- *
- * Unlike the REG_REQUEST parameter, the REG_RESPONSE parameter is allowed to
- * have duplicate services listed. This is because the initiator has the option
- * not to contact the server in the first place. If the server sends
- * REG_RESPONSE parameters that contain duplicate services, we just handle each
- * duplicate Reg Type one after the other.
- *
- * The parameter lifetime is investigated first. If it is zero i.e. the server
- * has canceled a service and hip_del_registration_client() is called. Otherwise
- * the server has granted us the services we requested and
- * hip_add_registration_client() is called.
- *
- * @param     entry a pointer to a host association which is registering.
- * @param     msg   a pointer to HIP message from where to dig out the
- *                  REG_RESPONSE parameter.
- * @return          -1 if the message @c msg did not contain a
- *                  REG_RESPONSE parameter, zero otherwise.
- * @see             hip_add_registration_client().
- * @see             hip_del_registration_client().
- */
-int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
-{
-    int err                               = 0, type_count = 0;
-    struct hip_reg_response *reg_response = NULL;
-    uint8_t *reg_types                    = NULL;
-
-    reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
-
-    if (reg_response == NULL) {
-        err = -1;
-        goto out_err;
-    }
-
-    HIP_DEBUG("REG_RESPONSE parameter found.\n");
-    HIP_DEBUG("Lifetime %d \n", reg_response->lifetime);
-
-    type_count = hip_get_param_contents_len(reg_response) -
-                 sizeof(reg_response->lifetime);
-    reg_types  = (uint8_t *) hip_get_param_contents_direct(reg_response) +
-                 sizeof(reg_response->lifetime);
-
-    if (reg_response->lifetime == 0) {
-        hip_del_registration_client(entry, reg_types, type_count);
-    } else {
-        hip_add_registration_client(entry, reg_response->lifetime,
-                                    reg_types, type_count);
-    }
-
-out_err:
-    return err;
-}
-
-/**
- * Handles all REG_FAILED parameters. Digs out the REG_FAILED parameters one
- * after other from the HIP message @c msg and takes action based on the
- * contents of the current REG_FAILED parameter. The function first cancels the
- * 'request' bit and then removes the corresponding pending request.
- *
- * @param  entry    a pointer to a host association which is registering.
- * @param  msg      a pointer to HIP message from where to dig out the
- *                  REG_FAILED parameters.
- * @return          -1 if the message @c msg did not contain a REG_FAILED
- *                  parameter, zero otherwise.
- */
-int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
-{
-    int err                           = 0, type_count = 0, i = 0;
-    struct hip_reg_failed *reg_failed = NULL;
-    uint8_t *reg_types                = NULL;
-    char reason[256];
-
-    reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
-
-    if (reg_failed == NULL) {
-        err = -1;
-        goto out_err;
-    }
-
-    HIP_DEBUG("REG_FAILED parameter found.\n");
-
-    /* There can be more than one REG_FAILED parameters in the message. We
-     * have to loop through every one. */
-    while (hip_get_param_type(reg_failed) == HIP_PARAM_REG_FAILED) {
-        type_count = hip_get_param_contents_len(reg_failed) -
-                     sizeof(reg_failed->failure_type);
-        reg_types  = (uint8_t *) hip_get_param_contents_direct(reg_failed) +
-                     sizeof(reg_failed->failure_type);
-        hip_get_registration_failure_string(reg_failed->failure_type,
-                                            reason);
-
-        for (; i < type_count; i++) {
-            switch (reg_types[i]) {
-            case HIP_SERVICE_RENDEZVOUS:
-            {
-                HIP_DEBUG("The server has refused to grant us " \
-                          "rendezvous service.\n%s\n", reason);
-                hip_hadb_cancel_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
-                hip_del_pending_request_by_type(
-                    entry, HIP_SERVICE_RENDEZVOUS);
-                hip_hadb_set_peer_controls(
-                    entry, HIP_HA_CTRL_PEER_REFUSED_RVS);
-                break;
-            }
-            case HIP_SERVICE_RELAY:
-            {
-                HIP_DEBUG("The server has refused to grant us " \
-                          "relay service.\n%s\n", reason);
-                hip_hadb_cancel_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
-                hip_del_pending_request_by_type(
-                    entry, HIP_SERVICE_RELAY);
-                hip_hadb_set_peer_controls(
-                    entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
-                break;
-            }
-            default:
-                HIP_DEBUG("The server has refused to grant us " \
-                          "an unknown service (%u).\n%s\n",
-                          reg_types[i], reason);
-                hip_del_pending_request_by_type(
-                    entry, reg_types[i]);
-                hip_hadb_set_peer_controls(
-                    entry, HIP_HA_CTRL_PEER_REFUSED_UNSUP);
-                break;
-            }
-        }
-
-        /* Iterate to the next parameter and break the loop if there are
-         * no more parameters left. */
-        i          = 0;
-        reg_failed = (struct hip_reg_failed *)
-                     hip_get_next_param(msg, (hip_tlv_common_t *) reg_failed);
-
-        if (reg_failed == NULL) {
-            break;
-        }
-    }
-
-out_err:
-
-    return err;
 }
 
 /**
@@ -1255,6 +777,155 @@ static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 }
 
 /**
+ * Handles param REG_INFO. Digs out the REG_INFO parameter from the HIP message
+ * @c source_msg, sets the peer control bits accordingly and builds REG_REQUEST
+ * in response to the HIP message @c target_msg. The peer controls are set to
+ * indicate which services the peer offers.
+ *
+ * REG_REQUEST is build only if the server offers at least one of the services
+ * we have requested. Only those services as requested that the server offers.
+ *
+ * @param source_msg a pointer to HIP message from where to dig out the
+ *                   REG_INFO parameter.
+ * @param target_msg a pointer to HIP message where to build the REG_REQUEST
+ *                   parameter.
+ * @param entry      a pointer to a host association for which to set the peer
+ *                   control bits.
+ * @return           -1 if the message @c msg did not contain a REG_INFO
+ *                   parameter zero otherwise.
+ * @see              peer_controls
+ */
+int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
+                              hip_common_t *target_msg)
+{
+    struct hip_reg_info *reg_info = NULL;
+    uint8_t *reg_types            = NULL;
+    unsigned int type_count       = 0;
+    unsigned int i;
+    int err                       = 0;
+
+    reg_info = hip_get_param(source_msg, HIP_PARAM_REG_INFO);
+
+    if (reg_info == NULL) {
+        HIP_DEBUG("No REG_INFO parameter found. The server offers " \
+                  "no services.\n");
+
+        err = -1;
+        goto out_err;
+    }
+
+    HIP_DEBUG("REG_INFO parameter found.\n");
+
+    HIP_DEBUG("REG INFO MIN LIFETIME %d\n", reg_info->min_lifetime);
+    HIP_DEBUG("REG INFO MAX LIFETIME %d\n", reg_info->max_lifetime);
+
+    /* Get a pointer registration types and the type count. */
+    reg_types  = reg_info->reg_type;
+    type_count = hip_get_param_contents_len(reg_info) -
+                 (sizeof(reg_info->min_lifetime) +
+                  sizeof(reg_info->max_lifetime));
+
+    /* Check RFC 5203 Chapter 3.1. */
+    if (type_count == 0) {
+        HIP_INFO("The server is currently unable to provide services " \
+                 "due to transient conditions.\n");
+        err = 0;
+        goto out_err;
+    }
+
+    /* Loop through all the registration types found in REG_INFO parameter
+     * and store the information of responder's capability to offer a
+     * service. */
+    for (i = 0; i < type_count; i++) {
+        switch (reg_types[i]) {
+        case HIP_SERVICE_RENDEZVOUS:
+            HIP_INFO("Responder offers rendezvous service.\n");
+
+            hip_hadb_set_peer_controls(
+                entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
+
+            break;
+        case HIP_SERVICE_RELAY:
+            HIP_INFO("Responder offers relay service.\n");
+            hip_hadb_set_peer_controls(
+                entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+
+            break;
+        default:
+            HIP_INFO("Responder offers unsupported service.\n");
+            hip_hadb_set_peer_controls(
+                entry, HIP_HA_CTRL_PEER_UNSUP_CAPABLE);
+        }
+    }
+
+    /* This far we have stored the information of what services the server
+     * offers. Next we check if we have requested any of those services from
+     * command line using hipconf. If we have requested, we have pending
+     * requests stored. We build a REG_REQUEST parameter containing each
+     * service that we have requested and the server offers. */
+
+    if (entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
+        int request_count = hip_get_pending_request_count(entry);
+        if (request_count > 0) {
+            unsigned int j         = 0;
+            int types_to_request   = 0;
+            uint8_t valid_lifetime = 0;
+            uint8_t type_array[request_count];
+            hip_pending_request_t *requests[request_count];
+
+            i = 0;
+            hip_get_pending_requests(entry, requests);
+
+            /* If we have requested for a cancellation of a service
+             * we use lifetime of zero. Otherwise we must check
+             * that the requested lifetime falls between the offered
+             * lifetime boundaries. */
+            if (requests[0]->lifetime == 0) {
+                HIP_DEBUG("SERVICE CANCELATION \n");
+                valid_lifetime = 0;
+            } else {
+                valid_lifetime = MIN(requests[0]->lifetime,
+                                     reg_info->max_lifetime);
+                valid_lifetime = MAX(valid_lifetime,
+                                     reg_info->min_lifetime);
+            }
+
+            /* Copy the Reg Types to an array. Outer loop for the
+             * services we have requested, inner loop for the
+             * services the server offers. */
+            for (i = 0; i < (unsigned)request_count; i++) {
+                for (j = 0; j < type_count; j++) {
+                    if (requests[i]->reg_type ==
+                        reg_types[j]) {
+                        type_array[types_to_request] =
+                            requests[i]->reg_type;
+
+                        types_to_request++;
+                        break;
+                    }
+                }
+            }
+            HIP_DEBUG("VALID SERVICE LIFETIME %d\n", valid_lifetime);
+            if (types_to_request > 0) {
+                HIP_IFEL(hip_build_param_reg_request(
+                             target_msg, valid_lifetime,
+                             type_array, types_to_request),
+                         -1,
+                         "Failed to build a REG_REQUEST " \
+                         "parameter.\n");
+            }
+        }
+        /* We do not delete the pending requests for this entry yet, but
+         * only after R2 has arrived. We do not need pending requests
+         * when R2 arrives, but in case the I2 is to be retransmitted,
+         * we must be able to produce the REG_REQUEST parameter. */
+    }
+
+out_err:
+    return err;
+}
+
+/**
  * Checks if the value list has duplicate values. Checks whether the value list
  * @c values has duplicate service values.
  *
@@ -1280,6 +951,223 @@ static int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
     }
 
     return 0;
+}
+
+/**
+ * Handles param REG_REQUEST. Digs out the REG_REQUEST parameter from the HIP
+ * message @c source_msg, takes action based on the contents of the REG_REQUEST
+ * parameter and builds parameters in response to the HIP message @c target_msg.
+ *
+ * First hip_has_duplicate_services() is called to check whether the
+ * parameter is malformed in a way that it has the same services listed more
+ * than once. If the parameter proves to be malformed, the whole parameter is
+ * omitted, none of the Reg Types in the REG_REQUEST are handled, and no
+ * parameters are build as response. The initiator might be rogue and trying to
+ * stress the server with malformed service requests. This is considered as a
+ * protocol error and errno is set to EPROTO.
+ *
+ * If the parameter passes the hip_has_duplicate_services() test, the parameter
+ * lifetime is investigated next. If it is zero i.e. the client is canceling a
+ * service, hip_del_registration_server() is called. Otherwise the client is
+ * registering to new services and hip_add_registration_server() is called.
+ *
+ * Once the aforementioned functions return, a REG_RESPONSE and/or a required
+ * number of REG_FAILED parameters are built to
+ *
+ * @param entry      a pointer to a host association which is registering.
+ * @param source_msg a pointer to HIP message from where to dig out the
+ *                   REG_INFO parameter.
+ * @param target_msg a pointer to HIP message where to build the REG_RESPONSE
+ *                   and/or REG_FAILED parameters.
+ * @return           -1 if the message @c source_msg did not contain a
+ *                   REG_REQUEST parameter or the parameter had duplicate
+ *                   services, zero otherwise.
+ * @see              hip_has_duplicate_services().
+ * @see              hip_add_registration_server().
+ * @see              hip_del_registration_server().
+ */
+
+int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
+                                 hip_common_t *target_msg)
+{
+    int err                             = 0, type_count = 0, accepted_count = 0, refused_count = 0;
+    struct hip_reg_request *reg_request = NULL;
+    uint8_t *reg_types                  = NULL;
+    /* Arrays for storing the type reg_types of the accepted and refused
+     * request types. */
+    uint8_t *accepted_requests          = NULL, *accepted_lifetimes = NULL;
+    uint8_t *refused_requests           = NULL, *failure_types = NULL;
+
+    reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
+
+    if (reg_request == NULL) {
+        err = -1;
+        /* Have to use return instead of 'goto out_err' because of
+         * the arrays initialised later. Otherwise this won't compile:
+         * error: jump into scope of identifier with variably modified
+         * type. */
+        return err;
+    }
+
+    /* Get the number of registration types. */
+    type_count         = hip_get_param_contents_len(reg_request) -
+                         sizeof(reg_request->lifetime);
+    accepted_requests  = malloc(sizeof(uint8_t) * type_count);
+    accepted_lifetimes = malloc(sizeof(uint8_t) * type_count);
+    refused_requests   = malloc(sizeof(uint8_t) * type_count);
+    failure_types      = malloc(sizeof(uint8_t) * type_count);
+
+    /* Allocate memory for types */
+
+    /* Get a pointer to the actual registration types. */
+    reg_types = (uint8_t *) hip_get_param_contents_direct(reg_request) +
+                sizeof(reg_request->lifetime);
+
+    HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, " \
+              "number of service types requested: %d.\n",
+              reg_request->lifetime, type_count);
+
+    /* Check that the request has at most one value of each type. */
+    if (hip_has_duplicate_services(reg_types, type_count)) {
+        /* We consider this as a protocol error, and do not build
+         * REG_FAILED parameters. The initiator may be rogue and
+         * trying to stress the server with malformed service
+         * requests. */
+        err   = -1;
+        errno = EPROTO;
+        HIP_ERROR("The REG_REQUEST parameter has duplicate services. " \
+                  "The whole parameter is omitted.\n");
+        /* As above. */
+        return err;
+    }
+
+    memset(accepted_requests,  0, sizeof(uint8_t) * type_count);
+    memset(accepted_lifetimes, 0, sizeof(uint8_t) * type_count);
+    memset(refused_requests,   0, sizeof(uint8_t) * type_count);
+    memset(failure_types,      0, sizeof(uint8_t) * type_count);
+
+    if (reg_request->lifetime == 0) {
+        hip_del_registration_server(
+            entry, reg_types, type_count, accepted_requests,
+            &accepted_count, refused_requests, failure_types,
+            &refused_count);
+    } else {
+        hip_add_registration_server(
+            entry, reg_request->lifetime, reg_types, type_count,
+            accepted_requests, accepted_lifetimes, &accepted_count,
+            refused_requests, failure_types, &refused_count);
+    }
+
+    HIP_DEBUG("Number of accepted service requests: %d, number of refused " \
+              "service requests: %d.\n", accepted_count, refused_count);
+
+    /* The registration is now done. Next, we build the REG_RESPONSE and
+     * REG_FAILED parameters. */
+    if (accepted_count > 0) {
+        /* There is an issue related to the building of REG_RESPONSE
+         * parameters in RFC 5203. In Section 4.4 it is said: "The
+         * registrar MUST NOT include more than one REG_RESPONSE
+         * parameter in its R2 or UPDATE packets..." Now, how can we
+         * inform the requester that it has been granted two or more
+         * services with different lifetimes? We cannot. Therefore we
+         * just take the first accepted lifetime and use that with all
+         * services. -Lauri 20.05.2008 */
+        hip_build_param_reg_response(target_msg, accepted_lifetimes[0],
+                                     accepted_requests, accepted_count);
+    }
+    if (refused_count > 0) {
+        /* We must add as many REG_FAILED parameters as there are
+         * different failure types. */
+        int i, j, to_be_build_count;
+        uint8_t reg_types_to_build[refused_count];
+        uint8_t type_to_check[HIP_TOTAL_EXISTING_FAILURE_TYPES] =
+            HIP_ARRAY_INIT_REG_FAILURES;
+
+        /* We have to get an continuous memory region holding all the
+         * registration types having the same failure type. This memory
+         * region is the 'reg_types_to_build' array and it will hold
+         * 'to_be_build_count' elements in it. This is done for each
+         * existing failure type. After each failure type check, we
+         * build a REG_FAILED parameter. */
+        for (i = 0; i < HIP_TOTAL_EXISTING_FAILURE_TYPES; i++) {
+            to_be_build_count = 0;
+            for (j = 0; j < refused_count; j++) {
+                if (failure_types[j] == type_to_check[i]) {
+                    reg_types_to_build[to_be_build_count] =
+                        refused_requests[j];
+                    to_be_build_count++;
+                }
+            }
+            if (to_be_build_count > 0) {
+                hip_build_param_reg_failed(
+                    target_msg, type_to_check[i],
+                    reg_types_to_build, to_be_build_count);
+            }
+        }
+    }
+
+    free(accepted_requests);
+    free(accepted_lifetimes);
+    free(refused_requests);
+    free(failure_types);
+
+    return err;
+}
+
+/**
+ * Handles param REG_RESPONSE. Digs out the REG_RESPONSE parameter from the HIP
+ * message @c msg and takes action based on the contents of the
+ * REG_RESPONSE parameter.
+ *
+ * Unlike the REG_REQUEST parameter, the REG_RESPONSE parameter is allowed to
+ * have duplicate services listed. This is because the initiator has the option
+ * not to contact the server in the first place. If the server sends
+ * REG_RESPONSE parameters that contain duplicate services, we just handle each
+ * duplicate Reg Type one after the other.
+ *
+ * The parameter lifetime is investigated first. If it is zero i.e. the server
+ * has canceled a service and hip_del_registration_client() is called. Otherwise
+ * the server has granted us the services we requested and
+ * hip_add_registration_client() is called.
+ *
+ * @param     entry a pointer to a host association which is registering.
+ * @param     msg   a pointer to HIP message from where to dig out the
+ *                  REG_RESPONSE parameter.
+ * @return          -1 if the message @c msg did not contain a
+ *                  REG_RESPONSE parameter, zero otherwise.
+ * @see             hip_add_registration_client().
+ * @see             hip_del_registration_client().
+ */
+int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
+{
+    int err                               = 0, type_count = 0;
+    struct hip_reg_response *reg_response = NULL;
+    uint8_t *reg_types                    = NULL;
+
+    reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
+
+    if (reg_response == NULL) {
+        err = -1;
+        goto out_err;
+    }
+
+    HIP_DEBUG("REG_RESPONSE parameter found.\n");
+    HIP_DEBUG("Lifetime %d \n", reg_response->lifetime);
+
+    type_count = hip_get_param_contents_len(reg_response) -
+                 sizeof(reg_response->lifetime);
+    reg_types  = (uint8_t *) hip_get_param_contents_direct(reg_response) +
+                 sizeof(reg_response->lifetime);
+
+    if (reg_response->lifetime == 0) {
+        hip_del_registration_client(entry, reg_types, type_count);
+    } else {
+        hip_add_registration_client(entry, reg_response->lifetime,
+                                    reg_types, type_count);
+    }
+
+out_err:
+    return err;
 }
 
 /**
@@ -1328,6 +1216,98 @@ static int hip_get_registration_failure_string(uint8_t failure_type,
     }
 
     return 0;
+}
+
+/**
+ * Handles all REG_FAILED parameters. Digs out the REG_FAILED parameters one
+ * after other from the HIP message @c msg and takes action based on the
+ * contents of the current REG_FAILED parameter. The function first cancels the
+ * 'request' bit and then removes the corresponding pending request.
+ *
+ * @param  entry    a pointer to a host association which is registering.
+ * @param  msg      a pointer to HIP message from where to dig out the
+ *                  REG_FAILED parameters.
+ * @return          -1 if the message @c msg did not contain a REG_FAILED
+ *                  parameter, zero otherwise.
+ */
+int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
+{
+    int err                           = 0, type_count = 0, i = 0;
+    struct hip_reg_failed *reg_failed = NULL;
+    uint8_t *reg_types                = NULL;
+    char reason[256];
+
+    reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
+
+    if (reg_failed == NULL) {
+        err = -1;
+        goto out_err;
+    }
+
+    HIP_DEBUG("REG_FAILED parameter found.\n");
+
+    /* There can be more than one REG_FAILED parameters in the message. We
+     * have to loop through every one. */
+    while (hip_get_param_type(reg_failed) == HIP_PARAM_REG_FAILED) {
+        type_count = hip_get_param_contents_len(reg_failed) -
+                     sizeof(reg_failed->failure_type);
+        reg_types  = (uint8_t *) hip_get_param_contents_direct(reg_failed) +
+                     sizeof(reg_failed->failure_type);
+        hip_get_registration_failure_string(reg_failed->failure_type,
+                                            reason);
+
+        for (; i < type_count; i++) {
+            switch (reg_types[i]) {
+            case HIP_SERVICE_RENDEZVOUS:
+            {
+                HIP_DEBUG("The server has refused to grant us " \
+                          "rendezvous service.\n%s\n", reason);
+                hip_hadb_cancel_local_controls(
+                    entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+                hip_del_pending_request_by_type(
+                    entry, HIP_SERVICE_RENDEZVOUS);
+                hip_hadb_set_peer_controls(
+                    entry, HIP_HA_CTRL_PEER_REFUSED_RVS);
+                break;
+            }
+            case HIP_SERVICE_RELAY:
+            {
+                HIP_DEBUG("The server has refused to grant us " \
+                          "relay service.\n%s\n", reason);
+                hip_hadb_cancel_local_controls(
+                    entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+                hip_del_pending_request_by_type(
+                    entry, HIP_SERVICE_RELAY);
+                hip_hadb_set_peer_controls(
+                    entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
+                break;
+            }
+            default:
+                HIP_DEBUG("The server has refused to grant us " \
+                          "an unknown service (%u).\n%s\n",
+                          reg_types[i], reason);
+                hip_del_pending_request_by_type(
+                    entry, reg_types[i]);
+                hip_hadb_set_peer_controls(
+                    entry, HIP_HA_CTRL_PEER_REFUSED_UNSUP);
+                break;
+            }
+        }
+
+        /* Iterate to the next parameter and break the loop if there are
+         * no more parameters left. */
+        i          = 0;
+        reg_failed = (struct hip_reg_failed *)
+                     hip_get_next_param(msg, (hip_tlv_common_t *) reg_failed);
+
+        if (reg_failed == NULL) {
+            break;
+        }
+    }
+
+out_err:
+
+    return err;
 }
 
 /**

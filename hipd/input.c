@@ -51,12 +51,6 @@
 #include "pkt_handling.h"
 #include "pisa.h"
 
-/* forwards */
-static int hip_produce_keying_material(struct hip_packet_context *ctx,
-                                       uint64_t I,
-                                       uint64_t J,
-                                       struct hip_dh_public_value **dhpv);
-
 /**
  * Verifies a HMAC.
  *

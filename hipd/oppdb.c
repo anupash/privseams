@@ -61,15 +61,6 @@ typedef struct hip_opp_info hip_opp_info_t;
 
 HIP_HASHTABLE *oppdb;
 
-static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
-static hip_opp_block_t *hip_create_opp_block_entry(void);
-static void hip_oppdb_dump(void);
-static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
-                               const hip_hit_t *hit_our,
-                               const struct in6_addr *ip_peer,
-                               const struct in6_addr *ip_our,
-                               const struct sockaddr_in6 *caller);
-
 /**
  * hashing function for the hashtable implementation
  *
@@ -98,6 +89,21 @@ static unsigned long hip_oppdb_hash_hit(const void *ptr)
 static int hip_oppdb_match_hit(const void *ptr1, const void *ptr2)
 {
     return hip_hash_hit(ptr1) != hip_hash_hit(ptr2);
+}
+
+/**
+ * delete an opportunistic database entry
+ *
+ * @param entry the entry to be deleted
+ */
+static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
+{
+    hip_opp_block_t *deleted;
+
+    HIP_LOCK_OPP(entry);
+    deleted = hip_ht_delete(oppdb, entry);
+    HIP_UNLOCK_OPP(entry);
+    free(deleted);
 }
 
 /**
@@ -149,21 +155,6 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 out_err:
     HIP_UNLOCK_HT(&opp_db);
     return fail;
-}
-
-/**
- * delete an opportunistic database entry
- *
- * @param entry the entry to be deleted
- */
-static void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
-{
-    hip_opp_block_t *deleted;
-
-    HIP_LOCK_OPP(entry);
-    deleted = hip_ht_delete(oppdb, entry);
-    HIP_UNLOCK_OPP(entry);
-    free(deleted);
 }
 
 /**
@@ -282,6 +273,32 @@ static hip_opp_block_t *hip_create_opp_block_entry(void)
 }
 
 /**
+ * dump the contents of the database
+ */
+static void hip_oppdb_dump(void)
+{
+    int i;
+    hip_opp_block_t *this;
+    hip_list_t *item, *tmp;
+
+    HIP_DEBUG("start oppdb dump\n");
+    HIP_LOCK_HT(&oppdb);
+
+    list_for_each_safe(item, tmp, oppdb, i)
+    {
+        this = (hip_opp_block_t *) list_entry(item);
+
+        HIP_DEBUG_HIT("this->peer_phit",
+                      &this->peer_phit);
+        HIP_DEBUG_HIT("this->our_real_hit",
+                      &this->our_real_hit);
+    }
+
+    HIP_UNLOCK_HT(&oppdb);
+    HIP_DEBUG("end oppdb dump\n");
+}
+
+/**
  * add an opportunistic mode connection entry to the database
  *
  * @param phit_peer the pseudo HIT of peer
@@ -331,32 +348,6 @@ static int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 void hip_init_opp_db(void)
 {
     oppdb = hip_ht_init(hip_oppdb_hash_hit, hip_oppdb_match_hit);
-}
-
-/**
- * dump the contents of the database
- */
-static void hip_oppdb_dump(void)
-{
-    int i;
-    hip_opp_block_t *this;
-    hip_list_t *item, *tmp;
-
-    HIP_DEBUG("start oppdb dump\n");
-    HIP_LOCK_HT(&oppdb);
-
-    list_for_each_safe(item, tmp, oppdb, i)
-    {
-        this = (hip_opp_block_t *) list_entry(item);
-
-        HIP_DEBUG_HIT("this->peer_phit",
-                      &this->peer_phit);
-        HIP_DEBUG_HIT("this->our_real_hit",
-                      &this->our_real_hit);
-    }
-
-    HIP_UNLOCK_HT(&oppdb);
-    HIP_DEBUG("end oppdb dump\n");
 }
 
 /**

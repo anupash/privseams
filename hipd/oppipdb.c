@@ -20,10 +20,6 @@
 
 HIP_HASHTABLE *oppipdb;
 
-static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2);
-static hip_oppip_t *hip_create_oppip_entry(void);
-static unsigned long hip_oppipdb_hash_ip(const void *ptr);
-
 /**
  * Generates the hash information that is used to index the table
  *

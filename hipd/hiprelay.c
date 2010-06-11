@@ -148,26 +148,6 @@ hip_relay_status_t relay_enabled        = HIP_RELAY_OFF;
  */
 hip_relay_wl_status_t whitelist_enabled = HIP_RELAY_WL_ON;
 
-/* forward declarations */
-static int hip_relht_init(void);
-static void hip_relht_uninit(void);
-static void hip_relht_rec_free_expired_doall(hip_relrec_t *rec);
-static int hip_relwl_init(void);
-static void hip_relwl_uninit(void);
-static int hip_relwl_put(hip_hit_t *hit);
-static void hip_relwl_hit_free_doall(hip_hit_t *hit);
-static int hip_relay_read_config(void);
-static int hip_relay_write_config(void);
-static unsigned long hip_relht_hash(const hip_relrec_t *rec);
-static unsigned long hip_relwl_hash(const hip_hit_t *hit);
-static int hip_relay_forward_response(const hip_common_t *r,
-                                      const uint8_t type_hdr,
-                                      const in6_addr_t *r_saddr,
-                                      const in6_addr_t *r_daddr,
-                                      const in6_addr_t *relay_to_addr,
-                                      const in_port_t relay_to_port);
-static void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime);
-
 /**
  * Returns a hash calculated over a HIT.
  *
@@ -473,6 +453,20 @@ void hip_relht_free_all_of_type(const hip_relrec_type_t type)
 }
 
 /**
+ * Sets the lifetime of a relay record.
+ * The service lifetime is set to 2^((lifetime - 64)/8) seconds.
+ *
+ * @param rec      a pointer to a relay record.
+ * @param lifetime the lifetime of the above formula.
+ */
+static void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime)
+{
+    if (rec != NULL) {
+        rec->lifetime = pow(2, ((double) (lifetime - 64) / 8));
+    }
+}
+
+/**
  * Allocates a new relay record.
  *
  * @param type     the type of this relay record (HIP_FULLRELAY or
@@ -515,20 +509,6 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
 }
 
 /**
- * Sets the lifetime of a relay record.
- * The service lifetime is set to 2^((lifetime - 64)/8) seconds.
- *
- * @param rec      a pointer to a relay record.
- * @param lifetime the lifetime of the above formula.
- */
-static void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime)
-{
-    if (rec != NULL) {
-        rec->lifetime = pow(2, ((double) (lifetime - 64) / 8));
-    }
-}
-
-/**
  * The hash function of the @c hiprelay_wl hashtable. Calculates a hash from
  * parameter HIT.
  *
@@ -566,6 +546,32 @@ static int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t)
+
+/**
+ * Deletes a single entry from the whitelist hashtable and frees the memory
+ * allocated for the element. The parameter HIT is itself left untouched, it is
+ * only used as an search key.
+ *
+ * @param hit a pointer to a HIT.
+ */
+static void hip_relwl_hit_free_doall(hip_hit_t *hit)
+{
+    if (hiprelay_wl == NULL || hit == NULL) {
+        return;
+    }
+
+    /* Check if such element exist, and delete the pointer from the hashtable. */
+    hip_hit_t *deleted_hit = list_del(hit, hiprelay_wl);
+
+    /* Free the memory allocated for the element. */
+    if (deleted_hit != NULL) {
+        /* We set the memory to '\0' because the user may still have a
+         * reference to the memory region that is freed here. */
+        memset(deleted_hit, '\0', sizeof(*deleted_hit));
+        free(deleted_hit);
+        HIP_DEBUG("HIT deleted from the relay whitelist.\n");
+    }
+}
 
 /**
  * Puts a HIT into the whitelist. Puts the HIT pointed by @c hit into the
@@ -636,32 +642,6 @@ static unsigned long hip_relwl_size(void)
 }
 
 #endif /* CONFIG_HIP_DEBUG */
-
-/**
- * Deletes a single entry from the whitelist hashtable and frees the memory
- * allocated for the element. The parameter HIT is itself left untouched, it is
- * only used as an search key.
- *
- * @param hit a pointer to a HIT.
- */
-static void hip_relwl_hit_free_doall(hip_hit_t *hit)
-{
-    if (hiprelay_wl == NULL || hit == NULL) {
-        return;
-    }
-
-    /* Check if such element exist, and delete the pointer from the hashtable. */
-    hip_hit_t *deleted_hit = list_del(hit, hiprelay_wl);
-
-    /* Free the memory allocated for the element. */
-    if (deleted_hit != NULL) {
-        /* We set the memory to '\0' because the user may still have a
-         * reference to the memory region that is freed here. */
-        memset(deleted_hit, '\0', sizeof(*deleted_hit));
-        free(deleted_hit);
-        HIP_DEBUG("HIT deleted from the relay whitelist.\n");
-    }
-}
 
 /** A callback wrapper of the prototype required by @c lh_doall(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t)
@@ -843,6 +823,66 @@ out_err:
 }
 
 /**
+ * forward a HIP control packet with relay_to parameter
+ *
+ * @param r the HIP control message to be relayed
+ * @param r_saddr the original source address
+ * @param r_daddr the original destination address
+ * @param relay_to_addr the address where to relay the packet
+ * @param relay_to_port the port where to relay the packet
+ * @return zero on success or negative on error
+ */
+static int hip_relay_forward_response(const hip_common_t *r,
+                                      const uint8_t type_hdr,
+                                      const in6_addr_t *r_saddr,
+                                      const in6_addr_t *r_daddr,
+                                      const in6_addr_t *relay_to_addr,
+                                      const in_port_t relay_to_port)
+{
+    struct hip_common *r_to_be_relayed   = NULL;
+    struct hip_tlv_common *current_param = NULL;
+    int err                              = 0;
+
+    HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  source address", r_saddr);
+    HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  destination address", r_daddr);
+    HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  relay to address", relay_to_addr);
+    HIP_DEBUG("Relay_to port: %d.\n", relay_to_port);
+
+    HIP_IFEL(!(r_to_be_relayed = hip_msg_alloc()), -ENOMEM,
+             "No memory to copy original I1\n");
+
+    hip_build_network_hdr(r_to_be_relayed, type_hdr, 0,
+                          &(r->hits), &(r->hitr));
+
+    while ((current_param = hip_get_next_param(r, current_param)) != NULL) {
+        HIP_DEBUG("Found parameter in R.\n");
+        HIP_DEBUG("Copying existing parameter to R packet " \
+                  "to be relayed.\n");
+        hip_build_param(r_to_be_relayed, current_param);
+    }
+
+    hip_zero_msg_checksum(r_to_be_relayed);
+
+    if (relay_to_port == 0) {
+        HIP_IFEL(hip_send_pkt(NULL, (struct in6_addr *) relay_to_addr, hip_get_local_nat_udp_port(),
+                              relay_to_port, r_to_be_relayed, NULL, 0),
+                 -ECOMM, "forwarding response failed in raw\n");
+    } else {
+        HIP_IFEL(hip_send_pkt(NULL, (struct in6_addr *) relay_to_addr, hip_get_local_nat_udp_port(),
+                              relay_to_port, r_to_be_relayed, NULL, 0),
+                 -ECOMM, "forwarding response failed in UDP\n");
+    }
+
+    HIP_DEBUG_HIT("hip_relay_forward_response: Relayed  to", relay_to_addr);
+
+out_err:
+    if (r_to_be_relayed != NULL) {
+        free(r_to_be_relayed);
+    }
+    return err;
+}
+
+/**
  * handle a HIP control message with relay_to parameter
  *
  * @param msg the message with the relay_to parameter
@@ -913,66 +953,6 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
     }
 
 out_err:
-    return err;
-}
-
-/**
- * forward a HIP control packet with relay_to parameter
- *
- * @param r the HIP control message to be relayed
- * @param r_saddr the original source address
- * @param r_daddr the original destination address
- * @param relay_to_addr the address where to relay the packet
- * @param relay_to_port the port where to relay the packet
- * @return zero on success or negative on error
- */
-static int hip_relay_forward_response(const hip_common_t *r,
-                                      const uint8_t type_hdr,
-                                      const in6_addr_t *r_saddr,
-                                      const in6_addr_t *r_daddr,
-                                      const in6_addr_t *relay_to_addr,
-                                      const in_port_t relay_to_port)
-{
-    struct hip_common *r_to_be_relayed   = NULL;
-    struct hip_tlv_common *current_param = NULL;
-    int err                              = 0;
-
-    HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  source address", r_saddr);
-    HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  destination address", r_daddr);
-    HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  relay to address", relay_to_addr);
-    HIP_DEBUG("Relay_to port: %d.\n", relay_to_port);
-
-    HIP_IFEL(!(r_to_be_relayed = hip_msg_alloc()), -ENOMEM,
-             "No memory to copy original I1\n");
-
-    hip_build_network_hdr(r_to_be_relayed, type_hdr, 0,
-                          &(r->hits), &(r->hitr));
-
-    while ((current_param = hip_get_next_param(r, current_param)) != NULL) {
-        HIP_DEBUG("Found parameter in R.\n");
-        HIP_DEBUG("Copying existing parameter to R packet " \
-                  "to be relayed.\n");
-        hip_build_param(r_to_be_relayed, current_param);
-    }
-
-    hip_zero_msg_checksum(r_to_be_relayed);
-
-    if (relay_to_port == 0) {
-        HIP_IFEL(hip_send_pkt(NULL, (struct in6_addr *) relay_to_addr, hip_get_local_nat_udp_port(),
-                              relay_to_port, r_to_be_relayed, NULL, 0),
-                 -ECOMM, "forwarding response failed in raw\n");
-    } else {
-        HIP_IFEL(hip_send_pkt(NULL, (struct in6_addr *) relay_to_addr, hip_get_local_nat_udp_port(),
-                              relay_to_port, r_to_be_relayed, NULL, 0),
-                 -ECOMM, "forwarding response failed in UDP\n");
-    }
-
-    HIP_DEBUG_HIT("hip_relay_forward_response: Relayed  to", relay_to_addr);
-
-out_err:
-    if (r_to_be_relayed != NULL) {
-        free(r_to_be_relayed);
-    }
     return err;
 }
 
@@ -1196,6 +1176,49 @@ static void hip_relht_uninit(void)
     hip_ht_uninit(hiprelay_ht);
     hiprelay_ht = NULL;
 }
+/**
+ * Initializes the global HIP relay whitelist. Allocates memory for
+ * @c hiprelay_wl.
+ *
+ * @return zero on success, -1 otherwise.
+ * @note   do not call this function directly, instead call hip_relay_init().
+ */
+
+static int hip_relwl_init(void)
+{
+    /* Check that the relay whitelist is not already initialized. */
+    if (hiprelay_wl != NULL) {
+        return -1;
+    }
+
+    hiprelay_wl = hip_ht_init(LHASH_HASH_FN(hip_relwl),
+                              LHASH_COMP_FN(hip_relwl));
+
+    if (hiprelay_wl == NULL) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ * Uninitializes the HIP relay whitelist hashtable @c hiprelay_wl. Frees the
+ * memory allocated for the hashtable and for the HITs. Thus, after calling
+ * this function, all memory allocated from the heap related to the whitelist
+ * is free.
+ *
+ * @note do not call this function directly, instead call hip_relay_uninit().
+ */
+static void hip_relwl_uninit(void)
+{
+    if (hiprelay_wl == NULL) {
+        return;
+    }
+
+    hip_ht_doall(hiprelay_wl, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(hip_relwl_hit_free));
+    hip_ht_uninit(hiprelay_wl);
+    hiprelay_wl = NULL;
+}
 
 /**
  * Initializes the HIP relay / RVS. Initializes the HIP relay hashtable and
@@ -1268,47 +1291,4 @@ int hip_relay_reinit(void)
 
 out_err:
     return err;
-}
-
-/**
- * Initializes the global HIP relay whitelist. Allocates memory for
- * @c hiprelay_wl.
- *
- * @return zero on success, -1 otherwise.
- * @note   do not call this function directly, instead call hip_relay_init().
- */
-static int hip_relwl_init(void)
-{
-    /* Check that the relay whitelist is not already initialized. */
-    if (hiprelay_wl != NULL) {
-        return -1;
-    }
-
-    hiprelay_wl = hip_ht_init(LHASH_HASH_FN(hip_relwl),
-                              LHASH_COMP_FN(hip_relwl));
-
-    if (hiprelay_wl == NULL) {
-        return -1;
-    }
-
-    return 0;
-}
-
-/**
- * Uninitializes the HIP relay whitelist hashtable @c hiprelay_wl. Frees the
- * memory allocated for the hashtable and for the HITs. Thus, after calling
- * this function, all memory allocated from the heap related to the whitelist
- * is free.
- *
- * @note do not call this function directly, instead call hip_relay_uninit().
- */
-static void hip_relwl_uninit(void)
-{
-    if (hiprelay_wl == NULL) {
-        return;
-    }
-
-    hip_ht_doall(hiprelay_wl, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(hip_relwl_hit_free));
-    hip_ht_uninit(hiprelay_wl);
-    hiprelay_wl = NULL;
 }
