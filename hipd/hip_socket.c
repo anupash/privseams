@@ -34,6 +34,7 @@ static int hip_handle_raw_input_v6(struct hip_packet_context *ctx)
                                 ctx,
                                 0)) {
         HIP_ERROR("Reading network msg failed\n");
+    } else {
         err = hip_receive_control_packet(ctx);
         if (err) {
             HIP_ERROR("hip_receive_control_packet()!\n");
