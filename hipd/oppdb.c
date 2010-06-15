@@ -121,7 +121,7 @@ int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry)
 
     HIP_ASSERT(opp_entry);
     hip_del_peer_info(&opp_entry->peer_phit,
-                            &opp_entry->our_real_hit);
+                      &opp_entry->our_real_hit);
     hip_oppdb_del_entry_by_entry(opp_entry);
     return err;
 }
