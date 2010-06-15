@@ -83,9 +83,11 @@ static void add_udp_header(struct udphdr *udp_hdr,
  * @param packet_len    packet length
  * @param next_hdr      next header value
  */
-static void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
-                     const struct in6_addr *dst_addr, const uint16_t packet_len,
-                     const uint8_t next_hdr)
+static void add_ipv4_header(struct ip *ip_hdr,
+                            const struct in6_addr *src_addr,
+                            const struct in6_addr *dst_addr,
+                            const uint16_t packet_len,
+                            const uint8_t next_hdr)
 {
     struct in_addr src_in_addr;
     struct in_addr dst_in_addr;
@@ -113,17 +115,19 @@ static void add_ipv4_header(struct ip *ip_hdr, const struct in6_addr *src_addr,
 
 /** adds an IPv6-header to the packet
  *
- * @param ip6_hdr       pointer to location where IPv6 header should be written to
+ * @param ip6_hdr       pointer to location where IPv6 header should be written
  * @param src_addr      IPv6 source address
  * @param dst_addr      IPv6 destination address
  * @param packet_len    packet length
  * @param next_hdr      next header value
  */
-static void add_ipv6_header(struct ip6_hdr *ip6_hdr, const struct in6_addr *src_addr,
-                     const struct in6_addr *dst_addr, const uint16_t packet_len,
-                     const uint8_t next_hdr)
+static void add_ipv6_header(struct ip6_hdr *ip6_hdr,
+                            const struct in6_addr *src_addr,
+                            const struct in6_addr *dst_addr,
+                            const uint16_t packet_len,
+                            const uint8_t next_hdr)
 {
-    ip6_hdr->ip6_flow = 0;     /* zero the version (4), TC (8) and flow-ID (20) */
+    ip6_hdr->ip6_flow = 0;  /* zero the version (4), TC (8) and flow-ID (20) */
     /* set version to 6 and leave first 4 bits of TC at 0 */
     ip6_hdr->ip6_vfc  = 0x60;
     ip6_hdr->ip6_plen = htons(packet_len - sizeof(struct ip6_hdr));
