@@ -322,7 +322,7 @@ static int hip_probe_kernel_modules(void)
     net_total    = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
     crypto_total = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
 
-    /* no, this check shoult NOT be performed at ./configure time */
+    /* no, this check should NOT be performed at ./configure time */
     if (stat("/sbin/modprobe", &sbuf)) {
         HIP_INFO("The modprobe tool is not installed, will not load modules\n");
         if (hip_check_kernel_modules()) {
