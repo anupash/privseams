@@ -299,9 +299,8 @@ static int hip_check_kernel_modules(void)
     for (count = 0; count < net_total; count++) {
         snprintf(str, sizeof(str), "/sys/module/%s", kernel_net_mod[count]);
         if (stat(str, &sbuf)) {
-            HIP_ERROR("The %s kernel module is not loaded\n",
+            HIP_INFO("The %s kernel module is not loaded\n",
                       kernel_net_mod[count]);
-            return ENOENT;
         }
     }
 
