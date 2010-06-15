@@ -268,7 +268,7 @@ static const char *kernel_crypto_mod[] = {
 static const char *kernel_net_mod[] = {
     "xfrm4_mode_beet", "xfrm6_mode_beet",
     "esp4",            "esp6",
-    "xfrm_user",       "dummy",
+    "dummy"
 };
 
 /**
