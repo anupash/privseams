@@ -70,7 +70,7 @@ static int hip_del_pending_request_by_expiration(void)
 
     /* See hip_del_pending_request() for a comment. */
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        request = (hip_pending_request_t *) (iter->ptr);
+        request = iter->ptr;
         if (now - request->created > HIP_PENDING_REQUEST_LIFETIME) {
             HIP_DEBUG("Deleting and freeing a pending request by " \
                       "expiration (%u seconds) at index %u.\n",
@@ -243,7 +243,7 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 
     /* See hip_del_pending_request() for a comment. */
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        request = (hip_pending_request_t *) (iter->ptr);
+        request = iter->ptr;
         if (request->entry == entry && request->reg_type == reg_type) {
             HIP_DEBUG("Deleting and freeing a pending request by " \
                       "type at index %u.\n", index);
@@ -273,8 +273,7 @@ int hip_replace_pending_requests(hip_ha_t *entry_old,
     hip_ll_node_t *iter = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry
-            == entry_old) {
+        if (((hip_pending_request_t *) (iter->ptr))->entry == entry_old) {
             ((hip_pending_request_t *) (iter->ptr))->entry = entry_new;
             return 0;
         }
@@ -308,10 +307,8 @@ static int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requ
     int request_count   = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry
-            == entry) {
-            requests[request_count] =
-                (hip_pending_request_t *) (iter->ptr);
+        if (((hip_pending_request_t *) (iter->ptr))->entry  == entry) {
+            requests[request_count] = iter->ptr;
             request_count++;
         }
     }
@@ -336,8 +333,7 @@ static int hip_get_pending_request_count(hip_ha_t *entry)
     int request_count   = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry
-            == entry) {
+        if (((hip_pending_request_t *) (iter->ptr))->entry == entry) {
             request_count++;
         }
     }
@@ -895,10 +891,8 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
              * services the server offers. */
             for (i = 0; i < (unsigned)request_count; i++) {
                 for (j = 0; j < type_count; j++) {
-                    if (requests[i]->reg_type ==
-                        reg_types[j]) {
-                        type_array[types_to_request] =
-                            requests[i]->reg_type;
+                    if (requests[i]->reg_type == reg_types[j]) {
+                        type_array[types_to_request] = requests[i]->reg_type;
 
                         types_to_request++;
                         break;
@@ -907,9 +901,10 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
             }
             HIP_DEBUG("VALID SERVICE LIFETIME %d\n", valid_lifetime);
             if (types_to_request > 0) {
-                HIP_IFEL(hip_build_param_reg_request(
-                             target_msg, valid_lifetime,
-                             type_array, types_to_request),
+                HIP_IFEL(hip_build_param_reg_request(target_msg,
+                                                     valid_lifetime,
+                                                     type_array,
+                                                     types_to_request),
                          -1,
                          "Failed to build a REG_REQUEST " \
                          "parameter.\n");
