@@ -594,7 +594,10 @@ static int hip_read_control_msg_all(int sockfd,
         ctx->msg_ports->src_port = ntohs(addr_from4->sin_port);
         /* Destination port is known from the bound socket. */
         ctx->msg_ports->dst_port = hip_get_local_nat_udp_port();
-    }
+    } else {
+        ctx->msg_ports->src_port = 0;
+        ctx->msg_ports->dst_port = 0;
+   }
 
     /* IPv4 addresses */
     if (is_ipv4) {
