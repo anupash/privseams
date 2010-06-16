@@ -56,6 +56,7 @@ hip_ha_t *hip_opp_add_map(const struct in6_addr *dst_ip,
 
 hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
                                          struct in6_addr *src_addr);
+int hip_handle_opp_r1(struct hip_packet_context *ctx);
 int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
                      void *opaque);
 

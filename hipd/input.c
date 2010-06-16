@@ -524,12 +524,6 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         goto out_err;
     }
 
-    if (ctx->hadb_entry) {
-        state = ctx->hadb_entry->state;
-    } else {
-        state = HIP_STATE_NONE;
-    }
-
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     if (!ctx->hadb_entry &&
         (type == HIP_I1 || type == HIP_R1)) {
@@ -538,6 +532,12 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
                                                ctx->src_addr);
     }
 #endif
+
+    if (ctx->hadb_entry) {
+        state = ctx->hadb_entry->state;
+    } else {
+        state = HIP_STATE_NONE;
+    }
 
 #ifdef CONFIG_HIP_RVS
     /* check if it a relaying msg */
@@ -680,6 +680,11 @@ int hip_check_r1(RVS const uint8_t packet_type,
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     /* Check and remove the IP of the peer from the opp non-HIP database */
     hip_oppipdb_delentry(&ctx->hadb_entry->peer_addr);
+    /* Replace the opportunistic entry with one using the peer HIT
+     * before further operations */
+    if (hit_is_opportunistic_hit(&ctx->hadb_entry->hit_peer)) {
+        hip_handle_opp_r1(ctx);
+    }
 #endif
 
     if (ipv6_addr_any(&ctx->input_msg->hitr)) {

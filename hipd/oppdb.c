@@ -249,6 +249,31 @@ out_err:
 }
 
 /**
+ * unblock all opportunistic connections with a certain remote host
+ *
+ * @param entry the opportunistic mode connection
+ * @param ptr the pseudo HIT denoting the remote host
+ * @return zero on success or negative on error
+ */
+static int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
+{
+    hip_opp_info_t *opp_info = ptr;
+    int err                  = 0;
+
+    if (ipv6_addr_cmp(&entry->peer_phit, &opp_info->pseudo_peer_hit) != 0) {
+        goto out_err;
+    }
+
+    HIP_IFEL(hip_opp_unblock_app(&entry->caller, opp_info),
+             1, "unblock failed\n");
+
+    hip_oppdb_del_entry_by_entry(entry);
+
+out_err:
+    return err;
+}
+
+/**
  * create a opportunistic mode database entry
  *
  * @return the created databased entry (caller deallocates)
@@ -406,82 +431,68 @@ out_err:
     return entry;
 }
 
-
-#if 0
 /**
- * process an incoming R1 packet
+ * process an incoming R1 packet for an opportunistic connection
  *
- * @param msg the R1 packet
- * @param src_addr the source address of the message
- * @param dst_addr the destination address of the message
- * @param opp_entry the opportunistic database entry
- * @param msg_info the transport layer port numbers (UDP tunnel)
+ * @param ctx the packet context
  * @return zero on success or negative on failure
  */
-static int hip_receive_opp_r1(struct hip_common *msg,
-                              struct in6_addr *src_addr,
-                              struct in6_addr *dst_addr,
-                              hip_ha_t *opp_entry,
-                              hip_portpair_t *msg_info)
+int hip_handle_opp_r1(struct hip_packet_context *ctx)
 {
     hip_opp_info_t opp_info;
-    hip_ha_t *entry;
+    hip_ha_t *opp_entry;
     hip_hit_t phit;
     int err = 0;
 
-    HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
-    HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
-    HIP_DEBUG_IN6ADDR("!!!! peer addr=", src_addr);
-    HIP_DEBUG_IN6ADDR("!!!! local addr=", dst_addr);
+    opp_entry = ctx->hadb_entry;
 
-    HIP_IFEL(hip_hadb_add_peer_info_complete(&msg->hitr, &msg->hits,
-                                             NULL, dst_addr, src_addr, NULL), -1,
-             "Failed to insert peer map\n");
+    HIP_DEBUG_HIT("peer hit", &ctx->input_msg->hits);
+    HIP_DEBUG_HIT("local hit", &ctx->input_msg->hitr);
 
-    HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)), -1,
-             "Did not find opp entry\n");
+    HIP_IFEL(hip_hadb_add_peer_info_complete(&ctx->input_msg->hitr,
+                                             &ctx->input_msg->hits,
+                                             NULL,
+                                             ctx->dst_addr,
+                                             ctx->src_addr,
+                                             NULL),
+             -1, "Failed to insert peer map\n");
 
-    HIP_IFEL(hip_init_us(entry, &msg->hitr), -1,
-             "hip_init_us failed\n");
+    HIP_IFEL(!(ctx->hadb_entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
+                                                      &ctx->input_msg->hitr)),
+             -1, "Did not find opp entry\n");
+
+    HIP_IFEL(hip_init_us(ctx->hadb_entry, &ctx->input_msg->hitr),
+             -1, "hip_init_us failed\n");
     /* old HA has state 2, new HA has state 1, so copy it */
-    entry->state          = opp_entry->state;
+    ctx->hadb_entry->state          = opp_entry->state;
     /* For service registration routines */
-    entry->local_controls = opp_entry->local_controls;
-    entry->peer_controls  = opp_entry->peer_controls;
+    ctx->hadb_entry->local_controls = opp_entry->local_controls;
+    ctx->hadb_entry->peer_controls  = opp_entry->peer_controls;
 
-    if (hip_replace_pending_requests(opp_entry, entry) == -1) {
+    if (hip_replace_pending_requests(opp_entry, ctx->hadb_entry) == -1) {
         HIP_DEBUG("RVS: Error moving the pending requests to a new HA");
     }
 
-    HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
-    HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
-    HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
-    HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
+    HIP_DEBUG_HIT("peer hit", &ctx->input_msg->hits);
+    HIP_DEBUG_HIT("local hit", &ctx->input_msg->hitr);
 
-    HIP_IFEL(hip_opportunistic_ipv6_to_hit(src_addr, &phit,
-                                           HIP_HIT_TYPE_HASH100), -1,
-             "pseudo hit conversion failed\n");
+    HIP_IFEL(hip_opportunistic_ipv6_to_hit(ctx->src_addr, &phit,
+                                           HIP_HIT_TYPE_HASH100),
+             -1, "pseudo hit conversion failed\n");
 
-
-    ipv6_addr_copy(&opp_info.real_peer_hit, &msg->hits);
+    ipv6_addr_copy(&opp_info.real_peer_hit, &ctx->input_msg->hits);
     ipv6_addr_copy(&opp_info.pseudo_peer_hit, &phit);
-    ipv6_addr_copy(&opp_info.local_hit, &msg->hitr);
-    ipv6_addr_copy(&opp_info.local_addr, dst_addr);
-    ipv6_addr_copy(&opp_info.peer_addr, src_addr);
-    hip_for_each_opp(hip_oppdb_unblock_group, &opp_info);
+    ipv6_addr_copy(&opp_info.local_hit, &ctx->input_msg->hitr);
+    ipv6_addr_copy(&opp_info.local_addr, ctx->dst_addr);
+    ipv6_addr_copy(&opp_info.peer_addr, ctx->src_addr);
 
-    /* why is the receive entry still pointing to hip_receive_opp_r1 ? */
-    /* @todo is this function set needed? */
-    //entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
-    HIP_IFCS(entry,
-             (err = hip_receive_r1(msg, src_addr, dst_addr, entry, msg_info)));
+    hip_for_each_opp(hip_oppdb_unblock_group, &opp_info);
     hip_del_peer_info_entry(opp_entry);
 
 out_err:
 
     return err;
 }
-#endif
 
 /**
  * add an entry to the opportunistic mode dabase and host association
