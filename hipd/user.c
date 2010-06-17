@@ -285,6 +285,11 @@ int hip_handle_user_msg(hip_common_t *msg,
         dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
         hip_dec_cookie_difficulty();
         break;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+    case HIP_MSG_GET_PEER_HIT:
+        err = hip_opp_get_peer_hit(msg, src);
+        break;
+#endif
     case HIP_MSG_CERT_SPKI_VERIFY:
     {
         HIP_DEBUG("Got an request to verify SPKI cert\n");

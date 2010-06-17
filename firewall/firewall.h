@@ -17,6 +17,7 @@ extern int esp_relay;
 extern int use_midauth;
 extern int hip_fw_sock;
 extern int hip_fw_async_sock;
+extern int system_based_opp_mode;
 
 int hip_fw_init_esp_relay(void);
 void hip_fw_uninit_esp_relay(void);

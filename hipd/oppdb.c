@@ -619,3 +619,74 @@ hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
     HIP_UNLOCK_HT(&opp_db);
     return ret;
 }
+
+/**
+ * Trigger opportunistic I1 to obtain the HIT of the Responder.
+ *
+ * @param msg contains information on the Responder's IP address
+ *            and the local HIT to use for the connection
+ * @param src the UDP port number of the calling library process
+ * @return zero on success or negative on failure
+ */
+int hip_opp_get_peer_hit(struct hip_common *msg,
+                         const struct sockaddr_in6 *src)
+{
+    int err = 0;
+    struct in6_addr phit, dst_ip, our_hit, our_addr;
+    struct in6_addr *ptr;
+    hip_ha_t *ha;
+
+    ptr = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
+    HIP_IFEL(!ptr, -1, "No local hit in msg\n");
+    memcpy(&our_hit, ptr, sizeof(our_hit));
+    HIP_DEBUG_HIT("our_hit", &our_hit);
+
+    ptr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
+    HIP_IFEL(!ptr, -1, "No peer ip in msg\n");
+    memcpy(&dst_ip, ptr, sizeof(dst_ip));
+    HIP_DEBUG_HIT("dst_ip", &dst_ip);
+
+    HIP_IFEL(hip_select_source_address(&our_addr, &dst_ip),
+             -1, "Cannot find source address\n"); 
+
+    /* Check if we've previously contacted the host and found it
+     * non-HIP capable*/
+    if (hip_oppipdb_find_byip((struct in6_addr *) &dst_ip)) {
+        hip_msg_init(msg);
+        /* A message without peer HIT indicates a non-HIP capable peer */
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_PEER_HIT, 0), -1,
+                 "Building of user header failed\n");
+        HIP_IFEL(hip_build_param_contents(msg,
+                                          &dst_ip,
+                                          HIP_PARAM_IPV6_ADDR_PEER,
+                                          sizeof(struct in6_addr)),
+                 -1, "build param HIP_PARAM_HIT  failed: %s\n");
+        HIP_IFEL(hip_sendto_user(msg, (struct sockaddr *)src),
+                 -1, "send to user failed\n");
+        goto out_err;
+    }
+
+    /* No previous contact, new host. Let's do the opportunistic magic */
+
+    HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit,
+                                           HIP_HIT_TYPE_HASH100),
+             -1, "Opp HIT conversion failed\n");
+
+    HIP_ASSERT(hit_is_opportunistic_hit(&phit));
+
+    HIP_DEBUG_HIT("phit", &phit);
+
+    hip_hadb_add_peer_info_complete(&our_hit,  &phit,   NULL,
+                                    &our_addr, &dst_ip, NULL);
+
+    HIP_IFEL(!(ha = hip_hadb_find_byhits(&our_hit, &phit)),
+             -1, "Did not find hadb entry\n");
+
+    HIP_IFEL(hip_oppdb_add_entry(&phit, &our_hit, &dst_ip, NULL, src),
+             -1, "Add to oppdb failed\n");
+
+    HIP_IFEL(hip_send_i1(&our_hit, &phit, ha), -1, "sending of I1 failed\n");
+
+out_err:
+    return err;
+}
