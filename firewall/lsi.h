@@ -16,10 +16,10 @@
 
 int hip_trigger_bex(const struct in6_addr *src_hit,
                     const struct in6_addr *dst_hit,
-                    struct in6_addr *src_lsi,
-                    struct in6_addr *dst_lsi,
-                    struct in6_addr *src_ip,
-                    struct in6_addr *dst_ip);
+                    const hip_lsi_t *src_lsi,
+                    const hip_lsi_t *dst_lsi,
+                    const struct in6_addr *src_ip,
+                    const struct in6_addr *dst_ip);
 int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
                                const struct in6_addr *ip_src,
                                const struct in6_addr *ip_dst,

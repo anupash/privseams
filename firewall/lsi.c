@@ -70,16 +70,16 @@
  */
 int hip_trigger_bex(const struct in6_addr *src_hit,
                     const struct in6_addr *dst_hit,
-                    struct in6_addr *src_lsi,
-                    struct in6_addr *dst_lsi,
-                    struct in6_addr *src_ip,
-                    struct in6_addr *dst_ip)
+                    const hip_lsi_t *src_lsi,
+                    const hip_lsi_t *dst_lsi,
+                    const struct in6_addr *src_ip,
+                    const struct in6_addr *dst_ip)
 {
     struct hip_common *msg = NULL;
     int err                = 0;
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
-    HIP_IFEL(!dst_hit && !dst_ip, -1,
-             "neither destination hit nor ip provided\n");
+    HIP_IFEL(!dst_hit && !dst_ip && !dst_lsi,
+             -1, "no destination hit, ip or lsi provided\n");
 
     /* NOTE: we need this sequence in order to process the incoming
      * message correctly */
@@ -88,11 +88,10 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_TRIGGER_BEX, 0),
              -1, "build hdr failed\n");
 
-    /* destination HIT, LSI or IP are obligatory */
+    /* destination HIT, LSI or IP is obligatory */
     if (dst_hit) {
         HIP_DEBUG_HIT("dst_hit: ", dst_hit);
-        HIP_IFEL(hip_build_param_contents(msg, (void *) (dst_hit),
-                                          HIP_PARAM_HIT,
+        HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT,
                                           sizeof(struct in6_addr)),
                  -1, "build param HIP_PARAM_HIT failed\n");
     }
@@ -100,36 +99,31 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
     /* source HIT is optional */
     if (src_hit) {
         HIP_DEBUG_HIT("src_hit: ", src_hit);
-        HIP_IFEL(hip_build_param_contents(msg, (void *) (src_hit),
-                                          HIP_PARAM_HIT,
+        HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT,
                                           sizeof(struct in6_addr)),
                  -1, "build param HIP_PARAM_HIT failed\n");
     }
 
-    /* destination LSI is obligatory */
+    /* destination HIT, LSI or IP is obligatory */
     if (dst_lsi) {
-        HIP_DEBUG_IN6ADDR("dst lsi: ", dst_lsi);
-        HIP_IFEL(hip_build_param_contents(msg, (void *) (dst_lsi),
-                                          HIP_PARAM_LSI,
-                                          sizeof(struct in6_addr)),
+        HIP_DEBUG_INADDR("dst lsi: ", dst_lsi);
+        HIP_IFEL(hip_build_param_contents(msg, dst_lsi, HIP_PARAM_LSI,
+                                          sizeof(hip_lsi_t)),
                  -1, "build param HIP_PARAM_LSI failed\n");
     }
 
     /* source LSI is optional */
     if (src_lsi) {
-        HIP_DEBUG_IN6ADDR("src lsi: ", src_lsi);
-        HIP_IFEL(hip_build_param_contents(msg, (void *) (src_lsi),
-                                          HIP_PARAM_LSI,
-                                          sizeof(struct in6_addr)),
+        HIP_DEBUG_INADDR("src lsi: ", src_lsi);
+        HIP_IFEL(hip_build_param_contents(msg, src_lsi, HIP_PARAM_LSI,
+                                          sizeof(hip_lsi_t)),
                  -1, "build param HIP_PARAM_LSI failed\n");
     }
 
-    /* if no destination HIT is provided, at least destination IP must
-       exist */
+    /* destination HIT, LSI or IP is obligatory */
     if (dst_ip) {
         HIP_DEBUG_IN6ADDR("dst_ip: ", dst_ip);
-        HIP_IFEL(hip_build_param_contents(msg, (void *) (dst_ip),
-                                          HIP_PARAM_IPV6_ADDR,
+        HIP_IFEL(hip_build_param_contents(msg, dst_ip, HIP_PARAM_IPV6_ADDR,
                                           sizeof(struct in6_addr)),
                  -1, "build param HIP_PARAM_IPV6_ADDR failed\n");
     }
@@ -137,8 +131,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
     /* this again is optional */
     if (src_ip) {
         HIP_DEBUG_IN6ADDR("src_ip: ", src_ip);
-        HIP_IFEL(hip_build_param_contents(msg, (void *) (src_ip),
-                                          HIP_PARAM_IPV6_ADDR,
+        HIP_IFEL(hip_build_param_contents(msg, src_ip, HIP_PARAM_IPV6_ADDR,
                                           sizeof(struct in6_addr)),
                  -1, "build param HIP_PARAM_IPV6_ADDR failed\n");
     }
@@ -466,7 +459,6 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
                                struct in_addr *lsi_dst)
 {
     int err = 0, state_ha, new_fw_entry_state;
-    struct in6_addr src_lsi, dst_lsi;
     struct in6_addr src_hit, dst_hit;
     struct in6_addr src_ip, dst_ip;
     firewall_hl_t *entry_peer = NULL;
@@ -475,8 +467,6 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
         HIP_DEBUG_LSI("lsi dst", lsi_dst);
     }
 
-    memset(&src_lsi, 0, sizeof(struct in6_addr));
-    memset(&dst_lsi, 0, sizeof(struct in6_addr));
     memset(&src_hit, 0, sizeof(struct in6_addr));
     memset(&dst_hit, 0, sizeof(struct in6_addr));
     memset(&src_ip, 0, sizeof(struct in6_addr));
@@ -537,10 +527,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
             (state_ha == HIP_STATE_NONE)         ||
             (state_ha == HIP_STATE_UNASSOCIATED)) {
             /* initialize bex */
-            IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
-            IPV4_TO_IPV6_MAP(lsi_dst, &dst_lsi);
-            HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi,
-                                     &dst_lsi, NULL, NULL),
+            HIP_IFEL(hip_trigger_bex(NULL, NULL, lsi_src, lsi_dst, NULL, NULL),
                      -1, "Base Exchange Trigger failed\n");
             /* update fw db entry */
             HIP_IFEL(hip_firewall_update_entry(&src_hit, &dst_hit,

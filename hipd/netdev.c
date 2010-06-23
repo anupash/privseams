@@ -1029,66 +1029,55 @@ out_err:
  * @return zero on success and non-zero on error
  * @todo move this to some other file
  */
-int hip_netdev_trigger_bex_msg(struct hip_common *msg)
+int hip_netdev_trigger_bex_msg(const struct hip_common *msg)
 {
-    hip_hit_t *our_hit        = NULL, *peer_hit = NULL;
-    struct in6_addr *our_lsi6 = NULL, *peer_lsi6 = NULL;
-    hip_lsi_t our_lsi, peer_lsi;
+    hip_hit_t *our_hit        = NULL, *peer_hit  = NULL;
+    hip_lsi_t *our_lsi        = NULL, *peer_lsi  = NULL;
     struct in6_addr *our_addr = NULL, *peer_addr = NULL;
     struct hip_tlv_common *param;
     int err                   = 0;
 
     HIP_DUMP_MSG(msg);
 
-    memset(&peer_lsi, 0, sizeof(peer_lsi));
-    memset(&our_lsi, 0, sizeof(our_lsi));
-
-    /* Destination HIT - mandatory*/
+    /* Destination HIT */
     param = hip_get_param(msg, HIP_PARAM_HIT);
     if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
         peer_hit = hip_get_param_contents_direct(param);
-    }
 
-    if (ipv6_addr_is_null(peer_hit)) {
-        peer_hit = NULL;
-    } else {
-        HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
+        if (ipv6_addr_is_null(peer_hit)) {
+            peer_hit = NULL;
+        } else {
+            HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
+        }
     }
 
     /* Source HIT */
     param = hip_get_next_param(msg, param);
     if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
         our_hit = hip_get_param_contents_direct(param);
-    }
-    HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
 
-    if (ipv6_addr_is_null(our_hit)) {
-        peer_hit = NULL;
-    } else {
-        HIP_DEBUG_HIT("trigger_msg_peer_hit:", our_hit);
+        if (ipv6_addr_is_null(our_hit)) {
+            our_hit = NULL;
+        } else {
+            HIP_DEBUG_HIT("trigger_msg_ourr_hit:", our_hit);
+        }
     }
 
     /* Peer LSI */
     param = hip_get_param(msg, HIP_PARAM_LSI);
     if (param) {
-        peer_lsi6 = hip_get_param_contents_direct(param);
-        if (IN6_IS_ADDR_V4MAPPED(peer_lsi6)) {
-            IPV6_TO_IPV4_MAP(peer_lsi6, &peer_lsi);
-            HIP_DEBUG_LSI("trigger_msg_peer_lsi:", &peer_lsi);
-        }
+        peer_lsi = hip_get_param_contents_direct(param);
     }
+    HIP_DEBUG_LSI("trigger_msg_peer_lsi:", peer_lsi);
 
     /** @todo: check if peer lsi is all zeroes? */
 
     /* Local LSI */
     param = hip_get_next_param(msg, param);
     if (param && hip_get_param_type(param) == HIP_PARAM_LSI) {
-        our_lsi6 = hip_get_param_contents_direct(param);
-        if (IN6_IS_ADDR_V4MAPPED(our_lsi6)) {
-            IPV6_TO_IPV4_MAP(our_lsi6, &our_lsi);
-        }
+        our_lsi = hip_get_param_contents_direct(param);
     }
-    HIP_DEBUG_LSI("trigger_msg_our_lsi:", &our_lsi);
+    HIP_DEBUG_LSI("trigger_msg_our_lsi:", our_lsi);
 
     /** @todo: check if local lsi is all zeroes? */
 
@@ -1107,7 +1096,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg)
     HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
 
     err = hip_netdev_trigger_bex(our_hit, peer_hit,
-                                 &our_lsi, &peer_lsi,
+                                 our_lsi, peer_lsi,
                                  our_addr, peer_addr);
 
     return err;
