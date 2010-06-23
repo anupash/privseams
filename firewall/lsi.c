@@ -46,6 +46,7 @@
 #include "firewall.h"
 #include "firewalldb.h"
 #include "lsi.h"
+#include "reinject.h"
 
 
 #define BUFSIZE HIP_MAX_PACKET

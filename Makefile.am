@@ -101,6 +101,7 @@ firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/helpers.c             \
                          firewall/hslist.c              \
                          firewall/lsi.c                 \
+                         firewall/reinject.c            \
                          firewall/rule_management.c     \
                          firewall/sysopp.c              \
                          firewall/user_ipsec_api.c      \

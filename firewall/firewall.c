@@ -72,6 +72,7 @@
 #include "lsi.h"
 #include "midauth.h"
 #include "pisa.h"
+#include "reinject.h"
 #include "rule_management.h"
 #include "user_ipsec_api.h"
 #include "firewall.h"
@@ -526,6 +527,8 @@ static int firewall_init_extensions(void)
     hip_firewall_cache_init_hldb();
     // Initializing local port cache database
     hip_firewall_port_cache_init_hldb();
+    /* Initialize raw sockets for packet reinjection */
+    hip_firewall_init_raw_sockets();
 
 out_err:
     return err;

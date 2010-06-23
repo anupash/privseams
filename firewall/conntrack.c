@@ -48,6 +48,7 @@
 #include "pisa.h"
 #include "conntrack.h"
 #include "config.h"
+#include "reinject.h"
 
 
 DList *hipList = NULL;
