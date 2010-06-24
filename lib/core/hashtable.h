@@ -24,7 +24,7 @@
 #define HIP_UNLOCK_HT(hash)
 
 void hip_ht_uninit(void *head);
-void *hip_ht_find(void *head, void *data);
+void *hip_ht_find(void *head, const void *data);
 void *hip_ht_delete(void *head, void *data);
 int hip_ht_add(void *head, void *data);
 

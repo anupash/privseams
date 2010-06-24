@@ -105,7 +105,7 @@ void hip_ht_uninit(void *head)
  * @param data the key to find from the hashtable
  * @return a pointer to the value of the found key or NULL otherwise
  */
-void *hip_ht_find(void *head, void *data)
+void *hip_ht_find(void *head, const void *data)
 {
     return lh_retrieve((LHASH100_CAST *) head, data);
 }
