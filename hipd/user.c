@@ -143,7 +143,7 @@ void hip_user_uninit_handles(void)
  *
  * @param msg the message to send
  * @param dst the destination of the message
- * @return zero on success, or negative error value on error.
+ * @return number of bytes sent on success, -1 on error
  */
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
 {

@@ -661,7 +661,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
                                           HIP_PARAM_IPV6_ADDR_PEER,
                                           sizeof(struct in6_addr)),
                  -1, "build param HIP_PARAM_HIT  failed: %s\n");
-        HIP_IFEL(hip_sendto_user(msg, (struct sockaddr *)src),
+        HIP_IFEL(hip_sendto_user(msg, (struct sockaddr *)src) < 0,
                  -1, "send to user failed\n");
         goto out_err;
     }
