@@ -40,12 +40,12 @@ static HIP_HASHTABLE *firewall_cache_db = NULL;
  *
  * @return the allocated cache entry
  */
-firewall_cache_hl_t *hip_cache_create_hl_entry(void)
+fw_cache_hl_t *hip_cache_create_hl_entry(void)
 {
-    firewall_cache_hl_t *entry = NULL;
+    fw_cache_hl_t *entry = NULL;
     int err = 0;
 
-    HIP_IFEL(!(entry = malloc(sizeof(firewall_cache_hl_t))),
+    HIP_IFEL(!(entry = malloc(sizeof(fw_cache_hl_t))),
              -ENOMEM, "No memory available for firewall database entry\n");
     memset(entry, 0, sizeof(*entry));
 out_err:
@@ -57,12 +57,11 @@ out_err:
  *
  * @param ha_entry cache database entry
  *
- * @return zero on success and non-zero on error
+ * @return the new firewall db entry
  */
-static int firewall_add_new_entry(const firewall_cache_hl_t *ha_entry)
+static fw_cache_hl_t * firewall_add_new_entry(const fw_cache_hl_t *ha_entry)
 {
-    firewall_cache_hl_t *new_entry = NULL;
-    int err = 0;
+    fw_cache_hl_t *new_entry = NULL;
 
     HIP_DEBUG("\n");
 
@@ -82,49 +81,95 @@ static int firewall_add_new_entry(const firewall_cache_hl_t *ha_entry)
 
     hip_ht_add(firewall_cache_db, new_entry);
 
-    return err;
+    return new_entry;
 }
 
 /**
- * Search the cache database for an entry. The search is based on HITs if they are given.
- * If HITs are NULL, then search with the LSIs.
+ * Query HIPD for current HA information and try to match a pair of
+ * HITs, LSIs or IPs. If a match is found, insert it in the firewall
+ * cache and return the cache entry.
  *
- * @param hit_our local HIT
- * @param hit_peer remote HIT
- * @param lsi_our local LSI
- * @param lsi_peer remote LSI
- * @param ip_our local (default) locator
- * @param ip_peer remote (default) locator
- * @param state output argument in which the function writes the state of the corresponding HIP association
- * @return
+ * @param local local identifier or locator (optional)
+ * @param peer peer identifier or locator
+ * @param type whether the parameters are HITs, LSIs or IPs
+ * @return the cached entry on match, NULL otherwise
  */
-int hip_firewall_cache_db_match(const struct in6_addr *hit_our,
-                                const struct in6_addr *hit_peer,
-                                hip_lsi_t       *lsi_our,
-                                hip_lsi_t       *lsi_peer,
-                                struct in6_addr *ip_our,
-                                struct in6_addr *ip_peer,
-                                int *state)
+static fw_cache_hl_t *hip_firewall_cache_hadb_match(const void *local,
+                                                    const void *peer,
+                                                    fw_cache_query_type_t type)
 {
-    int i, err = 0, entry_in_cache = 0;
-    firewall_cache_hl_t *this            = NULL;
-    hip_list_t *item                     = NULL;
-    hip_list_t *tmp                      = NULL;
+    int err = 0;
+    fw_cache_hl_t *ha_match              = NULL;
+    fw_cache_hl_t *ha_curr               = NULL;
     struct hip_common *msg               = NULL;
-    firewall_cache_hl_t *ha_curr         = NULL;
-    firewall_cache_hl_t *ha_match        = NULL;
     struct hip_tlv_common *current_param = NULL;
 
-    HIP_ASSERT((hit_our && hit_peer) ||
-               (lsi_our && lsi_peer));
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+    hip_msg_init(msg);
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0),
+             -1, "Building of daemon header failed\n");
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock),
+             -1, "send recv daemon info\n");
 
-    if (hit_peer) {
-        ha_match = (firewall_cache_hl_t *) hip_ht_find(
-            firewall_cache_db,
-            (void *) hit_peer);
+    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+        ha_curr = hip_get_param_contents_direct(current_param);
+
+        if (type == FW_CACHE_HIT &&
+            !ipv6_addr_cmp(peer, &ha_curr->hit_peer) &&
+            (!local || !ipv6_addr_cmp(local,  &ha_curr->hit_our))) {
+            ha_match = ha_curr;
+            break;
+        } else if (type == FW_CACHE_LSI &&
+            !ipv4_addr_cmp(peer, &ha_curr->lsi_peer) &&
+            (!local || !ipv4_addr_cmp(local, &ha_curr->lsi_our))) {
+            ha_match = ha_curr;
+            break;
+        } else if (type == FW_CACHE_IP &&
+            !ipv6_addr_cmp(peer, &ha_curr->ip_peer) &&
+            (!local || !ipv6_addr_cmp(local, &ha_curr->ip_our))) {
+            ha_match = ha_curr;
+            break;
+        }
+    }
+
+    if (ha_match) {
+        ha_match = firewall_add_new_entry(ha_match);
+    }
+
+out_err:
+
+    if (msg) {
+        free(msg);
+    }
+
+    return ha_match;
+}
+
+/**
+ * Search the cache database for an entry by HITs, LSIs or IPs
+ *
+ * @param local local identifier or locator (optional)
+ * @param peer peer identifier or locator
+ * @param type whether the parameters are HITs, LSIs or IPs
+ * @param query_daemon whether to query the demon for HA information
+ *        if no entry is found in the cache
+ * @return the entry on match, NULL otherwise
+ */
+fw_cache_hl_t *hip_firewall_cache_db_match(const void *local,
+                                           const void *peer,
+                                           fw_cache_query_type_t type,
+                                           int query_daemon)
+{
+    int i;
+    fw_cache_hl_t *this                  = NULL;
+    hip_list_t *item                     = NULL;
+    hip_list_t *tmp                      = NULL;
+    fw_cache_hl_t *ha_match              = NULL;
+
+    if (type == FW_CACHE_HIT) {
+        ha_match = hip_ht_find(firewall_cache_db, peer);
         if (ha_match) {
             HIP_DEBUG("Matched using hash\n");
-            entry_in_cache = 1;
             goto out_err;
         }
     }
@@ -134,119 +179,58 @@ int hip_firewall_cache_db_match(const struct in6_addr *hit_our,
     HIP_LOCK_HT(&firewall_cache_db);
 
     list_for_each_safe(item, tmp, firewall_cache_db, i) {
-        this = (firewall_cache_hl_t *) list_entry(item);
+        this = list_entry(item);
 
-        if (lsi_our && lsi_peer) {
-            HIP_DEBUG_INADDR("this->our", (hip_lsi_t *) &this->lsi_our.s_addr);
-            HIP_DEBUG_INADDR("this->peer", (hip_lsi_t *) &this->lsi_peer.s_addr);
-            HIP_DEBUG_INADDR("our", lsi_our);
-            HIP_DEBUG_INADDR("peer", lsi_peer);
+        if (type == FW_CACHE_HIT &&
+            !ipv6_addr_cmp(peer, &this->hit_peer) &&
+            (!local || !ipv6_addr_cmp(local, &this->hit_our))) {
+            ha_match = this;
+            break;
+        } else if (type == FW_CACHE_LSI &&
+            !ipv4_addr_cmp(peer, &this->lsi_peer) &&
+            (!local || !ipv4_addr_cmp(local, &this->lsi_our))) {
+            ha_match = this;
+            break;
+        } else if (type == FW_CACHE_IP &&
+            !ipv6_addr_cmp(peer, &this->ip_peer) &&
+            (!local || !ipv6_addr_cmp(local, &this->ip_our))) {
+            ha_match = this;
+            break;
         }
 
-        if (hit_our && hit_peer &&
-            (ipv6_addr_cmp(hit_peer, &this->hit_peer) == 0) &&
-            (ipv6_addr_cmp(hit_our,  &this->hit_our)  == 0)) {
-            ha_match = this;
-            break;
-        }
-        if (lsi_our && lsi_peer &&
-            lsi_peer->s_addr == this->lsi_peer.s_addr &&
-            lsi_our->s_addr  == this->lsi_our.s_addr) {
-            ha_match = this;
-            break;
-        }
-        if (ip_our && ip_peer &&
-            ip_peer->s6_addr == this->ip_peer.s6_addr &&
-            ip_our->s6_addr  == this->ip_our.s6_addr) {
-            ha_match = this;
-            break;
-        }
     }
     HIP_UNLOCK_HT(&firewall_cache_db);
 
-    if (ha_match) {
-        entry_in_cache = 1;
-        goto out_err;
-    }
-
-    HIP_DEBUG("No cache found, querying daemon\n");
-
-    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-    hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0),
-             -1, "Building of daemon header failed\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
-             "send recv daemon info\n");
-
-    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-        ha_curr = hip_get_param_contents_direct(current_param);
-
-        HIP_DEBUG_HIT("our1", &ha_curr->hit_our);
-        HIP_DEBUG_HIT("peer1", &ha_curr->hit_peer);
-        if (hit_our) {
-            HIP_DEBUG_HIT("our2", hit_our);
-        }
-        if (hit_peer) {
-            HIP_DEBUG_HIT("peer2", hit_peer);
-        }
-        if (hit_our && hit_peer &&
-            (ipv6_addr_cmp(hit_peer, &ha_curr->hit_peer) == 0) &&
-            (ipv6_addr_cmp(hit_our,  &ha_curr->hit_our)  == 0)) {
-            HIP_DEBUG("Matched HITs\n");
-            ha_match = ha_curr;
-            break;
-        }
-        if (lsi_our && lsi_peer &&
-            lsi_peer->s_addr == ha_curr->lsi_peer.s_addr &&
-            lsi_our->s_addr  == ha_curr->lsi_our.s_addr) {
-            HIP_DEBUG("Matched LSIs\n");
-            ha_match = ha_curr;
-            break;
-        }
-        if (ip_our && ip_peer &&
-            ip_peer->s6_addr == ha_curr->ip_peer.s6_addr &&
-            ip_our->s6_addr  == ha_curr->ip_our.s6_addr) {
-            HIP_DEBUG("Matched IPs\n");
-            ha_match = ha_curr;
-            break;
-        }
+    if (!ha_match && query_daemon) {
+        HIP_DEBUG("No cache found, querying daemon\n");
+        ha_match = hip_firewall_cache_hadb_match(local, peer, type);
     }
 
 out_err:
-    if (ha_match) {
-        if (!entry_in_cache) {
-            firewall_add_new_entry(ha_match);
-        }
-
-        if (lsi_our) {
-            ipv4_addr_copy(lsi_our, &ha_match->lsi_our);
-        }
-
-        if (lsi_peer) {
-            ipv4_addr_copy(lsi_peer, &ha_match->lsi_peer);
-        }
-
-        if (ip_our) {
-            ipv6_addr_copy(ip_our, &ha_match->ip_our);
-        }
-
-        if (ip_peer) {
-            ipv6_addr_copy(ip_peer, &ha_match->ip_peer);
-            HIP_DEBUG_IN6ADDR("peer ip", ip_peer);
-        }
-
-        if (state) {
-            *state = ha_match->state;
-        }
-    } else {
-        err = -1;
+    if (!ha_match) {
+        HIP_DEBUG("No match found\n");
     }
 
-    if (msg) {
-        free(msg);
-    }
+    return ha_match;
+}
 
-    return err;
+/**
+ * Delete a database entry identified by HITs, LSIs or IPs
+ *
+ * @param local local identifier or locator (optional)
+ * @param peer peer identifier or locator
+ * @param type whether the parameters are HITs, LSIs or IPs
+ */
+void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
+                                     fw_cache_query_type_t type)
+{
+    fw_cache_hl_t *entry;
+
+    entry = hip_firewall_cache_db_match(local, peer, type, 0);
+    if (entry) {
+        hip_ht_delete(firewall_cache_db, entry);
+        free(entry);
+    }
 }
 
 /**
@@ -258,7 +242,7 @@ out_err:
  */
 static unsigned long hip_firewall_hash_hit_peer(const void *ptr)
 {
-    struct in6_addr *hit_peer = &((firewall_cache_hl_t *) ptr)->hit_peer;
+    struct in6_addr *hit_peer = &((fw_cache_hl_t *) ptr)->hit_peer;
     uint8_t hash[HIP_AH_SHA_LEN];
 
     hip_build_digest(HIP_DIGEST_SHA1, hit_peer, sizeof(*hit_peer), hash);
@@ -295,7 +279,7 @@ void hip_firewall_cache_init_hldb(void)
 void hip_firewall_cache_delete_hldb(int exiting)
 {
     int i;
-    firewall_cache_hl_t *this = NULL;
+    fw_cache_hl_t *this       = NULL;
     hip_list_t *item          = NULL;
     hip_list_t *tmp           = NULL;
 
@@ -304,7 +288,7 @@ void hip_firewall_cache_delete_hldb(int exiting)
 
     list_for_each_safe(item, tmp, firewall_cache_db, i)
     {
-        this = (firewall_cache_hl_t *) list_entry(item);
+        this = list_entry(item);
         hip_ht_delete(firewall_cache_db, this);
         free(this);
     }
@@ -317,4 +301,69 @@ void hip_firewall_cache_delete_hldb(int exiting)
     if (exiting)
         hip_ht_uninit(firewall_cache_db);
     HIP_DEBUG("End hldbdb delete\n");
+}
+
+/** 
+ * Update the state of a cached entry identified by HITs
+ * @param  hit_s Local HIT (optional)
+ * @param  hit_r Peer HIT
+ * @return 0 on success, negative on error
+*/
+int hip_firewall_cache_set_bex_state(const struct in6_addr *hit_our,
+                                     const struct in6_addr *hit_peer,
+                                     int state)
+{
+    int err = 0;
+    fw_cache_hl_t *entry;
+
+    HIP_IFEL(!hit_peer, -1, "Need peer HIT to search\n");
+
+    entry = hip_firewall_cache_db_match(hit_our, hit_peer, FW_CACHE_HIT, 0);
+    HIP_IFEL(!entry, -1, "No cache entry found\n");
+
+    entry->state = state;
+
+out_err:
+    return err;
+}
+
+/**
+ * Update the HIT and state information of an entry identified by a pair
+ * of IP addresses. Used for opportunistic base exchange.
+ *
+ * @param ip_our local IP to search for (optional)
+ * @param ip_peer peer IP to search for
+ * @param hit_our new local hit (optional)
+ * @param hit_peer new peer hit (optional)
+ * @param state new state
+ * @return 0 on success, negative on error
+ */
+
+int hip_firewall_cache_update_entry(const struct in6_addr *ip_our,
+                                    const struct in6_addr *ip_peer,
+                                    const struct in6_addr *hit_our,
+                                    const struct in6_addr *hit_peer,
+                                    int state)
+{
+    int err = 0;
+    fw_cache_hl_t *entry;
+
+    HIP_IFEL(!ip_peer, -1, "Need peer IP to search\n");
+
+    entry = hip_firewall_cache_db_match(ip_our, ip_peer, FW_CACHE_IP, 0);
+    HIP_IFEL(!entry, -1, "No cache entry found\n");
+
+    if (hit_our) {
+        ipv6_addr_copy(&entry->hit_our, hit_our);
+    }
+    if (hit_peer) {
+        /* A hash of the peer HIT is used as the key. Re-add to update. */
+        hip_ht_delete(firewall_cache_db, entry);
+        ipv6_addr_copy(&entry->hit_peer, hit_peer);
+        hip_ht_add(firewall_cache_db, entry);
+    }
+    entry->state = state;
+
+out_err:
+    return err;
 }

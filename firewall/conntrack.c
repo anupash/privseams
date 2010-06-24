@@ -41,7 +41,6 @@
 #include "esp_prot_conntrack.h"
 #include "firewall_defines.h"
 #include "firewall.h"
-#include "firewalldb.h"
 #include "lib/core/hip_udp.h"
 #include "helpers.h"
 #include "hslist.h"

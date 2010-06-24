@@ -12,17 +12,32 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/icomm.h"
 
-typedef struct hip_hadb_user_info_state firewall_cache_hl_t;
+typedef struct hip_hadb_user_info_state fw_cache_hl_t;
 
-int hip_firewall_cache_db_match(const struct in6_addr *, const struct in6_addr *,
-                                hip_lsi_t *, hip_lsi_t *,
-                                struct in6_addr *, struct in6_addr *, int *);
+typedef enum { FW_CACHE_HIT, FW_CACHE_LSI, FW_CACHE_IP } fw_cache_query_type_t;
 
-//Initializes the firewall cache database
+fw_cache_hl_t *hip_firewall_cache_db_match(const void *local,
+                                           const void *peer,
+                                           fw_cache_query_type_t type,
+                                           int query_daemon);
+
+void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
+                                     fw_cache_query_type_t type);
+
 void hip_firewall_cache_init_hldb(void);
 
-firewall_cache_hl_t *hip_cache_create_hl_entry(void);
+fw_cache_hl_t *hip_cache_create_hl_entry(void);
 
 void hip_firewall_cache_delete_hldb(int);
+
+int hip_firewall_cache_set_bex_state(const struct in6_addr *hit_s,
+                                     const struct in6_addr *hit_r,
+                                     int state);
+
+int hip_firewall_cache_update_entry(const struct in6_addr *ip_our,
+                                    const struct in6_addr *ip_peer,
+                                    const struct in6_addr *hit_our,
+                                    const struct in6_addr *hit_peer,
+                                    int state);
 
 #endif /* HIP_FIREWALL_CACHE_H */

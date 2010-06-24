@@ -25,7 +25,6 @@
 #include "lib/core/protodefs.h"
 #include "cache.h"
 #include "firewall.h"
-#include "firewalldb.h"
 #include "user_ipsec_fw_msg.h"
 #include "firewall_control.h"
 #include "sysopp.h"
@@ -46,24 +45,24 @@ static int hip_handle_bex_state_update(struct hip_common *msg)
     msg_type = hip_get_msg_type(msg);
 
     /* src_hit */
-    param    = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HIT);
-    src_hit  = (struct in6_addr *) hip_get_param_contents_direct(param);
+    param    = hip_get_param(msg, HIP_PARAM_HIT);
+    src_hit  = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("Source HIT: ", src_hit);
 
     /* dst_hit */
     param    = hip_get_next_param(msg, param);
-    dst_hit  = (struct in6_addr *) hip_get_param_contents_direct(param);
+    dst_hit  = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 
     /* update bex_state in firewalldb */
     switch (msg_type) {
     case HIP_MSG_FW_BEX_DONE:
-        err = hip_firewall_set_bex_state(src_hit,
-                                         dst_hit,
-                                         (dst_hit ? 1 : -1));
+        err = hip_firewall_cache_set_bex_state(src_hit, dst_hit,
+                                               HIP_STATE_ESTABLISHED);
         break;
     case HIP_MSG_FW_UPDATE_DB:
-        err = hip_firewall_set_bex_state(src_hit, dst_hit, 0);
+        err = hip_firewall_cache_set_bex_state(src_hit, dst_hit, 
+                                               HIP_STATE_NONE);
         break;
     default:
         break;
@@ -119,7 +118,6 @@ int hip_handle_msg(struct hip_common *msg)
         break;
     case HIP_MSG_RESET_FIREWALL_DB:
         hip_firewall_cache_delete_hldb(0);
-        hip_firewall_delete_hldb();
         break;
     case HIP_MSG_OFFER_FULLRELAY:
         if (!esp_relay) {

@@ -1211,10 +1211,6 @@ out_err:
         hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
                                   &(ctx->hadb_entry)->hit_our,
                                   &(ctx->hadb_entry)->hit_peer);
-    } else {
-        hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
-                                  NULL,
-                                  NULL);
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE

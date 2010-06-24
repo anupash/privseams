@@ -67,7 +67,6 @@
 #include "esp_prot_conntrack.h"
 #include "firewall_control.h"
 #include "firewall_defines.h"
-#include "firewalldb.h"
 #include "helpers.h"
 #include "lsi.h"
 #include "midauth.h"
@@ -521,8 +520,6 @@ static int firewall_init_extensions(void)
     midauth_init();
 #endif
 
-    // Initializing local database for mapping LSI-HIT in the firewall
-    hip_firewall_init_hldb();
     // Initializing local cache database
     hip_firewall_cache_init_hldb();
     // Initializing local port cache database
@@ -654,7 +651,6 @@ static void firewall_exit(void)
     }
     free(msg);
 
-    hip_firewall_delete_hldb();
     hip_firewall_cache_delete_hldb(1);
     hip_firewall_port_cache_uninit_hldb();
     hip_fw_uninit_system_based_opp_mode();

@@ -30,8 +30,8 @@
 #include "lib/core/hostid.h"
 #include "lib/core/message.h"
 #include "lib/core/prefix.h"
+#include "cache.h"
 #include "firewall.h"
-#include "firewalldb.h"
 #include "helpers.h"
 #include "lsi.h"
 #include "sysopp.h"
@@ -87,68 +87,6 @@ out_err:
 }
 
 /**
- * Gets the state of the bex for a pair of ip addresses.
- * @param src_ip    input for finding the correct entries
- * @param dst_ip    input for finding the correct entries
- * @param src_hit   output data of the correct entry
- * @param dst_hit   output data of the correct entry
- * @param src_lsi   output data of the correct entry
- * @param dst_lsi   output data of the correct entry
- *
- * @return  the state of the bex if the entry is found
- *          otherwise returns -1
- */
-static int hip_get_bex_state_from_IPs(const struct in6_addr *src_ip,
-                               const struct in6_addr *dst_ip,
-                               struct in6_addr *src_hit,
-                               struct in6_addr *dst_hit,
-                               hip_lsi_t *src_lsi,
-                               hip_lsi_t *dst_lsi)
-{
-    int err = 0, res = -1;
-    struct hip_tlv_common *current_param = NULL;
-    struct hip_common *msg               = NULL;
-    struct hip_hadb_user_info_state *ha  = NULL;
-
-    HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
-
-    HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
-    hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0),
-             -1, "Building of daemon header failed\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock), -1,
-             "send recv daemon info\n");
-
-    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-        ha = hip_get_param_contents_direct(current_param);
-
-        if ((ipv6_addr_cmp(dst_ip, &ha->ip_our) == 0) &&
-            (ipv6_addr_cmp(src_ip, &ha->ip_peer) == 0)) {
-            memcpy(src_hit, &ha->hit_peer, sizeof(struct in6_addr));
-            memcpy(dst_hit, &ha->hit_our, sizeof(struct in6_addr));
-            memcpy(src_lsi, &ha->lsi_peer, sizeof(hip_lsi_t));
-            memcpy(dst_lsi, &ha->lsi_our, sizeof(hip_lsi_t));
-            res = ha->state;
-            break;
-        } else if ((ipv6_addr_cmp(src_ip, &ha->ip_our) == 0) &&
-                   (ipv6_addr_cmp(dst_ip, &ha->ip_peer) == 0)) {
-            memcpy(src_hit, &ha->hit_our, sizeof(struct in6_addr));
-            memcpy(dst_hit, &ha->hit_peer, sizeof(struct in6_addr));
-            memcpy(src_lsi, &ha->lsi_our, sizeof(hip_lsi_t));
-            memcpy(dst_lsi, &ha->lsi_peer, sizeof(hip_lsi_t));
-            res = ha->state;
-            break;
-        }
-    }
-
-out_err:
-    if (msg) {
-        free(msg);
-    }
-    return res;
-}
-
-/**
  * Add a by-pass rule to skip opportunistic processing for a peer
  * that was found non-HIP capable. Offers a significant speed up.
  *
@@ -181,6 +119,9 @@ static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx,
              "iptables -I HIPFWOPP-OUTPUT -d %s -j %s",
              addr_str, verdict ? "ACCEPT" : "DROP");
     system_print(command);
+
+    /* The cache entry is no longer necessary. Let's free it. */
+    hip_firewall_cache_db_del_entry(&ctx->src, &ctx->dst, FW_CACHE_IP);
 }
 
 /**
@@ -196,100 +137,36 @@ static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx,
 int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx,
                                             const int default_verdict)
 {
-    int state_ha, new_fw_entry_state;
-    hip_lsi_t src_lsi, dst_lsi;
-    struct in6_addr src_hit, dst_hit;
-    firewall_hl_t *entry_peer = NULL;
-    struct sockaddr_in6 all_zero_hit;
-    int verdict = default_verdict;
+    fw_cache_hl_t *entry_peer = NULL;
+    int verdict;
 
     HIP_DEBUG("\n");
 
-    //get firewall db entry
-    entry_peer = hip_firewall_ip_db_match(&ctx->dst);
+    if (hip_firewall_cache_db_match(&ctx->dst, &ctx->src, FW_CACHE_IP, 0)) {
+        /* Peer is src and we are dst on an outgoing packet. */
+        HIP_DEBUG("Packet is reinjection.\n");
+        return 1;
+    }
+
+    entry_peer = hip_firewall_cache_db_match(&ctx->src, &ctx->dst,
+                                             FW_CACHE_IP, 1);
+
     if (entry_peer) {
-        //if the firewall entry is still undefined
-        //check whether the base exchange has been established
-        if (entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT) {
-            //get current connection state from hipd
-            state_ha = hip_get_bex_state_from_IPs(&ctx->src,
-                                                  &ctx->dst,
-                                                  &src_hit,
-                                                  &dst_hit,
-                                                  &src_lsi,
-                                                  &dst_lsi);
-
-            //find the correct state for the fw entry state
-            HIP_DEBUG("HA state %d\n", state_ha);
-            if (state_ha == HIP_STATE_ESTABLISHED) {
-                new_fw_entry_state = FIREWALL_STATE_BEX_ESTABLISHED;
-            } else if ((state_ha == HIP_STATE_FAILED)  ||
-                       (state_ha == HIP_STATE_CLOSING) ||
-                       (state_ha == HIP_STATE_CLOSED)) {
-                new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
-            } else {
-                new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
-            }
-
-            HIP_DEBUG("New state %d\n", new_fw_entry_state);
-            //update fw entry state accordingly
-            hip_firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
-                                      &ctx->dst, new_fw_entry_state);
-
-            //reobtain the entry in case it has been updated
-            entry_peer = hip_firewall_ip_db_match(&ctx->dst);
-        }
-
-        //decide what to do with the packet
-        if (entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT) {
+        if (entry_peer->state == HIP_STATE_ESTABLISHED &&
+            !ipv6_addr_cmp(hip_fw_get_default_hit(), &entry_peer->hit_our)) {
+            hip_reinject_packet(&entry_peer->hit_our, &entry_peer->hit_peer,
+                                ctx->ipq_packet, 4, 0);
             verdict = 0;
-        } else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED) {
-            hip_fw_add_non_hip_peer(ctx, verdict);
-            verdict = default_verdict;
-        } else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED) {
-            if (&entry_peer->hit_our                       &&
-                (ipv6_addr_cmp(hip_fw_get_default_hit(),
-                               &entry_peer->hit_our) == 0)) {
-                hip_reinject_packet(&entry_peer->hit_our,
-                                    &entry_peer->hit_peer,
-                                    ctx->ipq_packet, 4, 0);
-                verdict = 0;
-            } else {
-                verdict = default_verdict;
-            }
-        }
-    } else {
-        /* add default entry in the firewall db */
-        hip_firewall_add_default_entry(&ctx->dst);
-
-        /* get current connection state from hipd */
-        state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst,
-                                              &src_hit, &dst_hit,
-                                              &src_lsi, &dst_lsi);
-        if (state_ha == -1) {
-            hip_hit_t *def_hit = hip_fw_get_default_hit();
-            HIP_DEBUG("Initiate bex at firewall\n");
-            memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
-            hip_fw_trigger_opportunistic_bex(&ctx->dst, def_hit);
-            verdict = 0;
-        } else if (state_ha == HIP_STATE_ESTABLISHED) {
-            if (!ipv6_addr_cmp(&src_hit, hip_fw_get_default_hit())) {
-                HIP_DEBUG("is local hit\n");
-                hip_firewall_update_entry(&src_hit, &dst_hit,
-                                          &dst_lsi, &ctx->dst,
-                                          FIREWALL_STATE_BEX_ESTABLISHED);
-                hip_reinject_packet(&src_hit, &dst_hit, ctx->ipq_packet, 4, 0);
-                verdict = 0;
-            } else {
-                verdict = default_verdict;
-            }
-        } else if ((state_ha == HIP_STATE_FAILED)  ||
-                   (state_ha == HIP_STATE_CLOSING) ||
-                   (state_ha == HIP_STATE_CLOSED)) {
+        } else if (entry_peer->state == HIP_STATE_FAILED) {
+            hip_fw_add_non_hip_peer(ctx, default_verdict);
             verdict = default_verdict;
         } else {
             verdict = 0;
         }
+    } else {
+        HIP_DEBUG("Initiate bex at firewall\n");
+        hip_fw_trigger_opportunistic_bex(&ctx->dst, hip_fw_get_default_hit());
+        verdict = 0;
     }
 
     return verdict;
@@ -307,7 +184,7 @@ int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg)
     int err = 0, state;
     hip_hit_t *local_hit, *peer_hit;
     struct in6_addr *peer_addr;
-    hip_lsi_t *local_addr;
+    struct in6_addr *local_addr;
 
     local_hit  = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
     peer_hit   = hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
@@ -315,13 +192,13 @@ int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg)
     peer_addr  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
 
     if (peer_hit) {
-        state = FIREWALL_STATE_BEX_ESTABLISHED;
+        state = HIP_STATE_ESTABLISHED;
     } else {
-        state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
+        state = HIP_STATE_FAILED;
     }
 
-    hip_firewall_update_entry(local_hit, peer_hit,
-                              local_addr, peer_addr, state);
+    hip_firewall_cache_update_entry(local_addr, peer_addr,
+                                    local_hit, peer_hit, state);
 
     return err;
 }
