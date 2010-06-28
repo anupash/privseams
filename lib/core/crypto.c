@@ -462,9 +462,6 @@ int impl_dsa_sign(uint8_t *digest, DSA *dsa, uint8_t *signature)
     bn2bin_safe(dsa_sig->s, &signature[1 + DSA_PRIV], DSA_PRIV);
 
 out_err:
-    if (dsa) {
-        DSA_free(dsa);
-    }
     if (dsa_sig) {
         DSA_SIG_free(dsa_sig);
     }

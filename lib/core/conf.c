@@ -1108,9 +1108,17 @@ static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
     }
 
     if (use_default && action == ACTION_ADD) {
-        /* Add default keys in three steps: dsa, rsa anon, rsa pub.
-         * Necessary for large keys. */
+        /* Keys must be added one by one for the hip_endpoint structure
+         * to fit in the message. */
 
+        if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
+                                                "dsa", NULL, 0, 0))) {
+            goto out_err;
+        }
+        HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
+                 "Sending msg failed.\n");
+
+        hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
                                                 "dsa", NULL, 0, 0))) {
             goto out_err;
