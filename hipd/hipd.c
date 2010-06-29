@@ -150,20 +150,13 @@ int hip_sendto_firewall(const struct hip_common *msg)
 #ifdef CONFIG_HIP_FIREWALL
     int n          = 0;
     HIP_DEBUG("CONFIG_HIP_FIREWALL DEFINED AND STATUS IS %d\n", hip_get_firewall_status());
-    struct sockaddr_in6 hip_fw_addr;
-    socklen_t alen = sizeof(hip_firewall_addr);
-
-    bzero(&hip_firewall_addr, alen);
-    hip_fw_addr.sin6_family = AF_INET6;
-    hip_fw_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    hip_fw_addr.sin6_addr   = in6addr_loopback;
 
     n = sendto(hip_firewall_sock,
                msg,
                hip_get_msg_total_len(msg),
                0,
                (struct sockaddr *) &hip_firewall_addr,
-               alen);
+               sizeof(hip_firewall_addr));
     return n;
 #else
     HIP_DEBUG("Firewall is disabled.\n");
@@ -353,6 +346,11 @@ static int hipd_main(uint64_t flags)
 
 #ifdef CONFIG_HIP_FIREWALL
         if (hip_firewall_status < 0) {
+
+            memset(&hip_firewall_addr, 0, sizeof(hip_firewall_addr));
+            hip_firewall_addr.sin6_family = AF_INET6;
+            hip_firewall_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
+            hip_firewall_addr.sin6_addr   = in6addr_loopback;
 
             hip_msg_init(ctx.input_msg);
             err = hip_build_user_hdr(ctx.input_msg,
