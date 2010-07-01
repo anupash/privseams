@@ -1016,7 +1016,7 @@ static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
    /* set local UDP port just in case the original communications
       changed from raw to UDP or vice versa */
     ctx->hadb_entry->local_udp_port = ctx->msg_ports->dst_port;
-    /* @todo: a workaround for bug id 944 */
+    /* @todo: a workaround for bug id 592200 */
     ctx->hadb_entry->peer_udp_port = ctx->msg_ports->src_port;
 
     /* RFC 5206: End-Host Mobility and Multihoming.

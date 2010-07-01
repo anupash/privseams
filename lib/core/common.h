@@ -54,7 +54,7 @@ struct hip_esp_tail {
 /* maximum packet size of a packet to be sent on the wire */
 #define MAX_PACKET_SIZE         1500
 
-/* see bug id 595
+/* see bug id 592138
  *
  * @note if you want to make this smaller, you have to change also
  *       /proc/sys/net/ipv6/conf/default/mtu, but it will have a

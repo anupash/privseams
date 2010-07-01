@@ -108,7 +108,7 @@ static void hip_create_file_unless_exists(const char *path, const char *contents
 
 #define HIPL_CONFIG_FILE_EX \
     "# Format of this file is as with hipconf, but without hipconf prefix\n\
-# add hi default    # add all four HITs (see bug id 522)\n\
+# add hi default    # add all four HITs (see bug id 592127)\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
 # add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
@@ -535,7 +535,7 @@ static int hip_init_host_ids(void)
     /* Three steps because multiple large keys will not fit in the same message */
 
     /* DSA keys and RSA anonymous are not loaded by default until bug id
-     * 522 is properly solved. Run hipconf add hi default if you want to
+     * 592127 is properly solved. Run hipconf add hi default if you want to
      * enable non-default HITs. */
 
     /* rsa pub */

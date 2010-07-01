@@ -521,7 +521,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
                               &lsi, host_identity,
                               NULL, NULL, NULL);
 
-        /* Currently only RSA pub is added by default (bug id 522).
+        /* Currently only RSA pub is added by default (bug id 592127).
          * Ignore redundant adding in case user wants to enable
          * multiple HITs. */
         HIP_IFEL((err == -EEXIST), 0,
