@@ -1067,8 +1067,8 @@ int hip_netdev_trigger_bex_msg(const struct hip_common *msg)
     param = hip_get_param(msg, HIP_PARAM_LSI);
     if (param) {
         peer_lsi = hip_get_param_contents_direct(param);
+        HIP_DEBUG_LSI("trigger_msg_peer_lsi:", peer_lsi);
     }
-    HIP_DEBUG_LSI("trigger_msg_peer_lsi:", peer_lsi);
 
     /** @todo: check if peer lsi is all zeroes? */
 
@@ -1076,8 +1076,8 @@ int hip_netdev_trigger_bex_msg(const struct hip_common *msg)
     param = hip_get_next_param(msg, param);
     if (param && hip_get_param_type(param) == HIP_PARAM_LSI) {
         our_lsi = hip_get_param_contents_direct(param);
+        HIP_DEBUG_LSI("trigger_msg_our_lsi:", our_lsi);
     }
-    HIP_DEBUG_LSI("trigger_msg_our_lsi:", our_lsi);
 
     /** @todo: check if local lsi is all zeroes? */
 
