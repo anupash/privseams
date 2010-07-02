@@ -1,5 +1,5 @@
-#ifndef HIP_LIB_CORE_CHECKSUM_H
-#define HIP_LIB_CORE_CHECKSUM_H
+#ifndef HIP_LIB_TOOL_CHECKSUM_H
+#define HIP_LIB_TOOL_CHECKSUM_H
 
 #define _BSD_SOURCE
 
@@ -17,4 +17,4 @@ uint16_t checksum_ip(struct ip *ip_hdr, const unsigned int ip_hl);
 uint16_t inchksum(const void *data, uint32_t length);
 uint16_t hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
 
-#endif /* HIP_LIB_CORE_CHECKSUM_H */
+#endif /* HIP_LIB_TOOL_CHECKSUM_H */

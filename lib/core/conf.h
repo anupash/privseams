@@ -13,8 +13,8 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 
-#ifndef HIP_LIB_CONF_HIPCONF_H
-#define HIP_LIB_CONF_HIPCONF_H
+#ifndef HIP_LIB_CORE_CONF_H
+#define HIP_LIB_CORE_CONF_H
 
 #include <stdlib.h>
 
@@ -62,4 +62,4 @@ int hip_conf_handle_load(hip_common_t *msg,
                          int optc,
                          int send_only);
 
-#endif /* HIP_LIB_CONF_HIPCONF_H */
+#endif /* HIP_LIB_CORE_CONF_H */

@@ -7,8 +7,8 @@
  * @author Tim Just <tim.just@rwth-aachen.de>
  *
  */
-#ifndef HIP_HIPD_MODULARIZATION_H
-#define HIP_HIPD_MODULARIZATION_H
+#ifndef HIP_HIPD_PKT_HANDLING_H
+#define HIP_HIPD_PKT_HANDLING_H
 
 #include <stdint.h>
 #include "lib/core/protodefs.h"
@@ -26,4 +26,4 @@ int hip_run_handle_functions(const uint8_t packet_type,
 
 void hip_uninit_handle_functions(void);
 
-#endif /* HIP_HIPD_MODULARIZATION_H */
+#endif /* HIP_HIPD_PKT_HANDLING_H */

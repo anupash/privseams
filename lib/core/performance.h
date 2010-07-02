@@ -4,8 +4,8 @@
  * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 
-#ifndef HIP_LIB_PERFORMANCE_PERFORMANCE_H
-#define HIP_LIB_PERFORMANCE_PERFORMANCE_H
+#ifndef HIP_LIB_CORE_PERFORMANCE_H
+#define HIP_LIB_CORE_PERFORMANCE_H
 
 /*
  * Primitive performance measurement
@@ -76,4 +76,4 @@ enum perf_sensor {PERF_I1,
 
 perf_set_t *perf_set;
 
-#endif /* HIP_LIB_PERFORMANCE_PERFORMANCE_H */
+#endif /* HIP_LIB_CORE_PERFORMANCE_H */
