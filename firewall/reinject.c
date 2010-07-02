@@ -323,8 +323,6 @@ void hip_firewall_init_raw_sockets(void)
  * @param proto the transport layer protocol of the packet
  * @param ttl new ttl value for the transformed packet
  *
- * @todo this function could also be used by the proxy?
- *
  * @return zero on success and non-zero on error
  */
 int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,

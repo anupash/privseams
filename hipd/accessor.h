@@ -35,10 +35,6 @@
 
 #define INDEX_HASH_FN           HIP_DIGEST_SHA1
 
-/** Specifies the NAT status of the daemon. This value indicates if the current
- *  machine is behind a NAT. Defined in hipd.c */
-extern int hipproxy;
-
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);
 int hipd_get_flag(unsigned int);
