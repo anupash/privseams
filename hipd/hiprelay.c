@@ -1067,7 +1067,7 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
         /* Notice that the HMAC is currently ignored to allow rvs/relay e.g.
          * in the following use case: I <----IPv4 ----> RVS <----IPv6---> R
          * Otherwise we have to loop through all host associations and try
-         * all HMAC keys. See bug id 753 */
+         * all HMAC keys. See bug id 592172 */
         HIP_DEBUG("Full_Relay_HMAC verification failed.\n");
         HIP_DEBUG("Ignoring HMAC verification\n");
     }
