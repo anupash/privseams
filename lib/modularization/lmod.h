@@ -8,8 +8,8 @@
  * @author Tim Just <tim.just@rwth-aachen.de>
  *
  */
-#ifndef HIP_LIB_MODULARIZATION_MODULARIZATION_H
-#define HIP_LIB_MODULARIZATION_MODULARIZATION_H
+#ifndef HIP_LIB_MODULARIZATION_LMOD_H
+#define HIP_LIB_MODULARIZATION_LMOD_H
 
 #include <stdint.h>
 
@@ -53,4 +53,4 @@ int lmod_register_packet_type(const uint16_t packet_type,
 
 void lmod_uninit_packet_types(void);
 
-#endif /* HIP_LIB_MODULARIZATION_MODULARIZATION_H */
+#endif /* HIP_LIB_MODULARIZATION_LMOD_H */
