@@ -77,6 +77,7 @@
 #include "firewall.h"
 #include "sysopp.h"
 
+
 /* packet types handled by the firewall */
 #define OTHER_PACKET          0
 #define HIP_PACKET            1
@@ -204,7 +205,6 @@ int hip_fw_init_esp_relay(void)
  */
 void hip_fw_uninit_esp_relay(void)
 {
-
     esp_relay = 0;
 }
 
@@ -2023,23 +2023,22 @@ int main(int argc, char **argv)
         }
     }
 
-    if (errflg)
-    {
+    if (errflg) {
         print_usage();
         printf("Invalid argument. Closing. \n\n");
         exit(2);
     }
 
-    if (!foreground)
-    {
+    if (!foreground) {
         hip_set_logtype(LOGTYPE_SYSLOG);
         HIP_DEBUG("Forking into background\n");
-        if (fork() > 0)
+        if (fork() > 0) {
             return 0;
+        }
     }
 
     HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
-            "Failed to obtain firewall lock.\n");
+             "Failed to obtain firewall lock.\n");
 
     /* Request-response socket with hipfw */
     hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -2052,10 +2051,11 @@ int main(int argc, char **argv)
     for (i=0; i<2; i++) {
         err = bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
                sizeof(sock_addr));
-        if (err == 0)
+        if (err == 0) {
             break;
-        else if (err && i == 0)
+        } else if (err && i == 0) {
             sleep(2);
+        }
     }
 
     HIP_IFEL(err, -1, "Bind on firewall socket addr failed. Give -k option to kill old hipfw\n");
