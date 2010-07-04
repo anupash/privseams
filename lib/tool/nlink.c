@@ -148,8 +148,9 @@ int hip_netlink_receive(struct rtnl_handle *nl,
     while (1) {
         iov.iov_len = sizeof(buf);
 
-        /* note: not using recvmsg interface anymore as
-         * a workaround for bug id 782 */
+        /* Transitioned from recvmsg() to recvfrom() due to
+         * "Netlink overrun" errors when executing
+         * "hipconf rst all" */
 
         status      = recvfrom(nl->fd, buf, sizeof(buf),
                                0, NULL, NULL);
