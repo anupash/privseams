@@ -110,7 +110,8 @@ static int hip_peek_recv_total_len(int sockfd,
     msg        = malloc(hdr_size);
     HIP_IFEL(!msg, -ENOMEM, "Error allocating memory.\n");
 
-    /* Make sure the socket does not block (bug id 806) */
+    /* If a positive timeout value is given, make sure that the
+     * retrieving the message from the hipd does not block */
     if (timeout >= 0) {
         flags |= MSG_DONTWAIT;
     }
