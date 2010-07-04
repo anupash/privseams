@@ -512,8 +512,9 @@ int hip_handle_user_msg(hip_common_t *msg,
             }
         }
 
-        /* Workaround for bug id 880 until bug id 592135 is implemented.
-         * -miika  */
+        /* Workaround for registration when a mapping already pre-exists
+         * (inserted e.g. with "hipconf add map"). This can be removed
+         * after bug id 592135 is resolved. */
         if (entry->state != HIP_STATE_NONE || HIP_STATE_UNASSOCIATED) {
             hip_common_t *msg2 = calloc(HIP_MAX_PACKET, 1);
             HIP_IFE((msg2 == 0), -1);
