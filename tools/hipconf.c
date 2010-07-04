@@ -27,7 +27,9 @@ int main(int argc, char *argv[])
     hip_set_logtype(LOGTYPE_STDERR);
     hip_set_logfmt(LOGFMT_SHORT);
 
-    // workaround for bug #604
+    /* Hipconf displays nothing if debug level is set to none in
+     * /etc/hip/hipd_config because also hipconf reads the config
+     * file. This re-enables the the logging for hipconf. */
     hip_set_logdebug(LOGDEBUG_ALL);
 
     HIP_IFEL(hip_do_hipconf(argc, argv, 0), -2,
