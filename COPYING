@@ -1,19 +1,10 @@
 HIPL Licensing Conditions
 =========================
 
-HIPL is licensed under GPLv2 until June 2010. After this, the license
-of the code developed for the HIPL project changes from GPLv2 to
-MIT (Expat license). However, the following companies can use the code
-developed for the HIPL project using the MIT license already before the
-mentioned date:
-
-  * Nokia OYJ
-  * OY LM Ericsson Ab
-  * Elisa Oyj
-  * Puolustusvoimat
-  * Birdstep Technology Oy
-  * TeliaSonera Finland Oyj
-  * Tekes
+HIPL is licensed under MIT (Expat) license starting from
+4.7.2010. HIPL license prior to to this date was GPLv2. Please note
+that HIPL code base has still few GPL dependencies as described
+later on.
 
 The code under the following directories was developed for the HIPL project:
 
@@ -26,7 +17,7 @@ The code under the following directories was developed for the HIPL project:
   * doc
 
 The following directories contain code imported from other projects
-and have their own licensing conditions:
+and have their own licensing conditions (GPL):
 
   * firewall/user_ipsec_esp.c
   * tools/hipdnsproxy/DNS

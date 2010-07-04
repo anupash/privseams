@@ -6,7 +6,7 @@ URL: http://infrahip.hiit.fi/
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: miika@iki.fi
 Vendor: InfraHIP
-License: GPLv2
+License: GPLv2 and MIT/Expat
 Group: System Environment/Kernel
 BuildRequires: gcc gcc-c++ openssl-devel iptables-devel xmlto libtool libcap-devel autoconf automake xmlto rpm-build
 ExclusiveOS: linux
