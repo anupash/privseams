@@ -45,7 +45,8 @@ static int hip_firewall_init_raw_sock_icmp_outbound(int *firewall_raw_sock_v6)
     *firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMP);
     HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6,
                      IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");
@@ -75,7 +76,8 @@ static int hip_firewall_init_raw_sock_tcp_v4(int *firewall_raw_sock_v4)
     *firewall_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
     HIP_IFEL(*firewall_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(*firewall_raw_sock_v4, IPPROTO_IP,
                      IP_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
@@ -108,7 +110,8 @@ static int hip_firewall_init_raw_sock_udp_v4(int *firewall_raw_sock_v4)
     *firewall_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     HIP_IFEL(*firewall_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(*firewall_raw_sock_v4, IPPROTO_IP,
                      IP_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
@@ -141,7 +144,8 @@ static int hip_firewall_init_raw_sock_icmp_v4(int *firewall_raw_sock_v4)
     *firewall_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     HIP_IFEL(*firewall_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(*firewall_raw_sock_v4, IPPROTO_IP,
                      IP_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
@@ -173,7 +177,8 @@ static int hip_firewall_init_raw_sock_tcp_v6(int *firewall_raw_sock_v6)
     *firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
     HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6,
                      IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");
@@ -202,7 +207,8 @@ static int hip_firewall_init_raw_sock_udp_v6(int *firewall_raw_sock_v6)
     *firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_UDP);
     HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6,
                      IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");
@@ -231,7 +237,8 @@ static int hip_firewall_init_raw_sock_icmp_v6(int *firewall_raw_sock_v6)
     *firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
     HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6,
                      IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");

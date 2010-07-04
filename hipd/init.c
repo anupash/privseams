@@ -239,7 +239,8 @@ static int hip_init_raw_sock_v4(int proto)
     set_cloexec_flag(sock, 1);
     HIP_IFEL(sock <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(sock, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
     err = setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
@@ -455,7 +456,8 @@ static int hip_init_raw_sock_v6(int proto)
     set_cloexec_flag(sock, 1);
     HIP_IFEL(sock <= 0, 1, "Raw socket creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");
     err = setsockopt(sock, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
@@ -1206,7 +1208,8 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
     set_cloexec_flag(*hip_nat_sock_udp, 1);
     err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt udp pktinfo failed\n");
-    /* see bug id 212 why RECV_ERR is off */
+    /* RECV_ERR is off because it is not handled properly by hipd
+     * (message length is -1 and this causes msg reading problems) */
     err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
     if (!is_output) {
