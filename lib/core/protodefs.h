@@ -339,8 +339,6 @@
 #define HIP_SIG_RSA                   5
 #define HIP_HI_DEFAULT_ALGO           HIP_HI_RSA
 
-/** @todo Kludge: currently set to DSA until bug id 175 is resolved!
- *  Should be RSA. */
 #define HIP_ANY_ALGO                  -1
 
 #define HIP_DIGEST_MD5                1
