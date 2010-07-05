@@ -1001,12 +1001,6 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
             !ipv6_addr_any(&dst)) {
             HIP_DEBUG("create relay_to parameter in R2\n");
             hip_build_param_relay_to(ctx->output_msg, &dst, dst_port);
-
-            /* FIXME: The addresses to use for continued communication
-             * should be sent in LOCATOR parameters. */
-            HIP_DEBUG("Setting peer address to RELAY_FROM address.\n");
-            memcpy(&ctx->hadb_entry->peer_addr, &dst, sizeof(dst));
-	        ctx->hadb_entry->peer_udp_port = dst_port;
         }
     }
 #endif
