@@ -752,14 +752,14 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
                 UNUSED const uint32_t ha_state,
                 struct hip_packet_context *ctx)
 {
-    int err = 0;
-    hip_common_t *r1pkt     = NULL;
+    int err                     = 0;
+    hip_common_t *r1pkt         = NULL;
     in6_addr_t dst_ip           = IN6ADDR_ANY_INIT,
                *r1_dst_addr     = NULL,
                *local_plain_hit = NULL,
                *r1_src_addr     = ctx->dst_addr;
-    in_port_t r1_dst_port    = 0;
-    uint16_t relay_para_type = 0;
+    in_port_t r1_dst_port       = 0;
+    int relay_para_type         = 0;
 
     HIP_IFEL(ctx->error,
              -1,
@@ -835,40 +835,34 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
     HIP_DEBUG_HIT("hip_xmit_r1(): ripkt->hitr", &r1pkt->hitr);
 
 #ifdef CONFIG_HIP_RVS
-    /* Build VIA_RVS or RELAY_TO parameter if the I1 packet was relayed
-     * through a rvs. */
     /** @todo Parameters must be in ascending order, should this
      *  be checked here? Now we just assume that the VIA_RVS/RELAY_TO
      *  parameter is the last parameter. */
-    /* If I1 had a FROM/RELAY_FROM, then we must build a RELAY_TO/VIA_RVS
+    /* If I1 had a RELAY_FROM/FROM, then we must build a RELAY_TO/VIA_RVS
      * parameter. */
-    if (!ipv6_addr_any(&dst_ip) && relay_para_type) { // dst_port has the value of RELAY_FROM port.
-                                                    //there is port no value for FROM parameter
-                                                    //here condition is not enough
+    if (!ipv6_addr_any(&dst_ip) && relay_para_type) {
         if (relay_para_type == HIP_PARAM_RELAY_FROM) {
-            HIP_DEBUG("Build param relay from\n");
-            hip_build_param_relay_to(
-                r1pkt, &dst_ip, r1_dst_port);
+            HIP_DEBUG("Build param relay_to\n");
+            hip_build_param_relay_to(r1pkt, &dst_ip, r1_dst_port);
         } else if (relay_para_type == HIP_PARAM_FROM)    {
-            HIP_DEBUG("Build param from\n");
+            HIP_DEBUG("Build param via_rvs\n");
             hip_build_param_via_rvs(r1pkt, ctx->src_addr);
         }
     }
 #endif
-    /* R1 is send on UDP if R1 destination port is hip_get_peer_nat_udp_port(). This is if:
+    /* R1 is send on UDP if R1 destination port is hip_get_peer_nat_udp_port().
+     * This is if:
      * a) the I1 was received on UDP.
      * b) the received I1 packet had a RELAY_FROM parameter. */
     if (r1_dst_port) {
-        HIP_IFEL(hip_send_pkt(r1_src_addr, r1_dst_addr, hip_get_local_nat_udp_port(),
+        HIP_IFEL(hip_send_pkt(r1_src_addr, r1_dst_addr, 
+                              hip_get_local_nat_udp_port(),
                               r1_dst_port, r1pkt, NULL, 0),
                  -ECOMM, "Sending R1 packet on UDP failed.\n");
-    }
-    /* Else R1 is send on raw HIP. */
-    else {
-        HIP_IFEL(hip_send_pkt(
-                     r1_src_addr,
-                     r1_dst_addr, 0, 0,
-                     r1pkt, NULL, 0),
+    } else { /* Else R1 is sent on raw HIP. */
+        HIP_IFEL(hip_send_pkt(r1_src_addr,
+                              r1_dst_addr, 0, 0,
+                              r1pkt, NULL, 0),
                  -ECOMM,
                  "Sending R1 packet on raw HIP failed.\n");
     }
@@ -959,20 +953,17 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
              "failed to add esp protection anchor\n");
     /************************************************/
 
-#if defined(CONFIG_HIP_RVS)
+#ifdef CONFIG_HIP_RVS
     /********** REG_REQUEST **********/
     /* This part should only be executed at server offering rvs or relay
      * services.
      */
 
-    /* Handle REG_REQUEST parameter. */
-    hip_handle_param_reg_request(ctx->hadb_entry, ctx->input_msg, ctx->output_msg);
-
-#endif
-
-#if defined(CONFIG_HIP_RVS)
+    hip_handle_param_reg_request(ctx->hadb_entry,
+                                 ctx->input_msg, ctx->output_msg);
     if (hip_relay_get_status() != HIP_RELAY_OFF) {
-        hip_build_param_reg_from(ctx->output_msg, ctx->src_addr, ctx->msg_ports->src_port);
+        hip_build_param_reg_from(ctx->output_msg,
+                                 ctx->src_addr, ctx->msg_ports->src_port);
     }
 #endif
 
@@ -995,7 +986,7 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
     }
 
     HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
-                                          ctx->output_msg),
+                                   ctx->output_msg),
              -EINVAL,
              "Could not sign R2. Failing\n");
 
