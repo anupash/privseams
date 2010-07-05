@@ -66,6 +66,10 @@ void hip_init_services(void)
     hip_services[1].status       = HIP_SERVICE_OFF;
     hip_services[1].min_lifetime = HIP_RELREC_MIN_LIFETIME;
     hip_services[1].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+    hip_services[2].reg_type     = HIP_FULLRELAY;
+    hip_services[2].status       = HIP_SERVICE_OFF;
+    hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
+    hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
     hip_ll_init(&pending_requests);
 }
@@ -452,6 +456,9 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
                 case HIP_SERVICE_RELAY:
                     type = HIP_RELAY;
                     break;
+                case HIP_SERVICE_FULLRELAY:
+                    type = HIP_FULLRELAY;
+                    break;
                 case HIP_SERVICE_RENDEZVOUS:
                 default:
                     type = HIP_RVSRELAY;
@@ -719,6 +726,24 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
                 entry, HIP_SERVICE_RELAY);
             break;
         }
+        case HIP_SERVICE_FULLRELAY:
+        {
+            HIP_DEBUG("The server has granted us full relay " \
+                      "service for %u seconds (lifetime 0x%x.)\n",
+                      seconds, lifetime);
+            hip_hadb_cancel_local_controls(
+                entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
+            hip_hadb_set_peer_controls(
+                entry, HIP_HA_CTRL_PEER_GRANTED_FULLRELAY);
+            hip_del_pending_request_by_type(
+                entry, HIP_SERVICE_FULLRELAY);
+            /* Delete SAs with relay server to
+             * avoid problems with ESP relay*/
+            entry->disable_sas = 1;
+            /* SAs are added before registration completes*/
+            hip_delete_security_associations_and_sp(entry);
+            break;
+        }
         default:
         {
             HIP_DEBUG("The server has granted us an unknown " \
@@ -778,6 +803,17 @@ static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
                 entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
             hip_del_pending_request_by_type(
                 entry, HIP_SERVICE_RELAY);
+
+            break;
+        }
+        case HIP_SERVICE_FULLRELAY:
+        {
+            HIP_DEBUG("The server has cancelled our full relay " \
+                      "service.\n");
+            hip_hadb_cancel_local_controls(
+                entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
+            hip_del_pending_request_by_type(
+                entry, HIP_SERVICE_FULLRELAY);
 
             break;
         }
@@ -866,6 +902,12 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
             HIP_INFO("Responder offers relay service.\n");
             hip_hadb_set_peer_controls(
                 entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+
+            break;
+        case HIP_SERVICE_FULLRELAY:
+            HIP_INFO("Responder offers full relay service.\n");
+            hip_hadb_set_peer_controls(
+                entry, HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE);
 
             break;
         default:
@@ -1296,6 +1338,18 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
                     entry, HIP_SERVICE_RELAY);
                 hip_hadb_set_peer_controls(
                     entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
+                break;
+            }
+            case HIP_SERVICE_FULLRELAY:
+            {
+                HIP_DEBUG("The server has refused to grant us " \
+                          "full relay service.\n%s\n", reason);
+                hip_hadb_cancel_local_controls(
+                    entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
+                hip_del_pending_request_by_type(
+                    entry, HIP_SERVICE_FULLRELAY);
+                hip_hadb_set_peer_controls(
+                    entry, HIP_HA_CTRL_PEER_REFUSED_FULLRELAY);
                 break;
             }
             default:
