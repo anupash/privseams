@@ -130,4 +130,8 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
                               const uint32_t ha_state,
                               struct hip_packet_context *ctx);
 
+int hip_relay_forward(const struct hip_packet_context *ctx,
+                      hip_relrec_t *rec,
+                      const uint8_t type_hdr);
+
 #endif /* HIP_HIPD_HIPRELAY_H */

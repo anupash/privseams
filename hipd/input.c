@@ -1278,6 +1278,28 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
             "Received illegal controls in I1: 0x%x. Dropping\n",
             ntohs(ctx->input_msg->control));
 
+#ifdef CONFIG_HIP_RVS
+    if (hip_relay_get_status() != HIP_RELAY_OFF &&
+        !hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+        hip_relrec_t *rec = NULL, dummy;
+
+        memcpy(&dummy.hit_r, &ctx->input_msg->hitr,
+               sizeof(ctx->input_msg->hitr));
+        HIP_DEBUG_HIT("Searching relay record on HIT ", &dummy.hit_r);
+        rec = hip_relht_get(&dummy);
+        if (rec == NULL) {
+            HIP_INFO("No matching relay record found.\n");
+        } else if (rec->type == HIP_RELAY ||
+                   rec->type == HIP_FULLRELAY ||
+                   rec->type == HIP_RVSRELAY) {
+            HIP_INFO("Matching relay record found.\n");
+            hip_relay_forward(ctx, rec, HIP_I1);
+            err = -ECANCELED;
+            goto out_err;
+        }
+    }
+#endif
+
 out_err:
     return err;
 }
@@ -1403,6 +1425,30 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     HIP_IFEL(ipv6_addr_any(&ctx->input_msg->hitr),
              0,
              "Received NULL receiver HIT in I2. Dropping\n");
+
+#ifdef CONFIG_HIP_RVS
+    if (hip_relay_get_status() != HIP_RELAY_OFF &&
+        !hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+        hip_relrec_t *rec = NULL, dummy;
+
+        /* Check if we have a relay record in our database matching the
+         * Responder's HIT. We should find one if the Responder is
+         * registered to relay. */
+        memcpy(&dummy.hit_r, &ctx->input_msg->hitr,
+               sizeof(ctx->input_msg->hitr));
+        HIP_DEBUG_HIT("Searching relay record on HIT ", &dummy.hit_r);
+        rec = hip_relht_get(&dummy);
+        if (rec == NULL) {
+            HIP_INFO("No matching relay record found.\n");
+        } else if (rec->type != HIP_RVSRELAY) {
+            HIP_INFO("Matching relay record found:Full-Relay.\n");
+            hip_relay_forward(ctx, rec, HIP_I2);
+            err = -ECANCELED;
+            goto out_err;
+            }
+        }
+#endif
+
     HIP_IFEL(!hip_hidb_hit_is_our(&ctx->input_msg->hitr),
              -EPROTO,
              "Responder's HIT in the received I2 packet does not correspond " \
@@ -1818,25 +1864,6 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     }
 
     ctx->hadb_entry->spi_outbound_new = spi_out;
-
-#ifdef CONFIG_HIP_RVS
-    {
-        in6_addr_t dest;
-        in_port_t dest_port = 0;
-
-        ipv6_addr_copy(&dest, &in6addr_any);
-        if (hip_relay_get_status() == HIP_RELAY_OFF) {
-            ctx->hadb_entry->state = hip_relay_handle_relay_from(ctx->input_msg,
-                                                                 ctx->src_addr,
-                                                                 &dest,
-                                                                 &dest_port);
-            if (ctx->hadb_entry->state == -1) {
-                HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
-                goto out_err;
-            }
-        }
-    }
-#endif
 
     /***** LOCATOR PARAMETER *****/
     locator = (struct hip_locator *) hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);

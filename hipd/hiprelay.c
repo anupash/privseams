@@ -865,6 +865,128 @@ out_err:
 }
 
 /**
+ * forward a control packet in relay or rvs mode
+ *
+ * @param ctx the packet context corresponding to the packet
+ * @param rec the relay record corresponding to the packet
+ * @param type_hdr message type
+ * @return zero on success and negative on failure
+ */
+int hip_relay_forward(const struct hip_packet_context *ctx,
+                      hip_relrec_t *rec,
+                      const uint8_t type_hdr)
+{
+    hip_common_t *msg_to_be_relayed = NULL;
+    hip_tlv_common_t *current_param = NULL;
+    int err                         = 0, from_added = 0;
+    hip_tlv_type_t param_type       = 0;
+
+    HIP_DEBUG("Msg type :      %s (%d)\n",
+              hip_message_type_name(hip_get_msg_type(ctx->input_msg)),
+              hip_get_msg_type(ctx->input_msg));
+    HIP_DEBUG_IN6ADDR("source address", ctx->src_addr);
+    HIP_DEBUG_IN6ADDR("destination address", ctx->dst_addr);
+    HIP_DEBUG_HIT("Relay record hit", &rec->hit_r);
+    HIP_DEBUG("Relay record port: %d.\n", rec->udp_port_r);
+    HIP_DEBUG("source port: %u, destination port: %u\n",
+              ctx->msg_ports->src_port, ctx->msg_ports->dst_port);
+
+    if (rec->type == HIP_RVSRELAY) {
+        HIP_DEBUG("Relay type is RVS\n");
+        param_type = HIP_PARAM_FROM;
+    } else {
+        HIP_DEBUG("Relay type is relay\n");
+        param_type = HIP_PARAM_RELAY_FROM;
+    }
+
+    HIP_IFEL(!(msg_to_be_relayed = hip_msg_alloc()), -ENOMEM,
+             "No memory\n");
+
+    hip_build_network_hdr(msg_to_be_relayed, type_hdr, 0,
+                          &ctx->input_msg->hits, &ctx->input_msg->hitr);
+
+    /* Notice that in most cases the incoming I1 has no paramaters at all,
+     * and this "while" loop is skipped. Multiple rvses en route to responder
+     * is one (the only?) case when the incoming I1 packet has parameters. */
+    while ((current_param = hip_get_next_param(ctx->input_msg,
+                                               current_param))) {
+        HIP_DEBUG("Found parameter in the packet.\n");
+        /* Copy while type is smaller than or equal to FROM (RELAY_FROM)
+         * or a new FROM (RELAY_FROM) has already been added. */
+        if (from_added || hip_get_param_type(current_param) <= param_type) {
+            HIP_DEBUG("Copying existing parameter to the packet " \
+                      "to be relayed.\n");
+            hip_build_param(msg_to_be_relayed, current_param);
+        } else {
+           /* Parameter under inspection has greater type than FROM
+            * (RELAY_FROM) parameter: insert a new FROM (RELAY_FROM) parameter
+            * between the previous parameter and "current_param". */
+            HIP_DEBUG("Created new param %d and copied " \
+                      "current parameter to relayed packet.\n",
+                      param_type);
+            if (param_type == HIP_PARAM_RELAY_FROM) {
+                hip_build_param_relay_from(msg_to_be_relayed,
+                                           ctx->src_addr,
+                                           ctx->msg_ports->src_port);
+            } else {
+                hip_build_param_from(msg_to_be_relayed, ctx->src_addr);
+            }
+            hip_build_param(msg_to_be_relayed, current_param);
+            from_added = 1;
+        }
+    }
+
+    /* If the incoming packet had no parameters after the existing FROM
+     * (RELAY_FROM) parameters, new FROM (RELAY_FROM) parameter is not added
+     * until here. */
+    if (!from_added) {
+        HIP_DEBUG("No parameters found, adding a new param %d.\n",
+                  param_type);
+        if (param_type == HIP_PARAM_RELAY_FROM) {
+            hip_build_param_relay_from(msg_to_be_relayed,
+                                       ctx->src_addr,
+                                       ctx->msg_ports->src_port);
+        } else {
+            hip_build_param_from(msg_to_be_relayed, ctx->src_addr);
+        }
+    }
+
+    hip_zero_msg_checksum(msg_to_be_relayed);
+
+    if (rec->type == HIP_RVSRELAY) {
+        param_type = HIP_PARAM_RVS_HMAC;
+    } else {
+        param_type = HIP_PARAM_RELAY_HMAC;
+    }
+
+    /* Adding RVS_HMAC or RELAY_HMAC parameter as the last parameter
+     * of the relayed packet. Notice that this presumes that there
+     * are no parameters whose type value is greater than RVS_HMAC or 
+     * RELAY_HMAC in the incoming I1/I2 packet. */
+    HIP_IFEL(hip_build_param_hmac(msg_to_be_relayed,
+                                  &(rec->hmac_relay),
+                                  param_type),
+             -1, "Building of RVS_HMAC or RELAY_HMAC failed.\n");
+
+    /* Note that we use NULL as source IP address instead of
+     * i1_daddr. A source address is selected in the send function. */
+    HIP_IFEL(hip_send_pkt(NULL, &rec->ip_r, hip_get_local_nat_udp_port(),
+                          rec->udp_port_r, msg_to_be_relayed, NULL, 0),
+             -ECOMM, "Relaying the packet failed.\n");
+
+    rec->last_contact = time(NULL);
+
+    HIP_DEBUG_HIT("Relayed the packet to", &rec->ip_r);
+
+out_err:
+    if (msg_to_be_relayed) {
+        free(msg_to_be_relayed);
+    }
+
+    return err;
+}
+
+/**
  * forward a HIP control packet with relay_to parameter
  *
  * @param r the HIP control message to be relayed
@@ -1038,31 +1160,42 @@ out_err:
 }
 
 /**
- * handle relay_from parameter in a HIP control message
+ * handle from/relay_from parameter in a HIP control message
  *
  * @param source_msg the HIP control message
  * @param relay_ip the source IP address of the message
  * @param dest_ip the relayed destination will be written here
  * @param dest_port the relayed destination port will be written here
+ * @return 0 if no FROM/RELAY FROM parameter is found, parameter type
+ *         if one is found, negative on error
  */
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
                                 RVS in6_addr_t *relay_ip,
                                 in6_addr_t *dest_ip, in_port_t *dest_port)
 {
-    hip_tlv_type_t param_type;
+    int param_type;
     struct hip_relay_from *relay_from = NULL;
+    struct hip_from *from             = NULL;
 #ifdef CONFIG_HIP_RVS
     hip_ha_t *relay_ha_entry          = NULL;
 #endif
 
     /* Check if the incoming I1 packet has  RELAY_FROM parameters. */
-    relay_from = (struct hip_relay_from *)
-                 hip_get_param(source_msg, HIP_PARAM_RELAY_FROM);
+    relay_from = hip_get_param(source_msg, HIP_PARAM_RELAY_FROM);
 
     /* Copy parameter data to target buffers. */
     if (relay_from == NULL) {
-        HIP_DEBUG("No RELAY_FROM parameters found in I1.\n");
-        return 0;
+        from = hip_get_param(source_msg, HIP_PARAM_FROM);
+        if (from == NULL) {
+            HIP_DEBUG("No FROM/RELAY_FROM parameters found in I.\n");
+            return 0;
+        } else {
+            HIP_DEBUG("Found FROM parameter in I1.\n");
+            param_type = HIP_PARAM_FROM;
+            memcpy(dest_ip, &from->address, sizeof(from->address));
+            *dest_port = ntohs(relay_from->port);
+            HIP_DEBUG("FROM port in I1: %d \n", *dest_port);
+        }
     } else {
         HIP_DEBUG("Found RELAY_FROM parameter in I.\n");
         // set the relay ip and port to the destination address and port.
@@ -1112,12 +1245,18 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
          * all HMAC keys. See bug id 592172 */
         HIP_DEBUG("Full_Relay_HMAC verification failed.\n");
         HIP_DEBUG("Ignoring HMAC verification\n");
+    } else if (from != NULL && 
+               hip_verify_packet_hmac_general(source_msg,
+                                              &relay_ha_entry->hip_hmac_out,
+                                              HIP_PARAM_RVS_HMAC ) != 0) {
+        HIP_DEBUG("RVS_HMAC verification failed.\n");
+        HIP_DEBUG("Ignoring HMAC verification\n");
     }
 
     HIP_DEBUG("RVS_HMAC or Full_Relay verified.\n");
 #endif  /* CONFIG_HIP_RVS */
 
-    return 1;
+    return param_type;
 }
 
 /**

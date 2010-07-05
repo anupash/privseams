@@ -1697,9 +1697,9 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
  * @see       hip_build_param_hmac2_contents()
  * @see       hip_write_hmac().
  */
-static int hip_build_param_hmac(struct hip_common *msg,
-                                const struct hip_crypto_key *key,
-                                hip_tlv_type_t param_type)
+int hip_build_param_hmac(struct hip_common *msg,
+                         const struct hip_crypto_key *key,
+                         hip_tlv_type_t param_type)
 {
     int err = 0;
     struct hip_hmac hmac;
@@ -4029,4 +4029,55 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
     }
 
     return 0;
+}
+
+/**
+ * Build a @c RELAY_FROM parameter to the HIP packet @c msg.
+ *
+ * @param msg  a pointer to a HIP packet common header
+ * @param addr a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param port port number (host byte order).
+ * @return     zero on success, or negative error value on error.
+ */
+int hip_build_param_relay_from(struct hip_common *msg,
+                               const struct in6_addr *addr,
+                               const in_port_t port)
+{
+    struct hip_relay_from relay_from;
+    int err = 0;
+
+    hip_set_param_type((struct hip_tlv_common *) &relay_from, 
+                       HIP_PARAM_RELAY_FROM);
+    ipv6_addr_copy((struct in6_addr *) &relay_from.address, addr);
+    relay_from.port = htons(port);
+    relay_from.reserved = 0;
+    relay_from.protocol = HIP_NAT_PROTO_UDP;
+    hip_calc_generic_param_len((struct hip_tlv_common *) &relay_from,
+                               sizeof(relay_from), 0);
+    err = hip_build_param(msg, &relay_from);
+
+    return err;
+}
+
+/**
+ * Build a @c FROM parameter to the HIP packet @c msg.
+ *
+ * @param msg      a pointer to a HIP packet common header
+ * @param addr     a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @return         zero on success, or negative error value on error.
+ * @see            RFC5204 section 4.2.2.
+ */
+int hip_build_param_from(struct hip_common *msg,
+                         const struct in6_addr *addr)
+{
+    struct hip_from from;
+    int err = 0;
+
+    hip_set_param_type((struct hip_tlv_common *) &from, HIP_PARAM_FROM);
+    ipv6_addr_copy((struct in6_addr *) &from.address, addr);
+
+    hip_calc_generic_param_len((struct hip_tlv_common *) &from,
+                               sizeof(struct hip_from), 0);
+    err = hip_build_param(msg, &from);
+    return err;
 }

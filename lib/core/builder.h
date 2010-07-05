@@ -279,4 +279,13 @@ int hip_build_param_nat_port(hip_common_t *msg,
 struct in6_addr *hip_get_locator_item_address(void *item);
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
 
+int hip_build_param_hmac(struct hip_common *msg,
+                         const struct hip_crypto_key *key,
+                         hip_tlv_type_t param_type);
+int hip_build_param_relay_from(struct hip_common *msg,
+                               const struct in6_addr *addr,
+                               const in_port_t port);
+int hip_build_param_from(struct hip_common *msg,
+                         const struct in6_addr *addr);
+
 #endif /* HIP_LIB_CORE_BUILDER_H */

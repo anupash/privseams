@@ -769,10 +769,14 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
     HIP_DEBUG_IN6ADDR("i1_daddr", ctx->dst_addr);
     HIP_DEBUG_IN6ADDR("dst_ip", &dst_ip);
 
+    relay_para_type = hip_relay_handle_relay_from(ctx->input_msg,
+                                                  ctx->src_addr,
+                                                  &dst_ip, &r1_dst_port);
+
     /* Get the final destination address and port for the outgoing R1.
      * dst_ip and dst_port have values only if the incoming I1 had
      * FROM/FROM_NAT parameter. */
-    if (!ipv6_addr_any(&dst_ip) && relay_para_type) {
+    if (!ipv6_addr_any(&dst_ip) && (relay_para_type > 0)) {
         //from RVS or relay
         if (relay_para_type == HIP_PARAM_RELAY_FROM) {
             HIP_DEBUG("Param relay from\n");
@@ -970,7 +974,6 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
     if (hip_relay_get_status() != HIP_RELAY_OFF) {
         hip_build_param_reg_from(ctx->output_msg, ctx->src_addr, ctx->msg_ports->src_port);
     }
-
 #endif
 
 
@@ -995,6 +998,27 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
                                           ctx->output_msg),
              -EINVAL,
              "Could not sign R2. Failing\n");
+
+#ifdef CONFIG_HIP_RVS
+    {
+        struct in6_addr dst;
+        in_port_t dst_port = 0;
+
+        memset(&dst, 0, sizeof(dst));
+        if ((hip_relay_handle_relay_from(ctx->input_msg, ctx->src_addr,
+                                         &dst, &dst_port) > 0) &&
+            !ipv6_addr_any(&dst)) {
+            HIP_DEBUG("create relay_to parameter in R2\n");
+            hip_build_param_relay_to(ctx->output_msg, &dst, dst_port);
+
+            /* FIXME: The addresses to use for continued communication
+             * should be sent in LOCATOR parameters. */
+            HIP_DEBUG("Setting peer address to RELAY_FROM address.\n");
+            memcpy(&ctx->hadb_entry->peer_addr, &dst, sizeof(dst));
+	        ctx->hadb_entry->peer_udp_port = dst_port;
+        }
+    }
+#endif
 
     err = hip_add_sa(ctx->dst_addr,
                      ctx->src_addr,
