@@ -56,8 +56,6 @@
  * @param udp_hdr       location of the udp_hdr
  * @param packet_len    packet length
  * @param entry         corresponding host association entry
- * @param src_addr      source address
- * @param dst_addr      destination address
  */
 static void add_udp_header(struct udphdr *udp_hdr,
                            const uint16_t packet_len,
