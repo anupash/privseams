@@ -326,8 +326,9 @@ void hip_firewall_cache_delete_hldb(int exiting)
 
 /** 
  * Update the state of a cached entry identified by HITs
- * @param  hit_s Local HIT (optional)
- * @param  hit_r Peer HIT
+ * @param  hit_our Local HIT (optional)
+ * @param  hit_peer Peer HIT
+ * @param state New state
  * @return 0 on success, negative on error
 */
 int hip_firewall_cache_set_bex_state(const struct in6_addr *hit_our,
