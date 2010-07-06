@@ -72,7 +72,6 @@ static int hip_pisa_load_certificate(void)
  *
  * @see hip_pisa_load_certificate*
  *
- * @param void
  * @return pointer to midauth_cert
  */
 char *hip_pisa_get_certificate(void)
