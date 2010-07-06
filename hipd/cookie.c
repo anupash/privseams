@@ -372,6 +372,7 @@ out_err:
  * recreate R1 packets corresponding to one HI
  *
  * @param entry the host id entry
+ * @param opaque unused, required for compatibility with hip_for_each_hi()
  * @return zero on success or negative on error
  */
 static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
