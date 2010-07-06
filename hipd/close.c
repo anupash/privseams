@@ -517,6 +517,7 @@ out_err:
  * tear down a host association after close procedure
  *
  * @param ha the corresponding host association
+ * @param opaque unused, required for compatibility with hip_for_each_ha()
  * @return zero on success or negative on error
  */
 int hip_purge_closing_ha(hip_ha_t *ha, UNUSED void *opaque)
