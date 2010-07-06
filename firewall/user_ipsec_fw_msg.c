@@ -259,7 +259,6 @@ out_err:
 /**
  * handles a SA flush request sent by the hipd
  *
- * @param msg the received message
  * @return 0, if message sent and received ok, != 0 else
  */
 int handle_sa_flush_all_request(void)
