@@ -69,6 +69,7 @@ const char *path_window_size = {"verifier.window_size"};
 
 /**
  * Return an int value of the currently opened config file
+ * @param cfg configuration setting to look up
  * @param name name of setting
  * @param result here the result will be stored. if the setting can't be red, it won't be altered. So you can use a default value als initial setting
  * @return true on success and false on failure
