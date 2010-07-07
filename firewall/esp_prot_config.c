@@ -67,6 +67,7 @@ const char *path_update_threshold = {"sender.update_threshold"};
 
 const char *path_window_size = {"verifier.window_size"};
 
+#ifdef HAVE_LIBCONFIG
 /**
  * Return an int value of the currently opened config file
  * @param cfg configuration setting to look up
@@ -77,7 +78,6 @@ const char *path_window_size = {"verifier.window_size"};
  * @note: This function is necessary for wrapping the libconfig call.
  *        It is needed because of an API change between libconfig 1.3 and 1.4
  */
-#ifdef HAVE_LIBCONFIG
 static int esp_prot_wrap_config_lookup_int(const config_t *cfg,
                                            const char *name,
                                            int *result)
