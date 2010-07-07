@@ -28,6 +28,7 @@
 #ifndef HIP_FIREWALL_REINJECT_H
 #define HIP_FIREWALL_REINJECT_H
 
+#include <stdint.h>
 #include <netinet/in.h>
 
 void hip_firewall_init_raw_sockets(void);

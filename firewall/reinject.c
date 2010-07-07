@@ -31,14 +31,20 @@
 #define _BSD_SOURCE
 
 #include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <netinet/ip_icmp.h>
+#include <string.h>
+#include <arpa/inet.h>
 #include <netinet/icmp6.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#include <sys/socket.h>
 
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
+#include "lib/core/prefix.h"
 #include "lib/tool/checksum.h"
 #include "reinject.h"
 
