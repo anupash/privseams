@@ -37,6 +37,7 @@
 #include <netinet/in.h>
 
 #include "config.h"
+#include "hipd/cookie.h"
 #include "hipd/esp_prot_hipd_msg.h"
 #include "hipd/hadb.h"
 #include "hipd/hipd.h"
