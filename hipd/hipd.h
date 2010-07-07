@@ -28,32 +28,15 @@
 #ifndef HIP_HIPD_HIPD_H
 #define HIP_HIPD_HIPD_H
 
-#include <signal.h>     /* signal() */
-#include <stdio.h>      /* stderr and others */
-#include <errno.h>      /* errno */
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/time.h>
-#include <time.h>
+#include <netdb.h>
 #include <stdint.h>
-#include <sys/un.h>
-#include <netinet/udp.h>
-#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/types.h>
 
-#include "config.h"
-#include "lib/core/crypto.h"
-#include "cookie.h"
-#include "user.h"
-#include "lib/core/conf.h"
-#include "lib/core/debug.h"
-#include "netdev.h"
-#include "nat.h"
-#include "init.h"
-#include "hidb.h"
-#include "maintenance.h"
-#include "accessor.h" /* @todo: header recursion: accessor.h calls hipd.h */
-#include "lib/core/message.h"
-#include "lib/core/esp_prot_common.h"
+#include "lib/core/hashtable.h"
+#include "lib/core/protodefs.h"
+#include "lib/tool/nlink.h"
+
 
 #define HIP_HIT_DEV "dummy0"
 

@@ -28,13 +28,24 @@
  * @author  Tim Just
  */
 
-#include <malloc.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <netinet/in.h>
 
-#include "hip_socket.h"
+#include "lib/core/builder.h"
+#include "lib/core/common.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/message.h"
+#include "lib/tool/nlink.h"
 #include "hipd.h"
 #include "input.h"
+#include "netdev.h"
 #include "pkt_handling.h"
-#include "lib/core/common.h"
+#include "user.h"
+#include "hip_socket.h"
+
 
 struct socketfd {
     uint16_t priority;

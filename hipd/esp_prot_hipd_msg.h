@@ -36,6 +36,8 @@
 #ifndef HIP_HIPD_ESP_PROT_HIPD_MSG_H
 #define HIP_HIPD_ESP_PROT_HIPD_MSG_H
 
+#include <stdint.h>
+
 #include "lib/core/protodefs.h"
 #include "lib/core/state.h"
 

@@ -57,16 +57,12 @@
 #ifndef HIP_HIPD_OPPDB_H
 #define HIP_HIPD_OPPDB_H
 
-#include <sys/socket.h>
-#include <sys/un.h>
-#include "lib/core/debug.h"
+#include <stdint.h>
+#include <netinet/in.h>
 
-#include "hidb.h"
-#include "lib/core/hashtable.h"
-#include "lib/core/builder.h"
-#include "lib/tool/lutil.h"
-#include "lib/core/prefix.h"
-#include "oppipdb.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/state.h"
+
 
 struct hip_opp_blocking_request_entry {
     hip_hit_t           peer_phit;

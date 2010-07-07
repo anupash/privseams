@@ -42,26 +42,41 @@
 
 #define _BSD_SOURCE
 
+#include <ifaddrs.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <openssl/lhash.h>
+#include <openssl/rand.h>
 #include <sys/ioctl.h>
-#include <ifaddrs.h>
 #include <linux/rtnetlink.h>
 
-#include "config.h"
-#include "hipd.h"
-#include "accessor.h"
-#include "netdev.h"
-#include "maintenance.h"
-#include "lib/core/debug.h"
+#include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/conf.h"
-#include "lib/core/hostsfiles.h"
+#include "lib/core/debug.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/hit.h"
+#include "lib/core/hostsfiles.h"
+#include "lib/core/ife.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
 #include "lib/tool/lutil.h"
 #include "lib/tool/nlink.h"
+#include "config.h"
+#include "accessor.h"
+#include "hadb.h"
+#include "hidb.h"
+#include "hipd.h"
+#include "hit_to_ip.h"
+#include "maintenance.h"
+#include "output.h"
+#include "netdev.h"
+
 
 /**
  * We really don't expect more than a handfull of interfaces to be on

@@ -28,13 +28,10 @@
 #ifndef HIP_HIPD_MAINTENANCE_H
 #define HIP_HIPD_MAINTENANCE_H
 
-#include <stdlib.h>
-#include <fcntl.h>
-#include "hidb.h"
-#include "hipd.h"
-#include "oppdb.h"
-#include "lib/core/statistics.h"
-#include "nat.h"
+#include <stdint.h>
+#include <netinet/in.h>
+#include <sys/time.h>
+
 
 int hip_register_maint_function(int (*maint_function)(void),
                                 const uint16_t priority);

@@ -28,10 +28,13 @@
 #ifndef HIP_HIPD_KEYMAT_H
 #define HIP_HIPD_KEYMAT_H
 
-#include "lib/core/list.h"
+#include <stdint.h>
+#include <netinet/in.h>
+#include <sys/types.h>
 
-#include "lib/core/crypto.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/state.h"
+
 
 void hip_make_keymat(char *kij, size_t kij_len,
                      struct hip_keymat_keymat *keymat,

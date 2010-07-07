@@ -36,10 +36,12 @@
 #ifndef HIP_HIPD_REGISTRATION_H
 #define HIP_HIPD_REGISTRATION_H
 
-#include "lib/core/builder.h" // For lifetime conversions.
-#include "lib/core/protodefs.h" // For service type values and hip_ha_t
-#include "hiprelay.h" // For relrec lifetimes.
-#include "lib/core/linkedlist.h" // For pending service requests.
+#include <stdint.h>
+#include <sys/types.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/protodefs.h"
+
 
 /** A pending service request coupled with a host association. */
 typedef struct {

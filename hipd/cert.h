@@ -38,23 +38,11 @@
  * @date 31.3.2008
  *
  */
-#include <sys/types.h>
-#include <stdio.h>
-#include <string.h>
-#include <netinet/in.h>
+
 #include <openssl/rsa.h>
-#include <openssl/conf.h>
-#include <openssl/x509.h>
-#include <openssl/x509v3.h>
-#include <openssl/x509_vfy.h>
-#include <openssl/err.h>
-#include <openssl/pem.h>
 
-#include "lib/core/debug.h"
-#include "lib/core/ife.h"
-
-#include "hidb.h"
 #include "lib/core/hashtable.h"
+#include "lib/core/protodefs.h"
 
 /** SPKI */
 int hip_cert_spki_sign(struct hip_common *);

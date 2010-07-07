@@ -28,7 +28,12 @@
 #ifndef HIP_HIPD_HADB_LEGACY_H
 #define HIP_HIPD_HADB_LEGACY_H
 
-#include "hadb.h"
+#include <stdint.h>
+#include <netinet/in.h>
+#include <sys/time.h>
+
+#include "lib/core/protodefs.h"
+
 
 int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
                                     const struct in6_addr *addr,

@@ -33,7 +33,16 @@
  * @author  Alberto Garcia
  */
 
+#include <errno.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "lib/core/builder.h"
 #include "lib/core/common.h"
+#include "lib/core/debug.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
 #include "oppipdb.h"
 
 #define HIP_LOCK_OPPIP(entry)

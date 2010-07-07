@@ -28,20 +28,9 @@
 #ifndef HIP_HIPD_INIT_H
 #define HIP_HIPD_INIT_H
 
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/wait.h>
-#include <sys/utsname.h>
+#include <stdint.h>
+#include <netinet/in.h>
 
-#include "lib/tool/xfrmapi.h"
-#include "lib/core/debug.h"
-#include "lib/core/protodefs.h"
-#include "lib/core/conf.h"
-#include "oppipdb.h"
-#include "hiprelay.h"
-#include "hadb.h"
-#include "nsupdate.h"
 
 /* startup flags options to be configured via the command line */
 #define HIPD_START_FOREGROUND               (1 << 0)

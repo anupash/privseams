@@ -33,25 +33,11 @@
 #ifndef HIP_HIPD_OUTPUT_H
 #define HIP_HIPD_OUTPUT_H
 
-#include <netinet/ip6.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
-#include <unistd.h>
-#include <string.h>
+#include <netinet/in.h>
 
-#include "config.h"
-#include "dh.h"
-#include "hidb.h"
-#include "hadb.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/state.h"
 
-#include "lib/core/builder.h"
-#include "cookie.h"
-#include "close.h"
-#include "user.h"
-#include "nat.h"
-#include "registration.h"
-#include "esp_prot_hipd_msg.h"
 
 #define HIP_MAX_ICMP_PACKET 512
 

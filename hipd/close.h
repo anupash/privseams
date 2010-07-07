@@ -28,17 +28,7 @@
 #ifndef HIP_HIPD_CLOSE_H
 #define HIP_HIPD_CLOSE_H
 
-#include "hadb.h"
-
-#include "hidb.h"
-#include "lib/core/builder.h"
-#include "cookie.h"
-#include "output.h"
-#include "lib/core/debug.h"
-#include "keymat.h"
-#include "lib/core/crypto.h"
-
-#include "lib/tool/pk.h"
+#include "lib/core/protodefs.h"
 
 int hip_send_close(struct hip_common *msg, int delete_ha_info);
 int hip_close_check_packet(const uint8_t packet_type,

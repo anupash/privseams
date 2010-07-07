@@ -33,12 +33,18 @@
  *
  */
 
-#include "user_ipsec_sadb_api.h"
-#include "lib/core/esp_prot_common.h"
-#include "user_ipsec_hipd_msg.h"
+#include <stdint.h>
+#include <netinet/in.h>
+
 #include "lib/core/debug.h"
 #include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/state.h"
 #include "user.h"
+#include "user_ipsec_hipd_msg.h"
+#include "user_ipsec_sadb_api.h"
 
 
 /** generic send function used to send the below created messages

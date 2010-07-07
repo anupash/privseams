@@ -34,16 +34,13 @@
 #ifndef HIP_HIPD_HIPRELAY_H
 #define HIP_HIPD_HIPRELAY_H
 
-#include <time.h> /* For timing. */
-#include <netinet/in.h> /* For IPv6 addresses etc. */
-#include <arpa/inet.h> /* For nthos() */
-#include <math.h> /* For pow() */
+#include <stdint.h>
+#include <netinet/in.h>
+#include <sys/types.h>
 
-#include "config.h"
- /* For debuging macros. */
-#include "registration.h" /* For lifetime conversions. */
-#include "configfilereader.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/state.h"
+
 
 /**
  * The minimum lifetime the relay / RVS client is granted the service. This

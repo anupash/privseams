@@ -28,21 +28,12 @@
 #ifndef HIP_HIPD_HADB_H
 #define HIP_HIPD_HADB_H
 
-#include "config.h"
-#include "keymat.h"
-#include "lib/tool/pk.h"
-#include "lib/core/debug.h"
+#include <stdint.h>
 
-#include "hidb.h"
 #include "lib/core/hashtable.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/state.h"
-#include "lib/core/builder.h"
-#include "lib/core/straddr.h"
-#include "input.h"      // required for declaration of receive functions
-#include "user_ipsec_sadb_api.h"
-#include "lib/tool/xfrmapi.h"
-#include "nat.h"
-#include "hadb_legacy.h"
+
 
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha)

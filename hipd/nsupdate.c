@@ -38,17 +38,25 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <string.h>
-#include <sys/resource.h> // for getrlimit
 
+#include "lib/core/common.h"
+#include "lib/core/debug.h"
+#include "lib/core/hit.h"
+#include "lib/core/ife.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
+#include "lib/core/state.h"
+#include "lib/tool/nlink.h"
 #include "config.h"
 #include "hidb.h"
+#include "hipd.h"
 #include "nsupdate.h"
-#include "lib/core/common.h"
-#include "lib/core/hit.h"
 
 // parameters for nsupdate.pl
 #define VAR_IPS "HIPD_IPS"

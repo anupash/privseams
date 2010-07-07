@@ -30,35 +30,62 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-
+#include <unistd.h>
+#include <netinet/icmp6.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <openssl/aes.h>
+#include <openssl/rand.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
-#include <netinet/icmp6.h>
+#include <sys/utsname.h>
+#include <sys/wait.h>
 #include <linux/rtnetlink.h>
-#include <linux/unistd.h>
 
-#include "config.h"
-#include "hipd.h"
-#include "init.h"
-#include "esp_prot_light_update.h"
-#include "oppdb.h"
-#include "hip_socket.h"
-#include "pkt_handling.h"
 #include "lib/core/capability.h"
 #include "lib/core/common.h"
+#include "lib/core/conf.h"
+#include "lib/core/crypto.h"
 #include "lib/core/debug.h"
 #include "lib/core/filemanip.h"
-#include "lib/core/hostid.h"
-#include "lib/core/performance.h"
-#include "lib/tool/nlink.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/hostid.h"
 #include "lib/core/hostsfiles.h"
+#include "lib/core/ife.h"
+#include "lib/tool/nlink.h"
+#include "lib/core/performance.h"
+#include "lib/core/straddr.h"
+#include "lib/tool/xfrmapi.h"
 #include "modules/hipd_modules.h"
+#include "config.h"
+#include "accessor.h"
+#include "close.h"
+#include "dh.h"
+#include "esp_prot_light_update.h"
+#include "hadb.h"
+#include "hidb.h"
+#include "hip_socket.h"
+#include "hipd.h"
+#include "hiprelay.h"
+#include "input.h"
+#include "maintenance.h"
+#include "nat.h"
+#include "netdev.h"
+#include "nsupdate.h"
+#include "oppdb.h"
+#include "oppipdb.h"
+#include "output.h"
+#include "pkt_handling.h"
+#include "registration.h"
+#include "user.h"
+#include "init.h"
+
 
 /**
  * HIP daemon lock file is used to prevent multiple instances

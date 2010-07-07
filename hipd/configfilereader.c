@@ -27,8 +27,13 @@
  * @see     configfilereader.h for usage instructions.
  */
 
-#include "configfilereader.h"
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "lib/core/debug.h"
+#include "configfilereader.h"
 
 /** Error value for generic config file error. (Everything but -EIO and EOF are
  *  acceptable here.) */

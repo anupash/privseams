@@ -28,13 +28,12 @@
 #ifndef HIP_HIPD_HIDB
 #define HIP_HIPD_HIDB
 
-#include <asm/types.h>
-#include <sys/errno.h>
-#include <sys/socket.h>
-#include "lib/core/list.h"
-#include "lib/core/debug.h"
+#include <netinet/in.h>
+
 #include "lib/core/hashtable.h"
-#include "cookie.h"
+#include "lib/core/list.h"
+#include "lib/core/protodefs.h"
+
 
 #if 0
 #define HIP_READ_LOCK_DB(db) do { \

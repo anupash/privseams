@@ -31,13 +31,34 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 
-#include "config.h"
-#include "close.h"
+#include "lib/core/builder.h"
 #include "lib/core/common.h"
+#include "lib/core/crypto.h"
+#include "lib/core/debug.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
 #include "lib/core/performance.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/state.h"
+#include "config.h"
+#include "hadb.h"
+#include "hiprelay.h"
+#include "input.h"
+#include "maintenance.h"
+#include "oppipdb.h"
+#include "output.h"
+#include "user.h"
+#include "close.h"
+
 
 /**
  * send a HIP close packet to a peer

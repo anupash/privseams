@@ -38,11 +38,13 @@
 #ifndef HIP_HIPD_INPUT_H
 #define HIP_HIPD_INPUT_H
 
-#include "config.h"
-#include "hiprelay.h"
-#include "lib/core/state.h"
+#include <stdint.h>
+#include <netinet/in.h>
+
 #include "lib/core/debug.h"
 #include "lib/core/protodefs.h"
+#include "lib/core/state.h"
+
 
 /**
  * Checks for illegal controls in a HIP packet Controls field.

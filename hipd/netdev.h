@@ -32,18 +32,11 @@
 #ifndef HIP_HIPD_NETDEV_H
 #define HIP_HIPD_NETDEV_H
 
+#include <netinet/in.h>
 #include <sys/socket.h>
-#include <netinet/ip6.h>
-#include <openssl/rand.h>
 
+#include "lib/core/protodefs.h"
 #include "lib/tool/nlink.h"
-#include "lib/core/list.h"
-#include "lib/core/debug.h"
-#include "lib/core/prefix.h"
-
-#include "hit_to_ip.h"
-
-struct rtnl_handle;
 
 int hip_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(void);

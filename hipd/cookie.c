@@ -32,12 +32,25 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
-#include "config.h"
-#include "cookie.h"
+#include "lib/core/builder.h"
 #include "lib/core/common.h"
+#include "lib/core/debug.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/list.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
+#include "lib/tool/pk.h"
+#include "config.h"
+#include "hidb.h"
+#include "output.h"
+#include "cookie.h"
+
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
 #define HIP_DEFAULT_COOKIE_K    1ULL /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */

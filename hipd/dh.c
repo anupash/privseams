@@ -31,6 +31,12 @@
  * @author Tobias Heer <heer@tobibox.de>
  */
 
+#include <stdint.h>
+#include <sys/types.h>
+#include <openssl/ossl_typ.h>
+
+#include "lib/core/crypto.h"
+#include "lib/core/debug.h"
 #include "dh.h"
 
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};

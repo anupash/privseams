@@ -38,6 +38,8 @@
 #ifndef HIP_HIPD_ESP_PROT_ANCHORDB_H
 #define HIP_HIPD_ESP_PROT_ANCHORDB_H
 
+#include <stdint.h>
+
 #include "lib/core/protodefs.h"
 
 void anchor_db_init(void);

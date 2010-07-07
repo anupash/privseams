@@ -55,14 +55,32 @@
  * - Bing Zhou <bingzhou@cc.hut.fi>
  */
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <netinet/in.h>
 
-#include "config.h"
-#include "oppdb.h"
-#include "hadb.h"
-#include "accessor.h"
+#include "lib/core/builder.h"
 #include "lib/core/common.h"
+#include "lib/core/debug.h"
 #include "lib/core/hit.h"
+#include "lib/core/ife.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "config.h"
+#include "accessor.h"
+#include "hadb.h"
+#include "hidb.h"
+#include "hipd.h"
+#include "netdev.h"
+#include "oppipdb.h"
+#include "output.h"
+#include "registration.h"
+#include "user.h"
+#include "oppdb.h"
+
 
 #define HIP_LOCK_OPP_INIT(entry)
 #define HIP_UNLOCK_OPP_INIT(entry)

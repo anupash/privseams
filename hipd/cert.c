@@ -29,8 +29,31 @@
  * @author Samu Varjonen
  */
 
-#include "cert.h"
+#include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <openssl/conf.h>
+#include <openssl/dsa.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/rsa.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/certtools.h"
 #include "lib/core/common.h"
+#include "lib/core/crypto.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/straddr.h"
+#include "lib/tool/pk.h"
+#include "hidb.h"
+#include "cert.h"
 
 
 /****************************************************************************

@@ -117,13 +117,31 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
-#include "config.h"
-#include "hiprelay.h"
-#include "output.h"
+#include "lib/core/builder.h"
 #include "lib/core/common.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "config.h"
+#include "configfilereader.h"
+#include "hadb.h"
+#include "input.h"
+#include "output.h"
+#include "hiprelay.h"
+
 
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
  *  cannot be opened for reading, we write a new config file from scratch using

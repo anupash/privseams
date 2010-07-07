@@ -30,9 +30,8 @@
 #ifndef HIP_HIPD_OPPIPDB_H
 #define HIP_HIPD_OPPIPDB_H
 
-#include "lib/core/debug.h"
-#include "hidb.h"
-#include "lib/core/hashtable.h"
+#include <netinet/in.h>
+
 
 typedef struct in6_addr hip_oppip_t;
 

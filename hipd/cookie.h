@@ -28,11 +28,10 @@
 #ifndef HIP_HIPD_COOKIE_H
 #define HIP_HIPD_COOKIE_H
 
-#include "lib/core/debug.h"
-#include "lib/core/builder.h"
-#include "output.h"
-#include "lib/core/list.h"
-#include "hipd.h"
+#include <stdint.h>
+#include <netinet/in.h>
+
+#include "lib/core/protodefs.h"
 
 struct hip_r1entry {
     struct hip_common *r1;

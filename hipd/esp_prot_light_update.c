@@ -33,12 +33,23 @@
  *
  */
 
-#include "esp_prot_light_update.h"
-#include "esp_prot_anchordb.h"
-#include "hipd.h"
+#include <errno.h>
+#include <stdint.h>
+#include <netinet/in.h>
+
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
+#include "lib/core/protodefs.h"
+#include "lib/tool/xfrmapi.h"
+#include "esp_prot_anchordb.h"
+#include "esp_prot_hipd_msg.h"
+#include "hipd.h"
+#include "input.h"
+#include "output.h"
+#include "esp_prot_light_update.h"
+
 
 /**
  * sends an ack for a received HHL-based update message

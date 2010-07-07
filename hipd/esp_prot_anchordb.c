@@ -35,11 +35,19 @@
  *
  */
 
-#include "lib/core/esp_prot_common.h"
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "lib/core/builder.h"
-#include "esp_prot_anchordb.h"
+#include "lib/core/debug.h"
+#include "lib/core/esp_prot_common.h"
+#include "lib/core/ife.h"
+#include "lib/core/protodefs.h"
 #include "hipd.h"
 #include "init.h"
+#include "esp_prot_anchordb.h"
+
 
 /* defines the structure storing the anchors */
 typedef struct anchor_db {

@@ -34,6 +34,9 @@
 #ifndef HIP_HIPD_USER_IPSEC_HIPD_MSG_H
 #define HIP_HIPD_USER_IPSEC_HIPD_MSG_H
 
+#include <stdint.h>
+#include <netinet/in.h>
+
 #include "lib/core/protodefs.h"
 
 int hip_userspace_ipsec_activate(const struct hip_common *msg);

@@ -33,18 +33,10 @@
 #ifndef HIP_HIPD_USER_H
 #define HIP_HIPD_USER_H
 
-#include <stdio.h>
-#include <stdint.h> // For uint8_t
-#include <stdlib.h>
-#include "lib/core/list.h"
-#include "close.h"
-#include "accessor.h"
-#include "hidb.h"
-#include "cert.h"
-#include "hipd.h"
-#include "registration.h"
-#include "esp_prot_hipd_msg.h"
-#include "user_ipsec_hipd_msg.h"
+#include <netinet/in.h>
+
+#include "lib/core/protodefs.h"
+
 
 int hip_user_register_handle(const uint8_t msg_type,
                              int (*handle_func)(hip_common_t *msg,

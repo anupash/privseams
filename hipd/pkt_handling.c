@@ -29,9 +29,16 @@
  * @author Tim Just <tim.just@rwth-aachen.de>
  *
  */
-#include "pkt_handling.h"
+
+#include <stdint.h>
+
+#include "lib/core/ife.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/state.h"
 #include "lib/modularization/lmod.h"
+#include "pkt_handling.h"
+
 
 struct handle_function {
     uint16_t priority;

@@ -57,21 +57,46 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <errno.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
 
-#include "config.h"
-#include "hadb.h"
-#include "hipd.h"
-#include "accessor.h"
-#include "oppdb.h"
-#include "lib/core/list.h"
-#include "lib/core/hostsfiles.h"
-#include "lib/core/hostid.h"
+#include "lib/core/builder.h"
+#include "lib/core/crypto.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
 #include "lib/core/hip_udp.h"
-#include "lib/core/solve.h"
+#include "lib/core/hostid.h"
+#include "lib/core/hostsfiles.h"
+#include "lib/core/ife.h"
 #include "lib/core/keylen.h"
-#include "lib/modularization/lmod.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/solve.h"
+#include "lib/core/straddr.h"
+#include "lib/core/transform.h"
+#include "lib/tool/pk.h"
+#include "lib/tool/xfrmapi.h"
+#include "config.h"
+#include "accessor.h"
+#include "hadb_legacy.h"
+#include "hidb.h"
+#include "hipd.h"
+#include "input.h"
+#include "keymat.h"
+#include "netdev.h"
+#include "oppdb.h"
+#include "output.h"
+#include "user_ipsec_sadb_api.h"
+#include "hadb.h"
+
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100

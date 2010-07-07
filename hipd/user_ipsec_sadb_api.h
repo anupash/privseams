@@ -36,6 +36,9 @@
 #ifndef HIP_HIPD_USER_IPSEC_SADB_API_H
 #define HIP_HIPD_USER_IPSEC_SADB_API_H
 
+#include <stdint.h>
+#include <netinet/in.h>
+
 #include "lib/core/protodefs.h"
 
 uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,

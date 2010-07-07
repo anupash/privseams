@@ -28,13 +28,7 @@
 #ifndef HIP_HIPD_ACCESSOR_H
 #define HIP_HIPD_ACCESSOR_H
 
-#include <openssl/sha.h>
-#include <openssl/md5.h>
-#include <openssl/des.h>
-#include <sys/time.h>
-
-#include "config.h"
-#include "lib/core/hashtable.h"
+#include "lib/core/protodefs.h"
 
 /** @defgroup daemon_states HIP daemon states
  * @{

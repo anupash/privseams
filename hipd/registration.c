@@ -33,8 +33,19 @@
  * @see     hiprelay.h
  */
 
-#include "registration.h"
+#include <errno.h>
+#include <limits.h>
+#include <stdint.h>
+#include <string.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/ife.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "hadb.h"
+#include "hiprelay.h"
+#include "registration.h"
 
 /**
  * Pending request lifetime. Pending requests are created when the requester

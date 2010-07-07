@@ -55,10 +55,16 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 
+#include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/common.h"
-#include "nat.h"
+#include "lib/core/ife.h"
+#include "lib/core/state.h"
+#include "hadb.h"
+#include "hipd.h"
+#include "output.h"
 #include "user.h"
+#include "nat.h"
 
 static int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 

@@ -30,7 +30,8 @@
  * @todo move the functions elsewhere and delete this file?
  */
 
-#define _BSD_SOURCE
+#include <string.h>
+#include <netinet/in.h>
 
 #include "config.h"
 #include "accessor.h"

@@ -30,16 +30,39 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <time.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
 
-#include "config.h"
-#include "hipd.h"
-#include "hip_socket.h"
-#include "pkt_handling.h"
+#include "lib/core/builder.h"
+#include "lib/core/conf.h"
+#include "lib/core/debug.h"
 #include "lib/core/filemanip.h"
+#include "lib/core/hashtable.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
 #include "lib/core/performance.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/straddr.h"
 #include "lib/core/util.h"
+#include "config.h"
+#include "accessor.h"
+#include "hip_socket.h"
+#include "init.h"
+#include "maintenance.h"
+#include "netdev.h"
+#include "hipd.h"
+
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
  * of this file! */

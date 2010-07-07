@@ -32,8 +32,16 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <stdint.h>
 #include <stdlib.h>
+#include <netinet/in.h>
+#include <openssl/lhash.h>
+#include <sys/time.h>
 
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/state.h"
 #include "hadb_legacy.h"
 
 /**

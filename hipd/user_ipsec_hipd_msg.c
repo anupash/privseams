@@ -31,13 +31,22 @@
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
  */
 
+#include <stdint.h>
 #include <stdlib.h>
+#include <netinet/in.h>
 
-#include "user_ipsec_hipd_msg.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/protodefs.h"
+#include "lib/tool/xfrmapi.h"
+#include "esp_prot_hipd_msg.h"
+#include "hadb.h"
 #include "hipd.h"
 #include "init.h"
 #include "user_ipsec_sadb_api.h"
-#include "lib/core/builder.h"
+#include "user_ipsec_hipd_msg.h"
+
 
 /**
  * handles a userspace ipsec activation message sent by the fw

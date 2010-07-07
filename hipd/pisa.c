@@ -32,6 +32,11 @@
  * @author Thomas Jansen
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "lib/core/debug.h"
 #include "hipd.h"
 #include "pisa.h"
 

@@ -34,7 +34,7 @@
 #define HIP_HIPD_HIT_TO_IP_H
 
 #include <netinet/in.h>
-#include <sys/types.h>
+
 #include "lib/core/protodefs.h"
 
 int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval);

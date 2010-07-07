@@ -31,10 +31,15 @@
  * @author Tobias Heer <heer#tobibox.de>
  */
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "keymat.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
 #include "lib/core/hit.h"
+#include "lib/core/ife.h"
+#include "keymat.h"
 
 /**
  * allocate and initialize a big enough key material buffer for

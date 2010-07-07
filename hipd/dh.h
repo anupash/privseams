@@ -28,8 +28,7 @@
 #ifndef HIP_HIPD_DH_H
 #define HIP_HIPD_DH_H
 
-#include "hadb.h"
-#include "lib/core/crypto.h"
+#include <stdint.h>
 
 int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id);
 void hip_dh_uninit(void);

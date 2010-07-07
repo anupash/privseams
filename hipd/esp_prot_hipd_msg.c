@@ -33,13 +33,25 @@
  *
  */
 
-#include "esp_prot_hipd_msg.h"
+#include <errno.h>
+#include <stdint.h>
+#include <string.h>
+#include <arpa/inet.h>
+
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/esp_prot_common.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
+#include "lib/core/protodefs.h"
+#include "lib/tool/xfrmapi.h"
+#include "cookie.h"
 #include "esp_prot_anchordb.h"
 #include "esp_prot_light_update.h"
-#include "lib/core/esp_prot_common.h"
-#include "lib/core/builder.h"
-#include "lib/core/hip_udp.h"
+#include "hadb.h"
 #include "hipd.h"
+#include "output.h"
+#include "esp_prot_hipd_msg.h"
 
 /** @todo Remove this dependency from core to UPDATE module */
 #include "modules/update/hipd/update.h"

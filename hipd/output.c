@@ -36,17 +36,40 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
 #include <stdlib.h>
-#include <netinet/icmp6.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netinet/udp.h>
 
-#include "config.h"
-#include "pisa.h"
-#include "output.h"
+#include "lib/core/builder.h"
 #include "lib/core/common.h"
-#include "lib/core/performance.h"
+#include "lib/core/crypto.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/list.h"
+#include "lib/core/performance.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
 #include "lib/tool/checksum.h"
+#include "lib/tool/xfrmapi.h"
+#include "config.h"
+#include "cookie.h"
+#include "dh.h"
+#include "esp_prot_hipd_msg.h"
+#include "hadb.h"
+#include "hidb.h"
+#include "hipd.h"
+#include "hiprelay.h"
+#include "nat.h"
+#include "netdev.h"
+#include "pisa.h"
+#include "registration.h"
+#include "output.h"
+
 
 enum number_dh_keys_t { ONE, TWO };
 

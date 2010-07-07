@@ -81,10 +81,7 @@
 #define HIP_HIPD_CONFIGFILEREADER_H
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <errno.h>
+
  /* For debuging macros. */
 
 /** Maximum number of characters per line in HIP relay config file. */

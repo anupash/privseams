@@ -38,13 +38,29 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-#include "config.h"
-#include "maintenance.h"
-#include "hipd.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/ife.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/protodefs.h"
 #include "lib/modularization/lmod.h"
+#include "config.h"
+#include "accessor.h"
+#include "close.h"
+#include "cookie.h"
+#include "hadb.h"
+#include "hidb.h"
+#include "hipd.h"
+#include "init.h"
+#include "oppdb.h"
+#include "output.h"
+#include "maintenance.h"
 
 #define FORCE_EXIT_COUNTER_START                5
 

@@ -36,41 +36,55 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <openssl/lhash.h>
+#include <sys/types.h>
 
-#include "config.h"
-#include "input.h"
-#include "hadb.h"
-#include "oppdb.h"
-#include "user.h"
-#include "keymat.h"
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/crypto.h"
+#include "lib/core/debug.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/hit.h"
 #include "lib/core/hostid.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
 #include "lib/core/keylen.h"
 #include "lib/core/performance.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
-#include "lib/core/transform.h"
-#include "dh.h"
-
-#include "hidb.h"
-#include "cookie.h"
-#include "output.h"
-#include "lib/tool/pk.h"
-#include "netdev.h"
-#include "lib/tool/lutil.h"
 #include "lib/core/state.h"
-#include "lib/core/hit.h"
-#include "oppdb.h"
-#include "registration.h"
+#include "lib/core/transform.h"
+#include "lib/tool/xfrmapi.h"
+#include "config.h"
+#include "cookie.h"
+#include "dh.h"
+#include "esp_prot_hipd_msg.h"
+#include "esp_prot_light_update.h"
+#include "hadb.h"
+#include "hadb_legacy.h"
+#include "hidb.h"
 #include "hipd.h"
+#include "hiprelay.h"
+#include "keymat.h"
+#include "maintenance.h"
+#include "netdev.h"
+#include "oppdb.h"
 #include "oppipdb.h"
-#include "pkt_handling.h"
+#include "output.h"
 #include "pisa.h"
+#include "pkt_handling.h"
+#include "registration.h"
+#include "input.h"
 
 /**
  * Verifies a HMAC.

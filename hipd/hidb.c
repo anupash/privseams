@@ -35,12 +35,32 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
 
-#include "config.h"
-#include "hidb.h"
+#include "lib/core/builder.h"
+#include "lib/core/crypto.h"
+#include "lib/core/debug.h"
+#include "lib/core/hashtable.h"
 #include "lib/core/hostid.h"
 #include "lib/core/hit.h"
+#include "lib/core/ife.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "lib/core/straddr.h"
+#include "lib/tool/nlink.h"
+#include "lib/tool/pk.h"
+#include "config.h"
+#include "cookie.h"
+#include "hipd.h"
+#include "netdev.h"
+#include "hidb.h"
+
 
 HIP_HASHTABLE *hip_local_hostid_db = NULL;
 #define HIP_MAX_HOST_ID_LEN 1600

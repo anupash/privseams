@@ -47,18 +47,49 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
 #include <signal.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/hip_udp.h"
+#include "lib/core/hostid.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/linkedlist.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
+#include "lib/modularization/lmod.h"
+#include "lib/tool/nlink.h"
 #include "config.h"
 #include "accessor.h"
-#include "user.h"
+#include "cert.h"
+#include "close.h"
+#include "cookie.h"
 #include "esp_prot_anchordb.h"
-#include "lib/core/hostid.h"
-#include "lib/core/hip_udp.h"
+#include "esp_prot_hipd_msg.h"
+#include "hadb.h"
+#include "hidb.h"
 #include "hipd.h"
-#include "lib/modularization/lmod.h"
+#include "hiprelay.h"
+#include "hit_to_ip.h"
+#include "init.h"
+#include "maintenance.h"
+#include "nat.h"
+#include "netdev.h"
+#include "nsupdate.h"
+#include "oppdb.h"
+#include "output.h"
+#include "registration.h"
+#include "user.h"
+#include "user_ipsec_hipd_msg.h"
+
 
 struct usr_msg_handle {
     uint16_t priority;
