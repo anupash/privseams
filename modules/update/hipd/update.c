@@ -113,11 +113,11 @@ out_err:
  * hip_update_get_out_id
  *
  * @note RFC 5201 Section 5.2.13:
- *       Notice that the section says "The Update ID is an unsigned quantity,
- *       initialized by a host to zero upon moving to ESTABLISHED state" and
- *       "The Update ID is incremented by one before each new UPDATE that is
+ *       Notice that the section says 'The Update ID is an unsigned quantity,
+ *       initialized by a host to zero upon moving to ESTABLISHED state' and
+ *       'The Update ID is incremented by one before each new UPDATE that is
  *       sent by the host; the first UPDATE packet originated by a host has
- *       an Update ID of 0". Therefore we initialize the Update ID with 0 and
+ *       an Update ID of 0'. Therefore we initialize the Update ID with 0 and
  *       increment this value before a new UPDATE packet is sent. Because the
  *       first UPDATE packet should contain 0 as value, we need to decrement
  *       the packet value by one for each UPDATE packet.

@@ -408,12 +408,12 @@ static hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct 
 /**
  * select the strongest DH key according RFC5201, section 5.2.6:
  *
- *  "The sender can include at most two different Diffie-Hellman public
+ *  The sender can include at most two different Diffie-Hellman public
  *  values in the DIFFIE_HELLMAN parameter.  This gives the possibility
  *  e.g. for a server to provide a weaker encryption possibility for a
  *  PDA host that is not powerful enough.  It is RECOMMENDED that the
  *  Initiator, receiving more than one public values selects the stronger
- *  one, if it supports it."
+ *  one, if it supports it.
  *
  * @param dhf pointer to the Diffie-Hellman parameter with two DH keys.
  * @return a pointer to the chosen Diffie-Hellman parameter

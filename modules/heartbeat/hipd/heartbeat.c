@@ -38,9 +38,9 @@
  * required only at one side of the communications as long as the
  * other party supports replying to ICMPv6 echo requests.
  *
- * @see "Varjonen et al, Secure and Efficient IPv4/IPv6 Handovers Using
+ * @see Varjonen et al, Secure and Efficient IPv4/IPv6 Handovers Using
  * Host-Based Identifier-Locator Split, Journal of Communications
- * Software and Systems, 2010".
+ * Software and Systems, 2010.
  *
  * @note Implementation of the heartbeat concept in tiny branch:
  *
