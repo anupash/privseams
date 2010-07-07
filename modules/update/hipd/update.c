@@ -43,13 +43,10 @@
 #include "hipd/hadb.h"
 #include "hipd/netdev.h"
 #include "hipd/nsupdate.h"
+#include "hipd/pisa.h"
 #include "hipd/pkt_handling.h"
 #include "hipd/user.h"
 #include "update_legacy.h"
-
-#ifdef CONFIG_HIP_MIDAUTH
-#include "hipd/pisa.h"
-#endif
 
 struct update_state {
     /** A kludge to get the UPDATE retransmission to work.

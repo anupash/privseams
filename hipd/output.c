@@ -40,16 +40,13 @@
 #include <netinet/icmp6.h>
 
 #include "config.h"
+#include "pisa.h"
 #include "output.h"
 #include "lib/core/common.h"
 #include "lib/core/performance.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/solve.h"
 #include "lib/tool/checksum.h"
-
-#ifdef CONFIG_HIP_MIDAUTH
-#include "pisa.h"
-#endif
 
 enum number_dh_keys_t { ONE, TWO };
 
