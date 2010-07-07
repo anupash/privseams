@@ -204,11 +204,6 @@
 
 /****** FIREWALL ******/
 
-// the states of the connections as kept in the firewall
-#define FIREWALL_STATE_BEX_DEFAULT              -1  //default entry
-#define FIREWALL_STATE_BEX_NOT_SUPPORTED         0  //detected lack of HIP support at peer
-#define FIREWALL_STATE_BEX_ESTABLISHED           1  //detected HIP support at peer
-
 /*----Firewall cache----*/
 /*Values for the port cache of the firewall*/
 #define FIREWALL_PORT_CACHE_IPV6_TRAFFIC        1
