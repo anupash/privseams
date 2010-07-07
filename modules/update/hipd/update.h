@@ -32,6 +32,8 @@
 #define HIP_HIPD_UPDATE_H
 
 #include <stdint.h>
+#include <netinet/in.h>
+
 #include "lib/core/protodefs.h"
 
 int hip_create_locators(hip_common_t *locator_msg,

@@ -57,15 +57,37 @@
 
 #define _BSD_SOURCE
 
+#include <errno.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 #include <netinet/icmp6.h>
+#include <netinet/in.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
-#include "heartbeat.h"
 #include "hipd/hadb.h"
 #include "hipd/init.h"
 #include "hipd/hip_socket.h"
+#include "hipd/maintenance.h"
+#include "hipd/nat.h"
+#include "hipd/output.h"
 #include "hipd/pkt_handling.h"
+#include "hipd/user.h"
 #include "lib/core/common.h"
+#include "lib/core/debug.h"
+#include "lib/core/icomm.h"
+#include "lib/core/ife.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "lib/core/statistics.h"
+#include "lib/core/straddr.h"
+#include "lib/modularization/lmod.h"
+#include "lib/tool/nlink.h"
+#include "heartbeat.h"
 
 #define HIP_HEARTBEAT_INTERVAL 20
 

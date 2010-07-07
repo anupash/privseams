@@ -36,10 +36,19 @@
  * @author Tim Just
  */
 
-#include "hb_update.h"
+#include <errno.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "hipd/hadb.h"
 #include "hipd/maintenance.h"
+#include "lib/core/builder.h"
 #include "lib/core/common.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/protodefs.h"
 #include "modules/update/hipd/update.h"
+#include "hb_update.h"
 
 static const int hip_heartbeat_trigger_update_threshold = 5;
 

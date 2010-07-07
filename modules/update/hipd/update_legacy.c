@@ -31,12 +31,20 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
+#include "config.h"
+#include "hipd/hipd.h"
+#include "hipd/maintenance.h"
+#include "hipd/oppipdb.h"
+#include "lib/core/builder.h"
+#include "lib/core/debug.h"
+#include "lib/core/ife.h"
+#include "lib/core/list.h"
+#include "lib/core/prefix.h"
+#include "lib/core/protodefs.h"
 #include "update.h"
 #include "update_legacy.h"
-#include "hipd/hipd.h"
-#include "lib/core/debug.h"
-#include "lib/core/list.h"
 
 /**
  * build a LOCATOR parameter for an UPDATE packet
