@@ -1,12 +1,12 @@
 HIPL Licensing Conditions
 =========================
 
-HIPL is licensed under MIT (Expat) license starting from
-4.7.2010. HIPL license prior to to this date was GPLv2. Please note
-that HIPL code base has still few GPL dependencies as described
-later on.
+HIPL is license is GNU/GPLv2 due to some GPL dependencies (as listed
+later in this section) even though majority of the source code was
+relicensed to MIT (Expat) on 4.7.2010.
 
-The code under the following directories was developed for the HIPL project:
+The code under the following directories were developed for the HIPL
+project under the MIT (Expat) license:
 
   * firewall (see an exception below)
   * tools (see exceptions below)
