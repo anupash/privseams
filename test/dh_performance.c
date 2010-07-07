@@ -40,6 +40,7 @@
 #include <unistd.h>
 #include <openssl/dh.h>
 #include <openssl/dsa.h>
+#include <openssl/objects.h>
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
 #include <sys/time.h>

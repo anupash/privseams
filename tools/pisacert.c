@@ -28,6 +28,7 @@
  * @author Thomas Jansen <mithi@mithi.net>
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +38,7 @@
 
 #include "lib/core/builder.h"
 #include "lib/core/certtools.h"
+#include "lib/core/icomm.h"
 #include "lib/core/ife.h"
 #include "lib/core/message.h"
 #include "lib/core/protodefs.h"
