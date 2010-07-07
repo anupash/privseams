@@ -50,7 +50,6 @@
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 20
 /** Port number for NAT traversal of hip control packets. */
 
-extern HIP_HASHTABLE *hadb_hit;
 hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry);
 int hip_nat_refresh_port(void);
 int hip_user_nat_mode(int nat_mode);
