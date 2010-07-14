@@ -39,7 +39,10 @@
 #define _BSD_SOURCE
 
 #include <pwd.h>
+#include <string.h>
 #include <unistd.h>
+#include <linux/capability.h>
+#include <linux/unistd.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 
@@ -48,8 +51,6 @@
 #include "ife.h"
 #include "capability.h"
 
-#include <linux/capability.h>
-#include <linux/unistd.h>
 
 #define USER_NOBODY "nobody"
 #define USER_HIPD "hipd"

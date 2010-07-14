@@ -33,14 +33,17 @@
  *
  */
 
+#include <math.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <openssl/sha.h>
 #include <openssl/rand.h>
-#include <math.h>
 
 #include "common.h"
-#include "hashtree.h"
-#include "ife.h"
 #include "debug.h"
+#include "ife.h"
+#include "hashtree.h"
 
 /** calculates the logarithm for a given base
  *

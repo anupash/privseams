@@ -29,9 +29,13 @@
  */
 
 #include <math.h>
+#include <stdint.h>
+#include <sys/time.h>
 
 #include "debug.h"
+#include "ife.h"
 #include "statistics.h"
+
 
 /**
  * Convert a timeval struct to milliseconds

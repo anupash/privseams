@@ -29,10 +29,24 @@
  * @author Samu Varjonen
  */
 
-#include "certtools.h"
+#include <regex.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/bn.h>
+#include <openssl/conf.h>
+#include <openssl/dsa.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/rsa.h>
+
 #include "crypto.h"
-#include "straddr.h"
+#include "debug.h"
+#include "ife.h"
 #include "message.h"
+#include "prefix.h"
+#include "straddr.h"
+#include "certtools.h"
 
 /*******************************************************************************
 * FUNCTIONS FOR SPKI                                                          *

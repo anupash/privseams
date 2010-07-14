@@ -43,6 +43,12 @@
  * @see lib/opphip/wrap_db.c for a minimal hash table implementation
  *      example
  */
+
+#include <limits.h>
+#include <stdint.h>
+#include <openssl/lhash.h>
+
+#include "debug.h"
 #include "hashtable.h"
 
 /**

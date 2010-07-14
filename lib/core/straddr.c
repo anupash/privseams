@@ -31,13 +31,19 @@
 
 #define _BSD_SOURCE
 
-#include <errno.h>
-#include <arpa/inet.h>
 #include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <openssl/evp.h>
+
 #include "config.h"
-#include "straddr.h"
 #include "debug.h"
+#include "ife.h"
+#include "prefix.h"
+#include "straddr.h"
 
 /**
  * convert a binary IPv6 address to a string

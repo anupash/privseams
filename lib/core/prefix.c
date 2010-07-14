@@ -34,8 +34,19 @@
 
 #define _BSD_SOURCE
 
-#include "prefix.h"
+#include <errno.h>
+#include <stdint.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/un.h>
+
+#include "config.h"
 #include "builder.h"
+#include "debug.h"
+#include "ife.h"
+#include "protodefs.h"
+#include "prefix.h"
 
 /* Definitions */
 #define HIP_ID_TYPE_HIT     1

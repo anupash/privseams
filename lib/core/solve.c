@@ -29,6 +29,17 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <errno.h>
+#include <stdint.h>
+#include <string.h>
+
+#include "config.h"
+#include "builder.h"
+#include "crypto.h"
+#include "debug.h"
+#include "ife.h"
+#include "prefix.h"
+#include "protodefs.h"
 #include "solve.h"
 
 /**

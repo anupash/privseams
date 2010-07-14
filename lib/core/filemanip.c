@@ -29,12 +29,17 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <errno.h>
+#include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <signal.h>
 
-#include "config.h"
 #include "crypto.h"
+#include "debug.h"
+#include "ife.h"
 #include "filemanip.h"
 
 /**

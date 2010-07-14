@@ -29,6 +29,8 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <netinet/in.h>
+
 #include "hip_udp.h"
 #include "debug.h"
 

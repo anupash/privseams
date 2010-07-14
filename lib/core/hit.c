@@ -29,11 +29,16 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <stdint.h>
+#include <string.h>
+
 #include "config.h"
-#include "hit.h"
-#include "debug.h"
-#include "straddr.h"
 #include "builder.h"
+#include "debug.h"
+#include "prefix.h"
+#include "protodefs.h"
+#include "straddr.h"
+#include "hit.h"
 
 /**
  * convert a binary HIT into a string

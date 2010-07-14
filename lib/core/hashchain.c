@@ -33,13 +33,16 @@
  *
  */
 
+#include <stdlib.h>
+#include <string.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/md5.h>
 
-#include "hashchain.h"
 #include "debug.h"
+#include "hashtree.h"
 #include "ife.h"
+#include "hashchain.h"
 
 /* these are not needed and therefore not implemented
  * right now but they should be used where necessary */

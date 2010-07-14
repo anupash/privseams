@@ -38,15 +38,19 @@
 
 #define _BSD_SOURCE
 
-#include <arpa/inet.h>
 #include <limits.h>
-#include <time.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include "config.h"
-
-#include "hostsfiles.h"
 #include "lib/tool/lutil.h"
+#include "ife.h"
+#include "prefix.h"
+#include "protodefs.h"
+#include "hostsfiles.h"
 
 
 #define HOSTS_FILE "/etc/hosts"

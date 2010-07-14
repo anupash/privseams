@@ -49,13 +49,28 @@
  * @todo "Bad signature r or s size" occurs randomly. This should not happen.
  */
 
+#include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <openssl/aes.h>
+#include <openssl/des.h>
+#include <openssl/err.h>
+#include <openssl/hmac.h>
+#include <openssl/pem.h>
+#include <openssl/rand.h>
 
+#include "lib/tool/pk.h"
 #include "config.h"
 #include "crypto.h"
+#include "debug.h"
+#include "ife.h"
 #include "keylen.h"
 #include "performance.h"
-#include "lib/tool/pk.h"
+#include "crypto.h"
+
 
 /*
  * Diffie-Hellman primes

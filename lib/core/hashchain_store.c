@@ -34,10 +34,13 @@
  *
  */
 
-#include "hashchain_store.h"
-#include "hashtree.h"
+#include <string.h>
+
 #include "debug.h"
+#include "hashtree.h"
 #include "ife.h"
+#include "linkedlist.h"
+#include "hashchain_store.h"
 
 /** helper function to free a hash chain
  *

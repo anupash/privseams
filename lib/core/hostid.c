@@ -29,18 +29,27 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#include <netinet/in.h>
+#include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <openssl/bn.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
 
 #include "config.h"
 #include "lib/tool/pk.h"
+#include "builder.h"
 #include "crypto.h"
 #include "debug.h"
 #include "filemanip.h"
-#include "hostid.h"
 #include "ife.h"
+#include "prefix.h"
 #include "protodefs.h"
+#include "hostid.h"
 
 /* ACTION_ADD, ACTION_NEW are used by hip_serialize_host_id_action() */
 #include "conf.h"
