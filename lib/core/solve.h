@@ -28,13 +28,9 @@
 #ifndef HIP_LIB_CORE_SOLVE_H
 #define HIP_LIB_CORE_SOLVE_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
-#include "config.h"
-#include "crypto.h"
 #include "protodefs.h"
-#include "state.h"
-
 
 #define HIP_PUZZLE_MAX_K        28
 

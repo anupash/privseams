@@ -29,12 +29,17 @@
 #ifndef HIP_LIB_CORE_STATE_H
 #define HIP_LIB_CORE_STATE_H
 
+#include <stdint.h>
+#include <netinet/in.h>
+#include <sys/time.h>
+#include <sys/types.h>
+
+#include "hipd/cookie.h"
+#include "lib/modularization/lmod.h"
 #include "config.h"
 #include "hashtable.h"
-#include "esp_prot_common.h"
+#include "protodefs.h"
 #include "statistics.h"
-
-#include "lib/modularization/lmod.h"
 
 #define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1

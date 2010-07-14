@@ -39,23 +39,15 @@
 #ifndef HIP_LIB_CORE_CERTTOOLS_H
 #define HIP_LIB_CORE_CERTTOOLS_H
 
-#include <sys/types.h>
-#include <sys/time.h>
-#include <time.h>
-#include <regex.h>
-#include <stdio.h>
-#include <string.h>
+#include <stdint.h>
 #include <netinet/in.h>
 #include <openssl/rsa.h>
-#include <openssl/conf.h>
 #include <openssl/x509.h>
-#include <openssl/x509v3.h>
-
-#include "config.h"
-#include "debug.h"
-#include "ife.h"
+#include <sys/types.h>
 
 #include "hashtable.h"
+#include "protodefs.h"
+
 
 /** Defines */
 #define HIP_CERT_CONF_PATH HIPL_SYSCONFDIR "hip_cert.cnf"

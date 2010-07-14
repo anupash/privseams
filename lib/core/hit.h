@@ -29,6 +29,7 @@
 #define HIP_LIB_CORE_HIT_H
 
 #include <netinet/in.h>
+
 #include "protodefs.h"
 
 int hip_convert_hit_to_str(const hip_hit_t *hit, const char *prefix, char *str);

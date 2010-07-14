@@ -28,29 +28,15 @@
 #ifndef HIP_LIB_CORE_CRYPTO_H
 #define HIP_LIB_CORE_CRYPTO_H
 
-#include <sys/time.h>
-#include <time.h>
+#include <stdint.h>
+#include <netinet/in.h>
+#include <sys/types.h>
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <openssl/dh.h>
-#include <openssl/sha.h>
-#include <openssl/bn.h>
-#include <openssl/bio.h>
-#include <openssl/pem.h>
-#include <openssl/err.h>
-#include <openssl/md5.h>
-#include <openssl/aes.h>
-#include <openssl/des.h>
-#include <openssl/hmac.h>
-#include <openssl/rand.h>
-#include <limits.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <asm/types.h>
-#include <string.h>
-#include <netinet/in.h>
 
-#include "config.h"
+#include "hipd/hadb.h"
+#include "hipd/hidb.h"
 #include "debug.h"
 #include "ife.h"
 #include "transform.h"

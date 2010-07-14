@@ -32,9 +32,13 @@
 #ifndef HIP_LIB_CORE_PROTODEFS_H
 #define HIP_LIB_CORE_PROTODEFS_H
 
-#include <netinet/ip6.h>
-#include "hashchain.h"
-#include "esp_prot_common.h"
+#include <stdint.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
+#include "lib/core/esp_prot_common.h"
+#include "lib/core/hashchain.h"
 
 #ifndef PF_HIP
 #  define PF_HIP 32

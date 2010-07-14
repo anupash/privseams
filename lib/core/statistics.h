@@ -31,8 +31,7 @@
 #ifndef HIP_LIB_CORE_STATISTICS_H
 #define HIP_LIB_CORE_STATISTICS_H
 
-#include <stdlib.h>
-#include <inttypes.h>
+#include <stdint.h>
 #include <sys/time.h>
 
 #define STATS_IN_MSECS  1000

@@ -28,18 +28,10 @@
 #ifndef HIP_LIB_CORE_DEBUG_H
 #define HIP_LIB_CORE_DEBUG_H
 
-#include <stdio.h>
-#include <errno.h>
 #include <stdarg.h>
-#include <syslog.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <netinet/in.h>
-#include "config.h"
+#include <stdint.h>
+
 #include "protodefs.h"
-#include "prefix.h"
-#include "ife.h"
 
 /* includes filename, line number and max(debug_prefix[]) */
 #define DEBUG_PREFIX_MAX  64

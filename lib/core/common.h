@@ -31,7 +31,12 @@
 #ifndef HIP_LIB_CORE_COMMON_H
 #define HIP_LIB_CORE_COMMON_H
 
+#define _BSD_SOURCE
+
 #include <stdint.h>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
+#include <netinet/udp.h>
 
 /** unused attribute marking */
 #ifdef __GNUC__

@@ -28,8 +28,9 @@
 #ifndef HIP_LIB_CORE_HOSTSFILES_H
 #define HIP_LIB_CORE_HOSTSFILES_H
 
-#include "conf.h"
-#include "prefix.h"
+#include <netinet/in.h>
+
+#include "protodefs.h"
 
 int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
 int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi);

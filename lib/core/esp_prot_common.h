@@ -37,7 +37,7 @@
 #ifndef HIP_LIB_CORE_ESP_PROT_COMMON_H
 #define HIP_LIB_CORE_ESP_PROT_COMMON_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 /* the maximum numbers for arrays used for the different modes */
 #define MAX_NUM_TRANSFORMS                      10

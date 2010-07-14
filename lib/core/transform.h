@@ -28,7 +28,6 @@
 #ifndef HIP_LIB_CORE_TRANSFORM_H
 #define HIP_LIB_CORE_TRANSFORM_H
 
-#include "config.h"
 #include "protodefs.h"
 
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);

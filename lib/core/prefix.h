@@ -28,12 +28,11 @@
 #ifndef HIP_LIB_CORE_PREFIX_H
 #define HIP_LIB_CORE_PREFIX_H
 
-#include <sys/un.h>
-#include <stdlib.h>
+#include <stdint.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
-#include "debug.h"
 #include "protodefs.h"
-#include "list.h"
 
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 

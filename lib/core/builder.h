@@ -32,14 +32,15 @@
 #ifndef HIP_LIB_CORE_BUILDER_H
 #define HIP_LIB_CORE_BUILDER_H
 
+#include <stdint.h>
+#include <netinet/in.h>
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
 
 #include "config.h"
-#include "debug.h"
-
-#include "icomm.h"
 #include "certtools.h"
+#include "debug.h"
+#include "icomm.h"
 #include "state.h"
 
 /* Removed in 2.6.11 - why ? */
