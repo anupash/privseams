@@ -49,6 +49,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/ife.h"
+#include "lib/core/prefix.h"
 #include "nlink.h"
 
 #define HIP_MAX_NETLINK_PACKET 65537
