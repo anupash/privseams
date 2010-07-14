@@ -37,6 +37,7 @@
 #define HIP_LIB_CORE_HASHCHAIN_H
 
 #include <stdlib.h>
+#include <openssl/sha.h>
 
 #include "hashtree.h"
 

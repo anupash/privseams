@@ -36,7 +36,7 @@
 #ifndef HIP_LIB_CORE_HASHTREE_H
 #define HIP_LIB_CORE_HASHTREE_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 /* arguments for the generator functionms */
 typedef struct htree_gen_args {

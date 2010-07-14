@@ -28,14 +28,8 @@
 #ifndef HIP_LIB_CORE_HASHTABLE_H
 #define HIP_LIB_CORE_HASHTABLE_H
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <openssl/bio.h>
-#include <openssl/crypto.h>
 #include <openssl/lhash.h>
-#include <limits.h>
-#include "debug.h"
+
 #include "list.h"
 
 /* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
