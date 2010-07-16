@@ -1,8 +1,6 @@
 #ifndef HIP_LIB_TOOL_CHECKSUM_H
 #define HIP_LIB_TOOL_CHECKSUM_H
 
-#define _BSD_SOURCE
-
 #include <stdint.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
