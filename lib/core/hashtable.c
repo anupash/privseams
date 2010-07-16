@@ -59,7 +59,7 @@
  */
 static unsigned long hip_hash_generic(const void *ptr)
 {
-    unsigned long hash = (unsigned long) (*((uint32_t *) ptr));
+    unsigned long hash = (unsigned long) (*((const uint32_t *) ptr));
     return hash % ULONG_MAX;
 }
 
