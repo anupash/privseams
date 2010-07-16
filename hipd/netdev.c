@@ -1215,7 +1215,7 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
         case RTM_DELADDR:
             HIP_DEBUG("RTM_NEWADDR/DELADDR\n");
             ifa = (struct ifaddrmsg *) NLMSG_DATA(msg);
-            rta = (void *) IFA_RTA(ifa);
+            rta = IFA_RTA(ifa);
             l   = msg->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
 
             /* Check if our interface is in the whitelist */

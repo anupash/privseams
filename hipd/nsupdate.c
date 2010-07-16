@@ -297,7 +297,7 @@ static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
 
     /* make space-separated list of IP addresses in ips_str */
     list_for_each_safe(item, tmp_hip_list_t, addresses, i) {
-        struct netdev_address *n = (void *) list_entry(item);
+        struct netdev_address *n = list_entry(item);
 
         if (netdev_address_to_str(n, ip_str, sizeof(ip_str)) == NULL) {
             HIP_PERROR("netdev_address_to_str");
