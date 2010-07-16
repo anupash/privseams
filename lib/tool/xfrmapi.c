@@ -152,7 +152,7 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
     }
 
     addattr_l(&req.n, sizeof(req), XFRMA_TMPL,
-              (void *) tmpls_buf, tmpls_len);
+              tmpls_buf, tmpls_len);
 
     if (req.xpinfo.sel.family == AF_UNSPEC) {
         req.xpinfo.sel.family = AF_INET6;
@@ -347,7 +347,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         xfrm_fill_encap(&encap, (sport ? sport : hip_get_local_nat_udp_port()),
                         (dport ? dport : hip_get_peer_nat_udp_port()), saddr);
         HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
-                          (void *) &encap, sizeof(encap)), -1);
+                          &encap, sizeof(encap)), -1);
     }
 
     {
@@ -372,7 +372,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
         HIP_IFE((addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_AUTH,
-                           (void *) &alg, len)), -1);
+                           &alg, len)), -1);
 
         /* XFRMA_ALG_CRYPT */
         memset(&alg, 0, sizeof(alg));
@@ -383,7 +383,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
         HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_CRYPT,
-                          (void *) &alg, len), -1);
+                          &alg, len), -1);
     }
 
     HIP_IFE((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1);
@@ -443,7 +443,7 @@ static int hip_xfrm_state_delete(struct rtnl_handle *rth,
                         (dport ? dport : hip_get_peer_nat_udp_port()),
                         peer_addr);
         HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
-                          (void *) &encap, sizeof(encap)), -1);
+                          &encap, sizeof(encap)), -1);
     }
 
 

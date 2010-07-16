@@ -194,7 +194,7 @@ int hip_send_close(struct hip_common *msg,
     memcpy(opaque + sizeof(hip_hit_t), &delete_ha_info, sizeof(int));
 
 
-    HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) opaque),
+    HIP_IFEL(hip_for_each_ha(&hip_xmit_close, opaque),
              -1, "Failed to reset all HAs\n");
 
     /* send msg to firewall to reset

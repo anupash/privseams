@@ -688,7 +688,7 @@ static int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
     req.nlh.nlmsg_seq   = rth->dump = ++rth->seq;
     req.g.rtgen_family  = family;
 
-    return sendto(rth->fd, (void *) &req, sizeof(req), 0,
+    return sendto(rth->fd, &req, sizeof(req), 0,
                   (struct sockaddr *) &nladdr, sizeof(nladdr));
 }
 

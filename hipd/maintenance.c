@@ -399,10 +399,10 @@ int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_add
              "Build hdr failed\n");
 
     HIP_IFEL(hip_build_param_contents(msg,
-                                      (void *) (r_is_our ? hit_s : hit_r), HIP_PARAM_HIT,
+                                      r_is_our ? hit_s : hit_r, HIP_PARAM_HIT,
                                       sizeof(struct in6_addr)), -1, "build param contents failed\n");
     HIP_IFEL(hip_build_param_contents(msg,
-                                      (void *) (r_is_our ? hit_r : hit_s), HIP_PARAM_HIT,
+                                      r_is_our ? hit_r : hit_s, HIP_PARAM_HIT,
                                       sizeof(struct in6_addr)), -1, "build param contents failed\n");
 
     bzero(&hip_fw_addr, alen);

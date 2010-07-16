@@ -230,7 +230,7 @@ int hip_user_nat_mode(int nat_mode)
         err = -1;
         HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
     }
-    HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, (void *) &nat), 0,
+    HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, &nat), 0,
              "Error from for_each_ha().\n");
     //set the nat mode for the host
     hip_nat_status = nat;

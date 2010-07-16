@@ -2232,8 +2232,8 @@ int hip_build_param_reg_info(hip_common_t *msg,
     hip_calc_generic_param_len((struct hip_tlv_common *) &reg_info, sizeof(struct hip_reg_info),
                                service_count * sizeof(service_list[0].reg_type));
 
-    err                   = hip_build_generic_param(
-        msg, &reg_info, sizeof(struct hip_reg_info), (void *) reg_type);
+    err = hip_build_generic_param(msg, &reg_info, sizeof(struct hip_reg_info),
+                                  reg_type);
 
     return err;
 }
@@ -2308,8 +2308,8 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
     hip_calc_generic_param_len((struct hip_tlv_common *) &reg_failed, sizeof(struct hip_reg_failed),
                                type_count * sizeof(type_list[0]));
 
-    err                     = hip_build_generic_param(
-        msg, &reg_failed, sizeof(struct hip_reg_failed), (void *) type_list);
+    err = hip_build_generic_param(msg, &reg_failed,
+                                  sizeof(struct hip_reg_failed), type_list);
 
     HIP_DEBUG("Added REG_FAILED parameter with %u service%s.\n", type_count,
               (type_count > 1) ? "s" : "");

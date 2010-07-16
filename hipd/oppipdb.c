@@ -198,7 +198,7 @@ hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer)
 {
     hip_oppip_t *ret = NULL;
 
-    ret = hip_ht_find(oppipdb, (void *) ip_peer);
+    ret = hip_ht_find(oppipdb, ip_peer);
     if (!ret) {
         HIP_DEBUG("The ip was not present in oppipdb. Peer HIP capable.\n");
     } else {
