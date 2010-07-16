@@ -111,7 +111,7 @@ static unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
         goto out_err;
     }
 
-    HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *) addr_pair,
+    HIP_IFEL(hip_build_digest(INDEX_HASH_FN, addr_pair,
                               2 * sizeof(struct in6_addr), hash), -1,
                               "failed to hash addresses\n");
 
@@ -175,7 +175,7 @@ static unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
     memcpy(&hash_input[sizeof(struct in6_addr)], &link_entry->spi,
            sizeof(uint32_t));
 
-    HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *) hash_input,
+    HIP_IFEL(hip_build_digest(INDEX_HASH_FN, hash_input,
                               input_length, hash),
              -1, "failed to hash addresses\n");
 
@@ -939,7 +939,7 @@ hip_sa_entry_t *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
     HIP_DEBUG("mode: %i\n", search_entry.mode);
 
     // find entry in sadb db
-    HIP_IFEL(!(stored_entry = (hip_sa_entry_t *) hip_ht_find(sadb, &search_entry)), -1,
+    HIP_IFEL(!(stored_entry = hip_ht_find(sadb, &search_entry)), -1,
              "failed to retrieve sa entry\n");
 
 out_err:

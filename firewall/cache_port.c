@@ -207,9 +207,7 @@ firewall_port_cache_hl_t *hip_firewall_port_cache_db_match(in_port_t port,
     memcpy(key + strlen(key), "_", 1);
     memcpy(key + strlen(key), protocol, strlen(protocol));
 
-    found_entry = (firewall_port_cache_hl_t *) hip_ht_find(
-        firewall_port_cache_db,
-        (void *) key);
+    found_entry = hip_ht_find(firewall_port_cache_db, key);
 
     if (proto == IPPROTO_ICMPV6) {
         goto out_err;
@@ -218,9 +216,7 @@ firewall_port_cache_hl_t *hip_firewall_port_cache_db_match(in_port_t port,
     if (!found_entry) {
         bindto      = hip_get_proto_info(ntohs(port), proto_for_bind);
         hip_port_cache_add_new_entry(key, bindto);
-        found_entry = (firewall_port_cache_hl_t *) hip_ht_find(
-            firewall_port_cache_db,
-            (void *) key);
+        found_entry = hip_ht_find(firewall_port_cache_db, key);
     } else {
         HIP_DEBUG("Matched port using hash\n");
     }

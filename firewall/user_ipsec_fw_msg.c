@@ -71,7 +71,7 @@ int send_userspace_ipsec_to_hipd(const int activate)
         HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_USERSPACE_IPSEC, 0), -1,
                  "build hdr failed\n");
 
-        HIP_IFEL(hip_build_param_contents(msg, (void *) &activate,
+        HIP_IFEL(hip_build_param_contents(msg, &activate,
                                           HIP_PARAM_INT,
                                           sizeof(unsigned int)), -1,
                  "build param contents failed\n");
