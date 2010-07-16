@@ -412,7 +412,7 @@ void hip_hexdump(const char *file, int line, const char *function,
                     = snprintf((char *) (hexdump + hexdump_index),
                                hexdump_count,
                                "%02x",
-                               (unsigned char) (*(((unsigned char *) str)
+                               (unsigned char) (*(((const unsigned char *) str)
                                        + char_index)));
             if (hexdump_written < 0 || hexdump_written > hexdump_max_size - 1) {
                 free(hexdump);
@@ -494,12 +494,13 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
         while (char_index < len) {
             // Write the character in hex
             hexdump_written = snprintf((char *) (hexdump + hexdump_index),
-                                       hexdump_count, "%02x", (unsigned char) (*(((unsigned char *) str) + char_index)));
+                                       hexdump_count, "%02x",
+                                       (unsigned char) (*(((const unsigned char *) str) + char_index)));
             if (hexdump_written < 0 || hexdump_written > hexdump_total_size - 1) {
                 free(hexdump);
                 HIP_DIE("hexdump msg too long(%d)", hexdump_written);
             }
-            char written = (unsigned char) (*(((unsigned char *) str) + char_index));
+            char written = (unsigned char) (*(((const unsigned char *) str) + char_index));
 
             // Write space between
             hexdump_index  += hexdump_written;
