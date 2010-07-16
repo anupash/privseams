@@ -131,8 +131,8 @@ static int hip_send_icmp(int sockfd, hip_ha_t *entry)
     HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
     memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
 
-    chdr             = (struct cmsghdr *) (void *) cmsgbuf;
-    pkti             = (struct inet6_pktinfo *) (void *) (CMSG_DATA(chdr));
+    chdr             = (struct cmsghdr *) cmsgbuf;
+    pkti             = (struct inet6_pktinfo *) CMSG_DATA(chdr);
 
     identifier       = getpid() & 0xFFFF;
 
@@ -148,7 +148,7 @@ static int hip_send_icmp(int sockfd, hip_ha_t *entry)
     dst6.sin6_flowinfo      = 0;
 
     /* build icmp header */
-    icmph                   = (struct icmp6_hdr *) (void *) icmp_pkt;
+    icmph                   = (struct icmp6_hdr *) icmp_pkt;
     icmph->icmp6_type       = ICMP6_ECHO_REQUEST;
     icmph->icmp6_code       = 0;
     entry->heartbeats_sent++;
@@ -279,8 +279,8 @@ static int hip_icmp_recvmsg(int sockfd)
     HIP_IFEL((!dst), -1, "Malloc for dst failed\n");
 
     /* cast */
-    chdr    = (struct cmsghdr *) (void *) cmsgbuf;
-    pktinfo = (struct inet6_pktinfo *) (void *) (CMSG_DATA(chdr));
+    chdr    = (struct cmsghdr *) cmsgbuf;
+    pktinfo = (struct inet6_pktinfo *) CMSG_DATA(chdr);
 
     /* clear memory */
     memset(stval, 0, sizeof(struct timeval));
@@ -324,7 +324,7 @@ static int hip_icmp_recvmsg(int sockfd)
     gettimeofday(rtval, (struct timezone *) NULL);
 
     /* Check if the process identifier is ours and that this really is echo response */
-    icmph = (struct icmp6_hdr *) (void *) iovbuf;
+    icmph = (struct icmp6_hdr *) iovbuf;
     if (icmph->icmp6_type != ICMP6_ECHO_REPLY) {
         err = 0;
         goto out_err;

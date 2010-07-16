@@ -2054,9 +2054,9 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
                          "RVS_NAT.\n");
 
                 /* responder_hit is not currently used. */
-                ipv6_addr_copy(&responder_hit, (struct in6_addr *) (void *)
+                ipv6_addr_copy(&responder_hit, (struct in6_addr *)
                                notification->data);
-                ipv6_addr_copy(&responder_ip, (struct in6_addr *) (void *)
+                ipv6_addr_copy(&responder_ip, (struct in6_addr *)
                                &(notification->
                                  data[sizeof(struct in6_addr)]));
                 memcpy(&port, &(notification->

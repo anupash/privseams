@@ -115,7 +115,7 @@ static unsigned long hip_oppdb_hash_hit(const void *ptr)
                      sizeof(hip_hit_t) + sizeof(struct sockaddr_in6),
                      hash);
 
-    return *((unsigned long *) (void *) hash);
+    return *((unsigned long *) hash);
 }
 
 /**

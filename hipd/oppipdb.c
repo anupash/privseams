@@ -64,7 +64,7 @@ static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 
     hip_build_digest(HIP_DIGEST_SHA1, entry, sizeof(hip_oppip_t), hash);
 
-    return *((unsigned long *) (void *) hash);
+    return *((unsigned long *) hash);
 }
 
 /**

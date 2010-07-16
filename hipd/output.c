@@ -1319,7 +1319,7 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
     len = hip_get_msg_total_len(msg);
 
     if (udp) {
-        struct udphdr *uh = (struct udphdr *) (void *) msg;
+        struct udphdr *uh = (struct udphdr *) msg;
 
         /* Insert 32 bits of zero bytes between UDP and HIP */
         memmove(((char *) msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);

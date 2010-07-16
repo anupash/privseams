@@ -181,7 +181,7 @@ unsigned long hip_hidb_hash(const void *ptr)
 
     hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), hash);
 
-    return *((unsigned long *) (void *) hash);
+    return *((unsigned long *) hash);
 }
 
 /**

@@ -137,7 +137,7 @@ static unsigned long hip_ha_hash(const hip_ha_t *ha)
     hip_build_digest(HIP_DIGEST_SHA1, (void *) hitpair, sizeof(hitpair),
                      hash);
 
-    return *((unsigned long *) (void *) hash);
+    return *((unsigned long *) hash);
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -177,7 +177,7 @@ static unsigned long hip_hash_peer_addr(const void *ptr)
 
     hip_build_digest(HIP_DIGEST_SHA1, addr, sizeof(*addr), hash);
 
-    return *((unsigned long *) (void *) hash);
+    return *((unsigned long *) hash);
 }
 
 /**

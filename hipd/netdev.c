@@ -181,7 +181,7 @@ static unsigned long hip_netdev_hash(const void *ptr)
     hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
                      sizeof(struct sockaddr_storage), hash);
 
-    return *((unsigned long *) (void *) hash);
+    return *((unsigned long *) hash);
 }
 
 /**
@@ -233,7 +233,7 @@ static int hip_filter_address(struct sockaddr *addr)
     switch (addr->sa_family) {
     case AF_INET6:
         a_in6 = hip_cast_sa_addr(addr);
-        inet_ntop(AF_INET6, &((struct sockaddr_in6 *) (void *) addr)->sin6_addr, s,
+        inet_ntop(AF_INET6, &((struct sockaddr_in6 *) addr)->sin6_addr, s,
                   INET6_ADDRSTRLEN);
 
         HIP_DEBUG("IPv6 address to filter is %s.\n", s);
@@ -269,8 +269,8 @@ static int hip_filter_address(struct sockaddr *addr)
         break;
 
     case AF_INET:
-        a_in = ((struct sockaddr_in *) (void *) addr)->sin_addr.s_addr;
-        inet_ntop(AF_INET, &((struct sockaddr_in *) (void *) addr)->sin_addr, s,
+        a_in = ((struct sockaddr_in *) addr)->sin_addr.s_addr;
+        inet_ntop(AF_INET, &((struct sockaddr_in *) addr)->sin_addr, s,
                   INET6_ADDRSTRLEN);
 
         HIP_DEBUG("IPv4 address to filter is %s.\n", s);
@@ -294,7 +294,7 @@ static int hip_filter_address(struct sockaddr *addr)
         } else if (IS_IPV4_LOOPBACK(a_in)) {
             HIP_DEBUG("Address ignored: IPV4_LOOPBACK.\n");
             return FA_IGNORE;
-        } else if (IS_LSI((struct sockaddr_in *) (void *) addr)) {
+        } else if (IS_LSI((struct sockaddr_in *) addr)) {
             HIP_DEBUG("Address ignored: address is LSI.\n");
             return FA_IGNORE;
         } else {
@@ -443,7 +443,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
         struct sockaddr_in6 temp;
         memset(&temp, 0, sizeof(temp));
         temp.sin6_family = AF_INET6;
-        IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *) (void *) addr)->sin_addr),
+        IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *) addr)->sin_addr),
                          &temp.sin6_addr);
         memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
     } else {
@@ -570,12 +570,12 @@ static int hip_netdev_find_if(struct sockaddr *addr)
         if (addr->sa_family == AF_INET6) {
             strncpy(fam_str, "AF_INET6", FAM_STR_MAX);
             inet_ntop(AF_INET6,
-                      &(((struct sockaddr_in6 *) (void *) addr)->sin6_addr),
+                      &(((struct sockaddr_in6 *) addr)->sin6_addr),
                       ipv6_str, INET6_ADDRSTRLEN);
         } else if (addr->sa_family == AF_INET) {
             strncpy(fam_str, "AF_INET", FAM_STR_MAX);
             inet_ntop(AF_INET,
-                      &(((struct sockaddr_in *) (void *) addr)->sin_addr),
+                      &(((struct sockaddr_in *) addr)->sin_addr),
                       ipv6_str, INET6_ADDRSTRLEN);
         } else {
             strncpy(fam_str, "not AF_INET or AF_INET6", FAM_STR_MAX);
@@ -597,9 +597,9 @@ static int hip_netdev_find_if(struct sockaddr *addr)
              ((memcmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
                       hip_cast_sa_addr(addr),
                       hip_sa_addr_len(addr)) == 0))) ||
-            IPV6_EQ_IPV4(&(((struct sockaddr_in6 *) (void *)
+            IPV6_EQ_IPV4(&(((struct sockaddr_in6 *)
                             &(n->addr))->sin6_addr),
-                         &((struct sockaddr_in *) (void *)
+                         &((struct sockaddr_in *)
                            addr)->sin_addr)) {
             HIP_DEBUG("Matching network device index is " \
                       "%d.\n", n->if_index);
