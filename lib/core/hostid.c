@@ -269,7 +269,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                struct in6_addr *hit,
                                int hit_type)
 {
-    int algo = hip_get_host_id_algo((struct hip_host_id *) host_id);
+    int algo = hip_get_host_id_algo((const struct hip_host_id *) host_id);
     int err  = 0;
 
     if (algo == HIP_HI_DSA) {
