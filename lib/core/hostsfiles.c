@@ -218,7 +218,7 @@ static int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line 
 {
     int err = 1;
 
-    if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id)) {
+    if (!ipv6_addr_cmp(arg, &entry->id)) {
         memcpy(result, entry->hostname, strlen(entry->hostname));
         err = 0; /* Stop at the first match */
     }
@@ -243,7 +243,7 @@ static int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line
     int err    = 1;
     int is_lsi = hip_id_type_match(&entry->id, 2);
 
-    if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id) && is_lsi) {
+    if (!ipv6_addr_cmp(arg, &entry->id) && is_lsi) {
         memcpy(result, entry->hostname, strlen(entry->hostname));
         err = 0; /* Stop at the first match */
     }
