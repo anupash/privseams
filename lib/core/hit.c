@@ -104,7 +104,7 @@ unsigned long hip_hash_hit(const void *ptr)
 {
     uint8_t hash[HIP_AH_SHA_LEN];
 
-    hip_build_digest(HIP_DIGEST_SHA1, (uint8_t *)ptr + sizeof(uint16_t),
+    hip_build_digest(HIP_DIGEST_SHA1, (const uint8_t *)ptr + sizeof(uint16_t),
                      7 * sizeof(uint16_t), hash);
 
     return *((unsigned long *) hash);
