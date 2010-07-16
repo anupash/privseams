@@ -737,14 +737,17 @@ static int hip_check_param_contents_len(const struct hip_common *msg,
     int ok        = 0;
     /* length in bytes */
     int param_len = hip_get_param_total_len(param);
-    uint8_t *pos  = (uint8_t *) param;
+
+    /* cast pointers to a compatible type for comparison below */
+    const uint8_t *msg_pos    = (const uint8_t *) msg;
+    const uint8_t *param_pos  = (const uint8_t *) param;
 
     /* Note: the lower limit is not checked, because there really is no
      * lower limit. */
 
-    if (pos == ((const uint8_t *) msg)) {
+    if (param_pos == msg_pos) {
         HIP_ERROR("not a parameter\n");
-    } else if (pos + param_len > ((const uint8_t *) msg) + HIP_MAX_PACKET) {
+    } else if (param_pos + param_len > msg_pos + HIP_MAX_PACKET) {
         HIP_DEBUG("param far too long (%d)\n", param_len);
     } else if (param_len > hip_get_msg_total_len(msg)) {
         HIP_DEBUG("param too long (%d) msg_len %d\n", param_len,
