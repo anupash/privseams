@@ -39,6 +39,7 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
+#include <openssl/safestack.h>
 
 #include "crypto.h"
 #include "debug.h"
@@ -795,8 +796,8 @@ out_err:
  *       the conf with the hip_cert_free_conf
  *
  */
-STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *section_name,
-                                                  CONF * conf)
+STACK_OF(CONF_VALUE) *hip_cert_read_conf_section(const char *section_name,
+                                                 CONF *conf)
 {
     long err = 0;
     int i;
