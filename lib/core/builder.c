@@ -1417,7 +1417,7 @@ static int hip_build_generic_param(struct hip_common *msg,
                                    const void *contents)
 {
     const struct hip_tlv_common *param = (const struct hip_tlv_common *) parameter_hdr;
-    void *src                          = NULL;
+    const void *src                    = NULL;
     uint8_t *dst                       = NULL;
     int err                            = 0, size = 0;
     uint8_t *max_dst                   = ((uint8_t *) msg) + HIP_MAX_PACKET;
@@ -1459,13 +1459,13 @@ static int hip_build_generic_param(struct hip_common *msg,
     }
 
     /* copy header */
-    src  = (void *) param;
+    src  = param;
     size = param_hdr_size;
     memcpy(dst, src, size);
 
     /* copy contents  */
     dst += param_hdr_size;
-    src  = (void *) contents;
+    src  = contents;
     /* Copy the right amount of contents, see jokela draft for TLV
      * format. For example, this skips the algo in struct hip_sig2
      * (which is included in the length), see the
