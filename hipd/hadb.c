@@ -134,7 +134,7 @@ static unsigned long hip_ha_hash(const hip_ha_t *ha)
     memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
     memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
 
-    hip_build_digest(HIP_DIGEST_SHA1, (void *) hitpair, sizeof(hitpair),
+    hip_build_digest(HIP_DIGEST_SHA1, hitpair, sizeof(hitpair),
                      hash);
 
     return *((unsigned long *) hash);

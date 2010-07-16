@@ -382,7 +382,7 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg,
         HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEL_LOCAL_HI, 0),
                  -1, "Failed to build user message header\n");
 
-        HIP_IFEL(hip_build_param_contents(msg, (void *) &data->lhi.hit,
+        HIP_IFEL(hip_build_param_contents(msg, &data->lhi.hit,
                                           HIP_PARAM_HIT, sizeof(in6_addr_t)),
                  -1, "Failed to build HIT param\n");
 
@@ -445,7 +445,7 @@ static int hip_conf_handle_hi_del(hip_common_t *msg,
         goto out_err;
     }
 
-    if ((err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+    if ((err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
                                         sizeof(in6_addr_t)))) {
         HIP_ERROR("build param HIT failed: %s\n", strerror(err));
         goto out_err;
@@ -1246,11 +1246,11 @@ static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
         break;
     }
 
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+    HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
                                       sizeof(in6_addr_t)), -1,
              "build param hit failed\n");
 
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+    HIP_IFEL(hip_build_param_contents(msg, &ip6,
                                       HIP_PARAM_IPV6_ADDR,
                                       sizeof(in6_addr_t)), -1,
              "build param hit failed\n");
@@ -1259,7 +1259,7 @@ static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
         HIP_IFEL(convert_string_to_address_v4(opt[2], &lsi), -1,
                  "string to address conversion failed\n");
         HIP_IFEL(!IS_LSI32(lsi.s_addr), -1, "Wrong LSI value\n");
-        HIP_IFEL(hip_build_param_contents(msg, (void *) &lsi,
+        HIP_IFEL(hip_build_param_contents(msg, &lsi,
                                           HIP_PARAM_LSI,
                                           sizeof(struct in_addr)), -1,
                  "build param lsi failed\n");
@@ -1405,7 +1405,7 @@ static int hip_conf_handle_rst(hip_common_t *msg, UNUSED int action,
         goto out;
     }
 
-    err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+    err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
                                    sizeof(in6_addr_t));
     if (err) {
         HIP_ERROR("build param hit failed: %s\n", strerror(err));
@@ -1500,7 +1500,7 @@ static int hip_conf_handle_manual_update(hip_common_t *msg, UNUSED int action,
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_MANUAL_UPDATE_PACKET, 0), -1,
              "Failed to build user message header.: %s\n", strerror(err));
 
-    err = hip_build_param_contents(msg, (void *) &ifidx, HIP_PARAM_UINT,
+    err = hip_build_param_contents(msg, &ifidx, HIP_PARAM_UINT,
                                    sizeof(unsigned int));
 
 out_err:
@@ -1749,7 +1749,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
     HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
 
     /* attach the hit into the message */
-    err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+    err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
                                    sizeof(in6_addr_t));
     if (err) {
         HIP_ERROR("build param hit failed: %s\n", strerror(err));
@@ -1784,7 +1784,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
 
     /* attach new val for the set action */
     if (msg_type == HIP_MSG_CONF_PUZZLE_SET) {
-        err = hip_build_param_contents(msg, (void *) &newVal, HIP_PARAM_INT,
+        err = hip_build_param_contents(msg, &newVal, HIP_PARAM_INT,
                                        sizeof(int));
         if (err) {
             HIP_ERROR("build param int failed: %s\n", strerror(err));
@@ -1864,7 +1864,7 @@ static int hip_conf_handle_opp(hip_common_t *msg,
         goto out;
     }
 
-    err = hip_build_param_contents(msg, (void *) &oppmode, HIP_PARAM_UINT,
+    err = hip_build_param_contents(msg, &oppmode, HIP_PARAM_UINT,
                                    sizeof(unsigned int));
     if (err) {
         HIP_ERROR("build param oppmode failed: %s\n", strerror(err));

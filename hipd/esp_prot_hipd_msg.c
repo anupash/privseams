@@ -466,7 +466,7 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, const int direction
 
     // we always tell the negotiated transform to the firewall
     HIP_DEBUG("esp protection transform is %u \n", entry->esp_prot_transform);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &entry->esp_prot_transform,
+    HIP_IFEL(hip_build_param_contents(msg, &entry->esp_prot_transform,
                                       HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
              "build param contents failed\n");
 
@@ -502,19 +502,19 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, const int direction
         }
 
         // add parameters to hipfw message
-        HIP_IFEL(hip_build_param_contents(msg, (void *) &hash_item_length,
+        HIP_IFEL(hip_build_param_contents(msg, &hash_item_length,
                                           HIP_PARAM_ITEM_LENGTH, sizeof(uint32_t)), -1,
                  "build param contents failed\n");
 
         // add parameters to hipfw message
-        HIP_IFEL(hip_build_param_contents(msg, (void *) &esp_prot_num_parallel_hchains,
+        HIP_IFEL(hip_build_param_contents(msg, &esp_prot_num_parallel_hchains,
                                           HIP_PARAM_UINT, sizeof(uint16_t)), -1,
                  "build param contents failed\n");
 
         for (i = 0; i < esp_prot_num_parallel_hchains; i++) {
             HIP_HEXDUMP("esp protection anchor is ", &hchain_anchors[i][0], hash_length);
 
-            HIP_IFEL(hip_build_param_contents(msg, (void *) &hchain_anchors[i][0],
+            HIP_IFEL(hip_build_param_contents(msg, &hchain_anchors[i][0],
                                               HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
                      "build param contents failed\n");
         }

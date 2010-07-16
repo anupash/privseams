@@ -122,43 +122,43 @@ struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
              "build hdr failed\n");
 
     HIP_DEBUG_IN6ADDR("Source IP address: ", saddr);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) saddr,
+    HIP_IFEL(hip_build_param_contents(msg, saddr,
                                       HIP_PARAM_IPV6_ADDR,
                                       sizeof(struct in6_addr)), -1,
              "build param contents failed\n");
 
     HIP_DEBUG_IN6ADDR("Destination IP address : ", daddr);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) daddr,
+    HIP_IFEL(hip_build_param_contents(msg, daddr,
                                       HIP_PARAM_IPV6_ADDR,
                                       sizeof(struct in6_addr)), -1,
              "build param contents failed\n");
 
     HIP_DEBUG_HIT("Source HIT: ", src_hit);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) src_hit, HIP_PARAM_HIT,
+    HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT,
                                       sizeof(struct in6_addr)), -1,
              "build param contents failed\n");
 
     HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) dst_hit, HIP_PARAM_HIT,
+    HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT,
                                       sizeof(struct in6_addr)), -1,
              "build param contents failed\n");
 
     HIP_DEBUG("the spi value is : %x \n", spi);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &spi, HIP_PARAM_UINT,
+    HIP_IFEL(hip_build_param_contents(msg, &spi, HIP_PARAM_UINT,
                                       sizeof(uint32_t)), -1,
              "build param contents failed\n");
 
     HIP_DEBUG("the nat_mode value is %u \n", entry->nat_mode);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &entry->nat_mode, HIP_PARAM_UINT,
+    HIP_IFEL(hip_build_param_contents(msg, &entry->nat_mode, HIP_PARAM_UINT,
                                       sizeof(uint8_t)), -1,
              "build param contents failed\n");
 
     HIP_DEBUG("the local_port value is %u \n", entry->local_udp_port);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &entry->local_udp_port,
+    HIP_IFEL(hip_build_param_contents(msg, &entry->local_udp_port,
                                       HIP_PARAM_UINT, sizeof(uint16_t)), -1, "build param contents failed\n");
 
     HIP_DEBUG("the peer_port value is %u \n", entry->peer_udp_port);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &entry->peer_udp_port,
+    HIP_IFEL(hip_build_param_contents(msg, &entry->peer_udp_port,
                                       HIP_PARAM_UINT, sizeof(uint16_t)), -1, "build param contents failed\n");
 
     // params needed by the esp protection extension
@@ -180,23 +180,23 @@ struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
              "build param contents failed\n");
 
     HIP_DEBUG("ealg value is %d \n", ealg);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &ealg, HIP_PARAM_INT,
+    HIP_IFEL(hip_build_param_contents(msg, &ealg, HIP_PARAM_INT,
                                       sizeof(int)), -1,
              "build param contents failed\n");
 
     HIP_DEBUG("retransmission value is %d \n", retransmission);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &retransmission,
+    HIP_IFEL(hip_build_param_contents(msg, &retransmission,
                                       HIP_PARAM_INT, sizeof(int)), -1,
              "build param contents failed\n");
 
     HIP_DEBUG("the direction value is %d \n", direction);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &direction,
+    HIP_IFEL(hip_build_param_contents(msg, &direction,
                                       HIP_PARAM_INT,
                                       sizeof(int)), -1,
              "build param contents failed\n");
 
     HIP_DEBUG("the update value is %d \n", update);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &update, HIP_PARAM_INT,
+    HIP_IFEL(hip_build_param_contents(msg, &update, HIP_PARAM_INT,
                                       sizeof(int)), -1,
              "build param contents failed\n");
 
@@ -240,27 +240,27 @@ struct hip_common *create_delete_sa_msg(const uint32_t spi,
              "build hdr failed\n");
 
     HIP_DEBUG("spi value: %u\n", spi);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &spi, HIP_PARAM_UINT,
+    HIP_IFEL(hip_build_param_contents(msg, &spi, HIP_PARAM_UINT,
                                       sizeof(uint32_t)), -1, "build param contents failed\n");
 
     HIP_DEBUG_IN6ADDR("peer address: ", peer_addr);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) peer_addr, HIP_PARAM_IPV6_ADDR,
+    HIP_IFEL(hip_build_param_contents(msg, peer_addr, HIP_PARAM_IPV6_ADDR,
                                       sizeof(struct in6_addr)), -1, "build param contents failed\n");
 
     HIP_DEBUG_IN6ADDR("destination address: ", dst_addr);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) dst_addr, HIP_PARAM_IPV6_ADDR,
+    HIP_IFEL(hip_build_param_contents(msg, dst_addr, HIP_PARAM_IPV6_ADDR,
                                       sizeof(struct in6_addr)), -1, "build param contents failed\n");
 
     HIP_DEBUG("family: %i\n", family);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &family, HIP_PARAM_INT,
+    HIP_IFEL(hip_build_param_contents(msg, &family, HIP_PARAM_INT,
                                       sizeof(int)), -1, "build param contents failed\n");
 
     HIP_DEBUG("src_port: %i\n", src_port);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &src_port, HIP_PARAM_INT,
+    HIP_IFEL(hip_build_param_contents(msg, &src_port, HIP_PARAM_INT,
                                       sizeof(int)), -1, "build param contents failed\n");
 
     HIP_DEBUG("src_port: %i\n", dst_port);
-    HIP_IFEL(hip_build_param_contents(msg, (void *) &dst_port, HIP_PARAM_INT,
+    HIP_IFEL(hip_build_param_contents(msg, &dst_port, HIP_PARAM_INT,
                                       sizeof(int)), -1, "build param contents failed\n");
 
 out_err:
