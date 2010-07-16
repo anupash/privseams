@@ -186,7 +186,7 @@ uint16_t checksum_ip(struct ip *ip_hdr, const unsigned int ip_hl)
 uint16_t inchksum(const void *data, uint32_t length)
 {
     long sum            = 0;
-    const uint16_t *wrd =  (uint16_t *) data;
+    const uint16_t *wrd = data;
     long slen           = (long) length;
 
     while (slen > 1) {
@@ -195,7 +195,7 @@ uint16_t inchksum(const void *data, uint32_t length)
     }
 
     if (slen > 0) {
-        sum += *((uint8_t *) wrd);
+        sum += *((const uint8_t *) wrd);
     }
 
     while (sum >> 16) {
