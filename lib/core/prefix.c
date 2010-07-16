@@ -217,11 +217,9 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
 {
     int err              = 0;
     uint8_t digest[HIP_AH_SHA_LEN];
-    char *key            = (char *) (ip);
-    unsigned int key_len = sizeof(struct in6_addr);
 
     HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-    HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)),
+    HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, ip, sizeof(ip), digest)),
              err,
              "Building of digest failed\n");
 
@@ -298,7 +296,7 @@ int hip_sockaddr_is_v6_mapped(struct sockaddr *sa)
  */
 int hip_sockaddr_len(const void *sockaddr)
 {
-    struct sockaddr *sa = (struct sockaddr *) sockaddr;
+    const struct sockaddr *sa = sockaddr;
     int len;
 
     switch (sa->sa_family) {
