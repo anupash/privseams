@@ -814,7 +814,7 @@ STACK_OF(CONF_VALUE) *hip_cert_read_conf_section(const char *section_name,
              section_name, HIP_CERT_CONF_PATH);
 
     for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
-        item = (void *) sk_CONF_VALUE_value(sec, i);
+        item = sk_CONF_VALUE_value(sec, i);
     }
 out_err:
     if (err == -1) {

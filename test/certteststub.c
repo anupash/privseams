@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     sec  = hip_cert_read_conf_section("hip_spki", conf);
 
     for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
-        item = (void *) sk_CONF_VALUE_value(sec, i);
+        item = sk_CONF_VALUE_value(sec, i);
         if (!strcmp(item->name, "issuerhit")) {
             err = inet_pton(AF_INET6, item->value, defhit);
             if (err < 1) {
@@ -175,7 +175,7 @@ skip_spki:
     sec_name = hip_cert_read_conf_section("hip_x509v3_name", conf);
 
     for (i = 0; i < sk_CONF_VALUE_num(sec_name); i++) {
-        item = (void *) sk_CONF_VALUE_value(sec_name, i);
+        item = sk_CONF_VALUE_value(sec_name, i);
         if (!strcmp(item->name, "issuerhit")) {
             err = inet_pton(AF_INET6, item->value, defhit);
             if (err < 1) {

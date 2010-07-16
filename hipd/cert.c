@@ -776,7 +776,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
         /* Loop through the conf stack for general information */
         extlist = sk_X509_EXTENSION_new_null();
         for (i = 0; i < sk_CONF_VALUE_num(sec_general); i++) {
-            item = (void *) sk_CONF_VALUE_value(sec_general, i);
+            item = sk_CONF_VALUE_value(sec_general, i);
             if (!strcmp(item->name, "issuerhit")) {
                 strcpy(issuer_hit, item->value);
                 ret = inet_pton(AF_INET6, item->value, issuer_hit_n);
@@ -827,7 +827,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
         /* Loop through the conf stack and add extensions to ext stack */
         extlist = sk_X509_EXTENSION_new_null();
         for (i = 0; i < sk_CONF_VALUE_num(sec_ext); i++) {
-            item = (void *) sk_CONF_VALUE_value(sec_ext, i);
+            item = sk_CONF_VALUE_value(sec_ext, i);
             HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx,
                                              item->name, item->value )), -1,
                      "Failed to create extension\n");
@@ -884,7 +884,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
 
     if (sec_ext != NULL) {
         for (i = 0; i < sk_CONF_VALUE_num(sec_ext); i++) {
-            item = (void *) sk_CONF_VALUE_value(sec_ext, i);
+            item = sk_CONF_VALUE_value(sec_ext, i);
             /*
              * Skip issuerAltName and subjectAltName because
              * HITs use them already. Skip also basicConstraint =
