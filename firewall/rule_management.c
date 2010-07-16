@@ -375,7 +375,7 @@ static struct hit_option *parse_hit(char *token)
 
     if (!strcmp(token, NEGATE_STR)) {
         option->boolean = 0;
-        token           = (char *) strtok(NULL, " ");
+        token           = strtok(NULL, " ");
     } else {
         option->boolean = 1;
     }
@@ -514,7 +514,7 @@ static struct int_option *parse_type(char *token)
 
     if (!strcmp(token, NEGATE_STR)) {
         option->boolean = 0;
-        token           = (char *) strtok(NULL, " ");
+        token           = strtok(NULL, " ");
     } else {
         option->boolean = 1;
     }
@@ -561,7 +561,7 @@ static struct state_option *parse_state(char *token)
 
     if (!strcmp(token, NEGATE_STR)) {
         option->int_opt.boolean = 0;
-        token                   = (char *) strtok(NULL, " ");
+        token                   = strtok(NULL, " ");
     } else {
         option->int_opt.boolean = 1;
     }
@@ -594,7 +594,7 @@ static struct string_option *parse_if(char *token)
 
     if (!strcmp(token, NEGATE_STR)) {
         option->boolean = 0;
-        token           = (char *) strtok(NULL, " ");
+        token           = strtok(NULL, " ");
     } else {
         option->boolean = 1;
     }
@@ -623,7 +623,7 @@ static struct rule *parse_rule(char *string)
     char *token;
     int option_found  = NO_OPTION;
 
-    token = (char *) strtok(string, " ");
+    token = strtok(string, " ");
     if (token == NULL) {
         return NULL;
     }
@@ -641,7 +641,7 @@ static struct rule *parse_rule(char *string)
         return NULL;
     }
     while (strlen(string) > 0) {
-        token = (char *) strtok(NULL, " ");
+        token = strtok(NULL, " ");
         if (token == NULL) {
             /* empty string */
             break;
@@ -954,7 +954,7 @@ void read_rule_file(const char *file_name)
             }
 
             /* remove trailing new line */
-            tmp_line = (char *) strtok(line, "\n");
+            tmp_line = strtok(line, "\n");
 
             if (tmp_line) {
                 rule = parse_rule(tmp_line);
@@ -966,17 +966,14 @@ void read_rule_file(const char *file_name)
                 }
 
                 if (rule->hook == NF_IP6_LOCAL_IN) {
-                    input = (DList *) append_to_list((DList *) input,
-                                                     (void *) rule);
-                    print_rule((struct rule *) ((DList *) input)->data);
+                    input = append_to_list(input, rule);
+                    print_rule((struct rule *) input->data);
                 } else if (rule->hook == NF_IP6_LOCAL_OUT)    {
-                    output = (DList *) append_to_list((DList *) output,
-                                                      (void *) rule);
-                    print_rule((struct rule *) ((DList *) output)->data);
+                    output = append_to_list(output, rule);
+                    print_rule((struct rule *) output->data);
                 } else if (rule->hook == NF_IP6_FORWARD)    {
-                    forward = (DList *) append_to_list((DList *) forward,
-                                                       (void *) rule);
-                    print_rule((struct rule *) ((DList *) forward)->data);
+                    forward = append_to_list(forward, rule);
+                    print_rule((struct rule *) forward->data);
                 }
             } else if (tmp_line)   {
                 HIP_DEBUG("unable to parse rule: %s\n", original_line);
@@ -989,8 +986,8 @@ void read_rule_file(const char *file_name)
         HIP_DEBUG("Can't open file %s \n", file_name );
     }
 
-    input_rules   = (DList *) input;
+    input_rules   = input;
     set_stateful_filtering();
-    output_rules  = (DList *) output;
-    forward_rules = (DList *) forward;
+    output_rules  = output;
+    forward_rules = forward;
 }
