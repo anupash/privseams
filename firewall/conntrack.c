@@ -140,7 +140,7 @@ static void print_esp_tuple(const struct esp_tuple *esp_tuple)
  */
 static void print_esp_list(void)
 {
-    DList *list = (DList *) espList;
+    DList *list = espList;
 
     HIP_DEBUG("ESP LIST: \n");
     while (list) {
@@ -157,7 +157,7 @@ static void print_esp_list(void)
  */
 static void print_tuple_list(void)
 {
-    DList *list = (DList *) hipList;
+    DList *list = hipList;
 
     HIP_DEBUG("TUPLE LIST: \n");
     if (list) {
@@ -257,7 +257,7 @@ static struct tuple *get_tuple_by_hip(const struct hip_data *data,
                                       OPP const struct in6_addr *ip6_from)
 {
     struct hip_tuple *tuple = NULL;
-    DList *list = (DList *) hipList;
+    DList *list = hipList;
 
     while (list) {
         tuple = (struct hip_tuple *) list->data;
@@ -354,8 +354,7 @@ static SList *update_esp_address(SList *addr_list,
         esp_addr->update_id = NULL;
     }
     HIP_DEBUG("update_esp_address: addr created and added\n");
-    return (SList *) append_to_slist((SList *) addr_list,
-                                     (void *) esp_addr);
+    return append_to_slist(addr_list, esp_addr);
 }
 
 /**
@@ -470,10 +469,8 @@ static void insert_new_connection(const struct hip_data *data)
     connection->reply.hip_tuple->data->verify    = NULL;
 
     //add tuples to list
-    hipList = (DList *) append_to_list((DList *) hipList,
-                                       (void *) connection->original.hip_tuple);
-    hipList = (DList *) append_to_list((DList *) hipList,
-                                       (void *) connection->reply.hip_tuple);
+    hipList = append_to_list(hipList, connection->original.hip_tuple);
+    hipList = append_to_list(hipList, connection->reply.hip_tuple);
     HIP_DEBUG("inserting connection \n");
 }
 
@@ -482,10 +479,9 @@ static void insert_new_connection(const struct hip_data *data)
  *
  * @param esp_tuple the ESP tuple to be inserted
  */
-static void insert_esp_tuple(const struct esp_tuple *esp_tuple)
+static void insert_esp_tuple(struct esp_tuple *esp_tuple)
 {
-    espList = (DList *) append_to_list((DList *) espList,
-                                       (void *) esp_tuple);
+    espList = append_to_list(espList, esp_tuple);
 
     HIP_DEBUG("insert_esp_tuple:\n");
     print_esp_list();
@@ -663,9 +659,8 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
                        sizeof(struct in6_addr));
                 esp_address->update_id  = malloc(sizeof(uint32_t));
                 *esp_address->update_id = seq->update_id;
-                new_esp->dst_addr_list  = (SList *)
-                                          append_to_slist((SList *) new_esp->dst_addr_list,
-                                                          (void *) esp_address);
+                new_esp->dst_addr_list  = append_to_slist(new_esp->dst_addr_list,
+                                                          esp_address);
                 n--;
                 if (n > 0) {
                     locator_addr++;
@@ -703,8 +698,8 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *esp_
         memcpy(&esp_address->dst_addr, addr, sizeof(struct in6_addr));
 
         esp_address->update_id = NULL;
-        new_esp->dst_addr_list = (SList *) append_to_slist((SList *) new_esp->dst_addr_list,
-                                                           (void *) esp_address);
+        new_esp->dst_addr_list = append_to_slist(new_esp->dst_addr_list,
+                                                 esp_address);
     }
     return new_esp;
 }
@@ -758,9 +753,8 @@ static int insert_connection_from_update(const struct hip_data *data,
     connection->reply.direction                   = REPLY_DIR;
 
     connection->reply.esp_tuples                  = NULL;
-    connection->reply.esp_tuples                  = (SList *) append_to_slist((SList *)
-                                                                              connection->reply.esp_tuples,
-                                                                              (void *) esp_tuple);
+    connection->reply.esp_tuples                  = append_to_slist(connection->reply.esp_tuples,
+                                                                    esp_tuple);
     insert_esp_tuple(esp_tuple);
 
     connection->reply.connection               = connection;
@@ -775,10 +769,8 @@ static int insert_connection_from_update(const struct hip_data *data,
 
 
     //add tuples to list
-    hipList = (DList *) append_to_list((DList *) hipList,
-                                       (void *) connection->original.hip_tuple);
-    hipList = (DList *) append_to_list((DList *) hipList,
-                                       (void *) connection->reply.hip_tuple);
+    hipList = append_to_list(hipList, connection->original.hip_tuple);
+    hipList = append_to_list(hipList, connection->reply.hip_tuple);
     HIP_DEBUG("insert_connection_from_update \n");
     return 1;
 }
@@ -1047,8 +1039,7 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
                                                       ip6_src, NULL);
         esp_tuple->tuple         = other_dir;
 
-        other_dir->esp_tuples    = (SList *)
-                                   append_to_slist((SList *) other_dir->esp_tuples, esp_tuple);
+        other_dir->esp_tuples    = append_to_slist(other_dir->esp_tuples, esp_tuple);
 
         insert_esp_tuple(esp_tuple);
     }
@@ -1107,8 +1098,7 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
             memset(esp_tuple, 0, sizeof(struct esp_tuple));
 
             //add esp_tuple to list of tuples
-            other_dir->esp_tuples = (SList *)
-                                    append_to_slist((SList *) other_dir->esp_tuples,
+            other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples,
                                                     esp_tuple);
         }
 
@@ -1334,9 +1324,8 @@ static int handle_update(const struct hip_common *common,
             /* we have to consider the src ip address in case of cascading NATs (see above FIXME) */
             esp_tuple                   = esp_tuple_from_esp_info(esp_info, ip6_src, other_dir_tuple);
 
-            other_dir_tuple->esp_tuples = (SList *)
-                                          append_to_slist((SList *) other_dir_esps,
-                                                          (void *) esp_tuple);
+            other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
+                                                          esp_tuple);
             insert_esp_tuple(esp_tuple);
 
             HIP_DEBUG("connection insertion successful\n");
@@ -1407,9 +1396,8 @@ static int handle_update(const struct hip_common *common,
                         struct esp_tuple *new_esp = esp_tuple_from_esp_info(
                             esp_info, ip6_src, other_dir_tuple);
 
-                        other_dir_tuple->esp_tuples = (SList *)
-                                                      append_to_slist((SList *) other_dir_esps,
-                                                                      (void *) new_esp);
+                        other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
+                                                                      new_esp);
                         insert_esp_tuple(new_esp);
                         tuple->connection->state = STATE_ESTABLISHED;
                     }
@@ -1425,8 +1413,8 @@ static int handle_update(const struct hip_common *common,
                     struct esp_tuple *new_esp = esp_tuple_from_esp_info(esp_info,
                                                                         ip6_src, other_dir_tuple);
 
-                    other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
-                                                                            other_dir_esps, (void *) new_esp);
+                    other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
+                                                                  new_esp);
                     insert_esp_tuple(new_esp);
                 }
             }
@@ -1959,7 +1947,7 @@ int conntrack(const struct in6_addr *ip6_src,
  */
 struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6_addr *dst_hit)
 {
-    DList *list = (DList *) hipList;
+    DList *list = hipList;
 
     while (list) {
         struct hip_tuple *tuple = (struct hip_tuple *) list->data;
