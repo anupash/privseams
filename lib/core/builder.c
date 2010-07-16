@@ -742,9 +742,9 @@ static int hip_check_param_contents_len(const struct hip_common *msg,
     /* Note: the lower limit is not checked, because there really is no
      * lower limit. */
 
-    if (pos == ((uint8_t *) msg)) {
+    if (pos == ((const uint8_t *) msg)) {
         HIP_ERROR("not a parameter\n");
-    } else if (pos + param_len > ((uint8_t *) msg) + HIP_MAX_PACKET) {
+    } else if (pos + param_len > ((const uint8_t *) msg) + HIP_MAX_PACKET) {
         HIP_DEBUG("param far too long (%d)\n", param_len);
     } else if (param_len > hip_get_msg_total_len(msg)) {
         HIP_DEBUG("param too long (%d) msg_len %d\n", param_len,
@@ -1310,7 +1310,7 @@ static int hip_check_network_param_attributes(const struct hip_tlv_common *param
     case HIP_PARAM_HOST_ID:
     {
         uint8_t algo =
-            hip_get_host_id_algo((struct hip_host_id *) param);
+            hip_get_host_id_algo((const struct hip_host_id *) param);
         if (algo != HIP_HI_DSA && algo != HIP_HI_RSA) {
             err = -EPROTONOSUPPORT;
             HIP_ERROR("Host id algo %d not supported\n", algo);
@@ -1413,7 +1413,7 @@ static int hip_build_generic_param(struct hip_common *msg,
                                    hip_tlv_len_t param_hdr_size,
                                    const void *contents)
 {
-    const struct hip_tlv_common *param = (struct hip_tlv_common *) parameter_hdr;
+    const struct hip_tlv_common *param = (const struct hip_tlv_common *) parameter_hdr;
     void *src                          = NULL;
     uint8_t *dst                       = NULL;
     int err                            = 0, size = 0;
@@ -2111,7 +2111,7 @@ int hip_build_param_via_rvs(struct hip_common *msg,
     hip_calc_generic_param_len((struct hip_tlv_common *) &viarvs, sizeof(struct hip_via_rvs),
                                sizeof(struct in6_addr));
     err = hip_build_generic_param(msg, &viarvs, sizeof(struct hip_via_rvs),
-                                  (void *) rvs_addresses);
+                                  rvs_addresses);
     return err;
 }
 
@@ -3872,7 +3872,7 @@ int hip_get_locator_addr_item_count(const struct hip_locator *locator)
     char *address_pointer = (char *) (locator + 1);
     int amount            = 0;
 
-    for (; address_pointer < ((char *) locator)
+    for (; address_pointer < ((const char *) locator)
             + hip_get_param_contents_len(locator);)
     {
         if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
