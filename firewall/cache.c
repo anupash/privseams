@@ -263,7 +263,7 @@ void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
  */
 static unsigned long hip_firewall_hash_hit_peer(const void *ptr)
 {
-    struct in6_addr *hit_peer = &((fw_cache_hl_t *) ptr)->hit_peer;
+    const struct in6_addr *hit_peer = &((const fw_cache_hl_t *) ptr)->hit_peer;
     uint8_t hash[HIP_AH_SHA_LEN];
 
     hip_build_digest(HIP_DIGEST_SHA1, hit_peer, sizeof(*hit_peer), hash);
