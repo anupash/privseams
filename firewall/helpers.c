@@ -50,10 +50,10 @@
  * @note this function is not re-entrant and should not be used with threads
  *
  */
-char *addr_to_numeric(const struct in6_addr *addrp)
+const char *addr_to_numeric(const struct in6_addr *addrp)
 {
     static char buf[50 + 1];
-    return (char *) inet_ntop(AF_INET6, addrp, buf, sizeof(buf));
+    return inet_ntop(AF_INET6, addrp, buf, sizeof(buf));
 }
 
 /**
