@@ -73,6 +73,10 @@
     <listitem><para>iptables -A OUTPUT -p udp --dport 10500 -j ACCEPT</para></listitem>
     <listitem><para>iptables -A INPUT -p 50 -j ACCEPT</para></listitem>
     <listitem><para>iptables -A OUTPUT -p 50 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A INPUT -p 58 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p 58 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A INPUT -s 1.0.0.0/8 -d 1.0.0.0/8 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -s -s 1.0.0.0/8 -d -s 1.0.0.0/8 -j ACCEPT</para></listitem>
     <listitem><para>ip6tables -A INPUT -s 2001:0010::/28 -d 2001:0010::/28 -j ACCEPT</para></listitem>
     <listitem><para>ip6tables -A OUTPUT -s 2001:0010::/28 -d 2001:0010::/28 -j ACCEPT</para></listitem>
     </itemizedlist>
