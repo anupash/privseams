@@ -119,7 +119,11 @@ int hip_set_lowcapability(void)
     struct __user_cap_data_struct data;
 
     header.pid     = 0;
+#ifdef _LINUX_CAPABILITY_VERSION_1
     header.version = _LINUX_CAPABILITY_VERSION_1;
+#else /* CentOS 5.5 lacks the _1 constant */
+    header.version = _LINUX_CAPABILITY_VERSION;
+#endif
     data.effective = data.permitted = data.inheritable = 0;
 
     HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
