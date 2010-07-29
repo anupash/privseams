@@ -112,14 +112,14 @@ static const char hex_digits[] = {
  * @param hostname_len      length of the buffer
  * @return                  0
  */
-static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, const char *hostname, const int hostname_len)
+static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, char *hostname, const int hostname_len)
 {
     if ((hit == NULL) || (hostname == NULL)) {
         return -1;
     }
 
-    uint8_t *bytes = (uint8_t *) hit->s6_addr;
-    char *cp       = (char *) hostname;
+    const uint8_t *bytes = (const uint8_t *) hit->s6_addr;
+    char *cp             = hostname;
     int i;     // no C99 :(
     for (i = 15; i >= 0; i--) {
         *cp++ = hex_digits[bytes[i] & 0x0f];
