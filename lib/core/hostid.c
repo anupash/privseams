@@ -101,9 +101,10 @@ out_err:
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
                            struct in6_addr *hit, int hit_type)
 {
-    int err                 = 0;
+    int err               = 0;
     uint8_t digest[HIP_AH_SHA_LEN];
-    uint8_t *key_rr              = (uint8_t *) host_id->key; /* skip the header */
+    const uint8_t *key_rr = (const uint8_t *) host_id->key;
+
     /* hit excludes rdata but it is included in hi_length;
        subtract rdata */
     unsigned int key_rr_len = ntohs(host_id->hi_length) -
@@ -298,7 +299,7 @@ void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
                         int is_priv)
 {
     int bytes;
-    uint8_t *tmp    = (uint8_t *) host_id->key;
+    const uint8_t *tmp = (const uint8_t *) host_id->key;
     int offset = 0;
     int e_len  = tmp[offset++];
 
