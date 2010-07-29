@@ -83,7 +83,7 @@ static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv 
     struct hip_host_id *ret;
 
     /* check T, Miika won't like this */
-    T = *((uint8_t *) (hi->key));
+    T = *((const uint8_t *) (hi->key));
     if (T > 8) {
         HIP_ERROR("Invalid T-value in DSA key (0x%x)\n", T);
         return NULL;
@@ -144,7 +144,7 @@ static struct hip_host_id *hip_get_rsa_public_key(const struct hip_host_id_priv 
  */
 static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid)
 {
-    int alg = hip_get_host_id_algo((struct hip_host_id *) hid);
+    int alg = hip_get_host_id_algo((const struct hip_host_id *) hid);
     switch (alg) {
     case HIP_HI_RSA:
         return hip_get_rsa_public_key(hid);
@@ -176,7 +176,7 @@ static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid
  */
 unsigned long hip_hidb_hash(const void *ptr)
 {
-    hip_hit_t *hit = &(((struct hip_host_id_entry *) ptr)->lhi.hit);
+    const hip_hit_t *hit = &((const struct hip_host_id_entry *) ptr)->lhi.hit;
     uint8_t hash[HIP_AH_SHA_LEN];
 
     hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), hash);
@@ -469,7 +469,8 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 
     list_add(id_entry, db);
 
-    if (hip_get_host_id_algo((struct hip_host_id *) host_id) == HIP_HI_RSA) {
+    if (hip_get_host_id_algo((const struct hip_host_id *) host_id) ==
+        HIP_HI_RSA) {
         id_entry->private_key = hip_key_rr_to_rsa(host_id, 1);
     } else {
         id_entry->private_key = hip_key_rr_to_dsa(host_id, 1);
@@ -479,7 +480,7 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
     id_entry->host_id = hip_get_public_key(host_id);
     HIP_IFEL(!hip_precreate_r1(id_entry->r1,
-                               (struct in6_addr *) &lhi->hit,
+                               &lhi->hit,
                                (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
                                id_entry->private_key, id_entry->host_id),
              -ENOENT,

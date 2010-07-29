@@ -49,7 +49,7 @@ struct hip_r1entry *hip_init_r1(void);
 void hip_uninit_r1(struct hip_r1entry *);
 int hip_recreate_all_precreated_r1_packets(void);
 int hip_precreate_r1(struct hip_r1entry *r1table,
-                     struct in6_addr *hit,
+                     const struct in6_addr *hit,
                      int (*sign)(void *key, struct hip_common *m),
                      void *privkey,
                      struct hip_host_id *pubkey);
