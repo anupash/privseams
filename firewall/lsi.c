@@ -222,14 +222,14 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
     struct icmphdr *icmp = NULL;
 
     if (ipOrigTraffic == 4) {
-        struct ip *iphdr = (struct ip *) m->payload;
+        const struct ip *iphdr = (const struct ip *) m->payload;
         ip_hdr_size = (iphdr->ip_hl * 4);
         protocol    = iphdr->ip_p;
         ttl         = iphdr->ip_ttl;
         HIP_DEBUG_LSI("Ipv4 address src ", &(iphdr->ip_src));
         HIP_DEBUG_LSI("Ipv4 address dst ", &(iphdr->ip_dst));
     } else {
-        struct ip6_hdr *ip6_hdr = (struct ip6_hdr *) m->payload;
+        const struct ip6_hdr *ip6_hdr = (const struct ip6_hdr *) m->payload;
         ip_hdr_size = sizeof(struct ip6_hdr);         //Fixed size
         protocol    = ip6_hdr->ip6_nxt;
         ttl         = ip6_hdr->ip6_hlim;
@@ -318,19 +318,20 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int process_as_lsi                         = 0;
     char proto[PROTO_STRING_MAX];
     struct in6_addr src_addr, dst_addr;
-    struct ip6_hdr *ip6_hdr                    = (struct ip6_hdr *) m->payload;
+    const struct ip6_hdr *ip6_hdr;
     firewall_port_cache_hl_t *port_cache_entry = NULL;
     fw_cache_hl_t *entry                       = NULL;
 
+    ip6_hdr = (const struct ip6_hdr *) m->payload;
     ip_hdr_size = sizeof(struct ip6_hdr);
 
     switch (ip6_hdr->ip6_nxt) {
     case IPPROTO_UDP:
-        portDest = ((struct udphdr *) ((m->payload) + ip_hdr_size))->dest;
+        portDest = ((const struct udphdr *) ((m->payload) + ip_hdr_size))->dest;
         strcpy(proto, "udp6");
         break;
     case IPPROTO_TCP:
-        portDest = ((struct tcphdr *) ((m->payload) + ip_hdr_size))->dest;
+        portDest = ((const struct tcphdr *) ((m->payload) + ip_hdr_size))->dest;
         strcpy(proto, "tcp6");
         break;
     case IPPROTO_ICMPV6:
