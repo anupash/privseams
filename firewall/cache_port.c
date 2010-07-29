@@ -234,9 +234,11 @@ out_err:
  */
 static unsigned long hip_firewall_port_hash_key(const void *ptr)
 {
-    char *key = (char *) (&((firewall_port_cache_hl_t *) ptr)->port_and_protocol);
+    const char *key;
     uint8_t hash[HIP_AH_SHA_LEN];
 
+    key = (const char *)
+          &((const firewall_port_cache_hl_t *) ptr)->port_and_protocol;
     hip_build_digest(HIP_DIGEST_SHA1, key, sizeof(*key), hash);
     return *((unsigned long *) hash);
 }
