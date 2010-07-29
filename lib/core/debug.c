@@ -590,18 +590,18 @@ void hip_print_sockaddr(UNUSED const char *file, UNUSED int line,
 {
     const char *default_str = "<unknown>";
     int maxlen;
-    void *addr;
+    const void *addr;
     int family        = sockaddr->sa_family;
     char addr_str[INET6_ADDRSTRLEN + 1];
 
     switch (family) {
     case AF_INET:
         maxlen = INET_ADDRSTRLEN;
-        addr   = &(((struct sockaddr_in *) sockaddr)->sin_addr);
+        addr   = &((const struct sockaddr_in *) sockaddr)->sin_addr;
         break;
     case AF_INET6:
         maxlen = INET6_ADDRSTRLEN;
-        addr   = &(((struct sockaddr_in6 *) sockaddr)->sin6_addr);
+        addr   = &((const struct sockaddr_in6 *) sockaddr)->sin6_addr;
         break;
     default:
         maxlen = 0;
