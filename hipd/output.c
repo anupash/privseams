@@ -1505,7 +1505,7 @@ int hip_send_pkt(const struct in6_addr *local_addr,
     list_for_each_safe(item, tmp, addresses, i)
     {
         netdev_src_addr = (struct netdev_address *) list_entry(item);
-        src_addr = hip_cast_sa_addr((const struct sockaddr *) &netdev_src_addr->addr);
+        src_addr = hip_cast_sa_addr((struct sockaddr *) &netdev_src_addr->addr);
 
         if (!are_addresses_compatible(src_addr, peer_addr)) {
             continue;

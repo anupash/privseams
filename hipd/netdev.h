@@ -49,7 +49,7 @@ int hip_netdev_trigger_bex_msg(const struct hip_common *msg);
 void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags);
 
 int hip_netdev_white_list_add(char *device_name);
-int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex);
+int hip_exists_address_in_list(struct sockaddr *addr, int ifindex);
 
 void hip_copy_peer_addrlist_changed(hip_ha_t *ha);
 

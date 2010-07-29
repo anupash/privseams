@@ -227,7 +227,7 @@ static int hip_count_if_addresses(int ifindex)
 static int hip_filter_address(struct sockaddr *addr)
 {
     char s[INET6_ADDRSTRLEN];
-    const struct in6_addr *a_in6 = NULL;
+    struct in6_addr *a_in6 = NULL;
     in_addr_t a_in;
     HIP_DEBUG("Filtering the address family %d \n", addr->sa_family);
     switch (addr->sa_family) {
@@ -342,7 +342,7 @@ static int hip_exists_address_family_in_list(const struct in6_addr *addr)
  * @param ifindex the network interface index
  * @return one if the index exists in the cache or zero otherwise
  */
-int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex)
+int hip_exists_address_in_list(struct sockaddr *addr, int ifindex)
 {
     struct netdev_address *n;
     hip_list_t *tmp, *t;
@@ -361,9 +361,9 @@ int hip_exists_address_in_list(const struct sockaddr *addr, int ifindex)
         HIP_DEBUG("mapped=%d\n", mapped);
 
         if (mapped) {
-            in6          = (const struct in6_addr * ) hip_cast_sa_addr((struct sockaddr *) (&n->addr));
+            in6          = (struct in6_addr * ) hip_cast_sa_addr((struct sockaddr *) (&n->addr));
 
-            HIP_IFEL(!(in = (const struct in_addr *) hip_cast_sa_addr(addr)),
+            HIP_IFEL(!(in = (struct in_addr *) hip_cast_sa_addr(addr)),
                      -1, "unable to cast address\n");
 
             addr_match   = IPV6_EQ_IPV4(in6, in);
@@ -1406,14 +1406,14 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
     HIP_IFEL(!hip_exists_address_family_in_list(dst), -1, "No address of the same family\n");
 
     if (ipv6_addr_is_teredo(dst)) {
-        const struct netdev_address *na;
+        struct netdev_address *na;
         const struct in6_addr *in6;
         hip_list_t *n, *t;
         int c, match = 0;
 
         list_for_each_safe(n, t, addresses, c) {
             na  = list_entry(n);
-            in6 = hip_cast_sa_addr((const struct sockaddr *) &na->addr);
+            in6 = hip_cast_sa_addr((struct sockaddr *) &na->addr);
             if (ipv6_addr_is_teredo(in6)) {
                 ipv6_addr_copy(src, in6);
                 match = 1;

@@ -435,7 +435,7 @@ static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *h
     }
 
     /* Use previous hadb source address if it still exists */
-    if (hip_exists_address_in_list((const struct sockaddr *) &ss, -1) &&
+    if (hip_exists_address_in_list((struct sockaddr *) &ss, -1) &&
         are_addresses_compatible(&ha->our_addr, dst_addr)) {
         HIP_DEBUG("Reusing hadb old source address\n");
         ipv6_addr_copy(new_src_addr, &ha->our_addr);
@@ -445,7 +445,7 @@ static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *h
     /* Last resort: use any address from the local list */
     list_for_each_safe(n, t, addresses, c) {
         na  = (struct netdev_address *) list_entry(n);
-        in6 = hip_cast_sa_addr((const struct sockaddr *) &na->addr);
+        in6 = hip_cast_sa_addr((struct sockaddr *) &na->addr);
         if (are_addresses_compatible(in6, dst_addr)) {
             HIP_DEBUG("Reusing a local address from the list\n");
             ipv6_addr_copy(new_src_addr, in6);

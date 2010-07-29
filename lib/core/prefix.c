@@ -250,7 +250,7 @@ out_err:
  *                  NULL if the cast fails.
  */
 
-void *hip_cast_sa_addr(const struct sockaddr *sa)
+void *hip_cast_sa_addr(struct sockaddr *sa)
 {
     if (sa == NULL) {
         HIP_ERROR("sockaddr is NULL, skipping type conversion\n");

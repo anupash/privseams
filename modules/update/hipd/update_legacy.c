@@ -80,9 +80,9 @@ int hip_build_locators_old(struct hip_common *msg)
     list_for_each_safe(item, tmp, addresses, i) {
         n = (struct netdev_address *) list_entry(item);
         HIP_DEBUG_IN6ADDR("Add address:",
-                          hip_cast_sa_addr(((const struct sockaddr *) &n->addr)));
-        HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr((const struct sockaddr *) &n->addr)));
-        memcpy(&locs[count].address, hip_cast_sa_addr((const struct sockaddr *) &n->addr),
+                          hip_cast_sa_addr(((struct sockaddr *) &n->addr)));
+        HIP_ASSERT(!ipv6_addr_is_hit(hip_cast_sa_addr((struct sockaddr *) &n->addr)));
+        memcpy(&locs[count].address, hip_cast_sa_addr((struct sockaddr *) &n->addr),
                sizeof(struct in6_addr));
         if (n->flags & HIP_FLAG_CONTROL_TRAFFIC_ONLY) {
             locs[count].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL;
