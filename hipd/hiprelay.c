@@ -499,7 +499,7 @@ int hip_relht_maintenance(void)
  *
  * @param type the type of the records to be deleted.
  */
-void hip_relht_free_all_of_type(const hip_relrec_type_t type)
+void hip_relht_free_all_of_type(hip_relrec_type_t type)
 {
     if (hiprelay_ht == NULL) {
         return;
@@ -507,8 +507,7 @@ void hip_relht_free_all_of_type(const hip_relrec_type_t type)
 
     unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
     ((struct lhash_st *) hiprelay_ht)->down_load = 0;
-    hip_ht_doall_arg(hiprelay_ht, (LHASH_DOALL_ARG_FN_TYPE) LHASH_DOALL_ARG_FN(hip_relht_rec_free_type),
-                     (void *) &type);
+    hip_ht_doall_arg(hiprelay_ht, (LHASH_DOALL_ARG_FN_TYPE) LHASH_DOALL_ARG_FN(hip_relht_rec_free_type), &type);
     ((struct lhash_st *) hiprelay_ht)->down_load = tmp;
 }
 
@@ -1046,11 +1045,11 @@ static int hip_relay_forward_response(const hip_common_t *r,
     hip_zero_msg_checksum(r_to_be_relayed);
 
     if (relay_to_port == 0) {
-        HIP_IFEL(hip_send_pkt(NULL, (struct in6_addr *) relay_to_addr, hip_get_local_nat_udp_port(),
+        HIP_IFEL(hip_send_pkt(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
                               relay_to_port, r_to_be_relayed, NULL, 0),
                  -ECOMM, "forwarding response failed in raw\n");
     } else {
-        HIP_IFEL(hip_send_pkt(NULL, (struct in6_addr *) relay_to_addr, hip_get_local_nat_udp_port(),
+        HIP_IFEL(hip_send_pkt(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
                               relay_to_port, r_to_be_relayed, NULL, 0),
                  -ECOMM, "forwarding response failed in UDP\n");
     }
