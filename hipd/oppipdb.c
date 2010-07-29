@@ -59,10 +59,9 @@ HIP_HASHTABLE *oppipdb;
  */
 static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 {
-    hip_oppip_t *entry = (hip_oppip_t *) ptr;
     uint8_t hash[HIP_AH_SHA_LEN];
 
-    hip_build_digest(HIP_DIGEST_SHA1, entry, sizeof(hip_oppip_t), hash);
+    hip_build_digest(HIP_DIGEST_SHA1, ptr, sizeof(hip_oppip_t), hash);
 
     return *((unsigned long *) hash);
 }
