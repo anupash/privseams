@@ -167,14 +167,14 @@ struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
 
     HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
     HIP_IFEL(hip_build_param_contents(msg,
-                                      (struct hip_crypto_key *) enckey,
+                                      enckey,
                                       HIP_PARAM_KEYS,
                                       sizeof(struct hip_crypto_key)), -1,
              "build param contents failed\n");
 
     HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
     HIP_IFEL(hip_build_param_contents(msg,
-                                      (struct hip_crypto_key *) authkey,
+                                      authkey,
                                       HIP_PARAM_KEYS,
                                       sizeof(struct hip_crypto_key)), -1,
              "build param contents failed\n");
