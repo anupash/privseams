@@ -1019,7 +1019,7 @@ out_err:
  * @return zero on success and non-zero on error
  * @todo move this to some other file
  */
-static int hip_netdev_handle_acquire(const struct nlmsghdr *msg)
+static int hip_netdev_handle_acquire(struct nlmsghdr *msg)
 {
     hip_hit_t *src_hit        = NULL, *dst_hit = NULL;
     hip_lsi_t *src_lsi        = NULL, *dst_lsi = NULL;
