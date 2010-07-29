@@ -108,7 +108,7 @@ HIP_HASHTABLE *oppdb;
  */
 static unsigned long hip_oppdb_hash_hit(const void *ptr)
 {
-    hip_opp_block_t *entry = (hip_opp_block_t *) ptr;
+    const hip_opp_block_t *entry = (const hip_opp_block_t *) ptr;
     uint8_t hash[HIP_AH_SHA_LEN];
 
     hip_build_digest(HIP_DIGEST_SHA1, &entry->peer_phit,
@@ -273,7 +273,7 @@ static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id,
 skip_hit_addr:
 
     HIP_DEBUG("Unblocking caller at port %d\n", ntohs(app_id->sin6_port));
-    n = hip_sendto_user(message, (struct sockaddr *) app_id);
+    n = hip_sendto_user(message, (const struct sockaddr *) app_id);
 
     if (n < 0) {
         HIP_ERROR("hip_sendto_user() failed.\n");
@@ -565,7 +565,7 @@ hip_ha_t *hip_opp_add_map(const struct in6_addr *dst_ip,
 
     HIP_DEBUG_HIT("opportunistic hashed hit", &opp_hit);
 
-    if ((oppip_entry = hip_oppipdb_find_byip((struct in6_addr *) dst_ip))) {
+    if ((oppip_entry = hip_oppipdb_find_byip(dst_ip))) {
         HIP_DEBUG("Old mapping exist \n");
 
         if ((ha = hip_hadb_find_byhits(hit_our, &opp_hit))) {
@@ -700,7 +700,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
                                           HIP_PARAM_IPV6_ADDR_PEER,
                                           sizeof(struct in6_addr)),
                  -1, "build param HIP_PARAM_HIT  failed: %s\n");
-        HIP_IFEL((hip_sendto_user(msg, (struct sockaddr *) src) < 0),
+        HIP_IFEL((hip_sendto_user(msg, (const struct sockaddr *) src) < 0),
                  -1, "send to user failed\n");
         goto out_err;
     }
