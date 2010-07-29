@@ -69,7 +69,7 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
                                                    int(*func)(const struct hosts_file_line *line,
                                                               const void *arg,
                                                               void *result),
-                                                   void *arg,
+                                                   const void *arg,
                                                    void *result)
 {
     FILE *hip_hosts = NULL;
@@ -445,10 +445,10 @@ int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
 
     err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
                                         hip_map_first_id_to_hostname_from_hosts,
-                                        (hip_hit_t *) hit, hostname) &&
+                                        hit, hostname) &&
            hip_for_each_hosts_file_line(HOSTS_FILE,
                                         hip_map_first_id_to_hostname_from_hosts,
-                                        (hip_hit_t *) hit, hostname));
+                                        hit, hostname));
     HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 
     err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
