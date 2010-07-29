@@ -418,7 +418,7 @@ void hip_print_locator(int debug_level,
                        int line,
                        const char *function,
                        const char *str,
-                       const struct hip_locator *locator);
+                       struct hip_locator *locator);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

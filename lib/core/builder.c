@@ -422,7 +422,7 @@ static hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct 
  * @param dhf pointer to the Diffie-Hellman parameter with two DH keys.
  * @return a pointer to the chosen Diffie-Hellman parameter
  */
-struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *dhf)
+struct hip_dh_public_value *hip_dh_select_key(struct hip_diffie_hellman *dhf)
 {
     struct hip_dh_public_value *dhpv1 = NULL, *dhpv2 = NULL, *err = NULL;
 
@@ -472,7 +472,7 @@ uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id)
  * @param locator a pointer a LOCATOR parameter
  * @return a pointer to the first locator in the LOCATOR parameter
  */
-struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(const struct hip_locator *locator)
+struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator)
 {
     return (struct hip_locator_info_addr_item *) (locator + 1);
 }
@@ -865,7 +865,7 @@ void *hip_get_param_contents(const struct hip_common *msg,
  * @return pointer to the contents of the tlv_common (just after the
  *          the type and length fields)
  */
-void *hip_get_param_contents_direct(const void *tlv_common)
+void *hip_get_param_contents_direct(void *tlv_common)
 {
     return ((uint8_t *) tlv_common) + sizeof(struct hip_tlv_common);
 }
@@ -885,7 +885,7 @@ void *hip_get_param_contents_direct(const void *tlv_common)
  *            the message was completely full
  * @todo      Should this function should return hip_tlv_common?
  */
-static void *hip_find_free_param(const struct hip_common *msg)
+static void *hip_find_free_param(struct hip_common *msg)
 {
     struct hip_tlv_common *current_param = NULL;
     struct hip_tlv_common *last_used_pos = NULL;
@@ -1545,7 +1545,7 @@ int hip_build_param_contents(struct hip_common *msg,
 int hip_build_param(struct hip_common *msg, const void *tlv_common)
 {
     int err        = 0;
-    uint8_t *contents = ((uint8_t *) tlv_common) + sizeof(struct hip_tlv_common);
+    const uint8_t *contents = ((const uint8_t *) tlv_common) + sizeof(struct hip_tlv_common);
 
     if (tlv_common == NULL) {
         err = -EFAULT;
@@ -2704,20 +2704,20 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
     uint16_t supported_esp_tf[] = { HIP_ESP_NULL_SHA1,
                                     HIP_ESP_3DES_SHA1,
                                     HIP_ESP_AES_SHA1 };
-    uint16_t *table             = NULL;
-    uint16_t *tfm;
+    const uint16_t *table       = NULL;
+    const uint16_t *tfm;
     int table_n                 = 0, pkt_tfms = 0, i;
 
     type = hip_get_param_type(transform_tlv);
     if (type == HIP_PARAM_HIP_TRANSFORM) {
         table    = supported_hip_tf;
         table_n  = sizeof(supported_hip_tf) / sizeof(uint16_t);
-        tfm      = (uint16_t*) ((uint8_t *) transform_tlv + sizeof(struct hip_tlv_common));
+        tfm      = (const uint16_t*) ((const uint8_t *) transform_tlv + sizeof(struct hip_tlv_common));
         pkt_tfms = hip_get_param_contents_len(transform_tlv) / sizeof(uint16_t);
     } else if (type == HIP_PARAM_ESP_TRANSFORM) {
         table    = supported_esp_tf;
         table_n  = sizeof(supported_esp_tf) / sizeof(uint16_t);
-        tfm      = (uint16_t*) ((uint8_t *) transform_tlv +
+        tfm      = (const uint16_t*) ((const uint8_t *) transform_tlv +
                    sizeof(struct hip_tlv_common) + sizeof(uint16_t));
         pkt_tfms = (hip_get_param_contents_len(transform_tlv) - sizeof(uint16_t)) / sizeof(uint16_t);
     } else {
@@ -3872,22 +3872,22 @@ int hip_private_dsa_to_hit(DSA *dsa_key,
  */
 int hip_get_locator_addr_item_count(const struct hip_locator *locator)
 {
-    char *address_pointer = (char *) (locator + 1);
-    int amount            = 0;
+    const char *address_pointer = (const char *) (locator + 1);
+    int amount                  = 0;
+    uint8_t type;
 
-    for (; address_pointer < ((const char *) locator)
-            + hip_get_param_contents_len(locator);)
-    {
-        if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+    while(address_pointer <
+          ((const char *) locator) + hip_get_param_contents_len(locator)) {
+        type = ((const struct hip_locator_info_addr_item *)
+               address_pointer)->locator_type;
+
+        if (type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
             address_pointer += sizeof(struct hip_locator_info_addr_item2);
             amount += 1;
-        } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
             address_pointer += sizeof(struct hip_locator_info_addr_item);
             amount += 1;
-        } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
             address_pointer += sizeof(struct hip_locator_info_addr_item);
             amount += 1;
         } else {

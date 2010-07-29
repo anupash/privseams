@@ -616,7 +616,7 @@ out_err:
  * @return zero on success or negative on failure
  */
 static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
-                                        const struct hip_locator *locator)
+                                        struct hip_locator *locator)
 {
     int err                    = 0;
     int locator_addr_count     = 0;

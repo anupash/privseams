@@ -186,7 +186,7 @@ int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
 void hip_dump_msg(const struct hip_common *);
 struct hip_dh_public_value
-        *hip_dh_select_key(const struct hip_diffie_hellman *);
+        *hip_dh_select_key(struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
 int hip_get_locator_addr_item_count(const struct hip_locator *);
 union hip_locator_info_addr *hip_get_locator_item(void *item_list, int index);
@@ -194,7 +194,7 @@ int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 int hip_check_network_msg_len(const struct hip_common *msg);
 struct hip_locator_info_addr_item
-        *hip_get_locator_first_addr_item(const struct hip_locator *);
+        *hip_get_locator_first_addr_item(struct hip_locator *);
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
 hip_hdr_type_t hip_get_msg_type(const struct hip_common *);
@@ -202,7 +202,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *,
                                           const struct hip_tlv_common *);
 void *hip_get_param(const struct hip_common *, hip_tlv_type_t);
 void *hip_get_param_contents(const struct hip_common *, hip_tlv_type_t);
-void *hip_get_param_contents_direct(const void *);
+void *hip_get_param_contents_direct(void *);
 hip_tlv_len_t hip_get_param_contents_len(const void *);
 int hip_get_param_host_id_di_type_len(struct hip_host_id *, const char **, int *);
 char *hip_get_param_host_id_hostname(struct hip_host_id *);
