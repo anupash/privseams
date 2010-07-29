@@ -915,7 +915,7 @@ int esp_prot_verify_htree_element(const hash_function_t hash_function,
 
     HIP_DEBUG("checking active_root...\n");
 
-    data_index = ntohl(*((uint32_t *) hash_value));
+    data_index = ntohl(*((const uint32_t *) hash_value));
 
     if ((err = htree_verify_branch(active_root, hash_length,
                                    hash_value + (sizeof(uint32_t) + hash_length),
@@ -931,19 +931,18 @@ int esp_prot_verify_htree_element(const hash_function_t hash_function,
         HIP_DEBUG("active htree could not verify hash element\n");
 
         if (next_root) {
-            HIP_IFEL((err = htree_verify_branch(next_root, hash_length,
-                                                hash_value + (sizeof(uint32_t) + hash_length),
-                                                hash_tree_depth * hash_length,
-                                                hash_value + sizeof(uint32_t),
-                                                hash_length,
-                                                *((uint32_t *) hash_value),
-                                                next_uroot,
-                                                next_uroot_length,
-                                                htree_leaf_generator,
-                                                htree_node_generator,
-                                                NULL)) < 0,
-                                        -1,
-                                        "failure during tree verification\n");
+            HIP_IFEL(htree_verify_branch(next_root, hash_length,
+                                         hash_value + (sizeof(uint32_t) + hash_length),
+                                         hash_tree_depth * hash_length,
+                                         hash_value + sizeof(uint32_t),
+                                         hash_length,
+                                         *((const uint32_t *) hash_value),
+                                         next_uroot,
+                                         next_uroot_length,
+                                         htree_leaf_generator,
+                                         htree_node_generator,
+                                         NULL) < 0,
+                     -1, "failure during tree verification\n");
 
             if (err) {
                 HIP_DEBUG("neither active nor update htree could verify hash element\n");
