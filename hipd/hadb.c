@@ -172,9 +172,10 @@ static IMPLEMENT_LHASH_COMP_FN(hip_ha, hip_ha_t)
  */
 static unsigned long hip_hash_peer_addr(const void *ptr)
 {
-    struct in6_addr *addr = &((struct hip_peer_addr_list_item *) ptr)->address;
+    const struct in6_addr *addr;
     uint8_t hash[HIP_AH_SHA_LEN];
 
+    addr = &((const struct hip_peer_addr_list_item *) ptr)->address;
     hip_build_digest(HIP_DIGEST_SHA1, addr, sizeof(*addr), hash);
 
     return *((unsigned long *) hash);
