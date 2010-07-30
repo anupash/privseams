@@ -324,9 +324,9 @@ static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
  *                  check first if update is needed
  * @return 0
  */
-int nsupdate(const int start)
+int nsupdate(int start)
 {
     HIP_DEBUG("Updating dns records...\n");
-    hip_for_each_hi(run_nsupdate_for_hit, (void *) &start);
+    hip_for_each_hi(run_nsupdate_for_hit, &start);
     return 0;
 }

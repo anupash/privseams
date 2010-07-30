@@ -40,6 +40,6 @@
 void hip_set_nsupdate_status(int status);
 int hip_get_nsupdate_status(void);
 
-int nsupdate(const int start);
+int nsupdate(int start);
 
 #endif /* HIP_HIPD_NSUPDATE_H */
