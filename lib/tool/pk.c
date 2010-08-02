@@ -147,10 +147,10 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
 
         HIP_IFEL(!(pz = hip_get_param(msg, HIP_PARAM_PUZZLE)),
                  -ENOENT, "Illegal R1 packet (puzzle missing)\n");
-        memcpy(opaque, pz->opaque, 3);
+        memcpy(opaque, pz->opaque, sizeof(pz->opaque));
         randi = pz->I;
 
-        memset(pz->opaque, 0, 3);
+        memset(pz->opaque, 0, sizeof(pz->opaque));
         pz->I = 0;
     } else {
         HIP_IFEL(!(sig = hip_get_param(msg, HIP_PARAM_HIP_SIGNATURE)),
@@ -183,7 +183,7 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
 #endif
 
     if (hip_get_msg_type(msg) == HIP_R1) {
-        memcpy(pz->opaque, opaque, 3);
+        memcpy(pz->opaque, opaque, sizeof(pz->opaque));
         pz->I = randi;
     }
 
