@@ -308,7 +308,6 @@ int hip_close_create_response(UNUSED const uint8_t packet_type,
                               struct hip_packet_context *ctx)
 {
     int err = 0, echo_len;
-    uint16_t mask = HIP_PACKET_CTRL_ANON;
     struct hip_echo_request *request;
 
     HIP_IFE(!(ctx->output_msg = hip_msg_alloc()), -ENOMEM);
@@ -321,7 +320,7 @@ int hip_close_create_response(UNUSED const uint8_t packet_type,
 
     hip_build_network_hdr(ctx->output_msg,
                         HIP_CLOSE_ACK,
-                        mask,
+                        0,
                         &(ctx->hadb_entry)->hit_our,
                         &(ctx->hadb_entry)->hit_peer);
 
@@ -433,7 +432,6 @@ int hip_close_ack_check_packet(UNUSED const uint8_t packet_type,
                                struct hip_packet_context *ctx)
 {
     int err = 0;
-    uint16_t mask = HIP_PACKET_CTRL_ANON;
     struct hip_echo_request *echo_resp = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -444,7 +442,7 @@ int hip_close_ack_check_packet(UNUSED const uint8_t packet_type,
     HIP_IFEL(ipv6_addr_any(&ctx->input_msg->hitr), -1,
             "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
-    if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
+    if (!hip_controls_sane(ntohs(ctx->input_msg->control), 0)) {
         HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
                 ntohs(ctx->input_msg->control));
         goto out_err;
