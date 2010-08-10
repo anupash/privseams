@@ -234,6 +234,7 @@ static int run_nsupdate(char *ips, char *hit, int start)
         HIP_PERROR("fork");
         return ERR;
     } else if (child_pid == 0)   { // CHILD
+        char nsupdate_arg0[] = NSUPDATE_ARG0;
         char start_str[2];
 
         snprintf(start_str, sizeof(start_str), "%i", start);
@@ -242,11 +243,11 @@ static int run_nsupdate(char *ips, char *hit, int start)
         char *env_hit   = make_env(VAR_HIT, hit);
         char *env_start = make_env(VAR_START, start_str);
 
-        const char *cmd[]     = { NSUPDATE_ARG0, NULL };
+        char *cmd[]           = { nsupdate_arg0, NULL };
         char *const env[]     = { env_ips, env_hit, env_start, NULL };
 
         HIP_DEBUG("Executing %s with %s; %s; %s\n", NSUPDATE_PL, env_hit, env_ips, env_start);
-        execve(NSUPDATE_PL, (char **) cmd, env);
+        execve(NSUPDATE_PL, cmd, env);
 
         if (env_ips) {
             free(env_ips);
