@@ -731,6 +731,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
     char cert_str_pem[1024];
     unsigned char *der_cert = NULL;
     int der_cert_len        = 0;
+    char arg1[21];
+    char arg2[21];
 
     HIP_IFEL(!(subject = malloc(sizeof(struct in6_addr))), -1,
              "Malloc for subject failed\n");
@@ -921,34 +923,38 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
          * present, when adding subjectKeyIdentifier give string
          * hash to the X509_EXT_conf it knows what to do with it */
 
+        /* X509V3_EXT_conf() doesn't accept const char *, so we 
+         * write the arguments to a buffer first */
+        sprintf(arg1, "basicConstraints");
+        sprintf(arg2, "CA:true");
         HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx,
-                                         (char *)"basicConstraints",
-                                         (char *)"CA:true")), -1,
+                                         arg1, arg2)), -1,
                  "Failed to create extension\n");
         HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
                  "Failed to add extensions to the cert\n");
 
+        sprintf(arg1, "subjectKeyIdentifier");
+        sprintf(arg2, "hash");
         HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx,
-                                         (char *)"subjectKeyIdentifier",
-                                         (char *)"hash")), -1,
+                                         arg1, arg2)), -1,
                  "Failed to create extension\n");
         HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
                  "Failed to add extensions to the cert\n");
     }
 
     /* add subjectAltName = IP:<HIT> */
+    sprintf(arg1, "issuerAltName");
     sprintf(ialtname, "IP:%s", issuer_hit);
     HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx,
-                                     (char *)"issuerAltName",
-                                     ialtname)), -1,
+                                     arg1, ialtname)), -1,
              "Failed to create extension\n");
     HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
              "Failed to add extensions to the cert\n");
     /* add subjectAltName = IP:<HIT> */
+    sprintf(arg1, "subjectAltName");
     sprintf(saltname, "IP:%s", subject_hit);
     HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx,
-                                     (char *)"subjectAltName",
-                                     saltname)), -1,
+                                     arg1, saltname)), -1,
              "Failed to create extension\n");
     HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
              "Failed to add extensions to the cert\n");
