@@ -500,7 +500,7 @@ int main(int argc, char *argv[])
 
     if (hipd_get_flag(HIPD_FLAG_RESTART)) {
         HIP_INFO(" !!!!! HIP DAEMON RESTARTING !!!!! \n");
-        hip_handle_exec_app(0, EXEC_LOADLIB_NONE, argc, argv);
+        hip_handle_exec_app(0, EXEC_LOADLIB_NONE, argc, (const char **) argv);
     }
 
     return EXIT_SUCCESS;

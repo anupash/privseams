@@ -1837,7 +1837,7 @@ static int hip_conf_handle_opp(hip_common_t *msg,
     int err              = 0;
 
     if (action == ACTION_RUN) {
-        return hip_handle_exec_app(0, EXEC_LOADLIB_OPP, optc, (char **) &opt[0]);
+        return hip_handle_exec_app(0, EXEC_LOADLIB_OPP, optc, &opt[0]);
     }
     if (optc != 1) {
         HIP_ERROR("Incorrect number of arguments\n");
@@ -2239,14 +2239,22 @@ out_err:
  *      EXEC_LOADLIB_NONE
  *
  */
-int hip_handle_exec_app(int do_fork, int type, UNUSED int argc, char *argv[])
+int hip_handle_exec_app(int do_fork, int type, int argc, const char *argv[])
 {
     int ret = 0;
     unsigned i;
+    int k;
     char lib_all[LIB_LENGTH];
     char *libs[5];
+    char **argv_new = NULL;
 
     memset(libs, 0, sizeof(libs));
+    argv_new = malloc(sizeof(char *) * argc);
+    memset(argv_new, 0, sizeof(char *) * argc);
+
+    for (k = 0; k < argc; k++) {
+        argv_new[k] = strdup(argv[k]);
+    }
 
     if (do_fork) {
          ret = fork();
@@ -2273,13 +2281,21 @@ int hip_handle_exec_app(int do_fork, int type, UNUSED int argc, char *argv[])
     setenv("LD_PRELOAD", lib_all, 1);
     HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
 
-    if (execvp(argv[0], argv)) {
+    if (execvp(argv_new[0], argv_new)) {
         HIP_DEBUG("Failed to execvp new application: %s!\n",
                   strerror(errno));
 
         for (i = 0; i < sizeof(libs) / sizeof(libs[0]); i++) {
             if (libs[i])
                 free(libs[i]);
+        }
+        for (k = 0; 0 < argc; k++) {
+            if(argv_new[k]) {
+                free(argv_new[k]);
+            }
+        }
+        if (argv_new) {
+            free(argv_new);
         }
 
         exit(EXIT_FAILURE);
