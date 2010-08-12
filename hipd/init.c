@@ -402,8 +402,9 @@ static int hip_probe_kernel_modules(void)
         snprintf(cmd, sizeof(cmd), "/sbin/modprobe %s 2> /dev/null",
                  kernel_net_mod[count]);
         if (system(cmd)) {
-            HIP_ERROR("Unable to load %s!\n", kernel_net_mod[count]);
-            return ENOENT;
+            /* Fedora 11-12 have xfrm_user module as built in and hipd fails
+             * to start unless errors are suppressed. */
+            HIP_ERROR("Ignoring failure to load %s!\n", kernel_net_mod[count]);
         }
     }
 
