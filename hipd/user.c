@@ -398,7 +398,7 @@ int hip_handle_user_msg(hip_common_t *msg,
         struct hip_reg_request *reg_req    = NULL;
         hip_pending_request_t *pending_req = NULL;
         uint8_t *reg_types                 = NULL;
-        in6_addr_t *dst_ip                 = NULL;
+        struct in6_addr *dst_ip                 = NULL;
         int i                              = 0, type_count = 0;
         int opp_mode                       = 0;
         int add_to_global                  = 0;

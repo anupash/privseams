@@ -257,7 +257,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
 {
     hip_transform_suite_t transform_hip_suite, transform_esp_suite;
     struct hip_spi_in_item spi_in_data;
-    in6_addr_t daddr;
+    struct in6_addr daddr;
     struct hip_param *param                 = NULL;
     struct hip_esp_info *esp_info           = NULL;
     struct hip_host_id_entry *host_id_entry = NULL;
@@ -774,7 +774,7 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
 {
     int err                     = 0;
     hip_common_t *r1pkt         = NULL;
-    in6_addr_t dst_ip           = IN6ADDR_ANY_INIT,
+    struct in6_addr dst_ip      = IN6ADDR_ANY_INIT,
                *r1_dst_addr     = NULL,
                *local_plain_hit = NULL,
                *r1_src_addr     = ctx->dst_addr;

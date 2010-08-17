@@ -321,7 +321,7 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
  * @return         Zero if the cookie was verified succesfully, negative
  *                 otherwise.
  */
-int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
+int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
                       hip_common_t *hdr, struct hip_solution *solution)
 {
     /* In a effort to conform the HIPL coding convention, the return value

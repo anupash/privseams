@@ -129,7 +129,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
 
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
-                                              in6_addr_t *src_addr,
-                                              in6_addr_t *dst_addr);
+                                              struct in6_addr *src_addr,
+                                              struct in6_addr *dst_addr);
 
 #endif /* HIP_HIPD_HADB_H */

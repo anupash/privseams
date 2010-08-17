@@ -68,8 +68,8 @@
  */
 static int esp_prot_send_update_response(const hip_common_t *recv_update,
                                          hip_ha_t *entry,
-                                         const in6_addr_t *src_ip,
-                                         const in6_addr_t *dst_ip,
+                                         const struct in6_addr *src_ip,
+                                         const struct in6_addr *dst_ip,
                                          const uint32_t spi)
 {
     hip_common_t *resp_update = NULL;
@@ -942,8 +942,8 @@ int esp_prot_update_type(const hip_common_t *recv_update)
  **/
 int esp_prot_handle_first_update_packet(const hip_common_t *recv_update,
                                         hip_ha_t *entry,
-                                        const in6_addr_t *src_ip,
-                                        const in6_addr_t *dst_ip)
+                                        const struct in6_addr *src_ip,
+                                        const struct in6_addr *dst_ip)
 {
     uint32_t spi = 0;
     int err = 0;
@@ -976,8 +976,8 @@ int esp_prot_handle_first_update_packet(const hip_common_t *recv_update,
  * @return          0 on success, -1 in case of an error
  **/
 int esp_prot_handle_second_update_packet(hip_ha_t *entry,
-                                         const in6_addr_t *src_ip,
-                                         const in6_addr_t *dst_ip)
+                                         const struct in6_addr *src_ip,
+                                         const struct in6_addr *dst_ip)
 {
     int err = 0;
 

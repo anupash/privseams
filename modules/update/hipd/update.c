@@ -615,7 +615,7 @@ out_err:
  * @param locator the LOCATOR parameter
  * @return zero on success or negative on failure
  */
-static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
+static int hip_handle_locator_parameter(hip_ha_t *ha, struct in6_addr *src_addr,
                                         struct hip_locator *locator)
 {
     int err                    = 0;
@@ -645,7 +645,7 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
     for (i = 0; i < locator_addr_count; i++) {
         locator_info_addr = hip_get_locator_item(locator_address_item, i);
 
-        peer_addr = malloc(sizeof(in6_addr_t));
+        peer_addr = malloc(sizeof(struct in6_addr));
         if (!peer_addr) {
             HIP_ERROR("Couldn't allocate memory for peer_addr.\n");
             return -1;
@@ -666,7 +666,7 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, in6_addr_t *src_addr,
     if (!src_addr_included) {
         HIP_DEBUG("Preferred address was not in locator (NAT?)\n");
 
-        peer_addr = malloc(sizeof(in6_addr_t));
+        peer_addr = malloc(sizeof(struct in6_addr));
         if (!peer_addr) {
             HIP_ERROR("Couldn't allocate memory for peer_addr.\n");
             return -1;
@@ -692,7 +692,7 @@ out_err:
  */
 static int hip_handle_first_update_packet(hip_common_t *received_update_packet,
                                           hip_ha_t *ha,
-                                          in6_addr_t *src_addr)
+                                          struct in6_addr *src_addr)
 {
     int err = 0;
     struct hip_locator *locator = NULL;
@@ -740,8 +740,8 @@ out_err:
  */
 static void hip_handle_second_update_packet(hip_common_t *received_update_packet,
                                             hip_ha_t *ha,
-                                            in6_addr_t *src_addr,
-                                            in6_addr_t *dst_addr)
+                                            struct in6_addr *src_addr,
+                                            struct in6_addr *dst_addr)
 {
     struct hip_esp_info *esp_info = NULL;
 
@@ -774,8 +774,8 @@ static void hip_handle_second_update_packet(hip_common_t *received_update_packet
  *       "third" packets for each address to echo response.
  */
 static void hip_handle_third_update_packet(hip_ha_t *ha,
-                                           in6_addr_t *src_addr,
-                                           in6_addr_t *dst_addr)
+                                           struct in6_addr *src_addr,
+                                           struct in6_addr *dst_addr)
 {
     hip_recreate_security_associations_and_sp(ha, src_addr, dst_addr);
 

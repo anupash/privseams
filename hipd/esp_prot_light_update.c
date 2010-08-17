@@ -60,8 +60,8 @@
  * @param spi IPsec spi of the direction
  * @return 0 in case of succcess, -1 otherwise
  */
-static int esp_prot_send_light_ack(hip_ha_t *entry, const in6_addr_t *src_addr,
-                                   const in6_addr_t *dst_addr, const uint32_t spi)
+static int esp_prot_send_light_ack(hip_ha_t *entry, const struct in6_addr *src_addr,
+                                   const struct in6_addr *dst_addr, const uint32_t spi)
 {
     hip_common_t *light_ack = NULL;
     uint16_t mask           = 0;

@@ -542,7 +542,7 @@ static void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime)
  */
 hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
                                const uint8_t lifetime,
-                               const in6_addr_t *hit_r, const hip_hit_t *ip_r,
+                               const struct in6_addr *hit_r, const hip_hit_t *ip_r,
                                const in_port_t port,
                                const hip_crypto_key_t *hmac)
 {
@@ -1015,9 +1015,9 @@ out_err:
  */
 static int hip_relay_forward_response(const hip_common_t *r,
                                       const uint8_t type_hdr,
-                                      const in6_addr_t *r_saddr,
-                                      const in6_addr_t *r_daddr,
-                                      const in6_addr_t *relay_to_addr,
+                                      const struct in6_addr *r_saddr,
+                                      const struct in6_addr *r_daddr,
+                                      const struct in6_addr *relay_to_addr,
                                       const in_port_t relay_to_port)
 {
     struct hip_common *r_to_be_relayed   = NULL;
@@ -1126,7 +1126,7 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
                                    packet_type,
                                    ctx->src_addr,
                                    ctx->dst_addr,
-                                   (in6_addr_t *) &relay_to->address,
+                                   (struct in6_addr *) &relay_to->address,
                                    ntohs(relay_to->port));
         //  state = HIP_STATE_NONE;
         err = 1;
@@ -1187,8 +1187,8 @@ out_err:
  *         if one is found, negative on error
  */
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
-                                RVS in6_addr_t *relay_ip,
-                                in6_addr_t *dest_ip, in_port_t *dest_port)
+                                RVS struct in6_addr *relay_ip,
+                                struct in6_addr *dest_ip, in_port_t *dest_port)
 {
     int param_type;
     struct hip_relay_from *relay_from = NULL;
@@ -1322,7 +1322,7 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
             HIP_DEBUG("relay_to address is saved as reflexive addr. \n");
             ctx->hadb_entry->local_reflexive_udp_port = ntohs(relay_to->port);
             memcpy(&ctx->hadb_entry->local_reflexive_address,
-                   &relay_to->address, sizeof(in6_addr_t));
+                   &relay_to->address, sizeof(struct in6_addr));
         }
         err = 1;
         goto out_err;

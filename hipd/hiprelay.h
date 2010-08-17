@@ -72,7 +72,7 @@ typedef struct {
     /** HIT of Responder (Relay Client) */
     hip_hit_t        hit_r;
     /** IP address of Responder (Relay Client) */
-    in6_addr_t       ip_r;
+    struct in6_addr       ip_r;
     /** Client UDP port received in I2 packet of registration. */
     in_port_t        udp_port_r;
     /** Integrity key established while registration occurred. */
@@ -105,7 +105,7 @@ int hip_relht_maintenance(void);
 
 hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
                                const uint8_t lifetime,
-                               const in6_addr_t *hit_r, const hip_hit_t *ip_r,
+                               const struct in6_addr *hit_r, const hip_hit_t *ip_r,
                                const in_port_t port,
                                const hip_crypto_key_t *hmac);
 void hip_relht_free_all_of_type(const hip_relrec_type_t type);
@@ -116,8 +116,8 @@ int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
                               uint8_t *granted_lifetime);
 int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry);
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
-                                in6_addr_t *relay_ip,
-                                in6_addr_t *dest_ip, in_port_t *dest_port);
+                                struct in6_addr *relay_ip,
+                                struct in6_addr *dest_ip, in_port_t *dest_port);
 
 int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
                                         const uint32_t ha_state,

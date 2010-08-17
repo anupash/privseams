@@ -2129,7 +2129,7 @@ int hip_build_param_via_rvs(struct hip_common *msg,
  *             draft, this is now RELAY_TO.
  */
 int hip_build_param_relay_to(struct hip_common *msg,
-                             const in6_addr_t *addr,
+                             const struct in6_addr *addr,
                              const in_port_t port)
 {
     struct hip_relay_to relay_to;
@@ -3956,7 +3956,7 @@ struct in6_addr *hip_get_locator_item_address(void *item)
  *             draft, this is now RELAY_TO.
  */
 int hip_build_param_reg_from(struct hip_common *msg,
-                             const in6_addr_t *addr,
+                             const struct in6_addr *addr,
                              const in_port_t port)
 {
     struct hip_reg_from reg_from;

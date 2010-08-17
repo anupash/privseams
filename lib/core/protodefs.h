@@ -573,7 +573,6 @@ typedef uint16_t hip_transform_suite_t;
 typedef uint16_t hip_controls_t;
 typedef uint32_t sa_eid_t;
 typedef struct in6_addr hip_hit_t;
-typedef struct in6_addr in6_addr_t;
 typedef struct in_addr hip_lsi_t;
 typedef struct hip_hadb_state hip_ha_t;
 typedef struct hip_hadb_rcv_func_set hip_rcv_func_set_t;

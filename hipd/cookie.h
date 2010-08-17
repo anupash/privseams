@@ -53,7 +53,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table,
                      int (*sign)(void *key, struct hip_common *m),
                      void *privkey,
                      struct hip_host_id *pubkey);
-int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,  hip_common_t *hdr,
+int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,  hip_common_t *hdr,
                       struct hip_solution *cookie);
 int hip_inc_cookie_difficulty(void);
 int hip_dec_cookie_difficulty(void);

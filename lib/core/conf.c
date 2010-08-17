@@ -254,7 +254,7 @@ static int hip_get_hits(hip_common_t *msg, const char *opt,
     struct hip_tlv_common *current_param = NULL;
     struct hip_hit_info *data;
     struct in_addr *deflsi               = NULL;
-    in6_addr_t *defhit                   = NULL;
+    struct in6_addr *defhit                   = NULL;
     hip_tlv_type_t param_type            = 0;
     char hit_s[INET6_ADDRSTRLEN], lsi_s[INET_ADDRSTRLEN];
 
@@ -383,7 +383,7 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg,
                  -1, "Failed to build user message header\n");
 
         HIP_IFEL(hip_build_param_contents(msg, &data->lhi.hit,
-                                          HIP_PARAM_HIT, sizeof(in6_addr_t)),
+                                          HIP_PARAM_HIT, sizeof(struct in6_addr)),
                  -1, "Failed to build HIT param\n");
 
         HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
@@ -424,7 +424,7 @@ static int hip_conf_handle_hi_del(hip_common_t *msg,
 {
     int err = 0;
     int ret;
-    in6_addr_t hit;
+    struct in6_addr hit;
 
     HIP_IFEL(optc != 1, -EINVAL, "Invalid number of arguments\n");
 
@@ -438,7 +438,7 @@ static int hip_conf_handle_hi_del(hip_common_t *msg,
     HIP_IFEL((ret == 0), -EINVAL,
              "inet_pton: %s: not a valid network address\n", opt[0]);
 
-    HIP_HEXDUMP("HIT to delete: ", &hit, sizeof(in6_addr_t));
+    HIP_HEXDUMP("HIT to delete: ", &hit, sizeof(struct in6_addr));
 
     if ((err = hip_build_user_hdr(msg, HIP_MSG_DEL_LOCAL_HI, 0))) {
         HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
@@ -446,7 +446,7 @@ static int hip_conf_handle_hi_del(hip_common_t *msg,
     }
 
     if ((err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
-                                        sizeof(in6_addr_t)))) {
+                                        sizeof(struct in6_addr)))) {
         HIP_ERROR("build param HIT failed: %s\n", strerror(err));
         goto out_err;
     }
@@ -880,7 +880,7 @@ static int hip_conf_handle_server(hip_common_t *msg,
                                   UNUSED int send_only)
 {
     hip_hit_t hit;
-    in6_addr_t ipv6;
+    struct in6_addr ipv6;
     int err = 0, seconds = 0, i = 0, number_of_regtypes = 0, reg_type = 0;
     int index_of_hit = 0, index_of_ip = 0, opp_mode = 0;;
     uint8_t lifetime             = 0, *reg_types = NULL;
@@ -1036,7 +1036,7 @@ static int hip_conf_handle_server(hip_common_t *msg,
 
     if (!opp_mode) {
         HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
-                                          sizeof(in6_addr_t)), -1,
+                                          sizeof(struct in6_addr)), -1,
                  "Failed to build HIT parameter to hipconf user message.\n");
     }
 
@@ -1044,7 +1044,7 @@ static int hip_conf_handle_server(hip_common_t *msg,
      * HITs (bug id 880) */
     HIP_IFEL(hip_build_param_contents(msg, &ipv6,
                                       HIP_PARAM_IPV6_ADDR,
-                                      sizeof(in6_addr_t)), -1,
+                                      sizeof(struct in6_addr)), -1,
              "Failed to build IPv6 parameter to hipconf user message.\n");
 
     HIP_IFEL(hip_build_param_reg_request(msg, lifetime, reg_types,
@@ -1214,7 +1214,7 @@ static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 {
     int err = 0;
     struct in_addr lsi, aux;
-    in6_addr_t hit, ip6;
+    struct in6_addr hit, ip6;
 
     HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
@@ -1247,12 +1247,12 @@ static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
     }
 
     HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
-                                      sizeof(in6_addr_t)), -1,
+                                      sizeof(struct in6_addr)), -1,
              "build param hit failed\n");
 
     HIP_IFEL(hip_build_param_contents(msg, &ip6,
                                       HIP_PARAM_IPV6_ADDR,
-                                      sizeof(in6_addr_t)), -1,
+                                      sizeof(struct in6_addr)), -1,
              "build param hit failed\n");
 
     if (optc == 3) {
@@ -1382,10 +1382,10 @@ static int hip_conf_handle_rst(hip_common_t *msg, UNUSED int action,
 {
     int err;
     int ret;
-    in6_addr_t hit;
+    struct in6_addr hit;
 
     if (!strcmp("all", opt[0])) {
-        memset(&hit, 0, sizeof(in6_addr_t));
+        memset(&hit, 0, sizeof(struct in6_addr));
     } else {
         ret = inet_pton(AF_INET6, opt[0], &hit);
         if (ret < 0 && errno == EAFNOSUPPORT) {
@@ -1406,7 +1406,7 @@ static int hip_conf_handle_rst(hip_common_t *msg, UNUSED int action,
     }
 
     err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
-                                   sizeof(in6_addr_t));
+                                   sizeof(struct in6_addr));
     if (err) {
         HIP_ERROR("build param hit failed: %s\n", strerror(err));
         goto out;
@@ -1434,7 +1434,7 @@ static int hip_conf_handle_debug(hip_common_t *msg, UNUSED int action,
 {
     int err    = 0;
     int status = 0;
-    in6_addr_t hit;
+    struct in6_addr hit;
 
     if (optc != 0) {
         HIP_IFEL(1,
@@ -1444,15 +1444,15 @@ static int hip_conf_handle_debug(hip_common_t *msg, UNUSED int action,
 
     if (!strcmp("all", opt[0])) {
         HIP_INFO("Displaying all debugging messages\n");
-        memset(&hit, 0, sizeof(in6_addr_t));
+        memset(&hit, 0, sizeof(struct in6_addr));
         status = HIP_MSG_SET_DEBUG_ALL;
     } else if (!strcmp("medium", opt[0])) {
         HIP_INFO("Displaying ERROR and INFO debugging messages\n");
-        memset(&hit, 0, sizeof(in6_addr_t));
+        memset(&hit, 0, sizeof(struct in6_addr));
         status = HIP_MSG_SET_DEBUG_MEDIUM;
     } else if (!strcmp("none", opt[0])) {
         HIP_INFO("Displaying no debugging messages\n");
-        memset(&hit, 0, sizeof(in6_addr_t));
+        memset(&hit, 0, sizeof(struct in6_addr));
         status = HIP_MSG_SET_DEBUG_NONE;
     } else {
         HIP_IFEL(1, -EINVAL, "Unknown argument\n");
@@ -1570,10 +1570,10 @@ static int hip_conf_handle_nat(hip_common_t *msg, UNUSED int action,
 {
     int err    = 0;
     int status = 0;
-    in6_addr_t hit;
+    struct in6_addr hit;
 
     if (!strcmp("plain-udp", opt[0])) {
-        memset(&hit, 0, sizeof(in6_addr_t));
+        memset(&hit, 0, sizeof(struct in6_addr));
         status = HIP_MSG_SET_NAT_PLAIN_UDP;
     } else if (!strcmp("none", opt[0])) {
         memset(&hit, 0, sizeof(struct in6_addr));
@@ -1750,7 +1750,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
 
     /* attach the hit into the message */
     err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
-                                   sizeof(in6_addr_t));
+                                   sizeof(struct in6_addr));
     if (err) {
         HIP_ERROR("build param hit failed: %s\n", strerror(err));
         goto out_err;
@@ -2053,7 +2053,7 @@ static int hip_conf_handle_ha(hip_common_t *msg,
 {
     struct hip_tlv_common *current_param = NULL;
     int err                              = 0;
-    in6_addr_t hit1;
+    struct in6_addr hit1;
 
     HIP_IFEL(optc > 1, -1, "Too many arguments\n");
 

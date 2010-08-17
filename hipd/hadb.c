@@ -1535,8 +1535,8 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
  * @param dst_addr the new destination address for the SAs
  * @return zero on success and negative on error
  */
-int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, in6_addr_t *src_addr,
-                                              in6_addr_t *dst_addr)
+int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, struct in6_addr *src_addr,
+                                              struct in6_addr *dst_addr)
 {
     int err         = 0;
 

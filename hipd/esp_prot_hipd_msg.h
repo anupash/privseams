@@ -60,11 +60,11 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry,
 int esp_prot_update_type(const hip_common_t *recv_update);
 int esp_prot_handle_first_update_packet(const hip_common_t *recv_update,
                                         hip_ha_t *entry,
-                                        const in6_addr_t *src_ip,
-                                        const in6_addr_t *dst_ip);
+                                        const struct in6_addr *src_ip,
+                                        const struct in6_addr *dst_ip);
 int esp_prot_handle_second_update_packet(hip_ha_t *entry,
-                                         const in6_addr_t *src_ip,
-                                         const in6_addr_t *dst_ip);
+                                         const struct in6_addr *src_ip,
+                                         const struct in6_addr *dst_ip);
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry);
 int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
                                   hip_ha_t *entry,

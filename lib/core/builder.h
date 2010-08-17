@@ -164,7 +164,7 @@ int hip_build_param_hip_transform(struct hip_common *,
                                   const hip_transform_suite_t[],
                                   const uint16_t);
 int hip_build_param_relay_to(struct hip_common *msg,
-                             const in6_addr_t *rvs_addr,
+                             const struct in6_addr *rvs_addr,
                              const in_port_t port);
 int hip_build_param_via_rvs(struct hip_common *msg,
                             const struct in6_addr rvs_addresses[]);
@@ -272,7 +272,7 @@ int hip_build_param_esp_prot_root(struct hip_common *msg,
                                   uint8_t root_length,
                                   unsigned char *root);
 int hip_build_param_reg_from(struct hip_common *msg,
-                             const in6_addr_t *addr,
+                             const struct in6_addr *addr,
                              const in_port_t port);
 int hip_build_param_nat_port(hip_common_t *msg,
                              const in_port_t port,
