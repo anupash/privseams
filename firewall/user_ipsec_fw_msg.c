@@ -160,8 +160,8 @@ int handle_sa_add_request(const struct hip_common *msg)
 
     /* parse the esp protection extension parameters */
     HIP_IFEL(esp_prot_handle_sa_add_request(msg, &esp_prot_transform,
-                  &esp_num_anchors, esp_prot_anchors, &hash_item_length), -1,
-                  "failed to retrieve esp prot anchor\n");
+                                            &esp_num_anchors, esp_prot_anchors, &hash_item_length),
+             -1, "failed to retrieve esp prot anchor\n");
 
     param          = hip_get_param(msg, HIP_PARAM_KEYS);
     enc_key        = hip_get_param_contents_direct(param);
@@ -188,11 +188,11 @@ int handle_sa_add_request(const struct hip_common *msg)
     HIP_DEBUG("the update value is %d \n", update);
 
     HIP_IFEL(hip_sadb_add(direction, spi, BEET_MODE, src_addr, dst_addr,
-                      src_hit, dst_hit, encap_mode, local_port, peer_port, ealg,
-                      auth_key, enc_key, DEFAULT_LIFETIME, esp_prot_transform,
-                      hash_item_length, esp_num_anchors, esp_prot_anchors,
-                      retransmission, update), -1,
-             "failed to add user_space IPsec security association\n");
+                          src_hit, dst_hit, encap_mode, local_port, peer_port, ealg,
+                          auth_key, enc_key, DEFAULT_LIFETIME, esp_prot_transform,
+                          hash_item_length, esp_num_anchors, esp_prot_anchors,
+                          retransmission, update),
+             -1, "failed to add user_space IPsec security association\n");
 
 out_err:
     return err;

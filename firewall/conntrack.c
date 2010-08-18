@@ -799,7 +799,7 @@ static int insert_connection_from_update(const struct hip_data *data,
  * @return zero on success and non-zero on error
  */
 static int hipfw_handle_relay_to_r2(const struct hip_common *common,
-                                 const hip_fw_context_t *ctx)
+                                    const hip_fw_context_t *ctx)
 {
     struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
     struct hip_relay_to *relay_to = NULL; /* same format as relay_from */
