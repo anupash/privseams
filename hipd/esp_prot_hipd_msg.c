@@ -190,7 +190,7 @@ int esp_prot_set_preferred_transforms(const struct hip_common *msg)
 
     for (i = 0; i < MAX_NUM_TRANSFORMS; i++) {
         if (i < esp_prot_num_transforms) {
-            param = (struct hip_tlv_common *) hip_get_next_param(msg, param);
+            param = hip_get_next_param(msg, param);
             esp_prot_transforms[i] = *((uint8_t *) hip_get_param_contents_direct(param));
             HIP_DEBUG("esp protection transform %i: %u\n", i + 1, esp_prot_transforms[i]);
         } else {

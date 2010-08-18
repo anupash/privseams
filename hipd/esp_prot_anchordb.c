@@ -134,17 +134,17 @@ int anchor_db_update(const struct hip_common *msg)
             esp_transforms[i] = *(uint8_t *) hip_get_param_contents_direct(param);
             HIP_DEBUG("esp_transform is %u\n", esp_transforms[i]);
 
-            HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+            HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                      -1, "parameter missing in user-message from fw\n");
             anchor_db.num_anchors[esp_transforms[i]] = *(int *) hip_get_param_contents_direct(param);
             HIP_DEBUG("num_anchors is %i\n", anchor_db.num_anchors[esp_transforms[i]]);
 
-            HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+            HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                      -1, "parameter missing in user-message from fw\n");
             anchor_db.anchor_lengths[esp_transforms[i]] = *(int *) hip_get_param_contents_direct(param);
             HIP_DEBUG("anchor_length is %i\n", anchor_db.anchor_lengths[esp_transforms[i]]);
 
-            HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+            HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                      -1, "parameter missing in user-message from fw\n");
         }
 
@@ -171,8 +171,8 @@ int anchor_db_update(const struct hip_common *msg)
 
                 // exclude getting the next param for the very last loop
                 if (!(i == esp_prot_num_transforms - 2 && j == anchor_db.num_anchors[esp_transforms[i]] - 1)) {
-                    HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(
-                                   msg, param)), -1, "parameter missing in user-message from fw\n");
+                    HIP_IFEL(!(param = hip_get_next_param(msg, param)),
+                             -1, "parameter missing in user-message from fw\n");
                 }
             }
         }

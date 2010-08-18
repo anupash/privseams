@@ -286,7 +286,7 @@ static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
     struct hip_tlv_common *i = NULL, *last = NULL;
     hip_tlv_type_t type;
 
-    while ((i = (struct hip_tlv_common *) hip_get_next_param(hip, i))) {
+    while ((i = hip_get_next_param(hip, i))) {
         last = i;
     }
 
@@ -304,7 +304,7 @@ static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
     memcpy(buffer, last, len);
     i = NULL;
 
-    while ((i = (struct hip_tlv_common *) hip_get_next_param(hip, i))) {
+    while ((i = hip_get_next_param(hip, i))) {
         if (hip_get_param_type(i) > type) {
             offset = (char *) i - (char *) hip;
 

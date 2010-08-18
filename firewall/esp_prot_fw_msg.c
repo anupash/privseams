@@ -630,7 +630,7 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg,
         *hash_item_length = *((uint32_t *) hip_get_param_contents_direct(param));
         HIP_DEBUG("esp protection item length: %u\n", *hash_item_length);
 
-        HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+        HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                  -1, "transform suggests num_anchors, but it is NOT included in msg\n");
         *num_anchors = *((uint16_t *) hip_get_param_contents_direct(param));
         HIP_DEBUG("esp protection number of transferred anchors: %u\n", *num_anchors);
@@ -646,7 +646,7 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg,
                 memcpy(&esp_prot_anchors[i][0], anchor, hash_length);
                 HIP_HEXDUMP("esp protection anchor is ", &esp_prot_anchors[i][0], hash_length);
 
-                HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
+                HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                          -1, "awaiting further anchor, but it is NOT included in msg\n");
             }
         }
