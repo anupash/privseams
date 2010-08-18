@@ -10,7 +10,6 @@ project under the MIT (Expat) license:
 
   * firewall (see an exception below)
   * tools (see exceptions below)
-  * lib/opphip
   * lib/core
   * test
   * hipd
