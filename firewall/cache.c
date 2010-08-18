@@ -132,7 +132,7 @@ static fw_cache_hl_t *hip_firewall_cache_hadb_match(const void *local,
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock),
              -1, "send recv daemon info\n");
 
-    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+    while ((current_param = hip_get_next_param(msg, current_param))) {
         ha_curr = hip_get_param_contents_direct(current_param);
 
         if (type == FW_CACHE_HIT &&

@@ -266,8 +266,7 @@ static int hip_get_hits(hip_common_t *msg, const char *opt,
         HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
         /* Loop through all the parameters in the message just filled. */
-        while ((current_param =
-                    hip_get_next_param(msg, current_param)) != NULL) {
+        while ((current_param = hip_get_next_param(msg, current_param))) {
             param_type = hip_get_param_type(current_param);
 
             if (param_type == HIP_PARAM_HIT_INFO) {
@@ -308,8 +307,7 @@ static int hip_get_hits(hip_common_t *msg, const char *opt,
         HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
         /* Loop through all the parameters in the message just filled. */
-        while ((current_param =
-                    hip_get_next_param(msg, current_param)) != NULL) {
+        while ((current_param = hip_get_next_param(msg, current_param))) {
             param_type = hip_get_param_type(current_param);
 
             if (param_type == HIP_PARAM_HIT) {
@@ -371,7 +369,7 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg,
     HIP_IFEL(hip_send_recv_daemon_info(msg_tmp, send_only, 0), -1,
              "Sending msg failed.\n");
 
-    while ((param = hip_get_next_param(msg_tmp, param)) != NULL) {
+    while ((param = hip_get_next_param(msg_tmp, param))) {
         data = hip_get_param_contents_direct(param);
         HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEL_LOCAL_HI, 0),
                  -1, "Failed to build user message header\n");
@@ -1061,7 +1059,7 @@ static int hip_conf_handle_server(hip_common_t *msg,
                  opt[index_of_ip]);
     }
 out_err:
-    if (reg_types != NULL) {
+    if (reg_types) {
         free(reg_types);
     }
 
@@ -1756,7 +1754,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
         HIP_IFE(hip_send_recv_daemon_info(msg, send_only, 0), -ECOMM);
 
         /* Loop through all the parameters in the message just filled. */
-        while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+        while ((current_param = hip_get_next_param(msg, current_param))) {
             param_type = hip_get_param_type(current_param);
             if (param_type == HIP_PARAM_HIT) {
                 //no need to get the hit from msg
@@ -2057,7 +2055,7 @@ static int hip_conf_handle_ha(hip_common_t *msg,
     HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
              "send recv daemon info\n");
 
-    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+    while ((current_param = hip_get_next_param(msg, current_param))) {
         struct hip_hadb_user_info_state *ha =
             hip_get_param_contents_direct(current_param);
 
@@ -2173,7 +2171,7 @@ static int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
     char *lib_aux = lib_all;
     const char *prefix  = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
 
-    while (*libs != NULL) {
+    while (*libs) {
         /* Copying prefix to lib_all */
         HIP_IFEL(c_count < strlen(prefix), -1, "Overflow in string lib_all\n");
         strncpy(lib_aux, prefix, c_count);
@@ -2563,7 +2561,7 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
     HIP_IFEL(!(hip_config = fopen(fname, "r")), -1,
              "Error: can't open config file %s.\n", fname);
 
-    while (err == 0 && fgets(line, sizeof(line), hip_config) != NULL) {
+    while (err == 0 && fgets(line, sizeof(line), hip_config)) {
         /* Remove whitespace */
         c = line;
         while (*c == ' ' || *c == '\t') {
@@ -2765,7 +2763,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
     HIP_INFO("User message was sent successfully to the HIP daemon.\n");
 
 out_err:
-    if (msg != NULL) {
+    if (msg) {
         free(msg);
     }
 
