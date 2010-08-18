@@ -175,12 +175,13 @@ int hip_fw_async_sock                     = 0;
 static void print_usage(void)
 {
     printf("HIP Firewall\n");
-    printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-h]");
+    printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-h] [-V]");
 #ifdef CONFIG_HIP_MIDAUTH
     printf(" [-m]");
 #endif
     printf("\n");
     printf("      -f file_name = is a path to a file containing firewall filtering rules\n");
+    printf("      -V = print version information and exit\n");
     printf("      -d = debugging output\n");
     printf("      -v = verbose output\n");
     printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authed HIP traffic)\n");
