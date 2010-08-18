@@ -168,6 +168,7 @@ int hip_wait_addr_changes_to_stabilize       = 1;
 static void usage(void)
 {
     fprintf(stderr, "Usage: hipd [options]\n\n");
+    fprintf(stderr, "  -V print version information and exit\n");
     fprintf(stderr, "  -b run in background\n");
     fprintf(stderr, "  -i <device name> add interface to the white list. " \
             "Use additional -i for additional devices.\n");
