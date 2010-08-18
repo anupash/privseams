@@ -60,7 +60,7 @@ int hip_userspace_ipsec_activate(const struct hip_common *msg)
     int err                      = 0, activate = 0;
 
     // process message and store anchor elements in the db
-    param    = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
+    param    = hip_get_param(msg, HIP_PARAM_INT);
     activate = *((int *) hip_get_param_contents_direct(param));
 
     // set global variable

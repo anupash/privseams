@@ -1109,7 +1109,7 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
     HIP_DEBUG("handle_relay_to: Matching relay record found:Full-Relay.\n");
 
     //check if there is a relay_to parameter
-    relay_to = (struct hip_relay_to *) hip_get_param(ctx->input_msg, HIP_PARAM_RELAY_TO);
+    relay_to = hip_get_param(ctx->input_msg, HIP_PARAM_RELAY_TO);
     HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
 
     // check msg type
@@ -1305,7 +1305,7 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
     // check if the relay has been registered
 
     //check if there is a relay_to parameter
-    relay_to = (struct hip_relay_to *) hip_get_param(ctx->input_msg, HIP_PARAM_RELAY_TO);
+    relay_to = hip_get_param(ctx->input_msg, HIP_PARAM_RELAY_TO);
     HIP_IFEL(!relay_to, 0, "No relay_to  found\n");
 
     // check msg type

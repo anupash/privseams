@@ -125,7 +125,7 @@ int anchor_db_update(const struct hip_common *msg)
 
         /*** set up anchor_db.num_anchors and anchor_db.anchor_lengths ***/
         // get first int value
-        HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT)),
+        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_UINT)),
                  -1, "parameter missing in user-message from fw\n");
 
         // don't set up anything for UNUSED transform
@@ -156,14 +156,14 @@ int anchor_db_update(const struct hip_common *msg)
                            malloc(anchor_db.anchor_lengths[esp_transforms[i]])),
                          -1, "failed to allocate memory\n");
 
-                anchor = (unsigned char *) hip_get_param_contents_direct(param);
+                anchor = hip_get_param_contents_direct(param);
                 memcpy(anchor_db.anchors[esp_transforms[i]][j], anchor,
                        anchor_db.anchor_lengths[esp_transforms[i]]);
                 HIP_HEXDUMP("adding anchor: ", anchor_db.anchors[esp_transforms[i]][j],
                             anchor_db.anchor_lengths[esp_transforms[i]]);
 
-                HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(
-                               msg, param)), -1, "parameter missing in user-message from fw\n");
+                HIP_IFEL(!(param = hip_get_next_param(msg, param)),
+                         -1, "parameter missing in user-message from fw\n");
                 anchor_db.hash_item_length[esp_transforms[i]] = *(int *)
                                                                 hip_get_param_contents_direct(param);
                 HIP_DEBUG("adding hash_item_length: %i\n",

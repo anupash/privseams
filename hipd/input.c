@@ -327,8 +327,7 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
 
     memset(dh_shared_key, 0, dh_shared_len);
 
-    HIP_IFEL(!(dhf = (struct hip_diffie_hellman *) hip_get_param(
-                   ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
+    HIP_IFEL(!(dhf = hip_get_param(ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT,  "No Diffie-Hellman parameter found.\n");
 
     /* If the message has two DH keys, select (the stronger, usually) one. */
@@ -857,7 +856,7 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     }
 
     /***** LOCATOR PARAMETER ******/
-    locator = (struct hip_locator *) hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
+    locator = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
     if (locator) {
         err = handle_locator(locator,
                              ctx->hadb_entry);
@@ -1149,7 +1148,7 @@ int hip_handle_r2(RVS const uint8_t packet_type,
              "failed to handle esp prot anchor\n");
 
     /***** LOCATOR PARAMETER *****/
-    locator = (struct hip_locator *) hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
+    locator = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
     if (locator) {
         HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
     }
@@ -1880,7 +1879,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     ctx->hadb_entry->spi_outbound_new = spi_out;
 
     /***** LOCATOR PARAMETER *****/
-    locator = (struct hip_locator *) hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
+    locator = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
     if (locator) {
         HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
     }

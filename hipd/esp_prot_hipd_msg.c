@@ -77,7 +77,7 @@ static int esp_prot_send_update_response(const hip_common_t *recv_update,
     uint16_t mask             = 0;
     int err                   = 0;
 
-    HIP_IFEL(!(seq = (struct hip_seq *) hip_get_param(recv_update, HIP_PARAM_SEQ)),
+    HIP_IFEL(!(seq = hip_get_param(recv_update, HIP_PARAM_SEQ)),
              -1,
              "SEQ not found\n");
 
@@ -175,16 +175,16 @@ int esp_prot_set_preferred_transforms(const struct hip_common *msg)
     struct hip_tlv_common *param = NULL;
     int err                      = 0, i;
 
-    param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
+    param = hip_get_param(msg, HIP_PARAM_INT);
     esp_prot_active = *((int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("esp_prot_active: %i\n", esp_prot_active);
 
     // process message and store the preferred transforms
-    param = (struct hip_tlv_common *) hip_get_next_param(msg, param);
+    param = hip_get_next_param(msg, param);
     esp_prot_num_transforms = *((int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("esp protection num_transforms: %i\n", esp_prot_num_transforms);
 
-    param = (struct hip_tlv_common *) hip_get_next_param(msg, param);
+    param = hip_get_next_param(msg, param);
     esp_prot_num_parallel_hchains = *((long *) hip_get_param_contents_direct(param));
     HIP_DEBUG("esp_prot_num_parallel_hchains: %i\n", esp_prot_num_parallel_hchains);
 
@@ -246,11 +246,11 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
     memset(cmp_val, 0, MAX_HASH_LENGTH);
 
     param     = hip_get_param(msg, HIP_PARAM_HIT);
-    local_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
+    local_hit = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("src_hit", local_hit);
 
     param     = hip_get_next_param(msg, param);
-    peer_hit  = (hip_hit_t *) hip_get_param_contents_direct(param);
+    peer_hit  = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("dst_hit", peer_hit);
 
     // get matching entry from hadb for HITs provided above
@@ -283,7 +283,7 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
     // process all update anchors now
     param                   = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
     for (i = 0; i < num_parallel_hchains; i++) {
-        esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
+        esp_prot_anchor = hip_get_param_contents_direct(param);
         HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
 
         // make sure that the update-anchor is not set yet
@@ -306,7 +306,7 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
     if (root_length > 0) {
         param = hip_get_param(msg, HIP_PARAM_ROOT);
         for (i = 0; i < num_parallel_hchains; i++) {
-            root[i] = (unsigned char *) hip_get_param_contents_direct(param);
+            root[i] = hip_get_param_contents_direct(param);
             memcpy(&entry->esp_root[i][0], root[i], root_length);
 
             HIP_HEXDUMP("root: ", &entry->esp_root[i][0], root_length);
@@ -333,11 +333,11 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
             HIP_DEBUG("branch_length: %i\n", branch_length[i]);
 
             param            = hip_get_next_param(msg, param);
-            secret[i]        = (unsigned char *) hip_get_param_contents_direct(param);
+            secret[i]        = hip_get_param_contents_direct(param);
             HIP_HEXDUMP("secret: ", secret[i], secret_length[i]);
 
             param            = hip_get_next_param(msg, param);
-            branch_nodes[i]  = (unsigned char *) hip_get_param_contents_direct(param);
+            branch_nodes[i]  = hip_get_param_contents_direct(param);
             HIP_HEXDUMP("branch_nodes: ", branch_nodes[i], branch_length[i]);
         }
     }
@@ -382,11 +382,11 @@ int esp_prot_handle_anchor_change_msg(const struct hip_common *msg)
     int err                        = 0;
 
     param                = hip_get_param(msg, HIP_PARAM_HIT);
-    local_hit            = (hip_hit_t *) hip_get_param_contents_direct(param);
+    local_hit            = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("src_hit", local_hit);
 
     param                = hip_get_next_param(msg, param);
-    peer_hit             = (hip_hit_t *) hip_get_param_contents_direct(param);
+    peer_hit             = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("dst_hit", peer_hit);
 
     param                = hip_get_param(msg, HIP_PARAM_INT);
@@ -419,7 +419,7 @@ int esp_prot_handle_anchor_change_msg(const struct hip_common *msg)
     // only handle outbound direction here
     if (direction == HIP_SPI_DIRECTION_OUT) {
         for (i = 0; i < num_parallel_hchains; i++) {
-            esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
+            esp_prot_anchor = hip_get_param_contents_direct(param);
             HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
 
             // make sure that the update-anchor is set
@@ -915,9 +915,9 @@ int esp_prot_update_type(const hip_common_t *recv_update)
 
     HIP_ASSERT(recv_update != NULL);
 
-    seq = (struct hip_seq *) hip_get_param(recv_update, HIP_PARAM_SEQ);
-    ack = (struct hip_ack *) hip_get_param(recv_update, HIP_PARAM_ACK);
-    esp_info = (struct hip_esp_info *) hip_get_param(recv_update, HIP_PARAM_ESP_INFO);
+    seq      = hip_get_param(recv_update, HIP_PARAM_SEQ);
+    ack      = hip_get_param(recv_update, HIP_PARAM_ACK);
+    esp_info = hip_get_param(recv_update, HIP_PARAM_ESP_INFO);
 
     if (seq && !ack && !esp_info) {
         return ESP_PROT_FIRST_UPDATE_PACKET;
@@ -1028,7 +1028,7 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
          * @note we can distinguish the 1. and 2. UPDATE message by
          *       looking at the presence of SEQ param in the packet
          *       to be sent */
-        seq = (struct hip_seq *) hip_get_param(update, HIP_PARAM_SEQ);
+        seq = hip_get_param(update, HIP_PARAM_SEQ);
 
         if (seq) {
             // we need to know the hash_length for this transform
