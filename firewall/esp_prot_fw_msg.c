@@ -614,8 +614,7 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg,
     HIP_ASSERT(esp_prot_transform != NULL);
     HIP_ASSERT(num_anchors != NULL);
 
-    HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg,
-                                                               HIP_PARAM_ESP_PROT_TFM)),
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_ESP_PROT_TFM)),
              -1, "esp prot transform missing\n");
     *esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
     HIP_DEBUG("esp protection transform is %u\n", *esp_prot_transform);
@@ -626,7 +625,7 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg,
         HIP_IFEL((hash_length = esp_prot_get_hash_length(*esp_prot_transform)) <= 0,
                  -1, "error or tried to resolve UNUSED transform\n");
 
-        HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_ITEM_LENGTH)),
+        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_ITEM_LENGTH)),
                  -1, "transform suggests hash_item_length, but it is NOT included in msg\n");
         *hash_item_length = *((uint32_t *) hip_get_param_contents_direct(param));
         HIP_DEBUG("esp protection item length: %u\n", *hash_item_length);
@@ -636,12 +635,12 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg,
         *num_anchors = *((uint16_t *) hip_get_param_contents_direct(param));
         HIP_DEBUG("esp protection number of transferred anchors: %u\n", *num_anchors);
 
-        HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),
+        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),
                  -1, "transform suggests anchor, but it is NOT included in msg\n");
 
         if (*num_anchors <= num_parallel_hchains) {
             for (i = 0; i < *num_anchors; i++) {
-                anchor = (unsigned char *) hip_get_param_contents_direct(param);
+                anchor = hip_get_param_contents_direct(param);
 
                 // store the current anchor
                 memcpy(&esp_prot_anchors[i][0], anchor, hash_length);

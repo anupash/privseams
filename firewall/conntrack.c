@@ -899,8 +899,7 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
     HIP_DEBUG("verify_responder: %i\n", verify_responder);
 
     // handling HOST_ID param
-    HIP_IFEL(!(host_id = (struct hip_host_id *) hip_get_param(common,
-                                                              HIP_PARAM_HOST_ID)),
+    HIP_IFEL(!(host_id = hip_get_param(common, HIP_PARAM_HOST_ID)),
              -1, "No HOST_ID found in control message\n");
 
     len = hip_get_param_total_len(host_id);
@@ -974,12 +973,11 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
 
     HIP_DEBUG("\n");
 
-    HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common,
-                                                           HIP_PARAM_ESP_INFO)),
-                                                           0, "no spi found\n");
+    HIP_IFEL(!(spi = hip_get_param(common, HIP_PARAM_ESP_INFO)),
+             0, "no spi found\n");
 
     // might not be there in case of BLIND
-    host_id = (struct hip_host_id *) hip_get_param(common, HIP_PARAM_HOST_ID);
+    host_id = hip_get_param(common, HIP_PARAM_HOST_ID);
 
     // handling HOST_ID param
     if (host_id) {
@@ -1077,7 +1075,7 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
     const struct in6_addr *ip6_src = &ctx->src;
     int err                     = 1;
 
-    HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO)),
+    HIP_IFEL(!(spi = hip_get_param(common, HIP_PARAM_ESP_INFO)),
              0, "no spi found\n");
 
     // TODO: clean up
@@ -1272,11 +1270,11 @@ static int handle_update(const struct hip_common *common,
     int err                            = 1;
 
     /* get params from UPDATE message */
-    seq      = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
-    esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
-    ack      = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
-    locator  = (struct hip_locator *) hip_get_param(common, HIP_PARAM_LOCATOR);
-    spi      = (struct hip_spi *) hip_get_param(common, HIP_PARAM_ESP_INFO);
+    seq      = hip_get_param(common, HIP_PARAM_SEQ);
+    esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
+    ack      = hip_get_param(common, HIP_PARAM_ACK);
+    locator  = hip_get_param(common, HIP_PARAM_LOCATOR);
+    spi      = hip_get_param(common, HIP_PARAM_ESP_INFO);
 
     /* connection changed to a path going through this firewall */
     if (tuple == NULL) {

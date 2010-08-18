@@ -903,9 +903,9 @@ int esp_prot_conntrack_update(const hip_common_t *update, const struct tuple *tu
     memset(esp_anchors, 0, MAX_NUM_PARALLEL_HCHAINS * sizeof(struct esp_prot_anchor *));
     memset(esp_roots, 0, MAX_NUM_PARALLEL_HCHAINS * sizeof(struct esp_prot_root *));
 
-    seq      = (struct hip_seq *) hip_get_param(update, HIP_PARAM_SEQ);
-    esp_info = (struct hip_esp_info *) hip_get_param(update, HIP_PARAM_ESP_INFO);
-    ack      = (struct hip_ack *) hip_get_param(update, HIP_PARAM_ACK);
+    seq      = hip_get_param(update, HIP_PARAM_SEQ);
+    esp_info = hip_get_param(update, HIP_PARAM_ESP_INFO);
+    ack      = hip_get_param(update, HIP_PARAM_ACK);
     // there might be several anchor elements
     param    = hip_get_param(update, HIP_PARAM_ESP_PROT_ANCHOR);
 
@@ -1018,8 +1018,8 @@ int esp_prot_conntrack_lupdate(const struct hip_common *common,
     HIP_DEBUG("handling light update...\n");
 
     // get params from UPDATE message
-    seq = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
-    ack = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
+    seq = hip_get_param(common, HIP_PARAM_SEQ);
+    ack = hip_get_param(common, HIP_PARAM_ACK);
 
     if (seq) {
         HIP_DEBUG("received ANCHOR packet of LIGHT UPDATE\n");
@@ -1082,7 +1082,7 @@ int esp_prot_conntrack_lupdate(const struct hip_common *common,
     } else if (ack) {
         HIP_DEBUG("received ACK packet of LIGHT UPDATE\n");
 
-        esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
+        esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
 
         // lookup cached ANCHOR and update corresponding esp_tuple
         HIP_IFEL(esp_prot_conntrack_update_anchor(tuple, ack, esp_info), -1,

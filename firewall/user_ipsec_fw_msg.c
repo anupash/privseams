@@ -126,23 +126,23 @@ int handle_sa_add_request(const struct hip_common *msg)
 
     /* get all attributes from the message */
 
-    param      = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
-    src_addr   = (struct in6_addr *) hip_get_param_contents_direct(param);
+    param      = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
+    src_addr   = hip_get_param_contents_direct(param);
     HIP_DEBUG_IN6ADDR("Source IP address: ", src_addr);
 
     param      = hip_get_next_param(msg, param);
-    dst_addr   = (struct in6_addr *) hip_get_param_contents_direct(param);
+    dst_addr   = hip_get_param_contents_direct(param);
     HIP_DEBUG_IN6ADDR("Destination IP address : ", dst_addr);
 
-    param      = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HIT);
-    src_hit    = (struct in6_addr *) hip_get_param_contents_direct(param);
+    param      = hip_get_param(msg, HIP_PARAM_HIT);
+    src_hit    = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("Source Hit: ", src_hit);
 
     param      = hip_get_next_param(msg, param);
-    dst_hit    = (struct in6_addr *) hip_get_param_contents_direct(param);
+    dst_hit    = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 
-    param      = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
+    param      = hip_get_param(msg, HIP_PARAM_UINT);
     spi        = *((uint32_t *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the spi value is : 0x%lx \n", spi);
 
@@ -163,15 +163,15 @@ int handle_sa_add_request(const struct hip_common *msg)
                   &esp_num_anchors, esp_prot_anchors, &hash_item_length), -1,
                   "failed to retrieve esp prot anchor\n");
 
-    param          = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
-    enc_key        = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
+    param          = hip_get_param(msg, HIP_PARAM_KEYS);
+    enc_key        = hip_get_param_contents_direct(param);
     HIP_HEXDUMP("crypto key:", enc_key, sizeof(struct hip_crypto_key));
 
     param          = hip_get_next_param(msg, param);
-    auth_key       = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
+    auth_key       = hip_get_param_contents_direct(param);
     HIP_HEXDUMP("auth key:", auth_key, sizeof(struct hip_crypto_key));
 
-    param          = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
+    param          = hip_get_param(msg, HIP_PARAM_INT);
     ealg           = *((int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("ealg value is %d \n", ealg);
 
@@ -220,11 +220,11 @@ int handle_sa_delete_request(const struct hip_common *msg)
     HIP_DEBUG("spi value: 0x%lx \n", spi);
 
     param     = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
-    peer_addr = (struct in6_addr *) hip_get_param_contents_direct(param);
+    peer_addr = hip_get_param_contents_direct(param);
     HIP_DEBUG_IN6ADDR("peer address: ", peer_addr);
 
     param     = hip_get_next_param(msg, param);
-    dst_addr  = (struct in6_addr *) hip_get_param_contents_direct(param);
+    dst_addr  = hip_get_param_contents_direct(param);
     HIP_DEBUG_IN6ADDR("dst address: ", dst_addr);
 
     param     = hip_get_param(msg, HIP_PARAM_INT);
