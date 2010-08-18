@@ -25,6 +25,8 @@ AM_CONDITIONAL(HAVE_XMLTO, test x"$have_xmlto" = x"yes")
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_PROG_CC_C_O # Required in CentOS
+# Enable silent rules only when available (automake 1.11 or later).
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # Check for python for build-system and tools directory
 AM_PATH_PYTHON([2.4.3],, [AC_MSG_ERROR([min. required python version not found])])
