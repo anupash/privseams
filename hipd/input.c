@@ -337,11 +337,10 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     HIP_DEBUG("Start PERF_DH_CREATE\n");
     hip_perf_start_benchmark(perf_set, PERF_DH_CREATE);
 #endif
-    HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(
-                  (*dhpv)->public_value, (*dhpv)->group_id,
-                  ntohs((*dhpv)->pub_len),
-                  (unsigned char *) dh_shared_key,
-                  dh_shared_len)) < 0,
+    HIP_IFEL((dh_shared_len = hip_calculate_shared_secret((*dhpv)->public_value, (*dhpv)->group_id,
+                                                          ntohs((*dhpv)->pub_len),
+                                                          (unsigned char *) dh_shared_key,
+                                                          dh_shared_len)) < 0,
              -EINVAL, "Calculation of shared secret failed.\n");
 
     hip_make_keymat(dh_shared_key,
