@@ -271,9 +271,7 @@ static int hip_get_hits(hip_common_t *msg, const char *opt,
             param_type = hip_get_param_type(current_param);
 
             if (param_type == HIP_PARAM_HIT_INFO) {
-                data = (struct hip_hit_info *)
-                       hip_get_param_contents_direct(
-                    current_param);
+                data = hip_get_param_contents_direct(current_param);
                 inet_ntop(AF_INET6, &data->lhi.hit, hit_s,
                           INET6_ADDRSTRLEN);
 
@@ -315,15 +313,11 @@ static int hip_get_hits(hip_common_t *msg, const char *opt,
             param_type = hip_get_param_type(current_param);
 
             if (param_type == HIP_PARAM_HIT) {
-                defhit = (struct in6_addr *)
-                         hip_get_param_contents_direct(
-                    current_param);
+                defhit = hip_get_param_contents_direct(current_param);
                 inet_ntop(AF_INET6, defhit, hit_s,
                           INET6_ADDRSTRLEN);
             } else if (param_type == HIP_PARAM_LSI) {
-                deflsi = (struct in_addr *)
-                         hip_get_param_contents_direct(
-                    current_param);
+                deflsi = hip_get_param_contents_direct(current_param);
                 inet_ntop(AF_INET, deflsi, lsi_s,
                           INET_ADDRSTRLEN);
             } else {
@@ -378,7 +372,7 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg,
              "Sending msg failed.\n");
 
     while ((param = hip_get_next_param(msg_tmp, param)) != NULL) {
-        data = (struct hip_hit_info *) hip_get_param_contents_direct(param);
+        data = hip_get_param_contents_direct(param);
         HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEL_LOCAL_HI, 0),
                  -1, "Failed to build user message header\n");
 
@@ -1767,7 +1761,7 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
             if (param_type == HIP_PARAM_HIT) {
                 //no need to get the hit from msg
             } else if (param_type == HIP_PARAM_INT)   {
-                diff = (int *) hip_get_param_contents_direct(current_param);
+                diff = hip_get_param_contents_direct(current_param);
             } else {
                 HIP_ERROR("Unrelated parameter in user " \
                           "message.\n");

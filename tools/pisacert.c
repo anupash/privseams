@@ -64,7 +64,7 @@ static int get_default_hit(struct in6_addr *result)
     HIP_IFE(hip_send_recv_daemon_info(msg, 0, 0), -ECOMM);
 
     param = hip_get_param(msg, HIP_PARAM_HIT);
-    hit   = (struct in6_addr *) hip_get_param_contents_direct(param);
+    hit   = hip_get_param_contents_direct(param);
     memcpy(result, hit, sizeof(struct in6_addr));
 
 out_err:

@@ -60,7 +60,7 @@
  * <li>struct hip_common *msg = malloc(HIP_MAX_PACKET);</li>
  * <li>receive the message from kernel.</li>
  * <li>if (msg->err) goto_error_handler;</li>
- * <li>hit = (struct in6addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);</li>
+ * <li>hit = hip_get_param_contents(msg, HIP_PARAM_HIT);</li>
  * <li>note: hit can be null, if the param was not found.</li>
  * </li>
  * <li>note: hit can be null.</li>
