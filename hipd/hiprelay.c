@@ -893,10 +893,10 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
                       hip_relrec_t *rec,
                       const uint8_t type_hdr)
 {
-    hip_common_t *msg_to_be_relayed = NULL;
-    hip_tlv_common_t *current_param = NULL;
-    int err                         = 0, from_added = 0;
-    hip_tlv_type_t param_type       = 0;
+    hip_common_t *msg_to_be_relayed       = NULL;
+    const hip_tlv_common_t *current_param = NULL;
+    int err                               = 0, from_added = 0;
+    hip_tlv_type_t param_type             = 0;
 
     HIP_DEBUG("Msg type :      %s (%d)\n",
               hip_message_type_name(hip_get_msg_type(ctx->input_msg)),
@@ -1020,9 +1020,9 @@ static int hip_relay_forward_response(const hip_common_t *r,
                                       const struct in6_addr *relay_to_addr,
                                       const in_port_t relay_to_port)
 {
-    struct hip_common *r_to_be_relayed   = NULL;
-    struct hip_tlv_common *current_param = NULL;
-    int err                              = 0;
+    struct hip_common *r_to_be_relayed         = NULL;
+    const struct hip_tlv_common *current_param = NULL;
+    int err                                    = 0;
 
     HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  source address", r_saddr);
     HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  destination address", r_daddr);
@@ -1079,7 +1079,7 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
 {
     int err           = 0;
     hip_relrec_t *rec = NULL, dummy;
-    struct hip_relay_to *relay_to;
+    const struct hip_relay_to *relay_to;
     //check if full relay service is active
 
     if (hip_relay_get_status() == HIP_RELAY_OFF) {
@@ -1118,15 +1118,14 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
     case HIP_R2:
     case HIP_UPDATE:
     case HIP_NOTIFY:
-        HIP_DEBUG_IN6ADDR("the relay to address: ",
-                          (struct in6_addr *) &relay_to->address);
+        HIP_DEBUG_IN6ADDR("the relay to address: ", &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d",
                   ntohs(relay_to->port));
         hip_relay_forward_response(ctx->input_msg,
                                    packet_type,
                                    ctx->src_addr,
                                    ctx->dst_addr,
-                                   (struct in6_addr *) &relay_to->address,
+                                   &relay_to->address,
                                    ntohs(relay_to->port));
         //  state = HIP_STATE_NONE;
         err = 1;
@@ -1146,14 +1145,13 @@ out_err:
  *
  * @todo handle also the relay case
  */
-int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry)
+int hip_relay_add_rvs_to_ha(const hip_common_t *source_msg, hip_ha_t *entry)
 {
-    struct hip_via_rvs *via_rvs = NULL;
+    const struct hip_via_rvs *via_rvs = NULL;
     int err                     = 0;
 
     // Get rendezvous server's IP addresses
-    via_rvs = (struct hip_via_rvs *)
-              hip_get_param(source_msg, HIP_PARAM_VIA_RVS);
+    via_rvs = hip_get_param(source_msg, HIP_PARAM_VIA_RVS);
 
     if (!via_rvs) {
         return -1;
@@ -1191,10 +1189,10 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
                                 struct in6_addr *dest_ip, in_port_t *dest_port)
 {
     int param_type;
-    struct hip_relay_from *relay_from = NULL;
-    struct hip_from *from             = NULL;
+    const struct hip_relay_from *relay_from = NULL;
+    const struct hip_from *from             = NULL;
 #ifdef CONFIG_HIP_RVS
-    hip_ha_t *relay_ha_entry          = NULL;
+    hip_ha_t *relay_ha_entry                = NULL;
 #endif
 
     /* Check if the incoming I1 packet has  RELAY_FROM parameters. */
@@ -1292,7 +1290,7 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
                                         struct hip_packet_context *ctx)
 {
     int err = 0;
-    struct hip_relay_to *relay_to;
+    const struct hip_relay_to *relay_to;
     //check if full relay service is active
 
     if (!ctx->hadb_entry) {
@@ -1312,13 +1310,11 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
     switch (packet_type) {
     case HIP_R1:
     case HIP_R2:
-        HIP_DEBUG_IN6ADDR("the relay to address: ",
-                          (struct in6_addr *) &relay_to->address);
+        HIP_DEBUG_IN6ADDR("the relay to address: ", &relay_to->address);
         HIP_DEBUG("the relay to ntohs(port): %d, local udp port %d\n",
                   ntohs(relay_to->port), ctx->hadb_entry->local_udp_port);
 
-        if (ipv6_addr_cmp((struct in6_addr *) &relay_to->address,
-                          &ctx->hadb_entry->our_addr)) {
+        if (ipv6_addr_cmp(&relay_to->address, &ctx->hadb_entry->our_addr)) {
             HIP_DEBUG("relay_to address is saved as reflexive addr. \n");
             ctx->hadb_entry->local_reflexive_udp_port = ntohs(relay_to->port);
             memcpy(&ctx->hadb_entry->local_reflexive_address,

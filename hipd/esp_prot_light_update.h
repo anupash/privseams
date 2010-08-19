@@ -41,9 +41,9 @@
 
 int esp_prot_send_light_update(hip_ha_t *entry,
                                const int anchor_offset[],
-                               unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS],
+                               const unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS],
                                const int secret_length[],
-                               unsigned char *branch_nodes[MAX_NUM_PARALLEL_HCHAINS],
+                               const unsigned char *branch_nodes[MAX_NUM_PARALLEL_HCHAINS],
                                const int branch_length[]);
 int esp_prot_handle_light_update(const uint8_t packet_type,
                                  const uint32_t ha_state,

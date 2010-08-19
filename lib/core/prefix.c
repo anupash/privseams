@@ -88,7 +88,7 @@ int ipv6_addr_is_teredo(const struct in6_addr *teredo)
  * @param ip the IPv6 address to test
  * @return one if the address is all zeroes and zero otherwise
  */
-int ipv6_addr_is_null(struct in6_addr *ip)
+int ipv6_addr_is_null(const struct in6_addr *ip)
 {
     return (ip->s6_addr32[0] | ip->s6_addr32[1] |
             ip->s6_addr32[2] | ip->s6_addr32[3]) == 0;
@@ -410,7 +410,7 @@ int ipv6_addr_any(const struct in6_addr *a) {
 }
 
 void hip_copy_in6addr_null_check(struct in6_addr *to,
-                                 struct in6_addr *from) {
+                                 const struct in6_addr *from) {
     HIP_ASSERT(to);
     if (from) {
         ipv6_addr_copy(to, from);
@@ -420,7 +420,7 @@ void hip_copy_in6addr_null_check(struct in6_addr *to,
 }
 
 void hip_copy_inaddr_null_check(struct in_addr *to,
-                                struct in_addr *from) {
+                                const struct in_addr *from) {
     HIP_ASSERT(to);
     if (from) {
         memcpy(to, from, sizeof(*to));

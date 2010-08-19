@@ -111,16 +111,16 @@ out_err:
  */
 int handle_sa_add_request(const struct hip_common *msg)
 {
-    struct hip_tlv_common *param   = NULL;
-    struct in6_addr *src_addr      = NULL, *dst_addr = NULL;
-    struct in6_addr *src_hit       = NULL, *dst_hit = NULL;
-    uint32_t spi                   = 0;
-    int ealg                       = 0, err = 0;
-    struct hip_crypto_key *enc_key = NULL, *auth_key = NULL;
-    int retransmission             = 0, direction = 0, update = 0;
-    uint16_t local_port            = 0, peer_port = 0;
-    uint8_t encap_mode             = 0, esp_prot_transform = 0;
-    uint32_t hash_item_length      = 0;
+    const struct hip_tlv_common *param   = NULL;
+    const struct in6_addr *src_addr      = NULL, *dst_addr = NULL;
+    const struct in6_addr *src_hit       = NULL, *dst_hit = NULL;
+    uint32_t spi                         = 0;
+    int ealg                             = 0, err = 0;
+    const struct hip_crypto_key *enc_key = NULL, *auth_key = NULL;
+    int retransmission                   = 0, direction = 0, update = 0;
+    uint16_t local_port                  = 0, peer_port = 0;
+    uint8_t encap_mode                   = 0, esp_prot_transform = 0;
+    uint32_t hash_item_length            = 0;
     uint16_t esp_num_anchors;
     unsigned char esp_prot_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
 
@@ -143,19 +143,19 @@ int handle_sa_add_request(const struct hip_common *msg)
     HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 
     param      = hip_get_param(msg, HIP_PARAM_UINT);
-    spi        = *((uint32_t *) hip_get_param_contents_direct(param));
+    spi        = *((const uint32_t *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the spi value is : 0x%lx \n", spi);
 
     param      = hip_get_next_param(msg, param);
-    encap_mode = *((uint8_t *) hip_get_param_contents_direct(param));
+    encap_mode = *((const uint8_t *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the nat_mode value is %u \n", encap_mode);
 
     param      = hip_get_next_param(msg, param);
-    local_port = *((uint16_t *) hip_get_param_contents_direct(param));
+    local_port = *((const uint16_t *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the local_port value is %u \n", local_port);
 
     param      = hip_get_next_param(msg, param);
-    peer_port  = *((uint16_t *) hip_get_param_contents_direct(param));
+    peer_port  = *((const uint16_t *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the peer_port value is %u \n", peer_port);
 
     /* parse the esp protection extension parameters */
@@ -172,19 +172,19 @@ int handle_sa_add_request(const struct hip_common *msg)
     HIP_HEXDUMP("auth key:", auth_key, sizeof(struct hip_crypto_key));
 
     param          = hip_get_param(msg, HIP_PARAM_INT);
-    ealg           = *((int *) hip_get_param_contents_direct(param));
+    ealg           = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("ealg value is %d \n", ealg);
 
     param          =  hip_get_next_param(msg, param);
-    retransmission = *((int *) hip_get_param_contents_direct(param));
+    retransmission = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("already_acquired value is %d \n", retransmission);
 
     param          =  hip_get_next_param(msg, param);
-    direction      = *((int *) hip_get_param_contents_direct(param));
+    direction      = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the direction value is %d \n", direction);
 
     param          =  hip_get_next_param(msg, param);
-    update         = *((int *) hip_get_param_contents_direct(param));
+    update         = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("the update value is %d \n", update);
 
     HIP_IFEL(hip_sadb_add(direction, spi, BEET_MODE, src_addr, dst_addr,
@@ -206,17 +206,17 @@ out_err:
  */
 int handle_sa_delete_request(const struct hip_common *msg)
 {
-    struct hip_tlv_common *param = NULL;
-    uint32_t spi                 = 0;
-    struct in6_addr *peer_addr   = NULL;
-    struct in6_addr *dst_addr    = NULL;
-    int family                   = 0, src_port = 0, dst_port = 0;
-    int err                      = 0;
+    const struct hip_tlv_common *param = NULL;
+    uint32_t spi                       = 0;
+    const struct in6_addr *peer_addr   = NULL;
+    const struct in6_addr *dst_addr    = NULL;
+    int family                         = 0, src_port = 0, dst_port = 0;
+    int err                            = 0;
 
     /* get all attributes from the message */
 
     param     = hip_get_param(msg, HIP_PARAM_UINT);
-    spi       = *((uint32_t *) hip_get_param_contents_direct(param));
+    spi       = *((const uint32_t *) hip_get_param_contents_direct(param));
     HIP_DEBUG("spi value: 0x%lx \n", spi);
 
     param     = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
@@ -228,15 +228,15 @@ int handle_sa_delete_request(const struct hip_common *msg)
     HIP_DEBUG_IN6ADDR("dst address: ", dst_addr);
 
     param     = hip_get_param(msg, HIP_PARAM_INT);
-    family    = *((int *) hip_get_param_contents_direct(param));
+    family    = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("family: %i\n", family);
 
     param     = hip_get_next_param(msg, param);
-    src_port  = *((int *) hip_get_param_contents_direct(param));
+    src_port  = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("src_port: %i\n", src_port);
 
     param     = hip_get_next_param(msg, param);
-    dst_port  = *((int *) hip_get_param_contents_direct(param));
+    dst_port  = *((const int *) hip_get_param_contents_direct(param));
     HIP_DEBUG("dst_port: %i\n", dst_port);
 
     /* work-around due to broken sa_delete in hipd */

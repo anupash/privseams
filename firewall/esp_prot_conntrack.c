@@ -194,8 +194,8 @@ out_err:
  */
 static int esp_prot_conntrack_cache_anchor(const struct tuple *tuple,
                                            const struct hip_seq *seq,
-                                           struct esp_prot_anchor **esp_anchors,
-                                           struct esp_prot_root **esp_roots)
+                                           const struct esp_prot_anchor **esp_anchors,
+                                           const struct esp_prot_root **esp_roots)
 {
     struct esp_anchor_item *anchor_item     = NULL;
     unsigned char *cmp_value                = NULL;
@@ -425,9 +425,9 @@ out_err:
  * @return  0 on success, -1 on error
  */
 static int esp_prot_conntrack_verify_branch(const struct tuple *tuple,
-        struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS],
-        struct esp_prot_branch *esp_branches[MAX_NUM_PARALLEL_HCHAINS],
-        struct esp_prot_secret *esp_secrets[MAX_NUM_PARALLEL_HCHAINS])
+        const struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS],
+        const struct esp_prot_branch *esp_branches[MAX_NUM_PARALLEL_HCHAINS],
+        const struct esp_prot_secret *esp_secrets[MAX_NUM_PARALLEL_HCHAINS])
 {
     esp_prot_conntrack_tfm_t *conntrack_tfm = NULL;
     int hash_length                         = 0;
@@ -564,9 +564,8 @@ int esp_prot_conntrack_uninit(void)
 int esp_prot_conntrack_R1_tfms(const struct hip_common *common,
                                const struct tuple *tuple)
 {
-    struct hip_param *param                         = NULL;
-    struct esp_prot_preferred_tfms *prot_transforms = NULL;
-    int err                                         = 0, i;
+    const struct esp_prot_preferred_tfms *prot_transforms = NULL;
+    int err                                               = 0, i;
 
     HIP_DEBUG("\n");
 
@@ -575,10 +574,9 @@ int esp_prot_conntrack_R1_tfms(const struct hip_common *common,
     memset(tuple->connection->esp_prot_tfms, 0, NUM_TRANSFORMS + 1);
 
     // check if message contains optional ESP protection transforms
-    if ((param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS))) {
+    if ((prot_transforms = hip_get_param(common,
+                                         HIP_PARAM_ESP_PROT_TRANSFORMS))) {
         HIP_DEBUG("ESP protection extension transforms found\n");
-
-        prot_transforms = (struct esp_prot_preferred_tfms *) param;
 
         // make sure we only process as many transforms as we can handle
         if (prot_transforms->num_transforms > NUM_TRANSFORMS + 1) {
@@ -623,13 +621,13 @@ int esp_prot_conntrack_R1_tfms(const struct hip_common *common,
 int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
                                  struct tuple *tuple)
 {
-    struct hip_tlv_common *param            = NULL;
-    struct esp_prot_anchor *prot_anchor     = NULL;
-    struct esp_tuple *esp_tuple             = NULL;
-    esp_prot_conntrack_tfm_t *conntrack_tfm = NULL;
-    long i                                  = 0;
-    int hash_length                         = 0;
-    int err                                 = 0;
+    const struct hip_tlv_common *param        = NULL;
+    const struct esp_prot_anchor *prot_anchor = NULL;
+    struct esp_tuple *esp_tuple               = NULL;
+    esp_prot_conntrack_tfm_t *conntrack_tfm   = NULL;
+    long i                                    = 0;
+    int hash_length                           = 0;
+    int err                                   = 0;
 
     HIP_DEBUG("\n");
 
@@ -638,7 +636,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 
     // check if message contains optional ESP protection anchors
     if ((param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))) {
-        prot_anchor = (struct esp_prot_anchor *) param;
+        prot_anchor = (const struct esp_prot_anchor *) param;
 
         /* create esp_tuple for direction of this message only storing
          * the sent anchor, no SPI known yet -> will be sent in R2
@@ -700,7 +698,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 
                     // get next anchor
                     param       = hip_get_next_param(common, param);
-                    prot_anchor = (struct esp_prot_anchor *) param;
+                    prot_anchor = (const struct esp_prot_anchor *) param;
                 }
 
                 // store number of parallel hchains
@@ -783,13 +781,13 @@ out_err:
 int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
                                  const struct tuple *tuple)
 {
-    struct hip_tlv_common *param            = NULL;
-    struct esp_prot_anchor *prot_anchor     = NULL;
-    struct esp_tuple *esp_tuple             = NULL;
-    esp_prot_conntrack_tfm_t *conntrack_tfm = NULL;
-    long i                                  = 0;
-    int hash_length                         = 0;
-    int err                                 = 0;
+    const struct hip_tlv_common *param        = NULL;
+    const struct esp_prot_anchor *prot_anchor = NULL;
+    struct esp_tuple *esp_tuple               = NULL;
+    esp_prot_conntrack_tfm_t *conntrack_tfm   = NULL;
+    long i                                    = 0;
+    int hash_length                           = 0;
+    int err                                   = 0;
 
     HIP_DEBUG("\n");
 
@@ -798,7 +796,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 
     // check if message contains optional ESP protection anchor
     if ((param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))) {
-        prot_anchor = (struct esp_prot_anchor *) param;
+        prot_anchor = (const struct esp_prot_anchor *) param;
 
         // check if the anchor has a supported transform
         if (esp_prot_check_transform(tuple->connection->num_esp_prot_tfms,
@@ -851,7 +849,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 
                     // get next anchor
                     param       = hip_get_next_param(common, param);
-                    prot_anchor = (struct esp_prot_anchor *) param;
+                    prot_anchor = (const struct esp_prot_anchor *) param;
                 }
 
                 // store number of parallel hchains
@@ -886,12 +884,12 @@ out_err:
  */
 int esp_prot_conntrack_update(const hip_common_t *update, const struct tuple *tuple)
 {
-    struct hip_tlv_common *param  = NULL;
-    struct hip_seq *seq           = NULL;
-    struct hip_ack *ack           = NULL;
-    struct hip_esp_info *esp_info = NULL;
-    struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS];
-    struct esp_prot_root *esp_roots[MAX_NUM_PARALLEL_HCHAINS];
+    const struct hip_tlv_common *param  = NULL;
+    const struct hip_seq *seq           = NULL;
+    const struct hip_ack *ack           = NULL;
+    const struct hip_esp_info *esp_info = NULL;
+    const struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS];
+    const struct esp_prot_root *esp_roots[MAX_NUM_PARALLEL_HCHAINS];
     int err                       = 0;
     long i                        = 0;
 
@@ -915,7 +913,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, const struct tuple *tu
 
         // get all anchors
         for (i = 0; i < num_parallel_hchains; i++) {
-            esp_anchors[i] = (struct esp_prot_anchor *) param;
+            esp_anchors[i] = (const struct esp_prot_anchor *) param;
 
             param          = hip_get_next_param(update, param);
         }
@@ -924,7 +922,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, const struct tuple *tu
         if (param) {
             // get all roots
             for (i = 0; i < num_parallel_hchains; i++) {
-                esp_roots[i] = (struct esp_prot_root *) param;
+                esp_roots[i] = (const struct esp_prot_root *) param;
 
                 param        = hip_get_next_param(update, param);
             }
@@ -995,14 +993,14 @@ int esp_prot_conntrack_lupdate(const struct hip_common *common,
                                struct tuple *tuple,
                                const hip_fw_context_t *ctx)
 {
-    struct hip_seq *seq          = NULL;
-    struct hip_tlv_common *param = NULL;
-    struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS];
-    struct esp_prot_branch *esp_branches[MAX_NUM_PARALLEL_HCHAINS];
-    struct esp_prot_secret *esp_secrets[MAX_NUM_PARALLEL_HCHAINS];
-    struct esp_prot_root *esp_roots[MAX_NUM_PARALLEL_HCHAINS];
-    struct hip_ack *ack           = NULL;
-    struct hip_esp_info *esp_info = NULL;
+    const struct hip_seq *seq          = NULL;
+    const struct hip_tlv_common *param = NULL;
+    const struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS];
+    const struct esp_prot_branch *esp_branches[MAX_NUM_PARALLEL_HCHAINS];
+    const struct esp_prot_secret *esp_secrets[MAX_NUM_PARALLEL_HCHAINS];
+    const struct esp_prot_root *esp_roots[MAX_NUM_PARALLEL_HCHAINS];
+    const struct hip_ack *ack           = NULL;
+    const struct hip_esp_info *esp_info = NULL;
     const struct in6_addr *ip6_src = &ctx->src;
     const struct in6_addr *ip6_dst = &ctx->dst;
     int err                       = 0;
@@ -1026,21 +1024,21 @@ int esp_prot_conntrack_lupdate(const struct hip_common *common,
 
         param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR);
         for (i = 0; i < num_parallel_hchains; i++) {
-            esp_anchors[i] = (struct esp_prot_anchor *) param;
+            esp_anchors[i] = (const struct esp_prot_anchor *) param;
 
             param          = hip_get_next_param(common, param);
         }
 
         param = hip_get_param(common, HIP_PARAM_ESP_PROT_BRANCH);
         for (i = 0; i < num_parallel_hchains; i++) {
-            esp_branches[i] = (struct esp_prot_branch *) param;
+            esp_branches[i] = (const struct esp_prot_branch *) param;
 
             param           = hip_get_next_param(common, param);
         }
 
         param = hip_get_param(common, HIP_PARAM_ESP_PROT_SECRET);
         for (i = 0; i < num_parallel_hchains; i++) {
-            esp_secrets[i] = (struct esp_prot_secret *) param;
+            esp_secrets[i] = (const struct esp_prot_secret *) param;
 
             param          = hip_get_next_param(common, param);
         }
@@ -1048,7 +1046,7 @@ int esp_prot_conntrack_lupdate(const struct hip_common *common,
         param = hip_get_param(common, HIP_PARAM_ESP_PROT_ROOT);
         if (param) {
             for (i = 0; i < num_parallel_hchains; i++) {
-                esp_roots[i] = (struct esp_prot_root *) param;
+                esp_roots[i] = (const struct esp_prot_root *) param;
 
                 param        = hip_get_next_param(common, param);
             }

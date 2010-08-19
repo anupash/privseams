@@ -172,7 +172,7 @@ int hip_send_close(struct hip_common *msg,
 {
     int err                            = 0, retry, n;
     char *opaque                       = NULL;
-    hip_hit_t *hit                     = NULL;
+    const hip_hit_t *hit               = NULL;
     struct sockaddr_in6 sock_addr;
     struct hip_common *msg_to_firewall = NULL;
 
@@ -308,7 +308,7 @@ int hip_close_create_response(UNUSED const uint8_t packet_type,
                               struct hip_packet_context *ctx)
 {
     int err = 0, echo_len;
-    struct hip_echo_request *request;
+    const struct hip_echo_request *request;
 
     HIP_IFE(!(ctx->output_msg = hip_msg_alloc()), -ENOMEM);
 
@@ -432,7 +432,7 @@ int hip_close_ack_check_packet(UNUSED const uint8_t packet_type,
                                struct hip_packet_context *ctx)
 {
     int err = 0;
-    struct hip_echo_request *echo_resp = NULL;
+    const struct hip_echo_request *echo_resp = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");

@@ -802,11 +802,11 @@ static int hipfw_handle_relay_to_r2(const struct hip_common *common,
                                     const hip_fw_context_t *ctx)
 {
     struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
-    struct hip_relay_to *relay_to = NULL; /* same format as relay_from */
+    const struct hip_relay_to *relay_to = NULL; /* same format as relay_from */
     struct tuple *tuple, *reverse_tuple;
     int err = 0;
     uint32_t spi;
-    struct hip_esp_info *esp_info;
+    const struct hip_esp_info *esp_info;
 
     HIP_DEBUG_IN6ADDR("ctx->src", &ctx->src);
     HIP_DEBUG_IN6ADDR("ctx->dst", &ctx->dst);
@@ -891,7 +891,7 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
                      UNUSED const hip_fw_context_t *ctx)
 {
     struct in6_addr hit;
-    struct hip_host_id *host_id = NULL;
+    const struct hip_host_id *host_id = NULL;
     // assume correct packet
     int err                     = 1;
     hip_tlv_len_t len           = 0;
@@ -925,10 +925,12 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
     // store the public key separately
     // store function pointer for verification
     if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA) {
-        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((struct hip_host_id_priv *) host_id, 0);
+        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(
+                                 (const struct hip_host_id_priv *) host_id, 0);
         tuple->hip_tuple->data->verify      = hip_rsa_verify;
     } else {
-        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((struct hip_host_id_priv *) host_id, 0);
+        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(
+                                 (const struct hip_host_id_priv *) host_id, 0);
         tuple->hip_tuple->data->verify      = hip_dsa_verify;
     }
 
@@ -960,11 +962,11 @@ out_err:
 static int handle_i2(struct hip_common *common, struct tuple *tuple,
                      const hip_fw_context_t *ctx)
 {
-    struct hip_esp_info *spi    = NULL;
-    struct tuple *other_dir     = NULL;
-    struct esp_tuple *esp_tuple = NULL;
-    SList *other_dir_esps       = NULL;
-    struct hip_host_id *host_id = NULL;
+    const struct hip_esp_info *spi    = NULL;
+    struct tuple *other_dir           = NULL;
+    struct esp_tuple *esp_tuple       = NULL;
+    SList *other_dir_esps             = NULL;
+    const struct hip_host_id *host_id = NULL;
     struct in6_addr hit;
     // assume correct packet
     int err                     = 1;
@@ -996,10 +998,12 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         // store the public key separately
         // store function pointer for verification
         if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA) {
-            tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((struct hip_host_id_priv *) host_id, 0);
+            tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa(
+                                 (const struct hip_host_id_priv *) host_id, 0);
             tuple->hip_tuple->data->verify      = hip_rsa_verify;
         } else {
-            tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((struct hip_host_id_priv *) host_id, 0);
+            tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa(
+                                 (const struct hip_host_id_priv *) host_id, 0);
             tuple->hip_tuple->data->verify      = hip_dsa_verify;
         }
 
@@ -1068,10 +1072,10 @@ out_err:
 static int handle_r2(const struct hip_common *common, struct tuple *tuple,
                      const hip_fw_context_t *ctx)
 {
-    struct hip_esp_info *spi    = NULL;
-    struct tuple *other_dir     = NULL;
-    SList *other_dir_esps       = NULL;
-    struct esp_tuple *esp_tuple = NULL;
+    const struct hip_esp_info *spi    = NULL;
+    struct tuple *other_dir           = NULL;
+    SList *other_dir_esps             = NULL;
+    struct esp_tuple *esp_tuple       = NULL;
     const struct in6_addr *ip6_src = &ctx->src;
     int err                     = 1;
 
@@ -1260,14 +1264,14 @@ static int handle_update(const struct hip_common *common,
                          struct tuple *tuple,
                          const hip_fw_context_t *ctx)
 {
-    struct hip_seq *seq                = NULL;
-    struct hip_esp_info *esp_info      = NULL;
-    struct hip_ack *ack                = NULL;
-    struct hip_locator *locator        = NULL;
-    struct hip_spi *spi                = NULL;
-    struct tuple *other_dir_tuple      = NULL;
-    const struct in6_addr *ip6_src     = &ctx->src;
-    int err                            = 1;
+    const struct hip_seq *seq                = NULL;
+    const struct hip_esp_info *esp_info      = NULL;
+    const struct hip_ack *ack                = NULL;
+    const struct hip_locator *locator        = NULL;
+    const struct hip_spi *spi                = NULL;
+    struct tuple *other_dir_tuple            = NULL;
+    const struct in6_addr *ip6_src           = &ctx->src;
+    int err                                  = 1;
 
     /* get params from UPDATE message */
     seq      = hip_get_param(common, HIP_PARAM_SEQ);

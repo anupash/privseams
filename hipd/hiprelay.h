@@ -114,7 +114,7 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
 hip_relay_wl_status_t hip_relwl_get_status(void);
 int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
                               uint8_t *granted_lifetime);
-int hip_relay_add_rvs_to_ha(hip_common_t *source_msg, hip_ha_t *entry);
+int hip_relay_add_rvs_to_ha(const hip_common_t *source_msg, hip_ha_t *entry);
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
                                 struct in6_addr *relay_ip,
                                 struct in6_addr *dest_ip, in_port_t *dest_port);

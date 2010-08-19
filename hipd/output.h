@@ -65,7 +65,7 @@ int hip_send_r2_response(struct hip_common *r2,
                          hip_ha_t *entry,
                          hip_portpair_t *r2_info);
 
-int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
+int hip_send_i1(hip_hit_t *, const hip_hit_t *, hip_ha_t *);
 
 int hip_send_i2(const uint8_t packet_type,
                 const uint32_t ha_state,

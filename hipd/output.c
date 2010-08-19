@@ -92,7 +92,7 @@ enum number_dh_keys_t number_dh_keys = TWO;
  * @todo remove the dst_hit parameter? test with the opportunistic TCP extension
  */
 static int hip_send_i1_pkt(struct hip_common *i1,
-                           UNUSED hip_hit_t *dst_hit,
+                           UNUSED const hip_hit_t *dst_hit,
                            struct in6_addr *local_addr,
                            struct in6_addr *peer_addr,
                            in_port_t src_port,
@@ -141,7 +141,8 @@ static int hip_send_i1_pkt(struct hip_common *i1,
  *                the peer.
  * @return        zero on success, or negative error value on error.
  */
-int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
+int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+                hip_ha_t *entry)
 {
     struct hip_common *i1       = 0;
     uint16_t mask               = 0;
@@ -258,7 +259,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     hip_transform_suite_t transform_hip_suite, transform_esp_suite;
     struct hip_spi_in_item spi_in_data;
     struct in6_addr daddr;
-    struct hip_param *param                 = NULL;
+    const struct hip_param *param           = NULL;
     struct hip_esp_info *esp_info           = NULL;
     struct hip_host_id_entry *host_id_entry = NULL;
     char *enc_in_msg                        = NULL, *host_id_in_enc = NULL;
@@ -305,7 +306,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     HIP_IFE(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
             -ENOENT);
     HIP_IFEL((transform_hip_suite =
-                  hip_select_hip_transform((struct hip_hip_transform *) param)) == 0,
+                  hip_select_hip_transform((const struct hip_hip_transform *) param)) == 0,
              -EINVAL,
              "Could not find acceptable hip transform suite\n");
 
@@ -326,8 +327,8 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                                                         (struct hip_tlv_common *) ctx->hadb_entry->our_pub),
                      -1,
                      "Building of param encrypted failed.\n");
-            enc_in_msg     = hip_get_param(ctx->output_msg,
-                                           HIP_PARAM_ENCRYPTED);
+            enc_in_msg     = hip_get_param_readwrite(ctx->output_msg,
+                                                     HIP_PARAM_ENCRYPTED);
             HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
             iv             = ((struct hip_encrypted_aes_sha1 *) enc_in_msg)->iv;
             get_random_bytes(iv, 16);
@@ -338,8 +339,8 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                                                          (struct hip_tlv_common *) ctx->hadb_entry->our_pub),
                      -1,
                      "Building of param encrypted failed.\n");
-            enc_in_msg     = hip_get_param(ctx->output_msg,
-                                           HIP_PARAM_ENCRYPTED);
+            enc_in_msg     = hip_get_param_readwrite(ctx->output_msg,
+                                                    HIP_PARAM_ENCRYPTED);
             HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
             iv             = ((struct hip_encrypted_3des_sha1 *) enc_in_msg)->iv;
             get_random_bytes(iv, 8);
@@ -351,8 +352,8 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                                                          (struct hip_tlv_common *) ctx->hadb_entry->our_pub),
                      -1,
                      "Building of param encrypted failed.\n");
-            enc_in_msg     = hip_get_param(ctx->output_msg,
-                                           HIP_PARAM_ENCRYPTED);
+            enc_in_msg     = hip_get_param_readwrite(ctx->output_msg,
+                                                     HIP_PARAM_ENCRYPTED);
             HIP_ASSERT(enc_in_msg);             /* Builder internal error. */
             iv             = NULL;
             host_id_in_enc = enc_in_msg +
@@ -385,13 +386,12 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                               ctx->output_msg);
 
     /********** ESP-ENC transform. **********/
-    HIP_IFE(!(param = hip_get_param(ctx->input_msg,
-                                    HIP_PARAM_ESP_TRANSFORM)),
+    HIP_IFE(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_TRANSFORM)),
             -ENOENT);
 
     /* Select only one transform */
     HIP_IFEL((transform_esp_suite =
-                  hip_select_esp_transform((struct hip_esp_transform *) param)) == 0,
+                  hip_select_esp_transform((const struct hip_esp_transform *) param)) == 0,
              -1, "Could not find acceptable hip transform suite\n");
     HIP_IFEL(hip_build_param_esp_transform(ctx->output_msg,
                                            &transform_esp_suite, 1), -1,
@@ -461,7 +461,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
              -1,
              "Setting up SP pair failed\n");
 
-    esp_info = hip_get_param(ctx->output_msg, HIP_PARAM_ESP_INFO);
+    esp_info = hip_get_param_readwrite(ctx->output_msg, HIP_PARAM_ESP_INFO);
     HIP_ASSERT(esp_info);     /* Builder internal error */
     esp_info->new_spi = htonl(spi_in);
     /* LSI not created, as it is local, and we do not support IPv4 */
@@ -469,7 +469,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     /********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
     /* must reply... */
     {
-        struct hip_echo_request *ping;
+        const struct hip_echo_request *ping;
 
         ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
         if (ping) {
@@ -504,7 +504,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     /********** ECHO_RESPONSE (OPTIONAL) ************/
     /* must reply */
     {
-        struct hip_echo_request *ping;
+        const struct hip_echo_request *ping;
 
         ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST);
         if (ping) {
@@ -711,7 +711,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         struct hip_puzzle *pz;
         uint64_t random_i;
 
-        HIP_IFEL(!(pz = hip_get_param(msg, HIP_PARAM_PUZZLE)), -1,
+        HIP_IFEL(!(pz = hip_get_param_readwrite(msg, HIP_PARAM_PUZZLE)), -1,
                  "Internal error\n");
 
         /* hardcode kludge */

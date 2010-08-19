@@ -75,7 +75,7 @@
 int hip_cert_spki_sign(struct hip_common *msg)
 {
     int err                      = 0, sig_len = 0, algo = 0, t = 0;
-    struct hip_cert_spki_info *p_cert;
+    const struct hip_cert_spki_info *p_cert;
     struct hip_cert_spki_info *cert;
     struct hip_host_id *host_id  = NULL;
     unsigned char sha_digest[21];
@@ -362,7 +362,7 @@ int hip_cert_spki_verify(struct hip_common *msg)
     unsigned char *signature_hash_b64 = NULL;
     unsigned char *signature_b64      = NULL;
 
-    struct hip_cert_spki_info *p_cert;
+    const struct hip_cert_spki_info *p_cert;
     struct hip_cert_spki_info *cert   = NULL;
     unsigned char *signature          = NULL;
 
@@ -719,7 +719,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
     const EVP_MD *digest = NULL;
     X509 *cert;
     X509V3_CTX ctx;
-    struct hip_cert_x509_req *subject;
+    const struct hip_cert_x509_req *subject;
     char subject_hit[41];
     char issuer_hit[41];
     char ialtname[45];
@@ -734,14 +734,10 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
     char arg1[21];
     char arg2[21];
 
-    HIP_IFEL(!(subject = malloc(sizeof(struct in6_addr))), -1,
-             "Malloc for subject failed\n");
     HIP_IFEL(!(issuer_hit_n = malloc(sizeof(struct in6_addr))), -1,
              "Malloc for subject failed\n");
     HIP_IFEL(!(pkey = malloc(sizeof(EVP_PKEY))), -1,
              "Malloc for pkey failed\n");
-    HIP_IFEL(!memset(subject, 0, sizeof(subject)), -1,
-             "Failed to memset memory for subject\n");
     HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(issuer_hit_n)), -1,
              "Failed to memset memory for issuer\n");
     HIP_IFEL(!memset(subject_hit, '\0', sizeof(subject_hit)), -1,
@@ -1016,7 +1012,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *msg)
 {
     int err                    = 0;
     struct hip_cert_x509_resp verify;
-    struct hip_cert_x509_resp *p;
+    const struct hip_cert_x509_resp *p;
     X509 *cert                 = NULL;
     X509_STORE *store          = NULL;
     X509_STORE_CTX *verify_ctx = NULL;

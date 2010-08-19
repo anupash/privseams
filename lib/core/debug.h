@@ -410,7 +410,7 @@ void uint16_to_binstring(uint16_t val, char *buffer);
  */
 void uint32_to_binstring(uint32_t val, char *buffer);
 
-void hip_print_locator_addresses(struct hip_common *);
+void hip_print_locator_addresses(const struct hip_common *);
 void hip_print_peer_addresses_to_be_added(hip_ha_t *);
 void hip_print_peer_addresses(hip_ha_t *);
 void hip_print_locator(int debug_level,

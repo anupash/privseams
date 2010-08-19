@@ -385,7 +385,7 @@ out_err:
  *            written. Minimum buffer length is sizeof(struct hip_hit_t)
  * @return zero on successful match or non-zero otherwise
  */
-int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
+int hip_map_lsi_to_hit_from_hosts_files(const hip_lsi_t *lsi, hip_hit_t *hit)
 {
     int err = 0;
     uint8_t hostname[HOST_NAME_MAX];
@@ -479,7 +479,9 @@ out_err:
  * @param ip the resulting routable IP address if found
  * @return zero on successful match or non-zero otherwise
  */
-int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip)
+int hip_map_id_to_ip_from_hosts_files(const hip_hit_t *hit,
+                                      const hip_lsi_t *lsi,
+                                      struct in6_addr *ip)
 {
     int err = 0;
     uint8_t hostname[HOST_NAME_MAX];

@@ -603,9 +603,9 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg,
                            unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
                            uint32_t *hash_item_length)
 {
-    struct hip_tlv_common *param = NULL;
-    int hash_length              = 0, err = 0;
-    unsigned char *anchor        = NULL;
+    const struct hip_tlv_common *param = NULL;
+    int hash_length                    = 0, err = 0;
+    const unsigned char *anchor        = NULL;
     uint16_t i;
     *num_anchors        = 0;
     *esp_prot_transform = 0;
@@ -616,7 +616,7 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg,
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_ESP_PROT_TFM)),
              -1, "esp prot transform missing\n");
-    *esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
+    *esp_prot_transform = *((const uint8_t *) hip_get_param_contents_direct(param));
     HIP_DEBUG("esp protection transform is %u\n", *esp_prot_transform);
 
     // this parameter is only included, if the esp extension is used
@@ -627,12 +627,12 @@ int esp_prot_handle_sa_add_request(const struct hip_common *msg,
 
         HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_ITEM_LENGTH)),
                  -1, "transform suggests hash_item_length, but it is NOT included in msg\n");
-        *hash_item_length = *((uint32_t *) hip_get_param_contents_direct(param));
+        *hash_item_length = *((const uint32_t *) hip_get_param_contents_direct(param));
         HIP_DEBUG("esp protection item length: %u\n", *hash_item_length);
 
         HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                  -1, "transform suggests num_anchors, but it is NOT included in msg\n");
-        *num_anchors = *((uint16_t *) hip_get_param_contents_direct(param));
+        *num_anchors = *((const uint16_t *) hip_get_param_contents_direct(param));
         HIP_DEBUG("esp protection number of transferred anchors: %u\n", *num_anchors);
 
         HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),

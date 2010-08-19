@@ -53,6 +53,7 @@ int hip_exists_address_in_list(struct sockaddr *addr, int ifindex);
 
 void hip_copy_peer_addrlist_changed(hip_ha_t *ha);
 
-int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr);
+int hip_map_id_to_addr(const hip_hit_t *hit, const hip_lsi_t *lsi,
+                       struct in6_addr *addr);
 
 #endif /* HIP_HIPD_NETDEV_H */

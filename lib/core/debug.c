@@ -680,34 +680,37 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
  *
  * @param in_msg the message where the LOCATOR parameter is located
  */
-void hip_print_locator_addresses(struct hip_common *in_msg)
+void hip_print_locator_addresses(const struct hip_common *in_msg)
 {
-    struct hip_locator *locator;
-    struct hip_locator_info_addr_item *item   = NULL;
-    struct hip_locator_info_addr_item2 *item2 = NULL;
-    char *address_pointer;
+    const struct hip_locator *locator;
+    const struct hip_locator_info_addr_item *ptr    = NULL;
+    const struct hip_locator_info_addr_item *item   = NULL;
+    const struct hip_locator_info_addr_item2 *item2 = NULL;
+    const char *address_pointer;
 
-    locator = hip_get_param((struct hip_common *) in_msg,
-                            HIP_PARAM_LOCATOR);
+    locator = hip_get_param(in_msg, HIP_PARAM_LOCATOR);
     if (locator) {
-        address_pointer = (char *) (locator + 1);
+        address_pointer = (const char *) (locator + 1);
 
-        for (; address_pointer < ((char *) locator) + hip_get_param_contents_len(locator); ) {
-            if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-                item2            = (struct hip_locator_info_addr_item2 *) address_pointer;
-                HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item2->address);
-                HIP_DEBUG("Locator address offset is %d\n", address_pointer - (char *) (locator + 1));
+        for (; address_pointer < ((const char *) locator) +
+                                 hip_get_param_contents_len(locator); ) {
+            ptr = (const struct hip_locator_info_addr_item *) address_pointer;
+            if (ptr->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+                item2 = (const struct hip_locator_info_addr_item2 *)
+                        address_pointer;
+                HIP_DEBUG_HIT("LOCATOR", &item2->address);
+                HIP_DEBUG("Locator address offset is %d\n",
+                          address_pointer - (const char *) (locator + 1));
                 address_pointer += sizeof(struct hip_locator_info_addr_item2);
-            } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                       == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-                item             = (struct hip_locator_info_addr_item *) address_pointer;
-                HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item->address);
+            } else if (ptr->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+                item = (const struct hip_locator_info_addr_item *)
+                       address_pointer;
+                HIP_DEBUG_HIT("LOCATOR", &item->address);
                 address_pointer += sizeof(struct hip_locator_info_addr_item);
-            } else if (((struct hip_locator_info_addr_item *) address_pointer)->locator_type
-                       == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-                item             = (struct hip_locator_info_addr_item *) address_pointer;
-                HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *) &item->address);
+            } else if (ptr->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+                item = (const struct hip_locator_info_addr_item *)
+                       address_pointer;
+                HIP_DEBUG_HIT("LOCATOR", &item->address);
                 address_pointer += sizeof(struct hip_locator_info_addr_item);
             } else {
                 address_pointer += sizeof(struct hip_locator_info_addr_item);

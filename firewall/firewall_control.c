@@ -59,8 +59,8 @@
  */
 static int hip_handle_bex_state_update(struct hip_common *msg)
 {
-    struct in6_addr *src_hit     = NULL, *dst_hit = NULL;
-    struct hip_tlv_common *param = NULL;
+    const struct in6_addr *src_hit     = NULL, *dst_hit = NULL;
+    const struct hip_tlv_common *param = NULL;
     int err                      = 0, msg_type = 0;
 
     msg_type = hip_get_msg_type(msg);

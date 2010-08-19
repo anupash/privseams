@@ -766,8 +766,55 @@ static int hip_check_param_contents_len(const struct hip_common *msg,
  * @return              the next parameter after the current_param in @c msg, or
  *                      NULL if no parameters were found.
  */
-struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
-                                          const struct hip_tlv_common *current_param)
+const struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
+                                                const struct hip_tlv_common *current_param)
+{
+    const struct hip_tlv_common *next_param = NULL;
+    const uint8_t *pos                      = (const uint8_t *) current_param;
+
+    if (!msg) {
+        HIP_ERROR("msg null\n");
+        goto out;
+    }
+
+    if (current_param == NULL) {
+        pos = (const uint8_t *) msg;
+    }
+
+    if (pos == (const uint8_t *) msg) {
+        pos += sizeof(struct hip_common);
+    } else {
+        pos += hip_get_param_total_len(current_param);
+    }
+
+    next_param = (const struct hip_tlv_common *) pos;
+
+    /* check that the next parameter does not point
+     * a) outside of the message
+     * b) out of the buffer with check_param_contents_len()
+     * c) to an empty slot in the message */
+    if (((const char *) next_param) - ((const char *) msg) >=
+        hip_get_msg_total_len(msg) ||     /* a */
+        !hip_check_param_contents_len(msg, next_param) ||     /* b */
+        hip_get_param_contents_len(next_param) == 0) {        /* c */
+        next_param = NULL;
+    }
+
+out:
+    return next_param;
+}
+
+/**
+ * Iterate to the next parameter in the message
+ *
+ * @param msg           a pointer to the beginning of the message header
+ * @param current_param a pointer to the current parameter, or NULL if the msg
+ *                      is to be searched from the beginning.
+ * @return              the next parameter after the current_param in @c msg, or
+ *                      NULL if no parameters were found.
+ */
+struct hip_tlv_common *hip_get_next_param_readwrite(struct hip_common *msg,
+                                                    struct hip_tlv_common *current_param)
 {
     struct hip_tlv_common *next_param = NULL;
     uint8_t *pos                      = (uint8_t *) current_param;
@@ -816,7 +863,39 @@ out:
  *                   or NULL if no parameters of the type param_type were not
  *                   found.
  */
-void *hip_get_param(const struct hip_common *msg, hip_tlv_type_t param_type)
+const void *hip_get_param(const struct hip_common *msg,
+                          hip_tlv_type_t param_type)
+{
+    const void *matched                        = NULL;
+    const struct hip_tlv_common *current_param = NULL;
+
+    /** @todo Optimize: stop when next parameter's type is greater than the
+     *  searched one. */
+
+    while ((current_param = hip_get_next_param(msg, current_param))) {
+        if (hip_get_param_type(current_param) == param_type) {
+            matched = current_param;
+            break;
+        }
+    }
+
+    return matched;
+}
+
+/**
+ * Get the first parameter of the given type. If there are multiple
+ * parameters of the same type, one should use hip_get_next_param()
+ * after calling this function to iterate through them all.
+ *
+ * @param msg        a pointer to the beginning of the message header.
+ * @param param_type the type of the parameter to be searched from msg
+ *                   (in host byte order)
+ * @return           a pointer to the first parameter of the type param_type,
+ *                   or NULL if no parameters of the type param_type were not
+ *                   found.
+ */
+void *hip_get_param_readwrite(struct hip_common *msg,
+                              hip_tlv_type_t param_type)
 {
     void *matched                        = NULL;
     struct hip_tlv_common *current_param = NULL;
@@ -824,7 +903,7 @@ void *hip_get_param(const struct hip_common *msg, hip_tlv_type_t param_type)
     /** @todo Optimize: stop when next parameter's type is greater than the
      *  searched one. */
 
-    while ((current_param = hip_get_next_param(msg, current_param))
+    while ((current_param = hip_get_next_param_readwrite(msg, current_param))
            != NULL) {
         if (hip_get_param_type(current_param) == param_type) {
             matched = current_param;
@@ -847,10 +926,10 @@ void *hip_get_param(const struct hip_common *msg, hip_tlv_type_t param_type)
  *                   type @c param_type, or NULL if no parameters of type
  *                   @c param_type were found.
  */
-void *hip_get_param_contents(const struct hip_common *msg,
-                             hip_tlv_type_t param_type)
+const void *hip_get_param_contents(const struct hip_common *msg,
+                                   hip_tlv_type_t param_type)
 {
-    uint8_t *contents = hip_get_param(msg, param_type);
+    const uint8_t *contents = hip_get_param(msg, param_type);
     if (contents) {
         contents += sizeof(struct hip_tlv_common);
     }
@@ -864,9 +943,21 @@ void *hip_get_param_contents(const struct hip_common *msg,
  * @return pointer to the contents of the tlv_common (just after the
  *          the type and length fields)
  */
-void *hip_get_param_contents_direct(void *tlv_common)
+void *hip_get_param_contents_direct_readwrite(void *tlv_common)
 {
     return ((uint8_t *) tlv_common) + sizeof(struct hip_tlv_common);
+}
+
+/**
+ * hip_get_param_contents_direct - get parameter contents direct from TLV
+ *
+ * @param tlv_common pointer to a parameter
+ * @return pointer to the contents of the tlv_common (just after the
+ *          the type and length fields)
+ */
+const void *hip_get_param_contents_direct(const void *tlv_common)
+{
+    return ((const uint8_t *) tlv_common) + sizeof(struct hip_tlv_common);
 }
 
 /**
@@ -903,7 +994,7 @@ static void *hip_find_free_param(struct hip_common *msg)
         goto out;
     }
 
-    while ((current_param = hip_get_next_param(msg, current_param))
+    while ((current_param = hip_get_next_param_readwrite(msg, current_param))
            != NULL) {
         last_used_pos = current_param;
     }
@@ -1206,8 +1297,8 @@ static const char *hip_param_type_name(const hip_tlv_type_t param_type)
  */
 void hip_dump_msg(const struct hip_common *msg)
 {
-    struct hip_tlv_common *current_param = NULL;
-    uint8_t *contents                    = NULL;
+    const struct hip_tlv_common *current_param = NULL;
+    const uint8_t *contents                    = NULL;
     /* The value of the "Length"-field in current parameter. */
     hip_tlv_len_t len                    = 0;
     /* Total length of the parameter (type+length+value+padding), and the
@@ -1250,8 +1341,8 @@ void hip_dump_msg(const struct hip_common *msg)
  */
 int hip_check_userspace_msg(const struct hip_common *msg)
 {
-    struct hip_tlv_common *current_param = NULL;
-    int err                              = 0;
+    const struct hip_tlv_common *current_param = NULL;
+    int err                                    = 0;
 
     if (!hip_check_user_msg_len(msg)) {
         err = -EMSGSIZE;
@@ -1331,9 +1422,9 @@ static int hip_check_network_param_attributes(const struct hip_tlv_common *param
  */
 int hip_check_network_msg(const struct hip_common *msg)
 {
-    struct hip_tlv_common *current_param = NULL;
-    hip_tlv_type_t current_param_type    = 0, prev_param_type = 0;
-    int err                              = 0;
+    const struct hip_tlv_common *current_param = NULL;
+    hip_tlv_type_t current_param_type          = 0, prev_param_type = 0;
+    int err                                    = 0;
 
     /* Checksum of the message header is verified in input.c */
 
@@ -1755,8 +1846,8 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
                                 struct hip_common *msg_copy,
                                 struct hip_host_id *host_id)
 {
-    struct hip_tlv_common *param = NULL;
-    int err                      = 0;
+    const struct hip_tlv_common *param = NULL;
+    int err                            = 0;
 
     HIP_HEXDUMP("host id", host_id,
                 hip_get_param_total_len(host_id));
@@ -2048,7 +2139,7 @@ int hip_build_param_signature_contents(struct hip_common *msg,
  * @param request true if parameter is ECHO_REQUEST, otherwise parameter is ECHO_RESPONSE
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
+int hip_build_param_echo(struct hip_common *msg, const void *opaque, int len,
                          int sign, int request)
 {
     struct hip_echo_request ping;
@@ -2460,7 +2551,8 @@ int hip_build_param_challenge_response(struct hip_common *msg, struct hip_challe
  *
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
+int hip_build_param_solution(struct hip_common *msg,
+                             const struct hip_puzzle *pz,
                              uint64_t val_J)
 {
     struct hip_solution cookie;
@@ -2938,7 +3030,7 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg,
 int hip_build_param_esp_prot_branch(struct hip_common *msg,
                                     int anchor_offset,
                                     int branch_length,
-                                    unsigned char *branch_nodes)
+                                    const unsigned char *branch_nodes)
 {
     int err = 0;
     struct esp_prot_branch branch;
@@ -2981,7 +3073,7 @@ int hip_build_param_esp_prot_branch(struct hip_common *msg,
  */
 int hip_build_param_esp_prot_secret(struct hip_common *msg,
                                     int secret_length,
-                                    unsigned char *secret)
+                                    const unsigned char *secret)
 {
     int err = 0;
     struct esp_prot_secret esp_secret;
@@ -3270,7 +3362,7 @@ static void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hd
  * @param len the length of the hostname in bytes
  * @return zero on success and negative on error
  */
-int hip_get_param_host_id_di_type_len(struct hip_host_id *host,
+int hip_get_param_host_id_di_type_len(const struct hip_host_id *host,
                                       const char **id,
                                       int *len)
 {
@@ -3297,7 +3389,7 @@ int hip_get_param_host_id_di_type_len(struct hip_host_id *host,
  * @param hostid the host id parameter
  * @return a pointer to the hostname field
  */
-char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
+const char *hip_get_param_host_id_hostname(const struct hip_host_id *hostid)
 {
     return hostid->hostname;
 }

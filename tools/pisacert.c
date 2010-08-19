@@ -52,10 +52,10 @@
  */
 static int get_default_hit(struct in6_addr *result)
 {
-    int err                      = 0;
-    hip_common_t *msg            = NULL;
-    struct hip_tlv_common *param = NULL;
-    struct in6_addr *hit         = NULL;
+    int err                            = 0;
+    hip_common_t *msg                  = NULL;
+    const struct hip_tlv_common *param = NULL;
+    const struct in6_addr *hit         = NULL;
 
     msg = hip_msg_alloc();
     HIP_IFE(!msg, -1);

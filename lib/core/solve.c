@@ -55,8 +55,8 @@
  *       in improving this now.
  * @return The J that solves the puzzle is returned, or 0 to indicate an error.
  */
-uint64_t hip_solve_puzzle(void *puzzle_or_solution,
-                          struct hip_common *hdr,
+uint64_t hip_solve_puzzle(const void *puzzle_or_solution,
+                          const struct hip_common *hdr,
                           int mode)
 {
     uint64_t mask     = 0;
@@ -65,7 +65,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
     uint64_t digest   = 0;
     uint8_t cookie[48];
     int err           = 0;
-    union {
+    const union {
         struct hip_puzzle   pz;
         struct hip_solution sl;
     } *u;
@@ -82,7 +82,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
              " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
 
     mask = hton64((1ULL << u->pz.K) - 1);
-    memcpy(cookie, (uint8_t *) &(u->pz.I), sizeof(uint64_t));
+    memcpy(cookie, &u->pz.I, sizeof(uint64_t));
 
     HIP_DEBUG("(u->pz.I: 0x%llx\n", u->pz.I);
 

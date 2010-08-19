@@ -99,7 +99,7 @@
  * @note            Fix the packet len before calling this function!
  */
 static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
-                           uint8_t *hmac, void *hmac_key, int hmac_type)
+                           const uint8_t *hmac, void *hmac_key, int hmac_type)
 {
     int err = 0;
     uint8_t hmac_res[HIP_AH_SHA_LEN];
@@ -134,7 +134,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
 {
     int err               = 0, len = 0, orig_len = 0;
     struct hip_crypto_key tmpkey;
-    struct hip_hmac *hmac = NULL;
+    const struct hip_hmac *hmac = NULL;
     uint8_t orig_checksum      = 0;
 
     HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
@@ -150,7 +150,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
     orig_checksum = hip_get_msg_checksum(msg);
     hip_zero_msg_checksum(msg);
 
-    len           = (uint8_t *) hmac - (uint8_t *) msg;
+    len = (const uint8_t *) hmac - (const uint8_t *) msg;
     hip_set_msg_total_len(msg, len);
 
     memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
@@ -196,7 +196,7 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
                                    struct hip_host_id *host_id)
 {
     struct hip_crypto_key tmpkey;
-    struct hip_hmac *hmac;
+    const struct hip_hmac *hmac;
     struct hip_common *msg_copy = NULL;
     int err                     = 0;
 
@@ -244,26 +244,28 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     int auth_transf_length, esp_transf_length, we_are_HITg = 0;
     int hip_tfm, esp_tfm, err = 0, dh_shared_len = 1024;
     struct hip_keymat_keymat km;
-    struct hip_esp_info *esp_info;
-    char *keymat                     = NULL;
+    const struct hip_esp_info *esp_info;
+    char *keymat                       = NULL;
     size_t keymat_len_min; /* how many bytes we need at least for the KEYMAT */
     size_t keymat_len;     /* note SHA boundary */
-    struct hip_tlv_common *param     = NULL;
+    const struct hip_tlv_common *param = NULL;
     uint16_t esp_keymat_index, esp_default_keymat_index;
     struct hip_diffie_hellman *dhf;
-    struct in6_addr *plain_local_hit = NULL;
+    struct in6_addr *plain_local_hit   = NULL;
 
     /* Perform light operations first before allocating memory or
      * using lots of CPU time */
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
              -EINVAL,
              "Could not find HIP transform\n");
-    HIP_IFEL((hip_tfm = hip_select_hip_transform((struct hip_hip_transform *) param)) == 0,
+    HIP_IFEL((hip_tfm = hip_select_hip_transform(
+                               (const struct hip_hip_transform *) param)) == 0,
              -EINVAL, "Could not select HIP transform\n");
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_TRANSFORM)),
              -EINVAL,
              "Could not find ESP transform\n");
-    HIP_IFEL((esp_tfm = hip_select_esp_transform((struct hip_esp_transform *) param)) == 0,
+    HIP_IFEL((esp_tfm = hip_select_esp_transform(
+                               (const struct hip_esp_transform *) param)) == 0,
              -EINVAL, "Could not select proper ESP transform\n");
 
     hip_transf_length  = hip_transform_key_length(hip_tfm);
@@ -327,7 +329,8 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
 
     memset(dh_shared_key, 0, dh_shared_len);
 
-    HIP_IFEL(!(dhf = hip_get_param(ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
+    HIP_IFEL(!(dhf = hip_get_param_readwrite(ctx->input_msg, 
+                                             HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT,  "No Diffie-Hellman parameter found.\n");
 
     /* If the message has two DH keys, select (the stronger, usually) one. */
@@ -658,8 +661,8 @@ out_err:
 }
 
 //TODO doxygen header missing
-static int handle_locator(struct hip_locator *locator,
-                          hip_ha_t           *entry)
+static int handle_locator(const struct hip_locator *locator,
+                          hip_ha_t *entry)
 {
     int n_addrs = 0, loc_size = 0, err = 0;
 
@@ -696,8 +699,8 @@ int hip_check_r1(RVS const uint8_t packet_type,
 {
     int err = 0, mask = HIP_PACKET_CTRL_ANON, len;
     struct in6_addr daddr;
-    struct hip_host_id *peer_host_id  = NULL;
-    const char *str                         = NULL;
+    const struct hip_host_id *peer_host_id = NULL;
+    const char *str                        = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R1\n");
@@ -824,11 +827,11 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
 {
     int err                           = 0, retransmission = 0, written = 0;
     uint64_t solved_puzzle            = 0, I = 0;
-    struct hip_puzzle *pz             = NULL;
-    struct hip_diffie_hellman *dh_req = NULL;
-    struct hip_r1_counter *r1cntr     = NULL;
-    struct hip_dh_public_value *dhpv  = NULL;
-    struct hip_locator *locator       = NULL;
+    const struct hip_puzzle *pz             = NULL;
+    const struct hip_diffie_hellman *dh_req = NULL;
+    const struct hip_r1_counter *r1cntr     = NULL;
+    struct hip_dh_public_value *dhpv        = NULL;
+    const struct hip_locator *locator       = NULL;
     uint16_t i2_mask = 0;
 
     HIP_DEBUG("Received R1 in state %s\n", hip_state_str(ha_state));
@@ -882,7 +885,7 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     /* Solve puzzle: if this is a retransmission, we have to preserve
      * the old solution. */
     if (!retransmission) {
-        struct hip_puzzle *pz2 = NULL;
+        const struct hip_puzzle *pz2 = NULL;
 
         HIP_IFEL(!(pz2 = hip_get_param(ctx->input_msg, HIP_PARAM_PUZZLE)), -EINVAL,
                  "Malformed R1 packet. PUZZLE parameter missing\n");
@@ -1097,8 +1100,8 @@ int hip_handle_r2(RVS const uint8_t packet_type,
 {
     int err = 0, tfm = 0, retransmission = 0, idx = 0;
     uint32_t spi_recvd = 0, spi_in = 0;
-    struct hip_esp_info *esp_info   = NULL;
-    struct hip_locator *locator     = NULL;
+    const struct hip_esp_info *esp_info = NULL;
+    const struct hip_locator *locator   = NULL;
     struct hip_spi_out_item spi_out_data;
 
     if (ha_state == HIP_STATE_ESTABLISHED) {
@@ -1422,13 +1425,14 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
 {
     int err = 0, is_loopback = 0;
     uint16_t mask = HIP_PACKET_CTRL_ANON, crypto_len = 0;
-    char *tmp_enc = NULL, *enc = NULL;
-    unsigned char *iv = NULL;
-    struct hip_solution *solution     = NULL;
-    struct hip_dh_public_value *dhpv  = NULL;
-    struct hip_r1_counter *r1cntr     = NULL;
-    struct hip_hip_transform *hip_transform = NULL;
-    struct hip_host_id *host_id_in_enc      = NULL;
+    char *tmp_enc                                    = NULL;
+    const char *enc                                  = NULL;
+    unsigned char *iv                                = NULL;
+    const struct hip_solution *solution              = NULL;
+    struct hip_dh_public_value *dhpv                 = NULL;
+    const struct hip_r1_counter *r1cntr              = NULL;
+    const struct hip_hip_transform *hip_transform    = NULL;
+    struct hip_host_id *host_id_in_enc               = NULL;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2\n");
     hip_perf_start_benchmark(perf_set, PERF_I2);
@@ -1555,7 +1559,8 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     enc = hip_get_param(ctx->input_msg, HIP_PARAM_ENCRYPTED);
     if (enc == NULL) {
         HIP_DEBUG("ENCRYPTED parameter missing from I2 packet\n");
-        host_id_in_enc = hip_get_param(ctx->input_msg, HIP_PARAM_HOST_ID);
+        host_id_in_enc = hip_get_param_readwrite(ctx->input_msg,
+                                                 HIP_PARAM_HOST_ID);
         HIP_IFEL(!host_id_in_enc, -1, "No host id in i2");
     } else {
         /* Little workaround...
@@ -1729,14 +1734,14 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
 {
     int err = 0, retransmission = 0;
     uint32_t spi_out = 0;
-    struct hip_esp_info *esp_info           = NULL;
+    const struct hip_esp_info *esp_info     = NULL;
     hip_transform_suite_t esp_tfm;
     struct hip_spi_in_item spi_in_data;
-    struct hip_locator *locator             = NULL;
+    const struct hip_locator *locator       = NULL;
     int if_index                            = 0;
     struct sockaddr_storage ss_addr;
     struct sockaddr *addr                   = NULL;
-    struct hip_esp_transform *esp_tf = NULL;
+    const struct hip_esp_transform *esp_tf  = NULL;
     struct hip_spi_out_item spi_out_data;
 
     /* Get the interface index of the network device which has our
@@ -1966,13 +1971,13 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
                       struct hip_packet_context *ctx)
 {
     int err = 0;
-    struct hip_tlv_common *current_param  = NULL;
-    struct hip_notification *notification = NULL;
+    const struct hip_tlv_common *current_param  = NULL;
+    const struct hip_notification *notification = NULL;
     struct in6_addr responder_ip, responder_hit;
-    hip_tlv_type_t param_type             = 0, response;
-    hip_tlv_len_t param_len               = 0;
-    uint16_t msgtype                      = 0;
-    in_port_t port                        = 0;
+    hip_tlv_type_t param_type                   = 0, response;
+    hip_tlv_len_t param_len                     = 0;
+    uint16_t msgtype                            = 0;
+    in_port_t port                              = 0;
 
     /* Loop through all the parameters in the received packet. */
     while ((current_param =
@@ -1982,7 +1987,7 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
         if (param_type == HIP_PARAM_NOTIFICATION) {
             HIP_INFO("Found NOTIFICATION parameter in NOTIFY " \
                      "packet.\n");
-            notification = (struct hip_notification *) current_param;
+            notification = (const struct hip_notification *) current_param;
 
             param_len    = hip_get_param_contents_len(current_param);
             msgtype      = ntohs(notification->msgtype);
@@ -2052,9 +2057,9 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
                          "RVS_NAT.\n");
 
                 /* responder_hit is not currently used. */
-                ipv6_addr_copy(&responder_hit, (struct in6_addr *)
+                ipv6_addr_copy(&responder_hit, (const struct in6_addr *)
                                notification->data);
-                ipv6_addr_copy(&responder_ip, (struct in6_addr *)
+                ipv6_addr_copy(&responder_ip, (const struct in6_addr *)
                                &(notification->
                                  data[sizeof(struct in6_addr)]));
                 memcpy(&port, &(notification->

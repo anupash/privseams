@@ -219,11 +219,11 @@ int hip_handle_user_msg(hip_common_t *msg,
                         struct sockaddr_in6 *src,
                         int *send_response)
 {
-    hip_hit_t *src_hit           = NULL, *dst_hit = NULL;
-    hip_ha_t *entry              = NULL;
-    int err                      = 0, msg_type = 0, n = 0, reti = 0;
-    int access_ok                = 0, is_root = 0;
-    struct hip_tlv_common *param = NULL;
+    const hip_hit_t *src_hit           = NULL, *dst_hit = NULL;
+    hip_ha_t *entry                    = NULL;
+    int err                            = 0, msg_type = 0, n = 0, reti = 0;
+    int access_ok                      = 0, is_root = 0;
+    const struct hip_tlv_common *param = NULL;
 
     HIP_ASSERT(src->sin6_family == AF_INET6);
     HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -379,7 +379,7 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_TRANSFORM_ORDER:
     {
         err = 0;
-        struct hip_transformation_order *transorder;
+        const struct hip_transformation_order *transorder;
         HIP_IFEL(!(transorder = hip_get_param(msg, HIP_PARAM_TRANSFORM_ORDER)), -1,
                  "no transform order struct found (should contain transform order)\n");
         HIP_DEBUG("Transform order received from hipconf: %d\n", transorder->transorder);
@@ -395,13 +395,13 @@ int hip_handle_user_msg(hip_common_t *msg,
          * the hip daemon wants either to register to a server for
          * additional services or it wants to cancel a registration.
          * Cancellation is identified with a zero lifetime. */
-        struct hip_reg_request *reg_req    = NULL;
-        hip_pending_request_t *pending_req = NULL;
-        uint8_t *reg_types                 = NULL;
-        struct in6_addr *dst_ip                 = NULL;
-        int i                              = 0, type_count = 0;
-        int opp_mode                       = 0;
-        int add_to_global                  = 0;
+        const struct hip_reg_request *reg_req = NULL;
+        hip_pending_request_t *pending_req    = NULL;
+        const uint8_t *reg_types              = NULL;
+        const struct in6_addr *dst_ip         = NULL;
+        int i                                 = 0, type_count = 0;
+        int opp_mode                          = 0;
+        int add_to_global                     = 0;
         struct sockaddr_in6 sock_addr6;
         struct sockaddr_in sock_addr;
         struct in6_addr server_addr, hitr;
@@ -849,7 +849,7 @@ int hip_handle_user_msg(hip_common_t *msg,
         break;
     case HIP_MSG_SET_NAT_PORT:
     {
-        struct hip_port_info *nat_port;
+        const struct hip_port_info *nat_port;
 
         nat_port = hip_get_param(msg, HIP_PARAM_LOCAL_NAT_PORT);
         if (nat_port) {
@@ -885,8 +885,9 @@ int hip_handle_user_msg(hip_common_t *msg,
     {
         err = 0;
         struct hip_hit_to_ip_set *name_info;
-        HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_HIT_TO_IP_SET)), -1,
-                 "no name struct found\n");
+        HIP_IFEL(!(name_info = hip_get_param_readwrite(msg, 
+                                                     HIP_PARAM_HIT_TO_IP_SET)),
+                 -1, "no name struct found\n");
         HIP_DEBUG("Name in name_info %s\n", name_info->name);
         int name_len = strlen(name_info->name);
         if (name_len >= 1) {
@@ -918,8 +919,8 @@ int hip_handle_user_msg(hip_common_t *msg,
         break;
     case HIP_MSG_MAP_ID_TO_ADDR:
     {
-        struct in6_addr *id = NULL;
-        hip_hit_t *hit      = NULL;
+        const struct in6_addr *id = NULL;
+        const hip_hit_t *hit      = NULL;
         hip_lsi_t lsi;
         struct in6_addr addr;
 
@@ -957,7 +958,7 @@ int hip_handle_user_msg(hip_common_t *msg,
         break;
     case HIP_MSG_LSI_TO_HIT:
     {
-        hip_lsi_t *lsi;
+        const hip_lsi_t *lsi;
         hip_ha_t *ha;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1);

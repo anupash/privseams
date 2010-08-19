@@ -415,7 +415,8 @@ static int hip_get_pending_request_count(hip_ha_t *entry)
  */
 
 static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
-                                       uint8_t *reg_types, int type_count,
+                                       const uint8_t *reg_types,
+                                       int type_count,
                                        uint8_t accepted_requests[],
                                        uint8_t accepted_lifetimes[],
                                        int *accepted_count, uint8_t refused_requests[],
@@ -574,7 +575,8 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
  * @return                   zero on success, -1 otherwise.
  * @see                      hip_del_registration_client().
  */
-static int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
+static int hip_del_registration_server(hip_ha_t *entry,
+                                       const uint8_t *reg_types,
                                        int type_count, uint8_t accepted_requests[],
                                        int *accepted_count, uint8_t refused_requests[],
                                        uint8_t failure_types[], int *refused_count)
@@ -697,7 +699,8 @@ static int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
  * @see                       hip_add_registration_server().
  */
 static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
-                                       uint8_t *reg_types, int type_count)
+                                       const uint8_t *reg_types,
+                                       int type_count)
 {
     int i          = 0;
     time_t seconds = 0;
@@ -786,7 +789,8 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
  * @return                   zero on success, -1 otherwise.
  * @see                      hip_del_registration_client().
  */
-static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
+static int hip_del_registration_client(hip_ha_t *entry,
+                                       const uint8_t *reg_types,
                                        int type_count)
 {
     int i = 0;
@@ -862,11 +866,11 @@ static int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
                               hip_common_t *target_msg)
 {
-    struct hip_reg_info *reg_info = NULL;
-    uint8_t *reg_types            = NULL;
-    unsigned int type_count       = 0;
+    const struct hip_reg_info *reg_info = NULL;
+    const uint8_t *reg_types            = NULL;
+    unsigned int type_count             = 0;
     unsigned int i;
-    int err                       = 0;
+    int err                             = 0;
 
     reg_info = hip_get_param(source_msg, HIP_PARAM_REG_INFO);
 
@@ -1003,7 +1007,7 @@ out_err:
  * @return            zero if there are no duplicate values, -1 otherwise.
  */
 
-static int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
+static int hip_has_duplicate_services(const uint8_t *reg_types, int type_count)
 {
     if (reg_types == NULL || type_count <= 0) {
         return -1;
@@ -1060,8 +1064,8 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
                                  hip_common_t *target_msg)
 {
     int err                             = 0, type_count = 0, accepted_count = 0, refused_count = 0;
-    struct hip_reg_request *reg_request = NULL;
-    uint8_t *reg_types                  = NULL;
+    const struct hip_reg_request *reg_request = NULL;
+    const uint8_t *reg_types                  = NULL;
     /* Arrays for storing the type reg_types of the accepted and refused
      * request types. */
     uint8_t *accepted_requests          = NULL, *accepted_lifetimes = NULL;
@@ -1089,7 +1093,7 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
     /* Allocate memory for types */
 
     /* Get a pointer to the actual registration types. */
-    reg_types = (uint8_t *) hip_get_param_contents_direct(reg_request) +
+    reg_types = (const uint8_t *) hip_get_param_contents_direct(reg_request) +
                 sizeof(reg_request->lifetime);
 
     HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, " \
@@ -1210,8 +1214,8 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 {
     int err                               = 0, type_count = 0;
-    struct hip_reg_response *reg_response = NULL;
-    uint8_t *reg_types                    = NULL;
+    const struct hip_reg_response *reg_response = NULL;
+    const uint8_t *reg_types                    = NULL;
 
     reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
 
@@ -1225,7 +1229,7 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 
     type_count = hip_get_param_contents_len(reg_response) -
                  sizeof(reg_response->lifetime);
-    reg_types  = (uint8_t *) hip_get_param_contents_direct(reg_response) +
+    reg_types  = (const uint8_t *) hip_get_param_contents_direct(reg_response) +
                  sizeof(reg_response->lifetime);
 
     if (reg_response->lifetime == 0) {
@@ -1302,8 +1306,8 @@ static int hip_get_registration_failure_string(uint8_t failure_type,
 int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 {
     int err                           = 0, type_count = 0, i = 0;
-    struct hip_reg_failed *reg_failed = NULL;
-    uint8_t *reg_types                = NULL;
+    const struct hip_reg_failed *reg_failed = NULL;
+    const uint8_t *reg_types                = NULL;
     char reason[256];
 
     reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
@@ -1320,7 +1324,7 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
     while (hip_get_param_type(reg_failed) == HIP_PARAM_REG_FAILED) {
         type_count = hip_get_param_contents_len(reg_failed) -
                      sizeof(reg_failed->failure_type);
-        reg_types  = (uint8_t *) hip_get_param_contents_direct(reg_failed) +
+        reg_types  = (const uint8_t *) hip_get_param_contents_direct(reg_failed) +
                      sizeof(reg_failed->failure_type);
         hip_get_registration_failure_string(reg_failed->failure_type,
                                             reason);
@@ -1378,8 +1382,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
         /* Iterate to the next parameter and break the loop if there are
          * no more parameters left. */
         i          = 0;
-        reg_failed = (struct hip_reg_failed *)
-                     hip_get_next_param(msg, (hip_tlv_common_t *) reg_failed);
+        reg_failed = (const struct hip_reg_failed *) hip_get_next_param(msg,
+                                        (const hip_tlv_common_t *) reg_failed);
 
         if (reg_failed == NULL) {
             break;
@@ -1402,8 +1406,8 @@ out_err:
  */
 int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg)
 {
-    int err                    = 0;
-    struct hip_reg_from *rfrom = NULL;
+    int err                          = 0;
+    const struct hip_reg_from *rfrom = NULL;
 
     HIP_DEBUG("Checking msg for REG_FROM parameter.\n");
     rfrom = hip_get_param(msg, HIP_PARAM_REG_FROM);

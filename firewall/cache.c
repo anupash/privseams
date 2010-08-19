@@ -120,10 +120,11 @@ static fw_cache_hl_t *hip_firewall_cache_hadb_match(const void *local,
                                                     fw_cache_query_type_t type)
 {
     int err = 0;
-    fw_cache_hl_t *ha_match              = NULL;
-    fw_cache_hl_t *ha_curr               = NULL;
-    struct hip_common *msg               = NULL;
-    struct hip_tlv_common *current_param = NULL;
+    fw_cache_hl_t *ha_ret                      = NULL;
+    const fw_cache_hl_t *ha_match              = NULL;
+    const fw_cache_hl_t *ha_curr               = NULL;
+    struct hip_common *msg                     = NULL;
+    const struct hip_tlv_common *current_param = NULL;
 
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
     hip_msg_init(msg);
@@ -154,7 +155,7 @@ static fw_cache_hl_t *hip_firewall_cache_hadb_match(const void *local,
     }
 
     if (ha_match) {
-        ha_match = firewall_add_new_entry(ha_match);
+        ha_ret = firewall_add_new_entry(ha_match);
     }
 
 out_err:
@@ -163,7 +164,7 @@ out_err:
         free(msg);
     }
 
-    return ha_match;
+    return ha_ret;
 }
 
 /**

@@ -106,9 +106,9 @@ void anchor_db_uninit(void)
  */
 int anchor_db_update(const struct hip_common *msg)
 {
-    struct hip_tlv_common *param = NULL;
-    unsigned char *anchor        = NULL;
-    int err                      = 0, i, j;
+    const struct hip_tlv_common *param = NULL;
+    const unsigned char *anchor        = NULL;
+    int err                            = 0, i, j;
     uint8_t esp_transforms[MAX_NUM_TRANSFORMS];
 
     HIP_ASSERT(msg != NULL);
@@ -131,17 +131,20 @@ int anchor_db_update(const struct hip_common *msg)
         // don't set up anything for UNUSED transform
         for (i = 0; i < esp_prot_num_transforms - 1; i++) {
             // needed for redirection to correct slot in anchor_db
-            esp_transforms[i] = *(uint8_t *) hip_get_param_contents_direct(param);
+            esp_transforms[i] = *(const uint8_t *) 
+                                hip_get_param_contents_direct(param);
             HIP_DEBUG("esp_transform is %u\n", esp_transforms[i]);
 
             HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                      -1, "parameter missing in user-message from fw\n");
-            anchor_db.num_anchors[esp_transforms[i]] = *(int *) hip_get_param_contents_direct(param);
+            anchor_db.num_anchors[esp_transforms[i]] = *(const int *)
+                                          hip_get_param_contents_direct(param);
             HIP_DEBUG("num_anchors is %i\n", anchor_db.num_anchors[esp_transforms[i]]);
 
             HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                      -1, "parameter missing in user-message from fw\n");
-            anchor_db.anchor_lengths[esp_transforms[i]] = *(int *) hip_get_param_contents_direct(param);
+            anchor_db.anchor_lengths[esp_transforms[i]] = *(const int *)
+                                          hip_get_param_contents_direct(param);
             HIP_DEBUG("anchor_length is %i\n", anchor_db.anchor_lengths[esp_transforms[i]]);
 
             HIP_IFEL(!(param = hip_get_next_param(msg, param)),
@@ -164,8 +167,8 @@ int anchor_db_update(const struct hip_common *msg)
 
                 HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                          -1, "parameter missing in user-message from fw\n");
-                anchor_db.hash_item_length[esp_transforms[i]] = *(int *)
-                                                                hip_get_param_contents_direct(param);
+                anchor_db.hash_item_length[esp_transforms[i]] = *(const int *)
+                                          hip_get_param_contents_direct(param);
                 HIP_DEBUG("adding hash_item_length: %i\n",
                           anchor_db.hash_item_length[esp_transforms[i]]);
 

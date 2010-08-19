@@ -74,7 +74,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit);
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
 void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
-int hip_init_peer(hip_ha_t *entry, struct hip_host_id *peer);
+int hip_init_peer(hip_ha_t *entry, const struct hip_host_id *peer);
 int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our);
 
 
@@ -87,9 +87,9 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
 
 int hip_add_peer_map(const struct hip_common *input);
 
-int hip_hadb_add_peer_info(hip_hit_t *hit,
-                           struct in6_addr *addr,
-                           hip_lsi_t *peer_lsi,
+int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
+                           const struct in6_addr *peer_addr,
+                           const hip_lsi_t *peer_lsi,
                            const char *peer_hostname);
 
 int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
@@ -119,13 +119,14 @@ void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
 
 int hip_count_open_connections(void);
 
-hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
+hip_ha_t *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *,
+                                            const hip_hit_t *);
 
 int hip_handle_get_ha_info(hip_ha_t *entry, void *);
 
 /*lsi support functions*/
 int hip_generate_peer_lsi(hip_lsi_t *lsi);
-hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
+hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
 
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,

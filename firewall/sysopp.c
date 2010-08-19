@@ -205,9 +205,9 @@ int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx,
 int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg)
 {
     int err = 0, state;
-    hip_hit_t *local_hit, *peer_hit;
-    struct in6_addr *peer_addr;
-    struct in6_addr *local_addr;
+    const hip_hit_t *local_hit, *peer_hit;
+    const struct in6_addr *peer_addr;
+    const struct in6_addr *local_addr;
 
     local_hit  = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
     peer_hit   = hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);

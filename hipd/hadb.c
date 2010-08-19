@@ -560,8 +560,10 @@ out_err:
  * @param peer_hostname an optional host name for the remote host
  * @return zero on success or negative on error
  */
-int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
-                           hip_lsi_t *peer_lsi, const char *peer_hostname)
+int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
+                           const struct in6_addr *peer_addr,
+                           const hip_lsi_t *peer_lsi,
+                           const char *peer_hostname)
 {
     int err = 0;
     struct hip_peer_map_info peer_map;
@@ -618,22 +620,18 @@ out_err:
  */
 int hip_add_peer_map(const struct hip_common *input)
 {
-    struct in6_addr *hit = NULL, *ip = NULL;
-    hip_lsi_t *lsi       = NULL;
-    char *peer_hostname  = NULL;
-    int err              = 0;
+    const struct in6_addr *hit = NULL, *ip = NULL;
+    const hip_lsi_t *lsi       = NULL;
+    const char *peer_hostname  = NULL;
+    int err                    = 0;
 
-    hit           = (struct in6_addr *)
-                    hip_get_param_contents(input, HIP_PARAM_HIT);
+    hit           = hip_get_param_contents(input, HIP_PARAM_HIT);
 
-    lsi           = (hip_lsi_t *)
-                    hip_get_param_contents(input, HIP_PARAM_LSI);
+    lsi           = hip_get_param_contents(input, HIP_PARAM_LSI);
 
-    ip            = (struct in6_addr *)
-                    hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
+    ip            = hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
 
-    peer_hostname = (char *)
-                    hip_get_param_contents(input, HIP_PARAM_HOSTNAME);
+    peer_hostname = hip_get_param_contents(input, HIP_PARAM_HOSTNAME);
 
     if (!ip && (!lsi || !hit)) {
         HIP_ERROR("handle async map: no ip and maybe no lsi or hit\n");
@@ -965,7 +963,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
  * @return zero on success and negative on error
  */
 int hip_init_peer(hip_ha_t *entry,
-                  struct hip_host_id *peer)
+                  const struct hip_host_id *peer)
 {
     int err = 0;
     int len = hip_get_param_total_len(peer);
@@ -1334,8 +1332,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
  *                   a matching host association was not found.
  * @author           Miika Komu
  */
-hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
-                                            hip_hit_t *rvs_ip)
+hip_ha_t *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_hit,
+                                            const hip_hit_t *rvs_ip)
 {
     int i            = 0;
     hip_ha_t *this   = NULL, *result = NULL;
@@ -1478,7 +1476,7 @@ hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_ds
  * @param lsi_dst the remote LSI
  * @return the HADB entry or NULL if not found
  */
-hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi_dst)
+hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi_dst)
 {
     hip_list_t *item, *aux;
     hip_ha_t *tmp;

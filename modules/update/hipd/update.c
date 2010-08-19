@@ -115,7 +115,7 @@ int hip_create_locators(hip_common_t *locator_msg,
     HIP_IFEL(hip_build_locators_old(locator_msg),
              -1,
              "Failed to build locators\n");
-    loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
+    loc = hip_get_param_readwrite(locator_msg, HIP_PARAM_LOCATOR);
     hip_print_locator_addresses(locator_msg);
     *locators = hip_get_locator_first_addr_item(loc);
 
@@ -167,12 +167,12 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
                                  struct hip_locator_info_addr_item *locators,
                                  int type)
 {
-    int err                               = 0;
-    uint32_t esp_info_old_spi             = 0, esp_info_new_spi = 0;
-    uint16_t mask                         = 0;
-    struct hip_seq *seq                   = NULL;
-    struct hip_echo_request *echo_request = NULL;
-    struct update_state *localstate       = NULL;
+    int err                                     = 0;
+    uint32_t esp_info_old_spi                   = 0, esp_info_new_spi = 0;
+    uint16_t mask                               = 0;
+    const struct hip_seq *seq                   = NULL;
+    const struct hip_echo_request *echo_request = NULL;
+    struct update_state *localstate             = NULL;
 
     HIP_DEBUG("Creating the UPDATE packet\n");
 
@@ -313,10 +313,10 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
         HIP_DEBUG("echo opaque data len=%d\n",
                   hip_get_param_contents_len(echo_request));
         HIP_HEXDUMP("ECHO_REQUEST ",
-                    (uint8_t *) echo_request + sizeof(struct hip_tlv_common),
+                    (const uint8_t *) echo_request + sizeof(struct hip_tlv_common),
                     hip_get_param_contents_len(echo_request));
         HIP_IFEL(hip_build_param_echo(update_packet_to_send,
-                                      (uint8_t *) echo_request + sizeof(struct hip_tlv_common),
+                                      (const uint8_t *) echo_request + sizeof(struct hip_tlv_common),
                                       hip_get_param_contents_len(echo_request), 1, 0),
                  -1, "Building of ECHO_RESPONSE failed\n");
     }
@@ -698,13 +698,15 @@ static int hip_handle_first_update_packet(hip_common_t *received_update_packet,
     struct hip_locator *locator = NULL;
     struct hip_esp_info *esp_info = NULL;
 
-    locator = hip_get_param(received_update_packet, HIP_PARAM_LOCATOR);
+    locator = hip_get_param_readwrite(received_update_packet,
+                                      HIP_PARAM_LOCATOR);
     err     = hip_handle_locator_parameter(ha, src_addr, locator);
     if (err) {
         goto out_err;
     }
 
-    esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
+    esp_info = hip_get_param_readwrite(received_update_packet,
+                                       HIP_PARAM_ESP_INFO);
     ha->spi_outbound_new = ntohl(esp_info->new_spi);
 
     // Randomize the echo response opaque data before sending ECHO_REQUESTS.
@@ -743,7 +745,7 @@ static void hip_handle_second_update_packet(hip_common_t *received_update_packet
                                             struct in6_addr *src_addr,
                                             struct in6_addr *dst_addr)
 {
-    struct hip_esp_info *esp_info = NULL;
+    const struct hip_esp_info *esp_info = NULL;
 
     hip_send_update_to_one_peer(received_update_packet,
                                 ha,
@@ -874,7 +876,7 @@ static int hip_update_check_packet(UNUSED const uint8_t packet_type,
 {
     int err = 0;
     unsigned int has_esp_info = 0;
-    struct hip_esp_info *esp_info = NULL;
+    const struct hip_esp_info *esp_info = NULL;
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_UPDATE\n");
         hip_perf_start_benchmark(perf_set, PERF_UPDATE);
@@ -942,14 +944,14 @@ static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
                                     struct hip_packet_context *ctx)
 {
     int err = 0, same_seq = 0;
-    unsigned int ack_peer_update_id         = 0;
-    unsigned int seq_update_id              = 0;
-    struct hip_seq *seq                     = NULL;
-    struct hip_ack *ack                     = NULL;
-    struct hip_locator *locator             = NULL;
-    struct hip_echo_request *echo_request   = NULL;
-    struct hip_echo_response *echo_response = NULL;
-    struct update_state *localstate         = NULL;
+    unsigned int ack_peer_update_id               = 0;
+    unsigned int seq_update_id                    = 0;
+    const struct hip_seq *seq                     = NULL;
+    const struct hip_ack *ack                     = NULL;
+    const struct hip_locator *locator             = NULL;
+    const struct hip_echo_request *echo_request   = NULL;
+    const struct hip_echo_response *echo_response = NULL;
+    struct update_state *localstate               = NULL;
 
     /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
      * the implementation MAY reply with an ICMP Parameter Problem. */

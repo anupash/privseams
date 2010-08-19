@@ -37,7 +37,7 @@
 
 #include "lib/core/protodefs.h"
 
-int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval);
+int hip_hit_to_ip(const hip_hit_t *hit, struct in6_addr *retval);
 
 void hip_set_hit_to_ip_status(const int status);
 int hip_get_hit_to_ip_status(void);

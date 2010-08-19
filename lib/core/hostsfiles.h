@@ -32,10 +32,10 @@
 
 #include "protodefs.h"
 
-int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
+int hip_map_lsi_to_hit_from_hosts_files(const hip_lsi_t *lsi, hip_hit_t *hit);
 int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi);
-int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit,
-                                      hip_lsi_t *lsi,
+int hip_map_id_to_ip_from_hosts_files(const hip_hit_t *hit,
+                                      const hip_lsi_t *lsi,
                                       struct in6_addr *ip);
 int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname);
 int hip_host_file_info_exists_lsi(hip_lsi_t *lsi);

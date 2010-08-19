@@ -115,9 +115,9 @@ out_err:
  */
 int esp_prot_send_light_update(hip_ha_t *entry,
                                const int anchor_offset[],
-                               unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS],
+                               const unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS],
                                const int secret_length[],
-                               unsigned char *branch_nodes[MAX_NUM_PARALLEL_HCHAINS],
+                               const unsigned char *branch_nodes[MAX_NUM_PARALLEL_HCHAINS],
                                const int branch_length[])
 {
     hip_common_t *light_update = NULL;
@@ -218,12 +218,12 @@ int esp_prot_handle_light_update(UNUSED const uint8_t packet_type,
                                  UNUSED const uint32_t ha_state,
                                  struct hip_packet_context *ctx)
 {
-    struct hip_seq *seq = NULL;
-    struct hip_ack *ack = NULL;
-    uint32_t seq_no     = 0;
-    uint32_t ack_no     = 0;
-    uint32_t spi        = 0;
-    int err             = 0;
+    const struct hip_seq *seq = NULL;
+    const struct hip_ack *ack = NULL;
+    uint32_t seq_no           = 0;
+    uint32_t ack_no           = 0;
+    uint32_t spi              = 0;
+    int err                   = 0;
 
     HIP_IFEL(!ctx->hadb_entry, -1,
               "No entry in host association database when receiving " \

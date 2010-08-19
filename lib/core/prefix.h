@@ -47,7 +47,7 @@ typedef uint32_t hip_closest_prefix_type_t;
 
 int ipv6_addr_is_hit(const struct in6_addr *hit);
 int ipv6_addr_is_teredo(const struct in6_addr *teredo);
-int ipv6_addr_is_null(struct in6_addr *ip);
+int ipv6_addr_is_null(const struct in6_addr *ip);
 int hit_is_real_hit(const struct in6_addr *hit);
 int hit_is_opportunistic_hit(const struct in6_addr *hit);
 void set_hit_prefix(struct in6_addr *hit);
@@ -74,9 +74,9 @@ void ipv6_addr_copy(struct in6_addr *a1,
                     const struct in6_addr *a2);
 int ipv6_addr_any(const struct in6_addr *a);
 void hip_copy_in6addr_null_check(struct in6_addr *to,
-                                 struct in6_addr *from);
+                                 const struct in6_addr *from);
 void hip_copy_inaddr_null_check(struct in_addr *to,
-                                struct in_addr *from);
+                                const struct in_addr *from);
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 

@@ -688,7 +688,8 @@ out_err:
  * @note Either HIT or LSI must be given. If both are given, the HIT is preferred.
  * @todo move this to some other file (this file contains local IP address management, not remote)
  */
-int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr)
+int hip_map_id_to_addr(const hip_hit_t *hit, const hip_lsi_t *lsi,
+                       struct in6_addr *addr)
 {
     int err      = -1, skip_namelookup = 0; /* Assume that resolving fails */
     hip_hit_t hit2;
@@ -772,12 +773,12 @@ out_err:
  *       will be used as a last resort.
  * @todo move this function to some other file
  */
-static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
-                                  hip_hit_t *dst_hit,
-                                  hip_lsi_t *src_lsi,
-                                  hip_lsi_t *dst_lsi,
-                                  struct in6_addr *src_addr,
-                                  struct in6_addr *dst_addr)
+static int hip_netdev_trigger_bex(const hip_hit_t *src_hit_in,
+                                  const hip_hit_t *dst_hit_in,
+                                  const hip_lsi_t *src_lsi_in,
+                                  const hip_lsi_t *dst_lsi_in,
+                                  const struct in6_addr *src_addr_in,
+                                  const struct in6_addr *dst_addr_in)
 {
     int err = 0, if_index = 0, is_ipv4_locator;
     int reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status;
@@ -788,6 +789,8 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
     int is_loopback = 0;
     hip_lsi_t dlsi, slsi;
     struct in6_addr dhit, shit, saddr, dst6_lsi;
+    struct in6_addr *src_hit, *dst_hit, *src_addr, *dst_addr;
+    struct in_addr *src_lsi, *dst_lsi;
     struct in6_addr daddr;
     struct sockaddr_storage ss_addr;
     struct sockaddr *addr;
@@ -801,13 +804,13 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
     addr          = (struct sockaddr *) &ss_addr;
 
     /* Make sure that dst_hit is not a NULL pointer */
-    hip_copy_in6addr_null_check(&dhit, dst_hit);
+    hip_copy_in6addr_null_check(&dhit, dst_hit_in);
     dst_hit       = &dhit;
     HIP_DEBUG_HIT("dst hit", dst_hit);
 
     /* Make sure that src_hit is not a NULL pointer */
-    hip_copy_in6addr_null_check(&shit, src_hit);
-    if (!src_hit) {
+    hip_copy_in6addr_null_check(&shit, src_hit_in);
+    if (!src_hit_in) {
         hip_get_default_hit(&shit);
     }
     src_hit = &shit;
@@ -815,29 +818,29 @@ static int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 
     /* Initialize mapped format of dst lsi before pointer
      * changes just below */
-    if (dst_lsi) {
-        IPV4_TO_IPV6_MAP(dst_lsi, &dst6_lsi);
+    if (dst_lsi_in) {
+        IPV4_TO_IPV6_MAP(dst_lsi_in, &dst6_lsi);
     } else {
         memset(&dst6_lsi, 0, sizeof(dst6_lsi));
     }
 
     /* Make sure that dst_lsi is not a NULL pointer */
-    hip_copy_inaddr_null_check(&dlsi, dst_lsi);
+    hip_copy_inaddr_null_check(&dlsi, dst_lsi_in);
     dst_lsi = &dlsi;
     HIP_DEBUG_LSI("dst lsi", dst_lsi);
 
     /* Make sure that src_lsi is not a NULL pointer */
-    hip_copy_inaddr_null_check(&slsi, src_lsi);
+    hip_copy_inaddr_null_check(&slsi, src_lsi_in);
     src_lsi = &slsi;
     HIP_DEBUG_LSI("src lsi", src_lsi);
 
     /* Make sure that dst_addr is not a NULL pointer */
-    hip_copy_in6addr_null_check(&daddr, dst_addr);
+    hip_copy_in6addr_null_check(&daddr, dst_addr_in);
     dst_addr = &daddr;
     HIP_DEBUG_IN6ADDR("dst addr", dst_addr);
 
     /* Make sure that src_addr is not a NULL pointer */
-    hip_copy_in6addr_null_check(&saddr, src_addr);
+    hip_copy_in6addr_null_check(&saddr, src_addr_in);
     src_addr = &saddr;
     HIP_DEBUG_IN6ADDR("src addr", src_addr);
 
@@ -1067,10 +1070,10 @@ out_err:
  */
 int hip_netdev_trigger_bex_msg(const struct hip_common *msg)
 {
-    hip_hit_t *our_hit        = NULL, *peer_hit  = NULL;
-    hip_lsi_t *our_lsi        = NULL, *peer_lsi  = NULL;
-    struct in6_addr *our_addr = NULL, *peer_addr = NULL;
-    struct hip_tlv_common *param;
+    const hip_hit_t *our_hit        = NULL, *peer_hit  = NULL;
+    const hip_lsi_t *our_lsi        = NULL, *peer_lsi  = NULL;
+    const struct in6_addr *our_addr = NULL, *peer_addr = NULL;
+    const struct hip_tlv_common *param;
     int err                   = 0;
 
     HIP_DUMP_MSG(msg);

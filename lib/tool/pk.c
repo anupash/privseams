@@ -140,12 +140,13 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
 
     origlen = hip_get_msg_total_len(msg);
     if (hip_get_msg_type(msg) == HIP_R1) {
-        HIP_IFEL(!(sig = hip_get_param(msg, HIP_PARAM_HIP_SIGNATURE2)),
+        HIP_IFEL(!(sig = hip_get_param_readwrite(msg,
+                                                 HIP_PARAM_HIP_SIGNATURE2)),
                  -ENOENT, "Could not find signature2\n");
 
         memset(&msg->hitr, 0, sizeof(struct in6_addr));
 
-        HIP_IFEL(!(pz = hip_get_param(msg, HIP_PARAM_PUZZLE)),
+        HIP_IFEL(!(pz = hip_get_param_readwrite(msg, HIP_PARAM_PUZZLE)),
                  -ENOENT, "Illegal R1 packet (puzzle missing)\n");
         memcpy(opaque, pz->opaque, sizeof(pz->opaque));
         randi = pz->I;
@@ -153,7 +154,7 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
         memset(pz->opaque, 0, sizeof(pz->opaque));
         pz->I = 0;
     } else {
-        HIP_IFEL(!(sig = hip_get_param(msg, HIP_PARAM_HIP_SIGNATURE)),
+        HIP_IFEL(!(sig = hip_get_param_readwrite(msg, HIP_PARAM_HIP_SIGNATURE)),
                  -ENOENT, "Could not find signature\n");
     }
 

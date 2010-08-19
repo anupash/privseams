@@ -468,8 +468,8 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
     char buf_after[80];
     char present_issuer[41];
     char present_subject[41];
-    struct hip_common *msg              = NULL;
-    struct hip_cert_spki_info *returned = NULL;
+    struct hip_common *msg                    = NULL;
+    const struct hip_cert_spki_info *returned = NULL;
 
     /* Malloc needed */
     tmp_issuer  = malloc(128);
@@ -654,7 +654,7 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *to_verificatio
 {
     int err = 0;
     struct hip_common *msg;
-    struct hip_cert_spki_info *returned;
+    const struct hip_cert_spki_info *returned;
 
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "Malloc for msg failed\n");
@@ -703,7 +703,7 @@ int hip_cert_x509v3_request_certificate(struct in6_addr *subject,
 {
     int err = 0;
     struct hip_common *msg;
-    struct hip_cert_x509_resp *p;
+    const struct hip_cert_x509_resp *p;
 
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "Malloc for msg failed\n");
@@ -746,7 +746,7 @@ int hip_cert_x509v3_request_verification(unsigned char *certificate, int len)
 {
     int err = 0;
     struct hip_common *msg;
-    struct hip_cert_x509_resp *received;
+    const struct hip_cert_x509_resp *received;
 
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "Malloc for msg failed\n");

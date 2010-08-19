@@ -380,15 +380,15 @@ static int hip_sa_entry_set(hip_sa_entry_t *entry,
                             int direction,
                             uint32_t spi,
                             uint32_t mode,
-                            struct in6_addr *src_addr,
-                            struct in6_addr *dst_addr,
-                            struct in6_addr *inner_src_addr,
-                            struct in6_addr *inner_dst_addr,
+                            const struct in6_addr *src_addr,
+                            const struct in6_addr *dst_addr,
+                            const struct in6_addr *inner_src_addr,
+                            const struct in6_addr *inner_dst_addr,
                             uint8_t encap_mode,
                             uint16_t src_port,
                             uint16_t dst_port,
-                            int ealg, struct hip_crypto_key *auth_key,
-                            struct hip_crypto_key *enc_key,
+                            int ealg, const struct hip_crypto_key *auth_key,
+                            const struct hip_crypto_key *enc_key,
                             uint64_t lifetime, uint8_t esp_prot_transform,
                             uint32_t hash_item_length,
                             uint16_t esp_num_anchors,
@@ -533,16 +533,16 @@ out_err:
 static int hip_sa_entry_update(int direction,
                                uint32_t spi,
                                uint32_t mode,
-                               struct in6_addr *src_addr,
-                               struct in6_addr *dst_addr,
-                               struct in6_addr *inner_src_addr,
-                               struct in6_addr *inner_dst_addr,
+                               const struct in6_addr *src_addr,
+                               const struct in6_addr *dst_addr,
+                               const struct in6_addr *inner_src_addr,
+                               const struct in6_addr *inner_dst_addr,
                                uint8_t encap_mode,
                                uint16_t src_port,
                                uint16_t dst_port,
                                int ealg,
-                               struct hip_crypto_key *auth_key,
-                               struct hip_crypto_key *enc_key,
+                               const struct hip_crypto_key *auth_key,
+                               const struct hip_crypto_key *enc_key,
                                uint64_t lifetime,
                                uint8_t esp_prot_transform,
                                uint32_t hash_item_length,
@@ -628,12 +628,18 @@ static void hip_sa_entry_free(hip_sa_entry_t *entry)
  * @return                  0 on success, else -1
  */
 static int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
-                            struct in6_addr *src_addr, struct in6_addr *dst_addr,
-                            struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
-                            uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-                            int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-                            uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
-                            uint16_t esp_num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
+                            const struct in6_addr *src_addr,
+                            const struct in6_addr *dst_addr,
+                            const struct in6_addr *inner_src_addr,
+                            const struct in6_addr *inner_dst_addr,
+                            uint8_t encap_mode, uint16_t src_port,
+                            uint16_t dst_port,
+                            int ealg, const struct hip_crypto_key *auth_key,
+                            const struct hip_crypto_key *enc_key,
+                            uint64_t lifetime, uint8_t esp_prot_transform,
+                            uint32_t hash_item_length,
+                            uint16_t esp_num_anchors,
+                            unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
                             int update)
 {
     hip_sa_entry_t *entry = NULL;
@@ -787,17 +793,22 @@ int hip_sadb_uninit(void)
  * @return                  0 on success, else -1
  */
 int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
-                 struct in6_addr *src_addr, struct in6_addr *dst_addr,
-                 struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+                 const struct in6_addr *src_addr,
+                 const struct in6_addr *dst_addr,
+                 const struct in6_addr *inner_src_addr,
+                 const struct in6_addr *inner_dst_addr,
                  uint8_t encap_mode, uint16_t local_port, uint16_t peer_port,
-                 int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
-                 uint64_t lifetime, uint8_t esp_prot_transform, uint32_t hash_item_length,
-                 uint16_t esp_num_anchors, unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
+                 int ealg, const struct hip_crypto_key *auth_key,
+                 const struct hip_crypto_key *enc_key,
+                 uint64_t lifetime, uint8_t esp_prot_transform,
+                 uint32_t hash_item_length,
+                 uint16_t esp_num_anchors,
+                 unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
                  UNUSED int retransmission, int update)
 {
-    int err                          = 0;
-    struct in6_addr *check_local_hit = NULL;
-    struct in6_addr *default_hit     = NULL;
+    int err                                = 0;
+    const struct in6_addr *check_local_hit = NULL;
+    struct in6_addr *default_hit           = NULL;
     in_port_t src_port, dst_port;
 
     /* TODO handle retransmission correctly */
@@ -848,7 +859,7 @@ out_err:
  * @param spi spi   number of the entry
  * @return          -1, if error occurred, else 0
  */
-int hip_sadb_delete(struct in6_addr *dst_addr, uint32_t spi)
+int hip_sadb_delete(const struct in6_addr *dst_addr, uint32_t spi)
 {
     hip_sa_entry_t *entry = NULL;
     int err               = 0;

@@ -672,7 +672,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 {
     int err = 0;
     struct in6_addr phit, dst_ip, our_hit, our_addr;
-    struct in6_addr *ptr;
+    const struct in6_addr *ptr;
     hip_ha_t *ha;
 
     ptr = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);

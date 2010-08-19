@@ -250,12 +250,12 @@ const char *hipconf_usage =
 static int hip_get_hits(hip_common_t *msg, const char *opt,
                         UNUSED int optc, int send_only)
 {
-    int err                              = 0;
-    struct hip_tlv_common *current_param = NULL;
-    struct hip_hit_info *data;
-    struct in_addr *deflsi               = NULL;
-    struct in6_addr *defhit                   = NULL;
-    hip_tlv_type_t param_type            = 0;
+    int err                                    = 0;
+    const struct hip_tlv_common *current_param = NULL;
+    const struct hip_hit_info *data;
+    const struct in_addr *deflsi               = NULL;
+    const struct in6_addr *defhit              = NULL;
+    hip_tlv_type_t param_type                  = 0;
     char hit_s[INET6_ADDRSTRLEN], lsi_s[INET_ADDRSTRLEN];
 
     if (strcmp(opt, "all") == 0) {
@@ -356,10 +356,10 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg,
                                       UNUSED int optc,
                                       int send_only)
 {
-    int err                      = 0;
-    struct hip_tlv_common *param = NULL;
-    struct hip_hit_info *data;
-    hip_common_t *msg_tmp        = NULL;
+    int err                            = 0;
+    const struct hip_tlv_common *param = NULL;
+    const struct hip_hit_info *data;
+    hip_common_t *msg_tmp              = NULL;
 
     msg_tmp = hip_msg_alloc();
     HIP_IFEL(!msg_tmp, -ENOMEM, "Malloc for msg_tmp failed\n");
@@ -453,7 +453,7 @@ out_err:
  * @param ha hip_hadb_user_info_state (partial information of hadb)
  * @return zero for success and negative on error
  */
-static int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
+static int hip_conf_print_info_ha(const struct hip_hadb_user_info_state *ha)
 {
     HIP_INFO("HA is %s\n", hip_state_str(ha->state));
     if (ha->shotgun_status == HIP_MSG_SHOTGUN_ON) {
@@ -1626,7 +1626,7 @@ static int hip_conf_handle_locator(hip_common_t *msg, UNUSED int action,
                                    const char *opt[], UNUSED int optc, int send_only)
 {
     int err                     = 0, status = 0;
-    struct hip_locator *locator = NULL;
+    const struct hip_locator *locator = NULL;
 
     if (!strcmp("on", opt[0])) {
         status = HIP_MSG_SET_LOCATOR_ON;
@@ -1671,10 +1671,11 @@ static int hip_conf_handle_puzzle(hip_common_t *msg,
                                   int optc,
                                   int send_only)
 {
-    int err = 0, ret = 0, msg_type = 0, all, *diff = NULL, newVal = 0;
+    int err = 0, ret = 0, msg_type = 0, all, newVal = 0;
+    const int *diff                                 = NULL;
     hip_hit_t hit, all_zero_hit;
-    struct hip_tlv_common *current_param = NULL;
-    hip_tlv_type_t param_type            = 0;
+    const struct hip_tlv_common *current_param      = NULL;
+    hip_tlv_type_t param_type                       = 0;
     char hit_s[INET6_ADDRSTRLEN];
 
     memset(&hit, 0, sizeof(hip_hit_t));
@@ -1886,8 +1887,8 @@ static int hip_conf_handle_get_peer_lsi(hip_common_t *msg,
 {
     int err = 0;
     hip_hit_t hit;
-    hip_tlv_common_t *param;
-    hip_lsi_t *lsi;
+    const hip_tlv_common_t *param;
+    const hip_lsi_t *lsi;
     char lsi_str[INET_ADDRSTRLEN];
     const char *hit_str = opt[0];
 
@@ -2043,8 +2044,9 @@ static int hip_conf_handle_ha(hip_common_t *msg,
                               int optc,
                               int send_only)
 {
-    struct hip_tlv_common *current_param = NULL;
-    int err                              = 0;
+    const struct hip_tlv_common *current_param = NULL;
+    const struct hip_hadb_user_info_state *ha;
+    int err                                    = 0;
     struct in6_addr hit1;
 
     HIP_IFEL(optc > 1, -1, "Too many arguments\n");
@@ -2056,8 +2058,7 @@ static int hip_conf_handle_ha(hip_common_t *msg,
              "send recv daemon info\n");
 
     while ((current_param = hip_get_next_param(msg, current_param))) {
-        struct hip_hadb_user_info_state *ha =
-            hip_get_param_contents_direct(current_param);
+        ha = hip_get_param_contents_direct(current_param);
 
         if (!strcmp("all", opt[0])) {
             hip_conf_print_info_ha(ha);
@@ -2364,9 +2365,9 @@ static int hip_conf_handle_map_id_to_addr(struct hip_common *msg,
     int err = 0;
     struct in6_addr hit;
     struct in_addr lsi;
-    struct in6_addr *ip;
+    const struct in6_addr *ip;
     struct in_addr ip4;
-    struct hip_tlv_common *param = NULL;
+    const struct hip_tlv_common *param = NULL;
     char addr_str[INET6_ADDRSTRLEN];
 
     if (inet_pton(AF_INET6, opt[0], &hit) != 1) {
@@ -2498,8 +2499,8 @@ static int hip_conf_handle_lsi_to_hit(struct hip_common *msg,
 {
     int err                      = 0;
     hip_lsi_t lsi;
-    struct in6_addr *hit;
-    struct hip_tlv_common *param = NULL;
+    const struct in6_addr *hit;
+    const struct hip_tlv_common *param = NULL;
 
     HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1, "inet_pton()\n");
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_LSI_TO_HIT, 0), -1,

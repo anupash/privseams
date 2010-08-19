@@ -519,11 +519,11 @@ out_err:
  */
 int hip_handle_add_local_hi(const struct hip_common *input)
 {
-    int err                                = 0;
-    struct hip_host_id_priv *host_identity = NULL;
+    int err                                      = 0;
+    const struct hip_host_id_priv *host_identity = NULL;
     struct hip_lhi lhi;
-    struct hip_tlv_common *param           = NULL;
-    struct hip_eid_endpoint *eid_endpoint  = NULL;
+    const struct hip_tlv_common *param           = NULL;
+    const struct hip_eid_endpoint *eid_endpoint  = NULL;
     struct in6_addr in6_lsi;
     hip_lsi_t lsi;
 
@@ -544,7 +544,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
         }
         HIP_DEBUG("host id found in the msg\n");
 
-        eid_endpoint  = (struct hip_eid_endpoint *) param;
+        eid_endpoint = (const struct hip_eid_endpoint *) param;
 
         HIP_IFEL(!eid_endpoint, -ENOENT, "No host endpoint in input\n");
 
@@ -600,13 +600,12 @@ out_err:
  */
 int hip_handle_del_local_hi(const struct hip_common *input)
 {
-    struct in6_addr *hit;
+    const struct in6_addr *hit;
     struct hip_lhi lhi;
     char buf[46];
     int err = 0;
 
-    hit = (struct in6_addr *)
-          hip_get_param_contents(input, HIP_PARAM_HIT);
+    hit = hip_get_param_contents(input, HIP_PARAM_HIT);
     HIP_IFEL(!hit, -ENODATA, "no hit\n");
 
     hip_in6_ntop(hit, buf);

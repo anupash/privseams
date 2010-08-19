@@ -78,7 +78,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *,
                                             uint8_t,
                                             void *,
                                             hip_tlv_len_t);
-int hip_build_param_echo(struct hip_common *, void *, int, int, int);
+int hip_build_param_echo(struct hip_common *, const void *, int, int, int);
 int hip_build_param_eid_endpoint(struct hip_common *,
                                  const struct endpoint_hip *);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *,
@@ -147,7 +147,7 @@ int hip_build_param_signature_contents(struct hip_common *,
                                        hip_tlv_len_t,
                                        uint8_t);
 int hip_build_param_solution(struct hip_common *,
-                             struct hip_puzzle *,
+                             const struct hip_puzzle *,
                              uint64_t);
 
 int hip_build_param_challenge_response(struct hip_common *,
@@ -198,14 +198,19 @@ struct hip_locator_info_addr_item
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
 hip_hdr_type_t hip_get_msg_type(const struct hip_common *);
-struct hip_tlv_common *hip_get_next_param(const struct hip_common *,
-                                          const struct hip_tlv_common *);
-void *hip_get_param(const struct hip_common *, hip_tlv_type_t);
-void *hip_get_param_contents(const struct hip_common *, hip_tlv_type_t);
-void *hip_get_param_contents_direct(void *);
+const struct hip_tlv_common *hip_get_next_param(const struct hip_common *,
+                                                const struct hip_tlv_common *);
+struct hip_tlv_common *hip_get_next_param_readwrite(struct hip_common *,
+                                                    struct hip_tlv_common *);
+const void *hip_get_param(const struct hip_common *, hip_tlv_type_t);
+void *hip_get_param_readwrite(struct hip_common *, hip_tlv_type_t);
+const void *hip_get_param_contents(const struct hip_common *, hip_tlv_type_t);
+const void *hip_get_param_contents_direct(const void *);
+void *hip_get_param_contents_direct_readwrite(void *);
 hip_tlv_len_t hip_get_param_contents_len(const void *);
-int hip_get_param_host_id_di_type_len(struct hip_host_id *, const char **, int *);
-char *hip_get_param_host_id_hostname(struct hip_host_id *);
+int hip_get_param_host_id_di_type_len(const struct hip_host_id *,
+                                      const char **, int *);
+const char *hip_get_param_host_id_hostname(const struct hip_host_id *);
 hip_tlv_len_t hip_get_param_total_len(const void *);
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *);
 hip_tlv_type_t hip_get_param_type(const void *);
@@ -264,10 +269,10 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg,
 int hip_build_param_esp_prot_branch(struct hip_common *msg,
                                     int anchor_offset,
                                     int branch_length,
-                                    unsigned char *branch_nodes);
+                                    const unsigned char *branch_nodes);
 int hip_build_param_esp_prot_secret(struct hip_common *msg,
                                     int secret_length,
-                                    unsigned char *secret);
+                                    const unsigned char *secret);
 int hip_build_param_esp_prot_root(struct hip_common *msg,
                                   uint8_t root_length,
                                   unsigned char *root);

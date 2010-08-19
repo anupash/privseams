@@ -589,11 +589,11 @@ static int hip_fw_uninit_system_based_opp_mode(void)
  */
 static int hip_query_default_local_hit_from_hipd(void)
 {
-    int err                      = 0;
-    struct hip_common *msg       = NULL;
-    struct hip_tlv_common *param = NULL;
-    hip_hit_t *hit               = NULL;
-    hip_lsi_t *lsi               = NULL;
+    int err                            = 0;
+    struct hip_common *msg             = NULL;
+    const struct hip_tlv_common *param = NULL;
+    const hip_hit_t *hit               = NULL;
+    const hip_lsi_t *lsi               = NULL;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEFAULT_HIT, 0), -1,

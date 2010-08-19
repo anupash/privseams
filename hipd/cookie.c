@@ -96,8 +96,8 @@ static int hip_set_cookie_difficulty(int k)
  */
 int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    int err            = 0, diff = 0;
-    hip_hit_t *dst_hit = NULL;
+    int err                  = 0, diff = 0;
+    const hip_hit_t *dst_hit = NULL;
     hip_hit_t all_zero_hit;
     bzero(&all_zero_hit, sizeof(all_zero_hit));
 
@@ -121,8 +121,9 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
  */
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    int err = 0, *newVal = NULL;
-    hip_hit_t *dst_hit = NULL;
+    int err                  = 0;
+    const int *newVal        = NULL;
+    const hip_hit_t *dst_hit = NULL;
     hip_hit_t all_zero_hit;
     bzero(&all_zero_hit, sizeof(all_zero_hit));
 
@@ -322,16 +323,16 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
  *                 otherwise.
  */
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
-                      hip_common_t *hdr, struct hip_solution *solution)
+                      hip_common_t *hdr, const struct hip_solution *solution)
 {
     /* In a effort to conform the HIPL coding convention, the return value
      * of this function was inverted. I.e. This function now returns
      * negative for error conditions, zero otherwise. It used to be the
      * other way around. -Lauri 23.07.2008. */
-    struct hip_puzzle *puzzle     = NULL;
-    struct hip_r1entry *result    = NULL;
-    struct hip_host_id_entry *hid = NULL;
-    int err                       = 0;
+    const struct hip_puzzle *puzzle = NULL;
+    struct hip_r1entry *result      = NULL;
+    struct hip_host_id_entry *hid   = NULL;
+    int err                         = 0;
 
     /* Find the proper R1 table */
     HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(

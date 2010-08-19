@@ -56,12 +56,12 @@
  */
 int hip_userspace_ipsec_activate(const struct hip_common *msg)
 {
-    struct hip_tlv_common *param = NULL;
-    int err                      = 0, activate = 0;
+    const struct hip_tlv_common *param = NULL;
+    int err                            = 0, activate = 0;
 
     // process message and store anchor elements in the db
     param    = hip_get_param(msg, HIP_PARAM_INT);
-    activate = *((int *) hip_get_param_contents_direct(param));
+    activate = *((const int *) hip_get_param_contents_direct(param));
 
     // set global variable
     hip_use_userspace_ipsec = activate;

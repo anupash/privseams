@@ -147,7 +147,7 @@ static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, char *hostname, cons
  * @return              0 on success, -1 otherwise
  */
 
-int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval)
+int hip_hit_to_ip(const hip_hit_t *hit, struct in6_addr *retval)
 {
     struct addrinfo *rp     = NULL; // no C99 :(
     char hit_to_ip_hostname[64 + HIT_TO_IP_ZONE_MAX_LEN + 1];
