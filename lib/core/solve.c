@@ -159,12 +159,11 @@ out_err:
  */
 int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
 {
-    struct hip_challenge_request *pz;
+    const struct hip_challenge_request *pz;
     struct hip_puzzle tmp;
     uint64_t solution;
     int err = 0;
     uint8_t digist[HIP_AH_SHA_LEN];
-
 
     pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
     while (pz) {
@@ -188,8 +187,8 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
         HIP_IFEL(hip_build_param_challenge_response(out, pz, ntoh64(solution)) < 0,
                  -1,
                  "Error while creating solution_m reply parameter\n");
-        pz = (struct hip_challenge_request *) hip_get_next_param(in,
-                                                                 (struct hip_tlv_common *) pz);
+        pz = (const struct hip_challenge_request *)
+             hip_get_next_param(in, (const struct hip_tlv_common *) pz);
     }
 
 out_err:

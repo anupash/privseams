@@ -2510,7 +2510,8 @@ int hip_build_param_challenge_request(struct hip_common *msg,
  *
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_challenge_response(struct hip_common *msg, struct hip_challenge_request *pz,
+int hip_build_param_challenge_response(struct hip_common *msg,
+                                       const struct hip_challenge_request *pz,
                                        uint64_t val_J)
 {
     struct hip_challenge_response cookie;

@@ -151,7 +151,7 @@ int hip_build_param_solution(struct hip_common *,
                              uint64_t);
 
 int hip_build_param_challenge_response(struct hip_common *,
-                                       struct hip_challenge_request *,
+                                       const struct hip_challenge_request *,
                                        uint64_t);
 
 int hip_build_param(struct hip_common *, const void *);

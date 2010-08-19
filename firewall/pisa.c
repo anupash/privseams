@@ -221,7 +221,7 @@ static struct hip_challenge_response *pisa_check_challenge_response(
     pisa_append_hmac(&hip->hits, &hip->hitr, 0, &hash[0], 4);
     pisa_append_hmac(&hip->hits, &hip->hitr, 1, &hash[1], 4);
 
-    response =  hip_get_param(hip, HIP_PARAM_CHALLENGE_RESPONSE);
+    response =  hip_get_param_readwrite(hip, HIP_PARAM_CHALLENGE_RESPONSE);
 
     while (response) {
         /* loop over all HIP_PARAM_CHALLENGE_RESPONSE */
@@ -236,7 +236,8 @@ static struct hip_challenge_response *pisa_check_challenge_response(
         }
 
         response = (struct hip_challenge_response *)
-                hip_get_next_param(hip, (struct hip_tlv_common *) response);
+                   hip_get_next_param_readwrite(hip,
+                                           (struct hip_tlv_common *) response);
     }
 
     return NULL;
@@ -251,7 +252,7 @@ static struct hip_challenge_response *pisa_check_challenge_response(
 static int pisa_check_certificate(hip_fw_context_t *ctx)
 {
     struct hip_common *hip = ctx->transport_hdr.hip;
-    struct hip_cert *cert;
+    const struct hip_cert *cert;
     struct hip_cert_spki_info ci;
     struct pisa_cert pc;
     char *buf              = NULL;
