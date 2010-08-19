@@ -75,7 +75,7 @@ AC_SUBST(AM_CFLAGS, "-std=c99 -Wall -Wextra -Werror")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wredundant-decls -Wdisabled-optimization")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wundef -Wstrict-prototypes -Wmissing-prototypes")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-deprecated-declarations -Wpointer-arith")
-AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings -Wshadow -Winline")
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings -Wshadow -Winline -Wcast-qual")
 
 
 #TODO fix the code and get rid of this one
@@ -83,20 +83,6 @@ AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -fno-strict-aliasing")
 
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
-
-
-# The flags below should be converted into errors once all warnings are fixed.
-AC_ARG_ENABLE(gcc-warn,
-               AS_HELP_STRING([--enable-gcc-warn],
-                              [enables additional compiler warnings (default is YES)]),
-               [ac_cv_use_gcc_warn=$enableval],
-               [ac_cv_use_gcc_warn=yes])
-AC_CACHE_CHECK([whether to use gcc-warn],
-               [ac_cv_use_gcc_warn],
-               [ac_cv_use_gcc_warn=yes])
-if test x"$ac_cv_use_gcc_warn" = x"yes"; then
-    AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wcast-qual -Wno-error=cast-qual")
-fi
 
 AC_ARG_ENABLE(firewall,
                AS_HELP_STRING([--enable-firewall],
