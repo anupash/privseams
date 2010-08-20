@@ -247,7 +247,7 @@ vpath %.h $(srcdir)
 # when creating specific objects that may depend on version.h directly.
 BUILT_SOURCES = version.h
 $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
-	bzr version-info $(srcdir) --custom --template="#define BZR_REVISION \"{revno}\"\n#define BZR_DATE \"{date}\"\n#define BZR_BRANCH \"{branch_nick}\"\n" > $@
+	bzr version-info $(srcdir) --custom --template='#define BZR_REVISION "{revno}"\n#define BZR_DATE "{date}"\n#define BZR_BRANCH "{branch_nick}"\n' > $@
 
 
 # The complete doc/ subdirectory is in EXTRA_DIST, so files that should
