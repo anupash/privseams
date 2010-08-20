@@ -187,9 +187,9 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
                           &ha->hit_peer);
 
     // Add ESP_INFO
-    if (type == HIP_UPDATE_LOCATOR
-            || type == HIP_UPDATE_ECHO_REQUEST
-            || type == HIP_UPDATE_ESP_ANCHOR_ACK) {
+    if (type == HIP_UPDATE_LOCATOR      ||
+        type == HIP_UPDATE_ECHO_REQUEST ||
+        type == HIP_UPDATE_ESP_ANCHOR_ACK) {
         // Handle SPI numbers
         esp_info_old_spi = ha->spi_inbound_current;
         esp_info_new_spi = ha->spi_inbound_current;
@@ -197,7 +197,8 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
         HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
                   esp_info_old_spi, esp_info_new_spi);
 
-        HIP_IFEL(hip_build_param_esp_info(update_packet_to_send, ha->current_keymat_index,
+        HIP_IFEL(hip_build_param_esp_info(update_packet_to_send,
+                                          ha->current_keymat_index,
                                           esp_info_old_spi, esp_info_new_spi),
                  -1, "Building of ESP_INFO param failed\n");
     }
@@ -229,9 +230,9 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
 #endif
 
     // Add SEQ
-    if (type == HIP_UPDATE_LOCATOR
-            || type == HIP_UPDATE_ECHO_REQUEST
-            || type == HIP_UPDATE_ESP_ANCHOR) {
+    if (type == HIP_UPDATE_LOCATOR      ||
+        type == HIP_UPDATE_ECHO_REQUEST ||
+        type == HIP_UPDATE_ESP_ANCHOR) {
 
         localstate = lmod_get_state_item(ha->hip_modular_state, "update");
         localstate->update_id_out++;
@@ -246,14 +247,16 @@ static int hip_create_update_msg(hip_common_t *received_update_packet,
     }
 
     // Add ACK
-    if (type == HIP_UPDATE_ECHO_REQUEST
-            || type == HIP_UPDATE_ECHO_RESPONSE
-            || type == HIP_UPDATE_ESP_ANCHOR_ACK) {
+    if (type == HIP_UPDATE_ECHO_REQUEST  ||
+        type == HIP_UPDATE_ECHO_RESPONSE ||
+        type == HIP_UPDATE_ESP_ANCHOR_ACK) {
         HIP_IFEL(!(seq = hip_get_param(received_update_packet,
-                                       HIP_PARAM_SEQ)), -1, "SEQ not found\n");
+                                       HIP_PARAM_SEQ)),
+                 -1, "SEQ not found\n");
 
         HIP_IFEL(hip_build_param_ack(update_packet_to_send,
-                                     ntohl(seq->update_id)), -1, "Building of ACK failed\n");
+                                     ntohl(seq->update_id)),
+                 -1, "Building of ACK failed\n");
     }
 
     if (type == HIP_UPDATE_ESP_ANCHOR) {
@@ -493,8 +496,8 @@ int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
 
     HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
              "Out of memory while allocation memory for the update packet\n");
-    err = hip_create_update_msg(received_update_packet, ha, update_packet_to_send,
-                                locators, type);
+    err = hip_create_update_msg(received_update_packet, ha,
+                                update_packet_to_send, locators, type);
     if (err) {
         goto out_err;
     }

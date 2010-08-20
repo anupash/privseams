@@ -577,9 +577,12 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
  */
 static int hip_del_registration_server(hip_ha_t *entry,
                                        const uint8_t *reg_types,
-                                       int type_count, uint8_t accepted_requests[],
-                                       int *accepted_count, uint8_t refused_requests[],
-                                       uint8_t failure_types[], int *refused_count)
+                                       int type_count,
+                                       uint8_t accepted_requests[],
+                                       int *accepted_count,
+                                       uint8_t refused_requests[],
+                                       uint8_t failure_types[],
+                                       int *refused_count)
 {
     int err = 0, i = 0;
     hip_relrec_t dummy, *fetch_record = NULL;
