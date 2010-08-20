@@ -276,6 +276,7 @@ void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
             socketfd = ((struct socketfd*) iter->ptr)->fd;
 
             if (FD_ISSET(socketfd, read_fdset)) {
+                ctx->error = 0;
                 ((struct socketfd*) iter->ptr)->func_ptr(ctx);
             }
         }
