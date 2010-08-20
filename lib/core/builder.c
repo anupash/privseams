@@ -903,8 +903,7 @@ void *hip_get_param_readwrite(struct hip_common *msg,
     /** @todo Optimize: stop when next parameter's type is greater than the
      *  searched one. */
 
-    while ((current_param = hip_get_next_param_readwrite(msg, current_param))
-           != NULL) {
+    while ((current_param = hip_get_next_param_readwrite(msg, current_param))) {
         if (hip_get_param_type(current_param) == param_type) {
             matched = current_param;
             break;
@@ -994,8 +993,7 @@ static void *hip_find_free_param(struct hip_common *msg)
         goto out;
     }
 
-    while ((current_param = hip_get_next_param_readwrite(msg, current_param))
-           != NULL) {
+    while ((current_param = hip_get_next_param_readwrite(msg, current_param))) {
         last_used_pos = current_param;
     }
 
@@ -1313,7 +1311,7 @@ void hip_dump_msg(const struct hip_common *msg)
     HIP_DEBUG("Msg err:        %d\n", hip_get_msg_err(msg));
     HIP_DEBUG("Msg controls:   0x%04x\n", msg->control);
 
-    while ((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+    while ((current_param = hip_get_next_param(msg, current_param))) {
         len       = hip_get_param_contents_len(current_param);
         /* Formula from base draft section 5.2.1. */
         total_len = 11 + len - (len + 3) % 8;
@@ -1350,8 +1348,7 @@ int hip_check_userspace_msg(const struct hip_common *msg)
         goto out;
     }
 
-    while ((current_param = hip_get_next_param(msg, current_param))
-           != NULL) {
+    while ((current_param = hip_get_next_param(msg, current_param))) {
         if (!hip_check_param_contents_len(msg, current_param)) {
             err = -EMSGSIZE;
             HIP_ERROR("bad param len\n");
@@ -1442,8 +1439,7 @@ int hip_check_network_msg(const struct hip_common *msg)
     }
 
     /* Checking of param types, lengths and ordering. */
-    while ((current_param = hip_get_next_param(msg, current_param))
-           != NULL) {
+    while ((current_param = hip_get_next_param(msg, current_param))) {
         current_param_type = hip_get_param_type(current_param);
         if (!hip_check_param_contents_len(msg, current_param)) {
             err = -EMSGSIZE;
@@ -2991,7 +2987,7 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg,
         memcpy(&esp_anchor.anchors[0], active_anchor, hash_length);
 
         /* send 0 if next_anchor not present */
-        if (next_anchor != NULL) {
+        if (next_anchor) {
             memcpy(&esp_anchor.anchors[hash_length], next_anchor, hash_length);
         } else {
             memset(&esp_anchor.anchors[hash_length], 0, hash_length);
