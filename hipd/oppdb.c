@@ -686,7 +686,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
     HIP_DEBUG_HIT("dst_ip", &dst_ip);
 
     HIP_IFEL(hip_select_source_address(&our_addr, &dst_ip),
-             -1, "Cannot find source address\n"); 
+             -1, "Cannot find source address\n");
 
     /* Check if we've previously contacted the host and found it
      * non-HIP capable*/

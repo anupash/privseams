@@ -34,7 +34,7 @@
 
 #define HIP_PUZZLE_MAX_K        28
 
-uint64_t hip_solve_puzzle(const void *puzzle, 
+uint64_t hip_solve_puzzle(const void *puzzle,
                           const struct hip_common *hdr, int mode);
 int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in);
 

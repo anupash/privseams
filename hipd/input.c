@@ -329,7 +329,7 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
 
     memset(dh_shared_key, 0, dh_shared_len);
 
-    HIP_IFEL(!(dhf = hip_get_param_readwrite(ctx->input_msg, 
+    HIP_IFEL(!(dhf = hip_get_param_readwrite(ctx->input_msg,
                                              HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT,  "No Diffie-Hellman parameter found.\n");
 

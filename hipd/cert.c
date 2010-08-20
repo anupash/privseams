@@ -919,7 +919,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
          * present, when adding subjectKeyIdentifier give string
          * hash to the X509_EXT_conf it knows what to do with it */
 
-        /* X509V3_EXT_conf() doesn't accept const char *, so we 
+        /* X509V3_EXT_conf() doesn't accept const char *, so we
          * write the arguments to a buffer first */
         sprintf(arg1, "basicConstraints");
         sprintf(arg2, "CA:true");

@@ -885,7 +885,7 @@ int hip_handle_user_msg(hip_common_t *msg,
     {
         err = 0;
         struct hip_hit_to_ip_set *name_info;
-        HIP_IFEL(!(name_info = hip_get_param_readwrite(msg, 
+        HIP_IFEL(!(name_info = hip_get_param_readwrite(msg,
                                                      HIP_PARAM_HIT_TO_IP_SET)),
                  -1, "no name struct found\n");
         HIP_DEBUG("Name in name_info %s\n", name_info->name);

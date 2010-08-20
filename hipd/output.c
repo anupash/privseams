@@ -875,7 +875,7 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
      * a) the I1 was received on UDP.
      * b) the received I1 packet had a RELAY_FROM parameter. */
     if (r1_dst_port) {
-        HIP_IFEL(hip_send_pkt(r1_src_addr, r1_dst_addr, 
+        HIP_IFEL(hip_send_pkt(r1_src_addr, r1_dst_addr,
                               hip_get_local_nat_udp_port(),
                               r1_dst_port, r1pkt, NULL, 0),
                  -ECOMM, "Sending R1 packet on UDP failed.\n");

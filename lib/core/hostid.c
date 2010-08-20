@@ -545,7 +545,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
             dsa_filenamebase_len =
                 strlen(HIPL_SYSCONFDIR) +
                 strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
-           
+
             if (anon || hi_fmt == NULL) {
                 dsa_filenamebase     = malloc(HOST_ID_FILENAME_MAX_LEN);
                 HIP_IFEL(!dsa_filenamebase, -ENOMEM,
@@ -768,20 +768,20 @@ int hip_serialize_host_id_action(struct hip_common *msg,
 
             } else { /* pub */
 
-                if ((err = load_dsa_private_key(dsa_filenamebase_pub, 
+                if ((err = load_dsa_private_key(dsa_filenamebase_pub,
                                                 &dsa_pub_key))) {
                     HIP_ERROR("Loading of the DSA key (pub) failed\n");
                     goto out_err;
                 }
 
-                dsa_pub_key_rr_len = dsa_to_dns_key_rr(dsa_pub_key, 
+                dsa_pub_key_rr_len = dsa_to_dns_key_rr(dsa_pub_key,
                                                        &dsa_pub_key_rr);
                 HIP_IFEL(dsa_pub_key_rr_len <= 0, -EFAULT,
                          "dsa_pub_key_rr_len <= 0\n");
 
                 HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
 
-                if ((err = hip_private_dsa_to_hit(dsa_pub_key, 
+                if ((err = hip_private_dsa_to_hit(dsa_pub_key,
                                                   &dsa_pub_lhi.hit))) {
                     HIP_ERROR("Conversion from DSA to HIT failed\n");
                     goto out_err;
@@ -789,7 +789,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 HIP_DEBUG_HIT("DSA HIT", &dsa_pub_lhi.hit);
 
                 if ((err = dsa_to_hip_endpoint(dsa_pub_key,
-                                               &endpoint_dsa_pub_hip, 0, 
+                                               &endpoint_dsa_pub_hip, 0,
                                                hostname))) {
                     HIP_ERROR("Failed to allocate and build DSA endpoint (pub).\n");
                     goto out_err;

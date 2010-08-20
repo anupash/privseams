@@ -82,7 +82,7 @@ static int hip_handle_bex_state_update(struct hip_common *msg)
                                                HIP_STATE_ESTABLISHED);
         break;
     case HIP_MSG_FW_UPDATE_DB:
-        err = hip_firewall_cache_set_bex_state(src_hit, dst_hit, 
+        err = hip_firewall_cache_set_bex_state(src_hit, dst_hit,
                                                HIP_STATE_NONE);
         break;
     default:

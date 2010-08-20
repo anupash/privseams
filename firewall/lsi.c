@@ -359,7 +359,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
         process_as_lsi = 1;
     }
 
-    HIP_IFEL(!(entry = hip_firewall_cache_db_match(ip_dst, ip_src, 
+    HIP_IFEL(!(entry = hip_firewall_cache_db_match(ip_dst, ip_src,
                                                    FW_CACHE_HIT, 1)),
              -1, "Failed to obtain from cache\n");
 
@@ -425,7 +425,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
     } else if (entry_peer->state == HIP_STATE_NONE ||
                entry_peer->state == HIP_STATE_UNASSOCIATED) {
         HIP_IFEL(hip_trigger_bex(&entry_peer->hit_our,
-                                 &entry_peer->hit_peer, 
+                                 &entry_peer->hit_peer,
                                  &entry_peer->lsi_our,
                                  &entry_peer->lsi_peer,
                                  NULL, NULL),

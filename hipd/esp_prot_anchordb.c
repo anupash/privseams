@@ -131,7 +131,7 @@ int anchor_db_update(const struct hip_common *msg)
         // don't set up anything for UNUSED transform
         for (i = 0; i < esp_prot_num_transforms - 1; i++) {
             // needed for redirection to correct slot in anchor_db
-            esp_transforms[i] = *(const uint8_t *) 
+            esp_transforms[i] = *(const uint8_t *)
                                 hip_get_param_contents_direct(param);
             HIP_DEBUG("esp_transform is %u\n", esp_transforms[i]);
 

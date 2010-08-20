@@ -4141,7 +4141,7 @@ int hip_build_param_relay_from(struct hip_common *msg,
     struct hip_relay_from relay_from;
     int err = 0;
 
-    hip_set_param_type((struct hip_tlv_common *) &relay_from, 
+    hip_set_param_type((struct hip_tlv_common *) &relay_from,
                        HIP_PARAM_RELAY_FROM);
     ipv6_addr_copy((struct in6_addr *) &relay_from.address, addr);
     relay_from.port = htons(port);

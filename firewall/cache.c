@@ -325,7 +325,7 @@ void hip_firewall_cache_delete_hldb(int exiting)
     HIP_DEBUG("End hldbdb delete\n");
 }
 
-/** 
+/**
  * Update the state of a cached entry identified by HITs
  * @param  hit_our Local HIT (optional)
  * @param  hit_peer Peer HIT

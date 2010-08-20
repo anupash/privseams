@@ -1473,7 +1473,7 @@ $ make V=99
       <section><title>Supported features</title>
 
       <para>
-      
+
       The maemo/diablo version of HIPL supports most features of HIPL, except
       the firewall extensions.
 
@@ -2658,7 +2658,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         file. Otherwise you risk your host becoming an open HIP and
         ESP relay. For additional security measure, you can also use
         also /etc/hip/firewall_conf to further restrict the allowed
-	clients and servers by their HITs.
+        clients and servers by their HITs.
        </para>
       <para>
         The main difference between the rendezvous server and the HIP relay

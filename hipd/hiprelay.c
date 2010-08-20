@@ -978,7 +978,7 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
 
     /* Adding RVS_HMAC or RELAY_HMAC parameter as the last parameter
      * of the relayed packet. Notice that this presumes that there
-     * are no parameters whose type value is greater than RVS_HMAC or 
+     * are no parameters whose type value is greater than RVS_HMAC or
      * RELAY_HMAC in the incoming I1/I2 packet. */
     HIP_IFEL(hip_build_param_hmac(msg_to_be_relayed,
                                   &(rec->hmac_relay),
@@ -1260,7 +1260,7 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
          * all HMAC keys. See bug id 592172 */
         HIP_DEBUG("Full_Relay_HMAC verification failed.\n");
         HIP_DEBUG("Ignoring HMAC verification\n");
-    } else if (from != NULL && 
+    } else if (from != NULL &&
                hip_verify_packet_hmac_general(source_msg,
                                               &relay_ha_entry->hip_hmac_out,
                                               HIP_PARAM_RVS_HMAC ) != 0) {

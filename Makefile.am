@@ -211,7 +211,7 @@ doxygen: doc/Doxyfile
 
 # CentOS 5.5 requires this or otherwise autoreconf gives the error:
 # Makefile.am:213: `nodist_doc_DATA' is used but `docdir' is undefined
-docdir = ${datadir}/doc/${PACKAGE} 
+docdir = ${datadir}/doc/${PACKAGE}
 
 if HAVE_XMLTO
 nodist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
