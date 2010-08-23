@@ -2,15 +2,15 @@ How to get HIPL
 ===============
 
 The latest version of HIPL is always available through Bazaar (version 1.6 or
-later required). Run the command
+later required) and is hosted on Launchpad now. Run the command
 
-  bzr checkout http://hipl.hiit.fi/hipl/hipl-bzr/trunk
+  bzr checkout lp:hipl
 
-to get an anonymous read-only checkout or
+to get a checkout of the source tree.
 
-  bzr checkout bzr+ssh://hipl.hiit.fi/var/archive/hipl-bzr/trunk
-
-if you are a developer with an ssh account on the server.
+This will provide you with an anonymous checkout, unless you are a developer
+registered with the hipl-core project on Launchpad and used the command
+"bzr launchpad-login" beforehand to let Bazaar know your Launchpad user name.
 
 
 HIPL dependencies
@@ -44,6 +44,7 @@ On Fedora, the following command(s) should solve the dependencies:
               perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
 
   Optionally: yum install miredo bzr xmlto doxygen
+
 
 How to build HIPL
 =================
