@@ -757,15 +757,15 @@ out_err:
  * arguments. This function also supports HIP-based loopback
  * connectivity and hiccups (data packet) extensions.
  *
- * @param src_hit The source HIT for the I1. Alternatively, NULL if default
- *                HIT is suitable
- * @param dst_hit The destination HIT. This HIT cannot be a "pseudo HIT" as
- *                used by the opportunistic mode. Use hip_send_i1() function
- *                instead with opportunistic mode.
- * @param src_lsi Optional source LSI corresponding to the source HIT
- * @param dst_lsi Optional destination LSI corresponding to the destination HIT
- * @param src_addr Source address for the I1 (IPv4 address in IPv6 mapped format)
- * @param dst_addr Destination address for the I1 (IPv4 address in IPv6 mapped format)
+ * @param src_hit_in The source HIT for the I1. Alternatively, NULL if default
+ *                   HIT is suitable
+ * @param dst_hit_in The destination HIT. This HIT cannot be a "pseudo HIT" as
+ *                   used by the opportunistic mode. Use hip_send_i1() function
+ *                   instead with opportunistic mode.
+ * @param src_lsi_in Optional source LSI corresponding to the source HIT
+ * @param dst_lsi_in Optional destination LSI corresponding to the destination HIT
+ * @param src_addr_in Source address for the I1 (IPv4 address in IPv6 mapped format)
+ * @param dst_addr_in Destination address for the I1 (IPv4 address in IPv6 mapped format)
  * @return zero on success and non-zero on error
  * @note HITs can be NULL if the LSIs are non-NULL (and vice versa).
  * @note The locators (addresses) can be NULL. This function will
