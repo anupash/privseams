@@ -46,6 +46,7 @@
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <linux/rtnetlink.h>
 
 #include "lib/core/capability.h"
