@@ -347,7 +347,7 @@ out_err:
 }
 
 /**
- * hip_close_create_response
+ * hip_close_send_response
  *
  * Send a before generated CLOSE_ACK packet.
  *
