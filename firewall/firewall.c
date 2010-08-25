@@ -1189,9 +1189,10 @@ static int hip_fw_handle_esp_output(hip_fw_context_t *ctx)
  */
 static int hip_fw_handle_other_output(hip_fw_context_t *ctx)
 {
-    int verdict           = accept_normal_traffic_by_default;
+    HIP_DEBUG("accept_normal_traffic_by_default = %d\n",
+        accept_normal_traffic_by_default);
 
-    HIP_DEBUG("\n");
+    int verdict = accept_normal_traffic_by_default;
 
     if (ctx->ip_version == 6 && hip_userspace_ipsec) {
 
@@ -1565,9 +1566,13 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
             // this might be a TCP packet for opportunistic mode
             HIP_DEBUG("plain TCP packet\n");
 
+            struct tcphdr *tcphdr = (struct tcphdr*)
+                (((char *) iphdr) + ip_hdr_len);
             ctx->packet_type       = TCP_PACKET;
-            ctx->transport_hdr.tcp = (struct tcphdr *)
-                    (((char *) iphdr) + ip_hdr_len);
+            ctx->transport_hdr.tcp = tcphdr;
+
+            HIP_DEBUG("src port: %u\n", ntohs(tcphdr->source));
+            HIP_DEBUG("dst port: %u\n", ntohs(tcphdr->dest));
 
             goto end_init;
         } else if (iphdr->ip_p != IPPROTO_UDP) {
@@ -1631,9 +1636,13 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
             // this might be a TCP packet for opportunistic mode
             HIP_DEBUG("plain TCP packet\n");
 
-            ctx->packet_type       = TCP_PACKET;
-            ctx->transport_hdr.tcp = (struct tcphdr *)
+            struct tcphdr *tcphdr = (struct tcphdr *)
                     (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
+            ctx->packet_type       = TCP_PACKET;
+            ctx->transport_hdr.tcp = tcphdr;
+
+            HIP_DEBUG("src port: %u\n", ntohs(tcphdr->source));
+            HIP_DEBUG("dst port: %u\n", ntohs(tcphdr->dest));
 
             goto end_init;
         } else if (ip6_hdr->ip6_nxt != IPPROTO_UDP) {
@@ -1657,9 +1666,15 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
 
         // add udp header to context
         ctx->udp_encap_hdr = udphdr;
+    } else {
+        HIP_DEBUG("neither ipv4 nor ipv6\n");
+        goto end_init;
     }
 
-    HIP_DEBUG("UDP header size  is %d\n", sizeof(struct udphdr));
+    HIP_DEBUG("UDP header size  is %d (in header: %u) \n",
+        sizeof(struct udphdr), udphdr->len);
+    HIP_DEBUG("UDP src port: %u\n", ntohs(udphdr->source));
+    HIP_DEBUG("UDP dst port: %u\n", ntohs(udphdr->dest));
 
     /* only handle IPv4 right now
      * -> however this is the place to handle UDP encapsulated IPv6 */
