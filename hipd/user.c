@@ -216,12 +216,11 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
  * @return zero on success, or negative error value on error.
  */
 int hip_handle_user_msg(hip_common_t *msg,
-                        struct sockaddr_in6 *src,
-                        int *send_response)
+                        struct sockaddr_in6 *src)
 {
     const hip_hit_t *src_hit           = NULL, *dst_hit = NULL;
     hip_ha_t *entry                    = NULL;
-    int err                            = 0, msg_type = 0, n = 0, reti = 0;
+    int err                            = 0, msg_type = 0, reti = 0;
     int access_ok                      = 0, is_root = 0;
     const struct hip_tlv_common *param = NULL;
 
@@ -709,77 +708,6 @@ int hip_handle_user_msg(hip_common_t *msg,
         /* invoking the signal handler directly is not a sane thing to do */
         kill(getpid(), SIGINT);
         break;
-    case HIP_MSG_SET_DATAPACKET_MODE_ON:
-    {
-        struct sockaddr_in6 sock_addr;
-        HIP_DEBUG("HIP_MSG_SET_DATAPACKET_MODE_ON\n");
-        HIP_DUMP_MSG(msg);
-
-        hip_use_userspace_data_packet_mode = 1;
-
-        memset(&sock_addr, 0, sizeof(sock_addr));
-        sock_addr.sin6_family              = AF_INET6;
-        sock_addr.sin6_port                = htons(HIP_FIREWALL_PORT);
-        sock_addr.sin6_addr                = in6addr_loopback;
-
-        n  = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
-        if (n <= 0) {
-            HIP_ERROR("hipconf datapacket  failed \n");
-        } else {
-            HIP_DEBUG("hipconf datapacket ok (sent %d bytes)\n", n);
-            break;
-        }
-        *send_response = 1;
-        break;
-    }
-
-    case HIP_MSG_SET_DATAPACKET_MODE_OFF:
-    {
-        struct sockaddr_in6 sock_addr_1;
-        HIP_DEBUG("HIP_MSG_SET_DATAPACKET_MODE_OFF\n");
-        HIP_DUMP_MSG(msg);
-
-        hip_use_userspace_data_packet_mode = 0;
-
-        //firewall socket address
-        memset(&sock_addr_1, 0, sizeof(sock_addr_1));
-        sock_addr_1.sin6_family            = AF_INET6;
-        sock_addr_1.sin6_port              = htons(HIP_FIREWALL_PORT);
-        sock_addr_1.sin6_addr              = in6addr_loopback;
-
-        n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr_1);
-        if (n <= 0) {
-            HIP_ERROR("hipconf datapacket  failed \n");
-        } else {
-            HIP_DEBUG("hipconf datapacket ok (sent %d bytes)\n", n);
-        }
-        *send_response = 1;
-        break;
-    }
-
-    case HIP_MSG_BUILD_HOST_ID_SIGNATURE_DATAPACKET:
-    {
-        int original_type;
-        hip_hit_t data_hit;
-
-        HIP_IFEL(hip_get_any_localhost_hit(&data_hit, HIP_HI_DEFAULT_ALGO, 0), -1,
-                 "No HIT found\n");
-
-        HIP_DEBUG("HIP_MSG_BUILD_HOST_ID_SIGNATURE_DATAPACKET");
-
-        original_type = msg->type_hdr;
-
-        /* We are about the sign the packet ..
-         * So change the MSG type to HIP_DATA and then reset it to original */
-        msg->type_hdr = HIP_DATA;
-        err           = hip_build_host_id_and_signature(msg, &data_hit);
-        msg->type_hdr = original_type;
-
-        *send_response = 1;
-        goto out_err;
-    }
-    break;
-
     case HIP_MSG_TRIGGER_BEX:
         HIP_DEBUG("HIP_MSG_TRIGGER_BEX\n");
         hip_firewall_status = 1;

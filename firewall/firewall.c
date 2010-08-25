@@ -1348,7 +1348,6 @@ static int hip_fw_handle_hip_input(hip_fw_context_t *ctx)
     int verdict = accept_hip_esp_traffic_by_default;
 
     HIP_DEBUG("hip_fw_handle_hip_input()\n");
-    //Prabhu handle incoming datapackets
 
     verdict = hip_fw_handle_hip_output(ctx);
 

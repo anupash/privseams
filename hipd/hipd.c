@@ -150,8 +150,6 @@ int address_change_time_counter = -1;
  */
 int hip_use_userspace_ipsec                  = 0;
 
-int hip_use_userspace_data_packet_mode       = 0;
-
 int esp_prot_active                          = 0;
 int esp_prot_num_transforms                  = 0;
 uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];

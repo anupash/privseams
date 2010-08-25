@@ -998,12 +998,6 @@ send_i1:
 
     HIP_DEBUG("Using ifindex %d\n", if_index);
 
-    /* If datapacket mode is set then don't send I1.
-     * Instead, reply with data packet mode message type. */
-    if (hip_use_userspace_data_packet_mode) {
-        goto out_err;
-    }
-
     HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
              "Sending of I1 failed\n");
 

@@ -128,7 +128,7 @@
 #define ACTION_HIT_TO_IP_SET 32
 #define ACTION_NAT_LOCAL_PORT 33
 #define ACTION_NAT_PEER_PORT 34
-#define ACTION_DATAPACKET 35  /*Support for datapacket--Prabhu */
+/* unused, was ACTION_DATAPACKET 35 */
 /* unused, was ACTION_SHOTGUN 36 */
 #define ACTION_MAP_ID_TO_ADDR 37
 #define ACTION_LSI_TO_HIT 38
@@ -177,7 +177,7 @@
 #define TYPE_HIT_TO_LSI    35
 #define TYPE_NAT_LOCAL_PORT 36
 #define TYPE_NAT_PEER_PORT 37
-#define TYPE_DATAPACKET    38 /*support for data packet mode-- Prabhu */
+/* unused, was TYPE_DATAPACKET 38 */
 #define TYPE_SHOTGUN       39
 #define TYPE_ID_TO_ADDR    40
 #define TYPE_LSI_TO_HIT    41
@@ -232,7 +232,6 @@ const char *hipconf_usage =
     "nsupdate on|off\n"
     "hit-to-ip on|off\n"
     "hit-to-ip-zone <hit-to-ip.zone.>\n"
-    "datapacket on|off\n"
     "shotgun on|off\n"
     "id-to-addr hit|lsi\n"
 ;
@@ -588,8 +587,6 @@ static int hip_conf_get_action(char *argv[])
         } else {
             ret = ACTION_NAT;
         }
-    } else if (!strcmp("datapacket", argv[1]))    {
-        ret = ACTION_DATAPACKET;
     }
 
     return ret;
@@ -616,7 +613,6 @@ static int hip_conf_check_action_argc(int action)
     case ACTION_LOCATOR:
     case ACTION_HEARTBEAT:
     case ACTION_HIT_TO_LSI:
-    case ACTION_DATAPACKET:
     case ACTION_MAP_ID_TO_ADDR:
     case ACTION_LSI_TO_HIT:
         count = 1;
@@ -727,8 +723,6 @@ static int hip_conf_get_type(char *text, char *argv[])
         ret = TYPE_HIT_TO_IP_SET;
     } else if (strcmp("hit-to-ip", argv[1]) == 0) {
         ret = TYPE_HIT_TO_IP;
-    } else if (strcmp("datapacket", argv[1]) == 0) {
-        ret = TYPE_DATAPACKET;
     } else if (strcmp("lsi-to-hit", argv[1]) == 0) {
         ret = TYPE_LSI_TO_HIT;
     } else {
@@ -776,7 +770,6 @@ static int hip_conf_get_type_arg(int action)
     case ACTION_NSUPDATE:
     case ACTION_HIT_TO_IP:
     case ACTION_HIT_TO_IP_SET:
-    case ACTION_DATAPACKET:
         type_arg = 2;
         break;
     case ACTION_MANUAL_UPDATE:
@@ -1577,35 +1570,6 @@ static int hip_conf_handle_nat(hip_common_t *msg, UNUSED int action,
 
 out_err:
     return err;
-}
-
-/**
- * Handles the hipconf commands where type is @c datapacket. This mode swithces the Hip Firewall to work in data packet mode , meaning it can communicate without establishing BEX with peer node.
- *
- */
-
-static int hip_conf_handle_datapacket(hip_common_t *msg,
-                                      UNUSED int action,
-                                      const char *opt[],
-                                      UNUSED int optc,
-                                      UNUSED int send_only)
-{
-    int err = 0, status = 0;
-
-    if (!strcmp("on", opt[0])) {
-        status = HIP_MSG_SET_DATAPACKET_MODE_ON;
-    } else if (!strcmp("off", opt[0])) {
-        status = HIP_MSG_SET_DATAPACKET_MODE_OFF;
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-    }
-
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
-             "Failed to build user message header.: %s\n", strerror(err));
-
-out_err:
-
-    return 0;
 }
 
 /**
@@ -2684,7 +2648,7 @@ int (*action_handler[])(hip_common_t *,
     hip_conf_handle_get_peer_lsi,       /* 35: TYPE_MAP_GET_PEER_LSI */
     hip_conf_handle_nat_port,           /* 36: TYPE_NAT_LOCAL_PORT */
     hip_conf_handle_nat_port,           /* 37: TYPE_PEER_LOCAL_PORT */
-    hip_conf_handle_datapacket,         /* 38: TYPE_DATAPACKET*/
+    NULL,                               /* 38: unused, was TYPE_DATAPACKET*/
     NULL,                               /* 39: unused, was TYPE_SHOTGUN */
     hip_conf_handle_map_id_to_addr,     /* 40: TYPE_ID_TO_ADDR */
     hip_conf_handle_lsi_to_hit,         /* 41: TYPE_LSI_TO_HIT */

@@ -186,9 +186,6 @@
 #define HIP_MSG_CANCEL_FULLRELAY                 192
 #define HIP_MSG_REINIT_FULLRELAY                 193
 #define HIP_MSG_FIREWALL_START                   194
-#define HIP_MSG_SET_DATAPACKET_MODE_ON           195
-#define HIP_MSG_SET_DATAPACKET_MODE_OFF          196
-#define HIP_MSG_BUILD_HOST_ID_SIGNATURE_DATAPACKET 197
 #define HIP_MSG_MANUAL_UPDATE_PACKET             198
 /** Socket option for hipconf to set handover mode, hard or soft. */
 #define HIP_MSG_HANDOVER_HARD                    199

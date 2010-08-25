@@ -110,8 +110,6 @@ extern int hip_encrypt_i2_hi;
 
 extern hip_transform_suite_t hip_nat_status;
 
-extern int hip_use_userspace_data_packet_mode;
-
 extern int esp_prot_active;
 extern int esp_prot_num_transforms;
 extern long esp_prot_num_parallel_hchains;
