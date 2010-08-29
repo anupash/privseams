@@ -579,9 +579,6 @@ CODING CONVENTIONS
 - Use global variables only with GOOD reason. Ask your adviser
   before introducing a new global variable.
 
-- Kernel code (if any) MUST follow the kernel guidelines:
-  Documentation/CodingStyle
-
 - USE ASCII encoding, no fancy symbols!
 
 - Do not make unreadable code by nesting code too much:
@@ -612,20 +609,6 @@ CODING CONVENTIONS
           hello(i, x);
       }
   }
-
-- In emacs, you can set the Linux kernel indendation as default by adding
-  the following lines to your ".emacs" file located at your home directory:
-
-    (defun my-c-mode-common-hook ()
-      (c-set-style "PLEASE_ADD_RIGHT_STYLE_HERE"))
-    (add-hook 'c-mode-common-hook 'my-c-mode-common-hook)
-    (global-set-key [f5] 'indent-region)
-
-  Now, whenever you wish to indend a region,
-
-    1. Move the cursor to the beginning of the region to be indended and press
-       CTRL & SPACE (first control, hold it down and press space.)
-    2. Move the cursor to the end of the region to be indended, and press F5.
 
 - All functions should return an error value instead of "ok" value. That, is
   zero for success and non-zero for failure.
