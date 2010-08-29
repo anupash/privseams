@@ -94,7 +94,7 @@ int hip_hit_are_equal(const struct in6_addr *hit1,
 }
 
 /**
- * hip_hash_hit - calculate a hash from a HIT
+ * calculate a hash from a HIT
  *
  * @param ptr pointer to a HIT
  *

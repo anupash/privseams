@@ -790,8 +790,6 @@ static void hip_handle_third_update_packet(hip_ha_t *ha,
 }
 
 /**
- * hip_update_manual_update
- *
  * Thin wrapper function around hip_send_locators_to_all_peers. Needed for
  * registration as user message handle function.
  *
@@ -859,8 +857,6 @@ out_err:
 }
 
 /**
- * hip_update_check_packet
- *
  * Check a received UPDATE packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -933,8 +929,6 @@ out_err:
 }
 
 /**
- * hip_update_handle_packet
- *
  * Process an received and checked UPDATE packet.
  *
  * @param packet_type the packet type

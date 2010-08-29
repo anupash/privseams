@@ -115,7 +115,7 @@ static void hip_update_keymat_buffer(uint8_t *keybuf, uint8_t *Kold, size_t Kold
 }
 
 /**
- * hip_make_keymat - generate HIP keying material
+ * generate HIP keying material
  * @param kij Diffie-Hellman Kij (as in the HIP drafts)
  * @param kij_len the length of the Kij material
  * @param keymat pointer to a keymat structure which will be updated according
@@ -215,7 +215,7 @@ void hip_make_keymat(char *kij,
 }
 
 /**
- * hip_keymat_draw - draw keying material
+ * draw keying material
  * @param keymat pointer to the keymat structure which contains information
  *          about the actual
  * @param len size of keymat structure
@@ -241,7 +241,7 @@ out_err:
 }
 
 /**
- * hip_keymat_draw_and_copy - draw keying material and copy it to the given buffer
+ * draw keying material and copy it to the given buffer
  * @param dst destination buffer
  * @param keymat pointer to the keymat structure which contains information
  *          about the actual

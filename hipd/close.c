@@ -233,8 +233,6 @@ out_err:
 }
 
 /**
- * hip_close_check_packet
- *
  * Check whether a received control packet is valid or not.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -289,8 +287,6 @@ out_err:
 }
 
 /**
- * hip_close_create_response
- *
  * Create an response (CLOSE_ACK) for a received CLOSE packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -347,8 +343,6 @@ out_err:
 }
 
 /**
- * hip_close_send_response
- *
  * Send a before generated CLOSE_ACK packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -413,8 +407,6 @@ out_err:
 }
 
 /**
- * hip_close_ack_check_packet
- *
  * Check whether a received CLOSE_ACK packet is valid or not.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -483,8 +475,6 @@ out_err:
 }
 
 /**
- * hip_close_ack_handle_packet
- *
  * Handle a received and checked CLOSE_ACK packet. If a hadb entry exists, the
  * host association state will be set to HIP_STATE_CLOSED.
  *

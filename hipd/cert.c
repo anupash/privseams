@@ -63,8 +63,8 @@
  ***************************************************************************/
 
 /**
- * hip_cert_spki_sign - Function that signs the cert sequence and
- * creates the public key sequence and the signature sequence
+ * Function that signs the cert sequence and creates the public key
+ * sequence and the signature sequence
  *
  * @param msg points to the msg gotten from "client" that should
  *            contain HIP_PARAM_CERT_SPKI_INFO

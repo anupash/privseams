@@ -468,8 +468,6 @@ unsigned long hip_relht_size(void)
 }
 
 /**
- * hip_relht_maintenance
- *
  * @brief Clear the expired records from the relay hashtable.
  *
  * Periodic maintenance function of the hip relay. This function should be

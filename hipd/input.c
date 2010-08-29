@@ -680,8 +680,6 @@ out_err:
 }
 
 /**
- * hip_check_r1
- *
  * Check a received R1 control packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -977,8 +975,6 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     return err;
 }
 /**
- * hip_handle_i2_in_i2_sent
- *
  * Checks wether the received I2 packet in state I2-SENT should be droppped, or
  * not. If the packet should be dropped, the error flag is set to 1.
  *
@@ -1007,8 +1003,6 @@ int hip_handle_i2_in_i2_sent(UNUSED const uint8_t packet_type,
 }
 
 /**
- * hip_check_r2
- *
  * Check a received R2 control packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -1081,8 +1075,6 @@ out_err:
 }
 
 /**
- * hip_handle_r2
- *
  * Handle an incoming R2 packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -1258,8 +1250,6 @@ out_err:
 }
 
 /**
- * hip_check_i1
- *
  * Check a received I1 control packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -1406,8 +1396,6 @@ out_err:
 }
 
 /**
- * hip_check_i2
- *
  * Check a received I2 control packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -1908,8 +1896,6 @@ out_err:
 }
 
 /**
- * hip_check_notify
- *
  * Check an incoming NOTIFY packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)

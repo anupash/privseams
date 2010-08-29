@@ -74,8 +74,6 @@
 int hip_nsupdate_status = 0;
 
 /**
- * hip_set_nsupdate_status
- *
  * This function is an interface to turn on/off DNS updates
  *
  * @param status    0 unless DNS updates wanted, 1 otherwise
@@ -87,8 +85,6 @@ void hip_set_nsupdate_status(int status)
 }
 
 /**
- * hip_get_nsupdate_status
- *
  * This function is an interface to check if DNS updates are wanted
  *
  * @return  0 unless DNS updates wanted, 1 otherwise

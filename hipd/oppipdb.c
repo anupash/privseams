@@ -67,7 +67,6 @@ static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 }
 
 /**
- * hip_oppipdb_match_ip:
  * Compares two ip addresses using their hashes
  *
  * @param ptr1: pointer to the first ip address to compare

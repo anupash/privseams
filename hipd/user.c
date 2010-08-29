@@ -172,8 +172,6 @@ int hip_user_run_handles(const uint8_t msg_type,
 }
 
 /**
- * hip_uninit_handle_functions
- *
  * Free the memory used for storage of handle functions.
  *
  */

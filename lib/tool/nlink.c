@@ -1439,8 +1439,7 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
 }
 
 /**
- * xfrm_fill_selector - fill in the selector.
- * Selector is bound to HITs
+ * Fill in the selector. Selector is bound to HITs.
  *
  * @param sel pointer to xfrm_selector to be filled in
  * @param id_our Source HIT or LSI, if the last is defined

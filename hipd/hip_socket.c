@@ -190,10 +190,6 @@ void hip_init_sockets(void)
     hip_register_socket(hip_nl_route.fd,        &hip_handle_nl_route_sock, 10500);
 }
 
-/**
- * hip_register_socket
- *
- */
 int hip_register_socket(int socketfd,
                         int (*func_ptr)(struct hip_packet_context *ctx),
                         const uint16_t priority)
@@ -221,10 +217,6 @@ out_err:
     return err;
 }
 
-/**
- * hip_get_highest_descriptor
- *
- */
 int hip_get_highest_descriptor(void)
 {
     int highest_descriptor = 0;
@@ -243,10 +235,6 @@ int hip_get_highest_descriptor(void)
     return highest_descriptor;
 }
 
-/**
- * hip_prepare_fd_set
- *
- */
 void hip_prepare_fd_set(fd_set *read_fdset)
 {
     hip_ll_node_t *iter = NULL;
@@ -262,10 +250,6 @@ void hip_prepare_fd_set(fd_set *read_fdset)
     }
 }
 
-/**
- * hip_run_socket_handles
- *
- */
 void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
 {
     hip_ll_node_t *iter = NULL;

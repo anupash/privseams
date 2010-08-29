@@ -743,7 +743,7 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
 }
 
 /**
- * hip_print_locator - print a locator
+ * Print a locator.
  * @param file
  * @param debug_level
  * @param line

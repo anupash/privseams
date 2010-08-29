@@ -53,8 +53,6 @@ struct handle_function {
 static hip_ll_t *hip_handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
 
 /**
- * hip_register_handle_function
- *
  * Register a function for handling of the specified combination from packet
  * type and host association state.
  *
@@ -105,8 +103,6 @@ out_err:
 }
 
 /**
- * hip_run_handle_functions
- *
  * Run all handle functions for specified combination from packet type and host
  * association state.
  *
@@ -153,8 +149,6 @@ out_err:
 }
 
 /**
- * hip_uninit_handle_functions
- *
  * Free the memory used for storage of handle functions.
  *
  */

@@ -83,8 +83,6 @@ static hip_ll_t packet_types;
 static uint16_t num_disabled_modules = 0;
 
 /**
- * lmod_init_state
- *
  * Initializes a new data structure for storage of references to state items.
  * This data structure consists of a pointer set and can be mentioned as global
  * state.
@@ -112,8 +110,6 @@ struct modular_state *lmod_init_state(void)
 }
 
 /**
- * lmod_register_state_init_function
- *
  * Registers a new state initialization function. These functions are called,
  * when a new host association database entry is created.
  *
@@ -132,8 +128,6 @@ int lmod_register_state_init_function(void *func)
 }
 
 /**
- * lmod_init_state_items
- *
  * Initialize all registered state items. This function is called, when a new
  * host association database entry is created.
  *
@@ -154,8 +148,6 @@ void lmod_init_state_items(struct modular_state *state)
 }
 
 /**
- * lmod_get_state_item_id
- *
  * Retrieve a void pointer to a state variable from the global state set using
  * the state item name.
  *
@@ -179,8 +171,6 @@ static int lmod_get_state_item_id(struct modular_state *state,
 }
 
 /**
- * lmod_get_state_item_by_id
- *
  * Returns a void pointer to a state item from the global state set using
  * the id (index number).
  *
@@ -196,8 +186,6 @@ static void *lmod_get_state_item_by_id(struct modular_state *state,
 }
 
 /**
- * lmod_get_state_item
- *
  * Returns a void pointer to a state item from the global state set using
  * the string identifier.
  *
@@ -217,8 +205,6 @@ void *lmod_get_state_item(struct modular_state *state, const char *item_name)
 
 
 /**
- * lmod_add_state_item
- *
  * Registers a new state item to the global state. The state item can be of any
  * type. This function stores a reference to the new state item.
  *
@@ -252,8 +238,6 @@ int lmod_add_state_item(struct modular_state *state,
 }
 
 /**
- * lmod_uninit_state
- *
  * Free all allocated memory for storage of the global state set.
  *
  *  @param      state       Pointer to the global state.
@@ -274,8 +258,6 @@ void lmod_uninit_state(struct modular_state *state)
 }
 
 /**
- * lmod_register_function
- *
  * Register a function to the specified list according their priority.
  *
  * @param *list Pointer to the list if already exist, NULL otherwise.
@@ -325,8 +307,6 @@ hip_ll_t *lmod_register_function(hip_ll_t *list,
 }
 
 /**
- * lmod_unregister_function
- *
  * Unregister a function from the specified list.
  *
  * @param *list Pointer to the list from which the function should be removed.
@@ -356,8 +336,6 @@ int lmod_unregister_function(hip_ll_t *list, const void *function)
 }
 
 /**
- * lmod_disable_module
- *
  * Disable the module with the provide name. The initialization functions of
  * disabled modules will not be executed. Therefore the functionality of these
  * modules should be completely disabled.
@@ -384,8 +362,6 @@ int lmod_disable_module(const char *module_name)
 }
 
 /**
- * lmod_module_disabled
- *
  * Check whether a certain module is disabled.
  *
  * @note This function uses string compares. Therefore you should call this
@@ -410,8 +386,6 @@ int lmod_module_disabled(const char *module_name)
 }
 
 /**
- * lmod_uninit_disabled_modules
- *
  * Free all allocated memory for storage of disabled modules.
  *
  */
@@ -430,8 +404,6 @@ void lmod_uninit_disabled_modules(void)
 }
 
 /**
- * lmod_packet_type_exists
- *
  * Check whether a certain packet type was already registered.
  *
  * @note The return value is not 0 (FALSE), if the packet type not exists.
@@ -460,8 +432,6 @@ static int lmod_packet_type_exists(const uint16_t packet_type)
 }
 
 /**
- * lmod_register_packet_type
- *
  * Register a new packet type and the corresponding identifier. Each module
  * introducing a new packet type should register it using this function.
  *
@@ -513,8 +483,6 @@ int lmod_register_packet_type(const uint16_t packet_type,
 }
 
 /**
- * lmod_free_packet_entry
- *
  * Free allocated memory for one entry of the packet type list.
  *
  */
@@ -526,8 +494,6 @@ static void lmod_free_packet_entry(void *entry)
 }
 
 /**
- * lmod_uninit_packet_types
- *
  * Free all allocated memory for storage of the packet type list.
  *
  * @note Call this function, if you have added packet types.

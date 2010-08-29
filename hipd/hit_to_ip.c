@@ -50,8 +50,6 @@
 int hip_hit_to_ip_status = 0;
 
 /**
- * hip_set_hit_to_ip_status
- *
  * This function is an interface to turn on/off locators lookup in hit-to-ip domain
  *
  * @param status 0 unless locator lookups in hit-to-ip domain wanted, 1 otherwise
@@ -62,8 +60,6 @@ void hip_set_hit_to_ip_status(const int status)
 }
 
 /**
- * hip_get_hit_to_ip_status
- *
  * This function is an interface to check if locators lookup in hit-to-ip domain if wanted
  *
  * @return 0 unless locator lookups in hit-to-ip domain wanted, 1 otherwise
@@ -80,8 +76,6 @@ int hip_get_hit_to_ip_status(void)
 char *hip_hit_to_ip_zone = NULL;
 
 /**
- * hip_hit_to_ip_set
- *
  * Set the zone for hit-to-ip domain lookups
  *
  * @param zone  domain as a string, e.g. "hit-to-ip.infrahip.net"
@@ -103,8 +97,6 @@ static const char hex_digits[] = {
 };
 
 /**
- * hip_get_hit_to_ip_hostname
- *
  * returns "5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net" for 2001:1e:574e:2505:264a:b360:d8cc:1d75
  *
  * @param hit               HIT as a string
@@ -138,8 +130,6 @@ static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, char *hostname, cons
 }
 
 /**
- * hip_hit_to_ip
- *
  * checks for ip address for hit preferring IPv4 one
  *
  * @param hit           HIT to look locators for

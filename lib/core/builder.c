@@ -176,7 +176,7 @@ void hip_msg_init(struct hip_common *msg)
 }
 
 /**
- * hip_msg_alloc - allocate and initialize a HIP packet
+ * Allocate and initialize a HIP packet
  *
  * Return: initialized HIP packet if successful, NULL on error.
  */
@@ -578,7 +578,7 @@ int hip_check_network_msg_len(const struct hip_common *msg)
 }
 
 /**
- * hip_check_network_msg_type - check the type of the network message
+ * Check the type of the network message
  *
  * @param msg pointer to the message
  * @return 1 if the message type is valid, or 0 if the message type is

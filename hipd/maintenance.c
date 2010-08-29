@@ -186,8 +186,6 @@ out_err:
 }
 
 /**
- * hip_register_maint_function
- *
  * Register a maintenance function. All maintenance functions are called during
  * the periodic maintenance cycle.
  *
@@ -224,8 +222,6 @@ out_err:
 }
 
 /**
- * hip_unregister_maint_function
- *
  * Remove a maintenance function from the list.
  *
  * @param *maint_function Pointer to the function which should be unregistered.
@@ -240,8 +236,6 @@ int hip_unregister_maint_function(int (*maint_function)(void))
 }
 
 /**
- * hip_run_maint_functions
- *
  * Run all maintenance functions.
  *
  * @return Success =  0
@@ -264,8 +258,6 @@ static int hip_run_maint_functions(void)
 }
 
 /**
- * hip_uninit_maint_functions
- *
  * Free the memory used for storage of maintenance functions.
  *
  */

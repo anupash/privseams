@@ -54,7 +54,7 @@
 *******************************************************************************/
 
 /**
- * hip_cert_spki_lib_verify - Function that verifies the signature in
+ * Function that verifies the signature in
  * the given SPKI cert sent by the "client"
  *
  * @param cert points to hip_cert_spki_info that is going to be verified
@@ -369,9 +369,8 @@ out_err:
 }
 
 /**
- * hip_cert_spki_build_cert - Function to build the basic cert object
- * of SPKI clears public-key object and signature in
- * hip_cert_spki_header
+ * Function to build the basic cert object of SPKI clears public-key
+ * object and signature in hip_cert_spki_header
  *
  * @param minimal_content holds the struct hip_cert_spki_header
  *                        containing the minimal needed information for
@@ -393,7 +392,7 @@ static int hip_cert_spki_build_cert(struct hip_cert_spki_info *minimal_content)
 }
 
 /**
- * hip_cert_spki_inject - Function for injecting objects to cert object
+ * Function for injecting objects to cert object
  *
  * @param to hip_cert_spki_info containing the char table where to insert
  * @param after is a char pointer for the regcomp after which the inject happens
@@ -438,7 +437,7 @@ out_err:
 }
 
 /**
- * hip_cert_spki_create_cert - Function to build the create minimal SPKI cert
+ * Function to build the create minimal SPKI cert
  *
  * @param content holds the struct hip_cert_spki_info containing
  *                the minimal needed information for cert object,
@@ -589,8 +588,8 @@ out_err:
 }
 
 /**
- * hip_cert_spki_char2certinfo - Function that takes the cert in single char table
- * and constructs hip_cert_spki_info from it
+ * Function that takes the cert in single char table and constructs
+ * hip_cert_spki_info from it
  *
  * @param from char pointer to the whole certificate
  * @param to hip_cert_spki_info containing the char table where to insert
@@ -641,8 +640,8 @@ out_err:
 }
 
 /**
- * hip_cert_spki_send_to_verification - Function that sends the given
- * hip_cert_spki_info to the daemon to verification
+ * Function that sends the given hip_cert_spki_info to the daemon to
+ * verification
  *
  * @param to_verification is the cert to be verified
  *
@@ -687,8 +686,7 @@ out_err:
  ******************************************************************************/
 
 /**
- * hip_cert_x509v3_request_certificate - Function that requests for a
- * certificate from daemon and gives it back
+ * Function that requests for a certificate from daemon and gives it back.
  *
  * @param subject is the subjects HIT
  *
@@ -732,8 +730,8 @@ out_err:
 }
 
 /**
- * hip_cert_x509v3_request_verification - Function that requests for a
- * verification of a certificate from daemon and tells the result
+ * Function that requests for a verification of a certificate from
+ * daemon and tells the result.
  *
  * @param certificate is pointer to a certificate to be verified
  * @param len is the length of the cert in certificate parameter in bytes
@@ -784,8 +782,7 @@ out_err:
 *******************************************************************************/
 
 /**
- * hip_cert_read_conf_section - Function that reads configuration
- * section from HIP_CERT_CONF_PATH,
+ * Function that reads configuration section from HIP_CERT_CONF_PATH.
  *
  * @param section_name a char pointer pointing to the name of the section to be retrieved
  * @param conf pointer to CONF struct that will point to the default configuration
@@ -824,7 +821,7 @@ out_err:
 }
 
 /**
- * hip_cert_open_conf - Function that opens an configuration file from HIP_CERT_CONF_PATH,
+ * Function that opens an configuration file from HIP_CERT_CONF_PATH.
  *
  * @return CONF pointer if ok and NULL if error or unsuccesfull.
  */
@@ -844,7 +841,7 @@ out_err:
 }
 
 /**
- * hip_cert_free_conf - Function that frees the memory of a allocated configuration
+ * Function that frees the memory of a allocated configuration.
  *
  * @param conf pointer to the to be freed configuration
  *
@@ -858,7 +855,7 @@ void hip_cert_free_conf(CONF *conf)
 }
 
 /**
- * hip_cert_regex - Function that wraps regular expression stuff and gives the answer :)
+ * Function that wraps regular expression stuff and gives the answer :)
  *
  * @param what is a char pointer to the rule used in the search (POSIX)
  * @param from where are we looking for it char pointer

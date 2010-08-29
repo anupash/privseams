@@ -205,8 +205,6 @@ out_err:
 }
 
 /**
- * esp_prot_handle_light_update
- *
  * Handles an HHL-based update message
  *
  * @param packet_type the packet type
