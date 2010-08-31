@@ -1931,6 +1931,12 @@ $ make V=99
       </para></listitem>
     </itemizedlist>
     <para>
+      You can also trigger the handover message exchange without
+      changing IP addresses by running "hipconf manual-update". Note that this
+      only simulates the message exchange that would normally occur on IP
+      address changes and does not test handover detection.
+    </para>
+    <para>
       Do not use link local addresses for the mobility scenarios for the
       hosts, unless you know what you are doing! For example, you are asking
       for trouble if you establish HIP SA between the mobile and
