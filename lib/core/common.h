@@ -52,6 +52,13 @@
 # define RVS UNUSED
 #endif
 
+/** marking for firewall function parameters */
+#ifdef CONFIG_HIP_FIREWALL
+# define HIPFW
+#else
+# define HIPFW UNUSED
+#endif
+
 /** marking for OPPORTUNISTIC-specific function parameters */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 # define OPP

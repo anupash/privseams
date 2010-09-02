@@ -45,6 +45,7 @@
 #include <sys/un.h>
 
 #include "lib/core/builder.h"
+#include "lib/core/common.h"
 #include "lib/core/conf.h"
 #include "lib/core/debug.h"
 #include "lib/core/filemanip.h"
@@ -188,7 +189,7 @@ static void usage(void)
  * @param msg the message to send
  * @return zero on success or negative on error
  */
-int hip_sendto_firewall(const struct hip_common *msg)
+int hip_sendto_firewall(HIPFW const struct hip_common *msg)
 {
 #ifdef CONFIG_HIP_FIREWALL
     int n          = 0;
