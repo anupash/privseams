@@ -889,7 +889,6 @@ void read_rule_file(const char *file_name)
             char *p             = NULL;
             char *original_line = NULL;
             struct rule *rule   = NULL;
-            int state           = 0;
 
             HIP_DEBUG("line read: %s\n", line);
 
@@ -913,10 +912,6 @@ void read_rule_file(const char *file_name)
             rule = parse_rule(line);
 
             if (rule) {
-                if (rule->state) {
-                    state = 1;
-                }
-
                 if (rule->hook == NF_IP6_LOCAL_IN) {
                     input = append_to_list(input, rule);
                     print_rule((struct rule *) input->data);
