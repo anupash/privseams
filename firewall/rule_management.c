@@ -860,55 +860,11 @@ DList *read_rules(const int hook)
  */
 
 /**
- * read a rule line in the firewall configuration file
- *
- * @param buf the buffer where the line is read
- * @param buflen the length of the buffer
- * @param file a handle to the firewall configuration file
- *
- * @return the length of the line (excluding trailing 0)
- * @todo check correctness of this function
- */
-static size_t read_line(char *buf, int buflen, FILE *file)
-{
-    int ch     = 0;
-    size_t len = 0;
-
-    HIP_ASSERT(file != 0);
-    HIP_ASSERT(buf != 0);
-    HIP_ASSERT(buflen > 0);
-
-    if (fgets(buf, buflen, file) == NULL) {
-        if (feof(file)) {               /* EOF */
-            len = 0;
-        } else {                        /* error */
-            len = 0;
-        }
-        clearerr(file);
-        return len;
-    }
-
-    len = strlen(buf);
-    if (buf[len - 1] == '\n') {         /* clear any trailing newline */
-        buf[--len] = '\0';
-    } else if ((int)len == buflen - 1) {     /* line too long */
-        while ((ch = getchar()) != '\n' && ch != EOF) {
-            continue;
-        }
-        clearerr(file);
-        return 0;
-    }
-
-    return len;
-}
-
-/**
  * read all rule sets from the specified file and parse into rule
  * lists
  *
  * @param file_name the name of the configuration file to be read
- *
- * @todo fix reading of empty lines (memory problems)
+ *                  (try default config file if NULL)
  */
 void read_rule_file(const char *file_name)
 {
@@ -916,13 +872,6 @@ void read_rule_file(const char *file_name)
     DList *output       = NULL;
     DList *forward      = NULL;
     FILE *file          = NULL;
-    struct rule *rule   = NULL;
-    char line[MAX_LINE_LENGTH];
-    char *original_line = NULL;
-    int s               = MAX_LINE_LENGTH;
-    int state           = 0;
-    size_t line_length  = 0;
-    char *tmp_line      = NULL;
 
     if (!file_name) {
         file_name = HIP_FW_DEFAULT_RULE_FILE;
@@ -934,31 +883,34 @@ void read_rule_file(const char *file_name)
     file = fopen(file_name, "r");
 
     if (file != NULL) {
-        while ((line_length = read_line(line, s, file)) > 0) {
-            char *comment;
+        char line[MAX_LINE_LENGTH];
 
-            original_line = malloc(line_length + sizeof(char) + 1);
-            original_line = strcpy(original_line, line);
+        while (fgets(line, sizeof(line), file)) {
+            char *p             = NULL;
+            char *original_line = NULL;
+            struct rule *rule   = NULL;
+            int state           = 0;
 
             HIP_DEBUG("line read: %s\n", line);
 
-            /* terminate the line to comment sign */
-            comment = index(line, '#');
-            if (comment) {
-                *comment = 0;
+            original_line = strdup(line);
+            HIP_ASSERT(original_line);
+
+            /* terminate at comment sign or strip newline */
+            for (p = line; *p; ++p) {
+                if (*p == '#' || *p == '\n') {
+                    *p = '\0';
+                    break;
+                }
             }
 
-            if (line_length == 0) {
+            /* skip if empty */
+            if (*line == '\0') {
                 free(original_line);
                 continue;
             }
 
-            /* remove trailing new line */
-            tmp_line = strtok(line, "\n");
-
-            if (tmp_line) {
-                rule = parse_rule(tmp_line);
-            }
+            rule = parse_rule(line);
 
             if (rule) {
                 if (rule->state) {
@@ -975,15 +927,18 @@ void read_rule_file(const char *file_name)
                     forward = append_to_list(forward, rule);
                     print_rule((struct rule *) forward->data);
                 }
-            } else if (tmp_line)   {
+            } else {
                 HIP_DEBUG("unable to parse rule: %s\n", original_line);
             }
             free(original_line);
-            original_line = NULL;
+        }
+
+        if (!feof(file)) {
+            HIP_ERROR("fgets(): %s\n", strerror(errno));
         }
         fclose(file);
     } else {
-        HIP_DEBUG("Can't open file %s \n", file_name );
+        HIP_DEBUG("Can't open file %s: %s\n", file_name, strerror(errno));
     }
 
     input_rules   = input;
