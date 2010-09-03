@@ -438,6 +438,8 @@ static int hip_heartbeat_init_state(struct modular_state *state)
                 -1,
                 "Error on allocating memory for heartbeat_counter.\n");
 
+    *heartbeat_count = 0;
+
     err = lmod_add_state_item(state, heartbeat_count, "heartbeat_update");
 
 out_err:
