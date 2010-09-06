@@ -580,16 +580,16 @@ static void remove_tuple(struct tuple *tuple)
 
         tuple->connection = NULL;
         // tuple was not malloced -> no free here
-    }
 
-    if (tuple->src_ip) {
-        free(tuple->src_ip);
-        tuple->src_ip = NULL;
-    }
+        if (tuple->src_ip) {
+            free(tuple->src_ip);
+            tuple->src_ip = NULL;
+        }
 
-    if (tuple->dst_ip) {
-        free(tuple->dst_ip);
-        tuple->dst_ip = NULL;
+        if (tuple->dst_ip) {
+            free(tuple->dst_ip);
+            tuple->dst_ip = NULL;
+        }
     }
 }
 
