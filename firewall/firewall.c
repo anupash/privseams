@@ -666,12 +666,13 @@ static void firewall_exit(void)
 
     HIP_DEBUG("Firewall exit\n");
 
-    msg = hip_msg_alloc();
-    if (hip_build_user_hdr(msg, HIP_MSG_FIREWALL_QUIT, 0) ||
-        hip_send_recv_daemon_info(msg, 1, hip_fw_sock)) {
-        HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
+    if ((msg = hip_msg_alloc()) != NULL) {
+        if (hip_build_user_hdr(msg, HIP_MSG_FIREWALL_QUIT, 0) ||
+            hip_send_recv_daemon_info(msg, 1, hip_fw_sock)) {
+            HIP_DEBUG("Failed to notify hipd of firewall shutdown.\n");
+        }
+        free(msg);
     }
-    free(msg);
 
     hip_firewall_cache_delete_hldb(1);
     hip_firewall_port_cache_uninit_hldb();
@@ -702,14 +703,6 @@ static void firewall_close(DBG const int sig)
     HIP_DEBUG("Caught signal %d, closing firewall.\n", sig);
     firewall_exit();
     exit(EXIT_SUCCESS);
-}
-
-static void die(struct ipq_handle *h)
-{
-    HIP_DEBUG("Dying by sending SIGTERM to self\n");
-    ipq_perror("passer");
-    ipq_destroy_handle(h);
-    kill(getpid(), SIGTERM);
 }
 
 /**
@@ -1930,7 +1923,7 @@ static void hip_fw_wait_for_hipd(void)
 int main(int argc, char **argv)
 {
     int err                = 0, highest_descriptor, i;
-    int status, n, len;
+    int n, len;
     struct ipq_handle *h4  = NULL, *h6 = NULL;
     int ch;
     char *rule_file        = NULL;
@@ -2128,55 +2121,30 @@ int main(int argc, char **argv)
     firewall_probe_kernel_modules();
 
     // create firewall queue handles for IPv4 traffic
-    // FIXME died handle will still be used below
-    // FIXME memleak - not free'd on exit
-    h4 = ipq_create_handle(0, PF_INET);
-
-    if (!h4) {
-        die(h4);
-    }
-
-    HIP_DEBUG("IPv4 handle created\n");
-
-    status = ipq_set_mode(h4, IPQ_COPY_PACKET, HIP_MAX_PACKET);
-
-    if (status < 0) {
-        die(h4);
-    }
-    HIP_DEBUG("IPv4 handle mode COPY_PACKET set\n");
+    HIP_IFEL(!(h4 = ipq_create_handle(0, PF_INET)), -1,
+             "ipq_create_handle(): %s\n", ipq_errstr());
+    HIP_IFEL(ipq_set_mode(h4, IPQ_COPY_PACKET, HIP_MAX_PACKET) == -1, -1,
+             "ipq_set_mode(): %s\n", ipq_errstr());
+    HIP_DEBUG("IPv4 handle created (mode COPY_PACKET)\n");
 
     // create firewall queue handles for IPv6 traffic
-    // FIXME died handle will still be used below
-    // FIXME memleak - not free'd on exit
-    h6 = ipq_create_handle(0, PF_INET6);
-
-    if (!h6) {
-        die(h6);
-    }
-    HIP_DEBUG("IPv6 handle created\n");
-    status = ipq_set_mode(h6, IPQ_COPY_PACKET, HIP_MAX_PACKET);
-
-    if (status < 0) {
-        die(h6);
-    }
-    HIP_DEBUG("IPv6 handle mode COPY_PACKET set\n");
+    HIP_IFEL(!(h6 = ipq_create_handle(0, PF_INET6)), -1,
+             "ipq_create_handle(): %s\n", ipq_errstr());
+    HIP_IFEL(ipq_set_mode(h6, IPQ_COPY_PACKET, HIP_MAX_PACKET) == -1, -1,
+             "ipq_set_mode(): %s\n", ipq_errstr());
+    HIP_DEBUG("IPv6 handle created (mode COPY_PACKET)\n");
 
     // set up ip(6)tables rules and firewall extensions
     HIP_IFEL(firewall_init(), -1, "Firewall init failed\n");
 
-    /* Allocate message. */
-    // FIXME memleak - not free'd on exit
-    msg = hip_msg_alloc();
-    if (!msg) {
-        err = -1;
-        return err;
-    }
-
     if (limit_capabilities) {
-        HIP_IFEL(hip_set_lowcapability(), -1, "Failed to reduce priviledges");
+        HIP_IFEL(hip_set_lowcapability(), -1, "Failed to reduce privileges\n");
     }
 
     highest_descriptor = maxof(3, hip_fw_async_sock, h4->fd, h6->fd);
+
+    /* Allocate message. */
+    HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Insufficient memory\n");
 
     hip_msg_init(msg);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_FIREWALL_START, 0), -1,
@@ -2184,7 +2152,6 @@ int main(int argc, char **argv)
     if (hip_send_recv_daemon_info(msg, 1, hip_fw_sock)) {
         HIP_DEBUG("Failed to notify hipd of firewall start.\n");
     }
-    hip_msg_init(msg);
 
     // let's show that the firewall is running even with debug NONE
     HIP_DEBUG("firewall running. Entering select loop.\n");
@@ -2295,6 +2262,12 @@ int main(int argc, char **argv)
     }
 
 out_err:
+    if(h4) {
+        ipq_destroy_handle(h4);
+    }
+    if(h6) {
+        ipq_destroy_handle(h6);
+    }
     if (hip_fw_async_sock) {
         close(hip_fw_async_sock);
     }
@@ -2306,7 +2279,7 @@ out_err:
     }
 
     firewall_exit();
-    return 0;
+    return err;
 }
 
 /*----------------EXTERNALLY USED FUNCTIONS-------------------*/
