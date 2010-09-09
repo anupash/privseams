@@ -306,14 +306,13 @@ int hip_close_create_response(UNUSED const uint8_t packet_type,
     int err = 0, echo_len;
     const struct hip_echo_request *request;
 
-    HIP_IFE(!(ctx->output_msg = hip_msg_alloc()), -ENOMEM);
-
     HIP_IFEL(!(request =
                  hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
              -1, "No echo request under signature.\n");
 
     echo_len = hip_get_param_contents_len(request);
 
+    hip_msg_init(ctx->output_msg);
     hip_build_network_hdr(ctx->output_msg,
                         HIP_CLOSE_ACK,
                         0,
@@ -394,9 +393,6 @@ int hip_close_send_response(UNUSED const uint8_t packet_type,
              -1,
              "Deleting peer info failed.\n");
 out_err:
-    if (ctx->output_msg) {
-        free(ctx->output_msg);
-    }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
     hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE );

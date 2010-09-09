@@ -276,8 +276,8 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
      * of the REG_INFO parameter. */
 
     HIP_DEBUG("R1 source port %u, destination port %d\n",
-              ctx->msg_ports->src_port,
-              ctx->msg_ports->dst_port);
+              ctx->msg_ports.src_port,
+              ctx->msg_ports.dst_port);
 
     HIP_ASSERT(ctx->hadb_entry);
 
@@ -441,11 +441,11 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
      * try to set up inbound IPsec SA, similarly as in hip_send_r2 */
 
     HIP_DEBUG("src %d, dst %d\n",
-              ctx->msg_ports->src_port,
-              ctx->msg_ports->dst_port);
+              ctx->msg_ports.src_port,
+              ctx->msg_ports.dst_port);
 
-    ctx->hadb_entry->local_udp_port = ctx->msg_ports->src_port;
-    ctx->hadb_entry->peer_udp_port  = ctx->msg_ports->dst_port;
+    ctx->hadb_entry->local_udp_port = ctx->msg_ports.src_port;
+    ctx->hadb_entry->peer_udp_port  = ctx->msg_ports.dst_port;
 
     ctx->hadb_entry->hip_transform  = transform_hip_suite;
 
@@ -454,7 +454,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
 
     HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input_msg->hits,
                                    &ctx->input_msg->hitr,
-                                   ctx->src_addr, ctx->dst_addr,
+                                   &ctx->src_addr, &ctx->dst_addr,
                                    IPPROTO_ESP,
                                    1,
                                    1),
@@ -517,7 +517,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     /********** I2 packet complete **********/
     memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
     spi_in_data.spi     = spi_in;
-    spi_in_data.ifindex = hip_devaddr2ifindex(ctx->dst_addr);
+    spi_in_data.ifindex = hip_devaddr2ifindex(&ctx->dst_addr);
     HIP_LOCK_HA(ctx->hadb_entry);
 
     /* 99999 HIP_IFEB(hip_hadb_add_spi_old(ctx->hadb_entry,
@@ -535,9 +535,9 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     HIP_IFE(hip_hadb_get_peer_addr(ctx->hadb_entry, &daddr), -1);
 
     /* R1 packet source port becomes the I2 packet destination port. */
-    err = hip_send_pkt(ctx->dst_addr, &daddr,
+    err = hip_send_pkt(&ctx->dst_addr, &daddr,
                        (ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                       ctx->msg_ports->src_port, ctx->output_msg, ctx->hadb_entry, 1);
+                       ctx->msg_ports.src_port, ctx->output_msg, ctx->hadb_entry, 1);
     HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
     HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
@@ -547,9 +547,6 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     }
 
 out_err:
-    if (ctx->output_msg) {
-        free(ctx->output_msg);
-    }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_R1\n");
     hip_perf_stop_benchmark(perf_set, PERF_R1);
@@ -777,7 +774,7 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
     struct in6_addr dst_ip      = IN6ADDR_ANY_INIT,
                *r1_dst_addr     = NULL,
                *local_plain_hit = NULL,
-               *r1_src_addr     = ctx->dst_addr;
+               *r1_src_addr     = &ctx->dst_addr;
     in_port_t r1_dst_port       = 0;
     int relay_para_type         = 0;
 
@@ -785,12 +782,12 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
              -1,
              "Abort packet processing and don't send R1 packet.\n")
 
-    HIP_DEBUG_IN6ADDR("i1_saddr", ctx->src_addr);
-    HIP_DEBUG_IN6ADDR("i1_daddr", ctx->dst_addr);
+    HIP_DEBUG_IN6ADDR("i1_saddr", &ctx->src_addr);
+    HIP_DEBUG_IN6ADDR("i1_daddr", &ctx->dst_addr);
     HIP_DEBUG_IN6ADDR("dst_ip", &dst_ip);
 
     relay_para_type = hip_relay_handle_relay_from(ctx->input_msg,
-                                                  ctx->src_addr,
+                                                  &ctx->src_addr,
                                                   &dst_ip, &r1_dst_port);
 
     /* Get the final destination address and port for the outgoing R1.
@@ -801,13 +798,13 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
         if (relay_para_type == HIP_PARAM_RELAY_FROM) {
             HIP_DEBUG("Param relay from\n");
             //from relay
-            r1_dst_addr = ctx->src_addr;
-            r1_dst_port = ctx->msg_ports->src_port;
+            r1_dst_addr = &ctx->src_addr;
+            r1_dst_port = ctx->msg_ports.src_port;
         } else if (relay_para_type == HIP_PARAM_FROM)    {
             HIP_DEBUG("Param from\n");
             //from RVS, answer to I
             r1_dst_addr =  &dst_ip;
-            if (ctx->msg_ports->src_port) {
+            if (ctx->msg_ports.src_port) {
                 // R and RVS is in the UDP mode or I send UDP to RVS with incoming port hip_get_peer_nat_udp_port()
                 r1_dst_port =  hip_get_peer_nat_udp_port();
             } else {
@@ -818,8 +815,8 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
     } else {
         HIP_DEBUG("No RVS or relay\n");
         /* no RVS or RELAY found;  direct connection */
-        r1_dst_addr = ctx->src_addr;
-        r1_dst_port = ctx->msg_ports->src_port;
+        r1_dst_addr = &ctx->src_addr;
+        r1_dst_port = ctx->msg_ports.src_port;
     }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -842,7 +839,7 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
         }
     }
 
-    HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, ctx->dst_addr,
+    HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, &ctx->dst_addr,
                                   &ctx->input_msg->hitr)),
              -ENOENT, "No precreated R1\n");
 
@@ -866,7 +863,7 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
             hip_build_param_relay_to(r1pkt, &dst_ip, r1_dst_port);
         } else if (relay_para_type == HIP_PARAM_FROM)    {
             HIP_DEBUG("Build param via_rvs\n");
-            hip_build_param_via_rvs(r1pkt, ctx->src_addr);
+            hip_build_param_via_rvs(r1pkt, &ctx->src_addr);
         }
     }
 #endif
@@ -928,7 +925,7 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
              "Abort packet processing and don't send R1 packet.\n")
 
     /* Build and send R2: IP ( HIP ( SPI, HMAC, HIP_SIGNATURE ) ) */
-    HIP_IFEL(!(ctx->output_msg = hip_msg_alloc()), -ENOMEM, "No memory for R2\n");
+    hip_msg_init(ctx->output_msg);
 
     /* Just swap the addresses to use the I2's destination HIT as the R2's
      * source HIT. */
@@ -983,7 +980,7 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
                                  ctx->input_msg, ctx->output_msg);
     if (hip_relay_get_status() != HIP_RELAY_OFF) {
         hip_build_param_reg_from(ctx->output_msg,
-                                 ctx->src_addr, ctx->msg_ports->src_port);
+                                 &ctx->src_addr, ctx->msg_ports.src_port);
     }
 #endif
 
@@ -1016,7 +1013,7 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
         in_port_t dst_port = 0;
 
         memset(&dst, 0, sizeof(dst));
-        if ((hip_relay_handle_relay_from(ctx->input_msg, ctx->src_addr,
+        if ((hip_relay_handle_relay_from(ctx->input_msg, &ctx->src_addr,
                                          &dst, &dst_port) > 0) &&
             !ipv6_addr_any(&dst)) {
             HIP_DEBUG("create relay_to parameter in R2\n");
@@ -1025,8 +1022,8 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
     }
 #endif
 
-    err = hip_add_sa(ctx->dst_addr,
-                     ctx->src_addr,
+    err = hip_add_sa(&ctx->dst_addr,
+                     &ctx->src_addr,
                      &ctx->input_msg->hitr,
                      &ctx->input_msg->hits,
                      ctx->hadb_entry->spi_outbound_current,
@@ -1049,8 +1046,8 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
     HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n",
               ctx->hadb_entry->spi_outbound_new);
 
-    err = hip_send_pkt(ctx->dst_addr,
-                       ctx->src_addr,
+    err = hip_send_pkt(&ctx->dst_addr,
+                       &ctx->src_addr,
                        (ctx->hadb_entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
                        ctx->hadb_entry->peer_udp_port,
                        ctx->output_msg,
@@ -1064,9 +1061,6 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
     HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
 out_err:
-    if (ctx->output_msg) {
-        free(ctx->output_msg);
-    }
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_I2\n");
     hip_perf_stop_benchmark(perf_set, PERF_I2);

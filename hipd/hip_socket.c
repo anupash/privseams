@@ -250,6 +250,18 @@ void hip_prepare_fd_set(fd_set *read_fdset)
     }
 }
 
+/**
+ * Run callbacks for any global socket that's flagged in the fd_set.
+ * Invoked from hipd_main's main loop.
+ *
+ * @param read_fdset fd_set loaded with global socket handles, after
+ *                   select() call.
+ * @param ctx        Initialized packet context. Will be prepared for next
+ *                   iteration upon return.
+ * @todo             select() should probably be called here rather than in
+ *                   hipd_main (passing read_fdset is superfluous)
+ * @see              hipd_main
+ */
 void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
 {
     hip_ll_node_t *iter = NULL;
@@ -260,8 +272,13 @@ void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
             socketfd = ((struct socketfd*) iter->ptr)->fd;
 
             if (FD_ISSET(socketfd, read_fdset)) {
-                ctx->error = 0;
                 ((struct socketfd*) iter->ptr)->func_ptr(ctx);
+                HIP_DEBUG("result: %d\n", ctx->error);
+
+                /* Reset for next iteration.
+                 * msg_ports has no reset-state. */
+                ctx->hadb_entry = NULL;
+                ctx->error      = 0;
             }
         }
     } else {

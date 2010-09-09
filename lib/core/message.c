@@ -558,9 +558,6 @@ static int hip_read_control_msg_all(int sockfd,
 
     hip_msg_init(ctx->input_msg);
 
-    HIP_ASSERT(ctx->src_addr);
-    HIP_ASSERT(ctx->dst_addr);
-
     HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
 //    memset(msg_info, 0, sizeof(hip_portpair_t));
@@ -613,31 +610,31 @@ static int hip_read_control_msg_all(int sockfd,
     /* UDP port numbers */
     if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
         HIP_DEBUG("source port = %d\n", ntohs(addr_from4->sin_port));
-        ctx->msg_ports->src_port = ntohs(addr_from4->sin_port);
+        ctx->msg_ports.src_port = ntohs(addr_from4->sin_port);
         /* Destination port is known from the bound socket. */
-        ctx->msg_ports->dst_port = hip_get_local_nat_udp_port();
+        ctx->msg_ports.dst_port = hip_get_local_nat_udp_port();
     } else {
-        ctx->msg_ports->src_port = 0;
-        ctx->msg_ports->dst_port = 0;
+        ctx->msg_ports.src_port = 0;
+        ctx->msg_ports.dst_port = 0;
    }
 
     /* IPv4 addresses */
     if (is_ipv4) {
         struct sockaddr_in *addr_to4 = (struct sockaddr_in *) &addr_to;
-        IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, ctx->src_addr);
-        IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr, ctx->dst_addr);
+        IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, &ctx->src_addr);
+        IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr, &ctx->dst_addr);
         addr_to4->sin_family = AF_INET;
         addr_to4->sin_addr   = pktinfo.pktinfo_in4->ipi_addr;
-        addr_to4->sin_port   = ctx->msg_ports->dst_port;
+        addr_to4->sin_port   = ctx->msg_ports.dst_port;
     } else {   /* IPv6 addresses */
         struct sockaddr_in6 *addr_to6 =
             (struct sockaddr_in6 *) &addr_to;
-        memcpy(ctx->src_addr, &addr_from6->sin6_addr,
+        memcpy(&ctx->src_addr, &addr_from6->sin6_addr,
                sizeof(struct in6_addr));
-        memcpy(ctx->dst_addr, &pktinfo.pktinfo_in6->ipi6_addr,
+        memcpy(&ctx->dst_addr, &pktinfo.pktinfo_in6->ipi6_addr,
                sizeof(struct in6_addr));
         addr_to6->sin6_family = AF_INET6;
-        ipv6_addr_copy(&addr_to6->sin6_addr, ctx->dst_addr);
+        ipv6_addr_copy(&addr_to6->sin6_addr, &ctx->dst_addr);
     }
 
     if (is_ipv4 && (encap_hdr_size == IPV4_HDR_SIZE)) {    /* raw IPv4, !UDP */
@@ -661,12 +658,8 @@ static int hip_read_control_msg_all(int sockfd,
 
 
 
-    if (ctx->src_addr) {
-        HIP_DEBUG_IN6ADDR("src", ctx->src_addr);
-    }
-    if (ctx->dst_addr) {
-        HIP_DEBUG_IN6ADDR("dst", ctx->dst_addr);
-    }
+    HIP_DEBUG_IN6ADDR("src", &ctx->src_addr);
+    HIP_DEBUG_IN6ADDR("dst", &ctx->dst_addr);
 
 out_err:
     return err;

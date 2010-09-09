@@ -899,12 +899,12 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
     HIP_DEBUG("Msg type :      %s (%d)\n",
               hip_message_type_name(hip_get_msg_type(ctx->input_msg)),
               hip_get_msg_type(ctx->input_msg));
-    HIP_DEBUG_IN6ADDR("source address", ctx->src_addr);
-    HIP_DEBUG_IN6ADDR("destination address", ctx->dst_addr);
+    HIP_DEBUG_IN6ADDR("source address", &ctx->src_addr);
+    HIP_DEBUG_IN6ADDR("destination address", &ctx->dst_addr);
     HIP_DEBUG_HIT("Relay record hit", &rec->hit_r);
     HIP_DEBUG("Relay record port: %d.\n", rec->udp_port_r);
     HIP_DEBUG("source port: %u, destination port: %u\n",
-              ctx->msg_ports->src_port, ctx->msg_ports->dst_port);
+              ctx->msg_ports.src_port, ctx->msg_ports.dst_port);
 
     if (rec->type == HIP_RVSRELAY) {
         HIP_DEBUG("Relay type is RVS\n");
@@ -941,10 +941,10 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
                       param_type);
             if (param_type == HIP_PARAM_RELAY_FROM) {
                 hip_build_param_relay_from(msg_to_be_relayed,
-                                           ctx->src_addr,
-                                           ctx->msg_ports->src_port);
+                                           &ctx->src_addr,
+                                           ctx->msg_ports.src_port);
             } else {
-                hip_build_param_from(msg_to_be_relayed, ctx->src_addr);
+                hip_build_param_from(msg_to_be_relayed, &ctx->src_addr);
             }
             hip_build_param(msg_to_be_relayed, current_param);
             from_added = 1;
@@ -959,10 +959,10 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
                   param_type);
         if (param_type == HIP_PARAM_RELAY_FROM) {
             hip_build_param_relay_from(msg_to_be_relayed,
-                                       ctx->src_addr,
-                                       ctx->msg_ports->src_port);
+                                       &ctx->src_addr,
+                                       ctx->msg_ports.src_port);
         } else {
-            hip_build_param_from(msg_to_be_relayed, ctx->src_addr);
+            hip_build_param_from(msg_to_be_relayed, &ctx->src_addr);
         }
     }
 
@@ -1121,8 +1121,8 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
                   ntohs(relay_to->port));
         hip_relay_forward_response(ctx->input_msg,
                                    packet_type,
-                                   ctx->src_addr,
-                                   ctx->dst_addr,
+                                   &ctx->src_addr,
+                                   &ctx->dst_addr,
                                    &relay_to->address,
                                    ntohs(relay_to->port));
         //  state = HIP_STATE_NONE;
