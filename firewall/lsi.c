@@ -311,16 +311,16 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
                                const struct in6_addr *ip_dst,
                                const int lsi_support)
 {
-    int err                                    = 0;
-    int verdict                                = 1;
-    int ip_hdr_size                            = 0;
-    int portDest                               = 0;
-    int process_as_lsi                         = 0;
+    int err                                               = 0;
+    int verdict                                           = 1;
+    int ip_hdr_size                                       = 0;
+    int portDest                                          = 0;
+    int process_as_lsi                                    = 0;
+    fw_cache_hl_t *entry                                  = NULL;
+    const struct firewall_port_cache_hl *port_cache_entry = NULL;
+    const struct ip6_hdr *ip6_hdr                         = NULL;
     char proto[PROTO_STRING_MAX];
     struct in6_addr src_addr, dst_addr;
-    const struct ip6_hdr *ip6_hdr;
-    firewall_port_cache_hl_t *port_cache_entry = NULL;
-    fw_cache_hl_t *entry                       = NULL;
 
     ip6_hdr = (const struct ip6_hdr *) m->payload;
     ip_hdr_size = sizeof(struct ip6_hdr);
@@ -348,7 +348,8 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 
     if (port_cache_entry &&
         (port_cache_entry->traffic_type ==
-         FIREWALL_PORT_CACHE_IPV6_TRAFFIC)) {
+         FIREWALL_PORT_CACHE_IPV6_TRAFFIC))
+    {
         verdict = 1;
         HIP_DEBUG("Cached port, accepting\n");
         goto out_err;

@@ -212,6 +212,5 @@ struct firewall_port_cache_hl {
     char port_and_protocol[FIREWALL_PORT_CACHE_KEY_LENGTH];     //key
     int  traffic_type;                                          //value
 };
-typedef struct firewall_port_cache_hl firewall_port_cache_hl_t;
 
 #endif /* HIP_LIB_CORE_ICOMM_H */

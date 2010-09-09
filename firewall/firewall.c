@@ -1308,8 +1308,8 @@ static int hip_fw_handle_tcp_forward(UNUSED hip_fw_context_t *ctx)
 }
 
 /**
- * Process an other (not HIP, ESP, TCP) packet from the inbound packet capture
- * queue
+ * Process another (not HIP, ESP, TCP) packet from the inbound packet
+ * capture queue. May result in LSI or SysOPP Transformation.
  *
  * @param ctx the packet context
  *
@@ -1486,7 +1486,7 @@ out_err:
  *
  * @param  ctx        the context.
  * @param  buf        a pointer to a IP packet.
- * @param ip_version  the IP version for this packet
+ * @param  ip_version the IP version for this packet
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */
 static int hip_fw_init_context(hip_fw_context_t *ctx,
@@ -1925,6 +1925,7 @@ static void hip_fw_wait_for_hipd(void)
  *
  * @return zero on success and non-zero on failure
  *
+ * @todo   Set up atexit() for clean shutdown on HIP_ASSERT.
  */
 int main(int argc, char **argv)
 {
