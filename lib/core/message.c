@@ -202,8 +202,7 @@ int hip_daemon_connect(int hip_user_sock)
     daemon_addr.sin6_addr   = in6addr_loopback;
 
     HIP_IFEL(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
-                     sizeof(daemon_addr)), -1,
-             "connection to daemon failed\n");
+             sizeof(daemon_addr)), -1, "connection to daemon failed\n");
 
 out_err:
 

@@ -242,7 +242,7 @@ static int hip_fw_init_userspace_ipsec(void)
     struct utsname name;
 
     HIP_IFEL(uname(&name), -1, "Failed to retrieve kernel information: %s\n",
-             strerror(err));
+             strerror(errno));
     ver_c = atoi(&name.release[4]);
 
     if (hip_userspace_ipsec) {
@@ -531,8 +531,7 @@ static int firewall_init_extensions(void)
         system_print("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
     }
 
-    HIP_IFEL(hip_fw_init_system_based_opp_mode(),
-             -1, "failed to load extension\n");
+    HIP_IFEL(hip_fw_init_system_based_opp_mode(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
@@ -620,7 +619,6 @@ out_err:
 
 /**
  * Uninitialize all basic and extended packet capture rules
- *
  */
 static void hip_fw_flush_iptables(void)
 {
@@ -658,7 +656,6 @@ static void hip_fw_flush_iptables(void)
 /**
  * Firewall signal handler (SIGINT, SIGTERM). Exit firewall gracefully
  * and clean up all packet capture rules.
- *
  */
 static void firewall_exit(void)
 {
@@ -1798,7 +1795,7 @@ static void drop_packet(struct ipq_handle *handle, unsigned long packetId)
  * @param ctx packet context
  *
  * @return  nothing, this function loops forever,
- *      until the firewall is stopped.
+ *          until the firewall is stopped.
  */
 static int hip_fw_handle_packet(unsigned char *buf,
                                 struct ipq_handle *hndl,
@@ -2043,11 +2040,11 @@ int main(int argc, char **argv)
             return 0;
         case ':':         /* option without operand */
             printf("Option -%c requires an operand\n", optopt);
-            errflg++;
+            errflg = 1;
             break;
         case '?':
             printf("Unrecognized option: -%c\n", optopt);
-            errflg++;
+            errflg = 1;
         }
     }
 
@@ -2078,7 +2075,7 @@ int main(int argc, char **argv)
 
     for (i=0; i<2; i++) {
         err = bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
-               sizeof(sock_addr));
+                   sizeof(sock_addr));
         if (err == 0) {
             break;
         } else if (err && i == 0) {
@@ -2087,8 +2084,7 @@ int main(int argc, char **argv)
     }
 
     HIP_IFEL(err, -1, "Bind on firewall socket addr failed. Give -k option to kill old hipfw\n");
-    HIP_IFEL(hip_daemon_connect(hip_fw_sock), -1,
-         "connecting socket failed\n");
+    HIP_IFEL(hip_daemon_connect(hip_fw_sock), -1, "connecting socket failed\n");
 
     /* Only for receiving out-of-sync notifications from hipd  */
     hip_fw_async_sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -2097,10 +2093,10 @@ int main(int argc, char **argv)
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
     sock_addr.sin6_addr = in6addr_loopback;
-    HIP_IFEL(bind(hip_fw_async_sock, (struct sockaddr *)& sock_addr,
-              sizeof(sock_addr)), -1, "Bind on firewall socket addr failed. Give -k option to kill old hipfw\n");
+    HIP_IFEL(bind(hip_fw_async_sock, (struct sockaddr *)& sock_addr, sizeof(sock_addr)), -1,
+             "Bind on firewall socket addr failed. Give -k option to kill old hipfw\n");
     HIP_IFEL(hip_daemon_connect(hip_fw_async_sock), -1,
-         "connecting socket failed\n");
+             "connecting socket failed\n");
 
     /* Starting hipfw does not always work when hipfw starts first -miika */
     if (hip_userspace_ipsec || hip_lsi_support || system_based_opp_mode) {
@@ -2173,7 +2169,8 @@ int main(int argc, char **argv)
         // get handle with queued packet and process
         /* @todo: using HIPD_SELECT blocks hipfw with R1 */
         if ((err = select((highest_descriptor + 1), &read_fdset,
-                       NULL, NULL, &timeout)) < 0) {
+                          NULL, NULL, &timeout)) < 0)
+        {
             HIP_PERROR("select error, ignoring\n");
             continue;
         }
