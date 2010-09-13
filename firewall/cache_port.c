@@ -153,11 +153,11 @@ static int hip_get_proto_info(in_port_t port_dest, char *proto)
  */
 static int hip_port_cache_add_new_entry(const char *key, int value)
 {
-    firewall_port_cache_hl_t *new_entry = NULL;
+    struct firewall_port_cache_hl *new_entry = NULL;
     int err = 0;
 
     HIP_DEBUG("\n");
-    new_entry = (firewall_port_cache_hl_t *) (hip_cache_create_hl_entry());
+    new_entry = (struct firewall_port_cache_hl *) (hip_cache_create_hl_entry());
     memcpy(new_entry->port_and_protocol, key, strlen(key));
     new_entry->traffic_type = value;
     hip_ht_add(firewall_port_cache_db, new_entry);
@@ -173,10 +173,10 @@ static int hip_port_cache_add_new_entry(const char *key, int value)
  *
  * @return the cache entry if found or NULL otherwise
  */
-firewall_port_cache_hl_t *hip_firewall_port_cache_db_match(in_port_t port,
+struct firewall_port_cache_hl *hip_firewall_port_cache_db_match(in_port_t port,
                                                            int proto)
 {
-    firewall_port_cache_hl_t *found_entry = NULL;
+    struct firewall_port_cache_hl *found_entry = NULL;
     char key[FIREWALL_PORT_CACHE_KEY_LENGTH];
     char protocol[10], proto_for_bind[10];
     int bindto = FIREWALL_PORT_CACHE_IPV4_TRAFFIC; //3 - default to ipv4, non-LSI traffic
@@ -238,7 +238,7 @@ static unsigned long hip_firewall_port_hash_key(const void *ptr)
     uint8_t hash[HIP_AH_SHA_LEN];
 
     key = (const char *)
-          &((const firewall_port_cache_hl_t *) ptr)->port_and_protocol;
+          &((const struct firewall_port_cache_hl *) ptr)->port_and_protocol;
     hip_build_digest(HIP_DIGEST_SHA1, key, sizeof(*key), hash);
     return *((unsigned long *) hash);
 }
@@ -273,9 +273,9 @@ void hip_firewall_port_cache_init_hldb(void)
 void hip_firewall_port_cache_uninit_hldb(void)
 {
     int i;
-    firewall_port_cache_hl_t *this = NULL;
-    hip_list_t *item               = NULL;
-    hip_list_t *tmp                = NULL;
+    struct firewall_port_cache_hl *this = NULL;
+    hip_list_t *item                    = NULL;
+    hip_list_t *tmp                     = NULL;
 
     HIP_DEBUG("Start hldb delete\n");
     HIP_LOCK_HT(&firewall_port_cache_db);
@@ -283,7 +283,7 @@ void hip_firewall_port_cache_uninit_hldb(void)
     list_for_each_safe(item, tmp, firewall_port_cache_db, i)
     {
       HIP_DEBUG("xx\n");
-        this = (firewall_port_cache_hl_t *) list_entry(item);
+        this = (struct firewall_port_cache_hl *) list_entry(item);
         hip_ht_delete(firewall_port_cache_db, this);
         free(this);
       HIP_DEBUG("yy\n");

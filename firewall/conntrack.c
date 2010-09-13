@@ -577,10 +577,9 @@ static void remove_tuple(struct tuple *tuple)
             list              = tuple->esp_tuples;
         }
         tuple->esp_tuples = NULL;
-
         tuple->connection = NULL;
-        // tuple was not malloced -> no free here
 
+        // tuple was not malloced -> no free here
         if (tuple->src_ip) {
             free(tuple->src_ip);
             tuple->src_ip = NULL;
@@ -853,13 +852,10 @@ static int hipfw_handle_relay_to_r2(const struct hip_common *common,
 
     /* Store Responder's IP address and port */
     tuple->esp_relay = 1;
-    ipv6_addr_copy(&tuple->esp_relay_daddr,
-                   &ctx->src);
+    ipv6_addr_copy(&tuple->esp_relay_daddr, &ctx->src);
     tuple->esp_relay_dport = tuple->dst_port;
-    HIP_DEBUG("tuple relay port=%d\n",
-              tuple->esp_relay_dport);
-    HIP_DEBUG_IN6ADDR("tuple relay ip",
-                      &tuple->esp_relay_daddr);
+    HIP_DEBUG("tuple relay port=%d\n", tuple->esp_relay_dport);
+    HIP_DEBUG_IN6ADDR("tuple relay ip", &tuple->esp_relay_daddr);
 
     /* Store Initiator's IP address and port */
     reverse_tuple->esp_relay = 1;
@@ -961,10 +957,10 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
                      const hip_fw_context_t *ctx)
 {
     const struct hip_esp_info *spi    = NULL;
+    const SList *other_dir_esps       = NULL;
+    const struct hip_host_id *host_id = NULL;
     struct tuple *other_dir           = NULL;
     struct esp_tuple *esp_tuple       = NULL;
-    SList *other_dir_esps             = NULL;
-    const struct hip_host_id *host_id = NULL;
     struct in6_addr hit;
     // assume correct packet
     int err                     = 1;

@@ -50,14 +50,14 @@ struct hit_option {
 };
 
 struct int_option {
-    int value; //int value
-    int boolean; // 0 if negation, else 1
+    int value;   /**< int value */
+    int boolean; /**< 0 if negation, else 1 */
 };
 
 struct state_option {
     struct int_option int_opt;
-    int verify_responder; //1 if responder signatures are verified
-    int accept_mobile; //1 if state can be established from updates signalling
+    int verify_responder; /**< 1 if responder signatures are verified */
+    int accept_mobile;    /**< 1 if state can be established from updates signalling */
     int decrypt_contents;
 };
 
@@ -68,10 +68,10 @@ struct string_option {
     int boolean;
 };
 
-//Pointer values must be NULL if option is not specified.
-//Use alloc_empty_rule() to allocate rule with pointers set to NULL!!
-//when updating rule structure, update also (at least) free_rule(),
-//print_rule(), rules_equal(), copy_rule (), alloc_empty_rule() functions
+// Pointer values must be NULL if option is not specified.
+// Use alloc_empty_rule() to allocate rule with pointers set to NULL!!
+// when updating rule structure, update also (at least) free_rule(),
+// print_rule(), rules_equal(), copy_rule (), alloc_empty_rule() functions
 struct rule {
     struct hit_option *src_hit;
     struct hit_option *dst_hit;
