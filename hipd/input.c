@@ -651,7 +651,7 @@ int hip_receive_udp_control_packet(struct hip_packet_context *ctx)
          * used for setting up the SAs: handle_r1 creates one-way SA and
          * handle_i2 the other way; let's make sure that they are the
          * same. */
-        ctx->src_addr = &entry->peer_addr;
+        ipv6_addr_copy(&ctx->src_addr, &entry->peer_addr);
     }
 #endif
     HIP_IFEL(hip_receive_control_packet(ctx), -1,
