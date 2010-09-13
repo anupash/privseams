@@ -263,8 +263,8 @@ int esp_prot_handle_light_update(UNUSED const uint8_t packet_type,
 
         // send ACK
         esp_prot_send_light_ack(ctx->hadb_entry,
-                                ctx->dst_addr,
-                                ctx->src_addr,
+                                &ctx->dst_addr,
+                                &ctx->src_addr,
                                 spi);
     } else if (ack != NULL) {
         /********** ACK ***********/
@@ -279,8 +279,8 @@ int esp_prot_handle_light_update(UNUSED const uint8_t packet_type,
         ctx->hadb_entry->light_update_retrans = 0;
 
         // notify sadb about next anchor
-        HIP_IFEL(hip_add_sa(ctx->dst_addr,
-                            ctx->src_addr,
+        HIP_IFEL(hip_add_sa(&ctx->dst_addr,
+                            &ctx->src_addr,
                             &(ctx->hadb_entry)->hit_our,
                             &(ctx->hadb_entry)->hit_peer,
                             ctx->hadb_entry->spi_outbound_new,

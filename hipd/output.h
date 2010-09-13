@@ -63,7 +63,7 @@ int hip_send_r2_response(struct hip_common *r2,
                          struct in6_addr *r2_saddr,
                          struct in6_addr *r2_daddr,
                          hip_ha_t *entry,
-                         hip_portpair_t *r2_info);
+                         struct hip_portpair_t *r2_info);
 
 int hip_send_i1(hip_hit_t *, const hip_hit_t *, hip_ha_t *);
 

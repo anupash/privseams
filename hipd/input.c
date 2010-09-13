@@ -522,8 +522,8 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     HIP_DEBUG_HIT("HIT Sender  ", &ctx->input_msg->hits);
     HIP_DEBUG_HIT("HIT Receiver", &ctx->input_msg->hitr);
     HIP_DEBUG("source port: %u, destination port: %u\n",
-              ctx->msg_ports->src_port,
-              ctx->msg_ports->dst_port);
+              ctx->msg_ports.src_port,
+              ctx->msg_ports.dst_port);
 
     HIP_DUMP_MSG(ctx->input_msg);
 
@@ -532,9 +532,9 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
                             &ctx->input_msg->hits) ||
          IN6_ARE_ADDR_EQUAL(&ctx->input_msg->hitr,
                             &ipv6_any_addr)) &&
-        !hip_addr_is_loopback(ctx->dst_addr) &&
-        !hip_addr_is_loopback(ctx->src_addr) &&
-        !IN6_ARE_ADDR_EQUAL(ctx->src_addr, ctx->dst_addr)) {
+        !hip_addr_is_loopback(&ctx->dst_addr) &&
+        !hip_addr_is_loopback(&ctx->src_addr) &&
+        !IN6_ARE_ADDR_EQUAL(&ctx->src_addr, &ctx->dst_addr)) {
         HIP_DEBUG("Invalid loopback packet. Dropping.\n");
         goto out_err;
     }
@@ -565,7 +565,7 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         (type == HIP_I1 || type == HIP_R1)) {
         ctx->hadb_entry =
                 hip_oppdb_get_hadb_entry_i1_r1(ctx->input_msg,
-                                               ctx->src_addr);
+                                               &ctx->src_addr);
     }
 #endif
 
@@ -734,18 +734,18 @@ int hip_check_r1(RVS const uint8_t packet_type,
      * newer address. This enables us to use the rendezvous server, while
      * not supporting the REA TLV. */
     hip_hadb_get_peer_addr(ctx->hadb_entry, &daddr);
-    if (ipv6_addr_cmp(&daddr, ctx->src_addr) != 0) {
+    if (ipv6_addr_cmp(&daddr, &ctx->src_addr) != 0) {
         HIP_DEBUG("Mapped address didn't match received address\n");
         HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
         HIP_HEXDUMP("Mapping", &daddr, 16);
-        HIP_HEXDUMP("Received", ctx->src_addr, 16);
+        HIP_HEXDUMP("Received", &ctx->src_addr, 16);
         hip_hadb_delete_peer_addrlist_one_old(ctx->hadb_entry, &daddr);
         hip_hadb_add_peer_addr(ctx->hadb_entry,
-                               ctx->src_addr,
+                               &ctx->src_addr,
                                0,
                                0,
                                PEER_ADDR_STATE_ACTIVE,
-                               ctx->msg_ports->src_port);
+                               ctx->msg_ports.src_port);
     }
 
     hip_relay_add_rvs_to_ha(ctx->input_msg, ctx->hadb_entry);
@@ -845,7 +845,7 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
      * the peer is behind NAT. We set NAT mode "on" and set the send function to
      * "hip_send_udp". The client UDP port is not stored until the handling
      * of R2 packet. Don't know if the entry is already locked... */
-    if (ctx->msg_ports->dst_port != 0) {
+    if (ctx->msg_ports.dst_port != 0) {
         HIP_LOCK_HA(ctx->hadb_entry);
         if (ctx->hadb_entry->nat_mode == HIP_NAT_MODE_NONE) {
             ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
@@ -899,13 +899,9 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
         solved_puzzle = ctx->hadb_entry->puzzle_solution;
     }
 
-    /* Allocate space for a new I2 message. */
-    HIP_IFEL(!(ctx->output_msg = hip_msg_alloc()),
-             -ENOMEM,
-             "Allocation of I2 failed\n");
-
     HIP_DEBUG("Build normal I2.\n");
     /* create I2 */
+    hip_msg_init(ctx->output_msg);
     hip_build_network_hdr(ctx->output_msg,
                           HIP_I2,
                           i2_mask,
@@ -1104,9 +1100,9 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     }
 
     /* if the NAT mode is used, update the port numbers of the host association */
-    if (ctx->msg_ports->dst_port == hip_get_local_nat_udp_port()) {
-        ctx->hadb_entry->local_udp_port = ctx->msg_ports->dst_port;
-        ctx->hadb_entry->peer_udp_port  = ctx->msg_ports->src_port;
+    if (ctx->msg_ports.dst_port == hip_get_local_nat_udp_port()) {
+        ctx->hadb_entry->local_udp_port = ctx->msg_ports.dst_port;
+        ctx->hadb_entry->peer_udp_port  = ctx->msg_ports.src_port;
     }
 
     HIP_IFEL(!(esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO)),
@@ -1133,7 +1129,7 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     HIP_DEBUG("esp_transform: %i\n", tfm);
 
     HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
-              ctx->msg_ports->src_port, ctx->msg_ports->dst_port);
+              ctx->msg_ports.src_port, ctx->msg_ports.dst_port);
 
     /********** ESP-PROT anchor [OPTIONAL] **********/
     HIP_IFEL(esp_prot_r2_handle_anchor(ctx->hadb_entry,
@@ -1149,8 +1145,8 @@ int hip_handle_r2(RVS const uint8_t packet_type,
 
     HIP_DEBUG_HIT("hit our", &(ctx->hadb_entry)->hit_our);
     HIP_DEBUG_HIT("hit peer", &(ctx->hadb_entry)->hit_peer);
-    HIP_IFEL(hip_add_sa(ctx->src_addr,
-                        ctx->dst_addr,
+    HIP_IFEL(hip_add_sa(&ctx->src_addr,
+                        &ctx->dst_addr,
                         &ctx->input_msg->hits,
                         &ctx->input_msg->hitr,
                         spi_in,
@@ -1163,8 +1159,8 @@ int hip_handle_r2(RVS const uint8_t packet_type,
             -1,
             "Failed to setup IPsec SPD/SA entries, peer:src\n");
 
-    HIP_IFEL(hip_add_sa(ctx->dst_addr,
-                        ctx->src_addr,
+    HIP_IFEL(hip_add_sa(&ctx->dst_addr,
+                        &ctx->src_addr,
                         &ctx->input_msg->hitr,
                         &ctx->input_msg->hits,
                         spi_recvd,
@@ -1183,7 +1179,7 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     /* Source IPv6 address is implicitly the preferred address after the
      * base exchange. */
 
-    idx = hip_devaddr2ifindex(ctx->dst_addr);
+    idx = hip_devaddr2ifindex(&ctx->dst_addr);
 
     if (idx != 0) {
         HIP_DEBUG("ifindex = %d\n", idx);
@@ -1273,7 +1269,7 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
     HIP_INFO_HIT("I1 Source HIT:", &(ctx->input_msg)->hits);
-    HIP_INFO_IN6ADDR("I1 Source IP :", ctx->src_addr);
+    HIP_INFO_IN6ADDR("I1 Source IP :", &ctx->src_addr);
 
     HIP_ASSERT(!ipv6_addr_any(&(ctx->input_msg)->hitr));
 
@@ -1360,10 +1356,10 @@ int hip_handle_i1(UNUSED const uint8_t packet_type,
     src_hit_is_our = hip_hidb_hit_is_our(&ctx->input_msg->hits);
 
     /* check i1 for broadcast/multicast addresses */
-    if (IN6_IS_ADDR_V4MAPPED(ctx->dst_addr)) {
+    if (IN6_IS_ADDR_V4MAPPED(&ctx->dst_addr)) {
         struct in_addr addr4;
 
-        IPV6_TO_IPV4_MAP(ctx->dst_addr, &addr4);
+        IPV6_TO_IPV4_MAP(&ctx->dst_addr, &addr4);
 
         if (addr4.s_addr == INADDR_BROADCAST) {
             HIP_DEBUG("Received I1 broadcast\n");
@@ -1372,17 +1368,17 @@ int hip_handle_i1(UNUSED const uint8_t packet_type,
                     ctx->error = 1,
                     "Received a copy of own broadcast, dropping\n");
 
-            HIP_IFF(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
+            HIP_IFF(hip_select_source_address(&ctx->dst_addr, &ctx->src_addr),
                     -1,
                     ctx->error = 1,
                     "Could not find source address\n");
         }
-    } else if (IN6_IS_ADDR_MULTICAST(ctx->dst_addr)) {
+    } else if (IN6_IS_ADDR_MULTICAST(&ctx->dst_addr)) {
         HIP_IFF(src_hit_is_our,
                 -1,
                 ctx->error = 1,
                 "Received a copy of own broadcast, dropping\n");
-        HIP_IFF(hip_select_source_address(ctx->dst_addr, ctx->src_addr),
+        HIP_IFF(hip_select_source_address(&ctx->dst_addr, &ctx->src_addr),
                 -1,
                 ctx->error = 1,
                 "Could not find source address\n");
@@ -1466,7 +1462,7 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     HIP_DEBUG("Received I2 in state %s\n", hip_state_str(ha_state));
     HIP_INFO("Received I2 from:\n");
     HIP_INFO_HIT("Source HIT:", &ctx->input_msg->hits);
-    HIP_INFO_IN6ADDR("Source IP: ", ctx->src_addr);
+    HIP_INFO_IN6ADDR("Source IP: ", &ctx->src_addr);
 
     /* Next, we initialize the new HIP association. Peer HIT is the
       * source HIT of the received I2 packet. We can have many Host
@@ -1488,7 +1484,7 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
                   "association. Dropping the I2 packet.\n");
      }
      ipv6_addr_copy(&ctx->hadb_entry->hit_peer, &ctx->input_msg->hits);
-     ipv6_addr_copy(&ctx->hadb_entry->our_addr, ctx->dst_addr);
+     ipv6_addr_copy(&ctx->hadb_entry->our_addr, &ctx->dst_addr);
      HIP_DEBUG("Initializing the HIP association.\n");
      hip_init_us(ctx->hadb_entry, &ctx->input_msg->hitr);
      hip_hadb_insert_state(ctx->hadb_entry);
@@ -1502,8 +1498,8 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
              -ENODATA,
              "SOLUTION parameter missing from I2 packet. Dropping\n");
 
-    HIP_IFEL(hip_verify_cookie(ctx->src_addr,
-                               ctx->dst_addr,
+    HIP_IFEL(hip_verify_cookie(&ctx->src_addr,
+                               &ctx->dst_addr,
                                ctx->input_msg,
                                solution),
              -EPROTO,
@@ -1762,12 +1758,12 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
      * stored as the peer UDP port and send function is set to
      * "hip_send_pkt()". Note that we must store the port not until
      * here, since the source port can be different for I1 and I2. */
-    if (ctx->msg_ports->dst_port != 0) {
+    if (ctx->msg_ports.dst_port != 0) {
         if (ctx->hadb_entry->nat_mode == 0) {
             ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
         }
-        ctx->hadb_entry->local_udp_port = ctx->msg_ports->dst_port;
-        ctx->hadb_entry->peer_udp_port  = ctx->msg_ports->src_port;
+        ctx->hadb_entry->local_udp_port = ctx->msg_ports.dst_port;
+        ctx->hadb_entry->peer_udp_port  = ctx->msg_ports.src_port;
         HIP_DEBUG("Setting send func to UDP for entry %p from I2 info.\n",
                   ctx->hadb_entry);
         /** @todo Is this function set needed ? */
@@ -1801,11 +1797,11 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
              "Could not select proper ESP transform\n");
 
     HIP_IFEL(hip_hadb_add_peer_addr(ctx->hadb_entry,
-                                    ctx->src_addr,
+                                    &ctx->src_addr,
                                     0,
                                     0,
                                     PEER_ADDR_STATE_ACTIVE,
-                                    ctx->msg_ports->src_port),
+                                    ctx->msg_ports.src_port),
              -1,
              "Error while adding the preferred peer address\n");
 
@@ -1823,8 +1819,8 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     /************************************************/
 
     /* Set up IPsec associations */
-    err = hip_add_sa(ctx->src_addr,
-                     ctx->dst_addr,
+    err = hip_add_sa(&ctx->src_addr,
+                     &ctx->dst_addr,
                      &ctx->input_msg->hits,
                      &ctx->input_msg->hitr,
                      ctx->hadb_entry->spi_inbound_current,
@@ -1850,8 +1846,8 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
 
     HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input_msg->hits,
                                    &ctx->input_msg->hitr,
-                                   ctx->src_addr,
-                                   ctx->dst_addr,
+                                   &ctx->src_addr,
+                                   &ctx->dst_addr,
                                    IPPROTO_ESP,
                                    1,
                                    1),
@@ -1860,7 +1856,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
 
     memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
     spi_in_data.spi     = ctx->hadb_entry->spi_inbound_current;
-    spi_in_data.ifindex = hip_devaddr2ifindex(ctx->dst_addr);
+    spi_in_data.ifindex = hip_devaddr2ifindex(&ctx->dst_addr);
 
     if (spi_in_data.ifindex) {
         HIP_DEBUG("spi_in_data.ifindex = %d.\n", spi_in_data.ifindex);
@@ -2059,11 +2055,7 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
                     port = hip_get_peer_nat_udp_port();
                 }
 
-                /* We don't need to use hip_msg_alloc(), since
-                 * the I1 packet is just the size of struct
-                 * hip_common. */
-                memset(ctx->output_msg, 0, sizeof(ctx->output_msg));
-
+                hip_msg_init(ctx->output_msg);
                 hip_build_network_hdr(ctx->output_msg,
                                       response,
                                       ctx->hadb_entry->local_controls,

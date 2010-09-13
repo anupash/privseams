@@ -293,8 +293,6 @@ static int hipd_main(uint64_t flags)
     fd_set read_fdset;
     struct hip_packet_context ctx;
 
-    memset(&ctx, 0, sizeof(ctx));
-
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Creating perf set\n");
     perf_set = hip_perf_create(PERF_MAX);
@@ -350,6 +348,11 @@ static int hipd_main(uint64_t flags)
     HIP_INFO("hipd pid=%d starting\n", getpid());
     time(&load_time);
 
+    /* prepare the one and only hip_packet_context instance */
+    memset(&ctx, 0, sizeof(ctx));
+    HIP_IFEL(!(ctx.input_msg  = hip_msg_alloc()), ENOMEM, "Insufficient memory");
+    HIP_IFEL(!(ctx.output_msg = hip_msg_alloc()), ENOMEM, "Insufficient memory");
+
     /* Default initialization function. */
     HIP_IFEL(hipd_init(flags), 1, "hipd_init() failed!\n");
 
@@ -359,15 +362,6 @@ static int hipd_main(uint64_t flags)
     }
 
     highest_descriptor = hip_get_highest_descriptor();
-
-    /* Allocate user message. */
-    HIP_IFE(!(ctx.input_msg = hip_msg_alloc()), 1);
-    ctx.output_msg  = NULL;
-    ctx.src_addr    = malloc(sizeof(struct in6_addr));
-    ctx.dst_addr    = malloc(sizeof(struct in6_addr));
-    ctx.msg_ports   = malloc(sizeof(struct hip_stateless_info));
-    ctx.hadb_entry  = NULL;
-    ctx.error = 0;
 
     /* Enter to the select-loop */
     HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT,
@@ -435,20 +429,11 @@ out_err:
     /* free allocated resources */
     hip_exit();
 
-    if (ctx.input_msg) {
+    if(ctx.input_msg) {
         free(ctx.input_msg);
     }
-
-    if (ctx.src_addr) {
-        free(ctx.src_addr);
-    }
-
-    if (ctx.dst_addr) {
-        free(ctx.dst_addr);
-    }
-
-    if (ctx.msg_ports) {
-        free(ctx.msg_ports);
+    if(ctx.output_msg) {
+        free(ctx.output_msg);
     }
 
     HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);

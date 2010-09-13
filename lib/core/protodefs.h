@@ -1128,18 +1128,24 @@ struct sockaddr_hip {
 } __attribute__ ((packed));
 
 /**
- * Structure used during packet handling to store the incoming message,
- * source address, destination address, the used ports, the host association
- * database entry and a flag indicating the packet handling should be aborted.
+ * A data structure for storing the source and destination ports of a packet.
+ */
+struct hip_portpair_t {
+    in_port_t src_port;     /**< The source port of an incoming packet. */
+    in_port_t dst_port;     /**< The destination port of an incoming packet. */
+};
+
+/**
+ * Structure used to pass information around during packet handling.
  */
 struct hip_packet_context {
-    struct hip_common         *input_msg;
-    struct hip_common         *output_msg;
-    struct in6_addr           *src_addr;
-    struct in6_addr           *dst_addr;
-    struct hip_stateless_info *msg_ports;
-    struct hip_hadb_state     *hadb_entry;
-    uint8_t                    error;
+    struct hip_common         *input_msg;  /**< Incoming message. */
+    struct hip_common         *output_msg; /**< Outgoing message. */
+    struct in6_addr            src_addr;   /**< Packet origin. */
+    struct in6_addr            dst_addr;   /**< Packet destination. */
+    struct hip_portpair_t      msg_ports;  /**< Used ports. */
+    struct hip_hadb_state     *hadb_entry; /**< Host association database entry. */
+    uint8_t                    error;      /**< Abort further processing if not 0 */
 };
 
 

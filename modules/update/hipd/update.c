@@ -1049,9 +1049,9 @@ static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
 
    /* set local UDP port just in case the original communications
       changed from raw to UDP or vice versa */
-    ctx->hadb_entry->local_udp_port = ctx->msg_ports->dst_port;
+    ctx->hadb_entry->local_udp_port = ctx->msg_ports.dst_port;
     /* @todo: a workaround for bug id 592200 */
-    ctx->hadb_entry->peer_udp_port = ctx->msg_ports->src_port;
+    ctx->hadb_entry->peer_udp_port = ctx->msg_ports.src_port;
 
     /* RFC 5206: End-Host Mobility and Multihoming.
      * 3.2.1. Mobility with a Single SA Pair (No Rekeying)
@@ -1063,7 +1063,7 @@ static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
     if (locator) {
         err = hip_handle_first_update_packet(ctx->input_msg,
                                              ctx->hadb_entry,
-                                             ctx->src_addr);
+                                             &ctx->src_addr);
         goto out_err;
     } else if (echo_request) {
         /* Ignore the ECHO REQUESTS with the same SEQ after processing the first
@@ -1077,13 +1077,13 @@ static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
          */
         hip_handle_second_update_packet(ctx->input_msg,
                                         ctx->hadb_entry,
-                                        ctx->dst_addr,
-                                        ctx->src_addr);
+                                        &ctx->dst_addr,
+                                        &ctx->src_addr);
         goto out_err;
     } else if (echo_response) {
         hip_handle_third_update_packet(ctx->hadb_entry,
-                                       ctx->dst_addr,
-                                       ctx->src_addr);
+                                       &ctx->dst_addr,
+                                       &ctx->src_addr);
         goto out_err;
     }
     else if (esp_prot_update_type(ctx->input_msg)
@@ -1091,8 +1091,8 @@ static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
     {
        esp_prot_handle_first_update_packet(ctx->input_msg,
                                            ctx->hadb_entry,
-                                           ctx->src_addr,
-                                           ctx->dst_addr);
+                                           &ctx->src_addr,
+                                           &ctx->dst_addr);
 
        goto out_err;
     }
@@ -1100,8 +1100,8 @@ static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
                 == ESP_PROT_SECOND_UPDATE_PACKET)
    {
        esp_prot_handle_second_update_packet(ctx->hadb_entry,
-                                            ctx->src_addr,
-                                            ctx->dst_addr);
+                                            &ctx->src_addr,
+                                            &ctx->dst_addr);
 
        goto out_err;
    }

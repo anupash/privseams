@@ -111,15 +111,6 @@ typedef enum {
 } hip_hastate_t;
 
 /**
- * A data structure for storing the source and destination ports of an incoming
- * packet.
- */
-typedef struct hip_stateless_info {
-    in_port_t src_port;     /**< The source port of an incoming packet. */
-    in_port_t dst_port;     /**< The destination port of an incoming packet. */
-} hip_portpair_t;
-
-/**
  * A data structure for handling retransmission. Used inside host association
  * database entries.
  */

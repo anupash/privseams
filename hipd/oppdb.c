@@ -491,8 +491,8 @@ int hip_handle_opp_r1(struct hip_packet_context *ctx)
     HIP_IFEL(hip_hadb_add_peer_info_complete(&ctx->input_msg->hitr,
                                              &ctx->input_msg->hits,
                                              NULL,
-                                             ctx->dst_addr,
-                                             ctx->src_addr,
+                                             &ctx->dst_addr,
+                                             &ctx->src_addr,
                                              NULL),
              -1, "Failed to insert peer map\n");
 
@@ -515,15 +515,15 @@ int hip_handle_opp_r1(struct hip_packet_context *ctx)
     HIP_DEBUG_HIT("peer hit", &ctx->input_msg->hits);
     HIP_DEBUG_HIT("local hit", &ctx->input_msg->hitr);
 
-    HIP_IFEL(hip_opportunistic_ipv6_to_hit(ctx->src_addr, &phit,
+    HIP_IFEL(hip_opportunistic_ipv6_to_hit(&ctx->src_addr, &phit,
                                            HIP_HIT_TYPE_HASH100),
              -1, "pseudo hit conversion failed\n");
 
     ipv6_addr_copy(&opp_info.real_peer_hit, &ctx->input_msg->hits);
     ipv6_addr_copy(&opp_info.pseudo_peer_hit, &phit);
     ipv6_addr_copy(&opp_info.local_hit, &ctx->input_msg->hitr);
-    ipv6_addr_copy(&opp_info.local_addr, ctx->dst_addr);
-    ipv6_addr_copy(&opp_info.peer_addr, ctx->src_addr);
+    ipv6_addr_copy(&opp_info.local_addr, &ctx->dst_addr);
+    ipv6_addr_copy(&opp_info.peer_addr, &ctx->src_addr);
 
     hip_for_each_opp(hip_oppdb_unblock_group, &opp_info);
     hip_del_peer_info_entry(opp_entry);
