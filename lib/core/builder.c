@@ -3964,7 +3964,7 @@ int hip_get_locator_addr_item_count(const struct hip_locator *locator)
     int amount                  = 0;
     uint8_t type;
 
-    while(address_pointer <
+    while (address_pointer <
           ((const char *) locator) + hip_get_param_contents_len(locator)) {
         type = ((const struct hip_locator_info_addr_item *)
                address_pointer)->locator_type;

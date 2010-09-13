@@ -2229,7 +2229,7 @@ int hip_handle_exec_app(int do_fork, int type, int argc, const char *argv[])
                 free(libs[i]);
         }
         for (k = 0; 0 < argc; k++) {
-            if(argv_new[k]) {
+            if (argv_new[k]) {
                 free(argv_new[k]);
             }
         }

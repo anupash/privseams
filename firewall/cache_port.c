@@ -174,7 +174,7 @@ static int hip_port_cache_add_new_entry(const char *key, int value)
  * @return the cache entry if found or NULL otherwise
  */
 struct firewall_port_cache_hl *hip_firewall_port_cache_db_match(in_port_t port,
-                                                           int proto)
+                                                                int proto)
 {
     struct firewall_port_cache_hl *found_entry = NULL;
     char key[FIREWALL_PORT_CACHE_KEY_LENGTH];

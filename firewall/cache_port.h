@@ -34,7 +34,7 @@
 
 void hip_firewall_port_cache_init_hldb(void);
 struct firewall_port_cache_hl *hip_firewall_port_cache_db_match(in_port_t port,
-                                                           int proto);
+                                                                int proto);
 void hip_firewall_port_cache_uninit_hldb(void);
 
 #endif /* HIP_CACHE_H */

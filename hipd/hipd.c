@@ -429,10 +429,10 @@ out_err:
     /* free allocated resources */
     hip_exit();
 
-    if(ctx.input_msg) {
+    if (ctx.input_msg) {
         free(ctx.input_msg);
     }
-    if(ctx.output_msg) {
+    if (ctx.output_msg) {
         free(ctx.output_msg);
     }
 

@@ -348,8 +348,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 
     if (port_cache_entry &&
         (port_cache_entry->traffic_type ==
-         FIREWALL_PORT_CACHE_IPV6_TRAFFIC))
-    {
+         FIREWALL_PORT_CACHE_IPV6_TRAFFIC)) {
         verdict = 1;
         HIP_DEBUG("Cached port, accepting\n");
         goto out_err;

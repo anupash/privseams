@@ -2169,8 +2169,7 @@ int main(int argc, char **argv)
         // get handle with queued packet and process
         /* @todo: using HIPD_SELECT blocks hipfw with R1 */
         if ((err = select((highest_descriptor + 1), &read_fdset,
-                          NULL, NULL, &timeout)) < 0)
-        {
+                          NULL, NULL, &timeout)) < 0) {
             HIP_PERROR("select error, ignoring\n");
             continue;
         }
@@ -2259,10 +2258,10 @@ int main(int argc, char **argv)
     }
 
 out_err:
-    if(h4) {
+    if (h4) {
         ipq_destroy_handle(h4);
     }
-    if(h6) {
+    if (h6) {
         ipq_destroy_handle(h6);
     }
     if (hip_fw_async_sock) {
