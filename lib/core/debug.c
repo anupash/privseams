@@ -373,6 +373,214 @@ void hip_perror_wrapper(const char *file, int line, const char *function,
 }
 
 /**
+ * Convert a 4-bit value to a hexadecimal string representation.
+ *
+ * @param q     the 4-bit value (an integer between 0 and 15) to convert to hex.
+ * @return      1 byte of hexadecimal output as a string character.
+ */
+static char hip_quad2hex(const char q)
+{
+    HIP_ASSERT(q < 16);
+
+    if (q < 10) {
+        return '0' + q;
+    } else {
+        return 'A' + (q - 10);
+    }
+}
+
+/**
+ * Convert a single byte to a hexadecimal string representation.
+ *
+ * @param c     the byte to convert to hex.
+ * @param bfr   the buffer to write the 2 bytes of hexadecimal output to.
+ */
+static void hip_byte2hex(const char c, char* bfr)
+{
+    const int high_quad = (c & 0xF0) >> 4;
+    const int low_quad = c & 0x0F;
+    *bfr = hip_quad2hex(high_quad);
+    *(bfr + 1) = hip_quad2hex(low_quad);
+}
+
+/**
+ * Write the hexadecimal string representation of a memory area to a buffer.
+ * At most @in_len bytes of the input memory are read and at most @out_len bytes of the output buffer are written, whichever comes first.
+ * If at least one byte was converted, the hexadecimal representation is terminated by 0.
+ * If the memory regions of @in and @out overlap, the result of the operation is undefined.
+ *
+ * @param in        the address of the start of the memory area to convert.
+ * @param in_len    the size in bytes of the memory area to convert.
+ * @param out       the address of the buffer to write the hexadecimal representation to.
+ * @param out_len   the size in bytes of the out buffer to write to.
+ * @return          the number of bytes from in that were converted.
+ */
+static size_t hip_mem2hex(const void* in, const size_t in_len, char* out, const size_t out_len)
+{
+    if (in_len > 0 && out_len > 2) {
+        const unsigned char* in_cur = in;
+        const unsigned char* in_end = in_cur + in_len;
+        char* out_cur = out;
+        const char* out_end = out_cur + out_len;
+
+        // terminate if either we reach the end of in or if there is not enough room to write another hex digit and the terminating 0 into out.
+        while (in_cur < in_end && out_cur <= (out_end - 3)) {
+            hip_byte2hex(*in_cur, out_cur);
+
+            in_cur += 1;
+            out_cur += 2;
+        }
+
+        *out_cur = '\0';
+
+        return (in_cur - (const unsigned char*)in);
+    } else {
+        return 0;
+    }
+}
+
+/**
+ * Convert a byte to its printable ASCII representation (e.g. the numeric value 65 is converted to 'A').
+ * If it is not printable, convert it to '.'.
+ *
+ * @param b the byte to convert.
+ * @return  the printable ASCII representation of @b.
+ */
+static char hip_byte2printable(const char b)
+{
+    if (b >= 32 && b <= 126) {
+        return b;
+    } else {
+        return '.';
+    }
+}
+
+static const unsigned int HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH = 16;
+static const unsigned int HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH = (16 /*HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH*/ * 4) + 1;
+
+/**
+ * Retrieve the amount of buffer space necessary to hold the pretty printed output produced by hip_mem2pretty_hex().
+ *
+ * @param in_len    the size of the memory area to convert with hip_mem2pretty_hex()
+ * @return          the number of bytes of the hip_mem2pretty_hex() output.
+ */
+static size_t hip_mem2pretty_hex_size(const size_t in_len)
+{
+    // for each line, i.e., multiple of 16 input bytes (including partial ones):
+    // 32 bytes for hex digits, 16 bytes for spaces, 16 bytes for ascii, 1 line == 65 bytes
+    // plus terminating 0 character
+    const size_t full_lines = in_len / 16;
+    const size_t partial_lines = (in_len % 16) != 0 ? 1 : 0;
+    return ((full_lines + partial_lines) * HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH) + 1;
+}
+
+/**
+ * Create one line of a pretty-printed hexadecimal string representation of a memory area in the format of the hexdump -C UNIX command to a buffer.
+ * At most @in_len bytes of the memory are read and at most @out_len bytes are are written, whichever comes first.
+ * The function always writes a full line of HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH bytes including a newline character into out.
+ * If the memory regions of @in and @out overlap, the result of the operation is undefined.
+ *
+ * Example of the output:
+ * <pre>
+ * 13 88 94 64 0d b9 89 ff f3 cc 4c a1 80 11 05 94 ...d......L.....
+ * </pre>
+ *
+ * @param in        the address of the start of the memory area to convert.
+ * @param in_len    the size in bytes of the memory area to convert. At most HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH bytes are read.
+ * @param out       the address of the buffer to write the hexadecimal representation to. Exactly HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH are written.
+ * @param out_len   the size in bytes of the out buffer to write to. This value should be greater or equal to HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH.
+ * @return          1 if a line of output was written to out. 0 and no output is written if @in_len is 0 or if @out_len is less than HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH.
+ */
+static int hip_mem2pretty_hex_line(const char* in, const size_t in_len, char* out, const size_t out_len)
+{
+    if (in_len > 0 && out_len >= HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH) {
+        const char* in_cur = in; // incremented with every fully processed input byte
+        const char* in_end = in_cur + in_len; // the final input byte + 1, i.e., the first not to read from
+        const char* in_line_end = in_cur + HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH; // the input byte to iterate 'in_cur' up to
+        char* hex = out;
+        char* ascii = out + HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH * 3;
+
+        // write hex and ascii representations
+        while (in_cur < in_line_end) {
+            // is there still input data available?
+            if (in_cur < in_end) {
+                // convert input
+                hip_byte2hex(*in_cur, hex);  // add hex digits
+                *ascii = hip_byte2printable(*in_cur);    // add printable char
+            } else {
+                // write dummy output
+                *hex = ' ';
+                *(hex + 1) = ' ';
+                *ascii = ' ';
+            }
+
+            *(hex + 2) = ' ';   // add space between hex digits
+            hex += 3;   // move to next hex digit position
+            ascii += 1; // move to next ascii position
+            in_cur += 1; // move to next input byte (it's okay to increment this even if in_cur >= in_end because in that case we do not read from this pointer)
+        }
+
+        // at this point, we have written a full line and ascii points to its end - add a newline.
+        *ascii = '\n';
+
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+/**
+ * Write a pretty-printed hexadecimal string representation of a memory area in the format of the hexdump -C UNIX command to a buffer.
+ * At most @in_len bytes of the memory are read and at most @out_len bytes are are written, whichever comes first.
+ * If at least one byte was converted, the hexadecimal representation is terminated by a null character.
+ * If the memory regions of @in and @out overlap, the result of the operation is undefined.
+ *
+ * Example of the output:
+ * <pre>
+ * 13 88 94 64 0d b9 89 ff f3 cc 4c a1 80 11 05 94 ...d......L.....
+ * 6c 3c 00 00 01 01 08 0a 00 10 a2 58 00 0f 98 30 l<.........X....
+ * </pre>
+ *
+ * @param in        the address of the start of the memory area to convert.
+ * @param in_len    the size in bytes of the memory area at @in to convert.
+ * @param out       the address of the buffer to write the hexadecimal representation to.
+ * @param out_len   the size in bytes of the @out buffer to write to.
+ * @return          the number of bytes from @in that were converted.
+ */
+static size_t hip_mem2pretty_hex(const void* in, const size_t in_len, char* out, const size_t out_len)
+{
+    // Points to where the input for the next line is to be read from. Incremented by HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH with every line.
+    const char* in_cur = in;
+    // Points to where the next line of output is to be written to. Incremented by HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH with every line.
+    char* out_cur = out;
+    // Points to the final input byte + 1, i.e., the first input byte not to read from.
+    const char* in_end = in_cur + in_len;
+    // Points to the final output byte + 1, i.e., the first output byte not to write to.
+    const char* out_end = out_cur + out_len;
+
+    // Iterate while there is still input to read and enough room for another full line including the terminating null character.
+    while (in_cur < in_end && out_cur <= (out_end - (HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH + 1))) {
+        const size_t in_remaining = in_len - (in_cur - (const char*)in);
+        const size_t out_remaining = out_len - (out_cur - (const char*)out);
+
+        // convert one line of input
+        const int line_result = hip_mem2pretty_hex_line(in_cur, in_remaining, out_cur, out_remaining);
+        // since the loop condition already makes sure that the input to hip_mem2pretty_hex_line() is valid, it must return 1.
+        HIP_ASSERT(line_result == 1);
+
+        // advance input pointer by at most the maximum available input so the return value is calculated correctly
+        in_cur += (in_remaining > HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH ? HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH : in_remaining);
+        out_cur += HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH;
+    }
+
+    if (out_cur < out_end) {
+        *out_cur = '\0';
+    }
+
+    return in_cur - (const char*)in;
+}
+
+/**
  * Print raw hexdump starting from address @c str of length @c len. Do not call
  * this function from the outside of the debug module, use the HIP_HEXDUMP macro
  * instead.
@@ -385,51 +593,19 @@ void hip_perror_wrapper(const char *file, int line, const char *function,
  * @param len      the length of the data to be hexdumped
  */
 void hip_hexdump(const char *file, int line, const char *function,
-                 const char *prefix, const void *str, int len)
+                 const char *prefix, const void *str, const size_t len)
 {
-    int hexdump_max_size = 0;
-    int hexdump_count    = 0;
-    char *hexdump        = NULL;
-    int hexdump_written  = 0;
-    int hexdump_index    = 0;
-    int char_index       = 0;
-
-    hexdump_max_size = len * 2 + 1;
-    hexdump_count    = hexdump_max_size;
-
-    hexdump          = calloc(hexdump_max_size, sizeof(char));
-    if (hexdump == NULL) {
-        HIP_DIE("hexdump memory allocation failed\n");
+    if (len > 0) {
+        const size_t buffer_size = (len * 2) + 1;
+        char* buffer = malloc(buffer_size);
+        if (buffer != NULL) {
+            hip_mem2hex(str, len, buffer, buffer_size);
+            hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s0x%s\n", prefix, buffer);
+            free(buffer);
+        } else {
+            HIP_DIE("memory allocation failed\n");
+        }
     }
-    if (len == 0) {
-        /* Removed this error message to keep hexdump quiet in
-         * HIP_DUMP_MSG for zero length padding. Lauri 22.09.2006 */
-        //HIP_ERROR("hexdump length was 0\n");
-    } else {
-        do {
-            /* note: if you change the printing format, adjust also hexdump_count! */
-            hexdump_written
-                    = snprintf((char *) (hexdump + hexdump_index),
-                               hexdump_count,
-                               "%02x",
-                               (unsigned char) (*(((const unsigned char *) str)
-                                       + char_index)));
-            if (hexdump_written < 0 || hexdump_written > hexdump_max_size - 1) {
-                free(hexdump);
-                HIP_DIE("hexdump msg too long(%d)", hexdump_written);
-            } else {
-                hexdump_count -= hexdump_written;
-                HIP_ASSERT(hexdump_count >= 0);
-                hexdump_index += hexdump_written;
-                HIP_ASSERT(hexdump_index + hexdump_count == hexdump_max_size);
-            }
-            char_index++;
-        } while (char_index < len);
-
-        hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s0x%s\n", prefix, hexdump);
-    }
-
-    free(hexdump);
 }
 
 /**
@@ -450,125 +626,20 @@ void hip_hexdump(const char *file, int line, const char *function,
  * @param str      pointer to the beginning of the data to be hexdumped
  * @param len      the length of the data to be hexdumped
  */
-int hip_hexdump_parsed(const char *file, int line, const char *function,
-                       const char *prefix, const void *str, int len)
+void hip_hexdump_parsed(const char *file, int line, const char *function,
+                        const char *prefix, const void *str, const size_t len)
 {
-    int hexdump_total_size = 0;
-    int hexdump_count      = 0;
-    int hexdump_written    = 0;
-    int hexdump_index      = 0;
-    int char_index         = 0;
-    char *hexdump          = NULL;
-
-    int bytes_per_line     = 16;
-    char space             = ' ';
-    char nonascii          = '.';
-    char *asciidump        = NULL;
-    int lines              = 0;
-    int line_index         = 0;
-
-    int pad_length         = 0;
-    int pad_start_position = 0;
-
-    // Count lines
-    if (len % 16 == 0) {
-        lines = (int) len / 16;
-    } else {
-        lines = (int) len / 16 + 1;
-    }
-
-    // one byte requires 4 bytes in the output (two for hex, one for ascii and one space)
-    hexdump_total_size = lines * 4 * bytes_per_line + 1;
-    pad_start_position = len * 3 + ((lines - 1) * bytes_per_line) + 1;
-    hexdump_count      = hexdump_total_size;
-    pad_length         = (hexdump_total_size - bytes_per_line) - pad_start_position;
-
-    hexdump            = calloc(hexdump_total_size, sizeof(char));
-    asciidump          = calloc((bytes_per_line + 2), sizeof(char));
-
-    if (hexdump == NULL || asciidump == NULL) {
-        HIP_DIE("memory allocation failed\n");
-    }
-
     if (len > 0) {
-        while (char_index < len) {
-            // Write the character in hex
-            hexdump_written = snprintf((char *) (hexdump + hexdump_index),
-                                       hexdump_count, "%02x",
-                                       (unsigned char) (*(((const unsigned char *) str) + char_index)));
-            if (hexdump_written < 0 || hexdump_written > hexdump_total_size - 1) {
-                free(hexdump);
-                HIP_DIE("hexdump msg too long(%d)", hexdump_written);
-            }
-            char written = (unsigned char) (*(((const unsigned char *) str) + char_index));
-
-            // Write space between
-            hexdump_index  += hexdump_written;
-            hexdump_count  -= hexdump_written;
-            hexdump_written = snprintf((char *) (hexdump + hexdump_index),
-                                       hexdump_count, "%c", space);
-            if (hexdump_written < 0 || hexdump_written > hexdump_total_size - 1) {
-                free(hexdump);
-                free(asciidump);
-                HIP_DIE("hexdump msg too long(%d)", hexdump_written);
-            }
-            hexdump_count -= hexdump_written;
-            HIP_ASSERT(hexdump_count >= 0);
-            hexdump_index += hexdump_written;
-            HIP_ASSERT(hexdump_index + hexdump_count == hexdump_total_size);
-
-            /* Write the character in ascii to ascii dump line */
-            if (written > 32 && written < 127) {
-                memset(asciidump + line_index, written, 1);
-            } else {
-                memset(asciidump + line_index, nonascii, 1);
-            }
-            line_index++;
-            /* If line is full or input is all read, copy data to hexdump */
-            if (line_index >= 16 || (char_index + 1) == len) {
-                /* Add padding */
-                if ((char_index + 1) == len && pad_length > 0
-                    && ((hexdump_index + line_index + pad_length) < hexdump_total_size)) {
-                    char *padding = calloc(pad_length + 1, sizeof(char));
-                    memset(padding, ' ', pad_length);
-                    memset(padding + pad_length, '\0', 1);
-                    hexdump_written = snprintf((char *) (hexdump + hexdump_index),
-                                               hexdump_count, "%s", padding);
-                    if (hexdump_written < 0 || hexdump_written > hexdump_total_size - 1) {
-                        free(hexdump);
-                        free(asciidump);
-                        free(padding);
-                        HIP_DIE("hexdump msg too long(%d)", hexdump_written);
-                    }
-                    hexdump_index += hexdump_written;
-                    hexdump_count -= hexdump_written;
-                    free(padding);
-                }
-                memset(asciidump + line_index, '\n', 1);
-                memset(asciidump + line_index + 1, '\0', 1);
-                hexdump_written = snprintf((char *) (hexdump + hexdump_index),
-                                           hexdump_count, "%s", asciidump);
-                if (hexdump_written < 0 || hexdump_written > hexdump_total_size - 1) {
-                    free(hexdump);
-                    free(asciidump);
-                    HIP_DIE("hexdump msg too long(%d)", hexdump_written);
-                }
-                hexdump_index += hexdump_written;
-                hexdump_count -= hexdump_written;
-                line_index     = 0;
-                memset(asciidump, 0, bytes_per_line + 2);
-            }
-            char_index++;
+        const size_t buffer_size = hip_mem2pretty_hex_size(len);
+        char* buffer = malloc(buffer_size);
+        if (buffer != NULL) {
+            hip_mem2pretty_hex(str, len, buffer, buffer_size);
+            hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s%s\n", prefix, buffer);
+            free(buffer);
+        } else {
+            HIP_DIE("memory allocation failed\n");
         }
-        hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s%s\n", prefix, hexdump);
-    } else {
-        HIP_ERROR("hexdump length was 0\n");
     }
-
-    free(hexdump);
-    free(asciidump);
-
-    return 0;
 }
 
 /**
