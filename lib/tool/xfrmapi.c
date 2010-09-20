@@ -80,8 +80,8 @@ const char *a_algo_names_new[] =
  * @return 0
  */
 static int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
-                           int sport,
-                           int dport,
+                           const int sport,
+                           const int dport,
                            const struct in6_addr *oa)
 {
     encap->encap_type  = HIP_UDP_ENCAP_ESPINUDP;
@@ -105,8 +105,8 @@ static int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
 static int xfrm_fill_selector(struct xfrm_selector *sel,
                               const struct in6_addr *id_our,
                               const struct in6_addr *id_peer,
-                              uint8_t proto, uint8_t id_prefix,
-                              int preferred_family)
+                              const uint8_t proto, const uint8_t id_prefix,
+                              const int preferred_family)
 {
     struct in_addr in_id_our, in_id_peer;
 
@@ -161,7 +161,8 @@ static int xfrm_init_lft(struct xfrm_lifetime_cfg *lft)
  * @return zero
  */
 static int xfrm_algo_parse(struct xfrm_algo *alg, const char *name,
-                           const unsigned char *key, int key_len, int max)
+                           const unsigned char *key, const int key_len,
+                           const int max)
 {
     int len  = 0;
     int slen = key_len;
