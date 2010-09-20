@@ -92,18 +92,4 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
                     const struct in6_addr *dst_addr, char *idev, char *odev,
                     int family, struct idxmap **idxmap);
 
-int xfrm_init_lft(struct xfrm_lifetime_cfg *lft);
-int xfrm_fill_selector(struct xfrm_selector *sel,
-                       const struct in6_addr *id_our,
-                       const struct in6_addr *id_peer,
-                       uint8_t proto, uint8_t id_prefix,
-                       int preferred_family);
-int xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
-                    int sport,
-                    int dport,
-                    const struct in6_addr *oa);
-
-int xfrm_algo_parse(struct xfrm_algo *alg, const char *name,
-                    const unsigned char *key, int key_len, int max);
-
 #endif /* HIP_LIB_TOOL_NLINK_H */
