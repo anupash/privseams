@@ -71,6 +71,119 @@ const char *a_algo_names_new[] =
 
 
 /**
+ * fill the port numbers for the UDP tunnel for IPsec
+ *
+ * @param encap xfrm_encap_tmpl structure
+ * @param sport source port
+ * @param dport destination port
+ * @param oa the destination address of the tunnel in IPv6-mapped format
+ * @return 0
+ */
+static int hip_xfrm_fill_encap(struct xfrm_encap_tmpl *encap,
+                               const int sport,
+                               const int dport,
+                               const struct in6_addr *oa)
+{
+    encap->encap_type  = HIP_UDP_ENCAP_ESPINUDP;
+    encap->encap_sport = htons(sport);
+    encap->encap_dport = htons(dport);
+    encap->encap_oa.a4 = oa->s6_addr32[3];
+    return 0;
+}
+
+/**
+ * Fill in the selector. Selector is bound to HITs.
+ *
+ * @param sel pointer to xfrm_selector to be filled in
+ * @param id_our Source HIT or LSI, if the last is defined
+ * @param id_peer Peer HIT or LSI, if the last is defined
+ * @param proto inclusive protocol filter (zero for any protocol)
+ * @param id_prefix Length of the identifier's prefix
+ * @param preferred_family address family filter (AF_INET6 for HITs)
+ * @return 0
+ */
+static int hip_xfrm_fill_selector(struct xfrm_selector *sel,
+                                  const struct in6_addr *id_our,
+                                  const struct in6_addr *id_peer,
+                                  const uint8_t proto, const uint8_t id_prefix,
+                                  const int preferred_family)
+{
+    struct in_addr in_id_our, in_id_peer;
+
+    if (IN6_IS_ADDR_V4MAPPED(id_our)) {
+        sel->family = AF_INET;
+        IPV6_TO_IPV4_MAP(id_our, &in_id_our);
+        IPV6_TO_IPV4_MAP(id_peer, &in_id_peer);
+        memcpy(&sel->daddr, &in_id_our, sizeof(sel->daddr));
+        memcpy(&sel->saddr, &in_id_peer, sizeof(sel->saddr));
+    } else {
+        sel->family = preferred_family;
+        memcpy(&sel->daddr, id_peer, sizeof(sel->daddr));
+        memcpy(&sel->saddr, id_our, sizeof(sel->saddr));
+    }
+
+    if (proto) {
+        HIP_DEBUG("proto = %d\n", proto);
+        sel->proto = proto;
+    }
+
+    sel->prefixlen_d = id_prefix;
+    sel->prefixlen_s = id_prefix;
+
+    return 0;
+}
+
+/**
+ * initialize the lft
+ *
+ * @param lft pointer to the lft struct to be initialized
+ *
+ * @return 0
+ */
+static int hip_xfrm_init_lft(struct xfrm_lifetime_cfg *lft)
+{
+    lft->soft_byte_limit   = XFRM_INF;
+    lft->hard_byte_limit   = XFRM_INF;
+    lft->soft_packet_limit = XFRM_INF;
+    lft->hard_packet_limit = XFRM_INF;
+
+    return 0;
+}
+
+/**
+ * parse a crypto algorithm name and its key into an xfrm_algo structure
+ *
+ * @param alg the resulting xfrm_algo structure (caller allocates)
+ * @param name the name of the crypto algorithm
+ * @param key the key for the given algorithm
+ * @param key_len the length of the key in bits
+ * @param max maximum size for a key in the xfrm_algo structure
+ * @return zero
+ */
+static int hip_xfrm_algo_parse(struct xfrm_algo *alg, const char *name,
+                               const unsigned char *key, const int key_len,
+                               const int max)
+{
+    int len  = 0;
+    int slen = key_len;
+
+    strncpy(alg->alg_name, name, sizeof(alg->alg_name));
+
+    len = slen;
+    if (len > 0) {
+        if (len > max) {
+            HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
+            return -1;
+        }
+        memcpy(alg->alg_key, key, key_len * 8);
+    }
+
+    alg->alg_key_len = len * 8;
+
+    return 0;
+}
+
+/**
  * modify a Security Policy
  * @param cmd command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
  * @param id_our Source ID or LSI
@@ -110,14 +223,14 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
     req.n.nlmsg_flags = NLM_F_REQUEST | flags;
     req.n.nlmsg_type  = cmd;
 
-    xfrm_init_lft(&req.xpinfo.lft);
+    hip_xfrm_init_lft(&req.xpinfo.lft);
 
     /* Direction */
     req.xpinfo.dir = dir;
 
     /* SELECTOR <--> HITs  SELECTOR <--> LSIs*/
-    HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, id_peer, id_our, 0,
-                               id_prefix, preferred_family), -1);
+    HIP_IFE(hip_xfrm_fill_selector(&req.xpinfo.sel, id_peer, id_our, 0,
+                                   id_prefix, preferred_family), -1);
 
     /* TEMPLATE */
     tmpl = (struct xfrm_user_tmpl *) ((char *) tmpls_buf);
@@ -257,8 +370,8 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
     req.xpid.dir      = dir;
 
     /* SELECTOR <--> HITs */
-    HIP_IFE(xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
-                               hit_prefix, preferred_family), -1);
+    HIP_IFE(hip_xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
+                                   hit_prefix, preferred_family), -1);
     HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
              "No associated policies to be deleted\n");
 
@@ -332,7 +445,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
     req.n.nlmsg_flags   = NLM_F_REQUEST;
     req.n.nlmsg_type    = cmd;
 
-    xfrm_init_lft(&req.xsinfo.lft);
+    hip_xfrm_init_lft(&req.xsinfo.lft);
 
     req.xsinfo.mode     = XFRM_MODE_BEET;
     req.xsinfo.id.proto = IPPROTO_ESP;
@@ -340,12 +453,14 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
     req.xsinfo.id.spi   = htonl(spi);
 
     /* Selector */
-    HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_id, dst_id,
-                               0, hip_xfrmapi_sa_default_prefix,
-                               AF_INET6), -1);
+    HIP_IFE(hip_xfrm_fill_selector(&req.xsinfo.sel, src_id, dst_id,
+                                   0, hip_xfrmapi_sa_default_prefix,
+                                   AF_INET6), -1);
     if (req.xsinfo.family == AF_INET && (sport || dport)) {
-        xfrm_fill_encap(&encap, (sport ? sport : hip_get_local_nat_udp_port()),
-                        (dport ? dport : hip_get_peer_nat_udp_port()), saddr);
+        hip_xfrm_fill_encap(&encap,
+                            (sport ? sport : hip_get_local_nat_udp_port()),
+                            (dport ? dport : hip_get_peer_nat_udp_port()),
+                            saddr);
         HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                           &encap, sizeof(encap)), -1);
     }
@@ -366,9 +481,9 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
         /* XFRMA_ALG_AUTH */
         memset(&alg, 0, sizeof(alg));
-        HIP_IFE(xfrm_algo_parse((void *) &alg, a_name,
-                                authkey->key, authkey_len,
-                                sizeof(alg.buf)), -1);
+        HIP_IFE(hip_xfrm_algo_parse((void *) &alg, a_name,
+                                    authkey->key, authkey_len,
+                                    sizeof(alg.buf)), -1);
         len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
         HIP_IFE((addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_AUTH,
@@ -376,9 +491,9 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
         /* XFRMA_ALG_CRYPT */
         memset(&alg, 0, sizeof(alg));
-        HIP_IFE(xfrm_algo_parse((void *) &alg, e_name,
-                                enckey->key, enckey_len,
-                                sizeof(alg.buf)), -1);
+        HIP_IFE(hip_xfrm_algo_parse((void *) &alg, e_name,
+                                    enckey->key, enckey_len,
+                                    sizeof(alg.buf)), -1);
 
         len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
@@ -439,9 +554,10 @@ static int hip_xfrm_state_delete(struct rtnl_handle *rth,
     /** @todo Fill in information for UDP-NAT SAs. */
     if (req.xsid.family == AF_INET && (sport || dport)) {
         HIP_DEBUG("FILLING UDP Port info while deleting\n");
-        xfrm_fill_encap(&encap, (sport ? sport : hip_get_local_nat_udp_port()),
-                        (dport ? dport : hip_get_peer_nat_udp_port()),
-                        peer_addr);
+        hip_xfrm_fill_encap(&encap,
+                            (sport ? sport : hip_get_local_nat_udp_port()),
+                            (dport ? dport : hip_get_peer_nat_udp_port()),
+                            peer_addr);
         HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                           &encap, sizeof(encap)), -1);
     }
