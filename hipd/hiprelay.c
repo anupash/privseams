@@ -314,18 +314,19 @@ static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t)
 /**
  * relay hash table comparison function
  *
+ * Note that the point of this function is *not* to compare the entries by their hashes (the hash table implementation can do that on its own) but to compare the entries themselves to detect and resolve hash collisions.
+ *
  * @param rec1 a hip_relrec_t structure
  * @param rec2 a hip_relrec_t structure
  * @return zero if the structures are equal or one otherwise
  */
 static int hip_relht_cmp(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 {
-    if (rec1 == NULL || &(rec1->hit_r) == NULL ||
-        rec2 == NULL || &(rec2->hit_r) == NULL) {
+    if (rec1 == NULL || rec2 == NULL) {
         return 1;
     }
 
-    return hip_relht_hash(rec1) != hip_relht_hash(rec2);
+    return memcmp(&rec1->hit_r, &rec2->hit_r, sizeof(rec1->hit_r));
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -585,8 +586,9 @@ static unsigned long hip_relwl_hash(const hip_hit_t *hit)
 static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t)
 
 /**
- * The compare function of the @c hiprelay_wl hashtable. Compares the hash
- * values calculated from parameter @c hit1 and @c hit2.
+ * The compare function of the @c hiprelay_wl hashtable.
+ *
+ * Note that the point of this function is *not* to compare the entries by their hashes (the hash table implementation can do that on its own) but to compare the entries themselves to detect and resolve hash collisions.
  *
  * @param hit1 a pointer to a HIT.
  * @param hit2 a pointer to a HIT.
@@ -598,7 +600,7 @@ static int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
         return 1;
     }
 
-    return hip_relwl_hash(hit1) != hip_relwl_hash(hit2);
+    return memcmp(hit1, hit2, sizeof(*hit1));
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */

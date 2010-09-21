@@ -69,6 +69,8 @@ static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 /**
  * Compares two ip addresses using their hashes
  *
+ * Note that the point of this function is *not* to compare the entries by their hashes (the hash table implementation can do that on its own) but to compare the entries themselves to detect and resolve hash collisions.
+ *
  * @param ptr1: pointer to the first ip address to compare
  * @param ptr2: pointer to the second ip address to compare
  *
@@ -76,7 +78,7 @@ static unsigned long hip_oppipdb_hash_ip(const void *ptr)
  */
 static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
 {
-    return hip_oppipdb_hash_ip(ptr1) != hip_oppipdb_hash_ip(ptr2);
+    return memcmp(ptr1, ptr2, sizeof(hip_oppip_t));
 }
 
 /**
