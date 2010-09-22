@@ -384,6 +384,11 @@ static void hip_remove_addresses_to_send_echo_request(struct update_state *state
     }
 }
 
+/**
+ * Print all IP addresses where an update packet should be sent to.
+ *
+ * @param ha    pointer to a host association
+ */
 static void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
 {
     int i = 0;
