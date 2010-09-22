@@ -1206,7 +1206,8 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
             HIP_DEBUG("Found FROM parameter in I1.\n");
             param_type = HIP_PARAM_FROM;
             memcpy(dest_ip, &from->address, sizeof(from->address));
-            *dest_port = ntohs(relay_from->port);
+            /* No port number in RVS FROM. hip_send_r1() fills in this later */
+            *dest_port = 0;
             HIP_DEBUG("FROM port in I1: %d \n", *dest_port);
         }
     } else {
