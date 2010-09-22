@@ -137,6 +137,9 @@ it will be much easier for your fellow developers to understand your
 changes and to use the extra information for eventual bugfixes in the
 future.
 
+NOTE: To automatically close a bug in launchpad, use
+bzr commit --fixes lp:#BUG_ID#
+
 NOTE: You can set your preferred editor by editing the [DEFAULT]
 section of Bazaar configuration located at $HOME/.bazaar/bazaar.conf,
 e.g.:
