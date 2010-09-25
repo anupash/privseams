@@ -6,7 +6,7 @@
  * @date    20.05.2008
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5203.txt">
  *          Host Identity Protocol (HIP) Registration Extension</a>
- * Copyright (c) 2010 Aalto University) and RWTH Aachen University.
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation

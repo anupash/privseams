@@ -16,7 +16,7 @@
  * @author  Lauri Silvennoinen
  * @version 1.0
  * @date    21.04.2008
- * Copyright (c) 2010 Aalto University) and RWTH Aachen University.
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation

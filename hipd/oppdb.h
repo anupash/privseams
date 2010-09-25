@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * Copyright (c) 2010 Aalto University) and RWTH Aachen University.
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,7 +27,7 @@
 /*
  * hipd oppdb.h
  *
- * Copyright (c) 2010 Aalto University) and RWTH Aachen University.
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation

@@ -5,7 +5,7 @@
  * stderr. This is done automatically using DEBUG flag in Makefile (see logtype
  * variable below).
  *
- * Copyright (c) 2010 Aalto University) and RWTH Aachen University.
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation

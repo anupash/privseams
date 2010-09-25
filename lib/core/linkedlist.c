@@ -2,7 +2,7 @@
  * This file defines a linked list for storing pointers.
  *
  * @author  Lauri Silvennoinen
- * Copyright (c) 2010 Aalto University) and RWTH Aachen University.
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation

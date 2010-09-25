@@ -6,7 +6,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Tao Wan <taow_cc.hut.fi>
  * @author  Rene Hummen
- * Copyright (c) 2010 Aalto University) and RWTH Aachen University.
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation

@@ -4,7 +4,7 @@
  * @author  Baris Boyvat <baris#boyvat.com>
  * @version 0.1
  * @date    3.5.2009
- * Copyright (c) 2010 Aalto University) and RWTH Aachen University.
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation

@@ -2,7 +2,7 @@
  * This file defines the main function of the command line tool 'hipconf'.
  *
  * @author  Miika Komu <miika_iki.fi>
- * Copyright (c) 2010 Aalto University) and RWTH Aachen University.
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
