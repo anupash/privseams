@@ -127,7 +127,8 @@ out_err:
 /**
  * compares the hashes of 2 SA entries to check if they are the same
  *
- * Note that the point of this function is *not* to compare the entries by their hashes (the hash table implementation can do that on its own) but to compare the entries themselves to detect and resolve hash collisions.
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
  *
  * @param sa_entry1     first SA entry to be compared with
  * @param sa_entry2     second SA entry to be compared with
@@ -187,7 +188,8 @@ out_err:
 /**
  * compares the hashes of 2 link entries to check if they are the same
  *
- * Note that the point of this function is *not* to compare the entries by their hashes (the hash table implementation can do that on its own) but to compare the entries themselves to detect and resolve hash collisions.
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
  *
  * @param link_entry1   first link entry to be compared with
  * @param link_entry2   second link entry to be compared with

@@ -314,7 +314,8 @@ static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t)
 /**
  * relay hash table comparison function
  *
- * Note that the point of this function is *not* to compare the entries by their hashes (the hash table implementation can do that on its own) but to compare the entries themselves to detect and resolve hash collisions.
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
  *
  * @param rec1 a hip_relrec_t structure
  * @param rec2 a hip_relrec_t structure
@@ -588,7 +589,8 @@ static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t)
 /**
  * The compare function of the @c hiprelay_wl hashtable.
  *
- * Note that the point of this function is *not* to compare the entries by their hashes (the hash table implementation can do that on its own) but to compare the entries themselves to detect and resolve hash collisions.
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
  *
  * @param hit1 a pointer to a HIT.
  * @param hit2 a pointer to a HIT.

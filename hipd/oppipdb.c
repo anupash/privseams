@@ -67,14 +67,15 @@ static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 }
 
 /**
- * Compares two ip addresses using their hashes
+ * Compares two ip addresses.
  *
- * Note that the point of this function is *not* to compare the entries by their hashes (the hash table implementation can do that on its own) but to compare the entries themselves to detect and resolve hash collisions.
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
  *
  * @param ptr1: pointer to the first ip address to compare
  * @param ptr2: pointer to the second ip address to compare
  *
- * @return 0 if the ip hashes are identical, 1 if they are different
+ * @return 0 if the ips are identical, 1 if they are different
  */
 static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
 {
