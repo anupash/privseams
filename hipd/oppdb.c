@@ -121,13 +121,18 @@ static unsigned long hip_oppdb_hash_hit(const void *ptr)
 /**
  * matching function for the hashtable implementation
  *
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
+ *
  * @param ptr1 a pointer to a hip_opp_block_t structure
  * @param ptr2 a pointer to a hip_opp_block_t structure
  * @return zero on match or non-zero otherwise
  */
 static int hip_oppdb_match_hit(const void *ptr1, const void *ptr2)
 {
-    return hip_hash_hit(ptr1) != hip_hash_hit(ptr2);
+    const hip_opp_block_t *b1 = (const hip_opp_block_t *) ptr1;
+    const hip_opp_block_t *b2 = (const hip_opp_block_t *) ptr2;
+    return memcmp(&b1->peer_phit, &b2->peer_phit, sizeof(hip_hit_t) + sizeof(struct sockaddr_in6));
 }
 
 /**

@@ -147,18 +147,26 @@ IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
  * a comparison function for the hash table algorithm to distinguish
  * two HAs from each other
  *
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
+ *
  * @param ha1 a HA to compare for equality
  * @param ha2 a HA to compare for equality
  * @return zero if the HAs match or non-zero otherwise
  */
 static int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 {
-    if (ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
-        ha2 == NULL || &(ha2->hit_our) == NULL || &(ha2->hit_peer) == NULL) {
+    int result_hit_our = 0;
+
+    if (ha1 == NULL || ha2 == NULL) {
         return 1;
     }
 
-    return hip_ha_LHASH_HASH(ha1) != hip_ha_LHASH_HASH(ha2);
+    result_hit_our = memcmp(&ha1->hit_our, &ha2->hit_our, sizeof(ha1->hit_our));
+    if (result_hit_our != 0) {
+        return result_hit_our;
+    }
+    return memcmp(&ha1->hit_peer, &ha2->hit_peer, sizeof(ha1->hit_peer));
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -182,7 +190,10 @@ static unsigned long hip_hash_peer_addr(const void *ptr)
 }
 
 /**
- * test if two peer addresses match
+ * test if two peer addresses match to detect and avoid hash collisions in the peer address list.
+ *
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
  *
  * @param ptr1 a pointer to a hip_peer_addr_list_item
  * @param ptr2 a pointer to a hip_peer_addr_list_item
@@ -190,7 +201,9 @@ static unsigned long hip_hash_peer_addr(const void *ptr)
  */
 static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
 {
-    return hip_hash_peer_addr(ptr1) != hip_hash_peer_addr(ptr2);
+    const struct in6_addr *addr1 = &((const struct hip_peer_addr_list_item *) ptr1)->address;
+    const struct in6_addr *addr2 = &((const struct hip_peer_addr_list_item *) ptr2)->address;
+    return memcmp(addr1, addr2, sizeof(*addr1));
 }
 
 /* PRIMITIVES */

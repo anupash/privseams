@@ -127,6 +127,9 @@ out_err:
 /**
  * compares the hashes of 2 SA entries to check if they are the same
  *
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
+ *
  * @param sa_entry1     first SA entry to be compared with
  * @param sa_entry2     second SA entry to be compared with
  * @return              1 if different entries, else 0
@@ -134,22 +137,16 @@ out_err:
 static int hip_sa_entries_cmp(const hip_sa_entry_t *sa_entry1,
                               const hip_sa_entry_t *sa_entry2)
 {
-    int err             = 0;
-    unsigned long hash1 = 0;
-    unsigned long hash2 = 0;
+    int result = 0;
 
     // values have to be present
     HIP_ASSERT(sa_entry1 && sa_entry2);
 
-    HIP_IFEL(!(hash1 = hip_sa_entry_hash(sa_entry1)), -1,
-             "failed to hash sa entry\n");
-    HIP_IFEL(!(hash2 = hip_sa_entry_hash(sa_entry2)), -1,
-             "failed to hash sa entry\n");
-
-    err = (hash1 != hash2);
-
-out_err:
-    return err;
+    result = memcmp(&sa_entry1->inner_src_addr, &sa_entry2->inner_src_addr, sizeof(sa_entry1->inner_src_addr));
+    if (result != 0) {
+        return result;
+    }
+    return memcmp(&sa_entry1->inner_dst_addr, &sa_entry2->inner_dst_addr, sizeof(sa_entry1->inner_dst_addr));
 }
 
 /**
@@ -191,6 +188,9 @@ out_err:
 /**
  * compares the hashes of 2 link entries to check if they are the same
  *
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
+ *
  * @param link_entry1   first link entry to be compared with
  * @param link_entry2   second link entry to be compared with
  * @return              1 if different entries, else 0
@@ -198,23 +198,17 @@ out_err:
 static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
                                 const hip_link_entry_t *link_entry2)
 {
-    int err             = 0;
-    unsigned long hash1 = 0;
-    unsigned long hash2 = 0;
+    int result = 0;
 
     // values have to be present
     HIP_ASSERT(link_entry1 != NULL && link_entry1->spi != 0);
     HIP_ASSERT(link_entry2 != NULL && link_entry2->spi != 0);
 
-    HIP_IFEL(!(hash1 = hip_link_entry_hash(link_entry1)), -1,
-             "failed to hash link entry\n");
-    HIP_IFEL(!(hash2 = hip_link_entry_hash(link_entry2)), -1,
-             "failed to hash link entry\n");
-
-    err = (hash1 != hash2);
-
-out_err:
-    return err;
+    result = link_entry1->spi - link_entry2->spi;
+    if (result != 0) {
+        return result;
+    }
+    return memcmp(&link_entry1->dst_addr, &link_entry2->dst_addr, sizeof(link_entry1->dst_addr));
 }
 
 /*

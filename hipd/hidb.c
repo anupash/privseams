@@ -187,13 +187,18 @@ unsigned long hip_hidb_hash(const void *ptr)
 /**
  * matching function required by hashtable/linked list implementation
  *
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
+ *
  * @param ptr1 a pointer to hip_host_id_entry
  * @param ptr2 a pointer to hip_host_id_entry
  * @return zero on match or non-zero on unmatch
  */
 int hip_hidb_match(const void *ptr1, const void *ptr2)
 {
-    return hip_hidb_hash(ptr1) != hip_hidb_hash(ptr2);
+    const hip_hit_t *hit1 = &((const struct hip_host_id_entry *) ptr1)->lhi.hit;
+    const hip_hit_t *hit2 = &((const struct hip_host_id_entry *) ptr2)->lhi.hit;
+    return memcmp(hit1, hit2, sizeof(*hit1));
 }
 
 /**

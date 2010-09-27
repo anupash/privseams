@@ -272,16 +272,23 @@ static unsigned long hip_firewall_hash_hit_peer(const void *ptr)
 }
 
 /**
- * Compare two HITs
+ * Compare two cache table entries to resolve hash collisions.
  *
- * @param ptr1: pointer to a HIT
- * @param ptr2: pointer to a HIT
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
  *
- * @return zero if hashes are identical, or one otherwise
+ * @param ptr1: pointer to a fw_cache_hl_t
+ * @param ptr2: pointer to a fw_cache_hl_t
+ *
+ * @return zero if the peer HITs in both table entries are identical, a non-zero value otherwise.
  */
 static int hip_firewall_match_hit_peer(const void *ptr1, const void *ptr2)
 {
-    return hip_firewall_hash_hit_peer(ptr1) != hip_firewall_hash_hit_peer(ptr2);
+    // stg: can one assume that there will always be at most one fw_cache_hl_t object per hit_peer?
+    // If so, one could compare the pointers instead because if the hit_peers are the same, the pointers would be the same, and comparing the pointers is faster.
+    const struct in6_addr *peer1 = &((const fw_cache_hl_t *) ptr1)->hit_peer;
+    const struct in6_addr *peer2 = &((const fw_cache_hl_t *) ptr2)->hit_peer;
+    return memcmp(peer1, peer2, sizeof(*peer1));
 }
 
 /**

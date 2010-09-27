@@ -178,14 +178,19 @@ static unsigned long hip_netdev_hash(const void *ptr)
     const struct netdev_address *na = (const struct netdev_address *) ptr;
     uint8_t hash[HIP_AH_SHA_LEN];
 
+    /* stg: TODO A cryptographically secure hash is unnecessarily expensive for a hash table. Something cheaper, like an XOR, would do just fine. */
     hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
                      sizeof(struct sockaddr_storage), hash);
 
+    /* stg: TODO Returning only a long is all the more reason to move to a cheaper hash function. */
     return *((unsigned long *) hash);
 }
 
 /**
  * equality function for the addresses hash table
+ *
+ * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
  *
  * @param ptr1 a pointer to a netdev_address structure
  * @param ptr2 a pointer to a netdev_address structure
@@ -193,7 +198,9 @@ static unsigned long hip_netdev_hash(const void *ptr)
  */
 static int hip_netdev_match(const void *ptr1, const void *ptr2)
 {
-    return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
+    const struct netdev_address *na1 = (const struct netdev_address *) ptr1;
+    const struct netdev_address *na2 = (const struct netdev_address *) ptr2;
+    return memcmp(&na1->addr, &na2->addr, sizeof(na1->addr));
 }
 
 /**
