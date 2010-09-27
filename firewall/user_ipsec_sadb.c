@@ -217,48 +217,13 @@ out_err:
     return err;
 }
 
-/**
+/*
  * callback wrappers providing per-variable casts before calling the
  * type-specific callbacks
- *
- * @param hip_sa_entry      function pointer
- * @param hip_sa_entry_t    type to be casted to
- *
- * @note appends _hash to given function
  */
-static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry, hip_sa_entry_t)
-
-/**
- * callback wrappers providing per-variable casts before calling the
- * type-specific callbacks
- *
- * @param hip_sa_entries    function pointer
- * @param hip_sa_entry_t    type to be casted to
- *
- * @note appends _cmp to given function
- */
+static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry,   hip_sa_entry_t)
 static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, hip_sa_entry_t)
-
-/**
- * callback wrappers providing per-variable casts before calling the
- * type-specific callbacks
- *
- * @param hip_link_entry    function pointer
- * @param hip_link_entry_t  type to be casted to
- *
- * @note appends _hash to given function
- */
-static IMPLEMENT_LHASH_HASH_FN(hip_link_entry, hip_link_entry_t)
-
-/**
- * callback wrappers providing per-variable casts before calling the
- * type-specific callbacks
- *
- * @param hip_link_entries  function pointer
- * @param hip_link_entry_t  type to be casted to
- *
- * @note appends _cmp to given function
- */
+static IMPLEMENT_LHASH_HASH_FN(hip_link_entry,   hip_link_entry_t)
 static IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
 
 /**
