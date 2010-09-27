@@ -221,10 +221,10 @@ out_err:
  * callback wrappers providing per-variable casts before calling the
  * type-specific callbacks
  */
-static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry,   hip_sa_entry_t)
-static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, hip_sa_entry_t)
-static IMPLEMENT_LHASH_HASH_FN(hip_link_entry,   hip_link_entry_t)
-static IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
+IMPLEMENT_LHASH_HASH_FN(hip_sa_entry,   hip_sa_entry_t)
+IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, hip_sa_entry_t)
+IMPLEMENT_LHASH_HASH_FN(hip_link_entry,   hip_link_entry_t)
+IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
 
 /**
  * finds a link entry in the linkdb

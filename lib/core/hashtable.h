@@ -73,20 +73,20 @@ LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE c
 #undef IMPLEMENT_LHASH_DOALL_ARG_FN
 
 #define IMPLEMENT_LHASH_HASH_FN(name, o_type) \
-    unsigned long name ## _LHASH_HASH(const void *arg) { \
+    static unsigned long name ## _LHASH_HASH(const void *arg) { \
         const o_type *a = arg; \
         return name ## _hash(a); }
 #define IMPLEMENT_LHASH_COMP_FN(name, o_type) \
-    int name ## _LHASH_COMP(const void *arg1, const void *arg2) { \
+    static int name ## _LHASH_COMP(const void *arg1, const void *arg2) { \
         const o_type *a = arg1;             \
         const o_type *b = arg2; \
         return name ## _cmp(a, b); }
 #define IMPLEMENT_LHASH_DOALL_FN(name, o_type) \
-    void name ## _LHASH_DOALL(void *arg) { \
+    static void name ## _LHASH_DOALL(void *arg) { \
         o_type *a = arg; \
         name ## _doall(a); }
 #define IMPLEMENT_LHASH_DOALL_ARG_FN(name, o_type, a_type) \
-    void name ## _LHASH_DOALL_ARG(void *arg1, void *arg2) { \
+    static void name ## _LHASH_DOALL_ARG(void *arg1, void *arg2) { \
         o_type *a = arg1; \
         a_type *b = arg2; \
         name ## _doall_arg(a, b); }

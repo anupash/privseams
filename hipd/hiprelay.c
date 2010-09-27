@@ -269,7 +269,7 @@ static void hip_relht_rec_free_type_doall_arg(hip_relrec_t *rec, const hip_relre
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
-static IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t, hip_relrec_type_t)
+IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t, hip_relrec_type_t)
 
 /**
  * Returns relay status.
@@ -309,7 +309,7 @@ static unsigned long hip_relht_hash(const hip_relrec_t *rec)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t)
+IMPLEMENT_LHASH_HASH_FN(hip_relht, const hip_relrec_t)
 
 /**
  * relay hash table comparison function
@@ -329,7 +329,7 @@ static int hip_relht_cmp(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relht, const hip_relrec_t)
+IMPLEMENT_LHASH_COMP_FN(hip_relht, const hip_relrec_t)
 
 /**
  * Puts a relay record into the hashtable. Puts the relay record pointed by
@@ -425,7 +425,7 @@ void hip_relht_rec_free_doall(hip_relrec_t *rec)
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t)
+IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t)
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
@@ -451,7 +451,7 @@ static void hip_relht_rec_free_expired_doall(hip_relrec_t *rec)
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free_expired, hip_relrec_t)
+IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free_expired, hip_relrec_t)
 
 /**
  * Returns the number of relay records in the hashtable @c hiprelay_ht.
@@ -583,7 +583,7 @@ static unsigned long hip_relwl_hash(const hip_hit_t *hit)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t)
+IMPLEMENT_LHASH_HASH_FN(hip_relwl, const hip_hit_t)
 
 /**
  * The compare function of the @c hiprelay_wl hashtable. Compares the hash
@@ -603,7 +603,7 @@ static int hip_relwl_cmp(const hip_hit_t *hit1, const hip_hit_t *hit2)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t)
+IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t)
 
 /**
  * Deletes a single entry from the whitelist hashtable and frees the memory
@@ -702,7 +702,7 @@ static unsigned long hip_relwl_size(void)
 #endif /* CONFIG_HIP_DEBUG */
 
 /** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t)
+IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t)
 
 /**
  * Returns the whitelist status.
