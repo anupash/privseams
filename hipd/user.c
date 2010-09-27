@@ -210,7 +210,6 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
  *       switch(msg_type) block in this function.
  * @param  msg  a pointer to the received user message HIP packet.
  * @param  src the origin of the sender
- * @param  send_response response
  * @return zero on success, or negative error value on error.
  */
 int hip_handle_user_msg(hip_common_t *msg,
