@@ -5,11 +5,11 @@ PKG_BRANCHNAME:=main
 PKG_VERSION:=1.0.6
 PKG_RELEASE:=6
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_BRANCHNAME).tar.gz
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://hipl.hiit.fi/hipl/contrib/openwrt/
 PKG_CAT:=zcat
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_BRANCHNAME)
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_INSTALL_DIR:=$(PKG_BUILD_DIR)/ipkg-install
 
 include $(INCLUDE_DIR)/package.mk
@@ -82,7 +82,8 @@ endef
 
 CONFIGURE_VARS += \
     LIBS="-lz" \
-    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig"
+    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig" \
+	CFLAGS="-fPIC -Wno-error"
 
 define Build/Configure
 	$(call Build/Configure/Default, \
