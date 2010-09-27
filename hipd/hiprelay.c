@@ -1064,11 +1064,6 @@ out_err:
 /**
  * handle a HIP control message with relay_to parameter
  *
- * @param msg the message with the relay_to parameter
- * @param msg_type the type of the message
- * @param src_addr the source address of the message
- * @param dst_addr the destination address of the message
- * @param msg_info transport port numbers
  * @return zero on success or negative on error
  */
 int hip_relay_handle_relay_to(const uint8_t packet_type,
@@ -1276,12 +1271,6 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 /**
  * handle the relay_to parameter at the Initiator
  *
- * @param msg the HIP control packet with relay_to parameter
- * @param msg_type the type of the HIP control message
- * @param src_addr source address of the message
- * @param dst_addr destination address of the message
- * @param msg_info transport layer port information
- * @param entry the host association
  * @return zero on success or negative on error
  */
 int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
