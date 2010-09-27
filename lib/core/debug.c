@@ -405,9 +405,9 @@ static void hip_byte2hex(const char c, char* bfr)
 
 /**
  * Write the hexadecimal string representation of a memory area to a buffer.
- * At most @in_len bytes of the input memory are read and at most @out_len bytes of the output buffer are written, whichever comes first.
+ * At most @a in_len bytes of the input memory are read and at most @a out_len bytes of the output buffer are written, whichever comes first.
  * If at least one byte was converted, the hexadecimal representation is terminated by 0.
- * If the memory regions of @in and @out overlap, the result of the operation is undefined.
+ * If the memory regions of @a in and @a out overlap, the result of the operation is undefined.
  *
  * @param in        the address of the start of the memory area to convert.
  * @param in_len    the size in bytes of the memory area to convert.
@@ -444,7 +444,7 @@ static size_t hip_mem2hex(const void* in, const size_t in_len, char* out, const 
  * If it is not printable, convert it to '.'.
  *
  * @param b the byte to convert.
- * @return  the printable ASCII representation of @b.
+ * @return  the printable ASCII representation of @a b
  */
 static char hip_byte2printable(const char b)
 {
@@ -476,9 +476,9 @@ static size_t hip_mem2pretty_hex_size(const size_t in_len)
 
 /**
  * Create one line of a pretty-printed hexadecimal string representation of a memory area in the format of the hexdump -C UNIX command to a buffer.
- * At most @in_len bytes of the memory are read and at most @out_len bytes are are written, whichever comes first.
+ * At most @a in_len bytes of the memory are read and at most @a out_len bytes are are written, whichever comes first.
  * The function always writes a full line of HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH bytes including a newline character into out.
- * If the memory regions of @in and @out overlap, the result of the operation is undefined.
+ * If the memory regions of @a in and @a out overlap, the result of the operation is undefined.
  *
  * Example of the output:
  * <pre>
@@ -489,7 +489,7 @@ static size_t hip_mem2pretty_hex_size(const size_t in_len)
  * @param in_len    the size in bytes of the memory area to convert. At most HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH bytes are read.
  * @param out       the address of the buffer to write the hexadecimal representation to. Exactly HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH are written.
  * @param out_len   the size in bytes of the out buffer to write to. This value should be greater or equal to HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH.
- * @return          1 if a line of output was written to out. 0 and no output is written if @in_len is 0 or if @out_len is less than HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH.
+ * @return          1 if a line of output was written to out. 0 and no output is written if @a in_len is 0 or if @a out_len is less than HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH.
  */
 static int hip_mem2pretty_hex_line(const char* in, const size_t in_len, char* out, const size_t out_len)
 {
@@ -531,9 +531,9 @@ static int hip_mem2pretty_hex_line(const char* in, const size_t in_len, char* ou
 
 /**
  * Write a pretty-printed hexadecimal string representation of a memory area in the format of the hexdump -C UNIX command to a buffer.
- * At most @in_len bytes of the memory are read and at most @out_len bytes are are written, whichever comes first.
+ * At most @a in_len bytes of the memory are read and at most @a out_len bytes are are written, whichever comes first.
  * If at least one byte was converted, the hexadecimal representation is terminated by a null character.
- * If the memory regions of @in and @out overlap, the result of the operation is undefined.
+ * If the memory regions of @a in and @a out overlap, the result of the operation is undefined.
  *
  * Example of the output:
  * <pre>
@@ -542,10 +542,10 @@ static int hip_mem2pretty_hex_line(const char* in, const size_t in_len, char* ou
  * </pre>
  *
  * @param in        the address of the start of the memory area to convert.
- * @param in_len    the size in bytes of the memory area at @in to convert.
+ * @param in_len    the size in bytes of the memory area at @a in to convert.
  * @param out       the address of the buffer to write the hexadecimal representation to.
- * @param out_len   the size in bytes of the @out buffer to write to.
- * @return          the number of bytes from @in that were converted.
+ * @param out_len   the size in bytes of the @a out buffer to write to.
+ * @return          the number of bytes from @a in that were converted.
  */
 static size_t hip_mem2pretty_hex(const void* in, const size_t in_len, char* out, const size_t out_len)
 {
