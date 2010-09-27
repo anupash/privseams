@@ -45,7 +45,6 @@
 #include <openssl/x509.h>
 #include <sys/types.h>
 
-#include "hashtable.h"
 #include "protodefs.h"
 
 
@@ -75,7 +74,6 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
                               const char *, struct in6_addr *,
                               const char *, struct in6_addr *,
                               time_t *, time_t *);
-int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
 int hip_cert_spki_char2certinfo(char *, struct hip_cert_spki_info *);
 int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *);
 
