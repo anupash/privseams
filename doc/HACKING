@@ -491,9 +491,9 @@ In addition to K&R style
 ------------------------
 
 - line length:
-  Long lines (>80 characters) should be broken at suitable places
-  where doing so improves readability. Broken lines should not be
-  mechanically indented by four spaces. Instead they should be
+  Long lines (>80 characters) should be broken at suitable places if
+  and only if doing so improves readability. Broken lines should not
+  be mechanically indented by four spaces. Instead they should be
   indented for optimum readability. For example function arguments
   placed on the next line should align with the first character
   after the '('.
