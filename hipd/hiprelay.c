@@ -533,6 +533,7 @@ static void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime)
  * @param hit_r    a pointer to Responder (relay client) HIT.
  * @param ip_r     a pointer to Responder (relay client) IP address.
  * @param port     responder's UDP port.
+ * @param hmac     HMAC to copy into the new record
  * @return         a pointer to a new relay record, or NULL if failed to
  *                 allocate.
  * @note           All records to be put in the hashtable should be created with
@@ -1005,6 +1006,7 @@ out_err:
  * forward a HIP control packet with relay_to parameter
  *
  * @param r the HIP control message to be relayed
+ * @param type_hdr message type
  * @param r_saddr the original source address
  * @param r_daddr the original destination address
  * @param relay_to_addr the address where to relay the packet
