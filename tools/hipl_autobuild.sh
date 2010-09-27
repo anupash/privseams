@@ -91,6 +91,14 @@ check_dist()
     run_program diff -u file_list_checkout file_list_tarball
 }
 
+# There should be no Doxygen warnings.
+check_doxygen()
+{
+    make doxygen > /dev/null 2> doxygen_stderr
+    touch empty
+    run_program diff -u empty doxygen_stderr
+}
+
 compile()
 {
     # TODO add short description - what is tested in which directory?
@@ -114,6 +122,9 @@ run_program autoreconf --install
 
 CONFIGURATION="distribution tarball completeness"
 check_dist
+
+CONFIGURATION="Doxygen documentation"
+check_doxygen
 
 # Compile HIPL in different configurations
 # vanilla configuration
