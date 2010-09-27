@@ -515,8 +515,9 @@ in HIPL. Pay special attention to spacing and the placement of
 parentheses:
 
 
-#include <stddef.h>     /* Use <> for system #includes. */
-#include "header.h"     /* Use "" for local #includes. */
+#include <stddef.h>     // System #includes come first, use <> and
+                        // are separated by an empty line from
+#include "header.h"     // local #includes, which use "".
 
 struct whatever {
     /* Observe how the variable names and the stars are aligned. */
