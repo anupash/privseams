@@ -129,7 +129,8 @@ check_doxygen
 # Compile HIPL in different configurations
 # vanilla configuration
 compile
-# TODO what does this do compared to check_dist?
+
+# internal autoconf tests, bootstrap the dist tarball, build out-of-tree, etc
 run_program "make -j17 distcheck"
 
 # PISA configuration
