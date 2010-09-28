@@ -101,10 +101,10 @@ check_doxygen()
 
 compile()
 {
-    # TODO add short description - what is tested in which directory?
+    # Run compile and install tests for a certain configuration, in-tree.
     CONFIGURATION="--prefix=$(pwd)/local_install $@"
     run_program "./configure" $CONFIGURATION &&
-        run_program "make -j17" &&
+        run_program "make -j17"              &&
         run_program "make -j17 checkheaders" &&
         run_program "make install"
 }
