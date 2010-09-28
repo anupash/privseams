@@ -1,13 +1,19 @@
 #!/bin/sh
-# HIPL autobuild script for periodic compilation tests.
+# HIPL autobuild script for periodic compilation and quality tests.
 # The name of the branch to test needs to be passed as the first parameter.
+#
+# The script is suitable to be run from cron in order to provide basic
+# continuous integration. Errors encountered during operation are logged
+# to a text file and sent off by email. To receive these notifications,
+# set the HIPL_NOTIFICATION_EMAIL environment variable to a suitable value.
 #
 # No full checkout of HIPL sources is done. In order to greatly speed up
 # testing multiple branches, lightweight checkouts are used. The shared
 # repository from which the checkouts are extracted is expected to have
 # been updated before this script is run.
 #
-# This script relies on the following directory layout:
+# This script relies on the following home directory layout of the user
+# running it:
 # - $HOME/src/hipl/           - location for HIPL shared repository
 # - $HOME/src/hipl/<branch>   - location for HIPL <branch> to be tested
 # - $HOME/tmp/autobuild/hipl/ - temporary build directory
@@ -19,12 +25,8 @@
 #           directory.
 # RATIONALE I was not sure where the VERSION info added by Miika should have been
 #           extracted from in the first place.
-# TODO      Which are the system dependencies for this script?
 # TODO      What should cron-jobs typically look like and why?
 #           - Rene (26.05.2010)
-#
-# If the HIPL_NOTIFICATION_EMAIL environment variable is set to a suitable value
-# for the user running this script, then email will be sent in case of failure.
 
 if test "$1" = ""; then
     echo "usage: $0 <branch_name>"
