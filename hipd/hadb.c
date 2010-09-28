@@ -147,8 +147,11 @@ static IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
  * a comparison function for the hash table algorithm to distinguish
  * two HAs from each other
  *
- * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
- * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
+ * Note that when this function is called, the hashes of the two hash table
+ * entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether
+ * the entries (or rather the part used to calculate the hash) themselves are
+ * equal or whether they are different and this is just a hash collision.
  *
  * @param ha1 a HA to compare for equality
  * @param ha2 a HA to compare for equality
@@ -192,8 +195,11 @@ static unsigned long hip_hash_peer_addr(const void *ptr)
 /**
  * test if two peer addresses match to detect and avoid hash collisions in the peer address list.
  *
- * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
- * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
+ * Note that when this function is called, the hashes of the two hash table
+ * entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether
+ * the entries (or rather the part used to calculate the hash) themselves are
+ * equal or whether they are different and this is just a hash collision.
  *
  * @param ptr1 a pointer to a hip_peer_addr_list_item
  * @param ptr2 a pointer to a hip_peer_addr_list_item
