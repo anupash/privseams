@@ -82,7 +82,7 @@ cleanup()
 check_dist()
 {
     # TODO I'm not a sed user, please explain
-    find -L . | sed -e 1d -e 's:./::' -e '/\.bzr/d' -e '/autom4te.cache/d' -e '/file_list_checkout/d' -e '/tools\/bzrhooks/d' |
+    find -L . | sed -e 1d -e 's:./::' -e '/\.bzr/d' -e '/autom4te.cache/d' -e '/file_list_checkout/d' |
         sort > file_list_checkout
     ./configure && make dist
     tar -tzf hipl-*.tar.gz |
