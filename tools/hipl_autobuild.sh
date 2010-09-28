@@ -2,6 +2,11 @@
 # HIPL autobuild script for periodic compilation tests.
 # The name of the branch to test needs to be passed as the first parameter.
 #
+# No full checkout of HIPL sources is done. In order to greatly speed up
+# testing multiple branches, lightweight checkouts are used. The shared
+# repository from which the checkouts are extracted is expected to have
+# been updated before this script is run.
+#
 # This script relies on the following directory layout:
 # - $HOME/src/hipl/           - location for HIPL shared repository
 # - $HOME/src/hipl/<branch>   - location for HIPL <branch> to be tested
@@ -112,7 +117,6 @@ compile()
 # only run the autobuilder for newer revisions than the last one checked
 test $BRANCH_REVISION = $AUTOBUILD_REVISION && exit 0
 
-# TODO why is the repo up-to-date?
 bzr checkout -q --lightweight $BRANCH_URL $CHECKOUT_DIR || cleanup 1
 
 cd "$CHECKOUT_DIR" || cleanup 1
