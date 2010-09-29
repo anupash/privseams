@@ -69,8 +69,11 @@ static unsigned long hip_oppipdb_hash_ip(const void *ptr)
 /**
  * Compares two ip addresses.
  *
- * Note that when this function is called, the hashes of the two hash table entries provided as arguments are known to be equal.
- * The point of this function is to allow the hash table to determine whether the entries (or rather the part used to calculate the hash) themselves are equal or whether they are different and this is just a hash collision.
+ * Note that when this function is called, the hashes of the two hash table
+ * entries provided as arguments are known to be equal.
+ * The point of this function is to allow the hash table to determine whether
+ * the entries (or rather the part used to calculate the hash) themselves are
+ * equal or whether they are different and this is just a hash collision.
  *
  * @param ptr1: pointer to the first ip address to compare
  * @param ptr2: pointer to the second ip address to compare
