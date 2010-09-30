@@ -507,9 +507,10 @@
  * importantantly, these are <span style="color:#f00;">the only values allowed
  * in that field.</span> Do not put any other bits on wire in the Controls
  * field.
- * @note Do not confuse these values with HIP host association ontrol values.
+ * @note Do not confuse these values with HIP host association Control values.
  * @{
  */
+#define HIP_PACKET_CTRL_NON              0x0000 /**< HIP packet with empty Controls field */
 #define HIP_PACKET_CTRL_ANON             0x0001 /**< HIP packet Controls value */
 /* unused, was HIP_PACKET_CTRL_BLIND 0x0004 */
 /* @} */

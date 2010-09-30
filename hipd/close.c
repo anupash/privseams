@@ -315,7 +315,7 @@ int hip_close_create_response(UNUSED const uint8_t packet_type,
     hip_msg_init(ctx->output_msg);
     hip_build_network_hdr(ctx->output_msg,
                         HIP_CLOSE_ACK,
-                        0,
+                        HIP_PACKET_CTRL_NON,
                         &(ctx->hadb_entry)->hit_our,
                         &(ctx->hadb_entry)->hit_peer);
 
@@ -430,7 +430,7 @@ int hip_close_ack_check_packet(UNUSED const uint8_t packet_type,
     HIP_IFEL(ipv6_addr_any(&ctx->input_msg->hitr), -1,
             "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
-    if (!hip_controls_sane(ntohs(ctx->input_msg->control), 0)) {
+    if (!hip_controls_sane(ntohs(ctx->input_msg->control), HIP_PACKET_CTRL_NON)) {
         HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
                 ntohs(ctx->input_msg->control));
         goto out_err;
