@@ -33,7 +33,6 @@ ifneq "$(wildcard /usr/share/misc/config.guess)" ""
 endif
 	./configure $(CROSS) --prefix=/usr --sysconfdir=/etc \
                          --enable-shared \
-                         --disable-gcc-warn \
                          --disable-debug
 
 
