@@ -115,8 +115,6 @@ firewall_hipfw_SOURCES += firewall/midauth.c   \
 endif
 
 
-# TODO: libhipcore, libhipconf and libhiptool have circular
-# dependencies. This needs to be addressed at some point.
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/capability.c      \
                                  lib/core/certtools.c       \
