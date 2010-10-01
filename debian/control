@@ -1,4 +1,6 @@
 Source: hipl
+Section: net
+Priority: optional
 Maintainer: Rene Hummen <rene.hummen@cs.rwth-aachen.de>
 Build-Depends: debhelper (>= 5), autotools-dev
 Standards-Version: 3.7.2
