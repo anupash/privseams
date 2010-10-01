@@ -3,6 +3,12 @@
 # Mailer script that notifies about commits to a BZR repo
 #
 # Copyright (c) 2010 Mircea Gherzan <mgherzan@gmail.com>
+#
+# This script has multiple issues that need to be fixed before it is put in
+# production use:
+# - temporary files are created in an insecure predictable fashion,
+# - storing the last revision in /tmp will fail if the machine gets
+#   rebooted and /tmp is deleted, as is often the case.
 
 # path to the BZR repository
 REPO=/home/$USER/src/hipl
