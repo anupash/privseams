@@ -39,8 +39,6 @@
 #include "common_types.h"
 #include "hslist.h"
 
-static SList *slist_last(SList *list);
-
 /**
  * allocate a new linked list element
  *
@@ -51,6 +49,22 @@ static SList *alloc_slist(void)
     SList *list = malloc(sizeof(SList));
     list->next = NULL;
     list->data = NULL;
+    return list;
+}
+
+/**
+ * traverse to the last element of the linked list
+ *
+ * @param list the linked list to be traversed
+ * @return the last element of the linked list
+ */
+static SList *slist_last(SList *list)
+{
+    if (list) {
+        while (list->next) {
+            list = list->next;
+        }
+    }
     return list;
 }
 
@@ -78,22 +92,6 @@ SList *append_to_slist(SList *list,
     } else {
         return new_list;
     }
-}
-
-/**
- * traverse to the last element of the linked list
- *
- * @param list the linked list to be traversed
- * @return the last element of the linked list
- */
-static SList *slist_last(SList *list)
-{
-    if (list) {
-        while (list->next) {
-            list = list->next;
-        }
-    }
-    return list;
 }
 
 /**
