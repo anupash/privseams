@@ -26,7 +26,7 @@ fi
 read lastrev < $LASTREV
 
 # from now on, working in the BZR repo
-cd $REPO
+cd $REPO || exit 1
 
 # update the repo to get the last revision
 bzr up
