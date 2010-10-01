@@ -45,8 +45,7 @@ for rev in $(seq $lastrev $head); do
     subject="[$branch] $rev: $firstline"
 
     # create the body of the e-mail
-    > $MAILBUF
-    bzr log -r $rev | tail -n +7 >> $MAILBUF
+    bzr log -r $rev | tail -n +7 > $MAILBUF
     echo "" >> $MAILBUF
     bzr diff -c $rev >> $MAILBUF
 
