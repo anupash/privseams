@@ -28,9 +28,16 @@
 #ifndef HIP_FIREWALL_CACHE_PORT_H
 #define HIP_FIREWALL_CACHE_PORT_H
 
-#include <netinet/in.h>
+#include <netinet/in.h> // in_port_t
 
-#include "lib/core/icomm.h"
+#define FIREWALL_PORT_CACHE_IPV6_TRAFFIC        1
+#define FIREWALL_PORT_CACHE_IPV4_TRAFFIC        3
+#define FIREWALL_PORT_CACHE_KEY_LENGTH          20
+
+struct firewall_port_cache_hl {
+    char port_and_protocol[FIREWALL_PORT_CACHE_KEY_LENGTH];     //key
+    int  traffic_type;                                          //value
+};
 
 void hip_firewall_port_cache_init_hldb(void);
 struct firewall_port_cache_hl *hip_firewall_port_cache_db_match(in_port_t port,
