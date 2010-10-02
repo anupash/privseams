@@ -319,7 +319,6 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     fw_cache_hl_t *entry                                  = NULL;
     const struct firewall_port_cache_hl *port_cache_entry = NULL;
     const struct ip6_hdr *ip6_hdr                         = NULL;
-    char proto[PROTO_STRING_MAX];
     struct in6_addr src_addr, dst_addr;
 
     ip6_hdr = (const struct ip6_hdr *) m->payload;
@@ -328,11 +327,9 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     switch (ip6_hdr->ip6_nxt) {
     case IPPROTO_UDP:
         portDest = ((const struct udphdr *) ((m->payload) + ip_hdr_size))->dest;
-        strcpy(proto, "udp6");
         break;
     case IPPROTO_TCP:
         portDest = ((const struct tcphdr *) ((m->payload) + ip_hdr_size))->dest;
-        strcpy(proto, "tcp6");
         break;
     case IPPROTO_ICMPV6:
         HIP_DEBUG("ICMPv6 packet\n");
