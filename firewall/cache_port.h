@@ -30,18 +30,18 @@
 
 #include <netinet/in.h> // in_port_t
 
-#define FIREWALL_PORT_CACHE_IPV6_TRAFFIC        1
-#define FIREWALL_PORT_CACHE_IPV4_TRAFFIC        3
-#define FIREWALL_PORT_CACHE_KEY_LENGTH          20
-
-struct firewall_port_cache_hl {
-    char port_and_protocol[FIREWALL_PORT_CACHE_KEY_LENGTH];     //key
-    int  traffic_type;                                          //value
+enum hip_firewall_port_traffic_type {
+    HIP_FIREWALL_PORT_TRAFFIC_TYPE_UNKNOWN,
+    HIP_FIREWALL_PORT_TRAFFIC_TYPE_IPV6,
+    HIP_FIREWALL_PORT_TRAFFIC_TYPE_IPV4,
+    HIP_FIREWALL_PORT_TRAFFIC_TYPE_LSI
 };
 
-void hip_firewall_port_cache_init_hldb(void);
-struct firewall_port_cache_hl *hip_firewall_port_cache_db_match(in_port_t port,
-                                                                int proto);
-void hip_firewall_port_cache_uninit_hldb(void);
+void hip_firewall_port_cache_init(void);
+
+enum hip_firewall_port_traffic_type
+hip_firewall_port_cache_lookup_traffic_type(const in_port_t port,
+                                            const int proto);
+void hip_firewall_port_cache_uninit(void);
 
 #endif /* HIP_CACHE_H */
