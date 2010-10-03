@@ -30,16 +30,16 @@
 
 #include <netinet/in.h> // in_port_t
 
-enum hip_firewall_port_traffic_type {
-    HIP_FIREWALL_PORT_TRAFFIC_TYPE_UNKNOWN,
-    HIP_FIREWALL_PORT_TRAFFIC_TYPE_IPV6,
-    HIP_FIREWALL_PORT_TRAFFIC_TYPE_IPV4,
-    HIP_FIREWALL_PORT_TRAFFIC_TYPE_LSI
+enum hip_firewall_port_info {
+    HIP_FIREWALL_PORT_UNBOUND,
+    HIP_FIREWALL_PORT_IPV6,
+    HIP_FIREWALL_PORT_IPV4,
+    HIP_FIREWALL_PORT_LSI
 };
 
 void hip_firewall_port_cache_init(void);
 
-enum hip_firewall_port_traffic_type
+enum hip_firewall_port_info
 hip_firewall_port_cache_lookup_traffic_type(const in_port_t port,
                                             const int proto);
 void hip_firewall_port_cache_uninit(void);

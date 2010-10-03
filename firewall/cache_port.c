@@ -60,7 +60,7 @@
 
 struct firewall_port_cache_hl {
     char port_and_protocol[FIREWALL_PORT_CACHE_KEY_LENGTH];     //key
-    enum hip_firewall_port_traffic_type traffic_type;           //value
+    enum hip_firewall_port_info traffic_type;           //value
 };
 
 static HIP_HASHTABLE *firewall_port_cache_db = NULL;
@@ -74,14 +74,14 @@ static HIP_HASHTABLE *firewall_port_cache_db = NULL;
  * @param *proto        protocol type
  * @return              the traffic type associated with the given port.
  */
-static enum hip_firewall_port_traffic_type
+static enum hip_firewall_port_info
 hip_get_proto_info(const in_port_t port_dest, const char *proto)
 {
     FILE *fd       = NULL;
     char line[500], sub_string_addr_hex[8], path[11 + sizeof(proto)];
     char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
     int lineno     = 0, index_addr_port = 0, result;
-    enum hip_firewall_port_traffic_type exists = HIP_FIREWALL_PORT_TRAFFIC_TYPE_UNKNOWN;
+    enum hip_firewall_port_info exists = HIP_FIREWALL_PORT_UNBOUND;
     uint32_t result_addr;
     struct in_addr addr;
     List list;
@@ -104,7 +104,7 @@ hip_get_proto_info(const in_port_t port_dest, const char *proto)
 
     initlist(&list);
     while (fd && getwithoutnewline(line, 500, fd) != NULL &&
-           exists == HIP_FIREWALL_PORT_TRAFFIC_TYPE_UNKNOWN) {
+           exists == HIP_FIREWALL_PORT_UNBOUND) {
         lineno++;
 
         destroy(&list);
@@ -130,16 +130,19 @@ hip_get_proto_info(const in_port_t port_dest, const char *proto)
         HIP_DEBUG("Result %i\n", result);
         HIP_DEBUG("port dest %i\n", port_dest);
         if (result == port_dest) {
-            strncpy(sub_string_addr_hex, fqdn_str, 8);
-            sscanf(sub_string_addr_hex, "%X", &result_addr);
-            addr.s_addr = result_addr;
-            if (IS_LSI32(addr.s_addr)) {
-                exists = HIP_FIREWALL_PORT_TRAFFIC_TYPE_LSI;
-                break;
+            if (!strcmp(proto, "tcp6") || !strcmp(proto, "udp6")) {
+                exists = HIP_FIREWALL_PORT_IPV6;
             } else {
-                exists = HIP_FIREWALL_PORT_TRAFFIC_TYPE_IPV6;
-                break;
+                strncpy(sub_string_addr_hex, fqdn_str, 8);
+                sscanf(sub_string_addr_hex, "%X", &result_addr);
+                addr.s_addr = result_addr;
+                if (IS_LSI32(addr.s_addr)) {
+                    exists = HIP_FIREWALL_PORT_LSI;
+                } else {
+                    exists = HIP_FIREWALL_PORT_IPV4;
+                }
             }
+            break;
         }
     }     /* end of while */
     if (fd) {
@@ -159,7 +162,7 @@ hip_get_proto_info(const in_port_t port_dest, const char *proto)
  * @return zero on success or non-zero on failure
  */
 static int hip_port_cache_add_new_entry(const char *key,
-                                        const enum hip_firewall_port_traffic_type value)
+                                        const enum hip_firewall_port_info value)
 {
     struct firewall_port_cache_hl *new_entry = NULL;
     int err = 0;
@@ -181,14 +184,14 @@ static int hip_port_cache_add_new_entry(const char *key,
  *
  * @return the cache entry if found or NULL otherwise
  */
-enum hip_firewall_port_traffic_type
+enum hip_firewall_port_info
 hip_firewall_port_cache_lookup_traffic_type(const in_port_t port,
                                             const int proto)
 {
     struct firewall_port_cache_hl *found_entry = NULL;
     char key[FIREWALL_PORT_CACHE_KEY_LENGTH];
     char protocol[10], proto_for_bind[10];
-    enum hip_firewall_port_traffic_type bindto = HIP_FIREWALL_PORT_TRAFFIC_TYPE_UNKNOWN;
+    enum hip_firewall_port_info bindto = HIP_FIREWALL_PORT_UNBOUND;
 
     memset(protocol, 0, sizeof(protocol));
     memset(proto_for_bind, 0, sizeof(proto_for_bind));

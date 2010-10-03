@@ -317,8 +317,8 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int portDest                                          = 0;
     int process_as_lsi                                    = 0;
     fw_cache_hl_t *entry                                  = NULL;
-    enum hip_firewall_port_traffic_type port_traffic_type =
-        HIP_FIREWALL_PORT_TRAFFIC_TYPE_UNKNOWN;
+    enum hip_firewall_port_info port_traffic_type =
+        HIP_FIREWALL_PORT_UNBOUND;
     const struct ip6_hdr *ip6_hdr                         = NULL;
     struct in6_addr src_addr, dst_addr;
 
@@ -344,7 +344,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     port_traffic_type = hip_firewall_port_cache_lookup_traffic_type(portDest,
                                                                     ip6_hdr->ip6_nxt);
 
-    if (port_traffic_type == HIP_FIREWALL_PORT_TRAFFIC_TYPE_IPV6) {
+    if (port_traffic_type == HIP_FIREWALL_PORT_IPV6) {
         verdict = 1;
         HIP_DEBUG("Cached port, accepting\n");
         goto out_err;
