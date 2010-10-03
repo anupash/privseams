@@ -341,8 +341,8 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     }
 
     /* port caching */
-    port_traffic_type = hip_firewall_port_cache_lookup_traffic_type(portDest,
-                                                                    ip6_hdr->ip6_nxt);
+    port_traffic_type = hip_firewall_port_cache_lookup_binding(portDest,
+                                                               ip6_hdr->ip6_nxt);
 
     if (port_traffic_type == HIP_FIREWALL_PORT_IPV6) {
         verdict = 1;

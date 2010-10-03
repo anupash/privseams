@@ -40,7 +40,7 @@ enum hip_firewall_port_info {
 void hip_firewall_port_cache_init(void);
 
 enum hip_firewall_port_info
-hip_firewall_port_cache_lookup_traffic_type(const in_port_t port,
+hip_firewall_port_cache_lookup_binding(const in_port_t port,
                                             const int proto);
 void hip_firewall_port_cache_uninit(void);
 

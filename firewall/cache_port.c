@@ -185,7 +185,7 @@ static int hip_port_cache_add_new_entry(const char *key,
  * @return the cache entry if found or NULL otherwise
  */
 enum hip_firewall_port_info
-hip_firewall_port_cache_lookup_traffic_type(const in_port_t port,
+hip_firewall_port_cache_lookup_binding(const in_port_t port,
                                             const int proto)
 {
     struct firewall_port_cache_hl *found_entry = NULL;
