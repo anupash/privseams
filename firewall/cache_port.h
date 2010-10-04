@@ -31,17 +31,21 @@
 #include <netinet/in.h> // in_port_t
 
 enum hip_firewall_port_info {
-    HIP_FIREWALL_PORT_UNBOUND,
-    HIP_FIREWALL_PORT_IPV6,
-    HIP_FIREWALL_PORT_IPV4,
-    HIP_FIREWALL_PORT_LSI
+    HIP_FIREWALL_PORT_UNKNOWN = 0,  // only used internally
+    HIP_FIREWALL_PORT_UNBOUND,      // no application is bound to a certain
+                                    // port under IPv4 or IPv6
+    HIP_FIREWALL_PORT_IPV6,         // the port is bound to an IPv6 address (and
+                                    // potentially an IPv4 address)
+    HIP_FIREWALL_PORT_IPV4,         // the port is bound to a non-LSI IPv4
+                                    // address (but not to an IPv6 address)
+    HIP_FIREWALL_PORT_LSI           // the port is bound to an LSI IPv4 address
 };
 
 void hip_firewall_port_cache_init(void);
 
 enum hip_firewall_port_info
-hip_firewall_port_cache_lookup_binding(const in_port_t port,
-                                            const int proto);
+hip_firewall_port_cache_lookup_binding(const uint8_t proto,
+                                       const in_port_t port);
 void hip_firewall_port_cache_uninit(void);
 
 #endif /* HIP_CACHE_H */

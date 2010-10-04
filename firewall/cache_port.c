@@ -38,32 +38,209 @@
  *
  * @brief Cache TCP and UDP port numbers for inbound HIP-related connections to optimize LSI translation
  *
- * @author Miika Komu <miika@iki.fi>
+ * @author Miika Komu <miika@iki.fi>, Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
 
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <netinet/in.h>
 
-#include "lib/core/builder.h"
 #include "lib/core/debug.h"
-#include "lib/core/hashtable.h"
-#include "lib/core/icomm.h"
 #include "lib/core/list.h"
-#include "lib/core/prefix.h"
 #include "lib/tool/lutil.h"
-#include "cache.h"
+#include "lib/core/prefix.h"
 #include "cache_port.h"
 
-#define FIREWALL_PORT_CACHE_KEY_LENGTH          20
 
-struct firewall_port_cache_hl {
-    char port_and_protocol[FIREWALL_PORT_CACHE_KEY_LENGTH];     //key
-    enum hip_firewall_port_info traffic_type;           //value
-};
+/**
+ * Pointer to the port information cache.
+ *
+ * The cache is a two-dimensional array.
+ * The first dimension is the transport protocol for which a port can be bound
+ * (supported are TCP and UDP).
+ * The second dimension is the port number itself.
+ * The value is a uint8_t representation of an enum hip_firewall_port_info value
+ */
+static uint8_t *cache = NULL;
 
-static HIP_HASHTABLE *firewall_port_cache_db = NULL;
+static const unsigned long CACHE_SIZE_PROTOS = 2;
+static const unsigned long CACHE_SIZE_PORTS = 1 << (sizeof(in_port_t) * 8);
+static unsigned long cache_size_entries = 0;
+static unsigned long cache_size_bytes = 0;
+
+
+/**
+ * Allocate and initializes the cache resources.
+ * If this function has not been called first, the results of calling
+ * cache_get() and cache_set() are undefined.
+ */
+static void
+cache_init(void)
+{
+    HIP_ASSERT(NULL == cache);
+
+    cache_size_entries = CACHE_SIZE_PROTOS * CACHE_SIZE_PORTS;
+    cache_size_bytes = cache_size_entries * sizeof(*cache);
+
+    cache = calloc(1, cache_size_bytes);
+    /* We zero the cache on allocation assuming that HIP_FIREWALL_PORT_UNKNOWN
+    is 0 and thus the whole cache initially has that value. */
+    if (NULL == cache) {
+        HIP_ERROR("Allocating the port info cache failed\n");
+    }
+}
+
+/**
+ * Release the cache resources.
+ * After calling this function, the results of calling cache_get() and
+ * cache_set() are undefined.
+ */
+static void
+cache_uninit(void)
+{
+    if (NULL != cache) {
+        free(cache);
+        cache = NULL;
+    } else {
+        HIP_ERROR("Deallocating the port info cache failed because it was not allocated\n");
+    }
+}
+
+/**
+ * Determines the index of a cache entry.
+ * The cache array should only be indexed via this function.
+ *
+ * The flat cache entry index can be used to access the cache as a
+ * one-dimensional array.
+ * Using it is not strictly necessary because it would be possible and more
+ * beautiful to behold to access the cache as a two-dimensional array, but the
+ * one-dimensional flat index determined here can also be used for bounds
+ * checking.
+ *
+ * @param protocol the protocol the specified port belongs to.
+ *  The value is the same as used in the IPv4 'protocol' and the IPv6 'Next
+ *  Header' fields.
+ *  The only supported values are 6 for TCP and 17 for UDP.
+ * @param port the port in host byte order to set the port information for.
+ *  Valid values range from 0 to 2^16-1.
+ * @return the index of the cache entry for @a protocol and @a port.
+ */
+static unsigned long
+cache_index(const uint8_t protocol,
+            const uint16_t port)
+{
+    unsigned long index = 0;
+    unsigned long protocol_offset = 0;
+
+    // check input paramaters
+    HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
+    
+    // determine the offset into the first (protocol) dimension
+    if (IPPROTO_TCP == protocol) {
+        protocol_offset = 0;
+    } else if (IPPROTO_UDP == protocol) {
+        protocol_offset = 1;
+    }
+
+    // calculate the index
+    index = (protocol_offset * CACHE_SIZE_PORTS) + port;
+
+    // check return value
+    HIP_ASSERT(index < cache_size_entries);
+
+    return index;
+}
+
+/**
+ * Cache information on the port of a given protocol.
+ *
+ * Looking up the port information from the /proc file systems is relatively
+ * expensive.
+ * Thus, we use this cache to speed up the lookup.
+ *
+ * This function is called after looking up port information from the /proc
+ * file system.
+ * After it has been called, a call to hip_firewall_port_cache_set() with the
+ * same protocol and prot returns the previously set prot information.
+ *
+ * @param protocol the protocol the specified port belongs to.
+ *  The value is the same as used in the IPv4 'protocol' and the IPv6 'Next
+ *  Header' fields.
+ *  The only supported values are 6 for TCP and 17 for UDP.
+ * @param port the port in host byte order to set the port information for.
+ *  Valid values range from 0 to 2^16-1.
+ * @param info the information to store in the cache.
+ */
+static void
+cache_set(const uint8_t protocol,
+          const uint16_t port,
+          const enum hip_firewall_port_info info)
+{
+    // check input paramaters
+    HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
+    
+    // fail gracefully if the cache is not allocated
+    if (NULL != cache) {
+        // calculate index of cache entry
+        const unsigned long index = cache_index(protocol, port);
+
+        // convert the port info to the cache storage type
+        const uint8_t value = (uint8_t)info;
+        
+        // check that the conversion is consistent
+        HIP_ASSERT((const enum hip_firewall_port_info)value == info);
+
+        cache[index] = value;
+    } else {
+        HIP_ERROR("Unable to set cache entry, cache not allocated\n");
+    }
+}
+
+/**
+ * Retrieve port information for a given protocol from the cache.
+ *
+ * Looking up the port information from the /proc file systems is relatively
+ * expensive.
+ * Thus, we use this cache to speed up the lookup.
+ *
+ * This function is called before looking up port information from the /proc
+ * file system.
+ *
+ * @param protocol the protocol the specified port belongs to.
+ *  The value is the same as used in the IPv4 'protocol' and the IPv6 'Next
+ *  Header' fields.
+ *  The only supported values are 6 for TCP and 17 for UDP.
+ * @param port the port in host byte order to set the port information for.
+ *  Valid values range from 0 to 2^16-1.
+ * @return If the port information was previously stored, it is returned.
+ *  If the port information was not previously stored or the cache is not
+ *  available, HIP_FIREWALL_PORT_UNKNOWN is returned.
+ */
+static enum hip_firewall_port_info
+cache_get(const uint8_t protocol,
+          const uint16_t port)
+{
+    enum hip_firewall_port_info info = HIP_FIREWALL_PORT_UNKNOWN;
+
+    // check input paramaters
+    HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
+    
+    // fail gracefully if cache is not available
+    if (NULL != cache) {
+        const unsigned long index = cache_index(protocol, port);
+
+        info = (enum hip_firewall_port_info)cache[index];
+    }
+
+    // check return value
+    HIP_ASSERT(HIP_FIREWALL_PORT_UNKNOWN == info ||
+               HIP_FIREWALL_PORT_UNBOUND == info ||
+               HIP_FIREWALL_PORT_IPV6 == info ||
+               HIP_FIREWALL_PORT_IPV4 == info ||
+               HIP_FIREWALL_PORT_LSI == info);
+
+    return info;
+}
 
 /**
  * Check from the proc file system whether a local port is attached
@@ -71,35 +248,41 @@ static HIP_HASHTABLE *firewall_port_cache_db = NULL;
  * incoming packets should be diverted to an LSI.
  *
  * @param port_dest     the port number of the socket
- * @param *proto        protocol type
+ * @param *protocol     protocol type
  * @return              the traffic type associated with the given port.
  */
 static enum hip_firewall_port_info
-hip_get_proto_info(const in_port_t port_dest, const char *proto)
+proc_get(const uint8_t protocol,
+         const in_port_t port_dest)
 {
     FILE *fd       = NULL;
-    char line[500], sub_string_addr_hex[8], path[11 + sizeof(proto)];
+    char line[500], sub_string_addr_hex[8], path[20];
     char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
     int lineno     = 0, index_addr_port = 0, result;
     enum hip_firewall_port_info exists = HIP_FIREWALL_PORT_UNBOUND;
     uint32_t result_addr;
     struct in_addr addr;
     List list;
+    char protocol_str[10];
 
-    if (!proto) {
-        return exists;
-    }
-
-    if (!strcmp(proto, "tcp6") || !strcmp(proto, "tcp")) {
-        index_addr_port = 15;
-    } else if (!strcmp(proto, "udp6") || !strcmp(proto, "udp")) {
+    switch (protocol) {
+    case IPPROTO_UDP:
+        strcpy(protocol_str, "udp6");
         index_addr_port = 10;
-    } else {
-        return exists;
+        break;
+    case IPPROTO_TCP:
+        strcpy(protocol_str, "tcp6");
+        index_addr_port = 15;
+        break;
+    case IPPROTO_ICMPV6:
+        break;
+    default:
+        goto out;
+        break;
     }
 
     strcpy(path, "/proc/net/");
-    strcat(path, proto);
+    strcat(path, protocol_str);
     fd = fopen(path, "r");
 
     initlist(&list);
@@ -130,7 +313,7 @@ hip_get_proto_info(const in_port_t port_dest, const char *proto)
         HIP_DEBUG("Result %i\n", result);
         HIP_DEBUG("port dest %i\n", port_dest);
         if (result == port_dest) {
-            if (!strcmp(proto, "tcp6") || !strcmp(proto, "udp6")) {
+            if (!strcmp(protocol_str, "tcp6") || !strcmp(protocol_str, "udp6")) {
                 exists = HIP_FIREWALL_PORT_IPV6;
             } else {
                 strncpy(sub_string_addr_hex, fqdn_str, 8);
@@ -150,164 +333,60 @@ hip_get_proto_info(const in_port_t port_dest, const char *proto)
     }
     destroy(&list);
 
+out:
+    HIP_ASSERT(HIP_FIREWALL_PORT_UNBOUND == exists ||
+               HIP_FIREWALL_PORT_IPV6 == exists ||
+               HIP_FIREWALL_PORT_IPV4 == exists ||
+               HIP_FIREWALL_PORT_LSI == exists);
     return exists;
-}
-
-/**
- * add a default entry in the firewall port cache.
- *
- * @param key       the hash key (a string consisting of concatenation of the port, an underscore and the protocol)
- * @param value     the value for the hash key (LSI mode value)
- *
- * @return zero on success or non-zero on failure
- */
-static int hip_port_cache_add_new_entry(const char *key,
-                                        const enum hip_firewall_port_info value)
-{
-    struct firewall_port_cache_hl *new_entry = NULL;
-    int err = 0;
-
-    HIP_DEBUG("\n");
-    new_entry = (struct firewall_port_cache_hl *) (hip_cache_create_hl_entry());
-    memcpy(new_entry->port_and_protocol, key, strlen(key));
-    new_entry->traffic_type = value;
-    hip_ht_add(firewall_port_cache_db, new_entry);
-
-    return err;
 }
 
 /**
  * Search in the port cache database. The key composed of port and protocol
  *
  * @param port the TCP or UDP port to search for
- * @param proto the protocol (IPPROTO_UDP, IPPROTO_TCP or IPPROTO_ICMPV6)
+ * @param protocol the protocol (IPPROTO_UDP, IPPROTO_TCP or IPPROTO_ICMPV6)
  *
  * @return the cache entry if found or NULL otherwise
  */
 enum hip_firewall_port_info
-hip_firewall_port_cache_lookup_binding(const in_port_t port,
-                                            const int proto)
+hip_firewall_port_cache_lookup_binding(const uint8_t protocol,
+                                       const in_port_t port)
 {
-    struct firewall_port_cache_hl *found_entry = NULL;
-    char key[FIREWALL_PORT_CACHE_KEY_LENGTH];
-    char protocol[10], proto_for_bind[10];
-    enum hip_firewall_port_info bindto = HIP_FIREWALL_PORT_UNBOUND;
+    enum hip_firewall_port_info info = HIP_FIREWALL_PORT_UNBOUND;
 
-    memset(protocol, 0, sizeof(protocol));
-    memset(proto_for_bind, 0, sizeof(proto_for_bind));
-    memset(key, 0, sizeof(key));
+    // check input paramaters
+    if (IPPROTO_TCP == protocol ||
+        IPPROTO_UDP == protocol) {
+        const uint8_t port_hbo = ntohs(port);
 
-    switch (proto) {
-    case IPPROTO_UDP:
-        strcpy(protocol, "udp");
-        strcpy(proto_for_bind, "udp6");
-        break;
-    case IPPROTO_TCP:
-        strcpy(protocol, "tcp");
-        strcpy(proto_for_bind, "tcp6");
-        break;
-    case IPPROTO_ICMPV6:
-        strcpy(protocol, "icmp");
-        break;
-    default:
-        goto out_err;
-        break;
-    }
+        // check the cache before checking /proc
+        info = cache_get(protocol, port_hbo);
 
-    //assemble the key
-    sprintf(key, "%i", (int) port);
-    memcpy(key + strlen(key), "_", 1);
-    memcpy(key + strlen(key), protocol, strlen(protocol));
-
-    found_entry = hip_ht_find(firewall_port_cache_db, key);
-
-    if (proto == IPPROTO_ICMPV6) {
-        goto out_err;
-    }
-
-    if (!found_entry) {
-        bindto      = hip_get_proto_info(ntohs(port), proto_for_bind);
-        hip_port_cache_add_new_entry(key, bindto);
-        found_entry = hip_ht_find(firewall_port_cache_db, key);
+        if (HIP_FIREWALL_PORT_UNKNOWN == info) {
+            info = proc_get(protocol, port_hbo);
+            cache_set(protocol, port_hbo, info);
+        }
     } else {
-        HIP_DEBUG("Matched port using hash\n");
-        bindto = found_entry->traffic_type;
+        HIP_ERROR("Protocol %d not supported\n", protocol);
     }
 
-out_err:
-    return bindto;
+    // check return value
+    HIP_ASSERT(HIP_FIREWALL_PORT_UNBOUND == info ||
+               HIP_FIREWALL_PORT_IPV6 == info ||
+               HIP_FIREWALL_PORT_IPV4 == info ||
+               HIP_FIREWALL_PORT_LSI == info);
+
+    return info;
 }
 
-/**
- * Generate the hash information that is used to index the table
- *
- * @param ptr pointer to the hit used to assemble the hash
- *
- * @return hash value
- */
-static unsigned long hip_firewall_port_hash_key(const void *ptr)
-{
-    const char *key;
-    uint8_t hash[HIP_AH_SHA_LEN];
-
-    key = (const char *)
-          &((const struct firewall_port_cache_hl *) ptr)->port_and_protocol;
-    hip_build_digest(HIP_DIGEST_SHA1, key, sizeof(*key), hash);
-    return *((unsigned long *) hash);
-}
-
-/**
- * Compare two keys for the hashtable
- *
- * Note that when this function is called, the hashes of the two hash table
- * entries provided as arguments are known to be equal.
- * The point of this function is to allow the hash table to determine whether
- * the entries (or rather the part used to calculate the hash) themselves are
- * equal or whether they are different and this is just a hash collision.
- *
- * @param ptr1 pointer to the first key
- * @param ptr2 pointer to the second key
- *
- * @return 0 if keys identical, otherwise != 0
- */
-static int hip_firewall_match_port_cache_key(const void *ptr1, const void *ptr2)
-{
-    return strncmp((const char *)ptr1, (const char *)ptr2, FIREWALL_PORT_CACHE_KEY_LENGTH);
-}
-
-/**
- * Initialize port cache database
- *
- */
 void hip_firewall_port_cache_init(void)
 {
-    firewall_port_cache_db = hip_ht_init(hip_firewall_port_hash_key,
-                                         hip_firewall_match_port_cache_key);
+    cache_init();
 }
 
-/**
- * Initialize port cache database
- *
- */
 void hip_firewall_port_cache_uninit(void)
 {
-    int i;
-    struct firewall_port_cache_hl *this = NULL;
-    hip_list_t *item                    = NULL;
-    hip_list_t *tmp                     = NULL;
-
-    HIP_DEBUG("Start hldb delete\n");
-    HIP_LOCK_HT(&firewall_port_cache_db);
-
-    list_for_each_safe(item, tmp, firewall_port_cache_db, i)
-    {
-      HIP_DEBUG("xx\n");
-        this = (struct firewall_port_cache_hl *) list_entry(item);
-        hip_ht_delete(firewall_port_cache_db, this);
-        free(this);
-      HIP_DEBUG("yy\n");
-    }
-    HIP_UNLOCK_HT(&firewall_port_cache_db);
-    hip_ht_uninit(firewall_port_cache_db);
-    HIP_DEBUG("End hldbdb delete\n");
+    cache_uninit();
 }
+

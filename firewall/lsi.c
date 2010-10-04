@@ -315,10 +315,8 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int verdict                                           = 1;
     int ip_hdr_size                                       = 0;
     int portDest                                          = 0;
-    int process_as_lsi                                    = 0;
     fw_cache_hl_t *entry                                  = NULL;
-    enum hip_firewall_port_info port_traffic_type =
-        HIP_FIREWALL_PORT_UNBOUND;
+    enum hip_firewall_port_info port_traffic_type = HIP_FIREWALL_PORT_UNBOUND;
     const struct ip6_hdr *ip6_hdr                         = NULL;
     struct in6_addr src_addr, dst_addr;
 
@@ -340,48 +338,47 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
         break;
     }
 
-    /* port caching */
-    port_traffic_type = hip_firewall_port_cache_lookup_binding(portDest,
-                                                               ip6_hdr->ip6_nxt);
+    port_traffic_type = hip_firewall_port_cache_lookup_binding(ip6_hdr->ip6_nxt,
+                                                               portDest);
 
     if (port_traffic_type == HIP_FIREWALL_PORT_IPV6) {
+        HIP_DEBUG("Port %d is bound to an IPv6 address -> accepting packet\n", portDest);
         verdict = 1;
-        HIP_DEBUG("Cached port, accepting\n");
-        goto out_err;
-    }
+    } else if (port_traffic_type == HIP_FIREWALL_PORT_UNBOUND ||
+               port_traffic_type == HIP_FIREWALL_PORT_IPV4 ||
+               port_traffic_type == HIP_FIREWALL_PORT_LSI) {
+        HIP_DEBUG("Port %d is unbound or bound to an IPv4 address -> looking up in cache\n", portDest);
+        HIP_IFEL(!(entry = hip_firewall_cache_db_match(ip_dst, ip_src,
+                                                       FW_CACHE_HIT, 1)),
+                 -1, "Failed to obtain from cache\n");
 
-    if (lsi_support) {
         /* Currently preferring LSIs over opp. connections */
-        process_as_lsi = 1;
-    }
+        if (lsi_support) {
+            HIP_DEBUG("Trying lsi transformation\n");
+            HIP_DEBUG_LSI("lsi_our: ", &entry->lsi_our);
+            HIP_DEBUG_LSI("lsi_peer: ", &entry->lsi_peer);
+            IPV4_TO_IPV6_MAP(&entry->lsi_our, &dst_addr);
+            IPV4_TO_IPV6_MAP(&entry->lsi_peer, &src_addr);
+            HIP_IFEL(hip_reinject_packet(&src_addr, &dst_addr, m, 6, 1), -1,
+                     "Failed to reinject with LSIs\n");
+            HIP_DEBUG("Successful LSI transformation.\n");
 
-    HIP_IFEL(!(entry = hip_firewall_cache_db_match(ip_dst, ip_src,
-                                                   FW_CACHE_HIT, 1)),
-             -1, "Failed to obtain from cache\n");
-
-    if (process_as_lsi) {
-        HIP_DEBUG("Trying lsi transformation\n");
-        HIP_DEBUG_LSI("lsi_our: ", &entry->lsi_our);
-        HIP_DEBUG_LSI("lsi_peer: ", &entry->lsi_peer);
-        IPV4_TO_IPV6_MAP(&entry->lsi_our, &dst_addr);
-        IPV4_TO_IPV6_MAP(&entry->lsi_peer, &src_addr);
-        HIP_IFEL(hip_reinject_packet(&src_addr, &dst_addr, m, 6, 1), -1,
-                 "Failed to reinject with LSIs\n");
-        HIP_DEBUG("Successful LSI transformation.\n");
-
-        if (ip6_hdr->ip6_nxt == IPPROTO_ICMPV6) {
-            verdict = 1;             /* broadcast: dst may be ipv4 or ipv6 */
+            if (ip6_hdr->ip6_nxt == IPPROTO_ICMPV6) {
+                verdict = 1;             /* broadcast: dst may be ipv4 or ipv6 */
+            } else {
+                verdict = 0;             /* drop original */
+            }
         } else {
-            verdict = 0;             /* drop original */
+            HIP_DEBUG("Trying sys opp transformation\n");
+            HIP_DEBUG_IN6ADDR("ip_src: ", &entry->ip_peer);
+            HIP_DEBUG_IN6ADDR("ip_dst: ", &entry->ip_our);
+            HIP_IFEL(hip_reinject_packet(&entry->ip_peer, &entry->ip_our, m, 6, 1),
+                     -1, "Failed to reinject with IP addrs\n");
+            HIP_DEBUG("Successfull sysopp transformation. Drop orig\n");
+            verdict = 0;
         }
     } else {
-        HIP_DEBUG("Trying sys opp transformation\n");
-        HIP_DEBUG_IN6ADDR("ip_src: ", &entry->ip_peer);
-        HIP_DEBUG_IN6ADDR("ip_dst: ", &entry->ip_our);
-        HIP_IFEL(hip_reinject_packet(&entry->ip_peer, &entry->ip_our, m, 6, 1),
-                 -1, "Failed to reinject with IP addrs\n");
-        HIP_DEBUG("Successfull sysopp transformation. Drop orig\n");
-        verdict = 0;
+        HIP_DIE("hip_firewall_port_cache_lookup_binding() returned unknown return value %d\n", port_traffic_type);
     }
 
 out_err:
