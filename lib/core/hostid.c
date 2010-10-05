@@ -544,7 +544,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
         if (hi_fmt == NULL || !strcmp(hi_fmt, "dsa")) {
             dsa_filenamebase_len =
                 strlen(HIPL_SYSCONFDIR) +
-                strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
+                strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE);
 
             if (anon || hi_fmt == NULL) {
                 dsa_filenamebase     = malloc(HOST_ID_FILENAME_MAX_LEN);
@@ -586,7 +586,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
         if (hi_fmt == NULL || !strcmp(hi_fmt, "rsa")) {
             rsa_filenamebase_len =
                 strlen(HIPL_SYSCONFDIR) +
-                strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
+                strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE);
 
             if (anon || hi_fmt == NULL) {
                 rsa_filenamebase =
