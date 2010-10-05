@@ -128,9 +128,6 @@ int hip_transform_order                  = 123;
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 int hip_locator_status             = HIP_MSG_SET_LOCATOR_OFF;
 
-/* Create /etc/hip stuff and exit (used for binary hipfw packaging) */
-int create_configs_and_exit        = 0;
-
 /* We are caching the IP addresses of the host here. The reason is that during
  * in hip_handle_acquire it is not possible to call getifaddrs (it creates
  * a new netlink socket and seems like only one can be open per process).
