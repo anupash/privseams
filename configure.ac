@@ -49,7 +49,6 @@ fi
 AC_DEFINE_UNQUOTED(HIPL_DEFAULT_PREFIX, "$(eval echo ${prefix})")
 AH_TEMPLATE(HIPL_DEFAULT_PREFIX, [default prefix])
 
-AC_SUBST(sysconfdir, /etc)
 # Our configuration files should be located in a subdirectory of their own.
 AC_SUBST(sysconfdir, ${sysconfdir}/hip)
 
