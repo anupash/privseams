@@ -49,7 +49,7 @@
 
 
 /** Defines */
-#define HIP_CERT_CONF_PATH HIPL_SYSCONFDIR "hip_cert.cnf"
+#define HIP_CERT_CONF_PATH HIPL_SYSCONFDIR "/hip_cert.cnf"
 
 /* Needed if the configuration file for certs did not exist  */
 #define HIP_CERT_INIT_DAYS 10

@@ -51,7 +51,7 @@ AH_TEMPLATE(HIPL_DEFAULT_PREFIX, [default prefix])
 
 # Default sysconf and lockfile directory
 # TODO: @Miika is there any better way to define this?
-AC_SUBST(sysconfdir, /etc/hip/)
+AC_SUBST(sysconfdir, /etc/hip)
 AC_DEFINE_UNQUOTED(HIPL_SYSCONFDIR, "$(eval echo $sysconfdir)")
 AH_TEMPLATE(HIPL_SYSCONFDIR, [default configuration file location])
 
