@@ -78,7 +78,7 @@ static struct in6_addr community_operator_hit;
 
 /* @todo make this configurable, issuer HIT */
 #define CO_HIT "2001:001a:b1b0:0aad:0f92:15ca:280c:9430"
-#define CO_HIT_FILE "/etc/hip/co_hit"
+#define CO_HIT_FILE HIPL_SYSCONFDIR "/co_hit"
 
 /**
  * Generate a new random number and shift the old one down.

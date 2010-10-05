@@ -458,7 +458,7 @@ out_err:
  *               ACTION_NEW will override the existing identities on disk!
  * @param anon set to one when you want to process only anonymous (short-term)
  *             identities or zero otherwise
- * @param use_default One when dealing with default identities in /etc/hip.
+ * @param use_default One when dealing with default identities in HIPL_SYSCONFDIR.
  *                    Zero when user supplies own identities denoted by
  *                    @c hi_file argument.
  * @param hi_fmt "dsa" or "rsa" currently supported

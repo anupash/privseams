@@ -25,11 +25,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  * This file contains iterator functions to access and parse
- * /etc/hosts and /etc/hip/hosts files. Also, this file contains a
- * number of predefined functions that support mapping between
+ * /etc/hosts and HIPL_SYSCONFDIR/hosts files. Also, this file contains
+ * a number of predefined functions that support mapping between
  * hostnames, HITs, LSIs and routable IP addresses.
  *
- * @brief parser for /etc/hosts and /etc/hip/hosts
+ * @brief parser for /etc/hosts and HIPL_SYSCONFDIR/hosts
  *
  * @author Miika Komu <miika@iki.fi>
  *
@@ -56,8 +56,8 @@
 #define HOSTS_FILE "/etc/hosts"
 
 /**
- * "For-each" loop to iterate through /etc/hosts or /etc/hip/hosts file, line
- * by line.
+ * "For-each" loop to iterate through /etc/hosts or HIPL_SYSCONFDIR/hosts
+ * file, line by line.
  *
  * @param hosts_file the path and name to the hosts file
  * @param func the iterator function pointer
@@ -252,7 +252,7 @@ static int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line
 }
 
 /**
- * find the hostname matching the given LSI from /etc/hip/hosts and
+ * find the hostname matching the given LSI from HIPL_SYSCONFDIR/hosts and
  * /etc/hosts (in this particular order)
  *
  * @param lsi the LSI to match
@@ -377,7 +377,7 @@ out_err:
 }
 
 /**
- * find the HIT matching to the given LSI from /etc/hip/hosts and
+ * find the HIT matching to the given LSI from HIPL_SYSCONFDIR/hosts and
  * /etc/hosts (in this particular order)
  *
  * @param lsi the LSI to match
@@ -426,7 +426,7 @@ out_err:
 }
 
 /**
- * find the LSI matching to the given HIT from /etc/hip/hosts and
+ * find the LSI matching to the given HIT from HIPL_SYSCONFDIR/hosts and
  * /etc/hosts (in this particular order)
  *
  * @param hit the HIT to match
@@ -472,7 +472,7 @@ out_err:
  * This function maps a HIT or a LSI (nodename) to an IP address using
  * the two hosts files.
  * The function implements this in two steps. First, it maps the HIT or
- * LSI to an hostname from /etc/hip/hosts or /etc/hosts. Second, it
+ * LSI to an hostname from HIPL_SYSCONFDIR/hosts or /etc/hosts. Second, it
  * maps the hostname to an IP address from /etc/hosts. The IP address
  * is returned in the res argument.
  *

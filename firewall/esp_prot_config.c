@@ -46,7 +46,7 @@
 #include "config.h"
 
 
-const char *config_file                = "/etc/hip/esp_prot_config.cfg";
+const char *config_file                = HIPL_SYSCONFDIR "/esp_prot_config.cfg";
 
 const char *path_hash_length           = "token_config.hash_length";
 const char *path_hash_structure_length = "token_config.hash_structure_length";
@@ -121,7 +121,7 @@ config_t *esp_prot_read_config(void)
     config_init(cfg);
     HIP_DEBUG("reading config file: %s\n", config_file);
     HIP_IFEL(!config_read_file(cfg, config_file), -1,
-             "unable to read config file, please ensure that esp_prot_config.cfg is located in /etc/hip/\n");
+             "unable to read config file, please ensure that esp_prot_config.cfg is located in " HIPL_SYSCONFDIR "\n");
 
 out_err:
     if (err) {

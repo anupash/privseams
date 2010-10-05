@@ -159,7 +159,7 @@ static void hip_create_file_unless_exists(const char *path, const char *contents
     "# Format of this file is as with hipconf, but without hipconf prefix\n\
 # add hi default    # add all four HITs (see bug id 592127)\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
-# add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
+# add service rvs   # the host acts as HIP rendezvous (see also HIPL_SYSCONFDIR/relay_config)\n\
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
 # add server relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\
 # add server full-relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\

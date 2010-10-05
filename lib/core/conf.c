@@ -25,7 +25,7 @@
  *
  * This library is used to configure HIP daemon (hipd) dynamically
  * with the hipconf command line tool. Hipd uses this library also to
- * parse the static configuration from @c /etc/hip/hipd_config (the file
+ * parse the static configuration from @c HIPL_SYSCONFDIR/hipd_config (the file
  * has same syntax as hipconf).
  *
  * All new messages have to be registered into the action_handler
@@ -189,7 +189,7 @@
 
 /**
  * A help string containing the usage of @c hipconf and also
- * @c /etc/hip/hipd_config.
+ * @c HIPL_SYSCONFDIR/hipd_config.
  *
  * @note If you added a new action, do not forget to add a brief usage below
  *       for the action.

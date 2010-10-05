@@ -129,7 +129,7 @@ static void check_and_write_default_config(const char *file)
     ssize_t items;
     int i    = 0;
 
-    /* Firewall depends on hipd to create /etc/hip */
+    /* Firewall depends on hipd to create HIPL_SYSCONFDIR */
     for (i = 0; i < 5; i++) {
         if (stat(HIPL_SYSCONFDIR, &status) &&
             errno == ENOENT) {
@@ -145,7 +145,7 @@ static void check_and_write_default_config(const char *file)
         HIP_DIE("Please start hipd or execute 'hipd -c'\n");
     }
 
-    rename("/etc/hip/firewall.conf", HIP_FW_DEFAULT_RULE_FILE);
+    rename(HIPL_SYSCONFDIR "/firewall.conf", HIP_FW_DEFAULT_RULE_FILE);
 
     if (stat(file, &status) && errno == ENOENT) {
         errno = 0;

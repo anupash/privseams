@@ -26,7 +26,7 @@
  * This file defines the rendezvous extension and the UDP relay for HIP packets
  * for the Host Identity Protocol (HIP). See header file for usage
  * instructions. Supports access control in the form in white lists in
- * the /etc/hip/relay_config file.
+ * the HIPL_SYSCONFDIR/relay_config file.
  *
  * The HIP relay combines the functionalites of an rendezvous server (RVS) and
  * a HIP UDP relay. The HIP relay consists of a hashtable for storing IP address

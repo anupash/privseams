@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "lib/core/debug.h"
 #include "hipd.h"
 #include "pisa.h"
@@ -45,7 +46,7 @@
 static char *midauth_cert = NULL;
 
 /**
- * Load a certificate from the file /etc/hip/cert and store it in memory
+ * Load a certificate from the file HIPL_SYSCONFDIR/cert and store it in memory
  *
  * @return 0 on success
  */
@@ -59,7 +60,7 @@ static int hip_pisa_load_certificate(void)
     midauth_cert = malloc(CERT_MAX_SIZE);
     memset(midauth_cert, 0, CERT_MAX_SIZE);
 
-    if (!(f = fopen("/etc/hip/cert", "r"))) {
+    if (!(f = fopen(HIPL_SYSCONFDIR "/cert", "r"))) {
         HIP_ERROR("Could not open certificate file.\n");
         return -1;
     }
