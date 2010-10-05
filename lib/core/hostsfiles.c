@@ -66,11 +66,11 @@
  * @return zero on success or non-zero on failure
  */
 static int hip_for_each_hosts_file_line(const char *hosts_file,
-                                                   int(*func)(const struct hosts_file_line *line,
-                                                              const void *arg,
-                                                              void *result),
+                                        int(*func)(const struct hosts_file_line *line,
                                                    const void *arg,
-                                                   void *result)
+                                                   void *result),
+                                        const void *arg,
+                                        void *result)
 {
     FILE *hip_hosts = NULL;
     List mylist;
@@ -89,8 +89,8 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
 
     HIP_IFEL(!hip_hosts, -1, "Failed to open hosts file\n");
 
-    /* For each line in the given hosts file, convert the line into binary format and
-     * call the given the handler  */
+    /* For each line in the given hosts file, convert the line into binary
+     * format and call the given the handler  */
 
     err = 1;
     while (fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
@@ -469,10 +469,12 @@ out_err:
 }
 
 /**
- * This function maps a HIT or a LSI (nodename) to an IP address using the two hosts files.
- * The function implements this in two steps. First, it maps the HIT or LSI to an hostname
- * from /etc/hip/hosts or /etc/hosts. Second, it maps the hostname to a IP address from
- * /etc/hosts. The IP address is returned in the res argument.
+ * This function maps a HIT or a LSI (nodename) to an IP address using
+ * the two hosts files.
+ * The function implements this in two steps. First, it maps the HIT or
+ * LSI to an hostname from /etc/hip/hosts or /etc/hosts. Second, it
+ * maps the hostname to an IP address from /etc/hosts. The IP address
+ * is returned in the res argument.
  *
  * @param hit a HIT to be mapped
  * @param lsi an LSI to be mapped
