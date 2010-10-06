@@ -552,8 +552,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                          "Could not allocate DSA filename.\n");
 
                 ret = snprintf(dsa_filenamebase,
-                               dsa_filenamebase_len +
-                               strlen(DEFAULT_ANON_HI_FILE_NAME_SUFFIX),
+                               HOST_ID_FILENAME_MAX_LEN,
                                "%s%s%s",
                                HIPL_SYSCONFDIR,
                                DEFAULT_HOST_DSA_KEY_FILE_BASE,
@@ -616,8 +615,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
 
                 ret = snprintf(
                     rsa_filenamebase_pub,
-                    rsa_filenamebase_len +
-                    strlen(DEFAULT_PUB_HI_FILE_NAME_SUFFIX),
+                    HOST_ID_FILENAME_MAX_LEN,
                     "%s%s%s", HIPL_SYSCONFDIR,
                     DEFAULT_HOST_RSA_KEY_FILE_BASE,
                     DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
