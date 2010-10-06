@@ -593,12 +593,12 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 HIP_IFEL(!rsa_filenamebase, -ENOMEM,
                          "Could not allocate RSA filename.\n");
 
-                ret = snprintf(
-                    rsa_filenamebase,
-                    HOST_ID_FILENAME_MAX_LEN, "%s%s%s",
-                    HIPL_SYSCONFDIR,
-                    DEFAULT_HOST_RSA_KEY_FILE_BASE,
-                    DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
+                ret = snprintf(rsa_filenamebase,
+                               HOST_ID_FILENAME_MAX_LEN,
+                               "%s%s%s",
+                               HIPL_SYSCONFDIR,
+                               DEFAULT_HOST_RSA_KEY_FILE_BASE,
+                               DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
 
                 HIP_IFE(ret <= 0, -EINVAL);
 
@@ -613,12 +613,12 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                          "Could not allocate RSA (pub) " \
                          "filename.\n");
 
-                ret = snprintf(
-                    rsa_filenamebase_pub,
-                    HOST_ID_FILENAME_MAX_LEN,
-                    "%s%s%s", HIPL_SYSCONFDIR,
-                    DEFAULT_HOST_RSA_KEY_FILE_BASE,
-                    DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
+                ret = snprintf(rsa_filenamebase_pub,
+                               HOST_ID_FILENAME_MAX_LEN,
+                               "%s%s%s",
+                               HIPL_SYSCONFDIR,
+                               DEFAULT_HOST_RSA_KEY_FILE_BASE,
+                               DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
 
                 HIP_IFE(ret <= 0, -EINVAL);
 
