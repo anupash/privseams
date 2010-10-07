@@ -801,16 +801,35 @@ the lines following the brief description before the special commands.
 The special commands comment the function parameters and the return value.
 Furthermore an extra note is added to this comment with "@note" and a reference
 to a related function with "@see". Notice how we refer to the function
-parameters in the description text with the special command "@c" Including this
+parameters in the description text with the special command "@a" Including this
 special command is by no way obligatory. It only makes the next word to be
-rendered using Courier instead of the default font. However, be careful not to
-add your own special commands by accidentally typing something like @entry.
+rendered using Courier instead of the default font. If that causes a
+doxygen warning, try "@c" which results in courier too, but doesn't confer
+semantics like "@a". However, be careful not to add your own special commands
+by accidentally typing something like @entry.
 
 Function comment blocks must be placed to the c-source file.  Doxygen
 comment blocks have a tendency to bloat the code. Generally, if
 possible, place the doxygen comment in the header file instead of the
 c-file.  This applies to all Doxygen comments, not just function
 comments.
+
+To ensure correct cross-referencing, global variables should be prepended
+by :: and functions appended by () in comment blocks, like this:
+
+/**
+ * Stores information about one ESP connection endpoint (i.e., one SPI).
+ *
+ * @todo Write allocator/deallocator for automatic synching with ::espList.
+ */
+struct esp_tuple { /* ... */ };
+
+/**
+ * A connection (i.e., two tuples).
+ * alloc/dealloc using insert_new_connection() or
+ * remove_connection(), respectively.
+ */
+struct connection { /*...*/  };
 
 Doxygen includes a special tag for todo items. The todo tag is "@todo". The todo
 tag can be placed anywhere in the code. When placed inside of a function, the
