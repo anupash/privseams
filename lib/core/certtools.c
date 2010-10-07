@@ -437,7 +437,7 @@ out_err:
 }
 
 /**
- * Function to build the create minimal SPKI cert
+ * Function to build the create minimal SPKI cert (plus socket parameter)
  *
  * @param content holds the struct hip_cert_spki_info containing
  *                the minimal needed information for cert object,
@@ -449,13 +449,14 @@ out_err:
  * @param subject HIT in representation encoding 2001:001...
  * @param not_before time in timeval before which the cert should not be used
  * @param not_after time in timeval after which the cert should not be used
- *
+ * @param hip_user_socket socket, already connected to hipd, to pass through to 
+ *                hip_send_recv_daemon_info
  * @return 0 if ok -1 if error
  */
-int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
+int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
                               const char *issuer_type, struct in6_addr *issuer,
                               const char *subject_type, struct in6_addr *subject,
-                              time_t *not_before, time_t *not_after)
+                              time_t *not_before, time_t *not_after, int hip_user_socket)
 {
     int err           = 0;
     char *tmp_issuer  = NULL;
@@ -559,7 +560,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
     /* send and wait */
     HIP_DEBUG("Sending request to sign SPKI cert sequence to "
               "daemon and waiting for answer\n");
-    hip_send_recv_daemon_info(msg, 0, 0);
+    hip_send_recv_daemon_info(msg, 0, hip_user_socket);
 
     /* get the struct from the message sent back by the daemon */
     HIP_IFEL(!(returned = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)),
@@ -585,6 +586,29 @@ out_err:
         free(msg);
     }
     return err;
+}
+
+/**
+ * Function to build the create minimal SPKI cert
+ *
+ * @param content holds the struct hip_cert_spki_info containing
+ *                the minimal needed information for cert object,
+ *                also contains the char table where the cert object
+ *                is to be stored
+ * @param issuer_type With HIP its HIT
+ * @param issuer HIT in representation encoding 2001:001...
+ * @param subject_type With HIP its HIT
+ * @param subject HIT in representation encoding 2001:001...
+ * @param not_before time in timeval before which the cert should not be used
+ * @param not_after time in timeval after which the cert should not be used
+ * @return 0 if ok -1 if error
+ */
+int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
+                              const char *issuer_type, struct in6_addr *issuer,
+                              const char *subject_type, struct in6_addr *subject,
+                              time_t *not_before, time_t *not_after)
+{
+   return(hip_cert_spki_create_cert_sock(content, issuer_type, issuer, subject_type, subject, not_before, not_after, 0));
 }
 
 /**
