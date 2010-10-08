@@ -65,8 +65,8 @@
 #define DSA_KEY_DEFAULT_BITS       1024
 #define RSA_KEY_DEFAULT_BITS       1024
 
-#define DEFAULT_HOST_DSA_KEY_FILE_BASE "hip_host_dsa_key"
-#define DEFAULT_HOST_RSA_KEY_FILE_BASE "hip_host_rsa_key"
+#define DEFAULT_HOST_DSA_KEY_FILE_BASE "/hip_host_dsa_key"
+#define DEFAULT_HOST_RSA_KEY_FILE_BASE "/hip_host_rsa_key"
 #define DEFAULT_PUB_FILE_SUFFIX        ".pub"
 
 #define DEFAULT_PUB_HI_FILE_NAME_SUFFIX  "_pub"

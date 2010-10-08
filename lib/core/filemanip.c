@@ -164,7 +164,7 @@ int check_and_create_dir(const char *dirname, mode_t mode)
 }
 
 /**
- * make /etc/hip file permissions more secure
+ * Make HIPL_SYSCONFDIR file permissions more secure.
  *
  * @param filenamebase the file name based for keys
  */

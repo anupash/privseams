@@ -159,7 +159,7 @@ static void hip_create_file_unless_exists(const char *path, const char *contents
     "# Format of this file is as with hipconf, but without hipconf prefix\n\
 # add hi default    # add all four HITs (see bug id 592127)\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
-# add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
+# add service rvs   # the host acts as HIP rendezvous (see also HIPL_SYSCONFDIR/relay_config)\n\
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
 # add server relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\
 # add server full-relay [RELAY-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to relay server\n\
@@ -575,7 +575,8 @@ static int hip_init_host_ids(void)
 
     /* Create default keys if necessary. */
 
-    if (stat(HIPL_SYSCONFDIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
+    if (stat(HIPL_SYSCONFDIR DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX,
+             &status) && errno == ENOENT) {
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
                                               NULL, NULL, RSA_KEY_DEFAULT_BITS,
                                               DSA_KEY_DEFAULT_BITS),

@@ -49,9 +49,10 @@ fi
 AC_DEFINE_UNQUOTED(HIPL_DEFAULT_PREFIX, "$(eval echo ${prefix})")
 AH_TEMPLATE(HIPL_DEFAULT_PREFIX, [default prefix])
 
+# Our configuration files should be located in a subdirectory of their own.
+AC_SUBST(sysconfdir, ${sysconfdir}/hip)
+
 # Default sysconf and lockfile directory
-# TODO: @Miika is there any better way to define this?
-AC_SUBST(sysconfdir, /etc/hip/)
 AC_DEFINE_UNQUOTED(HIPL_SYSCONFDIR, "$(eval echo $sysconfdir)")
 AH_TEMPLATE(HIPL_SYSCONFDIR, [default configuration file location])
 
@@ -59,10 +60,10 @@ AC_SUBST(lockdir, /var/lock/)
 AC_DEFINE_UNQUOTED(HIPL_LOCKDIR, "$(eval echo $lockdir)")
 AH_TEMPLATE(HIPL_LOCKDIR, [default lock file location])
 
-AC_DEFINE_UNQUOTED(HIPL_HOSTS_FILE, "$(eval echo ${sysconfdir}hosts)")
+AC_DEFINE_UNQUOTED(HIPL_HOSTS_FILE, "$(eval echo ${sysconfdir}/hosts)")
 AH_TEMPLATE(HIPL_HOSTS_FILE, [default hosts file location])
 
-AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}hipd_config)")
+AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}/hipd_config)")
 AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
 
 

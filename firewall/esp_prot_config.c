@@ -46,26 +46,23 @@
 #include "config.h"
 
 
-const char *config_file = {"/etc/hip/esp_prot_config.cfg"};
+const char *config_file                = HIPL_SYSCONFDIR "/esp_prot_config.cfg";
 
-const char *path_token_transform = {"token_config.token_transform"};
+const char *path_hash_length           = "token_config.hash_length";
+const char *path_hash_structure_length = "token_config.hash_structure_length";
+const char *path_token_transform       = "token_config.token_transform";
 
-const char *path_num_parallel_hchains = {"token_config.token_modes.num_parallel_hchains"};
+const char *path_num_parallel_hchains  = "token_config.token_modes.num_parallel_hchains";
+const char *path_ring_buffer_size      = "token_config.token_modes.ring_buffer_size";
+const char *path_num_linear_elements   = "token_config.token_modes.num_linear_elements";
+const char *path_num_random_elements   = "token_config.token_modes.num_random_elements";
 
-const char *path_ring_buffer_size = {"token_config.token_modes.ring_buffer_size"};
-const char *path_num_linear_elements = {"token_config.token_modes.num_linear_elements"};
-const char *path_num_random_elements = {"token_config.token_modes.num_random_elements"};
+const char *path_num_hchains_per_item  = "sender.hcstore.num_hchains_per_item";
+const char *path_num_hierarchies       = "sender.hcstore.num_hierarchies";
+const char *path_refill_threshold      = "sender.hcstore.refill_threshold";
+const char *path_update_threshold      = "sender.update_threshold";
 
-const char *path_hash_length = {"token_config.hash_length"};
-const char *path_hash_structure_length = {"token_config.hash_structure_length"};
-
-
-const char *path_num_hchains_per_item = {"sender.hcstore.num_hchains_per_item"};
-const char *path_num_hierarchies = {"sender.hcstore.num_hierarchies"};
-const char *path_refill_threshold = {"sender.hcstore.refill_threshold"};
-const char *path_update_threshold = {"sender.update_threshold"};
-
-const char *path_window_size = {"verifier.window_size"};
+const char *path_window_size           = "verifier.window_size";
 
 #ifdef HAVE_LIBCONFIG
 /**
@@ -124,7 +121,7 @@ config_t *esp_prot_read_config(void)
     config_init(cfg);
     HIP_DEBUG("reading config file: %s\n", config_file);
     HIP_IFEL(!config_read_file(cfg, config_file), -1,
-             "unable to read config file, please ensure that esp_prot_config.cfg is located in /etc/hip/\n");
+             "unable to read config file, please ensure that esp_prot_config.cfg is located in " HIPL_SYSCONFDIR "\n");
 
 out_err:
     if (err) {
