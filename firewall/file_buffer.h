@@ -23,33 +23,50 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
-
-#ifndef HIP_FIREWALL_CACHE_PORT_H
-#define HIP_FIREWALL_CACHE_PORT_H
-
-#include <netinet/in.h> // in_port_t
+#ifndef HIP_FIREWALL_FILE_BUFFER_H
+#define HIP_FIREWALL_FILE_BUFFER_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum hip_port_info_ {
-    HIP_PORT_INFO_UNKNOWN = 0,  /** It is not known which protocol a port is
-                                 * bound under */
-    HIP_PORT_INFO_IPV6UNBOUND,  /** The port is not bound to an IPv6 address
-                                 * (but potentially to an IPv4 address) */
-    HIP_PORT_INFO_IPV6BOUND,    /** The port is bound to an IPv6 address (and
-                                 * potentially to an IPv4 address) */
-} hip_port_info_t;
+/**
+ * File buffer objects are used to load file contents into a memory buffer.
+ * The memory buffer is allocated so that the whole file fits in it.
+ * Any changes to the memory buffer are not written back to the file and remain
+ * local to the memory buffer.
+ */
+typedef struct hip_file_buffer {
+    /**
+     * Points to the first byte of file data and the beginning of the buffer.
+     */
+    char *start;
+    /**
+     * Points to the last byte of file data + 1.
+     */
+    char *end;
+    /*
+     * The number of bytes in the allocated buffer.
+     * This is not necessarily equal to end - start.
+     * This field should not to be accessed by users of hip_file_buffer_t.
+     */
+    size_t _size;
+    /*
+     * The file descriptor for the file backing the buffer.
+     * This field should not to be accessed by users of hip_file_buffer_t.
+     */
+    int _fd;
+} hip_file_buffer_t;
 
-void hip_init_port_info(void);
-void hip_uninit_port_info(void);
-hip_port_info_t hip_get_port_info(const uint8_t proto,
-                  				  const in_port_t port);
+hip_file_buffer_t *hip_fb_new(const char *file_name);
+void hip_fb_delete(hip_file_buffer_t *fb);
+int hip_fb_reload(hip_file_buffer_t *fb);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* HIP_CACHE_H */
+#endif

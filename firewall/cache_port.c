@@ -228,6 +228,8 @@ cache_get(const uint8_t protocol,
         const unsigned long index = cache_index(protocol, port);
 
         info = (hip_port_info_t)cache[index];
+    } else {
+        HIP_ERROR("Unable to retrieve cache entry, cache not allocated\n");
     }
 
     // check return value
@@ -244,8 +246,8 @@ cache_get(const uint8_t protocol,
 
 
 
-static line_parser_t *tcp6_parser = NULL;
-static line_parser_t *udp6_parser = NULL;
+static hip_line_parser_t *tcp6_parser = NULL;
+static hip_line_parser_t *udp6_parser = NULL;
 
 /**
  * Check from the proc file system whether a local port is attached
@@ -261,7 +263,7 @@ get_port_info_from_proc(const uint8_t protocol,
                         const uint16_t port)
 {
     hip_port_info_t result = HIP_PORT_INFO_IPV6UNBOUND;
-    line_parser_t *lp = NULL;
+    hip_line_parser_t *lp = NULL;
 
     HIP_ASSERT(IPPROTO_TCP == protocol ||
                IPPROTO_UDP == protocol);
@@ -275,8 +277,8 @@ get_port_info_from_proc(const uint8_t protocol,
     }
 
     // TODO: synchronize refreshing the parser buffers with cache invalidation
-    lp_refresh(lp);
-    char *line = lp_first(lp);
+    hip_lp_reload(lp);
+    char *line = hip_lp_first(lp);
     while (line != NULL) {
         unsigned long proc_port = 0;
         // note that strto(u)l() is about 10 times faster than sscanf().
@@ -285,7 +287,7 @@ get_port_info_from_proc(const uint8_t protocol,
             result = HIP_PORT_INFO_IPV6BOUND;
             break;
         }
-        line = lp_next(lp);
+        line = hip_lp_next(lp);
     }
 
     HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == result ||
@@ -327,13 +329,13 @@ hip_get_port_info(const uint8_t protocol,
 void hip_init_port_info(void)
 {
     cache_init();
-    tcp6_parser = lp_new("/proc/net/tcp6");
-    udp6_parser = lp_new("/proc/net/udp6");
+    tcp6_parser = hip_lp_new("/proc/net/tcp6");
+    udp6_parser = hip_lp_new("/proc/net/udp6");
 }
 
 void hip_uninit_port_info(void)
 {
-    lp_delete(tcp6_parser);
-    lp_delete(udp6_parser);
+    hip_lp_delete(tcp6_parser);
+    hip_lp_delete(udp6_parser);
     cache_uninit();
 }

@@ -24,8 +24,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * @brief Iterates over lines in a file.
- *
  * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
 #ifndef HIP_FIREWALL_LINE_PARSER_H
@@ -35,17 +33,13 @@
 extern "C" {
 #endif
 
-typedef struct line_parser line_parser_t;
+typedef struct hip_line_parser hip_line_parser_t;
 
-int lp_refresh(line_parser_t *lp);
-
-line_parser_t *lp_new(const char *file_name);
-
-void lp_delete(line_parser_t *lp);
-
-char *lp_first(line_parser_t *lp);
-
-char *lp_next(line_parser_t *lp);
+hip_line_parser_t *hip_lp_new(const char *file_name);
+void hip_lp_delete(hip_line_parser_t *lp);
+char *hip_lp_first(hip_line_parser_t *lp);
+char *hip_lp_next(hip_line_parser_t *lp);
+int hip_lp_reload(hip_line_parser_t *lp);
 
 #ifdef __cplusplus
 }

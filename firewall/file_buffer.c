@@ -1,0 +1,174 @@
+/**
+ * @file
+ *
+ * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
+ */
+#include <sys/types.h>  // off_t, size_t
+#include <unistd.h>     // lseek(), close(), read()
+#include <fcntl.h>      // open()
+
+#include "lib/core/debug.h" // HIP_ASSERT()
+#include "firewall/file_buffer.h"
+
+/**
+ * (Re-)allocates the file buffer so that it can hold a complete copy of the
+ * file in memory.
+ *
+ * If the size of a file cannot be determined (lseek() does not work on proc
+ * files), the buffer size is increased with each invocation.
+ *
+ * @param fb the file buffer to use.
+ * @return 0 if the buffer could be allocated, a non-zero value else.
+ */
+static int
+hip_fb_resize(hip_file_buffer_t *fb)
+{
+    off_t file_size = 0;
+
+    HIP_ASSERT(fb != NULL);
+
+    if (fb->start != NULL) {
+        free(fb->start);
+    }
+
+    /* First, we try to determine the current file size for the new buffer size.
+     * If that fails (it does, e.g., for proc files), we just increase the
+     * current buffer size. */
+    file_size = lseek(fb->_fd, 0, SEEK_END);
+    if (file_size != -1) {
+        fb->_size = file_size + 4096; // add a little head room
+    } else {
+        if (fb->_size < 4096) {
+            fb->_size = 4096;
+        } else {
+            HIP_ASSERT(fb->_size < 1024 * 1024 * 1024);
+            fb->_size *= 2;
+        }
+    }
+
+    // allocate the buffer
+    fb->start = (char *)malloc(fb->_size);
+    if (NULL == fb->start) {
+        fb->_size = 0;
+    }
+
+    return (NULL == fb->start);
+}
+
+/**
+ * Creates a file buffer that holds the specified file.
+ *
+ * @param file_name the name of the file to buffer.
+ * @return a file buffer instance if the file could be opened and successfully
+ *  buffered.
+ *  NULL on error.
+ */
+hip_file_buffer_t *
+hip_fb_new(const char *file_name)
+{
+    hip_file_buffer_t *fb = NULL;
+
+    HIP_ASSERT(file_name != NULL);
+
+    fb = (hip_file_buffer_t *)calloc(1, sizeof(hip_file_buffer_t));
+    if (fb != NULL) {
+        fb->_fd = open(file_name, O_RDONLY);
+        if (fb->_fd != -1) {
+            // start, end, size are now NULL/0 thanks to calloc()
+            // initialize file buffer
+            if (hip_fb_reload(fb) == 0) {
+                return fb;
+            }
+        }
+        hip_fb_delete(fb);
+    }
+
+    return NULL;
+}
+
+/**
+ * Deletes a file buffer and releases all resources associated with it.
+ * After calling this function, the result of calling any other hip_fb_...()
+ * function on the file buffer fb is undefined.
+ *
+ * @param fb the file buffer to delete.
+ */
+void
+hip_fb_delete(hip_file_buffer_t *fb)
+{
+    HIP_ASSERT(fb != NULL);
+    if (fb->_fd != -1) {
+        close(fb->_fd);
+    }
+    if (fb->start != NULL) {
+        free(fb->start);
+    }
+    free(fb);
+}
+
+/**
+ * Make modifications to the file since the last invocation of hip_fb_new() or
+ * hip_fb_reload() visible in the buffer.
+ *
+ * @param fb the file buffer to use.
+ * @return 0 if the file data was successfully re-read.
+ *  1 if the file could not be read or not enough buffer space could be
+ *  allocated.
+ */
+int
+hip_fb_reload(hip_file_buffer_t *fb)
+{
+    HIP_ASSERT(fb != NULL);
+
+    while (1) {
+        ssize_t bytes = 0;
+
+        // can we re-read the whole file into the memory buffer?
+        lseek(fb->_fd, 0, SEEK_SET);
+        bytes = read(fb->_fd, fb->start, fb->_size);
+        if (bytes == -1) {
+            // we can't read from the file at all -> return error
+            break;
+        } else if ((size_t)bytes == fb->_size) {
+            // we can't fit the file into the memory buffer -> resize it
+            if (hip_fb_resize(fb) == 0) {
+                // successful resize -> retry reading
+                continue;
+            } else {
+                // error resizing -> return error
+                break;
+            }
+        } else {
+            // successfully read the file contents into the buffer
+            fb->end = fb->start + bytes;
+            return 0;
+        }
+    }
+
+    fb->end = NULL;
+
+    return 1;
+}

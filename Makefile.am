@@ -95,6 +95,7 @@ firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/esp_prot_config.c     \
                          firewall/esp_prot_conntrack.c  \
                          firewall/esp_prot_fw_msg.c     \
+                         firewall/file_buffer.c         \
                          firewall/firewall.c            \
                          firewall/firewall_control.c    \
                          firewall/helpers.c             \
