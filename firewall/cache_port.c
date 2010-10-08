@@ -42,8 +42,12 @@
  */
 
 #include <stdint.h>
-#include <string.h>
+#include <string.h>     // sscanf()
 #include <netinet/in.h>
+#include <sys/types.h>  // off_t, size_t
+#include <unistd.h>     // lseek(), close(), read()
+#include <fcntl.h>      // open()
+
 
 #include "lib/core/debug.h"
 #include "lib/core/list.h"
@@ -59,7 +63,7 @@
  * The first dimension is the transport protocol for which a port can be bound
  * (supported are TCP and UDP).
  * The second dimension is the port number itself.
- * The value is a uint8_t representation of an enum hip_firewall_port_info value
+ * The value is a uint8_t representation of an hip_port_info_t value
  */
 static uint8_t *cache = NULL;
 
@@ -83,7 +87,7 @@ cache_init(void)
     cache_size_bytes = cache_size_entries * sizeof(*cache);
 
     cache = calloc(1, cache_size_bytes);
-    /* We zero the cache on allocation assuming that HIP_FIREWALL_PORT_UNKNOWN
+    /* We zero the cache on allocation assuming that HIP_PORT_INFO_UNKNOWN
     is 0 and thus the whole cache initially has that value. */
     if (NULL == cache) {
         HIP_ERROR("Allocating the port info cache failed\n");
@@ -174,7 +178,7 @@ cache_index(const uint8_t protocol,
 static void
 cache_set(const uint8_t protocol,
           const uint16_t port,
-          const enum hip_firewall_port_info info)
+          const hip_port_info_t info)
 {
     // check input paramaters
     HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
@@ -188,7 +192,7 @@ cache_set(const uint8_t protocol,
         const uint8_t value = (uint8_t)info;
         
         // check that the conversion is consistent
-        HIP_ASSERT((const enum hip_firewall_port_info)value == info);
+        HIP_ASSERT((const hip_port_info_t)value == info);
 
         cache[index] = value;
     } else {
@@ -214,13 +218,13 @@ cache_set(const uint8_t protocol,
  *  Valid values range from 0 to 2^16-1.
  * @return If the port information was previously stored, it is returned.
  *  If the port information was not previously stored or the cache is not
- *  available, HIP_FIREWALL_PORT_UNKNOWN is returned.
+ *  available, HIP_PORT_INFO_UNKNOWN is returned.
  */
-static enum hip_firewall_port_info
+static hip_port_info_t
 cache_get(const uint8_t protocol,
           const uint16_t port)
 {
-    enum hip_firewall_port_info info = HIP_FIREWALL_PORT_UNKNOWN;
+    hip_port_info_t info = HIP_PORT_INFO_UNKNOWN;
 
     // check input paramaters
     HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
@@ -229,133 +233,318 @@ cache_get(const uint8_t protocol,
     if (NULL != cache) {
         const unsigned long index = cache_index(protocol, port);
 
-        info = (enum hip_firewall_port_info)cache[index];
+        info = (hip_port_info_t)cache[index];
     }
 
     // check return value
-    HIP_ASSERT(HIP_FIREWALL_PORT_UNKNOWN == info ||
-               HIP_FIREWALL_PORT_UNBOUND == info ||
-               HIP_FIREWALL_PORT_IPV6 == info ||
-               HIP_FIREWALL_PORT_IPV4 == info ||
-               HIP_FIREWALL_PORT_LSI == info);
+    HIP_ASSERT(HIP_PORT_INFO_UNKNOWN == info ||
+               HIP_PORT_INFO_UNBOUND == info ||
+               HIP_PORT_INFO_IPV6 == info ||
+               HIP_PORT_INFO_IPV4 == info ||
+               HIP_PORT_INFO_LSI == info);
 
     return info;
 }
+
+
+
+
+/**
+ * An instance of struct line_parser holds the context of a line parser object.
+ */
+typedef struct line_parser {
+    /**
+     * Points to the file contents in memory.
+     */
+    char *start;
+    /**
+     * Points to the current parsing position.
+     */
+    char *cur;
+    /**
+     * Points to the last byte of file data + 1.
+     */
+    char *end;
+    /**
+     * The number of bytes in the allocated buffer.
+     */
+    size_t size;
+    /**
+     * The file descriptor this parser operates on.
+     */
+    int fd;
+} line_parser_t;
+
+/**
+ * (Re-)allocates a string buffer for a line parser so that it can hold a
+ * complete copy of the file in memory.
+ *
+ * If the size of a file cannot be determined (lseek() does not work on proc
+ * files), the buffer size is increased with each invocation.
+ *
+ * @param lp the line parser to use.
+ * @return 0 if the buffer could be allocated, a non-zero value else.
+ */
+static int
+lp__resize(line_parser_t *lp)
+{
+    off_t file_size = 0;
+
+    HIP_ASSERT(lp != NULL);
+
+    if (lp->start != NULL) {
+        free(lp->start);
+    }
+
+    /* First, we try to determine the current file size for the new buffer size.
+     * If that fails (it does, e.g., for proc files), we just increase the
+     * current buffer size. */
+    file_size = lseek(lp->fd, 0, SEEK_END);
+    if (file_size != -1) {
+        lp->size = file_size + 4096; // add a little head room
+    } else {
+        if (lp->size < 4096) {
+            lp->size = 4096;
+        } else {
+            HIP_ASSERT(lp->size < 1024 * 1024 * 1024);
+            lp->size *= 2;
+        }
+    }
+
+    // allocate the buffer
+    lp->start = (char *)malloc(lp->size);
+    if (NULL == lp->start) {
+        lp->size = 0;
+    }
+
+    return (NULL == lp->start);
+}
+
+/**
+ * Make sure that modifications to the file since the last invocation of
+ * lp_new() or lp_refresh() are visible to subsequent calls to lp_next().
+ *
+ * This function implicitly ends a parsing pass and a call to lp_first() should
+ * follow.
+ *
+ * @param lp the line parser to use.
+ * @return 0 if the parser was successfully refreshed. A non-zero value if an
+ *  error occurred and lp_next() should not be called.
+ */
+static int
+lp_refresh(line_parser_t *lp)
+{
+    ssize_t bytes = 0;
+
+    HIP_ASSERT(lp != NULL);
+
+    // force a new parsing pass in any case
+    lp->cur = NULL;
+
+    while (1) {
+        // can we re-read the whole file into the memory buffer?
+        lseek(lp->fd, 0, SEEK_SET);
+        bytes = read(lp->fd, lp->start, lp->size);
+        if (bytes == -1) {
+            // we can't read from the file at all -> return error
+            break;
+        } else if ((size_t)bytes == lp->size) {
+            // we can't fit the file into the memory buffer -> resize it
+            if (lp__resize(lp) == 0) {
+                // successful resize -> retry reading
+                continue;
+            } else {
+                // error resizing -> return error
+                break;
+            }
+        } else {
+            // successfully read the file contents into the buffer
+            lp->cur = lp->start;
+            lp->end = lp->start + bytes;
+            return 0;
+        }
+    }
+
+    lp->end = NULL;
+
+    return 1;
+}
+
+/**
+ * Creates a line parser that can parse the specified file.
+ *
+ * When this function returns successfully, lp_first() can be called immediately
+ * without calling lp_refresh() first.
+ *
+ * @param file_name the name of the file to parse. The line parser only
+ *  supports the files tcp, tcp6, udp, and udp6 in /proc/net/.
+ * @return a line parser instance if the parser could initialize correctly.
+ *  NULL, if the specified file is not supported.
+ */
+static line_parser_t *
+lp_new(const char *file_name)
+{
+    line_parser_t *lp = NULL;
+
+    HIP_ASSERT(file_name != NULL);
+
+    lp = (line_parser_t *)calloc(1, sizeof(line_parser_t));
+    if (lp != NULL) {
+        lp->fd = open(file_name, O_RDONLY);
+        if (lp->fd != -1) {
+            // start, cur, end, size are now NULL/0 thanks to calloc()
+            // initialize file mapping/buffer
+            if (lp_refresh(lp) == 0) {
+                return lp;
+            }
+        }
+        free(lp);
+    }
+
+    return NULL;
+}
+
+/**
+ * Deletes a line parser and releases all resources associated with it.
+ */
+static void
+lp_delete(line_parser_t *lp)
+{
+    HIP_ASSERT(lp != NULL);
+    if (lp->fd != -1) {
+        close(lp->fd);
+    }
+    if (lp->start != NULL) {
+        free(lp->start);
+    }
+    free(lp);
+}
+
+/**
+ * Start a new parsing pass with a line parser.
+ *
+ * A parsing pass consists of starting it via lp_first() and iterating over
+ * the lines in the file via lp_next() until it returns NULL.
+ * If the file contents have changed since the previous parsing pass, they are
+ * not guaranteed to be visible in the new parsing pass.
+ * To ensure that modifications are visible, by lp_next(), call lp_refresh().
+ *
+ * @param lp the line parser to use.
+ * @return a pointer to the first line in the file or NULL if no line is
+ *  available.
+ */
+static inline char *
+lp_first(line_parser_t *lp)
+{
+    HIP_ASSERT(lp != NULL);
+
+    lp->cur = lp->start;
+
+    return lp->cur;
+}
+
+/**
+ * Get the next line in a parsing pass with a line parser.
+ *
+ * Each invocation of this function returns a pointer to consecutive lines in
+ * the file to parse.
+ * After the last line has been reached, NULL is returned.
+ * In that case, parsing can restart by calling lp_first().
+ *
+ * @param lp the line parser parser to use.
+ * @return a pointer to a line in the file or NULL if there are no more lines
+ *  available.
+ */
+static inline char *
+lp_next(line_parser_t *lp)
+{
+    HIP_ASSERT(lp != NULL);
+
+    // have we reached the end of the buffer in a previous invocation?
+    if (lp->cur != NULL) {
+        size_t remaining;
+
+        // for basic sanity, make sure that lp->cur points somewhere into the buffer
+        HIP_ASSERT(lp->cur >= lp->start && lp->cur < lp->end);
+
+        remaining = lp->end - lp->cur;
+        lp->cur = (char *)memchr(lp->cur, '\n', remaining);
+
+        // given the rest of the parsing code, we should always find a \n, but
+        // let's check to be sure
+        if (lp->cur != NULL) {
+            // cur should not point to the new-line character but to the next one:
+            lp->cur += 1;
+            // is there text on the line here or are we at the end?
+            if (lp->cur >= lp->end) {
+                lp->cur = NULL;
+            }
+        }
+    }
+
+    return lp->cur;
+}
+
+
+
+static line_parser_t *tcp6_parser = NULL;
+static line_parser_t *udp6_parser = NULL;
 
 /**
  * Check from the proc file system whether a local port is attached
  * to an IPv4 or IPv6 address. This is required to determine whether
  * incoming packets should be diverted to an LSI.
  *
- * @param port_dest     the port number of the socket
- * @param *protocol     protocol type
- * @return              the traffic type associated with the given port.
+ * @param protocol protocol type
+ * @param port the port number of the socket
+ * @return the traffic type associated with the given port.
  */
-static enum hip_firewall_port_info
-proc_get(const uint8_t protocol,
-         const in_port_t port_dest)
+static hip_port_info_t
+get_port_info_from_proc(const uint8_t protocol,
+                        const uint16_t port)
 {
-    FILE *fd       = NULL;
-    char line[500], sub_string_addr_hex[8], path[20];
-    char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
-    int lineno     = 0, index_addr_port = 0, result;
-    enum hip_firewall_port_info exists = HIP_FIREWALL_PORT_UNBOUND;
-    uint32_t result_addr;
-    struct in_addr addr;
-    List list;
-    char protocol_str[10];
+    hip_port_info_t result = HIP_PORT_INFO_UNBOUND;
+    line_parser_t *lp = NULL;
 
+    HIP_ASSERT(IPPROTO_TCP == protocol ||
+               IPPROTO_UDP == protocol);
     switch (protocol) {
-    case IPPROTO_UDP:
-        strcpy(protocol_str, "udp6");
-        index_addr_port = 10;
-        break;
     case IPPROTO_TCP:
-        strcpy(protocol_str, "tcp6");
-        index_addr_port = 15;
+        lp = tcp6_parser;
         break;
-    case IPPROTO_ICMPV6:
-        break;
-    default:
-        goto out;
+    case IPPROTO_UDP:
+        lp = udp6_parser;
         break;
     }
 
-    strcpy(path, "/proc/net/");
-    strcat(path, protocol_str);
-    fd = fopen(path, "r");
-
-    initlist(&list);
-    while (fd && getwithoutnewline(line, 500, fd) != NULL &&
-           exists == HIP_FIREWALL_PORT_UNBOUND) {
-        lineno++;
-
-        destroy(&list);
-        initlist(&list);
-
-        if (lineno == 1 || strlen(line) <= 1) {
-            continue;
-        }
-
-        extractsubstrings(line, &list);
-
-        fqdn_str = getitem(&list, index_addr_port);
-        if (fqdn_str) {
-            separator = strrchr(fqdn_str, ':');
-        }
-
-        if (!separator) {
-            continue;
-        }
-
-        sub_string_port_hex = strtok(separator, ":");
-        sscanf(sub_string_port_hex, "%X", &result);
-        HIP_DEBUG("Result %i\n", result);
-        HIP_DEBUG("port dest %i\n", port_dest);
-        if (result == port_dest) {
-            if (!strcmp(protocol_str, "tcp6") || !strcmp(protocol_str, "udp6")) {
-                exists = HIP_FIREWALL_PORT_IPV6;
-            } else {
-                strncpy(sub_string_addr_hex, fqdn_str, 8);
-                sscanf(sub_string_addr_hex, "%X", &result_addr);
-                addr.s_addr = result_addr;
-                if (IS_LSI32(addr.s_addr)) {
-                    exists = HIP_FIREWALL_PORT_LSI;
-                } else {
-                    exists = HIP_FIREWALL_PORT_IPV4;
-                }
-            }
+    // TODO: synchronize refreshing the parser buffers with cache invalidation
+    lp_refresh(lp);
+    char *line = lp_first(lp);
+    while (line != NULL) {
+        unsigned int proc_port = 0;
+        sscanf(line + 39, "%X", &proc_port);
+        if (proc_port == port) {
+            result = HIP_PORT_INFO_IPV6;
             break;
         }
-    }     /* end of while */
-    if (fd) {
-        fclose(fd);
     }
-    destroy(&list);
 
-out:
-    HIP_ASSERT(HIP_FIREWALL_PORT_UNBOUND == exists ||
-               HIP_FIREWALL_PORT_IPV6 == exists ||
-               HIP_FIREWALL_PORT_IPV4 == exists ||
-               HIP_FIREWALL_PORT_LSI == exists);
-    return exists;
+    HIP_ASSERT(HIP_PORT_INFO_UNBOUND == result ||
+               HIP_PORT_INFO_IPV6 == result ||
+               HIP_PORT_INFO_IPV4 == result ||
+               HIP_PORT_INFO_LSI == result);
+    return result;
 }
 
 /**
- * Search in the port cache database. The key composed of port and protocol
- *
- * @param port the TCP or UDP port to search for
- * @param protocol the protocol (IPPROTO_UDP, IPPROTO_TCP or IPPROTO_ICMPV6)
- *
- * @return the cache entry if found or NULL otherwise
  */
-enum hip_firewall_port_info
-hip_firewall_port_cache_lookup_binding(const uint8_t protocol,
-                                       const in_port_t port)
+hip_port_info_t
+hip_get_port_info(const uint8_t protocol,
+                  const in_port_t port)
 {
-    enum hip_firewall_port_info info = HIP_FIREWALL_PORT_UNBOUND;
+    hip_port_info_t info = HIP_PORT_INFO_UNBOUND;
 
-    // check input paramaters
+    // check input parameters
     if (IPPROTO_TCP == protocol ||
         IPPROTO_UDP == protocol) {
         const uint8_t port_hbo = ntohs(port);
@@ -363,8 +552,8 @@ hip_firewall_port_cache_lookup_binding(const uint8_t protocol,
         // check the cache before checking /proc
         info = cache_get(protocol, port_hbo);
 
-        if (HIP_FIREWALL_PORT_UNKNOWN == info) {
-            info = proc_get(protocol, port_hbo);
+        if (HIP_PORT_INFO_UNKNOWN == info) {
+            info = get_port_info_from_proc(protocol, port_hbo);
             cache_set(protocol, port_hbo, info);
         }
     } else {
@@ -372,21 +561,25 @@ hip_firewall_port_cache_lookup_binding(const uint8_t protocol,
     }
 
     // check return value
-    HIP_ASSERT(HIP_FIREWALL_PORT_UNBOUND == info ||
-               HIP_FIREWALL_PORT_IPV6 == info ||
-               HIP_FIREWALL_PORT_IPV4 == info ||
-               HIP_FIREWALL_PORT_LSI == info);
+    HIP_ASSERT(HIP_PORT_INFO_UNBOUND == info ||
+               HIP_PORT_INFO_IPV6 == info ||
+               HIP_PORT_INFO_IPV4 == info ||
+               HIP_PORT_INFO_LSI == info);
 
     return info;
 }
 
-void hip_firewall_port_cache_init(void)
+void hip_init_port_info(void)
 {
     cache_init();
+    tcp6_parser = lp_new("/proc/net/tcp6");
+    udp6_parser = lp_new("/proc/net/udp6");
 }
 
-void hip_firewall_port_cache_uninit(void)
+void hip_uninit_port_info(void)
 {
+    lp_delete(tcp6_parser);
+    lp_delete(udp6_parser);
     cache_uninit();
 }
 

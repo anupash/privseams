@@ -316,7 +316,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int ip_hdr_size                                       = 0;
     int portDest                                          = 0;
     fw_cache_hl_t *entry                                  = NULL;
-    enum hip_firewall_port_info port_traffic_type = HIP_FIREWALL_PORT_UNBOUND;
+    hip_port_info_t port_traffic_type = HIP_PORT_INFO_UNBOUND;
     const struct ip6_hdr *ip6_hdr                         = NULL;
     struct in6_addr src_addr, dst_addr;
 
@@ -338,15 +338,15 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
         break;
     }
 
-    port_traffic_type = hip_firewall_port_cache_lookup_binding(ip6_hdr->ip6_nxt,
-                                                               portDest);
+    port_traffic_type = hip_get_port_info(ip6_hdr->ip6_nxt,
+                                          portDest);
 
-    if (port_traffic_type == HIP_FIREWALL_PORT_IPV6) {
+    if (port_traffic_type == HIP_PORT_INFO_IPV6) {
         HIP_DEBUG("Port %d is bound to an IPv6 address -> accepting packet\n", portDest);
         verdict = 1;
-    } else if (port_traffic_type == HIP_FIREWALL_PORT_UNBOUND ||
-               port_traffic_type == HIP_FIREWALL_PORT_IPV4 ||
-               port_traffic_type == HIP_FIREWALL_PORT_LSI) {
+    } else if (port_traffic_type == HIP_PORT_INFO_UNBOUND ||
+               port_traffic_type == HIP_PORT_INFO_IPV4 ||
+               port_traffic_type == HIP_PORT_INFO_LSI) {
         HIP_DEBUG("Port %d is unbound or bound to an IPv4 address -> looking up in cache\n", portDest);
         HIP_IFEL(!(entry = hip_firewall_cache_db_match(ip_dst, ip_src,
                                                        FW_CACHE_HIT, 1)),

@@ -544,7 +544,7 @@ static int firewall_init_extensions(void)
     // Initializing local cache database
     hip_firewall_cache_init_hldb();
     // Initializing local port cache database
-    hip_firewall_port_cache_init();
+    hip_init_port_info();
     /* Initialize raw sockets for packet reinjection */
     hip_firewall_init_raw_sockets();
 
@@ -672,7 +672,7 @@ static void firewall_exit(void)
     }
 
     hip_firewall_cache_delete_hldb(1);
-    hip_firewall_port_cache_uninit();
+    hip_uninit_port_info();
     hip_fw_uninit_system_based_opp_mode();
     hip_fw_flush_iptables();
     /* rules have to be removed first, otherwise HIP packets won't pass through
