@@ -132,7 +132,7 @@ cache_index(const uint8_t protocol,
 
     // check input paramaters
     HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
-    
+
     // determine the offset into the first (protocol) dimension
     if (IPPROTO_TCP == protocol) {
         protocol_offset = 0;
@@ -176,7 +176,7 @@ cache_set(const uint8_t protocol,
 {
     // check input paramaters
     HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
-    
+
     // fail gracefully if the cache is not allocated
     if (NULL != cache) {
         // calculate index of cache entry
@@ -184,7 +184,7 @@ cache_set(const uint8_t protocol,
 
         // convert the port info to the cache storage type
         const uint8_t value = (uint8_t)info;
-        
+
         // check that the conversion is consistent
         HIP_ASSERT((const hip_port_info_t)value == info);
 
@@ -222,7 +222,7 @@ cache_get(const uint8_t protocol,
 
     // check input paramaters
     HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
-    
+
     // fail gracefully if cache is not available
     if (NULL != cache) {
         const unsigned long index = cache_index(protocol, port);
@@ -232,10 +232,8 @@ cache_get(const uint8_t protocol,
 
     // check return value
     HIP_ASSERT(HIP_PORT_INFO_UNKNOWN == info ||
-               HIP_PORT_INFO_UNBOUND == info ||
-               HIP_PORT_INFO_IPV6 == info ||
-               HIP_PORT_INFO_IPV4 == info ||
-               HIP_PORT_INFO_LSI == info);
+               HIP_PORT_INFO_IPV6UNBOUND == info ||
+               HIP_PORT_INFO_IPV6BOUND == info);
 
     return info;
 }
@@ -262,7 +260,7 @@ static hip_port_info_t
 get_port_info_from_proc(const uint8_t protocol,
                         const uint16_t port)
 {
-    hip_port_info_t result = HIP_PORT_INFO_UNBOUND;
+    hip_port_info_t result = HIP_PORT_INFO_IPV6UNBOUND;
     line_parser_t *lp = NULL;
 
     HIP_ASSERT(IPPROTO_TCP == protocol ||
@@ -284,15 +282,14 @@ get_port_info_from_proc(const uint8_t protocol,
         // note that strto(u)l() is about 10 times faster than sscanf().
         proc_port = strtoul(line + 39, NULL, 16);
         if (proc_port == port) {
-            result = HIP_PORT_INFO_IPV6;
+            result = HIP_PORT_INFO_IPV6BOUND;
             break;
         }
+        line = lp_next(lp);
     }
 
-    HIP_ASSERT(HIP_PORT_INFO_UNBOUND == result ||
-               HIP_PORT_INFO_IPV6 == result ||
-               HIP_PORT_INFO_IPV4 == result ||
-               HIP_PORT_INFO_LSI == result);
+    HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == result ||
+               HIP_PORT_INFO_IPV6BOUND == result);
     return result;
 }
 
@@ -302,7 +299,7 @@ hip_port_info_t
 hip_get_port_info(const uint8_t protocol,
                   const in_port_t port)
 {
-    hip_port_info_t info = HIP_PORT_INFO_UNBOUND;
+    hip_port_info_t info = HIP_PORT_INFO_IPV6UNBOUND;
 
     // check input parameters
     if (IPPROTO_TCP == protocol ||
@@ -321,10 +318,8 @@ hip_get_port_info(const uint8_t protocol,
     }
 
     // check return value
-    HIP_ASSERT(HIP_PORT_INFO_UNBOUND == info ||
-               HIP_PORT_INFO_IPV6 == info ||
-               HIP_PORT_INFO_IPV4 == info ||
-               HIP_PORT_INFO_LSI == info);
+    HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == info ||
+               HIP_PORT_INFO_IPV6BOUND == info);
 
     return info;
 }
