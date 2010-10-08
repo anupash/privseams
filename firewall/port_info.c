@@ -47,7 +47,7 @@
 
 #include "lib/core/debug.h"
 #include "firewall/line_parser.h"
-#include "cache_port.h"
+#include "firewall/port_info.h"
 
 
 /**

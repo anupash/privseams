@@ -63,7 +63,7 @@
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
 #include "cache.h"
-#include "cache_port.h"
+#include "port_info.h"
 #include "firewall.h"
 #include "lsi.h"
 #include "reinject.h"

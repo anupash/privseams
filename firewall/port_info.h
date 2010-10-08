@@ -25,8 +25,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_FIREWALL_CACHE_PORT_H
-#define HIP_FIREWALL_CACHE_PORT_H
+#ifndef HIP_FIREWALL_PORT_INFO_H
+#define HIP_FIREWALL_PORT_INFO_H
 
 #include <netinet/in.h> // in_port_t
 

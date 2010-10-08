@@ -88,7 +88,6 @@ hipd_hipd_SOURCES += hipd/oppdb.c                \
 endif
 
 firewall_hipfw_SOURCES = firewall/cache.c               \
-                         firewall/cache_port.c          \
                          firewall/conntrack.c           \
                          firewall/dlist.c               \
                          firewall/esp_prot_api.c        \
@@ -102,6 +101,7 @@ firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/hslist.c              \
                          firewall/line_parser.c         \
                          firewall/lsi.c                 \
+                         firewall/port_info.c           \
                          firewall/reinject.c            \
                          firewall/rule_management.c     \
                          firewall/sysopp.c              \
