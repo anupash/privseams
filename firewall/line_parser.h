@@ -24,18 +24,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * Cache TCP and UDP port information for incoming HIP-related connections for
- * LSIs. When hipfw sees an incoming HIT-based connection, it needs to figure out if
- * it needs to be translated to LSI or not. LSI translation is done only when there is
- * no IPv6 application bound the corresponding TCP or UDP port. The port information
- * can be read from /proc but consumes time. To avoid this overhead, hipfw caches
- * the port information after the first read. Notice that cache is static and hipfw
- * must be restarted if there are changes in the port numbers. This is described in
- * more detail in <a
- * href="http://hipl.hiit.fi/hipl/thesis_teresa_finez.pdf">T. Finez,
- * Backwards Compatibility Experimentation with Host Identity Protocol
- * and Legacy Software and Networks , final project, December 2008</a>.
- *
  * @brief Iterates over lines in a file.
  *
  * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
