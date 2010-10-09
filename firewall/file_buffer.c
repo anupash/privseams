@@ -34,6 +34,20 @@
 #include "firewall/file_buffer.h"
 
 /**
+ * Always allocate this many more bytes for the memory buffer than is needed
+ * the actual file contents.
+ * This avoids having to re-allocate the buffer for very small increases in the
+ * file size.
+ */
+static const unsigned long HIP_FB_HEADROOM = 4096;
+
+/**
+ * Allocate at most this many bytes, i.e., the maximum supported file size.
+ * This is an arbitrary number used for sanity checking.
+ */
+static const unsigned long HIP_FB_MAX_SIZE = 1024 * 1024 * 1024;
+
+/**
  * (Re-)allocates the file buffer so that it can hold a complete copy of the
  * file in memory.
  *
@@ -43,8 +57,7 @@
  * @param fb the file buffer to use.
  * @return 0 if the buffer could be allocated, a non-zero value else.
  */
-static int
-hip_fb_resize(hip_file_buffer_t *fb)
+static int hip_fb_resize(hip_file_buffer_t *fb)
 {
     off_t file_size = 0;
 
@@ -52,6 +65,7 @@ hip_fb_resize(hip_file_buffer_t *fb)
 
     if (fb->start != NULL) {
         free(fb->start);
+        fb->start = NULL;
     }
 
     /* First, we try to determine the current file size for the new buffer size.
@@ -59,20 +73,21 @@ hip_fb_resize(hip_file_buffer_t *fb)
      * current buffer size. */
     file_size = lseek(fb->_fd, 0, SEEK_END);
     if (file_size != -1) {
-        fb->_size = file_size + 4096; // add a little head room
+        fb->_size = file_size + HIP_FB_HEADROOM; // add a little head room
     } else {
-        if (fb->_size < 4096) {
-            fb->_size = 4096;
+        if (fb->_size < HIP_FB_HEADROOM) {
+            fb->_size = HIP_FB_HEADROOM;
         } else {
-            HIP_ASSERT(fb->_size < 1024 * 1024 * 1024);
             fb->_size *= 2;
         }
     }
 
-    // allocate the buffer
-    fb->start = (char *)malloc(fb->_size);
-    if (NULL == fb->start) {
-        fb->_size = 0;
+    if (fb->_size <= HIP_FB_MAX_SIZE) {
+        // allocate the buffer
+        fb->start = (char *)malloc(fb->_size);
+        if (NULL == fb->start) {
+            fb->_size = 0;
+        }
     }
 
     return (NULL == fb->start);
@@ -86,8 +101,7 @@ hip_fb_resize(hip_file_buffer_t *fb)
  *  buffered.
  *  NULL on error.
  */
-hip_file_buffer_t *
-hip_fb_new(const char *file_name)
+hip_file_buffer_t *hip_fb_new(const char *file_name)
 {
     hip_file_buffer_t *fb = NULL;
 
@@ -116,8 +130,7 @@ hip_fb_new(const char *file_name)
  *
  * @param fb the file buffer to delete.
  */
-void
-hip_fb_delete(hip_file_buffer_t *fb)
+void hip_fb_delete(hip_file_buffer_t *fb)
 {
     HIP_ASSERT(fb != NULL);
     if (fb->_fd != -1) {
@@ -138,8 +151,7 @@ hip_fb_delete(hip_file_buffer_t *fb)
  *  1 if the file could not be read or not enough buffer space could be
  *  allocated.
  */
-int
-hip_fb_reload(hip_file_buffer_t *fb)
+int hip_fb_reload(hip_file_buffer_t *fb)
 {
     HIP_ASSERT(fb != NULL);
 

@@ -33,9 +33,8 @@
 #include "firewall/line_parser.h"
 
 /**
- * A line parser object is used to linearly iterate over the lines in a buffer
- * that holds text.
- * The iteration can be restarted and repeated at any point in the buffer.
+ * A line parser object is used to linearly iterate over the lines in a memory
+ * area that holds text.
  * The buffer contents are not modified and the returned line pointers are
  * terminated by \n characters, not \0 characters.
  */
@@ -62,8 +61,7 @@ struct hip_line_parser {
  * @return a line parser instance if the parser could initialize correctly.
  *  NULL, if the specified file could not be accessed.
  */
-hip_line_parser_t *
-hip_lp_new(const char *file_name)
+hip_line_parser_t *hip_lp_new(const char *file_name)
 {
     hip_line_parser_t *lp = NULL;
 
@@ -87,8 +85,7 @@ hip_lp_new(const char *file_name)
  *
  * @param lp the line parser object to delete.
  */
-void
-hip_lp_delete(hip_line_parser_t *lp)
+void hip_lp_delete(hip_line_parser_t *lp)
 {
     HIP_ASSERT(lp != NULL);
     if (lp->fb != NULL) {
@@ -110,8 +107,7 @@ hip_lp_delete(hip_line_parser_t *lp)
  * @return a pointer to the first line in the file or NULL if no line is
  *  available.
  */
-char *
-hip_lp_first(hip_line_parser_t *lp)
+char *hip_lp_first(hip_line_parser_t *lp)
 {
     HIP_ASSERT(lp != NULL);
 
@@ -132,8 +128,7 @@ hip_lp_first(hip_line_parser_t *lp)
  * @return a pointer to a line in the buffer or NULL if there are no more lines
  *  available.
  */
-char *
-hip_lp_next(hip_line_parser_t *lp)
+char *hip_lp_next(hip_line_parser_t *lp)
 {
     HIP_ASSERT(lp != NULL);
 
@@ -170,8 +165,7 @@ hip_lp_next(hip_line_parser_t *lp)
  * @param lp the line parser to use.
  * @return 0 if the file contents could be successfully reloaded or 1 on error.
  */
-int
-hip_lp_reload(hip_line_parser_t *lp)
+int hip_lp_reload(hip_line_parser_t *lp)
 {
     return hip_fb_reload(lp->fb);
 }

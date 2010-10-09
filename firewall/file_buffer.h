@@ -34,7 +34,8 @@ extern "C" {
 #endif
 
 /**
- * File buffer objects are used to load file contents into a memory buffer.
+ * File buffer objects are used to load and hold file contents into a memory
+ * buffer.
  * The memory buffer is allocated so that the whole file fits in it.
  * Any changes to the memory buffer are not written back to the file and remain
  * local to the memory buffer.
