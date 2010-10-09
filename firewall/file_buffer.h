@@ -51,7 +51,7 @@ typedef struct hip_file_buffer {
     char *end;
     /*
      * The number of bytes in the allocated buffer.
-     * This is not necessarily equal to end - start.
+     * _size is less than or equal to (end - start).
      * This field should not to be accessed by users of hip_file_buffer_t.
      */
     size_t _size;
