@@ -30,10 +30,8 @@
 
 #include "common_types.h"
 
-SList *append_to_slist(SList *list,
-                       void *data);
+SList *append_to_slist(SList *list, void *data);
 
-SList *remove_link_slist(SList *list,
-                         SList *link);
+SList *remove_link_slist(SList *list, SList *link);
 
 #endif /* HIP_FIREWALL_HSLIST_H */

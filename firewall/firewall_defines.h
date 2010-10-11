@@ -56,15 +56,15 @@ typedef struct hip_fw_context {
     struct in6_addr   src, dst;
     union {
         struct ip6_hdr *ipv6;
-        struct ip *     ipv4;
+        struct ip      *ipv4;
     } ip_hdr;
 
     // transport layer information
     int packet_type;     /* HIP_PACKET, ESP_PACKET, etc  */
     union {
-        struct hip_esp *   esp;
+        struct hip_esp    *esp;
         struct hip_common *hip;
-        struct tcphdr *    tcp;
+        struct tcphdr     *tcp;
     } transport_hdr;
     struct udphdr *udp_encap_hdr;
 
@@ -74,8 +74,8 @@ typedef struct hip_fw_context {
 /********** State table structures **************/
 
 struct esp_address {
-    struct in6_addr dst_addr;
-    uint32_t *      update_id; // null or pointer to the update id from the packet
+    struct in6_addr  dst_addr;
+    uint32_t        *update_id; // null or pointer to the update id from the packet
     // that announced this address.
     // when ack with the update id is seen all esp_addresses with
     // null update_id can be removed.
@@ -85,8 +85,8 @@ struct esp_tuple {
     uint32_t                spi;
     uint32_t                new_spi;
     uint32_t                spi_update_id;
-    SList *                 dst_addr_list;
-    struct tuple *          tuple;
+    SList                  *dst_addr_list;
+    struct tuple           *tuple;
     /* tracking of the ESP SEQ number */
     uint32_t                seq_no;
     /* members needed for ESP protection extension */
@@ -99,9 +99,9 @@ struct esp_tuple {
     unsigned char           first_active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
     unsigned char           next_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
     int                     active_root_length;
-    unsigned char *         active_roots[MAX_NUM_PARALLEL_HCHAINS];
+    unsigned char          *active_roots[MAX_NUM_PARALLEL_HCHAINS];
     int                     next_root_length[MAX_NUM_PARALLEL_HCHAINS];
-    unsigned char *         next_roots[MAX_NUM_PARALLEL_HCHAINS];
+    unsigned char          *next_roots[MAX_NUM_PARALLEL_HCHAINS];
     /* list temporarily storing anchor elements until the consecutive update
      * msg reveals that all on-path devices know the new anchor */
     hip_ll_t                anchor_cache;
@@ -113,22 +113,22 @@ struct hip_data {
     struct in6_addr     src_hit;
     struct in6_addr     dst_hit;
     struct hip_host_id *src_hi;
-    void *              src_pub_key;
+    void               *src_pub_key;
     int                 (*verify)(void *, struct hip_common *);
 };
 
 struct hip_tuple {
     struct hip_data *data;
-    struct tuple *   tuple;
+    struct tuple    *tuple;
 };
 
 struct tuple {
-    struct hip_tuple * hip_tuple;
-    struct in6_addr *  src_ip;
-    struct in6_addr *  dst_ip;
+    struct hip_tuple  *hip_tuple;
+    struct in6_addr   *src_ip;
+    struct in6_addr   *dst_ip;
     in_port_t          src_port;
     in_port_t          dst_port;
-    SList *            esp_tuples;
+    SList             *esp_tuples;
     int                direction;
     struct connection *connection;
     int                state;
