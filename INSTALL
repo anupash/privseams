@@ -73,3 +73,14 @@ compiler that does produce warnings, you can override -Werror as follows:
   CFLAGS=-Wno-error ./configure
 
 Then run make as usual.
+
+
+Broken Systems
+==============
+
+HIPL is known not to compile out-of-the-box on some platforms. In cases where
+the platform is clearly at fault we try not to clutter our sources with
+workarounds, but rely on the user to pass flags to configure. Below is
+a list of known-broken systems along with workarounds.
+
+CentOS 5.5: CPPFLAGS=-U__STRICT_ANSI__ ./configure
