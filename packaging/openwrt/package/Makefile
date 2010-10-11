@@ -40,18 +40,6 @@ define Package/hipl-hipfw/description
  The firewall for HIPL.
 endef
 
-define Package/hipl-hipconf
-    SECTION:=net
-    CATEGORY:=Network
-    DEPENDS:=+hipl-hipd
-    TITLE:=HIPL configuration application
-    URL:=http://hipl.hiit.fi/
-endef
-
-define Package/hipl-hipconf/description
- The configuration application for the hipd of the HIPL implementation.
-endef
-
 define Package/hipl-hipproxy
     SECTION:=net
     CATEGORY:=Network
@@ -103,6 +91,7 @@ define Package/hipl-hipd/install
 
 	$(INSTALL_BIN) ./files/hipd.init $(1)/etc/init.d/hipd
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipd $(1)/usr/sbin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipconf $(1)/usr/sbin/
 endef
 
 define Package/hipl-hipfw/install
@@ -111,12 +100,6 @@ define Package/hipl-hipfw/install
 
 	$(INSTALL_BIN) ./files/hipfw.init $(1)/etc/init.d/hipfw
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipfw $(1)/usr/sbin/
-endef
-
-define Package/hipl-hipconf/install
-	$(INSTALL_DIR) $(1)/usr/sbin/
-
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipconf $(1)/usr/sbin/
 endef
 
 define Package/hipl-hipproxy/install
@@ -144,5 +127,4 @@ endef
 $(eval $(call BuildPackage,hipl-common))
 $(eval $(call BuildPackage,hipl-hipd))
 $(eval $(call BuildPackage,hipl-hipfw))
-$(eval $(call BuildPackage,hipl-hipconf))
 $(eval $(call BuildPackage,hipl-hipproxy))
