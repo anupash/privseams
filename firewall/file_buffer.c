@@ -96,6 +96,11 @@ static int hip_fb_resize(hip_file_buffer_t *fb)
 /**
  * Creates a file buffer that holds the specified file.
  *
+ * This function allocates resources, in particular memory, for the returned
+ * hip_line_parser_t object.
+ * To free these resources and to avoid memory leaks, it is imperative to call
+ * hip_lp_delete() when the object created here is no longer used.
+ *
  * @param file_name the name of the file to buffer.
  * @return a file buffer instance if the file could be opened and successfully
  *  buffered.
