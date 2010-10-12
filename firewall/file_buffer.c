@@ -26,11 +26,10 @@
  *
  * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
-#include <sys/types.h>  // off_t, size_t
+#include <stdlib.h>     // malloc(), free()
 #include <unistd.h>     // lseek(), close(), read()
 #include <fcntl.h>      // open()
 
-#include "lib/core/debug.h" // HIP_ASSERT()
 #include "firewall/file_buffer.h"
 
 /**
@@ -61,7 +60,9 @@ static int hip_fb_resize(hip_file_buffer_t *fb)
 {
     off_t file_size = 0;
 
-    HIP_ASSERT(fb != NULL);
+    if (NULL != fb) {
+        return 1;
+    }
 
     if (fb->start != NULL) {
         free(fb->start);
@@ -110,19 +111,19 @@ hip_file_buffer_t *hip_fb_new(const char *file_name)
 {
     hip_file_buffer_t *fb = NULL;
 
-    HIP_ASSERT(file_name != NULL);
-
-    fb = (hip_file_buffer_t *)calloc(1, sizeof(hip_file_buffer_t));
-    if (fb != NULL) {
-        fb->_fd = open(file_name, O_RDONLY);
-        if (fb->_fd != -1) {
-            // start, end, size are now NULL/0 thanks to calloc()
-            // initialize file buffer
-            if (hip_fb_reload(fb) == 0) {
-                return fb;
+    if (file_name != NULL) {
+        fb = (hip_file_buffer_t *)calloc(1, sizeof(hip_file_buffer_t));
+        if (fb != NULL) {
+            fb->_fd = open(file_name, O_RDONLY);
+            if (fb->_fd != -1) {
+                // start, end, size are now NULL/0 thanks to calloc()
+                // initialize file buffer
+                if (hip_fb_reload(fb) == 0) {
+                    return fb;
+                }
             }
+            hip_fb_delete(fb);
         }
-        hip_fb_delete(fb);
     }
 
     return NULL;
@@ -137,14 +138,15 @@ hip_file_buffer_t *hip_fb_new(const char *file_name)
  */
 void hip_fb_delete(hip_file_buffer_t *fb)
 {
-    HIP_ASSERT(fb != NULL);
-    if (fb->_fd != -1) {
-        close(fb->_fd);
+    if (fb != NULL) {
+        if (fb->_fd != -1) {
+            close(fb->_fd);
+        }
+        if (fb->start != NULL) {
+            free(fb->start);
+        }
+        free(fb);
     }
-    if (fb->start != NULL) {
-        free(fb->start);
-    }
-    free(fb);
 }
 
 /**
@@ -158,7 +160,9 @@ void hip_fb_delete(hip_file_buffer_t *fb)
  */
 int hip_fb_reload(hip_file_buffer_t *fb)
 {
-    HIP_ASSERT(fb != NULL);
+    if (NULL == fb || -1 == fb->_fd) {
+        return 1;
+    }
 
     while (1) {
         ssize_t bytes = 0;

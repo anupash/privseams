@@ -28,7 +28,6 @@
  */
 #include <stdlib.h>  // calloc()
 
-#include "lib/core/debug.h" // HIP_ASSERT()
 #include "firewall/file_buffer.h"   // hip_fb_new()
 #include "firewall/line_parser.h"
 
@@ -50,16 +49,16 @@ hip_line_parser_t *hip_lp_new(const char *file_name)
 {
     hip_line_parser_t *lp = NULL;
 
-    HIP_ASSERT(file_name != NULL);
-
-    lp = (hip_line_parser_t *)calloc(1, sizeof(hip_line_parser_t));
-    if (lp != NULL) {
-        // cur is NULL as it should be thanks to calloc()
-        lp->fb = hip_fb_new(file_name);
-        if (lp->fb != NULL) {
-            return lp;
+    if (file_name != NULL) {
+        lp = (hip_line_parser_t *)calloc(1, sizeof(hip_line_parser_t));
+        if (lp != NULL) {
+            // cur is NULL as it should be thanks to calloc()
+            lp->fb = hip_fb_new(file_name);
+            if (lp->fb != NULL) {
+                return lp;
+            }
+            hip_lp_delete(lp);
         }
-        hip_lp_delete(lp);
     }
 
     return NULL;
@@ -72,11 +71,12 @@ hip_line_parser_t *hip_lp_new(const char *file_name)
  */
 void hip_lp_delete(hip_line_parser_t *lp)
 {
-    HIP_ASSERT(lp != NULL);
-    if (lp->fb != NULL) {
-        hip_fb_delete(lp->fb);
+    if (lp != NULL) {
+        if (lp->fb != NULL) {
+            hip_fb_delete(lp->fb);
+        }
+        free(lp);
     }
-    free(lp);
 }
 
 /**
@@ -91,8 +91,10 @@ void hip_lp_delete(hip_line_parser_t *lp)
  */
 int hip_lp_reload(hip_line_parser_t *lp)
 {
-    HIP_ASSERT(lp != NULL);
-    HIP_ASSERT(lp->fb != NULL);
+    if (NULL == lp ||
+        NULL == lp->fb) {
+        return 1;
+    }
 
     // Reset the parsing position because
     // a) if the file was successfully reloaded, the contents may have changed

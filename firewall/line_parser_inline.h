@@ -76,8 +76,10 @@ struct hip_line_parser {
  */
 static inline char *hip_lp_first(hip_line_parser_t *lp)
 {
-    HIP_ASSERT(lp != NULL);
-    HIP_ASSERT(lp->fb != NULL);
+    if (NULL == lp ||
+        NULL == lp->fb) {
+        return NULL;
+    }
 
     lp->cur = lp->fb->start;
 
@@ -98,29 +100,29 @@ static inline char *hip_lp_first(hip_line_parser_t *lp)
  */
 static inline char *hip_lp_next(hip_line_parser_t *lp)
 {
-    HIP_ASSERT(lp != NULL);
-    HIP_ASSERT(lp->fb != NULL);
-    HIP_ASSERT(lp->fb->start != NULL);
+    size_t remaining;
 
-    // have we reached the end of the buffer in a previous invocation?
+    if (NULL == lp ||
+        NULL == lp->cur ||
+        NULL == lp->fb ||
+        NULL == lp->fb->start ||
+        NULL == lp->fb->end ||
+        lp->cur < lp->fb->start ||
+        lp->cur >= lp->fb->end) {
+        return NULL;
+    }
+
+    remaining = lp->fb->end - lp->cur;
+    lp->cur = (char *)memchr(lp->cur, '\n', remaining);
+
+    // given the rest of the parsing code, we should always find a \n, but
+    // let's check to be sure
     if (lp->cur != NULL) {
-        size_t remaining;
-
-        // for basic sanity, make sure that lp->cur points somewhere into the buffer
-        HIP_ASSERT(lp->cur >= lp->fb->start && lp->cur < lp->fb->end);
-
-        remaining = lp->fb->end - lp->cur;
-        lp->cur = (char *)memchr(lp->cur, '\n', remaining);
-
-        // given the rest of the parsing code, we should always find a \n, but
-        // let's check to be sure
-        if (lp->cur != NULL) {
-            // cur should not point to the new-line character but to the next one:
-            lp->cur += 1;
-            // is there text on the line here or are we at the end?
-            if (lp->cur >= lp->fb->end) {
-                lp->cur = NULL;
-            }
+        // cur should not point to the new-line character but to the next one:
+        lp->cur += 1;
+        // is there text on the line here or are we at the end?
+        if (lp->cur >= lp->fb->end) {
+            lp->cur = NULL;
         }
     }
 
