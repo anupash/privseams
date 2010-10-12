@@ -38,6 +38,16 @@ lib_LTLIBRARIES = lib/core/libhipcore.la
 lib_LTLIBRARIES += lib/modularization/libmod.la
 
 
+### tests ###
+TESTS =                     check_lib_core
+check_PROGRAMS =            check_lib_core
+check_lib_core_SOURCES =    test/check_lib_core.c                              \
+                            test/lib/core/hit.c                                \
+                            test/lib/core/straddr.c
+check_lib_core_LDADD =      $(top_builddir)/lib/core/libhipcore.la             \
+                            -lcheck
+
+
 ### source declarations ###
 
 test_auth_performance_SOURCES = test/auth_performance.c
