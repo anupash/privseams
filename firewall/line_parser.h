@@ -37,12 +37,14 @@ typedef struct hip_line_parser hip_line_parser_t;
 
 hip_line_parser_t *hip_lp_new(const char *file_name);
 void hip_lp_delete(hip_line_parser_t *lp);
-char *hip_lp_first(hip_line_parser_t *lp);
-char *hip_lp_next(hip_line_parser_t *lp);
+static inline char *hip_lp_first(hip_line_parser_t *lp);
+static inline char *hip_lp_next(hip_line_parser_t *lp);
 int hip_lp_reload(hip_line_parser_t *lp);
 
 #ifdef __cplusplus
 }
 #endif
+
+#include "firewall/line_parser_inline.h"
 
 #endif
