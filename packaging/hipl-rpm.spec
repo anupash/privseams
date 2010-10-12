@@ -26,9 +26,14 @@ other related tools.
 %setup
 
 # Note: in subsequent releases me may want to use --disable-debugging
+# Note: CentOS 5.5 requires special cpp flags (see bug id #620327)
 %build
 autoreconf --install
+%if 0%{?fedora}
 %configure --prefix=/usr
+%else
+CPPFLAGS=-U__STRICT_ANSI__ ./configure --prefix=/usr
+%endif
 make -j 4 all
 
 # Currently we are not going to install all includes and test software.
