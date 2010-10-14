@@ -46,7 +46,7 @@ extern "C" {
  * A line parser object is used to linearly iterate over the lines in a memory
  * area that holds text.
  * The buffer contents are not modified and the returned line pointers are
- * terminated by \n characters, not \0 characters.
+ * terminated by newline characters, not null characters.
  */
 struct hip_line_parser {
     /**
@@ -64,8 +64,8 @@ struct hip_line_parser {
 /**
  * Start a new parsing pass with a line parser and return the first line in the
  * buffer.
- * The buffer is not modified and the line is terminated by a new-line
- * character (not a \0 character).
+ * The buffer is not modified and the line is terminated by a newline
+ * character (not a null character).
  *
  * A parsing pass consists of starting it via hip_lp_first() and iterating over
  * the lines in the file via hip_lp_next() until it returns NULL.
