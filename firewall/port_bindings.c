@@ -38,12 +38,6 @@
 #include "firewall/line_parser.h"
 #include "firewall/port_bindings.h"
 
-
-/**
- * A convenience switch to enable or disable the caching of port lookups.
- */
-static const unsigned long ENABLE_CACHE = 1;
-
 /**
  * Pointer to the port bindings cache.
  *
@@ -157,11 +151,11 @@ static void set_cache_entry(const uint8_t protocol,
                             const uint16_t port,
                             const enum hip_port_binding binding)
 {
-    // check input parameters
-    HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
-
     // fail gracefully if the cache is not allocated
     if (NULL != cache) {
+        // check input parameters
+        HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
+
         // calculate index of cache entry
         const unsigned long index = get_cache_index(protocol, port);
 
@@ -200,20 +194,20 @@ static enum hip_port_binding get_cache_entry(const uint8_t protocol,
 {
     enum hip_port_binding binding = HIP_PORT_INFO_UNKNOWN;
 
-    // check input parameters
-    HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
-
     // fail gracefully if cache is not available
     if (NULL != cache) {
+        // check input parameters
+        HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
+
         const unsigned long index = get_cache_index(protocol, port);
 
         binding = (enum hip_port_binding)cache[index];
-    }
 
-    // check return value
-    HIP_ASSERT(HIP_PORT_INFO_UNKNOWN == binding ||
-               HIP_PORT_INFO_IPV6UNBOUND == binding ||
-               HIP_PORT_INFO_IPV6BOUND == binding);
+        // check return value
+        HIP_ASSERT(HIP_PORT_INFO_UNKNOWN == binding ||
+                   HIP_PORT_INFO_IPV6UNBOUND == binding ||
+                   HIP_PORT_INFO_IPV6BOUND == binding);
+    }
 
     return binding;
 }
@@ -247,7 +241,7 @@ static struct hip_line_parser *udp6_parser = NULL;
  * @return the traffic type associated with the given port.
  */
 static enum hip_port_binding get_port_binding_from_proc(const uint8_t protocol,
-                                                  const uint16_t port)
+                                                        const uint16_t port)
 {
     enum hip_port_binding result = HIP_PORT_INFO_IPV6UNBOUND;
     // the files /proc/net/{udp,tcp}6 are line-based and the line number of the
@@ -293,12 +287,15 @@ static enum hip_port_binding get_port_binding_from_proc(const uint8_t protocol,
 
 /**
  * Initialize the port binding lookup and allocate any necessary resources.
+ *
+ * @param enable_cache if not 0, use an internal cache that is consulted on
+ *  lookups in favor of parsing the proc file.
  */
-void hip_port_bindings_init(void)
+void hip_port_bindings_init(const bool enable_cache)
 {
     // The cache is built such that it can be disabled just by not initializing
     // it here.
-    if (ENABLE_CACHE) {
+    if (enable_cache) {
         init_cache();
     }
     tcp6_parser = hip_lp_create("/proc/net/tcp6");

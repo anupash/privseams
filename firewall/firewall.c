@@ -544,7 +544,8 @@ static int firewall_init_extensions(void)
     // Initializing local cache database
     hip_firewall_cache_init_hldb();
     // Initializing local port cache database
-    hip_port_bindings_init();
+    // TODO: caching is disabled because cache invalidation is not yet implemented and thus caching produces stale (incorrect) results
+    hip_port_bindings_init(false);
     /* Initialize raw sockets for packet reinjection */
     hip_firewall_init_raw_sockets();
 

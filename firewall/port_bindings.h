@@ -40,6 +40,7 @@
 #ifndef HIP_FIREWALL_PORT_INFO_H
 #define HIP_FIREWALL_PORT_INFO_H
 
+#include <stdbool.h>    // bool
 #include <netinet/in.h> // in_port_t
 
 #ifdef __cplusplus
@@ -67,7 +68,7 @@ enum hip_port_binding {
     HIP_PORT_INFO_IPV6BOUND,
 };
 
-void hip_port_bindings_init(void);
+void hip_port_bindings_init(const bool enable_cache);
 void hip_port_bindings_uninit(void);
 enum hip_port_binding hip_port_bindings_get(const uint8_t proto,
                   				            const in_port_t port);
