@@ -49,10 +49,10 @@
  */
 static uint8_t *cache = NULL;
 
-static const unsigned long CACHE_SIZE_PROTOS = 2;
-static const unsigned long CACHE_SIZE_PORTS = 1 << (sizeof(in_port_t) * 8);
-static unsigned long cache_size_entries = 0;
-static unsigned long cache_size_bytes = 0;
+static const unsigned int CACHE_SIZE_PROTOS = 2;
+static const unsigned int CACHE_SIZE_PORTS = 1 << (sizeof(in_port_t) * 8);
+static unsigned int cache_size_entries = 0;
+static unsigned int cache_size_bytes = 0;
 
 /**
  * Allocate and initializes the cache resources.
@@ -106,11 +106,11 @@ static void uninit_cache(void)
  *  Valid values range from 0 to 2^16-1.
  * @return the index of the cache entry for @a protocol and @a port.
  */
-static unsigned long get_cache_index(const uint8_t protocol,
-                                     const uint16_t port)
+static unsigned int get_cache_index(const uint8_t protocol,
+                                    const uint16_t port)
 {
-    unsigned long index = 0;
-    unsigned long protocol_offset = 0;
+    unsigned int index = 0;
+    unsigned int protocol_offset = 0;
 
     // check input parameters
     HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
@@ -157,7 +157,7 @@ static void set_cache_entry(const uint8_t protocol,
         HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
 
         // calculate index of cache entry
-        const unsigned long index = get_cache_index(protocol, port);
+        const unsigned int index = get_cache_index(protocol, port);
 
         // convert the port binding to the cache storage type
         const uint8_t value = (uint8_t)binding;
@@ -199,7 +199,7 @@ static enum hip_port_binding get_cache_entry(const uint8_t protocol,
         // check input parameters
         HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
 
-        const unsigned long index = get_cache_index(protocol, port);
+        const unsigned int index = get_cache_index(protocol, port);
 
         binding = (enum hip_port_binding)cache[index];
 
@@ -268,8 +268,8 @@ static enum hip_port_binding get_port_binding_from_proc(const uint8_t protocol,
     hip_lp_reload(lp);
     char *line = hip_lp_first(lp);
     while (line != NULL) {
-        const unsigned long PORT_OFFSET_IN_LINE = 39;
-        const unsigned long PORT_BASE_HEX = 16;
+        const unsigned int PORT_OFFSET_IN_LINE = 39;
+        const unsigned int PORT_BASE_HEX = 16;
         unsigned long proc_port = 0;
         // note that strtoul() is about 10 times faster than sscanf().
         proc_port = strtoul(line + PORT_OFFSET_IN_LINE, NULL, PORT_BASE_HEX);

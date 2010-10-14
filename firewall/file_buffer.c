@@ -38,7 +38,7 @@
  * This avoids having to re-allocate the buffer for very small increases in the
  * file size.
  */
-static const unsigned long HIP_FB_HEADROOM = 4096;
+static const unsigned int HIP_FB_HEADROOM = 4096;
 
 /**
  * Allocate at most this many bytes, i.e., the maximum supported file size.
