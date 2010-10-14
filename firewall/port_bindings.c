@@ -33,6 +33,7 @@
 #include <stdlib.h> // strtoul()
 #include <netinet/in.h> // in_port_t
 #include <string.h> // memset()
+#include <time.h>   // clock()
 
 #include "lib/core/debug.h"
 #include "firewall/line_parser.h"
@@ -106,8 +107,8 @@ static void uninit_cache(void)
  *  Valid values range from 0 to 2^16-1.
  * @return the index of the cache entry for @a protocol and @a port.
  */
-static unsigned int get_cache_index(const uint8_t protocol,
-                                    const uint16_t port)
+static inline unsigned int get_cache_index(const uint8_t protocol,
+                                           const uint16_t port)
 {
     unsigned int index = 0;
     unsigned int protocol_offset = 0;
@@ -218,12 +219,12 @@ static enum hip_port_binding get_cache_entry(const uint8_t protocol,
  * After calling this function, all valid invocations of get_cache_entry()
  * return HIP_PORT_INFO_UNKNOWN.
  */
-//static void invalidate_cache(void)
-//{
-//    if (cache != NULL) {
-//        memset(cache, 0, cache_size_bytes);
-//    }
-//}
+static void invalidate_cache(void)
+{
+    if (cache != NULL) {
+        memset(cache, HIP_PORT_INFO_UNKNOWN, cache_size_bytes);
+    }
+}
 
 
 
@@ -234,14 +235,64 @@ static struct hip_line_parser *tcp6_parser = NULL;
 static struct hip_line_parser *udp6_parser = NULL;
 
 /**
+ * Load the latest information from /proc.
+ * This consists of handling two separate caching layers:
+ * a) re-reading the file contents in the tcp/udp6_parser objects and
+ * b) invalidating the lookup cache.
+ * On the one hand, this operation should ideally be called for every call to
+ * hip_port_bindings_get() to retrieve up-to-date information from /proc
+ * about which ports are bound.
+ * On the other hand, this operation is about 300 times more expensive than
+ * parsing the /proc file and even more expensive compared to a cache lookup.
+ * hip_port_bindings_reload_delayed() tries to balance this conflict.
+ * After calling this function, the cache is empty and the line parser sees the
+ * up-to-date file contents from /proc.
+ *
+ * @todo TODO efficiency could be increased by narrowing this down from
+ *  reloading the files and invalidating the caches of all protocols to
+ *  individual protocols.
+ */
+static void hip_port_bindings_reload(void)
+{
+    invalidate_cache();
+    hip_lp_reload(tcp6_parser);
+    hip_lp_reload(udp6_parser);
+}
+
+/**
+ * Delay the invocation of hip_port_bindings_reload() to avoid its performance
+ * penalty.
+ * This function tries to strike a balance between the cost of
+ * hip_port_bindings_reload() and the freshness of the lookup information
+ * returned by hip_port_bindings_get().
+ * Within a time span of ten seconds, this function may be called an arbitrary
+ * number of times without itself calling hip_port_bindings_reload().
+ * Once ten seconds have passed since the last invocation of
+ * hip_port_bindings_reload(), this function calls hip_port_bindings_reload()
+ * again.
+ */
+static void hip_port_bindings_reload_delayed(void)
+{
+    static clock_t last_reload = 0;
+    clock_t now = clock();
+
+    // The docs say one should divide by CLOCKS_PER_SEC in double.
+    // However, with a granularity of 10 seconds can stick with integer math.
+    if (((now - last_reload) / (CLOCKS_PER_SEC * 10)) > 0) {
+        last_reload = now;
+        hip_port_bindings_reload();
+    }
+}
+
+/**
  * Look up the port binding from the proc file system.
  *
  * @param protocol protocol type
  * @param port the port number of the socket
  * @return the traffic type associated with the given port.
  */
-static enum hip_port_binding get_port_binding_from_proc(const uint8_t protocol,
-                                                        const uint16_t port)
+static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t protocol,
+                                                             const uint16_t port)
 {
     enum hip_port_binding result = HIP_PORT_INFO_IPV6UNBOUND;
     // the files /proc/net/{udp,tcp}6 are line-based and the line number of the
@@ -262,10 +313,11 @@ static enum hip_port_binding get_port_binding_from_proc(const uint8_t protocol,
         break;
     }
 
-    // The proc files change quickly so we reload their contents before parsing.
-    // TODO: This is surprisingly expensive and should be changed and
-    // synchronized with cache invalidation
-    hip_lp_reload(lp);
+    // Note that here we blindly parse whatever is in the file buffer.
+    // This may not be up-to-date compared to the actual /proc file.
+    // We rely on someone else calling hip_port_bindings_reload_delayed() to
+    // reload the file contents for us so that we return some at least roughly
+    // up-to-date information.
     char *line = hip_lp_first(lp);
     while (line != NULL) {
         const unsigned int PORT_OFFSET_IN_LINE = 39;
@@ -289,7 +341,13 @@ static enum hip_port_binding get_port_binding_from_proc(const uint8_t protocol,
  * Initialize the port binding lookup and allocate any necessary resources.
  *
  * @param enable_cache if not 0, use an internal cache that is consulted on
- *  lookups in favor of parsing the proc file.
+ *  lookups in favor of parsing the /proc file.
+ *  If this lookup cache is not enabled, every lookup results in parsing the
+ *  proc file.
+ *  Note however, that the /proc file itself is cached in memory and only
+ *  reloaded at a certain interval.
+ *  Within this interval, hip_port_bindings_get() might return a different
+ *  port binding status than the one in the actual /proc file.
  */
 void hip_port_bindings_init(const bool enable_cache)
 {
@@ -321,6 +379,10 @@ void hip_port_bindings_uninit(void)
  * If there is no web server or it only supports (or binds to) IPv4 addresses,
  * this function returns HIP_PORT_INFO_IPV6UNBOUND.
  *
+ * Note that due to internal caching, hip_port_bindings_get() might return for
+ * a certain caching interval a different port binding status than the one
+ * reported in the actual /proc file (see hip_port_bindings_reload_delayed()).
+ *
  * @param protocol the protocol to check the port binding for.
  *  The values are equivalent to those found in the 'Protocol' field of the
  *  IPv4 header and the 'Next Header' field of the IPv6 header.
@@ -342,11 +404,17 @@ enum hip_port_binding hip_port_bindings_get(const uint8_t protocol,
         IPPROTO_UDP == protocol) {
         const uint8_t port_hbo = ntohs(port);
 
+        // make sure we return (sort of) up-to-date information
+        hip_port_bindings_reload_delayed();
+
         // check the cache before checking /proc
+        // note that the cache might be switched off (see
+        // hip_port_bindings_init()) or was just invalidated by
+        // hip_port_bindings_reload_delayed()
         binding = get_cache_entry(protocol, port_hbo);
 
         if (HIP_PORT_INFO_UNKNOWN == binding) {
-            binding = get_port_binding_from_proc(protocol, port_hbo);
+            binding = hip_port_bindings_get_from_proc(protocol, port_hbo);
             set_cache_entry(protocol, port_hbo, binding);
         }
     } else {
