@@ -60,7 +60,7 @@ static int hip_fb_resize(hip_file_buffer_t *fb)
 {
     off_t file_size = 0;
 
-    if (NULL != fb) {
+    if (NULL == fb) {
         return 1;
     }
 
