@@ -29,6 +29,8 @@
 #ifndef HIP_FIREWALL_FILE_BUFFER_H
 #define HIP_FIREWALL_FILE_BUFFER_H
 
+#include <sys/types.h>  // size_t
+
 #ifdef __cplusplus
 extern "C" {
 #endif
