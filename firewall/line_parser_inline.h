@@ -36,7 +36,7 @@
 #include <string.h> // memchr()
 
 #include "lib/core/debug.h" // HIP_ASSERT()
-#include "firewall/file_buffer.h"   // hip_lp_new()
+#include "firewall/file_buffer.h"   // hip_lp_create()
 
 #ifdef __cplusplus
 extern "C" {

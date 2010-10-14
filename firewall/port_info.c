@@ -315,8 +315,8 @@ void hip_init_port_info(void)
     if (ENABLE_CACHE) {
         init_cache();
     }
-    tcp6_parser = hip_lp_new("/proc/net/tcp6");
-    udp6_parser = hip_lp_new("/proc/net/udp6");
+    tcp6_parser = hip_lp_create("/proc/net/tcp6");
+    udp6_parser = hip_lp_create("/proc/net/udp6");
 }
 
 /**

@@ -35,7 +35,7 @@ extern "C" {
 
 typedef struct hip_line_parser hip_line_parser_t;
 
-hip_line_parser_t *hip_lp_new(const char *file_name);
+hip_line_parser_t *hip_lp_create(const char *file_name);
 void hip_lp_delete(hip_line_parser_t *lp);
 static inline char *hip_lp_first(hip_line_parser_t *lp);
 static inline char *hip_lp_next(hip_line_parser_t *lp);

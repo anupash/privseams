@@ -41,7 +41,7 @@ static double time_hip_fb_create_delete(const unsigned long iterations,
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        hip_file_buffer_t *fb = hip_fb_new(file_name);
+        hip_file_buffer_t *fb = hip_fb_create(file_name);
         if (fb != NULL) {
             hip_fb_delete(fb);
         }
@@ -59,7 +59,7 @@ static double time_hip_fb_reload(const unsigned long iterations,
     hip_file_buffer_t *fb;
     int err;
 
-    fb = hip_fb_new(file_name);
+    fb = hip_fb_create(file_name);
     assert(fb != NULL);
 
     start = clock();
@@ -84,7 +84,7 @@ static double time_hip_lp_create_delete(const unsigned long iterations,
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        hip_line_parser_t *lp = hip_lp_new(file_name);
+        hip_line_parser_t *lp = hip_lp_create(file_name);
         if (lp != NULL) {
             hip_lp_delete(lp);
         }
@@ -102,7 +102,7 @@ static double time_hip_lp_first(const unsigned long iterations,
     hip_line_parser_t *lp;
     char *line;
 
-    lp = hip_lp_new(file_name);
+    lp = hip_lp_create(file_name);
     assert(lp != NULL);
 
     start = clock();
@@ -126,7 +126,7 @@ static double time_hip_lp_next(const unsigned long iterations,
     hip_line_parser_t *lp;
     char *line;
 
-    lp = hip_lp_new(file_name);
+    lp = hip_lp_create(file_name);
     assert(lp != NULL);
     line = hip_lp_first(lp);
     assert(line != NULL);
@@ -152,7 +152,7 @@ static double time_hip_lp_parse_file(const unsigned long iterations,
     hip_line_parser_t *lp;
     char *line;
 
-    lp = hip_lp_new(file_name);
+    lp = hip_lp_create(file_name);
     assert(lp != NULL);
 
     start = clock();
@@ -178,7 +178,7 @@ static double time_hip_lp_reload(const unsigned long iterations,
     unsigned long i;
     hip_line_parser_t *lp;
 
-    lp = hip_lp_new(file_name);
+    lp = hip_lp_create(file_name);
     assert(lp != NULL);
 
     start = clock();
@@ -241,7 +241,7 @@ int main(void)
     const in_port_t port = 0xFFFF;
 
     printf("Testing file buffer allocation and de-allocation:\n"
-           "  - call hip_fb_new() to\n"
+           "  - call hip_fb_create() to\n"
            "    - allocate the file buffer object\n"
            "    - open the file\n"
            "    - call hip_fb_reload() to\n"
@@ -260,9 +260,9 @@ int main(void)
            time_hip_fb_reload(iterations, file_name));
 
     printf("Testing line parser allocation and de-allocation:\n"
-           "  - call hip_lp_new() to\n"
+           "  - call hip_lp_create() to\n"
            "    - allocate a line parser object\n"
-           "    - call hip_fb_new() (s.a.)\n"
+           "    - call hip_fb_create() (s.a.)\n"
            "  - call hip_lp_delete() to\n"
            "    - de-allocate the line parser object\n"
            "  ==> time_hip_lp_create_delete(%ld, %s): %fs\n\n", iterations,

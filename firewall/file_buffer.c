@@ -107,7 +107,7 @@ static int hip_fb_resize(hip_file_buffer_t *fb)
  *  buffered.
  *  NULL on error.
  */
-hip_file_buffer_t *hip_fb_new(const char *file_name)
+hip_file_buffer_t *hip_fb_create(const char *file_name)
 {
     hip_file_buffer_t *fb = NULL;
 
@@ -150,7 +150,7 @@ void hip_fb_delete(hip_file_buffer_t *fb)
 }
 
 /**
- * Make modifications to the file since the last invocation of hip_fb_new() or
+ * Make modifications to the file since the last invocation of hip_fb_create() or
  * hip_fb_reload() visible in the buffer.
  *
  * @param fb the file buffer to use.

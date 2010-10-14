@@ -28,7 +28,7 @@
  */
 #include <stdlib.h>  // calloc()
 
-#include "firewall/file_buffer.h"   // hip_fb_new()
+#include "firewall/file_buffer.h"   // hip_fb_create()
 #include "firewall/line_parser.h"
 
 /**
@@ -45,7 +45,7 @@
  * @return a line parser instance if the parser could initialize correctly.
  *  NULL, if the specified file could not be accessed.
  */
-hip_line_parser_t *hip_lp_new(const char *file_name)
+hip_line_parser_t *hip_lp_create(const char *file_name)
 {
     hip_line_parser_t *lp = NULL;
 
@@ -53,7 +53,7 @@ hip_line_parser_t *hip_lp_new(const char *file_name)
         lp = (hip_line_parser_t *)calloc(1, sizeof(hip_line_parser_t));
         if (lp != NULL) {
             // cur is NULL as it should be thanks to calloc()
-            lp->fb = hip_fb_new(file_name);
+            lp->fb = hip_fb_create(file_name);
             if (lp->fb != NULL) {
                 return lp;
             }
@@ -81,7 +81,7 @@ void hip_lp_delete(hip_line_parser_t *lp)
 
 /**
  * If the line parser uses a file-based memory buffer, reload the file contents
- * to reflect any changes in the file since the last invocation of hip_lp_new()
+ * to reflect any changes in the file since the last invocation of hip_lp_create()
  * or hip_lp_reload().
  * When this function returns, the current parsing position is reset and parsing
  * must be restarted by calling hip_lp_first().

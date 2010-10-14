@@ -64,7 +64,7 @@ typedef struct hip_file_buffer {
     int _fd;
 } hip_file_buffer_t;
 
-hip_file_buffer_t *hip_fb_new(const char *file_name);
+hip_file_buffer_t *hip_fb_create(const char *file_name);
 void hip_fb_delete(hip_file_buffer_t *fb);
 int hip_fb_reload(hip_file_buffer_t *fb);
 
