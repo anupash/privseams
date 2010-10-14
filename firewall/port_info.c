@@ -90,8 +90,6 @@ static void uninit_cache(void)
     if (NULL != cache) {
         free(cache);
         cache = NULL;
-    } else {
-        HIP_ERROR("Deallocating the port info cache failed because it was not allocated\n");
     }
 }
 
@@ -178,8 +176,6 @@ static void set_cache_entry(const uint8_t protocol,
         HIP_ASSERT((const hip_port_info_t)value == info);
 
         cache[index] = value;
-    } else {
-        HIP_ERROR("Unable to set cache entry, cache not allocated\n");
     }
 }
 
@@ -216,8 +212,6 @@ static hip_port_info_t get_cache_entry(const uint8_t protocol,
         const unsigned long index = get_cache_index(protocol, port);
 
         info = (hip_port_info_t)cache[index];
-    } else {
-        HIP_ERROR("Unable to retrieve cache entry, cache not allocated\n");
     }
 
     // check return value
