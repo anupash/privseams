@@ -24,7 +24,7 @@
  */
 /**
  * @file
- * The port information says whether a port is locally bound to an IPv6
+ * The port binding says whether a port is locally bound to an IPv6
  * application or not.
  * This allows the firewall to determine whether an incoming HIT-based packet
  * is meant to go to a local IPv6 port or not.
@@ -50,7 +50,7 @@ extern "C" {
  * The binding state of a particular TCP or UDP port under IPv6 on the local
  * host.
  */
-typedef enum hip_port_info_ {
+enum hip_port_binding {
     /**
      * It is not known which network protocol the port is bound under.
      */
@@ -65,12 +65,12 @@ typedef enum hip_port_info_ {
      * address)
      */
     HIP_PORT_INFO_IPV6BOUND,
-} hip_port_info_t;
+};
 
-void hip_init_port_info(void);
-void hip_uninit_port_info(void);
-hip_port_info_t hip_get_port_info(const uint8_t proto,
-                  				  const in_port_t port);
+void hip_port_bindings_init(void);
+void hip_port_bindings_uninit(void);
+enum hip_port_binding hip_port_bindings_get(const uint8_t proto,
+                  				            const in_port_t port);
 
 #ifdef __cplusplus
 }

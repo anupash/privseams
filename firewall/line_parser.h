@@ -33,13 +33,13 @@
 extern "C" {
 #endif
 
-typedef struct hip_line_parser hip_line_parser_t;
+struct hip_line_parser;
 
-hip_line_parser_t *hip_lp_create(const char *file_name);
-void hip_lp_delete(hip_line_parser_t *lp);
-static inline char *hip_lp_first(hip_line_parser_t *lp);
-static inline char *hip_lp_next(hip_line_parser_t *lp);
-int hip_lp_reload(hip_line_parser_t *lp);
+struct hip_line_parser *hip_lp_create(const char *file_name);
+void hip_lp_delete(struct hip_line_parser *lp);
+static inline char *hip_lp_first(struct hip_line_parser *lp);
+static inline char *hip_lp_next(struct hip_line_parser *lp);
+int hip_lp_reload(struct hip_line_parser *lp);
 
 #ifdef __cplusplus
 }

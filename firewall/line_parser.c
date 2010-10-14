@@ -37,7 +37,7 @@
  * When this function returns successfully, hip_lp_first() can be called
  * immediately to start parsing.
  * This function allocates resources, in particular memory, for the returned
- * hip_line_parser_t object.
+ * struct hip_line_parser object.
  * To free these resources and to avoid memory leaks, it is imperative to call
  * hip_lp_delete() when the object created here is no longer used.
  *
@@ -45,12 +45,12 @@
  * @return a line parser instance if the parser could initialize correctly.
  *  NULL, if the specified file could not be accessed.
  */
-hip_line_parser_t *hip_lp_create(const char *file_name)
+struct hip_line_parser *hip_lp_create(const char *file_name)
 {
-    hip_line_parser_t *lp = NULL;
+    struct hip_line_parser *lp = NULL;
 
     if (file_name != NULL) {
-        lp = (hip_line_parser_t *)calloc(1, sizeof(hip_line_parser_t));
+        lp = (struct hip_line_parser *)calloc(1, sizeof(struct hip_line_parser));
         if (lp != NULL) {
             // cur is NULL as it should be thanks to calloc()
             lp->fb = hip_fb_create(file_name);
@@ -69,7 +69,7 @@ hip_line_parser_t *hip_lp_create(const char *file_name)
  *
  * @param lp the line parser object to delete.
  */
-void hip_lp_delete(hip_line_parser_t *lp)
+void hip_lp_delete(struct hip_line_parser *lp)
 {
     if (lp != NULL) {
         if (lp->fb != NULL) {
@@ -89,7 +89,7 @@ void hip_lp_delete(hip_line_parser_t *lp)
  * @param lp the line parser to use.
  * @return 0 if the file contents could be successfully reloaded or 1 on error.
  */
-int hip_lp_reload(hip_line_parser_t *lp)
+int hip_lp_reload(struct hip_line_parser *lp)
 {
     if (NULL == lp ||
         NULL == lp->fb) {

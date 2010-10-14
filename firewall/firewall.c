@@ -91,7 +91,7 @@
 #include "lsi.h"
 #include "midauth.h"
 #include "pisa.h"
-#include "port_info.h"
+#include "port_bindings.h"
 #include "reinject.h"
 #include "rule_management.h"
 #include "user_ipsec_api.h"
@@ -544,7 +544,7 @@ static int firewall_init_extensions(void)
     // Initializing local cache database
     hip_firewall_cache_init_hldb();
     // Initializing local port cache database
-    hip_init_port_info();
+    hip_port_bindings_init();
     /* Initialize raw sockets for packet reinjection */
     hip_firewall_init_raw_sockets();
 
@@ -672,7 +672,7 @@ static void firewall_exit(void)
     }
 
     hip_firewall_cache_delete_hldb(1);
-    hip_uninit_port_info();
+    hip_port_bindings_uninit();
     hip_fw_uninit_system_based_opp_mode();
     hip_fw_flush_iptables();
     /* rules have to be removed first, otherwise HIP packets won't pass through

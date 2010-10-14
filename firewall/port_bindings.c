@@ -36,7 +36,7 @@
 
 #include "lib/core/debug.h"
 #include "firewall/line_parser.h"
-#include "firewall/port_info.h"
+#include "firewall/port_bindings.h"
 
 
 /**
@@ -45,13 +45,13 @@
 static const unsigned long ENABLE_CACHE = 1;
 
 /**
- * Pointer to the port information cache.
+ * Pointer to the port bindings cache.
  *
  * The cache is a two-dimensional array.
  * The first dimension is the transport protocol for which a port can be bound
  * (supported are TCP and UDP).
  * The second dimension is the port number itself.
- * The value is a uint8_t representation of an hip_port_info_t value
+ * The value is a uint8_t representation of an enum hip_port_binding value
  */
 static uint8_t *cache = NULL;
 
@@ -76,7 +76,7 @@ static void init_cache(void)
     /* We zero the cache on allocation assuming that HIP_PORT_INFO_UNKNOWN
     is 0 and thus the whole cache initially has that value. */
     if (NULL == cache) {
-        HIP_ERROR("Allocating the port info cache failed\n");
+        HIP_ERROR("Allocating the port bindings cache failed\n");
     }
 }
 
@@ -108,7 +108,7 @@ static void uninit_cache(void)
  *  The value is the same as used in the IPv4 'protocol' and the IPv6 'Next
  *  Header' fields.
  *  The only supported values are 6 for TCP and 17 for UDP.
- * @param port the port in host byte order to set the port information for.
+ * @param port the port in host byte order to get the port binding for.
  *  Valid values range from 0 to 2^16-1.
  * @return the index of the cache entry for @a protocol and @a port.
  */
@@ -138,28 +138,24 @@ static unsigned long get_cache_index(const uint8_t protocol,
 }
 
 /**
- * Cache information on the port of a given protocol.
+ * Cache binding state on the port of a given protocol.
  *
- * Looking up the port information from the /proc file systems is relatively
- * expensive.
- * Thus, we use this cache to speed up the lookup.
- *
- * This function is called after looking up port information from the /proc
+ * This function is called after looking up port binding status from the /proc
  * file system.
  * After it has been called, a call to hip_firewall_port_cache_set() with the
- * same protocol and port returns the previously set port information.
+ * same protocol and port returns the previously set port binding.
  *
  * @param protocol the protocol the specified port belongs to.
  *  The value is the same as used in the IPv4 'protocol' and the IPv6 'Next
  *  Header' fields.
  *  The only supported values are 6 for TCP and 17 for UDP.
- * @param port the port in host byte order to set the port information for.
+ * @param port the port in host byte order to set the port binding for.
  *  Valid values range from 0 to 2^16-1.
- * @param info the information to store in the cache.
+ * @param binding the binding to store in the cache.
  */
 static void set_cache_entry(const uint8_t protocol,
                             const uint16_t port,
-                            const hip_port_info_t info)
+                            const enum hip_port_binding binding)
 {
     // check input parameters
     HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
@@ -169,40 +165,40 @@ static void set_cache_entry(const uint8_t protocol,
         // calculate index of cache entry
         const unsigned long index = get_cache_index(protocol, port);
 
-        // convert the port info to the cache storage type
-        const uint8_t value = (uint8_t)info;
+        // convert the port binding to the cache storage type
+        const uint8_t value = (uint8_t)binding;
 
         // check that the conversion is consistent
-        HIP_ASSERT((const hip_port_info_t)value == info);
+        HIP_ASSERT((const enum hip_port_binding)value == binding);
 
         cache[index] = value;
     }
 }
 
 /**
- * Retrieve port information for a given protocol from the cache.
+ * Retrieve port binding for a given protocol from the cache.
  *
- * Looking up the port information from the /proc file systems is relatively
+ * Looking up the port binding from the /proc file systems is relatively
  * expensive.
  * Thus, we use this cache to speed up the lookup.
  *
- * This function is called before looking up port information from the /proc
+ * This function is called before looking up the port binding from the /proc
  * file system.
  *
  * @param protocol the protocol the specified port belongs to.
  *  The value is the same as used in the IPv4 'protocol' and the IPv6 'Next
  *  Header' fields.
  *  The only supported values are 6 for TCP and 17 for UDP.
- * @param port the port in host byte order to set the port information for.
+ * @param port the port in host byte order to set the port binding for.
  *  Valid values range from 0 to 2^16-1.
- * @return If the port information was previously stored, it is returned.
- *  If the port information was not previously stored or the cache is not
+ * @return If the port binding was previously stored, it is returned.
+ *  If the port binding was not previously stored or the cache is not
  *  available, HIP_PORT_INFO_UNKNOWN is returned.
  */
-static hip_port_info_t get_cache_entry(const uint8_t protocol,
-                                       const uint16_t port)
+static enum hip_port_binding get_cache_entry(const uint8_t protocol,
+                                             const uint16_t port)
 {
-    hip_port_info_t info = HIP_PORT_INFO_UNKNOWN;
+    enum hip_port_binding binding = HIP_PORT_INFO_UNKNOWN;
 
     // check input parameters
     HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
@@ -211,15 +207,15 @@ static hip_port_info_t get_cache_entry(const uint8_t protocol,
     if (NULL != cache) {
         const unsigned long index = get_cache_index(protocol, port);
 
-        info = (hip_port_info_t)cache[index];
+        binding = (enum hip_port_binding)cache[index];
     }
 
     // check return value
-    HIP_ASSERT(HIP_PORT_INFO_UNKNOWN == info ||
-               HIP_PORT_INFO_IPV6UNBOUND == info ||
-               HIP_PORT_INFO_IPV6BOUND == info);
+    HIP_ASSERT(HIP_PORT_INFO_UNKNOWN == binding ||
+               HIP_PORT_INFO_IPV6UNBOUND == binding ||
+               HIP_PORT_INFO_IPV6BOUND == binding);
 
-    return info;
+    return binding;
 }
 
 /**
@@ -240,24 +236,24 @@ static hip_port_info_t get_cache_entry(const uint8_t protocol,
 
 
 
-static hip_line_parser_t *tcp6_parser = NULL;
-static hip_line_parser_t *udp6_parser = NULL;
+static struct hip_line_parser *tcp6_parser = NULL;
+static struct hip_line_parser *udp6_parser = NULL;
 
 /**
- * Look up the port information from the proc file system.
+ * Look up the port binding from the proc file system.
  *
  * @param protocol protocol type
  * @param port the port number of the socket
  * @return the traffic type associated with the given port.
  */
-static hip_port_info_t get_port_info_from_proc(const uint8_t protocol,
-                                               const uint16_t port)
+static enum hip_port_binding get_port_binding_from_proc(const uint8_t protocol,
+                                                  const uint16_t port)
 {
-    hip_port_info_t result = HIP_PORT_INFO_IPV6UNBOUND;
+    enum hip_port_binding result = HIP_PORT_INFO_IPV6UNBOUND;
     // the files /proc/net/{udp,tcp}6 are line-based and the line number of the
     // port to look up is not known in advance
     // -> use a parser that lets us iterate over the lines in the files
-    hip_line_parser_t *lp = NULL;
+    struct hip_line_parser *lp = NULL;
 
     // the parser can re-read the file contents online, so we re-use the parser
     // objects for all lookups
@@ -296,9 +292,9 @@ static hip_port_info_t get_port_info_from_proc(const uint8_t protocol,
 }
 
 /**
- * Initialize the port information lookup and allocate any necessary resources.
+ * Initialize the port binding lookup and allocate any necessary resources.
  */
-void hip_init_port_info(void)
+void hip_port_bindings_init(void)
 {
     // The cache is built such that it can be disabled just by not initializing
     // it here.
@@ -310,9 +306,9 @@ void hip_init_port_info(void)
 }
 
 /**
- * Release any resources allocated for port information lookups.
+ * Release any resources allocated for port binding lookups.
  */
-void hip_uninit_port_info(void)
+void hip_port_bindings_uninit(void)
 {
     hip_lp_delete(tcp6_parser);
     hip_lp_delete(udp6_parser);
@@ -325,8 +321,8 @@ void hip_uninit_port_info(void)
  *
  * For example, on a system with a running IPv6-capable web server, this
  * function returns HIP_PORT_INFO_IPV6BOUND.
- * If the web server only supports (or binds to) IPv4 addresses, this function
- * returns HIP_PORT_INFO_IPV6UNBOUND.
+ * If there is no web server or it only supports (or binds to) IPv4 addresses,
+ * this function returns HIP_PORT_INFO_IPV6UNBOUND.
  *
  * @param protocol the protocol to check the port binding for.
  *  The values are equivalent to those found in the 'Protocol' field of the
@@ -339,10 +335,10 @@ void hip_uninit_port_info(void)
  *  protocol to an IPv6 address.
  *  HIP_PORT_INFO_IPV6UNBOUND if it is not.
  */
-hip_port_info_t hip_get_port_info(const uint8_t protocol,
-                                  const in_port_t port)
+enum hip_port_binding hip_port_bindings_get(const uint8_t protocol,
+                                            const in_port_t port)
 {
-    hip_port_info_t info = HIP_PORT_INFO_IPV6UNBOUND;
+    enum hip_port_binding binding = HIP_PORT_INFO_IPV6UNBOUND;
 
     // check input parameters
     if (IPPROTO_TCP == protocol ||
@@ -350,19 +346,19 @@ hip_port_info_t hip_get_port_info(const uint8_t protocol,
         const uint8_t port_hbo = ntohs(port);
 
         // check the cache before checking /proc
-        info = get_cache_entry(protocol, port_hbo);
+        binding = get_cache_entry(protocol, port_hbo);
 
-        if (HIP_PORT_INFO_UNKNOWN == info) {
-            info = get_port_info_from_proc(protocol, port_hbo);
-            set_cache_entry(protocol, port_hbo, info);
+        if (HIP_PORT_INFO_UNKNOWN == binding) {
+            binding = get_port_binding_from_proc(protocol, port_hbo);
+            set_cache_entry(protocol, port_hbo, binding);
         }
     } else {
         HIP_ERROR("Protocol %d not supported\n", protocol);
     }
 
     // check return value
-    HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == info ||
-               HIP_PORT_INFO_IPV6BOUND == info);
+    HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == binding ||
+               HIP_PORT_INFO_IPV6BOUND == binding);
 
-    return info;
+    return binding;
 }

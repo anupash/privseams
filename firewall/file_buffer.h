@@ -42,7 +42,7 @@ extern "C" {
  * Any changes to the memory buffer are not written back to the file and remain
  * local to the memory buffer.
  */
-typedef struct hip_file_buffer {
+struct hip_file_buffer {
     /**
      * Points to the first byte of file data and the beginning of the buffer.
      */
@@ -54,19 +54,19 @@ typedef struct hip_file_buffer {
     /*
      * The number of bytes in the allocated buffer.
      * _size is less than or equal to (end - start).
-     * This field should not to be accessed by users of hip_file_buffer_t.
+     * This field should not to be accessed by users of struct hip_file_buffer.
      */
     size_t _size;
     /*
      * The file descriptor for the file backing the buffer.
-     * This field should not to be accessed by users of hip_file_buffer_t.
+     * This field should not to be accessed by users of struct hip_file_buffer.
      */
     int _fd;
-} hip_file_buffer_t;
+};
 
-hip_file_buffer_t *hip_fb_create(const char *file_name);
-void hip_fb_delete(hip_file_buffer_t *fb);
-int hip_fb_reload(hip_file_buffer_t *fb);
+struct hip_file_buffer *hip_fb_create(const char *file_name);
+void hip_fb_delete(struct hip_file_buffer *fb);
+int hip_fb_reload(struct hip_file_buffer *fb);
 
 #ifdef __cplusplus
 }

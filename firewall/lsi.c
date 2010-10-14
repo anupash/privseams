@@ -63,7 +63,7 @@
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
 #include "cache.h"
-#include "port_info.h"
+#include "port_bindings.h"
 #include "firewall.h"
 #include "lsi.h"
 #include "reinject.h"
@@ -316,7 +316,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int ip_hdr_size                                       = 0;
     int portDest                                          = 0;
     fw_cache_hl_t *entry                                  = NULL;
-    hip_port_info_t port_traffic_type = HIP_PORT_INFO_UNKNOWN;
+    enum hip_port_binding port_traffic_type = HIP_PORT_INFO_UNKNOWN;
     const struct ip6_hdr *ip6_hdr                         = NULL;
     struct in6_addr src_addr, dst_addr;
 
@@ -338,7 +338,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
         break;
     }
 
-    port_traffic_type = hip_get_port_info(ip6_hdr->ip6_nxt,
+    port_traffic_type = hip_port_bindings_get(ip6_hdr->ip6_nxt,
                                           portDest);
 
     if (port_traffic_type == HIP_PORT_INFO_IPV6BOUND) {

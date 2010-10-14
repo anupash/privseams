@@ -34,7 +34,7 @@ endif
 
 
 ### test programs ###
-noinst_PROGRAMS = test/fw_port_info_performance
+noinst_PROGRAMS = test/fw_port_bindings_performance
 
 
 
@@ -45,14 +45,14 @@ lib_LTLIBRARIES += lib/modularization/libmod.la
 
 ### source declarations ###
 
-test_auth_performance_SOURCES           = test/auth_performance.c
-test_certteststub_SOURCES               = test/certteststub.c
-test_dh_performance_SOURCES             = test/dh_performance.c
-test_hc_performance_SOURCES             = test/hc_performance.c
-test_fw_port_info_performance_SOURCES   = test/fw_port_info_performance.c     \
-                                          firewall/file_buffer.c              \
-                                          firewall/line_parser.c              \
-                                          firewall/port_info.c
+test_auth_performance_SOURCES          	    = test/auth_performance.c
+test_certteststub_SOURCES                   = test/certteststub.c
+test_dh_performance_SOURCES                 = test/dh_performance.c
+test_hc_performance_SOURCES                 = test/hc_performance.c
+test_fw_port_bindings_performance_SOURCES   = test/fw_port_bindings_performance.c \
+                                              firewall/file_buffer.c              \
+                                              firewall/line_parser.c              \
+                                              firewall/port_bindings.c
 
 tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
@@ -110,7 +110,7 @@ firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/hslist.c              \
                          firewall/line_parser.c         \
                          firewall/lsi.c                 \
-                         firewall/port_info.c           \
+                         firewall/port_bindings.c       \
                          firewall/reinject.c            \
                          firewall/rule_management.c     \
                          firewall/sysopp.c              \
@@ -184,7 +184,7 @@ test_auth_performance_LDADD              = lib/core/libhipcore.la
 test_certteststub_LDADD                  = lib/core/libhipcore.la
 test_dh_performance_LDADD                = lib/core/libhipcore.la
 test_hc_performance_LDADD                = lib/core/libhipcore.la
-test_fw_port_info_performance_LDADD      = lib/core/libhipcore.la
+test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
 tools_hipconf_LDADD                     += lib/core/libhipcore.la
 tools_pisacert_LDADD                     = lib/core/libhipcore.la
 

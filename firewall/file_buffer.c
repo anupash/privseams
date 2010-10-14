@@ -56,7 +56,7 @@ static const unsigned long HIP_FB_MAX_SIZE = 1024 * 1024 * 1024;
  * @param fb the file buffer to use.
  * @return 0 if the buffer could be allocated, a non-zero value else.
  */
-static int hip_fb_resize(hip_file_buffer_t *fb)
+static int hip_fb_resize(struct hip_file_buffer *fb)
 {
     off_t file_size = 0;
 
@@ -98,7 +98,7 @@ static int hip_fb_resize(hip_file_buffer_t *fb)
  * Creates a file buffer that holds the specified file.
  *
  * This function allocates resources, in particular memory, for the returned
- * hip_line_parser_t object.
+ * struct hip_line_parser object.
  * To free these resources and to avoid memory leaks, it is imperative to call
  * hip_lp_delete() when the object created here is no longer used.
  *
@@ -107,12 +107,12 @@ static int hip_fb_resize(hip_file_buffer_t *fb)
  *  buffered.
  *  NULL on error.
  */
-hip_file_buffer_t *hip_fb_create(const char *file_name)
+struct hip_file_buffer *hip_fb_create(const char *file_name)
 {
-    hip_file_buffer_t *fb = NULL;
+    struct hip_file_buffer *fb = NULL;
 
     if (file_name != NULL) {
-        fb = (hip_file_buffer_t *)calloc(1, sizeof(hip_file_buffer_t));
+        fb = (struct hip_file_buffer *)calloc(1, sizeof(struct hip_file_buffer));
         if (fb != NULL) {
             fb->_fd = open(file_name, O_RDONLY);
             if (fb->_fd != -1) {
@@ -136,7 +136,7 @@ hip_file_buffer_t *hip_fb_create(const char *file_name)
  *
  * @param fb the file buffer to delete.
  */
-void hip_fb_delete(hip_file_buffer_t *fb)
+void hip_fb_delete(struct hip_file_buffer *fb)
 {
     if (fb != NULL) {
         if (fb->_fd != -1) {
@@ -158,7 +158,7 @@ void hip_fb_delete(hip_file_buffer_t *fb)
  *  1 if the file could not be read or not enough buffer space could be
  *  allocated.
  */
-int hip_fb_reload(hip_file_buffer_t *fb)
+int hip_fb_reload(struct hip_file_buffer *fb)
 {
     if (NULL == fb || -1 == fb->_fd) {
         return 1;

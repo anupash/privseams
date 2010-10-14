@@ -31,7 +31,7 @@
 #include <assert.h>
 #include "firewall/file_buffer.h"
 #include "firewall/line_parser.h"
-#include "firewall/port_info.h"
+#include "firewall/port_bindings.h"
 
 static double time_hip_fb_create_delete(const unsigned long iterations,
                                         const char *file_name)
@@ -41,7 +41,7 @@ static double time_hip_fb_create_delete(const unsigned long iterations,
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        hip_file_buffer_t *fb = hip_fb_create(file_name);
+        struct hip_file_buffer *fb = hip_fb_create(file_name);
         if (fb != NULL) {
             hip_fb_delete(fb);
         }
@@ -56,7 +56,7 @@ static double time_hip_fb_reload(const unsigned long iterations,
 {
     clock_t start, end;
     unsigned long i;
-    hip_file_buffer_t *fb;
+    struct hip_file_buffer *fb;
     int err;
 
     fb = hip_fb_create(file_name);
@@ -84,7 +84,7 @@ static double time_hip_lp_create_delete(const unsigned long iterations,
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        hip_line_parser_t *lp = hip_lp_create(file_name);
+        struct hip_line_parser *lp = hip_lp_create(file_name);
         if (lp != NULL) {
             hip_lp_delete(lp);
         }
@@ -99,7 +99,7 @@ static double time_hip_lp_first(const unsigned long iterations,
 {
     clock_t start, end;
     unsigned long i;
-    hip_line_parser_t *lp;
+    struct hip_line_parser *lp;
     char *line;
 
     lp = hip_lp_create(file_name);
@@ -123,7 +123,7 @@ static double time_hip_lp_next(const unsigned long iterations,
 {
     clock_t start, end;
     unsigned long i;
-    hip_line_parser_t *lp;
+    struct hip_line_parser *lp;
     char *line;
 
     lp = hip_lp_create(file_name);
@@ -149,7 +149,7 @@ static double time_hip_lp_parse_file(const unsigned long iterations,
 {
     clock_t start, end;
     unsigned long i;
-    hip_line_parser_t *lp;
+    struct hip_line_parser *lp;
     char *line;
 
     lp = hip_lp_create(file_name);
@@ -176,7 +176,7 @@ static double time_hip_lp_reload(const unsigned long iterations,
 {
     clock_t start, end;
     unsigned long i;
-    hip_line_parser_t *lp;
+    struct hip_line_parser *lp;
 
     lp = hip_lp_create(file_name);
     assert(lp != NULL);
@@ -194,38 +194,38 @@ static double time_hip_lp_reload(const unsigned long iterations,
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
 
-static double time_hip_port_info_create_delete(const unsigned long iterations)
+static double time_hip_port_binding_create_delete(const unsigned long iterations)
 {
     clock_t start, end;
     unsigned long i;
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        hip_init_port_info();
-        hip_uninit_port_info();
+        hip_port_bindings_init();
+        hip_port_bindings_uninit();
     }
     end = clock();
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
 
-static double time_hip_get_port_info(const unsigned long iterations,
+static double time_hip_port_bindings_get(const unsigned long iterations,
                                      const uint8_t proto,
                                      const in_port_t port)
 {
     clock_t start, end;
     unsigned long i;
-    hip_port_info_t pi;
+    enum hip_port_binding pi;
 
-    hip_init_port_info();
+    hip_port_bindings_init();
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        pi = hip_get_port_info(proto, port);
+        pi = hip_port_bindings_get(proto, port);
     }
     end = clock();
 
-    hip_uninit_port_info();
+    hip_port_bindings_uninit();
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
@@ -293,22 +293,22 @@ int main(void)
            "  ==> time_hip_lp_reload(%ld, %s): %fs\n\n", iterations, file_name,
            time_hip_lp_reload(iterations, file_name));
 
-    printf("Testing port info allocation and de-allocation:\n"
-           "  - call hip_init_port_info() to\n"
+    printf("Testing port binding allocation and de-allocation:\n"
+           "  - call hip_port_bindings_init() to\n"
            "    - allocate and zero cache\n"
            "    - create tcp6 and udp6 line parser objects\n"
-           "  - call hip_uninit_port_info() to\n"
+           "  - call hip_port_bindings_uninit() to\n"
            "    - delete tcp6 and udp6 line parser objects\n"
            "    - de-allocate cache\n"
-           "  ==> time_hip_port_info_create_delete(%ld): %fs\n\n", iterations,
-           time_hip_port_info_create_delete(iterations));
+           "  ==> time_hip_port_binding_create_delete(%ld): %fs\n\n", iterations,
+           time_hip_port_binding_create_delete(iterations));
 
-    printf("Testing port info parsing:\n"
-           "  - call hip_get_port_info() to\n"
-           "    - check cache for port info\n"
+    printf("Testing port binding parsing:\n"
+           "  - call hip_port_bindings_get() to\n"
+           "    - check cache for port binding\n"
            "    - parse proc file if no cache entry\n"
-           "  ==> time_hip_get_port_info(%ld, %d, 0x%X): %fs\n\n", iterations,
-           proto, port, time_hip_get_port_info(iterations, proto, port));
+           "  ==> time_hip_port_bindings_get(%ld, %d, 0x%X): %fs\n\n", iterations,
+           proto, port, time_hip_port_bindings_get(iterations, proto, port));
 
     return 0;
 }
