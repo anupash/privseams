@@ -33,6 +33,11 @@ sbin_PROGRAMS += firewall/hipfw
 endif
 
 
+### test programs ###
+noinst_PROGRAMS = test/fw_port_info_performance
+
+
+
 ### libraries ###
 lib_LTLIBRARIES = lib/core/libhipcore.la
 lib_LTLIBRARIES += lib/modularization/libmod.la
@@ -40,10 +45,14 @@ lib_LTLIBRARIES += lib/modularization/libmod.la
 
 ### source declarations ###
 
-test_auth_performance_SOURCES = test/auth_performance.c
-test_certteststub_SOURCES     = test/certteststub.c
-test_dh_performance_SOURCES   = test/dh_performance.c
-test_hc_performance_SOURCES   = test/hc_performance.c
+test_auth_performance_SOURCES           = test/auth_performance.c
+test_certteststub_SOURCES               = test/certteststub.c
+test_dh_performance_SOURCES             = test/dh_performance.c
+test_hc_performance_SOURCES             = test/hc_performance.c
+test_fw_port_info_performance_SOURCES   = test/fw_port_info_performance.c     \
+                                          firewall/file_buffer.c              \
+                                          firewall/line_parser.c              \
+                                          firewall/port_info.c
 
 tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
@@ -168,15 +177,16 @@ include modules/update/Makefile.am
 
 ### library dependencies ###
 
-firewall_hipfw_LDADD          += lib/core/libhipcore.la
-hipd_hipd_LDADD               += lib/modularization/libmod.la \
-                                 lib/core/libhipcore.la
-test_auth_performance_LDADD    = lib/core/libhipcore.la
-test_certteststub_LDADD        = lib/core/libhipcore.la
-test_dh_performance_LDADD      = lib/core/libhipcore.la
-test_hc_performance_LDADD      = lib/core/libhipcore.la
-tools_hipconf_LDADD           += lib/core/libhipcore.la
-tools_pisacert_LDADD           = lib/core/libhipcore.la
+firewall_hipfw_LDADD                    += lib/core/libhipcore.la
+hipd_hipd_LDADD                         += lib/modularization/libmod.la \
+                                           lib/core/libhipcore.la
+test_auth_performance_LDADD              = lib/core/libhipcore.la
+test_certteststub_LDADD                  = lib/core/libhipcore.la
+test_dh_performance_LDADD                = lib/core/libhipcore.la
+test_hc_performance_LDADD                = lib/core/libhipcore.la
+test_fw_port_info_performance_LDADD      = lib/core/libhipcore.la
+tools_hipconf_LDADD                     += lib/core/libhipcore.la
+tools_pisacert_LDADD                     = lib/core/libhipcore.la
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \
