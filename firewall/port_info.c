@@ -297,16 +297,6 @@ static hip_port_info_t get_port_info_from_proc(const uint8_t protocol,
 
 /**
  * Initialize the port information lookup and allocate any necessary resources.
- *
- * The port information says whether a port is locally bound to an IPv6
- * application or not.
- * This allows the firewall to determine whether an incoming HIT-based packet
- * is meant to go to a local IPv6 port or not.
- * If not, the packet needs to be converted to IPv4 and sent to an LSI.
- * More details can be found in <a
- * href="http://hipl.hiit.fi/hipl/thesis_teresa_finez.pdf">T. Finez,
- * Backwards Compatibility Experimentation with Host Identity Protocol
- * and Legacy Software and Networks , final project, December 2008</a>.
  */
 void hip_init_port_info(void)
 {

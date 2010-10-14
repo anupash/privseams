@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -24,6 +22,20 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+/**
+ * @file
+ * The port information says whether a port is locally bound to an IPv6
+ * application or not.
+ * This allows the firewall to determine whether an incoming HIT-based packet
+ * is meant to go to a local IPv6 port or not.
+ * If not, the packet needs to be converted to IPv4 and sent to an LSI.
+ * More details can be found in <a
+ * href="http://hipl.hiit.fi/hipl/thesis_teresa_finez.pdf">T. Finez,
+ * Backwards Compatibility Experimentation with Host Identity Protocol
+ * and Legacy Software and Networks , final project, December 2008</a>.
+ *
+ * @author Miika Komu <miika@iki.fi>, Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
+ */
 
 #ifndef HIP_FIREWALL_PORT_INFO_H
 #define HIP_FIREWALL_PORT_INFO_H
@@ -34,13 +46,25 @@
 extern "C" {
 #endif
 
+/**
+ * The binding state of a particular TCP or UDP port under IPv6 on the local
+ * host.
+ */
 typedef enum hip_port_info_ {
-    HIP_PORT_INFO_UNKNOWN = 0,  /** It is not known which protocol a port is
-                                 * bound under */
-    HIP_PORT_INFO_IPV6UNBOUND,  /** The port is not bound to an IPv6 address
-                                 * (but potentially to an IPv4 address) */
-    HIP_PORT_INFO_IPV6BOUND,    /** The port is bound to an IPv6 address (and
-                                 * potentially to an IPv4 address) */
+    /**
+     * It is not known which network protocol the port is bound under.
+     */
+    HIP_PORT_INFO_UNKNOWN = 0,
+    /**
+     * The port is not bound to an IPv6 address (but potentially to an
+     * IPv4 address).
+     */
+    HIP_PORT_INFO_IPV6UNBOUND,
+    /**
+     * The port is bound to an IPv6 address (and potentially to an IPv4
+     * address)
+     */
+    HIP_PORT_INFO_IPV6BOUND,
 } hip_port_info_t;
 
 void hip_init_port_info(void);
