@@ -383,6 +383,11 @@ void hip_port_bindings_uninit(void)
  * a certain caching interval a different port binding status than the one
  * reported in the actual /proc file (see hip_port_bindings_reload_delayed()).
  *
+ * The binary test/fw_port_bindings_performance benchmarks the elements that
+ * influence the performance of the hip_port_bindings_* code.
+ * Please have a look at the numbers it generates when changing this code under
+ * performance aspects.
+ *
  * @param protocol the protocol to check the port binding for.
  *  The values are equivalent to those found in the 'Protocol' field of the
  *  IPv4 header and the 'Next Header' field of the IPv6 header.
@@ -404,7 +409,10 @@ enum hip_port_binding hip_port_bindings_get(const uint8_t protocol,
         IPPROTO_UDP == protocol) {
         const uint8_t port_hbo = ntohs(port);
 
-        // make sure we return (sort of) up-to-date information
+        // Make sure we return (sort of) up-to-date information.
+        // This is the one potentially slow operation here.
+        // The others (hip_port_bindings_get_from_proc() and the cache access
+        // functions) are very fast.
         hip_port_bindings_reload_delayed();
 
         // check the cache before checking /proc
