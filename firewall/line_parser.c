@@ -50,7 +50,7 @@ struct hip_line_parser *hip_lp_create(const char *file_name)
     struct hip_line_parser *lp = NULL;
 
     if (file_name != NULL) {
-        lp = (struct hip_line_parser *)calloc(1, sizeof(struct hip_line_parser));
+        lp = calloc(1, sizeof(struct hip_line_parser));
         if (lp != NULL) {
             // cur is NULL as it should be thanks to calloc()
             lp->fb = hip_fb_create(file_name);

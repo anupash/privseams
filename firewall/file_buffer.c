@@ -85,7 +85,7 @@ static int hip_fb_resize(struct hip_file_buffer *fb)
 
     if (fb->_size <= HIP_FB_MAX_SIZE) {
         // allocate the buffer
-        fb->start = (char *)malloc(fb->_size);
+        fb->start = malloc(fb->_size);
         if (NULL == fb->start) {
             fb->_size = 0;
         }
@@ -112,7 +112,7 @@ struct hip_file_buffer *hip_fb_create(const char *file_name)
     struct hip_file_buffer *fb = NULL;
 
     if (file_name != NULL) {
-        fb = (struct hip_file_buffer *)calloc(1, sizeof(struct hip_file_buffer));
+        fb = calloc(1, sizeof(struct hip_file_buffer));
         if (fb != NULL) {
             fb->_fd = open(file_name, O_RDONLY);
             if (fb->_fd != -1) {
