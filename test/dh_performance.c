@@ -1,5 +1,5 @@
 /*!
- * \file dh_performance.c
+ * \file
  *
  * \brief Performance testfile that can be used for benchmarking a system.
  * \author Tobias Heer
