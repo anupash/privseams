@@ -90,15 +90,15 @@ static double time_hip_fb_reload(const unsigned int iterations,
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
 
-static double time_hip_lp_create_delete(const unsigned int iterations,
-                                        const char *file_name)
+static double time_hip_lp_create_delete(const unsigned int iterations)
 {
     clock_t start, end;
     unsigned int i;
+    struct hip_mem_area ma = { 0, 0 };
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        struct hip_line_parser *lp = hip_lp_create(file_name);
+        struct hip_line_parser *lp = hip_lp_create(&ma);
         if (lp != NULL) {
             hip_lp_delete(lp);
         }
@@ -108,15 +108,15 @@ static double time_hip_lp_create_delete(const unsigned int iterations,
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
 
-static double time_hip_lp_first(const unsigned int iterations,
-                                const char *file_name)
+static double time_hip_lp_first(const unsigned int iterations)
 {
     clock_t start, end;
     unsigned int i;
     struct hip_line_parser *lp;
     char *line;
+    struct hip_mem_area ma = { 0, 0 };
 
-    lp = hip_lp_create(file_name);
+    lp = hip_lp_create(&ma);
     assert(lp != NULL);
 
     start = clock();
@@ -137,10 +137,13 @@ static double time_hip_lp_next(const unsigned int iterations,
 {
     clock_t start, end;
     unsigned int i;
+    struct hip_file_buffer *fb;
     struct hip_line_parser *lp;
     char *line;
 
-    lp = hip_lp_create(file_name);
+    fb = hip_fb_create(file_name);
+    assert(fb != NULL);
+    lp = hip_lp_create(hip_fb_get_mem_area(fb));
     assert(lp != NULL);
     line = hip_lp_first(lp);
     assert(line != NULL);
@@ -154,6 +157,9 @@ static double time_hip_lp_next(const unsigned int iterations,
     if (lp != NULL) {
         hip_lp_delete(lp);
     }
+    if (fb != NULL) {
+        hip_fb_delete(fb);
+    }
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
@@ -163,10 +169,13 @@ static double time_hip_lp_parse_file(const unsigned int iterations,
 {
     clock_t start, end;
     unsigned int i;
+    struct hip_file_buffer *fb;
     struct hip_line_parser *lp;
     char *line;
 
-    lp = hip_lp_create(file_name);
+    fb = hip_fb_create(file_name);
+    assert(fb != NULL);
+    lp = hip_lp_create(hip_fb_get_mem_area(fb));
     assert(lp != NULL);
 
     start = clock();
@@ -181,28 +190,8 @@ static double time_hip_lp_parse_file(const unsigned int iterations,
     if (lp != NULL) {
         hip_lp_delete(lp);
     }
-
-    return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
-}
-
-static double time_hip_lp_reload(const unsigned int iterations,
-                                 const char *file_name)
-{
-    clock_t start, end;
-    unsigned int i;
-    struct hip_line_parser *lp;
-
-    lp = hip_lp_create(file_name);
-    assert(lp != NULL);
-
-    start = clock();
-    for (i = 0; i < iterations; i += 1) {
-        hip_lp_reload(lp);
-    }
-    end = clock();
-
-    if (lp != NULL) {
-        hip_lp_delete(lp);
+    if (fb != NULL) {
+        hip_fb_delete(fb);
     }
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
@@ -284,14 +273,14 @@ int main(void)
            "    - call hip_fb_create() (s.a.)\n"
            "  - call hip_lp_delete() to\n"
            "    - de-allocate the line parser object\n"
-           "  ==> time_hip_lp_create_delete(%d, %s): %fs\n\n", iterations,
-           file_name, time_hip_lp_create_delete(iterations, file_name));
+           "  ==> time_hip_lp_create_delete(%d): %fs\n\n", iterations,
+           time_hip_lp_create_delete(iterations));
 
     printf("Testing line parser parsing function:\n"
            "  - call hip_lp_first() to\n"
            "    - retrieve a pointer to the beginning of the file\n"
-           "  ==> time_hip_lp_first(%d, %s): %fs\n\n", iterations, file_name,
-           time_hip_lp_first(iterations, file_name));
+           "  ==> time_hip_lp_first(%d): %fs\n\n", iterations,
+           time_hip_lp_first(iterations));
 
     printf("Testing line parser parsing function:\n"
            "  - call hip_lp_next() to\n"
@@ -305,12 +294,6 @@ int main(void)
            "  - call hip_lp_next() (s.a.) until the end of the file\n"
            "  ==> time_hip_lp_parse_file(%d, %s): %fs\n\n", iterations, file_name,
            time_hip_lp_parse_file(iterations, file_name));
-
-    printf("Testing line parser reloading:\n"
-           "  - call hip_lp_reload() to\n"
-           "    - call hip_fb_reload() (s.a.)\n"
-           "  ==> time_hip_lp_reload(%d, %s): %fs\n\n", iterations, file_name,
-           time_hip_lp_reload(iterations, file_name));
 
     printf("Testing port binding allocation and de-allocation without cache:\n"
            "  - call hip_port_bindings_init() to\n"

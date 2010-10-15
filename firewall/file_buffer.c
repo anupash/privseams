@@ -64,38 +64,44 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
         return 1;
     }
 
-    if (fb->start != NULL) {
-        free(fb->start);
-        fb->start = NULL;
+    if (fb->ma.start != NULL) {
+        free(fb->ma.start);
+        fb->ma.start = NULL;
     }
 
     /* First, we try to determine the current file size for the new buffer size.
      * If that fails (it does, e.g., for proc files), we just increase the
      * current buffer size. */
-    file_size = lseek(fb->_fd, 0, SEEK_END);
+    file_size = lseek(fb->fd, 0, SEEK_END);
     if (file_size != -1) {
-        fb->_size = file_size + HIP_FB_HEADROOM; // add a little head room
+        fb->buffer_size = file_size + HIP_FB_HEADROOM; // add a little head room
     } else {
-        if (fb->_size < HIP_FB_HEADROOM) {
-            fb->_size = HIP_FB_HEADROOM;
+        if (fb->buffer_size < HIP_FB_HEADROOM) {
+            fb->buffer_size = HIP_FB_HEADROOM;
         } else {
-            fb->_size *= 2;
+            fb->buffer_size *= 2;
         }
     }
 
-    if (fb->_size <= HIP_FB_MAX_SIZE) {
+    if (fb->buffer_size <= HIP_FB_MAX_SIZE) {
         // allocate the buffer
-        fb->start = malloc(fb->_size);
-        if (NULL == fb->start) {
-            fb->_size = 0;
+        fb->ma.start = malloc(fb->buffer_size);
+        if (NULL == fb->ma.start) {
+            fb->buffer_size = 0;
         }
     }
 
-    return (NULL == fb->start);
+    return (NULL == fb->ma.start);
 }
 
 /**
  * Creates a file buffer that holds the specified file.
+ *
+ * A file buffer is used to load and hold the contents of a file in
+ * memory (for simplified access or improved performance).
+ * The memory buffer is allocated so that the whole file fits in it.
+ * Any changes to the memory buffer are not written back to the file and remain
+ * local to the memory buffer.
  *
  * This function allocates resources, in particular memory, for the returned
  * struct hip_line_parser object.
@@ -114,8 +120,8 @@ struct hip_file_buffer *hip_fb_create(const char *const file_name)
     if (file_name != NULL) {
         fb = calloc(1, sizeof(struct hip_file_buffer));
         if (fb != NULL) {
-            fb->_fd = open(file_name, O_RDONLY);
-            if (fb->_fd != -1) {
+            fb->fd = open(file_name, O_RDONLY);
+            if (fb->fd != -1) {
                 // start, end, size are now NULL/0 thanks to calloc()
                 // initialize file buffer
                 if (hip_fb_reload(fb) == 0) {
@@ -139,11 +145,11 @@ struct hip_file_buffer *hip_fb_create(const char *const file_name)
 void hip_fb_delete(struct hip_file_buffer *const fb)
 {
     if (fb != NULL) {
-        if (fb->_fd != -1) {
-            close(fb->_fd);
+        if (fb->fd != -1) {
+            close(fb->fd);
         }
-        if (fb->start != NULL) {
-            free(fb->start);
+        if (fb->ma.start != NULL) {
+            free(fb->ma.start);
         }
         free(fb);
     }
@@ -153,6 +159,10 @@ void hip_fb_delete(struct hip_file_buffer *const fb)
  * Make modifications to the file since the last invocation of hip_fb_create() or
  * hip_fb_reload() visible in the buffer.
  *
+ * @warning
+ * Note that this function may change the start and end pointers in the memory
+ * area returned by hip_fb_get_mem_area()!
+ *
  * @param fb the file buffer to use.
  * @return 0 if the file data was successfully re-read.
  *  1 if the file could not be read or not enough buffer space could be
@@ -160,7 +170,7 @@ void hip_fb_delete(struct hip_file_buffer *const fb)
  */
 int hip_fb_reload(struct hip_file_buffer *const fb)
 {
-    if (NULL == fb || -1 == fb->_fd) {
+    if (NULL == fb || -1 == fb->fd) {
         return 1;
     }
 
@@ -168,12 +178,12 @@ int hip_fb_reload(struct hip_file_buffer *const fb)
         ssize_t bytes = 0;
 
         // can we re-read the whole file into the memory buffer?
-        lseek(fb->_fd, 0, SEEK_SET);
-        bytes = read(fb->_fd, fb->start, fb->_size);
+        lseek(fb->fd, 0, SEEK_SET);
+        bytes = read(fb->fd, fb->ma.start, fb->buffer_size);
         if (bytes == -1) {
             // we can't read from the file at all -> return error
             break;
-        } else if ((size_t)bytes == fb->_size) {
+        } else if ((size_t)bytes == fb->buffer_size) {
             // we can't fit the file into the memory buffer -> resize it
             if (hip_fb_resize(fb) == 0) {
                 // successful resize -> retry reading
@@ -184,12 +194,12 @@ int hip_fb_reload(struct hip_file_buffer *const fb)
             }
         } else {
             // successfully read the file contents into the buffer
-            fb->end = fb->start + bytes;
+            fb->ma.end = fb->ma.start + bytes;
             return 0;
         }
     }
 
-    fb->end = NULL;
+    fb->ma.end = NULL;
 
     return 1;
 }

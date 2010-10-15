@@ -26,24 +26,18 @@
  *
  * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
-#ifndef HIP_FIREWALL_FILE_BUFFER_H
-#define HIP_FIREWALL_FILE_BUFFER_H
+#ifndef HIP_FIREWALL_MEM_AREA_H
+#define HIP_FIREWALL_MEM_AREA_H
 
-#include "firewall/mem_area.h"  // struct hip_mem_area
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct hip_file_buffer *hip_fb_create(const char *const file_name);
-void hip_fb_delete(struct hip_file_buffer *const fb);
-static inline const struct hip_mem_area *hip_fb_get_mem_area(const struct hip_file_buffer *const fb);
-int hip_fb_reload(struct hip_file_buffer *const fb);
-
-#ifdef __cplusplus
-}
-#endif
-
-#include "firewall/file_buffer_inline.h"
+/**
+ * A range of memory with a defined start and end.
+ *
+ * This structure is useful where the information is needed about a specific
+ * memory area, e.g., for a file loaded into memory.
+ */
+struct hip_mem_area {
+    char *start;
+    char *end;
+};
 
 #endif

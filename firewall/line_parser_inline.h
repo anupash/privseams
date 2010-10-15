@@ -29,6 +29,12 @@
 #ifndef HIP_FIREWALL_LINE_PARSER_INLINE_H
 #define HIP_FIREWALL_LINE_PARSER_INLINE_H
 
+// On the one hand, the contents of this file are part of the public interface
+// and thus only their declaration should go into the public header file.
+// On the other hand, these functions should be inlineable so their definitions
+// have to appear in a header file.
+// To achieve inlineability and still hide the implementation, we use this
+// secondary header file that is not part of the public interface.
 #ifndef HIP_FIREWALL_LINE_PARSER_H
 #error This file must not be included directly because it contains implementation details. It may only be included by line_parser.h.
 #endif
@@ -43,22 +49,19 @@ extern "C" {
 #endif
 
 /**
- * A line parser object is used to linearly iterate over the lines in a memory
- * area that holds text.
- * The buffer contents are not modified and the returned line pointers are
- * terminated by newline characters, not null characters.
+ * Represents the parsing state on a memory area object.
  */
 struct hip_line_parser {
+    /**
+     * The memory area this parser operates on.
+     */
+    const struct hip_mem_area *ma;
     /**
      * The current parsing position.
      * If NULL, hip_lp_first() needs to be called.
      * If != NULL, points to the start of line in the memory buffer.
      */
     char *cur;
-    /**
-     * The memory buffer this parser operates on.
-     */
-    struct hip_file_buffer *fb;
 };
 
 /**
@@ -77,11 +80,11 @@ struct hip_line_parser {
 static inline char *hip_lp_first(struct hip_line_parser *const lp)
 {
     if (NULL == lp ||
-        NULL == lp->fb) {
+        NULL == lp->ma) {
         return NULL;
     }
 
-    lp->cur = lp->fb->start;
+    lp->cur = lp->ma->start;
 
     return lp->cur;
 }
@@ -104,15 +107,15 @@ static inline char *hip_lp_next(struct hip_line_parser *const lp)
 
     if (NULL == lp ||
         NULL == lp->cur ||
-        NULL == lp->fb ||
-        NULL == lp->fb->start ||
-        NULL == lp->fb->end ||
-        lp->cur < lp->fb->start ||
-        lp->cur >= lp->fb->end) {
+        NULL == lp->ma ||
+        NULL == lp->ma->start ||
+        NULL == lp->ma->end ||
+        lp->cur < lp->ma->start ||
+        lp->cur >= lp->ma->end) {
         return NULL;
     }
 
-    remaining = lp->fb->end - lp->cur;
+    remaining = lp->ma->end - lp->cur;
     lp->cur = (char *)memchr(lp->cur, '\n', remaining);
 
     // given the rest of the parsing code, we should always find a \n, but
@@ -121,7 +124,7 @@ static inline char *hip_lp_next(struct hip_line_parser *const lp)
         // cur should not point to the new-line character but to the next one:
         lp->cur += 1;
         // is there text on the line here or are we at the end?
-        if (lp->cur >= lp->fb->end) {
+        if (lp->cur >= lp->ma->end) {
             lp->cur = NULL;
         }
     }

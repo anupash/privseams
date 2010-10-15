@@ -35,7 +35,8 @@
 #include <string.h> // memset()
 #include <time.h>   // clock()
 
-#include "lib/core/debug.h"
+#include "lib/core/debug.h" // HIP_ASSERT()
+#include "lib/core/ife.h"   // IFEL()
 #include "firewall/line_parser.h"
 #include "firewall/port_bindings.h"
 
@@ -231,7 +232,9 @@ static void invalidate_cache(void)
 
 
 
+static struct hip_file_buffer *tcp6_file = NULL;
 static struct hip_line_parser *tcp6_parser = NULL;
+static struct hip_file_buffer *udp6_file = NULL;
 static struct hip_line_parser *udp6_parser = NULL;
 
 /**
@@ -255,8 +258,8 @@ static struct hip_line_parser *udp6_parser = NULL;
 static void hip_port_bindings_reload(void)
 {
     invalidate_cache();
-    hip_lp_reload(tcp6_parser);
-    hip_lp_reload(udp6_parser);
+    hip_fb_reload(tcp6_file);
+    hip_fb_reload(udp6_file);
 }
 
 /**
@@ -348,16 +351,32 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
  *  reloaded at a certain interval.
  *  Within this interval, hip_port_bindings_get() might return a different
  *  port binding status than the one in the actual /proc file.
+ * @return 0 on success, a non-zero value on an error.
  */
-void hip_port_bindings_init(const bool enable_cache)
+int hip_port_bindings_init(const bool enable_cache)
 {
+    int err;
+
     // The cache is built such that it can be disabled just by not initializing
     // it here.
     if (enable_cache) {
         init_cache();
     }
-    tcp6_parser = hip_lp_create("/proc/net/tcp6");
-    udp6_parser = hip_lp_create("/proc/net/udp6");
+
+    tcp6_file = hip_fb_create("/proc/net/tcp6");
+    HIP_IFEL(NULL == tcp6_file, 1, "Buffering tcp6 proc file in memory failed\n");
+    tcp6_parser = hip_lp_create(hip_fb_get_mem_area(tcp6_file));
+    HIP_IFEL(NULL == tcp6_parser, 1, "Creating line parser for tcp6 proc file failed\n");
+
+    udp6_file = hip_fb_create("/proc/net/udp6");
+    HIP_IFEL(NULL == udp6_file, 1, "Buffering udp6 proc file in memory failed\n");
+    udp6_parser = hip_lp_create(hip_fb_get_mem_area(udp6_file));
+    HIP_IFEL(NULL == udp6_parser, 1, "Creating line parser for udp6 proc file failed\n");
+
+    return 0;
+
+out_err:
+    return err;
 }
 
 /**
@@ -365,8 +384,20 @@ void hip_port_bindings_init(const bool enable_cache)
  */
 void hip_port_bindings_uninit(void)
 {
-    hip_lp_delete(tcp6_parser);
-    hip_lp_delete(udp6_parser);
+    if (tcp6_parser != NULL) {
+        hip_lp_delete(tcp6_parser);
+    }
+    if (tcp6_file != NULL) {
+        hip_fb_delete(tcp6_file);
+    }
+
+    if (udp6_parser != NULL) {
+        hip_lp_delete(udp6_parser);
+    }
+    if (udp6_file != NULL) {
+        hip_fb_delete(udp6_file);
+    }
+
     uninit_cache();
 }
 
@@ -412,7 +443,7 @@ enum hip_port_binding hip_port_bindings_get(const uint8_t protocol,
         // Make sure we return (sort of) up-to-date information.
         // This is the one potentially slow operation here.
         // The others (hip_port_bindings_get_from_proc() and the cache access
-        // functions) are very fast.
+        // functions) are (intended to be) very fast.
         hip_port_bindings_reload_delayed();
 
         // check the cache before checking /proc

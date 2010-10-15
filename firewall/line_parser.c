@@ -32,7 +32,12 @@
 #include "firewall/line_parser.h"
 
 /**
- * Creates a line parser that can parse the specified file.
+ * Creates a parser that iterates over the lines of a given memory area.
+ *
+ * A line parser object is used to linearly iterate over the lines in a memory
+ * area that holds text.
+ * The memory area contents are not modified and the returned line pointers are
+ * terminated by newline characters, not null characters.
  *
  * When this function returns successfully, hip_lp_first() can be called
  * immediately to start parsing.
@@ -45,19 +50,16 @@
  * @return a line parser instance if the parser could initialize correctly.
  *  NULL, if the specified file could not be accessed.
  */
-struct hip_line_parser *hip_lp_create(const char *const file_name)
+struct hip_line_parser *hip_lp_create(const struct hip_mem_area *const ma)
 {
     struct hip_line_parser *lp = NULL;
 
-    if (file_name != NULL) {
+    if (ma != NULL) {
         lp = calloc(1, sizeof(struct hip_line_parser));
         if (lp != NULL) {
             // cur is NULL as it should be thanks to calloc()
-            lp->fb = hip_fb_create(file_name);
-            if (lp->fb != NULL) {
-                return lp;
-            }
-            hip_lp_delete(lp);
+            lp->ma = ma;
+            return lp;
         }
     }
 
@@ -65,43 +67,15 @@ struct hip_line_parser *hip_lp_create(const char *const file_name)
 }
 
 /**
- * Deletes a line parser and releases all resources associated with it.
+ * Deletes a line parser and releases all resources associated with it (but not
+ * the struct hip_mem_area object this parser was created with or the memory
+ * backing that memory area).
  *
  * @param lp the line parser object to delete.
  */
 void hip_lp_delete(struct hip_line_parser *const lp)
 {
     if (lp != NULL) {
-        if (lp->fb != NULL) {
-            hip_fb_delete(lp->fb);
-        }
         free(lp);
     }
-}
-
-/**
- * If the line parser uses a file-based memory buffer, reload the file contents
- * to reflect any changes in the file since the last invocation of hip_lp_create()
- * or hip_lp_reload().
- * When this function returns, the current parsing position is reset and parsing
- * must be restarted by calling hip_lp_first().
- *
- * @param lp the line parser to use.
- * @return 0 if the file contents could be successfully reloaded or 1 on error.
- */
-int hip_lp_reload(struct hip_line_parser *const lp)
-{
-    if (NULL == lp ||
-        NULL == lp->fb) {
-        return 1;
-    }
-
-    // Reset the parsing position because
-    // a) if the file was successfully reloaded, the contents may have changed
-    //    and the parsing position has become meaningless;
-    // b) if the file was not successfully reloaded, the memory buffer does not
-    //    hold valid data and parsing cannot be performed.
-    lp->cur = NULL;
-
-    return hip_fb_reload(lp->fb);
 }

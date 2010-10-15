@@ -29,17 +29,18 @@
 #ifndef HIP_FIREWALL_LINE_PARSER_H
 #define HIP_FIREWALL_LINE_PARSER_H
 
+#include "firewall/mem_area.h"  // struct hip_mem_area
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct hip_line_parser;
 
-struct hip_line_parser *hip_lp_create(const char *const file_name);
+struct hip_line_parser *hip_lp_create(const struct hip_mem_area *const ma);
 void hip_lp_delete(struct hip_line_parser *const lp);
 static inline char *hip_lp_first(struct hip_line_parser *const lp);
 static inline char *hip_lp_next(struct hip_line_parser *const lp);
-int hip_lp_reload(struct hip_line_parser *const lp);
 
 #ifdef __cplusplus
 }
