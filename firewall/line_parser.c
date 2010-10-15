@@ -47,7 +47,7 @@
  * To free these resources and to avoid memory leaks, it is imperative to call
  * hip_lp_delete() when the object created here is no longer used.
  *
- * @param file_name the name of the file to parse.
+ * @param ma the memory area to interpret as text and to parse by lines.
  * @return a line parser instance if the parser could initialize correctly.
  *  NULL, if the specified file could not be accessed.
  */
