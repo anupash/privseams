@@ -1,5 +1,4 @@
 /** @file
- * A header file for message.c.
  *
  * @author  Miika Komu <miika_iki.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>

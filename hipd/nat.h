@@ -1,5 +1,4 @@
 /** @file
- * A header file for nat.c
  *
  * @author  (version 1.0) Abhinav Pathak
  * @author  (version 1.1) Lauri Silvennoinen

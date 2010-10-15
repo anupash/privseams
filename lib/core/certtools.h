@@ -25,15 +25,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/** @file
- * A header file for certtools.c
+/**
+ * @file
  *
  * Certificate building, parseing and verification functions.
  *
  * @author Samu Varjonen
  * @version 0.1
  * @date 31.3.2008
- *
  */
 
 #ifndef HIP_LIB_CORE_CERTTOOLS_H

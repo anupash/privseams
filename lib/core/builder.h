@@ -1,5 +1,4 @@
 /** @file
- * A header file for builder.c.
  *
  * @author  Miika Komu <miika_iki.fi>
  * @author  Mika Kousa <mkousa_iki.fi>

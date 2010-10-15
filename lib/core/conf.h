@@ -1,5 +1,4 @@
 /** @file
- * A header file for conf.c
  *
  * @author  Janne Lundberg <jlu_tcs.hut.fi>
  * @author  Miika Komu <miika_iki.fi>

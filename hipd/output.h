@@ -1,5 +1,4 @@
 /** @file
- * A header file for output.c.
  *
  * @author  Janne Lundberg
  * @author  Miika Komu

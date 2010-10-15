@@ -1,5 +1,4 @@
 /** @file
- * A header file for linkedlist.c
  *
  * We are using following notation in this file:
  * <pre>

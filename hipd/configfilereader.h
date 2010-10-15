@@ -1,5 +1,4 @@
 /** @file
- * A header file for configfilereader.c
  *
  * This is a general purpose configurationfilereader. The configurationfile
  * consists of stanzas of the following form:

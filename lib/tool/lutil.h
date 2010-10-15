@@ -1,5 +1,5 @@
 /** @file
- * A header file for lutil.c. Imported from libinet6.
+ * Imported from libinet6.
  *
  * Distributed under
  * <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>

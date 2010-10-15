@@ -1,5 +1,4 @@
 /** @file
- * oppipdb.h: A header file for oppipdb.c
  *
  * @author  Antti Partanen
  * @author  Alberto Garcia

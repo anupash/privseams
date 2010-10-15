@@ -1,5 +1,4 @@
 /** @file
- * A header file for user.c.
  *
  * @author  Miika Komu <miika_iki.fi>
  * @author  Kristian Slavov <kslavov_hiit.fi>

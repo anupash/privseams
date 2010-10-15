@@ -1,5 +1,4 @@
 /** @file
- * A header file for registration.c.
  *
  * @author  Lauri Silvennoinen
  * @version 1.0

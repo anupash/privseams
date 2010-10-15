@@ -1,5 +1,4 @@
 /** @file
- * A header file for input.c.
  *
  * @author  Janne Lundberg
  * @author  Miika Komu
