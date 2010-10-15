@@ -376,7 +376,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
             verdict = 0;
         }
     } else {
-        HIP_DIE("hip_firewall_port_cache_lookup_binding() returned unknown return value %d\n", port_traffic_type);
+        HIP_DIE("hip_port_bindings_get() returned unknown return value %d\n", port_traffic_type);
     }
 
 out_err:
