@@ -45,7 +45,7 @@
  * @return a line parser instance if the parser could initialize correctly.
  *  NULL, if the specified file could not be accessed.
  */
-struct hip_line_parser *hip_lp_create(const char *file_name)
+struct hip_line_parser *hip_lp_create(const char *const file_name)
 {
     struct hip_line_parser *lp = NULL;
 
@@ -69,7 +69,7 @@ struct hip_line_parser *hip_lp_create(const char *file_name)
  *
  * @param lp the line parser object to delete.
  */
-void hip_lp_delete(struct hip_line_parser *lp)
+void hip_lp_delete(struct hip_line_parser *const lp)
 {
     if (lp != NULL) {
         if (lp->fb != NULL) {
@@ -89,7 +89,7 @@ void hip_lp_delete(struct hip_line_parser *lp)
  * @param lp the line parser to use.
  * @return 0 if the file contents could be successfully reloaded or 1 on error.
  */
-int hip_lp_reload(struct hip_line_parser *lp)
+int hip_lp_reload(struct hip_line_parser *const lp)
 {
     if (NULL == lp ||
         NULL == lp->fb) {

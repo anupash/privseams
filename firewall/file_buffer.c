@@ -56,7 +56,7 @@ static const unsigned long HIP_FB_MAX_SIZE = 1024 * 1024 * 1024;
  * @param fb the file buffer to use.
  * @return 0 if the buffer could be allocated, a non-zero value else.
  */
-static int hip_fb_resize(struct hip_file_buffer *fb)
+static int hip_fb_resize(struct hip_file_buffer *const fb)
 {
     off_t file_size = 0;
 
@@ -107,7 +107,7 @@ static int hip_fb_resize(struct hip_file_buffer *fb)
  *  buffered.
  *  NULL on error.
  */
-struct hip_file_buffer *hip_fb_create(const char *file_name)
+struct hip_file_buffer *hip_fb_create(const char *const file_name)
 {
     struct hip_file_buffer *fb = NULL;
 
@@ -136,7 +136,7 @@ struct hip_file_buffer *hip_fb_create(const char *file_name)
  *
  * @param fb the file buffer to delete.
  */
-void hip_fb_delete(struct hip_file_buffer *fb)
+void hip_fb_delete(struct hip_file_buffer *const fb)
 {
     if (fb != NULL) {
         if (fb->_fd != -1) {
@@ -158,7 +158,7 @@ void hip_fb_delete(struct hip_file_buffer *fb)
  *  1 if the file could not be read or not enough buffer space could be
  *  allocated.
  */
-int hip_fb_reload(struct hip_file_buffer *fb)
+int hip_fb_reload(struct hip_file_buffer *const fb)
 {
     if (NULL == fb || -1 == fb->_fd) {
         return 1;

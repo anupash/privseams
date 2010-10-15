@@ -64,9 +64,9 @@ struct hip_file_buffer {
     int _fd;
 };
 
-struct hip_file_buffer *hip_fb_create(const char *file_name);
-void hip_fb_delete(struct hip_file_buffer *fb);
-int hip_fb_reload(struct hip_file_buffer *fb);
+struct hip_file_buffer *hip_fb_create(const char *const file_name);
+void hip_fb_delete(struct hip_file_buffer *const fb);
+int hip_fb_reload(struct hip_file_buffer *const fb);
 
 #ifdef __cplusplus
 }

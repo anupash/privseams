@@ -74,7 +74,7 @@ struct hip_line_parser {
  * @return a pointer to the first line in the file or NULL if no line is
  *  available.
  */
-static inline char *hip_lp_first(struct hip_line_parser *lp)
+static inline char *hip_lp_first(struct hip_line_parser *const lp)
 {
     if (NULL == lp ||
         NULL == lp->fb) {
@@ -98,7 +98,7 @@ static inline char *hip_lp_first(struct hip_line_parser *lp)
  * @return a pointer to a line in the buffer or NULL if there are no more lines
  *  available.
  */
-static inline char *hip_lp_next(struct hip_line_parser *lp)
+static inline char *hip_lp_next(struct hip_line_parser *const lp)
 {
     size_t remaining;
 

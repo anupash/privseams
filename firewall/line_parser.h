@@ -35,11 +35,11 @@ extern "C" {
 
 struct hip_line_parser;
 
-struct hip_line_parser *hip_lp_create(const char *file_name);
-void hip_lp_delete(struct hip_line_parser *lp);
-static inline char *hip_lp_first(struct hip_line_parser *lp);
-static inline char *hip_lp_next(struct hip_line_parser *lp);
-int hip_lp_reload(struct hip_line_parser *lp);
+struct hip_line_parser *hip_lp_create(const char *const file_name);
+void hip_lp_delete(struct hip_line_parser *const lp);
+static inline char *hip_lp_first(struct hip_line_parser *const lp);
+static inline char *hip_lp_next(struct hip_line_parser *const lp);
+int hip_lp_reload(struct hip_line_parser *const lp);
 
 #ifdef __cplusplus
 }
