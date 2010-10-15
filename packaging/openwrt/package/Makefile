@@ -1,7 +1,6 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=hipl
-PKG_BRANCHNAME:=main
 PKG_VERSION:=1.0.6
 PKG_RELEASE:=6
 
