@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -24,7 +22,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
-/** @file
+
+/**
+ * @file
  * This file defines a Host Identity Protocol (HIP) header and parameter
  * related constants and structures.
  */

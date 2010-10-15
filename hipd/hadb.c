@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * Host Association Database (HADB) is the heart of the hipd and it
  * contains state information about HIP connectivity with remote
  * hosts. It shouldn't be confused with Host Identity Data Base (HIDB)

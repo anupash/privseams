@@ -1,8 +1,4 @@
-/** @file
- *
- * @author  Baris Boyvat <baris#boyvat.com>
- * @version 0.1
- * @date    3.5.2009
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -25,6 +21,13 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * @author  Baris Boyvat <baris#boyvat.com>
+ * @version 0.1
+ * @date    3.5.2009
  */
 
 #ifndef HIP_HIPD_UPDATE_H

@@ -1,5 +1,4 @@
-/** @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -22,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * This file defines handling functions for opportunistic mode to remember
  * IP's which are not HIP capable. This means faster communication in second
  * connection attempts to these hosts. Otherwise it would always take the same

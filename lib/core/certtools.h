@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -27,7 +25,6 @@
 
 /**
  * @file
- *
  * Certificate building, parseing and verification functions.
  *
  * @author Samu Varjonen

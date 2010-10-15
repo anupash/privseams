@@ -1,13 +1,4 @@
-/**
- * @file
- *
- * @brief Performance testfile that can be used for benchmarking a system.
- * @author Tobias Heer
- *
- * This is file provides an executable that can be run to benchmark a HIP system.
- * It provides detailed information about the runtime of certain cryptographic
- * operations.
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -30,7 +21,17 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
  *
+ * @brief Performance testfile that can be used for benchmarking a system.
+ * @author Tobias Heer
+ *
+ * This is file provides an executable that can be run to benchmark a HIP system.
+ * It provides detailed information about the runtime of certain cryptographic
+ * operations.
  */
 
 #include <stdint.h>

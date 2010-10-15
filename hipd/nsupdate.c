@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * @brief Update DNS data for the hit-to-ip domain name.
  * @brief It executes an external perl script for each HIT
  * @brief and passes it a list of the current IP addresses.

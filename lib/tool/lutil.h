@@ -1,4 +1,5 @@
-/** @file
+/**
+ * @file
  * Imported from libinet6.
  *
  * Distributed under

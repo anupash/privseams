@@ -1,16 +1,4 @@
-/** @file
- *
- * @author  (version 1.0) Abhinav Pathak
- * @author  (version 1.1) Lauri Silvennoinen
- * @version 1.1
- * @date    27.10.2006
- * @note    Related drafts:
- *          <ul>
- *          <li><a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-02.txt">
- *          draft-schmitt-hip-nat-traversal-02</a></li>
- *          <li><a href="http://www.ietf.org/internet-drafts/draft-irtf-hiprg-nat-03.txt">
- *          draft-irtf-hiprg-nat-03</a></li>
- *          </ul>
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -33,6 +21,21 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * @author  (version 1.0) Abhinav Pathak
+ * @author  (version 1.1) Lauri Silvennoinen
+ * @version 1.1
+ * @date    27.10.2006
+ * @note    Related drafts:
+ *          <ul>
+ *          <li><a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-02.txt">
+ *          draft-schmitt-hip-nat-traversal-02</a></li>
+ *          <li><a href="http://www.ietf.org/internet-drafts/draft-irtf-hiprg-nat-03.txt">
+ *          draft-irtf-hiprg-nat-03</a></li>
+ *          </ul>
  * @note    All Doxygen comments have been added in version 1.1.
  */
 
