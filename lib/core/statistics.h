@@ -23,8 +23,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * Header file for statistics.c
- *
  * @author Rene Hummen
  */
 

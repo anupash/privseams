@@ -24,8 +24,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * @brief The header file for firewall/pisa_cert.c
- *
  * @author Thomas Jansen
  */
 

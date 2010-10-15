@@ -1,5 +1,4 @@
 /** @file
- * The header file for update.c
  *
  * @author  Baris Boyvat <baris#boyvat.com>
  * @version 0.1

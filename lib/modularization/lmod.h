@@ -24,8 +24,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * @brief The main header file for libmodularization.
- *
  * @author Tim Just <tim.just@rwth-aachen.de>
  *
  */

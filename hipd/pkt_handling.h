@@ -1,6 +1,5 @@
 /**
  * @file
- * The header file for hipd/pkt_handling.c
  *
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
