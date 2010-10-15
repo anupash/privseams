@@ -1,5 +1,4 @@
-/** @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -22,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * All functionality that requires packet capture using libipq are contained in the
  * hipfw. The basic function of the hipfw is to track HIP packets and track associate
  * them with the related ESP connections with SPIs. This way, the hipfw can support access control

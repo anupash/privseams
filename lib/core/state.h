@@ -1,7 +1,4 @@
-/** @file
- * This file defines Host Identity Protocol (HIP) header and parameter related
- * constants and structures.
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -24,6 +21,12 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * This file defines Host Identity Protocol (HIP) header and parameter related
+ * constants and structures.
  */
 
 #ifndef HIP_LIB_CORE_STATE_H

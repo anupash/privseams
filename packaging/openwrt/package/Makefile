@@ -1,7 +1,6 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=hipl
-PKG_BRANCHNAME:=main
 PKG_VERSION:=1.0.6
 PKG_RELEASE:=6
 
@@ -18,7 +17,7 @@ define Package/hipl-hipd
     SECTION:=net
     CATEGORY:=Network
     DEPENDS:=+hipl-common +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
-    TITLE:=HIPL deamon
+    TITLE:=HIPL daemon
     URL:=http://hipl.hiit.fi/
 endef
 
@@ -38,30 +37,6 @@ endef
 
 define Package/hipl-hipfw/description
  The firewall for HIPL.
-endef
-
-define Package/hipl-hipconf
-    SECTION:=net
-    CATEGORY:=Network
-    DEPENDS:=+hipl-hipd
-    TITLE:=HIPL configuration application
-    URL:=http://hipl.hiit.fi/
-endef
-
-define Package/hipl-hipconf/description
- The configuration application for the hipd of the HIPL implementation.
-endef
-
-define Package/hipl-hipproxy
-    SECTION:=net
-    CATEGORY:=Network
-    DEPENDS:=+hipl-hipd +hipl-hipfw
-    TITLE:=HIPL proxy
-    URL:=http://hipl.hiit.fi/
-endef
-
-define Package/hipl-hipproxy/description
- The scripts for running the hipproxy.
 endef
 
 define Package/hipl-common
@@ -98,56 +73,32 @@ define Build/Compile
 endef
 
 define Package/hipl-hipd/install
-	$(INSTALL_DIR) $(1)/etc/init.d/
-	$(INSTALL_DIR) $(1)/usr/sbin/
-
 	$(INSTALL_BIN) ./files/hipd.init $(1)/etc/init.d/hipd
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipd $(1)/usr/sbin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipconf $(1)/usr/sbin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipdnsproxy $(1)/usr/sbin/
 endef
 
 define Package/hipl-hipfw/install
-	$(INSTALL_DIR) $(1)/etc/init.d/
-	$(INSTALL_DIR) $(1)/usr/sbin/
-
 	$(INSTALL_BIN) ./files/hipfw.init $(1)/etc/init.d/hipfw
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipfw $(1)/usr/sbin/
 endef
 
-define Package/hipl-hipconf/install
-	$(INSTALL_DIR) $(1)/usr/sbin/
-
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipconf $(1)/usr/sbin/
-endef
-
-define Package/hipl-hipproxy/install
-	$(INSTALL_DIR) $(1)/usr/sbin/
-
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipdnsproxy $(1)/usr/sbin/
-endef
-
 define Package/hipl-common/install
 	$(INSTALL_DIR) $(1)/etc/hip/
+	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_DIR) $(1)/etc/modules.d/
 	$(INSTALL_DIR) $(1)/usr/lib/
-	$(INSTALL_DIR) $(1)/usr/bin/
-	$(INSTALL_DIR) $(1)/usr/include/
-	$(INSTALL_DIR) $(1)/usr/include/libipsec
+	$(INSTALL_DIR) $(1)/usr/sbin/
 
 	$(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipcore.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipcore.la $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libmod.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libmod.la $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipheartbeat.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipheartbeat.la $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiphbupdate.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiphbupdate.la $(1)/usr/lib/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipupdate.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipupdate.la $(1)/usr/lib/
 endef
 
 $(eval $(call BuildPackage,hipl-common))
 $(eval $(call BuildPackage,hipl-hipd))
 $(eval $(call BuildPackage,hipl-hipfw))
-$(eval $(call BuildPackage,hipl-hipconf))
-$(eval $(call BuildPackage,hipl-hipproxy))

@@ -1,18 +1,4 @@
-/** @file
- * This file defines handling functions for incoming packets for the Host
- * Identity Protocol (HIP).
- *
- * @author  Janne Lundberg
- * @author  Miika Komu
- * @author  Mika Kousa
- * @author  Kristian Slavov
- * @author  Anthony D. Joseph
- * @author  Bing Zhou
- * @author  Tobias Heer
- * @author  Laura Takkinen
- * @author  Rene Hummen
- * @author  Samu Varjonen
- * @author  Tim Just
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -35,6 +21,24 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * This file defines handling functions for incoming packets for the Host
+ * Identity Protocol (HIP).
+ *
+ * @author  Janne Lundberg
+ * @author  Miika Komu
+ * @author  Mika Kousa
+ * @author  Kristian Slavov
+ * @author  Anthony D. Joseph
+ * @author  Bing Zhou
+ * @author  Tobias Heer
+ * @author  Laura Takkinen
+ * @author  Rene Hummen
+ * @author  Samu Varjonen
+ * @author  Tim Just
  */
 
 #define _BSD_SOURCE

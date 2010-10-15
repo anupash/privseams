@@ -1,11 +1,4 @@
-/** @file
- * A header file for user.c.
- *
- * @author  Miika Komu <miika_iki.fi>
- * @author  Kristian Slavov <kslavov_hiit.fi>
- * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @author  Tao Wan <taow_cc.hut.fi>
- * @author  Rene Hummen
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -28,6 +21,15 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Kristian Slavov <kslavov_hiit.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Tao Wan <taow_cc.hut.fi>
+ * @author  Rene Hummen
  */
 
 #ifndef HIP_HIPD_USER_H

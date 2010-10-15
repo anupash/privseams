@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,14 +21,16 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * Stores security association for IPsec connections and makes them
  * accessasible through HITs and (dst IP, spi).
  *
  * @brief Security association database for IPsec connections
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- *
  */
 
 #ifndef HIP_FIREWALL_USER_IPSEC_SADB_H

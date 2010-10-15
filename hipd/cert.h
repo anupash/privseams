@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -25,19 +23,18 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_HIPD_CERT_H
-#define HIP_HIPD_CERT_H
-
-/** @file
- * A header file for cert.c
+/**
+ * @file
  *
  * Certificate signing and verification functions.
  *
  * @author Samu Varjonen
  * @version 0.1
  * @date 31.3.2008
- *
  */
+
+#ifndef HIP_HIPD_CERT_H
+#define HIP_HIPD_CERT_H
 
 #include <openssl/rsa.h>
 

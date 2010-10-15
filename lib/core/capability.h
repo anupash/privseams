@@ -1,7 +1,4 @@
-/** @file
- * The header for capability.c.
- *
- * @author  Tobias Heer  <heer@cs.rwth-aachen.de> (header file only)
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
