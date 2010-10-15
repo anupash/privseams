@@ -23,7 +23,7 @@
  * <li>Declare a linked list <code>hip_configvaluelist_t values</code> for values</li>
  * <li>Open the configfile using <code>fopen()</code></li>
  * <li>Go through the configuration file using hip_cf_get_line_data()
- * inside a <code>do{ }while()</code> -loop:
+ * inside a <code>do { } while ()</code> -loop:
  * <pre>
  * do {
  *     parseerr = 0;
@@ -31,19 +31,19 @@
  *     hip_cvl_init(&values);
  *     lineerr = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
  *
- *     if(parseerr == 0){
+ *     if (parseerr == 0) {
  *
  *       ... parameter has now the parameter name ...
  *
- *        hip_configfilevalue_t *current = NULL;
- *    while((current = hip_cvl_get_next(&values, current)) != NULL) {
+ *         hip_configfilevalue_t *current = NULL;
+ *         while ((current = hip_cvl_get_next(&values, current)) != NULL) {
  *
  *           ... do stuff with the current value ...
  *
- *        }
- *    }
- *    hip_cvl_uninit(&values);
- * } while(lineerr != EOF);
+ *         }
+ *     }
+ *     hip_cvl_uninit(&values);
+ * } while (lineerr != EOF);
  * </pre>
  * </li>
  * <li>Close the configfile using <code>close()</code></li>
