@@ -89,9 +89,6 @@ define Package/hipl-common/install
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_DIR) $(1)/etc/modules.d/
 	$(INSTALL_DIR) $(1)/usr/lib/
-	$(INSTALL_DIR) $(1)/usr/bin/
-	$(INSTALL_DIR) $(1)/usr/include/
-	$(INSTALL_DIR) $(1)/usr/include/libipsec
 	$(INSTALL_DIR) $(1)/usr/sbin/
 
 	$(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
