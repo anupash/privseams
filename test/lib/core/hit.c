@@ -66,10 +66,10 @@ END_TEST
 START_TEST (test_hip_convert_hit_to_str_bounds)
 {
     const char suffix[] = "";
-    const unsigned long BEFORE_LEN = 30;
-    const unsigned long HIT_LEN = 39; // 16 bytes -> 32 hex chars + 7 ':'s
-    const unsigned long SUFFIX_LEN = sizeof(suffix); // includes null char
-    const unsigned long AFTER_LEN = 30;
+    const unsigned int BEFORE_LEN = 30;
+    const unsigned int HIT_LEN = 39; // 16 bytes -> 32 hex chars + 7 ':'s
+    const unsigned int SUFFIX_LEN = sizeof(suffix); // includes null char
+    const unsigned int AFTER_LEN = 30;
     char buf[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN];
     char ones[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN];
     hip_hit_t hit;
