@@ -41,6 +41,13 @@ START_TEST (test_hip_convert_hit_to_str_valid)
 }
 END_TEST
 
+START_TEST (test_hip_convert_hit_to_str_null_hit)
+{
+    char buf[64];
+    hip_convert_hit_to_str(NULL, "", buf);
+}
+END_TEST
+
 START_TEST (test_hip_convert_hit_to_str_null_buf)
 {
     hip_hit_t hit;
@@ -58,32 +65,30 @@ END_TEST
 
 START_TEST (test_hip_convert_hit_to_str_bounds)
 {
-    const char *prefix = "PREFIX";
+    const char suffix[] = "";
     const unsigned long BEFORE_LEN = 30;
-    const unsigned long PREFIX_LEN = sizeof(*prefix);
-    const unsigned long HIT_LEN = 40; // 16 bytes -> 32 hex chars + 7 ':'s + \0
+    const unsigned long HIT_LEN = 39; // 16 bytes -> 32 hex chars + 7 ':'s
+    const unsigned long SUFFIX_LEN = sizeof(suffix); // includes null char
     const unsigned long AFTER_LEN = 30;
-    char buf[BEFORE_LEN + PREFIX_LEN + HIT_LEN + AFTER_LEN];
-    char ones[BEFORE_LEN + PREFIX_LEN + HIT_LEN + AFTER_LEN];
+    char buf[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN];
+    char ones[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN];
     hip_hit_t hit;
     memset(buf, -1, sizeof(buf));
     memset(ones, -1, sizeof(ones));
-    memset(&hit.s6_addr, 0x22222222, sizeof(hit.s6_addr));
+    memset(&hit.s6_addr, 0x22, sizeof(hit.s6_addr));
 
     // write the HIT string into the middle of the buffer
-    fail_unless(hip_convert_hit_to_str(&hit, prefix, buf + BEFORE_LEN) == 0, NULL);
+    fail_unless(hip_convert_hit_to_str(&hit, suffix, buf + BEFORE_LEN) == 0, NULL);
     // is the buffer before the HIT untouched?
     fail_unless(memcmp(buf, ones, BEFORE_LEN) == 0, NULL);
-    // is the prefix correct?
-    fail_unless(memcmp(buf + BEFORE_LEN, prefix, PREFIX_LEN) == 0, NULL);
     // is the first part of the HIT correct?
-    fail_unless(*(buf + BEFORE_LEN + PREFIX_LEN) == '2', NULL);
+    fail_unless(*(buf + BEFORE_LEN) == '2', NULL);
     // is the last part of the HIT correct?
-    fail_unless(*(buf + BEFORE_LEN + PREFIX_LEN + HIT_LEN - 2) == '2', NULL);
-    // is the HIT 0-terminated?
-    fail_unless(*(buf + BEFORE_LEN + PREFIX_LEN + HIT_LEN - 1) == '\0', NULL);
-    // is the buffer after the HIT untouched?
-    fail_unless(memcmp(buf + BEFORE_LEN + PREFIX_LEN + HIT_LEN, ones, AFTER_LEN) == 0, NULL);
+    fail_unless(*(buf + BEFORE_LEN + HIT_LEN - 1) == '2', NULL);
+    // is the suffix correct including the terminating null character?
+    fail_unless(memcmp(buf + BEFORE_LEN + HIT_LEN, suffix, SUFFIX_LEN) == 0, NULL);
+    // is the buffer after the suffix untouched?
+    fail_unless(memcmp(buf + BEFORE_LEN + HIT_LEN + SUFFIX_LEN, ones, AFTER_LEN) == 0, NULL);
 }
 END_TEST
 
@@ -95,6 +100,7 @@ Suite *lib_core_hit(void)
 
     TCase *tc_core = tcase_create("Core");
     tcase_add_test(tc_core, test_hip_convert_hit_to_str_valid);
+    tcase_add_exit_test(tc_core, test_hip_convert_hit_to_str_null_hit, 1);
     tcase_add_test(tc_core, test_hip_convert_hit_to_str_null_buf);
     tcase_add_test(tc_core, test_hip_convert_hit_to_str_null_prefix);
     tcase_add_test(tc_core, test_hip_convert_hit_to_str_bounds);
