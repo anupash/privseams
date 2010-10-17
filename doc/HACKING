@@ -696,6 +696,24 @@ runs the existing unit tests.
 HIPL uses the check framework (http://check.sourceforge.net/) for unit tests.
 It is available in source and binary form, e.g. the Debian package 'check'.
 
+What To Test?
+-------------
+Unit tests check whether implementations conform to their specification (i.e.,
+their documentation). Some rules of thumb for writing tests are:
+
+- test the documented aspects of a function: does it behave as expected? does
+  it catch invalid input as documented?
+
+- test undocumented aspects of a function: how does it handle invalid input
+  (e.g., NULL pointers, empty strings, negative integers) that the compiler
+  cannot catch?
+
+Test coverage: At the very least, tests should ensure that a function can
+handle valid and invalid input as documented. Ideally, they also test corner
+cases and unusual input and state. Obviously, unit tests are limited
+in testing whether a function fully behaves as documented because that can be
+very complex, slow, or impossible on a local system. 
+
 Unit Tests Organizition
 -----------------------
 The unit tests are organized as follows:
