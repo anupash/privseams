@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include "lib/core/hit.h"
 
-START_TEST (test_hip_convert_hit_to_str_valid)
+START_TEST(test_hip_convert_hit_to_str_valid)
 {
     char buf[64];
     hip_hit_t hit;
@@ -41,21 +41,21 @@ START_TEST (test_hip_convert_hit_to_str_valid)
 }
 END_TEST
 
-START_TEST (test_hip_convert_hit_to_str_null_hit)
+START_TEST(test_hip_convert_hit_to_str_null_hit)
 {
     char buf[64];
     hip_convert_hit_to_str(NULL, "", buf);
 }
 END_TEST
 
-START_TEST (test_hip_convert_hit_to_str_null_buf)
+START_TEST(test_hip_convert_hit_to_str_null_buf)
 {
     hip_hit_t hit;
     fail_unless(hip_convert_hit_to_str(&hit, "", NULL) == 1, NULL);
 }
 END_TEST
 
-START_TEST (test_hip_convert_hit_to_str_null_prefix)
+START_TEST(test_hip_convert_hit_to_str_null_prefix)
 {
     char buf[64];
     hip_hit_t hit;
@@ -63,7 +63,7 @@ START_TEST (test_hip_convert_hit_to_str_null_prefix)
 }
 END_TEST
 
-START_TEST (test_hip_convert_hit_to_str_bounds)
+START_TEST(test_hip_convert_hit_to_str_bounds)
 {
     const char suffix[] = "SFX";
     const unsigned int BEFORE_LEN = 30;
@@ -90,7 +90,7 @@ START_TEST (test_hip_convert_hit_to_str_bounds)
 }
 END_TEST
 
-START_TEST (test_hip_hit_is_bigger_bigger)
+START_TEST(test_hip_hit_is_bigger_bigger)
 {
     const hip_hit_t bigger = IN6ADDR_LOOPBACK_INIT;
     const hip_hit_t smaller = IN6ADDR_ANY_INIT;
@@ -98,7 +98,7 @@ START_TEST (test_hip_hit_is_bigger_bigger)
 }
 END_TEST
 
-START_TEST (test_hip_hit_is_bigger_equal_smaller)
+START_TEST(test_hip_hit_is_bigger_equal_smaller)
 {
     const hip_hit_t bigger = IN6ADDR_LOOPBACK_INIT;
     const hip_hit_t smaller = IN6ADDR_ANY_INIT;
@@ -107,21 +107,21 @@ START_TEST (test_hip_hit_is_bigger_equal_smaller)
 }
 END_TEST
 
-START_TEST (test_hip_hit_is_bigger_first_null)
+START_TEST(test_hip_hit_is_bigger_first_null)
 {
     hip_hit_t hit;
     hip_hit_is_bigger(NULL, &hit);
 }
 END_TEST
 
-START_TEST (test_hip_hit_is_bigger_second_null)
+START_TEST(test_hip_hit_is_bigger_second_null)
 {
     hip_hit_t hit;
     hip_hit_is_bigger(&hit, NULL);
 }
 END_TEST
 
-START_TEST (test_hip_hit_are_equal_equality)
+START_TEST(test_hip_hit_are_equal_equality)
 {
     const hip_hit_t hit1 = IN6ADDR_LOOPBACK_INIT;
     const hip_hit_t hit2 = IN6ADDR_LOOPBACK_INIT;
@@ -129,7 +129,7 @@ START_TEST (test_hip_hit_are_equal_equality)
 }
 END_TEST
 
-START_TEST (test_hip_hit_are_equal_inequality)
+START_TEST(test_hip_hit_are_equal_inequality)
 {
     const hip_hit_t bigger = IN6ADDR_LOOPBACK_INIT;
     const hip_hit_t smaller = IN6ADDR_ANY_INIT;
@@ -137,28 +137,28 @@ START_TEST (test_hip_hit_are_equal_inequality)
 }
 END_TEST
 
-START_TEST (test_hip_hit_are_equal_first_null)
+START_TEST(test_hip_hit_are_equal_first_null)
 {
     hip_hit_t hit;
     hip_hit_are_equal(NULL, &hit);
 }
 END_TEST
 
-START_TEST (test_hip_hit_are_equal_second_null)
+START_TEST(test_hip_hit_are_equal_second_null)
 {
     hip_hit_t hit;
     hip_hit_are_equal(&hit, NULL);
 }
 END_TEST
 
-START_TEST (test_hip_hash_hit_valid)
+START_TEST(test_hip_hash_hit_valid)
 {
     const hip_hit_t hit = IN6ADDR_ANY_INIT;
     hip_hash_hit(&hit);
 }
 END_TEST
 
-START_TEST (test_hip_hash_hit_null)
+START_TEST(test_hip_hash_hit_null)
 {
     hip_hash_hit(NULL);
 }

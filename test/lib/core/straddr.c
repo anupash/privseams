@@ -31,7 +31,7 @@
 #include <stdlib.h> // free()
 #include "lib/core/straddr.h"
 
-START_TEST (test_convert_string_to_address_v4_valid)
+START_TEST(test_convert_string_to_address_v4_valid)
 {
     const char *str = "127.0.0.1";
     struct in_addr ip;
@@ -40,7 +40,7 @@ START_TEST (test_convert_string_to_address_v4_valid)
 }
 END_TEST
 
-START_TEST (test_convert_string_to_address_v4_null_str)
+START_TEST(test_convert_string_to_address_v4_null_str)
 {
     struct in_addr ip;
 
@@ -48,7 +48,7 @@ START_TEST (test_convert_string_to_address_v4_null_str)
 }
 END_TEST
 
-START_TEST (test_convert_string_to_address_v4_null_addr)
+START_TEST(test_convert_string_to_address_v4_null_addr)
 {
     const char *str = "127.0.0.1";
 
@@ -56,7 +56,7 @@ START_TEST (test_convert_string_to_address_v4_null_addr)
 }
 END_TEST
 
-START_TEST (test_convert_string_to_address_v4_invalid)
+START_TEST(test_convert_string_to_address_v4_invalid)
 {
     const char *str = " 127.0.0.1";
     struct in_addr ip;
@@ -65,7 +65,7 @@ START_TEST (test_convert_string_to_address_v4_invalid)
 }
 END_TEST
 
-START_TEST (test_convert_string_to_address_valid)
+START_TEST(test_convert_string_to_address_valid)
 {
     const char *str = "fe80::215:58ff:fe29:9c36";
     struct in6_addr ip;
@@ -74,7 +74,7 @@ START_TEST (test_convert_string_to_address_valid)
 }
 END_TEST
 
-START_TEST (test_convert_string_to_address_null_str)
+START_TEST(test_convert_string_to_address_null_str)
 {
     struct in6_addr ip;
 
@@ -82,7 +82,7 @@ START_TEST (test_convert_string_to_address_null_str)
 }
 END_TEST
 
-START_TEST (test_convert_string_to_address_null_addr)
+START_TEST(test_convert_string_to_address_null_addr)
 {
     const char *str = "fe80::215:58ff:fe29:9c36";
 
@@ -90,7 +90,7 @@ START_TEST (test_convert_string_to_address_null_addr)
 }
 END_TEST
 
-START_TEST (test_convert_string_to_address_invalid)
+START_TEST(test_convert_string_to_address_invalid)
 {
     const char *str = " fe80::215:58ff:fe29:9c36";
     struct in6_addr ip;
@@ -99,7 +99,7 @@ START_TEST (test_convert_string_to_address_invalid)
 }
 END_TEST
 
-START_TEST (test_hip_string_to_lowercase_valid)
+START_TEST(test_hip_string_to_lowercase_valid)
 {
     char to[128] = { 1 };
     char ones[128] = { 1 };
@@ -117,26 +117,26 @@ START_TEST (test_hip_string_to_lowercase_valid)
 }
 END_TEST
 
-START_TEST (test_hip_string_is_digit_valid)
+START_TEST(test_hip_string_is_digit_valid)
 {
     fail_unless(hip_string_is_digit("123456789") == 0, NULL);
     fail_unless(hip_string_is_digit("abc") < 0, NULL);
 }
 END_TEST
 
-START_TEST (test_hip_string_is_digit_null)
+START_TEST(test_hip_string_is_digit_null)
 {
     fail_unless(hip_string_is_digit(NULL) < 0, NULL);
 }
 END_TEST
 
-START_TEST (test_hip_string_is_digit_empty)
+START_TEST(test_hip_string_is_digit_empty)
 {
     fail_unless(hip_string_is_digit("") < 0, NULL);
 }
 END_TEST
 
-START_TEST (test_base64_encode_valid)
+START_TEST(test_base64_encode_valid)
 {
     const char b64[] = "VGVzdA==";
     unsigned char buf[] = "Test";
@@ -149,13 +149,13 @@ START_TEST (test_base64_encode_valid)
 }
 END_TEST
 
-START_TEST (test_base64_encode_null_buf)
+START_TEST(test_base64_encode_null_buf)
 {
     fail_unless(base64_encode(NULL, 42) == NULL, NULL);
 }
 END_TEST
 
-START_TEST (test_base64_encode_empty_buf)
+START_TEST(test_base64_encode_empty_buf)
 {
     unsigned char buf[] = "";
     unsigned char *result = NULL;
