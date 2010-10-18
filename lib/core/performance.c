@@ -7,7 +7,6 @@
  * This file provides a set of functions to measure execution time.
  * The measurement unit is second.
  *
- * \note Distributed under
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
