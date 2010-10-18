@@ -614,7 +614,7 @@ static int hip_check_network_msg_type(const struct hip_common *msg)
 
 /**
  * hip_check_userspace_param_type - check the userspace parameter type
- * @param UNUSED pointer to the parameter
+ * @param param pointer to the parameter
  *
  * @return 1 if parameter type is valid, or 0 if parameter type is invalid
  */
