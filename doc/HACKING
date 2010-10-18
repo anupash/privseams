@@ -850,7 +850,8 @@ Entire files can be commented with the "@file" special tag as illustrated in
 Example 6. From example 6 we notice that Doxygen comments can also include
 simple HTML.
 
-/**@file
+/**
+ * @file
  * This file defines various functions for handling HIP messages.
  *
  * @author  John Doe
@@ -874,7 +875,7 @@ HIP_NTF_INVALID_SYNTAX located in libhipcore/protodefs.h you can add the
 following comment block in doc/doxygen.h, example 7.
 
 /**
- * @file lib/core/protodefs.h
+ * @file
  * @def  HIP_NTF_INVALID_SYNTAX
  *       Indicates that the HIP message received was invalid because...
  */
