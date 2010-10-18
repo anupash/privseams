@@ -37,23 +37,23 @@
 /** This performace set holds all measurements */
 struct perf_set {
     /** @brief A pointer to names of output files */
-    FILE **         files;
+    FILE          **files;
     /** @brief A list of names of the perf sets. */
-    char **         names;
+    char          **names;
     /** @brief A list timeval time structs. */
     struct timeval *times;
     /** @brief A list of measured results. */
-    double *        result;
+    double         *result;
     /** @brief The number of perf sets. */
     int             num_files;
     /** @brief A linecount */
-    int *           linecount;
+    int            *linecount;
     /** @brief Are the necessary files opened? 1=TRUE, 0=FALSE. */
     int             files_open;
     /** @brief Are measurements running? This is an integer field of the length num_files. */
-    int *           running;
+    int            *running;
     /** @brief Are the measurements writable (completed)? This is an integer field of the length num_files. */
-    int *           writable;
+    int            *writable;
 };
 
 typedef struct perf_set perf_set_t;
@@ -66,30 +66,31 @@ void hip_perf_stop_benchmark(perf_set_t *perf_set, int slot);
 int hip_perf_write_benchmark(perf_set_t *perf_set, int slot);
 void hip_perf_destroy(perf_set_t *perf_set);
 
-enum perf_sensor {PERF_I1,
-                  PERF_R1,
-                  PERF_I2,
-                  PERF_R2,
-                  PERF_UPDATE,
-                  PERF_VERIFY,
-                  PERF_BASE,
-                  PERF_CLOSE_SEND,
-                  PERF_HANDLE_CLOSE,
-                  PERF_HANDLE_CLOSE_ACK,
-                  PERF_CLOSE_COMPLETE,
-                  PERF_DSA_VERIFY_IMPL,
-                  PERF_RSA_VERIFY_IMPL,
-                  /* The firewall only uses the sensors given above, hence it
-                   * has a separate PERF_MAX. */
-                  PERF_MAX_FIREWALL,
-                  PERF_DH_CREATE,
-                  PERF_SIGN,
-                  PERF_DSA_SIGN_IMPL,
-                  PERF_I1_SEND,
-                  PERF_RSA_SIGN_IMPL,
-                  PERF_STARTUP,
-                  /* Number of sensors for the HIP daemon. */
-                  PERF_MAX
+enum perf_sensor {
+    PERF_I1,
+    PERF_R1,
+    PERF_I2,
+    PERF_R2,
+    PERF_UPDATE,
+    PERF_VERIFY,
+    PERF_BASE,
+    PERF_CLOSE_SEND,
+    PERF_HANDLE_CLOSE,
+    PERF_HANDLE_CLOSE_ACK,
+    PERF_CLOSE_COMPLETE,
+    PERF_DSA_VERIFY_IMPL,
+    PERF_RSA_VERIFY_IMPL,
+    /* The firewall only uses the sensors given above, hence it
+     * has a separate PERF_MAX. */
+    PERF_MAX_FIREWALL,
+    PERF_DH_CREATE,
+    PERF_SIGN,
+    PERF_DSA_SIGN_IMPL,
+    PERF_I1_SEND,
+    PERF_RSA_SIGN_IMPL,
+    PERF_STARTUP,
+    /* Number of sensors for the HIP daemon. */
+    PERF_MAX
 };
 
 perf_set_t *perf_set;
