@@ -26,11 +26,10 @@
 #ifndef HIP_LIB_CORE_PERFORMANCE_H
 #define HIP_LIB_CORE_PERFORMANCE_H
 
-/*
+/**
  * Primitive performance measurement
  *
- * Authors:
- * - Tobias Heer <heer@tobibox.de>
+ * @author Tobias Heer <heer@tobibox.de>
  */
 
 #include <stdio.h>
