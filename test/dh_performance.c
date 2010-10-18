@@ -97,8 +97,6 @@
  *
  * Prints all possible command line options.
  *
- * @author Tobias Heer
- *
  * @param progname The name of the executable
  * @return void
  */
@@ -125,8 +123,6 @@ static void dhp_usage(char *progname)
  * @brief Get the option values from the input parameters.
  *
  * Takes the input parameters, parses them and returns the option switches.
- *
- * @author Tobias Heer
  *
  * @param argv The arguments array.
  * @param argc The length of the arguments array.
@@ -272,8 +268,6 @@ static int dhp_getopts(int argc,
 /**
  * @brief Determine and print the gettimeofday time resolution.
  *
- * @author Tobias Heer
- *
  * Determine the time resolution of gettimeofday.
  *
  * @return void
@@ -304,8 +298,6 @@ static void print_timeres(void)
  *
  * Starts a time interval.
  *
- * @author Tobias Heer
- *
  * @param bench_time timeval struct from the OS.
  * @return void
  */
@@ -318,8 +310,6 @@ static void dhp_start_benchmark(struct timeval *bench_time)
  * @brief Take time for benchmark and return passed time.
  *
  * Concludes a time interval and returns the past time.
- *
- * @author Tobias Heer
  *
  * @param bench_time timeval struct from the OS.
  * @return passed time since beginning of the interval.
@@ -334,8 +324,6 @@ static double dhp_stop_benchmark(struct timeval *bench_time)
 
 /**
  * @brief Main function that performs the measurements.
- *
- * @author Tobias Heer
  *
  * @param argc Number of command line arguments
  * @param argv Command line argument array

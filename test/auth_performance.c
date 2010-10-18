@@ -66,8 +66,6 @@ int dsa_key_len      = 1024;
 /**
  * @brief Determine and print the gettimeofday time resolution.
  *
- * @author Tobias Heer
- *
  * Determine the time resolution of gettimeofday.
  *
  * @return void

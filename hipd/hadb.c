@@ -1350,7 +1350,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
  *                   IPv4 address  used as searching key.
  * @return           a pointer to a matching host association or NULL if
  *                   a matching host association was not found.
- * @author           Miika Komu
  */
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_hit,
                                             const hip_hit_t *rvs_ip)
