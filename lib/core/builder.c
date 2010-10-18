@@ -620,7 +620,7 @@ static int hip_check_network_msg_type(const struct hip_common *msg)
  *
  * @return 1 if parameter type is valid, or 0 if parameter type is invalid
  */
-static int hip_check_userspace_param_type(const struct hip_tlv_common *param UNUSED)
+static int hip_check_userspace_param_type(UNUSED const struct hip_tlv_common *param)
 {
     return 1;
 }
