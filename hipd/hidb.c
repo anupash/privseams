@@ -354,7 +354,7 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
 
     list_for_each(item, hip_local_hostid_db, c) {
         id_entry = (struct hip_host_id_entry *) list_entry(item);
-        if (hip_hit_are_equal(&id_entry->lhi.hit, our)) {
+        if (memcmp(&id_entry->lhi.hit, our, sizeof(*our)) == 0) {
             memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
             return 0;
         }

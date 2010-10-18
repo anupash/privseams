@@ -41,71 +41,48 @@
 #include "hit.h"
 
 /**
- * convert a binary HIT into a string
+ * Convert a binary HIT to a hexadecimal string representation of the form
+ * 0011:2233:4455:6677:8899:AABB:CCDD:EEFF terminated by a null character.
  *
- * @param hit a binary HIT
- * @param prefix an optional HIT prefix as a string
- * @param hit_str the HIT as a string with the given prefix
- * @return zero on success and negative on error
+ * @param hit a pointer to a binary HIT.
+ * @param suffix an optional null-terminated string suffix to be appended to
+ *  the HIT. If suffix is NULL or the empty string, no suffix is appended. If
+ *  suffix is not null-terminated, the result is undefined.
+ * @param hit_str a pointer to a buffer to write the HIT and the suffix to. The
+ *  result of passing a buffer that is too short to hold the string
+ *  representation plus the suffix is undefined.
+ * @return 0 if the HIT was successfully converted. Returns a negative value if
+ *  hit is NULL or hit_str is NULL.
  */
-int hip_convert_hit_to_str(const hip_hit_t *hit,
-                           const char *prefix,
-                           char *hit_str)
+int hip_convert_hit_to_str(const hip_hit_t *const hit,
+                           const char *const suffix,
+                           char *const hit_str)
 {
-    int err = 0;
-
-    HIP_ASSERT(hit);
-
-    memset(hit_str, 0, INET6_ADDRSTRLEN);
-    err = !hip_in6_ntop(hit, hit_str);
-
-    if (prefix) {
-        memcpy(hit_str + strlen(hit_str), prefix, strlen(prefix));
+    if (hit != NULL && hit_str != NULL) {
+        if (hip_in6_ntop(hit, hit_str) != NULL) {
+            if (suffix && *suffix != '\0') {
+                strcpy(hit_str + strlen(hit_str), suffix);
+            }
+            return 0;
+        }
     }
 
-    return err;
-}
-/**
- * compare two HITs to check which HIT is "bigger"
- *
- * @param hit1 the first HIT to be compared
- * @param hit2 the second HIT to be compared
- *
- * @return 1 if hit1 was bigger than hit2, or else 0
- */
-int hip_hit_is_bigger(const struct in6_addr *hit1,
-                      const struct in6_addr *hit2)
-{
-    return ipv6_addr_cmp(hit1, hit2) > 0;
+    return -1;
 }
 
 /**
- * compare two HITs to check which if they are equal
+ * Determine whether a HIT is numerically greater than another.
  *
- * @param hit1 the first HIT to be compared
- * @param hit2 the second HIT to be compared
- *
- * @return 1 if the HITs were equal and zero otherwise
+ * @param hit_gt    a pointer to a HIT. When passing a NULL pointer, the result
+ *  of this function is undefined.
+ * @param hit_le    a pointer to a HIT. When passing a NULL pointer, the result
+ *  of this function is undefined.
+ * @return 1 if hit_gt is greater than hit_le, otherwise 0.
  */
-int hip_hit_are_equal(const struct in6_addr *hit1,
-                      const struct in6_addr *hit2)
+int hip_hit_is_bigger(const struct in6_addr *const hit_gt,
+                      const struct in6_addr *const hit_le)
 {
-    return ipv6_addr_cmp(hit1, hit2) == 0;
-}
-
-/**
- * calculate a hash from a HIT
- *
- * @param ptr pointer to a HIT
- *
- * Returns value in range: 0 <= x < range
- */
-unsigned long hip_hash_hit(const void *ptr)
-{
-    uint8_t hash[HIP_AH_SHA_LEN];
-
-    hip_build_digest(HIP_DIGEST_SHA1, (const uint8_t *)ptr + sizeof(uint16_t),
-                     7 * sizeof(uint16_t), hash);
-
-    return *((unsigned long *) hash);
+    HIP_ASSERT(hit_gt != NULL);
+    HIP_ASSERT(hit_le != NULL);
+    return ipv6_addr_cmp(hit_gt, hit_le) > 0;
 }
