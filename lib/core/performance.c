@@ -1,5 +1,5 @@
 /*!
- * \file dh_performance.c
+ * \file
  *
  * \brief Primitive performance measurement library.
  * \author Tobias Heer
