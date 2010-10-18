@@ -191,11 +191,11 @@ int hip_cert_spki_sign(struct hip_common *msg)
     /* clearing signature field just to be sure */
     memset(cert->signature, '\0', sizeof(cert->signature));
 
-    HIP_IFEL(!(digest_b64 = (unsigned char *) base64_encode((unsigned char *) sha_digest,
-                                                            (unsigned int) sizeof(sha_digest))),
+    HIP_IFEL(EVP_EncodeBlock(digest_b64, (unsigned char *) sha_digest,
+                             (unsigned int) sizeof(sha_digest)) > 0,
              -1, "Failed to encode digest_b64\n");
-    HIP_IFEL(!(signature_b64 = (unsigned char *) base64_encode((unsigned char *) signature,
-                                                               (unsigned int) sig_len)),
+    HIP_IFEL(EVP_EncodeBlock(signature_b64, (unsigned char *) signature,
+                             (unsigned int) sig_len) > 0,
              -1, "Failed to encode signature_b64\n");
     /* create (signature (hash sha1 |digest|)|signature|) */
     sprintf(cert->signature, "(signature (hash sha1 |%s|)|%s|)",
@@ -215,7 +215,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
                  -1,
                  "Error in converting public exponent from BN to bin\n");
 
-        HIP_IFEL(!(n_b64 = (unsigned char *) base64_encode((unsigned char *) n_bin, RSA_size(rsa))),
+        HIP_IFEL(EVP_EncodeBlock(n_b64, (unsigned char *) n_bin, RSA_size(rsa)) > 0,
                  -1,
                  "Failed to encode n_b64\n");
 
@@ -241,26 +241,22 @@ int hip_cert_spki_sign(struct hip_common *msg)
          */
         HIP_IFEL(!(BN_bn2bin(dsa->p, p_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(!(p_b64 = (unsigned char *) base64_encode((unsigned char *) p_bin,
-                                                           BN_num_bytes(dsa->p))),
+        HIP_IFEL(EVP_EncodeBlock(p_b64, (unsigned char *) p_bin, BN_num_bytes(dsa->p)) > 0,
                  -1, "Failed to encode p_b64\n");
 
         HIP_IFEL(!(BN_bn2bin(dsa->q, q_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(!(q_b64 = (unsigned char *) base64_encode((unsigned char *) q_bin,
-                                                           BN_num_bytes(dsa->q))),
+        HIP_IFEL(EVP_EncodeBlock(q_b64, (unsigned char *) q_bin, BN_num_bytes(dsa->q)) > 0,
                  -1, "Failed to encode q_64");
 
         HIP_IFEL(!(BN_bn2bin(dsa->g, g_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(!(g_b64 = (unsigned char *) base64_encode((unsigned char *) g_bin,
-                                                           BN_num_bytes(dsa->g))),
+        HIP_IFEL(EVP_EncodeBlock(g_b64, (unsigned char *) g_bin, BN_num_bytes(dsa->g)) > 0,
                  -1, "Failed to encode g_b64\n");
 
         HIP_IFEL(!(BN_bn2bin(dsa->pub_key, y_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(!(y_b64 = (unsigned char *) base64_encode((unsigned char *) y_bin,
-                                                           BN_num_bytes(dsa->pub_key))),
+        HIP_IFEL(EVP_EncodeBlock(y_b64, (unsigned char *) y_bin, BN_num_bytes(dsa->pub_key)) > 0,
                  -1, "Failed to encode y_b64\n");
 
         sprintf(cert->public_key, "(public_key (dsa-pkcs1-sha1 (p |%s|)(q |%s|)"
