@@ -192,7 +192,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 
     contents_len = ntohs(host_id->hi_length);
 
-    /*! \todo add an extra check for the T val */
+    /** @todo add an extra check for the T val */
 
     HIP_IFEL(contents_len <= 20, -EMSGSIZE, "Host id too short\n");
 

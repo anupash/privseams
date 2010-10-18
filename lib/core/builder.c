@@ -3142,7 +3142,7 @@ int hip_build_param_esp_prot_root(struct hip_common *msg,
 
 /**
  * hip_build_param_esp_info - build esp_info parameter
- * \todo Properly comment parameters of hip_build_param_esp_info()
+ * @todo Properly comment parameters of hip_build_param_esp_info()
  *
  * @param msg the message where the parameter will be appended
  * @param keymat_index no desription

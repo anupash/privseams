@@ -34,25 +34,25 @@
 
 #include <stdio.h>
 
-/*! This performace set holds all measurements */
+/** This performace set holds all measurements */
 struct perf_set {
-    /*! \brief A pointer to names of output files */
+    /** @brief A pointer to names of output files */
     FILE **         files;
-    /*! \brief A list of names of the perf sets. */
+    /** @brief A list of names of the perf sets. */
     char **         names;
-    /*! \brief A list timeval time structs. */
+    /** @brief A list timeval time structs. */
     struct timeval *times;
-    /*! \brief A list of measured results. */
+    /** @brief A list of measured results. */
     double *        result;
-    /*! \brief The number of perf sets. */
+    /** @brief The number of perf sets. */
     int             num_files;
-    /*! \brief A linecount */
+    /** @brief A linecount */
     int *           linecount;
-    /*! \brief Are the necessary files opened? 1=TRUE, 0=FALSE. */
+    /** @brief Are the necessary files opened? 1=TRUE, 0=FALSE. */
     int             files_open;
-    /*! \brief Are measurements running? This is an integer field of the length num_files. */
+    /** @brief Are measurements running? This is an integer field of the length num_files. */
     int *           running;
-    /*! \brief Are the measurements writable (completed)? This is an integer field of the length num_files. */
+    /** @brief Are the measurements writable (completed)? This is an integer field of the length num_files. */
     int *           writable;
 };
 
