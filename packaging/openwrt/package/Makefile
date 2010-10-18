@@ -57,8 +57,7 @@ endef
 
 CONFIGURE_VARS += \
     LIBS="-lz" \
-    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig" \
-	CFLAGS="-fPIC -Wno-error"
+    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig"
 
 define Build/Configure
 	$(call Build/Configure/Default, \
