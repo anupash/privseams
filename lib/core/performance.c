@@ -91,7 +91,7 @@ perf_set_t *hip_perf_create(int num)
 }
 
 /*!
- * \brief Set the filename for an performance slot..
+ * \brief Set the filename for an performance slot.
  *
  * Assigns a filename to each performance measurement slot.
  * \author      Tobias Heer

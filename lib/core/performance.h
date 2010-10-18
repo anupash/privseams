@@ -46,7 +46,7 @@ struct perf_set {
     double *        result;
     /*! \brief The number of perf sets. */
     int             num_files;
-    /*! \brief A linecount.. */
+    /*! \brief A linecount */
     int *           linecount;
     /*! \brief Are the necessary files opened? 1=TRUE, 0=FALSE. */
     int             files_open;
