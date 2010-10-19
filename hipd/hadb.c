@@ -142,7 +142,7 @@ static unsigned long hip_ha_hash(const hip_ha_t *ha)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
+STATIC_IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
 
 /**
  * a comparison function for the hash table algorithm to distinguish
@@ -174,7 +174,7 @@ static int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-IMPLEMENT_LHASH_COMP_FN(hip_ha, hip_ha_t)
+STATIC_IMPLEMENT_LHASH_COMP_FN(hip_ha, hip_ha_t)
 
 /**
  * build a digest of a peer address
@@ -1173,7 +1173,7 @@ static void hip_hadb_rec_free_doall(hip_ha_t *rec)
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
-IMPLEMENT_LHASH_DOALL_FN(hip_hadb_rec_free, hip_ha_t)
+STATIC_IMPLEMENT_LHASH_DOALL_FN(hip_hadb_rec_free, hip_ha_t)
 
 /**
  * Uninitialize host association database

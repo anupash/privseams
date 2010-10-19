@@ -221,10 +221,10 @@ static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
  * callback wrappers providing per-variable casts before calling the
  * type-specific callbacks
  */
-IMPLEMENT_LHASH_HASH_FN(hip_sa_entry,   hip_sa_entry_t)
-IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, hip_sa_entry_t)
-IMPLEMENT_LHASH_HASH_FN(hip_link_entry,   hip_link_entry_t)
-IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
+STATIC_IMPLEMENT_LHASH_HASH_FN(hip_sa_entry,   hip_sa_entry_t)
+STATIC_IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, hip_sa_entry_t)
+STATIC_IMPLEMENT_LHASH_HASH_FN(hip_link_entry,   hip_link_entry_t)
+STATIC_IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
 
 /**
  * finds a link entry in the linkdb

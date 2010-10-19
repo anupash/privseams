@@ -43,6 +43,11 @@
 #define HIP_LOCK_HT(hash)
 #define HIP_UNLOCK_HT(hash)
 
+#define STATIC_IMPLEMENT_LHASH_COMP_FN      static IMPLEMENT_LHASH_COMP_FN
+#define STATIC_IMPLEMENT_LHASH_DOALL_FN     static IMPLEMENT_LHASH_DOALL_FN
+#define STATIC_IMPLEMENT_LHASH_DOALL_ARG_FN static IMPLEMENT_LHASH_DOALL_ARG_FN
+#define STATIC_IMPLEMENT_LHASH_HASH_FN      static IMPLEMENT_LHASH_HASH_FN
+
 void hip_ht_uninit(void *head);
 void *hip_ht_find(void *head, const void *data);
 void *hip_ht_delete(void *head, void *data);
@@ -71,20 +76,20 @@ typedef LHASH_OF(HIP_HT)         HIP_HASHTABLE_TYPE;
 #undef IMPLEMENT_LHASH_DOALL_ARG_FN
 
 #define IMPLEMENT_LHASH_HASH_FN(name, o_type) \
-    static unsigned long name ## _LHASH_HASH(const void *arg) { \
+    unsigned long name ## _LHASH_HASH(const void *arg) { \
         const o_type *a = arg; \
         return name ## _hash(a); }
 #define IMPLEMENT_LHASH_COMP_FN(name, o_type) \
-    static int name ## _LHASH_COMP(const void *arg1, const void *arg2) { \
+    int name ## _LHASH_COMP(const void *arg1, const void *arg2) { \
         const o_type *a = arg1;             \
         const o_type *b = arg2; \
         return name ## _cmp(a, b); }
 #define IMPLEMENT_LHASH_DOALL_FN(name, o_type) \
-    static void name ## _LHASH_DOALL(void *arg) { \
+    void name ## _LHASH_DOALL(void *arg) { \
         o_type *a = arg; \
         name ## _doall(a); }
 #define IMPLEMENT_LHASH_DOALL_ARG_FN(name, o_type, a_type) \
-    static void name ## _LHASH_DOALL_ARG(void *arg1, void *arg2) { \
+    void name ## _LHASH_DOALL_ARG(void *arg1, void *arg2) { \
         o_type *a = arg1; \
         a_type *b = arg2; \
         name ## _doall_arg(a, b); }
