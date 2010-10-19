@@ -48,13 +48,6 @@
 #define STATIC_IMPLEMENT_LHASH_DOALL_ARG_FN static IMPLEMENT_LHASH_DOALL_ARG_FN
 #define STATIC_IMPLEMENT_LHASH_HASH_FN      static IMPLEMENT_LHASH_HASH_FN
 
-void hip_ht_uninit(void *head);
-void *hip_ht_find(void *head, const void *data);
-void *hip_ht_delete(void *head, void *data);
-int hip_ht_add(void *head, void *data);
-void hip_ht_doall(void *head, LHASH_DOALL_FN_TYPE func);
-void hip_ht_doall_arg(void *head, LHASH_DOALL_ARG_FN_TYPE func,
-                      void *arg);
 
 #ifdef HIPL_OPENSSL_100
 
@@ -102,5 +95,12 @@ typedef HIP_HASHTABLE HIP_HASHTABLE_TYPE;
 HIP_HASHTABLE_TYPE *hip_linked_list_init(void);
 HIP_HASHTABLE_TYPE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
                                 LHASH_COMP_FN_TYPE cmpfunc);
+void hip_ht_uninit(void *head);
+void *hip_ht_find(void *head, const void *data);
+void *hip_ht_delete(void *head, void *data);
+int hip_ht_add(void *head, void *data);
+void hip_ht_doall(void *head, LHASH_DOALL_FN_TYPE func);
+void hip_ht_doall_arg(void *head, LHASH_DOALL_ARG_FN_TYPE func,
+                      void *arg);
 
 #endif /* HIP_LIB_CORE_HASHTABLE_H */
