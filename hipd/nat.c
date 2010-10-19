@@ -1,25 +1,4 @@
-/** @file
- * This file defines extensions to Host Identity Protocol (HIP) to support
- * traversal of Network Address Translator (NAT) middleboxes.
- *
- * The traversal mechanism tunnels HIP control and data traffic over UDP
- * and enables HIP initiators which may be behind NATs to contact HIP
- * responders which may be behind another NAT. Three basic cases exist for NAT
- * traversal. In the first case, only the initiator of a HIP base exchange is
- * located behind a NAT. In the second case, only the responder of a HIP base
- * exchange is located behind a NAT. In the third case, both parties are
- * located behind (different) NATs. The use rendezvous server is mandatory
- * when the responder is behind a NAT.
- *
- * @author  (version 1.0) Abhinav Pathak
- * @author  (version 1.1) Lauri Silvennoinen
- * @note    Related drafts:
- *          <ul>
- *          <li><a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-02.txt">
- *          draft-schmitt-hip-nat-traversal-02</a></li>
- *          <li><a href="http://www.ietf.org/internet-drafts/draft-irtf-hiprg-nat-03.txt">
- *          draft-irtf-hiprg-nat-03</a></li>
- *          </ul>
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -42,6 +21,31 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * This file defines extensions to Host Identity Protocol (HIP) to support
+ * traversal of Network Address Translator (NAT) middleboxes.
+ *
+ * The traversal mechanism tunnels HIP control and data traffic over UDP
+ * and enables HIP initiators which may be behind NATs to contact HIP
+ * responders which may be behind another NAT. Three basic cases exist for NAT
+ * traversal. In the first case, only the initiator of a HIP base exchange is
+ * located behind a NAT. In the second case, only the responder of a HIP base
+ * exchange is located behind a NAT. In the third case, both parties are
+ * located behind (different) NATs. The use rendezvous server is mandatory
+ * when the responder is behind a NAT.
+ *
+ * @author  (version 1.0) Abhinav Pathak
+ * @author  (version 1.1) Lauri Silvennoinen
+ * @note    Related drafts:
+ *          <ul>
+ *          <li><a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-02.txt">
+ *          draft-schmitt-hip-nat-traversal-02</a></li>
+ *          <li><a href="http://www.ietf.org/internet-drafts/draft-irtf-hiprg-nat-03.txt">
+ *          draft-irtf-hiprg-nat-03</a></li>
+ *          </ul>
  * @note    All Doxygen comments have been added in version 1.1.
  */
 

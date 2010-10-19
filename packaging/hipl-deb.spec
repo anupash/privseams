@@ -29,7 +29,7 @@ other related tools.
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
 autoreconf --install
-%configure --prefix=/usr
+%configure --prefix=/usr --sysconfdir=/etc
 make -j 4 all
 
 # Note:

@@ -1,21 +1,4 @@
-/** @file
- * A header file for linkedlist.c
- *
- * We are using following notation in this file:
- * <pre>
- * +------------+   head   +---------+   next   +---------+
- * | linkedlist |--------->|   node  |--------->|   node  |--  ...  --> NULL
- * +------------+          +--------+-          +---------+
- *                              |                    |
- *                              | ptr                | ptr
- *                              v                    v
- *                         +---------+          +---------+
- *                         | element |          | element |
- *                         +---------+          +---------+
- * </pre>where element contains the payload data.
- * @author  Lauri Silvennoinen
- * @version 1.0
- * @date    21.04.2008
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -38,6 +21,26 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ *
+ * We are using following notation in this file:
+ * <pre>
+ * +------------+   head   +---------+   next   +---------+
+ * | linkedlist |--------->|   node  |--------->|   node  |--  ...  --> NULL
+ * +------------+          +--------+-          +---------+
+ *                              |                    |
+ *                              | ptr                | ptr
+ *                              v                    v
+ *                         +---------+          +---------+
+ *                         | element |          | element |
+ *                         +---------+          +---------+
+ * </pre>where element contains the payload data.
+ * @author  Lauri Silvennoinen
+ * @version 1.0
+ * @date    21.04.2008
  */
 
 #ifndef HIP_LIB_CORE_LINKEDLIST_H

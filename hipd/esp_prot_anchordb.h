@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -28,11 +26,13 @@
  * the hash structures stored in the BEX store of the hipfw. The elements
  * maintained here should be used for the insertion of new anchor elements
  * during HIP BEX.
- *
+ */
+
+/**
+ * @file
  * @brief Stores anchor elements to be used for the esp protection
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- *
  */
 
 #ifndef HIP_HIPD_ESP_PROT_ANCHORDB_H

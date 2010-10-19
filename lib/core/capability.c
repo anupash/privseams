@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,6 +21,13 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * @brief Functionality to lower the privileges of a daemon
+ *
+ * @author Miika Komu <miika@iki.fi>
  *
  * This file contains functionality to lower the privileges (or
  * capabilities) of hipd and hipfw. It is important to restrict
@@ -30,10 +35,6 @@
  * specific.
  *
  * This code causes problems with valgrind, because of setpwent(3).
- *
- * @brief Functionality to lower the privileges of a daemon
- *
- * @author Miika Komu <miika@iki.fi>
  */
 
 #define _BSD_SOURCE

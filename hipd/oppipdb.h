@@ -1,8 +1,4 @@
-/** @file
- * oppipdb.h: A header file for oppipdb.c
- *
- * @author  Antti Partanen
- * @author  Alberto Garcia
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -25,6 +21,12 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * @author  Antti Partanen
+ * @author  Alberto Garcia
  */
 
 #ifndef HIP_HIPD_OPPIPDB_H

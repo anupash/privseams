@@ -30,9 +30,9 @@ other related tools.
 %build
 autoreconf --install
 %if 0%{?fedora}
-%configure --prefix=/usr
+%configure --prefix=/usr --sysconfdir=/etc
 %else
-CPPFLAGS=-U__STRICT_ANSI__ ./configure --prefix=/usr
+CPPFLAGS=-U__STRICT_ANSI__ ./configure --prefix=/usr --sysconfdir=/etc
 %endif
 make -j 4 all
 

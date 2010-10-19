@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -65,14 +63,14 @@ static void print_usage(void)
             "-n [NUM] = do NUM measurements\n");
 }
 
-/*!
- * \brief   Determine and print the gettimeofday time resolution.
+/**
+ * @brief   Determine and print the gettimeofday time resolution.
  *
- * \author      Tobias Heer
+ * @author      Tobias Heer
  *
  * Determine the time resolution of gettimeofday.
  *
- * \return void
+ * @return void
  */
 static void print_timeres(void)
 {

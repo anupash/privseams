@@ -1,9 +1,4 @@
-/**
- * @file
- *
- * Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
- */
-/**
+/*
  * Host Identity Protocol
  * Copyright (C) 2004-06 the Boeing Company
  *
@@ -16,14 +11,14 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ */
+
+/**
  * @file
- *
  * @author Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
  * @author Rene Hummen <rene.hummen@rwth-aachen.de> (ported to HIPL project and major rewrite)
  *
  * @brief user-mode HIP BEET mode implementation
- *
  */
 
 #define _BSD_SOURCE

@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * This is the  implementation of the API for adding and verifying
  * tokens to ESP data packets for the different modes, in order to
  * allow middleboxes to inspect and verify the validity of ESP
@@ -32,7 +33,6 @@
  * @brief Provides API to token-based ESP protection for middleboxes
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- *
  */
 
 #include <math.h>

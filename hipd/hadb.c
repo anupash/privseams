@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * Host Association Database (HADB) is the heart of the hipd and it
  * contains state information about HIP connectivity with remote
  * hosts. It shouldn't be confused with Host Identity Data Base (HIDB)
@@ -141,7 +142,7 @@ static unsigned long hip_ha_hash(const hip_ha_t *ha)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
+STATIC_IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
 
 /**
  * a comparison function for the hash table algorithm to distinguish
@@ -173,7 +174,7 @@ static int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-IMPLEMENT_LHASH_COMP_FN(hip_ha, hip_ha_t)
+STATIC_IMPLEMENT_LHASH_COMP_FN(hip_ha, hip_ha_t)
 
 /**
  * build a digest of a peer address
@@ -1087,11 +1088,6 @@ out_err:
  */
 void hip_init_hadb(void)
 {
-    /* The next line initializes the hash table for host associations. Note
-     * that we are using callback wrappers IMPLEMENT_LHASH_HASH_FN and
-     * IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
-     * provide automagic variable casts, so that all elements stored in the
-     * hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
     hadb_hit = hip_ht_init(LHASH_HASH_FN(hip_ha), LHASH_COMP_FN(hip_ha));
 }
 
@@ -1177,7 +1173,7 @@ static void hip_hadb_rec_free_doall(hip_ha_t *rec)
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
-IMPLEMENT_LHASH_DOALL_FN(hip_hadb_rec_free, hip_ha_t)
+STATIC_IMPLEMENT_LHASH_DOALL_FN(hip_hadb_rec_free, hip_ha_t)
 
 /**
  * Uninitialize host association database
@@ -1349,7 +1345,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
  *                   IPv4 address  used as searching key.
  * @return           a pointer to a matching host association or NULL if
  *                   a matching host association was not found.
- * @author           Miika Komu
  */
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_hit,
                                             const hip_hit_t *rvs_ip)

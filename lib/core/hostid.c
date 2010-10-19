@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * @brief Host identifier manipulation functions
  *
  * @author Miika Komu <miika@iki.fi>
@@ -192,7 +193,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 
     contents_len = ntohs(host_id->hi_length);
 
-    /*! \todo add an extra check for the T val */
+    /** @todo add an extra check for the T val */
 
     HIP_IFEL(contents_len <= 20, -EMSGSIZE, "Host id too short\n");
 

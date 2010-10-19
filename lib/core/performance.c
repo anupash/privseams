@@ -1,13 +1,4 @@
-/*!
- * \file dh_performance.c
- *
- * \brief Primitive performance measurement library.
- * \author Tobias Heer
- *
- * This file provides a set of functions to measure execution time.
- * The measurement unit is second.
- *
- * \note Distributed under
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -30,7 +21,17 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
  *
+ * @brief Primitive performance measurement library.
+ * @author Tobias Heer
+ * @author Dongsu Park
+ *
+ * This file provides a set of functions to measure execution time.
+ * The measurement unit is second.
  */
 
 #include <stdio.h>
@@ -42,19 +43,17 @@
 #include "ife.h"
 #include "performance.h"
 
-/*!
- * \brief Create a set of performance slots. Each performance measurement type
+/**
+ * @brief Create a set of performance slots. Each performance measurement type
  * needs a slot.
  *
  * Create a set of performance slots. Each performance measurement type needs
  * a slot. This is the first step when starting measurements.
  *
- * \author      Tobias Heer
+ * @param num Number of distinct sets to create.
+ * @return A pointer to the performance set.
  *
- * \param num Number of distinct sets to create.
- * \return A pointer to the performance set.
- *
- * \note The performance set memory must be freed after finishing the tests.
+ * @note The performance set memory must be freed after finishing the tests.
  */
 perf_set_t *hip_perf_create(int num)
 {
@@ -90,17 +89,16 @@ perf_set_t *hip_perf_create(int num)
     return perf_set;
 }
 
-/*!
- * \brief Set the filename for an performance slot..
+/**
+ * @brief Set the filename for an performance slot.
  *
  * Assigns a filename to each performance measurement slot.
- * \author      Tobias Heer
  *
- * \param set The respective performance measurement created by hip_perf_create.
- * \see hip_perf_create
- * \param slot The slot number beginning with 0.
- * \param name The filename.
- * \return Returns error code. 0 = Success, 1 = Error.
+ * @param set The respective performance measurement created by hip_perf_create.
+ * @see hip_perf_create
+ * @param slot The slot number beginning with 0.
+ * @param name The filename.
+ * @return Returns error code. 0 = Success, 1 = Error.
  */
 int hip_perf_set_name(perf_set_t *set,  int slot, const char *name)
 {
@@ -117,16 +115,15 @@ out_err:
     return err;
 }
 
-/*!
- * \brief Open the files for result output.
+/**
+ * @brief Open the files for result output.
  *
  * Open the files for a specific perf set.
- * \author      Tobias Heer
  *
- * \see hip_perf_create
- * \note Filenames must have been set by hip_perf_set_name before calling this function.
- * \param set The respective performance measurement created by hip_perf_create.
- * \return Returns error code. 0 = Success, 1 = Error.
+ * @see hip_perf_create
+ * @note Filenames must have been set by hip_perf_set_name before calling this function.
+ * @param set The respective performance measurement created by hip_perf_create.
+ * @return Returns error code. 0 = Success, 1 = Error.
  */
 int hip_perf_open(perf_set_t *set)
 {
@@ -149,17 +146,16 @@ out_err:
     return err;
 }
 
-/*!
- * \brief Start benchmarking for a perf set slot.
+/**
+ * @brief Start benchmarking for a perf set slot.
  *
  * Start taking the time for a perf set slot. Slots can overlap but should not
  * write to disk while another slot is active.
- * \author      Tobias Heer
  *
- * \see hip_perf_create
- * \param set The respective performance measurement created by hip_perf_create.
- * \param slot The slot number beginning with 0.
- * \return void
+ * @see hip_perf_create
+ * @param set The respective performance measurement created by hip_perf_create.
+ * @param slot The slot number beginning with 0.
+ * @return void
  */
 void hip_perf_start_benchmark(perf_set_t *set, int slot)
 {
@@ -169,22 +165,21 @@ void hip_perf_start_benchmark(perf_set_t *set, int slot)
     }
 }
 
-/*!
- * \brief Stop benchmarking for a perf set slot and memorize the result.
+/**
+ * @brief Stop benchmarking for a perf set slot and memorize the result.
  *
  * Stop taking the time for a perf set slot. Slots can overlap but should not
  * write to disk while another slot is active.
- * \author      Tobias Heer
  *
- * \note This function only writes results to the memory. For disk writes you
+ * @note This function only writes results to the memory. For disk writes you
  * need to run hip_perf_write_benchmark.
  *
- * \see hip_perf_write_benchmark
- * \see hip_perf_create
+ * @see hip_perf_write_benchmark
+ * @see hip_perf_create
  *
- * \param set The respective performance measurement created by hip_perf_create.
- * \param slot The slot number beginning with 0.
- * \return void
+ * @param set The respective performance measurement created by hip_perf_create.
+ * @param slot The slot number beginning with 0.
+ * @return void
  */
 void hip_perf_stop_benchmark(perf_set_t *set, int slot)
 {
@@ -198,20 +193,19 @@ void hip_perf_stop_benchmark(perf_set_t *set, int slot)
     }
 }
 
-/*!
- * \brief Write the benchmark results to the files.
+/**
+ * @brief Write the benchmark results to the files.
  *
  * Save the benchmark results to the respective files.
- * \author      Tobias Heer
  *
- * \note Do not use this functions while other benchmarks are in progress. It may disturb the measurements.
+ * @note Do not use this functions while other benchmarks are in progress. It may disturb the measurements.
  *
- * \see hip_perf_write_benchmark
- * \see hip_perf_create
+ * @see hip_perf_write_benchmark
+ * @see hip_perf_create
  *
- * \param set The respective performance measurement created by hip_perf_create.
- * \param slot The slot number beginning with 0.
- * \return Returns error code. 0 = Success, 1 = Error.
+ * @param set The respective performance measurement created by hip_perf_create.
+ * @param slot The slot number beginning with 0.
+ * @return Returns error code. 0 = Success, 1 = Error.
  */
 int hip_perf_write_benchmark(perf_set_t *set, int slot)
 {
@@ -235,15 +229,14 @@ out_err:
     return err;
 }
 
-/*!
- * \brief Deallocate memory of a performance set
+/**
+ * @brief Deallocate memory of a performance set
  *
  * Deallocate memory of the given performance set, including each member of
  * the perf_set_t data structure.
- * \author      Dongsu Park
  *
- * \param set The respective performance measurement created by hip_perf_create.
- * \return Nothing.
+ * @param set The respective performance measurement created by hip_perf_create.
+ * @return Nothing.
  */
 void hip_perf_destroy(perf_set_t *set)
 {
