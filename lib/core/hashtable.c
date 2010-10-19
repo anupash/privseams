@@ -76,14 +76,12 @@ static int hip_match_generic(const void *ptr1, const void *ptr2)
     return ptr1 != ptr2;
 }
 
-#ifdef HIPL_OPENSSL_100
-
 /**
  * Returns a generic linked list based on the hash table implementation
  *
  * @return an allocated hash table which is caller is responsible to free
  */
-LHASH_OF(HIP_HT) * hip_linked_list_init(void)
+HIP_HASHTABLE_TYPE *hip_linked_list_init(void)
 {
     return hip_ht_init(hip_hash_generic, hip_match_generic);
 }
@@ -96,25 +94,11 @@ LHASH_OF(HIP_HT) * hip_linked_list_init(void)
  * @return The allocated hashtable that the caller must free with hip_ht_uninit().
  *         NULL on error.
  */
-LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc)
+HIP_HASHTABLE_TYPE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
+                                LHASH_COMP_FN_TYPE cmpfunc)
 {
-    return (LHASH_OF(HIP_HT) *)lh_new(hashfunc, cmpfunc);
+    return (HIP_HASHTABLE_TYPE *) lh_new(hashfunc, cmpfunc);
 }
-
-#else /* not HIPL_OPENSSL_100 */
-
-HIP_HASHTABLE *hip_linked_list_init(void)
-{
-    return hip_ht_init(hip_hash_generic, hip_match_generic);
-}
-
-HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
-                           LHASH_COMP_FN_TYPE cmpfunc)
-{
-    return (HIP_HASHTABLE *) lh_new(hashfunc, cmpfunc);
-}
-
-#endif /* HIPL_OPENSSL_100 */
 
 /**
  * Unitilialize a hashtable that was allocated using hip_ht_init()
