@@ -47,6 +47,9 @@ void hip_ht_uninit(void *head);
 void *hip_ht_find(void *head, const void *data);
 void *hip_ht_delete(void *head, void *data);
 int hip_ht_add(void *head, void *data);
+void hip_ht_doall(void *head, LHASH_DOALL_FN_TYPE func);
+void hip_ht_doall_arg(void *head, LHASH_DOALL_ARG_FN_TYPE func,
+                      void *arg);
 
 #ifdef HIPL_OPENSSL_100
 
@@ -95,8 +98,5 @@ HIP_HASHTABLE *hip_linked_list_init(void);
 HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
                            LHASH_COMP_FN_TYPE cmpfunc);
 #endif
-
-void hip_ht_doall(void *head, LHASH_DOALL_FN_TYPE func);
-void hip_ht_doall_arg(void *head, LHASH_DOALL_ARG_FN_TYPE func, void *arg);
 
 #endif /* HIP_LIB_CORE_HASHTABLE_H */
