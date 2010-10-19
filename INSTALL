@@ -27,7 +27,8 @@ In order to compile HIPL you need autotools (autoconf, automake, libtool), GNU
 Make and gcc. openssl, iptables, libcap and libconfig are required complete
 with development headers. For Perl, Socket6, IO::Socket::INET6, Net::IP and
 Net::DNS modules are required. You can optionally install xmlto to
-build the HOWTO and doxygen to build the code documentation.
+build the HOWTO and doxygen to build the code documentation. Installing the
+optional check library (http://check.sourceforge.net/) enables unit tests. 
 
 On Ubuntu, the following command(s) should solve the dependencies:
 
@@ -35,7 +36,7 @@ On Ubuntu, the following command(s) should solve the dependencies:
     iptables-dev libcap-dev libnet-ip-perl libnet-dns-perl \
     libsocket6-perl libio-socket-inet6-perl
 
-  Optionally: aptitude install pax miredo bzr xmlto doxygen
+  Optionally: aptitude install pax miredo bzr xmlto doxygen check
 
 On Fedora, the following command(s) should solve the dependencies:
 

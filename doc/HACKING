@@ -771,6 +771,8 @@ steps:
     details)
   - register the test function to the test suite by adding a corresponding
     tcase_add_test() function call to hipd_bar() in test/hipd/bar.c.
+    If you'd like to test for an HIP_ASSERT() to occur, use
+    tcase_add_exit_test().
   - run "make check"
 
 DEBUGGING

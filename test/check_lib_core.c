@@ -31,6 +31,13 @@
 #include <stdlib.h>
 #include <check.h>
 
+// Import test suite functions from their respective C files via forward
+// declarations.
+// Since each test C file exports only one such function which is only used
+// right here, a dedicated header file for each of them adds unnecessary file
+// clutter in this particular case of unit tests.
+// Do not adopt this HFAS (header-file-avoidance-scheme) (TM) in HIPL production
+// code as header files are generally a good idea, just not here.
 extern Suite *lib_core_hit (void);
 extern Suite *lib_core_straddr (void);
 

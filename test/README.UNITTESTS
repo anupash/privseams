@@ -2,4 +2,4 @@ Run the unit tests via
 
 #> make check
 
-For more information, see doc/HACKING 
+For more information, see doc/HACKING
