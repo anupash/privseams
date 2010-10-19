@@ -164,6 +164,8 @@ START_TEST(test_hip_hash_hit_null)
 }
 END_TEST
 
+// For unknown reasons, this file does not compile with the following,
+// seemingly useless forward declaration
 Suite *lib_core_hit(void);
 
 Suite *lib_core_hit(void)
