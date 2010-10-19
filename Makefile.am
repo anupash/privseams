@@ -180,8 +180,7 @@ include modules/update/Makefile.am
 
 ### library dependencies ###
 
-check_lib_core_LDADD           = lib/core/libhipcore.la       \
-                                 -lcheck
+check_lib_core_LDADD           = lib/core/libhipcore.la
 firewall_hipfw_LDADD          += lib/core/libhipcore.la
 hipd_hipd_LDADD               += lib/modularization/libmod.la \
                                  lib/core/libhipcore.la
