@@ -39,8 +39,13 @@ lib_LTLIBRARIES += lib/modularization/libmod.la
 
 
 ### tests ###
-TESTS =                     check_lib_core
-check_PROGRAMS =            check_lib_core
+TESTS           =
+check_PROGRAMS  =
+
+if HIP_UNITTESTS
+TESTS           += check_lib_core
+check_PROGRAMS  += check_lib_core
+endif
 
 
 ### source declarations ###

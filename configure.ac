@@ -40,8 +40,9 @@ AC_CHECK_FUNC(EC_KEY_new,
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 # The unit tests depend on 'check' (http://check.sourceforge.net/)
-AC_CHECK_LIB(check, suite_create,,
+AC_CHECK_LIB(check, suite_create, HAVE_LIBCHECK=1,
 			 AC_MSG_WARN(libcheck (http://check.sourceforge.net/) not found: HIPL unit tests are not available),)
+AM_CONDITIONAL(HIP_UNITTESTS, test "$HAVE_LIBCHECK")
 
 # If no --prefix option is passed to configure, $prefix is empty. But we want
 # to expand $sysconfdir, which defaults to ${prefix}/etc. So set $prefix.
