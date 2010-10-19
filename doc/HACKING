@@ -761,9 +761,12 @@ steps:
   - re-run the automake tool chain
 * If it does not exist, create the test suite for the file hipd/bar.c:
   - copy an existing test suite (test/hipd/*.c) to test/hipd/bar.c.
-  - from test/hipd/bar.c, remove all tests and tcase_add_test() statements
-  - adapt the name of the test suite in the call to suite_create() to "hipd/bar"
-  - add hipd/bar.c to check_hipd_SOURCES in Makefile.am
+  - in test/hipd/bar.c, make sure you include the test target's header file
+    (#include "hipd/bar.h" in this example) 
+  - in test/hipd/bar.c, remove all tests and tcase_add_test() statements
+  - in test/hipd/bar.c, adapt the name of the test suite in the invocation of
+  	suite_create() to "hipd/bar"
+  - add test/hipd/bar.c to check_hipd_SOURCES in Makefile.am
   - re-run the automake tool chain
 * Create the test case:
   - implement the test function called test_foo_<test aspect>() in
@@ -774,6 +777,28 @@ steps:
     If you'd like to test for an HIP_ASSERT() to occur, use
     tcase_add_exit_test().
   - run "make check"
+
+Testing Static Functions
+------------------------
+Usually, unit tests are not intended to apply to static functions and doing so
+is difficult because these functions are not accessible by test programs
+from outside of the files that define them. However, static functions
+are commonplace in HIPL and often form relevant test targets. Developers are
+thus encouraged to apply unit tests to static functions as well as to
+non-static functions with external visibility.
+
+There are two approaches to making static functions visible within the test
+programs (adopting the names from the organization example above):
+
+a) Instead of including hipd/bar.h, include the implementation file hipd/bar.c
+   directly. While not an elegant solution, it is the simplest approach that
+   should work in most cases.
+
+b) For the test target static foo() create the wrapper foo_test_wrapper() that
+   is not static. Declare all such wrappers in hipd/bar_test_wrappers.h and
+   include that file instead of hipd/bar.h. While more effort, this is cleaner
+   than solution a) and should work where a) prooves problematic.
+
 
 DEBUGGING
 =========
