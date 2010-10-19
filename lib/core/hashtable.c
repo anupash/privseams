@@ -85,7 +85,7 @@ static int hip_match_generic(const void *ptr1, const void *ptr2)
  */
 LHASH_OF(HIP_HT) * hip_linked_list_init(void)
 {
-  return (LHASH_OF(HIP_HT) *) hip_ht_init(hip_hash_generic, hip_match_generic);
+    return hip_ht_init(hip_hash_generic, hip_match_generic);
 }
 
 /**
@@ -105,7 +105,7 @@ LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE c
 
 HIP_HASHTABLE *hip_linked_list_init(void)
 {
-    return (HIP_HASHTABLE *) hip_ht_init(hip_hash_generic, hip_match_generic);
+    return hip_ht_init(hip_hash_generic, hip_match_generic);
 }
 
 HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc,
