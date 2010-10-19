@@ -88,7 +88,7 @@ char *hip_in6_ntop(const struct in6_addr *const in6, char *const buf)
 int hip_convert_string_to_address(const char *const str,
                                   struct in6_addr *const ip6)
 {
-    if (str != NULL && ip6 != NULL) {
+    if (str && ip6) {
         if (inet_pton(AF_INET6, str, ip6) == 1) {
             /* IPv6 address conversion was ok */
             return 0;

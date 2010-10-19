@@ -59,8 +59,8 @@ int hip_convert_hit_to_str(const hip_hit_t *const hit,
                            const char *const suffix,
                            char *const hit_str)
 {
-    if (hit != NULL && hit_str != NULL) {
-        if (hip_in6_ntop(hit, hit_str) != NULL) {
+    if (hit && hit_str) {
+        if (hip_in6_ntop(hit, hit_str)) {
             if (suffix && *suffix != '\0') {
                 strcpy(hit_str + strlen(hit_str), suffix);
             }
@@ -83,7 +83,7 @@ int hip_convert_hit_to_str(const hip_hit_t *const hit,
 int hip_hit_is_bigger(const struct in6_addr *const hit_gt,
                       const struct in6_addr *const hit_le)
 {
-    HIP_ASSERT(hit_gt != NULL);
-    HIP_ASSERT(hit_le != NULL);
+    HIP_ASSERT(hit_gt);
+    HIP_ASSERT(hit_le);
     return ipv6_addr_cmp(hit_gt, hit_le) > 0;
 }
