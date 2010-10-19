@@ -55,8 +55,7 @@ void hip_ht_doall_arg(void *head, LHASH_DOALL_ARG_FN_TYPE func,
 
 #define LHASH100_CAST _LHASH
 
-typedef DECLARE_LHASH_OF (HIP_HT) hip_ht_common;
-typedef hip_ht_common HIP_HASHTABLE;
+typedef DECLARE_LHASH_OF(HIP_HT) HIP_HASHTABLE;
 
 LHASH_OF(HIP_HT) * hip_linked_list_init(void);
 LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc);
@@ -91,7 +90,7 @@ LHASH_OF(HIP_HT) * hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE c
         o_type *a = arg1; \
         a_type *b = arg2; \
         name ## _doall_arg(a, b); }
-typedef DECLARE_LHASH_OF (HIP_HT) hip_ht_common;
+
 typedef LHASH HIP_HASHTABLE;
 
 HIP_HASHTABLE *hip_linked_list_init(void);
