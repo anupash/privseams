@@ -1088,11 +1088,6 @@ out_err:
  */
 void hip_init_hadb(void)
 {
-    /* The next line initializes the hash table for host associations. Note
-     * that we are using callback wrappers IMPLEMENT_LHASH_HASH_FN and
-     * IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
-     * provide automagic variable casts, so that all elements stored in the
-     * hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
     hadb_hit = hip_ht_init(LHASH_HASH_FN(hip_ha), LHASH_COMP_FN(hip_ha));
 }
 
