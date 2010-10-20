@@ -1835,10 +1835,10 @@ static int hip_conf_handle_get_peer_lsi(hip_common_t *msg,
 {
     int err = 0;
     hip_hit_t hit;
-    const hip_tlv_common_t *param;
     const hip_lsi_t *lsi;
     char lsi_str[INET_ADDRSTRLEN];
     const char *hit_str = opt[0];
+    const struct hip_tlv_common *param;
 
     HIP_IFEL((inet_pton(AF_INET6, hit_str, &hit) <= 0), 1,
              "Not an IPv6 address\n");
