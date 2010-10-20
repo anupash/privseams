@@ -38,6 +38,16 @@ lib_LTLIBRARIES = lib/core/libhipcore.la
 lib_LTLIBRARIES += lib/modularization/libmod.la
 
 
+### tests ###
+TESTS           =
+check_PROGRAMS  =
+
+if HIP_UNITTESTS
+TESTS           += check_lib_core
+check_PROGRAMS  += check_lib_core
+endif
+
+
 ### source declarations ###
 
 test_auth_performance_SOURCES = test/auth_performance.c
@@ -151,6 +161,10 @@ endif
 
 lib_modularization_libmod_la_SOURCES = lib/modularization/lmod.c
 
+check_lib_core_SOURCES =    test/check_lib_core.c          \
+                            test/lib/core/hit.c            \
+                            test/lib/core/straddr.c
+
 # Initialize LDADD lists empty, because modules might add entries to LDADD. The
 # module LDADDs need to be included before the standard LDADDs, because modules
 # can depend on the core code.
@@ -166,6 +180,7 @@ include modules/update/Makefile.am
 
 ### library dependencies ###
 
+check_lib_core_LDADD           = lib/core/libhipcore.la
 firewall_hipfw_LDADD          += lib/core/libhipcore.la
 hipd_hipd_LDADD               += lib/modularization/libmod.la \
                                  lib/core/libhipcore.la

@@ -684,6 +684,122 @@ If you face memory problems, append the following to the eclipse.ini:
 
 Modify the numbers depending on your hardware to suit your needs.
 
+UNIT TESTS
+==========
+You can (and are recommended to) use unit testing to improve code quality.
+
+The command
+
+#> make check
+
+runs the existing unit tests.
+HIPL uses the check framework (http://check.sourceforge.net/) for unit tests.
+It is available in source and binary form, e.g. the Debian package 'check'.
+
+What To Test?
+-------------
+Unit tests check whether implementations conform to their specification (i.e.,
+their documentation). Some rules of thumb for writing tests are:
+
+- test the documented aspects of a function: does it behave as expected? does
+  it catch invalid input as documented?
+
+- test undocumented aspects of a function: how does it handle invalid input
+  (e.g., NULL pointers, empty strings, negative integers) that the compiler
+  cannot catch?
+
+Test coverage: At the very least, tests should ensure that a function can
+handle valid and invalid input as documented. Ideally, they also test corner
+cases and unusual input and state. Obviously, unit tests are limited
+in testing whether a function fully behaves as documented because that can be
+very complex, slow, or impossible on a local system. 
+
+Unit Tests Organizition
+-----------------------
+The unit tests are organized as follows:
+
+- all test code resides in the test directory. The directories below test
+  mirror those in the main hipl directory to organize the tests in the same
+  layout.  
+
+- test programs: There is one test program per hipl component. At the time of
+  this writing, the only test program is check_lib_core for all tests that
+  relate to the files from lib/core. By convention, each test program is
+  called check_<component name> where <component name> is the name of the
+  directory that contains the component. Test programs are defined in
+  Makefile.am.
+
+- test suites: Each test program consists of several test suites, one for each
+  implementation file to test. By convention, the tests of the test suite for
+  lib/core/hit.c are contained in test/lib/core/hit.c, which exports them as a
+  suite to the check_lib_core test program.
+ 
+- tests: Each test suite consists of one or more tests that test a specific
+  aspect of a function from the implementation. For example, the test function
+  test_hip_convert_hit_to_str_valid() in test/lib/core/hit.c tests whether the
+  function hip_convert_hit_to_str() from lib/core/hit.c works as expected with
+  valid input parameters. By convention, the test function is called
+  test_<function under test>_<test aspect>().
+
+Adding Unit Tests
+-----------------
+To add a unit test for the function foo() in the file hipd/bar.c, follow these
+steps:
+
+* If it does not exist, create a test program for the hipd component:
+  - copy an existing test program implementation (test/check_*.c) to
+    test/check_hipd.c
+  - remove the existing "extern Suite" and "srunner_add_suite()" statements
+  - in Makefile.am:
+  	* add the check_hipd test program to TESTS
+  	* add the check_hipd test program to check_PROGRAMS
+  	* add the file test/check_hipd.c to check_hipd_SOURCES 
+  	* add the check library from the check framework and all libraries your
+  	  test program depends on (usually the same as the original component hipd)
+  	  to check_hipd_LDADD
+  - create the directory test/hipd for your test suites
+  - re-run the automake tool chain
+* If it does not exist, create the test suite for the file hipd/bar.c:
+  - copy an existing test suite (test/hipd/*.c) to test/hipd/bar.c.
+  - in test/hipd/bar.c, make sure you include the test target's header file
+    (#include "hipd/bar.h" in this example) 
+  - in test/hipd/bar.c, remove all tests and tcase_add_test() statements
+  - in test/hipd/bar.c, adapt the name of the test suite in the invocation of
+  	suite_create() to "hipd/bar"
+  - add test/hipd/bar.c to check_hipd_SOURCES in Makefile.am
+  - re-run the automake tool chain
+* Create the test case:
+  - implement the test function called test_foo_<test aspect>() in
+    test/hipd/bar.c (see other test suites and the check documentation for
+    details)
+  - register the test function to the test suite by adding a corresponding
+    tcase_add_test() function call to hipd_bar() in test/hipd/bar.c.
+    If you'd like to test for an HIP_ASSERT() to occur, use
+    tcase_add_exit_test().
+  - run "make check"
+
+Testing Static Functions
+------------------------
+Usually, unit tests are not intended to apply to static functions and doing so
+is difficult because these functions are not accessible by test programs
+from outside of the files that define them. However, static functions
+are commonplace in HIPL and often form relevant test targets. Developers are
+thus encouraged to apply unit tests to static functions as well as to
+non-static functions with external visibility.
+
+There are two approaches to making static functions visible within the test
+programs (adopting the names from the organization example above):
+
+a) Instead of including hipd/bar.h, include the implementation file hipd/bar.c
+   directly. While not an elegant solution, it is the simplest approach that
+   should work in most cases.
+
+b) For the test target static foo() create the wrapper foo_test_wrapper() that
+   is not static. Declare all such wrappers in hipd/bar_test_wrappers.h and
+   include that file instead of hipd/bar.h. While more effort, this is cleaner
+   than solution a) and should work where a) prooves problematic.
+
+
 DEBUGGING
 =========
 
