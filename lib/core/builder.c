@@ -1,5 +1,4 @@
-/** @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -22,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * This file defines building and parsing functions for Host Identity
  * Protocol (HIP) kernel module and user messages. The functions can
  * be used for sending on-the-wire HIP control messages to the
@@ -614,11 +616,11 @@ static int hip_check_network_msg_type(const struct hip_common *msg)
 
 /**
  * hip_check_userspace_param_type - check the userspace parameter type
- * @param UNUSED pointer to the parameter
+ * @param param pointer to the parameter
  *
  * @return 1 if parameter type is valid, or 0 if parameter type is invalid
  */
-static int hip_check_userspace_param_type(const struct hip_tlv_common *param UNUSED)
+static int hip_check_userspace_param_type(UNUSED const struct hip_tlv_common *param)
 {
     return 1;
 }
@@ -3142,7 +3144,7 @@ int hip_build_param_esp_prot_root(struct hip_common *msg,
 
 /**
  * hip_build_param_esp_info - build esp_info parameter
- * \todo Properly comment parameters of hip_build_param_esp_info()
+ * @todo Properly comment parameters of hip_build_param_esp_info()
  *
  * @param msg the message where the parameter will be appended
  * @param keymat_index no desription

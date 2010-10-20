@@ -63,14 +63,12 @@ int rsa_key_len      = 1024;
 int dsa_key_len      = 1024;
 #define ECDSA_CURVE NID_sect163r1
 
-/*!
- * \brief Determine and print the gettimeofday time resolution.
- *
- * \author Tobias Heer
+/**
+ * @brief Determine and print the gettimeofday time resolution.
  *
  * Determine the time resolution of gettimeofday.
  *
- * \return void
+ * @return void
  */
 static void print_timeres(void)
 {

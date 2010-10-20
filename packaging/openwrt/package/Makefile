@@ -57,8 +57,7 @@ endef
 
 CONFIGURE_VARS += \
     LIBS="-lz" \
-    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig" \
-	CFLAGS="-fPIC -Wno-error"
+    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig"
 
 define Build/Configure
 	$(call Build/Configure/Default, \
@@ -73,6 +72,9 @@ define Build/Compile
 endef
 
 define Package/hipl-hipd/install
+	$(INSTALL_DIR) $(1)/etc/init.d/
+	$(INSTALL_DIR) $(1)/usr/sbin/
+
 	$(INSTALL_BIN) ./files/hipd.init $(1)/etc/init.d/hipd
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipd $(1)/usr/sbin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipconf $(1)/usr/sbin/
@@ -80,16 +82,17 @@ define Package/hipl-hipd/install
 endef
 
 define Package/hipl-hipfw/install
+	$(INSTALL_DIR) $(1)/etc/init.d/
+	$(INSTALL_DIR) $(1)/usr/sbin/
+
 	$(INSTALL_BIN) ./files/hipfw.init $(1)/etc/init.d/hipfw
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/hipfw $(1)/usr/sbin/
 endef
 
 define Package/hipl-common/install
 	$(INSTALL_DIR) $(1)/etc/hip/
-	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_DIR) $(1)/etc/modules.d/
 	$(INSTALL_DIR) $(1)/usr/lib/
-	$(INSTALL_DIR) $(1)/usr/sbin/
 
 	$(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipcore.so* $(1)/usr/lib/

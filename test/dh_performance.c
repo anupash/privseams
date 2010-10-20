@@ -54,7 +54,7 @@
 #include "lib/tool/pk.h"
 
 
-/*! \brief Number of benchmark runs */
+/** @brief Number of benchmark runs */
 #define DHP_DEFAULT_LOOPS 100
 
 
@@ -66,41 +66,39 @@
  */
 
 #define PS_DH_CREATE  0
-/** \brief Perf set number: Shared secret creation */
+/** @brief Perf set number: Shared secret creation */
 #define PS_DH_SHARE   1
-/*! \brief Perf set number: DSA key creation */
+/** @brief Perf set number: DSA key creation */
 #define PS_DSA_CREATE 2
-/*! \brief Perf set number: DSA signature creation */
+/** @brief Perf set number: DSA signature creation */
 #define PS_DSA_SIGN   3
-/*! \brief Perf set number: DSA verification */
+/** @brief Perf set number: DSA verification */
 #define PS_DSA_VERIFY 4
-/*! \brief Perf set number: DSA key creation */
+/** @brief Perf set number: DSA key creation */
 #define PS_RSA_CREATE 5
-/*! \brief Perf set number: RSA signature creation */
+/** @brief Perf set number: RSA signature creation */
 #define PS_RSA_SIGN   6
-/*! \brief Perf set number: RSA verification */
+/** @brief Perf set number: RSA verification */
 #define PS_RSA_VERIFY 7
-/*! \brief Perf set number: Hash chain creation */
+/** @brief Perf set number: Hash chain creation */
 #define PS_HC_CREATE  8
-/*! \brief Perf set number: Hash computation */
+/** @brief Perf set number: Hash computation */
 #define PS_HASH       9
-/* \brief Maximum perf set number. Number of file outputs */
+/* @brief Maximum perf set number. Number of file outputs */
 #define PS_MAX       10
-/*!@}*/
+/**@}*/
 
-/*! \brief Input bytes for the hash function */
+/** @brief Input bytes for the hash function */
 #define HASH_LEN     20
 
 
-/*!
- * \brief Print command line options.
+/**
+ * @brief Print command line options.
  *
  * Prints all possible command line options.
  *
- * \author Tobias Heer
- *
- * \param progname The name of the executable
- * \return void
+ * @param progname The name of the executable
+ * @return void
  */
 static void dhp_usage(char *progname)
 {
@@ -121,33 +119,31 @@ static void dhp_usage(char *progname)
             , progname, DSA_KEY_DEFAULT_BITS);
 }
 
-/*!
- * \brief Get the option values from the input parameters.
+/**
+ * @brief Get the option values from the input parameters.
  *
  * Takes the input parameters, parses them and returns the option switches.
  *
- * \author Tobias Heer
+ * @param argv The arguments array.
+ * @param argc The length of the arguments array.
+ * @param sw_create_dh How many DH keys should be used?
+ * @param sw_dh_group_id Which DH group ID (key type) should be used?
+ * @param sw_create_dsa How many DSA keys should be used?
+ * @param sw_create_rsa How many RSA keys should be used?
+ * @param sw_rsa_keylen RSA key length.
+ * @param sw_dsa_keylen DSA key length.
+ * @param sw_bench_loops Repetitions for the public-key measurements.
+ * @param sw_print_keys  Print the DH, RSA, and DSA keys (for debug).
+ * @param sw_shared_key_len Length of the shared keys.
+ * @param sw_hash_chain_len Length of the hash chain (elements)
+ * @param sw_file_output Print data to files or to stdout
+ * @param sw_cpuload Don't measure, only load the CPU.
+ * @param sw_hash_loops Number of hash computations.
  *
- * \param argv The arguments array.
- * \param argc The length of the arguments array.
- * \param sw_create_dh How many DH keys should be used?
- * \param sw_dh_group_id Which DH group ID (key type) should be used?
- * \param sw_create_dsa How many DSA keys should be used?
- * \param sw_create_rsa How many RSA keys should be used?
- * \param sw_rsa_keylen RSA key length.
- * \param sw_dsa_keylen DSA key length.
- * \param sw_bench_loops Repetitions for the public-key measurements.
- * \param sw_print_keys  Print the DH, RSA, and DSA keys (for debug).
- * \param sw_shared_key_len Length of the shared keys.
- * \param sw_hash_chain_len Length of the hash chain (elements)
- * \param sw_file_output Print data to files or to stdout
- * \param sw_cpuload Don't measure, only load the CPU.
- * \param sw_hash_loops Number of hash computations.
- *
- * \note all sw_ paramters are pointers to ouput parameters that are modified
+ * @note all sw_ paramters are pointers to ouput parameters that are modified
  *       by dhp_getopts.
  *
- * \return Returns error code. 0 = Success, 1 = Error.
+ * @return Returns error code. 0 = Success, 1 = Error.
  */
 static int dhp_getopts(int argc,
                        char **argv,
@@ -269,14 +265,12 @@ static int dhp_getopts(int argc,
     return 1;
 }
 
-/*!
- * \brief Determine and print the gettimeofday time resolution.
- *
- * \author Tobias Heer
+/**
+ * @brief Determine and print the gettimeofday time resolution.
  *
  * Determine the time resolution of gettimeofday.
  *
- * \return void
+ * @return void
  */
 static void print_timeres(void)
 {
@@ -299,30 +293,26 @@ static void print_timeres(void)
     printf( "-------------------------------\n\n\n");
 }
 
-/*!
- * \brief Take time for benchmark.
+/**
+ * @brief Take time for benchmark.
  *
  * Starts a time interval.
  *
- * \author Tobias Heer
- *
- * \param bench_time timeval struct from the OS.
- * \return void
+ * @param bench_time timeval struct from the OS.
+ * @return void
  */
 static void dhp_start_benchmark(struct timeval *bench_time)
 {
     gettimeofday(bench_time, NULL);
 }
 
-/*!
- * \brief Take time for benchmark and return passed time.
+/**
+ * @brief Take time for benchmark and return passed time.
  *
  * Concludes a time interval and returns the past time.
  *
- * \author Tobias Heer
- *
- * \param bench_time timeval struct from the OS.
- * \return passed time since beginning of the interval.
+ * @param bench_time timeval struct from the OS.
+ * @return passed time since beginning of the interval.
  */
 static double dhp_stop_benchmark(struct timeval *bench_time)
 {
@@ -332,15 +322,13 @@ static double dhp_stop_benchmark(struct timeval *bench_time)
             * 1000000 + (now.tv_usec - bench_time->tv_usec)) / 1000000.0;
 }
 
-/*!
- * \brief Main function that performs the measurements.
+/**
+ * @brief Main function that performs the measurements.
  *
- * \author Tobias Heer
+ * @param argc Number of command line arguments
+ * @param argv Command line argument array
  *
- * \param argc Number of command line arguments
- * \param argv Command line argument array
- *
- * \return Returns error code. 0 = Success, 1 = Error.
+ * @return Returns error code. 0 = Success, 1 = Error.
  */
 int main(int argc, char **argv)
 {

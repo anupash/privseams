@@ -1,5 +1,4 @@
-/** @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -22,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * This library is used to configure HIP daemon (hipd) dynamically
  * with the hipconf command line tool. Hipd uses this library also to
  * parse the static configuration from @c HIPL_SYSCONFDIR/hipd_config (the file
@@ -1833,10 +1835,10 @@ static int hip_conf_handle_get_peer_lsi(hip_common_t *msg,
 {
     int err = 0;
     hip_hit_t hit;
-    const hip_tlv_common_t *param;
     const hip_lsi_t *lsi;
     char lsi_str[INET_ADDRSTRLEN];
     const char *hit_str = opt[0];
+    const struct hip_tlv_common *param;
 
     HIP_IFEL((inet_pton(AF_INET6, hit_str, &hit) <= 0), 1,
              "Not an IPv6 address\n");

@@ -1388,7 +1388,7 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
          * no more parameters left. */
         i          = 0;
         reg_failed = (const struct hip_reg_failed *) hip_get_next_param(msg,
-                                        (const hip_tlv_common_t *) reg_failed);
+                                        (const struct hip_tlv_common *)reg_failed);
 
         if (reg_failed == NULL) {
             break;
