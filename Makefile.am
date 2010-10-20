@@ -48,8 +48,10 @@ TESTS           =
 check_PROGRAMS  =
 
 if HIP_UNITTESTS
-TESTS           += check_lib_core
-check_PROGRAMS  += check_lib_core
+TESTS           += check_lib_core \
+                   check_firewall
+check_PROGRAMS  += check_lib_core \
+                   check_firewall
 endif
 
 
@@ -176,6 +178,9 @@ check_lib_core_SOURCES =    test/check_lib_core.c          \
                             test/lib/core/hit.c            \
                             test/lib/core/straddr.c
 
+check_firewall_SOURCES =    test/check_firewall.c          \
+                            test/firewall/file_buffer.c
+
 # Initialize LDADD lists empty, because modules might add entries to LDADD. The
 # module LDADDs need to be included before the standard LDADDs, because modules
 # can depend on the core code.
@@ -192,6 +197,7 @@ include modules/update/Makefile.am
 ### library dependencies ###
 
 check_lib_core_LDADD                     = lib/core/libhipcore.la
+check_firewall_LDADD                     = lib/core/libhipcore.la
 firewall_hipfw_LDADD                    += lib/core/libhipcore.la
 hipd_hipd_LDADD                         += lib/modularization/libmod.la \
                                            lib/core/libhipcore.la
