@@ -97,7 +97,7 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
 }
 
 /**
- * Creates a file buffer that holds the specified file.
+ * Initializes a file buffer that holds the specified file.
  *
  * A file buffer is used to load and hold the contents of a file in
  * memory (for simplified access or improved performance).
@@ -139,7 +139,9 @@ int hip_fb_create(struct hip_file_buffer *const fb,
 }
 
 /**
- * Deletes a file buffer and releases all resources associated with it.
+ * De-allocates the resources associated with a file buffer object in
+ * hip_fb_create().
+ * This function does not de-allocated the memory pointed to by fb.
  * After calling this function, the result of calling any other hip_fb_...()
  * function on the file buffer fb is undefined.
  *
