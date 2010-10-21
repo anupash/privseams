@@ -30,6 +30,7 @@
 #include <stdlib.h>     // malloc(), free()
 #include <unistd.h>     // lseek(), close(), read()
 #include <fcntl.h>      // open()
+#include <string.h>     // memset()
 
 #include "firewall/file_buffer.h"
 
@@ -108,35 +109,33 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
  * For regular files, using mmap() is vastly more efficient.
  *
  * This function allocates resources, in particular memory, for the returned
- * struct hip_line_parser object.
+ * object.
  * To free these resources and to avoid memory leaks, it is imperative to call
- * hip_lp_delete() when the object created here is no longer used.
+ * hip_fb_delete() when the object created here is no longer used.
  *
- * @param file_name the name of the file to buffer.
- * @return a file buffer instance if the file could be opened and successfully
- *  buffered.
- *  NULL on error.
+ * @param fb a pointer to a valid, allocated instance of struct hip_file_buffer.
+ *  Upon successful completion, the function writes file-specific context data
+ *  to the location referenced by fb.
+ * @param file_name the name of the file to open and load into memory.
+ * @return a 0 if the file could be opened and successfully buffered.
+ *  -1 is returned when the fb is NULL or when file_name is NULL or when
+ *  the file file_name cannot be opened for reading.
  */
-struct hip_file_buffer *hip_fb_create(const char *const file_name)
+int hip_fb_create(struct hip_file_buffer *const fb,
+                  const char *const file_name)
 {
-    struct hip_file_buffer *fb = NULL;
-
-    if (file_name != NULL) {
-        fb = calloc(1, sizeof(struct hip_file_buffer));
-        if (fb != NULL) {
-            fb->fd = open(file_name, O_RDONLY);
-            if (fb->fd != -1) {
-                // start, end, size are now NULL/0 thanks to calloc()
-                // initialize file buffer
-                if (hip_fb_reload(fb) == 0) {
-                    return fb;
-                }
+    if (fb && file_name) {
+        memset(fb, 0, sizeof(*fb)); // set all fields to 0/NULL
+        fb->fd = open(file_name, O_RDONLY);
+        if (fb->fd != -1) {
+            if (hip_fb_reload(fb) == 0) {
+                return 0;
             }
-            hip_fb_delete(fb);
         }
+        hip_fb_delete(fb);
     }
 
-    return NULL;
+    return -1;
 }
 
 /**
@@ -144,18 +143,21 @@ struct hip_file_buffer *hip_fb_create(const char *const file_name)
  * After calling this function, the result of calling any other hip_fb_...()
  * function on the file buffer fb is undefined.
  *
- * @param fb the file buffer to delete.
+ * @param fb the file buffer to delete. If fb is NULL, this function has no
+ *  effect.
  */
 void hip_fb_delete(struct hip_file_buffer *const fb)
 {
     if (fb != NULL) {
         if (fb->fd != -1) {
             close(fb->fd);
+            fb->fd = -1;
         }
         if (fb->ma.start != NULL) {
             free(fb->ma.start);
+            fb->ma.start = NULL;
+            fb->ma.end = NULL;
         }
-        free(fb);
     }
 }
 

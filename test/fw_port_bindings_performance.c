@@ -53,12 +53,12 @@ static double time_hip_fb_create_delete(const unsigned int iterations,
 {
     clock_t start, end;
     unsigned int i;
+    struct hip_file_buffer fb;
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        struct hip_file_buffer *fb = hip_fb_create(file_name);
-        if (fb != NULL) {
-            hip_fb_delete(fb);
+        if (hip_fb_create(&fb, file_name) == 0) {
+            hip_fb_delete(&fb);
         }
     }
     end = clock();
@@ -71,22 +71,20 @@ static double time_hip_fb_reload(const unsigned int iterations,
 {
     clock_t start, end;
     unsigned int i;
-    struct hip_file_buffer *fb;
+    struct hip_file_buffer fb;
     int err;
 
-    fb = hip_fb_create(file_name);
-    assert(fb != NULL);
+    err = hip_fb_create(&fb, file_name);
+    assert(0 == err);
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        err = hip_fb_reload(fb);
+        err = hip_fb_reload(&fb);
         assert(err == 0);
     }
     end = clock();
 
-    if (fb != NULL) {
-        hip_fb_delete(fb);
-    }
+    hip_fb_delete(&fb);
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
@@ -138,13 +136,14 @@ static double time_hip_lp_next(const unsigned int iterations,
 {
     clock_t start, end;
     unsigned int i;
-    struct hip_file_buffer *fb;
+    struct hip_file_buffer fb;
     struct hip_line_parser *lp;
     char *line;
+    int err;
 
-    fb = hip_fb_create(file_name);
-    assert(fb != NULL);
-    lp = hip_lp_create(hip_fb_get_mem_area(fb));
+    err = hip_fb_create(&fb, file_name);
+    assert(0 == err);
+    lp = hip_lp_create(hip_fb_get_mem_area(&fb));
     assert(lp != NULL);
     line = hip_lp_first(lp);
     assert(line != NULL);
@@ -158,9 +157,7 @@ static double time_hip_lp_next(const unsigned int iterations,
     if (lp != NULL) {
         hip_lp_delete(lp);
     }
-    if (fb != NULL) {
-        hip_fb_delete(fb);
-    }
+    hip_fb_delete(&fb);
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
@@ -170,13 +167,14 @@ static double time_hip_lp_parse_file(const unsigned int iterations,
 {
     clock_t start, end;
     unsigned int i;
-    struct hip_file_buffer *fb;
+    struct hip_file_buffer fb;
     struct hip_line_parser *lp;
     char *line;
+    int err;
 
-    fb = hip_fb_create(file_name);
-    assert(fb != NULL);
-    lp = hip_lp_create(hip_fb_get_mem_area(fb));
+    err = hip_fb_create(&fb, file_name);
+    assert(0 == err);
+    lp = hip_lp_create(hip_fb_get_mem_area(&fb));
     assert(lp != NULL);
 
     start = clock();
@@ -191,9 +189,7 @@ static double time_hip_lp_parse_file(const unsigned int iterations,
     if (lp != NULL) {
         hip_lp_delete(lp);
     }
-    if (fb != NULL) {
-        hip_fb_delete(fb);
-    }
+    hip_fb_delete(&fb);
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
@@ -251,7 +247,7 @@ int main(void)
 
     printf("Testing file buffer allocation and de-allocation:\n"
            "  - call hip_fb_create() to\n"
-           "    - allocate the file buffer object\n"
+           "    - zero the file buffer object\n"
            "    - open the file\n"
            "    - call hip_fb_reload() to\n"
            "      - allocate a memory buffer for the file data (if new fb object)\n"

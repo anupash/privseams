@@ -233,9 +233,9 @@ static void invalidate_cache(void)
 
 
 
-static struct hip_file_buffer *tcp6_file = NULL;
+static struct hip_file_buffer tcp6_file;
 static struct hip_line_parser *tcp6_parser = NULL;
-static struct hip_file_buffer *udp6_file = NULL;
+static struct hip_file_buffer udp6_file;
 static struct hip_line_parser *udp6_parser = NULL;
 
 /**
@@ -259,8 +259,8 @@ static struct hip_line_parser *udp6_parser = NULL;
 static void hip_port_bindings_reload(void)
 {
     invalidate_cache();
-    hip_fb_reload(tcp6_file);
-    hip_fb_reload(udp6_file);
+    hip_fb_reload(&tcp6_file);
+    hip_fb_reload(&udp6_file);
 }
 
 /**
@@ -364,14 +364,12 @@ int hip_port_bindings_init(const bool enable_cache)
         init_cache();
     }
 
-    tcp6_file = hip_fb_create("/proc/net/tcp6");
-    HIP_IFEL(NULL == tcp6_file, 1, "Buffering tcp6 proc file in memory failed\n");
-    tcp6_parser = hip_lp_create(hip_fb_get_mem_area(tcp6_file));
+    HIP_IFEL(hip_fb_create(&tcp6_file, "/proc/net/tcp6") == 0, 1, "Buffering tcp6 proc file in memory failed\n");
+    tcp6_parser = hip_lp_create(hip_fb_get_mem_area(&tcp6_file));
     HIP_IFEL(NULL == tcp6_parser, 1, "Creating line parser for tcp6 proc file failed\n");
 
-    udp6_file = hip_fb_create("/proc/net/udp6");
-    HIP_IFEL(NULL == udp6_file, 1, "Buffering udp6 proc file in memory failed\n");
-    udp6_parser = hip_lp_create(hip_fb_get_mem_area(udp6_file));
+    HIP_IFEL(hip_fb_create(&udp6_file, "/proc/net/udp6") == 0, 1, "Buffering udp6 proc file in memory failed\n");
+    udp6_parser = hip_lp_create(hip_fb_get_mem_area(&udp6_file));
     HIP_IFEL(NULL == udp6_parser, 1, "Creating line parser for udp6 proc file failed\n");
 
     return 0;
@@ -388,16 +386,12 @@ void hip_port_bindings_uninit(void)
     if (tcp6_parser != NULL) {
         hip_lp_delete(tcp6_parser);
     }
-    if (tcp6_file != NULL) {
-        hip_fb_delete(tcp6_file);
-    }
+    hip_fb_delete(&tcp6_file);
 
     if (udp6_parser != NULL) {
         hip_lp_delete(udp6_parser);
     }
-    if (udp6_file != NULL) {
-        hip_fb_delete(udp6_file);
-    }
+    hip_fb_delete(&udp6_file);
 
     uninit_cache();
 }
