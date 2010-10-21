@@ -103,6 +103,9 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
  * The memory buffer is allocated so that the whole file fits in it.
  * Any changes to the memory buffer are not written back to the file and remain
  * local to the memory buffer.
+ * Note that this is useful primarily with files that cannot be mapped into
+ * memory via mmap(), such as files in /proc.
+ * For regular files, using mmap() is vastly more efficient.
  *
  * This function allocates resources, in particular memory, for the returned
  * struct hip_line_parser object.
