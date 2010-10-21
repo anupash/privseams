@@ -33,7 +33,7 @@
 #include "firewall/line_parser.h"
 
 /**
- * Creates a parser that iterates over the lines of a given memory area.
+ * Initializes a parser that iterates over the lines of a given memory area.
  *
  * A line parser object is used to linearly iterate over the lines in a memory
  * area that holds text.
@@ -43,40 +43,42 @@
  * When this function returns successfully, hip_lp_first() can be called
  * immediately to start parsing.
  * This function allocates resources, in particular memory, for the returned
- * struct hip_line_parser object.
+ * object.
  * To free these resources and to avoid memory leaks, it is imperative to call
  * hip_lp_delete() when the object created here is no longer used.
  *
+ * @param lp a pointer to a valid, allocated instance of struct hip_line_parser.
+ *  Upon successful completion, the function writes parser-specific context
+ *  data to the location referenced by lp.
  * @param ma the memory area to interpret as text and to parse by lines.
- * @return a line parser instance if the parser could initialize correctly.
- *  NULL, if the specified file could not be accessed.
+ * @return 0 if the line parser lp was successfully initialized.
+ *  This function return -1 if lp is NULL or if ma is NULL.
  */
-struct hip_line_parser *hip_lp_create(const struct hip_mem_area *const ma)
+int hip_lp_create(struct hip_line_parser *const lp,
+                  const struct hip_mem_area *const ma)
 {
-    struct hip_line_parser *lp = NULL;
-
-    if (ma != NULL) {
-        lp = calloc(1, sizeof(struct hip_line_parser));
-        if (lp != NULL) {
-            // cur is NULL as it should be thanks to calloc()
-            lp->ma = ma;
-            return lp;
-        }
+    if (lp && ma) {
+        lp->ma = ma;
+        lp->cur = NULL;
+        return 0;
     }
 
-    return NULL;
+    return -1;
 }
 
 /**
- * Deletes a line parser and releases all resources associated with it (but not
- * the struct hip_mem_area object this parser was created with or the memory
- * backing that memory area).
+ * Releases the resources allocated for a line parser object in
+ * hip_lp_create().
+ * This does not include the memory pointed to by lp or the struct hip_mem_area
+ * object this parser was created with or the memory backing that memory area).
  *
  * @param lp the line parser object to delete.
+ *  If lp is NULL, calling this function has no effect.
  */
 void hip_lp_delete(struct hip_line_parser *const lp)
 {
     if (lp != NULL) {
-        free(lp);
+        lp->ma = NULL;
+        lp->cur = NULL;
     }
 }

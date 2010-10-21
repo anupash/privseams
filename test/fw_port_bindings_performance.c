@@ -94,12 +94,12 @@ static double time_hip_lp_create_delete(const unsigned int iterations)
     clock_t start, end;
     unsigned int i;
     struct hip_mem_area ma = { 0, 0 };
+    struct hip_line_parser lp;
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        struct hip_line_parser *lp = hip_lp_create(&ma);
-        if (lp != NULL) {
-            hip_lp_delete(lp);
+        if (hip_lp_create(&lp, &ma) == 0) {
+            hip_lp_delete(&lp);
         }
     }
     end = clock();
@@ -111,22 +111,21 @@ static double time_hip_lp_first(const unsigned int iterations)
 {
     clock_t start, end;
     unsigned int i;
-    struct hip_line_parser *lp;
+    struct hip_line_parser lp;
     char *line;
     struct hip_mem_area ma = { 0, 0 };
+    int err;
 
-    lp = hip_lp_create(&ma);
-    assert(lp != NULL);
+    err = hip_lp_create(&lp, &ma);
+    assert(0 == err);
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        line = hip_lp_first(lp);
+        line = hip_lp_first(&lp);
     }
     end = clock();
 
-    if (lp != NULL) {
-        hip_lp_delete(lp);
-    }
+    hip_lp_delete(&lp);
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
 }
@@ -137,26 +136,24 @@ static double time_hip_lp_next(const unsigned int iterations,
     clock_t start, end;
     unsigned int i;
     struct hip_file_buffer fb;
-    struct hip_line_parser *lp;
+    struct hip_line_parser lp;
     char *line;
     int err;
 
     err = hip_fb_create(&fb, file_name);
     assert(0 == err);
-    lp = hip_lp_create(hip_fb_get_mem_area(&fb));
-    assert(lp != NULL);
-    line = hip_lp_first(lp);
+    err = hip_lp_create(&lp, hip_fb_get_mem_area(&fb));
+    assert(0 == err);
+    line = hip_lp_first(&lp);
     assert(line != NULL);
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        line = hip_lp_next(lp);
+        line = hip_lp_next(&lp);
     }
     end = clock();
 
-    if (lp != NULL) {
-        hip_lp_delete(lp);
-    }
+    hip_lp_delete(&lp);
     hip_fb_delete(&fb);
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;
@@ -168,27 +165,25 @@ static double time_hip_lp_parse_file(const unsigned int iterations,
     clock_t start, end;
     unsigned int i;
     struct hip_file_buffer fb;
-    struct hip_line_parser *lp;
+    struct hip_line_parser lp;
     char *line;
     int err;
 
     err = hip_fb_create(&fb, file_name);
     assert(0 == err);
-    lp = hip_lp_create(hip_fb_get_mem_area(&fb));
-    assert(lp != NULL);
+    err = hip_lp_create(&lp, hip_fb_get_mem_area(&fb));
+    assert(0 == err);
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        line = hip_lp_first(lp);
+        line = hip_lp_first(&lp);
         while (line != NULL) {
-            line = hip_lp_next(lp);
+            line = hip_lp_next(&lp);
         }
     }
     end = clock();
 
-    if (lp != NULL) {
-        hip_lp_delete(lp);
-    }
+    hip_lp_delete(&lp);
     hip_fb_delete(&fb);
 
     return (((double) (end - start)) / CLOCKS_PER_SEC) / iterations;

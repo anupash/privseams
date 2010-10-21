@@ -234,9 +234,9 @@ static void invalidate_cache(void)
 
 
 static struct hip_file_buffer tcp6_file;
-static struct hip_line_parser *tcp6_parser = NULL;
+static struct hip_line_parser tcp6_parser;
 static struct hip_file_buffer udp6_file;
-static struct hip_line_parser *udp6_parser = NULL;
+static struct hip_line_parser udp6_parser;
 
 /**
  * Load the latest information from /proc.
@@ -310,10 +310,10 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
                IPPROTO_UDP == protocol);
     switch (protocol) {
     case IPPROTO_TCP:
-        lp = tcp6_parser;
+        lp = &tcp6_parser;
         break;
     case IPPROTO_UDP:
-        lp = udp6_parser;
+        lp = &udp6_parser;
         break;
     }
 
@@ -365,12 +365,12 @@ int hip_port_bindings_init(const bool enable_cache)
     }
 
     HIP_IFEL(hip_fb_create(&tcp6_file, "/proc/net/tcp6") == 0, 1, "Buffering tcp6 proc file in memory failed\n");
-    tcp6_parser = hip_lp_create(hip_fb_get_mem_area(&tcp6_file));
-    HIP_IFEL(NULL == tcp6_parser, 1, "Creating line parser for tcp6 proc file failed\n");
+    HIP_IFEL(hip_lp_create(&tcp6_parser, hip_fb_get_mem_area(&tcp6_file)) != 0,
+             1, "Creating line parser for tcp6 proc file failed\n");
 
     HIP_IFEL(hip_fb_create(&udp6_file, "/proc/net/udp6") == 0, 1, "Buffering udp6 proc file in memory failed\n");
-    udp6_parser = hip_lp_create(hip_fb_get_mem_area(&udp6_file));
-    HIP_IFEL(NULL == udp6_parser, 1, "Creating line parser for udp6 proc file failed\n");
+    HIP_IFEL(hip_lp_create(&udp6_parser, hip_fb_get_mem_area(&udp6_file)) != 0,
+             1, "Creating line parser for udp6 proc file failed\n");
 
     return 0;
 
@@ -383,14 +383,10 @@ out_err:
  */
 void hip_port_bindings_uninit(void)
 {
-    if (tcp6_parser != NULL) {
-        hip_lp_delete(tcp6_parser);
-    }
+    hip_lp_delete(&tcp6_parser);
     hip_fb_delete(&tcp6_file);
 
-    if (udp6_parser != NULL) {
-        hip_lp_delete(udp6_parser);
-    }
+    hip_lp_delete(&udp6_parser);
     hip_fb_delete(&udp6_file);
 
     uninit_cache();
