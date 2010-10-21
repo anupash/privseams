@@ -364,11 +364,11 @@ int hip_port_bindings_init(const bool enable_cache)
         init_cache();
     }
 
-    HIP_IFEL(hip_fb_create(&tcp6_file, "/proc/net/tcp6") == 0, 1, "Buffering tcp6 proc file in memory failed\n");
+    HIP_IFEL(hip_fb_create(&tcp6_file, "/proc/net/tcp6") != 0, 1, "Buffering tcp6 proc file in memory failed\n");
     HIP_IFEL(hip_lp_create(&tcp6_parser, hip_fb_get_mem_area(&tcp6_file)) != 0,
              1, "Creating line parser for tcp6 proc file failed\n");
 
-    HIP_IFEL(hip_fb_create(&udp6_file, "/proc/net/udp6") == 0, 1, "Buffering udp6 proc file in memory failed\n");
+    HIP_IFEL(hip_fb_create(&udp6_file, "/proc/net/udp6") != 0, 1, "Buffering udp6 proc file in memory failed\n");
     HIP_IFEL(hip_lp_create(&udp6_parser, hip_fb_get_mem_area(&udp6_file)) != 0,
              1, "Creating line parser for udp6 proc file failed\n");
 
