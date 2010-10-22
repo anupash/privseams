@@ -39,7 +39,7 @@ syncrepo()
     ssh  ${REPO_USER}@${REPO_SERVER} "rm -f ${PKG_SERVER_DIR}/*.${DISTRO_PKG_SUFFIX}"
 
     # Copy all packages and repo index to the repository
-    rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
+    rsync -uvr $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
 
 }
 
@@ -96,7 +96,6 @@ DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 REPO_SERVER=hipl.hiit.fi
 REPO_BASE=/var/www/packages/html
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
-RSYNC_OPTS=-uvr
 REPO_USER=hipl
 REPO_GROUP=hipl
 SPECFILE_DIR=$(mktemp -d)
