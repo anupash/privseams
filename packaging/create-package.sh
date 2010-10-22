@@ -48,7 +48,7 @@ set_release_version()
     if test -r $OPT_CHANGELOG; then
         RELEASE=$(head -2 $OPT_CHANGELOG | tail -1 | cut -d" " -f2)
     else
-        RELEASE=$(bzr log --line -l 1 | cut -d: -f1)
+        RELEASE=$(bzr revno)
     fi
 }
 
