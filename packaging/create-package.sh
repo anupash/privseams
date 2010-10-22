@@ -116,28 +116,21 @@ build_deb()
 set -e
 
 VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
-RELEASE=
 NAME=hipl
 PKGROOT=$PWD
 PKGEXE=$PKGROOT/packaging
 PKG_INDEX_DIR=$PKGEXE
 PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
-PKG_WEB_DIR=
-PKG_SERVER_DIR=
 DEBDIR=$PWD/debbuild
 RPMDIR=$PWD/rpmbuild
 RPMBUILD=/tmp/rpmbuild
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
 SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
 SUDO= # no sudo
-ARCH=
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
-DISTROBASE=
-DISTRO_PKG_SUFFIX=
 REPO_SERVER=hipl.hiit.fi
 REPO_BASE=/var/www/packages/html
-BIN_FORMAT=
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 RSYNC_OPTS=-uvr
 REPO_USER=hipl
