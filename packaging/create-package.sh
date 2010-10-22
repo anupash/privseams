@@ -32,6 +32,10 @@ mkindex_deb()
 
 syncrepo()
 {
+    NAME=hipl
+    REPO_SERVER=hipl.hiit.fi
+    REPO_USER=hipl
+
     # create repo dir if it does not exist
     ssh ${REPO_USER}@${REPO_SERVER} mkdir -p $PKG_SERVER_DIR
 
@@ -86,15 +90,12 @@ build_deb()
 set -e
 
 VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
-NAME=hipl
 PKGROOT=$PWD
 PKG_EXE=$PKGROOT/packaging
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
-REPO_SERVER=hipl.hiit.fi
 REPO_BASE=/var/www/packages/html
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
-REPO_USER=hipl
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
