@@ -76,8 +76,6 @@ syncrepo()
         mkindex_deb
     elif test x"$DISTROBASE" = x"redhat"; then
         mkindex_rpm
-    else
-        die "Unhandled distro $DISTROBASE"
     fi
 
     # Delete old packages from the repo
@@ -163,7 +161,7 @@ elif test -r /etc/redhat-release; then
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
 else
-    die "Unknown architecture"
+    die "unknown distribution"
 fi
 
 set_release_version
@@ -181,8 +179,6 @@ elif test x"$1" = x"bin"; then
         BIN_FORMAT=rpm
     elif test x"$DISTROBASE" = x"debian"; then
         BIN_FORMAT=deb
-    else
-        die "Unknown distro"
     fi
 fi
 
@@ -190,6 +186,4 @@ if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"; then
     build_rpm
 elif test x"$1" = x"deb" || test x"$BIN_FORMAT" = x"deb"; then
     build_deb
-else
-    die "*** Unknown platform, aborting ***"
 fi
