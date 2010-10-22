@@ -96,7 +96,6 @@ build_rpm()
 
 build_deb()
 {
-    test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
     if test -e ~/debbuild; then
         echo "Warning: ~/debbuild found, could be a problem"
         echo "It should be a link to /usr/src/debian"
