@@ -35,13 +35,6 @@ syncrepo()
     # create repo dir if it does not exist
     ssh ${REPO_USER}@${REPO_SERVER} mkdir -p $PKG_SERVER_DIR
 
-    # build index of all packages
-    if test x"$DISTROBASE" = x"debian"; then
-        mkindex_deb
-    elif test x"$DISTROBASE" = x"redhat"; then
-        mkindex_rpm
-    fi
-
     # Delete old packages from the repo
     ssh  ${REPO_USER}@${REPO_SERVER} "rm -f ${PKG_SERVER_DIR}/*.${DISTRO_PKG_SUFFIX}"
 
@@ -169,7 +162,13 @@ fi
 # Determine action
 case $1 in
     syncrepo)
-        syncrepo ;;
+        if test "$DISTROBASE" = "debian"; then
+            mkindex_deb
+        else
+            mkindex_rpm
+        fi
+        syncrepo
+        ;;
     deb)
         build_package build_deb ;;
     rpm)
