@@ -59,10 +59,20 @@ set_release_version()
     fi
 }
 
-build_rpm()
+build_package()
 {
+    set_release_version
+    echo "Version: $VERSION" > $SPECFILE
+    echo "Release: $RELEASE" >> $SPECFILE
+    cat $SPECFILE_TEMPLATE >> $SPECFILE
+
     make dist > /dev/null
 
+    $1
+}
+
+build_rpm()
+{
     echo "Deleting old .rpmmacros"
     echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
 
@@ -86,8 +96,6 @@ build_rpm()
 
 build_deb()
 {
-    make dist > /dev/null
-
     test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
     if test -e ~/debbuild; then
         echo "Warning: ~/debbuild found, could be a problem"
@@ -159,25 +167,19 @@ else
     die "unknown distribution"
 fi
 
-set_release_version
-echo "Version: $VERSION" > $SPECFILE
-echo "Release: $RELEASE" >> $SPECFILE
-
-cat $SPECFILE_TEMPLATE >> $SPECFILE
-
 # Determine action
 case $1 in
     syncrepo)
         syncrepo ;;
     deb)
-        build_deb ;;
+        build_package build_deb ;;
     rpm)
-        build_rpm ;;
+        build_package build_rpm ;;
     bin)
         if test "$DISTROBASE" = "debian"; then
-            build_deb
+            build_package build_deb
         else
-            build_rpm
+            build_package build_rpm
         fi
         ;;
     *)
