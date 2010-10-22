@@ -234,14 +234,12 @@ static void invalidate_cache(void)
 
 
 static struct hip_file_buffer tcp6_file;
-static struct hip_line_parser tcp6_parser;
 static struct hip_file_buffer udp6_file;
-static struct hip_line_parser udp6_parser;
 
 /**
  * Load the latest information from /proc.
  * This consists of handling two separate caching layers:
- * a) re-reading the file contents in the tcp/udp6_parser objects and
+ * a) re-reading the file contents in the tcp6/udp6 file buffer objects and
  * b) invalidating the lookup cache.
  * On the one hand, this operation should ideally be called for every call to
  * hip_port_bindings_get() to retrieve up-to-date information from /proc
@@ -249,8 +247,8 @@ static struct hip_line_parser udp6_parser;
  * On the other hand, this operation is about 300 times more expensive than
  * parsing the /proc file and even more expensive compared to a cache lookup.
  * hip_port_bindings_reload_delayed() tries to balance this conflict.
- * After calling this function, the cache is empty and the line parser sees the
- * up-to-date file contents from /proc.
+ * After calling this function, the cache is empty and the file buffers contain
+ * the up-to-date file contents from /proc.
  *
  * @todo TODO efficiency could be increased by narrowing this down from
  *  reloading the files and invalidating the caches of all protocols to
@@ -302,18 +300,16 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
     // the files /proc/net/{udp,tcp}6 are line-based and the line number of the
     // port to look up is not known in advance
     // -> use a parser that lets us iterate over the lines in the files
-    struct hip_line_parser *lp = NULL;
+    struct hip_line_parser lp;
 
-    // the parser can re-read the file contents online, so we re-use the parser
-    // objects for all lookups
     HIP_ASSERT(IPPROTO_TCP == protocol ||
                IPPROTO_UDP == protocol);
     switch (protocol) {
     case IPPROTO_TCP:
-        lp = &tcp6_parser;
+        hip_lp_create(&lp, hip_fb_get_mem_area(&tcp6_file));
         break;
     case IPPROTO_UDP:
-        lp = &udp6_parser;
+        hip_lp_create(&lp, hip_fb_get_mem_area(&udp6_file));
         break;
     }
 
@@ -322,7 +318,7 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
     // We rely on someone else calling hip_port_bindings_reload_delayed() to
     // reload the file contents for us so that we return some at least roughly
     // up-to-date information.
-    char *line = hip_lp_first(lp);
+    char *line = hip_lp_first(&lp);
     while (line != NULL) {
         const unsigned int PORT_OFFSET_IN_LINE = 39;
         const unsigned int PORT_BASE_HEX = 16;
@@ -333,9 +329,10 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
             result = HIP_PORT_INFO_IPV6BOUND;
             break;
         }
-        line = hip_lp_next(lp);
+        line = hip_lp_next(&lp);
     }
 
+    hip_lp_delete(&lp);
     HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == result ||
                HIP_PORT_INFO_IPV6BOUND == result);
     return result;
@@ -365,12 +362,7 @@ int hip_port_bindings_init(const bool enable_cache)
     }
 
     HIP_IFEL(hip_fb_create(&tcp6_file, "/proc/net/tcp6") != 0, 1, "Buffering tcp6 proc file in memory failed\n");
-    HIP_IFEL(hip_lp_create(&tcp6_parser, hip_fb_get_mem_area(&tcp6_file)) != 0,
-             1, "Creating line parser for tcp6 proc file failed\n");
-
     HIP_IFEL(hip_fb_create(&udp6_file, "/proc/net/udp6") != 0, 1, "Buffering udp6 proc file in memory failed\n");
-    HIP_IFEL(hip_lp_create(&udp6_parser, hip_fb_get_mem_area(&udp6_file)) != 0,
-             1, "Creating line parser for udp6 proc file failed\n");
 
     return 0;
 
@@ -383,10 +375,7 @@ out_err:
  */
 void hip_port_bindings_uninit(void)
 {
-    hip_lp_delete(&tcp6_parser);
     hip_fb_delete(&tcp6_file);
-
-    hip_lp_delete(&udp6_parser);
     hip_fb_delete(&udp6_file);
 
     uninit_cache();
