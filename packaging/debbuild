@@ -703,7 +703,7 @@ LINE: while (<SPECFILE>) {
         $prepscript .= "tar -".
                 ( $pkgdata{main}{source} =~ /\.tar\.gz$/ ? "z" : "" ).
                 ( $pkgdata{main}{source} =~ /\.tar\.bz2$/ ? "j" : "" ).
-                ( /\s+-q\s+/ ? '' : 'vv' )."xf ".
+                "xf ".
                 "$topdir/SOURCES/$pkgdata{main}{source}\n".
                 qq(STATUS=\$?\nif [ \$STATUS -ne 0 ]; then\n  exit \$STATUS\nfi\n).
                 "cd $topdir/BUILD/$tarballdir\n".
