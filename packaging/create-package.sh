@@ -181,7 +181,6 @@ elif test x"$1" = x"bin"; then
         die "Unknown distro"
     fi
 fi
-echo "Architecture: $ARCH"
 
 make dist > /dev/null
 
