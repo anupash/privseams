@@ -72,9 +72,6 @@ build_package()
 
 build_rpm()
 {
-    echo "Deleting old .rpmmacros"
-    echo "%_topdir $BUILDDIR" > $HOME/.rpmmacros
-
     # fix this hack -miika
     test -d $BUILDDIR/RPMS/i586 &&
         cp -a $BUILDDIR/RPMS/i586 $BUILDDIR/RPMS/i386
