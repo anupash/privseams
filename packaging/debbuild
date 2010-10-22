@@ -69,9 +69,9 @@ $specglobals{'vendor'} = 'debbuild';
 # Initialized globals
 my $verbosity = 0;
 my $NoAutoReq = 0;
-my %cmdopts = (type => '',
-                stage => 'a',
-                short => 'n'
+my %cmdopts = (type  => '',
+               stage => 'a',
+               short => 'n'
         );
 my $topdir = "/usr/src/debian";
 #my $specglobals{buildroot} = "%{_tmppath}/%{name}-%{version}-%{release}.root".int(rand(99998)+1);
@@ -79,12 +79,12 @@ $specglobals{buildroot} = '';
 
 # "Constants"
 my %targets = ('p' => 'Prep',
-                'c' => 'Compile',
-                'i' => 'Install',
-                'l' => 'Verify %files',
-                'a' => 'Build binary and source',
-                'b' => 'Build binary',
-                's' => 'Build source'
+               'c' => 'Compile',
+               'i' => 'Install',
+               'l' => 'Verify %files',
+               'a' => 'Build binary and source',
+               'b' => 'Build binary',
+               's' => 'Build source'
         );
 # Ah, the joys of multiple architectures.  :(  Feh.
 # As copied from rpm
@@ -98,8 +98,8 @@ my $scriptletbase;
 # than one Debian version at the same time.  Whee.
 # /etc/debian-version
 my %distmap = (
-        "3.1.9ubuntu7.1"        => "dapper",
-        "4ubuntu2"      => "feisty",
+        "3.1.9ubuntu7.1" => "dapper",
+        "4ubuntu2"       => "feisty",
         "3.0"   => "woody",
         "3.1"   => "sarge",
         "4"     => "etch",
