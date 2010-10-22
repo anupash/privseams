@@ -120,6 +120,8 @@ RELEASE=
 NAME=hipl
 PKGROOT=$PWD
 PKGEXE=$PKGROOT/packaging
+PKG_INDEX_DIR=$PKGEXE
+PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
 PKG_WEB_DIR=
 PKG_SERVER_DIR=
 DEBDIR=$PWD/debbuild
@@ -129,14 +131,14 @@ SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
 SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
 SUDO= # no sudo
 ARCH=
+DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 DISTRO_RELEASE=
-DISTRO=
 DISTROBASE=
 DISTRO_PKG_SUFFIX=
 REPO_SERVER=hipl.hiit.fi
 REPO_BASE=/var/www/packages/html
 BIN_FORMAT=
-TARBALL=
+TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 RSYNC_OPTS=-uvr
 REPO_USER=hipl
 REPO_GROUP=hipl
@@ -174,12 +176,6 @@ else
 fi
 
 cat $SPECFILE_TEMPLATE >> $SPECFILE
-
-DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
-PKG_INDEX_DIR=$PKGEXE
-PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
-
-TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 
 # Determine action
 if test x"$1" = x"syncrepo"; then
