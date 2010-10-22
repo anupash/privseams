@@ -202,7 +202,6 @@ echo <<EOF
 EOF
 
 make dist > /dev/null
-ls -ld $TARBALL
 
 echo "*** Cleaning up ${DEBDIR} ***"
 rm -rf ${DEBDIR}
