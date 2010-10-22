@@ -181,4 +181,6 @@ case $1 in
             build_rpm
         fi
         ;;
+    *)
+        die "usage: $0 [syncrepo|deb|rpm|bin]"
 esac
