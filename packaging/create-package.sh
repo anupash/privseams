@@ -156,7 +156,7 @@ if test -r /etc/debian_version; then
     DISTRO_RELEASE=$(lsb_release -c | cut -f2)
     PKG_WEB_DIR=ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
-    cat $PKGEXE/hipl-deb.spec >> $SPECFILE
+    SPECFILE_TEMPLATE=$PKGEXE/hipl-deb.spec
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
 elif test -r /etc/redhat-release; then
@@ -166,12 +166,14 @@ elif test -r /etc/redhat-release; then
     DISTRO_RELEASE=$(lsb_release -r | cut -f2)
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
-    cat $PKGEXE/hipl-rpm.spec >> $SPECFILE
+    SPECFILE_TEMPLATE=$PKGEXE/hipl-rpm.spec
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
 else
     die "Unknown architecture"
 fi
+
+cat $SPECFILE_TEMPLATE >> $SPECFILE
 
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 PKG_INDEX_DIR=$PKGEXE
