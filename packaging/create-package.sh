@@ -25,9 +25,7 @@ build_rpm()
     echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
 
     for SUBDIR in $SUBRPMDIRS; do
-        if test ! -d $RPMBUILD/$SUBDIR; then
-            mkdir -p $RPMBUILD/$SUBDIR
-        fi
+        mkdir -p $RPMBUILD/$SUBDIR
     done
 
     # fix this hack -miika
@@ -46,7 +44,7 @@ build_rpm()
 
 mkindex_rpm()
 {
-    test ! -d $PKG_INDEX && mkdir $PKG_INDEX
+    mkdir -p $PKG_INDEX
     # fix this hack -miika
     test -d  /tmp/hipl-${VERSION}/buildenv/RPMS/i586 &&
         cp -a /tmp/hipl-${VERSION}/buildenv/RPMS/i586 /tmp/hipl-${VERSION}/buildenv/RPMS/i386
@@ -102,9 +100,7 @@ build_deb()
 
     rm -rf $DEBDIR
     for SUBDIR in $SUBDEBDIRS; do
-        if test ! -d $DEBDIR/$SUBDIR; then
-            mkdir -p $DEBDIR/$SUBDIR
-        fi
+        mkdir -p $DEBDIR/$SUBDIR
     done
 
     cp $SPECFILE $DEBDIR/SPECS
