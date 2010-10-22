@@ -1,33 +1,6 @@
 #!/bin/sh
 
-VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
-RELEASE=
-NAME=hipl
-PKGROOT=$PWD
-PKGEXE=$PKGROOT/packaging
-PKG_WEB_DIR=
-PKG_SERVER_DIR=
-DEBDIR=$PWD/debbuild
-RPMDIR=$PWD/rpmbuild
-RPMBUILD=/tmp/rpmbuild
-SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
-SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
-SUDO= # no sudo
-ARCH=
-DISTRO_RELEASE=
-DISTRO=
-DISTROBASE=
-DISTRO_PKG_SUFFIX=
-REPO_SERVER=hipl.hiit.fi
-REPO_BASE=/var/www/packages/html
-BIN_FORMAT=
-TARBALL=
-RSYNC_OPTS=-uvr
-REPO_USER=hipl
-REPO_GROUP=hipl
-SPECFILE_DIR=$(mktemp -d)
-SPECFILE=$SPECFILE_DIR/hipl.spec
-OPT_CHANGELOG='doc/ChangeLog'
+############### helper functions #####################
 
 die()
 {
@@ -141,6 +114,35 @@ build_deb()
 ############### Main program #####################
 
 set -e
+
+VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
+RELEASE=
+NAME=hipl
+PKGROOT=$PWD
+PKGEXE=$PKGROOT/packaging
+PKG_WEB_DIR=
+PKG_SERVER_DIR=
+DEBDIR=$PWD/debbuild
+RPMDIR=$PWD/rpmbuild
+RPMBUILD=/tmp/rpmbuild
+SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
+SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
+SUDO= # no sudo
+ARCH=
+DISTRO_RELEASE=
+DISTRO=
+DISTROBASE=
+DISTRO_PKG_SUFFIX=
+REPO_SERVER=hipl.hiit.fi
+REPO_BASE=/var/www/packages/html
+BIN_FORMAT=
+TARBALL=
+RSYNC_OPTS=-uvr
+REPO_USER=hipl
+REPO_GROUP=hipl
+SPECFILE_DIR=$(mktemp -d)
+SPECFILE=$SPECFILE_DIR/hipl.spec
+OPT_CHANGELOG='doc/ChangeLog'
 
 set_release_version
 echo "Version: $VERSION" > $SPECFILE
