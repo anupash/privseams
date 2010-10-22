@@ -97,8 +97,7 @@ REPO_SERVER=hipl.hiit.fi
 REPO_BASE=/var/www/packages/html
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 REPO_USER=hipl
-SPECFILE_DIR=$(mktemp -d)
-SPECFILE=$SPECFILE_DIR/hipl.spec
+SPECFILE=$(mktemp -d)/hipl.spec
 OPT_CHANGELOG='doc/ChangeLog'
 
 # Set architecture, distro and repo details
