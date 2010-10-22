@@ -161,6 +161,14 @@ fi
 
 # Determine action
 case $1 in
+    syncrepo_deb)
+        mkindex_deb
+        syncrepo
+        ;;
+    syncrepo_rpm)
+        mkindex_rpm
+        syncrepo
+        ;;
     syncrepo)
         if test "$DISTROBASE" = "debian"; then
             mkindex_deb
@@ -181,5 +189,5 @@ case $1 in
         fi
         ;;
     *)
-        die "usage: $0 [syncrepo|deb|rpm|bin]"
+        die "usage: $0 [syncrepo|syncrepo_deb|syncrepo_rpm|deb|rpm|bin]"
 esac
