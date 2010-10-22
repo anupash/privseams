@@ -61,6 +61,11 @@ build_package()
 
     make dist > /dev/null
 
+    rm -rf $BUILDDIR
+    for SUBDIR in $SUBBUILDDIRS; do
+        mkdir -p $BUILDDIR/$SUBDIR
+    done
+
     $1
 }
 
@@ -68,11 +73,6 @@ build_rpm()
 {
     echo "Deleting old .rpmmacros"
     echo "%_topdir $BUILDDIR" > $HOME/.rpmmacros
-
-    rm -rf $BUILDDIR
-    for SUBDIR in $SUBBUILDDIRS; do
-        mkdir -p $BUILDDIR/$SUBDIR
-    done
 
     # fix this hack -miika
     test -d $BUILDDIR/RPMS/i586 &&
@@ -92,11 +92,6 @@ build_deb()
     if test ! -x /usr/bin/pax; then
         die "apt-get install pax"
     fi
-
-    rm -rf $BUILDDIR
-    for SUBDIR in $SUBBUILDDIRS; do
-        mkdir -p $BUILDDIR/$SUBDIR
-    done
 
     cp $SPECFILE $BUILDDIR/SPECS
 
