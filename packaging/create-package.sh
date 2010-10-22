@@ -43,18 +43,10 @@ syncrepo()
 
 }
 
-set_release_version()
-{
-    if test -r $OPT_CHANGELOG; then
-        RELEASE=$(head -2 $OPT_CHANGELOG | tail -1 | cut -d" " -f2)
-    else
-        RELEASE=$(bzr revno)
-    fi
-}
-
 build_package()
 {
-    set_release_version
+    RELEASE=$(grep BZR_REVISION $PKGROOT/version.h | cut -d\" -f2)
+
     echo "Version: $VERSION" > $SPECFILE
     echo "Release: $RELEASE" >> $SPECFILE
     cat $SPECFILE_TEMPLATE >> $SPECFILE
