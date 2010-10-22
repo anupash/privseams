@@ -98,7 +98,6 @@ REPO_BASE=/var/www/packages/html
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 REPO_USER=hipl
 SPECFILE=$(mktemp -d)/hipl.spec
-OPT_CHANGELOG='doc/ChangeLog'
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
