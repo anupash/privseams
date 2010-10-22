@@ -180,7 +180,6 @@ foreach (`dpkg-architecture`) {
 }
 $scriptletbase .=
 q(
-  set -x
   umask 022
   cd %{_topdir}/BUILD
 );
