@@ -24,7 +24,7 @@ build_rpm()
 
     for SUBDIR in $SUBRPMDIRS; do
         if test ! -d $RPMBUILD/$SUBDIR; then
-            $SUDO mkdir -p $RPMBUILD/$SUBDIR
+            mkdir -p $RPMBUILD/$SUBDIR
         fi
     done
 
@@ -32,8 +32,8 @@ build_rpm()
     test -d $RPMBUILD/RPMS/i586 &&
         cp -a $RPMBUILD/RPMS/i586 $RPMBUILD/RPMS/i386
 
-    $SUDO mv -f $TARBALL $RPMBUILD/SOURCES
-    $SUDO rpmbuild -ba $SPECFILE
+    mv -f $TARBALL $RPMBUILD/SOURCES
+    rpmbuild -ba $SPECFILE
 
     # rpmbuild does not want to build to $RPMDIR, so let's just move it
     # to there from $RPMBUILD
@@ -48,8 +48,8 @@ mkindex_rpm()
     # fix this hack -miika
     test -d  /tmp/hipl-${VERSION}/buildenv/RPMS/i586 &&
         cp -a /tmp/hipl-${VERSION}/buildenv/RPMS/i586 /tmp/hipl-${VERSION}/buildenv/RPMS/i386
-    #$SUDO createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
-    $SUDO createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
+    #createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
+    createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
 
 mkindex_deb()
@@ -126,7 +126,6 @@ RPMDIR=$PWD/rpmbuild
 RPMBUILD=/tmp/rpmbuild
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
 SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
-SUDO= # no sudo
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 REPO_SERVER=hipl.hiit.fi
