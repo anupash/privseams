@@ -69,6 +69,7 @@ build_rpm()
     echo "Deleting old .rpmmacros"
     echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
 
+    rm -rf $RPMDIR
     for SUBDIR in $SUBRPMDIRS; do
         mkdir -p $RPMBUILD/$SUBDIR
     done
@@ -82,7 +83,6 @@ build_rpm()
 
     # rpmbuild does not want to build to $RPMDIR, so let's just move it
     # to there from $RPMBUILD
-    test -d $RPMDIR && rm -rf $RPMDIR
     mv $RPMBUILD $RPMDIR
     find $RPMDIR -name '*rpm'
 }
