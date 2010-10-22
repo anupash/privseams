@@ -48,8 +48,8 @@ mkindex_rpm()
     # fix this hack -miika
     test -d  /tmp/hipl-${VERSION}/buildenv/RPMS/i586 &&
         cp -a /tmp/hipl-${VERSION}/buildenv/RPMS/i586 /tmp/hipl-${VERSION}/buildenv/RPMS/i386
-    #createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
-    createrepo --outputdir=$PKG_INDEX_DIR $PKG_DIR
+    #createrepo --update --outputdir=$PKG_EXE $PKG_DIR
+    createrepo --outputdir=$PKG_EXE $PKG_DIR
 }
 
 mkindex_deb()
@@ -118,8 +118,7 @@ VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 NAME=hipl
 PKGROOT=$PWD
 PKGEXE=$PKGROOT/packaging
-PKG_INDEX_DIR=$PKGEXE
-PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
+PKG_INDEX=$PKG_EXE/$PKG_INDEX_NAME
 DEBDIR=$PWD/debbuild
 RPMDIR=$PWD/rpmbuild
 RPMBUILD=/tmp/rpmbuild
