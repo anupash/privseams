@@ -41,6 +41,7 @@ ltmain.sh
 m4/*.m4
 missing
 py-compile
+rpmbuild/
 stamp-h1
 tags
 test/auth_performance

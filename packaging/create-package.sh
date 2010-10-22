@@ -67,23 +67,20 @@ build_package()
 build_rpm()
 {
     echo "Deleting old .rpmmacros"
-    echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
+    echo "%_topdir $RPMDIR" > $HOME/.rpmmacros
 
     rm -rf $RPMDIR
     for SUBDIR in $SUBRPMDIRS; do
-        mkdir -p $RPMBUILD/$SUBDIR
+        mkdir -p $RPMDIR/$SUBDIR
     done
 
     # fix this hack -miika
-    test -d $RPMBUILD/RPMS/i586 &&
-        cp -a $RPMBUILD/RPMS/i586 $RPMBUILD/RPMS/i386
+    test -d $RPMDIR/RPMS/i586 &&
+        cp -a $RPMDIR/RPMS/i586 $RPMDIR/RPMS/i386
 
-    mv -f $TARBALL $RPMBUILD/SOURCES
+    mv -f $TARBALL $RPMDIR/SOURCES
     rpmbuild -ba $SPECFILE
 
-    # rpmbuild does not want to build to $RPMDIR, so let's just move it
-    # to there from $RPMBUILD
-    mv $RPMBUILD $RPMDIR
     find $RPMDIR -name '*rpm'
 }
 
@@ -121,7 +118,6 @@ PKGEXE=$PKGROOT/packaging
 PKG_INDEX=$PKG_EXE/$PKG_INDEX_NAME
 DEBDIR=$PWD/debbuild
 RPMDIR=$PWD/rpmbuild
-RPMBUILD=/tmp/rpmbuild
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
 SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
