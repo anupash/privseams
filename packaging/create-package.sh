@@ -118,7 +118,7 @@ build_deb()
 
 set -e
 
-VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
+VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 NAME=hipl
 PKGROOT=$PWD
 PKGEXE=$PKGROOT/packaging
