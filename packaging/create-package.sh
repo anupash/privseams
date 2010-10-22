@@ -146,10 +146,6 @@ SPECFILE_DIR=$(mktemp -d)
 SPECFILE=$SPECFILE_DIR/hipl.spec
 OPT_CHANGELOG='doc/ChangeLog'
 
-set_release_version
-echo "Version: $VERSION" > $SPECFILE
-echo "Release: $RELEASE" >> $SPECFILE
-
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
     DISTROBASE=debian
@@ -172,6 +168,10 @@ elif test -r /etc/redhat-release; then
 else
     die "Unknown architecture"
 fi
+
+set_release_version
+echo "Version: $VERSION" > $SPECFILE
+echo "Release: $RELEASE" >> $SPECFILE
 
 cat $SPECFILE_TEMPLATE >> $SPECFILE
 
