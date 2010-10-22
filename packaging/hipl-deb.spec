@@ -30,7 +30,7 @@ other related tools.
 %build
 autoreconf --install
 %configure --prefix=/usr --sysconfdir=/etc
-make -j 4 all
+make -j 4
 
 # Note:
 # This debbuild script is fragile and does not tolerate comments well.
