@@ -189,5 +189,5 @@ case $1 in
         fi
         ;;
     *)
-        die "usage: $0 [syncrepo|syncrepo_deb|syncrepo_rpm|deb|rpm|bin]"
+        die "usage: $0 <syncrepo|syncrepo_deb|syncrepo_rpm|deb|rpm|bin>"
 esac
