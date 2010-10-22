@@ -67,18 +67,18 @@ build_package()
 build_rpm()
 {
     echo "Deleting old .rpmmacros"
-    echo "%_topdir $RPMDIR" > $HOME/.rpmmacros
+    echo "%_topdir $BUILDDIR" > $HOME/.rpmmacros
 
-    rm -rf $RPMDIR
-    for SUBDIR in $SUBRPMDIRS; do
-        mkdir -p $RPMDIR/$SUBDIR
+    rm -rf $BUILDDIR
+    for SUBDIR in $SUBBUILDDIRS; do
+        mkdir -p $BUILDDIR/$SUBDIR
     done
 
     # fix this hack -miika
-    test -d $RPMDIR/RPMS/i586 &&
-        cp -a $RPMDIR/RPMS/i586 $RPMDIR/RPMS/i386
+    test -d $BUILDDIR/RPMS/i586 &&
+        cp -a $BUILDDIR/RPMS/i586 $BUILDDIR/RPMS/i386
 
-    mv -f $TARBALL $RPMDIR/SOURCES
+    mv -f $TARBALL $BUILDDIR/SOURCES
     rpmbuild -ba $SPECFILE
 }
 
@@ -93,16 +93,16 @@ build_deb()
         die "apt-get install pax"
     fi
 
-    rm -rf $DEBDIR
-    for SUBDIR in $SUBDEBDIRS; do
-        mkdir -p $DEBDIR/$SUBDIR
+    rm -rf $BUILDDIR
+    for SUBDIR in $SUBBUILDDIRS; do
+        mkdir -p $BUILDDIR/$SUBDIR
     done
 
-    cp $SPECFILE $DEBDIR/SPECS
+    cp $SPECFILE $BUILDDIR/SPECS
 
-    mv -f $TARBALL $DEBDIR/SOURCES
+    mv -f $TARBALL $BUILDDIR/SOURCES
     # http://www.deepnet.cx/debbuild/
-    $PKGEXE/debbuild --buildroot $DEBDIR -ba $SPECFILE
+    $PKGEXE/debbuild --buildroot $BUILDDIR -ba $SPECFILE
 }
 
 ############### Main program #####################
@@ -114,10 +114,6 @@ NAME=hipl
 PKGROOT=$PWD
 PKGEXE=$PKGROOT/packaging
 PKG_INDEX=$PKG_EXE/$PKG_INDEX_NAME
-DEBDIR=$PWD/debbuild
-RPMDIR=$PWD/rpmbuild
-SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
-SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 REPO_SERVER=hipl.hiit.fi
@@ -134,7 +130,9 @@ OPT_CHANGELOG='doc/ChangeLog'
 if test -r /etc/debian_version; then
     DISTROBASE=debian
     ARCH=$(dpkg --print-architecture)
-    PKG_DIR=$DEBDIR/DEBS/$ARCH
+    BUILDDIR=$PWD/debbuild
+    SUBBUILDDIRS="BUILD SOURCES SPECS DEBS SDEBS"
+    PKG_DIR=$BUILDDIR/DEBS/$ARCH
     PKG_WEB_DIR=ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
     SPECFILE_TEMPLATE=$PKGEXE/hipl-deb.spec
@@ -143,7 +141,9 @@ if test -r /etc/debian_version; then
 elif test -r /etc/redhat-release; then
     DISTROBASE=redhat
     ARCH=$(uname -i)
-    PKG_DIR=$RPMDIR/RPMS/$ARCH
+    BUILDDIR=$PWD/rpmbuild
+    SUBBUILDDIRS="BUILD SOURCES SPECS RPMS SRPMS"
+    PKG_DIR=$BUILDDIR/RPMS/$ARCH
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
     SPECFILE_TEMPLATE=$PKGEXE/hipl-rpm.spec
