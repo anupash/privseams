@@ -98,6 +98,7 @@ build_deb()
         die "apt-get install pax"
     fi
 
+    rm -rf $DEBDIR
     for SUBDIR in $SUBDEBDIRS; do
         if test ! -d $DEBDIR/$SUBDIR; then
             mkdir -p $DEBDIR/$SUBDIR
@@ -183,9 +184,6 @@ fi
 echo "Architecture: $ARCH"
 
 make dist > /dev/null
-
-echo "*** Cleaning up ${DEBDIR} ***"
-rm -rf ${DEBDIR}
 
 if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"; then
     build_rpm
