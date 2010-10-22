@@ -198,7 +198,6 @@ static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 {
     int err = 0;
     if (entry && mode != HIP_NAT_MODE_NONE) {
-        //hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
         entry->nat_mode = *((hip_transform_suite_t *) mode);
         HIP_DEBUG("NAT status of host association %p: %d\n",
                   entry, entry->nat_mode);
