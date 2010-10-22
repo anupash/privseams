@@ -8,40 +8,6 @@ die()
     exit 1
 }
 
-set_release_version()
-{
-    if test -r $OPT_CHANGELOG; then
-        RELEASE=$(head -2 $OPT_CHANGELOG | tail -1 | cut -d" " -f2)
-    else
-        RELEASE=$(bzr log --line -l 1 | cut -d: -f1)
-    fi
-}
-
-build_rpm()
-{
-    make dist > /dev/null
-
-    echo "Deleting old .rpmmacros"
-    echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
-
-    for SUBDIR in $SUBRPMDIRS; do
-        mkdir -p $RPMBUILD/$SUBDIR
-    done
-
-    # fix this hack -miika
-    test -d $RPMBUILD/RPMS/i586 &&
-        cp -a $RPMBUILD/RPMS/i586 $RPMBUILD/RPMS/i386
-
-    mv -f $TARBALL $RPMBUILD/SOURCES
-    rpmbuild -ba $SPECFILE
-
-    # rpmbuild does not want to build to $RPMDIR, so let's just move it
-    # to there from $RPMBUILD
-    test -d $RPMDIR && rm -rf $RPMDIR
-    mv $RPMBUILD $RPMDIR
-    find $RPMDIR -name '*rpm'
-}
-
 mkindex_rpm()
 {
     mkdir -p $PKG_INDEX
@@ -82,6 +48,40 @@ syncrepo()
     # Copy all packages and repo index to the repository
     rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
 
+}
+
+set_release_version()
+{
+    if test -r $OPT_CHANGELOG; then
+        RELEASE=$(head -2 $OPT_CHANGELOG | tail -1 | cut -d" " -f2)
+    else
+        RELEASE=$(bzr log --line -l 1 | cut -d: -f1)
+    fi
+}
+
+build_rpm()
+{
+    make dist > /dev/null
+
+    echo "Deleting old .rpmmacros"
+    echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
+
+    for SUBDIR in $SUBRPMDIRS; do
+        mkdir -p $RPMBUILD/$SUBDIR
+    done
+
+    # fix this hack -miika
+    test -d $RPMBUILD/RPMS/i586 &&
+        cp -a $RPMBUILD/RPMS/i586 $RPMBUILD/RPMS/i386
+
+    mv -f $TARBALL $RPMBUILD/SOURCES
+    rpmbuild -ba $SPECFILE
+
+    # rpmbuild does not want to build to $RPMDIR, so let's just move it
+    # to there from $RPMBUILD
+    test -d $RPMDIR && rm -rf $RPMDIR
+    mv $RPMBUILD $RPMDIR
+    find $RPMDIR -name '*rpm'
 }
 
 build_deb()
