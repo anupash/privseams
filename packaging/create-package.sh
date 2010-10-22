@@ -73,11 +73,6 @@ build_rpm()
 
 build_deb()
 {
-    if test -e ~/debbuild; then
-        echo "Warning: ~/debbuild found, could be a problem"
-        echo "It should be a link to /usr/src/debian"
-    fi
-
     if test ! -x /usr/bin/pax; then
         die "apt-get install pax"
     fi
