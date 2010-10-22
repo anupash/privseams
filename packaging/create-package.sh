@@ -45,6 +45,11 @@ syncrepo()
 
 build_package()
 {
+    rm -rf $BUILDDIR
+    for SUBDIR in $SUBBUILDDIRS; do
+        mkdir -p $BUILDDIR/$SUBDIR
+    done
+
     RELEASE=$(grep BZR_REVISION $PKGROOT/version.h | cut -d\" -f2)
 
     echo "Version: $VERSION" > $SPECFILE
@@ -52,11 +57,6 @@ build_package()
     cat $SPECFILE_TEMPLATE >> $SPECFILE
 
     make dist > /dev/null
-
-    rm -rf $BUILDDIR
-    for SUBDIR in $SUBBUILDDIRS; do
-        mkdir -p $BUILDDIR/$SUBDIR
-    done
     mv -f $TARBALL $BUILDDIR/SOURCES
 
     $1
@@ -77,8 +77,6 @@ build_deb()
         die "apt-get install pax"
     fi
 
-    cp $SPECFILE $BUILDDIR/SPECS
-
     # http://www.deepnet.cx/debbuild/
     $PKG_EXE/debbuild --buildroot $BUILDDIR -ba $SPECFILE
 }
@@ -97,7 +95,6 @@ REPO_SERVER=hipl.hiit.fi
 REPO_BASE=/var/www/packages/html
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 REPO_USER=hipl
-SPECFILE=$(mktemp -d)/hipl.spec
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
@@ -127,6 +124,7 @@ else
 fi
 
 PKG_INDEX=$PKG_EXE/$PKG_INDEX_NAME
+SPECFILE=$BUILDDIR/SPECS/hipl.spec
 
 # Determine action
 case $1 in
