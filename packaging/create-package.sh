@@ -65,6 +65,7 @@ build_package()
     for SUBDIR in $SUBBUILDDIRS; do
         mkdir -p $BUILDDIR/$SUBDIR
     done
+    mv -f $TARBALL $BUILDDIR/SOURCES
 
     $1
 }
@@ -78,7 +79,6 @@ build_rpm()
     test -d $BUILDDIR/RPMS/i586 &&
         cp -a $BUILDDIR/RPMS/i586 $BUILDDIR/RPMS/i386
 
-    mv -f $TARBALL $BUILDDIR/SOURCES
     rpmbuild -ba $SPECFILE
 }
 
@@ -95,7 +95,6 @@ build_deb()
 
     cp $SPECFILE $BUILDDIR/SPECS
 
-    mv -f $TARBALL $BUILDDIR/SOURCES
     # http://www.deepnet.cx/debbuild/
     $PKGEXE/debbuild --buildroot $BUILDDIR -ba $SPECFILE
 }
