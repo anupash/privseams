@@ -132,7 +132,7 @@ SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
 SUDO= # no sudo
 ARCH=
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
-DISTRO_RELEASE=
+DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 DISTROBASE=
 DISTRO_PKG_SUFFIX=
 REPO_SERVER=hipl.hiit.fi
@@ -155,7 +155,6 @@ if test -r /etc/debian_version; then
     DISTROBASE=debian
     ARCH=$(dpkg --print-architecture)
     PKG_DIR=$DEBDIR/DEBS/$ARCH
-    DISTRO_RELEASE=$(lsb_release -c | cut -f2)
     PKG_WEB_DIR=ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
     SPECFILE_TEMPLATE=$PKGEXE/hipl-deb.spec
@@ -165,7 +164,6 @@ elif test -r /etc/redhat-release; then
     DISTROBASE=redhat
     ARCH=$(uname -i)
     PKG_DIR=$RPMDIR/RPMS/$ARCH
-    DISTRO_RELEASE=$(lsb_release -r | cut -f2)
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
     SPECFILE_TEMPLATE=$PKGEXE/hipl-rpm.spec
