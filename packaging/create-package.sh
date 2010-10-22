@@ -167,19 +167,18 @@ echo "Release: $RELEASE" >> $SPECFILE
 cat $SPECFILE_TEMPLATE >> $SPECFILE
 
 # Determine action
-if test x"$1" = x"syncrepo"; then
-    syncrepo
-    exit
-elif test x"$1" = x"bin"; then
-    if test x"$DISTROBASE" = x"redhat"; then
-        BIN_FORMAT=rpm
-    elif test x"$DISTROBASE" = x"debian"; then
-        BIN_FORMAT=deb
-    fi
-fi
-
-if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"; then
-    build_rpm
-elif test x"$1" = x"deb" || test x"$BIN_FORMAT" = x"deb"; then
-    build_deb
-fi
+case $1 in
+    syncrepo)
+        syncrepo ;;
+    deb)
+        build_deb ;;
+    rpm)
+        build_rpm ;;
+    bin)
+        if test "$DISTROBASE" = "debian"; then
+            build_deb
+        else
+            build_rpm
+        fi
+        ;;
+esac
