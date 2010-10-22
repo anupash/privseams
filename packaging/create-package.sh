@@ -91,7 +91,6 @@ VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 NAME=hipl
 PKGROOT=$PWD
 PKG_EXE=$PKGROOT/packaging
-PKG_INDEX=$PKG_EXE/$PKG_INDEX_NAME
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 REPO_SERVER=hipl.hiit.fi
@@ -130,6 +129,8 @@ elif test -r /etc/redhat-release; then
 else
     die "unknown distribution"
 fi
+
+PKG_INDEX=$PKG_EXE/$PKG_INDEX_NAME
 
 # Determine action
 case $1 in
