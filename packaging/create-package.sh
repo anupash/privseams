@@ -80,7 +80,7 @@ build_deb()
     cp $SPECFILE $BUILDDIR/SPECS
 
     # http://www.deepnet.cx/debbuild/
-    $PKGEXE/debbuild --buildroot $BUILDDIR -ba $SPECFILE
+    $PKG_EXE/debbuild --buildroot $BUILDDIR -ba $SPECFILE
 }
 
 ############### Main program #####################
@@ -90,7 +90,7 @@ set -e
 VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 NAME=hipl
 PKGROOT=$PWD
-PKGEXE=$PKGROOT/packaging
+PKG_EXE=$PKGROOT/packaging
 PKG_INDEX=$PKG_EXE/$PKG_INDEX_NAME
 DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
@@ -113,7 +113,7 @@ if test -r /etc/debian_version; then
     PKG_DIR=$BUILDDIR/DEBS/$ARCH
     PKG_WEB_DIR=ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
-    SPECFILE_TEMPLATE=$PKGEXE/hipl-deb.spec
+    SPECFILE_TEMPLATE=$PKG_EXE/hipl-deb.spec
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
 elif test -r /etc/redhat-release; then
@@ -124,7 +124,7 @@ elif test -r /etc/redhat-release; then
     PKG_DIR=$BUILDDIR/RPMS/$ARCH
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
-    SPECFILE_TEMPLATE=$PKGEXE/hipl-rpm.spec
+    SPECFILE_TEMPLATE=$PKG_EXE/hipl-rpm.spec
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
 else
