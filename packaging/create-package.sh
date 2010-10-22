@@ -19,6 +19,8 @@ set_release_version()
 
 build_rpm()
 {
+    make dist > /dev/null
+
     echo "Deleting old .rpmmacros"
     echo "%_topdir $RPMBUILD" > $HOME/.rpmmacros
 
@@ -88,6 +90,8 @@ syncrepo()
 
 build_deb()
 {
+    make dist > /dev/null
+
     test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
     if test -e ~/debbuild; then
         echo "Warning: ~/debbuild found, could be a problem"
@@ -181,8 +185,6 @@ elif test x"$1" = x"bin"; then
         die "Unknown distro"
     fi
 fi
-
-make dist > /dev/null
 
 if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"; then
     build_rpm
