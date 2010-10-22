@@ -196,15 +196,6 @@ elif test x"$1" = x"bin"; then
 fi
 echo "Architecture: $ARCH"
 
-echo <<EOF
-** Creating the directory structure and files for building the
-** source package needed for RPM package containing HIPL
-** user space software
-**
-** Version $VERSION
-**
-EOF
-
 make dist > /dev/null
 
 echo "*** Cleaning up ${DEBDIR} ***"
