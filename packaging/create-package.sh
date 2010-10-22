@@ -80,8 +80,6 @@ build_rpm()
 
     mv -f $TARBALL $RPMDIR/SOURCES
     rpmbuild -ba $SPECFILE
-
-    find $RPMDIR -name '*rpm'
 }
 
 build_deb()
