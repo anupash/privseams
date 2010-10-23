@@ -92,6 +92,23 @@ START_TEST(test_hip_fb_create_check_file_integrity)
 }
 END_TEST
 
+START_TEST(test_hip_fb_delete_valid)
+{
+    struct hip_file_buffer fb;
+    int err = 0;
+
+    err = hip_fb_create(&fb, "/etc/fstab");
+    assert(0 == err);
+    hip_fb_delete(&fb);
+}
+END_TEST
+
+START_TEST(test_hip_fb_delete_null_fb)
+{
+    hip_fb_delete(NULL);
+}
+END_TEST
+
 // For unknown reasons, this file does not compile with the following,
 // seemingly useless forward declaration
 Suite *firewall_file_buffer(void);
@@ -106,6 +123,8 @@ Suite *firewall_file_buffer(void)
     tcase_add_test(tc_core, test_hip_fb_create_null_file_name);
     tcase_add_test(tc_core, test_hip_fb_create_missing_file);
     tcase_add_test(tc_core, test_hip_fb_create_check_file_integrity);
+    tcase_add_test(tc_core, test_hip_fb_delete_valid);
+    tcase_add_test(tc_core, test_hip_fb_delete_null_fb);
     suite_add_tcase(s, tc_core);
 
     return s;
