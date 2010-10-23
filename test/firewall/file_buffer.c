@@ -60,7 +60,7 @@ START_TEST(test_hip_fb_create_missing_file)
 {
     struct hip_file_buffer fb;
 
-    fail_unless(hip_fb_create(&fb, "XhUp8vH5sbye3izn25XbY3EVu9VcAsNC42WOCVYxAkMXiFo7cuh4Zsp2jHgfJ2OsBUTamYDuSyB9oSuAYEfBJA6EaEXBpNCp2l88Zo2yaWaLw6pB5mh61dlBDQZjaqlS") == -1, NULL);
+    fail_unless(hip_fb_create(&fb, "XhUp8vH5sbye3izn25XbY3EVu9VcAsNC42WOCVYxAkMXiFo7cuh4Zsp2jHgfJ2OsBUTamYDuSyB9oSuAYEfBJA6EaEXBpNCp2l88Zo2yaWaLw6pB5mh61dlBDQZjaqlS") == -2, NULL);
 }
 END_TEST
 

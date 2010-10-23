@@ -143,24 +143,35 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
  *  to the location referenced by fb.
  * @param file_name the name of the file to open and load into memory.
  * @return a 0 if the file could be opened and successfully buffered.
- *  -1 is returned when the fb is NULL or when file_name is NULL or when
- *  the file file_name cannot be opened for reading.
+ *  -1 is returned if fb is NULL or if file_name is NULL.
+ *  -2 is returned if the specified file cannot be opened for reading.
+ *  -3 is returned if an internal error occurs.
  */
 int hip_fb_create(struct hip_file_buffer *const fb,
                   const char *const file_name)
 {
+    int err = 0;
+
     if (fb && file_name) {
         memset(fb, 0, sizeof(*fb)); // set all fields to 0/NULL
         fb->fd = open(file_name, O_RDONLY);
         if (fb->fd != -1) {
             if (hip_fb_reload(fb) == 0) {
                 return 0;
+            } else {
+                err = -3;
             }
+        } else {
+            HIP_ERROR("Opening the file %s for reading via open() failed with the error %s\n",
+                      file_name, strerror(errno));
+            err = -2;
         }
         hip_fb_delete(fb);
+    } else {
+        err = -1;
     }
 
-    return -1;
+    return err;
 }
 
 /**
