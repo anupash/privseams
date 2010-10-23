@@ -14,7 +14,6 @@ mkindex_rpm()
     # fix this hack -miika
     test -d  /tmp/hipl-${VERSION}/buildenv/RPMS/i586 &&
         cp -a /tmp/hipl-${VERSION}/buildenv/RPMS/i586 /tmp/hipl-${VERSION}/buildenv/RPMS/i386
-    #createrepo --update --outputdir=$PKG_EXE $PKG_DIR
     createrepo --outputdir=$PKG_EXE $PKG_DIR
 }
 
@@ -25,7 +24,6 @@ mkindex_deb()
     ORIG=$PWD
     cd $PKG_DIR
     WD=$(echo $PKG_WEB_DIR | sed 's:ubuntu/::')
-    #dpkg-scanpackages --multiversion . |
     dpkg-scanpackages . |
         sed "s,Filename: \.,Filename: $WD," |
         gzip -9c > $PKG_INDEX
