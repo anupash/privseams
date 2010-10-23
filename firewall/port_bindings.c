@@ -438,7 +438,7 @@ enum hip_port_binding hip_port_bindings_get(const uint8_t protocol,
     // check input parameters
     if (IPPROTO_TCP == protocol ||
         IPPROTO_UDP == protocol) {
-        const uint8_t port_hbo = ntohs(port);
+        const uint16_t port_hbo = ntohs(port);
 
         // Make sure we return (sort of) up-to-date information.
         // This is the one potentially slow operation here.
