@@ -19,13 +19,12 @@ mkindex_rpm()
 
 mkindex_deb()
 {
-    PKG_WEB_DIR=ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
+    PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
 
     ORIG=$PWD
     cd $PKG_DIR
-    WD=$(echo $PKG_WEB_DIR | sed 's:ubuntu/::')
     dpkg-scanpackages . |
-        sed "s,Filename: \.,Filename: $WD," |
+        sed "s,Filename: \.,Filename: $PKG_WEB_DIR," |
         gzip -9c > $PKG_INDEX
     cd $ORIG
 }
@@ -89,7 +88,6 @@ set -e
 VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 PKGROOT=$PWD
 PKG_EXE=$PKGROOT/packaging
-DISTRO=$(lsb_release -d | cut -f2 | tr '[:upper:]' '[:lower:]' | cut -d" " -f1)
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 REPO_BASE=/var/www/packages/html
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
@@ -101,7 +99,7 @@ if test -r /etc/debian_version; then
     BUILDDIR=$PWD/debbuild
     SUBBUILDDIRS="BUILD SOURCES SPECS DEBS SDEBS"
     PKG_DIR=$BUILDDIR/DEBS/$ARCH
-    PKG_SERVER_DIR=$REPO_BASE/$DISTRO/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
+    PKG_SERVER_DIR=$REPO_BASE/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     SPECFILE_TEMPLATE=$PKG_EXE/hipl-deb.spec
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
