@@ -180,7 +180,8 @@ check_lib_core_SOURCES =    test/check_lib_core.c          \
 
 check_firewall_SOURCES =    test/check_firewall.c          \
                             test/firewall/file_buffer.c    \
-                            test/firewall/line_parser.c
+                            test/firewall/line_parser.c    \
+                            test/firewall/port_bindings.c
 
 # Initialize LDADD lists empty, because modules might add entries to LDADD. The
 # module LDADDs need to be included before the standard LDADDs, because modules
