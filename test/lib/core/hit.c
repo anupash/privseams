@@ -70,9 +70,12 @@ START_TEST(test_hip_convert_hit_to_str_bounds)
     const unsigned int HIT_LEN = 39; // 16 bytes -> 32 hex chars + 7 ':'s
     const unsigned int SUFFIX_LEN = sizeof(suffix); // includes null char
     const unsigned int AFTER_LEN = 30;
-    char buf[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN] = { 1 };
-    char ones[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN] = { 1 };
+    char buf[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN];
+    char ones[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN];
     hip_hit_t hit;
+
+    memset(buf, 1, sizeof(buf));
+    memset(ones, 1, sizeof(ones));
     memset(&hit.s6_addr, 0x22, sizeof(hit.s6_addr));
 
     // write the HIT string into the middle of the buffer
