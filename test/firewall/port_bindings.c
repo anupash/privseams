@@ -23,7 +23,9 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 #include <check.h>
-#include <assert.h>
+#include <assert.h>     // assert()
+#include <netinet/in.h> // htons()
+#include <stdio.h>      // printf()
 #include "firewall/port_bindings.h"
 #include "firewall/port_bindings.c"
 
@@ -63,6 +65,39 @@ START_TEST(test_hip_port_bindings_uninit_without_cache)
 }
 END_TEST
 
+static void test_hip_port_bindings_get(const bool enable_cache)
+{
+    int err = 0;
+    enum hip_port_binding binding;
+
+    err = hip_port_bindings_init(enable_cache);
+    assert(0 == err);
+
+    binding = hip_port_bindings_get(IPPROTO_TCP, htons(631));
+    fail_unless(HIP_PORT_INFO_IPV6UNBOUND == binding ||
+                HIP_PORT_INFO_IPV6BOUND == binding, NULL);
+    if (HIP_PORT_INFO_IPV6UNBOUND == binding) {
+        printf("hip_port_bindings_get() reports your CUPS port 631 to not be bound under IPv6.\n"
+               " This is only correct if you do not have CUPS installed or deliberately disabled\n"
+               " IPv6 support.\n");
+    } else {
+        printf("hip_port_bindings_get() reports your CUPS port 631 to be bound under IPv6. This\n"
+               " is only correct if you have CUPS running and IPv6 support enabled.\n");
+    }
+}
+
+START_TEST(test_hip_port_bindings_get_with_cache)
+{
+    test_hip_port_bindings_get(true);
+}
+END_TEST
+
+START_TEST(test_hip_port_bindings_get_without_cache)
+{
+    test_hip_port_bindings_get(false);
+}
+END_TEST
+
 // For unknown reasons, this file does not compile with the following,
 // seemingly useless forward declaration
 Suite *firewall_port_bindings(void);
@@ -76,6 +111,8 @@ Suite *firewall_port_bindings(void)
     tcase_add_test(tc_core, test_hip_port_bindings_init_without_cache);
     tcase_add_test(tc_core, test_hip_port_bindings_uninit_with_cache);
     tcase_add_test(tc_core, test_hip_port_bindings_uninit_without_cache);
+    tcase_add_test(tc_core, test_hip_port_bindings_get_with_cache);
+    tcase_add_test(tc_core, test_hip_port_bindings_get_without_cache);
     suite_add_tcase(s, tc_core);
 
     return s;
