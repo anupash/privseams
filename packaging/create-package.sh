@@ -76,9 +76,7 @@ build_rpm()
 
 build_deb()
 {
-    if test ! -x /usr/bin/pax; then
-        die "apt-get install pax"
-    fi
+    which pax > /dev/null || die "aptitude install pax"
 
     # http://www.deepnet.cx/debbuild/
     $PKG_EXE/debbuild --buildroot $BUILDDIR -ba $SPECFILE
