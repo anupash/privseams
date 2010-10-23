@@ -110,7 +110,7 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
                 err = -3;
             }
         } else {
-            HIP_ERROR("Determining file size via lseek() failed: %s", strerror(errno));
+            HIP_ERROR("Determining file size via lseek() failed: %s\n", strerror(errno));
             err = -2;
         }
         fb->buffer_size = 0;
@@ -225,14 +225,14 @@ int hip_fb_reload(struct hip_file_buffer *const fb)
         // can we re-read the whole file into the memory buffer?
         seek_offset = lseek(fb->fd, 0, SEEK_SET);
         if (-1 == seek_offset) {
-            HIP_ERROR("Resetting the read position on file descriptor %d via lseek() failed with the error %s",
+            HIP_ERROR("Resetting the read position on file descriptor %d via lseek() failed with the error %s\n",
                       fb->fd, errno, strerror(errno));
             break;
         }
 
         bytes = read(fb->fd, fb->ma.start, fb->buffer_size);
         if (bytes == -1) {
-            HIP_ERROR("Reading the contents of the file descriptor %d via read() into a memory buffer of size %d failed with the error %s",
+            HIP_ERROR("Reading the contents of the file descriptor %d via read() into a memory buffer of size %d failed with the error %s\n",
                       fb->fd, fb->buffer_size, strerror(errno));
             break;
         } else if ((size_t)bytes == fb->buffer_size) {
