@@ -44,7 +44,6 @@ syncrepo()
 
     # Copy all packages and repo index to the repository
     rsync -uvr $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
-
 }
 
 build_package()
@@ -56,9 +55,9 @@ build_package()
 
     RELEASE=$(grep BZR_REVISION $PKGROOT/version.h | cut -d\" -f2)
 
-    echo "Version: $VERSION" > $SPECFILE
+    echo "Version: $VERSION"  > $SPECFILE
     echo "Release: $RELEASE" >> $SPECFILE
-    cat $SPECFILE_TEMPLATE >> $SPECFILE
+    cat $SPECFILE_TEMPLATE   >> $SPECFILE
 
     make dist > /dev/null
     mv -f $TARBALL $BUILDDIR/SOURCES
