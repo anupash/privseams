@@ -35,6 +35,7 @@
 #include <netinet/in.h> // in_port_t
 #include <string.h> // memset()
 #include <time.h>   // clock()
+#include <errno.h>  // errno
 
 #include "lib/core/debug.h" // HIP_ASSERT()
 #include "lib/core/ife.h"   // IFEL()
@@ -324,7 +325,10 @@ static int hip_port_bindings_reload_delayed(void)
 static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t protocol,
                                                              const uint16_t port)
 {
+    const unsigned int PORT_STR_OFFSET = 39;
+    const unsigned int PORT_STR_LEN = 4;
     enum hip_port_binding result = HIP_PORT_INFO_IPV6UNBOUND;
+    const struct hip_mem_area *ma;
     char *line;
     // the files /proc/net/{udp,tcp}6 are line-based and the line number of the
     // port to look up is not known in advance
@@ -335,12 +339,13 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
                IPPROTO_UDP == protocol);
     switch (protocol) {
     case IPPROTO_TCP:
-        hip_lp_create(&lp, hip_fb_get_mem_area(&tcp6_file));
+        ma = hip_fb_get_mem_area(&tcp6_file);
         break;
     case IPPROTO_UDP:
-        hip_lp_create(&lp, hip_fb_get_mem_area(&udp6_file));
+        ma = hip_fb_get_mem_area(&udp6_file);
         break;
     }
+    hip_lp_create(&lp, ma);
 
     // Note that here we blindly parse whatever is in the file buffer.
     // This may not be up-to-date compared to the actual /proc file.
@@ -352,21 +357,22 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
     // the first line only contains headers, no port information, skip it
     line = hip_lp_next(&lp);
 
-    while (line != NULL) {
-        const unsigned int PORT_OFFSET_IN_LINE = 39;
+    // is the current line valid and is it long enough to hold a port binding?
+    while (line != NULL && ma->end > (line + PORT_STR_OFFSET + PORT_STR_LEN)) {
         const unsigned int PORT_BASE_HEX = 16;
         unsigned long proc_port = 0;
         // note that strtoul() is about 10 times faster than sscanf().
         errno = 0;
-        proc_port = strtoul(line + PORT_OFFSET_IN_LINE, NULL, PORT_BASE_HEX);
+        proc_port = strtoul(line + PORT_STR_OFFSET, NULL, PORT_BASE_HEX);
         if (0 == errno) {
             if (proc_port == port) {
                 result = HIP_PORT_INFO_IPV6BOUND;
                 break;
             }
         } else {
-            HIP_ERROR("Unable to parse port number in line '%.44s' from /proc/net/%s6, errno = %d\n",
-                      line, IPPROTO_TCP == protocol ? "tcp" : "udp", errno);
+            HIP_ERROR("Unable to parse port number in line '%.*s' from /proc/net/%s6, errno = %d\n",
+                      PORT_STR_OFFSET + PORT_STR_LEN, line,
+                      IPPROTO_TCP == protocol ? "tcp" : "udp", errno);
         }
         line = hip_lp_next(&lp);
     }
