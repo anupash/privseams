@@ -21,12 +21,9 @@ mkindex_deb()
 {
     PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
 
-    ORIG=$PWD
-    cd $PKG_DIR
-    dpkg-scanpackages . |
-        sed "s,Filename: \.,Filename: $PKG_WEB_DIR," |
+    dpkg-scanpackages $PKG_DIR |
+        sed "s,Filename: $PKG_DIR,Filename: $PKG_WEB_DIR," |
         gzip -9c > $PKG_INDEX
-    cd $ORIG
 }
 
 syncrepo()
