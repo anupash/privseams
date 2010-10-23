@@ -20,6 +20,8 @@ mkindex_rpm()
 
 mkindex_deb()
 {
+    PKG_WEB_DIR=ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
+
     ORIG=$PWD
     cd $PKG_DIR
     WD=$(echo $PKG_WEB_DIR | sed 's/ubuntu\///' | sed 's/\//\\\//g')
@@ -101,8 +103,7 @@ if test -r /etc/debian_version; then
     BUILDDIR=$PWD/debbuild
     SUBBUILDDIRS="BUILD SOURCES SPECS DEBS SDEBS"
     PKG_DIR=$BUILDDIR/DEBS/$ARCH
-    PKG_WEB_DIR=ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
-    PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
+    PKG_SERVER_DIR=$REPO_BASE/$DISTRO/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     SPECFILE_TEMPLATE=$PKG_EXE/hipl-deb.spec
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
@@ -112,8 +113,7 @@ elif test -r /etc/redhat-release; then
     BUILDDIR=$PWD/rpmbuild
     SUBBUILDDIRS="BUILD SOURCES SPECS RPMS SRPMS"
     PKG_DIR=$BUILDDIR/RPMS/$ARCH
-    PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
-    PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
+    PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
     SPECFILE_TEMPLATE=$PKG_EXE/hipl-rpm.spec
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
