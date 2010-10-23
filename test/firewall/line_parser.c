@@ -27,8 +27,20 @@
 #include "firewall/line_parser.h"
 #include "firewall/line_parser.c"
 
-const char *const data[4] = { "I'm not knocking your want to carry that home\n", "Took it with you when you moved and got it broke\n", "Found the pieces we counted them all alone\n", "Didn't add up forgot to carry a zero" };
-struct hip_mem_area ma = { (char *)&data, (char *)&data + sizeof(data) };
+// four lines, each 50 characters long (including \n)
+char data[] = "I'm not knocking your want to carry that home    \n\
+Took it with you when you moved and got it broke \n\
+Found the pieces we counted them all alone       \n\
+Didn't add up forgot to carry a zero             ";
+// four pointers to the beginning of the lines
+char *const lines[4] = {
+    data,
+    data + 50,
+    data + 100,
+    data + 150
+};
+// the memory area describing data
+const struct hip_mem_area ma = { data, data + sizeof(data) };
 
 // these tests do not clean up after themselves because they assume that
 // check runs them in dedicated processes so the OS does the cleanup
@@ -78,7 +90,7 @@ START_TEST(test_hip_lp_first_valid)
 
     err = hip_lp_create(&lp, &ma);
     assert(0 == err);
-    fail_unless(hip_lp_first(&lp) == (char *)&data, NULL);
+    fail_unless(hip_lp_first(&lp) == lines[0], NULL);
 }
 END_TEST
 
@@ -97,11 +109,11 @@ START_TEST(test_hip_lp_next_valid)
     err = hip_lp_create(&lp, &ma);
     assert(0 == err);
     first = hip_lp_first(&lp);
-    assert(first == (char *)&data);
+    assert(first == lines[0]);
 
-    fail_unless(hip_lp_next(&lp) == (const char *)&data[1], NULL);
-    fail_unless(hip_lp_next(&lp) == (const char *)&data[2], NULL);
-    fail_unless(hip_lp_next(&lp) == (const char *)&data[3], NULL);
+    fail_unless(hip_lp_next(&lp) == lines[1], NULL);
+    fail_unless(hip_lp_next(&lp) == lines[2], NULL);
+    fail_unless(hip_lp_next(&lp) == lines[3], NULL);
     fail_unless(hip_lp_next(&lp) == NULL, NULL);
 }
 END_TEST
