@@ -312,7 +312,7 @@ static int hip_port_bindings_reload_delayed(void)
         }
     }
 
-    return err;
+    return ret;
 }
 
 /**
