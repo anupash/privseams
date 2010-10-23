@@ -319,6 +319,10 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
     // reload the file contents for us so that we return some at least roughly
     // up-to-date information.
     char *line = hip_lp_first(&lp);
+
+    // the first line only contains headers, no port information, skip it
+    line = hip_lp_next(&lp);
+
     while (line != NULL) {
         const unsigned int PORT_OFFSET_IN_LINE = 39;
         const unsigned int PORT_BASE_HEX = 16;
