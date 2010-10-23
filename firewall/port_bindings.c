@@ -261,12 +261,21 @@ static struct hip_file_buffer udp6_file;
  * @todo TODO efficiency could be increased by narrowing this down from
  *  reloading the files and invalidating the caches of all protocols to
  *  individual protocols.
+ *
+ * @return If this function completes successfully, it returns 0.
+ *  If one of the proc files could not be reloaded from the file system, this
+ *  function returns -1.
  */
-static void hip_port_bindings_reload(void)
+static int hip_port_bindings_reload(void)
 {
+    int err = 0;
+
     invalidate_cache();
-    hip_fb_reload(&tcp6_file);
-    hip_fb_reload(&udp6_file);
+
+    err = hip_fb_reload(&tcp6_file);
+    err |= hip_fb_reload(&udp6_file);
+
+    return (err == 0) ? 0 : -1;
 }
 
 /**
