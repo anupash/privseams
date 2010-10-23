@@ -70,26 +70,31 @@ START_TEST(test_hip_convert_hit_to_str_bounds)
     const unsigned int HIT_LEN = 39; // 16 bytes -> 32 hex chars + 7 ':'s
     const unsigned int SUFFIX_LEN = sizeof(suffix); // includes null char
     const unsigned int AFTER_LEN = 30;
-    char buf[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN];
-    char ones[BEFORE_LEN + HIT_LEN + SUFFIX_LEN + AFTER_LEN];
+    struct {
+        char before[BEFORE_LEN];
+        char hit[HIT_LEN];
+        char suffix[SUFFIX_LEN];
+        char after[AFTER_LEN];
+    } buf;
+    char ones[sizeof(buf)];
     hip_hit_t hit;
 
-    memset(buf, 1, sizeof(buf));
+    memset(&buf, 1, sizeof(buf));
     memset(ones, 1, sizeof(ones));
     memset(&hit.s6_addr, 0x22, sizeof(hit.s6_addr));
 
     // write the HIT string into the middle of the buffer
-    fail_unless(hip_convert_hit_to_str(&hit, suffix, buf + BEFORE_LEN) == 0, NULL);
+    fail_unless(hip_convert_hit_to_str(&hit, suffix, (char *)&buf.hit) == 0, NULL);
     // is the buffer before the HIT untouched?
-    fail_unless(memcmp(buf, ones, BEFORE_LEN) == 0, NULL);
+    fail_unless(memcmp(&buf.before, ones, BEFORE_LEN) == 0, NULL);
     // is the first part of the HIT correct?
-    fail_unless(*(buf + BEFORE_LEN) == '2', NULL);
+    fail_unless(buf.hit[0] == '2', NULL);
     // is the last part of the HIT correct?
-    fail_unless(*(buf + BEFORE_LEN + HIT_LEN - 1) == '2', NULL);
+    fail_unless(buf.hit[HIT_LEN - 1] == '2', NULL);
     // is the suffix correct including the terminating null character?
-    fail_unless(memcmp(buf + BEFORE_LEN + HIT_LEN, suffix, SUFFIX_LEN) == 0, NULL);
+    fail_unless(memcmp(&buf.suffix, suffix, SUFFIX_LEN) == 0, NULL);
     // is the buffer after the suffix untouched?
-    fail_unless(memcmp(buf + BEFORE_LEN + HIT_LEN + SUFFIX_LEN, ones, AFTER_LEN) == 0, NULL);
+    fail_unless(memcmp(&buf.after, ones, AFTER_LEN) == 0, NULL);
 }
 END_TEST
 
