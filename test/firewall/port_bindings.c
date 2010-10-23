@@ -28,6 +28,17 @@
 
 // these tests do not clean up after themselves because they assume that
 // check runs them in dedicated processes so the OS does the cleanup
+START_TEST(test_hip_port_bindings_init_with_cache)
+{
+    fail_unless(hip_port_bindings_init(true) == 0, NULL);
+}
+END_TEST
+
+START_TEST(test_hip_port_bindings_init_without_cache)
+{
+    fail_unless(hip_port_bindings_init(false) == 0, NULL);
+}
+END_TEST
 
 // For unknown reasons, this file does not compile with the following,
 // seemingly useless forward declaration
@@ -38,6 +49,8 @@ Suite *firewall_port_bindings(void)
     Suite *s = suite_create("firewall/port_bindings");
 
     TCase *tc_core = tcase_create("Core");
+    tcase_add_test(tc_core, test_hip_port_bindings_init_with_cache);
+    tcase_add_test(tc_core, test_hip_port_bindings_init_without_cache);
     suite_add_tcase(s, tc_core);
 
     return s;
