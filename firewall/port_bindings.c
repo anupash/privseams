@@ -61,19 +61,27 @@ static unsigned int cache_size_bytes = 0;
  * Allocate and initializes the cache resources.
  * If this function has not been called first, the results of calling
  * cache_get() and cache_set() are undefined.
+ *
+ * @return 0 if the function completes successfully.
+ *  If the memory for the cache could not be allocated, this function returns
+ *  -1.
  */
-static void init_cache(void)
+static int init_cache(void)
 {
     HIP_ASSERT(NULL == cache);
 
     cache_size_entries = CACHE_SIZE_PROTOS * CACHE_SIZE_PORTS;
     cache_size_bytes = cache_size_entries * sizeof(*cache);
 
-    cache = calloc(1, cache_size_bytes);
     /* We zero the cache on allocation assuming that HIP_PORT_INFO_UNKNOWN
     is 0 and thus the whole cache initially has that value. */
-    if (NULL == cache) {
+    HIP_ASSERT((uint8_t)HIP_PORT_INFO_UNKNOWN == 0);
+    cache = calloc(1, cache_size_bytes);
+    if (cache) {
+        return 0;
+    } else {
         HIP_ERROR("Allocating the port bindings cache failed\n");
+        return -1;
     }
 }
 
@@ -353,7 +361,11 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
  *  reloaded at a certain interval.
  *  Within this interval, hip_port_bindings_get() might return a different
  *  port binding status than the one in the actual /proc file.
- * @return 0 on success, a non-zero value on an error.
+ * @return 0 if the function completes successfully.
+ *  If enable_cache is true but the cache could not be allocated or initialized
+ *  this function returns -1.
+ *  If one of the /proc files could not be opened or buffered in memory
+ *  successfully, this function returns -2.
  */
 int hip_port_bindings_init(const bool enable_cache)
 {
@@ -362,11 +374,14 @@ int hip_port_bindings_init(const bool enable_cache)
     // The cache is built such that it can be disabled just by not initializing
     // it here.
     if (enable_cache) {
-        init_cache();
+        HIP_IFEL(init_cache() != 0, -1,
+                 "Initializing the port bindings cache failed\n")
     }
 
-    HIP_IFEL(hip_fb_create(&tcp6_file, "/proc/net/tcp6") != 0, 1, "Buffering tcp6 proc file in memory failed\n");
-    HIP_IFEL(hip_fb_create(&udp6_file, "/proc/net/udp6") != 0, 1, "Buffering udp6 proc file in memory failed\n");
+    HIP_IFEL(hip_fb_create(&tcp6_file, "/proc/net/tcp6") != 0, -2,
+             "Buffering tcp6 proc file in memory failed\n");
+    HIP_IFEL(hip_fb_create(&udp6_file, "/proc/net/udp6") != 0, -2,
+             "Buffering udp6 proc file in memory failed\n");
 
     return 0;
 
