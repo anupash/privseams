@@ -23,6 +23,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 #include <check.h>
+#include <assert.h>
 #include "firewall/port_bindings.h"
 #include "firewall/port_bindings.c"
 
@@ -40,6 +41,28 @@ START_TEST(test_hip_port_bindings_init_without_cache)
 }
 END_TEST
 
+START_TEST(test_hip_port_bindings_uninit_with_cache)
+{
+    int err = 0;
+
+    err = hip_port_bindings_init(true);
+    assert(0 == err);
+
+    hip_port_bindings_uninit();
+}
+END_TEST
+
+START_TEST(test_hip_port_bindings_uninit_without_cache)
+{
+    int err = 0;
+
+    err = hip_port_bindings_init(false);
+    assert(0 == err);
+
+    hip_port_bindings_uninit();
+}
+END_TEST
+
 // For unknown reasons, this file does not compile with the following,
 // seemingly useless forward declaration
 Suite *firewall_port_bindings(void);
@@ -51,6 +74,8 @@ Suite *firewall_port_bindings(void)
     TCase *tc_core = tcase_create("Core");
     tcase_add_test(tc_core, test_hip_port_bindings_init_with_cache);
     tcase_add_test(tc_core, test_hip_port_bindings_init_without_cache);
+    tcase_add_test(tc_core, test_hip_port_bindings_uninit_with_cache);
+    tcase_add_test(tc_core, test_hip_port_bindings_uninit_without_cache);
     suite_add_tcase(s, tc_core);
 
     return s;
