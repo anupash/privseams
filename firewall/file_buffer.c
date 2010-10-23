@@ -31,7 +31,9 @@
 #include <unistd.h>     // lseek(), close(), read()
 #include <fcntl.h>      // open()
 #include <string.h>     // memset()
+#include <errno.h>      // errno
 
+#include "lib/core/debug.h"     // HIP_ERROR()
 #include "firewall/file_buffer.h"
 
 /**
@@ -60,40 +62,57 @@ static const unsigned long HIP_FB_MAX_SIZE = 1024 * 1024 * 1024;
  */
 static int hip_fb_resize(struct hip_file_buffer *const fb)
 {
-    off_t file_size = 0;
+    int err = 0;
 
-    if (NULL == fb) {
-        return 1;
-    }
+    if (fb) {
+        off_t file_size = 0;
 
-    if (fb->ma.start != NULL) {
-        free(fb->ma.start);
-        fb->ma.start = NULL;
-    }
+        if (fb->ma.start != NULL) {
+            free(fb->ma.start);
+            fb->ma.start = NULL;
+        }
 
-    /* First, we try to determine the current file size for the new buffer size.
-     * If that fails (it does, e.g., for proc files), we just increase the
-     * current buffer size. */
-    file_size = lseek(fb->fd, 0, SEEK_END);
-    if (file_size != -1) {
-        fb->buffer_size = file_size + HIP_FB_HEADROOM; // add a little head room
-    } else {
-        if (fb->buffer_size < HIP_FB_HEADROOM) {
-            fb->buffer_size = HIP_FB_HEADROOM;
+        /* First, we try to determine the current file size for the new buffer size.
+         * If that fails (it does, e.g., for proc files), we just increase the
+         * current buffer size. */
+        errno = 0;
+        file_size = lseek(fb->fd, 0, SEEK_END);
+        if (file_size != -1 || EINVAL == errno) {
+            if (file_size != -1) {
+                fb->buffer_size = file_size + HIP_FB_HEADROOM; // add a little head room
+            } else if (EINVAL == errno) {
+                if (fb->buffer_size < HIP_FB_HEADROOM) {
+                    fb->buffer_size = HIP_FB_HEADROOM;
+                } else {
+                    fb->buffer_size *= 2;
+                }
+            }
+
+            // fb->buffer_size is now adjusted, but maybe not positive or very large?
+            if (fb->buffer_size > 0 && fb->buffer_size <= HIP_FB_MAX_SIZE) {
+                // fb->buffer_size is now the size we want to allocate
+                fb->ma.start = malloc(fb->buffer_size);
+                if (fb->ma.start) {
+                    return 0;
+                } else {
+                    HIP_ERROR("Allocating %d bytes of memory for file data failed\n",
+                              fb->buffer_size);
+                    err = -4;
+                }
+            } else {
+                HIP_ERROR("The file buffer size %d is too large to be supported\n");
+                err = -3;
+            }
         } else {
-            fb->buffer_size *= 2;
+            HIP_ERROR("Determining file size via lseek() failed: %s", strerror(errno));
+            err = -2;
         }
+        fb->buffer_size = 0;
+    } else {
+        err = -1;
     }
 
-    if (fb->buffer_size <= HIP_FB_MAX_SIZE) {
-        // allocate the buffer
-        fb->ma.start = malloc(fb->buffer_size);
-        if (NULL == fb->ma.start) {
-            fb->buffer_size = 0;
-        }
-    }
-
-    return (NULL == fb->ma.start);
+    return err;
 }
 
 /**
