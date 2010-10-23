@@ -51,14 +51,20 @@ static const unsigned int HIP_FB_HEADROOM = 4096;
 static const unsigned long HIP_FB_MAX_SIZE = 1024 * 1024 * 1024;
 
 /**
- * (Re-)allocates the file buffer so that it can hold a complete copy of the
+ * (Re-)allocates the file buffer so that it can hold a complete copy of its
  * file in memory.
+ * After the function completes successfully, the memory area associated with
+ * the file buffer points to an allocated region of memory that is at least as
+ * large as the size of the file buffer's file at the time of invocation.
+ * The contents of the memory area are undefined.
  *
  * If the size of a file cannot be determined (lseek() does not work on proc
- * files), the buffer size is increased with each invocation.
+ * files), the buffer size is increased incrementally.
  *
  * @param fb the file buffer to use.
- * @return 0 if the buffer could be allocated, a non-zero value else.
+ * @return If the function completes successfully, it returns 0.
+ *  If fb is NULL, -1 is returned.
+ *  If internal errors occur, other negative values are returned.
  */
 static int hip_fb_resize(struct hip_file_buffer *const fb)
 {
