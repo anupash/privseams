@@ -88,6 +88,18 @@ START_TEST(test_hip_fb_create_check_file_integrity)
     fail_unless((ma->end - ma->start) == sizeof(file_contents));
     fail_unless(memcmp(ma->start, file_contents, sizeof(file_contents)) == 0, NULL);
 
+    fd = open(file_name, O_RDWR | O_APPEND);
+    assert(fd != -1);
+    bytes_written = write(fd, file_contents, sizeof(file_contents));
+    assert(sizeof(file_contents) == bytes_written);
+    close(fd);
+
+    fail_unless(hip_fb_reload(&fb) == 0, NULL);
+    fail_unless(ma == hip_fb_get_mem_area(&fb), NULL);
+    fail_unless((ma->end - ma->start) == sizeof(file_contents) * 2);
+    fail_unless(memcmp(ma->start, file_contents, sizeof(file_contents)) == 0, NULL);
+    fail_unless(memcmp(ma->start + sizeof(file_contents), file_contents, sizeof(file_contents)) == 0, NULL);
+
     remove(file_name);
 }
 END_TEST
