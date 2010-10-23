@@ -325,6 +325,7 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
                                                              const uint16_t port)
 {
     enum hip_port_binding result = HIP_PORT_INFO_IPV6UNBOUND;
+    char *line;
     // the files /proc/net/{udp,tcp}6 are line-based and the line number of the
     // port to look up is not known in advance
     // -> use a parser that lets us iterate over the lines in the files
@@ -346,7 +347,7 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
     // We rely on someone else calling hip_port_bindings_reload_delayed() to
     // reload the file contents for us so that we return some at least roughly
     // up-to-date information.
-    char *line = hip_lp_first(&lp);
+    line = hip_lp_first(&lp);
 
     // the first line only contains headers, no port information, skip it
     line = hip_lp_next(&lp);
