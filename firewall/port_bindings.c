@@ -386,6 +386,9 @@ int hip_port_bindings_init(const bool enable_cache)
     return 0;
 
 out_err:
+    hip_fb_delete(&udp6_file);
+    hip_fb_delete(&tcp6_file);
+    uninit_cache();
     return err;
 }
 
