@@ -74,6 +74,11 @@ static int init_cache(void)
     cache_size_entries = CACHE_SIZE_PROTOS * CACHE_SIZE_PORTS;
     cache_size_bytes = cache_size_entries * sizeof(*cache);
 
+    // check that the conversion used in the cache from enum hip_port_binding
+    // to uint8_t is consistent
+    HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == (enum hip_port_binding)(uint8_t)HIP_PORT_INFO_IPV6UNBOUND);
+    HIP_ASSERT(HIP_PORT_INFO_IPV6BOUND == (enum hip_port_binding)(uint8_t)HIP_PORT_INFO_IPV6BOUND);
+
     /* We zero the cache on allocation assuming that HIP_PORT_INFO_UNKNOWN
     is 0 and thus the whole cache initially has that value. */
     HIP_ASSERT((uint8_t)HIP_PORT_INFO_UNKNOWN == 0);
@@ -124,21 +129,17 @@ static inline unsigned int get_cache_index(const uint8_t protocol,
     unsigned int index = 0;
     unsigned int protocol_offset = 0;
 
-    // check input parameters
-    HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
-
     // determine the offset into the first (protocol) dimension
     if (IPPROTO_TCP == protocol) {
         protocol_offset = 0;
     } else if (IPPROTO_UDP == protocol) {
         protocol_offset = 1;
+    } else {
+        HIP_DIE("Invalid protocol");
     }
 
     // calculate the index
     index = (protocol_offset * CACHE_SIZE_PORTS) + port;
-
-    // check return value
-    HIP_ASSERT(index < cache_size_entries);
 
     return index;
 }
@@ -165,17 +166,11 @@ static void set_cache_entry(const uint8_t protocol,
 {
     // fail gracefully if the cache is not allocated
     if (NULL != cache) {
-        // check input parameters
-        HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
-
         // calculate index of cache entry
         const unsigned int index = get_cache_index(protocol, port);
 
         // convert the port binding to the cache storage type
         const uint8_t value = (uint8_t)binding;
-
-        // check that the conversion is consistent
-        HIP_ASSERT((const enum hip_port_binding)value == binding);
 
         cache[index] = value;
     }
@@ -208,17 +203,9 @@ static enum hip_port_binding get_cache_entry(const uint8_t protocol,
 
     // fail gracefully if cache is not available
     if (NULL != cache) {
-        // check input parameters
-        HIP_ASSERT(IPPROTO_TCP == protocol || IPPROTO_UDP == protocol);
-
         const unsigned int index = get_cache_index(protocol, port);
 
         binding = (enum hip_port_binding)cache[index];
-
-        // check return value
-        HIP_ASSERT(HIP_PORT_INFO_UNKNOWN == binding ||
-                   HIP_PORT_INFO_IPV6UNBOUND == binding ||
-                   HIP_PORT_INFO_IPV6BOUND == binding);
     }
 
     return binding;
@@ -335,8 +322,6 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
     // -> use a parser that lets us iterate over the lines in the files
     struct hip_line_parser lp;
 
-    HIP_ASSERT(IPPROTO_TCP == protocol ||
-               IPPROTO_UDP == protocol);
     switch (protocol) {
     case IPPROTO_TCP:
         ma = hip_fb_get_mem_area(&tcp6_file);
@@ -378,8 +363,6 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
     }
 
     hip_lp_delete(&lp);
-    HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == result ||
-               HIP_PORT_INFO_IPV6BOUND == result);
     return result;
 }
 
