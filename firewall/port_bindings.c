@@ -357,10 +357,16 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
         const unsigned int PORT_BASE_HEX = 16;
         unsigned long proc_port = 0;
         // note that strtoul() is about 10 times faster than sscanf().
+        errno = 0;
         proc_port = strtoul(line + PORT_OFFSET_IN_LINE, NULL, PORT_BASE_HEX);
-        if (proc_port == port) {
-            result = HIP_PORT_INFO_IPV6BOUND;
-            break;
+        if (0 == errno) {
+            if (proc_port == port) {
+                result = HIP_PORT_INFO_IPV6BOUND;
+                break;
+            }
+        } else {
+            HIP_ERROR("Unable to parse port number in line '%.44s' from /proc/net/%s6, errno = %d\n",
+                      line, IPPROTO_TCP == protocol ? "tcp" : "udp", errno);
         }
         line = hip_lp_next(&lp);
     }
