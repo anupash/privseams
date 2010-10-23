@@ -289,18 +289,29 @@ static int hip_port_bindings_reload(void)
  * Once ten seconds have passed since the last invocation of
  * hip_port_bindings_reload(), this function calls hip_port_bindings_reload()
  * again.
+ *
+ * @return If this function completes successfully, it returns 0.
+ *  If reloading is necessary and it fails, this function returns -1.
  */
-static void hip_port_bindings_reload_delayed(void)
+static int hip_port_bindings_reload_delayed(void)
 {
+    int ret = 0;
     static clock_t last_reload = 0;
     clock_t now = clock();
 
     // The docs say one should divide by CLOCKS_PER_SEC in double.
     // However, with a granularity of 10 seconds can stick with integer math.
     if (((now - last_reload) / (CLOCKS_PER_SEC * 10)) > 0) {
+        int err = 0;
+
         last_reload = now;
-        hip_port_bindings_reload();
+        err = hip_port_bindings_reload();
+        if (err) {
+            ret = -1;
+        }
     }
+
+    return err;
 }
 
 /**
