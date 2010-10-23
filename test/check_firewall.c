@@ -33,11 +33,15 @@
 // Do not adopt this HFAS (header-file-avoidance-scheme) (TM) in HIPL production
 // code as header files are generally a good idea, just not here.
 extern Suite *firewall_file_buffer(void);
+extern Suite *firewall_line_parser(void);
+extern Suite *firewall_port_bindings(void);
 
 int main(void)
 {
     int number_failed;
     SRunner *sr = srunner_create(firewall_file_buffer());
+    srunner_add_suite(sr, firewall_line_parser());
+    srunner_add_suite(sr, firewall_port_bindings());
 
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
