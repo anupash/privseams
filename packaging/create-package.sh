@@ -119,7 +119,7 @@ else
     die "unknown distribution"
 fi
 
-PKG_INDEX=$PKG_EXE/$PKG_INDEX_NAME
+PKG_INDEX=$PKG_DIR/$PKG_INDEX_NAME
 SPECFILE=$BUILDDIR/SPECS/hipl.spec
 
 # Determine action
