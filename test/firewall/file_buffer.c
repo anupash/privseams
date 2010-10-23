@@ -121,6 +121,12 @@ START_TEST(test_hip_fb_delete_null_fb)
 }
 END_TEST
 
+START_TEST(test_hip_fb_reload_null_fb)
+{
+    fail_unless(hip_fb_reload(NULL) == -1, NULL);
+}
+END_TEST
+
 // For unknown reasons, this file does not compile with the following,
 // seemingly useless forward declaration
 Suite *firewall_file_buffer(void);
@@ -137,6 +143,7 @@ Suite *firewall_file_buffer(void)
     tcase_add_test(tc_core, test_hip_fb_create_check_file_integrity);
     tcase_add_test(tc_core, test_hip_fb_delete_valid);
     tcase_add_test(tc_core, test_hip_fb_delete_null_fb);
+    tcase_add_test(tc_core, test_hip_fb_reload_null_fb);
     suite_add_tcase(s, tc_core);
 
     return s;
