@@ -197,24 +197,32 @@ void hip_fb_delete(struct hip_file_buffer *const fb)
  * area returned by hip_fb_get_mem_area()!
  *
  * @param fb the file buffer to use.
- * @return 0 if the file data was successfully re-read.
- *  1 if the file could not be read or not enough buffer space could be
- *  allocated.
+ * @return 0 when the function completes successfully.
+ *  If fb is NULL, -1 is returned.
+ *  If an internal error occurs, -2 is returned.
  */
 int hip_fb_reload(struct hip_file_buffer *const fb)
 {
-    if (NULL == fb || -1 == fb->fd) {
-        return 1;
+    if (NULL == fb) {
+        return -1;
     }
 
     while (1) {
-        ssize_t bytes = 0;
+        ssize_t bytes;
+        off_t seek_offset;
 
         // can we re-read the whole file into the memory buffer?
-        lseek(fb->fd, 0, SEEK_SET);
+        seek_offset = lseek(fb->fd, 0, SEEK_SET);
+        if (-1 == seek_offset) {
+            HIP_ERROR("Resetting the read position on file descriptor %d via lseek() failed with the error %s",
+                      fb->fd, errno, strerror(errno));
+            break;
+        }
+
         bytes = read(fb->fd, fb->ma.start, fb->buffer_size);
         if (bytes == -1) {
-            // we can't read from the file at all -> return error
+            HIP_ERROR("Reading the contents of the file descriptor %d via read() into a memory buffer of size %d failed with the error %s",
+                      fb->fd, fb->buffer_size, strerror(errno));
             break;
         } else if ((size_t)bytes == fb->buffer_size) {
             // we can't fit the file into the memory buffer -> resize it
@@ -234,5 +242,5 @@ int hip_fb_reload(struct hip_file_buffer *const fb)
 
     fb->ma.end = NULL;
 
-    return 1;
+    return -2;
 }
