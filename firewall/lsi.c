@@ -317,7 +317,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int ip_hdr_size                                       = 0;
     int portDest                                          = 0;
     fw_cache_hl_t *entry                                  = NULL;
-    enum hip_port_binding port_traffic_type = HIP_PORT_INFO_UNKNOWN;
+    enum hip_port_binding port_binding					  = HIP_PORT_INFO_UNKNOWN;
     const struct ip6_hdr *ip6_hdr                         = NULL;
     struct in6_addr src_addr, dst_addr;
 
@@ -339,13 +339,13 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
         break;
     }
 
-    port_traffic_type = hip_port_bindings_get(ip6_hdr->ip6_nxt,
-                                          portDest);
+    port_binding = hip_port_bindings_get(ip6_hdr->ip6_nxt,
+                                         portDest);
 
-    if (port_traffic_type == HIP_PORT_INFO_IPV6BOUND) {
+    if (port_binding == HIP_PORT_INFO_IPV6BOUND) {
         HIP_DEBUG("Port %d is bound to an IPv6 address -> accepting packet\n", portDest);
         verdict = 1;
-    } else if (port_traffic_type == HIP_PORT_INFO_IPV6UNBOUND) {
+    } else if (port_binding == HIP_PORT_INFO_IPV6UNBOUND) {
         HIP_DEBUG("Port %d is unbound or bound to an IPv4 address -> looking up in cache\n", portDest);
         HIP_IFEL(!(entry = hip_firewall_cache_db_match(ip_dst, ip_src,
                                                        FW_CACHE_HIT, 1)),
@@ -377,7 +377,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
             verdict = 0;
         }
     } else {
-        HIP_DIE("hip_port_bindings_get() returned unknown return value %d\n", port_traffic_type);
+        HIP_DIE("hip_port_bindings_get() returned unknown return value %d\n", port_binding);
     }
 
 out_err:
