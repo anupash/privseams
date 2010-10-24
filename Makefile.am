@@ -57,7 +57,7 @@ endif
 
 ### source declarations ###
 
-test_auth_performance_SOURCES          	    = test/auth_performance.c
+test_auth_performance_SOURCES               = test/auth_performance.c
 test_certteststub_SOURCES                   = test/certteststub.c
 test_dh_performance_SOURCES                 = test/dh_performance.c
 test_hc_performance_SOURCES                 = test/hc_performance.c
