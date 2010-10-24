@@ -317,7 +317,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int ip_hdr_size                                       = 0;
     int portDest                                          = 0;
     fw_cache_hl_t *entry                                  = NULL;
-    enum hip_port_binding port_binding					  = HIP_PORT_INFO_UNKNOWN;
+    enum hip_port_binding port_binding                    = HIP_PORT_INFO_UNKNOWN;
     const struct ip6_hdr *ip6_hdr                         = NULL;
     struct in6_addr src_addr, dst_addr;
 

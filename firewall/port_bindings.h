@@ -72,7 +72,7 @@ enum hip_port_binding {
 int hip_port_bindings_init(const bool enable_cache);
 void hip_port_bindings_uninit(void);
 enum hip_port_binding hip_port_bindings_get(const uint8_t proto,
-                  				            const in_port_t port);
+                                            const in_port_t port);
 
 #ifdef __cplusplus
 }
