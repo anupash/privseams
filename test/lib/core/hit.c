@@ -84,7 +84,7 @@ START_TEST(test_hip_convert_hit_to_str_bounds)
     memset(&hit.s6_addr, 0x22, sizeof(hit.s6_addr));
 
     // write the HIT string into the middle of the buffer
-    fail_unless(hip_convert_hit_to_str(&hit, suffix, (char *)&buf.hit) == 0, NULL);
+    fail_unless(hip_convert_hit_to_str(&hit, suffix, buf.hit) == 0, NULL);
     // is the buffer before the HIT untouched?
     fail_unless(memcmp(&buf.before, ones, BEFORE_LEN) == 0, NULL);
     // is the first part of the HIT correct?
