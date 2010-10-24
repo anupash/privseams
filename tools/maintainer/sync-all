@@ -1,7 +1,7 @@
 #!/bin/sh -xv
 
 HOSTS="
-halko.pc.infrahip.net
+garadar.infrahip.net
 netherstorm.infrahip.net
 terokkar.infrahip.net
 shadowmoon.infrahip.net
@@ -27,11 +27,10 @@ make bin syncrepo"
 # unconfigured:
 # ubuntu lucid 32-bit allerian
 # ubuntu lucid 64-bit cenarion 64-bit
-# ubuntu lucid 64-bit garadar
 #
 # configured:
 # Ubuntu lucid 32-bit terokkar.infrahip.net
-# Ubuntu lucid 64-bit halko.pc.infrahip.net (real host)
+# ubuntu lucid 64-bit garadar
 # f12-i386            netherstorm.infrahip.net
 # F12-x86_64          shadowmoon.infrahip.net
 # CentOS-5.4 i386     hellfire.infrahip.net
@@ -42,6 +41,7 @@ make bin syncrepo"
 # disabled:
 # F10-x86_64          nagrand.infrahip.net
 # FC11-i386           hipserver (real host)
+# Ubuntu lucid 64-bit halko.pc.infrahip.net (real host)
 
 if test $# != 0
 then

@@ -71,7 +71,7 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
     int err                      = 0, mask = 0;
     int delete_ha_info           = *(int *) ((uint8_t *)opaque + sizeof(hip_hit_t));
-    hip_hit_t *peer              = (hip_hit_t *) opaque;
+    hip_hit_t *peer              = opaque;
     struct hip_common *msg_close = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
