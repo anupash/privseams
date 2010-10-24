@@ -1,5 +1,4 @@
-/** @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -22,9 +21,11 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * This file defines the certificate building and verification functions to use with HIP
- *
  *
  * @author Samu Varjonen
  */
@@ -274,7 +275,8 @@ algo_check_done:
         memset(y_bin, 0, (stop - start + 1));
         snprintf((char *) y_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *) y_b64));
-    } else {HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
+    } else {
+        HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
     }
 
     memset(sha_digest, '\0', sizeof(sha_digest));
@@ -340,7 +342,8 @@ algo_check_done:
         /* DSA_do_verify returns 1 if success. */
         cert->success = err == 1 ? 0 : -1;
         HIP_IFEL((err = err == 1 ? 0 : -1), -1, "DSA_do_verify error\n");
-    } else {HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
+    } else {
+        HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
     }
 
 out_err:
@@ -449,14 +452,17 @@ out_err:
  * @param subject HIT in representation encoding 2001:001...
  * @param not_before time in timeval before which the cert should not be used
  * @param not_after time in timeval after which the cert should not be used
- * @param hip_user_socket socket, already connected to hipd, to pass through to 
+ * @param hip_user_socket socket, already connected to hipd, to pass through to
  *                hip_send_recv_daemon_info
  * @return 0 if ok -1 if error
  */
 int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
-                              const char *issuer_type, struct in6_addr *issuer,
-                              const char *subject_type, struct in6_addr *subject,
-                              time_t *not_before, time_t *not_after, int hip_user_socket)
+                                   const char *issuer_type,
+                                   struct in6_addr *issuer,
+                                   const char *subject_type,
+                                   struct in6_addr *subject,
+                                   time_t *not_before, time_t *not_after,
+                                   int hip_user_socket)
 {
     int err           = 0;
     char *tmp_issuer  = NULL;
@@ -608,7 +614,9 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info *content,
                               const char *subject_type, struct in6_addr *subject,
                               time_t *not_before, time_t *not_after)
 {
-   return(hip_cert_spki_create_cert_sock(content, issuer_type, issuer, subject_type, subject, not_before, not_after, 0));
+   return hip_cert_spki_create_cert_sock(content, issuer_type, issuer,
+                                         subject_type, subject, not_before,
+                                         not_after, 0);
 }
 
 /**
@@ -791,7 +799,8 @@ int hip_cert_x509v3_request_verification(unsigned char *certificate, int len)
     err = hip_get_msg_err(msg);
     if (err == 0) {
         HIP_DEBUG("Verified successfully\n");
-    } else {      HIP_DEBUG("Verification failed\n");
+    } else {
+        HIP_DEBUG("Verification failed\n");
     }
 
 out_err:

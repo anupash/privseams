@@ -1,5 +1,4 @@
-/** @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -22,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * This file defines a registration mechanism for the Host Identity Protocol
  * (HIP) that allows hosts to register with services.
  *
@@ -1386,7 +1388,7 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
          * no more parameters left. */
         i          = 0;
         reg_failed = (const struct hip_reg_failed *) hip_get_next_param(msg,
-                                        (const hip_tlv_common_t *) reg_failed);
+                                        (const struct hip_tlv_common *)reg_failed);
 
         if (reg_failed == NULL) {
             break;

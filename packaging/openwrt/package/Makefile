@@ -1,7 +1,6 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=hipl
-PKG_BRANCHNAME:=main
 PKG_VERSION:=1.0.6
 PKG_RELEASE:=6
 
@@ -58,8 +57,7 @@ endef
 
 CONFIGURE_VARS += \
     LIBS="-lz" \
-    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig" \
-	CFLAGS="-fPIC -Wno-error"
+    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig"
 
 define Build/Configure
 	$(call Build/Configure/Default, \
@@ -95,9 +93,6 @@ define Package/hipl-common/install
 	$(INSTALL_DIR) $(1)/etc/hip/
 	$(INSTALL_DIR) $(1)/etc/modules.d/
 	$(INSTALL_DIR) $(1)/usr/lib/
-	$(INSTALL_DIR) $(1)/usr/bin/
-	$(INSTALL_DIR) $(1)/usr/include/
-	$(INSTALL_DIR) $(1)/usr/include/libipsec
 
 	$(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipcore.so* $(1)/usr/lib/

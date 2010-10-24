@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * This file contains a benchmark for the cryptographic authentication functions.
  *
  * @brief Authentication function benchmark
@@ -62,14 +63,12 @@ int rsa_key_len      = 1024;
 int dsa_key_len      = 1024;
 #define ECDSA_CURVE NID_sect163r1
 
-/*!
- * \brief Determine and print the gettimeofday time resolution.
- *
- * \author Tobias Heer
+/**
+ * @brief Determine and print the gettimeofday time resolution.
  *
  * Determine the time resolution of gettimeofday.
  *
- * \return void
+ * @return void
  */
 static void print_timeres(void)
 {

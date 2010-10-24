@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * @brief A database to local Host Identifiers and the related accessor functions.
  *
  * @author Janne Lundberg <jlu#tcs.hut.fi>
@@ -354,7 +355,7 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
 
     list_for_each(item, hip_local_hostid_db, c) {
         id_entry = (struct hip_host_id_entry *) list_entry(item);
-        if (hip_hit_are_equal(&id_entry->lhi.hit, our)) {
+        if (memcmp(&id_entry->lhi.hit, our, sizeof(*our)) == 0) {
             memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
             return 0;
         }

@@ -1,7 +1,4 @@
-/** @file
- * The HIPL main file containing the daemon main loop.
- *
- * @date 28.01.2008
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -24,6 +21,13 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * The HIPL main file containing the daemon main loop.
+ *
+ * @date 28.01.2008
  * @note HIPU: libm.a is not availble on OS X. The functions are present in libSystem.dyld, though
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */

@@ -1,18 +1,4 @@
-/** @file
- * This file defines handling functions for incoming packets for the Host
- * Identity Protocol (HIP).
- *
- * @author  Janne Lundberg
- * @author  Miika Komu
- * @author  Mika Kousa
- * @author  Kristian Slavov
- * @author  Anthony D. Joseph
- * @author  Bing Zhou
- * @author  Tobias Heer
- * @author  Laura Takkinen
- * @author  Rene Hummen
- * @author  Samu Varjonen
- * @author  Tim Just
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -35,6 +21,24 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
+ * This file defines handling functions for incoming packets for the Host
+ * Identity Protocol (HIP).
+ *
+ * @author  Janne Lundberg
+ * @author  Miika Komu
+ * @author  Mika Kousa
+ * @author  Kristian Slavov
+ * @author  Anthony D. Joseph
+ * @author  Bing Zhou
+ * @author  Tobias Heer
+ * @author  Laura Takkinen
+ * @author  Rene Hummen
+ * @author  Samu Varjonen
+ * @author  Tim Just
  */
 
 #define _BSD_SOURCE
@@ -850,8 +854,6 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
         if (ctx->hadb_entry->nat_mode == HIP_NAT_MODE_NONE) {
             ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
         }
-        /* @todo Is this alternative xmit function necessary? */
-        /* hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set); */
         HIP_UNLOCK_HA(ctx->hadb_entry);
     }
 
@@ -1183,7 +1185,6 @@ int hip_handle_r2(RVS const uint8_t packet_type,
 
     if (idx != 0) {
         HIP_DEBUG("ifindex = %d\n", idx);
-        // hip_hadb_set_spi_ifindex_deprecated(ctx->hadb_entry, spi_in, idx);
     } else {
         HIP_ERROR("Couldn't get device ifindex of address\n");
     }
@@ -1766,8 +1767,6 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
         ctx->hadb_entry->peer_udp_port  = ctx->msg_ports.src_port;
         HIP_DEBUG("Setting send func to UDP for entry %p from I2 info.\n",
                   ctx->hadb_entry);
-        /** @todo Is this function set needed ? */
-        /*hip_hadb_set_xmit_function_set(ctx->hadb_entry, &nat_xmit_func_set);*/
     }
 
     /* If we have old SAs with these HITs delete them */

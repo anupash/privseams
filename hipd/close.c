@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,9 +21,11 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * @brief Processing for CLOSE control packets
- *
  * @author Miika Komu <miika@iki.fi>
  */
 
@@ -71,7 +71,7 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
     int err                      = 0, mask = 0;
     int delete_ha_info           = *(int *) ((uint8_t *)opaque + sizeof(hip_hit_t));
-    hip_hit_t *peer              = (hip_hit_t *) opaque;
+    hip_hit_t *peer              = opaque;
     struct hip_common *msg_close = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE

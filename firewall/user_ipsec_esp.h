@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -24,27 +22,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
 /**
- * Host Identity Protocol
- * Copyright (C) 2004-06 the Boeing Company
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
  * @file
- *
  * @author Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
  * @author Rene Hummen <rene.hummen@rwth-aachen.de> (ported to HIPL project and major rewrite)
  *
  * @brief user-mode HIP BEET mode implementation
- *
  */
 
 #ifndef HIP_FIREWALL_USER_IPSEC_ESP_H

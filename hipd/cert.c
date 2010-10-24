@@ -1,5 +1,4 @@
-/** @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -22,6 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**
+ * @file
  *
  * This file defines the certificate signing and verification
  * functions to use with HIP
@@ -74,7 +77,7 @@
  */
 int hip_cert_spki_sign(struct hip_common *msg)
 {
-    int err                      = 0, sig_len = 0, algo = 0, t = 0;
+    int err = 0, sig_len = 0, algo = 0, t = 0;
     const struct hip_cert_spki_info *p_cert;
     struct hip_cert_spki_info *cert;
     struct hip_host_id *host_id  = NULL;
@@ -82,7 +85,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
     unsigned char *signature_b64 = NULL;
     unsigned char *digest_b64    = NULL;
     unsigned char *sha_retval;
-    uint8_t *signature                = NULL;
+    uint8_t *signature           = NULL;
     DSA_SIG *dsa_sig             = NULL;
 
     /* RSA needed variables */
@@ -144,8 +147,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
         HIP_IFEL((!signature), -1, "Malloc for signature failed\n");
         memset(signature, 0, sig_len);
 
-        err       = RSA_sign(NID_sha1, sha_digest, SHA_DIGEST_LENGTH, signature,
-                             (unsigned int *) &sig_len, rsa);
+        err = RSA_sign(NID_sha1, sha_digest, SHA_DIGEST_LENGTH, signature,
+                       (unsigned int *) &sig_len, rsa);
         HIP_IFEL((err = err == 0 ? -1 : 0), -1, "RSA_sign error\n");
     } else if (algo == HIP_HI_DSA) {
         p_bin        = malloc(BN_num_bytes(dsa->p) + 1);
@@ -175,8 +178,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
         signature    = malloc(HIP_DSA_SIG_SIZE);
         memset(signature, 0, HIP_DSA_SIG_SIZE);
 
-        t            = BN_num_bytes(dsa->p);
-        t            = (t - 64) / 8;
+        t = BN_num_bytes(dsa->p);
+        t = (t - 64) / 8;
         HIP_IFEL(t > 8, 1, "Illegal DSA key\n");
 
         signature[0] = t;
@@ -191,11 +194,11 @@ int hip_cert_spki_sign(struct hip_common *msg)
     /* clearing signature field just to be sure */
     memset(cert->signature, '\0', sizeof(cert->signature));
 
-    HIP_IFEL(!(digest_b64 = (unsigned char *) base64_encode((unsigned char *) sha_digest,
-                                                            (unsigned int) sizeof(sha_digest))),
+    HIP_IFEL(EVP_EncodeBlock(digest_b64, (unsigned char *) sha_digest,
+                             (unsigned int) sizeof(sha_digest)) > 0,
              -1, "Failed to encode digest_b64\n");
-    HIP_IFEL(!(signature_b64 = (unsigned char *) base64_encode((unsigned char *) signature,
-                                                               (unsigned int) sig_len)),
+    HIP_IFEL(EVP_EncodeBlock(signature_b64, (unsigned char *) signature,
+                             (unsigned int) sig_len) > 0,
              -1, "Failed to encode signature_b64\n");
     /* create (signature (hash sha1 |digest|)|signature|) */
     sprintf(cert->signature, "(signature (hash sha1 |%s|)|%s|)",
@@ -215,7 +218,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
                  -1,
                  "Error in converting public exponent from BN to bin\n");
 
-        HIP_IFEL(!(n_b64 = (unsigned char *) base64_encode((unsigned char *) n_bin, RSA_size(rsa))),
+        HIP_IFEL(EVP_EncodeBlock(n_b64, (unsigned char *) n_bin, RSA_size(rsa)) > 0,
                  -1,
                  "Failed to encode n_b64\n");
 
@@ -241,32 +244,29 @@ int hip_cert_spki_sign(struct hip_common *msg)
          */
         HIP_IFEL(!(BN_bn2bin(dsa->p, p_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(!(p_b64 = (unsigned char *) base64_encode((unsigned char *) p_bin,
-                                                           BN_num_bytes(dsa->p))),
+        HIP_IFEL(EVP_EncodeBlock(p_b64, (unsigned char *) p_bin, BN_num_bytes(dsa->p)) > 0,
                  -1, "Failed to encode p_b64\n");
 
         HIP_IFEL(!(BN_bn2bin(dsa->q, q_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(!(q_b64 = (unsigned char *) base64_encode((unsigned char *) q_bin,
-                                                           BN_num_bytes(dsa->q))),
+        HIP_IFEL(EVP_EncodeBlock(q_b64, (unsigned char *) q_bin, BN_num_bytes(dsa->q)) > 0,
                  -1, "Failed to encode q_64");
 
         HIP_IFEL(!(BN_bn2bin(dsa->g, g_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(!(g_b64 = (unsigned char *) base64_encode((unsigned char *) g_bin,
-                                                           BN_num_bytes(dsa->g))),
+        HIP_IFEL(EVP_EncodeBlock(g_b64, (unsigned char *) g_bin, BN_num_bytes(dsa->g)) > 0,
                  -1, "Failed to encode g_b64\n");
 
         HIP_IFEL(!(BN_bn2bin(dsa->pub_key, y_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(!(y_b64 = (unsigned char *) base64_encode((unsigned char *) y_bin,
-                                                           BN_num_bytes(dsa->pub_key))),
+        HIP_IFEL(EVP_EncodeBlock(y_b64, (unsigned char *) y_bin, BN_num_bytes(dsa->pub_key)) > 0,
                  -1, "Failed to encode y_b64\n");
 
         sprintf(cert->public_key, "(public_key (dsa-pkcs1-sha1 (p |%s|)(q |%s|)"
                                   "(g |%s|)(y |%s|)))",
                 p_b64, q_b64, g_b64, y_b64);
-    } else {HIP_IFEL(1 == 0, -1, "Unknown algorithm for public-key element\n");
+    } else {
+        HIP_IFEL(1 == 0, -1, "Unknown algorithm for public-key element\n");
     }
 
     /* Put the results into the msg back */
@@ -486,7 +486,8 @@ algo_check_done:
                  "Failed to run hip_cert_regex (exponent)\n");
         e_hex = malloc(stop - start);
         HIP_IFEL((!e_hex), -1, "Malloc for e_hex failed\n");
-        snprintf(e_hex, (stop - start - 1), "%s", (char *) &cert->public_key[start + 1]);
+        snprintf(e_hex, (stop - start - 1), "%s",
+                 (char *) &cert->public_key[start + 1]);
 
         /* public modulus */
         start       = stop = 0;
@@ -498,7 +499,8 @@ algo_check_done:
         modulus     = malloc(stop - start + 1);
         HIP_IFEL((!modulus), -1, "Malloc for modulus failed\n");
         memset(modulus, 0, (stop - start + 1));
-        snprintf((char *) modulus_b64, (stop - start - 1), "%s", (char *) &cert->public_key[start + 1]);
+        snprintf((char *) modulus_b64, (stop - start - 1), "%s",
+                 (char *) &cert->public_key[start + 1]);
 
         /* put the stuff into the RSA struct */
         BN_hex2bn(&rsa->e, e_hex);
@@ -531,7 +533,8 @@ algo_check_done:
         p_bin = malloc(stop - start + 1);
         HIP_IFEL((!p_bin), -1, "Malloc for p_bin failed\n");
         memset(p_bin, 0, (stop - start + 1));
-        snprintf((char *) p_b64, (stop - start - 1), "%s", (char *) &cert->public_key[start + 1]);
+        snprintf((char *) p_b64, (stop - start - 1), "%s",
+                 (char *) &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(p_bin, p_b64, strlen((char *) p_b64));
 
         /* dsa->q */
@@ -544,7 +547,8 @@ algo_check_done:
         q_bin  = malloc(stop - start + 1);
         HIP_IFEL((!q_bin), -1, "Malloc for q_bin failed\n");
         memset(q_bin, 0, (stop - start + 1));
-        snprintf((char *) q_b64, (stop - start - 1), "%s", (char *) &cert->public_key[start + 1]);
+        snprintf((char *) q_b64, (stop - start - 1), "%s",
+                 (char *) &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(q_bin, q_b64, strlen((char *) q_b64));
 
         /* dsa->g */
@@ -557,7 +561,8 @@ algo_check_done:
         g_bin  = malloc(stop - start + 1);
         HIP_IFEL((!g_bin), -1, "Malloc for g_bin failed\n");
         memset(g_bin, 0, (stop - start + 1));
-        snprintf((char *) g_b64, (stop - start - 1), "%s", (char *) &cert->public_key[start + 1]);
+        snprintf((char *) g_b64, (stop - start - 1), "%s",
+                 (char *) &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(g_bin, g_b64, strlen((char *) g_b64));
 
         /* dsa->y */
@@ -570,7 +575,8 @@ algo_check_done:
         y_bin  = malloc(stop - start + 1);
         HIP_IFEL((!y_bin), -1, "Malloc for y_bin failed\n");
         memset(y_bin, 0, (stop - start + 1));
-        snprintf((char *) y_b64, (stop - start - 1), "%s", (char *) &cert->public_key[start + 1]);
+        snprintf((char *) y_b64, (stop - start - 1), "%s",
+                 (char *) &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *) y_b64));
     } else {
         HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
@@ -606,7 +612,8 @@ algo_check_done:
     signature_b64 = malloc(stop - start + 1);
     HIP_IFEL((!signature_b64), -1, "Failed to malloc signature_b64\n");
     memset(signature_b64, '\0', keylen);
-    snprintf((char *) signature_b64, (stop - start - 2), "%s", (char *) &cert->signature[start + 2]);
+    snprintf((char *) signature_b64, (stop - start - 2), "%s",
+             (char *) &cert->signature[start + 2]);
     if (algo == HIP_HI_DSA) {
         signature = malloc(stop - start + 1);
         HIP_IFEL(!signature, -1, "Failed to malloc signature (dsa)\n");

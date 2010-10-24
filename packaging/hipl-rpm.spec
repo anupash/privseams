@@ -30,11 +30,11 @@ other related tools.
 %build
 autoreconf --install
 %if 0%{?fedora}
-%configure --prefix=/usr
+%configure --prefix=/usr --sysconfdir=/etc
 %else
-CPPFLAGS=-U__STRICT_ANSI__ ./configure --prefix=/usr
+CPPFLAGS=-U__STRICT_ANSI__ ./configure --prefix=/usr --sysconfdir=/etc
 %endif
-make -j 4 all
+make -j 4
 
 # Currently we are not going to install all includes and test software.
 # As a consequence, we need to tell rpmbuild that we don't want to package

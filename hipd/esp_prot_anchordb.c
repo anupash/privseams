@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,7 +21,10 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * This implementation stores anchor elements to be used as references to
  * the hash structures stored in the BEX store of the hipfw. The elements
  * maintained here should be used for the insertion of new anchor elements
@@ -32,7 +33,6 @@
  * @brief Stores anchor elements to be used for the esp protection
  *
  * @author Rene Hummen <rene.hummen@rwth-aachen.de>
- *
  */
 
 #include <stdint.h>

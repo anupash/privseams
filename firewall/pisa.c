@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -23,13 +21,16 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
- *
+ */
+
+/**
+ * @file
  * This file contains PISA specific functions for the firewall. The basic idea
  * is to modify the HIP messages and manage state for allowed connections to
  * allow or reject associated ESP traffic.
  *
  * @brief PISA functions for the firewall
- * *
+ *
  * @author Thomas Jansen
  * @author Dominic Gatzen
  */

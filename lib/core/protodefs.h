@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -24,7 +22,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
-/** @file
+
+/**
+ * @file
  * This file defines a Host Identity Protocol (HIP) header and parameter
  * related constants and structures.
  */
@@ -583,7 +583,6 @@ typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
 typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
 typedef struct hip_ipsec_func_set hip_ipsec_func_set_t;
 typedef struct hip_common hip_common_t;
-typedef struct hip_tlv_common hip_tlv_common_t;
 
 struct hip_crypto_key {
     uint8_t key[HIP_MAX_KEY_LEN];

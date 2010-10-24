@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -24,7 +22,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
-/** @file
+
+/**
+ * @file
  * A teststub for certtools.c/h
  *
  * File for testing the main operations of certtools.
@@ -33,7 +33,6 @@
  * Then it tries to verify it. If it succeeds everything should be OK :)
  *
  * @author Samu Varjonen
- *
  */
 
 #include <stdio.h>
