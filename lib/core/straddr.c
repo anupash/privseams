@@ -32,30 +32,28 @@
 
 #define _BSD_SOURCE
 
-#include <ctype.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <openssl/evp.h>
+#include <stdio.h>      // sprintf()
+#include <arpa/inet.h>  // inet_pton()
 
-#include "config.h"
-#include "debug.h"
-#include "ife.h"
-#include "prefix.h"
+#include "debug.h"      // HIP_DEBUG()
+#include "prefix.h"     // IPV4_TO_IPV6_MAP()
 #include "straddr.h"
 
 /**
- * convert a binary IPv6 address to a string
+ * Convert a binary IPv6 address to a hexadecimal string representation of the
+ * form 0011:2233:4455:6677:8899:AABB:CCDD:EEFF terminated by a null character.
  *
- * @param in6 the IPv6 address to convert
- * @param buf a preallocated buffer where the string will be stored
- * @return a pointer to the buf
+ * @param in6 a pointer to a binary IPv6 address.
+ * @param buf a pointer to a buffer to write the string representation to. The
+ *  result of passing a buffer that is too short to hold the string
+ *  representation is undefined.
+ * @return The function returns a pointer to the output buffer buf if the
+ *  address is successfully converted. It returns a negative value if in6 is
+ *  NULL or buf is NULL.
  */
-char *hip_in6_ntop(const struct in6_addr *in6, char *buf)
+char *hip_in6_ntop(const struct in6_addr *const in6, char *const buf)
 {
-    if (!buf) {
+    if (!in6 || !buf) {
         return NULL;
     }
     sprintf(buf,
@@ -68,137 +66,37 @@ char *hip_in6_ntop(const struct in6_addr *in6, char *buf)
 }
 
 /**
- * convert a string into a binary IPv4 address (a wrapper for inet_pton())
+ * Convert a string representation of an IPv6 or IPv4 address to a struct
+ * in6_addr.
+ * If the string contains an IPv4 address, it is converted to its
+ * IPv6-compatible mapping.
  *
- * @param str the string to convert
- * @param ip an output argument that will contain a binary IPv4 calculated
- *        from the @c str
- * @return zero on success and negative on error
+ * @param str points to the string to convert.
+ * @param ip6 points to a buffer where the function stores the binary address
+ *  if it could be converted.
+ * @return The return value is 0 if the conversion succeeds. It is a
+ *  negative value if str or ip6 are NULL or if str contains neither a
+ *  parseable IPv6 or IPv4 address.
  */
-int convert_string_to_address_v4(const char *str, struct in_addr *ip)
+int hip_convert_string_to_address(const char *const str,
+                                  struct in6_addr *const ip6)
 {
-    int ret = 0, err = 0;
-
-    ret = inet_pton(AF_INET, str, ip);
-    HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
-             "inet_pton: not a valid address family\n");
-    HIP_IFEL((ret == 0), -1,
-             "inet_pton: %s: not a valid network address\n", str);
-out_err:
-    return err;
-}
-
-/**
- * Convert a string to an IPv6 address. This function can handle
- * also IPv6 mapped addresses.
- *
- * @param str the string to convert
- * @param ip6 An output argument that will contain a binary IPv4 calculated
- *        from the @c str. Possibly in IPv6 mapped format.
- * @return zero on success or negative on error
- */
-int convert_string_to_address(const char *str,
-                              struct in6_addr *ip6)
-{
-    int ret = 0, err = 0;
-    struct in_addr ip4;
-
-    ret = inet_pton(AF_INET6, str, ip6);
-    HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
-             "\"%s\" is not of valid address family.\n", str);
-    if (ret > 0) {
-        /* IPv6 address conversion was ok */
-        goto out_err;
-    }
-
-    /* Might be an ipv4 address (ret == 0). Lets catch it here. */
-    err = convert_string_to_address_v4(str, &ip4);
-    if (err) {
-        goto out_err;
-    }
-
-    IPV4_TO_IPV6_MAP(&ip4, ip6);
-    HIP_DEBUG("Mapped v4 to v6.\n");
-    HIP_DEBUG_IN6ADDR("mapped v6", ip6);
-
-out_err:
-    return err;
-}
-
-/**
- * convert a string containing upper case characters to lower case
- *
- * @param to the result of the conversion (minimum length @c count)
- * @param from a string possibly containing upper case characters
- * @param count count
- * @return zero on success or negative on failure
- */
-int hip_string_to_lowercase(char *to, const char *from, const size_t count)
-{
-    unsigned i;
-
-    if (to == NULL || from == NULL || count == 0) {
-        return -1;
-    }
-
-    for (i = 0; i < count; i++) {
-        if (isalpha(from[i])) {
-            to[i] = tolower(from[i]);
+    if (str && ip6) {
+        if (inet_pton(AF_INET6, str, ip6) == 1) {
+            /* IPv6 address conversion was ok */
+            return 0;
         } else {
-            to[i] = from[i];
+            struct in_addr ip4;
+
+            /* Might be an ipv4 address (ret == 0). Lets catch it here. */
+            if (inet_pton(AF_INET, str, &ip4) == 1) {
+                IPV4_TO_IPV6_MAP(&ip4, ip6);
+                HIP_DEBUG("Mapped v4 to v6.\n");
+                HIP_DEBUG_IN6ADDR("mapped v6", ip6);
+                return 0;
+            }
         }
     }
-    return 0;
+
+    return -1;
 }
-
-/**
- * test if a given string contains a positive integer
- *
- * @param string the string to test
- * @return zero if the string is digit or negative otherwise
- */
-int hip_string_is_digit(const char *string)
-{
-    if (string == NULL) {
-        return -1;
-    }
-
-    int i = 0;
-
-    while (string[i] != '\0') {
-        if (!isdigit(string[i])) {
-            return -1;
-        }
-        i++;
-    }
-    return 0;
-}
-
-
-/**
- * encode the given content to Base64
- *
- * @param buf Pointer to contents to be encoded
- * @param len How long is the first parameter in bytes
- *
- * @return Returns a pointer to encoded content or NULL on error
- */
-unsigned char *base64_encode(unsigned char *buf, unsigned int len)
-{
-    unsigned char *ret;
-    unsigned int b64_len;
-
-    b64_len = (((len + 2) / 3) * 4) + 1;
-    ret     = malloc(b64_len);
-    if (ret == NULL) {
-        goto out_err;
-    }
-    EVP_EncodeBlock(ret, buf, len);
-    return ret;
-out_err:
-    if (ret) {
-        free(ret);
-    }
-    return NULL;
-}
-

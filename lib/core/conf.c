@@ -872,7 +872,6 @@ static int hip_conf_handle_server(hip_common_t *msg,
     int index_of_hit = 0, index_of_ip = 0, opp_mode = 0;;
     uint8_t lifetime             = 0, *reg_types = NULL;
     time_t seconds_from_lifetime = 0;
-    char lowercase[30];
 
     memset(&hit, 0, sizeof(hit));
     memset(&ipv6, 0, sizeof(ipv6));
@@ -883,6 +882,8 @@ static int hip_conf_handle_server(hip_common_t *msg,
         err = -1;
         goto out_err;
     } else if (action == ACTION_ADD) {
+        char *tail_ptr = NULL;
+
         if (optc < 4) {
             if (optc < 3) {
                 HIP_ERROR("Missing arguments.\n");
@@ -903,19 +904,11 @@ static int hip_conf_handle_server(hip_common_t *msg,
             index_of_ip        = optc - 2;
         }
 
-        HIP_IFEL(hip_string_is_digit(opt[optc - 1]), -1,
+        seconds = strtoul(opt[optc - 1], &tail_ptr, 10);
+        HIP_IFEL(*tail_ptr == '\0' && seconds > 0 && seconds <= 15384774, -1,
                  "Invalid lifetime value \"%s\" given.\n"       \
                  "Please give a lifetime value between 1 and "  \
                  "15384774 seconds.\n", opt[optc - 1]);
-
-        seconds = atoi(opt[optc - 1]);
-
-        if (seconds <= 0 || seconds > 15384774) {
-            HIP_ERROR("Invalid lifetime value \"%s\" given.\n"    \
-                      "Please give a lifetime value between 1 and " \
-                      "15384774 seconds.\n", opt[optc - 1]);
-            goto out_err;
-        }
 
         HIP_IFEL(hip_get_lifetime_value(seconds, &lifetime), -1,
                  "Unable to convert seconds to a lifetime value.\n");
@@ -994,19 +987,18 @@ static int hip_conf_handle_server(hip_common_t *msg,
             goto out_err;
         }
 
-        hip_string_to_lowercase(lowercase, opt[i], strlen(opt[i]) + 1);
-        if (strcmp("rvs", lowercase) == 0) {
+        if (strcasecmp("rvs", opt[i]) == 0) {
             reg_types[i] = HIP_SERVICE_RENDEZVOUS;
-        } else if (strcmp("relay", lowercase) == 0) {
+        } else if (strcasecmp("relay", opt[i]) == 0) {
             reg_types[i] = HIP_SERVICE_RELAY;
-        } else if (strcmp("full-relay", lowercase) == 0)  {
+        } else if (strcasecmp("full-relay", opt[i]) == 0)  {
             reg_types[i] = HIP_SERVICE_FULLRELAY;
         }         /* To cope with the atoi() error value we handle the 'zero'
                    * case here. */
-        else if (strcmp("0", lowercase) == 0) {
+        else if (strcasecmp("0", opt[i]) == 0) {
             reg_types[i] = 0;
         } else {
-            reg_type = atoi(lowercase);
+            reg_type = atoi(opt[i]);
             if (reg_type <= 0 || reg_type > 255) {
                 HIP_ERROR("'%s' is not a valid service name " \
                           "or service number.\n", opt[i]);
@@ -1207,13 +1199,13 @@ static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 
     HIP_IFEL((optc != 2 && optc != 3), -1, "Missing arguments\n");
 
-    HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+    HIP_IFEL(hip_convert_string_to_address(opt[0], &hit), -1,
              "string to address conversion failed\n");
 
-    HIP_IFEL((err = convert_string_to_address(opt[1], &ip6)), -1,
+    HIP_IFEL((err = hip_convert_string_to_address(opt[1], &ip6)), -1,
              "string to address conversion failed\n");
 
-    if ((err && !convert_string_to_address_v4(opt[1], &aux))) {
+    if ((err && inet_pton(AF_INET, opt[1], &aux) != 1)) {
         HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
     }
 
@@ -1243,7 +1235,7 @@ static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
              "build param hit failed\n");
 
     if (optc == 3) {
-        HIP_IFEL(convert_string_to_address_v4(opt[2], &lsi), -1,
+        HIP_IFEL(inet_pton(AF_INET, opt[2], &lsi) == 1, -1,
                  "string to address conversion failed\n");
         HIP_IFEL(!IS_LSI32(lsi.s_addr), -1, "Wrong LSI value\n");
         HIP_IFEL(hip_build_param_contents(msg, &lsi,
@@ -2011,7 +2003,7 @@ static int hip_conf_handle_ha(hip_common_t *msg,
         if (!strcmp("all", opt[0])) {
             hip_conf_print_info_ha(ha);
         } else {
-            HIP_IFE(convert_string_to_address(opt[0], &hit1), -1);
+            HIP_IFE(hip_convert_string_to_address(opt[0], &hit1), -1);
 
             if ((ipv6_addr_cmp(&hit1, &ha->hit_our) == 0) ||
                 (ipv6_addr_cmp(&hit1, &ha->hit_peer) == 0))
