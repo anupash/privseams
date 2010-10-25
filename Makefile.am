@@ -238,7 +238,7 @@ doc/HOWTO.txt: doc/HOWTO.xml
 
 CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
-	rm -rf doc/doxy
+	rm -rf doc/doxy debbuild rpmbuild
 
 bin deb increl rpm syncrepo:
 	env PYEXECDIR=$(pyexecdir) @srcdir@/packaging/create-package.sh $@
