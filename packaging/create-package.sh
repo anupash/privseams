@@ -68,8 +68,6 @@ build_rpm()
 
 build_deb()
 {
-    which pax > /dev/null || die "aptitude install pax"
-
     # http://www.deepnet.cx/debbuild/
     $PACKAGING_DIR/debbuild --buildroot $BUILDDIR -ba $SPECFILE
 }
@@ -86,6 +84,7 @@ REPO_BASE=/var/www/packages/html
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
+    which pax > /dev/null || die "aptitude install pax"
     DISTRO=debian
     ARCH=$(dpkg --print-architecture)
     BUILDDIR=$PWD/debbuild
