@@ -241,7 +241,7 @@ clean-local:
 	rm -rf doc/doxy debbuild rpmbuild
 
 bin deb rpm syncrepo:
-	env PYEXECDIR=$(pyexecdir) @srcdir@/packaging/create-package.sh $@
+	@srcdir@/packaging/create-package.sh $@
 
 autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
