@@ -10,7 +10,6 @@ die()
 
 mkindex_rpm()
 {
-    mkdir -p $PKG_INDEX
     # fix this hack -miika
     test -d  /tmp/hipl-${VERSION}/buildenv/RPMS/i586 &&
         cp -a /tmp/hipl-${VERSION}/buildenv/RPMS/i586 /tmp/hipl-${VERSION}/buildenv/RPMS/i386
