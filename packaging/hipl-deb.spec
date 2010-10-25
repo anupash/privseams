@@ -4,7 +4,7 @@ Summary: HIP IPsec key management and mobility daemon.
 #       by packaging/create-package.sh
 # Note: To check that this file is in correct format, type
 # ./debbuild --showpkgs hipl-deb.spec
-URL: http://infrahip.hiit.fi
+URL: http://infrahip.hiit.fi/
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: miika@iki.fi
 Vendor: InfraHIP
@@ -14,6 +14,7 @@ BuildRequires: automake, autoconf, libtool, gcc, libssl-dev, xmlto, doxygen, ipt
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
+
 %description
 
 Host Identity Protocol (HIP) provides cryptographic authentication to
@@ -69,7 +70,7 @@ make -j 4
 
 
 %package all
-Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
+Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
 Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-tools, hipl-doc, hipl-dnsproxy
 %description all
