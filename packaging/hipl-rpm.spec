@@ -111,8 +111,8 @@ install -d %{buildroot}%{prefix}/share/pixmaps
 
 # XX FIXME: add more python stuff from tools directory
 
+make install DESTDIR=%{buildroot}
 install -d %{buildroot}/etc/rc.d/init.d
-make DESTDIR=%{buildroot} install
 install -m 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 755 packaging/fedora-init.d/hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 755 packaging/fedora-init.d/dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy

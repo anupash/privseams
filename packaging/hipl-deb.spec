@@ -119,8 +119,8 @@ Group: System Environment/Kernel
 %install
 rm -rf %{buildroot}
 
+make install DESTDIR=%{buildroot}
 install -d %{buildroot}/etc/init.d
-make DESTDIR=%{buildroot} install
 install -m 755 packaging/debian-init.d/hipfw %{buildroot}/etc/init.d/hipfw
 install -m 755 packaging/debian-init.d/hipd %{buildroot}/etc/init.d/hipd
 install -m 755 packaging/debian-init.d/dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
