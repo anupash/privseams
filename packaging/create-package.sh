@@ -61,7 +61,7 @@ build_package()
 
 build_rpm()
 {
-    rpmbuild -ba $SPECFILE
+    rpmbuild --target $ARCH -ba $SPECFILE
 }
 
 build_deb()
