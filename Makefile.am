@@ -240,7 +240,7 @@ CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
 	rm -rf doc/doxy debbuild rpmbuild
 
-bin deb rpm syncrepo:
+bin deb rpm syncrepo syncrepo_deb syncrepo_rpm:
 	@srcdir@/packaging/create-package.sh $@
 
 autotools-clean: maintainer-clean
@@ -268,4 +268,4 @@ $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
 dist-hook:
 	rm -f $(distdir)/doc/Doxyfile
 
-.PHONY: bin checkheaders deb doxygen rpm syncrepo
+.PHONY: bin checkheaders deb doxygen rpm syncrepo*
