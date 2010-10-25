@@ -1131,10 +1131,6 @@ You must do the following things first at the server:
 Install repository tool at the host where you are building packages:
 * yum -y install createrepo
 
-Remember update version number in hipl.spec before
-uploading any binaries!!!
-* make increl
-
 Create binaries and synchronise to repository:
 * make bin syncrepo
 
@@ -1158,10 +1154,6 @@ You must do the following things first at the server:
 
 Install the following tool to the host where building packages:
 * apt-get install dpkg-scanpackages
-
-Note: if you are doing a version upgrade, remember to update the
-version number in hipl-deb.spec!!!
-* make increl
 
 Build the binaries and synchronize to repository:
 * make bin syncrepo
