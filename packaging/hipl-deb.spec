@@ -199,6 +199,8 @@ rm -rf %{buildroot}
 
 %files doc
 %doc doc/HOWTO.txt doc/HOWTO.html
+%doc doc/base-exchange-relay.png doc/base-exchange-rvs.png
+%doc doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 
 %files all
 %doc COPYING
