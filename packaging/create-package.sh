@@ -49,14 +49,14 @@ build_package()
         mkdir -p $BUILDDIR/$SUBDIR
     done
 
-    RELEASE=$(grep BZR_REVISION $PKGROOT/version.h | cut -d\" -f2)
+    RELEASE=$(grep BZR_REVISION $SRCDIR/version.h | cut -d\" -f2)
 
     echo "Version: $VERSION"  > $SPECFILE
     echo "Release: $RELEASE" >> $SPECFILE
     cat $SPECFILE_TEMPLATE   >> $SPECFILE
 
     make dist > /dev/null
-    mv -f $PKGROOT/hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
+    mv -f hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
 
     $1
 }
@@ -82,9 +82,9 @@ build_deb()
 
 set -e
 
-VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
-PKGROOT=$PWD
-PKG_EXE=$PKGROOT/packaging
+SRCDIR=$(echo $0 | sed s:/packaging/create-package.sh::)
+VERSION=$(grep '^AC_INIT' $SRCDIR/configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
+PKG_EXE=$SRCDIR/packaging
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 REPO_BASE=/var/www/packages/html
 
