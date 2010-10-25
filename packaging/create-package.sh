@@ -56,7 +56,7 @@ build_package()
     cat $SPECFILE_TEMPLATE   >> $SPECFILE
 
     make dist > /dev/null
-    mv -f $TARBALL $BUILDDIR/SOURCES
+    mv -f $PKGROOT/hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
 
     $1
 }
@@ -87,7 +87,6 @@ PKGROOT=$PWD
 PKG_EXE=$PKGROOT/packaging
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 REPO_BASE=/var/www/packages/html
-TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
