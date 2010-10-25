@@ -13,6 +13,7 @@ mkindex_rpm()
     # fix this hack -miika
     test -d  /tmp/hipl-${VERSION}/buildenv/RPMS/i586 &&
         cp -a /tmp/hipl-${VERSION}/buildenv/RPMS/i586 /tmp/hipl-${VERSION}/buildenv/RPMS/i386
+    mkdir -p $PKG_DIR
     createrepo $PKG_DIR
 }
 
