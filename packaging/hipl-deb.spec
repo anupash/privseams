@@ -119,12 +119,7 @@ Group: System Environment/Kernel
 %install
 rm -rf %{buildroot}
 
-install -d %{buildroot}/usr/share/pixmaps
-install -d %{buildroot}/usr/bin
-install -d %{buildroot}/usr/sbin
-install -d %{buildroot}/usr/lib
 install -d %{buildroot}/etc/init.d
-install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 755 packaging/debian-init.d/hipfw %{buildroot}/etc/init.d/hipfw
 install -m 755 packaging/debian-init.d/hipd %{buildroot}/etc/init.d/hipd
