@@ -25,6 +25,8 @@ mkindex_deb()
 
 syncrepo()
 {
+    $INDEXING_CMD
+
     NAME=hipl
     REPO_SERVER=hipl.hiit.fi
     REPO_USER=hipl
@@ -56,7 +58,7 @@ build_package()
     make dist > /dev/null
     mv -f hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
 
-    $1
+    $PACKAGING_CMD
 }
 
 build_rpm()
@@ -93,6 +95,8 @@ if test -r /etc/debian_version; then
     SPECFILE_TEMPLATE=$PACKAGING_DIR/hipl-deb.spec
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
+    INDEXING_CMD=mkindex_deb
+    PACKAGING_CMD=build_deb
 elif test -r /etc/redhat-release; then
     DISTRO=redhat
     ARCH=$(uname -i)
@@ -103,6 +107,8 @@ elif test -r /etc/redhat-release; then
     SPECFILE_TEMPLATE=$PACKAGING_DIR/hipl-rpm.spec
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
+    INDEXING_CMD=mkindex_rpm
+    PACKAGING_CMD=build_rpm
 else
     die "unknown distribution"
 fi
@@ -113,32 +119,17 @@ SPECFILE=$BUILDDIR/SPECS/hipl.spec
 # Determine action
 case $1 in
     syncrepo_deb)
-        mkindex_deb
-        syncrepo
-        ;;
+        INDEXING_CMD=mkindex_deb syncrepo ;;
     syncrepo_rpm)
-        mkindex_rpm
-        syncrepo
-        ;;
+        INDEXING_CMD=mkindex_rpm syncrepo ;;
     syncrepo)
-        if test "$DISTRO" = "debian"; then
-            mkindex_deb
-        else
-            mkindex_rpm
-        fi
-        syncrepo
-        ;;
+        syncrepo ;;
     deb)
-        build_package build_deb ;;
+        PACKAGING_CMD=build_deb build_package ;;
     rpm)
-        build_package build_rpm ;;
+        PACKAGING_CMD=build_rpm build_package ;;
     bin)
-        if test "$DISTRO" = "debian"; then
-            build_package build_deb
-        else
-            build_package build_rpm
-        fi
-        ;;
+        build_package ;;
     *)
         die "usage: $0 <syncrepo|syncrepo_deb|syncrepo_rpm|deb|rpm|bin>"
 esac
