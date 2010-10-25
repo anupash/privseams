@@ -53,6 +53,7 @@ build_package()
 
     echo "Version: $VERSION"  > $SPECFILE
     echo "Release: $RELEASE" >> $SPECFILE
+    echo "%define _topdir $BUILDDIR" >> $SPECFILE
     cat $SPECFILE_TEMPLATE   >> $SPECFILE
 
     make dist > /dev/null
