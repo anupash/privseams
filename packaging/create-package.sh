@@ -10,9 +10,6 @@ die()
 
 mkindex_rpm()
 {
-    # fix this hack -miika
-    test -d  /tmp/hipl-${VERSION}/buildenv/RPMS/i586 &&
-        cp -a /tmp/hipl-${VERSION}/buildenv/RPMS/i586 /tmp/hipl-${VERSION}/buildenv/RPMS/i386
     mkdir -p $PKG_DIR
     createrepo $PKG_DIR
 }
@@ -64,10 +61,6 @@ build_package()
 
 build_rpm()
 {
-    # fix this hack -miika
-    test -d $BUILDDIR/RPMS/i586 &&
-        cp -a $BUILDDIR/RPMS/i586 $BUILDDIR/RPMS/i386
-
     rpmbuild -ba $SPECFILE
 }
 
