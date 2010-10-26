@@ -36,11 +36,30 @@
 #include <string.h> // memset()
 #include <time.h>   // clock()
 #include <errno.h>  // errno
+#include <signal.h> // signal()
+#include <unistd.h> // alarm()
 
 #include "lib/core/debug.h" // HIP_ASSERT()
 #include "lib/core/ife.h"   // IFEL()
 #include "firewall/line_parser.h"
 #include "firewall/port_bindings.h"
+
+/**
+ * The number of seconds after which hip_port_bindings_trigger_reload() is
+ * called periodically.
+ * The smaller this number, the more up-to-date information is returned by
+ * hip_port_bindings_get().
+ * At the same time, a small interval also causes the somewhat expensive
+ * hip_port_bindings_reload() to be called more frequently.
+ */
+const unsigned int INVALIDATION_INTERVAL = 1;
+
+/**
+ * Indicates whether the caches should be invalidated.
+ * This is periodically set to 1 by a timer and reset the next time a lookup is
+ * performed.
+ */
+volatile sig_atomic_t cache_invalidation_flag = 1;
 
 /**
  * Pointer to the port bindings cache.
@@ -233,6 +252,22 @@ static struct hip_file_buffer tcp6_file;
 static struct hip_file_buffer udp6_file;
 
 /**
+ * Handles ALRM signals and triggers caches to be reloaded.
+ * After this function has been called, the next call to
+ * hip_port_bindings_get() calls hip_port_bindings_reload() to invalidate the
+ * port and the file caches before performing a port lookup.
+ * This tries to strike a balance between the cost of
+ * hip_port_bindings_reload() and the freshness of the lookup information
+ * returned by hip_port_bindings_get().
+ * This function is called every INVALIDATION_INTERVAL seconds.
+ */
+static void hip_port_bindings_trigger_reload(int sig __attribute__ ((unused)) )
+{
+    cache_invalidation_flag = 1;
+    alarm(INVALIDATION_INTERVAL);
+}
+
+/**
  * Load the latest information from /proc.
  * This consists of handling two separate caching layers:
  * a) re-reading the file contents in the tcp6/udp6 file buffer objects and
@@ -242,7 +277,7 @@ static struct hip_file_buffer udp6_file;
  * about which ports are bound.
  * On the other hand, this operation is about 300 times more expensive than
  * parsing the /proc file and even more expensive compared to a cache lookup.
- * hip_port_bindings_reload_delayed() tries to balance this conflict.
+ * hip_port_bindings_trigger_reload() tries to balance this conflict.
  * After calling this function, the cache is empty and the file buffers contain
  * the up-to-date file contents from /proc.
  *
@@ -264,42 +299,6 @@ static int hip_port_bindings_reload(void)
     err |= hip_fb_reload(&udp6_file);
 
     return (err == 0) ? 0 : -1;
-}
-
-/**
- * Delay the invocation of hip_port_bindings_reload() to avoid its performance
- * penalty.
- * This function tries to strike a balance between the cost of
- * hip_port_bindings_reload() and the freshness of the lookup information
- * returned by hip_port_bindings_get().
- * Within a time span of ten seconds, this function may be called an arbitrary
- * number of times without itself calling hip_port_bindings_reload().
- * Once ten seconds have passed since the last invocation of
- * hip_port_bindings_reload(), this function calls hip_port_bindings_reload()
- * again.
- *
- * @return If this function completes successfully, it returns 0.
- *  If reloading is necessary and it fails, this function returns -1.
- */
-static int hip_port_bindings_reload_delayed(void)
-{
-    int ret = 0;
-    static clock_t last_reload = 0;
-    clock_t now = clock();
-
-    // The docs say one should divide by CLOCKS_PER_SEC in double.
-    // However, with a granularity of 10 seconds can stick with integer math.
-    if (((now - last_reload) / (CLOCKS_PER_SEC * 10)) > 0) {
-        int err = 0;
-
-        last_reload = now;
-        err = hip_port_bindings_reload();
-        if (err) {
-            ret = -1;
-        }
-    }
-
-    return ret;
 }
 
 /**
@@ -334,7 +333,7 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
 
     // Note that here we blindly parse whatever is in the file buffer.
     // This may not be up-to-date compared to the actual /proc file.
-    // We rely on someone else calling hip_port_bindings_reload_delayed() to
+    // We rely on someone else calling hip_port_bindings_reload() to
     // reload the file contents for us so that we return some at least roughly
     // up-to-date information.
     line = hip_lp_first(&lp);
@@ -394,6 +393,12 @@ int hip_port_bindings_init(const bool enable_cache)
                  "Initializing the port bindings cache failed\n")
     }
 
+    // Trigger cache invalidation (see hip_port_bindings_trigger_reload())
+    // This is useful even if enable_cache is false because it affects not only
+    // the port-based cache but also the file cache.
+    signal(SIGALRM, hip_port_bindings_trigger_reload);
+    alarm(INVALIDATION_INTERVAL);
+
     HIP_IFEL(hip_fb_create(&tcp6_file, "/proc/net/tcp6") != 0, -2,
              "Buffering tcp6 proc file in memory failed\n");
     HIP_IFEL(hip_fb_create(&udp6_file, "/proc/net/udp6") != 0, -2,
@@ -428,7 +433,7 @@ void hip_port_bindings_uninit(void)
  *
  * Note that due to internal caching, hip_port_bindings_get() might return for
  * a certain caching interval a different port binding status than the one
- * reported in the actual /proc file (see hip_port_bindings_reload_delayed()).
+ * reported in the actual /proc file (see hip_port_bindings_trigger_reload()).
  *
  * The binary test/fw_port_bindings_performance benchmarks the elements that
  * influence the performance of the hip_port_bindings_* code.
@@ -460,12 +465,15 @@ enum hip_port_binding hip_port_bindings_get(const uint8_t protocol,
         // This is the one potentially slow operation here.
         // The others (hip_port_bindings_get_from_proc() and the cache access
         // functions) are (intended to be) very fast.
-        hip_port_bindings_reload_delayed();
+        if (cache_invalidation_flag) {
+            hip_port_bindings_reload();
+            cache_invalidation_flag = 0;
+        }
 
         // check the cache before checking /proc
         // note that the cache might be switched off (see
         // hip_port_bindings_init()) or was just invalidated by
-        // hip_port_bindings_reload_delayed()
+        // hip_port_bindings_reload()
         binding = get_cache_entry(protocol, port_hbo);
 
         if (HIP_PORT_INFO_UNKNOWN == binding) {
