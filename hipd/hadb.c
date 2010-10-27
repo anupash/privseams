@@ -1441,10 +1441,10 @@ int hip_generate_peer_lsi(hip_lsi_t *lsi)
 {
     struct in_addr lsi_prefix;
     uint8_t hostname[HOST_NAME_MAX];
-    int index = 1;
+    int idx = 1;
 
     do {
-        lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX | index++);
+        lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX | idx++);
     } while (lsi_assigned(lsi_prefix) ||
              !hip_map_lsi_to_hostname_from_hosts(lsi, (char *) hostname));
 

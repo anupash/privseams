@@ -101,7 +101,7 @@ void hip_uninit_services(void)
  */
 static int hip_del_pending_request_by_expiration(void)
 {
-    int index                      = 0;
+    int idx = 0;
     hip_ll_node_t *iter            = NULL;
     hip_pending_request_t *request = NULL;
     time_t now                     = time(NULL);
@@ -112,11 +112,11 @@ static int hip_del_pending_request_by_expiration(void)
         if (now - request->created > HIP_PENDING_REQUEST_LIFETIME) {
             HIP_DEBUG("Deleting and freeing a pending request by " \
                       "expiration (%u seconds) at index %u.\n",
-                      now - request->created, index);
-            hip_ll_del(&pending_requests, index, free);
+                      now - request->created, idx);
+            hip_ll_del(&pending_requests, idx, free);
             return 0;
         }
-        index++;
+        idx++;
     }
 
     return -1;
@@ -242,7 +242,7 @@ out_err:
  */
 int hip_del_pending_request(hip_ha_t *entry)
 {
-    int index           = 0;
+    int idx = 0;
     hip_ll_node_t *iter = NULL;
 
     /* Iterate through the linked list. The iterator itself can't be used
@@ -252,11 +252,11 @@ int hip_del_pending_request(hip_ha_t *entry)
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((hip_pending_request_t *) (iter->ptr))->entry == entry) {
             HIP_DEBUG("Deleting and freeing a pending request at " \
-                      "index %u.\n", index);
-            hip_ll_del(&pending_requests, index, free);
+                      "index %u.\n", idx);
+            hip_ll_del(&pending_requests, idx, free);
             return 0;
         }
-        index++;
+        idx++;
     }
 
     return -1;
@@ -275,7 +275,7 @@ int hip_del_pending_request(hip_ha_t *entry)
  */
 int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 {
-    int index                      = 0;
+    int idx = 0;
     hip_ll_node_t *iter            = NULL;
     hip_pending_request_t *request = NULL;
 
@@ -284,11 +284,11 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
         request = iter->ptr;
         if (request->entry == entry && request->reg_type == reg_type) {
             HIP_DEBUG("Deleting and freeing a pending request by " \
-                      "type at index %u.\n", index);
-            hip_ll_del(&pending_requests, index, free);
+                      "type at index %u.\n", idx);
+            hip_ll_del(&pending_requests, idx, free);
             return 0;
         }
-        index++;
+        idx++;
     }
 
     return -1;
