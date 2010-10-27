@@ -46,6 +46,7 @@
 #include <ifaddrs.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <net/if.h>
