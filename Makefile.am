@@ -240,7 +240,7 @@ CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
 	rm -rf doc/doxy debbuild rpmbuild
 
-bin deb rpm syncrepo syncrepo_deb syncrepo_rpm:
+bin deb rpm syncrepo syncrepo_deb syncrepo_rpm: $(srcdir)/version.h
 	@srcdir@/packaging/create-package.sh $@
 
 autotools-clean: maintainer-clean
