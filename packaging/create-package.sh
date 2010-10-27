@@ -10,11 +10,8 @@ die()
 
 mkindex_rpm()
 {
-    mkdir -p $PKG_INDEX
-    # fix this hack -miika
-    test -d  /tmp/hipl-${VERSION}/buildenv/RPMS/i586 &&
-        cp -a /tmp/hipl-${VERSION}/buildenv/RPMS/i586 /tmp/hipl-${VERSION}/buildenv/RPMS/i386
-    createrepo --outputdir=$PKG_EXE $PKG_DIR
+    mkdir -p $PKG_DIR
+    createrepo $PKG_DIR
 }
 
 mkindex_deb()
@@ -28,6 +25,8 @@ mkindex_deb()
 
 syncrepo()
 {
+    $INDEXING_CMD
+
     NAME=hipl
     REPO_SERVER=hipl.hiit.fi
     REPO_USER=hipl
@@ -49,67 +48,66 @@ build_package()
         mkdir -p $BUILDDIR/$SUBDIR
     done
 
-    RELEASE=$(grep BZR_REVISION $PKGROOT/version.h | cut -d\" -f2)
+    RELEASE=$(grep BZR_REVISION $SRCDIR/version.h | cut -d\" -f2)
 
     echo "Version: $VERSION"  > $SPECFILE
     echo "Release: $RELEASE" >> $SPECFILE
+    echo "%define _topdir $BUILDDIR" >> $SPECFILE
     cat $SPECFILE_TEMPLATE   >> $SPECFILE
 
     make dist > /dev/null
-    mv -f $TARBALL $BUILDDIR/SOURCES
+    mv -f hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
 
-    $1
+    $PACKAGING_CMD
 }
 
 build_rpm()
 {
-    # fix this hack -miika
-    test -d $BUILDDIR/RPMS/i586 &&
-        cp -a $BUILDDIR/RPMS/i586 $BUILDDIR/RPMS/i386
-
-    rpmbuild -ba $SPECFILE
+    rpmbuild --target $ARCH -ba $SPECFILE
 }
 
 build_deb()
 {
-    which pax > /dev/null || die "aptitude install pax"
-
     # http://www.deepnet.cx/debbuild/
-    $PKG_EXE/debbuild --buildroot $BUILDDIR -ba $SPECFILE
+    $PACKAGING_DIR/debbuild --buildroot $BUILDDIR -ba $SPECFILE
 }
 
 ############### Main program #####################
 
 set -e
 
-VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
-PKGROOT=$PWD
-PKG_EXE=$PKGROOT/packaging
+SRCDIR=$(echo $0 | sed s:/packaging/create-package.sh::)
+VERSION=$(grep '^AC_INIT' $SRCDIR/configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
+PACKAGING_DIR=$SRCDIR/packaging
 DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 REPO_BASE=/var/www/packages/html
-TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
-    DISTROBASE=debian
+    which pax > /dev/null || die "aptitude install pax"
+    DISTRO=debian
     ARCH=$(dpkg --print-architecture)
     BUILDDIR=$PWD/debbuild
     SUBBUILDDIRS="BUILD SOURCES SPECS DEBS SDEBS"
     PKG_DIR=$BUILDDIR/DEBS/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
-    SPECFILE_TEMPLATE=$PKG_EXE/hipl-deb.spec
+    SPECFILE_TEMPLATE=$PACKAGING_DIR/hipl-deb.spec
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
+    INDEXING_CMD=mkindex_deb
+    PACKAGING_CMD=build_deb
 elif test -r /etc/redhat-release; then
-    DISTROBASE=redhat
+    DISTRO=redhat
     ARCH=$(uname -i)
     BUILDDIR=$PWD/rpmbuild
     SUBBUILDDIRS="BUILD SOURCES SPECS RPMS SRPMS"
     PKG_DIR=$BUILDDIR/RPMS/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
-    SPECFILE_TEMPLATE=$PKG_EXE/hipl-rpm.spec
+    SPECFILE_TEMPLATE=$PACKAGING_DIR/hipl-rpm.spec
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
+    INDEXING_CMD=mkindex_rpm
+    PACKAGING_CMD=build_rpm
 else
     die "unknown distribution"
 fi
@@ -120,32 +118,17 @@ SPECFILE=$BUILDDIR/SPECS/hipl.spec
 # Determine action
 case $1 in
     syncrepo_deb)
-        mkindex_deb
-        syncrepo
-        ;;
+        INDEXING_CMD=mkindex_deb syncrepo ;;
     syncrepo_rpm)
-        mkindex_rpm
-        syncrepo
-        ;;
+        INDEXING_CMD=mkindex_rpm syncrepo ;;
     syncrepo)
-        if test "$DISTROBASE" = "debian"; then
-            mkindex_deb
-        else
-            mkindex_rpm
-        fi
-        syncrepo
-        ;;
+        syncrepo ;;
     deb)
-        build_package build_deb ;;
+        PACKAGING_CMD=build_deb build_package ;;
     rpm)
-        build_package build_rpm ;;
+        PACKAGING_CMD=build_rpm build_package ;;
     bin)
-        if test "$DISTROBASE" = "debian"; then
-            build_package build_deb
-        else
-            build_package build_rpm
-        fi
-        ;;
+        build_package ;;
     *)
         die "usage: $0 <syncrepo|syncrepo_deb|syncrepo_rpm|deb|rpm|bin>"
 esac

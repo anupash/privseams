@@ -258,10 +258,10 @@ doc/HOWTO.txt: doc/HOWTO.xml
 
 CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
-	rm -rf doc/doxy
+	rm -rf doc/doxy debbuild rpmbuild
 
-bin deb increl rpm syncrepo:
-	env PYEXECDIR=$(pyexecdir) @srcdir@/packaging/create-package.sh $@
+bin deb rpm syncrepo syncrepo_deb syncrepo_rpm:
+	@srcdir@/packaging/create-package.sh $@
 
 autotools-clean: maintainer-clean
 	rm -f aclocal.m4 compile config.* configure depcomp install-sh
@@ -288,4 +288,4 @@ $(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
 dist-hook:
 	rm -f $(distdir)/doc/Doxyfile
 
-.PHONY: bin checkheaders deb doxygen increl rpm syncrepo
+.PHONY: bin checkheaders deb doxygen rpm syncrepo*

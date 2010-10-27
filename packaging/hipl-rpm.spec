@@ -34,7 +34,7 @@ autoreconf --install
 %else
 CPPFLAGS=-U__STRICT_ANSI__ ./configure --prefix=/usr --sysconfdir=/etc
 %endif
-make -j 4
+make -j
 
 # Currently we are not going to install all includes and test software.
 # As a consequence, we need to tell rpmbuild that we don't want to package
@@ -111,17 +111,11 @@ install -d %{buildroot}%{prefix}/share/pixmaps
 
 # XX FIXME: add more python stuff from tools directory
 
-install -d %{buildroot}%{prefix}/bin
-install -d %{buildroot}%{prefix}/sbin
-install -d %{buildroot}%{prefix}/lib
+make install DESTDIR=%{buildroot}
 install -d %{buildroot}/etc/rc.d/init.d
-install -d %{buildroot}/doc
-make DESTDIR=%{buildroot} install
 install -m 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 755 packaging/fedora-init.d/hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 755 packaging/fedora-init.d/dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
-install -m 644 doc/HOWTO.txt %{buildroot}/doc
-install -m 644 doc/HOWTO.html %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
 install -t %{buildroot}%{python_sitelib}/DNS tools/hipdnsproxy/DNS/*py*
 install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
@@ -130,9 +124,6 @@ install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/pyip6.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/hosts.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/util.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnskeyparse/myasn.py* # XX FIXME
-# required in CentOS release 5.2
-install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}%{prefix}/sbin/hipdnskeyparse
-install -m 755 tools/hipdnsproxy/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
 
 %post lib
 /sbin/ldconfig
@@ -229,6 +220,8 @@ rm -rf %{buildroot}
 
 %files doc
 %doc doc/HOWTO.txt doc/HOWTO.html
+%doc doc/base-exchange-relay.png doc/base-exchange-rvs.png
+%doc doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 
 %files all
 

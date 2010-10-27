@@ -4,7 +4,7 @@ Summary: HIP IPsec key management and mobility daemon.
 #       by packaging/create-package.sh
 # Note: To check that this file is in correct format, type
 # ./debbuild --showpkgs hipl-deb.spec
-URL: http://infrahip.hiit.fi
+URL: http://infrahip.hiit.fi/
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: miika@iki.fi
 Vendor: InfraHIP
@@ -14,6 +14,7 @@ BuildRequires: automake, autoconf, libtool, gcc, libssl-dev, xmlto, doxygen, ipt
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
+
 %description
 
 Host Identity Protocol (HIP) provides cryptographic authentication to
@@ -30,7 +31,7 @@ other related tools.
 %build
 autoreconf --install
 %configure --prefix=/usr --sysconfdir=/etc
-make -j 4
+make -j
 
 # Note:
 # This debbuild script is fragile and does not tolerate comments well.
@@ -69,7 +70,7 @@ make -j 4
 
 
 %package all
-Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
+Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
 Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-tools, hipl-doc, hipl-dnsproxy
 %description all
@@ -118,18 +119,11 @@ Group: System Environment/Kernel
 %install
 rm -rf %{buildroot}
 
-install -d %{buildroot}/usr/share/pixmaps
-install -d %{buildroot}/usr/bin
-install -d %{buildroot}/usr/sbin
-install -d %{buildroot}/usr/lib
+make install DESTDIR=%{buildroot}
 install -d %{buildroot}/etc/init.d
-install -d %{buildroot}/doc
-make DESTDIR=%{buildroot} install
 install -m 755 packaging/debian-init.d/hipfw %{buildroot}/etc/init.d/hipfw
 install -m 755 packaging/debian-init.d/hipd %{buildroot}/etc/init.d/hipd
 install -m 755 packaging/debian-init.d/dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
-install -m 644 doc/HOWTO.txt %{buildroot}/doc
-install -m 644 doc/HOWTO.html %{buildroot}/doc
 install -d %{buildroot}/usr/lib/python2.6/dist-packages/DNS
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/DNS tools/hipdnsproxy/DNS/*py*
 install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/pyip6.py*
@@ -137,8 +131,6 @@ install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/hosts.
 install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/util.py*
 install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnskeyparse/myasn.py*
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hipdnsproxy/hipdnsproxy
-install -m 755 tools/hipdnskeyparse/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
-install -m 755 tools/hipdnsproxy/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 
 %post lib
 /sbin/ldconfig
@@ -199,6 +191,8 @@ rm -rf %{buildroot}
 
 %files doc
 %doc doc/HOWTO.txt doc/HOWTO.html
+%doc doc/base-exchange-relay.png doc/base-exchange-rvs.png
+%doc doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 
 %files all
 %doc COPYING
