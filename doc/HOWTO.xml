@@ -684,7 +684,7 @@ Kernel modules  --->
           </para>
           <para>
   <programlisting>
-  $ make package/hipl-install V=99
+  $ make package/hipl/install V=99
   </programlisting>
           </para>
         </listitem>
@@ -831,7 +831,7 @@ $ make V=99
           </para>
           <para>
 <programlisting>
-$ make package/hipl-install V=99
+$ make package/hipl/install V=99
 </programlisting>
           </para>
         </listitem>
@@ -1130,7 +1130,7 @@ $ bin/openwrt-wgt*
           </para>
           <para>
   <programlisting>
-  $ make package/hipl-install V=99
+  $ make package/hipl/install V=99
   </programlisting>
           </para>
         </listitem>
