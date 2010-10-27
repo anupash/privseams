@@ -79,13 +79,13 @@ set -e
 SRCDIR=$(echo $0 | sed s:/packaging/create-package.sh::)
 VERSION=$(grep '^AC_INIT' $SRCDIR/configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 PACKAGING_DIR=$SRCDIR/packaging
-DISTRO_RELEASE=$(lsb_release -c | cut -f2)
 REPO_BASE=/var/www/packages/html
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
     which pax > /dev/null || die "aptitude install pax"
     DISTRO=debian
+    DISTRO_RELEASE=$(lsb_release -c | cut -f2)
     ARCH=$(dpkg --print-architecture)
     BUILDDIR=$PWD/debbuild
     SUBBUILDDIRS="BUILD SOURCES SPECS DEBS SDEBS"
@@ -98,6 +98,7 @@ if test -r /etc/debian_version; then
     PACKAGING_CMD=build_deb
 elif test -r /etc/redhat-release; then
     DISTRO=redhat
+    DISTRO_RELEASE=$(lsb_release -r | cut -f2)
     ARCH=$(uname -i)
     BUILDDIR=$PWD/rpmbuild
     SUBBUILDDIRS="BUILD SOURCES SPECS RPMS SRPMS"
