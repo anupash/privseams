@@ -41,6 +41,7 @@
 
 #include "lib/core/protodefs.h"
 
+/* Definition of the fields in an appinfo parameter */
 #define SIGNALING_APPINFO_APP_DN 1
 #define SIGNALING_APPINFO_ISSUER_DN 2
 #define SIGNALING_APPINFO_REQS 3

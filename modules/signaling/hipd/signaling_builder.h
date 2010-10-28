@@ -38,9 +38,9 @@
 /*
  * Build an appinfo parameter.
  */
-int hip_build_param_signaling_prot_appinfo(struct hip_common *msg);
+int signaling_build_param_appinfo(struct hip_common *msg);
 
 /* Get the typename of a appinfo field */
-const char *signaling_get_type_name(const hip_tlv_type_t param_type);
+const char *signaling_get_param_field_type_name(const hip_tlv_type_t param_type);
 
 #endif /* MODULES_ESP_TOKENS_HIPD_ESP_TOKENS_BUILDER_H_ */

@@ -50,9 +50,9 @@
 
 
 /*
- * Get the next tlv
+ * Get the next tlv from a appinfo parameter
  */
-static const struct hip_tlv_common *signaling_next_tlv(const void *param, const void *last_tlv) {
+static const struct hip_tlv_common *signaling_get_param_next_tlv(const void *param, const void *last_tlv) {
 	const struct hip_tlv_common *next_tlv = NULL;
 	const uint8_t *pos = (const uint8_t *) last_tlv;
 
@@ -80,7 +80,7 @@ out:
 /*
  * Print all application information included in the packet.
  */
-int hip_signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = -1;
 	int field_length;
@@ -96,35 +96,35 @@ int hip_signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_st
 	}
 
 	/* Iterate over the contents */
-	tlv = signaling_next_tlv(appinfo, tlv);
+	tlv = signaling_get_param_next_tlv(appinfo, tlv);
 	while(tlv != NULL) {
 		field_length = hip_get_param_contents_len(tlv);
 		/* Append string terminator to be sure...*/
 		info = (char *)malloc(field_length+1);
 		memset(info, 0, field_length+1);
 		memcpy(info, hip_get_param_contents_direct(tlv), field_length);
-		HIP_DEBUG("SIGNALING(%i/%i): Field %s: %s.\n", ha_state, packet_type, signaling_get_type_name(hip_get_param_type(tlv)), info);
-		tlv = signaling_next_tlv(appinfo, tlv);
+		HIP_DEBUG("SIGNALING(%i/%i): Field %s: %s.\n", ha_state, packet_type, signaling_get_param_field_type_name(hip_get_param_type(tlv)), info);
+		tlv = signaling_get_param_next_tlv(appinfo, tlv);
 	}
 
 out:
 	return err;
 }
 
-int hip_signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg), -1, "Building of APP Name Param for I2 failed\n");
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg), -1, "Building of APP Name Param for I2 failed\n");
     printf("SIGNALING(%i/%i):::: Successfully included Appinfo into I2 Packet.\n", ha_state, packet_type);
 out_err:
 	return err;
 }
 
-int hip_signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
 	HIP_DEBUG("SIGNALING:: Adding r2 information. \n");
-    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg), -1, "Building of APP Name Param for R2 failed\n");
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg), -1, "Building of APP Name Param for R2 failed\n");
     printf("SIGNALING(%i/%i):::: Successfully included Appinfo into R2 Packet.\n", ha_state, packet_type);
 
 out_err:

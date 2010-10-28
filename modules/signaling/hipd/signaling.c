@@ -20,27 +20,27 @@ int hip_signaling_init(void)
 	/* Print the app info */
 
     HIP_DEBUG("Initialized Signaling Module.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_signaling_handle_appinfo, INBOUND_HANDLE_APPLINFO_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_handle_appinfo, INBOUND_HANDLE_APPLINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &hip_signaling_handle_appinfo, INBOUND_HANDLE_APPLINFO_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &signaling_handle_appinfo, INBOUND_HANDLE_APPLINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
     /* Add info in I2 */
-	HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &hip_signaling_i2_add_appinfo, OUTBOUND_I2_CREATE_APPINFO_PRIO),
+	HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &signaling_i2_add_appinfo, OUTBOUND_I2_CREATE_APPINFO_PRIO),
 			-1, "Error on registering Signaling handle function.\n");
-	HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &hip_signaling_i2_add_appinfo, OUTBOUND_I2_CREATE_APPINFO_PRIO),
+	HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_add_appinfo, OUTBOUND_I2_CREATE_APPINFO_PRIO),
 			-1, "Error on registering Signaling handle function.\n");
 
     /* Add info in R2 */
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &hip_signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &hip_signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &hip_signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &hip_signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
             -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &hip_signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
             -1, "Error on registering Signaling handle function.\n");
 
 out_err:

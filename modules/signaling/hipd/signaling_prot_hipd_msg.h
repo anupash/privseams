@@ -44,16 +44,16 @@
  * Do something with the application information included in the I2 or R2 packet.
  * For now, just print it.
  */
-int hip_signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 /*
  * Add application information to I2 packet.
  */
-int hip_signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 /*
  * Add application information to R2 packet.
  */
-int hip_signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_MSG_H*/

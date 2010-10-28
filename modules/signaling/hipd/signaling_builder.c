@@ -41,7 +41,10 @@
 
 #include "signaling_builder.h"
 
-const char *signaling_get_type_name(const hip_tlv_type_t param_type)
+/*
+ * Returns the name of an application information parameter field.
+ */
+const char *signaling_get_param_field_type_name(const hip_tlv_type_t param_type)
 {
     switch (param_type) {
     case SIGNALING_APPINFO_APP_DN: 		return "Application Distinguished Name";
@@ -52,7 +55,10 @@ const char *signaling_get_type_name(const hip_tlv_type_t param_type)
     return "UNDEFINED Application information";
 }
 
-static void *append_tlv(void *start, hip_tlv_type_t type, const void *contents, hip_tlv_len_t length) {
+/*
+ * Appends a tlv struct at the location given by 'start'.
+ */
+static void *signaling_build_param_append_tlv(void *start, hip_tlv_type_t type, const void *contents, hip_tlv_len_t length) {
 	const void *src = NULL;
 	uint8_t *dst = NULL;
 	struct hip_tlv_common *tlv = start;
@@ -74,7 +80,7 @@ static void *append_tlv(void *start, hip_tlv_type_t type, const void *contents, 
 }
 
 /**
- * Build a HIP SIGNALING APP INFO (= Name, Developer, Serial) parameter
+ * Build a SIGNALING APP INFO (= Name, Developer, Serial) parameter
  *
  * @param msg the message
  * @param type the info type
@@ -82,7 +88,7 @@ static void *append_tlv(void *start, hip_tlv_type_t type, const void *contents, 
  * @param length the length of the info
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_signaling_prot_appinfo(struct hip_common *msg)
+int signaling_build_param_appinfo(struct hip_common *msg)
 {
     struct hip_tlv_common appinfo;
     int err = 0;
@@ -112,8 +118,8 @@ int hip_build_param_signaling_prot_appinfo(struct hip_common *msg)
 
 	/* Build the contents (a list of tlv structs) */
     contents_start = p_tmp = malloc(length_contents);
-    p_tmp = append_tlv(p_tmp, SIGNALING_APPINFO_APP_DN, app_dn, strlen(app_dn));
-    p_tmp = append_tlv(p_tmp, SIGNALING_APPINFO_GROUPS, app_groups, strlen(app_groups));
+    p_tmp = signaling_build_param_append_tlv(p_tmp, SIGNALING_APPINFO_APP_DN, app_dn, strlen(app_dn));
+    p_tmp = signaling_build_param_append_tlv(p_tmp, SIGNALING_APPINFO_GROUPS, app_groups, strlen(app_groups));
     err = hip_build_generic_param(msg, &appinfo, sizeof(struct hip_tlv_common), contents_start);
 
     return err;
