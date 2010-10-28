@@ -33,15 +33,45 @@
 
 #include <string.h>
 
-#include "modules/signaling/lib/signaling_prot_common.h"
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/common.h"
-#include "signaling_builder.h"
 #include "lib/core/ife.h"
 
+#include "signaling_builder.h"
 
+const char *signaling_get_type_name(const hip_tlv_type_t param_type)
+{
+    switch (param_type) {
+    case SIGNALING_APPINFO_APP_DN: 		return "Application Distinguished Name";
+    case SIGNALING_APPINFO_ISSUER_DN:	return "Issuer Distinguished NAme";
+    case SIGNALING_APPINFO_REQS:		return "Application Requirements";
+    case SIGNALING_APPINFO_GROUPS:		return "Application Groups";
+    }
+    return "UNDEFINED Application information";
+}
+
+static void *append_tlv(void *start, hip_tlv_type_t type, const void *contents, hip_tlv_len_t length) {
+	const void *src = NULL;
+	uint8_t *dst = NULL;
+	struct hip_tlv_common *tlv = start;
+
+	if(length > 0) {
+		hip_set_param_type(tlv, type);
+		hip_set_param_contents_len(tlv, length);
+
+		src = contents;
+		dst = hip_get_param_contents_direct_readwrite(tlv);
+		memcpy(dst, src, length);
+
+		start = (uint8_t *)start + sizeof(struct hip_tlv_common) + length;
+	} else {
+		HIP_DEBUG("Passed zero-length argument of type %d... ignoring!", type);
+	}
+
+	return start;
+}
 
 /**
  * Build a HIP SIGNALING APP INFO (= Name, Developer, Serial) parameter
@@ -52,27 +82,40 @@
  * @param length the length of the info
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_signaling_prot_appinfo(struct hip_common *msg, hip_tlv_type_t type, const char *info, hip_tlv_len_t length)
+int hip_build_param_signaling_prot_appinfo(struct hip_common *msg)
 {
-    struct hip_signaling_prot_appinfo appinfo;
+    struct hip_tlv_common appinfo;
     int err = 0;
-    char *value;
+    int length_contents = 0;
+    void *contents_start, *p_tmp;
+
+    /* Contents hardcoded for test
+     * TODO: Get this dynamically
+     */
+    const char *app_dn = "Mozilla Firefox 3.2.1";
+    const char *app_groups = "browser, client";
 
     HIP_ASSERT(msg != NULL);
 
     /* Set type */
-    hip_set_param_type((struct hip_tlv_common *) &appinfo, type);
+    hip_set_param_type(&appinfo, HIP_PARAM_SIGNALING_APPINFO);
+
+    /* Calculate the length */
+    length_contents = strlen(app_dn) + strlen(app_groups);
+    if(strlen(app_dn) > 0)
+    	length_contents += 4;
+    if(strlen(app_groups) > 0)
+    	length_contents += 4;
 
     /* Set length */
-    hip_set_param_contents_len((struct hip_tlv_common *) &appinfo, length);
+    hip_set_param_contents_len(&appinfo, length_contents);
 
-    /* Set contents */
-    HIP_IFEL(!(value = malloc(length)), -1, "Failed to alloc memory for app name\n");
-    memcpy(value, info, length);
+	/* Build the contents (a list of tlv structs) */
+    contents_start = p_tmp = malloc(length_contents);
+    p_tmp = append_tlv(p_tmp, SIGNALING_APPINFO_APP_DN, app_dn, strlen(app_dn));
+    p_tmp = append_tlv(p_tmp, SIGNALING_APPINFO_GROUPS, app_groups, strlen(app_groups));
+    err = hip_build_generic_param(msg, &appinfo, sizeof(struct hip_tlv_common), contents_start);
 
-    err = hip_build_generic_param(msg, &appinfo, sizeof(struct hip_signaling_prot_appinfo), value);
-
-out_err:
     return err;
 }
 

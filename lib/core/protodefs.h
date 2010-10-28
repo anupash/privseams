@@ -163,10 +163,7 @@
 #define HIP_PARAM_ESP_PROT_ROOT        4124
 #define HIP_PARAM_LOCAL_NAT_PORT       4125
 #define HIP_PARAM_PEER_NAT_PORT        4126
-
-#define HIP_PARAM_SIGNALING_APPNAME    5000
-#define HIP_PARAM_SIGNALING_APPDEVELOPER 5002
-#define HIP_PARAM_SIGNALING_APPSERIAL  5004
+#define HIP_PARAM_SIGNALING_APPINFO    5000
 
 /* Range 32768 - 49141 for HIPL private network parameters. Please add
  * here only network messages, not internal messages!

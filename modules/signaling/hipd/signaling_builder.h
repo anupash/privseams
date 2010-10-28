@@ -34,9 +34,13 @@
 #ifndef MODULES_SIGNALING_HIPD_SIGNALING_BUILDER_H_
 #define MODULES_SIGNALING_HIPD_SIGNALING_BUILDER_H_
 
+#include "modules/signaling/lib/signaling_prot_common.h"
 /*
  * Build an appinfo parameter.
  */
-int hip_build_param_signaling_prot_appinfo(struct hip_common *msg, hip_tlv_type_t type, const char *info, hip_tlv_len_t length);
+int hip_build_param_signaling_prot_appinfo(struct hip_common *msg);
+
+/* Get the typename of a appinfo field */
+const char *signaling_get_type_name(const hip_tlv_type_t param_type);
 
 #endif /* MODULES_ESP_TOKENS_HIPD_ESP_TOKENS_BUILDER_H_ */

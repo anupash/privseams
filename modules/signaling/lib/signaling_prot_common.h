@@ -41,22 +41,11 @@
 
 #include "lib/core/protodefs.h"
 
-#define SIGNALING_APPINFO_APPNAME = 1
-#define SIGNALING_APPINFO_DEVLOPERNAME = 2
-#define SIGNALING_APPINFO_SERIAL = 3
+#define SIGNALING_APPINFO_APP_DN 1
+#define SIGNALING_APPINFO_ISSUER_DN 2
+#define SIGNALING_APPINFO_REQS 3
+#define SIGNALING_APPINFO_GROUPS 4
 
-struct hip_signaling_prot_generic_appinfo {
-	 hip_tlv_type_t type;
-	 hip_tlv_len_t  length;
-	 unsigned char info[0];
-} __attribute__ ((packed));
-
-/* Parameter definitions for HIP packets */
-struct hip_signaling_prot_appinfo {
-    hip_tlv_type_t type;
-    hip_tlv_len_t  length;
-    unsigned char info[0];
-} __attribute__ ((packed));
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 

@@ -50,64 +50,71 @@
 
 
 /*
+ * Get the next tlv
+ */
+static const struct hip_tlv_common *signaling_next_tlv(const void *param, const void *last_tlv) {
+	const struct hip_tlv_common *next_tlv = NULL;
+	const uint8_t *pos = (const uint8_t *) last_tlv;
+
+    if (!param) {
+        HIP_ERROR("No contents given (null)\n");
+        goto out;
+    }
+
+	if(last_tlv == NULL) {
+		pos = hip_get_param_contents_direct(param);
+	} else {
+		pos += sizeof(struct hip_tlv_common) + hip_get_param_contents_len(last_tlv);
+	}
+
+	next_tlv = (const struct hip_tlv_common *) pos;
+
+	/* Check we are still inside the message */
+	if(((const char *) next_tlv) - ((const char *) hip_get_param_contents_direct(param)) >= hip_get_param_contents_len(param))
+		next_tlv = NULL;
+
+out:
+	return next_tlv;
+}
+
+/*
  * Print all application information included in the packet.
  */
 int hip_signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = -1;
-	int length;
+	int field_length;
 	char *info;
-	const struct hip_signaling_prot_appinfo *appname = NULL;
-	const struct hip_signaling_prot_appinfo *appdev = NULL;
-	const struct hip_signaling_prot_appinfo *appserial = NULL;
-	printf("Entering appinfo function on packet type %i \n", packet_type);
+	const struct hip_tlv_common *appinfo = NULL;
+	const struct hip_tlv_common *tlv = NULL;
 
-	/* Look up app name */
-	appname = (const struct hip_signaling_prot_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPNAME);
-	if(appname == NULL) {
-		printf("SIGNALING(%i/%i): Application Name: No name found.\n", ha_state, packet_type);
-	} else {
-		err = 0;
-		length = ntohs(appname->length);
-		info = (char *)malloc(length);
-		memcpy(info, &appname->info[0], length);
-		printf("SIGNALING(%i/%i): Application Name: %s.\n", ha_state, packet_type, info);
+	/* Get the parameter */
+	appinfo = (const struct hip_tlv_common *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO);
+	if(appinfo == NULL) {
+		HIP_DEBUG("No parameter of type %d found.\n", HIP_PARAM_SIGNALING_APPINFO);
+		goto out;
 	}
 
-	/* Look up developer */
-	appdev = (const struct hip_signaling_prot_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPDEVELOPER);
-	if(appdev == NULL) {
-		printf("SIGNALING(%i/%i): Application Developer: No name found.\n", ha_state, packet_type);
-	} else {
-		err = 0;
-		length = ntohs(appdev->length);
-		info = (char *)malloc(length);
-		memcpy(info, &appdev->info[0], length);
-		printf("SIGNALING(%i/%i): Application Developer: %s.\n", ha_state, packet_type, info);
+	/* Iterate over the contents */
+	tlv = signaling_next_tlv(appinfo, tlv);
+	while(tlv != NULL) {
+		field_length = hip_get_param_contents_len(tlv);
+		/* Append string terminator to be sure...*/
+		info = (char *)malloc(field_length+1);
+		memset(info, 0, field_length+1);
+		memcpy(info, hip_get_param_contents_direct(tlv), field_length);
+		HIP_DEBUG("SIGNALING(%i/%i): Field %s: %s.\n", ha_state, packet_type, signaling_get_type_name(hip_get_param_type(tlv)), info);
+		tlv = signaling_next_tlv(appinfo, tlv);
 	}
 
-	/* Look up Serial */
-	appserial = (const struct hip_signaling_prot_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPSERIAL);
-	if(appserial == NULL) {
-		printf("SIGNALING(%i/%i): Application Serial: No name found.\n", ha_state, packet_type);
-	} else {
-		err = 0;
-		length = ntohs(appserial->length);
-		info = (char *)malloc(length);
-		memcpy(info, &appserial->info[0], length);
-		printf("SIGNALING(%i/%i): Application Serial: %s.\n", ha_state, packet_type, info);
-	}
-
+out:
 	return err;
 }
 
 int hip_signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-	HIP_DEBUG("SIGNALING:: Adding i2 information. \n");
-    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg, HIP_PARAM_SIGNALING_APPNAME, "Firefox", 7), -1, "Building of APP Name Param for I2 failed\n");
-    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg, HIP_PARAM_SIGNALING_APPDEVELOPER, "Mozilla", 7), -1, "Building of APP Developer Param for I2 failed\n");
-    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg, HIP_PARAM_SIGNALING_APPSERIAL, "3.2.1", 5), -1, "Building of APP Serial Param for I2 failed\n");
+    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg), -1, "Building of APP Name Param for I2 failed\n");
     printf("SIGNALING(%i/%i):::: Successfully included Appinfo into I2 Packet.\n", ha_state, packet_type);
 out_err:
 	return err;
@@ -117,9 +124,7 @@ int hip_signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_st
 {
 	int err = 0;
 	HIP_DEBUG("SIGNALING:: Adding r2 information. \n");
-    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg, HIP_PARAM_SIGNALING_APPNAME, "Firefox", 7), -1, "Building of APP Name Param for R2 failed\n");
-    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg, HIP_PARAM_SIGNALING_APPDEVELOPER, "Mozilla", 7), -1, "Building of APP Developer Param for R2 failed\n");
-    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg, HIP_PARAM_SIGNALING_APPSERIAL, "3.2.1", 5), -1, "Building of APP Serial Param for R2 failed\n");
+    HIP_IFEL(hip_build_param_signaling_prot_appinfo(ctx->output_msg), -1, "Building of APP Name Param for R2 failed\n");
     printf("SIGNALING(%i/%i):::: Successfully included Appinfo into R2 Packet.\n", ha_state, packet_type);
 
 out_err:
