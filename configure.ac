@@ -54,7 +54,9 @@ AC_DEFINE_UNQUOTED(HIPL_DEFAULT_PREFIX, "$(eval echo ${prefix})")
 AH_TEMPLATE(HIPL_DEFAULT_PREFIX, [default prefix])
 
 # Our configuration files should be located in a subdirectory of their own.
-AC_SUBST(sysconfdir, ${sysconfdir}/hip)
+# The variable is evaluated and echoed to produce a string that can be
+# substituted for references to configuration files throughout the codebase.
+AC_SUBST(sysconfdir, $(eval echo ${sysconfdir}/hip))
 
 # Default sysconf and lockfile directory
 AC_DEFINE_UNQUOTED(HIPL_SYSCONFDIR, "$(eval echo $sysconfdir)")
@@ -219,6 +221,6 @@ echo "|";
 echo "+-----------------------------------------------"
 echo ""
 
-AC_CONFIG_FILES([ Makefile doc/Doxyfile ])
+AC_CONFIG_FILES([ Makefile doc/Doxyfile doc/HOWTO.xml tools/nsupdate.pl tools/hipdnsproxy/hipdnsproxy ])
 
 AC_OUTPUT

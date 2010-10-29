@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# HIP name look-up daemon for /etc/hip/hosts and DNS servers
+# HIP name look-up daemon for HIPL hosts file and DNS servers
 #
 # Usage: Basic usage without any command line options.
 #        See getopt() for the options.
@@ -17,10 +17,10 @@
 # - Test name resolution with following methods:
 #   - Non-HIP records
 #   - Hostname to HIT resolution
-#     - HITs and LSIs from /etc/hip/hosts
+#     - HITs and LSIs from @sysconfdir@/hosts
 #     - On-the-fly generated LSI; HIT either from from DNS or hosts
 #     - HI records from DNS
-#   - PTR records: maps HITs to hostnames from /etc/hip/hosts
+#   - PTR records: maps HITs to hostnames from @sysconfdir@/hosts
 #
 # Actions to resolv.conf files and dnsproxy hooking:
 # - Dnsmasq=on, revolvconf=on: only hooks dnsmasq
@@ -286,7 +286,7 @@ class ResolvConf:
         os.system('killall --quiet hipconf 2>/dev/null')
 
 class Global:
-    default_hiphosts = "/etc/hip/hosts"
+    default_hiphosts = "@sysconfdir@/hosts"
     default_hosts = "/etc/hosts"
     re_nameserver = re.compile(r'nameserver\s+(\S+)$')
     def __init__(gp):

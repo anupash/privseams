@@ -31,6 +31,7 @@ depcomp
 doc/Doxyfile
 doc/HOWTO.html
 doc/HOWTO.txt
+doc/HOWTO.xml
 doc/doxy/
 firewall/hipfw
 hipd/hipd
@@ -50,7 +51,8 @@ test/dh_performance
 test/hc_performance
 tools/hipconf
 tools/hipdnskeyparse
-tools/hipdnsproxy
+tools/hipdnsproxy/hipdnsproxy
+tools/nsupdate.pl
 tools/pisacert
 modules/hipd_modules.h
 version.h
