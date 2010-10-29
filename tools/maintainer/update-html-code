@@ -1,6 +1,5 @@
 #!/bin/sh
 
-REVISION=main
 TMP_DIR=~/.hipl.doxygen.tmp.dir
 WWW_DIR=/var/www/infrahip/html/hipl
 OUTPUT_DIR=$WWW_DIR/doxygen
