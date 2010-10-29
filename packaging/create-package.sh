@@ -69,7 +69,7 @@ build_rpm()
 build_deb()
 {
     # http://www.deepnet.cx/debbuild/
-    $PACKAGING_DIR/debbuild --buildroot $BUILDDIR -ba $SPECFILE
+    $SRCDIR_PACKAGING/debbuild --buildroot $BUILDDIR -ba $SPECFILE
 }
 
 ############### Main program #####################
@@ -78,7 +78,7 @@ set -e
 
 SRCDIR=$(echo $0 | sed s:/packaging/create-package.sh::)
 VERSION=$(grep '^AC_INIT' $SRCDIR/configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
-PACKAGING_DIR=$SRCDIR/packaging
+SRCDIR_PACKAGING=$SRCDIR/packaging
 REPO_BASE=/var/www/packages/html
 
 # Set architecture, distro and repo details
@@ -91,7 +91,7 @@ if test -r /etc/debian_version; then
     SUBBUILDDIRS="BUILD SOURCES SPECS DEBS SDEBS"
     PKG_DIR=$BUILDDIR/DEBS/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
-    SPECFILE_TEMPLATE=$PACKAGING_DIR/hipl-deb.spec
+    SPECFILE_TEMPLATE=$SRCDIR_PACKAGING/hipl-deb.spec
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
     INDEXING_CMD=mkindex_deb
@@ -104,7 +104,7 @@ elif test -r /etc/redhat-release; then
     SUBBUILDDIRS="BUILD SOURCES SPECS RPMS SRPMS"
     PKG_DIR=$BUILDDIR/RPMS/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
-    SPECFILE_TEMPLATE=$PACKAGING_DIR/hipl-rpm.spec
+    SPECFILE_TEMPLATE=$SRCDIR_PACKAGING/hipl-rpm.spec
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
     INDEXING_CMD=mkindex_rpm
