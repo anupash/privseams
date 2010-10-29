@@ -41,7 +41,7 @@ AC_CHECK_FUNC(EC_KEY_new,
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 # The unit tests depend on 'check' (http://check.sourceforge.net/)
 AC_CHECK_LIB(check, suite_create,,
-			 AC_MSG_WARN(libcheck (http://check.sourceforge.net/) not found: HIPL unit tests are not available),)
+             AC_MSG_WARN(libcheck (http://check.sourceforge.net/) not found: HIPL unit tests are not available),)
 AM_CONDITIONAL(HIP_UNITTESTS, test x"$ac_cv_lib_check_suite_create" = xyes)
 
 # If no --prefix option is passed to configure, $prefix is empty. But we want
