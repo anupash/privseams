@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# HIP name look-up daemon for /etc/hip/hosts and DNS and Bamboo servers
+# HIP name look-up daemon for /etc/hip/hosts and DNS servers
 #
 # Usage: Basic usage without any command line options.
 #        See getopt() for the options.
@@ -20,7 +20,6 @@
 #     - HITs and LSIs from /etc/hip/hosts
 #     - On-the-fly generated LSI; HIT either from from DNS or hosts
 #     - HI records from DNS
-#     - HITs from Bamboo via hipd
 #   - PTR records: maps HITs to hostnames from /etc/hip/hosts
 #
 # Actions to resolv.conf files and dnsproxy hooking:
