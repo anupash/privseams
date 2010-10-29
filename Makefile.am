@@ -259,7 +259,7 @@ vpath %.h $(srcdir)
 # Ensure that version.h is created before everything else. This does not work
 # when creating specific objects that may depend on version.h directly.
 BUILT_SOURCES = version.h
-$(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/branch/last-revision)
+$(srcdir)/version.h: $(wildcard $(srcdir)/.bzr/checkout/dirstate)
 	bzr version-info $(srcdir) --custom --template='#define BZR_REVISION "{revno}"\n#define BZR_DATE "{date}"\n#define BZR_BRANCH "{branch_nick}"\n' > $@
 
 
