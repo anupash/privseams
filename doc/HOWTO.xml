@@ -1540,7 +1540,7 @@ $ make V=99
     </para>
 
     <itemizedlist>
-      <listitem><programlisting>Version of HIPL software. Ubuntu: dpkg -l 'hipl*'. Redhat-based distros: rpm -qa|grep hipl</programlisting></listitem>
+      <listitem><programlisting>Version of HIPL software. Ubuntu: dpkg -l 'hipl*'. Redhat-based distros: rpm -qa | grep hipl</programlisting></listitem>
       <listitem><programlisting>hipconf get ha all</programlisting></listitem>
       <listitem><programlisting>ip xfrm state</programlisting></listitem>
       <listitem><programlisting>uname -a</programlisting></listitem>
@@ -1549,8 +1549,8 @@ $ make V=99
       <listitem><programlisting>cat /etc/selinux/config</programlisting></listitem>
       <listitem><programlisting>iptables -L -n</programlisting></listitem>
       <listitem><programlisting>ip6tables -L -n</programlisting></listitem>
-      <listitem><programlisting>ps axu|grep hip</programlisting></listitem>
-      <listitem><programlisting>ps axu|grep dns</programlisting></listitem>
+      <listitem><programlisting>ps axu | grep hip</programlisting></listitem>
+      <listitem><programlisting>ps axu | grep dns</programlisting></listitem>
     </itemizedlist>
 
    <!--
@@ -3484,7 +3484,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 
        <para>If firewall is killed, it leaves rules dangling which may drop
              some traffic. Check with "iptables -L -n" if there are some HIPFW
-             rules there and no hipfw running ("ps axu|grep hipfw"). You can
+             rules there and no hipfw running ("ps axu | grep hipfw"). You can
              flush the rules with "hipfw -k" and then pressing CTRL + C.
              Alternatively, you can just run "/etc/init.d/hipfw stop".
        </para>
