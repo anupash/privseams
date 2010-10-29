@@ -261,8 +261,9 @@ static struct hip_file_buffer udp6_file;
  * returned by hip_port_bindings_get().
  * This function is called every INVALIDATION_INTERVAL seconds.
  */
-static void hip_port_bindings_trigger_reload(int sig __attribute__ ((unused)) )
+static void hip_port_bindings_trigger_reload(const int sig)
 {
+    signal(sig, hip_port_bindings_trigger_reload);
     cache_invalidation_flag = 1;
     alarm(INVALIDATION_INTERVAL);
 }
