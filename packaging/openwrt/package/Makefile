@@ -61,6 +61,7 @@ CONFIGURE_VARS += \
 
 define Build/Configure
 	$(call Build/Configure/Default, \
+            --sysconfdir=/etc \
             --enable-shared \
             --disable-debug \
     );
