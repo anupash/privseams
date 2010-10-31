@@ -89,4 +89,4 @@ static inline const struct hip_mem_area *hip_fb_get_mem_area(const struct hip_fi
     return NULL;
 }
 
-#endif
+#endif /* HIP_FIREWALL_FILE_BUFFER_INLINE_H */

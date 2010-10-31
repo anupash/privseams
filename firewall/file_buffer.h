@@ -42,4 +42,4 @@ int hip_fb_reload(struct hip_file_buffer *const fb);
 
 #include "firewall/file_buffer_inline.h"
 
-#endif
+#endif /* HIP_FIREWALL_FILE_BUFFER_H */

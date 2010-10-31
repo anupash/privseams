@@ -42,4 +42,4 @@ static inline char *hip_lp_next(struct hip_line_parser *const lp);
 
 #include "firewall/line_parser_inline.h"
 
-#endif
+#endif /* HIP_FIREWALL_LINE_PARSER_H */

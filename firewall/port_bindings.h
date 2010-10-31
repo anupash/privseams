@@ -38,8 +38,8 @@
  * @author Miika Komu <miika@iki.fi>, Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
 
-#ifndef HIP_FIREWALL_PORT_INFO_H
-#define HIP_FIREWALL_PORT_INFO_H
+#ifndef HIP_FIREWALL_PORT_BINDINGS_H
+#define HIP_FIREWALL_PORT_BINDINGS_H
 
 #include <stdbool.h>    // bool
 #include <netinet/in.h> // in_port_t
@@ -70,4 +70,4 @@ void hip_port_bindings_uninit(void);
 enum hip_port_binding hip_port_bindings_get(const uint8_t proto,
                                             const in_port_t port);
 
-#endif /* HIP_CACHE_H */
+#endif /* HIP_FIREWALL_PORT_BINDINGS_H */

@@ -129,4 +129,4 @@ static inline char *hip_lp_next(struct hip_line_parser *const lp)
     return lp->cur;
 }
 
-#endif
+#endif /* HIP_FIREWALL_LINE_PARSER_INLINE_H */
