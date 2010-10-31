@@ -45,10 +45,6 @@
 #include "lib/core/debug.h" // HIP_ASSERT()
 #include "firewall/file_buffer.h"   // hip_lp_create()
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * Represents the parsing state on a memory area object.
  */
@@ -132,9 +128,5 @@ static inline char *hip_lp_next(struct hip_line_parser *const lp)
 
     return lp->cur;
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

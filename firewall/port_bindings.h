@@ -44,10 +44,6 @@
 #include <stdbool.h>    // bool
 #include <netinet/in.h> // in_port_t
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * The binding state of a particular TCP or UDP port under IPv6 on the local
  * host.
@@ -73,9 +69,5 @@ int hip_port_bindings_init(const bool enable_cache);
 void hip_port_bindings_uninit(void);
 enum hip_port_binding hip_port_bindings_get(const uint8_t proto,
                                             const in_port_t port);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* HIP_CACHE_H */

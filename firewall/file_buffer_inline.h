@@ -40,10 +40,6 @@
 #error This file must not be included directly because it contains implementation details. It may only be included by file_buffer.h.
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * A file buffer object represents an open file and its associated memory
  * buffer.
@@ -92,9 +88,5 @@ static inline const struct hip_mem_area *hip_fb_get_mem_area(const struct hip_fi
     }
     return NULL;
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

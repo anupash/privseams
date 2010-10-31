@@ -32,10 +32,6 @@
 
 #include "firewall/mem_area.h"  // struct hip_mem_area
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct hip_line_parser;
 
 int hip_lp_create(struct hip_line_parser *const lp,
@@ -43,10 +39,6 @@ int hip_lp_create(struct hip_line_parser *const lp,
 void hip_lp_delete(struct hip_line_parser *const lp);
 static inline char *hip_lp_first(struct hip_line_parser *const lp);
 static inline char *hip_lp_next(struct hip_line_parser *const lp);
-
-#ifdef __cplusplus
-}
-#endif
 
 #include "firewall/line_parser_inline.h"
 

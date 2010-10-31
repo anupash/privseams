@@ -32,10 +32,6 @@
 
 #include "firewall/mem_area.h"  // struct hip_mem_area
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct hip_file_buffer;
 
 int hip_fb_create(struct hip_file_buffer *const fb,
@@ -43,10 +39,6 @@ int hip_fb_create(struct hip_file_buffer *const fb,
 void hip_fb_delete(struct hip_file_buffer *const fb);
 static inline const struct hip_mem_area *hip_fb_get_mem_area(const struct hip_file_buffer *const fb);
 int hip_fb_reload(struct hip_file_buffer *const fb);
-
-#ifdef __cplusplus
-}
-#endif
 
 #include "firewall/file_buffer_inline.h"
 
