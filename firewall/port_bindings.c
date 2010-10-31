@@ -261,11 +261,9 @@ static struct hip_file_buffer udp6_file;
  * returned by hip_port_bindings_get().
  * This function is called every INVALIDATION_INTERVAL seconds.
  */
-static void hip_port_bindings_trigger_reload(const int sig)
+static void hip_port_bindings_trigger_reload(const int sig __attribute__ ((unused)))
 {
-    signal(sig, hip_port_bindings_trigger_reload);
     cache_invalidation_flag = 1;
-    alarm(INVALIDATION_INTERVAL);
 }
 
 /**
@@ -394,12 +392,6 @@ int hip_port_bindings_init(const bool enable_cache)
                  "Initializing the port bindings cache failed\n")
     }
 
-    // Trigger cache invalidation (see hip_port_bindings_trigger_reload())
-    // This is useful even if enable_cache is false because it affects not only
-    // the port-based cache but also the file cache.
-    signal(SIGALRM, hip_port_bindings_trigger_reload);
-    alarm(INVALIDATION_INTERVAL);
-
     HIP_IFEL(hip_fb_create(&tcp6_file, "/proc/net/tcp6") != 0, -2,
              "Buffering tcp6 proc file in memory failed\n");
     HIP_IFEL(hip_fb_create(&udp6_file, "/proc/net/udp6") != 0, -2,
@@ -467,8 +459,13 @@ enum hip_port_binding hip_port_bindings_get(const uint8_t protocol,
         // The others (hip_port_bindings_get_from_proc() and the cache access
         // functions) are (intended to be) very fast.
         if (cache_invalidation_flag) {
-            hip_port_bindings_reload();
+            // prevent further cache invalidation
             cache_invalidation_flag = 0;
+            // invalidate all caches and reload the /proc-file contents
+            hip_port_bindings_reload();
+            // start a timer that sets cache_invalidation_flag back to 1
+            signal(SIGALRM, hip_port_bindings_trigger_reload);
+            alarm(INVALIDATION_INTERVAL);
         }
 
         // check the cache before checking /proc
