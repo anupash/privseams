@@ -58,7 +58,7 @@ int hip_lp_create(struct hip_line_parser *const lp,
                   const struct hip_mem_area *const ma)
 {
     if (lp && ma) {
-        lp->ma = ma;
+        lp->ma  = ma;
         lp->cur = NULL;
         return 0;
     }
@@ -78,7 +78,7 @@ int hip_lp_create(struct hip_line_parser *const lp,
 void hip_lp_delete(struct hip_line_parser *const lp)
 {
     if (lp != NULL) {
-        lp->ma = NULL;
+        lp->ma  = NULL;
         lp->cur = NULL;
     }
 }

@@ -81,8 +81,8 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
         /* First, we try to determine the current file size for the new buffer size.
          * If that fails (it does, e.g., for proc files), we just increase the
          * current buffer size. */
-        errno = 0;
-        file_size = lseek(fb->fd, 0, SEEK_END);
+        errno       = 0;
+        file_size   = lseek(fb->fd, 0, SEEK_END);
         if (file_size != -1 || EINVAL == errno) {
             if (file_size != -1) {
                 fb->buffer_size = file_size + HIP_FB_HEADROOM; // add a little head room
@@ -193,8 +193,8 @@ void hip_fb_delete(struct hip_file_buffer *const fb)
         }
         if (fb->ma.start != NULL) {
             free(fb->ma.start);
-            fb->ma.start = NULL;
-            fb->ma.end = NULL;
+            fb->ma.start    = NULL;
+            fb->ma.end      = NULL;
         }
     }
 }

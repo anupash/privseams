@@ -103,7 +103,7 @@ END_TEST
 START_TEST(test_hip_lp_next_valid)
 {
     struct hip_line_parser lp;
-    int err = 0;
+    int err     = 0;
     char *first = NULL;
 
     err = hip_lp_create(&lp, &ma);
