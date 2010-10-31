@@ -22,10 +22,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #include <check.h>
 #include <assert.h>     // assert()
 #include <netinet/in.h> // htons()
 #include <stdio.h>      // printf()
+
 #include "firewall/port_bindings.h"
 #include "firewall/port_bindings.c"
 

@@ -22,12 +22,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #include <check.h>
 #include <fcntl.h>  // open()
 #include <stdio.h>  // mkstemp()
 #include <unistd.h> // write()
 #include <string.h> // strncpy(), memcmp()
 #include <assert.h> // assert()
+
 #include "firewall/file_buffer.h"
 #include "firewall/file_buffer.c"
 

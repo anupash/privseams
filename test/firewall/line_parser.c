@@ -22,8 +22,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #include <check.h>
 #include <assert.h>     // assert()
+
 #include "firewall/line_parser.h"
 #include "firewall/line_parser.c"
 
