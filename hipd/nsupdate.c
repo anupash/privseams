@@ -37,6 +37,7 @@
 
 #define _BSD_SOURCE
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

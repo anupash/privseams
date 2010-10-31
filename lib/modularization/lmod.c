@@ -276,7 +276,7 @@ hip_ll_t *lmod_register_function(hip_ll_t *list,
                                  void *entry,
                                  const uint16_t priority)
 {
-    int            index    = 0;
+    int idx = 0;
     hip_ll_t      *new_list = NULL;
     hip_ll_node_t *iter     = NULL;
 
@@ -298,11 +298,11 @@ hip_ll_t *lmod_register_function(hip_ll_t *list,
         } else if (priority < ((struct function *) iter->ptr)->priority) {
             break;
         } else {
-            index++;
+            idx++;
         }
     }
 
-    hip_ll_add(list, index, entry);
+    hip_ll_add(list, idx, entry);
 
     return list;
 }
@@ -318,8 +318,8 @@ hip_ll_t *lmod_register_function(hip_ll_t *list,
  */
 int lmod_unregister_function(hip_ll_t *list, const void *function)
 {
-    int            index = 0;
-    hip_ll_node_t *iter  = NULL;
+    int idx = 0;
+    hip_ll_node_t *iter = NULL;
 
     if (!list) {
         return -1;
@@ -327,10 +327,10 @@ int lmod_unregister_function(hip_ll_t *list, const void *function)
 
     while ((iter = hip_ll_iterate(list, iter))) {
         if (function == ((struct function *) iter->ptr)->func_ptr) {
-            hip_ll_del(list, index, free);
+            hip_ll_del(list, idx, free);
             break;
         }
-        index++;
+        idx++;
     }
 
     return 0;
@@ -418,14 +418,14 @@ void lmod_uninit_disabled_modules(void)
  */
 static int lmod_packet_type_exists(const uint16_t packet_type)
 {
-    int            index = 0;
-    hip_ll_node_t *iter  = NULL;
+    int idx = 0;
+    hip_ll_node_t *iter = NULL;
 
     while ((iter = hip_ll_iterate(&packet_types, iter))) {
         if (packet_type == ((struct packet_type *) iter->ptr)->num) {
-            return index;
+            return idx;
         } else {
-            index++;
+            idx++;
         }
     }
 
@@ -447,10 +447,10 @@ static int lmod_packet_type_exists(const uint16_t packet_type)
 int lmod_register_packet_type(const uint16_t packet_type,
                               const char *identifier)
 {
-    int                 index          = 0;
-    size_t              identifier_len = 0;
-    hip_ll_node_t      *iter           = NULL;
-    struct packet_type *new_entry      = NULL;
+    int idx = 0;
+    size_t identifier_len = 0;
+    hip_ll_node_t      *iter      = NULL;
+    struct packet_type *new_entry = NULL;
 
     if (!identifier || (lmod_packet_type_exists(packet_type) != -1)) {
         return -1;
@@ -474,11 +474,11 @@ int lmod_register_packet_type(const uint16_t packet_type,
         } else if (packet_type < ((struct packet_type *) iter->ptr)->num) {
             break;
         } else {
-            index++;
+            idx++;
         }
     }
 
-    hip_ll_add(&packet_types, index, new_entry);
+    hip_ll_add(&packet_types, idx, new_entry);
 
     return 0;
 }

@@ -17,10 +17,10 @@
 ###########################################################
 use strict;
 
-my $CONFIG_PATH = "/etc/hip/nsupdate.conf";
+my $CONFIG_PATH = "@sysconfdir@/nsupdate.conf";
 
 ##########################################################
-# default values, please change in /etc/hip/nsupdate.conf
+# default values, please change in above configuration file
 our $DEBUG = 0;
 our $LOG_FACILITY = 'local6';
 our $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';

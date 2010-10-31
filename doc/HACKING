@@ -712,7 +712,7 @@ Test coverage: At the very least, tests should ensure that a function can
 handle valid and invalid input as documented. Ideally, they also test corner
 cases and unusual input and state. Obviously, unit tests are limited
 in testing whether a function fully behaves as documented because that can be
-very complex, slow, or impossible on a local system. 
+very complex, slow, or impossible on a local system.
 
 Unit Tests Organizition
 -----------------------
@@ -720,7 +720,7 @@ The unit tests are organized as follows:
 
 - all test code resides in the test directory. The directories below test
   mirror those in the main hipl directory to organize the tests in the same
-  layout.  
+  layout.
 
 - test programs: There is one test program per hipl component. At the time of
   this writing, the only test program is check_lib_core for all tests that
@@ -733,7 +733,7 @@ The unit tests are organized as follows:
   implementation file to test. By convention, the tests of the test suite for
   lib/core/hit.c are contained in test/lib/core/hit.c, which exports them as a
   suite to the check_lib_core test program.
- 
+
 - tests: Each test suite consists of one or more tests that test a specific
   aspect of a function from the implementation. For example, the test function
   test_hip_convert_hit_to_str_valid() in test/lib/core/hit.c tests whether the
@@ -751,21 +751,21 @@ steps:
     test/check_hipd.c
   - remove the existing "extern Suite" and "srunner_add_suite()" statements
   - in Makefile.am:
-  	* add the check_hipd test program to TESTS
-  	* add the check_hipd test program to check_PROGRAMS
-  	* add the file test/check_hipd.c to check_hipd_SOURCES 
-  	* add the check library from the check framework and all libraries your
-  	  test program depends on (usually the same as the original component hipd)
-  	  to check_hipd_LDADD
+    * add the check_hipd test program to TESTS
+    * add the check_hipd test program to check_PROGRAMS
+    * add the file test/check_hipd.c to check_hipd_SOURCES
+    * add the check library from the check framework and all libraries your
+      test program depends on (usually the same as the original component
+      hipd) to check_hipd_LDADD
   - create the directory test/hipd for your test suites
   - re-run the automake tool chain
 * If it does not exist, create the test suite for the file hipd/bar.c:
   - copy an existing test suite (test/hipd/*.c) to test/hipd/bar.c.
   - in test/hipd/bar.c, make sure you include the test target's header file
-    (#include "hipd/bar.h" in this example) 
+    (#include "hipd/bar.h" in this example)
   - in test/hipd/bar.c, remove all tests and tcase_add_test() statements
   - in test/hipd/bar.c, adapt the name of the test suite in the invocation of
-  	suite_create() to "hipd/bar"
+    suite_create() to "hipd/bar"
   - add test/hipd/bar.c to check_hipd_SOURCES in Makefile.am
   - re-run the automake tool chain
 * Create the test case:

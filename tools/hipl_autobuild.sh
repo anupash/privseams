@@ -111,8 +111,8 @@ compile()
     # Run compile and install tests for a certain configuration, in-tree.
     CONFIGURATION="--prefix=$(pwd)/local_install $@"
     run_program "./configure" $CONFIGURATION &&
-        run_program "make -j17"              &&
-        run_program "make -j17 checkheaders" &&
+        run_program "make -j"                &&
+        run_program "make -j checkheaders"   &&
         run_program "make install"
 }
 
@@ -137,7 +137,7 @@ check_doxygen
 compile
 
 # internal autoconf tests, bootstrap the dist tarball, build out-of-tree, etc
-run_program "make -j17 distcheck"
+run_program "make -j distcheck"
 
 # PISA configuration
 compile --enable-firewall --disable-rvs --disable-opportunistic --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
@@ -154,8 +154,8 @@ run_program "cp hipl*tar.gz $OPENWRT_DIR/dl"
 cd $OPENWRT_DIR || cleanup 1
 run_program "rm -rf package/hipl"
 run_program "cp -r $CHECKOUT_DIR/packaging/openwrt/package package/hipl"
-run_program "make -j17 package/hipl-clean V=99"
-run_program "make -j17 package/hipl-install V=99"
+run_program "make -j package/hipl/clean V=99"
+run_program "make -j package/hipl/install V=99"
 
 
 # Crosscompile HIPL in a scratchbox environment.

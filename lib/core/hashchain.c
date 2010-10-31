@@ -200,19 +200,19 @@ out_err:
 /* getter function for a specific element of the given hash chain
  *
  * @param       hash_chain hash chain from which the element should be returned
- * @param       index index to the hash chain element
+ * @param       idx index to the hash chain element
  * @return      element of the given hash chain
  */
 static unsigned char *hchain_element_by_index(const hash_chain_t *hash_chain,
-                                              const int index)
+                                              const int idx)
 {
     unsigned char *element = NULL;
     int err                = 0;
 
     HIP_ASSERT(hash_chain);
 
-    if (index >= 0 && index < hash_chain->hchain_length) {
-        element = &hash_chain->elements[index * hash_chain->hash_length];
+    if (idx >= 0 && idx < hash_chain->hchain_length) {
+        element = &hash_chain->elements[idx * hash_chain->hash_length];
     } else {
         HIP_ERROR("Element from uninited hash chain or out-of-bound element requested!");
 

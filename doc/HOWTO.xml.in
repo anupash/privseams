@@ -684,7 +684,7 @@ Kernel modules  --->
           </para>
           <para>
   <programlisting>
-  $ make package/hipl-install V=99
+  $ make package/hipl/install V=99
   </programlisting>
           </para>
         </listitem>
@@ -831,7 +831,7 @@ $ make V=99
           </para>
           <para>
 <programlisting>
-$ make package/hipl-install V=99
+$ make package/hipl/install V=99
 </programlisting>
           </para>
         </listitem>
@@ -1130,7 +1130,7 @@ $ bin/openwrt-wgt*
           </para>
           <para>
   <programlisting>
-  $ make package/hipl-install V=99
+  $ make package/hipl/install V=99
   </programlisting>
           </para>
         </listitem>
@@ -1540,17 +1540,17 @@ $ make V=99
     </para>
 
     <itemizedlist>
-      <listitem><programlisting>Version of HIPL software. Ubuntu: dpkg -l 'hipl*'. Redhat-based distros: rpm -qa|grep hipl</programlisting></listitem>
+      <listitem><programlisting>Version of HIPL software. Ubuntu: dpkg -l 'hipl*'. Redhat-based distros: rpm -qa | grep hipl</programlisting></listitem>
       <listitem><programlisting>hipconf get ha all</programlisting></listitem>
       <listitem><programlisting>ip xfrm state</programlisting></listitem>
       <listitem><programlisting>uname -a</programlisting></listitem>
       <listitem><programlisting>lsb_release -a</programlisting></listitem>
-      <listitem><programlisting>cat /etc/hip/hipd_config</programlisting></listitem>
+      <listitem><programlisting>cat @sysconfdir@/hipd_config</programlisting></listitem>
       <listitem><programlisting>cat /etc/selinux/config</programlisting></listitem>
       <listitem><programlisting>iptables -L -n</programlisting></listitem>
       <listitem><programlisting>ip6tables -L -n</programlisting></listitem>
-      <listitem><programlisting>ps axu|grep hip</programlisting></listitem>
-      <listitem><programlisting>ps axu|grep dns</programlisting></listitem>
+      <listitem><programlisting>ps axu | grep hip</programlisting></listitem>
+      <listitem><programlisting>ps axu | grep dns</programlisting></listitem>
     </itemizedlist>
 
    <!--
@@ -1706,7 +1706,7 @@ $ make V=99
       This will setup a HIP connection between the two hosts (it may take a
       while if you are using virtual machines). You should replace
       HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
-      creates if necessary) the host identities from /etc/hip automatically.
+      creates if necessary) the host identities from @sysconfdir@ automatically.
       If you want to know the default HIT of the localhost, run
       "hipconf get hi default".
       You can list all HITs of the machine with "hipconf get hi all". By
@@ -1723,7 +1723,7 @@ $ make V=99
       hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
-      You can also add the mapping to "/etc/hip/hipd_config" and restart hipd.
+      You can also add the mapping to "@sysconfdir@/hipd_config" and restart hipd.
       It is also possible to use DNS for the mappings.
     </para>
     <para>
@@ -1788,7 +1788,7 @@ $ make V=99
               HIP_DEBUG&gt;
             </para>
             <para>
-              These options can be also set in "/etc/hip/hipd_config" to configure
+              These options can be also set in "@sysconfdir@/hipd_config" to configure
               hipd and other libraries at startup.
             </para>
             <para>
@@ -1849,7 +1849,7 @@ $ make V=99
               </para></listitem>
             </itemizedlist>
             <para>
-              Beforehand the following rules must be added in the file /etc/hip/firewall.conf
+              Beforehand the following rules must be added in the file @sysconfdir@/firewall.conf
             </para>
             <para>crash:</para>
               <itemizedlist>
@@ -1994,14 +1994,14 @@ $ make V=99
       <para>
         3a. If you want to maintain separate files for HIP identifiers,
         write the HIT-hostname (or LSI-hostname)
-        pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts.
+        pair to @sysconfdir@/hosts and the IP-hostname pair to /etc/hosts.
         See also the method (2) for overloading all addresses in
         /etc/hosts.
       </para>
       <para>
         3b. Execute "hipconf add map PEER_HIT PEER_IP" and use the HIT directly
         in the application. You can insert the
-        hipconf command also to /etc/hip/hipd_config and restart hipd.
+        hipconf command also to @sysconfdir@/hipd_config and restart hipd.
       </para>
     </section>
     <section id="sec_advanced_methods">
@@ -2338,7 +2338,7 @@ VPN
     <para>As NFSv3 supports only IPv4, you need use LSIs. So, make sure that
           you are running also hipfw with the LSI support (-l) on both sides.
           For example, you can start it with "hipfw -lAbk" flags. Also,
-          it is recommended to fix HITs and LSIs to /etc/hip/hosts
+          it is recommended to fix HITs and LSIs to @sysconfdir@/hosts
           and IP addresses to /etc/hosts at both sides. In this example,
           the NFS server has been configured to use LSI 1.0.0.1 and the
           client 1.0.0.2. Notice that the LSIs are valid only within the local
@@ -2482,7 +2482,7 @@ VPN
 
     <para>
      The DNS proxy tries to find host identities from two places:
-     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS.
+     "hosts" files (/etc/hosts and @sysconfdir@/hosts), HI records in DNS.
      It returns the host identities as HITs or LSIs to the requesting
      application.
     </para>
@@ -2537,7 +2537,7 @@ VPN
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
-hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
+hipdnskeyparse &lt; @sysconfdir@/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
@@ -2563,7 +2563,7 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
     <para>
        Currently HIP daemon performs HIP name resolution in the following order:
       <itemizedlist>
-        <listitem><para>in /etc/hip/hosts</para></listitem>
+        <listitem><para>in @sysconfdir@/hosts</para></listitem>
         <listitem><para>in /etc/hosts</para></listitem>
         <listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
       </itemizedlist>
@@ -2575,7 +2575,7 @@ hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed 
       to contact peer host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
     </para>
     <para>Default hit-to-ip.infrahip.net. suffix can be changed with
-      "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;. Please note it is independent from HIT_TO_IP_ZONE in /etc/hip/nsupdate.conf"
+      "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;. Please note it is independent from HIT_TO_IP_ZONE in @sysconfdir@/nsupdate.conf"
     </para>
     <para>
       With "hipconf nsupdate on", the HIP daemon also maintains
@@ -2660,10 +2660,10 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         NAT boxes to establish direct end-to-end connectivity with
         each other. The second mode, "full-relay" is supported
         completely and it relays both HIP and ESP traffic. You should
-        use it carefully and whitelist your /etc/hip/relay_config
+        use it carefully and whitelist your @sysconfdir@/relay_config
         file. Otherwise you risk your host becoming an open HIP and
         ESP relay. For additional security measure, you can also use
-        also /etc/hip/firewall_conf to further restrict the allowed
+        also @sysconfdir@/firewall_conf to further restrict the allowed
         clients and servers by their HITs.
        </para>
       <para>
@@ -2709,14 +2709,14 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
       <abstract>
         <para>
           In this section, we show how to edit the configuration file:
-          "<emphasis>/etc/hip/relay_config</emphasis>".
+          "<emphasis>@sysconfdir@/relay_config</emphasis>".
         </para>
       </abstract>
       <section id="sec_relay_conf_about">
         <title>About the RVS and HIP Relay Configuration File</title>
         <para>
           The rendezvous server and the HIP relay server are configured using a
-          configuration file: "<emphasis>/etc/hip/relay_config</emphasis>".
+          configuration file: "<emphasis>@sysconfdir@/relay_config</emphasis>".
           Note, that this file is server side configuration file i.e. you only
           need to configure the file at the relay or rendezvous server, not at
           the client. This file is shared between the RVS and the HIP relay
@@ -2854,7 +2854,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         <para>
           Before you test the rendezvous mechanisms, you should have run the base
           exchange once without the rendezvous server to get familiar how the
-          "<emphasis>/etc/hosts</emphasis>" and "<emphasis>/etc/hip/hosts</emphasis>" files are configured. Please see
+          "<emphasis>/etc/hosts</emphasis>" and "<emphasis>@sysconfdir@/hosts</emphasis>" files are configured. Please see
           <xref linkend="ch_basictest" /> for information on how to run a base
           exchange without the rendezvous server. Also, before you can test the
           rendezvous mechanism, the configuration file must be edited
@@ -2884,7 +2884,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </mediaobject>
         <para>
           First, the "<emphasis>/etc/hosts</emphasis>" and
-          "<emphasis>/etc/hip/hosts</emphasis>" files are configured. Please
+          "<emphasis>@sysconfdir@/hosts</emphasis>" files are configured. Please
           notice that you can leave all non-HIP-related values in
           "<emphasis>/etc/hosts</emphasis>" intact.
         </para>
@@ -2904,7 +2904,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               </listitem>
               <listitem>
                 <para>
-                  In the "<emphasis>/etc/hip/hosts</emphasis>" file you should have:
+                  In the "<emphasis>@sysconfdir@/hosts</emphasis>" file you should have:
                   &lt;RESPONDER HIT&gt; &lt;RESPONDER NAME&gt;. This is the line
                   that you would have in a normal base exchange execution not
                   involving an RVS. Please make sure that you use the same HIT
@@ -2921,7 +2921,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               <listitem>
                 <para>
                   Both files, "<emphasis>/etc/hosts</emphasis>" and
-                  "<emphasis>/etc/hip/hosts</emphasis>", are left blank. The files are left blank
+                  "<emphasis>@sysconfdir@/hosts</emphasis>", are left blank. The files are left blank
                   because the rendezvous server is assumed to have no information
                   of its clients beforehand. The RVS can have some white listed
                   HITs as beforehand information, however, but it is not required
@@ -2938,7 +2938,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
               <listitem>
                 <para>
                   At the responder, both files,"<emphasis>/etc/hosts</emphasis>"
-                  and "<emphasis>/etc/hip/hosts</emphasis>", are left blank
+                  and "<emphasis>@sysconfdir@/hosts</emphasis>", are left blank
                   also. The responder is assumed to know the IP address and the
                   HIT of the rendezvous server, but this information is given as
                   command line parameters of the "<emphasis>hipconf</emphasis>" tool.
@@ -3116,7 +3116,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           Before you test the relay mechanisms, you should have run the base
           exchange once without the relay server to get familiar how the
           "<emphasis>/etc/hosts</emphasis>" and
-          "<emphasis>/etc/hip/hosts</emphasis>" files are configured. Please see
+          "<emphasis>@sysconfdir@/hosts</emphasis>" files are configured. Please see
           <xref linkend="ch_basictest" /> for information on how to run a base
           exchange without the relay server. Also, before you can test the
           relay mechanism, the configuration file must be edited
@@ -3156,7 +3156,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         </mediaobject>
         <para>
           First, the "<emphasis>/etc/hosts</emphasis>" and
-          "<emphasis>/etc/hip/hosts</emphasis>" files are configured. Please
+          "<emphasis>@sysconfdir@/hosts</emphasis>" files are configured. Please
           notice that you can leave all non-HIP-related values in
           "<emphasis>/etc/hosts</emphasis>" intact. The configuration of these
           files is identical with the RVS test case, thus if you have already
@@ -3387,7 +3387,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
             <para>
               The server, on the other hand, uses the first given lifetime
               boundaries for every offered service in REG_INFO parameters
-              (If "<emphasis>/etc/hip/relay_config</emphasis>" would provide
+              (If "<emphasis>@sysconfdir@/relay_config</emphasis>" would provide
               a way to define individual lifetime boundaries for each service,
               the boundaries listed first would be used for every service).
             </para>
@@ -3484,7 +3484,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 
        <para>If firewall is killed, it leaves rules dangling which may drop
              some traffic. Check with "iptables -L -n" if there are some HIPFW
-             rules there and no hipfw running ("ps axu|grep hipfw"). You can
+             rules there and no hipfw running ("ps axu | grep hipfw"). You can
              flush the rules with "hipfw -k" and then pressing CTRL + C.
              Alternatively, you can just run "/etc/init.d/hipfw stop".
        </para>
@@ -3494,7 +3494,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
         it drops all HIP traffic and allows all other traffic. You can change
         the defaults with hipfw command line flags. To get a list of command
         line flags, give the -h option to hipfw. When you start the firewall
-        the first time, it creates /etc/hip/firewall.conf file which contains
+        the first time, it creates @sysconfdir@/firewall.conf file which contains
         an example usage template.
         </para>
 
@@ -3783,7 +3783,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
             enable/disable opportunistic mode. By default it is on.
     </para></listitem>
     <listitem><para>
-           Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="ch_basictest" />.
+           Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from @sysconfdir@/hosts, and then following the steps in <xref linkend="ch_basictest" />.
     </para></listitem>
     </itemizedlist>
 
@@ -3911,7 +3911,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
           getendpointinfo name resolution interface.</para>
       </listitem>
       <listitem>
-        <para>By default, the interface first checks the /etc/hip/hosts file for
+        <para>By default, the interface first checks the @sysconfdir@/hosts file for
           a matching host. If one is not found, the kernel is queried for its
           list of known HIP peers and the list is examined for matches.</para>
       </listitem>
@@ -3952,7 +3952,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
 </programlisting>
 
     <para>
-    Notice that the last command can be also configured to /etc/hip/hipd_config
+    Notice that the last command can be also configured to @sysconfdir@/hipd_config
     </para>
 
     <para>
@@ -4009,7 +4009,7 @@ hipconf shotgun on
 </programlisting>
 </para>
 
-    <para>The same line can be also included in /etc/hip/hipd_config
+    <para>The same line can be also included in @sysconfdir@/hipd_config
           without the "hipconf" prefix.
     </para>
 

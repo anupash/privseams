@@ -28,7 +28,7 @@ Make and gcc. openssl, iptables, libcap and libconfig are required complete
 with development headers. For Perl, Socket6, IO::Socket::INET6, Net::IP and
 Net::DNS modules are required. You can optionally install xmlto to
 build the HOWTO and doxygen to build the code documentation. Installing the
-optional check library (http://check.sourceforge.net/) enables unit tests. 
+optional check library (http://check.sourceforge.net/) enables unit tests.
 Some additional libraries are needed for building binary packages (fakeroot
 and dpkg-dev on ubuntu).
 
