@@ -80,8 +80,8 @@ struct hip_line_parser {
  */
 static inline char *hip_lp_first(struct hip_line_parser *const lp)
 {
-    if (NULL == lp ||
-        NULL == lp->ma) {
+    if (!lp ||
+        !lp->ma) {
         return NULL;
     }
 
@@ -106,11 +106,11 @@ static inline char *hip_lp_next(struct hip_line_parser *const lp)
 {
     size_t remaining;
 
-    if (NULL == lp ||
-        NULL == lp->cur ||
-        NULL == lp->ma ||
-        NULL == lp->ma->start ||
-        NULL == lp->ma->end ||
+    if (!lp ||
+        !lp->cur ||
+        !lp->ma ||
+        !lp->ma->start ||
+        !lp->ma->end ||
         lp->cur < lp->ma->start ||
         lp->cur >= lp->ma->end) {
         return NULL;
@@ -121,7 +121,7 @@ static inline char *hip_lp_next(struct hip_line_parser *const lp)
 
     // given the rest of the parsing code, we should always find a \n, but
     // let's check to be sure
-    if (lp->cur != NULL) {
+    if (lp->cur) {
         // cur should not point to the new-line character but to the next one:
         lp->cur += 1;
         // is there text on the line here or are we at the end?

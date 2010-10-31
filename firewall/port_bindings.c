@@ -88,7 +88,7 @@ static unsigned int cache_size_bytes        = 0;
  */
 static int init_cache(void)
 {
-    HIP_ASSERT(NULL == cache);
+    HIP_ASSERT(!cache);
 
     cache_size_entries  = CACHE_SIZE_PROTOS * CACHE_SIZE_PORTS;
     cache_size_bytes    = cache_size_entries * sizeof(*cache);
@@ -117,7 +117,7 @@ static int init_cache(void)
  */
 static void uninit_cache(void)
 {
-    if (NULL != cache) {
+    if (cache) {
         free(cache);
         cache = NULL;
     }
@@ -184,7 +184,7 @@ static void set_cache_entry(const uint8_t protocol,
                             const enum hip_port_binding binding)
 {
     // fail gracefully if the cache is not allocated
-    if (NULL != cache) {
+    if (cache) {
         // calculate index of cache entry
         const unsigned int index = get_cache_index(protocol, port);
 
@@ -221,7 +221,7 @@ static enum hip_port_binding get_cache_entry(const uint8_t protocol,
     enum hip_port_binding binding = HIP_PORT_INFO_UNKNOWN;
 
     // fail gracefully if cache is not available
-    if (NULL != cache) {
+    if (cache) {
         const unsigned int index = get_cache_index(protocol, port);
 
         binding = (enum hip_port_binding)cache[index];
@@ -238,7 +238,7 @@ static enum hip_port_binding get_cache_entry(const uint8_t protocol,
  */
 static void invalidate_cache(void)
 {
-    if (cache != NULL) {
+    if (cache) {
         memset(cache, HIP_PORT_INFO_UNKNOWN, cache_size_bytes);
     }
 }
@@ -343,7 +343,7 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
     line = hip_lp_next(&lp);
 
     // is the current line valid and is it long enough to hold a port binding?
-    while (line != NULL && ma->end > (line + PORT_STR_OFFSET + PORT_STR_LEN)) {
+    while (line && ma->end > (line + PORT_STR_OFFSET + PORT_STR_LEN)) {
         const unsigned int PORT_BASE_HEX    = 16;
         unsigned long proc_port             = 0;
         // note that strtoul() is about 10 times faster than sscanf().

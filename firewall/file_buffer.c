@@ -73,7 +73,7 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
     if (fb) {
         off_t file_size = 0;
 
-        if (fb->ma.start != NULL) {
+        if (fb->ma.start) {
             free(fb->ma.start);
             fb->ma.start = NULL;
         }
@@ -186,12 +186,12 @@ int hip_fb_create(struct hip_file_buffer *const fb,
  */
 void hip_fb_delete(struct hip_file_buffer *const fb)
 {
-    if (fb != NULL) {
+    if (fb) {
         if (fb->fd != -1) {
             close(fb->fd);
             fb->fd = -1;
         }
-        if (fb->ma.start != NULL) {
+        if (fb->ma.start) {
             free(fb->ma.start);
             fb->ma.start    = NULL;
             fb->ma.end      = NULL;
@@ -214,7 +214,7 @@ void hip_fb_delete(struct hip_file_buffer *const fb)
  */
 int hip_fb_reload(struct hip_file_buffer *const fb)
 {
-    if (NULL == fb) {
+    if (!fb) {
         return -1;
     }
 

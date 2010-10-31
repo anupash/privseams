@@ -77,7 +77,7 @@ int hip_lp_create(struct hip_line_parser *const lp,
  */
 void hip_lp_delete(struct hip_line_parser *const lp)
 {
-    if (lp != NULL) {
+    if (lp) {
         lp->ma  = NULL;
         lp->cur = NULL;
     }

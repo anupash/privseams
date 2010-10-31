@@ -87,7 +87,7 @@ struct hip_file_buffer {
  */
 static inline const struct hip_mem_area *hip_fb_get_mem_area(const struct hip_file_buffer *const fb)
 {
-    if (fb != NULL) {
+    if (fb) {
         return &fb->ma;
     }
     return NULL;
