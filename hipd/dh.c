@@ -40,6 +40,15 @@
 #include "lib/core/debug.h"
 #include "dh.h"
 
+/**
+ * This table holds Diffie-Hellman values used during HIP BEXs.
+ * These values are generated when the HIP daemon starts and valid for its
+ * lifetime.
+ * Each array element corresponds to a DH value of a specific DH group.
+ * The valid groups are defined in RFC 5201, section 5.2.6.
+ * This array is indexed by the Group ID value defined in the RFC.
+ * Note that this means that the array element at index 0 is thus unused.
+ */
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
 
 /**
@@ -52,6 +61,12 @@ int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
 {
     int res;
     DH *tmp;
+
+    if (group_id <= 0 || group_id >= HIP_MAX_DH_GROUP_ID) {
+        HIP_ERROR("The Group ID %d is invalid\n", group_id);
+        res = -1;
+        goto err_free;
+    }
 
     /*
      * First check that we have the key available.
@@ -105,6 +120,11 @@ int hip_calculate_shared_secret(uint8_t *public_value,
     int err = 0;
     DH *tmp;
 
+    if (group_id <= 0 || group_id >= HIP_MAX_DH_GROUP_ID) {
+        HIP_ERROR("The Group ID %d is invalid\n", group_id);
+        return -1;
+    }
+
     /*
      * First check that we have the key available.
      * Then encode it into the buffer
@@ -146,7 +166,7 @@ static void hip_regen_dh_keys(uint32_t bitmask)
     maxmask  = (1 << (HIP_MAX_DH_GROUP_ID + 1)) - 1;
     bitmask &= maxmask;
 
-    for (i = 1; i <= HIP_MAX_DH_GROUP_ID; i++) {
+    for (i = 1; i < HIP_MAX_DH_GROUP_ID; i++) {
         if (bitmask & (1 << i)) {
             tmp = hip_generate_dh_key(i);
             if (!tmp) {
