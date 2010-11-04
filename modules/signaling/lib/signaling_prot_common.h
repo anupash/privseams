@@ -47,6 +47,12 @@
 #define SIGNALING_APPINFO_REQS 3
 #define SIGNALING_APPINFO_GROUPS 4
 
+struct signaling_param_portinfo {
+    hip_tlv_type_t type;
+    hip_tlv_len_t  length;
+    uint16_t srcport;
+    uint16_t destport;
+} __attribute__ ((packed));
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 

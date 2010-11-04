@@ -8,3 +8,5 @@ modules_signaling_lib_libhipsignaling_common_la_SOURCES = modules/signaling/lib/
 
 hipd_hipd_LDADD += modules/signaling/hipd/libhipsignaling.la \
                    modules/signaling/lib/libhipsignaling_common.la
+
+firewall_hipfw_LDADD += modules/signaling/lib/libhipsignaling_common.la
