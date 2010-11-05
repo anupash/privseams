@@ -42,6 +42,7 @@
 #include "hipd/hadb.h"
 
 #include "signaling_hipd_builder.h"
+#include "signaling_netstat_api.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/hipd/signaling_state.h"
 
@@ -107,6 +108,9 @@ int signaling_build_param_appinfo(struct hip_common *msg)
     HIP_IFEL(!(port_state = lmod_get_state_item(entry->hip_modular_state, "signaling_port_state")),
                  -1, "failed to retrieve state for signaling ports\n");
     HIP_DEBUG("Got ports from HADB: src: %d dest %d \n", port_state->src_port, port_state->dest_port);
+
+    /* Dynamically lookup application from port information */
+    signaling_netstat_get_application_context(port_state->src_port, port_state->dest_port);
 
     /* Contents hardcoded for test
      * TODO: Get this dynamically
