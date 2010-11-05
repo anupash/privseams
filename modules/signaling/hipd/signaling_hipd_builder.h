@@ -31,15 +31,13 @@
  *
  */
 
-#ifndef MODULES_SIGNALING_HIPD_SIGNALING_BUILDER_H_
-#define MODULES_SIGNALING_HIPD_SIGNALING_BUILDER_H_
+#ifndef MODULES_SIGNALING_HIPD_SIGNALING_HIPD_BUILDER_H_
+#define MODULES_SIGNALING_HIPD_SIGNALING_HIPD_BUILDER_H_
 
 /* Build an appinfo parameter. */
 int signaling_build_param_appinfo(struct hip_common *msg);
 
 /* Get the typename of a appinfo field */
 const char *signaling_get_param_field_type_name(const hip_tlv_type_t param_type);
-
-int signaling_build_param_portinfo(struct hip_common *msg, uint16_t src_port, uint16_t dest_port);
 
 #endif /* MODULES_ESP_TOKENS_HIPD_ESP_TOKENS_BUILDER_H_ */

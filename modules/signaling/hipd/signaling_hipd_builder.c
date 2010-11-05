@@ -38,8 +38,12 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/common.h"
 #include "lib/core/ife.h"
-#include "signaling_builder.h"
-#include "signaling_prot_common.h"
+
+#include "hipd/hadb.h"
+
+#include "signaling_hipd_builder.h"
+#include "modules/signaling/lib/signaling_prot_common.h"
+#include "modules/signaling/hipd/signaling_state.h"
 
 
 /*
@@ -95,6 +99,14 @@ int signaling_build_param_appinfo(struct hip_common *msg)
     int err = 0;
     int length_contents = 0;
     void *contents_start, *p_tmp;
+    struct signaling_port_state *port_state = NULL;
+    hip_ha_t *entry = NULL;
+
+    HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)),
+                 -1, "failed to retrieve hadb entry");
+    HIP_IFEL(!(port_state = lmod_get_state_item(entry->hip_modular_state, "signaling_port_state")),
+                 -1, "failed to retrieve state for signaling ports\n");
+    HIP_DEBUG("Got ports from HADB: src: %d dest %d \n", port_state->src_port, port_state->dest_port);
 
     /* Contents hardcoded for test
      * TODO: Get this dynamically
@@ -122,27 +134,6 @@ int signaling_build_param_appinfo(struct hip_common *msg)
     p_tmp = signaling_build_param_append_tlv(p_tmp, SIGNALING_APPINFO_APP_DN, app_dn, strlen(app_dn));
     p_tmp = signaling_build_param_append_tlv(p_tmp, SIGNALING_APPINFO_GROUPS, app_groups, strlen(app_groups));
     err = hip_build_generic_param(msg, &appinfo, sizeof(struct hip_tlv_common), contents_start);
-
-    return err;
-}
-
-int signaling_build_param_portinfo(struct hip_common *msg, uint16_t src_port, uint16_t dest_port) {
-    struct signaling_param_portinfo pi;
-    int err = 0;
-
-    hip_set_param_type((struct hip_tlv_common *) &pi, HIP_PARAM_SIGNALING_PORTINFO);
-    hip_set_param_contents_len((struct hip_tlv_common *) &pi, 2*sizeof(uint16_t));
-
-    pi.srcport = htons(src_port);
-    pi.destport = htons(dest_port);
-
-    if(src_port || dest_port) {
-        HIP_DEBUG("Signaling port information to hipd (src = %d, dest = %d)\n", src_port, dest_port);
-        HIP_IFEL(hip_build_param(msg, &pi),
-                            -1, "Appending port information param failed\n");
-    } else {
-        HIP_DEBUG("No port information given. Omitting building parameter HIP_PARAM_SIGNALING_PORTINFO. \n");
-    }
 
 out_err:
     return err;

@@ -66,7 +66,7 @@
 #include "firewall.h"
 #include "lsi.h"
 #include "reinject.h"
-#include "modules/signaling/lib/signaling_builder.h"
+#include "modules/signaling/lib/signaling_common_builder.h"
 
 /**
  * build a message for hipd to trigger a base exchange

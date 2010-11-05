@@ -4,24 +4,32 @@
 #include "lib/core/common.h"
 #include "lib/core/state.h"
 #include "lib/core/ife.h"
+#include "lib/core/icomm.h"
 #include "hipd/pkt_handling.h"
+#include "hipd/user.h"
 #include "signaling.h"
-#include "signaling_prot_hipd_msg.h"
+#include "signaling_hipd_msg.h"
+#include "signaling_hipd_user_msg.h"
+#include "signaling_state.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 
-#define INBOUND_HANDLE_APPLINFO_PRIO              29000
-#define OUTBOUND_I2_CREATE_APPINFO_PRIO       	  41500
-#define OUTBOUND_R2_CREATE_APPINFO_PRIO       	  41501
+#define INBOUND_HANDLE_APPLINFO_PRIO            29000
+#define OUTBOUND_I2_CREATE_APPINFO_PRIO         41500
+#define OUTBOUND_R2_CREATE_APPINFO_PRIO         41501
+#define TRIGGER_BEX_PORTS_PRIO                  50000
+
 
 int hip_signaling_init(void)
 {
 	int err = 0;
-	/* Print the app info */
 
 	// register parameter types
 	lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTINFO, "HIP_PARAM_SIGNALING_PORTINFO");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO, "HIP_PARAM_SIGNALING_APPINFO");
+
+    // register initialization function for port information per connection state in hadb
+    lmod_register_state_init_function(&signaling_init_state);
 
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_handle_appinfo, INBOUND_HANDLE_APPLINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
@@ -45,6 +53,11 @@ int hip_signaling_init(void)
             -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
             -1, "Error on registering Signaling handle function.\n");
+
+    // register user message handler
+    HIP_IFEL(hip_user_register_handle(HIP_MSG_TRIGGER_BEX, &signaling_handle_bex_ports, TRIGGER_BEX_PORTS_PRIO),
+            -1, "Error on registering Signaling user handle function.\n");
+
 
     HIP_DEBUG("Initialized Signaling Module.\n");
 

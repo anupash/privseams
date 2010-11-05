@@ -45,9 +45,9 @@
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
 
-#include "modules/signaling/lib/signaling_builder.h"
+#include "modules/signaling/hipd/signaling_hipd_builder.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
-#include "signaling_prot_hipd_msg.h"
+#include "signaling_hipd_msg.h"
 
 
 
