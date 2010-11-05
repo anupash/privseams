@@ -143,7 +143,14 @@ run_program "make -j distcheck"
 compile --enable-firewall --disable-rvs --disable-opportunistic --disable-profiling --enable-debug --enable-midauth --disable-performance --disable-demo
 
 # Max compile coverage configuration
-compile --enable-firewall --enable-rvs --enable-opportunistic --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo
+FEATURES_ALL="--enable-firewall --enable-rvs --enable-opportunistic --enable-profiling --disable-debug --enable-midauth --enable-performance --enable-demo"
+compile $FEATURES_ALL
+
+# Max compile coverage configuration without optimization
+compile $FEATURES_ALL CFLAGS="-O0"
+
+# Max compile coverage configuration with full optimization
+compile $FEATURES_ALL CFLAGS="-O3"
 
 # Without modules
 compile --with-nomodules=heartbeat,update,heartbeat_update
