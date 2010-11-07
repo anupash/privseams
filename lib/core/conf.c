@@ -197,7 +197,7 @@
  *       for the action.
  */
 const char *hipconf_usage =
-    "add|del map <hit> <ipv6> [lsi]\n"
+    "add|del map <hit> <ip> [lsi]\n"
     "del hi <hit>|all\n"
     "get hi default|all\n"
     "new|add hi anon|pub rsa|dsa filebasename\n"
@@ -1235,7 +1235,7 @@ static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
              "build param hit failed\n");
 
     if (optc == 3) {
-        HIP_IFEL(inet_pton(AF_INET, opt[2], &lsi) == 1, -1,
+        HIP_IFEL(inet_pton(AF_INET, opt[2], &lsi) != 1, -1,
                  "string to address conversion failed\n");
         HIP_IFEL(!IS_LSI32(lsi.s_addr), -1, "Wrong LSI value\n");
         HIP_IFEL(hip_build_param_contents(msg, &lsi,
