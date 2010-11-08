@@ -164,7 +164,7 @@ class Hosts:
                     aaaa_hit[n] = (addr, 0)
                 elif self.str_is_ipv6(addr):
                     aaaa[n] = (addr, 0)
-                else:
+                elif not self.str_is_lsi(addr):
                     a[n] = (addr, 0)
         self.a = a
         self.aaaa = aaaa
