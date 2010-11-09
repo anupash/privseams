@@ -803,8 +803,13 @@ b) For the test target static foo() create the wrapper foo_test_wrapper() that
 DEBUGGING
 =========
 
-HIPL provides a set of wrappers for adding debugging statements in a
-concise way:
+You can debug HIPL code using gdb. The recommended way to configure a
+debug build is as follows:
+
+./configure <options> CFLAGS='-g -O0'
+
+Alternatively, HIPL provides a set of wrappers for printing or logging
+debugging statements in a unified way:
 
 - HIP_DIE(arguments as for printk)
 - HIP_ERROR(arguments as for printk)
