@@ -151,6 +151,56 @@ out_err:
     return err;
 }
 
+
+/*
+ * Fill in the context information of an application.
+ */
+static int signaling_get_application_context(const char *app_file) {
+    int err = 0;
+    X509AC *ac = NULL;
+    X509_NAME *name;
+    char issuername[ONELINELEN];
+    char holdername[ONELINELEN];
+
+    HIP_IFEL(!(ac = signaling_get_application_cert(app_file)),
+            -1, "Could not open application certificate.");
+
+    /* Dump certificate */
+    //X509AC_print(app_cert);
+
+    /* Read whatever we want to know. */
+    /* Issuer name */
+    if( (ac->info->issuer->type == 0)||
+        ((ac->info->issuer->type == 1)&&(ac->info->issuer->d.v2Form->issuer != NULL)))
+    {
+        name = X509AC_get_issuer_name(ac);
+        if (!name)
+            HIP_DEBUG("Error getting AC issuer name, possibly not a X500 name");
+        else
+        {
+            X509_NAME_oneline(name,issuername,ONELINELEN);
+        }
+
+    }
+
+    /* Application INFORMATION */
+    if( ac->info->holder->entity != NULL) {
+        name = X509AC_get_holder_entity_name(ac);
+        if (!name) {
+            HIP_DEBUG("Error getting AC holder name, possibly not a X500 name");
+        } else {
+            X509_NAME_oneline(name,holdername,ONELINELEN);
+        }
+    }
+
+    HIP_DEBUG("Found following context for application: %s \n", app_file);
+    HIP_DEBUG("\tIssuer name: %s\n", issuername);
+    HIP_DEBUG("\tHolder name: %s\n", holdername);
+
+out_err:
+    return err;
+}
+
 /*
  * Appends a tlv struct at the location given by 'start'.
  */
@@ -205,8 +255,12 @@ int signaling_build_param_appinfo(struct hip_common *msg)
             -1, "Got not path to application. \n");
 
     /* Verify the application */
-    HIP_IFEL(!signaling_verify_application(app_path_buf),
+    HIP_IFEL(0 > signaling_verify_application(app_path_buf),
             -1, "Could not verify certificate of application: %s.\n", app_path_buf);
+
+    /* Get the application context. */
+    HIP_IFEL(0 > signaling_get_application_context(app_path_buf),
+            -1, "Could not build application context for application: %s.\n", app_path_buf);
 
     /* Contents hardcoded for test
      * TODO: Get this dynamically
