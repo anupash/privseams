@@ -205,7 +205,8 @@ int signaling_build_param_appinfo(struct hip_common *msg)
             -1, "Got not path to application. \n");
 
     /* Verify the application */
-    err = signaling_verify_application(app_path_buf);
+    HIP_IFEL(!signaling_verify_application(app_path_buf),
+            -1, "Could not verify certificate of application: %s.\n", app_path_buf);
 
     /* Contents hardcoded for test
      * TODO: Get this dynamically
