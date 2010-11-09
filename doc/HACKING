@@ -803,11 +803,8 @@ b) For the test target static foo() create the wrapper foo_test_wrapper() that
 DEBUGGING
 =========
 
-Debugging the kernel with gdb is not possible unless you're running
-User Mode Linux and in such cases you may prefer manual debugging
-statements in the code. It may be also your personal favourite to
-prefer debugging statements over gdb in the userspace. HIPL provides a
-set of wrappers for adding debugging statements in a concise way:
+HIPL provides a set of wrappers for adding debugging statements in a
+concise way:
 
 - HIP_DIE(arguments as for printk)
 - HIP_ERROR(arguments as for printk)
