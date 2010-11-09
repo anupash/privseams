@@ -9,10 +9,9 @@
 #ifndef HIP_HIPD_SIGNALING_NETSTAT_WRAPPER_H
 #define HIP_HIPD_SIGNALING_NETSTAT_WRAPPER_H
 
-#include "lib/core/protodefs.h"
-#include "signaling_state.h"
+/* MAX = ? */
+#define PATHBUF_SIZE            200
 
-int signaling_netstat_get_application_context(uint16_t srcport, uint16_t destport);
-
+int signaling_netstat_get_application_path(uint16_t srcport, uint16_t destport, char *pathbuf);
 
 #endif /* HIP_HIPD_SIGNALING_NETSTAT_WRAPPER_H */

@@ -20,8 +20,6 @@
 #define CALLBUF_SIZE            60
 /* MAX = sizeof(/proc/{port}/exe) <= 16 */
 #define SYMLINKBUF_SIZE         16
-/* MAX = ? */
-#define PATHBUF_SIZE            200
 
 // Netstat format widths (derived from netstat source code)
 #define NETSTAT_SIZE_PROTO      7
@@ -31,14 +29,21 @@
 #define NETSTAT_SIZE_PROGNAME   20
 #define NETSTAT_SIZE_ADDR_v6    50
 
-int signaling_netstat_get_application_context(uint16_t srcport, uint16_t destport) {
+/*
+ * Determine the context of an application (e.g. binary path, ...)
+ *
+ * TODO:
+ *  - add more checks for right connection (check src and destination addresses)
+ *  - add parsing of udp connections
+ *  - data structures to handle application context
+ */
+int signaling_netstat_get_application_path(uint16_t srcport, uint16_t destport, char *pathbuf) {
     FILE *fp;
     int err = 0, UNUSED scanerr;
     char *res;
     char callbuf[CALLBUF_SIZE];
     char symlinkbuf[SYMLINKBUF_SIZE];
     char readbuf[NETSTAT_SIZE_OUTPUT];
-    char pathbuf[PATHBUF_SIZE];
 
     // variables for parsing
     char proto[NETSTAT_SIZE_PROTO];

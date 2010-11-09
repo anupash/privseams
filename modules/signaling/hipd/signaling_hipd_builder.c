@@ -41,11 +41,19 @@
 
 #include "hipd/hadb.h"
 
+#include <x509ac.h>
+#include <x509attr.h>
+#include <x509ac-supp.h>
+#include <x509attr-supp.h>
+#include <x509ac_utils.h>
+#include <openssl/x509.h>
+#include <openssl/err.h>
+#include <openssl/pem.h>
+
 #include "signaling_hipd_builder.h"
 #include "signaling_netstat_api.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/hipd/signaling_state.h"
-
 
 /*
  * Returns the name of an application information parameter field.
@@ -59,6 +67,73 @@ const char *signaling_get_param_field_type_name(const hip_tlv_type_t param_type)
     case SIGNALING_APPINFO_GROUPS:		return "Application Groups";
     }
     return "UNDEFINED Application information";
+}
+
+/*
+ * Argument is a null-terminated string.
+ */
+static int signaling_verify_application(const char *app_file) {
+    int err = 0;
+    char *app_cert_file;
+    const char *issuer_cert_file;
+    FILE *fp = NULL;
+    /* X509 Stuff */
+    X509AC *app_cert = NULL;
+    X509 *issuercert = NULL;
+    X509_STORE *store = NULL;
+    X509_STORE_CTX *verify_ctx = NULL;
+
+    /* Build path to application certificate */
+    app_cert_file = malloc(strlen(app_file) + 6);
+    memset(app_cert_file, 0, strlen(app_file) + 6);
+    strcat(app_cert_file, app_file);
+    strcat(app_cert_file, ".cert");
+
+    /* Get the application certificate */
+    HIP_IFEL(!(fp = fopen(app_cert_file, "r")),
+            -1,"Application certificate could not be found at %s.\n", app_cert_file);
+    HIP_IFEL(!(app_cert = PEM_read_X509AC(fp, NULL, NULL, NULL)),
+            -1, "Could not decode application certificate.\n");
+    HIP_DEBUG("Testing application against certificate at: %s.\n", app_cert_file);
+    fclose(fp);
+
+    /* Look for and get issuer certificate */
+    issuer_cert_file = "cert.pem";
+    HIP_IFEL(!(fp = fopen(issuer_cert_file, "r")),
+            -1, "No issuer cert file given.\n");
+    HIP_IFEL(!(issuercert = PEM_read_X509(fp, NULL, NULL, NULL)),
+            -1, "Could not decode root cert file.\n");
+    HIP_DEBUG("Using issuer certificate at: %s.\n", issuer_cert_file);
+    fclose(fp);
+
+    /* Setup the certificate store, which is passed used in the verification context store */
+    HIP_IFEL(!(store = X509_STORE_new()),
+            -1, "Error setting up the store. Exiting... \n");
+
+    /* Add the issuer certificate into the certificate lookup store. */
+    if(issuercert != NULL) {
+        X509_STORE_add_cert(store, issuercert);
+    }
+
+    /* Setup the store context that is passed to the verify function. */
+    HIP_IFEL(!(verify_ctx = X509_STORE_CTX_new()),
+            -1, "Error setting up the verify context.\n");
+
+    /* Init the store context */
+    HIP_IFEL(!(X509_STORE_CTX_init(verify_ctx, store, NULL, NULL)),
+            -1, "Error initializing the verify context.\n");
+
+    /* Now do the verifying */
+    HIP_IFEL(!X509AC_verify_cert(verify_ctx, app_cert),
+            -1, "Certificate %s did not verify correctly!\n", "attr_cert.pem");
+
+out_err:
+    /* Free memory */
+    X509_STORE_CTX_free(verify_ctx);
+    X509_STORE_free(store);
+    X509AC_free(app_cert);
+
+    return err;
 }
 
 /*
@@ -102,6 +177,7 @@ int signaling_build_param_appinfo(struct hip_common *msg)
     void *contents_start, *p_tmp;
     struct signaling_port_state *port_state = NULL;
     hip_ha_t *entry = NULL;
+    char app_path_buf[PATHBUF_SIZE];
 
     HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)),
                  -1, "failed to retrieve hadb entry");
@@ -110,13 +186,17 @@ int signaling_build_param_appinfo(struct hip_common *msg)
     HIP_DEBUG("Got ports from HADB: src: %d dest %d \n", port_state->src_port, port_state->dest_port);
 
     /* Dynamically lookup application from port information */
-    signaling_netstat_get_application_context(port_state->src_port, port_state->dest_port);
+    HIP_IFEL(0 > signaling_netstat_get_application_path(port_state->src_port, port_state->dest_port, app_path_buf),
+            -1, "Got not path to application. \n");
+
+    /* Verify the application */
+    err = signaling_verify_application(app_path_buf);
 
     /* Contents hardcoded for test
      * TODO: Get this dynamically
      */
-    const char *app_dn = "Mozilla Firefox 3.2.1";
-    const char *app_groups = "browser, client";
+    const char *app_dn      = "Mozilla Firefox 3.2.1";
+    const char *app_groups  = "browser, client";
 
     HIP_ASSERT(msg != NULL);
 
