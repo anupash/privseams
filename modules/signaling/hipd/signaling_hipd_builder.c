@@ -70,11 +70,36 @@ const char *signaling_get_param_field_type_name(const hip_tlv_type_t param_type)
 }
 
 /*
+ * Get the attribute certificate corresponding to the given application binary.
+ */
+static X509AC *signaling_get_application_cert(const char *app_file) {
+    FILE *fp = NULL;
+    char *app_cert_file = NULL;
+    X509AC *app_cert = NULL;
+    int err = 0;
+
+    /* Build path to application certificate */
+    app_cert_file = malloc(strlen(app_file) + 6);
+    memset(app_cert_file, 0, strlen(app_file) + 6);
+    strcat(app_cert_file, app_file);
+    strcat(app_cert_file, ".cert");
+
+    /* Now get the application certificate */
+    HIP_IFEL(!(fp = fopen(app_cert_file, "r")),
+            -1,"Application certificate could not be found at %s.\n", app_cert_file);
+    HIP_IFEL(!(app_cert = PEM_read_X509AC(fp, NULL, NULL, NULL)),
+            -1, "Could not decode application certificate.\n");
+    fclose(fp);
+
+out_err:
+    return app_cert;
+}
+
+/*
  * Argument is a null-terminated string.
  */
 static int signaling_verify_application(const char *app_file) {
     int err = 0;
-    char *app_cert_file;
     const char *issuer_cert_file;
     FILE *fp = NULL;
     /* X509 Stuff */
@@ -83,19 +108,9 @@ static int signaling_verify_application(const char *app_file) {
     X509_STORE *store = NULL;
     X509_STORE_CTX *verify_ctx = NULL;
 
-    /* Build path to application certificate */
-    app_cert_file = malloc(strlen(app_file) + 6);
-    memset(app_cert_file, 0, strlen(app_file) + 6);
-    strcat(app_cert_file, app_file);
-    strcat(app_cert_file, ".cert");
-
-    /* Get the application certificate */
-    HIP_IFEL(!(fp = fopen(app_cert_file, "r")),
-            -1,"Application certificate could not be found at %s.\n", app_cert_file);
-    HIP_IFEL(!(app_cert = PEM_read_X509AC(fp, NULL, NULL, NULL)),
-            -1, "Could not decode application certificate.\n");
-    HIP_DEBUG("Testing application against certificate at: %s.\n", app_cert_file);
-    fclose(fp);
+    /* Get application certificate */
+    HIP_IFEL(!(app_cert = signaling_get_application_cert(app_file)),
+            -1, "No application certificate found for application: %s.\n", app_file);
 
     /* Look for and get issuer certificate */
     issuer_cert_file = "cert.pem";
