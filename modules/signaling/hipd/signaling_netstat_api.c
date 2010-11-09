@@ -66,10 +66,7 @@ int signaling_netstat_get_application_context(uint16_t srcport, uint16_t destpor
     HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
     res = fgets(&readbuf[0], NETSTAT_SIZE_OUTPUT, fp);
     pclose(fp);
-    if(res == NULL) {
-        HIP_DEBUG("Got no output from netstat.\n");
-        goto out_err;
-    }
+    HIP_IFEL(!res, -1, "Got no output from netstat.\n");
 
     // parse output
     scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d/%s",
