@@ -22,7 +22,7 @@ struct signaling_state_connection {
 /* Holds information about the application associated with a connection
  * Strings have to be null terminated. */
 struct signaling_state_application {
-    uint16_t pid;
+    int pid;
     char *path;
     char *application_dn;
     char *issuer_dn;

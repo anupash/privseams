@@ -35,9 +35,8 @@
  * TODO:
  *  - add more checks for right connection (check src and destination addresses)
  *  - add parsing of udp connections
- *  - data structures to handle application context
  */
-int signaling_netstat_get_application_path(uint16_t srcport, uint16_t destport, char *pathbuf) {
+int signaling_netstat_get_application_path(struct signaling_state *ctx) {
     FILE *fp;
     int err = 0, UNUSED scanerr;
     char *res;
@@ -52,7 +51,7 @@ int signaling_netstat_get_application_path(uint16_t srcport, uint16_t destport, 
     char local_addr[NETSTAT_SIZE_ADDR_v6];
     char state[NETSTAT_SIZE_STATE];
     char progname[NETSTAT_SIZE_PROGNAME];
-    int pid = 0;
+    UNUSED int pid = 0;
     UNUSED int local_port = 0, remote_port = 0;
 
     memset(proto, 0, NETSTAT_SIZE_PROTO);
@@ -64,7 +63,7 @@ int signaling_netstat_get_application_path(uint16_t srcport, uint16_t destport, 
 
     // prepare call to netstat
     memset(callbuf, 0, CALLBUF_SIZE);
-    sprintf(callbuf, "netstat -tpnW | grep :%d | grep :%d", srcport, destport);
+    sprintf(callbuf, "netstat -tpnW | grep :%d | grep :%d", ctx->connection.src_port, ctx->connection.dest_port);
 
     // make call to netstat
     memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
@@ -75,17 +74,20 @@ int signaling_netstat_get_application_path(uint16_t srcport, uint16_t destport, 
 
     // parse output
     scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d/%s",
-            proto, unused, unused, local_addr, remote_addr, state, &pid, progname);
-    HIP_DEBUG("Found program %s (%d) on a %s connection from: \n", progname, pid, proto);
+            proto, unused, unused, local_addr, remote_addr, state, &ctx->application.pid, progname);
+    HIP_DEBUG("Found program %s (%d) on a %s connection from: \n", progname, ctx->application.pid, proto);
     HIP_DEBUG("\t from:\t %s\n", local_addr);
     HIP_DEBUG("\t to:\t %s\n", remote_addr);
 
     // determine path to application binary from /proc/{pid}/exe
     memset(symlinkbuf, 0, SYMLINKBUF_SIZE);
-    memset(pathbuf, 0, PATHBUF_SIZE);
-    sprintf(symlinkbuf, "/proc/%i/exe", pid);
-    scanerr = readlink(symlinkbuf, pathbuf, PATHBUF_SIZE);
-    HIP_DEBUG("Found application binary at: %s \n", pathbuf);
+    ctx->application.path = (char *) malloc(PATHBUF_SIZE);
+    memset(ctx->application.path, 0, PATHBUF_SIZE);
+    sprintf(symlinkbuf, "/proc/%i/exe", ctx->application.pid);
+    HIP_IFEL(0 > readlink(symlinkbuf, ctx->application.path, PATHBUF_SIZE),
+            -1, "Failed to read symlink to application binary\n");
+
+    HIP_DEBUG("Found application binary at: %s \n", ctx->application.path);
 
 out_err:
 

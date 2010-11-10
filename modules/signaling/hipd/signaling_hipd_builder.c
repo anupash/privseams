@@ -100,7 +100,7 @@ out_err:
 /*
  * Argument is a null-terminated string.
  */
-static int signaling_verify_application(const char *app_file) {
+static int signaling_verify_application(struct signaling_state *ctx) {
     int err = 0;
     const char *issuer_cert_file;
     FILE *fp = NULL;
@@ -111,8 +111,8 @@ static int signaling_verify_application(const char *app_file) {
     X509_STORE_CTX *verify_ctx = NULL;
 
     /* Get application certificate */
-    HIP_IFEL(!(app_cert = signaling_get_application_cert(app_file)),
-            -1, "No application certificate found for application: %s.\n", app_file);
+    HIP_IFEL(!(app_cert = signaling_get_application_cert(ctx->application.path)),
+            -1, "No application certificate found for application: %s.\n", ctx->application.path);
 
     /* Look for and get issuer certificate */
     issuer_cert_file = "cert.pem";
@@ -157,14 +157,12 @@ out_err:
 /*
  * Fill in the context information of an application.
  */
-static int signaling_get_application_context(const char *app_file) {
+static int signaling_get_application_context(struct signaling_state *ctx) {
     int err = 0;
     X509AC *ac = NULL;
     X509_NAME *name;
-    char issuername[ONELINELEN];
-    char holdername[ONELINELEN];
 
-    HIP_IFEL(!(ac = signaling_get_application_cert(app_file)),
+    HIP_IFEL(!(ac = signaling_get_application_cert(ctx->application.path)),
             -1, "Could not open application certificate.");
 
     /* Dump certificate */
@@ -180,7 +178,8 @@ static int signaling_get_application_context(const char *app_file) {
             HIP_DEBUG("Error getting AC issuer name, possibly not a X500 name");
         else
         {
-            X509_NAME_oneline(name,issuername,ONELINELEN);
+            ctx->application.issuer_dn = (char *) malloc(ONELINELEN);
+            X509_NAME_oneline(name,ctx->application.issuer_dn,ONELINELEN);
         }
 
     }
@@ -191,13 +190,14 @@ static int signaling_get_application_context(const char *app_file) {
         if (!name) {
             HIP_DEBUG("Error getting AC holder name, possibly not a X500 name");
         } else {
-            X509_NAME_oneline(name,holdername,ONELINELEN);
+            ctx->application.application_dn = (char *) malloc(ONELINELEN);
+            X509_NAME_oneline(name,ctx->application.application_dn,ONELINELEN);
         }
     }
 
-    HIP_DEBUG("Found following context for application: %s \n", app_file);
-    HIP_DEBUG("\tIssuer name: %s\n", issuername);
-    HIP_DEBUG("\tHolder name: %s\n", holdername);
+    HIP_DEBUG("Found following context for application: %s \n", ctx->application.path);
+    HIP_DEBUG("\tIssuer name: %s\n", ctx->application.application_dn);
+    HIP_DEBUG("\tHolder name: %s\n", ctx->application.issuer_dn);
 
 out_err:
     return err;
@@ -244,31 +244,24 @@ int signaling_build_param_appinfo(struct hip_common *msg)
     void *contents_start, *p_tmp;
     struct signaling_state *sig_state = NULL;
     hip_ha_t *entry = NULL;
-    char app_path_buf[PATHBUF_SIZE];
 
     HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)),
-                 -1, "failed to retrieve hadb entry");
+                 -1, "failed to retrieve hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_state")),
-                 -1, "failed to retrieve state for signaling ports\n");
-    HIP_DEBUG("Got ports from HADB: src: %d dest %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
+                 -1, "failed to retrieve state for signaling\n");
+    HIP_DEBUG("Got state from HADB: ports src: %d dest %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
 
     /* Dynamically lookup application from port information */
-    HIP_IFEL(0 > signaling_netstat_get_application_path(sig_state->connection.src_port, sig_state->connection.dest_port, app_path_buf),
-            -1, "Got not path to application. \n");
+    HIP_IFEL(0 > signaling_netstat_get_application_path(sig_state),
+            -1, "Got no path to application. \n");
 
     /* Verify the application */
-    HIP_IFEL(0 > signaling_verify_application(app_path_buf),
-            -1, "Could not verify certificate of application: %s.\n", app_path_buf);
+    HIP_IFEL(0 > signaling_verify_application(sig_state),
+            -1, "Could not verify certificate of application: %s.\n", sig_state->application.path);
 
     /* Get the application context. */
-    HIP_IFEL(0 > signaling_get_application_context(app_path_buf),
-            -1, "Could not build application context for application: %s.\n", app_path_buf);
-
-    /* Contents hardcoded for test
-     * TODO: Get this dynamically
-     */
-    const char *app_dn      = "Mozilla Firefox 3.2.1";
-    const char *app_groups  = "browser, client";
+    HIP_IFEL(0 > signaling_get_application_context(sig_state),
+            -1, "Could not build application context for application: %s.\n", sig_state->application.path);
 
     HIP_ASSERT(msg != NULL);
 
@@ -276,10 +269,9 @@ int signaling_build_param_appinfo(struct hip_common *msg)
     hip_set_param_type(&appinfo, HIP_PARAM_SIGNALING_APPINFO);
 
     /* Calculate the length */
-    length_contents = strlen(app_dn) + strlen(app_groups);
-    if(strlen(app_dn) > 0)
-    	length_contents += 4;
-    if(strlen(app_groups) > 0)
+    if(sig_state->application.application_dn != NULL)
+        length_contents = strlen(sig_state->application.application_dn);
+    if(strlen(sig_state->application.application_dn) > 0)
     	length_contents += 4;
 
     /* Set length */
@@ -287,8 +279,7 @@ int signaling_build_param_appinfo(struct hip_common *msg)
 
 	/* Build the contents (a list of tlv structs) */
     contents_start = p_tmp = malloc(length_contents);
-    p_tmp = signaling_build_param_append_tlv(p_tmp, SIGNALING_APPINFO_APP_DN, app_dn, strlen(app_dn));
-    p_tmp = signaling_build_param_append_tlv(p_tmp, SIGNALING_APPINFO_GROUPS, app_groups, strlen(app_groups));
+    p_tmp = signaling_build_param_append_tlv(p_tmp, SIGNALING_APPINFO_APP_DN, sig_state->application.application_dn, strlen(sig_state->application.application_dn));
     err = hip_build_generic_param(msg, &appinfo, sizeof(struct hip_tlv_common), contents_start);
 
 out_err:
