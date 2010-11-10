@@ -98,12 +98,16 @@ out_err:
 /**
  * This hashes a file 'in_file' and returns the digest in 'digest_buffer'.
  */
-static void signaling_hash_file(const char *in_file, unsigned char *digest_buffer) {
+static int signaling_hash_file(const char *in_file, unsigned char *digest_buffer) {
     SHA_CTX context;
     int fd;
     int i;
     unsigned char read_buffer[1024];
     FILE *f;
+    int err = 0;
+
+    HIP_IFEL(!in_file, -1, "No path to application given (NULL).\n");
+    HIP_IFEL(!digest_buffer, -1, "Output buffer is NULL.\n");
 
     HIP_DEBUG("Hashing file: %s. \n", in_file);
 
@@ -118,6 +122,9 @@ static void signaling_hash_file(const char *in_file, unsigned char *digest_buffe
     }
     SHA1_Final(&(digest_buffer[0]),&context);
     fclose(f);
+
+out_err:
+    return err;
 }
 
 
@@ -143,7 +150,8 @@ static int signaling_verify_application_hash(const char *file, X509AC *ac) {
 
     // Get the hash of file into a ASN1 Bitstring
     // TODO: We need to choose the hash algorithm equal to the one in the certificate?
-    signaling_hash_file(file, md);
+    HIP_IFEL(0 > signaling_hash_file(file, md),
+            -1, "Could not compute hash of binary.\n");
     hash = ASN1_BIT_STRING_new();
     ASN1_BIT_STRING_set(hash,md,SHA_DIGEST_LENGTH);
 

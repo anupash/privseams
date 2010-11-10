@@ -24,12 +24,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * hipd messages to the hipfw and additional parameters for BEX and
- * UPDATE messages.
- *
- * @brief Messaging with hipfw and other HIP instances
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author Henrik Ziegeldorf <henrik.ziegeldorf@rwth-aachen.de>
  *
  */
 
@@ -105,7 +100,7 @@ int signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_state,
 		info = (char *)malloc(field_length+1);
 		memset(info, 0, field_length+1);
 		memcpy(info, hip_get_param_contents_direct(tlv), field_length);
-		HIP_DEBUG("SIGNALING(%i/%i): Field %s: %s.\n", ha_state, packet_type, signaling_get_param_field_type_name(hip_get_param_type(tlv)), info);
+		HIP_DEBUG("Found appinfo field %s: %s.\n", ha_state, packet_type, signaling_get_param_field_type_name(hip_get_param_type(tlv)), info);
 		tlv = signaling_get_param_next_tlv(appinfo, tlv);
 	}
 
@@ -113,21 +108,20 @@ out:
 	return err;
 }
 
-int signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg), -1, "Building of APP Name Param for I2 failed\n");
-    printf("SIGNALING(%i/%i):::: Successfully included Appinfo into I2 Packet.\n", ha_state, packet_type);
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg), -1, "Building of param appinfo for I2 failed.\n");
+    printf("Successfully included param appinfo into I2 Packet.\n");
 out_err:
 	return err;
 }
 
-int signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-	HIP_DEBUG("SIGNALING:: Adding r2 information. \n");
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg), -1, "Building of APP Name Param for R2 failed\n");
-    printf("SIGNALING(%i/%i):::: Successfully included Appinfo into R2 Packet.\n", ha_state, packet_type);
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg), -1, "Building of param appinfo for R2 failed.\n");
+    printf("Successfully included param appinfo into R2 Packet.\n");
 
 out_err:
 	return err;

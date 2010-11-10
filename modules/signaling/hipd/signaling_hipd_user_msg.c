@@ -68,9 +68,9 @@ int signaling_handle_bex_ports(struct hip_common *msg,
         memcpy(&sig_state->connection.src_hit, our_hit, sizeof(hip_hit_t));
         memcpy(&sig_state->connection.dest_hit, peer_hit, sizeof(hip_hit_t));
         HIP_DEBUG("Saved connection information for I2.\n");
-        HIP_DEBUG_HIT("src_hit", &sig_state->connection.src_hit);
-        HIP_DEBUG_HIT("dest_hit", &sig_state->connection.dest_hit);
-        HIP_DEBUG("src port: %d dest port: %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
+        HIP_DEBUG_HIT("\tsrc_hit", &sig_state->connection.src_hit);
+        HIP_DEBUG_HIT("\tdest_hit", &sig_state->connection.dest_hit);
+        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
     }
 
 out_err:
