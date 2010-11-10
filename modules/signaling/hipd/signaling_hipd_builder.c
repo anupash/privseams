@@ -78,6 +78,8 @@ static X509AC *signaling_get_application_cert(const char *app_file) {
     X509AC *app_cert = NULL;
     int err = 0;
 
+    HIP_IFEL(app_file == NULL, -1, "Got no path to application (NULL).\n");
+
     /* Build path to application certificate */
     app_cert_file = malloc(strlen(app_file) + 6);
     memset(app_cert_file, 0, strlen(app_file) + 6);
