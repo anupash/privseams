@@ -19,8 +19,24 @@ struct signaling_state_connection {
     uint16_t dest_port;
 };
 
+/* Holds information about the application associated with a connection
+ * Strings have to be null terminated. */
+struct signaling_state_application {
+    uint16_t pid;
+    char *path;
+    char *application_dn;
+    char *issuer_dn;
+    char *requirements;
+    char *groups;
+};
+
+/*
+ * Holds all the information about the binding between a application and the connection.
+ * Contents are filled in in different places.
+ */
 struct signaling_state {
     struct signaling_state_connection connection;
+    struct signaling_state_application application;
 };
 
 int signaling_init_state(struct modular_state *state);
