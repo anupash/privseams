@@ -19,8 +19,10 @@ The following directories contain code imported from other projects
 and have their own licensing conditions (GPL):
 
   * firewall/user_ipsec_esp.c
-  * tools/hipdnsproxy/DNS
   * lib/tool
+
+(Note that tools/hipdnsproxy/DNS is from the pydns project and is covered 
+by the standard Python License)
 
 MIT (Expat) License
 ===================
