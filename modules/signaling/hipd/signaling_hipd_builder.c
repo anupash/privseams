@@ -24,14 +24,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * @brief adds parameters according to the defined parameter structure to a
- *        packet
- *
- * @author Rene Hummen <rene.hummen@rwth-aachen.de>
+ * @author Henrik Ziegeldorf <henrik.ziegeldorf@rwth-aachen.de>
  *
  */
 
 #include <string.h>
+#include <unistd.h>
 
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
@@ -97,6 +95,77 @@ out_err:
     return app_cert;
 }
 
+/**
+ * This hashes a file 'in_file' and returns the digest in 'digest_buffer'.
+ */
+static void signaling_hash_file(const char *in_file, unsigned char *digest_buffer) {
+    SHA_CTX context;
+    int fd;
+    int i;
+    unsigned char read_buffer[1024];
+    FILE *f;
+
+    HIP_DEBUG("Hashing file: %s. \n", in_file);
+
+    f = fopen(in_file,"r");
+    fd=fileno(f);
+    SHA1_Init(&context);
+    for (;;) {
+        i = read(fd,read_buffer,1024);
+        if(i <= 0)
+            break;
+        SHA1_Update(&context,read_buffer,(unsigned long)i);
+    }
+    SHA1_Final(&(digest_buffer[0]),&context);
+    fclose(f);
+}
+
+
+UNUSED static void hex_print(unsigned char *buf, int len) {
+    int i;
+    for (i = 0; i < len; i++)
+        printf("%02x", buf[i]);
+    printf("\n");
+}
+
+static int signaling_verify_application_hash(const char *file, X509AC *ac) {
+    int err = 0;
+    int res = 0;
+    unsigned char md[SHA_DIGEST_LENGTH];
+    ASN1_BIT_STRING *hash;
+
+    HIP_IFEL(!file, -1, "No path to application given.");
+    HIP_IFEL(!ac, -1, "No attribute certificate given.");
+
+    // Check if hash is present in certificate
+    HIP_IFEL(ac->info->holder->objectDigestInfo == NULL,
+            -1, "Hash could not be found in attribute certificate.");
+
+    // Get the hash of file into a ASN1 Bitstring
+    // TODO: We need to choose the hash algorithm equal to the one in the certificate?
+    signaling_hash_file(file, md);
+    hash = ASN1_BIT_STRING_new();
+    ASN1_BIT_STRING_set(hash,md,SHA_DIGEST_LENGTH);
+
+    // Compare the hashes
+    // TODO: ASN1_BIT_STRING_cmp compares string types too, is this ok here?
+    res = ASN1_STRING_cmp(hash, ac->info->holder->objectDigestInfo->digest);
+    if(res != 0) {
+        HIP_DEBUG("Hashes differ:\n");
+        HIP_DEBUG("\thash in cert:\t");
+        hex_print(ac->info->holder->objectDigestInfo->digest->data,
+                ac->info->holder->objectDigestInfo->digest->length);
+        HIP_DEBUG("\thash of app:\t");
+        hex_print(hash->data, hash->length);
+        err = -1;
+    } else {
+        HIP_DEBUG("Hash of file %s matches the one in the certificate.\n", file);
+    }
+
+out_err:
+    return err;
+}
+
 /*
  * Argument is a null-terminated string.
  */
@@ -123,6 +192,10 @@ static int signaling_verify_application(struct signaling_state *ctx) {
     HIP_DEBUG("Using issuer certificate at: %s.\n", issuer_cert_file);
     fclose(fp);
 
+    /* Before we do any verifying, check that hashes match */
+    HIP_IFEL(0 > signaling_verify_application_hash(ctx->application.path, app_cert),
+            -1, "Hash of application doesn't match hash in certificate.\n");
+
     /* Setup the certificate store, which is passed used in the verification context store */
     HIP_IFEL(!(store = X509_STORE_new()),
             -1, "Error setting up the store. Exiting... \n");
@@ -144,11 +217,12 @@ static int signaling_verify_application(struct signaling_state *ctx) {
     HIP_IFEL(!X509AC_verify_cert(verify_ctx, app_cert),
             -1, "Certificate %s did not verify correctly!\n", "attr_cert.pem");
 
-out_err:
     /* Free memory */
     X509_STORE_CTX_free(verify_ctx);
     X509_STORE_free(store);
     X509AC_free(app_cert);
+
+out_err:
 
     return err;
 }
