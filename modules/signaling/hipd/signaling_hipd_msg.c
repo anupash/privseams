@@ -40,6 +40,8 @@
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
 
+#include "hipd/hadb.h"
+
 #include "modules/signaling/hipd/signaling_hipd_builder.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "signaling_hipd_msg.h"
@@ -96,8 +98,20 @@ out_err:
 int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg), -1, "Building of param appinfo for I2 failed.\n");
-    printf("Successfully included param appinfo into I2 Packet.\n");
+    hip_ha_t *entry = NULL;
+    struct signaling_state *sig_state;
+
+    /* Get the global state */
+    HIP_IFEL(!(entry = hip_hadb_find_byhits(&ctx->output_msg->hits, &ctx->output_msg->hitr)),
+                 -1, "Failed to retrieve hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_state")),
+                 -1, "failed to retrieve state for signaling\n");
+    // HIP_DEBUG("Got state from HADB: ports src: %d dest %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
+
+    HIP_IFEL(signaling_build_param_appinfo(ctx, sig_state),
+            -1, "Building of param appinfo for I2 failed.\n");
+    HIP_DEBUG("Successfully included param appinfo into I2 Packet.\n");
+
 out_err:
 	return err;
 }
@@ -105,8 +119,39 @@ out_err:
 int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg), -1, "Building of param appinfo for R2 failed.\n");
-    printf("Successfully included param appinfo into R2 Packet.\n");
+	const struct signaling_param_appinfo *param;
+	uint16_t src_port = 0, dest_port = 0;
+    hip_ha_t *entry = NULL;
+    struct signaling_state *sig_state;
+
+	/* Port information is included in the I2 (ctx->input_msg). Add it to global state.
+	 * Note: This could be done in another function but to do it here saves one lookup in hadb. */
+
+    /* Get the global state */
+    HIP_IFEL(!(entry = hip_hadb_find_byhits(&ctx->output_msg->hits, &ctx->output_msg->hitr)),
+                 -1, "Failed to retrieve hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_state")),
+                 -1, "failed to retrieve state for signaling\n");
+
+    /* If we got some state, save the ports and hits to it */
+    param = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO);
+    if(param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
+        dest_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
+        src_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
+        sig_state->connection.src_port = src_port;
+        sig_state->connection.dest_port = dest_port;
+        memcpy(&sig_state->connection.src_hit, &ctx->output_msg->hits, sizeof(hip_hit_t));
+        memcpy(&sig_state->connection.dest_hit, &ctx->output_msg->hitr, sizeof(hip_hit_t));
+        HIP_DEBUG("Saved connection information for R2.\n");
+        HIP_DEBUG_HIT("\tsrc_hit", &sig_state->connection.src_hit);
+        HIP_DEBUG_HIT("\tdest_hit", &sig_state->connection.dest_hit);
+        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
+    }
+
+    /* Now we can build the param into the R2 packet */
+    HIP_IFEL(signaling_build_param_appinfo(ctx, sig_state),
+            -1, "Building of param appinfo for R2 failed.\n");
+    HIP_DEBUG("Successfully included param appinfo into R2 Packet.\n");
 
 out_err:
 	return err;

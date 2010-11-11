@@ -37,8 +37,6 @@
 #include "lib/core/common.h"
 #include "lib/core/ife.h"
 
-#include "hipd/hadb.h"
-
 #include <x509ac.h>
 #include <x509attr.h>
 #include <x509ac-supp.h>
@@ -51,7 +49,6 @@
 #include "signaling_hipd_builder.h"
 #include "signaling_netstat_api.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
-#include "modules/signaling/hipd/signaling_state.h"
 
 /*
  * Returns the name of an application information parameter field.
@@ -378,26 +375,20 @@ out_err:
  * @param length the length of the info
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_appinfo(struct hip_common *msg)
+int signaling_build_param_appinfo(struct hip_packet_context *ctx, struct signaling_state *sig_state)
 {
     struct signaling_param_appinfo *appinfo;
     int err = 0;
     int length_contents = 0;
-    struct signaling_state *sig_state = NULL;
-    hip_ha_t *entry = NULL;
+    hip_common_t *msg = ctx->output_msg;
 
     /* Sanity checks */
     HIP_IFEL(msg == NULL,
             -1, "Got no msg context. (msg == NULL)\n");
+    HIP_IFEL(sig_state == NULL,
+            -1, "Got no context to built the parameter from.\n");
 
     /* BUILD THE APPLICATION CONTEXT */
-
-    /* Get ports from globale state */
-    HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)),
-                 -1, "failed to retrieve hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_state")),
-                 -1, "failed to retrieve state for signaling\n");
-    HIP_DEBUG("Got state from HADB: ports src: %d dest %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
 
     /* Dynamically lookup application from port information */
     HIP_IFEL(0 > signaling_netstat_get_application_path(sig_state),
