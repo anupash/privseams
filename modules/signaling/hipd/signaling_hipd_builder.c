@@ -51,20 +51,6 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 /*
- * Returns the name of an application information parameter field.
- */
-const char *signaling_get_param_field_type_name(const hip_tlv_type_t param_type)
-{
-    switch (param_type) {
-    case SIGNALING_APPINFO_APP_DN: 		return "Application Distinguished Name";
-    case SIGNALING_APPINFO_ISSUER_DN:	return "Issuer Distinguished NAme";
-    case SIGNALING_APPINFO_REQS:		return "Application Requirements";
-    case SIGNALING_APPINFO_GROUPS:		return "Application Groups";
-    }
-    return "UNDEFINED Application information";
-}
-
-/*
  * Get the attribute certificate corresponding to the given application binary.
  */
 static X509AC *signaling_get_application_cert(const char *app_file) {
@@ -125,7 +111,7 @@ out_err:
 }
 
 
-UNUSED static void hex_print(unsigned char *buf, int len) {
+static void hex_print(unsigned char *buf, int len) {
     int i;
     for (i = 0; i < len; i++)
         printf("%02x", buf[i]);
@@ -306,7 +292,7 @@ UNUSED static void *signaling_build_param_append_tlv(void *start, hip_tlv_type_t
 	return start;
 }
 
-static int signaling_param_appinfo_get_content_lengths(struct signaling_state *ctx) {
+static int signaling_param_appinfo_get_content_length(struct signaling_state *ctx) {
     struct signaling_state_application *appctx;
     int res = 0;
 
@@ -405,7 +391,7 @@ int signaling_build_param_appinfo(struct hip_packet_context *ctx, struct signali
     /* BUILD THE PARAMETER */
 
     /* Allocate some memory for the param */
-    length_contents = signaling_param_appinfo_get_content_lengths(sig_state);
+    length_contents = signaling_param_appinfo_get_content_length(sig_state);
     appinfo = (struct signaling_param_appinfo *) malloc(sizeof(hip_tlv_common_t) + length_contents);
 
     /* Set type and lenght */

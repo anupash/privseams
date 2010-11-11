@@ -46,36 +46,6 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "signaling_hipd_msg.h"
 
-
-
-/*
- * Get the next tlv from a appinfo parameter
- */
-UNUSED static const struct hip_tlv_common *signaling_get_param_next_tlv(const void *param, const void *last_tlv) {
-	const struct hip_tlv_common *next_tlv = NULL;
-	const uint8_t *pos = (const uint8_t *) last_tlv;
-
-    if (!param) {
-        HIP_ERROR("No contents given (null)\n");
-        goto out;
-    }
-
-	if(last_tlv == NULL) {
-		pos = hip_get_param_contents_direct(param);
-	} else {
-		pos += sizeof(struct hip_tlv_common) + hip_get_param_contents_len(last_tlv);
-	}
-
-	next_tlv = (const struct hip_tlv_common *) pos;
-
-	/* Check we are still inside the message */
-	if(((const char *) next_tlv) - ((const char *) hip_get_param_contents_direct(param)) >= hip_get_param_contents_len(param))
-		next_tlv = NULL;
-
-out:
-	return next_tlv;
-}
-
 /*
  * Print all application information included in the packet.
  */
