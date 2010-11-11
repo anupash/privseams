@@ -268,30 +268,6 @@ out_err:
     return err;
 }
 
-/*
- * Appends a tlv struct at the location given by 'start'.
- */
-UNUSED static void *signaling_build_param_append_tlv(void *start, hip_tlv_type_t type, const void *contents, hip_tlv_len_t length) {
-	const void *src = NULL;
-	uint8_t *dst = NULL;
-	struct hip_tlv_common *tlv = start;
-
-	if(length > 0) {
-		hip_set_param_type(tlv, type);
-		hip_set_param_contents_len(tlv, length);
-
-		src = contents;
-		dst = hip_get_param_contents_direct_readwrite(tlv);
-		memcpy(dst, src, length);
-
-		start = (uint8_t *)start + sizeof(struct hip_tlv_common) + length;
-	} else {
-		HIP_DEBUG("Passed zero-length argument of type %d... ignoring!", type);
-	}
-
-	return start;
-}
-
 static int signaling_param_appinfo_get_content_length(struct signaling_state *ctx) {
     struct signaling_state_application *appctx;
     int res = 0;
