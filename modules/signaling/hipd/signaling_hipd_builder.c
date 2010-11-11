@@ -343,8 +343,8 @@ static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo
             -1, "No parameter or application context given.\n");
 
     /* Set ports */
-    appinfo->src_port = ctx->connection.src_port;
-    appinfo->dest_port = ctx->connection.dest_port;
+    appinfo->src_port = htons(ctx->connection.src_port);
+    appinfo->dest_port = htons(ctx->connection.dest_port);
 
     /* Set length fields */
     appinfo->app_dn_length = (ctx->application.application_dn != NULL ? htons(strlen(ctx->application.application_dn)) : 0);
@@ -424,6 +424,9 @@ int signaling_build_param_appinfo(struct hip_common *msg)
 	/* Build the parameter contents */
     HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, sig_state),
             -1, "Failed to build appinfo parameter.\n");
+
+    /* Dump it */
+    signaling_param_appinfo_print(appinfo);
 
     /* Insert parameter into the message */
     HIP_IFEL(0 > hip_build_param(msg, appinfo),
