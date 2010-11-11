@@ -50,12 +50,54 @@
 #define SIGNALING_APPINFO_REQS 3
 #define SIGNALING_APPINFO_GROUPS 4
 
+/*
+  Structure for parameter
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |             Type              |             Length            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |         SRC PORT              |          DEST PORT            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |    APP-DN  Length             |     ISS-DN  Length            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |    REQ     Length             |     GRP     Length            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |    Distinguished Name of Application                          /
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     /    ...        |    Distinguished Name of Issuer               /
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     /    ...                                        |               /
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     /    Requirement Information                                    /
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     /  ....                         | Group Information             /
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |               |             PADDING                           |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+*/
+
+struct signaling_param_appinfo {
+    hip_tlv_type_t type;
+    hip_tlv_len_t  length;
+    uint16_t src_port;
+    uint16_t dest_port;
+    hip_tlv_len_t app_dn_length;
+    hip_tlv_len_t iss_dn_length;
+    hip_tlv_len_t req_length;
+    hip_tlv_len_t grp_length;
+};
+
 struct signaling_param_portinfo {
     hip_tlv_type_t type;
     hip_tlv_len_t  length;
     uint16_t srcport;
     uint16_t destport;
 } __attribute__ ((packed));
+
+void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo);
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 

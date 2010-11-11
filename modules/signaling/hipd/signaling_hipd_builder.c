@@ -288,7 +288,7 @@ out_err:
 /*
  * Appends a tlv struct at the location given by 'start'.
  */
-static void *signaling_build_param_append_tlv(void *start, hip_tlv_type_t type, const void *contents, hip_tlv_len_t length) {
+UNUSED static void *signaling_build_param_append_tlv(void *start, hip_tlv_type_t type, const void *contents, hip_tlv_len_t length) {
 	const void *src = NULL;
 	uint8_t *dst = NULL;
 	struct hip_tlv_common *tlv = start;
@@ -309,8 +309,68 @@ static void *signaling_build_param_append_tlv(void *start, hip_tlv_type_t type, 
 	return start;
 }
 
+static int signaling_param_appinfo_get_content_lengths(struct signaling_state *ctx) {
+    struct signaling_state_application *appctx;
+    int res = 0;
+
+    if(ctx == NULL) {
+        return -1;
+    }
+
+    appctx = &ctx->application;
+
+    /* Length of length fields = 8 (4 x 2 Bytes) */
+    res += 8;
+
+    /* Length of port information = 4 (2 x 2 Bytes) */
+    res += 4;
+
+    /* Length of variable input */
+    res += (appctx->application_dn != NULL ? strlen(appctx->application_dn) : 0);
+    res += (appctx->issuer_dn != NULL ? strlen(appctx->issuer_dn) : 0);
+    res += (appctx->requirements != NULL ? strlen(appctx->requirements) : 0);
+    res += (appctx->groups != NULL ? strlen(appctx->groups) : 0);
+
+    return res;
+}
+
+static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo *appinfo, struct signaling_state *ctx) {
+    int err = 0;
+    uint8_t *p_tmp;
+
+    /* Sanity checks */
+    HIP_IFEL((appinfo == NULL || ctx == NULL),
+            -1, "No parameter or application context given.\n");
+
+    /* Set ports */
+    appinfo->src_port = ctx->connection.src_port;
+    appinfo->dest_port = ctx->connection.dest_port;
+
+    /* Set length fields */
+    appinfo->app_dn_length = (ctx->application.application_dn != NULL ? htons(strlen(ctx->application.application_dn)) : 0);
+    appinfo->iss_dn_length = (ctx->application.issuer_dn != NULL ? htons(strlen(ctx->application.issuer_dn)) : 0);
+    appinfo->req_length = (ctx->application.requirements != NULL ? htons(strlen(ctx->application.requirements)) : 0);
+    appinfo->grp_length = (ctx->application.groups != NULL ? htons(strlen(ctx->application.groups)) : 0);
+
+    /* Set the contents
+     * We dont need to check for NULL pointers since length is then set to 0 */
+    p_tmp = (uint8_t *) appinfo + sizeof(struct signaling_param_appinfo);
+    memcpy(p_tmp, ctx->application.application_dn, ntohs(appinfo->app_dn_length));
+    p_tmp += ntohs(appinfo->app_dn_length);
+    memcpy(p_tmp, ctx->application.issuer_dn, ntohs(appinfo->iss_dn_length));
+    p_tmp += ntohs(appinfo->iss_dn_length);
+    memcpy(p_tmp, ctx->application.requirements, ntohs(appinfo->req_length));
+    p_tmp += ntohs(appinfo->req_length);
+    memcpy(p_tmp, ctx->application.groups, ntohs(appinfo->grp_length));
+
+out_err:
+    return err;
+}
+
 /**
  * Build a SIGNALING APP INFO (= Name, Developer, Serial) parameter
+ * TODO: Define and check for mandatory fields.
+ *
  *
  * @param msg the message
  * @param type the info type
@@ -320,13 +380,19 @@ static void *signaling_build_param_append_tlv(void *start, hip_tlv_type_t type, 
  */
 int signaling_build_param_appinfo(struct hip_common *msg)
 {
-    struct hip_tlv_common appinfo;
+    struct signaling_param_appinfo *appinfo;
     int err = 0;
     int length_contents = 0;
-    void *contents_start, *p_tmp;
     struct signaling_state *sig_state = NULL;
     hip_ha_t *entry = NULL;
 
+    /* Sanity checks */
+    HIP_IFEL(msg == NULL,
+            -1, "Got no msg context. (msg == NULL)\n");
+
+    /* BUILD THE APPLICATION CONTEXT */
+
+    /* Get ports from globale state */
     HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)),
                  -1, "failed to retrieve hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_state")),
@@ -341,28 +407,27 @@ int signaling_build_param_appinfo(struct hip_common *msg)
     HIP_IFEL(0 > signaling_verify_application(sig_state),
             -1, "Could not verify certificate of application: %s.\n", sig_state->application.path);
 
-    /* Get the application context. */
+    /* Build the application context. */
     HIP_IFEL(0 > signaling_get_application_context(sig_state),
             -1, "Could not build application context for application: %s.\n", sig_state->application.path);
 
-    HIP_ASSERT(msg != NULL);
+    /* BUILD THE PARAMETER */
 
-    /* Set type */
-    hip_set_param_type(&appinfo, HIP_PARAM_SIGNALING_APPINFO);
+    /* Allocate some memory for the param */
+    length_contents = signaling_param_appinfo_get_content_lengths(sig_state);
+    appinfo = (struct signaling_param_appinfo *) malloc(sizeof(hip_tlv_common_t) + length_contents);
 
-    /* Calculate the length */
-    if(sig_state->application.application_dn != NULL)
-        length_contents = strlen(sig_state->application.application_dn);
-    if(strlen(sig_state->application.application_dn) > 0)
-    	length_contents += 4;
+    /* Set type and lenght */
+    hip_set_param_type((hip_tlv_common_t *) appinfo, HIP_PARAM_SIGNALING_APPINFO);
+    hip_set_param_contents_len((hip_tlv_common_t *) appinfo, length_contents);
 
-    /* Set length */
-    hip_set_param_contents_len(&appinfo, length_contents);
+	/* Build the parameter contents */
+    HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, sig_state),
+            -1, "Failed to build appinfo parameter.\n");
 
-	/* Build the contents (a list of tlv structs) */
-    contents_start = p_tmp = malloc(length_contents);
-    p_tmp = signaling_build_param_append_tlv(p_tmp, SIGNALING_APPINFO_APP_DN, sig_state->application.application_dn, strlen(sig_state->application.application_dn));
-    err = hip_build_generic_param(msg, &appinfo, sizeof(struct hip_tlv_common), contents_start);
+    /* Insert parameter into the message */
+    HIP_IFEL(0 > hip_build_param(msg, appinfo),
+            -1, "Failed to append appinfo parameter to message.\n");
 
 out_err:
     return err;

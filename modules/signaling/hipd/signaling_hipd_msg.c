@@ -49,7 +49,7 @@
 /*
  * Get the next tlv from a appinfo parameter
  */
-static const struct hip_tlv_common *signaling_get_param_next_tlv(const void *param, const void *last_tlv) {
+UNUSED static const struct hip_tlv_common *signaling_get_param_next_tlv(const void *param, const void *last_tlv) {
 	const struct hip_tlv_common *next_tlv = NULL;
 	const uint8_t *pos = (const uint8_t *) last_tlv;
 
@@ -77,34 +77,19 @@ out:
 /*
  * Print all application information included in the packet.
  */
-int signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_handle_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = -1;
-	int field_length;
-	char *info;
-	const struct hip_tlv_common *appinfo = NULL;
-	const struct hip_tlv_common *tlv = NULL;
+	const struct signaling_param_appinfo *appinfo = NULL;
 
 	/* Get the parameter */
-	appinfo = (const struct hip_tlv_common *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO);
-	if(appinfo == NULL) {
-		HIP_DEBUG("No parameter of type %d found.\n", HIP_PARAM_SIGNALING_APPINFO);
-		goto out;
-	}
+	HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
+	        -1, "No application info parameter found in the message.\n");
 
-	/* Iterate over the contents */
-	tlv = signaling_get_param_next_tlv(appinfo, tlv);
-	while(tlv != NULL) {
-		field_length = hip_get_param_contents_len(tlv);
-		/* Append string terminator to be sure...*/
-		info = (char *)malloc(field_length+1);
-		memset(info, 0, field_length+1);
-		memcpy(info, hip_get_param_contents_direct(tlv), field_length);
-		HIP_DEBUG("Found appinfo field %s: %s.\n", ha_state, packet_type, signaling_get_param_field_type_name(hip_get_param_type(tlv)), info);
-		tlv = signaling_get_param_next_tlv(appinfo, tlv);
-	}
+	/* Print out contents */
+	signaling_param_appinfo_print(appinfo);
 
-out:
+out_err:
 	return err;
 }
 
