@@ -74,10 +74,8 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
     if (fb) {
         off_t file_size = 0;
 
-        if (fb->ma.start) {
-            free(fb->ma.start);
-            fb->ma.start = NULL;
-        }
+        free(fb->ma.start);
+        fb->ma.start = NULL;
 
         /* First, we try to determine the current file size for the new buffer size.
          * If that fails (it does, e.g., for proc files), we just increase the
@@ -192,11 +190,9 @@ void hip_fb_delete(struct hip_file_buffer *const fb)
             close(fb->fd);
             fb->fd = -1;
         }
-        if (fb->ma.start) {
-            free(fb->ma.start);
-            fb->ma.start    = NULL;
-            fb->ma.end      = NULL;
-        }
+        free(fb->ma.start);
+        fb->ma.start    = NULL;
+        fb->ma.end      = NULL;
     }
 }
 

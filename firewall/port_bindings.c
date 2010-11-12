@@ -117,10 +117,8 @@ static int init_cache(void)
  */
 static void uninit_cache(void)
 {
-    if (cache) {
-        free(cache);
-        cache = NULL;
-    }
+    free(cache);
+    cache = NULL;
 }
 
 /**
