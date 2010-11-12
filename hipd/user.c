@@ -67,7 +67,7 @@
 #include "lib/core/linkedlist.h"
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
-#include "lib/modularization/lmod.h"
+#include "lib/core/modularization.h"
 #include "lib/tool/nlink.h"
 #include "config.h"
 #include "accessor.h"

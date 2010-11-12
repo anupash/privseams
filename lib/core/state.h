@@ -38,9 +38,9 @@
 #include <sys/types.h>
 
 #include "hipd/cookie.h"
-#include "lib/modularization/lmod.h"
 #include "config.h"
 #include "hashtable.h"
+#include "modularization.h"
 #include "protodefs.h"
 #include "statistics.h"
 

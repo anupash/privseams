@@ -25,7 +25,7 @@
 
 /**
  * @file
- * @brief The main source file for libmodularization (lmod).
+ * @brief Allow modularized features that can be enabled as required.
  *
  * @author Tim Just <tim.just@rwth-aachen.de>
  */
@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lmod.h"
+#include "modularization.h"
 
 /**
  * A generic struct for function pointer.

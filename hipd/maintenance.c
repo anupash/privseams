@@ -50,7 +50,7 @@
 #include "lib/core/ife.h"
 #include "lib/core/linkedlist.h"
 #include "lib/core/protodefs.h"
-#include "lib/modularization/lmod.h"
+#include "lib/core/modularization.h"
 #include "config.h"
 #include "accessor.h"
 #include "close.h"

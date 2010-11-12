@@ -36,7 +36,7 @@
 #include "lib/core/linkedlist.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/state.h"
-#include "lib/modularization/lmod.h"
+#include "lib/core/modularization.h"
 #include "pkt_handling.h"
 
 

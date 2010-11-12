@@ -37,7 +37,7 @@
 #define HIP_HIPD_ESP_PROT_LIGHT_UPDATE_H
 
 #include "lib/core/protodefs.h"
-#include "lib/modularization/lmod.h"
+#include "lib/core/modularization.h"
 
 int esp_prot_send_light_update(hip_ha_t *entry,
                                const int anchor_offset[],

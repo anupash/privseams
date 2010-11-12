@@ -166,12 +166,12 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/keylen.c          \
                                  lib/core/linkedlist.c      \
                                  lib/core/message.c         \
+                                 lib/core/modularization.c  \
                                  lib/core/prefix.c          \
                                  lib/core/solve.c           \
                                  lib/core/statistics.c      \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
-                                 lib/modularization/lmod.c  \
                                  lib/tool/checksum.c        \
                                  lib/tool/lutil.c           \
                                  lib/tool/nlink.c           \

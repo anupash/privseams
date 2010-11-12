@@ -85,7 +85,7 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/statistics.h"
 #include "lib/core/straddr.h"
-#include "lib/modularization/lmod.h"
+#include "lib/core/modularization.h"
 #include "lib/tool/nlink.h"
 #include "heartbeat.h"
 

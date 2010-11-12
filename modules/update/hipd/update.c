@@ -61,7 +61,7 @@
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
-#include "lib/modularization/lmod.h"
+#include "lib/core/modularization.h"
 #include "update_legacy.h"
 #include "update.h"
 
