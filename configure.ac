@@ -80,9 +80,6 @@ AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}/hipd_config)")
 AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
 
 
-AC_ARG_WITH(nomodules,
-            AS_HELP_STRING([--with-nomodules=list],
-                           [comma-separated list of disabled modules]))
 
 # Set default AM_CFLAGS for the complete project.
 AC_SUBST(AM_CFLAGS, "-std=c99 -Wall -Wextra -Werror")
@@ -216,6 +213,10 @@ if test x"$ac_cv_use_demo" = x"yes"; then
     AC_DEFINE(CONFIG_HIP_DEMO)
     AH_TEMPLATE(CONFIG_HIP_DEMO, [Defined to 1 if demo is enabled.])
 fi
+
+AC_ARG_WITH(nomodules,
+            AS_HELP_STRING([--with-nomodules=list],
+                           [comma-separated list of disabled modules]))
 
 
 
