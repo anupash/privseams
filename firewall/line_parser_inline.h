@@ -113,7 +113,7 @@ static inline char *hip_lp_next(struct hip_line_parser *const lp)
     }
 
     remaining   = lp->ma->end - lp->cur;
-    lp->cur     = (char *)memchr(lp->cur, '\n', remaining);
+    lp->cur     = memchr(lp->cur, '\n', remaining);
 
     // given the rest of the parsing code, we should always find a \n, but
     // let's check to be sure
