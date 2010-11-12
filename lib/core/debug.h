@@ -261,11 +261,6 @@
 #define HIP_DEBUG_GL(debug_group, debug_level, ...) do {} while (0)
 #endif
 
-#ifdef CONFIG_HIP_DEMO
-#define HIP_DEMO(...) printf(__VA_ARGS__);
-#else
-#define HIP_DEMO(...) do {} while (0)
-#endif
 /* @} */
 
 /* Debug groups define groups of debug messages which belong to the

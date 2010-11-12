@@ -201,19 +201,6 @@ if test x"$ac_cv_use_performance" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_PERFORMANCE, test x"$ac_cv_use_performance" = x"yes")
 
-AC_ARG_ENABLE(demo,
-               AS_HELP_STRING([--enable-demo],
-                              [Demo output (default is NO)]),
-               [ac_cv_use_demo=$enableval],
-               [ac_cv_use_demo=no])
-AC_CACHE_CHECK([whether to print output for demos],
-               [ac_cv_use_demo],
-               [ac_cv_use_demo=no])
-if test x"$ac_cv_use_demo" = x"yes"; then
-    AC_DEFINE(CONFIG_HIP_DEMO)
-    AH_TEMPLATE(CONFIG_HIP_DEMO, [Defined to 1 if demo is enabled.])
-fi
-
 AC_ARG_WITH(nomodules,
             AS_HELP_STRING([--with-nomodules=list],
                            [comma-separated list of disabled modules]))
