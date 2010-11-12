@@ -12,11 +12,13 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_DEFINE_UNQUOTED(HIPL_CONFIGURATION, "$@")
 AH_TEMPLATE(HIPL_CONFIGURATION, [options passed to configure])
 
-# Checks for programs.
+
+# program checks
+
 AC_PROG_CC
 AC_PROG_INSTALL
 # AC_PROG_LIBTOOL() could be replaced with LT_INIT(disable-shared) but
-# OpenWRT (Mar 2010) is running too old version of libtool
+# OpenWrt (Mar 2010) is running too old version of libtool
 # LT_INIT(disable-shared)
 AC_PROG_LIBTOOL(disable-shared)
 
@@ -28,21 +30,26 @@ AM_PROG_CC_C_O # Required in CentOS
 # Enable silent rules only when available (automake 1.11 or later).
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-# Check for python for build-system and tools directory
-AM_PATH_PYTHON([2.4.3],, [AC_MSG_ERROR([min. required python version not found])])
+# Check for Python for build-system and tools directory
+AM_PATH_PYTHON([2.4.3],, [AC_MSG_ERROR([Minimum required Python version not found.])])
 
-# Checks for libraries.
-AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
-# Check for ec crypto in openssl
+
+
+# library checks
+
+AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(OpenSSL not found.))
+# Check for ellyptic curve crypto in OpenSSL.
 AC_CHECK_FUNC(EC_KEY_new,
               AC_DEFINE(HAVE_EC_CRYPTO)
-              AH_TEMPLATE(HAVE_EC_CRYPTO, [Defined to 1 if ec is enabled.]))
+              AH_TEMPLATE(HAVE_EC_CRYPTO, [Defined to 1 if elliptic curve crypto is enabled.]))
 # We need the math lib in the registration extension.
-AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
+AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math library not found.))
 # The unit tests depend on 'check' (http://check.sourceforge.net/)
 AC_CHECK_LIB(check, suite_create,,
-             AC_MSG_WARN(libcheck (http://check.sourceforge.net/) not found: HIPL unit tests are not available))
+             AC_MSG_WARN(libcheck (http://check.sourceforge.net/) not found: unit tests not available))
 AM_CONDITIONAL(HIP_UNITTESTS, test x"$ac_cv_lib_check_suite_create" = xyes)
+
+
 
 # If no --prefix option is passed to configure, $prefix is empty. But we want
 # to expand $sysconfdir, which defaults to ${prefix}/etc. So set $prefix.
@@ -91,9 +98,13 @@ AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -fno-strict-aliasing")
 # Set the preprocessor flags for the entire project
 AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
 
+
+
+# configure options
+
 AC_ARG_ENABLE(firewall,
                AS_HELP_STRING([--enable-firewall],
-                              [HIP enabled firewall daemon (default is YES)]),
+                              [HIP firewall daemon (default is YES)]),
                [ac_cv_use_firewall=$enableval],
                [ac_cv_use_firewall=yes])
 AC_CACHE_CHECK([whether to use firewall],
@@ -110,7 +121,7 @@ AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
 AC_ARG_ENABLE(rvs,
                AS_HELP_STRING([--enable-rvs],
-                              [HIP Rendezvous Extensions (default is YES)]),
+                              [HIP Rendezvous extensions (default is YES)]),
                [ac_cv_use_rvs=$enableval],
                [ac_cv_use_rvs=yes])
 AC_CACHE_CHECK([whether to use RVS],
@@ -180,7 +191,7 @@ AM_CONDITIONAL(HIP_MIDAUTH, test x"$ac_cv_use_midauth" = x"yes")
 
 AC_ARG_ENABLE(performance,
                AS_HELP_STRING([--enable-performance],
-                              [Performace measurement support (default is NO)]),
+                              [Performance measurement support (default is NO)]),
                [ac_cv_use_performance=$enableval],
                [ac_cv_use_performance=no])
 AC_CACHE_CHECK([whether to use performance measurement],
@@ -207,6 +218,7 @@ if test x"$ac_cv_use_demo" = x"yes"; then
 fi
 
 
+
 # Parse modules directory
 echo ""
 echo "+-----------------------------------------------";
@@ -220,6 +232,8 @@ fi
 echo "|";
 echo "+-----------------------------------------------"
 echo ""
+
+
 
 AC_CONFIG_FILES([ Makefile doc/Doxyfile doc/HOWTO.xml tools/nsupdate.pl tools/hipdnsproxy/hipdnsproxy ])
 
