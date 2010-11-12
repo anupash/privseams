@@ -58,7 +58,6 @@ endif
 
 ### libraries ###
 lib_LTLIBRARIES = lib/core/libhipcore.la
-lib_LTLIBRARIES += lib/modularization/libmod.la
 
 
 ### tests ###
@@ -172,6 +171,7 @@ lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/statistics.c      \
                                  lib/core/straddr.c         \
                                  lib/core/transform.c       \
+                                 lib/modularization/lmod.c  \
                                  lib/tool/checksum.c        \
                                  lib/tool/lutil.c           \
                                  lib/tool/nlink.c           \
@@ -182,7 +182,6 @@ if HIP_PERFORMANCE
 lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
 
-lib_modularization_libmod_la_SOURCES = lib/modularization/lmod.c
 
 check_lib_core_SOURCES =    test/check_lib_core.c          \
                             test/lib/core/hit.c            \
@@ -205,8 +204,7 @@ include modules/update/Makefile.am
 
 check_lib_core_LDADD           = lib/core/libhipcore.la
 firewall_hipfw_LDADD          += lib/core/libhipcore.la
-hipd_hipd_LDADD               += lib/modularization/libmod.la \
-                                 lib/core/libhipcore.la
+hipd_hipd_LDADD               += lib/core/libhipcore.la
 test_auth_performance_LDADD    = lib/core/libhipcore.la
 test_certteststub_LDADD        = lib/core/libhipcore.la
 test_dh_performance_LDADD      = lib/core/libhipcore.la
