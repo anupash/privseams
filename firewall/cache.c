@@ -174,7 +174,7 @@ out_err:
  * @param local local identifier or locator (optional)
  * @param peer peer identifier or locator
  * @param type whether the parameters are HITs, LSIs or IPs
- * @param query_daemon whether to query the demon for HA information
+ * @param query_daemon whether to query the daemon for HA information
  *        if no entry is found in the cache
  * @return the entry on match, NULL otherwise
  */
