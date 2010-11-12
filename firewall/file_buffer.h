@@ -27,6 +27,7 @@
  * @file
  * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
+
 #ifndef HIP_FIREWALL_FILE_BUFFER_H
 #define HIP_FIREWALL_FILE_BUFFER_H
 
