@@ -48,6 +48,7 @@ tags
 test/auth_performance
 test/certteststub
 test/dh_performance
+test/fw_port_bindings_performance
 test/hc_performance
 tools/hipconf
 tools/hipdnskeyparse

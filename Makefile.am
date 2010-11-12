@@ -56,6 +56,11 @@ sbin_PROGRAMS += firewall/hipfw
 endif
 
 
+### test programs ###
+noinst_PROGRAMS = test/fw_port_bindings_performance
+
+
+
 ### libraries ###
 lib_LTLIBRARIES = lib/core/libhipcore.la
 
@@ -65,17 +70,23 @@ TESTS           =
 check_PROGRAMS  =
 
 if HIP_UNITTESTS
-TESTS           += check_lib_core
-check_PROGRAMS  += check_lib_core
+TESTS           += check_firewall \
+                   check_lib_core
+check_PROGRAMS  += check_firewall \
+                   check_lib_core
 endif
 
 
 ### source declarations ###
 
-test_auth_performance_SOURCES = test/auth_performance.c
-test_certteststub_SOURCES     = test/certteststub.c
-test_dh_performance_SOURCES   = test/dh_performance.c
-test_hc_performance_SOURCES   = test/hc_performance.c
+test_auth_performance_SOURCES               = test/auth_performance.c
+test_certteststub_SOURCES                   = test/certteststub.c
+test_dh_performance_SOURCES                 = test/dh_performance.c
+test_fw_port_bindings_performance_SOURCES   = test/fw_port_bindings_performance.c \
+                                              firewall/file_buffer.c              \
+                                              firewall/line_parser.c              \
+                                              firewall/port_bindings.c
+test_hc_performance_SOURCES                 = test/hc_performance.c
 
 tools_hipconf_SOURCES  = tools/hipconf.c
 tools_pisacert_SOURCES = tools/pisacert.c
@@ -120,18 +131,20 @@ hipd_hipd_SOURCES += hipd/oppdb.c                \
 endif
 
 firewall_hipfw_SOURCES = firewall/cache.c               \
-                         firewall/cache_port.c          \
                          firewall/conntrack.c           \
                          firewall/dlist.c               \
                          firewall/esp_prot_api.c        \
                          firewall/esp_prot_config.c     \
                          firewall/esp_prot_conntrack.c  \
                          firewall/esp_prot_fw_msg.c     \
+                         firewall/file_buffer.c         \
                          firewall/firewall.c            \
                          firewall/firewall_control.c    \
                          firewall/helpers.c             \
                          firewall/hslist.c              \
+                         firewall/line_parser.c         \
                          firewall/lsi.c                 \
+                         firewall/port_bindings.c       \
                          firewall/reinject.c            \
                          firewall/rule_management.c     \
                          firewall/sysopp.c              \
@@ -187,6 +200,11 @@ check_lib_core_SOURCES =    test/check_lib_core.c          \
                             test/lib/core/hit.c            \
                             test/lib/core/straddr.c
 
+check_firewall_SOURCES =    test/check_firewall.c          \
+                            test/firewall/file_buffer.c    \
+                            test/firewall/line_parser.c    \
+                            test/firewall/port_bindings.c
+
 # Initialize LDADD lists empty, because modules might add entries to LDADD. The
 # module LDADDs need to be included before the standard LDADDs, because modules
 # can depend on the core code.
@@ -202,15 +220,17 @@ include modules/update/Makefile.am
 
 ### library dependencies ###
 
-check_lib_core_LDADD           = lib/core/libhipcore.la
-firewall_hipfw_LDADD          += lib/core/libhipcore.la
-hipd_hipd_LDADD               += lib/core/libhipcore.la
-test_auth_performance_LDADD    = lib/core/libhipcore.la
-test_certteststub_LDADD        = lib/core/libhipcore.la
-test_dh_performance_LDADD      = lib/core/libhipcore.la
-test_hc_performance_LDADD      = lib/core/libhipcore.la
-tools_hipconf_LDADD           += lib/core/libhipcore.la
-tools_pisacert_LDADD           = lib/core/libhipcore.la
+check_lib_core_LDADD                     = lib/core/libhipcore.la
+check_firewall_LDADD                     = lib/core/libhipcore.la
+firewall_hipfw_LDADD                    += lib/core/libhipcore.la
+hipd_hipd_LDADD                         += lib/core/libhipcore.la
+test_auth_performance_LDADD              = lib/core/libhipcore.la
+test_certteststub_LDADD                  = lib/core/libhipcore.la
+test_dh_performance_LDADD                = lib/core/libhipcore.la
+test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
+test_hc_performance_LDADD                = lib/core/libhipcore.la
+tools_hipconf_LDADD                     += lib/core/libhipcore.la
+tools_pisacert_LDADD                     = lib/core/libhipcore.la
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \

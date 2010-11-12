@@ -23,16 +23,24 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_FIREWALL_CACHE_PORT_H
-#define HIP_FIREWALL_CACHE_PORT_H
+/**
+ * @file
+ * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
+ */
 
-#include <netinet/in.h>
+#ifndef HIP_FIREWALL_FILE_BUFFER_H
+#define HIP_FIREWALL_FILE_BUFFER_H
 
-#include "lib/core/icomm.h"
+#include "mem_area.h"
 
-void hip_firewall_port_cache_init_hldb(void);
-struct firewall_port_cache_hl *hip_firewall_port_cache_db_match(in_port_t port,
-                                                                int proto);
-void hip_firewall_port_cache_uninit_hldb(void);
+struct hip_file_buffer;
 
-#endif /* HIP_CACHE_H */
+int hip_fb_create(struct hip_file_buffer *const fb,
+                  const char *const file_name);
+void hip_fb_delete(struct hip_file_buffer *const fb);
+static inline const struct hip_mem_area *hip_fb_get_mem_area(const struct hip_file_buffer *const fb);
+int hip_fb_reload(struct hip_file_buffer *const fb);
+
+#include "firewall/file_buffer_inline.h"
+
+#endif /* HIP_FIREWALL_FILE_BUFFER_H */
