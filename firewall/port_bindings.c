@@ -39,6 +39,7 @@
 #include <signal.h> // signal()
 #include <unistd.h> // alarm()
 
+#include "lib/core/common.h"
 #include "lib/core/debug.h" // HIP_ASSERT()
 #include "lib/core/ife.h"   // IFEL()
 #include "firewall/line_parser.h"
@@ -259,7 +260,7 @@ static struct hip_file_buffer udp6_file;
  * returned by hip_port_bindings_get().
  * This function is called every INVALIDATION_INTERVAL seconds.
  */
-static void hip_port_bindings_trigger_reload(const int sig __attribute__ ((unused)))
+static void hip_port_bindings_trigger_reload(UNUSED const int sig)
 {
     cache_invalidation_flag = 1;
 }
