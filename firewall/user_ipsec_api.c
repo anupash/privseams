@@ -261,9 +261,6 @@ int hip_fw_userspace_ipsec_output(const struct hip_fw_context *ctx)
         if(ctx->transport_hdr.tcp) {
             srcport=ntohs(ctx->transport_hdr.tcp->source);
             destport=ntohs(ctx->transport_hdr.tcp->dest);
-        } else if (ctx->udp_encap_hdr) {
-            srcport=ntohs(ctx->udp_encap_hdr->source);
-            destport=ntohs(ctx->udp_encap_hdr->dest);
         } else {
             // TODO: how can protocols like ICMP(v6) without port information be handled?
             HIP_DEBUG("SIGNALING: Cannot get port information from packet.\n");
