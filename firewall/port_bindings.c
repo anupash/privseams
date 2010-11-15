@@ -300,11 +300,21 @@ static int hip_port_bindings_reload(void)
 }
 
 /**
- * Look up the port binding from the proc file system.
+ * Look up in the proc file system whether a TCP or UDP port is bound under
+ * IPv6.
+ * It iterates over the lines in /proc/net/{udp,tcp}6 via a line parser object
+ * and returns whether a match was found.
  *
- * @param protocol protocol type
- * @param port the port number of the socket
- * @return the traffic type associated with the given port.
+ * @param protocol the protocol to check the port binding for.
+ *  The values are equivalent to those found in the 'Protocol' field of the
+ *  IPv4 header and the 'Next Header' field of the IPv6 header.
+ *  The only supported values are those for TCP (6) and UDP (17).
+ *  The effect of calling this function with an unsupported value is undefined.
+ * @param port the port to look up.
+ *  The value is expected in host byte order.
+ * @return HIP_PORT_INFO_IPV6BOUND if the given port is bound under the given
+ *  protocol to an IPv6 address.
+ *  HIP_PORT_INFO_IPV6UNBOUND if it is not.
  */
 static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t protocol,
                                                              const uint16_t port)
