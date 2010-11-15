@@ -31,6 +31,9 @@
 #ifndef HIP_FIREWALL_FILE_BUFFER_H
 #define HIP_FIREWALL_FILE_BUFFER_H
 
+#include <sys/types.h>
+#include <stddef.h>
+
 #include "mem_area.h"
 
 struct hip_file_buffer;
@@ -41,6 +44,53 @@ void hip_fb_delete(struct hip_file_buffer *const fb);
 static inline const struct hip_mem_area *hip_fb_get_mem_area(const struct hip_file_buffer *const fb);
 int hip_fb_reload(struct hip_file_buffer *const fb);
 
-#include "firewall/file_buffer_inline.h"
+/**
+ * A file buffer object represents an open file and its associated memory
+ * buffer.
+ */
+struct hip_file_buffer {
+    /**
+     * The memory area holding the file contents.
+     * Its start field points to the first byte of file data and the beginning
+     * of the allocated memory buffer.
+     * Its end field points to the last byte of file data + 1.
+     */
+    struct hip_mem_area ma;
+    /*
+     * The number of bytes in the allocated buffer that ma.start points to.
+     * buffer_size is equal to or greater than (ma.end - ma.start).
+     */
+    size_t buffer_size;
+    /*
+     * The file descriptor for the file backing the buffer.
+     */
+    int fd;
+};
+
+/**
+ * Retrieve the memory area in which the file contents are stored.
+ *
+ * There is a 1:1 relationship between the passed in fb object and the returned
+ * pointer.
+ * That is, calling this function on the same fb object will always return the
+ * same struct hip_mem_area pointer.
+ * Thus, you may assume that the returned struct hip_mem_area pointer has the
+ * same life time as its associated struct hip_file_buffer object.
+ * However, hip_fb_reload() may change the start and end address in the
+ * returned struct hip_mem_area object!
+ *
+ * @param fb the file buffer object holding the memory area to retrieve.
+ * @return a pointer to the struct hip_mem_area object associated with the
+ *  given file buffer object.
+ *  If the passed in file buffer pointer is invalid, this function returns
+ *  NULL.
+ */
+static inline const struct hip_mem_area *hip_fb_get_mem_area(const struct hip_file_buffer *const fb)
+{
+    if (fb) {
+        return &fb->ma;
+    }
+    return NULL;
+}
 
 #endif /* HIP_FIREWALL_FILE_BUFFER_H */

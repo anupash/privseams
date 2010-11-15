@@ -44,6 +44,7 @@
 #include "lib/core/ife.h"
 #include "line_parser.h"
 #include "port_bindings.h"
+#include "file_buffer.h"
 
 /**
  * The number of seconds after which hip_port_bindings_trigger_reload() is
