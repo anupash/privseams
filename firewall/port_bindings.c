@@ -323,7 +323,7 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
     const unsigned int PORT_STR_OFFSET  = 39;
     const unsigned int PORT_STR_LEN     = 4;
     enum hip_port_binding result        = HIP_PORT_INFO_IPV6UNBOUND;
-    const struct hip_mem_area *ma;
+    const struct hip_mem_area *ma       = NULL;
     char *line;
     // the files /proc/net/{udp,tcp}6 are line-based and the line number of the
     // port to look up is not known in advance
