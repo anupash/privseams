@@ -70,9 +70,29 @@ int signaling_netstat_get_application_path(struct signaling_state *ctx) {
     HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
     res = fgets(&readbuf[0], NETSTAT_SIZE_OUTPUT, fp);
     pclose(fp);
-    HIP_IFEL(!res, -1, "Got no output from netstat.\n");
 
-    // parse output
+    /*
+     * If we have no connection, then we might be the server process.
+     * We have to look for a listening socket on the destination port.
+     */
+    if(!res) {
+        // prepare new call to netstat
+        memset(callbuf, 0, CALLBUF_SIZE);
+        sprintf(callbuf, "netstat -tlnp | grep :%d", ctx->connection.src_port);
+
+        // make call to netstat
+        memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
+        HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
+        res = fgets(&readbuf[0], NETSTAT_SIZE_OUTPUT, fp);
+        pclose(fp);
+    }
+
+    HIP_IFEL(!res, -1, "Got no output from netstat (neither connection nor listening socket).\n");
+
+    /*
+     * Parse the output.
+     * Format is the same for connections and listening sockets.
+     */
     scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d/%s",
             proto, unused, unused, local_addr, remote_addr, state, &ctx->application.pid, progname);
     HIP_DEBUG("Found program %s (%d) on a %s connection from: \n", progname, ctx->application.pid, proto);
