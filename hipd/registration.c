@@ -522,10 +522,8 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
                     if (new_record != NULL) {
                         free(new_record);
                     }
-                    refused_requests[*refused_count] =
-                        reg_types[i];
-                    failure_types[*refused_count]    =
-                        HIP_REG_TRANSIENT_CONDITIONS;
+                    refused_requests[*refused_count] = reg_types[i];
+                    failure_types[*refused_count]    = HIP_REG_TRANSIENT_CONDITIONS;
                     (*refused_count)++;
                     HIP_ERROR("Unable to store new relay " \
                               "record. Registration " \

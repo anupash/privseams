@@ -3757,7 +3757,7 @@ int dsa_to_hip_endpoint(DSA *dsa,
                        hostname,
                        dsa_key_rr);
 
-    out_err:
+out_err:
 
     if (dsa_key_rr) {
         free(dsa_key_rr);
@@ -3815,7 +3815,7 @@ int rsa_to_hip_endpoint(RSA *rsa,
                        hostname,
                        rsa_key_rr);
 
-    out_err:
+out_err:
 
     if (rsa_key_rr) {
         free(rsa_key_rr);
