@@ -69,7 +69,7 @@
  *
  * <pre>
  * hip_relrec_t dummy, *fetch_record = NULL;
- * memcpy((char *)&(dummy.hit_r), hit, sizeof(hit));
+ * memcpy(&dummy.hit_r, hit, sizeof(hit));
  * fetch_record = hip_relht_get(&dummy);
  * if (fetch_record != NULL) {
  *     // Do something with the record.
@@ -79,7 +79,7 @@
  * <li>Deleting a relay record. A dummy record can be used:
  * <pre>
  * hip_relrec_t dummy;
- * memcpy((char *) &(dummy.hit_r), hit, sizeof(hit));
+ * memcpy(&dummy.hit_r, hit, sizeof(hit));
  * hip_relht_rec_free(&dummy);
  * </pre>
  * </li>

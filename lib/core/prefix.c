@@ -383,24 +383,22 @@ int hip_addr_is_loopback(struct in6_addr *addr)
 
 int ipv4_addr_cmp(const struct in_addr *a1,
                                 const struct in_addr *a2) {
-    return memcmp((const char *) a1, (const char *) a2,
-                  sizeof(struct in_addr));
+    return memcmp(a1, a2, sizeof(struct in_addr));
 }
 
 void ipv4_addr_copy(struct in_addr *a1,
                                   const struct in_addr *a2) {
-    memcpy((char *) a1, (const char *) a2, sizeof(struct in_addr));
+    memcpy(a1, a2, sizeof(struct in_addr));
 }
 
 int ipv6_addr_cmp(const struct in6_addr *a1,
                   const struct in6_addr *a2) {
-    return memcmp((const char *) a1, (const char *) a2,
-                  sizeof(struct in6_addr));
+    return memcmp(a1, a2, sizeof(struct in6_addr));
 }
 
 void ipv6_addr_copy(struct in6_addr *a1,
                const struct in6_addr *a2) {
-    memcpy((char *) a1, (const char *) a2, sizeof(struct in6_addr));
+    memcpy(a1, a2, sizeof(struct in6_addr));
 }
 
 int ipv6_addr_any(const struct in6_addr *a) {
