@@ -489,9 +489,9 @@ int lmod_register_packet_type(const uint16_t packet_type,
  */
 static void lmod_free_packet_entry(void *entry)
 {
-    struct packet_type *packte_type_entry = entry;
-    free(packte_type_entry->identifier);
-    free(packte_type_entry);
+    struct packet_type *packet_type_entry = entry;
+    free(packet_type_entry->identifier);
+    free(packet_type_entry);
 }
 
 /**
