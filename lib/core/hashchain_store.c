@@ -48,7 +48,7 @@
  */
 static void hcstore_free_hchain(void *hchain)
 {
-    hchain_free((hash_chain_t *) hchain);
+    hchain_free(hchain);
 }
 
 /** helper function to free a hash tree
@@ -57,7 +57,7 @@ static void hcstore_free_hchain(void *hchain)
  */
 static void hcstore_free_htree(void *htree)
 {
-    htree_free((hash_tree_t *) htree);
+    htree_free(htree);
 }
 
 /** initializes a new hash item store

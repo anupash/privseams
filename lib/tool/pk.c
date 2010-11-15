@@ -41,7 +41,7 @@
  */
 int hip_rsa_sign(void *priv_key, struct hip_common *msg)
 {
-    RSA *rsa      = (RSA *) priv_key;
+    RSA *rsa      = priv_key;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     uint8_t *signature = NULL;
     int err       = 0, len;

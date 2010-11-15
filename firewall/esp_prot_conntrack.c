@@ -111,7 +111,7 @@ static void esp_prot_conntrack_free_cached_item(void *cache_item)
     long i;
 
     if (cache_item) {
-        anchor_item = (struct esp_anchor_item *) cache_item;
+        anchor_item = cache_item;
 
         for (i = 0; i < num_parallel_hchains; i++) {
             if (anchor_item->active_anchors[i]) {
@@ -399,8 +399,7 @@ static int esp_prot_conntrack_update_anchor(const struct tuple *tuple,
         }
 
         // delete cached item from the list
-        HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
-                                 hip_ll_del(&esp_tuple->anchor_cache,
+        HIP_IFEL(!(anchor_item = hip_ll_del(&esp_tuple->anchor_cache,
                                             element_index, NULL)), -1,
                  "failed to remove anchor_item from list\n");
         free(anchor_item);
