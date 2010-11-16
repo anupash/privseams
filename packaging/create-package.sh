@@ -109,6 +109,10 @@ elif test -r /etc/redhat-release; then
     PKG_INDEX_NAME=repodata
     INDEXING_CMD=mkindex_rpm
     PACKAGING_CMD=build_rpm
+    case $(lsb_release -d) in
+        "Description:	CentOS release 5.5 (Final)")
+            export CPPFLAGS=-U__STRICT_ANSI__;;
+    esac
 else
     die "unknown distribution"
 fi

@@ -29,11 +29,7 @@ other related tools.
 # Note: CentOS 5.5 requires special cpp flags (see bug id #620327)
 %build
 autoreconf --install
-%if 0%{?fedora}
 %configure --prefix=/usr --sysconfdir=/etc
-%else
-CPPFLAGS=-U__STRICT_ANSI__ ./configure --prefix=/usr --sysconfdir=/etc
-%endif
 make -j
 
 # Currently we are not going to install all includes and test software.
