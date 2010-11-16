@@ -57,12 +57,6 @@ Group: System Environment/Kernel
 Requires: hipl-lib hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
 %description all
 
-%package minimal
-Summary: Minimal HIPL software bundle for servers. This virtual package is suitable for e.g. servers.
-Group: System Environment/Kernel
-Requires: hipl-lib hipl-daemon
-%description minimal
-
 %package lib
 Summary: HIP for Linux libraries
 Group: System Environment/Kernel
@@ -212,8 +206,6 @@ rm -rf %{buildroot}
 %doc doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 
 %files all
-
-%files minimal
 
 
 %changelog

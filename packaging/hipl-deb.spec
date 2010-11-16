@@ -56,7 +56,7 @@ make -j
 # create subpackage
 # list of files with the name of subpackage
 #
-# Note: earlier the contents of "all" and "minimal" was just "."
+# Note: earlier the contents of "all" was just "."
 # It doesn't work anymore with Rene's changes to the update version of
 # debbuild. Currently they include some files to get the binaries compiled.
 # Fix this workaround.
@@ -74,12 +74,6 @@ Summary: Full HIPL software bundle. This virtual package is suitable e.g. for cl
 Group: System Environment/Kernel
 Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-doc, hipl-dnsproxy
 %description all
-
-%package minimal
-Summary: Minimal HIPL software bundle for servers. This virtual package is suitable for e.g. servers.
-Group: System Environment/Kernel
-Requires: hipl-lib, hipl-daemon
-%description minimal
 
 %package lib
 Summary: HIP for Linux libraries
@@ -189,8 +183,6 @@ rm -rf %{buildroot}
 %files all
 %doc COPYING
 
-%files minimal
-%doc doc/HACKING
 
 %changelog
 * Fri Nov 20 2009 Miika Komu <miika@iki.fi>
