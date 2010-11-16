@@ -48,7 +48,7 @@ build_package()
         mkdir -p $BUILDDIR/$SUBDIR
     done
 
-    RELEASE=$(grep BZR_REVISION $SRCDIR/version.h | cut -d\" -f2)
+    RELEASE=$(grep VCS_REVISION $SRCDIR/version.h | cut -d\" -f2)
 
     echo "Version: $VERSION"  > $SPECFILE
     echo "Release: $RELEASE" >> $SPECFILE

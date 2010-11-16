@@ -43,7 +43,7 @@
 static inline void hip_print_version(const char *name)
 {
     printf("%s %s (Bazaar branch-nick: '%s', revision: %s, commit date: '%s')\n",
-           name, VERSION, BZR_BRANCH, BZR_REVISION, BZR_DATE);
+           name, VERSION, VCS_BRANCH, VCS_REVISION, VCS_DATE);
     printf("build configuration: %s\n", HIPL_CONFIGURATION);
 }
 
