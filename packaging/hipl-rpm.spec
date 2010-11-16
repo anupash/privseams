@@ -25,7 +25,6 @@ the key and mobility management daemon plus other related tools.
 %setup
 
 # Note: in subsequent releases me may want to use --disable-debugging
-# Note: CentOS 5.5 requires special cpp flags (see bug id #620327)
 %build
 autoreconf --install
 %configure --prefix=/usr --sysconfdir=/etc
@@ -47,8 +46,6 @@ make -j
 
 # create subpackage
 # list of files with the name of subpackage
-
-# XX TODO: copy descriptions from hipl-deb.spec and make sure rpm still builds
 
 %package all
 Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
@@ -93,8 +90,6 @@ rm -rf %{buildroot}
 install -d %{buildroot}%{prefix}/share/pixmaps
 #end CentOS add
 
-# XX FIXME: add more python stuff from tools directory
-
 make install-strip DESTDIR=%{buildroot}
 install -d %{buildroot}/etc/rc.d/init.d
 install -m 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
@@ -113,8 +108,7 @@ install -t %{buildroot}%{python_sitelib} tools/hipdnskeyparse/myasn.py* # XX FIX
 /sbin/ldconfig
 
 %post daemon
-if [ "$1" = "2" ]
-then
+if [ "$1" = "2" ]; then
         # upgrade
         /sbin/service hipd restart
 else
@@ -125,16 +119,14 @@ else
 fi
 
 %preun daemon
-if [ "$1" = "0" ]
-then
-        # removing package completely
+if [ "$1" = "0" ]; then
+        # remove daemon completely
         /sbin/service hipd stop
         /sbin/chkconfig --del hipd
 fi
 
 %post dnsproxy
-if [ "$1" = "2" ]
-then
+if [ "$1" = "2" ]; then
         # upgrade
         /sbin/service hipdnsproxy restart
 else
@@ -145,16 +137,14 @@ else
 fi
 
 %preun dnsproxy
-if [ "$1" = "0" ]
-then
-        # removing package completely
+if [ "$1" = "0" ]; then
+        # remove daemon completely
         /sbin/service hipdnsproxy stop
         /sbin/chkconfig --del hipdnsproxy
 fi
 
 %post firewall
-if [ "$1" = "2" ]
-then
+if [ "$1" = "2" ]; then
         # upgrade
         /sbin/service hipfw restart
 else
@@ -165,9 +155,8 @@ else
 fi
 
 %preun firewall
-if [ "$1" = "0" ]
-then
-        # removing package completely
+if [ "$1" = "0" ]; then
+        # remove daemon completely
         /sbin/service hipfw stop
         /sbin/chkconfig --del hipfw
 fi
@@ -175,7 +164,6 @@ fi
 %clean
 rm -rf %{buildroot}
 
-# XX TODO: 64-bit binaries should go to lib64 not lib
 %files lib
 %{_libdir}
 

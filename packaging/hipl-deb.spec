@@ -60,9 +60,6 @@ make -j
 # debbuild. Currently they include some files to get the binaries compiled.
 # Fix this workaround.
 #
-# Note:
-# - 64-bit binaries should go to lib64
-#
 # Note: the post rules used to be like this (does not work anymore)
 # - update-rc.d hipfw start 20 S . stop 80 0 6 .
 # - invoke-rc.d --quiet hipdnsproxy start
