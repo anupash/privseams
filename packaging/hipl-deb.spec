@@ -17,13 +17,12 @@ Prefix: /usr
 
 %description
 
-Host Identity Protocol (HIP) provides cryptographic authentication to
+The Host Identity Protocol (HIP) provides cryptographic authentication
 between hosts and secure communications using IPsec. HIP protocol
-extensions support also mobility and multihoming, and traversal of NATs.
+extensions also support mobility, multihoming and NAT traversal.
 
-HIP for Linux (HIPL) is an implementation of a HIP implementation that
-consists of the key and mobility management daemon. It includes also
-other related tools.
+HIP for Linux (HIPL) is an implementation of HIP that consists of
+the key and mobility management daemon plus other related tools.
 %prep
 %setup
 
