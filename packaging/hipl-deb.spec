@@ -72,13 +72,13 @@ make -j
 %package all
 Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
-Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-tools, hipl-doc, hipl-dnsproxy
+Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-doc, hipl-dnsproxy
 %description all
 
 %package minimal
 Summary: Minimal HIPL software bundle for servers. This virtual package is suitable for e.g. servers.
 Group: System Environment/Kernel
-Requires: hipl-lib, hipl-daemon, hipl-tools
+Requires: hipl-lib, hipl-daemon
 %description minimal
 
 %package lib
@@ -92,12 +92,6 @@ Requires: hipl-lib, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-sock
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
-
-%package tools
-Requires: hipl-lib, hipl-daemon
-Summary: Command line tools to control hipd from command line
-Group: System Environment/Kernel
-%description tools
 
 %package firewall
 Requires: hipl-lib
@@ -170,6 +164,10 @@ rm -rf %{buildroot}
 
 %files daemon
 /usr/sbin/hipd
+/usr/sbin/hipconf
+/usr/sbin/pisacert
+/usr/sbin/nsupdate.pl
+%defattr(755,root,root)
 %config /etc/init.d/hipd
 
 %files dnsproxy
@@ -178,12 +176,6 @@ rm -rf %{buildroot}
 %defattr(755,root,root)
 %config /etc/init.d/hipdnsproxy
 
-
-%files tools
-/usr/sbin/hipconf
-/usr/sbin/pisacert
-/usr/sbin/nsupdate.pl
-%defattr(755,root,root)
 
 %files firewall
 /usr/sbin/hipfw
