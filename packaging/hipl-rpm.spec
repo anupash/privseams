@@ -8,7 +8,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2 and MIT/Expat
 Group: System Environment/Kernel
-BuildRequires: gcc gcc-c++ openssl-devel iptables-devel xmlto libtool libcap-devel autoconf automake xmlto rpm-build
+BuildRequires: gcc gcc-c++ openssl-devel iptables-devel xmlto libtool libcap-devel autoconf automake rpm-build
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
