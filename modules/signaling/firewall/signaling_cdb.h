@@ -74,6 +74,9 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
 
 signaling_cdb_entry_t *signaling_cdb_entry_find(const struct in6_addr *local_hit,
                                                 const struct in6_addr *remote_hit);
+int signaling_cdb_ports_find(const uint16_t src_port, const uint16_t dest_port,
+                             signaling_cdb_entry_t * entry);
+
 
 void signaling_cdb_print(void);
 

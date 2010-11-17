@@ -186,6 +186,35 @@ int signaling_cdb_uninit(void)
 }
 
 /**
+ * searches for a port pair inside a given entry
+ * returns -1 for error, 0 for not found, 1 for found.
+ */
+int signaling_cdb_ports_find(const uint16_t src_port, const uint16_t dest_port,
+        signaling_cdb_entry_t * entry) {
+    int err = 0;
+    SList *listitem;
+    signaling_cdb_connection_entry_t * conn;
+
+    HIP_IFEL(entry == NULL,
+            -1, "Entry is null.\n" );
+
+    listitem = entry->connections;
+    while(listitem) {
+        conn = (signaling_cdb_connection_entry_t *) listitem->data;
+        if((src_port == conn->local_port && dest_port == conn->remote_port) ||
+           (dest_port == conn->local_port && src_port == conn->remote_port)) {
+            err = 1;
+            goto out_err;
+        }
+        listitem = listitem->next;
+    }
+
+out_err:
+    return err;
+}
+
+
+/**
  * searches the scdb for an entry
  */
 signaling_cdb_entry_t *signaling_cdb_entry_find(const struct in6_addr *local_hit,
@@ -205,7 +234,7 @@ signaling_cdb_entry_t *signaling_cdb_entry_find(const struct in6_addr *local_hit
 
     // find entry in sadb db
     HIP_IFEL(!(stored_entry = hip_ht_find(scdb, &search_entry)),
-            -1, "failed to retrieve sa entry\n");
+            -1, "No corresponding scdb entry found.\n");
 
 out_err:
     if (err) {
