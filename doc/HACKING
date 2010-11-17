@@ -627,9 +627,7 @@ CODING CONVENTIONS
       HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
 
   out_err:
-      if (mem) {
-          free(mem);
-      }
+      free(mem);
       return err;
   }
 
