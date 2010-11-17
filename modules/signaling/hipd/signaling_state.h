@@ -11,7 +11,9 @@
 #include "lib/core/modularization.h"
 #include "lib/core/protodefs.h"
 
-/* Identifies a specific connection */
+/* Identifies a specific connection
+ * TODO: src and destination hits are most likely redundant here since they can be obtained
+ *       from elsewhere in the hadb entry and anyway, all we need are ports.*/
 struct signaling_state_connection {
     hip_hit_t src_hit;
     hip_hit_t dest_hit;
