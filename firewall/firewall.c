@@ -495,6 +495,9 @@ static int firewall_init_extensions(void)
     /* Initialize raw sockets for packet reinjection */
     hip_firewall_init_raw_sockets();
 
+    /* Initialize signaling module */
+    HIP_IFEL(signaling_hipfw_init(), -1, "failed to init signaling extensions\n");
+
 out_err:
     return err;
 }

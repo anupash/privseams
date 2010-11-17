@@ -41,7 +41,15 @@
 
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "signaling_hipfw.h"
+#include "signaling_cdb.h"
 
+/* Init connection tracking data base */
+int signaling_hipfw_init(void) {
+    int err = 0;
+    err = signaling_cdb_init();
+
+    return err;
+}
 /*
  * Print all application information included in the packet.
  */
