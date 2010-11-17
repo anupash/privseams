@@ -64,6 +64,8 @@ typedef struct signaling_cdb_entry {
 } signaling_cdb_entry_t;
 
 
+int signaling_cdb_handle_add_request(hip_common_t * msg);
+
 int signaling_cdb_init(void);
 int signaling_cdb_uninit(void);
 

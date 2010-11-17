@@ -39,12 +39,92 @@
 #include "lib/core/debug.h"
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
+#include "lib/core/prefix.h"
+#include "lib/core/icomm.h"
 
 #include "hipd/hadb.h"
+#include "hipd/user.h"
 
 #include "modules/signaling/hipd/signaling_hipd_builder.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "signaling_hipd_msg.h"
+
+/** generic send function used to send the below created messages
+ *
+ * @param msg   the message to be sent
+ * @return      0, if correct, else != 0
+ */
+static int signaling_hipd_send_to_fw(const struct hip_common *msg)
+{
+    struct sockaddr_in6 hip_fw_addr;
+    struct in6_addr loopback = in6addr_loopback;
+    int err                  = 0;
+
+    HIP_ASSERT(msg != NULL);
+
+    // destination is firewall
+    hip_fw_addr.sin6_family = AF_INET6;
+    hip_fw_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
+    ipv6_addr_copy(&hip_fw_addr.sin6_addr, &loopback);
+
+    err = hip_sendto_user(msg, (struct sockaddr *) &hip_fw_addr);
+    if (err < 0) {
+        HIP_ERROR("Sending message to firewall failed\n");
+
+        err = -1;
+        goto out_err;
+    } else {
+        HIP_DEBUG("Sending message to firewall successful\n");
+
+        // this is needed if we want to use HIP_IFEL
+        err = 0;
+    }
+
+out_err:
+    return err;
+}
+
+/*
+ * Tell the firewall to add a scdb entry for the completed BEX.
+ */
+int signaling_send_scdb_add(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    struct hip_common *msg = NULL;
+    int err                = 0;
+    const struct signaling_param_appinfo *appinfo = NULL;
+
+    /* Get the parameter */
+    HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
+            -1, "No application info parameter found in the message.\n");
+
+    /* Build the user message */
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
+              "alloc memory for adding scdb entry\n");
+    hip_msg_init(msg);
+
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CDB_ADD_CONN, 0), -1,
+              "build hdr failed\n");
+
+     /* Include Hits */
+    HIP_IFEL(hip_build_param_contents(msg, &ctx->input_msg->hits,
+                                       HIP_PARAM_HIT,
+                                       sizeof(hip_hit_t)), -1,
+              "build param contents (src hit) failed\n");
+
+    HIP_IFEL(hip_build_param_contents(msg, &ctx->input_msg->hitr,
+                                       HIP_PARAM_HIT,
+                                       sizeof(hip_hit_t)), -1,
+              "build param contents (src hit) failed\n");
+
+    /* Include appinfo parameter (copy it...) */
+    hip_build_param(msg, appinfo);
+
+    /* Send */
+    HIP_IFEL(signaling_hipd_send_to_fw(msg), -1, "failed to send add scdb-msg to fw\n");
+
+out_err:
+    return err;
+}
 
 /*
  * Print all application information included in the packet.
@@ -78,7 +158,7 @@ int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
                  -1, "failed to retrieve state for signaling\n");
     // HIP_DEBUG("Got state from HADB: ports src: %d dest %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
 
-    HIP_IFEL(signaling_build_param_appinfo(ctx, sig_state),
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, sig_state),
             -1, "Building of param appinfo for I2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into I2 Packet.\n");
 
@@ -119,7 +199,7 @@ int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
     }
 
     /* Now we can build the param into the R2 packet */
-    HIP_IFEL(signaling_build_param_appinfo(ctx, sig_state),
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, sig_state),
             -1, "Building of param appinfo for R2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into R2 Packet.\n");
 

@@ -41,8 +41,12 @@
 
 #include "lib/core/protodefs.h"
 
+/* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
 #define HIP_PARAM_SIGNALING_APPINFO     5000
 #define HIP_PARAM_SIGNALING_PORTINFO    32830
+
+/* User message types (adds to icomm.h)*/
+#define HIP_MSG_SIGNALING_CDB_ADD_CONN  138
 
 /* Definition of the fields in an appinfo parameter */
 #define SIGNALING_APPINFO_APP_DN 1

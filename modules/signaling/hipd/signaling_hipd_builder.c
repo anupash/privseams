@@ -337,12 +337,11 @@ out_err:
  * @param length the length of the info
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_appinfo(struct hip_packet_context *ctx, struct signaling_state *sig_state)
+int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_state *sig_state)
 {
     struct signaling_param_appinfo *appinfo;
     int err = 0;
     int length_contents = 0;
-    hip_common_t *msg = ctx->output_msg;
 
     /* Sanity checks */
     HIP_IFEL(msg == NULL,

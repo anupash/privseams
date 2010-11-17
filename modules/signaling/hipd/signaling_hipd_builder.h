@@ -37,7 +37,7 @@
 #include "signaling_state.h"
 
 /* Build an appinfo parameter. */
-int signaling_build_param_appinfo(struct hip_packet_context *ctx, struct signaling_state *sig_state);
+int signaling_build_param_appinfo(hip_common_t *ctx, struct signaling_state *sig_state);
 
 /* Get the typename of a appinfo field */
 const char *signaling_get_param_field_type_name(const hip_tlv_type_t param_type);

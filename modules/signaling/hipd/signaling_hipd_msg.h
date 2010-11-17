@@ -46,6 +46,8 @@
  */
 int signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
+int signaling_send_scdb_add(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx);
+
 /*
  * Add application information to I2 packet.
  */

@@ -37,6 +37,8 @@
 #include "lib/core/common.h"
 
 #include "firewall/hslist.h"
+
+#include "modules/signaling/lib/signaling_prot_common.h"
 #include "signaling_cdb.h"
 
 /* hash functions definitions used for calculating the entries' hashes
@@ -319,4 +321,20 @@ void signaling_cdb_print(void) {
     hip_ht_doall(scdb, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(signaling_cdb_print));
     HIP_DEBUG("------------------ SCDB END   ------------------\n");
 }
+
+int signaling_cdb_handle_add_request(hip_common_t * msg) {
+    int err = 0;
+    const struct signaling_param_appinfo *appinfo;
+
+    HIP_DEBUG("Got request to add a connection to a scdb entry.\n");
+    HIP_DUMP_MSG(msg);
+
+    appinfo = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+    if(appinfo) {
+        signaling_param_appinfo_print(appinfo);
+    }
+
+    return err;
+}
+
 
