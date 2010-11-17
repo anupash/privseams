@@ -229,10 +229,12 @@ signaling_cdb_entry_t *signaling_cdb_entry_find(const struct in6_addr *local_hit
     // fill search entry with information needed by the hash function
     memcpy(&search_entry.local_hit, local_hit, sizeof(struct in6_addr));
     memcpy(&search_entry.remote_hit, remote_hit, sizeof(struct in6_addr));
+    stored_entry = hip_ht_find(scdb, &search_entry);
 
-    /*HIP_DEBUG("looking up scdb entry with following index attributes:\n");
-    HIP_DEBUG_HIT("inner_src_addr", &search_entry.local_hit);
-    HIP_DEBUG_HIT("inner_dst_addr", &search_entry.remote_hit);*/
+    if(!stored_entry) {
+        memcpy(&search_entry.local_hit, remote_hit, sizeof(struct in6_addr));
+        memcpy(&search_entry.remote_hit, local_hit, sizeof(struct in6_addr));
+    }
 
     // find entry in sadb db
     HIP_IFEL(!(stored_entry = hip_ht_find(scdb, &search_entry)),
@@ -252,6 +254,8 @@ static signaling_cdb_entry_t * signaling_cdb_add_new(const struct in6_addr *loca
     signaling_cdb_entry_t * entry = malloc(sizeof(signaling_cdb_entry_t));
     memcpy(&entry->local_hit, local_hit, sizeof(struct in6_addr));
     memcpy(&entry->remote_hit, remote_hit, sizeof(struct in6_addr));
+    entry->connections = NULL;
+    entry->applications = NULL;
 
     HIP_IFEL(hip_ht_add(scdb, entry), -1, "hash collision detected!\n");
 
@@ -276,10 +280,12 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
         entry = signaling_cdb_add_new(local_hit, remote_hit);
     }
 
+    HIP_IFEL(!entry, -1, "Adding a new entry failed.\n");
+
     entry->connections = append_to_slist(entry->connections, conn);
     entry->applications = append_to_slist(entry->applications, app);
 
-//out_err:
+out_err:
     return err;
 }
 
@@ -293,20 +299,28 @@ static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
     HIP_DEBUG("\tConnections\n");
 
     listentry = entry->connections;
-    while(listentry) {
-        HIP_DEBUG("\t  ->  local port: %d, remote port: %d\n",
+    while(listentry != NULL) {
+        if(listentry->data != NULL) {
+            HIP_DEBUG("\t  ->  local port: %d, remote port: %d\n",
                 ((signaling_cdb_connection_entry_t *) listentry->data)->local_port,
                 ((signaling_cdb_connection_entry_t *) listentry->data)->remote_port);
+        } else {
+            HIP_DEBUG("\t  ->  <no port info available>\n");
+        }
         listentry = listentry->next;
     }
 
     HIP_DEBUG("\tApplications\n");
 
     listentry = entry->applications;
-    while(listentry) {
-        HIP_DEBUG("\t  ->  appname (%d): %s\n",
+    while(listentry != NULL) {
+        if(listentry->data != NULL) {
+            HIP_DEBUG("\t  ->  appname (%d): %s\n",
                 ((signaling_cdb_applications_entry_t *) listentry->data)->pid,
                 ((signaling_cdb_applications_entry_t *) listentry->data)->application_dn);
+        } else {
+            HIP_DEBUG("\t  ->  <no appdata available>\n");
+        }
         listentry = listentry->next;
     }
     HIP_DEBUG("\t----- ELEMENT END   ------\n");
