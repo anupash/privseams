@@ -339,14 +339,33 @@ void signaling_cdb_print(void) {
 int signaling_cdb_handle_add_request(hip_common_t * msg) {
     int err = 0;
     const struct signaling_param_appinfo *appinfo;
+    const struct hip_tlv_common *param   = NULL;
+    const hip_hit_t *src_hit = NULL;
+    const hip_hit_t *dst_hit = NULL;
+    signaling_cdb_connection_entry_t * conn;
 
     HIP_DEBUG("Got request to add a connection to a scdb entry.\n");
     HIP_DUMP_MSG(msg);
 
-    appinfo = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
-    if(appinfo) {
-        signaling_param_appinfo_print(appinfo);
+    param      = hip_get_param(msg, HIP_PARAM_HIT);
+    src_hit    = hip_get_param_contents_direct(param);
+
+    param      = hip_get_next_param(msg, param);
+    dst_hit    = hip_get_param_contents_direct(param);
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+    if(param) {
+        signaling_param_appinfo_print((const struct signaling_param_appinfo *) param);
     }
+    appinfo = (const struct signaling_param_appinfo *) param;
+
+    conn = malloc(sizeof(signaling_cdb_connection_entry_t));
+    conn->local_port = ntohs(appinfo->dest_port);
+    conn->remote_port = ntohs(appinfo->src_port);
+
+    signaling_cdb_add(src_hit, dst_hit, conn, NULL);
+
+    signaling_cdb_print();
 
     return err;
 }
