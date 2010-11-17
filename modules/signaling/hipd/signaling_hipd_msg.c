@@ -85,6 +85,23 @@ out_err:
 }
 
 /*
+ * Do a BEX_UPDATE.
+ */
+int signaling_trigger_bex_update(struct hip_common *msg, UNUSED struct sockaddr_in6 *src) {
+    int err = 0;
+
+    HIP_DEBUG("Received request to trigger a update BEX. \n");
+    HIP_DUMP_MSG(msg);
+
+    /*
+     * TODO: determine application and trigger the update BEX...
+     */
+
+//out_err:
+    return err;
+}
+
+/*
  * Tell the firewall to add a scdb entry for the completed BEX.
  */
 int signaling_send_scdb_add(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)

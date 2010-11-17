@@ -38,8 +38,11 @@
 
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
+#include "lib/core/message.h"
 
 #include "modules/signaling/lib/signaling_prot_common.h"
+#include "modules/signaling/lib/signaling_common_builder.h"
+
 #include "signaling_hipfw.h"
 #include "signaling_cdb.h"
 
@@ -67,6 +70,44 @@ int signaling_hipfw_handle_appinfo(const struct hip_common *common, UNUSED struc
 
 out_err:
 	return err;
+}
+
+/* Tell the HIPD to do a BEX update on this new connection. */
+int signaling_hipfw_trigger_bex_update(hip_fw_context_t *ctx) {
+    int err = 0;
+    uint16_t src_port, dst_port;
+
+    struct hip_common *msg = NULL;
+    HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+    /* build the message header */
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_TRIGGER_BEX_UPDATE, 0),
+             -1, "build hdr failed\n");
+
+    /* Include Hits */
+    HIP_IFEL(hip_build_param_contents(msg, &ctx->src,
+                                       HIP_PARAM_HIT,
+                                       sizeof(hip_hit_t)), -1,
+              "build param contents (src hit) failed\n");
+
+    HIP_IFEL(hip_build_param_contents(msg, &ctx->dst,
+                                       HIP_PARAM_HIT,
+                                       sizeof(hip_hit_t)), -1,
+              "build param contents (dst hit) failed\n");
+
+    /* Include port numbers in bex trigger. port numbers are used by signaling module */
+    src_port=ntohs(ctx->transport_hdr.tcp->source);
+    dst_port=ntohs(ctx->transport_hdr.tcp->dest);
+
+    signaling_build_param_portinfo(msg, src_port, dst_port);
+
+    HIP_DUMP_MSG(msg);
+
+    /* send msg to hipd and receive corresponding reply */
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
+
+out_err:
+    return err;
 }
 
 /*
@@ -102,6 +143,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
         err = 1;
     } else {
         HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
+        signaling_hipfw_trigger_bex_update(ctx);
         err = 0;
     }
 

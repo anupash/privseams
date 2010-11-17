@@ -47,6 +47,7 @@
 
 /* User message types (adds to icomm.h)*/
 #define HIP_MSG_SIGNALING_CDB_ADD_CONN  138
+#define HIP_MSG_SIGNALING_TRIGGER_BEX_UPDATE  138
 
 /* Definition of the fields in an appinfo parameter */
 #define SIGNALING_APPINFO_APP_DN 1
