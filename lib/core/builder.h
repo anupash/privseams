@@ -193,8 +193,6 @@ union hip_locator_info_addr *hip_get_locator_item(void *item_list, int index);
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 int hip_check_network_msg_len(const struct hip_common *msg);
-struct hip_locator_info_addr_item
-        *hip_get_locator_first_addr_item(struct hip_locator *);
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
 hip_hdr_type_t hip_get_msg_type(const struct hip_common *);

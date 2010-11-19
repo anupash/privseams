@@ -96,6 +96,17 @@ struct update_state {
 static const int update_id_window_size = 50;
 
 /**
+ * Retrieve a pointer to the first locator in a LOCATOR parameter
+ *
+ * @param locator a pointer a LOCATOR parameter
+ * @return a pointer to the first locator in the LOCATOR parameter
+ */
+static struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator)
+{
+    return (struct hip_locator_info_addr_item *) (locator + 1);
+}
+
+/**
  * build locators in an UPDATE message
  *
  * @param locator_msg the message where the LOCATOR should be appended

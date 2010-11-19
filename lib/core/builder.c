@@ -468,17 +468,6 @@ uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id)
 }
 
 /**
- * Retrieve a pointer to the first locator in a LOCATOR parameter
- *
- * @param locator a pointer a LOCATOR parameter
- * @return a pointer to the first locator in the LOCATOR parameter
- */
-struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator)
-{
-    return (struct hip_locator_info_addr_item *) (locator + 1);
-}
-
-/**
  * Translate a service life time from seconds to a 8-bit integer value. The
  * lifetime value in seconds is translated to a 8-bit integer value using
  * following formula: <code>lifetime = (8 * (log(seconds) / log(2)))
