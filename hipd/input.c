@@ -69,6 +69,7 @@
 #include "lib/core/state.h"
 #include "lib/core/transform.h"
 #include "lib/tool/xfrmapi.h"
+#include "modules/update/hipd/update.h"
 #include "config.h"
 #include "cookie.h"
 #include "dh.h"

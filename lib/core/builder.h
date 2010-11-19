@@ -185,7 +185,6 @@ void hip_dump_msg(const struct hip_common *);
 struct hip_dh_public_value
         *hip_dh_select_key(struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
-int hip_get_locator_addr_item_count(const struct hip_locator *);
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 int hip_check_network_msg_len(const struct hip_common *msg);
@@ -282,7 +281,6 @@ int hip_build_param_reg_from(struct hip_common *msg,
 int hip_build_param_nat_port(hip_common_t *msg,
                              const in_port_t port,
                              hip_tlv_type_t hipparam);
-struct in6_addr *hip_get_locator_item_address(void *item);
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
 
 int hip_build_param_hmac(struct hip_common *msg,

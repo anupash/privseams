@@ -654,6 +654,61 @@ static union hip_locator_info_addr *hip_get_locator_item(void *item_list, int id
 }
 
 /**
+ * retrieve a IP address from a locator item structure
+ *
+ * @param item      a pointer to the item
+ * @return a pointer to the IP address
+ */
+static struct in6_addr *hip_get_locator_item_address(void *item)
+{
+    struct hip_locator_info_addr_item *temp;
+
+
+    temp = (struct hip_locator_info_addr_item *) item;
+    if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+        return &temp->address;
+    } else if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+        return &temp->address;
+    } else {
+        return &((struct hip_locator_info_addr_item2 *) temp)->address;
+    }
+}
+
+/**
+ * Retrieve the amount the locators inside a LOCATOR parameter.
+ * Type 1 and 2 parameters are supported.
+ *
+ * @param locator a LOCATOR parameter
+ * @return the amount of locators
+ */
+int hip_get_locator_addr_item_count(const struct hip_locator *locator)
+{
+    const char *address_pointer = (const char *) (locator + 1);
+    int amount                  = 0;
+    uint8_t type;
+
+    while (address_pointer <
+          ((const char *) locator) + hip_get_param_contents_len(locator)) {
+        type = ((const struct hip_locator_info_addr_item *)
+               address_pointer)->locator_type;
+
+        if (type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+            address_pointer += sizeof(struct hip_locator_info_addr_item2);
+            amount += 1;
+        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+            address_pointer += sizeof(struct hip_locator_info_addr_item);
+            amount += 1;
+        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+            address_pointer += sizeof(struct hip_locator_info_addr_item);
+            amount += 1;
+        } else {
+            address_pointer += sizeof(struct hip_locator_info_addr_item);
+        }
+    }
+    return amount;
+}
+
+/**
  * process a LOCATOR paramter
  *
  * @param ha the related host association

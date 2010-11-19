@@ -45,6 +45,8 @@
 #define HIP_UPDATE_ESP_ANCHOR           3
 #define HIP_UPDATE_ESP_ANCHOR_ACK       4
 
+int hip_get_locator_addr_item_count(const struct hip_locator *locator);
+
 int hip_create_locators(hip_common_t *locator_msg,
                         struct hip_locator_info_addr_item **locators);
 
