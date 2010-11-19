@@ -246,6 +246,10 @@ echo ""
 
 
 
-AC_CONFIG_FILES([ Makefile doc/Doxyfile doc/HOWTO.xml tools/nsupdate.pl tools/hipdnsproxy/hipdnsproxy ])
+AC_CONFIG_FILES([ Makefile
+                  doc/Doxyfile
+                  doc/HOWTO.xml
+                  tools/hipdnsproxy/hipdnsproxy
+                  tools/nsupdate.pl ])
 
 AC_OUTPUT
