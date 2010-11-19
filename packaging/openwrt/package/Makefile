@@ -62,7 +62,6 @@ CONFIGURE_VARS += \
 define Build/Configure
 	$(call Build/Configure/Default, \
             --sysconfdir=/etc \
-            --enable-shared \
             --disable-debug \
     );
 endef
@@ -93,13 +92,8 @@ endef
 define Package/hipl-common/install
 	$(INSTALL_DIR) $(1)/etc/hip/
 	$(INSTALL_DIR) $(1)/etc/modules.d/
-	$(INSTALL_DIR) $(1)/usr/lib/
 
 	$(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipcore.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipheartbeat.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhiphbupdate.so* $(1)/usr/lib/
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhipupdate.so* $(1)/usr/lib/
 endef
 
 $(eval $(call BuildPackage,hipl-common))
