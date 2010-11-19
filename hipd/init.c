@@ -708,6 +708,7 @@ static void hip_init_packet_types(void)
     lmod_register_packet_type(HIP_CLOSE_ACK, "HIP_CLOSE_ACK");
     lmod_register_packet_type(HIP_PSIG,      "HIP_PSIG");
     lmod_register_packet_type(HIP_TRIG,      "HIP_TRIG");
+    lmod_register_packet_type(HIP_UPDATE,    "HIP_UPDATE");
     lmod_register_packet_type(HIP_LUPDATE,   "HIP_LUPDATE");
     lmod_register_packet_type(HIP_DATA,      "HIP_DATA");
     lmod_register_packet_type(HIP_PAYLOAD,   "HIP_PAYLOAD");
