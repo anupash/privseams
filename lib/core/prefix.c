@@ -381,23 +381,23 @@ int hip_addr_is_loopback(struct in6_addr *addr)
     return IS_IPV4_LOOPBACK(addr_in.s_addr);
 }
 
-int ipv4_addr_cmp(const struct in_addr *a1,
-                                const struct in_addr *a2) {
+int ipv4_addr_cmp(const struct in_addr *a1, const struct in_addr *a2)
+{
     return memcmp(a1, a2, sizeof(struct in_addr));
 }
 
-void ipv4_addr_copy(struct in_addr *a1,
-                                  const struct in_addr *a2) {
+void ipv4_addr_copy(struct in_addr *a1, const struct in_addr *a2)
+{
     memcpy(a1, a2, sizeof(struct in_addr));
 }
 
-int ipv6_addr_cmp(const struct in6_addr *a1,
-                  const struct in6_addr *a2) {
+int ipv6_addr_cmp(const struct in6_addr *a1, const struct in6_addr *a2)
+{
     return memcmp(a1, a2, sizeof(struct in6_addr));
 }
 
-void ipv6_addr_copy(struct in6_addr *a1,
-               const struct in6_addr *a2) {
+void ipv6_addr_copy(struct in6_addr *a1, const struct in6_addr *a2)
+{
     memcpy(a1, a2, sizeof(struct in6_addr));
 }
 
@@ -409,7 +409,8 @@ int ipv6_addr_any(const struct in6_addr *a) {
 }
 
 void hip_copy_in6addr_null_check(struct in6_addr *to,
-                                 const struct in6_addr *from) {
+                                 const struct in6_addr *from)
+{
     HIP_ASSERT(to);
     if (from) {
         ipv6_addr_copy(to, from);
@@ -418,8 +419,8 @@ void hip_copy_in6addr_null_check(struct in6_addr *to,
     }
 }
 
-void hip_copy_inaddr_null_check(struct in_addr *to,
-                                const struct in_addr *from) {
+void hip_copy_inaddr_null_check(struct in_addr *to, const struct in_addr *from)
+{
     HIP_ASSERT(to);
     if (from) {
         memcpy(to, from, sizeof(*to));

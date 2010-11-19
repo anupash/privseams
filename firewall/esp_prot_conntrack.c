@@ -88,8 +88,7 @@ esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
  * @param transform     TPA transform
  * @return              resolved transform, NULL for UNUSED transform
  */
-static esp_prot_conntrack_tfm_t *esp_prot_conntrack_resolve_transform(
-        const uint8_t transform)
+static esp_prot_conntrack_tfm_t *esp_prot_conntrack_resolve_transform(const uint8_t transform)
 {
     HIP_DEBUG("resolving transform: %u\n", transform);
 
@@ -137,10 +136,9 @@ static void esp_prot_conntrack_free_cached_item(void *cache_item)
  * @param   hash_length length of the anchor element
  * @return  esp state of the connection
  */
-static struct esp_tuple *esp_prot_conntrack_find_esp_tuple(
-        const struct tuple *tuple,
-        const unsigned char *active_anchor,
-        const int hash_length)
+static struct esp_tuple *esp_prot_conntrack_find_esp_tuple(const struct tuple *tuple,
+                                                           const unsigned char *active_anchor,
+                                                           const int hash_length)
 {
     struct esp_tuple *esp_tuple = NULL;
     SList *list                 = NULL;
@@ -424,9 +422,9 @@ out_err:
  * @return  0 on success, -1 on error
  */
 static int esp_prot_conntrack_verify_branch(const struct tuple *tuple,
-        const struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS],
-        const struct esp_prot_branch *esp_branches[MAX_NUM_PARALLEL_HCHAINS],
-        const struct esp_prot_secret *esp_secrets[MAX_NUM_PARALLEL_HCHAINS])
+                                            const struct esp_prot_anchor *esp_anchors[MAX_NUM_PARALLEL_HCHAINS],
+                                            const struct esp_prot_branch *esp_branches[MAX_NUM_PARALLEL_HCHAINS],
+                                            const struct esp_prot_secret *esp_secrets[MAX_NUM_PARALLEL_HCHAINS])
 {
     esp_prot_conntrack_tfm_t *conntrack_tfm = NULL;
     int hash_length                         = 0;
@@ -547,8 +545,8 @@ int esp_prot_conntrack_uninit(void)
     int err = 0;
 
     // uninit all possible transforms
-    memset(esp_prot_conntrack_tfms, 0, MAX_NUM_TRANSFORMS
-           * sizeof(esp_prot_conntrack_tfm_t));
+    memset(esp_prot_conntrack_tfms, 0,
+           MAX_NUM_TRANSFORMS * sizeof(esp_prot_conntrack_tfm_t));
 
     return err;
 }
@@ -881,7 +879,8 @@ out_err:
  * @param   tuple connection state of the connection tracking mechanism
  * @return  0 on success, -1 in case of an error or unsupported update
  */
-int esp_prot_conntrack_update(const hip_common_t *update, const struct tuple *tuple)
+int esp_prot_conntrack_update(const hip_common_t *update,
+                              const struct tuple *tuple)
 {
     const struct hip_tlv_common *param  = NULL;
     const struct hip_seq *seq           = NULL;
@@ -898,7 +897,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, const struct tuple *tu
     HIP_ASSERT(tuple != NULL);
 
     memset(esp_anchors, 0, MAX_NUM_PARALLEL_HCHAINS * sizeof(struct esp_prot_anchor *));
-    memset(esp_roots, 0, MAX_NUM_PARALLEL_HCHAINS * sizeof(struct esp_prot_root *));
+    memset(esp_roots,   0, MAX_NUM_PARALLEL_HCHAINS * sizeof(struct esp_prot_root *));
 
     seq      = hip_get_param(update, HIP_PARAM_SEQ);
     esp_info = hip_get_param(update, HIP_PARAM_ESP_INFO);
@@ -1148,8 +1147,10 @@ int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
                                                           conntrack_tfm->hash_length, esp_tuple->hash_tree_depth,
                                                           &esp_tuple->active_anchors[active_hchain][0],
                                                           &esp_tuple->next_anchors[active_hchain][0],
-                                                          esp_tuple->active_roots[active_hchain], esp_tuple->active_root_length,
-                                                          esp_tuple->next_roots[active_hchain], esp_tuple->next_root_length[active_hchain],
+                                                          esp_tuple->active_roots[active_hchain],
+                                                          esp_tuple->active_root_length,
+                                                          esp_tuple->next_roots[active_hchain],
+                                                          esp_tuple->next_root_length[active_hchain],
                                                           ((unsigned char *) esp) + sizeof(struct hip_esp))) < 0, -1,
                      "failed to verify ESP protection hash\n");
         } else {
@@ -1167,8 +1168,11 @@ int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
                                                                &esp_tuple->active_anchors[active_hchain][0],
                                                                &esp_tuple->next_anchors[active_hchain][0],
                                                                ((unsigned char *) esp) + sizeof(struct hip_esp),
-                                                               num_verify, esp_tuple->active_roots[active_hchain], esp_tuple->active_root_length,
-                                                               esp_tuple->next_roots[active_hchain], esp_tuple->next_root_length[active_hchain])) < 0, -1,
+                                                               num_verify,
+                                                               esp_tuple->active_roots[active_hchain],
+                                                               esp_tuple->active_root_length,
+                                                               esp_tuple->next_roots[active_hchain],
+                                                               esp_tuple->next_root_length[active_hchain])) < 0, -1,
                          "failed to verify ESP protection hash\n");
             } else if ((esp_tuple->esp_prot_tfm == ESP_PROT_TFM_CUMULATIVE
                         || esp_tuple->esp_prot_tfm == ESP_PROT_TFM_PARA_CUMUL)
@@ -1218,7 +1222,8 @@ int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
 
                     // keep the buffer filled with fresh elements only
                     if (cumulative_ptr[i].seq > esp_tuple->hash_buffer[cumulative_ptr[i].seq % ring_buffer_size].seq) {
-                        memcpy(&esp_tuple->hash_buffer[cumulative_ptr[i].seq % ring_buffer_size], &cumulative_ptr[i],
+                        memcpy(&esp_tuple->hash_buffer[cumulative_ptr[i].seq % ring_buffer_size],
+                               &cumulative_ptr[i],
                                sizeof(esp_cumulative_item_t));
 
                         HIP_DEBUG("cached cumulative token with SEQ: %u\n", cumulative_ptr[i].seq);
