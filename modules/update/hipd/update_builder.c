@@ -32,7 +32,10 @@
  * @author Rene Hummen
  */
 
+#include <string.h>
+
 #include "lib/core/builder.h"
+#include "lib/core/ife.h"
 #include "update_builder.h"
 
 
@@ -73,5 +76,39 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
                                sizeof(struct hip_ack));
     ack.peer_update_id = htonl(peer_update_id);
     err = hip_build_param(msg, &ack);
+    return err;
+}
+
+/**
+ * build a HIP locator parameter
+ *
+ * @param msg           the message where the REA will be appended
+ * @param addrs         list of addresses
+ * @param addr_count number of addresses
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_locator(struct hip_common *msg,
+                            struct hip_locator_info_addr_item *addrs,
+                            int addr_count)
+{
+    int err                          = 0;
+    struct hip_locator *locator_info = NULL;
+    int addrs_len = addr_count * (sizeof(struct hip_locator_info_addr_item));
+
+    HIP_IFE(!(locator_info = malloc(sizeof(struct hip_locator) + addrs_len)), -1);
+
+    hip_set_param_type((struct hip_tlv_common *) locator_info, HIP_PARAM_LOCATOR);
+
+    hip_calc_generic_param_len((struct hip_tlv_common *) locator_info,
+                               sizeof(struct hip_locator),
+                               addrs_len);
+
+    memcpy(locator_info + 1, addrs, addrs_len);
+    HIP_IFE(hip_build_param(msg, locator_info), -1);
+
+out_err:
+    if (locator_info) {
+        free(locator_info);
+    }
     return err;
 }

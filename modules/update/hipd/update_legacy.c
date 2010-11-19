@@ -43,6 +43,7 @@
 #include "lib/core/list.h"
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
+#include "update_builder.h"
 #include "update.h"
 #include "update_legacy.h"
 

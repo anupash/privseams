@@ -114,9 +114,6 @@ int hip_build_param_keys_hdr(struct hip_keys *,
                              uint32_t,
                              uint16_t,
                              struct hip_crypto_key *);
-int hip_build_param_locator(struct hip_common *,
-                            struct hip_locator_info_addr_item *,
-                            int);
 int hip_build_param_cert(struct hip_common *,
                          uint8_t,
                          uint8_t,
@@ -213,6 +210,9 @@ hip_tlv_len_t hip_get_param_total_len(const void *);
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *);
 hip_tlv_type_t hip_get_param_type(const void *);
 void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type);
+void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
+                                       hip_tlv_len_t tlv_size,
+                                       hip_tlv_len_t contents_size);
 void hip_calc_param_len(struct hip_tlv_common *tlv_common,
                         hip_tlv_len_t contents_size);
 uint16_t hip_get_msg_checksum(struct hip_common *msg);
