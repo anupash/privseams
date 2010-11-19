@@ -731,7 +731,6 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, struct in6_addr *src_addr,
     HIP_IFEL(!locator, -1, "locator is NULL");
 
     locator_addr_count = hip_get_locator_addr_item_count(locator);
-    HIP_IFEL((locator_addr_count < 0), -1, "Negative address count\n");
 
     HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
               locator_addr_count, hip_get_param_total_len(locator));
