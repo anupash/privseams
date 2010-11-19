@@ -3899,33 +3899,6 @@ int hip_get_locator_addr_item_count(const struct hip_locator *locator)
 }
 
 /**
- * Retreive a @c LOCATOR ADDRESS ITEM@c from a list.
- *
- * @param item_list a pointer to the first item in the list
- * @param idx       the index of the item in the list
- * @return          the locator addres item
- */
-union hip_locator_info_addr *hip_get_locator_item(void *item_list, int idx)
-{
-    int i = 0;
-    struct hip_locator_info_addr_item *temp;
-    char *result;
-    result = (char *) item_list;
-
-
-    for (i = 0; i <= idx - 1; i++) {
-        temp = (struct hip_locator_info_addr_item *) result;
-        if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI ||
-            temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-            result += sizeof(struct hip_locator_info_addr_item);
-        } else {
-            result += sizeof(struct hip_locator_info_addr_item2);
-        }
-    }
-    return (union hip_locator_info_addr *) result;
-}
-
-/**
  * retrieve a IP address from a locator item structure
  *
  * @param item      a pointer to the item
