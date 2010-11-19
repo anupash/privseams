@@ -38,6 +38,13 @@
 
 #include "lib/core/protodefs.h"
 
+/* the different mobility message types */
+#define HIP_UPDATE_LOCATOR              0
+#define HIP_UPDATE_ECHO_REQUEST         1
+#define HIP_UPDATE_ECHO_RESPONSE        2
+#define HIP_UPDATE_ESP_ANCHOR           3
+#define HIP_UPDATE_ESP_ANCHOR_ACK       4
+
 int hip_create_locators(hip_common_t *locator_msg,
                         struct hip_locator_info_addr_item **locators);
 
