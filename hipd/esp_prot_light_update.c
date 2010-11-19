@@ -43,6 +43,7 @@
 #include "lib/core/ife.h"
 #include "lib/core/protodefs.h"
 #include "lib/tool/xfrmapi.h"
+#include "modules/update/hipd/update_builder.h"
 #include "esp_prot_anchordb.h"
 #include "esp_prot_hipd_msg.h"
 #include "hipd.h"

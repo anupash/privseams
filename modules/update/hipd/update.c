@@ -49,7 +49,6 @@
 #include "hipd/pisa.h"
 #include "hipd/pkt_handling.h"
 #include "hipd/user.h"
-#include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/crypto.h"
 #include "lib/core/debug.h"
@@ -62,6 +61,7 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
 #include "lib/core/modularization.h"
+#include "update_builder.h"
 #include "update_legacy.h"
 #include "update.h"
 

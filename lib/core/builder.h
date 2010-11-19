@@ -68,7 +68,6 @@ void hip_build_network_hdr(struct hip_common *,
                            const struct in6_addr *,
                            const struct in6_addr *);
 int hip_host_id_hits(hip_ha_t *entry, struct hip_common *msg);
-int hip_build_param_ack(struct hip_common *, uint32_t);
 int hip_build_param_contents(struct hip_common *,
                              const void *,
                              hip_tlv_type_t,
@@ -139,7 +138,6 @@ int hip_build_param_challenge_request(struct hip_common *,
 
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 
-int hip_build_param_seq(struct hip_common *, uint32_t);
 int hip_build_param_signature2_contents(struct hip_common *,
                                         const void *,
                                         hip_tlv_len_t,
@@ -216,6 +214,9 @@ const char *hip_get_param_host_id_hostname(const struct hip_host_id *);
 hip_tlv_len_t hip_get_param_total_len(const void *);
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *);
 hip_tlv_type_t hip_get_param_type(const void *);
+void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type);
+void hip_calc_param_len(struct hip_tlv_common *tlv_common,
+                        hip_tlv_len_t contents_size);
 uint16_t hip_get_msg_checksum(struct hip_common *msg);
 const char *hip_message_type_name(const uint8_t);
 struct hip_common *hip_msg_alloc(void);

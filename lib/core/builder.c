@@ -393,7 +393,7 @@ hip_tlv_type_t hip_get_param_type(const void *tlv_common)
  * @param tlv_generic pointer to the parameter
  * @param type type of the parameter (in host byte order)
  */
-static void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
+void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
 {
     tlv_generic->type = htons(type);
 }
@@ -1089,7 +1089,7 @@ static void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
  * @param contents_size size of the contents after type and length fields
  *                 (in host byte order)
  */
-static void hip_calc_param_len(struct hip_tlv_common *tlv_common,
+void hip_calc_param_len(struct hip_tlv_common *tlv_common,
                                hip_tlv_len_t contents_size)
 {
     hip_calc_generic_param_len(tlv_common,
@@ -2859,50 +2859,6 @@ out_err:
     if (locator_info) {
         free(locator_info);
     }
-    return err;
-}
-
-
-
-/**
- * build and append a HIP SEQ parameter to a message
- *
- * @param msg the message where the parameter will be appended
- * @param update_id Update ID
- * @return 0 on success, otherwise < 0.
- */
-int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
-{
-    int err = 0;
-    struct hip_seq seq;
-
-    hip_set_param_type((struct hip_tlv_common *) &seq, HIP_PARAM_SEQ);
-    hip_calc_generic_param_len((struct hip_tlv_common *) &seq,
-                               sizeof(struct hip_seq),
-                               0);
-    seq.update_id = htonl(update_id);
-    err = hip_build_param(msg, &seq);
-    return err;
-}
-
-/**
- * build and append a HIP ACK parameter to a message
- *
- * @param msg the message where the parameter will be appended
- * @param peer_update_id peer Update ID
- * @return 0 on success, otherwise < 0.
- */
-int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
-{
-    int err = 0;
-    struct hip_ack ack;
-
-    hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_ACK);
-    hip_calc_generic_param_len((struct hip_tlv_common *) &ack,
-                               sizeof(struct hip_ack),
-                               0);
-    ack.peer_update_id = htonl(peer_update_id);
-    err = hip_build_param(msg, &ack);
     return err;
 }
 
