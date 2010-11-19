@@ -25,8 +25,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_HIPD_UPDATE_LEGACY_H
-#define HIP_HIPD_UPDATE_LEGACY_H
+#ifndef HIP_MODULES_UPDATE_HIPD_UPDATE_H
+#define HIP_MODULES_UPDATE_HIPD_UPDATE_H
 
 #include "lib/core/protodefs.h"
 
@@ -34,4 +34,4 @@ int hip_build_locators_old(struct hip_common *msg);
 
 void hip_empty_oppipdb_old(void);
 
-#endif /* HIP_HIPD_UPDATE_LEGACY_H */
+#endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_H */

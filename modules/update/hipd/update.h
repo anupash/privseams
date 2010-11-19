@@ -30,8 +30,8 @@
  * @date    3.5.2009
  */
 
-#ifndef HIP_HIPD_UPDATE_H
-#define HIP_HIPD_UPDATE_H
+#ifndef HIP_MODULES_HIPD_UPDATE_LEGACY_H
+#define HIP_MODULES_HIPD_UPDATE_LEGACY_H
 
 #include <stdint.h>
 #include <netinet/in.h>
@@ -50,4 +50,4 @@ int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
 
 int hip_update_init(void);
 
-#endif /* HIP_HIPD_UPDATE_H */
+#endif /* HIP_MODULES_HIPD_UPDATE_LEGACY_H */
