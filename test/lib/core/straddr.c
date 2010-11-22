@@ -27,8 +27,10 @@
  * @file
  * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
+
 #include <check.h>
-#include <stdlib.h> // free()
+#include <stdlib.h>
+
 #include "lib/core/straddr.h"
 
 START_TEST(test_hip_in6_ntop_valid)

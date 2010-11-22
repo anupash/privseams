@@ -27,10 +27,12 @@
  * @file
  * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
+
 #include <check.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
 #include "lib/core/hit.h"
 
 START_TEST(test_hip_convert_hit_to_str_valid)
