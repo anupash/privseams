@@ -72,8 +72,7 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
     struct hip_ack ack;
 
     hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_ACK);
-    hip_calc_param_len((struct hip_tlv_common *) &ack,
-                               sizeof(struct hip_ack));
+    hip_calc_param_len((struct hip_tlv_common *) &ack, sizeof(struct hip_ack));
     ack.peer_update_id = htonl(peer_update_id);
     err = hip_build_param(msg, &ack);
     return err;
@@ -107,8 +106,6 @@ int hip_build_param_locator(struct hip_common *msg,
     HIP_IFE(hip_build_param(msg, locator_info), -1);
 
 out_err:
-    if (locator_info) {
-        free(locator_info);
-    }
+    free(locator_info);
     return err;
 }

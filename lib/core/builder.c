@@ -1059,8 +1059,8 @@ void hip_calc_hdr_len(struct hip_common *msg)
  *                 (in host byte order)
  */
 void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
-                                       hip_tlv_len_t tlv_size,
-                                       hip_tlv_len_t contents_size)
+                                hip_tlv_len_t tlv_size,
+                                hip_tlv_len_t contents_size)
 {
     hip_set_param_contents_len(tlv_common,
                                tlv_size + contents_size -
@@ -1079,7 +1079,7 @@ void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
  *                 (in host byte order)
  */
 void hip_calc_param_len(struct hip_tlv_common *tlv_common,
-                               hip_tlv_len_t contents_size)
+                        hip_tlv_len_t contents_size)
 {
     hip_calc_generic_param_len(tlv_common,
                                sizeof(struct hip_tlv_common),

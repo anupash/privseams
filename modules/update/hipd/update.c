@@ -659,7 +659,7 @@ static struct in6_addr *hip_get_locator_item_address(void *item)
     struct hip_locator_info_addr_item *temp;
 
 
-    temp = (struct hip_locator_info_addr_item *) item;
+    temp = item;
     if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
         return &temp->address;
     } else if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
