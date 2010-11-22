@@ -47,6 +47,10 @@
 #include "update.h"
 #include "update_legacy.h"
 
+
+#define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
+#define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
+
 /**
  * build a LOCATOR parameter for an UPDATE packet
  *

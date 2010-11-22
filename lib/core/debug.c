@@ -83,6 +83,7 @@
 #include "lib/core/list.h"
 #include "lib/core/prefix.h"
 #include "lib/tool/lutil.h"
+#include "modules/update/hipd/update.h"
 #include "builder.h"
 #include "ife.h"
 #include "state.h"

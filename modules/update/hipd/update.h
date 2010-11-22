@@ -45,6 +45,11 @@
 #define HIP_UPDATE_ESP_ANCHOR           3
 #define HIP_UPDATE_ESP_ANCHOR_ACK       4
 
+/* locator parameter types */
+#define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
+#define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
+#define HIP_LOCATOR_LOCATOR_TYPE_UDP     2
+
 int hip_get_locator_addr_item_count(const struct hip_locator *locator);
 
 int hip_create_locators(hip_common_t *locator_msg,
