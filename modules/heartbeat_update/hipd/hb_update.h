@@ -1,6 +1,4 @@
-/**
- * @file
- *
+/*
  * Copyright (c) 2010 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -24,6 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #ifndef HIP_MODULES_HEARTBEAT_UPDATE_HIPD_HB_UPDATE_H
 #define HIP_MODULES_HEARTBEAT_UPDATE_HIPD_HB_UPDATE_H
 
