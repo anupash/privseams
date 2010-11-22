@@ -20,6 +20,7 @@
 #define OUTBOUND_R2_CREATE_APPINFO_PRIO         41501
 #define TRIGGER_BEX_PORTS_PRIO                  50000
 #define TRIGGER_BEX_UPDATE_PRIO                 30000
+#define HANDLE_UPDATE_PRIO                      32000
 
 
 int hip_signaling_init(void)
@@ -57,6 +58,11 @@ int hip_signaling_init(void)
             -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
             -1, "Error on registering Signaling handle function.\n");
+
+    // Handle BEX UPDATES
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED, &signaling_handle_bex_update, HANDLE_UPDATE_PRIO),
+            -1, "Error on registering Signaling handle function.\n");
+
 
     // register user message handler
     HIP_IFEL(hip_user_register_handle(HIP_MSG_TRIGGER_BEX, &signaling_handle_bex_ports, TRIGGER_BEX_PORTS_PRIO),

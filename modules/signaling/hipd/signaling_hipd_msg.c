@@ -41,9 +41,11 @@
 #include "lib/core/ife.h"
 #include "lib/core/prefix.h"
 #include "lib/core/icomm.h"
+#include "lib/core/hip_udp.h"
 
 #include "hipd/hadb.h"
 #include "hipd/user.h"
+#include "hipd/output.h"
 
 #include "modules/signaling/hipd/signaling_hipd_builder.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
@@ -84,20 +86,97 @@ out_err:
     return err;
 }
 
+static int build_bex_update_msg(hip_common_t *update_packet_to_send,
+                                UNUSED hip_common_t *msg,
+                                hip_ha_t *ha)
+{
+    int err                                     = 0;
+    uint16_t mask                               = 0;
+    struct signaling_state * sig_state = NULL;
+
+    HIP_DEBUG("Creating the BEX UPDATE packet\n");
+
+    hip_build_network_hdr(update_packet_to_send,
+                          HIP_UPDATE,
+                          mask,
+                          &ha->hit_our,
+                          &ha->hit_peer);
+
+
+
+    HIP_IFEL(!(sig_state = (struct signaling_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_state")),
+                 -1, "failed to retrieve state for signaling ports\n");
+
+    // Add Appinfo
+    signaling_build_param_appinfo(update_packet_to_send, sig_state);
+
+    // Add HMAC
+    HIP_IFEL(hip_build_param_hmac_contents(update_packet_to_send,
+                                           &ha->hip_hmac_out), -1, "Building of HMAC failed\n");
+
+    // Add SIGNATURE
+    HIP_IFEL(ha->sign(ha->our_priv_key, update_packet_to_send), -EINVAL,
+             "Could not sign UPDATE. Failing\n");
+
+out_err:
+    return err;
+}
+
 /*
  * Do a BEX_UPDATE.
  */
 int signaling_trigger_bex_update(struct hip_common *msg, UNUSED struct sockaddr_in6 *src) {
     int err = 0;
+    hip_ha_t *ha = NULL;
+    hip_common_t * update_packet_to_send = NULL;
+    const hip_tlv_common_t * param = NULL;
+    const hip_hit_t * our_hit = NULL;
+    const hip_hit_t * peer_hit = NULL;
 
     HIP_DEBUG("Received request to trigger a update BEX. \n");
     HIP_DUMP_MSG(msg);
 
-    /*
-     * TODO: determine application and trigger the update BEX...
-     */
+    /* Get the corresponding host association */
+    param = hip_get_param(msg, HIP_PARAM_HIT);
+    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
+        peer_hit = hip_get_param_contents_direct(param);
+        if (ipv6_addr_is_null(peer_hit)) {
+            peer_hit = NULL;
+        } else {
+            HIP_DEBUG_HIT("got dest hit:", peer_hit);
+        }
+    }
 
-//out_err:
+    param = hip_get_next_param(msg, param);
+    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
+        our_hit = hip_get_param_contents_direct(param);
+        if (ipv6_addr_is_null(our_hit)) {
+            our_hit = NULL;
+        } else {
+            HIP_DEBUG_HIT("got src hit:", our_hit);
+        }
+    }
+
+    HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
+                 -1, "Failed to retrieve hadb entry, cannot save port state.\n");
+
+    /* Build the update message */
+    HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
+             "Out of memory while allocation memory for the bex update packet\n");
+    HIP_IFEL(build_bex_update_msg(update_packet_to_send, msg, ha),
+            -1, "Failed to build BEX update.\n");
+
+
+    /* Send the update bex message */
+    err = hip_send_pkt(NULL,
+                       &ha->peer_addr,
+                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ha->peer_udp_port,
+                       update_packet_to_send,
+                       ha,
+                       1);
+
+out_err:
     return err;
 }
 
@@ -161,6 +240,21 @@ int signaling_handle_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
 out_err:
 	return err;
 }
+
+/*
+ * Handle a BEX update
+ */
+int signaling_handle_bex_update(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int err = -1;
+
+    HIP_DEBUG("Received BEX Update... \n");
+    HIP_DUMP_MSG(ctx->input_msg);
+
+//out_err:
+    return err;
+}
+
 
 int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
