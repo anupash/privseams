@@ -47,6 +47,8 @@ stamp-h1
 tags
 test/auth_performance
 test/certteststub
+test/check_firewall
+test/check_lib_core
 test/dh_performance
 test/fw_port_bindings_performance
 test/hc_performance

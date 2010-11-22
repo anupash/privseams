@@ -70,10 +70,10 @@ TESTS           =
 check_PROGRAMS  =
 
 if HIP_UNITTESTS
-TESTS           += check_firewall \
-                   check_lib_core
-check_PROGRAMS  += check_firewall \
-                   check_lib_core
+TESTS           += test/check_firewall \
+                   test/check_lib_core
+check_PROGRAMS  += test/check_firewall \
+                   test/check_lib_core
 endif
 
 
@@ -196,14 +196,14 @@ lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
 
 
-check_lib_core_SOURCES =    test/check_lib_core.c          \
-                            test/lib/core/hit.c            \
-                            test/lib/core/straddr.c
+test_check_firewall_SOURCES = test/check_firewall.c          \
+                              test/firewall/file_buffer.c    \
+                              test/firewall/line_parser.c    \
+                              test/firewall/port_bindings.c
 
-check_firewall_SOURCES =    test/check_firewall.c          \
-                            test/firewall/file_buffer.c    \
-                            test/firewall/line_parser.c    \
-                            test/firewall/port_bindings.c
+test_check_lib_core_SOURCES = test/check_lib_core.c          \
+                              test/lib/core/hit.c            \
+                              test/lib/core/straddr.c
 
 # Initialize LDADD lists empty, because modules might add entries to LDADD. The
 # module LDADDs need to be included before the standard LDADDs, because modules
@@ -220,11 +220,11 @@ include modules/update/Makefile.am
 
 ### library dependencies ###
 
-check_lib_core_LDADD                     = lib/core/libhipcore.la
-check_firewall_LDADD                     = lib/core/libhipcore.la
 firewall_hipfw_LDADD                    += lib/core/libhipcore.la
 hipd_hipd_LDADD                         += lib/core/libhipcore.la
 test_auth_performance_LDADD              = lib/core/libhipcore.la
+test_check_firewall_LDADD                = lib/core/libhipcore.la
+test_check_lib_core_LDADD                = lib/core/libhipcore.la
 test_certteststub_LDADD                  = lib/core/libhipcore.la
 test_dh_performance_LDADD                = lib/core/libhipcore.la
 test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
