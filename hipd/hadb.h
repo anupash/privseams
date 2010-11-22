@@ -42,8 +42,6 @@
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
-extern hip_xmit_func_set_t nat_xmit_func_set;
-
 extern HIP_HASHTABLE *hadb_hit;
 
 void hip_hadb_hold_entry(void *entry);

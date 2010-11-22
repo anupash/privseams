@@ -70,11 +70,6 @@ struct update_state {
         @todo Remove this kludge. */
     int update_state;
 
-    /** Update function set.
-        @note Do not modify this value directly. Use
-        hip_hadb_set_handle_function_set() instead. */
-    hip_update_func_set_t *hadb_update_func;
-
     /** This "linked list" includes the locators we recieved in the initial
      * UPDATE packet. Locators are stored as "struct in6_addr *"s.
      *
@@ -942,7 +937,6 @@ static int hip_update_init_state(struct modular_state *state)
              "Error on allocating memory for a update state instance.\n");
 
     update_state->update_state                   = 0;
-    update_state->hadb_update_func               = NULL;
     update_state->addresses_to_send_echo_request = hip_linked_list_init();
     update_state->update_id_out                  = 0;
     update_state->update_id_in                   = 0;
@@ -1086,8 +1080,6 @@ static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
         ack_peer_update_id = ntohl(ack->peer_update_id);
         HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
                   ack_peer_update_id);
-        /*ha->hadb_update_func->hip_update_handle_ack(
-         *      ha, ack, has_esp_info);*/
         if (ack_peer_update_id != hip_update_get_out_id(localstate)) {
             // Simplified logic of RFC 5201 6.12.2, 1st step:
             // We drop the packet if the Update ID in the ACK
