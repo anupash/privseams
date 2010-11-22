@@ -59,6 +59,7 @@
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
 #include "lib/tool/pk.h"
+#include "modules/update/hipd/update.h"
 #include "common_types.h"
 #include "dlist.h"
 #include "esp_prot_conntrack.h"

@@ -150,9 +150,6 @@ struct hip_spi_in_item {
     uint16_t      keymat_index;        /* advertised keymat index */
     /* the Update ID in SEQ parameter these SPI are related to */
     struct hip_esp_info                stored_received_esp_info;
-    /* our addresses this SPI is related to, reuse struct to ease coding */
-    struct hip_locator_info_addr_item *addresses;
-    int                                addresses_n; /* number of addresses */
 };
 
 struct hip_spi_out_item {

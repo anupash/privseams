@@ -33,7 +33,7 @@
  */
 
 #include "lib/core/protodefs.h"
-
+#include "update.h"
 
 #ifndef MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
 #define MODULES_UPDATE_HIPD_UPDATE_BUILDER_H

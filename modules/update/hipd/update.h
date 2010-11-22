@@ -50,6 +50,52 @@
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
 #define HIP_LOCATOR_LOCATOR_TYPE_UDP     2
 
+
+struct hip_locator {
+    hip_tlv_type_t type;
+    hip_tlv_len_t  length;
+    /* fixed part ends */
+} __attribute__ ((packed));
+
+/**
+ * Fixed start of this struct must match to struct hip_peer_addr_list_item
+ * for the part of address item. It is used in hip_update_locator_match().
+ * @todo Maybe fix this in some better way?
+ */
+struct hip_locator_info_addr_item {
+    uint8_t         traffic_type;
+    uint8_t         locator_type;
+    uint8_t         locator_length;
+    uint8_t         reserved; /**< last bit is P (prefered) */
+    uint32_t        lifetime;
+    struct in6_addr address;
+}  __attribute__ ((packed));
+
+/**
+ * it is the type 2 locater for UDP or other transport protocol later.
+ */
+struct hip_locator_info_addr_item2 {
+    uint8_t         traffic_type;
+    uint8_t         locator_type;
+    uint8_t         locator_length;
+    uint8_t         reserved; /* last bit is P (prefered) */
+    uint32_t        lifetime;
+    uint16_t        port;
+    uint8_t         transport_protocol;
+    uint8_t         kind;
+    uint32_t        priority;
+    uint32_t        spi;
+    struct in6_addr address;
+}  __attribute__ ((packed));
+
+/**
+ * it is a union of both type1 and type2 locator.
+ */
+union hip_locator_info_addr {
+    struct hip_locator_info_addr_item  type1;
+    struct hip_locator_info_addr_item2 type2;
+} __attribute__ ((packed));
+
 int hip_get_locator_addr_item_count(const struct hip_locator *locator);
 
 int hip_create_locators(hip_common_t *locator_msg,
