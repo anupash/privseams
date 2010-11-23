@@ -102,6 +102,10 @@ AH_TEMPLATE(HIPL_HOSTS_FILE, [default hosts file location])
 AC_DEFINE_UNQUOTED(HIPL_CONFIG_FILE, "$(eval echo ${sysconfdir}/hipd_config)")
 AH_TEMPLATE(HIPL_CONFIG_FILE, [default config file location])
 
+# Make sure that pythondir does not contain ${prefix} or similar so that it
+# can be substituted into our Python scripts.
+AC_SUBST(pythondir, $(eval echo $pythondir))
+
 
 
 # Set default AM_CFLAGS for the complete project.
@@ -249,6 +253,7 @@ echo ""
 AC_CONFIG_FILES([ Makefile
                   doc/Doxyfile
                   doc/HOWTO.xml
+                  tools/hipdnskeyparse/hipdnskeyparse
                   tools/hipdnsproxy/hipdnsproxy
                   tools/nsupdate.pl ])
 

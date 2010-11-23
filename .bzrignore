@@ -53,7 +53,7 @@ test/dh_performance
 test/fw_port_bindings_performance
 test/hc_performance
 tools/hipconf
-tools/hipdnskeyparse
+tools/hipdnskeyparse/hipdnskeyparse
 tools/hipdnsproxy/hipdnsproxy
 tools/nsupdate.pl
 tools/pisacert

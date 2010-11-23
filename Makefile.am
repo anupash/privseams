@@ -247,7 +247,7 @@ dns_PYTHON = tools/hipdnsproxy/DNS/__init__.py      \
              tools/hipdnsproxy/DNS/Type.py          \
              tools/hipdnsproxy/DNS/win32dns.py
 
-dnsdir = $(pythondir)/hipdnsproxy/DNS
+dnsdir = $(pythondir)/DNS
 
 tools_hipdnskeyparse_PYTHON = tools/hipdnskeyparse/myasn.py
 
@@ -255,8 +255,8 @@ tools_hipdnsproxy_PYTHON = tools/hipdnsproxy/hosts.py       \
                            tools/hipdnsproxy/pyip6.py       \
                            tools/hipdnsproxy/util.py
 
-tools_hipdnskeyparsedir = $(pythondir)
-tools_hipdnsproxydir    = $(pythondir)
+tools_hipdnskeyparsedir = $(pythondir)/hipdnskeyparse
+tools_hipdnsproxydir    = $(pythondir)/hipdnsproxy
 
 
 ### misc stuff ###

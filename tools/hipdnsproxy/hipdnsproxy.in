@@ -57,6 +57,7 @@ import copy
 import errno
 
 #local imports
+sys.path.append('@pythondir@/hipdnsproxy')
 import hosts
 import util
 import DNS

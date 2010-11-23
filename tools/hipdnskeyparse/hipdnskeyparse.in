@@ -3,11 +3,13 @@
 import sys
 import getopt
 import os
-import myasn
 import binascii
 import re
 import sha
 import struct
+
+sys.path.append('@pythondir@/hipdnskeyparse')
+import myasn
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
