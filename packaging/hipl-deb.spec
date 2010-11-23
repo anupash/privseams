@@ -160,7 +160,6 @@ rm -rf %{buildroot}
 %doc doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 
 %files all
-%doc COPYING
 
 
 %changelog
