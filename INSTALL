@@ -24,8 +24,8 @@ to use the optional native programming interface, you need to patch your kernel
 anyway.
 
 In order to compile HIPL you need autotools (autoconf, automake, libtool), GNU
-Make and gcc. openssl, iptables, libcap and libconfig are required complete
-with development headers. For Perl, Socket6, IO::Socket::INET6, Net::IP and
+Make and gcc. openssl, iptables and libconfig are required complete with
+development headers. For Perl, Socket6, IO::Socket::INET6, Net::IP and
 Net::DNS modules are required. You can optionally install xmlto to
 build the HOWTO and doxygen to build the code documentation. Installing the
 optional check library (http://check.sourceforge.net/) enables unit tests.
@@ -35,7 +35,7 @@ and dpkg-dev on ubuntu).
 On Ubuntu, the following command(s) should solve the dependencies:
 
   aptitude install automake autoconf libtool gcc libssl-dev \
-    iptables-dev libcap-dev libnet-ip-perl libnet-dns-perl \
+    iptables-dev libconfig8-dev libnet-ip-perl libnet-dns-perl \
     libsocket6-perl libio-socket-inet6-perl
 
   Optionally: aptitude install pax miredo bzr xmlto doxygen check fakeroot
@@ -44,10 +44,10 @@ On Ubuntu, the following command(s) should solve the dependencies:
 On Fedora, the following command(s) should solve the dependencies:
 
   yum install gcc openssl-devel autoconf automake libtool \
-              iptables-devel libcap-devel rpm-build \
+              iptables-devel libconfig-devel rpm-build \
               perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
 
-  Optionally: yum install miredo bzr xmlto doxygen
+  Optionally: yum install miredo bzr xmlto doxygen check-devel
 
 
 How to build HIPL
