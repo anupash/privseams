@@ -168,6 +168,7 @@ rm -rf %{buildroot}
 %files dnsproxy
 /usr/sbin/hipdnsproxy
 /usr/sbin/hipdnskeyparse
+/usr/lib/python2.6/dist-packages
 %defattr(755,root,root)
 %config /etc/init.d/hipdnsproxy
 
