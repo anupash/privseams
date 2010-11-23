@@ -50,24 +50,18 @@ make -j
 %package all
 Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
-Requires: hipl-lib hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
+Requires: hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
 %description all
 
-%package lib
-Summary: HIP for Linux libraries
-Group: System Environment/Kernel
-Requires: openssl iptables libcap
-%description lib
-
 %package daemon
-Requires: hipl-lib perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
+Requires: perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6 openssl iptables libcap
 Obsoletes: tools
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
 
 %package firewall
-Requires: hipl-lib
+Requires: openssl iptables libcap
 Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control, Local Scope Identifier support, userspace BEET-mode IPsec (for kernels below < 2.6.27) and system-based opportunistic mode for HIP.
 Group: System Environment/Kernel
 %description firewall
@@ -78,7 +72,7 @@ Group: System Environment/Kernel
 %description doc
 
 %package dnsproxy
-Requires: python hipl-lib
+Requires: python
 Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS or hosts files
 Group: System Environment/Kernel
 %description dnsproxy
@@ -103,9 +97,6 @@ install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/pyip6.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/hosts.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/util.py*
 install -t %{buildroot}%{python_sitelib} tools/hipdnskeyparse/myasn.py* # XX FIXME
-
-%post lib
-/sbin/ldconfig
 
 %post daemon
 if [ "$1" = "2" ]; then
@@ -163,9 +154,6 @@ fi
 
 %clean
 rm -rf %{buildroot}
-
-%files lib
-%{_libdir}
 
 %files daemon
 %{prefix}/sbin/hipd

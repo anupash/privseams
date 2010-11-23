@@ -68,24 +68,18 @@ make -j
 %package all
 Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
-Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-doc, hipl-dnsproxy
+Requires: hipl-firewall, hipl-daemon, hipl-doc, hipl-dnsproxy
 %description all
 
-%package lib
-Summary: HIP for Linux libraries
-Group: System Environment/Kernel
-Requires: openssl, iptables, libcap2
-%description lib
-
 %package daemon
-Requires: hipl-lib, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
+Requires: openssl, iptables, libcap2, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
 Obsoletes: tools
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
 
 %package firewall
-Requires: hipl-lib
+Requires: openssl, iptables, libcap2
 Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control, Local Scope Identifier support, userspace BEET-mode IPsec (for kernels below < 2.6.27) and system-based opportunistic mode for HIP.
 Group: System Environment/Kernel
 %description firewall
@@ -96,7 +90,7 @@ Group: System Environment/Kernel
 %description doc
 
 %package dnsproxy
-Requires: python, hipl-lib
+Requires: python
 Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS or hosts files
 Group: System Environment/Kernel
 %description dnsproxy
@@ -116,9 +110,6 @@ install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/hosts.
 install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/util.py*
 install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnskeyparse/myasn.py*
 install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hipdnsproxy/hipdnsproxy
-
-%post lib
-/sbin/ldconfig
 
 %post daemon
 update-rc.d hipd defaults 21
@@ -149,9 +140,6 @@ update-rc.d -f hipdnsproxy remove
 
 %clean
 rm -rf %{buildroot}
-
-%files lib
-%{_libdir}
 
 %files daemon
 /usr/sbin/hipd
