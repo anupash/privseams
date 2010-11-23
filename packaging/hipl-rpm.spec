@@ -89,14 +89,6 @@ install -d %{buildroot}/etc/rc.d/init.d
 install -m 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 755 packaging/fedora-init.d/hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 755 packaging/fedora-init.d/dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
-install -d %{buildroot}%{python_sitelib}/DNS
-install -t %{buildroot}%{python_sitelib}/DNS tools/hipdnsproxy/DNS/*py*
-install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
-install -d %{buildroot}%{python_sitelib}/hipdnsproxy
-install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/pyip6.py*
-install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/hosts.py*
-install -t %{buildroot}%{python_sitelib} tools/hipdnsproxy/util.py*
-install -t %{buildroot}%{python_sitelib} tools/hipdnskeyparse/myasn.py* # XX FIXME
 
 %post daemon
 if [ "$1" = "2" ]; then

@@ -103,13 +103,6 @@ install -d %{buildroot}/etc/init.d
 install -m 755 packaging/debian-init.d/hipfw %{buildroot}/etc/init.d/hipfw
 install -m 755 packaging/debian-init.d/hipd %{buildroot}/etc/init.d/hipd
 install -m 755 packaging/debian-init.d/dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
-install -d %{buildroot}/usr/lib/python2.6/dist-packages/DNS
-install -t %{buildroot}/usr/lib/python2.6/dist-packages/DNS tools/hipdnsproxy/DNS/*py*
-install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/pyip6.py*
-install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/hosts.py*
-install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnsproxy/util.py*
-install -t %{buildroot}/usr/lib/python2.6/dist-packages tools/hipdnskeyparse/myasn.py*
-install -t %{buildroot}/usr/lib/python2.6/dist-packages/hipdnsproxy tools/hipdnsproxy/hipdnsproxy
 
 %post daemon
 update-rc.d hipd defaults 21
