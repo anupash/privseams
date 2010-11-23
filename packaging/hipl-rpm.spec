@@ -8,7 +8,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2 and MIT/Expat
 Group: System Environment/Kernel
-BuildRequires: gcc openssl-devel iptables-devel xmlto libtool autoconf automake rpm-build
+BuildRequires: gcc autoconf automake libtool xmlto openssl-devel iptables-devel rpm-build
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -54,7 +54,7 @@ Requires: hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
 %description all
 
 %package daemon
-Requires: perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6 openssl iptables
+Requires: openssl iptables perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
 Obsoletes: tools
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel

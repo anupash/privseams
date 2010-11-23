@@ -10,7 +10,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2 and MIT/Expat
 Group: System Environment/Kernel
-BuildRequires: automake, autoconf, libtool, gcc, libssl-dev, xmlto, iptables-dev, dpkg-dev, pax
+BuildRequires: gcc automake autoconf libtool xmlto libssl-dev iptables-dev dpkg-dev pax
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -45,13 +45,13 @@ make -j
 # before building the final release just to check that you have not discarded
 # any essential files.
 #
-#define _unpackaged_files_terminate_build 0
-#define _missing_doc_files_terminate_build 0
-#define python_sitelib __python -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
-#
-# Note:
-# we are not distributing everything from test directory, just essentials
-#
+#%define _unpackaged_files_terminate_build 0
+#%define _missing_doc_files_terminate_build 0
+#%define python_sitelib __python -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
+
+
+# Note: we are not distributing everything from test directory, just essentials
+
 # create subpackage
 # list of files with the name of subpackage
 #
@@ -64,22 +64,21 @@ make -j
 # - update-rc.d hipfw start 20 S . stop 80 0 6 .
 # - invoke-rc.d --quiet hipdnsproxy start
 
-
 %package all
 Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
-Requires: hipl-firewall, hipl-daemon, hipl-doc, hipl-dnsproxy
+Requires: hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
 %description all
 
 %package daemon
-Requires: openssl, iptables, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
+Requires: openssl iptables libnet-ip-perl libnet-dns-perl libsocket6-perl libio-socket-inet6-perl
 Obsoletes: tools
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
 
 %package firewall
-Requires: openssl, iptables
+Requires: openssl iptables
 Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control, Local Scope Identifier support, userspace BEET-mode IPsec (for kernels below < 2.6.27) and system-based opportunistic mode for HIP.
 Group: System Environment/Kernel
 %description firewall
@@ -148,7 +147,6 @@ rm -rf %{buildroot}
 /usr/lib/python2.6/dist-packages
 %defattr(755,root,root)
 %config /etc/init.d/hipdnsproxy
-
 
 %files firewall
 /usr/sbin/hipfw
