@@ -83,6 +83,7 @@
 #include "lib/core/list.h"
 #include "lib/core/prefix.h"
 #include "lib/tool/lutil.h"
+#include "modules/update/hipd/update.h"
 #include "builder.h"
 #include "ife.h"
 #include "state.h"
@@ -811,56 +812,5 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
     {
         addr = (struct hip_peer_addr_list_item *) list_entry(item);
         HIP_DEBUG_HIT("Peer address", &addr->address);
-    }
-}
-
-/**
- * Print a locator.
- * @param file
- * @param debug_level
- * @param line
- * @param function
- * @param str string to be printed before the HIT
- * @param locator the locator to be printed
- */
-void hip_print_locator(UNUSED int debug_level, UNUSED const char *file,
-                       UNUSED int line, UNUSED const char *function,
-                       DBG const char *str, struct hip_locator *locator)
-{
-/* XXTRASHXX Totally useless does anything but what it is supposed to do -SAMU */
-
-    int n_addrs                                               = 0, i = 0;
-    struct hip_locator_info_addr_item *first_address_item     = NULL,
-    *locator_address_item                                     = NULL;
-    struct hip_locator_info_addr_item2 *locator_address_item2 = NULL;
-    /* locator = hip_get_param((struct hip_common *)in_msg,
-     * HIP_PARAM_LOCATOR);*/
-    if (locator) {
-        HIP_DEBUG("%s: \n", str);
-
-        n_addrs            = hip_get_locator_addr_item_count(locator);
-        HIP_DEBUG("there are  %d locator items \n", n_addrs);
-        first_address_item = hip_get_locator_first_addr_item(locator);
-
-        for (i = 0; i < n_addrs; i++) {
-            locator_address_item = (struct hip_locator_info_addr_item *)
-                                   hip_get_locator_item(first_address_item, i);
-            HIP_DEBUG("locator items index %d, type is %d \n", i,
-                      locator_address_item->locator_type );
-            if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-                HIP_INFO_HIT("locator",
-                             (struct in6_addr *) &locator_address_item->address);
-            }
-            if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-                HIP_INFO_HIT("LOCATOR from ESP SPI(type 1)",
-                             (struct in6_addr *) &locator_address_item->address);
-            }
-            if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-                locator_address_item2 = (struct hip_locator_info_addr_item2 *) locator_address_item;
-                HIP_INFO_HIT("LOCATOR from UDP",
-                             (struct in6_addr *) &locator_address_item2->address);
-                HIP_DEBUG("LOCATOR port for UDP: %d\n",  ntohs(locator_address_item2->port));
-            }
-        }
     }
 }

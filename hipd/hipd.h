@@ -112,8 +112,6 @@ extern int esp_prot_active;
 extern int esp_prot_num_transforms;
 extern long esp_prot_num_parallel_hchains;
 
-extern int hip_trigger_update_on_heart_beat_failure;
-
 extern int hip_locator_status;
 extern int hip_transform_order;
 

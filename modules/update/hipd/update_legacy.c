@@ -45,8 +45,13 @@
 #include "lib/core/list.h"
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
+#include "update_builder.h"
 #include "update.h"
 #include "update_legacy.h"
+
+
+#define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
+#define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
 
 /**
  * build a LOCATOR parameter for an UPDATE packet

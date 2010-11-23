@@ -159,7 +159,6 @@ long esp_prot_num_parallel_hchains           = 0;
 
 int hip_shotgun_status                       = HIP_MSG_SHOTGUN_OFF;
 
-int hip_trigger_update_on_heart_beat_failure = 1;
 int hip_wait_addr_changes_to_stabilize       = 1;
 
 /**

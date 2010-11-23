@@ -576,12 +576,6 @@ typedef uint32_t sa_eid_t;
 typedef struct in6_addr hip_hit_t;
 typedef struct in_addr hip_lsi_t;
 typedef struct hip_hadb_state hip_ha_t;
-typedef struct hip_hadb_rcv_func_set hip_rcv_func_set_t;
-typedef struct hip_hadb_handle_func_set hip_handle_func_set_t;
-typedef struct hip_hadb_update_func_set hip_update_func_set_t;
-typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
-typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
-typedef struct hip_ipsec_func_set hip_ipsec_func_set_t;
 typedef struct hip_common hip_common_t;
 
 struct hip_crypto_key {
@@ -688,46 +682,6 @@ struct hip_unit_test {
     uint16_t       caseid;
 } __attribute__ ((packed));
 
-/**
- * Fixed start of this struct must match to struct hip_peer_addr_list_item
- * for the part of address item. It is used in hip_update_locator_match().
- * @todo Maybe fix this in some better way?
- */
-struct hip_locator_info_addr_item {
-    uint8_t         traffic_type;
-    uint8_t         locator_type;
-    uint8_t         locator_length;
-    uint8_t         reserved; /**< last bit is P (prefered) */
-    uint32_t        lifetime;
-    struct in6_addr address;
-}  __attribute__ ((packed));
-//add by santtu
-/**
- * it is the type 2 locater for UDP or other transport protocol later.
- */
-struct hip_locator_info_addr_item2 {
-    uint8_t         traffic_type;
-    uint8_t         locator_type;
-    uint8_t         locator_length;
-    uint8_t         reserved; /* last bit is P (prefered) */
-    uint32_t        lifetime;
-    uint16_t        port;
-    uint8_t         transport_protocol;
-    uint8_t         kind;
-    uint32_t        priority;
-    uint32_t        spi;
-    struct in6_addr address;
-}  __attribute__ ((packed));
-
-
-/**
- * it is a union of both type1 and type2 locator.
- */
-union hip_locator_info_addr {
-    struct hip_locator_info_addr_item  type1;
-    struct hip_locator_info_addr_item2 type2;
-} __attribute__ ((packed));
-//end add
 /** Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
  * members are in network byte order.
@@ -936,12 +890,6 @@ struct hip_notification {
     uint16_t       reserved;
     uint16_t       msgtype;
     uint8_t        data[0]; /**< A pointer to the notification data */
-} __attribute__ ((packed));
-
-struct hip_locator {
-    hip_tlv_type_t type;
-    hip_tlv_len_t  length;
-    /* fixed part ends */
 } __attribute__ ((packed));
 
 struct hip_hmac {

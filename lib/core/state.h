@@ -80,25 +80,9 @@
 /* #define PEER_ADDR_STATE_UNVERIFIED       1 */
 #define PEER_ADDR_STATE_ACTIVE           2
 
-#define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
-#define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
-
-#define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
-#define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
-//NAT branch
-#define HIP_LOCATOR_LOCATOR_TYPE_UDP 2
-
-/* #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY 126 */
-/* #define HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY 120 */
 /** for the triple nat mode*/
 #define HIP_NAT_MODE_NONE               0
 #define HIP_NAT_MODE_PLAIN_UDP          1
-
-#define HIP_UPDATE_LOCATOR              0
-#define HIP_UPDATE_ECHO_REQUEST         1
-#define HIP_UPDATE_ECHO_RESPONSE        2
-#define HIP_UPDATE_ESP_ANCHOR          3
-#define HIP_UPDATE_ESP_ANCHOR_ACK      4
 
 #define HIP_SPI_DIRECTION_OUT           1
 #define HIP_SPI_DIRECTION_IN            2
@@ -142,8 +126,6 @@ struct hip_peer_addr_list_item {
     uint32_t        lifetime;
     struct timeval  modified_time;      /* time when this address was
                                          * added or updated */
-    uint32_t        seq_update_id;      /* the Update ID in SEQ parameter
-                                         * this address is related to */
     uint8_t         echo_data[4];       /* data put into the ECHO_REQUEST parameter */
 //NAT branch
     uint8_t         transport_protocol;             /*value 1 for UDP*/
@@ -162,34 +144,17 @@ struct hip_spi_in_item {
     /* ifindex if the netdev to which this is related to */
     int           ifindex;
     unsigned long timestamp;        /* when SA was created */
-    int           updating;        /* UPDATE is in progress */
     uint32_t      esp_info_spi_out;        /* UPDATE, the stored outbound
                                             * SPI related to the inbound
                                             * SPI we sent in reply (useless?)*/
     uint16_t      keymat_index;        /* advertised keymat index */
-    int           update_state_flags;        /* 0x1=received ack for
-                                              * sent SEQ, 0x2=received
-                                              * peer's ESP_INFO,
-                                              * both=0x3=can move back
-                                              * to established */
     /* the Update ID in SEQ parameter these SPI are related to */
-    uint32_t                           seq_update_id;
-    /* the corresponding esp_info of peer */
     struct hip_esp_info                stored_received_esp_info;
-    /* our addresses this SPI is related to, reuse struct to ease coding */
-    struct hip_locator_info_addr_item *addresses;
-    int                                addresses_n; /* number of addresses */
 };
 
 struct hip_spi_out_item {
     uint32_t        spi;
     uint32_t        new_spi;        /* spi is changed to this when rekeying */
-
-    /* USELESS, IF SEQ ID WILL BE RELATED TO ADDRESS ITEMS,
-     * NOT OUTBOUND SPIS */
-    /* the Update ID in SEQ parameter these SPI are related to */
-    uint32_t        seq_update_id;
-
     HIP_HASHTABLE * peer_addr_list;    /* Peer's IPv6 addresses */
     struct in6_addr preferred_address;
 };

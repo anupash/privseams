@@ -51,7 +51,6 @@
 #include "hipd/pisa.h"
 #include "hipd/pkt_handling.h"
 #include "hipd/user.h"
-#include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/crypto.h"
 #include "lib/core/debug.h"
@@ -64,6 +63,7 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
 #include "lib/core/modularization.h"
+#include "update_builder.h"
 #include "update_legacy.h"
 #include "update.h"
 
@@ -71,11 +71,6 @@ struct update_state {
     /** A kludge to get the UPDATE retransmission to work.
         @todo Remove this kludge. */
     int update_state;
-
-    /** Update function set.
-        @note Do not modify this value directly. Use
-        hip_hadb_set_handle_function_set() instead. */
-    hip_update_func_set_t *hadb_update_func;
 
     /** This "linked list" includes the locators we recieved in the initial
      * UPDATE packet. Locators are stored as "struct in6_addr *"s.
@@ -96,6 +91,17 @@ struct update_state {
 };
 
 static const int update_id_window_size = 50;
+
+/**
+ * Retrieve a pointer to the first locator in a LOCATOR parameter
+ *
+ * @param locator a pointer a LOCATOR parameter
+ * @return a pointer to the first locator in the LOCATOR parameter
+ */
+static struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator)
+{
+    return (struct hip_locator_info_addr_item *) (locator + 1);
+}
 
 /**
  * build locators in an UPDATE message
@@ -618,6 +624,88 @@ out_err:
 }
 
 /**
+ * Retrieve a locator address item from a list.
+ *
+ * @param item_list a pointer to the first item in the list
+ * @param idx       the index of the item in the list
+ * @return          the locator addres item
+ */
+static union hip_locator_info_addr *hip_get_locator_item(void *item_list,
+                                                         int idx)
+{
+    int i = 0;
+    struct hip_locator_info_addr_item *temp;
+    char *result;
+    result = item_list;
+
+
+    for (i = 0; i <= idx - 1; i++) {
+        temp = (struct hip_locator_info_addr_item *) result;
+        if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI ||
+            temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+            result += sizeof(struct hip_locator_info_addr_item);
+        } else {
+            result += sizeof(struct hip_locator_info_addr_item2);
+        }
+    }
+    return (union hip_locator_info_addr *) result;
+}
+
+/**
+ * retrieve a IP address from a locator item structure
+ *
+ * @param item      a pointer to the item
+ * @return a pointer to the IP address
+ */
+static struct in6_addr *hip_get_locator_item_address(void *item)
+{
+    struct hip_locator_info_addr_item *temp;
+
+
+    temp = item;
+    if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+        return &temp->address;
+    } else if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+        return &temp->address;
+    } else {
+        return &((struct hip_locator_info_addr_item2 *) temp)->address;
+    }
+}
+
+/**
+ * Retrieve the number of locators inside a LOCATOR parameter.
+ * Type 1 and 2 parameters are supported.
+ *
+ * @param locator a LOCATOR parameter
+ * @return the number of locators
+ */
+int hip_get_locator_addr_item_count(const struct hip_locator *locator)
+{
+    const char *address_pointer = (const char *) (locator + 1);
+    int loc_count               = 0;
+    uint8_t type;
+
+    while (address_pointer <
+          ((const char *) locator) + hip_get_param_contents_len(locator)) {
+        type = ((const struct hip_locator_info_addr_item *)
+               address_pointer)->locator_type;
+
+        if (type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+            address_pointer += sizeof(struct hip_locator_info_addr_item2);
+            loc_count += 1;
+        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI
+                    || type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+
+            address_pointer += sizeof(struct hip_locator_info_addr_item);
+            loc_count += 1;
+        } else {
+            address_pointer += sizeof(struct hip_locator_info_addr_item);
+        }
+    }
+    return loc_count;
+}
+
+/**
  * process a LOCATOR paramter
  *
  * @param ha the related host association
@@ -640,7 +728,6 @@ static int hip_handle_locator_parameter(hip_ha_t *ha, struct in6_addr *src_addr,
     HIP_IFEL(!locator, -1, "locator is NULL");
 
     locator_addr_count = hip_get_locator_addr_item_count(locator);
-    HIP_IFEL((locator_addr_count < 0), -1, "Negative address count\n");
 
     HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
               locator_addr_count, hip_get_param_total_len(locator));
@@ -852,7 +939,6 @@ static int hip_update_init_state(struct modular_state *state)
              "Error on allocating memory for a update state instance.\n");
 
     update_state->update_state                   = 0;
-    update_state->hadb_update_func               = NULL;
     update_state->addresses_to_send_echo_request = hip_linked_list_init();
     update_state->update_id_out                  = 0;
     update_state->update_id_in                   = 0;
@@ -996,8 +1082,6 @@ static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
         ack_peer_update_id = ntohl(ack->peer_update_id);
         HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
                   ack_peer_update_id);
-        /*ha->hadb_update_func->hip_update_handle_ack(
-         *      ha, ack, has_esp_info);*/
         if (ack_peer_update_id != hip_update_get_out_id(localstate)) {
             // Simplified logic of RFC 5201 6.12.2, 1st step:
             // We drop the packet if the Update ID in the ACK
@@ -1138,8 +1222,6 @@ out_err:
 int hip_update_init(void)
 {
     int err = 0;
-
-    lmod_register_packet_type(HIP_UPDATE, "HIP_UPDATE");
 
     HIP_IFEL(lmod_register_state_init_function(&hip_update_init_state),
              -1,

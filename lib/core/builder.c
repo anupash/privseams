@@ -393,7 +393,7 @@ hip_tlv_type_t hip_get_param_type(const void *tlv_common)
  * @param tlv_generic pointer to the parameter
  * @param type type of the parameter (in host byte order)
  */
-static void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
+void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
 {
     tlv_generic->type = htons(type);
 }
@@ -465,17 +465,6 @@ out_err:
 uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id)
 {
     return host_id->rdata.algorithm;     /* 8 bits, no ntons() */
-}
-
-/**
- * Retrieve a pointer to the first locator in a LOCATOR parameter
- *
- * @param locator a pointer a LOCATOR parameter
- * @return a pointer to the first locator in the LOCATOR parameter
- */
-struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator)
-{
-    return (struct hip_locator_info_addr_item *) (locator + 1);
 }
 
 /**
@@ -1069,9 +1058,9 @@ void hip_calc_hdr_len(struct hip_common *msg)
  * @param contents_size size of the contents after the TLV header
  *                 (in host byte order)
  */
-static void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
-                                       hip_tlv_len_t tlv_size,
-                                       hip_tlv_len_t contents_size)
+void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
+                                hip_tlv_len_t tlv_size,
+                                hip_tlv_len_t contents_size)
 {
     hip_set_param_contents_len(tlv_common,
                                tlv_size + contents_size -
@@ -1089,8 +1078,8 @@ static void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
  * @param contents_size size of the contents after type and length fields
  *                 (in host byte order)
  */
-static void hip_calc_param_len(struct hip_tlv_common *tlv_common,
-                               hip_tlv_len_t contents_size)
+void hip_calc_param_len(struct hip_tlv_common *tlv_common,
+                        hip_tlv_len_t contents_size)
 {
     hip_calc_generic_param_len(tlv_common,
                                sizeof(struct hip_tlv_common),
@@ -2829,84 +2818,6 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 }
 
 /**
- * build a HIP locator parameter
- *
- * @param msg           the message where the REA will be appended
- * @param addrs         list of addresses
- * @param addr_count number of addresses
- * @return 0 on success, otherwise < 0.
- */
-int hip_build_param_locator(struct hip_common *msg,
-                            struct hip_locator_info_addr_item *addrs,
-                            int addr_count)
-{
-    int err                          = 0;
-    struct hip_locator *locator_info = NULL;
-    int addrs_len = addr_count * (sizeof(struct hip_locator_info_addr_item));
-
-    HIP_IFE(!(locator_info = malloc(sizeof(struct hip_locator) + addrs_len)), -1);
-
-    hip_set_param_type((struct hip_tlv_common *) locator_info, HIP_PARAM_LOCATOR);
-
-    hip_calc_generic_param_len((struct hip_tlv_common *) locator_info,
-                               sizeof(struct hip_locator),
-                               addrs_len);
-
-    memcpy(locator_info + 1, addrs, addrs_len);
-    HIP_IFE(hip_build_param(msg, locator_info), -1);
-
-out_err:
-    if (locator_info) {
-        free(locator_info);
-    }
-    return err;
-}
-
-
-
-/**
- * build and append a HIP SEQ parameter to a message
- *
- * @param msg the message where the parameter will be appended
- * @param update_id Update ID
- * @return 0 on success, otherwise < 0.
- */
-int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
-{
-    int err = 0;
-    struct hip_seq seq;
-
-    hip_set_param_type((struct hip_tlv_common *) &seq, HIP_PARAM_SEQ);
-    hip_calc_generic_param_len((struct hip_tlv_common *) &seq,
-                               sizeof(struct hip_seq),
-                               0);
-    seq.update_id = htonl(update_id);
-    err = hip_build_param(msg, &seq);
-    return err;
-}
-
-/**
- * build and append a HIP ACK parameter to a message
- *
- * @param msg the message where the parameter will be appended
- * @param peer_update_id peer Update ID
- * @return 0 on success, otherwise < 0.
- */
-int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
-{
-    int err = 0;
-    struct hip_ack ack;
-
-    hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_ACK);
-    hip_calc_generic_param_len((struct hip_tlv_common *) &ack,
-                               sizeof(struct hip_ack),
-                               0);
-    ack.peer_update_id = htonl(peer_update_id);
-    err = hip_build_param(msg, &ack);
-    return err;
-}
-
-/**
  * build and append a ESP PROT transform parameter
  *
  * @param msg the message where the parameter will be appended
@@ -3951,88 +3862,6 @@ int hip_private_dsa_to_hit(DSA *dsa_key,
                            struct in6_addr *hit)
 {
     return hip_any_key_to_hit(dsa_key, hit, 0, 1);
-}
-
-/**
- * Retrieve the amount the locators inside a LOCATOR parameter.
- * Type 1 and 2 parameters are supported.
- *
- * @param locator a LOCATOR parameter
- * @return the amount of locators
- */
-int hip_get_locator_addr_item_count(const struct hip_locator *locator)
-{
-    const char *address_pointer = (const char *) (locator + 1);
-    int amount                  = 0;
-    uint8_t type;
-
-    while (address_pointer <
-          ((const char *) locator) + hip_get_param_contents_len(locator)) {
-        type = ((const struct hip_locator_info_addr_item *)
-               address_pointer)->locator_type;
-
-        if (type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-            address_pointer += sizeof(struct hip_locator_info_addr_item2);
-            amount += 1;
-        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-            address_pointer += sizeof(struct hip_locator_info_addr_item);
-            amount += 1;
-        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-            address_pointer += sizeof(struct hip_locator_info_addr_item);
-            amount += 1;
-        } else {
-            address_pointer += sizeof(struct hip_locator_info_addr_item);
-        }
-    }
-    return amount;
-}
-
-/**
- * Retreive a @c LOCATOR ADDRESS ITEM@c from a list.
- *
- * @param item_list a pointer to the first item in the list
- * @param idx       the index of the item in the list
- * @return          the locator addres item
- */
-union hip_locator_info_addr *hip_get_locator_item(void *item_list, int idx)
-{
-    int i = 0;
-    struct hip_locator_info_addr_item *temp;
-    char *result;
-    result = (char *) item_list;
-
-
-    for (i = 0; i <= idx - 1; i++) {
-        temp = (struct hip_locator_info_addr_item *) result;
-        if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI ||
-            temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-            result += sizeof(struct hip_locator_info_addr_item);
-        } else {
-            result += sizeof(struct hip_locator_info_addr_item2);
-        }
-    }
-    return (union hip_locator_info_addr *) result;
-}
-
-/**
- * retrieve a IP address from a locator item structure
- *
- * @param item      a pointer to the item
- * @return a pointer to the IP address
- */
-struct in6_addr *hip_get_locator_item_address(void *item)
-{
-    struct hip_locator_info_addr_item *temp;
-
-
-    temp = (struct hip_locator_info_addr_item *) item;
-    if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-        return &temp->address;
-    } else if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-        return &temp->address;
-    } else {
-        return &((struct hip_locator_info_addr_item2 *) temp)->address;
-    }
 }
 
 /**

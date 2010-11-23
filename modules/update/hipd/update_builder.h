@@ -23,21 +23,27 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_HIPD_HADB_LEGACY_H
-#define HIP_HIPD_HADB_LEGACY_H
+/**
+ * @file
+ *
+ * This file facilitates buiding of mobility and multi-homing-specific
+ * parameters.
+ *
+ * @author Rene Hummen
+ */
+
+#ifndef MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
+#define MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
 
 #include <stdint.h>
-#include <netinet/in.h>
-#include <sys/time.h>
 
 #include "lib/core/protodefs.h"
+#include "update.h"
 
+int hip_build_param_seq(struct hip_common *msg, uint32_t update_id);
+int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);
+int hip_build_param_locator(struct hip_common *msg,
+                            struct hip_locator_info_addr_item *addrs,
+                            int addr_count);
 
-int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
-                                    const struct in6_addr *addr,
-                                    uint32_t *lifetime,
-                                    struct timeval *modified_time);
-
-void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr);
-
-#endif /* HIP_HIPD_HADB_LEGACY_H */
+#endif /* MODULES_UPDATE_HIPD_UPDATE_BUILDER_H */

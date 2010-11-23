@@ -45,6 +45,7 @@
 #include "lib/core/ife.h"
 #include "lib/core/protodefs.h"
 #include "lib/tool/xfrmapi.h"
+#include "modules/update/hipd/update_builder.h"
 #include "cookie.h"
 #include "esp_prot_anchordb.h"
 #include "esp_prot_light_update.h"
