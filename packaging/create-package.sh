@@ -83,7 +83,6 @@ REPO_BASE=/var/www/packages/html
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
-    which pax > /dev/null || die "aptitude install pax"
     DISTRO=debian
     DISTRO_RELEASE=$(lsb_release -c | cut -f2)
     ARCH=$(dpkg --print-architecture)

@@ -10,7 +10,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2 and MIT/Expat
 Group: System Environment/Kernel
-BuildRequires: automake, autoconf, libtool, gcc, libssl-dev, xmlto, iptables-dev, dpkg-dev
+BuildRequires: automake, autoconf, libtool, gcc, libssl-dev, xmlto, iptables-dev, dpkg-dev, pax
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
