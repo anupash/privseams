@@ -16,7 +16,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/hipl-hipd
     SECTION:=net
     CATEGORY:=Network
-    DEPENDS:=+hipl-common +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
+    DEPENDS:=+hipl-common +libconfig +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
     TITLE:=HIPL daemon
     URL:=http://hipl.hiit.fi/
 endef
@@ -46,7 +46,7 @@ define Package/hipl-common
     #note: modules will be automatically selected for compilation and
     #will be required by ipkg on the openwrt box
     #TODO remove unnecessary modules
-    DEPENDS:=+libconfig +kmod-crypto-aes +kmod-crypto-hmac +kmod-crypto-null +kmod-crypto-sha1 +kmod-ipv6 +libgcc +libopenssl
+    DEPENDS:=+kmod-crypto-aes +kmod-crypto-hmac +kmod-crypto-null +kmod-crypto-sha1 +kmod-ipv6 +libgcc +libopenssl
     TITLE:=HIPL common files
     URL:=http://hipl.hiit.fi/
 endef
