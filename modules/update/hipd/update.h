@@ -66,7 +66,7 @@ struct hip_locator_info_addr_item {
     uint8_t         traffic_type;
     uint8_t         locator_type;
     uint8_t         locator_length;
-    uint8_t         reserved; /**< last bit is P (prefered) */
+    uint8_t         reserved; /**< last bit is P (preferred) */
     uint32_t        lifetime;
     struct in6_addr address;
 }  __attribute__ ((packed));
@@ -78,7 +78,7 @@ struct hip_locator_info_addr_item2 {
     uint8_t         traffic_type;
     uint8_t         locator_type;
     uint8_t         locator_length;
-    uint8_t         reserved; /* last bit is P (prefered) */
+    uint8_t         reserved; /* last bit is P (preferred) */
     uint32_t        lifetime;
     uint16_t        port;
     uint8_t         transport_protocol;

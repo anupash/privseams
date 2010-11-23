@@ -32,11 +32,13 @@
  * @author Rene Hummen
  */
 
-#include "lib/core/protodefs.h"
-#include "update.h"
-
 #ifndef MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
 #define MODULES_UPDATE_HIPD_UPDATE_BUILDER_H
+
+#include <stdint.h>
+
+#include "lib/core/protodefs.h"
+#include "update.h"
 
 int hip_build_param_seq(struct hip_common *msg, uint32_t update_id);
 int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);

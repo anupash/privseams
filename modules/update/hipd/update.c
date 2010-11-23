@@ -622,18 +622,19 @@ out_err:
 }
 
 /**
- * Retreive a @c LOCATOR ADDRESS ITEM@c from a list.
+ * Retrieve a locator address item from a list.
  *
  * @param item_list a pointer to the first item in the list
  * @param idx       the index of the item in the list
  * @return          the locator addres item
  */
-static union hip_locator_info_addr *hip_get_locator_item(void *item_list, int idx)
+static union hip_locator_info_addr *hip_get_locator_item(void *item_list,
+                                                         int idx)
 {
     int i = 0;
     struct hip_locator_info_addr_item *temp;
     char *result;
-    result = (char *) item_list;
+    result = item_list;
 
 
     for (i = 0; i <= idx - 1; i++) {
@@ -670,16 +671,16 @@ static struct in6_addr *hip_get_locator_item_address(void *item)
 }
 
 /**
- * Retrieve the amount the locators inside a LOCATOR parameter.
+ * Retrieve the number of locators inside a LOCATOR parameter.
  * Type 1 and 2 parameters are supported.
  *
  * @param locator a LOCATOR parameter
- * @return the amount of locators
+ * @return the number of locators
  */
 int hip_get_locator_addr_item_count(const struct hip_locator *locator)
 {
     const char *address_pointer = (const char *) (locator + 1);
-    int amount                  = 0;
+    int loc_count               = 0;
     uint8_t type;
 
     while (address_pointer <
@@ -689,18 +690,17 @@ int hip_get_locator_addr_item_count(const struct hip_locator *locator)
 
         if (type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
             address_pointer += sizeof(struct hip_locator_info_addr_item2);
-            amount += 1;
-        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+            loc_count += 1;
+        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI
+                    || type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+
             address_pointer += sizeof(struct hip_locator_info_addr_item);
-            amount += 1;
-        } else if (type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-            address_pointer += sizeof(struct hip_locator_info_addr_item);
-            amount += 1;
+            loc_count += 1;
         } else {
             address_pointer += sizeof(struct hip_locator_info_addr_item);
         }
     }
-    return amount;
+    return loc_count;
 }
 
 /**

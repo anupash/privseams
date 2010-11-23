@@ -92,7 +92,7 @@ int hip_build_param_locator(struct hip_common *msg,
 {
     int err                          = 0;
     struct hip_locator *locator_info = NULL;
-    int addrs_len = addr_count * (sizeof(struct hip_locator_info_addr_item));
+    int addrs_len = addr_count * sizeof(struct hip_locator_info_addr_item);
 
     HIP_IFE(!(locator_info = malloc(sizeof(struct hip_locator) + addrs_len)), -1);
 
