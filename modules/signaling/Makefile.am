@@ -22,4 +22,3 @@ hipd_hipd_LDADD += modules/signaling/hipd/libhipsignaling.la \
 firewall_hipfw_LDADD += modules/signaling/firewall/libhipsignaling_hipfw.la \
                         modules/signaling/lib/libhipsignaling_common.la \
                         -L/home/ziegeldorf/thesisrepository/code/x509ac -lx509ac -lssl
-                        

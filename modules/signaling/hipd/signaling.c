@@ -28,7 +28,6 @@ int hip_signaling_init(void)
 	int err = 0;
 
 	// register parameter types
-	lmod_register_parameter_type(HIP_PARAM_SIGNALING_PORTINFO, "HIP_PARAM_SIGNALING_PORTINFO");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO, "HIP_PARAM_SIGNALING_APPINFO");
 
     // register initialization function for port information per connection state in hadb
@@ -69,7 +68,7 @@ int hip_signaling_init(void)
 
 
     // register user message handler
-    HIP_IFEL(hip_user_register_handle(HIP_MSG_TRIGGER_BEX, &signaling_handle_bex_ports, TRIGGER_BEX_PORTS_PRIO),
+    HIP_IFEL(hip_user_register_handle(HIP_MSG_TRIGGER_BEX, &signaling_handle_trigger_bex, TRIGGER_BEX_PORTS_PRIO),
             -1, "Error on registering Signaling user handle function.\n");
 
     HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_TRIGGER_BEX_UPDATE, &signaling_trigger_first_bex_update, TRIGGER_BEX_UPDATE_PRIO),

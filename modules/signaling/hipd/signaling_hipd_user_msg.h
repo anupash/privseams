@@ -16,6 +16,6 @@
 /*
  * Handle ports from tigger_bex_msg.
  */
-int signaling_handle_bex_ports(struct hip_common *msg, struct sockaddr_in6 *src);
+int signaling_handle_trigger_bex(struct hip_common *msg, struct sockaddr_in6 *src);
 
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_USER_MSG_H*/

@@ -275,9 +275,9 @@ int signaling_trigger_first_bex_update(struct hip_common *msg, UNUSED struct soc
      * TODO: fix this hack */
     HIP_IFEL(!(sig_state = (struct signaling_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_state")),
                  -1, "failed to retrieve state for signaling\n");
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_PORTINFO);
-    sig_state->connection.src_port = ntohs(((const struct signaling_param_portinfo *) param)->srcport);
-    sig_state->connection.dest_port = ntohs(((const struct signaling_param_portinfo *) param)->destport);
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+    sig_state->connection.src_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
+    sig_state->connection.dest_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
 
     /* Build the update message */
     HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,

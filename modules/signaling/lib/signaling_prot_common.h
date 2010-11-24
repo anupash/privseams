@@ -43,17 +43,19 @@
 
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
 #define HIP_PARAM_SIGNALING_APPINFO     5000
-#define HIP_PARAM_SIGNALING_PORTINFO    32830
 
 /* User message types (adds to icomm.h)*/
 #define HIP_MSG_SIGNALING_TRIGGER_BEX_UPDATE  138
 #define HIP_MSG_SIGNALING_CDB_ADD_CONN  139
 
 /*
-  Structure for parameter
+     Generic structure for the context of an application.
+     Structure is optimized for use on the wire,
+     but is used for internal state keeping, too,
+     in order to have only one structure in use.
 
      0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |             Type              |             Length            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -88,13 +90,6 @@ struct signaling_param_appinfo {
     hip_tlv_len_t req_length;
     hip_tlv_len_t grp_length;
 };
-
-struct signaling_param_portinfo {
-    hip_tlv_type_t type;
-    hip_tlv_len_t  length;
-    uint16_t srcport;
-    uint16_t destport;
-} __attribute__ ((packed));
 
 void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo);
 

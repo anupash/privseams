@@ -20,7 +20,7 @@
 #include "signaling_hipd_user_msg.h"
 
 /* Saves the ports from the trigger_bex_msg to global state */
-int signaling_handle_bex_ports(struct hip_common *msg,
+int signaling_handle_trigger_bex(struct hip_common *msg,
                                UNUSED struct sockaddr_in6 *src) {
     const hip_hit_t *our_hit        = NULL, *peer_hit  = NULL;
     uint16_t src_port = 0, dest_port = 0;
@@ -59,10 +59,10 @@ int signaling_handle_bex_ports(struct hip_common *msg,
                  -1, "failed to retrieve state for signaling ports\n");
 
     /* If we got some state, save the ports and hits to it */
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_PORTINFO);
-    if(param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_PORTINFO) {
-        src_port = ntohs(((const struct signaling_param_portinfo *) param)->srcport);
-        dest_port = ntohs(((const struct signaling_param_portinfo *) param)->destport);
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+    if(param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
+        src_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
+        dest_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
         sig_state->connection.src_port = src_port;
         sig_state->connection.dest_port = dest_port;
         memcpy(&sig_state->connection.src_hit, our_hit, sizeof(hip_hit_t));

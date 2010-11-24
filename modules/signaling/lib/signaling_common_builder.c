@@ -390,24 +390,60 @@ out_err:
     return err;
 }
 
-int signaling_build_param_portinfo(struct hip_common *msg, uint16_t src_port, uint16_t dest_port) {
-    struct signaling_param_portinfo pi;
+/*
+ * Allocate an appinfo parameter and initialize to standard values.
+ *
+ * @param length The total maximum length of the new parameter (including type and length field).
+ */
+static struct signaling_param_appinfo * signaling_param_appinfo_init(unsigned int length) {
+    int err = 0;
+    struct signaling_param_appinfo *appctx = NULL;
+
+    /* Size must be at least be enough to accomodate fixed contents and tlv header */
+    HIP_IFEL((length < sizeof(struct signaling_param_appinfo)),
+            -1, "Error allocating memory for appinfo parameter: requested size < MinSize.");
+
+    appctx = (struct signaling_param_appinfo *) malloc(length);
+
+    /* Set contents to zero. */
+    memset((uint8_t *)appctx, 0, length);
+
+    /* Set type and length */
+    hip_set_param_type((hip_tlv_common_t *) appctx, HIP_PARAM_SIGNALING_APPINFO);
+    hip_set_param_contents_len((hip_tlv_common_t *) appctx, length-2);
+
+out_err:
+    if (err)
+        return NULL;
+
+    return appctx;
+}
+
+/*
+ * Builds and appends an appinfo parameter to the given message setting only the port fields.
+ * This is used for communicating ports between hipfw and hipd. The application's name etc. remains empty,
+ * since application lookup and verification is done in HIPD.
+ *
+ * Comment:
+ *      The firewall might do the application lookup and verification, if connection tracking is based on
+ *      application instead of ports (as for now). Then the application's name etc. should be filled in,
+ *      so that the application does not have to repeat the lookup.
+ */
+int signaling_build_param_portinfo(struct hip_common *msg, uint16_t src_port, uint16_t dst_port) {
+    struct signaling_param_appinfo * appctx;
     int err = 0;
 
-    hip_set_param_type((struct hip_tlv_common *) &pi, HIP_PARAM_SIGNALING_PORTINFO);
-    hip_set_param_contents_len((struct hip_tlv_common *) &pi, 2*sizeof(uint16_t));
+    HIP_IFEL(!(src_port || dst_port),
+            -1, "No port information given, omitting building of parameter HIP_PARAM_SIGNALING_APPINFO.\n");
 
-    pi.srcport = htons(src_port);
-    pi.destport = htons(dest_port);
+    appctx = signaling_param_appinfo_init(sizeof(struct signaling_param_appinfo));
+    appctx->src_port = htons(src_port);
+    appctx->dest_port = htons(dst_port);
 
-    if(src_port || dest_port) {
-        HIP_DEBUG("Signaling port information to hipd (src = %d, dest = %d)\n", src_port, dest_port);
-        HIP_IFEL(hip_build_param(msg, &pi),
-                            -1, "Appending port information param failed\n");
-    } else {
-        HIP_DEBUG("No port information given. Omitting building parameter HIP_PARAM_SIGNALING_PORTINFO. \n");
-    }
+    HIP_IFEL(hip_build_param(msg, appctx),
+            -1, "HIP builder failed building appinfo parameter into message.\n");
 
 out_err:
     return err;
+
 }
