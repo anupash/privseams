@@ -47,7 +47,7 @@
 #include <openssl/pem.h>
 
 #include "signaling_hipd_builder.h"
-#include "signaling_netstat_api.h"
+#include "modules/signaling/lib/signaling_netstat_api.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 /*
