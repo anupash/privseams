@@ -49,7 +49,7 @@
 
 
 #include "modules/update/hipd/update.h"
-#include "modules/signaling/hipd/signaling_hipd_builder.h"
+#include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "signaling_hipd_msg.h"
 
