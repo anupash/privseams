@@ -36,6 +36,8 @@ int hip_signaling_init(void)
 
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_handle_appinfo, INBOUND_HANDLE_APPLINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_send_scdb_add, ADD_SCDB_ENTRY_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &signaling_handle_appinfo, INBOUND_HANDLE_APPLINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &signaling_send_scdb_add, ADD_SCDB_ENTRY_PRIO),
