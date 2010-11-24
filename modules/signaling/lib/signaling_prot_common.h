@@ -49,13 +49,6 @@
 #define HIP_MSG_SIGNALING_TRIGGER_BEX_UPDATE  138
 #define HIP_MSG_SIGNALING_CDB_ADD_CONN  139
 
-
-/* Definition of the fields in an appinfo parameter (only used in signaling module) */
-#define SIGNALING_APPINFO_APP_DN 1
-#define SIGNALING_APPINFO_ISSUER_DN 2
-#define SIGNALING_APPINFO_REQS 3
-#define SIGNALING_APPINFO_GROUPS 4
-
 /*
   Structure for parameter
 
