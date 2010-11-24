@@ -40,6 +40,9 @@
 
 #include "lib/core/protodefs.h"
 
+#define SIGNALING_FIRST_BEX_UPDATE 33001
+#define SIGNALING_SECOND_BEX_UPDATE 33002
+
 /*
  * Do something with the application information included in the I2 or R2 packet.
  * For now, just print it.
@@ -50,8 +53,9 @@ int signaling_handle_bex_update(const uint8_t packet_type, const uint32_t ha_sta
 
 int signaling_send_scdb_add(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx);
 
-int signaling_trigger_bex_update(struct hip_common *msg, UNUSED struct sockaddr_in6 *src);
+int signaling_trigger_first_bex_update(struct hip_common *msg, UNUSED struct sockaddr_in6 *src);
 
+int signaling_get_update_type(hip_common_t *msg);
 /*
  * Add application information to I2 packet.
  */

@@ -64,13 +64,15 @@ int hip_signaling_init(void)
     // Handle BEX UPDATES
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED, &signaling_handle_bex_update, HANDLE_UPDATE_PRIO),
             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT, &signaling_handle_bex_update, HANDLE_UPDATE_PRIO),
+            -1, "Error on registering Signaling handle function.\n");
 
 
     // register user message handler
     HIP_IFEL(hip_user_register_handle(HIP_MSG_TRIGGER_BEX, &signaling_handle_bex_ports, TRIGGER_BEX_PORTS_PRIO),
             -1, "Error on registering Signaling user handle function.\n");
 
-    HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_TRIGGER_BEX_UPDATE, &signaling_trigger_bex_update, TRIGGER_BEX_UPDATE_PRIO),
+    HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_TRIGGER_BEX_UPDATE, &signaling_trigger_first_bex_update, TRIGGER_BEX_UPDATE_PRIO),
                 -1, "Error on registering Signaling user handle function.\n");
 
 

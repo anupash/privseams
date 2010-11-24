@@ -47,9 +47,13 @@
 #include "hipd/user.h"
 #include "hipd/output.h"
 
+
+#include "modules/update/hipd/update.h"
 #include "modules/signaling/hipd/signaling_hipd_builder.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "signaling_hipd_msg.h"
+
+int update_sent = 0;
 
 /** generic send function used to send the below created messages
  *
@@ -86,37 +90,140 @@ out_err:
     return err;
 }
 
-static int build_bex_update_msg(hip_common_t *update_packet_to_send,
+static int build_first_bex_update_msg(hip_common_t *update_packet_to_send,
                                 UNUSED hip_common_t *msg,
                                 hip_ha_t *ha)
 {
     int err                                     = 0;
     uint16_t mask                               = 0;
     struct signaling_state * sig_state = NULL;
+    struct update_state *localstate             = NULL;
 
-    HIP_DEBUG("Creating the BEX UPDATE packet\n");
-
+    /* Allocate and build message */
     hip_build_network_hdr(update_packet_to_send,
                           HIP_UPDATE,
                           mask,
                           &ha->hit_our,
                           &ha->hit_peer);
 
+    /* Add sequence number */
+    HIP_IFEL(!(localstate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
+            -1, "Could not get update state for host association.\n");
+    localstate->update_id_out++;
+    HIP_DEBUG("outgoing UPDATE ID=%u\n", hip_update_get_out_id(localstate));
+    HIP_IFEL(hip_build_param_seq(update_packet_to_send, hip_update_get_out_id(localstate)),
+            -1, "Building of SEQ parameter failed\n");
 
-
+    /* Add Appinfo */
     HIP_IFEL(!(sig_state = (struct signaling_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_state")),
-                 -1, "failed to retrieve state for signaling ports\n");
+            -1, "failed to retrieve state for signaling ports\n");
+    HIP_IFEL(signaling_build_param_appinfo(update_packet_to_send, sig_state),
+            -1, "Building of APPInfo parameter failed\n");
+
+    /* Add HMAC */
+    HIP_IFEL(hip_build_param_hmac_contents(update_packet_to_send, &ha->hip_hmac_out),
+            -1, "Building of HMAC failed\n");
+
+    /* Add SIGNATURE */
+    HIP_IFEL(ha->sign(ha->our_priv_key, update_packet_to_send),
+            -EINVAL, "Could not sign UPDATE. Failing\n");
+
+out_err:
+    return err;
+}
+
+static int build_second_bex_update_msg(struct hip_packet_context *ctx,
+                                       hip_ha_t *ha)
+{
+    int err                                     = 0;
+    uint16_t mask                               = 0;
+    struct signaling_state * sig_state = NULL;
+    const struct hip_seq *seq                   = NULL;
+    const struct signaling_param_appinfo * appinfo = NULL;
+
+    HIP_DEBUG("Creating the SECOND BEX UPDATE packet\n");
+
+    /* Allocate and build message. */
+    hip_build_network_hdr(ctx->output_msg,
+                          HIP_UPDATE,
+                          mask,
+                          &ha->hit_our,
+                          &ha->hit_peer);
+
+    /* Add ACK paramater */
+    seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ);
+    HIP_IFEL(hip_build_param_ack(ctx->output_msg, ntohl(seq->update_id)),
+             -1, "Building of ACK parameter failed\n");
+
+    /* Set new ports
+     * TODO: Fix this, hack! */
+    HIP_IFEL(!(sig_state = (struct signaling_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_state")),
+                 -1, "failed to retrieve state for signaling\n");
+    appinfo = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO);
+    sig_state->connection.src_port = ntohs(appinfo->dest_port);
+    sig_state->connection.dest_port = ntohs(appinfo->src_port);
 
     // Add Appinfo
-    signaling_build_param_appinfo(update_packet_to_send, sig_state);
+    signaling_build_param_appinfo(ctx->output_msg, sig_state);
 
     // Add HMAC
-    HIP_IFEL(hip_build_param_hmac_contents(update_packet_to_send,
+    HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
                                            &ha->hip_hmac_out), -1, "Building of HMAC failed\n");
 
     // Add SIGNATURE
-    HIP_IFEL(ha->sign(ha->our_priv_key, update_packet_to_send), -EINVAL,
-             "Could not sign UPDATE. Failing\n");
+    HIP_IFEL(ha->sign(ha->our_priv_key, ctx->output_msg), -EINVAL,
+             "Could not sign UPDATE 2. Failing\n");
+
+out_err:
+    return err;
+}
+
+int signaling_get_update_type(hip_common_t *msg) {
+    int err = 0;
+    const hip_tlv_common_t * param = NULL;
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
+            -1, "No appinfo parameter found, no signaling update type.\n");
+
+    if((param = hip_get_param(msg, HIP_PARAM_SEQ))) {
+        return SIGNALING_FIRST_BEX_UPDATE;
+    }
+
+    if((param = hip_get_param(msg, HIP_PARAM_ACK))) {
+            return SIGNALING_SECOND_BEX_UPDATE;
+    }
+
+out_err:
+    return err;
+}
+
+static int signaling_trigger_second_bex_update(struct hip_packet_context * ctx) {
+    int err = 0;
+    const hip_hit_t * our_hit = NULL;
+    const hip_hit_t * peer_hit = NULL;
+    hip_ha_t *ha = NULL;
+
+    /* Get hits */
+    our_hit = &ctx->input_msg->hits;
+    peer_hit = &ctx->input_msg->hitr;
+
+    /* Get the host association */
+    HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
+                 -1, "Failed to retrieve hadb entry.\n");
+
+    /* Build the update message */
+    HIP_IFEL(!(ctx->output_msg = hip_msg_alloc()),
+             -ENOMEM, "Allocation of update bex failed\n");
+    HIP_IFEL(build_second_bex_update_msg(ctx, ha),
+            -1, "Failed to build second BEX update.\n");
+
+    /* Send the update bex message */
+    err = hip_send_pkt(NULL,
+                       &ha->peer_addr,
+                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ha->peer_udp_port,
+                       ctx->output_msg,
+                       ha,
+                       1);
 
 out_err:
     return err;
@@ -125,16 +232,22 @@ out_err:
 /*
  * Do a BEX_UPDATE.
  */
-int signaling_trigger_bex_update(struct hip_common *msg, UNUSED struct sockaddr_in6 *src) {
+int signaling_trigger_first_bex_update(struct hip_common *msg, UNUSED struct sockaddr_in6 *src) {
     int err = 0;
     hip_ha_t *ha = NULL;
     hip_common_t * update_packet_to_send = NULL;
     const hip_tlv_common_t * param = NULL;
     const hip_hit_t * our_hit = NULL;
     const hip_hit_t * peer_hit = NULL;
+    struct signaling_state *sig_state = NULL;
 
     HIP_DEBUG("Received request to trigger a update BEX. \n");
-    HIP_DUMP_MSG(msg);
+
+    /* TODO: implement retransmit handling */
+    if(update_sent) {
+        HIP_DEBUG("Update already on its way... waiting... \n");
+        goto out_err;
+    }
 
     /* Get the corresponding host association */
     param = hip_get_param(msg, HIP_PARAM_HIT);
@@ -146,7 +259,6 @@ int signaling_trigger_bex_update(struct hip_common *msg, UNUSED struct sockaddr_
             HIP_DEBUG_HIT("got dest hit:", peer_hit);
         }
     }
-
     param = hip_get_next_param(msg, param);
     if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
         our_hit = hip_get_param_contents_direct(param);
@@ -156,14 +268,21 @@ int signaling_trigger_bex_update(struct hip_common *msg, UNUSED struct sockaddr_
             HIP_DEBUG_HIT("got src hit:", our_hit);
         }
     }
-
     HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
                  -1, "Failed to retrieve hadb entry, cannot save port state.\n");
+
+    /* Set new ports ports
+     * TODO: fix this hack */
+    HIP_IFEL(!(sig_state = (struct signaling_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_state")),
+                 -1, "failed to retrieve state for signaling\n");
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_PORTINFO);
+    sig_state->connection.src_port = ntohs(((const struct signaling_param_portinfo *) param)->srcport);
+    sig_state->connection.dest_port = ntohs(((const struct signaling_param_portinfo *) param)->destport);
 
     /* Build the update message */
     HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
              "Out of memory while allocation memory for the bex update packet\n");
-    HIP_IFEL(build_bex_update_msg(update_packet_to_send, msg, ha),
+    HIP_IFEL(build_first_bex_update_msg(update_packet_to_send, msg, ha),
             -1, "Failed to build BEX update.\n");
 
 
@@ -176,12 +295,14 @@ int signaling_trigger_bex_update(struct hip_common *msg, UNUSED struct sockaddr_
                        ha,
                        1);
 
+    update_sent = 1;
+
 out_err:
     return err;
 }
 
 /*
- * Tell the firewall to add a scdb entry for the completed BEX.
+ * Tell the firewall to add a scdb entry for the completed BEX or update BEX.
  */
 int signaling_send_scdb_add(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
@@ -189,15 +310,14 @@ int signaling_send_scdb_add(UNUSED const uint8_t packet_type, UNUSED const uint3
     int err                = 0;
     const struct signaling_param_appinfo *appinfo = NULL;
 
-    /* Get the parameter */
+    /* Get the appinfo parameter */
     HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
             -1, "No application info parameter found in the message.\n");
 
     /* Build the user message */
-    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
-              "alloc memory for adding scdb entry\n");
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)),
+            -1, "alloc memory for adding scdb entry\n");
     hip_msg_init(msg);
-
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CDB_ADD_CONN, 0), -1,
               "build hdr failed\n");
 
@@ -246,12 +366,22 @@ out_err:
  */
 int signaling_handle_bex_update(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int err = -1;
+    int err = 0;
 
-    HIP_DEBUG("Received BEX Update... \n");
-    HIP_DUMP_MSG(ctx->input_msg);
+    if(signaling_get_update_type(ctx->input_msg) == SIGNALING_FIRST_BEX_UPDATE) {
+        HIP_DEBUG("Received FIRST BEX Update... \n");
+        HIP_IFEL(signaling_trigger_second_bex_update(ctx),
+                -1, "failed to process second bex update. \n");
+        HIP_IFEL(signaling_send_scdb_add(packet_type, ha_state, ctx),
+                -1, "failed to notify fw to update scdb\n");
+    } else if (signaling_get_update_type(ctx->input_msg) == SIGNALING_SECOND_BEX_UPDATE) {
+        HIP_DEBUG("Received SECOND BEX Update... \n");
+        update_sent = 0;
+        HIP_IFEL(signaling_send_scdb_add(packet_type, ha_state, ctx),
+                -1, "failed to notify fw to update scdb\n");
+    }
 
-//out_err:
+out_err:
     return err;
 }
 

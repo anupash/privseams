@@ -46,10 +46,11 @@
 #define HIP_PARAM_SIGNALING_PORTINFO    32830
 
 /* User message types (adds to icomm.h)*/
-#define HIP_MSG_SIGNALING_CDB_ADD_CONN  138
 #define HIP_MSG_SIGNALING_TRIGGER_BEX_UPDATE  138
+#define HIP_MSG_SIGNALING_CDB_ADD_CONN  139
 
-/* Definition of the fields in an appinfo parameter */
+
+/* Definition of the fields in an appinfo parameter (only used in signaling module) */
 #define SIGNALING_APPINFO_APP_DN 1
 #define SIGNALING_APPINFO_ISSUER_DN 2
 #define SIGNALING_APPINFO_REQS 3
