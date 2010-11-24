@@ -75,8 +75,10 @@ out_err:
 /* Tell the HIPD to do a BEX update on this new connection. */
 int signaling_hipfw_trigger_bex_update(hip_fw_context_t *ctx) {
     int err = 0;
-    uint16_t src_port, dst_port;
+    uint16_t src_port = 0;
+    uint16_t dst_port = 0;
 
+    /* Allocate the message */
     struct hip_common *msg = NULL;
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
@@ -95,15 +97,13 @@ int signaling_hipfw_trigger_bex_update(hip_fw_context_t *ctx) {
                                        sizeof(hip_hit_t)), -1,
               "build param contents (dst hit) failed\n");
 
-    /* Include port numbers in bex trigger. port numbers are used by signaling module */
+    /* Include port numbers. */
     src_port=ntohs(ctx->transport_hdr.tcp->source);
     dst_port=ntohs(ctx->transport_hdr.tcp->dest);
-
     signaling_build_param_portinfo(msg, src_port, dst_port);
 
+    /* Print and send message */
     HIP_DUMP_MSG(msg);
-
-    /* send msg to hipd and receive corresponding reply */
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 
 out_err:
@@ -127,7 +127,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     HIP_DEBUG("Determining if there is a connection between \n");
     HIP_DEBUG_HIT("\tsrc", &ctx->src);
     HIP_DEBUG_HIT("\tdst", &ctx->dst);
-    HIP_DEBUG("\t on ports %d/%d or if corresponding application is allowed.\n", src_port, dest_port);
+    HIP_DEBUG("\t on ports %d/%d or if corresponding application is generally allowed.\n", src_port, dest_port);
 
     entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst);
     if(entry == NULL) {
@@ -137,6 +137,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
         goto out_err;
     }
 
+    /* If there is an association search the connection. */
     found = signaling_cdb_ports_find(src_port, dest_port, entry);
     if(found) {
         HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
