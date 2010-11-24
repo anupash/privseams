@@ -76,6 +76,8 @@ int signaling_netstat_get_application_path(struct signaling_state *ctx) {
      * We have to look for a listening socket on the destination port.
      */
     if(!res) {
+        HIP_DEBUG("No output from netstat call: %s\n", callbuf);
+
         // prepare new call to netstat
         memset(callbuf, 0, CALLBUF_SIZE);
         sprintf(callbuf, "netstat -tlnp | grep :%d", ctx->connection.src_port);
@@ -87,6 +89,9 @@ int signaling_netstat_get_application_path(struct signaling_state *ctx) {
         pclose(fp);
     }
 
+    if(!res) {
+        HIP_DEBUG("No output from netstat call: %s\n", callbuf);
+    }
     HIP_IFEL(!res, -1, "Got no output from netstat (neither connection nor listening socket).\n");
 
     /*
