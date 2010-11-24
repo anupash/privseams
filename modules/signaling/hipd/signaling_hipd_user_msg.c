@@ -63,14 +63,10 @@ int signaling_handle_trigger_bex(struct hip_common *msg,
     if(param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         src_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
         dest_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
-        sig_state->connection.src_port = src_port;
-        sig_state->connection.dest_port = dest_port;
-        memcpy(&sig_state->connection.src_hit, our_hit, sizeof(hip_hit_t));
-        memcpy(&sig_state->connection.dest_hit, peer_hit, sizeof(hip_hit_t));
+        sig_state->application.src_port = src_port;
+        sig_state->application.dest_port = dest_port;
         HIP_DEBUG("Saved connection information for I2.\n");
-        HIP_DEBUG_HIT("\tsrc_hit", &sig_state->connection.src_hit);
-        HIP_DEBUG_HIT("\tdest_hit", &sig_state->connection.dest_hit);
-        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->connection.src_port, sig_state->connection.dest_port);
+        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->application.src_port, sig_state->application.dest_port);
     }
 
 out_err:

@@ -63,7 +63,7 @@ int signaling_netstat_get_application_path(struct signaling_state *ctx) {
 
     // prepare call to netstat
     memset(callbuf, 0, CALLBUF_SIZE);
-    sprintf(callbuf, "netstat -tpnW | grep :%d | grep :%d", ctx->connection.src_port, ctx->connection.dest_port);
+    sprintf(callbuf, "netstat -tpnW | grep :%d | grep :%d", ctx->application.src_port, ctx->application.dest_port);
 
     // make call to netstat
     memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
@@ -80,7 +80,7 @@ int signaling_netstat_get_application_path(struct signaling_state *ctx) {
 
         // prepare new call to netstat
         memset(callbuf, 0, CALLBUF_SIZE);
-        sprintf(callbuf, "netstat -tlnp | grep :%d", ctx->connection.src_port);
+        sprintf(callbuf, "netstat -tlnp | grep :%d", ctx->application.src_port);
 
         // make call to netstat
         memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);

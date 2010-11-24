@@ -11,19 +11,11 @@
 #include "lib/core/modularization.h"
 #include "lib/core/protodefs.h"
 
-/* Identifies a specific connection
- * TODO: src and destination hits are most likely redundant here since they can be obtained
- *       from elsewhere in the hadb entry and anyway, all we need are ports.*/
-struct signaling_state_connection {
-    hip_hit_t src_hit;
-    hip_hit_t dest_hit;
-    uint16_t src_port;
-    uint16_t dest_port;
-};
-
 /* Holds information about the application associated with a connection
  * Strings have to be null terminated. */
 struct signaling_state_application {
+    uint16_t src_port;
+    uint16_t dest_port;
     int pid;
     char *path;
     char *application_dn;
@@ -33,11 +25,9 @@ struct signaling_state_application {
 };
 
 /*
- * Holds all the information about the binding between a application and the connection.
- * Contents are filled in in different places.
+ * Container
  */
 struct signaling_state {
-    struct signaling_state_connection connection;
     struct signaling_state_application application;
 };
 

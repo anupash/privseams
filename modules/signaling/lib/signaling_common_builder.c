@@ -304,8 +304,8 @@ static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo
             -1, "No parameter or application context given.\n");
 
     /* Set ports */
-    appinfo->src_port = htons(ctx->connection.src_port);
-    appinfo->dest_port = htons(ctx->connection.dest_port);
+    appinfo->src_port = htons(ctx->application.src_port);
+    appinfo->dest_port = htons(ctx->application.dest_port);
 
     /* Set length fields */
     appinfo->app_dn_length = (ctx->application.application_dn != NULL ? htons(strlen(ctx->application.application_dn)) : 0);
