@@ -41,15 +41,12 @@
 #include "signaling_oslayer.h"
 #include "signaling_prot_common.h"
 
-static int signaling_param_appinfo_get_content_length(struct signaling_state *ctx) {
-    struct signaling_state_application *appctx;
+static int signaling_param_appinfo_get_content_length(struct signaling_application_context *app_ctx) {
     int res = 0;
 
-    if(ctx == NULL) {
+    if(app_ctx == NULL) {
         return -1;
     }
-
-    appctx = &ctx->application;
 
     /* Length of length fields = 8 (4 x 2 Bytes) */
     res += 8;
@@ -58,42 +55,42 @@ static int signaling_param_appinfo_get_content_length(struct signaling_state *ct
     res += 4;
 
     /* Length of variable input */
-    res += (appctx->application_dn != NULL ? strlen(appctx->application_dn) : 0);
-    res += (appctx->issuer_dn != NULL ? strlen(appctx->issuer_dn) : 0);
-    res += (appctx->requirements != NULL ? strlen(appctx->requirements) : 0);
-    res += (appctx->groups != NULL ? strlen(appctx->groups) : 0);
+    res += (app_ctx->application_dn != NULL ? strlen(app_ctx->application_dn) : 0);
+    res += (app_ctx->issuer_dn != NULL ? strlen(app_ctx->issuer_dn) : 0);
+    res += (app_ctx->requirements != NULL ? strlen(app_ctx->requirements) : 0);
+    res += (app_ctx->groups != NULL ? strlen(app_ctx->groups) : 0);
 
     return res;
 }
 
-static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo *appinfo, struct signaling_state *ctx) {
+static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo *par, struct signaling_application_context *app_ctx) {
     int err = 0;
     uint8_t *p_tmp;
 
     /* Sanity checks */
-    HIP_IFEL((appinfo == NULL || ctx == NULL),
+    HIP_IFEL((par == NULL || app_ctx == NULL),
             -1, "No parameter or application context given.\n");
 
     /* Set ports */
-    appinfo->src_port = htons(ctx->application.src_port);
-    appinfo->dest_port = htons(ctx->application.dest_port);
+    par->src_port = htons(app_ctx->src_port);
+    par->dest_port = htons(app_ctx->dest_port);
 
     /* Set length fields */
-    appinfo->app_dn_length = (ctx->application.application_dn != NULL ? htons(strlen(ctx->application.application_dn)) : 0);
-    appinfo->iss_dn_length = (ctx->application.issuer_dn != NULL ? htons(strlen(ctx->application.issuer_dn)) : 0);
-    appinfo->req_length = (ctx->application.requirements != NULL ? htons(strlen(ctx->application.requirements)) : 0);
-    appinfo->grp_length = (ctx->application.groups != NULL ? htons(strlen(ctx->application.groups)) : 0);
+    par->app_dn_length = (app_ctx->application_dn != NULL ? htons(strlen(app_ctx->application_dn)) : 0);
+    par->iss_dn_length = (app_ctx->issuer_dn != NULL ? htons(strlen(app_ctx->issuer_dn)) : 0);
+    par->req_length = (app_ctx->requirements != NULL ? htons(strlen(app_ctx->requirements)) : 0);
+    par->grp_length = (app_ctx->groups != NULL ? htons(strlen(app_ctx->groups)) : 0);
 
     /* Set the contents
      * We dont need to check for NULL pointers since length is then set to 0 */
-    p_tmp = (uint8_t *) appinfo + sizeof(struct signaling_param_appinfo);
-    memcpy(p_tmp, ctx->application.application_dn, ntohs(appinfo->app_dn_length));
-    p_tmp += ntohs(appinfo->app_dn_length);
-    memcpy(p_tmp, ctx->application.issuer_dn, ntohs(appinfo->iss_dn_length));
-    p_tmp += ntohs(appinfo->iss_dn_length);
-    memcpy(p_tmp, ctx->application.requirements, ntohs(appinfo->req_length));
-    p_tmp += ntohs(appinfo->req_length);
-    memcpy(p_tmp, ctx->application.groups, ntohs(appinfo->grp_length));
+    p_tmp = (uint8_t *) par + sizeof(struct signaling_param_appinfo);
+    memcpy(p_tmp, app_ctx->application_dn, ntohs(par->app_dn_length));
+    p_tmp += ntohs(par->app_dn_length);
+    memcpy(p_tmp, app_ctx->issuer_dn, ntohs(par->iss_dn_length));
+    p_tmp += ntohs(par->iss_dn_length);
+    memcpy(p_tmp, app_ctx->requirements, ntohs(par->req_length));
+    p_tmp += ntohs(par->req_length);
+    memcpy(p_tmp, app_ctx->groups, ntohs(par->grp_length));
 
 out_err:
     return err;
@@ -110,7 +107,7 @@ out_err:
  * @param length the length of the info
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_state *sig_state)
+int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_application_context *app_ctx)
 {
     struct signaling_param_appinfo *appinfo;
     int err = 0;
@@ -119,27 +116,27 @@ int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_state *sig
     /* Sanity checks */
     HIP_IFEL(msg == NULL,
             -1, "Got no msg context. (msg == NULL)\n");
-    HIP_IFEL(sig_state == NULL,
+    HIP_IFEL(app_ctx == NULL,
             -1, "Got no context to built the parameter from.\n");
 
     /* BUILD THE APPLICATION CONTEXT */
 
     /* Dynamically lookup application from port information */
-    HIP_IFEL(0 > signaling_netstat_get_application_path(sig_state),
+    HIP_IFEL(0 > signaling_netstat_get_application_path(app_ctx),
             -1, "Got no path to application. \n");
 
     /* Verify the application */
-    HIP_IFEL(0 > signaling_verify_application(sig_state),
-            -1, "Could not verify certificate of application: %s.\n", sig_state->application.path);
+    HIP_IFEL(0 > signaling_verify_application(app_ctx),
+            -1, "Could not verify certificate of application: %s.\n", app_ctx->path);
 
     /* Build the application context. */
-    HIP_IFEL(0 > signaling_get_application_context(sig_state),
-            -1, "Could not build application context for application: %s.\n", sig_state->application.path);
+    HIP_IFEL(0 > signaling_get_application_context(app_ctx),
+            -1, "Could not build application context for application: %s.\n", app_ctx->path);
 
     /* BUILD THE PARAMETER */
 
     /* Allocate some memory for the param */
-    length_contents = signaling_param_appinfo_get_content_length(sig_state);
+    length_contents = signaling_param_appinfo_get_content_length(app_ctx);
     appinfo = (struct signaling_param_appinfo *) malloc(sizeof(hip_tlv_common_t) + length_contents);
 
     /* Set type and lenght */
@@ -147,7 +144,7 @@ int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_state *sig
     hip_set_param_contents_len((hip_tlv_common_t *) appinfo, length_contents);
 
     /* Build the parameter contents */
-    HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, sig_state),
+    HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, app_ctx),
             -1, "Failed to build appinfo parameter.\n");
 
     /* Dump it */
@@ -168,26 +165,26 @@ out_err:
  */
 static struct signaling_param_appinfo * signaling_param_appinfo_init(unsigned int length) {
     int err = 0;
-    struct signaling_param_appinfo *appctx = NULL;
+    struct signaling_param_appinfo *par = NULL;
 
     /* Size must be at least be enough to accomodate fixed contents and tlv header */
     HIP_IFEL((length < sizeof(struct signaling_param_appinfo)),
             -1, "Error allocating memory for appinfo parameter: requested size < MinSize.");
 
-    appctx = (struct signaling_param_appinfo *) malloc(length);
+    par = (struct signaling_param_appinfo *) malloc(length);
 
     /* Set contents to zero. */
-    memset((uint8_t *)appctx, 0, length);
+    memset((uint8_t *)par, 0, length);
 
     /* Set type and length */
-    hip_set_param_type((hip_tlv_common_t *) appctx, HIP_PARAM_SIGNALING_APPINFO);
-    hip_set_param_contents_len((hip_tlv_common_t *) appctx, length-2);
+    hip_set_param_type((hip_tlv_common_t *) par, HIP_PARAM_SIGNALING_APPINFO);
+    hip_set_param_contents_len((hip_tlv_common_t *) par, length-2);
 
 out_err:
     if (err)
         return NULL;
 
-    return appctx;
+    return par;
 }
 
 /*
@@ -201,17 +198,17 @@ out_err:
  *      so that the application does not have to repeat the lookup.
  */
 int signaling_build_param_portinfo(struct hip_common *msg, uint16_t src_port, uint16_t dst_port) {
-    struct signaling_param_appinfo * appctx;
+    struct signaling_param_appinfo * par = NULL;
     int err = 0;
 
     HIP_IFEL(!(src_port || dst_port),
             -1, "No port information given, omitting building of parameter HIP_PARAM_SIGNALING_APPINFO.\n");
 
-    appctx = signaling_param_appinfo_init(sizeof(struct signaling_param_appinfo));
-    appctx->src_port = htons(src_port);
-    appctx->dest_port = htons(dst_port);
+    par = signaling_param_appinfo_init(sizeof(struct signaling_param_appinfo));
+    par->src_port = htons(src_port);
+    par->dest_port = htons(dst_port);
 
-    HIP_IFEL(hip_build_param(msg, appctx),
+    HIP_IFEL(hip_build_param(msg, par),
             -1, "HIP builder failed building appinfo parameter into message.\n");
 
 out_err:

@@ -51,8 +51,8 @@
 /*
      Generic structure for the context of an application.
      Structure is optimized for use on the wire,
-     but is used for internal state keeping, too,
-     in order to have only one structure in use.
+     but is used for inter process-communication, too.
+     Using only one structure simplifies handling.
 
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
@@ -90,6 +90,25 @@ struct signaling_param_appinfo {
     hip_tlv_len_t req_length;
     hip_tlv_len_t grp_length;
 };
+
+/*
+     Internal representation of context information for an application.
+     This structure should be used whenever state needs to be kept about an application.
+
+     Strings are assumed to be 0-terminated.
+     Empty strings should be set to 'NULL'.
+*/
+struct signaling_application_context {
+    uint16_t src_port;
+    uint16_t dest_port;
+    int pid;
+    char *path;
+    char *application_dn;
+    char *issuer_dn;
+    char *requirements;
+    char *groups;
+};
+
 
 void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo);
 

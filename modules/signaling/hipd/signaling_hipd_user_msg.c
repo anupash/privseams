@@ -16,7 +16,7 @@
 #include "hipd/hadb.h"
 
 #include "modules/signaling/lib/signaling_prot_common.h"
-#include "signaling_state.h"
+#include "signaling_hipd_state.h"
 #include "signaling_hipd_user_msg.h"
 
 /* Saves the ports from the trigger_bex_msg to global state */
@@ -27,7 +27,7 @@ int signaling_handle_trigger_bex(struct hip_common *msg,
     const struct hip_tlv_common *param;
 
     hip_ha_t *entry = NULL;
-    struct signaling_state *sig_state = NULL;
+    struct signaling_hipd_state *sig_state = NULL;
     int err = 0;
 
     /* Need to get source and destination hit first to lookup state from hadb */
@@ -55,7 +55,7 @@ int signaling_handle_trigger_bex(struct hip_common *msg,
     HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
                  -1, "Failed to retrieve hadb entry, cannot save port state.\n");
 
-    HIP_IFEL(!(sig_state = (struct signaling_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_state")),
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling ports\n");
 
     /* If we got some state, save the ports and hits to it */
@@ -63,10 +63,10 @@ int signaling_handle_trigger_bex(struct hip_common *msg,
     if(param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         src_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
         dest_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
-        sig_state->application.src_port = src_port;
-        sig_state->application.dest_port = dest_port;
+        sig_state->app_ctx.src_port = src_port;
+        sig_state->app_ctx.dest_port = dest_port;
         HIP_DEBUG("Saved connection information for I2.\n");
-        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->application.src_port, sig_state->application.dest_port);
+        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->app_ctx.src_port, sig_state->app_ctx.dest_port);
     }
 
 out_err:

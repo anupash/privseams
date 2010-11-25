@@ -10,7 +10,7 @@
 #include "signaling.h"
 #include "signaling_hipd_msg.h"
 #include "signaling_hipd_user_msg.h"
-#include "signaling_state.h"
+#include "signaling_hipd_state.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 
@@ -31,7 +31,7 @@ int hip_signaling_init(void)
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO, "HIP_PARAM_SIGNALING_APPINFO");
 
     // register initialization function for port information per connection state in hadb
-    lmod_register_state_init_function(&signaling_init_state);
+    lmod_register_state_init_function(&signaling_hipd_init_state);
 
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_handle_appinfo, INBOUND_HANDLE_APPLINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");

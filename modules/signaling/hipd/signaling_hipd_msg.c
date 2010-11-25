@@ -51,6 +51,7 @@
 #include "modules/update/hipd/update.h"
 #include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
+#include "signaling_hipd_state.h"
 #include "signaling_hipd_msg.h"
 
 int update_sent = 0;
@@ -96,7 +97,7 @@ static int build_first_bex_update_msg(hip_common_t *update_packet_to_send,
 {
     int err                                     = 0;
     uint16_t mask                               = 0;
-    struct signaling_state * sig_state          = NULL;
+    struct signaling_hipd_state * sig_state          = NULL;
     struct update_state *localstate             = NULL;
 
     /* Allocate and build message */
@@ -115,9 +116,9 @@ static int build_first_bex_update_msg(hip_common_t *update_packet_to_send,
             -1, "Building of SEQ parameter failed\n");
 
     /* Add Appinfo */
-    HIP_IFEL(!(sig_state = (struct signaling_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_state")),
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling ports\n");
-    HIP_IFEL(signaling_build_param_appinfo(update_packet_to_send, sig_state),
+    HIP_IFEL(signaling_build_param_appinfo(update_packet_to_send, &sig_state->app_ctx),
             -1, "Building of APPInfo parameter failed\n");
 
     /* Add HMAC */
@@ -137,7 +138,7 @@ static int build_second_bex_update_msg(struct hip_packet_context *ctx,
 {
     int err                                     = 0;
     uint16_t mask                               = 0;
-    struct signaling_state * sig_state = NULL;
+    struct signaling_hipd_state * sig_state = NULL;
     const struct hip_seq *seq                   = NULL;
     const struct signaling_param_appinfo * appinfo = NULL;
 
@@ -157,14 +158,14 @@ static int build_second_bex_update_msg(struct hip_packet_context *ctx,
 
     /* Set new ports
      * TODO: Fix this, hack! */
-    HIP_IFEL(!(sig_state = (struct signaling_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_state")),
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
     appinfo = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO);
-    sig_state->application.src_port = ntohs(appinfo->dest_port);
-    sig_state->application.dest_port = ntohs(appinfo->src_port);
+    sig_state->app_ctx.src_port = ntohs(appinfo->dest_port);
+    sig_state->app_ctx.dest_port = ntohs(appinfo->src_port);
 
     // Add Appinfo
-    signaling_build_param_appinfo(ctx->output_msg, sig_state);
+    signaling_build_param_appinfo(ctx->output_msg, &sig_state->app_ctx);
 
     // Add HMAC
     HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
@@ -239,7 +240,7 @@ int signaling_trigger_first_bex_update(struct hip_common *msg, UNUSED struct soc
     const hip_tlv_common_t * param = NULL;
     const hip_hit_t * our_hit = NULL;
     const hip_hit_t * peer_hit = NULL;
-    struct signaling_state *sig_state = NULL;
+    struct signaling_hipd_state *sig_state = NULL;
 
     HIP_DEBUG("Received request to trigger a update BEX. \n");
 
@@ -273,11 +274,11 @@ int signaling_trigger_first_bex_update(struct hip_common *msg, UNUSED struct soc
 
     /* Set new ports ports
      * TODO: fix this hack */
-    HIP_IFEL(!(sig_state = (struct signaling_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_state")),
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
-    sig_state->application.src_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
-    sig_state->application.dest_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
+    sig_state->app_ctx.src_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
+    sig_state->app_ctx.dest_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
 
     /* Build the update message */
     HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
@@ -390,16 +391,16 @@ int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
 {
 	int err = 0;
     hip_ha_t *entry = NULL;
-    struct signaling_state *sig_state;
+    struct signaling_hipd_state *sig_state;
 
     /* Get the global state */
     HIP_IFEL(!(entry = hip_hadb_find_byhits(&ctx->output_msg->hits, &ctx->output_msg->hitr)),
                  -1, "Failed to retrieve hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_state")),
+    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
     // HIP_DEBUG("Got state from HADB: ports src: %d dest %d \n", sig_state->application.src_port, sig_state->application.dest_port);
 
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, sig_state),
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->app_ctx),
             -1, "Building of param appinfo for I2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into I2 Packet.\n");
 
@@ -413,7 +414,7 @@ int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
 	const struct signaling_param_appinfo *param;
 	uint16_t src_port = 0, dest_port = 0;
     hip_ha_t *entry = NULL;
-    struct signaling_state *sig_state;
+    struct signaling_hipd_state *sig_state;
 
 	/* Port information is included in the I2 (ctx->input_msg). Add it to global state.
 	 * Note: This could be done in another function but to do it here saves one lookup in hadb. */
@@ -421,7 +422,7 @@ int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
     /* Get the global state */
     HIP_IFEL(!(entry = hip_hadb_find_byhits(&ctx->output_msg->hits, &ctx->output_msg->hitr)),
                  -1, "Failed to retrieve hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_state")),
+    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
 
     /* If we got some state, save the ports and hits to it */
@@ -429,14 +430,14 @@ int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
     if(param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         dest_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
         src_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
-        sig_state->application.src_port = src_port;
-        sig_state->application.dest_port = dest_port;
+        sig_state->app_ctx.src_port = src_port;
+        sig_state->app_ctx.dest_port = dest_port;
         HIP_DEBUG("Saved connection information for R2.\n");
-        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->application.src_port, sig_state->application.dest_port);
+        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->app_ctx.src_port, sig_state->app_ctx.dest_port);
     }
 
     /* Now we can build the param into the R2 packet */
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, sig_state),
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->app_ctx),
             -1, "Building of param appinfo for R2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into R2 Packet.\n");
 

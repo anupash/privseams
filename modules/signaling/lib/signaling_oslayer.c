@@ -153,7 +153,7 @@ out_err:
 /*
  * Argument is a null-terminated string.
  */
-int signaling_verify_application(struct signaling_state *ctx) {
+int signaling_verify_application(struct signaling_application_context *app_ctx) {
     int err = 0;
     const char *issuer_cert_file;
     FILE *fp = NULL;
@@ -164,8 +164,8 @@ int signaling_verify_application(struct signaling_state *ctx) {
     X509_STORE_CTX *verify_ctx = NULL;
 
     /* Get application certificate */
-    HIP_IFEL(!(app_cert = get_application_attribute_certificate(ctx->application.path)),
-            -1, "No application certificate found for application: %s.\n", ctx->application.path);
+    HIP_IFEL(!(app_cert = get_application_attribute_certificate(app_ctx->path)),
+            -1, "No application certificate found for application: %s.\n", app_ctx->path);
 
     /* Look for and get issuer certificate */
     issuer_cert_file = "cert.pem";
@@ -177,7 +177,7 @@ int signaling_verify_application(struct signaling_state *ctx) {
     fclose(fp);
 
     /* Before we do any verifying, check that hashes match */
-    HIP_IFEL(0 > verify_application_hash(ctx->application.path, app_cert),
+    HIP_IFEL(0 > verify_application_hash(app_ctx->path, app_cert),
             -1, "Hash of application doesn't match hash in certificate.\n");
 
     /* Setup the certificate store, which is passed used in the verification context store */
@@ -214,12 +214,12 @@ out_err:
 /*
  * Fill in the context information of an application.
  */
-int signaling_get_application_context(struct signaling_state *ctx) {
+int signaling_get_application_context(struct signaling_application_context *app_ctx) {
     int err = 0;
     X509AC *ac = NULL;
     X509_NAME *name;
 
-    HIP_IFEL(!(ac = get_application_attribute_certificate(ctx->application.path)),
+    HIP_IFEL(!(ac = get_application_attribute_certificate(app_ctx->path)),
             -1, "Could not open application certificate.");
 
     /* Dump certificate */
@@ -235,8 +235,8 @@ int signaling_get_application_context(struct signaling_state *ctx) {
             HIP_DEBUG("Error getting AC issuer name, possibly not a X500 name");
         else
         {
-            ctx->application.issuer_dn = (char *) malloc(ONELINELEN);
-            X509_NAME_oneline(name,ctx->application.issuer_dn,ONELINELEN);
+            app_ctx->issuer_dn = (char *) malloc(ONELINELEN);
+            X509_NAME_oneline(name,app_ctx->issuer_dn,ONELINELEN);
         }
 
     }
@@ -247,14 +247,14 @@ int signaling_get_application_context(struct signaling_state *ctx) {
         if (!name) {
             HIP_DEBUG("Error getting AC holder name, possibly not a X500 name");
         } else {
-            ctx->application.application_dn = (char *) malloc(ONELINELEN);
-            X509_NAME_oneline(name,ctx->application.application_dn,ONELINELEN);
+            app_ctx->application_dn = (char *) malloc(ONELINELEN);
+            X509_NAME_oneline(name,app_ctx->application_dn,ONELINELEN);
         }
     }
 
-    HIP_DEBUG("Found following context for application: %s \n", ctx->application.path);
-    HIP_DEBUG("\tIssuer name: %s\n", ctx->application.application_dn);
-    HIP_DEBUG("\tHolder name: %s\n", ctx->application.issuer_dn);
+    HIP_DEBUG("Found following context for application: %s \n", app_ctx->path);
+    HIP_DEBUG("\tIssuer name: %s\n", app_ctx->application_dn);
+    HIP_DEBUG("\tHolder name: %s\n", app_ctx->issuer_dn);
 
 out_err:
     return err;
@@ -267,7 +267,7 @@ out_err:
  *  - add more checks for right connection (check src and destination addresses)
  *  - add parsing of udp connections
  */
-int signaling_netstat_get_application_path(struct signaling_state *ctx) {
+int signaling_netstat_get_application_path(struct signaling_application_context *app_ctx) {
     FILE *fp;
     int err = 0, UNUSED scanerr;
     char *res;
@@ -294,7 +294,7 @@ int signaling_netstat_get_application_path(struct signaling_state *ctx) {
 
     // prepare call to netstat
     memset(callbuf, 0, CALLBUF_SIZE);
-    sprintf(callbuf, "netstat -tpnW | grep :%d | grep :%d", ctx->application.src_port, ctx->application.dest_port);
+    sprintf(callbuf, "netstat -tpnW | grep :%d | grep :%d", app_ctx->src_port, app_ctx->dest_port);
 
     // make call to netstat
     memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
@@ -311,7 +311,7 @@ int signaling_netstat_get_application_path(struct signaling_state *ctx) {
 
         // prepare new call to netstat
         memset(callbuf, 0, CALLBUF_SIZE);
-        sprintf(callbuf, "netstat -tlnp | grep :%d", ctx->application.src_port);
+        sprintf(callbuf, "netstat -tlnp | grep :%d", app_ctx->src_port);
 
         // make call to netstat
         memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
@@ -330,20 +330,20 @@ int signaling_netstat_get_application_path(struct signaling_state *ctx) {
      * Format is the same for connections and listening sockets.
      */
     scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d/%s",
-            proto, unused, unused, local_addr, remote_addr, state, &ctx->application.pid, progname);
-    HIP_DEBUG("Found program %s (%d) on a %s connection from: \n", progname, ctx->application.pid, proto);
+            proto, unused, unused, local_addr, remote_addr, state, &app_ctx->pid, progname);
+    HIP_DEBUG("Found program %s (%d) on a %s connection from: \n", progname, app_ctx->pid, proto);
     HIP_DEBUG("\t from:\t %s\n", local_addr);
     HIP_DEBUG("\t to:\t %s\n", remote_addr);
 
     // determine path to application binary from /proc/{pid}/exe
     memset(symlinkbuf, 0, SYMLINKBUF_SIZE);
-    ctx->application.path = (char *) malloc(PATHBUF_SIZE);
-    memset(ctx->application.path, 0, PATHBUF_SIZE);
-    sprintf(symlinkbuf, "/proc/%i/exe", ctx->application.pid);
-    HIP_IFEL(0 > readlink(symlinkbuf, ctx->application.path, PATHBUF_SIZE),
+    app_ctx->path = (char *) malloc(PATHBUF_SIZE);
+    memset(app_ctx->path, 0, PATHBUF_SIZE);
+    sprintf(symlinkbuf, "/proc/%i/exe", app_ctx->pid);
+    HIP_IFEL(0 > readlink(symlinkbuf, app_ctx->path, PATHBUF_SIZE),
             -1, "Failed to read symlink to application binary\n");
 
-    HIP_DEBUG("Found application binary at: %s \n", ctx->application.path);
+    HIP_DEBUG("Found application binary at: %s \n", app_ctx->path);
 
 out_err:
 
