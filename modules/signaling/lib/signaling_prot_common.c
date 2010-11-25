@@ -45,6 +45,12 @@ void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo
     HIP_DEBUG("+------------ APP INFO END   ----------------------\n");
 }
 
+struct signaling_application_context *signaling_init_application_context(void) {
+    struct signaling_application_context *new_app_ctx = malloc(sizeof(struct signaling_application_context));
+    memset(new_app_ctx, 0, sizeof(struct signaling_application_context));
+    return new_app_ctx;
+}
+
 void signaling_application_context_print(const struct signaling_application_context *app_ctx) {
     if(app_ctx == NULL) {
         HIP_DEBUG("No app_ctx parameter given.\n");

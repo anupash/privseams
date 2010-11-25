@@ -97,8 +97,9 @@ struct signaling_param_appinfo {
      Internal representation of context information for an application.
      This structure should be used whenever state needs to be kept about an application.
 
+     Use signaling_init_application_context() to initialize this structure to standard values.
+
      Strings are assumed to be 0-terminated.
-     Empty strings should be set to 'NULL'.
      All integers are in host-byte-order.
 */
 struct signaling_application_context {
@@ -114,6 +115,8 @@ struct signaling_application_context {
 
 
 void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo);
+
+struct signaling_application_context *signaling_init_application_context(void);
 
 void signaling_application_context_print(const struct signaling_application_context *app_ctx);
 
