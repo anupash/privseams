@@ -153,7 +153,7 @@ out_err:
 /*
  * Argument is a null-terminated string.
  */
-int signaling_verify_application(struct signaling_application_context *app_ctx) {
+int signaling_verify_application(const char *app_path) {
     int err = 0;
     const char *issuer_cert_file;
     FILE *fp = NULL;
@@ -164,8 +164,8 @@ int signaling_verify_application(struct signaling_application_context *app_ctx) 
     X509_STORE_CTX *verify_ctx = NULL;
 
     /* Get application certificate */
-    HIP_IFEL(!(app_cert = get_application_attribute_certificate(app_ctx->path)),
-            -1, "No application certificate found for application: %s.\n", app_ctx->path);
+    HIP_IFEL(!(app_cert = get_application_attribute_certificate(app_path)),
+            -1, "No application certificate found for application: %s.\n", app_path);
 
     /* Look for and get issuer certificate */
     issuer_cert_file = "cert.pem";
@@ -177,7 +177,7 @@ int signaling_verify_application(struct signaling_application_context *app_ctx) 
     fclose(fp);
 
     /* Before we do any verifying, check that hashes match */
-    HIP_IFEL(0 > verify_application_hash(app_ctx->path, app_cert),
+    HIP_IFEL(0 > verify_application_hash(app_path, app_cert),
             -1, "Hash of application doesn't match hash in certificate.\n");
 
     /* Setup the certificate store, which is passed used in the verification context store */
@@ -213,20 +213,23 @@ out_err:
 
 /*
  * Fill in the context information of an application.
+ *
+ * Also sets application path.
  */
-int signaling_get_application_context(struct signaling_application_context *app_ctx) {
+int signaling_get_application_context(char *app_path, struct signaling_application_context *app_ctx) {
     int err = 0;
     X509AC *ac = NULL;
     X509_NAME *name;
 
-    HIP_IFEL(!(ac = get_application_attribute_certificate(app_ctx->path)),
+    HIP_IFEL(!(ac = get_application_attribute_certificate(app_path)),
             -1, "Could not open application certificate.");
 
     /* Dump certificate */
     //X509AC_print(app_cert);
 
-    /* Read whatever we want to know. */
-    /* Issuer name */
+    /* Fill in context */
+    app_ctx->path = app_path;
+
     if( (ac->info->issuer->type == 0)||
         ((ac->info->issuer->type == 1)&&(ac->info->issuer->d.v2Form->issuer != NULL)))
     {
@@ -241,7 +244,6 @@ int signaling_get_application_context(struct signaling_application_context *app_
 
     }
 
-    /* Application INFORMATION */
     if( ac->info->holder->entity != NULL) {
         name = X509AC_get_holder_entity_name(ac);
         if (!name) {
@@ -251,10 +253,6 @@ int signaling_get_application_context(struct signaling_application_context *app_
             X509_NAME_oneline(name,app_ctx->application_dn,ONELINELEN);
         }
     }
-
-    HIP_DEBUG("Found following context for application: %s \n", app_ctx->path);
-    HIP_DEBUG("\tIssuer name: %s\n", app_ctx->application_dn);
-    HIP_DEBUG("\tHolder name: %s\n", app_ctx->issuer_dn);
 
 out_err:
     return err;
@@ -266,14 +264,17 @@ out_err:
  * TODO:
  *  - add more checks for right connection (check src and destination addresses)
  *  - add parsing of udp connections
+ *
+ *  @return NULL on error, the path to the application binary on success
  */
-int signaling_netstat_get_application_path(struct signaling_application_context *app_ctx) {
+char *signaling_netstat_get_application_path_by_ports(const uint16_t src_port, uint16_t dst_port) {
     FILE *fp;
     int err = 0, UNUSED scanerr;
     char *res;
     char callbuf[CALLBUF_SIZE];
     char symlinkbuf[SYMLINKBUF_SIZE];
     char readbuf[NETSTAT_SIZE_OUTPUT];
+    char *output = (char *) malloc(PATHBUF_SIZE);
 
     // variables for parsing
     char proto[NETSTAT_SIZE_PROTO];
@@ -282,8 +283,7 @@ int signaling_netstat_get_application_path(struct signaling_application_context 
     char local_addr[NETSTAT_SIZE_ADDR_v6];
     char state[NETSTAT_SIZE_STATE];
     char progname[NETSTAT_SIZE_PROGNAME];
-    UNUSED int pid = 0;
-    UNUSED int local_port = 0, remote_port = 0;
+    int pid = 0;
 
     memset(proto, 0, NETSTAT_SIZE_PROTO);
     memset(unused, 0, NETSTAT_SIZE_RECV_SEND);
@@ -294,7 +294,7 @@ int signaling_netstat_get_application_path(struct signaling_application_context 
 
     // prepare call to netstat
     memset(callbuf, 0, CALLBUF_SIZE);
-    sprintf(callbuf, "netstat -tpnW | grep :%d | grep :%d", app_ctx->src_port, app_ctx->dest_port);
+    sprintf(callbuf, "netstat -tpnW | grep :%d | grep :%d", src_port, dst_port);
 
     // make call to netstat
     memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
@@ -311,7 +311,7 @@ int signaling_netstat_get_application_path(struct signaling_application_context 
 
         // prepare new call to netstat
         memset(callbuf, 0, CALLBUF_SIZE);
-        sprintf(callbuf, "netstat -tlnp | grep :%d", app_ctx->src_port);
+        sprintf(callbuf, "netstat -tlnp | grep :%d", src_port);
 
         // make call to netstat
         memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
@@ -330,23 +330,24 @@ int signaling_netstat_get_application_path(struct signaling_application_context 
      * Format is the same for connections and listening sockets.
      */
     scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d/%s",
-            proto, unused, unused, local_addr, remote_addr, state, &app_ctx->pid, progname);
-    HIP_DEBUG("Found program %s (%d) on a %s connection from: \n", progname, app_ctx->pid, proto);
+            proto, unused, unused, local_addr, remote_addr, state, &pid, progname);
+    HIP_DEBUG("Found program %s (%d) on a %s connection from: \n", progname, pid, proto);
     HIP_DEBUG("\t from:\t %s\n", local_addr);
     HIP_DEBUG("\t to:\t %s\n", remote_addr);
 
     // determine path to application binary from /proc/{pid}/exe
     memset(symlinkbuf, 0, SYMLINKBUF_SIZE);
-    app_ctx->path = (char *) malloc(PATHBUF_SIZE);
-    memset(app_ctx->path, 0, PATHBUF_SIZE);
-    sprintf(symlinkbuf, "/proc/%i/exe", app_ctx->pid);
-    HIP_IFEL(0 > readlink(symlinkbuf, app_ctx->path, PATHBUF_SIZE),
+    memset(output, 0, PATHBUF_SIZE);
+    sprintf(symlinkbuf, "/proc/%i/exe", pid);
+    HIP_IFEL(0 > readlink(symlinkbuf, output, PATHBUF_SIZE),
             -1, "Failed to read symlink to application binary\n");
 
-    HIP_DEBUG("Found application binary at: %s \n", app_ctx->path);
+    HIP_DEBUG("Found application binary at: %s \n", output);
 
 out_err:
-
-    return err;
+    if(err) {
+        return NULL;
+    }
+    return output;
 }
 

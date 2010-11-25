@@ -37,10 +37,25 @@ void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo
     p_content = (const uint8_t *) appinfo + sizeof(struct signaling_param_appinfo);
     signaling_param_appinfo_print_field("Application DN:", ntohs(appinfo->app_dn_length), p_content);
     p_content += ntohs(appinfo->app_dn_length);
-    signaling_param_appinfo_print_field("Issuer DN:\t", ntohs(appinfo->iss_dn_length), p_content);
+    signaling_param_appinfo_print_field("AC Issuer DN:\t", ntohs(appinfo->iss_dn_length), p_content);
     p_content += ntohs(appinfo->iss_dn_length);
     signaling_param_appinfo_print_field("Requirements:\t", ntohs(appinfo->req_length), p_content);
     p_content += ntohs(appinfo->req_length);
     signaling_param_appinfo_print_field("Groups:\t", ntohs(appinfo->grp_length), p_content);
     HIP_DEBUG("+------------ APP INFO END   ----------------------\n");
+}
+
+void signaling_application_context_print(const struct signaling_application_context *app_ctx) {
+    if(app_ctx == NULL) {
+        HIP_DEBUG("No app_ctx parameter given.\n");
+        return;
+    }
+    HIP_DEBUG("+------------ APP CONTEXT START ----------------------\n");
+    HIP_DEBUG("Context for application: %s \n", app_ctx->path);
+    HIP_DEBUG("\tPorts:\t\t src %d, dest %d\n", app_ctx->src_port, app_ctx->dest_port);
+    HIP_DEBUG("\tApplication DN:\t %s\n", app_ctx->application_dn);
+    HIP_DEBUG("\tAC Issuer DN:\t %s\n", app_ctx->issuer_dn);
+    HIP_DEBUG("\tRequirements:\t %s\n", app_ctx->requirements);
+    HIP_DEBUG("\tGroups:\t\t %s\n", app_ctx->groups);
+    HIP_DEBUG("+------------ APP CONTEXT END   ----------------------\n");
 }

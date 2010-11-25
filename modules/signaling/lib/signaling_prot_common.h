@@ -54,6 +54,8 @@
      but is used for inter process-communication, too.
      Using only one structure simplifies handling.
 
+     All integers are in network byte order.
+
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -97,6 +99,7 @@ struct signaling_param_appinfo {
 
      Strings are assumed to be 0-terminated.
      Empty strings should be set to 'NULL'.
+     All integers are in host-byte-order.
 */
 struct signaling_application_context {
     uint16_t src_port;
@@ -111,6 +114,8 @@ struct signaling_application_context {
 
 
 void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo);
+
+void signaling_application_context_print(const struct signaling_application_context *app_ctx);
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 

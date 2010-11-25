@@ -110,6 +110,7 @@ out_err:
 int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_application_context *app_ctx)
 {
     struct signaling_param_appinfo *appinfo;
+    char *app_path = NULL;
     int err = 0;
     int length_contents = 0;
 
@@ -122,16 +123,16 @@ int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_applicatio
     /* BUILD THE APPLICATION CONTEXT */
 
     /* Dynamically lookup application from port information */
-    HIP_IFEL(0 > signaling_netstat_get_application_path(app_ctx),
-            -1, "Got no path to application. \n");
+    HIP_IFEL(!(app_path = signaling_netstat_get_application_path_by_ports(app_ctx->src_port, app_ctx->dest_port)),
+            -1, "Got no path to application.\n");
 
     /* Verify the application */
-    HIP_IFEL(0 > signaling_verify_application(app_ctx),
-            -1, "Could not verify certificate of application: %s.\n", app_ctx->path);
+    HIP_IFEL(0 > signaling_verify_application(app_path),
+            -1, "Could not verify certificate of application: %s.\n", app_path);
 
     /* Build the application context. */
-    HIP_IFEL(0 > signaling_get_application_context(app_ctx),
-            -1, "Could not build application context for application: %s.\n", app_ctx->path);
+    HIP_IFEL(0 > signaling_get_application_context(app_path, app_ctx),
+            -1, "Could not build application context for application: %s.\n", app_path);
 
     /* BUILD THE PARAMETER */
 
