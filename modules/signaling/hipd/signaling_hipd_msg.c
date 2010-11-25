@@ -305,15 +305,10 @@ out_err:
 /*
  * Tell the firewall to add a scdb entry for the completed BEX or update BEX.
  */
-int signaling_send_scdb_add(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+static int signaling_send_scdb_add(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_appinfo *appinfo)
 {
     struct hip_common *msg = NULL;
     int err                = 0;
-    const struct signaling_param_appinfo *appinfo = NULL;
-
-    /* Get the appinfo parameter */
-    HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
-            -1, "No application info parameter found in the message.\n");
 
     /* Build the user message */
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)),
@@ -323,12 +318,12 @@ int signaling_send_scdb_add(UNUSED const uint8_t packet_type, UNUSED const uint3
               "build hdr failed\n");
 
      /* Include Hits */
-    HIP_IFEL(hip_build_param_contents(msg, &ctx->input_msg->hits,
+    HIP_IFEL(hip_build_param_contents(msg, hits,
                                        HIP_PARAM_HIT,
                                        sizeof(hip_hit_t)), -1,
               "build param contents (src hit) failed\n");
 
-    HIP_IFEL(hip_build_param_contents(msg, &ctx->input_msg->hitr,
+    HIP_IFEL(hip_build_param_contents(msg, hitr,
                                        HIP_PARAM_HIT,
                                        sizeof(hip_hit_t)), -1,
               "build param contents (src hit) failed\n");
@@ -344,19 +339,33 @@ out_err:
 }
 
 /*
- * Print all application information included in the packet.
+ * Just a dummy.
+ *
+ * Here we should do checks with local policies about the application information we're given,
+ * e.g. accept that application or not.
  */
-int signaling_handle_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_check_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, UNUSED struct hip_packet_context *ctx) {
+    return 0;
+}
+
+
+/*
+ * Process application information in this packet.
+ *
+ *  1) Print
+ *  2) Notify the oslayer (hipfw) of the completed BEX)
+ */
+int signaling_handle_bex(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = -1;
 	const struct signaling_param_appinfo *appinfo = NULL;
 
-	/* Get the parameter */
 	HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
 	        -1, "No application info parameter found in the message.\n");
 
-	/* Print out contents */
 	signaling_param_appinfo_print(appinfo);
+
+	signaling_send_scdb_add(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo);
 
 out_err:
 	return err;
@@ -368,17 +377,21 @@ out_err:
 int signaling_handle_bex_update(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
+    const struct signaling_param_appinfo * appinfo = NULL;
+
+    HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
+            -1, "No application info parameter found in the message (should be there..).\n");
 
     if(signaling_get_update_type(ctx->input_msg) == SIGNALING_FIRST_BEX_UPDATE) {
         HIP_DEBUG("Received FIRST BEX Update... \n");
         HIP_IFEL(signaling_trigger_second_bex_update(ctx),
-                -1, "failed to process second bex update. \n");
-        HIP_IFEL(signaling_send_scdb_add(packet_type, ha_state, ctx),
+                -1, "failed to trigger second bex update. \n");
+        HIP_IFEL(signaling_send_scdb_add(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo),
                 -1, "failed to notify fw to update scdb\n");
     } else if (signaling_get_update_type(ctx->input_msg) == SIGNALING_SECOND_BEX_UPDATE) {
         HIP_DEBUG("Received SECOND BEX Update... \n");
         update_sent = 0;
-        HIP_IFEL(signaling_send_scdb_add(packet_type, ha_state, ctx),
+        HIP_IFEL(signaling_send_scdb_add(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo),
                 -1, "failed to notify fw to update scdb\n");
     }
 

@@ -44,14 +44,18 @@
 #define SIGNALING_SECOND_BEX_UPDATE 33002
 
 /*
- * Do something with the application information included in the I2 or R2 packet.
- * For now, just print it.
+ * Perform checks on application context information.
  */
-int signaling_handle_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_check_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+
+/*
+ * Process information.
+ *
+ * 1) Notify firewall if packet is I2, R2 or UPDATE
+ */
+int signaling_handle_bex(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 int signaling_handle_bex_update(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-
-int signaling_send_scdb_add(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx);
 
 int signaling_trigger_first_bex_update(struct hip_common *msg, UNUSED struct sockaddr_in6 *src);
 
