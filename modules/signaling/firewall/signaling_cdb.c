@@ -188,10 +188,11 @@ int signaling_cdb_uninit(void)
 }
 
 /**
- * searches for a port pair inside a given entry
- * returns -1 for error, 0 for not found, 1 for found.
+ * Searches for a pair of ports inside the given entry.
+ *
+ * @return -1 for error, 0 for not found, 1 for found.
  */
-int signaling_cdb_ports_find(const uint16_t src_port, const uint16_t dest_port,
+int signaling_cdb_entry_find_ports(const uint16_t src_port, const uint16_t dest_port,
         signaling_cdb_entry_t * entry) {
     int err = 0;
     SList *listitem;

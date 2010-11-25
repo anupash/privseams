@@ -97,7 +97,8 @@ out_err:
  */
 int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
 
-    int err = 1, found = 0;
+    int verdict = VERDICT_DEFAULT;
+    int found = 0;
     int src_port, dest_port;
     signaling_cdb_entry_t *entry;
 
@@ -115,22 +116,25 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     if(entry == NULL) {
         HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
         /* Let packet proceed because BEX will be triggered by userspace ipsec */
-        err = 1;
         goto out_err;
     }
 
     /* If there is an association search the connection. */
-    found = signaling_cdb_ports_find(src_port, dest_port, entry);
-    if(found) {
+    found = signaling_cdb_entry_find_ports(src_port, dest_port, entry);
+    if(found == -1) {
+        HIP_DEBUG("An error occured searching the connection tracking database.\n");
+        verdict = VERDICT_DEFAULT;
+    }
+    if(found == 1) {
         HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
-        err = 1;
+        verdict = VERDICT_ACCEPT;
     } else {
         HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
         signaling_hipfw_trigger_bex_update(ctx);
-        err = 0;
+        verdict = VERDICT_DROP;
     }
 
 out_err:
-    return err;
+    return verdict;
 }
 

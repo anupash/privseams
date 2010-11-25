@@ -37,6 +37,12 @@
 
 #include "lib/core/protodefs.h"
 
+#define VERDICT_DROP    0;
+#define VERDICT_ACCEPT  1;
+
+/* Defines what is done in case of errors. */
+#define VERDICT_DEFAULT VERDICT_ACCEPT
+
 int signaling_hipfw_oslayer_init(void);
 
 /* Check if the packet is conntracked or not. Take the corresponding actions. */
