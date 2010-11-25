@@ -16,4 +16,8 @@
 
 int signaling_netstat_get_application_path(struct signaling_state *ctx);
 
+int signaling_verify_application(struct signaling_state *ctx);
+
+int signaling_get_application_context(struct signaling_state *ctx);
+
 #endif /* HIP_HIPD_SIGNALING_NETSTAT_WRAPPER_H */
