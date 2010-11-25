@@ -97,20 +97,18 @@ out_err:
 }
 
 /**
- * Build a SIGNALING APP INFO (= Name, Developer, Serial) parameter
+ * Builds a hip_param_signaling_appinfo parameter into msg,
+ * using the values in the application context 'app_ctx'.
  * TODO: Define and check for mandatory fields.
  *
- *
- * @param msg the message
- * @param type the info type
- * @param info the info (app name, devloper or serial)
- * @param length the length of the info
+ * @param app_ctx the application context where values are taken from
+ * @param msg the message, where the parameter is appended
+
  * @return zero for success, or non-zero on error
  */
 int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_application_context *app_ctx)
 {
     struct signaling_param_appinfo *appinfo;
-    char *app_path = NULL;
     int err = 0;
     int length_contents = 0;
 
@@ -120,38 +118,16 @@ int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_applicatio
     HIP_IFEL(app_ctx == NULL,
             -1, "Got no context to built the parameter from.\n");
 
-    /* BUILD THE APPLICATION CONTEXT */
-
-    /* Dynamically lookup application from port information */
-    HIP_IFEL(!(app_path = signaling_netstat_get_application_path_by_ports(app_ctx->src_port, app_ctx->dest_port)),
-            -1, "Got no path to application.\n");
-
-    /* Verify the application */
-    HIP_IFEL(0 > signaling_verify_application(app_path),
-            -1, "Could not verify certificate of application: %s.\n", app_path);
-
-    /* Build the application context. */
-    HIP_IFEL(0 > signaling_get_application_context(app_path, app_ctx),
-            -1, "Could not build application context for application: %s.\n", app_path);
-
     /* BUILD THE PARAMETER */
-
-    /* Allocate some memory for the param */
     length_contents = signaling_param_appinfo_get_content_length(app_ctx);
     appinfo = (struct signaling_param_appinfo *) malloc(sizeof(hip_tlv_common_t) + length_contents);
 
-    /* Set type and lenght */
     hip_set_param_type((hip_tlv_common_t *) appinfo, HIP_PARAM_SIGNALING_APPINFO);
     hip_set_param_contents_len((hip_tlv_common_t *) appinfo, length_contents);
 
-    /* Build the parameter contents */
     HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, app_ctx),
             -1, "Failed to build appinfo parameter.\n");
 
-    /* Dump it */
-    signaling_param_appinfo_print(appinfo);
-
-    /* Insert parameter into the message */
     HIP_IFEL(0 > hip_build_param(msg, appinfo),
             -1, "Failed to append appinfo parameter to message.\n");
 
@@ -171,10 +147,9 @@ static struct signaling_param_appinfo * signaling_param_appinfo_init(unsigned in
     /* Size must be at least be enough to accomodate fixed contents and tlv header */
     HIP_IFEL((length < sizeof(struct signaling_param_appinfo)),
             -1, "Error allocating memory for appinfo parameter: requested size < MinSize.");
-
     par = (struct signaling_param_appinfo *) malloc(length);
 
-    /* Set contents to zero. */
+    /* Set contents to zero (defined standard values). */
     memset((uint8_t *)par, 0, length);
 
     /* Set type and length */

@@ -14,10 +14,12 @@
 /* MAX = ? */
 #define PATHBUF_SIZE            200
 
-char *signaling_netstat_get_application_path_by_ports(const uint16_t src_port, uint16_t dst_port);
-
 int signaling_verify_application(const char *app_path);
 
-int signaling_get_application_context(char *app_path, struct signaling_application_context *app_ctx);
+int signaling_netstat_get_application_by_ports(const uint16_t src_port, const uint16_t dst_port, struct signaling_application_context *app_ctx);
+
+int signaling_get_application_context_from_certificate(char *app_path, struct signaling_application_context *app_ctx);
+
+int signaling_get_verified_application_context_by_ports(uint16_t src_port, uint16_t dst_port, struct signaling_application_context *app_ctx);
 
 #endif /* HIP_HIPD_SIGNALING_NETSTAT_WRAPPER_H */

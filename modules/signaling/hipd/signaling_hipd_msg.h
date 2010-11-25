@@ -57,7 +57,7 @@ int signaling_handle_bex(const uint8_t packet_type, const uint32_t ha_state, str
 
 int signaling_handle_bex_update(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
-int signaling_trigger_first_bex_update(struct hip_common *msg, UNUSED struct sockaddr_in6 *src);
+int signaling_handle_trigger_bex_update(struct hip_common *msg, UNUSED struct sockaddr_in6 *src);
 
 int signaling_get_update_type(hip_common_t *msg);
 /*

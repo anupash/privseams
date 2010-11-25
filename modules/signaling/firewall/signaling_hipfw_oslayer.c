@@ -65,7 +65,7 @@ int signaling_hipfw_trigger_bex_update(hip_fw_context_t *ctx) {
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
     /* build the message header */
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_TRIGGER_BEX_UPDATE, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION, 0),
              -1, "build hdr failed\n");
 
     /* Include Hits */
