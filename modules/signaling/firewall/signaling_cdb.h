@@ -41,26 +41,10 @@
 #include "firewall/common_types.h"
 #include "lib/core/protodefs.h"
 
-typedef struct signaling_cdb_connection_entry {
-    uint16_t local_port;
-    uint16_t remote_port;
-} signaling_cdb_connection_entry_t;
-
-typedef struct signaling_cdb_application_entry {
-    int pid;
-    char *path;
-    char *application_dn;
-    char *issuer_dn;
-    char *requirements;
-    char *groups;
-} signaling_cdb_applications_entry_t;
-
-
 typedef struct signaling_cdb_entry {
     hip_hit_t local_hit;
     hip_hit_t remote_hit;
-    SList * connections;
-    SList * applications;
+    SList * application_contexts;
 } signaling_cdb_entry_t;
 
 
@@ -71,11 +55,11 @@ int signaling_cdb_uninit(void);
 
 int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
-                      signaling_cdb_connection_entry_t *conn,
-                      signaling_cdb_applications_entry_t *app);
+                      struct signaling_application_context *app_ctx);
 
 signaling_cdb_entry_t *signaling_cdb_entry_find(const struct in6_addr *local_hit,
                                                 const struct in6_addr *remote_hit);
+
 int signaling_cdb_ports_find(const uint16_t src_port, const uint16_t dest_port,
                              signaling_cdb_entry_t * entry);
 

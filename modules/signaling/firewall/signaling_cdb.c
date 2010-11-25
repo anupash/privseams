@@ -195,16 +195,16 @@ int signaling_cdb_ports_find(const uint16_t src_port, const uint16_t dest_port,
         signaling_cdb_entry_t * entry) {
     int err = 0;
     SList *listitem;
-    signaling_cdb_connection_entry_t * conn;
+    struct signaling_application_context * app_ctx = NULL;
 
     HIP_IFEL(entry == NULL,
             -1, "Entry is null.\n" );
 
-    listitem = entry->connections;
+    listitem = entry->application_contexts;
     while(listitem) {
-        conn = (signaling_cdb_connection_entry_t *) listitem->data;
-        if((src_port == conn->local_port && dest_port == conn->remote_port) ||
-           (dest_port == conn->local_port && src_port == conn->remote_port)) {
+        app_ctx = (struct signaling_application_context *) listitem->data;
+        if((src_port == app_ctx->src_port && dest_port == app_ctx->dest_port) ||
+           (dest_port == app_ctx->src_port && src_port == app_ctx->dest_port)) {
             err = 1;
             goto out_err;
         }
@@ -254,8 +254,7 @@ static signaling_cdb_entry_t * signaling_cdb_add_new(const struct in6_addr *loca
     signaling_cdb_entry_t * entry = malloc(sizeof(signaling_cdb_entry_t));
     memcpy(&entry->local_hit, local_hit, sizeof(struct in6_addr));
     memcpy(&entry->remote_hit, remote_hit, sizeof(struct in6_addr));
-    entry->connections = NULL;
-    entry->applications = NULL;
+    entry->application_contexts = NULL;
 
     HIP_IFEL(hip_ht_add(scdb, entry), -1, "hash collision detected!\n");
 
@@ -269,8 +268,7 @@ out_err:
 /* Adds or updates and entry */
 int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
-                      signaling_cdb_connection_entry_t *conn,
-                      signaling_cdb_applications_entry_t *app)
+                      struct signaling_application_context *app_ctx)
 {
     int err = 0;
     signaling_cdb_entry_t *entry = NULL;
@@ -280,50 +278,43 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
         entry = signaling_cdb_add_new(local_hit, remote_hit);
     }
 
-    HIP_IFEL(!entry, -1, "Adding a new entry failed.\n");
+    HIP_IFEL(!entry, -1, "Adding a new empty entry failed.\n");
 
-    entry->connections = append_to_slist(entry->connections, conn);
-    entry->applications = append_to_slist(entry->applications, app);
+    entry->application_contexts = append_to_slist(entry->application_contexts, app_ctx);
 
 out_err:
     return err;
 }
 
+/*
+ * Prints one database entry.
+ */
 static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
     SList *listentry;
+    struct signaling_application_context *app_ctx;
 
-    HIP_DEBUG("\t----- ELEMENT START ------\n");
+    HIP_DEBUG("\t----- SCDB ELEMENT START ------\n");
     HIP_DEBUG_HIT("\tLocal Hit", &entry->local_hit);
     HIP_DEBUG_HIT("\tRemote Hit", &entry->remote_hit);
 
-    HIP_DEBUG("\tConnections\n");
+    HIP_DEBUG("\tApplication contexts:\n");
 
-    listentry = entry->connections;
+    listentry = entry->application_contexts;
     while(listentry != NULL) {
         if(listentry->data != NULL) {
+            app_ctx = (struct signaling_application_context *) listentry->data;
+            HIP_DEBUG("\t  ->  appname (%d): %s\n",
+                app_ctx->pid,
+                app_ctx->application_dn);
             HIP_DEBUG("\t  ->  local port: %d, remote port: %d\n",
-                ((signaling_cdb_connection_entry_t *) listentry->data)->local_port,
-                ((signaling_cdb_connection_entry_t *) listentry->data)->remote_port);
+                app_ctx->src_port,
+                app_ctx->dest_port);
         } else {
             HIP_DEBUG("\t  ->  <no port info available>\n");
         }
         listentry = listentry->next;
     }
-
-    HIP_DEBUG("\tApplications\n");
-
-    listentry = entry->applications;
-    while(listentry != NULL) {
-        if(listentry->data != NULL) {
-            HIP_DEBUG("\t  ->  appname (%d): %s\n",
-                ((signaling_cdb_applications_entry_t *) listentry->data)->pid,
-                ((signaling_cdb_applications_entry_t *) listentry->data)->application_dn);
-        } else {
-            HIP_DEBUG("\t  ->  <no appdata available>\n");
-        }
-        listentry = listentry->next;
-    }
-    HIP_DEBUG("\t----- ELEMENT END   ------\n");
+    HIP_DEBUG("\t----- SCDB ELEMENT END   ------\n");
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
@@ -336,37 +327,50 @@ void signaling_cdb_print(void) {
     HIP_DEBUG("------------------ SCDB END   ------------------\n");
 }
 
+/*
+ * Processes a message of type 'HIP_MSG_SIGNALING_CDB_ADD_CONN'
+ * by adding information about completed BEX or Update to connection tracking db.
+ *
+ * Comment:
+ *      For now, connection tracking is done only on port-basis.
+ *      Thus, any application context inside 'msg' is discarded.
+ *
+ * @return -1 on error
+ */
 int signaling_cdb_handle_add_request(hip_common_t * msg) {
     int err = 0;
     const struct signaling_param_appinfo *appinfo;
     const struct hip_tlv_common *param   = NULL;
     const hip_hit_t *src_hit = NULL;
     const hip_hit_t *dst_hit = NULL;
-    signaling_cdb_connection_entry_t * conn;
+    struct signaling_application_context * app_ctx;
+
+    HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CDB_ADD_CONN,
+            -1, "Message has wrong type.\n");
 
     HIP_DEBUG("Got request to add a connection to a scdb entry.\n");
     HIP_DUMP_MSG(msg);
 
     param      = hip_get_param(msg, HIP_PARAM_HIT);
     src_hit    = hip_get_param_contents_direct(param);
-
     param      = hip_get_next_param(msg, param);
     dst_hit    = hip_get_param_contents_direct(param);
+    HIP_IFEL(!(src_hit && dst_hit),
+            -1, "Source- and/or destinationhit not given.\n");
 
-    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
-    if(param) {
-        signaling_param_appinfo_print((const struct signaling_param_appinfo *) param);
-    }
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
+            -1, "No appinfo parameter in message.\n");
     appinfo = (const struct signaling_param_appinfo *) param;
+    app_ctx = signaling_init_application_context();
 
-    conn = malloc(sizeof(signaling_cdb_connection_entry_t));
-    conn->local_port = ntohs(appinfo->dest_port);
-    conn->remote_port = ntohs(appinfo->src_port);
+    app_ctx->src_port = ntohs(appinfo->src_port);
+    app_ctx->dest_port = ntohs(appinfo->dest_port);
 
-    signaling_cdb_add(src_hit, dst_hit, conn, NULL);
+    signaling_cdb_add(src_hit, dst_hit, app_ctx);
 
     signaling_cdb_print();
 
+out_err:
     return err;
 }
 
