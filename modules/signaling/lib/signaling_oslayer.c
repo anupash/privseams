@@ -199,7 +199,7 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
         // prepare make second call to netstat
         HIP_DEBUG("No output from netstat call: %s\n", callbuf);
         memset(callbuf, 0, CALLBUF_SIZE);
-        sprintf(callbuf, "netstat -tlnp | grep :%d", src_port);
+        sprintf(callbuf, "netstat -tpneWl | grep :%d", src_port);
         memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
         HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
         res = fgets(&readbuf[0], NETSTAT_SIZE_OUTPUT, fp);
