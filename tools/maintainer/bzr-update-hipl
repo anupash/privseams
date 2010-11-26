@@ -6,7 +6,7 @@ PATH=/p/bin:$PATH
 
 # Use abs dir names in TMP_DIR, WWW_DIR and OUTPUT_FILE
 TMP_DIR=~/.bzr-hipl-cache
-REVISION=trunk
+BRANCH=trunk
 WWW_DIR=/var/www/infrahip/html/hipl
 OUTPUT_FILE=$WWW_DIR/hipl.tar.gz
 CHANGE_LOG_FILE=/tmp/ChangeLog
@@ -16,14 +16,16 @@ VERSION=
 #
 if test -x  $TMP_DIR
 then
-    cd $TMP_DIR/hipl-bzr/$REVISION
+    cd $TMP_DIR/hipl-bzr/$BRANCH
     bzr update
 else
     mkdir $TMP_DIR
+    cd $TMP_DIR
     bzr init-repo hipl-bzr
     cd hipl-bzr
-    bzr checkout file:///var/archive/hipl-bzr/$REVISION
-    cd $REVISION
+    bzr checkout lp:hipl
+    mv hipl $BRANCH
+    cd $BRANCH
 fi
 
 VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
