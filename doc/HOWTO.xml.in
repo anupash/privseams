@@ -2462,29 +2462,45 @@ VPN
     <title>DNS Proxy</title>
 
     <para>
-      The recommended way to support HIT look up in a client host
-      is to use the python-based DNS proxy daemon. It is optional on
-      hosts dedicated as servers. However, running the DNS proxy
-      on e.g. a SSH server or IRC server has the benefit that it
-      speeds up logins. The server software will try to resolve the HIT of
-      the client to a hostname and introduces an articifial delay to the
-      client if the HIT was not found. Running DNS proxy at the server
-      avoids this delay.
+      The linux libc library does not (yet) support look up of HI
+      records from the DNS. As a workaround for this problem, HIPL
+      provides a DNS proxy that intercepts DNS requests and handles
+      the HI record look up. The proxy intercepts the DNS requests by
+      overwriting itself into /etc/resolv.conf file. Then, the DNS
+      proxy forwards all of the DNS requests to the server that was in
+      the file prior to overwriting it. When the proxy encounters HIP
+      records in DNS or hosts files, it returns them instead of the IP
+      addresses to the caller.
     </para>
 
     <para>
-      The DNS proxy is located in
-      the tools/hipdnsproxy directory and has to be started with
-      root priviledges. After you start the script, it will rewrite
-      /etc/resolv.conf to redirect all DNS look ups to itself so that
-      it can return HITs to applications when applicable.
+      The DNS proxy is single threaded, but asynchronous. It polls for
+      changes in resolv.conf, stores the changes and rewrites itself
+      there. The DNS proxy caches the results of DNS requests to
+      reduce delays. To avoid loosing the mapping between a HIT and
+      the corresponding IP address, the DNS proxy always this
+      information to hipd (using hipconf). It sends this information
+      always because there is chance that hipd was restarted or its
+      state was reset.
     </para>
 
     <para>
-     The DNS proxy tries to find host identities from two places:
-     "hosts" files (/etc/hosts and @sysconfdir@/hosts), HI records in DNS.
-     It returns the host identities as HITs or LSIs to the requesting
-     application.
+      The DNS proxy is useful especially for client hosts. However,
+      running the DNS proxy on e.g. a SSH server or IRC server has the
+      benefit that it speeds up logins. The server software will try
+      to resolve the HIT of the client to a hostname and introduces an
+      articifial delay to the client if the HIT was not found. Running
+      DNS proxy at the server avoids this delay.
+    </para>
+
+    <para>
+     The DNS proxy tries to find host identities from two places,
+     the "hosts" files or HI records in DNS. The @sysconfdir@/hosts file
+     can be used to isolate all HITs or LSIs, or they can be overloaded
+     all in the /etc/hosts file. In the case of DNS, the DNS proxy
+     converts the HI records automatically to HITs and returns also
+     LSIs to the application when requested. The DNS proxy handles
+     the LSI conversion through hipd.
     </para>
 
     <para>
@@ -2523,9 +2539,10 @@ VPN
     </para>
 
     <para>
-      The DNS proxy does not return IP addresses when it finds a HIT for
-      a queried host. If you want to see the IP addresses, try
-      "dig -t any hostname".
+      The DNS proxy does not return IP addresses when it finds a HIT
+      for a queried host. If you want to see the IP addresses, try
+      "dig -t any hostname". Intentionally, the DNS proxy does not
+      alter ANY requests for diagnostics and debugging purposes.
     </para>
 
   </section>
