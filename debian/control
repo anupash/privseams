@@ -1,11 +1,13 @@
 Source: hipl
 Section: net
 Priority: optional
-Maintainer: Rene Hummen <rene.hummen@cs.rwth-aachen.de>
-Build-Depends: debhelper (>= 5), autotools-dev
-Standards-Version: 3.7.2
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Rene Hummen <rene.hummen@cs.rwth-aachen.de>
+Build-Depends: debhelper (>= 7), python, libconfig8-dev, libssl-dev, iptables-dev
+Standards-Version: 3.9.1.0
+Homepage: http://launchpad.net/hipl
 
 Package: hipl
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, libnet-dns-perl
 Description: HIP for Linux

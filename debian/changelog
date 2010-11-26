@@ -1,5 +1,5 @@
-hipl (1.0.4-1) unstable; urgency=low
+hipl (1.0.6-5186ppa6) maverick; urgency=low
 
-  * Initial release
+  * Initial snapshot for ppa testing purposes
 
- -- Rene Hummen <rene.hummen@cs.rwth-aachen.de>  Wed, 10 Feb 2010 16:27:50 +0100
+ -- Rene Hummen <rene.hummen@cs.rwth-aachen.de>  Thu, 25 Nov 2010 21:12:25 +0100
