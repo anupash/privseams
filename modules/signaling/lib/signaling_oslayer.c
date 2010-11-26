@@ -174,6 +174,7 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
     char local_addr[NETSTAT_SIZE_ADDR_v6];
     char state[NETSTAT_SIZE_STATE];
     char progname[NETSTAT_SIZE_PROGNAME];
+    UNUSED int inode;
 
     memset(proto, 0, NETSTAT_SIZE_PROTO);
     memset(unused, 0, NETSTAT_SIZE_RECV_SEND);
@@ -182,11 +183,9 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
     memset(state, 0, NETSTAT_SIZE_STATE);
     memset(progname, 0, NETSTAT_SIZE_PROGNAME);
 
-    // prepare call to netstat
+    // prepare and make call to netstat
     memset(callbuf, 0, CALLBUF_SIZE);
-    sprintf(callbuf, "netstat -tpnW | grep :%d | grep :%d", src_port, dst_port);
-
-    // make call to netstat
+    sprintf(callbuf, "netstat -tpneW | grep :%d | grep :%d", src_port, dst_port);
     memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
     HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
     res = fgets(&readbuf[0], NETSTAT_SIZE_OUTPUT, fp);
@@ -197,13 +196,10 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
      * We have to look for a listening socket on the destination port.
      */
     if(!res) {
+        // prepare make second call to netstat
         HIP_DEBUG("No output from netstat call: %s\n", callbuf);
-
-        // prepare new call to netstat
         memset(callbuf, 0, CALLBUF_SIZE);
         sprintf(callbuf, "netstat -tlnp | grep :%d", src_port);
-
-        // make call to netstat
         memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
         HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
         res = fgets(&readbuf[0], NETSTAT_SIZE_OUTPUT, fp);
@@ -219,9 +215,9 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
      * Parse the output.
      * Format is the same for connections and listening sockets.
      */
-    scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d/%s",
-            proto, unused, unused, local_addr, remote_addr, state, &app_ctx->pid, progname);
-    HIP_DEBUG("Found program %s (%d) on a %s connection from: \n", progname, app_ctx->pid, proto);
+    scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d %d %d/%s",
+            proto, unused, unused, local_addr, remote_addr, state, &app_ctx->euid, &inode, &app_ctx->pid, progname);
+    HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", progname, app_ctx->pid, app_ctx->euid, proto);
     HIP_DEBUG("\t from:\t %s\n", local_addr);
     HIP_DEBUG("\t to:\t %s\n", remote_addr);
 

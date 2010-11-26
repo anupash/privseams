@@ -38,8 +38,10 @@
 #define HIP_LIB_CORE_SIGNALING_PROT_COMMON_H
 
 #include <stdint.h>
+#include <sys/types.h>
 
 #include "lib/core/protodefs.h"
+
 
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
 #define HIP_PARAM_SIGNALING_APPINFO     5000
@@ -105,7 +107,8 @@ struct signaling_param_appinfo {
 struct signaling_application_context {
     uint16_t src_port;
     uint16_t dest_port;
-    int pid;
+    pid_t pid;
+    uid_t euid;
     char *path;
     char *application_dn;
     char *issuer_dn;
