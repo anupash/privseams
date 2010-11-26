@@ -52,6 +52,7 @@
 #include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_oslayer.h"
+#include "modules/signaling/lib/signaling_user_api.h"
 #include "signaling_hipd_state.h"
 #include "signaling_hipd_msg.h"
 
@@ -239,6 +240,8 @@ static int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
             -1, "failed to retrieve state for signaling ports\n");
     HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &sig_state->app_ctx),
             -1, "Failed application lookup / verification.\n");
+    HIP_IFEL(signaling_user_info_by_uid(sig_state->app_ctx.euid),
+            -1, "Could not build user information.\n");
     /* Build and send */
     HIP_IFEL(!(update_packet_to_send = build_update_message(ha, type, &sig_state->app_ctx, seq_id)),
             -1, "Failed to build update.\n");
@@ -400,6 +403,8 @@ int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
 
     HIP_IFEL(signaling_get_verified_application_context_by_ports(sig_state->app_ctx.src_port, sig_state->app_ctx.dest_port, &sig_state->app_ctx),
             -1, "Application lookup/verification failed.\n");
+    HIP_IFEL(signaling_user_info_by_uid(sig_state->app_ctx.euid),
+            -1, "Could not build user information.\n");
     HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->app_ctx),
             -1, "Building of param appinfo for I2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into I2 Packet.\n");
@@ -439,6 +444,8 @@ int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
     /* Now we can build the param into the R2 packet */
     HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dest_port, &sig_state->app_ctx),
             -1, "Application lookup/verification failed.\n");
+    HIP_IFEL(signaling_user_info_by_uid(sig_state->app_ctx.euid),
+            -1, "Could not build user information.\n");
     HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->app_ctx),
             -1, "Building of param appinfo for R2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into R2 Packet.\n");
