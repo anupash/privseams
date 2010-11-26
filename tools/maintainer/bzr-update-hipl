@@ -35,7 +35,7 @@ bzr log > $CHANGE_LOG_FILE
 # Make a HIP tarball
 #
 autoreconf --install
-./configure
+./configure --sysconfdir=/etc
 make dist
 
 # Add ChangeLog file and rename as "trunk"
