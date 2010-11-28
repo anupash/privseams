@@ -1,14 +1,16 @@
 #!/bin/sh -xv
 
 HOSTS="
+allerian.infrahipnet
 garadar.infrahip.net
+cenarion.infrahip.net
 netherstorm.infrahip.net
 terokkar.infrahip.net
 shadowmoon.infrahip.net
-stonebreaker.infrahip.net
 hellfire.infrahip.net
 zangarmash.infrahip.net
-blacktemple.infrahip.net
+nagrand.infrahip.net
+ironforge.infrahip.net
 "
 
 COMMANDS="
@@ -24,24 +26,21 @@ make bin syncrepo"
 
 #set -e
 
-# unconfigured:
-# ubuntu lucid 32-bit allerian
-# ubuntu lucid 64-bit cenarion 64-bit
-#
-# configured:
+# configured hosts:
 # Ubuntu lucid 32-bit terokkar.infrahip.net
-# ubuntu lucid 64-bit garadar
-# f12-i386            netherstorm.infrahip.net
-# F12-x86_64          shadowmoon.infrahip.net
-# CentOS-5.4 i386     hellfire.infrahip.net
-# CentOS-5.4 x86_64   zangarmash.infrahip.net
+# ubuntu lucid 32-bit allerian
+# f13-i386            netherstorm.infrahip.net
+# F13-x86_64          shadowmoon.infrahip.net
+# CentOS-5.5 i386     hellfire.infrahip.net
+# CentOS-5.5 x86_64   zangarmash.infrahip.net
+# F14 32bit           ironforge
+# F14-x86_64	      nagrand.infrahip.net
+# ubuntu maverick 64-bit garadar
+# ubuntu maverick 64-bit cenarion 64-bit
+#
+# disabled hosts:
 # fc11-i386           blacktemple
 # fc11-x86_64         stonebreaker
-#
-# disabled:
-# F10-x86_64          nagrand.infrahip.net
-# FC11-i386           hipserver (real host)
-# Ubuntu lucid 64-bit halko.pc.infrahip.net (real host)
 
 if test $# != 0
 then
