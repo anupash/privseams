@@ -250,11 +250,14 @@ echo ""
 
 
 
-AC_CONFIG_FILES([ Makefile
-                  doc/Doxyfile
-                  doc/HOWTO.xml
-                  tools/hipdnskeyparse/hipdnskeyparse
-                  tools/hipdnsproxy/hipdnsproxy
-                  tools/nsupdate.pl ])
+AC_CONFIG_FILES([Makefile
+                 doc/Doxyfile
+                 doc/HOWTO.xml])
+AC_CONFIG_FILES([tools/hipdnskeyparse/hipdnskeyparse],
+                [chmod +x tools/hipdnskeyparse/hipdnskeyparse])
+AC_CONFIG_FILES([tools/hipdnsproxy/hipdnsproxy],
+                [chmod +x tools/hipdnsproxy/hipdnsproxy])
+AC_CONFIG_FILES([tools/nsupdate.pl],
+                [chmod +x tools/nsupdate.pl])
 
 AC_OUTPUT
