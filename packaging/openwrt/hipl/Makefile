@@ -29,8 +29,6 @@ define Package/hipl-hipfw
     SECTION:=net
     CATEGORY:=Network
     DEPENDS:=hipl-common +libconfig +iptables +ip6tables +kmod-ip6tables +kmod-ipt-queue
-             # TUN/TAP support - might be needed at some point instead of kmod-ipt-queue
-             #+kmod-tun
     TITLE:=HIPL firewall
     URL:=http://hipl.hiit.fi/
 endef
