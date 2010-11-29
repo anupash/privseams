@@ -73,7 +73,7 @@ uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c,
     /* make 16 bit words out of every two adjacent 8 bit words and */
     /* calculate the sum of all 16 vit words */
     for (i = 0; i < len; i = i + 2) {
-        word16 = ((((uint16_t) (data[i] << 8))) & 0xFF00) +
+        word16 = (((uint16_t) (data[i] << 8)) & 0xFF00) +
                  (((uint16_t) data[i + 1]) & 0xFF);
         sum    = sum + (unsigned long) word16;
     }
@@ -129,7 +129,7 @@ uint16_t ipv6_checksum(uint8_t protocol,
     chksum       += inchksum(data, len);
 
     chksum        = (chksum >> 16) + (chksum & 0xffff);
-    chksum       += (chksum >> 16);
+    chksum       +=  chksum >> 16;
 
     chksum        = (uint16_t) (~chksum);
     if (chksum == 0) {
@@ -223,7 +223,7 @@ uint16_t inchksum(const void *data, uint32_t length)
 uint16_t hip_checksum_packet(char *data, struct sockaddr *src,
                              struct sockaddr *dst)
 {
-    uint16_t checksum      = 0;
+    uint16_t checksum = 0;
     unsigned long sum = 0;
     int count         = 0, length = 0;
     unsigned short *p = NULL;     /* 16-bit */
