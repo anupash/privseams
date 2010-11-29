@@ -31,7 +31,7 @@
  * @see     linkedlist.h for usage instructions.
  */
 
-#include <stdlib.h> /* For malloc(). */
+#include <stdlib.h>
 
 #include "debug.h"
 #include "linkedlist.h"

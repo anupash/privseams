@@ -30,11 +30,11 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
-#include <string.h>     // strcpy()
+#include <string.h>
 
-#include "debug.h"      // HIP_ASSERT()
-#include "prefix.h"     // ipv6_addr_cmp()
-#include "straddr.h"    // hip_in6_ntop()
+#include "debug.h"
+#include "prefix.h"
+#include "straddr.h"
 #include "hit.h"
 
 /**

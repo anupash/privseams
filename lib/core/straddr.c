@@ -32,11 +32,11 @@
 
 #define _BSD_SOURCE
 
-#include <stdio.h>      // sprintf()
-#include <arpa/inet.h>  // inet_pton()
+#include <stdio.h>
+#include <arpa/inet.h>
 
-#include "debug.h"      // HIP_DEBUG()
-#include "prefix.h"     // IPV4_TO_IPV6_MAP()
+#include "debug.h"
+#include "prefix.h"
 #include "straddr.h"
 
 /**
