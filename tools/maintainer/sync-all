@@ -14,15 +14,15 @@ ironforge.infrahip.net
 "
 
 COMMANDS="
-cd /tmp;
-sudo rm -rf trunk;
-rm hipl.tar.gz;
+cd /tmp
+sudo rm -rf trunk
+rm hipl.tar.gz
 wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
-tar xvzf hipl.tar.gz &&
-cd trunk &&
-autoreconf --install &&
-./configure &&
-make bin syncrepo"
+    tar xvzf hipl.tar.gz &&
+    cd trunk &&
+    autoreconf --install &&
+    ./configure &&
+    make bin syncrepo"
 
 #set -e
 
@@ -42,26 +42,22 @@ make bin syncrepo"
 # fc11-i386           blacktemple
 # fc11-x86_64         stonebreaker
 
-if test $# != 0
-then
+if test $# != 0; then
     HOSTS="$@"
 fi
 
 echo "--- Pinging all hosts ---"
 
-for HOST in $HOSTS
-do
+for HOST in $HOSTS; do
     ping -c 2 $HOST
 done
 
 echo "--- Executing command on each host ---"
 
-time for HOST in $HOSTS
-do
+time for HOST in $HOSTS; do
     echo "--- Host: $HOST ---"
     ping -c 2 $HOST
-    if test $? = 0
-    then
+    if test $? = 0; then
         ssh $HOST $COMMANDS
     else
         echo "Not responding, skipping"

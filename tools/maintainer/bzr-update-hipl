@@ -14,8 +14,7 @@ VERSION=
 
 # Update to the latest version and check out what patches need to be generated
 #
-if test -x  $TMP_DIR
-then
+if test -x  $TMP_DIR; then
     cd $TMP_DIR/hipl-bzr/$BRANCH
     bzr update
 else
@@ -28,7 +27,7 @@ else
     cd $BRANCH
 fi
 
-VERSION=$(grep '^AC_INIT' configure.ac|cut -d'[' -f 3|cut -d']' -f1)
+VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 
 # Generate a ChangeLog file
 #
