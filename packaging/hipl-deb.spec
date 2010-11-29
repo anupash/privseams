@@ -71,7 +71,7 @@ Requires: hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
 %description all
 
 %package daemon
-Requires: openssl iptables libnet-ip-perl libnet-dns-perl libsocket6-perl libio-socket-inet6-perl
+Requires: openssl iptables libnet-ip-perl libnet-dns-perl
 Obsoletes: minimal tools
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
