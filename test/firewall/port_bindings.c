@@ -23,6 +23,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <assert.h>
 #include <check.h>

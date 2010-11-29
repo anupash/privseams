@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <linux/netlink.h>
 #include <linux/xfrm.h>

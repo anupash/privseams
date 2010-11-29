@@ -32,6 +32,7 @@
  * @author Rene Hummen
  */
 
+#include <arpa/inet.h>
 #include <string.h>
 
 #include "lib/core/builder.h"

@@ -33,6 +33,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include "lib/core/builder.h"

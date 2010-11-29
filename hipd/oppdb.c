@@ -59,6 +59,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include "lib/core/builder.h"

@@ -30,6 +30,7 @@
  * @author Miika Komu <miika@iki.fi>, Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
  */
 
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <errno.h>
 #include <signal.h>

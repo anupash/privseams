@@ -34,6 +34,7 @@
  */
 
 #include <stdint.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include "lib/core/debug.h"

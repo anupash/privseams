@@ -27,6 +27,7 @@
 #define HIP_LIB_CORE_PREFIX_H
 
 #include <stdint.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 

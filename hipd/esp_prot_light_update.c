@@ -35,6 +35,7 @@
 
 #include <errno.h>
 #include <stdint.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include "lib/core/builder.h"

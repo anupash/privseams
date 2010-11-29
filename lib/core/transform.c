@@ -30,6 +30,8 @@
  * @author Miika Komu <miika@iki.fi>
  */
 
+#include <arpa/inet.h>
+
 #include "debug.h"
 #include "builder.h"
 #include "transform.h"
