@@ -425,6 +425,29 @@ int main(void)
             printf("%i. ecdsa signature: %.3f ms\n", i + 1, timediff / 1000.0);
         }
     }
+
+    printf("\nVerifying %d ECDSA signatures\n", num_measurements);
+    for (i = 0; i < num_measurements; i++) {
+        gettimeofday(&start_time, NULL);
+
+        SHA1(&data[i * PACKET_LENGTH], PACKET_LENGTH,
+             &hashed_data[i * SHA_DIGEST_LENGTH]);
+
+        err = ECDSA_do_verify(&hashed_data[i * SHA_DIGEST_LENGTH],
+                              SHA_DIGEST_LENGTH,
+                              ecdsa_sig_pool[i],
+                              ecdsa_key_pool[i % key_pool_size]);
+
+        gettimeofday(&stop_time, NULL);
+
+        timediff = calc_timeval_diff(&start_time, &stop_time);
+
+        if (err <= 0) {
+            printf("Verification failed\n");
+        } else {
+            printf("%i. ecdsa verification: %.3f ms\n", i + 1, timediff / 1000.0);
+        }
+    }
 #endif
 
     return err;
