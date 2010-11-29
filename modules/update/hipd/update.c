@@ -36,8 +36,8 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-#include <arpa/inet.h>
 #include <netinet/in.h>
+#include <openssl/rand.h>
 
 #include "config.h"
 #include "hipd/cookie.h"
@@ -68,6 +68,8 @@
 #include "update_legacy.h"
 #include "update.h"
 
+enum update_types {UNKNOWN_PACKET, FIRST_PACKET, SECOND_PACKET, THIRD_PACKET};
+
 struct update_state {
     /** A kludge to get the UPDATE retransmission to work.
         @todo Remove this kludge. */
@@ -90,8 +92,6 @@ struct update_state {
     /** Stored incoming UPDATE ID counter. */
     uint32_t                     update_id_in;
 };
-
-static const int update_id_window_size = 50;
 
 /**
  * Retrieve a pointer to the first locator in a LOCATOR parameter
@@ -516,53 +516,60 @@ int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
         goto out_err;
     }
 
-    if (hip_shotgun_status == HIP_MSG_SHOTGUN_OFF) {
-        switch (type) {
-        case HIP_UPDATE_LOCATOR:
-            HIP_IFEL(hip_select_local_addr_for_first_update(ha, src_addr, dst_addr, &local_addr), -1,
-                     "No source address found for first update\n");
-            HIP_DEBUG_IN6ADDR("Sending update from", &local_addr);
-            HIP_DEBUG_IN6ADDR("to", dst_addr);
+    switch (type) {
+    case HIP_UPDATE_LOCATOR:
+        HIP_IFEL(hip_select_local_addr_for_first_update(ha,
+                                                        src_addr,
+                                                        dst_addr,
+                                                        &local_addr),
+                 -1,
+                 "No source address found for first update\n");
+        HIP_DEBUG_IN6ADDR("Sending update from", &local_addr);
+        HIP_DEBUG_IN6ADDR("to", dst_addr);
 
-            hip_send_update_pkt(update_packet_to_send, ha, &local_addr,
-                                dst_addr);
+        hip_send_update_pkt(update_packet_to_send, ha, &local_addr,
+                            dst_addr);
 
-            break;
-        case HIP_UPDATE_ECHO_RESPONSE:
-            HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
-            HIP_DEBUG_IN6ADDR("to", dst_addr);
+        break;
+    case HIP_UPDATE_ECHO_RESPONSE:
+        HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
+        HIP_DEBUG_IN6ADDR("to", dst_addr);
 
-            hip_send_update_pkt(update_packet_to_send, ha, src_addr,
-                                dst_addr);
+        hip_send_update_pkt(update_packet_to_send, ha, src_addr,
+                            dst_addr);
 
-            break;
-        case HIP_UPDATE_ECHO_REQUEST:
-            localstate = lmod_get_state_item(ha->hip_modular_state, "update");
+        break;
+    case HIP_UPDATE_ECHO_REQUEST:
+        localstate = lmod_get_state_item(ha->hip_modular_state, "update");
 
-            list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
-                dst_addr = (struct in6_addr *) list_entry(item);
+        // Randomize the echo response opaque data before sending ECHO_REQUESTS.
+        // Notice that we're using the same opaque value for the identical
+        // UPDATE packets sent between different address combinations.
+        RAND_bytes(ha->echo_data, sizeof(ha->echo_data));
 
-                if (!are_addresses_compatible(src_addr, dst_addr)) {
-                    continue;
-                }
+        list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
+            dst_addr = (struct in6_addr *) list_entry(item);
 
-                HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
-                HIP_DEBUG_IN6ADDR("to", dst_addr);
-
-                hip_send_update_pkt(update_packet_to_send, ha,
-                                    src_addr, dst_addr);
+            if (!are_addresses_compatible(src_addr, dst_addr)) {
+                continue;
             }
 
-            break;
-        case HIP_UPDATE_ESP_ANCHOR:
-        case HIP_UPDATE_ESP_ANCHOR_ACK:
-            // TODO re-implement sending of esp prot anchors
-            HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
+            HIP_DEBUG_IN6ADDR("Sending echo requests from", src_addr);
             HIP_DEBUG_IN6ADDR("to", dst_addr);
 
-            hip_send_update_pkt(update_packet_to_send, ha, src_addr, dst_addr);
-            break;
+            hip_send_update_pkt(update_packet_to_send, ha,
+                                src_addr, dst_addr);
         }
+
+        break;
+    case HIP_UPDATE_ESP_ANCHOR:
+    case HIP_UPDATE_ESP_ANCHOR_ACK:
+        // TODO re-implement sending of esp prot anchors
+        HIP_DEBUG_IN6ADDR("Sending update from", src_addr);
+        HIP_DEBUG_IN6ADDR("to", dst_addr);
+
+        hip_send_update_pkt(update_packet_to_send, ha, src_addr, dst_addr);
+        break;
     }
 
 out_err:
@@ -714,7 +721,8 @@ int hip_get_locator_addr_item_count(const struct hip_locator *locator)
  * @param locator the LOCATOR parameter
  * @return zero on success or negative on failure
  */
-static int hip_handle_locator_parameter(hip_ha_t *ha, struct in6_addr *src_addr,
+static int hip_handle_locator_parameter(hip_ha_t *ha,
+                                        const struct in6_addr *src_addr,
                                         struct hip_locator *locator)
 {
     int err                    = 0;
@@ -781,46 +789,77 @@ out_err:
 }
 
 /**
+ * Classifies an UPDATE packet by means of contained parameters.
+ *
+ * @param esp_info      esp_info parameter of currently received packet
+ * @param locator       locator parameter of currently received packet
+ * @param seq           sequence parameter of currently received packet
+ * @param ack           acknowledgement parameter of currently received packet
+ * @param echo_request  echo_request parameter of currently received packet
+ * @param echo_response echo_response parameter of currently received packet
+ * @return member of enum update_types
+ */
+static enum update_types hip_classify_update_type(const struct hip_esp_info *esp_info,
+                                                  const struct hip_locator *locator,
+                                                  const struct hip_seq *seq,
+                                                  const struct hip_ack *ack,
+                                                  const struct hip_echo_request *echo_request,
+                                                  const struct hip_echo_response *echo_response) {
+
+    if (esp_info && locator && seq)
+        return FIRST_PACKET;
+    else if (esp_info && seq && ack && echo_request)
+        return SECOND_PACKET;
+    else if (ack && echo_response)
+        return THIRD_PACKET;
+    else
+        return UNKNOWN_PACKET;
+}
+
+/**
  * process the first UPDATE packet (i.e. with a LOCATOR parameter)
  *
- * @param received_update_packet the UPDATE packet
- * @param ha the related host association
- * @param src_addr the source address of the UPDATE packet
+ * @param ctx           the packet context
+ * @param esp_info      esp_info parameter of currently received packet
+ * @param locator       locator parameter of currently received packet
+ * @param seq           sequence parameter of currently received packet
  * @return zero on success or negative on failure
  */
-static int hip_handle_first_update_packet(hip_common_t *received_update_packet,
-                                          hip_ha_t *ha,
-                                          struct in6_addr *src_addr)
+static int hip_handle_first_update_packet(struct hip_packet_context *ctx,
+                                          const struct hip_esp_info *esp_info,
+                                          struct hip_locator *locator,
+                                          const struct hip_seq *seq)
 {
-    int err = 0;
-    struct hip_locator *locator = NULL;
-    struct hip_esp_info *esp_info = NULL;
+    struct update_state *localstate = NULL;
+    int err                         = 0;
 
-    locator = hip_get_param_readwrite(received_update_packet,
-                                      HIP_PARAM_LOCATOR);
-    err     = hip_handle_locator_parameter(ha, src_addr, locator);
-    if (err) {
-        goto out_err;
+    HIP_IFEL(!(localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state,
+                                                "update")),
+             -1,
+             "failed to look up UPDATE-specific state\n");
+
+    HIP_IFEL(hip_handle_locator_parameter(ctx->hadb_entry,
+                                          &ctx->src_addr,
+                                          locator),
+             -1,
+             "failed to process LOCATOR parameter\n");
+
+    // set the new spi value for the association
+    ctx->hadb_entry->spi_outbound_new = ntohl(esp_info->new_spi);
+
+    // progress update sequence to currently processed update
+    if (localstate->update_id_in < ntohl(seq->update_id)) {
+        localstate->update_id_in = ntohl(seq->update_id);
     }
 
-    esp_info = hip_get_param_readwrite(received_update_packet,
-                                       HIP_PARAM_ESP_INFO);
-    ha->spi_outbound_new = ntohl(esp_info->new_spi);
-
-    // Randomize the echo response opaque data before sending ECHO_REQUESTS.
-    // Notice that we're using the same opaque value for the identical
-    // UPDATE packets sent between different address combinations.
-    get_random_bytes(ha->echo_data, sizeof(ha->echo_data));
-
-    err = hip_send_update_to_one_peer(received_update_packet,
-                                      ha,
-                                      &ha->our_addr,
-                                      &ha->peer_addr,
-                                      NULL,
-                                      HIP_UPDATE_ECHO_REQUEST);
-    if (err) {
-        goto out_err;
-    }
+    HIP_IFEL(hip_send_update_to_one_peer(ctx->input_msg,
+                                         ctx->hadb_entry,
+                                         &ctx->dst_addr,
+                                         &ctx->src_addr,
+                                         NULL,
+                                         HIP_UPDATE_ECHO_REQUEST),
+             -1,
+             "failed to send UPDATE\n");
 
 out_err:
     return err;
@@ -829,59 +868,71 @@ out_err:
 /**
  * process the second UPDATE packet (i.e. with echo request)
  *
- * @param received_update_packet the UPDATE packet
- * @param ha the related host association
- * @param src_addr the source address of the received UPDATE packet
- * @param dst_addr the destination address of the received UPDATE packet
+ * @param ctx           the packet context
+ * @param esp_info      esp_info parameter of currently received packet
+ * @param seq           sequence parameter of currently received packet
  * @return zero on success or negative on failure
- *
- * @todo The word "second" is misleading. There could be actually multiple
- *       "second" packets for each address to echo request.
  */
-static void hip_handle_second_update_packet(hip_common_t *received_update_packet,
-                                            hip_ha_t *ha,
-                                            struct in6_addr *src_addr,
-                                            struct in6_addr *dst_addr)
+static int hip_handle_second_update_packet(struct hip_packet_context *ctx,
+                                           const struct hip_esp_info *esp_info,
+                                           const struct hip_seq *seq)
 {
-    const struct hip_esp_info *esp_info = NULL;
+    struct update_state *localstate = NULL;
+    int err                         = 0;
 
-    hip_send_update_to_one_peer(received_update_packet,
-                                ha,
-                                src_addr,
-                                dst_addr,
-                                NULL,
-                                HIP_UPDATE_ECHO_RESPONSE);
+    HIP_IFEL(!(localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state,
+                                                "update")),
+             -1,
+             "failed to look up UPDATE-specific state\n");
 
-    esp_info = hip_get_param(received_update_packet, HIP_PARAM_ESP_INFO);
-    ha->spi_outbound_new = ntohl(esp_info->new_spi);
+    // set active addresses
+    ipv6_addr_copy(&ctx->hadb_entry->our_addr,
+                   &ctx->dst_addr);
+    ipv6_addr_copy(&ctx->hadb_entry->peer_addr,
+                   &ctx->src_addr);
 
-    hip_recreate_security_associations_and_sp(ha, src_addr, dst_addr);
+    // set the new spi value for the association
+    ctx->hadb_entry->spi_outbound_new = ntohl(esp_info->new_spi);
 
-    // Set active addresses
-    ipv6_addr_copy(&ha->our_addr, src_addr);
-    ipv6_addr_copy(&ha->peer_addr, dst_addr);
+    // progress update sequence to currently processed update
+    if (localstate->update_id_in < ntohl(seq->update_id)) {
+        localstate->update_id_in = ntohl(seq->update_id);
+    }
+
+    hip_recreate_security_associations_and_sp(ctx->hadb_entry,
+                                              &ctx->dst_addr,
+                                              &ctx->src_addr);
+
+    HIP_IFEL(hip_send_update_to_one_peer(ctx->input_msg,
+                                         ctx->hadb_entry,
+                                         &ctx->dst_addr,
+                                         &ctx->src_addr,
+                                         NULL,
+                                         HIP_UPDATE_ECHO_RESPONSE),
+             -1,
+             "failed to send UPDATE\n");
+
+  out_err:
+    return err;
 }
 
 /**
  * process the third update (i.e. with echo response)
  *
- * @param ha the related host association
- * @param src_addr the source address of the received UPDATE packet
- * @param dst_addr the destination address of the received UPDATE packet
+ * @param ctx the packet context
  * @return zero on success or negative on failure
- *
- * @todo The word "third" is misleading. There could be actually multiple
- *       "third" packets for each address to echo response.
  */
-static void hip_handle_third_update_packet(hip_ha_t *ha,
-                                           struct in6_addr *src_addr,
-                                           struct in6_addr *dst_addr)
+static void hip_handle_third_update_packet(struct hip_packet_context *ctx)
 {
-    hip_recreate_security_associations_and_sp(ha, src_addr, dst_addr);
+    // set active addresses
+    ipv6_addr_copy(&ctx->hadb_entry->our_addr,
+                   &ctx->dst_addr);
+    ipv6_addr_copy(&ctx->hadb_entry->peer_addr,
+                   &ctx->src_addr);
 
-    // Set active addresses
-    ipv6_addr_copy(&ha->our_addr, src_addr);
-    ipv6_addr_copy(&ha->peer_addr, dst_addr);
+    hip_recreate_security_associations_and_sp(ctx->hadb_entry,
+                                              &ctx->dst_addr,
+                                              &ctx->src_addr);
 }
 
 /**
@@ -900,6 +951,11 @@ static int hip_update_manual_update(UNUSED hip_common_t *msg,
     return hip_send_locators_to_all_peers();
 }
 
+/**
+ * Check if update should be sent.
+ *
+ * @return 0 on success, else negative value
+ */
 static int hip_update_maintenance(void)
 {
     int err = 0;
@@ -946,7 +1002,85 @@ static int hip_update_init_state(struct modular_state *state)
 
     err = lmod_add_state_item(state, update_state, "update");
 
-out_err:
+  out_err:
+    return err;
+}
+
+ /**
+  * Check if UPDATE sequence and acknowledgment numbers are as expected.
+  *
+  * @param packet_type the packet type
+  * @param ha_state the HA state
+  * @param ctx the packet context
+  * @return zero on success or negative on failure
+  */
+static int hip_check_update_freshness(UNUSED const uint8_t packet_type,
+                                      UNUSED const uint32_t ha_state,
+                                      struct hip_packet_context *ctx) {
+    struct update_state *localstate = NULL;
+    const struct hip_seq *seq       = NULL;
+    const struct hip_ack *ack       = NULL;
+    uint32_t seq_update_id          = 0;
+    uint32_t ack_peer_update_id     = 0;
+    int err                         = 0;
+
+    /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
+     * the implementation MAY reply with an ICMP Parameter Problem. */
+    HIP_IFEL(!ctx->hadb_entry,
+             -1,
+             "No host association database entry found.\n");
+
+    HIP_IFEL(!(localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state,
+                                                "update")),
+             -1,
+             "failed to look up UPDATE-specific state\n");
+
+    /* RFC 5201 Section 6.12: Receiving UPDATE Packets */
+    HIP_DEBUG("previous incoming update id=%u\n", localstate->update_id_in);
+    HIP_DEBUG("previous outgoing update id=%u\n",
+              hip_update_get_out_id(localstate));
+
+    // check freshness of seq, if available
+    seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ);
+    if (seq) {
+        seq_update_id = ntohl(seq->update_id);
+        HIP_DEBUG("SEQ parameter found with Update ID %u.\n", seq_update_id);
+
+        // old updates are bad updates (may be replayed)
+        if (localstate->update_id_in != 0 &&
+            seq_update_id < localstate->update_id_in) {
+
+            HIP_DEBUG("Update ID (%u) in the SEQ parameter is before "
+                      "previous Update ID (%u). Dropping the packet.\n",
+                      seq_update_id,
+                      localstate->update_id_in);
+            err = -1;
+            goto out_err;
+        }
+    }
+
+    // check freshness of ack, if available
+    ack = hip_get_param(ctx->input_msg, HIP_PARAM_ACK);
+    if (ack) {
+        ack_peer_update_id = ntohl(ack->peer_update_id);
+        HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
+                  ack_peer_update_id);
+
+        // we only want acks for our most current update
+        if (ack_peer_update_id != hip_update_get_out_id(localstate)) {
+
+            HIP_DEBUG("Update ID (%u) in the ACK parameter is not "
+                      "equal to the last outgoing Update ID (%u). "
+                      "Dropping the packet.\n",
+                      ack_peer_update_id,
+                      hip_update_get_out_id(localstate));
+            err = -1;
+            goto out_err;
+        }
+    }
+
+  out_err:
+    ctx->error = err;
     return err;
 }
 
@@ -963,62 +1097,30 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-static int hip_update_check_packet(UNUSED const uint8_t packet_type,
+static int hip_check_update_packet(UNUSED const uint8_t packet_type,
                                    UNUSED const uint32_t ha_state,
                                    struct hip_packet_context *ctx)
 {
     int err = 0;
-    unsigned int has_esp_info = 0;
-    const struct hip_esp_info *esp_info = NULL;
+
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Start PERF_UPDATE\n");
         hip_perf_start_benchmark(perf_set, PERF_UPDATE);
 #endif
 
-    /** @todo Check these references again because these checks are done
-     * separately for ACKs and SEQs
-     */
+    /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
+     * the implementation MAY reply with an ICMP Parameter Problem. */
+    HIP_IFEL(!ctx->hadb_entry, -1, "No host association database entry found.\n");
 
-    /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
-     *  UPDATE Message:
-     * 3. The system MUST verify the HMAC in the UPDATE packet. If
-     * the verification fails, the packet MUST be dropped.
-     */
+    /* The HMAC parameter covers the same parts of a packet as the PK signature.
+     * Therefore, we can omit the signature check at the end-host. */
     HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
                                     &ctx->hadb_entry->hip_hmac_in),
              -1,
              "HMAC validation on UPDATE failed.\n");
 
-    /* RFC 5201 Section 6.12.1. Handling a SEQ Parameter in a Received
-     *  UPDATE Message:
-     * 4. The system MAY verify the SIGNATURE in the UPDATE packet.
-     * If the verification fails, the packet SHOULD be dropped and an error
-     * message logged.
-     */
-    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
-                                     ctx->input_msg),
-             -1,
-             "Verification of UPDATE signature failed.\n");
-
-    esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO);
-    if (esp_info != NULL) {
-        HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
-                  ntohl(esp_info->new_spi));
-        has_esp_info = 1;
-
-        if (esp_info->new_spi != esp_info->old_spi) {
-            HIP_DEBUG("New SPI != Old SPI -> Please notice that "
-                      "rekeying case is not implemented yet.");
-        }
-        /** @todo Further ESP_INFO handling
-         * Done in hip_handle_esp_info() before
-         */
-    }
-
-out_err:
-    if (err) {
-        ctx->error = err;
-    }
+  out_err:
+    ctx->error = err;
     return err;
 }
 
@@ -1030,180 +1132,97 @@ out_err:
  * @param ctx the packet context
  * @return zero on success or negative on failure
  */
-static int hip_update_handle_packet(UNUSED const uint8_t packet_type,
+static int hip_handle_update_packet(UNUSED const uint8_t packet_type,
                                     UNUSED const uint32_t ha_state,
                                     struct hip_packet_context *ctx)
 {
-    int err = 0, same_seq = 0;
-    unsigned int ack_peer_update_id               = 0;
-    unsigned int seq_update_id                    = 0;
+    const struct hip_esp_info *esp_info           = NULL;
+    struct hip_locator *locator                   = NULL;
     const struct hip_seq *seq                     = NULL;
     const struct hip_ack *ack                     = NULL;
-    const struct hip_locator *locator             = NULL;
     const struct hip_echo_request *echo_request   = NULL;
     const struct hip_echo_response *echo_response = NULL;
-    struct update_state *localstate               = NULL;
+    enum update_types update_type                 = UNKNOWN_PACKET;
+    int err                                       = 0;
 
-    /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
-     * the implementation MAY reply with an ICMP Parameter Problem. */
-    HIP_IFEL(!ctx->hadb_entry, -1, "No host association database entry found.\n");
+    /* RFC 5206: End-Host Mobility and Multihoming.
+     * Mandatory parameters from 3.2.1. Mobility with a Single SA Pair
+     * (No Rekeying) */
+    esp_info      = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO);
+    locator       = hip_get_param_readwrite(ctx->input_msg, HIP_PARAM_LOCATOR);
+    seq           = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ);
+    ack           = hip_get_param(ctx->input_msg, HIP_PARAM_ACK);
+    echo_request  = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
+    echo_response = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
 
-    /** @todo: Relay support */
+    /* set local UDP port just in case the original communications
+       changed from raw to UDP or vice versa */
+    ctx->hadb_entry->local_udp_port = ctx->msg_ports.dst_port;
+    /* @todo: a workaround for bug id 592200 */
+    ctx->hadb_entry->peer_udp_port = ctx->msg_ports.src_port;
+
+    update_type = hip_classify_update_type(esp_info,
+                                           locator,
+                                           seq,
+                                           ack,
+                                           echo_request,
+                                           echo_response);
+    switch (update_type) {
+    case FIRST_PACKET:
+        err = hip_handle_first_update_packet(ctx,
+                                             esp_info,
+                                             locator,
+                                             seq);
+        break;
+    case SECOND_PACKET:
+        err = hip_handle_second_update_packet(ctx,
+                                        esp_info,
+                                        seq);
+        break;
+    case THIRD_PACKET:
+        hip_handle_third_update_packet(ctx);
+        break;
+    default:
+        if (esp_prot_update_type(ctx->input_msg)
+                == ESP_PROT_FIRST_UPDATE_PACKET) {
+            esp_prot_handle_first_update_packet(ctx->input_msg,
+                                                ctx->hadb_entry,
+                                                &ctx->src_addr,
+                                                &ctx->dst_addr);
+        }
+        else if (esp_prot_update_type(ctx->input_msg)
+                == ESP_PROT_SECOND_UPDATE_PACKET) {
+            esp_prot_handle_second_update_packet(ctx->hadb_entry,
+                                                 &ctx->src_addr,
+                                                 &ctx->dst_addr);
+        }
+        else {
+            HIP_ERROR("UPDATE packet unknown\n");
+            err = -1;
+            goto out_err;
+        }
+    }
+
+    hip_empty_oppipdb_old();
+
+  out_err:
+    ctx->error = err;
+    return err;
+}
+
+static int hip_update_change_state(UNUSED const uint8_t packet_type,
+                                    UNUSED const uint32_t ha_state,
+                                    struct hip_packet_context *ctx) {
+    int err = 0;
 
     /* RFC 5201 Section 4.4.2, Table 5: According to the state processes
      * listed, the state is moved from R2_SENT to ESTABLISHED if an
      * UPDATE packet is received */
     if (ctx->hadb_entry->state == HIP_STATE_R2_SENT) {
-        ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
         HIP_DEBUG("Received UPDATE in state %s, moving to ESTABLISHED.\n",
                   hip_state_str(ctx->hadb_entry->state));
-    } else if (ctx->hadb_entry->state != HIP_STATE_ESTABLISHED) {
-        HIP_ERROR("Received UPDATE in illegal state %s.\n",
-                  hip_state_str(ctx->hadb_entry->state));
-        err = -EPROTO;
-        goto out_err;
+        ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
     }
-
-    localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "update");
-
-    /* RFC 5201 Section 6.12: Receiving UPDATE Packets */
-    HIP_DEBUG("previous incoming update id=%u\n", localstate->update_id_in);
-    HIP_DEBUG("previous outgoing update id=%u\n", hip_update_get_out_id(localstate));
-
-    /* RFC 5201 Section 6.12: 3th or 4th step:
-     *
-     * Summary: ACK is processed before SEQ if both are present.
-     *
-     * 4th step: If the association is in the ESTABLISHED state and there is
-     * both an ACK and SEQ in the UPDATE, the ACK is first processed as
-     * described in Section 6.12.2, and then the rest of the UPDATE is
-     * processed as described in Section 6.12.1 */
-    ack = hip_get_param(ctx->input_msg, HIP_PARAM_ACK);
-    if (ack != NULL) {
-        ack_peer_update_id = ntohl(ack->peer_update_id);
-        HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
-                  ack_peer_update_id);
-        if (ack_peer_update_id != hip_update_get_out_id(localstate)) {
-            // Simplified logic of RFC 5201 6.12.2, 1st step:
-            // We drop the packet if the Update ID in the ACK
-            // parameter does not equal to the last outgoing Update ID
-            HIP_DEBUG("Update ID (%u) in the ACK parameter does not "
-                      "equal to the last outgoing Update ID (%u). "
-                      "Dropping the packet.\n",
-                      ack_peer_update_id,
-                      hip_update_get_out_id(localstate));
-            err = -1;
-            goto out_err;
-        }
-    }
-
-    /* RFC 5201 Sections 6.12: 2nd or 4th step:
-     *
-     * 2nd case: If the association is in the ESTABLISHED state and the SEQ
-     * (but not ACK) parameter is present, the UPDATE is processed and replied
-     * to as described in Section 6.12.1. */
-    seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ);
-    if (seq != NULL) {
-        seq_update_id = ntohl(seq->update_id);
-        HIP_DEBUG("SEQ parameter found with  Update ID %u.\n",
-                  seq_update_id);
-
-        /**
-         *  @todo 15.9.2009: Handle retransmission case
-         */
-
-        if (localstate->update_id_in != 0 &&
-            (seq_update_id < localstate->update_id_in ||
-             seq_update_id > localstate->update_id_in + update_id_window_size)) {
-            /* RFC 5201 6.12.1 part 1: */
-            HIP_DEBUG("Update ID (%u) in the SEQ parameter is not "
-                      "in the window of the previous Update ID (%u). "
-                      "Dropping the packet.\n",
-                      seq_update_id,
-                      localstate->update_id_in);
-
-            err = -1;
-            goto out_err;
-        }
-
-        /* Section 6.12.1 5th step:
-         * If a new SEQ parameter is being processed, the parameters in the
-         * UPDATE are then processed.  The system MUST record the Update ID
-         * in the received SEQ parameter, for replay protection.
-         */
-        if (localstate->update_id_in != 0 &&
-            localstate->update_id_in == seq_update_id) {
-            same_seq = 1;
-        }
-
-        localstate->update_id_in = seq_update_id;
-    }
-
-   /* set local UDP port just in case the original communications
-      changed from raw to UDP or vice versa */
-    ctx->hadb_entry->local_udp_port = ctx->msg_ports.dst_port;
-    /* @todo: a workaround for bug id 592200 */
-    ctx->hadb_entry->peer_udp_port = ctx->msg_ports.src_port;
-
-    /* RFC 5206: End-Host Mobility and Multihoming.
-     * 3.2.1. Mobility with a Single SA Pair (No Rekeying)
-     */
-    locator       = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
-    echo_request  = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
-    echo_response = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
-
-    if (locator) {
-        err = hip_handle_first_update_packet(ctx->input_msg,
-                                             ctx->hadb_entry,
-                                             &ctx->src_addr);
-        goto out_err;
-    } else if (echo_request) {
-        /* Ignore the ECHO REQUESTS with the same SEQ after processing the first
-         * one.
-         */
-        if (same_seq) {
-            goto out_err;
-        }
-        /* We handle ECHO_REQUEST by sending an update packet with reversed
-         * source and destination address.
-         */
-        hip_handle_second_update_packet(ctx->input_msg,
-                                        ctx->hadb_entry,
-                                        &ctx->dst_addr,
-                                        &ctx->src_addr);
-        goto out_err;
-    } else if (echo_response) {
-        hip_handle_third_update_packet(ctx->hadb_entry,
-                                       &ctx->dst_addr,
-                                       &ctx->src_addr);
-        goto out_err;
-    }
-    else if (esp_prot_update_type(ctx->input_msg)
-                == ESP_PROT_FIRST_UPDATE_PACKET)
-    {
-       esp_prot_handle_first_update_packet(ctx->input_msg,
-                                           ctx->hadb_entry,
-                                           &ctx->src_addr,
-                                           &ctx->dst_addr);
-
-       goto out_err;
-    }
-    else if (esp_prot_update_type(ctx->input_msg)
-                == ESP_PROT_SECOND_UPDATE_PACKET)
-   {
-       esp_prot_handle_second_update_packet(ctx->hadb_entry,
-                                            &ctx->src_addr,
-                                            &ctx->dst_addr);
-
-       goto out_err;
-   }
-
-out_err:
-    if (err) {
-        HIP_ERROR("UPDATE handler failed, err=%d\n", err);
-    }
-
-    hip_empty_oppipdb_old();
 
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop and write PERF_UPDATE\n");
@@ -1229,23 +1248,39 @@ int hip_update_init(void)
              "Error on registering update state init function.\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
-                                          HIP_STATE_ESTABLISHED,
-                                          &hip_update_check_packet,
+                                          HIP_STATE_R2_SENT,
+                                          &hip_check_update_freshness,
                                           20000),
              -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
-                                          HIP_STATE_ESTABLISHED,
-                                          &hip_update_handle_packet,
+                                          HIP_STATE_R2_SENT,
+                                          &hip_check_update_packet,
+                                          20100),
+             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_R2_SENT,
+                                          &hip_handle_update_packet,
                                           30000),
              -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
-                                          &hip_update_check_packet,
+                                          &hip_update_change_state,
+                                          40000),
+                 -1, "Error on registering UPDATE handle function.\n");
+
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_ESTABLISHED,
+                                          &hip_check_update_freshness,
                                           20000),
              -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
-                                          HIP_STATE_R2_SENT,
-                                          &hip_update_handle_packet,
+                                          HIP_STATE_ESTABLISHED,
+                                          &hip_check_update_packet,
+                                          20100),
+             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_ESTABLISHED,
+                                          &hip_handle_update_packet,
                                           30000),
              -1, "Error on registering UPDATE handle function.\n");
 
@@ -1270,6 +1305,6 @@ int hip_update_init(void)
              -1,
              "Error on registering UPDATE maintenance function.\n");
 
-out_err:
+  out_err:
     return err;
 }
