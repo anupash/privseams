@@ -1,2 +1,2 @@
-* package/ contains the files that enable HIPL to build with the lastest
+* hipl/ contains the files that enable HIPL to build with the lastest
 OpenWRT trunk checkout
