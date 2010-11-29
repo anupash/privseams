@@ -16,7 +16,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/hipl-hipd
     SECTION:=net
     CATEGORY:=Network
-    DEPENDS:=+hipl-common +libconfig +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
+    DEPENDS:=hipl-common +libconfig +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
     TITLE:=HIPL daemon
     URL:=http://hipl.hiit.fi/
 endef
@@ -28,7 +28,7 @@ endef
 define Package/hipl-hipfw
     SECTION:=net
     CATEGORY:=Network
-    DEPENDS:=+hipl-common +iptables +ip6tables +kmod-ip6tables +kmod-ipt-queue
+    DEPENDS:=hipl-common +iptables +ip6tables +kmod-ip6tables +kmod-ipt-queue
              # TUN/TAP support - might be needed at some point instead of kmod-ipt-queue
              #+kmod-tun
     TITLE:=HIPL firewall
