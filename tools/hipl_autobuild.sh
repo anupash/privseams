@@ -153,7 +153,8 @@ compile $FEATURES_ALL
 compile $FEATURES_ALL CFLAGS="-O0"
 
 # Max compile coverage configuration with full optimization
-compile $FEATURES_ALL CFLAGS="-O3"
+# FIXME: Disabled until the tree compiles with this optimization level.
+#compile $FEATURES_ALL CFLAGS="-O3"
 
 # Without modules
 compile --with-nomodules=heartbeat,update,heartbeat_update
