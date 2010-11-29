@@ -28,7 +28,7 @@ the key and mobility management daemon plus other related tools.
 %build
 autoreconf --install
 %configure --prefix=/usr --sysconfdir=/etc
-make -j
+make -j 32
 
 # Currently we are not going to install all includes and test software.
 # As a consequence, we need to tell rpmbuild that we don't want to package

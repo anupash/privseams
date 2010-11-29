@@ -30,7 +30,7 @@ the key and mobility management daemon plus other related tools.
 %build
 autoreconf --install
 %configure --prefix=/usr --sysconfdir=/etc
-make -j
+make -j 32
 
 # Note:
 # This debbuild script is fragile and does not tolerate comments well.
