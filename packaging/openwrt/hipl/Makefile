@@ -45,6 +45,7 @@ define Package/hipl-common
     #will be required by ipkg on the openwrt box
     #TODO remove unnecessary modules
     DEPENDS:=+kmod-crypto-aes +kmod-crypto-hmac +kmod-crypto-null +kmod-crypto-sha1 +kmod-ipv6 +libgcc +libopenssl
+    BUILDONLY:=1
     TITLE:=HIPL common files
     URL:=http://hipl.hiit.fi/
 endef
