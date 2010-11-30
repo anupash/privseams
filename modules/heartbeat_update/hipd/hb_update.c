@@ -87,10 +87,7 @@ static int hip_hb_update_trigger(hip_ha_t *hadb_entry, UNUSED void *opaque)
     }
 
 out_err:
-    if (locator_msg) {
-        free(locator_msg);
-    }
-
+    free(locator_msg);
     return err;
 }
 

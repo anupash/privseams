@@ -691,10 +691,7 @@ int esp_prot_i2_add_anchor(struct hip_packet_context *ctx)
     }
 
 out_err:
-    if (anchor) {
-        free(anchor);
-    }
-
+    free(anchor);
     return err;
 }
 
@@ -832,10 +829,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
     }
 
 out_err:
-    if (anchor) {
-        free(anchor);
-    }
-
+    free(anchor);
     return err;
 }
 

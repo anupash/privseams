@@ -347,23 +347,13 @@ algo_check_done:
     }
 
 out_err:
-    if (signature_hash_b64) {
-        free(signature_hash_b64);
-    }
-    if (signature_hash) {
-        free(signature_hash);
-    }
-    if (modulus_b64) {
-        free(modulus_b64);
-    }
-    if (modulus) {
-        free(modulus);
-    }
+    free(signature_hash_b64);
+    free(signature_hash);
+    free(modulus_b64);
+    free(modulus);
+    free(e_hex);
     if (rsa) {
         RSA_free(rsa);
-    }
-    if (e_hex) {
-        free(e_hex);
     }
     if (dsa) {
         DSA_free(dsa);
@@ -576,21 +566,11 @@ int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
 
 out_err:
     /* free everything malloced */
-    if (tmp_before) {
-        free(tmp_before);
-    }
-    if (tmp_after) {
-        free(tmp_after);
-    }
-    if (tmp_issuer) {
-        free(tmp_issuer);
-    }
-    if (tmp_subject) {
-        free(tmp_subject);
-    }
-    if (msg) {
-        free(msg);
-    }
+    free(tmp_before);
+    free(tmp_after);
+    free(tmp_issuer);
+    free(tmp_subject);
+    free(msg);
     return err;
 }
 
@@ -707,9 +687,7 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *to_verificatio
     memcpy(to_verification, returned, sizeof(struct hip_cert_spki_info));
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
+    free(msg);
     return err;
 }
 
@@ -755,9 +733,7 @@ int hip_cert_x509v3_request_certificate(struct in6_addr *subject,
     err = p->der_len;
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
+    free(msg);
     return err;
 }
 
@@ -804,9 +780,7 @@ int hip_cert_x509v3_request_verification(unsigned char *certificate, int len)
     }
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
+    free(msg);
     return err;
 }
 

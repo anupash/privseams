@@ -429,12 +429,8 @@ out_err:
     /* free allocated resources */
     hip_exit();
 
-    if (ctx.input_msg) {
-        free(ctx.input_msg);
-    }
-    if (ctx.output_msg) {
-        free(ctx.output_msg);
-    }
+    free(ctx.input_msg);
+    free(ctx.output_msg);
 
     HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 

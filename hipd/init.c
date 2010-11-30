@@ -615,11 +615,7 @@ static int hip_init_host_ids(void)
     hip_hidb_associate_default_hit_lsi(&default_hit, &default_lsi);
 
 out_err:
-
-    if (user_msg) {
-        free(user_msg);
-    }
-
+    free(user_msg);
     return err;
 }
 

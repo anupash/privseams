@@ -103,9 +103,7 @@ static int hip_fw_trigger_opportunistic_bex(const struct in6_addr *peer_ip,
              -1, "send msg failed\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
+    free(msg);
     return err;
 }
 

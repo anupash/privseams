@@ -280,60 +280,30 @@ int hip_cert_spki_sign(struct hip_common *msg)
 out_err:
 
     /* free malloced memory */
-    if (digest_b64) {
-        free(digest_b64);
-    }
-    if (signature_b64) {
-        free(signature_b64);
-    }
-    if (signature) {
-        free(signature);
-    }
-    if (host_id) {
-        free(host_id);
-    }
+    free(digest_b64);
+    free(signature_b64);
+    free(signature);
+    free(host_id);
 
     /* RSA pubkey */
-    if (e_bin) {
-        free(e_bin);
-    }
-    if (n_bin) {
-        free(n_bin);
-    }
+    free(e_bin);
+    free(n_bin);
     /* encoded */
     if (e_hex) {
         OPENSSL_free(e_hex);
     }
-    if (n_b64) {
-        free(n_b64);
-    }
+    free(n_b64);
 
     /* DSA pubkey */
-    if (p_bin) {
-        free(p_bin);
-    }
-    if (q_bin) {
-        free(q_bin);
-    }
-    if (g_bin) {
-        free(g_bin);
-    }
-    if (y_bin) {
-        free(y_bin);
-    }
+    free(p_bin);
+    free(q_bin);
+    free(g_bin);
+    free(y_bin);
     /* encoded */
-    if (p_b64) {
-        free(p_b64);
-    }
-    if (q_b64) {
-        free(q_b64);
-    }
-    if (g_b64) {
-        free(g_b64);
-    }
-    if (y_b64) {
-        free(y_b64);
-    }
+    free(p_b64);
+    free(q_b64);
+    free(g_b64);
+    free(y_b64);
 
     if (dsa_sig) {
         DSA_SIG_free(dsa_sig);
@@ -658,29 +628,15 @@ algo_check_done:
              "Failed to build cert_info\n");
 
 out_err:
-    if (signature_hash_b64) {
-        free(signature_hash_b64);
-    }
-    if (signature_hash) {
-        free(signature_hash);
-    }
-    if (modulus_b64) {
-        free(modulus_b64);
-    }
-    if (modulus) {
-        free(modulus);
-    }
-    if (cert) {
-        free(cert);
-    }
+    free(signature_hash_b64);
+    free(signature_hash);
+    free(modulus_b64);
+    free(modulus);
+    free(cert);
+    free(signature);
+    free(e_hex);
     if (rsa) {
         RSA_free(rsa);
-    }
-    if (signature) {
-        free(signature);
-    }
-    if (e_hex) {
-        free(e_hex);
     }
     if (dsa) {
         DSA_free(dsa);
@@ -986,9 +942,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
              "Failed to create x509 response parameter\n");
 
 out_err:
-    if (host_id) {
-        free(host_id);
-    }
+    free(host_id);
     if (req != NULL) {
         X509_REQ_free(req);
     }

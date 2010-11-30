@@ -520,9 +520,7 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 
                     HIP_DEBUG("Registration accepted.\n");
                 } else {               /* The put was unsuccessful. */
-                    if (new_record != NULL) {
-                        free(new_record);
-                    }
+                    free(new_record);
                     refused_requests[*refused_count] = reg_types[i];
                     failure_types[*refused_count]    = HIP_REG_TRANSIENT_CONDITIONS;
                     (*refused_count)++;

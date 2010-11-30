@@ -612,10 +612,7 @@ static int hip_query_default_local_hit_from_hipd(void)
     ipv4_addr_copy(&default_lsi, lsi);
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 
@@ -2272,9 +2269,7 @@ out_err:
     if (hip_fw_sock) {
         close(hip_fw_sock);
     }
-    if (msg != NULL) {
-        free(msg);
-    }
+    free(msg);
 
     firewall_exit();
     return err;

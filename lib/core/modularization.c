@@ -396,9 +396,7 @@ void lmod_uninit_disabled_modules(void)
 
     if (disabled_modules) {
         for (i = 0; i < num_disabled_modules; i++) {
-            if (disabled_modules[i]) {
-                free(disabled_modules[i]);
-            }
+            free(disabled_modules[i]);
         }
         free(disabled_modules);
     }

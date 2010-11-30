@@ -556,12 +556,8 @@ out_err:
 static void hip_sa_entry_free(hip_sa_entry_t *entry)
 {
     if (entry) {
-        if (entry->auth_key) {
-            free(entry->auth_key);
-        }
-        if (entry->enc_key) {
-            free(entry->enc_key);
-        }
+        free(entry->auth_key);
+        free(entry->enc_key);
 
         // also free all hchain related members
         esp_prot_sa_entry_free(entry);
@@ -720,12 +716,8 @@ int hip_sadb_uninit(void)
         HIP_ERROR("failed to flush sadb\n");
     }
 
-    if (sadb) {
-        free(sadb);
-    }
-    if (linkdb) {
-        free(linkdb);
-    }
+    free(sadb);
+    free(linkdb);
 
     return err;
 }

@@ -290,9 +290,7 @@ skip_hit_addr:
         goto out_err;
     }
 out_err:
-    if (message) {
-        free(message);
-    }
+    free(message);
     return err;
 }
 

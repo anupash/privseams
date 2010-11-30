@@ -224,7 +224,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
     err = r1;
 
 out_err:
-    if (!err && r1) {
+    if (!err) {
         free(r1);
     }
 
@@ -302,9 +302,7 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
      */
     if (hip_r1table) {
         for (i = 0; i < HIP_R1TABLESIZE; i++) {
-            if (hip_r1table[i].r1) {
-                free(hip_r1table[i].r1);
-            }
+            free(hip_r1table[i].r1);
         }
         free(hip_r1table);
         hip_r1table = NULL;

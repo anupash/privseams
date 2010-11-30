@@ -576,9 +576,7 @@ int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
     }
 
 out_err:
-    if (update_packet_to_send) {
-        free(update_packet_to_send);
-    }
+    free(update_packet_to_send);
     return err;
 }
 
@@ -628,9 +626,7 @@ out_err:
     if (hip_locator_status == HIP_MSG_SET_LOCATOR_ON) {
         hip_recreate_all_precreated_r1_packets();
     }
-    if (locator_msg) {
-        free(locator_msg);
-    }
+    free(locator_msg);
     return err;
 }
 

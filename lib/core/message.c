@@ -172,9 +172,7 @@ static int hip_peek_recv_total_len(int sockfd,
     bytes += encap_hdr_size;
 
 out_err:
-    if (msg != NULL) {
-        free(msg);
-    }
+    free(msg);
 
     if (err) {
         return err;

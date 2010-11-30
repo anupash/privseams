@@ -510,9 +510,7 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
                 }
             }
 
-            if (hip_tuple->data->src_hi) {
-                free(hip_tuple->data->src_hi);
-            }
+            free(hip_tuple->data->src_hi);
 
             free(hip_tuple->data);
             hip_tuple->data = NULL;
@@ -584,15 +582,11 @@ static void remove_tuple(struct tuple *tuple)
         tuple->connection = NULL;
 
         // tuple was not malloced -> no free here
-        if (tuple->src_ip) {
-            free(tuple->src_ip);
-            tuple->src_ip = NULL;
-        }
+        free(tuple->src_ip);
+        tuple->src_ip = NULL;
 
-        if (tuple->dst_ip) {
-            free(tuple->dst_ip);
-            tuple->dst_ip = NULL;
-        }
+        free(tuple->dst_ip);
+        tuple->dst_ip = NULL;
     }
 }
 

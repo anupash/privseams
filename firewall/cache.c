@@ -160,11 +160,7 @@ static fw_cache_hl_t *hip_firewall_cache_hadb_match(const void *local,
     }
 
 out_err:
-
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return ha_ret;
 }
 

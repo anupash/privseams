@@ -247,15 +247,9 @@ static int run_nsupdate(char *ips, char *hit, int start)
         HIP_DEBUG("Executing %s with %s; %s; %s\n", NSUPDATE_PL, env_hit, env_ips, env_start);
         execve(NSUPDATE_PL, cmd, env);
 
-        if (env_ips) {
-            free(env_ips);
-        }
-        if (env_hit) {
-            free(env_hit);
-        }
-        if (env_start) {
-            free(env_start);
-        }
+        free(env_ips);
+        free(env_hit);
+        free(env_start);
 
         /* Executed only if error */
         HIP_PERROR("execve");

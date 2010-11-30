@@ -1902,10 +1902,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 
     err = hip_build_param(msg, &hmac2);
 out_err:
-    if (msg_copy) {
-        free(msg_copy);
-    }
-
+    free(msg_copy);
     return err;
 }
 
@@ -2029,11 +2026,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
     err = hip_build_generic_param(msg, &enc, sizeof(enc), common);
 
 out_err:
-
-    if (param_padded) {
-        free(param_padded);
-    }
-
+    free(param_padded);
     return err;
 }
 
@@ -2638,11 +2631,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
                                   value);
 
 out_err:
-
-    if (value) {
-        free(value);
-    }
-
+    free(value);
     return err;
 }
 
@@ -3670,11 +3659,7 @@ int dsa_to_hip_endpoint(DSA *dsa,
                        dsa_key_rr);
 
 out_err:
-
-    if (dsa_key_rr) {
-        free(dsa_key_rr);
-    }
-
+    free(dsa_key_rr);
     return err;
 }
 
@@ -3728,11 +3713,7 @@ int rsa_to_hip_endpoint(RSA *rsa,
                        rsa_key_rr);
 
 out_err:
-
-    if (rsa_key_rr) {
-        free(rsa_key_rr);
-    }
-
+    free(rsa_key_rr);
     return err;
 }
 
@@ -3825,17 +3806,9 @@ static int hip_any_key_to_hit(void *any_key,
               (is_dsa ? "dsa" : "rsa"));
 
 out_err:
-
-    if (key_rr) {
-        free(key_rr);
-    }
-    if (host_id) {
-        free(host_id);
-    }
-    if (host_id_pub) {
-        free(host_id_pub);
-    }
-
+    free(key_rr);
+    free(host_id);
+    free(host_id_pub);
     return err;
 }
 

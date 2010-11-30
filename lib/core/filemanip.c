@@ -190,9 +190,6 @@ void change_key_file_perms(const char *filenamebase)
     chmod(pubfilename, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
 out_err:
-    if (pubfilename) {
-        free(pubfilename);
-    }
-
+    free(pubfilename);
     return;
 }

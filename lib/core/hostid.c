@@ -141,10 +141,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
     set_hit_prefix(hit);
 
 out_err:
-    if (khi_data) {
-        free(khi_data);
-    }
-
+    free(khi_data);
     return err;
 }
 
@@ -884,18 +881,10 @@ out_err:
         change_key_file_perms(rsa_filenamebase_pub);
     }
 
-    if (dsa_host_id) {
-        free(dsa_host_id);
-    }
-    if (dsa_pub_host_id) {
-        free(dsa_pub_host_id);
-    }
-    if (rsa_host_id) {
-        free(rsa_host_id);
-    }
-    if (rsa_pub_host_id) {
-        free(rsa_pub_host_id);
-    }
+    free(dsa_host_id);
+    free(dsa_pub_host_id);
+    free(rsa_host_id);
+    free(rsa_pub_host_id);
     if (dsa_key) {
         DSA_free(dsa_key);
     }
@@ -908,42 +897,18 @@ out_err:
     if (rsa_pub_key) {
         RSA_free(rsa_pub_key);
     }
-    if (dsa_key_rr) {
-        free(dsa_key_rr);
-    }
-    if (rsa_key_rr) {
-        free(rsa_key_rr);
-    }
-    if (dsa_pub_key_rr) {
-        free(dsa_pub_key_rr);
-    }
-    if (rsa_pub_key_rr) {
-        free(rsa_pub_key_rr);
-    }
-    if (dsa_filenamebase) {
-        free(dsa_filenamebase);
-    }
-    if (rsa_filenamebase) {
-        free(rsa_filenamebase);
-    }
-    if (dsa_filenamebase_pub) {
-        free(dsa_filenamebase_pub);
-    }
-    if (rsa_filenamebase_pub) {
-        free(rsa_filenamebase_pub);
-    }
-    if (endpoint_dsa_hip) {
-        free(endpoint_dsa_hip);
-    }
-    if (endpoint_rsa_hip) {
-        free(endpoint_rsa_hip);
-    }
-    if (endpoint_dsa_pub_hip) {
-        free(endpoint_dsa_pub_hip);
-    }
-    if (endpoint_rsa_pub_hip) {
-        free(endpoint_rsa_pub_hip);
-    }
+    free(dsa_key_rr);
+    free(rsa_key_rr);
+    free(dsa_pub_key_rr);
+    free(rsa_pub_key_rr);
+    free(dsa_filenamebase);
+    free(rsa_filenamebase);
+    free(dsa_filenamebase_pub);
+    free(rsa_filenamebase_pub);
+    free(endpoint_dsa_hip);
+    free(endpoint_rsa_hip);
+    free(endpoint_dsa_pub_hip);
+    free(endpoint_rsa_pub_hip);
 
     return err;
 }
@@ -1027,9 +992,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr)
 out_err:
 
     if (err) {
-        if (*dsa_key_rr) {
-            free(*dsa_key_rr);
-        }
+        free(*dsa_key_rr);
         return err;
     } else {
         return dsa_key_rr_len;
@@ -1124,9 +1087,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr)
 out_err:
 
     if (err) {
-        if (*rsa_key_rr) {
-            free(*rsa_key_rr);
-        }
+        free(*rsa_key_rr);
         return err;
     }
 

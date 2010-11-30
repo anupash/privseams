@@ -334,27 +334,13 @@ static void free_rule(struct rule *rule)
     if (rule) {
         HIP_DEBUG("freeing ");
         print_rule(rule);
-        if (rule->src_hit != NULL) {
-            free(rule->src_hit);
-        }
-        if (rule->dst_hit != NULL) {
-            free(rule->dst_hit);
-        }
-        if (rule->src_hi != NULL) {
-            free(rule->src_hi);
-        }
-        if (rule->type != NULL) {
-            free(rule->type);
-        }
-        if (rule->state != NULL) {
-            free(rule->state);
-        }
-        if (rule->in_if != NULL) {
-            free_string_option(rule->in_if);
-        }
-        if (rule->out_if != NULL) {
-            free_string_option(rule->out_if);
-        }
+        free(rule->src_hit);
+        free(rule->dst_hit);
+        free(rule->src_hi);
+        free(rule->type);
+        free(rule->state);
+        free_string_option(rule->in_if);
+        free_string_option(rule->out_if);
         free(rule);
     }
 }

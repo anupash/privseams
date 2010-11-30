@@ -273,10 +273,7 @@ int send_esp_prot_to_hipd(const int activate)
     HIP_DEBUG("send_recv msg succeeded\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 
@@ -312,10 +309,7 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore,
     HIP_DEBUG("send_recv msg succeeded\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 
@@ -489,13 +483,8 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
     HIP_DEBUG("send_recv msg succeeded\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-    if (branch_nodes) {
-        free(branch_nodes);
-    }
-
+    free(msg);
+    free(branch_nodes);
     return err;
 }
 
@@ -582,10 +571,7 @@ int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
     HIP_DEBUG("send_recv msg succeeded\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 

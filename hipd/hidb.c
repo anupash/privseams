@@ -863,10 +863,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
     }
 
 out_err:
-    if (hi_public) {
-        free(hi_public);
-    }
-
+    free(hi_public);
     return err;
 }
 

@@ -862,12 +862,8 @@ static void hip_hadb_delete_state(hip_ha_t *ha)
 
     /* Delete SAs */
 
-    if (ha->dh_shared_key) {
-        free(ha->dh_shared_key);
-    }
-    if (ha->hip_msg_retrans.buf) {
-        free(ha->hip_msg_retrans.buf);
-    }
+    free(ha->dh_shared_key);
+    free(ha->hip_msg_retrans.buf);
     if (ha->peer_pub) {
         if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
             ha->peer_pub_key) {
@@ -877,21 +873,13 @@ static void hip_hadb_delete_state(hip_ha_t *ha)
         }
         free(ha->peer_pub);
     }
-    if (ha->our_priv) {
-        free(ha->our_priv);
-    }
-    if (ha->our_pub) {
-        free(ha->our_pub);
-    }
-    if (ha->rendezvous_addr) {
-        free(ha->rendezvous_addr);
-    }
+    free(ha->our_priv);
+    free(ha->our_pub);
+    free(ha->rendezvous_addr);
 
     lmod_uninit_state(ha->hip_modular_state);
 
-    if (ha->locator) {
-        free(ha->locator);
-    }
+    free(ha->locator);
 
     if (ha->peer_addr_list_to_be_added) {
         list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
@@ -1035,10 +1023,8 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 {
     int err = 0, alg = 0;
 
-    if (entry->our_pub != NULL) {
-        free(entry->our_pub);
-        entry->our_pub = NULL;
-    }
+    free(entry->our_pub);
+    entry->our_pub = NULL;
 
     /* Try to fetch our private host identity first using RSA then using DSA.
      * Note, that hip_get_host_id() allocates a new buffer and this buffer
@@ -1072,8 +1058,7 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
     }
 
 out_err:
-
-    if (err && entry->our_pub) {
+    if (err) {
         free(entry->our_pub);
         entry->our_pub = NULL;
     }

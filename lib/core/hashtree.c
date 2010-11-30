@@ -195,15 +195,9 @@ void htree_free(hash_tree_t *tree)
     if (tree) {
         htree_free(tree->link_tree);
 
-        if (tree->nodes) {
-            free(tree->nodes);
-        }
-        if (tree->data) {
-            free(tree->data);
-        }
-        if (tree->secrets) {
-            free(tree->secrets);
-        }
+        free(tree->nodes);
+        free(tree->data);
+        free(tree->secrets);
 
         free(tree);
     }

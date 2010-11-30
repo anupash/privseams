@@ -208,9 +208,7 @@ void hip_make_keymat(char *kij,
         HIP_ERROR("NULL calc_index\n");
     }
 
-    if (shabuffer) {
-        free(shabuffer);
-    }
+    free(shabuffer);
 
     return;
 }

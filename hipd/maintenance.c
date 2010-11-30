@@ -416,10 +416,7 @@ int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_add
     HIP_DEBUG("BEX DATA Send to firewall OK.\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 
@@ -451,8 +448,6 @@ int hip_firewall_set_esp_relay(int action)
     HIP_DEBUG("Sent %d bytes to firewall.\n", sent);
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
+    free(msg);
     return err;
 }

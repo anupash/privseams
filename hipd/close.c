@@ -153,10 +153,7 @@ static int hip_xmit_close(hip_ha_t *entry, void *opaque)
 #endif
 
 out_err:
-    if (msg_close) {
-        free(msg_close);
-    }
-
+    free(msg_close);
     return err;
 }
 
@@ -223,12 +220,8 @@ int hip_send_close(struct hip_common *msg,
     }
 
 out_err:
-    if (msg_to_firewall) {
-        free(msg_to_firewall);
-    }
-    if (opaque) {
-        free(opaque);
-    }
+    free(msg_to_firewall);
+    free(opaque);
     return err;
 }
 

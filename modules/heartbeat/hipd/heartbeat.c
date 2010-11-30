@@ -187,9 +187,7 @@ static int hip_send_icmp(int sockfd, hip_ha_t *entry)
     HIP_DEBUG_HIT("Sent heartbeat to", &entry->hit_peer);
 
 out_err:
-    if (icmp_pkt) {
-        free(icmp_pkt);
-    }
+    free(icmp_pkt);
     return err;
 }
 
@@ -354,19 +352,10 @@ static int hip_icmp_recvmsg(int sockfd)
              "Failed to calculate the statistics and store the values\n");
 
 out_err:
-
-    if (stval) {
-        free(stval);
-    }
-    if (rtval) {
-        free(rtval);
-    }
-    if (src) {
-        free(src);
-    }
-    if (dst) {
-        free(dst);
-    }
+    free(stval);
+    free(rtval);
+    free(src);
+    free(dst);
 
     return err;
 }

@@ -222,10 +222,7 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
              -1, "HMAC validation failed\n");
 
 out_err:
-    if (msg_copy) {
-        free(msg_copy);
-    }
-
+    free(msg_copy);
     return err;
 }
 
@@ -440,15 +437,11 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
 
     /* on success free for dh_shared_key is called by caller */
 out_err:
-    if (err && dh_shared_key) {
+    if (err) {
         free(dh_shared_key);
     }
-    if (keymat) {
-        free(keymat);
-    }
-    if (plain_local_hit) {
-        free(plain_local_hit);
-    }
+    free(keymat);
+    free(plain_local_hit);
     return err;
 }
 
@@ -966,9 +959,7 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     /******************************************************************/
 
 out_err:
-    if (ctx->hadb_entry->dh_shared_key) {
-        free(ctx->hadb_entry->dh_shared_key);
-    }
+    free(ctx->hadb_entry->dh_shared_key);
     return err;
 }
 /**
@@ -1683,9 +1674,7 @@ out_err:
     if (err) {
         ctx->error = err;
     }
-    if (tmp_enc != NULL) {
-            free(tmp_enc);
-    }
+    free(tmp_enc);
     return err;
 }
 

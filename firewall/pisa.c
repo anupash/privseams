@@ -298,9 +298,7 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
     HIP_INFO("Certificate successfully verified.\n");
 
 out_err:
-    if (buf) {
-        free(buf);
-    }
+    free(buf);
     return err;
 }
 

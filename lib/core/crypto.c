@@ -455,9 +455,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
     err = 0;
 
 out_err:
-    if (result) {
-        free(result);
-    }
+    free(result);
 
     return err;
 }
@@ -830,9 +828,7 @@ out_err:
         }
     }
 
-    if (pubfilename) {
-        free(pubfilename);
-    }
+    free(pubfilename);
 
     return err;
 }
@@ -934,9 +930,7 @@ out_err:
         }
     }
 
-    if (pubfilename) {
-        free(pubfilename);
-    }
+    free(pubfilename);
 
     return err;
 }

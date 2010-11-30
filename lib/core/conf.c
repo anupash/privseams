@@ -393,9 +393,7 @@ static int hip_conf_handle_hi_del_all(hip_common_t *msg,
     HIP_INFO("All HIs deleted.\n");
 
 out_err:
-    if (msg_tmp) {
-        free(msg_tmp);
-    }
+    free(msg_tmp);
     return err;
 }
 
@@ -1046,10 +1044,7 @@ static int hip_conf_handle_server(hip_common_t *msg,
                  opt[index_of_ip]);
     }
 out_err:
-    if (reg_types) {
-        free(reg_types);
-    }
-
+    free(reg_types);
     return err;
 }
 
@@ -2219,17 +2214,12 @@ int hip_handle_exec_app(int do_fork, int type, int argc, const char *argv[])
                   strerror(errno));
 
         for (i = 0; i < sizeof(libs) / sizeof(libs[0]); i++) {
-            if (libs[i])
-                free(libs[i]);
+            free(libs[i]);
         }
         for (k = 0; 0 < argc; k++) {
-            if (argv_new[k]) {
-                free(argv_new[k]);
-            }
+            free(argv_new[k]);
         }
-        if (argv_new) {
-            free(argv_new);
-        }
+        free(argv_new);
 
         exit(EXIT_FAILURE);
     }
@@ -2704,9 +2694,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
     HIP_INFO("User message was sent successfully to the HIP daemon.\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
+    free(msg);
 
     if (err) {
         HIP_ERROR("(Check syntax for hipconf. Is hipd running or root privilege needed?)\n");
