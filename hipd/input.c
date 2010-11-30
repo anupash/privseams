@@ -837,8 +837,6 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     const struct hip_locator *locator       = NULL;
     uint16_t i2_mask = 0;
 
-    HIP_DEBUG("Received R1 in state %s\n", hip_state_str(ha_state));
-
     if (ha_state == HIP_STATE_I2_SENT) {
         HIP_DEBUG("Retransmission\n");
         retransmission = 1;
