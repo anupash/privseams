@@ -54,9 +54,7 @@ define Package/hipl-common/description
  The libraries and configs needed for HIPL.
 endef
 
-CONFIGURE_VARS += \
-    LIBS="-lz" \
-    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig"
+CONFIGURE_VARS += LIBS="-lz"
 
 define Build/Configure
 	$(call Build/Configure/Default, \
