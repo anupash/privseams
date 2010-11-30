@@ -11,6 +11,8 @@ rm -rf $TMP_DIR
 mkdir $TMP_DIR
 
 tar xvzf $HIPL_TAR
-cd main
+cd trunk
+autoreconf --install
+./configure
 make doxygen
-mv doxy/html/* $OUTPUT_DIR
+mv doc/doxy/html/* $OUTPUT_DIR
