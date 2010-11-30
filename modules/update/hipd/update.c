@@ -1287,6 +1287,8 @@ int hip_update_init(void)
                                       &hip_update_manual_update,
                                       20000),
              -1, "Error on registering UPDATE user message handle function.\n");
+
+/* FIXME: Implement handle function for HIP_MSG_LOCATOR_GET to replace this. */
 #if 0
     case HIP_MSG_LOCATOR_GET:
         HIP_DEBUG("Got a request for locators\n");
