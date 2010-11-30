@@ -13,7 +13,5 @@ mkdir -p $TMP_DIR $OUTPUT_DIR
 touch $OUTPUT_DIR/DO_NOT_EDIT_THESE_MANUALLY.GENERATED_AUTOMATICALLY
 cp -r $BZR_HIPL_CACHE/$BRANCH/doc $TMP_DIR
 cd $TMP_DIR/doc
-#xmlto -o manual html HOWTO.xml 2> /dev/null
-#cp -r manual/* $OUTPUT_DIR
-make
-cp -r howto-html/* $OUTPUT_DIR
+xmlto -o manual html HOWTO.xml
+cp -r manual/* $OUTPUT_DIR
