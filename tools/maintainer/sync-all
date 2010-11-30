@@ -1,11 +1,11 @@
 #!/bin/sh -xv
 
 HOSTS="
+halko.pc.infrahip.net
 allerian.infrahipnet
 garadar.infrahip.net
 cenarion.infrahip.net
 netherstorm.infrahip.net
-terokkar.infrahip.net
 shadowmoon.infrahip.net
 hellfire.infrahip.net
 zangarmash.infrahip.net
@@ -27,20 +27,22 @@ wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
 #set -e
 
 # configured hosts:
-# Ubuntu lucid 32-bit terokkar.infrahip.net
 # ubuntu lucid 32-bit allerian
+# ubuntu lucid 64-bit halko
+# ubuntu maverick 32-bit MISSING
+# ubuntu maverick 64-bit garadar
 # f13-i386            netherstorm.infrahip.net
 # F13-x86_64          shadowmoon.infrahip.net
-# CentOS-5.5 i386     hellfire.infrahip.net
-# CentOS-5.5 x86_64   zangarmash.infrahip.net
 # F14 32bit           ironforge
 # F14-x86_64	      nagrand.infrahip.net
-# ubuntu maverick 64-bit garadar
-# ubuntu maverick 64-bit cenarion 64-bit
+# CentOS-5.5 i386     hellfire.infrahip.net
+# CentOS-5.5 x86_64   zangarmash.infrahip.net
 #
 # disabled hosts:
 # fc11-i386           blacktemple
 # fc11-x86_64         stonebreaker
+# Ubuntu lucid 32-bit terokkar.infrahip.net
+# ubuntu maverick 64-bit cenarion 64-bit
 
 if test $# != 0; then
     HOSTS="$@"

@@ -21,7 +21,7 @@ else
     cd $TMP_DIR
     bzr init-repo hipl-bzr
     cd hipl-bzr
-    bzr checkout lp:hipl $BRANCH
+    bzr checkout --lightweight lp:hipl $BRANCH
     cd $BRANCH
 fi
 
