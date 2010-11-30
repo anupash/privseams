@@ -1,5 +1,7 @@
 #!/bin/sh -xv
 
+TMP_DIR='~/.hipl.syncall.tmp.dir'
+
 HOSTS="
 halko.pc.infrahip.net
 allerian.infrahipnet
@@ -14,8 +16,8 @@ ironforge.infrahip.net
 "
 
 COMMANDS="
-cd /tmp
-sudo rm -rf trunk
+cd $TMP_DIR
+rm -rf trunk
 rm hipl.tar.gz
 wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
     tar xvzf hipl.tar.gz &&
@@ -58,7 +60,6 @@ echo "--- Executing command on each host ---"
 
 time for HOST in $HOSTS; do
     echo "--- Host: $HOST ---"
-    ping -c 2 $HOST
     if test $? = 0; then
         ssh $HOST $COMMANDS
     else
