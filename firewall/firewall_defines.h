@@ -100,10 +100,10 @@ struct esp_tuple {
     unsigned char          *active_roots[MAX_NUM_PARALLEL_HCHAINS];
     int                     next_root_length[MAX_NUM_PARALLEL_HCHAINS];
     unsigned char          *next_roots[MAX_NUM_PARALLEL_HCHAINS];
-    /* list temporarily storing anchor elements until the consecutive update
-     * msg reveals that all on-path devices know the new anchor */
+    /** List temporarily storing anchor elements until the consecutive update
+     *  msg reveals that all on-path devices know the new anchor. */
     hip_ll_t                anchor_cache;
-    /* buffer storing hashes of previous packets for cumulative authentication */
+    /** buffer storing hashes of previous packets for cumulative authentication */
     esp_cumulative_item_t   hash_buffer[MAX_RING_BUFFER_SIZE];
 };
 
