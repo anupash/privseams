@@ -424,6 +424,7 @@ struct esp_tuple *find_esp_tuple(const SList *esp_list, const uint32_t spi)
  * initialize and store a new HIP/ESP connnection into the connection table
  *
  * @param data the connection-related data to be inserted
+ * @see remove_connection
  */
 static void insert_new_connection(const struct hip_data *data)
 {
@@ -599,6 +600,7 @@ static void remove_tuple(struct tuple *tuple)
  * removes a connection (both way tuples) along with its associated HIP and ESP tuples
  *
  * @param connection the connection to be freed
+ * @see insert_new_connection
  */
 static void remove_connection(struct connection *connection)
 {
