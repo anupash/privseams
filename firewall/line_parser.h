@@ -40,8 +40,6 @@ struct hip_line_parser;
 int hip_lp_create(struct hip_line_parser *const lp,
                   const struct hip_mem_area *const ma);
 void hip_lp_delete(struct hip_line_parser *const lp);
-static inline char *hip_lp_first(struct hip_line_parser *const lp);
-static inline char *hip_lp_next(struct hip_line_parser *const lp);
 
 /**
  * Represents the parsing state on a memory area object.

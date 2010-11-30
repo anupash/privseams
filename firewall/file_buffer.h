@@ -41,7 +41,6 @@ struct hip_file_buffer;
 int hip_fb_create(struct hip_file_buffer *const fb,
                   const char *const file_name);
 void hip_fb_delete(struct hip_file_buffer *const fb);
-static inline const struct hip_mem_area *hip_fb_get_mem_area(const struct hip_file_buffer *const fb);
 int hip_fb_reload(struct hip_file_buffer *const fb);
 
 /**
