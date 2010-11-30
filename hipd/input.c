@@ -967,7 +967,7 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
 
     /******************************************************************/
 
-    out_err:
+out_err:
     if (ctx->hadb_entry->dh_shared_key) {
         free(ctx->hadb_entry->dh_shared_key);
     }

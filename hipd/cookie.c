@@ -135,7 +135,7 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 
     HIP_IFEL(hip_set_cookie_difficulty(*newVal), -1,
              "Setting difficulty failed\n");
- out_err:
+out_err:
     return err;
 }
 

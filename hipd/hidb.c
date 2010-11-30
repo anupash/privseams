@@ -903,7 +903,7 @@ int hip_get_default_hit_msg(struct hip_common *msg)
     HIP_IFE(hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi)),
             -1);
 
- out_err:
+out_err:
 
     return err;
 }

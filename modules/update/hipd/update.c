@@ -912,7 +912,7 @@ static int hip_handle_second_update_packet(struct hip_packet_context *ctx,
              -1,
              "failed to send UPDATE\n");
 
-  out_err:
+out_err:
     return err;
 }
 
@@ -1002,7 +1002,7 @@ static int hip_update_init_state(struct modular_state *state)
 
     err = lmod_add_state_item(state, update_state, "update");
 
-  out_err:
+out_err:
     return err;
 }
 
@@ -1079,7 +1079,7 @@ static int hip_check_update_freshness(UNUSED const uint8_t packet_type,
         }
     }
 
-  out_err:
+out_err:
     ctx->error = err;
     return err;
 }
@@ -1119,7 +1119,7 @@ static int hip_check_update_packet(UNUSED const uint8_t packet_type,
              -1,
              "HMAC validation on UPDATE failed.\n");
 
-  out_err:
+out_err:
     ctx->error = err;
     return err;
 }
@@ -1205,7 +1205,7 @@ static int hip_handle_update_packet(UNUSED const uint8_t packet_type,
 
     hip_empty_oppipdb_old();
 
-  out_err:
+out_err:
     ctx->error = err;
     return err;
 }
@@ -1305,6 +1305,6 @@ int hip_update_init(void)
              -1,
              "Error on registering UPDATE maintenance function.\n");
 
-  out_err:
+out_err:
     return err;
 }
