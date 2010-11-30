@@ -152,6 +152,9 @@ compile $FEATURES_ALL
 # Max compile coverage configuration without optimization
 compile $FEATURES_ALL CFLAGS="-O0"
 
+# Max compile coverage configuration optimized for size
+compile $FEATURES_ALL CFLAGS="-Os"
+
 # Max compile coverage configuration with full optimization
 # FIXME: Disabled until the tree compiles with this optimization level.
 #compile $FEATURES_ALL CFLAGS="-O3"
