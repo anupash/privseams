@@ -8,13 +8,7 @@ OUTPUT_DIR=$WWW_DIR
 
 set -e
 
-if ! test -d $TMP_DIR; then
-    mkdir $TMP_DIR 2> /dev/null
-fi
-
-if ! test -d $OUTPUT_DIR; then
-    mkdir $OUTPUT_DIR 2> /dev/null
-fi
+mkdir -p $TMP_DIR $OUTPUT_DIR
 
 touch $OUTPUT_DIR/DO_NOT_EDIT_THESE_MANUALLY.GENERATED_AUTOMATICALLY
 cp -r $BZR_HIPL_CACHE/$REVISION/doc $TMP_DIR
