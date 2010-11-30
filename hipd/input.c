@@ -1664,18 +1664,18 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     /* Store peer's public key and HIT to HA */
      HIP_IFE(hip_init_peer(ctx->hadb_entry, host_id_in_enc), -EINVAL);
      /* Validate signature */
- #ifdef CONFIG_HIP_PERFORMANCE
+#ifdef CONFIG_HIP_PERFORMANCE
      HIP_DEBUG("Start PERF_VERIFY(2)\n");
      hip_perf_start_benchmark(perf_set, PERF_VERIFY);
- #endif
+#endif
      HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
                                       ctx->input_msg),
               -EINVAL,
               "Verification of I2 signature failed\n");
- #ifdef CONFIG_HIP_PERFORMANCE
+#ifdef CONFIG_HIP_PERFORMANCE
      HIP_DEBUG("Stop PERF_VERIFY(2)\n");
      hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
- #endif
+#endif
 
     if ((r1cntr = hip_get_param(ctx->input_msg, HIP_PARAM_R1_COUNTER))) {
         ctx->hadb_entry->birthday = r1cntr->generation;
