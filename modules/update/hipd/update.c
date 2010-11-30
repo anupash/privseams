@@ -151,8 +151,11 @@ out_err:
 */
 static inline uint32_t hip_update_get_out_id(struct update_state *state)
 {
-    HIP_IFCS(state, return (state->update_id_out - 1));
-    return -1;
+    if (state) {
+        return state->update_id_out - 1;
+    } else {
+        return -1;
+    }
 }
 
 /**
