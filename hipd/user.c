@@ -125,8 +125,8 @@ int hip_user_register_handle(const uint8_t msg_type,
              -1,
              "Error on allocating memory for a handle function entry.\n");
 
-    new_entry->priority    = priority;
-    new_entry->func_ptr    = handle_func;
+    new_entry->priority = priority;
+    new_entry->func_ptr = handle_func;
 
     hip_user_msg_handles[msg_type] =
             lmod_register_function(hip_user_msg_handles[msg_type],
@@ -233,13 +233,13 @@ int hip_handle_user_msg(hip_common_t *msg,
         goto out_err;
     }
 
-    msg_type      = hip_get_msg_type(msg);
+    msg_type = hip_get_msg_type(msg);
 
-    is_root       = (ntohs(src->sin6_port) < 1024);
+    is_root  = ntohs(src->sin6_port) < 1024;
     if (is_root) {
         access_ok = 1;
     } else if (!is_root &&
-               (msg_type >= HIP_MSG_ANY_MIN && msg_type <= HIP_MSG_ANY_MAX)) {
+               msg_type >= HIP_MSG_ANY_MIN && msg_type <= HIP_MSG_ANY_MAX) {
         access_ok = 1;
     }
 
@@ -275,7 +275,7 @@ int hip_handle_user_msg(hip_common_t *msg,
         }
         break;
     case HIP_MSG_RST:
-        err                = hip_send_close(msg, 1);
+        err = hip_send_close(msg, 1);
         break;
     case HIP_MSG_SET_NAT_NONE:
     case HIP_MSG_SET_NAT_PLAIN_UDP:
@@ -337,7 +337,7 @@ int hip_handle_user_msg(hip_common_t *msg,
         break;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     case HIP_MSG_GET_PEER_HIT:
-        err = hip_opp_get_peer_hit(msg, src);
+        err     = hip_opp_get_peer_hit(msg, src);
         break;
 #endif
     case HIP_MSG_CERT_SPKI_VERIFY:
@@ -432,8 +432,7 @@ int hip_handle_user_msg(hip_common_t *msg,
         /* Register to a HIT without IP address */
         if (dst_ip && !dst_hit && ipv6_addr_is_hit(dst_ip)) {
             struct in_addr bcast = { INADDR_BROADCAST };
-            if (hip_map_id_to_addr(dst_ip, NULL,
-                                   &server_addr)) {
+            if (hip_map_id_to_addr(dst_ip, NULL, &server_addr)) {
                 IPV4_TO_IPV6_MAP(&bcast, &server_addr);
             }
             dst_hit = dst_ip;
@@ -505,38 +504,27 @@ int hip_handle_user_msg(hip_common_t *msg,
             /* Set the request flag. */
             switch (reg_types[i]) {
             case HIP_SERVICE_RENDEZVOUS:
-                hip_hadb_set_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+                hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
                 add_to_global = 1;
                 break;
             case HIP_SERVICE_RELAY:
-                hip_hadb_set_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+                hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
                 /* Don't ask for ICE from relay */
                 entry->nat_mode = 1;
                 add_to_global   = 1;
                 break;
             case HIP_SERVICE_FULLRELAY:
-                hip_hadb_set_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
+                hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
                 entry->nat_mode = 1;
                 add_to_global   = 1;
                 break;
             default:
-                HIP_INFO("Undefined service type (%u) " \
-                         "requested in the service " \
-                         "request.\n", reg_types[i]);
+                HIP_INFO("Undefined service type (%u) requested in the service request.\n",
+                         reg_types[i]);
                 /* For testing purposes we allow the user to
                  * request services that HIPL does not support.
                  */
-                hip_hadb_set_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_UNSUP);
-                /*
-                 * HIP_DEBUG("Deleting pending service request "\
-                 * "for service %u.\n", reg_types[i]);
-                 * hip_del_pending_request_by_type(entry,
-                 * reg_types[i]);
-                 */
+                hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_UNSUP);
                 break;
             }
         }
@@ -548,8 +536,8 @@ int hip_handle_user_msg(hip_common_t *msg,
                 sock_addr.sin_family = AF_INET;
                 /* The server address is added with 0 interface index */
                 hip_add_address_to_list((struct sockaddr *) &sock_addr,
-                                    0,
-                                    HIP_FLAG_CONTROL_TRAFFIC_ONLY);
+                                        0,
+                                        HIP_FLAG_CONTROL_TRAFFIC_ONLY);
 
             } else {
                 memset(&sock_addr6, 0, sizeof(sock_addr6));
@@ -557,8 +545,8 @@ int hip_handle_user_msg(hip_common_t *msg,
                 sock_addr6.sin6_addr   = *dst_ip;
                 /* The server address is added with 0 interface index */
                 hip_add_address_to_list((struct sockaddr *) &sock_addr6,
-                                    0,
-                                    HIP_FLAG_CONTROL_TRAFFIC_ONLY);
+                                        0,
+                                        HIP_FLAG_CONTROL_TRAFFIC_ONLY);
             }
         }
 
@@ -628,8 +616,8 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_REINIT_RVS:
     case HIP_MSG_REINIT_RELAY:
         HIP_DEBUG("Handling REINIT RELAY or REINIT RVS user message.\n");
-        HIP_IFEL(hip_relay_reinit(), -1, "Unable to reinitialize " \
-                                         "the HIP relay / RVS service.\n");
+        HIP_IFEL(hip_relay_reinit(), -1,
+                 "Unable to reinitialize the HIP relay / RVS service.\n");
         break;
     case HIP_MSG_CANCEL_RVS:
         HIP_DEBUG("Handling CANCEL RVS user message.\n");
@@ -684,10 +672,10 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_GET_HA_INFO:
         hip_msg_init(msg);
         hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0);
-        err              = hip_for_each_ha(hip_handle_get_ha_info, msg);
+        err = hip_for_each_ha(hip_handle_get_ha_info, msg);
         break;
     case HIP_MSG_DEFAULT_HIT:
-        err              =  hip_get_default_hit_msg(msg);
+        err = hip_get_default_hit_msg(msg);
         break;
     case HIP_MSG_MHADDR_ACTIVE:
         is_active_mhaddr = 1;
@@ -813,7 +801,7 @@ int hip_handle_user_msg(hip_common_t *msg,
         err = 0;
         struct hip_hit_to_ip_set *name_info;
         HIP_IFEL(!(name_info = hip_get_param_readwrite(msg,
-                                                     HIP_PARAM_HIT_TO_IP_SET)),
+                                                       HIP_PARAM_HIT_TO_IP_SET)),
                  -1, "no name struct found\n");
         HIP_DEBUG("Name in name_info %s\n", name_info->name);
         int name_len = strlen(name_info->name);
