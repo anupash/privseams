@@ -93,10 +93,6 @@ int hip_encode_dh_publickey(DH *dh, uint8_t *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
 void hip_free_dh(DH *target);
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
-int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
-               struct in6_addr *hit);
-int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
-               struct in6_addr *hit);
 DSA *create_dsa_key(int bits);
 RSA *create_rsa_key(int bits);
 int save_dsa_private_key(const char *filenamebase, DSA *dsa);
