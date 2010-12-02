@@ -1300,7 +1300,7 @@ out_err:
         free(dsa_filenamebase_pub);
     }
     if (ecdsa_filenamebase_pub) {
-        free(dsa_filenamebase_pub);
+        free(ecdsa_filenamebase_pub);
     }
     if (rsa_filenamebase_pub) {
         free(rsa_filenamebase_pub);
