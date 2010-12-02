@@ -1028,11 +1028,6 @@ int hip_init_peer(hip_ha_t *entry,
         HIP_IFEL(1,-1, "Unkown algorithm");
     }
 
-    if (hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA) {
-    } else if (hip_get_host_id_algo(entry->peer_pub) == HIP_HI_ECDSA) {
-    } else { /* DSA */
-    }
-
 out_err:
     HIP_DEBUG_HIT("peer's hit", &hit);
     HIP_DEBUG_HIT("entry's hit", &entry->hit_peer);
