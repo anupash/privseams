@@ -50,16 +50,14 @@ if test $# != 0; then
     HOSTS="$@"
 fi
 
-echo "--- Pinging all hosts ---"
-
-for HOST in $HOSTS; do
-    ping -c 2 $HOST
-done
+echo "--- Hosts ---"
+echo "$HOSTS"
 
 echo "--- Executing command on each host ---"
 
 time for HOST in $HOSTS; do
     echo "--- Host: $HOST ---"
+    ping -c 2 $HOST
     if test $? = 0; then
         ssh $HOST $COMMANDS
     else
