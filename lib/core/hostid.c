@@ -753,16 +753,17 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
                 HIP_IFEL(dsa_key_rr_len <= 0, -EFAULT, "dsa_key_rr_len <= 0\n");
 
+                if ((err = hip_private_dsa_to_hit(dsa_key, &dsa_lhi.hit))) {
+                   HIP_ERROR("Conversion from DSA to HIT failed\n");
+                   goto out_err;
+                }
+                HIP_DEBUG_HIT("DSA HIT", &dsa_pub_lhi.hit);
+
                 if ((err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip,
                                                HIP_ENDPOINT_FLAG_ANON,
                                                hostname))) {
                     HIP_ERROR("Failed to allocate and build DSA endpoint (anon).\n");
                     goto out_err;
-                }
-
-                if ((err = hip_private_dsa_to_hit(dsa_key, &dsa_lhi.hit))) {
-                   HIP_ERROR("Conversion from DSA to HIT failed\n");
-                   goto out_err;
                 }
 
             } else { /* pub */
@@ -777,8 +778,6 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                                                        &dsa_pub_key_rr);
                 HIP_IFEL(dsa_pub_key_rr_len <= 0, -EFAULT,
                          "dsa_pub_key_rr_len <= 0\n");
-
-                HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
 
                 if ((err = hip_private_dsa_to_hit(dsa_pub_key,
                                                   &dsa_pub_lhi.hit))) {

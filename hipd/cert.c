@@ -188,7 +188,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
         bn2bin_safe(dsa_sig->s, &signature[1 + DSA_PRIV], DSA_PRIV);
         sig_len      = SHA_DIGEST_LENGTH + DSA_PRIV * 2;
     } else {
-        HIP_IFEL(1 == 0, -1, "Unknown algorithm for signing\n");
+        HIP_IFEL(1, -1, "Unknown algorithm for signing\n");
     }
 
     /* clearing signature field just to be sure */
@@ -266,7 +266,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
                                   "(g |%s|)(y |%s|)))",
                 p_b64, q_b64, g_b64, y_b64);
     } else {
-        HIP_IFEL(1 == 0, -1, "Unknown algorithm for public-key element\n");
+        HIP_IFEL(1, -1, "Unknown algorithm for public-key element\n");
     }
 
     /* Put the results into the msg back */
@@ -884,7 +884,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
         HIP_IFEL((X509_set_pubkey(cert, pkey) != 1), -1,
                  "Failed to set public key of the certificate\n");
     } else {
-        HIP_IFEL(1 == 0, -1, "Unknown algorithm\n");
+        HIP_IFEL(1, -1, "Unknown algorithm\n");
     }
 
     if (sec_ext != NULL) {
