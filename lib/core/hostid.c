@@ -325,6 +325,30 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
 }
 
 /*
+ * Translate the openssl specific curve id into the coressponding HIP id.
+ */
+static int get_ecdsa_curve_hip_name(const int nid) {
+    int err = 0;
+
+    /* Determine the curve */
+    switch (nid) {
+    case NID_secp256k1:
+        return NIST_ECDSA_256;
+    case NID_sect283k1:
+        return NIST_ECDSA_283;
+    case NID_secp384r1:
+        return NIST_ECDSA_384;
+    default:
+        HIP_DEBUG("Curve not supported.\n");
+        err = -1;
+        goto out_err;
+    }
+
+out_err:
+    return err;
+}
+
+/*
  * Get the curve nid from the ECC curve field in the host_id parameter.
  */
 static int get_ecdsa_curve_nid(const struct hip_host_id *host_id) {
@@ -1341,6 +1365,7 @@ int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr) {
     int out_len = 0;
     const BIGNUM *priv_key = NULL;
     uint16_t curveid;
+    const EC_GROUP *group = NULL;
 
     /* sanity check */
     HIP_IFEL(!EC_KEY_check_key(ecdsa),
@@ -1358,7 +1383,9 @@ int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr) {
     memset(buffer, 0, out_len);
 
     /* insert curve id */
-    curveid = htons(NIST_ECDSA_283);
+    HIP_IFEL(!(group = EC_KEY_get0_group(ecdsa)),
+            -1, "Could not get group from key structure. \n");
+    curveid =  htons(get_ecdsa_curve_hip_name(EC_GROUP_get_curve_name(group)));
     memcpy(buffer, &curveid, 2);
 
     /* serialize public key */
