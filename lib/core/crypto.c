@@ -1063,7 +1063,7 @@ out_err:
 
 
 /**
- * save host ECRSA keys to disk
+ * save host ECDSA keys to disk
  * @param filenamebase the filename base where ECDSA key should be saved
  * @param ecdsa the ECDSA key structure
  *
@@ -1079,10 +1079,90 @@ out_err:
  * error occurred.
  */
 int save_ecdsa_private_key(const char *filenamebase, EC_KEY *ecdsa) {
-    // TODO
-    HIP_DEBUG("(UNIMPLEMENTED) Should create key in %s \n", filenamebase);
-    ecdsa = NULL;
-    return -1;
+    int err           = 0, files = 0, ret;
+    char *pubfilename = NULL;
+    int pubfilename_len;
+    FILE *fp          = NULL;
+
+    HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
+
+    pubfilename_len =
+        strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
+    pubfilename     = malloc(pubfilename_len);
+    HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
+
+    ret = snprintf(pubfilename, pubfilename_len, "%s%s",
+                               filenamebase,
+                               DEFAULT_PUB_FILE_SUFFIX);
+    HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
+
+    HIP_INFO("Saving ECDSA keys to: pub='%s' priv='%s'\n", pubfilename,
+             filenamebase);
+
+    fp  = fopen(pubfilename, "wb" /* mode */);
+    HIP_IFEL(!fp, 1,
+             "Couldn't open public key file %s for writing\n", pubfilename);
+
+    // this is important, otherwise parametes will be saved explicitely
+    err = PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa));
+
+    err = PEM_write_EC_PUBKEY(fp, ecdsa) == 0 ? 1 : 0;
+    files++;
+    if (err) {
+        HIP_ERROR("Write failed for %s\n", pubfilename);
+        goto out_err;
+    }
+    if ((err = fclose(fp))) {
+        HIP_ERROR("Error closing file\n");
+        goto out_err;
+    }
+
+    fp  = fopen(filenamebase, "wb" /* mode */);
+    HIP_IFEL(!fp, 1,
+             "Couldn't open private key file %s for writing\n", filenamebase);
+
+    // this is important, otherwise parametes will be saved explicitely
+    err = PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa));
+
+    err = PEM_write_ECPrivateKey(fp, ecdsa, NULL, NULL,
+                                  0, NULL, NULL) == 0 ? 1 : 0;
+    files++;
+    if (err) {
+        HIP_ERROR("Write failed for %s\n", filenamebase);
+        goto out_err;
+    }
+
+out_err:
+
+    if (err && fp) {
+        if (fclose(fp)) {
+            HIP_ERROR("Error closing file\n");
+        }
+    } else if (fp && (err = fclose(fp)))   {
+        HIP_ERROR("Error closing file\n");
+    }
+
+    if (err) {
+        switch (files) {
+        case 2:
+            if (unlink(filenamebase)) { /* add error check */
+                HIP_ERROR("Could not delete file %s\n", filenamebase);
+            }
+        case 1:
+            if (unlink(pubfilename)) { /* add error check */
+                HIP_ERROR("Could not delete file %s\n", pubfilename);
+            }
+        default:
+            break;
+        }
+    }
+
+    if (pubfilename) {
+        free(pubfilename);
+    }
+
+    return err;
+
 }
 
 /**
