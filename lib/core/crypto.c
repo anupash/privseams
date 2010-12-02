@@ -818,11 +818,33 @@ err_out:
 EC_KEY *create_ecdsa_key(int nid) {
     int err = 0;
     EC_KEY *eckey = NULL;
+    EC_GROUP *group = NULL;
+    int asn1_flag = OPENSSL_EC_NAMED_CURVE;
 
-    HIP_IFEL(!(eckey = EC_KEY_new_by_curve_name(nid)),
-            -1, "Failed creating new key (possibly wrong group id)\n");
-    HIP_IFEL(!EC_KEY_generate_key(eckey),
-            -1, "Failed generating new key. \n");
+    HIP_IFEL(!(eckey = EC_KEY_new()),
+            -1, "Could not init new key.\n");
+
+    if(!(group = EC_GROUP_new_by_curve_name(nid))) {
+        HIP_ERROR("Could not create curve.\n");
+    }
+
+    HIP_DEBUG("Retrying with standard curve NIST_ECDSA_384 \n");
+
+    HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(NID_secp384r1)),
+            -1, "Failed creating new key\n");
+
+    // this is important, otherwise parametes will be saved explicitely
+    EC_GROUP_set_asn1_flag(group, asn1_flag);
+
+    HIP_IFEL(!EC_KEY_set_group(eckey, group),
+            -1, "Could not set group.\n");
+
+    if(!EC_KEY_generate_key(eckey)) {
+        EC_KEY_free(eckey);
+        HIP_ERROR("Key generation failed\n");
+        err = -1;
+        goto out_err;
+    }
 
 out_err:
     if(err)
