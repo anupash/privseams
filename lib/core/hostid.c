@@ -1346,8 +1346,6 @@ int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr) {
     HIP_IFEL(!EC_KEY_check_key(ecdsa),
             -1, "Invalid public key.\n");
 
-    EC_KEY_print_fp(stdout, ecdsa, 0);
-
     /* get sizes for public and private key, allocate memory for output */
     HIP_IFEL(!(pub_key_len = EC_POINT_point2oct(EC_KEY_get0_group(ecdsa), EC_KEY_get0_public_key(ecdsa), EC_KEY_get_conv_form(ecdsa), NULL, 0, NULL)),
             -1, "Failed to calculate out length of serialized key.\n");
