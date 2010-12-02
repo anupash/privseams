@@ -82,6 +82,7 @@
 /* filename needs to contain either to be valid HI file */
 #define RSA_FILE "_rsa_"
 #define DSA_FILE "_dsa_"
+#define ECDSA_FILE "_ecdsa_"
 
 #define MAX_LINE_LENGTH 512
 
@@ -438,7 +439,7 @@ static struct hip_host_id *load_dsa_file(FILE *fp)
     dsa = DSA_new();
     dsa = PEM_read_DSA_PUBKEY(fp, &dsa, NULL, NULL);
     if (!dsa) {
-        HIP_DEBUG("reading RSA file failed \n");
+        HIP_DEBUG("reading DSA file failed \n");
         DSA_free(dsa);
         return NULL;
     }
@@ -447,6 +448,34 @@ static struct hip_host_id *load_dsa_file(FILE *fp)
     hi             = malloc(sizeof(struct hip_host_id));
     hip_build_param_host_id_hdr(hi, NULL, dsa_key_rr_len, HIP_HI_DSA);
     hip_build_param_host_id_only(hi, dsa_key_rr, NULL);
+    return hi;
+}
+
+/**
+ * load an ECDSA public key from a file and convert it into a hip_host_id
+ *
+ * @param fp FILE object where to load a PEM formatted ECDSA public key
+ *
+ * @return hip_host id structure (caller deallocates) or NULL on error
+ */
+static struct hip_host_id *load_ecdsa_file(FILE *fp)
+{
+    struct hip_host_id *hi    = NULL;
+    EC_KEY *ecdsa                  = NULL;
+    unsigned char *ecdsa_key_rr = NULL;
+    int ecdsa_key_rr_len;
+
+    ecdsa = PEM_read_EC_PUBKEY(fp, NULL, NULL, NULL);
+    if (!ecdsa) {
+        HIP_DEBUG("reading ECDSA file failed \n");
+        EC_KEY_free(ecdsa);
+        return NULL;
+    }
+    ecdsa_key_rr     = malloc(sizeof(struct hip_host_id));
+    ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa, &ecdsa_key_rr);
+    hi             = malloc(sizeof(struct hip_host_id));
+    hip_build_param_host_id_hdr(hi, NULL, ecdsa_key_rr_len, HIP_HI_ECDSA);
+    hip_build_param_host_id_only(hi, ecdsa_key_rr, NULL);
     return hi;
 }
 
@@ -476,12 +505,16 @@ static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
         algo = HIP_HI_RSA;
     } else if (strstr(token, DSA_FILE)) {
         algo = HIP_HI_DSA;
+    } else if (strstr(token, ECDSA_FILE)) {
+        algo = HIP_HI_ECDSA;
     } else {
         HIP_DEBUG("Invalid filename for HI: missing _rsa_ or _dsa_ \n");
         return NULL;
     }
     if (algo == HIP_HI_RSA) {
         hi = load_rsa_file(fp);
+    } else if (algo == HIP_HI_ECDSA) {
+        hi = load_ecdsa_file(fp);
     } else {
         hi = load_dsa_file(fp);
     }
