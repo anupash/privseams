@@ -808,9 +808,9 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE);
 
             if (anon || hi_fmt == NULL) {
-                dsa_filenamebase     = malloc(HOST_ID_FILENAME_MAX_LEN);
+                ecdsa_filenamebase     = malloc(HOST_ID_FILENAME_MAX_LEN);
                 HIP_IFEL(!ecdsa_filenamebase, -ENOMEM,
-                         "Could not allocate DSA filename.\n");
+                         "Could not allocate ECDSA filename.\n");
 
                 ret = snprintf(ecdsa_filenamebase,
                                HOST_ID_FILENAME_MAX_LEN,
