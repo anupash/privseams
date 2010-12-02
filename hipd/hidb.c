@@ -935,7 +935,7 @@ out_err:
  */
 int hip_get_default_hit(struct in6_addr *hit)
 {
-    return hip_get_any_localhost_hit(hit, HIP_HI_RSA, 0);
+    return hip_get_any_localhost_hit(hit, HIP_HI_ECDSA, 0);
 }
 
 /**
