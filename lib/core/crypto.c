@@ -480,6 +480,9 @@ int impl_ecdsa_sign(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature)
     unsigned char *tmp;
     size_t der_siglen = 0;
 
+    HIP_IFEL(!EC_KEY_check_key(ecdsa),
+            -1, "Check of signing key failed. \n");
+
     sig_size = ECDSA_size(ecdsa);
     memset(signature, 0, sig_size);
 
@@ -1113,6 +1116,9 @@ int load_ecdsa_private_key(const char *filename, EC_KEY **ecdsa)
         HIP_ERROR("Error closing file\n");
         goto out_err;
     }
+
+    HIP_IFEL(!EC_KEY_check_key(*ecdsa),
+            -1, "Error during loading of ecdsa key.\n");
 
     HIP_IFEL(!*ecdsa, -EINVAL, "Read failed for %s\n", filename);
 
