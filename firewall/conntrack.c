@@ -504,6 +504,8 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
             if (hip_tuple->data->src_pub_key && hip_tuple->data->src_hi) {
                 if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_RSA) {
                     RSA_free((RSA *) hip_tuple->data->src_pub_key);
+                } else if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_ECDSA) {
+                    EC_KEY_free((EC_KEY *) hip_tuple->data->src_pub_key);
                 } else {
                     DSA_free((DSA *) hip_tuple->data->src_pub_key);
                 }
@@ -926,7 +928,10 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
     if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA) {
         tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((const struct hip_host_id_priv *) host_id, 0);
         tuple->hip_tuple->data->verify      = hip_rsa_verify;
-    } else {
+    } else if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_ECDSA) {
+        tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_ecdsa((const struct hip_host_id_priv *) host_id, 0);
+        tuple->hip_tuple->data->verify      = hip_ecdsa_verify;
+    } else { /* DSA */
         tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((const struct hip_host_id_priv *) host_id, 0);
         tuple->hip_tuple->data->verify      = hip_dsa_verify;
     }
@@ -997,7 +1002,10 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA) {
             tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((const struct hip_host_id_priv *) host_id, 0);
             tuple->hip_tuple->data->verify      = hip_rsa_verify;
-        } else {
+        } else if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_ECDSA) {
+            tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_ecdsa((const struct hip_host_id_priv *) host_id, 0);
+            tuple->hip_tuple->data->verify      = hip_ecdsa_verify;
+        } else { /* DSA */
             tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((const struct hip_host_id_priv *) host_id, 0);
             tuple->hip_tuple->data->verify      = hip_dsa_verify;
         }
