@@ -68,8 +68,32 @@ HIP_HASHTABLE *hip_local_hostid_db = NULL;
 
 static const char *lsi_addresses[] = {"1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4"};
 
+static struct hip_host_id *hip_get_ecdsa_public_key(const struct hip_host_id_priv *host_id) {
+    int err = 0;
+    struct hip_ecdsa_keylen key_lens;
+    struct hip_host_id *host_id_pub;
+
+    HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
+            -1, "Failed computing key sizes.\n");
+
+    host_id_pub = (struct hip_host_id *) malloc(sizeof(struct hip_host_id));
+    memcpy(host_id_pub, host_id, sizeof(struct hip_host_id) - sizeof(host_id_pub->key) - sizeof(host_id_pub->hostname));
+    memcpy(host_id_pub->key, host_id->key, key_lens.Y_len+2);
+    host_id_pub->hi_length = htons(key_lens.Y_len+2+sizeof(struct hip_host_id_key_rdata));
+
+    host_id_pub->length    = htons(sizeof(struct hip_host_id));
+
+out_err:
+    if(err)
+        return NULL;
+
+    HIP_DEBUG("successfully created public host id\n");
+    return host_id_pub;
+}
+
+
 /**
- * Strips a public key out of DSA a host id with private key component
+ * Strips a DSA public key out of a host id with private key component
  *
  * @param hi the host identifier with its private key component
  * @return An allocated hip_host_id structure. Caller must deallocate.
@@ -151,6 +175,8 @@ static struct hip_host_id *hip_get_public_key(const struct hip_host_id_priv *hid
         return hip_get_rsa_public_key(hid);
     case HIP_HI_DSA:
         return hip_get_dsa_public_key(hid);
+    case HIP_HI_ECDSA:
+        return hip_get_ecdsa_public_key(hid);
     default:
         HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
         return NULL;
@@ -250,6 +276,8 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
 
     if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA && id->private_key) {
         RSA_free(id->private_key);
+    } else if (hip_get_host_id_algo(id->host_id) == HIP_HI_ECDSA && id->private_key) {
+            EC_KEY_free(id->private_key);
     } else if (id->private_key) {
         DSA_free(id->private_key);
     }
@@ -478,22 +506,47 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 
     list_add(id_entry, db);
 
-    if (hip_get_host_id_algo((const struct hip_host_id *) host_id) ==
-        HIP_HI_RSA) {
+    if (hip_get_host_id_algo((const struct hip_host_id *) host_id) == HIP_HI_RSA) {
         id_entry->private_key = hip_key_rr_to_rsa(host_id, 1);
-    } else {
+    } else if (hip_get_host_id_algo((const struct hip_host_id *) host_id) == HIP_HI_ECDSA) {
+        id_entry->private_key = hip_key_rr_to_ecdsa(host_id, 1);
+    } else { /* DSA */
         id_entry->private_key = hip_key_rr_to_dsa(host_id, 1);
     }
 
     HIP_DEBUG("Generating a new R1 set.\n");
     HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
     id_entry->host_id = hip_get_public_key(host_id);
-    HIP_IFEL(!hip_precreate_r1(id_entry->r1,
-                               &lhi->hit,
-                               (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-                               id_entry->private_key, id_entry->host_id),
-             -ENOENT,
-             "Unable to precreate R1s.\n");
+    switch (hip_get_host_id_algo(id_entry->host_id)) {
+    case HIP_HI_RSA:
+        HIP_IFEL(!hip_precreate_r1(id_entry->r1,
+                                   &lhi->hit,
+                                   hip_rsa_sign,
+                                   id_entry->private_key, id_entry->host_id),
+                 -ENOENT,
+                 "Unable to precreate R1s.\n");
+        break;
+    case HIP_HI_DSA:
+        HIP_IFEL(!hip_precreate_r1(id_entry->r1,
+                                   &lhi->hit,
+                                   hip_dsa_sign,
+                                   id_entry->private_key, id_entry->host_id),
+                 -ENOENT,
+                 "Unable to precreate R1s.\n");
+        break;
+    case HIP_HI_ECDSA:
+        HIP_IFEL(!hip_precreate_r1(id_entry->r1,
+                                   &lhi->hit,
+                                   hip_ecdsa_sign,
+                                   id_entry->private_key, id_entry->host_id),
+                 -ENOENT,
+                 "Unable to precreate R1s.\n");
+        break;
+    default:
+        HIP_ERROR("Unsupported algorithms\n");
+        err = -1;
+        goto out_err;
+    }
 
     /* Called while the database is locked, perhaps not the best
      * option but HIs are not added often */
@@ -507,6 +560,8 @@ out_err:
             if (id_entry->private_key) {
                 if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA) {
                     RSA_free(id_entry->private_key);
+                } else if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_ECDSA) {
+                    EC_KEY_free(id_entry->private_key);
                 } else {
                     DSA_free(id_entry->private_key);
                 }
@@ -857,6 +912,8 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
     case HIP_HI_DSA:
         err = hip_dsa_sign(private_key, msg);
         break;
+    case HIP_HI_ECDSA:
+        err = hip_ecdsa_sign(private_key, msg);
     default:
         HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
         break;

@@ -397,10 +397,25 @@ static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
 
     hip_uninit_r1(entry->r1);
     HIP_IFE(!(entry->r1 = hip_init_r1()), -ENOMEM);
-    HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
-                              (hip_get_host_id_algo(entry->host_id) ==
-                               HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-                              entry->private_key, entry->host_id), -1);
+    switch (hip_get_host_id_algo(entry->host_id)) {
+    case HIP_HI_RSA:
+        HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
+                                  hip_rsa_sign,
+                                  entry->private_key, entry->host_id), -1);
+        break;
+    case HIP_HI_DSA:
+        HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
+                                  hip_dsa_sign,
+                                  entry->private_key, entry->host_id), -1);
+        break;
+    case HIP_HI_ECDSA:
+        HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
+                                  hip_ecdsa_sign,
+                                  entry->private_key, entry->host_id), -1);
+        break;
+    default:
+        HIP_IFEL(1,-1, "Unkown algorithm");
+    }
 
 out_err:
     return err;
