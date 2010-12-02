@@ -1744,8 +1744,6 @@ out_err:
  * <li>payload_proto.</li>
  * <li>payload_len: see how build_daemon_hdr() works.</li>
  * <li>ver_res.</li>
- * <li>checksum (move the checksum function from hip.c to this file
- *     because this file is shared by kernel and userspace).</li>
  * <li>write the parameters of this function into the message.</li>
  * </ul>
  * @note Use @b only accessors to hide byte order and size conversion issues!
