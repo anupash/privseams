@@ -411,7 +411,7 @@ int hip_get_ecdsa_keylen(const struct hip_host_id_priv *host_id,
     case NID_secp384r1:
         curve_size = 384;
         break;
-    case NID_brainpoolP160r1:
+    //case NID_brainpoolP160r1:
         // implement this when openssl supports this curve
     default:
         HIP_DEBUG("Curve not supported.\n");
