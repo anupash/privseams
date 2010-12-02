@@ -1393,7 +1393,7 @@ static int hip_check_network_param_attributes(const struct hip_tlv_common *param
     {
         uint8_t algo =
             hip_get_host_id_algo((const struct hip_host_id *) param);
-        if (algo != HIP_HI_DSA && algo != HIP_HI_RSA) {
+        if (algo != HIP_HI_DSA && algo != HIP_HI_RSA && algo != HIP_HI_ECDSA) {
             err = -EPROTONOSUPPORT;
             HIP_ERROR("Host id algo %d not supported\n", algo);
         }
@@ -3795,7 +3795,7 @@ out_err:
 /**
  * Translate a host id into a HIT
  *
- * @param any_key a pointer to DSA or RSA key in OpenSSL format
+ * @param any_key a pointer to DSA, RSA or ECDSA key in OpenSSL format
  * @param hit the resulting HIT will be stored here
  * @param is_public 0 if the host id constains the private key
  *                  or 1 otherwise
@@ -3805,7 +3805,7 @@ out_err:
 static int hip_any_key_to_hit(void *any_key,
                               hip_hit_t *hit,
                               int is_public,
-                              int is_dsa)
+                              int type)
 {
     int err = 0, key_rr_len;
     unsigned char *key_rr = NULL;
@@ -3814,12 +3814,13 @@ static int hip_any_key_to_hit(void *any_key,
     struct hip_host_id *host_id_pub = NULL;
     RSA *rsa_key = (RSA *) any_key;
     DSA *dsa_key = (DSA *) any_key;
+    EC_KEY *ecdsa_key = (EC_KEY *) any_key;
 
     memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
     HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
             "gethostname failed\n");
 
-    if (is_dsa) {
+    if (type == HIP_HI_DSA) {
         HIP_IFEL(((key_rr_len = dsa_to_dns_key_rr(dsa_key, &key_rr)) <= 0), -1,
                 "key_rr_len\n");
         if (is_public) {
@@ -3839,6 +3840,29 @@ static int hip_any_key_to_hit(void *any_key,
                     + sizeof(struct hip_host_id_key_rdata));
             memcpy(&host_id->key, key_rr, key_rr_len);
             HIP_IFEL(hip_private_dsa_host_id_to_hit(host_id, hit,
+                                                    HIP_HIT_TYPE_HASH100),
+                     -1, "conversion from host id to hit failed\n");
+        }
+    } else if (type == HIP_HI_ECDSA) {
+        HIP_IFEL(((key_rr_len = ecdsa_to_key_rr(ecdsa_key, &key_rr)) <= 0), -1,
+                "key_rr_len\n");
+        if (is_public) {
+            HIP_IFEL(!(host_id_pub = malloc(sizeof(struct hip_host_id))),
+                    -ENOMEM, "malloc\n");
+            host_id_pub->hi_length = htons(key_rr_len
+                    + sizeof(struct hip_host_id_key_rdata));
+            memcpy(&host_id_pub->key[0], key_rr, key_rr_len);
+            HIP_IFEL(hip_ecdsa_host_id_to_hit(host_id_pub, hit, HIP_HIT_TYPE_HASH100),
+                    -1, "conversion from host id to hit failed\n");
+        } else {
+            HIP_IFEL(!(host_id = malloc(sizeof(struct hip_host_id_priv))),
+                    -ENOMEM,
+                    "malloc\n");
+
+            host_id->hi_length = htons(key_rr_len
+                    + sizeof(struct hip_host_id_key_rdata));
+            memcpy(&host_id->key, key_rr, key_rr_len);
+            HIP_IFEL(hip_private_ecdsa_host_id_to_hit(host_id, hit,
                                                     HIP_HIT_TYPE_HASH100),
                      -1, "conversion from host id to hit failed\n");
         }
@@ -3878,7 +3902,7 @@ static int hip_any_key_to_hit(void *any_key,
 
     HIP_DEBUG_HIT("hit", hit);
     HIP_DEBUG("hi is %s %s\n", (is_public ? "public" : "private"),
-              (is_dsa ? "dsa" : "rsa"));
+              (type == HIP_HI_ECDSA ? "ecdsa" : "rsa/dsa"));
 
 out_err:
 
@@ -3905,7 +3929,7 @@ out_err:
 int hip_private_rsa_to_hit(RSA *rsa_key,
                            struct in6_addr *hit)
 {
-    return hip_any_key_to_hit(rsa_key, hit, 0, 0);
+    return hip_any_key_to_hit(rsa_key, hit, 0, HIP_HI_RSA);
 }
 
 /**
@@ -3918,7 +3942,7 @@ int hip_private_rsa_to_hit(RSA *rsa_key,
 int hip_private_dsa_to_hit(DSA *dsa_key,
                            struct in6_addr *hit)
 {
-    return hip_any_key_to_hit(dsa_key, hit, 0, 1);
+    return hip_any_key_to_hit(dsa_key, hit, 0, HIP_HI_DSA);
 }
 
 /**
