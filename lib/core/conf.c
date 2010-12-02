@@ -285,6 +285,8 @@ static int hip_get_hits(hip_common_t *msg, const char *opt,
                     HIP_INFO(" RSA ");
                 } else if (data->lhi.algo == HIP_HI_DSA) {
                     HIP_INFO(" DSA ");
+                } else if (data->lhi.algo == HIP_HI_ECDSA) {
+                    HIP_INFO(" ECDSA ");
                 } else {
                     HIP_INFO(" Unknown algorithm (%d) ",
                              data->lhi.algo);
