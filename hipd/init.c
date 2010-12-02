@@ -581,7 +581,7 @@ static int hip_init_host_ids(void)
     if (stat(HIPL_SYSCONFDIR DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX,
              &status) && errno == ENOENT) {
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
-                                              "ecdsa", NULL, RSA_KEY_DEFAULT_BITS,
+                                              NULL, NULL, RSA_KEY_DEFAULT_BITS,
                                               DSA_KEY_DEFAULT_BITS, ECDSA_DEFAULT_CURVE),
                  1, "Failed to create keys to %s\n", HIPL_SYSCONFDIR);
     }
