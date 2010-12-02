@@ -275,8 +275,10 @@ algo_check_done:
         memset(y_bin, 0, (stop - start + 1));
         snprintf((char *) y_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *) y_b64));
+    } else if (algo == HIP_HI_ECDSA) {
+        HIP_IFEL(1, -1, "Call to unimplemented ECDSA case.\n");
     } else {
-        HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
+        HIP_IFEL(1, -1, "Unknown algorithm\n");
     }
 
     memset(sha_digest, '\0', sizeof(sha_digest));
@@ -342,8 +344,10 @@ algo_check_done:
         /* DSA_do_verify returns 1 if success. */
         cert->success = err == 1 ? 0 : -1;
         HIP_IFEL((err = err == 1 ? 0 : -1), -1, "DSA_do_verify error\n");
+    } else if (algo == HIP_HI_ECDSA) {
+        HIP_IFEL(1, -1, "Call to unimplemented ECDSA case.\n");
     } else {
-        HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
+        HIP_IFEL(1, -1, "Unknown algorithm\n");
     }
 
 out_err:
