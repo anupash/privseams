@@ -3623,6 +3623,62 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
 }
 
 /**
+ * Convert a EC structure from OpenSSL into an endpoint_hip structure
+ * used internally by the implementation.
+ *
+ * @param ec the EC key to be converted
+ * @param endpoint An output argument. This function allocates and
+ *                 stores the result of the conversion here. Caller
+ *                 is responsible of deallocation.
+ * @param endpoint_flags
+ * @param hostname host name for the EC key
+ * @return zero on success and negative on failure
+ */
+int ecdsa_to_hip_endpoint(EC_KEY *ecdsa,
+                        struct endpoint_hip **endpoint,
+                        se_hip_flags_t endpoint_flags,
+                        const char *hostname)
+{
+    int err = 0;
+    unsigned char *ecdsa_key_rr = NULL;
+    int ecdsa_key_rr_len;
+    struct endpoint_hip endpoint_hdr;
+
+    ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa, &ecdsa_key_rr);
+    if (ecdsa_key_rr_len <= 0) {
+        HIP_ERROR("ecdsa_key_rr_len <= 0\n");
+        err = -ENOMEM;
+        goto out_err;
+    }
+
+    hip_build_endpoint_hdr(&endpoint_hdr,
+                           hostname,
+                           endpoint_flags,
+                           HIP_HI_ECDSA,
+                           ecdsa_key_rr_len);
+
+    *endpoint = malloc(endpoint_hdr.length);
+    if (!(*endpoint)) {
+        err = -ENOMEM;
+        goto out_err;
+    }
+    memset(*endpoint, 0, endpoint_hdr.length);
+
+    hip_build_endpoint(*endpoint,
+                       &endpoint_hdr,
+                       hostname,
+                       ecdsa_key_rr);
+
+out_err:
+
+    if (ecdsa_key_rr) {
+        free(ecdsa_key_rr);
+    }
+
+    return err;
+}
+
+/**
  * Convert a DSA structure from OpenSSL into an endpoint_hip structure
  * used internally by the implementation.
  *
@@ -3863,6 +3919,19 @@ int hip_private_dsa_to_hit(DSA *dsa_key,
                            struct in6_addr *hit)
 {
     return hip_any_key_to_hit(dsa_key, hit, 0, 1);
+}
+
+/**
+ * translate a private ECDSA key to a HIT
+ *
+ * @param dsa_key the DSA key in OpenSSL format
+ * @param hit the resulting HIT will be stored here
+ * @return zero on success and negative on failure
+ */
+int hip_private_ecdsa_to_hit(EC_KEY *ecdsa_key,
+                             struct in6_addr *hit)
+{
+    return hip_any_key_to_hit(ecdsa_key, hit, 0, HIP_HI_ECDSA);
 }
 
 /**

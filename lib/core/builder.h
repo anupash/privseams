@@ -231,6 +231,10 @@ int dsa_to_hip_endpoint(DSA *dsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags_t endpoint_flags,
                         const char *hostname);
+int ecdsa_to_hip_endpoint(EC_KEY *ecdsa,
+                        struct endpoint_hip **endpoint,
+                        se_hip_flags_t endpoint_flags,
+                        const char *hostname);
 int hip_build_param_reg_info(hip_common_t *msg,
                              const void *service_list,
                              const unsigned int service_count);
@@ -249,6 +253,8 @@ int hip_private_rsa_to_hit(RSA *rsa_key,
                            struct in6_addr *hit);
 int hip_private_dsa_to_hit(DSA *dsa_key,
                            struct in6_addr *hit);
+int hip_private_ecdsa_to_hit(EC_KEY *ecdsa_key,
+                             struct in6_addr *hit);
 int hip_build_param_nat_pacing(struct hip_common *msg, uint32_t min_ta);
 
 int hip_build_param_reg_failed(struct hip_common *msg,

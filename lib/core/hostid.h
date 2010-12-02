@@ -33,6 +33,11 @@
 #include "protodefs.h"
 #include "state.h"
 
+struct hip_ecdsa_keylen {
+    int z_len;  // private key length
+    int Y_len;  // public key length
+};
+
 struct hip_rsa_keylen {
     int e_len;
     int e;
@@ -59,6 +64,12 @@ static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
     return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
 
+static inline int hip_ecdsa_host_id_to_hit(const struct hip_host_id *host_id,
+                                           struct in6_addr *hit, int hit_type)
+{
+    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+}
+
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
                        struct in6_addr *hit, int hit_type);
 int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
@@ -67,16 +78,25 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    struct in6_addr *hit,
                                    int hit_type);
+int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
+                                     struct in6_addr *hit,
+                                     int hit_type);
 int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                struct in6_addr *hit, int hit_type);
 void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
                         struct hip_rsa_keylen *ret,
                         int is_priv);
-
+int hip_get_ecdsa_keylen(const struct hip_host_id_priv *host_id,
+                         struct hip_ecdsa_keylen *ret);
 RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv);
 DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv);
+EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *host_id, int is_priv);
+
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
+int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr);
+
+
 int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
                                   void *msg);
 int hip_serialize_host_id_action(struct hip_common *msg,
@@ -86,6 +106,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                                  const char *hi_fmt,
                                  const char *hi_file,
                                  int rsa_key_bits,
-                                 int dsa_key_bits);
+                                 int dsa_key_bits,
+                                 int ecdsa_nid);
 
 #endif /* HIP_LIB_CORE_HOSTID_H */

@@ -1073,7 +1073,7 @@ out_err:
 static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
                               int optc, int send_only)
 {
-    int err          = 0, anon = 0, use_default = 0, rsa_key_bits = 0;
+    int err          = 0, anon = 0, use_default = 0, rsa_key_bits = 0, ecdsa_nid = ECDSA_DEFAULT_CURVE;
     int dsa_key_bits = 0;
     const char *fmt  = NULL, *file = NULL;
 
@@ -1112,7 +1112,7 @@ static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
          * to fit in the message. */
 
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
-                                                "dsa", NULL, 0, 0))) {
+                                                "dsa", NULL, 0, 0, 0))) {
             goto out_err;
         }
         HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
@@ -1120,7 +1120,7 @@ static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-                                                "dsa", NULL, 0, 0))) {
+                                                "dsa", NULL, 0, 0, 0))) {
             goto out_err;
         }
         HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
@@ -1128,7 +1128,7 @@ static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
-                                                "rsa", NULL, 0, 0))) {
+                                                "rsa", NULL, 0, 0, 0))) {
             goto out_err;
         }
         HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
@@ -1136,7 +1136,7 @@ static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-                                           "rsa", NULL, 0, 0))) {
+                                           "rsa", NULL, 0, 0, 0))) {
             goto out_err;
         }
         HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
@@ -1171,7 +1171,7 @@ static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
     }
 
     err = hip_serialize_host_id_action(msg, action, anon, use_default,
-                                       fmt, file, rsa_key_bits, dsa_key_bits);
+                                       fmt, file, rsa_key_bits, dsa_key_bits, ecdsa_nid);
 out_err:
     return err;
 }
