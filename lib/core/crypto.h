@@ -62,9 +62,11 @@
  * #define HIP_MAX_RSA_KEY_LEN 4096 */
 #define DSA_KEY_DEFAULT_BITS       1024
 #define RSA_KEY_DEFAULT_BITS       1024
+#define ECDSA_DEFAULT_CURVE        NIST_ECDSA_384
 
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE "/hip_host_dsa_key"
 #define DEFAULT_HOST_RSA_KEY_FILE_BASE "/hip_host_rsa_key"
+#define DEFAULT_HOST_ECDSA_KEY_FILE_BASE "/hip_host_ecdsa_key"
 #define DEFAULT_PUB_FILE_SUFFIX        ".pub"
 
 #define DEFAULT_PUB_HI_FILE_NAME_SUFFIX  "_pub"
@@ -95,12 +97,17 @@ void hip_free_dh(DH *target);
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 DSA *create_dsa_key(int bits);
 RSA *create_rsa_key(int bits);
+EC_KEY *create_ecdsa_key(int nid);
 int save_dsa_private_key(const char *filenamebase, DSA *dsa);
 int save_rsa_private_key(const char *filenamebase, RSA *rsa);
+int save_ecdsa_private_key(const char *filenamebase, EC_KEY *ecdsa);
 int load_dsa_private_key(const char *filenamebase, DSA **dsa);
 int load_rsa_private_key(const char *filename, RSA **rsa);
+int load_ecdsa_private_key(const char *filename, EC_KEY **ec);
 int impl_dsa_sign(uint8_t *digest, DSA *dsa, uint8_t *signature);
 int impl_dsa_verify(uint8_t *digest, DSA *dsa, uint8_t *signature);
+int impl_ecdsa_sign(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature);
+int impl_ecdsa_verify(uint8_t *digest, EC_KEY *dsa, uint8_t *signature);
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
                          uint8_t *enc_key, int direction);
