@@ -362,9 +362,17 @@
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
-#define HIP_HI_DEFAULT_ALGO           HIP_HI_RSA
+#define HIP_HI_ECDSA                  7  // according to RFC5201-bis
+#define HIP_SIG_ECDSA                 7
+#define HIP_HI_DEFAULT_ALGO           HIP_HI_ECDSA  /* is unused ...*/
 
 #define HIP_ANY_ALGO                  -1
+
+/* Elliptic curves */
+#define NIST_ECDSA_256                1
+#define NIST_ECDSA_384                2
+#define brainpoolP160r1               3
+#define NIST_ECDSA_283                4
 
 #define HIP_DIGEST_MD5                1
 #define HIP_DIGEST_SHA1               2
@@ -623,7 +631,7 @@ struct hip_host_id_priv {
 struct hip_lhi {
     struct in6_addr hit;
     uint16_t        anonymous;        /**< Is this an anonymous HI */
-    uint16_t        algo;        /**< HIP_HI_RSA or HIP_HI_DSA */
+    uint16_t        algo;        /**< HIP_HI_RSA or HIP_HI_DSA or HIP_ECDSA*/
 } __attribute__ ((packed));
 
 
