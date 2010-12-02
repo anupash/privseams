@@ -908,10 +908,14 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                     goto out_err;
                 }
             } else if(!strcmp(hi_fmt, "ecdsa")) {
-                // TODO
-                HIP_DEBUG("Should create ecdsa key here, but unimplemented.\n");
-                err = -1;
-                goto out_err;
+                HIP_DEBUG("bladf\n");
+                ecdsa_key = create_ecdsa_key(ecdsa_nid);
+                HIP_IFEL(!ecdsa_key, -EINVAL,
+                         "Creation of ECDSA key failed.\n");
+                if ((err = save_ecdsa_private_key(ecdsa_filenamebase, ecdsa_key))) {
+                    HIP_ERROR("Saving of ECDSA key failed.\n");
+                    goto out_err;
+                }
             } else {             /*RSA*/
                 rsa_key = create_rsa_key(rsa_key_bits);
                 HIP_IFEL(!rsa_key, -EINVAL,
