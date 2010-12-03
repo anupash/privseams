@@ -1260,24 +1260,12 @@ out_err:
     free(ecdsa_pub_host_id);
     free(rsa_host_id);
     free(rsa_pub_host_id);
-    if (dsa_key) {
-        DSA_free(dsa_key);
-    }
-    if (ecdsa_key) {
-        EC_KEY_free(ecdsa_key);
-    }
-    if (rsa_key) {
-        RSA_free(rsa_key);
-    }
-    if (dsa_pub_key) {
-        DSA_free(dsa_pub_key);
-    }
-    if (ecdsa_pub_key) {
-        EC_KEY_free(ecdsa_pub_key);
-    }
-    if (rsa_pub_key) {
-        RSA_free(rsa_pub_key);
-    }
+    DSA_free(dsa_key);
+    EC_KEY_free(ecdsa_key);
+    RSA_free(rsa_key);
+    DSA_free(dsa_pub_key);
+    EC_KEY_free(ecdsa_pub_key);
+    RSA_free(rsa_pub_key);
     free(dsa_key_rr);
     free(ecdsa_key_rr);
     free(rsa_key_rr);
