@@ -808,6 +808,8 @@ err_out:
  *
  * The caller is responsible for freeing the allocated ECDSA key.
  *
+ * @param nid openssl specific curve id, for the curve to be used with this key
+ *
  * @return the created ECDSA structure, otherwise NULL.
  *
  */

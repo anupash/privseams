@@ -675,6 +675,7 @@ out_err:
  *                Argument @c use_default must be zero when used.
  * @param rsa_key_bits size for RSA keys in bits
  * @param dsa_key_bits size of DSA keys in bits
+ * @param ecdsa_nid openssl specific curve id
  *
  * @return zero on success and negative on error
  */
