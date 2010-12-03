@@ -364,7 +364,6 @@
 #define HIP_SIG_RSA                   5
 #define HIP_HI_ECDSA                  7  // according to RFC5201-bis
 #define HIP_SIG_ECDSA                 7
-#define HIP_HI_DEFAULT_ALGO           HIP_HI_ECDSA  /* is unused ...*/
 
 #define HIP_ANY_ALGO                  -1
 
