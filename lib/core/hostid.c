@@ -1054,7 +1054,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
                 HIP_IFEL(dsa_key_rr_len <= 0, -EFAULT, "dsa_key_rr_len <= 0\n");
 
-                if ((err = hip_private_dsa_to_hit(dsa_key, &dsa_lhi.hit))) {
+                if ((err = hip_any_key_to_hit(dsa_key, &dsa_lhi.hit, 0, HIP_HI_DSA))) {
                    HIP_ERROR("Conversion from DSA to HIT failed\n");
                    goto out_err;
                 }
@@ -1080,8 +1080,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 HIP_IFEL(dsa_pub_key_rr_len <= 0, -EFAULT,
                          "dsa_pub_key_rr_len <= 0\n");
 
-                if ((err = hip_private_dsa_to_hit(dsa_pub_key,
-                                                  &dsa_pub_lhi.hit))) {
+                if ((err = hip_any_key_to_hit(dsa_pub_key, &dsa_pub_lhi.hit, 0, HIP_HI_DSA))) {
                     HIP_ERROR("Conversion from DSA to HIT failed\n");
                     goto out_err;
                 }
@@ -1105,7 +1104,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 HIP_IFEL(ecdsa_key_rr_len <= 0, -EFAULT,
                          "ecdsa_key_rr_len <= 0\n");
 
-                if ((err = hip_private_ecdsa_to_hit(ecdsa_key, &ecdsa_lhi.hit))) {
+                if ((err = hip_any_key_to_hit(ecdsa_key, &ecdsa_lhi.hit, 0, HIP_HI_ECDSA))) {
                    HIP_ERROR("Conversion from ECDSA to HIT failed\n");
                    goto out_err;
                 }
@@ -1131,8 +1130,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 HIP_IFEL(ecdsa_pub_key_rr_len <= 0, -EFAULT,
                          "ecdsa_pub_key_rr_len <= 0\n");
 
-                if ((err = hip_private_ecdsa_to_hit(ecdsa_pub_key,
-                                                    &ecdsa_pub_lhi.hit))) {
+                if ((err = hip_any_key_to_hit(ecdsa_pub_key, &ecdsa_pub_lhi.hit, 0, HIP_HI_ECDSA))) {
                     HIP_ERROR("Conversion from ECDSA to HIT failed\n");
                     goto out_err;
                 }
@@ -1160,7 +1158,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 goto out_err;
             }
 
-            if ((err = hip_private_rsa_to_hit(rsa_key, &rsa_lhi.hit))) {
+            if ((err = hip_any_key_to_hit(rsa_key, &rsa_lhi.hit, 0, HIP_HI_RSA))) {
                 HIP_ERROR("Conversion from RSA to HIT failed\n");
                 goto out_err;
             }
@@ -1180,7 +1178,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 goto out_err;
             }
 
-            if ((err = hip_private_rsa_to_hit(rsa_pub_key, &rsa_pub_lhi.hit))) {
+            if ((err = hip_any_key_to_hit(rsa_pub_key, &rsa_pub_lhi.hit, 0, HIP_HI_RSA))) {
                 HIP_ERROR("Conversion from RSA to HIT failed\n");
                 goto out_err;
             }

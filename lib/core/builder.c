@@ -3799,13 +3799,13 @@ out_err:
  * @param hit the resulting HIT will be stored here
  * @param is_public 0 if the host id constains the private key
  *                  or 1 otherwise
- * @param is_dsa 1 if the key is DSA or zero for RSA
+ * @param type the type of the host identity, HIP_HI_RSA, HIP_HI_DSA or HIP_HI_ECDSA
  * @return zero on success and negative on failure
  */
-static int hip_any_key_to_hit(void *any_key,
-                              hip_hit_t *hit,
-                              int is_public,
-                              int type)
+int hip_any_key_to_hit(void *any_key,
+                       hip_hit_t *hit,
+                       int is_public,
+                       int type)
 {
     int err = 0, key_rr_len;
     unsigned char *key_rr = NULL;
@@ -3916,45 +3916,6 @@ out_err:
     }
 
     return err;
-}
-
-/**
- * translate a private RSA key to a HIT
- *
- * @param rsa_key the RSA key in OpenSSL format
- * @param hit the resulting HIT will be stored here
- * @return zero on success and negative on failure
- */
-int hip_private_rsa_to_hit(RSA *rsa_key,
-                           struct in6_addr *hit)
-{
-    return hip_any_key_to_hit(rsa_key, hit, 0, HIP_HI_RSA);
-}
-
-/**
- * translate a private DSA key to a HIT
- *
- * @param dsa_key the DSA key in OpenSSL format
- * @param hit the resulting HIT will be stored here
- * @return zero on success and negative on failure
- */
-int hip_private_dsa_to_hit(DSA *dsa_key,
-                           struct in6_addr *hit)
-{
-    return hip_any_key_to_hit(dsa_key, hit, 0, HIP_HI_DSA);
-}
-
-/**
- * translate a private ECDSA key to a HIT
- *
- * @param dsa_key the DSA key in OpenSSL format
- * @param hit the resulting HIT will be stored here
- * @return zero on success and negative on failure
- */
-int hip_private_ecdsa_to_hit(EC_KEY *ecdsa_key,
-                             struct in6_addr *hit)
-{
-    return hip_any_key_to_hit(ecdsa_key, hit, 0, HIP_HI_ECDSA);
 }
 
 /**
