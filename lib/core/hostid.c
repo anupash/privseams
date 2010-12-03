@@ -1380,8 +1380,11 @@ int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr) {
 
     /* insert curve id */
     HIP_IFEL(!(group = EC_KEY_get0_group(ecdsa)),
-            -1, "Could not get group from key structure. \n");
-    curveid =  htons(get_ecdsa_curve_hip_name(EC_GROUP_get_curve_name(group)));
+             -1, "Could not get group from key structure. \n");
+    curveid = get_ecdsa_curve_hip_name(EC_GROUP_get_curve_name(group));
+    HIP_IFEL(curveid == HIP_UNSUPPORTED_CURVE,
+             -1, "Curve is not supported.\n");
+    curveid = htons(curveid);
     memcpy(buffer, &curveid, 2);
 
     /* serialize public key */
