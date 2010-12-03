@@ -3845,25 +3845,24 @@ static int hip_any_key_to_hit(void *any_key,
         }
     } else if (type == HIP_HI_ECDSA) {
         HIP_IFEL(((key_rr_len = ecdsa_to_key_rr(ecdsa_key, &key_rr)) <= 0), -1,
-                "key_rr_len\n");
+                 "key_rr_len\n");
         if (is_public) {
             HIP_IFEL(!(host_id_pub = malloc(sizeof(struct hip_host_id))),
-                    -ENOMEM, "malloc\n");
+                     -ENOMEM, "malloc\n");
             host_id_pub->hi_length = htons(key_rr_len
                     + sizeof(struct hip_host_id_key_rdata));
             memcpy(&host_id_pub->key[0], key_rr, key_rr_len);
             HIP_IFEL(hip_ecdsa_host_id_to_hit(host_id_pub, hit, HIP_HIT_TYPE_HASH100),
-                    -1, "conversion from host id to hit failed\n");
+                     -1, "conversion from host id to hit failed\n");
         } else {
             HIP_IFEL(!(host_id = malloc(sizeof(struct hip_host_id_priv))),
-                    -ENOMEM,
-                    "malloc\n");
+                     -ENOMEM, "malloc\n");
 
             host_id->hi_length = htons(key_rr_len
                     + sizeof(struct hip_host_id_key_rdata));
             memcpy(&host_id->key, key_rr, key_rr_len);
             HIP_IFEL(hip_private_ecdsa_host_id_to_hit(host_id, hit,
-                                                    HIP_HIT_TYPE_HASH100),
+                                                      HIP_HIT_TYPE_HASH100),
                      -1, "conversion from host id to hit failed\n");
         }
     } else { /* rsa */
