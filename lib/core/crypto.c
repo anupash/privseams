@@ -474,7 +474,7 @@ out_err:
 int impl_ecdsa_sign(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature)
 {
     ECDSA_SIG *ecdsa_sig = NULL;
-    int err          = 0;
+    int err              = 0;
     int sig_size;
 
     HIP_IFEL(!EC_KEY_check_key(ecdsa),
@@ -491,10 +491,7 @@ int impl_ecdsa_sign(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature)
     bn2bin_safe(ecdsa_sig->s, signature + (sig_size/2), sig_size/2);
 
 out_err:
-    if (ecdsa_sig) {
-        ECDSA_SIG_free(ecdsa_sig);
-    }
-
+    ECDSA_SIG_free(ecdsa_sig);
     return err;
 }
 
