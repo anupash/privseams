@@ -232,9 +232,9 @@ int dsa_to_hip_endpoint(DSA *dsa,
                         se_hip_flags_t endpoint_flags,
                         const char *hostname);
 int ecdsa_to_hip_endpoint(EC_KEY *ecdsa,
-                        struct endpoint_hip **endpoint,
-                        se_hip_flags_t endpoint_flags,
-                        const char *hostname);
+                          struct endpoint_hip **endpoint,
+                          se_hip_flags_t endpoint_flags,
+                          const char *hostname);
 int hip_any_key_to_hit(void *any_key,
                        hip_hit_t *hit,
                        int is_public,

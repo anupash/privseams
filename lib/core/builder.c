@@ -3623,7 +3623,7 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
 }
 
 /**
- * Convert a EC structure from OpenSSL into an endpoint_hip structure
+ * Convert an EC structure from OpenSSL into an endpoint_hip structure
  * used internally by the implementation.
  *
  * @param ec the EC key to be converted
@@ -3635,9 +3635,9 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
  * @return zero on success and negative on failure
  */
 int ecdsa_to_hip_endpoint(EC_KEY *ecdsa,
-                        struct endpoint_hip **endpoint,
-                        se_hip_flags_t endpoint_flags,
-                        const char *hostname)
+                          struct endpoint_hip **endpoint,
+                          se_hip_flags_t endpoint_flags,
+                          const char *hostname)
 {
     int err = 0;
     unsigned char *ecdsa_key_rr = NULL;
@@ -3670,11 +3670,7 @@ int ecdsa_to_hip_endpoint(EC_KEY *ecdsa,
                        ecdsa_key_rr);
 
 out_err:
-
-    if (ecdsa_key_rr) {
-        free(ecdsa_key_rr);
-    }
-
+    free(ecdsa_key_rr);
     return err;
 }
 

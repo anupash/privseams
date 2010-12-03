@@ -278,16 +278,16 @@ int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
     struct hip_host_id host_id_pub;
 
     HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
-            -1, "Failed computing key sizes.\n");
+             -1, "Failed computing key sizes.\n");
 
     memcpy(&host_id_pub, host_id,
-            sizeof(host_id_pub) - sizeof(host_id_pub.key) - sizeof(host_id_pub.hostname));
+           sizeof(host_id_pub) - sizeof(host_id_pub.key) - sizeof(host_id_pub.hostname));
     memcpy(host_id_pub.key, host_id->key, key_lens.Y_len+2);
     host_id_pub.hi_length = htons(key_lens.Y_len+2+sizeof(struct hip_host_id_key_rdata));
     host_id_pub.length = htons(sizeof(struct hip_host_id)-2);
 
     HIP_IFEL(hip_rsa_host_id_to_hit(&host_id_pub, hit, hit_type),
-            -1, "Failed to convert HI to HIT.\n");
+             -1, "Failed to convert HI to HIT.\n");
 
 out_err:
     return err;
@@ -378,7 +378,7 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *host_id) {
     }
 
 out_err:
-    if(err)
+    if (err)
         return -1;
     return nid;
 }
@@ -388,8 +388,6 @@ out_err:
  *
  * @param host_id the host id
  * @param ret the ECDSA key component lengths will be stored here
- * @param is_priv one if the host_id contains also the private key
- *                component or zero otherwise
  *
  * @return 0 on success, non-0 otherwise
  */
@@ -424,8 +422,8 @@ int hip_get_ecdsa_keylen(const struct hip_host_id_priv *host_id,
      *
      * TODO:  Why is size for pubkey correct???
      */
-    ret->z_len = (curve_size + 7)/8;
-    ret->Y_len = ret->z_len*2+1;
+    ret->z_len = (curve_size + 7) / 8;
+    ret->Y_len = ret->z_len * 2 + 1;
 
 out_err:
     return err;
@@ -572,51 +570,51 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
  */
 EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *host_id, int is_priv)
 {
-    int err = 0;
-    int nid = 0;
-    EC_KEY *ret;
-    EC_POINT *pub_key = NULL;
-    EC_GROUP *group = NULL;
-    BIGNUM *priv_key = NULL;
+    int err             = 0;
+    int nid             = 0;
+    EC_POINT *pub_key   = NULL;
+    EC_GROUP *group     = NULL;
+    BIGNUM *priv_key    = NULL;
     struct hip_ecdsa_keylen key_lens;
+    EC_KEY *ret;
 
     nid = get_ecdsa_curve_nid((const struct hip_host_id *) host_id);
     HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
-            -1, "Failed computing key sizes.\n");
+             -1, "Failed computing key sizes.\n");
 
     /* Build public key structure from key rr */
     HIP_IFEL(!(ret = EC_KEY_new()),
-            -1, "Failed to init new key. \n");
+             -1, "Failed to init new key. \n");
 
     HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(nid)),
-            -1, "Failed building the group.\n");
+             -1, "Failed building the group.\n");
 
     HIP_IFEL(!(pub_key = EC_POINT_new(group)),
-            -1, "Failed to init public key (point).\n");
+             -1, "Failed to init public key (point).\n");
 
     HIP_IFEL(!EC_KEY_set_group(ret, group),
-            -1, "Failed setting the group for key.\n");
+             -1, "Failed setting the group for key.\n");
 
     HIP_IFEL(!EC_POINT_oct2point(group, pub_key, host_id->key+2, key_lens.Y_len, NULL),
-            -1, "Failed deserializing public key.\n");
+             -1, "Failed deserializing public key.\n");
 
     HIP_IFEL(!EC_KEY_set_public_key(ret, pub_key),
             -1, "Failed setting public key.\n");
 
     /* Build private key from key rr */
-    if(is_priv) {
+    if (is_priv) {
         HIP_IFEL(!(priv_key = BN_bin2bn(host_id->key + 2 + key_lens.Y_len, key_lens.z_len, priv_key)),
-                -1, "Failed deserializing private key.\n");
+                 -1, "Failed deserializing private key.\n");
         HIP_IFEL(!EC_KEY_set_private_key(ret, priv_key),
-                -1, "Failed setting private key.\n");
+                 -1, "Failed setting private key.\n");
     }
 
     /* Check the result before returning it */
     HIP_IFEL(!EC_KEY_check_key(ret),
-            -1, "Key check failed. \n");
+             -1, "Key check failed. \n");
 
 out_err:
-    if(err)
+    if (err)
         return NULL;
     return ret;
 }
@@ -688,16 +686,16 @@ int hip_serialize_host_id_action(struct hip_common *msg,
     int dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0, ecdsa_pub_key_rr_len = 0;
     hip_hdr_type_t numeric_action             = 0;
     char addrstr[INET6_ADDRSTRLEN], hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-    char *dsa_filenamebase                    = NULL, *rsa_filenamebase = NULL, *ecdsa_filenamebase = NULL;
+    char *dsa_filenamebase                    = NULL, *rsa_filenamebase     = NULL, *ecdsa_filenamebase     = NULL;
     char *dsa_filenamebase_pub                = NULL, *rsa_filenamebase_pub = NULL, *ecdsa_filenamebase_pub = NULL;
-    unsigned char *dsa_key_rr                 = NULL, *rsa_key_rr = NULL, *ecdsa_key_rr = NULL;
-    unsigned char *dsa_pub_key_rr             = NULL, *rsa_pub_key_rr = NULL, *ecdsa_pub_key_rr = NULL;
-    DSA *dsa_key                              = NULL, *dsa_pub_key = NULL;
-    RSA *rsa_key                              = NULL, *rsa_pub_key = NULL;
-    EC_KEY *ecdsa_key                         = NULL, *ecdsa_pub_key = NULL;
+    unsigned char *dsa_key_rr                 = NULL, *rsa_key_rr           = NULL, *ecdsa_key_rr           = NULL;
+    unsigned char *dsa_pub_key_rr             = NULL, *rsa_pub_key_rr       = NULL, *ecdsa_pub_key_rr       = NULL;
+    DSA *dsa_key                              = NULL, *dsa_pub_key          = NULL;
+    RSA *rsa_key                              = NULL, *rsa_pub_key          = NULL;
+    EC_KEY *ecdsa_key                         = NULL, *ecdsa_pub_key        = NULL;
     struct hip_lhi rsa_lhi, dsa_lhi, ecdsa_lhi, rsa_pub_lhi, dsa_pub_lhi, ecdsa_pub_lhi;
-    struct hip_host_id *dsa_host_id           = NULL, *rsa_host_id = NULL, *ecdsa_host_id = NULL;
-    struct hip_host_id *dsa_pub_host_id       = NULL, *rsa_pub_host_id = NULL, *ecdsa_pub_host_id = NULL;
+    struct hip_host_id *dsa_host_id           = NULL, *rsa_host_id           = NULL, *ecdsa_host_id         = NULL;
+    struct hip_host_id *dsa_pub_host_id       = NULL, *rsa_pub_host_id       = NULL, *ecdsa_pub_host_id     = NULL;
     struct endpoint_hip *endpoint_dsa_hip     = NULL;
     struct endpoint_hip *endpoint_dsa_pub_hip = NULL;
     struct endpoint_hip *endpoint_ecdsa_hip     = NULL;
@@ -805,7 +803,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE);
 
             if (anon || hi_fmt == NULL) {
-                ecdsa_filenamebase     = malloc(HOST_ID_FILENAME_MAX_LEN);
+                ecdsa_filenamebase = malloc(HOST_ID_FILENAME_MAX_LEN);
                 HIP_IFEL(!ecdsa_filenamebase, -ENOMEM,
                          "Could not allocate ECDSA filename.\n");
 
@@ -905,7 +903,6 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                     goto out_err;
                 }
             } else if(!strcmp(hi_fmt, "ecdsa")) {
-                HIP_DEBUG("bladf\n");
                 ecdsa_key = create_ecdsa_key(ecdsa_nid);
                 HIP_IFEL(!ecdsa_key, -EINVAL,
                          "Creation of ECDSA key failed.\n");
@@ -1315,11 +1312,11 @@ int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr) {
 
     /* sanity check */
     HIP_IFEL(!EC_KEY_check_key(ecdsa),
-            -1, "Invalid public key.\n");
+             -1, "Invalid public key.\n");
 
     /* get sizes for public and private key, allocate memory for output */
     HIP_IFEL(!(pub_key_len = EC_POINT_point2oct(EC_KEY_get0_group(ecdsa), EC_KEY_get0_public_key(ecdsa), EC_KEY_get_conv_form(ecdsa), NULL, 0, NULL)),
-            -1, "Failed to calculate out length of serialized key.\n");
+             -1, "Failed to calculate out length of serialized key.\n");
     public = ((priv_key = EC_KEY_get0_private_key(ecdsa)) == NULL ? 1: 0);
     if(!public) {
         priv_key_len = (pub_key_len - 1)/2;
@@ -1339,7 +1336,7 @@ int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr) {
 
     /* serialize public key */
     HIP_IFEL(!EC_POINT_point2oct(EC_KEY_get0_group(ecdsa), EC_KEY_get0_public_key(ecdsa), EC_KEY_get_conv_form(ecdsa), buffer + 2, out_len, NULL),
-            -1, "Failed to serialize public key key.\n");
+             -1, "Failed to serialize public key key.\n");
 
     /* serialize private key */
     if(!public) {
