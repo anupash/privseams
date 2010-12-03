@@ -105,13 +105,11 @@ int hip_ecdsa_sign(void *priv_key, struct hip_common *msg)
 
     if (hip_get_msg_type(msg) == HIP_R1) {
         HIP_IFEL(hip_build_param_signature2_contents(
-                msg, signature,
-                siglen, HIP_SIG_ECDSA),
-                -1, "Building of signature failed\n");
+                     msg, signature, siglen, HIP_SIG_ECDSA),
+                 -1, "Building of signature failed\n");
     } else {
         HIP_IFEL(hip_build_param_signature_contents(
-                msg, signature,
-                siglen, HIP_SIG_ECDSA),
+                     msg, signature, siglen, HIP_SIG_ECDSA),
                  -1, "Building of signature failed\n");
     }
 
@@ -252,7 +250,7 @@ out_err:
  */
 int hip_ecdsa_verify(void *peer_pub, struct hip_common *msg)
 {
-    return verify((EC_KEY *) peer_pub, msg, 2);
+    return verify(peer_pub, msg, 2);
 }
 
 /**
@@ -269,7 +267,7 @@ int hip_rsa_verify(void *peer_pub, struct hip_common *msg)
     HIP_DEBUG("Start PERF_RSA_VERIFY_IMPL\n");
     hip_perf_start_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
 #endif
-    return verify((RSA *) peer_pub, msg, 1);
+    return verify(peer_pub, msg, 1);
 }
 
 /**
@@ -286,7 +284,7 @@ int hip_dsa_verify(void *peer_pub, struct hip_common *msg)
     HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
     hip_perf_start_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
 #endif
-    return verify((DSA *) peer_pub, msg, 0);
+    return verify(peer_pub, msg, 0);
 }
 
 /**
