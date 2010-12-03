@@ -843,8 +843,11 @@ EC_KEY *create_ecdsa_key(int nid) {
     }
 
 out_err:
-    if(err)
+    if(err) {
+        EC_KEY_free(eckey);
+        EC_GROUP_free(group);
         return NULL;
+    }
     return eckey;
 }
 
