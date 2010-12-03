@@ -56,6 +56,7 @@
 #include "lib/core/hostid.h"
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
+#include "lib/core/ife.h"
 #include "dlist.h"
 #include "firewall.h"
 #include "helpers.h"
@@ -475,7 +476,7 @@ static struct hip_host_id *load_ecdsa_file(FILE *fp)
     HIP_IFEL(!(ecdsa_key_rr     = malloc(sizeof(struct hip_host_id))),
              -ENOMEM, "Could not allocate memory for ecdsa_key_rr\n");
     ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa, &ecdsa_key_rr);
-    HIP_IFLE(!(hi = malloc(sizeof(struct hip_host_id))),
+    HIP_IFEL(!(hi = malloc(sizeof(struct hip_host_id))),
              -ENOMEM, "Could not allocat memory for host identity.\n");
 
     hip_build_param_host_id_hdr(hi, NULL, ecdsa_key_rr_len, HIP_HI_ECDSA);
