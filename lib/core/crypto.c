@@ -476,9 +476,6 @@ int impl_ecdsa_sign(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature)
     ECDSA_SIG *ecdsa_sig = NULL;
     int err          = 0;
     int sig_size;
-    unsigned char der_sig[200];
-    unsigned char *tmp;
-    size_t der_siglen = 0;
 
     HIP_IFEL(!EC_KEY_check_key(ecdsa),
             -1, "Check of signing key failed. \n");
@@ -488,10 +485,6 @@ int impl_ecdsa_sign(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature)
 
     ecdsa_sig = ECDSA_do_sign(digest, HIP_AH_SHA_LEN, ecdsa);
     HIP_IFEL(!ecdsa_sig, 1, "ECDSA_do_sign failed\n");
-
-    tmp = &der_sig[0];
-    memset(&der_sig[0],0,der_siglen+10);
-    der_siglen = i2d_ECDSA_SIG(ecdsa_sig, &tmp);
 
     /* build signature from ECDSA_SIG struct */
     bn2bin_safe(ecdsa_sig->r, signature, sig_size/2);
