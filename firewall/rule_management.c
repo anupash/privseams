@@ -460,22 +460,34 @@ static struct hip_host_id *load_dsa_file(FILE *fp)
  */
 static struct hip_host_id *load_ecdsa_file(FILE *fp)
 {
-    struct hip_host_id *hi    = NULL;
-    EC_KEY *ecdsa                  = NULL;
+    int err                     = 0;
+    struct hip_host_id *hi      = NULL;
+    EC_KEY *ecdsa               = NULL;
     unsigned char *ecdsa_key_rr = NULL;
     int ecdsa_key_rr_len;
 
     ecdsa = PEM_read_EC_PUBKEY(fp, NULL, NULL, NULL);
     if (!ecdsa) {
         HIP_DEBUG("reading ECDSA file failed \n");
-        EC_KEY_free(ecdsa);
-        return NULL;
+        err = -1;
+        goto out_err;
     }
-    ecdsa_key_rr     = malloc(sizeof(struct hip_host_id));
+    HIP_IFEL(!(ecdsa_key_rr     = malloc(sizeof(struct hip_host_id))),
+             -ENOMEM, "Could not allocate memory for ecdsa_key_rr\n");
     ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa, &ecdsa_key_rr);
-    hi             = malloc(sizeof(struct hip_host_id));
+    HIP_IFLE(!(hi = malloc(sizeof(struct hip_host_id))),
+             -ENOMEM, "Could not allocat memory for host identity.\n");
+
     hip_build_param_host_id_hdr(hi, NULL, ecdsa_key_rr_len, HIP_HI_ECDSA);
     hip_build_param_host_id_only(hi, ecdsa_key_rr, NULL);
+
+out_err:
+    if (err) {
+        EC_KEY_free(ecdsa);
+        free(ecdsa_key_rr);
+        free(hi);
+        return NULL;
+    }
     return hi;
 }
 
