@@ -347,16 +347,22 @@ static int get_ecdsa_curve_hip_name(const int nid) {
 
 /*
  * Get the curve nid from the ECC curve field in the host_id parameter.
+ * It is contained in the first two bytes of the ecdsa keyrr data.
+ *
+ * @param host_id a pointer to the ecdsa based host id from which to get the curve id information
+ *
+ * @return the openssl specific curve id used with this host identity or -1 on error.
  */
 static int get_ecdsa_curve_nid(const struct hip_host_id *host_id) {
     int err = 0;
-    const uint16_t *curve_p;
     uint16_t curve_id;
     int nid;
 
-    /* Determine the curve */
-    curve_p = (const uint16_t *) &host_id->key[0];
-    curve_id = ntohs(*curve_p);
+    /* Determine the curve
+     * The first two bytes contain the hip curve identifier
+     * as defined in RFC5201-bis
+     * TODO: Maybe this should be implemented using a proper struct representation. */
+    curve_id = ntohs(*(const uint16_t*)host_id->key);
     HIP_DEBUG("Got curve id %d \n", curve_id);
     switch (curve_id) {
     case NIST_ECDSA_256:
