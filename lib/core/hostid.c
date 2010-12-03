@@ -326,26 +326,23 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
 
 /*
  * Translate the openssl specific curve id into the coressponding HIP id.
+ *
+ * @param nid the openssl specific ID of the curve
+ *
+ * @return the HIP ID of the curve (according to RFC5201-bis) or HIP_UNSUPPORTED_CURVE on error
+ *
  */
 static int get_ecdsa_curve_hip_name(const int nid) {
-    int err = 0;
-
     /* Determine the curve */
     switch (nid) {
     case NID_secp256k1:
         return NIST_ECDSA_256;
-    case NID_sect283k1:
-        return NIST_ECDSA_283;
     case NID_secp384r1:
         return NIST_ECDSA_384;
     default:
         HIP_DEBUG("Curve not supported.\n");
-        err = -1;
-        goto out_err;
+        return HIP_UNSUPPORTED_CURVE;
     }
-
-out_err:
-    return err;
 }
 
 /*
