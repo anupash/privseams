@@ -139,7 +139,7 @@ compile
 # internal autoconf tests, bootstrap the dist tarball, build out-of-tree, etc
 run_program "make -j distcheck"
 
-# run unit tests (this check needs to run after HIPL has been compiled)
+# run unit tests (needs to run after HIPL has been configured)
 run_program "make -j check"
 
 # PISA configuration
