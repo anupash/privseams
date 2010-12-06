@@ -4,7 +4,7 @@ TMP_DIR='~/.hipl.syncall.tmp.dir'
 
 HOSTS="
 halko.pc.infrahip.net
-allerian.infrahipnet
+allerian.infra.hipnet
 garadar.infrahip.net
 cenarion.infrahip.net
 netherstorm.infrahip.net
@@ -16,10 +16,10 @@ ironforge.infrahip.net
 "
 
 COMMANDS="
-mkdir $TMP_DIR
-cd $TMP_DIR
-rm -rf trunk
-rm hipl.tar.gz
+mkdir -p $TMP_DIR &&
+cd $TMP_DIR &&
+rm -rf trunk &&
+rm -f hipl.tar.gz &&
 wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
     tar xvzf hipl.tar.gz &&
     cd trunk &&
