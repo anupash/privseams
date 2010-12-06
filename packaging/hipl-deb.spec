@@ -10,7 +10,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2 and MIT/Expat
 Group: System Environment/Kernel
-BuildRequires: gcc automake autoconf libtool xmlto libssl-dev iptables-dev dpkg-dev pax
+BuildRequires: gcc, automake, autoconf, libtool, xmlto, libssl-dev, iptables-dev, dpkg-dev, pax
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -67,18 +67,18 @@ make -j 32
 %package all
 Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
 Group: System Environment/Kernel
-Requires: hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
+Requires: hipl-firewall, hipl-daemon, hipl-doc, hipl-dnsproxy
 %description all
 
 %package daemon
-Requires: openssl iptables libnet-ip-perl libnet-dns-perl
-Obsoletes: minimal tools
+Requires: openssl, iptables, libnet-ip-perl, libnet-dns-perl
+Obsoletes: minimal, tools
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
 
 %package firewall
-Requires: openssl iptables
+Requires: openssl, iptables
 Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control, Local Scope Identifier support, userspace BEET-mode IPsec (for kernels below < 2.6.27) and system-based opportunistic mode for HIP.
 Group: System Environment/Kernel
 %description firewall
