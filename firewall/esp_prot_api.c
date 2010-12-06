@@ -562,21 +562,13 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 
     if (entry->esp_prot_transform == ESP_PROT_TFM_TREE) {
         for (i = 0; i < num_parallel_hchains; i++) {
-            if (entry->active_hash_items[i]) {
-                htree_free(entry->active_hash_items[i]);
-            }
-            if (entry->next_hash_items[i]) {
-                htree_free(entry->next_hash_items[i]);
-            }
+            htree_free(entry->active_hash_items[i]);
+            htree_free(entry->next_hash_items[i]);
         }
     } else {
         for (i = 0; i < num_parallel_hchains; i++) {
-            if (entry->active_hash_items[i]) {
-                hchain_free(entry->active_hash_items[i]);
-            }
-            if (entry->next_hash_items[i]) {
-                hchain_free(entry->next_hash_items[i]);
-            }
+            hchain_free(entry->active_hash_items[i]);
+            hchain_free(entry->next_hash_items[i]);
         }
     }
 }
