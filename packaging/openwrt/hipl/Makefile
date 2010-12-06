@@ -28,7 +28,7 @@ endef
 define Package/hipl-hipfw
     SECTION:=net
     CATEGORY:=Network
-    DEPENDS:=hipl-common +libconfig +iptables +ip6tables +kmod-ip6tables +kmod-ipt-queue
+    DEPENDS:=hipl-common +libconfig +iptables +ip6tables +kmod-ipt-queue
     TITLE:=HIPL firewall
     URL:=http://hipl.hiit.fi/
 endef
