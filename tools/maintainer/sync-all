@@ -16,6 +16,7 @@ ironforge.infrahip.net
 "
 
 COMMANDS="
+mkdir $TMP_DIR
 cd $TMP_DIR
 rm -rf trunk
 rm hipl.tar.gz
