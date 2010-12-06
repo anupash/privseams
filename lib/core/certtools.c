@@ -352,12 +352,8 @@ out_err:
     free(modulus_b64);
     free(modulus);
     free(e_hex);
-    if (rsa) {
-        RSA_free(rsa);
-    }
-    if (dsa) {
-        DSA_free(dsa);
-    }
+    RSA_free(rsa);
+    DSA_free(dsa);
     return err;
 }
 
@@ -856,9 +852,7 @@ out_err:
  */
 void hip_cert_free_conf(CONF *conf)
 {
-    if (conf) {
-        NCONF_free(conf);
-    }
+    NCONF_free(conf);
 }
 
 /**

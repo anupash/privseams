@@ -289,9 +289,7 @@ out_err:
     free(e_bin);
     free(n_bin);
     /* encoded */
-    if (e_hex) {
-        OPENSSL_free(e_hex);
-    }
+    OPENSSL_free(e_hex);
     free(n_b64);
 
     /* DSA pubkey */
@@ -305,9 +303,7 @@ out_err:
     free(g_b64);
     free(y_b64);
 
-    if (dsa_sig) {
-        DSA_SIG_free(dsa_sig);
-    }
+    DSA_SIG_free(dsa_sig);
 
     return err;
 }
@@ -635,15 +631,10 @@ out_err:
     free(cert);
     free(signature);
     free(e_hex);
-    if (rsa) {
-        RSA_free(rsa);
-    }
-    if (dsa) {
-        DSA_free(dsa);
-    }
-    if (dsa_sig) {
-        DSA_SIG_free(dsa_sig);
-    }
+    RSA_free(rsa);
+    DSA_free(dsa);
+    DSA_SIG_free(dsa_sig);
+
     return err;
 }
 
@@ -943,13 +934,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
 
 out_err:
     free(host_id);
-    if (req != NULL) {
-        X509_REQ_free(req);
-    }
-    if (extlist != NULL) {
-        sk_X509_EXTENSION_pop_free(extlist, X509_EXTENSION_free);
-    }
-
+    X509_REQ_free(req);
+    sk_X509_EXTENSION_pop_free(extlist, X509_EXTENSION_free);
     return err;
 }
 
@@ -1029,11 +1015,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *msg)
 
 out_err:
     X509_STORE_CTX_cleanup(verify_ctx);
-    if (store) {
-        X509_STORE_free(store);
-    }
-    if (cert) {
-        X509_free(cert);
-    }
+    X509_STORE_free(store);
+    X509_free(cert);
     return err;
 }

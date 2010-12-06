@@ -497,10 +497,7 @@ int impl_dsa_sign(uint8_t *digest, DSA *dsa, uint8_t *signature)
     bn2bin_safe(dsa_sig->s, &signature[1 + DSA_PRIV], DSA_PRIV);
 
 out_err:
-    if (dsa_sig) {
-        DSA_SIG_free(dsa_sig);
-    }
-
+    DSA_SIG_free(dsa_sig);
     return err;
 }
 
@@ -537,9 +534,7 @@ int impl_dsa_verify(uint8_t *digest, DSA *dsa, uint8_t *signature)
 #endif
 
 out_err:
-    if (dsa_sig) {
-        DSA_SIG_free(dsa_sig);
-    }
+    DSA_SIG_free(dsa_sig);
     return err;
 }
 
@@ -571,10 +566,7 @@ int hip_gen_dh_shared_key(DH *dh,
     err = DH_compute_key(dh_shared_key, peer_pub_key, dh);
 
 out_err:
-    if (peer_pub_key) {
-        BN_free(peer_pub_key);
-    }
-
+    BN_free(peer_pub_key);
     return err;
 }
 
@@ -635,9 +627,7 @@ DH *hip_generate_dh_key(int group_id)
 
 void hip_free_dh(DH *dh)
 {
-    if (dh) {
-        DH_free(dh);
-    }
+    DH_free(dh);
 }
 
 /**
@@ -692,11 +682,7 @@ DSA *create_dsa_key(int bits)
     return dsa;
 
 err_out:
-
-    if (dsa) {
-        DSA_free(dsa);
-    }
-
+    DSA_free(dsa);
     return NULL;
 }
 
@@ -725,11 +711,7 @@ RSA *create_rsa_key(int bits)
     return rsa;
 
 err_out:
-
-    if (rsa) {
-        RSA_free(rsa);
-    }
-
+    RSA_free(rsa);
     return NULL;
 }
 

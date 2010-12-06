@@ -865,10 +865,9 @@ static void hip_hadb_delete_state(hip_ha_t *ha)
     free(ha->dh_shared_key);
     free(ha->hip_msg_retrans.buf);
     if (ha->peer_pub) {
-        if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA &&
-            ha->peer_pub_key) {
+        if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA) {
             RSA_free(ha->peer_pub_key);
-        } else if (ha->peer_pub_key) {
+        } else {
             DSA_free(ha->peer_pub_key);
         }
         free(ha->peer_pub);

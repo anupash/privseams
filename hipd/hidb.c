@@ -248,9 +248,9 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
         hip_uninit_r1(id->r1);
     }
 
-    if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA && id->private_key) {
+    if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA) {
         RSA_free(id->private_key);
-    } else if (id->private_key) {
+    } else {
         DSA_free(id->private_key);
     }
 
@@ -504,12 +504,10 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 out_err:
     if (err && id_entry) {
         if (id_entry->host_id) {
-            if (id_entry->private_key) {
-                if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA) {
-                    RSA_free(id_entry->private_key);
-                } else {
-                    DSA_free(id_entry->private_key);
-                }
+            if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA) {
+                RSA_free(id_entry->private_key);
+            } else {
+                DSA_free(id_entry->private_key);
             }
             free(id_entry->host_id);
         }

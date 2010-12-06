@@ -84,9 +84,7 @@ static int khi_encode(unsigned char *orig, int orig_len,
              "BN_bn2bin_safe\n");
 
 out_err:
-    if (bn) {
-        BN_free(bn);
-    }
+    BN_free(bn);
     return err;
 }
 
@@ -885,18 +883,10 @@ out_err:
     free(dsa_pub_host_id);
     free(rsa_host_id);
     free(rsa_pub_host_id);
-    if (dsa_key) {
-        DSA_free(dsa_key);
-    }
-    if (rsa_key) {
-        RSA_free(rsa_key);
-    }
-    if (dsa_pub_key) {
-        DSA_free(dsa_pub_key);
-    }
-    if (rsa_pub_key) {
-        RSA_free(rsa_pub_key);
-    }
+    DSA_free(dsa_key);
+    RSA_free(rsa_key);
+    DSA_free(dsa_pub_key);
+    RSA_free(rsa_pub_key);
     free(dsa_key_rr);
     free(rsa_key_rr);
     free(dsa_pub_key_rr);
