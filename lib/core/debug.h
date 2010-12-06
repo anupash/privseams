@@ -49,9 +49,7 @@
  *     HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
  *
  * out_err:
- *     if (mem != NULL) {
- *         free(mem);
- *     }
+ *     free(mem);
  *     return err;
  * }
  * </pre>
