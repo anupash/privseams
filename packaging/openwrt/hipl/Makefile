@@ -16,7 +16,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/hipl-hipd
     SECTION:=net
     CATEGORY:=Network
-    DEPENDS:=hipl-common +genl +ip +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
+    DEPENDS:=hipl-common +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
     TITLE:=HIPL daemon
     URL:=http://hipl.hiit.fi/
 endef
