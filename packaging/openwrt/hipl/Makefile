@@ -5,7 +5,7 @@ PKG_VERSION:=1.0.6
 PKG_RELEASE:=6
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://hipl.hiit.fi/hipl/contrib/openwrt/
+PKG_SOURCE_URL:=http://hipl.hiit.fi/hipl/
 PKG_CAT:=zcat
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
