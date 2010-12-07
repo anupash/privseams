@@ -1,0 +1,25 @@
+Index: package/kernel/modules/netdevices.mk
+===================================================================
+--- package/kernel/modules/netdevices.mk 2009-09-16 15:11:43.000000000 +0200
++++ package/kernel/modules/netdevices.mk 2009-09-15 14:56:25.000000000 +0200
+@@ -7,6 +7,20 @@
+ 
+ NETWORK_DEVICES_MENU:=Network Devices
+ 
++define KernelPackage/dummy
++  SUBMENU:=$(NETWORK_DEVICES_MENU)
++  TITLE:=Dummy network device
++  KCONFIG:=CONFIG_DUMMY
++  FILES:=$(LINUX_DIR)/drivers/net/dummy.$(LINUX_KMOD_SUFFIX)
++  AUTOLOAD:=$(call AutoLoad,34,dummy)
++endef
++
++define KernelPackage/dummy/description
++  The dummy network device
++endef
++
++$(eval $(call KernelPackage,dummy))
++
+ define KernelPackage/libphy
+   SUBMENU:=$(NETWORK_DEVICES_MENU)
+   TITLE:=PHY library
