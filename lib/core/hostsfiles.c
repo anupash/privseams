@@ -75,24 +75,24 @@ static int hip_resolve_hostname(const char* hostname, struct in6_addr *ip)
     HIP_IFEL(!hostname || !ip, -1, "unexpected null pointer");
 
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family   = AF_UNSPEC;
-    hints.ai_flags    = (AI_ADDRCONFIG);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_flags  = AI_ADDRCONFIG;
 
     HIP_IFEL((errno = getaddrinfo(hostname, NULL, &hints, &result)),
              -1,
              "failed to look up IP from name: %s\n", gai_strerror(errno));
 
     switch (result->ai_addr->sa_family) {
-        case AF_INET:
-            IPV4_TO_IPV6_MAP(&((struct sockaddr_in *)result->ai_addr)->sin_addr, ip);
-            break;
-        case AF_INET6:
-            ipv6_addr_copy(ip, &((struct sockaddr_in6 *)result->ai_addr)->sin6_addr);
-            break;
-        default:
-            HIP_ERROR("unknown address type\n");
-            err = -1;
-            goto out_err;
+    case AF_INET:
+        IPV4_TO_IPV6_MAP(&((struct sockaddr_in *)result->ai_addr)->sin_addr, ip);
+        break;
+    case AF_INET6:
+        ipv6_addr_copy(ip, &((struct sockaddr_in6 *)result->ai_addr)->sin6_addr);
+        break;
+    default:
+        HIP_ERROR("unknown address type\n");
+        err = -1;
+        goto out_err;
     }
 
     HIP_DEBUG_IN6ADDR("peer ip address", ip);
@@ -440,14 +440,14 @@ int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
     HIP_IFEL(hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
                                           hip_map_first_id_to_hostname_from_hosts,
                                           hit, hostname),
-           -1,
-           "Failed to map id to hostname\n");
+             -1,
+             "Failed to map id to hostname\n");
 
     HIP_IFEL(hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
                                           hip_map_first_hostname_to_lsi_from_hosts,
                                           hostname, &mapped_lsi),
-           -1,
-           "Failed to map hostname to lsi\n");
+             -1,
+             "Failed to map hostname to lsi\n");
 
     IPV6_TO_IPV4_MAP(&mapped_lsi, lsi);
 
