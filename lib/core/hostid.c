@@ -335,7 +335,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
 static int get_ecdsa_curve_hip_name(const int nid) {
     /* Determine the curve */
     switch (nid) {
-    case NID_secp256k1:
+    case NID_X9_62_prime256v1:
         return NIST_ECDSA_256;
     case NID_secp384r1:
         return NIST_ECDSA_384;
@@ -366,8 +366,8 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *host_id) {
     HIP_DEBUG("Got curve id %d \n", curve_id);
     switch (curve_id) {
     case NIST_ECDSA_256:
-        HIP_DEBUG("Using curve secp256k1 \n");
-        nid = NID_secp256k1;
+        HIP_DEBUG("Using curve secp256r1/prime256v1 \n");
+        nid = NID_X9_62_prime256v1;
         break;
     case NIST_ECDSA_384:
         HIP_DEBUG("Using curve secp384r1 \n");
@@ -406,7 +406,7 @@ int hip_get_ecdsa_keylen(const struct hip_host_id_priv *host_id,
 
     nid = get_ecdsa_curve_nid((const struct hip_host_id *) host_id);
     switch (nid) {
-    case NID_secp256k1:
+    case NID_X9_62_prime256v1:
         curve_size = 256;
         break;
     case NID_secp384r1:
