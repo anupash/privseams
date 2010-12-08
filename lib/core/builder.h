@@ -97,6 +97,10 @@ int hip_build_param_hmac_contents(struct hip_common *,
 int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
                                 struct hip_common *msg_copy,
                                 struct hip_host_id *host_id);
+int hip_build_host_id_from_param(const struct hip_host_id *param,
+                                 struct hip_host_id *peer_host_id);
+int hip_build_param_host_id(struct hip_common *msg,
+                            const struct hip_host_id *host_id);
 void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
                                  const char *hostname,
                                  hip_tlv_len_t rr_data_len,
