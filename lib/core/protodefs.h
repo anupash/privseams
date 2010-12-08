@@ -371,7 +371,7 @@
 #define HIP_UNSUPPORTED_CURVE         0
 #define NIST_ECDSA_256                1
 #define NIST_ECDSA_384                2
-#define brainpoolP160r1               3
+#define NIST_ECDSA_160                4 // substitute for brainpoolP160r1
 
 #define HIP_DIGEST_MD5                1
 #define HIP_DIGEST_SHA1               2

@@ -335,6 +335,8 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
 static int get_ecdsa_curve_hip_name(const int nid) {
     /* Determine the curve */
     switch (nid) {
+    case NID_secp160r1:
+        return NIST_ECDSA_160;
     case NID_X9_62_prime256v1:
         return NIST_ECDSA_256;
     case NID_secp384r1:
@@ -365,6 +367,10 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *host_id) {
     curve_id = ntohs(*(const uint16_t*)host_id->key);
     HIP_DEBUG("Got curve id %d \n", curve_id);
     switch (curve_id) {
+    case NIST_ECDSA_160:
+        HIP_DEBUG("Using curve secp160r1\n");
+        nid = NID_secp160r1;
+        break;
     case NIST_ECDSA_256:
         HIP_DEBUG("Using curve secp256r1/prime256v1 \n");
         nid = NID_X9_62_prime256v1;
@@ -373,10 +379,6 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *host_id) {
         HIP_DEBUG("Using curve secp384r1 \n");
         nid = NID_secp384r1;
         break;
-    case brainpoolP160r1:
-        HIP_DEBUG("Using curve brainpoolP160r1\n");
-        // implement this when openssl supports this curve
-        //nid = NID_NID_brainpoolP160r1;
     default:
         HIP_DEBUG("Curve not supported.\n");
         err = -1;
@@ -406,14 +408,15 @@ int hip_get_ecdsa_keylen(const struct hip_host_id_priv *host_id,
 
     nid = get_ecdsa_curve_nid((const struct hip_host_id *) host_id);
     switch (nid) {
+    case NID_secp160r1:
+        curve_size = 160;
+        break;
     case NID_X9_62_prime256v1:
         curve_size = 256;
         break;
     case NID_secp384r1:
         curve_size = 384;
         break;
-    //case NID_brainpoolP160r1:
-        // implement this when openssl supports this curve
     default:
         HIP_DEBUG("Curve not supported.\n");
         err = -1;
