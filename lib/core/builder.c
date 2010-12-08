@@ -1852,7 +1852,8 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
                  "Failed to build param\n");
     }
 
-    HIP_IFEL(hip_build_param(msg_copy, host_id), -1,
+    // we need to rebuild the compressed parameter format for host ids
+    HIP_IFEL(hip_build_param_host_id(msg_copy, host_id), -1,
              "Failed to append pseudo host id to R2\n");
 
 out_err:

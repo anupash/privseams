@@ -375,7 +375,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                    -1,
                    "Unknown HIT\n");
 
-        HIP_IFEL(hip_build_param(ctx->output_msg, host_id_entry->host_id),
+        HIP_IFEL(hip_build_param_host_id(ctx->output_msg, host_id_entry->host_id),
                  -1,
                  "Building of host id failed\n");
     }
@@ -674,7 +674,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
              "Building of HIP transform failed\n");
 
     /* Parameter HOST_ID */
-    HIP_IFEL(hip_build_param(msg, host_id_pub), -1,
+    HIP_IFEL(hip_build_param_host_id(msg, host_id_pub),
+             -1,
              "Building of host id failed\n");
 
     /* Parameter REG_INFO */
