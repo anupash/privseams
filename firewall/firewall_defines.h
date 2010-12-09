@@ -41,7 +41,6 @@
 #include "config.h"
 #include "common_types.h"
 #include "esp_prot_defines.h"
-#include "firewall_defines.h"
 
 
 typedef struct hip_fw_context {
