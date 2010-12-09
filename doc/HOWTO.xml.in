@@ -359,6 +359,114 @@
     </para>
   </section>
 
+  <section id="ch_openwrt">
+    <title>HIPL on OpenWRT</title>
+    <para>
+      HIPL compiles fine on OpenWrt trunk versions from the end of 2010 onwards.
+      For the 10.03 Backfire release you need to apply a patch to OpenWrt.
+    </para>
+    <para>
+      To get an OpenWrt tree suitable for compiling HIPL, perform the
+      following steps:
+      <orderedlist>
+        <listitem>
+          <para>
+            Get the OpenWrt backfire release branch:
+            <programlisting>
+$ svn checkout svn://svn.openwrt.org/openwrt/branches/backfire
+            </programlisting>
+            or get the OpenWrt trunk development version:
+            <programlisting>
+$ svn checkout svn://svn.openwrt.org/openwrt/trunk
+            </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            For the Backfire release branch, apply the patch to get the dummy
+            networking device:
+            <programlisting>
+$ cd /path/to/openwrt
+$ patch -p0 -i /path/to/hipl/packaging/openwrt/dummy_device.diff
+            </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Enable package feeds in OpenWrt to get required dependencies for
+            the HIPL firewall:
+            <programlisting>
+$ scripts/feeds update -a
+$ scripts/feeds install -a
+            </programlisting>
+          </para>
+        </listitem>
+      </orderedlist>
+      Make sure you have the requirements to compile OpenWrt installed
+      on your system. Details can be found in the OpenWrt documentation.
+    </para>
+    <para>
+      To modify your OpenWrt tree to contain HIPL you need to
+      <orderedlist>
+        <listitem>
+          <para>
+            Build a dist tarball of HIPL in your HIPL tree:
+            <programlisting>
+$ make dist
+            </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Add the OpenWrt packaging infrastructure for HIPL into the
+            OpenWrt tree:
+            <programlisting>
+$ cp -r /path/to/hipl/packaging/openwrt/hipl/ /path/to/openwrt/package/
+            </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Create the OpenWrt download directory in case it does not exist
+            yet and copy the HIPL dist tarball into it:
+            <programlisting>
+$ mkdir -p /path/to/openwrt/dl/
+$ cp /path/to/hipl/hipl-*.tar.gz /path/to/openwrt/dl/
+            </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Configure OpenWrt according to your needs, but make sure
+            you select a Linux 2.6 target, otherwise IPsec will not be
+            available and neither will HIPL. Enable both or either of
+            <option>hipl-hipd</option> and <option>hipl-hipfw</option>
+            in the <option>Network</option> section of the menu.
+            Then compile.
+            <programlisting>
+$ make menuconfig
+$ make
+            </programlisting>
+          </para>
+        </listitem>
+      </orderedlist>
+    </para>
+    <para>
+      The OpenWrt build process takes a long time. If you just want to
+      test HIPL compilation within OpenWrt quickly without triggering
+      a complete build, run
+      <programlisting>
+$ make package/hipl/install
+      </programlisting>
+    </para>
+    <para>
+      If you experience problems during compilation, add
+      <command>V=99</command> to the <command>make</command>
+      command in order to get more detailed output.
+    </para>
+  </section>
+
+
   <section id="maemo">
       <title>Installing HIPL on the Nokia N810 Internet tablet (version 4.1.x, aka. 'diablo')</title>
 
