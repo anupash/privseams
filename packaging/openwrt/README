@@ -3,9 +3,3 @@ This directory contains everything necessary to build HIPL on OpenWrt.
 * hipl:
   The contents of this directory should be copied to the package/ subdirectory
   of an OpenWrt checkout.
-
-* dummy_device.diff:
-  This adds packaging infrastructure for the dummy network device to OpenWrt.
-  The patch was applied to OpenWrt Subversion trunk as r24272, but is not
-  available on the backfire release branch. Apply it to build on OpenWrt
-  versions based on the backfire branch.

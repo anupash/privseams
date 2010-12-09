@@ -362,8 +362,8 @@
   <section id="ch_openwrt">
     <title>HIPL on OpenWRT</title>
     <para>
-      HIPL compiles fine on OpenWrt trunk versions from the end of 2010 onwards.
-      For the 10.03 Backfire release you need to apply a patch to OpenWrt.
+      HIPL compiles fine on OpenWrt trunk and Backfire branch versions
+      from the end of 2010 onwards.
     </para>
     <para>
       To get an OpenWrt tree suitable for compiling HIPL, perform the
@@ -378,16 +378,6 @@ $ svn checkout svn://svn.openwrt.org/openwrt/branches/backfire
             or get the OpenWrt trunk development version:
             <programlisting>
 $ svn checkout svn://svn.openwrt.org/openwrt/trunk
-            </programlisting>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-            For the Backfire release branch, apply the patch to get the dummy
-            networking device:
-            <programlisting>
-$ cd /path/to/openwrt
-$ patch -p0 -i /path/to/hipl/packaging/openwrt/dummy_device.diff
             </programlisting>
           </para>
         </listitem>
