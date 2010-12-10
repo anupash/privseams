@@ -730,7 +730,8 @@ int hip_map_id_to_addr(const hip_hit_t *hit, const hip_lsi_t *lsi,
      * If dst_hit is a HIT -> find LSI and hostname
      * If dst_hit is an LSI -> find HIT and hostname */
 
-    /* try to resolve HIT to IPv4/IPv6 address
+    /* try to resolve HIT to IPv4/IPv6 address by 'HIPL_SYSCONFDIR/hosts'
+     * and '/etc/hosts' files
      */
     HIP_IFEL(!hip_map_id_to_ip_from_hosts_files(hit, lsi, addr),
              0, "hip_map_id_to_ip_from_hosts_files succeeded\n");

@@ -26,11 +26,11 @@
 /**
  * @file
  * This file contains iterator functions to access and parse
- * HIPL_SYSCONFDIR/hosts files. Also, this file contains
+ * /etc/hosts and HIPL_SYSCONFDIR/hosts files. Also, this file contains
  * a number of predefined functions that support mapping between
  * hostnames, HITs, LSIs and routable IP addresses.
  *
- * @brief parser for HIPL_SYSCONFDIR/hosts
+ * @brief parser for /etc/hosts and HIPL_SYSCONFDIR/hosts
  *
  * @author Miika Komu <miika@iki.fi>
  *
@@ -45,9 +45,6 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 
 #include "config.h"
 #include "lib/tool/lutil.h"
@@ -56,54 +53,11 @@
 #include "protodefs.h"
 #include "hostsfiles.h"
 
-/**
- * Resolve a given hostname to an IP address.
- *
- * NOTE: The hostname will be resolved to the first address returned by
- *       getaddrinfo().
- *
- * @param hostname  hostname to be resolved
- * @param ip        resolved ip address
- * @return 0 on success, -1 otherwise
- */
-static int hip_resolve_hostname(const char* hostname, struct in6_addr *ip)
-{
-    struct addrinfo hints;
-    struct addrinfo *result = NULL;
-    int err = 0, errno = 0;
-
-    HIP_IFEL(!hostname || !ip, -1, "unexpected null pointer");
-
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_flags  = AI_ADDRCONFIG;
-
-    HIP_IFEL((errno = getaddrinfo(hostname, NULL, &hints, &result)),
-             -1,
-             "failed to look up IP from name: %s\n", gai_strerror(errno));
-
-    switch (result->ai_addr->sa_family) {
-    case AF_INET:
-        IPV4_TO_IPV6_MAP(&((struct sockaddr_in *)result->ai_addr)->sin_addr, ip);
-        break;
-    case AF_INET6:
-        ipv6_addr_copy(ip, &((struct sockaddr_in6 *)result->ai_addr)->sin6_addr);
-        break;
-    default:
-        HIP_ERROR("unknown address type\n");
-        err = -1;
-        goto out_err;
-    }
-
-    HIP_DEBUG_IN6ADDR("peer ip address", ip);
-
-out_err:
-    freeaddrinfo(result);
-    return err;
-}
+#define HOSTS_FILE "/etc/hosts"
 
 /**
- * "For-each" loop to iterate through HIPL_SYSCONFDIR/hosts file, line by line.
+ * "For-each" loop to iterate through /etc/hosts or HIPL_SYSCONFDIR/hosts
+ * file, line by line.
  *
  * @param hosts_file the path and name to the hosts file
  * @param func the iterator function pointer
@@ -298,7 +252,8 @@ static int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line
 }
 
 /**
- * find the hostname matching the given LSI from HIPL_SYSCONFDIR/hosts
+ * find the hostname matching the given LSI from HIPL_SYSCONFDIR/hosts and
+ * /etc/hosts (in this particular order)
  *
  * @param lsi the LSI to match
  * @param hostname An output argument where the matching hostname
@@ -309,6 +264,9 @@ static int hip_map_first_lsi_to_hostname_from_hosts(const struct hosts_file_line
 int hip_map_lsi_to_hostname_from_hosts(hip_lsi_t *lsi, char *hostname)
 {
     return hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
+                                        hip_map_first_lsi_to_hostname_from_hosts,
+                                        lsi, hostname) &&
+           hip_for_each_hosts_file_line(HOSTS_FILE,
                                         hip_map_first_lsi_to_hostname_from_hosts,
                                         lsi, hostname);
 }
@@ -383,7 +341,44 @@ out_err:
 }
 
 /**
- * find the HIT matching to the given LSI from HIPL_SYSCONFDIR/hosts
+ * A "for-each" iterator function for hosts files that returns the first
+ * routable IP address that matches the hostname
+ *
+ * @param entry a hosts file line entry
+ * @param arg a hostname as a string
+ * @param result An output argument where the matching matching IP address will be
+ *        written. IPv4 addresses are written in IPv6 mapped format and
+ *        the minimum buffer length is sizeof(struct in6_addr)
+ * @return zero on match or one otherwise
+ */
+static int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
+                                                   const void *arg,
+                                                   void *result)
+{
+    int err = 1;
+    int is_lsi, is_hit;
+
+    /* test if hostname/alias matches and the type is routable ip */
+    if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
+        (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX)) ||
+        (entry->alias2 && !strncmp(arg, entry->alias2, HOST_NAME_MAX))) {
+        is_hit = hip_id_type_match(&entry->id, 1);
+        is_lsi = hip_id_type_match(&entry->id, 2);
+
+        HIP_IFE((is_hit || is_lsi), 1);
+
+        ipv6_addr_copy(result, &entry->id);
+        err = 0; /* Stop at the first match */
+    }
+
+out_err:
+
+    return err;
+}
+
+/**
+ * find the HIT matching to the given LSI from HIPL_SYSCONFDIR/hosts and
+ * /etc/hosts (in this particular order)
  *
  * @param lsi the LSI to match
  * @param hit An output argument where the matching matching HIT will be
@@ -401,17 +396,27 @@ int hip_map_lsi_to_hit_from_hosts_files(const hip_lsi_t *lsi, hip_hit_t *hit)
 
     IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
 
-    HIP_IFEL(hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
-                                          hip_map_first_id_to_hostname_from_hosts,
-                                          &mapped_lsi, hostname),
-             -1,
-             "Failed to map id to hostname\n");
+    err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
+                                       hip_map_first_id_to_hostname_from_hosts,
+                                       &mapped_lsi, hostname);
+    if (err) {
+        err = hip_for_each_hosts_file_line(HOSTS_FILE,
+                                           hip_map_first_id_to_hostname_from_hosts,
+                                           &mapped_lsi, hostname);
+    }
 
-    HIP_IFEL(hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
-                                          hip_map_first_hostname_to_hit_from_hosts,
-                                          hostname, hit),
-             -1,
-             "Failed to map id to hostname\n");
+    HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+
+    err = hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
+                                       hip_map_first_hostname_to_hit_from_hosts,
+                                       hostname, hit);
+    if (err) {
+        err = hip_for_each_hosts_file_line(HOSTS_FILE,
+                                           hip_map_first_hostname_to_hit_from_hosts,
+                                           hostname, hit);
+    }
+
+    HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 
     HIP_DEBUG_HIT("Found hit: ", hit);
 
@@ -421,7 +426,8 @@ out_err:
 }
 
 /**
- * find the LSI matching to the given HIT from HIPL_SYSCONFDIR/hosts
+ * find the LSI matching to the given HIT from HIPL_SYSCONFDIR/hosts and
+ * /etc/hosts (in this particular order)
  *
  * @param hit the HIT to match
  * @param lsi An output argument where the matching matching LSI will
@@ -437,17 +443,21 @@ int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
     memset(hostname, 0, sizeof(hostname));
     HIP_ASSERT(lsi && hit);
 
-    HIP_IFEL(hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
-                                          hip_map_first_id_to_hostname_from_hosts,
-                                          hit, hostname),
-             -1,
-             "Failed to map id to hostname\n");
+    err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
+                                        hip_map_first_id_to_hostname_from_hosts,
+                                        hit, hostname) &&
+           hip_for_each_hosts_file_line(HOSTS_FILE,
+                                        hip_map_first_id_to_hostname_from_hosts,
+                                        hit, hostname));
+    HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 
-    HIP_IFEL(hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
-                                          hip_map_first_hostname_to_lsi_from_hosts,
-                                          hostname, &mapped_lsi),
-             -1,
-             "Failed to map hostname to lsi\n");
+    err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
+                                        hip_map_first_hostname_to_lsi_from_hosts,
+                                        hostname, &mapped_lsi) &&
+           hip_for_each_hosts_file_line(HOSTS_FILE,
+                                        hip_map_first_hostname_to_lsi_from_hosts,
+                                        hostname, &mapped_lsi));
+    HIP_IFEL(err, -1, "Failed to map hostname to lsi\n");
 
     IPV6_TO_IPV4_MAP(&mapped_lsi, lsi);
 
@@ -459,11 +469,12 @@ out_err:
 }
 
 /**
- * Map a HIT or an LSI to an IP address.
- *
+ * This function maps a HIT or a LSI (nodename) to an IP address using
+ * the two hosts files.
  * The function implements this in two steps. First, it maps the HIT or
- * LSI to an hostname from HIPL_SYSCONFDIR/hosts. Second, it
- * resolves the hostname to an IP address.
+ * LSI to an hostname from HIPL_SYSCONFDIR/hosts or /etc/hosts. Second, it
+ * maps the hostname to an IP address from /etc/hosts. The IP address
+ * is returned in the res argument.
  *
  * @param hit a HIT to be mapped
  * @param lsi an LSI to be mapped
@@ -475,7 +486,7 @@ int hip_map_id_to_ip_from_hosts_files(const hip_hit_t *hit,
                                       struct in6_addr *ip)
 {
     int err = 0;
-    char hostname[HOST_NAME_MAX];
+    uint8_t hostname[HOST_NAME_MAX];
 
     HIP_ASSERT((hit || lsi) && ip);
 
@@ -484,27 +495,34 @@ int hip_map_id_to_ip_from_hosts_files(const hip_hit_t *hit,
     if (hit && !ipv6_addr_any(hit)) {
         err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
                                             hip_map_first_id_to_hostname_from_hosts,
+                                            hit, hostname) &&
+               hip_for_each_hosts_file_line(HOSTS_FILE,
+                                            hip_map_first_id_to_hostname_from_hosts,
                                             hit, hostname));
     } else {
         struct in6_addr mapped_lsi;
         IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
         err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
                                             hip_map_first_id_to_hostname_from_hosts,
+                                            &mapped_lsi, hostname) &&
+               hip_for_each_hosts_file_line(HOSTS_FILE,
+                                            hip_map_first_id_to_hostname_from_hosts,
                                             &mapped_lsi, hostname));
     }
 
     HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 
-    HIP_IFEL(hip_resolve_hostname(hostname, ip),
-             -1,
-             "Failed to resove id to ip\n");
+    err = hip_for_each_hosts_file_line(HOSTS_FILE,
+                                       hip_map_first_hostname_to_ip_from_hosts,
+                                       hostname, ip);
+    HIP_IFEL(err, -1, "Failed to map id to ip\n");
 
 out_err:
     return err;
 }
 
 /**
- * check if the given LSI is in the hosts file
+ * check if the given LSI is in the hosts files
  *
  * @param lsi the LSI to be searched for
  * @return one if the LSI exists or zero otherwise
@@ -520,6 +538,9 @@ int hip_host_file_info_exists_lsi(hip_lsi_t *lsi)
     IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
 
     return !(hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
+                                          hip_map_first_id_to_hostname_from_hosts,
+                                          &mapped_lsi, hostname) &&
+             hip_for_each_hosts_file_line(HOSTS_FILE,
                                           hip_map_first_id_to_hostname_from_hosts,
                                           &mapped_lsi, hostname));
 }
