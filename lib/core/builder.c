@@ -3142,7 +3142,7 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
  * Convert a host id parameter from its compressed on the wire format to
  * the uncompressed internal format.
  *
- * @param param the host id parameter
+ * @param wire_host_id the host id parameter
  * @param peer_host_id pointer to memory, where the uncompressed host id is written to
  *
  * @return 0 on success, negative on error (if parameter was of wrong type)
