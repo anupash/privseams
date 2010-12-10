@@ -465,7 +465,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
     n   = send(hip_user_sock, msg, len, 0);
 
     if (n < len) {
-        HIP_ERROR("Could not send message to daemon: %s\n", strerror(errno););
+        HIP_ERROR("Could not send message to daemon: %s\n", strerror(errno));
         err = -1;
         goto out_err;
     }

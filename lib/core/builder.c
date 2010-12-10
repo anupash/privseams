@@ -3164,7 +3164,7 @@ int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
     fqdn_len    = ntohs(wire_host_id->di_type_length) & 0x0FFF;
     key_len     = ntohs(wire_host_id->hi_length) -
                   sizeof(struct hip_host_id_key_rdata);
-    memcpy(peer_host_id, param, header_len);
+    memcpy(peer_host_id, wire_host_id, header_len);
     memcpy(peer_host_id->key, wire_host_id->key, key_len);
     memcpy(peer_host_id->hostname, &wire_host_id->key[key_len], fqdn_len);
 
@@ -3210,7 +3210,7 @@ int hip_build_param_host_id(struct hip_common *msg,
     // = | length fields | + | keyrr header | + | HI | + | FQDN |
     par_len = header_len + key_len + fqdn_len;
     hip_set_param_contents_len((struct hip_tlv_common *) &new_host_id,
-                               par_len - sizeof(struct hip_tlv_common);
+                               par_len - sizeof(struct hip_tlv_common));
 
     return hip_build_param(msg, &new_host_id);
 }
