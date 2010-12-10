@@ -66,6 +66,8 @@ static int hip_handle_raw_input_v6(struct hip_packet_context *ctx)
 {
     int err = 0;
 
+    HIP_DEBUG("received on: hip_raw_sock_input_v6");
+
     if (hip_read_control_msg_v6(hip_raw_sock_input_v6,
                                 ctx,
                                 0)) {
@@ -83,6 +85,8 @@ static int hip_handle_raw_input_v6(struct hip_packet_context *ctx)
 static int hip_handle_raw_input_v4(struct hip_packet_context *ctx)
 {
     int err = 0;
+
+    HIP_DEBUG("received on: hip_raw_sock_input_v4");
 
     if (hip_read_control_msg_v4(hip_raw_sock_input_v4,
                                 ctx,
@@ -102,9 +106,7 @@ static int hip_handle_nat_input(struct hip_packet_context *ctx)
 {
     int err = 0;
 
-    HIP_DEBUG("Receiving a message on UDP from NAT " \
-              "socket (file descriptor: %d).\n",
-              hip_nat_sock_input_udp);
+    HIP_DEBUG("received on: hip_nat_sock_input_udp");
 
     err = hip_read_control_msg_v4(hip_nat_sock_input_udp,
                                   ctx,
@@ -124,6 +126,7 @@ static int hip_handle_user_sock(struct hip_packet_context *ctx)
     uint8_t msg_type = 0;
     struct sockaddr_in6 app_src;
 
+    HIP_DEBUG("received on: hip_user_sock");
 
     HIP_IFEL(hip_read_user_control_msg(hip_user_sock,
                                        ctx->input_msg,
@@ -162,7 +165,8 @@ out_err:
 
 static int hip_handle_nl_ipsec_sock(UNUSED struct hip_packet_context *ctx)
 {
-    HIP_DEBUG("netlink receive\n");
+    HIP_DEBUG("received on: hip_nl_ipsec");
+
     if (hip_netlink_receive(&hip_nl_ipsec,
                             hip_netdev_event, NULL)) {
         HIP_ERROR("Netlink receiving failed\n");
@@ -174,7 +178,8 @@ static int hip_handle_nl_ipsec_sock(UNUSED struct hip_packet_context *ctx)
 
 static int hip_handle_nl_route_sock(UNUSED struct hip_packet_context *ctx)
 {
-    HIP_DEBUG("netlink route receive\n");
+    HIP_DEBUG("received on: hip_nl_route");
+
     if (hip_netlink_receive(&hip_nl_route,
                             hip_netdev_event, NULL)) {
         HIP_ERROR("Netlink receiving failed\n");

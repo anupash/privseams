@@ -3147,25 +3147,31 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
  *
  * @return 0 on success, negative on error (if parameter was of wrong type)
  */
-int hip_build_host_id_from_param(const struct hip_host_id *param, struct hip_host_id *peer_host_id) {
+int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
+                                 struct hip_host_id *peer_host_id)
+{
     int err = 0;
     uint16_t header_len;
     uint16_t key_len;
     uint16_t fqdn_len;
-    HIP_IFEL(!(hip_get_param_type(param) == HIP_PARAM_HOST_ID),
+    HIP_IFEL(!(hip_get_param_type(wire_host_id) == HIP_PARAM_HOST_ID),
              -1, "Param has wrong type (not HIP_PARAM_HOST_ID)");
 
     // copy the header, key and fqdn
-    header_len  = sizeof(struct hip_host_id) - sizeof(peer_host_id->key) - sizeof(peer_host_id->hostname);
-    fqdn_len    = ntohs(param->di_type_length) & 0x0FFF;
-    key_len     = ntohs(param->hi_length) - sizeof(struct hip_host_id_key_rdata);
+    header_len  = sizeof(struct hip_host_id) -
+                  sizeof(peer_host_id->key) -
+                  sizeof(peer_host_id->hostname);
+    fqdn_len    = ntohs(wire_host_id->di_type_length) & 0x0FFF;
+    key_len     = ntohs(wire_host_id->hi_length) -
+                  sizeof(struct hip_host_id_key_rdata);
     memcpy(peer_host_id, param, header_len);
-    memcpy(peer_host_id->key, &param->key[0], key_len);
-    memcpy(peer_host_id->hostname, &param->key[key_len], fqdn_len);
+    memcpy(peer_host_id->key, wire_host_id->key, key_len);
+    memcpy(peer_host_id->hostname, &wire_host_id->key[key_len], fqdn_len);
 
     // with the header we also copied the compressed length value, so correct this
     hip_set_param_contents_len((struct hip_tlv_common *) peer_host_id,
-                               sizeof(struct hip_host_id) - sizeof(struct hip_tlv_common));
+                               sizeof(struct hip_host_id) -
+                               sizeof(struct hip_tlv_common));
 
 out_err:
     return err;
@@ -3181,7 +3187,8 @@ out_err:
  * @see hip_build_param()
  */
 int hip_build_param_host_id(struct hip_common *msg,
-                            const struct hip_host_id *host_id) {
+                            const struct hip_host_id *host_id)
+{
     struct hip_host_id new_host_id;
     uint16_t header_len;
     uint16_t fqdn_len;
@@ -3189,9 +3196,12 @@ int hip_build_param_host_id(struct hip_common *msg,
     uint16_t par_len;
 
     // eliminate unused space by copying fqdn directly behind the keyrr
-    header_len  = sizeof(struct hip_host_id) - sizeof(host_id->key) - sizeof(host_id->hostname);
+    header_len  = sizeof(struct hip_host_id) -
+                  sizeof(host_id->key) -
+                  sizeof(host_id->hostname);
     fqdn_len    = ntohs(host_id->di_type_length) & 0x0FFF;
-    key_len     = ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata);
+    key_len     = ntohs(host_id->hi_length) -
+                  sizeof(struct hip_host_id_key_rdata);
     memcpy(&new_host_id, host_id, header_len);
     memcpy(&new_host_id.key[0], host_id->key, key_len);
     memcpy(&new_host_id.key[key_len], host_id->hostname, fqdn_len);
@@ -3199,7 +3209,8 @@ int hip_build_param_host_id(struct hip_common *msg,
     // set the new contents length
     // = | length fields | + | keyrr header | + | HI | + | FQDN |
     par_len = header_len + key_len + fqdn_len;
-    hip_set_param_contents_len((struct hip_tlv_common *) &new_host_id, par_len);
+    hip_set_param_contents_len((struct hip_tlv_common *) &new_host_id,
+                               par_len - sizeof(struct hip_tlv_common);
 
     return hip_build_param(msg, &new_host_id);
 }
