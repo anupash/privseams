@@ -4,14 +4,13 @@ BZR_HIPL_CACHE=~/.bzr-hipl-cache/hipl-bzr
 BRANCH=trunk
 TMP_DIR=~/.hipl.howto.tmp.dir
 WWW_DIR=/var/www/infrahip/html/hipl/manual
-OUTPUT_DIR=$WWW_DIR
 
 set -e
 
-mkdir -p $TMP_DIR $OUTPUT_DIR
+mkdir -p $TMP_DIR $WWW_DIR
 
-touch $OUTPUT_DIR/DO_NOT_EDIT_THESE_MANUALLY.GENERATED_AUTOMATICALLY
+touch $WWW_DIR/DO_NOT_EDIT_THESE_MANUALLY.GENERATED_AUTOMATICALLY
 cp -r $BZR_HIPL_CACHE/$BRANCH/doc $TMP_DIR
 cd $TMP_DIR/doc
 xmlto -o manual html HOWTO.xml
-cp -r manual/* $OUTPUT_DIR
+cp -r manual/* $WWW_DIR
