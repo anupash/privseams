@@ -54,23 +54,6 @@ static struct dlist *alloc_list(void)
 }
 
 /**
- * get a pointer to the previous list item
- *
- * @param list a pointer to the list
- * @return a pointer to the previous list item
- */
-struct dlist *list_first(struct dlist *list)
-{
-    if (list) {
-        while (list->prev) {
-            list = list->prev;
-        }
-    }
-
-    return list;
-}
-
-/**
  * get a pointer to the next list item
  *
  * @param list a pointer to the list
@@ -81,6 +64,23 @@ struct dlist *list_last(struct dlist *list)
     if (list) {
         while (list->next) {
             list = list->next;
+        }
+    }
+
+    return list;
+}
+
+/**
+ * get a pointer to the previous list item
+ *
+ * @param list a pointer to the list
+ * @return a pointer to the previous list item
+ */
+struct dlist *list_first(struct dlist *list)
+{
+    if (list) {
+        while (list->prev) {
+            list = list->prev;
         }
     }
 
