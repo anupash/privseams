@@ -55,6 +55,7 @@
 #include "lib/core/ife.h"
 #include "lib/core/performance.h"
 #include "lib/core/prefix.h"
+#include "conntrack.h"
 #include "firewall_defines.h"
 #include "midauth.h"
 #include "pisa_cert.h"
@@ -69,10 +70,6 @@
  * seconds. Worst case timer resolution depends on the timeout in the select
  * call */
 #define PISA_RANDOM_TTL 2.0
-
-struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit,
-                                const struct in6_addr *dst_hit);
-
 
 static char pisa_random_data[2][PISA_RANDOM_LEN];
 static struct in6_addr community_operator_hit;
