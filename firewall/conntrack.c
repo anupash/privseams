@@ -504,9 +504,9 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
             // free keys depending on cipher
             if (hip_tuple->data->src_pub_key && hip_tuple->data->src_hi) {
                 if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_RSA) {
-                    RSA_free((RSA *) hip_tuple->data->src_pub_key);
+                    RSA_free(hip_tuple->data->src_pub_key);
                 } else {
-                    DSA_free((DSA *) hip_tuple->data->src_pub_key);
+                    DSA_free(hip_tuple->data->src_pub_key);
                 }
             }
 
