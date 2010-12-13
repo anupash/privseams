@@ -54,4 +54,4 @@ uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
 
 int hip_userspace_ipsec_setup_default_sp_prefix_pair(void);
 
-#endif /*HIP_HIPD_USER_IPSEC_SADB_API_H*/
+#endif /* HIP_HIPD_USER_IPSEC_SADB_API_H */

@@ -110,4 +110,4 @@ int esp_prot_get_hash_length(const uint8_t transform);
 int esp_prot_get_data_offset(const hip_sa_entry_t *entry);
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry);
 
-#endif /*HIP_FIREWALL_ESP_PROT_API_H*/
+#endif /* HIP_FIREWALL_ESP_PROT_API_H */

@@ -59,4 +59,4 @@ int esp_prot_check_transform(const int num_transforms,
                              const uint8_t *preferred_transforms,
                              const uint8_t transform);
 
-#endif /*HIP_LIB_CORE_ESP_PROT_COMMON_H*/
+#endif /* HIP_LIB_CORE_ESP_PROT_COMMON_H */

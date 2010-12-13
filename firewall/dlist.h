@@ -49,4 +49,4 @@ unsigned int list_length(DList *list);
 DList *list_first(DList *list);
 
 
-#endif /*HIP_FIREWALL_DLIST_H*/
+#endif /* HIP_FIREWALL_DLIST_H */

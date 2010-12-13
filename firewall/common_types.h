@@ -39,4 +39,4 @@ struct dlist {
     struct dlist *prev;
 };
 
-#endif /*HIP_FIREWALL_COMMON_TYPES_H*/
+#endif /* HIP_FIREWALL_COMMON_TYPES_H */
