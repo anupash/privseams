@@ -130,11 +130,11 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
 #endif
 
 #if __BYTE_ORDER == __BIG_ENDIAN
-  #define hton64(i) (i)
-  #define ntoh64(i) (i)
+#define hton64(i) (i)
+#define ntoh64(i) (i)
 #else
-  #define hton64(i) (((uint64_t) (htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ))
-  #define ntoh64 hton64
+#define hton64(i) (((uint64_t) (htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ))
+#define ntoh64 hton64
 #endif
 
 #endif /* HIP_LIB_CORE_PREFIX_H */
