@@ -268,20 +268,20 @@ static void print_rule(const struct rule *rule)
  */
 void print_rule_tables(void)
 {
-    struct dlist *list  = (struct dlist *) input_rules;
+    struct dlist *list  = input_rules;
     struct rule *rule   = NULL;
     while (list != NULL) {
         rule = list->data;
         print_rule(rule);
         list = list->next;
     }
-    list = (struct dlist *) output_rules;
+    list = output_rules;
     while (list != NULL) {
         rule = list->data;
         print_rule(rule);
         list = list->next;
     }
-    list = (struct dlist *) forward_rules;
+    list = forward_rules;
     while (list != NULL) {
         rule = list->data;
         print_rule(rule);
