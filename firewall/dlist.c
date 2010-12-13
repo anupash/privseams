@@ -70,13 +70,14 @@ struct dlist *list_last(struct dlist *list)
     return list;
 }
 
+#ifdef CONFIG_HIP_DEBUG
 /**
  * get a pointer to the previous list item
  *
  * @param list a pointer to the list
  * @return a pointer to the previous list item
  */
-struct dlist *list_first(struct dlist *list)
+static struct dlist *list_first(struct dlist *list)
 {
     if (list) {
         while (list->prev) {
@@ -93,7 +94,7 @@ struct dlist *list_first(struct dlist *list)
  * @param list the linked list
  * @return the number of items on the linked list
  */
-unsigned int list_length(struct dlist *list)
+static unsigned int list_length(struct dlist *list)
 {
     unsigned int length = 0;
     list = list_first(list);
@@ -105,6 +106,7 @@ unsigned int list_length(struct dlist *list)
     }
     return length;
 }
+#endif /* CONFIG_HIP_DEBUG */
 
 /**
  * append a new element to the linked list

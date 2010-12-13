@@ -39,10 +39,4 @@ struct dlist *find_in_dlist(struct dlist *list, void *data);
 
 struct dlist *list_last(struct dlist *list);
 
-/* These aren't currently used outside dlist.c, but are declared
-   public for uniformity (and so debug-less builds would succeed) */
-unsigned int list_length(struct dlist *list);
-struct dlist *list_first(struct dlist *list);
-
-
 #endif /* HIP_FIREWALL_DLIST_H */
