@@ -751,7 +751,7 @@ static void firewall_probe_kernel_modules(void)
                 HIP_ERROR("Could not freopen /dev/null");
             }
             execlp("/sbin/modprobe", "/sbin/modprobe",
-                   mod_name[count], (char *) NULL);
+                   mod_name[count], NULL);
         } else {
             waitpid(err, &status, 0);
         }

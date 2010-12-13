@@ -75,7 +75,7 @@ struct in6_addr *numeric_to_addr(const char *num)
     if ((err = inet_pton(AF_INET6, num, &ap)) == 1) {
         return &ap;
     }
-    return (struct in6_addr *) NULL;
+    return NULL;
 }
 
 /**

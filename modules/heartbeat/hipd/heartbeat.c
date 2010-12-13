@@ -321,7 +321,7 @@ static int hip_icmp_recvmsg(int sockfd)
     }
 
     /* Get the current time as the return time */
-    gettimeofday(rtval, (struct timezone *) NULL);
+    gettimeofday(rtval, NULL);
 
     /* Check if the process identifier is ours and that this really is echo response */
     icmph = (struct icmp6_hdr *) iovbuf;
