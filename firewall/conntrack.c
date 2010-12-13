@@ -223,7 +223,7 @@ static struct hip_data *get_hip_data(const struct hip_common *common)
 static void update_peer_opp_info(const struct hip_data *data,
                                  const struct in6_addr *ip6_from)
 {
-    struct _DList *list = (struct _DList *) hip_list;
+    struct dlist *list = (struct dlist *) hip_list;
     hip_hit_t phit;
 
     HIP_DEBUG("updating opportunistic entries\n");

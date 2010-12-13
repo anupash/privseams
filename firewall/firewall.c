@@ -886,7 +886,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
                       hip_fw_context_t *ctx)
 {
     // complete rule list for hook (== IN / OUT / FORWARD)
-    struct _DList *list = (struct _DList *) read_rules(hook);
+    struct dlist *list  = (struct dlist *) read_rules(hook);
     struct rule *rule   = NULL;
     // assume match for current rule
     int match           = 1, print_addr = 0;
