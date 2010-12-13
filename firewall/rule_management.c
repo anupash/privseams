@@ -113,9 +113,9 @@ enum {
     HOOK
 };
 
-DList *input_rules;
-DList *output_rules;
-DList *forward_rules;
+struct dlist *input_rules;
+struct dlist *output_rules;
+struct dlist *forward_rules;
 
 /**
  * Writes the default firewall configuration file to the disk if it does
@@ -168,7 +168,7 @@ static void check_and_write_default_config(const char *file)
  * @param hook NF_IP6_LOCAL_IN, NF_IP6_LOCAL_OUT or NF_IP6_LOCAL_FORWARD
  * @return a pointer to the list containing the rules
  */
-static DList *get_rule_list(const int hook)
+static struct dlist *get_rule_list(const int hook)
 {
     if (hook == NF_IP6_LOCAL_IN) {
         return input_rules;
@@ -834,9 +834,9 @@ static struct rule *parse_rule(char *string)
  *
  * @return a list containing the rules
  */
-DList *read_rules(const int hook)
+struct dlist *read_rules(const int hook)
 {
-    return (DList *) get_rule_list(hook);
+    return (struct dlist *) get_rule_list(hook);
 }
 
 /*----------- RULE MANAGEMENT -----------*/
@@ -855,10 +855,10 @@ DList *read_rules(const int hook)
  */
 void read_rule_file(const char *file_name)
 {
-    DList *input        = NULL;
-    DList *output       = NULL;
-    DList *forward      = NULL;
-    FILE *file          = NULL;
+    struct dlist *input   = NULL;
+    struct dlist *output  = NULL;
+    struct dlist *forward = NULL;
+    FILE         *file    = NULL;
 
     if (!file_name) {
         file_name = HIP_FW_DEFAULT_RULE_FILE;

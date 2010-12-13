@@ -135,7 +135,7 @@ static struct esp_tuple *esp_prot_conntrack_find_esp_tuple(const struct tuple *t
                                                            const int hash_length)
 {
     struct esp_tuple *esp_tuple = NULL;
-    SList *list                 = NULL;
+    struct slist     *list      = NULL;
     int err                     = 0;
 
     HIP_DEBUG("\n");
@@ -728,7 +728,7 @@ out_err:
  * @param   other_dir_esps maintained connection tracking state for this connection
  * @return  corresponding state
  */
-struct esp_tuple *esp_prot_conntrack_R2_esp_tuple(const SList *other_dir_esps)
+struct esp_tuple *esp_prot_conntrack_R2_esp_tuple(const struct slist *other_dir_esps)
 {
     struct esp_tuple *esp_tuple = NULL;
     int err                     = 0;

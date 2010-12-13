@@ -26,13 +26,11 @@
 #ifndef HIP_FIREWALL_COMMON_TYPES_H
 #define HIP_FIREWALL_COMMON_TYPES_H
 
-typedef struct slist SList;
 struct slist {
     void         *data;
     struct slist *next;
 };
 
-typedef struct dlist DList;
 struct dlist {
     void         *data;
     struct dlist *next;

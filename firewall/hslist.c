@@ -45,9 +45,9 @@
  *
  * @return the allocated linked list element (caller frees)
  */
-static SList *alloc_slist(void)
+static struct slist *alloc_slist(void)
 {
-    SList *list = malloc(sizeof(SList));
+    struct slist *list = malloc(sizeof(struct slist));
     list->next = NULL;
     list->data = NULL;
     return list;
@@ -59,7 +59,7 @@ static SList *alloc_slist(void)
  * @param list the linked list to be traversed
  * @return the last element of the linked list
  */
-static SList *slist_last(SList *list)
+static struct slist *slist_last(struct slist *list)
 {
     if (list) {
         while (list->next) {
@@ -76,11 +76,10 @@ static SList *slist_last(SList *list)
  * @param data contents of the linked list element (stored as a pointer)
  * @return a pointer to the appended element in the linked list
  */
-SList *append_to_slist(SList *list,
-                       void *data)
+struct slist *append_to_slist(struct slist *list, void *data)
 {
-    SList *new_list;
-    SList *last;
+    struct slist *new_list;
+    struct slist *last;
 
     new_list       = alloc_slist();
     new_list->data = data;
@@ -102,11 +101,10 @@ SList *append_to_slist(SList *list,
  * @param link the link to be unlinked from the list
  * @return a pointer to the linked list
  */
-SList *remove_link_slist(SList *list,
-                         SList *link)
+struct slist *remove_link_slist(struct slist *list, struct slist *link)
 {
-    SList *tmp;
-    SList *prev;
+    struct slist *tmp;
+    struct slist *prev;
 
     prev = NULL;
     tmp  = list;

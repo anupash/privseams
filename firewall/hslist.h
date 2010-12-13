@@ -28,8 +28,8 @@
 
 #include "common_types.h"
 
-SList *append_to_slist(SList *list, void *data);
+struct slist *append_to_slist(struct slist *list, void *data);
 
-SList *remove_link_slist(SList *list, SList *link);
+struct slist *remove_link_slist(struct slist *list, struct slist *link);
 
 #endif /* HIP_FIREWALL_HSLIST_H */
