@@ -132,7 +132,7 @@ static void hip_sig_chld(int signum)
 
     signal(signum, hip_sig_chld);
 
-    /* Get child process status, so it wont be left as zombie for long time. */
+    /* Get child process status, so it will not be left as zombie for long time. */
     while ((pid = wait3(&status, WNOHANG, 0)) > 0) {
         /* Maybe do something.. */
     }

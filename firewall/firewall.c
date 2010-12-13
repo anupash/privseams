@@ -746,7 +746,7 @@ static void firewall_probe_kernel_modules(void)
         if (err < 0) {
             HIP_ERROR("Failed to fork() for modprobe!\n");
         } else if (err == 0) {
-            /* Redirect stderr, so few non fatal errors wont show up. */
+            /* Redirect stderr, so few non fatal errors will not show up. */
             if (freopen("/dev/null", "w", stderr) == NULL) {
                 HIP_ERROR("Could not freopen /dev/null");
             }
