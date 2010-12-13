@@ -335,7 +335,7 @@ static void pisa_remove_connection(const hip_fw_context_t *ctx)
 }
 
 /**
- * Reject a connection via PISA. Update firewall to allow no further packages
+ * Reject a connection via PISA. Update firewall to allow no data packets
  * to pass through.
  *
  * @param ctx context of the packet that belongs to that connection
