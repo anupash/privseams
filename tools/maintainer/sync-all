@@ -37,7 +37,7 @@ mkdir -p $TMP_DIR &&
 # f13-i386            netherstorm.infrahip.net
 # F13-x86_64          shadowmoon.infrahip.net
 # F14 32bit           ironforge
-# F14-x86_64	      nagrand.infrahip.net
+# F14-x86_64          nagrand.infrahip.net
 # CentOS-5.5 i386     hellfire.infrahip.net
 # CentOS-5.5 x86_64   zangarmash.infrahip.net
 #
