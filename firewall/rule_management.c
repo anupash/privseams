@@ -271,19 +271,19 @@ void print_rule_tables(void)
     struct _DList *list = (struct _DList *) input_rules;
     struct rule *rule   = NULL;
     while (list != NULL) {
-        rule = (struct rule *) list->data;
+        rule = list->data;
         print_rule(rule);
         list = list->next;
     }
     list = (struct _DList *) output_rules;
     while (list != NULL) {
-        rule = (struct rule *) list->data;
+        rule = list->data;
         print_rule(rule);
         list = list->next;
     }
     list = (struct _DList *) forward_rules;
     while (list != NULL) {
-        rule = (struct rule *) list->data;
+        rule = list->data;
         print_rule(rule);
         list = list->next;
     }
@@ -901,13 +901,13 @@ void read_rule_file(const char *file_name)
             if (rule) {
                 if (rule->hook == NF_IP6_LOCAL_IN) {
                     input = append_to_list(input, rule);
-                    print_rule((struct rule *) input->data);
+                    print_rule(input->data);
                 } else if (rule->hook == NF_IP6_LOCAL_OUT)    {
                     output = append_to_list(output, rule);
-                    print_rule((struct rule *) output->data);
+                    print_rule(output->data);
                 } else if (rule->hook == NF_IP6_FORWARD)    {
                     forward = append_to_list(forward, rule);
-                    print_rule((struct rule *) forward->data);
+                    print_rule(forward->data);
                 }
             } else {
                 HIP_DEBUG("unable to parse rule: %s\n", original_line);

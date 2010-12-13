@@ -101,7 +101,7 @@ static void print_esp_addr_list(const SList *addr_list)
 
     HIP_DEBUG("ESP dst addr list:\n");
     while (list) {
-        addr = (struct esp_address *) list->data;
+        addr = list->data;
         HIP_DEBUG("addr: %s\n", addr_to_numeric(&addr->dst_addr));
         if (addr && addr->update_id != NULL) {
             HIP_DEBUG("upd id: %d\n", *addr->update_id);
@@ -148,7 +148,7 @@ static void print_esp_list(void)
     HIP_DEBUG("ESP LIST: \n");
     while (list) {
         if (list->data) {
-            print_esp_tuple((struct esp_tuple *) list->data);
+            print_esp_tuple(list->data);
         }
         list = list->next;
     }
@@ -166,7 +166,7 @@ static void print_tuple_list(void)
     if (list) {
         while (list) {
             if (list->data) {
-                print_tuple((struct hip_tuple *) list->data);
+                print_tuple(list->data);
             }
             list = list->next;
         }
@@ -231,7 +231,7 @@ static void update_peer_opp_info(const struct hip_data *data,
     hip_opportunistic_ipv6_to_hit(ip6_from, &phit, HIP_HIT_TYPE_HASH100);
 
     while (list) {
-        struct hip_tuple *tuple = (struct hip_tuple *) list->data;
+        struct hip_tuple *tuple = list->data;
 
         if (IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->src_hit) &&
             IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->dst_hit)) {
@@ -263,7 +263,7 @@ static struct tuple *get_tuple_by_hip(const struct hip_data *data,
     DList *list = hipList;
 
     while (list) {
-        tuple = (struct hip_tuple *) list->data;
+        tuple = list->data;
 
         if (IN6_ARE_ADDR_EQUAL(&data->src_hit, &tuple->data->src_hit) &&
             IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit)) {
@@ -302,7 +302,7 @@ static struct esp_address *get_esp_address(const SList *addr_list,
     HIP_DEBUG("get_esp_address\n");
 
     while (list) {
-        esp_addr = (struct esp_address *) list->data;
+        esp_addr = list->data;
         HIP_DEBUG("addr: %s \n", addr_to_numeric(&esp_addr->dst_addr));
 
         HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
@@ -376,7 +376,7 @@ static struct tuple *get_tuple_by_esp(const struct in6_addr *dst_addr, const uin
         HIP_DEBUG("Esp tuple list is empty\n");
     }
     while (list) {
-        struct esp_tuple *tuple = (struct esp_tuple *) list->data;
+        struct esp_tuple *tuple = list->data;
         if (spi == tuple->spi) {
             if (dst_addr && get_esp_address(tuple->dst_addr_list, dst_addr) != NULL) {
                 HIP_DEBUG("connection found by esp\n");
@@ -410,7 +410,7 @@ struct esp_tuple *find_esp_tuple(const SList *esp_list, const uint32_t spi)
         HIP_DEBUG("Esp tuple slist is empty\n");
     }
     while (list) {
-        esp_tuple = (struct esp_tuple *) list->data;
+        esp_tuple = list->data;
         if (esp_tuple->spi == spi) {
             HIP_DEBUG("find_esp_tuple: Found esp_tuple with spi 0x%lx\n", spi);
             return esp_tuple;
@@ -539,7 +539,7 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
         while (list) {
             esp_tuple->dst_addr_list = remove_link_slist(esp_tuple->dst_addr_list,
                                                          list);
-            addr = (struct esp_address *) list->data;
+            addr = list->data;
 
             free(addr->update_id);
             free(addr);
@@ -573,7 +573,7 @@ static void remove_tuple(struct tuple *tuple)
                                                                list->data));
 
             tuple->esp_tuples = remove_link_slist(tuple->esp_tuples, list);
-            free_esp_tuple((struct esp_tuple *) list->data);
+            free_esp_tuple(list->data);
             list->data        = NULL;
             free(list);
             list              = tuple->esp_tuples;
@@ -1943,7 +1943,7 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
     DList *list = hipList;
 
     while (list) {
-        struct hip_tuple *tuple = (struct hip_tuple *) list->data;
+        struct hip_tuple *tuple = list->data;
         if (IN6_ARE_ADDR_EQUAL(src_hit, &tuple->data->src_hit) &&
             IN6_ARE_ADDR_EQUAL(dst_hit, &tuple->data->dst_hit)) {
             HIP_DEBUG("connection found, \n");

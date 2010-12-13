@@ -947,7 +947,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
 
     while (list != NULL) {
         match = 1;
-        rule  = (struct rule *) list->data;
+        rule  = list->data;
 
         // check src_hit if defined in rule
         if (match && rule->src_hit) {

@@ -147,7 +147,7 @@ static struct esp_tuple *esp_prot_conntrack_find_esp_tuple(const struct tuple *t
     list = tuple->esp_tuples;
 
     while (list) {
-        esp_tuple = (struct esp_tuple *) list->data;
+        esp_tuple = list->data;
 
         // check if last installed anchor equals the one in the packet
         if (!memcmp(&esp_tuple->first_active_anchors[0][0], active_anchor,
@@ -745,7 +745,7 @@ struct esp_tuple *esp_prot_conntrack_R2_esp_tuple(const SList *other_dir_esps)
                  "expecting 1 esp_tuple in the list, but there are several\n");
 
         // get the esp_tuple for the other direction
-        HIP_IFEL(!(esp_tuple = (struct esp_tuple *) other_dir_esps->data), -1,
+        HIP_IFEL(!(esp_tuple = other_dir_esps->data), -1,
                  "expecting 1 esp_tuple in the list, but there is NONE\n");
     }
 
