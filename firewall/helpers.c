@@ -82,10 +82,8 @@ struct in6_addr *numeric_to_addr(const char *num)
  * Executes a system command and prints an error if
  * command wasn't successfull.
  *
- * @param command The system command. The caller of
- *                this function must take care that
- *                command does not contain malicious
- *                code.
+ * @param command The system command. The caller of this function must take
+ *                care that command does not contain malicious code.
  */
 void system_print(const char *command)
 {

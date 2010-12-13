@@ -300,7 +300,7 @@ out_err:
 }
 
 /**
- * Accept a connection via PISA. Update firewall to allow further packages to
+ * Accept a connection via PISA. Update firewall to allow data packets to
  * pass through.
  *
  * @param ctx context of the packet that belongs to that connection
