@@ -3210,11 +3210,18 @@ out_err:
 int hip_build_param_host_id(struct hip_common *msg,
                             const struct hip_host_id *host_id)
 {
+    int err = 0;
     struct hip_host_id new_host_id;
     uint16_t header_len;
     uint16_t fqdn_len;
     uint16_t key_len;
     uint16_t par_len;
+
+    // sanity checks
+    HIP_IFEL(!msg,
+             -1, "Cannot build host id parameter into given message (msg is NULL) \n");
+    HIP_IFEL(!host_id,
+             -1, "Cannot build host id parameter with no host id input (host id is NULL) \n");
 
     // eliminate unused space by copying fqdn directly behind the keyrr
     header_len  = sizeof(struct hip_host_id) -
@@ -3233,7 +3240,10 @@ int hip_build_param_host_id(struct hip_common *msg,
     hip_set_param_contents_len((struct hip_tlv_common *) &new_host_id,
                                par_len - sizeof(struct hip_tlv_common));
 
-    return hip_build_param(msg, &new_host_id);
+    err = hip_build_param(msg, &new_host_id);
+
+out_err:
+    return err;
 }
 
 /**
