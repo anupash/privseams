@@ -91,8 +91,10 @@ static struct hip_host_id *hip_get_ecdsa_public_key(const struct hip_host_id_pri
     hip_set_param_contents_len((struct hip_tlv_common *) host_id_pub, sizeof(struct hip_host_id)-sizeof(struct hip_tlv_common));
 
 out_err:
-    if (err)
+    if (err) {
+        free(host_id_pub);
         return NULL;
+    }
     return host_id_pub;
 }
 
