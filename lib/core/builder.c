@@ -3154,6 +3154,12 @@ int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
     uint16_t header_len;
     uint16_t key_len;
     uint16_t fqdn_len;
+
+    /* sanity checks */
+    HIP_IFEL(!wire_host_id,
+             -1, "Given host identity is NULL.\n");
+    HIP_IFEL(!peer_host_id,
+             -1, "Cannot write return value to NULL-pointer.\n");
     HIP_IFEL(!(hip_get_param_type(wire_host_id) == HIP_PARAM_HOST_ID),
              -1, "Param has wrong type (not HIP_PARAM_HOST_ID)");
 
