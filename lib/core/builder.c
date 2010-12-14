@@ -3163,13 +3163,28 @@ int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
     HIP_IFEL(!(hip_get_param_type(wire_host_id) == HIP_PARAM_HOST_ID),
              -1, "Param has wrong type (not HIP_PARAM_HOST_ID)");
 
-    // copy the header, key and fqdn
+    // compute and check lengths for key and di
     header_len  = sizeof(struct hip_host_id) -
                   sizeof(peer_host_id->key) -
                   sizeof(peer_host_id->hostname);
     fqdn_len    = ntohs(wire_host_id->di_type_length) & 0x0FFF;
     key_len     = ntohs(wire_host_id->hi_length) -
                   sizeof(struct hip_host_id_key_rdata);
+
+    if(fqdn_len >= HIP_HOST_ID_HOSTNAME_LEN_MAX) {
+        HIP_ERROR("Got bad length for domain identifier: %d\n", fqdn_len);
+        goto out_err;
+    }
+    if(key_len > HIP_MAX_RSA_KEY_LEN / 8 + 4) {
+        HIP_ERROR("Got bad key length: %d\n", fqdn_len);
+        goto out_err;
+    }
+    if(header_len + key_len + fqdn_len > hip_get_param_contents_len(wire_host_id) + 4) {
+        HIP_ERROR("Header+ Key + DI length exceeds parameter size: %d\n", header_len + key_len + fqdn_len);
+        goto out_err;
+    }
+
+    // copy the header, key and di
     memcpy(peer_host_id, wire_host_id, header_len);
     memcpy(peer_host_id->key, wire_host_id->key, key_len);
     memcpy(peer_host_id->hostname, &wire_host_id->key[key_len], fqdn_len);
