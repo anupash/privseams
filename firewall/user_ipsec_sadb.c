@@ -556,12 +556,8 @@ out_err:
 static void hip_sa_entry_free(hip_sa_entry_t *entry)
 {
     if (entry) {
-        if (entry->auth_key) {
-            free(entry->auth_key);
-        }
-        if (entry->enc_key) {
-            free(entry->enc_key);
-        }
+        free(entry->auth_key);
+        free(entry->enc_key);
 
         // also free all hchain related members
         esp_prot_sa_entry_free(entry);
@@ -720,12 +716,8 @@ int hip_sadb_uninit(void)
         HIP_ERROR("failed to flush sadb\n");
     }
 
-    if (sadb) {
-        free(sadb);
-    }
-    if (linkdb) {
-        free(linkdb);
-    }
+    free(sadb);
+    free(linkdb);
 
     return err;
 }
@@ -733,29 +725,29 @@ int hip_sadb_uninit(void)
 /**
  * adds or updates SA entry
  *
- * @param direction         direction of the SA
- * @param spi               IPsec SPI number
- * @param mode              ESP mode
- * @param src_addr          source address of outer IP header
- * @param dst_addr          destination address of outer IP header
- * @param inner_src_addr    inner source addresses for tunnel and BEET SAs
- * @param inner_dst_addr    inner destination addresses for tunnel and BEET SAs
- * @param encap_mode        encapsulation mode
- * @param local_port          src port for UDP encaps. ESP
+ * @param direction          direction of the SA
+ * @param spi                IPsec SPI number
+ * @param mode               ESP mode
+ * @param src_addr           source address of outer IP header
+ * @param dst_addr           destination address of outer IP header
+ * @param inner_src_addr     inner source addresses for tunnel and BEET SAs
+ * @param inner_dst_addr     inner destination addresses for tunnel and BEET SAs
+ * @param encap_mode         encapsulation mode
+ * @param local_port         src port for UDP encaps. ESP
  * @param peer_port          dst port for UDP encaps. ESP
- * @param ealg              crypto transform in use
- * @param auth_key          raw authentication key
- * @param enc_key           raw encryption key
- * @param lifetime          seconds until expiration
+ * @param ealg               crypto transform in use
+ * @param auth_key           raw authentication key
+ * @param enc_key            raw encryption key
+ * @param lifetime           seconds until expiration
  * @param esp_prot_transform mode used for securing ipsec traffic
- * @param hash_item_length  length of the hash item
- * @param esp_num_anchors   number of anchors for parallel mode
- * @param esp_prot_anchors  hash item anchors
- * @param update            notification if this is an update
- * @param local_port        local port
- * @param peer_port         peer port
- * @param retransmission    retransmission
- * @return                  0 on success, else -1
+ * @param hash_item_length   length of the hash item
+ * @param esp_num_anchors    number of anchors for parallel mode
+ * @param esp_prot_anchors   hash item anchors
+ * @param update             notification if this is an update
+ * @param local_port         local port
+ * @param peer_port          peer port
+ * @param retransmission     retransmission
+ * @return                   0 on success, else -1
  */
 int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
                  const struct in6_addr *src_addr,

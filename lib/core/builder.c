@@ -108,7 +108,7 @@
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
-  #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif /* ARRAY_SIZE */
 
 enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
@@ -1744,8 +1744,6 @@ out_err:
  * <li>payload_proto.</li>
  * <li>payload_len: see how build_daemon_hdr() works.</li>
  * <li>ver_res.</li>
- * <li>checksum (move the checksum function from hip.c to this file
- *     because this file is shared by kernel and userspace).</li>
  * <li>write the parameters of this function into the message.</li>
  * </ul>
  * @note Use @b only accessors to hide byte order and size conversion issues!
@@ -1854,7 +1852,8 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
                  "Failed to build param\n");
     }
 
-    HIP_IFEL(hip_build_param(msg_copy, host_id), -1,
+    // we need to rebuild the compressed parameter format for host ids
+    HIP_IFEL(hip_build_param_host_id(msg_copy, host_id), -1,
              "Failed to append pseudo host id to R2\n");
 
 out_err:
@@ -1902,10 +1901,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 
     err = hip_build_param(msg, &hmac2);
 out_err:
-    if (msg_copy) {
-        free(msg_copy);
-    }
-
+    free(msg_copy);
     return err;
 }
 
@@ -2029,11 +2025,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
     err = hip_build_generic_param(msg, &enc, sizeof(enc), common);
 
 out_err:
-
-    if (param_padded) {
-        free(param_padded);
-    }
-
+    free(param_padded);
     return err;
 }
 
@@ -2638,11 +2630,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
                                   value);
 
 out_err:
-
-    if (value) {
-        free(value);
-    }
-
+    free(value);
     return err;
 }
 
@@ -3148,6 +3136,83 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
     err          = hip_build_generic_param(msg, &enc, sizeof(enc), param);
 
     return err;
+}
+
+/**
+ * Convert a host id parameter from its compressed on the wire format to
+ * the uncompressed internal format.
+ *
+ * @param wire_host_id the host id parameter
+ * @param peer_host_id pointer to memory, where the uncompressed host id is written to
+ *
+ * @return 0 on success, negative on error (if parameter was of wrong type)
+ */
+int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
+                                 struct hip_host_id *peer_host_id)
+{
+    int err = 0;
+    uint16_t header_len;
+    uint16_t key_len;
+    uint16_t fqdn_len;
+    HIP_IFEL(!(hip_get_param_type(wire_host_id) == HIP_PARAM_HOST_ID),
+             -1, "Param has wrong type (not HIP_PARAM_HOST_ID)");
+
+    // copy the header, key and fqdn
+    header_len  = sizeof(struct hip_host_id) -
+                  sizeof(peer_host_id->key) -
+                  sizeof(peer_host_id->hostname);
+    fqdn_len    = ntohs(wire_host_id->di_type_length) & 0x0FFF;
+    key_len     = ntohs(wire_host_id->hi_length) -
+                  sizeof(struct hip_host_id_key_rdata);
+    memcpy(peer_host_id, wire_host_id, header_len);
+    memcpy(peer_host_id->key, wire_host_id->key, key_len);
+    memcpy(peer_host_id->hostname, &wire_host_id->key[key_len], fqdn_len);
+
+    // with the header we also copied the compressed length value, so correct this
+    hip_set_param_contents_len((struct hip_tlv_common *) peer_host_id,
+                               sizeof(struct hip_host_id) -
+                               sizeof(struct hip_tlv_common));
+
+out_err:
+    return err;
+}
+
+/**
+ * Build a host id parameter and insert it into a message.
+ *
+ * @param msg the message where the parameter is inserted
+ * @param host_id the host identity from which the parameter is built
+ *
+ * @return zero on success, negative on error value on error
+ * @see hip_build_param()
+ */
+int hip_build_param_host_id(struct hip_common *msg,
+                            const struct hip_host_id *host_id)
+{
+    struct hip_host_id new_host_id;
+    uint16_t header_len;
+    uint16_t fqdn_len;
+    uint16_t key_len;
+    uint16_t par_len;
+
+    // eliminate unused space by copying fqdn directly behind the keyrr
+    header_len  = sizeof(struct hip_host_id) -
+                  sizeof(host_id->key) -
+                  sizeof(host_id->hostname);
+    fqdn_len    = ntohs(host_id->di_type_length) & 0x0FFF;
+    key_len     = ntohs(host_id->hi_length) -
+                  sizeof(struct hip_host_id_key_rdata);
+    memcpy(&new_host_id, host_id, header_len);
+    memcpy(&new_host_id.key[0], host_id->key, key_len);
+    memcpy(&new_host_id.key[key_len], host_id->hostname, fqdn_len);
+
+    // set the new contents length
+    // = | length fields | + | keyrr header | + | HI | + | FQDN |
+    par_len = header_len + key_len + fqdn_len;
+    hip_set_param_contents_len((struct hip_tlv_common *) &new_host_id,
+                               par_len - sizeof(struct hip_tlv_common));
+
+    return hip_build_param(msg, &new_host_id);
 }
 
 /**
@@ -3722,11 +3787,7 @@ int dsa_to_hip_endpoint(DSA *dsa,
                        dsa_key_rr);
 
 out_err:
-
-    if (dsa_key_rr) {
-        free(dsa_key_rr);
-    }
-
+    free(dsa_key_rr);
     return err;
 }
 
@@ -3780,11 +3841,7 @@ int rsa_to_hip_endpoint(RSA *rsa,
                        rsa_key_rr);
 
 out_err:
-
-    if (rsa_key_rr) {
-        free(rsa_key_rr);
-    }
-
+    free(rsa_key_rr);
     return err;
 }
 
@@ -3900,17 +3957,9 @@ int hip_any_key_to_hit(void *any_key,
               (type == HIP_HI_ECDSA ? "ecdsa" : "rsa/dsa"));
 
 out_err:
-
-    if (key_rr) {
-        free(key_rr);
-    }
-    if (host_id) {
-        free(host_id);
-    }
-    if (host_id_pub) {
-        free(host_id_pub);
-    }
-
+    free(key_rr);
+    free(host_id);
+    free(host_id_pub);
     return err;
 }
 

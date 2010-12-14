@@ -56,7 +56,7 @@ build_package()
     cat $SPECFILE_TEMPLATE   >> $SPECFILE
 
     make dist > /dev/null
-    mv -f hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
+    cp hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
 
     $PACKAGING_CMD
 }

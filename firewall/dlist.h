@@ -28,25 +28,15 @@
 
 #include "common_types.h"
 
-DList *append_to_list(DList *list,
-                      void *data);
+struct dlist *append_to_list(struct dlist *list, void *data);
 
-DList *remove_link_dlist(DList *list,
-                         DList *link);
+struct dlist *remove_link_dlist(struct dlist *list, struct dlist *link);
 
-DList *insert_to_list(DList *list,
-                      void *data,
-                      unsigned int index);
+struct dlist *insert_to_list(struct dlist *list, void *data,
+                             unsigned int index);
 
-DList *find_in_dlist(DList *list,
-                     void *data);
+struct dlist *find_in_dlist(struct dlist *list, void *data);
 
-DList *list_last(DList *list);
+struct dlist *list_last(struct dlist *list);
 
-/* These aren't currently used outside dlist.c, but are declared
-   public for uniformity (and so debug-less builds would succeed) */
-unsigned int list_length(DList *list);
-DList *list_first(DList *list);
-
-
-#endif /*HIP_FIREWALL_DLIST_H*/
+#endif /* HIP_FIREWALL_DLIST_H */

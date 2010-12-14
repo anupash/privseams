@@ -398,7 +398,7 @@
 #define HIP_MAX_KEY_LEN 32 /* max. draw: 256 bits! */
 
 #define HIP_VER_RES                 0x01     /* Version 1, reserved 0 */
-#define HIP_USER_VER_RES            0x02       /* Internal messages */
+#define HIP_USER_VER_RES            0x10       /* Internal messages */
 
 /**
  * @defgroup hip_ha_controls HIP host association controls

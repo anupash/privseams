@@ -85,4 +85,4 @@ unsigned char *hchain_pop(hash_chain_t *hash_chain);
 int hchain_free(hash_chain_t *hash_chain);
 int hchain_get_num_remaining(const hash_chain_t *hash_chain);
 
-#endif /*HIP_LIB_CORE_HASHCHAIN_H*/
+#endif /* HIP_LIB_CORE_HASHCHAIN_H */

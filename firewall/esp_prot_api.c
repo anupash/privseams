@@ -485,13 +485,13 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry,
                         /* esp_prot_sadb_maintenance should have already set up the next_hchain,
                          * check that the anchor belongs to the one that is set */
                         if (use_hash_trees) {
-                            htree = (hash_tree_t *) entry->next_hash_items[i];
+                            htree = entry->next_hash_items[i];
 
                             HIP_IFEL(memcmp(&esp_prot_anchors[i][0],
                                             htree->root, hash_length), -1,
                                             "received a non-matching root from hipd for next_hchain\n");
                         } else {
-                            hchain = (hash_chain_t *) entry->next_hash_items[i];
+                            hchain = entry->next_hash_items[i];
 
                             HIP_IFEL(memcmp(&esp_prot_anchors[i][0],
                                             hchain_get_anchor(hchain),
@@ -562,21 +562,13 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 
     if (entry->esp_prot_transform == ESP_PROT_TFM_TREE) {
         for (i = 0; i < num_parallel_hchains; i++) {
-            if (entry->active_hash_items[i]) {
-                htree_free((hash_tree_t *) entry->active_hash_items[i]);
-            }
-            if (entry->next_hash_items[i]) {
-                htree_free((hash_tree_t *) entry->next_hash_items[i]);
-            }
+            htree_free(entry->active_hash_items[i]);
+            htree_free(entry->next_hash_items[i]);
         }
     } else {
         for (i = 0; i < num_parallel_hchains; i++) {
-            if (entry->active_hash_items[i]) {
-                hchain_free((hash_chain_t *) entry->active_hash_items[i]);
-            }
-            if (entry->next_hash_items[i]) {
-                hchain_free((hash_chain_t *) entry->next_hash_items[i]);
-            }
+            hchain_free(entry->active_hash_items[i]);
+            hchain_free(entry->next_hash_items[i]);
         }
     }
 }
@@ -694,7 +686,7 @@ int esp_prot_add_hash(unsigned char *esp_packet, int *out_length,
         // determine whether to use htrees or hchains
         if (entry->esp_prot_transform == ESP_PROT_TFM_TREE) {
             // there should be no parallel hash trees -> index 0
-            htree = (hash_tree_t *) entry->active_hash_items[0];
+            htree = entry->active_hash_items[0];
 
             // only add elements if not depleted yet
             if (htree_has_more_data(htree)) {
@@ -731,15 +723,14 @@ int esp_prot_add_hash(unsigned char *esp_packet, int *out_length,
         } else {
 
             if (token_transform == ESP_PROT_TFM_PARALLEL) {
-                hchain = (hash_chain_t *)
-                        entry->active_hash_items[entry->last_used_chain];
+                hchain = entry->active_hash_items[entry->last_used_chain];
 
                 HIP_DEBUG("entry->last_used_chain: %i\n", entry->last_used_chain);
 
                 entry->last_used_chain =
                         (entry->last_used_chain + 1) % num_parallel_hchains;
             } else {
-                hchain = (hash_chain_t *) entry->active_hash_items[0];
+                hchain = entry->active_hash_items[0];
             }
 
             // first determine hash length
@@ -1050,13 +1041,13 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
          * -> assume same for all parallel hchains (as round-robin) */
         if (entry->esp_prot_transform == ESP_PROT_TFM_TREE) {
             use_hash_trees   = 1;
-            htree            = (hash_tree_t *) entry->active_hash_items[0];
+            htree            = entry->active_hash_items[0];
             hash_item_length = htree->num_data_blocks;
 
             remaining        = htree_get_num_remaining(htree);
             threshold        = htree->num_data_blocks * update_threshold;
         } else {
-            hchain           = (hash_chain_t *) entry->active_hash_items[0];
+            hchain           = entry->active_hash_items[0];
             hash_item_length = hchain->hchain_length;
 
             remaining        = hchain_get_num_remaining(hchain);
@@ -1074,12 +1065,12 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
                 has_linked_anchor = 0;
 
                 if (use_hash_trees) {
-                    htree = (hash_tree_t *) entry->active_hash_items[i];
+                    htree = entry->active_hash_items[i];
 
                     link_trees[i]   = htree->link_tree;
                     hierarchy_level = htree->hierarchy_level;
                 } else {
-                    hchain = (hash_chain_t *) entry->active_hash_items[i];
+                    hchain = entry->active_hash_items[i];
 
                     link_trees[i]   = hchain->link_tree;
                     hierarchy_level = hchain->hchain_hierarchy;
@@ -1132,9 +1123,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
                             // free already discovered anchors, we can't use them any more...
                             for (j = 0; j <= i; j++) {
                                 if (use_hash_trees) {
-                                    htree_free((hash_tree_t *) entry->next_hash_items[j]);
+                                    htree_free(entry->next_hash_items[j]);
                                 } else {
-                                    hchain_free((hash_chain_t *) entry->next_hash_items[j]);
+                                    hchain_free(entry->next_hash_items[j]);
                                 }
                             }
 
@@ -1164,10 +1155,10 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
                              -1, "unable to retrieve hchain from store\n");
 
                     if (use_hash_trees) {
-                        htree      = (hash_tree_t *) entry->next_hash_items[i];
+                        htree      = entry->next_hash_items[i];
                         anchors[i] = htree->root;
                     } else {
-                        hchain     = (hash_chain_t *) entry->next_hash_items[i];
+                        hchain     = entry->next_hash_items[i];
                         anchors[i] = hchain_get_anchor(hchain);
                     }
                 }
@@ -1193,9 +1184,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
             for (i = 0; i < num_parallel_hchains; i++) {
                 // this will free all linked elements in the hchain
                 if (use_hash_trees) {
-                    htree_free((hash_tree_t *) entry->active_hash_items[i]);
+                    htree_free(entry->active_hash_items[i]);
                 } else {
-                    hchain_free((hash_chain_t *) entry->active_hash_items[i]);
+                    hchain_free(entry->active_hash_items[i]);
                 }
 
                 HIP_DEBUG("changing to next_hchain\n");

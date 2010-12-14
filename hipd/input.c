@@ -222,10 +222,7 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
              -1, "HMAC validation failed\n");
 
 out_err:
-    if (msg_copy) {
-        free(msg_copy);
-    }
-
+    free(msg_copy);
     return err;
 }
 
@@ -440,15 +437,11 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
 
     /* on success free for dh_shared_key is called by caller */
 out_err:
-    if (err && dh_shared_key) {
+    if (err) {
         free(dh_shared_key);
     }
-    if (keymat) {
-        free(keymat);
-    }
-    if (plain_local_hit) {
-        free(plain_local_hit);
-    }
+    free(keymat);
+    free(plain_local_hit);
     return err;
 }
 
@@ -702,7 +695,8 @@ int hip_check_r1(RVS const uint8_t packet_type,
 {
     int err = 0, mask = HIP_PACKET_CTRL_ANON, len;
     struct in6_addr daddr;
-    const struct hip_host_id *peer_host_id = NULL;
+    struct hip_host_id peer_host_id;
+    const struct hip_tlv_common *param     = NULL;
     const char *str                        = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -766,20 +760,24 @@ int hip_check_r1(RVS const uint8_t packet_type,
      * verification must be delayed to the R2 */
     /* Store the peer's public key to HA and validate it */
     /** @todo Do not store the key if the verification fails. */
-    HIP_IFEL(!(peer_host_id = hip_get_param(ctx->input_msg, HIP_PARAM_HOST_ID)),
+    HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_HOST_ID)),
              -ENOENT, "No HOST_ID found in R1\n");
+
+    /* we have to convert the compressed on the wire format into the internal host id representation */
+    HIP_IFEL(hip_build_host_id_from_param((const struct hip_host_id *) param, &peer_host_id),
+             -1, "Failed to convert host id parameter \n");
     /* copy hostname to hadb entry if local copy is empty */
     if (strlen((char *) (ctx->hadb_entry->peer_hostname)) == 0) {
         memcpy(ctx->hadb_entry->peer_hostname,
-               hip_get_param_host_id_hostname(peer_host_id),
+               hip_get_param_host_id_hostname(&peer_host_id),
                HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
     }
-    HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
+    HIP_IFE(hip_get_param_host_id_di_type_len(&peer_host_id, &str, &len) < 0, -1);
     HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
               str,
               len,
-              hip_get_param_host_id_hostname(peer_host_id));
-    HIP_IFE(hip_init_peer(ctx->hadb_entry, peer_host_id),
+              hip_get_param_host_id_hostname(&peer_host_id));
+    HIP_IFE(hip_init_peer(ctx->hadb_entry, &peer_host_id),
             -EINVAL);
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -836,8 +834,6 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     struct hip_dh_public_value *dhpv        = NULL;
     const struct hip_locator *locator       = NULL;
     uint16_t i2_mask = 0;
-
-    HIP_DEBUG("Received R1 in state %s\n", hip_state_str(ha_state));
 
     if (ha_state == HIP_STATE_I2_SENT) {
         HIP_DEBUG("Retransmission\n");
@@ -967,10 +963,8 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
 
     /******************************************************************/
 
-    out_err:
-    if (ctx->hadb_entry->dh_shared_key) {
-        free(ctx->hadb_entry->dh_shared_key);
-    }
+out_err:
+    free(ctx->hadb_entry->dh_shared_key);
     return err;
 }
 /**
@@ -1419,6 +1413,7 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     const struct hip_r1_counter *r1cntr              = NULL;
     const struct hip_hip_transform *hip_transform    = NULL;
     struct hip_host_id *host_id_in_enc               = NULL;
+    struct hip_host_id host_id;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2\n");
     hip_perf_start_benchmark(perf_set, PERF_I2);
@@ -1657,25 +1652,31 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
                  "The decrypted data is not a HOST_ID parameter. Dropping\n");
     }
 
+    /* We need to decompress the host id parameter
+     * and use the decompressed representation from here on
+     */
+    HIP_IFEL(hip_build_host_id_from_param(host_id_in_enc, &host_id),
+             -1, "Could not convert host id parameter.\n)");
+
     HIP_HEXDUMP("Initiator host id",
-                host_id_in_enc,
-                hip_get_param_total_len(host_id_in_enc));
+                &host_id,
+                hip_get_param_total_len(&host_id));
 
     /* Store peer's public key and HIT to HA */
-     HIP_IFE(hip_init_peer(ctx->hadb_entry, host_id_in_enc), -EINVAL);
+     HIP_IFE(hip_init_peer(ctx->hadb_entry, &host_id), -EINVAL);
      /* Validate signature */
- #ifdef CONFIG_HIP_PERFORMANCE
+#ifdef CONFIG_HIP_PERFORMANCE
      HIP_DEBUG("Start PERF_VERIFY(2)\n");
      hip_perf_start_benchmark(perf_set, PERF_VERIFY);
- #endif
+#endif
      HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
                                       ctx->input_msg),
               -EINVAL,
               "Verification of I2 signature failed\n");
- #ifdef CONFIG_HIP_PERFORMANCE
+#ifdef CONFIG_HIP_PERFORMANCE
      HIP_DEBUG("Stop PERF_VERIFY(2)\n");
      hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
- #endif
+#endif
 
     if ((r1cntr = hip_get_param(ctx->input_msg, HIP_PARAM_R1_COUNTER))) {
         ctx->hadb_entry->birthday = r1cntr->generation;
@@ -1685,9 +1686,7 @@ out_err:
     if (err) {
         ctx->error = err;
     }
-    if (tmp_enc != NULL) {
-            free(tmp_enc);
-    }
+    free(tmp_enc);
     return err;
 }
 

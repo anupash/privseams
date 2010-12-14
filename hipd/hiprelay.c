@@ -54,9 +54,7 @@
  * hip_relrec_t rr = hip_relrec_alloc(...);
  * hip_relht_put(rr);
  * if (hip_relht_get(rr) == NULL) { // The put was unsuccessful.
- *     if (rr != NULL) {
- *         free(rr);
- *     }
+ *     free(rr);
  * }
  * </pre>
  * </li>
@@ -1008,10 +1006,7 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
     HIP_DEBUG_HIT("Relayed the packet to", &rec->ip_r);
 
 out_err:
-    if (msg_to_be_relayed) {
-        free(msg_to_be_relayed);
-    }
-
+    free(msg_to_be_relayed);
     return err;
 }
 
@@ -1070,9 +1065,7 @@ static int hip_relay_forward_response(const hip_common_t *r,
     HIP_DEBUG_HIT("hip_relay_forward_response: Relayed  to", relay_to_addr);
 
 out_err:
-    if (r_to_be_relayed != NULL) {
-        free(r_to_be_relayed);
-    }
+    free(r_to_be_relayed);
     return err;
 }
 

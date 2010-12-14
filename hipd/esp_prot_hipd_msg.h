@@ -70,4 +70,4 @@ int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
                                   hip_ha_t *entry,
                                   uint32_t *spi);
 
-#endif /*HIP_HIPD_ESP_PROT_HIPD_MSG_H*/
+#endif /* HIP_HIPD_ESP_PROT_HIPD_MSG_H */

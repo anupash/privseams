@@ -43,29 +43,12 @@
  *
  * @return the linked list (caller frees)
  */
-static DList *alloc_list(void)
+static struct dlist *alloc_list(void)
 {
-    DList *list = malloc(sizeof(DList));
+    struct dlist *list = malloc(sizeof(struct dlist));
     list->data = NULL;
     list->next = NULL;
     list->prev = NULL;
-
-    return list;
-}
-
-/**
- * get a pointer to the previous list item
- *
- * @param list a pointer to the list
- * @return a pointer to the previous list item
- */
-DList *list_first(DList *list)
-{
-    if (list) {
-        while (list->prev) {
-            list = list->prev;
-        }
-    }
 
     return list;
 }
@@ -76,11 +59,29 @@ DList *list_first(DList *list)
  * @param list a pointer to the list
  * @return a pointer to the next list item
  */
-DList *list_last(DList *list)
+struct dlist *list_last(struct dlist *list)
 {
     if (list) {
         while (list->next) {
             list = list->next;
+        }
+    }
+
+    return list;
+}
+
+#ifdef CONFIG_HIP_DEBUG
+/**
+ * get a pointer to the previous list item
+ *
+ * @param list a pointer to the list
+ * @return a pointer to the previous list item
+ */
+static struct dlist *list_first(struct dlist *list)
+{
+    if (list) {
+        while (list->prev) {
+            list = list->prev;
         }
     }
 
@@ -93,7 +94,7 @@ DList *list_last(DList *list)
  * @param list the linked list
  * @return the number of items on the linked list
  */
-unsigned int list_length(DList *list)
+static unsigned int list_length(struct dlist *list)
 {
     unsigned int length = 0;
     list = list_first(list);
@@ -105,6 +106,7 @@ unsigned int list_length(DList *list)
     }
     return length;
 }
+#endif /* CONFIG_HIP_DEBUG */
 
 /**
  * append a new element to the linked list
@@ -113,11 +115,10 @@ unsigned int list_length(DList *list)
  * @param data the new item to be appended
  * @return a pointer to the new item in the linked list
  */
-DList *append_to_list(DList *list,
-                      void *data)
+struct dlist *append_to_list(struct dlist *list, void *data)
 {
-    DList *new_list;
-    DList *last;
+    struct dlist *new_list;
+    struct dlist *last;
 
     new_list       = alloc_list();
     new_list->data = data;
@@ -144,8 +145,7 @@ DList *append_to_list(DList *list,
  * @param link the link to be removed
  * @return link the link to be removed
  */
-DList *remove_link_dlist(DList *list,
-                         DList *link)
+struct dlist *remove_link_dlist(struct dlist *list, struct dlist *link)
 {
     if (link) {
         if (link->prev) {
@@ -171,8 +171,7 @@ DList *remove_link_dlist(DList *list,
  * @param data the element to find
  * @return the element in the linked list
  */
-DList *find_in_dlist(DList *list,
-                     void *data)
+struct dlist *find_in_dlist(struct dlist *list, void *data)
 {
     while (list) {
         if (list->data == data) {

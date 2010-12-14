@@ -41,7 +41,6 @@
 #include "config.h"
 #include "common_types.h"
 #include "esp_prot_defines.h"
-#include "firewall_defines.h"
 
 
 typedef struct hip_fw_context {
@@ -83,7 +82,7 @@ struct esp_tuple {
     uint32_t                spi;
     uint32_t                new_spi;
     uint32_t                spi_update_id;
-    SList                  *dst_addr_list;
+    struct slist           *dst_addr_list;
     struct tuple           *tuple;
     /* tracking of the ESP SEQ number */
     uint32_t                seq_no;
@@ -100,10 +99,10 @@ struct esp_tuple {
     unsigned char          *active_roots[MAX_NUM_PARALLEL_HCHAINS];
     int                     next_root_length[MAX_NUM_PARALLEL_HCHAINS];
     unsigned char          *next_roots[MAX_NUM_PARALLEL_HCHAINS];
-    /* list temporarily storing anchor elements until the consecutive update
-     * msg reveals that all on-path devices know the new anchor */
+    /** List temporarily storing anchor elements until the consecutive update
+     *  msg reveals that all on-path devices know the new anchor. */
     hip_ll_t                anchor_cache;
-    /* buffer storing hashes of previous packets for cumulative authentication */
+    /** buffer storing hashes of previous packets for cumulative authentication */
     esp_cumulative_item_t   hash_buffer[MAX_RING_BUFFER_SIZE];
 };
 
@@ -126,7 +125,7 @@ struct tuple {
     struct in6_addr   *dst_ip;
     in_port_t          src_port;
     in_port_t          dst_port;
-    SList             *esp_tuples;
+    struct slist      *esp_tuples;
     int                direction;
     struct connection *connection;
     int                state;

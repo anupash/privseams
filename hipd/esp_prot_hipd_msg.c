@@ -691,10 +691,7 @@ int esp_prot_i2_add_anchor(struct hip_packet_context *ctx)
     }
 
 out_err:
-    if (anchor) {
-        free(anchor);
-    }
-
+    free(anchor);
     return err;
 }
 
@@ -832,10 +829,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
     }
 
 out_err:
-    if (anchor) {
-        free(anchor);
-    }
-
+    free(anchor);
     return err;
 }
 
@@ -976,7 +970,7 @@ int esp_prot_handle_first_update_packet(const hip_common_t *recv_update,
                                            src_ip, spi),
              -1, "failed to send UPDATE replay");
 
-  out_err:
+out_err:
     return err;
 }
 
@@ -1017,7 +1011,7 @@ int esp_prot_handle_second_update_packet(hip_ha_t *entry,
                         entry),
              -1, "failed to notify sadb about next anchor\n");
 
-  out_err:
+out_err:
     return err;
 }
 

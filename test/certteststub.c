@@ -193,11 +193,7 @@ skip_spki:
 out_err:
     HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
 
-    if (cert) {
-        free(cert);
-    }
-    if (to_verification) {
-        free(to_verification);
-    }
+    free(cert);
+    free(to_verification);
     exit(err);
 }

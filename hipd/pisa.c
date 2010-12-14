@@ -55,9 +55,7 @@ static int hip_pisa_load_certificate(void)
 {
     FILE *f = NULL;
 
-    if (midauth_cert) {
-        free(midauth_cert);
-    }
+    free(midauth_cert);
     midauth_cert = malloc(CERT_MAX_SIZE);
     memset(midauth_cert, 0, CERT_MAX_SIZE);
 

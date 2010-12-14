@@ -5,7 +5,7 @@ PKG_VERSION:=1.0.6
 PKG_RELEASE:=6
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://hipl.hiit.fi/hipl/contrib/openwrt/
+PKG_SOURCE_URL:=http://hipl.hiit.fi/hipl/
 PKG_CAT:=zcat
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -16,7 +16,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/hipl-hipd
     SECTION:=net
     CATEGORY:=Network
-    DEPENDS:=+hipl-common +libconfig +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
+    DEPENDS:=hipl-common +genl +ip +kmod-ipsec +kmod-ipsec4 +kmod-ipsec6 +kmod-loop +kmod-nbd +kmod-tun +libpthread +losetup +kmod-dummy +kmod-ipip +kmod-crypto-authenc +kmod-ip6-tunnel
     TITLE:=HIPL daemon
     URL:=http://hipl.hiit.fi/
 endef
@@ -28,9 +28,7 @@ endef
 define Package/hipl-hipfw
     SECTION:=net
     CATEGORY:=Network
-    DEPENDS:=+hipl-common +iptables +ip6tables +kmod-ip6tables +kmod-ipt-queue
-             # TUN/TAP support - might be needed at some point instead of kmod-ipt-queue
-             #+kmod-tun
+    DEPENDS:=hipl-common +libconfig +iptables +ip6tables +kmod-ipt-queue
     TITLE:=HIPL firewall
     URL:=http://hipl.hiit.fi/
 endef
@@ -47,6 +45,7 @@ define Package/hipl-common
     #will be required by ipkg on the openwrt box
     #TODO remove unnecessary modules
     DEPENDS:=+kmod-crypto-aes +kmod-crypto-hmac +kmod-crypto-null +kmod-crypto-sha1 +kmod-ipv6 +libgcc +libopenssl
+    BUILDONLY:=1
     TITLE:=HIPL common files
     URL:=http://hipl.hiit.fi/
 endef
@@ -55,9 +54,7 @@ define Package/hipl-common/description
  The libraries and configs needed for HIPL.
 endef
 
-CONFIGURE_VARS += \
-    LIBS="-lz" \
-    CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libconfig"
+CONFIGURE_VARS += LIBS="-lz"
 
 define Build/Configure
 	$(call Build/Configure/Default, \

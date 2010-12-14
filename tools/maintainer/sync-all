@@ -1,11 +1,13 @@
 #!/bin/sh -xv
 
+TMP_DIR='$HOME/.hipl.syncall.tmp.dir'
+
 HOSTS="
-allerian.infrahipnet
+halko.pc.infrahip.net
+allerian.infrahip.net
 garadar.infrahip.net
 cenarion.infrahip.net
 netherstorm.infrahip.net
-terokkar.infrahip.net
 shadowmoon.infrahip.net
 hellfire.infrahip.net
 zangarmash.infrahip.net
@@ -14,10 +16,11 @@ ironforge.infrahip.net
 "
 
 COMMANDS="
-cd /tmp
-sudo rm -rf trunk
-rm hipl.tar.gz
-wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
+mkdir -p $TMP_DIR &&
+    cd $TMP_DIR &&
+    rm -rf trunk &&
+    rm -f hipl.tar.gz &&
+    wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
     tar xvzf hipl.tar.gz &&
     cd trunk &&
     autoreconf --install &&
@@ -27,30 +30,29 @@ wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
 #set -e
 
 # configured hosts:
-# Ubuntu lucid 32-bit terokkar.infrahip.net
 # ubuntu lucid 32-bit allerian
+# ubuntu lucid 64-bit halko
+# ubuntu maverick 32-bit MISSING
+# ubuntu maverick 64-bit garadar
 # f13-i386            netherstorm.infrahip.net
 # F13-x86_64          shadowmoon.infrahip.net
+# F14 32bit           ironforge
+# F14-x86_64          nagrand.infrahip.net
 # CentOS-5.5 i386     hellfire.infrahip.net
 # CentOS-5.5 x86_64   zangarmash.infrahip.net
-# F14 32bit           ironforge
-# F14-x86_64	      nagrand.infrahip.net
-# ubuntu maverick 64-bit garadar
-# ubuntu maverick 64-bit cenarion 64-bit
 #
 # disabled hosts:
 # fc11-i386           blacktemple
 # fc11-x86_64         stonebreaker
+# Ubuntu lucid 32-bit terokkar.infrahip.net
+# ubuntu maverick 64-bit cenarion 64-bit
 
 if test $# != 0; then
     HOSTS="$@"
 fi
 
-echo "--- Pinging all hosts ---"
-
-for HOST in $HOSTS; do
-    ping -c 2 $HOST
-done
+echo "--- Hosts ---"
+echo "$HOSTS"
 
 echo "--- Executing command on each host ---"
 

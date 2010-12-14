@@ -85,9 +85,7 @@ static int khi_encode(unsigned char *orig, int orig_len,
              "BN_bn2bin_safe\n");
 
 out_err:
-    if (bn) {
-        BN_free(bn);
-    }
+    BN_free(bn);
     return err;
 }
 
@@ -142,10 +140,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
     set_hit_prefix(hit);
 
 out_err:
-    if (khi_data) {
-        free(khi_data);
-    }
-
+    free(khi_data);
     return err;
 }
 
@@ -1431,9 +1426,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr)
 out_err:
 
     if (err) {
-        if (*dsa_key_rr) {
-            free(*dsa_key_rr);
-        }
+        free(*dsa_key_rr);
         return err;
     } else {
         return dsa_key_rr_len;
@@ -1528,9 +1521,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr)
 out_err:
 
     if (err) {
-        if (*rsa_key_rr) {
-            free(*rsa_key_rr);
-        }
+        free(*rsa_key_rr);
         return err;
     }
 

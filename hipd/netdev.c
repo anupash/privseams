@@ -373,9 +373,9 @@ int hip_exists_address_in_list(struct sockaddr *addr, int ifindex)
         HIP_DEBUG("mapped=%d\n", mapped);
 
         if (mapped) {
-            in6          = (struct in6_addr * ) hip_cast_sa_addr((struct sockaddr *) (&n->addr));
+            in6 = hip_cast_sa_addr((struct sockaddr *) (&n->addr));
 
-            HIP_IFEL(!(in = (struct in_addr *) hip_cast_sa_addr(addr)),
+            HIP_IFEL(!(in = hip_cast_sa_addr(addr)),
                      -1, "unable to cast address\n");
 
             addr_match   = IPV6_EQ_IPV4(in6, in);

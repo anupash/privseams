@@ -877,9 +877,7 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 
 out_err:
     for (i = 0; i < 16; i++) {
-        if (idxmap[i]) {
-            free(idxmap[i]);
-        }
+        free(idxmap[i]);
     }
 
     return 0;
@@ -1224,9 +1222,7 @@ static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
     *slash = *aux_slash;
 
 out_err:
-    if (aux_slash) {
-        free(aux_slash);
-    }
+    free(aux_slash);
     return err;
 }
 
@@ -1304,9 +1300,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
              "netlink talk failed\n");
 
 out_err:
-    if (res) {
-        free(res);
-    }
+    free(res);
     return 0;
 }
 
@@ -1407,9 +1401,7 @@ int set_up_device(const char *dev, int up)
             memset(res, '\0', size_dev + 1);
             strcat(strcat(res, dev), label);
             err      = do_chflags(res, flags, mask);
-            if (res) {
-                free(res);
-            }
+            free(res);
         }
     }
     err = do_chflags(dev, flags, mask);

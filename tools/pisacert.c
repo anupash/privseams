@@ -70,10 +70,7 @@ static int get_default_hit(struct in6_addr *result)
     memcpy(result, hit, sizeof(struct in6_addr));
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 

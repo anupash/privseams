@@ -74,8 +74,8 @@
 #include "reinject.h"
 
 
-DList *hipList = NULL;
-DList *espList = NULL;
+struct dlist *hip_list = NULL;
+struct dlist *esp_list = NULL;
 
 enum {
     STATE_NEW,
@@ -94,14 +94,14 @@ unsigned long timeoutValue = 0;
  * @param addr_list list of addresses
  *
  */
-static void print_esp_addr_list(const SList *addr_list)
+static void print_esp_addr_list(const struct slist *addr_list)
 {
-    const SList *list = addr_list;
+    const struct slist *list = addr_list;
     struct esp_address *addr = NULL;
 
     HIP_DEBUG("ESP dst addr list:\n");
     while (list) {
-        addr = (struct esp_address *) list->data;
+        addr = list->data;
         HIP_DEBUG("addr: %s\n", addr_to_numeric(&addr->dst_addr));
         if (addr && addr->update_id != NULL) {
             HIP_DEBUG("upd id: %d\n", *addr->update_id);
@@ -139,16 +139,16 @@ static void print_esp_tuple(const struct esp_tuple *esp_tuple)
 }
 
 /**
- * Prints all tuples in 'espList'.
+ * Prints all tuples in 'esp_list'.
  */
 static void print_esp_list(void)
 {
-    DList *list = espList;
+    struct dlist *list = esp_list;
 
     HIP_DEBUG("ESP LIST: \n");
     while (list) {
         if (list->data) {
-            print_esp_tuple((struct esp_tuple *) list->data);
+            print_esp_tuple(list->data);
         }
         list = list->next;
     }
@@ -156,17 +156,17 @@ static void print_esp_list(void)
 }
 
 /**
- * Prints all tuples in 'hipList'.
+ * Prints all tuples in 'hip_list'.
  */
 static void print_tuple_list(void)
 {
-    DList *list = hipList;
+    struct dlist *list = hip_list;
 
     HIP_DEBUG("TUPLE LIST: \n");
     if (list) {
         while (list) {
             if (list->data) {
-                print_tuple((struct hip_tuple *) list->data);
+                print_tuple(list->data);
             }
             list = list->next;
         }
@@ -223,7 +223,7 @@ static struct hip_data *get_hip_data(const struct hip_common *common)
 static void update_peer_opp_info(const struct hip_data *data,
                                  const struct in6_addr *ip6_from)
 {
-    struct _DList *list = (struct _DList *) hipList;
+    struct dlist *list = (struct dlist *) hip_list;
     hip_hit_t phit;
 
     HIP_DEBUG("updating opportunistic entries\n");
@@ -231,7 +231,7 @@ static void update_peer_opp_info(const struct hip_data *data,
     hip_opportunistic_ipv6_to_hit(ip6_from, &phit, HIP_HIT_TYPE_HASH100);
 
     while (list) {
-        struct hip_tuple *tuple = (struct hip_tuple *) list->data;
+        struct hip_tuple *tuple = list->data;
 
         if (IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->src_hit) &&
             IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->dst_hit)) {
@@ -260,10 +260,10 @@ static struct tuple *get_tuple_by_hip(const struct hip_data *data,
                                       OPP const struct in6_addr *ip6_from)
 {
     struct hip_tuple *tuple = NULL;
-    DList *list = hipList;
+    struct dlist *list = hip_list;
 
     while (list) {
-        tuple = (struct hip_tuple *) list->data;
+        tuple = list->data;
 
         if (IN6_ARE_ADDR_EQUAL(&data->src_hit, &tuple->data->src_hit) &&
             IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit)) {
@@ -293,16 +293,16 @@ static struct tuple *get_tuple_by_hip(const struct hip_data *data,
  * @param addr the address to matched from the list
  * @return the entry from the list that matched to the given address, or NULL if not found
  */
-static struct esp_address *get_esp_address(const SList *addr_list,
+static struct esp_address *get_esp_address(const struct slist *addr_list,
                                            const struct in6_addr *addr)
 {
-    const SList *list = addr_list;
+    const struct slist *list = addr_list;
     struct esp_address *esp_addr = NULL;
 
     HIP_DEBUG("get_esp_address\n");
 
     while (list) {
-        esp_addr = (struct esp_address *) list->data;
+        esp_addr = list->data;
         HIP_DEBUG("addr: %s \n", addr_to_numeric(&esp_addr->dst_addr));
 
         HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
@@ -328,9 +328,9 @@ static struct esp_address *get_esp_address(const SList *addr_list,
  *
  * @return the address list
  */
-static SList *update_esp_address(SList *addr_list,
-                                 const struct in6_addr *addr,
-                                 const uint32_t *upd_id)
+static struct slist *update_esp_address(struct slist *addr_list,
+                                        const struct in6_addr *addr,
+                                        const uint32_t *upd_id)
 {
     struct esp_address *esp_addr = get_esp_address(addr_list, addr);
     HIP_DEBUG("update_esp_address: address: %s \n", addr_to_numeric(addr));
@@ -361,7 +361,7 @@ static SList *update_esp_address(SList *addr_list,
 }
 
 /**
- * Find esp tuple from espList that matches the argument spi and contains the
+ * Find esp tuple from esp_list that matches the argument spi and contains the
  * argument ip address
  *
  * @param dst_addr the optional destination address to be searched for
@@ -370,13 +370,13 @@ static SList *update_esp_address(SList *addr_list,
  */
 static struct tuple *get_tuple_by_esp(const struct in6_addr *dst_addr, const uint32_t spi)
 {
-    SList *list = (SList *) espList;
+    struct slist *list = (struct slist *) esp_list;
 
     if (!list) {
         HIP_DEBUG("Esp tuple list is empty\n");
     }
     while (list) {
-        struct esp_tuple *tuple = (struct esp_tuple *) list->data;
+        struct esp_tuple *tuple = list->data;
         if (spi == tuple->spi) {
             if (dst_addr && get_esp_address(tuple->dst_addr_list, dst_addr) != NULL) {
                 HIP_DEBUG("connection found by esp\n");
@@ -397,20 +397,21 @@ static struct tuple *get_tuple_by_esp(const struct in6_addr *dst_addr, const uin
 /**
  * find esp_tuple from a list that matches the argument spi value
  *
- * @param esp_list the list to be searched for
+ * @param search_list the list to be searched for
  * @param spi the SPI number to the matched from the list
  * @return the matching ESP tuple or NULL if not found
  */
-struct esp_tuple *find_esp_tuple(const SList *esp_list, const uint32_t spi)
+struct esp_tuple *find_esp_tuple(const struct slist *search_list,
+                                 const uint32_t spi)
 {
-    const SList *list = esp_list;
+    const struct slist *list = search_list;
     struct esp_tuple *esp_tuple = NULL;
 
     if (!list) {
         HIP_DEBUG("Esp tuple slist is empty\n");
     }
     while (list) {
-        esp_tuple = (struct esp_tuple *) list->data;
+        esp_tuple = list->data;
         if (esp_tuple->spi == spi) {
             HIP_DEBUG("find_esp_tuple: Found esp_tuple with spi 0x%lx\n", spi);
             return esp_tuple;
@@ -424,6 +425,7 @@ struct esp_tuple *find_esp_tuple(const SList *esp_list, const uint32_t spi)
  * initialize and store a new HIP/ESP connnection into the connection table
  *
  * @param data the connection-related data to be inserted
+ * @see remove_connection
  */
 static void insert_new_connection(const struct hip_data *data)
 {
@@ -472,8 +474,8 @@ static void insert_new_connection(const struct hip_data *data)
     connection->reply.hip_tuple->data->verify    = NULL;
 
     //add tuples to list
-    hipList = append_to_list(hipList, connection->original.hip_tuple);
-    hipList = append_to_list(hipList, connection->reply.hip_tuple);
+    hip_list = append_to_list(hip_list, connection->original.hip_tuple);
+    hip_list = append_to_list(hip_list, connection->reply.hip_tuple);
     HIP_DEBUG("inserting connection \n");
 }
 
@@ -484,7 +486,7 @@ static void insert_new_connection(const struct hip_data *data)
  */
 static void insert_esp_tuple(struct esp_tuple *esp_tuple)
 {
-    espList = append_to_list(espList, esp_tuple);
+    esp_list = append_to_list(esp_list, esp_tuple);
 
     HIP_DEBUG("insert_esp_tuple:\n");
     print_esp_list();
@@ -503,17 +505,15 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
             // free keys depending on cipher
             if (hip_tuple->data->src_pub_key && hip_tuple->data->src_hi) {
                 if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_RSA) {
-                    RSA_free((RSA *) hip_tuple->data->src_pub_key);
+                    RSA_free(hip_tuple->data->src_pub_key);
                 } else if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_ECDSA) {
                     EC_KEY_free((EC_KEY *) hip_tuple->data->src_pub_key);
                 } else {
-                    DSA_free((DSA *) hip_tuple->data->src_pub_key);
+                    DSA_free(hip_tuple->data->src_pub_key);
                 }
             }
 
-            if (hip_tuple->data->src_hi) {
-                free(hip_tuple->data->src_hi);
-            }
+            free(hip_tuple->data->src_hi);
 
             free(hip_tuple->data);
             hip_tuple->data = NULL;
@@ -532,7 +532,7 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
 static void free_esp_tuple(struct esp_tuple *esp_tuple)
 {
     if (esp_tuple) {
-        SList *list              = esp_tuple->dst_addr_list;
+        struct slist *list       = esp_tuple->dst_addr_list;
         struct esp_address *addr = NULL;
 
         // remove eventual cached anchor elements for this esp tuple
@@ -542,7 +542,7 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
         while (list) {
             esp_tuple->dst_addr_list = remove_link_slist(esp_tuple->dst_addr_list,
                                                          list);
-            addr = (struct esp_address *) list->data;
+            addr = list->data;
 
             free(addr->update_id);
             free(addr);
@@ -563,20 +563,20 @@ static void remove_tuple(struct tuple *tuple)
 {
     if (tuple) {
         // remove hip_tuple from helper list
-        hipList = remove_link_dlist(hipList, find_in_dlist(hipList,
-                                                           tuple->hip_tuple));
+        hip_list = remove_link_dlist(hip_list,
+                                     find_in_dlist(hip_list, tuple->hip_tuple));
         // now free hip_tuple and its members
         free_hip_tuple(tuple->hip_tuple);
         tuple->hip_tuple = NULL;
 
-        SList *list = tuple->esp_tuples;
+        struct slist *list = tuple->esp_tuples;
         while (list) {
             // remove esp_tuples from helper list
-            espList = remove_link_dlist(espList, find_in_dlist(espList,
-                                                               list->data));
+            esp_list = remove_link_dlist(esp_list,
+                                         find_in_dlist(esp_list, list->data));
 
             tuple->esp_tuples = remove_link_slist(tuple->esp_tuples, list);
-            free_esp_tuple((struct esp_tuple *) list->data);
+            free_esp_tuple(list->data);
             list->data        = NULL;
             free(list);
             list              = tuple->esp_tuples;
@@ -585,15 +585,11 @@ static void remove_tuple(struct tuple *tuple)
         tuple->connection = NULL;
 
         // tuple was not malloced -> no free here
-        if (tuple->src_ip) {
-            free(tuple->src_ip);
-            tuple->src_ip = NULL;
-        }
+        free(tuple->src_ip);
+        tuple->src_ip = NULL;
 
-        if (tuple->dst_ip) {
-            free(tuple->dst_ip);
-            tuple->dst_ip = NULL;
-        }
+        free(tuple->dst_ip);
+        tuple->dst_ip = NULL;
     }
 }
 
@@ -601,6 +597,7 @@ static void remove_tuple(struct tuple *tuple)
  * removes a connection (both way tuples) along with its associated HIP and ESP tuples
  *
  * @param connection the connection to be freed
+ * @see insert_new_connection
  */
 static void remove_connection(struct connection *connection)
 {
@@ -773,8 +770,8 @@ static int insert_connection_from_update(const struct hip_data *data,
 
 
     //add tuples to list
-    hipList = append_to_list(hipList, connection->original.hip_tuple);
-    hipList = append_to_list(hipList, connection->reply.hip_tuple);
+    hip_list = append_to_list(hip_list, connection->original.hip_tuple);
+    hip_list = append_to_list(hip_list, connection->reply.hip_tuple);
     HIP_DEBUG("insert_connection_from_update \n");
     return 1;
 }
@@ -964,11 +961,11 @@ out_err:
 static int handle_i2(struct hip_common *common, struct tuple *tuple,
                      const hip_fw_context_t *ctx)
 {
-    const struct hip_esp_info *spi    = NULL;
-    const SList *other_dir_esps       = NULL;
-    const struct hip_host_id *host_id = NULL;
-    struct tuple *other_dir           = NULL;
-    struct esp_tuple *esp_tuple       = NULL;
+    const struct hip_esp_info *spi     = NULL;
+    const struct slist *other_dir_esps = NULL;
+    const struct hip_host_id *host_id  = NULL;
+    struct tuple *other_dir            = NULL;
+    struct esp_tuple *esp_tuple        = NULL;
     struct in6_addr hit;
     // assume correct packet
     int err                     = 1;
@@ -1077,7 +1074,7 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
 {
     const struct hip_esp_info *spi    = NULL;
     struct tuple *other_dir           = NULL;
-    SList *other_dir_esps             = NULL;
+    struct slist *other_dir_esps      = NULL;
     struct esp_tuple *esp_tuple       = NULL;
     const struct in6_addr *ip6_src = &ctx->src;
     int err                     = 1;
@@ -1289,9 +1286,9 @@ static int handle_update(const struct hip_common *common,
 
         /* attempt to create state for new connection */
         if (esp_info && locator && seq) {
-            struct hip_data *data       = NULL;
-            SList *other_dir_esps       = NULL;
-            struct esp_tuple *esp_tuple = NULL;
+            struct hip_data  *data           = NULL;
+            struct slist     *other_dir_esps = NULL;
+            struct esp_tuple *esp_tuple      = NULL;
 
             HIP_DEBUG("setting up a new connection...\n");
 
@@ -1345,8 +1342,8 @@ static int handle_update(const struct hip_common *common,
         }
     } else {
         /* we already know this connection */
-        SList *other_dir_esps       = NULL;
-        struct esp_tuple *esp_tuple = NULL;
+        struct slist *other_dir_esps = NULL;
+        struct esp_tuple *esp_tuple  = NULL;
 
         if (tuple->direction == ORIGINAL_DIR) {
             other_dir_tuple = &tuple->connection->reply;
@@ -1698,7 +1695,7 @@ int hipfw_relay_esp(const hip_fw_context_t *ctx)
     struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
     struct udphdr *udph = (struct udphdr *) ((uint8_t *) iph + iph->ihl * 4);
     int len = ctx->ipq_packet->data_len - iph->ihl * 4;
-    SList *list = (SList *) espList;
+    struct slist *list = (struct slist *) esp_list;
     struct tuple *tuple = NULL;
     struct hip_esp *esp = ctx->transport_hdr.esp;
     int err = 0;
@@ -1952,10 +1949,10 @@ int conntrack(const struct in6_addr *ip6_src,
  */
 struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6_addr *dst_hit)
 {
-    DList *list = hipList;
+    struct dlist *list = hip_list;
 
     while (list) {
-        struct hip_tuple *tuple = (struct hip_tuple *) list->data;
+        struct hip_tuple *tuple = list->data;
         if (IN6_ARE_ADDR_EQUAL(src_hit, &tuple->data->src_hit) &&
             IN6_ARE_ADDR_EQUAL(dst_hit, &tuple->data->dst_hit)) {
             HIP_DEBUG("connection found, \n");

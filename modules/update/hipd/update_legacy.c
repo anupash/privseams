@@ -109,11 +109,7 @@ int hip_build_locators_old(struct hip_common *msg)
     err = hip_build_param_locator(msg, locs, count);
 
 out_err:
-
-    if (locs) {
-        free(locs);
-    }
-
+    free(locs);
     return err;
 }
 

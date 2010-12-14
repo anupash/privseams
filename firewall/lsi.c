@@ -167,9 +167,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
     HIP_DEBUG("Send_recv msg succeed \n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
+    free(msg);
     return err;
 }
 
@@ -287,9 +285,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
         }
     }
 
-    if (msg) {
-        free(msg);
-    }
+    free(msg);
     return err;
 }
 

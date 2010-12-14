@@ -236,9 +236,7 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
 #endif
 
 out_err:
-    if (i1 != NULL) {
-        free(i1);
-    }
+    free(i1);
     return err;
 }
 
@@ -377,7 +375,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                    -1,
                    "Unknown HIT\n");
 
-        HIP_IFEL(hip_build_param(ctx->output_msg, host_id_entry->host_id),
+        HIP_IFEL(hip_build_param_host_id(ctx->output_msg, host_id_entry->host_id),
                  -1,
                  "Building of host id failed\n");
     }
@@ -676,7 +674,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
              "Building of HIP transform failed\n");
 
     /* Parameter HOST_ID */
-    HIP_IFEL(hip_build_param(msg, host_id_pub), -1,
+    HIP_IFEL(hip_build_param_host_id(msg, host_id_pub),
+             -1,
              "Building of host id failed\n");
 
     /* Parameter REG_INFO */
@@ -725,26 +724,15 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
     /* Packet ready */
 
-    if (dh_data1) {
-        free(dh_data1);
-    }
-    if (dh_data2) {
-        free(dh_data2);
-    }
+    free(dh_data1);
+    free(dh_data2);
 
     return msg;
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-    if (dh_data1) {
-        free(dh_data1);
-    }
-    if (dh_data2) {
-        free(dh_data2);
-    }
-
+    free(msg);
+    free(dh_data1);
+    free(dh_data2);
     return NULL;
 }
 
@@ -893,12 +881,8 @@ out_err:
     hip_perf_stop_benchmark(perf_set, PERF_I1);
     hip_perf_write_benchmark(perf_set, PERF_I1);
 #endif
-    if (r1pkt) {
-        free(r1pkt);
-    }
-    if (local_plain_hit) {
-        free(local_plain_hit);
-    }
+    free(r1pkt);
+    free(local_plain_hit);
     return err;
 }
 

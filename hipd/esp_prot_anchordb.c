@@ -88,10 +88,7 @@ void anchor_db_uninit(void)
         anchor_db.hash_item_length[i] = 0;
 
         for (j = 0; j < HCSTORE_MAX_HCHAINS_PER_ITEM; j++) {
-            if (anchor_db.anchors[i][j]) {
-                free(anchor_db.anchors[i][j]);
-            }
-
+            free(anchor_db.anchors[i][j]);
             anchor_db.anchors[i][j] = NULL;
         }
     }
@@ -237,10 +234,7 @@ unsigned char *anchor_db_get_anchor(const uint8_t transform)
 
 out_err:
     if (err) {
-        if (stored_anchor) {
-            free(stored_anchor);
-        }
-
+        free(stored_anchor);
         stored_anchor = NULL;
     }
 

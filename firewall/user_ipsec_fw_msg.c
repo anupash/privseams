@@ -98,9 +98,7 @@ int send_userspace_ipsec_to_hipd(const int activate)
     HIP_DEBUG("userspace ipsec activated\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
+    free(msg);
     return err;
 }
 

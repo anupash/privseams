@@ -936,7 +936,7 @@ by :: and functions appended by () in comment blocks, like this:
 /**
  * Stores information about one ESP connection endpoint (i.e., one SPI).
  *
- * @todo Write allocator/deallocator for automatic synching with ::espList.
+ * @todo Write allocator/deallocator for automatic synching with ::esp_list.
  */
 struct esp_tuple { /* ... */ };
 

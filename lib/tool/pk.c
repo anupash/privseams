@@ -72,9 +72,7 @@ int hip_rsa_sign(void *priv_key, struct hip_common *msg)
     }
 
 out_err:
-    if (signature) {
-        free(signature);
-    }
+    free(signature);
     return err;
 }
 

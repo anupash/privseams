@@ -59,4 +59,4 @@ struct hip_common *create_delete_sa_msg(const uint32_t spi,
                                         const int dst_port);
 struct hip_common *create_flush_all_sa_msg(void);
 
-#endif /*HIP_HIPD_USER_IPSEC_HIPD_MSG_H*/
+#endif /* HIP_HIPD_USER_IPSEC_HIPD_MSG_H */

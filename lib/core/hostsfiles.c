@@ -53,7 +53,6 @@
 #include "protodefs.h"
 #include "hostsfiles.h"
 
-
 #define HOSTS_FILE "/etc/hosts"
 
 /**

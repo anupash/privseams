@@ -50,4 +50,4 @@ unsigned char *anchor_db_get_anchor(const uint8_t transform);
 int anchor_db_get_anchor_length(const uint8_t transform);
 int anchor_db_get_hash_item_length(const uint8_t transform);
 
-#endif /*HIP_HIPD_ESP_PROT_ANCHORDB_H*/
+#endif /* HIP_HIPD_ESP_PROT_ANCHORDB_H */

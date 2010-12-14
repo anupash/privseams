@@ -115,9 +115,9 @@ enum {
     HOOK
 };
 
-DList *input_rules;
-DList *output_rules;
-DList *forward_rules;
+struct dlist *input_rules;
+struct dlist *output_rules;
+struct dlist *forward_rules;
 
 /**
  * Writes the default firewall configuration file to the disk if it does
@@ -170,7 +170,7 @@ static void check_and_write_default_config(const char *file)
  * @param hook NF_IP6_LOCAL_IN, NF_IP6_LOCAL_OUT or NF_IP6_LOCAL_FORWARD
  * @return a pointer to the list containing the rules
  */
-static DList *get_rule_list(const int hook)
+static struct dlist *get_rule_list(const int hook)
 {
     if (hook == NF_IP6_LOCAL_IN) {
         return input_rules;
@@ -270,22 +270,22 @@ static void print_rule(const struct rule *rule)
  */
 void print_rule_tables(void)
 {
-    struct _DList *list = (struct _DList *) input_rules;
+    struct dlist *list  = input_rules;
     struct rule *rule   = NULL;
     while (list != NULL) {
-        rule = (struct rule *) list->data;
+        rule = list->data;
         print_rule(rule);
         list = list->next;
     }
-    list = (struct _DList *) output_rules;
+    list = output_rules;
     while (list != NULL) {
-        rule = (struct rule *) list->data;
+        rule = list->data;
         print_rule(rule);
         list = list->next;
     }
-    list = (struct _DList *) forward_rules;
+    list = forward_rules;
     while (list != NULL) {
-        rule = (struct rule *) list->data;
+        rule = list->data;
         print_rule(rule);
         list = list->next;
     }
@@ -336,27 +336,13 @@ static void free_rule(struct rule *rule)
     if (rule) {
         HIP_DEBUG("freeing ");
         print_rule(rule);
-        if (rule->src_hit != NULL) {
-            free(rule->src_hit);
-        }
-        if (rule->dst_hit != NULL) {
-            free(rule->dst_hit);
-        }
-        if (rule->src_hi != NULL) {
-            free(rule->src_hi);
-        }
-        if (rule->type != NULL) {
-            free(rule->type);
-        }
-        if (rule->state != NULL) {
-            free(rule->state);
-        }
-        if (rule->in_if != NULL) {
-            free_string_option(rule->in_if);
-        }
-        if (rule->out_if != NULL) {
-            free_string_option(rule->out_if);
-        }
+        free(rule->src_hit);
+        free(rule->dst_hit);
+        free(rule->src_hi);
+        free(rule->type);
+        free(rule->state);
+        free_string_option(rule->in_if);
+        free_string_option(rule->out_if);
         free(rule);
     }
 }
@@ -894,9 +880,9 @@ static struct rule *parse_rule(char *string)
  *
  * @return a list containing the rules
  */
-DList *read_rules(const int hook)
+struct dlist *read_rules(const int hook)
 {
-    return (DList *) get_rule_list(hook);
+    return (struct dlist *) get_rule_list(hook);
 }
 
 /*----------- RULE MANAGEMENT -----------*/
@@ -915,10 +901,10 @@ DList *read_rules(const int hook)
  */
 void read_rule_file(const char *file_name)
 {
-    DList *input        = NULL;
-    DList *output       = NULL;
-    DList *forward      = NULL;
-    FILE *file          = NULL;
+    struct dlist *input   = NULL;
+    struct dlist *output  = NULL;
+    struct dlist *forward = NULL;
+    FILE         *file    = NULL;
 
     if (!file_name) {
         file_name = HIP_FW_DEFAULT_RULE_FILE;
@@ -961,13 +947,13 @@ void read_rule_file(const char *file_name)
             if (rule) {
                 if (rule->hook == NF_IP6_LOCAL_IN) {
                     input = append_to_list(input, rule);
-                    print_rule((struct rule *) input->data);
+                    print_rule(input->data);
                 } else if (rule->hook == NF_IP6_LOCAL_OUT)    {
                     output = append_to_list(output, rule);
-                    print_rule((struct rule *) output->data);
+                    print_rule(output->data);
                 } else if (rule->hook == NF_IP6_FORWARD)    {
                     forward = append_to_list(forward, rule);
-                    print_rule((struct rule *) forward->data);
+                    print_rule(forward->data);
                 }
             } else {
                 HIP_DEBUG("unable to parse rule: %s\n", original_line);

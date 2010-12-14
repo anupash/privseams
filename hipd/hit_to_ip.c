@@ -87,9 +87,7 @@ void hip_hit_to_ip_set(const char *zone)
 
     hip_hit_to_ip_zone = strdup(zone);
 
-    if (tmp != NULL) {
-        free(tmp);
-    }
+    free(tmp);
 }
 
 static const char hex_digits[] = {

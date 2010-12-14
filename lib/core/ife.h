@@ -109,17 +109,6 @@
         } \
     }
 
-/**
- * HIP_IFCS takes a pointer and an command to execute and executes the
- * @c command if @c condition is @b not NULL.
- */
-#define HIP_IFCS(condition, consequence) \
-    if (condition) {      \
-        consequence;      \
-    } else {              \
-        HIP_DEBUG("No state information found.\n"); \
-    }
-
 /** @} */
 
 #endif /* HIP_LIB_CORE_IFE_H */

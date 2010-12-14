@@ -242,10 +242,8 @@ void hip_perf_destroy(perf_set_t *set)
 {
     int slot = 0;
 
-    if (set->files) {
-        free(set->files);
-        set->files = NULL;
-    }
+    free(set->files);
+    set->files = NULL;
 
     /* Deallocate every slot in set->names.
      * You need to do it because every slot memory is allocated
@@ -253,40 +251,26 @@ void hip_perf_destroy(perf_set_t *set)
      */
     if (set->names) {
         for (slot = 0; slot < PERF_MAX; slot++) {
-            if (set->names[slot]) {
-                free(set->names[slot]);
-                set->names[slot] = NULL;
-            }
+            free(set->names[slot]);
+            set->names[slot] = NULL;
         }
         free(set->names);
         set->names = NULL;
     }
 
-    if (set->linecount) {
-        free(set->linecount);
-        set->linecount = NULL;
-    }
-    if (set->times) {
-        free(set->times);
-        set->times = NULL;
-    }
-    if (set->result) {
-        free(set->result);
-        set->result = NULL;
-    }
-    if (set->running) {
-        free(set->running);
-        set->running = NULL;
-    }
-    if (set->writable) {
-        free(set->writable);
-        set->writable = NULL;
-    }
+    free(set->linecount);
+    set->linecount = NULL;
+    free(set->times);
+    set->times = NULL;
+    free(set->result);
+    set->result = NULL;
+    free(set->running);
+    set->running = NULL;
+    free(set->writable);
+    set->writable = NULL;
 
-    if (set) {
-        free(set);
-        set = NULL;
-    }
+    free(set);
+    set = NULL;
 
     return;
 }

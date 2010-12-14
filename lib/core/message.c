@@ -172,9 +172,7 @@ static int hip_peek_recv_total_len(int sockfd,
     bytes += encap_hdr_size;
 
 out_err:
-    if (msg != NULL) {
-        free(msg);
-    }
+    free(msg);
 
     if (err) {
         return err;
@@ -467,7 +465,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
     n   = send(hip_user_sock, msg, len, 0);
 
     if (n < len) {
-        HIP_ERROR("Could not send message to daemon.\n");
+        HIP_ERROR("Could not send message to daemon: %s\n", strerror(errno));
         err = -1;
         goto out_err;
     }

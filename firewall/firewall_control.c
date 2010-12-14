@@ -166,8 +166,6 @@ int hip_handle_msg(struct hip_common *msg)
         break;
     }
 out_err:
-    if (msg_out) {
-        free(msg_out);
-    }
+    free(msg_out);
     return err;
 }

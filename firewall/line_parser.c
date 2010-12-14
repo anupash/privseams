@@ -83,3 +83,46 @@ void hip_lp_delete(struct hip_line_parser *const lp)
         lp->cur = NULL;
     }
 }
+
+/**
+ * Get the next line in a parsing pass with a line parser.
+ *
+ * Each invocation of this function returns a pointer to consecutive lines in
+ * the buffer to parse.
+ * After the last line has been reached, NULL is returned.
+ * In that case, parsing can restart by calling hip_lp_first().
+ *
+ * @param lp the line parser parser to use.
+ * @return a pointer to a line in the buffer or NULL if there are no more lines
+ *  available.
+ */
+char *hip_lp_next(struct hip_line_parser *const lp)
+{
+    size_t remaining;
+
+    if (!lp ||
+        !lp->cur ||
+        !lp->ma ||
+        !lp->ma->start ||
+        !lp->ma->end ||
+        lp->cur < lp->ma->start ||
+        lp->cur >= lp->ma->end) {
+        return NULL;
+    }
+
+    remaining   = lp->ma->end - lp->cur;
+    lp->cur     = memchr(lp->cur, '\n', remaining);
+
+    // given the rest of the parsing code, we should always find a \n, but
+    // let's check to be sure
+    if (lp->cur) {
+        // cur should not point to the new-line character but to the next one:
+        lp->cur += 1;
+        // is there text on the line here or are we at the end?
+        if (lp->cur >= lp->ma->end) {
+            lp->cur = NULL;
+        }
+    }
+
+    return lp->cur;
+}

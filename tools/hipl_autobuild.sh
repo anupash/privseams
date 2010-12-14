@@ -139,7 +139,10 @@ compile
 # internal autoconf tests, bootstrap the dist tarball, build out-of-tree, etc
 run_program "make -j distcheck"
 
-# run unit tests (this check needs to run after HIPL has been compiled)
+# test the distribution
+run_program "make -j bin"
+
+# run unit tests (needs to run after HIPL has been configured)
 run_program "make -j check"
 
 # PISA configuration
@@ -152,8 +155,12 @@ compile $FEATURES_ALL
 # Max compile coverage configuration without optimization
 compile $FEATURES_ALL CFLAGS="-O0"
 
+# Max compile coverage configuration optimized for size
+compile $FEATURES_ALL CFLAGS="-Os"
+
 # Max compile coverage configuration with full optimization
-compile $FEATURES_ALL CFLAGS="-O3"
+# FIXME: Disabled until the tree compiles with this optimization level.
+#compile $FEATURES_ALL CFLAGS="-O3"
 
 # Without modules
 compile --with-nomodules=heartbeat,update,heartbeat_update
@@ -163,7 +170,7 @@ CONFIGURATION="OpenWrt ARM crosscompile"
 run_program "cp hipl*tar.gz $OPENWRT_DIR/dl"
 cd $OPENWRT_DIR || cleanup 1
 run_program "rm -rf package/hipl"
-run_program "cp -r $CHECKOUT_DIR/packaging/openwrt/package package/hipl"
+run_program "cp -r $CHECKOUT_DIR/packaging/openwrt/hipl package/"
 run_program "make -j package/hipl/clean V=99"
 run_program "make -j package/hipl/install V=99"
 

@@ -9,7 +9,7 @@ TMP_DIR=~/.bzr-hipl-cache
 BRANCH=trunk
 WWW_DIR=/var/www/infrahip/html/hipl
 OUTPUT_FILE=$WWW_DIR/hipl.tar.gz
-CHANGE_LOG_FILE=/tmp/ChangeLog
+CHANGE_LOG_FILE=$TMP_DIR/ChangeLog
 
 # Update to the latest version and check out what patches need to be generated
 #
@@ -21,8 +21,7 @@ else
     cd $TMP_DIR
     bzr init-repo hipl-bzr
     cd hipl-bzr
-    bzr checkout lp:hipl
-    mv hipl $BRANCH
+    bzr checkout lp:hipl $BRANCH
     cd $BRANCH
 fi
 

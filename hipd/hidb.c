@@ -564,14 +564,12 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 out_err:
     if (err && id_entry) {
         if (id_entry->host_id) {
-            if (id_entry->private_key) {
-                if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA) {
-                    RSA_free(id_entry->private_key);
-                } else if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_ECDSA) {
-                    EC_KEY_free(id_entry->private_key);
-                } else {
-                    DSA_free(id_entry->private_key);
-                }
+            if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA) {
+                RSA_free(id_entry->private_key);
+            } else if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_ECDSA) {
+                EC_KEY_free(id_entry->private_key);
+            } else {
+                DSA_free(id_entry->private_key);
             }
             free(id_entry->host_id);
         }
@@ -927,10 +925,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
     }
 
 out_err:
-    if (hi_public) {
-        free(hi_public);
-    }
-
+    free(hi_public);
     return err;
 }
 
@@ -967,7 +962,7 @@ int hip_get_default_hit_msg(struct hip_common *msg)
     HIP_IFE(hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi)),
             -1);
 
- out_err:
+out_err:
 
     return err;
 }

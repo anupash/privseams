@@ -86,6 +86,6 @@ struct rule {
 void print_rule_tables(void);
 
 void read_rule_file(const char *file_name);
-DList *read_rules(const int hook);
+struct dlist *read_rules(const int hook);
 
 #endif /* HIP_FIREWALL_RULE_MANAGEMENT_H */

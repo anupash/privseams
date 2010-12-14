@@ -199,9 +199,7 @@ out_err:
         entry->light_update_retrans = 1;
     }
 
-    if (light_update) {
-        free(light_update);
-    }
+    free(light_update);
 
     return err;
 }

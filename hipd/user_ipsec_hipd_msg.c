@@ -203,9 +203,7 @@ struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
 
 out_err:
     if (err) {
-        if (msg) {
-            free(msg);
-        }
+        free(msg);
         msg = NULL;
     }
 
@@ -266,9 +264,7 @@ struct hip_common *create_delete_sa_msg(const uint32_t spi,
 
 out_err:
     if (err) {
-        if (msg) {
-            free(msg);
-        }
+        free(msg);
         msg = NULL;
     }
 
@@ -297,9 +293,7 @@ struct hip_common *create_flush_all_sa_msg(void)
 
 out_err:
     if (err) {
-        if (msg) {
-            free(msg);
-        }
+        free(msg);
         msg = NULL;
     }
 

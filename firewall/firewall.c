@@ -612,10 +612,7 @@ static int hip_query_default_local_hit_from_hipd(void)
     ipv4_addr_copy(&default_lsi, lsi);
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 
@@ -749,12 +746,12 @@ static void firewall_probe_kernel_modules(void)
         if (err < 0) {
             HIP_ERROR("Failed to fork() for modprobe!\n");
         } else if (err == 0) {
-            /* Redirect stderr, so few non fatal errors wont show up. */
+            /* Redirect stderr, so few non fatal errors will not show up. */
             if (freopen("/dev/null", "w", stderr) == NULL) {
                 HIP_ERROR("Could not freopen /dev/null");
             }
             execlp("/sbin/modprobe", "/sbin/modprobe",
-                   mod_name[count], (char *) NULL);
+                   mod_name[count], NULL);
         } else {
             waitpid(err, &status, 0);
         }
@@ -889,7 +886,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
                       hip_fw_context_t *ctx)
 {
     // complete rule list for hook (== IN / OUT / FORWARD)
-    struct _DList *list = (struct _DList *) read_rules(hook);
+    struct dlist *list  = read_rules(hook);
     struct rule *rule   = NULL;
     // assume match for current rule
     int match           = 1, print_addr = 0;
@@ -950,7 +947,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
 
     while (list != NULL) {
         match = 1;
-        rule  = (struct rule *) list->data;
+        rule  = list->data;
 
         // check src_hit if defined in rule
         if (match && rule->src_hit) {
@@ -2272,9 +2269,7 @@ out_err:
     if (hip_fw_sock) {
         close(hip_fw_sock);
     }
-    if (msg != NULL) {
-        free(msg);
-    }
+    free(msg);
 
     firewall_exit();
     return err;

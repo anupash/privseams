@@ -134,10 +134,7 @@ static int hip_nat_send_keep_alive(hip_ha_t *entry, UNUSED void *opaque)
                  entry, 0);
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 

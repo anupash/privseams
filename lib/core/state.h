@@ -320,7 +320,7 @@ struct hip_hadb_state {
     /** Used for UPDATE and CLOSE. When we sent multiple identical UPDATE
      * packets between different address combinations, we don't modify
      * the opaque data. */
-    char                                       echo_data[4];
+    unsigned char                              echo_data[4];
 
     HIP_HASHTABLE *                            peer_addr_list_to_be_added;
     /** For storing retransmission related data. */

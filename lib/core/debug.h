@@ -49,9 +49,7 @@
  *     HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
  *
  * out_err:
- *     if (mem != NULL) {
- *         free(mem);
- *     }
+ *     free(mem);
  *     return err;
  * }
  * </pre>
@@ -418,8 +416,7 @@ void hip_print_peer_addresses(hip_ha_t *);
 static inline const char *hip_state_str(unsigned int state)
 {
     const char *str             = "UNKNOWN";
-    static const char *states[] =
-    {
+    static const char *states[] = {
         "NONE",                          // 0
         "UNASSOCIATED",                  // 1
         "I1-SENT",                       // 2

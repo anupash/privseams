@@ -200,12 +200,8 @@ int userspace_ipsec_uninit(void)
     }
 
     // free the members
-    if (esp_packet) {
-        free(esp_packet);
-    }
-    if (decrypted_packet) {
-        free(decrypted_packet);
-    }
+    free(esp_packet);
+    free(decrypted_packet);
 
 out_err:
     return err;

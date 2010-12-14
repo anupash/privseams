@@ -101,8 +101,8 @@ int ipv6_addr_is_null(const struct in6_addr *ip)
  *
  * @param hit the IPv6 address to be tested
  * @return one if the IPv6 address was a real HIT and
-'          zero if it was a pseudo HIT
- */
+ '          zero if it was a pseudo HIT
+*/
 int hit_is_real_hit(const struct in6_addr *hit)
 {
     return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] != 0);
@@ -114,8 +114,8 @@ int hit_is_real_hit(const struct in6_addr *hit)
  *
  * @param hit the IPv6 address to be tested
  * @return zero if the IPv6 address was a real HIT and
-'          one if it was a pseudo HIT
- */
+ '          one if it was a pseudo HIT
+*/
 int hit_is_opportunistic_hit(const struct in6_addr *hit)
 {
     return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] == 0);
@@ -285,7 +285,7 @@ int hip_sockaddr_is_v6_mapped(struct sockaddr *sa)
     if (family != AF_INET6) {
         return 0;
     } else {
-        return IN6_IS_ADDR_V4MAPPED((struct in6_addr *) hip_cast_sa_addr(sa));
+        return IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(sa));
     }
 }
 

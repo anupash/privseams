@@ -113,15 +113,9 @@ static void esp_prot_conntrack_free_cached_item(void *cache_item)
         anchor_item = cache_item;
 
         for (i = 0; i < num_parallel_hchains; i++) {
-            if (anchor_item->active_anchors[i]) {
-                free(anchor_item->active_anchors[i]);
-            }
-            if (anchor_item->next_anchors[i]) {
-                free(anchor_item->next_anchors[i]);
-            }
-            if (anchor_item->roots[i]) {
-                free(anchor_item->roots[i]);
-            }
+            free(anchor_item->active_anchors[i]);
+            free(anchor_item->next_anchors[i]);
+            free(anchor_item->roots[i]);
         }
 
         free(anchor_item);
@@ -141,7 +135,7 @@ static struct esp_tuple *esp_prot_conntrack_find_esp_tuple(const struct tuple *t
                                                            const int hash_length)
 {
     struct esp_tuple *esp_tuple = NULL;
-    SList *list                 = NULL;
+    struct slist     *list      = NULL;
     int err                     = 0;
 
     HIP_DEBUG("\n");
@@ -153,7 +147,7 @@ static struct esp_tuple *esp_prot_conntrack_find_esp_tuple(const struct tuple *t
     list = tuple->esp_tuples;
 
     while (list) {
-        esp_tuple = (struct esp_tuple *) list->data;
+        esp_tuple = list->data;
 
         // check if last installed anchor equals the one in the packet
         if (!memcmp(&esp_tuple->first_active_anchors[0][0], active_anchor,
@@ -285,9 +279,7 @@ static int esp_prot_conntrack_cache_anchor(const struct tuple *tuple,
              "failed to add anchor_item to anchor_cache\n");
 
 out_err:
-    if (cmp_value) {
-        free(cmp_value);
-    }
+    free(cmp_value);
     return err;
 }
 
@@ -723,10 +715,8 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 
 out_err:
     if (err) {
-        if (esp_tuple) {
-            free(esp_tuple);
-            esp_tuple = NULL;
-        }
+        free(esp_tuple);
+        esp_tuple = NULL;
     }
 
     return err;
@@ -738,7 +728,7 @@ out_err:
  * @param   other_dir_esps maintained connection tracking state for this connection
  * @return  corresponding state
  */
-struct esp_tuple *esp_prot_conntrack_R2_esp_tuple(const SList *other_dir_esps)
+struct esp_tuple *esp_prot_conntrack_R2_esp_tuple(const struct slist *other_dir_esps)
 {
     struct esp_tuple *esp_tuple = NULL;
     int err                     = 0;
@@ -755,7 +745,7 @@ struct esp_tuple *esp_prot_conntrack_R2_esp_tuple(const SList *other_dir_esps)
                  "expecting 1 esp_tuple in the list, but there are several\n");
 
         // get the esp_tuple for the other direction
-        HIP_IFEL(!(esp_tuple = (struct esp_tuple *) other_dir_esps->data), -1,
+        HIP_IFEL(!(esp_tuple = other_dir_esps->data), -1,
                  "expecting 1 esp_tuple in the list, but there is NONE\n");
     }
 
@@ -968,12 +958,8 @@ int esp_prot_conntrack_remove_state(struct esp_tuple *esp_tuple)
     hip_ll_uninit(&esp_tuple->anchor_cache, esp_prot_conntrack_free_cached_item);
 
     for (i = 0; i < esp_tuple->num_hchains; i++) {
-        if (esp_tuple->active_roots[i]) {
-            free(esp_tuple->active_roots[i]);
-        }
-        if (esp_tuple->next_roots[i]) {
-            free(esp_tuple->next_roots[i]);
-        }
+        free(esp_tuple->active_roots[i]);
+        free(esp_tuple->next_roots[i]);
     }
 
     return err;
@@ -1254,9 +1240,7 @@ int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
             // change roots
             /* the BEX-store does not have hierarchies, so no root is used for
              * the first hchain */
-            if (esp_tuple->active_roots[active_hchain]) {
-                free(esp_tuple->active_roots[active_hchain]);
-            }
+            free(esp_tuple->active_roots[active_hchain]);
             esp_tuple->active_roots[active_hchain]     = esp_tuple->next_roots[active_hchain];
             esp_tuple->next_roots[active_hchain]       = NULL;
             esp_tuple->active_root_length              = esp_tuple->next_root_length[active_hchain];

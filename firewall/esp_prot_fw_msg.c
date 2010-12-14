@@ -273,10 +273,7 @@ int send_esp_prot_to_hipd(const int activate)
     HIP_DEBUG("send_recv msg succeeded\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 
@@ -312,10 +309,7 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore,
     HIP_DEBUG("send_recv msg succeeded\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 
@@ -401,10 +395,10 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
     // now transmit root for each next hash item for tree-based updates, if available
     for (i = 0; i < num_parallel_hchains; i++) {
         if (entry->esp_prot_transform == ESP_PROT_TFM_TREE) {
-            htree     = (hash_tree_t *) entry->next_hash_items[i];
+            htree     = entry->next_hash_items[i];
             link_tree = htree->link_tree;
         } else {
-            hchain    = (hash_chain_t *) entry->next_hash_items[i];
+            hchain    = entry->next_hash_items[i];
             link_tree = hchain->link_tree;
         }
 
@@ -489,13 +483,8 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
     HIP_DEBUG("send_recv msg succeeded\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-    if (branch_nodes) {
-        free(branch_nodes);
-    }
-
+    free(msg);
+    free(branch_nodes);
     return err;
 }
 
@@ -557,10 +546,10 @@ int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
     for (i = 0; i < num_parallel_hchains; i++) {
         // the anchor change has already occurred on fw-side
         if (entry->esp_prot_transform == ESP_PROT_TFM_TREE) {
-            htree  = (hash_tree_t *) entry->active_hash_items[i];
+            htree  = entry->active_hash_items[i];
             anchor = htree->root;
         } else {
-            hchain = (hash_chain_t *) entry->active_hash_items[i];
+            hchain = entry->active_hash_items[i];
             anchor = hchain_get_anchor(hchain);
         }
 
@@ -582,10 +571,7 @@ int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
     HIP_DEBUG("send_recv msg succeeded\n");
 
 out_err:
-    if (msg) {
-        free(msg);
-    }
-
+    free(msg);
     return err;
 }
 
