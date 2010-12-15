@@ -120,9 +120,15 @@ static IMPLEMENT_LHASH_COMP_FN(signaling_cdb_entries, signaling_cdb_entry_t)
 /**
  * frees an SCDB entry
  */
-static void signaling_cdb_entry_free(UNUSED signaling_cdb_entry_t *entry)
+static void signaling_cdb_entry_free(signaling_cdb_entry_t *entry)
 {
-    // TODO: Implement this
+    SList *element;
+    element = entry->application_contexts;
+    while (element) {
+        free(element->data);
+        element = element->next;
+    }
+    free(entry);
 }
 
 /**
@@ -143,11 +149,8 @@ UNUSED static int signaling_cdb_entry_delete(struct in6_addr *src_addr, struct i
     // delete the entry from the scdb
     hip_ht_delete(scdb, stored_entry);
 
-    // free all entry members
+    // free the entry and its members
     signaling_cdb_entry_free(stored_entry);
-
-    // we still have to free the entry itself
-    free(stored_entry);
 
     HIP_DEBUG("scdb entry deleted\n");
 
