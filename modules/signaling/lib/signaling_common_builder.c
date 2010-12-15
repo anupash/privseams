@@ -171,13 +171,14 @@ out_err:
  *      application instead of ports (as for now). Then the application's name etc. should be filled in,
  *      so that the application does not have to repeat the lookup.
  */
-int signaling_build_param_portinfo(struct hip_common *msg, uint16_t src_port, uint16_t dst_port) {
+int signaling_build_param_portinfo(hip_common_t *msg, uint16_t src_port, uint16_t dst_port) {
     struct signaling_param_appinfo * par = NULL;
     int err = 0;
 
     HIP_IFEL(!(src_port || dst_port),
             -1, "No port information given, omitting building of parameter HIP_PARAM_SIGNALING_APPINFO.\n");
 
+    /* TODO: need to free parameter after it has been built */
     par = signaling_param_appinfo_init(sizeof(struct signaling_param_appinfo));
     par->src_port = htons(src_port);
     par->dest_port = htons(dst_port);
@@ -189,4 +190,35 @@ out_err:
     free(par);
     return err;
 
+}
+
+/**
+ * @return zero for success, or non-zero on error
+ */
+int signaling_build_param_user_sig(hip_common_t *msg, const unsigned char *signature, const int sig_len)
+{
+    struct signaling_param_user_sig *param_user_sig = NULL;
+    int err = 0;
+
+    /* Sanity checks */
+    HIP_IFEL(!msg,
+             -1, "Got no msg context. (msg == NULL)\n");
+    HIP_IFEL(!signature,
+             -1, "Got no signature to built the parameter from.\n");
+
+    /* BUILD THE PARAMETER */
+    param_user_sig = malloc(sizeof(hip_tlv_common_t) + sig_len);
+    HIP_IFEL(!param_user_sig,
+             -1, "Could not allocate user signature parameter. \n");
+
+    hip_set_param_type((hip_tlv_common_t *) param_user_sig, HIP_PARAM_SIGNALING_USER_SIG);
+    hip_set_param_contents_len((hip_tlv_common_t *) param_user_sig, sig_len);
+    memcpy(param_user_sig->signature, signature, sig_len);
+
+    HIP_IFEL(hip_build_param(msg, param_user_sig),
+             -1, "Failed to append appinfo parameter to message.\n");
+
+out_err:
+    free(param_user_sig);
+    return err;
 }
