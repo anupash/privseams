@@ -184,8 +184,16 @@ out_err:
 int signaling_cdb_uninit(void)
 {
     int err = 0;
+    hip_list_t *curr, *iter;
+    struct signaling_cdb_entry *tmp;
+    int count;
 
-    // TODO: implement this
+    list_for_each_safe(curr, iter, scdb, count) {
+        tmp = (struct signaling_cdb_entry *) list_entry(curr);
+        signaling_cdb_entry_free(tmp);
+    }
+
+    hip_ht_uninit(scdb);
 
     return err;
 }
