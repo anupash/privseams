@@ -104,24 +104,38 @@ out_err:
     return err;
 }
 
-int signaling_user_info_by_uid(uid_t uid) {
+/*
+ * @return < 0 on error, size of computed signature on success
+ */
+int signaling_user_api_get_signature(uid_t uid, const void *data, int in_len, unsigned char *outbuf) {
     int err = 0;
     X509 *usercert = NULL;
     RSA *priv_key = NULL;
-    uint8_t *signature = NULL;
     unsigned int sig_len;
     const char *priv_key_file = "user-key.pem";
-    usercert = get_user_certificate(uid);
-    priv_key = load_rsa_private_key(priv_key_file);
 
+    // sanity checks
+    HIP_IFEL(!data,
+             -1, "Data to sign is NULL \n");
+    HIP_IFEL(in_len < 0,
+             -1, "Got bad in length \n");
+    HIP_IFEL(!outbuf,
+             -1, "Output buffer is NULL \n");
+
+    HIP_IFEL(!(priv_key = load_rsa_private_key(priv_key_file)),
+             -1, "Could not get private key for signing \n");
+
+    HIP_IFEL(!(usercert = get_user_certificate(uid)),
+             -1, "Could not get user certificate \n");
+
+    // sign using RSA
+    // TODO: support for dsa, ecdsa...
     sig_len = RSA_size(priv_key);
-    HIP_IFEL(!(signature = malloc(sig_len)),
-            -1, "Malloc for signature failed.");
-    memset(signature, 0, sig_len);
-
-    rsa_sign(priv_key, "Some random data to sign", 12, signature, &sig_len);
-    HIP_HEXDUMP("Signature: ", signature, sig_len);
+    rsa_sign(priv_key, data, in_len, outbuf, &sig_len);
 
 out_err:
-    return 0;
+    if (err) {
+        return err;
+    }
+    return sig_len;
 }

@@ -11,6 +11,6 @@
 
 #include <sys/types.h>
 
-int signaling_user_info_by_uid(uid_t uid);
+int signaling_user_api_get_signature(uid_t uid, const void *data, int in_len, unsigned char *outbuf);
 
 #endif /* HIP_HIPD_SIGNALING_USER_API_H */
