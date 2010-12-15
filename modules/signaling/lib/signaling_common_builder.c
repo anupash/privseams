@@ -41,6 +41,34 @@
 #include "signaling_oslayer.h"
 #include "signaling_prot_common.h"
 
+/*
+ * Allocate an appinfo parameter and initialize to standard values.
+ *
+ * @param length The total maximum length of the new parameter (including type and length field).
+ */
+static struct signaling_param_appinfo * signaling_param_appinfo_init(unsigned int length) {
+    int err = 0;
+    struct signaling_param_appinfo *par = NULL;
+
+    /* Size must be at least be enough to accomodate fixed contents and tlv header */
+    HIP_IFEL((length < sizeof(struct signaling_param_appinfo)),
+            -1, "Error allocating memory for appinfo parameter: requested size < MinSize.");
+    par = (struct signaling_param_appinfo *) malloc(length);
+
+    /* Set contents to zero (defined standard values). */
+    memset((uint8_t *)par, 0, length);
+
+    /* Set type and length */
+    hip_set_param_type((hip_tlv_common_t *) par, HIP_PARAM_SIGNALING_APPINFO);
+    hip_set_param_contents_len((hip_tlv_common_t *) par, length-2);
+
+out_err:
+    if (err)
+        return NULL;
+
+    return par;
+}
+
 static int signaling_param_appinfo_get_content_length(struct signaling_application_context *app_ctx) {
     int res = 0;
 
@@ -120,10 +148,7 @@ int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_applicatio
 
     /* BUILD THE PARAMETER */
     length_contents = signaling_param_appinfo_get_content_length(app_ctx);
-    appinfo = (struct signaling_param_appinfo *) malloc(sizeof(hip_tlv_common_t) + length_contents);
-
-    hip_set_param_type((hip_tlv_common_t *) appinfo, HIP_PARAM_SIGNALING_APPINFO);
-    hip_set_param_contents_len((hip_tlv_common_t *) appinfo, length_contents);
+    appinfo = signaling_param_appinfo_init(sizeof(hip_tlv_common_t) + length_contents);
 
     HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, app_ctx),
             -1, "Failed to build appinfo parameter.\n");
@@ -133,34 +158,6 @@ int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_applicatio
 
 out_err:
     return err;
-}
-
-/*
- * Allocate an appinfo parameter and initialize to standard values.
- *
- * @param length The total maximum length of the new parameter (including type and length field).
- */
-static struct signaling_param_appinfo * signaling_param_appinfo_init(unsigned int length) {
-    int err = 0;
-    struct signaling_param_appinfo *par = NULL;
-
-    /* Size must be at least be enough to accomodate fixed contents and tlv header */
-    HIP_IFEL((length < sizeof(struct signaling_param_appinfo)),
-            -1, "Error allocating memory for appinfo parameter: requested size < MinSize.");
-    par = (struct signaling_param_appinfo *) malloc(length);
-
-    /* Set contents to zero (defined standard values). */
-    memset((uint8_t *)par, 0, length);
-
-    /* Set type and length */
-    hip_set_param_type((hip_tlv_common_t *) par, HIP_PARAM_SIGNALING_APPINFO);
-    hip_set_param_contents_len((hip_tlv_common_t *) par, length-2);
-
-out_err:
-    if (err)
-        return NULL;
-
-    return par;
 }
 
 /*
