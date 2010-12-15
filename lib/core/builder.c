@@ -3171,15 +3171,15 @@ int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
     key_len     = ntohs(wire_host_id->hi_length) -
                   sizeof(struct hip_host_id_key_rdata);
 
-    if(fqdn_len >= HIP_HOST_ID_HOSTNAME_LEN_MAX) {
+    if (fqdn_len >= HIP_HOST_ID_HOSTNAME_LEN_MAX) {
         HIP_ERROR("Got bad length for domain identifier: %d\n", fqdn_len);
         goto out_err;
     }
-    if(key_len > HIP_MAX_RSA_KEY_LEN / 8 + 4) {
+    if (key_len > HIP_MAX_RSA_KEY_LEN / 8 + 4) {
         HIP_ERROR("Got bad key length: %d\n", fqdn_len);
         goto out_err;
     }
-    if(header_len + key_len + fqdn_len > hip_get_param_contents_len(wire_host_id) + 4) {
+    if (header_len + key_len + fqdn_len > hip_get_param_contents_len(wire_host_id) + 4) {
         HIP_ERROR("Header+ Key + DI length exceeds parameter size: %d\n", header_len + key_len + fqdn_len);
         goto out_err;
     }
