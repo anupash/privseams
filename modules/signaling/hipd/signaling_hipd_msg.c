@@ -292,6 +292,7 @@ static int signaling_send_scdb_add(hip_hit_t *hits, hip_hit_t *hitr, const struc
     HIP_IFEL(signaling_hipd_send_to_fw(msg), -1, "failed to send add scdb-msg to fw\n");
 
 out_err:
+    free(msg);
     return err;
 }
 

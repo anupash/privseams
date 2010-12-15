@@ -59,8 +59,10 @@ struct signaling_application_context *signaling_init_application_context(void) {
     memset(new_app_ctx, 0, sizeof(struct signaling_application_context));
 
 out_err:
-    if (err)
+    if (err) {
+        free(new_app_ctx);
         return NULL;
+    }
     return new_app_ctx;
 }
 

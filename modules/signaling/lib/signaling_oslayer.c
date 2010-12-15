@@ -71,6 +71,7 @@ static X509AC *get_application_attribute_certificate(const char *app_file) {
     fclose(fp);
 
 out_err:
+    free(app_cert_file);
     return app_cert;
 }
 
