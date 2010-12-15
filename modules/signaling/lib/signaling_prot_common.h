@@ -45,10 +45,34 @@
 
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
 #define HIP_PARAM_SIGNALING_APPINFO     5000
+#define HIP_PARAM_SIGNALING_USER_SIG    62500
+
 
 /* User message types (adds to icomm.h)*/
 #define HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION  138
 #define HIP_MSG_SIGNALING_CDB_ADD_CONN  139
+
+/*
+     Parameter for a user signature.
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |             Type              |             Length            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |   Signature                                                   /
+     /                                                               /
+     /                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     /                               |            PADDING            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+*/
+
+struct signaling_param_user_sig {
+    hip_tlv_type_t type;
+    hip_tlv_len_t  length;
+    unsigned char signature[0];
+};
 
 /*
      Generic structure for the context of an application.
