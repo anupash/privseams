@@ -263,7 +263,10 @@ out_err:
 static signaling_cdb_entry_t * signaling_cdb_add_new(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit) {
     int err = 0;
-    signaling_cdb_entry_t * entry = malloc(sizeof(signaling_cdb_entry_t));
+    signaling_cdb_entry_t * entry = NULL;
+
+    HIP_IFEL(!(entry = malloc(sizeof(signaling_cdb_entry_t))),
+             -1, "Could not allocate memory for new scdb entry \n");
     memcpy(&entry->local_hit, local_hit, sizeof(struct in6_addr));
     memcpy(&entry->remote_hit, remote_hit, sizeof(struct in6_addr));
     entry->application_contexts = NULL;
@@ -373,7 +376,8 @@ int signaling_cdb_handle_add_request(hip_common_t * msg) {
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
             -1, "No appinfo parameter in message.\n");
     appinfo = (const struct signaling_param_appinfo *) param;
-    app_ctx = signaling_init_application_context();
+    HIP_IFEL(!(app_ctx = signaling_init_application_context()),
+             -1, "Failed to init app context \n");
 
     app_ctx->src_port = ntohs(appinfo->src_port);
     app_ctx->dest_port = ntohs(appinfo->dest_port);

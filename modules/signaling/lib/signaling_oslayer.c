@@ -45,6 +45,8 @@
 
 /*
  * Get the attribute certificate corresponding to the given application binary.
+ *
+ * @note app_file is supposed to be 0-terminated
  */
 static X509AC *get_application_attribute_certificate(const char *app_file) {
     FILE *fp = NULL;
@@ -55,7 +57,8 @@ static X509AC *get_application_attribute_certificate(const char *app_file) {
     HIP_IFEL(app_file == NULL, -1, "Got no path to application (NULL).\n");
 
     /* Build path to application certificate */
-    app_cert_file = malloc(strlen(app_file) + 6);
+    HIP_IFEL(!(app_cert_file = malloc(strlen(app_file) + 6)),
+             -1, "Could not allocate memory for filename \n");
     memset(app_cert_file, 0, strlen(app_file) + 6);
     strcat(app_cert_file, app_file);
     strcat(app_cert_file, ".cert");
@@ -223,7 +226,8 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
 
     // determine path to application binary from /proc/{pid}/exe
     memset(symlinkbuf, 0, SYMLINKBUF_SIZE);
-    app_ctx->path = (char *) malloc(PATHBUF_SIZE);
+    HIP_IFEL(!(app_ctx->path = (char *) malloc(PATHBUF_SIZE)),
+             -1, "Could not allocate memory for application path.");
     memset(app_ctx->path, 0, PATHBUF_SIZE);
     sprintf(symlinkbuf, "/proc/%i/exe", app_ctx->pid);
     HIP_IFEL(0 > readlink(symlinkbuf, app_ctx->path, PATHBUF_SIZE),
@@ -262,7 +266,8 @@ int signaling_get_application_context_from_certificate(char *app_path, struct si
             HIP_DEBUG("Error getting AC issuer name, possibly not a X500 name");
         else
         {
-            app_ctx->issuer_dn = (char *) malloc(ONELINELEN);
+            HIP_IFEL(!(app_ctx->issuer_dn = (char *) malloc(ONELINELEN)),
+                     -1, "Could not allocate memory for issuer dn \n");
             X509_NAME_oneline(name,app_ctx->issuer_dn,ONELINELEN);
         }
 
@@ -273,7 +278,8 @@ int signaling_get_application_context_from_certificate(char *app_path, struct si
         if (!name) {
             HIP_DEBUG("Error getting AC holder name, possibly not a X500 name");
         } else {
-            app_ctx->application_dn = (char *) malloc(ONELINELEN);
+            HIP_IFEL(!(app_ctx->application_dn = (char *) malloc(ONELINELEN)),
+                     -1, "Could not allocate memory for AC holder name \n");
             X509_NAME_oneline(name,app_ctx->application_dn,ONELINELEN);
         }
     }

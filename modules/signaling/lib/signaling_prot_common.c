@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include "lib/core/debug.h"
+#include "lib/core/ife.h"
 #include "signaling_prot_common.h"
 
 static void signaling_param_appinfo_print_field(const char *prefix, const uint16_t length, const unsigned char *p_content) {
@@ -19,10 +20,14 @@ static void signaling_param_appinfo_print_field(const char *prefix, const uint16
         return;
     }
 
-    buf = malloc(length + 1);
+    if (!(buf = malloc(length + 1))) {
+        HIP_ERROR("Could not allocate memory for appinfo field \n");
+        return;
+    }
     memset(buf, 0, length + 1);
     memcpy(buf, p_content, length);
     HIP_DEBUG("%s\t%s\n", prefix, buf);
+    free(buf);
 }
 
 void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo) {
@@ -46,8 +51,16 @@ void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo
 }
 
 struct signaling_application_context *signaling_init_application_context(void) {
-    struct signaling_application_context *new_app_ctx = malloc(sizeof(struct signaling_application_context));
+    int err = 0;
+    struct signaling_application_context *new_app_ctx;
+
+    HIP_IFEL(!(new_app_ctx = malloc(sizeof(struct signaling_application_context))),
+             -1, "Could not allocate memory for new application context\n");
     memset(new_app_ctx, 0, sizeof(struct signaling_application_context));
+
+out_err:
+    if (err)
+        return NULL;
     return new_app_ctx;
 }
 

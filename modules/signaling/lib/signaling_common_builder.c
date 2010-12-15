@@ -52,8 +52,9 @@ static struct signaling_param_appinfo * signaling_param_appinfo_init(unsigned in
 
     /* Size must be at least be enough to accomodate fixed contents and tlv header */
     HIP_IFEL((length < sizeof(struct signaling_param_appinfo)),
-            -1, "Error allocating memory for appinfo parameter: requested size < MinSize.");
-    par = (struct signaling_param_appinfo *) malloc(length);
+             -1, "Error allocating memory for appinfo parameter: requested size < MinSize.");
+    HIP_IFEL(!(par = (struct signaling_param_appinfo *) malloc(length)),
+             -1, "Could not allocate memory for new appinfo parameter\n");
 
     /* Set contents to zero (defined standard values). */
     memset((uint8_t *)par, 0, length);
