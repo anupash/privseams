@@ -77,6 +77,10 @@ compiler that does produce warnings, you can override -Werror as follows:
 
 Then run make as usual.
 
+Please note that the HIP configuration files are located in
+/usr/local/etc/hip with the default configure flags. If you want to
+change the location to /etc/hip, you have to pass --sysconfdir=/etc to
+configure (or create a symbolic link).
 
 Broken Systems
 ==============
