@@ -190,7 +190,7 @@ int signaling_cdb_uninit(void)
 /**
  * Searches for a pair of ports inside the given entry.
  *
- * @return -1 for error, 0 for not found, 1 for found.
+ * @return < 0 for error, 0 for not found, > 0 for found.
  */
 int signaling_cdb_entry_find_ports(const uint16_t src_port, const uint16_t dest_port,
         signaling_cdb_entry_t * entry) {

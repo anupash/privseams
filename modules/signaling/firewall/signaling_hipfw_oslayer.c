@@ -121,11 +121,10 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
 
     /* If there is an association search the connection. */
     found = signaling_cdb_entry_find_ports(src_port, dest_port, entry);
-    if(found == -1) {
+    if(found < 0) {
         HIP_DEBUG("An error occured searching the connection tracking database.\n");
         verdict = VERDICT_DEFAULT;
-    }
-    if(found == 1) {
+    } else if(found > 0) {
         HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
         verdict = VERDICT_ACCEPT;
     } else {
