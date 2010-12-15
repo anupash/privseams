@@ -359,6 +359,28 @@ out_err:
     return err;
 }
 
+int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int err = 0;
+    hip_ha_t *entry = NULL;
+    unsigned char sig_buf[1000];
+    int sig_len = 10;
+    struct signaling_hipd_state *sig_state;
+
+    /* Get the global state */
+    HIP_IFEL(!(entry = hip_hadb_find_byhits(&ctx->output_msg->hits, &ctx->output_msg->hitr)),
+                 -1, "Failed to retrieve hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
+                 -1, "failed to retrieve state for signaling\n");
+
+    sig_len = signaling_user_api_get_signature(sig_state->app_ctx.euid, "sign this fresh data", 20, sig_buf);
+
+    HIP_IFEL(signaling_build_param_user_sig(ctx->output_msg, sig_buf, sig_len),
+            -1, "Building of param user_sig for I2 failed.\n");
+
+out_err:
+    return err;
+}
 
 int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
@@ -381,6 +403,11 @@ int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
 
 out_err:
 	return err;
+}
+
+int signaling_r2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    return signaling_i2_add_user_sig(packet_type, ha_state, ctx);
 }
 
 int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)

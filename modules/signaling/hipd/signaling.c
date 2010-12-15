@@ -20,7 +20,9 @@
 #define INBOUND_HANDLE_BEX_UPDATE_PRIO          32000
 
 #define OUTBOUND_I2_CREATE_APPINFO_PRIO         41500
+#define OUTBOUND_I2_CREATE_USER_SIG_PRIO        42500
 #define OUTBOUND_R2_CREATE_APPINFO_PRIO         41501
+#define OUTBOUND_R2_CREATE_USER_SIG_PRIO        42501
 
 #define INBOUND_HANDLE_BEX_TRIGGER_PRIO         50000
 #define INBOUND_HANDLE_BEX_UPDATE_TRIGGER_PRIO  30000
@@ -33,6 +35,7 @@ int hip_signaling_init(void)
 
 	// register parameter types
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO, "HIP_PARAM_SIGNALING_APPINFO");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIG, "HIP_PARAM_SIGNALING_USER_SIG");
 
     // register initialization function for port information per connection state in hadb
     lmod_register_state_init_function(&signaling_hipd_init_state);
@@ -63,6 +66,11 @@ int hip_signaling_init(void)
 	HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_add_appinfo, OUTBOUND_I2_CREATE_APPINFO_PRIO),
 			 -1, "Error on registering Signaling handle function.\n");
 
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I1_SENT, &signaling_i2_add_user_sig, OUTBOUND_I2_CREATE_USER_SIG_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_R1, HIP_STATE_I2_SENT, &signaling_i2_add_user_sig, OUTBOUND_I2_CREATE_USER_SIG_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
     /* Add info in R2 */
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
@@ -73,6 +81,17 @@ int hip_signaling_init(void)
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &signaling_r2_add_appinfo, OUTBOUND_R2_CREATE_APPINFO_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_r2_add_user_sig, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED, &signaling_r2_add_user_sig, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT, &signaling_r2_add_user_sig, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT, &signaling_r2_add_user_sig, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT, &signaling_r2_add_user_sig, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
     // register user message handler

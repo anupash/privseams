@@ -65,9 +65,13 @@ int signaling_get_update_type(hip_common_t *msg);
  */
 int signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
+int signaling_i2_add_user_sig(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+
 /*
  * Add application information to R2 packet.
  */
 int signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+
+int signaling_r2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx);
 
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_MSG_H*/
