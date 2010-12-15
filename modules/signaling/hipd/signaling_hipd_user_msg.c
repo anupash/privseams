@@ -17,11 +17,40 @@
 
 #include "modules/signaling/lib/signaling_prot_common.h"
 #include "signaling_hipd_state.h"
+#include "signaling_hipd_msg.h"
 #include "signaling_hipd_user_msg.h"
 
+
+/*
+ * Handles a trigger for a bex update sent by the firewall.
+ *
+ * Either we have to initiate a bex update exchange with the other party,
+ * or we tell the firewall that the new connection is allowed.
+ *
+ * Comment: Connection tracking in hipd is not implemented yet,
+ *          so we always start a new exchange of updates.
+ */
+int signaling_handle_bex_update_trigger(struct hip_common *msg, UNUSED struct sockaddr_in6 *src) {
+    int err = 0;
+
+    HIP_DEBUG("Received request for new connection (trigger bex update). \n");
+
+    /*
+     * Do connection tracking here ...
+     */
+
+
+    /* Need to do a complete update bex. */
+    HIP_IFEL(signaling_trigger_bex_update(msg),
+            -1, "Failed triggering first bex update.\n");
+
+out_err:
+    return err;
+}
+
 /* Saves the ports from the trigger_bex_msg to global state */
-int signaling_handle_trigger_bex(struct hip_common *msg,
-                               UNUSED struct sockaddr_in6 *src) {
+int signaling_handle_bex_trigger(struct hip_common *msg,
+                                 UNUSED struct sockaddr_in6 *src) {
     const hip_hit_t *our_hit        = NULL, *peer_hit  = NULL;
     uint16_t src_port = 0, dest_port = 0;
     const struct hip_tlv_common *param;

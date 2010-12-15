@@ -75,9 +75,9 @@ int hip_signaling_init(void)
             -1, "Error on registering Signaling handle function.\n");
 
     // register user message handler
-    HIP_IFEL(hip_user_register_handle(HIP_MSG_TRIGGER_BEX, &signaling_handle_trigger_bex, TRIGGER_BEX_PORTS_PRIO),
+    HIP_IFEL(hip_user_register_handle(HIP_MSG_TRIGGER_BEX, &signaling_handle_bex_trigger, TRIGGER_BEX_PORTS_PRIO),
             -1, "Error on registering Signaling user handle function.\n");
-    HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION, &signaling_handle_trigger_bex_update, TRIGGER_BEX_UPDATE_PRIO),
+    HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION, &signaling_handle_bex_update_trigger, TRIGGER_BEX_UPDATE_PRIO),
                 -1, "Error on registering Signaling user handle function.\n");
 
 
