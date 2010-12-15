@@ -136,7 +136,7 @@ out_err:
  */
 int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_application_context *app_ctx)
 {
-    struct signaling_param_appinfo *appinfo;
+    struct signaling_param_appinfo *appinfo = NULL;
     int err = 0;
     int length_contents = 0;
 
@@ -157,6 +157,7 @@ int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_applicatio
             -1, "Failed to append appinfo parameter to message.\n");
 
 out_err:
+    free(appinfo);
     return err;
 }
 
@@ -185,6 +186,7 @@ int signaling_build_param_portinfo(struct hip_common *msg, uint16_t src_port, ui
             -1, "HIP builder failed building appinfo parameter into message.\n");
 
 out_err:
+    free(par);
     return err;
 
 }
