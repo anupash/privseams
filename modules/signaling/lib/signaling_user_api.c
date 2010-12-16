@@ -210,18 +210,12 @@ int signaling_user_api_get_signature(uid_t uid, const void *data, int in_len, un
     HIP_IFEL(!(homedir = get_user_homedir(uid)),
              -1, "Could not get homedir for user %d.\n", uid);
 
-    HIP_DEBUG("Homedir for user %d: %s \n", uid, homedir);
-
-    memset(filebuf, 0, 200);
-    strcat(filebuf, homedir);
-    strcat(filebuf+strlen(homedir), "/.signaling/user-key.pem");
+    sprintf(filebuf, "%s/.signaling/user-key.pem", homedir);
     HIP_DEBUG("Looking for certificate at: %s \n", filebuf);
     HIP_IFEL(load_ecdsa_private_key(filebuf, &priv_key),
              -1, "Could not get private key for signing \n");
 
-    memset(filebuf, 0, 200);
-    strcat(filebuf, homedir);
-    strcat(filebuf+strlen(homedir), "/.signaling/user-cert.pem");
+    sprintf(filebuf, "%s/.signaling/user-cert.pem", homedir);
     HIP_DEBUG("Looking for certificate at: %s \n", filebuf);
     HIP_IFEL(load_x509_certificate(filebuf, &usercert),
              -1, "Could not get user certificate \n");
