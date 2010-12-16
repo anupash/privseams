@@ -60,11 +60,11 @@
 #define SIGNALING_CONN_ALLOWED  11
 
 /* Maximum lengths for application and user context */
-#define SIGNALING_APP_DN_MAX_LEN    100
-#define SIGNALING_ISS_DN_MAX_LEN    100
-#define SIGNALING_APP_REQ_MAX_LEN   100
-#define SIGNALING_APP_GRP_MAX_LEN   100
-#define SIGNALING_USER_ID_MAX_LEN   100
+#define SIGNALING_APP_DN_MAX_LEN    128
+#define SIGNALING_ISS_DN_MAX_LEN    128
+#define SIGNALING_APP_REQ_MAX_LEN   64
+#define SIGNALING_APP_GRP_MAX_LEN   64
+#define SIGNALING_USER_ID_MAX_LEN   128
 
 
 /*
@@ -94,7 +94,7 @@ struct signaling_param_user_context {
     hip_tlv_len_t  length;
     hip_tlv_len_t  ui_length;
     hip_tlv_len_t  sig_length;
-};
+} __attribute__ ((packed));
 
 /*
      Generic structure for the context of an application.
@@ -139,7 +139,7 @@ struct signaling_param_appinfo {
     hip_tlv_len_t iss_dn_length;
     hip_tlv_len_t req_length;
     hip_tlv_len_t grp_length;
-};
+} __attribute__ ((packed));
 
 struct signaling_application_context {
     pid_t pid;
