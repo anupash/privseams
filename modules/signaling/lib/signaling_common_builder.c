@@ -84,15 +84,18 @@ static int signaling_param_appinfo_get_content_length(struct signaling_applicati
     res += 4;
 
     /* Length of variable input */
-    res += (app_ctx->application_dn != NULL ? strlen(app_ctx->application_dn) : 0);
-    res += (app_ctx->issuer_dn != NULL ? strlen(app_ctx->issuer_dn) : 0);
-    res += (app_ctx->requirements != NULL ? strlen(app_ctx->requirements) : 0);
-    res += (app_ctx->groups != NULL ? strlen(app_ctx->groups) : 0);
+    res += strlen(app_ctx->application_dn);
+    res += strlen(app_ctx->issuer_dn);
+    res += strlen(app_ctx->requirements);
+    res += strlen(app_ctx->groups);
 
     return res;
 }
 
-static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo *par, struct signaling_application_context *app_ctx) {
+static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo *par,
+                                                  uint16_t src_port,
+                                                  uint16_t dest_port,
+                                                  struct signaling_application_context *app_ctx) {
     int err = 0;
     uint8_t *p_tmp;
 
@@ -101,14 +104,14 @@ static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo
             -1, "No parameter or application context given.\n");
 
     /* Set ports */
-    par->src_port = htons(app_ctx->src_port);
-    par->dest_port = htons(app_ctx->dest_port);
+    par->src_port = htons(src_port);
+    par->dest_port = htons(dest_port);
 
     /* Set length fields */
-    par->app_dn_length = (app_ctx->application_dn != NULL ? htons(strlen(app_ctx->application_dn)) : 0);
-    par->iss_dn_length = (app_ctx->issuer_dn != NULL ? htons(strlen(app_ctx->issuer_dn)) : 0);
-    par->req_length = (app_ctx->requirements != NULL ? htons(strlen(app_ctx->requirements)) : 0);
-    par->grp_length = (app_ctx->groups != NULL ? htons(strlen(app_ctx->groups)) : 0);
+    par->app_dn_length  = htons(strlen(app_ctx->application_dn));
+    par->iss_dn_length  = htons(strlen(app_ctx->issuer_dn));
+    par->req_length     = htons(strlen(app_ctx->requirements));
+    par->grp_length     = htons(strlen(app_ctx->groups));
 
     /* Set the contents
      * We dont need to check for NULL pointers since length is then set to 0 */
@@ -135,7 +138,7 @@ out_err:
 
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_application_context *app_ctx)
+int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_connection_context *ctx)
 {
     struct signaling_param_appinfo *appinfo = NULL;
     int err = 0;
@@ -144,14 +147,14 @@ int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_applicatio
     /* Sanity checks */
     HIP_IFEL(msg == NULL,
             -1, "Got no msg context. (msg == NULL)\n");
-    HIP_IFEL(app_ctx == NULL,
+    HIP_IFEL(ctx == NULL,
             -1, "Got no context to built the parameter from.\n");
 
     /* BUILD THE PARAMETER */
-    length_contents = signaling_param_appinfo_get_content_length(app_ctx);
+    length_contents = signaling_param_appinfo_get_content_length(&ctx->app_ctx);
     appinfo = signaling_param_appinfo_init(sizeof(hip_tlv_common_t) + length_contents);
 
-    HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, app_ctx),
+    HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, ctx->src_port, ctx->dest_port, &ctx->app_ctx),
             -1, "Failed to build appinfo parameter.\n");
 
     HIP_IFEL(0 > hip_build_param(msg, appinfo),
@@ -197,7 +200,7 @@ out_err:
  * @return zero for success, or non-zero on error
  */
 int signaling_build_param_user_info(hip_common_t *msg,
-                                    const struct signaling_application_context *app_ctx,
+                                    const struct signaling_user_context *user_ctx,
                                     const unsigned char *signature, const int sig_len)
 {
     struct signaling_param_user_context *param_userinfo = NULL;
@@ -214,7 +217,7 @@ int signaling_build_param_user_info(hip_common_t *msg,
 
     /* calculate lengths */
     header_len      = sizeof(struct signaling_param_user_context);
-    user_id_len     = app_ctx->user_id != NULL ? strlen(app_ctx->user_id) : 0;
+    user_id_len     = strlen(user_ctx->user_id);
     par_len         = header_len - sizeof(struct hip_tlv_common) + user_id_len + sig_len;
 
     HIP_DEBUG("Building user info parameter of length %d\n", par_len);
@@ -227,7 +230,7 @@ int signaling_build_param_user_info(hip_common_t *msg,
 
     hip_set_param_type((hip_tlv_common_t *) param_userinfo, HIP_PARAM_SIGNALING_USERINFO);
     hip_set_param_contents_len((hip_tlv_common_t *) param_userinfo, par_len);
-    memcpy((uint8_t *)param_userinfo + header_len, app_ctx->user_id, user_id_len);
+    memcpy((uint8_t *)param_userinfo + header_len, user_ctx->user_id, user_id_len);
     memcpy((uint8_t *)param_userinfo + header_len + user_id_len, signature, sig_len);
 
     HIP_IFEL(hip_build_param(msg, param_userinfo),

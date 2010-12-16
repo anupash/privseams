@@ -18,7 +18,7 @@
  * However, we use struct signaling_hipd_state as a container to be able to add further state later.
  */
 struct signaling_hipd_state {
-    struct signaling_application_context app_ctx;
+    struct signaling_connection_context ctx;
 };
 
 int signaling_hipd_init_state(struct modular_state *state);

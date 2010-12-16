@@ -38,6 +38,7 @@
 #include <openssl/x509.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
+#include <linux/limits.h>
 
 #include "signaling_common_builder.h"
 #include "signaling_oslayer.h"
@@ -163,7 +164,7 @@ out_err:
  *
  *  @return NULL on error, the path to the application binary on success
  */
-int signaling_netstat_get_application_by_ports(const uint16_t src_port, const uint16_t dst_port, struct signaling_application_context *app_ctx) {
+int signaling_netstat_get_application_by_ports(const uint16_t src_port, const uint16_t dst_port, struct signaling_connection_context *ctx) {
     FILE *fp;
     int err = 0, UNUSED scanerr;
     char *res;
@@ -180,12 +181,12 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
     char progname[NETSTAT_SIZE_PROGNAME];
     UNUSED int inode;
 
-    memset(proto, 0, NETSTAT_SIZE_PROTO);
-    memset(unused, 0, NETSTAT_SIZE_RECV_SEND);
+    memset(proto,       0, NETSTAT_SIZE_PROTO);
+    memset(unused,      0, NETSTAT_SIZE_RECV_SEND);
     memset(remote_addr, 0, NETSTAT_SIZE_ADDR_v6);
-    memset(local_addr, 0, NETSTAT_SIZE_ADDR_v6);
-    memset(state, 0, NETSTAT_SIZE_STATE);
-    memset(progname, 0, NETSTAT_SIZE_PROGNAME);
+    memset(local_addr,  0, NETSTAT_SIZE_ADDR_v6);
+    memset(state,       0, NETSTAT_SIZE_STATE);
+    memset(progname,    0, NETSTAT_SIZE_PROGNAME);
 
     // prepare and make call to netstat
     memset(callbuf, 0, CALLBUF_SIZE);
@@ -220,21 +221,19 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
      * Format is the same for connections and listening sockets.
      */
     scanerr = sscanf(readbuf, "%s %s %s %s %s %s %ld %d %d/%s",
-            proto, unused, unused, local_addr, remote_addr, state, &app_ctx->euid, &inode, &app_ctx->pid, progname);
-    HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", progname, app_ctx->pid, app_ctx->euid, proto);
+            proto, unused, unused, local_addr, remote_addr, state, &ctx->user_ctx.euid, &inode, &ctx->app_ctx.pid, progname);
+    HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", progname, ctx->app_ctx.pid, ctx->user_ctx.euid, proto);
     HIP_DEBUG("\t from:\t %s\n", local_addr);
     HIP_DEBUG("\t to:\t %s\n", remote_addr);
 
     // determine path to application binary from /proc/{pid}/exe
     memset(symlinkbuf, 0, SYMLINKBUF_SIZE);
-    HIP_IFEL(!(app_ctx->path = (char *) malloc(PATHBUF_SIZE)),
-             -1, "Could not allocate memory for application path.");
-    memset(app_ctx->path, 0, PATHBUF_SIZE);
-    sprintf(symlinkbuf, "/proc/%i/exe", app_ctx->pid);
-    HIP_IFEL(0 > readlink(symlinkbuf, app_ctx->path, PATHBUF_SIZE),
+    memset(ctx->app_ctx.path, 0, PATH_MAX);
+    sprintf(symlinkbuf, "/proc/%i/exe", ctx->app_ctx.pid);
+    HIP_IFEL(0 > readlink(symlinkbuf, ctx->app_ctx.path, PATH_MAX),
             -1, "Failed to read symlink to application binary\n");
 
-    HIP_DEBUG("Found application binary at: %s \n", app_ctx->path);
+    HIP_DEBUG("Found application binary at: %s \n", ctx->app_ctx.path);
 
 out_err:
     return err;
@@ -257,7 +256,7 @@ int signaling_get_application_context_from_certificate(char *app_path, struct si
     //X509AC_print(app_cert);
 
     /* Fill in context */
-    app_ctx->path = app_path;
+    strcpy(app_ctx->path, app_path);
 
     if( (ac->info->issuer->type == 0)||
         ((ac->info->issuer->type == 1)&&(ac->info->issuer->d.v2Form->issuer != NULL)))
@@ -267,8 +266,6 @@ int signaling_get_application_context_from_certificate(char *app_path, struct si
             HIP_DEBUG("Error getting AC issuer name, possibly not a X500 name");
         else
         {
-            HIP_IFEL(!(app_ctx->issuer_dn = (char *) malloc(ONELINELEN)),
-                     -1, "Could not allocate memory for issuer dn \n");
             X509_NAME_oneline(name,app_ctx->issuer_dn,ONELINELEN);
         }
 
@@ -279,8 +276,6 @@ int signaling_get_application_context_from_certificate(char *app_path, struct si
         if (!name) {
             HIP_DEBUG("Error getting AC holder name, possibly not a X500 name");
         } else {
-            HIP_IFEL(!(app_ctx->application_dn = (char *) malloc(ONELINELEN)),
-                     -1, "Could not allocate memory for AC holder name \n");
             X509_NAME_oneline(name,app_ctx->application_dn,ONELINELEN);
         }
     }
@@ -355,18 +350,18 @@ out_err:
 /*
  * Just a wrapper.
  */
-int signaling_get_verified_application_context_by_ports(uint16_t src_port, uint16_t dst_port, struct signaling_application_context *app_ctx) {
+int signaling_get_verified_application_context_by_ports(uint16_t src_port, uint16_t dst_port, struct signaling_connection_context *ctx) {
     int err = 0;
-    HIP_IFEL(signaling_netstat_get_application_by_ports(src_port, dst_port, app_ctx),
+    HIP_IFEL(signaling_netstat_get_application_by_ports(src_port, dst_port, ctx),
             -1, "Netstat failed to get path to application for given port pair.\n");
-    HIP_IFEL(signaling_verify_application(app_ctx->path),
-            -1, "Could not verify certificate of application: %s.\n", app_ctx->path);
-    HIP_IFEL(signaling_get_application_context_from_certificate(app_ctx->path, app_ctx),
-            -1, "Could not build application context for application: %s.\n", app_ctx->path);
+    HIP_IFEL(signaling_verify_application(ctx->app_ctx.path),
+            -1, "Could not verify certificate of application: %s.\n", ctx->app_ctx.path);
+    HIP_IFEL(signaling_get_application_context_from_certificate(ctx->app_ctx.path, &ctx->app_ctx),
+            -1, "Could not build application context for application: %s.\n", ctx->app_ctx.path);
 
     /* Needs to be done for completeness, since get_application_certificate_context does not fill in ports */
-    app_ctx->src_port = src_port;
-    app_ctx->dest_port = dst_port;
+    ctx->src_port = src_port;
+    ctx->dest_port = dst_port;
 
 out_err:
     return err;

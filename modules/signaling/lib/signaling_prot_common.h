@@ -39,6 +39,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <linux/limits.h>
 
 #include "lib/core/protodefs.h"
 
@@ -57,6 +58,13 @@
 #define SIGNALING_CONN_PENDING  1
 #define SIGNALING_CONN_BLOCKED  10
 #define SIGNALING_CONN_ALLOWED  11
+
+/* Maximum lengths for application and user context */
+#define SIGNALING_APP_DN_MAX_LEN    100
+#define SIGNALING_ISS_DN_MAX_LEN    100
+#define SIGNALING_APP_REQ_MAX_LEN   100
+#define SIGNALING_APP_GRP_MAX_LEN   100
+#define SIGNALING_USER_ID_MAX_LEN   100
 
 
 /*
@@ -133,40 +141,42 @@ struct signaling_param_appinfo {
     hip_tlv_len_t grp_length;
 };
 
+struct signaling_application_context {
+    pid_t pid;
+    char path[PATH_MAX];
+    char application_dn[SIGNALING_APP_DN_MAX_LEN];
+    char issuer_dn[SIGNALING_ISS_DN_MAX_LEN];
+    char requirements[SIGNALING_APP_REQ_MAX_LEN];
+    char groups[SIGNALING_APP_GRP_MAX_LEN];
+};
+
+struct signaling_user_context {
+    long int euid;
+    char user_id[SIGNALING_USER_ID_MAX_LEN];
+};
+
 /*
      Internal representation of context information for an application.
      This structure should be used whenever state needs to be kept about an application.
 
-     Use signaling_init_application_context() to initialize this structure to standard values.
+     Use signaling_init_context() to initialize this structure to standard values.
 
-     Strings are assumed to be 0-terminated.
      All integers are in host-byte-order.
 */
-struct signaling_application_context {
-    // context of connection
+struct signaling_connection_context {
     uint16_t src_port;
     uint16_t dest_port;
     int connection_status;
-
-    // context of application on this connection
-    pid_t pid;
-    char *path;
-    char *application_dn;
-    char *issuer_dn;
-    char *requirements;
-    char *groups;
-
-    // context of user for this application/connection
-    long int euid;
-    char *user_id;
+    struct signaling_application_context app_ctx;
+    struct signaling_user_context user_ctx;
 };
 
 
 void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo);
 
-struct signaling_application_context *signaling_init_application_context(void);
+struct signaling_connection_context *signaling_init_connection_context(void);
 
-void signaling_application_context_print(const struct signaling_application_context *app_ctx);
+void signaling_connection_context_print(const struct signaling_connection_context *ctx);
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 

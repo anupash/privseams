@@ -101,8 +101,8 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     int found = 0;
     int src_port, dest_port;
     signaling_cdb_entry_t *entry;
-    struct signaling_application_context *new_app_ctx;
-    struct signaling_application_context *app_ctx;
+    struct signaling_connection_context *new_app_ctx;
+    struct signaling_connection_context *app_ctx;
 
 
     /* Get ports from tcp header */
@@ -118,7 +118,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst);
     if(entry == NULL) {
         HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
-        new_app_ctx = signaling_init_application_context();
+        new_app_ctx = signaling_init_connection_context();
         new_app_ctx->src_port = src_port;
         new_app_ctx->dest_port = dest_port;
         signaling_cdb_add(&ctx->src, &ctx->dst, new_app_ctx);
@@ -154,7 +154,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
         }
     } else {
         HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
-        new_app_ctx = signaling_init_application_context();
+        new_app_ctx = signaling_init_connection_context();
         new_app_ctx->src_port = src_port;
         new_app_ctx->dest_port = dest_port;
         signaling_cdb_add(&ctx->src, &ctx->dst, new_app_ctx);

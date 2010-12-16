@@ -205,21 +205,21 @@ int signaling_cdb_uninit(void)
  */
 int signaling_cdb_entry_find_ports(const uint16_t src_port, const uint16_t dest_port,
                                    signaling_cdb_entry_t * entry,
-                                   struct signaling_application_context **ret) {
+                                   struct signaling_connection_context **ret) {
     int err = 0;
     SList *listitem;
-    struct signaling_application_context * app_ctx = NULL;
+    struct signaling_connection_context *ctx = NULL;
 
     HIP_IFEL(entry == NULL,
             -1, "Entry is null.\n" );
 
     listitem = entry->application_contexts;
     while(listitem) {
-        app_ctx = (struct signaling_application_context *) listitem->data;
-        if((src_port == app_ctx->src_port && dest_port == app_ctx->dest_port) ||
-           (dest_port == app_ctx->src_port && src_port == app_ctx->dest_port)) {
+        ctx = (struct signaling_connection_context *) listitem->data;
+        if((src_port == ctx->src_port && dest_port == ctx->dest_port) ||
+           (dest_port == ctx->src_port && src_port == ctx->dest_port)) {
             err = 1;
-            *ret = app_ctx;
+            *ret = ctx;
             goto out_err;
         }
         listitem = listitem->next;
@@ -285,8 +285,8 @@ out_err:
 /*
  * Updates all fields in old with values from new.
  */
-static int signaling_cdb_update_entry(struct signaling_application_context *old,
-                                      const struct signaling_application_context *new) {
+static int signaling_cdb_update_entry(struct signaling_connection_context *old,
+                                      const struct signaling_connection_context *new) {
     old->src_port = new->src_port;
     old->dest_port = new->dest_port;
     old->connection_status = new->connection_status;
@@ -298,12 +298,12 @@ static int signaling_cdb_update_entry(struct signaling_application_context *old,
 /* Adds or updates and entry */
 int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
-                      struct signaling_application_context *app_ctx)
+                      struct signaling_connection_context *ctx)
 {
     int err = 0;
     int found;
     signaling_cdb_entry_t *entry = NULL;
-    struct signaling_application_context *existing_app_ctx;
+    struct signaling_connection_context *existing_app_ctx;
     entry = signaling_cdb_entry_find(local_hit, remote_hit);
 
     if(entry == NULL) {
@@ -312,11 +312,11 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
 
     HIP_IFEL(!entry, -1, "Adding a new empty entry failed.\n");
 
-    found = signaling_cdb_entry_find_ports(app_ctx->src_port, app_ctx->dest_port, entry, &existing_app_ctx);
+    found = signaling_cdb_entry_find_ports(ctx->src_port, ctx->dest_port, entry, &existing_app_ctx);
     if (found > 0) {
-        signaling_cdb_update_entry(existing_app_ctx, app_ctx);
+        signaling_cdb_update_entry(existing_app_ctx, ctx);
     } else {
-        entry->application_contexts = append_to_slist(entry->application_contexts, app_ctx);
+        entry->application_contexts = append_to_slist(entry->application_contexts, ctx);
     }
 
 out_err:
@@ -328,7 +328,7 @@ out_err:
  */
 static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
     SList *listentry;
-    struct signaling_application_context *app_ctx;
+    struct signaling_connection_context *ctx;
 
     HIP_DEBUG("\t----- SCDB ELEMENT START ------\n");
     HIP_DEBUG_HIT("\tLocal Hit", &entry->local_hit);
@@ -339,13 +339,13 @@ static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
     listentry = entry->application_contexts;
     while(listentry != NULL) {
         if(listentry->data != NULL) {
-            app_ctx = (struct signaling_application_context *) listentry->data;
+            ctx = (struct signaling_connection_context *) listentry->data;
             HIP_DEBUG("\t  ->  appname (%d): %s\n",
-                app_ctx->pid,
-                app_ctx->application_dn);
+                ctx->app_ctx.pid,
+                ctx->app_ctx.application_dn);
             HIP_DEBUG("\t  ->  local port: %d, remote port: %d\n",
-                app_ctx->src_port,
-                app_ctx->dest_port);
+                ctx->src_port,
+                ctx->dest_port);
         } else {
             HIP_DEBUG("\t  ->  <no port info available>\n");
         }
@@ -380,7 +380,7 @@ int signaling_cdb_handle_add_request(hip_common_t * msg) {
     const struct hip_tlv_common *param   = NULL;
     const hip_hit_t *src_hit = NULL;
     const hip_hit_t *dst_hit = NULL;
-    struct signaling_application_context * app_ctx;
+    struct signaling_connection_context * ctx;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CDB_ADD_CONN,
             -1, "Message has wrong type.\n");
@@ -398,14 +398,14 @@ int signaling_cdb_handle_add_request(hip_common_t * msg) {
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
             -1, "No appinfo parameter in message.\n");
     appinfo = (const struct signaling_param_appinfo *) param;
-    HIP_IFEL(!(app_ctx = signaling_init_application_context()),
+    HIP_IFEL(!(ctx = signaling_init_connection_context()),
              -1, "Failed to init app context \n");
 
-    app_ctx->src_port = ntohs(appinfo->src_port);
-    app_ctx->dest_port = ntohs(appinfo->dest_port);
-    app_ctx->connection_status = SIGNALING_CONN_ALLOWED;
+    ctx->src_port = ntohs(appinfo->src_port);
+    ctx->dest_port = ntohs(appinfo->dest_port);
+    ctx->connection_status = SIGNALING_CONN_ALLOWED;
 
-    signaling_cdb_add(src_hit, dst_hit, app_ctx);
+    signaling_cdb_add(src_hit, dst_hit, ctx);
 
     signaling_cdb_print();
 

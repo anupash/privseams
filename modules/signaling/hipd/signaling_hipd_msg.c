@@ -116,7 +116,7 @@ out_err:
  * Setting either seq or ack_id to
  *
  */
-static hip_common_t *build_update_message(hip_ha_t *ha, int type, struct signaling_application_context *app_ctx, uint32_t seq) {
+static hip_common_t *build_update_message(hip_ha_t *ha, int type, struct signaling_connection_context *ctx, uint32_t seq) {
     int err = 0;
     uint16_t mask = 0;
     hip_common_t *msg_buf = NULL;
@@ -138,7 +138,7 @@ static hip_common_t *build_update_message(hip_ha_t *ha, int type, struct signali
 
 
     /* Add Appinfo */
-    HIP_IFEL(signaling_build_param_appinfo(msg_buf, app_ctx),
+    HIP_IFEL(signaling_build_param_appinfo(msg_buf, ctx),
             -1, "Building of APPInfo parameter failed\n");
 
     /* Add authentication */
@@ -238,11 +238,11 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
     /* Application lookup */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling ports\n");
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &sig_state->app_ctx),
+    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &sig_state->ctx),
             -1, "Failed application lookup / verification.\n");
 
     /* Build and send */
-    HIP_IFEL(!(update_packet_to_send = build_update_message(ha, type, &sig_state->app_ctx, seq_id)),
+    HIP_IFEL(!(update_packet_to_send = build_update_message(ha, type, &sig_state->ctx, seq_id)),
             -1, "Failed to build update.\n");
     err = hip_send_pkt(NULL,
                        &ha->peer_addr,
@@ -374,12 +374,12 @@ int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
     HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
 
-    sig_len = signaling_user_api_get_signature(sig_state->app_ctx.euid, "sign this fresh data", 20, sig_buf);
+    sig_len = signaling_user_api_get_signature(sig_state->ctx.user_ctx.euid, "sign this fresh data", 20, sig_buf);
 
     HIP_IFEL(sig_len < 0,
              -1, "Could not build user signature \n");
 
-    HIP_IFEL(signaling_build_param_user_info(ctx->output_msg, &sig_state->app_ctx, sig_buf, sig_len),
+    HIP_IFEL(signaling_build_param_user_info(ctx->output_msg, &sig_state->ctx.user_ctx, sig_buf, sig_len),
             -1, "Building of param user_sig for I2 failed.\n");
 
 out_err:
@@ -399,9 +399,9 @@ int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
                  -1, "failed to retrieve state for signaling\n");
     // HIP_DEBUG("Got state from HADB: ports src: %d dest %d \n", sig_state->application.src_port, sig_state->application.dest_port);
 
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(sig_state->app_ctx.src_port, sig_state->app_ctx.dest_port, &sig_state->app_ctx),
+    HIP_IFEL(signaling_get_verified_application_context_by_ports(sig_state->ctx.src_port, sig_state->ctx.dest_port, &sig_state->ctx),
             -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->app_ctx),
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->ctx),
             -1, "Building of param appinfo for I2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into I2 Packet.\n");
 
@@ -436,16 +436,16 @@ int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
     if(param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         dest_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
         src_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
-        sig_state->app_ctx.src_port = src_port;
-        sig_state->app_ctx.dest_port = dest_port;
+        sig_state->ctx.src_port = src_port;
+        sig_state->ctx.dest_port = dest_port;
         HIP_DEBUG("Saved connection information for R2.\n");
-        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->app_ctx.src_port, sig_state->app_ctx.dest_port);
+        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->ctx.src_port, sig_state->ctx.dest_port);
     }
 
     /* Now we can build the param into the R2 packet */
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dest_port, &sig_state->app_ctx),
+    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dest_port, &sig_state->ctx),
             -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->app_ctx),
+    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->ctx),
             -1, "Building of param appinfo for R2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into R2 Packet.\n");
 
