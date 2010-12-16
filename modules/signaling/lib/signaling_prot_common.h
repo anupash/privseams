@@ -170,7 +170,7 @@ struct signaling_connection_context {
     struct signaling_application_context app_ctx;
     struct signaling_user_context user_ctx;
 };
-
+const char *signaling_connection_status_name(int status);
 void signaling_param_userinfo_print(const struct signaling_param_user_context *userinfo);
 void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo);
 

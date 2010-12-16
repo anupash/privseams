@@ -80,17 +80,37 @@ out_err:
     return new_ctx;
 }
 
+const char *signaling_connection_status_name(int status) {
+    switch (status) {
+    case SIGNALING_CONN_NEW:
+        return "NEW";
+    case SIGNALING_CONN_PENDING:
+        return "PENDING";
+    case SIGNALING_CONN_BLOCKED:
+        return "BLOCKED";
+    case SIGNALING_CONN_ALLOWED:
+        return "ALLOWED";
+    default:
+        return "UNKOWN";
+    }
+}
+
 void signaling_connection_context_print(const struct signaling_connection_context *ctx) {
     if(ctx == NULL) {
         HIP_DEBUG("No ctx parameter given.\n");
         return;
     }
-    HIP_DEBUG("+------------ APP CONTEXT START ----------------------\n");
-    HIP_DEBUG("Context for application: %s \n", ctx->app_ctx.path);
-    HIP_DEBUG("\tPorts:\t\t src %d, dest %d\n", ctx->src_port, ctx->dest_port);
-    HIP_DEBUG("\tApplication DN:\t %s\n", ctx->app_ctx.application_dn);
-    HIP_DEBUG("\tAC Issuer DN:\t %s\n", ctx->app_ctx.issuer_dn);
-    HIP_DEBUG("\tRequirements:\t %s\n", ctx->app_ctx.requirements);
-    HIP_DEBUG("\tGroups:\t\t %s\n", ctx->app_ctx.groups);
-    HIP_DEBUG("+------------ APP CONTEXT END   ----------------------\n");
+
+    HIP_DEBUG("+------------ CONNECTION CONTEXT START ----------------------\n");
+    HIP_DEBUG(" Status:\t\t %s\n", signaling_connection_status_name(ctx->connection_status));
+    HIP_DEBUG(" Ports:\t\t src %d, dest %d\n", ctx->src_port, ctx->dest_port);
+    HIP_DEBUG(" User context \n");
+    HIP_DEBUG(" \tUser Id:\t %d\n", ctx->user_ctx.euid);
+    HIP_DEBUG(" \tUser Name:\t %s\n", ctx->user_ctx.user_id);
+    HIP_DEBUG(" Application context \n");
+    HIP_DEBUG(" \tApplication DN:\t %s\n", ctx->app_ctx.application_dn);
+    HIP_DEBUG(" \tAC Issuer DN:\t %s\n", ctx->app_ctx.issuer_dn);
+    HIP_DEBUG(" \tRequirements:\t %s\n", ctx->app_ctx.requirements);
+    HIP_DEBUG(" \tGroups:\t\t %s\n", ctx->app_ctx.groups);
+    HIP_DEBUG("+------------ CONNECTION CONTEXT END   ----------------------\n");
 }
