@@ -175,6 +175,18 @@ out_err:
     return err;
 }
 
+int signaling_user_api_get_uname(uid_t uid, struct signaling_user_context *user_ctx) {
+    int err = 0;
+    struct passwd *pw = NULL;
+
+    HIP_IFEL(!(pw = getpwuid(uid)),
+            -1, "Failed to get info for user id %d.\n", uid);
+    memcpy(user_ctx->user_id, pw->pw_name, strlen(pw->pw_name));
+
+out_err:
+    return err;
+}
+
 /*
  * @return < 0 on error, size of computed signature on success
  */
