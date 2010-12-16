@@ -204,7 +204,8 @@ int signaling_cdb_uninit(void)
  * @return < 0 for error, 0 for not found, > 0 for found.
  */
 int signaling_cdb_entry_find_ports(const uint16_t src_port, const uint16_t dest_port,
-        signaling_cdb_entry_t * entry) {
+                                   signaling_cdb_entry_t * entry,
+                                   struct signaling_application_context **ret) {
     int err = 0;
     SList *listitem;
     struct signaling_application_context * app_ctx = NULL;
@@ -218,6 +219,7 @@ int signaling_cdb_entry_find_ports(const uint16_t src_port, const uint16_t dest_
         if((src_port == app_ctx->src_port && dest_port == app_ctx->dest_port) ||
            (dest_port == app_ctx->src_port && src_port == app_ctx->dest_port)) {
             err = 1;
+            *ret = app_ctx;
             goto out_err;
         }
         listitem = listitem->next;
@@ -280,13 +282,28 @@ out_err:
     return entry;
 }
 
+/*
+ * Updates all fields in old with values from new.
+ */
+static int signaling_cdb_update_entry(struct signaling_application_context *old,
+                                      const struct signaling_application_context *new) {
+    old->src_port = new->src_port;
+    old->dest_port = new->dest_port;
+    old->connection_status = new->connection_status;
+    // TODO: update application context and user context
+
+    return 0;
+}
+
 /* Adds or updates and entry */
 int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
                       struct signaling_application_context *app_ctx)
 {
     int err = 0;
+    int found;
     signaling_cdb_entry_t *entry = NULL;
+    struct signaling_application_context *existing_app_ctx;
     entry = signaling_cdb_entry_find(local_hit, remote_hit);
 
     if(entry == NULL) {
@@ -295,7 +312,12 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
 
     HIP_IFEL(!entry, -1, "Adding a new empty entry failed.\n");
 
-    entry->application_contexts = append_to_slist(entry->application_contexts, app_ctx);
+    found = signaling_cdb_entry_find_ports(app_ctx->src_port, app_ctx->dest_port, entry, &existing_app_ctx);
+    if (found > 0) {
+        signaling_cdb_update_entry(existing_app_ctx, app_ctx);
+    } else {
+        entry->application_contexts = append_to_slist(entry->application_contexts, app_ctx);
+    }
 
 out_err:
     return err;
@@ -381,6 +403,7 @@ int signaling_cdb_handle_add_request(hip_common_t * msg) {
 
     app_ctx->src_port = ntohs(appinfo->src_port);
     app_ctx->dest_port = ntohs(appinfo->dest_port);
+    app_ctx->connection_status = SIGNALING_CONN_ALLOWED;
 
     signaling_cdb_add(src_hit, dst_hit, app_ctx);
 

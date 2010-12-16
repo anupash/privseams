@@ -52,6 +52,13 @@
 #define HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION  138
 #define HIP_MSG_SIGNALING_CDB_ADD_CONN  139
 
+/* Connection status types */
+#define SIGNALING_CONN_NEW      0
+#define SIGNALING_CONN_PENDING  1
+#define SIGNALING_CONN_BLOCKED  10
+#define SIGNALING_CONN_ALLOWED  11
+
+
 /*
      Parameter for a user signature.
 
@@ -131,6 +138,7 @@ struct signaling_param_appinfo {
 struct signaling_application_context {
     uint16_t src_port;
     uint16_t dest_port;
+    int connection_status;
     pid_t pid;
     long int euid;
     char *path;

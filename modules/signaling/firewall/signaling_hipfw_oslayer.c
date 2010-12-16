@@ -101,6 +101,8 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     int found = 0;
     int src_port, dest_port;
     signaling_cdb_entry_t *entry;
+    struct signaling_application_context *new_app_ctx;
+    struct signaling_application_context *app_ctx;
 
 
     /* Get ports from tcp header */
@@ -112,24 +114,51 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     HIP_DEBUG_HIT("\tdst", &ctx->dst);
     HIP_DEBUG("\t on ports %d/%d or if corresponding application is generally allowed.\n", src_port, dest_port);
 
+    /* Is there a HA between the two hosts? */
     entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst);
     if(entry == NULL) {
         HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
+        new_app_ctx = signaling_init_application_context();
+        new_app_ctx->src_port = src_port;
+        new_app_ctx->dest_port = dest_port;
+        signaling_cdb_add(&ctx->src, &ctx->dst, new_app_ctx);
+        new_app_ctx->connection_status = SIGNALING_CONN_PENDING;
         verdict = VERDICT_ACCEPT;
         /* Let packet proceed because BEX will be triggered by userspace ipsec */
         goto out_err;
     }
 
-    /* If there is an association search the connection. */
-    found = signaling_cdb_entry_find_ports(src_port, dest_port, entry);
+    /* If there is an association, is the connection known? */
+    found = signaling_cdb_entry_find_ports(src_port, dest_port, entry, &app_ctx);
     if(found < 0) {
         HIP_DEBUG("An error occured searching the connection tracking database.\n");
         verdict = VERDICT_DEFAULT;
     } else if(found > 0) {
-        HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
-        verdict = VERDICT_ACCEPT;
+        switch (app_ctx->connection_status) {
+        case SIGNALING_CONN_ALLOWED:
+            HIP_DEBUG("Packet is allowed, if kernelspace ipsec was running, setup exception rule in iptables now.\n");
+            verdict = VERDICT_ACCEPT;
+            break;
+        case SIGNALING_CONN_BLOCKED:
+            HIP_DEBUG("Connection is blocked explicitly. Drop packet.\n");
+            verdict = VERDICT_DROP;
+            break;
+        case SIGNALING_CONN_PENDING:
+            HIP_DEBUG("Received packet for pending connection. Drop packet. (Should do some timeout stuff here.)\n");
+            verdict = VERDICT_DROP;
+            break;
+        case SIGNALING_CONN_NEW:
+        default:
+            HIP_DEBUG("Invalid connection state %d. Drop packet.\n", app_ctx->connection_status);
+            verdict = VERDICT_DROP;
+        }
     } else {
         HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
+        new_app_ctx = signaling_init_application_context();
+        new_app_ctx->src_port = src_port;
+        new_app_ctx->dest_port = dest_port;
+        signaling_cdb_add(&ctx->src, &ctx->dst, new_app_ctx);
+        new_app_ctx->connection_status = SIGNALING_CONN_PENDING;
         signaling_hipfw_trigger_bex_update(ctx);
         verdict = VERDICT_DROP;
     }

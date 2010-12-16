@@ -59,6 +59,7 @@ struct signaling_application_context *signaling_init_application_context(void) {
     memset(new_app_ctx, 0, sizeof(struct signaling_application_context));
     new_app_ctx->pid    = -1;
     new_app_ctx->euid   = -1;
+    new_app_ctx->connection_status = SIGNALING_CONN_NEW;
 
 out_err:
     if (err) {
