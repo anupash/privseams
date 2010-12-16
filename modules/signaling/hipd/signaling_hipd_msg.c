@@ -392,7 +392,13 @@ int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
     HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
 
-    sig_len = signaling_user_api_get_signature(sig_state->ctx.user_ctx.euid, "sign this fresh data", 20, sig_buf);
+    HIP_IFEL(signaling_user_api_get_uname(sig_state->ctx.user_ctx.euid, &sig_state->ctx.user_ctx),
+             -1, "Could not get user name \n");
+
+    sig_len = signaling_user_api_get_signature(sig_state->ctx.user_ctx.euid,
+                                               sig_state->ctx.user_ctx.user_id,
+                                               strlen(sig_state->ctx.user_ctx.user_id),
+                                               sig_buf);
 
     HIP_IFEL(sig_len < 0,
              -1, "Could not build user signature \n");
