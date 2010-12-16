@@ -129,7 +129,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     }
 
     /* If there is an association, is the connection known? */
-    found = signaling_cdb_entry_find_ports(src_port, dest_port, entry, &app_ctx);
+    found = signaling_cdb_entry_find_connection(src_port, dest_port, entry, &app_ctx);
     if(found < 0) {
         HIP_DEBUG("An error occured searching the connection tracking database.\n");
         verdict = VERDICT_DEFAULT;

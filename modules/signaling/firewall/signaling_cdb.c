@@ -203,9 +203,9 @@ int signaling_cdb_uninit(void)
  *
  * @return < 0 for error, 0 for not found, > 0 for found.
  */
-int signaling_cdb_entry_find_ports(const uint16_t src_port, const uint16_t dest_port,
-                                   signaling_cdb_entry_t * entry,
-                                   struct signaling_connection_context **ret) {
+int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t dest_port,
+                                        signaling_cdb_entry_t * entry,
+                                        struct signaling_connection_context **ret) {
     int err = 0;
     SList *listitem;
     struct signaling_connection_context *ctx = NULL;
@@ -312,7 +312,7 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
 
     HIP_IFEL(!entry, -1, "Adding a new empty entry failed.\n");
 
-    found = signaling_cdb_entry_find_ports(ctx->src_port, ctx->dest_port, entry, &existing_app_ctx);
+    found = signaling_cdb_entry_find_connection(ctx->src_port, ctx->dest_port, entry, &existing_app_ctx);
     if (found > 0) {
         signaling_cdb_update_entry(existing_app_ctx, ctx);
     } else {
