@@ -123,7 +123,7 @@ static IMPLEMENT_LHASH_COMP_FN(signaling_cdb_entries, signaling_cdb_entry_t)
 static void signaling_cdb_entry_free(signaling_cdb_entry_t *entry)
 {
     SList *element;
-    element = entry->application_contexts;
+    element = entry->connection_contexts;
     while (element) {
         free(element->data);
         element = element->next;
@@ -213,7 +213,7 @@ int signaling_cdb_entry_find_ports(const uint16_t src_port, const uint16_t dest_
     HIP_IFEL(entry == NULL,
             -1, "Entry is null.\n" );
 
-    listitem = entry->application_contexts;
+    listitem = entry->connection_contexts;
     while(listitem) {
         ctx = (struct signaling_connection_context *) listitem->data;
         if((src_port == ctx->src_port && dest_port == ctx->dest_port) ||
@@ -271,7 +271,7 @@ static signaling_cdb_entry_t * signaling_cdb_add_new(const struct in6_addr *loca
              -1, "Could not allocate memory for new scdb entry \n");
     memcpy(&entry->local_hit, local_hit, sizeof(struct in6_addr));
     memcpy(&entry->remote_hit, remote_hit, sizeof(struct in6_addr));
-    entry->application_contexts = NULL;
+    entry->connection_contexts = NULL;
 
     HIP_IFEL(hip_ht_add(scdb, entry), -1, "hash collision detected!\n");
 
@@ -316,7 +316,7 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
     if (found > 0) {
         signaling_cdb_update_entry(existing_app_ctx, ctx);
     } else {
-        entry->application_contexts = append_to_slist(entry->application_contexts, ctx);
+        entry->connection_contexts = append_to_slist(entry->connection_contexts, ctx);
     }
 
 out_err:
@@ -336,7 +336,7 @@ static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
 
     HIP_DEBUG("\tApplication contexts:\n");
 
-    listentry = entry->application_contexts;
+    listentry = entry->connection_contexts;
     while(listentry != NULL) {
         if(listentry->data != NULL) {
             ctx = (struct signaling_connection_context *) listentry->data;
