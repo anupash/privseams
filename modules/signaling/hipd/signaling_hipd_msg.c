@@ -379,7 +379,7 @@ int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
     HIP_IFEL(sig_len < 0,
              -1, "Could not build user signature \n");
 
-    HIP_IFEL(signaling_build_param_user_sig(ctx->output_msg, sig_buf, sig_len),
+    HIP_IFEL(signaling_build_param_user_info(ctx->output_msg, &sig_state->app_ctx, sig_buf, sig_len),
             -1, "Building of param user_sig for I2 failed.\n");
 
 out_err:

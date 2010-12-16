@@ -45,7 +45,7 @@
 
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
 #define HIP_PARAM_SIGNALING_APPINFO     5000
-#define HIP_PARAM_SIGNALING_USER_SIG    62500
+#define HIP_PARAM_SIGNALING_USERINFO    62500
 
 
 /* User message types (adds to icomm.h)*/
@@ -67,6 +67,12 @@
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |             Type              |             Length            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |          UI Length            |           SIG Length          |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |          User ID                                              /
+     /                                                               /
+     /                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |   Signature                                                   /
      /                                                               /
      /                               +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -75,10 +81,11 @@
 
 */
 
-struct signaling_param_user_sig {
+struct signaling_param_user_context {
     hip_tlv_type_t type;
     hip_tlv_len_t  length;
-    unsigned char signature[0];
+    hip_tlv_len_t  ui_length;
+    hip_tlv_len_t  sig_length;
 };
 
 /*
@@ -136,16 +143,22 @@ struct signaling_param_appinfo {
      All integers are in host-byte-order.
 */
 struct signaling_application_context {
+    // context of connection
     uint16_t src_port;
     uint16_t dest_port;
     int connection_status;
+
+    // context of application on this connection
     pid_t pid;
-    long int euid;
     char *path;
     char *application_dn;
     char *issuer_dn;
     char *requirements;
     char *groups;
+
+    // context of user for this application/connection
+    long int euid;
+    char *user_id;
 };
 
 

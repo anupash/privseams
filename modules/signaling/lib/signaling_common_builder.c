@@ -196,30 +196,44 @@ out_err:
 /**
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_user_sig(hip_common_t *msg, const unsigned char *signature, const int sig_len)
+int signaling_build_param_user_info(hip_common_t *msg,
+                                    const struct signaling_application_context *app_ctx,
+                                    const unsigned char *signature, const int sig_len)
 {
-    struct signaling_param_user_sig *param_user_sig = NULL;
+    struct signaling_param_user_context *param_userinfo = NULL;
     int err = 0;
+    int user_id_len;
+    int header_len;
+    int par_len;
 
     /* Sanity checks */
     HIP_IFEL(!msg,
              -1, "Got no msg context. (msg == NULL)\n");
     HIP_IFEL(!signature,
-             -1, "Got no signature to built the parameter from.\n");
+             -1, "Got no signature to build the parameter from.\n");
+
+    /* calculate lengths */
+    header_len      = sizeof(struct signaling_param_user_context);
+    user_id_len     = app_ctx->user_id != NULL ? strlen(app_ctx->user_id) : 0;
+    par_len         = header_len - sizeof(struct hip_tlv_common) + user_id_len + sig_len;
+
+    HIP_DEBUG("Building user info parameter of length %d\n", par_len);
+
 
     /* BUILD THE PARAMETER */
-    param_user_sig = malloc(sizeof(hip_tlv_common_t) + sig_len);
-    HIP_IFEL(!param_user_sig,
+    param_userinfo = malloc(sizeof(hip_tlv_common_t) + par_len);
+    HIP_IFEL(!param_userinfo,
              -1, "Could not allocate user signature parameter. \n");
 
-    hip_set_param_type((hip_tlv_common_t *) param_user_sig, HIP_PARAM_SIGNALING_USER_SIG);
-    hip_set_param_contents_len((hip_tlv_common_t *) param_user_sig, sig_len);
-    memcpy(param_user_sig->signature, signature, sig_len);
+    hip_set_param_type((hip_tlv_common_t *) param_userinfo, HIP_PARAM_SIGNALING_USERINFO);
+    hip_set_param_contents_len((hip_tlv_common_t *) param_userinfo, par_len);
+    memcpy((uint8_t *)param_userinfo + header_len, app_ctx->user_id, user_id_len);
+    memcpy((uint8_t *)param_userinfo + header_len + user_id_len, signature, sig_len);
 
-    HIP_IFEL(hip_build_param(msg, param_user_sig),
+    HIP_IFEL(hip_build_param(msg, param_userinfo),
              -1, "Failed to append appinfo parameter to message.\n");
 
 out_err:
-    free(param_user_sig);
+    free(param_userinfo);
     return err;
 }
