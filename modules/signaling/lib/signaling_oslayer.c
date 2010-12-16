@@ -340,12 +340,15 @@ int signaling_verify_application(const char *app_path) {
     HIP_IFEL(!X509AC_verify_cert(verify_ctx, app_cert),
             -1, "Certificate %s did not verify correctly!\n", "attr_cert.pem");
 
-    X509_STORE_CTX_free(verify_ctx);
-    X509_STORE_free(store);
-    X509AC_free(app_cert);
-
 out_err:
-
+    if (verify_ctx) {
+        X509_STORE_CTX_free(verify_ctx);
+    }
+    // function is null tolerant
+    X509_STORE_free(store);
+    if (app_cert) {
+        X509AC_free(app_cert);
+    }
     return err;
 }
 
