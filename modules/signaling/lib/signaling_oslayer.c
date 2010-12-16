@@ -101,7 +101,7 @@ static int hash_file(const char *in_file, unsigned char *digest_buffer) {
             break;
         SHA1_Update(&context,read_buffer,(unsigned long)i);
     }
-    SHA1_Final(&(digest_buffer[0]),&context);
+    SHA1_Final(digest_buffer,&context);
     fclose(f);
 
 out_err:
@@ -190,9 +190,10 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
 
     // prepare and make call to netstat
     sprintf(callbuf, "netstat -tpneW | grep :%d | grep :%d", src_port, dst_port);
-    memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
-    HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
-    res = fgets(&readbuf[0], NETSTAT_SIZE_OUTPUT, fp);
+    memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
+    HIP_IFEL(!(fp = popen(callbuf, "r")),
+             -1, "Failed to make call to nestat.\n");
+    res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
     pclose(fp);
 
     /*
@@ -203,9 +204,10 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
         // prepare make second call to netstat
         HIP_DEBUG("No output from netstat call: %s\n", callbuf);
         sprintf(callbuf, "netstat -tpneWl | grep :%d", src_port);
-        memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
-        HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
-        res = fgets(&readbuf[0], NETSTAT_SIZE_OUTPUT, fp);
+        memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
+        HIP_IFEL(!(fp = popen(callbuf, "r")),
+                 -1, "Failed to make call to nestat.\n");
+        res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
         pclose(fp);
     }
 
