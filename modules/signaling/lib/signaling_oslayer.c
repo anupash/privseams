@@ -189,7 +189,6 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
     memset(progname,    0, NETSTAT_SIZE_PROGNAME);
 
     // prepare and make call to netstat
-    memset(callbuf, 0, CALLBUF_SIZE);
     sprintf(callbuf, "netstat -tpneW | grep :%d | grep :%d", src_port, dst_port);
     memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
     HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
@@ -203,7 +202,6 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
     if(!res) {
         // prepare make second call to netstat
         HIP_DEBUG("No output from netstat call: %s\n", callbuf);
-        memset(callbuf, 0, CALLBUF_SIZE);
         sprintf(callbuf, "netstat -tpneWl | grep :%d", src_port);
         memset(&readbuf[0], 0, NETSTAT_SIZE_OUTPUT);
         HIP_IFEL(!(fp = popen(callbuf, "r")), -1, "Failed to make call to nestat.\n");
@@ -227,7 +225,6 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
     HIP_DEBUG("\t to:\t %s\n", remote_addr);
 
     // determine path to application binary from /proc/{pid}/exe
-    memset(symlinkbuf, 0, SYMLINKBUF_SIZE);
     memset(ctx->app_ctx.path, 0, PATH_MAX);
     sprintf(symlinkbuf, "/proc/%i/exe", ctx->app_ctx.pid);
     HIP_IFEL(0 > readlink(symlinkbuf, ctx->app_ctx.path, PATH_MAX),
