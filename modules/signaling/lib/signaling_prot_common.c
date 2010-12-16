@@ -68,9 +68,9 @@ struct signaling_connection_context *signaling_init_connection_context(void) {
              -1, "Could not allocate memory for new application context\n");
     // TODO: doing something like new_ctx = {0} would be more correct and portable
     memset(new_ctx, 0, sizeof(struct signaling_connection_context));
-    new_ctx->app_ctx.pid    = -1;
-    new_ctx->user_ctx.euid   = -1;
-    new_ctx->connection_status = SIGNALING_CONN_NEW;
+    new_ctx->app_ctx.pid        = -1;
+    new_ctx->user_ctx.euid      = -1;
+    new_ctx->connection_status  = SIGNALING_CONN_NEW;
 
 out_err:
     if (err) {

@@ -228,7 +228,7 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
     memset(ctx->app_ctx.path, 0, PATH_MAX);
     sprintf(symlinkbuf, "/proc/%i/exe", ctx->app_ctx.pid);
     HIP_IFEL(0 > readlink(symlinkbuf, ctx->app_ctx.path, PATH_MAX),
-            -1, "Failed to read symlink to application binary\n");
+             -1, "Failed to read symlink to application binary\n");
 
     HIP_DEBUG("Found application binary at: %s \n", ctx->app_ctx.path);
 
@@ -255,9 +255,8 @@ int signaling_get_application_context_from_certificate(char *app_path, struct si
     /* Fill in context */
     strcpy(app_ctx->path, app_path);
 
-    if( (ac->info->issuer->type == 0)||
-        ((ac->info->issuer->type == 1)&&(ac->info->issuer->d.v2Form->issuer != NULL)))
-    {
+    if ((ac->info->issuer->type == 0)||
+        ((ac->info->issuer->type == 1)&&(ac->info->issuer->d.v2Form->issuer != NULL))) {
         name = X509AC_get_issuer_name(ac);
         if (!name)
             HIP_DEBUG("Error getting AC issuer name, possibly not a X500 name");
@@ -268,7 +267,7 @@ int signaling_get_application_context_from_certificate(char *app_path, struct si
 
     }
 
-    if( ac->info->holder->entity != NULL) {
+    if (ac->info->holder->entity != NULL) {
         name = X509AC_get_holder_entity_name(ac);
         if (!name) {
             HIP_DEBUG("Error getting AC holder name, possibly not a X500 name");
@@ -296,24 +295,24 @@ int signaling_verify_application(const char *app_path) {
 
     /* Get application certificate */
     HIP_IFEL(!(app_cert = get_application_attribute_certificate(app_path)),
-            -1, "No application certificate found for application: %s.\n", app_path);
+             -1, "No application certificate found for application: %s.\n", app_path);
 
     /* Look for and get issuer certificate */
     issuer_cert_file = "cert.pem";
     HIP_IFEL(!(fp = fopen(issuer_cert_file, "r")),
-            -1, "No issuer cert file given.\n");
+             -1, "No issuer cert file given.\n");
     HIP_IFEL(!(issuercert = PEM_read_X509(fp, NULL, NULL, NULL)),
-            -1, "Could not decode root cert file.\n");
+             -1, "Could not decode root cert file.\n");
     HIP_DEBUG("Using issuer certificate at: %s.\n", issuer_cert_file);
     fclose(fp);
 
     /* Before we do any verifying, check that hashes match */
     HIP_IFEL(0 > verify_application_hash(app_path, app_cert),
-            -1, "Hash of application doesn't match hash in certificate.\n");
+             -1, "Hash of application doesn't match hash in certificate.\n");
 
     /* Setup the certificate store, which is passed used in the verification context store */
     HIP_IFEL(!(store = X509_STORE_new()),
-            -1, "Error setting up the store. Exiting... \n");
+             -1, "Error setting up the store. Exiting... \n");
 
     /* Add the issuer certificate into the certificate lookup store. */
     if(issuercert != NULL) {
@@ -322,15 +321,15 @@ int signaling_verify_application(const char *app_path) {
 
     /* Setup the store context that is passed to the verify function. */
     HIP_IFEL(!(verify_ctx = X509_STORE_CTX_new()),
-            -1, "Error setting up the verify context.\n");
+             -1, "Error setting up the verify context.\n");
 
     /* Init the store context */
     HIP_IFEL(!(X509_STORE_CTX_init(verify_ctx, store, NULL, NULL)),
-            -1, "Error initializing the verify context.\n");
+             -1, "Error initializing the verify context.\n");
 
     /* Now do the verifying */
     HIP_IFEL(!X509AC_verify_cert(verify_ctx, app_cert),
-            -1, "Certificate %s did not verify correctly!\n", "attr_cert.pem");
+             -1, "Certificate %s did not verify correctly!\n", "attr_cert.pem");
 
 out_err:
     if (verify_ctx) {
@@ -350,11 +349,11 @@ out_err:
 int signaling_get_verified_application_context_by_ports(uint16_t src_port, uint16_t dst_port, struct signaling_connection_context *ctx) {
     int err = 0;
     HIP_IFEL(signaling_netstat_get_application_by_ports(src_port, dst_port, ctx),
-            -1, "Netstat failed to get path to application for given port pair.\n");
+             -1, "Netstat failed to get path to application for given port pair.\n");
     HIP_IFEL(signaling_verify_application(ctx->app_ctx.path),
-            -1, "Could not verify certificate of application: %s.\n", ctx->app_ctx.path);
+             -1, "Could not verify certificate of application: %s.\n", ctx->app_ctx.path);
     HIP_IFEL(signaling_get_application_context_from_certificate(ctx->app_ctx.path, &ctx->app_ctx),
-            -1, "Could not build application context for application: %s.\n", ctx->app_ctx.path);
+             -1, "Could not build application context for application: %s.\n", ctx->app_ctx.path);
 
     /* Needs to be done for completeness, since get_application_certificate_context does not fill in ports */
     ctx->src_port = src_port;
