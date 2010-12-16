@@ -49,6 +49,11 @@
 int signaling_check_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 /*
+ * Perform checks on user context information.
+ */
+int signaling_check_userinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+
+/*
  * Process information.
  *
  * 1) Notify firewall if packet is I2, R2 or UPDATE
