@@ -132,7 +132,7 @@ struct signaling_application_context {
     uint16_t src_port;
     uint16_t dest_port;
     pid_t pid;
-    uid_t euid;
+    long int euid;
     char *path;
     char *application_dn;
     char *issuer_dn;

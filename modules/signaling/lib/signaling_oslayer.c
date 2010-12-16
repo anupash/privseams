@@ -219,7 +219,7 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
      * Parse the output.
      * Format is the same for connections and listening sockets.
      */
-    scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d %d %d/%s",
+    scanerr = sscanf(readbuf, "%s %s %s %s %s %s %ld %d %d/%s",
             proto, unused, unused, local_addr, remote_addr, state, &app_ctx->euid, &inode, &app_ctx->pid, progname);
     HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", progname, app_ctx->pid, app_ctx->euid, proto);
     HIP_DEBUG("\t from:\t %s\n", local_addr);

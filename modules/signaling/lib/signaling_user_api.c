@@ -128,7 +128,7 @@ static char *get_user_homedir(uid_t uid) {
     struct passwd *pw = NULL;
 
     HIP_IFEL(!(pw = getpwuid(uid)),
-            -1, "Failed to get password entry for given user id.\n");
+            -1, "Failed to get info for user id %d.\n", uid);
 
 out_err:
     if(err) {
@@ -196,7 +196,9 @@ int signaling_user_api_get_signature(uid_t uid, const void *data, int in_len, un
 
     // get users homedir, private key and certificate
     HIP_IFEL(!(homedir = get_user_homedir(uid)),
-             -1, "Could not get homedir for user.\n");
+             -1, "Could not get homedir for user %d.\n", uid);
+
+    HIP_DEBUG("Homedir for user %d: %s \n", uid, homedir);
 
     memset(filebuf, 0, 200);
     strcat(filebuf, homedir);

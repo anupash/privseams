@@ -57,6 +57,8 @@ struct signaling_application_context *signaling_init_application_context(void) {
     HIP_IFEL(!(new_app_ctx = malloc(sizeof(struct signaling_application_context))),
              -1, "Could not allocate memory for new application context\n");
     memset(new_app_ctx, 0, sizeof(struct signaling_application_context));
+    new_app_ctx->pid    = -1;
+    new_app_ctx->euid   = -1;
 
 out_err:
     if (err) {
