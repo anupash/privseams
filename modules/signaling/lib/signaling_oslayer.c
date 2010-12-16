@@ -108,14 +108,6 @@ out_err:
     return err;
 }
 
-
-static void hex_print(unsigned char *buf, int len) {
-    int i;
-    for (i = 0; i < len; i++)
-        printf("%02x", buf[i]);
-    printf("\n");
-}
-
 static int verify_application_hash(const char *file, X509AC *ac) {
     int err = 0;
     int res = 0;
@@ -141,11 +133,8 @@ static int verify_application_hash(const char *file, X509AC *ac) {
     res = ASN1_STRING_cmp(hash, ac->info->holder->objectDigestInfo->digest);
     if(res != 0) {
         HIP_DEBUG("Hashes differ:\n");
-        HIP_DEBUG("\thash in cert:\t");
-        hex_print(ac->info->holder->objectDigestInfo->digest->data,
-                ac->info->holder->objectDigestInfo->digest->length);
-        HIP_DEBUG("\thash of app:\t");
-        hex_print(hash->data, hash->length);
+        HIP_HEXDUMP("\thash in cert:\t", ac->info->holder->objectDigestInfo->digest->data, ac->info->holder->objectDigestInfo->digest->length);
+        HIP_HEXDUMP("\thash of app:\t", hash->data, hash->length);
         err = -1;
     } else {
         HIP_DEBUG("Hash of file %s matches the one in the certificate.\n", file);
