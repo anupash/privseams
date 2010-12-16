@@ -115,6 +115,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst);
     if(entry == NULL) {
         HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
+        verdict = VERDICT_ACCEPT;
         /* Let packet proceed because BEX will be triggered by userspace ipsec */
         goto out_err;
     }
