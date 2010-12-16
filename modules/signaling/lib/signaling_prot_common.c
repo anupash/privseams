@@ -50,6 +50,21 @@ void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo
     HIP_DEBUG("+------------ APP INFO END   ----------------------\n");
 }
 
+void signaling_param_userinfo_print(const struct signaling_param_user_context *userinfo) {
+    const uint8_t *p_content;
+
+    if(userinfo == NULL) {
+        HIP_DEBUG("No userinfo parameter given.\n");
+        return;
+    }
+    p_content = (const uint8_t *) userinfo + sizeof(struct signaling_param_user_context);
+    HIP_DEBUG("+------------ USER INFO START ----------------------\n");
+    signaling_param_appinfo_print_field("User Name:", ntohs(userinfo->ui_length), p_content);
+    p_content += ntohs(userinfo->ui_length);
+    HIP_HEXDUMP("Signature: ", p_content, ntohs(userinfo->sig_length));
+    HIP_DEBUG("+------------ USER INFO END   ----------------------\n");
+}
+
 struct signaling_connection_context *signaling_init_connection_context(void) {
     int err = 0;
     struct signaling_connection_context *new_ctx;

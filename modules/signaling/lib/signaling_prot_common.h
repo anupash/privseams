@@ -171,12 +171,12 @@ struct signaling_connection_context {
     struct signaling_user_context user_ctx;
 };
 
-
+void signaling_param_userinfo_print(const struct signaling_param_user_context *userinfo);
 void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo);
 
 struct signaling_connection_context *signaling_init_connection_context(void);
-
 void signaling_connection_context_print(const struct signaling_connection_context *ctx);
+
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 
