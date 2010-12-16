@@ -253,7 +253,7 @@ int signaling_get_application_context_from_certificate(char *app_path, struct si
             HIP_DEBUG("Error getting AC issuer name, possibly not a X500 name");
         else
         {
-            X509_NAME_oneline(name,app_ctx->issuer_dn,ONELINELEN);
+            X509_NAME_oneline(name, app_ctx->issuer_dn, SIGNALING_ISS_DN_MAX_LEN);
         }
 
     }
@@ -263,7 +263,7 @@ int signaling_get_application_context_from_certificate(char *app_path, struct si
         if (!name) {
             HIP_DEBUG("Error getting AC holder name, possibly not a X500 name");
         } else {
-            X509_NAME_oneline(name,app_ctx->application_dn,ONELINELEN);
+            X509_NAME_oneline(name, app_ctx->application_dn, SIGNALING_APP_DN_MAX_LEN);
         }
     }
 
