@@ -223,6 +223,10 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
 
     HIP_DEBUG("Found application binary at: %s \n", ctx->app_ctx.path);
 
+    /* We still need to set ports */
+    ctx->src_port = src_port;
+    ctx->dest_port = dst_port;
+
 out_err:
     return err;
 }
@@ -345,10 +349,6 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port, uint1
              -1, "Could not verify certificate of application: %s.\n", ctx->app_ctx.path);
     HIP_IFEL(signaling_get_application_context_from_certificate(ctx->app_ctx.path, &ctx->app_ctx),
              -1, "Could not build application context for application: %s.\n", ctx->app_ctx.path);
-
-    /* Needs to be done for completeness, since get_application_certificate_context does not fill in ports */
-    ctx->src_port = src_port;
-    ctx->dest_port = dst_port;
 
 out_err:
     return err;
