@@ -12,22 +12,17 @@
 #include "lib/core/ife.h"
 #include "signaling_prot_common.h"
 
-static void signaling_param_appinfo_print_field(const char *prefix, const uint16_t length, const unsigned char *p_content) {
-    char *buf;
+static void signaling_param_print_field(const char *prefix, const uint16_t length, const unsigned char *p_content) {
+    char buf[length+1];
 
     if(length == 0) {
         HIP_DEBUG("%s\t <empty>\n", prefix);
         return;
     }
 
-    if (!(buf = malloc(length + 1))) {
-        HIP_ERROR("Could not allocate memory for appinfo field \n");
-        return;
-    }
     memset(buf, 0, length + 1);
     memcpy(buf, p_content, length);
     HIP_DEBUG("%s\t%s\n", prefix, buf);
-    free(buf);
 }
 
 void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo) {
@@ -40,13 +35,13 @@ void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo
     HIP_DEBUG("+------------ APP INFO START ----------------------\n");
     HIP_DEBUG("Ports: src %d, dest %d\n", ntohs(appinfo->src_port), ntohs(appinfo->dest_port));
     p_content = (const uint8_t *) appinfo + sizeof(struct signaling_param_appinfo);
-    signaling_param_appinfo_print_field("Application DN:", ntohs(appinfo->app_dn_length), p_content);
+    signaling_param_print_field("Application DN:", ntohs(appinfo->app_dn_length), p_content);
     p_content += ntohs(appinfo->app_dn_length);
-    signaling_param_appinfo_print_field("AC Issuer DN:\t", ntohs(appinfo->iss_dn_length), p_content);
+    signaling_param_print_field("AC Issuer DN:\t", ntohs(appinfo->iss_dn_length), p_content);
     p_content += ntohs(appinfo->iss_dn_length);
-    signaling_param_appinfo_print_field("Requirements:\t", ntohs(appinfo->req_length), p_content);
+    signaling_param_print_field("Requirements:\t", ntohs(appinfo->req_length), p_content);
     p_content += ntohs(appinfo->req_length);
-    signaling_param_appinfo_print_field("Groups:\t", ntohs(appinfo->grp_length), p_content);
+    signaling_param_print_field("Groups:\t", ntohs(appinfo->grp_length), p_content);
     HIP_DEBUG("+------------ APP INFO END   ----------------------\n");
 }
 
@@ -59,7 +54,7 @@ void signaling_param_userinfo_print(const struct signaling_param_user_context *u
     }
     p_content = (const uint8_t *) userinfo + sizeof(struct signaling_param_user_context);
     HIP_DEBUG("+------------ USER INFO START ----------------------\n");
-    signaling_param_appinfo_print_field("User Name:", ntohs(userinfo->ui_length), p_content);
+    signaling_param_print_field("User Name:", ntohs(userinfo->ui_length), p_content);
     p_content += ntohs(userinfo->ui_length);
     HIP_HEXDUMP("Signature: ", p_content, ntohs(userinfo->sig_length));
     HIP_DEBUG("+------------ USER INFO END   ----------------------\n");
