@@ -222,7 +222,6 @@ int signaling_build_param_user_info(hip_common_t *msg,
 
     HIP_DEBUG("Building user info parameter of length %d\n", par_len);
 
-
     /* BUILD THE PARAMETER */
     param_userinfo = malloc(sizeof(hip_tlv_common_t) + par_len);
     HIP_IFEL(!param_userinfo,
@@ -230,7 +229,9 @@ int signaling_build_param_user_info(hip_common_t *msg,
 
     hip_set_param_type((hip_tlv_common_t *) param_userinfo, HIP_PARAM_SIGNALING_USERINFO);
     hip_set_param_contents_len((hip_tlv_common_t *) param_userinfo, par_len);
+    param_userinfo->ui_length = htons(user_id_len);
     memcpy((uint8_t *)param_userinfo + header_len, user_ctx->user_id, user_id_len);
+    param_userinfo->sig_length = htons(sig_len);
     memcpy((uint8_t *)param_userinfo + header_len + user_id_len, signature, sig_len);
 
     HIP_IFEL(hip_build_param(msg, param_userinfo),
