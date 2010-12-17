@@ -50,10 +50,10 @@
 int signaling_hipfw_handle_appinfo(const struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
 {
 	int err = 1;
-	UNUSED const struct signaling_param_appinfo *appinfo = NULL;
+	UNUSED const struct signaling_param_app_context *appinfo = NULL;
 
 	/* Get the parameter */
-	HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(common, HIP_PARAM_SIGNALING_APPINFO)),
+	HIP_IFEL(!(appinfo = (const struct signaling_param_app_context *) hip_get_param(common, HIP_PARAM_SIGNALING_APPINFO)),
 	        -1, "No application info parameter found in the message.\n");
 
 	/* Print out contents */

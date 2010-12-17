@@ -170,7 +170,7 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
     uint16_t src_port = 0;
     uint16_t dst_port = 0;
     hip_common_t * update_packet_to_send = NULL;
-    const struct signaling_param_appinfo * appinfo = NULL;
+    const struct signaling_param_app_context * appinfo = NULL;
     struct signaling_hipd_state * sig_state = NULL;
     uint32_t seq_id = 0;
     const struct hip_seq * par_seq = NULL;
@@ -262,7 +262,7 @@ out_err:
  * Tell the firewall to add a scdb entry for the completed BEX or update BEX.
  *
  */
-static int signaling_send_scdb_add(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_appinfo *appinfo)
+static int signaling_send_scdb_add(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo)
 {
     struct hip_common *msg = NULL;
     int err                = 0;
@@ -334,9 +334,9 @@ out_err:
 int signaling_handle_bex(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = -1;
-	const struct signaling_param_appinfo *appinfo = NULL;
+	const struct signaling_param_app_context *appinfo = NULL;
 
-	HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
+	HIP_IFEL(!(appinfo = (const struct signaling_param_app_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
 	        -1, "No application info parameter found in the message.\n");
 
 	signaling_param_appinfo_print(appinfo);
@@ -353,9 +353,9 @@ out_err:
 int signaling_handle_bex_update(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
-    const struct signaling_param_appinfo * appinfo = NULL;
+    const struct signaling_param_app_context * appinfo = NULL;
 
-    HIP_IFEL(!(appinfo = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
+    HIP_IFEL(!(appinfo = (const struct signaling_param_app_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
             -1, "No application info parameter found in the message (should be there..).\n");
 
     HIP_DEBUG("Received update bex with following appinfo.\n");
@@ -441,7 +441,7 @@ int signaling_r2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
 int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-	const struct signaling_param_appinfo *param;
+	const struct signaling_param_app_context *param;
 	uint16_t src_port = 0, dest_port = 0;
     hip_ha_t *entry = NULL;
     struct signaling_hipd_state *sig_state;
@@ -456,10 +456,10 @@ int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
                  -1, "failed to retrieve state for signaling\n");
 
     /* If we got some state, save the ports and hits to it */
-    param = (const struct signaling_param_appinfo *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO);
+    param = (const struct signaling_param_app_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO);
     if(param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
-        dest_port = ntohs(((const struct signaling_param_appinfo *) param)->src_port);
-        src_port = ntohs(((const struct signaling_param_appinfo *) param)->dest_port);
+        dest_port = ntohs(((const struct signaling_param_app_context *) param)->src_port);
+        src_port = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
         sig_state->ctx.src_port = src_port;
         sig_state->ctx.dest_port = dest_port;
         HIP_DEBUG("Saved connection information for R2.\n");

@@ -46,14 +46,14 @@
  *
  * @param length The total maximum length of the new parameter (including type and length field).
  */
-static struct signaling_param_appinfo * signaling_param_appinfo_init(unsigned int length) {
+static struct signaling_param_app_context * signaling_param_appinfo_init(unsigned int length) {
     int err = 0;
-    struct signaling_param_appinfo *par = NULL;
+    struct signaling_param_app_context *par = NULL;
 
     /* Size must be at least be enough to accomodate fixed contents and tlv header */
-    HIP_IFEL((length < sizeof(struct signaling_param_appinfo)),
+    HIP_IFEL((length < sizeof(struct signaling_param_app_context)),
              -1, "Error allocating memory for appinfo parameter: requested size < MinSize.");
-    HIP_IFEL(!(par = (struct signaling_param_appinfo *) malloc(length)),
+    HIP_IFEL(!(par = (struct signaling_param_app_context *) malloc(length)),
              -1, "Could not allocate memory for new appinfo parameter\n");
 
     /* Set contents to zero (defined standard values). */
@@ -92,7 +92,7 @@ static int signaling_param_appinfo_get_content_length(struct signaling_applicati
     return res;
 }
 
-static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo *par,
+static int siganling_build_param_appinfo_contents(struct signaling_param_app_context *par,
                                                   uint16_t src_port,
                                                   uint16_t dest_port,
                                                   struct signaling_application_context *app_ctx) {
@@ -115,7 +115,7 @@ static int siganling_build_param_appinfo_contents(struct signaling_param_appinfo
 
     /* Set the contents
      * We dont need to check for NULL pointers since length is then set to 0 */
-    p_tmp = (uint8_t *) par + sizeof(struct signaling_param_appinfo);
+    p_tmp = (uint8_t *) par + sizeof(struct signaling_param_app_context);
     memcpy(p_tmp, app_ctx->application_dn, ntohs(par->app_dn_length));
     p_tmp += ntohs(par->app_dn_length);
     memcpy(p_tmp, app_ctx->issuer_dn, ntohs(par->iss_dn_length));
@@ -140,7 +140,7 @@ out_err:
  */
 int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_connection_context *ctx)
 {
-    struct signaling_param_appinfo *appinfo = NULL;
+    struct signaling_param_app_context *appinfo = NULL;
     int err = 0;
     int length_contents = 0;
 
@@ -176,14 +176,14 @@ out_err:
  *      so that the application does not have to repeat the lookup.
  */
 int signaling_build_param_portinfo(hip_common_t *msg, uint16_t src_port, uint16_t dst_port) {
-    struct signaling_param_appinfo * par = NULL;
+    struct signaling_param_app_context * par = NULL;
     int err = 0;
 
     HIP_IFEL(!(src_port || dst_port),
             -1, "No port information given, omitting building of parameter HIP_PARAM_SIGNALING_APPINFO.\n");
 
     /* TODO: need to free parameter after it has been built */
-    par = signaling_param_appinfo_init(sizeof(struct signaling_param_appinfo));
+    par = signaling_param_appinfo_init(sizeof(struct signaling_param_app_context));
     par->src_port = htons(src_port);
     par->dest_port = htons(dst_port);
 

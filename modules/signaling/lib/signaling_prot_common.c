@@ -25,7 +25,7 @@ static void signaling_param_print_field(const char *prefix, const uint16_t lengt
     HIP_DEBUG("%s\t%s\n", prefix, buf);
 }
 
-void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo) {
+void signaling_param_appinfo_print(const struct signaling_param_app_context *appinfo) {
     const uint8_t *p_content;
 
     if(appinfo == NULL) {
@@ -34,7 +34,7 @@ void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo
     }
     HIP_DEBUG("+------------ APP INFO START ----------------------\n");
     HIP_DEBUG("Ports: src %d, dest %d\n", ntohs(appinfo->src_port), ntohs(appinfo->dest_port));
-    p_content = (const uint8_t *) appinfo + sizeof(struct signaling_param_appinfo);
+    p_content = (const uint8_t *) appinfo + sizeof(struct signaling_param_app_context);
     signaling_param_print_field("Application DN:", ntohs(appinfo->app_dn_length), p_content);
     p_content += ntohs(appinfo->app_dn_length);
     signaling_param_print_field("AC Issuer DN:\t", ntohs(appinfo->iss_dn_length), p_content);

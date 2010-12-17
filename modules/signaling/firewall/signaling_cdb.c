@@ -376,7 +376,7 @@ void signaling_cdb_print(void) {
  */
 int signaling_cdb_handle_add_request(hip_common_t * msg) {
     int err = 0;
-    const struct signaling_param_appinfo *appinfo;
+    const struct signaling_param_app_context *appinfo;
     const struct hip_tlv_common *param   = NULL;
     const hip_hit_t *src_hit = NULL;
     const hip_hit_t *dst_hit = NULL;
@@ -397,7 +397,7 @@ int signaling_cdb_handle_add_request(hip_common_t * msg) {
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
             -1, "No appinfo parameter in message.\n");
-    appinfo = (const struct signaling_param_appinfo *) param;
+    appinfo = (const struct signaling_param_app_context *) param;
     HIP_IFEL(!(ctx = signaling_init_connection_context()),
              -1, "Failed to init app context \n");
 

@@ -130,7 +130,7 @@ struct signaling_param_user_context {
 
 */
 
-struct signaling_param_appinfo {
+struct signaling_param_app_context {
     hip_tlv_type_t type;
     hip_tlv_len_t  length;
     uint16_t src_port;
@@ -172,7 +172,7 @@ struct signaling_connection_context {
 };
 const char *signaling_connection_status_name(int status);
 void signaling_param_userinfo_print(const struct signaling_param_user_context *userinfo);
-void signaling_param_appinfo_print(const struct signaling_param_appinfo *appinfo);
+void signaling_param_appinfo_print(const struct signaling_param_app_context *appinfo);
 
 struct signaling_connection_context *signaling_init_connection_context(void);
 void signaling_connection_context_print(const struct signaling_connection_context *ctx);
