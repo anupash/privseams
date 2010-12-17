@@ -48,7 +48,5 @@ int signaling_hipfw_oslayer_init(void);
 /* Check if the packet is conntracked or not. Take the corresponding actions. */
 int signaling_hipfw_conntrack(hip_fw_context_t *ctx);
 
-int signaling_hipfw_trigger_bex_update(hip_fw_context_t *ctx);
-
 
 #endif /*HIP_HIPFW_SIGNALING_HIPFW_OSLAYER_H*/

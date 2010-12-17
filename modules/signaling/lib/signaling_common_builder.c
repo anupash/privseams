@@ -241,3 +241,43 @@ out_err:
     free(param_userinfo);
     return err;
 }
+
+/*
+ * Fill the internal application_context struct with data from application_context parameter.
+ *
+ * @return 0 on success
+ */
+int signaling_build_application_context(const struct signaling_param_app_context *param_app_ctx,
+                                        struct signaling_application_context *app_ctx) {
+    int err = 0;
+    const uint8_t *p_contents;
+    uint16_t tmp_len;
+
+    /* sanity checks */
+    HIP_IFEL(!param_app_ctx, -1, "Got NULL application context parameter\n");
+    HIP_IFEL(!app_ctx, -1, "Got NULL application context to write to\n");
+
+    /* copy contents */
+    tmp_len = ntohs(param_app_ctx->app_dn_length);
+    p_contents = (const uint8_t *) param_app_ctx + sizeof(struct signaling_param_app_context);
+    memcpy(app_ctx->application_dn, p_contents, tmp_len);
+    app_ctx->application_dn[tmp_len] = '\0';
+    p_contents += tmp_len;
+
+    tmp_len = ntohs(param_app_ctx->iss_dn_length);
+    memcpy(app_ctx->issuer_dn, p_contents, tmp_len);
+    app_ctx->issuer_dn[tmp_len] = '\0';
+    p_contents += tmp_len;
+
+    tmp_len = ntohs(param_app_ctx->req_length);
+    memcpy(app_ctx->requirements, p_contents, tmp_len);
+    app_ctx->requirements[tmp_len] = '\0';
+    p_contents += tmp_len;
+
+    tmp_len = ntohs(param_app_ctx->grp_length);
+    memcpy(app_ctx->groups, p_contents, tmp_len);
+    app_ctx->groups[tmp_len] = '\0';
+
+out_err:
+    return err;
+}

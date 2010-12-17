@@ -25,10 +25,7 @@
 #define OUTBOUND_R2_CREATE_APPINFO_PRIO         41501
 #define OUTBOUND_R2_CREATE_USER_SIG_PRIO        42501
 
-#define INBOUND_HANDLE_BEX_TRIGGER_PRIO         50000
-#define INBOUND_HANDLE_BEX_UPDATE_TRIGGER_PRIO  30000
-
-
+#define INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO    30000
 
 int hip_signaling_init(void)
 {
@@ -100,11 +97,8 @@ int hip_signaling_init(void)
              -1, "Error on registering Signaling handle function.\n");
 
     // register user message handler
-    HIP_IFEL(hip_user_register_handle(HIP_MSG_TRIGGER_BEX, &signaling_handle_bex_trigger, INBOUND_HANDLE_BEX_TRIGGER_PRIO),
+    HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION, &signaling_handle_new_connection_trigger, INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO),
              -1, "Error on registering Signaling user handle function.\n");
-    HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION, &signaling_handle_bex_update_trigger, INBOUND_HANDLE_BEX_UPDATE_TRIGGER_PRIO),
-             -1, "Error on registering Signaling user handle function.\n");
-
 
     HIP_DEBUG("Initialized Signaling Module.\n");
 

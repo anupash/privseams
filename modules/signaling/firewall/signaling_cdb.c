@@ -295,7 +295,14 @@ static int signaling_cdb_update_entry(struct signaling_connection_context *old,
     return 0;
 }
 
-/* Adds or updates and entry */
+/* Adds or updates and entry.
+ *
+ * @param local_hit the hit of the local host
+ * @param remote_hi the hit of the peer host
+ * @param ctx the signaling connection context to add to the entry identified by local and remote hit
+ *
+ * @return 0 on success, negative otherwise
+ * */
 int signaling_cdb_add(const struct in6_addr *local_hit,
                       const struct in6_addr *remote_hit,
                       struct signaling_connection_context *ctx)
