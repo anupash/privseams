@@ -208,7 +208,10 @@ const char *signaling_connection_status_name(int status);
 void signaling_param_userinfo_print(const struct signaling_param_user_context *userinfo);
 void signaling_param_appinfo_print(const struct signaling_param_app_context *appinfo);
 
-struct signaling_connection_context *signaling_init_connection_context(void);
+int signaling_init_user_context(struct signaling_user_context *user_ctx);
+int signaling_init_application_context(struct signaling_application_context *app_ctx);
+int signaling_init_connection_context(struct signaling_connection_context *ctx);
+
 void signaling_connection_context_print(const struct signaling_connection_context *ctx);
 
 

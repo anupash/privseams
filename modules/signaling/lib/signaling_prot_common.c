@@ -60,24 +60,49 @@ void signaling_param_userinfo_print(const struct signaling_param_user_context *u
     HIP_DEBUG("+------------ USER INFO END   ----------------------\n");
 }
 
-struct signaling_connection_context *signaling_init_connection_context(void) {
+int signaling_init_application_context(struct signaling_application_context *app_ctx) {
     int err = 0;
-    struct signaling_connection_context *new_ctx;
 
-    HIP_IFEL(!(new_ctx = malloc(sizeof(struct signaling_connection_context))),
-             -1, "Could not allocate memory for new application context\n");
-    // TODO: doing something like new_ctx = {0} would be more correct and portable
-    memset(new_ctx, 0, sizeof(struct signaling_connection_context));
-    new_ctx->app_ctx_out.pid    = -1;
-    new_ctx->user_ctx.euid      = -1;
-    new_ctx->connection_status  = SIGNALING_CONN_NEW;
+    HIP_IFEL(!app_ctx, -1, "Application context has to be allocated before initialization\n");
+
+    app_ctx->pid                = -1;
+    app_ctx->application_dn[0]  = '\0';
+    app_ctx->issuer_dn[0]       = '\0';
+    app_ctx->groups[0]          = '\0';
+    app_ctx->requirements[0]    = '\0';
+    app_ctx->path[0]            = '\0';
 
 out_err:
-    if (err) {
-        free(new_ctx);
-        return NULL;
-    }
-    return new_ctx;
+    return err;
+}
+
+int signaling_init_user_context(struct signaling_user_context *user_ctx) {
+    int err = 0;
+
+    HIP_IFEL(!user_ctx, -1, "User context has to be allocated before initialization\n");
+
+    user_ctx->euid = -1;
+    user_ctx->username[0] = '\0';
+
+out_err:
+    return err;
+}
+
+int signaling_init_connection_context(struct signaling_connection_context *ctx) {
+    int err = 0;
+
+    HIP_IFEL(!ctx, -1, "Connection context has to be allocated before initialization\n");
+
+    ctx->connection_status  = SIGNALING_CONN_NEW;
+    ctx->src_port           = 0;
+    ctx->dest_port          = 0;
+    HIP_IFEL(signaling_init_application_context(&ctx->app_ctx_out),
+             -1, "Could not init outgoing application context\n");
+    HIP_IFEL(signaling_init_user_context(&ctx->user_ctx),
+             -1, "Could not init user context\n");
+
+out_err:
+    return err;
 }
 
 const char *signaling_connection_status_name(int status) {

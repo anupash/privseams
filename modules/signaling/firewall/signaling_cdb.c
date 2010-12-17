@@ -398,7 +398,9 @@ int signaling_cdb_handle_add_request(hip_common_t * msg) {
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
             -1, "No appinfo parameter in message.\n");
     appinfo = (const struct signaling_param_app_context *) param;
-    HIP_IFEL(!(ctx = signaling_init_connection_context()),
+    HIP_IFEL(!(ctx = malloc(sizeof(struct signaling_connection_context))),
+             -1, "Could not allocate memory for new application context\n");
+    HIP_IFEL(signaling_init_connection_context(ctx),
              -1, "Failed to init app context \n");
 
     ctx->src_port = ntohs(appinfo->src_port);

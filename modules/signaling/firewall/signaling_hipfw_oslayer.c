@@ -96,12 +96,12 @@ out_err:
  * Returns a verdict 1 for pass, 0 for drop.
  */
 int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
-
+    int err = 0;
     int verdict = VERDICT_DEFAULT;
     int found = 0;
     int src_port, dest_port;
     signaling_cdb_entry_t *entry;
-    struct signaling_connection_context *new_app_ctx;
+    struct signaling_connection_context *new_ctx;
     struct signaling_connection_context *app_ctx;
 
 
@@ -118,11 +118,14 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     entry = signaling_cdb_entry_find(&ctx->src, &ctx->dst);
     if(entry == NULL) {
         HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
-        new_app_ctx = signaling_init_connection_context();
-        new_app_ctx->src_port = src_port;
-        new_app_ctx->dest_port = dest_port;
-        signaling_cdb_add(&ctx->src, &ctx->dst, new_app_ctx);
-        new_app_ctx->connection_status = SIGNALING_CONN_PENDING;
+        HIP_IFEL(!(new_ctx = malloc(sizeof(struct signaling_connection_context))),
+                 -1, "Could not allocate memory for new connection context\n");
+        HIP_IFEL(signaling_init_connection_context(new_ctx),
+                 -1, "Could not init connection context\n");
+        new_ctx->src_port = src_port;
+        new_ctx->dest_port = dest_port;
+        new_ctx->connection_status = SIGNALING_CONN_PENDING;
+        signaling_cdb_add(&ctx->src, &ctx->dst, new_ctx);
         verdict = VERDICT_ACCEPT;
         /* Let packet proceed because BEX will be triggered by userspace ipsec */
         goto out_err;
@@ -154,16 +157,22 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
         }
     } else {
         HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
-        new_app_ctx = signaling_init_connection_context();
-        new_app_ctx->src_port = src_port;
-        new_app_ctx->dest_port = dest_port;
-        signaling_cdb_add(&ctx->src, &ctx->dst, new_app_ctx);
-        new_app_ctx->connection_status = SIGNALING_CONN_PENDING;
+        HIP_IFEL(!(new_ctx = malloc(sizeof(struct signaling_connection_context))),
+                 -1, "Could not allocate memory for new connection context\n");
+        HIP_IFEL(signaling_init_connection_context(new_ctx),
+                 -1, "Could not init connection context\n");
+        new_ctx->src_port = src_port;
+        new_ctx->dest_port = dest_port;
+        new_ctx->connection_status = SIGNALING_CONN_PENDING;
+        signaling_cdb_add(&ctx->src, &ctx->dst, new_ctx);
         signaling_hipfw_trigger_bex_update(ctx);
         verdict = VERDICT_DROP;
     }
 
 out_err:
+    if (err) {
+        return VERDICT_DEFAULT;
+    }
     return verdict;
 }
 
