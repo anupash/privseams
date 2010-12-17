@@ -138,7 +138,7 @@ static hip_common_t *build_update_message(hip_ha_t *ha, int type, struct signali
 
 
     /* Add Appinfo */
-    HIP_IFEL(signaling_build_param_appinfo(msg_buf, ctx),
+    HIP_IFEL(signaling_build_param_application_context(msg_buf, ctx),
             -1, "Building of APPInfo parameter failed\n");
 
     /* Add authentication */
@@ -403,7 +403,7 @@ int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
     HIP_IFEL(sig_len < 0,
              -1, "Could not build user signature \n");
 
-    HIP_IFEL(signaling_build_param_user_info(ctx->output_msg, &sig_state->ctx.user_ctx, sig_buf, sig_len),
+    HIP_IFEL(signaling_build_param_user_context(ctx->output_msg, &sig_state->ctx.user_ctx, sig_buf, sig_len),
             -1, "Building of param user_sig for I2 failed.\n");
 
 out_err:
@@ -425,7 +425,7 @@ int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
 
     HIP_IFEL(signaling_get_verified_application_context_by_ports(sig_state->ctx.src_port, sig_state->ctx.dest_port, &sig_state->ctx),
             -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->ctx),
+    HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
             -1, "Building of param appinfo for I2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into I2 Packet.\n");
 
@@ -469,7 +469,7 @@ int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint
     /* Now we can build the param into the R2 packet */
     HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dest_port, &sig_state->ctx),
             -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_build_param_appinfo(ctx->output_msg, &sig_state->ctx),
+    HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
             -1, "Building of param appinfo for R2 failed.\n");
     HIP_DEBUG("Successfully included param appinfo into R2 Packet.\n");
 
