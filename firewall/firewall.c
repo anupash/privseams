@@ -476,9 +476,6 @@ static int firewall_init_extensions(void)
     // TARGET (-j) QUEUE will transfer matching packets to userspace
     // these packets will be handled using libipq
 
-    /* @todo: remove the following line */
-    system_print("echo 0 >/proc/sys/net/ipv6/conf/all/forwarding");
-
     // this has to be set up first in order to be the default behavior
     if (!accept_normal_traffic_by_default) {
         // make DROP the default behavior of all chains
