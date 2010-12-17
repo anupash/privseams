@@ -66,6 +66,11 @@
 #define SIGNALING_APP_GRP_MAX_LEN   64
 #define SIGNALING_USER_ID_MAX_LEN   128
 
+/* ------------------------------------------------------------------------------------
+ *
+ *                    PARAMETER DEFINITIONS
+ *
+ * ------------------------------------------------------------------------------------ */
 
 /*
      Parameter for a user signature.
@@ -141,6 +146,21 @@ struct signaling_param_app_context {
     hip_tlv_len_t grp_length;
 } __attribute__ ((packed));
 
+
+/* ------------------------------------------------------------------------------------
+ *
+ *                    INTERNAL STATE DEFINITIONS
+ *
+ * ------------------------------------------------------------------------------------ */
+
+/*
+     Internal representation of context information for an application.
+     This structure should be used whenever state needs to be kept about a application.
+
+     Use signaling_init_application_context() to initialize this structure to standard values.
+
+     All integers are in host-byte-order.
+*/
 struct signaling_application_context {
     pid_t pid;
     char path[PATH_MAX];
@@ -150,16 +170,23 @@ struct signaling_application_context {
     char groups[SIGNALING_APP_GRP_MAX_LEN];
 };
 
+/*
+     Internal representation of context information for a user.
+
+     Use signaling_init_user_context() to initialize this structure to standard values.
+
+     All integers are in host-byte-order.
+*/
 struct signaling_user_context {
     long int euid;
     char username[SIGNALING_USER_ID_MAX_LEN];
 };
 
 /*
-     Internal representation of context information for an application.
-     This structure should be used whenever state needs to be kept about an application.
+     Internal representation of context information for a connection.
+     This structure should be used whenever state needs to be kept about a connection.
 
-     Use signaling_init_context() to initialize this structure to standard values.
+     Use signaling_init_connection_context() to initialize this structure to standard values.
 
      All integers are in host-byte-order.
 */
@@ -170,6 +197,13 @@ struct signaling_connection_context {
     struct signaling_application_context app_ctx_out;
     struct signaling_user_context user_ctx;
 };
+
+/* ------------------------------------------------------------------------------------
+ *
+ *                    UTILITY FUNCTIONS
+ *
+ * ------------------------------------------------------------------------------------ */
+
 const char *signaling_connection_status_name(int status);
 void signaling_param_userinfo_print(const struct signaling_param_user_context *userinfo);
 void signaling_param_appinfo_print(const struct signaling_param_app_context *appinfo);
