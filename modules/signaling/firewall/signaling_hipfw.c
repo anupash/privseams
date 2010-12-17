@@ -57,7 +57,7 @@ int signaling_hipfw_handle_appinfo(const struct hip_common *common, UNUSED struc
 	        -1, "No application info parameter found in the message.\n");
 
 	/* Print out contents */
-	signaling_param_appinfo_print(appinfo);
+	signaling_param_application_context_print(appinfo);
 
 out_err:
 	return err;

@@ -205,7 +205,7 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
         seq_id = ntohl(par_seq->update_id);
     } else if(hip_get_msg_type(trigger_msg) == HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION) {
         HIP_DEBUG("Triggering new update bex for following connection.\n");
-        signaling_param_appinfo_print(appinfo);
+        signaling_param_application_context_print(appinfo);
         type = SIGNALING_FIRST_BEX_UPDATE;
         param = hip_get_param(trigger_msg, HIP_PARAM_HIT);
         if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
@@ -319,7 +319,7 @@ int signaling_check_userinfo(UNUSED const uint8_t packet_type, UNUSED const uint
     HIP_IFEL(!(userinfo = (const struct signaling_param_user_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO)),
             -1, "No application info parameter found in the message.\n");
 
-    signaling_param_userinfo_print(userinfo);
+    signaling_param_user_context_print(userinfo);
 
 out_err:
     return err;
@@ -339,7 +339,7 @@ int signaling_handle_bex(UNUSED const uint8_t packet_type, UNUSED const uint32_t
 	HIP_IFEL(!(appinfo = (const struct signaling_param_app_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
 	        -1, "No application info parameter found in the message.\n");
 
-	signaling_param_appinfo_print(appinfo);
+	signaling_param_application_context_print(appinfo);
 
 	signaling_send_scdb_add(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo);
 
@@ -359,7 +359,7 @@ int signaling_handle_bex_update(UNUSED const uint8_t packet_type, UNUSED const u
             -1, "No application info parameter found in the message (should be there..).\n");
 
     HIP_DEBUG("Received update bex with following appinfo.\n");
-    signaling_param_appinfo_print(appinfo);
+    signaling_param_application_context_print(appinfo);
 
     if(signaling_get_update_type(ctx->input_msg) == SIGNALING_FIRST_BEX_UPDATE) {
         HIP_DEBUG("Received FIRST BEX Update... \n");

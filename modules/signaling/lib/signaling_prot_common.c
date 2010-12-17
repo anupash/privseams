@@ -45,7 +45,7 @@ static void signaling_param_print_field(const char *prefix, const uint16_t lengt
  *
  * @param app the application context parameter to print
  */
-void signaling_param_appinfo_print(const struct signaling_param_app_context *param_app_ctx) {
+void signaling_param_application_context_print(const struct signaling_param_app_context *param_app_ctx) {
     const uint8_t *p_content;
 
     if(param_app_ctx == NULL) {
@@ -95,7 +95,7 @@ void signaling_connection_context_print(const struct signaling_connection_contex
  *
  * @param app the user context parameter to print
  */
-void signaling_param_userinfo_print(const struct signaling_param_user_context *userinfo) {
+void signaling_param_user_context_print(const struct signaling_param_user_context *userinfo) {
     const uint8_t *p_content;
 
     if(userinfo == NULL) {
