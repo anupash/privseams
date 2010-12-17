@@ -204,16 +204,15 @@ struct signaling_connection_context {
  *
  * ------------------------------------------------------------------------------------ */
 
-const char *signaling_connection_status_name(int status);
+/* Printing of parameters and internal structures */
 void signaling_param_userinfo_print(const struct signaling_param_user_context *userinfo);
 void signaling_param_appinfo_print(const struct signaling_param_app_context *appinfo);
+void signaling_connection_context_print(const struct signaling_connection_context *ctx);
 
+/* Initalization of internal structures */
 int signaling_init_user_context(struct signaling_user_context *user_ctx);
 int signaling_init_application_context(struct signaling_application_context *app_ctx);
 int signaling_init_connection_context(struct signaling_connection_context *ctx);
-
-void signaling_connection_context_print(const struct signaling_connection_context *ctx);
-
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 
