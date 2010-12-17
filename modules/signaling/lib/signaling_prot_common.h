@@ -152,7 +152,7 @@ struct signaling_application_context {
 
 struct signaling_user_context {
     long int euid;
-    char user_id[SIGNALING_USER_ID_MAX_LEN];
+    char username[SIGNALING_USER_ID_MAX_LEN];
 };
 
 /*

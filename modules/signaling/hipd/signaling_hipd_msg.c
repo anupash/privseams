@@ -396,8 +396,8 @@ int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
              -1, "Could not get user name \n");
 
     sig_len = signaling_user_api_get_signature(sig_state->ctx.user_ctx.euid,
-                                               sig_state->ctx.user_ctx.user_id,
-                                               strlen(sig_state->ctx.user_ctx.user_id),
+                                               sig_state->ctx.user_ctx.username,
+                                               strlen(sig_state->ctx.user_ctx.username),
                                                sig_buf);
 
     HIP_IFEL(sig_len < 0,

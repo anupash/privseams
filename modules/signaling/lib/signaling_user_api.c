@@ -181,7 +181,7 @@ int signaling_user_api_get_uname(uid_t uid, struct signaling_user_context *user_
 
     HIP_IFEL(!(pw = getpwuid(uid)),
             -1, "Failed to get info for user id %d.\n", uid);
-    memcpy(user_ctx->user_id, pw->pw_name, strlen(pw->pw_name));
+    memcpy(user_ctx->username, pw->pw_name, strlen(pw->pw_name));
 
 out_err:
     return err;

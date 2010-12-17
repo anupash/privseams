@@ -205,7 +205,7 @@ int signaling_build_param_user_info(hip_common_t *msg,
 {
     struct signaling_param_user_context *param_userinfo = NULL;
     int err = 0;
-    int user_id_len;
+    int username_len;
     int header_len;
     int par_len;
 
@@ -217,8 +217,8 @@ int signaling_build_param_user_info(hip_common_t *msg,
 
     /* calculate lengths */
     header_len      = sizeof(struct signaling_param_user_context);
-    user_id_len     = strlen(user_ctx->user_id);
-    par_len         = header_len - sizeof(struct hip_tlv_common) + user_id_len + sig_len;
+    username_len     = strlen(user_ctx->username);
+    par_len         = header_len - sizeof(struct hip_tlv_common) + username_len + sig_len;
 
     HIP_DEBUG("Building user info parameter of length %d\n", par_len);
 
@@ -229,10 +229,10 @@ int signaling_build_param_user_info(hip_common_t *msg,
 
     hip_set_param_type((hip_tlv_common_t *) param_userinfo, HIP_PARAM_SIGNALING_USERINFO);
     hip_set_param_contents_len((hip_tlv_common_t *) param_userinfo, par_len);
-    param_userinfo->ui_length = htons(user_id_len);
-    memcpy((uint8_t *)param_userinfo + header_len, user_ctx->user_id, user_id_len);
+    param_userinfo->ui_length = htons(username_len);
+    memcpy((uint8_t *)param_userinfo + header_len, user_ctx->username, username_len);
     param_userinfo->sig_length = htons(sig_len);
-    memcpy((uint8_t *)param_userinfo + header_len + user_id_len, signature, sig_len);
+    memcpy((uint8_t *)param_userinfo + header_len + username_len, signature, sig_len);
 
     HIP_IFEL(hip_build_param(msg, param_userinfo),
              -1, "Failed to append appinfo parameter to message.\n");
