@@ -170,7 +170,7 @@ int signaling_init_connection_context(struct signaling_connection_context *ctx) 
     ctx->connection_status  = SIGNALING_CONN_NEW;
     ctx->src_port           = 0;
     ctx->dest_port          = 0;
-    HIP_IFEL(signaling_init_application_context(&ctx->app_ctx_out),
+    HIP_IFEL(signaling_init_application_context(&ctx->app_ctx),
              -1, "Could not init outgoing application context\n");
     HIP_IFEL(signaling_init_user_context(&ctx->user_ctx),
              -1, "Could not init user context\n");
