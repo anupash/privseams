@@ -210,18 +210,18 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
      * Format is the same for connections and listening sockets.
      */
     scanerr = sscanf(readbuf, "%s %s %s %s %s %s %ld %d %d/%s",
-            proto, unused, unused, local_addr, remote_addr, state, &ctx->user_ctx.euid, &inode, &ctx->app_ctx_out.pid, progname);
-    HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", progname, ctx->app_ctx_out.pid, ctx->user_ctx.euid, proto);
+            proto, unused, unused, local_addr, remote_addr, state, &ctx->user_ctx.euid, &inode, &ctx->app_ctx.pid, progname);
+    HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", progname, ctx->app_ctx.pid, ctx->user_ctx.euid, proto);
     HIP_DEBUG("\t from:\t %s\n", local_addr);
     HIP_DEBUG("\t to:\t %s\n", remote_addr);
 
     // determine path to application binary from /proc/{pid}/exe
-    memset(ctx->app_ctx_out.path, 0, PATH_MAX);
-    sprintf(symlinkbuf, "/proc/%i/exe", ctx->app_ctx_out.pid);
-    HIP_IFEL(0 > readlink(symlinkbuf, ctx->app_ctx_out.path, PATH_MAX),
+    memset(ctx->app_ctx.path, 0, PATH_MAX);
+    sprintf(symlinkbuf, "/proc/%i/exe", ctx->app_ctx.pid);
+    HIP_IFEL(0 > readlink(symlinkbuf, ctx->app_ctx.path, PATH_MAX),
              -1, "Failed to read symlink to application binary\n");
 
-    HIP_DEBUG("Found application binary at: %s \n", ctx->app_ctx_out.path);
+    HIP_DEBUG("Found application binary at: %s \n", ctx->app_ctx.path);
 
     /* We still need to set ports */
     ctx->src_port = src_port;
@@ -345,10 +345,10 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port, uint1
     int err = 0;
     HIP_IFEL(signaling_netstat_get_application_by_ports(src_port, dst_port, ctx),
              -1, "Netstat failed to get path to application for given port pair.\n");
-    HIP_IFEL(signaling_verify_application(ctx->app_ctx_out.path),
-             -1, "Could not verify certificate of application: %s.\n", ctx->app_ctx_out.path);
-    HIP_IFEL(signaling_get_application_context_from_certificate(ctx->app_ctx_out.path, &ctx->app_ctx_out),
-             -1, "Could not build application context for application: %s.\n", ctx->app_ctx_out.path);
+    HIP_IFEL(signaling_verify_application(ctx->app_ctx.path),
+             -1, "Could not verify certificate of application: %s.\n", ctx->app_ctx.path);
+    HIP_IFEL(signaling_get_application_context_from_certificate(ctx->app_ctx.path, &ctx->app_ctx),
+             -1, "Could not build application context for application: %s.\n", ctx->app_ctx.path);
 
 out_err:
     return err;

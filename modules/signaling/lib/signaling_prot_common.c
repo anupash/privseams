@@ -83,10 +83,10 @@ void signaling_connection_context_print(const struct signaling_connection_contex
     HIP_DEBUG(" \tUser Id:\t %d\n", ctx->user_ctx.euid);
     HIP_DEBUG(" \tUser Name:\t %s\n", ctx->user_ctx.username);
     HIP_DEBUG(" Application context \n");
-    HIP_DEBUG(" \tApplication DN:\t %s\n", ctx->app_ctx_out.application_dn);
-    HIP_DEBUG(" \tAC Issuer DN:\t %s\n", ctx->app_ctx_out.issuer_dn);
-    HIP_DEBUG(" \tRequirements:\t %s\n", ctx->app_ctx_out.requirements);
-    HIP_DEBUG(" \tGroups:\t\t %s\n", ctx->app_ctx_out.groups);
+    HIP_DEBUG(" \tApplication DN:\t %s\n", ctx->app_ctx.application_dn);
+    HIP_DEBUG(" \tAC Issuer DN:\t %s\n", ctx->app_ctx.issuer_dn);
+    HIP_DEBUG(" \tRequirements:\t %s\n", ctx->app_ctx.requirements);
+    HIP_DEBUG(" \tGroups:\t\t %s\n", ctx->app_ctx.groups);
     HIP_DEBUG("+------------ CONNECTION CONTEXT END   ----------------------\n");
 }
 
