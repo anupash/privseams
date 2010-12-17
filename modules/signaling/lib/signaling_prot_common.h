@@ -167,7 +167,7 @@ struct signaling_connection_context {
     uint16_t src_port;
     uint16_t dest_port;
     int connection_status;
-    struct signaling_application_context app_ctx;
+    struct signaling_application_context app_ctx_out;
     struct signaling_user_context user_ctx;
 };
 const char *signaling_connection_status_name(int status);

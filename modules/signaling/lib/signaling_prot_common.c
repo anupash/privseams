@@ -68,7 +68,7 @@ struct signaling_connection_context *signaling_init_connection_context(void) {
              -1, "Could not allocate memory for new application context\n");
     // TODO: doing something like new_ctx = {0} would be more correct and portable
     memset(new_ctx, 0, sizeof(struct signaling_connection_context));
-    new_ctx->app_ctx.pid        = -1;
+    new_ctx->app_ctx_out.pid    = -1;
     new_ctx->user_ctx.euid      = -1;
     new_ctx->connection_status  = SIGNALING_CONN_NEW;
 
@@ -108,9 +108,9 @@ void signaling_connection_context_print(const struct signaling_connection_contex
     HIP_DEBUG(" \tUser Id:\t %d\n", ctx->user_ctx.euid);
     HIP_DEBUG(" \tUser Name:\t %s\n", ctx->user_ctx.username);
     HIP_DEBUG(" Application context \n");
-    HIP_DEBUG(" \tApplication DN:\t %s\n", ctx->app_ctx.application_dn);
-    HIP_DEBUG(" \tAC Issuer DN:\t %s\n", ctx->app_ctx.issuer_dn);
-    HIP_DEBUG(" \tRequirements:\t %s\n", ctx->app_ctx.requirements);
-    HIP_DEBUG(" \tGroups:\t\t %s\n", ctx->app_ctx.groups);
+    HIP_DEBUG(" \tApplication DN:\t %s\n", ctx->app_ctx_out.application_dn);
+    HIP_DEBUG(" \tAC Issuer DN:\t %s\n", ctx->app_ctx_out.issuer_dn);
+    HIP_DEBUG(" \tRequirements:\t %s\n", ctx->app_ctx_out.requirements);
+    HIP_DEBUG(" \tGroups:\t\t %s\n", ctx->app_ctx_out.groups);
     HIP_DEBUG("+------------ CONNECTION CONTEXT END   ----------------------\n");
 }

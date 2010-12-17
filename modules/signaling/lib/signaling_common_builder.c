@@ -151,10 +151,10 @@ int signaling_build_param_appinfo(hip_common_t *msg, struct signaling_connection
             -1, "Got no context to built the parameter from.\n");
 
     /* BUILD THE PARAMETER */
-    length_contents = signaling_param_appinfo_get_content_length(&ctx->app_ctx);
+    length_contents = signaling_param_appinfo_get_content_length(&ctx->app_ctx_out);
     appinfo = signaling_param_appinfo_init(sizeof(hip_tlv_common_t) + length_contents);
 
-    HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, ctx->src_port, ctx->dest_port, &ctx->app_ctx),
+    HIP_IFEL(0 > siganling_build_param_appinfo_contents(appinfo, ctx->src_port, ctx->dest_port, &ctx->app_ctx_out),
             -1, "Failed to build appinfo parameter.\n");
 
     HIP_IFEL(0 > hip_build_param(msg, appinfo),

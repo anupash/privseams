@@ -341,8 +341,8 @@ static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
         if(listentry->data != NULL) {
             ctx = (struct signaling_connection_context *) listentry->data;
             HIP_DEBUG("\t  ->  appname (%d): %s\n",
-                ctx->app_ctx.pid,
-                ctx->app_ctx.application_dn);
+                ctx->app_ctx_out.pid,
+                ctx->app_ctx_out.application_dn);
             HIP_DEBUG("\t  ->  local port: %d, remote port: %d\n",
                 ctx->src_port,
                 ctx->dest_port);
