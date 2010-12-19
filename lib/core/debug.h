@@ -29,6 +29,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+#include "config.h"
 #include "protodefs.h"
 
 /* includes filename, line number and max(debug_prefix[]) */
