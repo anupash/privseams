@@ -24,10 +24,12 @@
 #include "signaling_hipd_msg.h"
 #include "signaling_hipd_user_msg.h"
 
-/** generic send function used to send the below created messages
+/** Generic send function used to send to the firewall.
  *
- * @param msg   the message to be sent
- * @return      0, if correct, else != 0
+ * @param msg       the message to be sent
+ * @param block     set to 0 if no answer is expected,
+ *                  set to 1 if function should block and wait for an answer
+ * @return          0 on success, negative on error
  */
 static int signaling_hipd_send_to_fw(struct hip_common *msg, const int block)
 {
@@ -68,41 +70,43 @@ out_err:
 }
 
 /**
- * HIPD sends a CONNECTION_REQUEST message to the firewall, only when it is the responder to a new connection.
- * It uses this function to both notify the firewall of the new connection and
- * request the local application context for this connection to include it in the R2.
- * This function blocks until the firewall has sent its response with the local application context in it.
+ * HIPD should send a HIP_MSG_SIGNALING_REQUEST_CONNECTION message to the firewall,
+ * only when it is the responder to a new connection.
+ * By sending a HIP_MSG_SIGNALING_REQUEST_CONNECTION with the received application
+ * context to the firewall, HIPD notifies the firewall of the new connection and
+ * request the local application context for this connection.
+ * The local application context must be included in the R2 or UPDATE response resp.
  *
- * @param app_ctx   the application context for the incoming connection
+ * @note This function blocks until the firewall has sent its response with the local application context in it.
+ *
+ * @param src_hit   src hit of the new incoming connection
+ * @param dst_hit   dst hit of the new incoming connection
+ * @param app_ctx   the received application context for the new incoming connection
  *
  * @return          0 on sucess, negative on error
   */
 int signaling_send_connection_context_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                      const struct signaling_param_app_context *param_app_ctx) {
+                                              const struct signaling_param_app_context *param_app_ctx) {
     int err = 0;
 
-    /* Allocate the message */
+    /* Allocate, build and send a message of type
+     * HIP_MSG_SIGNALING_REQUEST_CONNECTION to the hipfw,
+     * containing the receive application context */
     struct hip_common *msg = NULL;
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-    /* Build the message header and parameter */
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_REQUEST_CONNECTION, 0),
              -1, "build hdr failed\n");
-
     HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (dst hit) failed\n");
-
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-
     HIP_IFEL(hip_build_param(msg, (const struct hip_tlv_common *) param_app_ctx),
              -1, "build param application context failed\n");
 
-    /* Print and send message */
     HIP_DEBUG("Sending connection context request to HIPF\n");
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 1), -1, "failed to send/recv connection request to fw\n");
 
-    /* Process the response */
+    /* We expect the corresponding local application context in the response. */
     HIP_IFEL(signaling_handle_connection_context(msg, NULL),
              -1, "Failed to process connection confirmation from hipfw/oslayer \n");
 
@@ -125,28 +129,24 @@ int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, con
     struct hip_common *msg = NULL;
     int err                = 0;
 
-    /* Build the user message */
+    /* Build and send a HIP_MSG_SIGNALING_CONFIRM_CONNECTION message.
+     * The message must identify the connection that has been established,
+     * i.e. include HITs and application context. */
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)),
             -1, "alloc memory for adding scdb entry\n");
     hip_msg_init(msg);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CONFIRM_CONNECTION, 0), -1,
               "build hdr failed\n");
-
-     /* Include Hits */
     HIP_IFEL(hip_build_param_contents(msg, hits,
-                                       HIP_PARAM_HIT,
-                                       sizeof(hip_hit_t)), -1,
+                                      HIP_PARAM_HIT,
+                                      sizeof(hip_hit_t)), -1,
               "build param contents (src hit) failed\n");
-
     HIP_IFEL(hip_build_param_contents(msg, hitr,
-                                       HIP_PARAM_HIT,
-                                       sizeof(hip_hit_t)), -1,
+                                      HIP_PARAM_HIT,
+                                      sizeof(hip_hit_t)), -1,
               "build param contents (src hit) failed\n");
-
-    /* Include appinfo parameter (copy it...) */
     hip_build_param(msg, appinfo);
 
-    /* Send */
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 0), -1, "failed to send add scdb-msg to fw\n");
 
 out_err:
@@ -155,27 +155,26 @@ out_err:
 }
 
 /**
- * This function is part of the HIPD interface towards the firewall.
- * It receives and handles a message of type HIP_MSG_SIGNALING_CONNECTION_CONFIRMATION
- * send by the firewall. This message is send as the answer to a previous
+ * This functions receives and handles a message of type HIP_MSG_SIGNALING_CONNECTION_CONFIRMATION
+ * from the firewall. This message is sent as the answer to a previous
  * HIP_MSG_SIGNALING_CONNECTION_REQUEST message from hipd to hipfw.
  * This message contains the local application context for the new connection.
+ * We have to save the application context to our local state, so that it can
+ * be included in an R2 or UPDATE later.
  *
  * @param msg   the answer from the firewall
  *
  * @return 0 on success, negative on error
  */
 int signaling_handle_connection_context(struct hip_common *msg,
-                                             UNUSED struct sockaddr_in6 *src) {
-    int err = 0;
+                                        UNUSED struct sockaddr_in6 *src) {
+    int err                                 = 0;
     const hip_hit_t *our_hit                = NULL;
     const hip_hit_t *peer_hit               = NULL;
     struct signaling_hipd_state *sig_state  = NULL;
     const struct hip_tlv_common *param      = NULL;
     hip_ha_t *entry                         = NULL;
 
-    /* We have to save the application context to our local state
-     * so that we can include it in when the R2 is built. */
     param = hip_get_param(msg, HIP_PARAM_HIT);
     if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
         peer_hit = hip_get_param_contents_direct(param);
@@ -210,14 +209,13 @@ out_err:
 }
 
 /**
- * This function is part of the HIPD interface towards the firewall.
- * It receives and handles a message of type HIP_MSG_SIGNALING_REQUEST_CONNECTION,
- * send by the firewall. This message means, that the firewall wants the HIPD
+ * This function receives and handles a messages of type HIP_MSG_SIGNALING_REQUEST_CONNECTION,
+ * from the firewall. This message means, that the firewall wants the HIPD
  * to establish a new connection for the context contained in the message.
  *
- * We have to check whether to trigger a BEX or an UPDATe and do it.
+ * We have to check whether to trigger a BEX or an UPDATE and do it.
  *   a) BEX:    We save the connection context to include it in the I2 later.
- *   b) UPDATE: We copy the connection context and send the UPDATE right away.
+ *   b) UPDATE: We save the connection context and send the UPDATE right away.
  *
  * @param msg the message from the firewall
  *

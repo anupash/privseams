@@ -152,7 +152,7 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
     }
 
     HIP_IFEL(!(appinfo = hip_get_param(trigger_msg, HIP_PARAM_SIGNALING_APPINFO)),
-            -1, "Message contains no portinformation (appinfo parameter). cannot build update.\n");
+            -1, "Message contains no application context. cannot build update.\n");
 
     /* Set type, hits, seq/ack.
      * We have to distinguish between the two different messages that triggered this update. */
