@@ -16,7 +16,7 @@
 
 int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo);
 
-int signaling_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+int signaling_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
                                       const struct signaling_param_app_context *param_app_ctx);
 
 /*

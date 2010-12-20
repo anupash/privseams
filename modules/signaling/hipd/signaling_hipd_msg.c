@@ -133,8 +133,6 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
     hip_ha_t *ha = NULL;
     const hip_hit_t * our_hit = NULL;
     const hip_hit_t * peer_hit = NULL;
-    uint16_t src_port = 0;
-    uint16_t dst_port = 0;
     hip_common_t * update_packet_to_send = NULL;
     const struct signaling_param_app_context * appinfo = NULL;
     struct signaling_hipd_state * sig_state = NULL;
@@ -156,19 +154,25 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
     HIP_IFEL(!(appinfo = hip_get_param(trigger_msg, HIP_PARAM_SIGNALING_APPINFO)),
             -1, "Message contains no portinformation (appinfo parameter). cannot build update.\n");
 
-    /* Set type, hits, seq/ack and ports.
-     * We have to distinguish between the different messages that triggered this update. */
+    /* Set type, hits, seq/ack.
+     * We have to distinguish between the two different messages that triggered this update. */
     if(hip_get_msg_type(trigger_msg) == HIP_UPDATE) {
         type = SIGNALING_SECOND_BEX_UPDATE;
         our_hit = &trigger_msg->hits;
         peer_hit = &trigger_msg->hitr;
-        src_port = ntohs(appinfo->dest_port);
-        dst_port = ntohs(appinfo->src_port);
         HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
                      -1, "Failed to retrieve hadb entry.\n");
         HIP_IFEL(!(par_seq = hip_get_param(trigger_msg, HIP_PARAM_SEQ)),
                 -1, "Message contains no seq parameter.\n");
         seq_id = ntohl(par_seq->update_id);
+
+        // now request applicationcontext from hipfw
+        // on success this will put the app context into our state
+        HIP_IFEL(!(param = hip_get_param(trigger_msg, HIP_PARAM_SIGNALING_APPINFO)),
+                 -1, "Message contains no app info parameter.\n");
+        HIP_IFEL(signaling_send_connection_request(our_hit, peer_hit, (const struct signaling_param_app_context *) param),
+                 -1, "failed to request/get application context");
+
     } else if(hip_get_msg_type(trigger_msg) == HIP_MSG_SIGNALING_REQUEST_CONNECTION) {
         HIP_DEBUG("Triggering new update bex for following connection.\n");
         signaling_param_application_context_print(appinfo);
@@ -187,25 +191,23 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
                 our_hit = NULL;
             }
         }
-        src_port = ntohs(appinfo->src_port);
-        dst_port = ntohs(appinfo->dest_port);
         HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
                      -1, "Failed to retrieve hadb entry.\n");
         HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
                 -1, "Could not get update state for host association.\n");
         updatestate->update_id_out++;
         seq_id = hip_update_get_out_id(updatestate);
+
+
     } else {
         HIP_DEBUG("Message is not update trigger.\n");
         err = -1;
         goto out_err;
     }
 
-    /* Application lookup */
+    /* Application lookup from local state*/
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling ports\n");
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &sig_state->ctx),
-            -1, "Failed application lookup / verification.\n");
 
     /* Build and send */
     HIP_IFEL(!(update_packet_to_send = build_update_message(ha, type, &sig_state->ctx, seq_id)),

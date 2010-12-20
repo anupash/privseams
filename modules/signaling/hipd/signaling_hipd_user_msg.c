@@ -77,7 +77,7 @@ out_err:
  *
  * @return          0 on sucess, negative on error
   */
-int signaling_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+int signaling_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
                                       const struct signaling_param_app_context *param_app_ctx) {
     int err = 0;
 
@@ -256,6 +256,19 @@ int signaling_handle_connection_request(struct hip_common *msg,
 
     /* Now check whether we need to trigger a BEX or an UPDATE */
     if(entry) {   // UPDATE
+        /* save application context to our local state */
+        HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
+                 -1, "failed to retrieve state for signaling module\n");
+        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
+                 -1, "Missing application_context parameter\n");
+        signaling_param_application_context_print((const struct signaling_param_app_context *) param);
+        signaling_init_connection_context(&sig_state->ctx);
+        sig_state->ctx.src_port     = ntohs(((const struct signaling_param_app_context *) param)->src_port);
+        sig_state->ctx.dest_port    = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
+        HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param, &sig_state->ctx.app_ctx),
+                 -1, "Failed to transform app ctx param to internal app ctx\n");
+
+        /* now trigger the UPDATE */
         HIP_DEBUG("Triggering UPDATE \n");
         HIP_IFEL(signaling_trigger_bex_update(msg),
                  -1, "Failed triggering first bex update.\n");
