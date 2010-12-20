@@ -36,6 +36,7 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/common.h"
 #include "lib/core/ife.h"
+#include "lib/core/prefix.h"
 
 #include "signaling_common_builder.h"
 #include "signaling_oslayer.h"
@@ -280,4 +281,25 @@ int signaling_build_application_context(const struct signaling_param_app_context
 
 out_err:
     return err;
+}
+
+void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t *hits, const hip_hit_t *hitr)
+{
+    const hip_tlv_common_t *param = NULL;
+
+    param = hip_get_param(msg, HIP_PARAM_HIT);
+    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
+        hitr = hip_get_param_contents_direct(param);
+        if (ipv6_addr_is_null(hitr)) {
+            hitr = NULL;
+        }
+    }
+
+    param = hip_get_next_param(msg, param);
+    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
+        hits = hip_get_param_contents_direct(param);
+        if (ipv6_addr_is_null(hits)) {
+            hits = NULL;
+        }
+    }
 }
