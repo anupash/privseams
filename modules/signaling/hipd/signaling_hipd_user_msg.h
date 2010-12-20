@@ -26,6 +26,4 @@ int signaling_handle_connection_request(struct hip_common *msg, struct sockaddr_
 
 int signaling_handle_connection_confirmation(struct hip_common *msg, struct sockaddr_in6 *src);
 
-int signaling_handle_bex_update_trigger(struct hip_common *msg, UNUSED struct sockaddr_in6 *src);
-
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_USER_MSG_H*/
