@@ -42,7 +42,9 @@
 #include "lib/core/prefix.h"
 #include "lib/core/icomm.h"
 #include "lib/core/hip_udp.h"
+#include "lib/core/message.h"
 
+#include "hipd/hipd.h"
 #include "hipd/hadb.h"
 #include "hipd/user.h"
 #include "hipd/output.h"
@@ -63,9 +65,10 @@ int update_sent = 0;
  * @param msg   the message to be sent
  * @return      0, if correct, else != 0
  */
-static int signaling_hipd_send_to_fw(const struct hip_common *msg)
+static int signaling_hipd_send_to_fw(struct hip_common *msg, const int block)
 {
     struct sockaddr_in6 hip_fw_addr;
+    struct sockaddr_in6 resp_addr;
     struct in6_addr loopback = in6addr_loopback;
     int err                  = 0;
 
@@ -87,6 +90,12 @@ static int signaling_hipd_send_to_fw(const struct hip_common *msg)
 
         // this is needed if we want to use HIP_IFEL
         err = 0;
+    }
+
+    if (block) {
+        HIP_DEBUG("Waiting for response on msg type %d\n", hip_get_msg_type(msg));
+        hip_read_user_control_msg(hip_user_sock, msg, &resp_addr);
+        HIP_DUMP_MSG(msg);
     }
 
 out_err:
@@ -289,7 +298,7 @@ static int signaling_send_scdb_add(hip_hit_t *hits, hip_hit_t *hitr, const struc
     hip_build_param(msg, appinfo);
 
     /* Send */
-    HIP_IFEL(signaling_hipd_send_to_fw(msg), -1, "failed to send add scdb-msg to fw\n");
+    HIP_IFEL(signaling_hipd_send_to_fw(msg, 0), -1, "failed to send add scdb-msg to fw\n");
 
 out_err:
     free(msg);
