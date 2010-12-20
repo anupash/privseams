@@ -43,14 +43,14 @@ int hip_signaling_init(void)
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_check_userinfo, INBOUND_CHECK_USERINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_handle_bex, INBOUND_HANDLE_BEX_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_handle_i2_app_context, INBOUND_HANDLE_BEX_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &signaling_check_appinfo, INBOUND_CHECK_APPINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &signaling_check_userinfo, INBOUND_CHECK_USERINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-    HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &signaling_handle_bex, INBOUND_HANDLE_BEX_PRIO),
+    HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &signaling_handle_r2_app_context, INBOUND_HANDLE_BEX_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED, &signaling_check_appinfo, INBOUND_CHECK_APPINFO_PRIO),

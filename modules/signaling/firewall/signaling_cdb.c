@@ -416,8 +416,6 @@ int signaling_cdb_handle_add_request(hip_common_t * msg) {
 
     signaling_cdb_add(src_hit, dst_hit, ctx);
 
-    signaling_cdb_print();
-
 out_err:
     return err;
 }

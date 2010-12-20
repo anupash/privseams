@@ -17,13 +17,13 @@
 int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo);
 
 int signaling_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-                                      const struct signaling_connection_context *ctx);
+                                      const struct signaling_param_app_context *param_app_ctx);
 
 /*
  * Handle ports from tigger_bex_msg.
  */
 int signaling_handle_connection_request(struct hip_common *msg, struct sockaddr_in6 *src);
 
-int signaling_handle_connection_confirmation(struct hip_common *msg, struct sockaddr_in6 *src);
+int signaling_handle_connection_context(struct hip_common *msg, struct sockaddr_in6 *src);
 
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_USER_MSG_H*/

@@ -58,8 +58,9 @@ static int signaling_hipd_send_to_fw(struct hip_common *msg, const int block)
 
     if (block) {
         HIP_DEBUG("Waiting for response on msg type %d\n", hip_get_msg_type(msg));
-        hip_read_user_control_msg(hip_user_sock, msg, &resp_addr);
-        HIP_DUMP_MSG(msg);
+        HIP_IFEL(hip_read_user_control_msg(hip_user_sock, msg, &resp_addr),
+                 -1, "Could not receive response on connection request\n");
+
     }
 
 out_err:
@@ -77,7 +78,7 @@ out_err:
  * @return          0 on sucess, negative on error
   */
 int signaling_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-                                      const struct signaling_connection_context *ctx) {
+                                      const struct signaling_param_app_context *param_app_ctx) {
     int err = 0;
 
     /* Allocate the message */
@@ -94,15 +95,15 @@ int signaling_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_hit,
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
 
-    HIP_IFEL(signaling_build_param_application_context(msg, ctx),
+    HIP_IFEL(hip_build_param(msg, (const struct hip_tlv_common *) param_app_ctx),
              -1, "build param application context failed\n");
 
     /* Print and send message */
-    HIP_DUMP_MSG(msg);
+    HIP_DEBUG("Sending connection context request to HIPF\n");
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 1), -1, "failed to send/recv connection request to fw\n");
 
     /* Process the response */
-    HIP_IFEL(signaling_handle_connection_confirmation(msg, NULL),
+    HIP_IFEL(signaling_handle_connection_context(msg, NULL),
              -1, "Failed to process connection confirmation from hipfw/oslayer \n");
 
 out_err:
@@ -164,7 +165,7 @@ out_err:
  *
  * @return 0 on success, negative on error
  */
-int signaling_handle_connection_confirmation(struct hip_common *msg,
+int signaling_handle_connection_context(struct hip_common *msg,
                                              UNUSED struct sockaddr_in6 *src) {
     int err = 0;
     const hip_hit_t *our_hit                = NULL;
@@ -200,6 +201,8 @@ int signaling_handle_connection_confirmation(struct hip_common *msg,
     sig_state->ctx.dest_port    = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
     HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param, &sig_state->ctx.app_ctx),
              -1, "Failed to transform app ctx param to internal app ctx\n");
+
+    HIP_DEBUG("Saved connection context from hipfw for R2:\n");
     signaling_connection_context_print(&sig_state->ctx);
 
 out_err:
@@ -274,6 +277,8 @@ int signaling_handle_connection_request(struct hip_common *msg,
         sig_state->ctx.dest_port    = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
         HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param, &sig_state->ctx.app_ctx),
                  -1, "Failed to transform app ctx param to internal app ctx\n");
+
+        HIP_DEBUG("Started new BEX for following connection context:\n");
         signaling_connection_context_print(&sig_state->ctx);
     }
 

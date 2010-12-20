@@ -53,12 +53,9 @@ int signaling_check_appinfo(const uint8_t packet_type, const uint32_t ha_state, 
  */
 int signaling_check_userinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
-/*
- * Process information.
- *
- * 1) Notify firewall if packet is I2, R2 or UPDATE
- */
-int signaling_handle_bex(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_handle_i2_app_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+
+int signaling_handle_r2_app_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 int signaling_handle_bex_update(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 

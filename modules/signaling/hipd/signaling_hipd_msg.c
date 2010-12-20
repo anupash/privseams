@@ -254,12 +254,12 @@ out_err:
 }
 
 /*
- * Process application information in this packet.
+ * Process application information in an I2 packet.
+ * We have to send a request to the firewall for the connection with this context,
+ * and expect our own connection context from the hipfw to send it in the R2.
  *
- *  1) Print
- *  2) Notify the oslayer (hipfw) of the completed BEX)
  */
-int signaling_handle_bex(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_handle_i2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = -1;
 	const struct signaling_param_app_context *appinfo = NULL;
@@ -269,10 +269,32 @@ int signaling_handle_bex(UNUSED const uint8_t packet_type, UNUSED const uint32_t
 
 	signaling_param_application_context_print(appinfo);
 
-	signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo);
+	signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo);
 
 out_err:
 	return err;
+}
+
+/*
+ * Process application information in an R2 packet.
+ * This completes a BEX with application context for which this HIPD process was the initiator.
+ * So, we have to confirm the new connection to the hipfw/oslayer.
+ *
+ */
+int signaling_handle_r2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int err = -1;
+    const struct signaling_param_app_context *appinfo = NULL;
+
+    HIP_IFEL(!(appinfo = (const struct signaling_param_app_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
+            -1, "No application info parameter found in the message.\n");
+
+    signaling_param_application_context_print(appinfo);
+
+    signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo);
+
+out_err:
+    return err;
 }
 
 /*
@@ -364,37 +386,20 @@ int signaling_r2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
 int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-	const struct signaling_param_app_context *param;
-	uint16_t src_port = 0, dest_port = 0;
-    hip_ha_t *entry = NULL;
-    struct signaling_hipd_state *sig_state;
+    hip_ha_t *entry                                    = NULL;
+    struct signaling_hipd_state *sig_state             = NULL;
 
 	/* Port information is included in the I2 (ctx->input_msg). Add it to global state.
 	 * Note: This could be done in another function but to do it here saves one lookup in hadb. */
 
-    /* Get the global state */
+    /* Get the connection context from the global state */
     HIP_IFEL(!(entry = hip_hadb_find_byhits(&ctx->output_msg->hits, &ctx->output_msg->hitr)),
                  -1, "Failed to retrieve hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
-
-    /* If we got some state, save the ports and hits to it */
-    param = (const struct signaling_param_app_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO);
-    if(param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
-        dest_port = ntohs(((const struct signaling_param_app_context *) param)->src_port);
-        src_port = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
-        sig_state->ctx.src_port = src_port;
-        sig_state->ctx.dest_port = dest_port;
-        HIP_DEBUG("Saved connection information for R2.\n");
-        HIP_DEBUG("\tsrc port: %d dest port: %d \n", sig_state->ctx.src_port, sig_state->ctx.dest_port);
-    }
-
-    /* Now we can build the param into the R2 packet */
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dest_port, &sig_state->ctx),
-            -1, "Application lookup/verification failed.\n");
     HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
             -1, "Building of param appinfo for R2 failed.\n");
-    HIP_DEBUG("Successfully included param appinfo into R2 Packet.\n");
+    HIP_DEBUG("Building application context for I2 successful.\n");
 
 out_err:
 	return err;
