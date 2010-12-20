@@ -99,10 +99,11 @@ int signaling_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 
     /* Print and send message */
     HIP_DUMP_MSG(msg);
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 1), -1, "send_recv msg failed\n");
+    HIP_IFEL(signaling_hipd_send_to_fw(msg, 1), -1, "failed to send/recv connection request to fw\n");
 
     /* Process the response */
-    HIP_DUMP_MSG(msg);
+    HIP_IFEL(signaling_handle_connection_confirmation(msg, NULL),
+             -1, "Failed to process connection confirmation from hipfw/oslayer \n");
 
 out_err:
     return err;
