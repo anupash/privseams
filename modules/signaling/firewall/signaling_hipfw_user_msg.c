@@ -153,7 +153,7 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
     uint16_t src_port , dst_port;
 
     /* Get HITs and Ports from the message */
-    signaling_get_hits_from_msg(msg, hits, hitr);
+    signaling_get_hits_from_msg(msg, &hits, &hitr);
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
              -1, "Could not get application context parameter from connection request \n");
     dst_port = ntohs(((const struct signaling_param_app_context *) param)->src_port);

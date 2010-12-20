@@ -21,6 +21,6 @@ int signaling_build_param_user_context(hip_common_t *msg,
 /* Builders for internal state structures */
 int signaling_build_application_context(const struct signaling_param_app_context *param_app_ctx,
                                         struct signaling_application_context *app_ctx);
-void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t *hits, const hip_hit_t *hitr);
+void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits, const hip_hit_t **hitr);
 
 #endif // MODULES_SIGNALING_LIB_SIGNALING_COMMON_BUILDER_H_

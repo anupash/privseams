@@ -283,23 +283,25 @@ out_err:
     return err;
 }
 
-void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t *hits, const hip_hit_t *hitr)
+void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
 {
     const hip_tlv_common_t *param = NULL;
 
     param = hip_get_param(msg, HIP_PARAM_HIT);
     if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-        hitr = hip_get_param_contents_direct(param);
-        if (ipv6_addr_is_null(hitr)) {
-            hitr = NULL;
+        *hitr = hip_get_param_contents_direct(param);
+        if (ipv6_addr_is_null(*hitr)) {
+            *hitr = NULL;
+            HIP_DEBUG("HITR = NULL \n");
         }
     }
 
     param = hip_get_next_param(msg, param);
     if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-        hits = hip_get_param_contents_direct(param);
-        if (ipv6_addr_is_null(hits)) {
-            hits = NULL;
+        *hits = hip_get_param_contents_direct(param);
+        if (ipv6_addr_is_null(*hits)) {
+            *hits = NULL;
+            HIP_DEBUG("HITS = NULL \n");
         }
     }
 }
