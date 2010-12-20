@@ -122,7 +122,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
 
 out_err:
     if (err) {
-        return VERDICT_DEFAULT;
+        return VERDICT_DROP;
     }
     return verdict;
 }

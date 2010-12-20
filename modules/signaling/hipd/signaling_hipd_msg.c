@@ -214,35 +214,6 @@ out_err:
 }
 
 /*
- * Just a dummy.
- *
- * Here we should do checks with local policies about the application information we're given,
- * e.g. accept that application or not.
- */
-int signaling_check_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, UNUSED struct hip_packet_context *ctx) {
-    return 0;
-}
-
-/*
- * Just a dummy.
- *
- * Here we should do checks with local policies about the user information we're given,
- * e.g. accept that user or not.
- */
-int signaling_check_userinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, UNUSED struct hip_packet_context *ctx) {
-    int err = 0;
-    const struct signaling_param_user_context *userinfo = NULL;
-
-    HIP_IFEL(!(userinfo = (const struct signaling_param_user_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO)),
-            -1, "No application info parameter found in the message.\n");
-
-    signaling_param_user_context_print(userinfo);
-
-out_err:
-    return err;
-}
-
-/*
  * Process application information in an I2 packet.
  * We have to send a request to the firewall for the connection with this context,
  * and expect our own connection context from the hipfw to send it in the R2.
