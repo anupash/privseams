@@ -154,6 +154,59 @@ out_err:
 
 /**
  * This function is part of the HIPD interface towards the firewall.
+ * It receives and handles a message of type HIP_MSG_SIGNALING_CONNECTION_CONFIRMATION
+ * send by the firewall. This message is send as the answer to a previous
+ * HIP_MSG_SIGNALING_CONNECTION_REQUEST message from hipd to hipfw.
+ * This message contains the local application context for the new connection.
+ *
+ * @param msg   the answer from the firewall
+ *
+ * @return 0 on success, negative on error
+ */
+int signaling_handle_connection_confirmation(struct hip_common *msg,
+                                             UNUSED struct sockaddr_in6 *src) {
+    int err = 0;
+    const hip_hit_t *our_hit                = NULL;
+    const hip_hit_t *peer_hit               = NULL;
+    struct signaling_hipd_state *sig_state  = NULL;
+    const struct hip_tlv_common *param      = NULL;
+    hip_ha_t *entry                         = NULL;
+
+    /* We have to save the application context to our local state
+     * so that we can include it in when the R2 is built. */
+    param = hip_get_param(msg, HIP_PARAM_HIT);
+    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
+        peer_hit = hip_get_param_contents_direct(param);
+        if (ipv6_addr_is_null(peer_hit)) {
+            peer_hit = NULL;
+        }
+    }
+    param = hip_get_next_param(msg, param);
+    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
+        our_hit = hip_get_param_contents_direct(param);
+        if (ipv6_addr_is_null(our_hit)) {
+            our_hit = NULL;
+        }
+    }
+    HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
+             -1, "hadb entry has not been set up\n");
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
+             -1, "failed to retrieve state for signaling module\n");
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
+             -1, "Missing application_context parameter\n");
+    signaling_init_connection_context(&sig_state->ctx);
+    sig_state->ctx.src_port     = ntohs(((const struct signaling_param_app_context *) param)->src_port);
+    sig_state->ctx.dest_port    = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
+    HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param, &sig_state->ctx.app_ctx),
+             -1, "Failed to transform app ctx param to internal app ctx\n");
+    signaling_connection_context_print(&sig_state->ctx);
+
+out_err:
+    return err;
+}
+
+/**
+ * This function is part of the HIPD interface towards the firewall.
  * It receives and handles a message of type HIP_MSG_SIGNALING_REQUEST_CONNECTION,
  * send by the firewall. This message means, that the firewall wants the HIPD
  * to establish a new connection for the context contained in the message.
