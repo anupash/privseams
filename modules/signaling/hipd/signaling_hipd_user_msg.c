@@ -66,9 +66,15 @@ out_err:
     return err;
 }
 
-/*
- * Tell the firewall to add a scdb entry for the completed BEX or update BEX.
+/**
+ * Send a confirmation about the establishment of a new connection to the hipfw/oslayer.
+ * This is the answer to a previous connection request from the hipfw/oslayer.
  *
+ * @param hits      the source hit of the new connection (our local hit)
+ * @param hitr      the remote hit of the new connection
+ * @param appinfo   the local application context for which the application has been established
+ *
+ * @return          0 on success, negative on error
  */
 int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo)
 {
