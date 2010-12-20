@@ -43,15 +43,6 @@
 #define SIGNALING_FIRST_BEX_UPDATE 33001
 #define SIGNALING_SECOND_BEX_UPDATE 33002
 
-/*
- * Perform checks on application context information.
- */
-int signaling_check_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-
-/*
- * Perform checks on user context information.
- */
-int signaling_check_userinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 int signaling_handle_i2_app_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
