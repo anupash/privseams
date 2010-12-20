@@ -67,6 +67,48 @@ out_err:
 }
 
 /**
+ * HIPD sends a CONNECTION_REQUEST message to the firewall, only when it is the responder to a new connection.
+ * It uses this function to both notify the firewall of the new connection and
+ * request the local application context for this connection to include it in the R2.
+ * This function blocks until the firewall has sent its response with the local application context in it.
+ *
+ * @param app_ctx   the application context for the incoming connection
+ *
+ * @return          0 on sucess, negative on error
+  */
+int signaling_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+                                      const struct signaling_connection_context *ctx) {
+    int err = 0;
+
+    /* Allocate the message */
+    struct hip_common *msg = NULL;
+    HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+    /* Build the message header and parameter */
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_REQUEST_CONNECTION, 0),
+             -1, "build hdr failed\n");
+
+    HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
+             -1, "build param contents (dst hit) failed\n");
+
+    HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
+             -1, "build param contents (src hit) failed\n");
+
+    HIP_IFEL(signaling_build_param_application_context(msg, ctx),
+             -1, "build param application context failed\n");
+
+    /* Print and send message */
+    HIP_DUMP_MSG(msg);
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 1), -1, "send_recv msg failed\n");
+
+    /* Process the response */
+    HIP_DUMP_MSG(msg);
+
+out_err:
+    return err;
+}
+
+/**
  * Send a confirmation about the establishment of a new connection to the hipfw/oslayer.
  * This is the answer to a previous connection request from the hipfw/oslayer.
  *
