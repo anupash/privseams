@@ -42,9 +42,7 @@
 #include "lib/core/prefix.h"
 #include "lib/core/icomm.h"
 #include "lib/core/hip_udp.h"
-#include "lib/core/message.h"
 
-#include "hipd/hipd.h"
 #include "hipd/hadb.h"
 #include "hipd/user.h"
 #include "hipd/output.h"
@@ -57,50 +55,9 @@
 #include "modules/signaling/lib/signaling_user_api.h"
 #include "signaling_hipd_state.h"
 #include "signaling_hipd_msg.h"
+#include "signaling_hipd_user_msg.h"
 
 int update_sent = 0;
-
-/** generic send function used to send the below created messages
- *
- * @param msg   the message to be sent
- * @return      0, if correct, else != 0
- */
-static int signaling_hipd_send_to_fw(struct hip_common *msg, const int block)
-{
-    struct sockaddr_in6 hip_fw_addr;
-    struct sockaddr_in6 resp_addr;
-    struct in6_addr loopback = in6addr_loopback;
-    int err                  = 0;
-
-    HIP_ASSERT(msg != NULL);
-
-    // destination is firewall
-    hip_fw_addr.sin6_family = AF_INET6;
-    hip_fw_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
-    ipv6_addr_copy(&hip_fw_addr.sin6_addr, &loopback);
-
-    err = hip_sendto_user(msg, (struct sockaddr *) &hip_fw_addr);
-    if (err < 0) {
-        HIP_ERROR("Sending message to firewall failed\n");
-
-        err = -1;
-        goto out_err;
-    } else {
-        HIP_DEBUG("Sending message to firewall successful\n");
-
-        // this is needed if we want to use HIP_IFEL
-        err = 0;
-    }
-
-    if (block) {
-        HIP_DEBUG("Waiting for response on msg type %d\n", hip_get_msg_type(msg));
-        hip_read_user_control_msg(hip_user_sock, msg, &resp_addr);
-        HIP_DUMP_MSG(msg);
-    }
-
-out_err:
-    return err;
-}
 
 int signaling_get_update_type(hip_common_t *msg) {
     int err = 0;
@@ -264,44 +221,6 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
     update_sent = 1;
 
 out_err:
-    return err;
-}
-
-/*
- * Tell the firewall to add a scdb entry for the completed BEX or update BEX.
- *
- */
-static int signaling_send_scdb_add(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo)
-{
-    struct hip_common *msg = NULL;
-    int err                = 0;
-
-    /* Build the user message */
-    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)),
-            -1, "alloc memory for adding scdb entry\n");
-    hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CDB_ADD_CONN, 0), -1,
-              "build hdr failed\n");
-
-     /* Include Hits */
-    HIP_IFEL(hip_build_param_contents(msg, hits,
-                                       HIP_PARAM_HIT,
-                                       sizeof(hip_hit_t)), -1,
-              "build param contents (src hit) failed\n");
-
-    HIP_IFEL(hip_build_param_contents(msg, hitr,
-                                       HIP_PARAM_HIT,
-                                       sizeof(hip_hit_t)), -1,
-              "build param contents (src hit) failed\n");
-
-    /* Include appinfo parameter (copy it...) */
-    hip_build_param(msg, appinfo);
-
-    /* Send */
-    HIP_IFEL(signaling_hipd_send_to_fw(msg, 0), -1, "failed to send add scdb-msg to fw\n");
-
-out_err:
-    free(msg);
     return err;
 }
 
