@@ -153,7 +153,7 @@ int hip_handle_msg(struct hip_common *msg)
         HIP_IFEL(hip_send_recv_daemon_info(msg_out, 1, hip_fw_sock), -1,
                  "Couldn't notify daemon of firewall presence\n");
         break;
-    case HIP_MSG_SIGNALING_CDB_ADD_CONN:
+    case HIP_MSG_SIGNALING_CONFIRM_CONNECTION:
         signaling_cdb_handle_add_request(msg);
         break;
     default:

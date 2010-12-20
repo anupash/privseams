@@ -389,7 +389,7 @@ int signaling_cdb_handle_add_request(hip_common_t * msg) {
     const hip_hit_t *dst_hit = NULL;
     struct signaling_connection_context * ctx;
 
-    HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CDB_ADD_CONN,
+    HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRM_CONNECTION,
             -1, "Message has wrong type.\n");
 
     HIP_DEBUG("Got request to add a connection to a scdb entry.\n");

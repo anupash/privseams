@@ -51,7 +51,7 @@
 
 /* User message types (adds to icomm.h)*/
 #define HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION    138
-#define HIP_MSG_SIGNALING_CDB_ADD_CONN              139
+#define HIP_MSG_SIGNALING_CONFIRM_CONNECTION        139
 
 /* Connection status types */
 #define SIGNALING_CONN_NEW      0

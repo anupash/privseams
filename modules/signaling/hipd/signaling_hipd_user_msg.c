@@ -79,7 +79,7 @@ int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, con
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)),
             -1, "alloc memory for adding scdb entry\n");
     hip_msg_init(msg);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CDB_ADD_CONN, 0), -1,
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_CONFIRM_CONNECTION, 0), -1,
               "build hdr failed\n");
 
      /* Include Hits */
