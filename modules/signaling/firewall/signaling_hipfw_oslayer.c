@@ -74,7 +74,7 @@ static int signaling_hipfw_send_trigger_new_connection(hip_hit_t *src_hit,
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
     /* Build the message header and parameter */
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION, 0),
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_REQUEST_CONNECTION, 0),
              -1, "build hdr failed\n");
 
     HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),

@@ -97,7 +97,7 @@ int hip_signaling_init(void)
              -1, "Error on registering Signaling handle function.\n");
 
     // register user message handler
-    HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION, &signaling_handle_new_connection_trigger, INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO),
+    HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_REQUEST_CONNECTION, &signaling_handle_connection_request, INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO),
              -1, "Error on registering Signaling user handle function.\n");
 
     HIP_DEBUG("Initialized Signaling Module.\n");

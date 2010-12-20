@@ -169,7 +169,7 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
         HIP_IFEL(!(par_seq = hip_get_param(trigger_msg, HIP_PARAM_SEQ)),
                 -1, "Message contains no seq parameter.\n");
         seq_id = ntohl(par_seq->update_id);
-    } else if(hip_get_msg_type(trigger_msg) == HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION) {
+    } else if(hip_get_msg_type(trigger_msg) == HIP_MSG_SIGNALING_REQUEST_CONNECTION) {
         HIP_DEBUG("Triggering new update bex for following connection.\n");
         signaling_param_application_context_print(appinfo);
         type = SIGNALING_FIRST_BEX_UPDATE;

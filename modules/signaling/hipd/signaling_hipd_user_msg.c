@@ -112,18 +112,20 @@ out_err:
 
 /**
  * This function is part of the HIPD interface towards the firewall.
- * It receives and handles the trigger_new_connection message,
- * send by the firewall upon new connection attempts.
+ * It receives and handles a message of type HIP_MSG_SIGNALING_REQUEST_CONNECTION,
+ * send by the firewall. This message means, that the firewall wants the HIPD
+ * to establish a new connection for the context contained in the message.
+ *
  * We have to check whether to trigger a BEX or an UPDATe and do it.
  *   a) BEX:    We save the connection context to include it in the I2 later.
  *   b) UPDATE: We copy the connection context and send the UPDATE right away.
  *
- * @param msg the message send by the firewall
+ * @param msg the message from the firewall
  *
  * @return 0 on success
  */
-int signaling_handle_new_connection_trigger(struct hip_common *msg,
-                                            struct sockaddr_in6 *src) {
+int signaling_handle_connection_request(struct hip_common *msg,
+                                        struct sockaddr_in6 *src) {
     const hip_hit_t *our_hit    = NULL;
     const hip_hit_t *peer_hit   = NULL;
     const struct hip_tlv_common *param;
