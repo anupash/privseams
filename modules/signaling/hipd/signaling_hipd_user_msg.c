@@ -70,7 +70,7 @@ out_err:
  * Tell the firewall to add a scdb entry for the completed BEX or update BEX.
  *
  */
-int signaling_send_scdb_add(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo)
+int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo)
 {
     struct hip_common *msg = NULL;
     int err                = 0;

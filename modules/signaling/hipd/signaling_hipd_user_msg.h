@@ -14,7 +14,7 @@
 #include "lib/core/protodefs.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
 
-int signaling_send_scdb_add(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo);
+int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo);
 
 /*
  * Handle ports from tigger_bex_msg.
