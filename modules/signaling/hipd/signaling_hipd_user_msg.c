@@ -77,7 +77,7 @@ out_err:
  *
  * @return          0 on sucess, negative on error
   */
-int signaling_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+int signaling_send_connection_context_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
                                       const struct signaling_param_app_context *param_app_ctx) {
     int err = 0;
 

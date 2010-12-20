@@ -170,7 +170,7 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
         // on success this will put the app context into our state
         HIP_IFEL(!(param = hip_get_param(trigger_msg, HIP_PARAM_SIGNALING_APPINFO)),
                  -1, "Message contains no app info parameter.\n");
-        HIP_IFEL(signaling_send_connection_request(our_hit, peer_hit, (const struct signaling_param_app_context *) param),
+        HIP_IFEL(signaling_send_connection_context_request(our_hit, peer_hit, (const struct signaling_param_app_context *) param),
                  -1, "failed to request/get application context");
 
     } else if(hip_get_msg_type(trigger_msg) == HIP_MSG_SIGNALING_REQUEST_CONNECTION) {
@@ -271,7 +271,7 @@ int signaling_handle_i2_app_context(UNUSED const uint8_t packet_type, UNUSED con
 
 	signaling_param_application_context_print(appinfo);
 
-	signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo);
+	signaling_send_connection_context_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo);
 
 out_err:
 	return err;
