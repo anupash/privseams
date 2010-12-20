@@ -175,20 +175,7 @@ int signaling_handle_connection_context(struct hip_common *msg,
     const struct hip_tlv_common *param      = NULL;
     hip_ha_t *entry                         = NULL;
 
-    param = hip_get_param(msg, HIP_PARAM_HIT);
-    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-        peer_hit = hip_get_param_contents_direct(param);
-        if (ipv6_addr_is_null(peer_hit)) {
-            peer_hit = NULL;
-        }
-    }
-    param = hip_get_next_param(msg, param);
-    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-        our_hit = hip_get_param_contents_direct(param);
-        if (ipv6_addr_is_null(our_hit)) {
-            our_hit = NULL;
-        }
-    }
+    signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
              -1, "hadb entry has not been set up\n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
@@ -232,24 +219,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
     int err = 0;
 
     /* Determine if we already have an association */
-    param = hip_get_param(msg, HIP_PARAM_HIT);
-    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-        peer_hit = hip_get_param_contents_direct(param);
-        if (ipv6_addr_is_null(peer_hit)) {
-            peer_hit = NULL;
-        } else {
-            HIP_DEBUG_HIT("got dest hit:", peer_hit);
-        }
-    }
-    param = hip_get_next_param(msg, param);
-    if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-        our_hit = hip_get_param_contents_direct(param);
-        if (ipv6_addr_is_null(our_hit)) {
-            our_hit = NULL;
-        } else {
-            HIP_DEBUG_HIT("got src hit:", our_hit);
-        }
-    }
+    signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     entry = hip_hadb_find_byhits(our_hit, peer_hit);
 
     /* Now check whether we need to trigger a BEX or an UPDATE */

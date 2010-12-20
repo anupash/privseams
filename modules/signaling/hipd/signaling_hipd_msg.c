@@ -177,20 +177,7 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
         HIP_DEBUG("Triggering new update bex for following connection.\n");
         signaling_param_application_context_print(appinfo);
         type = SIGNALING_FIRST_BEX_UPDATE;
-        param = hip_get_param(trigger_msg, HIP_PARAM_HIT);
-        if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-            peer_hit = hip_get_param_contents_direct(param);
-            if (ipv6_addr_is_null(peer_hit)) {
-                peer_hit = NULL;
-            }
-        }
-        param = hip_get_next_param(trigger_msg, param);
-        if (param && hip_get_param_type(param) == HIP_PARAM_HIT) {
-            our_hit = hip_get_param_contents_direct(param);
-            if (ipv6_addr_is_null(our_hit)) {
-                our_hit = NULL;
-            }
-        }
+        signaling_get_hits_from_msg(trigger_msg, &our_hit, &peer_hit);
         HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
                      -1, "Failed to retrieve hadb entry.\n");
         HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
