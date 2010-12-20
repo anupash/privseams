@@ -311,6 +311,10 @@ int signaling_cdb_add(const struct in6_addr *local_hit,
     int found;
     signaling_cdb_entry_t *entry = NULL;
     struct signaling_connection_context *existing_app_ctx;
+
+    HIP_IFEL(!local_hit || !remote_hit,
+             -1, "Got local or remote hit NULL\n");
+
     entry = signaling_cdb_entry_find(local_hit, remote_hit);
 
     if(entry == NULL) {
