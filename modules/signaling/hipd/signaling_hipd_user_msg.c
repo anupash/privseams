@@ -23,33 +23,6 @@
 #include "signaling_hipd_user_msg.h"
 
 
-/*
- * Handles a trigger for a bex update sent by the firewall.
- *
- * Either we have to initiate a bex update exchange with the other party,
- * or we tell the firewall that the new connection is allowed.
- *
- * Comment: Connection tracking in hipd is not implemented yet,
- *          so we always start a new exchange of updates.
- */
-UNUSED int signaling_handle_bex_update_trigger(struct hip_common *msg, UNUSED struct sockaddr_in6 *src) {
-    int err = 0;
-
-    HIP_DEBUG("Received request for new connection (trigger bex update). \n");
-
-    /*
-     * Do connection tracking here ...
-     */
-
-
-    /* Need to do a complete update bex. */
-    HIP_IFEL(signaling_trigger_bex_update(msg),
-            -1, "Failed triggering first bex update.\n");
-
-out_err:
-    return err;
-}
-
 /**
  * This function is part of the HIPD interface towards the firewall.
  * It receives and handles the trigger_new_connection message,
