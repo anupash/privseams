@@ -13,7 +13,7 @@
 
 /* Builders for on the wire parameters */
 int signaling_build_param_portinfo(hip_common_t *msg, uint16_t src_port, uint16_t dest_port);
-int signaling_build_param_application_context(hip_common_t *msg, struct signaling_connection_context *ctx);
+int signaling_build_param_application_context(hip_common_t *msg, const struct signaling_connection_context *ctx);
 int signaling_build_param_user_context(hip_common_t *msg,
                                        const struct signaling_user_context *user_ctx,
                                        const unsigned char *signature, const int sig_len);

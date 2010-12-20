@@ -70,7 +70,7 @@ out_err:
     return par;
 }
 
-static int signaling_param_appinfo_get_content_length(struct signaling_application_context *app_ctx) {
+static int signaling_param_appinfo_get_content_length(const struct signaling_application_context *app_ctx) {
     int res = 0;
 
     if(app_ctx == NULL) {
@@ -95,7 +95,7 @@ static int signaling_param_appinfo_get_content_length(struct signaling_applicati
 static int siganling_build_param_appinfo_contents(struct signaling_param_app_context *par,
                                                   uint16_t src_port,
                                                   uint16_t dest_port,
-                                                  struct signaling_application_context *app_ctx) {
+                                                  const struct signaling_application_context *app_ctx) {
     int err = 0;
     uint8_t *p_tmp;
 
@@ -138,7 +138,7 @@ out_err:
 
  * @return zero for success, or non-zero on error
  */
-int signaling_build_param_application_context(hip_common_t *msg, struct signaling_connection_context *ctx)
+int signaling_build_param_application_context(hip_common_t *msg, const struct signaling_connection_context *ctx)
 {
     struct signaling_param_app_context *appinfo = NULL;
     int err = 0;
