@@ -111,6 +111,7 @@ int signaling_send_connection_context_request(const hip_hit_t *src_hit, const hi
              -1, "Failed to process connection confirmation from hipfw/oslayer \n");
 
 out_err:
+    free(msg);
     return err;
 }
 

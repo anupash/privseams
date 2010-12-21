@@ -70,6 +70,7 @@ out_err:
     if (err) {
         free(new_ctx);
     }
+    free(msg);
     return err;
 }
 
@@ -105,6 +106,7 @@ int signaling_hipfw_send_connection_context(const hip_hit_t *hits, const hip_hit
     signaling_connection_context_print(ctx);
 
 out_err:
+    free(msg);
     return err;
 }
 
