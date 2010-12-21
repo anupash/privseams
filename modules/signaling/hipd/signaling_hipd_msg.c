@@ -83,9 +83,12 @@ out_err:
  *
  */
 static hip_common_t *build_update_message(hip_ha_t *ha, int type, struct signaling_connection_context *ctx, uint32_t seq) {
-    int err = 0;
-    uint16_t mask = 0;
-    hip_common_t *msg_buf = NULL;
+    int err                 = 0;
+    uint16_t mask           = 0;
+    hip_common_t *msg_buf   = NULL;
+    int sig_len             = 0;
+    unsigned char sig_buf[1000];
+
 
     /* Allocate and build message */
     HIP_IFEL(!(msg_buf = hip_msg_alloc()),
@@ -112,6 +115,18 @@ static hip_common_t *build_update_message(hip_ha_t *ha, int type, struct signali
             -1, "Building of HMAC failed\n");
     HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
             -EINVAL, "Could not sign UPDATE. Failing\n");
+
+    /* Add user auth */
+    sig_len = signaling_user_api_get_signature(ctx->user_ctx.euid,
+                                               ctx->user_ctx.username,
+                                               strlen(ctx->user_ctx.username),
+                                               sig_buf);
+    if(sig_len < 0) {
+        HIP_DEBUG("Could not build user signature \n");
+    } else {
+        HIP_IFEL(signaling_build_param_user_context(msg_buf, &ctx->user_ctx, sig_buf, sig_len),
+                 -1, "Building of param user_sig for I2 failed.\n");
+    }
 
 out_err:
     if(err) {
