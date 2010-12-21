@@ -100,7 +100,7 @@ int signaling_hipfw_send_connection_context(const hip_hit_t *hits, const hip_hit
              -1, "build param contents (src hit) failed\n");
     HIP_IFEL(signaling_build_param_application_context(msg, ctx),
              -1, "build param application context failed\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Sent connection context to HIPD for use in R2: \n");
     signaling_connection_context_print(ctx);
