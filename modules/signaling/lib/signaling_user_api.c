@@ -145,7 +145,7 @@ out_err:
  * @return NULL on error
  */
 static X509 *get_user_certificate(uid_t uid) {
-    char filebuf[PATH_MAX];
+    char filebuf[SIGNALING_PATH_MAX_LEN];
     char *homedir   = NULL;
     X509 *ret       = NULL;
     int err         = 0;
@@ -218,7 +218,7 @@ int signaling_user_api_get_signature(uid_t uid, const void *data, int in_len, un
     EC_KEY *priv_key = NULL;
     unsigned int sig_len;
     char *homedir = NULL;
-    char filebuf[PATH_MAX];
+    char filebuf[SIGNALING_PATH_MAX_LEN];
 
     // sanity checks
     HIP_IFEL(!data,

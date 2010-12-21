@@ -38,7 +38,6 @@
 #include <openssl/x509.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
-#include <linux/limits.h>
 
 #include "signaling_common_builder.h"
 #include "signaling_oslayer.h"
@@ -216,9 +215,9 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
     HIP_DEBUG("\t to:\t %s\n", remote_addr);
 
     // determine path to application binary from /proc/{pid}/exe
-    memset(ctx->app_ctx.path, 0, PATH_MAX);
+    memset(ctx->app_ctx.path, 0, SIGNALING_PATH_MAX_LEN);
     sprintf(symlinkbuf, "/proc/%i/exe", ctx->app_ctx.pid);
-    HIP_IFEL(0 > readlink(symlinkbuf, ctx->app_ctx.path, PATH_MAX),
+    HIP_IFEL(0 > readlink(symlinkbuf, ctx->app_ctx.path, SIGNALING_PATH_MAX_LEN),
              -1, "Failed to read symlink to application binary\n");
 
     HIP_DEBUG("Found application binary at: %s \n", ctx->app_ctx.path);

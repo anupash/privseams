@@ -65,6 +65,7 @@
 #define SIGNALING_APP_REQ_MAX_LEN   64
 #define SIGNALING_APP_GRP_MAX_LEN   64
 #define SIGNALING_USER_ID_MAX_LEN   128
+#define SIGNALING_PATH_MAX_LEN      PATH_MAX
 
 /* ------------------------------------------------------------------------------------
  *
@@ -163,7 +164,7 @@ struct signaling_param_app_context {
 */
 struct signaling_application_context {
     pid_t pid;
-    char path[PATH_MAX];
+    char path[SIGNALING_PATH_MAX_LEN];
     char application_dn[SIGNALING_APP_DN_MAX_LEN];
     char issuer_dn[SIGNALING_ISS_DN_MAX_LEN];
     char requirements[SIGNALING_APP_REQ_MAX_LEN];
