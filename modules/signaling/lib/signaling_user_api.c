@@ -24,25 +24,29 @@
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
 
-static int load_x509_certificate(const char *file, X509 **cert) {
-    int err = 0;
-    FILE *fp;
+static X509 *load_x509_certificate(const char *file) {
+    int err     = 0;
+    FILE *fp    = NULL;
+    X509 *cert  = NULL;
 
-    *cert = NULL;
     HIP_IFEL(!file, -ENOENT, "NULL filename\n");
 
     fp   = fopen(file, "rb");
     HIP_IFEL(!fp, -ENOMEM,
              "Could not open certificate key file %s for reading\n", file);
 
-    *cert = PEM_read_X509(fp, NULL, NULL, NULL);
+    cert = PEM_read_X509(fp, NULL, NULL, NULL);
     if ((err = fclose(fp))) {
         HIP_ERROR("Error closing file\n");
         goto out_err;
     }
 
 out_err:
-    return err;
+    if (err) {
+        X509_free(cert);
+        return NULL;
+    }
+    return cert;
 }
 
 /**
@@ -140,13 +144,23 @@ out_err:
 /*
  * @return NULL on error
  */
-UNUSED static X509 *get_user_certificate(uid_t uid) {
-    char *homedir = NULL;
+static X509 *get_user_certificate(uid_t uid) {
+    char filebuf[PATH_MAX];
+    char *homedir   = NULL;
+    X509 *ret       = NULL;
+    int err         = 0;
+
     homedir = get_user_homedir(uid);
-    HIP_DEBUG("Got homedir for user: %s\n", homedir);
-    //if(homedir != NULL)
-    //    return load_x509_certificate(homedir);
-    return NULL;
+    sprintf(filebuf, "%s/.signaling/user-cert.pem", homedir);
+    HIP_IFEL(!(ret = load_x509_certificate(filebuf)),
+             -1, "Could not get user certificate \n");
+
+out_err:
+    if (err) {
+        X509_free(ret);
+        return NULL;
+    }
+    return ret;
 }
 
 /**
@@ -176,12 +190,21 @@ out_err:
 }
 
 int signaling_user_api_get_uname(uid_t uid, struct signaling_user_context *user_ctx) {
-    int err = 0;
-    struct passwd *pw = NULL;
+    int err             = 0;
+    X509 *usercert      = NULL;
+    X509_NAME *uname    = NULL;
+    struct passwd *pw   = NULL;
 
-    HIP_IFEL(!(pw = getpwuid(uid)),
-            -1, "Failed to get info for user id %d.\n", uid);
-    memcpy(user_ctx->username, pw->pw_name, strlen(pw->pw_name));
+    if (!(usercert = get_user_certificate(uid))) {
+        HIP_DEBUG("Could not get user's certificate, using system username as fallback.\n");
+        HIP_IFEL(!(pw = getpwuid(uid)),
+                 -1, "Failed to get info for user id %d.\n", uid);
+        memcpy(user_ctx->username, pw->pw_name, strlen(pw->pw_name));
+    } else {
+        HIP_IFEL(!(uname = X509_get_subject_name(usercert)),
+                 -1, "Could not get subject name from certificate\n");
+        X509_NAME_oneline(uname, user_ctx->username, SIGNALING_USER_ID_MAX_LEN);
+    }
 
 out_err:
     return err;
@@ -192,7 +215,6 @@ out_err:
  */
 int signaling_user_api_get_signature(uid_t uid, const void *data, int in_len, unsigned char *outbuf) {
     int err = 0;
-    X509 *usercert = NULL;
     EC_KEY *priv_key = NULL;
     unsigned int sig_len;
     char *homedir = NULL;
@@ -215,13 +237,8 @@ int signaling_user_api_get_signature(uid_t uid, const void *data, int in_len, un
     HIP_IFEL(load_ecdsa_private_key(filebuf, &priv_key),
              -1, "Could not get private key for signing \n");
 
-    sprintf(filebuf, "%s/.signaling/user-cert.pem", homedir);
-    HIP_DEBUG("Looking for certificate at: %s \n", filebuf);
-    HIP_IFEL(load_x509_certificate(filebuf, &usercert),
-             -1, "Could not get user certificate \n");
-
-    // sign using RSA
-    // TODO: support for dsa, ecdsa...
+    // sign using ECDSA
+    // TODO: support for rsa, dsa...
     sig_len = ECDSA_size(priv_key);
     ecdsa_sign(priv_key, data, in_len, outbuf);
 
