@@ -33,8 +33,9 @@ int hip_signaling_init(void)
 	int err = 0;
 
 	// register parameter types
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO, "HIP_PARAM_SIGNALING_APPINFO");
-    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USERINFO, "HIP_PARAM_SIGNALING_USERINFO");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO,            "HIP_PARAM_SIGNALING_APPINFO");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, "HIP_PARAM_SIGNALING_CONNECTION_CONTEXT");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USERINFO,           "HIP_PARAM_SIGNALING_USERINFO");
 
     // register initialization function for port information per connection state in hadb
     lmod_register_state_init_function(&signaling_hipd_init_state);

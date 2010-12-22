@@ -45,8 +45,9 @@
 
 
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
-#define HIP_PARAM_SIGNALING_APPINFO     5000
-#define HIP_PARAM_SIGNALING_USERINFO    62500
+#define HIP_PARAM_SIGNALING_APPINFO             5000
+#define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5002
+#define HIP_PARAM_SIGNALING_USERINFO            62500
 
 
 /* User message types (adds to icomm.h)*/
