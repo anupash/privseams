@@ -282,6 +282,27 @@ int signaling_build_application_context(const struct signaling_param_app_context
 out_err:
     return err;
 }
+/*
+ * Fill the internal user_context struct with data from user_context parameter.
+ *
+ * @return 0 on success
+ */
+int signaling_build_user_context(const struct signaling_param_user_context *param_usr_ctx,
+                                 struct signaling_user_context *usr_ctx) {
+    int err = 0;
+
+    /* sanity checks */
+    HIP_IFEL(!param_usr_ctx,    -1, "Got NULL user context parameter\n");
+    HIP_IFEL(!usr_ctx,          -1, "Got NULL user context to write to\n");
+
+    /* copy contents */
+    memcpy(usr_ctx->username, (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context),
+           ntohs(param_usr_ctx->ui_length));
+    usr_ctx->username[ntohs(param_usr_ctx->ui_length)] = '\0';
+
+out_err:
+    return err;
+}
 
 void signaling_get_hits_from_msg(const hip_common_t *msg, const hip_hit_t **hits, const hip_hit_t **hitr)
 {
