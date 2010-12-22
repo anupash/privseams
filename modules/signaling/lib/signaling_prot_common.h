@@ -209,7 +209,7 @@ struct signaling_connection_context {
 /* Printing of parameters and internal structures */
 void signaling_param_user_context_print(const struct signaling_param_user_context *param_user_ctx);
 void signaling_param_application_context_print(const struct signaling_param_app_context *param_app_ctx);
-void signaling_connection_context_print(const struct signaling_connection_context *ctx);
+void signaling_connection_context_print(const struct signaling_connection_context *ctx, const char *prefix);
 
 /* Initalization of internal structures */
 int signaling_init_user_context(struct signaling_user_context *user_ctx);

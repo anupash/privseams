@@ -351,7 +351,7 @@ static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
     while(listentry != NULL) {
         if(listentry->data != NULL) {
             ctx = (struct signaling_connection_context *) listentry->data;
-            signaling_connection_context_print(ctx);
+            signaling_connection_context_print(ctx, "\t");
         }
         listentry = listentry->next;
     }

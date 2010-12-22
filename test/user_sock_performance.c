@@ -193,7 +193,7 @@ static void do_tests(int runs) {
            "Socket performance on empty wire struct\n"
            "--------------------------------------------\n");
 
-    signaling_connection_context_print(conn_ctx);
+    signaling_connection_context_print(conn_ctx, "");
 
 
     for (i = 0; i < runs; i++) {
@@ -218,7 +218,7 @@ static void do_tests(int runs) {
     strcpy(conn_ctx->app_ctx.groups, "Browser");
     strcpy(conn_ctx->app_ctx.requirements, "tcp, in/out");
 
-    signaling_connection_context_print(conn_ctx);
+    signaling_connection_context_print(conn_ctx, "");
 
     for (i = 0; i < runs; i++) {
         gettimeofday(&start_time, NULL);
@@ -243,7 +243,7 @@ static void do_tests(int runs) {
     strncpy(conn_ctx->app_ctx.groups, fill, 63);
     strncpy(conn_ctx->app_ctx.requirements, fill, 63);
 
-    signaling_connection_context_print(conn_ctx);
+    signaling_connection_context_print(conn_ctx, "");
 
 
     for (i = 0; i < runs; i++) {

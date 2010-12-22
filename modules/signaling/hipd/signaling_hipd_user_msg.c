@@ -104,7 +104,7 @@ int signaling_send_connection_context_request(const hip_hit_t *src_hit, const hi
              -1, "build connection context failed \n");
 
     HIP_DEBUG("Sending connection context request for following context to HIPF:\n");
-    signaling_connection_context_print(remote_ctx);
+    signaling_connection_context_print(remote_ctx, "");
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 1), -1, "failed to send/recv connection request to fw\n");
 
     /* We expect the corresponding local application context in the response. */
@@ -190,7 +190,7 @@ int signaling_handle_connection_context(struct hip_common *msg,
              -1, "Could not copy connection context\n");
 
     HIP_DEBUG("Saved connection context from hipfw for R2:\n");
-    signaling_connection_context_print(&sig_state->ctx);
+    signaling_connection_context_print(&sig_state->ctx, "");
 
 out_err:
     return err;
@@ -240,7 +240,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
                  -1, "Failed triggering first bex update.\n");
 
         HIP_DEBUG("Triggered UPDATE for following connection context:\n");
-        signaling_connection_context_print(&sig_state->ctx);
+        signaling_connection_context_print(&sig_state->ctx, "");
 
     } else {       // BEX
         HIP_DEBUG("Triggering BEX \n");
@@ -259,7 +259,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
                  -1, "Could not copy connection context\n");
 
         HIP_DEBUG("Started new BEX for following connection context:\n");
-        signaling_connection_context_print(&sig_state->ctx);
+        signaling_connection_context_print(&sig_state->ctx, "");
     }
 
 out_err:

@@ -64,7 +64,7 @@ int signaling_hipfw_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_h
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Send request to HIPD to establish a new connection with following connection context: \n");
-    signaling_connection_context_print(new_ctx);
+    signaling_connection_context_print(new_ctx, "");
 
 out_err:
     if (err) {
@@ -105,7 +105,7 @@ int signaling_hipfw_send_connection_context(const hip_hit_t *hits, const hip_hit
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Sent connection context to HIPD for use in R2: \n");
-    signaling_connection_context_print(ctx);
+    signaling_connection_context_print(ctx, "");
 
 out_err:
     free(msg);
@@ -165,7 +165,7 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
     src_port = ((const struct signaling_connection_context *) (param + 1))->dest_port;
 
     HIP_DEBUG("Received connection context request for following context: \n");
-    signaling_connection_context_print((const struct signaling_connection_context *) (param + 1));
+    signaling_connection_context_print((const struct signaling_connection_context *) (param + 1), "");
 
     /* a) check if we want to allow the connection */
         // TODO: DO this here

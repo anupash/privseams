@@ -70,26 +70,27 @@ void signaling_param_application_context_print(const struct signaling_param_app_
 /**
  * Print the internal connection context structure.
  *
- * @param ctx the connection context to print
+ * @param ctx       the connection context to print
+ * @param prefix    prefix is prepended to all output of this function
  */
-void signaling_connection_context_print(const struct signaling_connection_context *ctx) {
+void signaling_connection_context_print(const struct signaling_connection_context *ctx, const char *prefix) {
     if(ctx == NULL) {
-        HIP_DEBUG("No ctx parameter given.\n");
+        HIP_DEBUG("%sNo ctx parameter given.\n", prefix);
         return;
     }
 
-    HIP_DEBUG("+------------ CONNECTION CONTEXT START ----------------------\n");
-    HIP_DEBUG(" Status:\t\t %s\n", signaling_connection_status_name(ctx->connection_status));
-    HIP_DEBUG(" Ports:\t\t src %d, dest %d\n", ctx->src_port, ctx->dest_port);
-    HIP_DEBUG(" User context \n");
-    HIP_DEBUG(" \tUser Id:\t %d\n", ctx->user_ctx.euid);
-    HIP_DEBUG(" \tUser Name:\t %s\n", ctx->user_ctx.username);
-    HIP_DEBUG(" Application context \n");
-    HIP_DEBUG(" \tApplication DN:\t %s\n", ctx->app_ctx.application_dn);
-    HIP_DEBUG(" \tAC Issuer DN:\t %s\n", ctx->app_ctx.issuer_dn);
-    HIP_DEBUG(" \tRequirements:\t %s\n", ctx->app_ctx.requirements);
-    HIP_DEBUG(" \tGroups:\t\t %s\n", ctx->app_ctx.groups);
-    HIP_DEBUG("+------------ CONNECTION CONTEXT END   ----------------------\n");
+    HIP_DEBUG("%s+------------ CONNECTION CONTEXT START ----------------------\n", prefix);
+    HIP_DEBUG("%s  Status:\t\t %s\n", prefix, signaling_connection_status_name(ctx->connection_status));
+    HIP_DEBUG("%s  Ports:\t\t src %d, dest %d\n", prefix, ctx->src_port, ctx->dest_port);
+    HIP_DEBUG("%s  User context \n", prefix);
+    HIP_DEBUG("%s  \tUser Id:\t %d\n", prefix, ctx->user_ctx.euid);
+    HIP_DEBUG("%s  \tUser Name:\t %s\n", prefix, ctx->user_ctx.username);
+    HIP_DEBUG("%s  Application context \n", prefix);
+    HIP_DEBUG("%s  \tApplication DN:\t %s\n", prefix, ctx->app_ctx.application_dn);
+    HIP_DEBUG("%s  \tAC Issuer DN:\t %s\n", prefix, ctx->app_ctx.issuer_dn);
+    HIP_DEBUG("%s  \tRequirements:\t %s\n", prefix, ctx->app_ctx.requirements);
+    HIP_DEBUG("%s  \tGroups:\t\t %s\n", prefix, ctx->app_ctx.groups);
+    HIP_DEBUG("%s+------------ CONNECTION CONTEXT END   ----------------------\n", prefix);
 }
 
 /**
