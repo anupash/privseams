@@ -227,7 +227,7 @@ out_err:
  * and expect our own connection context from the hipfw to send it in the R2.
  *
  */
-int signaling_handle_i2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+static int signaling_handle_i2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = -1;
     struct signaling_connection_context conn_ctx;
@@ -246,7 +246,7 @@ out_err:
  * So, we have to confirm the new connection to the hipfw/oslayer.
  *
  */
-int signaling_handle_r2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+static int signaling_handle_r2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = -1;
     struct signaling_connection_context conn_ctx;
@@ -254,6 +254,34 @@ int signaling_handle_r2_app_context(UNUSED const uint8_t packet_type, UNUSED con
     HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
              -1, "Could not init connection context from R2 \n");
     signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
+
+out_err:
+    return err;
+}
+
+/*
+ * Handles an incomding I2 packet.
+ */
+int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
+    int err     = 0;
+
+    HIP_IFEL(packet_type != HIP_I2, -1, "Not an I2 Packet\n")
+
+    signaling_handle_i2_app_context(packet_type, ha_state, ctx);
+
+out_err:
+    return err;
+}
+
+/*
+ * Handles an incoming R2 packet.
+ */
+int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
+    int err     = 0;
+
+    HIP_IFEL(packet_type != HIP_R2, -1, "Not an R2 Packet\n")
+
+    signaling_handle_r2_app_context(packet_type, ha_state, ctx);
 
 out_err:
     return err;

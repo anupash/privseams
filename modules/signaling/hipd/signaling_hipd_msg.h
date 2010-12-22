@@ -44,9 +44,9 @@
 #define SIGNALING_SECOND_BEX_UPDATE 33002
 
 
-int signaling_handle_i2_app_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_handle_incoming_i2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
-int signaling_handle_r2_app_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_handle_incoming_r2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 int signaling_handle_bex_update(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
