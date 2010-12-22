@@ -294,6 +294,8 @@ int signaling_build_user_context(const struct signaling_param_user_context *para
     /* sanity checks */
     HIP_IFEL(!param_usr_ctx,    -1, "Got NULL user context parameter\n");
     HIP_IFEL(!usr_ctx,          -1, "Got NULL user context to write to\n");
+    HIP_IFEL(hip_get_param_type(param_usr_ctx) != HIP_PARAM_SIGNALING_USERINFO,
+            -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_USERINFO);
 
     /* copy contents */
     memcpy(usr_ctx->username, (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context),
