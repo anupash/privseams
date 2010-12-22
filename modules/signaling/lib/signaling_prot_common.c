@@ -68,6 +68,50 @@ void signaling_param_application_context_print(const struct signaling_param_app_
 }
 
 /**
+ * Print the internal application context structure.
+ *
+ * @param app_ctx   the application context to print
+ * @param prefix    prefix is prepended to all output of this function
+ * @param header    0 for no header, 1 to print a header
+ */
+void signaling_application_context_print(const struct signaling_application_context *app_ctx, const char *prefix, int header) {
+    if(app_ctx == NULL) {
+        HIP_DEBUG("%sNo application ctx parameter given.\n", prefix);
+        return;
+    }
+    if (header)
+        HIP_DEBUG("%s+------------ APPLICATION CONTEXT START ----------------------\n", prefix);
+    HIP_DEBUG("%s  Application context \n", prefix);
+    HIP_DEBUG("%s  \tApplication DN:\t %s\n", prefix, app_ctx->application_dn);
+    HIP_DEBUG("%s  \tAC Issuer DN:\t %s\n", prefix, app_ctx->issuer_dn);
+    HIP_DEBUG("%s  \tRequirements:\t %s\n", prefix, app_ctx->requirements);
+    HIP_DEBUG("%s  \tGroups:\t\t %s\n", prefix, app_ctx->groups);
+    if (header)
+        HIP_DEBUG("%s+------------ APPLICATION CONTEXT END   ----------------------\n", prefix);
+}
+
+/**
+ * Print the internal user context structure.
+ *
+ * @param usr_ctx   the user context to print
+ * @param prefix    prefix is prepended to all output of this function
+ * @param header    0 for no header, 1 to print a header
+ */
+void signaling_user_context_print(const struct signaling_user_context *user_ctx, const char *prefix, int header) {
+    if(user_ctx == NULL) {
+        HIP_DEBUG("%sNo user ctx parameter given.\n", prefix);
+        return;
+    }
+    if (header)
+        HIP_DEBUG("%s+------------ -USER CONTEXT START ----------------------\n", prefix);
+    HIP_DEBUG("%s  User context \n", prefix);
+    HIP_DEBUG("%s  \tUser Id:\t %d\n", prefix, user_ctx->euid);
+    HIP_DEBUG("%s  \tUser Name:\t %s\n", prefix, user_ctx->username);
+    if (header)
+        HIP_DEBUG("%s+------------ USER CONTEXT END   ----------------------\n", prefix);
+}
+
+/**
  * Print the internal connection context structure.
  *
  * @param ctx       the connection context to print
@@ -82,16 +126,12 @@ void signaling_connection_context_print(const struct signaling_connection_contex
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT START ----------------------\n", prefix);
     HIP_DEBUG("%s  Status:\t\t %s\n", prefix, signaling_connection_status_name(ctx->connection_status));
     HIP_DEBUG("%s  Ports:\t\t src %d, dest %d\n", prefix, ctx->src_port, ctx->dest_port);
-    HIP_DEBUG("%s  User context \n", prefix);
-    HIP_DEBUG("%s  \tUser Id:\t %d\n", prefix, ctx->user_ctx.euid);
-    HIP_DEBUG("%s  \tUser Name:\t %s\n", prefix, ctx->user_ctx.username);
-    HIP_DEBUG("%s  Application context \n", prefix);
-    HIP_DEBUG("%s  \tApplication DN:\t %s\n", prefix, ctx->app_ctx.application_dn);
-    HIP_DEBUG("%s  \tAC Issuer DN:\t %s\n", prefix, ctx->app_ctx.issuer_dn);
-    HIP_DEBUG("%s  \tRequirements:\t %s\n", prefix, ctx->app_ctx.requirements);
-    HIP_DEBUG("%s  \tGroups:\t\t %s\n", prefix, ctx->app_ctx.groups);
+    signaling_user_context_print(&ctx->user_ctx, prefix, 0);
+    signaling_application_context_print(&ctx->app_ctx, prefix, 0);
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT END   ----------------------\n", prefix);
 }
+
+
 
 /**
  * Prints the user context parameter.
