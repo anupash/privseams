@@ -229,12 +229,12 @@ out_err:
  */
 static int signaling_handle_i2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-	int err = -1;
+    int err = 0;
     struct signaling_connection_context conn_ctx;
 
     HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
              -1, "Could not init connection context from R2 \n");
-	signaling_send_connection_context_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
+    signaling_send_connection_context_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
 
 out_err:
 	return err;
@@ -248,7 +248,7 @@ out_err:
  */
 static int signaling_handle_r2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    int err = -1;
+    int err = 0;
     struct signaling_connection_context conn_ctx;
 
     HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
