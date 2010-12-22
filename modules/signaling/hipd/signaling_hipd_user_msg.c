@@ -79,14 +79,14 @@ out_err:
  *
  * @note This function blocks until the firewall has sent its response with the local application context in it.
  *
- * @param src_hit   src hit of the new incoming connection
- * @param dst_hit   dst hit of the new incoming connection
- * @param app_ctx   the received application context for the new incoming connection
+ * @param src_hit       src hit of the new incoming connection
+ * @param dst_hit       dst hit of the new incoming connection
+ * @param remote_ctx    the received connection context for the new incoming connection
  *
  * @return          0 on sucess, negative on error
   */
 int signaling_send_connection_context_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                              const struct signaling_param_app_context *param_app_ctx) {
+                                              const struct signaling_connection_context *remote_ctx) {
     int err = 0;
 
     /* Allocate, build and send a message of type
@@ -100,10 +100,11 @@ int signaling_send_connection_context_request(const hip_hit_t *src_hit, const hi
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(hip_build_param(msg, (const struct hip_tlv_common *) param_app_ctx),
-             -1, "build param application context failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, remote_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
+             -1, "build connection context failed \n");
 
-    HIP_DEBUG("Sending connection context request to HIPF\n");
+    HIP_DEBUG("Sending connection context request for following context to HIPF:\n");
+    signaling_connection_context_print(remote_ctx);
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 1), -1, "failed to send/recv connection request to fw\n");
 
     /* We expect the corresponding local application context in the response. */
@@ -121,11 +122,11 @@ out_err:
  *
  * @param hits      the source hit of the new connection (our local hit)
  * @param hitr      the remote hit of the new connection
- * @param appinfo   the local application context for which the application has been established
+ * @param appinfo   the application context for which the connection has been established
  *
  * @return          0 on success, negative on error
  */
-int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_param_app_context *appinfo)
+int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, const struct signaling_connection_context *ctx)
 {
     struct hip_common *msg = NULL;
     int err                = 0;
@@ -146,7 +147,8 @@ int signaling_send_connection_confirmation(hip_hit_t *hits, hip_hit_t *hitr, con
                                       HIP_PARAM_HIT,
                                       sizeof(hip_hit_t)), -1,
               "build param contents (src hit) failed\n");
-    hip_build_param(msg, appinfo);
+    HIP_IFEL(hip_build_param_contents(msg, ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
+             -1, "build connection context failed \n");
 
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 0), -1, "failed to send add scdb-msg to fw\n");
 
@@ -181,13 +183,11 @@ int signaling_handle_connection_context(struct hip_common *msg,
              -1, "hadb entry has not been set up\n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
              -1, "Missing application_context parameter\n");
-    signaling_init_connection_context(&sig_state->ctx);
-    sig_state->ctx.src_port     = ntohs(((const struct signaling_param_app_context *) param)->src_port);
-    sig_state->ctx.dest_port    = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
-    HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param, &sig_state->ctx.app_ctx),
-             -1, "Failed to transform app ctx param to internal app ctx\n");
+    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+    HIP_IFEL(signaling_copy_connection_context(&sig_state->ctx, (const struct signaling_connection_context *) (param + 1)),
+             -1, "Could not copy connection context\n");
 
     HIP_DEBUG("Saved connection context from hipfw for R2:\n");
     signaling_connection_context_print(&sig_state->ctx);
@@ -228,19 +228,20 @@ int signaling_handle_connection_request(struct hip_common *msg,
         /* save application context to our local state */
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
-        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
+        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
                  -1, "Missing application_context parameter\n");
         signaling_param_application_context_print((const struct signaling_param_app_context *) param);
-        signaling_init_connection_context(&sig_state->ctx);
-        sig_state->ctx.src_port     = ntohs(((const struct signaling_param_app_context *) param)->src_port);
-        sig_state->ctx.dest_port    = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
-        HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param, &sig_state->ctx.app_ctx),
-                 -1, "Failed to transform app ctx param to internal app ctx\n");
+        // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+        HIP_IFEL(signaling_copy_connection_context(&sig_state->ctx, (const struct signaling_connection_context *) (param + 1)),
+                 -1, "Could not copy connection context\n");
 
         /* now trigger the UPDATE */
-        HIP_DEBUG("Triggering UPDATE \n");
         HIP_IFEL(signaling_trigger_bex_update(msg),
                  -1, "Failed triggering first bex update.\n");
+
+        HIP_DEBUG("Triggered UPDATE for following connection context:\n");
+        signaling_connection_context_print(&sig_state->ctx);
+
     } else {       // BEX
         HIP_DEBUG("Triggering BEX \n");
         // trigger bex since we intercepted the packet before it could be handled by the hipfw
@@ -251,14 +252,11 @@ int signaling_handle_connection_request(struct hip_common *msg,
                  -1, "hadb entry has not been set up\n");
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
-        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
+        HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
                  -1, "Missing application_context parameter\n");
-        signaling_param_application_context_print((const struct signaling_param_app_context *) param);
-        signaling_init_connection_context(&sig_state->ctx);
-        sig_state->ctx.src_port     = ntohs(((const struct signaling_param_app_context *) param)->src_port);
-        sig_state->ctx.dest_port    = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
-        HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param, &sig_state->ctx.app_ctx),
-                 -1, "Failed to transform app ctx param to internal app ctx\n");
+        // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+        HIP_IFEL(signaling_copy_connection_context(&sig_state->ctx, (const struct signaling_connection_context *) (param + 1)),
+                 -1, "Could not copy connection context\n");
 
         HIP_DEBUG("Started new BEX for following connection context:\n");
         signaling_connection_context_print(&sig_state->ctx);

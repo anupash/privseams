@@ -380,11 +380,10 @@ void signaling_cdb_print(void) {
  */
 int signaling_cdb_handle_add_request(hip_common_t * msg) {
     int err = 0;
-    const struct signaling_param_app_context *appinfo;
-    const struct hip_tlv_common *param   = NULL;
-    const hip_hit_t *src_hit = NULL;
-    const hip_hit_t *dst_hit = NULL;
-    struct signaling_connection_context * ctx;
+    const struct hip_tlv_common *param          = NULL;
+    const hip_hit_t *src_hit                    = NULL;
+    const hip_hit_t *dst_hit                    = NULL;
+    struct signaling_connection_context *ctx    = NULL;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRM_CONNECTION,
             -1, "Message has wrong type.\n");
@@ -399,18 +398,14 @@ int signaling_cdb_handle_add_request(hip_common_t * msg) {
     HIP_IFEL(!(src_hit && dst_hit),
             -1, "Source- and/or destinationhit not given.\n");
 
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
-            -1, "No appinfo parameter in message.\n");
-    appinfo = (const struct signaling_param_app_context *) param;
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
+            -1, "No HIP_PARAM_SIGNALING_CONNECTION_CONTEXT parameter in message.\n");
     HIP_IFEL(!(ctx = malloc(sizeof(struct signaling_connection_context))),
              -1, "Could not allocate memory for new application context\n");
-    HIP_IFEL(signaling_init_connection_context(ctx),
+    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+    HIP_IFEL(signaling_copy_connection_context(ctx, (const struct signaling_connection_context*) (param + 1)),
              -1, "Failed to init app context \n");
-
-    ctx->src_port = ntohs(appinfo->src_port);
-    ctx->dest_port = ntohs(appinfo->dest_port);
     ctx->connection_status = SIGNALING_CONN_ALLOWED;
-
     signaling_cdb_add(src_hit, dst_hit, ctx);
 
 out_err:

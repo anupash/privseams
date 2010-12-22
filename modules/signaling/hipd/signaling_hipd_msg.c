@@ -149,11 +149,10 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
     const hip_hit_t * our_hit = NULL;
     const hip_hit_t * peer_hit = NULL;
     hip_common_t * update_packet_to_send = NULL;
-    const struct signaling_param_app_context * appinfo = NULL;
+    struct signaling_connection_context conn_ctx;
     struct signaling_hipd_state * sig_state = NULL;
     uint32_t seq_id = 0;
     const struct hip_seq * par_seq = NULL;
-    const struct hip_tlv_common *param = NULL;
     struct update_state * updatestate = NULL;
     int type = 0;
 
@@ -165,9 +164,6 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
         HIP_DEBUG("Update already on its way... waiting... \n");
         goto out_err;
     }
-
-    HIP_IFEL(!(appinfo = hip_get_param(trigger_msg, HIP_PARAM_SIGNALING_APPINFO)),
-            -1, "Message contains no application context. cannot build update.\n");
 
     /* Set type, hits, seq/ack.
      * We have to distinguish between the two different messages that triggered this update. */
@@ -181,16 +177,13 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
                 -1, "Message contains no seq parameter.\n");
         seq_id = ntohl(par_seq->update_id);
 
-        // now request applicationcontext from hipfw
-        // on success this will put the app context into our state
-        HIP_IFEL(!(param = hip_get_param(trigger_msg, HIP_PARAM_SIGNALING_APPINFO)),
-                 -1, "Message contains no app info parameter.\n");
-        HIP_IFEL(signaling_send_connection_context_request(our_hit, peer_hit, (const struct signaling_param_app_context *) param),
-                 -1, "failed to request/get application context");
+        // now request connection context from hipfw
+        // on success this will put the local connection context into our state
+        HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, trigger_msg),
+                 -1, "Could not init connection context from UPDATE \n");
+        signaling_send_connection_context_request(our_hit, peer_hit, &conn_ctx);
 
     } else if(hip_get_msg_type(trigger_msg) == HIP_MSG_SIGNALING_REQUEST_CONNECTION) {
-        HIP_DEBUG("Triggering new update bex for following connection.\n");
-        signaling_param_application_context_print(appinfo);
         type = SIGNALING_FIRST_BEX_UPDATE;
         signaling_get_hits_from_msg(trigger_msg, &our_hit, &peer_hit);
         HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
@@ -237,14 +230,11 @@ out_err:
 int signaling_handle_i2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = -1;
-	const struct signaling_param_app_context *appinfo = NULL;
+    struct signaling_connection_context conn_ctx;
 
-	HIP_IFEL(!(appinfo = (const struct signaling_param_app_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
-	        -1, "No application info parameter found in the message.\n");
-
-	signaling_param_application_context_print(appinfo);
-
-	signaling_send_connection_context_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo);
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
+             -1, "Could not init connection context from R2 \n");
+	signaling_send_connection_context_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
 
 out_err:
 	return err;
@@ -259,14 +249,11 @@ out_err:
 int signaling_handle_r2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = -1;
-    const struct signaling_param_app_context *appinfo = NULL;
+    struct signaling_connection_context conn_ctx;
 
-    HIP_IFEL(!(appinfo = (const struct signaling_param_app_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
-            -1, "No application info parameter found in the message.\n");
-
-    signaling_param_application_context_print(appinfo);
-
-    signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo);
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
+             -1, "Could not init connection context from R2 \n");
+    signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
 
 out_err:
     return err;
@@ -278,24 +265,21 @@ out_err:
 int signaling_handle_bex_update(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
-    const struct signaling_param_app_context * appinfo = NULL;
+    struct signaling_connection_context conn_ctx;
 
-    HIP_IFEL(!(appinfo = (const struct signaling_param_app_context *) hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_APPINFO)),
-            -1, "No application info parameter found in the message (should be there..).\n");
-
-    HIP_DEBUG("Received update bex with following appinfo.\n");
-    signaling_param_application_context_print(appinfo);
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
+             -1, "Could not init connection context from UPDATE \n");
 
     if(signaling_get_update_type(ctx->input_msg) == SIGNALING_FIRST_BEX_UPDATE) {
         HIP_DEBUG("Received FIRST BEX Update... \n");
         HIP_IFEL(signaling_trigger_bex_update(ctx->input_msg),
                 -1, "failed to trigger second bex update. \n");
-        HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo),
+        HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");
     } else if (signaling_get_update_type(ctx->input_msg) == SIGNALING_SECOND_BEX_UPDATE) {
         HIP_DEBUG("Received SECOND BEX Update... \n");
         update_sent = 0;
-        HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, appinfo),
+        HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");
     }
 

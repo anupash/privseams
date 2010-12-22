@@ -59,8 +59,8 @@ int signaling_hipfw_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_h
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(signaling_build_param_application_context(msg, new_ctx),
-             -1, "build param application context failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, new_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
+             -1, "build connection context failed \n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Send request to HIPD to establish a new connection with following connection context: \n");
@@ -98,8 +98,10 @@ int signaling_hipfw_send_connection_context(const hip_hit_t *hits, const hip_hit
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, hits, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(signaling_build_param_application_context(msg, ctx),
-             -1, "build param application context failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, ctx,
+                                      HIP_PARAM_SIGNALING_CONNECTION_CONTEXT,
+                                      sizeof(struct signaling_connection_context)),
+             -1, "build application context failed \n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Sent connection context to HIPD for use in R2: \n");
@@ -126,7 +128,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     HIP_IFEL(signaling_cdb_handle_add_request(msg),
              -1, "Could not add connection to cdb \n");
 
-    HIP_DEBUG("Added entry to scdb \n");
+    HIP_DEBUG("Got confirmation about connection from HIPD and added it to scdb: \n");
     signaling_cdb_print();
 out_err:
     return err;
@@ -150,17 +152,20 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
     int err                                         = 0;
     struct signaling_connection_context *new_ctx    = NULL;
     const struct hip_tlv_common *param              = NULL;
-    const hip_hit_t *hits                                 = NULL;
-    const hip_hit_t *hitr                                 = NULL;
+    const hip_hit_t *hits                           = NULL;
+    const hip_hit_t *hitr                           = NULL;
     uint16_t src_port , dst_port;
 
     /* Get HITs and Ports from the message */
     signaling_get_hits_from_msg(msg, &hits, &hitr);
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO)),
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
              -1, "Could not get application context parameter from connection request \n");
-    dst_port = ntohs(((const struct signaling_param_app_context *) param)->src_port);
-    src_port = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
+    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+    dst_port = ((const struct signaling_connection_context *) (param + 1))->src_port;
+    src_port = ((const struct signaling_connection_context *) (param + 1))->dest_port;
 
+    HIP_DEBUG("Received connection context request for following context: \n");
+    signaling_connection_context_print((const struct signaling_connection_context *) (param + 1));
 
     /* a) check if we want to allow the connection */
         // TODO: DO this here
