@@ -10,7 +10,9 @@
 
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
+#include "lib/core/builder.h"
 #include "signaling_prot_common.h"
+#include "signaling_common_builder.h"
 
 static const char *signaling_connection_status_name(int status) {
     switch (status) {
@@ -179,3 +181,63 @@ out_err:
     return err;
 }
 
+/**
+ * Initializes the given connection context by stripping all
+ * connection context information found in the message.
+ * Values that are not given in the  message are initialized to default.
+ *
+ * @param ctx a pointer to the connection context that should be initialized
+ * @param msg a msg that contains connection context information
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_init_connection_context_from_msg(struct signaling_connection_context *ctx,
+                                               hip_common_t *msg) {
+    int err                     = 0;
+    const hip_tlv_common_t *param     = NULL;
+
+    HIP_IFEL(!ctx,
+             -1, "Cannot initialize NULL-context\n");
+
+    HIP_IFEL(signaling_init_connection_context(ctx),
+             -1, "Failed to init connection context\n");
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
+        ctx->src_port   = ntohs(((const struct signaling_param_app_context *) param)->src_port);
+        ctx->dest_port  = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
+
+        HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param,
+                                                     &ctx->app_ctx),
+                 -1, "Could not init application context from app ctx parameter \n");
+
+    }
+
+    param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
+    if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
+        HIP_IFEL(signaling_build_user_context((const struct signaling_param_user_context *) param,
+                                              &ctx->user_ctx),
+                 -1, "Could not init user context from user ctx parameter \n");
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * Copies a complete connection context structure from src to dst.
+ *
+ * @param dst   the destination struct
+ * @param src   the source struct
+ *
+ * @return negative value on error, 0 on success
+ */
+int signaling_copy_connection_context(struct signaling_connection_context *dst,
+                                      const struct signaling_connection_context *src) {
+    if (!dst || !src) {
+        HIP_ERROR("Cannot copy from/to NULL struct \n");
+        return -1;
+    }
+    memcpy(dst, src, sizeof(struct signaling_connection_context));
+    return 0;
+}
