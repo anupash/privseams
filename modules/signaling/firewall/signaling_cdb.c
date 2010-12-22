@@ -342,8 +342,8 @@ static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
     struct signaling_connection_context *ctx;
 
     HIP_DEBUG("\t----- SCDB ELEMENT START ------\n");
-    HIP_DEBUG_HIT("\tLocal Hit", &entry->local_hit);
-    HIP_DEBUG_HIT("\tRemote Hit", &entry->remote_hit);
+    HIP_DEBUG_HIT("\tLocal Hit:\t", &entry->local_hit);
+    HIP_DEBUG_HIT("\tRemote Hit:\t", &entry->remote_hit);
 
     HIP_DEBUG("\tApplication contexts:\n");
 
@@ -351,14 +351,7 @@ static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
     while(listentry != NULL) {
         if(listentry->data != NULL) {
             ctx = (struct signaling_connection_context *) listentry->data;
-            HIP_DEBUG("\t  ->  appname (%d): %s\n",
-                ctx->app_ctx.pid,
-                ctx->app_ctx.application_dn);
-            HIP_DEBUG("\t  ->  local port: %d, remote port: %d\n",
-                ctx->src_port,
-                ctx->dest_port);
-        } else {
-            HIP_DEBUG("\t  ->  <no port info available>\n");
+            signaling_connection_context_print(ctx);
         }
         listentry = listentry->next;
     }
