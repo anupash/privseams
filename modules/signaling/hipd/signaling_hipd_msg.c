@@ -260,13 +260,38 @@ out_err:
 }
 
 /*
+ * Process user context information in an I2 packet.
+ */
+static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int err = 0;
+    struct signaling_user_context usr_ctx;
+
+    HIP_IFEL(signaling_init_user_context(&usr_ctx), -1, "Could not init user context\n");
+    HIP_IFEL(signaling_build_user_context(hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO), &usr_ctx),
+             -1, "Could not build user context from user context parameter\n");
+    signaling_user_context_print(&usr_ctx, "", 1);
+
+out_err:
+    return err;
+}
+
+/*
+ * Process user context information in an R2 packet.
+ */
+static int signaling_handle_r2_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    return signaling_handle_r2_user_context(packet_type, ha_state, ctx);
+}
+
+/*
  * Handles an incomding I2 packet.
  */
 int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
     int err     = 0;
 
     HIP_IFEL(packet_type != HIP_I2, -1, "Not an I2 Packet\n")
-
+    signaling_handle_i2_user_context(packet_type, ha_state, ctx);
     signaling_handle_i2_app_context(packet_type, ha_state, ctx);
 
 out_err:
@@ -280,7 +305,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     int err     = 0;
 
     HIP_IFEL(packet_type != HIP_R2, -1, "Not an R2 Packet\n")
-
+    signaling_handle_r2_user_context(packet_type, ha_state, ctx);
     signaling_handle_r2_app_context(packet_type, ha_state, ctx);
 
 out_err:
