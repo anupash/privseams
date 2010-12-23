@@ -546,11 +546,19 @@ int hip_fw_init_esp_relay(void)
 {
     int err = 0;
 
-    esp_relay      = 1;
-    /* The below are required for ESP relay and might not be active */
-    filter_traffic = 1;
-    firewall_init_filter_traffic();
-    hip_fw_init_esp_prot_conntrack();
+    esp_relay = 1;
+
+    /* Required for ESP relay and might not be active */
+    if (!filter_traffic) {
+        filter_traffic = 1;
+        /* Still accept HIP traffic as if the -A flag had been given
+         * instead of -F */
+        accept_hip_esp_traffic_by_default = 1;
+        restore_accept_hip_esp_traffic = 1;
+
+        firewall_init_filter_traffic();
+        hip_fw_init_esp_prot_conntrack();
+    }
 
     return err;
 }
