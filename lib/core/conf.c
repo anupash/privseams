@@ -903,7 +903,7 @@ static int hip_conf_handle_server(hip_common_t *msg,
         }
 
         seconds = strtoul(opt[optc - 1], &tail_ptr, 10);
-        HIP_IFEL(*tail_ptr == '\0' && seconds > 0 && seconds <= 15384774, -1,
+        HIP_IFEL(*tail_ptr != '\0' || seconds <= 0 || seconds > 15384774, -1,
                  "Invalid lifetime value \"%s\" given.\n"       \
                  "Please give a lifetime value between 1 and "  \
                  "15384774 seconds.\n", opt[optc - 1]);
