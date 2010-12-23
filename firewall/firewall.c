@@ -208,31 +208,6 @@ static void print_usage(void)
 /*----------------INIT FUNCTIONS------------------*/
 
 /**
- * Initialize ESP relay extensions
- *
- * @return zero on success, non-zero on error
- *
- */
-int hip_fw_init_esp_relay(void)
-{
-    int err = 0;
-
-    esp_relay      = 1;
-    filter_traffic = 1;
-
-    return err;
-}
-
-/**
- * uninitialize ESP relay extensions
- *
- */
-void hip_fw_uninit_esp_relay(void)
-{
-    esp_relay = 0;
-}
-
-/**
  * Initialize packet capture rules for userspace IPsec
  *
  * @return zero on success and non-zero on failure
@@ -463,38 +438,13 @@ static int hip_fw_init_system_based_opp_mode(void)
     return err;
 }
 
-/**
- * Initialize all basic and extended packet capture rules
- *
- * @return zero on success and non-zero on failure
+
+/*
+ * Initialize rules for filtering traffic
  *
  */
-static int firewall_init_extensions(void)
+static void firewall_init_filter_traffic(void)
 {
-    int err = 0;
-
-    // TARGET (-j) QUEUE will transfer matching packets to userspace
-    // these packets will be handled using libipq
-
-    // this has to be set up first in order to be the default behavior
-    if (!accept_normal_traffic_by_default) {
-        // make DROP the default behavior of all chains
-        // TODO don't drop LSIs -> else IPv4 apps won't work
-        // -> also messaging between HIPd and firewall is blocked here
-        system_print("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP"); /* @todo: ! LSI PREFIX */
-        system_print("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP"); /* @todo: ! LSI PREFIX */
-        system_print("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP"); /* @todo: ! LSI PREFIX */
-
-        // but still allow loopback and HITs as destination
-        system_print("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
-        system_print("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
-        system_print("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
-        system_print("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
-        system_print("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
-        system_print("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
-    }
-
-    if (filter_traffic) {
         // this will allow the firewall to handle HIP traffic
         // HIP protocol
         system_print("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
@@ -528,6 +478,41 @@ static int firewall_init_extensions(void)
         system_print("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
         system_print("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
         system_print("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
+}
+
+/**
+ * Initialize all basic and extended packet capture rules
+ *
+ * @return zero on success and non-zero on failure
+ *
+ */
+static int firewall_init_extensions(void)
+{
+    int err = 0;
+
+    // TARGET (-j) QUEUE will transfer matching packets to userspace
+    // these packets will be handled using libipq
+
+    // this has to be set up first in order to be the default behavior
+    if (!accept_normal_traffic_by_default) {
+        // make DROP the default behavior of all chains
+        // TODO don't drop LSIs -> else IPv4 apps won't work
+        // -> also messaging between HIPd and firewall is blocked here
+        system_print("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP"); /* @todo: ! LSI PREFIX */
+        system_print("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP"); /* @todo: ! LSI PREFIX */
+        system_print("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP"); /* @todo: ! LSI PREFIX */
+
+        // but still allow loopback and HITs as destination
+        system_print("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
+        system_print("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
+        system_print("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
+        system_print("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
+        system_print("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
+        system_print("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
+    }
+
+    if (filter_traffic) {
+        firewall_init_filter_traffic();
     }
 
     HIP_IFEL(hip_fw_init_system_based_opp_mode(), -1, "failed to load extension\n");
@@ -549,6 +534,34 @@ static int firewall_init_extensions(void)
 
 out_err:
     return err;
+}
+
+/**
+ * Initialize ESP relay extensions
+ *
+ * @return zero on success, non-zero on error
+ *
+ */
+int hip_fw_init_esp_relay(void)
+{
+    int err = 0;
+
+    esp_relay      = 1;
+    /* The below are required for ESP relay and might not be active */
+    filter_traffic = 1;
+    firewall_init_filter_traffic();
+    hip_fw_init_esp_prot_conntrack();
+
+    return err;
+}
+
+/**
+ * uninitialize ESP relay extensions
+ *
+ */
+void hip_fw_uninit_esp_relay(void)
+{
+    esp_relay = 0;
 }
 
 /**
