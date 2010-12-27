@@ -70,7 +70,7 @@ case "$1" in
         ;;
 
   *)
-        log_action_msg "Usage: /etc/init.d/hipd {start|stop|reload|force-reload|restart}"
+        log_action_msg "Usage: /etc/init.d/hipd {start|stop|reload|force-reload|restart|status}"
         exit 1
 esac
 

@@ -67,7 +67,7 @@ case "$1" in
         ;;
 
   *)
-        log_action_msg "Usage: /etc/init.d/dnsproxy {start|stop|reload|force-reload|restart}"
+        log_action_msg "Usage: /etc/init.d/dnsproxy {start|stop|restart|status}"
         exit 1
 esac
 

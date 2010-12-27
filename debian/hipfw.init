@@ -91,7 +91,7 @@ case "$1" in
         ;;
 
   *)
-        log_action_msg "Usage: /etc/init.d/hipfw {start|stop}"
+        log_action_msg "Usage: /etc/init.d/hipfw {start|stop|restart|status}"
         exit 1
 esac
 
