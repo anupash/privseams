@@ -445,6 +445,7 @@ static int hip_fw_init_system_based_opp_mode(void)
  */
 static void firewall_init_filter_traffic(void)
 {
+    if (filter_traffic) {
         // this will allow the firewall to handle HIP traffic
         // HIP protocol
         system_print("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
@@ -478,6 +479,7 @@ static void firewall_init_filter_traffic(void)
         system_print("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
         system_print("ip6tables -I HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
         system_print("ip6tables -I HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
+    }
 }
 
 /**
@@ -511,10 +513,8 @@ static int firewall_init_extensions(void)
         system_print("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
     }
 
-    if (filter_traffic) {
-        firewall_init_filter_traffic();
-    }
 
+    firewall_init_filter_traffic();
     HIP_IFEL(hip_fw_init_system_based_opp_mode(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
