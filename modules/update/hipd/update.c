@@ -36,6 +36,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <openssl/rand.h>
 
