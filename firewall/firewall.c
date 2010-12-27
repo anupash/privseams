@@ -119,7 +119,6 @@
 
 /* firewall-specific state */
 static int foreground                        = 1;
-static int statefulFiltering                 = 1;
 static int accept_normal_traffic_by_default  = HIP_FW_ACCEPT_NORMAL_TRAFFIC_BY_DEFAULT;
 static int accept_hip_esp_traffic_by_default = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 static int log_level                         = LOGDEBUG_NONE;
@@ -1076,7 +1075,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
         verdict = accept_hip_esp_traffic_by_default;
     }
 
-    if (statefulFiltering && verdict && !conntracked) {
+    if (verdict && !conntracked) {
         verdict = conntrack(ip6_src, ip6_dst, buf, ctx);
     }
 
@@ -2294,18 +2293,6 @@ out_err:
 }
 
 /*----------------EXTERNALLY USED FUNCTIONS-------------------*/
-
-/**
- * Turn on stateful filtering. Currently done in rule_management.
- *
- * @todo delete rule needs checking for state options
- * @todo This doesn't make sense. However, setting 0 prevents connection
- *       tracking.
- */
-void set_stateful_filtering(void)
-{
-    statefulFiltering = 1;
-}
 
 /**
  * Query the default HIT from the hipd. The HIT will be cached
