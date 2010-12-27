@@ -804,8 +804,8 @@ static enum update_types hip_classify_update_type(const struct hip_esp_info *esp
                                                   const struct hip_seq *seq,
                                                   const struct hip_ack *ack,
                                                   const struct hip_echo_request *echo_request,
-                                                  const struct hip_echo_response *echo_response) {
-
+                                                  const struct hip_echo_response *echo_response)
+{
     if (esp_info && locator && seq)
         return FIRST_PACKET;
     else if (esp_info && seq && ack && echo_request)
@@ -1016,7 +1016,8 @@ out_err:
   */
 static int hip_check_update_freshness(UNUSED const uint8_t packet_type,
                                       UNUSED const uint32_t ha_state,
-                                      struct hip_packet_context *ctx) {
+                                      struct hip_packet_context *ctx)
+{
     struct update_state *localstate = NULL;
     const struct hip_seq *seq       = NULL;
     const struct hip_ack *ack       = NULL;
@@ -1211,8 +1212,9 @@ out_err:
 }
 
 static int hip_update_change_state(UNUSED const uint8_t packet_type,
-                                    UNUSED const uint32_t ha_state,
-                                    struct hip_packet_context *ctx) {
+                                   UNUSED const uint32_t ha_state,
+                                   struct hip_packet_context *ctx)
+{
     int err = 0;
 
     /* RFC 5201 Section 4.4.2, Table 5: According to the state processes
