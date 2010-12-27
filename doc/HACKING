@@ -936,11 +936,11 @@ doxygen warning, try "@c" which results in courier too, but doesn't confer
 semantics like "@a". However, be careful not to add your own special commands
 by accidentally typing something like @entry.
 
-Function comment blocks must be placed to the c-source file.  Doxygen
-comment blocks have a tendency to bloat the code. Generally, if
-possible, place the doxygen comment in the header file instead of the
-c-file.  This applies to all Doxygen comments, not just function
-comments.
+Function comment blocks must be placed to the c-source file. Generally, if
+possible, place the doxygen comment in the c-source file instead of the
+c-header file. However, if no implementation exists in the c-source file, you
+must document the code in the c-header file (e.g., inline function in c-header
+file). This applies to all Doxygen comments, not just function comments.
 
 To ensure correct cross-referencing, global variables should be prepended
 by :: and functions appended by () in comment blocks, like this:
