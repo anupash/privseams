@@ -30,7 +30,7 @@ EXTRA_DIST =  .vimrc debian doc patches version.h
 EXTRA_DIST += packaging process_modules.py tools/maintainer
 EXTRA_DIST += $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh))
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh *.xml))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/firewall/,*.cfg))
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
