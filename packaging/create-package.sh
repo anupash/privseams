@@ -83,7 +83,6 @@ REPO_BASE=/var/www/packages/html
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
-    DISTRO=debian
     DISTRO_RELEASE=$(lsb_release -c | cut -f2)
     ARCH=$(dpkg --print-architecture)
     BUILDDIR=$PWD/debbuild
@@ -96,7 +95,6 @@ if test -r /etc/debian_version; then
     INDEXING_CMD=mkindex_deb
     PACKAGING_CMD=build_deb
 elif test -r /etc/redhat-release; then
-    DISTRO=redhat
     DISTRO_RELEASE=$(lsb_release -r | cut -f2)
     ARCH=$(uname -i)
     BUILDDIR=$PWD/rpmbuild
