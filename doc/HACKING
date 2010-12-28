@@ -1162,7 +1162,6 @@ Updating Ubuntu Server Repository
 
 You must do the following things first at the server:
 * apt-get install <required packages>
-* apt-get install pax
 
 Install the following tool to the host where building packages:
 * apt-get install dpkg-scanpackages

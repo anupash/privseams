@@ -40,7 +40,7 @@ syncrepo()
     rsync -uvr $PKG_DIR/hipl-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
 }
 
-build_package()
+build_rpm()
 {
     rm -rf $BUILDDIR
     for SUBDIR in $SUBBUILDDIRS; do
@@ -57,18 +57,12 @@ build_package()
     make dist > /dev/null
     cp hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
 
-    $PACKAGING_CMD
-}
-
-build_rpm()
-{
     rpmbuild --target $ARCH -ba $SPECFILE
 }
 
 build_deb()
 {
-    # http://www.deepnet.cx/debbuild/
-    $SRCDIR_PACKAGING/debbuild --buildroot $BUILDDIR -ba $SPECFILE
+    dpkg-buildpackage -us -uc -I.bzr -j32
 }
 
 ############### Main program #####################
@@ -84,11 +78,8 @@ REPO_BASE=/var/www/packages/html
 if test -r /etc/debian_version; then
     DISTRO_RELEASE=$(lsb_release -c | cut -f2)
     ARCH=$(dpkg --print-architecture)
-    BUILDDIR=$PWD/debbuild
-    SUBBUILDDIRS="BUILD SOURCES SPECS DEBS SDEBS"
-    PKG_DIR=$BUILDDIR/DEBS/$ARCH
+    PKG_DIR=..
     PKG_SERVER_DIR=$REPO_BASE/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
-    SPECFILE_TEMPLATE=$SRCDIR_PACKAGING/hipl-deb.spec
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
     INDEXING_CMD=mkindex_deb
@@ -125,11 +116,11 @@ case $1 in
     syncrepo)
         syncrepo ;;
     deb)
-        PACKAGING_CMD=build_deb build_package ;;
+        build_deb ;;
     rpm)
-        PACKAGING_CMD=build_rpm build_package ;;
+        build_rpm ;;
     bin)
-        build_package ;;
+        $PACKAGING_CMD ;;
     *)
         die "usage: $0 <syncrepo|syncrepo_deb|syncrepo_rpm|deb|rpm|bin>"
 esac

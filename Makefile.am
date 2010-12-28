@@ -278,7 +278,7 @@ doc/HOWTO.txt: doc/HOWTO.xml
 
 CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
-	rm -rf doc/doxy debbuild rpmbuild
+	rm -rf doc/doxy rpmbuild
 
 bin deb rpm syncrepo syncrepo_deb syncrepo_rpm: $(srcdir)/version.h
 	@srcdir@/packaging/create-package.sh $@

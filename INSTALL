@@ -37,8 +37,7 @@ On Ubuntu, the following command(s) should solve the dependencies:
   aptitude install automake autoconf libtool gcc libssl-dev \
     iptables-dev libconfig8-dev libnet-ip-perl libnet-dns-perl
 
-  Optionally: aptitude install pax miredo bzr xmlto doxygen check fakeroot
-                         dpkg-dev
+  Optionally: aptitude install miredo bzr xmlto doxygen check fakeroot dpkg-dev
 
 On Fedora, the following command(s) should solve the dependencies:
 
