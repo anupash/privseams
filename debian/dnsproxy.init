@@ -54,7 +54,7 @@ case "$1" in
     stop)
         stop_dnsproxy
         ;;
-    restart)
+    restart|force-reload)
         stop_dnsproxy
         sleep 3
         start_dnsproxy
@@ -63,7 +63,7 @@ case "$1" in
         status_of_proc -p $PID_FILE /usr/sbin/hipdnsproxy hipdnsproxy && exit 0 || exit $?
         ;;
     *)
-        log_action_msg "Usage: /etc/init.d/dnsproxy {start|stop|restart|status}"
+        log_action_msg "Usage: /etc/init.d/dnsproxy {start|stop|restart|force-reload|status}"
         exit 1
 esac
 
