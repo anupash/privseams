@@ -1204,8 +1204,6 @@ static int hip_handle_update_packet(UNUSED const uint8_t packet_type,
         }
     }
 
-    hip_empty_oppipdb_old();
-
 out_err:
     ctx->error = err;
     return err;
