@@ -16,7 +16,8 @@ modules_signaling_lib_libhipsignaling_common_la_SOURCES = modules/signaling/lib/
 modules_signaling_firewall_libhipsignaling_hipfw_la_SOURCES = modules/signaling/firewall/signaling_hipfw.c \
                                                               modules/signaling/firewall/signaling_cdb.c \
                                                               modules/signaling/firewall/signaling_hipfw_oslayer.c \
-                                                              modules/signaling/firewall/signaling_hipfw_user_msg.c
+                                                              modules/signaling/firewall/signaling_hipfw_user_msg.c \
+                                                              modules/signaling/firewall/signaling_policy_engine.c
 
 hipd_hipd_LDADD += modules/signaling/hipd/libhipsignaling.la \
                    modules/signaling/lib/libhipsignaling_common.la \
