@@ -43,16 +43,17 @@ syncrepo()
 build_rpm()
 {
     rm -rf $BUILDDIR
-    for SUBDIR in $SUBBUILDDIRS; do
+    for SUBDIR in BUILD SOURCES SPECS RPMS SRPMS; do
         mkdir -p $BUILDDIR/$SUBDIR
     done
 
+    SPECFILE=$BUILDDIR/SPECS/hipl.spec
     RELEASE=$(grep VCS_REVISION $SRCDIR/version.h | cut -d\" -f2)
 
     echo "Version: $VERSION"  > $SPECFILE
     echo "Release: $RELEASE" >> $SPECFILE
     echo "%define _topdir $BUILDDIR" >> $SPECFILE
-    cat $SPECFILE_TEMPLATE   >> $SPECFILE
+    cat $SRCDIR_PACKAGING/hipl-rpm.spec >> $SPECFILE
 
     make dist > /dev/null
     cp hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
@@ -88,10 +89,8 @@ elif test -r /etc/redhat-release; then
     DISTRO_RELEASE=$(lsb_release -r | cut -f2)
     ARCH=$(uname -i)
     BUILDDIR=$PWD/rpmbuild
-    SUBBUILDDIRS="BUILD SOURCES SPECS RPMS SRPMS"
     PKG_DIR=$BUILDDIR/RPMS/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
-    SPECFILE_TEMPLATE=$SRCDIR_PACKAGING/hipl-rpm.spec
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
     INDEXING_CMD=mkindex_rpm
@@ -105,7 +104,6 @@ else
 fi
 
 PKG_INDEX=$PKG_DIR/$PKG_INDEX_NAME
-SPECFILE=$BUILDDIR/SPECS/hipl.spec
 
 # Determine action
 case $1 in
