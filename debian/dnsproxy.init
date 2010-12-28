@@ -26,18 +26,17 @@ if test -f /etc/default/hipdnsproxy; then
 fi
 
 start_dnsproxy() {
-        log_daemon_msg "Starting DNS proxy for HIP" "hipdnsproxy"
-        if start-stop-daemon --start --quiet --exec $EXEC -- $DNSPROXY_OPTS; then
-            log_end_msg 0
-        else
-            log_end_msg 1
-        fi
+    log_daemon_msg "Starting DNS proxy for HIP" "hipdnsproxy"
+    if start-stop-daemon --start --quiet --exec $EXEC -- $DNSPROXY_OPTS; then
+        log_end_msg 0
+    else
+        log_end_msg 1
+    fi
 }
 
 stop_dnsproxy() {
     log_daemon_msg "Stopping DNS proxy for HIP" "hipdnsproxy"
-    if test -r $PID_FILE && ps `head -1 $PID_FILE` >/dev/null # see bug id 812
-    then
+    if test -r $PID_FILE && ps $(head -1 $PID_FILE) > /dev/null; then # see bug id 812
         if start-stop-daemon --stop --pidfile $PID_FILE --quiet -- $DNSPROXY_OPTS; then
             log_end_msg 0
         else
@@ -49,24 +48,21 @@ stop_dnsproxy() {
 }
 
 case "$1" in
-  start)
+    start)
         start_dnsproxy
         ;;
-  stop)
+    stop)
         stop_dnsproxy
         ;;
-
-  restart)
+    restart)
         stop_dnsproxy
         sleep 3
         start_dnsproxy
         ;;
-
-  status)
+    status)
         status_of_proc -p $PID_FILE /usr/sbin/hipdnsproxy hipdnsproxy && exit 0 || exit $?
         ;;
-
-  *)
+    *)
         log_action_msg "Usage: /etc/init.d/dnsproxy {start|stop|restart|status}"
         exit 1
 esac
