@@ -1,30 +1,8 @@
-This package was debianized by Rene Hummen <rene.hummen@cs.rwth-aachen.de> on
-Wed, 10 Feb 2010 16:27:50 +0100.
+HIPL is copyright (c) 2010 Aalto University and RWTH Aachen University.
 
-# THIS FILE NEEDS TO BE TAKEN CARE OF
+HIPL is free software licensed under the GNU General Public license, version 2.
+On Debian systems, the complete text of the GNU General Public License
+version 2 can be found in "/usr/share/common-licenses/GPL-2".
 
-It was downloaded from <url://example.com>
-
-Upstream Author(s):
-
-    <put author's name and email here>
-    <likewise for another author>
-
-Copyright:
-
-    <Copyright (C) YYYY Name OfAuthor>
-    <likewise for another author>
-
-License:
-
-    <Put the license of the package here indented by 4 spaces>
-
-The Debian packaging is:
-
-    Copyright (C) 2010 hummen <rene.hummen@cs.rwth-aachen.de>
-
-and is licensed under the GPL version 3,
-see `/usr/share/common-licenses/GPL-3'.
-
-# Please also look if there are files or directories which have a
-# different copyright/license attached and list them here.
+For a detailed list of licensing conditions of individual parts of HIPL,
+see the file COPYING at the top level of the HIPL sources.
