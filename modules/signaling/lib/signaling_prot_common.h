@@ -207,21 +207,23 @@ struct signaling_connection_context {
  * ------------------------------------------------------------------------------------ */
 
 /* Printing of parameters and internal structures */
-void signaling_param_user_context_print(const struct signaling_param_user_context *param_user_ctx);
-void signaling_param_application_context_print(const struct signaling_param_app_context *param_app_ctx);
+void signaling_param_user_context_print(const struct signaling_param_user_context * const param_user_ctx);
+void signaling_param_application_context_print(const struct signaling_param_app_context * const param_app_ctx);
 
-void signaling_application_context_print(const struct signaling_application_context *app_ctx, const char *prefix, int header);
-void signaling_user_context_print(const struct signaling_user_context *user_ctx, const char *prefix, int header);
-void signaling_connection_context_print(const struct signaling_connection_context *ctx, const char *prefix);
+void signaling_application_context_print(const struct signaling_application_context * const app_ctx,
+                                         const char *prefix, const int header);
+void signaling_user_context_print(const struct signaling_user_context * const user_ctx,
+                                  const char * prefix, const int header);
+void signaling_connection_context_print(const struct signaling_connection_context * const ctx, const char * prefix);
 
 /* Initalization of internal structures */
-int signaling_init_user_context(struct signaling_user_context *user_ctx);
-int signaling_init_application_context(struct signaling_application_context *app_ctx);
-int signaling_init_connection_context(struct signaling_connection_context *ctx);
-int signaling_init_connection_context_from_msg(struct signaling_connection_context *ctx,
-                                               hip_common_t *msg);
-int signaling_copy_connection_context(struct signaling_connection_context *dst,
-                                      const struct signaling_connection_context *src);
+int signaling_init_user_context(struct signaling_user_context * const user_ctx);
+int signaling_init_application_context(struct signaling_application_context * const app_ctx);
+int signaling_init_connection_context(struct signaling_connection_context * const ctx);
+int signaling_init_connection_context_from_msg(struct signaling_connection_context * const ctx,
+                                               const hip_common_t * const msg);
+int signaling_copy_connection_context(struct signaling_connection_context * const dst,
+                                      const struct signaling_connection_context * const src);
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 

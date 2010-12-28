@@ -47,7 +47,7 @@ static void signaling_param_print_field(const char *prefix, const uint16_t lengt
  *
  * @param app the application context parameter to print
  */
-void signaling_param_application_context_print(const struct signaling_param_app_context *param_app_ctx) {
+void signaling_param_application_context_print(const struct signaling_param_app_context * const param_app_ctx) {
     const uint8_t *p_content;
 
     if(param_app_ctx == NULL) {
@@ -74,7 +74,8 @@ void signaling_param_application_context_print(const struct signaling_param_app_
  * @param prefix    prefix is prepended to all output of this function
  * @param header    0 for no header, 1 to print a header
  */
-void signaling_application_context_print(const struct signaling_application_context *app_ctx, const char *prefix, int header) {
+void signaling_application_context_print(const struct signaling_application_context * const app_ctx,
+                                         const char *prefix, const int header) {
     if(app_ctx == NULL) {
         HIP_DEBUG("%sNo application ctx parameter given.\n", prefix);
         return;
@@ -97,7 +98,8 @@ void signaling_application_context_print(const struct signaling_application_cont
  * @param prefix    prefix is prepended to all output of this function
  * @param header    0 for no header, 1 to print a header
  */
-void signaling_user_context_print(const struct signaling_user_context *user_ctx, const char *prefix, int header) {
+void signaling_user_context_print(const struct signaling_user_context * const user_ctx,
+                                  const char *prefix, const int header) {
     if(user_ctx == NULL) {
         HIP_DEBUG("%sNo user ctx parameter given.\n", prefix);
         return;
@@ -117,7 +119,7 @@ void signaling_user_context_print(const struct signaling_user_context *user_ctx,
  * @param ctx       the connection context to print
  * @param prefix    prefix is prepended to all output of this function
  */
-void signaling_connection_context_print(const struct signaling_connection_context *ctx, const char *prefix) {
+void signaling_connection_context_print(const struct signaling_connection_context * const ctx, const char *prefix) {
     if(ctx == NULL) {
         HIP_DEBUG("%sNo ctx parameter given.\n", prefix);
         return;
@@ -138,7 +140,7 @@ void signaling_connection_context_print(const struct signaling_connection_contex
  *
  * @param app the user context parameter to print
  */
-void signaling_param_user_context_print(const struct signaling_param_user_context *userinfo) {
+void signaling_param_user_context_print(const struct signaling_param_user_context * const userinfo) {
     const uint8_t *p_content;
 
     if(userinfo == NULL) {
@@ -161,7 +163,7 @@ void signaling_param_user_context_print(const struct signaling_param_user_contex
  *
  * @return negative value on error, 0 on success
  */
-int signaling_init_application_context(struct signaling_application_context *app_ctx) {
+int signaling_init_application_context(struct signaling_application_context * const app_ctx) {
     int err = 0;
 
     HIP_IFEL(!app_ctx, -1, "Application context has to be allocated before initialization\n");
@@ -185,7 +187,7 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_init_user_context(struct signaling_user_context *user_ctx) {
+int signaling_init_user_context(struct signaling_user_context * const user_ctx) {
     int err = 0;
 
     HIP_IFEL(!user_ctx, -1, "User context has to be allocated before initialization\n");
@@ -205,7 +207,7 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_init_connection_context(struct signaling_connection_context *ctx) {
+int signaling_init_connection_context(struct signaling_connection_context * const ctx) {
     int err = 0;
 
     HIP_IFEL(!ctx, -1, "Connection context has to be allocated before initialization\n");
@@ -232,8 +234,8 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_init_connection_context_from_msg(struct signaling_connection_context *ctx,
-                                               hip_common_t *msg) {
+int signaling_init_connection_context_from_msg(struct signaling_connection_context * const ctx,
+                                               const hip_common_t * const msg) {
     int err                     = 0;
     const hip_tlv_common_t *param     = NULL;
 
@@ -273,8 +275,8 @@ out_err:
  *
  * @return negative value on error, 0 on success
  */
-int signaling_copy_connection_context(struct signaling_connection_context *dst,
-                                      const struct signaling_connection_context *src) {
+int signaling_copy_connection_context(struct signaling_connection_context * const dst,
+                                      const struct signaling_connection_context * const src) {
     if (!dst || !src) {
         HIP_ERROR("Cannot copy from/to NULL struct \n");
         return -1;
