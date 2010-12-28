@@ -1246,8 +1246,8 @@ out_err:
  * @todo: SPI parameters did not work earlier and could not be used for creating
  * connection state for updates - check if the situation is still the same
  *
- * @param common the R2 packet
- * @param tuple the connection tracking tuple corresponding to the R2 packet
+ * @param common the UPDATE packet
+ * @param tuple the connection tracking tuple corresponding to the UPDATE packet
  * @param ctx packet context
  *
  * @return one if packet was processed successfully or zero otherwise
