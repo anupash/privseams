@@ -29,11 +29,23 @@
 #ifndef HIP_HIPFW_SIGNALING_POLICY_ENGINE_H
 #define HIP_HIPFW_SIGNALING_POLICY_ENGINE_H
 
+#include <libconfig.h>
 
 #include "firewall/firewall_defines.h"
 #include "lib/core/protodefs.h"
 
 #include "modules/signaling/lib/signaling_prot_common.h"
+
+struct policy_tuple {
+    hip_hit_t host_id;
+    char user_id[SIGNALING_USER_ID_MAX_LEN];
+    char app_id[SIGNALING_APP_DN_MAX_LEN];
+    int target;
+};
+
+int signaling_policy_engine_init(config_t *cfg);
+
+void signaling_policy_engine_print_rule_set(const char *prefix);
 
 int signaling_policy_check(const struct tuple *tuple, const struct signaling_connection_context *conn_ctx);
 

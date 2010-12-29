@@ -151,6 +151,9 @@ int signaling_hipfw_init(const char *policy_file) {
         HIP_DEBUG("Connection tracking for signaling firewall is set to: %d\n", do_conntrack);
     }
 
+    /* Start the policy engine */
+    HIP_IFEL(signaling_policy_engine_init(cfg),
+             -1, "Failed to start policy engine \n");
 out_err:
     return err;
 }
