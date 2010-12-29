@@ -56,6 +56,7 @@ static void print_policy_tuple(const struct policy_tuple *tuple, const char *pre
     HIP_DEBUG("%s  HOST:\t %s\n", prefix, dst);
     HIP_DEBUG("%s  USER:\t %s\n", prefix, strlen(tuple->user_id) == 0 ? "ANY USER" : tuple->user_id);
     HIP_DEBUG("%s  APP:\t %s\n",  prefix, strlen(tuple->app_id)  == 0 ? "ANY APPLICATION" : tuple->app_id);
+    HIP_DEBUG("%s  TRGT:\t %s\n",  prefix, tuple->target  == 1 ? "ALLOW" : "DROP");
     HIP_DEBUG("%s--------------------------------------------\n", prefix);
 }
 
@@ -65,6 +66,7 @@ static int read_tuple(config_setting_t *tuple) {
     const char *host_id         = NULL;
     const char *user_id         = NULL;
     const char *app_id          = NULL;
+    long target                 = 0;
 
     HIP_IFEL(!tuple, -1, "Got NULL-tuple\n");
     HIP_IFEL(!(entry = malloc(sizeof(struct policy_tuple))),
@@ -88,6 +90,11 @@ static int read_tuple(config_setting_t *tuple) {
     } else {
         strncpy(entry->app_id, user_id, SIGNALING_APP_DN_MAX_LEN - 1);
         entry->app_id[SIGNALING_APP_DN_MAX_LEN - 1] = '\0';
+    }
+    if(CONFIG_FALSE == config_setting_lookup_int(tuple, "target", &target)) {
+        entry->target = 0;
+    } else {
+        entry->target = target;
     }
 
     policy_tuples = append_to_slist(policy_tuples, entry);
@@ -157,7 +164,7 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
     print_policy_tuple(tuple_rule, "\t");
 
     /* If we made it so far, the connection tuple matches the rule tuple */
-    return 1;
+    return tuple_rule->target;
 }
 
 /**
