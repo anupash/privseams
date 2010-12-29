@@ -37,6 +37,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/common.h"
 #include "lib/core/ife.h"
+#include "lib/core/prefix.h"
 #include "lib/core/straddr.h"
 
 #include "firewall/hslist.h"
@@ -46,6 +47,17 @@
 const char *path_rules     = {"rules"};
 
 SList *policy_tuples = NULL;
+
+static void print_policy_tuple(const struct policy_tuple *tuple, const char *prefix) {
+    char dst[INET6_ADDRSTRLEN];
+    hip_in6_ntop(&tuple->host_id, dst);
+
+    HIP_DEBUG("%s-------------- POLICY TUPLE ----------------\n", prefix);
+    HIP_DEBUG("%s  HOST:\t %s\n", prefix, dst);
+    HIP_DEBUG("%s  USER:\t %s\n", prefix, strlen(tuple->user_id) == 0 ? "ANY USER" : tuple->user_id);
+    HIP_DEBUG("%s  APP:\t %s\n",  prefix, strlen(tuple->app_id)  == 0 ? "ANY APPLICATION" : tuple->app_id);
+    HIP_DEBUG("%s--------------------------------------------\n", prefix);
+}
 
 static int read_tuple(config_setting_t *tuple) {
     int err                     = 0;
@@ -117,6 +129,37 @@ int signaling_policy_engine_init(config_t *cfg) {
     return err;
 }
 
+static int match_tuples(const struct policy_tuple *tuple_conn, const struct policy_tuple *tuple_rule) {
+    /* Check if hits match or if rule allows any hit */
+    if(ipv6_addr_cmp(&tuple_rule->host_id, &in6addr_any) != 0) {
+        if(ipv6_addr_cmp(&tuple_rule->host_id, &tuple_conn->host_id) != 0) {
+            return 0;
+        }
+    }
+
+    /* Check if user ids match or if rule allows any user */
+    if(strlen(tuple_rule->user_id) != 0) {
+        if(strcmp(tuple_rule->user_id, tuple_conn->user_id) != 0) {
+            return 0;
+        }
+    }
+
+    /* Check if app ids match or if rule allows any app */
+    if(strlen(tuple_rule->app_id) != 0) {
+        if(strcmp(tuple_rule->app_id, tuple_conn->app_id) != 0) {
+            return 0;
+        }
+    }
+
+    HIP_DEBUG("Connection tuple:\n");
+    print_policy_tuple(tuple_conn, "\t");
+    HIP_DEBUG("is matched by rule tuple:\n");
+    print_policy_tuple(tuple_rule, "\t");
+
+    /* If we made it so far, the connection tuple matches the rule tuple */
+    return 1;
+}
+
 /**
  * Check with the given policy, whether a connection with given tuple and connection context should be allowed.
  *
@@ -126,19 +169,26 @@ int signaling_policy_engine_init(config_t *cfg) {
  * @return          1 if the connection complies with the policy, 0 otherwise
  */
 int signaling_policy_check(UNUSED const struct tuple *tuple, UNUSED const struct signaling_connection_context *conn_ctx) {
-    HIP_DEBUG("WARNING: Call to unimplemented function \n");
-    return 1;
-}
+    int match = 0;
+    struct policy_tuple tuple_for_conn;
+    SList *listentry;
 
-static void print_policy_tuple(struct policy_tuple *tuple, const char *prefix) {
-    char dst[INET6_ADDRSTRLEN];
-    hip_in6_ntop(&tuple->host_id, dst);
+    /* Construct the tuple for the current context */
+    memcpy(&tuple_for_conn.app_id, conn_ctx->app_ctx.application_dn, SIGNALING_APP_DN_MAX_LEN);
+    memcpy(&tuple_for_conn.user_id, conn_ctx->user_ctx.username, SIGNALING_USER_ID_MAX_LEN);
+    memcpy(&tuple_for_conn.host_id, &tuple->hip_tuple->data->src_hit, sizeof(struct in6_addr));
 
-    HIP_DEBUG("%s-------------- POLICY TUPLE ----------------\n", prefix);
-    HIP_DEBUG("%s  HOST:\t %s\n", prefix, dst);
-    HIP_DEBUG("%s  USER:\t %s\n", prefix, strlen(tuple->user_id) == 0 ? "ANY USER" : tuple->user_id);
-    HIP_DEBUG("%s  APP:\t %s\n",  prefix, strlen(tuple->app_id)  == 0 ? "ANY APPLICATION" : tuple->app_id);
-    HIP_DEBUG("%s--------------------------------------------\n", prefix);
+    /* Find a match */
+    listentry = policy_tuples;
+    while (listentry) {
+        match = match_tuples(&tuple_for_conn, (struct policy_tuple *) listentry->data);
+        if (match) {
+            break;
+        }
+        listentry = listentry->next;
+    }
+
+    return match;
 }
 
 void signaling_policy_engine_print_rule_set(const char *prefix) {

@@ -1238,8 +1238,11 @@ static int handle_i2(struct hip_common *const common,
     }
 
     /* handle signaling_appinfo parameter */
-    HIP_IFEL(signaling_hipfw_handle_i2(common, tuple, ctx),
-             0, "Failed check for application in I2.\n");
+    err = signaling_hipfw_handle_i2(common, tuple, ctx);
+    if (err == 0) {
+        return err;
+    }
+
 
     /* check if the I2 contains ESP protection anchor and store state */
     if (esp_prot_conntrack_I2_anchor(common, tuple)) {

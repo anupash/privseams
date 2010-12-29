@@ -214,11 +214,13 @@ int signaling_hipfw_handle_i2(const struct hip_common *common, struct tuple *tup
     HIP_IFEL(signaling_init_connection_context_from_msg(conn_ctx, common),
              -1, "Could not init new connection context from message\n");
 
-    HIP_DEBUG("Deciding on following connection context: \n");
-    signaling_connection_context_print(conn_ctx, "");
-
     /* Get a verdict on given hosts, user and application from the policy engine */
     verdict = signaling_policy_check(tuple, conn_ctx);
+    if(!verdict) {
+        HIP_DEBUG("Connection has been rejected according to the firewall's policy\n");
+    } else {
+        HIP_DEBUG("Connection has been accepted according to the firewall's policy\n");
+    }
 
     /* If we allow the connection, save it in conntracking table */
     if (verdict) {
