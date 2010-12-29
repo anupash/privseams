@@ -522,7 +522,6 @@ static int firewall_init_extensions(void)
     HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
-    HIP_IFEL(hip_fw_init_signaling_hipfw(), -1, "failed to load extension\n");
 
 #ifdef CONFIG_HIP_MIDAUTH
     midauth_init();
@@ -534,6 +533,7 @@ static int firewall_init_extensions(void)
     hip_firewall_init_raw_sockets();
 
     /* Initialize signaling module */
+    HIP_IFEL(hip_fw_init_signaling_hipfw(), -1, "failed to load extension\n");
     HIP_IFEL(signaling_hipfw_oslayer_init(), -1, "failed to init signaling extensions\n");
 
 out_err:
