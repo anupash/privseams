@@ -36,6 +36,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "config.h"
+
+#ifdef HAVE_LIBCONFIG
+#include <libconfig.h>
+#else
+typedef struct {
+    // this is just defined to satisfy dependencies
+} config_t;
+#endif
+
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
 
@@ -52,6 +62,68 @@
  * If set to one, the firewall saves the connection contexts it sees to the conntracking table,
  * for later use. */
 int do_conntrack = 0;
+
+/**
+ * releases the configuration file and frees the configuration memory
+ *
+ * @param cfg   parsed configuration parameters
+ * @return      always 0
+ */
+static int signaling_hipfw_release_config(config_t *cfg)
+{
+    int err = 0;
+
+    if (cfg) {
+#ifdef HAVE_LIBCONFIG
+        config_destroy(cfg);
+        free(cfg);
+#endif
+    }
+
+    return err;
+}
+
+/**
+ * Parses the firewall config-file and stores the parameters in memory
+ *
+ * @return  configuration parameters
+ */
+static config_t *signaling_hipfw_read_config(const char *config_file)
+{
+    config_t *cfg = NULL;
+
+/* WORKAROUND in order to not introduce a new dependency for HIPL
+ *
+ * FIXME this should be removed once we go tiny */
+#ifdef HAVE_LIBCONFIG
+    int err       = 0;
+
+    HIP_IFEL(!(cfg = malloc(sizeof(config_t))), -1,
+             "Unable to allocate memory!\n");
+
+    // init context and read file
+    config_init(cfg);
+    HIP_DEBUG("reading config file: %s\n", config_file);
+    HIP_IFEL(!config_read_file(cfg, config_file),
+             -1, "unable to read config file at %s \n", config_file);
+
+out_err:
+    if (err) {
+        signaling_hipfw_release_config(cfg);
+        cfg = NULL;
+    }
+#endif
+
+    return cfg;
+}
+
+int signaling_hipfw_init(const char *policy_file) {
+    HIP_DEBUG("Starting firewall with policy: %s \n", policy_file);
+
+    signaling_hipfw_read_config(policy_file);
+
+    return 1;
+}
 
 /*
  * Add all information about application and user to the connection tracking table.
