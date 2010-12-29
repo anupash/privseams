@@ -63,6 +63,10 @@ typedef struct {
  * for later use. */
 int do_conntrack = 0;
 
+/* Paths to configuration elements */
+const char *default_policy_file = {"/etc/hip/signaling_firewall_policy.cfg"};
+
+
 /**
  * releases the configuration file and frees the configuration memory
  *
@@ -117,12 +121,28 @@ out_err:
     return cfg;
 }
 
+/**
+ * Initialize the middlebox firewall application.
+ * This sets up the firewall's policies.
+ *
+ * @param policy_file   the configuration file (in libconfig format) that specifies
+ *                      the firewall's policy. If NULL, a default policy is used.
+ *
+ * @return              0 on success, negative on error
+ */
 int signaling_hipfw_init(const char *policy_file) {
+    int err         = 0;
+    config_t *cfg   = NULL;
+
+    if (!policy_file) {
+        policy_file = default_policy_file;
+    }
     HIP_DEBUG("Starting firewall with policy: %s \n", policy_file);
+    HIP_IFEL(!(cfg = signaling_hipfw_read_config(policy_file)),
+             -1, "Could not parse policy file.\n");
 
-    signaling_hipfw_read_config(policy_file);
-
-    return 1;
+out_err:
+    return err;
 }
 
 /*
