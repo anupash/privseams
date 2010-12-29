@@ -64,8 +64,9 @@ typedef struct {
 int do_conntrack = 0;
 
 /* Paths to configuration elements */
-const char *default_policy_file = {"/etc/hip/signaling_firewall_policy.cfg"};
+const char *default_policy_file      = {"/etc/hip/signaling_firewall_policy.cfg"};
 
+const char *path_do_conntracking     = {"do_conntracking"};
 
 /**
  * releases the configuration file and frees the configuration memory
@@ -107,12 +108,12 @@ static config_t *signaling_hipfw_read_config(const char *config_file)
 
     // init context and read file
     config_init(cfg);
-    HIP_DEBUG("reading config file: %s\n", config_file);
     HIP_IFEL(!config_read_file(cfg, config_file),
              -1, "unable to read config file at %s \n", config_file);
 
 out_err:
     if (err) {
+        HIP_DEBUG("Config read error: %s \n", config_error_text(cfg));
         signaling_hipfw_release_config(cfg);
         cfg = NULL;
     }
@@ -137,9 +138,18 @@ int signaling_hipfw_init(const char *policy_file) {
     if (!policy_file) {
         policy_file = default_policy_file;
     }
+
     HIP_DEBUG("Starting firewall with policy: %s \n", policy_file);
     HIP_IFEL(!(cfg = signaling_hipfw_read_config(policy_file)),
              -1, "Could not parse policy file.\n");
+
+    /* Set do_conntracking */
+    if (CONFIG_FALSE == config_lookup_bool(cfg, path_do_conntracking, &do_conntrack)) {
+        HIP_DEBUG("Could not parse setting 'do_conntrack' from configuration, using default value: %d \n", do_conntrack);
+        HIP_DEBUG("Config parse error: %s \n", config_error_text(cfg));
+    } else {
+        HIP_DEBUG("Connection tracking for signaling firewall is set to: %d\n", do_conntrack);
+    }
 
 out_err:
     return err;
@@ -152,6 +162,7 @@ out_err:
  * @return 0 on success, negative on error
  */
 int signaling_hipfw_uninit(void) {
+    HIP_DEBUG("Uninit signaling firewall \n");
     return 0;
 }
 
