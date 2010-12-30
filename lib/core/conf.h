@@ -75,7 +75,7 @@
 #define ACTION_NEW 3
 
 int hip_handle_exec_app(int fork, int type, int argc, const char *argv[]);
-int hip_do_hipconf(int argc, char *argv[], int send_only);
+int hip_do_hipconf(int argc, const char *argv[], int send_only);
 
 /* Externally used handler functions */
 /* TODO: Is there a clean way to get rid of this external use? */

@@ -44,7 +44,7 @@
  *               the action and type.
  * @return       zero on success, or negative error value on error.
  */
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
     int err = 0;
 

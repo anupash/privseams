@@ -525,7 +525,7 @@ static int hip_conf_print_info_ha(const struct hip_hadb_user_info_state *ha)
  *           ret = ACTION_NEWACT;
  *       ...
  */
-static int hip_conf_get_action(char *argv[])
+static int hip_conf_get_action(const char *argv[])
 {
     int ret = -1;
 
@@ -655,7 +655,7 @@ static int hip_conf_check_action_argc(int action)
  * @param  argv arguments
  * @return the numeric type id correspoding to the symbolic text
  */
-static int hip_conf_get_type(char *text, char *argv[])
+static int hip_conf_get_type(const char *text, const char *argv[])
 {
     int ret = -1;
 
@@ -2476,7 +2476,8 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
     FILE *hip_config = NULL;
 
     List list;
-    char *c, line[128], *hip_arg, str[128], *args[64];
+    char *c, line[128], *hip_arg, str[128];
+    const char *args[64];
     char *comment, *nl;
     char fname[sizeof(HIPL_CONFIG_FILE) << 1];
 
@@ -2632,7 +2633,7 @@ int (*action_handler[])(hip_common_t *,
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-int hip_do_hipconf(int argc, char *argv[], int send_only)
+int hip_do_hipconf(int argc, const char *argv[], int send_only)
 {
     int err           = 0, type_arg = 0;
     long int action   = 0, type = 0;
@@ -2672,9 +2673,9 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      * array at index "type" with given commandline arguments.
      * The functions build a hip_common message. */
     if (argc == 3) {
-        err = (*action_handler[type])(msg, action, (const char **) &argv[2], argc - 3, send_only);
+        err = (*action_handler[type])(msg, action, &argv[2], argc - 3, send_only);
     } else {
-        err = (*action_handler[type])(msg, action, (const char **) &argv[3], argc - 3, send_only);
+        err = (*action_handler[type])(msg, action, &argv[3], argc - 3, send_only);
     }
 
     if (err != 0) {
