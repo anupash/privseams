@@ -162,11 +162,11 @@ compile
 # internal autoconf tests, bootstrap the dist tarball, build out-of-tree, etc
 run_program "make -j distcheck"
 
-# test the distribution
-run_program "make -j bin"
-
 # run unit tests (needs to run after HIPL has been configured)
 run_program "make -j check"
+
+# test binary distribution packages
+run_program "make -j bin"
 
 # PISA configuration
 compile --enable-firewall --disable-rvs --disable-opportunistic --disable-profiling --enable-debug --enable-midauth --disable-performance
