@@ -15,6 +15,7 @@
 #include "lib/core/ife.h"
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
+#include "lib/core/crypto.h"
 #include "lib/tool/pk.h"
 
 #include <openssl/x509.h>
@@ -47,81 +48,6 @@ out_err:
         return NULL;
     }
     return cert;
-}
-
-/**
- * Sign using ECDSA
- *
- * @param digest a digest of the message to sign
- * @param ecdsa the ECDSA key
- * @param signature write the signature here
- *
- * @return 0 on success and non-zero on error
- */
-static int impl_ecdsa_sign(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature)
-{
-    ECDSA_SIG *ecdsa_sig = NULL;
-    int err              = 0;
-    int sig_size;
-
-    HIP_IFEL(!EC_KEY_check_key(ecdsa),
-             -1, "Check of signing key failed. \n");
-
-    sig_size = ECDSA_size(ecdsa);
-    memset(signature, 0, sig_size);
-
-    ecdsa_sig = ECDSA_do_sign(digest, HIP_AH_SHA_LEN, ecdsa);
-    HIP_IFEL(!ecdsa_sig, 1, "ECDSA_do_sign failed\n");
-
-    /* build signature from ECDSA_SIG struct */
-    bn2bin_safe(ecdsa_sig->r, signature, sig_size/2);
-    bn2bin_safe(ecdsa_sig->s, signature + (sig_size/2), sig_size/2);
-
-out_err:
-    ECDSA_SIG_free(ecdsa_sig);
-    return err;
-}
-
-/**
- * load host EC private keys from disk
- * @param filename the file name base of the host EC key
- * @param ec Pointer to the EC key structure.
- *
- * Loads EC private key from file filename. EC struct
- * will be allocated dynamically and it is the responsibility
- * of the caller to free it with EC_free.
- *
- * @return On success *ec contains the EC structure. On failure
- * *EC contins NULL if the key could not be loaded (not in PEM format
- * or file not found, etc).
- */
-static int load_ecdsa_private_key(const char *filename, EC_KEY **ecdsa)
-{
-    FILE *fp = NULL;
-    int err  = 0;
-
-    *ecdsa = NULL;
-
-    HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
-
-    fp   = fopen(filename, "rb");
-    HIP_IFEL(!fp, -ENOMEM,
-             "Could not open private key file %s for reading\n", filename);
-
-    *ecdsa = PEM_read_ECPrivateKey(fp, NULL, NULL, NULL);
-    if ((err = fclose(fp))) {
-        HIP_ERROR("Error closing file\n");
-        goto out_err;
-    }
-
-    HIP_IFEL(!EC_KEY_check_key(*ecdsa),
-             -1, "Error during loading of ecdsa key.\n");
-
-    HIP_IFEL(!*ecdsa, -EINVAL, "Read failed for %s\n", filename);
-
-out_err:
-
-    return err;
 }
 
 /*
