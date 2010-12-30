@@ -74,7 +74,8 @@
 #define ACTION_ADD 1
 #define ACTION_NEW 3
 
-int hip_handle_exec_app(int fork, int type, int argc, const char *argv[]);
+int hip_handle_exec_app(int fork, int type, int argc,
+                        const char * const argv[]);
 int hip_do_hipconf(int argc, const char *argv[], int send_only);
 
 /* Externally used handler functions */

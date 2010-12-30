@@ -2167,7 +2167,8 @@ out_err:
  *      EXEC_LOADLIB_NONE
  *
  */
-int hip_handle_exec_app(int do_fork, int type, int argc, const char *argv[])
+int hip_handle_exec_app(int do_fork, int type, int argc,
+                        const char * const argv[])
 {
     int ret = 0;
     unsigned i;
