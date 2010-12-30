@@ -230,8 +230,8 @@ int lmod_add_state_item(struct modular_state *state,
 
     hip_ll_add_last(state->item_list, state_item);
 
-    state->item_names = (char **)realloc(state->item_names,
-                             (state->num_items + 1) * sizeof(char *));
+    state->item_names = realloc(state->item_names,
+                                (state->num_items + 1) * sizeof(char *));
 
     state->item_names[state->num_items++] = strdup(item_name);
 
@@ -354,8 +354,8 @@ int lmod_disable_module(const char *module_name)
         return -1;
     }
 
-    disabled_modules = (char **)realloc(disabled_modules,
-                                        (num_disabled_modules + 1) * sizeof(char *));
+    disabled_modules = realloc(disabled_modules,
+                               (num_disabled_modules + 1) * sizeof(char *));
 
     disabled_modules[num_disabled_modules++] = strdup(module_name);
 
