@@ -86,7 +86,7 @@ build_rpm()
 
 build_deb()
 {
-    dpkg-buildpackage -us -uc -I.bzr -j32
+    dpkg-buildpackage -us -uc -I.bzr -j32 -tc
 }
 
 ############### Main program #####################
