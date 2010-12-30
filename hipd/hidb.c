@@ -532,7 +532,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
     const struct hip_tlv_common *param           = NULL;
     const struct hip_eid_endpoint *eid_endpoint  = NULL;
     struct in6_addr in6_lsi;
-    hip_lsi_t lsi;
+    hip_lsi_t lsi = {0};
 
     HIP_DEBUG("/* --------- */ \n");
     HIP_DEBUG_IN6ADDR("input->hits = ", &input->hits);
