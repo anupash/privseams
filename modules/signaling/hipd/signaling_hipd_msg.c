@@ -327,8 +327,6 @@ int signaling_handle_bex_update(UNUSED const uint8_t packet_type, UNUSED const u
         HIP_DEBUG("Received FIRST BEX Update... \n");
         HIP_IFEL(signaling_trigger_bex_update(ctx->input_msg),
                 -1, "failed to trigger second bex update. \n");
-        HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
-                -1, "failed to notify fw to update scdb\n");
     } else if (signaling_get_update_type(ctx->input_msg) == SIGNALING_SECOND_BEX_UPDATE) {
         HIP_DEBUG("Received SECOND BEX Update... \n");
         update_sent = 0;
