@@ -6,3 +6,6 @@ version 2 can be found in "/usr/share/common-licenses/GPL-2".
 
 For a detailed list of licensing conditions of individual parts of HIPL,
 see the file COPYING at the top level of the HIPL sources.
+
+This product includes software developed by the OpenSSL Project
+for use in the OpenSSL Toolkit (http://www.openssl.org/).
