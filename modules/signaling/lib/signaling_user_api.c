@@ -25,6 +25,34 @@
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
 
+UNUSED static int X509_to_DER(X509 *cert, unsigned char **buf) {
+    int len;
+    int err = 0;
+
+    HIP_IFEL(!cert, -1, "Cannot encode NULL-certificate\n");
+    len = i2d_X509(cert, buf);
+    HIP_IFEL(len < 0, -1, "Could not DER-encode the given certificate.\n");
+
+out_err:
+    if (err) {
+        return err;
+    }
+    return len;
+}
+
+UNUSED static int DER_to_X509(unsigned char *buf, int len, X509 **cert) {
+    int err = 0;
+    unsigned char *p;
+
+    HIP_IFEL(!buf, -1, "Cannot decode from NULL-buffer\n");
+    HIP_IFEL(len <= 0, -1, "Cannot decode certificate of length <= 0\n");
+    p = buf;
+    *cert = d2i_X509(NULL, (const unsigned char **)  &p, len);
+
+out_err:
+    return err;
+}
+
 static X509 *load_x509_certificate(const char *file) {
     int err     = 0;
     FILE *fp    = NULL;
