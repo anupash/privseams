@@ -85,7 +85,7 @@ int fall, retr;
 /**
  * List containing all maintenance functions.
  */
-static hip_ll_t *hip_maintenance_functions;
+static struct hip_ll *hip_maintenance_functions;
 
 /**
  * an iterator to handle packet retransmission for a given host association
@@ -245,8 +245,8 @@ int hip_unregister_maint_function(int (*maint_function)(void))
  */
 static int hip_run_maint_functions(void)
 {
-    int            err  = 0;
-    hip_ll_node_t *iter = NULL;
+    int                 err  = 0;
+    struct hip_ll_node *iter = NULL;
 
     if (hip_maintenance_functions) {
         while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {

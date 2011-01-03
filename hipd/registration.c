@@ -65,7 +65,7 @@ hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
 /** A linked list for storing pending requests on the client side.
  *  @note This assumes a single threaded model. We are not using mutexes here.
  */
-hip_ll_t pending_requests;
+struct hip_ll pending_requests;
 
 /**
  * initialize services
@@ -103,7 +103,7 @@ void hip_uninit_services(void)
 static int hip_del_pending_request_by_expiration(void)
 {
     int idx = 0;
-    hip_ll_node_t *iter            = NULL;
+    struct hip_ll_node    *iter    = NULL;
     hip_pending_request_t *request = NULL;
     time_t now                     = time(NULL);
 
@@ -244,7 +244,7 @@ out_err:
 int hip_del_pending_request(hip_ha_t *entry)
 {
     int idx = 0;
-    hip_ll_node_t *iter = NULL;
+    struct hip_ll_node *iter = NULL;
 
     /* Iterate through the linked list. The iterator itself can't be used
      * for deleting nodes from the list. Therefore, we just get the index of
@@ -277,7 +277,7 @@ int hip_del_pending_request(hip_ha_t *entry)
 int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 {
     int idx = 0;
-    hip_ll_node_t *iter            = NULL;
+    struct hip_ll_node    *iter    = NULL;
     hip_pending_request_t *request = NULL;
 
     /* See hip_del_pending_request() for a comment. */
@@ -309,7 +309,7 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 int hip_replace_pending_requests(hip_ha_t *entry_old,
                                  hip_ha_t *entry_new)
 {
-    hip_ll_node_t *iter = 0;
+    struct hip_ll_node *iter = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((hip_pending_request_t *) (iter->ptr))->entry == entry_old) {
@@ -342,8 +342,8 @@ static int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requ
         return -1;
     }
 
-    hip_ll_node_t *iter = 0;
-    int request_count   = 0;
+    struct hip_ll_node *iter = 0;
+    int request_count        = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((hip_pending_request_t *) (iter->ptr))->entry  == entry) {
@@ -368,8 +368,8 @@ static int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requ
  */
 static int hip_get_pending_request_count(hip_ha_t *entry)
 {
-    hip_ll_node_t *iter = 0;
-    int request_count   = 0;
+    struct hip_ll_node *iter = 0;
+    int request_count        = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((hip_pending_request_t *) (iter->ptr))->entry == entry) {

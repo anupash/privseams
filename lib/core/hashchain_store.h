@@ -54,13 +54,13 @@
 typedef struct hchain_shelf {
     /* number of different hchain lengths currently used for this
      * (hash-function, hash_length)-combination */
-    unsigned    num_hchain_lengths;
+    unsigned      num_hchain_lengths;
     /* the different hchain lengths */
-    unsigned    hchain_lengths[MAX_NUM_HCHAIN_LENGTH];
+    unsigned      hchain_lengths[MAX_NUM_HCHAIN_LENGTH];
     /* number of hierarchies in this shelf */
-    unsigned    num_hierarchies[MAX_NUM_HCHAIN_LENGTH];
+    unsigned      num_hierarchies[MAX_NUM_HCHAIN_LENGTH];
     /* hchains with the respective hchain length */
-    hip_ll_t    hchains[MAX_NUM_HCHAIN_LENGTH][MAX_NUM_HIERARCHIES];
+    struct hip_ll hchains[MAX_NUM_HCHAIN_LENGTH][MAX_NUM_HIERARCHIES];
 } hchain_shelf_t;
 
 typedef struct hchain_store {

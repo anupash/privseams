@@ -60,7 +60,7 @@ struct socketfd {
 /**
  * List for storage of used sockets
  */
-static hip_ll_t *hip_sockets;
+static struct hip_ll *hip_sockets;
 
 static int hip_handle_raw_input_v6(struct hip_packet_context *ctx)
 {
@@ -228,8 +228,8 @@ out_err:
 
 int hip_get_highest_descriptor(void)
 {
-    int highest_descriptor = 0;
-    hip_ll_node_t *iter    = NULL;
+    int highest_descriptor   = 0;
+    struct hip_ll_node *iter = NULL;
 
     if (hip_sockets) {
         while ((iter = hip_ll_iterate(hip_sockets, iter))) {
@@ -246,7 +246,7 @@ int hip_get_highest_descriptor(void)
 
 void hip_prepare_fd_set(fd_set *read_fdset)
 {
-    hip_ll_node_t *iter = NULL;
+    struct hip_ll_node *iter = NULL;
 
     FD_ZERO(read_fdset);
 
@@ -273,7 +273,7 @@ void hip_prepare_fd_set(fd_set *read_fdset)
  */
 void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
 {
-    hip_ll_node_t *iter = NULL;
+    struct hip_ll_node *iter = NULL;
     int socketfd;
 
     if (hip_sockets) {

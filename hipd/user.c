@@ -98,7 +98,7 @@ struct usr_msg_handle {
     int    (*func_ptr)(hip_common_t *msg, struct sockaddr_in6 *src);
 };
 
-static hip_ll_t *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
+static struct hip_ll *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
 
 /**
  * Register a function for handling of the specified combination from packet
@@ -155,7 +155,7 @@ int hip_user_run_handles(const uint8_t msg_type,
                          hip_common_t *msg,
                          struct sockaddr_in6 *src)
 {
-    hip_ll_node_t *iter = NULL;
+    struct hip_ll_node *iter = NULL;
 
     if (!hip_user_msg_handles[msg_type] ||
         !hip_ll_get_size(hip_user_msg_handles[msg_type])) {
