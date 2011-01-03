@@ -713,7 +713,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
     sec_general = hip_cert_read_conf_section("hip_x509v3", conf);
     sec_name    = hip_cert_read_conf_section("hip_x509v3_name", conf);
     sec_ext     = hip_cert_read_conf_section("hip_x509v3_extensions", conf);
-    hip_cert_free_conf(conf);
+    NCONF_free(conf);
 
     /* Get the general information */
     HIP_IFEL((sec_general == NULL), -1,

@@ -84,7 +84,6 @@ int hip_cert_x509v3_request_verification(unsigned char *, int);
 /** Utilitary functions */
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *, CONF *);
 CONF *hip_cert_open_conf(void);
-void hip_cert_free_conf(CONF *);
 int hip_cert_regex(char *, char *, int *, int *);
 
 #endif /* HIP_LIB_CORE_CERTTOOLS_H */

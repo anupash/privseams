@@ -793,7 +793,7 @@ out_err:
  * @return STACK_OF(CONF_VALUE) pointer if ok and NULL if error or unsuccesfull.
  *
  * @note Remember to open the conf first with hip_cert_open_conf and after done close
- *       the conf with the hip_cert_free_conf
+ *       the conf with NCONF_free().
  *
  */
 STACK_OF(CONF_VALUE) *hip_cert_read_conf_section(const char *section_name,
@@ -841,18 +841,6 @@ out_err:
         return NULL;
     }
     return conf;
-}
-
-/**
- * Function that frees the memory of a allocated configuration.
- *
- * @param conf pointer to the to be freed configuration
- *
- * @return void
- */
-void hip_cert_free_conf(CONF *conf)
-{
-    NCONF_free(conf);
 }
 
 /**
