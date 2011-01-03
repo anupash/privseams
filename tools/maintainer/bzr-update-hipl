@@ -2,8 +2,6 @@
 
 set -e
 
-PATH=/p/bin:$PATH
-
 TMP_DIR=~/.bzr-hipl-cache
 BRANCH=trunk
 WWW_DIR=/var/www/infrahip/html/hipl
