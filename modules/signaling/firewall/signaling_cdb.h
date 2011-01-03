@@ -47,9 +47,6 @@ typedef struct signaling_cdb_entry {
     SList * connection_contexts;
 } signaling_cdb_entry_t;
 
-
-int signaling_cdb_handle_add_request(hip_common_t * msg);
-
 int signaling_cdb_init(void);
 int signaling_cdb_uninit(void);
 
@@ -64,6 +61,8 @@ int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t 
                                         signaling_cdb_entry_t * entry,
                                         struct signaling_connection_context **ret);
 
+struct signaling_connection_context *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
+                                                               const struct in6_addr *dst_hit);
 
 void signaling_cdb_print(void);
 

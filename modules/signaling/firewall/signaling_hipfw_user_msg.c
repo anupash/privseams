@@ -25,6 +25,37 @@
 #include "signaling_cdb.h"
 
 /**
+ * HIPFW resends a CONNECTION_REQUEST message to the HIPD, when it has been notified about
+ * the successful establishment of another connection by the HIPD and HIPFW has waiting connections.
+ *
+ * @return          0 on sucess, negative on error
+ */
+static int signaling_hipfw_resend_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+                                              const struct signaling_connection_context *conn_ctx) {
+    int err                 = 0;
+    struct hip_common *msg  = NULL;
+
+    HIP_IFE(!(msg = hip_msg_alloc()), -1);
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_REQUEST_CONNECTION, 0),
+             -1, "build hdr failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
+             -1, "build param contents (dst hit) failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
+             -1, "build param contents (src hit) failed\n");
+    HIP_IFEL(hip_build_param_contents(msg, conn_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
+             -1, "build connection context failed \n");
+    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
+
+    HIP_DEBUG("Resend request to HIPD to establish a new connection with following connection context: \n");
+    signaling_connection_context_print(conn_ctx, "");
+
+out_err:
+    free(msg);
+    return err;
+}
+
+
+/**
  * HIPFW sends a CONNECTION_REQUEST message to the HIPD, when it has detected a new connection attempt.
  * In this case we are the initiator.
  *
@@ -124,13 +155,44 @@ out_err:
  */
 int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     int err = 0;
+    const struct hip_tlv_common *param          = NULL;
+    const hip_hit_t *src_hit                    = NULL;
+    const hip_hit_t *dst_hit                    = NULL;
+    struct signaling_connection_context *ctx    = NULL;
 
-    HIP_IFEL(signaling_cdb_handle_add_request(msg),
-             -1, "Could not add connection to cdb \n");
+    HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRM_CONNECTION,
+            -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
 
-    HIP_DEBUG("Got confirmation about connection from HIPD and added it to scdb: \n");
+    HIP_DEBUG("Got confirmation about a previously requested connection from HIPD\n");
+    HIP_DUMP_MSG(msg);
+
+    signaling_get_hits_from_msg(msg, &src_hit, &dst_hit);
+
+    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
+            -1, "No HIP_PARAM_SIGNALING_CONNECTION_CONTEXT parameter in message.\n");
+    HIP_IFEL(!(ctx = malloc(sizeof(struct signaling_connection_context))),
+             -1, "Could not allocate memory for new application context\n");
+    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
+    HIP_IFEL(signaling_copy_connection_context(ctx, (const struct signaling_connection_context*) (param + 1)),
+             -1, "Failed to init app context \n");
+
+    signaling_cdb_add(src_hit, dst_hit, ctx);
     signaling_cdb_print();
+
+    /* If this confirmation notified about an established connection,
+     * determine if there is at least one waiting connection we can now establish */
+    if (ctx->connection_status == SIGNALING_CONN_ALLOWED) {
+        ctx = signaling_cdb_get_waiting(src_hit, dst_hit);
+        if (ctx) {
+            HIP_DEBUG("Have connection on wait. Triggering again... \n");
+            signaling_hipfw_resend_connection_request(src_hit, dst_hit, ctx);
+        }
+    }
+
 out_err:
+    if (err) {
+        free(ctx);
+    }
     return err;
 }
 

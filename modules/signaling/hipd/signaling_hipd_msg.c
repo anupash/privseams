@@ -253,6 +253,7 @@ static int signaling_handle_r2_app_context(UNUSED const uint8_t packet_type, UNU
 
     HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
              -1, "Could not init connection context from R2 \n");
+    conn_ctx.connection_status = SIGNALING_CONN_ALLOWED;
     signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
 
 out_err:
@@ -330,6 +331,7 @@ int signaling_handle_bex_update(UNUSED const uint8_t packet_type, UNUSED const u
     } else if (signaling_get_update_type(ctx->input_msg) == SIGNALING_SECOND_BEX_UPDATE) {
         HIP_DEBUG("Received SECOND BEX Update... \n");
         update_sent = 0;
+        conn_ctx.connection_status = SIGNALING_CONN_ALLOWED;
         HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");
     }

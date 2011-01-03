@@ -229,6 +229,34 @@ out_err:
     return err;
 }
 
+/**
+ * Searches for a connection that has been put on wait.
+ *
+ * @return < 0 for error, 0 for not found, > 0 for found.
+ */
+struct signaling_connection_context *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
+                                                               const struct in6_addr *dst_hit) {
+    int err                                  = 0;
+    struct slist *listitem                   = NULL;
+    signaling_cdb_entry_t *entry             = NULL;
+    struct signaling_connection_context *ctx = NULL;
+
+    HIP_IFEL(!(entry = signaling_cdb_entry_find(src_hit, dst_hit)),
+             -1, "No CDB entry for given HIT Pair\n");
+
+    listitem = entry->connection_contexts;
+    while(listitem) {
+        ctx = (struct signaling_connection_context *) listitem->data;
+        if (ctx->connection_status == SIGNALING_CONN_WAITING) {
+            return ctx;
+        }
+        listitem = listitem->next;
+    }
+
+out_err:
+    return NULL;
+}
+
 
 /**
  * searches the scdb for an entry
@@ -367,49 +395,4 @@ void signaling_cdb_print(void) {
     hip_ht_doall(scdb, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(signaling_cdb_print));
     HIP_DEBUG("------------------ SCDB END   ------------------\n");
 }
-
-/*
- * Processes a message of type 'HIP_MSG_SIGNALING_CDB_ADD_CONN'
- * by adding information about completed BEX or Update to connection tracking db.
- *
- * Comment:
- *      For now, connection tracking is done only on port-basis.
- *      Thus, any application context inside 'msg' is discarded.
- *
- * @return -1 on error
- */
-int signaling_cdb_handle_add_request(hip_common_t * msg) {
-    int err = 0;
-    const struct hip_tlv_common *param          = NULL;
-    const hip_hit_t *src_hit                    = NULL;
-    const hip_hit_t *dst_hit                    = NULL;
-    struct signaling_connection_context *ctx    = NULL;
-
-    HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRM_CONNECTION,
-            -1, "Message has wrong type.\n");
-
-    HIP_DEBUG("Got request to add a connection to a scdb entry.\n");
-    HIP_DUMP_MSG(msg);
-
-    param      = hip_get_param(msg, HIP_PARAM_HIT);
-    src_hit    = hip_get_param_contents_direct(param);
-    param      = hip_get_next_param(msg, param);
-    dst_hit    = hip_get_param_contents_direct(param);
-    HIP_IFEL(!(src_hit && dst_hit),
-            -1, "Source- and/or destinationhit not given.\n");
-
-    HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
-            -1, "No HIP_PARAM_SIGNALING_CONNECTION_CONTEXT parameter in message.\n");
-    HIP_IFEL(!(ctx = malloc(sizeof(struct signaling_connection_context))),
-             -1, "Could not allocate memory for new application context\n");
-    // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-    HIP_IFEL(signaling_copy_connection_context(ctx, (const struct signaling_connection_context*) (param + 1)),
-             -1, "Failed to init app context \n");
-    ctx->connection_status = SIGNALING_CONN_ALLOWED;
-    signaling_cdb_add(src_hit, dst_hit, ctx);
-
-out_err:
-    return err;
-}
-
 

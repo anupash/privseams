@@ -57,6 +57,7 @@
 /* Connection status types */
 #define SIGNALING_CONN_NEW      0
 #define SIGNALING_CONN_PENDING  1
+#define SIGNALING_CONN_WAITING  2
 #define SIGNALING_CONN_BLOCKED  10
 #define SIGNALING_CONN_ALLOWED  11
 

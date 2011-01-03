@@ -104,6 +104,10 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
             HIP_DEBUG("Connection is blocked explicitly. Drop packet.\n");
             verdict = VERDICT_DROP;
             break;
+        case SIGNALING_CONN_WAITING:
+            HIP_DEBUG("Connection is on wait, but will be established later. Drop packet.\n");
+            verdict = VERDICT_DROP;
+            break;
         case SIGNALING_CONN_PENDING:
             HIP_DEBUG("Received packet for pending connection. Drop packet. (Should do some timeout stuff here.)\n");
             verdict = VERDICT_DROP;
