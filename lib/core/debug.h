@@ -301,9 +301,9 @@ enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
 #define HIP_DEBUG_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, lsi)
 #define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in)
 
-enum logtype_t { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
-enum logfmt_t { LOGFMT_SHORT, LOGFMT_LONG };
-enum logdebug_t { LOGDEBUG_ALL, LOGDEBUG_MEDIUM, LOGDEBUG_NONE };
+enum logtype  { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
+enum logfmt   { LOGFMT_SHORT, LOGFMT_LONG };
+enum logdebug { LOGDEBUG_ALL, LOGDEBUG_MEDIUM, LOGDEBUG_NONE };
 
 void hip_set_logtype(int logtype);
 void hip_set_logfmt(int logfmt);
