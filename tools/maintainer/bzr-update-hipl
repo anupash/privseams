@@ -5,7 +5,6 @@ set -e
 TMP_DIR=~/.bzr-hipl-cache
 BRANCH=trunk
 WWW_DIR=/var/www/infrahip/html/hipl
-OUTPUT_FILE=$WWW_DIR/hipl.tar.gz
 
 if test -x  $TMP_DIR; then
     cd $TMP_DIR/hipl-bzr/$BRANCH
