@@ -6,7 +6,6 @@ TMP_DIR=~/.bzr-hipl-cache
 BRANCH=trunk
 WWW_DIR=/var/www/infrahip/html/hipl
 OUTPUT_FILE=$WWW_DIR/hipl.tar.gz
-CHANGE_LOG_FILE=$TMP_DIR/ChangeLog
 
 if test -x  $TMP_DIR; then
     cd $TMP_DIR/hipl-bzr/$BRANCH
@@ -22,9 +21,6 @@ fi
 
 VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 
-# Generate a ChangeLog file
-bzr log > $CHANGE_LOG_FILE
-
 # Make a HIPL tarball
 autoreconf --install
 ./configure --sysconfdir=/etc
@@ -33,13 +29,13 @@ make dist
 # Add ChangeLog file to tarball and rename to "trunk"
 tar xzf hipl-${VERSION}.tar.gz
 mv hipl-${VERSION} trunk
-cp $CHANGE_LOG_FILE trunk/doc
+bzr log > trunk/doc/ChangeLog
 tar czf hipl.tar.gz trunk
 chmod a+r hipl.tar.gz
 
 # Move tarball and ChangeLog to web directory
 mv hipl.tar.gz $WWW_DIR
-mv $CHANGE_LOG_FILE $WWW_DIR
+mv trunk/doc/ChangeLog $WWW_DIR
 
 # Remove temporary files
 rm -rf hipl-${VERSION} trunk
