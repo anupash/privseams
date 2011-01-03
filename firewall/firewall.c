@@ -900,7 +900,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
                       struct hip_fw_context *ctx)
 {
     // complete rule list for hook (== IN / OUT / FORWARD)
-    struct dlist *list  = read_rules(hook);
+    struct dlist *list  = get_rule_list(hook);
     struct rule *rule   = NULL;
     // assume match for current rule
     int match           = 1, print_addr = 0;

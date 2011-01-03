@@ -168,7 +168,7 @@ static void check_and_write_default_config(const char *file)
  * @param hook NF_IP6_LOCAL_IN, NF_IP6_LOCAL_OUT or NF_IP6_LOCAL_FORWARD
  * @return a pointer to the list containing the rules
  */
-static struct dlist *get_rule_list(const int hook)
+struct dlist *get_rule_list(const int hook)
 {
     if (hook == NF_IP6_LOCAL_IN) {
         return input_rules;
@@ -823,20 +823,6 @@ static struct rule *parse_rule(char *string)
 
     //print_rule(rule);
     return rule;
-}
-
-/*-----------PARSING ----------*/
-
-/**
- * a wrapper to get_rule_list()
- *
- * @param hook the input, output or forward hook
- *
- * @return a list containing the rules
- */
-struct dlist *read_rules(const int hook)
-{
-    return (struct dlist *) get_rule_list(hook);
 }
 
 /*----------- RULE MANAGEMENT -----------*/
