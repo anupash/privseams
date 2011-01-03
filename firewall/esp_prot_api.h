@@ -68,7 +68,7 @@ extern double refill_threshold;
 extern double update_threshold;
 
 extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
-extern hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
+extern hash_function hash_functions[NUM_HASH_FUNCTIONS];
 
 int esp_prot_init(void);
 int esp_prot_uninit(void);
@@ -85,7 +85,7 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet,
 int esp_prot_add_hash(unsigned char *esp_packet,
                       int *out_length,
                       hip_sa_entry_t *entry);
-int esp_prot_verify_hchain_element(const hash_function_t hash_function,
+int esp_prot_verify_hchain_element(const hash_function hash_function,
                                    const int hash_length,
                                    unsigned char *active_anchor,
                                    const unsigned char *next_anchor,
@@ -95,7 +95,7 @@ int esp_prot_verify_hchain_element(const hash_function_t hash_function,
                                    const int active_root_length,
                                    const unsigned char *next_root,
                                    const int next_root_length);
-int esp_prot_verify_htree_element(const hash_function_t hash_function,
+int esp_prot_verify_htree_element(const hash_function hash_function,
                                   const int hash_length,
                                   const uint32_t hash_tree_depth,
                                   const unsigned char *active_root,

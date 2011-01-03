@@ -71,7 +71,7 @@ static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore,
     struct hip_common *msg    = NULL;
     int hash_length           = 0, num_hchains = 0;
     esp_prot_tfm_t *transform = NULL;
-    hash_chain_t *hchain      = NULL;
+    struct hash_chain *hchain = NULL;
     hash_tree_t *htree        = NULL;
     unsigned char *anchor     = NULL;
     int err                   = 0;
@@ -148,7 +148,7 @@ static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore,
                 anchor           = htree->root;
                 hash_item_length = htree->num_data_blocks;
             } else {
-                HIP_IFEL(!(hchain = (hash_chain_t *) hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+                HIP_IFEL(!(hchain = (struct hash_chain *) hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
                                                                 [transform->hash_length_id].
                                                                 hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
                          "failed to retrieve hchain\n");
@@ -335,7 +335,7 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
     int i                       = 0;
     struct hip_common *msg      = NULL;
     int hash_length             = 0;
-    hash_chain_t *hchain        = NULL;
+    struct hash_chain *hchain   = NULL;
     hash_tree_t *htree          = NULL;
     hash_tree_t *link_tree      = NULL;
     int secret_length           = 0;
@@ -497,12 +497,12 @@ out_err:
 int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
 {
     int err                = 0;
-    struct hip_common *msg = NULL;
     int hash_length        = 0;
     long i                 = 0;
     unsigned char *anchor  = NULL;
-    hash_chain_t *hchain   = NULL;
-    hash_tree_t *htree     = NULL;
+    struct hip_common *msg    = NULL;
+    struct hash_chain *hchain = NULL;
+    hash_tree_t       *htree  = NULL;
 
     HIP_ASSERT(entry != NULL);
     HIP_ASSERT(entry->direction == HIP_SPI_DIRECTION_OUT);

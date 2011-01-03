@@ -49,40 +49,40 @@
 #endif
 
 /* hash function used for the creation and verification of the hash chain */
-typedef unsigned char * (*hash_function_t)(const unsigned char *,
-                                           unsigned long,
-                                           unsigned char *);
+typedef unsigned char * (*hash_function)(const unsigned char *,
+                                         unsigned long,
+                                         unsigned char *);
 
-typedef struct hash_chain {
+struct hash_chain {
     /* pointer to the hash-function used to create and verify the hchain
      *
      * @note params: (in_buffer, in_length, out_buffer)
      * @note out_buffer should be size MAX_HASH_LENGTH */
-    hash_function_t hash_function;
+    hash_function   hash_function;
     int             hash_length; /* length of the hashes, of which the hchain consist */
     int             hchain_length; /* number of initial elements in the hash-chain */
     int             hchain_hierarchy; /* hierarchy this hchain belongs to */
     int             current_index; /* index to currently revealed element for hchain traversal*/
     unsigned char * elements;     /* array containing the elements of the hash chain*/
     hash_tree_t *   link_tree;  /* pointer to a hash tree for linking hchains */
-} hash_chain_t;
+};
 
 int hchain_verify(const unsigned char *current_hash,
                   const unsigned char *last_hash,
-                  const hash_function_t hash_function,
+                  const hash_function hash_function,
                   const int hash_length,
                   const int tolerance,
                   const unsigned char *secret,
                   const int secret_length);
-hash_chain_t *hchain_create(const hash_function_t hash_function,
-                            const int hash_length,
-                            const int hchain_length,
-                            const int hchain_hierarchy,
-                            hash_tree_t *link_tree);
-unsigned char *hchain_get_anchor(const hash_chain_t *hash_chain);
-unsigned char *hchain_get_seed(const hash_chain_t *hash_chain);
-unsigned char *hchain_pop(hash_chain_t *hash_chain);
-int hchain_free(hash_chain_t *hash_chain);
-int hchain_get_num_remaining(const hash_chain_t *hash_chain);
+struct hash_chain *hchain_create(const hash_function hash_function,
+                                 const int hash_length,
+                                 const int hchain_length,
+                                 const int hchain_hierarchy,
+                                 hash_tree_t *link_tree);
+unsigned char *hchain_get_anchor(const struct hash_chain *hash_chain);
+unsigned char *hchain_get_seed(const struct hash_chain *hash_chain);
+unsigned char *hchain_pop(struct hash_chain *hash_chain);
+int hchain_free(struct hash_chain *hash_chain);
+int hchain_get_num_remaining(const struct hash_chain *hash_chain);
 
 #endif /* HIP_LIB_CORE_HASHCHAIN_H */

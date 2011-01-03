@@ -151,18 +151,18 @@ void hcstore_uninit(hchain_store_t *hcstore, const int use_hash_trees)
 /** registers a new hash function for utilization in the store
  *
  * @param       hcstore the store, where the function should be added
- * @param       hash_function function pointer to the hash function
+ * @param       hash_func function pointer to the hash function
  * @return      returns the index to the hash function in the store,
  *          -1 if MAX_FUNCTIONS is reached
  */
 int hcstore_register_function(hchain_store_t *hcstore,
-                              const hash_function_t hash_function)
+                              const hash_function hash_func)
 {
     int err = 0;
     unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(hash_function != NULL);
+    HIP_ASSERT(hash_func != NULL);
 
     // first check that there's still some space left
     HIP_IFEL(hcstore->num_functions == MAX_FUNCTIONS, -1,
@@ -170,7 +170,7 @@ int hcstore_register_function(hchain_store_t *hcstore,
 
     // also check if the function is already stored
     for (i = 0; i < hcstore->num_functions; i++) {
-        if (hcstore->hash_functions[i] == hash_function) {
+        if (hcstore->hash_functions[i] == hash_func) {
             HIP_DEBUG("hchain store already contains this function\n");
 
             err = i;
@@ -180,7 +180,7 @@ int hcstore_register_function(hchain_store_t *hcstore,
 
     // store the hash-function
     err                                             = hcstore->num_functions;
-    hcstore->hash_functions[hcstore->num_functions] = hash_function;
+    hcstore->hash_functions[hcstore->num_functions] = hash_func;
     hcstore->num_functions++;
 
     HIP_DEBUG("hash function successfully registered\n");
@@ -362,14 +362,14 @@ static int hcstore_fill_item(hchain_store_t *hcstore,
                              const int update_higher_level,
                              const int use_hash_trees)
 {
-    hash_chain_t *hchain          = NULL;
+    struct hash_chain *hchain     = NULL;
     hash_tree_t *htree            = NULL;
     hash_tree_t *link_tree        = NULL;
-    hash_function_t hash_function = NULL;
+    hash_function hash_func       = NULL;
     int hash_length               = 0;
     int hchain_length             = 0;
     unsigned create_hchains       = 0;
-    hash_chain_t *tmp_hchain      = NULL;
+    struct hash_chain *tmp_hchain = NULL;
     hash_tree_t *tmp_htree        = NULL;
     unsigned char *root           = NULL;
     int root_length               = 0;
@@ -377,7 +377,7 @@ static int hcstore_fill_item(hchain_store_t *hcstore,
     unsigned i, j;
 
     // set necessary parameters
-    hash_function  = hcstore->hash_functions[hash_func_id];
+    hash_func      = hcstore->hash_functions[hash_func_id];
     hash_length    = hcstore->hash_lengths[hash_func_id][hash_length_id];
     hchain_length  = hcstore->hchain_shelves[hash_func_id][hash_length_id].
                      hchain_lengths[hchain_length_id];
@@ -436,7 +436,7 @@ static int hcstore_fill_item(hchain_store_t *hcstore,
                         htree_add_data(link_tree, tmp_htree->root,
                                        hash_length);
                     } else {
-                        tmp_hchain = (hash_chain_t *) hip_ll_get(
+                        tmp_hchain = (struct hash_chain *) hip_ll_get(
                             &hcstore->hchain_shelves[hash_func_id][hash_length_id].
                             hchains[hchain_length_id][hierarchy_level - 1], j);
 
@@ -479,7 +479,7 @@ static int hcstore_fill_item(hchain_store_t *hcstore,
                         "failed to store new htree\n");
             } else {
                 // create a new hchain
-                HIP_IFEL(!(hchain = hchain_create(hash_function, hash_length,
+                HIP_IFEL(!(hchain = hchain_create(hash_func, hash_length,
                                         hchain_length, hierarchy_level, link_tree)), -1,
                         "failed to create new hchain\n");
 
@@ -610,11 +610,10 @@ void *hcstore_get_item_by_anchor(hchain_store_t *hcstore,
                                  const unsigned char *anchor,
                                  const int use_hash_trees)
 {
-    int hash_length      = 0;
-    hash_chain_t *hchain = NULL;
-    hash_tree_t *htree   = NULL;
-    void *stored_item    = NULL;
-    int err              = 0;
+    struct hash_chain *hchain      = NULL;
+    hash_tree_t       *htree       = NULL;
+    void              *stored_item = NULL;
+    int hash_length = 0, err = 0;
     unsigned i, j;
 
     HIP_ASSERT(hcstore != NULL);
@@ -658,7 +657,7 @@ void *hcstore_get_item_by_anchor(hchain_store_t *hcstore,
                     goto out_err;
                 }
             } else {
-                hchain = (hash_chain_t *) stored_item;
+                hchain = (struct hash_chain *) stored_item;
 
                 if (!memcmp(anchor, hchain_get_anchor(hchain), hash_length)) {
                     stored_item = hip_ll_del(&hcstore->
@@ -691,8 +690,8 @@ out_err:
  * @param       function_id index of the hash function
  * @return      pointer to the hash function, NULL if no such hash function
  */
-hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore,
-                                          const int function_id)
+hash_function hcstore_get_hash_function(hchain_store_t *hcstore,
+                                        const int function_id)
 {
     HIP_ASSERT(hcstore != NULL);
     HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);

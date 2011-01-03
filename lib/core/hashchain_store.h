@@ -74,7 +74,7 @@ typedef struct hchain_store {
      *
      * @note params: (in_buffer, in_length, out_buffer)
      * @note out_buffer should be size MAX_HASH_LENGTH */
-    hash_function_t hash_functions[MAX_FUNCTIONS];
+    hash_function hash_functions[MAX_FUNCTIONS];
     /* amount of different hash_lengths per hash-function */
     unsigned        num_hash_lengths[MAX_FUNCTIONS];
     /* length of the hashes, of which the respective hchain items consist */
@@ -88,7 +88,7 @@ int hcstore_init(hchain_store_t *hcstore,
                  const double refill_threshold);
 void hcstore_uninit(hchain_store_t *hcstore, const int use_hash_trees);
 int hcstore_register_function(hchain_store_t *hcstore,
-                              const hash_function_t hash_function);
+                              const hash_function hash_function);
 int hcstore_register_hash_length(hchain_store_t *hcstore,
                                  const int function_id,
                                  const int hash_length);
@@ -112,8 +112,8 @@ void *hcstore_get_item_by_anchor(hchain_store_t *hcstore,
                                  const int hierarchy_level,
                                  const unsigned char *anchor,
                                  const int use_hash_trees);
-hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore,
-                                          const int function_id);
+hash_function hcstore_get_hash_function(hchain_store_t *hcstore,
+                                        const int function_id);
 int hcstore_get_hash_length(hchain_store_t *hcstore,
                             const int function_id,
                             const int hash_length_id);

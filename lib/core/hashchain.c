@@ -53,7 +53,7 @@
  *
  * @param       current_hash the hash value to be verified
  * @param       last_hash the last known hash value
- * @param       hash_function the hash function to be used
+ * @param       hash_func the hash function to be used
  * @param       hash_length length of the hash values
  * @param       tolerance the maximum number of hash calculations
  * @param       secret the potentially incorporated secret
@@ -62,7 +62,7 @@
  */
 int hchain_verify(const unsigned char *current_hash,
                   const unsigned char *last_hash,
-                  const hash_function_t hash_function,
+                  const hash_function hash_func,
                   const int hash_length,
                   const int tolerance,
                   const unsigned char *secret,
@@ -74,7 +74,7 @@ int hchain_verify(const unsigned char *current_hash,
     int err = 0, i;
 
     HIP_ASSERT(current_hash != NULL && last_hash != NULL);
-    HIP_ASSERT(hash_function != NULL);
+    HIP_ASSERT(hash_func != NULL);
     HIP_ASSERT(hash_length > 0 && tolerance >= 0);
 
     // init buffer with the hash we want to verify
@@ -90,7 +90,7 @@ int hchain_verify(const unsigned char *current_hash,
             memcpy(&buffer[hash_length], secret, secret_length);
         }
 
-        hash_function(buffer, hash_length + secret_length, buffer);
+        hash_func(buffer, hash_length + secret_length, buffer);
 
         // compare the elements
         if (!(memcmp(buffer, last_hash, hash_length))) {
@@ -109,20 +109,20 @@ out_err:
 
 /** creates a new hash chain
  *
- * @param       hash_function hash function to be used to generate the hash values
+ * @param       hash_func hash function to be used to generate the hash values
  * @param       hash_length length of the hash values
  * @param       hchain_length number of hash elements
  * @param       hchain_hierarchy the hierarchy level this hash chain will belong to
  * @param       link_tree the link tree, if HHL is used
  * @return  pointer to the newly created hash chain, NULL on error
  */
-hash_chain_t *hchain_create(const hash_function_t hash_function,
-                            const int hash_length,
-                            const int hchain_length,
-                            const int hchain_hierarchy,
-                            hash_tree_t *link_tree)
+struct hash_chain *hchain_create(const hash_function hash_func,
+                                 const int hash_length,
+                                 const int hchain_length,
+                                 const int hchain_hierarchy,
+                                 hash_tree_t *link_tree)
 {
-    hash_chain_t *hchain = NULL;
+    struct hash_chain *hchain = NULL;
     /* the hash function output might be longer than needed
      * allocate enough memory for the hash function output
      *
@@ -131,16 +131,16 @@ hash_chain_t *hchain_create(const hash_function_t hash_function,
     int hash_data_length = 0;
     int i, err = 0;
 
-    HIP_ASSERT(hash_function != NULL);
+    HIP_ASSERT(hash_func != NULL);
     // make sure that the hash we want to use is smaller than the max output
     HIP_ASSERT(hash_length > 0 && hash_length <= MAX_HASH_LENGTH);
     HIP_ASSERT(hchain_length > 0);
     HIP_ASSERT(!(hchain_hierarchy == 0 && link_tree));
 
     // allocate memory for a new hash chain
-    HIP_IFEL(!(hchain = malloc(sizeof(hash_chain_t))), -1,
+    HIP_IFEL(!(hchain = malloc(sizeof(struct hash_chain))), -1,
              "failed to allocate memory\n");
-    memset(hchain, 0, sizeof(hash_chain_t));
+    memset(hchain, 0, sizeof(struct hash_chain));
 
     // allocate memory for the hash chain elements
     HIP_IFEL(!(hchain->elements = malloc(hash_length * hchain_length)),
@@ -159,7 +159,7 @@ hash_chain_t *hchain_create(const hash_function_t hash_function,
     for (i = 0; i < hchain_length; i++) {
         if (i > 0) {
             // (input, input_length, output) -> output_length == 20
-            HIP_IFEL(!(hash_function(hash_value, hash_data_length, hash_value)), -1,
+            HIP_IFEL(!(hash_func(hash_value, hash_data_length, hash_value)), -1,
                      "failed to calculate hash\n");
             // only consider highest bytes of digest with length of actual element
             memcpy( &hchain->elements[i * hash_length], hash_value, hash_length);
@@ -177,7 +177,7 @@ hash_chain_t *hchain_create(const hash_function_t hash_function,
         }
     }
 
-    hchain->hash_function    = hash_function;
+    hchain->hash_function    = hash_func;
     hchain->hash_length      = hash_length;
     hchain->hchain_length    = hchain_length;
     hchain->current_index    = hchain_length;
@@ -203,7 +203,7 @@ out_err:
  * @param       idx index to the hash chain element
  * @return      element of the given hash chain
  */
-static unsigned char *hchain_element_by_index(const hash_chain_t *hash_chain,
+static unsigned char *hchain_element_by_index(const struct hash_chain *hash_chain,
                                               const int idx)
 {
     unsigned char *element = NULL;
@@ -235,7 +235,7 @@ out_err:
  * @param       hash_chain hash chain from which the anchor should be returned
  * @return      anchor element of the given hash chain
  */
-unsigned char *hchain_get_anchor(const hash_chain_t *hash_chain)
+unsigned char *hchain_get_anchor(const struct hash_chain *hash_chain)
 {
     HIP_ASSERT(hash_chain);
 
@@ -247,7 +247,7 @@ unsigned char *hchain_get_anchor(const hash_chain_t *hash_chain)
  * @param       hash_chain hash chain from which the seed should be returned
  * @return      seed element of the given hash chain
  */
-unsigned char *hchain_get_seed(const hash_chain_t *hash_chain)
+unsigned char *hchain_get_seed(const struct hash_chain *hash_chain)
 {
     HIP_ASSERT(hash_chain);
 
@@ -263,7 +263,7 @@ unsigned char *hchain_get_seed(const hash_chain_t *hash_chain)
  * @param       hash_chain the hash chain
  * @return      next element of the hash chain or NULL if the hash chain reached boundary
  */
-static unsigned char *hchain_next(const hash_chain_t *hash_chain)
+static unsigned char *hchain_next(const struct hash_chain *hash_chain)
 {
     unsigned char *element = NULL;
 
@@ -277,7 +277,7 @@ static unsigned char *hchain_next(const hash_chain_t *hash_chain)
  * @param       hash_chain hash chain which has to be popped
  * @return      pointer to the next hashchain element or NULL if the hash chain is depleted
  */
-unsigned char *hchain_pop(hash_chain_t *hash_chain)
+unsigned char *hchain_pop(struct hash_chain *hash_chain)
 {
     unsigned char *element = NULL;
 
@@ -296,7 +296,7 @@ unsigned char *hchain_pop(hash_chain_t *hash_chain)
  * @param       hash_chain hash chain which should be removed
  * @return      always 0
  */
-int hchain_free(hash_chain_t *hash_chain)
+int hchain_free(struct hash_chain *hash_chain)
 {
     int err = 0;
 
@@ -318,7 +318,7 @@ int hchain_free(hash_chain_t *hash_chain)
  * @param       hash_chain the hash chain
  * @return      number of remaining elements
  */
-int hchain_get_num_remaining(const hash_chain_t *hash_chain)
+int hchain_get_num_remaining(const struct hash_chain *hash_chain)
 {
     return hash_chain->current_index;
 }

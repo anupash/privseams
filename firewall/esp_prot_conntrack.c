@@ -58,7 +58,7 @@
 
 
 typedef struct esp_prot_conntrack_tfm {
-    hash_function_t hash_function;     /* pointer to the hash function */
+    hash_function   hash_function;     /* pointer to the hash function */
     int             hash_length; /* hash length for this transform */
     int             is_used; /* needed as complete transform array is initialized */
 } esp_prot_conntrack_tfm_t;
