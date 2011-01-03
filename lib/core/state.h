@@ -329,7 +329,7 @@ struct hip_hadb_state {
     uint8_t                                    peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     /** Counters of heartbeats (ICMPv6s) */
     int                                        heartbeats_sent;
-    statistics_data_t                          heartbeats_statistics;
+    struct statistics_data                     heartbeats_statistics;
 
     struct timeval                             bex_start;
     struct timeval                             bex_end;

@@ -102,8 +102,7 @@ int main(int argc, char **argv)
     struct timeval stop_time;
     hash_chain_t *hchain        = NULL;
     hash_tree_t *htree          = NULL;
-    statistics_data_t creation_stats;
-    statistics_data_t verify_stats;
+    struct statistics_data creation_stats, verify_stats;
     uint64_t timediff           = 0;
     uint32_t num_items          = 0;
     double min                  = 0.0, max = 0.0, avg = 0.0;
@@ -166,8 +165,8 @@ int main(int argc, char **argv)
 
     hip_set_logdebug(LOGDEBUG_NONE);
 
-    memset(&creation_stats, 0, sizeof(statistics_data_t));
-    memset(&verify_stats, 0, sizeof(statistics_data_t));
+    memset(&creation_stats, 0, sizeof(struct statistics_data));
+    memset(&verify_stats, 0, sizeof(struct statistics_data));
 
     print_timeres();
 
@@ -235,8 +234,8 @@ int main(int argc, char **argv)
                 "Hash tree performance test\n"
                 "-------------------------------\n\n");
 
-        memset(&creation_stats, 0, sizeof(statistics_data_t));
-        memset(&verify_stats, 0, sizeof(statistics_data_t));
+        memset(&creation_stats, 0, sizeof(struct statistics_data));
+        memset(&verify_stats, 0, sizeof(struct statistics_data));
 
         printf("Creating %d hash trees of length %d with element length %d\n",
                count, hchain_length, hash_length);
