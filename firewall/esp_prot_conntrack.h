@@ -51,7 +51,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 struct esp_tuple *esp_prot_conntrack_R2_esp_tuple(const struct slist *other_dir_esps);
 int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
                                  const struct tuple *tuple);
-int esp_prot_conntrack_update(const hip_common_t *update,
+int esp_prot_conntrack_update(const struct hip_common *update,
                               const struct tuple *tuple);
 int esp_prot_conntrack_remove_state(struct esp_tuple *esp_tuple);
 int esp_prot_conntrack_lupdate(const struct hip_common *common,

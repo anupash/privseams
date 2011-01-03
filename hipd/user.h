@@ -41,15 +41,15 @@
 
 
 int hip_user_register_handle(const uint8_t msg_type,
-                             int (*handle_func)(hip_common_t *msg,
+                             int (*handle_func)(struct hip_common *msg,
                                                 struct sockaddr_in6 *src),
                              const uint16_t priority);
 int hip_user_run_handles(const uint8_t msg_type,
-                         hip_common_t *msg,
+                         struct hip_common *msg,
                          struct sockaddr_in6 *src);
 void hip_user_uninit_handles(void);
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst);
-int hip_handle_user_msg(hip_common_t *msg,
+int hip_handle_user_msg(struct hip_common *msg,
                         struct sockaddr_in6 *src);
 
 #endif /* HIP_HIPD_USER_H */

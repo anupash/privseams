@@ -94,7 +94,8 @@ static struct hip_ll *hip_maintenance_functions;
  * @param current_time current time
  * @return zero on success or negative on failure
  */
-static int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
+static int hip_handle_retransmission(struct hip_hadb_state *entry,
+                                     void *current_time)
 {
     int err     = 0;
     time_t *now = (time_t *) current_time;

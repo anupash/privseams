@@ -62,12 +62,14 @@
  * @param spi IPsec spi of the direction
  * @return 0 in case of succcess, -1 otherwise
  */
-static int esp_prot_send_light_ack(hip_ha_t *entry, const struct in6_addr *src_addr,
-                                   const struct in6_addr *dst_addr, const uint32_t spi)
+static int esp_prot_send_light_ack(struct hip_hadb_state *entry,
+                                   const struct in6_addr *src_addr,
+                                   const struct in6_addr *dst_addr,
+                                   const uint32_t spi)
 {
-    hip_common_t *light_ack = NULL;
-    uint16_t mask           = 0;
-    int err                 = 0;
+    struct hip_common *light_ack = NULL;
+    uint16_t mask = 0;
+    int err       = 0;
 
     HIP_IFEL(!(light_ack = hip_msg_alloc()), -ENOMEM,
              "failed to allocate memory\n");
@@ -115,17 +117,17 @@ out_err:
  * @param branch_length     length of each branch
  * @return                  0 in case of succcess, -1 otherwise
  */
-int esp_prot_send_light_update(hip_ha_t *entry,
+int esp_prot_send_light_update(struct hip_hadb_state *entry,
                                const int anchor_offset[],
                                const unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS],
                                const int secret_length[],
                                const unsigned char *branch_nodes[MAX_NUM_PARALLEL_HCHAINS],
                                const int branch_length[])
 {
-    hip_common_t *light_update = NULL;
-    int hash_length            = 0;
-    uint16_t mask              = 0;
-    int err                    = 0, i;
+    struct hip_common *light_update = NULL;
+    int hash_length = 0;
+    uint16_t mask   = 0;
+    int err         = 0, i;
 
     HIP_IFEL(!(light_update = hip_msg_alloc()), -ENOMEM,
              "failed to allocate memory\n");

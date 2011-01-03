@@ -575,14 +575,10 @@ typedef uint16_t hip_controls_t;
 typedef uint32_t sa_eid_t;
 typedef struct in6_addr hip_hit_t;
 typedef struct in_addr hip_lsi_t;
-typedef struct hip_hadb_state hip_ha_t;
-typedef struct hip_common hip_common_t;
 
 struct hip_crypto_key {
     uint8_t key[HIP_MAX_KEY_LEN];
 };
-
-typedef struct hip_crypto_key hip_crypto_key_t;
 
 /* RFC2535 3.1 KEY RDATA format */
 struct hip_host_id_key_rdata {
@@ -1078,7 +1074,7 @@ struct sockaddr_hip {
 /**
  * A data structure for storing the source and destination ports of a packet.
  */
-struct hip_portpair_t {
+struct hip_portpair {
     in_port_t src_port;     /**< The source port of an incoming packet. */
     in_port_t dst_port;     /**< The destination port of an incoming packet. */
 };
@@ -1091,7 +1087,7 @@ struct hip_packet_context {
     struct hip_common         *output_msg; /**< Outgoing message. */
     struct in6_addr            src_addr;   /**< Packet origin. */
     struct in6_addr            dst_addr;   /**< Packet destination. */
-    struct hip_portpair_t      msg_ports;  /**< Used ports. */
+    struct hip_portpair        msg_ports;  /**< Used ports. */
     struct hip_hadb_state     *hadb_entry; /**< Host association database entry. */
     uint8_t                    error;      /**< Abort further processing if not 0 */
 };

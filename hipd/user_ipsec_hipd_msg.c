@@ -109,7 +109,7 @@ struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
                                      const struct hip_crypto_key *authkey,
                                      const int retransmission,
                                      const int direction, const int update,
-                                     hip_ha_t *entry)
+                                     struct hip_hadb_state *entry)
 {
     struct hip_common *msg = NULL;
     int err                = 0;

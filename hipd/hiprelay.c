@@ -549,7 +549,7 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
                                const uint8_t lifetime,
                                const struct in6_addr *hit_r, const hip_hit_t *ip_r,
                                const in_port_t port,
-                               const hip_crypto_key_t *hmac)
+                               const struct hip_crypto_key *hmac)
 {
     if (hit_r == NULL || ip_r == NULL || hmac == NULL) {
         return NULL;
@@ -903,7 +903,7 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
                       hip_relrec_t *rec,
                       const uint8_t type_hdr)
 {
-    hip_common_t *msg_to_be_relayed            = NULL;
+    struct hip_common *msg_to_be_relayed       = NULL;
     const struct hip_tlv_common *current_param = NULL;
     int err                                    = 0, from_added = 0;
     hip_tlv_type_t param_type                  = 0;
@@ -1021,7 +1021,7 @@ out_err:
  * @param relay_to_port the port where to relay the packet
  * @return zero on success or negative on error
  */
-static int hip_relay_forward_response(const hip_common_t *r,
+static int hip_relay_forward_response(const struct hip_common *r,
                                       const uint8_t type_hdr,
                                       const struct in6_addr *r_saddr,
                                       const struct in6_addr *r_daddr,
@@ -1146,7 +1146,8 @@ out_err:
  *
  * @todo handle also the relay case
  */
-int hip_relay_add_rvs_to_ha(const hip_common_t *source_msg, hip_ha_t *entry)
+int hip_relay_add_rvs_to_ha(const struct hip_common *source_msg,
+                            struct hip_hadb_state *entry)
 {
     const struct hip_via_rvs *via_rvs = NULL;
     int err                     = 0;
@@ -1185,7 +1186,7 @@ out_err:
  * @return 0 if no FROM/RELAY FROM parameter is found, parameter type
  *         if one is found, negative on error
  */
-int hip_relay_handle_relay_from(hip_common_t *source_msg,
+int hip_relay_handle_relay_from(struct hip_common *source_msg,
                                 RVS struct in6_addr *relay_ip,
                                 struct in6_addr *dest_ip, in_port_t *dest_port)
 {
@@ -1193,7 +1194,7 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
     const struct hip_relay_from *relay_from = NULL;
     const struct hip_from *from             = NULL;
 #ifdef CONFIG_HIP_RVS
-    hip_ha_t *relay_ha_entry                = NULL;
+    struct hip_hadb_state *relay_ha_entry   = NULL;
 #endif
 
     /* Check if the incoming I1 packet has  RELAY_FROM parameters. */

@@ -80,7 +80,7 @@ int hip_do_hipconf(int argc, const char *argv[], int send_only);
 
 /* Externally used handler functions */
 /* TODO: Is there a clean way to get rid of this external use? */
-int hip_conf_handle_load(hip_common_t *msg,
+int hip_conf_handle_load(struct hip_common *msg,
                          int type,
                          const char *opt[],
                          int optc,

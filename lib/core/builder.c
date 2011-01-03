@@ -2237,7 +2237,7 @@ int hip_build_param_relay_to(struct hip_common *msg,
  * builders but after hip_calc_generic_param_len() and
  * hip_build_generic_param.
  */
-static inline int hip_reg_param_core(hip_common_t *msg,
+static inline int hip_reg_param_core(struct hip_common *msg,
                                      void *param,
                                      const uint8_t lifetime,
                                      const uint8_t *type_list,
@@ -2262,7 +2262,7 @@ static inline int hip_reg_param_core(hip_common_t *msg,
  * @return              zero on success, non-zero otherwise.
  * @todo gcc gives a weird warning if we use struct srv in the arguments of this function.
  *       Using void pointer as a workaround */
-int hip_build_param_reg_info(hip_common_t *msg,
+int hip_build_param_reg_info(struct hip_common *msg,
                              const void *srv_list,
                              const unsigned int service_count)
 {
@@ -2318,7 +2318,7 @@ int hip_build_param_reg_info(hip_common_t *msg,
  * @param type_count number of registration types in @c type_list.
  * @return           zero on success, non-zero otherwise.
  */
-int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
+int hip_build_param_reg_request(struct hip_common *msg, const uint8_t lifetime,
                                 const uint8_t *type_list, const int type_count)
 {
     int err = 0;
@@ -2340,7 +2340,7 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
  * @param type_count number of registration types in @c type_list.
  * @return           zero on success, non-zero otherwise.
  */
-int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
+int hip_build_param_reg_response(struct hip_common *msg, const uint8_t lifetime,
                                  const uint8_t *type_list, const int type_count)
 {
     int err = 0;
@@ -3954,7 +3954,7 @@ int hip_build_param_reg_from(struct hip_common *msg,
  *
  * @return zero on success, non-zero otherwise.
  */
-int hip_build_param_nat_port(hip_common_t *msg,
+int hip_build_param_nat_port(struct hip_common *msg,
                              const in_port_t port,
                              hip_tlv_type_t hipparam)
 {

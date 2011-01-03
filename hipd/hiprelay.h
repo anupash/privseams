@@ -76,7 +76,7 @@ typedef struct {
     /** Client UDP port received in I2 packet of registration. */
     in_port_t        udp_port_r;
     /** Integrity key established while registration occurred. */
-    hip_crypto_key_t hmac_relay;
+    struct hip_crypto_key hmac_relay;
 } hip_relrec_t;
 
 /**
@@ -107,15 +107,16 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
                                const uint8_t lifetime,
                                const struct in6_addr *hit_r, const hip_hit_t *ip_r,
                                const in_port_t port,
-                               const hip_crypto_key_t *hmac);
+                               const struct hip_crypto_key *hmac);
 void hip_relht_free_all_of_type(const hip_relrec_type_t type);
 int hip_relwl_compare(const hip_hit_t *hit1, const hip_hit_t *hit2);
 hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
 hip_relay_wl_status_t hip_relwl_get_status(void);
 int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
                               uint8_t *granted_lifetime);
-int hip_relay_add_rvs_to_ha(const hip_common_t *source_msg, hip_ha_t *entry);
-int hip_relay_handle_relay_from(hip_common_t *source_msg,
+int hip_relay_add_rvs_to_ha(const struct hip_common *source_msg,
+                            struct hip_hadb_state *entry);
+int hip_relay_handle_relay_from(struct hip_common *source_msg,
                                 struct in6_addr *relay_ip,
                                 struct in6_addr *dest_ip, in_port_t *dest_port);
 

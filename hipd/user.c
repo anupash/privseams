@@ -95,7 +95,7 @@
 
 struct usr_msg_handle {
     uint16_t priority;
-    int    (*func_ptr)(hip_common_t *msg, struct sockaddr_in6 *src);
+    int    (*func_ptr)(struct hip_common *msg, struct sockaddr_in6 *src);
 };
 
 static struct hip_ll *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
@@ -114,7 +114,7 @@ static struct hip_ll *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
  *         Error   = -1
  */
 int hip_user_register_handle(const uint8_t msg_type,
-                             int (*handle_func)(hip_common_t *msg,
+                             int (*handle_func)(struct hip_common *msg,
                                                 struct sockaddr_in6 *src),
                              const uint16_t priority)
 {
@@ -152,7 +152,7 @@ out_err:
  *         Error   = -1
  */
 int hip_user_run_handles(const uint8_t msg_type,
-                         hip_common_t *msg,
+                         struct hip_common *msg,
                          struct sockaddr_in6 *src)
 {
     struct hip_ll_node *iter = NULL;
@@ -214,11 +214,11 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
  * @param  src the origin of the sender
  * @return zero on success, or negative error value on error.
  */
-int hip_handle_user_msg(hip_common_t *msg,
+int hip_handle_user_msg(struct hip_common *msg,
                         struct sockaddr_in6 *src)
 {
     const hip_hit_t *src_hit           = NULL, *dst_hit = NULL;
-    hip_ha_t *entry                    = NULL;
+    struct hip_hadb_state *entry       = NULL;
     int err                            = 0, msg_type = 0, reti = 0;
     int access_ok                      = 0, is_root = 0;
     const struct hip_tlv_common *param = NULL;
@@ -554,7 +554,7 @@ int hip_handle_user_msg(hip_common_t *msg,
          * (inserted e.g. with "hipconf add map"). This can be removed
          * after bug id 592135 is resolved. */
         if (entry->state != HIP_STATE_NONE || HIP_STATE_UNASSOCIATED) {
-            hip_common_t *msg2 = calloc(HIP_MAX_PACKET, 1);
+            struct hip_common *msg2 = calloc(HIP_MAX_PACKET, 1);
             HIP_IFE((msg2 == 0), -1);
             HIP_IFE(hip_build_user_hdr(msg2, HIP_MSG_RST, 0), -1);
             HIP_IFE(hip_build_param_contents(msg2,
@@ -874,7 +874,7 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_LSI_TO_HIT:
     {
         const hip_lsi_t *lsi;
-        hip_ha_t *ha;
+        struct hip_hadb_state *ha;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1);
         HIP_IFE(!(lsi =  hip_get_param_contents_direct(param)), -1);

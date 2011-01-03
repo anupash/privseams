@@ -429,10 +429,10 @@ void hip_init_opp_db(void)
  *                  which to calculate the pseudo HIT
  * @return a host assocition or NULL if not found
  */
-static hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
-                                          struct in6_addr *resp_addr)
+static struct hip_hadb_state *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
+                                                       struct in6_addr *resp_addr)
 {
-    hip_ha_t *entry_tmp = NULL;
+    struct hip_hadb_state *entry_tmp = NULL;
     hip_hit_t phit;
     int err             = 0;
 
@@ -456,11 +456,11 @@ out_err:
  * @param src_addr the source address of the message
  * @return the host association or NULL if not found
  */
-hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
-                                         struct in6_addr *src_addr)
+struct hip_hadb_state *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
+                                                      struct in6_addr *src_addr)
 {
-    hip_hdr_type_t type = hip_get_msg_type(msg);
-    hip_ha_t *entry     = NULL;
+    hip_hdr_type_t         type  = hip_get_msg_type(msg);
+    struct hip_hadb_state *entry = NULL;
 
     if (type == HIP_I1) {
         if (!ipv6_addr_is_null(&msg->hitr)) {
@@ -486,7 +486,7 @@ out_err:
 int hip_handle_opp_r1(struct hip_packet_context *ctx)
 {
     hip_opp_info_t opp_info;
-    hip_ha_t *opp_entry;
+    struct hip_hadb_state *opp_entry;
     hip_hit_t phit;
     int err = 0;
 
@@ -549,14 +549,14 @@ out_err:
  * @param caller the UDP port of the local library process
  * @return the created host association
  */
-hip_ha_t *hip_opp_add_map(const struct in6_addr *dst_ip,
-                          const struct in6_addr *hit_our,
-                          const struct sockaddr_in6 *caller)
+struct hip_hadb_state *hip_opp_add_map(const struct in6_addr *dst_ip,
+                                       const struct in6_addr *hit_our,
+                                       const struct sockaddr_in6 *caller)
 {
-    int err                  = 0;
+    int err = 0;
     struct in6_addr opp_hit, src_ip;
-    hip_ha_t *ha             = NULL;
-    hip_oppip_t *oppip_entry = NULL;
+    struct hip_hadb_state *ha = NULL;
+    hip_oppip_t *oppip_entry  = NULL;
 
     HIP_DEBUG_IN6ADDR("Peer's IP ", dst_ip);
 
@@ -680,7 +680,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
     int err = 0;
     struct in6_addr phit, dst_ip, our_hit, our_addr;
     const struct in6_addr *ptr;
-    hip_ha_t *ha;
+    struct hip_hadb_state *ha;
 
     ptr = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
     HIP_IFEL(!ptr, -1, "No local hit in msg\n");

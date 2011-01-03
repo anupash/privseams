@@ -672,7 +672,7 @@ int hip_flush_all_sa(void)
  * @param entry corresponding host association
  */
 void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
-                   const int direction, hip_ha_t *entry)
+                   const int direction, struct hip_hadb_state *entry)
 {
     in_port_t sport, dport;
 
@@ -728,7 +728,7 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
                     const struct hip_crypto_key *authkey,
                     const int direction,
                     const int update,
-                    hip_ha_t *entry)
+                    struct hip_hadb_state *entry)
 {
     int err  = 0, enckey_len, authkey_len;
     int aalg = ealg;

@@ -104,7 +104,7 @@ static int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
  *
  * @return 0 on success negative on error
  */
-static int hip_send_icmp(int sockfd, hip_ha_t *entry)
+static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
 {
     int err                = 0, i = 0, identifier = 0;
     struct icmp6_hdr *icmph = NULL;
@@ -211,8 +211,8 @@ static int hip_icmp_statistics(struct in6_addr *src,
     uint64_t rtt             = 0;
     double avg               = 0.0, std_dev = 0.0;
     char hit[INET6_ADDRSTRLEN];
-    hip_ha_t *entry          = NULL;
-    uint8_t *heartbeat_count = NULL;
+    struct hip_hadb_state *entry = NULL;
+    uint8_t *heartbeat_count     = NULL;
 
     hip_in6_ntop(src, hit);
 
@@ -379,7 +379,7 @@ out_err:
  *
  * @return 0 on success negative on error
  */
-static int hip_send_heartbeat(hip_ha_t *hadb_entry, void *opaq)
+static int hip_send_heartbeat(struct hip_hadb_state *hadb_entry, void *opaq)
 {
     int err                  = 0;
     int *sockfd              = (int *) opaq;
@@ -414,7 +414,7 @@ static int hip_heartbeat_maintenance(void)
     return 0;
 }
 
-static int hip_heartbeat_handle_usr_msg(UNUSED hip_common_t *msg,
+static int hip_heartbeat_handle_usr_msg(UNUSED struct hip_common *msg,
                                         UNUSED struct sockaddr_in6 *src)
 {
     return 0;

@@ -98,10 +98,10 @@ union hip_locator_info_addr {
 
 int hip_get_locator_addr_item_count(const struct hip_locator *locator);
 
-int hip_create_locators(hip_common_t *locator_msg,
+int hip_create_locators(struct hip_common *locator_msg,
                         struct hip_locator_info_addr_item **locators);
 
-int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
+int hip_send_update_to_one_peer(struct hip_common *received_update_packet,
                                 struct hip_hadb_state *ha,
                                 struct in6_addr *src_addr,
                                 struct in6_addr *dst_addr,

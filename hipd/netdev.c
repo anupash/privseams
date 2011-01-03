@@ -705,7 +705,7 @@ int hip_map_id_to_addr(const hip_hit_t *hit, const hip_lsi_t *lsi,
 {
     int err      = -1, skip_namelookup = 0; /* Assume that resolving fails */
     hip_hit_t hit2;
-    hip_ha_t *ha = NULL;
+    struct hip_hadb_state *ha = NULL;
 
     HIP_ASSERT(hit || lsi);
 
@@ -797,7 +797,7 @@ static int hip_netdev_trigger_bex(const hip_hit_t *src_hit_in,
     int old_global_nat_mode = hip_nat_status;
     in_port_t ha_local_port;
     in_port_t ha_peer_port;
-    hip_ha_t *entry = NULL;
+    struct hip_hadb_state *entry = NULL;
     int is_loopback = 0;
     hip_lsi_t dlsi, slsi;
     struct in6_addr dhit, shit, saddr, dst6_lsi;
@@ -1034,7 +1034,7 @@ static int hip_netdev_handle_acquire(struct nlmsghdr *msg)
     hip_lsi_t *src_lsi        = NULL, *dst_lsi = NULL;
     struct in6_addr *src_addr = NULL, *dst_addr = NULL;
     struct xfrm_user_acquire *acq;
-    hip_ha_t *entry;
+    struct hip_hadb_state *entry;
     int err                   = 0;
 
     HIP_DEBUG("Acquire (pid: %d) \n", msg->nlmsg_pid);
@@ -1445,7 +1445,7 @@ out_err:
  *
  * @param ha ha state after base exchange
  */
-void hip_copy_peer_addrlist_changed(hip_ha_t *ha)
+void hip_copy_peer_addrlist_changed(struct hip_hadb_state *ha)
 {
     hip_list_t *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr_li;

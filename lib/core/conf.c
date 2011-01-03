@@ -248,7 +248,7 @@ const char *hipconf_usage =
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-static int hip_get_hits(hip_common_t *msg, const char *opt,
+static int hip_get_hits(struct hip_common *msg, const char *opt,
                         UNUSED int optc, int send_only)
 {
     int err                                    = 0;
@@ -351,16 +351,16 @@ out_err:
  * @return zero for success and negative on error
  * @note this does not flush the host identities from disk
  */
-static int hip_conf_handle_hi_del_all(hip_common_t *msg,
+static int hip_conf_handle_hi_del_all(struct hip_common *msg,
                                       UNUSED int action,
                                       UNUSED const char *opt[],
                                       UNUSED int optc,
                                       int send_only)
 {
-    int err                            = 0;
-    const struct hip_tlv_common *param = NULL;
-    const struct hip_hit_info *data;
-    hip_common_t *msg_tmp              = NULL;
+    int err = 0;
+    const struct hip_tlv_common *param   = NULL;
+    const struct hip_hit_info   *data;
+    struct       hip_common     *msg_tmp = NULL;
 
     msg_tmp = hip_msg_alloc();
     HIP_IFEL(!msg_tmp, -ENOMEM, "Malloc for msg_tmp failed\n");
@@ -407,7 +407,7 @@ out_err:
  * @param send_only
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_hi_del(hip_common_t *msg,
+static int hip_conf_handle_hi_del(struct hip_common *msg,
                                   int action,
                                   const char *opt[],
                                   int optc,
@@ -858,7 +858,7 @@ out_err:
  *               interface. There should be a way to choose which of the HITs
  *               to register to the server.
  */
-static int hip_conf_handle_server(hip_common_t *msg,
+static int hip_conf_handle_server(struct hip_common *msg,
                                   int action,
                                   const char *opt[],
                                   int optc,
@@ -1065,8 +1065,8 @@ out_err:
  * @param send_only
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
-                              int optc, int send_only)
+static int hip_conf_handle_hi(struct hip_common *msg, int action,
+                              const char *opt[], int optc, int send_only)
 {
     int err          = 0, anon = 0, use_default = 0, rsa_key_bits = 0;
     int dsa_key_bits = 0;
@@ -1183,7 +1183,8 @@ out_err:
  * @return       zero on success, or negative error value on error.
  * @note         Does not support @c del action.
  */
-static int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
+static int hip_conf_handle_map(struct hip_common *msg, int action,
+                               const char *opt[],
                                int optc, UNUSED int send_only)
 {
     int err = 0;
@@ -1255,7 +1256,7 @@ out_err:
  * @param send_only unused
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_heartbeat(hip_common_t *msg, UNUSED int action,
+static int hip_conf_handle_heartbeat(struct hip_common *msg, UNUSED int action,
                                      const char *opt[], UNUSED int optc,
                                      UNUSED int send_only)
 {
@@ -1290,9 +1291,9 @@ out_err:
  * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_trans_order(hip_common_t *msg, UNUSED int action,
-                                       const char *opt[], int optc,
-                                       UNUSED int send_only)
+static int hip_conf_handle_trans_order(struct hip_common *msg,
+                                       UNUSED int action, const char *opt[],
+                                       int optc, UNUSED int send_only)
 {
     int err = 0, transorder = 0, i = 0, k = 0;
 
@@ -1350,7 +1351,7 @@ out:
  * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_rst(hip_common_t *msg, UNUSED int action,
+static int hip_conf_handle_rst(struct hip_common *msg, UNUSED int action,
                                const char *opt[], UNUSED int optc,
                                UNUSED int send_only)
 {
@@ -1402,7 +1403,7 @@ out:
  * @param send_only currently unused parameter
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_debug(hip_common_t *msg, UNUSED int action,
+static int hip_conf_handle_debug(struct hip_common *msg, UNUSED int action,
                                  const char *opt[], int optc,
                                  UNUSED int send_only)
 {
@@ -1452,7 +1453,8 @@ out_err:
  * @param send_only currently_unused
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_manual_update(hip_common_t *msg, UNUSED int action,
+static int hip_conf_handle_manual_update(struct hip_common *msg,
+                                         UNUSED int action,
                                          UNUSED const char *opt[],
                                          UNUSED int optc,
                                          UNUSED int send_only)
@@ -1479,7 +1481,7 @@ out_err:
  * @return       zero on success, or negative error value on error.
  */
 
-static int hip_conf_handle_nat_port(hip_common_t *msg, int action,
+static int hip_conf_handle_nat_port(struct hip_common *msg, int action,
                                     const char *opt[],
                                     UNUSED int optc,
                                     UNUSED int send_only)
@@ -1520,7 +1522,7 @@ out_err:
  * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_nat(hip_common_t *msg, UNUSED int action,
+static int hip_conf_handle_nat(struct hip_common *msg, UNUSED int action,
                                const char *opt[], UNUSED int optc,
                                UNUSED int send_only)
 {
@@ -1557,8 +1559,9 @@ out_err:
  * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_locator(hip_common_t *msg, UNUSED int action,
-                                   const char *opt[], UNUSED int optc, int send_only)
+static int hip_conf_handle_locator(struct hip_common *msg, UNUSED int action,
+                                   const char *opt[], UNUSED int optc,
+                                   int send_only)
 {
     int err                     = 0, status = 0;
     const struct hip_locator *locator = NULL;
@@ -1600,7 +1603,7 @@ out_err:
  * @param send_only
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_puzzle(hip_common_t *msg,
+static int hip_conf_handle_puzzle(struct hip_common *msg,
                                   int action,
                                   const char *opt[],
                                   int optc,
@@ -1755,7 +1758,7 @@ out_err:
  * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_opp(hip_common_t *msg,
+static int hip_conf_handle_opp(struct hip_common *msg,
                                int action,
                                const char *opt[],
                                int optc,
@@ -1814,7 +1817,7 @@ out:
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-static int hip_conf_handle_get_peer_lsi(hip_common_t *msg,
+static int hip_conf_handle_get_peer_lsi(struct hip_common *msg,
                                         UNUSED int action,
                                         const char *opt[],
                                         UNUSED int optc,
@@ -1867,7 +1870,7 @@ out_err:
  * @param send_only currently unused
  * @return       zero on success, or negative error value on error.
  */
-static int hip_conf_handle_service(hip_common_t *msg,
+static int hip_conf_handle_service(struct hip_common *msg,
                                    int action,
                                    const char *opt[],
                                    int optc,
@@ -1951,7 +1954,7 @@ out_err:
  * @return zero for success and negative on error
  * @todo remove this and related constants
  */
-static int hip_conf_handle_run_normal(UNUSED hip_common_t *msg,
+static int hip_conf_handle_run_normal(UNUSED struct hip_common *msg,
                                       UNUSED int action,
                                       UNUSED const char *opt[],
                                       UNUSED int optc,
@@ -1973,7 +1976,7 @@ static int hip_conf_handle_run_normal(UNUSED hip_common_t *msg,
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-static int hip_conf_handle_ha(hip_common_t *msg,
+static int hip_conf_handle_ha(struct hip_common *msg,
                               UNUSED int action,
                               const char *opt[],
                               int optc,
@@ -2025,7 +2028,7 @@ out_err:
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-static int hip_conf_handle_mhaddr(hip_common_t *msg,
+static int hip_conf_handle_mhaddr(struct hip_common *msg,
                                   UNUSED int action,
                                   const char *opt[],
                                   UNUSED int optc,
@@ -2061,7 +2064,7 @@ out_err:
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-static int hip_conf_handle_handover(hip_common_t *msg,
+static int hip_conf_handle_handover(struct hip_common *msg,
                                     UNUSED int action,
                                     const char *opt[],
                                     UNUSED int optc,
@@ -2239,7 +2242,7 @@ int hip_handle_exec_app(int do_fork, int type, int argc,
  *                  should block for a response from hipd
  * @return zero for success and negative on error
  */
-static int hip_conf_handle_restart(hip_common_t *msg,
+static int hip_conf_handle_restart(struct hip_common *msg,
                                    UNUSED int type,
                                    UNUSED const char *opt[],
                                    UNUSED int optc,
@@ -2254,7 +2257,7 @@ out_err:
     return err;
 }
 
-static int hip_conf_handle_nsupdate(hip_common_t *msg,
+static int hip_conf_handle_nsupdate(struct hip_common *msg,
                                     UNUSED int action,
                                     const char *opt[],
                                     UNUSED int optc,
@@ -2352,7 +2355,7 @@ out_err:
  * @see hip_conf_handle_nsupdate
  * @see hip_conf_handle_hit_to_ip_set
  */
-static int hip_conf_handle_hit_to_ip(hip_common_t *msg,
+static int hip_conf_handle_hit_to_ip(struct hip_common *msg,
                                      int action,
                                      const char *opt[],
                                      int optc, int send_only)
@@ -2385,7 +2388,7 @@ out_err:
  * @return zero for success and negative on error
  * @see hip_conf_handle_hit_to_ip
  */
-static int hip_conf_handle_hit_to_ip_set(hip_common_t *msg,
+static int hip_conf_handle_hit_to_ip_set(struct hip_common *msg,
                                          UNUSED int action,
                                          const char *opt[],
                                          UNUSED int optc,
@@ -2570,7 +2573,7 @@ out_err:
  *       in conf.h because type values are used as @c action_handler array
  *       index. Locations and order of these handlers are important.
  */
-int (*action_handler[])(hip_common_t *,
+int (*action_handler[])(struct hip_common *,
                         int action,
                         const char *opt[],
                         int optc,
@@ -2636,9 +2639,9 @@ int (*action_handler[])(hip_common_t *,
  */
 int hip_do_hipconf(int argc, const char *argv[], int send_only)
 {
-    int err           = 0, type_arg = 0;
-    long int action   = 0, type = 0;
-    hip_common_t *msg = NULL;
+    int      err    = 0, type_arg = 0;
+    long int action = 0, type     = 0;
+    struct hip_common *msg = NULL;
 
     /* Check that we have at least one command line argument. */
     HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",

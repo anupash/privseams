@@ -112,7 +112,7 @@ static struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct
  * @param locators an extra pointer that will point to the LOCATOR
  * @return zero on success or negative on failure
  */
-int hip_create_locators(hip_common_t *locator_msg,
+int hip_create_locators(struct hip_common *locator_msg,
                         struct hip_locator_info_addr_item **locators)
 {
     int err = 0;
@@ -174,9 +174,9 @@ static inline uint32_t hip_update_get_out_id(struct update_state *state)
  * @todo :  Divide this function into more pieces, handle_spi, handle_seq, etc
  * @todo : Remove the uncommented lines?
  */
-static int hip_create_update_msg(hip_common_t *received_update_packet,
+static int hip_create_update_msg(struct hip_common *received_update_packet,
                                  struct hip_hadb_state *ha,
-                                 hip_common_t *update_packet_to_send,
+                                 struct hip_common *update_packet_to_send,
                                  struct hip_locator_info_addr_item *locators,
                                  int type)
 {
@@ -359,7 +359,7 @@ out_err:
  * @param dst_addr the destination address to use for sending
  * @return zero on success or negative on failure
  */
-static int hip_send_update_pkt(hip_common_t *update_packet_to_send,
+static int hip_send_update_pkt(struct hip_common *update_packet_to_send,
                                struct hip_hadb_state *ha,
                                const struct in6_addr *src_addr,
                                const struct in6_addr *dst_addr)
@@ -402,7 +402,7 @@ static void hip_remove_addresses_to_send_echo_request(struct update_state *state
  *
  * @param ha    pointer to a host association
  */
-static void hip_print_addresses_to_send_update_request(hip_ha_t *ha)
+static void hip_print_addresses_to_send_update_request(struct hip_hadb_state *ha)
 {
     int i = 0;
     hip_list_t *item = NULL, *tmp = NULL;
@@ -499,17 +499,17 @@ out_err:
  *
  * @todo locators should be sent to the whole verified addresses?
  */
-int hip_send_update_to_one_peer(hip_common_t *received_update_packet,
+int hip_send_update_to_one_peer(struct hip_common *received_update_packet,
                                 struct hip_hadb_state *ha,
                                 struct in6_addr *src_addr,
                                 struct in6_addr *dst_addr,
                                 struct hip_locator_info_addr_item *locators,
                                 int type)
 {
-    int err                             = 0, i = 0;
-    hip_list_t *item                    = NULL, *tmp = NULL;
-    hip_common_t *update_packet_to_send = NULL;
-    struct update_state *localstate     = NULL;
+    int err = 0, i = 0;
+    hip_list_t *item = NULL, *tmp = NULL;
+    struct hip_common   *update_packet_to_send = NULL;
+    struct update_state *localstate            = NULL;
     struct in6_addr local_addr;
 
     HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
@@ -590,9 +590,9 @@ static int hip_send_locators_to_all_peers(void)
 {
     int err = 0, i = 0;
     struct hip_locator_info_addr_item *locators;
-    hip_ha_t *ha = NULL;
+    struct hip_hadb_state *ha          = NULL;
+    struct hip_common     *locator_msg = NULL;
     hip_list_t *item = NULL, *tmp = NULL;
-    hip_common_t *locator_msg = NULL;
 
     HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
              "Out of memory while allocation memory for the packet\n");
@@ -600,7 +600,7 @@ static int hip_send_locators_to_all_peers(void)
 
     // Go through all the peers and send update packets
     list_for_each_safe(item, tmp, hadb_hit, i) {
-        ha = (hip_ha_t *) list_entry(item);
+        ha = (struct hip_hadb_state *) list_entry(item);
 
         if (ha->hastate == HIP_HASTATE_VALID &&
             ha->state == HIP_STATE_ESTABLISHED) {
@@ -721,7 +721,7 @@ int hip_get_locator_addr_item_count(const struct hip_locator *locator)
  * @param locator the LOCATOR parameter
  * @return zero on success or negative on failure
  */
-static int hip_handle_locator_parameter(hip_ha_t *ha,
+static int hip_handle_locator_parameter(struct hip_hadb_state *ha,
                                         const struct in6_addr *src_addr,
                                         struct hip_locator *locator)
 {
@@ -944,7 +944,7 @@ static void hip_handle_third_update_packet(struct hip_packet_context *ctx)
  *
  * @return zero on success or negative on failure
  */
-static int hip_update_manual_update(UNUSED hip_common_t *msg,
+static int hip_update_manual_update(UNUSED struct hip_common *msg,
                                     UNUSED struct sockaddr_in6 *src)
 {
     HIP_DEBUG("Manual UPDATE triggered.\n");

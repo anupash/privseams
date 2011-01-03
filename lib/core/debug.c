@@ -797,7 +797,7 @@ void hip_print_locator_addresses(const struct hip_common *in_msg)
  *
  * @param entry the host association
  */
-void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
+void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *entry)
 {
     hip_list_t *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr;

@@ -869,7 +869,7 @@ out_err:
  * @param   tuple connection state of the connection tracking mechanism
  * @return  0 on success, -1 in case of an error or unsupported update
  */
-int esp_prot_conntrack_update(const hip_common_t *update,
+int esp_prot_conntrack_update(const struct hip_common *update,
                               const struct tuple *tuple)
 {
     const struct hip_tlv_common *param  = NULL;

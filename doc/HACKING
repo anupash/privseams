@@ -916,7 +916,7 @@ for variable commenting, lets move onto function commenting. Example 4.
  * @note              the entry must not be NULL
  * @see               hip_clear_type()
  */
-int hip_set_type(hip_ha_t *entry, int type_number);
+int hip_set_type(struct hip_hadb_state *entry, int type_number);
 
 Notice how that whole commenting is just before the function block. The
 function commenting block contains three elements, the brief description, the

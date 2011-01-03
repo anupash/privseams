@@ -64,10 +64,10 @@ int hip_send_r2(const uint8_t packet_type,
 int hip_send_r2_response(struct hip_common *r2,
                          struct in6_addr *r2_saddr,
                          struct in6_addr *r2_daddr,
-                         hip_ha_t *entry,
-                         struct hip_portpair_t *r2_info);
+                         struct hip_hadb_state *entry,
+                         struct hip_portpair *r2_info);
 
-int hip_send_i1(hip_hit_t *, const hip_hit_t *, hip_ha_t *);
+int hip_send_i1(hip_hit_t *, const hip_hit_t *, struct hip_hadb_state *);
 
 int hip_send_i2(const uint8_t packet_type,
                 const uint32_t ha_state,
@@ -75,9 +75,13 @@ int hip_send_i2(const uint8_t packet_type,
 
 int are_addresses_compatible(const struct in6_addr *src_addr,
                              const struct in6_addr *dst_addr);
-int hip_send_pkt(const struct in6_addr *local_addr, const struct in6_addr *peer_addr,
-                 const in_port_t src_port, const in_port_t dst_port,
-                 struct hip_common *msg, hip_ha_t *entry, const int retransmit);
+int hip_send_pkt(const struct in6_addr *local_addr,
+                 const struct in6_addr *peer_addr,
+                 const in_port_t src_port,
+                 const in_port_t dst_port,
+                 struct hip_common *msg,
+                 struct hip_hadb_state *entry,
+                 const int retransmit);
 int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
                       in_port_t src_port, in_port_t dst_port,
                       const void *msg, int length);

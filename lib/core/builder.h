@@ -67,7 +67,7 @@ void hip_build_network_hdr(struct hip_common *,
                            uint16_t,
                            const struct in6_addr *,
                            const struct in6_addr *);
-int hip_host_id_hits(hip_ha_t *entry, struct hip_common *msg);
+int hip_host_id_hits(struct hip_hadb_state *entry, struct hip_common *msg);
 int hip_build_param_contents(struct hip_common *,
                              const void *,
                              hip_tlv_type_t,
@@ -235,14 +235,14 @@ int dsa_to_hip_endpoint(DSA *dsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags_t endpoint_flags,
                         const char *hostname);
-int hip_build_param_reg_info(hip_common_t *msg,
+int hip_build_param_reg_info(struct hip_common *msg,
                              const void *service_list,
                              const unsigned int service_count);
-int hip_build_param_reg_request(hip_common_t *msg,
+int hip_build_param_reg_request(struct hip_common *msg,
                                 const uint8_t lifetime,
                                 const uint8_t *type_list,
                                 const int type_count);
-int hip_build_param_reg_response(hip_common_t *msg,
+int hip_build_param_reg_response(struct hip_common *msg,
                                  const uint8_t lifetime,
                                  const uint8_t *type_list,
                                  const int type_count);
@@ -282,7 +282,7 @@ int hip_build_param_esp_prot_root(struct hip_common *msg,
 int hip_build_param_reg_from(struct hip_common *msg,
                              const struct in6_addr *addr,
                              const in_port_t port);
-int hip_build_param_nat_port(hip_common_t *msg,
+int hip_build_param_nat_port(struct hip_common *msg,
                              const in_port_t port,
                              hip_tlv_type_t hipparam);
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
