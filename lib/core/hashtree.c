@@ -326,7 +326,7 @@ int htree_add_random_secrets(hash_tree_t *tree)
 int htree_calc_nodes(hash_tree_t *tree,
                      const htree_leaf_gen_t leaf_gen,
                      const htree_node_gen_t node_gen,
-                     const htree_gen_args_t *gen_args)
+                     const struct htree_gen_args *gen_args)
 {
     int level_width       = 0, i, err = 0;
     // first leaf to be used when calculating next tree level in bytes
@@ -592,7 +592,7 @@ int htree_verify_branch(const unsigned char *root,
                         const int secret_length,
                         const htree_leaf_gen_t leaf_gen,
                         const htree_node_gen_t node_gen,
-                        const htree_gen_args_t *gen_args)
+                        const struct htree_gen_args *gen_args)
 {
     /* space for two nodes to be hashed together */
     unsigned char buffer[2 * root_length];
@@ -682,7 +682,7 @@ int htree_leaf_generator(const unsigned char *data,
                          const unsigned char *secret,
                          const int secret_length,
                          unsigned char *dst_buffer,
-                         UNUSED const htree_gen_args_t *gen_args)
+                         UNUSED const struct htree_gen_args *gen_args)
 {
     int err                        = 0;
     unsigned char buffer[data_length + secret_length];
@@ -723,7 +723,7 @@ int htree_node_generator(const unsigned char *left_node,
                          UNUSED const unsigned char *right_node,
                          const int node_length,
                          unsigned char *dst_buffer,
-                         UNUSED const htree_gen_args_t *gen_args)
+                         UNUSED const struct htree_gen_args *gen_args)
 {
     int err = 0;
 

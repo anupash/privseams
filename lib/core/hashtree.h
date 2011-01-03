@@ -39,9 +39,9 @@
 #include <stdint.h>
 
 /* arguments for the generator functionms */
-typedef struct htree_gen_args {
+struct htree_gen_args {
     int index;
-} htree_gen_args_t;
+};
 
 /** leaf generator function pointer
  *
@@ -52,7 +52,7 @@ typedef int (*htree_leaf_gen_t)(const unsigned char *data,
                                 const unsigned char *secret,
                                 const int secret_length,
                                 unsigned char *dst_buffer,
-                                const htree_gen_args_t *gen_args);
+                                const struct htree_gen_args *gen_args);
 
 /** node generator function pointer
  *
@@ -62,7 +62,7 @@ typedef int (*htree_node_gen_t)(const unsigned char *left_node,
                                 const unsigned char *right_node,
                                 const int node_length,
                                 unsigned char *dst_buffer,
-                                const htree_gen_args_t *gen_args);
+                                const struct htree_gen_args *gen_args);
 
 typedef struct hash_tree {
     // data variables
@@ -105,7 +105,7 @@ int htree_add_random_secrets(hash_tree_t *tree);
 int htree_calc_nodes(hash_tree_t *tree,
                      const htree_leaf_gen_t leaf_gen,
                      const htree_node_gen_t node_gen,
-                     const htree_gen_args_t *gen_args);
+                     const struct htree_gen_args *gen_args);
 int htree_get_num_remaining(const hash_tree_t *tree);
 int htree_has_more_data(const hash_tree_t *tree);
 int htree_get_next_data_offset(hash_tree_t *tree);
@@ -131,17 +131,17 @@ int htree_verify_branch(const unsigned char *root,
                         const int secret_length,
                         const htree_leaf_gen_t leaf_gen,
                         const htree_node_gen_t node_gen,
-                        const htree_gen_args_t *gen_args);
+                        const struct htree_gen_args *gen_args);
 int htree_leaf_generator(const unsigned char *data,
                          const int data_length,
                          const unsigned char *secret,
                          const int secret_length,
                          unsigned char *dst_buffer,
-                         const htree_gen_args_t *gen_args);
+                         const struct htree_gen_args *gen_args);
 int htree_node_generator(const unsigned char *left_node,
                          const unsigned char *right_node,
                          const int node_length,
                          unsigned char *dst_buffer,
-                         const htree_gen_args_t *gen_args);
+                         const struct htree_gen_args *gen_args);
 
 #endif /* HIP_LIB_CORE_HASHTREE_H */
