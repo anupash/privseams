@@ -4,15 +4,12 @@ set -e
 
 PATH=/p/bin:$PATH
 
-# Use abs dir names in TMP_DIR, WWW_DIR and OUTPUT_FILE
 TMP_DIR=~/.bzr-hipl-cache
 BRANCH=trunk
 WWW_DIR=/var/www/infrahip/html/hipl
 OUTPUT_FILE=$WWW_DIR/hipl.tar.gz
 CHANGE_LOG_FILE=$TMP_DIR/ChangeLog
 
-# Update to the latest version and check out what patches need to be generated
-#
 if test -x  $TMP_DIR; then
     cd $TMP_DIR/hipl-bzr/$BRANCH
     bzr update
@@ -28,29 +25,23 @@ fi
 VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 
 # Generate a ChangeLog file
-#
 bzr log > $CHANGE_LOG_FILE
 
-# Make a HIP tarball
-#
+# Make a HIPL tarball
 autoreconf --install
 ./configure --sysconfdir=/etc
 make dist
 
-# Add ChangeLog file and rename as "trunk"
+# Add ChangeLog file to tarball and rename to "trunk"
 tar xzf hipl-${VERSION}.tar.gz
 mv hipl-${VERSION} trunk
 cp $CHANGE_LOG_FILE trunk/doc
 tar czf hipl.tar.gz trunk
 chmod a+r hipl.tar.gz
 
-# Move the tarball to the web
+# Move tarball and ChangeLog to web directory
 mv hipl.tar.gz $WWW_DIR
-
-# Move the ChangeLog to web
-#
 mv $CHANGE_LOG_FILE $WWW_DIR
 
 # Remove temporary files
 rm -rf hipl-${VERSION} trunk
-
