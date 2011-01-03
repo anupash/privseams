@@ -43,7 +43,7 @@
 #include "user_ipsec_sadb.h"
 
 int send_esp_prot_to_hipd(const int active);
-int send_bex_store_update_to_hipd(hchain_store_t *hcstore,
+int send_bex_store_update_to_hipd(struct hchain_store *hcstore,
                                   const int use_hash_trees);
 int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
                                 const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],

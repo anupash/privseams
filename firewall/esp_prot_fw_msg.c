@@ -65,7 +65,7 @@
  *       this should be set up for the store containing the hchains for the BEX
  * @note the created message contains hash_length and anchors for each transform
  */
-static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore,
+static hip_common_t *create_bex_store_update_msg(struct hchain_store *hcstore,
                                                  const int use_hash_trees)
 {
     struct hip_common *msg    = NULL;
@@ -284,7 +284,7 @@ out_err:
  * @param   use_hash_trees indicates whether hash chains or hash trees are stored
  * @return  0 on success, -1 on error
  */
-int send_bex_store_update_to_hipd(hchain_store_t *hcstore,
+int send_bex_store_update_to_hipd(struct hchain_store *hcstore,
                                   const int use_hash_trees)
 {
     struct hip_common *msg = NULL;

@@ -112,9 +112,9 @@ static int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS];
 static esp_prot_tfm_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 
 // this store only contains hchains used when negotiating esp protection in BEX
-static hchain_store_t bex_store;
+static struct hchain_store bex_store;
 // this stores hchains used during UPDATE
-static hchain_store_t update_store;
+static struct hchain_store update_store;
 
 /**
  * Adds buffered packet hashes to a protected IPsec packet

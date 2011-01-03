@@ -67,7 +67,7 @@ static void hcstore_free_htree(void *htree)
  * @param       refill_threshold the threshold below which a hierarchy level will be refilled
  * @return      always returns 0
  */
-int hcstore_init(hchain_store_t *hcstore,
+int hcstore_init(struct hchain_store *hcstore,
                  const int num_hchains_per_item,
                  const double refill_threshold)
 {
@@ -112,7 +112,7 @@ int hcstore_init(hchain_store_t *hcstore,
  * @param       hcstore the store to be un-initialized
  * @param       use_hash_trees indicates whether hash chains or hash trees are stored
  */
-void hcstore_uninit(hchain_store_t *hcstore, const int use_hash_trees)
+void hcstore_uninit(struct hchain_store *hcstore, const int use_hash_trees)
 {
     int i, j, g, h;
 
@@ -155,7 +155,7 @@ void hcstore_uninit(hchain_store_t *hcstore, const int use_hash_trees)
  * @return      returns the index to the hash function in the store,
  *          -1 if MAX_FUNCTIONS is reached
  */
-int hcstore_register_function(hchain_store_t *hcstore,
+int hcstore_register_function(struct hchain_store *hcstore,
                               const hash_function hash_func)
 {
     int err = 0;
@@ -197,7 +197,7 @@ out_err:
  * @return      returns the index to the hash length in the store,
  *          -1 if MAX_NUM_HASH_LENGTH is reached
  */
-int hcstore_register_hash_length(hchain_store_t *hcstore, const int function_id,
+int hcstore_register_hash_length(struct hchain_store *hcstore, const int function_id,
                                  const int hash_length)
 {
     int err = 0;
@@ -241,7 +241,7 @@ out_err:
  * @return      returns the index to the hash structure length in the store,
  *          -1 if MAX_NUM_HCHAIN_LENGTH is reached
  */
-int hcstore_register_hash_item_length(hchain_store_t *hcstore,
+int hcstore_register_hash_item_length(struct hchain_store *hcstore,
                                       const int function_id,
                                       const int hash_length_id,
                                       const int hitem_length)
@@ -293,7 +293,7 @@ out_err:
  * @param       addtional_hierarchies
  * @return      returns the hierarchy count, -1 if MAX_NUM_HIERARCHIES is reached
  */
-int hcstore_register_hash_item_hierarchy(hchain_store_t *hcstore,
+int hcstore_register_hash_item_hierarchy(struct hchain_store *hcstore,
                                          const int function_id,
                                          const int hash_length_id,
                                          const int hitem_length,
@@ -354,7 +354,7 @@ out_err:
  * @param       use_hash_trees indicates whether hash chains or hash trees are stored
  * @return      number of created hash structures, -1 in case of an error
  */
-static int hcstore_fill_item(hchain_store_t *hcstore,
+static int hcstore_fill_item(struct hchain_store *hcstore,
                              const int hash_func_id,
                              const int hash_length_id,
                              const int hchain_length_id,
@@ -507,7 +507,7 @@ out_err:
  * @param       use_hash_trees indicates whether hash chains or hash trees are stored
  * @return      number of created hash structures, -1 in case of an error
  */
-int hcstore_refill(hchain_store_t *hcstore, const int use_hash_trees)
+int hcstore_refill(struct hchain_store *hcstore, const int use_hash_trees)
 {
     int err = 0;
     unsigned i, j, g, h;
@@ -541,7 +541,7 @@ out_err:
  * @param       hchain_length length of the hash structure
  * @return      pointer to the hash structure, NULL in case of an error or no such structure
  */
-void *hcstore_get_hash_item(hchain_store_t *hcstore,
+void *hcstore_get_hash_item(struct hchain_store *hcstore,
                             const int function_id,
                             const int hash_length_id,
                             const int hchain_length)
@@ -603,7 +603,7 @@ out_err:
  * @param       use_hash_trees indicates whether hash chains or hash trees are stored
  * @return      pointer to the hash structure, NULL in case of an error or no such structure
  */
-void *hcstore_get_item_by_anchor(hchain_store_t *hcstore,
+void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
                                  const int function_id,
                                  const int hash_length_id,
                                  const int hierarchy_level,
@@ -690,7 +690,7 @@ out_err:
  * @param       function_id index of the hash function
  * @return      pointer to the hash function, NULL if no such hash function
  */
-hash_function hcstore_get_hash_function(hchain_store_t *hcstore,
+hash_function hcstore_get_hash_function(struct hchain_store *hcstore,
                                         const int function_id)
 {
     HIP_ASSERT(hcstore != NULL);
@@ -706,7 +706,7 @@ hash_function hcstore_get_hash_function(hchain_store_t *hcstore,
  * @param       hash_length_id index of the hash length
  * @return      the hash length, 0 if no such hash length
  */
-int hcstore_get_hash_length(hchain_store_t *hcstore,
+int hcstore_get_hash_length(struct hchain_store *hcstore,
                             const int function_id,
                             const int hash_length_id)
 {
