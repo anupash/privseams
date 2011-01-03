@@ -61,8 +61,8 @@
  */
 int ipv6_addr_is_hit(const struct in6_addr *hit)
 {
-    hip_closest_prefix_type_t hit_begin;
-    memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
+    hip_closest_prefix_type hit_begin;
+    memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type));
     hit_begin  = ntohl(hit_begin);
     hit_begin &= HIP_HIT_TYPE_MASK_INV;
     return hit_begin == HIP_HIT_PREFIX;
@@ -76,8 +76,8 @@ int ipv6_addr_is_hit(const struct in6_addr *hit)
  */
 int ipv6_addr_is_teredo(const struct in6_addr *teredo)
 {
-    hip_closest_prefix_type_t teredo_begin;
-    memcpy(&teredo_begin, teredo, sizeof(hip_closest_prefix_type_t));
+    hip_closest_prefix_type teredo_begin;
+    memcpy(&teredo_begin, teredo, sizeof(hip_closest_prefix_type));
     teredo_begin  = ntohl(teredo_begin);
     teredo_begin &= HIP_TEREDO_TYPE_MASK_INV;
     return teredo_begin == HIP_TEREDO_PREFIX;
@@ -128,11 +128,11 @@ int hit_is_opportunistic_hit(const struct in6_addr *hit)
  */
 void set_hit_prefix(struct in6_addr *hit)
 {
-    hip_closest_prefix_type_t hit_begin;
-    memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
+    hip_closest_prefix_type hit_begin;
+    memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type));
     hit_begin &= htonl(HIP_HIT_TYPE_MASK_CLEAR);
     hit_begin |= htonl(HIP_HIT_PREFIX);
-    memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
+    memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type));
 }
 
 /**
@@ -142,11 +142,11 @@ void set_hit_prefix(struct in6_addr *hit)
  */
 void set_lsi_prefix(hip_lsi_t *lsi)
 {
-    hip_closest_prefix_type_t lsi_begin;
-    memcpy(&lsi_begin, lsi, sizeof(hip_closest_prefix_type_t));
+    hip_closest_prefix_type lsi_begin;
+    memcpy(&lsi_begin, lsi, sizeof(hip_closest_prefix_type));
     lsi_begin &= htonl(HIP_LSI_TYPE_MASK_CLEAR);
     lsi_begin |= htonl(HIP_LSI_PREFIX);
-    memcpy(lsi, &lsi_begin, sizeof(hip_closest_prefix_type_t));
+    memcpy(lsi, &lsi_begin, sizeof(hip_closest_prefix_type));
 }
 
 /**

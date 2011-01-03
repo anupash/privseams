@@ -42,7 +42,7 @@ struct hosts_file_line {
 };
 
 
-typedef uint32_t hip_closest_prefix_type_t;
+typedef uint32_t hip_closest_prefix_type;
 
 int ipv6_addr_is_hit(const struct in6_addr *hit);
 int ipv6_addr_is_teredo(const struct in6_addr *teredo);
