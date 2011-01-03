@@ -625,11 +625,6 @@ DH *hip_generate_dh_key(int group_id)
     return dh;
 }
 
-void hip_free_dh(DH *dh)
-{
-    DH_free(dh);
-}
-
 /**
  * determine the size for required to store DH shared secret
  * @param hip_dh_group_type the group type from DIFFIE_HELLMAN parameter

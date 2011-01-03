@@ -89,7 +89,6 @@ int hip_gen_dh_shared_key(DH *dh, uint8_t *peer_key, size_t peer_len, uint8_t *o
                           size_t outlen);
 int hip_encode_dh_publickey(DH *dh, uint8_t *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
-void hip_free_dh(DH *target);
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
                struct in6_addr *hit);

@@ -177,7 +177,7 @@ static void hip_regen_dh_keys(uint32_t bitmask)
             okey        = dh_table[i];
             dh_table[i] = tmp;
 
-            hip_free_dh(okey);
+            DH_free(okey);
 
             cnt++;
 
@@ -194,10 +194,8 @@ void hip_dh_uninit(void)
 {
     int i;
     for (i = 1; i < HIP_MAX_DH_GROUP_ID; i++) {
-        if (dh_table[i] != NULL) {
-            hip_free_dh(dh_table[i]);
-            dh_table[i] = NULL;
-        }
+        DH_free(dh_table[i]);
+        dh_table[i] = NULL;
     }
 }
 
