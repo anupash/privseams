@@ -324,13 +324,13 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
  * ipv6_addr_any). </b> When @c ha is NULL or if @c ha->hit_peer is
  * ipv6_addr_any this function will kill the HIP daemon.
  *
- * @return The state of the HIP association (hip_hastate_t).
+ * @return The state of the HIP association (enum hip_hastate).
  * @note   For multithreaded model: this function assumes that @c ha is locked.
  */
 int hip_hadb_insert_state(hip_ha_t *ha)
 {
-    hip_hastate_t st = 0;
-    hip_ha_t *tmp    = NULL;
+    enum hip_hastate  st  = 0;
+    hip_ha_t         *tmp = NULL;
 
     HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
 

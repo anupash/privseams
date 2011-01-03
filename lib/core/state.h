@@ -92,22 +92,22 @@
 /**
  * HIP host association state.
  */
-typedef enum {
+enum hip_hastate {
     HIP_HASTATE_INVALID = 0,
     HIP_HASTATE_VALID   = 1,
-} hip_hastate_t;
+};
 
 /**
  * A data structure for handling retransmission. Used inside host association
  * database entries.
  */
-typedef struct hip_msg_retrans {
+struct hip_msg_retrans {
     int                count;
     time_t             last_transmit;
     struct in6_addr    saddr;
     struct in6_addr    daddr;
     struct hip_common *buf;
-} hip_msg_retrans_t;
+};
 
 /*
  * Fixed start of this struct must match to struct hip_locator_info_addr_item
@@ -190,7 +190,7 @@ struct hip_hadb_state {
      *  locking stuff which is currently unimplemented because the daemon
      *  is single threaded. When zero, the host association can be freed.
      *  @date 24.01.2008 */
-    hip_hastate_t         hastate;
+    enum hip_hastate      hastate;
     /** Counter to tear down a HA in CLOSING or CLOSED state */
     int                   purge_timeout;
     /** The state of this host association. @see hip_ha_state */
@@ -324,7 +324,7 @@ struct hip_hadb_state {
 
     HIP_HASHTABLE *                            peer_addr_list_to_be_added;
     /** For storing retransmission related data. */
-    hip_msg_retrans_t                          hip_msg_retrans;
+    struct hip_msg_retrans                     hip_msg_retrans;
     /** peer hostname */
     uint8_t                                    peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     /** Counters of heartbeats (ICMPv6s) */
