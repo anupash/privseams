@@ -1,6 +1,7 @@
 #!/bin/sh -xv
 
 TMP_DIR='$HOME/.hipl.syncall.tmp.dir'
+EXTRACT_DIR='hipl-1.0.6'
 
 HOSTS="
 halko.pc.infrahip.net
@@ -18,11 +19,11 @@ ironforge.infrahip.net
 COMMANDS="
 mkdir -p $TMP_DIR &&
     cd $TMP_DIR &&
-    rm -rf trunk &&
+    rm -rf $EXTRACT_DIR &&
     rm -f hipl.tar.gz &&
     wget http://hipl.hiit.fi/hipl/hipl.tar.gz &&
     tar xvzf hipl.tar.gz &&
-    cd trunk &&
+    cd $EXTRACT_DIR &&
     autoreconf --install &&
     ./configure &&
     make bin syncrepo"
