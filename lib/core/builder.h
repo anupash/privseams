@@ -48,16 +48,16 @@
 /* Removed in 2.6.11 - why ? */
 extern struct hip_cert_spki_info hip_cert_spki_info;
 
-/* registration.c typedefs also used by hip_build_param_reg_info() */
-/** Possible service states. */
-typedef enum { HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1 } hip_srv_status_t;
+/** possible service states */
+enum hip_srv_status { HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1 };
+
 /** HIP service. */
-typedef struct hip_srv {
-    hip_srv_status_t status;     /**< Service status */
-    uint8_t          reg_type;
-    uint8_t          min_lifetime;
-    uint8_t          max_lifetime;
-} hip_srv_t;
+struct hip_srv {
+    enum hip_srv_status status;     /**< service status */
+    uint8_t             reg_type;
+    uint8_t             min_lifetime;
+    uint8_t             max_lifetime;
+};
 
 int hip_build_netlink_dummy_header(struct hip_common *);
 int hip_build_param_heartbeat(struct hip_common *msg, int seconds);

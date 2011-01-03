@@ -61,7 +61,7 @@
 #define HIP_PENDING_REQUEST_LIFETIME 120
 
 /** An array for storing all existing services. */
-hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
+struct hip_srv hip_services[HIP_TOTAL_EXISTING_SERVICES];
 /** A linked list for storing pending requests on the client side.
  *  @note This assumes a single threaded model. We are not using mutexes here.
  */
@@ -156,7 +156,7 @@ int hip_registration_maintenance(void)
  * @param  status   the status to set i.e. ON or OFF.
  * @return          zero if the status was set succesfully, -1 otherwise.
  */
-int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
+int hip_set_srv_status(uint8_t reg_type, enum hip_srv_status status)
 {
     int i = 0;
 
@@ -175,7 +175,7 @@ int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
  * whose status is ON.
  *
  * Make sure that the size of the target buffer @c active_services is at least
- * HIP_TOTAL_EXISTING_SERVICES * sizeof(hip_srv_t).
+ * HIP_TOTAL_EXISTING_SERVICES * sizeof(struct hip_srv).
  *
  * @param active_services      a target buffer where to put the active
  *                             services.
@@ -185,7 +185,7 @@ int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
  * @return -1 if active_services is NULL, zero otherwise.
  */
 
-int hip_get_active_services(hip_srv_t *active_services,
+int hip_get_active_services(struct hip_srv *active_services,
                             unsigned int *active_service_count)
 {
     if (active_services == NULL) {

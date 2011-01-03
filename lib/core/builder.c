@@ -2268,7 +2268,7 @@ int hip_build_param_reg_info(hip_common_t *msg,
 {
     int err    = 0;
     unsigned i = 0;
-    const hip_srv_t *service_list = (const hip_srv_t *) srv_list;
+    const struct hip_srv *service_list = (const struct hip_srv *) srv_list;
     struct hip_reg_info reg_info;
     uint8_t reg_type[service_count];
 

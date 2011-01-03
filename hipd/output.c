@@ -574,7 +574,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                                  int cookie_k)
 {
     hip_common_t *msg = NULL;
-    hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
+    struct hip_srv service_list[HIP_TOTAL_EXISTING_SERVICES];
     uint8_t *dh_data1  = NULL, *dh_data2 = NULL;
     char order[] = "000";
     int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;

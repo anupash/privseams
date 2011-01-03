@@ -64,8 +64,8 @@ void hip_init_services(void);
  */
 void hip_uninit_services(void);
 int hip_registration_maintenance(void);
-int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status);
-int hip_get_active_services(hip_srv_t *active_services,
+int hip_set_srv_status(uint8_t reg_type, enum hip_srv_status status);
+int hip_get_active_services(struct hip_srv *active_services,
                             unsigned int *active_service_count);
 int hip_add_pending_request(hip_pending_request_t *request);
 int hip_del_pending_request(hip_ha_t *entry);
