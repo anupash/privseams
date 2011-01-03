@@ -192,7 +192,7 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
                 -1, "Could not get update state for host association.\n");
         updatestate->update_id_out++;
         seq_id = hip_update_get_out_id(updatestate);
-
+        update_sent = 1;
 
     } else {
         HIP_DEBUG("Message is not update trigger.\n");
@@ -214,8 +214,6 @@ int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
                        update_packet_to_send,
                        ha,
                        1);
-
-    update_sent = 1;
 
 out_err:
     return err;
