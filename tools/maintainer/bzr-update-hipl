@@ -36,5 +36,13 @@ chmod a+r $TARBALL
 mv $TARBALL hipl-${VERSION}/doc/ChangeLog $WWW_DIR
 ln -sf $WWW_DIR/$TARBALL $WWW_DIR/hipl.tar.gz
 
+make doxygen
+rm -rf $WWW_DIR/doxygen
+mv doc/doxy/html $WWW_DIR/doxygen
+
+make doc/HOWTO.html
+cp doc/HOWTO.html doc/*.png $WWW_DIR/manual
+touch $WWW_DIR/manual/DO_NOT_EDIT_THESE_MANUALLY.GENERATED_AUTOMATICALLY
+
 # Remove temporary files
-rm -rf hipl-${VERSION}
+rm -rf hipl-${VERSION} trunk
