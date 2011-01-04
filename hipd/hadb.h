@@ -37,8 +37,6 @@
 #define HIP_LOCK_HA(ha)
 #define HIP_UNLOCK_HA(ha)
 
-#define do_gettimeofday(x) gettimeofday(x, NULL)
-
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 

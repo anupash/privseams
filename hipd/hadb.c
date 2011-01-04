@@ -814,7 +814,7 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
             a_item->lifetime      = lifetime;
             ipv6_addr_copy(&a_item->address, new_addr);
             a_item->address_state = state;
-            do_gettimeofday(&a_item->modified_time);
+            gettimeofday(&a_item->modified_time, NULL);
 
             list_add(a_item, entry->peer_addr_list_to_be_added);
         }
@@ -837,7 +837,7 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
     a_item->port          = port;
     ipv6_addr_copy(&a_item->address, new_addr);
     a_item->address_state = state;
-    do_gettimeofday(&a_item->modified_time);
+    gettimeofday(&a_item->modified_time, NULL);
 
     list_add(a_item, entry->peer_addresses_old);
 
