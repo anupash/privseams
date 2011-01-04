@@ -69,11 +69,36 @@
 #define SIGNALING_USER_ID_MAX_LEN   128
 #define SIGNALING_PATH_MAX_LEN      2048
 
+/* Failure types for user authentication */
+#define SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED    1
+#define SIGNALING_USER_AUTH_AUTHORITY_REJECTED      2
+
+/* Signaling notification message types */
+#define SIGNALING_USER_AUTH_FAILED                  124
+
 /* ------------------------------------------------------------------------------------
  *
  *                    PARAMETER DEFINITIONS
  *
  * ------------------------------------------------------------------------------------ */
+
+/*
+     Format for the notification data, for the "user authentication failed" notification.
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |           REASON              |                               /
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     /                            PADDING                            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ */
+
+struct signaling_ntf_user_auth_failed_data {
+    uint16_t reason;
+};
+
 
 /*
      Parameter for a user signature.
