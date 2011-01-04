@@ -915,7 +915,7 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
 int hip_del_peer_info_entry(struct hip_hadb_state *ha)
 {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    hip_opp_block_t *opp_entry = NULL;
+    struct hip_opp_blocking_request *opp_entry = NULL;
 #endif
 
     HIP_LOCK_HA(ha);
