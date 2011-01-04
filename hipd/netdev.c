@@ -496,7 +496,7 @@ static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
     if (addr && addr->sa_family == AF_INET) {
         memset(&addr_sin6, 0, sizeof(addr_sin6));
         addr_sin6.sin6_family = AF_INET6;
-        IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr((struct sockaddr *) addr)),
+        IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
                          ((struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &addr_sin6)));
     } else if (addr && addr->sa_family == AF_INET6) {
         memcpy(&addr_sin6, addr, sizeof(addr_sin6));
