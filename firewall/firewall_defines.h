@@ -43,7 +43,7 @@
 #include "esp_prot_defines.h"
 
 
-typedef struct hip_fw_context {
+struct hip_fw_context {
     // queued packet
     ipq_packet_msg_t *ipq_packet;
 
@@ -66,7 +66,7 @@ typedef struct hip_fw_context {
     struct udphdr *udp_encap_hdr;
 
     int            modified;
-} hip_fw_context_t;
+};
 
 /********** State table structures **************/
 

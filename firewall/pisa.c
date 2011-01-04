@@ -183,7 +183,7 @@ out_err:
  * @param ctx context of the packet where the puzzle will be inserted
  * @return success (0) or failure
  */
-static int pisa_insert_puzzle(hip_fw_context_t *ctx)
+static int pisa_insert_puzzle(struct hip_fw_context *ctx)
 {
     uint8_t opaque[PISA_PUZZLE_OPAQUE_LEN];
 
@@ -206,7 +206,7 @@ static int pisa_insert_puzzle(hip_fw_context_t *ctx)
  * @return pointer to the puzzle we accepted or NULL at failure
  */
 static struct hip_challenge_response *pisa_check_challenge_response(
-        hip_fw_context_t *ctx)
+        struct hip_fw_context *ctx)
 {
     struct hip_challenge_response *response;
     struct hip_common *hip = ctx->transport_hdr.hip;
@@ -247,7 +247,7 @@ static struct hip_challenge_response *pisa_check_challenge_response(
  * @param ctx context of the packet with the certificate to check
  * @return success (0) or failure
  */
-static int pisa_check_certificate(hip_fw_context_t *ctx)
+static int pisa_check_certificate(struct hip_fw_context *ctx)
 {
     struct hip_common *hip = ctx->transport_hdr.hip;
     const struct hip_cert *cert;
@@ -305,7 +305,7 @@ out_err:
  *
  * @param ctx context of the packet that belongs to that connection
  */
-static void pisa_accept_connection(const hip_fw_context_t *ctx)
+static void pisa_accept_connection(const struct hip_fw_context *ctx)
 {
     struct hip_common *hip = ctx->transport_hdr.hip;
     struct tuple *t        = get_tuple_by_hits(&hip->hits, &hip->hitr);
@@ -324,7 +324,7 @@ static void pisa_accept_connection(const hip_fw_context_t *ctx)
  *
  * @param ctx context of the packet that contains HITs of the connection
  */
-static void pisa_remove_connection(const hip_fw_context_t *ctx)
+static void pisa_remove_connection(const struct hip_fw_context *ctx)
 {
     struct hip_common *hip = ctx->transport_hdr.hip;
     struct tuple *t        = get_tuple_by_hits(&hip->hits, &hip->hitr);
@@ -340,7 +340,7 @@ static void pisa_remove_connection(const hip_fw_context_t *ctx)
  *
  * @param ctx context of the packet that belongs to that connection
  */
-static void pisa_reject_connection(const hip_fw_context_t *ctx)
+static void pisa_reject_connection(const struct hip_fw_context *ctx)
 {
     HIP_INFO("PISA rejected the connection.\n");
     pisa_remove_connection(ctx);
@@ -352,7 +352,7 @@ static void pisa_reject_connection(const hip_fw_context_t *ctx)
  * @param ctx context of the packet containing the I1
  * @return NF_ACCEPT verdict
  */
-static int pisa_handler_i1(UNUSED hip_fw_context_t *ctx)
+static int pisa_handler_i1(UNUSED struct hip_fw_context *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_BASE, PERF_I1\n");
@@ -375,7 +375,7 @@ static int pisa_handler_i1(UNUSED hip_fw_context_t *ctx)
  * @param ctx context of the packet containing the R1
  * @return NF_ACCEPT verdict
  */
-static int pisa_handler_r1(UNUSED hip_fw_context_t *ctx)
+static int pisa_handler_r1(UNUSED struct hip_fw_context *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R1\n");
@@ -397,7 +397,7 @@ static int pisa_handler_r1(UNUSED hip_fw_context_t *ctx)
  * @param ctx context of the packet to modify
  * @return NF_ACCEPT verdict
  */
-static int pisa_handler_i2(hip_fw_context_t *ctx)
+static int pisa_handler_i2(struct hip_fw_context *ctx)
 {
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2\n");
@@ -421,7 +421,7 @@ static int pisa_handler_i2(hip_fw_context_t *ctx)
  * @param ctx context of the packet to check
  * @return verdict, either NF_ACCEPT or NF_DROP
  */
-static int pisa_handler_r2(hip_fw_context_t *ctx)
+static int pisa_handler_r2(struct hip_fw_context *ctx)
 {
     int verdict                             = NF_DROP, sig = 0, cert = 0;
     struct hip_challenge_response *solution = NULL;
@@ -462,7 +462,7 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
  * @param ctx context of the packet to modify
  * @return NF_ACCEPT verdict
  */
-static int pisa_handler_u1(hip_fw_context_t *ctx)
+static int pisa_handler_u1(struct hip_fw_context *ctx)
 {
     pisa_insert_puzzle(ctx);
 
@@ -476,7 +476,7 @@ static int pisa_handler_u1(hip_fw_context_t *ctx)
  * @param ctx context of the packet to check
  * @return verdict, either NF_ACCEPT or NF_DROP
  */
-static int pisa_handler_u2(hip_fw_context_t *ctx)
+static int pisa_handler_u2(struct hip_fw_context *ctx)
 {
     int verdict                             = NF_DROP;
     int sig                                 = 0;
@@ -506,7 +506,7 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
  * @param ctx context of the packet to check
  * @return verdict, either NF_ACCEPT or NF_DROP
  */
-static int pisa_handler_u3(hip_fw_context_t *ctx)
+static int pisa_handler_u3(struct hip_fw_context *ctx)
 {
     int verdict                             = NF_DROP;
     int sig                                 = 0;
@@ -534,7 +534,7 @@ static int pisa_handler_u3(hip_fw_context_t *ctx)
  * @param ctx context of the packet
  * @return verdict, either NF_ACCEPT or NF_DROP
  */
-static int pisa_handler_close_ack(hip_fw_context_t *ctx)
+static int pisa_handler_close_ack(struct hip_fw_context *ctx)
 {
     pisa_remove_connection(ctx);
     return NF_ACCEPT;

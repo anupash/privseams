@@ -128,7 +128,7 @@ static hip_hit_t default_hit;
 static hip_lsi_t default_lsi;
 
 /* definition of the function pointer (see below) */
-typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
+typedef int (*hip_fw_handler_t)(struct hip_fw_context *);
 /* The firewall handlers do not accept rules directly. They should return
  * zero when they transformed packet and the original should be dropped.
  * Non-zero means that there was an error or the packet handler did not
@@ -851,7 +851,7 @@ static int match_string(const char *match, const char *packet, const int boolean
  * @param ctx packet context
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int filter_esp(const hip_fw_context_t *ctx)
+static int filter_esp(const struct hip_fw_context *ctx)
 {
     /* drop packet by default */
     int verdict = 0, ret;
@@ -900,7 +900,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
                       const unsigned int hook,
                       const char *in_if,
                       const char *out_if,
-                      hip_fw_context_t *ctx)
+                      struct hip_fw_context *ctx)
 {
     // complete rule list for hook (== IN / OUT / FORWARD)
     struct dlist *list  = read_rules(hook);
@@ -1143,7 +1143,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
+static int hip_fw_handle_hip_output(struct hip_fw_context *ctx){
     int verdict = accept_hip_esp_traffic_by_default;
 
     HIP_DEBUG("hip_fw_handle_hip_output \n");
@@ -1171,7 +1171,7 @@ static int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_esp_output(hip_fw_context_t *ctx)
+static int hip_fw_handle_esp_output(struct hip_fw_context *ctx)
 {
     int verdict = accept_hip_esp_traffic_by_default;
 
@@ -1193,7 +1193,7 @@ static int hip_fw_handle_esp_output(hip_fw_context_t *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_other_output(hip_fw_context_t *ctx)
+static int hip_fw_handle_other_output(struct hip_fw_context *ctx)
 {
     int verdict = accept_normal_traffic_by_default;
 
@@ -1248,7 +1248,7 @@ static int hip_fw_handle_other_output(hip_fw_context_t *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_tcp_output(hip_fw_context_t *ctx)
+static int hip_fw_handle_tcp_output(struct hip_fw_context *ctx)
 {
     HIP_DEBUG("\n");
 
@@ -1262,7 +1262,7 @@ static int hip_fw_handle_tcp_output(hip_fw_context_t *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_hip_forward(hip_fw_context_t *ctx)
+static int hip_fw_handle_hip_forward(struct hip_fw_context *ctx)
 {
     HIP_DEBUG("\n");
 
@@ -1284,7 +1284,7 @@ static int hip_fw_handle_hip_forward(hip_fw_context_t *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_esp_forward(hip_fw_context_t *ctx)
+static int hip_fw_handle_esp_forward(struct hip_fw_context *ctx)
 {
     int verdict = accept_hip_esp_traffic_by_default;
 
@@ -1306,7 +1306,7 @@ static int hip_fw_handle_esp_forward(hip_fw_context_t *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_tcp_forward(UNUSED hip_fw_context_t *ctx)
+static int hip_fw_handle_tcp_forward(UNUSED struct hip_fw_context *ctx)
 {
     HIP_DEBUG("\n");
 
@@ -1321,7 +1321,7 @@ static int hip_fw_handle_tcp_forward(UNUSED hip_fw_context_t *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_other_input(hip_fw_context_t *ctx)
+static int hip_fw_handle_other_input(struct hip_fw_context *ctx)
 {
     int verdict = accept_normal_traffic_by_default;
     int ip_hits = ipv6_addr_is_hit(&ctx->src) &&
@@ -1350,7 +1350,7 @@ static int hip_fw_handle_other_input(hip_fw_context_t *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_hip_input(hip_fw_context_t *ctx)
+static int hip_fw_handle_hip_input(struct hip_fw_context *ctx)
 {
     int verdict = accept_hip_esp_traffic_by_default;
 
@@ -1368,7 +1368,7 @@ static int hip_fw_handle_hip_input(hip_fw_context_t *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_esp_input(hip_fw_context_t *ctx)
+static int hip_fw_handle_esp_input(struct hip_fw_context *ctx)
 {
     int verdict = accept_hip_esp_traffic_by_default;
 
@@ -1397,7 +1397,7 @@ static int hip_fw_handle_esp_input(hip_fw_context_t *ctx)
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_tcp_input(hip_fw_context_t *ctx)
+static int hip_fw_handle_tcp_input(struct hip_fw_context *ctx)
 {
     int verdict = accept_normal_traffic_by_default;
 
@@ -1495,7 +1495,7 @@ out_err:
  * @param  ip_version the IP version for this packet
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */
-static int hip_fw_init_context(hip_fw_context_t *ctx,
+static int hip_fw_init_context(struct hip_fw_context *ctx,
                                const unsigned char *buf,
                                const int ip_version)
 {
@@ -1509,7 +1509,7 @@ static int hip_fw_init_context(hip_fw_context_t *ctx,
     ctx->packet_type = OTHER_PACKET;
 
     // same context memory as for packets before -> re-init
-    memset(ctx, 0, sizeof(hip_fw_context_t));
+    memset(ctx, 0, sizeof(struct hip_fw_context));
 
     // add whole packet to context and ip version
     ctx->ipq_packet = ipq_get_packet(buf);
@@ -1816,7 +1816,7 @@ static void drop_packet(struct ipq_handle *handle, unsigned long packetId)
 static int hip_fw_handle_packet(unsigned char *buf,
                                 struct ipq_handle *hndl,
                                 const int ip_version,
-                                hip_fw_context_t *ctx)
+                                struct hip_fw_context *ctx)
 {
     // assume DROP
     int verdict = 0;
@@ -1947,7 +1947,7 @@ int main(int argc, char **argv)
     fd_set read_fdset;
     struct timeval timeout;
     unsigned char buf[HIP_MAX_PACKET];
-    hip_fw_context_t ctx;
+    struct hip_fw_context ctx;
     int limit_capabilities = 0;
     int is_root            = 0, access_ok = 0, msg_type = 0; //variables for accepting user messages only from hipd
 

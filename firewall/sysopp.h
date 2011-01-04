@@ -31,7 +31,7 @@
 #include "lib/core/protodefs.h"
 #include "firewall_defines.h"
 
-int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx,
+int hip_fw_handle_outgoing_system_based_opp(const struct hip_fw_context *ctx,
                                             const int default_verdict);
 int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg);
 void hip_fw_flush_system_based_opp_chains(void);

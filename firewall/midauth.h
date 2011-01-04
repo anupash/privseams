@@ -38,7 +38,7 @@
 #include "lib/core/protodefs.h"
 #include "firewall_defines.h"
 
-typedef int (*midauth_handler)(hip_fw_context_t *ctx);
+typedef int (*midauth_handler)(struct hip_fw_context *ctx);
 
 struct midauth_handlers {
     midauth_handler i1;
@@ -58,7 +58,7 @@ struct midauth_handlers {
  * @param ctx context of the packet
  * @return NF_ACCEPT
  */
-int midauth_handler_accept(hip_fw_context_t *ctx);
+int midauth_handler_accept(struct hip_fw_context *ctx);
 
 /**
  * Check the correctness of a hip_solution_m
@@ -82,7 +82,7 @@ int midauth_verify_challenge_response(struct hip_common *hip,
  * @param opaque_len length of opaque
  * @return 0 on success
  */
-int midauth_add_challenge_request(hip_fw_context_t *ctx,
+int midauth_add_challenge_request(struct hip_fw_context *ctx,
                                   uint8_t val_K, uint8_t ltime,
                                   uint8_t *opaque, uint8_t opaque_len);
 
@@ -91,6 +91,6 @@ int midauth_add_challenge_request(hip_fw_context_t *ctx,
  */
 void midauth_init(void);
 
-int midauth_filter_hip(hip_fw_context_t *ctx);
+int midauth_filter_hip(struct hip_fw_context *ctx);
 
 #endif /* HIP_FIREWALL_MIDAUTH_H */

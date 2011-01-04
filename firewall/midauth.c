@@ -208,7 +208,7 @@ static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
  *
  * @param ctx context of the modified midauth packet
  */
-static void midauth_update_all_headers(hip_fw_context_t *ctx)
+static void midauth_update_all_headers(struct hip_fw_context *ctx)
 {
     struct iphdr *ipv4   = NULL;
     struct ip6_hdr *ipv6 = NULL;
@@ -331,7 +331,7 @@ out_err:
  * @param opaque_len   length of the opaque data field
  * @return 0 on success, <0 otherwise
  */
-int midauth_add_challenge_request(hip_fw_context_t *ctx, uint8_t val_K,
+int midauth_add_challenge_request(struct hip_fw_context *ctx, uint8_t val_K,
                                   uint8_t ltime,
                                   uint8_t *opaque,
                                   uint8_t opaque_len)
@@ -351,7 +351,7 @@ out_err:
     return err;
 }
 
-int midauth_handler_accept(UNUSED hip_fw_context_t *ctx)
+int midauth_handler_accept(UNUSED struct hip_fw_context *ctx)
 {
     return NF_ACCEPT;
 }
@@ -362,7 +362,7 @@ int midauth_handler_accept(UNUSED hip_fw_context_t *ctx)
  * @param ctx context of the packet
  * @return NF_DROP
  */
-static int midauth_handler_drop(UNUSED hip_fw_context_t *ctx)
+static int midauth_handler_drop(UNUSED struct hip_fw_context *ctx)
 {
     return NF_DROP;
 }
@@ -373,7 +373,7 @@ static int midauth_handler_drop(UNUSED hip_fw_context_t *ctx)
  * @param ctx context of the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static midauth_handler filter_midauth_update(const hip_fw_context_t *ctx)
+static midauth_handler filter_midauth_update(const struct hip_fw_context *ctx)
 {
     if (hip_get_param(ctx->transport_hdr.hip, HIP_PARAM_LOCATOR)) {
         return handlers.u1;
@@ -396,7 +396,7 @@ static midauth_handler filter_midauth_update(const hip_fw_context_t *ctx)
  * @param ctx HIP connection context
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-int midauth_filter_hip(hip_fw_context_t *ctx)
+int midauth_filter_hip(struct hip_fw_context *ctx)
 {
     int verdict               = NF_ACCEPT;
     midauth_handler h         = NULL;

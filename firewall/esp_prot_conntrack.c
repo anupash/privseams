@@ -975,7 +975,7 @@ int esp_prot_conntrack_remove_state(struct esp_tuple *esp_tuple)
  */
 int esp_prot_conntrack_lupdate(const struct hip_common *common,
                                struct tuple *tuple,
-                               const hip_fw_context_t *ctx)
+                               const struct hip_fw_context *ctx)
 {
     const struct hip_seq *seq          = NULL;
     const struct hip_tlv_common *param = NULL;
@@ -1086,7 +1086,7 @@ out_err:
  * @param   esp_tuple corresponding esp state of the connection
  * @return  0 on success, -1 on error
  */
-int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
+int esp_prot_conntrack_verify(const struct hip_fw_context *ctx,
                               struct esp_tuple *esp_tuple)
 {
     esp_prot_conntrack_tfm_t *conntrack_tfm = NULL;

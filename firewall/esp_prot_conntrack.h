@@ -56,8 +56,8 @@ int esp_prot_conntrack_update(const struct hip_common *update,
 int esp_prot_conntrack_remove_state(struct esp_tuple *esp_tuple);
 int esp_prot_conntrack_lupdate(const struct hip_common *common,
                                struct tuple *tuple,
-                               const hip_fw_context_t *ctx);
-int esp_prot_conntrack_verify(const hip_fw_context_t *ctx,
+                               const struct hip_fw_context *ctx);
+int esp_prot_conntrack_verify(const struct hip_fw_context *ctx,
                               struct esp_tuple *esp_tuple);
 
 #endif /* HIP_FIREWALL_ESP_PROT_CONNTRACK_H */
