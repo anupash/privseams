@@ -338,7 +338,7 @@ static int hip_exists_address_family_in_list(const struct in6_addr *addr)
     list_for_each_safe(tmp, t, addresses, c) {
         n = list_entry(tmp);
 
-        if (IN6_IS_ADDR_V4MAPPED((const struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &n->addr)) == mapped) {
+        if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr((struct sockaddr *) &n->addr)) == mapped) {
             return 1;
         }
     }
