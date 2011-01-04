@@ -71,7 +71,6 @@ int ring_buffer_size;
 int num_linear_elements;
 int num_random_elements;
 
-//hash_function_t hash_function;
 int hash_length_g;
 int hash_structure_length;
 
