@@ -69,11 +69,11 @@
 #define INDEX_HASH_LENGTH       SHA_DIGEST_LENGTH
 
 /* Structure for demultiplexing inbound ipsec packets, indexed by dst_addr and spi */
-typedef struct hip_link_entry {
+struct hip_link_entry {
     struct in6_addr      dst_addr;        /* destination address of outer IP header */
     uint32_t             spi;             /* ipsec spi, needed for demultiplexing incoming packets */
     struct hip_sa_entry *linked_sa_entry; /* direct link to sa entry */
-} hip_link_entry_t;
+};
 
 /* database storing the sa entries, indexed by src _and_ dst hits */
 HIP_HASHTABLE *sadb   = NULL;
@@ -158,7 +158,7 @@ static int hip_sa_entries_cmp(const struct hip_sa_entry *sa_entry1,
  * @param link_entry  link entry containing outer dst address and IPsec SPI
  * @return            hash of outer dst address and IPsec SPI
  */
-static unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
+static unsigned long hip_link_entry_hash(const struct hip_link_entry *link_entry)
 {
     int input_length = sizeof(struct in6_addr) + sizeof(uint32_t);
     unsigned char hash_input[input_length];
@@ -201,8 +201,8 @@ out_err:
  * @param link_entry2   second link entry to be compared with
  * @return              1 if different entries, else 0
  */
-static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
-                                const hip_link_entry_t *link_entry2)
+static int hip_link_entries_cmp(const struct hip_link_entry *link_entry1,
+                                const struct hip_link_entry *link_entry2)
 {
     int result = 0;
 
@@ -223,8 +223,8 @@ static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
  */
 STATIC_IMPLEMENT_LHASH_HASH_FN(hip_sa_entry,   struct hip_sa_entry)
 STATIC_IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, struct hip_sa_entry)
-STATIC_IMPLEMENT_LHASH_HASH_FN(hip_link_entry,   hip_link_entry_t)
-STATIC_IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
+STATIC_IMPLEMENT_LHASH_HASH_FN(hip_link_entry,   struct hip_link_entry)
+STATIC_IMPLEMENT_LHASH_COMP_FN(hip_link_entries, struct hip_link_entry)
 
 /**
  * finds a link entry in the linkdb
@@ -233,11 +233,10 @@ STATIC_IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
  * @param spi       IPsec SPI number
  * @return          corresponding link entry
  */
-static hip_link_entry_t * hip_link_entry_find(const struct in6_addr *dst_addr,
-                                              uint32_t spi)
+static struct hip_link_entry *hip_link_entry_find(const struct in6_addr *dst_addr,
+                                                  uint32_t spi)
 {
-    hip_link_entry_t search_link;
-    hip_link_entry_t *stored_link = NULL;
+    struct hip_link_entry search_link, *stored_link = NULL;
     int err = 0;
 
     // search the linkdb for the link to the corresponding entry
@@ -269,10 +268,10 @@ out_err:
 static int hip_link_entry_add(struct in6_addr *dst_addr,
                               struct hip_sa_entry *entry)
 {
-    hip_link_entry_t *link = NULL;
-    int err                = 0;
+    struct hip_link_entry *link = NULL;
+    int err = 0;
 
-    HIP_IFEL(!(link = malloc(sizeof(hip_link_entry_t))),
+    HIP_IFEL(!(link = malloc(sizeof(struct hip_link_entry))),
              -1, "failed to allocate memory\n");
 
     memcpy(&link->dst_addr, dst_addr, sizeof(struct in6_addr));
@@ -295,8 +294,8 @@ out_err:
  */
 static int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi)
 {
-    hip_link_entry_t *stored_link = NULL;
-    int err                       = 0;
+    struct hip_link_entry *stored_link = NULL;
+    int err = 0;
 
     // find link entry and free members
     HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
@@ -868,9 +867,9 @@ out_err:
 struct hip_sa_entry *hip_sa_entry_find_inbound(const struct in6_addr *dst_addr,
                                                uint32_t spi)
 {
-    hip_link_entry_t *stored_link = NULL;
-    struct hip_sa_entry *stored_entry  = NULL;
-    int err                       = 0;
+    struct hip_link_entry *stored_link  = NULL;
+    struct hip_sa_entry   *stored_entry = NULL;
+    int err = 0;
 
     HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
              "failed to find link entry\n");
