@@ -88,13 +88,14 @@ static int hip_cf_is_comment(char *line)
  *                    NULL or if there was an error when allocating memory to
  *                    the new element.
  */
-static int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data)
+static int hip_cvl_add(struct hip_config_value_list *linkedlist,
+                       const void *data)
 {
     if (linkedlist == NULL || data == NULL) {
         return HIP_EVAL;
     }
 
-    hip_configfilevalue_t *newnode = malloc(sizeof(hip_configfilevalue_t));
+    struct hip_configfile_value *newnode = malloc(sizeof(struct hip_configfile_value));
 
     if (newnode == NULL) {
         HIP_ERROR("Error on allocating memory for a linked list node.\n");
@@ -109,7 +110,7 @@ static int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data)
         linkedlist->head = newnode;
         return 0;
     } else {
-        hip_configfilevalue_t *pointer = linkedlist->head;
+        struct hip_configfile_value *pointer = linkedlist->head;
 
         while (pointer->next != NULL) {
             pointer = pointer->next;
@@ -141,7 +142,7 @@ static int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data)
  * @note          This function is not meant to be called outside this file. Use
  *                hip_cf_get_line_data() to get data from lines.
  */
-static int hip_cf_parse_val(char *line, hip_configvaluelist_t *values)
+static int hip_cf_parse_val(char *line, struct hip_config_value_list *values)
 {
     int i = 0, j = 0, k = 0, l = 0, end = 0;
     char value[HIP_RELAY_MAX_VAL_LEN + 1];
@@ -414,7 +415,8 @@ static int hip_cf_readline(FILE *fp, char *buf, int *parseerr)
  *                   @c parameter, @c values or @c parseerr is NULL, otherwise
  *                   the number of succesfully read characters.
  */
-int hip_cf_get_line_data(FILE *fp, char *parameter, hip_configvaluelist_t *values,
+int hip_cf_get_line_data(FILE *fp, char *parameter,
+                         struct hip_config_value_list *values,
                          int *parseerr)
 {
     if (fp == NULL || parameter == NULL || values == NULL || parseerr == NULL) {
@@ -449,7 +451,7 @@ int hip_cf_get_line_data(FILE *fp, char *parameter, hip_configvaluelist_t *value
  *
  * @param linkedlist the list to init.
  */
-void hip_cvl_init(hip_configvaluelist_t *linkedlist)
+void hip_cvl_init(struct hip_config_value_list *linkedlist)
 {
     if (linkedlist != NULL) {
         linkedlist->head = NULL;
@@ -463,13 +465,13 @@ void hip_cvl_init(hip_configvaluelist_t *linkedlist)
  *
  * @param linkedlist the list to uninitialize.
  */
-void hip_cvl_uninit(hip_configvaluelist_t *linkedlist)
+void hip_cvl_uninit(struct hip_config_value_list *linkedlist)
 {
     if (linkedlist == NULL || linkedlist->head == NULL) {
         return;
     }
 
-    hip_configfilevalue_t *pointer = NULL;
+    struct hip_configfile_value *pointer = NULL;
     pointer = linkedlist->head;
 
     /* Free the item currently at list head and move the next item to list
@@ -493,8 +495,8 @@ void hip_cvl_uninit(hip_configvaluelist_t *linkedlist)
  * @return            the next element or NULL if the list end has been reached
  *                    or @c linkedlist is NULL.
  */
-hip_configfilevalue_t *hip_cvl_get_next(hip_configvaluelist_t *linkedlist,
-                                        hip_configfilevalue_t *current)
+struct hip_configfile_value *hip_cvl_get_next(struct hip_config_value_list *linkedlist,
+                                              struct hip_configfile_value *current)
 {
     if (linkedlist == NULL) {
         return NULL;
@@ -511,7 +513,7 @@ hip_configfilevalue_t *hip_cvl_get_next(hip_configvaluelist_t *linkedlist,
  *
  * @param node the node whose contents are to be printed.
  */
-void print_node(hip_configfilevalue_t *node)
+void print_node(struct hip_configfile_value *node)
 {
     if (node == NULL) {
         HIP_INFO("Node NULL.\n");

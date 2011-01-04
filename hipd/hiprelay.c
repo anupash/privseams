@@ -769,7 +769,7 @@ static int hip_relay_read_config(void)
     FILE *fp    = NULL;
     int lineerr = 0, parseerr = 0, err = 0;
     char parameter[HIP_RELAY_MAX_PAR_LEN + 1];
-    hip_configvaluelist_t values;
+    struct hip_config_value_list values;
     hip_hit_t hit, *wl_hit = NULL;
     uint8_t max = 255;     /* Theoretical maximum lifetime value. */
 
@@ -783,7 +783,7 @@ static int hip_relay_read_config(void)
         lineerr  = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
 
         if (parseerr == 0) {
-            hip_configfilevalue_t *current = NULL;
+            struct hip_configfile_value *current = NULL;
             if (strcmp(parameter, "whitelist_enabled") == 0) {
                 current = hip_cvl_get_next(&values, current);
                 if (strcmp(current->data, "no") == 0) {

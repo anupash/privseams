@@ -45,7 +45,7 @@
  * them zero</li>
  * <li>Declare a char array for the parameter's name
  * <code>parameter[HIP_RELAY_MAX_PAR_LEN + 1]</code></li>
- * <li>Declare a linked list <code>hip_configvaluelist_t values</code> for values</li>
+ * <li>Declare a linked list <code>struct hip_config_value_list values</code> for values</li>
  * <li>Open the configfile using <code>fopen()</code></li>
  * <li>Go through the configuration file using hip_cf_get_line_data()
  * inside a <code>do { } while ()</code> -loop:
@@ -60,7 +60,7 @@
  *
  *       ... parameter has now the parameter name ...
  *
- *         hip_configfilevalue_t *current = NULL;
+ *         struct hip_configfile_value *current = NULL;
  *         while ((current = hip_cvl_get_next(&values, current)) != NULL) {
  *
  *           ... do stuff with the current value ...
@@ -98,22 +98,23 @@
 #define HIP_RELAY_VAL_SEP      ','
 
 /** Linked list node. */
-typedef struct hip_cvl_node {
-    char                 data[HIP_RELAY_MAX_VAL_LEN + 1]; /**< Node data. */
-    struct hip_cvl_node *next;     /**< A pointer to next item. */
-} hip_configfilevalue_t;
+struct hip_configfile_value {
+    char                         data[HIP_RELAY_MAX_VAL_LEN + 1]; /**< Node data. */
+    struct hip_configfile_value *next;     /**< A pointer to next item. */
+};
 
 /** Linked list. */
-typedef struct {
-    hip_configfilevalue_t *head;     /**< A pointer to the first item of the list. */
-} hip_configvaluelist_t;
+struct hip_config_value_list {
+    struct hip_configfile_value *head;     /**< A pointer to the first item of the list. */
+};
 
-int hip_cf_get_line_data(FILE *fp, char *parameter, hip_configvaluelist_t *values,
+int hip_cf_get_line_data(FILE *fp, char *parameter,
+                         struct hip_config_value_list *values,
                          int *parseerr);
-void hip_cvl_init(hip_configvaluelist_t *linkedlist);
-void hip_cvl_uninit(hip_configvaluelist_t *linkedlist);
-hip_configfilevalue_t *hip_cvl_get_next(hip_configvaluelist_t *linkedlist,
-                                        hip_configfilevalue_t *current);
-void print_node(hip_configfilevalue_t *node);
+void hip_cvl_init(struct hip_config_value_list *linkedlist);
+void hip_cvl_uninit(struct hip_config_value_list *linkedlist);
+struct hip_configfile_value *hip_cvl_get_next(struct hip_config_value_list *linkedlist,
+                                              struct hip_configfile_value *current);
+void print_node(struct hip_configfile_value *node);
 
 #endif /* HIP_HIPD_CONFIGFILEREADER_H */
