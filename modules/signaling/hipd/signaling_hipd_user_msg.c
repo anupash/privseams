@@ -247,7 +247,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
                  -1, "Could not copy connection context\n");
 
         /* now trigger the UPDATE */
-        HIP_IFEL(signaling_trigger_bex_update(msg),
+        HIP_IFEL(signaling_send_first_update(our_hit, peer_hit),
                  -1, "Failed triggering first bex update.\n");
 
         HIP_DEBUG("Triggered UPDATE for following connection context:\n");

@@ -50,7 +50,6 @@
 
 #include "modules/update/hipd/update.h"
 #include "modules/signaling/lib/signaling_common_builder.h"
-#include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_oslayer.h"
 #include "modules/signaling/lib/signaling_user_api.h"
 #include "signaling_hipd_state.h"
@@ -82,7 +81,7 @@ out_err:
  * Setting either seq or ack_id to
  *
  */
-static hip_common_t *build_update_message(hip_ha_t *ha, int type, struct signaling_connection_context *ctx, uint32_t seq) {
+static hip_common_t *build_update_message(hip_ha_t *ha, const int type, struct signaling_connection_context *ctx, const uint32_t seq) {
     int err                 = 0;
     uint16_t mask           = 0;
     hip_common_t *msg_buf   = NULL;
@@ -104,7 +103,6 @@ static hip_common_t *build_update_message(hip_ha_t *ha, int type, struct signali
         HIP_IFEL(hip_build_param_ack(msg_buf, seq),
                  -1, "Building of ACK parameter failed\n");
     }
-
 
     /* Add Appinfo */
     HIP_IFEL(signaling_build_param_application_context(msg_buf, ctx),
@@ -135,78 +133,93 @@ out_err:
     return msg_buf;
 }
 
-/*
- * Triggers either first or second bex update message.
- * The decision, which one is sent, can be made from type of trigger_msg,
- * which is either HIP_MSG_SIGNALING_TRIGGER_NEW_CONNECTION or
- * HIP_UPDATE.
+/**
+ * Send the first UPDATE message for an application that wants to establish a new connection.
  *
- * @param trigger_msg the message, that triggered this update.
+ * @param src_hit   the HIT of the initiator of the update exchange
+ * @param dst_hit   the HIT of the responder of the update exchange
+ *
+ * @return 0 on success, negative on error
  */
-int signaling_trigger_bex_update(struct hip_common *trigger_msg) {
-    int err = 0;
-    hip_ha_t *ha = NULL;
-    const hip_hit_t * our_hit = NULL;
-    const hip_hit_t * peer_hit = NULL;
-    hip_common_t * update_packet_to_send = NULL;
-    struct signaling_connection_context conn_ctx;
+int signaling_send_first_update(const struct in6_addr *src_hit, const struct in6_addr *dst_hit) {
+    int err                                 = 0;
+    uint32_t seq_id                         = 0;
+    hip_ha_t *ha                            = NULL;
     struct signaling_hipd_state * sig_state = NULL;
-    uint32_t seq_id = 0;
-    const struct hip_seq * par_seq = NULL;
-    struct update_state * updatestate = NULL;
-    int type = 0;
+    struct update_state * updatestate       = NULL;
+    hip_common_t * update_packet_to_send    = NULL;
 
-    HIP_IFEL(!trigger_msg,
-            -1, "Trigger MSG must not be NULL\n");
+    /* sanity tests */
+    HIP_IFEL(!src_hit, -1, "No source HIT given \n");
+    HIP_IFEL(!dst_hit, -1, "No destination HIT given \n");
 
-    /* TODO: implement proper retransmit handling */
-    if(update_sent) {
-        HIP_DEBUG("Update already on its way... waiting... \n");
-        goto out_err;
-    }
-
-    /* Set type, hits, seq/ack.
-     * We have to distinguish between the two different messages that triggered this update. */
-    if(hip_get_msg_type(trigger_msg) == HIP_UPDATE) {
-        type = SIGNALING_SECOND_BEX_UPDATE;
-        our_hit = &trigger_msg->hits;
-        peer_hit = &trigger_msg->hitr;
-        HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
-                     -1, "Failed to retrieve hadb entry.\n");
-        HIP_IFEL(!(par_seq = hip_get_param(trigger_msg, HIP_PARAM_SEQ)),
-                -1, "Message contains no seq parameter.\n");
-        seq_id = ntohl(par_seq->update_id);
-
-        // now request connection context from hipfw
-        // on success this will put the local connection context into our state
-        HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, trigger_msg),
-                 -1, "Could not init connection context from UPDATE \n");
-        signaling_send_connection_context_request(our_hit, peer_hit, &conn_ctx);
-
-    } else if(hip_get_msg_type(trigger_msg) == HIP_MSG_SIGNALING_REQUEST_CONNECTION) {
-        type = SIGNALING_FIRST_BEX_UPDATE;
-        signaling_get_hits_from_msg(trigger_msg, &our_hit, &peer_hit);
-        HIP_IFEL(!(ha = hip_hadb_find_byhits(our_hit, peer_hit)),
-                     -1, "Failed to retrieve hadb entry.\n");
-        HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
-                -1, "Could not get update state for host association.\n");
-        updatestate->update_id_out++;
-        seq_id = hip_update_get_out_id(updatestate);
-        update_sent = 1;
-
-    } else {
-        HIP_DEBUG("Message is not update trigger.\n");
-        err = -1;
-        goto out_err;
-    }
-
-    /* Application lookup from local state*/
+    /* Lookup and update state */
+    HIP_IFEL(!(ha = hip_hadb_find_byhits(src_hit, dst_hit)),
+             -1, "Failed to retrieve hadb entry.\n");
+    HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
+             -1, "Could not get update state for host association.\n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling ports\n");
+    updatestate->update_id_out++;
+    seq_id = hip_update_get_out_id(updatestate);
 
-    /* Build and send */
-    HIP_IFEL(!(update_packet_to_send = build_update_message(ha, type, &sig_state->ctx, seq_id)),
-            -1, "Failed to build update.\n");
+    /* Build and send the first update */
+    HIP_IFEL(!(update_packet_to_send = build_update_message(ha, SIGNALING_FIRST_BEX_UPDATE, &sig_state->ctx, seq_id)),
+             -1, "Failed to build update.\n");
+    err = hip_send_pkt(NULL,
+                       &ha->peer_addr,
+                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ha->peer_udp_port,
+                       update_packet_to_send,
+                       ha,
+                       1);
+
+out_err:
+    return err;
+}
+
+/**
+ * Send the second UPDATE message for an application that wants to establish a new connection.
+ *
+ * @param first_update  the update message to which we want to respond
+ *
+ * @return 0 on success, negative on error
+ */
+int signaling_send_second_update(const struct hip_common *first_update) {
+    int err                                         = 0;
+    uint32_t seq_id                                 = 0;
+    const struct in6_addr *src_hit                  = NULL;
+    const struct in6_addr *dst_hit                  = NULL;
+    const struct hip_seq * par_seq                  = NULL;
+    hip_ha_t *ha                                    = NULL;
+    struct signaling_hipd_state * sig_state         = NULL;
+    hip_common_t * update_packet_to_send            = NULL;
+    struct signaling_connection_context conn_ctx;
+
+
+    /* sanity checks */
+    HIP_IFEL(!first_update, -1, "Need received update message to build a response \n");
+
+    /* Lookup state */
+    src_hit = &first_update->hitr;
+    dst_hit = &first_update->hits;
+    HIP_IFEL(!(ha = hip_hadb_find_byhits(src_hit, dst_hit)),
+                 -1, "Failed to retrieve hadb entry.\n");
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
+            -1, "failed to retrieve state for signaling ports\n");
+    HIP_IFEL(!(par_seq = hip_get_param(first_update, HIP_PARAM_SEQ)),
+            -1, "Message contains no seq parameter.\n");
+    seq_id = ntohl(par_seq->update_id);
+
+    /* now request connection context from hipfw
+     * on success this will put the local connection context into our local state */
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, first_update),
+             -1, "Could not init connection context from first update \n");
+    signaling_send_connection_context_request(src_hit, dst_hit, &conn_ctx);
+
+    /* Build and send the second update */
+    HIP_IFEL(!(update_packet_to_send = build_update_message(ha, SIGNALING_SECOND_BEX_UPDATE, &sig_state->ctx, seq_id)),
+             -1, "Failed to build update.\n");
     err = hip_send_pkt(NULL,
                        &ha->peer_addr,
                        (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
@@ -324,11 +337,10 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
 
     if(signaling_get_update_type(ctx->input_msg) == SIGNALING_FIRST_BEX_UPDATE) {
         HIP_DEBUG("Received FIRST BEX Update... \n");
-        HIP_IFEL(signaling_trigger_bex_update(ctx->input_msg),
-                -1, "failed to trigger second bex update. \n");
+        HIP_IFEL(signaling_send_second_update(ctx->input_msg),
+                 -1, "failed to trigger second bex update. \n");
     } else if (signaling_get_update_type(ctx->input_msg) == SIGNALING_SECOND_BEX_UPDATE) {
         HIP_DEBUG("Received SECOND BEX Update... \n");
-        update_sent = 0;
         conn_ctx.connection_status = SIGNALING_CONN_ALLOWED;
         HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");

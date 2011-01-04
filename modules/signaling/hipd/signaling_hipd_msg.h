@@ -40,6 +40,8 @@
 
 #include "lib/core/protodefs.h"
 
+#include "modules/signaling/lib/signaling_prot_common.h"
+
 /* Update message types */
 #define SIGNALING_FIRST_BEX_UPDATE  33001
 #define SIGNALING_SECOND_BEX_UPDATE 33002
@@ -53,8 +55,10 @@ int signaling_handle_incoming_update(const uint8_t packet_type, const uint32_t h
 int signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_i2_add_user_sig(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-int signaling_r2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx);
-int signaling_trigger_bex_update(struct hip_common *trigger_msg);
+int signaling_r2_add_user_sig(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_send_first_update(const struct in6_addr *src_hit, const struct in6_addr *dst_hit);
+int signaling_send_second_update(const struct hip_common *first_update);
+
 
 /* Classification of signaling update messages */
 int signaling_get_update_type(hip_common_t *msg);
