@@ -1276,7 +1276,7 @@ int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
 {
     int err                = 0;
     struct hip_hadb_user_info_state hid;
-    struct hip_common *msg = (struct hip_common *) opaq;
+    struct hip_common *msg = opaq;
 
     memset(&hid, 0, sizeof(hid));
     hid.state = entry->state;
@@ -1373,7 +1373,7 @@ struct hip_hadb_state *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_
 static int hip_hadb_find_lsi(struct hip_hadb_state *entry, void *lsi)
 {
     int exist_lsi;
-    exist_lsi = hip_lsi_are_equal(&entry->lsi_peer, (hip_lsi_t *) lsi);
+    exist_lsi = hip_lsi_are_equal(&entry->lsi_peer, lsi);
     if (exist_lsi) {
         memset(lsi, 0, sizeof(lsi));
     }

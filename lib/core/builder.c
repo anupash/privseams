@@ -1494,7 +1494,7 @@ static int hip_build_generic_param(struct hip_common *msg,
                                    hip_tlv_len_t param_hdr_size,
                                    const void *contents)
 {
-    const struct hip_tlv_common *param = (const struct hip_tlv_common *) parameter_hdr;
+    const struct hip_tlv_common *param = parameter_hdr;
     const void *src                    = NULL;
     uint8_t *dst                       = NULL;
     int err                            = 0, size = 0;
@@ -2243,7 +2243,7 @@ static inline int hip_reg_param_core(struct hip_common *msg,
                                      const uint8_t *type_list,
                                      const int type_count)
 {
-    struct hip_reg_request *rreq = (struct hip_reg_request *) param;
+    struct hip_reg_request *rreq = param;
 
     hip_calc_generic_param_len((struct hip_tlv_common *) rreq, sizeof(struct hip_reg_request),
                                type_count * sizeof(uint8_t));
@@ -2268,7 +2268,7 @@ int hip_build_param_reg_info(struct hip_common *msg,
 {
     int err    = 0;
     unsigned i = 0;
-    const struct hip_srv *service_list = (const struct hip_srv *) srv_list;
+    const struct hip_srv *service_list = srv_list;
     struct hip_reg_info reg_info;
     uint8_t reg_type[service_count];
 
@@ -3813,8 +3813,8 @@ static int hip_any_key_to_hit(void *any_key,
     char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     struct hip_host_id_priv *host_id = NULL;
     struct hip_host_id *host_id_pub = NULL;
-    RSA *rsa_key = (RSA *) any_key;
-    DSA *dsa_key = (DSA *) any_key;
+    RSA *rsa_key = any_key;
+    DSA *dsa_key = any_key;
 
     memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
     HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
