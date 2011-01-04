@@ -55,12 +55,12 @@
  *
  * @note The performance set memory must be freed after finishing the tests.
  */
-perf_set_t *hip_perf_create(int num)
+struct perf_set *hip_perf_create(int num)
 {
     /* create the perf set struct*/
-    perf_set_t *set;
-    set            = malloc(sizeof(perf_set_t));
-    memset(set, 0, sizeof(perf_set_t));
+    struct perf_set *set;
+    set            = malloc(sizeof(struct perf_set));
+    memset(set, 0, sizeof(struct perf_set));
 
     set->num_files = num;
 
@@ -100,7 +100,7 @@ perf_set_t *hip_perf_create(int num)
  * @param name The filename.
  * @return Returns error code. 0 = Success, 1 = Error.
  */
-int hip_perf_set_name(perf_set_t *set,  int slot, const char *name)
+int hip_perf_set_name(struct perf_set *set, int slot, const char *name)
 {
     int err = 0, len = 0;
     HIP_IFEL(set == NULL,       -1, "Performance set is empty\n");
@@ -125,7 +125,7 @@ out_err:
  * @param set The respective performance measurement created by hip_perf_create.
  * @return Returns error code. 0 = Success, 1 = Error.
  */
-int hip_perf_open(perf_set_t *set)
+int hip_perf_open(struct perf_set *set)
 {
     int err = 0, i = 0;
     HIP_IFEL(!set,              -1, "Performance set is empty\n");
@@ -157,7 +157,7 @@ out_err:
  * @param slot The slot number beginning with 0.
  * @return void
  */
-void hip_perf_start_benchmark(perf_set_t *set, int slot)
+void hip_perf_start_benchmark(struct perf_set *set, int slot)
 {
     if (set->num_files > slot) {
         gettimeofday(&set->times[slot], NULL);
@@ -181,7 +181,7 @@ void hip_perf_start_benchmark(perf_set_t *set, int slot)
  * @param slot The slot number beginning with 0.
  * @return void
  */
-void hip_perf_stop_benchmark(perf_set_t *set, int slot)
+void hip_perf_stop_benchmark(struct perf_set *set, int slot)
 {
     struct timeval now;
     if (set->num_files > slot && set->running[slot] == 1) {
@@ -207,7 +207,7 @@ void hip_perf_stop_benchmark(perf_set_t *set, int slot)
  * @param slot The slot number beginning with 0.
  * @return Returns error code. 0 = Success, 1 = Error.
  */
-int hip_perf_write_benchmark(perf_set_t *set, int slot)
+int hip_perf_write_benchmark(struct perf_set *set, int slot)
 {
     int err = 0;
     HIP_IFEL(!set, -1, "Performance set is empty\n");
@@ -233,12 +233,12 @@ out_err:
  * @brief Deallocate memory of a performance set
  *
  * Deallocate memory of the given performance set, including each member of
- * the perf_set_t data structure.
+ * the perf_set data structure.
  *
  * @param set The respective performance measurement created by hip_perf_create.
  * @return Nothing.
  */
-void hip_perf_destroy(perf_set_t *set)
+void hip_perf_destroy(struct perf_set *set)
 {
     int slot = 0;
 

@@ -355,7 +355,7 @@ int main(int argc, char **argv)
     float bench_secs      = 0.0;
     struct timeval bench_time;
     unsigned int sig_len;
-    perf_set_t *perfset = NULL;
+    struct perf_set *perfset = NULL;
 
     printf("Default settings RSA: key pool of %d keys of length %d.\n",
            sw_create_rsa,
