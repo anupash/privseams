@@ -68,16 +68,14 @@
 static struct hip_common *create_bex_store_update_msg(struct hchain_store *hcstore,
                                                       const int use_hash_trees)
 {
-    struct hip_common *msg    = NULL;
-    int hash_length           = 0, num_hchains = 0;
-    esp_prot_tfm_t *transform = NULL;
-    struct hash_chain *hchain = NULL;
-    struct hash_tree  *htree  = NULL;
+    struct hip_common   *msg       = NULL;
+    struct esp_prot_tfm *transform = NULL;
+    struct hash_chain   *hchain    = NULL;
+    struct hash_tree    *htree     = NULL;
     unsigned char *anchor     = NULL;
-    int err                   = 0;
     unsigned  j               = 0;
     uint8_t i                 = 0;
-    int hash_item_length      = 0;
+    int hash_length = 0, num_hchains = 0, err = 0, hash_item_length = 0;
 
     HIP_ASSERT(hcstore != NULL);
 

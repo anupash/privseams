@@ -109,7 +109,7 @@ static int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS];
 
 /* stores the mapping transform_id -> (function_id, hash_length_id)
  * NOTE no mapping for UNUSED transform */
-static esp_prot_tfm_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
+static struct esp_prot_tfm esp_prot_transforms[MAX_NUM_TRANSFORMS];
 
 // this store only contains hchains used when negotiating esp protection in BEX
 static struct hchain_store bex_store;
@@ -198,10 +198,9 @@ static int esp_prot_add_packet_hashes(unsigned char *esp_packet,
 static void *esp_prot_get_bex_item_by_anchor(const unsigned char *item_anchor,
                                              const uint8_t transform)
 {
-    esp_prot_tfm_t *prot_transform = NULL;
-    void *return_item              = NULL;
-    int use_hash_trees             = 0;
-    int err                        = 0;
+    struct esp_prot_tfm *prot_transform = NULL;
+    void *return_item                   = NULL;
+    int use_hash_trees = 0, err = 0;
 
     HIP_ASSERT(item_anchor != NULL);
 
@@ -289,7 +288,7 @@ int esp_prot_init(void)
     HIP_DEBUG("setting up esp_prot_transforms...\n");
 
     // init all possible transforms
-    memset(esp_prot_transforms, 0, MAX_NUM_TRANSFORMS * sizeof(esp_prot_tfm_t));
+    memset(esp_prot_transforms, 0, MAX_NUM_TRANSFORMS * sizeof(struct esp_prot_tfm));
 
     // set available transforms to used
     esp_prot_transforms[token_transform].is_used = 1;
@@ -415,7 +414,7 @@ int esp_prot_uninit(void)
     hcstore_uninit(&bex_store, use_hash_trees);
     hcstore_uninit(&update_store, use_hash_trees);
     // ...and set transforms to 0/NULL
-    memset(esp_prot_transforms, 0, sizeof(uint8_t) * sizeof(esp_prot_tfm_t));
+    memset(esp_prot_transforms, 0, sizeof(uint8_t) * sizeof(struct esp_prot_tfm));
 
     // also deactivate the extension in hipd
     HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
@@ -578,9 +577,9 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
  */
 static hash_function esp_prot_get_hash_function(const uint8_t transform)
 {
-    esp_prot_tfm_t *prot_transform = NULL;
-    hash_function   hash_func      = NULL;
-    int err                        = 0;
+    struct esp_prot_tfm *prot_transform = NULL;
+    hash_function        hash_func      = NULL;
+    int err                             = 0;
 
     HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
              "tried to resolve UNUSED or UNKNOWN transform\n");
@@ -604,8 +603,8 @@ out_err:
  */
 int esp_prot_get_hash_length(const uint8_t transform)
 {
-    esp_prot_tfm_t *prot_transform = NULL;
-    int err                        = 0;
+    struct esp_prot_tfm *prot_transform = NULL;
+    int err                             = 0;
 
     // return length 0 for UNUSED transform
     HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 0,
@@ -964,7 +963,7 @@ out_err:
  * @param   transform the TPA transform
  * @return  resolved transform, NULL for UNUSED transform
  */
-esp_prot_tfm_t *esp_prot_resolve_transform(const uint8_t transform)
+struct esp_prot_tfm *esp_prot_resolve_transform(const uint8_t transform)
 {
     HIP_DEBUG("resolving transform: %u\n", transform);
 
@@ -1016,14 +1015,14 @@ int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
  */
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
-    esp_prot_tfm_t *prot_transform = NULL;
     int has_linked_anchor          = 0, soft_update = 1;
     int err                        = 0;
     int anchor_length              = 0;
     int anchor_offset[MAX_NUM_PARALLEL_HCHAINS];
     const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS];
-    struct hash_tree  *htree       = NULL;
-    struct hash_chain *hchain      = NULL;
+    struct esp_prot_tfm *prot_transform = NULL;
+    struct hash_tree    *htree          = NULL;
+    struct hash_chain   *hchain         = NULL;
     struct hash_tree *link_trees[MAX_NUM_PARALLEL_HCHAINS];
     int hash_item_length           = 0;
     int remaining                  = 0, i, j;

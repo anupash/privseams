@@ -48,11 +48,11 @@
  * NOTE: this ensures, we don't use uninitialized
  *       (hash_function, hash_length)-combinations in the array
  */
-typedef struct esp_prot_tfm {
+struct esp_prot_tfm {
     int is_used;     /* indicates if the transform is configured */
     int hash_func_id;     /* index of the hash function used by the transform */
     int hash_length_id;     /* index of the hash length used by the transform */
-} esp_prot_tfm_t;
+};
 
 
 extern int token_transform;
@@ -105,7 +105,7 @@ int esp_prot_verify_htree_element(const hash_function hash_function,
                                   const unsigned char *next_uroot,
                                   const int next_uroot_length,
                                   const unsigned char *hash_value);
-esp_prot_tfm_t *esp_prot_resolve_transform(const uint8_t transform);
+struct esp_prot_tfm *esp_prot_resolve_transform(const uint8_t transform);
 int esp_prot_get_hash_length(const uint8_t transform);
 int esp_prot_get_data_offset(const hip_sa_entry_t *entry);
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry);
