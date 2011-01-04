@@ -393,8 +393,8 @@ int hip_handle_user_msg(struct hip_common *msg,
          * the hip daemon wants either to register to a server for
          * additional services or it wants to cancel a registration.
          * Cancellation is identified with a zero lifetime. */
-        const struct hip_reg_request *reg_req = NULL;
-        hip_pending_request_t *pending_req    = NULL;
+        const struct hip_reg_request *reg_req     = NULL;
+        struct hip_pending_request   *pending_req = NULL;
         const uint8_t *reg_types              = NULL;
         const struct in6_addr *dst_ip         = NULL;
         int i                                 = 0, type_count = 0;
@@ -484,7 +484,7 @@ int hip_handle_user_msg(struct hip_common *msg,
                      sizeof(reg_req->lifetime);
 
         for (; i < type_count; i++) {
-            pending_req = malloc(sizeof(hip_pending_request_t));
+            pending_req = malloc(sizeof(struct hip_pending_request));
             if (pending_req == NULL) {
                 HIP_ERROR("Error on allocating memory for a " \
                           "pending registration request.\n");

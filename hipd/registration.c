@@ -103,9 +103,9 @@ void hip_uninit_services(void)
 static int hip_del_pending_request_by_expiration(void)
 {
     int idx = 0;
-    struct hip_ll_node    *iter    = NULL;
-    hip_pending_request_t *request = NULL;
-    time_t now                     = time(NULL);
+    time_t now = time(NULL);
+    struct hip_ll_node         *iter    = NULL;
+    struct hip_pending_request *request = NULL;
 
     /* See hip_del_pending_request() for a comment. */
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
@@ -219,7 +219,7 @@ int hip_get_active_services(struct hip_srv *active_services,
  *                 otherwise.
  */
 
-int hip_add_pending_request(hip_pending_request_t *request)
+int hip_add_pending_request(struct hip_pending_request *request)
 {
     int err = 0;
 
@@ -251,7 +251,7 @@ int hip_del_pending_request(struct hip_hadb_state *entry)
      * the element to be deleted using the iterator and then call
      * hip_ll_del() to do the actual deletion. */
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry == entry) {
+        if (((struct hip_pending_request *) (iter->ptr))->entry == entry) {
             HIP_DEBUG("Deleting and freeing a pending request at " \
                       "index %u.\n", idx);
             hip_ll_del(&pending_requests, idx, free);
@@ -278,8 +278,8 @@ int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
                                     uint8_t reg_type)
 {
     int idx = 0;
-    struct hip_ll_node    *iter    = NULL;
-    hip_pending_request_t *request = NULL;
+    struct hip_ll_node         *iter    = NULL;
+    struct hip_pending_request *request = NULL;
 
     /* See hip_del_pending_request() for a comment. */
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
@@ -313,8 +313,8 @@ int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
     struct hip_ll_node *iter = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry == entry_old) {
-            ((hip_pending_request_t *) (iter->ptr))->entry = entry_new;
+        if (((struct hip_pending_request *) (iter->ptr))->entry == entry_old) {
+            ((struct hip_pending_request *) (iter->ptr))->entry = entry_new;
             return 0;
         }
     }
@@ -338,7 +338,7 @@ int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
  * @see             hip_get_pending_request_count().
  */
 static int hip_get_pending_requests(struct hip_hadb_state *entry,
-                                    hip_pending_request_t *requests[])
+                                    struct hip_pending_request *requests[])
 {
     if (requests == NULL) {
         return -1;
@@ -348,7 +348,7 @@ static int hip_get_pending_requests(struct hip_hadb_state *entry,
     int request_count        = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry  == entry) {
+        if (((struct hip_pending_request *) (iter->ptr))->entry  == entry) {
             requests[request_count] = iter->ptr;
             request_count++;
         }
@@ -374,7 +374,7 @@ static int hip_get_pending_request_count(struct hip_hadb_state *entry)
     int request_count        = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry == entry) {
+        if (((struct hip_pending_request *) (iter->ptr))->entry == entry) {
             request_count++;
         }
     }
@@ -951,7 +951,7 @@ int hip_handle_param_reg_info(struct hip_hadb_state *entry,
             int types_to_request   = 0;
             uint8_t valid_lifetime = 0;
             uint8_t type_array[request_count];
-            hip_pending_request_t *requests[request_count];
+            struct hip_pending_request *requests[request_count];
 
             i = 0;
             hip_get_pending_requests(entry, requests);

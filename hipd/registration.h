@@ -46,13 +46,13 @@
 
 
 /** A pending service request coupled with a host association. */
-typedef struct {
+struct hip_pending_request {
     struct hip_hadb_state *entry;
     uint8_t   reg_type;
     uint8_t   lifetime;
     /** Time when this record was created, seconds since epoch. */
     time_t    created;
-} hip_pending_request_t;
+};
 
 /**
  * Initializes the services. Initializes the @c hip_services array.
@@ -67,7 +67,7 @@ int hip_registration_maintenance(void);
 int hip_set_srv_status(uint8_t reg_type, enum hip_srv_status status);
 int hip_get_active_services(struct hip_srv *active_services,
                             unsigned int *active_service_count);
-int hip_add_pending_request(hip_pending_request_t *request);
+int hip_add_pending_request(struct hip_pending_request *request);
 int hip_del_pending_request(struct hip_hadb_state *entry);
 int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
                                  struct hip_hadb_state *entry_new);
