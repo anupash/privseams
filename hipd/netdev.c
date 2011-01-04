@@ -221,7 +221,7 @@ static int hip_count_if_addresses(int ifindex)
     int i = 0, c;
 
     list_for_each_safe(n, t, addresses, c) {
-        na = (struct netdev_address *) list_entry(n);
+        na = list_entry(n);
         if (na->if_index == ifindex) {
             i++;
         }
@@ -336,7 +336,7 @@ static int hip_exists_address_family_in_list(const struct in6_addr *addr)
     int mapped = IN6_IS_ADDR_V4MAPPED(addr);
 
     list_for_each_safe(tmp, t, addresses, c) {
-        n = (struct netdev_address *) list_entry(tmp);
+        n = list_entry(tmp);
 
         if (IN6_IS_ADDR_V4MAPPED((const struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &n->addr)) == mapped) {
             return 1;
@@ -367,7 +367,7 @@ int hip_exists_address_in_list(struct sockaddr *addr, int ifindex)
         int mapped       = 0;
         int addr_match   = 0;
         int family_match = 0;
-        n      = (struct netdev_address *) list_entry(tmp);
+        n      = list_entry(tmp);
 
         mapped = hip_sockaddr_is_v6_mapped((struct sockaddr * ) (&n->addr));
         HIP_DEBUG("mapped=%d\n", mapped);
@@ -505,7 +505,7 @@ static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
     HIP_DEBUG_HIT("Address to delete = ", hip_cast_sa_addr((struct sockaddr *) &addr_sin6));
 
     list_for_each_safe(item, tmp, addresses, i) {
-        n       = (struct netdev_address *) list_entry(item);
+        n       = list_entry(item);
         deleted = 0;
         /* remove from list if if_index matches */
         if (!addr) {
@@ -547,7 +547,7 @@ void hip_delete_all_addresses(void)
     if (address_count) {
         list_for_each_safe(item, tmp, addresses, i)
         {
-            n = (struct netdev_address *) list_entry(item);
+            n = list_entry(item);
             HIP_DEBUG_HIT("address to be deleted\n", hip_cast_sa_addr((struct sockaddr *) &n->addr));
             list_del(n, addresses);
             free(n);
@@ -604,7 +604,7 @@ static int hip_netdev_find_if(struct sockaddr *addr)
      * socket address storages. */
     list_for_each_safe(item, tmp, addresses, i)
     {
-        n = (struct netdev_address *) list_entry(item);
+        n = list_entry(item);
         if (((n->addr.ss_family == addr->sa_family) &&
              ((memcmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
                       hip_cast_sa_addr(addr),
@@ -1456,7 +1456,7 @@ void hip_copy_peer_addrlist_changed(struct hip_hadb_state *ha)
     }
 
     list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
-        addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
+        addr_li = list_entry(item);
         list_add(addr_li, ha->peer_addresses_old);
         HIP_DEBUG_HIT("SPI out address", &addr_li->address);
     }

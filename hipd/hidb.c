@@ -281,7 +281,7 @@ static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
     list_for_each_safe(curr, iter, db, count) {
         struct hip_lhi lhi;
 
-        tmp = (struct hip_host_id_entry *) list_entry(curr);
+        tmp = list_entry(curr);
 
         memcpy(&lhi, &tmp->lhi, sizeof(lhi));
         err = hip_del_host_id(db, &lhi);
@@ -314,7 +314,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db
     hip_list_t *item;
     int c;
     list_for_each(item, db, c) {
-        id_entry = (struct hip_host_id_entry *) list_entry(item);
+        id_entry = list_entry(item);
 
         if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
             (algo == HIP_ANY_ALGO ||
@@ -354,7 +354,7 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
     int c, err = 1;
 
     list_for_each(item, hip_local_hostid_db, c) {
-        id_entry = (struct hip_host_id_entry *) list_entry(item);
+        id_entry = list_entry(item);
         if (memcmp(&id_entry->lhi.hit, our, sizeof(*our)) == 0) {
             memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
             return 0;
@@ -383,7 +383,7 @@ static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct hip_host_id_entry *id_entr
         used_lsi = 0;
 
         list_for_each(item, db, c) {
-            id_entry_aux = (struct hip_host_id_entry *) list_entry(item);
+            id_entry_aux = list_entry(item);
             if (hip_lsi_are_equal(&lsi_aux, &id_entry_aux->lsi)) {
                 used_lsi = 1;
                 c        = -1;
@@ -675,7 +675,7 @@ int hip_hidb_exists_lsi(hip_lsi_t *lsi)
     int c, res = 0;
 
     list_for_each(item, hip_local_hostid_db, c) {
-        id_entry = (struct hip_host_id_entry *) list_entry(item);
+        id_entry = list_entry(item);
         if (hip_lsi_are_equal(&id_entry->lsi, lsi)) {
             return 1;
         }
@@ -702,7 +702,7 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 
     list_for_each_safe(curr, iter, hip_local_hostid_db, c)
     {
-        tmp = (struct hip_host_id_entry *) list_entry(curr);
+        tmp = list_entry(curr);
         HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
         HIP_DEBUG_LSI("Found LSI", &tmp->lsi);
         err = func(tmp, opaque);
@@ -732,7 +732,7 @@ static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(HIP_HASHTABLE *db,
     int c;
 
     list_for_each(item, db, c) {
-        id_entry = (struct hip_host_id_entry *) list_entry(item);
+        id_entry = list_entry(item);
         if (!ipv4_addr_cmp(&id_entry->lsi, lsi)) {
             return id_entry;
         }

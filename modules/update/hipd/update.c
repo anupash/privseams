@@ -391,7 +391,7 @@ static void hip_remove_addresses_to_send_echo_request(struct update_state *state
     struct in6_addr *address = NULL;
 
     list_for_each_safe(item, tmp, state->addresses_to_send_echo_request, i) {
-        address = (struct in6_addr *)list_entry(item);
+        address = list_entry(item);
         list_del(address, state->addresses_to_send_echo_request);
         free(address);
     }
@@ -413,7 +413,7 @@ static void hip_print_addresses_to_send_update_request(struct hip_hadb_state *ha
 
     HIP_DEBUG("Addresses to send update:\n");
     list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
-        address = (struct in6_addr *)list_entry(item);
+        address = list_entry(item);
         HIP_DEBUG_IN6ADDR("", address);
     }
 }
@@ -465,7 +465,7 @@ static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *h
 
     /* Last resort: use any address from the local list */
     list_for_each_safe(n, t, addresses, c) {
-        na  = (struct netdev_address *) list_entry(n);
+        na  = list_entry(n);
         in6 = hip_cast_sa_addr((struct sockaddr *) &na->addr);
         if (are_addresses_compatible(in6, dst_addr)) {
             HIP_DEBUG("Reusing a local address from the list\n");
@@ -552,7 +552,7 @@ int hip_send_update_to_one_peer(struct hip_common *received_update_packet,
         RAND_bytes(ha->echo_data, sizeof(ha->echo_data));
 
         list_for_each_safe(item, tmp, localstate->addresses_to_send_echo_request, i) {
-            dst_addr = (struct in6_addr *) list_entry(item);
+            dst_addr = list_entry(item);
 
             if (!are_addresses_compatible(src_addr, dst_addr)) {
                 continue;
@@ -600,7 +600,7 @@ static int hip_send_locators_to_all_peers(void)
 
     // Go through all the peers and send update packets
     list_for_each_safe(item, tmp, hadb_hit, i) {
-        ha = (struct hip_hadb_state *) list_entry(item);
+        ha = list_entry(item);
 
         if (ha->hastate == HIP_HASTATE_VALID &&
             ha->state == HIP_STATE_ESTABLISHED) {

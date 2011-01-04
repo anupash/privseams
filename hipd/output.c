@@ -214,7 +214,7 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
                   ((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items);
         list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
         {
-            addr = (struct hip_peer_addr_list_item *) list_entry(item);
+            addr = list_entry(item);
             ipv6_addr_copy(&peer_addr, &addr->address);
 
             err  = hip_send_i1_pkt(i1,
@@ -1485,7 +1485,7 @@ int hip_send_pkt(const struct in6_addr *local_addr,
 
     list_for_each_safe(item, tmp, addresses, i)
     {
-        netdev_src_addr = (struct netdev_address *) list_entry(item);
+        netdev_src_addr = list_entry(item);
         src_addr = hip_cast_sa_addr((struct sockaddr *) &netdev_src_addr->addr);
 
         if (!are_addresses_compatible(src_addr, peer_addr)) {

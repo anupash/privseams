@@ -194,7 +194,7 @@ int hip_for_each_opp(int (*func)(struct hip_opp_blocking_request *entry,
     HIP_LOCK_HT(&opp_db);
     list_for_each_safe(item, tmp, oppdb, i)
     {
-        this = (struct hip_opp_blocking_request *) list_entry(item);
+        this = list_entry(item);
         fail = func(this, opaque);
         if (fail) {
             goto out_err;
@@ -359,7 +359,7 @@ static void hip_oppdb_dump(void)
 
     list_for_each_safe(item, tmp, oppdb, i)
     {
-        this = (struct hip_opp_blocking_request *) list_entry(item);
+        this = list_entry(item);
 
         HIP_DEBUG_HIT("this->peer_phit",
                       &this->peer_phit);
@@ -656,7 +656,7 @@ struct hip_opp_blocking_request *hip_oppdb_find_by_ip(const struct in6_addr *ip_
     HIP_LOCK_HT(&opp_db);
     list_for_each_safe(item, tmp, oppdb, i)
     {
-        this = (struct hip_opp_blocking_request *) list_entry(item);
+        this = list_entry(item);
         if (ipv6_addr_cmp(&this->peer_ip, ip_peer) == 0) {
             HIP_DEBUG("The ip was found in oppdb. Peer non-HIP capable.\n");
             ret = this;

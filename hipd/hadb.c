@@ -304,7 +304,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
     /* and then with rest (actually default HIT is here redundantly) */
     list_for_each_safe(item, tmp, hip_local_hostid_db, i)
     {
-        e     = (struct hip_host_id_entry *) list_entry(item);
+        e = list_entry(item);
         ipv6_addr_copy(&our_hit, &e->lhi.hit);
         entry = hip_hadb_find_byhits(hit, &our_hit);
         if (!entry) {
@@ -884,7 +884,7 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
 
     if (ha->peer_addr_list_to_be_added) {
         list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
-            addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
+            addr_li = list_entry(item);
             list_del(addr_li, ha->peer_addr_list_to_be_added);
             free(addr_li);
             HIP_DEBUG_HIT("SPI out address", &addr_li->address);
@@ -894,7 +894,7 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
 
     if (ha->peer_addresses_old) {
         list_for_each_safe(item, tmp, ha->peer_addresses_old, i) {
-            addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
+            addr_li = list_entry(item);
             list_del(addr_li, ha->peer_addresses_old);
             free(addr_li);
             HIP_DEBUG_HIT("SPI out address", &addr_li->address);
@@ -1219,7 +1219,7 @@ int hip_for_each_ha(int (*func)(struct hip_hadb_state *entry, void *opaq),
     HIP_LOCK_HT(&hadb_hit);
     list_for_each_safe(item, tmp, hadb_hit, i)
     {
-        this = (struct hip_hadb_state *) list_entry(item);
+        this = list_entry(item);
         /* @todo: lock ha when we have threads */
         fail = func(this, opaque);
         /* @todo: unlock ha when we have threads */
@@ -1346,7 +1346,7 @@ struct hip_hadb_state *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_
     HIP_LOCK_HT(&hadb_hit);
     list_for_each_safe(item, tmp, hadb_hit, i)
     {
-        this = (struct hip_hadb_state *) list_entry(item);
+        this = list_entry(item);
         /* @todo: lock ha when we have threads */
         if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
             (ipv6_addr_cmp(rvs_ip, &this->peer_addr) == 0)) {
@@ -1463,7 +1463,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
 
     list_for_each_safe(item, aux, hadb_hit, i)
     {
-        tmp = (struct hip_hadb_state *) list_entry(item);
+        tmp = list_entry(item);
         if (!hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst)) {
             continue;
         } else if (hip_lsi_are_equal(&tmp->lsi_our, lsi_src)) {
@@ -1489,7 +1489,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi_dst
 
     list_for_each_safe(item, aux, hadb_hit, i)
     {
-        tmp = (struct hip_hadb_state *) list_entry(item);
+        tmp = list_entry(item);
         if (hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst)) {
             return tmp;
         }

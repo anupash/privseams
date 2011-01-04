@@ -111,7 +111,7 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
     HIP_LOCK_HT(&oppipdb);
     list_for_each_safe(item, tmp, oppipdb, i)
     {
-        this = (hip_oppip_t *) list_entry(item);
+        this = list_entry(item);
         func(this, opaque);
     }
 

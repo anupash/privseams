@@ -810,7 +810,7 @@ void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *entry)
 
     list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
     {
-        addr = (struct hip_peer_addr_list_item *) list_entry(item);
+        addr = list_entry(item);
         HIP_DEBUG_HIT("Peer address", &addr->address);
     }
 }

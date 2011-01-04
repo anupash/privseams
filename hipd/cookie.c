@@ -421,7 +421,7 @@ int hip_recreate_all_precreated_r1_packets(void)
 
     list_for_each_safe(curr, iter, ht, c)
     {
-        tmp = (struct hip_host_id *) list_entry(curr);
+        tmp = list_entry(curr);
         hip_ht_add(HIP_DB_LOCAL_HID, tmp);
         list_del(tmp, ht);
     }

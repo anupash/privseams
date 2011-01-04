@@ -845,7 +845,7 @@ int hip_sadb_flush(void)
     // iterating over all elements
     list_for_each_safe(item, tmp, sadb, i)
     {
-        HIP_IFEL(!(entry = (struct hip_sa_entry *) list_entry(item)), -1,
+        HIP_IFEL(!(entry = list_entry(item)), -1,
                  "failed to get list entry\n");
         HIP_IFEL(hip_sa_entry_delete(&entry->inner_src_addr, &entry->inner_dst_addr), -1,
                  "failed to delete sa entry\n");
