@@ -429,7 +429,7 @@ static int hip_add_registration_server(struct hip_hadb_state *entry,
                                        uint8_t failure_types[], int *refused_count)
 {
     int err                  = 0, i = 0;
-    hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
+    struct hip_relrec dummy, *fetch_record = NULL, *new_record = NULL;
     uint8_t granted_lifetime = 0;
 
     memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
@@ -469,7 +469,7 @@ static int hip_add_registration_server(struct hip_hadb_state *entry,
                 (*refused_count)++;
             } else {
                 /* Set the type of the relay record. */
-                hip_relrec_type_t type;
+                enum hip_relrec_type type;
                 switch (reg_types[i]) {
                 case HIP_SERVICE_RELAY:
                     type = HIP_RELAY;
@@ -587,7 +587,7 @@ static int hip_del_registration_server(struct hip_hadb_state *entry,
                                        int *refused_count)
 {
     int err = 0, i = 0;
-    hip_relrec_t dummy, *fetch_record = NULL;
+    struct hip_relrec dummy, *fetch_record = NULL;
 
     memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
 
@@ -599,7 +599,7 @@ static int hip_del_registration_server(struct hip_hadb_state *entry,
         case HIP_SERVICE_RELAY:
         case HIP_SERVICE_FULLRELAY: {
             /* Set the type of the relay record. */
-            hip_relrec_type_t type_to_delete = 0;
+            enum hip_relrec_type type_to_delete = 0;
 
             /* RVS and relay deletions are identical except the
              * relay record type. */

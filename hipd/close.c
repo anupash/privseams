@@ -370,7 +370,7 @@ int hip_close_send_response(UNUSED const uint8_t packet_type,
  * then we need to delete the relay record matching the sender's HIT. */
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status()) {
-        hip_relrec_t dummy;
+        struct hip_relrec dummy;
         memcpy(&(dummy.hit_r), &(ctx->input_msg->hits),
                sizeof(ctx->input_msg->hits));
         hip_relht_rec_free_doall(&dummy);

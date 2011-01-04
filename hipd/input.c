@@ -1278,7 +1278,7 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status() != HIP_RELAY_OFF &&
         !hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
-        hip_relrec_t *rec = NULL, dummy;
+        struct hip_relrec *rec = NULL, dummy;
 
         memcpy(&dummy.hit_r, &ctx->input_msg->hitr,
                sizeof(ctx->input_msg->hitr));
@@ -1426,7 +1426,7 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status() != HIP_RELAY_OFF &&
         !hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
-        hip_relrec_t *rec = NULL, dummy;
+        struct hip_relrec *rec = NULL, dummy;
 
         /* Check if we have a relay record in our database matching the
          * Responder's HIT. We should find one if the Responder is
