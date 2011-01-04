@@ -62,7 +62,7 @@ struct inet6_pktinfo {
     unsigned int    ipi6_ifindex;
 };
 
-typedef int (*hip_filter_t)(struct nlmsghdr *n, int len, void *arg);
+typedef int (*hip_filter)(struct nlmsghdr *n, int len, void *arg);
 
 int set_up_device(const char *dev, int up);
 int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
@@ -72,7 +72,7 @@ int hip_netlink_open(struct rtnl_handle *nl,
                      unsigned subscriptions,
                      int protocol);
 int hip_netlink_receive(struct rtnl_handle *nl,
-                        hip_filter_t handler,
+                        hip_filter handler,
                         void *arg);
 int rtnl_open_byproto(struct rtnl_handle *rth,
                       unsigned subscriptions,
@@ -81,7 +81,7 @@ void rtnl_close(struct rtnl_handle *rth);
 int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg);
 int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                  unsigned groups, struct nlmsghdr *answer,
-                 hip_filter_t junk, void *arg);
+                 hip_filter junk, void *arg);
 
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
                       const char *dev, struct idxmap **idxma);

@@ -114,7 +114,7 @@ int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
  * returns.
  */
 int hip_netlink_receive(struct rtnl_handle *nl,
-                        hip_filter_t handler,
+                        hip_filter handler,
                         void *arg)
 {
     struct nlmsghdr *h;
@@ -229,7 +229,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
  */
 int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                  unsigned groups, struct nlmsghdr *answer,
-                 hip_filter_t junk, void *arg)
+                 hip_filter junk, void *arg)
 {
     int status, err = 0;
     unsigned seq;
