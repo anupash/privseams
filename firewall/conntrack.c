@@ -444,34 +444,26 @@ static void insert_new_connection(const struct hip_data *data)
 #endif
 
     //original direction tuple
-    connection->original.state                   = HIP_STATE_UNASSOCIATED;
-    connection->original.direction               = ORIGINAL_DIR;
-    connection->original.esp_tuples              = NULL;
-    connection->original.connection              = connection;
-    connection->original.hip_tuple               = malloc(sizeof(struct hip_tuple));
-    memset(connection->original.hip_tuple, 0, sizeof(struct hip_tuple));
-    connection->original.hip_tuple->tuple        = &connection->original;
-    connection->original.hip_tuple->data         = malloc(sizeof(struct hip_data));
-    memset(connection->original.hip_tuple->data, 0, sizeof(struct hip_data));
-    memcpy(&connection->original.hip_tuple->data->src_hit, &data->src_hit, sizeof(struct in6_addr));
-    memcpy(&connection->original.hip_tuple->data->dst_hit, &data->dst_hit, sizeof(struct in6_addr));
-    connection->original.hip_tuple->data->src_hi = NULL;
-    connection->original.hip_tuple->data->verify = NULL;
+    connection->original.state                    = HIP_STATE_UNASSOCIATED;
+    connection->original.direction                = ORIGINAL_DIR;
+    connection->original.esp_tuples               = NULL;
+    connection->original.connection               = connection;
+    connection->original.hip_tuple                = malloc(sizeof(struct hip_tuple));
+    connection->original.hip_tuple->tuple         = &connection->original;
+    connection->original.hip_tuple->data          = calloc(1, sizeof(struct hip_data));
+    connection->original.hip_tuple->data->src_hit = data->src_hit;
+    connection->original.hip_tuple->data->dst_hit = data->dst_hit;
 
     //reply direction tuple
-    connection->reply.state                      = HIP_STATE_UNASSOCIATED;
-    connection->reply.direction                  = REPLY_DIR;
-    connection->reply.esp_tuples                 = NULL;
-    connection->reply.connection                 = connection;
-    connection->reply.hip_tuple                  = malloc(sizeof(struct hip_tuple));
-    memset(connection->reply.hip_tuple, 0, sizeof(struct hip_tuple));
-    connection->reply.hip_tuple->tuple           = &connection->reply;
-    connection->reply.hip_tuple->data            = malloc(sizeof(struct hip_data));
-    memset(connection->reply.hip_tuple->data, 0, sizeof(struct hip_data));
-    memcpy(&connection->reply.hip_tuple->data->src_hit, &data->dst_hit, sizeof(struct in6_addr));
-    memcpy(&connection->reply.hip_tuple->data->dst_hit, &data->src_hit, sizeof(struct in6_addr));
-    connection->reply.hip_tuple->data->src_hi    = NULL;
-    connection->reply.hip_tuple->data->verify    = NULL;
+    connection->reply.state                    = HIP_STATE_UNASSOCIATED;
+    connection->reply.direction                = REPLY_DIR;
+    connection->reply.esp_tuples               = NULL;
+    connection->reply.connection               = connection;
+    connection->reply.hip_tuple                = malloc(sizeof(struct hip_tuple));
+    connection->reply.hip_tuple->tuple         = &connection->reply;
+    connection->reply.hip_tuple->data          = calloc(1, sizeof(struct hip_data));
+    connection->reply.hip_tuple->data->src_hit = data->dst_hit;
+    connection->reply.hip_tuple->data->dst_hit = data->src_hit;
 
     //add tuples to list
     hip_list = append_to_list(hip_list, connection->original.hip_tuple);
