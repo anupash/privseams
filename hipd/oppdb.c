@@ -107,7 +107,7 @@ HIP_HASHTABLE *oppdb;
  */
 static unsigned long hip_oppdb_hash_hit(const void *ptr)
 {
-    const struct hip_opp_blocking_request *entry = (const struct hip_opp_blocking_request *) ptr;
+    const struct hip_opp_blocking_request *entry = ptr;
     uint8_t hash[HIP_AH_SHA_LEN];
 
     hip_build_digest(HIP_DIGEST_SHA1, &entry->peer_phit,
@@ -132,8 +132,8 @@ static unsigned long hip_oppdb_hash_hit(const void *ptr)
  */
 static int hip_oppdb_match_hit(const void *ptr1, const void *ptr2)
 {
-    const struct hip_opp_blocking_request *b1 = (const struct hip_opp_blocking_request *) ptr1;
-    const struct hip_opp_blocking_request *b2 = (const struct hip_opp_blocking_request *) ptr2;
+    const struct hip_opp_blocking_request *b1 = ptr1;
+    const struct hip_opp_blocking_request *b2 = ptr2;
     return memcmp(&b1->peer_phit, &b2->peer_phit, sizeof(hip_hit_t) + sizeof(struct sockaddr_in6));
 }
 
@@ -615,7 +615,7 @@ int hip_handle_opp_fallback(struct hip_opp_blocking_request *entry,
                             void *current_time)
 {
     int err     = 0, disable_fallback = 0;
-    time_t *now = (time_t *) current_time;
+    time_t *now = current_time;
     struct in6_addr *addr;
 
     if (!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
