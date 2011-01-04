@@ -20,6 +20,7 @@
 
 #define INBOUND_HANDLE_BEX_PRIO                 32000
 #define INBOUND_HANDLE_BEX_UPDATE_PRIO          32000
+#define INBOUND_HANDLE_NOTIFY_PRIO              32000
 
 #define OUTBOUND_I2_CREATE_APPINFO_PRIO         41500
 #define OUTBOUND_I2_CREATE_USER_SIG_PRIO        42500
@@ -43,14 +44,20 @@ int hip_signaling_init(void)
     /* Handle messages with appinfo or userinfo parameter */
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE, &signaling_handle_incoming_i2, INBOUND_HANDLE_BEX_PRIO),
              -1, "Error on registering Signaling handle function.\n");
-
-
     HIP_IFEL(hip_register_handle_function(HIP_R2, HIP_STATE_I2_SENT, &signaling_handle_incoming_r2, INBOUND_HANDLE_BEX_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_ESTABLISHED, &signaling_handle_incoming_update, INBOUND_HANDLE_BEX_UPDATE_PRIO),
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE, HIP_STATE_R2_SENT, &signaling_handle_incoming_update, INBOUND_HANDLE_BEX_UPDATE_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+    /* Handle Notifications */
+    HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_I2_SENT, &signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_R2_SENT, &signaling_handle_incoming_notification,  INBOUND_HANDLE_NOTIFY_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_NOTIFY, HIP_STATE_ESTABLISHED, &signaling_handle_incoming_notification, INBOUND_HANDLE_NOTIFY_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
     /* Add info in I2 */

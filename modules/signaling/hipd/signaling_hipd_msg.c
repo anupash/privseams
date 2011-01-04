@@ -250,6 +250,47 @@ out_err:
     return err;
 }
 
+/**
+ * Build and send a notification about failed user authentication.
+ *
+ * @param reason    the reason why the authentication failed
+ */
+int signaling_send_user_auth_failed_ntf(const struct in6_addr *src_hit,
+                                        const struct in6_addr *dst_hit,
+                                        const int reason) {
+    int err                 = 0;
+    uint16_t mask           = 0;
+    hip_common_t *msg_buf   = NULL;
+    hip_ha_t *ha                                    = NULL;
+
+    /* Sanity checks */
+    HIP_IFEL(!src_hit || !dst_hit, -1, "Source or destination hit are NULL \n");
+
+    /* Allocate and build message */
+    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
+            -ENOMEM, "Out of memory while allocation memory for the bex update packet\n");
+    hip_build_network_hdr(msg_buf, HIP_NOTIFY, mask, src_hit, dst_hit);
+
+    /* Append notification parameter */
+    signaling_build_param_user_auth_fail(msg_buf, reason);
+
+    /* Sign the packet */
+    HIP_IFEL(!(ha = hip_hadb_find_byhits(src_hit, dst_hit)),
+             -1, "Failed to retrieve hadb entry.\n");
+    HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
+              -EINVAL, "Could not sign UPDATE. Failing\n");
+
+    err = hip_send_pkt(NULL,
+                       &ha->peer_addr,
+                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ha->peer_udp_port,
+                       msg_buf,
+                       ha,
+                       1);
+out_err:
+    return err;
+}
+
 /*
  * Process application information in an I2 packet.
  * We have to send a request to the firewall for the connection with this context,
@@ -296,11 +337,22 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
 {
     int err = 0;
     struct signaling_user_context usr_ctx;
+    const struct signaling_param_user_context *param_usr_ctx;
+    const unsigned char *signature;
 
     HIP_IFEL(signaling_init_user_context(&usr_ctx), -1, "Could not init user context\n");
-    HIP_IFEL(signaling_build_user_context(hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO), &usr_ctx),
+    param_usr_ctx = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO);
+    HIP_IFEL(signaling_build_user_context(param_usr_ctx, &usr_ctx),
              -1, "Could not build user context from user context parameter\n");
     signaling_user_context_print(&usr_ctx, "", 1);
+
+    signature = (const unsigned char *) param_usr_ctx + sizeof(struct signaling_user_context) + ntohs(param_usr_ctx->ui_length);
+    err = signaling_user_api_verify(&usr_ctx, signature, ntohs(param_usr_ctx->sig_length));
+
+    if (err == SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED) {
+        HIP_DEBUG("still there 1\n");
+        signaling_send_user_auth_failed_ntf(&ctx->input_msg->hitr, &ctx->input_msg->hits, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
+    }
 
 out_err:
     return err;
@@ -368,6 +420,19 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");
     }
+
+out_err:
+    return err;
+}
+
+int signaling_handle_incoming_notification(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
+    int err = 0;
+    const struct hip_notification *ntf;
+    const struct signaling_ntf_user_auth_failed_data *ntf_data;
+    HIP_IFEL(!(ntf = hip_get_param(ctx->input_msg, HIP_PARAM_NOTIFICATION)),
+             -1, "Could not get notification parameter from NOTIFY msg.\n");
+    ntf_data = (const struct signaling_ntf_user_auth_failed_data *) ntf->data;
+    HIP_DEBUG("Received notification, that user authentication failed, errorcode: %d \n", ntohs(ntf_data->reason));
 
 out_err:
     return err;

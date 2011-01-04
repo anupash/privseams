@@ -50,6 +50,7 @@
 int signaling_handle_incoming_i2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_handle_incoming_r2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_handle_incoming_update(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_handle_incoming_notification(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 /* Handler for outgoing messages */
 int signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
@@ -58,6 +59,8 @@ int signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state,
 int signaling_r2_add_user_sig(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_send_first_update(const struct in6_addr *src_hit, const struct in6_addr *dst_hit);
 int signaling_send_second_update(const struct hip_common *first_update);
+
+int signaling_send_user_auth_failed_ntf(const struct in6_addr *src_hit, const struct in6_addr *dst_hit, const int reason);
 
 
 /* Classification of signaling update messages */
