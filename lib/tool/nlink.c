@@ -59,16 +59,16 @@
 #define NLMSG_TAIL(nmsg) \
     ((struct rtattr *) (((uint8_t *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
-typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
-                             const struct nlmsghdr *n, void **);
+typedef int (*rtnl_filter)(const struct sockaddr_nl *,
+                           const struct nlmsghdr *n, void **);
 
-typedef struct {
+struct inet_prefix {
     uint8_t  family;
     uint8_t  bytelen;
     uint16_t bitlen;
     uint32_t flags;
     uint32_t data[4];
-} inet_prefix;
+};
 
 int lsi_total = 0;
 
@@ -520,7 +520,7 @@ static int get_unsigned(unsigned *val, const char *arg, int base)
  * @param family address family of the name
  * @return zero success and negative on error
  */
-static int get_addr_1(inet_prefix *addr, const char *name, int family)
+static int get_addr_1(struct inet_prefix *addr, const char *name, int family)
 {
     const char *cp;
     unsigned char *ap = (unsigned char *) addr->data;
@@ -580,7 +580,7 @@ static int get_addr_1(inet_prefix *addr, const char *name, int family)
  * @param family address family of the name
  * @return zero success and negative on error
  */
-static int get_prefix_1(inet_prefix *dst, char *arg, int family)
+static int get_prefix_1(struct inet_prefix *dst, char *arg, int family)
 {
     int err;
     unsigned plen;
@@ -703,9 +703,9 @@ static int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
  * @return zero on success and negative on error
  */
 static int rtnl_dump_filter(struct rtnl_handle *rth,
-                            rtnl_filter_t filter,
+                            rtnl_filter filter,
                             void *arg1,
-                            rtnl_filter_t junk,
+                            rtnl_filter junk,
                             void *arg2)
 {
     struct sockaddr_nl nladdr;
@@ -830,7 +830,7 @@ int hip_iproute_modify(struct rtnl_handle *rth,
         struct rtmsg    r;
         char            buf[1024];
     } req1;
-    inet_prefix dst;
+    struct inet_prefix dst;
     struct idxmap *idxmap[16];
     int dst_ok = 0, err = 0;
     int idx, i;
@@ -955,7 +955,7 @@ static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
  * @param family address family of the name
  * @return zero success and negative on error
  */
-static int get_prefix(inet_prefix *dst, char *arg, int family)
+static int get_prefix(struct inet_prefix *dst, char *arg, int family)
 {
     if (family == AF_PACKET) {
         HIP_ERROR("Error: \"%s\" may be inet prefix, but it is not allowed in this context.\n", arg);
@@ -984,7 +984,7 @@ static int get_prefix(inet_prefix *dst, char *arg, int family)
  */
 static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                      unsigned groups, struct nlmsghdr *answer,
-                     rtnl_filter_t junk,
+                     rtnl_filter junk,
                      void *jarg)
 {
     int status;
@@ -1133,7 +1133,7 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
     } req;
 
     int err = 0, idx, preferred_family = family;
-    inet_prefix addr;
+    struct inet_prefix addr;
     char dst_str[INET6_ADDRSTRLEN];
     struct in_addr ip4;
     HIP_ASSERT(dst_addr);
@@ -1246,7 +1246,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         char             buf[256];
     } req;
 
-    inet_prefix lcl;
+    struct inet_prefix lcl;
     int local_len      = 0, err = 0, size_dev;
     struct in_addr ip4 = { 0 };
     int ip_is_v4       = 0;
