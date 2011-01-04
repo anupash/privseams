@@ -138,18 +138,17 @@ static struct hip_common *create_bex_store_update_msg(struct hchain_store *hcsto
                                          [transform->hash_length_id].
                                          hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1]); j++) {
             if (use_hash_trees) {
-                HIP_IFEL(!(htree = (struct hash_tree *) hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
-                                                                   [transform->hash_length_id].
-                                                                   hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
-                         "failed to retrieve htree\n");
+                HIP_IFEL(!(htree = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+                                              [transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1],
+                                              j)),
+                         -1, "failed to retrieve htree\n");
 
                 anchor           = htree->root;
                 hash_item_length = htree->num_data_blocks;
             } else {
-                HIP_IFEL(!(hchain = (struct hash_chain *) hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
-                                                                [transform->hash_length_id].
-                                                                hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
-                         "failed to retrieve hchain\n");
+                HIP_IFEL(!(hchain = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+                                               [transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)),
+                         -1, "failed to retrieve hchain\n");
 
                 anchor           = hchain_get_anchor(hchain);
                 hash_item_length = hchain->hchain_length;

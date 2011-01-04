@@ -429,16 +429,14 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                 // add the anchors of the next lower level as data
                 for (j = 0; j < hcstore->num_hchains_per_item; j++) {
                     if (use_hash_trees) {
-                        tmp_htree = (struct hash_tree *) hip_ll_get(
-                            &hcstore->hchain_shelves[hash_func_id][hash_length_id].
-                            hchains[hchain_length_id][hierarchy_level - 1], j);
+                        tmp_htree = hip_ll_get(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level - 1],
+                                               j);
 
                         htree_add_data(link_tree, tmp_htree->root,
                                        hash_length);
                     } else {
-                        tmp_hchain = (struct hash_chain *) hip_ll_get(
-                            &hcstore->hchain_shelves[hash_func_id][hash_length_id].
-                            hchains[hchain_length_id][hierarchy_level - 1], j);
+                        tmp_hchain = hip_ll_get(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level - 1],
+                                                j);
 
                         htree_add_data(link_tree, hchain_get_anchor(tmp_hchain),
                                        hash_length);

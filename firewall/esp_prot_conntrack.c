@@ -332,8 +332,7 @@ static int esp_prot_conntrack_update_anchor(const struct tuple *tuple,
             element_index < hip_ll_get_size(&esp_tuple->anchor_cache);
             element_index++) {
 
-        HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
-                                 hip_ll_get(&esp_tuple->anchor_cache,
+        HIP_IFEL(!(anchor_item = hip_ll_get(&esp_tuple->anchor_cache,
                                             element_index)),
                  -1, "failed to look up anchor_item\n");
 
