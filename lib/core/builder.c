@@ -97,13 +97,13 @@
 #include <arpa/inet.h>
 #include <openssl/md5.h>
 
-#include "lib/core/common.h"
-#include "lib/core/prefix.h"
 #include "lib/tool/checksum.h"
+#include "common.h"
 #include "config.h"
-#include "builder.h"
 #include "crypto.h"
 #include "hostid.h"
+#include "prefix.h"
+#include "builder.h"
 
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */

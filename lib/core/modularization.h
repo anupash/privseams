@@ -33,7 +33,7 @@
 
 #include <stdint.h>
 
-#include "lib/core/linkedlist.h"
+#include "linkedlist.h"
 
 /**
  * @todo add description

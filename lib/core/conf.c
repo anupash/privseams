@@ -71,8 +71,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/core/common.h"
 #include "lib/tool/lutil.h"
+#include "common.h"
 #include "config.h"
 #include "builder.h"
 #include "crypto.h"

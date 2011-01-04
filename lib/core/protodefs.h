@@ -37,8 +37,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/core/esp_prot_common.h"
-#include "lib/core/hashchain.h"
+#include "esp_prot_common.h"
+#include "hashchain.h"
 
 #ifndef PF_HIP
 #  define PF_HIP 32

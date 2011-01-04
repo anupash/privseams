@@ -79,13 +79,13 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/core/common.h"
-#include "lib/core/list.h"
-#include "lib/core/prefix.h"
 #include "lib/tool/lutil.h"
 #include "modules/update/hipd/update.h"
 #include "builder.h"
+#include "common.h"
 #include "ife.h"
+#include "list.h"
+#include "prefix.h"
 #include "state.h"
 #include "straddr.h"
 #include "debug.h"
