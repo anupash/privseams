@@ -16,6 +16,7 @@ int signaling_build_param_application_context(hip_common_t *msg, const struct si
 int signaling_build_param_user_context(hip_common_t *msg,
                                        const struct signaling_user_context *user_ctx,
                                        const unsigned char *signature, const int sig_len);
+int signaling_build_param_user_auth_fail(hip_common_t *msg, const uint16_t reason);
 
 /* Builders for internal state structures */
 int signaling_build_application_context(const struct signaling_param_app_context *param_app_ctx,
