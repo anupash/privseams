@@ -610,7 +610,6 @@ void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
                                  const unsigned char *anchor,
                                  const int use_hash_trees)
 {
-    struct hash_chain *hchain      = NULL;
     struct hash_tree  *htree       = NULL;
     void              *stored_item = NULL;
     int hash_length = 0, err = 0;
@@ -656,18 +655,13 @@ void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
 
                     goto out_err;
                 }
-            } else {
-                hchain = stored_item;
+            } else if (!memcmp(anchor, hchain_get_anchor(stored_item), hash_length)) {
+                stored_item = hip_ll_del(&hcstore->
+                                         hchain_shelves[function_id][hash_length_id].
+                                         hchains[i][hierarchy_level], j, NULL);
 
-                if (!memcmp(anchor, hchain_get_anchor(hchain), hash_length)) {
-                    stored_item = hip_ll_del(&hcstore->
-                                             hchain_shelves[function_id][hash_length_id].
-                                             hchains[i][hierarchy_level], j, NULL);
-
-                    HIP_DEBUG("hash-chain matching the anchor found\n");
-
-                    goto out_err;
-                }
+                HIP_DEBUG("hash-chain matching the anchor found\n");
+                goto out_err;
             }
         }
     }
