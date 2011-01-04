@@ -101,6 +101,37 @@ struct usr_msg_handle {
 static struct hip_ll *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
 
 /**
+ * Convert a local host id into LSI/HIT information and write the
+ * result into a HIP message as a HIP_PARAM_HIT_INFO parameter.
+ * Interprocess communications only.
+ *
+ * @param entry an hip_host_id_entry structure
+ * @param msg a HIP user message where the HIP_PARAM_HIT_INFO
+ *            parameter will be written
+ * @return zero on success and negative on error
+ */
+static int host_id_entry_to_hit_info(struct hip_host_id_entry *entry, void *msg)
+{
+    struct hip_hit_info data;
+    int err = 0;
+
+    memcpy(&data.lhi, &entry->lhi, sizeof(struct hip_lhi));
+    /* FIXME: algo is 0 in entry->lhi */
+    data.lhi.algo = hip_get_host_id_algo(entry->host_id);
+    memcpy(&data.lsi, &entry->lsi, sizeof(hip_lsi_t));
+
+    HIP_IFEL(hip_build_param_contents(msg,
+                                      &data,
+                                      HIP_PARAM_HIT_INFO,
+                                      sizeof(data)),
+                                      -1,
+                                      "Error building parameter\n");
+
+out_err:
+    return err;
+}
+
+/**
  * Register a function for handling of the specified combination from packet
  * type and host association state.
  *
@@ -667,7 +698,7 @@ int hip_handle_user_msg(struct hip_common *msg,
     case HIP_MSG_GET_HITS:
         hip_msg_init(msg);
         hip_build_user_hdr(msg, HIP_MSG_GET_HITS, 0);
-        err = hip_for_each_hi(hip_host_id_entry_to_hit_info, msg);
+        err = hip_for_each_hi(host_id_entry_to_hit_info, msg);
         break;
     case HIP_MSG_GET_HA_INFO:
         hip_msg_init(msg);

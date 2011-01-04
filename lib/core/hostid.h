@@ -77,8 +77,6 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv);
 DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
-int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
-                                  void *msg);
 int hip_serialize_host_id_action(struct hip_common *msg,
                                  int action,
                                  int anon,

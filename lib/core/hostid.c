@@ -413,38 +413,6 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
 }
 
 /**
- * Convert a local host id into LSI/HIT information and write the
- * result into a HIP message as a HIP_PARAM_HIT_INFO parameter.
- * Interprocess communications only.
- *
- * @param entry an hip_host_id_entry structure
- * @param msg a HIP user message where the HIP_PARAM_HIT_INFO
- *            parameter will be written
- * @return zero on success and negative on error
- */
-int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
-                                  void *msg)
-{
-    struct hip_hit_info data;
-    int err = 0;
-
-    memcpy(&data.lhi, &entry->lhi, sizeof(struct hip_lhi));
-    /* FIXME: algo is 0 in entry->lhi */
-    data.lhi.algo = hip_get_host_id_algo(entry->host_id);
-    memcpy(&data.lsi, &entry->lsi, sizeof(hip_lsi_t));
-
-    HIP_IFEL(hip_build_param_contents(msg,
-                                      &data,
-                                      HIP_PARAM_HIT_INFO,
-                                      sizeof(data)),
-                                      -1,
-                                      "Error building parameter\n");
-
-out_err:
-    return err;
-}
-
-/**
  * (Re)create new host identities or load existing ones, and append the
  * private identities into a message. This functionality is used by hipd
  * but can also be invoked with hipconf.
