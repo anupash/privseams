@@ -312,7 +312,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int verdict                                           = 1;
     int ip_hdr_size                                       = 0;
     int portDest                                          = 0;
-    fw_cache_hl_t *entry                                  = NULL;
+    struct hip_hadb_user_info_state *entry                = NULL;
     enum hip_port_binding port_binding                    = HIP_PORT_INFO_UNKNOWN;
     const struct ip6_hdr *ip6_hdr                         = NULL;
     struct in6_addr src_addr, dst_addr;
@@ -399,7 +399,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
                                struct in_addr *lsi_dst)
 {
     int err = 0;
-    fw_cache_hl_t *entry_peer = NULL;
+    struct hip_hadb_user_info_state *entry_peer = NULL;
 
     if (lsi_dst) {
         HIP_DEBUG_LSI("lsi dst", lsi_dst);

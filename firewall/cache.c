@@ -62,12 +62,12 @@ static HIP_HASHTABLE *firewall_cache_db = NULL;
  *
  * @return the allocated cache entry
  */
-fw_cache_hl_t *hip_cache_create_hl_entry(void)
+struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void)
 {
-    fw_cache_hl_t *entry = NULL;
+    struct hip_hadb_user_info_state *entry = NULL;
     int err = 0;
 
-    HIP_IFEL(!(entry = malloc(sizeof(fw_cache_hl_t))),
+    HIP_IFEL(!(entry = malloc(sizeof(struct hip_hadb_user_info_state))),
              -ENOMEM, "No memory available for firewall database entry\n");
     memset(entry, 0, sizeof(*entry));
 out_err:
@@ -81,9 +81,9 @@ out_err:
  *
  * @return the new firewall db entry
  */
-static fw_cache_hl_t * firewall_add_new_entry(const fw_cache_hl_t *ha_entry)
+static struct hip_hadb_user_info_state *firewall_add_new_entry(const struct hip_hadb_user_info_state *ha_entry)
 {
-    fw_cache_hl_t *new_entry = NULL;
+    struct hip_hadb_user_info_state *new_entry = NULL;
 
     HIP_DEBUG("\n");
 
@@ -116,16 +116,16 @@ static fw_cache_hl_t * firewall_add_new_entry(const fw_cache_hl_t *ha_entry)
  * @param type whether the parameters are HITs, LSIs or IPs
  * @return the cached entry on match, NULL otherwise
  */
-static fw_cache_hl_t *hip_firewall_cache_hadb_match(const void *local,
-                                                    const void *peer,
-                                                    fw_cache_query_type_t type)
+static struct hip_hadb_user_info_state *hip_firewall_cache_hadb_match(const void *local,
+                                                                      const void *peer,
+                                                                      enum fw_cache_query_type type)
 {
     int err = 0;
-    fw_cache_hl_t *ha_ret                      = NULL;
-    const fw_cache_hl_t *ha_match              = NULL;
-    const fw_cache_hl_t *ha_curr               = NULL;
-    struct hip_common *msg                     = NULL;
-    const struct hip_tlv_common *current_param = NULL;
+    struct       hip_hadb_user_info_state *ha_ret        = NULL;
+    const struct hip_hadb_user_info_state *ha_match      = NULL;
+    const struct hip_hadb_user_info_state *ha_curr       = NULL;
+    struct       hip_common               *msg           = NULL;
+    const struct hip_tlv_common           *current_param = NULL;
 
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
     hip_msg_init(msg);
@@ -174,16 +174,14 @@ out_err:
  *        if no entry is found in the cache
  * @return the entry on match, NULL otherwise
  */
-fw_cache_hl_t *hip_firewall_cache_db_match(const void *local,
-                                           const void *peer,
-                                           fw_cache_query_type_t type,
-                                           int query_daemon)
+struct hip_hadb_user_info_state *hip_firewall_cache_db_match(const void *local,
+                                                             const void *peer,
+                                                             enum fw_cache_query_type type,
+                                                             int query_daemon)
 {
     int i;
-    fw_cache_hl_t *this                  = NULL;
-    hip_list_t *item                     = NULL;
-    hip_list_t *tmp                      = NULL;
-    fw_cache_hl_t *ha_match              = NULL;
+    struct hip_hadb_user_info_state *this = NULL, *ha_match = NULL;
+    hip_list_t *item = NULL, *tmp = NULL;
 
     if (type == FW_CACHE_HIT) {
         ha_match = hip_ht_find(firewall_cache_db, peer);
@@ -241,9 +239,9 @@ out_err:
  * @param type whether the parameters are HITs, LSIs or IPs
  */
 void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
-                                     fw_cache_query_type_t type)
+                                     enum fw_cache_query_type type)
 {
-    fw_cache_hl_t *entry;
+    struct hip_hadb_user_info_state *entry;
 
     entry = hip_firewall_cache_db_match(local, peer, type, 0);
     if (entry) {
@@ -261,7 +259,7 @@ void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
  */
 static unsigned long hip_firewall_hash_hit_peer(const void *ptr)
 {
-    const struct in6_addr *hit_peer = &((const fw_cache_hl_t *) ptr)->hit_peer;
+    const struct in6_addr *hit_peer = &((const struct hip_hadb_user_info_state *) ptr)->hit_peer;
     uint8_t hash[HIP_AH_SHA_LEN];
 
     hip_build_digest(HIP_DIGEST_SHA1, hit_peer, sizeof(*hit_peer), hash);
@@ -277,17 +275,17 @@ static unsigned long hip_firewall_hash_hit_peer(const void *ptr)
  * the entries (or rather the part used to calculate the hash) themselves are
  * equal or whether they are different and this is just a hash collision.
  *
- * @param ptr1: pointer to a fw_cache_hl_t
- * @param ptr2: pointer to a fw_cache_hl_t
+ * @param ptr1: pointer to a struct hip_hadb_user_info_state
+ * @param ptr2: pointer to a struct hip_hadb_user_info_state
  *
  * @return zero if the peer HITs in both table entries are identical, a non-zero value otherwise.
  */
 static int hip_firewall_match_hit_peer(const void *ptr1, const void *ptr2)
 {
-    // stg: can one assume that there will always be at most one fw_cache_hl_t object per hit_peer?
+    // stg: can one assume that there will always be at most one struct hip_hadb_user_info_state object per hit_peer?
     // If so, one could compare the pointers instead because if the hit_peers are the same, the pointers would be the same, and comparing the pointers is faster.
-    const struct in6_addr *peer1 = &((const fw_cache_hl_t *) ptr1)->hit_peer;
-    const struct in6_addr *peer2 = &((const fw_cache_hl_t *) ptr2)->hit_peer;
+    const struct in6_addr *peer1 = &((const struct hip_hadb_user_info_state *) ptr1)->hit_peer;
+    const struct in6_addr *peer2 = &((const struct hip_hadb_user_info_state *) ptr2)->hit_peer;
     return memcmp(peer1, peer2, sizeof(*peer1));
 }
 
@@ -308,9 +306,8 @@ void hip_firewall_cache_init_hldb(void)
 void hip_firewall_cache_delete_hldb(int exiting)
 {
     int i;
-    fw_cache_hl_t *this       = NULL;
-    hip_list_t *item          = NULL;
-    hip_list_t *tmp           = NULL;
+    struct hip_hadb_user_info_state *this = NULL;
+    hip_list_t *item = NULL, *tmp = NULL;
 
     HIP_DEBUG("Start hldb delete\n");
     HIP_LOCK_HT(&firewall_cache_db);
@@ -344,7 +341,7 @@ int hip_firewall_cache_set_bex_state(const struct in6_addr *hit_our,
                                      int state)
 {
     int err = 0;
-    fw_cache_hl_t *entry;
+    struct hip_hadb_user_info_state *entry;
 
     HIP_IFEL(!hit_peer, -1, "Need peer HIT to search\n");
 
@@ -376,7 +373,7 @@ int hip_firewall_cache_update_entry(const struct in6_addr *ip_our,
                                     int state)
 {
     int err = 0;
-    fw_cache_hl_t *entry;
+    struct hip_hadb_user_info_state *entry;
 
     HIP_IFEL(!ip_peer, -1, "Need peer IP to search\n");
 

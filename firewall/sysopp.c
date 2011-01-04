@@ -159,7 +159,7 @@ static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx,
 int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx,
                                             const int default_verdict)
 {
-    fw_cache_hl_t *entry_peer = NULL;
+    struct hip_hadb_user_info_state *entry_peer = NULL;
     int verdict;
 
     HIP_DEBUG("\n");
