@@ -441,15 +441,12 @@ out_err:
 int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
-    hip_ha_t *entry = NULL;
     unsigned char sig_buf[1000];
     int sig_len = 10;
     struct signaling_hipd_state *sig_state;
 
-    /* Get the global state */
-    HIP_IFEL(!(entry = hip_hadb_find_byhits(&ctx->output_msg->hits, &ctx->output_msg->hitr)),
-                 -1, "Failed to retrieve hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
+    HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
 
     HIP_IFEL(signaling_user_api_get_uname(sig_state->ctx.user_ctx.euid, &sig_state->ctx.user_ctx),
@@ -472,13 +469,10 @@ out_err:
 int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-    hip_ha_t *entry = NULL;
     struct signaling_hipd_state *sig_state;
 
-    /* Get the global state */
-    HIP_IFEL(!(entry = hip_hadb_find_byhits(&ctx->output_msg->hits, &ctx->output_msg->hitr)),
-                 -1, "Failed to retrieve hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
+    HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
     HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
             -1, "Building of param appinfo for I2 failed.\n");
@@ -496,19 +490,17 @@ int signaling_r2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
 int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
 	int err = 0;
-    hip_ha_t *entry                                    = NULL;
     struct signaling_hipd_state *sig_state             = NULL;
 
 	/* Port information is included in the I2 (ctx->input_msg). Add it to global state.
 	 * Note: This could be done in another function but to do it here saves one lookup in hadb. */
 
     /* Get the connection context from the global state */
-    HIP_IFEL(!(entry = hip_hadb_find_byhits(&ctx->output_msg->hits, &ctx->output_msg->hitr)),
-                 -1, "Failed to retrieve hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
-                 -1, "failed to retrieve state for signaling\n");
+    HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+             -1, "failed to retrieve state for signaling\n");
     HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
-            -1, "Building of param appinfo for R2 failed.\n");
+             -1, "Building of param appinfo for R2 failed.\n");
     HIP_DEBUG("Building application context for I2 successful.\n");
 
 out_err:

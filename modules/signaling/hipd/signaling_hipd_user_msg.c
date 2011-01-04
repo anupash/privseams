@@ -258,7 +258,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
         // trigger bex since we intercepted the packet before it could be handled by the hipfw
         HIP_IFEL(hip_netdev_trigger_bex_msg(msg, src),
                  -1, "Netdev could not trigger the BEX\n");
-        // have to do this after triggering BEX since there is no state before
+        // have to do this again after triggering BEX since there is no state before
         HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
                  -1, "hadb entry has not been set up\n");
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
