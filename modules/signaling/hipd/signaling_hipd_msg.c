@@ -314,7 +314,7 @@ out_err:
 /*
  * Handle a BEX update
  */
-int signaling_handle_bex_update(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
     struct signaling_connection_context conn_ctx;
