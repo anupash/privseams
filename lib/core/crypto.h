@@ -33,8 +33,6 @@
 #include <openssl/rsa.h>
 #include <openssl/dh.h>
 
-#include "hipd/hadb.h"
-#include "hipd/hidb.h"
 #include "debug.h"
 #include "ife.h"
 #include "transform.h"
