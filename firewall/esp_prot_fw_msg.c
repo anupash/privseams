@@ -294,8 +294,7 @@ int send_bex_store_update_to_hipd(struct hchain_store *hcstore,
 
     HIP_DEBUG("sending bex-store update to hipd...\n");
 
-    HIP_IFEL(!(msg = (struct hip_common *) create_bex_store_update_msg(hcstore,
-                                                                       use_hash_trees)),
+    HIP_IFEL(!(msg = create_bex_store_update_msg(hcstore, use_hash_trees)),
              -1, "failed to create bex store anchors update message\n");
 
     HIP_DUMP_MSG(msg);
