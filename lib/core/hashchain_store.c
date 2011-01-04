@@ -642,7 +642,7 @@ void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
                                      hchains[i][hierarchy_level], j);
 
             if (use_hash_trees) {
-                htree = (struct hash_tree *) stored_item;
+                htree = stored_item;
 
                 if (!memcmp(anchor, htree->root, hash_length)) {
                     stored_item =
@@ -657,7 +657,7 @@ void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
                     goto out_err;
                 }
             } else {
-                hchain = (struct hash_chain *) stored_item;
+                hchain = stored_item;
 
                 if (!memcmp(anchor, hchain_get_anchor(hchain), hash_length)) {
                     stored_item = hip_ll_del(&hcstore->
