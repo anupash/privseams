@@ -47,7 +47,7 @@ char *getwithoutnewline(char *buffer, int count, FILE *f)
  * @param list tabular delimited substrings will be stored into this
  *             list as list elements
  */
-void extractsubstrings(char *string, List *list)
+void extractsubstrings(char *string, struct list *list)
 {
     char *sub_string;
     char delims[] = " \t";
@@ -73,7 +73,7 @@ void extractsubstrings(char *string, List *list)
  *
  * @param ilist the linked list to initialized
  */
-void initlist(List *ilist)
+void initlist(struct list *ilist)
 {
     ilist->head = NULL;
 }
@@ -83,10 +83,10 @@ void initlist(List *ilist)
  * @param ilist the linked list where to add the element
  * @param data the contents of the element to be added
  */
-void insert(List *ilist, char *data)
+void insert(struct list *ilist, char *data)
 {
-    Listitem *new;
-    new         = malloc(sizeof(Listitem));
+    struct listitem *new;
+    new         = malloc(sizeof(struct listitem));
     new->next   = ilist->head;
     strncpy(new->data, data, MAX_ITEM_LEN);
     ilist->head = new;
@@ -98,9 +98,9 @@ void insert(List *ilist, char *data)
  * @param ilist the linked list
  * @return the number of elements in the linked list
  */
-int length(List *ilist)
+int length(struct list *ilist)
 {
-    Listitem *ptr;
+    struct listitem *ptr;
     int count = 1;
 
     if (!ilist->head) {
@@ -119,9 +119,9 @@ int length(List *ilist)
  *
  * @param ilist the linked list to be deallocated and destroyed
  */
-void destroy(List *ilist)
+void destroy(struct list *ilist)
 {
-    Listitem *ptr1, *ptr2;
+    struct listitem *ptr1, *ptr2;
     if (!ilist) {
         return;
     }
@@ -141,9 +141,9 @@ void destroy(List *ilist)
  * @param n a number denoting the Nth item to be fetched
  * @return a pointer to the contents of the linked list
  */
-char *getitem(List *ilist, int n)
+char *getitem(struct list *ilist, int n)
 {
-    Listitem *ptr;
+    struct listitem *ptr;
     int count = 0;
 
     if (!ilist->head) {

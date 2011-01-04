@@ -2479,7 +2479,7 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
     int err          = 0, i, len;
     FILE *hip_config = NULL;
 
-    List list;
+    struct list list;
     char *c, line[128], *hip_arg, str[128];
     const char *args[64];
     char *comment, *nl;
