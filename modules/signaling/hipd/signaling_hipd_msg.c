@@ -193,6 +193,7 @@ int signaling_send_second_update(const struct hip_common *first_update) {
     const struct hip_seq * par_seq                  = NULL;
     hip_ha_t *ha                                    = NULL;
     struct signaling_hipd_state * sig_state         = NULL;
+    struct update_state * updatestate               = NULL;
     hip_common_t * update_packet_to_send            = NULL;
     struct signaling_connection_context conn_ctx;
 
@@ -207,6 +208,10 @@ int signaling_send_second_update(const struct hip_common *first_update) {
                  -1, "Failed to retrieve hadb entry.\n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling ports\n");
+    HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
+             -1, "Could not get update state for host association.\n");
+
+    /* get the sequence number that we have to acknowledge */
     HIP_IFEL(!(par_seq = hip_get_param(first_update, HIP_PARAM_SEQ)),
             -1, "Message contains no seq parameter.\n");
     seq_id = ntohl(par_seq->update_id);
@@ -227,6 +232,11 @@ int signaling_send_second_update(const struct hip_common *first_update) {
                        update_packet_to_send,
                        ha,
                        1);
+
+    /* progress update sequence to currently processed update */
+    if (updatestate->update_id_in < seq_id) {
+        updatestate->update_id_in = seq_id;
+    }
 
 out_err:
     return err;
