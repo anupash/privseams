@@ -40,31 +40,23 @@
 
 #include "lib/core/protodefs.h"
 
-#define SIGNALING_FIRST_BEX_UPDATE 33001
+/* Update message types */
+#define SIGNALING_FIRST_BEX_UPDATE  33001
 #define SIGNALING_SECOND_BEX_UPDATE 33002
 
-
+/* Handler for incoming messages */
 int signaling_handle_incoming_i2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-
 int signaling_handle_incoming_r2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-
 int signaling_handle_incoming_update(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
+/* Handler for outgoing messages */
+int signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_add_user_sig(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_r2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_trigger_bex_update(struct hip_common *trigger_msg);
 
+/* Classification of signaling update messages */
 int signaling_get_update_type(hip_common_t *msg);
-/*
- * Add application information to I2 packet.
- */
-int signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-
-int signaling_i2_add_user_sig(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-
-/*
- * Add application information to R2 packet.
- */
-int signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-
-int signaling_r2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx);
 
 #endif /*HIP_HIPD_SIGNALING_PROT_HIPD_MSG_H*/
