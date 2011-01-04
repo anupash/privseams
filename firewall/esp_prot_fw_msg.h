@@ -50,7 +50,7 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
                                 const int hash_item_length,
                                 const int soft_update,
                                 const int *anchor_offset,
-                                hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS]);
+                                struct hash_tree *link_trees[MAX_NUM_PARALLEL_HCHAINS]);
 int send_anchor_change_to_hipd(const hip_sa_entry_t *entry);
 int esp_prot_handle_sa_add_request(const struct hip_common *msg,
                                    uint8_t *esp_prot_transform,

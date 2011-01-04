@@ -63,8 +63,8 @@ struct hash_chain {
     int             hchain_length; /* number of initial elements in the hash-chain */
     int             hchain_hierarchy; /* hierarchy this hchain belongs to */
     int             current_index; /* index to currently revealed element for hchain traversal*/
-    unsigned char * elements;     /* array containing the elements of the hash chain*/
-    hash_tree_t *   link_tree;  /* pointer to a hash tree for linking hchains */
+    unsigned char    *elements;    /* array containing the elements of the hash chain*/
+    struct hash_tree *link_tree;   /* pointer to a hash tree for linking hchains */
 };
 
 int hchain_verify(const unsigned char *current_hash,
@@ -78,7 +78,7 @@ struct hash_chain *hchain_create(const hash_function hash_function,
                                  const int hash_length,
                                  const int hchain_length,
                                  const int hchain_hierarchy,
-                                 hash_tree_t *link_tree);
+                                 struct hash_tree *link_tree);
 unsigned char *hchain_get_anchor(const struct hash_chain *hash_chain);
 unsigned char *hchain_get_seed(const struct hash_chain *hash_chain);
 unsigned char *hchain_pop(struct hash_chain *hash_chain);

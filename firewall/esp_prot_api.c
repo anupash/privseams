@@ -445,7 +445,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry,
     int hash_length      = 0, err = 0;
     int use_hash_trees   = 0;
     struct hash_chain *hchain = NULL;
-    hash_tree_t       *htree  = NULL;
+    struct hash_tree  *htree  = NULL;
     uint16_t i;
 
     HIP_ASSERT(entry != 0);
@@ -671,7 +671,7 @@ int esp_prot_add_hash(unsigned char *esp_packet, int *out_length,
     uint32_t htree_index          = 0;
     uint32_t htree_index_net      = 0;
     struct hash_chain *hchain     = NULL;
-    hash_tree_t *htree            = NULL;
+    struct hash_tree  *htree      = NULL;
     int branch_length             = 0;
 
     HIP_ASSERT(esp_packet != NULL);
@@ -1022,9 +1022,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
     int anchor_length              = 0;
     int anchor_offset[MAX_NUM_PARALLEL_HCHAINS];
     const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS];
-    hash_tree_t *htree             = NULL;
+    struct hash_tree  *htree       = NULL;
     struct hash_chain *hchain      = NULL;
-    hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS];
+    struct hash_tree *link_trees[MAX_NUM_PARALLEL_HCHAINS];
     int hash_item_length           = 0;
     int remaining                  = 0, i, j;
     int threshold                  = 0;

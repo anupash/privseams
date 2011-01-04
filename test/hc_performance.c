@@ -101,7 +101,7 @@ int main(int argc, char **argv)
     struct timeval start_time;
     struct timeval stop_time;
     struct hash_chain *hchain   = NULL;
-    hash_tree_t *htree          = NULL;
+    struct hash_tree  *htree    = NULL;
     struct statistics_data creation_stats, verify_stats;
     uint64_t timediff           = 0;
     uint32_t num_items          = 0;

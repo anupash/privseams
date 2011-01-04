@@ -72,7 +72,7 @@ static struct hip_common *create_bex_store_update_msg(struct hchain_store *hcsto
     int hash_length           = 0, num_hchains = 0;
     esp_prot_tfm_t *transform = NULL;
     struct hash_chain *hchain = NULL;
-    hash_tree_t *htree        = NULL;
+    struct hash_tree  *htree  = NULL;
     unsigned char *anchor     = NULL;
     int err                   = 0;
     unsigned  j               = 0;
@@ -140,9 +140,9 @@ static struct hip_common *create_bex_store_update_msg(struct hchain_store *hcsto
                                          [transform->hash_length_id].
                                          hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1]); j++) {
             if (use_hash_trees) {
-                HIP_IFEL(!(htree = (hash_tree_t *) hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
-                                                              [transform->hash_length_id].
-                                                              hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
+                HIP_IFEL(!(htree = (struct hash_tree *) hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+                                                                   [transform->hash_length_id].
+                                                                   hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
                          "failed to retrieve htree\n");
 
                 anchor           = htree->root;
@@ -328,15 +328,15 @@ int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
                         const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],
                         const int hash_item_length, const int soft_update,
                         const int *anchor_offset,
-                        hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS])
+                        struct hash_tree *link_trees[MAX_NUM_PARALLEL_HCHAINS])
 {
     int err                     = 0;
     int i                       = 0;
     struct hip_common *msg      = NULL;
     int hash_length             = 0;
     struct hash_chain *hchain   = NULL;
-    hash_tree_t *htree          = NULL;
-    hash_tree_t *link_tree      = NULL;
+    struct hash_tree *htree     = NULL;
+    struct hash_tree *link_tree = NULL;
     int secret_length           = 0;
     int branch_length           = 0;
     int root_length             = 0;
@@ -501,7 +501,7 @@ int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
     unsigned char *anchor  = NULL;
     struct hip_common *msg    = NULL;
     struct hash_chain *hchain = NULL;
-    hash_tree_t       *htree  = NULL;
+    struct hash_tree  *htree  = NULL;
 
     HIP_ASSERT(entry != NULL);
     HIP_ASSERT(entry->direction == HIP_SPI_DIRECTION_OUT);

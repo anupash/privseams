@@ -120,7 +120,7 @@ struct hash_chain *hchain_create(const hash_function hash_func,
                                  const int hash_length,
                                  const int hchain_length,
                                  const int hchain_hierarchy,
-                                 hash_tree_t *link_tree)
+                                 struct hash_tree *link_tree)
 {
     struct hash_chain *hchain = NULL;
     /* the hash function output might be longer than needed

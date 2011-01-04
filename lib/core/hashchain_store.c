@@ -363,14 +363,14 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                              const int use_hash_trees)
 {
     struct hash_chain *hchain     = NULL;
-    hash_tree_t *htree            = NULL;
-    hash_tree_t *link_tree        = NULL;
+    struct hash_tree  *htree      = NULL;
+    struct hash_tree  *link_tree  = NULL;
     hash_function hash_func       = NULL;
     int hash_length               = 0;
     int hchain_length             = 0;
     unsigned create_hchains       = 0;
     struct hash_chain *tmp_hchain = NULL;
-    hash_tree_t *tmp_htree        = NULL;
+    struct hash_tree  *tmp_htree  = NULL;
     unsigned char *root           = NULL;
     int root_length               = 0;
     int err                       = 0;
@@ -429,7 +429,7 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                 // add the anchors of the next lower level as data
                 for (j = 0; j < hcstore->num_hchains_per_item; j++) {
                     if (use_hash_trees) {
-                        tmp_htree = (hash_tree_t *) hip_ll_get(
+                        tmp_htree = (struct hash_tree *) hip_ll_get(
                             &hcstore->hchain_shelves[hash_func_id][hash_length_id].
                             hchains[hchain_length_id][hierarchy_level - 1], j);
 
@@ -611,7 +611,7 @@ void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
                                  const int use_hash_trees)
 {
     struct hash_chain *hchain      = NULL;
-    hash_tree_t       *htree       = NULL;
+    struct hash_tree  *htree       = NULL;
     void              *stored_item = NULL;
     int hash_length = 0, err = 0;
     unsigned i, j;
@@ -642,7 +642,7 @@ void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
                                      hchains[i][hierarchy_level], j);
 
             if (use_hash_trees) {
-                htree = (hash_tree_t *) stored_item;
+                htree = (struct hash_tree *) stored_item;
 
                 if (!memcmp(anchor, htree->root, hash_length)) {
                     stored_item =
