@@ -72,19 +72,19 @@ extern hash_function hash_functions[NUM_HASH_FUNCTIONS];
 
 int esp_prot_init(void);
 int esp_prot_uninit(void);
-int esp_prot_sa_entry_set(hip_sa_entry_t *entry,
+int esp_prot_sa_entry_set(struct hip_sa_entry *entry,
                           const uint8_t esp_prot_transform,
                           const uint32_t hash_item_length,
                           const uint16_t esp_num_anchors,
                           unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
                           const int update);
-void esp_prot_sa_entry_free(hip_sa_entry_t *entry);
+void esp_prot_sa_entry_free(struct hip_sa_entry *entry);
 int esp_prot_cache_packet_hash(unsigned char *esp_packet,
                                const uint16_t esp_length,
-                               hip_sa_entry_t *entry);
+                               struct hip_sa_entry *entry);
 int esp_prot_add_hash(unsigned char *esp_packet,
                       int *out_length,
-                      hip_sa_entry_t *entry);
+                      struct hip_sa_entry *entry);
 int esp_prot_verify_hchain_element(const hash_function hash_function,
                                    const int hash_length,
                                    unsigned char *active_anchor,
@@ -107,7 +107,7 @@ int esp_prot_verify_htree_element(const hash_function hash_function,
                                   const unsigned char *hash_value);
 struct esp_prot_tfm *esp_prot_resolve_transform(const uint8_t transform);
 int esp_prot_get_hash_length(const uint8_t transform);
-int esp_prot_get_data_offset(const hip_sa_entry_t *entry);
-int esp_prot_sadb_maintenance(hip_sa_entry_t *entry);
+int esp_prot_get_data_offset(const struct hip_sa_entry *entry);
+int esp_prot_sadb_maintenance(struct hip_sa_entry *entry);
 
 #endif /* HIP_FIREWALL_ESP_PROT_API_H */

@@ -51,7 +51,7 @@
 #define BEET_MODE 3 /* mode: 1-transport, 2-tunnel, 3-beet -> right now we only support mode 3 */
 
 /* IPsec Security Association entry */
-typedef struct hip_sa_entry {
+struct hip_sa_entry {
     int                    direction;      /* direction of the SA: inbound/outbound */
     uint32_t               spi;            /* IPsec SPI number */
     uint32_t               mode;           /* ESP mode :  1-transport, 2-tunnel, 3-beet */
@@ -87,7 +87,7 @@ typedef struct hip_sa_entry {
     int                    last_used_chain; /* in case of parallel hchains, stores last used for round robin */
     esp_cumulative_item_t  hash_buffer[MAX_RING_BUFFER_SIZE];    /* packet hash buffer for the cumulative packet auth */
     uint32_t               next_free;           /* next buffer entry to be used for cumulative packet auth */
-} hip_sa_entry_t;
+};
 
 int hip_sadb_init(void);
 int hip_sadb_uninit(void);
@@ -113,9 +113,9 @@ int hip_sadb_add(int direction,
 int hip_sadb_delete(const struct in6_addr *dst_addr,
                     uint32_t spi);
 int hip_sadb_flush(void);
-hip_sa_entry_t *hip_sa_entry_find_inbound(const struct in6_addr *dst_addr,
-                                          uint32_t spi);
-hip_sa_entry_t *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
-                                           const struct in6_addr *dst_hit);
+struct hip_sa_entry *hip_sa_entry_find_inbound(const struct in6_addr *dst_addr,
+                                               uint32_t spi);
+struct hip_sa_entry *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
+                                                const struct in6_addr *dst_hit);
 
 #endif /* HIP_FIREWALL_USER_IPSEC_SADB_H */

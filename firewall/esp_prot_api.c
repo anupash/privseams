@@ -125,7 +125,7 @@ static struct hchain_store update_store;
  */
 static int esp_prot_add_packet_hashes(unsigned char *esp_packet,
                                       int *out_length,
-                                      const hip_sa_entry_t *entry)
+                                      const struct hip_sa_entry *entry)
 {
     int err          = 0, i, j;
     int repeat       = 1;
@@ -434,7 +434,7 @@ out_err:
  * @param   update indicates whether we are processing a BEX or an UPDATE
  * @return  0 on success, 1 if TPA transforms not matching, -1 on error
  */
-int esp_prot_sa_entry_set(hip_sa_entry_t *entry,
+int esp_prot_sa_entry_set(struct hip_sa_entry *entry,
                           const uint8_t esp_prot_transform,
                           const uint32_t hash_item_length,
                           const uint16_t esp_num_anchors,
@@ -553,7 +553,7 @@ out_err:
  *
  * @param   entry the corresponding IPsec SA
  */
-void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
+void esp_prot_sa_entry_free(struct hip_sa_entry *entry)
 {
     int i;
 
@@ -626,7 +626,7 @@ out_err:
  */
 int esp_prot_cache_packet_hash(unsigned char *esp_packet,
                                const uint16_t esp_length,
-                               hip_sa_entry_t *entry)
+                               struct hip_sa_entry *entry)
 {
     int err                 = 0;
     hash_function hash_func = NULL;
@@ -663,7 +663,7 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet,
  * @param   entry the corresponding outbound IPsec SA
  */
 int esp_prot_add_hash(unsigned char *esp_packet, int *out_length,
-                      hip_sa_entry_t *entry)
+                      struct hip_sa_entry *entry)
 {
     const unsigned char *tmp_hash = NULL;
     int err                       = 0;
@@ -980,7 +980,7 @@ struct esp_prot_tfm *esp_prot_resolve_transform(const uint8_t transform)
  * @param   entry the corresponding IPsec SA
  * @return  ESP header length if no esp protection, else ESP header length + token length
  */
-int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
+int esp_prot_get_data_offset(const struct hip_sa_entry *entry)
 {
     int offset = sizeof(struct hip_esp);
 
@@ -1013,7 +1013,7 @@ int esp_prot_get_data_offset(const hip_sa_entry_t *entry)
  * @param   entry the corresponding outbound IPsec SA
  * @return  0 on success, 1 in case of UNUSED transform, -1 otherwise
  */
-int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
+int esp_prot_sadb_maintenance(struct hip_sa_entry *entry)
 {
     int has_linked_anchor          = 0, soft_update = 1;
     int err                        = 0;

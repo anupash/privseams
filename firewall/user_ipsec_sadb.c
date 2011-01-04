@@ -70,9 +70,9 @@
 
 /* Structure for demultiplexing inbound ipsec packets, indexed by dst_addr and spi */
 typedef struct hip_link_entry {
-    struct in6_addr  dst_addr;        /* destination address of outer IP header */
-    uint32_t         spi;             /* ipsec spi, needed for demultiplexing incoming packets */
-    hip_sa_entry_t * linked_sa_entry; /* direct link to sa entry */
+    struct in6_addr      dst_addr;        /* destination address of outer IP header */
+    uint32_t             spi;             /* ipsec spi, needed for demultiplexing incoming packets */
+    struct hip_sa_entry *linked_sa_entry; /* direct link to sa entry */
 } hip_link_entry_t;
 
 /* database storing the sa entries, indexed by src _and_ dst hits */
@@ -87,7 +87,7 @@ HIP_HASHTABLE *linkdb = NULL;
  * @param sa_entry  partial SA entry containing inner addresses and IPsec mode
  * @return          hash of inner addresses
  */
-static unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
+static unsigned long hip_sa_entry_hash(const struct hip_sa_entry *sa_entry)
 {
     struct in6_addr addr_pair[2];               /* in BEET-mode these are HITs */
     unsigned char hash[INDEX_HASH_LENGTH];
@@ -137,8 +137,8 @@ out_err:
  * @param sa_entry2     second SA entry to be compared with
  * @return              1 if different entries, else 0
  */
-static int hip_sa_entries_cmp(const hip_sa_entry_t *sa_entry1,
-                              const hip_sa_entry_t *sa_entry2)
+static int hip_sa_entries_cmp(const struct hip_sa_entry *sa_entry1,
+                              const struct hip_sa_entry *sa_entry2)
 {
     int result = 0;
 
@@ -221,8 +221,8 @@ static int hip_link_entries_cmp(const hip_link_entry_t *link_entry1,
  * callback wrappers providing per-variable casts before calling the
  * type-specific callbacks
  */
-STATIC_IMPLEMENT_LHASH_HASH_FN(hip_sa_entry,   hip_sa_entry_t)
-STATIC_IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, hip_sa_entry_t)
+STATIC_IMPLEMENT_LHASH_HASH_FN(hip_sa_entry,   struct hip_sa_entry)
+STATIC_IMPLEMENT_LHASH_COMP_FN(hip_sa_entries, struct hip_sa_entry)
 STATIC_IMPLEMENT_LHASH_HASH_FN(hip_link_entry,   hip_link_entry_t)
 STATIC_IMPLEMENT_LHASH_COMP_FN(hip_link_entries, hip_link_entry_t)
 
@@ -266,7 +266,8 @@ out_err:
  * @param entry     SA entry this link points to
  * @return          0 on success, else -1
  */
-static int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry)
+static int hip_link_entry_add(struct in6_addr *dst_addr,
+                              struct hip_sa_entry *entry)
 {
     hip_link_entry_t *link = NULL;
     int err                = 0;
@@ -341,7 +342,7 @@ out_err:
  * @param update            notification if this is an update
  * @return                  0 on success, else -1
  */
-static int hip_sa_entry_set(hip_sa_entry_t *entry,
+static int hip_sa_entry_set(struct hip_sa_entry *entry,
                             int direction,
                             uint32_t spi,
                             uint32_t mode,
@@ -515,8 +516,8 @@ static int hip_sa_entry_update(int direction,
                                unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
                                int update)
 {
-    hip_sa_entry_t *stored_entry = NULL;
-    int err                      = 0;
+    struct hip_sa_entry *stored_entry = NULL;
+    int err = 0;
 
     // we need the sadb entry to go through entries in the linkdb
     HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(inner_src_addr,
@@ -553,7 +554,7 @@ out_err:
  *
  * @param   entry SA entry to be freed
  */
-static void hip_sa_entry_free(hip_sa_entry_t *entry)
+static void hip_sa_entry_free(struct hip_sa_entry *entry)
 {
     if (entry) {
         free(entry->auth_key);
@@ -603,13 +604,13 @@ static int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
                             unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
                             int update)
 {
-    hip_sa_entry_t *entry = NULL;
+    struct hip_sa_entry *entry = NULL;
     int err               = 0;
 
     /* initialize members to 0/NULL */
-    HIP_IFEL(!(entry = malloc(sizeof(hip_sa_entry_t))), -1,
+    HIP_IFEL(!(entry = malloc(sizeof(struct hip_sa_entry))), -1,
              "failed to allocate memory\n");
-    memset(entry, 0, sizeof(hip_sa_entry_t));
+    memset(entry, 0, sizeof(struct hip_sa_entry));
 
     HIP_IFEL(!(entry->auth_key = malloc(hip_auth_key_length_esp(ealg))),
              -1, "failed to allocate memory\n");
@@ -660,8 +661,8 @@ out_err:
  */
 static int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 {
-    hip_sa_entry_t *stored_entry = NULL;
-    int err                      = 0;
+    struct hip_sa_entry *stored_entry = NULL;
+    int err = 0;
 
     /* find entry in sadb and delete entries in linkdb for all (addr, spi)-matches */
     HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(src_addr, dst_addr)), -1,
@@ -818,7 +819,7 @@ out_err:
  */
 int hip_sadb_delete(const struct in6_addr *dst_addr, uint32_t spi)
 {
-    hip_sa_entry_t *entry = NULL;
+    struct hip_sa_entry *entry = NULL;
     int err               = 0;
 
     HIP_IFEL(!(entry = hip_sa_entry_find_inbound(dst_addr, spi)), -1,
@@ -840,12 +841,13 @@ int hip_sadb_flush(void)
 {
     int err               = 0, i = 0;
     hip_list_t *item      = NULL, *tmp = NULL;
-    hip_sa_entry_t *entry = NULL;
+    struct hip_sa_entry *entry = NULL;
 
     // iterating over all elements
     list_for_each_safe(item, tmp, sadb, i)
     {
-        HIP_IFEL(!(entry = (hip_sa_entry_t *) list_entry(item)), -1, "failed to get list entry\n");
+        HIP_IFEL(!(entry = (struct hip_sa_entry *) list_entry(item)), -1,
+                 "failed to get list entry\n");
         HIP_IFEL(hip_sa_entry_delete(&entry->inner_src_addr, &entry->inner_dst_addr), -1,
                  "failed to delete sa entry\n");
     }
@@ -863,10 +865,11 @@ out_err:
  * @param spi       SPI number of the searched entry
  * @return          SA entry on success or NULL if no matching entry was found
  */
-hip_sa_entry_t *hip_sa_entry_find_inbound(const struct in6_addr *dst_addr, uint32_t spi)
+struct hip_sa_entry *hip_sa_entry_find_inbound(const struct in6_addr *dst_addr,
+                                               uint32_t spi)
 {
     hip_link_entry_t *stored_link = NULL;
-    hip_sa_entry_t *stored_entry  = NULL;
+    struct hip_sa_entry *stored_entry  = NULL;
     int err                       = 0;
 
     HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
@@ -889,12 +892,12 @@ out_err:
  * @param dst_hit   inner destination address
  * @return          SA entry on success or NULL if no matching entry found
  */
-hip_sa_entry_t *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
-                                           const struct in6_addr *dst_hit)
+struct hip_sa_entry *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
+                                                const struct in6_addr *dst_hit)
 {
-    hip_sa_entry_t search_entry;
-    hip_sa_entry_t *stored_entry = NULL;
-    int err                      = 0;
+    struct hip_sa_entry search_entry;
+    struct hip_sa_entry *stored_entry = NULL;
+    int err = 0;
 
     // fill search entry with information needed by the hash function
     memcpy(&search_entry.inner_src_addr, src_hit, sizeof(struct in6_addr));

@@ -322,11 +322,12 @@ out_err:
  * @param   link_trees the link trees for the anchor elements, in case of HHL
  * @return  0 on success, -1 on error
  */
-int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
-                        const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],
-                        const int hash_item_length, const int soft_update,
-                        const int *anchor_offset,
-                        struct hash_tree *link_trees[MAX_NUM_PARALLEL_HCHAINS])
+int send_trigger_update_to_hipd(const struct hip_sa_entry *entry,
+                                const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],
+                                const int hash_item_length,
+                                const int soft_update,
+                                const int *anchor_offset,
+                                struct hash_tree *link_trees[MAX_NUM_PARALLEL_HCHAINS])
 {
     int err                     = 0;
     int i                       = 0;
@@ -491,7 +492,7 @@ out_err:
  * @param   entry the sadb entry for the outbound direction
  * @return  0 on success, -1 on error, 1 for inbound sadb entry
  */
-int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
+int send_anchor_change_to_hipd(const struct hip_sa_entry *entry)
 {
     int err                = 0;
     int hash_length        = 0;
