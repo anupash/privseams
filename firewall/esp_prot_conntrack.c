@@ -57,11 +57,11 @@
 #include "esp_prot_conntrack.h"
 
 
-typedef struct esp_prot_conntrack_tfm {
+struct esp_prot_conntrack_tfm {
     hash_function   hash_function;     /* pointer to the hash function */
     int             hash_length; /* hash length for this transform */
     int             is_used; /* needed as complete transform array is initialized */
-} esp_prot_conntrack_tfm_t;
+};
 
 /* cached anchor element updates */
 struct esp_anchor_item {
@@ -79,7 +79,7 @@ struct esp_anchor_item {
  * NOTE set to the preferred anti-replay window size of ESP */
 int window_size;
 
-esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
+struct esp_prot_conntrack_tfm esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
 
 
 /**
@@ -88,7 +88,7 @@ esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
  * @param transform     TPA transform
  * @return              resolved transform, NULL for UNUSED transform
  */
-static esp_prot_conntrack_tfm_t *esp_prot_conntrack_resolve_transform(const uint8_t transform)
+static struct esp_prot_conntrack_tfm *esp_prot_conntrack_resolve_transform(const uint8_t transform)
 {
     HIP_DEBUG("resolving transform: %u\n", transform);
 
@@ -189,12 +189,11 @@ static int esp_prot_conntrack_cache_anchor(const struct tuple *tuple,
                                            const struct esp_prot_anchor **esp_anchors,
                                            const struct esp_prot_root **esp_roots)
 {
-    struct esp_anchor_item *anchor_item     = NULL;
-    unsigned char *cmp_value                = NULL;
-    struct esp_tuple *esp_tuple             = NULL;
-    esp_prot_conntrack_tfm_t *conntrack_tfm = NULL;
-    int hash_length                         = 0;
-    int err                                 = 0;
+    struct esp_anchor_item        *anchor_item   = NULL;
+    struct esp_tuple              *esp_tuple     = NULL;
+    struct esp_prot_conntrack_tfm *conntrack_tfm = NULL;
+    unsigned char                 *cmp_value     = NULL;
+    int hash_length = 0, err = 0;
     long i;
 
     HIP_DEBUG("\n");
@@ -296,10 +295,10 @@ static int esp_prot_conntrack_update_anchor(const struct tuple *tuple,
                                             const struct hip_ack *ack,
                                             const struct hip_esp_info *esp_info)
 {
-    struct esp_anchor_item *anchor_item     = NULL;
-    struct tuple *other_dir_tuple           = NULL;
-    struct esp_tuple *esp_tuple             = NULL;
-    esp_prot_conntrack_tfm_t *conntrack_tfm = NULL;
+    struct esp_anchor_item        *anchor_item     = NULL;
+    struct tuple                  *other_dir_tuple = NULL;
+    struct esp_tuple              *esp_tuple       = NULL;
+    struct esp_prot_conntrack_tfm *conntrack_tfm   = NULL;
     int hash_length                         = 0;
     // assume not found
     int err                                 = 0;
@@ -418,9 +417,9 @@ static int esp_prot_conntrack_verify_branch(const struct tuple *tuple,
                                             const struct esp_prot_branch *esp_branches[MAX_NUM_PARALLEL_HCHAINS],
                                             const struct esp_prot_secret *esp_secrets[MAX_NUM_PARALLEL_HCHAINS])
 {
-    esp_prot_conntrack_tfm_t *conntrack_tfm = NULL;
+    struct esp_prot_conntrack_tfm *conntrack_tfm = NULL;
+    struct esp_tuple              *esp_tuple     = NULL;
     int hash_length                         = 0;
-    struct esp_tuple *esp_tuple             = NULL;
     int err                                 = 0;
     int i                                   = 0;
     uint32_t branch_length                  = 0;
@@ -501,7 +500,7 @@ int esp_prot_conntrack_init(void)
 
     // init all possible transforms
     memset(esp_prot_conntrack_tfms, 0, MAX_NUM_TRANSFORMS
-           * sizeof(esp_prot_conntrack_tfm_t));
+           * sizeof(struct esp_prot_conntrack_tfm));
 
     // set available transforms to used
     esp_prot_conntrack_tfms[token_transform].is_used = 1;
@@ -538,7 +537,7 @@ int esp_prot_conntrack_uninit(void)
 
     // uninit all possible transforms
     memset(esp_prot_conntrack_tfms, 0,
-           MAX_NUM_TRANSFORMS * sizeof(esp_prot_conntrack_tfm_t));
+           MAX_NUM_TRANSFORMS * sizeof(struct esp_prot_conntrack_tfm));
 
     return err;
 }
@@ -610,10 +609,10 @@ int esp_prot_conntrack_R1_tfms(const struct hip_common *common,
 int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
                                  struct tuple *tuple)
 {
-    const struct hip_tlv_common *param        = NULL;
-    const struct esp_prot_anchor *prot_anchor = NULL;
-    struct esp_tuple *esp_tuple               = NULL;
-    esp_prot_conntrack_tfm_t *conntrack_tfm   = NULL;
+    const struct hip_tlv_common   *param         = NULL;
+    const struct esp_prot_anchor  *prot_anchor   = NULL;
+    struct esp_tuple              *esp_tuple     = NULL;
+    struct esp_prot_conntrack_tfm *conntrack_tfm = NULL;
     long i                                    = 0;
     int hash_length                           = 0;
     int err                                   = 0;
@@ -768,10 +767,10 @@ out_err:
 int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
                                  const struct tuple *tuple)
 {
-    const struct hip_tlv_common *param        = NULL;
-    const struct esp_prot_anchor *prot_anchor = NULL;
-    struct esp_tuple *esp_tuple               = NULL;
-    esp_prot_conntrack_tfm_t *conntrack_tfm   = NULL;
+    const struct hip_tlv_common   *param         = NULL;
+    const struct esp_prot_anchor  *prot_anchor   = NULL;
+    struct esp_tuple              *esp_tuple     = NULL;
+    struct esp_prot_conntrack_tfm *conntrack_tfm = NULL;
     long i                                    = 0;
     int hash_length                           = 0;
     int err                                   = 0;
@@ -1089,16 +1088,13 @@ out_err:
 int esp_prot_conntrack_verify(const struct hip_fw_context *ctx,
                               struct esp_tuple *esp_tuple)
 {
-    esp_prot_conntrack_tfm_t *conntrack_tfm = NULL;
-    struct hip_esp *esp                     = NULL;
-    int esp_len                             = 0;
-    uint32_t num_verify                     = 0;
-    int use_hash_trees                      = 0;
-    struct esp_cumulative_item *cached_element = NULL;
+    struct esp_prot_conntrack_tfm *conntrack_tfm  = NULL;
+    struct hip_esp                *esp            = NULL;
+    struct esp_cumulative_item    *cached_element = NULL;
+    struct esp_cumulative_item    *cumulative_ptr = NULL;
     unsigned char packet_hash[MAX_HASH_LENGTH];
-    struct esp_cumulative_item *cumulative_ptr = NULL;
-    int active_hchain                       = 0, err = 0, i;
-    uint32_t current_seq                    = 0;
+    int esp_len = 0, use_hash_trees = 0, active_hchain = 0, err = 0, i;
+    uint32_t num_verify = 0, current_seq = 0;
 
     HIP_DEBUG("\n");
 
