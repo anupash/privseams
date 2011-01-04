@@ -1591,7 +1591,7 @@ int hip_build_param_contents(struct hip_common *msg,
 {
     struct hip_tlv_common param;
     hip_set_param_type(&param, param_type);
-    hip_set_param_contents_len((struct hip_tlv_common *) &param, contents_size);
+    hip_set_param_contents_len(&param, contents_size);
     return hip_build_generic_param(msg,
                                    &param,
                                    sizeof(struct hip_tlv_common),
