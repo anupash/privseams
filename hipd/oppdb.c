@@ -624,7 +624,7 @@ int hip_handle_opp_fallback(struct hip_opp_blocking_request *entry,
         memset(&info, 0, sizeof(info));
         ipv6_addr_copy(&info.peer_addr, &entry->peer_ip);
 
-        addr = (struct in6_addr *) &entry->peer_ip;
+        addr = &entry->peer_ip;
         hip_oppipdb_add_entry(addr);
         HIP_DEBUG("Timeout for opp entry, falling back to\n");
         err  = hip_opp_unblock_app(&entry->caller, &info);
@@ -699,7 +699,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 
     /* Check if we've previously contacted the host and found it
      * non-HIP capable*/
-    if (hip_oppipdb_find_byip((struct in6_addr *) &dst_ip)) {
+    if (hip_oppipdb_find_byip(&dst_ip)) {
         hip_msg_init(msg);
         /* A message without peer HIT indicates a non-HIP capable peer */
         HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_PEER_HIT, 0), -1,
