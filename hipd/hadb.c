@@ -790,8 +790,7 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
 
     /* assumes already locked entry */
 
-    /* check if we are adding the peer's address during the base
-     *          * exchange */
+    /* check if we are adding the peer's address during the base exchange */
     if (spi == 0) {
         HIP_DEBUG("SPI is 0, set address as the bex address\n");
         if (!ipv6_addr_any(&entry->peer_addr)) {
@@ -803,9 +802,9 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
         HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
 
         if (entry->peer_addr_list_to_be_added) {
-            /*Adding the peer address to the entry->peer_addr_list_to_be_added
-             *                          * So that later aftre base exchange it can be transfered to
-             *                                                   * SPI OUT's peer address list*/
+            /* Adding the peer address to the entry->peer_addr_list_to_be_added
+             * so that later after base exchange it can be transferred to
+             * SPI OUT's peer address list */
             a_item = malloc(sizeof(struct hip_peer_addr_list_item));
             if (!a_item) {
                 HIP_ERROR("item malloc failed\n");
@@ -1539,7 +1538,8 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
  * @param dst_addr the new destination address for the SAs
  * @return zero on success and negative on error
  */
-int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, struct in6_addr *src_addr,
+int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
+                                              struct in6_addr *src_addr,
                                               struct in6_addr *dst_addr)
 {
     int err         = 0;
