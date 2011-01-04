@@ -399,7 +399,7 @@ struct hip_relrec *hip_relht_get(const struct hip_relrec *rec)
         return NULL;
     }
 
-    return (struct hip_relrec *) list_find(rec, hiprelay_ht);
+    return list_find(rec, hiprelay_ht);
 }
 
 /**
@@ -697,7 +697,7 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit)
         return NULL;
     }
 
-    return (hip_hit_t *) list_find(hit, hiprelay_wl);
+    return list_find(hit, hiprelay_wl);
 }
 
 #ifdef CONFIG_HIP_DEBUG
