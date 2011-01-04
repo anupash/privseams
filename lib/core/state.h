@@ -37,7 +37,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#include "hipd/cookie.h"
 #include "config.h"
 #include "hashtable.h"
 #include "modularization.h"
@@ -157,21 +156,6 @@ struct hip_spi_out_item {
     uint32_t        new_spi;        /* spi is changed to this when rekeying */
     HIP_HASHTABLE * peer_addr_list;    /* Peer's IPv6 addresses */
     struct in6_addr preferred_address;
-};
-
-/* this struct is here instead of hidb.h to avoid some weird compilation
- * warnings */
-struct hip_host_id_entry {
-    struct hip_lhi      lhi;
-    hip_lsi_t           lsi;
-    struct hip_host_id *host_id;     /* allocated dynamically */
-    void *              private_key; /* RSA or DSA */
-    struct hip_r1entry *r1;     /* precreated R1s */
-    /* Handler to call after insert with an argument, return 0 if OK*/
-    int                 (*insert)(struct hip_host_id_entry *, void **arg);
-    /* Handler to call before remove with an argument, return 0 if OK*/
-    int                 (*remove)(struct hip_host_id_entry *, void **arg);
-    void *              arg;
 };
 
 /* If you need to add a new boolean type variable to this structure, consider
