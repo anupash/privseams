@@ -52,6 +52,4 @@ struct esp_cumulative_item {
     unsigned char packet_hash[MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
-typedef struct esp_cumulative_item esp_cumulative_item_t;
-
 #endif /* HIP_FIREWALL_ESP_PROT_DEFINES_H */

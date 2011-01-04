@@ -1094,9 +1094,9 @@ int esp_prot_conntrack_verify(const struct hip_fw_context *ctx,
     int esp_len                             = 0;
     uint32_t num_verify                     = 0;
     int use_hash_trees                      = 0;
-    esp_cumulative_item_t *cached_element   = NULL;
+    struct esp_cumulative_item *cached_element = NULL;
     unsigned char packet_hash[MAX_HASH_LENGTH];
-    esp_cumulative_item_t *cumulative_ptr   = NULL;
+    struct esp_cumulative_item *cumulative_ptr = NULL;
     int active_hchain                       = 0, err = 0, i;
     uint32_t current_seq                    = 0;
 
@@ -1201,7 +1201,7 @@ int esp_prot_conntrack_verify(const struct hip_fw_context *ctx,
 
             if (esp_tuple->esp_prot_tfm == ESP_PROT_TFM_CUMULATIVE || esp_tuple->esp_prot_tfm == ESP_PROT_TFM_PARA_CUMUL) {
                 // track hashes of cumulative authentication mode if packet was authed
-                cumulative_ptr = (esp_cumulative_item_t *) (((unsigned char *) esp) + sizeof(struct hip_esp) + conntrack_tfm->hash_length);
+                cumulative_ptr = (struct esp_cumulative_item *) (((unsigned char *) esp) + sizeof(struct hip_esp) + conntrack_tfm->hash_length);
 
                 for (i = 0; i < num_linear_elements + num_random_elements; i++) {
                     HIP_DEBUG("cumulative_ptr[i].seq: %u\n", cumulative_ptr[i].seq);
@@ -1210,7 +1210,7 @@ int esp_prot_conntrack_verify(const struct hip_fw_context *ctx,
                     if (cumulative_ptr[i].seq > esp_tuple->hash_buffer[cumulative_ptr[i].seq % ring_buffer_size].seq) {
                         memcpy(&esp_tuple->hash_buffer[cumulative_ptr[i].seq % ring_buffer_size],
                                &cumulative_ptr[i],
-                               sizeof(esp_cumulative_item_t));
+                               sizeof(struct esp_cumulative_item));
 
                         HIP_DEBUG("cached cumulative token with SEQ: %u\n", cumulative_ptr[i].seq);
                         HIP_HEXDUMP("token: ", cumulative_ptr[i].packet_hash, conntrack_tfm->hash_length);

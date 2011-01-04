@@ -85,7 +85,7 @@ struct hip_sa_entry {
     int                    update_item_length; /* length of the update hash item */
     uint8_t                update_item_acked[MAX_NUM_PARALLEL_HCHAINS]; /* ack from peer that update succeeded */
     int                    last_used_chain; /* in case of parallel hchains, stores last used for round robin */
-    esp_cumulative_item_t  hash_buffer[MAX_RING_BUFFER_SIZE];    /* packet hash buffer for the cumulative packet auth */
+    struct esp_cumulative_item hash_buffer[MAX_RING_BUFFER_SIZE];    /* packet hash buffer for the cumulative packet auth */
     uint32_t               next_free;           /* next buffer entry to be used for cumulative packet auth */
 };
 

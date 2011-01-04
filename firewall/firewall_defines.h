@@ -101,9 +101,9 @@ struct esp_tuple {
     unsigned char          *next_roots[MAX_NUM_PARALLEL_HCHAINS];
     /** List temporarily storing anchor elements until the consecutive update
      *  msg reveals that all on-path devices know the new anchor. */
-    struct hip_ll           anchor_cache;
+    struct hip_ll              anchor_cache;
     /** buffer storing hashes of previous packets for cumulative authentication */
-    esp_cumulative_item_t   hash_buffer[MAX_RING_BUFFER_SIZE];
+    struct esp_cumulative_item hash_buffer[MAX_RING_BUFFER_SIZE];
 };
 
 struct hip_data {
