@@ -30,9 +30,11 @@ int signaling_hipd_init_state(struct modular_state *state)
              -1,
              "Error on allocating memory for a signaling_hipd_state instance.\n");
 
+    // TODO: proper initialization to 0/NULL values
     memset(sig_state, 0, sizeof(struct signaling_hipd_state));
-    sig_state->ctx.user_ctx.euid = -1;
-    sig_state->ctx.app_ctx.pid = -1;
+    sig_state->ctx.user_ctx.euid            = -1;
+    sig_state->ctx.app_ctx.pid              = -1;
+    sig_state->user_certificate_required    = 0;
 
     err = lmod_add_state_item(state, sig_state, "signaling_hipd_state");
 
