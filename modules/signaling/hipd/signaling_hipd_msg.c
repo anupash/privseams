@@ -428,13 +428,17 @@ out_err:
 }
 
 int signaling_handle_incoming_notification(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
-    int err = 0;
-    const struct hip_notification *ntf;
-    const struct signaling_ntf_user_auth_failed_data *ntf_data;
+    int err                                                     = 0;
+    struct signaling_hipd_state *sig_state                      = NULL;
+    const struct hip_notification *ntf                          = NULL;
+    const struct signaling_ntf_user_auth_failed_data *ntf_data  = NULL;
+
     HIP_IFEL(!(ntf = hip_get_param(ctx->input_msg, HIP_PARAM_NOTIFICATION)),
              -1, "Could not get notification parameter from NOTIFY msg.\n");
     ntf_data = (const struct signaling_ntf_user_auth_failed_data *) ntf->data;
-    HIP_DEBUG("Received notification, that user authentication failed, errorcode: %d \n", ntohs(ntf_data->reason));
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+            -1, "failed to retrieve state for signaling module \n");
+    sig_state->user_certificate_required = 1;
 
 out_err:
     return err;
