@@ -60,7 +60,7 @@ int signaling_r2_add_user_sig(const uint8_t packet_type, const uint32_t ha_state
 int signaling_send_first_update(const struct in6_addr *src_hit, const struct in6_addr *dst_hit);
 int signaling_send_second_update(const struct hip_common *first_update);
 
-int signaling_send_user_auth_failed_ntf(const struct in6_addr *src_hit, const struct in6_addr *dst_hit, const int reason);
+int signaling_send_user_auth_failed_ntf(hip_ha_t *ha, const int reason);
 
 
 /* Classification of signaling update messages */

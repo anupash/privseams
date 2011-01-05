@@ -255,28 +255,24 @@ out_err:
  *
  * @param reason    the reason why the authentication failed
  */
-int signaling_send_user_auth_failed_ntf(const struct in6_addr *src_hit,
-                                        const struct in6_addr *dst_hit,
+int signaling_send_user_auth_failed_ntf(hip_ha_t *ha,
                                         const int reason) {
     int err                 = 0;
     uint16_t mask           = 0;
     hip_common_t *msg_buf   = NULL;
-    hip_ha_t *ha                                    = NULL;
 
     /* Sanity checks */
-    HIP_IFEL(!src_hit || !dst_hit, -1, "Source or destination hit are NULL \n");
+    HIP_IFEL(!ha, -1, "Given host association is NULL \n");
 
     /* Allocate and build message */
     HIP_IFEL(!(msg_buf = hip_msg_alloc()),
             -ENOMEM, "Out of memory while allocation memory for the bex update packet\n");
-    hip_build_network_hdr(msg_buf, HIP_NOTIFY, mask, src_hit, dst_hit);
+    hip_build_network_hdr(msg_buf, HIP_NOTIFY, mask, &ha->hit_our, &ha->hit_peer);
 
     /* Append notification parameter */
     signaling_build_param_user_auth_fail(msg_buf, reason);
 
     /* Sign the packet */
-    HIP_IFEL(!(ha = hip_hadb_find_byhits(src_hit, dst_hit)),
-             -1, "Failed to retrieve hadb entry.\n");
     HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
               -EINVAL, "Could not sign UPDATE. Failing\n");
 
@@ -351,7 +347,7 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
 
     if (err == SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED) {
         HIP_DEBUG("still there 1\n");
-        signaling_send_user_auth_failed_ntf(&ctx->input_msg->hitr, &ctx->input_msg->hits, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
+        signaling_send_user_auth_failed_ntf(ctx->hadb_entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
     }
 
 out_err:
