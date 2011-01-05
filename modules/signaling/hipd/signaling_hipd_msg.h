@@ -63,7 +63,7 @@ int signaling_send_first_update(const struct in6_addr *src_hit, const struct in6
 int signaling_send_second_update(const struct hip_common *first_update);
 
 int signaling_send_user_auth_failed_ntf(hip_ha_t *ha, const int reason);
-
+int signaling_send_user_certificate_chain(hip_ha_t *ha);
 
 /* Classification of signaling update messages */
 int signaling_get_update_type(hip_common_t *msg);

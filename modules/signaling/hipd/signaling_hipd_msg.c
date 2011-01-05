@@ -293,6 +293,61 @@ out_err:
     return err;
 }
 
+int signaling_send_user_certificate_chain(hip_ha_t *ha) {
+    int err = 0;
+    uint16_t mask           = 0;
+    hip_common_t *msg_buf = NULL;
+    struct update_state * updatestate       = NULL;
+    struct signaling_hipd_state * sig_state = NULL;
+    X509 *cert = NULL;
+    int len;
+    unsigned char *buf;
+
+    /* sanity checks */
+    HIP_IFEL(!ha, -1, "Given HA is NULL \n");
+
+    /* Allocate and build message */
+    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
+            -ENOMEM, "Out of memory while allocation memory for the bex update packet\n");
+    hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ha->hit_our, &ha->hit_peer);
+
+    /* Add sequence number */
+    HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
+             -1, "Could not get update state for host association.\n");
+    updatestate->update_id_out++;
+    HIP_IFEL(hip_build_param_seq(msg_buf, hip_update_get_out_id(updatestate)),
+             -1, "Building of SEQ parameter failed\n");
+
+    /* Build the certificate parameter */
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
+             -1, "failed to retrieve state for signaling module\n");
+    HIP_IFEL(!(cert = signaling_user_api_get_user_certificate(sig_state->ctx.user_ctx.euid)),
+             -1, "Could not get certificate for user with id %d\n", sig_state->ctx.user_ctx.euid);
+    HIP_IFEL((len = signaling_X509_to_DER(cert, &buf)) < 0,
+             -1, "Could not get DER encoding of certificate\n");
+    HIP_IFEL(hip_build_param_cert(msg_buf, 0, 1, 0, HIP_CERT_X509V3, buf, len),
+             -1, "Could not build cert parameter\n");
+
+    HIP_DEBUG("Sending certificate chain for subject: %s (id=%d) \n", sig_state->ctx.user_ctx.username, sig_state->ctx.user_ctx.euid);
+
+    /* Mac and sign the packet */
+    HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
+             -1, "Building of HMAC failed\n");
+    HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
+             -EINVAL, "Could not sign UPDATE. Failing\n");
+
+    err = hip_send_pkt(NULL,
+                       &ha->peer_addr,
+                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ha->peer_udp_port,
+                       msg_buf,
+                       ha,
+                       1);
+
+out_err:
+    return err;
+}
+
 /*
  * Process application information in an I2 packet.
  * We have to send a request to the firewall for the connection with this context,
