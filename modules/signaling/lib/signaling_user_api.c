@@ -25,11 +25,12 @@
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
 
-UNUSED static int X509_to_DER(X509 *cert, unsigned char **buf) {
+int signaling_X509_to_DER(X509 *cert, unsigned char **buf) {
     int len;
     int err = 0;
 
     HIP_IFEL(!cert, -1, "Cannot encode NULL-certificate\n");
+    *buf = NULL;
     len = i2d_X509(cert, buf);
     HIP_IFEL(len < 0, -1, "Could not DER-encode the given certificate.\n");
 
@@ -98,7 +99,7 @@ out_err:
 /*
  * @return NULL on error
  */
-static X509 *get_user_certificate(uid_t uid) {
+X509 *signaling_user_api_get_user_certificate(const uid_t uid) {
     char filebuf[SIGNALING_PATH_MAX_LEN];
     char *homedir   = NULL;
     X509 *ret       = NULL;
@@ -149,7 +150,7 @@ int signaling_user_api_get_uname(uid_t uid, struct signaling_user_context *user_
     X509_NAME *uname    = NULL;
     struct passwd *pw   = NULL;
 
-    if (!(usercert = get_user_certificate(uid))) {
+    if (!(usercert = signaling_user_api_get_user_certificate(uid))) {
         HIP_DEBUG("Could not get user's certificate, using system username as fallback.\n");
         HIP_IFEL(!(pw = getpwuid(uid)),
                  -1, "Failed to get info for user id %d.\n", uid);
