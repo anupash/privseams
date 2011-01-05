@@ -482,6 +482,10 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         conn_ctx.connection_status = SIGNALING_CONN_ALLOWED;
         HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");
+    } else if (update_type == SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE) {
+        HIP_DEBUG("Received CERTIFICATE Update... \n");
+    } else if (update_type == SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE) {
+        HIP_DEBUG("Received CERTIFICATE Update ack... \n");
     }
 
 out_err:
