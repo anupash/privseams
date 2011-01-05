@@ -442,11 +442,17 @@ out_err:
  */
 int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
     int err     = 0;
+    struct signaling_hipd_state *sig_state = NULL;
 
     HIP_IFEL(packet_type != HIP_R2, -1, "Not an R2 Packet\n")
     signaling_handle_r2_user_context(packet_type, ha_state, ctx);
     signaling_handle_r2_app_context(packet_type, ha_state, ctx);
 
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+            -1, "failed to retrieve state for signaling ports\n");
+    if (sig_state->user_certificate_required) {
+        signaling_send_user_certificate_chain(ctx->hadb_entry);
+    }
 out_err:
     return err;
 }
