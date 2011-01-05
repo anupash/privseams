@@ -345,6 +345,12 @@
       make install
     </para>
     <para>
+      Note: the HIP configuration files are located in @sysconfdir@ with
+      the current set of options for configure. In contrast, the prebuilt
+      rpm/deb binaries store the HIP configuration files in /etc/hip
+      directory.
+    </para>
+    <para>
       Note: you can optionally compile a binary (rpm or deb) package with "make bin".
     </para>
     <para>
