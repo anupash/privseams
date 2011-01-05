@@ -349,6 +349,16 @@ enum hip_cuve_id {
     NIST_ECDSA_160
 };
 
+/* HIP certificate types (from draft-ietf-hip-cert) */
+#define HIP_CERT_X509V3               1
+#define HIP_CERT_SPKI                 2
+#define HIP_CERT_X509V3_HASH_URL      3
+#define HIP_CERT_SPKI_HASH_URL        4
+#define HIP_CERT_X509V3_LDAP_URL      5
+#define HIP_CERT_SPKI_LDAP_URL        6
+#define HIP_CERT_X509V3_DN            7
+#define HIP_CERT_SPKI_DN              8
+
 #define HIP_DIGEST_MD5                1
 #define HIP_DIGEST_SHA1               2
 #define HIP_DIGEST_SHA1_HMAC          3
