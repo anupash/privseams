@@ -143,47 +143,6 @@
 #include "hiprelay.h"
 
 
-/** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
- *  cannot be opened for reading, we write a new config file from scratch using
- *  this content.
- *  @note @c HIP_RC_FILE_FORMAT_STRING must match the printf format of this
- *        string.
- */
-#define HIP_RC_FILE_CONTENT \
-"# HIP relay / RVS configuration file.\n" \
-"#\n" \
-"# This file consists of stanzas of the following form:\n" \
-"# \n" \
-"# parametername = \"value1\", \"value2\", ... \"valueN\"\n" \
-"#\n" \
-"# where there can be as many values as needed per line with the limitation of\n" \
-"# total line length of ", HIP_RELAY_MAX_LINE_LEN, " characters. The 'parametername' is at most ", HIP_RELAY_MAX_PAR_LEN, "\n" \
-"# characters long and 'values' are at most ", HIP_RELAY_MAX_VAL_LEN, " characters long. A value itself\n" \
-"# may not contain a '", HIP_RELAY_VAL_SEP, "' character.\n" \
-"#\n" \
-"# The '", HIP_RELAY_COMMENT, "' character is used for comments. End of line comments are not allowed.\n" \
-"\n" \
-"# Relay whitelist status. When this is set to 'yes', only clients whose HIT is\n" \
-"# listed on the whitelist are allowed to register to the relay / RVS service.\n" \
-"# When this is set to 'no', any client is allowed to register. This defaults as\n" \
-"# 'yes' when no value is given.\n" \
-"whitelist_enabled = \"no\"\n" \
-"\n" \
-"# Relay whitelist. The HITs of the clients that are allowed to register to\n" \
-"# the relay / RVS service. You may use multiple stanzas of the same name.\n" \
-"whitelist = \"\"\n" \
-"\n" \
-"# The minimum number of seconds the relay / RVS client is granted the service.\n" \
-"# If the service request defines a value smaller than this value, this value is\n" \
-"# used.\n" \
-"minimum_lifetime = \"60\"\n" \
-"\n" \
-"# The maximum number of seconds the relay / RVS client is granted the service.\n" \
-"# If the service request defines a value bigger than this value, this value is\n" \
-"# used.\n" "maximum_lifetime = \"3600\"\n"
-/** The printf format string of @c HIP_RC_FILE_CONTENT. */
-#define HIP_RC_FILE_FORMAT_STRING "%s%d%s%d%s%d%s%c%s%c%s"
-
 /** HIP relay config file name and path. */
 #define HIP_RELAY_CONFIG_FILE  HIPL_SYSCONFDIR "/relay_config"
 
@@ -885,7 +844,39 @@ static int hip_relay_write_config(void)
     HIP_IFEL(((fp = fopen(HIP_RELAY_CONFIG_FILE, "w")) == NULL), -ENOENT,
              "Cannot open file %s for writing.\n", HIP_RELAY_CONFIG_FILE);
 
-    fprintf(fp, HIP_RC_FILE_FORMAT_STRING, HIP_RC_FILE_CONTENT);
+    fprintf(fp, "# HIP relay / RVS configuration file.\n\
+#\n\
+# This file consists of stanzas of the following form:\n\
+#\n\
+# parametername = \"value1\", \"value2\", ... \"valueN\"\n\
+#\n\
+# where there can be as many values as needed per line with the limitation of\n\
+# total line length of %d characters. The 'parametername' is at most %d\n\
+# characters long and 'values' are at most %d characters long. A value itself\n\
+# may not contain a '%c' character.\n\
+#\n\
+# The '%c' character is used for comments. End of line comments are not allowed.\n\
+\n\
+# Relay whitelist status. When this is set to 'yes', only clients whose HIT is\n\
+# listed on the whitelist are allowed to register to the relay / RVS service.\n\
+# When this is set to 'no', any client is allowed to register. This defaults as\n\
+# 'yes' when no value is given.\n\
+whitelist_enabled = \"no\"\n\
+\n\
+# Relay whitelist. The HITs of the clients that are allowed to register to\n\
+# the relay / RVS service. You may use multiple stanzas of the same name.\n\
+whitelist = \"\"\n\
+\n\
+# The minimum number of seconds the relay / RVS client is granted the service.\n\
+# If the service request defines a value smaller than this value, this value is\n\
+# used.\n\
+minimum_lifetime = \"60\"\n\
+\n\
+# The maximum number of seconds the relay / RVS client is granted the service.\n\
+# If the service request defines a value bigger than this value, this value is\n\
+# used.\n\
+maximum_lifetime = \"3600\"\n", HIP_RELAY_MAX_LINE_LEN, HIP_RELAY_MAX_PAR_LEN,
+            HIP_RELAY_MAX_VAL_LEN, HIP_RELAY_VAL_SEP, HIP_RELAY_COMMENT);
 
     if (fclose(fp) != 0) {
         HIP_ERROR("Cannot close file %s.\n", HIP_RELAY_CONFIG_FILE);
