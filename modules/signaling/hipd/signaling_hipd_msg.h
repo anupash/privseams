@@ -43,8 +43,10 @@
 #include "modules/signaling/lib/signaling_prot_common.h"
 
 /* Update message types */
-#define SIGNALING_FIRST_BEX_UPDATE  33001
-#define SIGNALING_SECOND_BEX_UPDATE 33002
+#define SIGNALING_FIRST_BEX_UPDATE              33001
+#define SIGNALING_SECOND_BEX_UPDATE             33002
+#define SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE  33003
+#define SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE 33004
 
 /* Handler for incoming messages */
 int signaling_handle_incoming_i2(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
