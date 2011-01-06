@@ -899,10 +899,6 @@ static int hip_handle_second_update_packet(struct hip_packet_context *ctx,
         localstate->update_id_in = ntohl(seq->update_id);
     }
 
-    hip_recreate_security_associations_and_sp(ctx->hadb_entry,
-                                              &ctx->dst_addr,
-                                              &ctx->src_addr);
-
     HIP_IFEL(hip_send_update_to_one_peer(ctx->input_msg,
                                          ctx->hadb_entry,
                                          &ctx->dst_addr,
@@ -929,10 +925,24 @@ static void hip_handle_third_update_packet(struct hip_packet_context *ctx)
                    &ctx->dst_addr);
     ipv6_addr_copy(&ctx->hadb_entry->peer_addr,
                    &ctx->src_addr);
+}
 
-    hip_recreate_security_associations_and_sp(ctx->hadb_entry,
-                                              &ctx->dst_addr,
-                                              &ctx->src_addr);
+static int hip_update_ipsec_sa(UNUSED const uint8_t packet_type,
+                        UNUSED const uint32_t ha_state,
+                        struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    // don't update IPsec SAs and SPs for 1st UPDATE packet
+    if(!hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR)) {
+        HIP_IFEL(hip_recreate_security_associations_and_sp(ctx->hadb_entry,
+                                                           &ctx->src_addr,
+                                                           &ctx->dst_addr),
+                 -1, "failed to update IPsec SAs and SPs\n");
+    }
+
+  out_err:
+    return err;
 }
 
 /**
@@ -1264,6 +1274,11 @@ int hip_update_init(void)
              -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
+                                          &hip_update_ipsec_sa,
+                                          30500),
+                 -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_R2_SENT,
                                           &hip_update_change_state,
                                           40000),
                  -1, "Error on registering UPDATE handle function.\n");
@@ -1282,6 +1297,11 @@ int hip_update_init(void)
                                           HIP_STATE_ESTABLISHED,
                                           &hip_handle_update_packet,
                                           30000),
+             -1, "Error on registering UPDATE handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_ESTABLISHED,
+                                          &hip_update_ipsec_sa,
+                                          30500),
              -1, "Error on registering UPDATE handle function.\n");
 
     HIP_IFEL(hip_user_register_handle(HIP_MSG_MANUAL_UPDATE_PACKET,
