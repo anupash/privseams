@@ -52,6 +52,7 @@
 #include "esp_prot_api.h"
 #include "esp_prot_config.h"
 #include "esp_prot_defines.h"
+#include "firewall.h"
 #include "firewall_defines.h"
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
