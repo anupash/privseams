@@ -35,6 +35,8 @@
  * @author Essi Vehmersalo
  */
 
+#include <stdlib.h>
+
 #include "lib/core/debug.h"
 #include "dlist.h"
 
