@@ -596,13 +596,13 @@ static int hip_init_host_ids(void)
     /* rsa pub */
     hip_msg_init(user_msg);
     if ((err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-                                            0, 1, "ecdsa", NULL, 0, 0, 0))) {
-        HIP_ERROR("Could not load default keys (ECDSA pub)\n");
+                                            0, 1, "rsa", NULL, 0, 0, 0))) {
+        HIP_ERROR("Could not load default keys (RSA pub)\n");
         goto out_err;
     }
 
     if ((err = hip_handle_add_local_hi(user_msg))) {
-        HIP_ERROR("Adding of keys failed (ECDSA pub)\n");
+        HIP_ERROR("Adding of keys failed (RSA pub)\n");
         goto out_err;
     }
 
