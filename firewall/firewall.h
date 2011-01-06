@@ -33,6 +33,7 @@ extern int filter_traffic;
 extern int hip_kernel_ipsec_fallback;
 extern int hip_lsi_support;
 extern int esp_relay;
+extern int hip_esp_protection;
 extern int use_midauth;
 extern int hip_fw_sock;
 extern int hip_fw_async_sock;

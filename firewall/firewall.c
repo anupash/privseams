@@ -137,7 +137,6 @@ static hip_fw_handler fw_handlers[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 /* extension-specific state */
 static int hip_userspace_ipsec            = 0;
-static int hip_esp_protection             = 0;
 static int restore_filter_traffic         = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 
@@ -148,6 +147,7 @@ int hip_kernel_ipsec_fallback             = 0;
 int hip_lsi_support                       = 0;
 int system_based_opp_mode                 = 0;
 int esp_relay                             = 0;
+int hip_esp_protection                    = 0;
 #ifdef CONFIG_HIP_MIDAUTH
 int use_midauth                           = 0;
 #endif
@@ -299,16 +299,14 @@ static int hip_fw_init_esp_prot(void)
 {
     int err = 0;
 
-    if (hip_esp_protection) {
-        // userspace ipsec is a prerequisite for esp protection
-        if (hip_userspace_ipsec) {
+    // userspace ipsec is a prerequisite for esp protection
+    if (hip_esp_protection && hip_userspace_ipsec) {
             HIP_IFEL(esp_prot_init(), -1, "failed to init esp protection\n");
-        } else {
-            HIP_ERROR("userspace ipsec needs to be turned on for this to work\n");
+    } else {
+        HIP_ERROR("userspace ipsec needs to be turned on for this to work\n");
 
-            err = 1;
-            goto out_err;
-        }
+        err = 1;
+        goto out_err;
     }
 
 out_err:
@@ -344,7 +342,7 @@ static int hip_fw_init_esp_prot_conntrack(void)
 {
     int err = 0;
 
-    if (filter_traffic) {
+    if (hip_esp_protection && filter_traffic) {
         HIP_IFEL(esp_prot_conntrack_init(), -1,
                  "failed to init esp protection conntracking\n");
     }
@@ -362,7 +360,7 @@ static int hip_fw_uninit_esp_prot_conntrack(void)
 {
     int err = 0;
 
-    if (filter_traffic) {
+    if (hip_esp_protection && filter_traffic) {
         HIP_IFEL(esp_prot_conntrack_uninit(), -1,
                  "failed to uninit esp protection conntracking\n");
     }
@@ -2004,7 +2002,6 @@ int main(int argc, char **argv)
             log_level = LOGDEBUG_ALL;
             break;
         case 'e':
-            hip_userspace_ipsec = 1;
             hip_esp_protection = 1;
             break;
         case 'f':
