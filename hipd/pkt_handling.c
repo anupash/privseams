@@ -105,6 +105,8 @@ out_err:
 /**
  * Remove a handle function from the list.
  *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
  * @param *handle_function Pointer to the function which should be unregistered.
  *
  * @return Success =  0
