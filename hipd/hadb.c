@@ -95,7 +95,6 @@
 #include "netdev.h"
 #include "oppdb.h"
 #include "output.h"
-#include "user_ipsec_sadb_api.h"
 #include "hadb.h"
 
 
