@@ -456,7 +456,7 @@ out_err:
  * @return        1 if the packet should be dropped, zero if the packet
  *                shouldn't be dropped
  */
-static int hip_packet_to_drop(hip_ha_t *entry,
+static int hip_packet_to_drop(struct hip_hadb_state *entry,
                               hip_hdr_type_t type,
                               struct in6_addr *hitr)
 {
@@ -629,8 +629,8 @@ out_err:
  */
 int hip_receive_udp_control_packet(struct hip_packet_context *ctx)
 {
-    int err         = 0, type;
-    hip_ha_t *entry = NULL;
+    int err = 0, type;
+    struct hip_hadb_state *entry = NULL;
 
     type  = hip_get_msg_type(ctx->input_msg);
     entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
@@ -660,7 +660,7 @@ out_err:
 
 //TODO doxygen header missing
 static int handle_locator(const struct hip_locator *locator,
-                          hip_ha_t *entry)
+                          struct hip_hadb_state *entry)
 {
     int n_addrs = 0, loc_size = 0, err = 0;
 
@@ -1278,7 +1278,7 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status() != HIP_RELAY_OFF &&
         !hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
-        hip_relrec_t *rec = NULL, dummy;
+        struct hip_relrec *rec = NULL, dummy;
 
         memcpy(&dummy.hit_r, &ctx->input_msg->hitr,
                sizeof(ctx->input_msg->hitr));
@@ -1426,7 +1426,7 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status() != HIP_RELAY_OFF &&
         !hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
-        hip_relrec_t *rec = NULL, dummy;
+        struct hip_relrec *rec = NULL, dummy;
 
         /* Check if we have a relay record in our database matching the
          * Responder's HIT. We should find one if the Responder is

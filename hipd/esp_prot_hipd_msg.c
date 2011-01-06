@@ -67,16 +67,16 @@
  * @param spi           spi of IPsec association
  * @return              0 on success, < 0 in case of an error
  */
-static int esp_prot_send_update_response(const hip_common_t *recv_update,
-                                         hip_ha_t *entry,
+static int esp_prot_send_update_response(const struct hip_common *recv_update,
+                                         struct hip_hadb_state *entry,
                                          const struct in6_addr *src_ip,
                                          const struct in6_addr *dst_ip,
                                          const uint32_t spi)
 {
-    hip_common_t *resp_update = NULL;
-    const struct hip_seq *seq = NULL;
-    uint16_t mask             = 0;
-    int err                   = 0;
+    struct       hip_common *resp_update = NULL;
+    const struct hip_seq    *seq         = NULL;
+    uint16_t mask = 0;
+    int err       = 0;
 
     HIP_IFEL(!(seq = hip_get_param(recv_update, HIP_PARAM_SEQ)),
              -1,
@@ -242,7 +242,7 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
     const unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS];
     const unsigned char *branch_nodes[MAX_NUM_PARALLEL_HCHAINS];
     const unsigned char *root[MAX_NUM_PARALLEL_HCHAINS];
-    hip_ha_t *entry                      = NULL;
+    struct hip_hadb_state *entry         = NULL;
     int hash_item_length                 = 0;
     unsigned char cmp_val[MAX_HASH_LENGTH];
     int err                              = 0;
@@ -388,7 +388,7 @@ int esp_prot_handle_anchor_change_msg(const struct hip_common *msg)
     uint8_t esp_prot_tfm                 = 0;
     int hash_length                      = 0;
     const unsigned char *esp_prot_anchor = NULL;
-    hip_ha_t *entry                      = NULL;
+    struct hip_hadb_state *entry         = NULL;
     int direction                        = 0;
     long num_parallel_hchains            = 0, i;
     int err                              = 0;
@@ -469,8 +469,8 @@ out_err:
  * @param update        this was triggered by an update
  * @return              0 if ok, != 0 else
  */
-int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, const int direction,
-                    const int update)
+int esp_prot_sa_add(struct hip_hadb_state *entry, struct hip_common *msg,
+                    const int direction, const int update)
 {
     unsigned char (*hchain_anchors)[MAX_HASH_LENGTH] = NULL;
     int hash_length           = 0;
@@ -549,7 +549,7 @@ out_err:
  * @param msg   the hip message to be sent
  * @return      0 on success, -1 in case of an error
  */
-int esp_prot_r1_add_transforms(hip_common_t *msg)
+int esp_prot_r1_add_transforms(struct hip_common *msg)
 {
     int err = 0;
 
@@ -779,7 +779,7 @@ out_err:
  * @param entry     hip association for the connection
  * @return          0 on success, -1 in case of an error
  */
-int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
+int esp_prot_r2_add_anchor(struct hip_common *r2, struct hip_hadb_state *entry)
 {
     unsigned char *anchor = NULL;
     int hash_length       = 0;
@@ -840,7 +840,7 @@ out_err:
  * @param input_msg the input message
  * @return          0 on success, -1 in case of an error
  */
-int esp_prot_r2_handle_anchor(hip_ha_t *entry,
+int esp_prot_r2_handle_anchor(struct hip_hadb_state *entry,
                               const struct hip_common *input_msg)
 {
     const struct hip_tlv_common *param        = NULL;
@@ -914,7 +914,7 @@ out_err:
  * @param   recv_update the received hip update
  * @return              packet type qualifiers
  */
-int esp_prot_update_type(const hip_common_t *recv_update)
+int esp_prot_update_type(const struct hip_common *recv_update)
 {
     const struct hip_seq * seq = NULL;
     const struct hip_ack * ack = NULL;
@@ -947,8 +947,8 @@ int esp_prot_update_type(const hip_common_t *recv_update)
  * @param dst_ip        dst ip address
  * @return              0 on success, -1 in case of an error
  **/
-int esp_prot_handle_first_update_packet(const hip_common_t *recv_update,
-                                        hip_ha_t *entry,
+int esp_prot_handle_first_update_packet(const struct hip_common *recv_update,
+                                        struct hip_hadb_state *entry,
                                         const struct in6_addr *src_ip,
                                         const struct in6_addr *dst_ip)
 {
@@ -982,7 +982,7 @@ out_err:
  * @param dst_ip    dst ip address
  * @return          0 on success, -1 in case of an error
  **/
-int esp_prot_handle_second_update_packet(hip_ha_t *entry,
+int esp_prot_handle_second_update_packet(struct hip_hadb_state *entry,
                                          const struct in6_addr *src_ip,
                                          const struct in6_addr *dst_ip)
 {
@@ -1022,7 +1022,8 @@ out_err:
  * @param entry     hip association for the connection
  * @return          0 on success, -1 in case of an error
  */
-int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
+int esp_prot_update_add_anchor(struct hip_common *update,
+                               struct hip_hadb_state *entry)
 {
     const struct hip_seq *seq = NULL;
     int hash_length           = 0;
@@ -1088,8 +1089,8 @@ out_err:
  * @param spi           the ipsec spi number
  * @return              0 on success, -1 in case of an error
  */
-int esp_prot_update_handle_anchor(const hip_common_t *recv_update,
-                                  hip_ha_t *entry,
+int esp_prot_update_handle_anchor(const struct hip_common *recv_update,
+                                  struct hip_hadb_state *entry,
                                   uint32_t *spi)
 {
     const struct esp_prot_anchor *prot_anchor = NULL;

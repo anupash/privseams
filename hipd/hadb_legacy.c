@@ -60,7 +60,7 @@
  *                      is returned, else @c interface_id and @c lifetime are
  *                      not assigned a value and 0 is returned.
  */
-int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
+int hip_hadb_get_peer_addr_info_old(struct hip_hadb_state *entry,
                                     const struct in6_addr *addr,
                                     uint32_t *lifetime,
                                     struct timeval *modified_time)
@@ -71,7 +71,7 @@ int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
 
     list_for_each_safe(item, tmp, entry->peer_addresses_old, ii)
     {
-        peer_addr_list_item = (struct hip_peer_addr_list_item *) list_entry(item);
+        peer_addr_list_item = list_entry(item);
 
         if (!ipv6_addr_cmp(&peer_addr_list_item->address, addr)) {
             if (lifetime) {
@@ -98,7 +98,8 @@ int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
  * @param ha corresponding hadb entry of the peer
  * @param addr IPv6 address to be deleted
  */
-void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr)
+void hip_hadb_delete_peer_addrlist_one_old(struct hip_hadb_state *ha,
+                                           struct in6_addr *addr)
 {
     struct hip_peer_addr_list_item *peer_addr_list_item;
     int i;
@@ -108,7 +109,7 @@ void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr)
 
     list_for_each_safe(item, tmp, ha->peer_addresses_old, i)
     {
-        peer_addr_list_item = (struct hip_peer_addr_list_item *) list_entry(item);
+        peer_addr_list_item = list_entry(item);
         if (!ipv6_addr_cmp(&peer_addr_list_item->address, addr)) {
             list_del(item, ha->peer_addresses_old);
             free(item);

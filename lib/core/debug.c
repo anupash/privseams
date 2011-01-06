@@ -79,13 +79,13 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/core/common.h"
-#include "lib/core/list.h"
-#include "lib/core/prefix.h"
 #include "lib/tool/lutil.h"
 #include "modules/update/hipd/update.h"
 #include "builder.h"
+#include "common.h"
 #include "ife.h"
+#include "list.h"
+#include "prefix.h"
 #include "state.h"
 #include "straddr.h"
 #include "debug.h"
@@ -109,18 +109,18 @@ const char *debug_prefix[] = { "die", "error", "info", "debug"};
  * here and it should not be used.
  */
 #ifdef CONFIG_HIP_DEBUG
-static enum logtype_t logtype   = LOGTYPE_STDERR;
+static enum logtype logtype   = LOGTYPE_STDERR;
 #else
-static enum logtype_t logtype   = LOGTYPE_SYSLOG;
+static enum logtype logtype   = LOGTYPE_SYSLOG;
 #endif /* CONFIG_HIP_DEBUG */
 
 #ifdef HIP_LOGFMT_LONG
-static enum logfmt_t logfmt     = LOGFMT_LONG;
+static enum logfmt logfmt     = LOGFMT_LONG;
 #else
-static enum logfmt_t logfmt     = LOGFMT_SHORT;
+static enum logfmt logfmt     = LOGFMT_SHORT;
 #endif /* HIP_LONGFMT */
 
-static enum logdebug_t logdebug = LOGDEBUG_ALL;
+static enum logdebug logdebug = LOGDEBUG_ALL;
 
 /**
  * @brief Sets logging to stderr or syslog.
@@ -797,7 +797,7 @@ void hip_print_locator_addresses(const struct hip_common *in_msg)
  *
  * @param entry the host association
  */
-void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
+void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *entry)
 {
     hip_list_t *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr;
@@ -810,7 +810,7 @@ void hip_print_peer_addresses_to_be_added(hip_ha_t *entry)
 
     list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
     {
-        addr = (struct hip_peer_addr_list_item *) list_entry(item);
+        addr = list_entry(item);
         HIP_DEBUG_HIT("Peer address", &addr->address);
     }
 }

@@ -31,18 +31,14 @@ struct listitem {
     struct listitem *next;
 };
 
-typedef struct listitem Listitem;
-
 struct list {
-    Listitem *head;
+    struct listitem *head;
 };
 
-typedef struct list List;
-
-void initlist(List *);
-void insert(List *, char *data);
-void destroy(List *);
-int length(List *);
+void initlist(struct list *);
+void insert(struct list *, char *data);
+void destroy(struct list *);
+int length(struct list *);
 
 /**
  * Gets an item from a linked list. Gets <code>n</code>th item from a linked
@@ -53,7 +49,7 @@ int length(List *);
  * @return      a pointer to <code>n</code>th item in the list, or NULL if
  *              list is NULL or if there is less than @c n items in the list.
  */
-char *getitem(List *, int n);
+char *getitem(struct list *, int n);
 char *getwithoutnewline(char *buffer, int count, FILE *f);
 
 /**
@@ -64,7 +60,7 @@ char *getwithoutnewline(char *buffer, int count, FILE *f);
  * @param string a pointer to a string that is to be broken into substrings.
  * @param list   a pointer to a linked list where to the substrings are put.
  */
-void extractsubstrings(char *string, List *list);
+void extractsubstrings(char *string, struct list *list);
 
 int maxof(int num_args, ...);
 

@@ -29,6 +29,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+#include "config.h"
 #include "protodefs.h"
 
 /* includes filename, line number and max(debug_prefix[]) */
@@ -300,9 +301,9 @@ enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
 #define HIP_DEBUG_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, lsi)
 #define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in)
 
-enum logtype_t { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
-enum logfmt_t { LOGFMT_SHORT, LOGFMT_LONG };
-enum logdebug_t { LOGDEBUG_ALL, LOGDEBUG_MEDIUM, LOGDEBUG_NONE };
+enum logtype  { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
+enum logfmt   { LOGFMT_SHORT, LOGFMT_LONG };
+enum logdebug { LOGDEBUG_ALL, LOGDEBUG_MEDIUM, LOGDEBUG_NONE };
 
 void hip_set_logtype(int logtype);
 void hip_set_logfmt(int logfmt);
@@ -402,8 +403,8 @@ void uint16_to_binstring(uint16_t val, char *buffer);
 void uint32_to_binstring(uint32_t val, char *buffer);
 
 void hip_print_locator_addresses(const struct hip_common *);
-void hip_print_peer_addresses_to_be_added(hip_ha_t *);
-void hip_print_peer_addresses(hip_ha_t *);
+void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *);
+void hip_print_peer_addresses(struct hip_hadb_state *);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

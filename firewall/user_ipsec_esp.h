@@ -43,13 +43,14 @@
 #include "user_ipsec_sadb.h"
 
 
-int hip_beet_mode_output(const hip_fw_context_t *ctx,
-                         hip_sa_entry_t *entry,
+int hip_beet_mode_output(const struct hip_fw_context *ctx,
+                         struct hip_sa_entry *entry,
                          const struct in6_addr *preferred_local_addr,
                          const struct in6_addr *preferred_peer_addr,
                          unsigned char *esp_packet,
                          uint16_t *esp_packet_len);
-int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
+int hip_beet_mode_input(const struct hip_fw_context *ctx,
+                        struct hip_sa_entry *entry,
                         unsigned char *decrypted_packet,
                         uint16_t *decrypted_packet_len);
 

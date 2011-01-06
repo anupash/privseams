@@ -43,7 +43,7 @@
 #include "esp_prot_defines.h"
 
 
-typedef struct hip_fw_context {
+struct hip_fw_context {
     // queued packet
     ipq_packet_msg_t *ipq_packet;
 
@@ -66,7 +66,7 @@ typedef struct hip_fw_context {
     struct udphdr *udp_encap_hdr;
 
     int            modified;
-} hip_fw_context_t;
+};
 
 /********** State table structures **************/
 
@@ -101,9 +101,9 @@ struct esp_tuple {
     unsigned char          *next_roots[MAX_NUM_PARALLEL_HCHAINS];
     /** List temporarily storing anchor elements until the consecutive update
      *  msg reveals that all on-path devices know the new anchor. */
-    hip_ll_t                anchor_cache;
+    struct hip_ll              anchor_cache;
     /** buffer storing hashes of previous packets for cumulative authentication */
-    esp_cumulative_item_t   hash_buffer[MAX_RING_BUFFER_SIZE];
+    struct esp_cumulative_item hash_buffer[MAX_RING_BUFFER_SIZE];
 };
 
 struct hip_data {

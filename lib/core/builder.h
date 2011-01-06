@@ -48,16 +48,16 @@
 /* Removed in 2.6.11 - why ? */
 extern struct hip_cert_spki_info hip_cert_spki_info;
 
-/* registration.c typedefs also used by hip_build_param_reg_info() */
-/** Possible service states. */
-typedef enum { HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1 } hip_srv_status_t;
+/** possible service states */
+enum hip_srv_status { HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1 };
+
 /** HIP service. */
-typedef struct hip_srv {
-    hip_srv_status_t status;     /**< Service status */
-    uint8_t          reg_type;
-    uint8_t          min_lifetime;
-    uint8_t          max_lifetime;
-} hip_srv_t;
+struct hip_srv {
+    enum hip_srv_status status;     /**< service status */
+    uint8_t             reg_type;
+    uint8_t             min_lifetime;
+    uint8_t             max_lifetime;
+};
 
 int hip_build_netlink_dummy_header(struct hip_common *);
 int hip_build_param_heartbeat(struct hip_common *msg, int seconds);
@@ -67,7 +67,7 @@ void hip_build_network_hdr(struct hip_common *,
                            uint16_t,
                            const struct in6_addr *,
                            const struct in6_addr *);
-int hip_host_id_hits(hip_ha_t *entry, struct hip_common *msg);
+int hip_host_id_hits(struct hip_hadb_state *entry, struct hip_common *msg);
 int hip_build_param_contents(struct hip_common *,
                              const void *,
                              hip_tlv_type_t,
@@ -243,14 +243,14 @@ int hip_any_key_to_hit(void *any_key,
                        hip_hit_t *hit,
                        int is_public,
                        int type);
-int hip_build_param_reg_info(hip_common_t *msg,
+int hip_build_param_reg_info(struct hip_common *msg,
                              const void *service_list,
                              const unsigned int service_count);
-int hip_build_param_reg_request(hip_common_t *msg,
+int hip_build_param_reg_request(struct hip_common *msg,
                                 const uint8_t lifetime,
                                 const uint8_t *type_list,
                                 const int type_count);
-int hip_build_param_reg_response(hip_common_t *msg,
+int hip_build_param_reg_response(struct hip_common *msg,
                                  const uint8_t lifetime,
                                  const uint8_t *type_list,
                                  const int type_count);
@@ -285,7 +285,7 @@ int hip_build_param_esp_prot_root(struct hip_common *msg,
 int hip_build_param_reg_from(struct hip_common *msg,
                              const struct in6_addr *addr,
                              const in_port_t port);
-int hip_build_param_nat_port(hip_common_t *msg,
+int hip_build_param_nat_port(struct hip_common *msg,
                              const in_port_t port,
                              hip_tlv_type_t hipparam);
 int hip_build_digest(const int type, const void *in, int in_len, void *out);

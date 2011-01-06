@@ -33,19 +33,20 @@
 
 #include <stdint.h>
 
-#include "lib/core/linkedlist.h"
+#include "linkedlist.h"
 
 /**
  * @todo add description
  */
 struct modular_state {
-    hip_ll_t        *item_list;
+    struct hip_ll   *item_list;
     char           **item_names;
     unsigned int     num_items;
 };
 
-hip_ll_t *lmod_register_function(hip_ll_t *list, void *entry, const uint16_t priority);
-int lmod_unregister_function(hip_ll_t *list, const void *function);
+struct hip_ll *lmod_register_function(struct hip_ll *list, void *entry,
+                                      const uint16_t priority);
+int lmod_unregister_function(struct hip_ll *list, const void *function);
 
 int lmod_register_state_init_function(void *func);
 

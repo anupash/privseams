@@ -50,7 +50,7 @@ struct handle_function {
 /**
  * @todo add description
  */
-static hip_ll_t *hip_handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
+static struct hip_ll *hip_handle_functions[HIP_MAX_PACKET_TYPE][HIP_MAX_HA_STATE];
 
 /**
  * Register a function for handling of the specified combination from packet
@@ -119,8 +119,8 @@ int hip_run_handle_functions(const uint8_t packet_type,
                              const uint32_t ha_state,
                              struct hip_packet_context *ctx)
 {
-    int            err  = 0;
-    hip_ll_node_t *iter = NULL;
+    int                 err  = 0;
+    struct hip_ll_node *iter = NULL;
 
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
              -1,

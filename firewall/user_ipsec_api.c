@@ -213,10 +213,10 @@ out_err:
  * @param ctx   the firewall context of the packet to be processed
  * @return      0, if correct, else != 0
  */
-int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx)
+int hip_fw_userspace_ipsec_output(const struct hip_fw_context *ctx)
 {
     // entry matching the peer HIT
-    hip_sa_entry_t *entry = NULL;
+    struct hip_sa_entry *entry = NULL;
     // the routable addresses as used in HIPL
     struct in6_addr preferred_local_addr;
     struct in6_addr preferred_peer_addr;
@@ -342,12 +342,12 @@ out_err:
  * @param ctx   the firewall context of the packet to be processed
  * @return      0, if correct, else != 0
  */
-int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx)
+int hip_fw_userspace_ipsec_input(const struct hip_fw_context *ctx)
 {
     struct hip_esp *esp_hdr       = NULL;
     struct sockaddr_storage local_sockaddr;
     // entry matching the SPI
-    hip_sa_entry_t *entry         = NULL;
+    struct hip_sa_entry *entry    = NULL;
     struct timeval now;
     uint16_t decrypted_packet_len = 0;
     uint32_t spi                  = 0;

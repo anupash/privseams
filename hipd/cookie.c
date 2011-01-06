@@ -322,7 +322,8 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
  *                 otherwise.
  */
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
-                      hip_common_t *hdr, const struct hip_solution *solution)
+                      struct hip_common *hdr,
+                      const struct hip_solution *solution)
 {
     /* In a effort to conform the HIPL coding convention, the return value
      * of this function was inverted. I.e. This function now returns
@@ -435,7 +436,7 @@ int hip_recreate_all_precreated_r1_packets(void)
 
     list_for_each_safe(curr, iter, ht, c)
     {
-        tmp = (struct hip_host_id *) list_entry(curr);
+        tmp = list_entry(curr);
         hip_ht_add(HIP_DB_LOCAL_HID, tmp);
         list_del(tmp, ht);
     }

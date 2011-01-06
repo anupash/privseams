@@ -221,7 +221,7 @@ static int hip_count_if_addresses(int ifindex)
     int i = 0, c;
 
     list_for_each_safe(n, t, addresses, c) {
-        na = (struct netdev_address *) list_entry(n);
+        na = list_entry(n);
         if (na->if_index == ifindex) {
             i++;
         }
@@ -336,9 +336,9 @@ static int hip_exists_address_family_in_list(const struct in6_addr *addr)
     int mapped = IN6_IS_ADDR_V4MAPPED(addr);
 
     list_for_each_safe(tmp, t, addresses, c) {
-        n = (struct netdev_address *) list_entry(tmp);
+        n = list_entry(tmp);
 
-        if (IN6_IS_ADDR_V4MAPPED((const struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &n->addr)) == mapped) {
+        if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr((struct sockaddr *) &n->addr)) == mapped) {
             return 1;
         }
     }
@@ -367,7 +367,7 @@ int hip_exists_address_in_list(struct sockaddr *addr, int ifindex)
         int mapped       = 0;
         int addr_match   = 0;
         int family_match = 0;
-        n      = (struct netdev_address *) list_entry(tmp);
+        n      = list_entry(tmp);
 
         mapped = hip_sockaddr_is_v6_mapped((struct sockaddr * ) (&n->addr));
         HIP_DEBUG("mapped=%d\n", mapped);
@@ -496,7 +496,7 @@ static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
     if (addr && addr->sa_family == AF_INET) {
         memset(&addr_sin6, 0, sizeof(addr_sin6));
         addr_sin6.sin6_family = AF_INET6;
-        IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr((struct sockaddr *) addr)),
+        IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
                          ((struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &addr_sin6)));
     } else if (addr && addr->sa_family == AF_INET6) {
         memcpy(&addr_sin6, addr, sizeof(addr_sin6));
@@ -505,7 +505,7 @@ static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
     HIP_DEBUG_HIT("Address to delete = ", hip_cast_sa_addr((struct sockaddr *) &addr_sin6));
 
     list_for_each_safe(item, tmp, addresses, i) {
-        n       = (struct netdev_address *) list_entry(item);
+        n       = list_entry(item);
         deleted = 0;
         /* remove from list if if_index matches */
         if (!addr) {
@@ -547,7 +547,7 @@ void hip_delete_all_addresses(void)
     if (address_count) {
         list_for_each_safe(item, tmp, addresses, i)
         {
-            n = (struct netdev_address *) list_entry(item);
+            n = list_entry(item);
             HIP_DEBUG_HIT("address to be deleted\n", hip_cast_sa_addr((struct sockaddr *) &n->addr));
             list_del(n, addresses);
             free(n);
@@ -604,7 +604,7 @@ static int hip_netdev_find_if(struct sockaddr *addr)
      * socket address storages. */
     list_for_each_safe(item, tmp, addresses, i)
     {
-        n = (struct netdev_address *) list_entry(item);
+        n = list_entry(item);
         if (((n->addr.ss_family == addr->sa_family) &&
              ((memcmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
                       hip_cast_sa_addr(addr),
@@ -705,7 +705,7 @@ int hip_map_id_to_addr(const hip_hit_t *hit, const hip_lsi_t *lsi,
 {
     int err      = -1, skip_namelookup = 0; /* Assume that resolving fails */
     hip_hit_t hit2;
-    hip_ha_t *ha = NULL;
+    struct hip_hadb_state *ha = NULL;
 
     HIP_ASSERT(hit || lsi);
 
@@ -797,7 +797,7 @@ static int hip_netdev_trigger_bex(const hip_hit_t *src_hit_in,
     int old_global_nat_mode = hip_nat_status;
     in_port_t ha_local_port;
     in_port_t ha_peer_port;
-    hip_ha_t *entry = NULL;
+    struct hip_hadb_state *entry = NULL;
     int is_loopback = 0;
     hip_lsi_t dlsi, slsi;
     struct in6_addr dhit, shit, saddr, dst6_lsi;
@@ -1034,7 +1034,7 @@ static int hip_netdev_handle_acquire(struct nlmsghdr *msg)
     hip_lsi_t *src_lsi        = NULL, *dst_lsi = NULL;
     struct in6_addr *src_addr = NULL, *dst_addr = NULL;
     struct xfrm_user_acquire *acq;
-    hip_ha_t *entry;
+    struct hip_hadb_state *entry;
     int err                   = 0;
 
     HIP_DEBUG("Acquire (pid: %d) \n", msg->nlmsg_pid);
@@ -1445,7 +1445,7 @@ out_err:
  *
  * @param ha ha state after base exchange
  */
-void hip_copy_peer_addrlist_changed(hip_ha_t *ha)
+void hip_copy_peer_addrlist_changed(struct hip_hadb_state *ha)
 {
     hip_list_t *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr_li;
@@ -1456,7 +1456,7 @@ void hip_copy_peer_addrlist_changed(hip_ha_t *ha)
     }
 
     list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
-        addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
+        addr_li = list_entry(item);
         list_add(addr_li, ha->peer_addresses_old);
         HIP_DEBUG_HIT("SPI out address", &addr_li->address);
     }

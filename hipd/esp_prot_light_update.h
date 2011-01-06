@@ -39,7 +39,7 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/modularization.h"
 
-int esp_prot_send_light_update(hip_ha_t *entry,
+int esp_prot_send_light_update(struct hip_hadb_state *entry,
                                const int anchor_offset[],
                                const unsigned char *secret[MAX_NUM_PARALLEL_HCHAINS],
                                const int secret_length[],

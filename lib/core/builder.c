@@ -97,13 +97,13 @@
 #include <arpa/inet.h>
 #include <openssl/md5.h>
 
-#include "lib/core/common.h"
-#include "lib/core/prefix.h"
 #include "lib/tool/checksum.h"
+#include "common.h"
 #include "config.h"
-#include "builder.h"
 #include "crypto.h"
 #include "hostid.h"
+#include "prefix.h"
+#include "builder.h"
 
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
@@ -1494,7 +1494,7 @@ static int hip_build_generic_param(struct hip_common *msg,
                                    hip_tlv_len_t param_hdr_size,
                                    const void *contents)
 {
-    const struct hip_tlv_common *param = (const struct hip_tlv_common *) parameter_hdr;
+    const struct hip_tlv_common *param = parameter_hdr;
     const void *src                    = NULL;
     uint8_t *dst                       = NULL;
     int err                            = 0, size = 0;
@@ -1591,7 +1591,7 @@ int hip_build_param_contents(struct hip_common *msg,
 {
     struct hip_tlv_common param;
     hip_set_param_type(&param, param_type);
-    hip_set_param_contents_len((struct hip_tlv_common *) &param, contents_size);
+    hip_set_param_contents_len(&param, contents_size);
     return hip_build_generic_param(msg,
                                    &param,
                                    sizeof(struct hip_tlv_common),
@@ -2237,13 +2237,13 @@ int hip_build_param_relay_to(struct hip_common *msg,
  * builders but after hip_calc_generic_param_len() and
  * hip_build_generic_param.
  */
-static inline int hip_reg_param_core(hip_common_t *msg,
+static inline int hip_reg_param_core(struct hip_common *msg,
                                      void *param,
                                      const uint8_t lifetime,
                                      const uint8_t *type_list,
                                      const int type_count)
 {
-    struct hip_reg_request *rreq = (struct hip_reg_request *) param;
+    struct hip_reg_request *rreq = param;
 
     hip_calc_generic_param_len((struct hip_tlv_common *) rreq, sizeof(struct hip_reg_request),
                                type_count * sizeof(uint8_t));
@@ -2262,13 +2262,13 @@ static inline int hip_reg_param_core(hip_common_t *msg,
  * @return              zero on success, non-zero otherwise.
  * @todo gcc gives a weird warning if we use struct srv in the arguments of this function.
  *       Using void pointer as a workaround */
-int hip_build_param_reg_info(hip_common_t *msg,
+int hip_build_param_reg_info(struct hip_common *msg,
                              const void *srv_list,
                              const unsigned int service_count)
 {
     int err    = 0;
     unsigned i = 0;
-    const hip_srv_t *service_list = (const hip_srv_t *) srv_list;
+    const struct hip_srv *service_list = srv_list;
     struct hip_reg_info reg_info;
     uint8_t reg_type[service_count];
 
@@ -2318,7 +2318,7 @@ int hip_build_param_reg_info(hip_common_t *msg,
  * @param type_count number of registration types in @c type_list.
  * @return           zero on success, non-zero otherwise.
  */
-int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
+int hip_build_param_reg_request(struct hip_common *msg, const uint8_t lifetime,
                                 const uint8_t *type_list, const int type_count)
 {
     int err = 0;
@@ -2340,7 +2340,7 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
  * @param type_count number of registration types in @c type_list.
  * @return           zero on success, non-zero otherwise.
  */
-int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
+int hip_build_param_reg_response(struct hip_common *msg, const uint8_t lifetime,
                                  const uint8_t *type_list, const int type_count)
 {
     int err = 0;
@@ -4034,7 +4034,7 @@ int hip_build_param_reg_from(struct hip_common *msg,
  *
  * @return zero on success, non-zero otherwise.
  */
-int hip_build_param_nat_port(hip_common_t *msg,
+int hip_build_param_nat_port(struct hip_common *msg,
                              const in_port_t port,
                              hip_tlv_type_t hipparam)
 {

@@ -2,17 +2,10 @@
 
 set -e
 
-PATH=/p/bin:$PATH
-
-# Use abs dir names in TMP_DIR, WWW_DIR and OUTPUT_FILE
 TMP_DIR=~/.bzr-hipl-cache
 BRANCH=trunk
 WWW_DIR=/var/www/infrahip/html/hipl
-OUTPUT_FILE=$WWW_DIR/hipl.tar.gz
-CHANGE_LOG_FILE=$TMP_DIR/ChangeLog
 
-# Update to the latest version and check out what patches need to be generated
-#
 if test -x  $TMP_DIR; then
     cd $TMP_DIR/hipl-bzr/$BRANCH
     bzr update
@@ -21,36 +14,35 @@ else
     cd $TMP_DIR
     bzr init-repo hipl-bzr
     cd hipl-bzr
-    bzr checkout lp:hipl $BRANCH
+    bzr checkout -q lp:hipl $BRANCH
     cd $BRANCH
 fi
 
 VERSION=$(grep '^AC_INIT' configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
+TARBALL=hipl-${VERSION}.tar.gz
 
-# Generate a ChangeLog file
-#
-bzr log > $CHANGE_LOG_FILE
-
-# Make a HIP tarball
-#
+# Make a HIPL tarball
 autoreconf --install
 ./configure --sysconfdir=/etc
 make dist
 
-# Add ChangeLog file and rename as "trunk"
-tar xzf hipl-${VERSION}.tar.gz
-mv hipl-${VERSION} trunk
-cp $CHANGE_LOG_FILE trunk/doc
-tar czf hipl.tar.gz trunk
-chmod a+r hipl.tar.gz
+# Add ChangeLog file to tarball
+tar xzf $TARBALL
+bzr log > hipl-${VERSION}/doc/ChangeLog
+tar czf $TARBALL hipl-${VERSION}
+chmod a+r $TARBALL
 
-# Move the tarball to the web
-mv hipl.tar.gz $WWW_DIR
+# Move tarball and ChangeLog to web directory
+mv $TARBALL hipl-${VERSION}/doc/ChangeLog $WWW_DIR
+ln -sf $WWW_DIR/$TARBALL $WWW_DIR/hipl.tar.gz
 
-# Move the ChangeLog to web
-#
-mv $CHANGE_LOG_FILE $WWW_DIR
+make doxygen
+rm -rf $WWW_DIR/doxygen
+mv doc/doxy/html $WWW_DIR/doxygen
+
+make doc/HOWTO.html
+cp doc/HOWTO.html doc/*.png $WWW_DIR/manual
+touch $WWW_DIR/manual/DO_NOT_EDIT_THESE_MANUALLY.GENERATED_AUTOMATICALLY
 
 # Remove temporary files
 rm -rf hipl-${VERSION} trunk
-

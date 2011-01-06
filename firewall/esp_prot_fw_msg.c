@@ -65,19 +65,17 @@
  *       this should be set up for the store containing the hchains for the BEX
  * @note the created message contains hash_length and anchors for each transform
  */
-static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore,
-                                                 const int use_hash_trees)
+static struct hip_common *create_bex_store_update_msg(struct hchain_store *hcstore,
+                                                      const int use_hash_trees)
 {
-    struct hip_common *msg    = NULL;
-    int hash_length           = 0, num_hchains = 0;
-    esp_prot_tfm_t *transform = NULL;
-    hash_chain_t *hchain      = NULL;
-    hash_tree_t *htree        = NULL;
+    struct hip_common   *msg       = NULL;
+    struct esp_prot_tfm *transform = NULL;
+    struct hash_chain   *hchain    = NULL;
+    struct hash_tree    *htree     = NULL;
     unsigned char *anchor     = NULL;
-    int err                   = 0;
     unsigned  j               = 0;
     uint8_t i                 = 0;
-    int hash_item_length      = 0;
+    int hash_length = 0, num_hchains = 0, err = 0, hash_item_length = 0;
 
     HIP_ASSERT(hcstore != NULL);
 
@@ -140,18 +138,17 @@ static hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore,
                                          [transform->hash_length_id].
                                          hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1]); j++) {
             if (use_hash_trees) {
-                HIP_IFEL(!(htree = (hash_tree_t *) hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
-                                                              [transform->hash_length_id].
-                                                              hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
-                         "failed to retrieve htree\n");
+                HIP_IFEL(!(htree = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+                                              [transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1],
+                                              j)),
+                         -1, "failed to retrieve htree\n");
 
                 anchor           = htree->root;
                 hash_item_length = htree->num_data_blocks;
             } else {
-                HIP_IFEL(!(hchain = (hash_chain_t *) hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
-                                                                [transform->hash_length_id].
-                                                                hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
-                         "failed to retrieve hchain\n");
+                HIP_IFEL(!(hchain = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+                                               [transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)),
+                         -1, "failed to retrieve hchain\n");
 
                 anchor           = hchain_get_anchor(hchain);
                 hash_item_length = hchain->hchain_length;
@@ -284,7 +281,7 @@ out_err:
  * @param   use_hash_trees indicates whether hash chains or hash trees are stored
  * @return  0 on success, -1 on error
  */
-int send_bex_store_update_to_hipd(hchain_store_t *hcstore,
+int send_bex_store_update_to_hipd(struct hchain_store *hcstore,
                                   const int use_hash_trees)
 {
     struct hip_common *msg = NULL;
@@ -294,8 +291,7 @@ int send_bex_store_update_to_hipd(hchain_store_t *hcstore,
 
     HIP_DEBUG("sending bex-store update to hipd...\n");
 
-    HIP_IFEL(!(msg = (struct hip_common *) create_bex_store_update_msg(hcstore,
-                                                                       use_hash_trees)),
+    HIP_IFEL(!(msg = create_bex_store_update_msg(hcstore, use_hash_trees)),
              -1, "failed to create bex store anchors update message\n");
 
     HIP_DUMP_MSG(msg);
@@ -325,19 +321,20 @@ out_err:
  * @param   link_trees the link trees for the anchor elements, in case of HHL
  * @return  0 on success, -1 on error
  */
-int send_trigger_update_to_hipd(const hip_sa_entry_t *entry,
-                        const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],
-                        const int hash_item_length, const int soft_update,
-                        const int *anchor_offset,
-                        hash_tree_t *link_trees[MAX_NUM_PARALLEL_HCHAINS])
+int send_trigger_update_to_hipd(const struct hip_sa_entry *entry,
+                                const unsigned char *anchors[MAX_NUM_PARALLEL_HCHAINS],
+                                const int hash_item_length,
+                                const int soft_update,
+                                const int *anchor_offset,
+                                struct hash_tree *link_trees[MAX_NUM_PARALLEL_HCHAINS])
 {
     int err                     = 0;
     int i                       = 0;
     struct hip_common *msg      = NULL;
     int hash_length             = 0;
-    hash_chain_t *hchain        = NULL;
-    hash_tree_t *htree          = NULL;
-    hash_tree_t *link_tree      = NULL;
+    struct hash_chain *hchain   = NULL;
+    struct hash_tree *htree     = NULL;
+    struct hash_tree *link_tree = NULL;
     int secret_length           = 0;
     int branch_length           = 0;
     int root_length             = 0;
@@ -494,15 +491,15 @@ out_err:
  * @param   entry the sadb entry for the outbound direction
  * @return  0 on success, -1 on error, 1 for inbound sadb entry
  */
-int send_anchor_change_to_hipd(const hip_sa_entry_t *entry)
+int send_anchor_change_to_hipd(const struct hip_sa_entry *entry)
 {
     int err                = 0;
-    struct hip_common *msg = NULL;
     int hash_length        = 0;
     long i                 = 0;
     unsigned char *anchor  = NULL;
-    hash_chain_t *hchain   = NULL;
-    hash_tree_t *htree     = NULL;
+    struct hip_common *msg    = NULL;
+    struct hash_chain *hchain = NULL;
+    struct hash_tree  *htree  = NULL;
 
     HIP_ASSERT(entry != NULL);
     HIP_ASSERT(entry->direction == HIP_SPI_DIRECTION_OUT);

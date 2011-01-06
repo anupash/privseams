@@ -189,7 +189,6 @@
 #define HIP_MSG_HANDOVER_HARD                    199
 #define HIP_MSG_HANDOVER_SOFT                    200
 #define HIP_MSG_FIREWALL_STATUS                  201
-#define HIP_MSG_FW_FLUSH_SYS_OPP_HIP             202
 /* @} */
 
 /* inclusive */

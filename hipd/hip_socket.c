@@ -60,13 +60,13 @@ struct socketfd {
 /**
  * List for storage of used sockets
  */
-static hip_ll_t *hip_sockets;
+static struct hip_ll *hip_sockets;
 
 static int hip_handle_raw_input_v6(struct hip_packet_context *ctx)
 {
     int err = 0;
 
-    HIP_DEBUG("received on: hip_raw_sock_input_v6");
+    HIP_DEBUG("received on: hip_raw_sock_input_v6\n");
 
     if (hip_read_control_msg_v6(hip_raw_sock_input_v6,
                                 ctx,
@@ -86,7 +86,7 @@ static int hip_handle_raw_input_v4(struct hip_packet_context *ctx)
 {
     int err = 0;
 
-    HIP_DEBUG("received on: hip_raw_sock_input_v4");
+    HIP_DEBUG("received on: hip_raw_sock_input_v4\n");
 
     if (hip_read_control_msg_v4(hip_raw_sock_input_v4,
                                 ctx,
@@ -106,7 +106,7 @@ static int hip_handle_nat_input(struct hip_packet_context *ctx)
 {
     int err = 0;
 
-    HIP_DEBUG("received on: hip_nat_sock_input_udp");
+    HIP_DEBUG("received on: hip_nat_sock_input_udp\n");
 
     err = hip_read_control_msg_v4(hip_nat_sock_input_udp,
                                   ctx,
@@ -126,7 +126,7 @@ static int hip_handle_user_sock(struct hip_packet_context *ctx)
     uint8_t msg_type = 0;
     struct sockaddr_in6 app_src;
 
-    HIP_DEBUG("received on: hip_user_sock");
+    HIP_DEBUG("received on: hip_user_sock\n");
 
     HIP_IFEL(hip_read_user_control_msg(hip_user_sock,
                                        ctx->input_msg,
@@ -165,7 +165,7 @@ out_err:
 
 static int hip_handle_nl_ipsec_sock(UNUSED struct hip_packet_context *ctx)
 {
-    HIP_DEBUG("received on: hip_nl_ipsec");
+    HIP_DEBUG("received on: hip_nl_ipsec\n");
 
     if (hip_netlink_receive(&hip_nl_ipsec,
                             hip_netdev_event, NULL)) {
@@ -178,7 +178,7 @@ static int hip_handle_nl_ipsec_sock(UNUSED struct hip_packet_context *ctx)
 
 static int hip_handle_nl_route_sock(UNUSED struct hip_packet_context *ctx)
 {
-    HIP_DEBUG("received on: hip_nl_route");
+    HIP_DEBUG("received on: hip_nl_route\n");
 
     if (hip_netlink_receive(&hip_nl_route,
                             hip_netdev_event, NULL)) {
@@ -228,8 +228,8 @@ out_err:
 
 int hip_get_highest_descriptor(void)
 {
-    int highest_descriptor = 0;
-    hip_ll_node_t *iter    = NULL;
+    int highest_descriptor   = 0;
+    struct hip_ll_node *iter = NULL;
 
     if (hip_sockets) {
         while ((iter = hip_ll_iterate(hip_sockets, iter))) {
@@ -246,7 +246,7 @@ int hip_get_highest_descriptor(void)
 
 void hip_prepare_fd_set(fd_set *read_fdset)
 {
-    hip_ll_node_t *iter = NULL;
+    struct hip_ll_node *iter = NULL;
 
     FD_ZERO(read_fdset);
 
@@ -273,7 +273,7 @@ void hip_prepare_fd_set(fd_set *read_fdset)
  */
 void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
 {
-    hip_ll_node_t *iter = NULL;
+    struct hip_ll_node *iter = NULL;
     int socketfd;
 
     if (hip_sockets) {

@@ -40,19 +40,19 @@
 /**
  * Data set that contains the the collected values
  */
-typedef struct statistics_data {
+struct statistics_data {
     uint32_t num_items;             /* number of items that have been added to the set */
     uint64_t added_values;          /* total amount of added values */
     uint64_t added_squared_values;  /* squared values for standard deviation calculation */
     uint64_t min_value;             /* minimal of all values added to the set */
     uint64_t max_value;             /* maximum of all values added to the set */
-} statistics_data_t;
+};
 
 uint64_t calc_timeval_diff(const struct timeval *timeval_start,
                            const struct timeval *timeval_end);
-int add_statistics_item(statistics_data_t *statistics_data,
+int add_statistics_item(struct statistics_data *statistics_data,
                         const uint64_t item_value);
-void calc_statistics(const statistics_data_t *statistics_data,
+void calc_statistics(const struct statistics_data *statistics_data,
                      uint32_t *num_items,
                      double *min,
                      double *max,

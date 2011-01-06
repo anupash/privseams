@@ -444,34 +444,26 @@ static void insert_new_connection(const struct hip_data *data)
 #endif
 
     //original direction tuple
-    connection->original.state                   = HIP_STATE_UNASSOCIATED;
-    connection->original.direction               = ORIGINAL_DIR;
-    connection->original.esp_tuples              = NULL;
-    connection->original.connection              = connection;
-    connection->original.hip_tuple               = malloc(sizeof(struct hip_tuple));
-    memset(connection->original.hip_tuple, 0, sizeof(struct hip_tuple));
-    connection->original.hip_tuple->tuple        = &connection->original;
-    connection->original.hip_tuple->data         = malloc(sizeof(struct hip_data));
-    memset(connection->original.hip_tuple->data, 0, sizeof(struct hip_data));
-    memcpy(&connection->original.hip_tuple->data->src_hit, &data->src_hit, sizeof(struct in6_addr));
-    memcpy(&connection->original.hip_tuple->data->dst_hit, &data->dst_hit, sizeof(struct in6_addr));
-    connection->original.hip_tuple->data->src_hi = NULL;
-    connection->original.hip_tuple->data->verify = NULL;
+    connection->original.state                    = HIP_STATE_UNASSOCIATED;
+    connection->original.direction                = ORIGINAL_DIR;
+    connection->original.esp_tuples               = NULL;
+    connection->original.connection               = connection;
+    connection->original.hip_tuple                = malloc(sizeof(struct hip_tuple));
+    connection->original.hip_tuple->tuple         = &connection->original;
+    connection->original.hip_tuple->data          = calloc(1, sizeof(struct hip_data));
+    connection->original.hip_tuple->data->src_hit = data->src_hit;
+    connection->original.hip_tuple->data->dst_hit = data->dst_hit;
 
     //reply direction tuple
-    connection->reply.state                      = HIP_STATE_UNASSOCIATED;
-    connection->reply.direction                  = REPLY_DIR;
-    connection->reply.esp_tuples                 = NULL;
-    connection->reply.connection                 = connection;
-    connection->reply.hip_tuple                  = malloc(sizeof(struct hip_tuple));
-    memset(connection->reply.hip_tuple, 0, sizeof(struct hip_tuple));
-    connection->reply.hip_tuple->tuple           = &connection->reply;
-    connection->reply.hip_tuple->data            = malloc(sizeof(struct hip_data));
-    memset(connection->reply.hip_tuple->data, 0, sizeof(struct hip_data));
-    memcpy(&connection->reply.hip_tuple->data->src_hit, &data->dst_hit, sizeof(struct in6_addr));
-    memcpy(&connection->reply.hip_tuple->data->dst_hit, &data->src_hit, sizeof(struct in6_addr));
-    connection->reply.hip_tuple->data->src_hi    = NULL;
-    connection->reply.hip_tuple->data->verify    = NULL;
+    connection->reply.state                    = HIP_STATE_UNASSOCIATED;
+    connection->reply.direction                = REPLY_DIR;
+    connection->reply.esp_tuples               = NULL;
+    connection->reply.connection               = connection;
+    connection->reply.hip_tuple                = malloc(sizeof(struct hip_tuple));
+    connection->reply.hip_tuple->tuple         = &connection->reply;
+    connection->reply.hip_tuple->data          = calloc(1, sizeof(struct hip_data));
+    connection->reply.hip_tuple->data->src_hit = data->dst_hit;
+    connection->reply.hip_tuple->data->dst_hit = data->src_hit;
 
     //add tuples to list
     hip_list = append_to_list(hip_list, connection->original.hip_tuple);
@@ -800,7 +792,7 @@ static int insert_connection_from_update(const struct hip_data *data,
  * @return zero on success and non-zero on error
  */
 static int hipfw_handle_relay_to_r2(const struct hip_common *common,
-                                    const hip_fw_context_t *ctx)
+                                    const struct hip_fw_context *ctx)
 {
     struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
     const struct hip_relay_to *relay_to = NULL; /* same format as relay_from */
@@ -886,7 +878,7 @@ out_err:
 // first check signature then store hi
 static int handle_r1(struct hip_common *common, struct tuple *tuple,
                      DBG int verify_responder,
-                     UNUSED const hip_fw_context_t *ctx)
+                     UNUSED const struct hip_fw_context *ctx)
 {
     struct in6_addr hit;
     const struct hip_host_id *host_id = NULL;
@@ -959,7 +951,7 @@ out_err:
  * @return one on success or zero failure
  */
 static int handle_i2(struct hip_common *common, struct tuple *tuple,
-                     const hip_fw_context_t *ctx)
+                     const struct hip_fw_context *ctx)
 {
     const struct hip_esp_info *spi     = NULL;
     const struct slist *other_dir_esps = NULL;
@@ -1070,7 +1062,7 @@ out_err:
  * @return one if packet was processed successfully or zero otherwise
  */
 static int handle_r2(const struct hip_common *common, struct tuple *tuple,
-                     const hip_fw_context_t *ctx)
+                     const struct hip_fw_context *ctx)
 {
     const struct hip_esp_info *spi    = NULL;
     struct tuple *other_dir           = NULL;
@@ -1254,15 +1246,15 @@ out_err:
  * @todo: SPI parameters did not work earlier and could not be used for creating
  * connection state for updates - check if the situation is still the same
  *
- * @param common the R2 packet
- * @param tuple the connection tracking tuple corresponding to the R2 packet
+ * @param common the UPDATE packet
+ * @param tuple the connection tracking tuple corresponding to the UPDATE packet
  * @param ctx packet context
  *
  * @return one if packet was processed successfully or zero otherwise
  */
 static int handle_update(const struct hip_common *common,
                          struct tuple *tuple,
-                         const hip_fw_context_t *ctx)
+                         const struct hip_fw_context *ctx)
 {
     const struct hip_seq *seq                = NULL;
     const struct hip_esp_info *esp_info      = NULL;
@@ -1446,7 +1438,7 @@ static int handle_close(UNUSED const struct in6_addr *ip6_src,
                         UNUSED const struct in6_addr *ip6_dst,
                         UNUSED const struct hip_common *common,
                         struct tuple *tuple,
-                        UNUSED const hip_fw_context_t *ctx)
+                        UNUSED const struct hip_fw_context *ctx)
 {
     int err = 1;
 
@@ -1484,7 +1476,7 @@ static int handle_close_ack(UNUSED const struct in6_addr *ip6_src,
                             UNUSED const struct in6_addr *ip6_dst,
                             UNUSED const struct hip_common *common,
                             struct tuple *tuple,
-                            UNUSED const hip_fw_context_t *ctx)
+                            UNUSED const struct hip_fw_context *ctx)
 {
     int err = 1;
 
@@ -1528,7 +1520,7 @@ static int check_packet(const struct in6_addr *ip6_src,
                         struct tuple *tuple,
                         const int verify_responder,
                         const int accept_mobile,
-                        hip_fw_context_t *ctx)
+                        struct hip_fw_context *ctx)
 {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     hip_hit_t phit;
@@ -1690,7 +1682,7 @@ out_err:
  *         ESP filtering. 1 means that the packet was not related to relayin
  *         and should just proceed to ESP filtering.
  */
-int hipfw_relay_esp(const hip_fw_context_t *ctx)
+int hipfw_relay_esp(const struct hip_fw_context *ctx)
 {
     struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
     struct udphdr *udph = (struct udphdr *) ((uint8_t *) iph + iph->ihl * 4);
@@ -1765,7 +1757,7 @@ out_err:
  * @param ctx context for the packet
  * @return verdict for the packet (zero means drop, one means pass)
  */
-int filter_esp_state(const hip_fw_context_t *ctx)
+int filter_esp_state(const struct hip_fw_context *ctx)
 {
     const struct in6_addr *dst_addr = NULL;
     const struct in6_addr *src_addr = NULL;
@@ -1845,7 +1837,7 @@ out_err:
  */
 int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
                  struct hip_common *buf, const struct state_option *option,
-                 const int must_accept, hip_fw_context_t *ctx)
+                 const int must_accept, struct hip_fw_context *ctx)
 {
     struct hip_data *data = NULL;
     struct tuple *tuple   = NULL;
@@ -1919,7 +1911,7 @@ out_err:
 int conntrack(const struct in6_addr *ip6_src,
               const struct in6_addr *ip6_dst,
               struct hip_common *buf,
-              hip_fw_context_t *ctx)
+              struct hip_fw_context *ctx)
 {
     struct hip_data *data = NULL;
     struct tuple *tuple   = NULL;

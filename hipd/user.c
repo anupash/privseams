@@ -95,10 +95,41 @@
 
 struct usr_msg_handle {
     uint16_t priority;
-    int    (*func_ptr)(hip_common_t *msg, struct sockaddr_in6 *src);
+    int    (*func_ptr)(struct hip_common *msg, struct sockaddr_in6 *src);
 };
 
-static hip_ll_t *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
+static struct hip_ll *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
+
+/**
+ * Convert a local host id into LSI/HIT information and write the
+ * result into a HIP message as a HIP_PARAM_HIT_INFO parameter.
+ * Interprocess communications only.
+ *
+ * @param entry an hip_host_id_entry structure
+ * @param msg a HIP user message where the HIP_PARAM_HIT_INFO
+ *            parameter will be written
+ * @return zero on success and negative on error
+ */
+static int host_id_entry_to_hit_info(struct hip_host_id_entry *entry, void *msg)
+{
+    struct hip_hit_info data;
+    int err = 0;
+
+    memcpy(&data.lhi, &entry->lhi, sizeof(struct hip_lhi));
+    /* FIXME: algo is 0 in entry->lhi */
+    data.lhi.algo = hip_get_host_id_algo(entry->host_id);
+    memcpy(&data.lsi, &entry->lsi, sizeof(hip_lsi_t));
+
+    HIP_IFEL(hip_build_param_contents(msg,
+                                      &data,
+                                      HIP_PARAM_HIT_INFO,
+                                      sizeof(data)),
+                                      -1,
+                                      "Error building parameter\n");
+
+out_err:
+    return err;
+}
 
 /**
  * Register a function for handling of the specified combination from packet
@@ -114,7 +145,7 @@ static hip_ll_t *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
  *         Error   = -1
  */
 int hip_user_register_handle(const uint8_t msg_type,
-                             int (*handle_func)(hip_common_t *msg,
+                             int (*handle_func)(struct hip_common *msg,
                                                 struct sockaddr_in6 *src),
                              const uint16_t priority)
 {
@@ -152,10 +183,10 @@ out_err:
  *         Error   = -1
  */
 int hip_user_run_handles(const uint8_t msg_type,
-                         hip_common_t *msg,
+                         struct hip_common *msg,
                          struct sockaddr_in6 *src)
 {
-    hip_ll_node_t *iter = NULL;
+    struct hip_ll_node *iter = NULL;
 
     if (!hip_user_msg_handles[msg_type] ||
         !hip_ll_get_size(hip_user_msg_handles[msg_type])) {
@@ -214,11 +245,11 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
  * @param  src the origin of the sender
  * @return zero on success, or negative error value on error.
  */
-int hip_handle_user_msg(hip_common_t *msg,
+int hip_handle_user_msg(struct hip_common *msg,
                         struct sockaddr_in6 *src)
 {
     const hip_hit_t *src_hit           = NULL, *dst_hit = NULL;
-    hip_ha_t *entry                    = NULL;
+    struct hip_hadb_state *entry       = NULL;
     int err                            = 0, msg_type = 0, reti = 0;
     int access_ok                      = 0, is_root = 0;
     const struct hip_tlv_common *param = NULL;
@@ -393,8 +424,8 @@ int hip_handle_user_msg(hip_common_t *msg,
          * the hip daemon wants either to register to a server for
          * additional services or it wants to cancel a registration.
          * Cancellation is identified with a zero lifetime. */
-        const struct hip_reg_request *reg_req = NULL;
-        hip_pending_request_t *pending_req    = NULL;
+        const struct hip_reg_request *reg_req     = NULL;
+        struct hip_pending_request   *pending_req = NULL;
         const uint8_t *reg_types              = NULL;
         const struct in6_addr *dst_ip         = NULL;
         int i                                 = 0, type_count = 0;
@@ -484,7 +515,7 @@ int hip_handle_user_msg(hip_common_t *msg,
                      sizeof(reg_req->lifetime);
 
         for (; i < type_count; i++) {
-            pending_req = malloc(sizeof(hip_pending_request_t));
+            pending_req = malloc(sizeof(struct hip_pending_request));
             if (pending_req == NULL) {
                 HIP_ERROR("Error on allocating memory for a " \
                           "pending registration request.\n");
@@ -554,7 +585,7 @@ int hip_handle_user_msg(hip_common_t *msg,
          * (inserted e.g. with "hipconf add map"). This can be removed
          * after bug id 592135 is resolved. */
         if (entry->state != HIP_STATE_NONE || HIP_STATE_UNASSOCIATED) {
-            hip_common_t *msg2 = calloc(HIP_MAX_PACKET, 1);
+            struct hip_common *msg2 = calloc(HIP_MAX_PACKET, 1);
             HIP_IFE((msg2 == 0), -1);
             HIP_IFE(hip_build_user_hdr(msg2, HIP_MSG_RST, 0), -1);
             HIP_IFE(hip_build_param_contents(msg2,
@@ -667,7 +698,7 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_GET_HITS:
         hip_msg_init(msg);
         hip_build_user_hdr(msg, HIP_MSG_GET_HITS, 0);
-        err = hip_for_each_hi(hip_host_id_entry_to_hit_info, msg);
+        err = hip_for_each_hi(host_id_entry_to_hit_info, msg);
         break;
     case HIP_MSG_GET_HA_INFO:
         hip_msg_init(msg);
@@ -874,7 +905,7 @@ int hip_handle_user_msg(hip_common_t *msg,
     case HIP_MSG_LSI_TO_HIT:
     {
         const hip_lsi_t *lsi;
-        hip_ha_t *ha;
+        struct hip_hadb_state *ha;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1);
         HIP_IFE(!(lsi =  hip_get_param_contents_direct(param)), -1);

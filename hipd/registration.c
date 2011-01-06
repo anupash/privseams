@@ -61,11 +61,11 @@
 #define HIP_PENDING_REQUEST_LIFETIME 120
 
 /** An array for storing all existing services. */
-hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
+struct hip_srv hip_services[HIP_TOTAL_EXISTING_SERVICES];
 /** A linked list for storing pending requests on the client side.
  *  @note This assumes a single threaded model. We are not using mutexes here.
  */
-hip_ll_t pending_requests;
+struct hip_ll pending_requests;
 
 /**
  * initialize services
@@ -103,9 +103,9 @@ void hip_uninit_services(void)
 static int hip_del_pending_request_by_expiration(void)
 {
     int idx = 0;
-    hip_ll_node_t *iter            = NULL;
-    hip_pending_request_t *request = NULL;
-    time_t now                     = time(NULL);
+    time_t now = time(NULL);
+    struct hip_ll_node         *iter    = NULL;
+    struct hip_pending_request *request = NULL;
 
     /* See hip_del_pending_request() for a comment. */
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
@@ -156,7 +156,7 @@ int hip_registration_maintenance(void)
  * @param  status   the status to set i.e. ON or OFF.
  * @return          zero if the status was set succesfully, -1 otherwise.
  */
-int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
+int hip_set_srv_status(uint8_t reg_type, enum hip_srv_status status)
 {
     int i = 0;
 
@@ -175,7 +175,7 @@ int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
  * whose status is ON.
  *
  * Make sure that the size of the target buffer @c active_services is at least
- * HIP_TOTAL_EXISTING_SERVICES * sizeof(hip_srv_t).
+ * HIP_TOTAL_EXISTING_SERVICES * sizeof(struct hip_srv).
  *
  * @param active_services      a target buffer where to put the active
  *                             services.
@@ -185,7 +185,7 @@ int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
  * @return -1 if active_services is NULL, zero otherwise.
  */
 
-int hip_get_active_services(hip_srv_t *active_services,
+int hip_get_active_services(struct hip_srv *active_services,
                             unsigned int *active_service_count)
 {
     if (active_services == NULL) {
@@ -219,7 +219,7 @@ int hip_get_active_services(hip_srv_t *active_services,
  *                 otherwise.
  */
 
-int hip_add_pending_request(hip_pending_request_t *request)
+int hip_add_pending_request(struct hip_pending_request *request)
 {
     int err = 0;
 
@@ -241,17 +241,17 @@ out_err:
  * @return       zero if the pending request was succesfully deleted, -1
  *               otherwise.
  */
-int hip_del_pending_request(hip_ha_t *entry)
+int hip_del_pending_request(struct hip_hadb_state *entry)
 {
     int idx = 0;
-    hip_ll_node_t *iter = NULL;
+    struct hip_ll_node *iter = NULL;
 
     /* Iterate through the linked list. The iterator itself can't be used
      * for deleting nodes from the list. Therefore, we just get the index of
      * the element to be deleted using the iterator and then call
      * hip_ll_del() to do the actual deletion. */
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry == entry) {
+        if (((struct hip_pending_request *) (iter->ptr))->entry == entry) {
             HIP_DEBUG("Deleting and freeing a pending request at " \
                       "index %u.\n", idx);
             hip_ll_del(&pending_requests, idx, free);
@@ -274,11 +274,12 @@ int hip_del_pending_request(hip_ha_t *entry)
  * @return          zero if the pending request was succesfully deleted, -1
  *                  otherwise.
  */
-int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
+int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
+                                    uint8_t reg_type)
 {
     int idx = 0;
-    hip_ll_node_t *iter            = NULL;
-    hip_pending_request_t *request = NULL;
+    struct hip_ll_node         *iter    = NULL;
+    struct hip_pending_request *request = NULL;
 
     /* See hip_del_pending_request() for a comment. */
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
@@ -306,14 +307,14 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
  *               otherwise.
  */
 
-int hip_replace_pending_requests(hip_ha_t *entry_old,
-                                 hip_ha_t *entry_new)
+int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
+                                 struct hip_hadb_state *entry_new)
 {
-    hip_ll_node_t *iter = 0;
+    struct hip_ll_node *iter = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry == entry_old) {
-            ((hip_pending_request_t *) (iter->ptr))->entry = entry_new;
+        if (((struct hip_pending_request *) (iter->ptr))->entry == entry_old) {
+            ((struct hip_pending_request *) (iter->ptr))->entry = entry_new;
             return 0;
         }
     }
@@ -336,17 +337,18 @@ int hip_replace_pending_requests(hip_ha_t *entry_old,
  *                  found, zero otherwise.
  * @see             hip_get_pending_request_count().
  */
-static int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
+static int hip_get_pending_requests(struct hip_hadb_state *entry,
+                                    struct hip_pending_request *requests[])
 {
     if (requests == NULL) {
         return -1;
     }
 
-    hip_ll_node_t *iter = 0;
-    int request_count   = 0;
+    struct hip_ll_node *iter = 0;
+    int request_count        = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry  == entry) {
+        if (((struct hip_pending_request *) (iter->ptr))->entry  == entry) {
             requests[request_count] = iter->ptr;
             request_count++;
         }
@@ -366,13 +368,13 @@ static int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requ
  *               is to be get.
  * @return       the number of pending requests for the host association.
  */
-static int hip_get_pending_request_count(hip_ha_t *entry)
+static int hip_get_pending_request_count(struct hip_hadb_state *entry)
 {
-    hip_ll_node_t *iter = 0;
-    int request_count   = 0;
+    struct hip_ll_node *iter = 0;
+    int request_count        = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-        if (((hip_pending_request_t *) (iter->ptr))->entry == entry) {
+        if (((struct hip_pending_request *) (iter->ptr))->entry == entry) {
             request_count++;
         }
     }
@@ -417,7 +419,8 @@ static int hip_get_pending_request_count(hip_ha_t *entry)
  * @see                       hip_add_registration_client().
  */
 
-static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
+static int hip_add_registration_server(struct hip_hadb_state *entry,
+                                       uint8_t lifetime,
                                        const uint8_t *reg_types,
                                        int type_count,
                                        uint8_t accepted_requests[],
@@ -426,7 +429,7 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
                                        uint8_t failure_types[], int *refused_count)
 {
     int err                  = 0, i = 0;
-    hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
+    struct hip_relrec dummy, *fetch_record = NULL, *new_record = NULL;
     uint8_t granted_lifetime = 0;
 
     memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
@@ -466,7 +469,7 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
                 (*refused_count)++;
             } else {
                 /* Set the type of the relay record. */
-                hip_relrec_type_t type;
+                enum hip_relrec_type type;
                 switch (reg_types[i]) {
                 case HIP_SERVICE_RELAY:
                     type = HIP_RELAY;
@@ -574,7 +577,7 @@ static int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
  * @return                   zero on success, -1 otherwise.
  * @see                      hip_del_registration_client().
  */
-static int hip_del_registration_server(hip_ha_t *entry,
+static int hip_del_registration_server(struct hip_hadb_state *entry,
                                        const uint8_t *reg_types,
                                        int type_count,
                                        uint8_t accepted_requests[],
@@ -584,7 +587,7 @@ static int hip_del_registration_server(hip_ha_t *entry,
                                        int *refused_count)
 {
     int err = 0, i = 0;
-    hip_relrec_t dummy, *fetch_record = NULL;
+    struct hip_relrec dummy, *fetch_record = NULL;
 
     memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
 
@@ -596,7 +599,7 @@ static int hip_del_registration_server(hip_ha_t *entry,
         case HIP_SERVICE_RELAY:
         case HIP_SERVICE_FULLRELAY: {
             /* Set the type of the relay record. */
-            hip_relrec_type_t type_to_delete = 0;
+            enum hip_relrec_type type_to_delete = 0;
 
             /* RVS and relay deletions are identical except the
              * relay record type. */
@@ -700,7 +703,7 @@ static int hip_del_registration_server(hip_ha_t *entry,
  * @return                    zero on success, -1 otherwise.
  * @see                       hip_add_registration_server().
  */
-static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
+static int hip_add_registration_client(struct hip_hadb_state *entry, uint8_t lifetime,
                                        const uint8_t *reg_types,
                                        int type_count)
 {
@@ -791,7 +794,7 @@ static int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
  * @return                   zero on success, -1 otherwise.
  * @see                      hip_del_registration_client().
  */
-static int hip_del_registration_client(hip_ha_t *entry,
+static int hip_del_registration_client(struct hip_hadb_state *entry,
                                        const uint8_t *reg_types,
                                        int type_count)
 {
@@ -865,8 +868,9 @@ static int hip_del_registration_client(hip_ha_t *entry,
  *                   parameter zero otherwise.
  * @see              peer_controls
  */
-int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
-                              hip_common_t *target_msg)
+int hip_handle_param_reg_info(struct hip_hadb_state *entry,
+                              struct hip_common *source_msg,
+                              struct hip_common *target_msg)
 {
     const struct hip_reg_info *reg_info = NULL;
     const uint8_t *reg_types            = NULL;
@@ -947,7 +951,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
             int types_to_request   = 0;
             uint8_t valid_lifetime = 0;
             uint8_t type_array[request_count];
-            hip_pending_request_t *requests[request_count];
+            struct hip_pending_request *requests[request_count];
 
             i = 0;
             hip_get_pending_requests(entry, requests);
@@ -1062,8 +1066,9 @@ static int hip_has_duplicate_services(const uint8_t *reg_types, int type_count)
  * @see              hip_del_registration_server().
  */
 
-int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
-                                 hip_common_t *target_msg)
+int hip_handle_param_reg_request(struct hip_hadb_state *entry,
+                                 struct hip_common *source_msg,
+                                 struct hip_common *target_msg)
 {
     int err                             = 0, type_count = 0, accepted_count = 0, refused_count = 0;
     const struct hip_reg_request *reg_request = NULL;
@@ -1213,7 +1218,8 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
  * @see             hip_add_registration_client().
  * @see             hip_del_registration_client().
  */
-int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
+int hip_handle_param_reg_response(struct hip_hadb_state *entry,
+                                  struct hip_common *msg)
 {
     int err                               = 0, type_count = 0;
     const struct hip_reg_response *reg_response = NULL;
@@ -1305,7 +1311,8 @@ static int hip_get_registration_failure_string(uint8_t failure_type,
  * @return          -1 if the message @c msg did not contain a REG_FAILED
  *                  parameter, zero otherwise.
  */
-int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
+int hip_handle_param_reg_failed(struct hip_hadb_state *entry,
+                                struct hip_common *msg)
 {
     int err                           = 0, type_count = 0, i = 0;
     const struct hip_reg_failed *reg_failed = NULL;
@@ -1406,7 +1413,7 @@ out_err:
  *
  * @todo rename this as hip_handle_param_reg_from()
  */
-int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg)
+int hip_handle_reg_from(struct hip_hadb_state *entry, struct hip_common *msg)
 {
     int err                          = 0;
     const struct hip_reg_from *rfrom = NULL;

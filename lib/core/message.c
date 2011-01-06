@@ -121,7 +121,7 @@ static int hip_peek_recv_total_len(int sockfd,
     unsigned long timeout_left = timeout;
     int hdr_size               = encap_hdr_size + sizeof(struct hip_common);
     char *msg                  = NULL;
-    hip_common_t *hip_hdr      = NULL;
+    struct hip_common *hip_hdr = NULL;
     struct timespec ts;
 
     ts.tv_sec  = 0;
@@ -559,7 +559,7 @@ static int hip_read_control_msg_all(int sockfd,
 
     HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-//    memset(msg_info, 0, sizeof(hip_portpair_t));
+//    memset(msg_info, 0, sizeof(struct hip_portpair));
     memset(&msg, 0, sizeof(msg));
     memset(cbuff, 0, sizeof(cbuff));
     memset(&addr_to, 0, sizeof(addr_to));

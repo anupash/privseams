@@ -50,7 +50,7 @@ uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
                                     const struct hip_crypto_key *authkey,
                                     const int retransmission,
                                     const int direction, const int update,
-                                    hip_ha_t *entry);
+                                    struct hip_hadb_state *entry);
 
 int hip_userspace_ipsec_setup_default_sp_prefix_pair(void);
 

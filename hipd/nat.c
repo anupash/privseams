@@ -91,7 +91,8 @@ static int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
  *                 value is only returned when the creation of the new UPDATE
  *                 message fails in some way.
  */
-static int hip_nat_send_keep_alive(hip_ha_t *entry, UNUSED void *opaque)
+static int hip_nat_send_keep_alive(struct hip_hadb_state *entry,
+                                   UNUSED void *opaque)
 {
     int err                = 0;
     struct hip_common *msg = NULL;
@@ -173,7 +174,7 @@ out_err:
  * Get HIP NAT status.
  * TODO doxygen header
  */
-hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
+hip_transform_suite_t hip_get_nat_mode(struct hip_hadb_state *entry)
 {
     if (entry) {
         return entry->nat_mode;
@@ -191,7 +192,7 @@ hip_transform_suite_t hip_get_nat_mode(hip_ha_t *entry)
  *                 association. This function does @b not insert the host
  *                 association into the host association database.
  */
-static int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
+static int hip_ha_set_nat_mode(struct hip_hadb_state *entry, void *mode)
 {
     int err = 0;
     if (entry && mode != HIP_NAT_MODE_NONE) {

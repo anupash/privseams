@@ -73,7 +73,7 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
                                         void *result)
 {
     FILE *hip_hosts = NULL;
-    List mylist;
+    struct list mylist;
     char line[500];
     int err         = 0, lineno = 0;
     struct in_addr in_addr;

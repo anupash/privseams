@@ -30,7 +30,7 @@ EXTRA_DIST =  .vimrc debian doc patches version.h
 EXTRA_DIST += packaging process_modules.py tools/maintainer
 EXTRA_DIST += $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
-EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh))
+EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/tools/,*.cfg *.pl *.sh *.xml))
 EXTRA_DIST += $(wildcard $(addprefix $(srcdir)/firewall/,*.cfg))
 EXTRA_DIST += $(HIPL_HEADER_LIST)
 
@@ -278,7 +278,7 @@ doc/HOWTO.txt: doc/HOWTO.xml
 
 CLEANFILES = doc/HOWTO.html doc/HOWTO.txt
 clean-local:
-	rm -rf doc/doxy debbuild rpmbuild
+	rm -rf doc/doxy rpmbuild
 
 bin deb rpm syncrepo syncrepo_deb syncrepo_rpm: $(srcdir)/version.h
 	@srcdir@/packaging/create-package.sh $@

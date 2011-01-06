@@ -54,7 +54,7 @@
  */
 static void add_udp_header(struct udphdr *udp_hdr,
                            const uint16_t packet_len,
-                           const hip_sa_entry_t *entry)
+                           const struct hip_sa_entry *entry)
 {
     udp_hdr->source = htons(entry->src_port);
 
@@ -146,7 +146,7 @@ static int hip_payload_encrypt(unsigned char *in,
                                const uint16_t in_len,
                                unsigned char *out,
                                uint16_t *out_len,
-                               hip_sa_entry_t *entry)
+                               struct hip_sa_entry *entry)
 {
     /* elen is length of data to encrypt */
     uint16_t elen                 = in_len;
@@ -351,7 +351,7 @@ out_err:
  */
 static int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
                                unsigned char *out, uint8_t *out_type, uint16_t *out_len,
-                               hip_sa_entry_t *entry)
+                               struct hip_sa_entry *entry)
 {
     /* elen is length of data to encrypt */
     uint16_t elen                 = 0;
@@ -546,7 +546,8 @@ out_err:
  * @param esp_packet_len        packet length
  * @return                      0, if correct, else != 0
  */
-int hip_beet_mode_output(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
+int hip_beet_mode_output(const struct hip_fw_context *ctx,
+                         struct hip_sa_entry *entry,
                          const struct in6_addr *preferred_local_addr,
                          const struct in6_addr *preferred_peer_addr,
                          unsigned char *esp_packet, uint16_t *esp_packet_len)
@@ -738,7 +739,8 @@ out_err:
  * @param decrypted_packet_len  packet length of decrypted packet
  * @return                      0, if correct, != 0 else
  */
-int hip_beet_mode_input(const hip_fw_context_t *ctx, hip_sa_entry_t *entry,
+int hip_beet_mode_input(const struct hip_fw_context *ctx,
+                        struct hip_sa_entry *entry,
                         unsigned char *decrypted_packet,
                         uint16_t *decrypted_packet_len)
 {

@@ -635,11 +635,23 @@ EMACS
 =====
 
 To adjust emacs to the right spacing conventions for the code, you can
-add the following lines to your .emacs configuration file:
+add the following lines to your *empty* ~/.emacs configuration file:
 
 (setq c-default-style "k&r")
 (setq-default c-basic-offset 4)
 (setq-default indent-tabs-mode nil)
+
+If you have other configurations in your ~/.emacs, may need to
+surround this by c-mode-hook and lambda function:
+
+(setq c-mode-hook
+    (function (lambda ()
+        (setq c-default-style "k&r")
+            (setq indent-tabs-mode nil)
+            (setq c-basic-offset 4)
+            (setq c-indent-level 8))
+    )
+) 
 
 ECLIPSE
 ========
@@ -904,7 +916,7 @@ for variable commenting, lets move onto function commenting. Example 4.
  * @note              the entry must not be NULL
  * @see               hip_clear_type()
  */
-int hip_set_type(hip_ha_t *entry, int type_number);
+int hip_set_type(struct hip_hadb_state *entry, int type_number);
 
 Notice how that whole commenting is just before the function block. The
 function commenting block contains three elements, the brief description, the
@@ -924,11 +936,11 @@ doxygen warning, try "@c" which results in courier too, but doesn't confer
 semantics like "@a". However, be careful not to add your own special commands
 by accidentally typing something like @entry.
 
-Function comment blocks must be placed to the c-source file.  Doxygen
-comment blocks have a tendency to bloat the code. Generally, if
-possible, place the doxygen comment in the header file instead of the
-c-file.  This applies to all Doxygen comments, not just function
-comments.
+Function comment blocks must be placed to the c-source file. Generally, if
+possible, place the doxygen comment in the c-source file instead of the
+c-header file. However, if no implementation exists in the c-source file, you
+must document the code in the c-header file (e.g., inline function in c-header
+file). This applies to all Doxygen comments, not just function comments.
 
 To ensure correct cross-referencing, global variables should be prepended
 by :: and functions appended by () in comment blocks, like this:
@@ -1150,7 +1162,6 @@ Updating Ubuntu Server Repository
 
 You must do the following things first at the server:
 * apt-get install <required packages>
-* apt-get install pax
 
 Install the following tool to the host where building packages:
 * apt-get install dpkg-scanpackages

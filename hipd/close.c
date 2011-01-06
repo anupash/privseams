@@ -67,7 +67,7 @@
  * @param opaque a nonce to be included in the CLOSE
  * @return zero on success or negative on error
  */
-static int hip_xmit_close(hip_ha_t *entry, void *opaque)
+static int hip_xmit_close(struct hip_hadb_state *entry, void *opaque)
 {
     int err                      = 0, mask = 0;
     int delete_ha_info           = *(int *) ((uint8_t *)opaque + sizeof(hip_hit_t));
@@ -370,7 +370,7 @@ int hip_close_send_response(UNUSED const uint8_t packet_type,
  * then we need to delete the relay record matching the sender's HIT. */
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status()) {
-        hip_relrec_t dummy;
+        struct hip_relrec dummy;
         memcpy(&(dummy.hit_r), &(ctx->input_msg->hits),
                sizeof(ctx->input_msg->hits));
         hip_relht_rec_free_doall(&dummy);
@@ -518,7 +518,7 @@ out_err:
  * @param opaque unused, required for compatibility with hip_for_each_ha()
  * @return zero on success or negative on error
  */
-int hip_purge_closing_ha(hip_ha_t *ha, UNUSED void *opaque)
+int hip_purge_closing_ha(struct hip_hadb_state *ha, UNUSED void *opaque)
 {
     int err = 0;
 

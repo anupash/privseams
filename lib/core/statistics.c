@@ -61,7 +61,7 @@ static uint64_t timeval_to_uint64(const struct timeval *timeval)
  * @param scaling_factor    scale samples by this constant factor
  * @return                  mean value
  */
-static double calc_avg(const statistics_data_t *statistics_data,
+static double calc_avg(const struct statistics_data *statistics_data,
                        const double scaling_factor)
 {
     double avg = 0.0;
@@ -84,7 +84,7 @@ static double calc_avg(const statistics_data_t *statistics_data,
  * @param scaling_factor    scale samples by this constant factor
  * @return                  standard deviation
  */
-static double calc_std_dev(const statistics_data_t *statistics_data,
+static double calc_std_dev(const struct statistics_data *statistics_data,
                            const double scaling_factor)
 {
     double std_dev = 0.0;
@@ -142,7 +142,7 @@ uint64_t calc_timeval_diff(const struct timeval *timeval_start,
  * @param item_value        sample
  * @return                  0 on success, -1 otherwise
  */
-int add_statistics_item(statistics_data_t *statistics_data,
+int add_statistics_item(struct statistics_data *statistics_data,
                         const uint64_t item_value)
 {
     int err = 0;
@@ -197,7 +197,7 @@ out_err:
  * @param std_dev      standard deviation from the mean value
  * @param scaling_factor    scale values by this constant factor
  */
-void calc_statistics(const statistics_data_t *statistics_data,
+void calc_statistics(const struct statistics_data *statistics_data,
                      uint32_t *num_items,
                      double *min,
                      double *max,

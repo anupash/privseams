@@ -114,7 +114,7 @@ out_err:
  * @param ctx the packet context
  * @param verdict the verdict to assign for the packet
  */
-static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx,
+static void hip_fw_add_non_hip_peer(const struct hip_fw_context *ctx,
                                     const int verdict)
 {
     char command[64];
@@ -156,10 +156,10 @@ static void hip_fw_add_non_hip_peer(const hip_fw_context_t *ctx,
  * @param default_verdict default verdict for the packet
  * @return      the verdict for the packet
  */
-int hip_fw_handle_outgoing_system_based_opp(const hip_fw_context_t *ctx,
+int hip_fw_handle_outgoing_system_based_opp(const struct hip_fw_context *ctx,
                                             const int default_verdict)
 {
-    fw_cache_hl_t *entry_peer = NULL;
+    struct hip_hadb_user_info_state *entry_peer = NULL;
     int verdict;
 
     HIP_DEBUG("\n");

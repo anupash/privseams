@@ -24,63 +24,62 @@ OPTIONS="-bklpF"
 
 # Run this before killing hipfw because it also removes dangling rules!
 flush_iptables() {
-    iptables -D INPUT -j HIPFW-INPUT 2>/dev/null
-    iptables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null
-    iptables -D FORWARD -j HIPFW-FORWARD 2>/dev/null
-    ip6tables -D INPUT -j HIPFW-INPUT 2>/dev/null
-    ip6tables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null
-    ip6tables -D FORWARD -j HIPFW-FORWARD 2>/dev/null
+    iptables  -D INPUT   -j HIPFW-INPUT   2> /dev/null
+    iptables  -D OUTPUT  -j HIPFW-OUTPUT  2> /dev/null
+    iptables  -D FORWARD -j HIPFW-FORWARD 2> /dev/null
+    ip6tables -D INPUT   -j HIPFW-INPUT   2> /dev/null
+    ip6tables -D OUTPUT  -j HIPFW-OUTPUT  2> /dev/null
+    ip6tables -D FORWARD -j HIPFW-FORWARD 2> /dev/null
 
     # Flush in case there are some residual rules
-    iptables -F HIPFW-INPUT 2>/dev/null
-    iptables -F HIPFW-OUTPUT 2>/dev/null
-    iptables -F HIPFW-FORWARD 2>/dev/null
-    ip6tables -F HIPFW-INPUT 2>/dev/null
-    ip6tables -F HIPFW-OUTPUT 2>/dev/null
-    ip6tables -F HIPFW-FORWARD 2>/dev/null
+    iptables  -F HIPFW-INPUT   2> /dev/null
+    iptables  -F HIPFW-OUTPUT  2> /dev/null
+    iptables  -F HIPFW-FORWARD 2> /dev/null
+    ip6tables -F HIPFW-INPUT   2> /dev/null
+    ip6tables -F HIPFW-OUTPUT  2> /dev/null
+    ip6tables -F HIPFW-FORWARD 2> /dev/null
 
-    iptables -X HIPFW-INPUT 2>/dev/null
-    iptables -X HIPFW-OUTPUT 2>/dev/null
-    iptables -X HIPFW-FORWARD 2>/dev/null
-    ip6tables -X HIPFW-INPUT 2>/dev/null
-    ip6tables -X HIPFW-OUTPUT 2>/dev/null
-    ip6tables -X HIPFW-FORWARD 2>/dev/null
+    iptables  -X HIPFW-INPUT   2> /dev/null
+    iptables  -X HIPFW-OUTPUT  2> /dev/null
+    iptables  -X HIPFW-FORWARD 2> /dev/null
+    ip6tables -X HIPFW-INPUT   2> /dev/null
+    ip6tables -X HIPFW-OUTPUT  2> /dev/null
+    ip6tables -X HIPFW-FORWARD 2> /dev/null
 }
 
-start()
-{
-        echo -n $"Starting $BASENAME:"
-        $DAEMON $OPTIONS && success || failure
-        RETVAL=$?
-        [ "$RETVAL" = 0 ] && touch $LOCK_FILE
-        echo
+start() {
+    echo -n $"Starting $BASENAME:"
+    $DAEMON $OPTIONS && success || failure
+    RETVAL=$?
+    [ "$RETVAL" = 0 ] && touch $LOCK_FILE
+    echo
 }
 
-stop()
-{
-        echo -n $"Stopping $BASENAME:"
-        killproc $DAEMON
-        RETVAL=$?
-        [ "$RETVAL" = 0 ] && rm -f $LOCK_FILE
-        echo
+stop() {
+    echo -n $"Stopping $BASENAME:"
+    killproc $DAEMON
+    RETVAL=$?
+    [ "$RETVAL" = 0 ] && rm -f $LOCK_FILE
+    echo
 }
 
 case "$1" in
-        start)
-                start
-                ;;
-        stop)
-                flush_iptables
-                stop
-                ;;
-        restart)
-                flush_iptables
-                stop
-                sleep 3
-                start
-                ;;
-        *)
-                echo $"Usage: $0 {start|stop}"
-                RETVAL=1
+    start)
+        start
+        ;;
+    stop)
+        flush_iptables
+        stop
+        ;;
+    restart)
+        flush_iptables
+        stop
+        sleep 3
+        start
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|restart}"
+        RETVAL=1
 esac
+
 exit $RETVAL

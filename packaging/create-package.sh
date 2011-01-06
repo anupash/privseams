@@ -1,4 +1,27 @@
 #!/bin/sh
+#
+# Copyright (c) 2010 Aalto University and RWTH Aachen University.
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
 
 ############### helper functions #####################
 
@@ -27,7 +50,6 @@ syncrepo()
 {
     $INDEXING_CMD
 
-    NAME=hipl
     REPO_SERVER=hipl.hiit.fi
     REPO_USER=hipl
 
@@ -38,38 +60,33 @@ syncrepo()
     ssh  ${REPO_USER}@${REPO_SERVER} "rm -f ${PKG_SERVER_DIR}/*.${DISTRO_PKG_SUFFIX}"
 
     # Copy all packages and repo index to the repository
-    rsync -uvr $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
+    rsync -uvr $PKG_DIR/hipl-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
 }
 
-build_package()
+build_rpm()
 {
     rm -rf $BUILDDIR
-    for SUBDIR in $SUBBUILDDIRS; do
+    for SUBDIR in BUILD SOURCES SPECS RPMS SRPMS; do
         mkdir -p $BUILDDIR/$SUBDIR
     done
 
+    SPECFILE=$BUILDDIR/SPECS/hipl.spec
     RELEASE=$(grep VCS_REVISION $SRCDIR/version.h | cut -d\" -f2)
 
     echo "Version: $VERSION"  > $SPECFILE
     echo "Release: $RELEASE" >> $SPECFILE
     echo "%define _topdir $BUILDDIR" >> $SPECFILE
-    cat $SPECFILE_TEMPLATE   >> $SPECFILE
+    cat $SRCDIR_PACKAGING/hipl-rpm.spec >> $SPECFILE
 
     make dist > /dev/null
     cp hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
 
-    $PACKAGING_CMD
-}
-
-build_rpm()
-{
     rpmbuild --target $ARCH -ba $SPECFILE
 }
 
 build_deb()
 {
-    # http://www.deepnet.cx/debbuild/
-    $SRCDIR_PACKAGING/debbuild --buildroot $BUILDDIR -ba $SPECFILE
+    dpkg-buildpackage -us -uc -I.bzr -j32 -tc
 }
 
 ############### Main program #####################
@@ -83,27 +100,20 @@ REPO_BASE=/var/www/packages/html
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
-    DISTRO=debian
     DISTRO_RELEASE=$(lsb_release -c | cut -f2)
     ARCH=$(dpkg --print-architecture)
-    BUILDDIR=$PWD/debbuild
-    SUBBUILDDIRS="BUILD SOURCES SPECS DEBS SDEBS"
-    PKG_DIR=$BUILDDIR/DEBS/$ARCH
+    PKG_DIR=..
     PKG_SERVER_DIR=$REPO_BASE/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
-    SPECFILE_TEMPLATE=$SRCDIR_PACKAGING/hipl-deb.spec
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
     INDEXING_CMD=mkindex_deb
     PACKAGING_CMD=build_deb
 elif test -r /etc/redhat-release; then
-    DISTRO=redhat
     DISTRO_RELEASE=$(lsb_release -r | cut -f2)
     ARCH=$(uname -i)
     BUILDDIR=$PWD/rpmbuild
-    SUBBUILDDIRS="BUILD SOURCES SPECS RPMS SRPMS"
     PKG_DIR=$BUILDDIR/RPMS/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
-    SPECFILE_TEMPLATE=$SRCDIR_PACKAGING/hipl-rpm.spec
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
     INDEXING_CMD=mkindex_rpm
@@ -117,7 +127,6 @@ else
 fi
 
 PKG_INDEX=$PKG_DIR/$PKG_INDEX_NAME
-SPECFILE=$BUILDDIR/SPECS/hipl.spec
 
 # Determine action
 case $1 in
@@ -128,11 +137,11 @@ case $1 in
     syncrepo)
         syncrepo ;;
     deb)
-        PACKAGING_CMD=build_deb build_package ;;
+        build_deb ;;
     rpm)
-        PACKAGING_CMD=build_rpm build_package ;;
+        build_rpm ;;
     bin)
-        build_package ;;
+        $PACKAGING_CMD ;;
     *)
         die "usage: $0 <syncrepo|syncrepo_deb|syncrepo_rpm|deb|rpm|bin>"
 esac

@@ -31,7 +31,7 @@ void hip_beetdb_put_entry(void *entry);
 void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec);
 int hip_xfrm_dst_init(struct in6_addr *dst_hit, struct in6_addr *dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr,
-                    uint32_t spi, int state, int dir, struct hip_portpair_t *sa_info);
+                    uint32_t spi, int state, int dir, struct hip_portpair *sa_info);
 int hip_xfrm_delete(hip_hit_t *hit, uint32_t spi, int dir);
 
 /* Setups the SA (with a given SPI if so said) */
@@ -43,10 +43,10 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
                     const struct hip_crypto_key *enckey,
                     const struct hip_crypto_key *authkey,
                     const int direction, const int update,
-                    hip_ha_t *entry);
+                    struct hip_hadb_state *entry);
 
 void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
-                   const int direction, hip_ha_t *entry);
+                   const int direction, struct hip_hadb_state *entry);
 
 
 int hip_setup_hit_sp_pair(const hip_hit_t *src_hit,

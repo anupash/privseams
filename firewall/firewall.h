@@ -33,6 +33,7 @@ extern int filter_traffic;
 extern int hip_kernel_ipsec_fallback;
 extern int hip_lsi_support;
 extern int esp_relay;
+extern int hip_esp_protection;
 extern int use_midauth;
 extern int hip_fw_sock;
 extern int hip_fw_async_sock;
@@ -40,7 +41,6 @@ extern int system_based_opp_mode;
 
 int hip_fw_init_esp_relay(void);
 void hip_fw_uninit_esp_relay(void);
-void set_stateful_filtering(void);
 hip_hit_t *hip_fw_get_default_hit(void);
 hip_lsi_t *hip_fw_get_default_lsi(void);
 

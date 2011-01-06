@@ -30,6 +30,4 @@
 
 int hip_build_locators_old(struct hip_common *msg);
 
-void hip_empty_oppipdb_old(void);
-
 #endif /* HIP_MODULES_UPDATE_HIPD_UPDATE_H */

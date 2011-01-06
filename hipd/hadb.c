@@ -120,7 +120,7 @@ struct hip_peer_map_info {
  * @param ha  rec a pointer to a host assosiation.
  * @return    the calculated hash or zero if ha, hit_our or hit_peer is NULL.
  */
-static unsigned long hip_ha_hash(const hip_ha_t *ha)
+static unsigned long hip_ha_hash(const struct hip_hadb_state *ha)
 {
     hip_hit_t hitpair[2];
     uint8_t hash[HIP_AH_SHA_LEN];
@@ -142,7 +142,7 @@ static unsigned long hip_ha_hash(const hip_ha_t *ha)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-STATIC_IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
+STATIC_IMPLEMENT_LHASH_HASH_FN(hip_ha, struct hip_hadb_state)
 
 /**
  * a comparison function for the hash table algorithm to distinguish
@@ -158,7 +158,8 @@ STATIC_IMPLEMENT_LHASH_HASH_FN(hip_ha, hip_ha_t)
  * @param ha2 a HA to compare for equality
  * @return zero if the HAs match or non-zero otherwise
  */
-static int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
+static int hip_ha_cmp(const struct hip_hadb_state *ha1,
+                      const struct hip_hadb_state *ha2)
 {
     int result_hit_our = 0;
 
@@ -174,7 +175,7 @@ static int hip_ha_cmp(const hip_ha_t *ha1, const hip_ha_t *ha2)
 }
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
-STATIC_IMPLEMENT_LHASH_COMP_FN(hip_ha, hip_ha_t)
+STATIC_IMPLEMENT_LHASH_COMP_FN(hip_ha, struct hip_hadb_state)
 
 /**
  * build a digest of a peer address
@@ -220,7 +221,7 @@ static int hip_match_peer_addr(const void *ptr1, const void *ptr2)
  *
  * @param entry the host association
  */
-static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
+static void hip_hadb_set_lsi_pair(struct hip_hadb_state *entry)
 {
     hip_lsi_t aux;
     //Assign value to lsi_our searching in hidb by the correspondent hit
@@ -235,16 +236,17 @@ static void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 }
 
 /**
- * This function searches for a hip_ha_t entry from the hip_hadb_hit
- * by a HIT pair (local,peer)
+ * This function searches for a struct hip_hadb_state entry from the
+ * hip_hadb_hit by a HIT pair (local,peer).
  *
  * @param hit local HIT
  * @param hit2 peer HIT
  * @return the corresponding host association or NULL if not found
  */
-hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
+struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit,
+                                            const hip_hit_t *hit2)
 {
-    hip_ha_t ha, *ret = NULL;
+    struct hip_hadb_state ha, *ret = NULL;
 
     memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
     memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
@@ -282,11 +284,11 @@ hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2)
  * @note Don't use this function because it does not deal properly
  * with multiple source hits. Prefer hip_hadb_find_byhits() function.
  */
-hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
+struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
     hip_list_t *item, *tmp;
     struct hip_host_id_entry *e;
-    hip_ha_t *entry = NULL;
+    struct hip_hadb_state *entry = NULL;
     hip_hit_t our_hit;
     int i;
 
@@ -302,7 +304,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
     /* and then with rest (actually default HIT is here redundantly) */
     list_for_each_safe(item, tmp, hip_local_hostid_db, i)
     {
-        e     = (struct hip_host_id_entry *) list_entry(item);
+        e = list_entry(item);
         ipv6_addr_copy(&our_hit, &e->lhi.hit);
         entry = hip_hadb_find_byhits(hit, &our_hit);
         if (!entry) {
@@ -324,13 +326,13 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
  * ipv6_addr_any). </b> When @c ha is NULL or if @c ha->hit_peer is
  * ipv6_addr_any this function will kill the HIP daemon.
  *
- * @return The state of the HIP association (hip_hastate_t).
+ * @return The state of the HIP association (enum hip_hastate).
  * @note   For multithreaded model: this function assumes that @c ha is locked.
  */
-int hip_hadb_insert_state(hip_ha_t *ha)
+int hip_hadb_insert_state(struct hip_hadb_state *ha)
 {
-    hip_hastate_t st = 0;
-    hip_ha_t *tmp    = NULL;
+    enum   hip_hastate     st  = 0;
+    struct hip_hadb_state *tmp = NULL;
 
     HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
 
@@ -459,7 +461,7 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
                                     const char *peer_hostname)
 {
     int err                      = 0;
-    hip_ha_t *entry              = NULL, *aux = NULL;
+    struct hip_hadb_state *entry = NULL, *aux = NULL;
     hip_lsi_t lsi_aux;
     in_port_t nat_udp_port_local = hip_get_local_nat_udp_port();
     in_port_t nat_udp_port_peer  = hip_get_peer_nat_udp_port();
@@ -684,7 +686,7 @@ out_err:
  *
  * @param  entry pointer to a host association
  */
-static int hip_hadb_init_entry(hip_ha_t *entry)
+static int hip_hadb_init_entry(struct hip_hadb_state *entry)
 {
     int   err          = 0;
 
@@ -722,9 +724,9 @@ out_err:
  *
  * @return NULL if memory allocation failed, otherwise the HA.
  */
-hip_ha_t *hip_hadb_create_state(void)
+struct hip_hadb_state *hip_hadb_create_state(void)
 {
-    hip_ha_t *entry = NULL;
+    struct hip_hadb_state *entry = NULL;
 
     if (!(entry = malloc(sizeof(struct hip_hadb_state)))) {
         return NULL;
@@ -756,7 +758,7 @@ hip_ha_t *hip_hadb_create_state(void)
  *
  * @return 0 if some of the addresses was copied successfully, else < 0.
  */
-int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
+int hip_hadb_get_peer_addr(struct hip_hadb_state *entry, struct in6_addr *addr)
 {
     int err = 0;
 
@@ -777,7 +779,8 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
  *
  * @return zero on success and negative on error
  */
-int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
+int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
+                           const struct in6_addr *new_addr,
                            uint32_t spi, uint32_t lifetime, int state,
                            in_port_t port)
 {
@@ -787,8 +790,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
 
     /* assumes already locked entry */
 
-    /* check if we are adding the peer's address during the base
-     *          * exchange */
+    /* check if we are adding the peer's address during the base exchange */
     if (spi == 0) {
         HIP_DEBUG("SPI is 0, set address as the bex address\n");
         if (!ipv6_addr_any(&entry->peer_addr)) {
@@ -800,9 +802,9 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
         HIP_DEBUG_IN6ADDR("entry->peer_address \n", &entry->peer_addr);
 
         if (entry->peer_addr_list_to_be_added) {
-            /*Adding the peer address to the entry->peer_addr_list_to_be_added
-             *                          * So that later aftre base exchange it can be transfered to
-             *                                                   * SPI OUT's peer address list*/
+            /* Adding the peer address to the entry->peer_addr_list_to_be_added
+             * so that later after base exchange it can be transferred to
+             * SPI OUT's peer address list */
             a_item = malloc(sizeof(struct hip_peer_addr_list_item));
             if (!a_item) {
                 HIP_ERROR("item malloc failed\n");
@@ -812,7 +814,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
             a_item->lifetime      = lifetime;
             ipv6_addr_copy(&a_item->address, new_addr);
             a_item->address_state = state;
-            do_gettimeofday(&a_item->modified_time);
+            gettimeofday(&a_item->modified_time, NULL);
 
             list_add(a_item, entry->peer_addr_list_to_be_added);
         }
@@ -835,7 +837,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
     a_item->port          = port;
     ipv6_addr_copy(&a_item->address, new_addr);
     a_item->address_state = state;
-    do_gettimeofday(&a_item->modified_time);
+    gettimeofday(&a_item->modified_time, NULL);
 
     list_add(a_item, entry->peer_addresses_old);
 
@@ -852,7 +854,7 @@ out_err:
  *           (SPI and HIT). This function should only be called when absolutely
  *           sure that nobody else has a reference to it.
  */
-static void hip_hadb_delete_state(hip_ha_t *ha)
+static void hip_hadb_delete_state(struct hip_hadb_state *ha)
 {
     hip_list_t *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr_li = NULL;
@@ -884,7 +886,7 @@ static void hip_hadb_delete_state(hip_ha_t *ha)
 
     if (ha->peer_addr_list_to_be_added) {
         list_for_each_safe(item, tmp, ha->peer_addr_list_to_be_added, i) {
-            addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
+            addr_li = list_entry(item);
             list_del(addr_li, ha->peer_addr_list_to_be_added);
             free(addr_li);
             HIP_DEBUG_HIT("SPI out address", &addr_li->address);
@@ -894,7 +896,7 @@ static void hip_hadb_delete_state(hip_ha_t *ha)
 
     if (ha->peer_addresses_old) {
         list_for_each_safe(item, tmp, ha->peer_addresses_old, i) {
-            addr_li = (struct hip_peer_addr_list_item *) list_entry(item);
+            addr_li = list_entry(item);
             list_del(addr_li, ha->peer_addresses_old);
             free(addr_li);
             HIP_DEBUG_HIT("SPI out address", &addr_li->address);
@@ -912,10 +914,10 @@ static void hip_hadb_delete_state(hip_ha_t *ha)
  * @param ha the ha to deinitiliaze and deallocate
  * @return zero on success and negative on error
  */
-int hip_del_peer_info_entry(hip_ha_t *ha)
+int hip_del_peer_info_entry(struct hip_hadb_state *ha)
 {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    hip_opp_block_t *opp_entry = NULL;
+    struct hip_opp_blocking_request *opp_entry = NULL;
 #endif
 
     HIP_LOCK_HA(ha);
@@ -954,7 +956,7 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
  */
 int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
 {
-    hip_ha_t *ha;
+    struct hip_hadb_state *ha;
 
     ha = hip_hadb_find_byhits(our_hit, peer_hit);
     if (!ha) {
@@ -971,7 +973,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
  * @param peer the remote host identifier
  * @return zero on success and negative on error
  */
-int hip_init_peer(hip_ha_t *entry,
+int hip_init_peer(struct hip_hadb_state *entry,
                   const struct hip_host_id *peer)
 {
     int err = 0;
@@ -1028,7 +1030,7 @@ out_err:
  *         @c entry
  * @return zero if success, negative otherwise.
  */
-int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
+int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
 {
     int err = 0, algo = 0;
 
@@ -1107,7 +1109,8 @@ void hip_init_hadb(void)
  *       not be allowed to co-exist. Therefore the logical OR might not be enough
  *       for all controls.
  */
-void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
+void hip_hadb_set_local_controls(struct hip_hadb_state *entry,
+                                 hip_controls_t mask)
 {
     if (entry != NULL) {
         switch (mask) {
@@ -1136,7 +1139,8 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
  *       not be allowed to co-exist. Therefore the logical OR might not be enough
  *       for all controls.
  */
-void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
+void hip_hadb_set_peer_controls(struct hip_hadb_state *entry,
+                                hip_controls_t mask)
 {
     if (entry != NULL) {
         switch (mask) {
@@ -1162,14 +1166,15 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
     }
 }
 
-void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
+void hip_hadb_cancel_local_controls(struct hip_hadb_state *entry,
+                                    hip_controls_t mask)
 {
     if (entry != NULL) {
         entry->local_controls &= (~mask);
     }
 }
 
-static void hip_hadb_rec_free_doall(hip_ha_t *rec)
+static void hip_hadb_rec_free_doall(struct hip_hadb_state *rec)
 {
     if (hadb_hit == NULL || rec == NULL) {
         return;
@@ -1179,7 +1184,7 @@ static void hip_hadb_rec_free_doall(hip_ha_t *rec)
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
-STATIC_IMPLEMENT_LHASH_DOALL_FN(hip_hadb_rec_free, hip_ha_t)
+STATIC_IMPLEMENT_LHASH_DOALL_FN(hip_hadb_rec_free, struct hip_hadb_state)
 
 /**
  * Uninitialize host association database
@@ -1222,10 +1227,11 @@ void hip_delete_all_sp(void)
  *               applying the mapper function to the last element in the hash
  *               table.
  */
-int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
+int hip_for_each_ha(int (*func)(struct hip_hadb_state *entry, void *opaq),
+                    void *opaque)
 {
     int i = 0, fail = 0;
-    hip_ha_t *this;
+    struct hip_hadb_state *this;
     hip_list_t *item, *tmp;
 
     if (!func) {
@@ -1235,7 +1241,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
     HIP_LOCK_HT(&hadb_hit);
     list_for_each_safe(item, tmp, hadb_hit, i)
     {
-        this = (hip_ha_t *) list_entry(item);
+        this = list_entry(item);
         /* @todo: lock ha when we have threads */
         fail = func(this, opaque);
         /* @todo: unlock ha when we have threads */
@@ -1256,7 +1262,7 @@ out_err:
  * @param cntr a counter used for counting open host associations
  * @return zero
  */
-static int hip_count_one_entry(hip_ha_t *entry, void *cntr)
+static int hip_count_one_entry(struct hip_hadb_state *entry, void *cntr)
 {
     int *counter = cntr;
     if (entry->state == HIP_STATE_CLOSING ||
@@ -1288,11 +1294,11 @@ int hip_count_open_connections(void)
  *             host association will be written
  * @return zero on success and negative on error
  */
-int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
+int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
 {
     int err                = 0;
     struct hip_hadb_user_info_state hid;
-    struct hip_common *msg = (struct hip_common *) opaq;
+    struct hip_common *msg = opaq;
 
     memset(&hid, 0, sizeof(hid));
     hid.state = entry->state;
@@ -1352,17 +1358,17 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
  * @return           a pointer to a matching host association or NULL if
  *                   a matching host association was not found.
  */
-hip_ha_t *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_hit,
-                                            const hip_hit_t *rvs_ip)
+struct hip_hadb_state *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_hit,
+                                                         const hip_hit_t *rvs_ip)
 {
     int i            = 0;
-    hip_ha_t *this   = NULL, *result = NULL;
+    struct hip_hadb_state *this   = NULL, *result = NULL;
     hip_list_t *item = NULL, *tmp = NULL;     //
 
     HIP_LOCK_HT(&hadb_hit);
     list_for_each_safe(item, tmp, hadb_hit, i)
     {
-        this = (hip_ha_t *) list_entry(item);
+        this = list_entry(item);
         /* @todo: lock ha when we have threads */
         if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
             (ipv6_addr_cmp(rvs_ip, &this->peer_addr) == 0)) {
@@ -1386,10 +1392,10 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_hit,
  * @return zero
  * @note this function overwrites @c lsi, beware!
  */
-static int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
+static int hip_hadb_find_lsi(struct hip_hadb_state *entry, void *lsi)
 {
     int exist_lsi;
-    exist_lsi = hip_lsi_are_equal(&entry->lsi_peer, (hip_lsi_t *) lsi);
+    exist_lsi = hip_lsi_are_equal(&entry->lsi_peer, lsi);
     if (exist_lsi) {
         memset(lsi, 0, sizeof(lsi));
     }
@@ -1446,13 +1452,13 @@ static int lsi_assigned(struct in_addr addr)
 int hip_generate_peer_lsi(hip_lsi_t *lsi)
 {
     struct in_addr lsi_prefix;
-    uint8_t hostname[HOST_NAME_MAX];
+    char hostname[HOST_NAME_MAX];
     int idx = 1;
 
     do {
         lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX | idx++);
     } while (lsi_assigned(lsi_prefix) ||
-             !hip_map_lsi_to_hostname_from_hosts(lsi, (char *) hostname));
+             !hip_map_lsi_to_hostname_from_hosts(lsi, hostname));
 
     *lsi = lsi_prefix;
     return 0;
@@ -1470,15 +1476,16 @@ int hip_generate_peer_lsi(hip_lsi_t *lsi)
  * multiple entries with the same tuple <lsi_src,lsi_dst>. Currently, that's not the case.
  * Our implementation doesn't allow repeated lsi tuples.
  */
-hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst)
+struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
+                                                        hip_lsi_t *lsi_dst)
 {
     hip_list_t *item, *aux;
-    hip_ha_t *tmp;
+    struct hip_hadb_state *tmp;
     int i;
 
     list_for_each_safe(item, aux, hadb_hit, i)
     {
-        tmp = (hip_ha_t *) list_entry(item);
+        tmp = list_entry(item);
         if (!hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst)) {
             continue;
         } else if (hip_lsi_are_equal(&tmp->lsi_our, lsi_src)) {
@@ -1496,15 +1503,15 @@ hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_ds
  * @param lsi_dst the remote LSI
  * @return the HADB entry or NULL if not found
  */
-hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi_dst)
+struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi_dst)
 {
     hip_list_t *item, *aux;
-    hip_ha_t *tmp;
+    struct hip_hadb_state *tmp;
     int i;
 
     list_for_each_safe(item, aux, hadb_hit, i)
     {
-        tmp = (hip_ha_t *) list_entry(item);
+        tmp = list_entry(item);
         if (hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst)) {
             return tmp;
         }
@@ -1553,7 +1560,8 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
  * @param dst_addr the new destination address for the SAs
  * @return zero on success and negative on error
  */
-int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha, struct in6_addr *src_addr,
+int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
+                                              struct in6_addr *src_addr,
                                               struct in6_addr *dst_addr)
 {
     int err         = 0;

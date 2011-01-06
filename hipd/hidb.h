@@ -31,6 +31,7 @@
 #include "lib/core/hashtable.h"
 #include "lib/core/list.h"
 #include "lib/core/protodefs.h"
+#include "cookie.h"
 
 
 #if 0
@@ -65,6 +66,19 @@ struct hip_entry_list {
     struct in6_addr peer_hit;
     /* These two _MUST_ be left untouched. Feel free to add more
      * to the end */
+};
+
+struct hip_host_id_entry {
+    struct hip_lhi      lhi;
+    hip_lsi_t           lsi;
+    struct hip_host_id *host_id;     /* allocated dynamically */
+    void *              private_key; /* RSA or DSA */
+    struct hip_r1entry *r1;     /* precreated R1s */
+    /* Handler to call after insert with an argument, return 0 if OK*/
+    int                 (*insert)(struct hip_host_id_entry *, void **arg);
+    /* Handler to call before remove with an argument, return 0 if OK*/
+    int                 (*remove)(struct hip_host_id_entry *, void **arg);
+    void *              arg;
 };
 
 /* Use this to point your target while accessing a database */

@@ -1,13 +1,46 @@
 Source: hipl
 Section: net
 Priority: optional
-Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
-XSBC-Original-Maintainer: Rene Hummen <rene.hummen@cs.rwth-aachen.de>
-Build-Depends: debhelper (>= 7), python, libconfig8-dev, libssl-dev, iptables-dev
-Standards-Version: 3.9.1.0
+Maintainer: HIPL team <hipl-dev@freelists.org>
+Build-Depends: debhelper (>= 7), python, libconfig8-dev, libssl-dev, iptables-dev, autoconf, xmlto
+Standards-Version: 3.9.1
 Homepage: http://launchpad.net/hipl
 
-Package: hipl
+Package: hipl-all
+Architecture: all
+Depends: ${misc:Depends}, hipl-daemon, hipl-firewall, hipl-dnsproxy, hipl-doc
+Description: HIP for Linux full software bundle
+ This virtual package is suitable e.g. for client machines.
+
+Package: hipl-daemon
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libnet-dns-perl
-Description: HIP for Linux
+Depends: ${shlibs:Depends}, ${misc:Depends}, openssl, iptables, libnet-ip-perl, libnet-dns-perl
+Suggests: hipl-doc
+Replaces: hipl-minimal, hipl-tools
+Description: HIP for Linux IPsec key management and mobility daemon
+ The Host Identity Protocol (HIP) and the related architecture form a proposal
+ to change the TCP/IP stack to securely support mobility and multi-homing.
+
+Package: hipl-firewall
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, openssl, iptables
+Suggests: hipl-doc
+Description: HIP for Linux multi-purpose firewall daemon
+ Public-key/HIT-based access control, Local Scope Identifier support,
+ userspace BEET-mode IPsec (for kernels below < 2.6.27) and
+ system-based opportunistic mode for HIP.
+
+Package: hipl-dnsproxy
+Architecture: any
+Depends: ${misc:Depends}, python
+Suggests: hipl-doc
+Description: HIP for Linux name lookup proxy
+ Intercepts DNS lookups and returns HITs or LSIs when corresponding
+ entries are found in the DNS or in hosts files.
+
+Package: hipl-doc
+Architecture: all
+Depends: ${misc:Depends}
+Section: doc
+Description: HIP for Linux documentation
+ This package contains the HTML documentation for HIPL.

@@ -56,15 +56,13 @@ struct perf_set {
     int            *writable;
 };
 
-typedef struct perf_set perf_set_t;
-
-perf_set_t *hip_perf_create(int num);
-int hip_perf_set_name(perf_set_t *perf_set,  int slot, const char *name);
-int hip_perf_open(perf_set_t *perf_set);
-void hip_perf_start_benchmark(perf_set_t *perf_set, int slot);
-void hip_perf_stop_benchmark(perf_set_t *perf_set, int slot);
-int hip_perf_write_benchmark(perf_set_t *perf_set, int slot);
-void hip_perf_destroy(perf_set_t *perf_set);
+struct perf_set *hip_perf_create(int num);
+int hip_perf_set_name(struct perf_set *perf_set, int slot, const char *name);
+int hip_perf_open(struct perf_set *perf_set);
+void hip_perf_start_benchmark(struct perf_set *perf_set, int slot);
+void hip_perf_stop_benchmark(struct perf_set *perf_set, int slot);
+int hip_perf_write_benchmark(struct perf_set *perf_set, int slot);
+void hip_perf_destroy(struct perf_set *perf_set);
 
 enum perf_sensor {
     PERF_I1,
@@ -93,6 +91,6 @@ enum perf_sensor {
     PERF_MAX
 };
 
-perf_set_t *perf_set;
+struct perf_set *perf_set;
 
 #endif /* HIP_LIB_CORE_PERFORMANCE_H */

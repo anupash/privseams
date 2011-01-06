@@ -85,7 +85,7 @@ int fall, retr;
 /**
  * List containing all maintenance functions.
  */
-static hip_ll_t *hip_maintenance_functions;
+static struct hip_ll *hip_maintenance_functions;
 
 /**
  * an iterator to handle packet retransmission for a given host association
@@ -94,7 +94,8 @@ static hip_ll_t *hip_maintenance_functions;
  * @param current_time current time
  * @return zero on success or negative on failure
  */
-static int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
+static int hip_handle_retransmission(struct hip_hadb_state *entry,
+                                     void *current_time)
 {
     int err     = 0;
     time_t *now = (time_t *) current_time;
@@ -245,8 +246,8 @@ int hip_unregister_maint_function(int (*maint_function)(void))
  */
 static int hip_run_maint_functions(void)
 {
-    int            err  = 0;
-    hip_ll_node_t *iter = NULL;
+    int                 err  = 0;
+    struct hip_ll_node *iter = NULL;
 
     if (hip_maintenance_functions) {
         while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {

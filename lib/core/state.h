@@ -37,7 +37,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#include "hipd/cookie.h"
 #include "config.h"
 #include "hashtable.h"
 #include "modularization.h"
@@ -92,22 +91,22 @@
 /**
  * HIP host association state.
  */
-typedef enum {
+enum hip_hastate {
     HIP_HASTATE_INVALID = 0,
     HIP_HASTATE_VALID   = 1,
-} hip_hastate_t;
+};
 
 /**
  * A data structure for handling retransmission. Used inside host association
  * database entries.
  */
-typedef struct hip_msg_retrans {
+struct hip_msg_retrans {
     int                count;
     time_t             last_transmit;
     struct in6_addr    saddr;
     struct in6_addr    daddr;
     struct hip_common *buf;
-} hip_msg_retrans_t;
+};
 
 /*
  * Fixed start of this struct must match to struct hip_locator_info_addr_item
@@ -159,21 +158,6 @@ struct hip_spi_out_item {
     struct in6_addr preferred_address;
 };
 
-/* this struct is here instead of hidb.h to avoid some weird compilation
- * warnings */
-struct hip_host_id_entry {
-    struct hip_lhi      lhi;
-    hip_lsi_t           lsi;
-    struct hip_host_id *host_id;     /* allocated dynamically */
-    void *              private_key; /* RSA or DSA */
-    struct hip_r1entry *r1;     /* precreated R1s */
-    /* Handler to call after insert with an argument, return 0 if OK*/
-    int                 (*insert)(struct hip_host_id_entry *, void **arg);
-    /* Handler to call before remove with an argument, return 0 if OK*/
-    int                 (*remove)(struct hip_host_id_entry *, void **arg);
-    void *              arg;
-};
-
 /* If you need to add a new boolean type variable to this structure, consider
  * adding a control value to the local_controls and/or peer_controls bitmask
  * field(s) instead of adding yet another integer. Lauri 24.01.2008. */
@@ -190,7 +174,7 @@ struct hip_hadb_state {
      *  locking stuff which is currently unimplemented because the daemon
      *  is single threaded. When zero, the host association can be freed.
      *  @date 24.01.2008 */
-    hip_hastate_t         hastate;
+    enum hip_hastate      hastate;
     /** Counter to tear down a HA in CLOSING or CLOSED state */
     int                   purge_timeout;
     /** The state of this host association. @see hip_ha_state */
@@ -324,12 +308,12 @@ struct hip_hadb_state {
 
     HIP_HASHTABLE *                            peer_addr_list_to_be_added;
     /** For storing retransmission related data. */
-    hip_msg_retrans_t                          hip_msg_retrans;
+    struct hip_msg_retrans                     hip_msg_retrans;
     /** peer hostname */
     uint8_t                                    peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     /** Counters of heartbeats (ICMPv6s) */
     int                                        heartbeats_sent;
-    statistics_data_t                          heartbeats_statistics;
+    struct statistics_data                     heartbeats_statistics;
 
     struct timeval                             bex_start;
     struct timeval                             bex_end;

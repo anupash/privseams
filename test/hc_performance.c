@@ -37,15 +37,15 @@
 #include "lib/core/hashtree.h"
 #include "lib/core/statistics.h"
 
-const hash_function_t hash_functions[2] = {(hash_function_t) SHA1,
-                                           (hash_function_t) MD5};
+const hash_function hash_functions[2] = {(hash_function) SHA1,
+                                         (hash_function) MD5};
 
 int count         = 100;
 // this is supported by both md5 and sha1
 int hash_length   = 16;
 int hchain_length = 100000;
 int verify_length = 64;
-hash_function_t hash_function;
+hash_function hash_func;
 int test_hc       = 0;
 int test_ht       = 0;
 
@@ -100,10 +100,9 @@ int main(int argc, char **argv)
     int err                     = 0;
     struct timeval start_time;
     struct timeval stop_time;
-    hash_chain_t *hchain        = NULL;
-    hash_tree_t *htree          = NULL;
-    statistics_data_t creation_stats;
-    statistics_data_t verify_stats;
+    struct hash_chain *hchain   = NULL;
+    struct hash_tree  *htree    = NULL;
+    struct statistics_data creation_stats, verify_stats;
     uint64_t timediff           = 0;
     uint32_t num_items          = 0;
     double min                  = 0.0, max = 0.0, avg = 0.0;
@@ -112,13 +111,13 @@ int main(int argc, char **argv)
     int branch_length           = 0;
     const unsigned char *secret = NULL;
     int secret_length           = 0;
-    hash_chain_t *hchains[8];
+    struct hash_chain *hchains[8];
     const unsigned char *data   = NULL;
     int data_length             = 0;
     const unsigned char *root   = NULL;
     int root_length             = 0;
 
-    hash_function = NULL;
+    hash_func = NULL;
 
 
     while ((c = getopt(argc, argv, "ctsml:h:v:n:")) != -1) {
@@ -130,10 +129,10 @@ int main(int argc, char **argv)
             test_ht       = 1;
             break;
         case 's':
-            hash_function = hash_functions[0];
+            hash_func     = hash_functions[0];
             break;
         case 'm':
-            hash_function = hash_functions[1];
+            hash_func     = hash_functions[1];
             break;
         case 'l':
             hchain_length = atoi(optarg);
@@ -158,7 +157,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (hash_function == NULL) {
+    if (hash_func == NULL) {
         printf("no hash function selected!\n");
         print_usage();
         exit(1);
@@ -166,8 +165,8 @@ int main(int argc, char **argv)
 
     hip_set_logdebug(LOGDEBUG_NONE);
 
-    memset(&creation_stats, 0, sizeof(statistics_data_t));
-    memset(&verify_stats, 0, sizeof(statistics_data_t));
+    memset(&creation_stats, 0, sizeof(struct statistics_data));
+    memset(&verify_stats, 0, sizeof(struct statistics_data));
 
     print_timeres();
 
@@ -181,7 +180,7 @@ int main(int argc, char **argv)
 
         for (i = 0; i < count; i++) {
             gettimeofday(&start_time, NULL);
-            if ((hchain = hchain_create(hash_function, hash_length,
+            if ((hchain = hchain_create(hash_func, hash_length,
                                         hchain_length, 0, NULL))) {
                 gettimeofday(&stop_time, NULL);
                 timediff = calc_timeval_diff(&start_time, &stop_time);
@@ -204,7 +203,7 @@ int main(int argc, char **argv)
                count, verify_length, hash_length);
 
         for (i = 0; i < count; i++) {
-            if (!(hchain = hchain_create(hash_function, hash_length,
+            if (!(hchain = hchain_create(hash_func, hash_length,
                                          verify_length, 0, NULL))) {
                 printf("ERROR creating hchain!");
                 exit(1);
@@ -212,7 +211,7 @@ int main(int argc, char **argv)
 
             gettimeofday(&start_time, NULL);
             if (hchain_verify(hchain_get_seed(hchain), hchain_get_anchor(hchain),
-                              hash_function, hash_length,
+                              hash_func, hash_length,
                               verify_length, NULL, 0)) {
                 gettimeofday(&stop_time, NULL);
                 timediff = calc_timeval_diff(&start_time, &stop_time);
@@ -235,8 +234,8 @@ int main(int argc, char **argv)
                 "Hash tree performance test\n"
                 "-------------------------------\n\n");
 
-        memset(&creation_stats, 0, sizeof(statistics_data_t));
-        memset(&verify_stats, 0, sizeof(statistics_data_t));
+        memset(&creation_stats, 0, sizeof(struct statistics_data));
+        memset(&verify_stats, 0, sizeof(struct statistics_data));
 
         printf("Creating %d hash trees of length %d with element length %d\n",
                count, hchain_length, hash_length);
@@ -311,7 +310,7 @@ int main(int argc, char **argv)
         htree_add_random_secrets(htree);
 
         for (i = 0; i < 8; i++) {
-            hchains[i] = hchain_create(hash_function, hash_length,
+            hchains[i] = hchain_create(hash_func, hash_length,
                                        hchain_length, 0, NULL);
             htree_add_data(htree, hchain_get_anchor(hchains[i]), hash_length);
         }
@@ -320,7 +319,7 @@ int main(int argc, char **argv)
                          htree_node_generator, NULL);
 
         // simulate level 1 creation
-        hchain = hchain_create(hash_function, hash_length, hchain_length, 1,
+        hchain = hchain_create(hash_func, hash_length, hchain_length, 1,
                                htree);
 
         // simulate BEX
@@ -329,7 +328,7 @@ int main(int argc, char **argv)
 
         // simulate level 1 hchain verification
         if (!hchain_verify(hchain_get_seed(hchain), hchain_get_anchor(hchain),
-                           hash_function, hash_length, verify_length,
+                           hash_func, hash_length, verify_length,
                            root, root_length)) {
             printf("hchain level 1 verfied\n");
         } else {
@@ -364,7 +363,7 @@ int main(int argc, char **argv)
 
         // simulate level 0 hchain verification
         if (!hchain_verify(hchain_get_seed(hchains[0]), data,
-                           hash_function, hash_length,
+                           hash_func, hash_length,
                            verify_length, NULL, 0)) {
             printf("hchain level 0 verfied\n");
         } else {

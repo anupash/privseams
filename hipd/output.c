@@ -100,7 +100,7 @@ static int hip_send_i1_pkt(struct hip_common *i1,
                            struct in6_addr *peer_addr,
                            in_port_t src_port,
                            in_port_t dst_port,
-                           hip_ha_t *entry)
+                           struct hip_hadb_state *entry)
 {
     int err = 0;
 
@@ -145,7 +145,7 @@ static int hip_send_i1_pkt(struct hip_common *i1,
  * @return        zero on success, or negative error value on error.
  */
 int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                hip_ha_t *entry)
+                struct hip_hadb_state *entry)
 {
     struct hip_common *i1       = 0;
     uint16_t mask               = 0;
@@ -214,7 +214,7 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
                   ((struct lhash_st *) entry->peer_addr_list_to_be_added)->num_items);
         list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i)
         {
-            addr = (struct hip_peer_addr_list_item *) list_entry(item);
+            addr = list_entry(item);
             ipv6_addr_copy(&peer_addr, &addr->address);
 
             err  = hip_send_i1_pkt(i1,
@@ -573,8 +573,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                                  const struct hip_host_id *host_id_pub,
                                  int cookie_k)
 {
-    hip_common_t *msg = NULL;
-    hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
+    struct hip_common *msg = NULL;
+    struct hip_srv service_list[HIP_TOTAL_EXISTING_SERVICES];
     uint8_t *dh_data1  = NULL, *dh_data2 = NULL;
     char order[] = "000";
     int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
@@ -761,7 +761,7 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
                 struct hip_packet_context *ctx)
 {
     int err                     = 0;
-    hip_common_t *r1pkt         = NULL;
+    struct hip_common *r1pkt    = NULL;
     struct in6_addr dst_ip      = IN6ADDR_ANY_INIT,
                *r1_dst_addr     = NULL,
                *local_plain_hit = NULL,
@@ -1102,7 +1102,7 @@ int are_addresses_compatible(const struct in6_addr *src_addr,
 static int hip_queue_packet(const struct in6_addr *src_addr,
                             const struct in6_addr *peer_addr,
                             const struct hip_common *msg,
-                            hip_ha_t *entry)
+                            struct hip_hadb_state *entry)
 {
     int err = 0;
     int len = hip_get_msg_total_len(msg);
@@ -1161,7 +1161,7 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
                                      const in_port_t src_port,
                                      const in_port_t dst_port,
                                      struct hip_common *msg,
-                                     hip_ha_t *entry,
+                                     struct hip_hadb_state *entry,
                                      const int retransmit)
 {
     int err                   = 0, sa_size, sent, len = 0, dupl, try_again, udp = 0;
@@ -1409,7 +1409,7 @@ static int hip_send_udp_from_one_src(const struct in6_addr *local_addr,
                                      const in_port_t src_port,
                                      const in_port_t dst_port,
                                      struct hip_common *msg,
-                                     hip_ha_t *entry,
+                                     struct hip_hadb_state *entry,
                                      const int retransmit)
 {
     return hip_send_raw_from_one_src(local_addr, peer_addr, src_port,
@@ -1449,7 +1449,7 @@ int hip_send_pkt(const struct in6_addr *local_addr,
                  const in_port_t src_port,
                  const in_port_t dst_port,
                  struct hip_common *msg,
-                 hip_ha_t *entry,
+                 struct hip_hadb_state *entry,
                  const int retransmit)
 {
     int err                                = 0;
@@ -1485,7 +1485,7 @@ int hip_send_pkt(const struct in6_addr *local_addr,
 
     list_for_each_safe(item, tmp, addresses, i)
     {
-        netdev_src_addr = (struct netdev_address *) list_entry(item);
+        netdev_src_addr = list_entry(item);
         src_addr = hip_cast_sa_addr((struct sockaddr *) &netdev_src_addr->addr);
 
         if (!are_addresses_compatible(src_addr, peer_addr)) {

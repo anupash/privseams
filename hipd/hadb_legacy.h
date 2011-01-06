@@ -33,11 +33,12 @@
 #include "lib/core/protodefs.h"
 
 
-int hip_hadb_get_peer_addr_info_old(hip_ha_t *entry,
+int hip_hadb_get_peer_addr_info_old(struct hip_hadb_state *entry,
                                     const struct in6_addr *addr,
                                     uint32_t *lifetime,
                                     struct timeval *modified_time);
 
-void hip_hadb_delete_peer_addrlist_one_old(hip_ha_t *ha, struct in6_addr *addr);
+void hip_hadb_delete_peer_addrlist_one_old(struct hip_hadb_state *ha,
+                                           struct in6_addr *addr);
 
 #endif /* HIP_HIPD_HADB_LEGACY_H */

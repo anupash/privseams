@@ -887,11 +887,6 @@ struct dlist *read_rules(const int hook)
 
 /*----------- RULE MANAGEMENT -----------*/
 
-/*
- * when rules are changed also statefulFiltering value in
- * firewall.c must be updated with set_stateful_filtering()
- */
-
 /**
  * read all rule sets from the specified file and parse into rule
  * lists
@@ -970,7 +965,6 @@ void read_rule_file(const char *file_name)
     }
 
     input_rules   = input;
-    set_stateful_filtering();
     output_rules  = output;
     forward_rules = forward;
 }

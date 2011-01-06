@@ -50,7 +50,7 @@ struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
                                      const struct hip_crypto_key *authkey,
                                      const int retransmission,
                                      const int direction, const int update,
-                                     hip_ha_t *entry);
+                                     struct hip_hadb_state *entry);
 struct hip_common *create_delete_sa_msg(const uint32_t spi,
                                         const struct in6_addr *peer_addr,
                                         const struct in6_addr *dst_addr,

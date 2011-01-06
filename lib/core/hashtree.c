@@ -64,7 +64,7 @@ double log_x(const int base, const double value)
  * @param       secret_index position of the secret in the leaf set
  * @return      always 0
  */
-static int htree_add_secret(hash_tree_t *tree,
+static int htree_add_secret(struct hash_tree *tree,
                             const unsigned char *secret,
                             const int secret_length,
                             const int secret_index)
@@ -90,17 +90,16 @@ static int htree_add_secret(hash_tree_t *tree,
  * @param       hierarchy_level the hierarchy level of the created hash tree
  * @return      pointer to the inited tree, NULL in case of an error.
  */
-hash_tree_t *htree_init(const int num_data_blocks,
-                        const int max_data_length,
-                        const int node_length,
-                        const int secret_length,
-                        hash_tree_t *link_tree,
-                        const int hierarchy_level)
+struct hash_tree *htree_init(const int num_data_blocks,
+                             const int max_data_length,
+                             const int node_length,
+                             const int secret_length,
+                             struct hash_tree *link_tree,
+                             const int hierarchy_level)
 {
-    hash_tree_t *tree = NULL;
-    int tmp_length    = 0;
-    int err           = 0, i;
-    double loga       = 0.0;
+    struct hash_tree *tree = NULL;
+    int tmp_length = 0, err = 0, i;
+    double loga = 0.0;
 
     HIP_ASSERT(num_data_blocks > 0);
     HIP_ASSERT(max_data_length > 0);
@@ -108,9 +107,9 @@ hash_tree_t *htree_init(const int num_data_blocks,
 
 
     // allocate the memory for the tree
-    HIP_IFEL(!(tree = malloc(sizeof(hash_tree_t))),
+    HIP_IFEL(!(tree = malloc(sizeof(struct hash_tree))),
              -1, "failed to allocate memory\n");
-    memset(tree, 0, sizeof(hash_tree_t));
+    memset(tree, 0, sizeof(struct hash_tree));
 
     // check here whether leaf_set_size is a power of 2 and compute correct value if it is not
     loga = log_x(2, num_data_blocks);
@@ -190,7 +189,7 @@ out_err:
  *
  * @param       tree the hash tree to be freed
  */
-void htree_free(hash_tree_t *tree)
+void htree_free(struct hash_tree *tree)
 {
     if (tree) {
         htree_free(tree->link_tree);
@@ -212,7 +211,7 @@ void htree_free(hash_tree_t *tree)
  * @param       data_length length of the data item
  * @return      always 0
  */
-int htree_add_data(hash_tree_t *tree,
+int htree_add_data(struct hash_tree *tree,
                    const unsigned char *data,
                    const int data_length)
 {
@@ -258,7 +257,7 @@ out_err:
  * @param       num_random_blocks number of random blocks to be added
  * @return      always 0
  */
-int htree_add_random_data(hash_tree_t *tree, const int num_random_blocks)
+int htree_add_random_data(struct hash_tree *tree, const int num_random_blocks)
 {
     HIP_ASSERT(tree != NULL);
     HIP_ASSERT(num_random_blocks > 0);
@@ -297,7 +296,7 @@ int htree_add_random_data(hash_tree_t *tree, const int num_random_blocks)
  * @param       tree pointer to the tree
  * @return      always 0
  */
-int htree_add_random_secrets(hash_tree_t *tree)
+int htree_add_random_secrets(struct hash_tree *tree)
 {
     int err = 0;
 
@@ -323,10 +322,10 @@ int htree_add_random_secrets(hash_tree_t *tree)
  * @param       gen_args arguments for the generators
  * @return      0 on success, -1 otherwise
  */
-int htree_calc_nodes(hash_tree_t *tree,
-                     const htree_leaf_gen_t leaf_gen,
-                     const htree_node_gen_t node_gen,
-                     const htree_gen_args_t *gen_args)
+int htree_calc_nodes(struct hash_tree *tree,
+                     const htree_leaf_gen leaf_gen,
+                     const htree_node_gen node_gen,
+                     const struct htree_gen_args *gen_args)
 {
     int level_width       = 0, i, err = 0;
     // first leaf to be used when calculating next tree level in bytes
@@ -399,7 +398,7 @@ out_err:
  * @param       tree given tree
  * @return number of remaining elements
  */
-int htree_get_num_remaining(const hash_tree_t *tree)
+int htree_get_num_remaining(const struct hash_tree *tree)
 {
     return tree->num_data_blocks - tree->data_position;
 }
@@ -409,7 +408,7 @@ int htree_get_num_remaining(const hash_tree_t *tree)
  * @param       tree pointer to the tree
  * @return      1 if more elements, else 0
  */
-int htree_has_more_data(const hash_tree_t *tree)
+int htree_has_more_data(const struct hash_tree *tree)
 {
     return tree->data_position < tree->num_data_blocks;
 }
@@ -421,7 +420,7 @@ int htree_has_more_data(const hash_tree_t *tree)
  *
  * NOTE: this increases the internal pointer to the current element
  */
-int htree_get_next_data_offset(hash_tree_t *tree)
+int htree_get_next_data_offset(struct hash_tree *tree)
 {
     int data_offset = 0;
 
@@ -440,7 +439,7 @@ int htree_get_next_data_offset(hash_tree_t *tree)
  * @param       branch_length destination buffer length, returns used space
  * @return      buffer containing the branch nodes, NULL on error
  */
-unsigned char *htree_get_branch(const hash_tree_t *tree,
+unsigned char *htree_get_branch(const struct hash_tree *tree,
                                 const int data_index,
                                 unsigned char *nodes,
                                 int *branch_length)
@@ -509,7 +508,7 @@ unsigned char *htree_get_branch(const hash_tree_t *tree,
  * @param       data_length length of the returned data item
  * @return      pointer to the data item, NULL in case of an error
  */
-const unsigned char *htree_get_data(const hash_tree_t *tree,
+const unsigned char *htree_get_data(const struct hash_tree *tree,
                                     const int data_index,
                                     int *data_length)
 {
@@ -529,7 +528,7 @@ const unsigned char *htree_get_data(const hash_tree_t *tree,
  * @param       secret_length length of the returned secret
  * @return      pointer to the secret, NULL in case of an error
  */
-const unsigned char *htree_get_secret(const hash_tree_t *tree,
+const unsigned char *htree_get_secret(const struct hash_tree *tree,
                                       const int secret_index,
                                       int *secret_length)
 {
@@ -552,7 +551,8 @@ const unsigned char *htree_get_secret(const hash_tree_t *tree,
  * @param       root_length length of the returned root element
  * @return      pointer to the root element, NULL in case of an error
  */
-const unsigned char *htree_get_root(const hash_tree_t *tree, int *root_length)
+const unsigned char *htree_get_root(const struct hash_tree *tree,
+                                    int *root_length)
 {
     HIP_ASSERT(tree != NULL);
 
@@ -590,9 +590,9 @@ int htree_verify_branch(const unsigned char *root,
                         const uint32_t data_index,
                         const unsigned char *secret,
                         const int secret_length,
-                        const htree_leaf_gen_t leaf_gen,
-                        const htree_node_gen_t node_gen,
-                        const htree_gen_args_t *gen_args)
+                        const htree_leaf_gen leaf_gen,
+                        const htree_node_gen node_gen,
+                        const struct htree_gen_args *gen_args)
 {
     /* space for two nodes to be hashed together */
     unsigned char buffer[2 * root_length];
@@ -682,7 +682,7 @@ int htree_leaf_generator(const unsigned char *data,
                          const unsigned char *secret,
                          const int secret_length,
                          unsigned char *dst_buffer,
-                         UNUSED const htree_gen_args_t *gen_args)
+                         UNUSED const struct htree_gen_args *gen_args)
 {
     int err                        = 0;
     unsigned char buffer[data_length + secret_length];
@@ -723,7 +723,7 @@ int htree_node_generator(const unsigned char *left_node,
                          UNUSED const unsigned char *right_node,
                          const int node_length,
                          unsigned char *dst_buffer,
-                         UNUSED const htree_gen_args_t *gen_args)
+                         UNUSED const struct htree_gen_args *gen_args)
 {
     int err = 0;
 

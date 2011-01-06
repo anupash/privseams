@@ -1,0 +1,3 @@
+debian/tmp/usr/sbin/hipdnsproxy usr/sbin/
+debian/tmp/usr/sbin/hipdnskeyparse usr/sbin/
+debian/tmp/usr/lib/python2.6/dist-packages usr/lib/python2.6/

@@ -60,7 +60,7 @@
 #define HIP_RELREC_MAX_LIFETIME 159 // Equals 3756 seconds.
 
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
-typedef struct {
+struct hip_relrec {
     /** The type of this relay record (full relay or rvs) */
     uint8_t          type;
     /** The lifetime of this record, seconds. */
@@ -76,46 +76,49 @@ typedef struct {
     /** Client UDP port received in I2 packet of registration. */
     in_port_t        udp_port_r;
     /** Integrity key established while registration occurred. */
-    hip_crypto_key_t hmac_relay;
-} hip_relrec_t;
+    struct hip_crypto_key hmac_relay;
+};
 
 /**
  * Relay record encapsulation modes used in a relay record. This mode is between
  * the Relay and the Responder.
  */
-typedef enum { HIP_RELAY     = HIP_SERVICE_RELAY,
-               HIP_FULLRELAY = HIP_SERVICE_FULLRELAY,
-               HIP_RVSRELAY  = HIP_SERVICE_RENDEZVOUS } hip_relrec_type_t;
+enum hip_relrec_type { HIP_RELAY     = HIP_SERVICE_RELAY,
+                       HIP_FULLRELAY = HIP_SERVICE_FULLRELAY,
+                       HIP_RVSRELAY  = HIP_SERVICE_RENDEZVOUS };
 /** Possible states of the RVS / relay. */
-typedef enum { HIP_RELAY_OFF = 0, HIP_RELAY_ON = 1, HIP_RELAY_FULL = 2 } hip_relay_status_t;
+enum hip_relay_status { HIP_RELAY_OFF = 0, HIP_RELAY_ON = 1, HIP_RELAY_FULL = 2 };
 /** Possible states of the whitelist. */
-typedef enum { HIP_RELAY_WL_OFF = 0, HIP_RELAY_WL_ON = 1 } hip_relay_wl_status_t;
+enum hip_relay_wl_status { HIP_RELAY_WL_OFF = 0, HIP_RELAY_WL_ON = 1 };
 
-hip_relay_status_t hip_relay_get_status(void);
-void hip_relay_set_status(hip_relay_status_t status);
+enum hip_relay_status hip_relay_get_status(void);
+void hip_relay_set_status(enum hip_relay_status status);
 int hip_relay_init(void);
 void hip_relay_uninit(void);
 int hip_relay_reinit(void);
-int hip_relht_put(hip_relrec_t *rec);
-hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
-void hip_relht_rec_free_doall(hip_relrec_t *rec);
-void hip_relht_rec_free_type_doall(hip_relrec_t *rec, const hip_relrec_type_t *type);
+int hip_relht_put(struct hip_relrec *rec);
+struct hip_relrec *hip_relht_get(const struct hip_relrec *rec);
+void hip_relht_rec_free_doall(struct hip_relrec *rec);
+void hip_relht_rec_free_type_doall(struct hip_relrec *rec,
+                                   const enum hip_relrec_type *type);
 unsigned long hip_relht_size(void);
 int hip_relht_maintenance(void);
 
-hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
-                               const uint8_t lifetime,
-                               const struct in6_addr *hit_r, const hip_hit_t *ip_r,
-                               const in_port_t port,
-                               const hip_crypto_key_t *hmac);
-void hip_relht_free_all_of_type(const hip_relrec_type_t type);
+struct hip_relrec *hip_relrec_alloc(const enum hip_relrec_type type,
+                                    const uint8_t lifetime,
+                                    const struct in6_addr *hit_r,
+                                    const hip_hit_t *ip_r,
+                                    const in_port_t port,
+                                    const struct hip_crypto_key *hmac);
+void hip_relht_free_all_of_type(const enum hip_relrec_type type);
 int hip_relwl_compare(const hip_hit_t *hit1, const hip_hit_t *hit2);
 hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
-hip_relay_wl_status_t hip_relwl_get_status(void);
+enum hip_relay_wl_status hip_relwl_get_status(void);
 int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
                               uint8_t *granted_lifetime);
-int hip_relay_add_rvs_to_ha(const hip_common_t *source_msg, hip_ha_t *entry);
-int hip_relay_handle_relay_from(hip_common_t *source_msg,
+int hip_relay_add_rvs_to_ha(const struct hip_common *source_msg,
+                            struct hip_hadb_state *entry);
+int hip_relay_handle_relay_from(struct hip_common *source_msg,
                                 struct in6_addr *relay_ip,
                                 struct in6_addr *dest_ip, in_port_t *dest_port);
 
@@ -128,7 +131,7 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
                               struct hip_packet_context *ctx);
 
 int hip_relay_forward(const struct hip_packet_context *ctx,
-                      hip_relrec_t *rec,
+                      struct hip_relrec *rec,
                       const uint8_t type_hdr);
 
 #endif /* HIP_HIPD_HIPRELAY_H */

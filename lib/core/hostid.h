@@ -96,9 +96,6 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
 int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr);
 
-
-int hip_host_id_entry_to_hit_info(struct hip_host_id_entry *entry,
-                                  void *msg);
 int hip_serialize_host_id_action(struct hip_common *msg,
                                  int action,
                                  int anon,

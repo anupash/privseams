@@ -54,11 +54,12 @@
 
 static const int hip_heartbeat_trigger_update_threshold = 5;
 
-static int hip_hb_update_trigger(hip_ha_t *hadb_entry, UNUSED void *opaque)
+static int hip_hb_update_trigger(struct hip_hadb_state *hadb_entry,
+                                 UNUSED void *opaque)
 {
     int err                                     = 0;
     uint8_t *heartbeat_counter                  = NULL;
-    hip_common_t *locator_msg                   = NULL;
+    struct hip_common *locator_msg              = NULL;
     struct hip_locator_info_addr_item *locators = NULL;
 
     if ((hadb_entry->state == HIP_STATE_ESTABLISHED) &&

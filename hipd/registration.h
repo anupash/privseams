@@ -46,13 +46,13 @@
 
 
 /** A pending service request coupled with a host association. */
-typedef struct {
-    hip_ha_t *entry;
+struct hip_pending_request {
+    struct hip_hadb_state *entry;
     uint8_t   reg_type;
     uint8_t   lifetime;
     /** Time when this record was created, seconds since epoch. */
     time_t    created;
-} hip_pending_request_t;
+};
 
 /**
  * Initializes the services. Initializes the @c hip_services array.
@@ -64,21 +64,26 @@ void hip_init_services(void);
  */
 void hip_uninit_services(void);
 int hip_registration_maintenance(void);
-int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status);
-int hip_get_active_services(hip_srv_t *active_services,
+int hip_set_srv_status(uint8_t reg_type, enum hip_srv_status status);
+int hip_get_active_services(struct hip_srv *active_services,
                             unsigned int *active_service_count);
-int hip_add_pending_request(hip_pending_request_t *request);
-int hip_del_pending_request(hip_ha_t *entry);
-int hip_replace_pending_requests(hip_ha_t *entry_old,
-                                 hip_ha_t *entry_new);
-int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type);
-int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
-                              hip_common_t *target_msg);
-int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
-                                 hip_common_t *target_msg);
-int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg);
-int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg);
+int hip_add_pending_request(struct hip_pending_request *request);
+int hip_del_pending_request(struct hip_hadb_state *entry);
+int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
+                                 struct hip_hadb_state *entry_new);
+int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
+                                    uint8_t reg_type);
+int hip_handle_param_reg_info(struct hip_hadb_state *entry,
+                              struct hip_common *source_msg,
+                              struct hip_common *target_msg);
+int hip_handle_param_reg_request(struct hip_hadb_state *entry,
+                                 struct hip_common *source_msg,
+                                 struct hip_common *target_msg);
+int hip_handle_param_reg_response(struct hip_hadb_state *entry,
+                                  struct hip_common *msg);
+int hip_handle_param_reg_failed(struct hip_hadb_state *entry,
+                                struct hip_common *msg);
 
-int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg);
+int hip_handle_reg_from(struct hip_hadb_state *entry, struct hip_common *msg);
 
 #endif /* HIP_HIPD_REGISTRATION_H */

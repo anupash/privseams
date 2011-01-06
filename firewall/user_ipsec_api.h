@@ -59,7 +59,7 @@
 
 int userspace_ipsec_init(void);
 int userspace_ipsec_uninit(void);
-int hip_fw_userspace_ipsec_input(const hip_fw_context_t *ctx);
-int hip_fw_userspace_ipsec_output(const hip_fw_context_t *ctx);
+int hip_fw_userspace_ipsec_input(const struct hip_fw_context *ctx);
+int hip_fw_userspace_ipsec_output(const struct hip_fw_context *ctx);
 
 #endif /* HIP_FIREWALL_USER_IPSEC_API_H */

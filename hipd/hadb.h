@@ -37,8 +37,6 @@
 #define HIP_LOCK_HA(ha)
 #define HIP_UNLOCK_HA(ha)
 
-#define do_gettimeofday(x) gettimeofday(x, NULL)
-
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
@@ -54,7 +52,8 @@ static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
     return *(const uint32_t *) key_1 == *(const uint32_t *) key_2;
 }
 
-int hip_ha_compare(const hip_ha_t *ha1, const hip_ha_t *ha2);
+int hip_ha_compare(const struct hip_hadb_state *ha1,
+                   const struct hip_hadb_state *ha2);
 
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
@@ -64,20 +63,22 @@ void hip_delete_all_sp(void);
 /* Initialization functions */
 
 /* Accessors */
-hip_ha_t *hip_hadb_find_byhits(const hip_hit_t *hit, const hip_hit_t *hit2);
-hip_ha_t *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit);
+struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit,
+                                            const hip_hit_t *hit2);
+struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit);
 
 /* insert/create/delete */
-int hip_hadb_insert_state(hip_ha_t *ha);
+int hip_hadb_insert_state(struct hip_hadb_state *ha);
 void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
-int hip_init_peer(hip_ha_t *entry, const struct hip_host_id *peer);
-int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our);
+int hip_init_peer(struct hip_hadb_state *entry, const struct hip_host_id *peer);
+int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our);
 
 
 /*************** CONSTRUCTS ********************/
-int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
+int hip_hadb_get_peer_addr(struct hip_hadb_state *entry, struct in6_addr *addr);
 
-int hip_hadb_add_peer_addr(hip_ha_t *entry, const struct in6_addr *new_addr,
+int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
+                           const struct in6_addr *new_addr,
                            uint32_t interface_id, uint32_t lifetime,
                            int state, in_port_t port);
 
@@ -95,35 +96,40 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
                                     const struct in6_addr *peer_addr,
                                     const char *peer_hostname);
 
-int hip_del_peer_info_entry(hip_ha_t *ha);
+int hip_del_peer_info_entry(struct hip_hadb_state *ha);
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 
 /* Utilities */
 
-hip_ha_t *hip_hadb_create_state(void);
+struct hip_hadb_state *hip_hadb_create_state(void);
 
-int hip_for_each_ha(int(func) (hip_ha_t * entry, void *opaq), void *opaque);
+int hip_for_each_ha(int(func) (struct hip_hadb_state * entry, void *opaq),
+                    void *opaque);
 
 /* next 2 functions are not called from outside but make sense and are
  * 'proposed' in libhipcore/state.h
  */
 
-void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask);
-void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask);
-void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
+void hip_hadb_set_local_controls(struct hip_hadb_state *entry,
+                                 hip_controls_t mask);
+void hip_hadb_set_peer_controls(struct hip_hadb_state *entry,
+                                hip_controls_t mask);
+void hip_hadb_cancel_local_controls(struct hip_hadb_state *entry,
+                                    hip_controls_t mask);
 
 int hip_count_open_connections(void);
 
-hip_ha_t *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *,
-                                            const hip_hit_t *);
+struct hip_hadb_state *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *,
+                                                         const hip_hit_t *);
 
-int hip_handle_get_ha_info(hip_ha_t *entry, void *);
+int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *);
 
 /*lsi support functions*/
 int hip_generate_peer_lsi(hip_lsi_t *lsi);
-hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi);
-hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
+struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi);
+struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
+                                                        hip_lsi_t *lsi_dst);
 
 int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
                                               struct in6_addr *src_addr,

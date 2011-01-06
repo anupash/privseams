@@ -43,7 +43,7 @@
  *
  * @param linkedlist the list to init.
  */
-void hip_ll_init(hip_ll_t *linkedlist)
+void hip_ll_init(struct hip_ll *linkedlist)
 {
     if (linkedlist != NULL) {
         linkedlist->head          = NULL;
@@ -73,13 +73,13 @@ void hip_ll_init(hip_ll_t *linkedlist)
  *                     invoking this function, and then call this function with
  *                     NULL as @c free_element.
  */
-void hip_ll_uninit(hip_ll_t *linkedlist, free_elem_fn_t free_element)
+void hip_ll_uninit(struct hip_ll *linkedlist, free_elem_fn free_element)
 {
     if (linkedlist == NULL || linkedlist->head == NULL) {
         return;
     }
 
-    hip_ll_node_t *pointer = NULL;
+    struct hip_ll_node *pointer = NULL;
 
     /* Free the node currently at list head and move the next item to list
      * head. Continue this until the item at list head is NULL. If
@@ -109,7 +109,7 @@ void hip_ll_uninit(hip_ll_t *linkedlist, free_elem_fn_t free_element)
  * @param  linkedlist the list whose node count is to be returned.
  * @return number of nodes in the list.
  */
-unsigned int hip_ll_get_size(const hip_ll_t *linkedlist)
+unsigned int hip_ll_get_size(const struct hip_ll *linkedlist)
 {
     if (linkedlist == NULL) {
         return 0;
@@ -139,16 +139,16 @@ unsigned int hip_ll_get_size(const hip_ll_t *linkedlist)
  *                    if there was an error when allocating memory to the new
  *                    node.
  */
-int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr)
+int hip_ll_add(struct hip_ll *linkedlist, const unsigned int index, void *ptr)
 {
     if (linkedlist == NULL || ptr == NULL) {
         return -1;
     }
 
-    hip_ll_node_t *newnode     = NULL, *pointer = NULL;
-    unsigned int current_index = 0;
+    struct hip_ll_node *newnode = NULL, *pointer = NULL;
+    unsigned int current_index  = 0;
 
-    if ((newnode = malloc(sizeof(hip_ll_node_t))) == NULL) {
+    if ((newnode = malloc(sizeof(struct hip_ll_node))) == NULL) {
         HIP_ERROR("Error on allocating memory for a linked list node.\n");
         return -1;
     }
@@ -166,7 +166,7 @@ int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr)
     /* There exist at least one element in the list and the new element is
      * not to be added as the first one. */
     else {
-        hip_ll_node_t *previous = pointer;
+        struct hip_ll_node *previous = pointer;
 
         /* Loop until "pointer" is at the last item. */
         while (pointer->next != NULL) {
@@ -202,7 +202,7 @@ int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr)
  *                    if there was an error when allocating memory to the new
  *                    node.
  */
-int hip_ll_add_first(hip_ll_t *linkedlist, void *ptr)
+int hip_ll_add_first(struct hip_ll *linkedlist, void *ptr)
 {
     return hip_ll_add(linkedlist, 0, ptr);
 }
@@ -217,7 +217,7 @@ int hip_ll_add_first(hip_ll_t *linkedlist, void *ptr)
  *                    if there was an error when allocating memory to the new
  *                    node.
  */
-int hip_ll_add_last(hip_ll_t *linkedlist, void *ptr)
+int hip_ll_add_last(struct hip_ll *linkedlist, void *ptr)
 {
     return hip_ll_add(linkedlist, linkedlist->element_count, ptr);
 }
@@ -245,8 +245,8 @@ int hip_ll_add_last(hip_ll_t *linkedlist, void *ptr)
  *                     element itself is deleted. NULL is also returned when
  *                     the list @c linkedlist itself is NULL.
  */
-void *hip_ll_del(hip_ll_t *linkedlist, const unsigned int index,
-                 free_elem_fn_t free_element)
+void *hip_ll_del(struct hip_ll *linkedlist, const unsigned int index,
+                 free_elem_fn free_element)
 {
     if (linkedlist == NULL || linkedlist->head == NULL) {
         return NULL;
@@ -254,9 +254,9 @@ void *hip_ll_del(hip_ll_t *linkedlist, const unsigned int index,
         return NULL;
     }
 
-    hip_ll_node_t *pointer     = NULL, *previous = NULL;
-    void *ptr                  = NULL;
-    unsigned int current_index = 0;
+    struct hip_ll_node *pointer = NULL, *previous = NULL;
+    void               *ptr     = NULL;
+    unsigned int current_index  = 0;
 
     if (index == 0) {
         ptr     = linkedlist->head->ptr;
@@ -318,8 +318,8 @@ void *hip_ll_del(hip_ll_t *linkedlist, const unsigned int index,
  *                     deleted. NULL is also returned when the list
  *                     @c linkedlist itself is NULL.
  */
-void *hip_ll_del_first(hip_ll_t *linkedlist,
-                       free_elem_fn_t free_element)
+void *hip_ll_del_first(struct hip_ll *linkedlist,
+                       free_elem_fn free_element)
 {
     return hip_ll_del(linkedlist, 0, free_element);
 }
@@ -335,7 +335,7 @@ void *hip_ll_del_first(hip_ll_t *linkedlist,
  * @return           the next element or NULL if the list end has been reached
  *                   or if @c linkedlist is NULL.
  */
-void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index)
+void *hip_ll_get(struct hip_ll *linkedlist, const unsigned int index)
 {
     if (linkedlist == NULL || linkedlist->head == NULL) {
         return NULL;
@@ -343,8 +343,8 @@ void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index)
         return NULL;
     }
 
-    hip_ll_node_t *pointer     = linkedlist->head;
-    unsigned int current_index = 0;
+    struct hip_ll_node *pointer = linkedlist->head;
+    unsigned int current_index  = 0;
 
     while (pointer != NULL) {
         if (current_index == index) {
@@ -365,7 +365,7 @@ void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index)
  * items from the list using this function or you will break the list.
  *
  * <pre>
- * hip_ll_node_t *iter = NULL;
+ * struct hip_ll_node *iter = NULL;
  * while((iter = hip_ll_iterate(&list, iter)) != NULL) {
  *         ... Do stuff with iter ...
  * }
@@ -380,8 +380,8 @@ void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index)
  *                    using this function.</span> Consider hip_ll_del() or
  *                    hip_ll_uninit() for deleting nodes and elements.
  */
-hip_ll_node_t *hip_ll_iterate(const hip_ll_t *linkedlist,
-                              hip_ll_node_t *current)
+struct hip_ll_node *hip_ll_iterate(const struct hip_ll *linkedlist,
+                                   struct hip_ll_node *current)
 {
     if (linkedlist == NULL) {
         return NULL;

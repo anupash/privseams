@@ -34,19 +34,17 @@ and dpkg-dev on ubuntu).
 
 On Ubuntu, the following command(s) should solve the dependencies:
 
-  aptitude install automake autoconf libtool gcc libssl-dev \
+  aptitude install autoconf automake libtool make gcc libssl-dev \
     iptables-dev libconfig8-dev libnet-ip-perl libnet-dns-perl
 
-  Optionally: aptitude install pax miredo bzr xmlto doxygen check fakeroot
-                         dpkg-dev
+  Optionally: aptitude install miredo bzr xmlto doxygen check fakeroot dpkg-dev
 
 On Fedora, the following command(s) should solve the dependencies:
 
-  yum install gcc openssl-devel autoconf automake libtool \
-              iptables-devel libconfig-devel rpm-build \
-              perl-Net-IP perl-Net-DNS
+  yum install autoconf automake libtool make gcc openssl-devel \
+              iptables-devel libconfig-devel perl-Net-IP perl-Net-DNS
 
-  Optionally: yum install miredo bzr xmlto doxygen check-devel
+  Optionally: yum install miredo bzr xmlto doxygen check-devel rpm-build
 
 
 How to build HIPL
@@ -77,6 +75,10 @@ compiler that does produce warnings, you can override -Werror as follows:
 
 Then run make as usual.
 
+Please note that the HIP configuration files are located in
+/usr/local/etc/hip with the default configure flags. If you want to
+change the location to /etc/hip, you have to pass --sysconfdir=/etc to
+configure (or create a symbolic link).
 
 Broken Systems
 ==============
