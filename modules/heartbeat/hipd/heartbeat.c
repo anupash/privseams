@@ -446,6 +446,8 @@ int hip_heartbeat_init(void)
     struct icmp6_filter filter;
     int *icmpsockfd = &hip_icmp_sock;
 
+    HIP_INFO("Initializing heartbeat extension\n");
+
     *icmpsockfd       = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
     set_cloexec_flag(*icmpsockfd, 1);
     HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");

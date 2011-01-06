@@ -103,6 +103,8 @@ int hip_hb_update_init(void)
 {
     int err = 0;
 
+    HIP_INFO("Initializing tunnel updates for heartbeat extension\n");
+
     HIP_IFEL(hip_register_maint_function(&hip_hb_update_maintenance, 50000),
              -1,
              "Error on registration of hip_hb_update_maintenance().\n");
