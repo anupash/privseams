@@ -103,6 +103,24 @@ out_err:
 }
 
 /**
+ * Remove a handle function from the list.
+ *
+ * @param *handle_function Pointer to the function which should be unregistered.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int hip_unregister_handle_function(const uint8_t packet_type,
+                                   const uint32_t ha_state,
+                                   int (*handle_function)(const uint8_t packet_type,
+                                                          const uint32_t ha_state,
+                                                          struct hip_packet_context *ctx))
+{
+    return lmod_unregister_function(hip_handle_functions[packet_type][ha_state],
+                                    handle_function);
+}
+
+/**
  * Run all handle functions for specified combination from packet type and host
  * association state.
  *
