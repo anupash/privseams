@@ -3896,9 +3896,9 @@ int hip_any_key_to_hit(void *any_key,
     char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     struct hip_host_id_priv *host_id = NULL;
     struct hip_host_id *host_id_pub = NULL;
-    RSA *rsa_key = (RSA *) any_key;
-    DSA *dsa_key = (DSA *) any_key;
-    EC_KEY *ecdsa_key = (EC_KEY *) any_key;
+    RSA *rsa_key        = any_key;
+    DSA *dsa_key        = any_key;
+    EC_KEY *ecdsa_key   = any_key;
 
     memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
     HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
