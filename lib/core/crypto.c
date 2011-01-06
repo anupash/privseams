@@ -790,7 +790,8 @@ err_out:
  * @return the created ECDSA structure, otherwise NULL.
  *
  */
-EC_KEY *create_ecdsa_key(int nid) {
+EC_KEY *create_ecdsa_key(int nid)
+{
     int err = 0;
     EC_KEY *eckey = NULL;
     EC_GROUP *group = NULL;
@@ -1049,7 +1050,8 @@ out_err:
  * @return 0 if all files were saved successfully, or non-zero if an
  * error occurred.
  */
-int save_ecdsa_private_key(const char *filenamebase, EC_KEY *ecdsa) {
+int save_ecdsa_private_key(const char *filenamebase, EC_KEY *ecdsa)
+{
     int err           = 0, files = 0, ret;
     char *pubfilename = NULL;
     int pubfilename_len;

@@ -267,7 +267,8 @@ out_err:
  */
 int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                      struct in6_addr *hit,
-                                     int hit_type) {
+                                     int hit_type)
+{
     int err = 0;
     struct hip_ecdsa_keylen key_lens;
     struct hip_host_id host_id_pub;
@@ -327,7 +328,8 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
  * @return the HIP ID of the curve (according to RFC5201-bis) or HIP_UNSUPPORTED_CURVE on error
  *
  */
-static int get_ecdsa_curve_hip_name(const int nid) {
+static int get_ecdsa_curve_hip_name(const int nid)
+{
     /* Determine the curve */
     switch (nid) {
     case NID_secp160r1:
@@ -350,7 +352,8 @@ static int get_ecdsa_curve_hip_name(const int nid) {
  *
  * @return the openssl specific curve id used with this host identity or -1 on error.
  */
-static int get_ecdsa_curve_nid(const struct hip_host_id *host_id) {
+static int get_ecdsa_curve_nid(const struct hip_host_id *host_id)
+{
     int err = 0;
     uint16_t curve_id;
     int nid;
@@ -395,7 +398,7 @@ out_err:
  * @return 0 on success, non-0 otherwise
  */
 int hip_get_ecdsa_keylen(const struct hip_host_id_priv *host_id,
-                          struct hip_ecdsa_keylen *ret)
+                         struct hip_ecdsa_keylen *ret)
 {
     int err = 0;
     int nid;
@@ -1292,7 +1295,8 @@ out_err:
  *
  * @note This functions assumes that the key is public.
  */
-int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr) {
+int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr)
+{
     int err = 0;
     int public = 0;
     unsigned char *buffer = NULL;
