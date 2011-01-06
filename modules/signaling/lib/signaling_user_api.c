@@ -25,7 +25,7 @@
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
 
-int signaling_X509_to_DER(X509 *cert, unsigned char **buf) {
+int signaling_X509_to_DER(X509 *const cert, unsigned char **buf) {
     int len;
     int err = 0;
 
@@ -41,9 +41,9 @@ out_err:
     return len;
 }
 
-UNUSED static int DER_to_X509(unsigned char *buf, int len, X509 **cert) {
+int signaling_DER_to_X509(const unsigned char *const buf, const int len, X509 **cert) {
     int err = 0;
-    unsigned char *p;
+    const unsigned char *p;
 
     HIP_IFEL(!buf, -1, "Cannot decode from NULL-buffer\n");
     HIP_IFEL(len <= 0, -1, "Cannot decode certificate of length <= 0\n");
@@ -54,7 +54,7 @@ out_err:
     return err;
 }
 
-static X509 *load_x509_certificate(const char *file) {
+static X509 *load_x509_certificate(const char *const file) {
     int err     = 0;
     FILE *fp    = NULL;
     X509 *cert  = NULL;
@@ -82,7 +82,7 @@ out_err:
 /*
  * @return NULL on error
  */
-static char *get_user_homedir(uid_t uid) {
+static char *get_user_homedir(const uid_t uid) {
     int err = 0;
     struct passwd *pw = NULL;
 
@@ -125,7 +125,7 @@ out_err:
  * @param data the data to be signed
  * @return zero on success and negative on error
  */
-static int ecdsa_sign(EC_KEY *priv_key, const void *data, int in_len, uint8_t *out)
+static int ecdsa_sign(EC_KEY *const priv_key, const void *const data, const int in_len, uint8_t *const out)
 {
     int err = 0;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
@@ -144,7 +144,7 @@ out_err:
     return err;
 }
 
-int signaling_user_api_get_uname(uid_t uid, struct signaling_user_context *user_ctx) {
+int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context *const user_ctx) {
     int err             = 0;
     X509 *usercert      = NULL;
     X509_NAME *uname    = NULL;
@@ -168,7 +168,7 @@ out_err:
 /*
  * @return < 0 on error, size of computed signature on success
  */
-int signaling_user_api_get_signature(uid_t uid, const void *data, int in_len, unsigned char *outbuf) {
+int signaling_user_api_get_signature(const uid_t uid, const void *const data, const int in_len, unsigned char *const outbuf) {
     int err = 0;
     EC_KEY *priv_key = NULL;
     unsigned int sig_len;
@@ -205,7 +205,7 @@ out_err:
 }
 
 
-static X509 *signaling_user_api_certificate_lookup(UNUSED const char *username) {
+static X509 *signaling_user_api_certificate_lookup(UNUSED const char *const username) {
     return NULL;
 }
 
