@@ -554,7 +554,6 @@ int hip_fw_init_esp_relay(void)
         restore_accept_hip_esp_traffic = 1;
 
         firewall_init_filter_traffic();
-        hip_fw_init_esp_prot_conntrack();
     }
 
     return err;
