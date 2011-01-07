@@ -203,7 +203,7 @@ struct hip_common *hip_msg_alloc(void)
  * @note compared to hip_convert_msg_total_len_to_bytes_16(), this
  *       function inputs an 8-bit integer
  */
-static uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len_t len)
+static uint16_t hip_convert_msg_total_len_to_bytes(const hip_hdr_len len)
 {
     return (len == 0) ? 0 : ((len + 1) << 3);
 }
