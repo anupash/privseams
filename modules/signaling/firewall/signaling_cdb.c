@@ -315,8 +315,6 @@ out_err:
  */
 static int signaling_cdb_update_entry(struct signaling_connection_context *old,
                                       const struct signaling_connection_context *new) {
-    old->src_port = new->src_port;
-    old->dest_port = new->dest_port;
     old->connection_status = new->connection_status;
     // TODO: update application context and user context
 
