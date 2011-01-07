@@ -33,8 +33,6 @@
 
 #include "protodefs.h"
 
-#define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
-
 struct hosts_file_line {
     char           *hostname, *alias, *alias2;
     struct in6_addr id;
