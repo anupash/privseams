@@ -91,7 +91,6 @@
 #include "straddr.h"
 #include "debug.h"
 
-#define SYSLOG_OPT        (LOG_PID)
 //#define SYSLOG_FACILITY   LOG_DAEMON
 #define SYSLOG_FACILITY   LOG_LOCAL6
 
@@ -225,7 +224,7 @@ static void hip_vlog(int debug_level, const char *file, const int line,
         }
         break;
     case LOGTYPE_SYSLOG:
-        openlog(NULL, SYSLOG_OPT, SYSLOG_FACILITY);
+        openlog(NULL, LOG_PID, SYSLOG_FACILITY);
         printed = vsnprintf(syslog_msg, DEBUG_MSG_MAX_LEN, fmt, args);
         syslog(syslog_level | SYSLOG_FACILITY, "%s %s", prefix, syslog_msg);
         /* the result of vsnprintf depends on glibc version; handle them both
