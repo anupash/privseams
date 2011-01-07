@@ -12,8 +12,6 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-#define MAX_ITEM_LEN 256
-
 /* moved this here from getaddrinfo.c because it's used now in
  * getendpointinfo.c too */
 

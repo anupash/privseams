@@ -15,6 +15,8 @@
 #include "lutil.h"
 #include "lib/core/conf.h"
 
+#define MAX_ITEM_LEN 256
+
 /**
  * Read characters to a buffer from a file. Works like fgets() but
  * removes the trailing '\n' from the end.
