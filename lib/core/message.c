@@ -121,7 +121,6 @@ static int hip_peek_recv_total_len(int sockfd,
     unsigned long timeout_left = timeout;
     int hdr_size               = encap_hdr_size + sizeof(struct hip_common);
     char *msg                  = NULL;
-    struct hip_common *hip_hdr = NULL;
     struct timespec ts;
 
     ts.tv_sec  = 0;
@@ -158,8 +157,7 @@ static int hip_peek_recv_total_len(int sockfd,
         goto out_err;
     }
 
-    hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
-    bytes   = hip_get_msg_total_len(hip_hdr);
+    bytes = hip_get_msg_total_len((struct hip_common *) msg + encap_hdr_size);
 
     if (bytes == 0) {
         HIP_ERROR("HIP message is of zero length. Dropping.\n");
