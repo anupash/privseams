@@ -538,7 +538,7 @@ out_err:
  * Verify an ECDSA signature
  *
  * @param digest a digest which was used to create the signature
- * @param ecdsa the DSA key
+ * @param ecdsa the ECDSA key
  * @param signature the signature to verify
  *
  * @return 1 for a valid signature, 0 for an incorrect signature and -1 on
