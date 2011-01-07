@@ -46,12 +46,12 @@
  * Label 'out_err' must be defined, on errors this label is used
  * as destination after proper actions.
  *
- * @param func Nonzero, if failure.
+ * @param cond Nonzero on failure
  * @param eval Set variable called 'err' to this value.
  */
-#define HIP_IFE(func, eval) \
+#define HIP_IFE(cond, eval) \
     { \
-        if (func) { \
+        if (cond) { \
             err = eval; \
             goto out_err; \
         } \
@@ -63,22 +63,22 @@
  * Label 'out_err' must be defined, on errors this label is used
  * as destination after proper actions.
  *
- * @param func Nonzero, if failure.
+ * @param cond nonzero on failure
  * @param eval Set variable called 'err' to this value.
  * @param args Arguments for HIP_ERROR(), use like with printf().
  */
-#define HIP_IFEL(func, eval, args ...) \
+#define HIP_IFEL(cond, eval, args ...) \
     { \
-        if (func) { \
+        if (cond) { \
             HIP_ERROR(args); \
             err = eval; \
             goto out_err; \
         } \
     }
 
-#define HIP_IFF(func, eval, finally, args ...) \
+#define HIP_IFF(cond, eval, finally, args ...) \
     { \
-        if (func) { \
+        if (cond) { \
             HIP_ERROR(args); \
             err = eval; \
             finally; \
