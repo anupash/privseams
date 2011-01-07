@@ -99,9 +99,6 @@
 #include "hadb.h"
 
 
-#define HIP_HADB_SIZE 53
-#define HIP_MAX_HAS 100
-
 HIP_HASHTABLE *hadb_hit = NULL;
 struct in_addr peer_lsi_index;
 
