@@ -3385,7 +3385,7 @@ const char *hip_get_param_host_id_hostname(const struct hip_host_id *hostid)
  */
 static void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
                                    const char *hostname,
-                                   se_hip_flags_t endpoint_flags,
+                                   se_hip_flags endpoint_flags,
                                    uint8_t host_id_algo,
                                    unsigned int rr_data_len)
 {
@@ -3699,7 +3699,7 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
  */
 int dsa_to_hip_endpoint(DSA *dsa,
                         struct endpoint_hip **endpoint,
-                        se_hip_flags_t endpoint_flags,
+                        se_hip_flags endpoint_flags,
                         const char *hostname)
 {
     int err = 0;
@@ -3751,7 +3751,7 @@ out_err:
  */
 int rsa_to_hip_endpoint(RSA *rsa,
                         struct endpoint_hip **endpoint,
-                        se_hip_flags_t endpoint_flags,
+                        se_hip_flags endpoint_flags,
                         const char *hostname)
 {
     int err = 0;

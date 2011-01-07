@@ -229,11 +229,11 @@ void hip_set_param_lsi_value(struct hip_esp_info *, uint32_t);
 void hip_zero_msg_checksum(struct hip_common *);
 int rsa_to_hip_endpoint(RSA *rsa,
                         struct endpoint_hip **endpoint,
-                        se_hip_flags_t endpoint_flags,
+                        se_hip_flags endpoint_flags,
                         const char *hostname);
 int dsa_to_hip_endpoint(DSA *dsa,
                         struct endpoint_hip **endpoint,
-                        se_hip_flags_t endpoint_flags,
+                        se_hip_flags endpoint_flags,
                         const char *hostname);
 int hip_build_param_reg_info(struct hip_common *msg,
                              const void *service_list,

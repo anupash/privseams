@@ -564,9 +564,9 @@
 
 typedef uint8_t hip_hdr;
 typedef uint8_t hip_hdr_len;
-typedef uint16_t se_family_t;
-typedef uint16_t se_length_t;
-typedef uint16_t se_hip_flags_t;
+typedef uint16_t se_family;
+typedef uint16_t se_len;
+typedef uint16_t se_hip_flags;
 typedef uint16_t hip_hdr_err_t;
 typedef uint16_t hip_tlv_type_t;
 typedef uint16_t hip_tlv_len_t;
@@ -683,18 +683,18 @@ struct hip_unit_test {
  * members are in network byte order.
  */
 struct endpoint {
-    se_family_t family;          /**< PF_HIP, PF_XX */
-    se_length_t length;          /**< length of the whole endpoint in octets */
+    se_family family;       /**< PF_HIP, PF_XX */
+    se_len    length;       /**< length of the whole endpoint in octets */
 };
 
 /**
  * @note not padded
  */
 struct endpoint_hip {
-    se_family_t    family;          /**< PF_HIP */
-    se_length_t    length;          /**< length of the whole endpoint in octets */
-    se_hip_flags_t flags;           /**< e.g. ANON or HIT */
-    uint8_t        algo;
+    se_family    family;    /**< PF_HIP */
+    se_len       length;    /**< length of the whole endpoint in octets */
+    se_hip_flags flags;     /**< e.g. ANON or HIT */
+    uint8_t      algo;
     hip_lsi_t      lsi;
     union {
         struct hip_host_id_priv host_id;
