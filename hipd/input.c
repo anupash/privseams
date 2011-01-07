@@ -457,7 +457,7 @@ out_err:
  *                shouldn't be dropped
  */
 static int hip_packet_to_drop(struct hip_hadb_state *entry,
-                              hip_hdr_type_t type,
+                              hip_hdr type,
                               struct in6_addr *hitr)
 {
     // If we are a relay or rendezvous server, don't drop the packet

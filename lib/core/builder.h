@@ -176,7 +176,7 @@ int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
 int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);
 
 int hip_build_param_hit_to_ip_set(struct hip_common *, const char *);
-int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
+int hip_build_user_hdr(struct hip_common *, hip_hdr, hip_hdr_err_t);
 void hip_calc_hdr_len(struct hip_common *);
 int hip_check_network_msg(const struct hip_common *);
 int hip_verify_network_header(struct hip_common *hip_common,
@@ -194,7 +194,7 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 int hip_check_network_msg_len(const struct hip_common *msg);
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
-hip_hdr_type_t hip_get_msg_type(const struct hip_common *);
+hip_hdr hip_get_msg_type(const struct hip_common *);
 const struct hip_tlv_common *hip_get_next_param(const struct hip_common *,
                                                 const struct hip_tlv_common *);
 struct hip_tlv_common *hip_get_next_param_readwrite(struct hip_common *,

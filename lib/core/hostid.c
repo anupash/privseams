@@ -444,7 +444,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
 {
     int err = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0;
     int dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0;
-    hip_hdr_type_t numeric_action             = 0;
+    hip_hdr numeric_action = 0;
     char addrstr[INET6_ADDRSTRLEN], hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     char *dsa_filenamebase                    = NULL, *rsa_filenamebase = NULL;
     char *dsa_filenamebase_pub                = NULL, *rsa_filenamebase_pub = NULL;

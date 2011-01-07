@@ -262,7 +262,7 @@ void hip_set_msg_total_len(struct hip_common *msg, uint16_t len)
  * @return the type of the message (in host byte order)
  *
  */
-hip_hdr_type_t hip_get_msg_type(const struct hip_common *msg)
+hip_hdr hip_get_msg_type(const struct hip_common *msg)
 {
     return msg->type_hdr;
 }
@@ -273,7 +273,7 @@ hip_hdr_type_t hip_get_msg_type(const struct hip_common *msg)
  * @param msg pointer to the beginning of the message header
  * @param type the type of the message (in host byte order)
  */
-static void hip_set_msg_type(struct hip_common *msg, hip_hdr_type_t type)
+static void hip_set_msg_type(struct hip_common *msg, hip_hdr type)
 {
     msg->type_hdr = type;
 }
@@ -578,9 +578,8 @@ int hip_check_network_msg_len(const struct hip_common *msg)
  */
 static int hip_check_network_msg_type(const struct hip_common *msg)
 {
-    int ok                     = 0;
-    hip_hdr_type_t supported[] =
-    {
+    int ok = 0;
+    hip_hdr supported[] = {
         HIP_I1,
         HIP_R1,
         HIP_I2,
@@ -591,10 +590,9 @@ static int hip_check_network_msg_type(const struct hip_common *msg)
         HIP_CLOSE_ACK,
         HIP_LUPDATE
     };
-    hip_hdr_type_t i;
-    hip_hdr_type_t type = hip_get_msg_type(msg);
+    hip_hdr i, type = hip_get_msg_type(msg);
 
-    for (i = 0; i < sizeof(supported) / sizeof(hip_hdr_type_t); i++) {
+    for (i = 0; i < sizeof(supported) / sizeof(hip_hdr); i++) {
         if (type == supported[i]) {
             ok = 1;
             break;
@@ -1690,7 +1688,7 @@ uint8_t hip_get_msg_response(struct hip_common *msg)
  *       should never be sent on wire and should not be confused with message
  *       arriving from the network.
  */
-int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
+int hip_build_user_hdr(struct hip_common *msg, hip_hdr base_type,
                        hip_hdr_err_t err_val)
 {
     int err = 0;

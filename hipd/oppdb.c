@@ -462,7 +462,7 @@ out_err:
 struct hip_hadb_state *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
                                                       struct in6_addr *src_addr)
 {
-    hip_hdr_type_t         type  = hip_get_msg_type(msg);
+    hip_hdr                type  = hip_get_msg_type(msg);
     struct hip_hadb_state *entry = NULL;
 
     if (type == HIP_I1) {
