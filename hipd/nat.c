@@ -174,7 +174,7 @@ out_err:
  * Get HIP NAT status.
  * TODO doxygen header
  */
-hip_transform_suite_t hip_get_nat_mode(struct hip_hadb_state *entry)
+hip_transform_suite hip_get_nat_mode(struct hip_hadb_state *entry)
 {
     if (entry) {
         return entry->nat_mode;
@@ -196,7 +196,7 @@ static int hip_ha_set_nat_mode(struct hip_hadb_state *entry, void *mode)
 {
     int err = 0;
     if (entry && mode != HIP_NAT_MODE_NONE) {
-        entry->nat_mode = *((hip_transform_suite_t *) mode);
+        entry->nat_mode = *((hip_transform_suite *) mode);
         HIP_DEBUG("NAT status of host association %p: %d\n",
                   entry, entry->nat_mode);
     }

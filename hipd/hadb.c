@@ -1088,7 +1088,7 @@ void hip_init_hadb(void)
  *       for all controls.
  */
 void hip_hadb_set_local_controls(struct hip_hadb_state *entry,
-                                 hip_controls_t mask)
+                                 hip_controls mask)
 {
     if (entry != NULL) {
         switch (mask) {
@@ -1118,7 +1118,7 @@ void hip_hadb_set_local_controls(struct hip_hadb_state *entry,
  *       for all controls.
  */
 void hip_hadb_set_peer_controls(struct hip_hadb_state *entry,
-                                hip_controls_t mask)
+                                hip_controls mask)
 {
     if (entry != NULL) {
         switch (mask) {
@@ -1145,7 +1145,7 @@ void hip_hadb_set_peer_controls(struct hip_hadb_state *entry,
 }
 
 void hip_hadb_cancel_local_controls(struct hip_hadb_state *entry,
-                                    hip_controls_t mask)
+                                    hip_controls mask)
 {
     if (entry != NULL) {
         entry->local_controls &= (~mask);

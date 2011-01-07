@@ -187,10 +187,10 @@ struct hip_hadb_state {
     int                   update_state;
     /** Our control values related to this host association.
      *  @see hip_ha_controls */
-    hip_controls_t        local_controls;
+    hip_controls          local_controls;
     /** Peer control values related to this host association.
      *  @see hip_ha_controls */
-    hip_controls_t        peer_controls;
+    hip_controls          peer_controls;
     /** If this host association is from a local HIT to a local HIT this
      *  is non-zero, otherwise zero. */
     int                   is_loopback;
@@ -247,7 +247,7 @@ struct hip_hadb_state {
     size_t                dh_shared_key_len;
     /** A boolean value indicating whether there is a NAT between this host
      *  and the peer. */
-    hip_transform_suite_t nat_mode;
+    hip_transform_suite   nat_mode;
     /* this might seem redundant as dst_port == hip_get_nat_udp_port(), but it makes
      * port handling easier in other functions */
     in_port_t             local_udp_port;
@@ -368,7 +368,7 @@ struct hip_hadb_user_info_state {
     in_port_t       nat_udp_port_local;
     in_port_t       nat_udp_port_peer;
     int             shotgun_status;
-    hip_controls_t  peer_controls;
+    hip_controls    peer_controls;
     struct timeval  bex_duration;
 };
 

@@ -258,7 +258,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                 UNUSED const uint32_t ha_state,
                 struct hip_packet_context *ctx)
 {
-    hip_transform_suite_t transform_hip_suite, transform_esp_suite;
+    hip_transform_suite transform_hip_suite, transform_esp_suite;
     struct hip_spi_in_item spi_in_data;
     struct in6_addr daddr;
     const struct hip_param *param           = NULL;
@@ -583,12 +583,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     unsigned int service_count = 0;
 
     /* Supported HIP and ESP transforms. */
-    hip_transform_suite_t transform_hip_suite[] = {
+    hip_transform_suite transform_hip_suite[] = {
         HIP_HIP_AES_SHA1,
         HIP_HIP_3DES_SHA1,
         HIP_HIP_NULL_SHA1
     };
-    hip_transform_suite_t transform_esp_suite[] = {
+    hip_transform_suite transform_esp_suite[] = {
         HIP_ESP_AES_SHA1,
         HIP_ESP_3DES_SHA1,
         HIP_ESP_NULL_SHA1
@@ -671,7 +671,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     HIP_IFEL(hip_build_param_hip_transform(msg,
                                            transform_hip_suite,
                                            sizeof(transform_hip_suite) /
-                                           sizeof(hip_transform_suite_t)), -1,
+                                           sizeof(hip_transform_suite)), -1,
              "Building of HIP transform failed\n");
 
     /* Parameter HOST_ID */
@@ -688,7 +688,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     HIP_IFEL(hip_build_param_esp_transform(msg,
                                            transform_esp_suite,
                                            sizeof(transform_esp_suite) /
-                                           sizeof(hip_transform_suite_t)), -1,
+                                           sizeof(hip_transform_suite)), -1,
              "Building of ESP transform failed\n");
 
     /********** ESP-PROT transform (OPTIONAL) **********/

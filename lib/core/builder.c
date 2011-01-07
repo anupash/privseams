@@ -1376,7 +1376,7 @@ static int hip_check_network_param_attributes(const struct hip_tlv_common *param
     case HIP_PARAM_ESP_TRANSFORM:
     {
         /* Search for one supported transform */
-        hip_transform_suite_t suite;
+        hip_transform_suite suite;
 
         suite = hip_get_param_transform_suite_id(param);
         if (suite == 0) {
@@ -2666,7 +2666,7 @@ static uint16_t hip_get_transform_max(hip_tlv transform_type)
  * @return zero on success, or negative on error
  */
 int hip_build_param_esp_transform(struct hip_common *msg,
-                                  const hip_transform_suite_t transform_suite[],
+                                  const hip_transform_suite transform_suite[],
                                   const uint16_t transform_count)
 {
     int err = 0;
@@ -2694,7 +2694,7 @@ int hip_build_param_esp_transform(struct hip_common *msg,
     hip_set_param_type((struct hip_tlv_common *) &transform_param,
                        HIP_PARAM_ESP_TRANSFORM);
     hip_calc_param_len((struct hip_tlv_common *) &transform_param,
-                       2 + transform_count * sizeof(hip_transform_suite_t));
+                       2 + transform_count * sizeof(hip_transform_suite));
     err = hip_build_param(msg, &transform_param);
 
 out_err:
@@ -2711,7 +2711,7 @@ out_err:
  * @return zero on success, or negative on error
  */
 int hip_build_param_hip_transform(struct hip_common *msg,
-                                  const hip_transform_suite_t transform_suite[],
+                                  const hip_transform_suite transform_suite[],
                                   const uint16_t transform_count)
 {
     int err = 0;
@@ -2739,7 +2739,7 @@ int hip_build_param_hip_transform(struct hip_common *msg,
     hip_set_param_type((struct hip_tlv_common *) &transform_param,
                        HIP_PARAM_HIP_TRANSFORM);
     hip_calc_param_len((struct hip_tlv_common *) &transform_param,
-                       transform_count * sizeof(hip_transform_suite_t));
+                       transform_count * sizeof(hip_transform_suite));
     err = hip_build_param(msg, &transform_param);
 
 out_err:
@@ -2753,7 +2753,7 @@ out_err:
  * @return              the suite id on transform_tlv on index
  * @todo                Remove index and rename.
  */
-hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv)
+hip_transform_suite hip_get_param_transform_suite_id(const void *transform_tlv)
 {
     /** @todo Why do we have hip_select_esp_transform separately? */
 

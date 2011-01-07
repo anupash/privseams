@@ -570,8 +570,8 @@ typedef uint16_t se_len;
 typedef uint16_t se_hip_flags;
 typedef uint16_t hip_tlv;
 typedef uint16_t hip_tlv_len;
-typedef uint16_t hip_transform_suite_t;
-typedef uint16_t hip_controls_t;
+typedef uint16_t hip_transform_suite;
+typedef uint16_t hip_controls;
 typedef uint32_t sa_eid_t;
 typedef struct in6_addr hip_hit_t;
 typedef struct in_addr hip_lsi_t;
@@ -816,16 +816,16 @@ struct hip_diffie_hellman {
 } __attribute__ ((packed));
 
 struct hip_hip_transform {
-    hip_tlv               type;
-    hip_tlv_len           length;
-    hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX];
+    hip_tlv             type;
+    hip_tlv_len         length;
+    hip_transform_suite suite_id[HIP_TRANSFORM_HIP_MAX];
 } __attribute__ ((packed));
 
 struct hip_esp_transform {
-    hip_tlv               type;
-    hip_tlv_len           length;
-    uint16_t              reserved;
-    hip_transform_suite_t suite_id[HIP_TRANSFORM_ESP_MAX];
+    hip_tlv             type;
+    hip_tlv_len         length;
+    uint16_t            reserved;
+    hip_transform_suite suite_id[HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
 
 

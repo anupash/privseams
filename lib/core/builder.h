@@ -159,10 +159,10 @@ int hip_build_param(struct hip_common *, const void *);
 void hip_set_msg_response(struct hip_common *msg, uint8_t on);
 uint8_t hip_get_msg_response(struct hip_common *msg);
 int hip_build_param_esp_transform(struct hip_common *,
-                                  const hip_transform_suite_t[],
+                                  const hip_transform_suite[],
                                   const uint16_t);
 int hip_build_param_hip_transform(struct hip_common *,
-                                  const hip_transform_suite_t[],
+                                  const hip_transform_suite[],
                                   const uint16_t);
 int hip_build_param_relay_to(struct hip_common *msg,
                              const struct in6_addr *rvs_addr,
@@ -209,7 +209,7 @@ int hip_get_param_host_id_di_type_len(const struct hip_host_id *,
                                       const char **, int *);
 const char *hip_get_param_host_id_hostname(const struct hip_host_id *);
 hip_tlv_len hip_get_param_total_len(const void *);
-hip_transform_suite_t hip_get_param_transform_suite_id(const void *);
+hip_transform_suite hip_get_param_transform_suite_id(const void *);
 hip_tlv hip_get_param_type(const void *);
 void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv type);
 void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,

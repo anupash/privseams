@@ -1720,7 +1720,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     int err = 0, retransmission = 0;
     uint32_t spi_out = 0;
     const struct hip_esp_info *esp_info     = NULL;
-    hip_transform_suite_t esp_tfm;
+    hip_transform_suite esp_tfm;
     struct hip_spi_in_item spi_in_data;
     const struct hip_locator *locator       = NULL;
     int if_index                            = 0;

@@ -28,8 +28,8 @@
 
 #include "protodefs.h"
 
-hip_transform_suite_t hip_select_esp_transform(const struct hip_esp_transform *);
-hip_transform_suite_t hip_select_hip_transform(const struct hip_hip_transform *);
+hip_transform_suite hip_select_esp_transform(const struct hip_esp_transform *);
+hip_transform_suite hip_select_hip_transform(const struct hip_hip_transform *);
 int hip_transform_key_length(int tid);
 
 #endif /* HIP_LIB_CORE_TRANSFORM_H */

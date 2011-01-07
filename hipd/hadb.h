@@ -112,11 +112,11 @@ int hip_for_each_ha(int(func) (struct hip_hadb_state * entry, void *opaq),
  */
 
 void hip_hadb_set_local_controls(struct hip_hadb_state *entry,
-                                 hip_controls_t mask);
+                                 hip_controls mask);
 void hip_hadb_set_peer_controls(struct hip_hadb_state *entry,
-                                hip_controls_t mask);
+                                hip_controls mask);
 void hip_hadb_cancel_local_controls(struct hip_hadb_state *entry,
-                                    hip_controls_t mask);
+                                    hip_controls mask);
 
 int hip_count_open_connections(void);
 

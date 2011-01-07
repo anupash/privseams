@@ -297,13 +297,13 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +        uint8_t public_value[0];
 +} __attribute__ ((packed));
 +
-+typedef uint16_t hip_transform_suite_t;
++typedef uint16_t hip_transform_suite;
 +
 +struct hip_hip_transform {
 +        hip_tlv type;
 +        hip_tlv_len length;
 +
-+        hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX];
++        hip_transform_suite suite_id[HIP_TRANSFORM_HIP_MAX];
 +} __attribute__ ((packed));
 +
 +struct hip_encrypted_aes_sha1 {
@@ -423,7 +423,7 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +
 +        uint16_t reserved;
 +
-+        hip_transform_suite_t suite_id[HIP_TRANSFORM_ESP_MAX];
++        hip_transform_suite suite_id[HIP_TRANSFORM_ESP_MAX];
 +} __attribute__ ((packed));
 +
 +struct hip_reg_info {
@@ -512,7 +512,7 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +
 +        uint16_t reserved;
 +
-+        hip_transform_suite_t suite_id[HIP_NAT_TRAVERSAL_MODE_MAX];
++        hip_transform_suite suite_id[HIP_NAT_TRAVERSAL_MODE_MAX];
 +} __attribute__ ((packed));
 +
 +struct hip_transaction_pacing {

@@ -43,15 +43,15 @@
  * @return the first acceptable Transform-ID or negative if no
  * acceptable transform was found. The return value is in host byte order.
  */
-hip_transform_suite_t hip_select_hip_transform(const struct hip_hip_transform *ht)
+hip_transform_suite hip_select_hip_transform(const struct hip_hip_transform *ht)
 {
-    hip_transform_suite_t tid = 0;
+    hip_transform_suite tid = 0;
     int i;
     int length;
-    const hip_transform_suite_t *suggestion;
+    const hip_transform_suite *suggestion;
 
     length     = ntohs(ht->length);
-    suggestion = (const hip_transform_suite_t *) &ht->suite_id[0];
+    suggestion = (const hip_transform_suite *) &ht->suite_id[0];
 
     if ((length >> 1) > 6) {
         HIP_ERROR("Too many transforms (%d)\n", length >> 1);
@@ -95,14 +95,14 @@ out:
  * @return the first acceptable Suite-ID or negative if no
  * acceptable Suite-ID was found.
  */
-hip_transform_suite_t hip_select_esp_transform(const struct hip_esp_transform *ht)
+hip_transform_suite hip_select_esp_transform(const struct hip_esp_transform *ht)
 {
-    hip_transform_suite_t tid = 0;
+    hip_transform_suite tid = 0;
     unsigned i, length;
-    const hip_transform_suite_t *suggestion;
+    const hip_transform_suite *suggestion;
 
     length     = hip_get_param_contents_len(ht);
-    suggestion = (const hip_transform_suite_t *) &ht->suite_id[0];
+    suggestion = (const hip_transform_suite *) &ht->suite_id[0];
 
     for (i = 0; i < length; i++) {
         switch (ntohs(*suggestion)) {
