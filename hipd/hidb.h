@@ -23,8 +23,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_HIPD_HIDB
-#define HIP_HIPD_HIDB
+#ifndef HIP_HIPD_HIDB_H
+#define HIP_HIPD_HIDB_H
 
 #include <netinet/in.h>
 #include <openssl/lhash.h>
@@ -120,4 +120,4 @@ int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);
 int hip_get_default_lsi(struct in_addr *lsi);
 
-#endif /* HIP_HIPD_HIDB */
+#endif /* HIP_HIPD_HIDB_H */
