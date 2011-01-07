@@ -154,11 +154,13 @@ int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context 
         HIP_DEBUG("Could not get user's certificate, using system username as fallback.\n");
         HIP_IFEL(!(pw = getpwuid(uid)),
                  -1, "Failed to get info for user id %d.\n", uid);
-        memcpy(user_ctx->username, pw->pw_name, strlen(pw->pw_name));
+        strncpy(user_ctx->username, pw->pw_name, SIGNALING_USER_ID_MAX_LEN-1);
+        user_ctx->username[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
     } else {
         HIP_IFEL(!(uname = X509_get_subject_name(usercert)),
                  -1, "Could not get subject name from certificate\n");
         X509_NAME_oneline(uname, user_ctx->username, SIGNALING_USER_ID_MAX_LEN);
+        user_ctx->username[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
     }
 
 out_err:
