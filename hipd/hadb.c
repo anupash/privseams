@@ -66,6 +66,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <openssl/dsa.h>
+#include <openssl/lhash.h>
 #include <openssl/rsa.h>
 
 #include "lib/core/builder.h"
@@ -285,7 +286,7 @@ struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit,
  */
 struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
     struct hip_host_id_entry *e;
     struct hip_hadb_state *entry = NULL;
     hip_hit_t our_hit;
@@ -855,7 +856,7 @@ out_err:
  */
 static void hip_hadb_delete_state(struct hip_hadb_state *ha)
 {
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr_li = NULL;
     int i;
 
@@ -1209,7 +1210,7 @@ int hip_for_each_ha(int (*func)(struct hip_hadb_state *entry, void *opaq),
 {
     int i = 0, fail = 0;
     struct hip_hadb_state *this;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     if (!func) {
         return -EINVAL;
@@ -1340,7 +1341,7 @@ struct hip_hadb_state *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_
 {
     int i            = 0;
     struct hip_hadb_state *this   = NULL, *result = NULL;
-    hip_list_t *item = NULL, *tmp = NULL;     //
+    LHASH_NODE *item = NULL, *tmp = NULL;     //
 
     HIP_LOCK_HT(&hadb_hit);
     list_for_each_safe(item, tmp, hadb_hit, i)
@@ -1456,7 +1457,7 @@ int hip_generate_peer_lsi(hip_lsi_t *lsi)
 struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
                                                         hip_lsi_t *lsi_dst)
 {
-    hip_list_t *item, *aux;
+    LHASH_NODE *item, *aux;
     struct hip_hadb_state *tmp;
     int i;
 
@@ -1482,7 +1483,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
  */
 struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi_dst)
 {
-    hip_list_t *item, *aux;
+    LHASH_NODE *item, *aux;
     struct hip_hadb_state *tmp;
     int i;
 

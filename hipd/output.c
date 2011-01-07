@@ -45,6 +45,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/udp.h>
+#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -150,7 +151,7 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
     struct hip_common *i1       = 0;
     uint16_t mask               = 0;
     int err                     = 0;
-    hip_list_t *item            = NULL, *tmp = NULL;
+    LHASH_NODE *item            = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr;
     int i                       = 0;
     struct in6_addr *local_addr = NULL;
@@ -1455,7 +1456,7 @@ int hip_send_pkt(const struct in6_addr *local_addr,
     int err                                = 0;
     struct netdev_address *netdev_src_addr = NULL;
     struct in6_addr *src_addr              = NULL;
-    hip_list_t *item                       = NULL, *tmp = NULL;
+    LHASH_NODE *item                       = NULL, *tmp = NULL;
     int i                                  = 0;
 
     /* Notice that the shotgun logic requires us to check always the address family.

@@ -27,6 +27,7 @@
 #define HIP_HIPD_HIDB
 
 #include <netinet/in.h>
+#include <openssl/lhash.h>
 
 #include "lib/core/hashtable.h"
 #include "lib/core/list.h"
@@ -62,7 +63,7 @@
 #define INET6_ADDRSTRLEN 46
 
 struct hip_entry_list {
-    hip_list_t      list;
+    LHASH_NODE      list;
     struct in6_addr peer_hit;
     /* These two _MUST_ be left untouched. Feel free to add more
      * to the end */

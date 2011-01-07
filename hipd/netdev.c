@@ -217,7 +217,7 @@ static int hip_netdev_match(const void *ptr1, const void *ptr2)
 static int hip_count_if_addresses(int ifindex)
 {
     struct netdev_address *na;
-    hip_list_t *n, *t;
+    LHASH_NODE *n, *t;
     int i = 0, c;
 
     list_for_each_safe(n, t, addresses, c) {
@@ -331,7 +331,7 @@ static int hip_filter_address(struct sockaddr *addr)
 static int hip_exists_address_family_in_list(const struct in6_addr *addr)
 {
     struct netdev_address *n;
-    hip_list_t *tmp, *t;
+    LHASH_NODE *tmp, *t;
     int c;
     int mapped = IN6_IS_ADDR_V4MAPPED(addr);
 
@@ -357,7 +357,7 @@ static int hip_exists_address_family_in_list(const struct in6_addr *addr)
 int hip_exists_address_in_list(struct sockaddr *addr, int ifindex)
 {
     struct netdev_address *n;
-    hip_list_t *tmp, *t;
+    LHASH_NODE *tmp, *t;
     int c;
     int err = 0;
     const struct in6_addr *in6;
@@ -489,7 +489,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
 {
     struct netdev_address *n;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
     int i, deleted = 0;
     struct sockaddr_in6 addr_sin6;
 
@@ -541,7 +541,7 @@ static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
 void hip_delete_all_addresses(void)
 {
     struct netdev_address *n;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
     int i;
 
     if (address_count) {
@@ -571,7 +571,7 @@ void hip_delete_all_addresses(void)
 static int hip_netdev_find_if(struct sockaddr *addr)
 {
     struct netdev_address *n = NULL;
-    hip_list_t *item         = NULL, *tmp = NULL;
+    LHASH_NODE *item         = NULL, *tmp = NULL;
     int i                    = 0;
 
 #ifdef CONFIG_HIP_DEBUG /* Debug block. */
@@ -1417,7 +1417,7 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
     if (ipv6_addr_is_teredo(dst)) {
         struct netdev_address *na;
         const struct in6_addr *in6;
-        hip_list_t *n, *t;
+        LHASH_NODE *n, *t;
         int c, match = 0;
 
         list_for_each_safe(n, t, addresses, c) {
@@ -1447,7 +1447,7 @@ out_err:
  */
 void hip_copy_peer_addrlist_changed(struct hip_hadb_state *ha)
 {
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr_li;
     int i            = 0;
 

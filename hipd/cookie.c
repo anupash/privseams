@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -413,7 +414,7 @@ out_err:
 int hip_recreate_all_precreated_r1_packets(void)
 {
     HIP_HASHTABLE *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
-    hip_list_t *curr, *iter;
+    LHASH_NODE *curr, *iter;
     struct hip_host_id *tmp;
     int c;
 

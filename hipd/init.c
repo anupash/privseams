@@ -44,6 +44,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <openssl/aes.h>
+#include <openssl/lhash.h>
 #include <openssl/rand.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
@@ -530,7 +531,7 @@ out_err:
  */
 static struct hip_host_id_entry *hip_return_first_rsa(void)
 {
-    hip_list_t *curr, *iter;
+    LHASH_NODE *curr, *iter;
     struct hip_host_id_entry *tmp = NULL;
     int c;
     uint16_t algo                 = 0;

@@ -61,6 +61,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -185,7 +186,7 @@ int hip_for_each_opp(int (*func)(struct hip_opp_blocking_request *entry,
 {
     int i = 0, fail = 0;
     struct hip_opp_blocking_request *this;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     if (!func) {
         return -EINVAL;
@@ -352,7 +353,7 @@ static void hip_oppdb_dump(void)
 {
     int i;
     struct hip_opp_blocking_request *this;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     HIP_DEBUG("start oppdb dump\n");
     HIP_LOCK_HT(&oppdb);
@@ -648,7 +649,7 @@ struct hip_opp_blocking_request *hip_oppdb_find_by_ip(const struct in6_addr *ip_
 {
     int i = 0;
     struct hip_opp_blocking_request *this, *ret = NULL;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     if (oppdb == NULL)
         return NULL;

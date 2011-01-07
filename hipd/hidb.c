@@ -42,6 +42,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <openssl/dsa.h>
+#include <openssl/lhash.h>
 #include <openssl/rsa.h>
 
 #include "lib/core/builder.h"
@@ -272,7 +273,7 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
  */
 static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
 {
-    hip_list_t *curr, *iter;
+    LHASH_NODE *curr, *iter;
     struct hip_host_id_entry *tmp;
     int count, err;
 
@@ -311,7 +312,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db
                                                                int anon)
 {
     struct hip_host_id_entry *id_entry;
-    hip_list_t *item;
+    LHASH_NODE *item;
     int c;
     list_for_each(item, db, c) {
         id_entry = list_entry(item);
@@ -350,7 +351,7 @@ int hip_hidb_hit_is_our(const hip_hit_t *our)
 int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
 {
     struct hip_host_id_entry *id_entry;
-    hip_list_t *item;
+    LHASH_NODE *item;
     int c, err = 1;
 
     list_for_each(item, hip_local_hostid_db, c) {
@@ -373,7 +374,7 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi)
 static int hip_hidb_add_lsi(HIP_HASHTABLE *db, struct hip_host_id_entry *id_entry)
 {
     struct hip_host_id_entry *id_entry_aux;
-    hip_list_t *item;
+    LHASH_NODE *item;
     hip_lsi_t lsi_aux;
     int err = 0, used_lsi, c, i;
     int len = sizeof(lsi_addresses) / sizeof(*lsi_addresses);
@@ -671,7 +672,7 @@ out:
 int hip_hidb_exists_lsi(hip_lsi_t *lsi)
 {
     struct hip_host_id_entry *id_entry;
-    hip_list_t *item;
+    LHASH_NODE *item;
     int c, res = 0;
 
     list_for_each(item, hip_local_hostid_db, c) {
@@ -694,7 +695,7 @@ int hip_hidb_exists_lsi(hip_lsi_t *lsi)
  */
 int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque)
 {
-    hip_list_t *curr, *iter;
+    LHASH_NODE *curr, *iter;
     struct hip_host_id_entry *tmp;
     int err = 0, c;
 
@@ -728,7 +729,7 @@ static struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(HIP_HASHTABLE *db,
                                                            const struct in_addr *lsi)
 {
     struct hip_host_id_entry *id_entry;
-    hip_list_t *item;
+    LHASH_NODE *item;
     int c;
 
     list_for_each(item, db, c) {

@@ -38,6 +38,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <openssl/lhash.h>
 #include <openssl/rand.h>
 
 #include "config.h"
@@ -387,7 +388,7 @@ static int hip_send_update_pkt(struct hip_common *update_packet_to_send,
 static void hip_remove_addresses_to_send_echo_request(struct update_state *state)
 {
     int i = 0;
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
     struct in6_addr *address = NULL;
 
     list_for_each_safe(item, tmp, state->addresses_to_send_echo_request, i) {
@@ -405,7 +406,7 @@ static void hip_remove_addresses_to_send_echo_request(struct update_state *state
 static void hip_print_addresses_to_send_update_request(struct hip_hadb_state *ha)
 {
     int i = 0;
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
     struct in6_addr *address = NULL;
     struct update_state *localstate = NULL;
 
@@ -435,7 +436,7 @@ static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *h
     int err = 0, c;
     struct sockaddr_storage ss;
     struct netdev_address *na = NULL;
-    hip_list_t *n = NULL, *t = NULL;
+    LHASH_NODE *n = NULL, *t = NULL;
     const struct in6_addr *in6 = NULL;
 
     memset(&ss, 0, sizeof(ss));
@@ -507,7 +508,7 @@ int hip_send_update_to_one_peer(struct hip_common *received_update_packet,
                                 int type)
 {
     int err = 0, i = 0;
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
     struct hip_common   *update_packet_to_send = NULL;
     struct update_state *localstate            = NULL;
     struct in6_addr local_addr;
@@ -592,7 +593,7 @@ static int hip_send_locators_to_all_peers(void)
     struct hip_locator_info_addr_item *locators;
     struct hip_hadb_state *ha          = NULL;
     struct hip_common     *locator_msg = NULL;
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
 
     HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
              "Out of memory while allocation memory for the packet\n");

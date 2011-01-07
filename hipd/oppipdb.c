@@ -102,7 +102,7 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
 {
     int i = 0;
     hip_oppip_t *this;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     if (!func) {
         return -EINVAL;

@@ -40,6 +40,7 @@
 #include <openssl/aes.h>
 #include <openssl/blowfish.h>
 #include <openssl/des.h>
+#include <openssl/lhash.h>
 #include <openssl/sha.h>
 #include <sys/time.h>
 
@@ -839,7 +840,7 @@ out_err:
 int hip_sadb_flush(void)
 {
     int err               = 0, i = 0;
-    hip_list_t *item      = NULL, *tmp = NULL;
+    LHASH_NODE *item      = NULL, *tmp = NULL;
     struct hip_sa_entry *entry = NULL;
 
     // iterating over all elements

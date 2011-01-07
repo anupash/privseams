@@ -34,6 +34,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <openssl/lhash.h>
 
 #include "config.h"
 #include "hipd/hipd.h"
@@ -64,7 +65,7 @@ int hip_build_locators_old(struct hip_common *msg)
     int err                                 = 0, i = 0, count = 0;
     int addr_max;
     struct netdev_address *n;
-    hip_list_t *item                        = NULL, *tmp = NULL;
+    LHASH_NODE *item                        = NULL, *tmp = NULL;
     struct hip_locator_info_addr_item *locs = NULL;
 
     if (address_count == 0) {
