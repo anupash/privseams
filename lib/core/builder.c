@@ -345,7 +345,7 @@ void hip_set_msg_checksum(struct hip_common *msg, uint8_t checksum)
  * @return the total length of the parameter in bytes (host byte
  * order), including the padding
  */
-hip_tlv_len_t hip_get_param_total_len(const void *tlv_common)
+hip_tlv_len hip_get_param_total_len(const void *tlv_common)
 {
     return HIP_LEN_PAD(sizeof(struct hip_tlv_common) +
                        ntohs(((const struct hip_tlv_common *)
@@ -359,7 +359,7 @@ hip_tlv_len_t hip_get_param_total_len(const void *tlv_common)
  * @return the length of the parameter in bytes (in host byte order),
  *          excluding padding and the length of "type" and "length" fields
  */
-hip_tlv_len_t hip_get_param_contents_len(const void *tlv_common)
+hip_tlv_len hip_get_param_contents_len(const void *tlv_common)
 {
     return ntohs(((const struct hip_tlv_common *) tlv_common)->length);
 }
@@ -372,7 +372,7 @@ hip_tlv_len_t hip_get_param_contents_len(const void *tlv_common)
  *              excluding padding and the length of "type" and "length" fields
  */
 void hip_set_param_contents_len(struct hip_tlv_common *tlv_generic,
-                                hip_tlv_len_t len)
+                                hip_tlv_len len)
 {
     tlv_generic->length = htons(len);
 }
@@ -383,7 +383,7 @@ void hip_set_param_contents_len(struct hip_tlv_common *tlv_generic,
  * @param tlv_common pointer to the parameter
  * @return the type of the parameter (in host byte order)
  */
-hip_tlv_type_t hip_get_param_type(const void *tlv_common)
+hip_tlv hip_get_param_type(const void *tlv_common)
 {
     return ntohs(((const struct hip_tlv_common *) tlv_common)->type);
 }
@@ -394,7 +394,7 @@ hip_tlv_type_t hip_get_param_type(const void *tlv_common)
  * @param tlv_generic pointer to the parameter
  * @param type type of the parameter (in host byte order)
  */
-void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
+void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv type)
 {
     tlv_generic->type = htons(type);
 }
@@ -406,7 +406,7 @@ void hip_set_param_type(struct hip_tlv_common *tlv_generic, hip_tlv_type_t type)
  * @return the length of the public value Diffie-Hellman parameter in bytes
  *          (in host byte order).
  */
-static hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh)
+static hip_tlv_len hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh)
 {
     return hip_get_param_contents_len(dh) - sizeof(uint8_t) - sizeof(uint16_t);
 }
@@ -632,9 +632,8 @@ static int hip_check_userspace_param_type(UNUSED const struct hip_tlv_common *pa
 static int hip_check_network_param_type(const struct hip_tlv_common *param)
 {
     int ok                 = 0;
-    hip_tlv_type_t i;
-    hip_tlv_type_t valid[] =
-    {
+    hip_tlv i;
+    hip_tlv valid[] = {
         HIP_PARAM_ACK,
         HIP_PARAM_CERT,
         HIP_PARAM_DIFFIE_HELLMAN,
@@ -692,7 +691,7 @@ static int hip_check_network_param_type(const struct hip_tlv_common *param)
         HIP_PARAM_CHALLENGE_RESPONSE
 #endif /* CONFIG_HIP_MIDAUTH */
     };
-    hip_tlv_type_t type = hip_get_param_type(param);
+    hip_tlv type = hip_get_param_type(param);
 
     /** @todo check the lengths of the parameters */
 
@@ -854,7 +853,7 @@ out:
  *                   found.
  */
 const void *hip_get_param(const struct hip_common *msg,
-                          hip_tlv_type_t param_type)
+                          hip_tlv param_type)
 {
     const void *matched                        = NULL;
     const struct hip_tlv_common *current_param = NULL;
@@ -885,7 +884,7 @@ const void *hip_get_param(const struct hip_common *msg,
  *                   found.
  */
 void *hip_get_param_readwrite(struct hip_common *msg,
-                              hip_tlv_type_t param_type)
+                              hip_tlv param_type)
 {
     void *matched                        = NULL;
     struct hip_tlv_common *current_param = NULL;
@@ -916,7 +915,7 @@ void *hip_get_param_readwrite(struct hip_common *msg,
  *                   @c param_type were found.
  */
 const void *hip_get_param_contents(const struct hip_common *msg,
-                                   hip_tlv_type_t param_type)
+                                   hip_tlv param_type)
 {
     const uint8_t *contents = hip_get_param(msg, param_type);
     if (contents) {
@@ -1058,8 +1057,8 @@ void hip_calc_hdr_len(struct hip_common *msg)
  *                 (in host byte order)
  */
 void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
-                                hip_tlv_len_t tlv_size,
-                                hip_tlv_len_t contents_size)
+                                hip_tlv_len tlv_size,
+                                hip_tlv_len contents_size)
 {
     hip_set_param_contents_len(tlv_common,
                                tlv_size + contents_size -
@@ -1078,7 +1077,7 @@ void hip_calc_generic_param_len(struct hip_tlv_common *tlv_common,
  *                 (in host byte order)
  */
 void hip_calc_param_len(struct hip_tlv_common *tlv_common,
-                        hip_tlv_len_t contents_size)
+                        hip_tlv_len contents_size)
 {
     hip_calc_generic_param_len(tlv_common,
                                sizeof(struct hip_tlv_common),
@@ -1187,7 +1186,7 @@ const char *hip_message_type_name(const uint8_t msg_type)
  * @param param_type parameter type number
  * @return      name of the message type
  */
-static const char *hip_param_type_name(const hip_tlv_type_t param_type)
+static const char *hip_param_type_name(const hip_tlv param_type)
 {
     switch (param_type) {
     case HIP_PARAM_ACK:             return "HIP_PARAM_ACK";
@@ -1288,7 +1287,7 @@ void hip_dump_msg(const struct hip_common *msg)
     const struct hip_tlv_common *current_param = NULL;
     const uint8_t *contents                    = NULL;
     /* The value of the "Length"-field in current parameter. */
-    hip_tlv_len_t len                    = 0;
+    hip_tlv_len len = 0;
     /* Total length of the parameter (type+length+value+padding), and the
      * length of padding. */
     size_t total_len                     = 0, pad_len = 0;
@@ -1305,8 +1304,8 @@ void hip_dump_msg(const struct hip_common *msg)
         len       = hip_get_param_contents_len(current_param);
         /* Formula from base draft section 5.2.1. */
         total_len = 11 + len - (len + 3) % 8;
-        pad_len   = total_len - len - sizeof(hip_tlv_type_t)
-                    - sizeof(hip_tlv_len_t);
+        pad_len   = total_len - len - sizeof(hip_tlv)
+                    - sizeof(hip_tlv_len);
         contents  = hip_get_param_contents_direct(current_param);
         HIP_DEBUG("Parameter type:%s (%d). Total length: %d (4 type+" \
                   "length, %d content, %d padding).\n",
@@ -1369,7 +1368,7 @@ out:
  */
 static int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 {
-    hip_tlv_type_t type = hip_get_param_type(param);
+    hip_tlv type = hip_get_param_type(param);
     int err             = 0;
 
     switch (type) {
@@ -1410,8 +1409,8 @@ static int hip_check_network_param_attributes(const struct hip_tlv_common *param
 int hip_check_network_msg(const struct hip_common *msg)
 {
     const struct hip_tlv_common *current_param = NULL;
-    hip_tlv_type_t current_param_type          = 0, prev_param_type = 0;
-    int err                                    = 0;
+    hip_tlv current_param_type = 0, prev_param_type = 0;
+    int err = 0;
 
     /* Checksum of the message header is verified in input.c */
 
@@ -1489,7 +1488,7 @@ out:
  */
 static int hip_build_generic_param(struct hip_common *msg,
                                    const void *parameter_hdr,
-                                   hip_tlv_len_t param_hdr_size,
+                                   hip_tlv_len param_hdr_size,
                                    const void *contents)
 {
     const struct hip_tlv_common *param = parameter_hdr;
@@ -1584,8 +1583,8 @@ out:
  */
 int hip_build_param_contents(struct hip_common *msg,
                              const void *contents,
-                             hip_tlv_type_t param_type,
-                             hip_tlv_len_t contents_size)
+                             hip_tlv param_type,
+                             hip_tlv_len contents_size)
 {
     struct hip_tlv_common param;
     hip_set_param_type(&param, param_type);
@@ -1780,7 +1779,7 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
  */
 int hip_build_param_hmac(struct hip_common *msg,
                          const struct hip_crypto_key *key,
-                         hip_tlv_type_t param_type)
+                         hip_tlv param_type)
 {
     int err = 0;
     struct hip_hmac hmac;
@@ -2048,7 +2047,7 @@ out_err:
  */
 int hip_build_param_signature2_contents(struct hip_common *msg,
                                         const void *contents,
-                                        hip_tlv_len_t contents_size,
+                                        hip_tlv_len contents_size,
                                         uint8_t algorithm)
 {
     /* note: if you make changes in this function, make them also in
@@ -2085,7 +2084,7 @@ int hip_build_param_signature2_contents(struct hip_common *msg,
  */
 int hip_build_param_signature_contents(struct hip_common *msg,
                                        const void *contents,
-                                       hip_tlv_len_t contents_size,
+                                       hip_tlv_len contents_size,
                                        uint8_t algorithm)
 {
     /* note: if you make changes in this function, make them also in
@@ -2573,15 +2572,15 @@ int hip_build_param_solution(struct hip_common *msg,
 int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
                                             uint8_t group_id1,
                                             void *pubkey1,
-                                            hip_tlv_len_t pubkey_len1,
+                                            hip_tlv_len pubkey_len1,
                                             uint8_t group_id2,
                                             void *pubkey2,
-                                            hip_tlv_len_t pubkey_len2)
+                                            hip_tlv_len pubkey_len2)
 {
     int err                  = 0;
     struct hip_diffie_hellman diffie_hellman;
     uint8_t *value           = NULL, *value_tmp = NULL;
-    hip_tlv_len_t pubkey_len = pubkey_len1 + sizeof(uint8_t) +
+    hip_tlv_len pubkey_len   = pubkey_len1 + sizeof(uint8_t) +
                                sizeof(uint16_t) + pubkey_len2;
     uint16_t tmp_pubkey_len2 = 0;
 
@@ -2638,7 +2637,7 @@ out_err:
  * @param transform_type the type of the transform
  * @return the number of suite ids that can be used for transform_type
  */
-static uint16_t hip_get_transform_max(hip_tlv_type_t transform_type)
+static uint16_t hip_get_transform_max(hip_tlv transform_type)
 {
     uint16_t transform_max = 0;
 
@@ -2763,7 +2762,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
      * which MUST match one of the values offered to the Initiator in
      * the R1 packet. Does this function check this?
      * -Lauri 01.08.2008. */
-    hip_tlv_type_t type;
+    hip_tlv type;
     uint16_t supported_hip_tf[] = { HIP_HIP_NULL_SHA1,
                                     HIP_HIP_3DES_SHA1,
                                     HIP_HIP_AES_SHA1};
@@ -3224,7 +3223,7 @@ int hip_build_param_host_id(struct hip_common *msg,
  */
 void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
                                  const char *hostname,
-                                 hip_tlv_len_t rr_data_len,
+                                 hip_tlv_len rr_data_len,
                                  uint8_t algorithm)
 {
     uint16_t hi_len = sizeof(struct hip_host_id_key_rdata) + rr_data_len;
@@ -3294,7 +3293,7 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
  */
 static void hip_build_param_host_id_hdr_priv(struct hip_host_id_priv *host_id_hdr,
                                              const char *hostname,
-                                             hip_tlv_len_t rr_data_len,
+                                             hip_tlv_len rr_data_len,
                                              uint8_t algorithm)
 {
     uint16_t hi_len = sizeof(struct hip_host_id_key_rdata) + rr_data_len;
@@ -3954,7 +3953,7 @@ int hip_build_param_reg_from(struct hip_common *msg,
  */
 int hip_build_param_nat_port(struct hip_common *msg,
                              const in_port_t port,
-                             hip_tlv_type_t hipparam)
+                             hip_tlv hipparam)
 {
     int err = 0;
     struct hip_port_info nat_port;

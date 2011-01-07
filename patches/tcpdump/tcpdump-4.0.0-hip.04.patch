@@ -219,8 +219,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +
 +#define HIP_AH_SHA_LEN                            20
 +
-+typedef uint16_t hip_tlv_type_t;
-+typedef uint16_t hip_tlv_len_t;
++typedef uint16_t hip_tlv;
++typedef uint16_t hip_tlv_len;
 +
 +/* Returns length of TLV option (contents) with padding. */
 +#define HIP_LEN_PAD(len) \
@@ -241,21 +241,21 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_tlv_common {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +} __attribute__ ((packed));
 +
 +struct hip_r1_counter {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint32_t reserved;
 +        uint64_t generation;
 +} __attribute__ ((packed));
 +
 +struct hip_puzzle {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint8_t K;
 +        uint8_t lifetime;
@@ -264,8 +264,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_solution {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint8_t K;
 +        uint8_t reserved;
@@ -275,22 +275,22 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_seq {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint32_t update_id;
 +} __attribute__ ((packed));
 +
 +struct hip_ack {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint32_t peer_update_id; /* n items */
 +} __attribute__ ((packed));
 +
 +struct hip_diffie_hellman {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint8_t group_id;  
 +        /* fixed part ends */
@@ -300,15 +300,15 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +typedef uint16_t hip_transform_suite_t;
 +
 +struct hip_hip_transform {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX];
 +} __attribute__ ((packed));
 +
 +struct hip_encrypted_aes_sha1 {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint32_t reserved;
 +        uint8_t iv[16];
@@ -316,8 +316,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_encrypted_3des_sha1 {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint32_t reserved;
 +        uint8_t iv[8];
@@ -325,8 +325,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_encrypted_null_sha1 {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint32_t reserved;
 +        /* fixed part ends */
@@ -341,8 +341,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_host_id {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint16_t hi_length;
 +        uint16_t di_type_length;
@@ -352,8 +352,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_cert {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +	uint8_t  cert_group;
 +        uint8_t  cert_count;
@@ -363,8 +363,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_notification {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint16_t reserved;
 +        uint16_t msgtype;
@@ -372,20 +372,20 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_echo_request { 
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +        /* opaque */
 +} __attribute__ ((packed));
 +
 +struct hip_echo_response {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +        /* opaque */
 +} __attribute__ ((packed));
 +
 +struct hip_hmac {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint8_t hmac_data[HIP_AH_SHA_LEN];
 +} __attribute__ ((packed));
@@ -395,8 +395,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +/* HIP SIGNATURE2 is the same as below */
 +
 +struct hip_signature {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint8_t algorithm;
 +        uint8_t signature[0]; /* variable length */
@@ -408,8 +408,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +/* HIP_ECHO_RESPONSE_UNSIGNED same as signed version above */
 +
 +struct hip_esp_info {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint16_t reserved;
 +        uint16_t keymat_index;
@@ -418,8 +418,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_esp_transform {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint16_t reserved;
 +
@@ -427,8 +427,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_reg_info {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +
 +	uint8_t min_lifetime;
 +	uint8_t max_lifetime;
@@ -437,8 +437,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_reg_request_response {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +
 +	uint8_t lifetime;
 +	uint8_t reg_type[0]; /* Variable */        
@@ -447,36 +447,36 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +/* REG_REQUEST is exactly like RESPONSE see above */
 +
 +struct hip_reg_failed {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +
 +	uint8_t failure_type;
 +	uint8_t reg_type[0]; /* Variable */
 +} __attribute__ ((packed));
 +
 +struct hip_from {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +        uint8_t address[16];
 +} __attribute__ ((packed));
 +
 +struct hip_rvs_hmac {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +        uint8_t hmac_data[HIP_AH_SHA_LEN];
 +} __attribute__ ((packed));
 +
 +struct hip_via_rvs {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +        uint8_t address[16];
 +        /* the rest of the addresses */
 +} __attribute__ ((packed));
 +
 +/* Type 0 and 1 */
 +struct hip_locator_info_addr_item {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +        uint8_t traffic_type;
 +        uint8_t locator_type;
 +        uint8_t locator_length;
@@ -489,8 +489,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +
 +/* Type 2 */
 +struct hip_locator_info_addr_item2 {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +        uint8_t traffic_type;
 +        uint8_t locator_type;
 +        uint8_t locator_length;
@@ -507,8 +507,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +}  __attribute__ ((packed));
 +
 +struct hip_nat_traversal_mode {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +        uint16_t reserved;
 +
@@ -516,15 +516,15 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_transaction_pacing {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t length;
++        hip_tlv type;
++        hip_tlv_len length;
 +
 +	uint32_t min_ta;
 +} __attribute__ ((packed));
 +
 +struct hip_reg_from {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +
 +	uint16_t port;
 +	uint8_t protocol;
@@ -533,8 +533,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_relay_from {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +
 +	uint16_t port;
 +	uint8_t protocol;
@@ -543,8 +543,8 @@ diff -N -r -u --strip-trailing-cr tcpdump-orig/print-hip.c tcpdump/print-hip.c
 +} __attribute__ ((packed));
 +
 +struct hip_relay_to {
-+        hip_tlv_type_t type;
-+        hip_tlv_len_t  length;
++        hip_tlv type;
++        hip_tlv_len  length;
 +
 +	uint16_t port;
 +	uint8_t protocol;

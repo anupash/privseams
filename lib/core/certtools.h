@@ -54,8 +54,8 @@
 
 /** Struct used to deliver the minimal needed information to build SPKI cert */
 struct hip_cert_spki_info {
-    hip_tlv_type_t  type;
-    hip_tlv_len_t   length;
+    hip_tlv         type;
+    hip_tlv_len     length;
     char            public_key[768];
     char            cert[224];
     char            signature[768];

@@ -135,7 +135,7 @@ out_err:
  */
 int hip_verify_packet_hmac_general(struct hip_common *msg,
                                    const struct hip_crypto_key *crypto_key,
-                                   const hip_tlv_type_t parameter_type)
+                                   const hip_tlv parameter_type)
 {
     int err               = 0, len = 0, orig_len = 0;
     struct hip_crypto_key tmpkey;
@@ -1955,8 +1955,8 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
     const struct hip_tlv_common *current_param  = NULL;
     const struct hip_notification *notification = NULL;
     struct in6_addr responder_ip, responder_hit;
-    hip_tlv_type_t param_type                   = 0, response;
-    hip_tlv_len_t param_len                     = 0;
+    hip_tlv param_type                          = 0, response;
+    hip_tlv_len param_len                       = 0;
     uint16_t msgtype                            = 0;
     in_port_t port                              = 0;
 

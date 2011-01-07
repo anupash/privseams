@@ -881,8 +881,8 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
     struct in6_addr hit;
     const struct hip_host_id *host_id = NULL;
     // assume correct packet
-    int err                     = 1;
-    hip_tlv_len_t len           = 0;
+    int err = 1;
+    hip_tlv_len len = 0;
 
     HIP_DEBUG("verify_responder: %i\n", verify_responder);
 
@@ -955,8 +955,8 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
     struct esp_tuple *esp_tuple        = NULL;
     struct in6_addr hit;
     // assume correct packet
-    int err                     = 1;
-    hip_tlv_len_t len           = 0;
+    int err = 1;
+    hip_tlv_len len = 0;
     const struct in6_addr *ip6_src = &ctx->src;
 
     HIP_DEBUG("\n");

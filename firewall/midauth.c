@@ -285,7 +285,7 @@ static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
     int err                  = 0, len, total_len, offset;
     char buffer[HIP_MAX_PACKET], *ptr = (char *) hip;
     struct hip_tlv_common *i = NULL, *last = NULL;
-    hip_tlv_type_t type;
+    hip_tlv type;
 
     while ((i = hip_get_next_param_readwrite(hip, i))) {
         last = i;

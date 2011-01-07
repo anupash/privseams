@@ -256,7 +256,7 @@ static int hip_get_hits(struct hip_common *msg, const char *opt,
     const struct hip_hit_info *data;
     const struct in_addr *deflsi               = NULL;
     const struct in6_addr *defhit              = NULL;
-    hip_tlv_type_t param_type                  = 0;
+    hip_tlv param_type                         = 0;
     char hit_s[INET6_ADDRSTRLEN], lsi_s[INET_ADDRSTRLEN];
 
     if (strcmp(opt, "all") == 0) {
@@ -1613,7 +1613,7 @@ static int hip_conf_handle_puzzle(struct hip_common *msg,
     const int *diff                                 = NULL;
     hip_hit_t hit, all_zero_hit;
     const struct hip_tlv_common *current_param      = NULL;
-    hip_tlv_type_t param_type                       = 0;
+    hip_tlv param_type                              = 0;
     char hit_s[INET6_ADDRSTRLEN];
 
     memset(&hit, 0, sizeof(hip_hit_t));
