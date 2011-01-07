@@ -562,12 +562,12 @@
 
 #define HIP_MAX_RSA_KEY_LEN 4096
 
-typedef uint8_t hip_hdr;
-typedef uint8_t hip_hdr_len;
+typedef uint8_t  hip_hdr;
+typedef uint8_t  hip_hdr_len;
+typedef uint16_t hip_hdr_err;
 typedef uint16_t se_family;
 typedef uint16_t se_len;
 typedef uint16_t se_hip_flags;
-typedef uint16_t hip_hdr_err_t;
 typedef uint16_t hip_tlv_type_t;
 typedef uint16_t hip_tlv_len_t;
 typedef uint16_t hip_transform_suite_t;

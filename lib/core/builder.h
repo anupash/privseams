@@ -176,7 +176,7 @@ int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
 int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);
 
 int hip_build_param_hit_to_ip_set(struct hip_common *, const char *);
-int hip_build_user_hdr(struct hip_common *, hip_hdr, hip_hdr_err_t);
+int hip_build_user_hdr(struct hip_common *, hip_hdr, hip_hdr_err);
 void hip_calc_hdr_len(struct hip_common *);
 int hip_check_network_msg(const struct hip_common *);
 int hip_verify_network_header(struct hip_common *hip_common,
@@ -192,7 +192,7 @@ uint8_t hip_get_host_id_algo(const struct hip_host_id *);
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 int hip_check_network_msg_len(const struct hip_common *msg);
-hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
+hip_hdr_err hip_get_msg_err(const struct hip_common *);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
 hip_hdr hip_get_msg_type(const struct hip_common *);
 const struct hip_tlv_common *hip_get_next_param(const struct hip_common *,
@@ -221,7 +221,7 @@ uint16_t hip_get_msg_checksum(struct hip_common *msg);
 const char *hip_message_type_name(const uint8_t);
 struct hip_common *hip_msg_alloc(void);
 void hip_msg_init(struct hip_common *);
-void hip_set_msg_err(struct hip_common *, hip_hdr_err_t);
+void hip_set_msg_err(struct hip_common *, hip_hdr_err);
 void hip_set_msg_checksum(struct hip_common *msg, uint8_t checksum);
 void hip_set_msg_total_len(struct hip_common *, uint16_t);
 void hip_set_param_contents_len(struct hip_tlv_common *, hip_tlv_len_t);

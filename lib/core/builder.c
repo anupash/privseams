@@ -284,7 +284,7 @@ static void hip_set_msg_type(struct hip_common *msg, hip_hdr type)
  *
  * @return the error value from the message (in host byte order)
  */
-hip_hdr_err_t hip_get_msg_err(const struct hip_common *msg)
+hip_hdr_err hip_get_msg_err(const struct hip_common *msg)
 {
     /* Note: error value is stored in checksum field for daemon messages.
      * This should be fixed later on by defining an own header for
@@ -300,7 +300,7 @@ hip_hdr_err_t hip_get_msg_err(const struct hip_common *msg)
  * @param msg pointer to the beginning of the message header
  * @param err the error value
  */
-void hip_set_msg_err(struct hip_common *msg, hip_hdr_err_t err)
+void hip_set_msg_err(struct hip_common *msg, hip_hdr_err err)
 {
     /* note: error value is stored in checksum field for daemon messages */
     msg->checksum = err;
@@ -1689,7 +1689,7 @@ uint8_t hip_get_msg_response(struct hip_common *msg)
  *       arriving from the network.
  */
 int hip_build_user_hdr(struct hip_common *msg, hip_hdr base_type,
-                       hip_hdr_err_t err_val)
+                       hip_hdr_err err_val)
 {
     int err = 0;
 
