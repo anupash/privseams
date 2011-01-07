@@ -9,7 +9,6 @@
 #include <sys/types.h>
 
 
-#define HIP_OPTION_KIND 30
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
 
