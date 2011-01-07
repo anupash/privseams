@@ -522,12 +522,6 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     spi_in_data.ifindex = hip_devaddr2ifindex(&ctx->dst_addr);
     HIP_LOCK_HA(ctx->hadb_entry);
 
-    /* 99999 HIP_IFEB(hip_hadb_add_spi_old(ctx->hadb_entry,
-                                           HIP_SPI_DIRECTION_IN, &spi_in_data),
-                      -1,
-                      HIP_UNLOCK_HA(ctx->hadb_entry));
-    */
-
     ctx->hadb_entry->esp_transform = transform_esp_suite;
     HIP_DEBUG("Saving base exchange encryption data to hadb_entry \n");
     HIP_DEBUG_HIT("Our HIT: ", &ctx->hadb_entry->hit_our);

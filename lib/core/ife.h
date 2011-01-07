@@ -76,17 +76,6 @@
         } \
     }
 
-#define HIP_IFEB(func, eval, finally) \
-    { \
-        if (func) { \
-            err = eval; \
-            finally; \
-            goto out_err; \
-        } else { \
-            finally; \
-        } \
-    }
-
 #define HIP_IFF(func, eval, finally, args ...) \
     { \
         if (func) { \
