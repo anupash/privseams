@@ -509,7 +509,7 @@ void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
  * @return The OpenSSL formatted RSA key corresponding to @c host_id.
  *         Caller is responsible of freeing.
  */
-RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv)
+RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *const host_id, const int is_priv)
 {
     int offset;
     struct hip_rsa_keylen keylen;
@@ -555,7 +555,7 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv)
  * @return The OpenSSL formatted DSA key corresponding to @c host_id.
  *         Caller is responsible of freeing.
  */
-DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
+DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *const host_id, const int is_priv)
 {
     int offset  = 0;
     DSA *dsa    = NULL;
@@ -596,7 +596,7 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
  * @return The OpenSSL formatted ECDSA key corresponding to @c host_id.
  *         Caller is responsible of freeing.
  */
-EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *host_id, int is_priv)
+EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const int is_priv)
 {
     int err             = 0;
     int nid             = 0;

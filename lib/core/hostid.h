@@ -88,9 +88,9 @@ void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
                         int is_priv);
 int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
                          struct hip_ecdsa_keylen *ret);
-RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv);
-DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv);
-EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *host_id, int is_priv);
+RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *const host_id, const int is_priv);
+DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *const host_id, const int is_priv);
+EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const int is_priv);
 
 int dsa_to_dns_key_rr(const DSA *const dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(const RSA *const rsa, unsigned char **rsa_key_rr);
