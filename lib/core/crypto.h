@@ -102,10 +102,10 @@ int save_ecdsa_private_key(const char *filenamebase, EC_KEY *ecdsa);
 int load_dsa_private_key(const char *filenamebase, DSA **dsa);
 int load_rsa_private_key(const char *filename, RSA **rsa);
 int load_ecdsa_private_key(const char *filename, EC_KEY **ec);
-int impl_dsa_sign(uint8_t *digest, DSA *dsa, uint8_t *signature);
-int impl_dsa_verify(uint8_t *digest, DSA *dsa, uint8_t *signature);
-int impl_ecdsa_sign(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature);
-int impl_ecdsa_verify(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature);
+int impl_dsa_sign(const uint8_t *digest, DSA *dsa, uint8_t *signature);
+int impl_dsa_verify(const uint8_t *digest, DSA *dsa, const uint8_t *const signature);
+int impl_ecdsa_sign(const uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature);
+int impl_ecdsa_verify(const uint8_t *digest, EC_KEY *ecdsa, const uint8_t *const signature);
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
                          uint8_t *enc_key, int direction);

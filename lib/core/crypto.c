@@ -469,7 +469,7 @@ out_err:
  *
  * @return 0 on success and non-zero on error
  */
-int impl_ecdsa_sign(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature)
+int impl_ecdsa_sign(const uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature)
 {
     ECDSA_SIG *ecdsa_sig = NULL;
     int err              = 0;
@@ -502,7 +502,7 @@ out_err:
  *
  * @return 0 on success and non-zero on error
  */
-int impl_dsa_sign(uint8_t *digest, DSA *dsa, uint8_t *signature)
+int impl_dsa_sign(const uint8_t *digest, DSA *dsa, uint8_t *signature)
 {
     DSA_SIG *dsa_sig = NULL;
     int err          = 0, t;
@@ -544,7 +544,7 @@ out_err:
  * @return 1 for a valid signature, 0 for an incorrect signature and -1 on
  *         error (see ERR_get_error(3) for the actual error)
  */
-int impl_ecdsa_verify(uint8_t *digest, EC_KEY *ecdsa, uint8_t *signature)
+int impl_ecdsa_verify(const uint8_t *digest, EC_KEY *ecdsa, const uint8_t *const signature)
 {
     ECDSA_SIG *ecdsa_sig;
     int err = 0;
@@ -576,7 +576,7 @@ out_err:
  * @return 1 for a valid signature, 0 for an incorrect signature and -1 on
  *         error (see ERR_get_error(3) for the actual error)
  */
-int impl_dsa_verify(uint8_t *digest, DSA *dsa, uint8_t *signature)
+int impl_dsa_verify(const uint8_t *digest, DSA *dsa, const uint8_t *const signature)
 {
     DSA_SIG *dsa_sig;
     int err = 0;
