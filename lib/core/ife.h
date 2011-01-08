@@ -41,6 +41,23 @@
  */
 
 /**
+ * Use this macro to exit a function and output an error message.
+ * Variable 'err' must be defined, usually type int.
+ * Label 'out_err' must be defined, on errors this label is used
+ * as destination after proper actions.
+ *
+ * @param eval Set variable called 'err' to this value.
+ *
+ * @note EAE stands for ERROR and EXIT.
+ */
+#define HIP_EAE(eval, args ...) \
+    { \
+        HIP_ERROR(args); \
+        err = eval; \
+        goto out_err; \
+    }
+
+/**
  * Use this macro to detect failures and exit function in case
  * of such. Variable 'err' must be defined, usually type int.
  * Label 'out_err' must be defined, on errors this label is used
