@@ -97,13 +97,13 @@ int rsa_to_dns_key_rr(const RSA *const rsa, unsigned char **rsa_key_rr);
 int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr);
 
 int hip_serialize_host_id_action(struct hip_common *msg,
-                                 int action,
-                                 int anon,
-                                 int use_default,
+                                 const int action,
+                                 const int anon,
+                                 const int use_default,
                                  const char *hi_fmt,
                                  const char *hi_file,
-                                 int rsa_key_bits,
-                                 int dsa_key_bits,
-                                 int ecdsa_nid);
+                                 const int rsa_key_bits,
+                                 const int dsa_key_bits,
+                                 const int ecdsa_nid);
 
 #endif /* HIP_LIB_CORE_HOSTID_H */

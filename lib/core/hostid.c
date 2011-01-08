@@ -660,7 +660,7 @@ out_err:
  * @param use_default One when dealing with default identities in HIPL_SYSCONFDIR.
  *                    Zero when user supplies own identities denoted by
  *                    @c hi_file argument.
- * @param hi_fmt "dsa" or "rsa" currently supported, support for "ecdsa" is in developement.
+ * @param hi_fmt "dsa", "rsa" or "ecdsa" are currently supported
  * @param hi_file an optional location for user-supplied host identities.
  *                Argument @c use_default must be zero when used.
  * @param rsa_key_bits size for RSA keys in bits
@@ -670,14 +670,14 @@ out_err:
  * @return zero on success and negative on error
  */
 int hip_serialize_host_id_action(struct hip_common *msg,
-                                 int action,
-                                 int anon,
-                                 int use_default,
+                                 const int action,
+                                 const int anon,
+                                 const int use_default,
                                  const char *hi_fmt,
                                  const char *hi_file,
-                                 int rsa_key_bits,
-                                 int dsa_key_bits,
-                                 int ecdsa_nid)
+                                 const int rsa_key_bits,
+                                 const int dsa_key_bits,
+                                 const int ecdsa_nid)
 {
     int err = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0, ecdsa_key_rr_len = 0;
     int dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0, ecdsa_pub_key_rr_len = 0;
