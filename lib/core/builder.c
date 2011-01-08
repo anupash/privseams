@@ -3884,19 +3884,19 @@ out_err:
  * @param type the type of the host identity, HIP_HI_RSA, HIP_HI_DSA or HIP_HI_ECDSA
  * @return zero on success and negative on failure
  */
-int hip_any_key_to_hit(void *any_key,
-                       hip_hit_t *hit,
-                       int is_public,
-                       int type)
+int hip_any_key_to_hit(const void *const any_key,
+                       hip_hit_t *const hit,
+                       const int is_public,
+                       const int type)
 {
     int err = 0, key_rr_len;
     unsigned char *key_rr = NULL;
     char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     struct hip_host_id_priv *host_id = NULL;
     struct hip_host_id *host_id_pub = NULL;
-    RSA *rsa_key        = any_key;
-    DSA *dsa_key        = any_key;
-    EC_KEY *ecdsa_key   = any_key;
+    const RSA *const rsa_key        = any_key;
+    const DSA *const dsa_key        = any_key;
+    const EC_KEY *const ecdsa_key   = any_key;
 
     memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
     HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
