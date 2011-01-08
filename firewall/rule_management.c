@@ -380,9 +380,9 @@ static struct hit_option *parse_hit(char *token)
 }
 
 /**
- * load an RSA public key from a file and convert it into a hip_host_id
+ * Load an RSA public key from a file and convert it into a hip_host_id.
  *
- * @param fp FILE object where to load a PEM formatted RSA public key
+ * @param fp FILE object from where to load a PEM formatted RSA public key
  *
  * @return hip_host id structure (caller deallocates) or NULL on error
  */
@@ -410,9 +410,9 @@ static struct hip_host_id *load_rsa_file(FILE *fp)
 }
 
 /**
- * load an DSA public key from a file and convert it into a hip_host_id
+ * Load an DSA public key from a file and convert it into a hip_host_id.
  *
- * @param fp FILE object where to load a PEM formatted DSA public key
+ * @param fp FILE object from where to load a PEM formatted DSA public key
  *
  * @return hip_host id structure (caller deallocates) or NULL on error
  */
@@ -439,9 +439,9 @@ static struct hip_host_id *load_dsa_file(FILE *fp)
 }
 
 /**
- * load an ECDSA public key from a file and convert it into a hip_host_id
+ * Load an ECDSA public key from a file and convert it into a hip_host_id.
  *
- * @param fp FILE object where to load a PEM formatted ECDSA public key
+ * @param fp FILE object from where to load a PEM formatted ECDSA public key
  *
  * @return hip_host id structure (caller deallocates) or NULL on error
  */
