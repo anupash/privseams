@@ -1109,7 +1109,7 @@ out_err:
             HIP_ERROR("Error closing file\n");
         }
     } else if (fp && (err = fclose(fp)))   {
-        HIP_ERROR("Error closing file\n");
+        HIP_ERROR("Error closing file %s\n", filenamebase);
     }
 
     if (err) {
