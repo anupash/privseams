@@ -816,13 +816,12 @@ EC_KEY *create_ecdsa_key(const int nid)
     HIP_IFEL(!EC_KEY_generate_key(eckey),
              -1, "Could not generate EC key\n");
 
-out_err:
-    if(err) {
-        EC_KEY_free(eckey);
-        EC_GROUP_free(group);
-        return NULL;
-    }
     return eckey;
+
+out_err:
+    EC_KEY_free(eckey);
+    EC_GROUP_free(group);
+    return NULL;
 }
 
 /**
