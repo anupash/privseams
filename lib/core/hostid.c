@@ -367,7 +367,7 @@ static int get_ecdsa_curve_hip_name(const int nid)
  *
  * @return the openssl specific curve id used with this host identity or -1 on error.
  */
-static int get_ecdsa_curve_nid(const struct hip_host_id *host_id)
+static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
 {
     int err = 0;
     uint16_t curve_id;
