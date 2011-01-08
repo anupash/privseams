@@ -176,7 +176,7 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
  * convert DSA-based private host id to a HIT
  *
  * @param host_id a host id
- * @param hit output argument, the calculated HIT will stored here
+ * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
@@ -217,7 +217,7 @@ out_err:
  * convert RSA-based private host id to a HIT
  *
  * @param host_id a host id
- * @param hit output argument, the calculated HIT will stored here
+ * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
@@ -261,7 +261,7 @@ out_err:
  * convert ECDSA-based private host id to a HIT
  *
  * @param host_id a host id
- * @param hit output argument, the calculated HIT will stored here
+ * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
@@ -293,7 +293,7 @@ out_err:
  * convert RSA or DSA-based private host id to a HIT
  *
  * @param host_id a host id
- * @param hit output argument, the calculated HIT will stored here
+ * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
