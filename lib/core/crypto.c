@@ -496,9 +496,9 @@ out_err:
 /**
  * Sign using DSA
  *
- * @param digest a digest of the message to sign
+ * @param digest the sha1-160 digest of the message to sign
  * @param dsa the DSA key
- * @param signature write the signature here
+ * @param signature write the signature here (we need memory of size HIP_DSA_SIGNATURE_LEN)
  *
  * @return 0 on success and non-zero on error
  */
