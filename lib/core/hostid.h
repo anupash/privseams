@@ -58,20 +58,20 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
  * file. It still remains as useless abstraction, but at least we eliminate the
  * need for a call and return sequence. -Lauri 06.08.2008
  */
-static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-                                         struct in6_addr *hit, int hit_type)
+static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *const host_id,
+                                         struct in6_addr *hit, const int hit_type)
 {
     return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
 
-static inline int hip_ecdsa_host_id_to_hit(const struct hip_host_id *host_id,
-                                           struct in6_addr *hit, int hit_type)
+static inline int hip_ecdsa_host_id_to_hit(const struct hip_host_id *const host_id,
+                                           struct in6_addr *hit, const int hit_type)
 {
     return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
 
-int hip_host_id_to_hit(const struct hip_host_id *host_id,
-                       struct in6_addr *hit, int hit_type);
+int hip_host_id_to_hit(const struct hip_host_id *const host_id,
+                       struct in6_addr *hit, const int hit_type);
 int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    struct in6_addr *hit,
                                    int hit_type);
