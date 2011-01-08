@@ -1068,23 +1068,21 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
      * Note, that currently (06.08.2008) both of these functions use DSA
      *
      * Set the funciton pointer for signing our host identity. */
-    if (algo == HIP_HI_DSA) {
+    switch (algo) {
+    case HIP_HI_DSA:
         entry->sign = hip_dsa_sign;
-        err = hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100);
-    } else if (algo == HIP_HI_RSA) {
+        break;
+    case HIP_HI_RSA:
         entry->sign = hip_rsa_sign;
-        err = hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100);
-    } else if (algo == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         entry->sign = hip_ecdsa_sign;
-        err = hip_ecdsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100);
-    } else {
+        break;
+    default:
         err = -1;
     }
+    err = hip_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100);
     HIP_IFEL(err, err, "Unable to digest the HIT out of public key.");
-    if (err != 0) {
-        HIP_ERROR("Unable to digest the HIT out of public key.");
-        goto out_err;
-    }
 
 out_err:
     if (err) {
