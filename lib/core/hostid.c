@@ -1310,7 +1310,6 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
     out_len = 2 + pub_key_len + priv_key_len;
     HIP_IFEL(!(buffer = malloc(out_len)),
              -ENOMEM, "Could not allocate memory for serialization of ECDSA key.\n");
-    memset(buffer, 0, out_len);
 
     /* insert curve id */
     HIP_IFEL(!(group = EC_KEY_get0_group(ecdsa)),
