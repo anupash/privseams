@@ -723,7 +723,7 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
  * @return the created DSA structure, otherwise NULL.
  *
  */
-DSA *create_dsa_key(int bits)
+DSA *create_dsa_key(const int bits)
 {
     DSA *dsa = NULL;
 
@@ -758,7 +758,7 @@ err_out:
  * @return the created RSA structure, otherwise NULL.
  *
  */
-RSA *create_rsa_key(int bits)
+RSA *create_rsa_key(const int bits)
 {
     RSA *rsa = NULL;
 
@@ -788,7 +788,7 @@ err_out:
  * @return the created ECDSA structure, otherwise NULL.
  *
  */
-EC_KEY *create_ecdsa_key(int nid)
+EC_KEY *create_ecdsa_key(const int nid)
 {
     int err = 0;
     EC_KEY *eckey = NULL;
