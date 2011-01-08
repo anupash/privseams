@@ -871,10 +871,10 @@ int save_dsa_private_key(const char *const filenamebase, DSA *dsa)
     fp  = fopen(pubfilename, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open public key file %s for writing\n", pubfilename);
+    files++;
 
     err = PEM_write_DSA_PUBKEY(fp, dsa) == 0 ? 1 : 0;
-    ;
-    files++;
+
     if (err) {
         HIP_ERROR("Write failed for %s\n", pubfilename);
         goto out_err;
@@ -973,9 +973,10 @@ int save_rsa_private_key(const char *const filenamebase, RSA *rsa)
     fp  = fopen(pubfilename, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open public key file %s for writing\n", pubfilename);
+    files++;
 
     err = PEM_write_RSA_PUBKEY(fp, rsa) == 0 ? 1 : 0;
-    files++;
+
     if (err) {
         HIP_ERROR("Write failed for %s\n", pubfilename);
         goto out_err;
@@ -1088,13 +1089,14 @@ int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *ecdsa)
     fp  = fopen(filenamebase, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open private key file %s for writing\n", filenamebase);
+    files++;
 
     // this is important, otherwise parametes will be saved explicitely
     err = PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa));
 
     err = PEM_write_ECPrivateKey(fp, ecdsa, NULL, NULL,
                                   0, NULL, NULL) == 0 ? 1 : 0;
-    files++;
+
     if (err) {
         HIP_ERROR("Write failed for %s\n", filenamebase);
         goto out_err;
