@@ -463,9 +463,9 @@ out_err:
 /**
  * Sign using ECDSA
  *
- * @param digest a digest of the message to sign
+ * @param digest the sha1-160 digest of the message to sign
  * @param ecdsa the ECDSA key
- * @param signature write the signature here
+ * @param signature write the signature here (we will need ECDSA_size(signing_key) of memory);
  *
  * @return 0 on success and non-zero on error
  */
