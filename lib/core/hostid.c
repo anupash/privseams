@@ -405,7 +405,8 @@ out_err:
 }
 
 /**
- * dig out ECDSA key length from an host id
+ * Get ECDSA key length from an host id.
+ * The keylength is determined by the elliptic curve that is being used.
  *
  * @param host_id the host id
  * @param ret the ECDSA key component lengths will be stored here
