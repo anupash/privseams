@@ -80,7 +80,7 @@
 #define FORWARD_STR "FORWARD"
 #define NEW_STR "NEW"
 #define ESTABLISHED_STR "ESTABLISHED"
-/* filename needs to contain either to be valid HI file */
+/* filename needs to contain one of these to be valid HI file */
 #define RSA_FILE "_rsa_"
 #define DSA_FILE "_dsa_"
 #define ECDSA_FILE "_ecdsa_"
