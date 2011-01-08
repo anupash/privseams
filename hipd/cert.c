@@ -125,7 +125,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
     HIP_IFEL(!(sha_retval = SHA1((unsigned char *) cert->cert, strlen((char *) cert->cert), sha_digest)),
              -1, "SHA1 error when creating digest.\n");
 
-    if (algo == HIP_HI_RSA) {
+    switch (algo) {
+    case HIP_HI_RSA:
         signature_b64 = malloc(RSA_size(rsa));
         HIP_IFEL((!signature_b64), -1, "Malloc for signature_b64 failed\n");
         memset(signature_b64, 0, RSA_size(rsa));
@@ -150,10 +151,12 @@ int hip_cert_spki_sign(struct hip_common *msg)
         err = RSA_sign(NID_sha1, sha_digest, SHA_DIGEST_LENGTH, signature,
                        (unsigned int *) &sig_len, rsa);
         HIP_IFEL((err = err == 0 ? -1 : 0), -1, "RSA_sign error\n");
-    } else if (algo == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
         HIP_IFEL(1, -1, "Unknown algorithm\n");
-    } else if (algo == HIP_HI_DSA) {
+        break;
+    case HIP_HI_DSA:
         p_bin        = malloc(BN_num_bytes(dsa->p) + 1);
         HIP_IFEL((!p_bin), -1, "Malloc for p_bin failed\n");
 
@@ -190,7 +193,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
         bn2bin_safe(dsa_sig->r, &signature[1], DSA_PRIV);
         bn2bin_safe(dsa_sig->s, &signature[1 + DSA_PRIV], DSA_PRIV);
         sig_len      = SHA_DIGEST_LENGTH + DSA_PRIV * 2;
-    } else {
+        break;
+    default:
         HIP_IFEL(1, -1, "Unknown algorithm for signing\n");
     }
 
@@ -208,7 +212,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
             (char *) digest_b64, (char *) signature_b64);
 
     /* Create the public key sequence */
-    if (algo == HIP_HI_RSA) {
+    switch (algo) {
+    case HIP_HI_RSA:
         /*
          * RSA public-key
          * draft-paajarvi-xml-spki-cert-00 section 3.1.1
@@ -234,10 +239,12 @@ int hip_cert_spki_sign(struct hip_common *msg)
         sprintf(cert->public_key, "(public_key (rsa-pkcs1-sha1 (e #%s#)(n |%s|)))",
                 e_hex,
                 n_b64);
-    } else if (algo == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
         HIP_IFEL(1, -1, "Unknown algorithm for signing\n");
-    } else if (algo == HIP_HI_DSA) {
+        break;
+    case HIP_HI_DSA:
         /*
          * DSA public-key
          * draft-paajarvi-xml-spki-cert-00 section 3.1.2
@@ -271,7 +278,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
         sprintf(cert->public_key, "(public_key (dsa-pkcs1-sha1 (p |%s|)(q |%s|)"
                                   "(g |%s|)(y |%s|)))",
                 p_b64, q_b64, g_b64, y_b64);
-    } else {
+        break;
+    default:
         HIP_IFEL(1, -1, "Unknown algorithm for public-key element\n");
     }
 
@@ -445,7 +453,8 @@ int hip_cert_spki_verify(struct hip_common *msg)
     HIP_DEBUG((1 != 1), -1, "Unknown algorithm\n");
 
 algo_check_done:
-    if (algo == HIP_HI_RSA) {
+    switch (algo) {
+    case HIP_HI_RSA:
         /* malloc space for new rsa */
         rsa = RSA_new();
         HIP_IFEL(!rsa, -1, "Failed to malloc RSA\n");
@@ -488,7 +497,8 @@ algo_check_done:
         signature = malloc(keylen);
         HIP_IFEL((!signature), -1, "Malloc for signature failed.\n");
         rsa->n    = BN_bin2bn(modulus, keylen, 0);
-    } else if (algo == HIP_HI_DSA) {
+        break;
+    case HIP_HI_DSA:
         /* malloc space for new dsa */
         dsa = DSA_new();
         HIP_IFEL(!dsa, -1, "Failed to malloc DSA\n");
@@ -550,10 +560,12 @@ algo_check_done:
         snprintf((char *) y_b64, (stop - start - 1), "%s",
                  (char *) &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *) y_b64));
-    } else if (algo == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
         HIP_IFEL(1, -1, "Unknown algorithm\n");
-    } else {
+        break;
+    default:
         HIP_IFEL((1), -1, "Unknown algorithm\n");
     }
 
@@ -596,7 +608,8 @@ algo_check_done:
     evpret = EVP_DecodeBlock(signature, signature_b64,
                              strlen((char *) signature_b64));
 
-    if (algo == HIP_HI_RSA) {
+    switch (algo) {
+    case HIP_HI_RSA:
         /* do the verification */
         err    = RSA_verify(NID_sha1, sha_digest, SHA_DIGEST_LENGTH,
                             signature, RSA_size(rsa), rsa);
@@ -607,7 +620,8 @@ algo_check_done:
         /* RSA_verify returns 1 if success. */
         cert->success = err == 1 ? 0 : -1;
         HIP_IFEL((err = err == 1 ? 0 : -1), -1, "RSA_verify error\n");
-    } else if (algo == HIP_HI_DSA) {
+        break;
+    case HIP_HI_DSA:
         /* build the signature structure */
         dsa_sig       = DSA_SIG_new();
         HIP_IFEL(!dsa_sig, 1, "Failed to allocate DSA_SIG\n");
@@ -621,10 +635,12 @@ algo_check_done:
         /* DSA_do_verify returns 1 if success. */
         cert->success = err == 1 ? 0 : -1;
         HIP_IFEL((err = err == 1 ? 0 : -1), -1, "DSA_do_verify error\n");
-    } else if (algo == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
         HIP_IFEL(1, -1, "Unknown algorithm for signing\n");
-    } else {
+        break;
+    default:
         HIP_IFEL((1), -1, "Unknown algorithm\n");
     }
 
@@ -832,20 +848,24 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
         dsa = (DSA *) rsa;
     }
 
-    if (algo == HIP_HI_RSA) {
+    switch (algo) {
+    case HIP_HI_RSA:
         HIP_IFEL(!EVP_PKEY_assign_RSA(pkey, rsa), -1,
                  "Failed to convert RSA to EVP_PKEY\n");
         HIP_IFEL((X509_set_pubkey(cert, pkey) != 1), -1,
                  "Failed to set public key of the certificate\n");
-    } else if (algo == HIP_HI_DSA) {
+        break;
+    case HIP_HI_DSA:
         HIP_IFEL(!EVP_PKEY_assign_DSA(pkey, dsa), -1,
                  "Failed to convert DSA to EVP_PKEY\n");
         HIP_IFEL((X509_set_pubkey(cert, pkey) != 1), -1,
                  "Failed to set public key of the certificate\n");
-    } else if (algo == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
         HIP_IFEL(1, -1, "Unknown algorithm for signing\n");
-    } else {
+        break;
+    default:
         HIP_IFEL(1, -1, "Unknown algorithm\n");
     }
 
@@ -924,14 +944,18 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
     HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
              "Failed to add extensions to the cert\n");
 
-    if (algo == HIP_HI_RSA) {
+    switch (algo) {
+    case HIP_HI_RSA:
         digest = EVP_sha1();
-    } else if (algo == HIP_HI_DSA) {
+        break;
+    case HIP_HI_DSA:
         digest = EVP_dss1();
-    } else if (algo == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         HIP_DEBUG("CALL TO UNIMPLEMENTED ECDSA CASE\n");
         HIP_IFEL(1, -1, "Unknown algorithm for signing\n");
-    } else {
+        break;
+    default:
         HIP_IFEL((1), -1, "Unknown algorithm\n");
     }
 
