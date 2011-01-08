@@ -443,7 +443,12 @@ int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
      *
      *    Attention to integer division: 2*(x)/8 != 2*((x)/8) != x/4
      *
-     * TODO:  Why is size for pubkey correct???
+     *    NOTE:
+     *      An ECDSA public key is a point on a specific curve.
+     *      Points have two coordinates (scalar values) which come
+     *      from the field over which the curve is built.
+     *      Thus the size of the public key is twice the size of the curve.
+     *      (Actually, there is one additional openssl-specific magic byte)
      */
     ret->z_len = (curve_size + 7) / 8;
     ret->Y_len = ret->z_len * 2 + 1;
