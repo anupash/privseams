@@ -413,7 +413,7 @@ out_err:
  *
  * @return 0 on success, non-0 otherwise
  */
-int hip_get_ecdsa_keylen(const struct hip_host_id_priv *host_id,
+int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
                          struct hip_ecdsa_keylen *ret)
 {
     int err = 0;

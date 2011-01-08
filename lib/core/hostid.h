@@ -86,7 +86,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
 void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
                         struct hip_rsa_keylen *ret,
                         int is_priv);
-int hip_get_ecdsa_keylen(const struct hip_host_id_priv *host_id,
+int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
                          struct hip_ecdsa_keylen *ret);
 RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv);
 DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv);
