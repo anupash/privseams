@@ -3175,7 +3175,7 @@ int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
         HIP_ERROR("Got bad length for domain identifier: %d\n", fqdn_len);
         goto out_err;
     }
-    if (key_len > HIP_MAX_RSA_KEY_LEN / 8 + 4) {
+    if (key_len > sizeof(peer_host_id->key)) {
         HIP_ERROR("Got bad key length: %d\n", fqdn_len);
         goto out_err;
     }
