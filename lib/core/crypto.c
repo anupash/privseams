@@ -1167,10 +1167,7 @@ int load_ecdsa_private_key(const char *const filename, EC_KEY **ecdsa)
     HIP_IFEL(!EC_KEY_check_key(*ecdsa),
              -1, "Error during loading of ecdsa key.\n");
 
-    HIP_IFEL(!*ecdsa, -EINVAL, "Read failed for %s\n", filename);
-
 out_err:
-
     return err;
 }
 
