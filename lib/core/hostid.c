@@ -151,6 +151,8 @@ out_err:
  * @param hit output argument, the calculated HIT will stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
+ *
+ * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
                        struct in6_addr *hit,
@@ -179,6 +181,8 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
  * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
+ *
+ * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    struct in6_addr *hit,
@@ -220,6 +224,8 @@ out_err:
  * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
+ *
+ * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                    struct in6_addr *hit,
@@ -264,6 +270,8 @@ out_err:
  * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
+ *
+ * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                      struct in6_addr *hit,
@@ -296,6 +304,8 @@ out_err:
  * @param hit output argument, the calculated HIT will be stored here
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
+ *
+ * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                struct in6_addr *hit,
