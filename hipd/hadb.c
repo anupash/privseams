@@ -867,12 +867,18 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
     free(ha->dh_shared_key);
     free(ha->hip_msg_retrans.buf);
     if (ha->peer_pub) {
-        if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_RSA) {
+        switch (hip_get_host_id_algo(ha->peer_pub)) {
+        case HIP_HI_RSA:
             RSA_free(ha->peer_pub_key);
-        } else if (hip_get_host_id_algo(ha->peer_pub) == HIP_HI_ECDSA ) {
+            break;
+        case HIP_HI_ECDSA:
             EC_KEY_free(ha->peer_pub_key);
-        } else {
+            break;
+        case HIP_HI_DSA:
             DSA_free(ha->peer_pub_key);
+            break;
+        default:
+            HIP_DEBUG("Could not free key, because algorithm is unknown.\n");
         }
         free(ha->peer_pub);
     }
