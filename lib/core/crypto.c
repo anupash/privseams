@@ -1127,10 +1127,7 @@ out_err:
         }
     }
 
-    if (pubfilename) {
-        free(pubfilename);
-    }
-
+    free(pubfilename);
     return err;
 
 }
