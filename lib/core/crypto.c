@@ -560,9 +560,7 @@ int impl_ecdsa_verify(const uint8_t *digest, EC_KEY *ecdsa, const uint8_t *const
     err = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
 
 out_err:
-    if (ecdsa_sig) {
-        ECDSA_SIG_free(ecdsa_sig);
-    }
+    ECDSA_SIG_free(ecdsa_sig);
     return err;
 }
 
