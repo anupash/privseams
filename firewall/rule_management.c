@@ -406,11 +406,11 @@ static int load_rsa_file(FILE *fp, struct hip_host_id *hi)
     hip_build_param_host_id_hdr(hi, NULL, rsa_key_rr_len, HIP_HI_RSA);
     hip_build_param_host_id_only(hi, rsa_key_rr, NULL);
 
+    return 0;
+
 out_err:
-    if (err) {
-        RSA_free(rsa);
-        free(rsa_key_rr);
-    }
+    RSA_free(rsa);
+    free(rsa_key_rr);
     return err;
 }
 
@@ -440,11 +440,12 @@ static int load_dsa_file(FILE *fp, struct hip_host_id *hi)
     hip_build_param_host_id_hdr(hi, NULL, dsa_key_rr_len, HIP_HI_DSA);
     hip_build_param_host_id_only(hi, dsa_key_rr, NULL);
 
+    return 0;
+
 out_err:
-    if (err) {
-        DSA_free(dsa);
-        free(dsa_key_rr);
-    }
+    DSA_free(dsa);
+    free(dsa_key_rr);
+
     return err;
 }
 
@@ -476,11 +477,11 @@ static int load_ecdsa_file(FILE *fp, struct hip_host_id *hi)
     hip_build_param_host_id_hdr(hi, NULL, ecdsa_key_rr_len, HIP_HI_ECDSA);
     hip_build_param_host_id_only(hi, ecdsa_key_rr, NULL);
 
+    return 0;
+
 out_err:
-    if (err) {
-        EC_KEY_free(ecdsa);
-        free(ecdsa_key_rr);
-    }
+    EC_KEY_free(ecdsa);
+    free(ecdsa_key_rr);
     return err;
 }
 
