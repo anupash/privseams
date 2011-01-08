@@ -3742,11 +3742,8 @@ int ecdsa_to_hip_endpoint(const EC_KEY *ecdsa,
     struct endpoint_hip endpoint_hdr;
 
     ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa, &ecdsa_key_rr);
-    if (ecdsa_key_rr_len <= 0) {
-        HIP_ERROR("ecdsa_key_rr_len <= 0\n");
-        err = -ENOMEM;
-        goto out_err;
-    }
+    HIP_IFEL(ecdsa_key_rr_len <= 0,
+             -ENOMEM, "ecdsa_key_rr_len <= 0\n");
 
     hip_build_endpoint_hdr(&endpoint_hdr,
                            hostname,
@@ -3754,12 +3751,8 @@ int ecdsa_to_hip_endpoint(const EC_KEY *ecdsa,
                            HIP_HI_ECDSA,
                            ecdsa_key_rr_len);
 
-    *endpoint = malloc(endpoint_hdr.length);
-    if (!(*endpoint)) {
-        err = -ENOMEM;
-        goto out_err;
-    }
-    memset(*endpoint, 0, endpoint_hdr.length);
+    HIP_IFEL(!(*endpoint = calloc(1, endpoint_hdr.length)),
+             -ENOMEM, "Could not allocate memory for hip endpoint \n");
 
     hip_build_endpoint(*endpoint,
                        &endpoint_hdr,
