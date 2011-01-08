@@ -1263,7 +1263,7 @@ out_err:
  *
  * @note This functions assumes that the key is public.
  */
-int ecdsa_to_key_rr(EC_KEY *ecdsa, unsigned char **ec_key_rr)
+int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
 {
     int err = 0;
     int public = 0;
@@ -1331,7 +1331,7 @@ out_err:
  * DNS KEY RR is stored at dsa_key_rr. On error function returns negative
  * and sets dsa_key_rr to NULL.
  */
-int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr)
+int dsa_to_dns_key_rr(const DSA *const dsa, unsigned char **dsa_key_rr)
 {
     int err            = 0;
     int dsa_key_rr_len = -1;
@@ -1417,7 +1417,7 @@ out_err:
  * @note Caller must free rsa_key_rr when it is not used anymore.
  * @note This function assumes that RSA given as a parameter is always public.
  */
-int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr)
+int rsa_to_dns_key_rr(const RSA *const rsa, unsigned char **rsa_key_rr)
 {
     int err            = 0;
     int rsa_key_rr_len = -1;

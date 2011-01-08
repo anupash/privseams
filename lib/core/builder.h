@@ -227,18 +227,18 @@ void hip_set_msg_total_len(struct hip_common *, uint16_t);
 void hip_set_param_contents_len(struct hip_tlv_common *, hip_tlv_len_t);
 void hip_set_param_lsi_value(struct hip_esp_info *, uint32_t);
 void hip_zero_msg_checksum(struct hip_common *);
-int rsa_to_hip_endpoint(RSA *rsa,
+int rsa_to_hip_endpoint(const RSA *const rsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags_t endpoint_flags,
-                        const char *hostname);
-int dsa_to_hip_endpoint(DSA *dsa,
+                        const char *const hostname);
+int dsa_to_hip_endpoint(const DSA *const dsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags_t endpoint_flags,
-                        const char *hostname);
-int ecdsa_to_hip_endpoint(EC_KEY *ecdsa,
+                        const char *const hostname);
+int ecdsa_to_hip_endpoint(const EC_KEY *const ecdsa,
                           struct endpoint_hip **endpoint,
                           se_hip_flags_t endpoint_flags,
-                          const char *hostname);
+                          const char *const hostname);
 int hip_any_key_to_hit(void *any_key,
                        hip_hit_t *hit,
                        int is_public,

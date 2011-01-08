@@ -3731,10 +3731,10 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
  * @param hostname host name for the EC key
  * @return zero on success and negative on failure
  */
-int ecdsa_to_hip_endpoint(EC_KEY *ecdsa,
+int ecdsa_to_hip_endpoint(const EC_KEY *ecdsa,
                           struct endpoint_hip **endpoint,
                           se_hip_flags_t endpoint_flags,
-                          const char *hostname)
+                          const char *const hostname)
 {
     int err = 0;
     unsigned char *ecdsa_key_rr = NULL;
@@ -3787,10 +3787,10 @@ out_err:
  * @param hostname host name for the DSA key
  * @return zero on success and negative on failure
  */
-int dsa_to_hip_endpoint(DSA *dsa,
+int dsa_to_hip_endpoint(const DSA *const dsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags_t endpoint_flags,
-                        const char *hostname)
+                        const char *const hostname)
 {
     int err = 0;
     unsigned char *dsa_key_rr = NULL;
@@ -3839,10 +3839,10 @@ out_err:
  * @param hostname host name for the DSA key
  * @return zero on success and negative on failure
  */
-int rsa_to_hip_endpoint(RSA *rsa,
+int rsa_to_hip_endpoint(const RSA *const rsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags_t endpoint_flags,
-                        const char *hostname)
+                        const char *const hostname)
 {
     int err = 0;
     unsigned char *rsa_key_rr = NULL;
