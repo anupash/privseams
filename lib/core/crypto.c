@@ -1145,7 +1145,7 @@ out_err:
  * *EC contins NULL if the key could not be loaded (not in PEM format
  * or file not found, etc).
  */
-int load_ecdsa_private_key(const char *filename, EC_KEY **ecdsa)
+int load_ecdsa_private_key(const char *const filename, EC_KEY **ecdsa)
 {
     FILE *fp = NULL;
     int err  = 0;
@@ -1187,7 +1187,7 @@ out_err:
  * *dsa contins NULL if the key could not be loaded (not in PEM format
  * or file not found, etc).
  */
-int load_dsa_private_key(const char *filename, DSA **dsa)
+int load_dsa_private_key(const char *const filename, DSA **dsa)
 {
     FILE *fp = NULL;
     int err  = 0;
@@ -1226,7 +1226,7 @@ out_err:
  * *rsa contains NULL if the key could not be loaded (not in PEM
  * format or file not found, etc).
  */
-int load_rsa_private_key(const char *filename, RSA **rsa)
+int load_rsa_private_key(const char *const filename, RSA **rsa)
 {
     FILE *fp = NULL;
     int err  = 0;
