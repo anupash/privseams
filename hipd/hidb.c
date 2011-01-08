@@ -287,13 +287,16 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
         hip_uninit_r1(id->r1);
     }
 
-    if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA) {
+    switch (hip_get_host_id_algo(id->host_id)) {
+    case HIP_HI_RSA:
         RSA_free(id->private_key);
-    } else if (hip_get_host_id_algo(id->host_id) == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         EC_KEY_free(id->private_key);
-    } else if (hip_get_host_id_algo(id->host_id) == HIP_HI_DSA) {
+        break;
+    case HIP_HI_DSA:
         DSA_free(id->private_key);
-    } else {
+    default:
         HIP_ERROR("Cannot free key, because key type is unkown.\n");
     }
 
