@@ -493,6 +493,7 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     int err                            = 0;
     struct hip_host_id_entry *id_entry = NULL;
     struct hip_host_id_entry *old_entry;
+    int (*signature_func)(void *key, struct hip_common *m);
 
     HIP_WRITE_LOCK_DB(db);
 
@@ -537,34 +538,26 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     id_entry->host_id = hip_get_public_key(host_id);
     switch (hip_get_host_id_algo(id_entry->host_id)) {
     case HIP_HI_RSA:
-        HIP_IFEL(!hip_precreate_r1(id_entry->r1,
-                                   &lhi->hit,
-                                   hip_rsa_sign,
-                                   id_entry->private_key, id_entry->host_id),
-                 -ENOENT,
-                 "Unable to precreate R1s.\n");
+        signature_func = hip_rsa_sign;
         break;
     case HIP_HI_DSA:
-        HIP_IFEL(!hip_precreate_r1(id_entry->r1,
-                                   &lhi->hit,
-                                   hip_dsa_sign,
-                                   id_entry->private_key, id_entry->host_id),
-                 -ENOENT,
-                 "Unable to precreate R1s.\n");
+        signature_func = hip_dsa_sign;
         break;
     case HIP_HI_ECDSA:
-        HIP_IFEL(!hip_precreate_r1(id_entry->r1,
-                                   &lhi->hit,
-                                   hip_ecdsa_sign,
-                                   id_entry->private_key, id_entry->host_id),
-                 -ENOENT,
-                 "Unable to precreate R1s.\n");
+        signature_func = hip_ecdsa_sign;
         break;
     default:
         HIP_ERROR("Unsupported algorithms\n");
         err = -1;
         goto out_err;
     }
+
+    HIP_IFEL(!hip_precreate_r1(id_entry->r1,
+                               &lhi->hit,
+                               signature_func,
+                               id_entry->private_key, id_entry->host_id),
+             -ENOENT,
+             "Unable to precreate R1s.\n");
 
     /* Called while the database is locked, perhaps not the best
      * option but HIs are not added often */
