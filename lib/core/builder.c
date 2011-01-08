@@ -3208,7 +3208,7 @@ out_err:
  * @see hip_build_param()
  */
 int hip_build_param_host_id(struct hip_common *msg,
-                            const struct hip_host_id *host_id)
+                            const struct hip_host_id *const host_id)
 {
     int err = 0;
     struct hip_host_id new_host_id;
