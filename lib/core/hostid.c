@@ -286,9 +286,14 @@ int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
 
     memcpy(&host_id_pub, host_id,
            sizeof(host_id_pub) - sizeof(host_id_pub.key) - sizeof(host_id_pub.hostname));
-    memcpy(host_id_pub.key, host_id->key, key_lens.Y_len+2);
-    host_id_pub.hi_length = htons(key_lens.Y_len+2+sizeof(struct hip_host_id_key_rdata));
-    host_id_pub.length = htons(sizeof(struct hip_host_id)-2);
+    /* copy the key rr
+     * the size of the key rr has the size of the public key + 2 bytes for the curve identifier (see RFC5201-bis 5.2.8.)*/
+    memcpy(host_id_pub.key, host_id->key, key_lens.Y_len + 2);
+    /* set the hi length
+     * the hi length is the length of the key rr data + the key rr header */
+    host_id_pub.hi_length = htons(key_lens.Y_len + 2 + sizeof(struct hip_host_id_key_rdata));
+
+    hip_set_param_contents_len((struct hip_tlv_common *) &host_id_pub, sizeof(struct hip_host_id)-sizeof(struct hip_tlv_common));
 
     HIP_IFEL(hip_rsa_host_id_to_hit(&host_id_pub, hit, hit_type),
              -1, "Failed to convert HI to HIT.\n");
