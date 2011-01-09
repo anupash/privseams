@@ -424,7 +424,7 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
                                               (uint8_t *) &(sock_src4->sin_addr),
                                               (uint8_t *) &(sock_dst4->sin_addr),
                                               (uint8_t *) udp, len);
-            memmove((msg + sizeof(struct ip)), (uint8_t *) udp, len);
+            memmove(msg + sizeof(struct ip), udp, len);
         }
         break;
     case IPPROTO_TCP:
@@ -445,7 +445,7 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
                                               (uint8_t *) &(sock_dst4->sin_addr),
                                               (uint8_t *) tcp, len);
 
-            memmove((char *) (msg + sizeof(struct ip)), (uint8_t *) tcp, len);
+            memmove(msg + sizeof(struct ip), tcp, len);
         }
         break;
     case IPPROTO_ICMP:
@@ -453,7 +453,7 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
         icmp              = (struct icmphdr *) msg;
         icmp->checksum    = htons(0);
         icmp->checksum    = inchksum(icmp, len);
-        memmove((char *) (msg + sizeof(struct ip)), (uint8_t *) icmp, len);
+        memmove(msg + sizeof(struct ip), icmp, len);
         break;
     case IPPROTO_ICMPV6:
         goto not_sending;

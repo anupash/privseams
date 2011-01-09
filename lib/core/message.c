@@ -637,13 +637,11 @@ static int hip_read_control_msg_all(int sockfd,
     if (is_ipv4 && (encap_hdr_size == IPV4_HDR_SIZE)) {    /* raw IPv4, !UDP */
         /* For some reason, the IPv4 header is always included.
          * Let's remove it here. */
-        memmove(ctx->input_msg,
-                ((char *) ctx->input_msg) + IPV4_HDR_SIZE,
+        memmove(ctx->input_msg, ctx->input_msg + IPV4_HDR_SIZE,
                 HIP_MAX_PACKET - IPV4_HDR_SIZE);
     } else if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
         /* remove 32-bits of zeroes between UDP and HIP headers */
-        memmove(ctx->input_msg,
-                ((char *) ctx->input_msg) + HIP_UDP_ZERO_BYTES_LEN,
+        memmove(ctx->input_msg, ctx->input_msg + HIP_UDP_ZERO_BYTES_LEN,
                 HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
     }
 
