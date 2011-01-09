@@ -3719,13 +3719,11 @@ int dsa_to_hip_endpoint(DSA *dsa,
                            HIP_HI_DSA,
                            dsa_key_rr_len);
 
-    *endpoint = malloc(endpoint_hdr.length);
+    *endpoint = calloc(1, endpoint_hdr.length);
     if (!(*endpoint)) {
         err = -ENOMEM;
         goto out_err;
     }
-    memset(*endpoint, 0, endpoint_hdr.length);
-
     hip_build_endpoint(*endpoint,
                        &endpoint_hdr,
                        hostname,
@@ -3773,13 +3771,11 @@ int rsa_to_hip_endpoint(RSA *rsa,
                            HIP_HI_RSA,
                            rsa_key_rr_len);
 
-    *endpoint = malloc(endpoint_hdr.length);
+    *endpoint = calloc(1, endpoint_hdr.length);
     if (!(*endpoint)) {
         err = -ENOMEM;
         goto out_err;
     }
-    memset(*endpoint, 0, endpoint_hdr.length);
-
     hip_build_endpoint(*endpoint,
                        &endpoint_hdr,
                        hostname,

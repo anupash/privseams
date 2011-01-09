@@ -615,16 +615,14 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
     HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size1\n");
-    HIP_IFEL(!(dh_data1 = malloc(dh_size1)),
+    HIP_IFEL(!(dh_data1 = calloc(1, dh_size1)),
              -1, "Failed to alloc memory for dh_data1\n");
-    memset(dh_data1, 0, dh_size1);
 
     /* Allocate memory for writing the second Diffie-Hellman shared secret */
     HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size2\n");
-    HIP_IFEL(!(dh_data2 = malloc(dh_size2)),
+    HIP_IFEL(!(dh_data2 = calloc(1, dh_size2)),
              -1, "Failed to alloc memory for dh_data2\n");
-    memset(dh_data2, 0, dh_size2);
 
     /* Ready to begin building of the R1 packet */
 

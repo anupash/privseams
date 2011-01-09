@@ -56,8 +56,7 @@ static int hip_pisa_load_certificate(void)
     FILE *f = NULL;
 
     free(midauth_cert);
-    midauth_cert = malloc(CERT_MAX_SIZE);
-    memset(midauth_cert, 0, CERT_MAX_SIZE);
+    midauth_cert = calloc(1, CERT_MAX_SIZE);
 
     if (!(f = fopen(HIPL_SYSCONFDIR "/cert", "r"))) {
         HIP_ERROR("Could not open certificate file.\n");

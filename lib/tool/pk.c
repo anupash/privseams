@@ -52,9 +52,8 @@ int hip_rsa_sign(void *priv_key, struct hip_common *msg)
              -1, "Building of SHA1 digest failed\n");
 
     len       = RSA_size(rsa);
-    signature = malloc(len);
+    signature = calloc(1, len);
     HIP_IFEL(!signature, -1, "Malloc for signature failed.");
-    memset(signature, 0, len);
 
     /* RSA_sign returns 0 on failure */
     HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, signature,

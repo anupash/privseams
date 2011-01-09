@@ -443,12 +443,10 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
         return;
     }
 
-    if ((n = malloc(sizeof(struct netdev_address))) == NULL) {
+    if ((n = calloc(1, sizeof(struct netdev_address))) == NULL) {
         HIP_ERROR("Error when allocating memory to a network device address.\n");
         return;
     }
-
-    memset(n, 0, sizeof(struct netdev_address));
 
     /* Convert IPv4 address to IPv6 */
     if (addr->sa_family == AF_INET) {

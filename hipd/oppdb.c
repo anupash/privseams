@@ -331,13 +331,11 @@ static struct hip_opp_blocking_request *hip_create_opp_block_entry(void)
 {
     struct hip_opp_blocking_request *entry = NULL;
 
-    entry = malloc(sizeof(struct hip_opp_blocking_request));
+    entry = calloc(1, sizeof(struct hip_opp_blocking_request));
     if (!entry) {
         HIP_ERROR("struct hip_opp_blocking_request memory allocation failed.\n");
         return NULL;
     }
-
-    memset(entry, 0, sizeof(*entry));
 
     HIP_LOCK_OPP_INIT(entry);
     time(&entry->creation_time);

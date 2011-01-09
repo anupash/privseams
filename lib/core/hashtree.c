@@ -107,9 +107,8 @@ struct hash_tree *htree_init(const int num_data_blocks,
 
 
     // allocate the memory for the tree
-    HIP_IFEL(!(tree = malloc(sizeof(struct hash_tree))),
+    HIP_IFEL(!(tree = calloc(1, sizeof(struct hash_tree))),
              -1, "failed to allocate memory\n");
-    memset(tree, 0, sizeof(struct hash_tree));
 
     // check here whether leaf_set_size is a power of 2 and compute correct value if it is not
     loga = log_x(2, num_data_blocks);

@@ -242,9 +242,8 @@ struct hip_r1entry *hip_init_r1(void)
 {
     struct hip_r1entry *err;
 
-    HIP_IFE(!(err = malloc(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE)),
+    HIP_IFE(!(err = calloc(1, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE)),
             NULL);
-    memset(err, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
 
 out_err:
     return err;

@@ -809,9 +809,8 @@ int dsa_to_dns_key_rr(const DSA *const dsa, unsigned char **dsa_key_rr)
         dsa_key_rr_len += DSA_PRIV; /* private key hack */
     }
 
-    *dsa_key_rr = malloc(dsa_key_rr_len);
+    *dsa_key_rr = calloc(1, dsa_key_rr_len);
     HIP_IFEL(!*dsa_key_rr, -ENOMEM, "Malloc for *dsa_key_rr failed\n");
-    memset(*dsa_key_rr, 0, dsa_key_rr_len);
 
     p           = *dsa_key_rr;
 
@@ -898,9 +897,8 @@ int rsa_to_dns_key_rr(const RSA *const rsa, unsigned char **rsa_key_rr)
         rsa_key_rr_len = e_len_bytes + e_len + key_len * 9 / 2;
     }
 
-    *rsa_key_rr = malloc(rsa_key_rr_len);
+    *rsa_key_rr = calloc(1, rsa_key_rr_len);
     HIP_IFEL(!*rsa_key_rr, -ENOMEM, "Malloc for *rsa_key_rr failed\n");
-    memset(*rsa_key_rr, 0, rsa_key_rr_len);
 
     c           = *rsa_key_rr;
 

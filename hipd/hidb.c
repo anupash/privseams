@@ -93,10 +93,8 @@ static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv 
     if (T != 8) {
         HIP_DEBUG("T-value in DSA-key not 8 (0x%x)!\n", T);
     }
-    key_len        = 64 + (T * 8);
-
-    ret            = malloc(sizeof(struct hip_host_id));
-    memcpy(ret, hi, sizeof(struct hip_host_id));
+    key_len = 64 + (T * 8);
+    ret     = calloc(1, sizeof(struct hip_host_id));
 
     /* the secret component of the DSA key is always 20 bytes */
     temp = ntohs(hi->hi_length) - DSA_PRIV;
@@ -452,9 +450,8 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     HIP_WRITE_LOCK_DB(db);
 
     HIP_ASSERT(&lhi->hit != NULL);
-    HIP_IFEL(!(id_entry = malloc(sizeof(struct hip_host_id_entry))),
+    HIP_IFEL(!(id_entry = calloc(1, sizeof(struct hip_host_id_entry))),
              -ENOMEM, "No memory available for host id\n");
-    memset(id_entry, 0, sizeof(struct hip_host_id_entry));
 
     ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
     id_entry->lhi.anonymous = lhi->anonymous;

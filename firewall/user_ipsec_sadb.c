@@ -608,17 +608,14 @@ static int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
     int err               = 0;
 
     /* initialize members to 0/NULL */
-    HIP_IFEL(!(entry = malloc(sizeof(struct hip_sa_entry))), -1,
+    HIP_IFEL(!(entry = calloc(1, sizeof(struct hip_sa_entry))), -1,
              "failed to allocate memory\n");
-    memset(entry, 0, sizeof(struct hip_sa_entry));
 
-    HIP_IFEL(!(entry->auth_key = malloc(hip_auth_key_length_esp(ealg))),
+    HIP_IFEL(!(entry->auth_key = calloc(1, hip_auth_key_length_esp(ealg))),
              -1, "failed to allocate memory\n");
-    memset(entry->auth_key, 0, hip_auth_key_length_esp(ealg));
     if (hip_enc_key_length(ealg) > 0) {
-        HIP_IFEL(!(entry->enc_key = malloc(hip_enc_key_length(ealg))),
+        HIP_IFEL(!(entry->enc_key = calloc(1, hip_enc_key_length(ealg))),
                  -1, "failed to allocate memory\n");
-        memset(entry->enc_key, 0, hip_enc_key_length(ealg));
     }
 
     HIP_IFEL(hip_sa_entry_set(entry, direction, spi, mode, src_addr, dst_addr,

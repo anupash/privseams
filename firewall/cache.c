@@ -68,9 +68,8 @@ struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void)
     struct hip_hadb_user_info_state *entry = NULL;
     int err = 0;
 
-    HIP_IFEL(!(entry = malloc(sizeof(struct hip_hadb_user_info_state))),
+    HIP_IFEL(!(entry = calloc(1, sizeof(struct hip_hadb_user_info_state))),
              -ENOMEM, "No memory available for firewall database entry\n");
-    memset(entry, 0, sizeof(*entry));
 out_err:
     return entry;
 }

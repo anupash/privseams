@@ -76,12 +76,9 @@ int hip_build_locators_old(struct hip_common *msg)
 
     addr_max = address_count;
 
-    HIP_IFEL(!(locs = malloc(addr_max *
+    HIP_IFEL(!(locs = calloc(1, addr_max *
                              sizeof(struct hip_locator_info_addr_item))),
              -1, "Malloc for LOCATORS type1 failed\n");
-
-    memset(locs, 0, (addr_max *
-                     sizeof(struct hip_locator_info_addr_item)));
 
     HIP_DEBUG("there are %d type 1 locator item\n", addr_max);
 

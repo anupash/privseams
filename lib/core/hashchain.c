@@ -138,14 +138,12 @@ struct hash_chain *hchain_create(const hash_function hash_func,
     HIP_ASSERT(!(hchain_hierarchy == 0 && link_tree));
 
     // allocate memory for a new hash chain
-    HIP_IFEL(!(hchain = malloc(sizeof(struct hash_chain))), -1,
+    HIP_IFEL(!(hchain = calloc(1, sizeof(struct hash_chain))), -1,
              "failed to allocate memory\n");
-    memset(hchain, 0, sizeof(struct hash_chain));
 
     // allocate memory for the hash chain elements
-    HIP_IFEL(!(hchain->elements = malloc(hash_length * hchain_length)),
+    HIP_IFEL(!(hchain->elements = calloc(1, hash_length * hchain_length)),
              -1, "failed to allocate memory\n");
-    memset(hchain->elements, 0, hash_length * hchain_length);
 
     // set the link tree if we are using different hierarchies
     if (link_tree) {

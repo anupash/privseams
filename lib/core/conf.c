@@ -2181,8 +2181,7 @@ int hip_handle_exec_app(int do_fork, int type, int argc,
     char **argv_new = NULL;
 
     memset(libs, 0, sizeof(libs));
-    argv_new = malloc(sizeof(char *) * argc);
-    memset(argv_new, 0, sizeof(char *) * argc);
+    argv_new = calloc(1, sizeof(char *) * argc);
 
     for (k = 0; k < argc; k++) {
         argv_new[k] = strdup(argv[k]);

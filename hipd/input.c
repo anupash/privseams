@@ -325,11 +325,9 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     /* 1024 should be enough for shared secret. The length of the shared
      * secret actually depends on the DH Group. */
     /** @todo 1024 -> hip_get_dh_size ? */
-    HIP_IFEL(!(dh_shared_key = malloc(dh_shared_len)),
+    HIP_IFEL(!(dh_shared_key = calloc(1, dh_shared_len)),
              -ENOMEM,
              "Error on allocating memory for Diffie-Hellman shared key.\n");
-
-    memset(dh_shared_key, 0, dh_shared_len);
 
     HIP_IFEL(!(dhf = hip_get_param_readwrite(ctx->input_msg,
                                              HIP_PARAM_DIFFIE_HELLMAN)),

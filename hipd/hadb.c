@@ -705,10 +705,9 @@ static int hip_hadb_init_entry(struct hip_hadb_state *entry)
     get_random_bytes(&entry->spi_inbound_current,
                      sizeof(entry->spi_inbound_current));
 
-    HIP_IFE(!(entry->hip_msg_retrans.buf = malloc(HIP_MAX_NETWORK_PACKET)),
+    HIP_IFE(!(entry->hip_msg_retrans.buf = calloc(1, HIP_MAX_NETWORK_PACKET)),
             -ENOMEM);
     entry->hip_msg_retrans.count = 0;
-    memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
 
     /* Initialize module states */
     entry->hip_modular_state = lmod_init_state();
@@ -728,11 +727,9 @@ struct hip_hadb_state *hip_hadb_create_state(void)
 {
     struct hip_hadb_state *entry = NULL;
 
-    if (!(entry = malloc(sizeof(struct hip_hadb_state)))) {
+    if (!(entry = calloc(1, sizeof(struct hip_hadb_state)))) {
         return NULL;
     }
-
-    memset(entry, 0, sizeof(struct hip_hadb_state));
 
     hip_hadb_init_entry(entry);
 

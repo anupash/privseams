@@ -202,8 +202,7 @@ static struct hip_data *get_hip_data(const struct hip_common *common)
     struct hip_data *data = NULL;
 
     // init hip_data for this tuple
-    data = malloc(sizeof(struct hip_data));
-    memset(data, 0, sizeof(struct hip_data));
+    data = calloc(1, sizeof(struct hip_data));
 
     memcpy(&data->src_hit, &common->hits, sizeof(struct in6_addr));
     memcpy(&data->dst_hit, &common->hitr, sizeof(struct in6_addr));
@@ -433,8 +432,7 @@ static void insert_new_connection(const struct hip_data *data)
 
     HIP_DEBUG("insert_new_connection\n");
 
-    connection = malloc(sizeof(struct connection));
-    memset(connection, 0, sizeof(struct connection));
+    connection = calloc(1, sizeof(struct connection));
 
     connection->state = STATE_ESTABLISHED;
     //set time stamp
@@ -632,8 +630,7 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
     if (esp_info && locator && esp_info->new_spi == esp_info->old_spi) {
         HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi 0x%lx\n", esp_info->new_spi);
         /* check that old spi is found */
-        new_esp        = malloc(sizeof(struct esp_tuple));
-        memset(new_esp, 0, sizeof(struct esp_tuple));
+        new_esp        = calloc(1, sizeof(struct esp_tuple));
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
 
@@ -679,8 +676,7 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *esp_
 {
     struct esp_tuple *new_esp = NULL;
     if (esp_info) {
-        new_esp        = malloc(sizeof(struct esp_tuple));
-        memset(new_esp, 0, sizeof(struct esp_tuple));
+        new_esp        = calloc(1, sizeof(struct esp_tuple));
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
 
@@ -1027,9 +1023,8 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
     esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi));
     if (!esp_tuple) {
         // esp_tuple does not exist yet
-        HIP_IFEL(!(esp_tuple = malloc(sizeof(struct esp_tuple))), 0,
+        HIP_IFEL(!(esp_tuple = calloc(1, sizeof(struct esp_tuple))), 0,
                  "failed to allocate memory\n");
-        memset(esp_tuple, 0, sizeof(struct esp_tuple));
 
         esp_tuple->spi           = ntohl(spi->new_spi);
         esp_tuple->new_spi       = 0;
@@ -1093,9 +1088,8 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
     // try to look up esp_tuple for this connection
     if (!(esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi)))) {
         if (!(esp_tuple = esp_prot_conntrack_R2_esp_tuple(other_dir_esps))) {
-            HIP_IFEL(!(esp_tuple = malloc(sizeof(struct esp_tuple))), 0,
+            HIP_IFEL(!(esp_tuple = calloc(1, sizeof(struct esp_tuple))), 0,
                      "failed to allocate memory\n");
-            memset(esp_tuple, 0, sizeof(struct esp_tuple));
 
             //add esp_tuple to list of tuples
             other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples,

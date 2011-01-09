@@ -175,14 +175,12 @@ int hip_send_close(struct hip_common *msg,
 
     HIP_DEBUG("msg=%p\n", msg);
 
-    HIP_IFEL(!(opaque = malloc(sizeof(hip_hit_t) + sizeof(int))),
+    HIP_IFEL(!(opaque = calloc(1, sizeof(hip_hit_t) + sizeof(int))),
              -1, "failed to allocate memory");
 
     if (msg) {
         hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
     }
-
-    memset(opaque, 0, sizeof(hip_hit_t) + sizeof(int));
 
     if (hit) {
         memcpy(opaque, hit, sizeof(hip_hit_t));
