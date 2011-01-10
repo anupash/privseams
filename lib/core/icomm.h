@@ -44,10 +44,6 @@
 #define HIP_FIREWALL_SYNC_PORT                 974
 
 
-#define HIP_MSG_GLOBAL_OPT 1
-#define HIP_MSG_SOCKET_OPT 2
-#define HIP_MSG_GET_HIT_LIST 3
-
 /** @defgroup hip_so HIP socket options
  * Define a constant HIP_MSG_NEWMODE which has value
  * between 0 and HIP_MSG_ROOT_MAX. You may also need to increase the value of
