@@ -499,7 +499,7 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
                 if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_RSA) {
                     RSA_free(hip_tuple->data->src_pub_key);
                 } else if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_ECDSA) {
-                    EC_KEY_free((EC_KEY *) hip_tuple->data->src_pub_key);
+                    EC_KEY_free(hip_tuple->data->src_pub_key);
                 } else {
                     DSA_free(hip_tuple->data->src_pub_key);
                 }
