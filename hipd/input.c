@@ -1081,11 +1081,9 @@ int hip_handle_r2(RVS const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int err = 0, tfm = 0, retransmission = 0, idx = 0;
-    uint32_t spi_recvd = 0, spi_in = 0;
-    const struct hip_esp_info *esp_info = NULL;
-    const struct hip_locator *locator   = NULL;
-    struct hip_spi_out_item spi_out_data;
+    int err = 0, retransmission = 0;
+    const struct hip_locator *locator     = NULL;
+    const struct hip_esp_info *esp_info   = NULL;
 
     if (ha_state == HIP_STATE_ESTABLISHED) {
         retransmission = 1;
@@ -1101,30 +1099,11 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     }
 
     HIP_IFEL(!(esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO)),
-             -EINVAL,
-             "Parameter SPI not found.\n");
+             -EINVAL, "Parameter SPI not found.\n");
 
-    spi_recvd = ntohl(esp_info->new_spi);
-    memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
-    spi_out_data.spi = spi_recvd;
-
-    ctx->hadb_entry->spi_outbound_current = spi_recvd;
-    HIP_DEBUG("Set SPI out = 0x%x\n", spi_recvd);
-
+    ctx->hadb_entry->spi_outbound_current = ntohl(esp_info->new_spi);
     /* Copy SPI out value here or otherwise ICE code has zero SPI */
-    ctx->hadb_entry->spi_outbound_new = spi_recvd;
-    HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
-
-    HIP_DEBUG("entry should have only one spi_in now, test\n");
-
-    spi_in = ctx->hadb_entry->spi_inbound_current;
-    HIP_DEBUG("spi_in: 0x%x\n", spi_in);
-
-    tfm    = ctx->hadb_entry->esp_transform;
-    HIP_DEBUG("esp_transform: %i\n", tfm);
-
-    HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
-              ctx->msg_ports.src_port, ctx->msg_ports.dst_port);
+    ctx->hadb_entry->spi_outbound_new = ntohl(esp_info->new_spi);
 
     /********** ESP-PROT anchor [OPTIONAL] **********/
     HIP_IFEL(esp_prot_r2_handle_anchor(ctx->hadb_entry,
@@ -1136,50 +1115,6 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     locator = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);
     if (locator) {
         HIP_DEBUG("Locator parameter support in BEX is not implemented!\n");
-    }
-
-    HIP_DEBUG_HIT("hit our", &(ctx->hadb_entry)->hit_our);
-    HIP_DEBUG_HIT("hit peer", &(ctx->hadb_entry)->hit_peer);
-    HIP_IFEL(hip_add_sa(&ctx->src_addr,
-                        &ctx->dst_addr,
-                        &ctx->input_msg->hits,
-                        &ctx->input_msg->hitr,
-                        spi_in,
-                        tfm,
-                        &(ctx->hadb_entry)->esp_in,
-                        &(ctx->hadb_entry)->auth_in,
-                        HIP_SPI_DIRECTION_IN,
-                        0,
-                        ctx->hadb_entry),
-            -1,
-            "Failed to setup IPsec SPD/SA entries, peer:src\n");
-
-    HIP_IFEL(hip_add_sa(&ctx->dst_addr,
-                        &ctx->src_addr,
-                        &ctx->input_msg->hitr,
-                        &ctx->input_msg->hits,
-                        spi_recvd,
-                        tfm,
-                        &ctx->hadb_entry->esp_out,
-                        &ctx->hadb_entry->auth_out,
-                        HIP_SPI_DIRECTION_OUT,
-                        0,
-                        ctx->hadb_entry),
-             -1,
-             "Failed to setup IPsec SPD/SA entries, peer:dst\n");
-
-    /** @todo Check for -EAGAIN */
-    HIP_DEBUG("Set up outbound IPsec SA, SPI = 0x%x (host).\n", spi_recvd);
-
-    /* Source IPv6 address is implicitly the preferred address after the
-     * base exchange. */
-
-    idx = hip_devaddr2ifindex(&ctx->dst_addr);
-
-    if (idx != 0) {
-        HIP_DEBUG("ifindex = %d\n", idx);
-    } else {
-        HIP_ERROR("Couldn't get device ifindex of address\n");
     }
 
 #ifdef CONFIG_HIP_RVS
@@ -1195,11 +1130,6 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     hip_handle_param_reg_failed(ctx->hadb_entry, ctx->input_msg);
 
     hip_handle_reg_from(ctx->hadb_entry, ctx->input_msg);
-
-    /* These will change SAs' state from ACQUIRE to VALID, and wake up any
-     * transport sockets waiting for a SA. */
-    // hip_finalize_sa(&entry->hit_peer, spi_recvd);
-    // hip_finalize_sa(&entry->hit_our, spi_in);
 
     ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
     hip_hadb_insert_state(ctx->hadb_entry);
@@ -1223,7 +1153,6 @@ int hip_handle_r2(RVS const uint8_t packet_type,
                HIP_MAX_NETWORK_PACKET);
     }
 
-out_err:
     if (ctx->hadb_entry->state == HIP_STATE_ESTABLISHED) {
         HIP_DEBUG("Send response to firewall.\n");
         hip_firewall_set_bex_data(HIP_MSG_FW_BEX_DONE,
@@ -1236,6 +1165,66 @@ out_err:
     hip_perf_stop_benchmark(perf_set, PERF_R2);
     hip_perf_write_benchmark(perf_set, PERF_R2);
 #endif
+
+out_err:
+    return err;
+}
+
+int hip_setup_ipsec_sa(UNUSED const uint8_t packet_type,
+                       UNUSED const uint32_t ha_state,
+                       struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    /* If we have old SAs with these HITs delete them */
+    hip_delete_security_associations_and_sp(ctx->hadb_entry);
+
+    // set up inbound IPsec SA
+    HIP_IFEL(hip_add_sa(&ctx->src_addr,
+                        &ctx->dst_addr,
+                        &ctx->input_msg->hits,
+                        &ctx->input_msg->hitr,
+                        ctx->hadb_entry->spi_inbound_current,
+                        ctx->hadb_entry->esp_transform,
+                        &ctx->hadb_entry->esp_in,
+                        &ctx->hadb_entry->auth_in,
+                        HIP_SPI_DIRECTION_IN,
+                        0,
+                        ctx->hadb_entry),
+             -1, "Failed to setup IPsec SPD/SA entries, peer:src\n");
+
+    // set up outbound IPsec SA
+    HIP_IFEL(hip_add_sa(&ctx->dst_addr,
+                        &ctx->src_addr,
+                        &ctx->input_msg->hitr,
+                        &ctx->input_msg->hits,
+                        ctx->hadb_entry->spi_outbound_current,
+                        ctx->hadb_entry->esp_transform,
+                        &ctx->hadb_entry->esp_out,
+                        &ctx->hadb_entry->auth_out,
+                        HIP_SPI_DIRECTION_OUT,
+                        0,
+                        ctx->hadb_entry),
+             -1, "Failed to setup IPsec SPD/SA entries, peer:dst\n");
+
+    // set up corresponding IPsec policies
+    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input_msg->hits,
+                                   &ctx->input_msg->hitr,
+                                   &ctx->src_addr,
+                                   &ctx->dst_addr,
+                                   IPPROTO_ESP,
+                                   1,
+                                   1),
+             -1, "Setting up SP pair failed\n");
+
+out_err:
+    if (err) {
+        HIP_ERROR("Failed to setup IPsec SAs, removing IPsec state!");
+
+        /* delete all IPsec related SPD/SA for this ctx->hadb_entry*/
+        hip_delete_security_associations_and_sp(ctx->hadb_entry);
+    }
+
     return err;
 }
 
@@ -1716,16 +1705,12 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
                   struct hip_packet_context *ctx)
 {
     int err = 0, retransmission = 0;
-    uint32_t spi_out = 0;
-    const struct hip_esp_info *esp_info     = NULL;
-    hip_transform_suite esp_tfm;
-    struct hip_spi_in_item spi_in_data;
     const struct hip_locator *locator       = NULL;
     int if_index                            = 0;
     struct sockaddr_storage ss_addr;
     struct sockaddr *addr                   = NULL;
-    const struct hip_esp_transform *esp_tf  = NULL;
-    struct hip_spi_out_item spi_out_data;
+    const struct hip_esp_info *esp_info     = NULL;
+    const struct hip_esp_transform *esp_tfm = NULL;
 
     /* Get the interface index of the network device which has our
      * local IP address. */
@@ -1767,31 +1752,14 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
                   ctx->hadb_entry);
     }
 
-    /* If we have old SAs with these HITs delete them */
-    hip_delete_security_associations_and_sp(ctx->hadb_entry);
+    HIP_IFEL(!(esp_info = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_INFO)),
+             -EINVAL, "Parameter SPI not found.\n");
 
-    HIP_IFEL(!(esp_tf = hip_get_param(ctx->input_msg,
-                                      HIP_PARAM_ESP_TRANSFORM)),
-             -ENOENT, "Did not find ESP transform on i2\n");
-    HIP_IFEL(!(esp_info = hip_get_param(ctx->input_msg,
-                                        HIP_PARAM_ESP_INFO)),
-             -ENOENT, "Did not find SPI LSI on i2\n");
-
+    ctx->hadb_entry->spi_outbound_current = ntohl(esp_info->new_spi);
+    /* Copy SPI out value here or otherwise ICE code has zero SPI */
+    ctx->hadb_entry->spi_outbound_new = ntohl(esp_info->new_spi);
 
     ctx->hadb_entry->peer_controls |= ntohs(ctx->input_msg->control);
-
-    /* move this below setup_sa */
-    memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
-    spi_out_data.spi            = ntohl(esp_info->new_spi);
-    ctx->hadb_entry->spi_outbound_current = spi_out_data.spi;
-    /* 99999
-     * HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
-     * HIP_IFE(hip_hadb_add_spi_old(ctx->hadb_entry, HIP_SPI_DIRECTION_OUT,
-     *                       &spi_out_data), -1);*/
-    ctx->hadb_entry->esp_transform  = hip_select_esp_transform(esp_tf);
-    HIP_IFEL(!(esp_tfm = ctx->hadb_entry->esp_transform),
-             -1,
-             "Could not select proper ESP transform\n");
 
     HIP_IFEL(hip_hadb_add_peer_addr(ctx->hadb_entry,
                                     &ctx->src_addr,
@@ -1808,60 +1776,18 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     }
     HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 
+    HIP_IFEL(!(esp_tfm = hip_get_param(ctx->input_msg,
+                                       HIP_PARAM_ESP_TRANSFORM)),
+              -ENOENT, "Did not find ESP transform on i2\n");
+
+    HIP_IFEL(!(ctx->hadb_entry->esp_transform = hip_select_esp_transform(esp_tfm)),
+             -1, "Could not select proper ESP transform\n");
+
     /********** ESP-PROT anchor [OPTIONAL] **********/
     /** @todo Modularize esp_prot_* */
     HIP_IFEL(esp_prot_i2_handle_anchor(ctx), -1,
              "failed to handle esp prot anchor\n");
 
-    /************************************************/
-
-    /* Set up IPsec associations */
-    err = hip_add_sa(&ctx->src_addr,
-                     &ctx->dst_addr,
-                     &ctx->input_msg->hits,
-                     &ctx->input_msg->hitr,
-                     ctx->hadb_entry->spi_inbound_current,
-                     esp_tfm,
-                     &ctx->hadb_entry->esp_in,
-                     &ctx->hadb_entry->auth_in,
-                     HIP_SPI_DIRECTION_IN,
-                     0,
-                     ctx->hadb_entry);
-
-    /* Remove the IPsec associations if there was an error when creating
-     * them.
-     */
-    if (err) {
-        err = -1;
-        HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", ctx->hadb_entry->spi_inbound_current);
-        hip_delete_security_associations_and_sp(ctx->hadb_entry);
-        goto out_err;
-    }
-
-    spi_out = ntohl(esp_info->new_spi);
-    HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
-
-    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input_msg->hits,
-                                   &ctx->input_msg->hitr,
-                                   &ctx->src_addr,
-                                   &ctx->dst_addr,
-                                   IPPROTO_ESP,
-                                   1,
-                                   1),
-             -1,
-             "Failed to set up an SP pair.\n");
-
-    memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
-    spi_in_data.spi     = ctx->hadb_entry->spi_inbound_current;
-    spi_in_data.ifindex = hip_devaddr2ifindex(&ctx->dst_addr);
-
-    if (spi_in_data.ifindex) {
-        HIP_DEBUG("spi_in_data.ifindex = %d.\n", spi_in_data.ifindex);
-    } else {
-        HIP_ERROR("Could not get device ifindex of address.\n");
-    }
-
-    ctx->hadb_entry->spi_outbound_new = spi_out;
 
     /***** LOCATOR PARAMETER *****/
     locator = hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR);

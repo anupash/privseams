@@ -538,10 +538,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE, hip_get_peer_nat_udp_port()),
              -2, "error while adding a new peer address\n");
 
-    HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
-                                   local_addr, peer_addr, 0, 1, 0),
-             -1, "Error in setting the SPs\n");
-
 out_err:
     return err;
 }
