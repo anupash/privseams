@@ -87,7 +87,7 @@ out_err:
  */
 int hip_dsa_sign(void *priv_key, struct hip_common *msg)
 {
-    DSA *dsa = (DSA *) priv_key;
+    DSA *dsa = priv_key;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     uint8_t signature[HIP_DSA_SIGNATURE_LEN];
     int err  = 0, len;
