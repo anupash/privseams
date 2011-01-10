@@ -59,13 +59,13 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
  * need for a call and return sequence. -Lauri 06.08.2008
  */
 static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *const host_id,
-                                         struct in6_addr *hit, const int hit_type)
+                                         struct in6_addr *const hit, const int hit_type)
 {
     return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
 
 static inline int hip_ecdsa_host_id_to_hit(const struct hip_host_id *const host_id,
-                                           struct in6_addr *hit, const int hit_type)
+                                           struct in6_addr *const hit, const int hit_type)
 {
     return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
