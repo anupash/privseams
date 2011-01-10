@@ -95,7 +95,8 @@ static struct hip_host_id *hip_get_ecdsa_public_key(const struct hip_host_id_pri
      * the hi length is the length of the key rr data + the key rr header */
     host_id_pub->hi_length = htons(key_lens.Y_len + 2 + sizeof(struct hip_host_id_key_rdata));
 
-    hip_set_param_contents_len((struct hip_tlv_common *) host_id_pub, sizeof(struct hip_host_id)-sizeof(struct hip_tlv_common));
+    hip_set_param_contents_len((struct hip_tlv_common *) host_id_pub,
+                               sizeof(struct hip_host_id) - sizeof(struct hip_tlv_common));
 
     return host_id_pub;
 
