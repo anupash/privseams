@@ -235,6 +235,10 @@ int dsa_to_hip_endpoint(const DSA *const dsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags endpoint_flags,
                         const char *const hostname);
+int hip_any_key_to_hit(const void *const any_key,
+                       hip_hit_t *const hit,
+                       const int is_public,
+                       const int type);
 int hip_build_param_reg_info(struct hip_common *msg,
                              const void *service_list,
                              const unsigned int service_count);

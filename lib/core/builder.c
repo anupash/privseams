@@ -3817,115 +3817,65 @@ out_err:
  * @param is_dsa 1 if the key is DSA or zero for RSA
  * @return zero on success and negative on failure
  */
-static int hip_any_key_to_hit(void *any_key,
-                              hip_hit_t *hit,
-                              int is_public,
-                              int is_dsa)
+int hip_any_key_to_hit(const void *const any_key,
+                       hip_hit_t *const hit,
+                       const int is_public,
+                       const int type)
 {
     int err = 0, key_rr_len;
     unsigned char *key_rr = NULL;
     char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     struct hip_host_id_priv *host_id = NULL;
     struct hip_host_id *host_id_pub = NULL;
-    RSA *rsa_key = any_key;
-    DSA *dsa_key = any_key;
+    const RSA *const rsa_key        = any_key;
+    const DSA *const dsa_key        = any_key;
 
     memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
     HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
             "gethostname failed\n");
 
-    if (is_dsa) {
+    switch (type) {
+    case HIP_HI_DSA:
         HIP_IFEL(((key_rr_len = dsa_to_dns_key_rr(dsa_key, &key_rr)) <= 0), -1,
                 "key_rr_len\n");
-        if (is_public) {
-            HIP_IFEL(!(host_id_pub = malloc(sizeof(struct hip_host_id))),
-                    -ENOMEM, "malloc\n");
-            host_id_pub->hi_length = htons(key_rr_len
-                    + sizeof(struct hip_host_id_key_rdata));
-            memcpy(&host_id_pub->key, key_rr, key_rr_len);
-            HIP_IFEL(hip_dsa_host_id_to_hit(host_id_pub, hit, HIP_HIT_TYPE_HASH100),
-                    -1, "conversion from host id to hit failed\n");
-        } else {
-            HIP_IFEL(!(host_id = malloc(sizeof(struct hip_host_id_priv))),
-                    -ENOMEM,
-                    "malloc\n");
-
-            host_id->hi_length = htons(key_rr_len
-                    + sizeof(struct hip_host_id_key_rdata));
-            memcpy(&host_id->key, key_rr, key_rr_len);
-            HIP_IFEL(hip_private_dsa_host_id_to_hit(host_id, hit,
-                                                    HIP_HIT_TYPE_HASH100),
-                     -1, "conversion from host id to hit failed\n");
-        }
-    } else { /* rsa */
+        break;
+    case HIP_HI_RSA:
         HIP_IFEL(((key_rr_len = rsa_to_dns_key_rr(rsa_key, &key_rr)) <= 0), -1,
                  "key_rr_len\n");
-        if (is_public) {
-            HIP_IFEL(!(host_id_pub = malloc(sizeof(struct hip_host_id))),
-                     -ENOMEM, "malloc\n");
+        break;
+    default:
+        HIP_IFEL(1, -1, "Unknown algorithm\n");
+    }
 
-            host_id_pub->hi_length = htons(key_rr_len +
-                                           sizeof(struct hip_host_id_key_rdata));
-
-            memcpy(&host_id_pub->key, key_rr, key_rr_len);
-
-            HIP_IFEL(hip_rsa_host_id_to_hit(host_id_pub,
-                                            hit,
-                                            HIP_HIT_TYPE_HASH100),
-                     -1,
-                     "conversion from host id to hit failed\n");
-        } else {
-            HIP_IFEL(!(host_id = malloc(sizeof(struct hip_host_id_priv))),
-                     -ENOMEM,
-                     "malloc\n");
-
-            host_id->hi_length = htons(key_rr_len +
-                                       sizeof(struct hip_host_id_key_rdata));
-            memcpy(&host_id->key, key_rr, key_rr_len);
-
-            HIP_IFEL(hip_private_rsa_host_id_to_hit(host_id,
-                                                    hit,
-                                                    HIP_HIT_TYPE_HASH100),
-                     -1,
-                     "conversion from host id to hit failed\n");
-        }
+    if (is_public) {
+        HIP_IFEL(!(host_id_pub = malloc(sizeof(struct hip_host_id))),
+                -ENOMEM, "Could not allocate memory for public host identity\n");
+        host_id_pub->hi_length = htons(key_rr_len + sizeof(struct hip_host_id_key_rdata));
+        memcpy(&host_id_pub->key, key_rr, key_rr_len);
+        // hip_host_id_to_hit needs to know the algorithm
+        host_id_pub->rdata.algorithm = type;
+        HIP_IFEL(hip_host_id_to_hit(host_id_pub, hit, HIP_HIT_TYPE_HASH100),
+                 -1, "conversion from public host id to hit failed\n");
+    } else {
+        HIP_IFEL(!(host_id = malloc(sizeof(struct hip_host_id_priv))),
+                -ENOMEM, "could not allocate memory for private host identity\n");
+        host_id->hi_length = htons(key_rr_len + sizeof(struct hip_host_id_key_rdata));
+        memcpy(&host_id->key, key_rr, key_rr_len);
+        // hip_private_host_id_to_hit needs to know the algorithm
+        host_id->rdata.algorithm = type;
+        HIP_IFEL(hip_private_host_id_to_hit(host_id, hit, HIP_HIT_TYPE_HASH100),
+                 -1, "conversion from private host id to hit failed\n");
     }
 
     HIP_DEBUG_HIT("hit", hit);
     HIP_DEBUG("hi is %s %s\n", (is_public ? "public" : "private"),
-              (is_dsa ? "dsa" : "rsa"));
+              (type == HIP_HI_DSA ? "dsa" : "rsa"));
 
 out_err:
     free(key_rr);
     free(host_id);
     free(host_id_pub);
     return err;
-}
-
-/**
- * translate a private RSA key to a HIT
- *
- * @param rsa_key the RSA key in OpenSSL format
- * @param hit the resulting HIT will be stored here
- * @return zero on success and negative on failure
- */
-int hip_private_rsa_to_hit(RSA *rsa_key,
-                           struct in6_addr *hit)
-{
-    return hip_any_key_to_hit(rsa_key, hit, 0, 0);
-}
-
-/**
- * translate a private DSA key to a HIT
- *
- * @param dsa_key the DSA key in OpenSSL format
- * @param hit the resulting HIT will be stored here
- * @return zero on success and negative on failure
- */
-int hip_private_dsa_to_hit(DSA *dsa_key,
-                           struct in6_addr *hit)
-{
-    return hip_any_key_to_hit(dsa_key, hit, 0, 1);
 }
 
 /**

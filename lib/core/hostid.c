@@ -610,16 +610,17 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                 dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
                 HIP_IFEL(dsa_key_rr_len <= 0, -EFAULT, "dsa_key_rr_len <= 0\n");
 
+                if ((err = hip_any_key_to_hit(dsa_key, &dsa_lhi.hit, 0, HIP_HI_DSA))) {
+                   HIP_ERROR("Conversion from DSA to HIT failed\n");
+                   goto out_err;
+                }
+                HIP_DEBUG_HIT("DSA HIT", &dsa_pub_lhi.hit);
+
                 if ((err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip,
                                                HIP_ENDPOINT_FLAG_ANON,
                                                hostname))) {
                     HIP_ERROR("Failed to allocate and build DSA endpoint (anon).\n");
                     goto out_err;
-                }
-
-                if ((err = hip_private_dsa_to_hit(dsa_key, &dsa_lhi.hit))) {
-                   HIP_ERROR("Conversion from DSA to HIT failed\n");
-                   goto out_err;
                 }
 
             } else { /* pub */
@@ -635,10 +636,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                 HIP_IFEL(dsa_pub_key_rr_len <= 0, -EFAULT,
                          "dsa_pub_key_rr_len <= 0\n");
 
-                HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
-
-                if ((err = hip_private_dsa_to_hit(dsa_pub_key,
-                                                  &dsa_pub_lhi.hit))) {
+                if ((err = hip_any_key_to_hit(dsa_pub_key, &dsa_pub_lhi.hit, 0, HIP_HI_DSA))) {
                     HIP_ERROR("Conversion from DSA to HIT failed\n");
                     goto out_err;
                 }
@@ -666,7 +664,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                 goto out_err;
             }
 
-            if ((err = hip_private_rsa_to_hit(rsa_key, &rsa_lhi.hit))) {
+            if ((err = hip_any_key_to_hit(rsa_key, &rsa_lhi.hit, 0, HIP_HI_RSA))) {
                 HIP_ERROR("Conversion from RSA to HIT failed\n");
                 goto out_err;
             }
@@ -686,7 +684,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                 goto out_err;
             }
 
-            if ((err = hip_private_rsa_to_hit(rsa_pub_key, &rsa_pub_lhi.hit))) {
+            if ((err = hip_any_key_to_hit(rsa_pub_key, &rsa_pub_lhi.hit, 0, HIP_HI_RSA))) {
                 HIP_ERROR("Conversion from RSA to HIT failed\n");
                 goto out_err;
             }
