@@ -726,7 +726,7 @@ err_out:
  * @return 0 if all files were saved successfully, or non-zero if an error
  * occurred.
  */
-int save_dsa_private_key(const char *filenamebase, DSA *dsa)
+int save_dsa_private_key(const char *const filenamebase, DSA *const dsa)
 {
     int err           = 0, files = 0, ret;
     char *pubfilename = NULL;
@@ -827,7 +827,7 @@ out_err:
  * @return 0 if all files were saved successfully, or non-zero if an
  * error occurred.
  */
-int save_rsa_private_key(const char *const filenamebase, RSA *rsa)
+int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
 {
     int err           = 0, files = 0, ret;
     char *pubfilename = NULL;
