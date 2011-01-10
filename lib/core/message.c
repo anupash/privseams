@@ -320,6 +320,11 @@ static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
     return n;
 }
 
+
+/** A generic HIP error. This should be a value whose value does not overlap
+ *  with the global errno values. */
+#define EHIP       500
+
 /**
  * Send and receive data with hipd. Do not call this function directly, use
  * hip_send_recv_daemon_info instead!

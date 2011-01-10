@@ -28,10 +28,6 @@
 
 #include "debug.h"
 
-/** A generic HIP error. This should be a value whose value does not overlap
- *  with the global errno values. */
-#define EHIP       500
-
 /**
  * @addtogroup ife
  * @{
