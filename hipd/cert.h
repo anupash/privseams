@@ -49,8 +49,4 @@ int hip_cert_spki_verify(struct hip_common *);
 int hip_cert_x509v3_handle_request_to_sign(struct hip_common *);
 int hip_cert_x509v3_handle_request_to_verify(struct hip_common *);
 
-/** utilitary functions */
-int hip_cert_hostid2rsa(struct hip_host_id_priv *, RSA *);
-int hip_cert_hostid2dsa(struct hip_host_id_priv *, DSA *);
-
 #endif /* HIP_HIPD_CERT_H */
