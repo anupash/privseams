@@ -100,6 +100,8 @@
 #include "message.h"
 
 
+#define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
+
 /**
  * Finds out how much data is coming from a socket
  *

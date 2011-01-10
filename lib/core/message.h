@@ -40,8 +40,6 @@
 #include "protodefs.h"
 #include "state.h"
 
-#define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
-
 int hip_daemon_connect(int hip_user_sock);
 int hip_read_user_control_msg(int socket,
                               struct hip_common *hip_msg,
