@@ -61,6 +61,9 @@
 #include "user_ipsec_sadb.h"
 
 
+#define INDEX_HASH_FN           HIP_DIGEST_SHA1
+#define INDEX_HASH_LENGTH       SHA_DIGEST_LENGTH
+
 /* hash functions used for calculating the entries' hashes
  *
  * TODO use own function to hash hits to improve performance
