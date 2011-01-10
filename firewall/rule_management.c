@@ -521,12 +521,18 @@ static struct hip_host_id *parse_hi(const char *token, const struct in6_addr *hi
 
     HIP_IFEL(!(hi = malloc(sizeof(struct hip_host_id))),
              -1, "Could not allocate memory for host identity\n");
-    if (algo == HIP_HI_RSA) {
+    switch (algo) {
+    case HIP_HI_RSA:
         HIP_IFEL(load_rsa_file(fp, hi),     -1, "Failed to load RSA key\n");
-    } else if (algo == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         HIP_IFEL(load_ecdsa_file(fp, hi),   -1, "Failed to load ECDSA key\n")
-    } else {
+        break;
+    case HIP_HI_DSA:
         HIP_IFEL(load_dsa_file(fp, hi),     -1, "Failed to load DSA key\n")
+        break;
+    default:
+        HIP_EAE(-1, "Could not load host identity, because algorithm is unknown.\n");
     }
 
     /* verify hi => hit */
