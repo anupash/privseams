@@ -556,6 +556,7 @@
 
 #define HIP_UDP_ZERO_BYTES_LEN 4 /* in bytes */
 
+#define HIP_MAX_DSA_KEY_LEN 1024
 #define HIP_MAX_RSA_KEY_LEN 4096
 
 typedef uint8_t  hip_hdr;
