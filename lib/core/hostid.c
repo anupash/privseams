@@ -97,8 +97,8 @@ out_err:
  * @param  hit_type type of the HIT (must be HIP_HIT_TYPE_HASH100).
  * @return          zero on success, negative otherwise.
  */
-int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-                           struct in6_addr *hit, int hit_type)
+int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
+                           struct in6_addr *const hit, const int hit_type)
 {
     int err               = 0;
     uint8_t digest[HIP_AH_SHA_LEN];
@@ -151,9 +151,9 @@ out_err:
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
-int hip_host_id_to_hit(const struct hip_host_id *host_id,
-                       struct in6_addr *hit,
-                       int hit_type)
+int hip_host_id_to_hit(const struct hip_host_id *const host_id,
+                       struct in6_addr *const hit,
+                       const int hit_type)
 {
     int algo = hip_get_host_id_algo(host_id);
     int err  = 0;
@@ -177,9 +177,9 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
-int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                   struct in6_addr *hit,
-                                   int hit_type)
+int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                                   struct in6_addr *const hit,
+                                   const int hit_type)
 {
     uint16_t temp;
     int contents_len;
@@ -218,9 +218,9 @@ out_err:
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
-int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                   struct in6_addr *hit,
-                                   int hit_type)
+int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                                   struct in6_addr *const hit,
+                                   const int hit_type)
 {
     int err = 0;
     int rsa_pub_len, rsa_priv_len;
@@ -262,9 +262,9 @@ out_err:
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
-int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                               struct in6_addr *hit,
-                               int hit_type)
+int hip_private_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                               struct in6_addr *const hit,
+                               const int hit_type)
 {
     int algo = hip_get_host_id_algo((const struct hip_host_id *) host_id);
     int err  = 0;
@@ -290,9 +290,9 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
  * @param is_priv one if the host_id contains also the private key
  *                component or zero otherwise
  */
-void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
-                        struct hip_rsa_keylen *ret,
-                        int is_priv)
+void hip_get_rsa_keylen(const struct hip_host_id_priv *const host_id,
+                        struct hip_rsa_keylen *const ret,
+                        const int is_priv)
 {
     int bytes;
     const uint8_t *tmp = (const uint8_t *) host_id->key;
@@ -334,7 +334,7 @@ void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
  * @return The OpenSSL formatted RSA key corresponding to @c host_id.
  *         Caller is responsible of freeing.
  */
-RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv)
+RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *const host_id, const int is_priv)
 {
     int offset;
     struct hip_rsa_keylen keylen;
@@ -380,7 +380,7 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv)
  * @return The OpenSSL formatted DSA key corresponding to @c host_id.
  *         Caller is responsible of freeing.
  */
-DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
+DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *const host_id, const int is_priv)
 {
     int offset  = 0;
     DSA *dsa    = NULL;
@@ -773,7 +773,7 @@ out_err:
  * DNS KEY RR is stored at dsa_key_rr. On error function returns negative
  * and sets dsa_key_rr to NULL.
  */
-int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr)
+int dsa_to_dns_key_rr(const DSA *const dsa, unsigned char **dsa_key_rr)
 {
     int err            = 0;
     int dsa_key_rr_len = -1;
@@ -859,7 +859,7 @@ out_err:
  * @note Caller must free rsa_key_rr when it is not used anymore.
  * @note This function assumes that RSA given as a parameter is always public.
  */
-int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr)
+int rsa_to_dns_key_rr(const RSA *const rsa, unsigned char **rsa_key_rr)
 {
     int err            = 0;
     int rsa_key_rr_len = -1;
