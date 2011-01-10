@@ -42,11 +42,10 @@
 #include "hashtree.h"
 
 /* longest digest in openssl lib */
-#ifdef SHA512_DIGEST_LENGTH
-#define MAX_HASH_LENGTH SHA512_DIGEST_LENGTH
-#else
-#define MAX_HASH_LENGTH 64
+#ifndef SHA512_DIGEST_LENGTH
+#define SHA512_DIGEST_LENGTH 64
 #endif
+#define MAX_HASH_LENGTH SHA512_DIGEST_LENGTH
 
 /* hash function used for the creation and verification of the hash chain */
 typedef unsigned char * (*hash_function)(const unsigned char *,
