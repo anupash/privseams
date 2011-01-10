@@ -1077,10 +1077,6 @@ int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *ecdsa)
     HIP_IFEL(!PEM_write_EC_PUBKEY(fp, ecdsa),
              -1, "Could not write public EC Key to %s \n", filenamebase);
 
-    if (err) {
-        HIP_ERROR("Write failed for %s\n", pubfilename);
-        goto out_err;
-    }
     if ((err = fclose(fp))) {
         HIP_ERROR("Error closing file\n");
         goto out_err;
