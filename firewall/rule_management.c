@@ -424,7 +424,7 @@ static struct hip_host_id *load_dsa_file(FILE *fp)
     dsa = DSA_new();
     dsa = PEM_read_DSA_PUBKEY(fp, &dsa, NULL, NULL);
     if (!dsa) {
-        HIP_DEBUG("reading RSA file failed \n");
+        HIP_DEBUG("reading DSA file failed \n");
         DSA_free(dsa);
         return NULL;
     }
