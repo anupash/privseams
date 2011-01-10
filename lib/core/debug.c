@@ -91,6 +91,13 @@
 #include "straddr.h"
 #include "debug.h"
 
+/* includes filename, line number and max(debug_prefix[]) */
+#define DEBUG_PREFIX_MAX  64
+
+/* stderror: includes prefix, separator, msg and \0
+ * syslog:   includes msg and \0 */
+#define DEBUG_MSG_MAX_LEN     1024
+
 //#define SYSLOG_FACILITY   LOG_DAEMON
 #define SYSLOG_FACILITY   LOG_LOCAL6
 

@@ -32,13 +32,6 @@
 #include "config.h"
 #include "protodefs.h"
 
-/* includes filename, line number and max(debug_prefix[]) */
-#define DEBUG_PREFIX_MAX  64
-
-/* stderror: includes prefix, separator, msg and \0
- * syslog:   includes msg and \0 */
-#define DEBUG_MSG_MAX_LEN     1024
-
 /**
  * Error handling macros used for checking errors. To use these macros, define a
  * label named @c out_err at the end of the function. For example, memory
