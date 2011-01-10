@@ -72,8 +72,6 @@
 
 #define BUFSIZE HIP_MAX_PACKET
 
-#define PROTO_STRING_MAX    16
-
 /**
  * build a message for hipd to trigger a base exchange
  *
