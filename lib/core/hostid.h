@@ -73,7 +73,7 @@ static inline int hip_ecdsa_host_id_to_hit(const struct hip_host_id *const host_
 int hip_host_id_to_hit(const struct hip_host_id *const host_id,
                        struct in6_addr *const hit, const int hit_type);
 int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                     struct in6_addr *hit,
+                                     struct in6_addr *const hit,
                                      int hit_type);
 int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
                                    struct in6_addr *const hit,

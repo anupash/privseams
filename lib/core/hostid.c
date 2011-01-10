@@ -274,7 +274,7 @@ out_err:
  * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
 int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                     struct in6_addr *hit,
+                                     struct in6_addr *const hit,
                                      int hit_type)
 {
     int err = 0;
