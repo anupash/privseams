@@ -851,7 +851,7 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                 ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa_key, &ecdsa_key_rr);
                 HIP_IFEL(ecdsa_key_rr_len <= 0, -EFAULT, "ecdsa_key_rr_len <= 0\n");
                 if ((err = ecdsa_to_hip_endpoint(ecdsa_key, &endpoint_ecdsa_hip,
-                                               anon ? HIP_ENDPOINT_FLAG_ANON : 0, hostname))) {
+                                                 anon ? HIP_ENDPOINT_FLAG_ANON : 0, hostname))) {
                     HIP_ERROR("Failed to allocate and build ECDSA endpoint.\n");
                     goto out_err;
                 }
