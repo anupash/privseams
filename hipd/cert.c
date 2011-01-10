@@ -171,6 +171,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
         y_b64 = malloc(BN_num_bytes(dsa->pub_key) + 20);
         HIP_IFEL(!y_b64, -1, "Malloc for y_b64 failed\n");
 
+#define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
         signature = calloc(1, HIP_DSA_SIG_SIZE);
 
         t = BN_num_bytes(dsa->p);
