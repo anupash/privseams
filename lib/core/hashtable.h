@@ -37,9 +37,6 @@
 #define HIPL_OPENSSL_100
 #endif /* LHASH_OF */
 
-#undef MIN_NODES
-#define MIN_NODES       16
-
 #define HIP_LOCK_HT(hash)
 #define HIP_UNLOCK_HT(hash)
 
