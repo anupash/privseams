@@ -42,7 +42,6 @@
 /* the maximum numbers for arrays used for the different modes */
 #define MAX_NUM_TRANSFORMS                      10
 #define MAX_NUM_PARALLEL_HCHAINS                10
-#define HCSTORE_MAX_HCHAINS_PER_ITEM            100
 #define MAX_HTREE_DEPTH                         20
 #define MAX_RING_BUFFER_SIZE                    128
 

@@ -49,6 +49,8 @@
 #include "esp_prot_anchordb.h"
 
 
+#define HCSTORE_MAX_HCHAINS_PER_ITEM 100
+
 /* defines the structure storing the anchors */
 struct anchor_db {
     /* amount of anchors for each transform */
