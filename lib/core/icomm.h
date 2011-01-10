@@ -190,6 +190,4 @@
 /* inclusive */
 #define HIP_MSG_ROOT_MAX                         255
 
-#define FLUSH_HA_INFO_DB                        1
-
 #endif /* HIP_LIB_CORE_ICOMM_H */
