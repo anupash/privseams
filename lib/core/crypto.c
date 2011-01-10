@@ -757,10 +757,10 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa)
     fp  = fopen(pubfilename, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open public key file %s for writing\n", pubfilename);
+    files++;
 
     err = PEM_write_DSA_PUBKEY(fp, dsa) == 0 ? 1 : 0;
-    ;
-    files++;
+
     if (err) {
         HIP_ERROR("Write failed for %s\n", pubfilename);
         goto out_err;
@@ -773,9 +773,10 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa)
     fp  = fopen(filenamebase, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open private key file %s for writing\n", filenamebase);
+    files++;
 
     err = PEM_write_DSAPrivateKey(fp, dsa, NULL, NULL, 0, NULL, NULL) == 0 ? 1 : 0;
-    files++;
+
     if (err) {
         HIP_ERROR("Write failed for %s\n", filenamebase);
         goto out_err;
@@ -858,9 +859,10 @@ int save_rsa_private_key(const char *const filenamebase, RSA *rsa)
     fp  = fopen(pubfilename, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open public key file %s for writing\n", pubfilename);
+    files++;
 
     err = PEM_write_RSA_PUBKEY(fp, rsa) == 0 ? 1 : 0;
-    files++;
+
     if (err) {
         HIP_ERROR("Write failed for %s\n", pubfilename);
         goto out_err;
@@ -873,10 +875,11 @@ int save_rsa_private_key(const char *const filenamebase, RSA *rsa)
     fp  = fopen(filenamebase, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open private key file %s for writing\n", filenamebase);
+    files++;
 
     err = PEM_write_RSAPrivateKey(fp, rsa, NULL, NULL,
                                   0, NULL, NULL) == 0 ? 1 : 0;
-    files++;
+
     if (err) {
         HIP_ERROR("Write failed for %s\n", filenamebase);
         goto out_err;
