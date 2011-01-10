@@ -120,10 +120,10 @@ out_err:
  * @param peer_pub public key of the peer
  * @param msg a HIP control message containing a signature parameter to
  *            be verified
- * @param rsa zero for DSA-based public key and one for RSA
+ * @param type HIP_HI_RSA or HIP_HI_DSA
  * @return zero on success and non-zero on failure
  */
-static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
+static int verify(void *peer_pub, struct hip_common *msg, const int type)
 {
     int err               = 0, len, origlen;
     struct hip_sig *sig;
@@ -162,7 +162,7 @@ static int verify(void *peer_pub, struct hip_common *msg, const int rsa)
 
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest),
              -1, "Could not calculate SHA1 digest\n");
-    if (rsa) {
+    if (type == HIP_HI_RSA) {
         /* RSA_verify returns 0 on failure */
         err = !RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH,
                           sig->signature, RSA_size(peer_pub), peer_pub);
@@ -210,7 +210,7 @@ int hip_rsa_verify(void *peer_pub, struct hip_common *msg)
     HIP_DEBUG("Start PERF_RSA_VERIFY_IMPL\n");
     hip_perf_start_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
 #endif
-    return verify((RSA *) peer_pub, msg, 1);
+    return verify(peer_pub, msg, HIP_HI_RSA);
 }
 
 /**
@@ -227,7 +227,7 @@ int hip_dsa_verify(void *peer_pub, struct hip_common *msg)
     HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
     hip_perf_start_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
 #endif
-    return verify((DSA *) peer_pub, msg, 0);
+    return verify(peer_pub, msg, HIP_HI_DSA);
 }
 
 /**
