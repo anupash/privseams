@@ -106,11 +106,6 @@
 #include "builder.h"
 
 
-/* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#endif /* ARRAY_SIZE */
-
 enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;

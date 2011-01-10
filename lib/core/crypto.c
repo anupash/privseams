@@ -65,7 +65,7 @@
 
 #include "lib/tool/pk.h"
 #include "config.h"
-#include "crypto.h"
+#include "common.h"
 #include "debug.h"
 #include "ife.h"
 #include "keylen.h"

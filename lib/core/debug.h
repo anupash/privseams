@@ -30,6 +30,7 @@
 #include <stdint.h>
 
 #include "config.h"
+#include "common.h"
 #include "protodefs.h"
 
 /**
@@ -398,8 +399,6 @@ void uint32_to_binstring(uint32_t val, char *buffer);
 void hip_print_locator_addresses(const struct hip_common *);
 void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *);
 void hip_print_peer_addresses(struct hip_hadb_state *);
-
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 /**
  * Gets the name of a state.

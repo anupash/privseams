@@ -125,4 +125,6 @@ struct hip_esp_tail {
 
 #define HIP_HIT_DEV_MTU         HIP_MTU >= MIN_HIP_MTU ? HIP_MTU : MIN_HIP_MTU
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 #endif /* HIP_LIB_CORE_COMMON_H */
