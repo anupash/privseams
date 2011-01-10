@@ -343,7 +343,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
  * @return the HIP ID of the curve (according to RFC5201-bis) or HIP_UNSUPPORTED_CURVE on error
  *
  */
-static int get_ecdsa_curve_hip_name(const int nid)
+static enum hip_cuve_id get_ecdsa_curve_hip_name(const int nid)
 {
     /* Determine the curve */
     switch (nid) {
@@ -355,7 +355,7 @@ static int get_ecdsa_curve_hip_name(const int nid)
         return NIST_ECDSA_384;
     default:
         HIP_DEBUG("Curve not supported.\n");
-        return HIP_UNSUPPORTED_CURVE;
+        return UNSUPPORTED_CURVE;
     }
 }
 
@@ -370,7 +370,7 @@ static int get_ecdsa_curve_hip_name(const int nid)
 static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
 {
     int err = 0;
-    uint16_t curve_id;
+    enum hip_cuve_id curve_id;
     int nid;
 
     /* Determine the curve
@@ -392,6 +392,8 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
         HIP_DEBUG("Using curve secp384r1 \n");
         nid = NID_secp384r1;
         break;
+    case brainpoolP160r1:
+        HIP_DEBUG("Curve brainpoolP160r1 is not supported, use NIST_ECDSA_160 instead.\n");
     default:
         HIP_DEBUG("Curve not supported.\n");
         err = -1;
@@ -1156,7 +1158,7 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
     HIP_IFEL(!(group = EC_KEY_get0_group(ecdsa)),
              -1, "Could not get group from key structure. \n");
     curveid = get_ecdsa_curve_hip_name(EC_GROUP_get_curve_name(group));
-    HIP_IFEL(curveid == HIP_UNSUPPORTED_CURVE,
+    HIP_IFEL(curveid == UNSUPPORTED_CURVE,
              -1, "Curve is not supported.\n");
     curveid = htons(curveid);
     memcpy(buffer, &curveid, 2);
