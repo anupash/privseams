@@ -100,7 +100,7 @@ int hip_create_msg_pseudo_hmac2(const struct hip_common *msg,
 int hip_build_host_id_from_param(const struct hip_host_id *param,
                                  struct hip_host_id *peer_host_id);
 int hip_build_param_host_id(struct hip_common *msg,
-                            const struct hip_host_id *host_id);
+                            const struct hip_host_id *const host_id);
 void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
                                  const char *hostname,
                                  hip_tlv_len rr_data_len,
@@ -227,14 +227,14 @@ void hip_set_msg_total_len(struct hip_common *, uint16_t);
 void hip_set_param_contents_len(struct hip_tlv_common *, hip_tlv_len);
 void hip_set_param_lsi_value(struct hip_esp_info *, uint32_t);
 void hip_zero_msg_checksum(struct hip_common *);
-int rsa_to_hip_endpoint(RSA *rsa,
+int rsa_to_hip_endpoint(const RSA *const rsa,
+                        struct endpoint_hip **const endpoint,
+                        se_hip_flags endpoint_flags,
+                        const char *const hostname);
+int dsa_to_hip_endpoint(const DSA *const dsa,
                         struct endpoint_hip **endpoint,
                         se_hip_flags endpoint_flags,
-                        const char *hostname);
-int dsa_to_hip_endpoint(DSA *dsa,
-                        struct endpoint_hip **endpoint,
-                        se_hip_flags endpoint_flags,
-                        const char *hostname);
+                        const char *const hostname);
 int hip_build_param_reg_info(struct hip_common *msg,
                              const void *service_list,
                              const unsigned int service_count);
