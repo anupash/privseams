@@ -3787,11 +3787,7 @@ int dsa_to_hip_endpoint(const DSA *const dsa,
     struct endpoint_hip endpoint_hdr;
 
     dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
-    if (dsa_key_rr_len <= 0) {
-        HIP_ERROR("dsa_key_rr_len <= 0\n");
-        err = -ENOMEM;
-        goto out_err;
-    }
+    HIP_IFEL(dsa_key_rr_len <= 0, -ENOMEM, "dsa_key_rr_len <= 0\n");
 
     hip_build_endpoint_hdr(&endpoint_hdr,
                            hostname,
@@ -3837,11 +3833,7 @@ int rsa_to_hip_endpoint(const RSA *const rsa,
     HIP_DEBUG("rsa_to_hip_endpoint called\n");
 
     rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
-    if (rsa_key_rr_len <= 0) {
-        HIP_ERROR("rsa_key_rr_len <= 0\n");
-        err = -ENOMEM;
-        goto out_err;
-    }
+    HIP_IFEL(rsa_key_rr_len <= 0, -ENOMEM, "rsa_key_rr_len <= 0\n");
 
     hip_build_endpoint_hdr(&endpoint_hdr,
                            hostname,
