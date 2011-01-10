@@ -338,6 +338,10 @@ void hip_set_msg_checksum(struct hip_common *msg, uint8_t checksum)
     msg->checksum = checksum;     /* one byte, no ntohs() */
 }
 
+/* Returns length of TLV option (contents) with padding. */
+#define HIP_LEN_PAD(len) \
+    ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
+
 /**
  * get the total size of a message parameter
  *

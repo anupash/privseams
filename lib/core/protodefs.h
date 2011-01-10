@@ -554,10 +554,6 @@
       HIP_REG_CANCEL_REQUIRED, HIP_REG_TRANSIENT_CONDITIONS }
 
 
-/* Returns length of TLV option (contents) with padding. */
-#define HIP_LEN_PAD(len) \
-    ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
-
 #define HIP_UDP_ZERO_BYTES_LEN 4 /* in bytes */
 
 #define HIP_MAX_RSA_KEY_LEN 4096
