@@ -796,22 +796,20 @@ EC_KEY *create_ecdsa_key(const int nid)
     int asn1_flag = OPENSSL_EC_NAMED_CURVE;
 
     HIP_IFEL(!(eckey = EC_KEY_new()),
-            -1, "Could not init new key.\n");
+             -1, "Could not init new key.\n");
 
     if(!(group = EC_GROUP_new_by_curve_name(nid))) {
         HIP_ERROR("Could not create curve.\n");
+        HIP_DEBUG("Retrying with standard curve NIST_ECDSA_384 \n");
+        HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(NID_secp384r1)),
+                 -1, "Failed creating new key\n");
     }
 
-    HIP_DEBUG("Retrying with standard curve NIST_ECDSA_384 \n");
-
-    HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(NID_secp384r1)),
-            -1, "Failed creating new key\n");
-
-    // this is important, otherwise parametes will be saved explicitely
+    // this is important, otherwise parameters will be saved explicitly
     EC_GROUP_set_asn1_flag(group, asn1_flag);
 
     HIP_IFEL(!EC_KEY_set_group(eckey, group),
-            -1, "Could not set group.\n");
+             -1, "Could not set group.\n");
 
     HIP_IFEL(!EC_KEY_generate_key(eckey),
              -1, "Could not generate EC key\n");
