@@ -53,9 +53,6 @@
 #include "capability.h"
 
 
-#define USER_NOBODY "nobody"
-#define USER_HIPD "hipd"
-
 /**
  * map a user name such as "nobody" to the corresponding UID number
  *
@@ -128,7 +125,7 @@ int hip_set_lowcapability(void)
 
     HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
-    uid = hip_user_to_uid(USER_NOBODY);
+    uid = hip_user_to_uid("nobody");
     if (uid == -1) {
         HIP_ERROR("User 'nodoby' could not be found\n");
         goto out_err;
