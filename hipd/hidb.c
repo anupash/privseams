@@ -495,6 +495,7 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     struct hip_host_id_entry *id_entry = NULL;
     struct hip_host_id_entry *old_entry;
     int (*signature_func)(void *key, struct hip_common *m);
+    int algo;
 
     HIP_WRITE_LOCK_DB(db);
 
@@ -525,12 +526,19 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 
     list_add(id_entry, db);
 
-    if (hip_get_host_id_algo((const struct hip_host_id *) host_id) == HIP_HI_RSA) {
+    algo = hip_get_host_id_algo((const struct hip_host_id *) host_id);
+    switch (algo) {
+    case HIP_HI_RSA:
         id_entry->private_key = hip_key_rr_to_rsa(host_id, 1);
-    } else if (hip_get_host_id_algo((const struct hip_host_id *) host_id) == HIP_HI_ECDSA) {
+        break;
+    case HIP_HI_ECDSA:
         id_entry->private_key = hip_key_rr_to_ecdsa(host_id, 1);
-    } else { /* DSA */
+        break;
+    case HIP_HI_DSA:
         id_entry->private_key = hip_key_rr_to_dsa(host_id, 1);
+        break;
+    default:
+        HIP_EAE(-1, "Cannot deserialize key because algorithm is unknown");
     }
 
     HIP_DEBUG("Generating a new R1 set.\n");
