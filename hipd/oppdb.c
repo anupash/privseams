@@ -88,7 +88,6 @@
 #define HIP_UNLOCK_OPP_INIT(entry)
 #define HIP_LOCK_OPP(entry)
 #define HIP_UNLOCK_OPP(entry)
-#define HIP_OPPDB_SIZE 533
 
 struct hip_opp_info {
     hip_hit_t       local_hit;
