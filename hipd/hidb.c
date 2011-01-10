@@ -75,7 +75,7 @@ static const char *lsi_addresses[] = {"1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4"
  * @param hi the host identifier with its private key component
  * @return An allocated hip_host_id structure. Caller must deallocate.
  */
-static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv *hi)
+static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv *const hi)
 {
     int key_len;
     /* T could easily have been an int, since the compiler will
@@ -113,7 +113,7 @@ static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv 
  * @return    A pointer to a newly allocated host identity with only the public key.
  *            Caller deallocates.
  */
-static struct hip_host_id *hip_get_rsa_public_key(const struct hip_host_id_priv *tmp)
+static struct hip_host_id *hip_get_rsa_public_key(const struct hip_host_id_priv *const tmp)
 {
     int rsa_pub_len;
     struct hip_rsa_keylen keylen;
@@ -247,10 +247,14 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
         hip_uninit_r1(id->r1);
     }
 
-    if (hip_get_host_id_algo(id->host_id) == HIP_HI_RSA) {
+    switch (hip_get_host_id_algo(id->host_id)) {
+    case HIP_HI_RSA:
         RSA_free(id->private_key);
-    } else {
+        break;
+    case HIP_HI_DSA:
         DSA_free(id->private_key);
+    default:
+        HIP_ERROR("Cannot free key, because key type is unkown.\n");
     }
 
     free(id->host_id);
@@ -446,6 +450,7 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     int err                            = 0;
     struct hip_host_id_entry *id_entry = NULL;
     struct hip_host_id_entry *old_entry;
+    int (*signature_func)(void *key, struct hip_common *m);
 
     HIP_WRITE_LOCK_DB(db);
 
@@ -486,9 +491,22 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     HIP_DEBUG("Generating a new R1 set.\n");
     HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
     id_entry->host_id = hip_get_public_key(host_id);
+    switch (hip_get_host_id_algo(id_entry->host_id)) {
+    case HIP_HI_RSA:
+        signature_func = hip_rsa_sign;
+        break;
+    case HIP_HI_DSA:
+        signature_func = hip_dsa_sign;
+        break;
+    default:
+        HIP_ERROR("Unsupported algorithms\n");
+        err = -1;
+        goto out_err;
+    }
+
     HIP_IFEL(!hip_precreate_r1(id_entry->r1,
                                &lhi->hit,
-                               (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+                               signature_func,
                                id_entry->private_key, id_entry->host_id),
              -ENOENT,
              "Unable to precreate R1s.\n");
