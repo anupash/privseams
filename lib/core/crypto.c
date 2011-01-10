@@ -1071,9 +1071,11 @@ int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *ecdsa)
     files++;
 
     // this is important, otherwise parametes will be saved explicitely
-    err = PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa));
+    HIP_IFEL(!PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa)),
+             -1, "Could not save parameters of public key\n");
 
-    err = PEM_write_EC_PUBKEY(fp, ecdsa) == 0 ? 1 : 0;
+    HIP_IFEL(!PEM_write_EC_PUBKEY(fp, ecdsa),
+             -1, "Could not write public EC Key to %s \n", filenamebase);
 
     if (err) {
         HIP_ERROR("Write failed for %s\n", pubfilename);
@@ -1090,15 +1092,11 @@ int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *ecdsa)
     files++;
 
     // this is important, otherwise parametes will be saved explicitely
-    err = PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa));
+    HIP_IFEL(!PEM_write_ECPKParameters(fp, EC_KEY_get0_group(ecdsa)),
+             -1, "Could not save parameters of private key\n");
 
-    err = PEM_write_ECPrivateKey(fp, ecdsa, NULL, NULL,
-                                  0, NULL, NULL) == 0 ? 1 : 0;
-
-    if (err) {
-        HIP_ERROR("Write failed for %s\n", filenamebase);
-        goto out_err;
-    }
+    HIP_IFEL(!PEM_write_ECPrivateKey(fp, ecdsa, NULL, NULL, 0, NULL, NULL),
+             -1, "Could not write private EC Key to %s \n", filenamebase);
 
 out_err:
 
