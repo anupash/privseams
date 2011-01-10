@@ -3718,14 +3718,14 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
  * Convert an EC structure from OpenSSL into an endpoint_hip structure
  * used internally by the implementation.
  *
- * @param ec the EC key to be converted
- * @param endpoint An output argument. This function allocates and
- *                 stores the result of the conversion here. On success
- *                 the caller is responsible of deallocation. On error
- *                 endpoint is set to NULL.
- * @param endpoint_flags flags for the endpoint
- * @param hostname host name for the EC key
- * @return zero on success and negative on failure
+ * @param ecdsa             the EC key to be converted
+ * @param endpoint          An output argument. This function allocates and
+ *                          stores the result of the conversion here. On success
+ *                          the caller is responsible of deallocation. On error
+ *                          endpoint is set to NULL.
+ * @param endpoint_flags    flags for the endpoint
+ * @param hostname          host name for the EC key
+ * @return                  zero on success and negative on failure
  */
 int ecdsa_to_hip_endpoint(const EC_KEY *ecdsa,
                           struct endpoint_hip **endpoint,
