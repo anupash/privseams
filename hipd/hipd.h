@@ -71,8 +71,6 @@
 
 #define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 3 /* seconds */
 
-#define HIPD_NL_GROUP 32
-
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern struct rtnl_handle hip_nl_generic;
