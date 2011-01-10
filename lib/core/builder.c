@@ -3814,7 +3814,7 @@ out_err:
  * @param hit the resulting HIT will be stored here
  * @param is_public 0 if the host id constains the private key
  *                  or 1 otherwise
- * @param is_dsa 1 if the key is DSA or zero for RSA
+ * @param type HIP_HI_RSA or HIP_HI_DSA
  * @return zero on success and negative on failure
  */
 int hip_any_key_to_hit(const void *const any_key,
