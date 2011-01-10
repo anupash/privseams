@@ -41,8 +41,6 @@
 #include "lib/core/state.h"
 
 
-#define HIP_MAX_ICMP_PACKET 512
-
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 
