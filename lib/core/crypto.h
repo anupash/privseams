@@ -90,18 +90,14 @@ int hip_gen_dh_shared_key(DH *dh, uint8_t *peer_key, size_t peer_len, uint8_t *o
 int hip_encode_dh_publickey(DH *dh, uint8_t *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
-int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
-               struct in6_addr *hit);
-int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
-               struct in6_addr *hit);
-DSA *create_dsa_key(int bits);
-RSA *create_rsa_key(int bits);
-int save_dsa_private_key(const char *filenamebase, DSA *dsa);
-int save_rsa_private_key(const char *filenamebase, RSA *rsa);
-int load_dsa_private_key(const char *filenamebase, DSA **dsa);
-int load_rsa_private_key(const char *filename, RSA **rsa);
-int impl_dsa_sign(uint8_t *digest, DSA *dsa, uint8_t *signature);
-int impl_dsa_verify(uint8_t *digest, DSA *dsa, uint8_t *signature);
+DSA *create_dsa_key(const int bits);
+RSA *create_rsa_key(const int bits);
+int save_dsa_private_key(const char *const filenamebase, DSA *dsa);
+int save_rsa_private_key(const char *const filenamebase, RSA *rsa);
+int load_dsa_private_key(const char *const filenamebase, DSA **const dsa);
+int load_rsa_private_key(const char *const filename, RSA **const rsa);
+int impl_dsa_sign(const unsigned char *const digest, DSA *const dsa, unsigned char *const signature);
+int impl_dsa_verify(const unsigned char *const digest, DSA *const dsa, const unsigned char *const signature);
 int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
                          uint8_t *enc_key, int direction);
