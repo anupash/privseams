@@ -3151,6 +3151,10 @@ int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
     uint16_t header_len;
     uint16_t key_len;
     uint16_t fqdn_len;
+
+    /* sanity checks */
+    HIP_IFEL(!wire_host_id, -1, "Given host identity is NULL.\n");
+    HIP_IFEL(!peer_host_id, -1, "Cannot write return value to NULL-pointer.\n");
     HIP_IFEL(!(hip_get_param_type(wire_host_id) == HIP_PARAM_HOST_ID),
              -1, "Param has wrong type (not HIP_PARAM_HOST_ID)");
 
@@ -3161,6 +3165,15 @@ int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
     fqdn_len    = ntohs(wire_host_id->di_type_length) & 0x0FFF;
     key_len     = ntohs(wire_host_id->hi_length) -
                   sizeof(struct hip_host_id_key_rdata);
+
+    HIP_IFEL(fqdn_len >= HIP_HOST_ID_HOSTNAME_LEN_MAX,
+             -1, "Got bad length for domain identifier: %d\n", fqdn_len);
+    HIP_IFEL(key_len > sizeof(peer_host_id->key),
+             -1, "Got bad key length: %d\n", fqdn_len);
+    HIP_IFEL(header_len + key_len + fqdn_len > hip_get_param_contents_len(wire_host_id) + 4,
+             -1, "Header+ Key + DI length exceeds parameter size: %d\n", header_len + key_len + fqdn_len);
+
+    // copy the header, key and di
     memcpy(peer_host_id, wire_host_id, header_len);
     memcpy(peer_host_id->key, wire_host_id->key, key_len);
     memcpy(peer_host_id->hostname, &wire_host_id->key[key_len], fqdn_len);
@@ -3184,13 +3197,18 @@ out_err:
  * @see hip_build_param()
  */
 int hip_build_param_host_id(struct hip_common *msg,
-                            const struct hip_host_id *host_id)
+                            const struct hip_host_id *const host_id)
 {
+    int err = 0;
     struct hip_host_id new_host_id;
     uint16_t header_len;
     uint16_t fqdn_len;
     uint16_t key_len;
     uint16_t par_len;
+
+    // sanity checks
+    HIP_IFEL(!msg,      -1, "Cannot build host id parameter into given message (msg is NULL) \n");
+    HIP_IFEL(!host_id,  -1, "Cannot build host id parameter with no host id input (host id is NULL) \n");
 
     // eliminate unused space by copying fqdn directly behind the keyrr
     header_len  = sizeof(struct hip_host_id) -
@@ -3209,7 +3227,10 @@ int hip_build_param_host_id(struct hip_common *msg,
     hip_set_param_contents_len((struct hip_tlv_common *) &new_host_id,
                                par_len - sizeof(struct hip_tlv_common));
 
-    return hip_build_param(msg, &new_host_id);
+    err = hip_build_param(msg, &new_host_id);
+
+out_err:
+    return err;
 }
 
 /**
