@@ -58,7 +58,6 @@
 #define HIP_WRITE_UNLOCK_DB(db)
 #endif
 
-#define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
 
