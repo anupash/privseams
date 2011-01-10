@@ -56,6 +56,7 @@
 #include "lib/core/hostid.h"
 #include "lib/core/prefix.h"
 #include "lib/core/protodefs.h"
+#include "lib/core/ife.h"
 #include "dlist.h"
 #include "firewall.h"
 #include "helpers.h"
@@ -378,62 +379,72 @@ static struct hit_option *parse_hit(char *token)
 }
 
 /**
- * load an RSA public key from a file and convert it into a hip_host_id
+ * Load an RSA public key from a file and convert it into a hip_host_id.
  *
- * @param fp FILE object where to load a PEM formatted RSA public key
+ * @param fp    FILE object from where to load a PEM formatted RSA public key
+ * @param hi    the key is returned inside this host identity struct
  *
- * @return hip_host id structure (caller deallocates) or NULL on error
+ * @return      0 on success, negative on error
  */
-static struct hip_host_id *load_rsa_file(FILE *fp)
+static int load_rsa_file(FILE *fp, struct hip_host_id *hi)
 {
-    struct hip_host_id *hi    = NULL;
-    RSA *rsa                  = NULL;
-    unsigned char *rsa_key_rr = NULL;
+    int err                     = 0;
+    RSA *rsa                    = NULL;
+    unsigned char *rsa_key_rr   = NULL;
     int rsa_key_rr_len;
 
-    rsa = RSA_new();
-    rsa = PEM_read_RSA_PUBKEY(fp, &rsa, NULL, NULL);
-    if (!rsa) {
-        HIP_DEBUG("reading RSA file failed \n");
-        RSA_free(rsa);
-        return NULL;
-    }
-    rsa_key_rr     = malloc(sizeof(struct hip_host_id));
-    rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
-    hi             = malloc(sizeof(struct hip_host_id));
+    HIP_IFEL(!hi, -1, "Cannot write return value, because passed hi is NULL\n");
+
+    HIP_IFEL(!(rsa = PEM_read_RSA_PUBKEY(fp, &rsa, NULL, NULL)),
+             -1, "Reading DSA key failed (maybe key is not in PEM format?)\n");
+    HIP_IFEL((rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr)) < 0,
+             -1, "Serialization of DSA key failed \n");
+
+    // no error checking here, since both functions are void
     hip_build_param_host_id_hdr(hi, NULL, rsa_key_rr_len, HIP_HI_RSA);
     hip_build_param_host_id_only(hi, rsa_key_rr, NULL);
 
-    return hi;
+    return 0;
+
+out_err:
+    RSA_free(rsa);
+    free(rsa_key_rr);
+    return err;
 }
 
 /**
- * load an DSA public key from a file and convert it into a hip_host_id
+ * Load an DSA public key from a file and convert it into a hip_host_id.
  *
- * @param fp FILE object where to load a PEM formatted DSA public key
+ * @param fp    FILE object from where to load a PEM formatted DSA public key
+ * @param hi    the key is returned inside this host identity struct
  *
- * @return hip_host id structure (caller deallocates) or NULL on error
+ * @return      0 on success, negative on error
  */
-static struct hip_host_id *load_dsa_file(FILE *fp)
+static int load_dsa_file(FILE *fp, struct hip_host_id *hi)
 {
-    struct hip_host_id *hi    = NULL;
-    DSA *dsa                  = NULL;
-    unsigned char *dsa_key_rr = NULL;
+    int err                     = 0;
+    DSA *dsa                    = NULL;
+    unsigned char *dsa_key_rr   = NULL;
     int dsa_key_rr_len;
 
-    dsa = DSA_new();
-    dsa = PEM_read_DSA_PUBKEY(fp, &dsa, NULL, NULL);
-    if (!dsa) {
-        HIP_DEBUG("reading DSA file failed \n");
-        DSA_free(dsa);
-        return NULL;
-    }
-    dsa_key_rr     = malloc(sizeof(struct hip_host_id));
-    dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
-    hi             = malloc(sizeof(struct hip_host_id));
+    HIP_IFEL(!hi, -1, "Cannot write return value, because passed hi is NULL\n");
+
+    HIP_IFEL(!(dsa = PEM_read_DSA_PUBKEY(fp, &dsa, NULL, NULL)),
+             -1, "Reading DSA key failed (maybe key is not in PEM format?)\n");
+    HIP_IFEL((dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr)) < 0,
+             -1, "Serialization of DSA key failed \n");
+
+    // no error checking here, since both functions are void
     hip_build_param_host_id_hdr(hi, NULL, dsa_key_rr_len, HIP_HI_DSA);
     hip_build_param_host_id_only(hi, dsa_key_rr, NULL);
-    return hi;
+
+    return 0;
+
+out_err:
+    DSA_free(dsa);
+    free(dsa_key_rr);
+
+    return err;
 }
 
 /**
@@ -445,8 +456,9 @@ static struct hip_host_id *load_dsa_file(FILE *fp)
  * @return a hip_host_id structure which the caller must deallocate
  * @note token file name must have _dsa_ or _rsa_ in the file to distinguish the algorithm
  */
-static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
+static struct hip_host_id *parse_hi(const char *token, const struct in6_addr *hit)
 {
+    int err = 0;
     FILE *fp = NULL;
     int algo;
     struct hip_host_id *hi = NULL;
@@ -466,21 +478,32 @@ static struct hip_host_id *parse_hi(char *token, const struct in6_addr *hit)
         HIP_DEBUG("Invalid filename for HI: missing _rsa_ or _dsa_ \n");
         return NULL;
     }
-    if (algo == HIP_HI_RSA) {
-        hi = load_rsa_file(fp);
-    } else {
-        hi = load_dsa_file(fp);
-    }
-    if (!hi) {
-        HIP_DEBUG("file loading failed \n");
-        return NULL;
+
+    HIP_IFEL(!(hi = malloc(sizeof(struct hip_host_id))),
+             -1, "Could not allocate memory for host identity\n");
+    switch (algo) {
+    case HIP_HI_RSA:
+        HIP_IFEL(load_rsa_file(fp, hi),     -1, "Failed to load RSA key\n");
+        break;
+    case HIP_HI_DSA:
+        HIP_IFEL(load_dsa_file(fp, hi),     -1, "Failed to load DSA key\n")
+        break;
+    default:
+        HIP_IFEL(1, -1, "Could not load host identity, because algorithm is unknown.\n");
     }
 
     /* verify hi => hit */
     hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH100);
     if (ipv6_addr_cmp(&temp_hit, hit)) {
-        HIP_DEBUG("HI in file %s does not match hit %s \n",
-                  token, addr_to_numeric(hit));
+        err = -1;
+        HIP_DEBUG("HI in file %s does not match hit from rule: \n", token);
+        HIP_DEBUG_HIT("expected hit:\t", hit);
+        HIP_DEBUG_HIT("got hit:\t\t",    hit);
+        goto out_err;
+    }
+
+out_err:
+    if (err) {
         free(hi);
         return NULL;
     }
