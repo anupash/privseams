@@ -3156,10 +3156,8 @@ int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
     uint16_t fqdn_len;
 
     /* sanity checks */
-    HIP_IFEL(!wire_host_id,
-             -1, "Given host identity is NULL.\n");
-    HIP_IFEL(!peer_host_id,
-             -1, "Cannot write return value to NULL-pointer.\n");
+    HIP_IFEL(!wire_host_id, -1, "Given host identity is NULL.\n");
+    HIP_IFEL(!peer_host_id, -1, "Cannot write return value to NULL-pointer.\n");
     HIP_IFEL(!(hip_get_param_type(wire_host_id) == HIP_PARAM_HOST_ID),
              -1, "Param has wrong type (not HIP_PARAM_HOST_ID)");
 
@@ -3218,10 +3216,8 @@ int hip_build_param_host_id(struct hip_common *msg,
     uint16_t par_len;
 
     // sanity checks
-    HIP_IFEL(!msg,
-             -1, "Cannot build host id parameter into given message (msg is NULL) \n");
-    HIP_IFEL(!host_id,
-             -1, "Cannot build host id parameter with no host id input (host id is NULL) \n");
+    HIP_IFEL(!msg,      -1, "Cannot build host id parameter into given message (msg is NULL) \n");
+    HIP_IFEL(!host_id,  -1, "Cannot build host id parameter with no host id input (host id is NULL) \n");
 
     // eliminate unused space by copying fqdn directly behind the keyrr
     header_len  = sizeof(struct hip_host_id) -
