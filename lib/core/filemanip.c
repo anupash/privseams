@@ -78,7 +78,7 @@ int hip_create_lock_file(const char *filename, int killold)
     HIP_IFEL(new_pid_str_len <= 0, -1, "pID length error.\n");
 
     /* Read old pid */
-    fd = HIP_CREATE_FILE(filename);
+    fd = open(filename, O_RDWR | O_CREAT, 0644);
     HIP_IFEL(fd <= 0, -1, "opening lock file failed\n");
 
     /** @todo This is possibly unsafe: the pid is read from the file without checking
