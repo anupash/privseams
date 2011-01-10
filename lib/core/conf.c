@@ -1133,7 +1133,7 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
 
         hip_msg_init(msg);
         if ((err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-                                           "rsa", NULL, 0, 0, 0))) {
+                                                "rsa", NULL, 0, 0, 0))) {
             goto out_err;
         }
         HIP_IFEL(hip_send_recv_daemon_info(msg, send_only, 0), -1,
