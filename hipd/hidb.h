@@ -58,9 +58,6 @@
 #define HIP_WRITE_UNLOCK_DB(db)
 #endif
 
-/* for debugging with in6_ntop */
-#define INET6_ADDRSTRLEN 46
-
 struct hip_entry_list {
     LHASH_NODE      list;
     struct in6_addr peer_hit;
