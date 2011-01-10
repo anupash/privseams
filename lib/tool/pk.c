@@ -88,7 +88,7 @@ out_err:
  */
 int hip_ecdsa_sign(void *priv_key, struct hip_common *msg)
 {
-    EC_KEY *ecdsa = (EC_KEY *) priv_key;
+    EC_KEY *ecdsa = priv_key;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     uint8_t signature[ECDSA_size(ecdsa)];
     int err  = 0, len, siglen;
@@ -127,7 +127,7 @@ out_err:
  */
 int hip_dsa_sign(void *priv_key, struct hip_common *msg)
 {
-    DSA *dsa = (DSA *) priv_key;
+    DSA *dsa = priv_key;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     uint8_t signature[HIP_DSA_SIGNATURE_LEN];
     int err  = 0, len;
