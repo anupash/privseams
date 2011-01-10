@@ -61,14 +61,6 @@
 #define CERTIFICATE_PUBLISH_INTERVAL 120 /* seconds */
 #define HIP_HA_PURGE_TIMEOUT 5
 
-/* How many duplicates to send simultaneously: 1 means no duplicates */
-#define HIP_PACKET_DUPLICATES                1
-/* Set to 1 if you want to simulate lost output packet */
-#define HIP_SIMULATE_PACKET_LOSS             1
-/* Packet loss probability in percents */
-#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
-#define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
-
 #define HIP_ADDRESS_CHANGE_WAIT_INTERVAL 3 /* seconds */
 
 extern struct rtnl_handle hip_nl_route;
