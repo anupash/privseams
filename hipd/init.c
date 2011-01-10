@@ -579,7 +579,7 @@ static int hip_init_host_ids(void)
 
     /* Create default keys if necessary. */
 
-    if (stat(HIPL_SYSCONFDIR DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX,
+    if (stat(DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX,
              &status) && errno == ENOENT) {
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
                                               NULL, NULL, RSA_KEY_DEFAULT_BITS,
