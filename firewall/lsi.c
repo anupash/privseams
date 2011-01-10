@@ -70,8 +70,6 @@
 #include "reinject.h"
 
 
-#define BUFSIZE HIP_MAX_PACKET
-
 /**
  * build a message for hipd to trigger a base exchange
  *
@@ -192,6 +190,8 @@ int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi)
 out_err:
     return err;
 }
+
+#define BUFSIZE HIP_MAX_PACKET
 
 /**
  * Executes the packet reinjection
