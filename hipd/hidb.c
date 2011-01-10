@@ -101,7 +101,7 @@ static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv 
     /* the secret component of the DSA key is always 20 bytes */
     temp = ntohs(hi->hi_length) - DSA_PRIV;
     ret->hi_length = htons(temp);
-    memset(&ret->key + ntohs(ret->hi_length) - sizeof(hi->rdata),
+    memset((char *) (&ret->key) + ntohs(ret->hi_length) - sizeof(hi->rdata),
            0, sizeof(ret->key) - ntohs(ret->hi_length));
     ret->length    = htons(sizeof(struct hip_host_id));
 

@@ -1298,7 +1298,7 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
         struct udphdr *uh = (struct udphdr *) msg;
 
         /* Insert 32 bits of zero bytes between UDP and HIP */
-        memmove(msg + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);
+        memmove((char *) msg + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);
         memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN  + sizeof(struct udphdr));
         len       += HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
 
@@ -1348,8 +1348,8 @@ out_err:
     if (udp && memmoved) {
         /* Remove 32 bits of zero bytes between UDP and HIP */
         len -= HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
-        memmove(msg, msg + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), len);
-        memset(msg + len, 0, HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr));
+        memmove(msg, (char *) msg + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), len);
+        memset((char *) msg + len, 0, HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr));
     }
 
     if (err) {
