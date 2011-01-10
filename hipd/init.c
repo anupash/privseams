@@ -620,6 +620,10 @@ out_err:
     return err;
 }
 
+
+/* Needed if the configuration file for certs did not exist  */
+#define HIP_CERT_INIT_DAYS 10
+
 /**
  * Initialize certificates for the local host
  *

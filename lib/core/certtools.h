@@ -47,9 +47,6 @@
 /** Defines */
 #define HIP_CERT_CONF_PATH HIPL_SYSCONFDIR "/hip_cert.cnf"
 
-/* Needed if the configuration file for certs did not exist  */
-#define HIP_CERT_INIT_DAYS 10
-
 #define HIP_CERT_DAY 86400
 
 /** Struct used to deliver the minimal needed information to build SPKI cert */
