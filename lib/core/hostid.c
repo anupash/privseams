@@ -531,7 +531,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                  "Creation of RSA key failed.\n");
 
         rsa_pub_key = create_rsa_key(rsa_key_bits);
-        HIP_IFEL(!dsa_pub_key, -EINVAL,
+        HIP_IFEL(!rsa_pub_key, -EINVAL,
                  "Creation of public RSA key failed.\n");
 
         if ((err = save_dsa_private_key(dsa_filenamebase, dsa_key))) {
