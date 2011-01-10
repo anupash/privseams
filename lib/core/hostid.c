@@ -433,14 +433,14 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv)
  *
  * @return zero on success and negative on error
  */
-int hip_serialize_host_id_action(struct hip_common *msg,
-                                 int action,
-                                 int anon,
-                                 int use_default,
+int hip_serialize_host_id_action(struct hip_common *const msg,
+                                 const int action,
+                                 const int anon,
+                                 const int use_default,
                                  const char *hi_fmt,
                                  const char *hi_file,
-                                 int rsa_key_bits,
-                                 int dsa_key_bits)
+                                 const int rsa_key_bits,
+                                 const int dsa_key_bits)
 {
     int err = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0;
     int dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0;

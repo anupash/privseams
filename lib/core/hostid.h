@@ -77,13 +77,13 @@ RSA *hip_key_rr_to_rsa(const struct hip_host_id_priv *host_id, int is_priv);
 DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *host_id, int is_priv);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr);
-int hip_serialize_host_id_action(struct hip_common *msg,
-                                 int action,
-                                 int anon,
-                                 int use_default,
+int hip_serialize_host_id_action(struct hip_common *const msg,
+                                 const int action,
+                                 const int anon,
+                                 const int use_default,
                                  const char *hi_fmt,
                                  const char *hi_file,
-                                 int rsa_key_bits,
-                                 int dsa_key_bits);
+                                 const int rsa_key_bits,
+                                 const int dsa_key_bits);
 
 #endif /* HIP_LIB_CORE_HOSTID_H */
