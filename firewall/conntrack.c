@@ -912,12 +912,19 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
 
     // store the public key separately
     // store function pointer for verification
-    if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA) {
+    switch (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi)) {
+    case HIP_HI_RSA:
         tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((const struct hip_host_id_priv *) host_id, 0);
         tuple->hip_tuple->data->verify      = hip_rsa_verify;
-    } else {
+        break;
+    case HIP_HI_DSA:
         tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((const struct hip_host_id_priv *) host_id, 0);
         tuple->hip_tuple->data->verify      = hip_dsa_verify;
+        break;
+    default:
+        HIP_ERROR("Could not store public key from I2, because host id algorithm is unknown.\n");
+        err = -1;
+        goto out_err;
     }
 
     HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
@@ -983,12 +990,19 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
 
         // store the public key separately
         // store function pointer for verification
-        if (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi) == HIP_HI_RSA) {
+        switch (hip_get_host_id_algo(tuple->hip_tuple->data->src_hi)) {
+        case HIP_HI_RSA:
             tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_rsa((const struct hip_host_id_priv *) host_id, 0);
             tuple->hip_tuple->data->verify      = hip_rsa_verify;
-        } else {
+            break;
+        case HIP_HI_DSA:
             tuple->hip_tuple->data->src_pub_key = hip_key_rr_to_dsa((const struct hip_host_id_priv *) host_id, 0);
             tuple->hip_tuple->data->verify      = hip_dsa_verify;
+            break;
+        default:
+            HIP_ERROR("Could not store public key from I2, because host id algorithm is unknown.\n");
+            err = -1;
+            goto out_err;
         }
 
         HIP_IFEL(tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key, common),
