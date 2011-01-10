@@ -185,7 +185,7 @@ static void print_usage(void)
     printf("      -V = print version information and exit\n");
     printf("      -d = debugging output\n");
     printf("      -v = verbose output\n");
-    printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authed HIP traffic)\n");
+    printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authenticated HIP traffic)\n");
     printf("      -F = accept all HIP traffic, deactivate HIP traffic filtering\n");
     printf("      -H = drop all non-HIP traffic (default: accept non-HIP traffic)\n");
     printf("      -b = fork the firewall to background\n");
