@@ -3799,12 +3799,8 @@ int dsa_to_hip_endpoint(const DSA *const dsa,
                            HIP_HI_DSA,
                            dsa_key_rr_len);
 
-    *endpoint = malloc(endpoint_hdr.length);
-    if (!(*endpoint)) {
-        err = -ENOMEM;
-        goto out_err;
-    }
-    memset(*endpoint, 0, endpoint_hdr.length);
+    HIP_IFEL(!(*endpoint = calloc(1, endpoint_hdr.length)),
+             -ENOMEM, "Could not allocate memory for hip endpoint \n");
 
     hip_build_endpoint(*endpoint,
                        &endpoint_hdr,
@@ -3853,12 +3849,8 @@ int rsa_to_hip_endpoint(const RSA *const rsa,
                            HIP_HI_RSA,
                            rsa_key_rr_len);
 
-    *endpoint = malloc(endpoint_hdr.length);
-    if (!(*endpoint)) {
-        err = -ENOMEM;
-        goto out_err;
-    }
-    memset(*endpoint, 0, endpoint_hdr.length);
+    HIP_IFEL(!(*endpoint = calloc(1, endpoint_hdr.length)),
+             -ENOMEM, "Could not allocate memory for hip endpoint \n");
 
     hip_build_endpoint(*endpoint,
                        &endpoint_hdr,
