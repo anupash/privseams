@@ -393,12 +393,23 @@ static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
                                            UNUSED void *opaque)
 {
     int err = 0;
+    int (*signature_func)(void *key, struct hip_common *m);
 
     hip_uninit_r1(entry->r1);
     HIP_IFE(!(entry->r1 = hip_init_r1()), -ENOMEM);
+    switch (hip_get_host_id_algo(entry->host_id)) {
+    case HIP_HI_RSA:
+        signature_func = hip_rsa_sign;
+        break;
+    case HIP_HI_DSA:
+        signature_func = hip_dsa_sign;
+        break;
+    default:
+        HIP_IFEL(1,-1, "Unkown algorithm");
+    }
+
     HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
-                              (hip_get_host_id_algo(entry->host_id) ==
-                               HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+                              signature_func,
                               entry->private_key, entry->host_id), -1);
 
 out_err:
