@@ -261,8 +261,7 @@ static int pisa_check_certificate(struct hip_fw_context *ctx)
     HIP_IFEL(cert == NULL, -1, "No certificate found.\n");
 
     len  = ntohs(cert->length);
-    buf  = malloc(len);
-    memset(buf, 0, len + 1);
+    buf  = calloc(1, len);
     memcpy(buf, cert + 1, len);
 
     HIP_IFEL(hip_cert_spki_char2certinfo(buf, &ci), -1,

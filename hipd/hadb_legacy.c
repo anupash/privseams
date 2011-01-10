@@ -67,7 +67,7 @@ int hip_hadb_get_peer_addr_info_old(struct hip_hadb_state *entry,
 {
     struct hip_peer_addr_list_item *peer_addr_list_item;
     int i = 1, ii;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     list_for_each_safe(item, tmp, entry->peer_addresses_old, ii)
     {
@@ -103,7 +103,7 @@ void hip_hadb_delete_peer_addrlist_one_old(struct hip_hadb_state *ha,
 {
     struct hip_peer_addr_list_item *peer_addr_list_item;
     int i;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     /* possibly deprecated function .. */
 

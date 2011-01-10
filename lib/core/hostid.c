@@ -98,8 +98,8 @@ out_err:
  * @param  hit_type type of the HIT (must be HIP_HIT_TYPE_HASH100).
  * @return          zero on success, negative otherwise.
  */
-int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-                           struct in6_addr *hit, int hit_type)
+int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
+                           struct in6_addr *const hit, const int hit_type)
 {
     int err               = 0;
     uint8_t digest[HIP_AH_SHA_LEN];
@@ -154,9 +154,9 @@ out_err:
  *
  * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
-int hip_host_id_to_hit(const struct hip_host_id *host_id,
-                       struct in6_addr *hit,
-                       int hit_type)
+int hip_host_id_to_hit(const struct hip_host_id *const host_id,
+                       struct in6_addr *const hit,
+                       const int hit_type)
 {
     int algo = hip_get_host_id_algo(host_id);
     int err  = 0;
@@ -184,9 +184,9 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
  *
  * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
-int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                   struct in6_addr *hit,
-                                   int hit_type)
+int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                                   struct in6_addr *const hit,
+                                   const int hit_type)
 {
     uint16_t temp;
     int contents_len;
@@ -227,9 +227,9 @@ out_err:
  *
  * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
-int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                                   struct in6_addr *hit,
-                                   int hit_type)
+int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                                   struct in6_addr *const hit,
+                                   const int hit_type)
 {
     int err = 0;
     int rsa_pub_len, rsa_priv_len;
@@ -312,9 +312,9 @@ out_err:
  *
  * @note see hip_dsa_host_id_to_hit for valid HIT types
  */
-int hip_private_host_id_to_hit(const struct hip_host_id_priv *host_id,
-                               struct in6_addr *hit,
-                               int hit_type)
+int hip_private_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                               struct in6_addr *const hit,
+                               const int hit_type)
 {
     int algo = hip_get_host_id_algo((const struct hip_host_id *) host_id);
     int err  = 0;
@@ -467,9 +467,9 @@ out_err:
  * @param is_priv one if the host_id contains also the private key
  *                component or zero otherwise
  */
-void hip_get_rsa_keylen(const struct hip_host_id_priv *host_id,
-                        struct hip_rsa_keylen *ret,
-                        int is_priv)
+void hip_get_rsa_keylen(const struct hip_host_id_priv *const host_id,
+                        struct hip_rsa_keylen *const ret,
+                        const int is_priv)
 {
     int bytes;
     const uint8_t *tmp = (const uint8_t *) host_id->key;
@@ -671,7 +671,8 @@ out_err:
  *
  * @return zero on success and negative on error
  */
-int hip_serialize_host_id_action(struct hip_common *msg,
+
+int hip_serialize_host_id_action(struct hip_common *const msg,
                                  const int action,
                                  const int anon,
                                  const int use_default,
@@ -681,16 +682,18 @@ int hip_serialize_host_id_action(struct hip_common *msg,
                                  const int dsa_key_bits,
                                  const int ecdsa_nid)
 {
-    int err = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0, ecdsa_key_rr_len = 0;
-    int dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0, ecdsa_pub_key_rr_len = 0;
-    hip_hdr_type_t numeric_action             = 0;
+
+    int err = 0;
+    int dsa_key_rr_len      = 0, rsa_key_rr_len      = 0, ecdsa_key_rr_len      = 0;
+    int dsa_pub_key_rr_len  = 0, rsa_pub_key_rr_len  = 0, ecdsa_pub_key_rr_len  = 0;
+    hip_hdr numeric_action             = 0;
     char addrstr[INET6_ADDRSTRLEN], hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-    const char *rsa_filenamebase                = HIPL_SYSCONFDIR DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
-    const char *dsa_filenamebase                = HIPL_SYSCONFDIR DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
-    const char *ecdsa_filenamebase              = HIPL_SYSCONFDIR DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
-    const char *rsa_filenamebase_pub            = HIPL_SYSCONFDIR DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
-    const char *dsa_filenamebase_pub            = HIPL_SYSCONFDIR DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
-    const char *ecdsa_filenamebase_pub          = HIPL_SYSCONFDIR DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;;
+    const char *rsa_filenamebase                = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
+    const char *dsa_filenamebase                = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
+    const char *ecdsa_filenamebase              = DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
+    const char *rsa_filenamebase_pub            = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
+    const char *dsa_filenamebase_pub            = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
+    const char *ecdsa_filenamebase_pub          = DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;;
     unsigned char *dsa_key_rr                   = NULL, *rsa_key_rr           = NULL, *ecdsa_key_rr           = NULL;
     unsigned char *dsa_pub_key_rr               = NULL, *rsa_pub_key_rr       = NULL, *ecdsa_pub_key_rr       = NULL;
     DSA *dsa_key                                = NULL, *dsa_pub_key          = NULL;
@@ -1230,9 +1233,8 @@ int dsa_to_dns_key_rr(const DSA *const dsa, unsigned char **dsa_key_rr)
         dsa_key_rr_len += DSA_PRIV; /* private key hack */
     }
 
-    *dsa_key_rr = malloc(dsa_key_rr_len);
+    *dsa_key_rr = calloc(1, dsa_key_rr_len);
     HIP_IFEL(!*dsa_key_rr, -ENOMEM, "Malloc for *dsa_key_rr failed\n");
-    memset(*dsa_key_rr, 0, dsa_key_rr_len);
 
     p           = *dsa_key_rr;
 
@@ -1319,9 +1321,8 @@ int rsa_to_dns_key_rr(const RSA *const rsa, unsigned char **rsa_key_rr)
         rsa_key_rr_len = e_len_bytes + e_len + key_len * 9 / 2;
     }
 
-    *rsa_key_rr = malloc(rsa_key_rr_len);
+    *rsa_key_rr = calloc(1, rsa_key_rr_len);
     HIP_IFEL(!*rsa_key_rr, -ENOMEM, "Malloc for *rsa_key_rr failed\n");
-    memset(*rsa_key_rr, 0, rsa_key_rr_len);
 
     c           = *rsa_key_rr;
 

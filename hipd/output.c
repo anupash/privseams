@@ -45,6 +45,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/udp.h>
+#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -150,7 +151,7 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
     struct hip_common *i1       = 0;
     uint16_t mask               = 0;
     int err                     = 0;
-    hip_list_t *item            = NULL, *tmp = NULL;
+    LHASH_NODE *item            = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr;
     int i                       = 0;
     struct in6_addr *local_addr = NULL;
@@ -257,7 +258,7 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                 UNUSED const uint32_t ha_state,
                 struct hip_packet_context *ctx)
 {
-    hip_transform_suite_t transform_hip_suite, transform_esp_suite;
+    hip_transform_suite transform_hip_suite, transform_esp_suite;
     struct hip_spi_in_item spi_in_data;
     struct in6_addr daddr;
     const struct hip_param *param           = NULL;
@@ -521,12 +522,6 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     spi_in_data.ifindex = hip_devaddr2ifindex(&ctx->dst_addr);
     HIP_LOCK_HA(ctx->hadb_entry);
 
-    /* 99999 HIP_IFEB(hip_hadb_add_spi_old(ctx->hadb_entry,
-                                           HIP_SPI_DIRECTION_IN, &spi_in_data),
-                      -1,
-                      HIP_UNLOCK_HA(ctx->hadb_entry));
-    */
-
     ctx->hadb_entry->esp_transform = transform_esp_suite;
     HIP_DEBUG("Saving base exchange encryption data to hadb_entry \n");
     HIP_DEBUG_HIT("Our HIT: ", &ctx->hadb_entry->hit_our);
@@ -582,12 +577,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     unsigned int service_count = 0;
 
     /* Supported HIP and ESP transforms. */
-    hip_transform_suite_t transform_hip_suite[] = {
+    hip_transform_suite transform_hip_suite[] = {
         HIP_HIP_AES_SHA1,
         HIP_HIP_3DES_SHA1,
         HIP_HIP_NULL_SHA1
     };
-    hip_transform_suite_t transform_esp_suite[] = {
+    hip_transform_suite transform_esp_suite[] = {
         HIP_ESP_AES_SHA1,
         HIP_ESP_3DES_SHA1,
         HIP_ESP_NULL_SHA1
@@ -620,16 +615,14 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
     HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size1\n");
-    HIP_IFEL(!(dh_data1 = malloc(dh_size1)),
+    HIP_IFEL(!(dh_data1 = calloc(1, dh_size1)),
              -1, "Failed to alloc memory for dh_data1\n");
-    memset(dh_data1, 0, dh_size1);
 
     /* Allocate memory for writing the second Diffie-Hellman shared secret */
     HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
              -1, "Could not get dh_size2\n");
-    HIP_IFEL(!(dh_data2 = malloc(dh_size2)),
+    HIP_IFEL(!(dh_data2 = calloc(1, dh_size2)),
              -1, "Failed to alloc memory for dh_data2\n");
-    memset(dh_data2, 0, dh_size2);
 
     /* Ready to begin building of the R1 packet */
 
@@ -670,7 +663,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     HIP_IFEL(hip_build_param_hip_transform(msg,
                                            transform_hip_suite,
                                            sizeof(transform_hip_suite) /
-                                           sizeof(hip_transform_suite_t)), -1,
+                                           sizeof(hip_transform_suite)), -1,
              "Building of HIP transform failed\n");
 
     /* Parameter HOST_ID */
@@ -687,7 +680,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     HIP_IFEL(hip_build_param_esp_transform(msg,
                                            transform_esp_suite,
                                            sizeof(transform_esp_suite) /
-                                           sizeof(hip_transform_suite_t)), -1,
+                                           sizeof(hip_transform_suite)), -1,
              "Building of ESP transform failed\n");
 
     /********** ESP-PROT transform (OPTIONAL) **********/
@@ -1303,8 +1296,8 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
         struct udphdr *uh = (struct udphdr *) msg;
 
         /* Insert 32 bits of zero bytes between UDP and HIP */
-        memmove(((char *) msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);
-        memset(((char *) msg), 0, HIP_UDP_ZERO_BYTES_LEN  + sizeof(struct udphdr));
+        memmove((char *) msg + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), msg, len);
+        memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN  + sizeof(struct udphdr));
         len       += HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
 
         uh->source = htons(src_port);
@@ -1353,10 +1346,8 @@ out_err:
     if (udp && memmoved) {
         /* Remove 32 bits of zero bytes between UDP and HIP */
         len -= HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr);
-        memmove((char *) msg, ((char *) msg) + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr),
-                len);
-        memset(((char *) msg) + len, 0,
-               HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr));
+        memmove(msg, (char *) msg + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr), len);
+        memset((char *) msg + len, 0, HIP_UDP_ZERO_BYTES_LEN + sizeof(struct udphdr));
     }
 
     if (err) {
@@ -1455,7 +1446,7 @@ int hip_send_pkt(const struct in6_addr *local_addr,
     int err                                = 0;
     struct netdev_address *netdev_src_addr = NULL;
     struct in6_addr *src_addr              = NULL;
-    hip_list_t *item                       = NULL, *tmp = NULL;
+    LHASH_NODE *item                       = NULL, *tmp = NULL;
     int i                                  = 0;
 
     /* Notice that the shotgun logic requires us to check always the address family.

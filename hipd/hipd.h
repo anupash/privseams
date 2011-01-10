@@ -106,7 +106,7 @@ extern int hip_shotgun_status;
 
 extern int hip_encrypt_i2_hi;
 
-extern hip_transform_suite_t hip_nat_status;
+extern hip_transform_suite hip_nat_status;
 
 extern int esp_prot_active;
 extern int esp_prot_num_transforms;

@@ -54,8 +54,8 @@
 
 /** Struct used to deliver the minimal needed information to build SPKI cert */
 struct hip_cert_spki_info {
-    hip_tlv_type_t  type;
-    hip_tlv_len_t   length;
+    hip_tlv         type;
+    hip_tlv_len     length;
     char            public_key[768];
     char            cert[224];
     char            signature[768];
@@ -84,7 +84,6 @@ int hip_cert_x509v3_request_verification(unsigned char *, int);
 /** Utilitary functions */
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *, CONF *);
 CONF *hip_cert_open_conf(void);
-void hip_cert_free_conf(CONF *);
 int hip_cert_regex(char *, char *, int *, int *);
 
 #endif /* HIP_LIB_CORE_CERTTOOLS_H */

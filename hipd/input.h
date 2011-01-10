@@ -74,7 +74,7 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 
 int hip_verify_packet_hmac_general(struct hip_common *msg,
                                    const struct hip_crypto_key *crypto_key,
-                                   const hip_tlv_type_t parameter_type);
+                                   const hip_tlv parameter_type);
 
 int hip_receive_control_packet(struct hip_packet_context *ctx);
 

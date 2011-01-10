@@ -121,7 +121,6 @@ static int hip_peek_recv_total_len(int sockfd,
     unsigned long timeout_left = timeout;
     int hdr_size               = encap_hdr_size + sizeof(struct hip_common);
     char *msg                  = NULL;
-    struct hip_common *hip_hdr = NULL;
     struct timespec ts;
 
     ts.tv_sec  = 0;
@@ -158,8 +157,7 @@ static int hip_peek_recv_total_len(int sockfd,
         goto out_err;
     }
 
-    hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
-    bytes   = hip_get_msg_total_len(hip_hdr);
+    bytes = hip_get_msg_total_len((struct hip_common *) msg + encap_hdr_size);
 
     if (bytes == 0) {
         HIP_ERROR("HIP message is of zero length. Dropping.\n");
@@ -639,13 +637,11 @@ static int hip_read_control_msg_all(int sockfd,
     if (is_ipv4 && (encap_hdr_size == IPV4_HDR_SIZE)) {    /* raw IPv4, !UDP */
         /* For some reason, the IPv4 header is always included.
          * Let's remove it here. */
-        memmove(ctx->input_msg,
-                ((char *) ctx->input_msg) + IPV4_HDR_SIZE,
+        memmove(ctx->input_msg, (char *) ctx->input_msg + IPV4_HDR_SIZE,
                 HIP_MAX_PACKET - IPV4_HDR_SIZE);
     } else if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
         /* remove 32-bits of zeroes between UDP and HIP headers */
-        memmove(ctx->input_msg,
-                ((char *) ctx->input_msg) + HIP_UDP_ZERO_BYTES_LEN,
+        memmove(ctx->input_msg, (char *) ctx->input_msg + HIP_UDP_ZERO_BYTES_LEN,
                 HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
     }
 

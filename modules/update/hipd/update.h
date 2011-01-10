@@ -52,8 +52,8 @@
 
 
 struct hip_locator {
-    hip_tlv_type_t type;
-    hip_tlv_len_t  length;
+    hip_tlv     type;
+    hip_tlv_len length;
     /* fixed part ends */
 } __attribute__ ((packed));
 

@@ -76,6 +76,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <arpa/inet.h>
+#include <openssl/lhash.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -799,7 +800,7 @@ void hip_print_locator_addresses(const struct hip_common *in_msg)
  */
 void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *entry)
 {
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr;
     int i            = 0;
 

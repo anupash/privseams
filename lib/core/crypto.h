@@ -62,10 +62,11 @@
 #define RSA_KEY_DEFAULT_BITS       1024
 #define ECDSA_DEFAULT_CURVE        NIST_ECDSA_384
 
-#define DEFAULT_HOST_DSA_KEY_FILE_BASE "/hip_host_dsa_key"
-#define DEFAULT_HOST_RSA_KEY_FILE_BASE "/hip_host_rsa_key"
-#define DEFAULT_HOST_ECDSA_KEY_FILE_BASE "/hip_host_ecdsa_key"
-#define DEFAULT_PUB_FILE_SUFFIX        ".pub"
+
+#define DEFAULT_HOST_DSA_KEY_FILE_BASE      HIPL_SYSCONFDIR "/hip_host_dsa_key"
+#define DEFAULT_HOST_RSA_KEY_FILE_BASE      HIPL_SYSCONFDIR "/hip_host_rsa_key"
+#define DEFAULT_HOST_ECDSA_KEY_FILE_BASE    HIPL_SYSCONFDIR"/hip_host_ecdsa_key"
+#define DEFAULT_PUB_FILE_SUFFIX             ".pub"
 
 #define DEFAULT_PUB_HI_FILE_NAME_SUFFIX  "_pub"
 #define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
@@ -91,7 +92,6 @@ int hip_gen_dh_shared_key(DH *dh, uint8_t *peer_key, size_t peer_len, uint8_t *o
                           size_t outlen);
 int hip_encode_dh_publickey(DH *dh, uint8_t *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
-void hip_free_dh(DH *target);
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 DSA *create_dsa_key(const int bits);
 RSA *create_rsa_key(const int bits);

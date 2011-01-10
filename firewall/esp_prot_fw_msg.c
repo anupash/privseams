@@ -535,9 +535,9 @@ int send_anchor_change_to_hipd(const struct hip_sa_entry *entry)
                                       HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)),
                                       -1, "build param contents failed\n");
 
-    HIP_DEBUG("esp_prot_num_parallel_hchains: %u\n", num_parallel_hchains);
+    HIP_DEBUG("esp_prot_num_parallel_hchains: %i\n", num_parallel_hchains);
     HIP_IFEL(hip_build_param_contents(msg, &num_parallel_hchains,
-                                      HIP_PARAM_INT, sizeof(long)), -1,
+                                      HIP_PARAM_INT, sizeof(int)), -1,
              "build param contents failed\n");
 
     for (i = 0; i < num_parallel_hchains; i++) {

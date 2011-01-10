@@ -23,10 +23,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_HIPD_HIDB
-#define HIP_HIPD_HIDB
+#ifndef HIP_HIPD_HIDB_H
+#define HIP_HIPD_HIDB_H
 
 #include <netinet/in.h>
+#include <openssl/lhash.h>
 
 #include "lib/core/hashtable.h"
 #include "lib/core/list.h"
@@ -62,7 +63,7 @@
 #define INET6_ADDRSTRLEN 46
 
 struct hip_entry_list {
-    hip_list_t      list;
+    LHASH_NODE      list;
     struct in6_addr peer_hit;
     /* These two _MUST_ be left untouched. Feel free to add more
      * to the end */
@@ -119,4 +120,4 @@ int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_hit_msg(struct hip_common *msg);
 int hip_get_default_lsi(struct in_addr *lsi);
 
-#endif /* HIP_HIPD_HIDB */
+#endif /* HIP_HIPD_HIDB_H */

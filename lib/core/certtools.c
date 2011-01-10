@@ -189,19 +189,19 @@ algo_check_done:
                  "Failed to run hip_cert_regex (exponent)\n");
         e_hex = malloc(stop - start);
         HIP_IFEL((!e_hex), -1, "Malloc for e_hex failed\n");
-        snprintf((char *) e_hex, (stop - start - 1), "%s", &cert->public_key[start + 1]);
+        snprintf((char *) e_hex, stop - start - 1, "%s",
+                 &cert->public_key[start + 1]);
 
         /* public modulus */
         start       = stop = 0;
         HIP_IFEL(hip_cert_regex(n_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex (modulus)\n");
-        modulus_b64 = malloc(stop - start + 1);
-        HIP_IFEL((!modulus_b64), -1, "Malloc for modulus_b64 failed\n");
-        memset(modulus_b64, 0, (stop - start + 1));
-        modulus     = malloc(stop - start + 1);
-        HIP_IFEL((!modulus), -1, "Malloc for modulus failed\n");
-        memset(modulus, 0, (stop - start + 1));
-        snprintf((char *) modulus_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
+        modulus_b64 = calloc(1, stop - start + 1);
+        HIP_IFEL((!modulus_b64), -1, "calloc for modulus_b64 failed\n");
+        modulus     = calloc(1, stop - start + 1);
+        HIP_IFEL((!modulus), -1, "calloc for modulus failed\n");
+        snprintf((char *) modulus_b64, stop - start - 1, "%s",
+                 &cert->public_key[start + 1]);
 
         /* put the stuff into the RSA struct */
         BN_hex2bn(&rsa->e, e_hex);
@@ -228,52 +228,48 @@ algo_check_done:
         start = stop = 0;
         HIP_IFEL(hip_cert_regex(p_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->p\n");
-        p_b64 = malloc(stop - start + 1);
-        HIP_IFEL((!p_b64), -1, "Malloc for p_b64 failed\n");
-        memset(p_b64, 0, (stop - start + 1));
-        p_bin = malloc(stop - start + 1);
-        HIP_IFEL((!p_bin), -1, "Malloc for p_bin failed\n");
-        memset(p_bin, 0, (stop - start + 1));
-        snprintf((char *) p_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
+        p_b64 = calloc(1, stop - start + 1);
+        HIP_IFEL((!p_b64), -1, "calloc for p_b64 failed\n");
+        p_bin = calloc(1, stop - start + 1);
+        HIP_IFEL((!p_bin), -1, "calloc for p_bin failed\n");
+        snprintf((char *) p_b64, stop - start - 1, "%s",
+                 &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(p_bin, p_b64, strlen((char *) p_b64));
 
         /* dsa->q */
         start  = stop = 0;
         HIP_IFEL(hip_cert_regex(q_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->q\n");
-        q_b64  = malloc(stop - start + 1);
-        HIP_IFEL((!q_b64), -1, "Malloc for q_b64 failed\n");
-        memset(q_b64, 0, (stop - start + 1));
-        q_bin  = malloc(stop - start + 1);
-        HIP_IFEL((!q_bin), -1, "Malloc for q_bin failed\n");
-        memset(q_bin, 0, (stop - start + 1));
-        snprintf((char *) q_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
+        q_b64  = calloc(1, stop - start + 1);
+        HIP_IFEL((!q_b64), -1, "calloc for q_b64 failed\n");
+        q_bin  = calloc(1, stop - start + 1);
+        HIP_IFEL((!q_bin), -1, "calloc for q_bin failed\n");
+        snprintf((char *) q_b64, stop - start - 1, "%s",
+                 &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(q_bin, q_b64, strlen((char *) q_b64));
 
         /* dsa->g */
         start  = stop = 0;
         HIP_IFEL(hip_cert_regex(g_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->g\n");
-        g_b64  = malloc(stop - start + 1);
-        HIP_IFEL((!g_b64), -1, "Malloc for g_b64 failed\n");
-        memset(g_b64, 0, (stop - start + 1));
-        g_bin  = malloc(stop - start + 1);
-        HIP_IFEL((!g_bin), -1, "Malloc for g_bin failed\n");
-        memset(g_bin, 0, (stop - start + 1));
-        snprintf((char *) g_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
+        g_b64  = calloc(1, stop - start + 1);
+        HIP_IFEL((!g_b64), -1, "calloc for g_b64 failed\n");
+        g_bin  = calloc(1, stop - start + 1);
+        HIP_IFEL((!g_bin), -1, "calloc for g_bin failed\n");
+        snprintf((char *) g_b64, stop - start - 1, "%s",
+                 &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(g_bin, g_b64, strlen((char *) g_b64));
 
         /* dsa->y */
         start  = stop = 0;
         HIP_IFEL(hip_cert_regex(y_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->y\n");
-        y_b64  = malloc(stop - start + 1);
-        HIP_IFEL((!y_b64), -1, "Malloc for y_b64 failed\n");
-        memset(y_b64, 0, (stop - start + 1));
-        y_bin  = malloc(stop - start + 1);
-        HIP_IFEL((!y_bin), -1, "Malloc for y_bin failed\n");
-        memset(y_bin, 0, (stop - start + 1));
-        snprintf((char *) y_b64, (stop - start - 1), "%s", &cert->public_key[start + 1]);
+        y_b64  = calloc(1, stop - start + 1);
+        HIP_IFEL((!y_b64), -1, "calloc for y_b64 failed\n");
+        y_bin  = calloc(1, stop - start + 1);
+        HIP_IFEL((!y_bin), -1, "calloc for y_bin failed\n");
+        snprintf((char *) y_b64, stop - start - 1, "%s",
+                 &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *) y_b64));
     } else if (algo == HIP_HI_ECDSA) {
         HIP_IFEL(1, -1, "Call to unimplemented ECDSA case.\n");
@@ -291,12 +287,11 @@ algo_check_done:
     start              = stop = 0;
     HIP_IFEL(hip_cert_regex(h_rule, cert->signature, &start, &stop), -1,
              "Failed to run hip_cert_regex (signature hash)\n");
-    signature_hash_b64 = malloc(stop - start + 1);
-    HIP_IFEL((!signature_hash_b64), -1, "Failed to malloc signature_hash_b64\n");
-    memset(signature_hash_b64, '\0', (stop - start + 1));
+    signature_hash_b64 = calloc(1, stop - start + 1);
+    HIP_IFEL((!signature_hash_b64), -1, "Failed to calloc signature_hash_b64\n");
     signature_hash     = malloc(stop - start + 1);
     HIP_IFEL((!signature_hash), -1, "Failed to malloc signature_hash\n");
-    snprintf((char *) signature_hash_b64, (stop - start - 1), "%s",
+    snprintf((char *) signature_hash_b64, stop - start - 1, "%s",
              &cert->signature[start + 1]);
     evpret = EVP_DecodeBlock(signature_hash, signature_hash_b64,
                              strlen((char *) signature_hash_b64));
@@ -308,10 +303,10 @@ algo_check_done:
     start         = stop = 0;
     HIP_IFEL(hip_cert_regex(s_rule, cert->signature, &start, &stop), -1,
              "Failed to run hip_cert_regex (signature)\n");
-    signature_b64 = malloc(stop - start + 1);
-    HIP_IFEL((!signature_b64), -1, "Failed to malloc signature_b64\n");
-    memset(signature_b64, '\0', keylen);
-    snprintf((char *) signature_b64, (stop - start - 2), "%s", &cert->signature[start + 2]);
+    signature_b64 = calloc(1, stop - start + 1);
+    HIP_IFEL((!signature_b64), -1, "Failed to calloc signature_b64\n");
+    snprintf((char *) signature_b64, stop - start - 2, "%s",
+             &cert->signature[start + 2]);
     if (algo == HIP_HI_DSA) {
         signature = malloc(stop - start + 1);
         HIP_IFEL(!signature, -1, "Failed to malloc signature (dsa)\n");
@@ -401,12 +396,10 @@ static int hip_cert_spki_inject(struct hip_cert_spki_info *to,
     regmatch_t pm[1];
     char *tmp_cert;
 
-    tmp_cert = malloc(strlen(to->cert) + strlen(what) + 1);
+    tmp_cert = calloc(1, strlen(to->cert) + strlen(what) + 1);
     if (!tmp_cert) {
         return -1;
     }
-    HIP_IFEL(!memset(tmp_cert, 0, sizeof(tmp_cert)), -1,
-             "Failed to memset temporary workspace\n");
     /* Compiling the regular expression */
     HIP_IFEL(regcomp(&re, after, REG_EXTENDED), -1,
              "Compilation of the regular expression failed\n");
@@ -468,19 +461,19 @@ int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
     const struct hip_cert_spki_info *returned = NULL;
 
     /* Malloc needed */
-    tmp_issuer  = malloc(128);
+    tmp_issuer  = calloc(1, 128);
     if (!tmp_issuer) {
         goto out_err;                  /* Why does this return 0? */
     }
-    tmp_subject = malloc(128);
+    tmp_subject = calloc(1, 128);
     if (!tmp_subject) {
         goto out_err;
     }
-    tmp_before  = malloc(128);
+    tmp_before  = calloc(1, 128);
     if (!tmp_before) {
         goto out_err;
     }
-    tmp_after   = malloc(128);
+    tmp_after   = calloc(1, 128);
     if (!tmp_after) {
         goto out_err;
     }
@@ -492,14 +485,6 @@ int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
              "Failed to memset memory for tmp buffers variables\n");
     HIP_IFEL(!memset(buf_after, '\0', sizeof(buf_after)), -1,
              "Failed to memset memory for tmp buffers variables\n");
-    HIP_IFEL(!memset(tmp_issuer, '\0', sizeof(tmp_issuer)), -1,
-             "Failed to memset memory for tmp variables\n");
-    HIP_IFEL(!memset(tmp_subject, '\0', sizeof(tmp_subject)), -1,
-             "Failed to memset memory for tmp variables\n");
-    HIP_IFEL(!memset(tmp_before, '\0', sizeof(tmp_before)), -1,
-             "Failed to memset memory for tmp variables\n");
-    HIP_IFEL(!memset(tmp_after, '\0', sizeof(tmp_after)), -1,
-             "Failed to memset memory for tmp variables\n");
     HIP_IFEL(!memset(present_issuer, '\0', sizeof(present_issuer)), -1,
              "Failed to memset memory for tmp variables\n");
     HIP_IFEL(!memset(present_subject, '\0', sizeof(present_subject)), -1,
@@ -633,19 +618,19 @@ int hip_cert_spki_char2certinfo(char *from, struct hip_cert_spki_info *to)
     /* Look for the public key */
     HIP_IFEL(hip_cert_regex(p_rule, from, &start, &stop), -1,
              "Failed to run hip_cert_regex (public-key)\n");
-    snprintf(to->public_key, (stop - start) + 1, "%s", &from[start]);
+    snprintf(to->public_key, stop - start + 1, "%s", &from[start]);
 
     /* Look for the cert sequence */
     start = stop = 0;
     HIP_IFEL(hip_cert_regex(c_rule, from, &start, &stop), -1,
              "Failed to run hip_cert_regex (cert)\n");
-    snprintf(to->cert, (stop - start) + 1, "%s", &from[start]);
+    snprintf(to->cert, stop - start + 1, "%s", &from[start]);
 
     /* look for the signature sequence */
     start = stop = 0;
     HIP_IFEL(hip_cert_regex(s_rule, from, &start, &stop), -1,
              "Failed to run hip_cert_regex (signature)\n");
-    snprintf(to->signature, (stop - start) + 1, "%s", &from[start]);
+    snprintf(to->signature, stop - start + 1, "%s", &from[start]);
 
 out_err:
     return err;
@@ -797,7 +782,7 @@ out_err:
  * @return STACK_OF(CONF_VALUE) pointer if ok and NULL if error or unsuccesfull.
  *
  * @note Remember to open the conf first with hip_cert_open_conf and after done close
- *       the conf with the hip_cert_free_conf
+ *       the conf with NCONF_free().
  *
  */
 STACK_OF(CONF_VALUE) *hip_cert_read_conf_section(const char *section_name,
@@ -845,18 +830,6 @@ out_err:
         return NULL;
     }
     return conf;
-}
-
-/**
- * Function that frees the memory of a allocated configuration.
- *
- * @param conf pointer to the to be freed configuration
- *
- * @return void
- */
-void hip_cert_free_conf(CONF *conf)
-{
-    NCONF_free(conf);
 }
 
 /**

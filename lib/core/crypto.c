@@ -574,7 +574,7 @@ out_err:
  * @return 1 for a valid signature, 0 for an incorrect signature and -1 on
  *         error (see ERR_get_error(3) for the actual error)
  */
-int impl_dsa_verify(const unsigned char *digest, DSA *const dsa, const unsigned char *const signature)
+int impl_dsa_verify(const unsigned char *const digest, DSA *const dsa, const unsigned char *const signature)
 {
     DSA_SIG *dsa_sig;
     int err = 0;
@@ -602,7 +602,7 @@ out_err:
 }
 
 /**
- * Generate a shared key using Diffie-Hellman
+ * Generate a shared key using Diffie-Hellman.
  *
  * @param dh Diffie-Hellman key
  * @param peer_key peer's public key
@@ -634,7 +634,7 @@ out_err:
 }
 
 /**
- * Encode Diffie-Hellman key into a character array
+ * Encode Diffie-Hellman key into a character array.
  *
  * @param dh Diffie-Hellman key
  * @param out output argument: a character array
@@ -655,7 +655,7 @@ out_err:
 }
 
 /**
- * generate a new Diffie-Hellman key
+ * Generate a new Diffie-Hellman key.
  *
  * @param group_id the group id of the D-H
  * @return a new Diffie-Hellman key (caller deallocates)
@@ -688,13 +688,8 @@ DH *hip_generate_dh_key(int group_id)
     return dh;
 }
 
-void hip_free_dh(DH *dh)
-{
-    DH_free(dh);
-}
-
 /**
- * determine the size for required to store DH shared secret
+ * Determine the size for required to store DH shared secret.
  * @param hip_dh_group_type the group type from DIFFIE_HELLMAN parameter
  *
  * @return 0 on failure, or the size for storing DH shared secret in bytes
@@ -715,7 +710,7 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 }
 
 /**
- * generate DSA parameters and a new key pair
+ * Generate DSA parameters and a new key pair.
  * @param bits length of the prime
  *
  * The caller is responsible for freeing the allocated DSA key.
@@ -779,6 +774,7 @@ err_out:
 }
 
 /**
+<<<<<<< TREE
  * generates ECDSA parameters and a new key pair
  *
  * The caller is responsible for freeing the allocated ECDSA key.
@@ -824,6 +820,9 @@ out_err:
 
 /**
  * save host DSA keys to disk
+=======
+ * Save host DSA keys to disk.
+>>>>>>> MERGE-SOURCE
  * @param filenamebase the filename base where DSA key should be saved
  * @param dsa the DSA key structure
  *
@@ -838,7 +837,7 @@ out_err:
  * @return 0 if all files were saved successfully, or non-zero if an error
  * occurred.
  */
-int save_dsa_private_key(const char *const filenamebase, DSA *dsa)
+int save_dsa_private_key(const char *const filenamebase, DSA *const dsa)
 {
     int err           = 0, files = 0, ret;
     char *pubfilename = NULL;
@@ -924,7 +923,7 @@ out_err:
 }
 
 /**
- * save host RSA keys to disk
+ * Save host RSA keys to disk.
  * @param filenamebase the filename base where RSA key should be saved
  * @param rsa the RSA key structure
  *
@@ -939,7 +938,7 @@ out_err:
  * @return 0 if all files were saved successfully, or non-zero if an
  * error occurred.
  */
-int save_rsa_private_key(const char *const filenamebase, RSA *rsa)
+int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
 {
     int err           = 0, files = 0, ret;
     char *pubfilename = NULL;
@@ -991,6 +990,7 @@ int save_rsa_private_key(const char *const filenamebase, RSA *rsa)
 
     err = PEM_write_RSAPrivateKey(fp, rsa, NULL, NULL,
                                   0, NULL, NULL) == 0 ? 1 : 0;
+
     if (err) {
         HIP_ERROR("Write failed for %s\n", filenamebase);
         goto out_err;
@@ -1164,7 +1164,7 @@ out_err:
 }
 
 /**
- * load host DSA private keys from disk
+ * Load host DSA private keys from disk.
  * @param filename the file name base of the host DSA key
  * @param dsa Pointer to the DSA key structure.
  *
@@ -1176,7 +1176,7 @@ out_err:
  * *dsa contins NULL if the key could not be loaded (not in PEM format
  * or file not found, etc).
  */
-int load_dsa_private_key(const char *const filename, DSA **dsa)
+int load_dsa_private_key(const char *const filename, DSA **const dsa)
 {
     FILE *fp = NULL;
     int err  = 0;
@@ -1203,7 +1203,7 @@ out_err:
 }
 
 /**
- * load host RSA private keys from disk
+ * Load host RSA private keys from disk.
  * @param filename the file name base of the host RSA key
  * @param rsa Pointer to the RSA key structure.
  *
@@ -1215,7 +1215,7 @@ out_err:
  * *rsa contains NULL if the key could not be loaded (not in PEM
  * format or file not found, etc).
  */
-int load_rsa_private_key(const char *const filename, RSA **rsa)
+int load_rsa_private_key(const char *const filename, RSA **const rsa)
 {
     FILE *fp = NULL;
     int err  = 0;
@@ -1241,7 +1241,7 @@ out_err:
 }
 
 /**
- * get random bytes
+ * Get random bytes.
  *
  * @param buf a buffer where to write random bytes
  * @param n write n bytes to @c buf

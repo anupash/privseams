@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
@@ -67,9 +68,8 @@ struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void)
     struct hip_hadb_user_info_state *entry = NULL;
     int err = 0;
 
-    HIP_IFEL(!(entry = malloc(sizeof(struct hip_hadb_user_info_state))),
+    HIP_IFEL(!(entry = calloc(1, sizeof(struct hip_hadb_user_info_state))),
              -ENOMEM, "No memory available for firewall database entry\n");
-    memset(entry, 0, sizeof(*entry));
 out_err:
     return entry;
 }
@@ -181,7 +181,7 @@ struct hip_hadb_user_info_state *hip_firewall_cache_db_match(const void *local,
 {
     int i;
     struct hip_hadb_user_info_state *this = NULL, *ha_match = NULL;
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
 
     if (type == FW_CACHE_HIT) {
         ha_match = hip_ht_find(firewall_cache_db, peer);
@@ -307,7 +307,7 @@ void hip_firewall_cache_delete_hldb(int exiting)
 {
     int i;
     struct hip_hadb_user_info_state *this = NULL;
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
 
     HIP_DEBUG("Start hldb delete\n");
     HIP_LOCK_HT(&firewall_cache_db);

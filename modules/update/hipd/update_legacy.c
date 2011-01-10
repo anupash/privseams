@@ -34,6 +34,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <openssl/lhash.h>
 
 #include "config.h"
 #include "hipd/hipd.h"
@@ -64,7 +65,7 @@ int hip_build_locators_old(struct hip_common *msg)
     int err                                 = 0, i = 0, count = 0;
     int addr_max;
     struct netdev_address *n;
-    hip_list_t *item                        = NULL, *tmp = NULL;
+    LHASH_NODE *item                        = NULL, *tmp = NULL;
     struct hip_locator_info_addr_item *locs = NULL;
 
     if (address_count == 0) {
@@ -75,12 +76,9 @@ int hip_build_locators_old(struct hip_common *msg)
 
     addr_max = address_count;
 
-    HIP_IFEL(!(locs = malloc(addr_max *
+    HIP_IFEL(!(locs = calloc(1, addr_max *
                              sizeof(struct hip_locator_info_addr_item))),
              -1, "Malloc for LOCATORS type1 failed\n");
-
-    memset(locs, 0, (addr_max *
-                     sizeof(struct hip_locator_info_addr_item)));
 
     HIP_DEBUG("there are %d type 1 locator item\n", addr_max);
 

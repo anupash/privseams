@@ -135,7 +135,7 @@ out_err:
  */
 int hip_verify_packet_hmac_general(struct hip_common *msg,
                                    const struct hip_crypto_key *crypto_key,
-                                   const hip_tlv_type_t parameter_type)
+                                   const hip_tlv parameter_type)
 {
     int err               = 0, len = 0, orig_len = 0;
     struct hip_crypto_key tmpkey;
@@ -325,11 +325,9 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     /* 1024 should be enough for shared secret. The length of the shared
      * secret actually depends on the DH Group. */
     /** @todo 1024 -> hip_get_dh_size ? */
-    HIP_IFEL(!(dh_shared_key = malloc(dh_shared_len)),
+    HIP_IFEL(!(dh_shared_key = calloc(1, dh_shared_len)),
              -ENOMEM,
              "Error on allocating memory for Diffie-Hellman shared key.\n");
-
-    memset(dh_shared_key, 0, dh_shared_len);
 
     HIP_IFEL(!(dhf = hip_get_param_readwrite(ctx->input_msg,
                                              HIP_PARAM_DIFFIE_HELLMAN)),
@@ -457,7 +455,7 @@ out_err:
  *                shouldn't be dropped
  */
 static int hip_packet_to_drop(struct hip_hadb_state *entry,
-                              hip_hdr_type_t type,
+                              hip_hdr type,
                               struct in6_addr *hitr)
 {
     // If we are a relay or rendezvous server, don't drop the packet
@@ -1720,7 +1718,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     int err = 0, retransmission = 0;
     uint32_t spi_out = 0;
     const struct hip_esp_info *esp_info     = NULL;
-    hip_transform_suite_t esp_tfm;
+    hip_transform_suite esp_tfm;
     struct hip_spi_in_item spi_in_data;
     const struct hip_locator *locator       = NULL;
     int if_index                            = 0;
@@ -1955,8 +1953,8 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
     const struct hip_tlv_common *current_param  = NULL;
     const struct hip_notification *notification = NULL;
     struct in6_addr responder_ip, responder_hit;
-    hip_tlv_type_t param_type                   = 0, response;
-    hip_tlv_len_t param_len                     = 0;
+    hip_tlv param_type                          = 0, response;
+    hip_tlv_len param_len                       = 0;
     uint16_t msgtype                            = 0;
     in_port_t port                              = 0;
 

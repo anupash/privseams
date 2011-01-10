@@ -61,6 +61,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -185,7 +186,7 @@ int hip_for_each_opp(int (*func)(struct hip_opp_blocking_request *entry,
 {
     int i = 0, fail = 0;
     struct hip_opp_blocking_request *this;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     if (!func) {
         return -EINVAL;
@@ -330,13 +331,11 @@ static struct hip_opp_blocking_request *hip_create_opp_block_entry(void)
 {
     struct hip_opp_blocking_request *entry = NULL;
 
-    entry = malloc(sizeof(struct hip_opp_blocking_request));
+    entry = calloc(1, sizeof(struct hip_opp_blocking_request));
     if (!entry) {
         HIP_ERROR("struct hip_opp_blocking_request memory allocation failed.\n");
         return NULL;
     }
-
-    memset(entry, 0, sizeof(*entry));
 
     HIP_LOCK_OPP_INIT(entry);
     time(&entry->creation_time);
@@ -352,7 +351,7 @@ static void hip_oppdb_dump(void)
 {
     int i;
     struct hip_opp_blocking_request *this;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     HIP_DEBUG("start oppdb dump\n");
     HIP_LOCK_HT(&oppdb);
@@ -461,7 +460,7 @@ out_err:
 struct hip_hadb_state *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
                                                       struct in6_addr *src_addr)
 {
-    hip_hdr_type_t         type  = hip_get_msg_type(msg);
+    hip_hdr                type  = hip_get_msg_type(msg);
     struct hip_hadb_state *entry = NULL;
 
     if (type == HIP_I1) {
@@ -648,7 +647,7 @@ struct hip_opp_blocking_request *hip_oppdb_find_by_ip(const struct in6_addr *ip_
 {
     int i = 0;
     struct hip_opp_blocking_request *this, *ret = NULL;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     if (oppdb == NULL)
         return NULL;

@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <openssl/lhash.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -241,9 +242,8 @@ struct hip_r1entry *hip_init_r1(void)
 {
     struct hip_r1entry *err;
 
-    HIP_IFE(!(err = malloc(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE)),
+    HIP_IFE(!(err = calloc(1, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE)),
             NULL);
-    memset(err, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
 
 out_err:
     return err;
@@ -427,7 +427,7 @@ out_err:
 int hip_recreate_all_precreated_r1_packets(void)
 {
     HIP_HASHTABLE *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
-    hip_list_t *curr, *iter;
+    LHASH_NODE *curr, *iter;
     struct hip_host_id *tmp;
     int c;
 

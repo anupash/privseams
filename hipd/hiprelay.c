@@ -901,8 +901,8 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
 {
     struct hip_common *msg_to_be_relayed       = NULL;
     const struct hip_tlv_common *current_param = NULL;
-    int err                                    = 0, from_added = 0;
-    hip_tlv_type_t param_type                  = 0;
+    int err = 0, from_added = 0;
+    hip_tlv param_type = 0;
 
     HIP_DEBUG("Msg type :      %s (%d)\n",
               hip_message_type_name(hip_get_msg_type(ctx->input_msg)),

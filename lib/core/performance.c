@@ -59,32 +59,18 @@ struct perf_set *hip_perf_create(int num)
 {
     /* create the perf set struct*/
     struct perf_set *set;
-    set            = malloc(sizeof(struct perf_set));
-    memset(set, 0, sizeof(struct perf_set));
+    set            = calloc(1, sizeof(struct perf_set));
 
     set->num_files = num;
 
     /* allocate memory for filenames and file pointers*/
-    set->files     = malloc(sizeof(FILE *) * num);
-    memset(set->files, 0, sizeof(FILE *) * num);
-
-    set->names     = malloc(sizeof(char *) * num);
-    memset(set->names, 0, sizeof(char *) * num);
-
-    set->linecount = malloc(sizeof(int) * num);
-    memset(set->linecount, 0, sizeof(int) * num);
-
-    set->times     = malloc(sizeof(struct timeval) * num);
-    memset(set->times, 0, sizeof(struct timeval) * num);
-
-    set->result    = malloc(sizeof(double) * num);
-    memset(set->result, 0, sizeof(double) * num);
-
-    set->running   = malloc(sizeof(int) * num);
-    memset(set->running, 0, sizeof(int) * num);
-
-    set->writable  = malloc(sizeof(int) * num);
-    memset(set->writable, 0, sizeof(int) * num);
+    set->files     = calloc(1, sizeof(FILE *) * num);
+    set->names     = calloc(1, sizeof(char *) * num);
+    set->linecount = calloc(1, sizeof(int) * num);
+    set->times     = calloc(1, sizeof(struct timeval) * num);
+    set->result    = calloc(1, sizeof(double) * num);
+    set->running   = calloc(1, sizeof(int) * num);
+    set->writable  = calloc(1, sizeof(int) * num);
 
     return perf_set;
 }

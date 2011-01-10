@@ -40,11 +40,9 @@
 #define LHASH_CAST
 #endif /* LHASH_OF */
 
-typedef LHASH_NODE hip_list_t;
-
 /**
  * list_entry - get the struct for this entry
- * @param ptr the &hip_list_t pointer.
+ * @param ptr the &LHASH_NODE pointer.
  */
 #define list_entry(ptr) (ptr->data)
 

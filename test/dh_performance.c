@@ -475,8 +475,7 @@ int main(int argc, char **argv)
         dhp_start_benchmark(&bench_time);
         for (i = 0; i < sw_bench_loops; i++) {
             sig_len = RSA_size(rsa_key_pool[i % sw_create_rsa]);
-            rsa_sig_pool[i] = malloc(sig_len);
-            memset(rsa_sig_pool[i], 0, sig_len);
+            rsa_sig_pool[i] = calloc(1, sig_len);
             ctx = BN_CTX_new();
             rsa_key_pool[i % sw_create_rsa]->iqmp = BN_mod_inverse(NULL, rsa_key_pool[i % sw_create_rsa]->p, rsa_key_pool[i % sw_create_rsa]->q, ctx);
 

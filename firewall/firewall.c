@@ -185,7 +185,7 @@ static void print_usage(void)
     printf("      -V = print version information and exit\n");
     printf("      -d = debugging output\n");
     printf("      -v = verbose output\n");
-    printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authed HIP traffic)\n");
+    printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authenticated HIP traffic)\n");
     printf("      -F = accept all HIP traffic, deactivate HIP traffic filtering\n");
     printf("      -H = drop all non-HIP traffic (default: accept non-HIP traffic)\n");
     printf("      -b = fork the firewall to background\n");
@@ -554,7 +554,6 @@ int hip_fw_init_esp_relay(void)
         restore_accept_hip_esp_traffic = 1;
 
         firewall_init_filter_traffic();
-        hip_fw_init_esp_prot_conntrack();
     }
 
     return err;
@@ -901,7 +900,7 @@ static int filter_hip(const struct in6_addr *ip6_src,
                       struct hip_fw_context *ctx)
 {
     // complete rule list for hook (== IN / OUT / FORWARD)
-    struct dlist *list  = read_rules(hook);
+    struct dlist *list  = get_rule_list(hook);
     struct rule *rule   = NULL;
     // assume match for current rule
     int match           = 1, print_addr = 0;

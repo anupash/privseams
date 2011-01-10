@@ -43,6 +43,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <openssl/lhash.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -276,7 +277,7 @@ static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
     int start          = 0;
     char ip_str[40];     // buffer for one IP address
     char ips_str[1024] = "";     // list of IP addresses
-    hip_list_t *item, *tmp_hip_list_t;
+    LHASH_NODE *item, *tmp;
     int i;
     char hit[INET6_ADDRSTRLEN + 2];
 
@@ -289,7 +290,7 @@ static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
     hip_convert_hit_to_str(&entry->lhi.hit, NULL, hit);
 
     /* make space-separated list of IP addresses in ips_str */
-    list_for_each_safe(item, tmp_hip_list_t, addresses, i) {
+    list_for_each_safe(item, tmp, addresses, i) {
         struct netdev_address *n = list_entry(item);
 
         if (netdev_address_to_str(n, ip_str, sizeof(ip_str)) == NULL) {

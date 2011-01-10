@@ -129,9 +129,8 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
     memset(iov, 0, sizeof(struct iovec));
     memset(&dst6, 0, sizeof(dst6));
 
-    icmp_pkt         = malloc(HIP_MAX_ICMP_PACKET);
+    icmp_pkt         = calloc(1, HIP_MAX_ICMP_PACKET);
     HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
-    memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
 
     chdr             = (struct cmsghdr *) cmsgbuf;
     pkti             = (struct inet6_pktinfo *) CMSG_DATA(chdr);
@@ -269,24 +268,20 @@ static int hip_icmp_recvmsg(int sockfd)
     struct timeval *stval  = NULL, *rtval = NULL, *ptr = NULL;
 
     /* malloc what you need */
-    stval   = malloc(sizeof(struct timeval));
-    HIP_IFEL((!stval), -1, "Malloc for stval failed\n");
-    rtval   = malloc(sizeof(struct timeval));
-    HIP_IFEL((!rtval), -1, "Malloc for rtval failed\n");
-    src     = malloc(sizeof(struct in6_addr));
-    HIP_IFEL((!src), -1, "Malloc for dst6 failed\n");
-    dst     = malloc(sizeof(struct in6_addr));
-    HIP_IFEL((!dst), -1, "Malloc for dst failed\n");
+    stval   = calloc(1, sizeof(struct timeval));
+    HIP_IFEL((!stval), -1, "calloc for stval failed\n");
+    rtval   = calloc(1, sizeof(struct timeval));
+    HIP_IFEL((!rtval), -1, "calloc for rtval failed\n");
+    src     = calloc(1, sizeof(struct in6_addr));
+    HIP_IFEL((!src), -1, "calloc for dst6 failed\n");
+    dst     = calloc(1, sizeof(struct in6_addr));
+    HIP_IFEL((!dst), -1, "calloc for dst failed\n");
 
     /* cast */
     chdr    = (struct cmsghdr *) cmsgbuf;
     pktinfo = (struct inet6_pktinfo *) CMSG_DATA(chdr);
 
     /* clear memory */
-    memset(stval, 0, sizeof(struct timeval));
-    memset(rtval, 0, sizeof(struct timeval));
-    memset(src, 0, sizeof(struct in6_addr));
-    memset(dst, 0, sizeof(struct in6_addr));
     memset(&src_sin6, 0, sizeof(struct sockaddr_in6));
     memset(&iov, 0, sizeof(&iov));
     memset(&iovbuf, 0, sizeof(iovbuf));
@@ -445,6 +440,8 @@ int hip_heartbeat_init(void)
     int err = 0, on = 1;
     struct icmp6_filter filter;
     int *icmpsockfd = &hip_icmp_sock;
+
+    HIP_INFO("Initializing heartbeat extension\n");
 
     *icmpsockfd       = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
     set_cloexec_flag(*icmpsockfd, 1);

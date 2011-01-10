@@ -44,6 +44,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <openssl/aes.h>
+#include <openssl/lhash.h>
 #include <openssl/rand.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
@@ -530,7 +531,7 @@ out_err:
  */
 static struct hip_host_id_entry *hip_return_first_rsa(void)
 {
-    hip_list_t *curr, *iter;
+    LHASH_NODE *curr, *iter;
     struct hip_host_id_entry *tmp = NULL;
     int c;
     uint16_t algo                 = 0;
@@ -578,7 +579,7 @@ static int hip_init_host_ids(void)
 
     /* Create default keys if necessary. */
 
-    if (stat(HIPL_SYSCONFDIR DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX,
+    if (stat(DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX,
              &status) && errno == ENOENT) {
         HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
                                               NULL, NULL, RSA_KEY_DEFAULT_BITS,

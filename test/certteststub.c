@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
             not_after += HIP_CERT_DAY * atoi(item->value);
         }
     }
-    hip_cert_free_conf(conf);
+    NCONF_free(conf);
 
     hip_cert_spki_create_cert(cert,
                               "hit", defhit,
@@ -183,7 +183,7 @@ skip_spki:
             }
         }
     }
-    hip_cert_free_conf(conf);
+    NCONF_free(conf);
     len = hip_cert_x509v3_request_certificate(defhit, der_cert);
 
     /** Now send it back for the verification */

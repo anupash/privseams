@@ -31,8 +31,8 @@
  */
 
 #include <math.h>
-#include <stdint.h>
 #include <sys/time.h>
+#include <stdlib.h>
 
 #include "debug.h"
 #include "ife.h"

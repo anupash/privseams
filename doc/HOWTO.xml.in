@@ -347,7 +347,7 @@
     <para>
       Note: the HIP configuration files are located in @sysconfdir@ with
       the current set of options for configure. In contrast, the prebuilt
-      rpm/deb binaries store the HIP configuration files in /etc/hip
+      rpm/deb binaries store the HIP configuration files in the /etc/hip
       directory.
     </para>
     <para>

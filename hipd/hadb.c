@@ -66,6 +66,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <openssl/dsa.h>
+#include <openssl/lhash.h>
 #include <openssl/rsa.h>
 
 #include "lib/core/builder.h"
@@ -95,7 +96,6 @@
 #include "netdev.h"
 #include "oppdb.h"
 #include "output.h"
-#include "user_ipsec_sadb_api.h"
 #include "hadb.h"
 
 
@@ -286,7 +286,7 @@ struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit,
  */
 struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
     struct hip_host_id_entry *e;
     struct hip_hadb_state *entry = NULL;
     hip_hit_t our_hit;
@@ -705,10 +705,9 @@ static int hip_hadb_init_entry(struct hip_hadb_state *entry)
     get_random_bytes(&entry->spi_inbound_current,
                      sizeof(entry->spi_inbound_current));
 
-    HIP_IFE(!(entry->hip_msg_retrans.buf = malloc(HIP_MAX_NETWORK_PACKET)),
+    HIP_IFE(!(entry->hip_msg_retrans.buf = calloc(1, HIP_MAX_NETWORK_PACKET)),
             -ENOMEM);
     entry->hip_msg_retrans.count = 0;
-    memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
 
     /* Initialize module states */
     entry->hip_modular_state = lmod_init_state();
@@ -728,11 +727,9 @@ struct hip_hadb_state *hip_hadb_create_state(void)
 {
     struct hip_hadb_state *entry = NULL;
 
-    if (!(entry = malloc(sizeof(struct hip_hadb_state)))) {
+    if (!(entry = calloc(1, sizeof(struct hip_hadb_state)))) {
         return NULL;
     }
-
-    memset(entry, 0, sizeof(struct hip_hadb_state));
 
     hip_hadb_init_entry(entry);
 
@@ -856,7 +853,7 @@ out_err:
  */
 static void hip_hadb_delete_state(struct hip_hadb_state *ha)
 {
-    hip_list_t *item = NULL, *tmp = NULL;
+    LHASH_NODE *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr_li = NULL;
     int i;
 
@@ -1081,8 +1078,8 @@ int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our)
     default:
         err = -1;
     }
-    err = hip_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100);
-    HIP_IFEL(err, err, "Unable to digest the HIT out of public key.");
+    HIP_IFEL(hip_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100),
+             -1, "Unable to digest the HIT out of public key.");
 
 out_err:
     if (err) {
@@ -1114,7 +1111,7 @@ void hip_init_hadb(void)
  *       for all controls.
  */
 void hip_hadb_set_local_controls(struct hip_hadb_state *entry,
-                                 hip_controls_t mask)
+                                 hip_controls mask)
 {
     if (entry != NULL) {
         switch (mask) {
@@ -1144,7 +1141,7 @@ void hip_hadb_set_local_controls(struct hip_hadb_state *entry,
  *       for all controls.
  */
 void hip_hadb_set_peer_controls(struct hip_hadb_state *entry,
-                                hip_controls_t mask)
+                                hip_controls mask)
 {
     if (entry != NULL) {
         switch (mask) {
@@ -1171,7 +1168,7 @@ void hip_hadb_set_peer_controls(struct hip_hadb_state *entry,
 }
 
 void hip_hadb_cancel_local_controls(struct hip_hadb_state *entry,
-                                    hip_controls_t mask)
+                                    hip_controls mask)
 {
     if (entry != NULL) {
         entry->local_controls &= (~mask);
@@ -1236,7 +1233,7 @@ int hip_for_each_ha(int (*func)(struct hip_hadb_state *entry, void *opaq),
 {
     int i = 0, fail = 0;
     struct hip_hadb_state *this;
-    hip_list_t *item, *tmp;
+    LHASH_NODE *item, *tmp;
 
     if (!func) {
         return -EINVAL;
@@ -1367,7 +1364,7 @@ struct hip_hadb_state *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_
 {
     int i            = 0;
     struct hip_hadb_state *this   = NULL, *result = NULL;
-    hip_list_t *item = NULL, *tmp = NULL;     //
+    LHASH_NODE *item = NULL, *tmp = NULL;     //
 
     HIP_LOCK_HT(&hadb_hit);
     list_for_each_safe(item, tmp, hadb_hit, i)
@@ -1483,7 +1480,7 @@ int hip_generate_peer_lsi(hip_lsi_t *lsi)
 struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
                                                         hip_lsi_t *lsi_dst)
 {
-    hip_list_t *item, *aux;
+    LHASH_NODE *item, *aux;
     struct hip_hadb_state *tmp;
     int i;
 
@@ -1509,7 +1506,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
  */
 struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi_dst)
 {
-    hip_list_t *item, *aux;
+    LHASH_NODE *item, *aux;
     struct hip_hadb_state *tmp;
     int i;
 

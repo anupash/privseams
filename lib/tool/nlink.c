@@ -1274,8 +1274,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 
     if (ip_is_v4 && lsi_total > 0) {
         size_dev = sizeof(dev) + sizeof(label);
-        res      = malloc(size_dev + 1);
-        memset(res, '\0', size_dev + 1);
+        res      = calloc(1, size_dev + 1);
         strcat(res, dev);
         strcat(res, label);
         addattr_l(&req.n, sizeof(req), IFA_LABEL, res,
@@ -1397,8 +1396,7 @@ int set_up_device(const char *dev, int up)
         for (total_add = lsi_total; total_add > 0; total_add--) {
             sprintf(label, ":%d", total_add);
             size_dev = sizeof(dev) + sizeof(label);
-            res      = malloc(size_dev + 1);
-            memset(res, '\0', size_dev + 1);
+            res      = calloc(1,size_dev + 1);
             strcat(strcat(res, dev), label);
             err      = do_chflags(res, flags, mask);
             free(res);
