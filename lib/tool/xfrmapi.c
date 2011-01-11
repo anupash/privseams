@@ -674,29 +674,23 @@ int hip_flush_all_sa(void)
 void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
                    const int direction, struct hip_hadb_state *entry)
 {
-    in_port_t sport, dport;
-
     // Ignore the dst_addr, because xfrm accepts only one address.
-    if (direction == HIP_SPI_DIRECTION_OUT) {
-        sport = entry->local_udp_port;
-        dport = entry->peer_udp_port;
+    if (direction == HIP_SPI_DIRECTION_OUT && entry->outbound_sa_count > 0) {
+        hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, AF_INET6,
+                              entry->local_udp_port, entry->peer_udp_port);
         entry->outbound_sa_count--;
-        if (entry->outbound_sa_count < 0) {
-            HIP_ERROR("Warning: out sa count negative\n");
-            entry->outbound_sa_count = 0;
-        }
-    } else {
-        sport = entry->peer_udp_port;
-        dport = entry->local_udp_port;
-        entry->inbound_sa_count--;
-        if (entry->inbound_sa_count < 0) {
-            HIP_ERROR("Warning: in sa count negative\n");
-            entry->inbound_sa_count = 0;
-        }
-    }
 
-    hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, AF_INET6,
-                          sport, dport);
+        HIP_DEBUG("outbound IPsec SA deleted\n");
+    } else if (direction == HIP_SPI_DIRECTION_IN &&
+               entry->inbound_sa_count > 0) {
+        hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, AF_INET6,
+                              entry->peer_udp_port, entry->local_udp_port);
+        entry->inbound_sa_count--;
+
+        HIP_DEBUG("inbound IPsec SA deleted\n");
+    } else {
+        HIP_DEBUG("No IPsec SA set up yet\n");
+    }
 }
 
 /**
