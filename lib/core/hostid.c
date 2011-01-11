@@ -288,10 +288,10 @@ int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
            sizeof(host_id_pub) - sizeof(host_id_pub.key) - sizeof(host_id_pub.hostname));
     /* copy the key rr
      * the size of the key rr has the size of the public key + 2 bytes for the curve identifier (see RFC5201-bis 5.2.8.)*/
-    memcpy(host_id_pub.key, host_id->key, key_lens.Y_len + 2);
+    memcpy(host_id_pub.key, host_id->key, key_lens.Y_len + HIP_CURVE_ID_LENGTH);
     /* set the hi length
      * the hi length is the length of the key rr data + the key rr header */
-    host_id_pub.hi_length = htons(key_lens.Y_len + 2 + sizeof(struct hip_host_id_key_rdata));
+    host_id_pub.hi_length = htons(key_lens.Y_len + HIP_CURVE_ID_LENGTH + sizeof(struct hip_host_id_key_rdata));
 
     hip_set_param_contents_len((struct hip_tlv_common *) &host_id_pub, sizeof(struct hip_host_id)-sizeof(struct hip_tlv_common));
 
@@ -625,7 +625,7 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const 
     HIP_IFEL(!EC_KEY_set_group(ret, group),
              -1, "Failed setting the group for key.\n");
 
-    HIP_IFEL(!EC_POINT_oct2point(group, pub_key, host_id->key+2, key_lens.Y_len, NULL),
+    HIP_IFEL(!EC_POINT_oct2point(group, pub_key, host_id->key + HIP_CURVE_ID_LENGTH, key_lens.Y_len, NULL),
              -1, "Failed deserializing public key.\n");
 
     HIP_IFEL(!EC_KEY_set_public_key(ret, pub_key),
@@ -633,7 +633,7 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const 
 
     /* Build private key from key rr */
     if (is_priv) {
-        HIP_IFEL(!(priv_key = BN_bin2bn(host_id->key + 2 + key_lens.Y_len, key_lens.z_len, priv_key)),
+        HIP_IFEL(!(priv_key = BN_bin2bn(host_id->key + HIP_CURVE_ID_LENGTH + key_lens.Y_len, key_lens.z_len, priv_key)),
                  -1, "Failed deserializing private key.\n");
         HIP_IFEL(!EC_KEY_set_private_key(ret, priv_key),
                  -1, "Failed setting private key.\n");
@@ -1153,7 +1153,7 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
     if(!public) {
         priv_key_len = (pub_key_len - 1)/2;
     }
-    out_len = 2 + pub_key_len + priv_key_len;
+    out_len = HIP_CURVE_ID_LENGTH + pub_key_len + priv_key_len;
     HIP_IFEL(!(buffer = malloc(out_len)),
              -ENOMEM, "Could not allocate memory for serialization of ECDSA key.\n");
 
@@ -1164,15 +1164,20 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
     HIP_IFEL(curveid == UNSUPPORTED_CURVE,
              -1, "Curve is not supported.\n");
     curveid = htons(curveid);
-    memcpy(buffer, &curveid, 2);
+    memcpy(buffer, &curveid, HIP_CURVE_ID_LENGTH);
 
     /* serialize public key */
-    HIP_IFEL(!EC_POINT_point2oct(EC_KEY_get0_group(ecdsa), EC_KEY_get0_public_key(ecdsa), EC_KEY_get_conv_form(ecdsa), buffer + 2, out_len, NULL),
+    HIP_IFEL(!EC_POINT_point2oct(EC_KEY_get0_group(ecdsa),
+                                 EC_KEY_get0_public_key(ecdsa),
+                                 EC_KEY_get_conv_form(ecdsa),
+                                 buffer + HIP_CURVE_ID_LENGTH,
+                                 out_len,
+                                 NULL),
              -1, "Failed to serialize public key key.\n");
 
     /* serialize private key */
     if(!public) {
-        bn2bin_safe(priv_key, buffer+2+pub_key_len, priv_key_len);
+        bn2bin_safe(priv_key, buffer + HIP_CURVE_ID_LENGTH + pub_key_len, priv_key_len);
     }
 
 out_err:

@@ -91,10 +91,10 @@ static struct hip_host_id *hip_get_ecdsa_public_key(const struct hip_host_id_pri
     memcpy(host_id_pub, host_id, sizeof(struct hip_host_id) - sizeof(host_id_pub->key) - sizeof(host_id_pub->hostname));
     /* copy the key rr
      * the size of the key rr has the size of the public key + 2 bytes for the curve identifier (see RFC5201-bis 5.2.8.)*/
-    memcpy(host_id_pub->key, host_id->key, key_lens.Y_len + 2);
+    memcpy(host_id_pub->key, host_id->key, key_lens.Y_len + HIP_CURVE_ID_LENGTH);
     /* set the hi length
      * the hi length is the length of the key rr data + the key rr header */
-    host_id_pub->hi_length = htons(key_lens.Y_len + 2 + sizeof(struct hip_host_id_key_rdata));
+    host_id_pub->hi_length = htons(key_lens.Y_len + HIP_CURVE_ID_LENGTH + sizeof(struct hip_host_id_key_rdata));
 
     hip_set_param_contents_len((struct hip_tlv_common *) host_id_pub,
                                sizeof(struct hip_host_id) - sizeof(struct hip_tlv_common));

@@ -368,6 +368,7 @@
 #define HIP_ANY_ALGO                  -1
 
 /* Elliptic curves */
+#define HIP_CURVE_ID_LENGTH           2
 enum hip_cuve_id {
     UNSUPPORTED_CURVE,
     NIST_ECDSA_256,
