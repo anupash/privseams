@@ -50,7 +50,7 @@ char *getwithoutnewline(char *buffer, int count, FILE *f)
 void extractsubstrings(char *string, struct list *list)
 {
     char *sub_string;
-    char delims[] = " \t";
+    char  delims[] = " \t";
 
     sub_string = strtok(string, delims);
 
@@ -86,8 +86,8 @@ void initlist(struct list *ilist)
 void insert(struct list *ilist, char *data)
 {
     struct listitem *new;
-    new         = malloc(sizeof(struct listitem));
-    new->next   = ilist->head;
+    new       = malloc(sizeof(struct listitem));
+    new->next = ilist->head;
     strncpy(new->data, data, MAX_ITEM_LEN);
     ilist->head = new;
 }
@@ -101,7 +101,7 @@ void insert(struct list *ilist, char *data)
 int length(struct list *ilist)
 {
     struct listitem *ptr;
-    int count = 1;
+    int              count = 1;
 
     if (!ilist->head) {
         return 0;
@@ -144,7 +144,7 @@ void destroy(struct list *ilist)
 char *getitem(struct list *ilist, int n)
 {
     struct listitem *ptr;
-    int count = 0;
+    int              count = 0;
 
     if (!ilist->head) {
         return NULL;
@@ -173,7 +173,7 @@ char *getitem(struct list *ilist, int n)
  */
 int maxof(int num_args, ...)
 {
-    int max, i, a;
+    int     max, i, a;
     va_list ap;
 
     va_start(ap, num_args);

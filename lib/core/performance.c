@@ -59,7 +59,7 @@ struct perf_set *hip_perf_create(int num)
 {
     /* create the perf set struct*/
     struct perf_set *set;
-    set            = calloc(1, sizeof(struct perf_set));
+    set = calloc(1, sizeof(struct perf_set));
 
     set->num_files = num;
 
@@ -94,7 +94,7 @@ int hip_perf_set_name(struct perf_set *set, int slot, const char *name)
     HIP_IFEL(set->names[slot],  -1, "Slot is already named\n");
     HIP_IFEL(slot >= set->num_files, -1, "Slot %d does not exist\n", slot);
 
-    len                   = strlen(name);
+    len              = strlen(name);
     set->names[slot] = malloc(len + 1);
     memcpy(set->names[slot], name, len + 1);
 out_err:
@@ -172,8 +172,8 @@ void hip_perf_stop_benchmark(struct perf_set *set, int slot)
     struct timeval now;
     if (set->num_files > slot && set->running[slot] == 1) {
         gettimeofday(&now, NULL);
-        set->result[slot]   = ((now.tv_sec - set->times[slot].tv_sec) * 1000000 +
-                                    (now.tv_usec - set->times[slot].tv_usec)) / 1000000.0;
+        set->result[slot] = ((now.tv_sec - set->times[slot].tv_sec) * 1000000 +
+                             (now.tv_usec - set->times[slot].tv_usec)) / 1000000.0;
         set->running[slot]  = 0;
         set->writable[slot] = 1;
     }

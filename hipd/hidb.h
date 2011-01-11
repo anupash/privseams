@@ -73,13 +73,13 @@ struct hip_host_id_entry {
     struct hip_lhi      lhi;
     hip_lsi_t           lsi;
     struct hip_host_id *host_id;     /* allocated dynamically */
-    void *              private_key; /* RSA or DSA */
+    void               *private_key; /* RSA or DSA */
     struct hip_r1entry *r1;     /* precreated R1s */
     /* Handler to call after insert with an argument, return 0 if OK*/
-    int                 (*insert)(struct hip_host_id_entry *, void **arg);
+    int (*insert)(struct hip_host_id_entry *, void **arg);
     /* Handler to call before remove with an argument, return 0 if OK*/
-    int                 (*remove)(struct hip_host_id_entry *, void **arg);
-    void *              arg;
+    int   (*remove)(struct hip_host_id_entry *, void **arg);
+    void *arg;
 };
 
 /* Use this to point your target while accessing a database */

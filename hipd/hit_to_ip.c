@@ -110,8 +110,8 @@ static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, char *hostname, cons
     }
 
     const uint8_t *bytes = (const uint8_t *) hit->s6_addr;
-    char *cp             = hostname;
-    int i;     // no C99 :(
+    char          *cp    = hostname;
+    int            i; // no C99 :(
     for (i = 15; i >= 0; i--) {
         *cp++ = hex_digits[bytes[i] & 0x0f];
         *cp++ = '.';
@@ -138,12 +138,12 @@ static int hip_get_hit_to_ip_hostname(const hip_hit_t *hit, char *hostname, cons
 
 int hip_hit_to_ip(const hip_hit_t *hit, struct in6_addr *retval)
 {
-    struct addrinfo *rp     = NULL; // no C99 :(
-    char hit_to_ip_hostname[64 + HIT_TO_IP_ZONE_MAX_LEN + 1];
-    int found_addr          = 0;
-    struct addrinfo hints;
+    struct addrinfo *rp = NULL;     // no C99 :(
+    char             hit_to_ip_hostname[64 + HIT_TO_IP_ZONE_MAX_LEN + 1];
+    int              found_addr = 0;
+    struct addrinfo  hints;
     struct addrinfo *result = NULL;
-    int res;
+    int              res;
 
     if ((hit == NULL) || (retval == NULL)) {
         return -1;
@@ -163,7 +163,7 @@ int hip_hit_to_ip(const hip_hit_t *hit, struct in6_addr *retval)
     hints.ai_next      = NULL;
 
     /* getaddrinfo is too complex for DNS lookup, but let us use it now */
-    res                = getaddrinfo( hit_to_ip_hostname, NULL, &hints, &result );
+    res = getaddrinfo(hit_to_ip_hostname, NULL, &hints, &result);
     HIP_DEBUG("getaddrinfo(%s) returned %d\n", hit_to_ip_hostname, res);
 
     if (res != 0) {

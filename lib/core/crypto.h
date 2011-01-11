@@ -69,15 +69,15 @@
 #define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
 
 #ifdef OPENSSL_NO_SHA0
-# define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
+#define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
 #else
-# define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
+#define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
 #endif
 
 #ifdef OPENSSL_NO_SHA0
-# define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
+#define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
 #else
-# define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
+#define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
 #endif
 
 int ssl_rsa_verify(uint8_t *digest, uint8_t *public_key, uint8_t *signature, int pub_klen);

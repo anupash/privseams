@@ -62,10 +62,10 @@
  */
 int hip_build_locators_old(struct hip_common *msg)
 {
-    int err                                 = 0, i = 0, count = 0;
-    int addr_max;
-    struct netdev_address *n;
-    LHASH_NODE *item                        = NULL, *tmp = NULL;
+    int                                err = 0, i = 0, count = 0;
+    int                                addr_max;
+    struct netdev_address             *n;
+    LHASH_NODE                        *item = NULL, *tmp = NULL;
     struct hip_locator_info_addr_item *locs = NULL;
 
     if (address_count == 0) {

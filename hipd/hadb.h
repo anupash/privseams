@@ -104,7 +104,7 @@ int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 struct hip_hadb_state *hip_hadb_create_state(void);
 
-int hip_for_each_ha(int(func) (struct hip_hadb_state * entry, void *opaq),
+int hip_for_each_ha(int(func) (struct hip_hadb_state *entry, void *opaq),
                     void *opaque);
 
 /* next 2 functions are not called from outside but make sense and are

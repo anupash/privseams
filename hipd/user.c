@@ -95,7 +95,7 @@
 
 struct usr_msg_handle {
     uint16_t priority;
-    int    (*func_ptr)(struct hip_common *msg, struct sockaddr_in6 *src);
+    int      (*func_ptr)(struct hip_common *msg, struct sockaddr_in6 *src);
 };
 
 static struct hip_ll *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
@@ -113,7 +113,7 @@ static struct hip_ll *hip_user_msg_handles[HIP_MSG_ROOT_MAX];
 static int host_id_entry_to_hit_info(struct hip_host_id_entry *entry, void *msg)
 {
     struct hip_hit_info data;
-    int err = 0;
+    int                 err = 0;
 
     memcpy(&data.lhi, &entry->lhi, sizeof(struct hip_lhi));
     /* FIXME: algo is 0 in entry->lhi */
@@ -124,8 +124,8 @@ static int host_id_entry_to_hit_info(struct hip_host_id_entry *entry, void *msg)
                                       &data,
                                       HIP_PARAM_HIT_INFO,
                                       sizeof(data)),
-                                      -1,
-                                      "Error building parameter\n");
+             -1,
+             "Error building parameter\n");
 
 out_err:
     return err;
@@ -149,7 +149,7 @@ int hip_user_register_handle(const uint8_t msg_type,
                                                 struct sockaddr_in6 *src),
                              const uint16_t priority)
 {
-    int err = 0;
+    int                    err       = 0;
     struct usr_msg_handle *new_entry = NULL;
 
     HIP_IFEL(!(new_entry = malloc(sizeof(struct usr_msg_handle))),
@@ -160,9 +160,9 @@ int hip_user_register_handle(const uint8_t msg_type,
     new_entry->func_ptr = handle_func;
 
     hip_user_msg_handles[msg_type] =
-            lmod_register_function(hip_user_msg_handles[msg_type],
-                                   new_entry,
-                                   priority);
+        lmod_register_function(hip_user_msg_handles[msg_type],
+                               new_entry,
+                               priority);
     if (!hip_user_msg_handles[msg_type]) {
         HIP_ERROR("Error on registering a handle function.\n");
         err = -1;
@@ -197,7 +197,6 @@ int hip_user_run_handles(const uint8_t msg_type,
 
     while ((iter = hip_ll_iterate(hip_user_msg_handles[msg_type],
                                   iter))) {
-
         ((struct usr_msg_handle *) iter->ptr)->func_ptr(msg, src);
     }
 
@@ -219,7 +218,6 @@ void hip_user_uninit_handles(void)
         }
     }
 }
-
 
 /**
  * send a response message back to the origin
@@ -248,11 +246,11 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst)
 int hip_handle_user_msg(struct hip_common *msg,
                         struct sockaddr_in6 *src)
 {
-    const hip_hit_t *src_hit           = NULL, *dst_hit = NULL;
-    struct hip_hadb_state *entry       = NULL;
-    int err                            = 0, msg_type = 0, reti = 0;
-    int access_ok                      = 0, is_root = 0;
-    const struct hip_tlv_common *param = NULL;
+    const hip_hit_t             *src_hit   = NULL, *dst_hit = NULL;
+    struct hip_hadb_state       *entry     = NULL;
+    int                          err       = 0, msg_type = 0, reti = 0;
+    int                          access_ok = 0, is_root = 0;
+    const struct hip_tlv_common *param     = NULL;
 
     HIP_ASSERT(src->sin6_family == AF_INET6);
     HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -266,7 +264,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 
     msg_type = hip_get_msg_type(msg);
 
-    is_root  = ntohs(src->sin6_port) < 1024;
+    is_root = ntohs(src->sin6_port) < 1024;
     if (is_root) {
         access_ok = 1;
     } else if (!is_root &&
@@ -350,13 +348,13 @@ int hip_handle_user_msg(struct hip_common *msg,
                  "Error when setting daemon DEBUG status to NONE\n");
         break;
     case HIP_MSG_CONF_PUZZLE_NEW:
-        err     = hip_recreate_all_precreated_r1_packets();
+        err = hip_recreate_all_precreated_r1_packets();
         break;
     case HIP_MSG_CONF_PUZZLE_GET:
-        err     = hip_get_puzzle_difficulty_msg(msg);
+        err = hip_get_puzzle_difficulty_msg(msg);
         break;
     case HIP_MSG_CONF_PUZZLE_SET:
-        err     = hip_set_puzzle_difficulty_msg(msg);
+        err = hip_set_puzzle_difficulty_msg(msg);
         break;
     case HIP_MSG_CONF_PUZZLE_INC:
         dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
@@ -368,7 +366,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         break;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     case HIP_MSG_GET_PEER_HIT:
-        err     = hip_opp_get_peer_hit(msg, src);
+        err = hip_opp_get_peer_hit(msg, src);
         break;
 #endif
     case HIP_MSG_CERT_SPKI_VERIFY:
@@ -424,16 +422,16 @@ int hip_handle_user_msg(struct hip_common *msg,
          * the hip daemon wants either to register to a server for
          * additional services or it wants to cancel a registration.
          * Cancellation is identified with a zero lifetime. */
-        const struct hip_reg_request *reg_req     = NULL;
-        struct hip_pending_request   *pending_req = NULL;
-        const uint8_t *reg_types              = NULL;
-        const struct in6_addr *dst_ip         = NULL;
-        int i                                 = 0, type_count = 0;
-        int opp_mode                          = 0;
-        int add_to_global                     = 0;
-        struct sockaddr_in6 sock_addr6;
-        struct sockaddr_in sock_addr;
-        struct in6_addr server_addr, hitr;
+        const struct hip_reg_request *reg_req       = NULL;
+        struct hip_pending_request   *pending_req   = NULL;
+        const uint8_t                *reg_types     = NULL;
+        const struct in6_addr        *dst_ip        = NULL;
+        int                           i             = 0, type_count = 0;
+        int                           opp_mode      = 0;
+        int                           add_to_global = 0;
+        struct sockaddr_in6           sock_addr6;
+        struct sockaddr_in            sock_addr;
+        struct in6_addr               server_addr, hitr;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
         struct in6_addr *hit_local;
 #endif
@@ -474,12 +472,12 @@ int hip_handle_user_msg(struct hip_common *msg,
             HIP_DEBUG("No HIT parameter found from the user " \
                       "message. Trying opportunistic mode \n");
             opp_mode = 1;
-        } else if (dst_ip == NULL)   {
+        } else if (dst_ip == NULL) {
             HIP_ERROR("No IPV6 parameter found from the user " \
                       "message.\n");
             err = -1;
             goto out_err;
-        } else if (reg_req == NULL)   {
+        } else if (reg_req == NULL) {
             HIP_ERROR("No REG_REQUEST parameter found from the " \
                       "user message.\n");
             err = -1;
@@ -507,7 +505,7 @@ int hip_handle_user_msg(struct hip_common *msg,
             hit_local = malloc(sizeof(struct in6_addr));
             HIP_IFEL(hip_get_default_hit(hit_local), -1,
                      "Error retrieving default HIT \n");
-            entry     = hip_opp_add_map(dst_ip, hit_local, src);
+            entry = hip_opp_add_map(dst_ip, hit_local, src);
         }
 #endif
         reg_types  = reg_req->reg_type;
@@ -569,7 +567,6 @@ int hip_handle_user_msg(struct hip_common *msg,
                 hip_add_address_to_list((struct sockaddr *) &sock_addr,
                                         0,
                                         HIP_FLAG_CONTROL_TRAFFIC_ONLY);
-
             } else {
                 memset(&sock_addr6, 0, sizeof(sock_addr6));
                 sock_addr6.sin6_family = AF_INET6;
@@ -780,7 +777,7 @@ int hip_handle_user_msg(struct hip_common *msg,
                                              HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
         } else if (dst_hit) {         /* Assign a new LSI */
             struct hip_common msg_tmp;
-            hip_lsi_t lsi;
+            hip_lsi_t         lsi;
 
             memset(&msg_tmp, 0, sizeof(msg_tmp));
             hip_generate_peer_lsi(&lsi);
@@ -802,9 +799,9 @@ int hip_handle_user_msg(struct hip_common *msg,
             HIP_DEBUG("Setting local NAT port\n");
             hip_set_local_nat_udp_port(nat_port->port);
             /* We need to recreate only the input socket to bind to the new
-               port. Output port must be left intact as it is a raw socket */
+             * port. Output port must be left intact as it is a raw socket */
             close(hip_nat_sock_input_udp);
-            hip_nat_sock_input_udp  = 0;
+            hip_nat_sock_input_udp = 0;
             hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0);
         } else {
             HIP_DEBUG("Setting peer NAT port\n");
@@ -865,10 +862,10 @@ int hip_handle_user_msg(struct hip_common *msg,
         break;
     case HIP_MSG_MAP_ID_TO_ADDR:
     {
-        const struct in6_addr *id = NULL;
-        const hip_hit_t *hit      = NULL;
-        hip_lsi_t lsi;
-        struct in6_addr addr;
+        const struct in6_addr *id  = NULL;
+        const hip_hit_t       *hit = NULL;
+        hip_lsi_t              lsi;
+        struct in6_addr        addr;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR)), -1);
         HIP_IFE(!(id = hip_get_param_contents_direct(param)), -1);
@@ -904,7 +901,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         break;
     case HIP_MSG_LSI_TO_HIT:
     {
-        const hip_lsi_t *lsi;
+        const hip_lsi_t       *lsi;
         struct hip_hadb_state *ha;
 
         HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1);

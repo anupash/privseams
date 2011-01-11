@@ -75,10 +75,10 @@ volatile sig_atomic_t cache_invalidation_flag = 1;
  */
 static uint8_t *cache = NULL;
 
-static const unsigned int CACHE_SIZE_PROTOS = 2;
-static const unsigned int CACHE_SIZE_PORTS  = 1 << (sizeof(in_port_t) * 8);
-static unsigned int cache_size_entries      = 0;
-static unsigned int cache_size_bytes        = 0;
+static const unsigned int CACHE_SIZE_PROTOS  = 2;
+static const unsigned int CACHE_SIZE_PORTS   = 1 << (sizeof(in_port_t) * 8);
+static unsigned int       cache_size_entries = 0;
+static unsigned int       cache_size_bytes   = 0;
 
 /**
  * Allocate and initializes the cache resources.
@@ -93,17 +93,17 @@ static int init_cache(void)
 {
     HIP_ASSERT(!cache);
 
-    cache_size_entries  = CACHE_SIZE_PROTOS * CACHE_SIZE_PORTS;
-    cache_size_bytes    = cache_size_entries * sizeof(*cache);
+    cache_size_entries = CACHE_SIZE_PROTOS * CACHE_SIZE_PORTS;
+    cache_size_bytes   = cache_size_entries * sizeof(*cache);
 
     // check that the conversion used in the cache from enum hip_port_binding
     // to uint8_t is consistent
-    HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == (enum hip_port_binding)(uint8_t)HIP_PORT_INFO_IPV6UNBOUND);
-    HIP_ASSERT(HIP_PORT_INFO_IPV6BOUND == (enum hip_port_binding)(uint8_t)HIP_PORT_INFO_IPV6BOUND);
+    HIP_ASSERT(HIP_PORT_INFO_IPV6UNBOUND == (enum hip_port_binding) (uint8_t) HIP_PORT_INFO_IPV6UNBOUND);
+    HIP_ASSERT(HIP_PORT_INFO_IPV6BOUND == (enum hip_port_binding) (uint8_t) HIP_PORT_INFO_IPV6BOUND);
 
     /* We zero the cache on allocation assuming that HIP_PORT_INFO_UNKNOWN
-    is 0 and thus the whole cache initially has that value. */
-    HIP_ASSERT((uint8_t)HIP_PORT_INFO_UNKNOWN == 0);
+     * is 0 and thus the whole cache initially has that value. */
+    HIP_ASSERT((uint8_t) HIP_PORT_INFO_UNKNOWN == 0);
     cache = calloc(1, cache_size_bytes);
     if (cache) {
         return 0;
@@ -146,8 +146,8 @@ static void uninit_cache(void)
 static inline unsigned int get_cache_index(const uint8_t protocol,
                                            const uint16_t port)
 {
-    unsigned int index              = 0;
-    unsigned int protocol_offset    = 0;
+    unsigned int index           = 0;
+    unsigned int protocol_offset = 0;
 
     // determine the offset into the first (protocol) dimension
     if (IPPROTO_TCP == protocol) {
@@ -190,7 +190,7 @@ static void set_cache_entry(const uint8_t protocol,
         const unsigned int index = get_cache_index(protocol, port);
 
         // convert the port binding to the cache storage type
-        const uint8_t value = (uint8_t)binding;
+        const uint8_t value = (uint8_t) binding;
 
         cache[index] = value;
     }
@@ -225,7 +225,7 @@ static enum hip_port_binding get_cache_entry(const uint8_t protocol,
     if (cache) {
         const unsigned int index = get_cache_index(protocol, port);
 
-        binding = (enum hip_port_binding)cache[index];
+        binding = (enum hip_port_binding) cache[index];
     }
 
     return binding;
@@ -243,11 +243,6 @@ static void invalidate_cache(void)
         memset(cache, HIP_PORT_INFO_UNKNOWN, cache_size_bytes);
     }
 }
-
-
-
-
-
 
 static struct hip_file_buffer tcp6_file;
 static struct hip_file_buffer udp6_file;
@@ -321,11 +316,11 @@ static int hip_port_bindings_reload(void)
 static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t protocol,
                                                              const uint16_t port)
 {
-    const unsigned int PORT_STR_OFFSET  = 39;
-    const unsigned int PORT_STR_LEN     = 4;
-    enum hip_port_binding result        = HIP_PORT_INFO_IPV6UNBOUND;
-    const struct hip_mem_area *ma       = NULL;
-    char *line;
+    const unsigned int         PORT_STR_OFFSET = 39;
+    const unsigned int         PORT_STR_LEN    = 4;
+    enum hip_port_binding      result          = HIP_PORT_INFO_IPV6UNBOUND;
+    const struct hip_mem_area *ma              = NULL;
+    char                      *line;
     // the files /proc/net/{udp,tcp}6 are line-based and the line number of the
     // port to look up is not known in advance
     // -> use a parser that lets us iterate over the lines in the files
@@ -353,11 +348,11 @@ static enum hip_port_binding hip_port_bindings_get_from_proc(const uint8_t proto
 
     // is the current line valid and is it long enough to hold a port binding?
     while (line && ma->end > (line + PORT_STR_OFFSET + PORT_STR_LEN)) {
-        const unsigned int PORT_BASE_HEX    = 16;
-        unsigned long proc_port             = 0;
+        const unsigned int PORT_BASE_HEX = 16;
+        unsigned long      proc_port     = 0;
         // note that strtoul() is about 10 times faster than sscanf().
-        errno       = 0;
-        proc_port   = strtoul(line + PORT_STR_OFFSET, NULL, PORT_BASE_HEX);
+        errno     = 0;
+        proc_port = strtoul(line + PORT_STR_OFFSET, NULL, PORT_BASE_HEX);
         if (0 == errno) {
             if (proc_port == port) {
                 result = HIP_PORT_INFO_IPV6BOUND;

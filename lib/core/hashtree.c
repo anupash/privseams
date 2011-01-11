@@ -97,9 +97,9 @@ struct hash_tree *htree_init(const int num_data_blocks,
                              struct hash_tree *link_tree,
                              const int hierarchy_level)
 {
-    struct hash_tree *tree = NULL;
-    int tmp_length = 0, err = 0, i;
-    double loga = 0.0;
+    struct hash_tree *tree       = NULL;
+    int               tmp_length = 0, err = 0, i;
+    double            loga       = 0.0;
 
     HIP_ASSERT(num_data_blocks > 0);
     HIP_ASSERT(max_data_length > 0);
@@ -154,7 +154,7 @@ struct hash_tree *htree_init(const int num_data_blocks,
 
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 
-    tree->root            = NULL;
+    tree->root = NULL;
 
     // now we can init the secret array
     if (secret_length > 0) {
@@ -170,7 +170,7 @@ struct hash_tree *htree_init(const int num_data_blocks,
             }
 
             memset(&tree->secrets[num_data_blocks * secret_length], 0,
-                  secret_length * (tree->leaf_set_size - num_data_blocks));
+                   secret_length * (tree->leaf_set_size - num_data_blocks));
         } else {
             memset(tree->secrets, 0, secret_length * tree->leaf_set_size);
         }
@@ -326,11 +326,11 @@ int htree_calc_nodes(struct hash_tree *tree,
                      const htree_node_gen node_gen,
                      const struct htree_gen_args *gen_args)
 {
-    int level_width       = 0, i, err = 0;
+    int level_width = 0, i, err = 0;
     // first leaf to be used when calculating next tree level in bytes
-    int source_index      = 0;
-    int target_index      = 0;
-    unsigned char *secret = NULL;
+    int            source_index = 0;
+    int            target_index = 0;
+    unsigned char *secret       = NULL;
 
     HIP_ASSERT(tree != NULL);
     HIP_ASSERT(tree->is_open == 0);
@@ -382,7 +382,7 @@ int htree_calc_nodes(struct hash_tree *tree,
         }
 
         // next level has got half the elements
-        level_width  = level_width / 2;
+        level_width = level_width / 2;
 
         /* use target index of this level as new source field */
         source_index = target_index;
@@ -443,19 +443,19 @@ unsigned char *htree_get_branch(const struct hash_tree *tree,
                                 unsigned char *nodes,
                                 int *branch_length)
 {
-    int tree_level              = 0;
-    int level_width             = 0;
-    int source_index            = 0;
-    int sibling_offset          = 0;
-    int tmp_index               = 0;
-    int err                     = 0;
-    unsigned char *branch_nodes = NULL;
+    int            tree_level     = 0;
+    int            level_width    = 0;
+    int            source_index   = 0;
+    int            sibling_offset = 0;
+    int            tmp_index      = 0;
+    int            err            = 0;
+    unsigned char *branch_nodes   = NULL;
 
     HIP_ASSERT(tree != NULL);
     HIP_ASSERT(data_index >= 0 && data_index < tree->num_data_blocks);
 
     // use local (unconst) variable for tree traversal
-    tmp_index      = data_index;
+    tmp_index = data_index;
 
     // branch includes all elements excluding the root
     *branch_length = tree->depth * tree->node_length;
@@ -595,10 +595,10 @@ int htree_verify_branch(const unsigned char *root,
 {
     /* space for two nodes to be hashed together */
     unsigned char buffer[2 * root_length];
-    int num_nodes      = 0;
-    int sibling_offset = 0;
-    int tmp_index      = 0;
-    int err            = 0, i;
+    int           num_nodes      = 0;
+    int           sibling_offset = 0;
+    int           tmp_index      = 0;
+    int           err            = 0, i;
 
     HIP_ASSERT(root != NULL);
     HIP_ASSERT(root_length > 0);
@@ -683,10 +683,10 @@ int htree_leaf_generator(const unsigned char *data,
                          unsigned char *dst_buffer,
                          UNUSED const struct htree_gen_args *gen_args)
 {
-    int err                        = 0;
-    unsigned char buffer[data_length + secret_length];
-    const unsigned char *hash_data = NULL;
-    int hash_data_length           = 0;
+    int                  err = 0;
+    unsigned char        buffer[data_length + secret_length];
+    const unsigned char *hash_data        = NULL;
+    int                  hash_data_length = 0;
 
     if (secret && secret_length > 0) {
         memcpy(&buffer[0], data, data_length);

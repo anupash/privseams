@@ -106,7 +106,7 @@
 static int hip_verify_hmac(struct hip_common *buffer, uint16_t buf_len,
                            const uint8_t *hmac, void *hmac_key, int hmac_type)
 {
-    int err = 0;
+    int     err = 0;
     uint8_t hmac_res[HIP_AH_SHA_LEN];
 
     HIP_HEXDUMP("HMAC data", buffer, buf_len);
@@ -137,10 +137,10 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
                                    const struct hip_crypto_key *crypto_key,
                                    const hip_tlv parameter_type)
 {
-    int err               = 0, len = 0, orig_len = 0;
-    struct hip_crypto_key tmpkey;
-    const struct hip_hmac *hmac = NULL;
-    uint8_t orig_checksum      = 0;
+    int                    err = 0, len = 0, orig_len = 0;
+    struct hip_crypto_key  tmpkey;
+    const struct hip_hmac *hmac          = NULL;
+    uint8_t                orig_checksum = 0;
 
     HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 
@@ -149,7 +149,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
 
     /* hmac verification modifies the msg length temporarily, so we have
      * to restore the length */
-    orig_len      = hip_get_msg_total_len(msg);
+    orig_len = hip_get_msg_total_len(msg);
 
     /* hmac verification assumes that checksum is zero */
     orig_checksum = hip_get_msg_checksum(msg);
@@ -200,10 +200,10 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
                                    struct hip_crypto_key *key,
                                    struct hip_host_id *host_id)
 {
-    struct hip_crypto_key tmpkey;
+    struct hip_crypto_key  tmpkey;
     const struct hip_hmac *hmac;
-    struct hip_common *msg_copy = NULL;
-    int err                     = 0;
+    struct hip_common     *msg_copy = NULL;
+    int                    err      = 0;
 
     HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
 
@@ -214,7 +214,7 @@ static int hip_verify_packet_hmac2(struct hip_common *msg,
              "Packet contained no HMAC parameter\n");
     HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
 
-    memcpy( &tmpkey,  key, sizeof(tmpkey));
+    memcpy(&tmpkey,  key, sizeof(tmpkey));
 
     HIP_IFEL(hip_verify_hmac(msg_copy, hip_get_msg_total_len(msg_copy),
                              hmac->hmac_data, tmpkey.key,
@@ -241,19 +241,19 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
                                        uint64_t J,
                                        struct hip_dh_public_value **dhpv)
 {
-    char *dh_shared_key = NULL;
-    int hip_transf_length, hmac_transf_length;
-    int auth_transf_length, esp_transf_length, we_are_HITg = 0;
-    int hip_tfm, esp_tfm, err = 0, dh_shared_len = 1024;
-    struct hip_keymat_keymat km;
-    const struct hip_esp_info *esp_info;
-    char *keymat                       = NULL;
-    size_t keymat_len_min; /* how many bytes we need at least for the KEYMAT */
-    size_t keymat_len;     /* note SHA boundary */
+    char                        *dh_shared_key = NULL;
+    int                          hip_transf_length, hmac_transf_length;
+    int                          auth_transf_length, esp_transf_length, we_are_HITg = 0;
+    int                          hip_tfm, esp_tfm, err = 0, dh_shared_len = 1024;
+    struct hip_keymat_keymat     km;
+    const struct hip_esp_info   *esp_info;
+    char                        *keymat = NULL;
+    size_t                       keymat_len_min; /* how many bytes we need at least for the KEYMAT */
+    size_t                       keymat_len; /* note SHA boundary */
     const struct hip_tlv_common *param = NULL;
-    uint16_t esp_keymat_index, esp_default_keymat_index;
-    struct hip_diffie_hellman *dhf;
-    struct in6_addr *plain_local_hit   = NULL;
+    uint16_t                     esp_keymat_index, esp_default_keymat_index;
+    struct hip_diffie_hellman   *dhf;
+    struct in6_addr             *plain_local_hit = NULL;
 
     /* Perform light operations first before allocating memory or
      * using lots of CPU time */
@@ -261,13 +261,13 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
              -EINVAL,
              "Could not find HIP transform\n");
     HIP_IFEL((hip_tfm = hip_select_hip_transform(
-                               (const struct hip_hip_transform *) param)) == 0,
+                  (const struct hip_hip_transform *) param)) == 0,
              -EINVAL, "Could not select HIP transform\n");
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_TRANSFORM)),
              -EINVAL,
              "Could not find ESP transform\n");
     HIP_IFEL((esp_tfm = hip_select_esp_transform(
-                               (const struct hip_esp_transform *) param)) == 0,
+                  (const struct hip_esp_transform *) param)) == 0,
              -EINVAL, "Could not select proper ESP transform\n");
 
     hip_transf_length  = hip_transform_key_length(hip_tfm);
@@ -506,9 +506,9 @@ static int hip_packet_to_drop(struct hip_hadb_state *entry,
  */
 int hip_receive_control_packet(struct hip_packet_context *ctx)
 {
-    int err = 0;
+    int             err           = 0;
     struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
-    uint32_t type, state;
+    uint32_t        type, state;
 
     /* Debug printing of received packet information. All received HIP
      * control packets are first passed to this function. Therefore
@@ -539,12 +539,12 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
              -1,
              "Checking control message failed.\n");
 
-    type  = hip_get_msg_type(ctx->input_msg);
+    type = hip_get_msg_type(ctx->input_msg);
 
     /** @todo Check packet csum.*/
 
     ctx->hadb_entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
-                                                  &ctx->input_msg->hitr);
+                                           &ctx->input_msg->hitr);
 
     // Check if we need to drop the packet
     if (ctx->hadb_entry &&
@@ -560,8 +560,8 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     if (!ctx->hadb_entry &&
         (type == HIP_I1 || type == HIP_R1)) {
         ctx->hadb_entry =
-                hip_oppdb_get_hadb_entry_i1_r1(ctx->input_msg,
-                                               &ctx->src_addr);
+            hip_oppdb_get_hadb_entry_i1_r1(ctx->input_msg,
+                                           &ctx->src_addr);
     }
 #endif
 
@@ -627,7 +627,7 @@ out_err:
  */
 int hip_receive_udp_control_packet(struct hip_packet_context *ctx)
 {
-    int err = 0, type;
+    int                    err   = 0, type;
     struct hip_hadb_state *entry = NULL;
 
     type  = hip_get_msg_type(ctx->input_msg);
@@ -683,7 +683,7 @@ out_err:
  * @param *ctx Pointer to the packet context, containing all information for
  *             the packet handling (received message, source and destination
  *             address, the ports and the corresponding entry from the host
-               association database).
+ *             association database).
  *
  * @return zero on success, or negative error value on error.
  */
@@ -691,11 +691,11 @@ int hip_check_r1(RVS const uint8_t packet_type,
                  RVS const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
-    int err = 0, mask = HIP_PACKET_CTRL_ANON, len;
-    struct in6_addr daddr;
-    struct hip_host_id peer_host_id;
-    const struct hip_tlv_common *param     = NULL;
-    const char *str                        = NULL;
+    int                          err = 0, mask = HIP_PACKET_CTRL_ANON, len;
+    struct in6_addr              daddr;
+    struct hip_host_id           peer_host_id;
+    const struct hip_tlv_common *param = NULL;
+    const char                  *str   = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R1\n");
@@ -784,8 +784,8 @@ int hip_check_r1(RVS const uint8_t packet_type,
 #endif
     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
                                      ctx->input_msg),
-                                     -EINVAL,
-                                     "Verification of R1 signature failed\n");
+             -EINVAL,
+             "Verification of R1 signature failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_VERIFY\n");
     hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
@@ -808,7 +808,7 @@ out_err:
  * @param *ctx Pointer to the packet context, containing all information for
  *             the packet handling (received message, source and destination
  *             address, the ports and the corresponding entry from the host
-               association database).
+ *             association database).
  *
  * @return zero on success, or negative error value on error.
  *
@@ -824,14 +824,14 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int err                           = 0, retransmission = 0, written = 0;
-    uint64_t solved_puzzle            = 0, I = 0;
-    const struct hip_puzzle *pz             = NULL;
-    const struct hip_diffie_hellman *dh_req = NULL;
-    const struct hip_r1_counter *r1cntr     = NULL;
-    struct hip_dh_public_value *dhpv        = NULL;
-    const struct hip_locator *locator       = NULL;
-    uint16_t i2_mask = 0;
+    int                              err           = 0, retransmission = 0, written = 0;
+    uint64_t                         solved_puzzle = 0, I = 0;
+    const struct hip_puzzle         *pz            = NULL;
+    const struct hip_diffie_hellman *dh_req        = NULL;
+    const struct hip_r1_counter     *r1cntr        = NULL;
+    struct hip_dh_public_value      *dhpv          = NULL;
+    const struct hip_locator        *locator       = NULL;
+    uint16_t                         i2_mask       = 0;
 
     if (ha_state == HIP_STATE_I2_SENT) {
         HIP_DEBUG("Retransmission\n");
@@ -887,8 +887,8 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
         HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz2,
                                                    ctx->input_msg,
                                                    HIP_SOLVE_PUZZLE)) == 0,
-                                                   -EINVAL, "Solving of puzzle failed\n");
-        I = pz2->I;
+                 -EINVAL, "Solving of puzzle failed\n");
+        I                                = pz2->I;
         ctx->hadb_entry->puzzle_solution = solved_puzzle;
         ctx->hadb_entry->puzzle_i        = pz2->I;
     } else {
@@ -941,8 +941,8 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     HIP_IFEL((written = hip_insert_dh(dhpv->public_value,
                                       ntohs(dhpv->pub_len),
                                       dhpv->group_id)) < 0,
-                -1,
-                "Could not extract the DH public key\n");
+             -1,
+             "Could not extract the DH public key\n");
 
     HIP_IFEL(hip_build_param_diffie_hellman_contents(ctx->output_msg,
                                                      dhpv->group_id,
@@ -965,6 +965,7 @@ out_err:
     free(ctx->hadb_entry->dh_shared_key);
     return err;
 }
+
 /**
  * Checks wether the received I2 packet in state I2-SENT should be droppped, or
  * not. If the packet should be dropped, the error flag is set to 1.
@@ -1009,7 +1010,7 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
                  DBG const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
-    int err = 0;
+    int      err  = 0;
     uint16_t mask = 0;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_R2\n");
@@ -1050,7 +1051,7 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_VERIFY);
 #endif
     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
-                                            ctx->input_msg),
+                                     ctx->input_msg),
              -EINVAL,
              "R2 signature verification failed.\n");
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1081,9 +1082,9 @@ int hip_handle_r2(RVS const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int err = 0, retransmission = 0;
-    const struct hip_locator *locator     = NULL;
-    const struct hip_esp_info *esp_info   = NULL;
+    int                        err      = 0, retransmission = 0;
+    const struct hip_locator  *locator  = NULL;
+    const struct hip_esp_info *esp_info = NULL;
 
     if (ha_state == HIP_STATE_ESTABLISHED) {
         retransmission = 1;
@@ -1118,7 +1119,7 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     }
 
 #ifdef CONFIG_HIP_RVS
-        hip_relay_handle_relay_to_in_client(packet_type, ha_state, ctx);
+    hip_relay_handle_relay_to_in_client(packet_type, ha_state, ctx);
 #endif /* CONFIG_HIP_RVS */
 
     /* Copying address list from temp location in entry
@@ -1236,7 +1237,7 @@ out_err:
  * @param *ctx Pointer to the packet context, containing all information for
  *             the packet handling (received message, source and destination
  *             address, the ports and the corresponding entry from the host
-               association database).
+ *             association database).
  *
  * @return zero on success, or negative error value on error.
  */
@@ -1382,7 +1383,7 @@ out_err:
  * @param *ctx Pointer to the packet context, containing all information for
  *             the packet handling (received message, source and destination
  *             address, the ports and the corresponding entry from the host
-               association database).
+ *             association database).
  *
  * @return zero on success, or negative error value on error.
  */
@@ -1390,17 +1391,17 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
                  DBG const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
-    int err = 0, is_loopback = 0;
-    uint16_t mask = HIP_PACKET_CTRL_ANON, crypto_len = 0;
-    char *tmp_enc                                    = NULL;
-    const char *enc                                  = NULL;
-    unsigned char *iv                                = NULL;
-    const struct hip_solution *solution              = NULL;
-    struct hip_dh_public_value *dhpv                 = NULL;
-    const struct hip_r1_counter *r1cntr              = NULL;
-    const struct hip_hip_transform *hip_transform    = NULL;
-    struct hip_host_id *host_id_in_enc               = NULL;
-    struct hip_host_id host_id;
+    int                             err            = 0, is_loopback = 0;
+    uint16_t                        mask           = HIP_PACKET_CTRL_ANON, crypto_len = 0;
+    char                           *tmp_enc        = NULL;
+    const char                     *enc            = NULL;
+    unsigned char                  *iv             = NULL;
+    const struct hip_solution      *solution       = NULL;
+    struct hip_dh_public_value     *dhpv           = NULL;
+    const struct hip_r1_counter    *r1cntr         = NULL;
+    const struct hip_hip_transform *hip_transform  = NULL;
+    struct hip_host_id             *host_id_in_enc = NULL;
+    struct hip_host_id              host_id;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2\n");
     hip_perf_start_benchmark(perf_set, PERF_I2);
@@ -1429,8 +1430,8 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
             hip_relay_forward(ctx, rec, HIP_I2);
             err = -ECANCELED;
             goto out_err;
-            }
         }
+    }
 #endif
 
     HIP_IFEL(!hip_hidb_hit_is_our(&ctx->input_msg->hitr),
@@ -1449,29 +1450,29 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     HIP_INFO_IN6ADDR("Source IP: ", &ctx->src_addr);
 
     /* Next, we initialize the new HIP association. Peer HIT is the
-      * source HIT of the received I2 packet. We can have many Host
-      * Identities and using any of those Host Identities we can
-      * calculate diverse HITs depending on the used algorithm. When
-      * we sent one of our pre-created R1 packets, we have used one
-      * of our Host Identities and thus of our HITs as source. We
-      * must dig out the original Host Identity using the destination
-      * HIT of the I2 packet as a key. The initialized HIP
-      * association will not, however, have the I2 destination HIT as
-      * source, but one that is calculated using the Host Identity
-      * that we have dug out. */
-     if (!ctx->hadb_entry) {
-         HIP_DEBUG("No HIP association found. Creating a new one.\n");
+     * source HIT of the received I2 packet. We can have many Host
+     * Identities and using any of those Host Identities we can
+     * calculate diverse HITs depending on the used algorithm. When
+     * we sent one of our pre-created R1 packets, we have used one
+     * of our Host Identities and thus of our HITs as source. We
+     * must dig out the original Host Identity using the destination
+     * HIT of the I2 packet as a key. The initialized HIP
+     * association will not, however, have the I2 destination HIT as
+     * source, but one that is calculated using the Host Identity
+     * that we have dug out. */
+    if (!ctx->hadb_entry) {
+        HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
-         HIP_IFEL(!(ctx->hadb_entry = hip_hadb_create_state()),
-                  -ENOMEM,
-                  "Out of memory when allocating memory for a new HIP " \
-                  "association. Dropping the I2 packet.\n");
-     }
-     ipv6_addr_copy(&ctx->hadb_entry->hit_peer, &ctx->input_msg->hits);
-     ipv6_addr_copy(&ctx->hadb_entry->our_addr, &ctx->dst_addr);
-     HIP_DEBUG("Initializing the HIP association.\n");
-     hip_init_us(ctx->hadb_entry, &ctx->input_msg->hitr);
-     hip_hadb_insert_state(ctx->hadb_entry);
+        HIP_IFEL(!(ctx->hadb_entry = hip_hadb_create_state()),
+                 -ENOMEM,
+                 "Out of memory when allocating memory for a new HIP " \
+                 "association. Dropping the I2 packet.\n");
+    }
+    ipv6_addr_copy(&ctx->hadb_entry->hit_peer, &ctx->input_msg->hits);
+    ipv6_addr_copy(&ctx->hadb_entry->our_addr, &ctx->dst_addr);
+    HIP_DEBUG("Initializing the HIP association.\n");
+    hip_init_us(ctx->hadb_entry, &ctx->input_msg->hitr);
+    hip_hadb_insert_state(ctx->hadb_entry);
 
     /* Here we should check the 'system boot counter' using the R1_COUNTER
      * parameter. However, our precreated R1 packets do not support system
@@ -1499,7 +1500,6 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     /* Verify HMAC. */
     if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
         hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
-
         is_loopback = 1;
         HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
                                         &ctx->hadb_entry->hip_hmac_out),
@@ -1518,7 +1518,7 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
              "HIP_TRANSFORM parameter missing from I2 packet. Dropping\n");
 
     HIP_IFEL(!(ctx->hadb_entry->hip_transform =
-                            hip_get_param_transform_suite_id(hip_transform)),
+                   hip_get_param_transform_suite_id(hip_transform)),
              -EPROTO,
              "Bad HIP transform. Dropping the I2 packet.\n");
 
@@ -1558,15 +1558,15 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
         case HIP_HIP_RESERVED:
             HIP_ERROR("Found HIP suite ID 'RESERVED'. Dropping " \
                       "the I2 packet.\n");
-            err            = -EOPNOTSUPP;
+            err = -EOPNOTSUPP;
             goto out_err;
         case HIP_HIP_AES_SHA1:
             host_id_in_enc = (struct hip_host_id *)
                              (tmp_enc +
                               sizeof(struct hip_encrypted_aes_sha1));
-            iv             = ((struct hip_encrypted_aes_sha1 *) tmp_enc)->iv;
+            iv = ((struct hip_encrypted_aes_sha1 *) tmp_enc)->iv;
             /* 4 = reserved, 16 = IV */
-            crypto_len     = hip_get_param_contents_len(enc) - 4 - 16;
+            crypto_len = hip_get_param_contents_len(enc) - 4 - 16;
             HIP_DEBUG("Found HIP suite ID " \
                       "'AES-CBC with HMAC-SHA1'.\n");
             break;
@@ -1574,9 +1574,9 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
             host_id_in_enc = (struct hip_host_id *)
                              (tmp_enc +
                               sizeof(struct hip_encrypted_3des_sha1));
-            iv             = ((struct hip_encrypted_3des_sha1 *) tmp_enc)->iv;
+            iv = ((struct hip_encrypted_3des_sha1 *) tmp_enc)->iv;
             /* 4 = reserved, 8 = IV */
-            crypto_len     = hip_get_param_contents_len(enc) - 4 - 8;
+            crypto_len = hip_get_param_contents_len(enc) - 4 - 8;
             HIP_DEBUG("Found HIP suite ID " \
                       "'3DES-CBC with HMAC-SHA1'.\n");
             break;
@@ -1590,15 +1590,15 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
             HIP_ERROR("Found HIP suite ID 'BLOWFISH-CBC with " \
                       "HMAC-SHA1'. Support for this suite ID is " \
                       "not implemented. Dropping the I2 packet.\n");
-            err            = -ENOSYS;
+            err = -ENOSYS;
             goto out_err;
         case HIP_HIP_NULL_SHA1:
             host_id_in_enc = (struct hip_host_id *)
                              (tmp_enc +
                               sizeof(struct hip_encrypted_null_sha1));
-            iv             = NULL;
+            iv = NULL;
             /* 4 = reserved */
-            crypto_len     = hip_get_param_contents_len(enc) - 4;
+            crypto_len = hip_get_param_contents_len(enc) - 4;
             HIP_DEBUG("Found HIP suite ID " \
                       "'NULL-ENCRYPT with HMAC-SHA1'.\n");
             break;
@@ -1626,8 +1626,8 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
          * Note, that the original packet has the data still encrypted. */
         HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, ctx->hadb_entry->hip_transform, crypto_len,
                                       (is_loopback ?
-                                          ctx->hadb_entry->hip_enc_out.key :
-                                          ctx->hadb_entry->hip_enc_in.key),
+                                       ctx->hadb_entry->hip_enc_out.key :
+                                       ctx->hadb_entry->hip_enc_in.key),
                                       HIP_DIRECTION_DECRYPT),
                  -1,
                  "Failed to decrypt the HOST_ID parameter. Dropping\n");
@@ -1650,19 +1650,19 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
                 hip_get_param_total_len(&host_id));
 
     /* Store peer's public key and HIT to HA */
-     HIP_IFE(hip_init_peer(ctx->hadb_entry, &host_id), -EINVAL);
-     /* Validate signature */
+    HIP_IFE(hip_init_peer(ctx->hadb_entry, &host_id), -EINVAL);
+    /* Validate signature */
 #ifdef CONFIG_HIP_PERFORMANCE
-     HIP_DEBUG("Start PERF_VERIFY(2)\n");
-     hip_perf_start_benchmark(perf_set, PERF_VERIFY);
+    HIP_DEBUG("Start PERF_VERIFY(2)\n");
+    hip_perf_start_benchmark(perf_set, PERF_VERIFY);
 #endif
-     HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
-                                      ctx->input_msg),
-              -EINVAL,
-              "Verification of I2 signature failed\n");
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                     ctx->input_msg),
+             -EINVAL,
+             "Verification of I2 signature failed\n");
 #ifdef CONFIG_HIP_PERFORMANCE
-     HIP_DEBUG("Stop PERF_VERIFY(2)\n");
-     hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
+    HIP_DEBUG("Stop PERF_VERIFY(2)\n");
+    hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
 #endif
 
     if ((r1cntr = hip_get_param(ctx->input_msg, HIP_PARAM_R1_COUNTER))) {
@@ -1704,13 +1704,13 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
                   UNUSED const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int err = 0, retransmission = 0;
-    const struct hip_locator *locator       = NULL;
-    int if_index                            = 0;
-    struct sockaddr_storage ss_addr;
-    struct sockaddr *addr                   = NULL;
-    const struct hip_esp_info *esp_info     = NULL;
-    const struct hip_esp_transform *esp_tfm = NULL;
+    int                             err      = 0, retransmission = 0;
+    const struct hip_locator       *locator  = NULL;
+    int                             if_index = 0;
+    struct sockaddr_storage         ss_addr;
+    struct sockaddr                *addr     = NULL;
+    const struct hip_esp_info      *esp_info = NULL;
+    const struct hip_esp_transform *esp_tfm  = NULL;
 
     /* Get the interface index of the network device which has our
      * local IP address. */
@@ -1778,7 +1778,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
 
     HIP_IFEL(!(esp_tfm = hip_get_param(ctx->input_msg,
                                        HIP_PARAM_ESP_TRANSFORM)),
-              -ENOENT, "Did not find ESP transform on i2\n");
+             -ENOENT, "Did not find ESP transform on i2\n");
 
     HIP_IFEL(!(ctx->hadb_entry->esp_transform = hip_select_esp_transform(esp_tfm)),
              -1, "Could not select proper ESP transform\n");
@@ -1830,7 +1830,7 @@ int hip_check_notify(UNUSED const uint8_t packet_type,
                      UNUSED const uint32_t ha_state,
                      struct hip_packet_context *ctx)
 {
-    int err = 0;
+    int      err  = 0;
     uint16_t mask = HIP_PACKET_CTRL_ANON, notify_controls = 0;
 
     HIP_IFEL(!ctx->hadb_entry,
@@ -1841,8 +1841,8 @@ int hip_check_notify(UNUSED const uint8_t packet_type,
 
     HIP_IFEL(!hip_controls_sane(notify_controls, mask),
              -EPROTO,
-           "Received a NOTIFY packet with illegal controls: 0x%x. Dropping\n",
-           notify_controls);
+             "Received a NOTIFY packet with illegal controls: 0x%x. Dropping\n",
+             notify_controls);
 
 out_err:
     if (err) {
@@ -1875,14 +1875,14 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
                       UNUSED const uint32_t ha_state,
                       struct hip_packet_context *ctx)
 {
-    int err = 0;
-    const struct hip_tlv_common *current_param  = NULL;
-    const struct hip_notification *notification = NULL;
-    struct in6_addr responder_ip, responder_hit;
-    hip_tlv param_type                          = 0, response;
-    hip_tlv_len param_len                       = 0;
-    uint16_t msgtype                            = 0;
-    in_port_t port                              = 0;
+    int                            err           = 0;
+    const struct hip_tlv_common   *current_param = NULL;
+    const struct hip_notification *notification  = NULL;
+    struct in6_addr                responder_ip, responder_hit;
+    hip_tlv                        param_type = 0, response;
+    hip_tlv_len                    param_len  = 0;
+    uint16_t                       msgtype    = 0;
+    in_port_t                      port       = 0;
 
     /* Loop through all the parameters in the received packet. */
     while ((current_param =
@@ -1894,8 +1894,8 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
                      "packet.\n");
             notification = (const struct hip_notification *) current_param;
 
-            param_len    = hip_get_param_contents_len(current_param);
-            msgtype      = ntohs(notification->msgtype);
+            param_len = hip_get_param_contents_len(current_param);
+            msgtype   = ntohs(notification->msgtype);
 
             switch (msgtype) {
             case HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE:

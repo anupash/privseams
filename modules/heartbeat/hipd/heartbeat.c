@@ -93,7 +93,7 @@
 
 #define HIP_HEARTBEAT_INTERVAL 20
 
-int hip_icmp_sock;
+int        hip_icmp_sock;
 static int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
 
 /**
@@ -106,16 +106,16 @@ static int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
  */
 static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
 {
-    int err                = 0, i = 0, identifier = 0;
-    struct icmp6_hdr *icmph = NULL;
-    struct sockaddr_in6 dst6;
-    u_char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    u_char *icmp_pkt       = NULL;
-    struct msghdr mhdr;
-    struct iovec iov[1];
-    struct cmsghdr *chdr = NULL;
+    int                   err   = 0, i = 0, identifier = 0;
+    struct icmp6_hdr     *icmph = NULL;
+    struct sockaddr_in6   dst6;
+    u_char                cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
+    u_char               *icmp_pkt = NULL;
+    struct msghdr         mhdr;
+    struct iovec          iov[1];
+    struct cmsghdr       *chdr = NULL;
     struct inet6_pktinfo *pkti = NULL;
-    struct timeval tval;
+    struct timeval        tval;
 
     HIP_IFEL(!entry, 0, "No entry\n");
 
@@ -129,13 +129,13 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
     memset(iov, 0, sizeof(struct iovec));
     memset(&dst6, 0, sizeof(dst6));
 
-    icmp_pkt         = calloc(1, HIP_MAX_ICMP_PACKET);
+    icmp_pkt = calloc(1, HIP_MAX_ICMP_PACKET);
     HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
 
-    chdr             = (struct cmsghdr *) cmsgbuf;
-    pkti             = (struct inet6_pktinfo *) CMSG_DATA(chdr);
+    chdr = (struct cmsghdr *) cmsgbuf;
+    pkti = (struct inet6_pktinfo *) CMSG_DATA(chdr);
 
-    identifier       = getpid() & 0xFFFF;
+    identifier = getpid() & 0xFFFF;
 
     /* Build ancillary data */
     chdr->cmsg_len   = CMSG_LEN(sizeof(struct inet6_pktinfo));
@@ -145,17 +145,17 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
 
     /* get the destination */
     memcpy(&dst6.sin6_addr, &entry->hit_peer, sizeof(struct in6_addr));
-    dst6.sin6_family        = AF_INET6;
-    dst6.sin6_flowinfo      = 0;
+    dst6.sin6_family   = AF_INET6;
+    dst6.sin6_flowinfo = 0;
 
     /* build icmp header */
-    icmph                   = (struct icmp6_hdr *) icmp_pkt;
-    icmph->icmp6_type       = ICMP6_ECHO_REQUEST;
-    icmph->icmp6_code       = 0;
+    icmph             = (struct icmp6_hdr *) icmp_pkt;
+    icmph->icmp6_type = ICMP6_ECHO_REQUEST;
+    icmph->icmp6_code = 0;
     entry->heartbeats_sent++;
 
-    icmph->icmp6_seq        = htons(entry->heartbeats_sent);
-    icmph->icmp6_id         = identifier;
+    icmph->icmp6_seq = htons(entry->heartbeats_sent);
+    icmph->icmp6_id  = identifier;
 
     gettimeofday(&tval, NULL);
 
@@ -164,8 +164,8 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
     memcpy(&icmp_pkt[8], &tval, sizeof(struct timeval));
 
     /* put the icmp packet to the io vector struct for the msghdr */
-    iov[0].iov_base     = icmp_pkt;
-    iov[0].iov_len      = sizeof(struct icmp6_hdr) + sizeof(struct timeval);
+    iov[0].iov_base = icmp_pkt;
+    iov[0].iov_len  = sizeof(struct icmp6_hdr) + sizeof(struct timeval);
 
     /* build the msghdr for the sendmsg, put ancillary data also*/
     mhdr.msg_name       = &dst6;
@@ -175,7 +175,7 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
     mhdr.msg_control    = &cmsgbuf;
     mhdr.msg_controllen = sizeof(cmsgbuf);
 
-    i                   = sendmsg(sockfd, &mhdr, 0);
+    i = sendmsg(sockfd, &mhdr, 0);
     if (i <= 0) {
         HIP_PERROR("SENDMSG ");
         /* Set return error, even if 0 bytes sent. */
@@ -205,13 +205,13 @@ static int hip_icmp_statistics(struct in6_addr *src,
                                struct timeval *stval,
                                struct timeval *rtval)
 {
-    int err                  = 0;
-    uint32_t rcvd_heartbeats = 0;
-    uint64_t rtt             = 0;
-    double avg               = 0.0, std_dev = 0.0;
-    char hit[INET6_ADDRSTRLEN];
-    struct hip_hadb_state *entry = NULL;
-    uint8_t *heartbeat_count     = NULL;
+    int                    err             = 0;
+    uint32_t               rcvd_heartbeats = 0;
+    uint64_t               rtt             = 0;
+    double                 avg             = 0.0, std_dev = 0.0;
+    char                   hit[INET6_ADDRSTRLEN];
+    struct hip_hadb_state *entry           = NULL;
+    uint8_t               *heartbeat_count = NULL;
 
     hip_in6_ntop(src, hit);
 
@@ -220,7 +220,7 @@ static int hip_icmp_statistics(struct in6_addr *src,
     HIP_IFEL((!entry), -1, "Entry not found\n");
 
     /* Calculate the RTT from given timevals */
-    rtt   = calc_timeval_diff(stval, rtval);
+    rtt = calc_timeval_diff(stval, rtval);
 
     /* add the heartbeat item to the statistics */
     add_statistics_item(&entry->heartbeats_statistics, rtt);
@@ -230,7 +230,7 @@ static int hip_icmp_statistics(struct in6_addr *src,
                     &std_dev, STATS_IN_MSECS);
 
     heartbeat_count = lmod_get_state_item(entry->hip_modular_state,
-                                            "heartbeat_update");
+                                          "heartbeat_update");
 
     *heartbeat_count = 0;
     HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_count);
@@ -255,26 +255,26 @@ out_err:
  */
 static int hip_icmp_recvmsg(int sockfd)
 {
-    int err = 0, ret = 0, identifier = 0;
-    struct msghdr mhdr;
-    struct cmsghdr *chdr;
-    struct iovec iov[1];
-    unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    unsigned char iovbuf[HIP_MAX_ICMP_PACKET];
-    struct icmp6_hdr *icmph = NULL;
+    int                   err = 0, ret = 0, identifier = 0;
+    struct msghdr         mhdr;
+    struct cmsghdr       *chdr;
+    struct iovec          iov[1];
+    unsigned char         cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
+    unsigned char         iovbuf[HIP_MAX_ICMP_PACKET];
+    struct icmp6_hdr     *icmph = NULL;
     struct inet6_pktinfo *pktinfo;
-    struct sockaddr_in6 src_sin6;
-    struct in6_addr *src   = NULL, *dst = NULL;
-    struct timeval *stval  = NULL, *rtval = NULL, *ptr = NULL;
+    struct sockaddr_in6   src_sin6;
+    struct in6_addr      *src   = NULL, *dst = NULL;
+    struct timeval       *stval = NULL, *rtval = NULL, *ptr = NULL;
 
     /* malloc what you need */
-    stval   = calloc(1, sizeof(struct timeval));
+    stval = calloc(1, sizeof(struct timeval));
     HIP_IFEL((!stval), -1, "calloc for stval failed\n");
-    rtval   = calloc(1, sizeof(struct timeval));
+    rtval = calloc(1, sizeof(struct timeval));
     HIP_IFEL((!rtval), -1, "calloc for rtval failed\n");
-    src     = calloc(1, sizeof(struct in6_addr));
+    src = calloc(1, sizeof(struct in6_addr));
     HIP_IFEL((!src), -1, "calloc for dst6 failed\n");
-    dst     = calloc(1, sizeof(struct in6_addr));
+    dst = calloc(1, sizeof(struct in6_addr));
     HIP_IFEL((!dst), -1, "calloc for dst failed\n");
 
     /* cast */
@@ -288,13 +288,13 @@ static int hip_icmp_recvmsg(int sockfd)
     memset(&mhdr, 0, sizeof(mhdr));
 
     /* receive control msg */
-    chdr->cmsg_level    = IPPROTO_IPV6;
-    chdr->cmsg_type     = IPV6_2292PKTINFO;
-    chdr->cmsg_len      = CMSG_LEN(sizeof(struct inet6_pktinfo));
+    chdr->cmsg_level = IPPROTO_IPV6;
+    chdr->cmsg_type  = IPV6_2292PKTINFO;
+    chdr->cmsg_len   = CMSG_LEN(sizeof(struct inet6_pktinfo));
 
     /* Input output buffer */
-    iov[0].iov_base     = &iovbuf;
-    iov[0].iov_len      = sizeof(iovbuf);
+    iov[0].iov_base = &iovbuf;
+    iov[0].iov_len  = sizeof(iovbuf);
 
     /* receive msg hdr */
     mhdr.msg_iov        = &(iov[0]);
@@ -304,7 +304,7 @@ static int hip_icmp_recvmsg(int sockfd)
     mhdr.msg_control    = (caddr_t) cmsgbuf;
     mhdr.msg_controllen = sizeof(cmsgbuf);
 
-    ret                 = recvmsg(sockfd, &mhdr, MSG_DONTWAIT);
+    ret = recvmsg(sockfd, &mhdr, MSG_DONTWAIT);
     if (errno == EAGAIN) {
         err = 0;
         goto out_err;
@@ -376,17 +376,16 @@ out_err:
  */
 static int hip_send_heartbeat(struct hip_hadb_state *hadb_entry, void *opaq)
 {
-    int err                  = 0;
-    int *sockfd              = (int *) opaq;
+    int      err             = 0;
+    int     *sockfd          = (int *) opaq;
     uint8_t *heartbeat_count = NULL;
 
     if ((hadb_entry->state == HIP_STATE_ESTABLISHED) &&
         (hadb_entry->outbound_sa_count > 0)) {
-
         HIP_IFEL(hip_send_icmp(*sockfd, hadb_entry), 0,
-                     "Error sending heartbeat, ignore\n");
+                 "Error sending heartbeat, ignore\n");
         heartbeat_count = lmod_get_state_item(hadb_entry->hip_modular_state,
-                                                "heartbeat_update");
+                                              "heartbeat_update");
 
         *heartbeat_count = *heartbeat_count + 1;
         HIP_DEBUG("heartbeat_counter: %d\n", *heartbeat_count);
@@ -417,12 +416,12 @@ static int hip_heartbeat_handle_usr_msg(UNUSED struct hip_common *msg,
 
 static int hip_heartbeat_init_state(struct modular_state *state)
 {
-    int err = 0;
+    int      err             = 0;
     uint8_t *heartbeat_count = NULL;
 
     HIP_IFEL(!(heartbeat_count = malloc(sizeof(uint8_t))),
-                -1,
-                "Error on allocating memory for heartbeat_counter.\n");
+             -1,
+             "Error on allocating memory for heartbeat_counter.\n");
 
     *heartbeat_count = 0;
 
@@ -437,13 +436,13 @@ out_err:
  */
 int hip_heartbeat_init(void)
 {
-    int err = 0, on = 1;
+    int                 err = 0, on = 1;
     struct icmp6_filter filter;
-    int *icmpsockfd = &hip_icmp_sock;
+    int                *icmpsockfd = &hip_icmp_sock;
 
     HIP_INFO("Initializing heartbeat extension\n");
 
-    *icmpsockfd       = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+    *icmpsockfd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
     set_cloexec_flag(*icmpsockfd, 1);
     HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
 

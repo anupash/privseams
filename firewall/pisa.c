@@ -71,7 +71,7 @@
  * call */
 #define PISA_RANDOM_TTL 2.0
 
-static char pisa_random_data[2][PISA_RANDOM_LEN];
+static char            pisa_random_data[2][PISA_RANDOM_LEN];
 static struct in6_addr community_operator_hit;
 
 /* @todo make this configurable, issuer HIT */
@@ -127,7 +127,7 @@ static int pisa_read_communit_operator_hit(char *hit)
 void pisa_check_for_random_update(void)
 {
     static time_t lastupdate = 0;
-    time_t now;
+    time_t        now;
 
     time(&now);
     if (difftime(now, lastupdate) > PISA_RANDOM_TTL) {
@@ -149,8 +149,8 @@ void pisa_check_for_random_update(void)
 static int pisa_append_hmac(struct in6_addr *hit1, struct in6_addr *hit2,
                             int rnd, void *data, int data_len)
 {
-    uint8_t key[32 + PISA_RANDOM_LEN];
-    int err          = 0;
+    uint8_t      key[32 + PISA_RANDOM_LEN];
+    int          err = 0;
     unsigned int len = HIP_AH_SHA_LEN;
 
     /* sanity checks for arguments */
@@ -187,8 +187,8 @@ static int pisa_insert_puzzle(struct hip_fw_context *ctx)
 {
     uint8_t opaque[PISA_PUZZLE_OPAQUE_LEN];
 
-    struct hip_common *hip = ctx->transport_hdr.hip;
-    int seed               = PISA_PUZZLE_SEED;
+    struct hip_common *hip  = ctx->transport_hdr.hip;
+    int                seed = PISA_PUZZLE_SEED;
 
     memcpy(&opaque, &seed, 4);
 
@@ -206,12 +206,12 @@ static int pisa_insert_puzzle(struct hip_fw_context *ctx)
  * @return pointer to the puzzle we accepted or NULL at failure
  */
 static struct hip_challenge_response *pisa_check_challenge_response(
-        struct hip_fw_context *ctx)
+    struct hip_fw_context *ctx)
 {
     struct hip_challenge_response *response;
-    struct hip_common *hip = ctx->transport_hdr.hip;
-    uint8_t hash[2][PISA_PUZZLE_OPAQUE_LEN];
-    int seed               = PISA_PUZZLE_SEED;
+    struct hip_common             *hip = ctx->transport_hdr.hip;
+    uint8_t                        hash[2][PISA_PUZZLE_OPAQUE_LEN];
+    int                            seed = PISA_PUZZLE_SEED;
 
     memcpy(&hash[0][0], &seed, 4);
     memcpy(&hash[1][0], &seed, 4);
@@ -235,7 +235,7 @@ static struct hip_challenge_response *pisa_check_challenge_response(
 
         response = (struct hip_challenge_response *)
                    hip_get_next_param_readwrite(hip,
-                                           (struct hip_tlv_common *) response);
+                                                (struct hip_tlv_common *) response);
     }
 
     return NULL;
@@ -249,19 +249,19 @@ static struct hip_challenge_response *pisa_check_challenge_response(
  */
 static int pisa_check_certificate(struct hip_fw_context *ctx)
 {
-    struct hip_common *hip = ctx->transport_hdr.hip;
-    const struct hip_cert *cert;
+    struct hip_common        *hip = ctx->transport_hdr.hip;
+    const struct hip_cert    *cert;
     struct hip_cert_spki_info ci;
-    struct pisa_cert pc;
-    char *buf              = NULL;
-    int err                = 0, len;
-    time_t now             = time(NULL);
+    struct pisa_cert          pc;
+    char                     *buf = NULL;
+    int                       err = 0, len;
+    time_t                    now = time(NULL);
 
     cert = hip_get_param(hip, HIP_PARAM_CERT);
     HIP_IFEL(cert == NULL, -1, "No certificate found.\n");
 
-    len  = ntohs(cert->length);
-    buf  = calloc(1, len);
+    len = ntohs(cert->length);
+    buf = calloc(1, len);
     memcpy(buf, cert + 1, len);
 
     HIP_IFEL(hip_cert_spki_char2certinfo(buf, &ci), -1,
@@ -307,7 +307,7 @@ out_err:
 static void pisa_accept_connection(const struct hip_fw_context *ctx)
 {
     struct hip_common *hip = ctx->transport_hdr.hip;
-    struct tuple *t        = get_tuple_by_hits(&hip->hits, &hip->hitr);
+    struct tuple      *t   = get_tuple_by_hits(&hip->hits, &hip->hitr);
 
     if (t) {
         t->connection->pisa_state = PISA_STATE_ALLOW;
@@ -326,7 +326,7 @@ static void pisa_accept_connection(const struct hip_fw_context *ctx)
 static void pisa_remove_connection(const struct hip_fw_context *ctx)
 {
     struct hip_common *hip = ctx->transport_hdr.hip;
-    struct tuple *t        = get_tuple_by_hits(&hip->hits, &hip->hitr);
+    struct tuple      *t   = get_tuple_by_hits(&hip->hits, &hip->hitr);
 
     if (t) {
         t->connection->pisa_state = PISA_STATE_DISALLOW;
@@ -422,7 +422,7 @@ static int pisa_handler_i2(struct hip_fw_context *ctx)
  */
 static int pisa_handler_r2(struct hip_fw_context *ctx)
 {
-    int verdict                             = NF_DROP, sig = 0, cert = 0;
+    int                            verdict  = NF_DROP, sig = 0, cert = 0;
     struct hip_challenge_response *solution = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -477,9 +477,9 @@ static int pisa_handler_u1(struct hip_fw_context *ctx)
  */
 static int pisa_handler_u2(struct hip_fw_context *ctx)
 {
-    int verdict                             = NF_DROP;
-    int sig                                 = 0;
-    int cert                                = 0;
+    int                            verdict  = NF_DROP;
+    int                            sig      = 0;
+    int                            cert     = 0;
     struct hip_challenge_response *solution = NULL;
 
     solution = pisa_check_challenge_response(ctx);
@@ -507,8 +507,8 @@ static int pisa_handler_u2(struct hip_fw_context *ctx)
  */
 static int pisa_handler_u3(struct hip_fw_context *ctx)
 {
-    int verdict                             = NF_DROP;
-    int sig                                 = 0;
+    int                            verdict  = NF_DROP;
+    int                            sig      = 0;
     struct hip_challenge_response *solution = NULL;
 
     solution = pisa_check_challenge_response(ctx);
@@ -538,6 +538,7 @@ static int pisa_handler_close_ack(struct hip_fw_context *ctx)
     pisa_remove_connection(ctx);
     return NF_ACCEPT;
 }
+
 /**
  * Initialize basic PISA functionality
  *

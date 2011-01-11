@@ -36,7 +36,7 @@
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 
 struct hosts_file_line {
-    char            *hostname, *alias, *alias2;
+    char           *hostname, *alias, *alias2;
     struct in6_addr id;
     int             lineno;
 };
@@ -80,10 +80,10 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 
 #define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                       \
-    {(in6_addr_to)->s6_addr32[0] = 0;                                \
-     (in6_addr_to)->s6_addr32[1] = 0;                                \
-     (in6_addr_to)->s6_addr32[2] = htonl(0xffff);                    \
-     (in6_addr_to)->s6_addr32[3] = (uint32_t) ((in_addr_from)->s_addr); }
+    { (in6_addr_to)->s6_addr32[0] = 0;                                \
+      (in6_addr_to)->s6_addr32[1] = 0;                                \
+      (in6_addr_to)->s6_addr32[2] = htonl(0xffff);                    \
+      (in6_addr_to)->s6_addr32[3] = (uint32_t) ((in_addr_from)->s_addr); }
 
 #define IPV6_TO_IPV4_MAP(in6_addr_from, in_addr_to)    \
     { ((in_addr_to)->s_addr) =                       \
@@ -91,7 +91,7 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
 
 #define IPV6_EQ_IPV4(in6_addr_a, in_addr_b)   \
     (IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
-    (((const uint32_t *) (in6_addr_a))[3] == (in_addr_b)->s_addr))
+     (((const uint32_t *) (in6_addr_a))[3] == (in_addr_b)->s_addr))
 
 /**
  * Checks if a uint32_t represents a Local Scope Identifier (LSI).
@@ -107,7 +107,7 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
 
 #define IS_LSI(a) ((((struct sockaddr *) a)->sa_family == AF_INET) ? \
                    (IS_LSI32(((struct sockaddr_in *) a)->sin_addr.s_addr)) : \
-                   (ipv6_addr_is_hit( &((struct sockaddr_in6 *) a)->sin6_addr)))
+                   (ipv6_addr_is_hit(&((struct sockaddr_in6 *) a)->sin6_addr)))
 
 /**
  * A macro to test if a uint32_t represents an IPv4 loopback address.
@@ -122,18 +122,18 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
 #define IS_IPV4_LOOPBACK(a) ((a & 0x000000FF) == 0x0000007F)
 
 #ifndef MIN
-#  define MIN(a, b)      ((a) < (b) ? (a) : (b))
+#define MIN(a, b)      ((a) < (b) ? (a) : (b))
 #endif
 
 #ifndef MAX
-#  define MAX(a, b)      ((a) > (b) ? (a) : (b))
+#define MAX(a, b)      ((a) > (b) ? (a) : (b))
 #endif
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 #define hton64(i) (i)
 #define ntoh64(i) (i)
 #else
-#define hton64(i) (((uint64_t) (htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ))
+#define hton64(i) (((uint64_t) (htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff))
 #define ntoh64 hton64
 #endif
 

@@ -71,7 +71,7 @@ const char *addr_to_numeric(const struct in6_addr *addrp)
 struct in6_addr *numeric_to_addr(const char *num)
 {
     static struct in6_addr ap;
-    int err;
+    int                    err;
     if ((err = inet_pton(AF_INET6, num, &ap)) == 1) {
         return &ap;
     }

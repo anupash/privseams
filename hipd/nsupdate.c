@@ -112,7 +112,7 @@ int hip_get_nsupdate_status(void)
 static char *make_env(const char *name, char *value)
 {
     char *result = NULL;
-    int err      = 0;
+    int   err    = 0;
 
     if ((name == NULL) || (value == NULL)) {
         return NULL;
@@ -141,7 +141,7 @@ out_err:
 static void sig_chld(UNUSED int signo)
 {
     pid_t child_pid;
-    int child_status;     // child exit code
+    int   child_status;   // child exit code
     child_pid = waitpid(0, &child_status, WNOHANG);
 }
 
@@ -161,19 +161,19 @@ static void sig_chld(UNUSED int signo)
 
 static const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
 {
-    struct sockaddr *tmp_sockaddr_ptr         = (struct sockaddr *) &(src->addr);
+    struct sockaddr     *tmp_sockaddr_ptr     = (struct sockaddr *) &(src->addr);
     struct sockaddr_in  *tmp_sockaddr_in_ptr  = (struct sockaddr_in *)  tmp_sockaddr_ptr;
     struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) tmp_sockaddr_ptr;
 
-    struct in_addr tmp_in_addr;
-    struct in6_addr *tmp_in6_addr_ptr         = NULL;
+    struct in_addr   tmp_in_addr;
+    struct in6_addr *tmp_in6_addr_ptr = NULL;
 
-    void *inet_ntop_src                       = NULL;
-    int af                                    = tmp_sockaddr_ptr->sa_family; // might be changed because of ip4->ip6 mapping
+    void *inet_ntop_src = NULL;
+    int   af            = tmp_sockaddr_ptr->sa_family;                       // might be changed because of ip4->ip6 mapping
 
     switch (af) {
     case AF_INET:
-        inet_ntop_src    = &(tmp_sockaddr_in_ptr->sin_addr);
+        inet_ntop_src = &(tmp_sockaddr_in_ptr->sin_addr);
         break;
 
     case AF_INET6:
@@ -205,7 +205,7 @@ static const char *netdev_address_to_str(struct netdev_address *src, char *dst, 
 static int run_nsupdate(char *ips, char *hit, int start)
 {
     struct sigaction act;
-    pid_t child_pid;
+    pid_t            child_pid;
 
     HIP_DEBUG("Updating dns records...\n");
 
@@ -232,7 +232,7 @@ static int run_nsupdate(char *ips, char *hit, int start)
     if (child_pid < 0) {
         HIP_PERROR("fork");
         return ERR;
-    } else if (child_pid == 0)   { // CHILD
+    } else if (child_pid == 0) {   // CHILD
         char nsupdate_arg0[] = NSUPDATE_ARG0;
         char start_str[2];
 
@@ -242,8 +242,8 @@ static int run_nsupdate(char *ips, char *hit, int start)
         char *env_hit   = make_env(VAR_HIT, hit);
         char *env_start = make_env(VAR_START, start_str);
 
-        char *cmd[]           = { nsupdate_arg0, NULL };
-        char *const env[]     = { env_ips, env_hit, env_start, NULL };
+        char       *cmd[] = { nsupdate_arg0, NULL };
+        char *const env[] = { env_ips, env_hit, env_start, NULL };
 
         HIP_DEBUG("Executing %s with %s; %s; %s\n", NSUPDATE_PL, env_hit, env_ips, env_start);
         execve(NSUPDATE_PL, cmd, env);
@@ -274,12 +274,12 @@ static int run_nsupdate(char *ips, char *hit, int start)
 
 static int run_nsupdate_for_hit(struct hip_host_id_entry *entry, void *opaq)
 {
-    int start          = 0;
-    char ip_str[40];     // buffer for one IP address
-    char ips_str[1024] = "";     // list of IP addresses
+    int         start = 0;
+    char        ip_str[40]; // buffer for one IP address
+    char        ips_str[1024] = ""; // list of IP addresses
     LHASH_NODE *item, *tmp;
-    int i;
-    char hit[INET6_ADDRSTRLEN + 2];
+    int         i;
+    char        hit[INET6_ADDRSTRLEN + 2];
 
     if (opaq != NULL) {
         start = *(int *) opaq;

@@ -45,9 +45,9 @@
  */
 hip_transform_suite hip_select_hip_transform(const struct hip_hip_transform *ht)
 {
-    hip_transform_suite tid = 0;
-    int i;
-    int length;
+    hip_transform_suite        tid = 0;
+    int                        i;
+    int                        length;
     const hip_transform_suite *suggestion;
 
     length     = ntohs(ht->length);
@@ -97,8 +97,8 @@ out:
  */
 hip_transform_suite hip_select_esp_transform(const struct hip_esp_transform *ht)
 {
-    hip_transform_suite tid = 0;
-    unsigned i, length;
+    hip_transform_suite        tid = 0;
+    unsigned                   i, length;
     const hip_transform_suite *suggestion;
 
     length     = hip_get_param_contents_len(ht);

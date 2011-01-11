@@ -95,7 +95,7 @@ static double calc_std_dev(const struct statistics_data *statistics_data,
     if (statistics_data->num_items >= 1) {
         sum1 = (double) statistics_data->added_values / statistics_data->num_items;
         sum2 = (double) statistics_data->added_squared_values
-                / statistics_data->num_items;
+               / statistics_data->num_items;
 
         std_dev = sqrt(sum2 - (sum1 * sum1));
     }
@@ -120,8 +120,7 @@ uint64_t calc_timeval_diff(const struct timeval *timeval_start,
 
     /* check that timeval_high really is higher */
     if ((timeval_end->tv_sec >= timeval_start->tv_sec) &&
-        (timeval_end->tv_usec > timeval_start->tv_usec))
-    {
+        (timeval_end->tv_usec > timeval_start->tv_usec)) {
         rel_timeval.tv_sec  = timeval_end->tv_sec - timeval_start->tv_sec;
         rel_timeval.tv_usec = timeval_end->tv_usec - timeval_start->tv_usec;
     } else {

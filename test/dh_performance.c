@@ -102,21 +102,21 @@
  */
 static void dhp_usage(char *progname)
 {
-    printf( "Usage: %s -c [NUM] -l [NUM]\n"
-            "-c [NUM] : create [NUM] new dh keys for the benchmark\n"
-            "-g [NUM] : dh group ID for dh keys (Default is 3 (1536 Oakley_5)\n"
-            "-d [NUM] : create [NUM] new dsa keys for the benchmark\n"
-            "-r [NUM] : create [NUM] new rsa keys for the benchmark\n"
-            "-j [NUM] : rsa key length (default is 1024)\n"
-            "-k [NUM] : dsa key length (default is %d)\n"
-            "-l [NUM] : run the benchmark [NUM] times\n"
-            "-p       : print keys (do not use this option for benchmarking!)\n"
-            "-s [NUM] : shared key length (default is 192)\n"
-            "-h [NUM] : hash chain length (default is 44 (20 trig, 20 sig, 4 binary)\n"
-            "-x       : write singe time values to files (PS_* files)\n"
-            "-b       : put load onto the cpu by calculating DH exchanges\n"
-            "-f [NUM] : calculate [NUM] SHA-1 hashes\n"
-            , progname, DSA_KEY_DEFAULT_BITS);
+    printf("Usage: %s -c [NUM] -l [NUM]\n"
+           "-c [NUM] : create [NUM] new dh keys for the benchmark\n"
+           "-g [NUM] : dh group ID for dh keys (Default is 3 (1536 Oakley_5)\n"
+           "-d [NUM] : create [NUM] new dsa keys for the benchmark\n"
+           "-r [NUM] : create [NUM] new rsa keys for the benchmark\n"
+           "-j [NUM] : rsa key length (default is 1024)\n"
+           "-k [NUM] : dsa key length (default is %d)\n"
+           "-l [NUM] : run the benchmark [NUM] times\n"
+           "-p       : print keys (do not use this option for benchmarking!)\n"
+           "-s [NUM] : shared key length (default is 192)\n"
+           "-h [NUM] : hash chain length (default is 44 (20 trig, 20 sig, 4 binary)\n"
+           "-x       : write singe time values to files (PS_* files)\n"
+           "-b       : put load onto the cpu by calculating DH exchanges\n"
+           "-f [NUM] : calculate [NUM] SHA-1 hashes\n"
+           , progname, DSA_KEY_DEFAULT_BITS);
 }
 
 /**
@@ -275,9 +275,9 @@ static int dhp_getopts(int argc,
 static void print_timeres(void)
 {
     struct timeval tv1, tv2;
-    int i;
-    printf( "-------------------------------\n"
-            "Determine gettimeofday resolution:\n");
+    int            i;
+    printf("-------------------------------\n"
+           "Determine gettimeofday resolution:\n");
 
 
     for (i = 0; i < 10; i++) {
@@ -290,7 +290,7 @@ static void print_timeres(void)
                1000000 * (tv2.tv_sec - tv1.tv_sec));
     }
 
-    printf( "-------------------------------\n\n\n");
+    printf("-------------------------------\n\n\n");
 }
 
 /**
@@ -333,28 +333,28 @@ static double dhp_stop_benchmark(struct timeval *bench_time)
 int main(int argc, char **argv)
 {
     int i;
-    int err               = 0;
+    int err = 0;
     /* switches */
-    int sw_create_dh      = 5;
-    int sw_create_dsa     = 5;
-    int sw_create_rsa     = 5;
-    int sw_bench_loops    = 0;
-    int sw_file_output    = 0;
-    int sw_print_keys     = FALSE;
-    int sw_shared_key_len = 192;
-    int sw_hash_chain_len = 46;
-    int sw_cpuload        = 0;
-    int sw_rsa_keylen     = 1024;
-    int sw_dsa_keylen     = DSA_KEY_DEFAULT_BITS;
-    int sw_hashloops      = 100000;
-    int sw_dh_group_id    = HIP_FIRST_DH_GROUP_ID;
-    RSA **rsa_key_pool    = NULL;
-    DSA **dsa_key_pool    = NULL;
-    DH **dh_key_pool      = NULL;
-    BN_CTX *ctx           = NULL;
-    float bench_secs      = 0.0;
-    struct timeval bench_time;
-    unsigned int sig_len;
+    int              sw_create_dh      = 5;
+    int              sw_create_dsa     = 5;
+    int              sw_create_rsa     = 5;
+    int              sw_bench_loops    = 0;
+    int              sw_file_output    = 0;
+    int              sw_print_keys     = FALSE;
+    int              sw_shared_key_len = 192;
+    int              sw_hash_chain_len = 46;
+    int              sw_cpuload        = 0;
+    int              sw_rsa_keylen     = 1024;
+    int              sw_dsa_keylen     = DSA_KEY_DEFAULT_BITS;
+    int              sw_hashloops      = 100000;
+    int              sw_dh_group_id    = HIP_FIRST_DH_GROUP_ID;
+    RSA            **rsa_key_pool      = NULL;
+    DSA            **dsa_key_pool      = NULL;
+    DH             **dh_key_pool       = NULL;
+    BN_CTX          *ctx               = NULL;
+    float            bench_secs        = 0.0;
+    struct timeval   bench_time;
+    unsigned int     sig_len;
     struct perf_set *perfset = NULL;
 
     printf("Default settings RSA: key pool of %d keys of length %d.\n",
@@ -396,30 +396,30 @@ int main(int argc, char **argv)
         hip_perf_set_name(perfset, PS_HASH,
                           "PS_HC_HASHLOOPS_100_PER_ENTRY.csv");
 
-        printf( "-------------------------------\n"
-                "!!! NOTE: File output option set! The benchmark \n"
-                "          results displayed here are not accurate!\n"
-                "          They contain the time needed to write\n"
-                "          the output to the files. Don't rely on these\n"
-                "          values. Use the values provided in the\n"
-                "          PS_*.csv files.\n\n"
-                "          PS_DH_CREATE:  Diffie Hellman key creation\n"
-                "          PS_DH_SHARE:   Diffie Hellman shared key creation\n"
-                "          PS_DSA_CREATE: DSA key creation\n"
-                "          PS_DSA_SIGN:   DSA signature\n"
-                "          PS_DSA_VERIFY: DSA verification\n"
-                "          PS_HC_CREATE:  Hash chain creation\n"
-                "          PS_HC_HASHLOOPS_100_PER_ENTRY: Hash performance. 100 hashes per row!\n"
-                "-------------------------------\n\n");
+        printf("-------------------------------\n"
+               "!!! NOTE: File output option set! The benchmark \n"
+               "          results displayed here are not accurate!\n"
+               "          They contain the time needed to write\n"
+               "          the output to the files. Don't rely on these\n"
+               "          values. Use the values provided in the\n"
+               "          PS_*.csv files.\n\n"
+               "          PS_DH_CREATE:  Diffie Hellman key creation\n"
+               "          PS_DH_SHARE:   Diffie Hellman shared key creation\n"
+               "          PS_DSA_CREATE: DSA key creation\n"
+               "          PS_DSA_SIGN:   DSA signature\n"
+               "          PS_DSA_VERIFY: DSA verification\n"
+               "          PS_HC_CREATE:  Hash chain creation\n"
+               "          PS_HC_HASHLOOPS_100_PER_ENTRY: Hash performance. 100 hashes per row!\n"
+               "-------------------------------\n\n");
         hip_perf_open(perfset);
     }
 
     if (!sw_cpuload) {
         print_timeres();
 
-        printf( "-------------------------------\n"
-                "RSA performance test\n"
-                "-------------------------------\n\n");
+        printf("-------------------------------\n"
+               "RSA performance test\n"
+               "-------------------------------\n\n");
 
 
         rsa_key_pool = malloc(sw_create_rsa * sizeof(RSA *));
@@ -456,10 +456,10 @@ int main(int argc, char **argv)
 
 
         if (sw_bench_loops == 0) {
-            printf( "Using standard number of loops (%d).\n"
-                    "Use the -p parameter to use more loops\n"
-                    "to get more realistic results.\n\n",
-                    DHP_DEFAULT_LOOPS);
+            printf("Using standard number of loops (%d).\n"
+                   "Use the -p parameter to use more loops\n"
+                   "to get more realistic results.\n\n",
+                   DHP_DEFAULT_LOOPS);
             sw_bench_loops = DHP_DEFAULT_LOOPS;
         }
 
@@ -474,9 +474,9 @@ int main(int argc, char **argv)
 
         dhp_start_benchmark(&bench_time);
         for (i = 0; i < sw_bench_loops; i++) {
-            sig_len = RSA_size(rsa_key_pool[i % sw_create_rsa]);
-            rsa_sig_pool[i] = calloc(1, sig_len);
-            ctx = BN_CTX_new();
+            sig_len                               = RSA_size(rsa_key_pool[i % sw_create_rsa]);
+            rsa_sig_pool[i]                       = calloc(1, sig_len);
+            ctx                                   = BN_CTX_new();
             rsa_key_pool[i % sw_create_rsa]->iqmp = BN_mod_inverse(NULL, rsa_key_pool[i % sw_create_rsa]->p, rsa_key_pool[i % sw_create_rsa]->q, ctx);
 
             if (sw_file_output) {
@@ -528,9 +528,9 @@ int main(int argc, char **argv)
         printf("%4.2f signatures per sec, %4.2f signatures per min\n\n",
                sw_bench_loops / bench_secs, sw_bench_loops / bench_secs * 60);
 
-        printf( "-------------------------------\n"
-                "DSA performance test\n"
-                "-------------------------------\n\n");
+        printf("-------------------------------\n"
+               "DSA performance test\n"
+               "-------------------------------\n\n");
 
         dsa_key_pool = malloc(sw_create_dsa * sizeof(DSA *));
         printf("Creating key pool of %d keys of length %d.\n",
@@ -568,10 +568,10 @@ int main(int argc, char **argv)
 
 
         if (sw_bench_loops == 0) {
-            printf( "Using standard number of loops (%d).\n"
-                    "Use the -p parameter to use more loops\n"
-                    "to get more realistic results.\n\n",
-                    DHP_DEFAULT_LOOPS);
+            printf("Using standard number of loops (%d).\n"
+                   "Use the -p parameter to use more loops\n"
+                   "to get more realistic results.\n\n",
+                   DHP_DEFAULT_LOOPS);
             sw_bench_loops = DHP_DEFAULT_LOOPS;
         }
 
@@ -640,24 +640,24 @@ int main(int argc, char **argv)
                sw_bench_loops / bench_secs, sw_bench_loops / bench_secs * 60);
 
 
-        printf( "-------------------------------\n"
-                "Diffie hellman performance test\n"
-                "-------------------------------\n\n");
+        printf("-------------------------------\n"
+               "Diffie hellman performance test\n"
+               "-------------------------------\n\n");
     } else {
-        printf( "-------------------------------\n"
-                "Diffie hellman cpu load\n"
-                "-------------------------------\n\n");
+        printf("-------------------------------\n"
+               "Diffie hellman cpu load\n"
+               "-------------------------------\n\n");
     }
     /* allocate memory for the DH key pool a minimum size for
      * two keys must be allocated (own and peer key) */
 
     if (sw_create_dh == 0) {
-        printf( "Using 2 DH keys.\n"
-                "Use the -c parameter to create more dh\n"
-                "keys and to get more realistic results.\n\n");
+        printf("Using 2 DH keys.\n"
+               "Use the -c parameter to create more dh\n"
+               "keys and to get more realistic results.\n\n");
 
         /*  DH_generate_key(dh_key_pool[0]);
-        *       DH_generate_key(dh_key_pool[1]); */
+         *       DH_generate_key(dh_key_pool[1]); */
         sw_create_dh = 2;
     }
     dh_key_pool = malloc((sw_create_dh == 0 ? 2 : sw_create_dh) * sizeof(DH *));
@@ -691,7 +691,7 @@ int main(int argc, char **argv)
 
 
     dhp_start_benchmark(&bench_time);
-    int dh_size = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID);
+    int     dh_size = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID);
     uint8_t shared_key[sw_shared_key_len];
     uint8_t pub_key[dh_size];
 
@@ -730,9 +730,9 @@ int main(int argc, char **argv)
     printf("%4.2f keys per sec, %4.2f keys per min\n\n",
            sw_bench_loops / bench_secs, sw_bench_loops / bench_secs * 60);
 
-    printf( "-------------------------------\n"
-            "Hash function (SHA-1) performance test\n"
-            "-------------------------------\n\n");
+    printf("-------------------------------\n"
+           "Hash function (SHA-1) performance test\n"
+           "-------------------------------\n\n");
 
     printf("Creating %d hashes\n", sw_hashloops);
     uint8_t buffer1[HASH_LEN];

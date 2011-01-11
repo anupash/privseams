@@ -48,9 +48,9 @@ struct hip_fw_context {
     ipq_packet_msg_t *ipq_packet;
 
     // IP layer information
-    int               ip_version; /* 4, 6 */
-    int               ip_hdr_len;
-    struct in6_addr   src, dst;
+    int             ip_version;   /* 4, 6 */
+    int             ip_hdr_len;
+    struct in6_addr src, dst;
     union {
         struct ip6_hdr *ipv6;
         struct ip      *ipv4;
@@ -65,43 +65,43 @@ struct hip_fw_context {
     } transport_hdr;
     struct udphdr *udp_encap_hdr;
 
-    int            modified;
+    int modified;
 };
 
 /********** State table structures **************/
 
 struct esp_address {
-    struct in6_addr  dst_addr;
-    uint32_t        *update_id; // null or pointer to the update id from the packet
+    struct in6_addr dst_addr;
+    uint32_t       *update_id;  // null or pointer to the update id from the packet
     // that announced this address.
     // when ack with the update id is seen all esp_addresses with
     // null update_id can be removed.
 };
 
 struct esp_tuple {
-    uint32_t                spi;
-    uint32_t                new_spi;
-    uint32_t                spi_update_id;
-    struct slist           *dst_addr_list;
-    struct tuple           *tuple;
+    uint32_t      spi;
+    uint32_t      new_spi;
+    uint32_t      spi_update_id;
+    struct slist *dst_addr_list;
+    struct tuple *tuple;
     /* tracking of the ESP SEQ number */
-    uint32_t                seq_no;
+    uint32_t seq_no;
     /* members needed for ESP protection extension */
-    uint8_t                 esp_prot_tfm;
-    uint32_t                hash_item_length;
-    uint32_t                hash_tree_depth;
-    long                    num_hchains;
-    unsigned char           active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
+    uint8_t       esp_prot_tfm;
+    uint32_t      hash_item_length;
+    uint32_t      hash_tree_depth;
+    long          num_hchains;
+    unsigned char active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
     // need for verification of anchor updates
-    unsigned char           first_active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
-    unsigned char           next_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
-    int                     active_root_length;
-    unsigned char          *active_roots[MAX_NUM_PARALLEL_HCHAINS];
-    int                     next_root_length[MAX_NUM_PARALLEL_HCHAINS];
-    unsigned char          *next_roots[MAX_NUM_PARALLEL_HCHAINS];
+    unsigned char  first_active_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
+    unsigned char  next_anchors[MAX_NUM_PARALLEL_HCHAINS][MAX_HASH_LENGTH];
+    int            active_root_length;
+    unsigned char *active_roots[MAX_NUM_PARALLEL_HCHAINS];
+    int            next_root_length[MAX_NUM_PARALLEL_HCHAINS];
+    unsigned char *next_roots[MAX_NUM_PARALLEL_HCHAINS];
     /** List temporarily storing anchor elements until the consecutive update
      *  msg reveals that all on-path devices know the new anchor. */
-    struct hip_ll              anchor_cache;
+    struct hip_ll anchor_cache;
     /** buffer storing hashes of previous packets for cumulative authentication */
     struct esp_cumulative_item hash_buffer[MAX_RING_BUFFER_SIZE];
 };
@@ -130,9 +130,9 @@ struct tuple {
     struct connection *connection;
     int                state;
     uint32_t           lupdate_seq;
-    int esp_relay;
-    struct in6_addr esp_relay_daddr;
-    in_port_t esp_relay_dport;
+    int                esp_relay;
+    struct in6_addr    esp_relay_daddr;
+    in_port_t          esp_relay_dport;
 };
 
 struct connection {
@@ -142,10 +142,10 @@ struct connection {
     int            state;
     struct timeval time_stamp;
     /* members needed for ESP protection extension */
-    int            num_esp_prot_tfms;
-    uint8_t        esp_prot_tfms[MAX_NUM_TRANSFORMS];
+    int     num_esp_prot_tfms;
+    uint8_t esp_prot_tfms[MAX_NUM_TRANSFORMS];
 #ifdef CONFIG_HIP_MIDAUTH
-    int            pisa_state;
+    int pisa_state;
 #endif
 };
 

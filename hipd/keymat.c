@@ -56,13 +56,13 @@
  * @return the allocated buffer (caller deallocates) or NULL on failure
  */
 static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
-                                    struct in6_addr *smaller_hit,
-                                    struct in6_addr *bigger_hit,
-                                    uint64_t I, uint64_t J)
+                                         struct in6_addr *smaller_hit,
+                                         struct in6_addr *bigger_hit,
+                                         uint64_t I, uint64_t J)
 
 {
     uint8_t *buffer = NULL, *cur = NULL;
-    size_t requiredmem;
+    size_t   requiredmem;
 
     HIP_DEBUG("\n");
     /* 2*sizeof(uint64_t) added to take care of I and J. */
@@ -78,15 +78,15 @@ static uint8_t *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_
         return buffer;
     }
 
-    cur    = buffer;
+    cur = buffer;
     memcpy(cur, kij, kij_len);
-    cur   += kij_len;
+    cur += kij_len;
     memcpy(cur, (uint8_t *) smaller_hit, sizeof(struct in6_addr));
-    cur   += sizeof(struct in6_addr);
+    cur += sizeof(struct in6_addr);
     memcpy(cur, (uint8_t *) bigger_hit, sizeof(struct in6_addr));
-    cur   += sizeof(struct in6_addr);
+    cur += sizeof(struct in6_addr);
     memcpy(cur, &I, sizeof(uint64_t));     // XX CHECK: network byte order?
-    cur   += sizeof(uint64_t);
+    cur += sizeof(uint64_t);
     memcpy(cur, &J, sizeof(uint64_t));     // XX CHECK: network byte order?
     cur   += sizeof(uint64_t);
     *(cur) = 1;
@@ -141,13 +141,13 @@ void hip_make_keymat(char *kij,
                      uint64_t I,
                      uint64_t J)
 {
-    int bufsize;
-    uint8_t index_nbr = 1;
-    size_t dstoffset  = 0;
-    void *seedkey;
+    int              bufsize;
+    uint8_t          index_nbr = 1;
+    size_t           dstoffset = 0;
+    void            *seedkey;
     struct in6_addr *smaller_hit, *bigger_hit;
-    int hit1_is_bigger;
-    uint8_t *shabuffer     = NULL;
+    int              hit1_is_bigger;
+    uint8_t         *shabuffer = NULL;
 
     HIP_DEBUG("\n");
     if (dstbuflen < HIP_AH_SHA_LEN) {
@@ -159,8 +159,8 @@ void hip_make_keymat(char *kij,
 
     hit1_is_bigger = hip_hit_is_bigger(hit1, hit2);
 
-    bigger_hit     =  hit1_is_bigger ? hit1 : hit2;
-    smaller_hit    = hit1_is_bigger ? hit2 : hit1;
+    bigger_hit  =  hit1_is_bigger ? hit1 : hit2;
+    smaller_hit = hit1_is_bigger ? hit2 : hit1;
 
     shabuffer = hip_create_keymat_buffer(kij, kij_len, HIP_AH_SHA_LEN,
                                          smaller_hit, bigger_hit, I, J);
@@ -183,7 +183,7 @@ void hip_make_keymat(char *kij,
      * K3 = SHA1(Kij | K2 | 3)
      * ...
      */
-    seedkey   = dstbuf;
+    seedkey = dstbuf;
     hip_update_keymat_buffer(shabuffer, seedkey, HIP_AH_SHA_LEN,
                              kij_len, index_nbr);
 
@@ -226,12 +226,12 @@ static void *hip_keymat_draw(struct hip_keymat_keymat *keymat, int len)
     /* todo: remove this function */
     void *ret = NULL;
 
-    if (len > (int)(keymat->keymatlen - keymat->offset)) {
+    if (len > (int) (keymat->keymatlen - keymat->offset)) {
         HIP_DEBUG("Tried to draw more keys than are available\n");
         goto out_err;
     }
 
-    ret             = (uint8_t *) keymat->keymatdst + keymat->offset;
+    ret = (uint8_t *) keymat->keymatdst + keymat->offset;
 
     keymat->offset += len;
 
@@ -252,11 +252,10 @@ int hip_keymat_draw_and_copy(unsigned char *dst,
                              struct hip_keymat_keymat *keymat,
                              int len)
 {
-    int err = 0;
-    void *p = hip_keymat_draw(keymat, len);
+    int   err = 0;
+    void *p   = hip_keymat_draw(keymat, len);
     HIP_IFEL(!p, -EINVAL, "Could not draw from keymat\n");
     memcpy(dst, p, len);
 out_err:
     return err;
 }
-

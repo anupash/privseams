@@ -102,8 +102,8 @@ void hip_uninit_services(void)
  */
 static int hip_del_pending_request_by_expiration(void)
 {
-    int idx = 0;
-    time_t now = time(NULL);
+    int                         idx     = 0;
+    time_t                      now     = time(NULL);
     struct hip_ll_node         *iter    = NULL;
     struct hip_pending_request *request = NULL;
 
@@ -243,7 +243,7 @@ out_err:
  */
 int hip_del_pending_request(struct hip_hadb_state *entry)
 {
-    int idx = 0;
+    int                 idx  = 0;
     struct hip_ll_node *iter = NULL;
 
     /* Iterate through the linked list. The iterator itself can't be used
@@ -277,7 +277,7 @@ int hip_del_pending_request(struct hip_hadb_state *entry)
 int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
                                     uint8_t reg_type)
 {
-    int idx = 0;
+    int                         idx     = 0;
     struct hip_ll_node         *iter    = NULL;
     struct hip_pending_request *request = NULL;
 
@@ -344,8 +344,8 @@ static int hip_get_pending_requests(struct hip_hadb_state *entry,
         return -1;
     }
 
-    struct hip_ll_node *iter = 0;
-    int request_count        = 0;
+    struct hip_ll_node *iter          = 0;
+    int                 request_count = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((struct hip_pending_request *) (iter->ptr))->entry  == entry) {
@@ -370,8 +370,8 @@ static int hip_get_pending_requests(struct hip_hadb_state *entry,
  */
 static int hip_get_pending_request_count(struct hip_hadb_state *entry)
 {
-    struct hip_ll_node *iter = 0;
-    int request_count        = 0;
+    struct hip_ll_node *iter          = 0;
+    int                 request_count = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((struct hip_pending_request *) (iter->ptr))->entry == entry) {
@@ -428,9 +428,9 @@ static int hip_add_registration_server(struct hip_hadb_state *entry,
                                        int *accepted_count, uint8_t refused_requests[],
                                        uint8_t failure_types[], int *refused_count)
 {
-    int err                  = 0, i = 0;
+    int               err = 0, i = 0;
     struct hip_relrec dummy, *fetch_record = NULL, *new_record = NULL;
-    uint8_t granted_lifetime = 0;
+    uint8_t           granted_lifetime = 0;
 
     memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
 
@@ -501,7 +501,7 @@ static int hip_add_registration_server(struct hip_hadb_state *entry,
 
                 /* Check that the put was succesful. */
                 if (hip_relht_get(new_record) != NULL) {
-                    accepted_requests[*accepted_count]  =
+                    accepted_requests[*accepted_count] =
                         reg_types[i];
                     accepted_lifetimes[*accepted_count] =
                         granted_lifetime;
@@ -586,7 +586,7 @@ static int hip_del_registration_server(struct hip_hadb_state *entry,
                                        uint8_t failure_types[],
                                        int *refused_count)
 {
-    int err = 0, i = 0;
+    int               err = 0, i = 0;
     struct hip_relrec dummy, *fetch_record = NULL;
 
     memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
@@ -664,7 +664,7 @@ static int hip_del_registration_server(struct hip_hadb_state *entry,
                 } else {
                     refused_requests[*refused_count] =
                         reg_types[i];
-                    failure_types[*refused_count]    =
+                    failure_types[*refused_count] =
                         HIP_REG_TRANSIENT_CONDITIONS;
                     (*refused_count)++;
                     HIP_ERROR("Cancellation refused.\n");
@@ -707,7 +707,7 @@ static int hip_add_registration_client(struct hip_hadb_state *entry, uint8_t lif
                                        const uint8_t *reg_types,
                                        int type_count)
 {
-    int i          = 0;
+    int    i       = 0;
     time_t seconds = 0;
 
     /* 'seconds' is just just for debug prints. */
@@ -872,11 +872,11 @@ int hip_handle_param_reg_info(struct hip_hadb_state *entry,
                               struct hip_common *source_msg,
                               struct hip_common *target_msg)
 {
-    const struct hip_reg_info *reg_info = NULL;
-    const uint8_t *reg_types            = NULL;
-    unsigned int type_count             = 0;
-    unsigned int i;
-    int err                             = 0;
+    const struct hip_reg_info *reg_info   = NULL;
+    const uint8_t             *reg_types  = NULL;
+    unsigned int               type_count = 0;
+    unsigned int               i;
+    int                        err = 0;
 
     reg_info = hip_get_param(source_msg, HIP_PARAM_REG_INFO);
 
@@ -947,10 +947,10 @@ int hip_handle_param_reg_info(struct hip_hadb_state *entry,
     if (entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
         int request_count = hip_get_pending_request_count(entry);
         if (request_count > 0) {
-            unsigned int j         = 0;
-            int types_to_request   = 0;
-            uint8_t valid_lifetime = 0;
-            uint8_t type_array[request_count];
+            unsigned int                j                = 0;
+            int                         types_to_request = 0;
+            uint8_t                     valid_lifetime   = 0;
+            uint8_t                     type_array[request_count];
             struct hip_pending_request *requests[request_count];
 
             i = 0;
@@ -973,7 +973,7 @@ int hip_handle_param_reg_info(struct hip_hadb_state *entry,
             /* Copy the Reg Types to an array. Outer loop for the
              * services we have requested, inner loop for the
              * services the server offers. */
-            for (i = 0; i < (unsigned)request_count; i++) {
+            for (i = 0; i < (unsigned) request_count; i++) {
                 for (j = 0; j < type_count; j++) {
                     if (requests[i]->reg_type == reg_types[j]) {
                         type_array[types_to_request] = requests[i]->reg_type;
@@ -1070,13 +1070,13 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
                                  struct hip_common *source_msg,
                                  struct hip_common *target_msg)
 {
-    int err                             = 0, type_count = 0, accepted_count = 0, refused_count = 0;
+    int                           err         = 0, type_count = 0, accepted_count = 0, refused_count = 0;
     const struct hip_reg_request *reg_request = NULL;
-    const uint8_t *reg_types                  = NULL;
+    const uint8_t                *reg_types   = NULL;
     /* Arrays for storing the type reg_types of the accepted and refused
      * request types. */
-    uint8_t *accepted_requests          = NULL, *accepted_lifetimes = NULL;
-    uint8_t *refused_requests           = NULL, *failure_types = NULL;
+    uint8_t *accepted_requests = NULL, *accepted_lifetimes = NULL;
+    uint8_t *refused_requests  = NULL, *failure_types = NULL;
 
     reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
 
@@ -1090,8 +1090,8 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
     }
 
     /* Get the number of registration types. */
-    type_count         = hip_get_param_contents_len(reg_request) -
-                         sizeof(reg_request->lifetime);
+    type_count = hip_get_param_contents_len(reg_request) -
+                 sizeof(reg_request->lifetime);
     accepted_requests  = malloc(sizeof(uint8_t) * type_count);
     accepted_lifetimes = malloc(sizeof(uint8_t) * type_count);
     refused_requests   = malloc(sizeof(uint8_t) * type_count);
@@ -1158,7 +1158,7 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
     if (refused_count > 0) {
         /* We must add as many REG_FAILED parameters as there are
          * different failure types. */
-        int i, j, to_be_build_count;
+        int     i, j, to_be_build_count;
         uint8_t reg_types_to_build[refused_count];
         uint8_t type_to_check[HIP_TOTAL_EXISTING_FAILURE_TYPES] =
             HIP_ARRAY_INIT_REG_FAILURES;
@@ -1221,9 +1221,9 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
 int hip_handle_param_reg_response(struct hip_hadb_state *entry,
                                   struct hip_common *msg)
 {
-    int err                               = 0, type_count = 0;
+    int                            err          = 0, type_count = 0;
     const struct hip_reg_response *reg_response = NULL;
-    const uint8_t *reg_types                    = NULL;
+    const uint8_t                 *reg_types    = NULL;
 
     reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
 
@@ -1237,8 +1237,8 @@ int hip_handle_param_reg_response(struct hip_hadb_state *entry,
 
     type_count = hip_get_param_contents_len(reg_response) -
                  sizeof(reg_response->lifetime);
-    reg_types  = (const uint8_t *) hip_get_param_contents_direct(reg_response) +
-                 sizeof(reg_response->lifetime);
+    reg_types = (const uint8_t *) hip_get_param_contents_direct(reg_response) +
+                sizeof(reg_response->lifetime);
 
     if (reg_response->lifetime == 0) {
         hip_del_registration_client(entry, reg_types, type_count);
@@ -1314,10 +1314,10 @@ static int hip_get_registration_failure_string(uint8_t failure_type,
 int hip_handle_param_reg_failed(struct hip_hadb_state *entry,
                                 struct hip_common *msg)
 {
-    int err                           = 0, type_count = 0, i = 0;
+    int                          err        = 0, type_count = 0, i = 0;
     const struct hip_reg_failed *reg_failed = NULL;
-    const uint8_t *reg_types                = NULL;
-    char reason[256];
+    const uint8_t               *reg_types  = NULL;
+    char                         reason[256];
 
     reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
 
@@ -1333,8 +1333,8 @@ int hip_handle_param_reg_failed(struct hip_hadb_state *entry,
     while (hip_get_param_type(reg_failed) == HIP_PARAM_REG_FAILED) {
         type_count = hip_get_param_contents_len(reg_failed) -
                      sizeof(reg_failed->failure_type);
-        reg_types  = (const uint8_t *) hip_get_param_contents_direct(reg_failed) +
-                     sizeof(reg_failed->failure_type);
+        reg_types = (const uint8_t *) hip_get_param_contents_direct(reg_failed) +
+                    sizeof(reg_failed->failure_type);
         hip_get_registration_failure_string(reg_failed->failure_type,
                                             reason);
 
@@ -1392,7 +1392,7 @@ int hip_handle_param_reg_failed(struct hip_hadb_state *entry,
          * no more parameters left. */
         i          = 0;
         reg_failed = (const struct hip_reg_failed *) hip_get_next_param(msg,
-                                        (const struct hip_tlv_common *)reg_failed);
+                                                                        (const struct hip_tlv_common *) reg_failed);
 
         if (reg_failed == NULL) {
             break;
@@ -1415,7 +1415,7 @@ out_err:
  */
 int hip_handle_reg_from(struct hip_hadb_state *entry, struct hip_common *msg)
 {
-    int err                          = 0;
+    int                        err   = 0;
     const struct hip_reg_from *rfrom = NULL;
 
     HIP_DEBUG("Checking msg for REG_FROM parameter.\n");

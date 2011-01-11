@@ -70,11 +70,11 @@
 #include "update_legacy.h"
 #include "update.h"
 
-enum update_types {UNKNOWN_PACKET, FIRST_PACKET, SECOND_PACKET, THIRD_PACKET};
+enum update_types { UNKNOWN_PACKET, FIRST_PACKET, SECOND_PACKET, THIRD_PACKET };
 
 struct update_state {
     /** A kludge to get the UPDATE retransmission to work.
-        @todo Remove this kludge. */
+     *  @todo Remove this kludge. */
     int update_state;
 
     /** This "linked list" includes the locators we recieved in the initial
@@ -90,9 +90,9 @@ struct update_state {
     HIP_HASHTABLE *addresses_to_send_echo_request;
 
     /** Stored outgoing UPDATE ID counter. */
-    uint32_t                     update_id_out;
+    uint32_t update_id_out;
     /** Stored incoming UPDATE ID counter. */
-    uint32_t                     update_id_in;
+    uint32_t update_id_in;
 };
 
 /**
@@ -116,7 +116,7 @@ static struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct
 int hip_create_locators(struct hip_common *locator_msg,
                         struct hip_locator_info_addr_item **locators)
 {
-    int err = 0;
+    int                 err = 0;
     struct hip_locator *loc = NULL;
 
     hip_msg_init(locator_msg);
@@ -150,7 +150,7 @@ out_err:
  * @param *state    Pointer to the update state.
  *
  * @return The next UPDATE out ID if state is set, -1 on error
-*/
+ */
 static inline uint32_t hip_update_get_out_id(struct update_state *state)
 {
     if (state) {
@@ -181,12 +181,12 @@ static int hip_create_update_msg(struct hip_common *received_update_packet,
                                  struct hip_locator_info_addr_item *locators,
                                  int type)
 {
-    int err                                     = 0;
-    uint32_t esp_info_old_spi                   = 0, esp_info_new_spi = 0;
-    uint16_t mask                               = 0;
-    const struct hip_seq *seq                   = NULL;
-    const struct hip_echo_request *echo_request = NULL;
-    struct update_state *localstate             = NULL;
+    int                            err              = 0;
+    uint32_t                       esp_info_old_spi = 0, esp_info_new_spi = 0;
+    uint16_t                       mask             = 0;
+    const struct hip_seq          *seq              = NULL;
+    const struct hip_echo_request *echo_request     = NULL;
+    struct update_state           *localstate       = NULL;
 
     HIP_DEBUG("Creating the UPDATE packet\n");
 
@@ -247,7 +247,6 @@ static int hip_create_update_msg(struct hip_common *received_update_packet,
     if (type == HIP_UPDATE_LOCATOR      ||
         type == HIP_UPDATE_ECHO_REQUEST ||
         type == HIP_UPDATE_ESP_ANCHOR) {
-
         localstate = lmod_get_state_item(ha->hip_modular_state, "update");
         localstate->update_id_out++;
         HIP_DEBUG("outgoing UPDATE ID=%u\n", hip_update_get_out_id(localstate));
@@ -365,7 +364,7 @@ static int hip_send_update_pkt(struct hip_common *update_packet_to_send,
                                const struct in6_addr *src_addr,
                                const struct in6_addr *dst_addr)
 {
-    int err = 0;
+    int       err        = 0;
     const int retransmit = 1;
 
     /** @todo set the local address unverified for that dst_hit(); */
@@ -387,8 +386,8 @@ static int hip_send_update_pkt(struct hip_common *update_packet_to_send,
  */
 static void hip_remove_addresses_to_send_echo_request(struct update_state *state)
 {
-    int i = 0;
-    LHASH_NODE *item = NULL, *tmp = NULL;
+    int              i       = 0;
+    LHASH_NODE      *item    = NULL, *tmp = NULL;
     struct in6_addr *address = NULL;
 
     list_for_each_safe(item, tmp, state->addresses_to_send_echo_request, i) {
@@ -405,9 +404,9 @@ static void hip_remove_addresses_to_send_echo_request(struct update_state *state
  */
 static void hip_print_addresses_to_send_update_request(struct hip_hadb_state *ha)
 {
-    int i = 0;
-    LHASH_NODE *item = NULL, *tmp = NULL;
-    struct in6_addr *address = NULL;
+    int                  i          = 0;
+    LHASH_NODE          *item       = NULL, *tmp = NULL;
+    struct in6_addr     *address    = NULL;
     struct update_state *localstate = NULL;
 
     localstate = lmod_get_state_item(ha->hip_modular_state, "update");
@@ -433,11 +432,11 @@ static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *h
                                                   const struct in6_addr *dst_addr,
                                                   struct in6_addr *new_src_addr)
 {
-    int err = 0, c;
+    int                     err = 0, c;
     struct sockaddr_storage ss;
-    struct netdev_address *na = NULL;
-    LHASH_NODE *n = NULL, *t = NULL;
-    const struct in6_addr *in6 = NULL;
+    struct netdev_address  *na  = NULL;
+    LHASH_NODE             *n   = NULL, *t = NULL;
+    const struct in6_addr  *in6 = NULL;
 
     memset(&ss, 0, sizeof(ss));
     memset(new_src_addr, 0, sizeof(*new_src_addr));
@@ -507,11 +506,11 @@ int hip_send_update_to_one_peer(struct hip_common *received_update_packet,
                                 struct hip_locator_info_addr_item *locators,
                                 int type)
 {
-    int err = 0, i = 0;
-    LHASH_NODE *item = NULL, *tmp = NULL;
+    int                  err                   = 0, i = 0;
+    LHASH_NODE          *item                  = NULL, *tmp = NULL;
     struct hip_common   *update_packet_to_send = NULL;
     struct update_state *localstate            = NULL;
-    struct in6_addr local_addr;
+    struct in6_addr      local_addr;
 
     HIP_IFEL(!(update_packet_to_send = hip_msg_alloc()), -ENOMEM,
              "Out of memory while allocation memory for the update packet\n");
@@ -589,11 +588,11 @@ out_err:
  */
 static int hip_send_locators_to_all_peers(void)
 {
-    int err = 0, i = 0;
+    int                                err = 0, i = 0;
     struct hip_locator_info_addr_item *locators;
-    struct hip_hadb_state *ha          = NULL;
-    struct hip_common     *locator_msg = NULL;
-    LHASH_NODE *item = NULL, *tmp = NULL;
+    struct hip_hadb_state             *ha          = NULL;
+    struct hip_common                 *locator_msg = NULL;
+    LHASH_NODE                        *item        = NULL, *tmp = NULL;
 
     HIP_IFEL(!(locator_msg = hip_msg_alloc()), -ENOMEM,
              "Out of memory while allocation memory for the packet\n");
@@ -642,9 +641,9 @@ out_err:
 static union hip_locator_info_addr *hip_get_locator_item(void *item_list,
                                                          int idx)
 {
-    int i = 0;
+    int                                i = 0;
     struct hip_locator_info_addr_item *temp;
-    char *result;
+    char                              *result;
     result = item_list;
 
 
@@ -691,22 +690,21 @@ static struct in6_addr *hip_get_locator_item_address(void *item)
 int hip_get_locator_addr_item_count(const struct hip_locator *locator)
 {
     const char *address_pointer = (const char *) (locator + 1);
-    int loc_count               = 0;
-    uint8_t type;
+    int         loc_count       = 0;
+    uint8_t     type;
 
     while (address_pointer <
-          ((const char *) locator) + hip_get_param_contents_len(locator)) {
+           ((const char *) locator) + hip_get_param_contents_len(locator)) {
         type = ((const struct hip_locator_info_addr_item *)
-               address_pointer)->locator_type;
+                address_pointer)->locator_type;
 
         if (type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
             address_pointer += sizeof(struct hip_locator_info_addr_item2);
-            loc_count += 1;
+            loc_count       += 1;
         } else if (type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI
-                    || type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-
+                   || type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
             address_pointer += sizeof(struct hip_locator_info_addr_item);
-            loc_count += 1;
+            loc_count       += 1;
         } else {
             address_pointer += sizeof(struct hip_locator_info_addr_item);
         }
@@ -726,14 +724,14 @@ static int hip_handle_locator_parameter(struct hip_hadb_state *ha,
                                         const struct in6_addr *src_addr,
                                         struct hip_locator *locator)
 {
-    int err                    = 0;
-    int locator_addr_count     = 0;
-    int i                      = 0;
-    int src_addr_included      = 0;
-    union hip_locator_info_addr *locator_info_addr = NULL;
+    int                                err                  = 0;
+    int                                locator_addr_count   = 0;
+    int                                i                    = 0;
+    int                                src_addr_included    = 0;
+    union hip_locator_info_addr       *locator_info_addr    = NULL;
     struct hip_locator_info_addr_item *locator_address_item = NULL;
-    struct in6_addr *peer_addr = 0;
-    struct update_state *localstate = NULL;
+    struct in6_addr                   *peer_addr            = 0;
+    struct update_state               *localstate           = NULL;
 
     HIP_IFEL(!locator, -1, "locator is NULL");
 
@@ -807,14 +805,15 @@ static enum update_types hip_classify_update_type(const struct hip_esp_info *esp
                                                   const struct hip_echo_request *echo_request,
                                                   const struct hip_echo_response *echo_response)
 {
-    if (esp_info && locator && seq)
+    if (esp_info && locator && seq) {
         return FIRST_PACKET;
-    else if (esp_info && seq && ack && echo_request)
+    } else if (esp_info && seq && ack && echo_request) {
         return SECOND_PACKET;
-    else if (ack && echo_response)
+    } else if (ack && echo_response) {
         return THIRD_PACKET;
-    else
+    } else {
         return UNKNOWN_PACKET;
+    }
 }
 
 /**
@@ -832,7 +831,7 @@ static int hip_handle_first_update_packet(struct hip_packet_context *ctx,
                                           const struct hip_seq *seq)
 {
     struct update_state *localstate = NULL;
-    int err                         = 0;
+    int                  err        = 0;
 
     HIP_IFEL(!(localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state,
                                                 "update")),
@@ -879,7 +878,7 @@ static int hip_handle_second_update_packet(struct hip_packet_context *ctx,
                                            const struct hip_seq *seq)
 {
     struct update_state *localstate = NULL;
-    int err                         = 0;
+    int                  err        = 0;
 
     HIP_IFEL(!(localstate = lmod_get_state_item(ctx->hadb_entry->hip_modular_state,
                                                 "update")),
@@ -929,20 +928,20 @@ static void hip_handle_third_update_packet(struct hip_packet_context *ctx)
 }
 
 static int hip_update_ipsec_sa(UNUSED const uint8_t packet_type,
-                        UNUSED const uint32_t ha_state,
-                        struct hip_packet_context *ctx)
+                               UNUSED const uint32_t ha_state,
+                               struct hip_packet_context *ctx)
 {
     int err = 0;
 
     // don't update IPsec SAs and SPs for 1st UPDATE packet
-    if(!hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR)) {
+    if (!hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR)) {
         HIP_IFEL(hip_recreate_security_associations_and_sp(ctx->hadb_entry,
                                                            &ctx->src_addr,
                                                            &ctx->dst_addr),
                  -1, "failed to update IPsec SAs and SPs\n");
     }
 
-  out_err:
+out_err:
     return err;
 }
 
@@ -999,7 +998,7 @@ static int hip_update_maintenance(void)
  */
 static int hip_update_init_state(struct modular_state *state)
 {
-    int err = 0;
+    int                  err          = 0;
     struct update_state *update_state = NULL;
 
     HIP_IFEL(!(update_state = malloc(sizeof(struct update_state))),
@@ -1017,24 +1016,24 @@ out_err:
     return err;
 }
 
- /**
-  * Check if UPDATE sequence and acknowledgment numbers are as expected.
-  *
-  * @param packet_type the packet type
-  * @param ha_state the HA state
-  * @param ctx the packet context
-  * @return zero on success or negative on failure
-  */
+/**
+ * Check if UPDATE sequence and acknowledgment numbers are as expected.
+ *
+ * @param packet_type the packet type
+ * @param ha_state the HA state
+ * @param ctx the packet context
+ * @return zero on success or negative on failure
+ */
 static int hip_check_update_freshness(UNUSED const uint8_t packet_type,
                                       UNUSED const uint32_t ha_state,
                                       struct hip_packet_context *ctx)
 {
-    struct update_state *localstate = NULL;
-    const struct hip_seq *seq       = NULL;
-    const struct hip_ack *ack       = NULL;
-    uint32_t seq_update_id          = 0;
-    uint32_t ack_peer_update_id     = 0;
-    int err                         = 0;
+    struct update_state  *localstate         = NULL;
+    const struct hip_seq *seq                = NULL;
+    const struct hip_ack *ack                = NULL;
+    uint32_t              seq_update_id      = 0;
+    uint32_t              ack_peer_update_id = 0;
+    int                   err                = 0;
 
     /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
      * the implementation MAY reply with an ICMP Parameter Problem. */
@@ -1061,7 +1060,6 @@ static int hip_check_update_freshness(UNUSED const uint8_t packet_type,
         // old updates are bad updates (may be replayed)
         if (localstate->update_id_in != 0 &&
             seq_update_id < localstate->update_id_in) {
-
             HIP_DEBUG("Update ID (%u) in the SEQ parameter is before "
                       "previous Update ID (%u). Dropping the packet.\n",
                       seq_update_id,
@@ -1080,7 +1078,6 @@ static int hip_check_update_freshness(UNUSED const uint8_t packet_type,
 
         // we only want acks for our most current update
         if (ack_peer_update_id != hip_update_get_out_id(localstate)) {
-
             HIP_DEBUG("Update ID (%u) in the ACK parameter is not "
                       "equal to the last outgoing Update ID (%u). "
                       "Dropping the packet.\n",
@@ -1116,8 +1113,8 @@ static int hip_check_update_packet(UNUSED const uint8_t packet_type,
     int err = 0;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_UPDATE\n");
-        hip_perf_start_benchmark(perf_set, PERF_UPDATE);
+    HIP_DEBUG("Start PERF_UPDATE\n");
+    hip_perf_start_benchmark(perf_set, PERF_UPDATE);
 #endif
 
     /* RFC 5201 Section 5.4.4: If there is no corresponding HIP association,
@@ -1148,14 +1145,14 @@ static int hip_handle_update_packet(UNUSED const uint8_t packet_type,
                                     UNUSED const uint32_t ha_state,
                                     struct hip_packet_context *ctx)
 {
-    const struct hip_esp_info *esp_info           = NULL;
-    struct hip_locator *locator                   = NULL;
-    const struct hip_seq *seq                     = NULL;
-    const struct hip_ack *ack                     = NULL;
-    const struct hip_echo_request *echo_request   = NULL;
+    const struct hip_esp_info      *esp_info      = NULL;
+    struct hip_locator             *locator       = NULL;
+    const struct hip_seq           *seq           = NULL;
+    const struct hip_ack           *ack           = NULL;
+    const struct hip_echo_request  *echo_request  = NULL;
     const struct hip_echo_response *echo_response = NULL;
-    enum update_types update_type                 = UNKNOWN_PACKET;
-    int err                                       = 0;
+    enum update_types               update_type   = UNKNOWN_PACKET;
+    int                             err           = 0;
 
     /* RFC 5206: End-Host Mobility and Multihoming.
      * Mandatory parameters from 3.2.1. Mobility with a Single SA Pair
@@ -1168,7 +1165,7 @@ static int hip_handle_update_packet(UNUSED const uint8_t packet_type,
     echo_response = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_RESPONSE_SIGN);
 
     /* set local UDP port just in case the original communications
-       changed from raw to UDP or vice versa */
+     * changed from raw to UDP or vice versa */
     ctx->hadb_entry->local_udp_port = ctx->msg_ports.dst_port;
     /* @todo: a workaround for bug id 592200 */
     ctx->hadb_entry->peer_udp_port = ctx->msg_ports.src_port;
@@ -1188,27 +1185,25 @@ static int hip_handle_update_packet(UNUSED const uint8_t packet_type,
         break;
     case SECOND_PACKET:
         err = hip_handle_second_update_packet(ctx,
-                                        esp_info,
-                                        seq);
+                                              esp_info,
+                                              seq);
         break;
     case THIRD_PACKET:
         hip_handle_third_update_packet(ctx);
         break;
     default:
         if (esp_prot_update_type(ctx->input_msg)
-                == ESP_PROT_FIRST_UPDATE_PACKET) {
+            == ESP_PROT_FIRST_UPDATE_PACKET) {
             esp_prot_handle_first_update_packet(ctx->input_msg,
                                                 ctx->hadb_entry,
                                                 &ctx->src_addr,
                                                 &ctx->dst_addr);
-        }
-        else if (esp_prot_update_type(ctx->input_msg)
-                == ESP_PROT_SECOND_UPDATE_PACKET) {
+        } else if (esp_prot_update_type(ctx->input_msg)
+                   == ESP_PROT_SECOND_UPDATE_PACKET) {
             esp_prot_handle_second_update_packet(ctx->hadb_entry,
                                                  &ctx->src_addr,
                                                  &ctx->dst_addr);
-        }
-        else {
+        } else {
             HIP_ERROR("UPDATE packet unknown\n");
             err = -1;
             goto out_err;
@@ -1236,9 +1231,9 @@ static int hip_update_change_state(UNUSED const uint8_t packet_type,
     }
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop and write PERF_UPDATE\n");
-        hip_perf_stop_benchmark(perf_set, PERF_UPDATE);
-        hip_perf_write_benchmark(perf_set, PERF_UPDATE);
+    HIP_DEBUG("Stop and write PERF_UPDATE\n");
+    hip_perf_stop_benchmark(perf_set, PERF_UPDATE);
+    hip_perf_write_benchmark(perf_set, PERF_UPDATE);
 #endif
 
     return err;
@@ -1277,12 +1272,12 @@ int hip_update_init(void)
                                           HIP_STATE_R2_SENT,
                                           &hip_update_ipsec_sa,
                                           30500),
-                 -1, "Error on registering UPDATE handle function.\n");
+             -1, "Error on registering UPDATE handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_R2_SENT,
                                           &hip_update_change_state,
                                           40000),
-                 -1, "Error on registering UPDATE handle function.\n");
+             -1, "Error on registering UPDATE handle function.\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
                                           HIP_STATE_ESTABLISHED,
@@ -1312,15 +1307,15 @@ int hip_update_init(void)
 
 /* FIXME: Implement handle function for HIP_MSG_LOCATOR_GET to replace this. */
 #if 0
-    case HIP_MSG_LOCATOR_GET:
-        HIP_DEBUG("Got a request for locators\n");
-        hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_LOCATOR_GET, 0), -1,
-                 "Failed to build user message header.: %s\n",
-                 strerror(err));
-        if ((err = hip_build_locators_old(msg, 0)) < 0) {
-            HIP_DEBUG("LOCATOR parameter building failed\n");
-        }
+case HIP_MSG_LOCATOR_GET:
+    HIP_DEBUG("Got a request for locators\n");
+    hip_msg_init(msg);
+    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_LOCATOR_GET, 0), -1,
+             "Failed to build user message header.: %s\n",
+             strerror(err));
+    if ((err = hip_build_locators_old(msg, 0)) < 0) {
+        HIP_DEBUG("LOCATOR parameter building failed\n");
+    }
 
 #endif
 

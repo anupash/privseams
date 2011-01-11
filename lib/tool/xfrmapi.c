@@ -37,7 +37,7 @@
 
 /* New OSes have this, but older ones don't */
 #ifndef XFRM_MODE_BEET
-#  define XFRM_MODE_BEET 4
+#define XFRM_MODE_BEET 4
 #endif
 
 #define XFRM_TMPLS_BUF_SIZE 1024
@@ -56,19 +56,19 @@ const char **a_algo_names;
 
 /* Mappings from HIP to XFRM algo names < 2.6.19 */
 const char *e_algo_names_old[] =
-{"reserved",   "aes",         "des3_ede", "des3_ede",
- "blowfish", "cipher_null", "cipher_null"};
+{ "reserved", "aes",         "des3_ede",         "des3_ede",
+  "blowfish", "cipher_null", "cipher_null" };
 const char *a_algo_names_old[] =
-{"reserved", "sha1", "sha1", "md5",
- "sha1",   "sha1", "md5"};
+{ "reserved", "sha1",   "sha1", "md5",
+  "sha1",     "sha1",   "md5" };
 
 /* Mappings from HIP to XFRM algo names >= 2.6.19 */
 const char *e_algo_names_new[] =
-{"reserved",        "cbc(aes)",         "cbc(des3_ede)", "cbc(des3_ede)",
- "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)"};
+{ "reserved",      "cbc(aes)",         "cbc(des3_ede)",         "cbc(des3_ede)",
+  "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)" };
 const char *a_algo_names_new[] =
-{"reserved",     "hmac(sha1)", "hmac(sha1)", "hmac(md5)",
- "hmac(sha1)", "hmac(sha1)", "hmac(md5)"};
+{ "reserved",   "hmac(sha1)",     "hmac(sha1)", "hmac(md5)",
+  "hmac(sha1)", "hmac(sha1)",     "hmac(md5)" };
 
 
 /**
@@ -212,9 +212,9 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
         struct xfrm_userpolicy_info xpinfo;
         char                        buf[RTA_BUF_SIZE];
     } req;
-    char tmpls_buf[XFRM_TMPLS_BUF_SIZE];
-    int tmpls_len  = 0, err = 0;
-    unsigned flags = 0;
+    char                   tmpls_buf[XFRM_TMPLS_BUF_SIZE];
+    int                    tmpls_len = 0, err = 0;
+    unsigned               flags     = 0;
     struct xfrm_user_tmpl *tmpl;
 
     memset(&req, 0, sizeof(req));
@@ -368,7 +368,7 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
     req.n.nlmsg_flags = NLM_F_REQUEST;
     req.n.nlmsg_type  = XFRM_MSG_DELPOLICY;
 
-    req.xpid.dir      = dir;
+    req.xpid.dir = dir;
 
     /* SELECTOR <--> HITs */
     HIP_IFE(hip_xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
@@ -417,7 +417,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
                                  const int preferred_family,
                                  const int sport, const int dport)
 {
-    int err = 0;
+    int                    err = 0;
     struct xfrm_encap_tmpl encap;
     struct {
         struct nlmsghdr         n;
@@ -442,16 +442,16 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         req.xsinfo.family = preferred_family;
     }
 
-    req.n.nlmsg_len     = NLMSG_LENGTH(sizeof(req.xsinfo));
-    req.n.nlmsg_flags   = NLM_F_REQUEST;
-    req.n.nlmsg_type    = cmd;
+    req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xsinfo));
+    req.n.nlmsg_flags = NLM_F_REQUEST;
+    req.n.nlmsg_type  = cmd;
 
     hip_xfrm_init_lft(&req.xsinfo.lft);
 
     req.xsinfo.mode     = XFRM_MODE_BEET;
     req.xsinfo.id.proto = IPPROTO_ESP;
 
-    req.xsinfo.id.spi   = htonl(spi);
+    req.xsinfo.id.spi = htonl(spi);
 
     /* Selector */
     HIP_IFE(hip_xfrm_fill_selector(&req.xsinfo.sel, src_id, dst_id,
@@ -473,10 +473,10 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         } alg;
         const char *e_name = e_algo_names[ealg];
         const char *a_name = a_algo_names[aalg];
-        int len;
+        int         len;
 
-        HIP_ASSERT(ealg < (int)sizeof(e_algo_names));
-        HIP_ASSERT(aalg < (int)sizeof(a_algo_names));
+        HIP_ASSERT(ealg < (int) sizeof(e_algo_names));
+        HIP_ASSERT(aalg < (int) sizeof(a_algo_names));
 
         memset(alg.buf, 0, sizeof(alg.buf));
 
@@ -532,7 +532,7 @@ static int hip_xfrm_state_delete(struct rtnl_handle *rth,
         char                  buf[RTA_BUF_SIZE];
     } req;
     struct xfrm_encap_tmpl encap;
-    int err = 0;
+    int                    err = 0;
 
     memset(&req, 0, sizeof(req));
 
@@ -724,9 +724,9 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
                     const int update,
                     struct hip_hadb_state *entry)
 {
-    int err  = 0, enckey_len, authkey_len;
-    int aalg = ealg;
-    int cmd  = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
+    int       err  = 0, enckey_len, authkey_len;
+    int       aalg = ealg;
+    int       cmd  = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
     in_port_t sport, dport;
 
     HIP_ASSERT(spi != 0);
@@ -796,9 +796,9 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
 {
     HIP_DEBUG("Start\n");
 
-    int err   = 0;
+    int     err    = 0;
     uint8_t prefix = hip_calc_sp_prefix(src_id, use_full_prefix);
-    int cmd   = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
+    int     cmd    = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 
     /* XX FIXME: remove the proto argument */
     HIP_DEBUG("hip_setup_hit_sp_pair\n");
@@ -863,8 +863,8 @@ void hip_delete_default_prefix_sp_pair(void)
  */
 int hip_setup_default_sp_prefix_pair(void)
 {
-    int err = 0;
-    hip_hit_t src_hit, dst_hit;
+    int             err = 0;
+    hip_hit_t       src_hit, dst_hit;
     struct in6_addr ip;
 
     memset(&ip, 0, sizeof(hip_hit_t));

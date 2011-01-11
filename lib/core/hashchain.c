@@ -71,7 +71,7 @@ int hchain_verify(const unsigned char *current_hash,
     /* stores intermediate hash results and allow to concat
      * with a secret at each step */
     unsigned char buffer[MAX_HASH_LENGTH + secret_length];
-    int err = 0, i;
+    int           err = 0, i;
 
     HIP_ASSERT(current_hash != NULL && last_hash != NULL);
     HIP_ASSERT(hash_func != NULL);
@@ -128,8 +128,8 @@ struct hash_chain *hchain_create(const hash_function hash_func,
      *
      * @note we also allow a concatenation with the link tree root and the jump chain element here */
     unsigned char hash_value[3 * MAX_HASH_LENGTH];
-    int hash_data_length = 0;
-    int i, err = 0;
+    int           hash_data_length = 0;
+    int           i, err = 0;
 
     HIP_ASSERT(hash_func != NULL);
     // make sure that the hash we want to use is smaller than the max output
@@ -160,7 +160,7 @@ struct hash_chain *hchain_create(const hash_function hash_func,
             HIP_IFEL(!(hash_func(hash_value, hash_data_length, hash_value)), -1,
                      "failed to calculate hash\n");
             // only consider highest bytes of digest with length of actual element
-            memcpy( &hchain->elements[i * hash_length], hash_value, hash_length);
+            memcpy(&hchain->elements[i * hash_length], hash_value, hash_length);
         } else {
             // random bytes as seed -> need a copy in hash_value for further computations
             HIP_IFEL(RAND_bytes(hash_value, hash_length) <= 0, -1,
@@ -205,7 +205,7 @@ static unsigned char *hchain_element_by_index(const struct hash_chain *hash_chai
                                               const int idx)
 {
     unsigned char *element = NULL;
-    int err                = 0;
+    int            err     = 0;
 
     HIP_ASSERT(hash_chain);
 
@@ -251,8 +251,6 @@ unsigned char *hchain_get_seed(const struct hash_chain *hash_chain)
 
     return hchain_element_by_index(hash_chain, 0);
 }
-
-
 
 /** returns the next element of the hash chain but does not advance the current element
  * pointer. This function should only be used if the next element is kept secret and has to

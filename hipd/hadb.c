@@ -123,7 +123,7 @@ struct hip_peer_map_info {
 static unsigned long hip_ha_hash(const struct hip_hadb_state *ha)
 {
     hip_hit_t hitpair[2];
-    uint8_t hash[HIP_AH_SHA_LEN];
+    uint8_t   hash[HIP_AH_SHA_LEN];
 
     if (ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL) {
         return 0;
@@ -186,7 +186,7 @@ STATIC_IMPLEMENT_LHASH_COMP_FN(hip_ha, struct hip_hadb_state)
 static unsigned long hip_hash_peer_addr(const void *ptr)
 {
     const struct in6_addr *addr;
-    uint8_t hash[HIP_AH_SHA_LEN];
+    uint8_t                hash[HIP_AH_SHA_LEN];
 
     addr = &((const struct hip_peer_addr_list_item *) ptr)->address;
     hip_build_digest(HIP_DIGEST_SHA1, addr, sizeof(*addr), hash);
@@ -286,11 +286,11 @@ struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit,
  */
 struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
-    LHASH_NODE *item, *tmp;
+    LHASH_NODE               *item, *tmp;
     struct hip_host_id_entry *e;
-    struct hip_hadb_state *entry = NULL;
-    hip_hit_t our_hit;
-    int i;
+    struct hip_hadb_state    *entry = NULL;
+    hip_hit_t                 our_hit;
+    int                       i;
 
     memset(&our_hit, 0, sizeof(our_hit));
 
@@ -460,11 +460,11 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
                                     const struct in6_addr *peer_addr,
                                     const char *peer_hostname)
 {
-    int err                      = 0;
+    int                    err   = 0;
     struct hip_hadb_state *entry = NULL, *aux = NULL;
-    hip_lsi_t lsi_aux;
-    in_port_t nat_udp_port_local = hip_get_local_nat_udp_port();
-    in_port_t nat_udp_port_peer  = hip_get_peer_nat_udp_port();
+    hip_lsi_t              lsi_aux;
+    in_port_t              nat_udp_port_local = hip_get_local_nat_udp_port();
+    in_port_t              nat_udp_port_peer  = hip_get_peer_nat_udp_port();
 
     HIP_DEBUG_IN6ADDR("Local IP address ", local_addr);
 
@@ -553,7 +553,7 @@ static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
                                           void *peer_map_void)
 {
     struct hip_peer_map_info *peer_map = peer_map_void;
-    int err                            = 0;
+    int                       err      = 0;
 
     HIP_DEBUG("hip_hadb_add_peer_info_wrapper() invoked.\n");
     HIP_IFEL(hip_hadb_add_peer_info_complete(&entry->lhi.hit,
@@ -583,7 +583,7 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                            const hip_lsi_t *peer_lsi,
                            const char *peer_hostname)
 {
-    int err = 0;
+    int                      err = 0;
     struct hip_peer_map_info peer_map;
 
     HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
@@ -638,16 +638,16 @@ out_err:
  */
 int hip_add_peer_map(const struct hip_common *input)
 {
-    const struct in6_addr *hit = NULL, *ip = NULL;
-    const hip_lsi_t *lsi       = NULL;
-    const char *peer_hostname  = NULL;
-    int err                    = 0;
+    const struct in6_addr *hit           = NULL, *ip = NULL;
+    const hip_lsi_t       *lsi           = NULL;
+    const char            *peer_hostname = NULL;
+    int                    err           = 0;
 
-    hit           = hip_get_param_contents(input, HIP_PARAM_HIT);
+    hit = hip_get_param_contents(input, HIP_PARAM_HIT);
 
-    lsi           = hip_get_param_contents(input, HIP_PARAM_LSI);
+    lsi = hip_get_param_contents(input, HIP_PARAM_LSI);
 
-    ip            = hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
+    ip = hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
 
     peer_hostname = hip_get_param_contents(input, HIP_PARAM_HOSTNAME);
 
@@ -684,7 +684,7 @@ out_err:
  */
 static int hip_hadb_init_entry(struct hip_hadb_state *entry)
 {
-    int   err          = 0;
+    int err = 0;
 
     HIP_IFEL(!entry, -1, "HA is NULL\n");
 
@@ -777,9 +777,9 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
                            uint32_t spi, uint32_t lifetime, int state,
                            in_port_t port)
 {
-    int err = 0;
+    int                             err = 0;
     struct hip_peer_addr_list_item *a_item;
-    char addrstr[INET6_ADDRSTRLEN];
+    char                            addrstr[INET6_ADDRSTRLEN];
 
     /* assumes already locked entry */
 
@@ -804,7 +804,7 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
                 err = -ENOMEM;
                 goto out_err;
             }
-            a_item->lifetime      = lifetime;
+            a_item->lifetime = lifetime;
             ipv6_addr_copy(&a_item->address, new_addr);
             a_item->address_state = state;
             gettimeofday(&a_item->modified_time, NULL);
@@ -814,7 +814,7 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
         goto out_err;
     }
 
-    err    = hip_hadb_get_peer_addr_info_old(entry, new_addr, NULL, NULL);
+    err = hip_hadb_get_peer_addr_info_old(entry, new_addr, NULL, NULL);
     if (err) {
         goto out_err;
     }
@@ -826,8 +826,8 @@ int hip_hadb_add_peer_addr(struct hip_hadb_state *entry,
         goto out_err;
     }
 
-    a_item->lifetime      = lifetime;
-    a_item->port          = port;
+    a_item->lifetime = lifetime;
+    a_item->port     = port;
     ipv6_addr_copy(&a_item->address, new_addr);
     a_item->address_state = state;
     gettimeofday(&a_item->modified_time, NULL);
@@ -849,9 +849,9 @@ out_err:
  */
 static void hip_hadb_delete_state(struct hip_hadb_state *ha)
 {
-    LHASH_NODE *item = NULL, *tmp = NULL;
+    LHASH_NODE                     *item    = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr_li = NULL;
-    int i;
+    int                             i;
 
     HIP_DEBUG("ha=0x%p\n", ha);
 
@@ -972,8 +972,8 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
 int hip_init_peer(struct hip_hadb_state *entry,
                   const struct hip_host_id *peer)
 {
-    int err = 0;
-    int len = hip_get_param_total_len(peer);
+    int             err = 0;
+    int             len = hip_get_param_total_len(peer);
     struct in6_addr hit;
 
     /* public key and verify function might be initialized already in the
@@ -1004,7 +1004,7 @@ int hip_init_peer(struct hip_hadb_state *entry,
             (struct hip_host_id_priv *) entry->peer_pub, 0);
         break;
     default:
-        HIP_IFEL(1,-1, "Unkown algorithm");
+        HIP_IFEL(1, -1, "Unkown algorithm");
     }
 
 out_err:
@@ -1210,9 +1210,9 @@ void hip_delete_all_sp(void)
 int hip_for_each_ha(int (*func)(struct hip_hadb_state *entry, void *opaq),
                     void *opaque)
 {
-    int i = 0, fail = 0;
+    int                    i = 0, fail = 0;
     struct hip_hadb_state *this;
-    LHASH_NODE *item, *tmp;
+    LHASH_NODE            *item, *tmp;
 
     if (!func) {
         return -EINVAL;
@@ -1276,9 +1276,9 @@ int hip_count_open_connections(void)
  */
 int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
 {
-    int err                = 0;
+    int                             err = 0;
     struct hip_hadb_user_info_state hid;
-    struct hip_common *msg = opaq;
+    struct hip_common              *msg = opaq;
 
     memset(&hid, 0, sizeof(hid));
     hid.state = entry->state;
@@ -1292,7 +1292,7 @@ int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
 
     /** @todo Modularize heartbeat */
 #if 0
-    hid.heartbeats_on       = hip_icmp_interval;
+    hid.heartbeats_on = hip_icmp_interval;
     calc_statistics(&entry->heartbeats_statistics, (uint32_t *) &hid.heartbeats_received, NULL, NULL,
                     &hid.heartbeats_mean, &hid.heartbeats_variance, STATS_IN_MSECS);
     hid.heartbeats_mean     = entry->heartbeats_mean;
@@ -1304,7 +1304,7 @@ int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
     hid.nat_udp_port_peer  = entry->peer_udp_port;
     hid.nat_udp_port_local = entry->local_udp_port;
 
-    hid.peer_controls      = entry->peer_controls;
+    hid.peer_controls = entry->peer_controls;
 
     /* does not print heartbeat info, but I do not think it even should -Samu*/
     hip_print_debug_info(&hid.ip_our,   &hid.ip_peer,
@@ -1312,8 +1312,8 @@ int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
                          &hid.lsi_peer, (char *) &hid.peer_hostname,
                          &hid.nat_udp_port_local, &hid.nat_udp_port_peer);
 
-    err                = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
-                                                  sizeof(hid));
+    err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
+                                   sizeof(hid));
     if (err) {
         HIP_ERROR("Building ha info failed\n");
     }
@@ -1341,9 +1341,9 @@ int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
 struct hip_hadb_state *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_hit,
                                                          const hip_hit_t *rvs_ip)
 {
-    int i            = 0;
-    struct hip_hadb_state *this   = NULL, *result = NULL;
-    LHASH_NODE *item = NULL, *tmp = NULL;     //
+    int                    i    = 0;
+    struct hip_hadb_state *this = NULL, *result = NULL;
+    LHASH_NODE            *item = NULL, *tmp = NULL; //
 
     HIP_LOCK_HT(&hadb_hit);
     list_for_each_safe(item, tmp, hadb_hit, i)
@@ -1390,7 +1390,7 @@ static int hip_hadb_find_lsi(struct hip_hadb_state *entry, void *lsi)
  */
 static int hip_hadb_exists_lsi(hip_lsi_t *lsi)
 {
-    int res = 0;
+    int       res = 0;
     hip_lsi_t lsi_aux;
 
     memcpy(&lsi_aux, lsi, sizeof(hip_lsi_t));
@@ -1432,8 +1432,8 @@ static int lsi_assigned(struct in_addr addr)
 int hip_generate_peer_lsi(hip_lsi_t *lsi)
 {
     struct in_addr lsi_prefix;
-    char hostname[HOST_NAME_MAX];
-    int idx = 1;
+    char           hostname[HOST_NAME_MAX];
+    int            idx = 1;
 
     do {
         lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX | idx++);
@@ -1459,9 +1459,9 @@ int hip_generate_peer_lsi(hip_lsi_t *lsi)
 struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
                                                         hip_lsi_t *lsi_dst)
 {
-    LHASH_NODE *item, *aux;
+    LHASH_NODE            *item, *aux;
     struct hip_hadb_state *tmp;
-    int i;
+    int                    i;
 
     list_for_each_safe(item, aux, hadb_hit, i)
     {
@@ -1485,9 +1485,9 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
  */
 struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi_dst)
 {
-    LHASH_NODE *item, *aux;
+    LHASH_NODE            *item, *aux;
     struct hip_hadb_state *tmp;
-    int i;
+    int                    i;
 
     list_for_each_safe(item, aux, hadb_hit, i)
     {
@@ -1544,7 +1544,7 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
                                               struct in6_addr *src_addr,
                                               struct in6_addr *dst_addr)
 {
-    int err         = 0;
+    int err = 0;
 
     int new_spi_out = ha->spi_outbound_new;
     int new_spi_in  = ha->spi_inbound_current;
@@ -1559,7 +1559,7 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
                                    IPPROTO_ESP,
                                    1,
                                    0),
-            -1, "Setting up SP pair failed\n");
+             -1, "Setting up SP pair failed\n");
 
     // Create a new inbound SA
     HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);

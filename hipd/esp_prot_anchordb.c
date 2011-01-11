@@ -52,11 +52,11 @@
 /* defines the structure storing the anchors */
 struct anchor_db {
     /* amount of anchors for each transform */
-    int            num_anchors[MAX_NUM_TRANSFORMS];
+    int num_anchors[MAX_NUM_TRANSFORMS];
     /* length of the anchors for each transform */
-    int            anchor_lengths[MAX_NUM_TRANSFORMS];
+    int anchor_lengths[MAX_NUM_TRANSFORMS];
     /* length of the corresponding hchain/htree */
-    int            hash_item_length[MAX_NUM_TRANSFORMS];
+    int hash_item_length[MAX_NUM_TRANSFORMS];
     /* set to support max amount of anchors possible */
     unsigned char *anchors[MAX_NUM_TRANSFORMS][HCSTORE_MAX_HCHAINS_PER_ITEM];
 };
@@ -103,10 +103,10 @@ void anchor_db_uninit(void)
  */
 int anchor_db_update(const struct hip_common *msg)
 {
-    const struct hip_tlv_common *param = NULL;
-    const unsigned char *anchor        = NULL;
-    int err                            = 0, i, j;
-    uint8_t esp_transforms[MAX_NUM_TRANSFORMS];
+    const struct hip_tlv_common *param  = NULL;
+    const unsigned char         *anchor = NULL;
+    int                          err    = 0, i, j;
+    uint8_t                      esp_transforms[MAX_NUM_TRANSFORMS];
 
     HIP_ASSERT(msg != NULL);
 
@@ -135,13 +135,13 @@ int anchor_db_update(const struct hip_common *msg)
             HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                      -1, "parameter missing in user-message from fw\n");
             anchor_db.num_anchors[esp_transforms[i]] = *(const int *)
-                                          hip_get_param_contents_direct(param);
+                                                       hip_get_param_contents_direct(param);
             HIP_DEBUG("num_anchors is %i\n", anchor_db.num_anchors[esp_transforms[i]]);
 
             HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                      -1, "parameter missing in user-message from fw\n");
             anchor_db.anchor_lengths[esp_transforms[i]] = *(const int *)
-                                          hip_get_param_contents_direct(param);
+                                                          hip_get_param_contents_direct(param);
             HIP_DEBUG("anchor_length is %i\n", anchor_db.anchor_lengths[esp_transforms[i]]);
 
             HIP_IFEL(!(param = hip_get_next_param(msg, param)),
@@ -153,7 +153,7 @@ int anchor_db_update(const struct hip_common *msg)
 
             for (j = 0; j < anchor_db.num_anchors[esp_transforms[i]]; j++) {
                 HIP_IFEL(!(anchor_db.anchors[esp_transforms[i]][j] =
-                           malloc(anchor_db.anchor_lengths[esp_transforms[i]])),
+                               malloc(anchor_db.anchor_lengths[esp_transforms[i]])),
                          -1, "failed to allocate memory\n");
 
                 anchor = hip_get_param_contents_direct(param);
@@ -165,7 +165,7 @@ int anchor_db_update(const struct hip_common *msg)
                 HIP_IFEL(!(param = hip_get_next_param(msg, param)),
                          -1, "parameter missing in user-message from fw\n");
                 anchor_db.hash_item_length[esp_transforms[i]] = *(const int *)
-                                          hip_get_param_contents_direct(param);
+                                                                hip_get_param_contents_direct(param);
                 HIP_DEBUG("adding hash_item_length: %i\n",
                           anchor_db.hash_item_length[esp_transforms[i]]);
 
@@ -213,8 +213,8 @@ int anchor_db_get_num_anchors(const uint8_t transform)
 unsigned char *anchor_db_get_anchor(const uint8_t transform)
 {
     unsigned char *stored_anchor = NULL;
-    int anchor_offset            = 0;
-    int err                      = 0;
+    int            anchor_offset = 0;
+    int            err           = 0;
 
     // ensure correct boundaries
     HIP_ASSERT(transform > 0);
@@ -230,7 +230,7 @@ unsigned char *anchor_db_get_anchor(const uint8_t transform)
 
     // remove anchor from db
     anchor_db.anchors[transform][anchor_offset] = NULL;
-    anchor_offset = anchor_db.num_anchors[transform]--;
+    anchor_offset                               = anchor_db.num_anchors[transform]--;
 
 out_err:
     if (err) {

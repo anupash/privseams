@@ -43,9 +43,9 @@
 
 /* longest digest in openssl lib */
 #ifdef SHA512_DIGEST_LENGTH
-# define MAX_HASH_LENGTH SHA512_DIGEST_LENGTH
+#define MAX_HASH_LENGTH SHA512_DIGEST_LENGTH
 #else
-# define MAX_HASH_LENGTH 64
+#define MAX_HASH_LENGTH 64
 #endif
 
 /* hash function used for the creation and verification of the hash chain */
@@ -58,11 +58,11 @@ struct hash_chain {
      *
      * @note params: (in_buffer, in_length, out_buffer)
      * @note out_buffer should be size MAX_HASH_LENGTH */
-    hash_function   hash_function;
-    int             hash_length; /* length of the hashes, of which the hchain consist */
-    int             hchain_length; /* number of initial elements in the hash-chain */
-    int             hchain_hierarchy; /* hierarchy this hchain belongs to */
-    int             current_index; /* index to currently revealed element for hchain traversal*/
+    hash_function     hash_function;
+    int               hash_length; /* length of the hashes, of which the hchain consist */
+    int               hchain_length; /* number of initial elements in the hash-chain */
+    int               hchain_hierarchy; /* hierarchy this hchain belongs to */
+    int               current_index; /* index to currently revealed element for hchain traversal*/
     unsigned char    *elements;    /* array containing the elements of the hash chain*/
     struct hash_tree *link_tree;   /* pointer to a hash tree for linking hchains */
 };

@@ -98,9 +98,9 @@ static int hip_set_cookie_difficulty(int k)
  */
 int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    int err                  = 0, diff = 0;
+    int              err     = 0, diff = 0;
     const hip_hit_t *dst_hit = NULL;
-    hip_hit_t all_zero_hit;
+    hip_hit_t        all_zero_hit;
     bzero(&all_zero_hit, sizeof(all_zero_hit));
 
     /* obtain the hit */
@@ -113,7 +113,6 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
     return err;
 }
 
-
 /**
  * set the puzzle difficulty according to the msg sent by hipconf
  *
@@ -123,10 +122,10 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
  */
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    int err                  = 0;
-    const int *newVal        = NULL;
+    int              err     = 0;
+    const int       *newVal  = NULL;
     const hip_hit_t *dst_hit = NULL;
-    hip_hit_t all_zero_hit;
+    hip_hit_t        all_zero_hit;
     bzero(&all_zero_hit, sizeof(all_zero_hit));
 
     HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
@@ -139,7 +138,6 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 out_err:
     return err;
 }
-
 
 /**
  * increase cookie difficulty by one
@@ -174,7 +172,7 @@ int hip_dec_cookie_difficulty()
 static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 {
     register uint32_t base = 0;
-    int i;
+    int               i;
 
     for (i = 0; i < 4; i++) {
         base ^= ip_i->s6_addr32[i];
@@ -204,10 +202,10 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
                               struct in6_addr *our_hit)
 {
-    struct hip_common *err          = NULL, *r1 = NULL;
-    struct hip_r1entry *hip_r1table = NULL;
-    struct hip_host_id_entry *hid   = NULL;
-    int idx, len;
+    struct hip_common        *err         = NULL, *r1 = NULL;
+    struct hip_r1entry       *hip_r1table = NULL;
+    struct hip_host_id_entry *hid         = NULL;
+    int                       idx, len;
 
     /* Find the proper R1 table and copy the R1 message from the table */
     HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
@@ -215,7 +213,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
              NULL, "Unknown HIT\n");
 
     hip_r1table = hid->r1;
-    idx = hip_calc_cookie_idx(ip_i, ip_r);
+    idx         = hip_calc_cookie_idx(ip_i, ip_r);
     HIP_DEBUG("Calculated index: %d\n", idx);
 
     /* Create a copy of the found entry */
@@ -267,7 +265,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
     for (i = 0; i < HIP_R1TABLESIZE; i++) {
         int cookie_k;
 
-        cookie_k      = hip_get_cookie_difficulty();
+        cookie_k = hip_get_cookie_difficulty();
 
         r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey,
                                       cookie_k);
@@ -329,10 +327,10 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
      * of this function was inverted. I.e. This function now returns
      * negative for error conditions, zero otherwise. It used to be the
      * other way around. -Lauri 23.07.2008. */
-    const struct hip_puzzle *puzzle = NULL;
-    struct hip_r1entry *result      = NULL;
-    struct hip_host_id_entry *hid   = NULL;
-    int err                         = 0;
+    const struct hip_puzzle  *puzzle = NULL;
+    struct hip_r1entry       *result = NULL;
+    struct hip_host_id_entry *hid    = NULL;
+    int                       err    = 0;
 
     /* Find the proper R1 table */
     HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
@@ -405,7 +403,7 @@ static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
         signature_func = hip_dsa_sign;
         break;
     default:
-        HIP_IFEL(1,-1, "Unkown algorithm");
+        HIP_IFEL(1, -1, "Unkown algorithm");
     }
 
     HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
@@ -423,10 +421,10 @@ out_err:
  */
 int hip_recreate_all_precreated_r1_packets(void)
 {
-    HIP_HASHTABLE *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
-    LHASH_NODE *curr, *iter;
+    HIP_HASHTABLE      *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
+    LHASH_NODE         *curr, *iter;
     struct hip_host_id *tmp;
-    int c;
+    int                 c;
 
     hip_for_each_hi(hip_recreate_r1s_for_entry_move, ht);
 

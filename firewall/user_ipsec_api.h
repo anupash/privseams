@@ -55,7 +55,7 @@
                              + MAX_ESP_PADDING \
                              + sizeof(struct hip_esp_tail) \
                              + EVP_MAX_MD_SIZE) \
-                             + MAX_HASH_LENGTH
+    + MAX_HASH_LENGTH
 
 int userspace_ipsec_init(void);
 int userspace_ipsec_uninit(void);

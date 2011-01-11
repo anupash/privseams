@@ -48,10 +48,10 @@
 /** A pending service request coupled with a host association. */
 struct hip_pending_request {
     struct hip_hadb_state *entry;
-    uint8_t   reg_type;
-    uint8_t   lifetime;
+    uint8_t                reg_type;
+    uint8_t                lifetime;
     /** Time when this record was created, seconds since epoch. */
-    time_t    created;
+    time_t created;
 };
 
 /**

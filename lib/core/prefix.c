@@ -101,8 +101,8 @@ int ipv6_addr_is_null(const struct in6_addr *ip)
  *
  * @param hit the IPv6 address to be tested
  * @return one if the IPv6 address was a real HIT and
- '          zero if it was a pseudo HIT
-*/
+ * '          zero if it was a pseudo HIT
+ */
 int hit_is_real_hit(const struct in6_addr *hit)
 {
     return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] != 0);
@@ -114,8 +114,8 @@ int hit_is_real_hit(const struct in6_addr *hit)
  *
  * @param hit the IPv6 address to be tested
  * @return zero if the IPv6 address was a real HIT and
- '          one if it was a pseudo HIT
-*/
+ * '          one if it was a pseudo HIT
+ */
 int hit_is_opportunistic_hit(const struct in6_addr *hit)
 {
     return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] == 0);
@@ -173,7 +173,7 @@ int hip_lsi_are_equal(const hip_lsi_t *lsi1,
  */
 int hip_id_type_match(const struct in6_addr *id, int id_type)
 {
-    int ret = 0, is_lsi = 0, is_hit = 0;
+    int       ret = 0, is_lsi = 0, is_hit = 0;
     hip_lsi_t lsi;
 
     if (ipv6_addr_is_hit(id)) {
@@ -216,7 +216,7 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
                                   struct in6_addr *hit,
                                   int hit_type)
 {
-    int err              = 0;
+    int     err = 0;
     uint8_t digest[HIP_AH_SHA_LEN];
 
     HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
@@ -298,7 +298,7 @@ int hip_sockaddr_is_v6_mapped(struct sockaddr *sa)
 int hip_sockaddr_len(const void *sockaddr)
 {
     const struct sockaddr *sa = sockaddr;
-    int len;
+    int                    len;
 
     switch (sa->sa_family) {
     case AF_INET:
@@ -325,7 +325,7 @@ int hip_sockaddr_len(const void *sockaddr)
 int hip_sa_addr_len(void *sockaddr)
 {
     struct sockaddr *sa = (struct sockaddr *) sockaddr;
-    int len;
+    int              len;
 
     switch (sa->sa_family) {
     case AF_INET:
@@ -401,11 +401,12 @@ void ipv6_addr_copy(struct in6_addr *a1, const struct in6_addr *a2)
     memcpy(a1, a2, sizeof(struct in6_addr));
 }
 
-int ipv6_addr_any(const struct in6_addr *a) {
+int ipv6_addr_any(const struct in6_addr *a)
+{
     return (a->s6_addr[0] | a->s6_addr[1] | a->s6_addr[2] | a->s6_addr[3] |
-            a->s6_addr[4] |a->s6_addr[5] |a->s6_addr[6] |a->s6_addr[7] |
-            a->s6_addr[8] |a->s6_addr[9] |a->s6_addr[10] |a->s6_addr[11] |
-            a->s6_addr[12] |a->s6_addr[13] |a->s6_addr[14] |a->s6_addr[15]) == 0;
+            a->s6_addr[4] | a->s6_addr[5] | a->s6_addr[6] | a->s6_addr[7] |
+            a->s6_addr[8] | a->s6_addr[9] | a->s6_addr[10] | a->s6_addr[11] |
+            a->s6_addr[12] | a->s6_addr[13] | a->s6_addr[14] | a->s6_addr[15]) == 0;
 }
 
 void hip_copy_in6addr_null_check(struct in6_addr *to,
@@ -428,5 +429,3 @@ void hip_copy_inaddr_null_check(struct in_addr *to, const struct in_addr *from)
         memset(to, 0, sizeof(*to));
     }
 }
-
-

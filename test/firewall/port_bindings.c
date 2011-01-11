@@ -70,7 +70,7 @@ END_TEST
 
 static void test_hip_port_bindings_get(const bool enable_cache)
 {
-    int err = 0;
+    int                   err = 0;
     enum hip_port_binding binding;
 
     err = hip_port_bindings_init(enable_cache);

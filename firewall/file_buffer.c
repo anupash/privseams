@@ -80,8 +80,8 @@ static int hip_fb_resize(struct hip_file_buffer *const fb)
         /* First, we try to determine the current file size for the new buffer size.
          * If that fails (it does, e.g., for proc files), we just increase the
          * current buffer size. */
-        errno       = 0;
-        file_size   = lseek(fb->fd, 0, SEEK_END);
+        errno     = 0;
+        file_size = lseek(fb->fd, 0, SEEK_END);
         if (file_size != -1 || EINVAL == errno) {
             if (file_size != -1) {
                 fb->buffer_size = file_size + HIP_FB_HEADROOM; // add a little head room
@@ -191,8 +191,8 @@ void hip_fb_delete(struct hip_file_buffer *const fb)
             fb->fd = -1;
         }
         free(fb->ma.start);
-        fb->ma.start    = NULL;
-        fb->ma.end      = NULL;
+        fb->ma.start = NULL;
+        fb->ma.end   = NULL;
     }
 }
 
@@ -217,7 +217,7 @@ int hip_fb_reload(struct hip_file_buffer *const fb)
 
     while (1) {
         ssize_t bytes;
-        off_t seek_offset;
+        off_t   seek_offset;
 
         // can we re-read the whole file into the memory buffer?
         seek_offset = lseek(fb->fd, 0, SEEK_SET);
@@ -232,7 +232,7 @@ int hip_fb_reload(struct hip_file_buffer *const fb)
             HIP_ERROR("Reading the contents of the file descriptor %d via read() into a memory buffer of size %d failed with the error %s\n",
                       fb->fd, fb->buffer_size, strerror(errno));
             break;
-        } else if ((size_t)bytes == fb->buffer_size) {
+        } else if ((size_t) bytes == fb->buffer_size) {
             // we can't fit the file into the memory buffer -> resize it
             if (hip_fb_resize(fb) == 0) {
                 // successful resize -> retry reading

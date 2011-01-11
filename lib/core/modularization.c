@@ -45,8 +45,8 @@ struct function {
 };
 
 struct packet_type {
-    uint16_t    num;
-    char *identifier;
+    uint16_t num;
+    char    *identifier;
 };
 
 
@@ -105,7 +105,7 @@ struct modular_state *lmod_init_state(void)
 
     hip_ll_init(state->item_list);
     state->item_names = NULL;
-    state->num_items = 0;
+    state->num_items  = 0;
 
     return state;
 }
@@ -140,7 +140,7 @@ int lmod_register_state_init_function(void *func)
 void lmod_init_state_items(struct modular_state *state)
 {
     struct hip_ll_node *iter = NULL;
-    int (*init_function)(struct modular_state *state) = NULL;
+    int                 (*init_function)(struct modular_state *state) = NULL;
 
     while ((iter = hip_ll_iterate(&state_init_functions, iter))) {
         init_function = iter->ptr;
@@ -163,9 +163,9 @@ static int lmod_get_state_item_id(struct modular_state *state,
     unsigned int i;
 
     for (i = 0; i < state->num_items; i++) {
-       if (0 == strcmp(item_name, state->item_names[i])) {
-           return i;
-       }
+        if (0 == strcmp(item_name, state->item_names[i])) {
+            return i;
+        }
     }
 
     return -1;
@@ -204,7 +204,6 @@ void *lmod_get_state_item(struct modular_state *state, const char *item_name)
     return lmod_get_state_item_by_id(state, state_id);
 }
 
-
 /**
  * Registers a new state item to the global state. The state item can be of any
  * type. This function stores a reference to the new state item.
@@ -222,7 +221,6 @@ int lmod_add_state_item(struct modular_state *state,
                         void *state_item,
                         const char *item_name)
 {
-
     /* Check if identifier already exists */
     if (-1 != lmod_get_state_item_id(state, item_name)) {
         return -1;
@@ -235,7 +233,7 @@ int lmod_add_state_item(struct modular_state *state,
 
     state->item_names[state->num_items++] = strdup(item_name);
 
-    return state->num_items-1;
+    return state->num_items - 1;
 }
 
 /**
@@ -276,7 +274,7 @@ struct hip_ll *lmod_register_function(struct hip_ll *list,
                                       void *entry,
                                       const uint16_t priority)
 {
-    int idx = 0;
+    int                 idx      = 0;
     struct hip_ll      *new_list = NULL;
     struct hip_ll_node *iter     = NULL;
 
@@ -318,7 +316,7 @@ struct hip_ll *lmod_register_function(struct hip_ll *list,
  */
 int lmod_unregister_function(struct hip_ll *list, const void *function)
 {
-    int idx = 0;
+    int                 idx  = 0;
     struct hip_ll_node *iter = NULL;
 
     if (!list) {
@@ -378,9 +376,9 @@ int lmod_module_disabled(const char *module_name)
     unsigned int i;
 
     for (i = 0; i < num_disabled_modules; i++) {
-       if (0 == strcmp(module_name, disabled_modules[i])) {
-           return 1;
-       }
+        if (0 == strcmp(module_name, disabled_modules[i])) {
+            return 1;
+        }
     }
 
     return 0;
@@ -416,7 +414,7 @@ void lmod_uninit_disabled_modules(void)
  */
 static int lmod_packet_type_exists(const uint16_t packet_type)
 {
-    int idx = 0;
+    int                 idx  = 0;
     struct hip_ll_node *iter = NULL;
 
     while ((iter = hip_ll_iterate(&packet_types, iter))) {
@@ -445,10 +443,10 @@ static int lmod_packet_type_exists(const uint16_t packet_type)
 int lmod_register_packet_type(const uint16_t packet_type,
                               const char *identifier)
 {
-    int idx = 0;
-    size_t identifier_len = 0;
-    struct hip_ll_node      *iter = NULL;
-    struct packet_type *new_entry = NULL;
+    int                 idx            = 0;
+    size_t              identifier_len = 0;
+    struct hip_ll_node *iter           = NULL;
+    struct packet_type *new_entry      = NULL;
 
     if (!identifier || (lmod_packet_type_exists(packet_type) != -1)) {
         return -1;

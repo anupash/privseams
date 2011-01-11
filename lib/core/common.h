@@ -41,37 +41,37 @@
 
 /** unused attribute marking */
 #ifdef __GNUC__
-# define UNUSED __attribute__((unused))
+#define UNUSED __attribute__((unused))
 #else
-# define UNUSED
+#define UNUSED
 #endif
 
 /** marking for RVS-specific function parameters */
 #ifdef CONFIG_HIP_RVS
-# define RVS
+#define RVS
 #else
-# define RVS UNUSED
+#define RVS UNUSED
 #endif
 
 /** marking for firewall function parameters */
 #ifdef CONFIG_HIP_FIREWALL
-# define HIPFW
+#define HIPFW
 #else
-# define HIPFW UNUSED
+#define HIPFW UNUSED
 #endif
 
 /** marking for OPPORTUNISTIC-specific function parameters */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-# define OPP
+#define OPP
 #else
-# define OPP UNUSED
+#define OPP UNUSED
 #endif
 
 /** marking for DEBUG-specific function parameters */
 #ifdef CONFIG_HIP_DEBUG
-# define DBG
+#define DBG
 #else
-# define DBG UNUSED
+#define DBG UNUSED
 #endif
 /*********** ESP structures *************/
 

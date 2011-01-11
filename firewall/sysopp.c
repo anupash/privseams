@@ -79,7 +79,7 @@ static int hip_fw_trigger_opportunistic_bex(const struct in6_addr *peer_ip,
                                             const struct in6_addr *local_hit)
 {
     struct hip_common *msg = NULL;
-    int err = 0;
+    int                err = 0;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
@@ -117,8 +117,8 @@ out_err:
 static void hip_fw_add_non_hip_peer(const struct hip_fw_context *ctx,
                                     const int verdict)
 {
-    char command[64];
-    char addr_str[INET_ADDRSTRLEN];
+    char           command[64];
+    char           addr_str[INET_ADDRSTRLEN];
     struct in_addr addr_v4;
 
     IPV6_TO_IPV4_MAP(&ctx->dst, &addr_v4);
@@ -160,7 +160,7 @@ int hip_fw_handle_outgoing_system_based_opp(const struct hip_fw_context *ctx,
                                             const int default_verdict)
 {
     struct hip_hadb_user_info_state *entry_peer = NULL;
-    int verdict;
+    int                              verdict;
 
     HIP_DEBUG("\n");
 
@@ -203,8 +203,8 @@ int hip_fw_handle_outgoing_system_based_opp(const struct hip_fw_context *ctx,
  */
 int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg)
 {
-    int err = 0, state;
-    const hip_hit_t *local_hit, *peer_hit;
+    int                    err = 0, state;
+    const hip_hit_t       *local_hit, *peer_hit;
     const struct in6_addr *peer_addr;
     const struct in6_addr *local_addr;
 

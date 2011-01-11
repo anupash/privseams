@@ -145,7 +145,7 @@ static int hip_cvl_add(struct hip_config_value_list *linkedlist,
  */
 static int hip_cf_parse_val(char *line, struct hip_config_value_list *values)
 {
-    int i = 0, j = 0, k = 0, l = 0, end = 0;
+    int  i = 0, j = 0, k = 0, l = 0, end = 0;
     char value[HIP_RELAY_MAX_VAL_LEN + 1];
 
     /* Search for the line end. */
@@ -424,7 +424,7 @@ int hip_cf_get_line_data(FILE *fp, char *parameter,
         return EOF;
     }
 
-    int lineerr = 0;
+    int  lineerr = 0;
     char line[HIP_RELAY_MAX_LINE_LEN + 1];
 
     memset(line, '\0', sizeof(line));
@@ -478,7 +478,7 @@ void hip_cvl_uninit(struct hip_config_value_list *linkedlist)
     /* Free the item currently at list head and move the next item to list
      * head. Continue this until the item at list head is NULL. */
     while (linkedlist->head != NULL) {
-        pointer          = linkedlist->head->next;
+        pointer = linkedlist->head->next;
         free(linkedlist->head);
         linkedlist->head = pointer;
     }
