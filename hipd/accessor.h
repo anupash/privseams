@@ -54,4 +54,3 @@ int hipd_get_flag(unsigned int);
 void hipd_set_flag(unsigned int);
 
 #endif /* HIP_HIPD_ACCESSOR_H */
-

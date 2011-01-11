@@ -53,9 +53,9 @@ int send_trigger_update_to_hipd(const struct hip_sa_entry *entry,
                                 struct hash_tree *link_trees[MAX_NUM_PARALLEL_HCHAINS]);
 int send_anchor_change_to_hipd(const struct hip_sa_entry *entry);
 int esp_prot_handle_sa_add_request(const struct hip_common *msg,
-                                   uint8_t *esp_prot_transform,
-                                   uint16_t *num_anchors,
+                                   uint8_t * esp_prot_transform,
+                                   uint16_t * num_anchors,
                                    unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
-                                   uint32_t *hash_item_length);
+                                   uint32_t * hash_item_length);
 
 #endif /* HIP_FIREWALL_ESP_PROT_FW_MSG_H */

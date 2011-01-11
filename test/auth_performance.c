@@ -73,9 +73,9 @@ int dsa_key_len      = 1024;
 static void print_timeres(void)
 {
     struct timeval tv1, tv2;
-    int i;
-    printf( "-------------------------------\n"
-            "Determine gettimeofday resolution:\n");
+    int            i;
+    printf("-------------------------------\n"
+           "Determine gettimeofday resolution:\n");
 
 
     for (i = 0; i < 10; i++) {
@@ -88,37 +88,37 @@ static void print_timeres(void)
                1000000 * (tv2.tv_sec - tv1.tv_sec));
     }
 
-    printf( "-------------------------------\n\n");
+    printf("-------------------------------\n\n");
 }
 
 int main(void)
 {
-    int i;
-    int err              = 0;
+    int            i;
+    int            err = 0;
     struct timeval start_time;
     struct timeval stop_time;
-    uint64_t timediff    = 0;
+    uint64_t       timediff = 0;
 
-    unsigned int sig_len = 0;
+    unsigned int  sig_len = 0;
     unsigned char data[PACKET_LENGTH * num_measurements];
     unsigned char hashed_data[SHA_DIGEST_LENGTH * num_measurements];
     unsigned char key[HIP_MAX_KEY_LEN];
-    unsigned int hashed_data_len = 0;
+    unsigned int  hashed_data_len = 0;
 
-    AES_KEY *aes_enc_key         = NULL;
-    AES_KEY *aes_dec_key         = NULL;
+    AES_KEY      *aes_enc_key = NULL;
+    AES_KEY      *aes_dec_key = NULL;
     unsigned char cbc_iv[AES_BLOCK_SIZE];
     unsigned char enc_data[num_measurements * PACKET_LENGTH];
     unsigned char dec_data[num_measurements * PACKET_LENGTH];
 
-    RSA *rsa_key_pool[key_pool_size];
+    RSA           *rsa_key_pool[key_pool_size];
     unsigned char *rsa_sig_pool[num_measurements];
 
-    DSA *dsa_key_pool[key_pool_size];
+    DSA     *dsa_key_pool[key_pool_size];
     DSA_SIG *dsa_sig_pool[num_measurements];
 
 #ifdef HAVE_EC_CRYPTO
-    EC_KEY *ecdsa_key_pool[key_pool_size];
+    EC_KEY    *ecdsa_key_pool[key_pool_size];
     ECDSA_SIG *ecdsa_sig_pool[num_measurements];
 #endif
 
@@ -266,7 +266,7 @@ int main(void)
 
     printf("\nCalculating %d RSA signatures\n", num_measurements);
     for (i = 0; i < num_measurements; i++) {
-        sig_len         = RSA_size(rsa_key_pool[i % key_pool_size]);
+        sig_len = RSA_size(rsa_key_pool[i % key_pool_size]);
 
         rsa_sig_pool[i] = malloc(sig_len);
 
@@ -330,7 +330,7 @@ int main(void)
 
     printf("\nCalculating %d DSA signatures\n", num_measurements);
     for (i = 0; i < num_measurements; i++) {
-        sig_len         = sizeof(DSA_SIG *);
+        sig_len = sizeof(DSA_SIG *);
 
         dsa_sig_pool[i] = malloc(sig_len);
 
@@ -400,7 +400,7 @@ int main(void)
 
     printf("\nCalculating %d ECDSA signatures\n", num_measurements);
     for (i = 0; i < num_measurements; i++) {
-        sig_len           = ECDSA_size(ecdsa_key_pool[i % key_pool_size]);
+        sig_len = ECDSA_size(ecdsa_key_pool[i % key_pool_size]);
 
         ecdsa_sig_pool[i] = malloc(sig_len);
 

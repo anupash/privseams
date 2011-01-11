@@ -38,12 +38,12 @@
 // clutter in this particular case of unit tests.
 // Do not adopt this HFAS (header-file-avoidance-scheme) (TM) in HIPL production
 // code as header files are generally a good idea, just not here.
-extern Suite *lib_core_hit (void);
-extern Suite *lib_core_straddr (void);
+extern Suite *lib_core_hit(void);
+extern Suite *lib_core_straddr(void);
 
 int main(void)
 {
-    int number_failed;
+    int      number_failed;
     SRunner *sr = srunner_create(lib_core_hit());
     srunner_add_suite(sr, lib_core_straddr());
 
@@ -52,4 +52,3 @@ int main(void)
     srunner_free(sr);
     return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-

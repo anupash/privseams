@@ -94,7 +94,7 @@ static int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 static int hip_nat_send_keep_alive(struct hip_hadb_state *entry,
                                    UNUSED void *opaque)
 {
-    int err                = 0;
+    int                err = 0;
     struct hip_common *msg = NULL;
 
     HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Alloc\n");

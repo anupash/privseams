@@ -42,9 +42,9 @@
 
 struct handle_function {
     uint16_t priority;
-    int    (*func_ptr)(const uint8_t packet_type,
-                       const uint32_t ha_state,
-                       struct hip_packet_context *ctx);
+    int      (*func_ptr)(const uint8_t packet_type,
+                         const uint32_t ha_state,
+                         struct hip_packet_context *ctx);
 };
 
 /**
@@ -73,7 +73,7 @@ int hip_register_handle_function(const uint8_t packet_type,
                                                         struct hip_packet_context *ctx),
                                  const uint16_t priority)
 {
-    int err = 0;
+    int                     err       = 0;
     struct handle_function *new_entry = NULL;
 
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
@@ -87,13 +87,13 @@ int hip_register_handle_function(const uint8_t packet_type,
              -1,
              "Error on allocating memory for a handle function entry.\n");
 
-    new_entry->priority    = priority;
-    new_entry->func_ptr    = handle_function;
+    new_entry->priority = priority;
+    new_entry->func_ptr = handle_function;
 
     hip_handle_functions[packet_type][ha_state] =
-            lmod_register_function(hip_handle_functions[packet_type][ha_state],
-                                   new_entry,
-                                   priority);
+        lmod_register_function(hip_handle_functions[packet_type][ha_state],
+                               new_entry,
+                               priority);
     if (!hip_handle_functions[packet_type][ha_state]) {
         HIP_ERROR("Error on registering a handle function.\n");
         err = -1;
@@ -158,7 +158,6 @@ int hip_run_handle_functions(const uint8_t packet_type,
     while ((iter = hip_ll_iterate(hip_handle_functions[packet_type][ha_state],
                                   iter))
            && !ctx->error) {
-
         ((struct handle_function *) iter->ptr)->func_ptr(packet_type,
                                                          ha_state,
                                                          ctx);

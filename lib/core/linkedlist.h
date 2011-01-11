@@ -48,14 +48,14 @@
 
 /** Linked list node. */
 struct hip_ll_node {
-    void *              ptr; /**< A pointer to node payload data. */
+    void               *ptr; /**< A pointer to node payload data. */
     struct hip_ll_node *next;     /**< A pointer to next node. */
 };
 
 /** Linked list. */
 struct hip_ll {
-    unsigned int         element_count; /**< Total number of nodes in the list. */
-    struct hip_ll_node  *head;          /**< A pointer to the first node of the list. */
+    unsigned int        element_count;  /**< Total number of nodes in the list. */
+    struct hip_ll_node *head;           /**< A pointer to the first node of the list. */
 };
 
 /** Linked list element memory deallocator function pointer. */

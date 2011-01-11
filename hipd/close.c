@@ -69,15 +69,15 @@
  */
 static int hip_xmit_close(struct hip_hadb_state *entry, void *opaque)
 {
-    int err                      = 0, mask = 0;
-    int delete_ha_info           = *(int *) ((uint8_t *)opaque + sizeof(hip_hit_t));
-    hip_hit_t *peer              = opaque;
-    struct hip_common *msg_close = NULL;
+    int                err            = 0, mask = 0;
+    int                delete_ha_info = *(int *) ((uint8_t *) opaque + sizeof(hip_hit_t));
+    hip_hit_t         *peer           = opaque;
+    struct hip_common *msg_close      = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_CLOSE_SEND, PERF_CLOSE_COMPLETE\n");
-    hip_perf_start_benchmark( perf_set, PERF_CLOSE_SEND );
-    hip_perf_start_benchmark( perf_set, PERF_CLOSE_COMPLETE );
+    hip_perf_start_benchmark(perf_set, PERF_CLOSE_SEND);
+    hip_perf_start_benchmark(perf_set, PERF_CLOSE_COMPLETE);
 #endif
 
     if (peer) {
@@ -148,8 +148,8 @@ static int hip_xmit_close(struct hip_hadb_state *entry, void *opaque)
     entry->state = HIP_STATE_CLOSING;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_CLOSE_SEND\n");
-    hip_perf_stop_benchmark( perf_set, PERF_CLOSE_SEND );
-    hip_perf_write_benchmark( perf_set, PERF_CLOSE_SEND );
+    hip_perf_stop_benchmark(perf_set, PERF_CLOSE_SEND);
+    hip_perf_write_benchmark(perf_set, PERF_CLOSE_SEND);
 #endif
 
 out_err:
@@ -167,11 +167,11 @@ out_err:
 int hip_send_close(struct hip_common *msg,
                    int delete_ha_info)
 {
-    int err                            = 0, retry, n;
-    char *opaque                       = NULL;
-    const hip_hit_t *hit               = NULL;
+    int                 err    = 0, retry, n;
+    char               *opaque = NULL;
+    const hip_hit_t    *hit    = NULL;
     struct sockaddr_in6 sock_addr;
-    struct hip_common *msg_to_firewall = NULL;
+    struct hip_common  *msg_to_firewall = NULL;
 
     HIP_DEBUG("msg=%p\n", msg);
 
@@ -243,7 +243,7 @@ int hip_close_check_packet(UNUSED const uint8_t packet_type,
     int err = 0;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
-    hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE );
+    hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
 #endif
 
     HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hitr), -1,
@@ -294,36 +294,36 @@ int hip_close_create_response(UNUSED const uint8_t packet_type,
                               UNUSED const uint32_t ha_state,
                               struct hip_packet_context *ctx)
 {
-    int err = 0, echo_len;
+    int                            err = 0, echo_len;
     const struct hip_echo_request *request;
 
     HIP_IFEL(!(request =
-                 hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
+                   hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN)),
              -1, "No echo request under signature.\n");
 
     echo_len = hip_get_param_contents_len(request);
 
     hip_msg_init(ctx->output_msg);
     hip_build_network_hdr(ctx->output_msg,
-                        HIP_CLOSE_ACK,
-                        HIP_PACKET_CTRL_NON,
-                        &(ctx->hadb_entry)->hit_our,
-                        &(ctx->hadb_entry)->hit_peer);
+                          HIP_CLOSE_ACK,
+                          HIP_PACKET_CTRL_NON,
+                          &(ctx->hadb_entry)->hit_our,
+                          &(ctx->hadb_entry)->hit_peer);
 
     HIP_IFEL(hip_build_param_echo(ctx->output_msg, request + 1,
-                                echo_len, 1, 0), -1,
-           "Failed to build echo param.\n");
+                                  echo_len, 1, 0), -1,
+             "Failed to build echo param.\n");
 
     /************* HMAC ************/
     HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
-                                         &(ctx->hadb_entry)->hip_hmac_out),
-           -1, "Building of HMAC failed.\n");
+                                           &(ctx->hadb_entry)->hip_hmac_out),
+             -1, "Building of HMAC failed.\n");
 
     /********** Signature **********/
     HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
-                                 ctx->output_msg),
-           -EINVAL,
-           "Could not create signature.\n");
+                                   ctx->output_msg),
+             -EINVAL,
+             "Could not create signature.\n");
 
 out_err:
     if (err) {
@@ -386,8 +386,8 @@ int hip_close_send_response(UNUSED const uint8_t packet_type,
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
-    hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE );
-    hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE );
+    hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE);
+    hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE);
 #endif
 
     return err;
@@ -410,20 +410,20 @@ int hip_close_ack_check_packet(UNUSED const uint8_t packet_type,
                                UNUSED const uint32_t ha_state,
                                struct hip_packet_context *ctx)
 {
-    int err = 0;
+    int                            err       = 0;
     const struct hip_echo_request *echo_resp = NULL;
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
-    hip_perf_start_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
+    hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
 #endif
 
     HIP_IFEL(ipv6_addr_any(&ctx->input_msg->hitr), -1,
-            "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
+             "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
     if (!hip_controls_sane(ntohs(ctx->input_msg->control), HIP_PACKET_CTRL_NON)) {
         HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
-                ntohs(ctx->input_msg->control));
+                  ntohs(ctx->input_msg->control));
         goto out_err;
     }
 
@@ -500,10 +500,10 @@ int hip_close_ack_handle_packet(UNUSED const uint8_t packet_type,
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK, PERF_CLOSE_COMPLETE\n");
-    hip_perf_stop_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
-    hip_perf_write_benchmark( perf_set, PERF_HANDLE_CLOSE_ACK );
-    hip_perf_stop_benchmark( perf_set, PERF_CLOSE_COMPLETE );
-    hip_perf_write_benchmark( perf_set, PERF_CLOSE_COMPLETE );
+    hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+    hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+    hip_perf_stop_benchmark(perf_set, PERF_CLOSE_COMPLETE);
+    hip_perf_write_benchmark(perf_set, PERF_CLOSE_COMPLETE);
 #endif
 
     return err;

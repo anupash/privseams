@@ -49,14 +49,14 @@
  */
 int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
 {
-    int err = 0;
+    int            err = 0;
     struct hip_seq seq;
 
     hip_set_param_type((struct hip_tlv_common *) &seq, HIP_PARAM_SEQ);
     hip_calc_param_len((struct hip_tlv_common *) &seq,
                        sizeof(struct hip_seq));
     seq.update_id = htonl(update_id);
-    err = hip_build_param(msg, &seq);
+    err           = hip_build_param(msg, &seq);
     return err;
 }
 
@@ -69,13 +69,13 @@ int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
  */
 int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
 {
-    int err = 0;
+    int            err = 0;
     struct hip_ack ack;
 
     hip_set_param_type((struct hip_tlv_common *) &ack, HIP_PARAM_ACK);
     hip_calc_param_len((struct hip_tlv_common *) &ack, sizeof(struct hip_ack));
     ack.peer_update_id = htonl(peer_update_id);
-    err = hip_build_param(msg, &ack);
+    err                = hip_build_param(msg, &ack);
     return err;
 }
 
@@ -91,9 +91,9 @@ int hip_build_param_locator(struct hip_common *msg,
                             struct hip_locator_info_addr_item *addrs,
                             int addr_count)
 {
-    int err                          = 0;
+    int                 err          = 0;
     struct hip_locator *locator_info = NULL;
-    int addrs_len = addr_count * sizeof(struct hip_locator_info_addr_item);
+    int                 addrs_len    = addr_count * sizeof(struct hip_locator_info_addr_item);
 
     HIP_IFE(!(locator_info = malloc(sizeof(struct hip_locator) + addrs_len)), -1);
 

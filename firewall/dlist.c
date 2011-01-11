@@ -108,6 +108,7 @@ static unsigned int list_length(struct dlist *list)
     }
     return length;
 }
+
 #endif /* CONFIG_HIP_DEBUG */
 
 /**

@@ -68,8 +68,8 @@ static int esp_prot_send_light_ack(struct hip_hadb_state *entry,
                                    const uint32_t spi)
 {
     struct hip_common *light_ack = NULL;
-    uint16_t mask = 0;
-    int err       = 0;
+    uint16_t           mask      = 0;
+    int                err       = 0;
 
     HIP_IFEL(!(light_ack = hip_msg_alloc()), -ENOMEM,
              "failed to allocate memory\n");
@@ -125,9 +125,9 @@ int esp_prot_send_light_update(struct hip_hadb_state *entry,
                                const int branch_length[])
 {
     struct hip_common *light_update = NULL;
-    int hash_length = 0;
-    uint16_t mask   = 0;
-    int err         = 0, i;
+    int                hash_length  = 0;
+    uint16_t           mask         = 0;
+    int                err          = 0, i;
 
     HIP_IFEL(!(light_update = hip_msg_alloc()), -ENOMEM,
              "failed to allocate memory\n");
@@ -218,16 +218,16 @@ int esp_prot_handle_light_update(UNUSED const uint8_t packet_type,
                                  UNUSED const uint32_t ha_state,
                                  struct hip_packet_context *ctx)
 {
-    const struct hip_seq *seq = NULL;
-    const struct hip_ack *ack = NULL;
-    uint32_t seq_no           = 0;
-    uint32_t ack_no           = 0;
-    uint32_t spi              = 0;
-    int err                   = 0;
+    const struct hip_seq *seq    = NULL;
+    const struct hip_ack *ack    = NULL;
+    uint32_t              seq_no = 0;
+    uint32_t              ack_no = 0;
+    uint32_t              spi    = 0;
+    int                   err    = 0;
 
     HIP_IFEL(!ctx->hadb_entry, -1,
-              "No entry in host association database when receiving " \
-              " HIP_LUPDATE. Dropping.\n");
+             "No entry in host association database when receiving " \
+             " HIP_LUPDATE. Dropping.\n");
 
     HIP_IFEL(hip_verify_packet_hmac(ctx->input_msg,
                                     &(ctx->hadb_entry)->hip_hmac_in),

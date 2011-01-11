@@ -30,23 +30,23 @@
  * stderr. This is done automatically using DEBUG flag in Makefile (see logtype
  * variable below).
  * Examples:
- *<pre>
+ **<pre>
  * HIP_INFO("test foobar");
  * HIP_INFO("%s\n", "debug test");
  * HIP_ERROR("%s%d\n", "serious error!", 123);
  * HIP_DIE("%s\n", "really bad error, exiting!");
  * HIP_PERROR("socket");
  * HIP_HEXDUMP("foobar", data, len);
- *</pre>
+ **</pre>
  *
  * Adjusting of log types and format dynamically. (there really should not be a
  * reason to call these in the code, because default settings should be
  * reasonable)
  *
- *<pre>
+ **<pre>
  * hip_set_logtype(LOGTYPE_STDERR); // set logging output to stderr
  * hip_set_logfmt(LOGFMT_SHORT);    // set short logging format
- *</pre>
+ **</pre>
  *
  * @todo debug messages should not be compiled at all in a production release
  * @todo set_log{type|format}(XX_DEFAULT)
@@ -102,7 +102,7 @@ const int debug2syslog_map[] = { LOG_ALERT,
                                  LOG_DEBUG };
 
 /* must be in the same order as enum debug_level (straight mapping) */
-const char *debug_prefix[] = { "die", "error", "info", "debug"};
+const char *debug_prefix[] = { "die", "error", "info", "debug" };
 /* printed just on stderr */
 
 /* Production quality code prints debugging stuff on syslog, testing code
@@ -110,15 +110,15 @@ const char *debug_prefix[] = { "die", "error", "info", "debug"};
  * here and it should not be used.
  */
 #ifdef CONFIG_HIP_DEBUG
-static enum logtype logtype   = LOGTYPE_STDERR;
+static enum logtype logtype = LOGTYPE_STDERR;
 #else
-static enum logtype logtype   = LOGTYPE_SYSLOG;
+static enum logtype logtype = LOGTYPE_SYSLOG;
 #endif /* CONFIG_HIP_DEBUG */
 
 #ifdef HIP_LOGFMT_LONG
-static enum logfmt logfmt     = LOGFMT_LONG;
+static enum logfmt logfmt = LOGFMT_LONG;
 #else
-static enum logfmt logfmt     = LOGFMT_SHORT;
+static enum logfmt logfmt = LOGFMT_SHORT;
 #endif /* HIP_LONGFMT */
 
 static enum logdebug logdebug = LOGDEBUG_ALL;
@@ -193,9 +193,9 @@ static void hip_vlog(int debug_level, const char *file, const int line,
                      const char *function, const char *fmt, va_list args)
 {
     char syslog_msg[DEBUG_MSG_MAX_LEN] = "";
-    int syslog_level                   = debug2syslog_map[debug_level];
+    int  syslog_level                  = debug2syslog_map[debug_level];
     char prefix[DEBUG_PREFIX_MAX]      = "\0";
-    int printed                        = 0;
+    int  printed                       = 0;
 
     if (logfmt == LOGFMT_LONG) {
         /* note: printed is not absolutely necessary to check in this case;
@@ -398,11 +398,11 @@ static char hip_quad2hex(const char q)
  * @param c     the byte to convert to hex.
  * @param bfr   the buffer to write the 2 bytes of hexadecimal output to.
  */
-static void hip_byte2hex(const char c, char* bfr)
+static void hip_byte2hex(const char c, char *bfr)
 {
     const int high_quad = (c & 0xF0) >> 4;
-    const int low_quad = c & 0x0F;
-    *bfr = hip_quad2hex(high_quad);
+    const int low_quad  = c & 0x0F;
+    *bfr       = hip_quad2hex(high_quad);
     *(bfr + 1) = hip_quad2hex(low_quad);
 }
 
@@ -418,25 +418,25 @@ static void hip_byte2hex(const char c, char* bfr)
  * @param out_len   the size in bytes of the out buffer to write to.
  * @return          the number of bytes from in that were converted.
  */
-static size_t hip_mem2hex(const void* in, const size_t in_len, char* out, const size_t out_len)
+static size_t hip_mem2hex(const void *in, const size_t in_len, char *out, const size_t out_len)
 {
     if (in_len > 0 && out_len > 2) {
-        const unsigned char* in_cur = in;
-        const unsigned char* in_end = in_cur + in_len;
-        char* out_cur = out;
-        const char* out_end = out_cur + out_len;
+        const unsigned char *in_cur  = in;
+        const unsigned char *in_end  = in_cur + in_len;
+        char                *out_cur = out;
+        const char          *out_end = out_cur + out_len;
 
         // terminate if either we reach the end of in or if there is not enough room to write another hex digit and the terminating 0 into out.
         while (in_cur < in_end && out_cur <= (out_end - 3)) {
             hip_byte2hex(*in_cur, out_cur);
 
-            in_cur += 1;
+            in_cur  += 1;
             out_cur += 2;
         }
 
         *out_cur = '\0';
 
-        return (in_cur - (const unsigned char*)in);
+        return in_cur - (const unsigned char *) in;
     } else {
         return 0;
     }
@@ -458,7 +458,7 @@ static char hip_byte2printable(const char b)
     }
 }
 
-static const unsigned int HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH = 16;
+static const unsigned int HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH  = 16;
 static const unsigned int HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH = (16 /*HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH*/ * 4) + 1;
 
 /**
@@ -472,7 +472,7 @@ static size_t hip_mem2pretty_hex_size(const size_t in_len)
     // for each line, i.e., multiple of 16 input bytes (including partial ones):
     // 32 bytes for hex digits, 16 bytes for spaces, 16 bytes for ascii, 1 line == 65 bytes
     // plus terminating 0 character
-    const size_t full_lines = in_len / 16;
+    const size_t full_lines    = in_len / 16;
     const size_t partial_lines = (in_len % 16) != 0 ? 1 : 0;
     return ((full_lines + partial_lines) * HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH) + 1;
 }
@@ -494,14 +494,14 @@ static size_t hip_mem2pretty_hex_size(const size_t in_len)
  * @param out_len   the size in bytes of the out buffer to write to. This value should be greater or equal to HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH.
  * @return          1 if a line of output was written to out. 0 and no output is written if @a in_len is 0 or if @a out_len is less than HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH.
  */
-static int hip_mem2pretty_hex_line(const char* in, const size_t in_len, char* out, const size_t out_len)
+static int hip_mem2pretty_hex_line(const char *in, const size_t in_len, char *out, const size_t out_len)
 {
     if (in_len > 0 && out_len >= HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH) {
-        const char* in_cur = in; // incremented with every fully processed input byte
-        const char* in_end = in_cur + in_len; // the final input byte + 1, i.e., the first not to read from
-        const char* in_line_end = in_cur + HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH; // the input byte to iterate 'in_cur' up to
-        char* hex = out;
-        char* ascii = out + HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH * 3;
+        const char *in_cur      = in; // incremented with every fully processed input byte
+        const char *in_end      = in_cur + in_len; // the final input byte + 1, i.e., the first not to read from
+        const char *in_line_end = in_cur + HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH; // the input byte to iterate 'in_cur' up to
+        char       *hex         = out;
+        char       *ascii       = out + HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH * 3;
 
         // write hex and ascii representations
         while (in_cur < in_line_end) {
@@ -512,15 +512,15 @@ static int hip_mem2pretty_hex_line(const char* in, const size_t in_len, char* ou
                 *ascii = hip_byte2printable(*in_cur);    // add printable char
             } else {
                 // write dummy output
-                *hex = ' ';
+                *hex       = ' ';
                 *(hex + 1) = ' ';
-                *ascii = ' ';
+                *ascii     = ' ';
             }
 
             *(hex + 2) = ' ';   // add space between hex digits
-            hex += 3;   // move to next hex digit position
-            ascii += 1; // move to next ascii position
-            in_cur += 1; // move to next input byte (it's okay to increment this even if in_cur >= in_end because in that case we do not read from this pointer)
+            hex       += 3; // move to next hex digit position
+            ascii     += 1; // move to next ascii position
+            in_cur    += 1; // move to next input byte (it's okay to increment this even if in_cur >= in_end because in that case we do not read from this pointer)
         }
 
         // at this point, we have written a full line and ascii points to its end - add a newline.
@@ -550,21 +550,21 @@ static int hip_mem2pretty_hex_line(const char* in, const size_t in_len, char* ou
  * @param out_len   the size in bytes of the @a out buffer to write to.
  * @return          the number of bytes from @a in that were converted.
  */
-static size_t hip_mem2pretty_hex(const void* in, const size_t in_len, char* out, const size_t out_len)
+static size_t hip_mem2pretty_hex(const void *in, const size_t in_len, char *out, const size_t out_len)
 {
     // Points to where the input for the next line is to be read from. Incremented by HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH with every line.
-    const char* in_cur = in;
+    const char *in_cur = in;
     // Points to where the next line of output is to be written to. Incremented by HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH with every line.
-    char* out_cur = out;
+    char *out_cur = out;
     // Points to the final input byte + 1, i.e., the first input byte not to read from.
-    const char* in_end = in_cur + in_len;
+    const char *in_end = in_cur + in_len;
     // Points to the final output byte + 1, i.e., the first output byte not to write to.
-    const char* out_end = out_cur + out_len;
+    const char *out_end = out_cur + out_len;
 
     // Iterate while there is still input to read and enough room for another full line including the terminating null character.
     while (in_cur < in_end && out_cur <= (out_end - (HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH + 1))) {
-        const size_t in_remaining = in_len - (in_cur - (const char*)in);
-        const size_t out_remaining = out_len - (out_cur - (const char*)out);
+        const size_t in_remaining  = in_len - (in_cur - (const char *) in);
+        const size_t out_remaining = out_len - (out_cur - (const char *) out);
 
         // convert one line of input
         const int line_result = hip_mem2pretty_hex_line(in_cur, in_remaining, out_cur, out_remaining);
@@ -572,7 +572,7 @@ static size_t hip_mem2pretty_hex(const void* in, const size_t in_len, char* out,
         HIP_ASSERT(line_result == 1);
 
         // advance input pointer by at most the maximum available input so the return value is calculated correctly
-        in_cur += (in_remaining > HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH ? HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH : in_remaining);
+        in_cur  += (in_remaining > HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH ? HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH : in_remaining);
         out_cur += HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH;
     }
 
@@ -580,7 +580,7 @@ static size_t hip_mem2pretty_hex(const void* in, const size_t in_len, char* out,
         *out_cur = '\0';
     }
 
-    return in_cur - (const char*)in;
+    return in_cur - (const char *) in;
 }
 
 /**
@@ -600,7 +600,7 @@ void hip_hexdump(const char *file, int line, const char *function,
 {
     if (len > 0) {
         const size_t buffer_size = (len * 2) + 1;
-        char* buffer = malloc(buffer_size);
+        char        *buffer      = malloc(buffer_size);
         if (buffer != NULL) {
             hip_mem2hex(str, len, buffer, buffer_size);
             hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s0x%s\n", prefix, buffer);
@@ -634,7 +634,7 @@ void hip_hexdump_parsed(const char *file, int line, const char *function,
 {
     if (len > 0) {
         const size_t buffer_size = hip_mem2pretty_hex_size(len);
-        char* buffer = malloc(buffer_size);
+        char        *buffer      = malloc(buffer_size);
         if (buffer != NULL) {
             hip_mem2pretty_hex(str, len, buffer, buffer_size);
             hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s%s\n", prefix, buffer);
@@ -663,10 +663,10 @@ void hip_print_sockaddr(UNUSED const char *file, UNUSED int line,
                         const struct sockaddr *sockaddr)
 {
     const char *default_str = "<unknown>";
-    int maxlen;
+    int         maxlen;
     const void *addr;
-    int family        = sockaddr->sa_family;
-    char addr_str[INET6_ADDRSTRLEN + 1];
+    int         family = sockaddr->sa_family;
+    char        addr_str[INET6_ADDRSTRLEN + 1];
 
     switch (family) {
     case AF_INET:
@@ -756,18 +756,18 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
  */
 void hip_print_locator_addresses(const struct hip_common *in_msg)
 {
-    const struct hip_locator *locator;
-    const struct hip_locator_info_addr_item *ptr    = NULL;
-    const struct hip_locator_info_addr_item *item   = NULL;
+    const struct hip_locator                 *locator;
+    const struct hip_locator_info_addr_item  *ptr   = NULL;
+    const struct hip_locator_info_addr_item  *item  = NULL;
     const struct hip_locator_info_addr_item2 *item2 = NULL;
-    const char *address_pointer;
+    const char                               *address_pointer;
 
     locator = hip_get_param(in_msg, HIP_PARAM_LOCATOR);
     if (locator) {
         address_pointer = (const char *) (locator + 1);
 
         for (; address_pointer < ((const char *) locator) +
-                                 hip_get_param_contents_len(locator); ) {
+             hip_get_param_contents_len(locator); ) {
             ptr = (const struct hip_locator_info_addr_item *) address_pointer;
             if (ptr->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
                 item2 = (const struct hip_locator_info_addr_item2 *)
@@ -800,9 +800,9 @@ void hip_print_locator_addresses(const struct hip_common *in_msg)
  */
 void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *entry)
 {
-    LHASH_NODE *item = NULL, *tmp = NULL;
+    LHASH_NODE                     *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr;
-    int i            = 0;
+    int                             i = 0;
 
     HIP_DEBUG("All the addresses in the peer_addr_list_to_be_added list:\n");
     if (entry->peer_addr_list_to_be_added == NULL) {

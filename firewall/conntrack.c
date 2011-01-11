@@ -84,8 +84,8 @@ enum {
     STATE_CLOSING
 };
 
-int timeoutChecking        = 0;
-unsigned long timeoutValue = 0;
+int           timeoutChecking = 0;
+unsigned long timeoutValue    = 0;
 
 /*------------print functions-------------*/
 /**
@@ -223,7 +223,7 @@ static void update_peer_opp_info(const struct hip_data *data,
                                  const struct in6_addr *ip6_from)
 {
     struct dlist *list = (struct dlist *) hip_list;
-    hip_hit_t phit;
+    hip_hit_t     phit;
 
     HIP_DEBUG("updating opportunistic entries\n");
     /* the pseudo hit is compared with the hit in the entries */
@@ -259,7 +259,7 @@ static struct tuple *get_tuple_by_hip(const struct hip_data *data,
                                       OPP const struct in6_addr *ip6_from)
 {
     struct hip_tuple *tuple = NULL;
-    struct dlist *list = hip_list;
+    struct dlist     *list  = hip_list;
 
     while (list) {
         tuple = list->data;
@@ -295,7 +295,7 @@ static struct tuple *get_tuple_by_hip(const struct hip_data *data,
 static struct esp_address *get_esp_address(const struct slist *addr_list,
                                            const struct in6_addr *addr)
 {
-    const struct slist *list = addr_list;
+    const struct slist *list     = addr_list;
     struct esp_address *esp_addr = NULL;
 
     HIP_DEBUG("get_esp_address\n");
@@ -403,8 +403,8 @@ static struct tuple *get_tuple_by_esp(const struct in6_addr *dst_addr, const uin
 struct esp_tuple *find_esp_tuple(const struct slist *search_list,
                                  const uint32_t spi)
 {
-    const struct slist *list = search_list;
-    struct esp_tuple *esp_tuple = NULL;
+    const struct slist *list      = search_list;
+    struct esp_tuple   *esp_tuple = NULL;
 
     if (!list) {
         HIP_DEBUG("Esp tuple slist is empty\n");
@@ -438,7 +438,7 @@ static void insert_new_connection(const struct hip_data *data)
     //set time stamp
     gettimeofday(&connection->time_stamp, NULL);
 #ifdef HIP_CONFIG_MIDAUTH
-    connection->pisa_state                       = PISA_STATE_DISALLOW;
+    connection->pisa_state = PISA_STATE_DISALLOW;
 #endif
 
     //original direction tuple
@@ -491,7 +491,6 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
 {
     if (hip_tuple) {
         if (hip_tuple->data) {
-
             // free keys depending on cipher
             if (hip_tuple->data->src_pub_key && hip_tuple->data->src_hi) {
                 if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_RSA) {
@@ -520,7 +519,7 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
 static void free_esp_tuple(struct esp_tuple *esp_tuple)
 {
     if (esp_tuple) {
-        struct slist *list       = esp_tuple->dst_addr_list;
+        struct slist       *list = esp_tuple->dst_addr_list;
         struct esp_address *addr = NULL;
 
         // remove eventual cached anchor elements for this esp tuple
@@ -565,9 +564,9 @@ static void remove_tuple(struct tuple *tuple)
 
             tuple->esp_tuples = remove_link_slist(tuple->esp_tuples, list);
             free_esp_tuple(list->data);
-            list->data        = NULL;
+            list->data = NULL;
             free(list);
-            list              = tuple->esp_tuples;
+            list = tuple->esp_tuples;
         }
         tuple->esp_tuples = NULL;
         tuple->connection = NULL;
@@ -623,9 +622,9 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
                                                          const struct hip_seq *seq,
                                                          struct tuple *tuple)
 {
-    struct esp_tuple *new_esp                             = NULL;
+    struct esp_tuple                        *new_esp      = NULL;
     const struct hip_locator_info_addr_item *locator_addr = NULL;
-    int n                                                 = 0;
+    int                                      n            = 0;
 
     if (esp_info && locator && esp_info->new_spi == esp_info->old_spi) {
         HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi 0x%lx\n", esp_info->new_spi);
@@ -634,8 +633,8 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
 
-        n              = (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
-                         sizeof(struct hip_locator_info_addr_item);
+        n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
+            sizeof(struct hip_locator_info_addr_item);
         HIP_DEBUG("esp_tuple_from_esp_info_locator: %d addresses in locator\n", n);
         if (n > 0) {
             locator_addr = (const struct hip_locator_info_addr_item *)
@@ -707,7 +706,7 @@ static int insert_connection_from_update(const struct hip_data *data,
                                          const struct hip_seq *seq)
 {
     struct connection *connection = malloc(sizeof(struct connection));
-    struct esp_tuple *esp_tuple   = NULL;
+    struct esp_tuple  *esp_tuple  = NULL;
 
     esp_tuple = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
                                                 &connection->reply);
@@ -716,9 +715,9 @@ static int insert_connection_from_update(const struct hip_data *data,
         HIP_DEBUG("insert_connection_from_update: can't create connection\n");
         return 0;
     }
-    connection->state                             = STATE_ESTABLISHING_FROM_UPDATE;
+    connection->state = STATE_ESTABLISHING_FROM_UPDATE;
 #ifdef HIP_CONFIG_MIDAUTH
-    connection->pisa_state                        = PISA_STATE_DISALLOW;
+    connection->pisa_state = PISA_STATE_DISALLOW;
 #endif
 
     //original direction tuple
@@ -736,12 +735,12 @@ static int insert_connection_from_update(const struct hip_data *data,
 
 
     //reply direction tuple
-    connection->reply.state                       = HIP_STATE_UNASSOCIATED;
-    connection->reply.direction                   = REPLY_DIR;
+    connection->reply.state     = HIP_STATE_UNASSOCIATED;
+    connection->reply.direction = REPLY_DIR;
 
-    connection->reply.esp_tuples                  = NULL;
-    connection->reply.esp_tuples                  = append_to_slist(connection->reply.esp_tuples,
-                                                                    esp_tuple);
+    connection->reply.esp_tuples = NULL;
+    connection->reply.esp_tuples = append_to_slist(connection->reply.esp_tuples,
+                                                   esp_tuple);
     insert_esp_tuple(esp_tuple);
 
     connection->reply.connection               = connection;
@@ -788,11 +787,11 @@ static int insert_connection_from_update(const struct hip_data *data,
 static int hipfw_handle_relay_to_r2(const struct hip_common *common,
                                     const struct hip_fw_context *ctx)
 {
-    struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
+    struct iphdr              *iph      = (struct iphdr *) ctx->ipq_packet->payload;
     const struct hip_relay_to *relay_to = NULL; /* same format as relay_from */
-    struct tuple *tuple, *reverse_tuple;
-    int err = 0;
-    uint32_t spi;
+    struct tuple              *tuple, *reverse_tuple;
+    int                        err = 0;
+    uint32_t                   spi;
     const struct hip_esp_info *esp_info;
 
     HIP_DEBUG_IN6ADDR("ctx->src", &ctx->src);
@@ -801,7 +800,7 @@ static int hipfw_handle_relay_to_r2(const struct hip_common *common,
     HIP_ASSERT((hip_get_msg_type(common) == HIP_R2));
 
     HIP_IFEL(!(relay_to = hip_get_param(common, HIP_PARAM_RELAY_TO)), -1,
-            "No relay_to, skip\n");
+             "No relay_to, skip\n");
 
     HIP_DEBUG_IN6ADDR("relay_to_addr", &relay_to->address);
 
@@ -874,10 +873,10 @@ static int handle_r1(struct hip_common *common, struct tuple *tuple,
                      DBG int verify_responder,
                      UNUSED const struct hip_fw_context *ctx)
 {
-    struct in6_addr hit;
+    struct in6_addr           hit;
     const struct hip_host_id *host_id = NULL;
     // assume correct packet
-    int err = 1;
+    int         err = 1;
     hip_tlv_len len = 0;
 
     HIP_DEBUG("verify_responder: %i\n", verify_responder);
@@ -951,15 +950,15 @@ out_err:
 static int handle_i2(struct hip_common *common, struct tuple *tuple,
                      const struct hip_fw_context *ctx)
 {
-    const struct hip_esp_info *spi     = NULL;
-    const struct slist *other_dir_esps = NULL;
-    const struct hip_host_id *host_id  = NULL;
-    struct tuple *other_dir            = NULL;
-    struct esp_tuple *esp_tuple        = NULL;
-    struct in6_addr hit;
+    const struct hip_esp_info *spi            = NULL;
+    const struct slist        *other_dir_esps = NULL;
+    const struct hip_host_id  *host_id        = NULL;
+    struct tuple              *other_dir      = NULL;
+    struct esp_tuple          *esp_tuple      = NULL;
+    struct in6_addr            hit;
     // assume correct packet
-    int err = 1;
-    hip_tlv_len len = 0;
+    int                    err     = 1;
+    hip_tlv_len            len     = 0;
     const struct in6_addr *ip6_src = &ctx->src;
 
     HIP_DEBUG("\n");
@@ -1032,9 +1031,9 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         esp_tuple->dst_addr_list = NULL;
         esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
                                                       ip6_src, NULL);
-        esp_tuple->tuple         = other_dir;
+        esp_tuple->tuple = other_dir;
 
-        other_dir->esp_tuples    = append_to_slist(other_dir->esp_tuples, esp_tuple);
+        other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples, esp_tuple);
 
         insert_esp_tuple(esp_tuple);
     }
@@ -1065,12 +1064,12 @@ out_err:
 static int handle_r2(const struct hip_common *common, struct tuple *tuple,
                      const struct hip_fw_context *ctx)
 {
-    const struct hip_esp_info *spi    = NULL;
-    struct tuple *other_dir           = NULL;
-    struct slist *other_dir_esps      = NULL;
-    struct esp_tuple *esp_tuple       = NULL;
-    const struct in6_addr *ip6_src = &ctx->src;
-    int err                     = 1;
+    const struct hip_esp_info *spi            = NULL;
+    struct tuple              *other_dir      = NULL;
+    struct slist              *other_dir_esps = NULL;
+    struct esp_tuple          *esp_tuple      = NULL;
+    const struct in6_addr     *ip6_src        = &ctx->src;
+    int                        err            = 1;
 
     HIP_IFEL(!(spi = hip_get_param(common, HIP_PARAM_ESP_INFO)),
              0, "no spi found\n");
@@ -1103,7 +1102,7 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
         esp_tuple->dst_addr_list = NULL;
         esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
                                                       ip6_src, NULL);
-        esp_tuple->tuple         = other_dir;
+        esp_tuple->tuple = other_dir;
 
         insert_esp_tuple(esp_tuple);
 
@@ -1144,8 +1143,8 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
                             struct esp_tuple *esp_tuple)
 {
     const struct hip_locator_info_addr_item *locator_addr = NULL;
-    int err                                               = 1;
-    int n                                                 = 0;
+    int                                      err          = 1;
+    int                                      n            = 0;
 
     HIP_DEBUG("\n");
 
@@ -1164,8 +1163,8 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
         esp_tuple->new_spi       = ntohl(esp_info->new_spi);
         esp_tuple->spi_update_id = seq->update_id;
 
-        n                        = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))
-                                   / sizeof(struct hip_locator_info_addr_item);
+        n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))
+            / sizeof(struct hip_locator_info_addr_item);
 
         if (n < 1) {
             HIP_DEBUG("no locator param found\n");
@@ -1212,7 +1211,7 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
         }
 
         n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))
-                / sizeof(struct hip_locator_info_addr_item);
+            / sizeof(struct hip_locator_info_addr_item);
         HIP_DEBUG(" %d locator addresses\n", n);
 
         locator_addr = (const struct hip_locator_info_addr_item *)
@@ -1256,14 +1255,14 @@ static int handle_update(const struct hip_common *common,
                          struct tuple *tuple,
                          const struct hip_fw_context *ctx)
 {
-    const struct hip_seq *seq                = NULL;
-    const struct hip_esp_info *esp_info      = NULL;
-    const struct hip_ack *ack                = NULL;
-    const struct hip_locator *locator        = NULL;
-    const struct hip_spi *spi                = NULL;
-    struct tuple *other_dir_tuple            = NULL;
-    const struct in6_addr *ip6_src           = &ctx->src;
-    int err                                  = 1;
+    const struct hip_seq      *seq             = NULL;
+    const struct hip_esp_info *esp_info        = NULL;
+    const struct hip_ack      *ack             = NULL;
+    const struct hip_locator  *locator         = NULL;
+    const struct hip_spi      *spi             = NULL;
+    struct tuple              *other_dir_tuple = NULL;
+    const struct in6_addr     *ip6_src         = &ctx->src;
+    int                        err             = 1;
 
     /* get params from UPDATE message */
     seq      = hip_get_param(common, HIP_PARAM_SEQ);
@@ -1316,7 +1315,7 @@ static int handle_update(const struct hip_common *common,
             }
 
             /* we have to consider the src ip address in case of cascading NATs (see above FIXME) */
-            esp_tuple                   = esp_tuple_from_esp_info(esp_info, ip6_src, other_dir_tuple);
+            esp_tuple = esp_tuple_from_esp_info(esp_info, ip6_src, other_dir_tuple);
 
             other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
                                                           esp_tuple);
@@ -1334,8 +1333,8 @@ static int handle_update(const struct hip_common *common,
         }
     } else {
         /* we already know this connection */
-        struct slist *other_dir_esps = NULL;
-        struct esp_tuple *esp_tuple  = NULL;
+        struct slist     *other_dir_esps = NULL;
+        struct esp_tuple *esp_tuple      = NULL;
 
         if (tuple->direction == ORIGINAL_DIR) {
             other_dir_tuple = &tuple->connection->reply;
@@ -1523,11 +1522,11 @@ static int check_packet(const struct in6_addr *ip6_src,
                         struct hip_fw_context *ctx)
 {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    hip_hit_t phit;
+    hip_hit_t       phit;
     struct in6_addr all_zero_addr;
 #endif
     struct in6_addr hit;
-    int err = 1;
+    int             err = 1;
 
     HIP_DEBUG("check packet: type %d \n", common->type_hdr);
 
@@ -1567,7 +1566,6 @@ static int check_packet(const struct in6_addr *ip6_src,
         HIP_DEBUG("verifying signature...\n");
         if (tuple->hip_tuple->data->verify(tuple->hip_tuple->data->src_pub_key,
                                            common)) {
-
             HIP_INFO("Signature verification failed\n");
 
             err = 0;
@@ -1684,14 +1682,14 @@ out_err:
  */
 int hipfw_relay_esp(const struct hip_fw_context *ctx)
 {
-    struct iphdr *iph = (struct iphdr *) ctx->ipq_packet->payload;
-    struct udphdr *udph = (struct udphdr *) ((uint8_t *) iph + iph->ihl * 4);
-    int len = ctx->ipq_packet->data_len - iph->ihl * 4;
-    struct slist *list = (struct slist *) esp_list;
-    struct tuple *tuple = NULL;
-    struct hip_esp *esp = ctx->transport_hdr.esp;
-    int err = 0;
-    uint32_t spi;
+    struct iphdr   *iph   = (struct iphdr *) ctx->ipq_packet->payload;
+    struct udphdr  *udph  = (struct udphdr *) ((uint8_t *) iph + iph->ihl * 4);
+    int             len   = ctx->ipq_packet->data_len - iph->ihl * 4;
+    struct slist   *list  = (struct slist *) esp_list;
+    struct tuple   *tuple = NULL;
+    struct hip_esp *esp   = ctx->transport_hdr.esp;
+    int             err   = 0;
+    uint32_t        spi;
 
     HIP_IFEL(!list, -1, "List is empty\n");
     HIP_IFEL((iph->protocol != IPPROTO_UDP), -1,
@@ -1734,7 +1732,7 @@ int hipfw_relay_esp(const struct hip_fw_context *ctx)
     HIP_DEBUG_IN6ADDR("esp_relay_addr", &tuple->esp_relay_daddr);
 
     udph->source = htons(HIP_NAT_UDP_PORT);
-    udph->dest = htons(tuple->esp_relay_dport);
+    udph->dest   = htons(tuple->esp_relay_dport);
     udph->check  = 0;
 
     HIP_DEBUG("Relaying packet\n");
@@ -1759,13 +1757,13 @@ out_err:
  */
 int filter_esp_state(const struct hip_fw_context *ctx)
 {
-    const struct in6_addr *dst_addr = NULL;
-    const struct in6_addr *src_addr = NULL;
-    struct hip_esp *esp             = NULL;
-    struct tuple *tuple             = NULL;
-    struct esp_tuple *esp_tuple     = NULL;
+    const struct in6_addr *dst_addr  = NULL;
+    const struct in6_addr *src_addr  = NULL;
+    struct hip_esp        *esp       = NULL;
+    struct tuple          *tuple     = NULL;
+    struct esp_tuple      *esp_tuple = NULL;
     // don't accept packet with this rule by default
-    int err                         = 0;
+    int      err = 0;
     uint32_t spi;
 
     dst_addr = &ctx->dst;
@@ -1773,7 +1771,7 @@ int filter_esp_state(const struct hip_fw_context *ctx)
     esp      = ctx->transport_hdr.esp;
 
     // needed to de-multiplex ESP traffic
-    spi      = ntohl(esp->esp_spi);
+    spi = ntohl(esp->esp_spi);
 
     // match packet against known connections
     HIP_DEBUG("filtering ESP packet against known connections...\n");
@@ -1839,13 +1837,13 @@ int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
                  struct hip_common *buf, const struct state_option *option,
                  const int must_accept, struct hip_fw_context *ctx)
 {
-    struct hip_data *data = NULL;
-    struct tuple *tuple   = NULL;
+    struct hip_data *data  = NULL;
+    struct tuple    *tuple = NULL;
     // FIXME results in unsafe use in filter_hip()
-    int return_value      = -1; //invalid value
+    int return_value = -1;      //invalid value
 
     // get data form the buffer and put it in a new data structure
-    data  = get_hip_data(buf);
+    data = get_hip_data(buf);
     // look up the tuple in the database
     tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
     free(data);
@@ -1882,11 +1880,11 @@ int filter_state(const struct in6_addr *ip6_src, const struct in6_addr *ip6_dst,
     } else {
         if ((option->int_opt.value == CONN_ESTABLISHED && option->int_opt.boolean
              && !must_accept) || (option->int_opt.value == CONN_NEW &&
-                                 !option->int_opt.boolean && !must_accept)) {
+                                  !option->int_opt.boolean && !must_accept)) {
             remove_connection(tuple->connection);
             tuple->connection = NULL;
 
-            return_value      = 1;
+            return_value = 1;
             goto out_err;
         }
     }
@@ -1913,12 +1911,12 @@ int conntrack(const struct in6_addr *ip6_src,
               struct hip_common *buf,
               struct hip_fw_context *ctx)
 {
-    struct hip_data *data = NULL;
-    struct tuple *tuple   = NULL;
-    int verdict = 0;
+    struct hip_data *data    = NULL;
+    struct tuple    *tuple   = NULL;
+    int              verdict = 0;
 
     // convert to new data type
-    data  = get_hip_data(buf);
+    data = get_hip_data(buf);
     // look up tuple in the db
     tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
 

@@ -66,9 +66,9 @@ int hip_remove_lock_file(const char *filename)
  */
 int hip_create_lock_file(const char *filename, int killold)
 {
-    int err     = 0, fd = 0, old_pid = 0, new_pid_str_len = 0;
+    int  err = 0, fd = 0, old_pid = 0, new_pid_str_len = 0;
     char old_pid_str[64], new_pid_str[64];
-    int pid_set = 0;     /* the pid was read successfully */
+    int  pid_set = 0;    /* the pid was read successfully */
     memset(old_pid_str, 0, sizeof(old_pid_str));
     memset(new_pid_str, 0, sizeof(new_pid_str));
 
@@ -78,15 +78,15 @@ int hip_create_lock_file(const char *filename, int killold)
     HIP_IFEL((new_pid_str_len <= 0), -1, "pID length error.\n");
 
     /* Read old pid */
-    fd              = HIP_CREATE_FILE(filename);
+    fd = HIP_CREATE_FILE(filename);
     HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
 
     /** @todo This is possibly unsafe: the pid is read from the file without checking
      * file permissions and the process with the number is simply killed.
      * THIS COULD BE USED TO ATTACK THE SYSTEM
      */
-    pid_set         = read(fd, old_pid_str, sizeof(old_pid_str) - 1);
-    old_pid         = atoi(old_pid_str);
+    pid_set = read(fd, old_pid_str, sizeof(old_pid_str) - 1);
+    old_pid = atoi(old_pid_str);
 
     if (lockf(fd, F_TLOCK, 0) < 0) {
         HIP_IFEL(!killold, -12,
@@ -145,7 +145,7 @@ out_err:
  */
 int check_and_create_dir(const char *dirname, mode_t mode)
 {
-    int err = 0;
+    int         err = 0;
     struct stat dir_stat;
 
     HIP_INFO("dirname=%s mode=%o\n", dirname, mode);
@@ -172,11 +172,11 @@ int check_and_create_dir(const char *dirname, mode_t mode)
 void change_key_file_perms(const char *filenamebase)
 {
     char *pubfilename = NULL;
-    int pubfilename_len;
+    int   pubfilename_len;
 
     pubfilename_len =
         strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
-    pubfilename     = malloc(pubfilename_len);
+    pubfilename = malloc(pubfilename_len);
     if (!pubfilename) {
         HIP_ERROR("malloc(%d) failed\n", pubfilename_len);
         goto out_err;

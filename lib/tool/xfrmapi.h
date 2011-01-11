@@ -16,7 +16,7 @@
 
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #ifndef NETLINK_XFRM
-#  define NETLINK_XFRM            6       /* ipsec */
+#define NETLINK_XFRM            6         /* ipsec */
 #endif
 
 void hip_beetdb_hold_entry(void *entry);

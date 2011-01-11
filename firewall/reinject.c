@@ -77,8 +77,8 @@ static int hip_firewall_init_raw_sock_icmp_outbound(int *firewall_raw_sock_v6)
     err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6,
                      IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err  = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6,
-                      IPV6_2292PKTINFO, &on, sizeof(on));
+    err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6,
+                     IPV6_2292PKTINFO, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt pktinfo failiped\n");
     err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET,
                      SO_REUSEADDR, &on, sizeof(on));
@@ -365,16 +365,16 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
                                    int proto,
                                    int ttl)
 {
-    int err               = 0, sent, sa_size;
-    int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
-    struct ip *iphdr      = NULL;
-    struct udphdr *udp    = NULL;
-    struct tcphdr *tcp    = NULL;
-    struct icmphdr *icmp  = NULL;
+    int                     err               = 0, sent, sa_size;
+    int                     firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
+    struct ip              *iphdr             = NULL;
+    struct udphdr          *udp               = NULL;
+    struct tcphdr          *tcp               = NULL;
+    struct icmphdr         *icmp              = NULL;
     struct sockaddr_storage src, dst;
-    struct sockaddr_in6 *sock_src6 = NULL, *sock_dst6 = NULL;
-    struct sockaddr_in *sock_src4 = NULL, *sock_dst4 = NULL;
-    struct in6_addr any   = IN6ADDR_ANY_INIT;
+    struct sockaddr_in6    *sock_src6 = NULL, *sock_dst6 = NULL;
+    struct sockaddr_in     *sock_src4 = NULL, *sock_dst4 = NULL;
+    struct in6_addr         any       = IN6ADDR_ANY_INIT;
 
     HIP_ASSERT(src_hit != NULL && dst_hit != NULL);
 
@@ -391,7 +391,7 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
         sock_dst4->sin_family = AF_INET;
         IPV6_TO_IPV4_MAP(src_hit, &(sock_src4->sin_addr));
         IPV6_TO_IPV4_MAP(dst_hit, &(sock_dst4->sin_addr));
-        sa_size               = sizeof(struct sockaddr_in);
+        sa_size = sizeof(struct sockaddr_in);
         HIP_DEBUG_LSI("src4 addr ", &(sock_src4->sin_addr));
         HIP_DEBUG_LSI("dst4 addr ", &(sock_dst4->sin_addr));
     } else {
@@ -399,8 +399,8 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
         ipv6_addr_copy(&sock_src6->sin6_addr, src_hit);
         sock_dst6->sin6_family = AF_INET6;
         ipv6_addr_copy(&sock_dst6->sin6_addr, dst_hit);
-        sa_size                = sizeof(struct sockaddr_in6);
-        is_ipv6                = 1;
+        sa_size = sizeof(struct sockaddr_in6);
+        is_ipv6 = 1;
     }
 
     switch (proto) {
@@ -409,21 +409,21 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
             HIP_DEBUG(" IPPROTO_UDP v6\n");
             firewall_raw_sock              = firewall_raw_sock_udp_v6;
             ((struct udphdr *) msg)->check = ipv6_checksum(IPPROTO_UDP,
-                                               &sock_src6->sin6_addr,
-                                               &sock_dst6->sin6_addr, msg, len);
+                                                           &sock_src6->sin6_addr,
+                                                           &sock_dst6->sin6_addr, msg, len);
         } else {
             HIP_DEBUG(" IPPROTO_UDP v4\n");
             firewall_raw_sock = firewall_raw_sock_udp_v4;
 
-            udp               = (struct udphdr *) msg;
+            udp = (struct udphdr *) msg;
 
-            sa_size           = sizeof(struct sockaddr_in);
+            sa_size = sizeof(struct sockaddr_in);
 
-            udp->check        = htons(0);
-            udp->check        = ipv4_checksum(IPPROTO_UDP,
-                                              (uint8_t *) &(sock_src4->sin_addr),
-                                              (uint8_t *) &(sock_dst4->sin_addr),
-                                              (uint8_t *) udp, len);
+            udp->check = htons(0);
+            udp->check = ipv4_checksum(IPPROTO_UDP,
+                                       (uint8_t *) &(sock_src4->sin_addr),
+                                       (uint8_t *) &(sock_dst4->sin_addr),
+                                       (uint8_t *) udp, len);
             memmove(msg + sizeof(struct ip), udp, len);
         }
         break;
@@ -440,10 +440,10 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
             HIP_DEBUG(" IPPROTO_TCP v4\n");
             firewall_raw_sock = firewall_raw_sock_tcp_v4;
 
-            tcp->check        = ipv4_checksum(IPPROTO_TCP,
-                                              (uint8_t *) &(sock_src4->sin_addr),
-                                              (uint8_t *) &(sock_dst4->sin_addr),
-                                              (uint8_t *) tcp, len);
+            tcp->check = ipv4_checksum(IPPROTO_TCP,
+                                       (uint8_t *) &(sock_src4->sin_addr),
+                                       (uint8_t *) &(sock_dst4->sin_addr),
+                                       (uint8_t *) tcp, len);
 
             memmove(msg + sizeof(struct ip), tcp, len);
         }
@@ -486,7 +486,7 @@ int hip_firewall_send_incoming_pkt(const struct in6_addr *src_hit,
         sent = sendto(firewall_raw_sock, iphdr,
                       iphdr->ip_len, 0,
                       (struct sockaddr *) &dst, sa_size);
-        if (sent != (int)(len + sizeof(struct ip))) {
+        if (sent != (int) (len + sizeof(struct ip))) {
             HIP_ERROR("Could not send the all requested" \
                       " data (%d/%d)\n", sent,
                       iphdr->ip_len);
@@ -535,9 +535,9 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
     int firewall_raw_sock = 0, is_ipv6 = 0;
 
     struct sockaddr_storage src, dst;
-    struct sockaddr_in6 *sock_src6, *sock_dst6;
-    struct sockaddr_in *sock_src4, *sock_dst4;
-    struct in6_addr any = IN6ADDR_ANY_INIT;
+    struct sockaddr_in6    *sock_src6, *sock_dst6;
+    struct sockaddr_in     *sock_src4, *sock_dst4;
+    struct in6_addr         any = IN6ADDR_ANY_INIT;
 
     HIP_ASSERT(src_hit != NULL && dst_hit != NULL);
 
@@ -554,7 +554,7 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
         IPV6_TO_IPV4_MAP(src_hit, &sock_src4->sin_addr);
         sock_dst4->sin_family = AF_INET;
         IPV6_TO_IPV4_MAP(dst_hit, &sock_dst4->sin_addr);
-        sa_size               = sizeof(struct sockaddr_in);
+        sa_size = sizeof(struct sockaddr_in);
         HIP_DEBUG_LSI("src4 addr ", &(sock_src4->sin_addr));
         HIP_DEBUG_LSI("dst4 addr ", &(sock_dst4->sin_addr));
     } else {
@@ -562,8 +562,8 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
         ipv6_addr_copy(&sock_src6->sin6_addr, src_hit);
         sock_dst6->sin6_family = AF_INET6;
         ipv6_addr_copy(&sock_dst6->sin6_addr, dst_hit);
-        sa_size                = sizeof(struct sockaddr_in6);
-        is_ipv6                = 1;
+        sa_size = sizeof(struct sockaddr_in6);
+        is_ipv6 = 1;
         HIP_DEBUG_HIT("src6 addr ", &(sock_src6->sin6_addr));
         HIP_DEBUG_HIT("dst6 addr ", &(sock_dst6->sin6_addr));
     }
@@ -574,13 +574,13 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
         if (is_ipv6) {
             firewall_raw_sock = firewall_raw_sock_tcp_v6;
             ((struct tcphdr *) msg)->check
-                    = ipv6_checksum(IPPROTO_TCP, &sock_src6->sin6_addr,
-                                       &sock_dst6->sin6_addr, msg, len);
+                = ipv6_checksum(IPPROTO_TCP, &sock_src6->sin6_addr,
+                                &sock_dst6->sin6_addr, msg, len);
         } else {
             firewall_raw_sock = firewall_raw_sock_tcp_v4;
             ((struct tcphdr *) msg)->check
-                    = ipv4_checksum(IPPROTO_TCP, (uint8_t *) &(sock_src4->sin_addr),
-                                       (uint8_t *) &(sock_dst4->sin_addr), msg, len);
+                = ipv4_checksum(IPPROTO_TCP, (uint8_t *) &(sock_src4->sin_addr),
+                                (uint8_t *) &(sock_dst4->sin_addr), msg, len);
         }
         break;
     case IPPROTO_UDP:
@@ -592,13 +592,13 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
         if (is_ipv6) {
             firewall_raw_sock = firewall_raw_sock_udp_v6;
             ((struct udphdr *) msg)->check
-                    = ipv6_checksum(IPPROTO_UDP, &sock_src6->sin6_addr,
-                                       &sock_dst6->sin6_addr, msg, len);
+                = ipv6_checksum(IPPROTO_UDP, &sock_src6->sin6_addr,
+                                &sock_dst6->sin6_addr, msg, len);
         } else {
             firewall_raw_sock = firewall_raw_sock_udp_v4;
             ((struct udphdr *) msg)->check
-                    = ipv4_checksum(IPPROTO_UDP, (uint8_t *) &(sock_src4->sin_addr),
-                                       (uint8_t *) &(sock_dst4->sin_addr), msg, len);
+                = ipv4_checksum(IPPROTO_UDP, (uint8_t *) &(sock_src4->sin_addr),
+                                (uint8_t *) &(sock_dst4->sin_addr), msg, len);
         }
         break;
     case IPPROTO_ICMP:
@@ -613,11 +613,11 @@ int hip_firewall_send_outgoing_pkt(const struct in6_addr *src_hit,
 
         break;
     case IPPROTO_ICMPV6:
-        firewall_raw_sock = firewall_raw_sock_icmp_v6;
+        firewall_raw_sock                       = firewall_raw_sock_icmp_v6;
         ((struct icmp6_hdr *) msg)->icmp6_cksum = htons(0);
         ((struct icmp6_hdr *) msg)->icmp6_cksum
-                = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr,
-                                   &sock_dst6->sin6_addr, msg, len);
+            = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr,
+                            &sock_dst6->sin6_addr, msg, len);
         break;
 
     case IPPROTO_ESP:

@@ -52,16 +52,16 @@
 
 /* IPsec Security Association entry */
 struct hip_sa_entry {
-    int                    direction;      /* direction of the SA: inbound/outbound */
-    uint32_t               spi;            /* IPsec SPI number */
-    uint32_t               mode;           /* ESP mode :  1-transport, 2-tunnel, 3-beet */
-    struct in6_addr        src_addr;       /* source address of outer IP header */
-    struct in6_addr        dst_addr;       /* destination address of outer IP header */
-    struct in6_addr        inner_src_addr; /* inner source addresses for tunnel and BEET SAs */
-    struct in6_addr        inner_dst_addr; /* inner destination addresses for tunnel and BEET SAs */
-    uint8_t                encap_mode;     /* encapsulation mode: 0 - none, 1 - udp */
-    uint16_t               src_port;       /* src port for UDP encaps. ESP */
-    uint16_t               dst_port;       /* dst port for UDP encaps. ESP */
+    int             direction;             /* direction of the SA: inbound/outbound */
+    uint32_t        spi;                   /* IPsec SPI number */
+    uint32_t        mode;                  /* ESP mode :  1-transport, 2-tunnel, 3-beet */
+    struct in6_addr src_addr;              /* source address of outer IP header */
+    struct in6_addr dst_addr;              /* destination address of outer IP header */
+    struct in6_addr inner_src_addr;        /* inner source addresses for tunnel and BEET SAs */
+    struct in6_addr inner_dst_addr;        /* inner destination addresses for tunnel and BEET SAs */
+    uint8_t         encap_mode;            /* encapsulation mode: 0 - none, 1 - udp */
+    uint16_t        src_port;              /* src port for UDP encaps. ESP */
+    uint16_t        dst_port;              /* dst port for UDP encaps. ESP */
     /****************** crypto parameters *******************/
     int                    ealg;           /* crypto transform in use */
     struct hip_crypto_key *auth_key;       /* raw authentication key */
@@ -70,23 +70,23 @@ struct hip_sa_entry {
     AES_KEY                aes_key;        /* AES key */
     BF_KEY                 bf_key;         /* BLOWFISH key */
     /******************** statistics *************************/
-    uint64_t               lifetime;       /* seconds until expiration */
-    uint64_t               bytes;          /* bytes transmitted */
-    struct timeval         usetime;        /* last used timestamp */
-    struct timeval         usetime_ka;     /* last used timestamp, including keep-alives */
-    uint32_t               sequence;       /* ESP sequence number counter */
+    uint64_t       lifetime;               /* seconds until expiration */
+    uint64_t       bytes;                  /* bytes transmitted */
+    struct timeval usetime;                /* last used timestamp */
+    struct timeval usetime_ka;             /* last used timestamp, including keep-alives */
+    uint32_t       sequence;               /* ESP sequence number counter */
     /*********** esp protection extension params *************/
     /* for both directions */
-    uint8_t                esp_prot_transform; /* mode used for securing ipsec traffic */
+    uint8_t esp_prot_transform;                /* mode used for securing ipsec traffic */
     /* for outbound direction */
-    void *                 active_hash_items[MAX_NUM_PARALLEL_HCHAINS]; /* active item can be a hchain or a htree */
-    void *                 next_hash_items[MAX_NUM_PARALLEL_HCHAINS]; /* update item can be a hchain or a htree */
-    int                    active_item_length; /* length of the active hash item */
-    int                    update_item_length; /* length of the update hash item */
-    uint8_t                update_item_acked[MAX_NUM_PARALLEL_HCHAINS]; /* ack from peer that update succeeded */
-    int                    last_used_chain; /* in case of parallel hchains, stores last used for round robin */
+    void                      *active_hash_items[MAX_NUM_PARALLEL_HCHAINS]; /* active item can be a hchain or a htree */
+    void                      *next_hash_items[MAX_NUM_PARALLEL_HCHAINS]; /* update item can be a hchain or a htree */
+    int                        active_item_length; /* length of the active hash item */
+    int                        update_item_length; /* length of the update hash item */
+    uint8_t                    update_item_acked[MAX_NUM_PARALLEL_HCHAINS]; /* ack from peer that update succeeded */
+    int                        last_used_chain; /* in case of parallel hchains, stores last used for round robin */
     struct esp_cumulative_item hash_buffer[MAX_RING_BUFFER_SIZE];    /* packet hash buffer for the cumulative packet auth */
-    uint32_t               next_free;           /* next buffer entry to be used for cumulative packet auth */
+    uint32_t                   next_free;       /* next buffer entry to be used for cumulative packet auth */
 };
 
 int hip_sadb_init(void);

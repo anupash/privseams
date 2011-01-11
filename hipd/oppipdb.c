@@ -100,9 +100,9 @@ static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
  */
 int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaque)
 {
-    int i = 0;
+    int          i = 0;
     hip_oppip_t *this;
-    LHASH_NODE *item, *tmp;
+    LHASH_NODE  *item, *tmp;
 
     if (!func) {
         return -EINVAL;
@@ -162,7 +162,7 @@ static hip_oppip_t *hip_create_oppip_entry(void)
  */
 int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
 {
-    int err               = 0;
+    int          err      = 0;
     hip_oppip_t *new_item = NULL;
 
     new_item = hip_create_oppip_entry();

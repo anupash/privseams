@@ -87,14 +87,14 @@ void hip_ll_uninit(struct hip_ll *linkedlist, free_elem_fn free_element)
      * actual element. */
     if (free_element != NULL) {
         while (linkedlist->head != NULL) {
-            pointer          = linkedlist->head->next;
+            pointer = linkedlist->head->next;
             free_element(linkedlist->head->ptr);
             free(linkedlist->head);
             linkedlist->head = pointer;
         }
     } else {
         while (linkedlist->head != NULL) {
-            pointer          = linkedlist->head->next;
+            pointer = linkedlist->head->next;
             free(linkedlist->head);
             linkedlist->head = pointer;
         }
@@ -145,8 +145,8 @@ int hip_ll_add(struct hip_ll *linkedlist, const unsigned int index, void *ptr)
         return -1;
     }
 
-    struct hip_ll_node *newnode = NULL, *pointer = NULL;
-    unsigned int current_index  = 0;
+    struct hip_ll_node *newnode       = NULL, *pointer = NULL;
+    unsigned int        current_index = 0;
 
     if ((newnode = malloc(sizeof(struct hip_ll_node))) == NULL) {
         HIP_ERROR("Error on allocating memory for a linked list node.\n");
@@ -254,9 +254,9 @@ void *hip_ll_del(struct hip_ll *linkedlist, const unsigned int index,
         return NULL;
     }
 
-    struct hip_ll_node *pointer = NULL, *previous = NULL;
-    void               *ptr     = NULL;
-    unsigned int current_index  = 0;
+    struct hip_ll_node *pointer       = NULL, *previous = NULL;
+    void               *ptr           = NULL;
+    unsigned int        current_index = 0;
 
     if (index == 0) {
         ptr     = linkedlist->head->ptr;
@@ -343,8 +343,8 @@ void *hip_ll_get(struct hip_ll *linkedlist, const unsigned int index)
         return NULL;
     }
 
-    struct hip_ll_node *pointer = linkedlist->head;
-    unsigned int current_index  = 0;
+    struct hip_ll_node *pointer       = linkedlist->head;
+    unsigned int        current_index = 0;
 
     while (pointer != NULL) {
         if (current_index == index) {

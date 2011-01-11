@@ -251,13 +251,13 @@ const char *hipconf_usage =
 static int hip_get_hits(struct hip_common *msg, const char *opt,
                         UNUSED int optc, int send_only)
 {
-    int err                                    = 0;
+    int                          err           = 0;
     const struct hip_tlv_common *current_param = NULL;
-    const struct hip_hit_info *data;
-    const struct in_addr *deflsi               = NULL;
-    const struct in6_addr *defhit              = NULL;
-    hip_tlv param_type                         = 0;
-    char hit_s[INET6_ADDRSTRLEN], lsi_s[INET_ADDRSTRLEN];
+    const struct hip_hit_info   *data;
+    const struct in_addr        *deflsi     = NULL;
+    const struct in6_addr       *defhit     = NULL;
+    hip_tlv                      param_type = 0;
+    char                         hit_s[INET6_ADDRSTRLEN], lsi_s[INET_ADDRSTRLEN];
 
     if (strcmp(opt, "all") == 0) {
         /* Build a HIP message with socket option to get default HIT. */
@@ -357,8 +357,8 @@ static int hip_conf_handle_hi_del_all(struct hip_common *msg,
                                       UNUSED int optc,
                                       int send_only)
 {
-    int err = 0;
-    const struct hip_tlv_common *param   = NULL;
+    int                          err   = 0;
+    const struct hip_tlv_common *param = NULL;
     const struct hip_hit_info   *data;
     struct       hip_common     *msg_tmp = NULL;
 
@@ -386,7 +386,7 @@ static int hip_conf_handle_hi_del_all(struct hip_common *msg,
     }
 
     /** @todo deleting HITs from the interface isn't working, so we
-        restart it */
+     *  restart it */
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_RESTART_DUMMY_INTERFACE, 0),
              -1, "Failed to build message header\n");
 
@@ -413,8 +413,8 @@ static int hip_conf_handle_hi_del(struct hip_common *msg,
                                   int optc,
                                   int send_only)
 {
-    int err = 0;
-    int ret;
+    int             err = 0;
+    int             ret;
     struct in6_addr hit;
 
     HIP_IFEL(optc != 1, -EINVAL, "Invalid number of arguments\n");
@@ -689,7 +689,7 @@ static int hip_conf_get_type(const char *text, const char *argv[])
         } else {
             ret = TYPE_NAT;
         }
-    } else if (strcmp("locator", argv[1]) == 0)     {
+    } else if (strcmp("locator", argv[1]) == 0) {
         ret = TYPE_LOCATOR;
     } else if (!strcmp("debug", text)) {
         ret = TYPE_DEBUG;
@@ -796,9 +796,9 @@ static int hip_conf_get_type_arg(int action)
 static int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
                                   int match_hip)
 {
-    int err              = 1;
+    int              err = 1;
     struct addrinfo *res = NULL, *rp;
-    struct in_addr *in4;
+    struct in_addr  *in4;
     struct in6_addr *in6;
 
     HIP_IFEL(getaddrinfo(hostname, NULL, NULL, &res), -1,
@@ -864,12 +864,13 @@ static int hip_conf_handle_server(struct hip_common *msg,
                                   int optc,
                                   UNUSED int send_only)
 {
-    hip_hit_t hit;
+    hip_hit_t       hit;
     struct in6_addr ipv6;
-    int err = 0, seconds = 0, i = 0, number_of_regtypes = 0, reg_type = 0;
-    int index_of_hit = 0, index_of_ip = 0, opp_mode = 0;;
-    uint8_t lifetime             = 0, *reg_types = NULL;
-    time_t seconds_from_lifetime = 0;
+    int             err          = 0, seconds = 0, i = 0, number_of_regtypes = 0, reg_type = 0;
+    int             index_of_hit = 0, index_of_ip = 0, opp_mode = 0;
+    ;
+    uint8_t lifetime              = 0, *reg_types = NULL;
+    time_t  seconds_from_lifetime = 0;
 
     memset(&hit, 0, sizeof(hit));
     memset(&ipv6, 0, sizeof(ipv6));
@@ -989,7 +990,7 @@ static int hip_conf_handle_server(struct hip_common *msg,
             reg_types[i] = HIP_SERVICE_RENDEZVOUS;
         } else if (strcasecmp("relay", opt[i]) == 0) {
             reg_types[i] = HIP_SERVICE_RELAY;
-        } else if (strcasecmp("full-relay", opt[i]) == 0)  {
+        } else if (strcasecmp("full-relay", opt[i]) == 0) {
             reg_types[i] = HIP_SERVICE_FULLRELAY;
         }         /* To cope with the atoi() error value we handle the 'zero'
                    * case here. */
@@ -1068,9 +1069,9 @@ out_err:
 static int hip_conf_handle_hi(struct hip_common *msg, int action,
                               const char *opt[], int optc, int send_only)
 {
-    int err          = 0, anon = 0, use_default = 0, rsa_key_bits = 0;
-    int dsa_key_bits = 0;
-    const char *fmt  = NULL, *file = NULL;
+    int         err          = 0, anon = 0, use_default = 0, rsa_key_bits = 0;
+    int         dsa_key_bits = 0;
+    const char *fmt          = NULL, *file = NULL;
 
     if (action == ACTION_DEL) {
         return hip_conf_handle_hi_del(msg, action, opt, optc, send_only);
@@ -1187,8 +1188,8 @@ static int hip_conf_handle_map(struct hip_common *msg, int action,
                                const char *opt[],
                                int optc, UNUSED int send_only)
 {
-    int err = 0;
-    struct in_addr lsi, aux;
+    int             err = 0;
+    struct in_addr  lsi, aux;
     struct in6_addr hit, ip6;
 
     HIP_DEBUG("action=%d optc=%d\n", action, optc);
@@ -1355,8 +1356,8 @@ static int hip_conf_handle_rst(struct hip_common *msg, UNUSED int action,
                                const char *opt[], UNUSED int optc,
                                UNUSED int send_only)
 {
-    int err;
-    int ret;
+    int             err;
+    int             ret;
     struct in6_addr hit;
 
     if (!strcmp("all", opt[0])) {
@@ -1407,8 +1408,8 @@ static int hip_conf_handle_debug(struct hip_common *msg, UNUSED int action,
                                  const char *opt[], int optc,
                                  UNUSED int send_only)
 {
-    int err    = 0;
-    int status = 0;
+    int             err    = 0;
+    int             status = 0;
     struct in6_addr hit;
 
     if (optc != 0) {
@@ -1486,7 +1487,7 @@ static int hip_conf_handle_nat_port(struct hip_common *msg, int action,
                                     UNUSED int optc,
                                     UNUSED int send_only)
 {
-    int err        = 0;
+    int err = 0;
 
     in_port_t port = (in_port_t) atoi(opt[1]);
 
@@ -1526,8 +1527,8 @@ static int hip_conf_handle_nat(struct hip_common *msg, UNUSED int action,
                                const char *opt[], UNUSED int optc,
                                UNUSED int send_only)
 {
-    int err    = 0;
-    int status = 0;
+    int             err    = 0;
+    int             status = 0;
     struct in6_addr hit;
 
     if (!strcmp("plain-udp", opt[0])) {
@@ -1563,7 +1564,7 @@ static int hip_conf_handle_locator(struct hip_common *msg, UNUSED int action,
                                    const char *opt[], UNUSED int optc,
                                    int send_only)
 {
-    int err                     = 0, status = 0;
+    int                       err     = 0, status = 0;
     const struct hip_locator *locator = NULL;
 
     if (!strcmp("on", opt[0])) {
@@ -1609,12 +1610,12 @@ static int hip_conf_handle_puzzle(struct hip_common *msg,
                                   int optc,
                                   int send_only)
 {
-    int err = 0, ret = 0, msg_type = 0, all, newVal = 0;
-    const int *diff                                 = NULL;
-    hip_hit_t hit, all_zero_hit;
-    const struct hip_tlv_common *current_param      = NULL;
-    hip_tlv param_type                              = 0;
-    char hit_s[INET6_ADDRSTRLEN];
+    int                          err  = 0, ret = 0, msg_type = 0, all, newVal = 0;
+    const int                   *diff = NULL;
+    hip_hit_t                    hit, all_zero_hit;
+    const struct hip_tlv_common *current_param = NULL;
+    hip_tlv                      param_type    = 0;
+    char                         hit_s[INET6_ADDRSTRLEN];
 
     memset(&hit, 0, sizeof(hip_hit_t));
     memset(&all_zero_hit, 0, sizeof(hip_hit_t));
@@ -1625,7 +1626,7 @@ static int hip_conf_handle_puzzle(struct hip_common *msg,
             err = -EINVAL;
             goto out_err;
         }
-    } else if (optc != 1)   {
+    } else if (optc != 1) {
         HIP_ERROR("Missing arguments\n");
         err = -EINVAL;
         goto out_err;
@@ -1648,7 +1649,7 @@ static int hip_conf_handle_puzzle(struct hip_common *msg,
         msg_type = HIP_MSG_CONF_PUZZLE_GET;
         break;
     default:
-        err      = -1;
+        err = -1;
     }
 
     if (err) {
@@ -1697,7 +1698,7 @@ static int hip_conf_handle_puzzle(struct hip_common *msg,
             param_type = hip_get_param_type(current_param);
             if (param_type == HIP_PARAM_HIT) {
                 //no need to get the hit from msg
-            } else if (param_type == HIP_PARAM_INT)   {
+            } else if (param_type == HIP_PARAM_INT) {
                 diff = hip_get_param_contents_direct(current_param);
             } else {
                 HIP_ERROR("Unrelated parameter in user " \
@@ -1765,7 +1766,7 @@ static int hip_conf_handle_opp(struct hip_common *msg,
                                UNUSED int send_only)
 {
     unsigned int oppmode = 0;
-    int err              = 0;
+    int          err     = 0;
 
     if (action == ACTION_RUN) {
         return hip_handle_exec_app(0, EXEC_LOADLIB_OPP, optc, &opt[0]);
@@ -1823,11 +1824,11 @@ static int hip_conf_handle_get_peer_lsi(struct hip_common *msg,
                                         UNUSED int optc,
                                         int send_only)
 {
-    int err = 0;
-    hip_hit_t hit;
-    const hip_lsi_t *lsi;
-    char lsi_str[INET_ADDRSTRLEN];
-    const char *hit_str = opt[0];
+    int                          err = 0;
+    hip_hit_t                    hit;
+    const hip_lsi_t             *lsi;
+    char                         lsi_str[INET_ADDRSTRLEN];
+    const char                  *hit_str = opt[0];
     const struct hip_tlv_common *param;
 
     HIP_IFEL((inet_pton(AF_INET6, hit_str, &hit) <= 0), 1,
@@ -1844,7 +1845,7 @@ static int hip_conf_handle_get_peer_lsi(struct hip_common *msg,
 
     param = hip_get_param(msg, HIP_PARAM_LSI);
     HIP_IFEL(!param, -1, "No LSI in msg\n");
-    lsi   = hip_get_param_contents_direct(param);
+    lsi = hip_get_param_contents_direct(param);
     HIP_IFEL(!inet_ntop(AF_INET, lsi, lsi_str, sizeof(lsi_str)), -1,
              "LSI string conversion failed\n");
     HIP_INFO("HIT %s maps to LSI %s\n", hit_str, lsi_str);
@@ -1852,7 +1853,6 @@ static int hip_conf_handle_get_peer_lsi(struct hip_common *msg,
 out_err:
     return err;
 }
-
 
 /**
  * Handles @c service commands received from @c hipconf.
@@ -1964,7 +1964,6 @@ static int hip_conf_handle_run_normal(UNUSED struct hip_common *msg,
     return -1;
 }
 
-
 /**
  * query and print information on host associations from hipd
  *
@@ -1982,10 +1981,10 @@ static int hip_conf_handle_ha(struct hip_common *msg,
                               int optc,
                               int send_only)
 {
-    const struct hip_tlv_common *current_param = NULL;
+    const struct hip_tlv_common           *current_param = NULL;
     const struct hip_hadb_user_info_state *ha;
-    int err                                    = 0;
-    struct in6_addr hit1;
+    int                                    err = 0;
+    struct in6_addr                        hit1;
 
     HIP_IFEL(optc > 1, -1, "Too many arguments\n");
 
@@ -2004,8 +2003,7 @@ static int hip_conf_handle_ha(struct hip_common *msg,
             HIP_IFE(hip_convert_string_to_address(opt[0], &hit1), -1);
 
             if ((ipv6_addr_cmp(&hit1, &ha->hit_our) == 0) ||
-                (ipv6_addr_cmp(&hit1, &ha->hit_peer) == 0))
-            {
+                (ipv6_addr_cmp(&hit1, &ha->hit_peer) == 0)) {
                 hip_conf_print_info_ha(ha);
             }
         }
@@ -2105,9 +2103,9 @@ out_err:
 
 static int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
 {
-    unsigned c_count = lib_all_length;
-    int err          = 0;
-    char *lib_aux = lib_all;
+    unsigned    c_count = lib_all_length;
+    int         err     = 0;
+    char       *lib_aux = lib_all;
     const char *prefix  = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
 
     while (*libs) {
@@ -2171,14 +2169,14 @@ out_err:
  *
  */
 int hip_handle_exec_app(int do_fork, int type, int argc,
-                        const char * const argv[])
+                        const char *const argv[])
 {
-    int ret = 0;
+    int      ret = 0;
     unsigned i;
-    int k;
-    char lib_all[LIB_LENGTH];
-    char *libs[5];
-    char **argv_new = NULL;
+    int      k;
+    char     lib_all[LIB_LENGTH];
+    char    *libs[5];
+    char   **argv_new = NULL;
 
     memset(libs, 0, sizeof(libs));
     argv_new = calloc(1, sizeof(char *) * argc);
@@ -2188,14 +2186,14 @@ int hip_handle_exec_app(int do_fork, int type, int argc,
     }
 
     if (do_fork) {
-         ret = fork();
+        ret = fork();
     }
 
     if (ret < 0) {
         HIP_ERROR("Failed to fork a new process: %s!\n",
                   strerror(errno));
         return ret;
-    } else if (ret > 0)   {
+    } else if (ret > 0) {
         return 0;
     }
 
@@ -2203,7 +2201,7 @@ int hip_handle_exec_app(int do_fork, int type, int argc,
     HIP_DEBUG("Executing %s.\n", argv[0]);
     if (type == EXEC_LOADLIB_HIP) {
         libs[0] = strdup("libhiptool.so");
-    } else if (type == EXEC_LOADLIB_OPP)   {
+    } else if (type == EXEC_LOADLIB_OPP) {
         libs[0] = strdup("libopphip.so");
         libs[1] = strdup("libhiptool.so");
     }
@@ -2295,13 +2293,13 @@ static int hip_conf_handle_map_id_to_addr(struct hip_common *msg,
                                           UNUSED int optc,
                                           int send_only)
 {
-    int err = 0;
-    struct in6_addr hit;
-    struct in_addr lsi;
-    const struct in6_addr *ip;
-    struct in_addr ip4;
+    int                          err = 0;
+    struct in6_addr              hit;
+    struct in_addr               lsi;
+    const struct in6_addr       *ip;
+    struct in_addr               ip4;
     const struct hip_tlv_common *param = NULL;
-    char addr_str[INET6_ADDRSTRLEN];
+    char                         addr_str[INET6_ADDRSTRLEN];
 
     if (inet_pton(AF_INET6, opt[0], &hit) != 1) {
         HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1,
@@ -2399,7 +2397,7 @@ static int hip_conf_handle_hit_to_ip_set(struct hip_common *msg,
     HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %d))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
     HIP_IFEL((len_name >= HIT_TO_IP_ZONE_MAX_LEN), -1, "Name too long (max %s)\n", HIT_TO_IP_ZONE_MAX_LEN);
 
-    err      = hip_build_user_hdr(msg, HIP_MSG_HIT_TO_IP_SET, 0);
+    err = hip_build_user_hdr(msg, HIP_MSG_HIT_TO_IP_SET, 0);
     if (err) {
         HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
         goto out_err;
@@ -2430,9 +2428,9 @@ static int hip_conf_handle_lsi_to_hit(struct hip_common *msg,
                                       UNUSED int optc,
                                       int send_only)
 {
-    int err                      = 0;
-    hip_lsi_t lsi;
-    const struct in6_addr *hit;
+    int                          err = 0;
+    hip_lsi_t                    lsi;
+    const struct in6_addr       *hit;
     const struct hip_tlv_common *param = NULL;
 
     HIP_IFEL(inet_pton(AF_INET, opt[0], &lsi) != 1, -1, "inet_pton()\n");
@@ -2475,14 +2473,14 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
                          int optc,
                          UNUSED int send_only)
 {
-    int err          = 0, i, len;
+    int   err        = 0, i, len;
     FILE *hip_config = NULL;
 
     struct list list;
-    char *c, line[128], *hip_arg, str[128];
+    char       *c, line[128], *hip_arg, str[128];
     const char *args[64];
-    char *comment, *nl;
-    char fname[sizeof(HIPL_CONFIG_FILE) << 1];
+    char       *comment, *nl;
+    char        fname[sizeof(HIPL_CONFIG_FILE) << 1];
 
     HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
@@ -2520,7 +2518,7 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
         str[strlen(str)] = ' ';
         hip_arg          = strcat(str, c);
         /* replace \n with \0  */
-        nl               = strchr(hip_arg, '\n');
+        nl = strchr(hip_arg, '\n');
         if (nl) {
             *nl = '\0';
         }
@@ -2638,9 +2636,9 @@ int (*action_handler[])(struct hip_common *,
  */
 int hip_do_hipconf(int argc, const char *argv[], int send_only)
 {
-    int      err    = 0, type_arg = 0;
-    long int action = 0, type     = 0;
-    struct hip_common *msg = NULL;
+    int                err    = 0, type_arg = 0;
+    long int           action = 0, type     = 0;
+    struct hip_common *msg    = NULL;
 
     /* Check that we have at least one command line argument. */
     HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",

@@ -43,10 +43,10 @@ struct hip_opp_blocking_request {
     struct sockaddr_in6 caller;
     hip_hit_t           our_real_hit;
 
-    time_t              creation_time;
-    struct in6_addr     peer_ip;
-    struct in6_addr     our_ip;
-    uint8_t             proxy_flag; //0: normal connection, 1: connection through proxy
+    time_t          creation_time;
+    struct in6_addr peer_ip;
+    struct in6_addr our_ip;
+    uint8_t         proxy_flag;     //0: normal connection, 1: connection through proxy
 };
 
 void hip_init_opp_db(void);
@@ -55,8 +55,8 @@ int hip_handle_opp_fallback(struct hip_opp_blocking_request *entry,
 struct hip_opp_blocking_request *hip_oppdb_find_byhits(const hip_hit_t *phit,
                                                        struct sockaddr_in6 *src);
 struct hip_opp_blocking_request *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer);
-struct hip_hadb_state *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
-                                              struct in6_addr *resp_addr);
+struct hip_hadb_state           *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
+                                                        struct in6_addr *resp_addr);
 int hip_oppdb_del_entry(const hip_hit_t *phit, const struct sockaddr_in6 *src);
 void hip_oppdb_uninit(void);
 int hip_oppdb_entry_clean_up(struct hip_opp_blocking_request *opp_entry);

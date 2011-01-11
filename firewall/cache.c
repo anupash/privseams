@@ -66,7 +66,7 @@ static HIP_HASHTABLE *firewall_cache_db = NULL;
 struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void)
 {
     struct hip_hadb_user_info_state *entry = NULL;
-    int err = 0;
+    int                              err   = 0;
 
     HIP_IFEL(!(entry = calloc(1, sizeof(struct hip_hadb_user_info_state))),
              -ENOMEM, "No memory available for firewall database entry\n");
@@ -120,7 +120,7 @@ static struct hip_hadb_user_info_state *hip_firewall_cache_hadb_match(const void
                                                                       const void *peer,
                                                                       enum fw_cache_query_type type)
 {
-    int err = 0;
+    int                                    err           = 0;
     struct       hip_hadb_user_info_state *ha_ret        = NULL;
     const struct hip_hadb_user_info_state *ha_match      = NULL;
     const struct hip_hadb_user_info_state *ha_curr       = NULL;
@@ -143,13 +143,13 @@ static struct hip_hadb_user_info_state *hip_firewall_cache_hadb_match(const void
             ha_match = ha_curr;
             break;
         } else if (type == FW_CACHE_LSI &&
-            !ipv4_addr_cmp(peer, &ha_curr->lsi_peer) &&
-            (!local || !ipv4_addr_cmp(local, &ha_curr->lsi_our))) {
+                   !ipv4_addr_cmp(peer, &ha_curr->lsi_peer) &&
+                   (!local || !ipv4_addr_cmp(local, &ha_curr->lsi_our))) {
             ha_match = ha_curr;
             break;
         } else if (type == FW_CACHE_IP &&
-            !ipv6_addr_cmp(peer, &ha_curr->ip_peer) &&
-            (!local || !ipv6_addr_cmp(local, &ha_curr->ip_our))) {
+                   !ipv6_addr_cmp(peer, &ha_curr->ip_peer) &&
+                   (!local || !ipv6_addr_cmp(local, &ha_curr->ip_our))) {
             ha_match = ha_curr;
             break;
         }
@@ -179,9 +179,9 @@ struct hip_hadb_user_info_state *hip_firewall_cache_db_match(const void *local,
                                                              enum fw_cache_query_type type,
                                                              int query_daemon)
 {
-    int i;
+    int                              i;
     struct hip_hadb_user_info_state *this = NULL, *ha_match = NULL;
-    LHASH_NODE *item = NULL, *tmp = NULL;
+    LHASH_NODE                      *item = NULL, *tmp = NULL;
 
     if (type == FW_CACHE_HIT) {
         ha_match = hip_ht_find(firewall_cache_db, peer);
@@ -204,17 +204,16 @@ struct hip_hadb_user_info_state *hip_firewall_cache_db_match(const void *local,
             ha_match = this;
             break;
         } else if (type == FW_CACHE_LSI &&
-            !ipv4_addr_cmp(peer, &this->lsi_peer) &&
-            (!local || !ipv4_addr_cmp(local, &this->lsi_our))) {
+                   !ipv4_addr_cmp(peer, &this->lsi_peer) &&
+                   (!local || !ipv4_addr_cmp(local, &this->lsi_our))) {
             ha_match = this;
             break;
         } else if (type == FW_CACHE_IP &&
-            !ipv6_addr_cmp(peer, &this->ip_peer) &&
-            (!local || !ipv6_addr_cmp(local, &this->ip_our))) {
+                   !ipv6_addr_cmp(peer, &this->ip_peer) &&
+                   (!local || !ipv6_addr_cmp(local, &this->ip_our))) {
             ha_match = this;
             break;
         }
-
     }
     HIP_UNLOCK_HT(&firewall_cache_db);
 
@@ -260,7 +259,7 @@ void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
 static unsigned long hip_firewall_hash_hit_peer(const void *ptr)
 {
     const struct in6_addr *hit_peer = &((const struct hip_hadb_user_info_state *) ptr)->hit_peer;
-    uint8_t hash[HIP_AH_SHA_LEN];
+    uint8_t                hash[HIP_AH_SHA_LEN];
 
     hip_build_digest(HIP_DIGEST_SHA1, hit_peer, sizeof(*hit_peer), hash);
     return *((unsigned long *) hash);
@@ -305,9 +304,9 @@ void hip_firewall_cache_init_hldb(void)
  */
 void hip_firewall_cache_delete_hldb(int exiting)
 {
-    int i;
+    int                              i;
     struct hip_hadb_user_info_state *this = NULL;
-    LHASH_NODE *item = NULL, *tmp = NULL;
+    LHASH_NODE                      *item = NULL, *tmp = NULL;
 
     HIP_DEBUG("Start hldb delete\n");
     HIP_LOCK_HT(&firewall_cache_db);
@@ -324,8 +323,9 @@ void hip_firewall_cache_delete_hldb(int exiting)
      * we handle it in firewall_exit(). */
 
     HIP_UNLOCK_HT(&firewall_cache_db);
-    if (exiting)
+    if (exiting) {
         hip_ht_uninit(firewall_cache_db);
+    }
     HIP_DEBUG("End hldbdb delete\n");
 }
 
@@ -335,12 +335,12 @@ void hip_firewall_cache_delete_hldb(int exiting)
  * @param  hit_peer Peer HIT
  * @param state New state
  * @return 0 on success, negative on error
-*/
+ */
 int hip_firewall_cache_set_bex_state(const struct in6_addr *hit_our,
                                      const struct in6_addr *hit_peer,
                                      int state)
 {
-    int err = 0;
+    int                              err = 0;
     struct hip_hadb_user_info_state *entry;
 
     HIP_IFEL(!hit_peer, -1, "Need peer HIT to search\n");
@@ -372,7 +372,7 @@ int hip_firewall_cache_update_entry(const struct in6_addr *ip_our,
                                     const struct in6_addr *hit_peer,
                                     int state)
 {
-    int err = 0;
+    int                              err = 0;
     struct hip_hadb_user_info_state *entry;
 
     HIP_IFEL(!ip_peer, -1, "Need peer IP to search\n");

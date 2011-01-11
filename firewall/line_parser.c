@@ -110,8 +110,8 @@ char *hip_lp_next(struct hip_line_parser *const lp)
         return NULL;
     }
 
-    remaining   = lp->ma->end - lp->cur;
-    lp->cur     = memchr(lp->cur, '\n', remaining);
+    remaining = lp->ma->end - lp->cur;
+    lp->cur   = memchr(lp->cur, '\n', remaining);
 
     // given the rest of the parsing code, we should always find a \n, but
     // let's check to be sure

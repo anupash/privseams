@@ -44,7 +44,7 @@ enum {
 
 struct hit_option {
     struct in6_addr value; //hit value
-    int boolean; //0 if negation, else 1
+    int             boolean; //0 if negation, else 1
 };
 
 struct int_option {
@@ -54,16 +54,16 @@ struct int_option {
 
 struct state_option {
     struct int_option int_opt;
-    int verify_responder; /**< 1 if responder signatures are verified */
-    int accept_mobile;    /**< 1 if state can be established from updates signalling */
-    int decrypt_contents;
+    int               verify_responder; /**< 1 if responder signatures are verified */
+    int               accept_mobile; /**< 1 if state can be established from updates signalling */
+    int               decrypt_contents;
 };
 
 // can be turned to more generic string option if necessary
 //
 struct string_option {
     char *value;
-    int boolean;
+    int   boolean;
 };
 
 // Pointer values must be NULL if option is not specified.
@@ -71,15 +71,15 @@ struct string_option {
 // when updating rule structure, update also (at least) free_rule(),
 // print_rule(), rules_equal(), copy_rule (), alloc_empty_rule() functions
 struct rule {
-    struct hit_option *src_hit;
-    struct hit_option *dst_hit;
-    struct hip_host_id *src_hi;
-    struct int_option *type;
-    struct state_option *state;
+    struct hit_option    *src_hit;
+    struct hit_option    *dst_hit;
+    struct hip_host_id   *src_hi;
+    struct int_option    *type;
+    struct state_option  *state;
     struct string_option *in_if;
     struct string_option *out_if;
-    unsigned int hook;
-    int accept;
+    unsigned int          hook;
+    int                   accept;
 };
 
 /*-------------- RULES ------------*/

@@ -37,7 +37,7 @@
 
 START_TEST(test_hip_convert_hit_to_str_valid)
 {
-    char buf[64];
+    char      buf[64];
     hip_hit_t hit;
     fail_unless(hip_convert_hit_to_str(&hit, "", buf) == 0, NULL);
 }
@@ -59,7 +59,7 @@ END_TEST
 
 START_TEST(test_hip_convert_hit_to_str_null_suffix)
 {
-    char buf[64];
+    char      buf[64];
     hip_hit_t hit;
     fail_unless(hip_convert_hit_to_str(&hit, NULL, buf) == 0, NULL);
 }
@@ -67,18 +67,18 @@ END_TEST
 
 START_TEST(test_hip_convert_hit_to_str_bounds)
 {
-    const char suffix[] = "SFX";
+    const char         suffix[]   = "SFX";
     const unsigned int BEFORE_LEN = 30;
-    const unsigned int HIT_LEN = 39; // 16 bytes -> 32 hex chars + 7 ':'s
+    const unsigned int HIT_LEN    = 39; // 16 bytes -> 32 hex chars + 7 ':'s
     const unsigned int SUFFIX_LEN = sizeof(suffix); // includes null char
-    const unsigned int AFTER_LEN = 30;
+    const unsigned int AFTER_LEN  = 30;
     struct {
         char before[BEFORE_LEN];
         char hit[HIT_LEN];
         char suffix[SUFFIX_LEN];
         char after[AFTER_LEN];
     } buf;
-    char ones[sizeof(buf)];
+    char      ones[sizeof(buf)];
     hip_hit_t hit;
 
     memset(&buf, 1, sizeof(buf));
@@ -102,7 +102,7 @@ END_TEST
 
 START_TEST(test_hip_hit_is_bigger_bigger)
 {
-    const hip_hit_t bigger = IN6ADDR_LOOPBACK_INIT;
+    const hip_hit_t bigger  = IN6ADDR_LOOPBACK_INIT;
     const hip_hit_t smaller = IN6ADDR_ANY_INIT;
     fail_unless(hip_hit_is_bigger(&bigger, &smaller) == 1, NULL);
 }
@@ -110,7 +110,7 @@ END_TEST
 
 START_TEST(test_hip_hit_is_bigger_equal_smaller)
 {
-    const hip_hit_t bigger = IN6ADDR_LOOPBACK_INIT;
+    const hip_hit_t bigger  = IN6ADDR_LOOPBACK_INIT;
     const hip_hit_t smaller = IN6ADDR_ANY_INIT;
     fail_unless(hip_hit_is_bigger(&smaller, &bigger) == 0, NULL);
     fail_unless(hip_hit_is_bigger(&bigger, &bigger) == 0, NULL);
@@ -169,4 +169,3 @@ Suite *lib_core_hit(void)
 
     return s;
 }
-

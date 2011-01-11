@@ -24,7 +24,7 @@
  */
 
 /**
- *@file
+ * *@file
  * Provides messaging functionality required for HHL-based anchor
  * element updates.
  *

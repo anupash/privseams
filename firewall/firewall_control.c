@@ -60,20 +60,20 @@
  */
 static int hip_handle_bex_state_update(struct hip_common *msg)
 {
-    const struct in6_addr *src_hit     = NULL, *dst_hit = NULL;
-    const struct hip_tlv_common *param = NULL;
-    int err                      = 0, msg_type = 0;
+    const struct in6_addr       *src_hit = NULL, *dst_hit = NULL;
+    const struct hip_tlv_common *param   = NULL;
+    int                          err     = 0, msg_type = 0;
 
     msg_type = hip_get_msg_type(msg);
 
     /* src_hit */
-    param    = hip_get_param(msg, HIP_PARAM_HIT);
-    src_hit  = hip_get_param_contents_direct(param);
+    param   = hip_get_param(msg, HIP_PARAM_HIT);
+    src_hit = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("Source HIT: ", src_hit);
 
     /* dst_hit */
-    param    = hip_get_next_param(msg, param);
-    dst_hit  = hip_get_param_contents_direct(param);
+    param   = hip_get_next_param(msg, param);
+    dst_hit = hip_get_param_contents_direct(param);
     HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 
     /* update bex_state in firewalldb */
@@ -100,7 +100,7 @@ static int hip_handle_bex_state_update(struct hip_common *msg)
  */
 int hip_handle_msg(struct hip_common *msg)
 {
-    int type, err = 0;
+    int                type, err = 0;
     struct hip_common *msg_out = NULL;
 
     HIP_DEBUG("Handling message from hipd\n");

@@ -41,14 +41,14 @@
 #include "hashchain.h"
 
 #ifndef PF_HIP
-#  define PF_HIP 32
+#define PF_HIP 32
 #endif
 #ifndef AF_HIP
-#  define AF_HIP 32
+#define AF_HIP 32
 #endif
 
 #ifndef IPPROTO_HIP
-#  define IPPROTO_HIP             139
+#define IPPROTO_HIP             139
 #endif
 
 #define IPV4_HDR_SIZE 20
@@ -550,8 +550,8 @@
 /* A shorthand to init an array having all possible registration failure
  * types. */
 #define HIP_ARRAY_INIT_REG_FAILURES \
-    {HIP_REG_INSUFFICIENT_CREDENTIALS, HIP_REG_TYPE_UNAVAILABLE, \
-     HIP_REG_CANCEL_REQUIRED, HIP_REG_TRANSIENT_CONDITIONS}
+    { HIP_REG_INSUFFICIENT_CREDENTIALS, HIP_REG_TYPE_UNAVAILABLE, \
+      HIP_REG_CANCEL_REQUIRED, HIP_REG_TRANSIENT_CONDITIONS }
 
 
 /* Returns length of TLV option (contents) with padding. */
@@ -596,8 +596,8 @@ struct hip_host_id {
     uint16_t                     di_type_length;
     struct hip_host_id_key_rdata rdata;
     /* Space to accommodate the largest supported key */
-    unsigned char                key[HIP_MAX_RSA_KEY_LEN / 8 + 4];
-    char                         hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    unsigned char key[HIP_MAX_RSA_KEY_LEN / 8 + 4];
+    char          hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 } __attribute__ ((packed));
 
 struct hip_host_id_priv {
@@ -607,8 +607,8 @@ struct hip_host_id_priv {
     uint16_t                     di_type_length;
     struct hip_host_id_key_rdata rdata;
     /* Space for the full private key */
-    unsigned char                key[HIP_MAX_RSA_KEY_LEN / 16 * 9 + 4];
-    char                         hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    unsigned char key[HIP_MAX_RSA_KEY_LEN / 16 * 9 + 4];
+    char          hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 } __attribute__ ((packed));
 
 
@@ -626,46 +626,46 @@ struct hip_lhi {
 struct hip_keymat_keymat {
     size_t offset;        /**< Offset into the key material */
     size_t keymatlen;     /**< Length of the key material */
-    void * keymatdst;     /**< Pointer to beginning of key material */
+    void  *keymatdst;     /**< Pointer to beginning of key material */
 };
 
 struct esp_prot_preferred_tfms {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint8_t        num_transforms;
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint8_t     num_transforms;
     // this will also contain the UNUSED transform
-    uint8_t        transforms[MAX_NUM_TRANSFORMS];
+    uint8_t transforms[MAX_NUM_TRANSFORMS];
 } __attribute__ ((packed));
 
 struct esp_prot_anchor {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint8_t        transform;
-    uint32_t       hash_item_length;
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint8_t     transform;
+    uint32_t    hash_item_length;
     // contains active and next anchor
-    unsigned char  anchors[2 * MAX_HASH_LENGTH];
+    unsigned char anchors[2 * MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 struct esp_prot_branch {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint32_t       anchor_offset;
-    uint32_t       branch_length;
-    unsigned char  branch_nodes[MAX_HTREE_DEPTH * MAX_HASH_LENGTH];
+    hip_tlv       type;
+    hip_tlv_len   length;
+    uint32_t      anchor_offset;
+    uint32_t      branch_length;
+    unsigned char branch_nodes[MAX_HTREE_DEPTH * MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 struct esp_prot_secret {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint8_t        secret_length;
-    unsigned char  secret[MAX_HASH_LENGTH];
+    hip_tlv       type;
+    hip_tlv_len   length;
+    uint8_t       secret_length;
+    unsigned char secret[MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 struct esp_prot_root {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint8_t        root_length;
-    unsigned char  root[MAX_HASH_LENGTH];
+    hip_tlv       type;
+    hip_tlv_len   length;
+    uint8_t       root_length;
+    unsigned char root[MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 /**
@@ -695,7 +695,7 @@ struct endpoint_hip {
     se_len       length;    /**< length of the whole endpoint in octets */
     se_hip_flags flags;     /**< e.g. ANON or HIT */
     uint8_t      algo;
-    hip_lsi_t      lsi;
+    hip_lsi_t    lsi;
     union {
         struct hip_host_id_priv host_id;
         struct in6_addr         hit;
@@ -737,12 +737,12 @@ struct hip_tlv_common {
 } __attribute__ ((packed));
 
 struct hip_esp_info {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint16_t       reserved;
-    uint16_t       keymat_index;
-    uint32_t       old_spi;
-    uint32_t       new_spi;
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint16_t    reserved;
+    uint16_t    keymat_index;
+    uint32_t    old_spi;
+    uint32_t    new_spi;
 } __attribute__ ((packed));
 
 /**
@@ -758,55 +758,55 @@ struct hip_esp_info {
  * @{
  */
 struct hip_r1_counter {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint32_t       reserved;
-    uint64_t       generation;
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint32_t    reserved;
+    uint64_t    generation;
 } __attribute__ ((packed));
 
 struct hip_puzzle {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint8_t        K;
-    uint8_t        lifetime;
-    uint8_t        opaque[HIP_PUZZLE_OPAQUE_LEN];
-    uint64_t       I;
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint8_t     K;
+    uint8_t     lifetime;
+    uint8_t     opaque[HIP_PUZZLE_OPAQUE_LEN];
+    uint64_t    I;
 } __attribute__ ((packed));
 
 struct hip_solution {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint8_t        K;
-    uint8_t        reserved;
-    uint8_t        opaque[HIP_PUZZLE_OPAQUE_LEN];
-    uint64_t       I;
-    uint64_t       J;
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint8_t     K;
+    uint8_t     reserved;
+    uint8_t     opaque[HIP_PUZZLE_OPAQUE_LEN];
+    uint64_t    I;
+    uint64_t    J;
 } __attribute__ ((packed));
 
 
 
 struct hip_challenge_request {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint8_t        K;
-    uint8_t        lifetime;
-    uint8_t        opaque[24];        /**< variable length */
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint8_t     K;
+    uint8_t     lifetime;
+    uint8_t     opaque[24];           /**< variable length */
 } __attribute__ ((packed));
 
 struct hip_challenge_response {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    uint8_t        K;
-    uint8_t        lifetime;
-    uint64_t       J;
-    uint8_t        opaque[24];        /**< variable length */
+    hip_tlv     type;
+    hip_tlv_len length;
+    uint8_t     K;
+    uint8_t     lifetime;
+    uint64_t    J;
+    uint8_t     opaque[24];           /**< variable length */
 } __attribute__ ((packed));
 
 struct hip_dh_public_value {
     uint8_t  group_id;
     uint16_t pub_len;
     /* fixed part ends */
-    uint8_t  public_value[0];
+    uint8_t public_value[0];
 } __attribute__ ((packed));
 
 struct hip_diffie_hellman {
@@ -1017,10 +1017,10 @@ struct hip_cert_x509_req {
 } __attribute__ ((packed));
 
 struct hip_cert_x509_resp {
-    hip_tlv        type;
-    hip_tlv_len    length;
-    unsigned char  der[1024];
-    int            der_len;
+    hip_tlv       type;
+    hip_tlv_len   length;
+    unsigned char der[1024];
+    int           der_len;
 } __attribute__ ((packed));
 
 struct hip_transformation_order {
@@ -1083,13 +1083,13 @@ struct hip_portpair {
  * Structure used to pass information around during packet handling.
  */
 struct hip_packet_context {
-    struct hip_common         *input_msg;  /**< Incoming message. */
-    struct hip_common         *output_msg; /**< Outgoing message. */
-    struct in6_addr            src_addr;   /**< Packet origin. */
-    struct in6_addr            dst_addr;   /**< Packet destination. */
-    struct hip_portpair        msg_ports;  /**< Used ports. */
-    struct hip_hadb_state     *hadb_entry; /**< Host association database entry. */
-    uint8_t                    error;      /**< Abort further processing if not 0 */
+    struct hip_common     *input_msg;      /**< Incoming message. */
+    struct hip_common     *output_msg;     /**< Outgoing message. */
+    struct in6_addr        src_addr;       /**< Packet origin. */
+    struct in6_addr        dst_addr;       /**< Packet destination. */
+    struct hip_portpair    msg_ports;      /**< Used ports. */
+    struct hip_hadb_state *hadb_entry;     /**< Host association database entry. */
+    uint8_t                error;          /**< Abort further processing if not 0 */
 };
 
 

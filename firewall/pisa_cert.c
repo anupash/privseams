@@ -54,8 +54,8 @@
  */
 static char *pisa_cert_get_part(char *cert, const char *name, char *r)
 {
-    int level = 0, len = 0;
-    char *p   = cert, *start = NULL;
+    int   level = 0, len = 0;
+    char *p     = cert, *start = NULL;
 
     if (!r) {
         return NULL;
@@ -137,7 +137,7 @@ out_err:
 static void pisa_cert_get_content(char *cert, const char *name, char *r)
 {
     char *start = cert;
-    int len     = 0;
+    int   len   = 0;
 
     if (!r) {
         return;
@@ -180,8 +180,8 @@ out_err:
  */
 void pisa_split_cert(char *cert, struct pisa_cert *pc)
 {
-    struct tm t;
-    char buffer1[224], buffer2[224];
+    struct tm       t;
+    char            buffer1[224], buffer2[224];
     struct in6_addr addr;
 
     pisa_cert_get_part(cert, "not-before", buffer1);

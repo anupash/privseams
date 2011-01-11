@@ -28,7 +28,7 @@
 
 /* Workaround for kernels before 2.6.15.3. */
 #ifndef IPV6_2292PKTINFO
-#  define IPV6_2292PKTINFO 2
+#define IPV6_2292PKTINFO 2
 #endif
 
 #include <netinet/in.h>

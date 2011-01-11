@@ -62,19 +62,19 @@
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
 struct hip_relrec {
     /** The type of this relay record (full relay or rvs) */
-    uint8_t          type;
+    uint8_t type;
     /** The lifetime of this record, seconds. */
-    time_t           lifetime;
+    time_t lifetime;
     /** Time when this record was created, seconds since epoch. */
-    time_t           created;
+    time_t created;
     /** Time when this record was last used, seconds since epoch. */
-    time_t           last_contact;
+    time_t last_contact;
     /** HIT of Responder (Relay Client) */
-    hip_hit_t        hit_r;
+    hip_hit_t hit_r;
     /** IP address of Responder (Relay Client) */
-    struct in6_addr       ip_r;
+    struct in6_addr ip_r;
     /** Client UDP port received in I2 packet of registration. */
-    in_port_t        udp_port_r;
+    in_port_t udp_port_r;
     /** Integrity key established while registration occurred. */
     struct hip_crypto_key hmac_relay;
 };
