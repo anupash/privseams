@@ -448,7 +448,6 @@ int hip_cert_spki_verify(struct hip_common *msg)
         algo = HIP_HI_RSA;
         goto algo_check_done;
     }
-    HIP_EAE(-1, "Unknown algorithm\n");
 
 algo_check_done:
     switch (algo) {
