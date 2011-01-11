@@ -124,4 +124,8 @@ int hip_handle_r2(const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx);
 
+int hip_setup_ipsec_sa(const uint8_t packet_type,
+                       const uint32_t ha_state,
+                       struct hip_packet_context *ctx);
+
 #endif /* HIP_HIPD_INPUT_H */

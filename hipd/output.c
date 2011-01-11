@@ -242,7 +242,110 @@ out_err:
 }
 
 /**
- * @brief Creates an I2 packet and sends it.
+ * @brief Add a signed echo response to an outbound packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *             information for the packet handling
+ *             (received message, source and destination address, the
+ *             ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return zero on success, negative value on error.
+ */
+int hip_add_signed_echo_response(UNUSED const uint8_t packet_type,
+                                 UNUSED const uint32_t ha_state,
+                                 struct hip_packet_context *ctx)
+{
+    const struct hip_echo_request *ping = NULL;
+    int err = 0;
+
+    ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
+    if (ping) {
+        int ln = hip_get_param_contents_len(ping);
+        HIP_IFEL(hip_build_param_echo(ctx->output_msg, ping + 1, ln, 1, 0), -1,
+                 "Error while creating echo reply parameter\n");
+    }
+
+  out_err:
+    return err;
+}
+
+/**
+ * @brief Adds a signature and hmac to an outbound packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *             information for the packet handling
+ *             (received message, source and destination address, the
+ *             ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return zero on success, negative value on error.
+ */
+int hip_sign_and_mac_packet(UNUSED const uint8_t packet_type,
+                            UNUSED const uint32_t ha_state,
+                            struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
+                                           &ctx->hadb_entry->hip_hmac_out),
+             -1,
+             "Building of HMAC failed\n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_SIGN\n");
+    hip_perf_start_benchmark(perf_set, PERF_SIGN);
+#endif
+    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
+                                   ctx->output_msg),
+             -EINVAL,
+             "Could not create signature\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_SIGN\n");
+    hip_perf_stop_benchmark(perf_set, PERF_SIGN);
+#endif
+
+  out_err:
+    return err;
+}
+
+/**
+ * @brief Adds an unsigned echo response to an outbound packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *             information for the packet handling
+ *             (received message, source and destination address, the
+ *             ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+int hip_add_unsigned_echo_response(UNUSED const uint8_t packet_type,
+                                   UNUSED const uint32_t ha_state,
+                                   struct hip_packet_context *ctx)
+{
+    const struct hip_echo_request *ping = NULL;
+    int err = 0;
+
+    ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST);
+    if (ping) {
+        int ln = hip_get_param_contents_len(ping);
+        HIP_IFEL(hip_build_param_echo(ctx->output_msg, (ping + 1), ln, 0, 0), -1,
+                 "Error while creating echo reply parameter\n");
+    }
+
+  out_err:
+    return err;
+}
+
+/**
+ * @brief Creates an I2 packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
@@ -254,20 +357,17 @@ out_err:
  *
  * @return zero on success, non-negative on error.
  */
-int hip_send_i2(UNUSED const uint8_t packet_type,
-                UNUSED const uint32_t ha_state,
-                struct hip_packet_context *ctx)
+int hip_create_i2(UNUSED const uint8_t packet_type,
+                  UNUSED const uint32_t ha_state,
+                  struct hip_packet_context *ctx)
 {
     hip_transform_suite transform_hip_suite, transform_esp_suite;
-    struct hip_spi_in_item spi_in_data;
-    struct in6_addr daddr;
     const struct hip_param *param           = NULL;
     struct hip_esp_info *esp_info           = NULL;
     struct hip_host_id_entry *host_id_entry = NULL;
     char *enc_in_msg                        = NULL, *host_id_in_enc = NULL;
     unsigned char *iv                       = NULL;
     int err = 0, host_id_in_enc_len = 0;
-    uint32_t spi_in = 0;
 
     HIP_IFEL(ctx->error,
              -1,
@@ -283,13 +383,8 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
 
     HIP_ASSERT(ctx->hadb_entry);
 
-    spi_in = ctx->hadb_entry->spi_inbound_current;
-
     /* TLV sanity checks are are already done by the caller of this
      * function. Now, begin to build I2 piece by piece. */
-
-    /* Delete old SPDs and SAs, if present */
-    hip_delete_security_associations_and_sp(ctx->hadb_entry);
 
     /********** R1 COUNTER (OPTIONAL) ********/
     /* we build this, if we have recorded some value (from previous R1s) */
@@ -399,6 +494,8 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                                            &transform_esp_suite, 1), -1,
              "Building of ESP transform failed\n");
 
+    ctx->hadb_entry->esp_transform = transform_esp_suite;
+
     /********** ESP-PROT anchor [OPTIONAL] **********/
 
     /** @todo Modularize esp_prot_* */
@@ -452,80 +549,36 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
     ctx->hadb_entry->hip_transform  = transform_hip_suite;
 
     /* XXX: -EAGAIN */
-    HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
-
-    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input_msg->hits,
-                                   &ctx->input_msg->hitr,
-                                   &ctx->src_addr, &ctx->dst_addr,
-                                   IPPROTO_ESP,
-                                   1,
-                                   1),
-             -1,
-             "Setting up SP pair failed\n");
+    HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n",
+              ctx->hadb_entry->spi_inbound_current);
 
     esp_info = hip_get_param_readwrite(ctx->output_msg, HIP_PARAM_ESP_INFO);
     HIP_ASSERT(esp_info);     /* Builder internal error */
-    esp_info->new_spi = htonl(spi_in);
-    /* LSI not created, as it is local, and we do not support IPv4 */
+    esp_info->new_spi = htonl(ctx->hadb_entry->spi_inbound_current);
 
-    /********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
-    /* must reply... */
-    {
-        const struct hip_echo_request *ping;
+  out_err:
+    return err;
+}
 
-        ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
-        if (ping) {
-            int ln = hip_get_param_contents_len(ping);
-            HIP_IFEL(hip_build_param_echo(ctx->output_msg, ping + 1, ln, 1, 0), -1,
-                     "Error while creating echo reply parameter\n");
-        }
-    }
-
-    /************* HMAC ************/
-    HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
-                                           &ctx->hadb_entry->hip_hmac_out),
-             -1,
-             "Building of HMAC failed\n");
-
-    /********** Signature **********/
-    /* Build a digest of the packet built so far. Signature will
-     * be calculated over the digest. */
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_SIGN\n");
-    hip_perf_start_benchmark(perf_set, PERF_SIGN);
-#endif
-    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
-                                          ctx->output_msg),
-             -EINVAL,
-             "Could not create signature\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_SIGN\n");
-    hip_perf_stop_benchmark(perf_set, PERF_SIGN);
-#endif
-
-    /********** ECHO_RESPONSE (OPTIONAL) ************/
-    /* must reply */
-    {
-        const struct hip_echo_request *ping;
-
-        ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST);
-        if (ping) {
-            int ln = hip_get_param_contents_len(ping);
-            HIP_IFEL(hip_build_param_echo(ctx->output_msg, (ping + 1), ln, 0, 0), -1,
-                     "Error while creating echo reply parameter\n");
-        }
-    }
-
-    /********** I2 packet complete **********/
-    memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
-    spi_in_data.spi     = spi_in;
-    spi_in_data.ifindex = hip_devaddr2ifindex(&ctx->dst_addr);
-    HIP_LOCK_HA(ctx->hadb_entry);
-
-    ctx->hadb_entry->esp_transform = transform_esp_suite;
-    HIP_DEBUG("Saving base exchange encryption data to hadb_entry \n");
-    HIP_DEBUG_HIT("Our HIT: ", &ctx->hadb_entry->hit_our);
-    HIP_DEBUG_HIT("Peer HIT: ", &ctx->hadb_entry->hit_peer);
+/**
+ * @brief Final processing and sending of an I2 packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, non-negative on error.
+ */
+int hip_send_i2(UNUSED const uint8_t packet_type,
+                UNUSED const uint32_t ha_state,
+                struct hip_packet_context *ctx)
+{
+    struct in6_addr daddr;
+    int err = 0;
 
     /** @todo Also store the keys that will be given to ESP later */
     HIP_IFE(hip_hadb_get_peer_addr(ctx->hadb_entry, &daddr), -1);
@@ -880,7 +933,114 @@ out_err:
 }
 
 /**
- * Creates and transmits an R2 packet.
+ * Adds an RVS registration_from parameter to outbound packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *             information for the packet handling
+ *             (received message, source and destination address, the
+ *             ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return zero on success, negative otherwise.
+ */
+int hip_add_rvs_reg_from(UNUSED const uint8_t packet_type,
+                         UNUSED const uint32_t ha_state,
+                         RVS struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+#ifdef CONFIG_HIP_RVS
+    hip_handle_param_reg_request(ctx->hadb_entry,
+                                 ctx->input_msg,
+                                 ctx->output_msg);
+    if (hip_relay_get_status() != HIP_RELAY_OFF) {
+        hip_build_param_reg_from(ctx->output_msg,
+                                 &ctx->src_addr,
+                                 ctx->msg_ports.src_port);
+    }
+#endif
+
+    return err;
+}
+
+/**
+ * Adds an HMAC2 and signature parameters to outbound packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *             information for the packet handling
+ *             (received message, source and destination address, the
+ *             ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return zero on success, negative otherwise.
+ */
+int hip_hmac2_and_sign(UNUSED const uint8_t packet_type,
+                       UNUSED const uint32_t ha_state,
+                       struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+    /* Create HMAC2 parameter. */
+    HIP_ASSERT(ctx->hadb_entry->our_pub);
+
+    HIP_IFEL(hip_build_param_hmac2_contents(ctx->output_msg,
+                                            &ctx->hadb_entry->hip_hmac_out,
+                                            ctx->hadb_entry->our_pub),
+             -1,
+             "Failed to build parameter HMAC2 contents.\n");
+
+    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
+                                   ctx->output_msg),
+             -EINVAL,
+             "Could not sign R2. Failing\n");
+
+  out_err:
+    return err;
+}
+
+/**
+ * Adds an RVS relay_to parameter to outbound packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *             information for the packet handling
+ *             (received message, source and destination address, the
+ *             ports and the corresponding entry from the host
+ *             association database).
+ *
+ * @return zero on success, negative otherwise.
+ */
+int hip_add_rvs_relay_to(UNUSED const uint8_t packet_type,
+                         UNUSED const uint32_t ha_state,
+                         RVS struct hip_packet_context *ctx)
+{
+    int err = 0;
+
+#ifdef CONFIG_HIP_RVS
+    struct in6_addr dst;
+    in_port_t dst_port = 0;
+
+    memset(&dst, 0, sizeof(dst));
+    if ((hip_relay_handle_relay_from(ctx->input_msg,
+                                     &ctx->src_addr,
+                                     &dst,
+                                     &dst_port) > 0)
+        && !ipv6_addr_any(&dst)) {
+        HIP_DEBUG("create relay_to parameter in R2\n");
+        hip_build_param_relay_to(ctx->output_msg, &dst, dst_port);
+    }
+#endif
+
+    return err;
+}
+
+/**
+ * Creates an R2 packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
@@ -892,11 +1052,10 @@ out_err:
  *
  * @return zero on success, negative otherwise.
  */
-int hip_send_r2(UNUSED const uint8_t packet_type,
-                UNUSED const uint32_t ha_state,
-                struct hip_packet_context *ctx)
+int hip_create_r2(UNUSED const uint8_t packet_type,
+                  UNUSED const uint32_t ha_state,
+                  struct hip_packet_context *ctx)
 {
-    struct hip_crypto_key hmac;
     int err          = 0;
     uint16_t mask    = 0;
 
@@ -950,81 +1109,28 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
              "failed to add esp protection anchor\n");
     /************************************************/
 
-#ifdef CONFIG_HIP_RVS
-    /********** REG_REQUEST **********/
-    /* This part should only be executed at server offering rvs or relay
-     * services.
-     */
+  out_err:
+    return err;
+}
 
-    hip_handle_param_reg_request(ctx->hadb_entry,
-                                 ctx->input_msg, ctx->output_msg);
-    if (hip_relay_get_status() != HIP_RELAY_OFF) {
-        hip_build_param_reg_from(ctx->output_msg,
-                                 &ctx->src_addr, ctx->msg_ports.src_port);
-    }
-#endif
-
-
-    /* Create HMAC2 parameter. */
-    if (ctx->hadb_entry->our_pub == NULL) {
-        HIP_DEBUG("ctx->hadb_entry->our_pub is NULL.\n");
-    }
-
-    memcpy(&hmac, &ctx->hadb_entry->hip_hmac_out, sizeof(hmac));
-    HIP_IFEL(hip_build_param_hmac2_contents(ctx->output_msg,
-                                            &hmac,
-                                            ctx->hadb_entry->our_pub),
-             -1,
-             "Failed to build parameter HMAC2 contents.\n");
-
-    /* Why is err reset to zero? -Lauri 11.06.2008 */
-    if (err == 1) {
-        err = 0;
-    }
-
-    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
-                                   ctx->output_msg),
-             -EINVAL,
-             "Could not sign R2. Failing\n");
-
-#ifdef CONFIG_HIP_RVS
-    {
-        struct in6_addr dst;
-        in_port_t dst_port = 0;
-
-        memset(&dst, 0, sizeof(dst));
-        if ((hip_relay_handle_relay_from(ctx->input_msg, &ctx->src_addr,
-                                         &dst, &dst_port) > 0) &&
-            !ipv6_addr_any(&dst)) {
-            HIP_DEBUG("create relay_to parameter in R2\n");
-            hip_build_param_relay_to(ctx->output_msg, &dst, dst_port);
-        }
-    }
-#endif
-
-    err = hip_add_sa(&ctx->dst_addr,
-                     &ctx->src_addr,
-                     &ctx->input_msg->hitr,
-                     &ctx->input_msg->hits,
-                     ctx->hadb_entry->spi_outbound_current,
-                     ctx->hadb_entry->esp_transform,
-                     &ctx->hadb_entry->esp_out,
-                     &ctx->hadb_entry->auth_out,
-                     HIP_SPI_DIRECTION_OUT,
-                     0,
-                     ctx->hadb_entry);
-    if (err) {
-        HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
-                  ctx->hadb_entry->spi_outbound_current);
-
-        /* delete all IPsec related SPD/SA for this ctx->hadb_entry*/
-        hip_delete_security_associations_and_sp(ctx->hadb_entry);
-        goto out_err;
-    }
-
-    /* @todo Check if err = -EAGAIN... */
-    HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n",
-              ctx->hadb_entry->spi_outbound_new);
+/**
+ * Sends an R2 packet.
+ *
+ * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
+ * @param ha_state The host association state (RFC 5201, 4.4.1.)
+ * @param *ctx Pointer to the packet context, containing all
+ *                    information for the packet handling
+ *                    (received message, source and destination address, the
+ *                    ports and the corresponding entry from the host
+ *                    association database).
+ *
+ * @return zero on success, negative otherwise.
+ */
+int hip_send_r2(UNUSED const uint8_t packet_type,
+                UNUSED const uint32_t ha_state,
+                struct hip_packet_context *ctx)
+{
+    int err = 0;
 
     err = hip_send_pkt(&ctx->dst_addr,
                        &ctx->src_addr,
@@ -1033,10 +1139,6 @@ int hip_send_r2(UNUSED const uint8_t packet_type,
                        ctx->output_msg,
                        ctx->hadb_entry,
                        1);
-
-    if (err == 1) {
-        err = 0;
-    }
 
     HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 

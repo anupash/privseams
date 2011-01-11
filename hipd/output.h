@@ -57,17 +57,43 @@ int hip_send_r1(const uint8_t packet_type,
                 const uint32_t ha_state,
                 struct hip_packet_context *ctx);
 
+int hip_add_rvs_reg_from(const uint8_t packet_type,
+                         const uint32_t ha_state,
+                         struct hip_packet_context *ctx);
+
+int hip_hmac2_and_sign(const uint8_t packet_type,
+                       const uint32_t ha_state,
+                       struct hip_packet_context *ctx);
+
+int hip_add_rvs_relay_to(const uint8_t packet_type,
+                         const uint32_t ha_state,
+                         struct hip_packet_context *ctx);
+
+int hip_create_r2(const uint8_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *ctx);
+
 int hip_send_r2(const uint8_t packet_type,
                 const uint32_t ha_state,
                 struct hip_packet_context *ctx);
 
-int hip_send_r2_response(struct hip_common *r2,
-                         struct in6_addr *r2_saddr,
-                         struct in6_addr *r2_daddr,
-                         struct hip_hadb_state *entry,
-                         struct hip_portpair *r2_info);
-
 int hip_send_i1(hip_hit_t *, const hip_hit_t *, struct hip_hadb_state *);
+
+int hip_add_signed_echo_response(const uint8_t packet_type,
+                                 const uint32_t ha_state,
+                                 struct hip_packet_context *ctx);
+
+int hip_sign_and_mac_packet(const uint8_t packet_type,
+                            const uint32_t ha_state,
+                            struct hip_packet_context *ctx);
+
+int hip_add_unsigned_echo_response(const uint8_t packet_type,
+                                   const uint32_t ha_state,
+                                   struct hip_packet_context *ctx);
+
+int hip_create_i2(const uint8_t packet_type,
+                  const uint32_t ha_state,
+                  struct hip_packet_context *ctx);
 
 int hip_send_i2(const uint8_t packet_type,
                 const uint32_t ha_state,
