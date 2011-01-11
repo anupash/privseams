@@ -1043,7 +1043,7 @@ out_err:
  * @return 0 if all files were saved successfully, or non-zero if an
  * error occurred.
  */
-int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *ecdsa)
+int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *const ecdsa)
 {
     int err           = 0, files = 0, ret;
     char *pubfilename = NULL;
@@ -1137,7 +1137,7 @@ out_err:
  * *EC contins NULL if the key could not be loaded (not in PEM format
  * or file not found, etc).
  */
-int load_ecdsa_private_key(const char *const filename, EC_KEY **ecdsa)
+int load_ecdsa_private_key(const char *const filename, EC_KEY **const ecdsa)
 {
     FILE *fp = NULL;
     int err  = 0;
