@@ -13,6 +13,7 @@
 #include "lib/core/builder.h"
 #include "signaling_prot_common.h"
 #include "signaling_common_builder.h"
+#include "signaling_user_api.h"
 
 static const char *signaling_connection_status_name(int status) {
     switch (status) {
@@ -115,15 +116,24 @@ void signaling_application_context_print(const struct signaling_application_cont
  */
 void signaling_user_context_print(const struct signaling_user_context * const user_ctx,
                                   const char *prefix, const int header) {
+    X509_NAME *subj_name;
+    char subj_name_string[SIGNALING_USER_ID_MAX_LEN] = { "<decoding error>" };
+
     if(user_ctx == NULL) {
         HIP_DEBUG("%sNo user ctx parameter given.\n", prefix);
         return;
     }
+
+    /* Decode users name */
+    if(!signaling_DER_to_X509_NAME(user_ctx->subject_name, user_ctx->subject_name_len, &subj_name)) {
+        X509_NAME_oneline(subj_name, subj_name_string, SIGNALING_USER_ID_MAX_LEN);
+    }
+
     if (header)
         HIP_DEBUG("%s+------------ -USER CONTEXT START ----------------------\n", prefix);
     HIP_DEBUG("%s  User context \n", prefix);
     HIP_DEBUG("%s  \tSystem UID:\t %d\n", prefix, user_ctx->euid);
-    HIP_DEBUG("%s  \tUser Name:\t %s\n", prefix, user_ctx->username);
+    HIP_DEBUG("%s  \tUser Name:\t %s\n", prefix, subj_name_string);
     HIP_DEBUG("%s  \tUser Key:\t %s\n", prefix, signaling_user_key_name(user_ctx->rdata.algorithm));
     HIP_DEBUG("%s  \tUser Key RR:\t Size %d\n", prefix, user_ctx->key_rr_len != -1 ? 0 : user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
     //if (user_ctx->key_rr_len > 0)
@@ -214,11 +224,13 @@ int signaling_init_user_context(struct signaling_user_context * const user_ctx) 
     HIP_IFEL(!user_ctx, -1, "User context has to be allocated before initialization\n");
 
     user_ctx->euid              = -1;    // no user id
-    user_ctx->username[0]       = '\0';  // no user name
-    user_ctx->key_rr_len        = -1;     // no user public key (but key_rdata still has size 4)
+    user_ctx->subject_name_len  = -1;    // no subject name
+    user_ctx->key_rr_len        = -1;    // no user public key (but key_rdata still has size 4)
     user_ctx->rdata.algorithm   = 0;     // no user public key algorithm
     user_ctx->rdata.flags       = 0;     // unused
     user_ctx->rdata.protocol    = 0;     // unused
+    memset(user_ctx->pkey,          0, sizeof(user_ctx->pkey));
+    memset(user_ctx->subject_name,  0, sizeof(user_ctx->subject_name));
 
 out_err:
     return err;

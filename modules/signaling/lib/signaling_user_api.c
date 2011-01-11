@@ -25,6 +25,22 @@
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
 
+int signaling_X509_NAME_to_DER(X509_NAME *const name, unsigned char **buf) {
+    int len;
+    int err = 0;
+
+    HIP_IFEL(!name, -1, "Cannot encode NULL-certificate\n");
+    *buf = NULL;
+    len = i2d_X509_NAME(name, buf);
+    HIP_IFEL(len < 0, -1, "Could not DER-encode the given X509 name.\n");
+
+out_err:
+    if (err) {
+        return err;
+    }
+    return len;
+}
+
 int signaling_X509_to_DER(X509 *const cert, unsigned char **buf) {
     int len;
     int err = 0;
@@ -40,6 +56,20 @@ out_err:
     }
     return len;
 }
+
+int signaling_DER_to_X509_NAME(const unsigned char *const buf, const int len, X509_NAME **name) {
+    int err = 0;
+    const unsigned char *p;
+
+    HIP_IFEL(!buf,      -1, "Cannot decode from NULL-buffer\n");
+    HIP_IFEL(len <= 0,  -1, "Cannot decode x509 name of length <= 0\n");
+    p = buf;
+    *name = d2i_X509_NAME(NULL, (const unsigned char **)  &p, len);
+
+out_err:
+    return err;
+}
+
 
 int signaling_DER_to_X509(const unsigned char *const buf, const int len, X509 **cert) {
     int err = 0;
@@ -106,7 +136,7 @@ X509 *signaling_user_api_get_user_certificate(const uid_t uid) {
     int err         = 0;
 
     homedir = get_user_homedir(uid);
-    sprintf(filebuf, "%s/.signaling/user-cert.pem", homedir);
+    sprintf(filebuf, "%s/.signaling/user-cert-chain.pem", homedir);
     HIP_IFEL(!(ret = load_x509_certificate(filebuf)),
              -1, "Could not get user certificate \n");
 
@@ -143,22 +173,23 @@ int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context 
     int err             = 0;
     X509 *usercert      = NULL;
     X509_NAME *uname    = NULL;
-    struct passwd *pw   = NULL;
+    unsigned char *buf  = NULL;
+    int out_len;
 
     if (!(usercert = signaling_user_api_get_user_certificate(uid))) {
         HIP_DEBUG("Could not get user's certificate, using system username as fallback.\n");
-        HIP_IFEL(!(pw = getpwuid(uid)),
-                 -1, "Failed to get info for user id %d.\n", uid);
-        strncpy(user_ctx->username, pw->pw_name, SIGNALING_USER_ID_MAX_LEN-1);
-        user_ctx->username[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
+        memcpy(user_ctx->subject_name, "anonymous", strlen("anonymous"));
     } else {
         HIP_IFEL(!(uname = X509_get_subject_name(usercert)),
                  -1, "Could not get subject name from certificate\n");
-        X509_NAME_oneline(uname, user_ctx->username, SIGNALING_USER_ID_MAX_LEN);
-        user_ctx->username[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
+        HIP_IFEL((out_len = signaling_X509_NAME_to_DER(uname, &buf)) < 0,
+                 -1, "Could not DER encode X509 Subject Name");
+        memcpy(user_ctx->subject_name, buf, out_len);
+        user_ctx->subject_name_len = out_len;
     }
 
 out_err:
+    free(buf);
     return err;
 }
 

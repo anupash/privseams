@@ -11,8 +11,10 @@
 
 #include <sys/types.h>
 
-/* Utility functions to convert X509 certificates to DER encoding and back */
+/* Utility functions to convert X509 certificates/names to DER encoding and back */
+int signaling_X509_NAME_to_DER(X509_NAME *const name, unsigned char **buf);
 int signaling_X509_to_DER(X509 *const cert, unsigned char **buf);
+int signaling_DER_to_X509_NAME(const unsigned char *const buf, const int len, X509_NAME **name);
 int signaling_DER_to_X509(const unsigned char *const buf, const int len, X509 **cert);
 
 /* Getters for different user context information */

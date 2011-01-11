@@ -14,6 +14,6 @@
 #define SIGNALING_USER_CERT_DIR HIPL_SYSCONFDIR "/user_certchains"
 
 /* Verify that a public key belongs to a specific subject. */
-int signaling_user_api_verify_pubkey(const char *const subject, const EVP_PKEY *const pub_key, X509 **user_cert);
+int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const pub_key, X509 **user_cert);
 
 #endif /* HIP_HIPD_SIGNALING_USER_MANAGEMENT_H */

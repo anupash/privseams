@@ -33,9 +33,14 @@
  *
  * @return 0 on success, negative on error
  */
-int signaling_user_api_verify_pubkey(const char *const subject, UNUSED const EVP_PKEY *const pub_key, UNUSED X509 **user_cert)
+int signaling_user_api_verify_pubkey(X509_NAME *subject, UNUSED const EVP_PKEY *const pub_key, UNUSED X509 **user_cert)
 {
-    HIP_DEBUG("Verifying public key of subject: %s", subject);
+    char *name;
 
+    name = X509_NAME_oneline(subject, NULL, SIGNALING_USER_ID_MAX_LEN);
+    HIP_DEBUG("Verifying public key of subject: %s \n", name);
+
+
+    free(name);
     return SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED;
 }

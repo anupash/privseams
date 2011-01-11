@@ -239,7 +239,7 @@ int signaling_build_param_user_context(hip_common_t *msg,
     /* calculate lengths */
     header_len        = sizeof(struct signaling_param_user_context) - sizeof(struct hip_host_id_key_rdata);
     pkey_rr_len       = user_ctx->key_rr_len;
-    username_len      = strlen(user_ctx->username);
+    username_len      = user_ctx->subject_name_len;
     par_contents_len  = header_len - sizeof(struct hip_tlv_common) + pkey_rr_len + username_len;
 
     HIP_DEBUG("Building user info parameter of length %d\n", par_contents_len);
@@ -260,7 +260,7 @@ int signaling_build_param_user_context(hip_common_t *msg,
 
     /* Set user name */
     param_userinfo->un_length = htons(username_len);
-    memcpy((uint8_t *)param_userinfo + header_len + pkey_rr_len, user_ctx->username, username_len);
+    memcpy((uint8_t *)param_userinfo + header_len + pkey_rr_len, user_ctx->subject_name, username_len);
 
     /* Set type and lenght */
     hip_set_param_type((struct hip_tlv_common *) param_userinfo, HIP_PARAM_SIGNALING_USERINFO);
@@ -397,10 +397,10 @@ int signaling_build_user_context(const struct signaling_param_user_context *para
     usr_ctx->rdata.protocol = param_usr_ctx->rdata.protocol;
     usr_ctx->rdata.flags = ntohs(param_usr_ctx->rdata.flags);
 
-    memcpy(usr_ctx->username,
+    usr_ctx->subject_name_len = ntohs(param_usr_ctx->un_length);
+    memcpy(usr_ctx->subject_name,
            (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context) + ntohs(param_usr_ctx->pkey_rr_length) - sizeof(struct hip_host_id_key_rdata),
            ntohs(param_usr_ctx->un_length));
-    usr_ctx->username[ntohs(param_usr_ctx->un_length)] = '\0';
 
 out_err:
     return err;

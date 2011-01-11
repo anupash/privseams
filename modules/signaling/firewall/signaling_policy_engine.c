@@ -181,8 +181,8 @@ int signaling_policy_check(UNUSED const struct tuple *tuple, UNUSED const struct
     SList *listentry;
 
     /* Construct the tuple for the current context */
-    memcpy(&tuple_for_conn.app_id, conn_ctx->app_ctx.application_dn, SIGNALING_APP_DN_MAX_LEN);
-    memcpy(&tuple_for_conn.user_id, conn_ctx->user_ctx.username, SIGNALING_USER_ID_MAX_LEN);
+    memcpy(&tuple_for_conn.app_id,  conn_ctx->app_ctx.application_dn, SIGNALING_APP_DN_MAX_LEN);
+    memcpy(&tuple_for_conn.user_id, conn_ctx->user_ctx.subject_name, SIGNALING_USER_ID_MAX_LEN);
     memcpy(&tuple_for_conn.host_id, &tuple->hip_tuple->data->src_hit, sizeof(struct in6_addr));
 
     /* Find a match */

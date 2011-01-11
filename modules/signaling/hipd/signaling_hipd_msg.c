@@ -324,7 +324,7 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha) {
     HIP_IFEL(hip_build_param_cert(msg_buf, 0, 1, 0, HIP_CERT_X509V3, buf, len),
              -1, "Could not build cert parameter\n");
 
-    HIP_DEBUG("Sending certificate chain for subject: %s (id=%d) \n", sig_state->ctx.user_ctx.username, sig_state->ctx.user_ctx.euid);
+    HIP_DEBUG("Sending certificate chain for subject id=%d \n", sig_state->ctx.user_ctx.euid);
 
     /* Mac and sign the packet */
     HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
@@ -398,6 +398,7 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
     unsigned char sha1_digest[HIP_AH_SHA_LEN];
     EVP_PKEY *pkey;
     struct hip_host_id user_hi;
+    X509_NAME *subject_name;
 
     orig_len = hip_get_msg_total_len(ctx->input_msg);
 
@@ -435,13 +436,16 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
     HIP_DEBUG("Correctly verified users signature\n");
 
     /* Now verify users public key against his certificate */
-    err = signaling_user_api_verify_pubkey(usr_ctx.username, NULL, NULL);
+    HIP_IFEL(signaling_DER_to_X509_NAME(usr_ctx.subject_name, usr_ctx.subject_name_len, &subject_name),
+             -1, "Could not decode to x509 name.");
+    err = signaling_user_api_verify_pubkey(subject_name, NULL, NULL);
     if (err == SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED) {
         signaling_send_user_auth_failed_ntf(ctx->hadb_entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
     }
 
 out_err:
     hip_set_msg_total_len(ctx->input_msg, orig_len);
+    X509_NAME_free(subject_name);
     return err;
 }
 

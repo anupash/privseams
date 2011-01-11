@@ -212,7 +212,7 @@ static void do_tests(int runs) {
     printf("--------------------------------------------\n"
            "Socket performance on medium full wire struct\n"
            "--------------------------------------------\n");
-    strcpy(conn_ctx->user_ctx.username, "Jan Henrik Ziegeldorf");
+    //strcpy(conn_ctx->user_ctx.subject_name, "Jan Henrik Ziegeldorf");
     strcpy(conn_ctx->app_ctx.application_dn, "Mozilla Firefox 3.2.1");
     strcpy(conn_ctx->app_ctx.issuer_dn, "Versign Inc.");
     strcpy(conn_ctx->app_ctx.groups, "Browser");
@@ -237,7 +237,7 @@ static void do_tests(int runs) {
            "Socket performance on maximum full wire struct\n"
            "--------------------------------------------\n");
 
-    strncpy(conn_ctx->user_ctx.username, fill, 127);
+    //strncpy(conn_ctx->user_ctx.subject_name, fill, 127);
     strncpy(conn_ctx->app_ctx.application_dn, fill, 127);
     strncpy(conn_ctx->app_ctx.issuer_dn, fill, 127);
     strncpy(conn_ctx->app_ctx.groups, fill, 63);

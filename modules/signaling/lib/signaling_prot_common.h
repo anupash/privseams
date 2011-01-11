@@ -118,7 +118,7 @@ struct signaling_ntf_user_auth_failed_data {
      |                                                               |    |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  --+
      |                                                               |
-     |          User Name            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |    X509 Subject Name          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      |                               |            PADDING            |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
@@ -214,12 +214,15 @@ struct signaling_application_context {
 */
 struct signaling_user_context {
     long int euid;
-    char username[SIGNALING_USER_ID_MAX_LEN];
+    int subject_name_len;
     int key_rr_len;
 
     /* The key_rr is comprised of the rrdata and the actual key */
     struct hip_host_id_key_rdata rdata;
     unsigned char pkey[HIP_MAX_RSA_KEY_LEN / 8 + 4 ];
+
+    /* Subject name in DER encoding */
+    unsigned char subject_name[SIGNALING_USER_ID_MAX_LEN];
 };
 
 /*
