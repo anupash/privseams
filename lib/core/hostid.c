@@ -1163,8 +1163,7 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
     curveid = get_ecdsa_curve_hip_name(EC_GROUP_get_curve_name(group));
     HIP_IFEL(curveid == UNSUPPORTED_CURVE,
              -1, "Curve is not supported.\n");
-    curveid = htons(curveid);
-    memcpy(buffer, &curveid, HIP_CURVE_ID_LENGTH);
+    *(uint16_t *) buffer = htons(curveid);
 
     /* serialize public key */
     HIP_IFEL(!EC_POINT_point2oct(EC_KEY_get0_group(ecdsa),
