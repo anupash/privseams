@@ -559,8 +559,8 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
     case ACTION_ADD:
         if (!use_default) {
             if (!strcmp(hi_fmt, "dsa")) {
-                if ((err = load_dsa_private_key(dsa_filenamebase, &dsa_key))) {
-                    HIP_ERROR("Loading of the DSA key failed\n");
+                if ((err = load_dsa_private_key(hi_file, &dsa_key))) {
+                    HIP_ERROR("Failed to load DSA key from file %s\n", hi_file);
                     goto out_err;
                 }
                 dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
@@ -576,8 +576,8 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                     goto out_err;
                 }
             } else { /*RSA*/
-                if ((err = load_rsa_private_key(rsa_filenamebase, &rsa_key))) {
-                    HIP_ERROR("Loading of the RSA key failed\n");
+                if ((err = load_rsa_private_key(hi_file, &rsa_key))) {
+                    HIP_ERROR("Failed to load RSA key from file %s\n", hi_file);
                     goto out_err;
                 }
                 rsa_key_rr_len = rsa_to_dns_key_rr(rsa_key, &rsa_key_rr);
