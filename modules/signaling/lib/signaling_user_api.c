@@ -199,33 +199,6 @@ out_err:
     return sig_len;
 }
 
-
-static X509 *signaling_user_api_certificate_lookup(UNUSED const char *const username) {
-    return NULL;
-}
-
-/**
- * Try to verify the signature for a given user.
- *
- * @param user_ctx  the user context containing the user name
- * @param signature a pointer the the user's signature
- * @param sig_len   the length of the signature
- */
-int signaling_user_api_verify_pubkey(UNUSED const struct signaling_user_context *usr_ctx) {
-    int err = 0;
-    char *username = NULL;
-    X509 *user_cert;
-
-    if (!(user_cert = signaling_user_api_certificate_lookup(username))) {
-        HIP_DEBUG("No certificate for user available, need to request.\n");
-        err = SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED;
-        goto out_err;
-    }
-
-out_err:
-    return err;
-}
-
 EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid) {
     int err         = 0;
     X509 *user_cert = NULL;

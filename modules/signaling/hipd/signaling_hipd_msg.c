@@ -54,6 +54,7 @@
 #include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_oslayer.h"
 #include "modules/signaling/lib/signaling_user_api.h"
+#include "modules/signaling/lib/signaling_user_management.h"
 #include "signaling_hipd_state.h"
 #include "signaling_hipd_msg.h"
 #include "signaling_hipd_user_msg.h"
@@ -303,7 +304,7 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha) {
 
     /* Allocate and build message */
     HIP_IFEL(!(msg_buf = hip_msg_alloc()),
-            -ENOMEM, "Out of memory while allocation memory for the bex update packet\n");
+            -ENOMEM, "Out of memory while allocation memory for the user cert update packet\n");
     hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ha->hit_our, &ha->hit_peer);
 
     /* Add sequence number */
@@ -434,7 +435,7 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
     HIP_DEBUG("Correctly verified users signature\n");
 
     /* Now verify users public key against his certificate */
-    err = signaling_user_api_verify_pubkey(&usr_ctx);
+    err = signaling_user_api_verify_pubkey(usr_ctx.username, NULL, NULL);
     if (err == SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED) {
         signaling_send_user_auth_failed_ntf(ctx->hadb_entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
     }
