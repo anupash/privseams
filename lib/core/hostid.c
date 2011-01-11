@@ -618,6 +618,8 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const 
     HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(nid)),
              -1, "Failed building the group.\n");
 
+    EC_GROUP_set_asn1_flag(group, OPENSSL_EC_NAMED_CURVE);
+
     HIP_IFEL(!(pub_key = EC_POINT_new(group)),
              -1, "Failed to init public key (point).\n");
 
