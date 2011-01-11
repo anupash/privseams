@@ -375,8 +375,7 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
 
     /* Determine the curve
      * The first two bytes contain the hip curve identifier
-     * as defined in RFC5201-bis
-     * TODO: Maybe this should be implemented using a proper struct representation. */
+     * as defined in RFC5201-bis */
     curve_id = ntohs(*(const uint16_t*)host_id->key);
     HIP_DEBUG("Got curve id %d \n", curve_id);
     switch (curve_id) {
