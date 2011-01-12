@@ -431,7 +431,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         int                           add_to_global = 0;
         struct sockaddr_in6           sock_addr6;
         struct sockaddr_in            sock_addr;
-        struct in6_addr               server_addr, hitr;
+        struct in6_addr               server_addr;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
         struct in6_addr *hit_local;
 #endif
@@ -448,11 +448,10 @@ int hip_handle_user_msg(struct hip_common *msg,
             struct in_addr lsi;
 
             IPV6_TO_IPV4_MAP(dst_ip, &lsi);
-            memset(&hitr, 0, sizeof(hitr));
             memset(&server_addr, 0, sizeof(server_addr));
 
             if (IS_LSI32(lsi.s_addr) &&
-                !hip_map_id_to_addr(&hitr, &lsi, &server_addr)) {
+                !hip_map_id_to_addr(NULL, &lsi, &server_addr)) {
                 dst_ip = &server_addr;
                 /* Note: next map_id below fills the HIT */
             }
