@@ -1754,9 +1754,6 @@ int main(int argc, char **argv)
     hip_perf_open(perf_set);
 #endif
 
-    memset(&default_hit, 0, sizeof(default_hit));
-    memset(&default_lsi, 0, sizeof(default_lsi));
-
     hip_set_logdebug(LOGDEBUG_ALL);
 
     while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpvV")) != -1) {
