@@ -33,7 +33,8 @@ int signaling_X509_NAME_to_DER(X509_NAME *const name, unsigned char **buf) {
     *buf = NULL;
     len = i2d_X509_NAME(name, buf);
     HIP_IFEL(len < 0, -1, "Could not DER-encode the given X509 name.\n");
-
+    HIP_IFEL(len > SIGNALING_USER_ID_MAX_LEN,
+             -1, "DER Encoding exceeds user id max size\n");
 out_err:
     if (err) {
         return err;
