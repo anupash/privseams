@@ -64,13 +64,13 @@ struct perf_set *hip_perf_create(int num)
     set->num_files = num;
 
     /* allocate memory for filenames and file pointers*/
-    set->files     = calloc(1, sizeof(FILE *) * num);
-    set->names     = calloc(1, sizeof(char *) * num);
-    set->linecount = calloc(1, sizeof(int) * num);
-    set->times     = calloc(1, sizeof(struct timeval) * num);
-    set->result    = calloc(1, sizeof(double) * num);
-    set->running   = calloc(1, sizeof(int) * num);
-    set->writable  = calloc(1, sizeof(int) * num);
+    set->files     = calloc(num, sizeof(FILE *));
+    set->names     = calloc(num, sizeof(char *));
+    set->linecount = calloc(num, sizeof(int));
+    set->times     = calloc(num, sizeof(struct timeval));
+    set->result    = calloc(num, sizeof(double));
+    set->running   = calloc(num, sizeof(int));
+    set->writable  = calloc(num, sizeof(int));
 
     return perf_set;
 }
