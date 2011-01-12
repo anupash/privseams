@@ -130,12 +130,12 @@ void signaling_user_context_print(const struct signaling_user_context * const us
     }
 
     if (header)
-        HIP_DEBUG("%s+------------ -USER CONTEXT START ----------------------\n", prefix);
+        HIP_DEBUG("%s+------------- USER CONTEXT START ----------------------\n", prefix);
     HIP_DEBUG("%s  User context \n", prefix);
     HIP_DEBUG("%s  \tSystem UID:\t %d\n", prefix, user_ctx->euid);
     HIP_DEBUG("%s  \tUser Name:\t %s\n", prefix, subj_name_string);
     HIP_DEBUG("%s  \tUser Key:\t %s\n", prefix, signaling_user_key_name(user_ctx->rdata.algorithm));
-    HIP_DEBUG("%s  \tUser Key RR:\t Size %d\n", prefix, user_ctx->key_rr_len != -1 ? 0 : user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
+    HIP_DEBUG("%s  \tUser Key RR:\t Size %d\n", prefix, user_ctx->key_rr_len == -1 ? 0 : user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
     //if (user_ctx->key_rr_len > 0)
     //    HIP_HEXDUMP(prefix, user_ctx->pkey, user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
     if (header)
