@@ -67,7 +67,7 @@
 #define SIGNALING_ISS_DN_MAX_LEN    128
 #define SIGNALING_APP_REQ_MAX_LEN   64
 #define SIGNALING_APP_GRP_MAX_LEN   64
-#define SIGNALING_USER_ID_MAX_LEN   128
+#define SIGNALING_USER_ID_MAX_LEN   256
 #define SIGNALING_PATH_MAX_LEN      2048
 
 /* Failure types for user authentication */
