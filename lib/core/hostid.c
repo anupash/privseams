@@ -74,13 +74,13 @@ static int khi_encode(unsigned char *orig, int orig_len,
     int     err = 0, shift = (orig_len - encoded_len) / 2,
             len = encoded_len / 8 + ((encoded_len % 8) ? 1 : 0);
 
-    HIP_IFEL((encoded_len > orig_len), -1, "len mismatch\n");
-    HIP_IFEL((!(bn = BN_bin2bn(orig, orig_len / 8, NULL))), -1,
+    HIP_IFEL(encoded_len > orig_len, -1, "len mismatch\n");
+    HIP_IFEL(!(bn = BN_bin2bn(orig, orig_len / 8, NULL)), -1,
              "BN_bin2bn\n");
     HIP_IFEL(!BN_rshift(bn, bn, shift), -1, "BN_lshift\n");
     HIP_IFEL(!BN_mask_bits(bn, encoded_len), -1,
              "BN_mask_bits\n");
-    HIP_IFEL((bn2bin_safe(bn, encoded, len) != len), -1,
+    HIP_IFEL(bn2bin_safe(bn, encoded, len) != len, -1,
              "BN_bn2bin_safe\n");
 
 out_err:
@@ -481,7 +481,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
 
     HIP_INFO("Using hostname: %s\n", hostname);
 
-    HIP_IFEL((!use_default && strcmp(hi_fmt, "rsa") && strcmp(hi_fmt, "dsa")),
+    HIP_IFEL(!use_default && strcmp(hi_fmt, "rsa") && strcmp(hi_fmt, "dsa"),
              -ENOSYS, "Only RSA, DSA and EC keys are supported\n");
 
     HIP_DEBUG("Using format %s and file %s \n", hi_fmt, hi_file);
@@ -783,7 +783,7 @@ int dsa_to_dns_key_rr(const DSA *const dsa, unsigned char **dsa_key_rr)
 
     /* ***** is use of BN_num_bytes ok ? ***** */
     t = (BN_num_bytes(dsa->p) - 64) / 8;
-    HIP_IFEL((t < 0 || t > 8), -EINVAL,
+    HIP_IFEL(t < 0 || t > 8, -EINVAL,
              "Invalid RSA key length %d bits\n", (64 + t * 8) * 8);
 
     /* RFC 2536 section 2 */

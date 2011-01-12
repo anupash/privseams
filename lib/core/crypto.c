@@ -433,11 +433,10 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
         des_set_odd_parity((des_cblock *) &secret_key2);
         des_set_odd_parity((des_cblock *) &secret_key3);
 
-        HIP_IFEL(((err = des_set_key_checked(((des_cblock *) &secret_key1), ks1)) != 0)
-                 || ((err = des_set_key_checked(((des_cblock *) &secret_key2), ks2)) != 0)
-                 || ((err = des_set_key_checked(((des_cblock *) &secret_key3), ks3)) != 0),
-                 err,
-                 "Unable to use calculated DH secret for 3DES key (%d)\n", err);
+        HIP_IFEL((err = des_set_key_checked(((des_cblock *) &secret_key1), ks1)) != 0 ||
+                 (err = des_set_key_checked(((des_cblock *) &secret_key2), ks2)) != 0 ||
+                 (err = des_set_key_checked(((des_cblock *) &secret_key3), ks3)) != 0,
+                 err, "Unable to use calculated DH secret for 3DES key (%d)\n", err);
         des_ede3_cbc_encrypt(data, result, len,
                              ks1, ks2, ks3, (des_cblock *) iv,
                              direction == HIP_DIRECTION_ENCRYPT ? DES_ENCRYPT : DES_DECRYPT);
@@ -475,7 +474,7 @@ int impl_dsa_sign(const unsigned char *const digest, DSA *const dsa, unsigned ch
     int      err     = 0, t;
 
     t = (BN_num_bytes(dsa->p) - 64) / 8;
-    HIP_IFEL((t > 8 || t < 0), 1, "Illegal DSA key\n");
+    HIP_IFEL(t > 8 || t < 0, 1, "Illegal DSA key\n");
 
     memset(signature, 0, HIP_DSA_SIGNATURE_LEN);
     signature[0] = t;

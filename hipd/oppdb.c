@@ -243,7 +243,7 @@ static int hip_opp_unblock_app(const struct sockaddr_in6 *app_id,
     struct hip_common *message = NULL;
     int                err     = 0, n;
 
-    HIP_IFEL((app_id->sin6_port == 0), 0, "Zero port, ignore\n");
+    HIP_IFEL(app_id->sin6_port == 0, 0, "Zero port, ignore\n");
 
     HIP_IFE(!(message = hip_msg_alloc()), -1);
     HIP_IFEL(hip_build_user_hdr(message, HIP_MSG_GET_PEER_HIT, 0), -1,
@@ -709,7 +709,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
                                           HIP_PARAM_IPV6_ADDR_PEER,
                                           sizeof(struct in6_addr)),
                  -1, "build param HIP_PARAM_HIT  failed: %s\n");
-        HIP_IFEL((hip_sendto_user(msg, (const struct sockaddr *) src) < 0),
+        HIP_IFEL(hip_sendto_user(msg, (const struct sockaddr *) src) < 0,
                  -1, "send to user failed\n");
         goto out_err;
     }

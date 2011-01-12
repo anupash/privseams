@@ -119,7 +119,7 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
 
     HIP_IFEL(!entry, 0, "No entry\n");
 
-    HIP_IFEL((entry->outbound_sa_count == 0), 0,
+    HIP_IFEL(entry->outbound_sa_count == 0, 0,
              "No outbound sa, ignoring keepalive\n")
 
     /* memset and malloc everything you need */
@@ -130,7 +130,7 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
     memset(&dst6, 0, sizeof(dst6));
 
     icmp_pkt = calloc(1, HIP_MAX_ICMP_PACKET);
-    HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
+    HIP_IFEL(!icmp_pkt, -1, "Malloc for icmp_pkt failed\n");
 
     chdr = (struct cmsghdr *) cmsgbuf;
     pkti = (struct inet6_pktinfo *) CMSG_DATA(chdr);
@@ -182,7 +182,7 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
         err = (0 > i) ? i : -1;
     }
 
-    HIP_IFEL((i < 0), -1, "Failed to send ICMP into ESP tunnel\n");
+    HIP_IFEL(i < 0, -1, "Failed to send ICMP into ESP tunnel\n");
     HIP_DEBUG_HIT("Sent heartbeat to", &entry->hit_peer);
 
 out_err:
@@ -217,7 +217,7 @@ static int hip_icmp_statistics(struct in6_addr *src,
 
     /* Find the correct entry */
     entry = hip_hadb_find_byhits(src, dst);
-    HIP_IFEL((!entry), -1, "Entry not found\n");
+    HIP_IFEL(!entry, -1, "Entry not found\n");
 
     /* Calculate the RTT from given timevals */
     rtt = calc_timeval_diff(stval, rtval);
@@ -269,13 +269,13 @@ static int hip_icmp_recvmsg(int sockfd)
 
     /* malloc what you need */
     stval = calloc(1, sizeof(struct timeval));
-    HIP_IFEL((!stval), -1, "calloc for stval failed\n");
+    HIP_IFEL(!stval, -1, "calloc for stval failed\n");
     rtval = calloc(1, sizeof(struct timeval));
-    HIP_IFEL((!rtval), -1, "calloc for rtval failed\n");
+    HIP_IFEL(!rtval, -1, "calloc for rtval failed\n");
     src = calloc(1, sizeof(struct in6_addr));
-    HIP_IFEL((!src), -1, "calloc for dst6 failed\n");
+    HIP_IFEL(!src, -1, "calloc for dst6 failed\n");
     dst = calloc(1, sizeof(struct in6_addr));
-    HIP_IFEL((!dst), -1, "calloc for dst failed\n");
+    HIP_IFEL(!dst, -1, "calloc for dst failed\n");
 
     /* cast */
     chdr    = (struct cmsghdr *) cmsgbuf;

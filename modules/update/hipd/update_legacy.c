@@ -102,7 +102,7 @@ int hip_build_locators_old(struct hip_common *msg)
 
     HIP_DEBUG("locator count %d\n", count);
 
-    HIP_IFEL((count == 0), -1, "No locators to build\n");
+    HIP_IFEL(count == 0, -1, "No locators to build\n");
 
     err = hip_build_param_locator(msg, locs, count);
 

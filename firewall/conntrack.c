@@ -808,7 +808,7 @@ static int hipfw_handle_relay_to_r2(const struct hip_common *common,
                (iph->protocol == IPPROTO_UDP)), 0,
              "Not a relay packet, ignore\n");
 
-    HIP_IFEL((ipv6_addr_cmp(&ctx->dst, &relay_to->address) == 0), 0,
+    HIP_IFEL(ipv6_addr_cmp(&ctx->dst, &relay_to->address) == 0, 0,
              "Reinjected control packet, passing it\n");
 
     esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
@@ -1692,7 +1692,7 @@ int hipfw_relay_esp(const struct hip_fw_context *ctx)
     uint32_t        spi;
 
     HIP_IFEL(!list, -1, "List is empty\n");
-    HIP_IFEL((iph->protocol != IPPROTO_UDP), -1,
+    HIP_IFEL(iph->protocol != IPPROTO_UDP, -1,
              "Protocol is not UDP. Not relaying packet.\n\n");
     HIP_IFEL(!esp, -1, "No ESP header\n");
 
@@ -1702,9 +1702,9 @@ int hipfw_relay_esp(const struct hip_fw_context *ctx)
 
     HIP_DEBUG("SPI is 0x%lx\n", spi);
 
-    HIP_IFEL((tuple->esp_relay == 0), -1, "Relay is off for this tuple\n");
+    HIP_IFEL(tuple->esp_relay == 0, -1, "Relay is off for this tuple\n");
 
-    HIP_IFEL((ipv6_addr_cmp(&ctx->dst, &tuple->esp_relay_daddr) == 0), 1,
+    HIP_IFEL(ipv6_addr_cmp(&ctx->dst, &tuple->esp_relay_daddr) == 0, 1,
              "Reinjected relayed packet, passing it\n");
 
     HIP_IFEL(hip_fw_hit_is_our(&tuple->connection->original.hip_tuple->data->dst_hit),

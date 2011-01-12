@@ -737,7 +737,7 @@ static int hip_relay_read_config(void)
     hip_hit_t                    hit, *wl_hit = NULL;
     uint8_t                      max = 255; /* Theoretical maximum lifetime value. */
 
-    HIP_IFEL(((fp = fopen(HIP_RELAY_CONFIG_FILE, "r")) == NULL), -ENOENT,
+    HIP_IFEL((fp = fopen(HIP_RELAY_CONFIG_FILE, "r")) == NULL, -ENOENT,
              "Cannot open file %s for reading.\n", HIP_RELAY_CONFIG_FILE);
 
     do {
@@ -841,7 +841,7 @@ static int hip_relay_write_config(void)
     int   err = 0;
     FILE *fp  = NULL;
 
-    HIP_IFEL(((fp = fopen(HIP_RELAY_CONFIG_FILE, "w")) == NULL), -ENOENT,
+    HIP_IFEL((fp = fopen(HIP_RELAY_CONFIG_FILE, "w")) == NULL, -ENOENT,
              "Cannot open file %s for writing.\n", HIP_RELAY_CONFIG_FILE);
 
     fprintf(fp, "# HIP relay / RVS configuration file.\n\

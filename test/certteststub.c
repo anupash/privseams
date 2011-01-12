@@ -187,7 +187,7 @@ skip_spki:
     len = hip_cert_x509v3_request_certificate(defhit, der_cert);
 
     /** Now send it back for the verification */
-    HIP_IFEL(((err = hip_cert_x509v3_request_verification(der_cert, len)) < 0),
+    HIP_IFEL((err = hip_cert_x509v3_request_verification(der_cert, len) < 0),
              -1, "Failed to verify a certificate\n");
 
 out_err:

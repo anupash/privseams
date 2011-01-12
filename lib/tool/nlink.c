@@ -867,12 +867,12 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 
     ll_init_map(rth, idxmap);
 
-    HIP_IFEL(((idx = ll_name_to_index(dev, idxmap)) == 0), -1,
+    HIP_IFEL((idx = ll_name_to_index(dev, idxmap)) == 0, -1,
              "ll_name_to_index failed\n");
 
     addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
 
-    HIP_IFEL((netlink_talk(rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "netlink_talk failed\n");
 
 out_err:
@@ -1143,12 +1143,11 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
     if (IN6_IS_ADDR_V4MAPPED(dst_addr)) {
         IPV6_TO_IPV4_MAP(dst_addr, &ip4);
         preferred_family = AF_INET;
-        HIP_IFEL((!inet_ntop(preferred_family, &ip4, dst_str,
-                             INET6_ADDRSTRLEN)), -1, "inet_pton\n");
+        HIP_IFEL(!inet_ntop(preferred_family, &ip4, dst_str, INET6_ADDRSTRLEN),
+                 -1, "inet_pton\n");
     } else {
-        HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
-                             INET6_ADDRSTRLEN)), -1,
-                 "inet_pton\n");
+        HIP_IFEL(!inet_ntop(preferred_family, dst_addr, dst_str, INET6_ADDRSTRLEN),
+                 -1, "inet_pton\n");
     }
     memset(&req, 0, sizeof(req));
 
@@ -1175,16 +1174,16 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
     ll_init_map(rth, idxmap);
 
     if (idev) {
-        HIP_IFEL(((idx = ll_name_to_index(idev, idxmap)) == 0),
+        HIP_IFEL((idx = ll_name_to_index(idev, idxmap)) == 0,
                  -1, "Cannot find device \"%s\"\n", idev);
         addattr32(&req.n, sizeof(req), RTA_IIF, idx);
     }
     if (odev) {
-        HIP_IFEL(((idx = ll_name_to_index(odev, idxmap)) == 0),
+        HIP_IFEL((idx = ll_name_to_index(odev, idxmap)) == 0,
                  -1, "Cannot find device \"%s\"\n", odev);
         addattr32(&req.n, sizeof(req), RTA_OIF, idx);
     }
-    HIP_IFE((rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0), -1);
+    HIP_IFE(rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0, -1);
     HIP_IFE(hip_parse_src_addr(&req.n, src_addr), -1);
 
 out_err:
@@ -1287,7 +1286,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         req.ifa.ifa_prefixlen = lcl.bitlen;
     }
 
-    HIP_IFEL(((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0),
+    HIP_IFEL((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0,
              -1, "ll_name_to_index failed\n");
 
     HIP_DEBUG("IFA INDEX IS %d\n", req.ifa.ifa_index);
@@ -1295,8 +1294,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
     // adds to the device dummy0
     aux = netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
     HIP_DEBUG("value exit function netlink_talk %i\n", aux);
-    HIP_IFEL((aux < 0), -1,
-             "netlink talk failed\n");
+    HIP_IFEL(aux < 0, -1, "netlink talk failed\n");
 
 out_err:
     free(res);

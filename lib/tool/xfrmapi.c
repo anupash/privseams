@@ -301,7 +301,7 @@ static int hip_xfrm_sa_flush(struct rtnl_handle *rth)
     req.n.nlmsg_type  = XFRM_MSG_FLUSHSA;
     req.xfs.proto     = IPPROTO_ESP;
 
-    HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "SA flush failed\n");
 
 out_err:
@@ -328,7 +328,7 @@ static int hip_xfrm_policy_flush(struct rtnl_handle *rth)
     req.n.nlmsg_flags = NLM_F_REQUEST;
     req.n.nlmsg_type  = XFRM_MSG_FLUSHPOLICY;
 
-    HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "Policy flush failed\n");
 
 out_err:
@@ -371,7 +371,7 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
     /* SELECTOR <--> HITs */
     HIP_IFE(hip_xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
                                    hit_prefix, preferred_family), -1);
-    HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "No associated policies to be deleted\n");
 
 out_err:
@@ -485,8 +485,8 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
                                     sizeof(alg.buf)), -1);
         len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
-        HIP_IFE((addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_AUTH,
-                           &alg, len)), -1);
+        HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_AUTH, &alg, len),
+                -1);
 
         /* XFRMA_ALG_CRYPT */
         memset(&alg, 0, sizeof(alg));
@@ -500,7 +500,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
                           &alg, len), -1);
     }
 
-    HIP_IFE((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1);
+    HIP_IFE(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1);
 
 out_err:
 
@@ -569,7 +569,7 @@ static int hip_xfrm_state_delete(struct rtnl_handle *rth,
 
     HIP_DEBUG("deleting xfrm state with spi 0x%x\n", spi);
     HIP_HEXDUMP("SA peer addr: ", &req.xsid.daddr, sizeof(req.xsid.daddr));
-    HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "netlink_talk() failed!\n");
 
 out_err:
@@ -730,7 +730,7 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
     HIP_ASSERT(spi != 0);
     HIP_ASSERT(entry);
 
-    HIP_IFEL((entry->disable_sas == 1), 0,
+    HIP_IFEL(entry->disable_sas == 1, 0,
              "SA creation disabled\n");
 
     if (direction == HIP_SPI_DIRECTION_OUT) {
@@ -746,7 +746,7 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
     authkey_len = hip_auth_key_length_esp(aalg);
     enckey_len  = hip_enc_key_length(ealg);
 
-    HIP_IFEL((enckey_len < 0 || authkey_len < 0), 1,
+    HIP_IFEL(enckey_len < 0 || authkey_len < 0, 1,
              "Bad enc or auth key len\n");
 
     HIP_DEBUG("************************************\n");

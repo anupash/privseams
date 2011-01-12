@@ -471,7 +471,7 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
     }
 
     /* assign a free lsi address */
-    HIP_IFEL((hip_hidb_add_lsi(db, id_entry)) < 0, -EEXIST, "No LSI free\n");
+    HIP_IFEL(hip_hidb_add_lsi(db, id_entry) < 0, -EEXIST, "No LSI free\n");
 
     memcpy(lsi, &id_entry->lsi, sizeof(hip_lsi_t));
     id_entry->insert = add;
@@ -588,8 +588,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
         /* Currently only RSA pub is added by default (bug id 592127).
          * Ignore redundant adding in case user wants to enable
          * multiple HITs. */
-        HIP_IFEL((err == -EEXIST), 0,
-                 "Ignoring redundant HI\n");
+        HIP_IFEL(err == -EEXIST, 0, "Ignoring redundant HI\n");
 
         /* Adding the pair <HI,LSI> */
         HIP_IFEL(err,
@@ -841,7 +840,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
     int                 alg       = -1;
     void               *private_key;
 
-    HIP_IFEL((hit == NULL), -1, "Null HIT\n");
+    HIP_IFEL(hit == NULL, -1, "Null HIT\n");
 
     /*
      * Below is the code for getting host id and appending it to the message

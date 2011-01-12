@@ -163,7 +163,7 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
     hip_perf_start_benchmark(perf_set, PERF_BASE);
 #endif
 
-    HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
+    HIP_IFEL(entry->state == HIP_STATE_ESTABLISHED, 0,
              "State established, not triggering bex\n");
 
     /* Assign a local private key, public key and HIT to HA */

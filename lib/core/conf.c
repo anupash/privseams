@@ -424,9 +424,9 @@ static int hip_conf_handle_hi_del(struct hip_common *msg,
     }
 
     ret = inet_pton(AF_INET6, opt[0], &hit);
-    HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -EAFNOSUPPORT,
+    HIP_IFEL(ret < 0 && errno == EAFNOSUPPORT, -EAFNOSUPPORT,
              "inet_pton: not a valid address family\n");
-    HIP_IFEL((ret == 0), -EINVAL,
+    HIP_IFEL(ret == 0, -EINVAL,
              "inet_pton: %s: not a valid network address\n", opt[0]);
 
     HIP_HEXDUMP("HIT to delete: ", &hit, sizeof(struct in6_addr));
@@ -1076,8 +1076,8 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
     if (action == ACTION_DEL) {
         return hip_conf_handle_hi_del(msg, action, opt, optc, send_only);
     } else if (action == ACTION_GET) {
-        HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
-        HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
+        HIP_IFEL(optc < 1, -1, "Missing arguments.\n");
+        HIP_IFEL(optc > 1, -1, "Too many arguments.\n");
 
         return hip_get_hits(msg, opt[0], 1, send_only);
     } else if (action != ACTION_ADD && action != ACTION_NEW) {
@@ -1087,8 +1087,8 @@ static int hip_conf_handle_hi(struct hip_common *msg, int action,
         goto out_err;
     }
 
-    HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
-    HIP_IFEL((optc > 4), -1, "Too many arguments.\n");
+    HIP_IFEL(optc < 1, -1, "Missing arguments.\n");
+    HIP_IFEL(optc > 4, -1, "Too many arguments.\n");
 
     if (strcmp(opt[0], "pub") == 0) {
         anon = 0;
@@ -1194,7 +1194,7 @@ static int hip_conf_handle_map(struct hip_common *msg, int action,
 
     HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
-    HIP_IFEL((optc != 2 && optc != 3), -1, "Missing arguments\n");
+    HIP_IFEL(optc != 2 && optc != 3, -1, "Missing arguments\n");
 
     HIP_IFEL(hip_convert_string_to_address(opt[0], &hit), -1,
              "string to address conversion failed\n");
@@ -1831,7 +1831,7 @@ static int hip_conf_handle_get_peer_lsi(struct hip_common *msg,
     const char                  *hit_str = opt[0];
     const struct hip_tlv_common *param;
 
-    HIP_IFEL((inet_pton(AF_INET6, hit_str, &hit) <= 0), 1,
+    HIP_IFEL(inet_pton(AF_INET6, hit_str, &hit) <= 0, 1,
              "Not an IPv6 address\n");
     HIP_IFEL(!ipv6_addr_is_hit(&hit), -1, "Not a HIT\n");
 
@@ -1878,13 +1878,12 @@ static int hip_conf_handle_service(struct hip_common *msg,
 {
     int err = 0;
 
-    HIP_IFEL((action != ACTION_ADD && action != ACTION_REINIT
-              && action != ACTION_DEL), -1,
+    HIP_IFEL(action != ACTION_ADD && action != ACTION_REINIT && action != ACTION_DEL, -1,
              "Only actions \"add\", \"del\" and \"reinit\" are supported " \
              "for \"service\".\n");
 
-    HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
-    HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
+    HIP_IFEL(optc < 1, -1, "Missing arguments.\n");
+    HIP_IFEL(optc > 1, -1, "Too many arguments.\n");
 
     if (action == ACTION_ADD) {
         if (strcmp(opt[0], "rvs") == 0) {
@@ -2395,7 +2394,8 @@ static int hip_conf_handle_hit_to_ip_set(struct hip_common *msg,
     int len_name = 0;
     len_name = strlen(opt[0]);
     HIP_DEBUG("hit-to-ip zone received from user: %s (len = %d (max %d))\n", opt[0], len_name, HIT_TO_IP_ZONE_MAX_LEN);
-    HIP_IFEL((len_name >= HIT_TO_IP_ZONE_MAX_LEN), -1, "Name too long (max %s)\n", HIT_TO_IP_ZONE_MAX_LEN);
+    HIP_IFEL(len_name >= HIT_TO_IP_ZONE_MAX_LEN, -1, "Name too long (max %s)\n",
+             HIT_TO_IP_ZONE_MAX_LEN);
 
     err = hip_build_user_hdr(msg, HIP_MSG_HIT_TO_IP_SET, 0);
     if (err) {
@@ -2482,7 +2482,7 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
     char       *comment, *nl;
     char        fname[sizeof(HIPL_CONFIG_FILE) << 1];
 
-    HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+    HIP_IFEL(optc != 1, -1, "Missing arguments\n");
 
     if (!strcmp(opt[0], "default")) {
         strcpy(fname, HIPL_CONFIG_FILE);
@@ -2641,34 +2641,34 @@ int hip_do_hipconf(int argc, const char *argv[], int send_only)
     struct hip_common *msg    = NULL;
 
     /* Check that we have at least one command line argument. */
-    HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",
+    HIP_IFEL(argc < 2, -1, "Invalid arguments.\n\n%s usage:\n%s\n",
              argv[0], hipconf_usage);
 
     /* Get a numeric value representing the action. */
     action = hip_conf_get_action(argv);
 
-    HIP_IFEL((action == -1), -1,
+    HIP_IFEL(action == -1, -1,
              "Invalid action argument '%s'\n", argv[1]);
 
     /* Check that we have at least the minumum number of arguments
      * for the given action. */
-    HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
+    HIP_IFEL(argc < hip_conf_check_action_argc(action) + 2, -1,
              "Not enough arguments given for the action '%s'\n",
              argv[1]);
 
     /* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
-    HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
+    HIP_IFEL((type_arg = hip_conf_get_type_arg(action)) < 0, -1,
              "Could not parse type\n");
 
     type = hip_conf_get_type(argv[type_arg], argv);
-    HIP_IFEL((type <= 0 || type > TYPE_MAX), -1,
+    HIP_IFEL(type <= 0 || type > TYPE_MAX, -1,
              "Invalid type argument '%s' %d\n", argv[type_arg], type);
 
     /* Get the type argument for the given action. */
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
     hip_msg_init(msg);
 
-    HIP_IFEL((*action_handler[type] == NULL), 0, "Unhandled action, ignore\n");
+    HIP_IFEL(*action_handler[type] == NULL, 0, "Unhandled action, ignore\n");
 
     /* Call handler function from the handler function pointer
      * array at index "type" with given commandline arguments.

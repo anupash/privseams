@@ -3836,11 +3836,11 @@ int hip_any_key_to_hit(const void *const any_key,
 
     switch (type) {
     case HIP_HI_DSA:
-        HIP_IFEL(((key_rr_len = dsa_to_dns_key_rr(dsa_key, &key_rr)) <= 0), -1,
+        HIP_IFEL((key_rr_len = dsa_to_dns_key_rr(dsa_key, &key_rr)) <= 0, -1,
                  "key_rr_len\n");
         break;
     case HIP_HI_RSA:
-        HIP_IFEL(((key_rr_len = rsa_to_dns_key_rr(rsa_key, &key_rr)) <= 0), -1,
+        HIP_IFEL((key_rr_len = rsa_to_dns_key_rr(rsa_key, &key_rr)) <= 0, -1,
                  "key_rr_len\n");
         break;
     default:

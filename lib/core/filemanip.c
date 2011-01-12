@@ -75,11 +75,11 @@ int hip_create_lock_file(const char *filename, int killold)
     /* New pid */
     snprintf(new_pid_str, sizeof(new_pid_str) - 1, "%d\n", getpid());
     new_pid_str_len = strlen(new_pid_str);
-    HIP_IFEL((new_pid_str_len <= 0), -1, "pID length error.\n");
+    HIP_IFEL(new_pid_str_len <= 0, -1, "pID length error.\n");
 
     /* Read old pid */
     fd = HIP_CREATE_FILE(filename);
-    HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
+    HIP_IFEL(fd <= 0, -1, "opening lock file failed\n");
 
     /** @todo This is possibly unsafe: the pid is read from the file without checking
      * file permissions and the process with the number is simply killed.
@@ -110,7 +110,7 @@ int hip_create_lock_file(const char *filename, int killold)
 
         /* Don't close file descriptor because new started process is
          * running. */
-        HIP_IFEL((fd <= 0), -1, "Opening lock file failed.\n");
+        HIP_IFEL(fd <= 0, -1, "Opening lock file failed.\n");
         HIP_IFEL(lockf(fd, F_TLOCK, 0), -1, "Lock attempt failed.\n");
         if (pid_set) {
             err = kill(old_pid, SIGKILL);
@@ -125,7 +125,7 @@ int hip_create_lock_file(const char *filename, int killold)
 
     lseek(fd, 0, SEEK_SET);
 
-    HIP_IFEL((write(fd, new_pid_str, new_pid_str_len) != new_pid_str_len),
+    HIP_IFEL(write(fd, new_pid_str, new_pid_str_len) != new_pid_str_len,
              -1, "Writing new process identifier failed.\n");
 
 out_err:

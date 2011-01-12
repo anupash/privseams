@@ -583,7 +583,7 @@ int hip_handle_user_msg(struct hip_common *msg,
          * after bug id 592135 is resolved. */
         if (entry->state != HIP_STATE_NONE || HIP_STATE_UNASSOCIATED) {
             struct hip_common *msg2 = calloc(HIP_MAX_PACKET, 1);
-            HIP_IFE((msg2 == 0), -1);
+            HIP_IFE(msg2 == 0, -1);
             HIP_IFE(hip_build_user_hdr(msg2, HIP_MSG_RST, 0), -1);
             HIP_IFE(hip_build_param_contents(msg2,
                                              &entry->hit_peer,

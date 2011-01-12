@@ -343,7 +343,7 @@ static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_so
     if (opt_socket) {
         hip_user_sock = opt_socket;
     } else {
-        HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
+        HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, EHIP);
 
         memset(&addr, 0, sizeof(addr));
         addr.sin6_family = AF_INET6;
@@ -384,7 +384,7 @@ static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_so
 
     /* You have a message synchronization problem if you see this error. */
     msg_type_new = hip_get_msg_type(msg);
-    HIP_IFEL((msg_type_new != msg_type_old), -1,
+    HIP_IFEL(msg_type_new != msg_type_old, -1,
              "Message sync problem. Expected %d, got %d\n",
              msg_type_old, msg_type_new);
 
@@ -447,7 +447,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
     if (opt_socket) {
         hip_user_sock = opt_socket;
     } else {
-        HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
+        HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, -1);
         memset(&addr, 0, sizeof(addr));
         addr.sin6_family = AF_INET6;
         addr.sin6_addr   = in6addr_loopback;
@@ -498,13 +498,12 @@ int hip_read_user_control_msg(int sockfd, struct hip_common *hip_msg,
 
     len = sizeof(*saddr);
 
-    HIP_IFEL(((total = hip_peek_recv_total_len(sockfd, 0, HIP_DEFAULT_MSG_TIMEOUT)) <= 0),
+    HIP_IFEL((total = hip_peek_recv_total_len(sockfd, 0, HIP_DEFAULT_MSG_TIMEOUT)) <= 0,
              -1,
              "recv peek failed\n");
 
-    HIP_IFEL(((bytes = recvfrom(sockfd, hip_msg, total, 0,
-                                (struct sockaddr *) saddr,
-                                &len)) != total),
+    HIP_IFEL((bytes = recvfrom(sockfd, hip_msg, total, 0,
+                               (struct sockaddr *) saddr,&len)) != total,
              -1, "recv\n");
 
     HIP_DEBUG("received user message from local port %d\n",
@@ -577,7 +576,7 @@ static int hip_read_control_msg_all(int sockfd,
 
     len = recvmsg(sockfd, &msg, 0);
 
-    HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
+    HIP_IFEL(len < 0, -1, "ICMP%s error: errno=%d, %s\n",
              (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
 
     cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;

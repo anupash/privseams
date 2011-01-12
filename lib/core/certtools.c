@@ -188,7 +188,7 @@ algo_check_done:
         HIP_IFEL(hip_cert_regex(e_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex (exponent)\n");
         e_hex = malloc(stop - start);
-        HIP_IFEL((!e_hex), -1, "Malloc for e_hex failed\n");
+        HIP_IFEL(!e_hex, -1, "Malloc for e_hex failed\n");
         snprintf((char *) e_hex, stop - start - 1, "%s",
                  &cert->public_key[start + 1]);
 
@@ -197,9 +197,9 @@ algo_check_done:
         HIP_IFEL(hip_cert_regex(n_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex (modulus)\n");
         modulus_b64 = calloc(1, stop - start + 1);
-        HIP_IFEL((!modulus_b64), -1, "calloc for modulus_b64 failed\n");
+        HIP_IFEL(!modulus_b64, -1, "calloc for modulus_b64 failed\n");
         modulus = calloc(1, stop - start + 1);
-        HIP_IFEL((!modulus), -1, "calloc for modulus failed\n");
+        HIP_IFEL(!modulus, -1, "calloc for modulus failed\n");
         snprintf((char *) modulus_b64, stop - start - 1, "%s",
                  &cert->public_key[start + 1]);
 
@@ -215,7 +215,7 @@ algo_check_done:
             keylen = keylen - keylen % 2;
         }
         signature = malloc(keylen);
-        HIP_IFEL((!signature), -1, "Malloc for signature failed.\n");
+        HIP_IFEL(!signature, -1, "Malloc for signature failed.\n");
         rsa->n = BN_bin2bn(modulus, keylen, 0);
     } else if (algo == HIP_HI_DSA) {
         /* malloc space for new dsa */
@@ -229,9 +229,9 @@ algo_check_done:
         HIP_IFEL(hip_cert_regex(p_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->p\n");
         p_b64 = calloc(1, stop - start + 1);
-        HIP_IFEL((!p_b64), -1, "calloc for p_b64 failed\n");
+        HIP_IFEL(!p_b64, -1, "calloc for p_b64 failed\n");
         p_bin = calloc(1, stop - start + 1);
-        HIP_IFEL((!p_bin), -1, "calloc for p_bin failed\n");
+        HIP_IFEL(!p_bin, -1, "calloc for p_bin failed\n");
         snprintf((char *) p_b64, stop - start - 1, "%s",
                  &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(p_bin, p_b64, strlen((char *) p_b64));
@@ -241,9 +241,9 @@ algo_check_done:
         HIP_IFEL(hip_cert_regex(q_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->q\n");
         q_b64 = calloc(1, stop - start + 1);
-        HIP_IFEL((!q_b64), -1, "calloc for q_b64 failed\n");
+        HIP_IFEL(!q_b64, -1, "calloc for q_b64 failed\n");
         q_bin = calloc(1, stop - start + 1);
-        HIP_IFEL((!q_bin), -1, "calloc for q_bin failed\n");
+        HIP_IFEL(!q_bin, -1, "calloc for q_bin failed\n");
         snprintf((char *) q_b64, stop - start - 1, "%s",
                  &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(q_bin, q_b64, strlen((char *) q_b64));
@@ -253,9 +253,9 @@ algo_check_done:
         HIP_IFEL(hip_cert_regex(g_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->g\n");
         g_b64 = calloc(1, stop - start + 1);
-        HIP_IFEL((!g_b64), -1, "calloc for g_b64 failed\n");
+        HIP_IFEL(!g_b64, -1, "calloc for g_b64 failed\n");
         g_bin = calloc(1, stop - start + 1);
-        HIP_IFEL((!g_bin), -1, "calloc for g_bin failed\n");
+        HIP_IFEL(!g_bin, -1, "calloc for g_bin failed\n");
         snprintf((char *) g_b64, stop - start - 1, "%s",
                  &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(g_bin, g_b64, strlen((char *) g_b64));
@@ -265,14 +265,14 @@ algo_check_done:
         HIP_IFEL(hip_cert_regex(y_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex dsa->y\n");
         y_b64 = calloc(1, stop - start + 1);
-        HIP_IFEL((!y_b64), -1, "calloc for y_b64 failed\n");
+        HIP_IFEL(!y_b64, -1, "calloc for y_b64 failed\n");
         y_bin = calloc(1, stop - start + 1);
-        HIP_IFEL((!y_bin), -1, "calloc for y_bin failed\n");
+        HIP_IFEL(!y_bin, -1, "calloc for y_bin failed\n");
         snprintf((char *) y_b64, stop - start - 1, "%s",
                  &cert->public_key[start + 1]);
         evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *) y_b64));
     } else {
-        HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
+        HIP_IFEL(1 == 0, -1, "Unknown algorithm\n");
     }
 
     memset(sha_digest, '\0', sizeof(sha_digest));
@@ -286,9 +286,9 @@ algo_check_done:
     HIP_IFEL(hip_cert_regex(h_rule, cert->signature, &start, &stop), -1,
              "Failed to run hip_cert_regex (signature hash)\n");
     signature_hash_b64 = calloc(1, stop - start + 1);
-    HIP_IFEL((!signature_hash_b64), -1, "Failed to calloc signature_hash_b64\n");
+    HIP_IFEL(!signature_hash_b64, -1, "Failed to calloc signature_hash_b64\n");
     signature_hash = malloc(stop - start + 1);
-    HIP_IFEL((!signature_hash), -1, "Failed to malloc signature_hash\n");
+    HIP_IFEL(!signature_hash, -1, "Failed to malloc signature_hash\n");
     snprintf((char *) signature_hash_b64, stop - start - 1, "%s",
              &cert->signature[start + 1]);
     evpret = EVP_DecodeBlock(signature_hash, signature_hash_b64,
@@ -302,7 +302,7 @@ algo_check_done:
     HIP_IFEL(hip_cert_regex(s_rule, cert->signature, &start, &stop), -1,
              "Failed to run hip_cert_regex (signature)\n");
     signature_b64 = calloc(1, stop - start + 1);
-    HIP_IFEL((!signature_b64), -1, "Failed to calloc signature_b64\n");
+    HIP_IFEL(!signature_b64, -1, "Failed to calloc signature_b64\n");
     snprintf((char *) signature_b64, stop - start - 2, "%s",
              &cert->signature[start + 2]);
     if (algo == HIP_HI_DSA) {
@@ -338,7 +338,7 @@ algo_check_done:
         cert->success = err == 1 ? 0 : -1;
         HIP_IFEL((err = err == 1 ? 0 : -1), -1, "DSA_do_verify error\n");
     } else {
-        HIP_IFEL((1 == 0), -1, "Unknown algorithm\n");
+        HIP_IFEL(1 == 0, -1, "Unknown algorithm\n");
     }
 
 out_err:

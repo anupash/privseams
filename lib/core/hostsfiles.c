@@ -365,7 +365,7 @@ static int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line 
         is_hit = hip_id_type_match(&entry->id, 1);
         is_lsi = hip_id_type_match(&entry->id, 2);
 
-        HIP_IFE((is_hit || is_lsi), 1);
+        HIP_IFE(is_hit || is_lsi, 1);
 
         ipv6_addr_copy(result, &entry->id);
         err = 0; /* Stop at the first match */

@@ -2076,7 +2076,7 @@ int main(int argc, char **argv)
 
     /* Request-response socket with hipfw */
     hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL((hip_fw_sock < 0), 1, "Could not create socket for firewall.\n");
+    HIP_IFEL(hip_fw_sock < 0, 1, "Could not create socket for firewall.\n");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_FIREWALL_SYNC_PORT);
@@ -2097,7 +2097,7 @@ int main(int argc, char **argv)
 
     /* Only for receiving out-of-sync notifications from hipd  */
     hip_fw_async_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL((hip_fw_async_sock < 0), 1, "Could not create socket for firewall.\n");
+    HIP_IFEL(hip_fw_async_sock < 0, 1, "Could not create socket for firewall.\n");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);

@@ -1118,7 +1118,7 @@ int hipd_init(const uint64_t flags)
              "Cannot initialize opportunistic mode IP database for " \
              "non HIP capable hosts!\n");
 #endif
-    HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
+    HIP_IFEL(hip_init_cipher() < 0, 1, "Unable to init ciphers.\n");
 
     HIP_IFE(init_random_seed(), -1);
 
@@ -1211,7 +1211,7 @@ int hipd_init(const uint64_t flags)
     HIP_IFE(hip_init_host_ids(), 1);
 
     hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL((hip_user_sock < 0), 1,
+    HIP_IFEL(hip_user_sock < 0, 1,
              "Could not create socket for user communication.\n");
     bzero(&daemon_addr, sizeof(daemon_addr));
     daemon_addr.sin6_family = AF_INET6;

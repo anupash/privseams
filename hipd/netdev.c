@@ -1001,7 +1001,7 @@ send_i1:
     HIP_DEBUG_IN6ADDR("our locator", &entry->our_addr);
 
     if_index = hip_devaddr2ifindex(&entry->our_addr);
-    HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
+    HIP_IFEL(if_index < 0, -1, "if_index NOT determined\n");
     /* we could try also hip_select_source_address() here on failure,
      * but it seems to fail too */
 
@@ -1047,7 +1047,7 @@ static int hip_netdev_handle_acquire(struct nlmsghdr *msg)
     entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
     if (entry) {
-        HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
+        HIP_IFEL(entry->state == HIP_STATE_ESTABLISHED, 0,
                  "State established, not triggering bex\n");
 
         src_lsi = &(entry->lsi_our);
@@ -1275,7 +1275,7 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
             /* Trying to add an existing address or deleting a non-existing
              * address */
             exists = hip_exists_address_in_list(addr, ifa->ifa_index);
-            HIP_IFEL(((exists && is_add) || (!exists && !is_add)), -1,
+            HIP_IFEL((exists && is_add) || (!exists && !is_add), -1,
                      "Address change discarded (exists=%d, is_add=%d)\n",
                      exists, is_add);
 
