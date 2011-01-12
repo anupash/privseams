@@ -1551,8 +1551,8 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
     // Create a new security policy
     HIP_IFEL(hip_setup_hit_sp_pair(&ha->hit_peer,
                                    &ha->hit_our,
-                                   dst_addr,
                                    src_addr,
+                                   dst_addr,
                                    IPPROTO_ESP,
                                    1,
                                    0),
@@ -1561,8 +1561,8 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
     // Create a new inbound SA
     HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
 
-    HIP_IFEL(hip_add_sa(dst_addr,
-                        src_addr,
+    HIP_IFEL(hip_add_sa(src_addr,
+                        dst_addr,
                         &ha->hit_peer,
                         &ha->hit_our,
                         new_spi_in,
@@ -1580,8 +1580,8 @@ int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
     HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", new_spi_out);
     ha->local_udp_port = ha->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
-    HIP_IFEL(hip_add_sa(src_addr,
-                        dst_addr,
+    HIP_IFEL(hip_add_sa(dst_addr,
+                        src_addr,
                         &ha->hit_our,
                         &ha->hit_peer,
                         new_spi_out,
