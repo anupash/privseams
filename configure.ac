@@ -114,6 +114,7 @@ AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wredundant-decls -Wdisabled-optimization")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wundef -Wstrict-prototypes -Wmissing-prototypes")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-deprecated-declarations -Wpointer-arith")
 AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wwrite-strings -Wshadow -Winline -Wcast-qual")
+AC_SUBST(AM_CFLAGS, "$AM_CFLAGS -Wno-missing-field-initializers")
 
 
 #TODO fix the code and get rid of this one
