@@ -53,10 +53,6 @@ typedef unsigned char * (*hash_function)(const unsigned char *,
                                          unsigned char *);
 
 struct hash_chain {
-    /* pointer to the hash-function used to create and verify the hchain
-     *
-     * @note params: (in_buffer, in_length, out_buffer)
-     * @note out_buffer should be size MAX_HASH_LENGTH */
     hash_function     hash_function;
     int               hash_length; /* length of the hashes, of which the hchain consist */
     int               hchain_length; /* number of initial elements in the hash-chain */
