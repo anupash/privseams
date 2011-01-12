@@ -1500,11 +1500,11 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
     struct udphdr *udphdr               = NULL;
     int            udp_encap_zero_bytes = 0;
 
-    // default assumption
-    ctx->packet_type = OTHER_PACKET;
-
     // same context memory as for packets before -> re-init
     memset(ctx, 0, sizeof(struct hip_fw_context));
+
+    // default assumption
+    ctx->packet_type = OTHER_PACKET;
 
     // add whole packet to context and ip version
     ctx->ipq_packet = ipq_get_packet(buf);
