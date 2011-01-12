@@ -81,19 +81,7 @@ void anchor_db_init(void)
 /** uninits the anchorDB */
 void anchor_db_uninit(void)
 {
-    int i, j;
-
-    // free all hashes
-    for (i = 0; i < MAX_NUM_TRANSFORMS; i++) {
-        anchor_db.num_anchors[i]      = 0;
-        anchor_db.anchor_lengths[i]   = 0;
-        anchor_db.hash_item_length[i] = 0;
-
-        for (j = 0; j < HCSTORE_MAX_HCHAINS_PER_ITEM; j++) {
-            free(anchor_db.anchors[i][j]);
-            anchor_db.anchors[i][j] = NULL;
-        }
-    }
+    memset(&anchor_db, 0, sizeof(struct anchor_db));
 
     HIP_DEBUG("uninited hchain anchorDB\n");
 }
