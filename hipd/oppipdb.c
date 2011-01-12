@@ -47,9 +47,6 @@
 #include "lib/core/prefix.h"
 #include "oppipdb.h"
 
-#define HIP_LOCK_OPPIP(entry)
-#define HIP_UNLOCK_OPPIP(entry)
-
 HIP_HASHTABLE *oppipdb;
 
 /**
@@ -108,14 +105,12 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
         return -EINVAL;
     }
 
-    HIP_LOCK_HT(&oppipdb);
     list_for_each_safe(item, tmp, oppipdb, i)
     {
         this = list_entry(item);
         func(this, opaque);
     }
 
-    HIP_UNLOCK_HT(&oppipdb);
     return 0;
 }
 
@@ -127,9 +122,7 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
  */
 void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, UNUSED void *arg)
 {
-    HIP_LOCK_OPPIP(entry);
     hip_ht_delete(oppipdb, entry);
-    HIP_UNLOCK_OPPIP(entry);
     free(entry);
 }
 

@@ -134,9 +134,7 @@ static int hip_send_i1_pkt(struct hip_common *i1,
     HIP_DEBUG("err after sending: %d.\n", err);
 
     if (!err) {
-        HIP_LOCK_HA(entry);
         entry->state = HIP_STATE_I1_SENT;
-        HIP_UNLOCK_HA(entry);
     } else if (err == 1) {
         err = 0;
     }
@@ -398,11 +396,7 @@ int hip_create_i2(UNUSED const uint8_t packet_type,
     /* we build this, if we have recorded some value (from previous R1s) */
     {
         uint64_t rtmp;
-
-        HIP_LOCK_HA(ctx->hadb_entry);
         rtmp = ctx->hadb_entry->birthday;
-        HIP_UNLOCK_HA(ctx->hadb_entry);
-
         HIP_IFEL(rtmp && hip_build_param_r1_counter(ctx->output_msg, rtmp), -1,
                  "Could not build R1 GENERATION parameter\n");
     }

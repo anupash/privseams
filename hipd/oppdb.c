@@ -84,11 +84,6 @@
 #include "oppdb.h"
 
 
-#define HIP_LOCK_OPP_INIT(entry)
-#define HIP_UNLOCK_OPP_INIT(entry)
-#define HIP_LOCK_OPP(entry)
-#define HIP_UNLOCK_OPP(entry)
-
 struct hip_opp_info {
     hip_hit_t       local_hit;
     hip_hit_t       real_peer_hit;
@@ -146,9 +141,7 @@ static void hip_oppdb_del_entry_by_entry(struct hip_opp_blocking_request *entry)
 {
     struct hip_opp_blocking_request *deleted;
 
-    HIP_LOCK_OPP(entry);
     deleted = hip_ht_delete(oppdb, entry);
-    HIP_UNLOCK_OPP(entry);
     free(deleted);
 }
 
@@ -191,7 +184,6 @@ int hip_for_each_opp(int (*func)(struct hip_opp_blocking_request *entry,
         return -EINVAL;
     }
 
-    HIP_LOCK_HT(&opp_db);
     list_for_each_safe(item, tmp, oppdb, i)
     {
         this = list_entry(item);
@@ -201,7 +193,6 @@ int hip_for_each_opp(int (*func)(struct hip_opp_blocking_request *entry,
         }
     }
 out_err:
-    HIP_UNLOCK_HT(&opp_db);
     return fail;
 }
 
@@ -336,9 +327,7 @@ static struct hip_opp_blocking_request *hip_create_opp_block_entry(void)
         return NULL;
     }
 
-    HIP_LOCK_OPP_INIT(entry);
     time(&entry->creation_time);
-    HIP_UNLOCK_OPP_INIT(entry);
 
     return entry;
 }
@@ -353,8 +342,6 @@ static void hip_oppdb_dump(void)
     LHASH_NODE                      *item, *tmp;
 
     HIP_DEBUG("start oppdb dump\n");
-    HIP_LOCK_HT(&oppdb);
-
     list_for_each_safe(item, tmp, oppdb, i)
     {
         this = list_entry(item);
@@ -364,8 +351,6 @@ static void hip_oppdb_dump(void)
         HIP_DEBUG_HIT("this->our_real_hit",
                       &this->our_real_hit);
     }
-
-    HIP_UNLOCK_HT(&oppdb);
     HIP_DEBUG("end oppdb dump\n");
 }
 
@@ -652,7 +637,6 @@ struct hip_opp_blocking_request *hip_oppdb_find_by_ip(const struct in6_addr *ip_
         return NULL;
     }
 
-    HIP_LOCK_HT(&opp_db);
     list_for_each_safe(item, tmp, oppdb, i)
     {
         this = list_entry(item);
@@ -663,7 +647,6 @@ struct hip_opp_blocking_request *hip_oppdb_find_by_ip(const struct in6_addr *ip_
         }
     }
 
-    HIP_UNLOCK_HT(&opp_db);
     return ret;
 }
 

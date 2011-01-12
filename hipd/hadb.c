@@ -913,8 +913,6 @@ int hip_del_peer_info_entry(struct hip_hadb_state *ha)
     struct hip_opp_blocking_request *opp_entry = NULL;
 #endif
 
-    HIP_LOCK_HA(ha);
-
     /* by now, if everything is according to plans, the refcnt
      * should be 1 */
     HIP_DEBUG_HIT("our HIT", &ha->hit_our);
@@ -933,8 +931,6 @@ int hip_del_peer_info_entry(struct hip_hadb_state *ha)
         hip_oppdb_entry_clean_up(opp_entry);
     }
 #endif
-
-    HIP_UNLOCK_HA(ha);
 
     return 0;
 }
@@ -1215,7 +1211,6 @@ int hip_for_each_ha(int (*func)(struct hip_hadb_state *entry, void *opaq),
         return -EINVAL;
     }
 
-    HIP_LOCK_HT(&hadb_hit);
     list_for_each_safe(item, tmp, hadb_hit, i)
     {
         this = list_entry(item);
@@ -1228,7 +1223,6 @@ int hip_for_each_ha(int (*func)(struct hip_hadb_state *entry, void *opaq),
     }
 
 out_err:
-    HIP_UNLOCK_HT(&hadb_hit);
     return fail;
 }
 
@@ -1342,7 +1336,6 @@ struct hip_hadb_state *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_
     struct hip_hadb_state *this = NULL, *result = NULL;
     LHASH_NODE            *item = NULL, *tmp = NULL; //
 
-    HIP_LOCK_HT(&hadb_hit);
     list_for_each_safe(item, tmp, hadb_hit, i)
     {
         this = list_entry(item);
@@ -1354,7 +1347,6 @@ struct hip_hadb_state *hip_hadb_find_rvs_candidate_entry(const hip_hit_t *local_
         }
         /* @todo: unlock ha when we have threads */
     }
-    HIP_UNLOCK_HT(&hadb_hit);
 
     return result;
 }

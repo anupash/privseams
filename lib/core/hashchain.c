@@ -44,11 +44,6 @@
 #include "ife.h"
 #include "hashchain.h"
 
-/* these are not needed and therefore not implemented
- * right now but they should be used where necessary */
-#define HCHAIN_LOCK(lock_id)
-#define HCHAIN_UNLOCK(lock_id)
-
 /** checks if a hash is verifiable by a hash chain
  *
  * @param       current_hash the hash value to be verified
@@ -279,10 +274,8 @@ unsigned char *hchain_pop(struct hash_chain *hash_chain)
 
     HIP_ASSERT(hash_chain);
 
-    HCHAIN_LOCK(&hash_chain);
     element = hchain_next(hash_chain);
     hash_chain->current_index--;
-    HCHAIN_UNLOCK(&hash_chain);
 
     return element;
 }

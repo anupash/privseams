@@ -193,8 +193,6 @@ struct hip_hadb_user_info_state *hip_firewall_cache_db_match(const void *local,
 
     HIP_DEBUG("Check firewall cache db\n");
 
-    HIP_LOCK_HT(&firewall_cache_db);
-
     list_for_each_safe(item, tmp, firewall_cache_db, i) {
         this = list_entry(item);
 
@@ -215,7 +213,6 @@ struct hip_hadb_user_info_state *hip_firewall_cache_db_match(const void *local,
             break;
         }
     }
-    HIP_UNLOCK_HT(&firewall_cache_db);
 
     if (!ha_match && query_daemon) {
         HIP_DEBUG("No cache found, querying daemon\n");
@@ -309,7 +306,6 @@ void hip_firewall_cache_delete_hldb(int exiting)
     LHASH_NODE                      *item = NULL, *tmp = NULL;
 
     HIP_DEBUG("Start hldb delete\n");
-    HIP_LOCK_HT(&firewall_cache_db);
 
     list_for_each_safe(item, tmp, firewall_cache_db, i)
     {
@@ -322,7 +318,6 @@ void hip_firewall_cache_delete_hldb(int exiting)
      * so we don't want to uninitialize hash table here. Instead,
      * we handle it in firewall_exit(). */
 
-    HIP_UNLOCK_HT(&firewall_cache_db);
     if (exiting) {
         hip_ht_uninit(firewall_cache_db);
     }

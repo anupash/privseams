@@ -33,10 +33,6 @@
 #include "lib/core/state.h"
 
 
-#define HIP_LOCK_INIT(ha)
-#define HIP_LOCK_HA(ha)
-#define HIP_UNLOCK_HA(ha)
-
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 

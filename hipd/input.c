@@ -844,12 +844,9 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
      * the peer is behind NAT. We set NAT mode "on" and set the send function to
      * "hip_send_udp". The client UDP port is not stored until the handling
      * of R2 packet. Don't know if the entry is already locked... */
-    if (ctx->msg_ports.dst_port != 0) {
-        HIP_LOCK_HA(ctx->hadb_entry);
-        if (ctx->hadb_entry->nat_mode == HIP_NAT_MODE_NONE) {
-            ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
-        }
-        HIP_UNLOCK_HA(ctx->hadb_entry);
+    if (ctx->msg_ports.dst_port   != 0 &&
+        ctx->hadb_entry->nat_mode == HIP_NAT_MODE_NONE) {
+        ctx->hadb_entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
     }
 
     /***** LOCATOR PARAMETER ******/
@@ -871,10 +868,8 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
 
     /* We must store the R1 generation counter, _IF_ it exists. */
     if (r1cntr) {
-        HIP_LOCK_HA(ctx->hadb_entry);
         HIP_DEBUG("Storing R1 generation counter %d\n", r1cntr->generation);
         ctx->hadb_entry->birthday = ntoh64(r1cntr->generation);
-        HIP_UNLOCK_HA(ctx->hadb_entry);
     }
 
     /* Solve puzzle: if this is a retransmission, we have to preserve
