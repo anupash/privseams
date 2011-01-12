@@ -34,6 +34,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <openssl/pem.h>
 
 #include "lib/core/common.h"
 #include "lib/core/debug.h"
@@ -394,11 +395,13 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
     int orig_len;
     struct signaling_user_context usr_ctx;
     const struct signaling_param_user_context *param_usr_ctx;
-    const struct hip_sig *param_user_signature;
+    struct hip_sig *param_user_signature;
     unsigned char sha1_digest[HIP_AH_SHA_LEN];
     EVP_PKEY *pkey;
     struct hip_host_id user_hi;
-    X509_NAME *subject_name;
+    X509_NAME *subject_name = NULL;
+    RSA *rsa = NULL;
+    EC_KEY *ecdsa = NULL;
 
     orig_len = hip_get_msg_total_len(ctx->input_msg);
 
@@ -421,8 +424,10 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
     HIP_IFEL(!(pkey = hip_key_rr_to_evp_key(&user_hi, 0)),
              -1, "Could not deserialize users public key\n");
 
+    PEM_write_PUBKEY(stderr, pkey);
+
     /* No modify the packet to verify signature */
-    HIP_IFEL(!(param_user_signature = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
+    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(ctx->input_msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
              -1, "I2 contains no user signature\n");
     hash_range_len = ((const uint8_t *) param_user_signature) - ((const uint8_t *) ctx->input_msg);
     hip_zero_msg_checksum(ctx->input_msg);
@@ -430,8 +435,26 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
     hip_set_msg_total_len(ctx->input_msg, hash_range_len);
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, ctx->input_msg, hash_range_len, sha1_digest),
              -1, "Could not build message digest \n");
-    HIP_IFEL(impl_ecdsa_verify(sha1_digest, EVP_PKEY_get1_EC_KEY(pkey), param_user_signature->signature),
-             -1, "I2 User Signature did not verify correctly\n");
+
+    switch (user_hi.rdata.algorithm) {
+    case HIP_HI_ECDSA:
+        // - 1 is the algorithm field
+        ecdsa = EVP_PKEY_get1_EC_KEY(pkey);
+        HIP_IFEL(ECDSA_size(ecdsa) != ntohs(param_user_signature->length) - 1,
+                 -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", ECDSA_size(ecdsa), ntohs(param_user_signature->length));
+        HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
+                     -1, "I2 ECDSA user signature did not verify correctly\n");
+        break;
+    case HIP_HI_RSA:
+        rsa = EVP_PKEY_get1_RSA(pkey);
+        HIP_IFEL(RSA_size(rsa) != ntohs(param_user_signature->length),
+                 -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", RSA_size(rsa), ntohs(param_user_signature->length));
+        HIP_IFEL(!RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, param_user_signature->signature, RSA_size(rsa), rsa),
+                 -1, "I2 RSA user signature did not verify correctly\n");
+        break;
+    default:
+        HIP_IFEL(1, -1, "Unknown algorithm\n");
+    }
 
     HIP_DEBUG("Correctly verified users signature\n");
 
@@ -445,6 +468,8 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
 
 out_err:
     hip_set_msg_total_len(ctx->input_msg, orig_len);
+    RSA_free(rsa);
+    EC_KEY_free(ecdsa);
     X509_NAME_free(subject_name);
     return err;
 }
