@@ -502,9 +502,6 @@ int hip_read_user_control_msg(int sockfd, struct hip_common *hip_msg,
              -1,
              "recv peek failed\n");
 
-    /** @todo Compiler warning;
-     *  warning: pointer targets in passing argument 6 of 'recvfrom'
-     *  differ in signedness. */
     HIP_IFEL(((bytes = recvfrom(sockfd, hip_msg, total, 0,
                                 (struct sockaddr *) saddr,
                                 &len)) != total),
