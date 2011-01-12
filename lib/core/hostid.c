@@ -656,7 +656,7 @@ EVP_PKEY *hip_key_rr_to_evp_key(const void *const host_id, const int is_priv) {
         break;
     case HIP_HI_ECDSA:
         key = hip_key_rr_to_ecdsa(host_id, is_priv);
-        err = EVP_PKEY_set1_EC_KEY(ret, key);
+        err = EVP_PKEY_assign_EC_KEY(ret, key);
         break;
     default:
         HIP_DEBUG("Unknown algorithm \n");
