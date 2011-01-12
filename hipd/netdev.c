@@ -797,7 +797,7 @@ static int hip_netdev_trigger_bex(const hip_hit_t *src_hit_in,
     struct hip_hadb_state  *entry       = NULL;
     int                     is_loopback = 0;
     hip_lsi_t               dlsi, slsi;
-    struct in6_addr         dhit, shit, saddr, dst6_lsi;
+    struct in6_addr         dhit, shit, saddr;
     struct in6_addr        *src_hit, *dst_hit, *src_addr, *dst_addr;
     struct in_addr         *src_lsi, *dst_lsi;
     struct in6_addr         daddr;
@@ -824,14 +824,6 @@ static int hip_netdev_trigger_bex(const hip_hit_t *src_hit_in,
     }
     src_hit = &shit;
     HIP_DEBUG_HIT("src hit", src_hit);
-
-    /* Initialize mapped format of dst lsi before pointer
-     * changes just below */
-    if (dst_lsi_in) {
-        IPV4_TO_IPV6_MAP(dst_lsi_in, &dst6_lsi);
-    } else {
-        memset(&dst6_lsi, 0, sizeof(dst6_lsi));
-    }
 
     /* Make sure that dst_lsi is not a NULL pointer */
     hip_copy_inaddr_null_check(&dlsi, dst_lsi_in);
