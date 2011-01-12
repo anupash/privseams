@@ -150,7 +150,30 @@ out_err:
 }
 
 /**
- * sign some opaque data
+ * sign some opaque data using rsa
+ *
+ * @param priv_key the RSA private key of the local host
+ * @param data the data to be signed
+ * @return zero on success and negative on error
+ */
+static int rsa_sign(RSA *const priv_key, const void *const data, const int in_len, unsigned char *const out)
+{
+    int err = 0;
+    unsigned int sig_len;
+    uint8_t sha1_digest[HIP_AH_SHA_LEN];
+
+     HIP_IFEL(!priv_key,
+             -1, "No private key given.\n");
+    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, data, in_len, sha1_digest) < 0,
+             -1, "Building of SHA1 digest failed\n");
+    HIP_IFEL(!RSA_sign(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, out, &sig_len, priv_key),
+             -1, "Signing error\n");
+out_err:
+    return err;
+}
+
+/**
+ * sign some opaque data using ecdsa
  *
  * @param priv_key the RSA private key of the local host
  * @param data the data to be signed
@@ -199,10 +222,11 @@ out_err:
  */
 int signaling_user_api_sign(const uid_t uid, const void *const data, const int in_len, unsigned char *out_buf, uint8_t *const sig_type) {
     int err = 0;
-    int sig_len;
+    int sig_len = -1;
     char filebuf[SIGNALING_PATH_MAX_LEN];
     char *homedir;
     EC_KEY *ecdsa = NULL;
+    RSA *rsa = NULL;
 
     /* sanity checks */
     HIP_IFEL(!data,         -1, "Data to sign is NULL \n");
@@ -210,19 +234,31 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
     HIP_IFEL(!out_buf,      -1, "Cannot write to NULL-buffer\n");
     HIP_IFEL(!sig_type,     -1, "Cannot write signature type to NULL pointer\n");
 
-    // get users private key
-    HIP_IFEL(!(homedir = get_user_homedir(uid)),
-             -1, "Could not get homedir for user %d.\n", uid);
-    sprintf(filebuf, "%s/.signaling/user-key.pem", homedir);
-    HIP_IFEL(load_ecdsa_private_key(filebuf, &ecdsa),
-             -1, "Could not get private key for signing \n");
-    EC_KEY_print_fp(stdout, ecdsa, 0);
-
-    // sign using ECDSA
-    sig_len     = ECDSA_size(ecdsa);
-    *sig_type   = HIP_SIG_ECDSA;
-    HIP_IFEL(ecdsa_sign(ecdsa, data, in_len, out_buf),
-             -1, "Signature function failed \n");
+    /* Check if there is a preferred signature type */
+    switch (*sig_type) {
+    case HIP_HI_RSA:
+        HIP_IFEL(!(homedir = get_user_homedir(uid)),
+                 -1, "Could not get homedir for user %d.\n", uid);
+        sprintf(filebuf, "%s/.signaling/user-rsa-key.pem", homedir);
+        HIP_IFEL(load_rsa_private_key(filebuf, &rsa),
+                 -1, "Could not get private key for signing \n");
+        sig_len     = RSA_size(rsa);
+        *sig_type   = HIP_SIG_RSA;
+        HIP_IFEL(rsa_sign(rsa, data, in_len, out_buf),
+                 -1, "Signature function failed \n");
+        break;
+    case HIP_HI_ECDSA:
+        HIP_IFEL(!(homedir = get_user_homedir(uid)),
+                 -1, "Could not get homedir for user %d.\n", uid);
+        sprintf(filebuf, "%s/.signaling/user-ecdsa-key.pem", homedir);
+        HIP_IFEL(load_ecdsa_private_key(filebuf, &ecdsa),
+                 -1, "Could not get private key for signing \n");
+        sig_len     = ECDSA_size(ecdsa);
+        *sig_type   = HIP_SIG_ECDSA;
+        HIP_IFEL(ecdsa_sign(ecdsa, data, in_len, out_buf),
+                 -1, "Signature function failed \n");
+        break;
+    }
 
 out_err:
     if (err) {

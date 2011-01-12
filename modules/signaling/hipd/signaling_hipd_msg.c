@@ -447,7 +447,7 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
         break;
     case HIP_HI_RSA:
         rsa = EVP_PKEY_get1_RSA(pkey);
-        HIP_IFEL(RSA_size(rsa) != ntohs(param_user_signature->length),
+        HIP_IFEL(RSA_size(rsa) != ntohs(param_user_signature->length) - 1,
                  -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", RSA_size(rsa), ntohs(param_user_signature->length));
         HIP_IFEL(!RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, param_user_signature->signature, RSA_size(rsa), rsa),
                  -1, "I2 RSA user signature did not verify correctly\n");
