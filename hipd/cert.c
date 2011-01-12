@@ -729,7 +729,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
              "Failed to load general certificate information\n");
     HIP_IFEL(!(req = X509_REQ_new()), -1, "Failed to create X509_REQ object");
 
-    HIP_IFEL((sec_name = NULL), -1,
+    HIP_IFEL(sec_name == NULL, -1,
              "Failed to load issuer naming information for the certificate\n");
 
     /* Issuer naming */
