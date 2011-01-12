@@ -42,7 +42,6 @@
 
 #include "lib/core/protodefs.h"
 
-void anchor_db_init(void);
 void anchor_db_uninit(void);
 int anchor_db_update(const struct hip_common *msg);
 int anchor_db_get_num_anchors(const uint8_t transform);

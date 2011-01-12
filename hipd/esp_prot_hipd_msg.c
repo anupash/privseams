@@ -205,7 +205,6 @@ int esp_prot_set_preferred_transforms(const struct hip_common *msg)
 
     // this works as we always have to send at least ESP_PROT_TFM_UNUSED
     if (esp_prot_active) {
-        anchor_db_init();
         HIP_DEBUG("switched to esp protection extension\n");
     } else {
         anchor_db_uninit();

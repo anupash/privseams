@@ -66,18 +66,6 @@ struct anchor_db {
 /* stores all anchors sent by the firewall */
 static struct anchor_db anchor_db;
 
-/** inits the anchorDB */
-void anchor_db_init(void)
-{
-    // set to 0 / NULL
-    memset(anchor_db.num_anchors, 0, MAX_NUM_TRANSFORMS * sizeof(int));
-    memset(anchor_db.anchor_lengths, 0, MAX_NUM_TRANSFORMS * sizeof(int));
-    memset(anchor_db.anchor_lengths, 0, MAX_NUM_TRANSFORMS * sizeof(int));
-    memset(anchor_db.anchors, 0, MAX_NUM_TRANSFORMS * HCSTORE_MAX_HCHAINS_PER_ITEM);
-
-    HIP_DEBUG("inited hchain anchorDB\n");
-}
-
 /** uninits the anchorDB */
 void anchor_db_uninit(void)
 {
