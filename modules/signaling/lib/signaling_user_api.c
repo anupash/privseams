@@ -22,6 +22,7 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 
+#include "signaling_user_management.h"
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
 
@@ -85,7 +86,7 @@ out_err:
     return err;
 }
 
-static X509 *load_x509_certificate(const char *const file) {
+UNUSED static X509 *load_x509_certificate(const char *const file) {
     int err     = 0;
     FILE *fp    = NULL;
     X509 *cert  = NULL;
@@ -130,23 +131,21 @@ out_err:
 /*
  * @return NULL on error
  */
-X509 *signaling_user_api_get_user_certificate(const uid_t uid) {
+STACK_OF(X509) *signaling_user_api_get_user_certificate_chain(const uid_t uid) {
     char filebuf[SIGNALING_PATH_MAX_LEN];
-    char *homedir   = NULL;
-    X509 *ret       = NULL;
-    int err         = 0;
+    char *homedir        = NULL;
+    STACK_OF(X509) *ret  = NULL;
+    int err              = 0;
 
     homedir = get_user_homedir(uid);
     sprintf(filebuf, "%s/.signaling/user-cert-chain.pem", homedir);
-    HIP_IFEL(!(ret = load_x509_certificate(filebuf)),
+    HIP_IFEL(!(ret = signaling_load_certificate_chain(filebuf)),
              -1, "Could not get user certificate \n");
 
-out_err:
-    if (err) {
-        X509_free(ret);
-        return NULL;
-    }
     return ret;
+out_err:
+    sk_free(ret);
+    return NULL;
 }
 
 /**
@@ -195,15 +194,17 @@ out_err:
 
 int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context *const user_ctx) {
     int err             = 0;
+    STACK_OF(X509) *usercert_chain = NULL;
     X509 *usercert      = NULL;
     X509_NAME *uname    = NULL;
     unsigned char *buf  = NULL;
     int out_len;
 
-    if (!(usercert = signaling_user_api_get_user_certificate(uid))) {
+    if (!(usercert_chain = signaling_user_api_get_user_certificate_chain(uid))) {
         HIP_DEBUG("Could not get user's certificate, using system username as fallback.\n");
         memcpy(user_ctx->subject_name, "anonymous", strlen("anonymous"));
     } else {
+        usercert = sk_X509_pop(usercert_chain);
         HIP_IFEL(!(uname = X509_get_subject_name(usercert)),
                  -1, "Could not get subject name from certificate\n");
         HIP_IFEL((out_len = signaling_X509_NAME_to_DER(uname, &buf)) < 0,
@@ -213,6 +214,8 @@ int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context 
     }
 
 out_err:
+    sk_X509_free(usercert_chain);
+    X509_free(usercert);
     free(buf);
     return err;
 }
@@ -269,12 +272,13 @@ out_err:
 
 EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid) {
     int err         = 0;
+    STACK_OF(X509) *user_cert_chain = NULL;
     X509 *user_cert = NULL;
     EVP_PKEY *pkey  = NULL;
 
-    HIP_IFEL(!(user_cert = signaling_user_api_get_user_certificate(uid)),
+    HIP_IFEL(!(user_cert_chain = signaling_user_api_get_user_certificate_chain(uid)),
              -1, "Could not find user's certificate \n");
-
+    user_cert = sk_X509_pop(user_cert_chain);
     HIP_IFEL(!(pkey=X509_get_pubkey(user_cert)),
              -1, "Error getting public key from users certificate \n");
 

@@ -296,6 +296,7 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha) {
     hip_common_t *msg_buf = NULL;
     struct update_state * updatestate       = NULL;
     struct signaling_hipd_state * sig_state = NULL;
+    STACK_OF(X509) *cert_chain = NULL;
     X509 *cert = NULL;
     int len;
     unsigned char *buf;
@@ -318,8 +319,9 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha) {
     /* Build the certificate parameter */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
-    HIP_IFEL(!(cert = signaling_user_api_get_user_certificate(sig_state->ctx.user_ctx.euid)),
+    HIP_IFEL(!(cert_chain = signaling_user_api_get_user_certificate_chain(sig_state->ctx.user_ctx.euid)),
              -1, "Could not get certificate for user with id %d\n", sig_state->ctx.user_ctx.euid);
+    cert = sk_X509_pop(cert_chain);
     HIP_IFEL((len = signaling_X509_to_DER(cert, &buf)) < 0,
              -1, "Could not get DER encoding of certificate\n");
     HIP_IFEL(hip_build_param_cert(msg_buf, 0, 1, 0, HIP_CERT_X509V3, buf, len),

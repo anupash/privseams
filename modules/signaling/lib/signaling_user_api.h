@@ -19,7 +19,7 @@ int signaling_DER_to_X509(const unsigned char *const buf, const int len, X509 **
 
 /* Getters for different user context information */
 int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context *const user_ctx);
-X509 *signaling_user_api_get_user_certificate(const uid_t uid);
+STACK_OF(X509) *signaling_user_api_get_user_certificate_chain(const uid_t uid);
 EVP_PKEY *signaling_user_api_get_user_public_key(const uid_t uid);
 
 /* Every user supplied cryptography module should implement this function.
