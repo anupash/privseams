@@ -272,10 +272,8 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
         req.xpinfo.sel.family = AF_INET6;
     }
 
-    {
-        HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
-                 "netlink_talk failed\n");
-    }
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0,
+             -1, "netlink_talk failed\n");
 
 out_err:
 
