@@ -672,7 +672,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
     struct hip_host_id             *host_id;
     RSA                            *rsa = NULL;
     DSA                            *dsa = NULL;
-    char                            cert_str_pem[1024];
     unsigned char                  *der_cert     = NULL;
     int                             der_cert_len = 0;
     char                            arg1[21];
@@ -688,8 +687,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
              "Failed to memset memory for subject\n");
     HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(struct in6_addr)), -1,
              "Failed to memset memory for issuer HIT\n");
-    HIP_IFEL(!memset(cert_str_pem, 0, sizeof(cert_str_pem)), -1,
-             "Failed to memset memory for cert_str\n");
     HIP_IFEL(!memset(ialtname, 0, sizeof(ialtname)), -1,
              "Failed to memset memory for ialtname\n");
     HIP_IFEL(!memset(saltname, 0, sizeof(saltname)), -1,
