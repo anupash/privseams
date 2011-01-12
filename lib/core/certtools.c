@@ -498,8 +498,8 @@ int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
     sprintf(tmp_after, "(not-after \"%s\")", buf_after);
 
     ipv6_addr_copy(&content->issuer_hit, issuer);
-    hip_in6_ntop(issuer, present_issuer);
-    hip_in6_ntop(subject, present_subject);
+    inet_ntop(AF_INET6, issuer, present_issuer, INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6, subject, present_subject, INET6_ADDRSTRLEN);
 
     sprintf(tmp_issuer, "(hash %s %s)", issuer_type, present_issuer);
     sprintf(tmp_subject, "(hash %s %s)", subject_type, present_subject);
