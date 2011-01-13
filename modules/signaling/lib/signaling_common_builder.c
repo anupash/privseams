@@ -104,18 +104,17 @@ static int siganling_build_param_appinfo_contents(struct signaling_param_app_con
     uint8_t *p_tmp;
 
     /* Sanity checks */
-    HIP_IFEL((par == NULL || app_ctx == NULL),
-            -1, "No parameter or application context given.\n");
+    HIP_IFEL((par == NULL || app_ctx == NULL), -1, "No parameter or application context given.\n");
 
     /* Set ports */
-    par->src_port = htons(src_port);
-    par->dest_port = htons(dest_port);
+    par->src_port   = htons(src_port);
+    par->dest_port  = htons(dest_port);
 
-    /* Set length fields */
-    par->app_dn_length  = htons(strlen(app_ctx->application_dn));
-    par->iss_dn_length  = htons(strlen(app_ctx->issuer_dn));
-    par->req_length     = htons(strlen(app_ctx->requirements));
-    par->grp_length     = htons(strlen(app_ctx->groups));
+    /* Set length fields and make sure to keep to maximum lengths */
+    par->app_dn_length  = htons(MIN(strlen(app_ctx->application_dn), SIGNALING_APP_DN_MAX_LEN));
+    par->iss_dn_length  = htons(MIN(strlen(app_ctx->issuer_dn),      SIGNALING_ISS_DN_MAX_LEN));
+    par->req_length     = htons(MIN(strlen(app_ctx->requirements),   SIGNALING_APP_REQ_MAX_LEN));
+    par->grp_length     = htons(MIN(strlen(app_ctx->groups),         SIGNALING_APP_GRP_MAX_LEN));
 
     /* Set the contents
      * We dont need to check for NULL pointers since length is then set to 0 */
