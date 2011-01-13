@@ -354,24 +354,24 @@ int signaling_build_application_context(const struct signaling_param_app_context
     HIP_IFEL(!param_app_ctx, -1, "Got NULL application context parameter\n");
     HIP_IFEL(!app_ctx, -1, "Got NULL application context to write to\n");
 
-    /* copy contents */
-    tmp_len = ntohs(param_app_ctx->app_dn_length);
+    /* copy contents and make sure maximum lengths are kept */
+    tmp_len = MIN(ntohs(param_app_ctx->app_dn_length), SIGNALING_APP_DN_MAX_LEN);
     p_contents = (const uint8_t *) param_app_ctx + sizeof(struct signaling_param_app_context);
     memcpy(app_ctx->application_dn, p_contents, tmp_len);
     app_ctx->application_dn[tmp_len] = '\0';
     p_contents += tmp_len;
 
-    tmp_len = ntohs(param_app_ctx->iss_dn_length);
+    tmp_len = MIN(ntohs(param_app_ctx->iss_dn_length), SIGNALING_ISS_DN_MAX_LEN);
     memcpy(app_ctx->issuer_dn, p_contents, tmp_len);
     app_ctx->issuer_dn[tmp_len] = '\0';
     p_contents += tmp_len;
 
-    tmp_len = ntohs(param_app_ctx->req_length);
+    tmp_len = MIN(ntohs(param_app_ctx->req_length), SIGNALING_APP_REQ_MAX_LEN);
     memcpy(app_ctx->requirements, p_contents, tmp_len);
     app_ctx->requirements[tmp_len] = '\0';
     p_contents += tmp_len;
 
-    tmp_len = ntohs(param_app_ctx->grp_length);
+    tmp_len = MIN(ntohs(param_app_ctx->grp_length), SIGNALING_APP_GRP_MAX_LEN);
     memcpy(app_ctx->groups, p_contents, tmp_len);
     app_ctx->groups[tmp_len] = '\0';
 
