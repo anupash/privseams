@@ -108,7 +108,7 @@ out_err:
  * @param trusted_chain         a certificate stack, that can containt additional trusted certificate
  * @param untruste_chain        a chain of untrusted certificates, that can be used to build a complete certificate chain
  *
- * @return                      0 if a certificate chain could be build and verified, negative if not
+ * @return                      0 if a certificate chain could be build and verified, a non-zero error code otherwise
  */
 int verify_certificate_chain(X509 *leaf_cert, const char *trusted_lookup_dir, STACK_OF(X509) *trusted_chain, STACK_OF(X509) *untrusted_chain) {
     int err                         = 0;
@@ -137,7 +137,12 @@ int verify_certificate_chain(X509 *leaf_cert, const char *trusted_lookup_dir, ST
     }
 
     /* Finally do the verification and output some info */
-     err = X509_verify_cert(verify_ctx) == 1 ? 0 : -1;
+     err = X509_verify_cert(verify_ctx);
+     if (err != 1) {
+         err = X509_STORE_CTX_get_error(verify_ctx);
+     } else {
+         err = 0;
+     }
 
 out_err:
     X509_STORE_CTX_free(verify_ctx);
@@ -200,7 +205,8 @@ int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const p
 
     err = verify_certificate_chain(leaf_cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain);
     if(err) {
-        HIP_DEBUG("Could not verify certificate chain. \n");
+        HIP_DEBUG("Could not verify certifcate chain:\n");
+        HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
     } else {
         HIP_DEBUG("Successfully verified certificate chain. \n");
     }
