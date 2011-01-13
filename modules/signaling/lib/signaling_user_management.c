@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <sys/stat.h>
 
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"
@@ -17,6 +18,7 @@
 #include "lib/core/common.h"
 #include "lib/core/crypto.h"
 #include "lib/core/hostid.h"
+#include "lib/core/prefix.h"
 #include "lib/tool/pk.h"
 
 #include <openssl/x509.h>
@@ -47,6 +49,154 @@
 static int subject_hash(X509_NAME *subject, char *const out_buf) {
     return sprintf(out_buf, "%08lx", X509_NAME_hash(subject));
 }
+
+static void get_user_certchain_hash_path(X509_NAME *subject, char *const buf) {
+    strcat(buf, CERTIFICATE_INDEX_USER_DIR);
+    subject_hash(subject, buf + sizeof(CERTIFICATE_INDEX_USER_DIR) - 1);
+    /* We need the -1 because sizeof, unlike strlen, counts the 0-terminator. However, we prefer sizeof for performance reasons */
+    strcat(buf, ".0");
+}
+
+static void get_free_user_certchain_hash_path(X509_NAME *subject, char *const buf) {
+    struct stat buf_stat;
+    int i = 0;
+    get_user_certchain_hash_path(subject, buf);
+    HIP_DEBUG("paaaath: %s \n", buf);
+    while (!stat(buf, &buf_stat) && i < 10) {
+        i++;
+        sprintf(buf + sizeof(CERTIFICATE_INDEX_USER_DIR) + CERTIFICATE_INDEX_HASH_LENGTH - 1, ".%d", i);
+    }
+}
+
+
+/*
+ * TODO: beautify this
+ */
+static void get_free_user_certchain_name_path(X509_NAME *subject, char *const buf) {
+    char name_buf[128];
+    int name_len;
+    int i = 0;
+    struct stat stat_buf;
+
+    strcat(buf, CERTIFICATE_INDEX_USER_DIR);
+    X509_NAME_get_text_by_NID(subject, NID_commonName, name_buf, 127);
+    name_buf[127] = '\0';
+    name_len = strlen(name_buf);
+    strcat(buf, name_buf);
+    strcat(buf, ".cert.0");
+
+    while (!stat(buf, &stat_buf) && i < 10) {
+        i++;
+        sprintf(buf + sizeof(CERTIFICATE_INDEX_USER_DIR) + name_len - 1, ".cert.%d", i);
+    }
+}
+
+static int certificate_chain_cmp(STACK_OF(X509) *c1, STACK_OF(X509) *c2) {
+    int i = 0;
+    const X509 *cert1 = NULL;
+    const X509 *cert2 = NULL;
+
+    if (!c1 || !c2) {
+        return -1;
+    }
+
+    for (i = 0; i < MIN(sk_X509_num(c1), sk_X509_num(c2)); i++) {
+        cert1 = sk_X509_value(c1, i);
+        cert2 = sk_X509_value(c2, i);
+        if (X509_cmp(cert1, cert2)) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Compare if two certificate chains are equal.
+ * We consider two chains as equal if all certificates from the shorter chain,
+ * match with the certificates from the other chain.
+ *
+ * TODO: update if we got a matching longer certificate chain
+ * @return 1 if we have a matching certificate chain, 0 if not
+ */
+static int signaling_have_user_cert_chain(STACK_OF(X509) *cert_chain) {
+    int i = 0;
+    char path_buf[PATH_MAX];
+    X509 *cert = NULL;
+    X509_NAME *x509_subj_name = NULL;
+    STACK_OF(X509) *local_chain = NULL;
+
+    cert = sk_X509_value(cert_chain, 0);
+    x509_subj_name = X509_get_subject_name(cert);
+    memset(path_buf, 0, PATH_MAX);
+    get_user_certchain_hash_path(x509_subj_name, path_buf);
+
+    while ((local_chain = signaling_load_certificate_chain(path_buf)) != NULL) {
+        if(!certificate_chain_cmp(local_chain, cert_chain)) {
+            return 1;
+        }
+        free(local_chain);
+        i++;
+        path_buf[sizeof(CERTIFICATE_INDEX_USER_DIR) + CERTIFICATE_INDEX_HASH_LENGTH] = (char) i;
+    }
+    return 0;
+}
+
+static int save_user_cert_chain(STACK_OF(X509) *cert_chain, const char *filename) {
+    int err = 0;
+    int i = 0;
+    FILE *fp = NULL;
+
+    HIP_IFEL(!(fp = fopen(filename, "w")), -1, "Could not open file %s for writing \n", filename);
+    for (i = 0; i < sk_X509_num(cert_chain); i++) {
+        PEM_write_X509(fp, sk_X509_value(cert_chain, i));
+    }
+    HIP_DEBUG("Saved certificate chain of size %d to: %s \n", i, filename);
+
+out_err:
+    fclose(fp);
+    return err;
+}
+
+/**
+ * @return 0 if the certificate chain has been added or if we have it already
+ *         negative if an error occurs
+ */
+int signaling_add_user_certificate_chain(STACK_OF(X509) *cert_chain) {
+    int err = 0;
+    X509 *cert = NULL;
+    X509_NAME *x509_subj_name = NULL;
+    char subj_name[128];
+    char dst_path[PATH_MAX];
+    char dst_hash_path[PATH_MAX];
+
+    /* write the certificates to a file */
+    cert = sk_X509_value(cert_chain, 0);
+    x509_subj_name = X509_get_subject_name(cert);
+    X509_NAME_oneline(x509_subj_name, subj_name, 128);
+    HIP_DEBUG("Got certificate chain for user: %s\n", subj_name);
+
+    if (signaling_have_user_cert_chain(cert_chain)) {
+        return 0;
+    }
+
+    /* construct the destination path */
+    get_free_user_certchain_name_path(x509_subj_name, dst_path);
+    HIP_IFEL(save_user_cert_chain(cert_chain, dst_path),
+             -1, "Could not save certificate chain to file \n");
+    memset(dst_hash_path, 0, PATH_MAX);
+    get_free_user_certchain_hash_path(x509_subj_name, dst_hash_path);
+    HIP_DEBUG("destination path : %s \n", dst_hash_path);
+    if(symlink(dst_path, dst_hash_path)) {
+        HIP_DEBUG("Successfully created symlink: %s -> %s \n", dst_hash_path, dst_path);
+    } else {
+        HIP_DEBUG("Failed creating symlink: %s -> %s \n", dst_hash_path, dst_path);
+    }
+
+out_err:
+    return err;
+}
+
 
 /**
  * Load a chain of certificates from a file.
@@ -169,12 +319,10 @@ int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const p
 
     /* Print some info and prepare filenames */
     X509_NAME_oneline(subject, name, SIGNALING_USER_ID_MAX_LEN);
-    strcat(hash_filename, CERTIFICATE_INDEX_USER_DIR);
-    subject_hash(subject, &hash_filename[sizeof(CERTIFICATE_INDEX_USER_DIR)-1]);
-    /* We need the -1 because sizeof, unlike strlen, counts the 0-terminator. However, we prefer sizeof for performance reasons */
-    strcat(&hash_filename[sizeof(CERTIFICATE_INDEX_USER_DIR) -1 + CERTIFICATE_INDEX_HASH_LENGTH], CERTIFICATE_INDEX_CERT_SUFFIX);
+    memset(hash_filename, 0, PATH_MAX);
+    get_user_certchain_hash_path(subject, hash_filename);
     HIP_DEBUG("Verifying public key of subject: %s \n", name);
-    HIP_DEBUG("Looking up certificates index at: %s\n", hash_filename);
+    HIP_DEBUG("Looking up certificates index beginning at: %s\n", hash_filename);
 
     /* Go through the certificate index */
     while ((cert_chain = signaling_load_certificate_chain(hash_filename)) != NULL) {

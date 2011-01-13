@@ -11,6 +11,9 @@
 
 #include <sys/types.h>
 
+/* User certificate management functions */
+int signaling_add_user_certificate_chain(STACK_OF(X509) *cert_chain);
+
 /* Util functions */
 STACK_OF(X509) *signaling_load_certificate_chain(char *certfile);
 

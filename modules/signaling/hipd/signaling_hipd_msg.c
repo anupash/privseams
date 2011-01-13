@@ -518,9 +518,69 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
 
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling ports\n");
-    if (sig_state->user_certificate_required) {
+    if (sig_state->user_ctx.user_certificate_required) {
         signaling_send_user_certificate_chain(ctx->hadb_entry);
     }
+out_err:
+    return err;
+}
+
+/**
+ * Handle an UPDATE message that contains (parts from) a user certificate chain.
+ *
+ * @return 0 on success
+ */
+static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
+    int err = 0;
+    const struct hip_cert *param_cert = NULL;
+    X509 *cert = NULL;
+    STACK_OF(X509) *cert_chain = NULL;
+    struct signaling_hipd_state *sig_state = NULL;
+    /* sanity checks */
+    HIP_IFEL(!ctx->input_msg,  -1, "Message is NULL\n");
+
+    /* process certificates */
+    HIP_IFEL(!(param_cert = hip_get_param(ctx->input_msg, HIP_PARAM_CERT)),
+             0, "Message contains no certificate (second certificate update (ACK) \n");
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+            -1, "failed to retrieve state\n");
+    if (!sig_state->user_ctx.cert_chain) {;
+        HIP_IFEL(!(sig_state->user_ctx.cert_chain = sk_X509_new_null()),
+                 -1, "memory allocation failure\n");
+    }
+    cert_chain = sig_state->user_ctx.cert_chain;
+    while(param_cert != NULL && hip_get_param_type((const struct hip_tlv_common *) param_cert) == HIP_PARAM_CERT) {
+        HIP_DEBUG("Got certificate %d from a group of %d certificates \n", param_cert->cert_id, param_cert->cert_count);
+        HIP_IFEL(signaling_DER_to_X509((const unsigned char *) (param_cert + 1), ntohs(param_cert->length) - sizeof(struct hip_cert) + sizeof(struct hip_tlv_common), &cert),
+                 -1, "Could not decode certificate");
+        /* set group if this is the beginning of a cert exchange */
+        if (sig_state->user_ctx.group == -1) {
+            sig_state->user_ctx.group = param_cert->cert_group;
+        }
+        /* check cert belongs to the group we're currently receiving */
+        if (sig_state->user_ctx.group != param_cert->cert_group) {
+            HIP_DEBUG("Received certificate from wrong group, discarding... \n");
+            continue;
+        }
+        sk_X509_push(cert_chain, cert);
+        HIP_DEBUG("Recevied and pushed:\n");
+        X509_print_fp(stderr, cert);
+
+        /* check if we have received the last cert */
+        if (sk_X509_num(cert_chain) == param_cert->cert_count) {
+            HIP_DEBUG("received complete certificate, now saving %d certs \n", sk_X509_num(cert_chain));
+            signaling_add_user_certificate_chain(cert_chain);
+
+            sig_state->user_ctx.group = -1;
+            sig_state->user_ctx.user_certificate_required = 0;
+            sig_state->user_ctx.cert_chain = NULL;
+            sk_X509_free(cert_chain);
+            cert_chain = NULL;
+        }
+
+        param_cert = (const struct hip_cert *) hip_get_next_param(ctx->input_msg, (const struct hip_tlv_common *) param_cert);
+    }
+
 out_err:
     return err;
 }
@@ -551,9 +611,9 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");
     } else if (update_type == SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE) {
-        HIP_DEBUG("Received CERTIFICATE Update... \n");
+        err = signaling_handle_incoming_certificate_udpate(packet_type, ha_state, ctx);
     } else if (update_type == SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE) {
-        HIP_DEBUG("Received CERTIFICATE Update ack... \n");
+        err = signaling_handle_incoming_certificate_udpate(packet_type, ha_state, ctx);
     }
 
 out_err:
@@ -571,7 +631,7 @@ int signaling_handle_incoming_notification(UNUSED const uint8_t packet_type, UNU
     ntf_data = (const struct signaling_ntf_user_auth_failed_data *) ntf->data;
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling module \n");
-    sig_state->user_certificate_required = 1;
+    sig_state->user_ctx.user_certificate_required = 1;
 
 out_err:
     return err;
