@@ -55,20 +55,20 @@ const char **e_algo_names;
 const char **a_algo_names;
 
 /* Mappings from HIP to XFRM algo names < 2.6.19 */
-const char *e_algo_names_old[] =
-{ "reserved", "aes",         "des3_ede",         "des3_ede",
-  "blowfish", "cipher_null", "cipher_null" };
-const char *a_algo_names_old[] =
-{ "reserved", "sha1",   "sha1", "md5",
-  "sha1",     "sha1",   "md5" };
+const char *e_algo_names_old[] = {
+    "reserved", "aes",         "des3_ede",   "des3_ede",
+    "blowfish", "cipher_null", "cipher_null" };
+const char *a_algo_names_old[] = {
+    "reserved", "sha1", "sha1", "md5",
+    "sha1",     "sha1", "md5" };
 
 /* Mappings from HIP to XFRM algo names >= 2.6.19 */
-const char *e_algo_names_new[] =
-{ "reserved",      "cbc(aes)",         "cbc(des3_ede)",         "cbc(des3_ede)",
-  "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)" };
-const char *a_algo_names_new[] =
-{ "reserved",   "hmac(sha1)",     "hmac(sha1)", "hmac(md5)",
-  "hmac(sha1)", "hmac(sha1)",     "hmac(md5)" };
+const char *e_algo_names_new[] = {
+    "reserved",      "cbc(aes)",         "cbc(des3_ede)",   "cbc(des3_ede)",
+    "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)" };
+const char *a_algo_names_new[] = {
+    "reserved",   "hmac(sha1)", "hmac(sha1)", "hmac(md5)",
+    "hmac(sha1)", "hmac(sha1)", "hmac(md5)" };
 
 
 /**
@@ -276,7 +276,6 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
              -1, "netlink_talk failed\n");
 
 out_err:
-
     return err;
 }
 
@@ -305,7 +304,6 @@ static int hip_xfrm_sa_flush(struct rtnl_handle *rth)
              "SA flush failed\n");
 
 out_err:
-
     return err;
 }
 
@@ -332,7 +330,6 @@ static int hip_xfrm_policy_flush(struct rtnl_handle *rth)
              "Policy flush failed\n");
 
 out_err:
-
     return err;
 }
 
@@ -375,7 +372,6 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
              "No associated policies to be deleted\n");
 
 out_err:
-
     return err;
 }
 
@@ -503,7 +499,6 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
     HIP_IFE(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1);
 
 out_err:
-
     return err;
 }
 
@@ -591,9 +586,9 @@ static int hip_calc_sp_prefix(const struct in6_addr *src_id,
 
     if (IN6_IS_ADDR_V4MAPPED(src_id)) {
         HIP_DEBUG("ipv4 address mapped as ipv6\n");
-        prefix = (use_full_prefix) ? 32 : HIP_LSI_PREFIX_LEN;
+        prefix = use_full_prefix ? 32 : HIP_LSI_PREFIX_LEN;
     } else {
-        prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+        prefix = use_full_prefix ? 128 : HIP_HIT_PREFIX_LEN;
     }
 
     return prefix;
@@ -637,8 +632,8 @@ void hip_xfrm_set_default_sa_prefix_len(int len)
  */
 void hip_xfrm_set_algo_names(int new_algo_names)
 {
-    e_algo_names = (new_algo_names ? e_algo_names_new : e_algo_names_old);
-    a_algo_names = (new_algo_names ? a_algo_names_new : a_algo_names_old);
+    e_algo_names = new_algo_names ? e_algo_names_new : e_algo_names_old;
+    a_algo_names = new_algo_names ? a_algo_names_new : a_algo_names_old;
 }
 
 /**
@@ -812,6 +807,7 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
                                    XFRM_POLICY_OUT, proto, prefix,
                                    AF_INET6), -1);
     HIP_DEBUG("End\n");
+
 out_err:
     return err;
 }
@@ -828,7 +824,7 @@ void hip_delete_hit_sp_pair(const hip_hit_t *src_hit,
                             const hip_hit_t *dst_hit,
                             const int use_full_prefix)
 {
-    uint8_t prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+    uint8_t prefix = use_full_prefix ? 128 : HIP_HIT_PREFIX_LEN;
 
     hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, dst_hit, src_hit,
                            XFRM_POLICY_IN, prefix, AF_INET6);
@@ -873,8 +869,8 @@ int hip_setup_default_sp_prefix_pair(void)
     set_hit_prefix(&src_hit);
     set_hit_prefix(&dst_hit);
 
-    HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0),
-            -1);
+    HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0), -1);
+
 out_err:
     return err;
 }
