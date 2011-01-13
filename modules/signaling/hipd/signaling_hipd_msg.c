@@ -317,6 +317,13 @@ static int free_message_space(struct hip_common *msg, hip_ha_t *ha) {
 }
 
 
+/**
+ * Send a whole certificate chain, possibly dstributed over multiple messages.
+ *
+ * @param ha the host association for the connection on which to send the certificate chain
+ *
+ * @return  0 on success, negative on error
+ */
 int signaling_send_user_certificate_chain(hip_ha_t *ha) {
     int err = 0;
     uint16_t mask           = 0;
