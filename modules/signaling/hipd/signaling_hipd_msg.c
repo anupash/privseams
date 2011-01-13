@@ -416,7 +416,7 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
  */
 static int signaling_handle_r2_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    return signaling_handle_r2_user_context(packet_type, ha_state, ctx);
+    return signaling_handle_i2_user_context(packet_type, ha_state, ctx);
 }
 
 /*
