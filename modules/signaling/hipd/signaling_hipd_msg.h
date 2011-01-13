@@ -55,13 +55,18 @@ int signaling_handle_incoming_update(const uint8_t packet_type, const uint32_t h
 int signaling_handle_incoming_notification(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
 /* Handler for outgoing messages */
-int signaling_i2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-int signaling_i2_add_user_sig(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-int signaling_r2_add_appinfo(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
-int signaling_r2_add_user_sig(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_add_application_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_add_user_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_i2_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_r2_add_application_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_r2_add_user_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+int signaling_r2_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
+
+/* Functions for initiating and answering to a bex update */
 int signaling_send_first_update(const struct in6_addr *src_hit, const struct in6_addr *dst_hit);
 int signaling_send_second_update(const struct hip_common *first_update);
 
+/* Functions for certificate exchange */
 int signaling_send_user_auth_failed_ntf(hip_ha_t *ha, const int reason);
 int signaling_send_user_certificate_chain(hip_ha_t *ha);
 

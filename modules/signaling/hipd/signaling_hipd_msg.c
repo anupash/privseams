@@ -571,7 +571,22 @@ out_err:
     return err;
 }
 
-int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_i2_add_application_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+	int err = 0;
+    struct signaling_hipd_state *sig_state;
+
+    HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+                 -1, "failed to retrieve state for signaling\n");
+    HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
+            -1, "Building of application context parameter failed.\n");
+
+out_err:
+	return err;
+}
+
+int signaling_i2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
     struct signaling_hipd_state *sig_state;
@@ -579,56 +594,37 @@ int signaling_i2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uin
     HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
-
-    /* Add user authentication */
     HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->ctx.user_ctx.euid),
-             -1, "User failed to sign I2 packet.\n");
+             -1, "User failed to sign packet.\n");
 out_err:
     return err;
 }
 
-int signaling_i2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_i2_add_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-	int err = 0;
+    int err = 0;
     struct signaling_hipd_state *sig_state;
 
     HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
-
-    HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
-            -1, "Building of param appinfo for I2 failed.\n");
-
     HIP_IFEL(signaling_build_param_user_context(ctx->output_msg, &sig_state->ctx.user_ctx),
-            -1, "Building of param user_sig for I2 failed.\n");
-
-    HIP_DEBUG("Building application context for I2 successful.\n");
+            -1, "Building of user context parameter failed.\n");
 
 out_err:
-	return err;
+    return err;
 }
 
-int signaling_r2_add_user_sig(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_r2_add_application_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-    return signaling_i2_add_user_sig(packet_type, ha_state, ctx);
+    return signaling_i2_add_application_context(packet_type, ha_state, ctx);
 }
 
-int signaling_r2_add_appinfo(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+int signaling_r2_add_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
+    return signaling_i2_add_user_context(packet_type, ha_state, ctx);
+}
+
+int signaling_r2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
-	int err = 0;
-    struct signaling_hipd_state *sig_state             = NULL;
-
-	/* Port information is included in the I2 (ctx->input_msg). Add it to global state.
-	 * Note: This could be done in another function but to do it here saves one lookup in hadb. */
-
-    /* Get the connection context from the global state */
-    HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
-    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-             -1, "failed to retrieve state for signaling\n");
-    HIP_IFEL(signaling_build_param_application_context(ctx->output_msg, &sig_state->ctx),
-             -1, "Building of param appinfo for R2 failed.\n");
-    HIP_DEBUG("Building application context for I2 successful.\n");
-
-out_err:
-	return err;
+    return signaling_i2_add_user_signature(packet_type, ha_state, ctx);
 }

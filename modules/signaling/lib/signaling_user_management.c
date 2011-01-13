@@ -200,7 +200,7 @@ int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const p
 
     err = verify_certificate_chain(leaf_cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain);
     if(err) {
-        ERR_print_errors_fp(stderr);
+        HIP_DEBUG("Could not verify certificate chain. \n");
     } else {
         HIP_DEBUG("Successfully verified certificate chain. \n");
     }
