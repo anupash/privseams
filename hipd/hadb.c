@@ -916,7 +916,7 @@ int hip_del_peer_info_entry(struct hip_hadb_state *ha)
      * should be 1 */
     HIP_DEBUG_HIT("our HIT", &ha->hit_our);
     HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
-    hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, 1);
+    hip_delete_security_associations_and_sp(ha);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
