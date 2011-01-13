@@ -44,7 +44,6 @@
 #include "lib/core/icomm.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/crypto.h"
-#include "lib/core/hostid.h"
 
 #include "hipd/hadb.h"
 #include "hipd/user.h"
@@ -393,87 +392,22 @@ out_err:
 static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
-    int hash_range_len;
-    int orig_len;
-    struct signaling_user_context usr_ctx;
-    const struct signaling_param_user_context *param_usr_ctx;
-    struct hip_sig *param_user_signature;
-    unsigned char sha1_digest[HIP_AH_SHA_LEN];
-    EVP_PKEY *pkey;
-    struct hip_host_id user_hi;
-    X509_NAME *subject_name = NULL;
-    RSA *rsa = NULL;
-    EC_KEY *ecdsa = NULL;
 
-    orig_len = hip_get_msg_total_len(ctx->input_msg);
-
-    /* Init the user context */
-    HIP_IFEL(signaling_init_user_context(&usr_ctx),
-             -1, "Could not init user context\n");
-    HIP_IFEL(!(param_usr_ctx = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO)),
-             -1, "Message contains no user context \n");
-    HIP_IFEL(signaling_build_user_context(param_usr_ctx, &usr_ctx),
-             -1, "Could not build user context from user context parameter\n");
-    signaling_user_context_print(&usr_ctx, "", 1);
-
-    /* Init the users identity and verify his signature */
-
-    /* We need to construct a temporary host_id struct since, all key_rr_to_xxx functions take this as argument.
-     * However, we need only to fill in hi_length, algorithm and the key rr. */
-    user_hi.hi_length = htons(usr_ctx.key_rr_len);
-    user_hi.rdata.algorithm = usr_ctx.rdata.algorithm;
-    memcpy(user_hi.key, usr_ctx.pkey, usr_ctx.key_rr_len - sizeof(struct hip_host_id_key_rdata));
-    HIP_IFEL(!(pkey = hip_key_rr_to_evp_key(&user_hi, 0)),
-             -1, "Could not deserialize users public key\n");
-
-    PEM_write_PUBKEY(stderr, pkey);
-
-    /* No modify the packet to verify signature */
-    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(ctx->input_msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
-             -1, "I2 contains no user signature\n");
-    hash_range_len = ((const uint8_t *) param_user_signature) - ((const uint8_t *) ctx->input_msg);
-    hip_zero_msg_checksum(ctx->input_msg);
-    HIP_IFEL(hash_range_len < 0, -ENOENT, "Invalid signature len\n");
-    hip_set_msg_total_len(ctx->input_msg, hash_range_len);
-    HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, ctx->input_msg, hash_range_len, sha1_digest),
-             -1, "Could not build message digest \n");
-
-    switch (user_hi.rdata.algorithm) {
-    case HIP_HI_ECDSA:
-        // - 1 is the algorithm field
-        ecdsa = EVP_PKEY_get1_EC_KEY(pkey);
-        HIP_IFEL(ECDSA_size(ecdsa) != ntohs(param_user_signature->length) - 1,
-                 -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", ECDSA_size(ecdsa), ntohs(param_user_signature->length));
-        HIP_IFEL(impl_ecdsa_verify(sha1_digest, ecdsa, param_user_signature->signature),
-                     -1, "I2 ECDSA user signature did not verify correctly\n");
+    err = signaling_verify_user_signature(ctx->input_msg);
+    switch (err) {
+    case 0:
+        HIP_DEBUG("User signature verification successful\n");
         break;
-    case HIP_HI_RSA:
-        rsa = EVP_PKEY_get1_RSA(pkey);
-        HIP_IFEL(RSA_size(rsa) != ntohs(param_user_signature->length) - 1,
-                 -1, "Size of public key does not match signature size. Aborting signature verification: %d / %d.\n", RSA_size(rsa), ntohs(param_user_signature->length));
-        HIP_IFEL(!RSA_verify(NID_sha1, sha1_digest, SHA_DIGEST_LENGTH, param_user_signature->signature, RSA_size(rsa), rsa),
-                 -1, "I2 RSA user signature did not verify correctly\n");
+    case -1:
+        HIP_DEBUG("Error processing user signature \n");
         break;
     default:
-        HIP_IFEL(1, -1, "Unknown algorithm\n");
-    }
-
-    HIP_DEBUG("Correctly verified users signature\n");
-
-    /* Now verify users public key against his certificate */
-    HIP_IFEL(signaling_DER_to_X509_NAME(usr_ctx.subject_name, usr_ctx.subject_name_len, &subject_name),
-             -1, "Could not decode to x509 name.");
-    err = signaling_user_api_verify_pubkey(subject_name, pkey, NULL);
-    if (err) {
-        HIP_DEBUG("Requesting user's certificate\n");
+        HIP_DEBUG("Could not verify certifcate chain:\n");
+        HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
+        HIP_DEBUG("Requesting user's certificate chain.\n");
         signaling_send_user_auth_failed_ntf(ctx->hadb_entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
     }
 
-out_err:
-    hip_set_msg_total_len(ctx->input_msg, orig_len);
-    RSA_free(rsa);
-    EC_KEY_free(ecdsa);
-    X509_NAME_free(subject_name);
     return err;
 }
 
