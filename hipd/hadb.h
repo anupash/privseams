@@ -104,7 +104,7 @@ int hip_for_each_ha(int(func) (struct hip_hadb_state *entry, void *opaq),
                     void *opaque);
 
 /* next 2 functions are not called from outside but make sense and are
- * 'proposed' in libhipcore/state.h
+ * 'proposed' in lib/core/state.h
  */
 
 void hip_hadb_set_local_controls(struct hip_hadb_state *entry,
