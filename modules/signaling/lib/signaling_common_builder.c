@@ -393,19 +393,19 @@ int signaling_build_user_context(const struct signaling_param_user_context *para
     HIP_IFEL(hip_get_param_type(param_usr_ctx) != HIP_PARAM_SIGNALING_USERINFO,
             -1, "Parameter has wrong type, expected %d\n", HIP_PARAM_SIGNALING_USERINFO);
 
-    /* copy contents */
-    usr_ctx->key_rr_len = ntohs(param_usr_ctx->pkey_rr_length);
+    /* copy contents and make sure max lengths are kept */
+    usr_ctx->key_rr_len = MIN(ntohs(param_usr_ctx->pkey_rr_length), SIGNALING_USER_KEY_MAX_LEN + sizeof(struct hip_host_id_key_rdata));
     memcpy(usr_ctx->pkey,
            (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context),
-           ntohs(param_usr_ctx->pkey_rr_length) - sizeof(struct hip_host_id_key_rdata));
+           usr_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
     usr_ctx->rdata.algorithm = param_usr_ctx->rdata.algorithm;
     usr_ctx->rdata.protocol = param_usr_ctx->rdata.protocol;
     usr_ctx->rdata.flags = ntohs(param_usr_ctx->rdata.flags);
 
-    usr_ctx->subject_name_len = ntohs(param_usr_ctx->un_length);
+    usr_ctx->subject_name_len = MIN(ntohs(param_usr_ctx->un_length), SIGNALING_USER_ID_MAX_LEN);
     memcpy(usr_ctx->subject_name,
            (const uint8_t *) param_usr_ctx + sizeof(struct signaling_param_user_context) + ntohs(param_usr_ctx->pkey_rr_length) - sizeof(struct hip_host_id_key_rdata),
-           ntohs(param_usr_ctx->un_length));
+           usr_ctx->subject_name_len);
 
 out_err:
     return err;

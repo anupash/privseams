@@ -68,6 +68,7 @@
 #define SIGNALING_APP_REQ_MAX_LEN   64
 #define SIGNALING_APP_GRP_MAX_LEN   64
 #define SIGNALING_USER_ID_MAX_LEN   256
+#define SIGNALING_USER_KEY_MAX_LEN  HIP_MAX_RSA_KEY_LEN / 8 + 4 // see lib/core/protodefs.h
 #define SIGNALING_PATH_MAX_LEN      2048
 
 /* Failure types for user authentication */
@@ -220,7 +221,7 @@ struct signaling_user_context {
 
     /* The key_rr is comprised of the rrdata and the actual key */
     struct hip_host_id_key_rdata rdata;
-    unsigned char pkey[HIP_MAX_RSA_KEY_LEN / 8 + 4 ];
+    unsigned char pkey[SIGNALING_USER_KEY_MAX_LEN];
 
     /* Subject name in DER encoding */
     unsigned char subject_name[SIGNALING_USER_ID_MAX_LEN];
