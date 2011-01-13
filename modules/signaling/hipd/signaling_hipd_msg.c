@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <openssl/pem.h>
+#include <openssl/x509.h>
 
 #include "lib/core/common.h"
 #include "lib/core/debug.h"
@@ -289,6 +290,33 @@ out_err:
     return err;
 }
 
+static int free_message_space(struct hip_common *msg, hip_ha_t *ha) {
+    uint8_t *dst;
+    const uint8_t *max_dst = ((uint8_t *) msg) + 1400;
+    const int param_mac_length = 24;
+    int param_signature_length;
+
+    if (!ha || !msg) {
+        return -1;
+    }
+
+    dst = (uint8_t *) msg + hip_get_msg_total_len(msg);
+    switch (hip_get_host_id_algo(ha->our_pub)) {
+    case HIP_HI_ECDSA:
+        param_signature_length = ECDSA_size(ha->our_priv_key);
+        break;
+    case HIP_HI_RSA:
+        param_signature_length = RSA_size(ha->our_priv_key);
+        break;
+    default:
+        param_signature_length = 200;
+    }
+    param_signature_length += sizeof(struct hip_sig) + 7;
+
+    return MAX(max_dst - (dst + param_mac_length + param_signature_length), 0);
+}
+
+
 int signaling_send_user_certificate_chain(hip_ha_t *ha) {
     int err = 0;
     uint16_t mask           = 0;
@@ -297,52 +325,90 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha) {
     struct signaling_hipd_state * sig_state = NULL;
     STACK_OF(X509) *cert_chain = NULL;
     X509 *cert = NULL;
-    int len;
+    int cert_len;
     unsigned char *buf;
+    int count = 0;
+    int total_cert_count;
+    int free_space;
 
     /* sanity checks */
     HIP_IFEL(!ha, -1, "Given HA is NULL \n");
-
-    /* Allocate and build message */
-    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
-            -ENOMEM, "Out of memory while allocation memory for the user cert update packet\n");
-    hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ha->hit_our, &ha->hit_peer);
-
-    /* Add sequence number */
     HIP_IFEL(!(updatestate = (struct update_state *) lmod_get_state_item(ha->hip_modular_state, "update")),
              -1, "Could not get update state for host association.\n");
-    updatestate->update_id_out++;
-    HIP_IFEL(hip_build_param_seq(msg_buf, hip_update_get_out_id(updatestate)),
-             -1, "Building of SEQ parameter failed\n");
 
-    /* Build the certificate parameter */
+    /* Get the users certificate chain */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
     HIP_IFEL(!(cert_chain = signaling_user_api_get_user_certificate_chain(sig_state->ctx.user_ctx.euid)),
              -1, "Could not get certificate for user with id %d\n", sig_state->ctx.user_ctx.euid);
-    cert = sk_X509_pop(cert_chain);
-    HIP_IFEL((len = signaling_X509_to_DER(cert, &buf)) < 0,
-             -1, "Could not get DER encoding of certificate\n");
-    HIP_IFEL(hip_build_param_cert(msg_buf, 0, 1, 0, HIP_CERT_X509V3, buf, len),
-             -1, "Could not build cert parameter\n");
+    total_cert_count = sk_X509_num(cert_chain);
+    HIP_DEBUG("Sending a total of %d certificates from users chain.\n", total_cert_count);
 
-    HIP_DEBUG("Sending certificate chain for subject id=%d \n", sig_state->ctx.user_ctx.euid);
+    while(sk_X509_num(cert_chain) > 0) {
+        /* Allocate and build a new message */
+        HIP_IFEL(!(msg_buf = hip_msg_alloc()),
+                -ENOMEM, "Out of memory while allocation memory for the user cert update packet\n");
+        hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ha->hit_our, &ha->hit_peer);
 
-    /* Mac and sign the packet */
-    HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
-             -1, "Building of HMAC failed\n");
-    HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
-             -EINVAL, "Could not sign UPDATE. Failing\n");
+        /* Add sequence number */
+        updatestate->update_id_out++;
+        HIP_IFEL(hip_build_param_seq(msg_buf, hip_update_get_out_id(updatestate)),
+                 -1, "Building of SEQ parameter failed\n");
+        /* Put as much certificate parameter into the message as possible */
+        do {
+            cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain)-1);
+            HIP_DEBUG("cert from stack nr. %d \n", sk_X509_num(cert_chain)-1);
+            HIP_IFEL((cert_len = signaling_X509_to_DER(cert, &buf)) < 0,
+                     -1, "Could not get DER encoding of certificate\n");
+            free_space = free_message_space(msg_buf, ha);
+            if (free_space == -1) {
+                err = -1;
+                goto out_err;
+            } else if(free_space > cert_len + (int) sizeof(struct hip_sig) + 7) {
+                count++;
+                HIP_IFEL(hip_build_param_cert(msg_buf, 0, total_cert_count, count, HIP_CERT_X509V3, buf, cert_len),
+                         -1, "Could not build cert parameter\n");
+                cert = sk_X509_pop(cert_chain);
+                X509_free(cert);
+            }
+            free(buf);
+            buf = NULL;
 
-    err = hip_send_pkt(NULL,
-                       &ha->peer_addr,
-                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
-                       ha->peer_udp_port,
-                       msg_buf,
-                       ha,
-                       1);
+            if(free_space <= cert_len) {
+                HIP_DEBUG("Free space left in current message is not not enough for next cert: Have %d but need %d\n",
+                          free_space, cert_len + (int) sizeof(struct hip_sig) + 7);
+                break;
+            }
+        } while (sk_X509_num(cert_chain) > 0);
+
+        /* Mac and sign the packet */
+        HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
+                 -1, "Building of HMAC failed\n");
+        HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
+                 -EINVAL, "Could not sign UPDATE. Failing\n");
+
+        HIP_DEBUG("Sending certificate chain for subject id %d up to certificate %d of %d\n", sig_state->ctx.user_ctx.euid, count, total_cert_count);
+
+        err = hip_send_pkt(NULL,
+                           &ha->peer_addr,
+                           (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                           ha->peer_udp_port,
+                           msg_buf,
+                           ha,
+                           1);
+
+        /* free message for the next run */
+        free(msg_buf);
+        msg_buf = NULL;
+    }
+
+    return 0;
 
 out_err:
+    sk_X509_free(cert_chain);
+    X509_free(cert);
+    free(buf);
+    free(msg_buf);
     return err;
 }
 

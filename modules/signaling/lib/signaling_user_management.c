@@ -80,8 +80,6 @@ STACK_OF(X509) *signaling_load_certificate_chain(char *certfile)
     while (sk_X509_INFO_num(sk)) {
         xi=sk_X509_INFO_shift(sk);
         if (xi->x509 != NULL) {
-            HIP_DEBUG("Found and pushed certificate: \n");
-            X509_print_fp(stderr, xi->x509);
             sk_X509_push(stack,xi->x509);
             xi->x509=NULL;
         }
@@ -90,8 +88,6 @@ STACK_OF(X509) *signaling_load_certificate_chain(char *certfile)
 
     HIP_IFEL(!sk_X509_num(stack),
              -1, "no certificates in file, %s\n",certfile);
-
-    HIP_DEBUG("Loaded certificate chain of length %d \n", sk_X509_num(stack));
 
 out_err:
     sk_X509_INFO_free(sk);
