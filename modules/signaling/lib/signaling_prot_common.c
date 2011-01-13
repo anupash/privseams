@@ -276,21 +276,18 @@ int signaling_init_connection_context_from_msg(struct signaling_connection_conte
     int err                     = 0;
     const hip_tlv_common_t *param     = NULL;
 
-    HIP_IFEL(!ctx,
-             -1, "Cannot initialize NULL-context\n");
+    /* sanity checks */
+    HIP_IFEL(!ctx, -1, "Cannot initialize NULL-context\n");
 
-    HIP_IFEL(signaling_init_connection_context(ctx),
-             -1, "Failed to init connection context\n");
-
+    /* init and fill the connection context */
+    HIP_IFEL(signaling_init_connection_context(ctx), -1, "Failed to init connection context\n");
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
         ctx->src_port   = ntohs(((const struct signaling_param_app_context *) param)->src_port);
         ctx->dest_port  = ntohs(((const struct signaling_param_app_context *) param)->dest_port);
-
         HIP_IFEL(signaling_build_application_context((const struct signaling_param_app_context *) param,
                                                      &ctx->app_ctx),
                  -1, "Could not init application context from app ctx parameter \n");
-
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
