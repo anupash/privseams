@@ -357,7 +357,6 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha) {
         /* Put as much certificate parameter into the message as possible */
         do {
             cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain)-1);
-            HIP_DEBUG("cert from stack nr. %d \n", sk_X509_num(cert_chain)-1);
             HIP_IFEL((cert_len = signaling_X509_to_DER(cert, &buf)) < 0,
                      -1, "Could not get DER encoding of certificate\n");
             free_space = free_message_space(msg_buf, ha);
