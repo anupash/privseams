@@ -33,12 +33,6 @@
 
 #include "protodefs.h"
 
-struct hosts_file_line {
-    char           *hostname, *alias, *alias2;
-    struct in6_addr id;
-    int             lineno;
-};
-
 
 typedef uint32_t hip_closest_prefix_type;
 

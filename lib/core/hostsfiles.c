@@ -55,6 +55,12 @@
 
 #define HOSTS_FILE "/etc/hosts"
 
+struct hosts_file_line {
+    char           *hostname, *alias, *alias2;
+    struct in6_addr id;
+    int             lineno;
+};
+
 /**
  * "For-each" loop to iterate through /etc/hosts or HIPL_SYSCONFDIR/hosts
  * file, line by line.
