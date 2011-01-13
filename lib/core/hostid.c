@@ -445,7 +445,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
     int                  err                = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0;
     int                  dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0;
     hip_hdr              numeric_action     = 0;
-    char                 addrstr[INET6_ADDRSTRLEN], hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    char                 hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     const char          *rsa_filenamebase     = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
     const char          *dsa_filenamebase     = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
     const char          *rsa_filenamebase_pub = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
@@ -471,7 +471,6 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
         goto out_err;
     }
 
-    memset(addrstr, '\0', INET6_ADDRSTRLEN);
     memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
     if ((err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))) {
