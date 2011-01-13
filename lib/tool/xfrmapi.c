@@ -51,11 +51,11 @@ struct rtnl_handle *hip_xfrmapi_nl_ipsec;
 int hip_xfrmapi_beet;
 int hip_xfrmapi_sa_default_prefix;
 
-const char **e_algo_names;
-const char **a_algo_names;
+static const char *const *e_algo_names;
+static const char *const *a_algo_names;
 
 /* Mappings from HIP to XFRM algo names < 2.6.19 */
-const char *e_algo_names_old[] = {
+static const char *const E_ALGO_NAMES_OLD[] = {
     "reserved",
     "aes",
     "des3_ede",
@@ -64,7 +64,7 @@ const char *e_algo_names_old[] = {
     "cipher_null",
     "cipher_null"
 };
-const char *a_algo_names_old[] = {
+static const char *const A_ALGO_NAMES_OLD[] = {
     "reserved",
     "sha1",
     "sha1",
@@ -75,7 +75,7 @@ const char *a_algo_names_old[] = {
 };
 
 /* Mappings from HIP to XFRM algo names >= 2.6.19 */
-const char *e_algo_names_new[] = {
+static const char *const E_ALGO_NAMES_NEW[] = {
     "reserved",
     "cbc(aes)",
     "cbc(des3_ede)",
@@ -84,7 +84,7 @@ const char *e_algo_names_new[] = {
     "ecb(cipher_null)",
     "ecb(cipher_null)"
 };
-const char *a_algo_names_new[] = {
+static const char *const A_ALGO_NAMES_NEW[] = {
     "reserved",
     "hmac(sha1)",
     "hmac(sha1)",
@@ -489,9 +489,9 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
             struct xfrm_algo algo;
             char             buf[XFRM_ALGO_KEY_BUF_SIZE];
         } alg;
-        const char *e_name = e_algo_names[ealg];
-        const char *a_name = a_algo_names[aalg];
-        int         len;
+        const char *const e_name = e_algo_names[ealg];
+        const char *const a_name = a_algo_names[aalg];
+        int               len;
 
         HIP_ASSERT(ealg < (int) sizeof(e_algo_names));
         HIP_ASSERT(aalg < (int) sizeof(a_algo_names));
@@ -656,8 +656,8 @@ void hip_xfrm_set_default_sa_prefix_len(int len)
  */
 void hip_xfrm_set_algo_names(int new_algo_names)
 {
-    e_algo_names = new_algo_names ? e_algo_names_new : e_algo_names_old;
-    a_algo_names = new_algo_names ? a_algo_names_new : a_algo_names_old;
+    e_algo_names = new_algo_names ? E_ALGO_NAMES_NEW : E_ALGO_NAMES_OLD;
+    a_algo_names = new_algo_names ? A_ALGO_NAMES_NEW : A_ALGO_NAMES_OLD;
 }
 
 /**
