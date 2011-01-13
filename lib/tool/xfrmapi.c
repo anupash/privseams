@@ -56,19 +56,43 @@ const char **a_algo_names;
 
 /* Mappings from HIP to XFRM algo names < 2.6.19 */
 const char *e_algo_names_old[] = {
-    "reserved", "aes",         "des3_ede",   "des3_ede",
-    "blowfish", "cipher_null", "cipher_null" };
+    "reserved",
+    "aes",
+    "des3_ede",
+    "des3_ede",
+    "blowfish",
+    "cipher_null",
+    "cipher_null"
+};
 const char *a_algo_names_old[] = {
-    "reserved", "sha1", "sha1", "md5",
-    "sha1",     "sha1", "md5" };
+    "reserved",
+    "sha1",
+    "sha1",
+    "md5",
+    "sha1",
+    "sha1",
+    "md5"
+};
 
 /* Mappings from HIP to XFRM algo names >= 2.6.19 */
 const char *e_algo_names_new[] = {
-    "reserved",      "cbc(aes)",         "cbc(des3_ede)",   "cbc(des3_ede)",
-    "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)" };
+    "reserved",
+    "cbc(aes)",
+    "cbc(des3_ede)",
+    "cbc(des3_ede)",
+    "cbc(blowfish)",
+    "ecb(cipher_null)",
+    "ecb(cipher_null)"
+};
 const char *a_algo_names_new[] = {
-    "reserved",   "hmac(sha1)", "hmac(sha1)", "hmac(md5)",
-    "hmac(sha1)", "hmac(sha1)", "hmac(md5)" };
+    "reserved",
+    "hmac(sha1)",
+    "hmac(sha1)",
+    "hmac(md5)",
+    "hmac(sha1)",
+    "hmac(sha1)",
+    "hmac(md5)"
+};
 
 
 /**
