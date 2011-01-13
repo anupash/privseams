@@ -96,11 +96,14 @@ static struct hip_host_id *hip_get_dsa_public_key(const struct hip_host_id_priv 
     key_len = 64 + (T * 8);
     ret     = calloc(1, sizeof(struct hip_host_id));
 
+    /* Copy the header and key_rr header */
+    memcpy(ret, hi, sizeof(struct hip_host_id) - sizeof(ret->key) - sizeof(ret->hostname));
+
     /* the secret component of the DSA key is always 20 bytes */
     temp           = ntohs(hi->hi_length) - DSA_PRIV;
+    memcpy(ret->key, hi->key, temp);
     ret->hi_length = htons(temp);
-    memset((char *) (&ret->key) + ntohs(ret->hi_length) - sizeof(hi->rdata),
-           0, sizeof(ret->key) - ntohs(ret->hi_length));
+    memcpy(ret->hostname, hi->hostname, sizeof(ret->hostname));
     ret->length = htons(sizeof(struct hip_host_id));
 
     return ret;
