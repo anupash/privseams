@@ -615,8 +615,7 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
     }
 
-    HIP_IFEL(hip_select_source_address(
-                 &peer_map.our_addr, &peer_map.peer_addr),
+    HIP_IFEL(hip_select_source_address(&peer_map.our_addr, &peer_map.peer_addr),
              -1, "Cannot find source address\n");
 
     HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
@@ -988,13 +987,11 @@ int hip_init_peer(struct hip_hadb_state *entry,
     switch (hip_get_host_id_algo(entry->peer_pub)) {
     case HIP_HI_RSA:
         entry->verify       = hip_rsa_verify;
-        entry->peer_pub_key = hip_key_rr_to_rsa(
-            (struct hip_host_id_priv *) entry->peer_pub, 0);
+        entry->peer_pub_key = hip_key_rr_to_rsa((struct hip_host_id_priv *) entry->peer_pub, 0);
         break;
     case HIP_HI_DSA:
         entry->verify       = hip_dsa_verify;
-        entry->peer_pub_key = hip_key_rr_to_dsa(
-            (struct hip_host_id_priv *) entry->peer_pub, 0);
+        entry->peer_pub_key = hip_key_rr_to_dsa((struct hip_host_id_priv *) entry->peer_pub, 0);
         break;
     default:
         HIP_IFEL(1, -1, "Unkown algorithm");

@@ -99,14 +99,14 @@ int hip_dsa_sign(void *priv_key, struct hip_common *msg)
              -1, "Signing error\n");
 
     if (hip_get_msg_type(msg) == HIP_R1) {
-        HIP_IFEL(hip_build_param_signature2_contents(
-                     msg, signature,
-                     HIP_DSA_SIGNATURE_LEN, HIP_SIG_DSA),
+        HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
+                                                     HIP_DSA_SIGNATURE_LEN,
+                                                     HIP_SIG_DSA),
                  -1, "Building of signature failed\n");
     } else {
-        HIP_IFEL(hip_build_param_signature_contents(
-                     msg, signature,
-                     HIP_DSA_SIGNATURE_LEN, HIP_SIG_DSA),
+        HIP_IFEL(hip_build_param_signature_contents(msg, signature,
+                                                    HIP_DSA_SIGNATURE_LEN,
+                                                    HIP_SIG_DSA),
                  -1, "Building of signature failed\n");
     }
 

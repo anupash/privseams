@@ -260,14 +260,12 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_HIP_TRANSFORM)),
              -EINVAL,
              "Could not find HIP transform\n");
-    HIP_IFEL((hip_tfm = hip_select_hip_transform(
-                  (const struct hip_hip_transform *) param)) == 0,
+    HIP_IFEL((hip_tfm = hip_select_hip_transform((const struct hip_hip_transform *) param)) == 0,
              -EINVAL, "Could not select HIP transform\n");
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_ESP_TRANSFORM)),
              -EINVAL,
              "Could not find ESP transform\n");
-    HIP_IFEL((esp_tfm = hip_select_esp_transform(
-                  (const struct hip_esp_transform *) param)) == 0,
+    HIP_IFEL((esp_tfm = hip_select_esp_transform((const struct hip_esp_transform *) param)) == 0,
              -EINVAL, "Could not select proper ESP transform\n");
 
     hip_transf_length  = hip_transform_key_length(hip_tfm);

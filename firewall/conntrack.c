@@ -1386,8 +1386,9 @@ static int handle_update(const struct hip_common *common,
                         err = 0;
                         goto out_err;
                     } else {                   /* connection state is being established from update */
-                        struct esp_tuple *new_esp = esp_tuple_from_esp_info(
-                            esp_info, ip6_src, other_dir_tuple);
+                        struct esp_tuple *new_esp = esp_tuple_from_esp_info(esp_info,
+                                                                            ip6_src,
+                                                                            other_dir_tuple);
 
                         other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
                                                                       new_esp);

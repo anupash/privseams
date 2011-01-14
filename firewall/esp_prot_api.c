@@ -325,9 +325,10 @@ int esp_prot_init(void)
                                                            hash_lengths[i][j])) < 0,
                          -1,
                          "failed to register hash-length in bex-store\n");
-                HIP_IFEL((update_hash_length_id = hcstore_register_hash_length(
-                              &update_store, update_function_id,
-                              hash_lengths[i][j])) < 0, -1,
+                HIP_IFEL((update_hash_length_id = hcstore_register_hash_length(&update_store,
+                                                                               update_function_id,
+                                                                               hash_lengths[i][j])) < 0,
+                         -1,
                          "failed to register hash-length in update-store\n");
 
                 // ensure the 2 stores are in sync
@@ -343,28 +344,36 @@ int esp_prot_init(void)
 
                 /* also register the the hchain lengths for this function and this
                  * hash length */
-                HIP_IFEL(hcstore_register_hash_item_length(
-                             &bex_store, bex_function_id, bex_hash_length_id,
-                             bex_hchain_length) < 0, -1,
+                HIP_IFEL(hcstore_register_hash_item_length(&bex_store,
+                                                           bex_function_id,
+                                                           bex_hash_length_id,
+                                                           bex_hchain_length) < 0,
+                         -1,
                          "failed to register hchain-length in bex-store\n");
 
                 /* register number of hierarchies in BEX-store */
-                HIP_IFEL(hcstore_register_hash_item_hierarchy(
-                             &bex_store, bex_function_id, bex_hash_length_id,
-                             bex_hchain_length, NUM_BEX_HIERARCHIES) < 0, -1,
+                HIP_IFEL(hcstore_register_hash_item_hierarchy(&bex_store,
+                                                              bex_function_id,
+                                                              bex_hash_length_id,
+                                                              bex_hchain_length,
+                                                              NUM_BEX_HIERARCHIES) < 0,
+                         -1,
                          "failed to register hchain-hierarchy in bex-store\n");
 
                 for (g = 0; g < NUM_UPDATE_HCHAIN_LENGTHS; g++) {
-                    HIP_IFEL(hcstore_register_hash_item_length(
-                                 &update_store, update_function_id,
-                                 update_hash_length_id,
-                                 update_hchain_lengths[g]) < 0, -1,
+                    HIP_IFEL(hcstore_register_hash_item_length(&update_store,
+                                                               update_function_id,
+                                                               update_hash_length_id,
+                                                               update_hchain_lengths[g]) < 0,
+                             -1,
                              "failed to register hchain-length in update-store\n");
 
-                    HIP_IFEL(hcstore_register_hash_item_hierarchy(
-                                 &update_store, update_function_id,
-                                 update_hash_length_id, update_hchain_lengths[g],
-                                 num_hierarchies) < 0, -1,
+                    HIP_IFEL(hcstore_register_hash_item_hierarchy(&update_store,
+                                                                  update_function_id,
+                                                                  update_hash_length_id,
+                                                                  update_hchain_lengths[g],
+                                                                  num_hierarchies) < 0,
+                             -1,
                              "failed to register hchain-hierarchy in update-store\n");
                 }
             } else {
@@ -518,9 +527,8 @@ int esp_prot_sa_entry_set(struct hip_sa_entry *entry,
                 for (i = 0; i < num_parallel_hchains; i++) {
                     if (i < esp_num_anchors) {
                         HIP_IFEL(!(entry->active_hash_items[i] =
-                                       esp_prot_get_bex_item_by_anchor(
-                                           &esp_prot_anchors[i][0],
-                                           esp_prot_transform)),
+                                       esp_prot_get_bex_item_by_anchor(&esp_prot_anchors[i][0],
+                                                                       esp_prot_transform)),
                                  -1, "corresponding hchain not found\n");
                     } else {
                         entry->active_hash_items[i] = NULL;

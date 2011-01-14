@@ -205,8 +205,7 @@ static int pisa_insert_puzzle(struct hip_fw_context *ctx)
  * @param ctx context of the packet with the puzzle to check
  * @return pointer to the puzzle we accepted or NULL at failure
  */
-static struct hip_challenge_response *pisa_check_challenge_response(
-    struct hip_fw_context *ctx)
+static struct hip_challenge_response *pisa_check_challenge_response(struct hip_fw_context *ctx)
 {
     struct hip_challenge_response *response;
     struct hip_common             *hip = ctx->transport_hdr.hip;

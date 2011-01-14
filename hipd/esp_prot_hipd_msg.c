@@ -806,8 +806,7 @@ int esp_prot_r2_add_anchor(struct hip_common *r2, struct hip_hadb_state *entry)
                 memcpy(&entry->esp_local_anchors[i][0], anchor, hash_length);
                 HIP_HEXDUMP("stored local anchor: ", &entry->esp_local_anchors[i][0], hash_length);
 
-                entry->esp_local_active_length = anchor_db_get_hash_item_length(
-                    entry->esp_prot_transform);
+                entry->esp_local_active_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
                 HIP_DEBUG("entry->esp_local_active_length: %u\n",
                           entry->esp_local_active_length);
             }
@@ -1069,8 +1068,7 @@ int esp_prot_update_add_anchor(struct hip_common *update,
                 }
             }
 
-            entry->esp_local_update_length = anchor_db_get_hash_item_length(
-                entry->esp_prot_transform);
+            entry->esp_local_update_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
             HIP_DEBUG("entry->esp_local_update_length: %u\n",
                       entry->esp_local_update_length);
         }

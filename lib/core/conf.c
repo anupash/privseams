@@ -1921,14 +1921,12 @@ static int hip_conf_handle_service(struct hip_common *msg,
                      -1, "Failed to build user message header.\n");
         } else if (strcmp(opt[0], "relay") == 0) {
             HIP_INFO("Deleting HIP UDP relay service.\n");
-            HIP_IFEL(hip_build_user_hdr(
-                         msg, HIP_MSG_CANCEL_HIPRELAY, 0), -1,
-                     "Failed to build user message header.\n");
+            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CANCEL_HIPRELAY, 0),
+                     -1, "Failed to build user message header.\n");
         } else if (strcmp(opt[0], "full-relay") == 0) {
             HIP_INFO("Deleting HIP full relay service.\n");
-            HIP_IFEL(hip_build_user_hdr(
-                         msg, HIP_MSG_CANCEL_FULLRELAY, 0), -1,
-                     "Failed to build user message header.\n");
+            HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_CANCEL_FULLRELAY, 0),
+                     -1, "Failed to build user message header.\n");
         } else {
             HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
         }

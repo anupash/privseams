@@ -206,13 +206,13 @@ static int esp_prot_conntrack_cache_anchor(const struct tuple *tuple,
     HIP_DEBUG("caching update anchor(s)...\n");
 
     // needed for allocating and copying the anchors
-    conntrack_tfm = esp_prot_conntrack_resolve_transform(
-        esp_anchors[0]->transform);
-    hash_length = conntrack_tfm->hash_length;
+    conntrack_tfm = esp_prot_conntrack_resolve_transform(esp_anchors[0]->transform);
+    hash_length   = conntrack_tfm->hash_length;
 
-    HIP_IFEL(!(esp_tuple = esp_prot_conntrack_find_esp_tuple(
-                   tuple, &esp_anchors[0]->anchors[0], hash_length)), -1,
-             "failed to look up matching esp_tuple\n");
+    HIP_IFEL(!(esp_tuple = esp_prot_conntrack_find_esp_tuple(tuple,
+                                                             &esp_anchors[0]->anchors[0],
+                                                             hash_length)),
+             -1, "failed to look up matching esp_tuple\n");
 
     HIP_IFEL(!(anchor_item = calloc(1, sizeof(struct esp_anchor_item))), -1,
              "failed to allocate memory\n");
@@ -345,8 +345,7 @@ static int esp_prot_conntrack_update_anchor(const struct tuple *tuple,
 
     if (found) {
         // needed for allocating and copying the anchors
-        conntrack_tfm = esp_prot_conntrack_resolve_transform(
-            esp_tuple->esp_prot_tfm);
+        conntrack_tfm               = esp_prot_conntrack_resolve_transform(esp_tuple->esp_prot_tfm);
         hash_length                 = conntrack_tfm->hash_length;
         esp_tuple->hash_item_length = anchor_item->hash_item_length;
 
@@ -429,13 +428,12 @@ static int esp_prot_conntrack_verify_branch(const struct tuple *tuple,
     HIP_ASSERT(esp_secrets[0] != NULL);
 
     // needed for allocating and copying the anchors
-    conntrack_tfm = esp_prot_conntrack_resolve_transform(
-        esp_anchors[0]->transform);
-    hash_length = conntrack_tfm->hash_length;
+    conntrack_tfm = esp_prot_conntrack_resolve_transform(esp_anchors[0]->transform);
+    hash_length   = conntrack_tfm->hash_length;
 
-    HIP_IFEL(!(esp_tuple = esp_prot_conntrack_find_esp_tuple(
-                   tuple, &esp_anchors[0]->anchors[0],
-                   hash_length)),
+    HIP_IFEL(!(esp_tuple = esp_prot_conntrack_find_esp_tuple(tuple,
+                                                             &esp_anchors[0]->anchors[0],
+                                                             hash_length)),
              -1, "failed to look up matching esp_tuple\n");
 
     for (i = 0; i < esp_tuple->num_hchains; i++) {
@@ -644,14 +642,12 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
                 HIP_DEBUG("using esp prot transform: %u\n", esp_tuple->esp_prot_tfm);
 
                 if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED) {
-                    conntrack_tfm = esp_prot_conntrack_resolve_transform(
-                        esp_tuple->esp_prot_tfm);
+                    conntrack_tfm               = esp_prot_conntrack_resolve_transform(esp_tuple->esp_prot_tfm);
                     hash_length                 = conntrack_tfm->hash_length;
                     esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
 
                     if (esp_tuple->esp_prot_tfm == ESP_PROT_TFM_TREE) {
-                        esp_tuple->hash_tree_depth = ceil(
-                            log_x(2, esp_tuple->hash_item_length));
+                        esp_tuple->hash_tree_depth = ceil(log_x(2, esp_tuple->hash_item_length));
                         HIP_DEBUG("esp_tuple->hash_tree_depth: %i\n", esp_tuple->hash_tree_depth);
 
                         // compute full leaf set size
@@ -792,15 +788,13 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
                 HIP_DEBUG("using esp prot transform: %u\n", esp_tuple->esp_prot_tfm);
 
                 if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED) {
-                    conntrack_tfm = esp_prot_conntrack_resolve_transform(
-                        esp_tuple->esp_prot_tfm);
-                    hash_length = conntrack_tfm->hash_length;
+                    conntrack_tfm = esp_prot_conntrack_resolve_transform(esp_tuple->esp_prot_tfm);
+                    hash_length   = conntrack_tfm->hash_length;
 
                     esp_tuple->hash_item_length = ntohl(prot_anchor->hash_item_length);
 
                     if (esp_tuple->esp_prot_tfm == ESP_PROT_TFM_TREE) {
-                        esp_tuple->hash_tree_depth = ceil(
-                            log_x(2, esp_tuple->hash_item_length));
+                        esp_tuple->hash_tree_depth = ceil(log_x(2, esp_tuple->hash_item_length));
                         HIP_DEBUG("esp_tuple->hash_tree_depth: %i\n", esp_tuple->hash_tree_depth);
 
                         // compute full leaf set size
@@ -1094,8 +1088,7 @@ int esp_prot_conntrack_verify(const struct hip_fw_context *ctx,
 
     if (hip_esp_protection) {
         if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED) {
-            conntrack_tfm = esp_prot_conntrack_resolve_transform(
-                esp_tuple->esp_prot_tfm);
+            conntrack_tfm = esp_prot_conntrack_resolve_transform(esp_tuple->esp_prot_tfm);
 
             esp     = ctx->transport_hdr.esp;
             esp_len = ctx->ipq_packet->data_len - ctx->ip_hdr_len;

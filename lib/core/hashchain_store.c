@@ -421,10 +421,8 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                 htree_add_random_secrets(link_tree);
 
                 // lower items should be full by now
-                HIP_ASSERT(hip_ll_get_size(
-                               &hcstore->hchain_shelves[hash_func_id][hash_length_id].
-                               hchains[hchain_length_id][hierarchy_level - 1]) ==
-                           hcstore->num_hchains_per_item);
+                HIP_ASSERT(hip_ll_get_size(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level - 1])
+                           == hcstore->num_hchains_per_item);
 
                 // add the anchors of the next lower level as data
                 for (j = 0; j < hcstore->num_hchains_per_item; j++) {
@@ -432,8 +430,7 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                         tmp_htree = hip_ll_get(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level - 1],
                                                j);
 
-                        htree_add_data(link_tree, tmp_htree->root,
-                                       hash_length);
+                        htree_add_data(link_tree, tmp_htree->root, hash_length);
                     } else {
                         tmp_hchain = hip_ll_get(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level - 1],
                                                 j);
@@ -471,10 +468,8 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                          "failed to calculate tree nodes\n");
 
                 // add it as last element to have some circulation
-                HIP_IFEL(hip_ll_add_last(
-                             &hcstore->hchain_shelves[hash_func_id][hash_length_id].
-                             hchains[hchain_length_id][hierarchy_level], htree), -1,
-                         "failed to store new htree\n");
+                HIP_IFEL(hip_ll_add_last(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level], htree),
+                         -1, "failed to store new htree\n");
             } else {
                 // create a new hchain
                 HIP_IFEL(!(hchain = hchain_create(hash_func, hash_length,
@@ -482,10 +477,8 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                          "failed to create new hchain\n");
 
                 // add it as last element to have some circulation
-                HIP_IFEL(hip_ll_add_last(
-                             &hcstore->hchain_shelves[hash_func_id][hash_length_id].
-                             hchains[hchain_length_id][hierarchy_level], hchain), -1,
-                         "failed to store new hchain\n");
+                HIP_IFEL(hip_ll_add_last(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level], hchain),
+                         -1, "failed to store new hchain\n");
             }
         }
 

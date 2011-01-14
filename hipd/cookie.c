@@ -331,9 +331,10 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
     int                       err    = 0;
 
     /* Find the proper R1 table */
-    HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
-                   HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO,
-                   -1)),
+    HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
+                                                          &hdr->hitr,
+                                                          HIP_ANY_ALGO,
+                                                          -1)),
              -1, "Requested source HIT not (any more) available.\n");
     result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r)];
 

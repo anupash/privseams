@@ -491,20 +491,18 @@ static int hip_add_registration_server(struct hip_hadb_state *entry,
                 }
 
                 /* Allocate a new relay record. */
-                new_record = hip_relrec_alloc(
-                    type, granted_lifetime, &(entry->hit_peer),
-                    &(entry->peer_addr),
-                    entry->peer_udp_port,
-                    &(entry->hip_hmac_in));
+                new_record = hip_relrec_alloc(type, granted_lifetime,
+                                              &(entry->hit_peer),
+                                              &(entry->peer_addr),
+                                              entry->peer_udp_port,
+                                              &(entry->hip_hmac_in));
 
                 hip_relht_put(new_record);
 
                 /* Check that the put was succesful. */
                 if (hip_relht_get(new_record) != NULL) {
-                    accepted_requests[*accepted_count] =
-                        reg_types[i];
-                    accepted_lifetimes[*accepted_count] =
-                        granted_lifetime;
+                    accepted_requests[*accepted_count]  = reg_types[i];
+                    accepted_lifetimes[*accepted_count] = granted_lifetime;
                     (*accepted_count)++;
 
                     /* SAs with the registrant were causing
@@ -724,12 +722,9 @@ static int hip_add_registration_client(struct hip_hadb_state *entry, uint8_t lif
             HIP_DEBUG("The server has granted us rendezvous " \
                       "service for %u seconds (lifetime 0x%x.)\n",
                       seconds, lifetime);
-            hip_hadb_cancel_local_controls(
-                entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_GRANTED_RVS);
-            hip_del_pending_request_by_type(
-                entry, HIP_SERVICE_RENDEZVOUS);
+            hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+            hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_GRANTED_RVS);
+            hip_del_pending_request_by_type(entry, HIP_SERVICE_RENDEZVOUS);
             break;
         }
         case HIP_SERVICE_RELAY:
@@ -737,12 +732,9 @@ static int hip_add_registration_client(struct hip_hadb_state *entry, uint8_t lif
             HIP_DEBUG("The server has granted us relay " \
                       "service for %u seconds (lifetime 0x%x.)\n",
                       seconds, lifetime);
-            hip_hadb_cancel_local_controls(
-                entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_GRANTED_RELAY);
-            hip_del_pending_request_by_type(
-                entry, HIP_SERVICE_RELAY);
+            hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+            hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_GRANTED_RELAY);
+            hip_del_pending_request_by_type(entry, HIP_SERVICE_RELAY);
             break;
         }
         case HIP_SERVICE_FULLRELAY:
@@ -750,12 +742,9 @@ static int hip_add_registration_client(struct hip_hadb_state *entry, uint8_t lif
             HIP_DEBUG("The server has granted us full relay " \
                       "service for %u seconds (lifetime 0x%x.)\n",
                       seconds, lifetime);
-            hip_hadb_cancel_local_controls(
-                entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_GRANTED_FULLRELAY);
-            hip_del_pending_request_by_type(
-                entry, HIP_SERVICE_FULLRELAY);
+            hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
+            hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_GRANTED_FULLRELAY);
+            hip_del_pending_request_by_type(entry, HIP_SERVICE_FULLRELAY);
             /* Delete SAs with relay server to
              * avoid problems with ESP relay*/
             entry->disable_sas = 1;
@@ -768,12 +757,9 @@ static int hip_add_registration_client(struct hip_hadb_state *entry, uint8_t lif
             HIP_DEBUG("The server has granted us an unknown " \
                       "service for %u seconds (lifetime 0x%x.)\n",
                       seconds, lifetime);
-            hip_hadb_cancel_local_controls(
-                entry, HIP_HA_CTRL_LOCAL_REQ_UNSUP);
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_GRANTED_UNSUP);
-            hip_del_pending_request_by_type(
-                entry, reg_types[i]);
+            hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_UNSUP);
+            hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_GRANTED_UNSUP);
+            hip_del_pending_request_by_type(entry, reg_types[i]);
             break;
         }
         }
@@ -809,20 +795,16 @@ static int hip_del_registration_client(struct hip_hadb_state *entry,
         {
             HIP_DEBUG("The server has cancelled our rendezvous " \
                       "service.\n");
-            hip_hadb_cancel_local_controls(
-                entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
-            hip_del_pending_request_by_type(
-                entry, HIP_SERVICE_RENDEZVOUS);
+            hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+            hip_del_pending_request_by_type(entry, HIP_SERVICE_RENDEZVOUS);
             break;
         }
         case HIP_SERVICE_RELAY:
         {
             HIP_DEBUG("The server has cancelled our relay " \
                       "service.\n");
-            hip_hadb_cancel_local_controls(
-                entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
-            hip_del_pending_request_by_type(
-                entry, HIP_SERVICE_RELAY);
+            hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+            hip_del_pending_request_by_type(entry, HIP_SERVICE_RELAY);
 
             break;
         }
@@ -830,10 +812,8 @@ static int hip_del_registration_client(struct hip_hadb_state *entry,
         {
             HIP_DEBUG("The server has cancelled our full relay " \
                       "service.\n");
-            hip_hadb_cancel_local_controls(
-                entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
-            hip_del_pending_request_by_type(
-                entry, HIP_SERVICE_FULLRELAY);
+            hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
+            hip_del_pending_request_by_type(entry, HIP_SERVICE_FULLRELAY);
 
             break;
         }
@@ -915,26 +895,22 @@ int hip_handle_param_reg_info(struct hip_hadb_state *entry,
         case HIP_SERVICE_RENDEZVOUS:
             HIP_INFO("Responder offers rendezvous service.\n");
 
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
+            hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
 
             break;
         case HIP_SERVICE_RELAY:
             HIP_INFO("Responder offers relay service.\n");
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+            hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
 
             break;
         case HIP_SERVICE_FULLRELAY:
             HIP_INFO("Responder offers full relay service.\n");
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE);
+            hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_FULLRELAY_CAPABLE);
 
             break;
         default:
             HIP_INFO("Responder offers unsupported service.\n");
-            hip_hadb_set_peer_controls(
-                entry, HIP_HA_CTRL_PEER_UNSUP_CAPABLE);
+            hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_UNSUP_CAPABLE);
         }
     }
 
@@ -1127,15 +1103,16 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
     memset(failure_types,      0, sizeof(uint8_t) * type_count);
 
     if (reg_request->lifetime == 0) {
-        hip_del_registration_server(
-            entry, reg_types, type_count, accepted_requests,
-            &accepted_count, refused_requests, failure_types,
-            &refused_count);
+        hip_del_registration_server(entry, reg_types, type_count,
+                                    accepted_requests, &accepted_count,
+                                    refused_requests, failure_types,
+                                    &refused_count);
     } else {
-        hip_add_registration_server(
-            entry, reg_request->lifetime, reg_types, type_count,
-            accepted_requests, accepted_lifetimes, &accepted_count,
-            refused_requests, failure_types, &refused_count);
+        hip_add_registration_server(entry, reg_request->lifetime, reg_types,
+                                    type_count, accepted_requests,
+                                    accepted_lifetimes, &accepted_count,
+                                    refused_requests, failure_types,
+                                    &refused_count);
     }
 
     HIP_DEBUG("Number of accepted service requests: %d, number of refused " \
@@ -1179,9 +1156,8 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
                 }
             }
             if (to_be_build_count > 0) {
-                hip_build_param_reg_failed(
-                    target_msg, type_to_check[i],
-                    reg_types_to_build, to_be_build_count);
+                hip_build_param_reg_failed(target_msg, type_to_check[i],
+                                           reg_types_to_build, to_be_build_count);
             }
         }
     }
@@ -1344,46 +1320,35 @@ int hip_handle_param_reg_failed(struct hip_hadb_state *entry,
             {
                 HIP_DEBUG("The server has refused to grant us " \
                           "rendezvous service.\n%s\n", reason);
-                hip_hadb_cancel_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
-                hip_del_pending_request_by_type(
-                    entry, HIP_SERVICE_RENDEZVOUS);
-                hip_hadb_set_peer_controls(
-                    entry, HIP_HA_CTRL_PEER_REFUSED_RVS);
+                hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+                hip_del_pending_request_by_type(entry, HIP_SERVICE_RENDEZVOUS);
+                hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_REFUSED_RVS);
                 break;
             }
             case HIP_SERVICE_RELAY:
             {
                 HIP_DEBUG("The server has refused to grant us " \
                           "relay service.\n%s\n", reason);
-                hip_hadb_cancel_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
-                hip_del_pending_request_by_type(
-                    entry, HIP_SERVICE_RELAY);
-                hip_hadb_set_peer_controls(
-                    entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
+                hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+                hip_del_pending_request_by_type(entry, HIP_SERVICE_RELAY);
+                hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_REFUSED_RELAY);
                 break;
             }
             case HIP_SERVICE_FULLRELAY:
             {
                 HIP_DEBUG("The server has refused to grant us " \
                           "full relay service.\n%s\n", reason);
-                hip_hadb_cancel_local_controls(
-                    entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
-                hip_del_pending_request_by_type(
-                    entry, HIP_SERVICE_FULLRELAY);
-                hip_hadb_set_peer_controls(
-                    entry, HIP_HA_CTRL_PEER_REFUSED_FULLRELAY);
+                hip_hadb_cancel_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_FULLRELAY);
+                hip_del_pending_request_by_type(entry, HIP_SERVICE_FULLRELAY);
+                hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_REFUSED_FULLRELAY);
                 break;
             }
             default:
                 HIP_DEBUG("The server has refused to grant us " \
                           "an unknown service (%u).\n%s\n",
                           reg_types[i], reason);
-                hip_del_pending_request_by_type(
-                    entry, reg_types[i]);
-                hip_hadb_set_peer_controls(
-                    entry, HIP_HA_CTRL_PEER_REFUSED_UNSUP);
+                hip_del_pending_request_by_type(entry, reg_types[i]);
+                hip_hadb_set_peer_controls(entry, HIP_HA_CTRL_PEER_REFUSED_UNSUP);
                 break;
             }
         }
