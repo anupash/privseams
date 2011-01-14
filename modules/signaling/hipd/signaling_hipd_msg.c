@@ -85,7 +85,7 @@ int signaling_get_update_type(hip_common_t *msg) {
 
     if (param_app_ctx && param_seq) {
         return SIGNALING_FIRST_BEX_UPDATE;
-    } else if (param_app_ctx && param_seq) {
+    } else if (param_app_ctx && param_ack) {
         return SIGNALING_SECOND_BEX_UPDATE;
     } else if (param_cert && param_seq) {
         return SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE;
@@ -126,8 +126,9 @@ static hip_common_t *build_update_message(hip_ha_t *ha, const int type, struct s
             -1, "Building of APPInfo parameter failed\n");
 
     /* Add Userinfo */
-    HIP_IFEL(signaling_build_param_user_context(msg_buf, &ctx->user_ctx),
-            -1, "Building of userinfo parameter for I2 failed.\n");
+    if(signaling_build_param_user_context(msg_buf, &ctx->user_ctx)) {
+        HIP_DEBUG("Building of userinfo parameter for I2 failed.\n");
+    }
 
     /* Add host authentication */
     HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
@@ -137,7 +138,7 @@ static hip_common_t *build_update_message(hip_ha_t *ha, const int type, struct s
 
     /* Add user authentication */
     HIP_IFEL(signaling_build_param_user_signature(msg_buf, ctx->user_ctx.euid),
-             -1, "User failed to sign UPDATE.\n");
+             0, "User failed to sign UPDATE.\n");
 
 out_err:
     if(err) {
@@ -645,6 +646,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_DEBUG("Received FIRST BEX Update... \n");
         HIP_IFEL(signaling_verify_user_signature(ctx->input_msg),
                  -1, "Could not verify user's signature in update packet.");
+        HIP_DEBUG("Correctly verified user signature in UPDATE \n");
         HIP_IFEL(signaling_send_second_update(ctx->input_msg),
                  -1, "failed to trigger second bex update. \n");
     } else if (update_type == SIGNALING_SECOND_BEX_UPDATE) {
