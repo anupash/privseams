@@ -61,7 +61,6 @@ static void get_free_user_certchain_hash_path(X509_NAME *subject, char *const bu
     struct stat buf_stat;
     int i = 0;
     get_user_certchain_hash_path(subject, buf);
-    HIP_DEBUG("paaaath: %s \n", buf);
     while (!stat(buf, &buf_stat) && i < 10) {
         i++;
         sprintf(buf + sizeof(CERTIFICATE_INDEX_USER_DIR) + CERTIFICATE_INDEX_HASH_LENGTH - 1, ".%d", i);
@@ -79,18 +78,30 @@ static void get_free_user_certchain_name_path(X509_NAME *subject, char *const bu
     struct stat stat_buf;
 
     strcat(buf, CERTIFICATE_INDEX_USER_DIR);
+    memset(name_buf, 0, 128);
     X509_NAME_get_text_by_NID(subject, NID_commonName, name_buf, 127);
     name_buf[127] = '\0';
     name_len = strlen(name_buf);
+    if (name_len == 0) {
+        X509_NAME_get_text_by_NID(subject, NID_organizationName, name_buf, 127);
+        name_buf[127] = '\0';
+        name_len = strlen(name_buf);
+    }
     strcat(buf, name_buf);
     strcat(buf, ".cert.0");
 
+    HIP_DEBUG("Path: %s \n", buf);
     while (!stat(buf, &stat_buf) && i < 10) {
         i++;
         sprintf(buf + sizeof(CERTIFICATE_INDEX_USER_DIR) + name_len - 1, ".cert.%d", i);
     }
 }
 
+/**
+ * Compare two certificate chains.
+ *
+ * @return 0 if they match, -1 otherwise
+ */
 static int certificate_chain_cmp(STACK_OF(X509) *c1, STACK_OF(X509) *c2) {
     int i = 0;
     const X509 *cert1 = NULL;
@@ -116,6 +127,9 @@ static int certificate_chain_cmp(STACK_OF(X509) *c1, STACK_OF(X509) *c2) {
  * We consider two chains as equal if all certificates from the shorter chain,
  * match with the certificates from the other chain.
  *
+ * @note    The given certificate chain should have the leaf certificate at the bottom
+ *          of the stack.
+ *
  * TODO: update if we got a matching longer certificate chain
  * @return 1 if we have a matching certificate chain, 0 if not
  */
@@ -126,7 +140,11 @@ static int signaling_have_user_cert_chain(STACK_OF(X509) *cert_chain) {
     X509_NAME *x509_subj_name = NULL;
     STACK_OF(X509) *local_chain = NULL;
 
-    cert = sk_X509_value(cert_chain, 0);
+    if (sk_X509_num(cert_chain) <= 0) {
+        return 1;
+    }
+
+    cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain)-1);
     x509_subj_name = X509_get_subject_name(cert);
     memset(path_buf, 0, PATH_MAX);
     get_user_certchain_hash_path(x509_subj_name, path_buf);
@@ -142,6 +160,15 @@ static int signaling_have_user_cert_chain(STACK_OF(X509) *cert_chain) {
     return 0;
 }
 
+/**
+ * Save a stack of certificates to a file.
+ * The order in which certificates are saved is the order in which they come from the stack,
+ * i.e. the certificate at the top of the stack will be at the bottom of the file.
+ *
+ * @cert_chain  the certificate chain, which is saved
+ * @filename    the file to which the certificate chain is written
+ * @return      0 on success, negative if there was an error opening the destination file for writing
+ */
 static int save_user_cert_chain(STACK_OF(X509) *cert_chain, const char *filename) {
     int err = 0;
     int i = 0;
@@ -158,6 +185,18 @@ out_err:
     return err;
 }
 
+void stack_reverse(STACK_OF(X509) **cert_chain) {
+    int i = 0;
+    STACK_OF(X509) *ret = NULL;
+    ret = sk_X509_new_null();
+
+    for (i = sk_X509_num(*cert_chain)-1; i>=0; i--) {
+        sk_X509_push(ret, sk_X509_pop(*cert_chain));
+    }
+    sk_X509_free(*cert_chain);
+    *cert_chain = ret;
+}
+
 /**
  * @return 0 if the certificate chain has been added or if we have it already
  *         negative if an error occurs
@@ -170,27 +209,33 @@ int signaling_add_user_certificate_chain(STACK_OF(X509) *cert_chain) {
     char dst_path[PATH_MAX];
     char dst_hash_path[PATH_MAX];
 
+    if (sk_X509_num(cert_chain) <= 0) {
+        return 0;
+    }
+
     /* write the certificates to a file */
-    cert = sk_X509_value(cert_chain, 0);
+    cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain)-1);
     x509_subj_name = X509_get_subject_name(cert);
     X509_NAME_oneline(x509_subj_name, subj_name, 128);
     HIP_DEBUG("Got certificate chain for user: %s\n", subj_name);
 
     if (signaling_have_user_cert_chain(cert_chain)) {
+        HIP_DEBUG("Already have user's certificate chain \n");
         return 0;
     }
 
     /* construct the destination path */
+    memset(dst_path, 0, PATH_MAX);
     get_free_user_certchain_name_path(x509_subj_name, dst_path);
+    HIP_DEBUG("User's certificate chain is new, saving to file: %s.\n", dst_path);
     HIP_IFEL(save_user_cert_chain(cert_chain, dst_path),
              -1, "Could not save certificate chain to file \n");
     memset(dst_hash_path, 0, PATH_MAX);
     get_free_user_certchain_hash_path(x509_subj_name, dst_hash_path);
-    HIP_DEBUG("destination path : %s \n", dst_hash_path);
     if(symlink(dst_path, dst_hash_path)) {
-        HIP_DEBUG("Successfully created symlink: %s -> %s \n", dst_hash_path, dst_path);
-    } else {
         HIP_DEBUG("Failed creating symlink: %s -> %s \n", dst_hash_path, dst_path);
+    } else {
+        HIP_DEBUG("Successfully created symlink: %s -> %s \n", dst_hash_path, dst_path);
     }
 
 out_err:
@@ -202,9 +247,11 @@ out_err:
  * Load a chain of certificates from a file.
  * Certificates need to be pasted one after another into the file.
  *
+ *
  * @param certfile  the file which contains the certificate chain
  *
- * @return          a stack of x509 certificates
+ * @return          a stack of x509 certificates, where the certificate
+                    at the bottom of the file will be at the top of the returned stack
  *
  * @note            Code is adapted from openssl's load_untrusted function.
  * */
@@ -219,7 +266,7 @@ STACK_OF(X509) *signaling_load_certificate_chain(char *certfile)
     HIP_IFEL(!(stack = sk_X509_new_null()),
              -1, "memory allocation failure\n");
     HIP_IFEL(!(fp=fopen(certfile, "r")),
-             -1, "error opening the file, %s\n", certfile);
+             -1, "No certificate chain at file, %s\n", certfile);
 
     /* This loads from a file, a stack of x509/crl/pkey sets */
     HIP_IFEL(!(sk = PEM_X509_INFO_read(fp,NULL,NULL,NULL)),
@@ -326,7 +373,7 @@ int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const p
 
     /* Go through the certificate index */
     while ((cert_chain = signaling_load_certificate_chain(hash_filename)) != NULL) {
-        leaf_cert = sk_X509_value(cert_chain, 0);
+        leaf_cert = sk_X509_pop(cert_chain);
         cert_pub_key = X509_get_pubkey(leaf_cert);
         if (EVP_PKEY_cmp(cert_pub_key, pub_key) == 1) {
             break;
@@ -337,7 +384,7 @@ int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const p
 
         /* move to next possible certificate */
         i++;
-        hash_filename[sizeof(CERTIFICATE_INDEX_USER_DIR) + CERTIFICATE_INDEX_HASH_LENGTH] = (char) i;
+        sprintf(hash_filename + sizeof(CERTIFICATE_INDEX_USER_DIR) + CERTIFICATE_INDEX_HASH_LENGTH - 1, ".%i", i);
         HIP_DEBUG("Looking up certificates index at: %s\n", hash_filename);
     }
 

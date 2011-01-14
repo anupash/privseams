@@ -16,6 +16,7 @@ int signaling_add_user_certificate_chain(STACK_OF(X509) *cert_chain);
 
 /* Util functions */
 STACK_OF(X509) *signaling_load_certificate_chain(char *certfile);
+void stack_reverse(STACK_OF(X509) **cert_chain);
 
 /* Verify that a public key belongs to a specific subject. */
 int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const pub_key, X509 **user_cert);

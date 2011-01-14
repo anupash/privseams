@@ -569,6 +569,8 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
         /* check if we have received the last cert */
         if (sk_X509_num(cert_chain) == param_cert->cert_count) {
             HIP_DEBUG("received complete certificate, now saving %d certs \n", sk_X509_num(cert_chain));
+            /* we have to reorder the stack one time... */
+            stack_reverse(&cert_chain);
             signaling_add_user_certificate_chain(cert_chain);
 
             sig_state->user_ctx.group = -1;
