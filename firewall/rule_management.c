@@ -457,7 +457,7 @@ out_err:
  *
  * @return      0 on success, negative on error
  */
-static int load_ecdsa_file(FILE *fp, struct hip_host_id *hi)
+static int load_ecdsa_file(FILE *fp, struct hip_host_id *const hi)
 {
     int err                     = 0;
     EC_KEY *ecdsa               = NULL;
