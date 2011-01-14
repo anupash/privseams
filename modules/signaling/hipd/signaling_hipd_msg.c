@@ -42,6 +42,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/ife.h"
 #include "lib/core/prefix.h"
+#include "lib/core/hostid.h"
 #include "lib/core/icomm.h"
 #include "lib/core/hip_udp.h"
 #include "lib/core/crypto.h"
@@ -53,6 +54,7 @@
 
 #include "modules/update/hipd/update.h"
 #include "modules/signaling/lib/signaling_common_builder.h"
+
 #include "modules/signaling/lib/signaling_oslayer.h"
 #include "modules/signaling/lib/signaling_user_api.h"
 #include "modules/signaling/lib/signaling_user_management.h"
@@ -464,6 +466,8 @@ out_err:
 static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     int err = 0;
+    const struct signaling_param_user_context *param_usr_ctx = NULL;
+    struct signaling_hipd_state * sig_state = NULL;
 
     err = signaling_verify_user_signature(ctx->input_msg);
     switch (err) {
@@ -476,10 +480,17 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
     default:
         HIP_DEBUG("Could not verify certifcate chain:\n");
         HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
+        /* cache the user identity */
+        HIP_IFEL(!(param_usr_ctx = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO)),
+                 -1, " error getting user context. \n");
+        HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+                 -1, "failed to retrieve state for signaling module\n");
+        signaling_build_user_context(param_usr_ctx, &sig_state->user_ctx);
         HIP_DEBUG("Requesting user's certificate chain.\n");
         signaling_send_user_auth_failed_ntf(ctx->hadb_entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
     }
 
+out_err:
     return err;
 }
 
@@ -518,7 +529,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
 
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling ports\n");
-    if (sig_state->user_ctx.user_certificate_required) {
+    if (sig_state->user_cert_ctx.user_certificate_required) {
         signaling_send_user_certificate_chain(ctx->hadb_entry);
     }
 out_err:
@@ -536,6 +547,10 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
     X509 *cert = NULL;
     STACK_OF(X509) *cert_chain = NULL;
     struct signaling_hipd_state *sig_state = NULL;
+    struct hip_host_id pseudo_ui;
+    EVP_PKEY *pkey = NULL;
+    X509_NAME *subject_name = NULL;
+
     /* sanity checks */
     HIP_IFEL(!ctx->input_msg,  -1, "Message is NULL\n");
 
@@ -544,21 +559,21 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
              0, "Message contains no certificate (second certificate update (ACK) \n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state\n");
-    if (!sig_state->user_ctx.cert_chain) {;
-        HIP_IFEL(!(sig_state->user_ctx.cert_chain = sk_X509_new_null()),
+    if (!sig_state->user_cert_ctx.cert_chain) {;
+        HIP_IFEL(!(sig_state->user_cert_ctx.cert_chain = sk_X509_new_null()),
                  -1, "memory allocation failure\n");
     }
-    cert_chain = sig_state->user_ctx.cert_chain;
+    cert_chain = sig_state->user_cert_ctx.cert_chain;
     while(param_cert != NULL && hip_get_param_type((const struct hip_tlv_common *) param_cert) == HIP_PARAM_CERT) {
         HIP_DEBUG("Got certificate %d from a group of %d certificates \n", param_cert->cert_id, param_cert->cert_count);
         HIP_IFEL(signaling_DER_to_X509((const unsigned char *) (param_cert + 1), ntohs(param_cert->length) - sizeof(struct hip_cert) + sizeof(struct hip_tlv_common), &cert),
                  -1, "Could not decode certificate");
         /* set group if this is the beginning of a cert exchange */
-        if (sig_state->user_ctx.group == -1) {
-            sig_state->user_ctx.group = param_cert->cert_group;
+        if (sig_state->user_cert_ctx.group == -1) {
+            sig_state->user_cert_ctx.group = param_cert->cert_group;
         }
         /* check cert belongs to the group we're currently receiving */
-        if (sig_state->user_ctx.group != param_cert->cert_group) {
+        if (sig_state->user_cert_ctx.group != param_cert->cert_group) {
             HIP_DEBUG("Received certificate from wrong group, discarding... \n");
             continue;
         }
@@ -571,11 +586,36 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
             HIP_DEBUG("received complete certificate, now saving %d certs \n", sk_X509_num(cert_chain));
             /* we have to reorder the stack one time... */
             stack_reverse(&cert_chain);
-            signaling_add_user_certificate_chain(cert_chain);
 
-            sig_state->user_ctx.group = -1;
-            sig_state->user_ctx.user_certificate_required = 0;
-            sig_state->user_ctx.cert_chain = NULL;
+            /* Now verify the user identity with the certificate chain
+             * We need to construct a temporary host_id struct since, all key_rr_to_xxx functions take this as argument.
+             * However, we need only to fill in hi_length, algorithm and the key rr. */
+            pseudo_ui.hi_length = sig_state->user_ctx.key_rr_len;
+            pseudo_ui.rdata.algorithm = sig_state->user_ctx.rdata.algorithm;
+            // note: the + 1 moves the pointer behind the parameter, where the key rr begins
+            memcpy(pseudo_ui.key,
+                   sig_state->user_ctx.pkey,
+                   sig_state->user_ctx.key_rr_len - sizeof(struct hip_host_id_key_rdata));
+            HIP_IFEL(!(pkey = hip_key_rr_to_evp_key(&pseudo_ui, 0)), -1, "Could not deserialize users public key\n");
+            PEM_write_PUBKEY(stderr, pkey);
+            cert = sk_X509_pop(cert_chain);
+            HIP_IFEL(signaling_DER_to_X509_NAME(sig_state->user_ctx.subject_name, sig_state->user_ctx.subject_name_len, &subject_name),
+                     -1, "Could not get users X509 name");
+            HIP_IFEL(signaling_user_api_verify_pubkey(subject_name, pkey, cert, 1),
+                     -1, "Could not verify users public key with received certificate chain\n");
+            if (!verify_certificate_chain(cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain)) {
+                /* Public key verification was successful, so we save the chain */
+                sk_X509_push(cert_chain, cert);
+                signaling_add_user_certificate_chain(cert_chain);
+            } else {
+                HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
+                free(cert);
+            }
+
+            /* Reset the certificate context for this HA */
+            sig_state->user_cert_ctx.group = -1;
+            sig_state->user_cert_ctx.user_certificate_required = 0;
+            sig_state->user_cert_ctx.cert_chain = NULL;
             sk_X509_free(cert_chain);
             cert_chain = NULL;
         }
@@ -603,6 +643,8 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
     /* Handle the different update types */
     if(update_type == SIGNALING_FIRST_BEX_UPDATE) {
         HIP_DEBUG("Received FIRST BEX Update... \n");
+        HIP_IFEL(signaling_verify_user_signature(ctx->input_msg),
+                 -1, "Could not verify user's signature in update packet.");
         HIP_IFEL(signaling_send_second_update(ctx->input_msg),
                  -1, "failed to trigger second bex update. \n");
     } else if (update_type == SIGNALING_SECOND_BEX_UPDATE) {
@@ -633,7 +675,7 @@ int signaling_handle_incoming_notification(UNUSED const uint8_t packet_type, UNU
     ntf_data = (const struct signaling_ntf_user_auth_failed_data *) ntf->data;
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling module \n");
-    sig_state->user_ctx.user_certificate_required = 1;
+    sig_state->user_cert_ctx.user_certificate_required = 1;
 
 out_err:
     return err;

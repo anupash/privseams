@@ -18,7 +18,6 @@
 struct user_certificate_context {
     /* Flag to save whether we need to send our user certificate after BEX or UPDATE is completed */
     int user_certificate_required;
-
     int group;
     STACK_OF(X509) *cert_chain;
 };
@@ -30,8 +29,9 @@ struct signaling_hipd_state {
     /* Holds the connection context for the connection that is currently being established */
     struct signaling_connection_context ctx;
     /* Collects user certificates accross multiple updates */
-    struct user_certificate_context user_ctx;
-
+    struct user_certificate_context user_cert_ctx;
+    /* Holds the user context for the  the connection that is currently being established */
+    struct signaling_user_context user_ctx;
 };
 
 int signaling_hipd_init_state(struct modular_state *state);

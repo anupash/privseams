@@ -35,9 +35,11 @@ int signaling_hipd_init_state(struct modular_state *state)
     sig_state->ctx.user_ctx.euid            = -1;
     sig_state->ctx.app_ctx.pid              = -1;
 
-    sig_state->user_ctx.user_certificate_required    = 0;
-    sig_state->user_ctx.cert_chain                   = NULL;
-    sig_state->user_ctx.group                        = -1;
+    sig_state->user_cert_ctx.user_certificate_required    = 0;
+    sig_state->user_cert_ctx.cert_chain                   = NULL;
+    sig_state->user_cert_ctx.group                        = -1;
+
+    signaling_init_user_context(&sig_state->user_ctx);
 
     err = lmod_add_state_item(state, sig_state, "signaling_hipd_state");
 

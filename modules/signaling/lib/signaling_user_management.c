@@ -25,16 +25,10 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 
+#include "signaling_common_builder.h"
 #include "signaling_prot_common.h"
 #include "signaling_user_management.h"
 #include "signaling_user_api.h"
-
-#define CERTIFICATE_INDEX_HASH_LENGTH   8
-#define CERTIFICATE_INDEX_SUFFIX_LENGTH 4
-
-#define CERTIFICATE_INDEX_USER_DIR      HIPL_SYSCONFDIR "/user_certchains/"
-#define CERTIFICATE_INDEX_TRUSTED_DIR   HIPL_SYSCONFDIR "/trusted_certs/"
-#define CERTIFICATE_INDEX_CERT_SUFFIX   ".0"
 
 /**
  * Get the short hash of a X509 name.
@@ -169,7 +163,7 @@ static int signaling_have_user_cert_chain(STACK_OF(X509) *cert_chain) {
  * @filename    the file to which the certificate chain is written
  * @return      0 on success, negative if there was an error opening the destination file for writing
  */
-static int save_user_cert_chain(STACK_OF(X509) *cert_chain, const char *filename) {
+int signaling_save_certificate_chain(STACK_OF(X509) *cert_chain, const char *filename) {
     int err = 0;
     int i = 0;
     FILE *fp = NULL;
@@ -228,7 +222,7 @@ int signaling_add_user_certificate_chain(STACK_OF(X509) *cert_chain) {
     memset(dst_path, 0, PATH_MAX);
     get_free_user_certchain_name_path(x509_subj_name, dst_path);
     HIP_DEBUG("User's certificate chain is new, saving to file: %s.\n", dst_path);
-    HIP_IFEL(save_user_cert_chain(cert_chain, dst_path),
+    HIP_IFEL(signaling_save_certificate_chain(cert_chain, dst_path),
              -1, "Could not save certificate chain to file \n");
     memset(dst_hash_path, 0, PATH_MAX);
     get_free_user_certchain_hash_path(x509_subj_name, dst_hash_path);
@@ -347,9 +341,12 @@ out_err:
 /**
  * Try to verify the public key of given user.
  *
+ * @param no_chain  1 if we only want to match the public key against a certificate
+ *                  0 if we want to verify that certificate (and its chain) too
+ *
  * @return 0 if a certificate chain could be build and verified, a non-zero error code otherwise
  */
-int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const pub_key, UNUSED X509 **user_cert)
+int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const pub_key, X509 *user_cert, int no_chain)
 {
     int err = 0;
     int i = 0;
@@ -371,6 +368,19 @@ int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const p
     HIP_DEBUG("Verifying public key of subject: %s \n", name);
     HIP_DEBUG("Looking up certificates index beginning at: %s\n", hash_filename);
 
+    if (no_chain && user_cert) {
+        HIP_DEBUG("Matching public key against supplied certificate only.\n");
+        cert_pub_key = X509_get_pubkey(user_cert);
+        if (EVP_PKEY_cmp(cert_pub_key, pub_key) == 1) {
+            HIP_DEBUG("Certificates match.\n");
+            return 0;
+        } else {
+            return -1;
+        }
+    } else if (no_chain && !user_cert) {
+        HIP_DEBUG("Matching public key against certificates from certificate dir.\n");
+    }
+
     /* Go through the certificate index */
     while ((cert_chain = signaling_load_certificate_chain(hash_filename)) != NULL) {
         leaf_cert = sk_X509_pop(cert_chain);
@@ -385,16 +395,19 @@ int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const p
         /* move to next possible certificate */
         i++;
         sprintf(hash_filename + sizeof(CERTIFICATE_INDEX_USER_DIR) + CERTIFICATE_INDEX_HASH_LENGTH - 1, ".%i", i);
-        HIP_DEBUG("Looking up certificates index at: %s\n", hash_filename);
     }
 
     if (!leaf_cert) {
         return SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED;
     }
 
-    HIP_DEBUG("Found matching certificate, now verifying certificate chain.\n");
-
-    err = verify_certificate_chain(leaf_cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain);
+    if (!no_chain) {
+        HIP_DEBUG("Found matching certificate in user cert directory.\n");
+        return 0;
+    } else {
+        HIP_DEBUG("Found matching certificate, now verifying certificate chain.\n");
+        return verify_certificate_chain(leaf_cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain);
+    }
 
 out_err:
     return err;
@@ -427,7 +440,7 @@ int signaling_verify_user_signature(struct hip_common *msg) {
     HIP_DEBUG("Verifying signature using following public key: \n");
     PEM_write_PUBKEY(stderr, pkey);
 
-    /* No modify the packet to verify signature */
+    /* Now modify the packet to verify signature */
     HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
              -1, "Packet contains no user signature\n");
     hash_range_len = ((const uint8_t *) param_user_signature) - ((const uint8_t *) msg);
@@ -465,7 +478,7 @@ int signaling_verify_user_signature(struct hip_common *msg) {
              -1, "Could not decode to x509 name.");
 
     /* Request the user to send his certificate chain if there was an error */
-    err = signaling_user_api_verify_pubkey(subject_name, pkey, NULL);
+    err = signaling_user_api_verify_pubkey(subject_name, pkey, NULL, 0);
 
 out_err:
     hip_set_msg_total_len(msg, orig_len);

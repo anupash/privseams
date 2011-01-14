@@ -11,15 +11,23 @@
 
 #include <sys/types.h>
 
+#define CERTIFICATE_INDEX_HASH_LENGTH   8
+#define CERTIFICATE_INDEX_SUFFIX_LENGTH 4
+
+#define CERTIFICATE_INDEX_USER_DIR      HIPL_SYSCONFDIR "/user_certchains/"
+#define CERTIFICATE_INDEX_TRUSTED_DIR   HIPL_SYSCONFDIR "/trusted_certs/"
+#define CERTIFICATE_INDEX_CERT_SUFFIX   ".0"
+
 /* User certificate management functions */
 int signaling_add_user_certificate_chain(STACK_OF(X509) *cert_chain);
 
 /* Util functions */
 STACK_OF(X509) *signaling_load_certificate_chain(char *certfile);
+int signaling_save_certificate_chain(STACK_OF(X509) *cert_chain, const char *filename);
 void stack_reverse(STACK_OF(X509) **cert_chain);
 
 /* Verify that a public key belongs to a specific subject. */
-int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const pub_key, X509 **user_cert);
+int signaling_user_api_verify_pubkey(X509_NAME *subject, const EVP_PKEY *const pub_key, X509 *user_cert, int no_chain);
 
 /* Verify a certificate chain */
 int verify_certificate_chain(X509 *leaf_cert, const char *trusted_lookup_dir, STACK_OF(X509) *trusted_chain, STACK_OF(X509) *untrusted_chain);
