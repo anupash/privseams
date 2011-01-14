@@ -28,7 +28,7 @@
 
 /* Workaround for kernels before 2.6.15.3. */
 #ifndef IPV6_2292PKTINFO
-#  define IPV6_2292PKTINFO 2
+#define IPV6_2292PKTINFO 2
 #endif
 
 #include <netinet/in.h>
@@ -43,10 +43,6 @@
 #define HIP_DAEMON_LOCAL_PORT                  973
 #define HIP_FIREWALL_SYNC_PORT                 974
 
-
-#define HIP_MSG_GLOBAL_OPT 1
-#define HIP_MSG_SOCKET_OPT 2
-#define HIP_MSG_GET_HIT_LIST 3
 
 /** @defgroup hip_so HIP socket options
  * Define a constant HIP_MSG_NEWMODE which has value
@@ -193,7 +189,5 @@
 
 /* inclusive */
 #define HIP_MSG_ROOT_MAX                         255
-
-#define FLUSH_HA_INFO_DB                        1
 
 #endif /* HIP_LIB_CORE_ICOMM_H */

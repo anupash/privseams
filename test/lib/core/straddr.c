@@ -42,7 +42,7 @@ START_TEST(test_hip_in6_ntop_valid)
         char null[1];               // terminating null character
         char after[GUARD_SIZE];
     } buf;
-    char ones[GUARD_SIZE];
+    char            ones[GUARD_SIZE];
     struct in6_addr in6;
 
     memset(&buf, '1', sizeof(buf));
@@ -81,7 +81,7 @@ END_TEST
 
 START_TEST(test_hip_convert_string_to_address_valid)
 {
-    const char *str = "fe80::215:58ff:fe29:9c36";
+    const char     *str = "fe80::215:58ff:fe29:9c36";
     struct in6_addr ip;
 
     fail_unless(hip_convert_string_to_address(str, &ip) == 0, NULL);
@@ -106,7 +106,7 @@ END_TEST
 
 START_TEST(test_hip_convert_string_to_address_invalid)
 {
-    const char *str = " fe80::215:58ff:fe29:9c36";
+    const char     *str = " fe80::215:58ff:fe29:9c36";
     struct in6_addr ip;
 
     fail_unless(hip_convert_string_to_address(str, &ip) < 0, NULL);

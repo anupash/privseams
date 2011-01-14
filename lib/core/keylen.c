@@ -93,7 +93,6 @@ int hip_hmac_key_length(int tid)
     return ret;
 }
 
-
 /**
  * get authentication key length for an ESP transform
  *
@@ -122,4 +121,3 @@ int hip_auth_key_length_esp(int tid)
 
     return ret;
 }
-

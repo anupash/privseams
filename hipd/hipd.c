@@ -71,46 +71,46 @@
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
  * of this file! */
-struct hip_common *hipd_msg          = NULL;
-struct hip_common *hipd_msg_v4       = NULL;
+struct hip_common *hipd_msg    = NULL;
+struct hip_common *hipd_msg_v4 = NULL;
 
-int is_active_mhaddr                 = 1; /**< Which mhaddr to use active or lazy? (default: active) */
-int is_hard_handover                 = 0; /**< if hard handover is forced to be used (default: no) */
+int is_active_mhaddr = 1;                 /**< Which mhaddr to use active or lazy? (default: active) */
+int is_hard_handover = 0;                 /**< if hard handover is forced to be used (default: no) */
 
 /** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
  *  0 = none = default, AF_INET, AF_INET6 */
-int suppress_af_family               = 0;
+int suppress_af_family = 0;
 
 /* For sending HIP control messages */
-int hip_raw_sock_output_v6           = 0;
-int hip_raw_sock_output_v4           = 0;
+int hip_raw_sock_output_v6 = 0;
+int hip_raw_sock_output_v4 = 0;
 
 /* For receiving HIP control messages */
-int hip_raw_sock_input_v6            = 0;
-int hip_raw_sock_input_v4            = 0;
+int hip_raw_sock_input_v6 = 0;
+int hip_raw_sock_input_v4 = 0;
 
 /** File descriptor of the socket used for sending HIP control packet
  *  NAT traversal on UDP/IPv4
  */
-int hip_nat_sock_output_udp          = 0;
+int hip_nat_sock_output_udp = 0;
 
 /** File descriptor of the socket used for receiving HIP control packet
  *  NAT traversal on UDP/IPv4
  */
-int hip_nat_sock_input_udp           = 0;
+int hip_nat_sock_input_udp = 0;
 
-int hip_nat_sock_output_udp_v6       = 0;
-int hip_nat_sock_input_udp_v6        = 0;
+int hip_nat_sock_output_udp_v6 = 0;
+int hip_nat_sock_input_udp_v6  = 0;
 
 /** Specifies the NAT status of the daemon. This value indicates if the current
  *  machine is behind a NAT. */
 hip_transform_suite hip_nat_status = 0;
 
 /* Encrypt host id in I2 */
-int hip_encrypt_i2_hi                = 0;
+int hip_encrypt_i2_hi = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
-int hip_user_sock                    = 0;
+int                hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
 /** For receiving netlink IPsec events (acquire, expire, etc) */
@@ -121,16 +121,16 @@ struct rtnl_handle hip_nl_ipsec;
 struct rtnl_handle hip_nl_route;
 
 struct sockaddr_in6 hip_firewall_addr;
-int hip_firewall_sock                    = 0;
+int                 hip_firewall_sock = 0;
 
 /* used to change the transform order see hipconf usage to see the usage
  * This is set to AES, 3DES, NULL by default see hipconf trasform order for
  * more information.
  */
-int hip_transform_order                  = 123;
+int hip_transform_order = 123;
 
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
-int hip_locator_status             = HIP_MSG_SET_LOCATOR_OFF;
+int hip_locator_status = HIP_MSG_SET_LOCATOR_OFF;
 
 /* We are caching the IP addresses of the host here. The reason is that during
  * in hip_handle_acquire it is not possible to call getifaddrs (it creates
@@ -140,9 +140,9 @@ int hip_locator_status             = HIP_MSG_SET_LOCATOR_OFF;
  * variable and most of the functions referencing them unnecessary -miika
  */
 
-int address_count;
+int            address_count;
 HIP_HASHTABLE *addresses;
-time_t load_time;
+time_t         load_time;
 
 int address_change_time_counter = -1;
 
@@ -150,16 +150,16 @@ int address_change_time_counter = -1;
  * userspace ipsec or not. If it is 1, hip uses the user space ipsec.
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
  */
-int hip_use_userspace_ipsec                  = 0;
+int hip_use_userspace_ipsec = 0;
 
-int esp_prot_active                          = 0;
-int esp_prot_num_transforms                  = 0;
+int     esp_prot_active         = 0;
+int     esp_prot_num_transforms = 0;
 uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-long esp_prot_num_parallel_hchains           = 0;
+long    esp_prot_num_parallel_hchains = 0;
 
-int hip_shotgun_status                       = HIP_MSG_SHOTGUN_OFF;
+int hip_shotgun_status = HIP_MSG_SHOTGUN_OFF;
 
-int hip_wait_addr_changes_to_stabilize       = 1;
+int hip_wait_addr_changes_to_stabilize = 1;
 
 /**
  * print hipd usage instructions on stderr
@@ -170,14 +170,14 @@ static void usage(void)
     fprintf(stderr, "  -V print version information and exit\n");
     fprintf(stderr, "  -b run in background\n");
     fprintf(stderr, "  -i <device name> add interface to the white list. " \
-            "Use additional -i for additional devices.\n");
+                    "Use additional -i for additional devices.\n");
     fprintf(stderr, "  -k kill existing hipd\n");
     fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
     fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
     fprintf(stderr, "  -f set debug type format to short\n");
     fprintf(stderr, "  -d set the initial (pre-config) debug level to ALL (default is MEDIUM)\n");
     fprintf(stderr, "  -D <module name> disable this module. " \
-            "Use additional -D for additional modules.\n");
+                    "Use additional -D for additional modules.\n");
     fprintf(stderr, "  -p disable privilege separation\n");
     fprintf(stderr, "  -m disable the loading/unloading of kernel modules\n");
     fprintf(stderr, "\n");
@@ -192,7 +192,7 @@ static void usage(void)
 int hip_sendto_firewall(HIPFW const struct hip_common *msg)
 {
 #ifdef CONFIG_HIP_FIREWALL
-    int n          = 0;
+    int n = 0;
     HIP_DEBUG("CONFIG_HIP_FIREWALL DEFINED AND STATUS IS %d\n", hip_get_firewall_status());
 
     n = sendto(hip_firewall_sock,
@@ -254,9 +254,9 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
             break;
         case 'D':
             if (!lmod_disable_module(optarg)) {
-               HIP_DEBUG("Module '%s' disabled.\n", optarg);
+                HIP_DEBUG("Module '%s' disabled.\n", optarg);
             } else {
-               HIP_ERROR("Error while disabling module '%s'.\n", optarg);
+                HIP_ERROR("Error while disabling module '%s'.\n", optarg);
             }
             break;
         case 'p':
@@ -288,9 +288,9 @@ static int hipd_parse_cmdline_opts(int argc, char *argv[], uint64_t *flags)
  */
 static int hipd_main(uint64_t flags)
 {
-    int highest_descriptor = 0, err = 0;
-    struct timeval timeout;
-    fd_set read_fdset;
+    int                       highest_descriptor = 0, err = 0;
+    struct timeval            timeout;
+    fd_set                    read_fdset;
     struct hip_packet_context ctx;
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -374,7 +374,6 @@ static int hipd_main(uint64_t flags)
     hip_perf_write_benchmark(perf_set, PERF_STARTUP);
 #endif
     while (hipd_get_state() != HIPD_STATE_CLOSED) {
-
         hip_prepare_fd_set(&read_fdset);
 
         hip_firewall_sock = hip_user_sock;
@@ -384,7 +383,6 @@ static int hipd_main(uint64_t flags)
 
 #ifdef CONFIG_HIP_FIREWALL
         if (hip_firewall_status < 0) {
-
             memset(&hip_firewall_addr, 0, sizeof(hip_firewall_addr));
             hip_firewall_addr.sin6_family = AF_INET6;
             hip_firewall_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
@@ -452,12 +450,12 @@ int main(int argc, char *argv[])
      * people are doing some very experimental features on some branches
      * that may crash the daemon and leave the SAs floating around to
      * disturb further base exchanges. Use -N flag to disable this. */
-    sflags         |= HIPD_START_FLUSH_IPSEC;
+    sflags |= HIPD_START_FLUSH_IPSEC;
 
     /* The default behaviour is to allow hipd to load the required modules
      * and unload them when exiting.
      */
-    sflags         |= HIPD_START_LOAD_KMOD;
+    sflags |= HIPD_START_LOAD_KMOD;
 
     /* set the initial verbosity level */
     hip_set_logdebug(LOGDEBUG_MEDIUM);
@@ -481,7 +479,7 @@ int main(int argc, char *argv[])
 
     if (hipd_get_flag(HIPD_FLAG_RESTART)) {
         HIP_INFO(" !!!!! HIP DAEMON RESTARTING !!!!! \n");
-        hip_handle_exec_app(0, EXEC_LOADLIB_NONE, argc, (const char * const *) argv);
+        hip_handle_exec_app(0, EXEC_LOADLIB_NONE, argc, (const char *const *) argv);
     }
 
     return EXIT_SUCCESS;

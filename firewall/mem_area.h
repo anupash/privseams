@@ -42,4 +42,4 @@ struct hip_mem_area {
     char *end;
 };
 
-#endif
+#endif /* HIP_FIREWALL_MEM_AREA_H */

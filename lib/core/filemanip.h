@@ -29,7 +29,6 @@
 #include <fcntl.h>
 #include <sys/types.h>
 
-#define HIP_CREATE_FILE(x)    open((x), O_RDWR | O_CREAT, 0644)
 #define HIP_DIR_MODE          0755
 #define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 

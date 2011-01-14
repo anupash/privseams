@@ -38,7 +38,6 @@
 #include "transform.h"
 #include "builder.h"
 
-#define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
 
 
@@ -55,9 +54,6 @@
 #define HIP_SECOND_DH_GROUP_ID        HIP_DH_384
 #define HIP_MAX_DH_GROUP_ID           7
 
-#define HIP_MAX_DSA_KEY_LEN        1024
-/* Moved to protodefs.h
- * #define HIP_MAX_RSA_KEY_LEN 4096 */
 #define DSA_KEY_DEFAULT_BITS       1024
 #define RSA_KEY_DEFAULT_BITS       1024
 #define ECDSA_DEFAULT_CURVE        NIST_ECDSA_384
@@ -72,15 +68,15 @@
 #define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
 
 #ifdef OPENSSL_NO_SHA0
-# define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
+#define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
 #else
-# define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
+#define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
 #endif
 
 #ifdef OPENSSL_NO_SHA0
-# define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
+#define HIP_SHA(buffer, total_len, hash)   SHA1((buffer), (total_len), (hash));
 #else
-# define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
+#define HIP_SHA(buffer, total_len, hash)   SHA((buffer), (total_len), (hash));
 #endif
 
 int ssl_rsa_verify(uint8_t *digest, uint8_t *public_key, uint8_t *signature, int pub_klen);

@@ -85,7 +85,7 @@ int lsi_total = 0;
 int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
               int alen)
 {
-    int len = RTA_LENGTH(alen);
+    int            len = RTA_LENGTH(alen);
     struct rtattr *rta;
 
     if (NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len) > maxlen) {
@@ -96,7 +96,7 @@ int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
     rta->rta_type = type;
     rta->rta_len  = len;
     memcpy(RTA_DATA(rta), data, alen);
-    n->nlmsg_len  = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len);
+    n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len);
     return 0;
 }
 
@@ -117,18 +117,18 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                         hip_filter handler,
                         void *arg)
 {
-    struct nlmsghdr *h;
+    struct nlmsghdr   *h;
     struct sockaddr_nl nladdr;
-    struct iovec iov;
-    struct msghdr msg = {
+    struct iovec       iov;
+    struct msghdr      msg = {
         (void *) &nladdr, sizeof(nladdr),
         &iov,             1,
         NULL,             0,
         0
     };
-    unsigned msg_len = 0;
-    int status = 0;
-    char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
+    unsigned           msg_len = 0;
+    int                status  = 0;
+    char               buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
     memset(&nladdr, 0, sizeof(nladdr));
     nladdr.nl_family = AF_NETLINK;
@@ -137,8 +137,8 @@ int hip_netlink_receive(struct rtnl_handle *nl,
     iov.iov_base     = buf;
     iov.iov_len      = sizeof(buf);
 
-    msg_len          = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
-                                MSG_PEEK | MSG_DONTWAIT, NULL, NULL);
+    msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
+                       MSG_PEEK | MSG_DONTWAIT, NULL, NULL);
     if (msg_len != sizeof(struct nlmsghdr)) {
         HIP_ERROR("Bad netlink msg\n");
         return -1;
@@ -153,8 +153,8 @@ int hip_netlink_receive(struct rtnl_handle *nl,
          * "Netlink overrun" errors when executing
          * "hipconf rst all" */
 
-        status      = recvfrom(nl->fd, buf, sizeof(buf),
-                               0, NULL, NULL);
+        status = recvfrom(nl->fd, buf, sizeof(buf),
+                          0, NULL, NULL);
 
         if (status < 0) {
             HIP_PERROR("perror: ");
@@ -173,7 +173,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
             HIP_ERROR("Sender address length == %d\n", msg.msg_namelen);
             return -1;
         }
-        for (h = (struct nlmsghdr *) buf; status >= (int)sizeof(*h); ) {
+        for (h = (struct nlmsghdr *) buf; status >= (int) sizeof(*h); ) {
             int err;
             int len = h->nlmsg_len;
             int l   = len - sizeof(*h);
@@ -188,7 +188,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                 return -1;
             }
 
-            err     = handler(h, len, arg);
+            err = handler(h, len, arg);
             if (err < 0) {
                 return err;
             }
@@ -231,16 +231,16 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                  unsigned groups, struct nlmsghdr *answer,
                  hip_filter junk, void *arg)
 {
-    int status, err = 0;
-    unsigned seq;
-    struct nlmsghdr *h;
+    int                status, err = 0;
+    unsigned           seq;
+    struct nlmsghdr   *h;
     struct sockaddr_nl nladdr;
-    char buf[16384];
-    struct iovec iov  = {
+    char               buf[16384];
+    struct iovec       iov = {
         .iov_base = (void *) n,
         .iov_len  = n->nlmsg_len
     };
-    struct msghdr msg = {
+    struct msghdr      msg = {
         .msg_name    = &nladdr,
         .msg_namelen = sizeof(nladdr),
         .msg_iov     = &iov,
@@ -253,7 +253,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
     nladdr.nl_pid    = peer;
     nladdr.nl_groups = groups;
 
-    n->nlmsg_seq     = seq = ++nl->seq;
+    n->nlmsg_seq = seq = ++nl->seq;
 
     /* Note: the TALK_ACK are here because I experienced problems
      * with SMP machines. The application added a mapping which caused
@@ -309,7 +309,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
             err = -1;
             goto out_err;
         }
-        for (h = (struct nlmsghdr *) buf; status >= (int)sizeof(*h); ) {
+        for (h = (struct nlmsghdr *) buf; status >= (int) sizeof(*h); ) {
             int len = h->nlmsg_len;
             int l   = len - sizeof(*h);
 
@@ -324,7 +324,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                 goto out_err;
             }
 
-            if (nladdr.nl_pid != (unsigned)peer || h->nlmsg_seq != seq) {
+            if (nladdr.nl_pid != (unsigned) peer || h->nlmsg_seq != seq) {
                 HIP_DEBUG("%d %d %d %d\n", nladdr.nl_pid,
                           peer, h->nlmsg_seq, seq);
                 if (junk) {
@@ -342,7 +342,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 
             if (h->nlmsg_type == NLMSG_ERROR) {
                 struct nlmsgerr *nl_err = (struct nlmsgerr *) NLMSG_DATA(h);
-                if (l < (int)sizeof(struct nlmsgerr)) {
+                if (l < (int) sizeof(struct nlmsgerr)) {
                     HIP_ERROR("Truncated\n");
                 } else {
                     errno = -nl_err->error;
@@ -396,7 +396,7 @@ int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
                       int protocol)
 {
     socklen_t addr_len;
-    int sndbuf = 32768, rcvbuf = 32768;
+    int       sndbuf = 32768, rcvbuf = 32768;
 
     memset(rth, 0, sizeof(*rth));
 
@@ -462,10 +462,10 @@ void rtnl_close(struct rtnl_handle *rth)
  */
 static unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
 {
-    static char ncache[16];
-    static int icache;
+    static char    ncache[16];
+    static int     icache;
     struct idxmap *im;
-    int i;
+    int            i;
 
     if (name == NULL) {
         return 0;
@@ -484,7 +484,7 @@ static unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
     }
 
     /** @todo having more that one NETLINK socket open at the same
-        time is bad! See hipd.c comments on addresses variable */
+     *  time is bad! See hipd.c comments on addresses variable */
     return if_nametoindex(name);
 }
 
@@ -499,12 +499,12 @@ static unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
 static int get_unsigned(unsigned *val, const char *arg, int base)
 {
     unsigned long res;
-    char *ptr;
+    char         *ptr;
 
     if (!arg || !*arg) {
         return -1;
     }
-    res  = strtoul(arg, &ptr, base);
+    res = strtoul(arg, &ptr, base);
     if (!ptr || ptr == arg || *ptr || res > UINT_MAX) {
         return -1;
     }
@@ -522,9 +522,9 @@ static int get_unsigned(unsigned *val, const char *arg, int base)
  */
 static int get_addr_1(struct inet_prefix *addr, const char *name, int family)
 {
-    const char *cp;
+    const char    *cp;
     unsigned char *ap = (unsigned char *) addr->data;
-    int i;
+    int            i;
 
     memset(addr, 0, sizeof(*addr));
 
@@ -553,7 +553,7 @@ static int get_addr_1(struct inet_prefix *addr, const char *name, int family)
         return 0;
     }
 
-    addr->family  = AF_INET;
+    addr->family = AF_INET;
     if (family != AF_UNSPEC && family != AF_INET) {
         return -1;
     }
@@ -582,9 +582,9 @@ static int get_addr_1(struct inet_prefix *addr, const char *name, int family)
  */
 static int get_prefix_1(struct inet_prefix *dst, char *arg, int family)
 {
-    int err;
+    int      err;
     unsigned plen;
-    char *slash;
+    char    *slash;
 
     memset(dst, 0, sizeof(*dst));
 
@@ -605,7 +605,7 @@ static int get_prefix_1(struct inet_prefix *dst, char *arg, int family)
         *slash = 0;
     }
 
-    err   = get_addr_1(dst, arg, family);
+    err = get_addr_1(dst, arg, family);
     if (err == 0) {
         switch (dst->family) {
         case AF_INET6:
@@ -645,7 +645,7 @@ done:
  */
 static int addattr32(struct nlmsghdr *n, unsigned maxlen, int type, uint32_t data)
 {
-    int len = RTA_LENGTH(4);
+    int            len = RTA_LENGTH(4);
     struct rtattr *rta;
     if (NLMSG_ALIGN(n->nlmsg_len) + len > maxlen) {
         HIP_ERROR("addattr32: Error! max allowed bound %d exceeded\n", maxlen);
@@ -655,7 +655,7 @@ static int addattr32(struct nlmsghdr *n, unsigned maxlen, int type, uint32_t dat
     rta->rta_type = type;
     rta->rta_len  = len;
     memcpy(RTA_DATA(rta), &data, 4);
-    n->nlmsg_len  = NLMSG_ALIGN(n->nlmsg_len) + len;
+    n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + len;
     return 0;
 }
 
@@ -678,7 +678,7 @@ static int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
     struct sockaddr_nl nladdr;
 
     memset(&nladdr, 0, sizeof(nladdr));
-    nladdr.nl_family    = AF_NETLINK;
+    nladdr.nl_family = AF_NETLINK;
 
     memset(&req, 0, sizeof(req));
     req.nlh.nlmsg_len   = sizeof(req);
@@ -709,17 +709,17 @@ static int rtnl_dump_filter(struct rtnl_handle *rth,
                             void *arg2)
 {
     struct sockaddr_nl nladdr;
-    struct iovec iov;
-    struct msghdr msg = {
+    struct iovec       iov;
+    struct msghdr      msg = {
         .msg_name    = &nladdr,
         .msg_namelen = sizeof(nladdr),
         .msg_iov     = &iov,
         .msg_iovlen  = 1,
     };
-    char buf[16384];
+    char               buf[16384];
 
     while (1) {
-        int status;
+        int              status;
         struct nlmsghdr *h;
 
         iov.iov_base = buf;
@@ -740,7 +740,7 @@ static int rtnl_dump_filter(struct rtnl_handle *rth,
         }
 
         h = (struct nlmsghdr *) buf;
-        while (NLMSG_OK(h, (unsigned)status)) {
+        while (NLMSG_OK(h, (unsigned) status)) {
             int err = 0;
 
             if (nladdr.nl_pid != 0 ||
@@ -831,9 +831,9 @@ int hip_iproute_modify(struct rtnl_handle *rth,
         char            buf[1024];
     } req1;
     struct inet_prefix dst;
-    struct idxmap *idxmap[16];
-    int dst_ok = 0, err = 0;
-    int idx, i;
+    struct idxmap     *idxmap[16];
+    int                dst_ok = 0, err = 0;
+    int                idx, i;
 
     memset(&req1, 0, sizeof(req1));
     for (i = 0; i < 16; i++) {
@@ -867,12 +867,12 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 
     ll_init_map(rth, idxmap);
 
-    HIP_IFEL(((idx = ll_name_to_index(dev, idxmap)) == 0), -1,
+    HIP_IFEL((idx = ll_name_to_index(dev, idxmap)) == 0, -1,
              "ll_name_to_index failed\n");
 
     addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
 
-    HIP_IFEL((netlink_talk(rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "netlink_talk failed\n");
 
 out_err:
@@ -923,10 +923,10 @@ static int parse_rtattr(struct rtattr *tb[],
  */
 static int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 {
-    struct rtmsg *r = NLMSG_DATA(n);
+    struct rtmsg  *r = NLMSG_DATA(n);
     struct rtattr *tb[RTA_MAX + 1];
     union {
-        struct in_addr * in;
+        struct in_addr  *in;
         struct in6_addr *in6;
     } addr;
     int entry;
@@ -987,28 +987,28 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                      rtnl_filter junk,
                      void *jarg)
 {
-    int status;
-    unsigned seq;
-    struct nlmsghdr *h;
+    int                status;
+    unsigned           seq;
+    struct nlmsghdr   *h;
     struct sockaddr_nl nladdr;
-    struct iovec iov  = {
+    struct iovec       iov = {
         .iov_base = (void *) n,
         .iov_len  = n->nlmsg_len
     };
-    struct msghdr msg = {
+    struct msghdr      msg = {
         .msg_name    = &nladdr,
         .msg_namelen = sizeof(nladdr),
         .msg_iov     = &iov,
         .msg_iovlen  = 1,
     };
-    char buf[16384];
+    char               buf[16384];
 
     memset(&nladdr, 0, sizeof(nladdr));
     nladdr.nl_family = AF_NETLINK;
     nladdr.nl_pid    = peer;
     nladdr.nl_groups = groups;
 
-    n->nlmsg_seq     = seq = ++rtnl->seq;
+    n->nlmsg_seq = seq = ++rtnl->seq;
 
     if (answer == NULL) {
         n->nlmsg_flags |= NLM_F_ACK;
@@ -1043,7 +1043,7 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
             HIP_ERROR("sender address length == %d\n", msg.msg_namelen);
             return -1;
         }
-        for (h = (struct nlmsghdr *) buf; status >= (int)sizeof(*h); ) {
+        for (h = (struct nlmsghdr *) buf; status >= (int) sizeof(*h); ) {
             int err;
             int len = h->nlmsg_len;
             int l   = len - sizeof(*h);
@@ -1057,7 +1057,7 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                 return -1;
             }
 
-            if (nladdr.nl_pid != (unsigned)peer ||
+            if (nladdr.nl_pid != (unsigned) peer ||
                 h->nlmsg_pid != rtnl->local.nl_pid ||
                 h->nlmsg_seq != seq) {
                 if (junk) {
@@ -1075,7 +1075,7 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
 
             if (h->nlmsg_type == NLMSG_ERROR) {
                 struct nlmsgerr *nlerr = (struct nlmsgerr *) NLMSG_DATA(h);
-                if (l < (int)sizeof(struct nlmsgerr)) {
+                if (l < (int) sizeof(struct nlmsgerr)) {
                     HIP_ERROR("ERROR truncated\n");
                 } else {
                     errno = -nlerr->error;
@@ -1132,10 +1132,10 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
         char            buf[1024];
     } req;
 
-    int err = 0, idx, preferred_family = family;
+    int                err = 0, idx, preferred_family = family;
     struct inet_prefix addr;
-    char dst_str[INET6_ADDRSTRLEN];
-    struct in_addr ip4;
+    char               dst_str[INET6_ADDRSTRLEN];
+    struct in_addr     ip4;
     HIP_ASSERT(dst_addr);
 
     HIP_DEBUG_IN6ADDR("Getting route for destination address", dst_addr);
@@ -1143,12 +1143,11 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
     if (IN6_IS_ADDR_V4MAPPED(dst_addr)) {
         IPV6_TO_IPV4_MAP(dst_addr, &ip4);
         preferred_family = AF_INET;
-        HIP_IFEL((!inet_ntop(preferred_family, &ip4, dst_str,
-                             INET6_ADDRSTRLEN)), -1, "inet_pton\n");
+        HIP_IFEL(!inet_ntop(preferred_family, &ip4, dst_str, INET6_ADDRSTRLEN),
+                 -1, "inet_pton\n");
     } else {
-        HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
-                             INET6_ADDRSTRLEN)), -1,
-                 "inet_pton\n");
+        HIP_IFEL(!inet_ntop(preferred_family, dst_addr, dst_str, INET6_ADDRSTRLEN),
+                 -1, "inet_pton\n");
     }
     memset(&req, 0, sizeof(req));
 
@@ -1175,16 +1174,16 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
     ll_init_map(rth, idxmap);
 
     if (idev) {
-        HIP_IFEL(((idx = ll_name_to_index(idev, idxmap)) == 0),
+        HIP_IFEL((idx = ll_name_to_index(idev, idxmap)) == 0,
                  -1, "Cannot find device \"%s\"\n", idev);
         addattr32(&req.n, sizeof(req), RTA_IIF, idx);
     }
     if (odev) {
-        HIP_IFEL(((idx = ll_name_to_index(odev, idxmap)) == 0),
+        HIP_IFEL((idx = ll_name_to_index(odev, idxmap)) == 0,
                  -1, "Cannot find device \"%s\"\n", odev);
         addattr32(&req.n, sizeof(req), RTA_OIF, idx);
     }
-    HIP_IFE((rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0), -1);
+    HIP_IFE(rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0, -1);
     HIP_IFE(hip_parse_src_addr(&req.n, src_addr), -1);
 
 out_err:
@@ -1204,9 +1203,9 @@ out_err:
 static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
 {
     struct in6_addr ip6_aux;
-    char *slash     = strchr(ip, '/');
-    char *aux_slash = NULL;
-    int err = 0;
+    char           *slash     = strchr(ip, '/');
+    char           *aux_slash = NULL;
+    int             err       = 0;
 
     if (slash) {
         HIP_IFEL(!(aux_slash = malloc(sizeof(slash))), -1, "alloc\n");
@@ -1247,19 +1246,19 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
     } req;
 
     struct inet_prefix lcl;
-    int local_len      = 0, err = 0, size_dev;
-    struct in_addr ip4 = { 0 };
-    int ip_is_v4       = 0;
-    char label[4];
-    char *res          = NULL;
-    int aux;
+    int                local_len = 0, err = 0, size_dev;
+    struct in_addr     ip4       = { 0 };
+    int                ip_is_v4  = 0;
+    char               label[4];
+    char              *res = NULL;
+    int                aux;
 
     memset(&req, 0, sizeof(req));
     if (convert_ipv6_slash_to_ipv4_slash(ip, &ip4)) {
         family   = AF_INET;
         ip_is_v4 = 1;
         lsi_total++;
-        ip       = strcat(inet_ntoa(ip4), HIP_LSI_FULL_PREFIX_STR);
+        ip = strcat(inet_ntoa(ip4), HIP_LSI_FULL_PREFIX_STR);
         sprintf(label, ":%d", lsi_total);
         HIP_DEBUG("Label %s:%d\n", ip, lsi_total);
     }
@@ -1287,7 +1286,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         req.ifa.ifa_prefixlen = lcl.bitlen;
     }
 
-    HIP_IFEL(((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0),
+    HIP_IFEL((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0,
              -1, "ll_name_to_index failed\n");
 
     HIP_DEBUG("IFA INDEX IS %d\n", req.ifa.ifa_index);
@@ -1295,8 +1294,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
     // adds to the device dummy0
     aux = netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
     HIP_DEBUG("value exit function netlink_talk %i\n", aux);
-    HIP_IFEL((aux < 0), -1,
-             "netlink talk failed\n");
+    HIP_IFEL(aux < 0, -1, "netlink talk failed\n");
 
 out_err:
     free(res);
@@ -1313,7 +1311,7 @@ static int get_ctl_fd(void)
     int s_errno;
     int fd;
 
-    fd      = socket(PF_INET, SOCK_DGRAM, 0);
+    fd = socket(PF_INET, SOCK_DGRAM, 0);
     if (fd >= 0) {
         return fd;
     }
@@ -1322,11 +1320,11 @@ static int get_ctl_fd(void)
     if (fd >= 0) {
         return fd;
     }
-    fd      = socket(PF_INET6, SOCK_DGRAM, 0);
+    fd = socket(PF_INET6, SOCK_DGRAM, 0);
     if (fd >= 0) {
         return fd;
     }
-    errno   = s_errno;
+    errno = s_errno;
     HIP_PERROR("Cannot create control socket");
     return -1;
 }
@@ -1342,11 +1340,11 @@ static int get_ctl_fd(void)
 static int do_chflags(const char *dev, uint32_t flags, uint32_t mask)
 {
     struct ifreq ifr;
-    int fd;
-    int err;
+    int          fd;
+    int          err;
 
     strncpy(ifr.ifr_name, dev, IF_NAMESIZE);
-    fd  = get_ctl_fd();
+    fd = get_ctl_fd();
     if (fd < 0) {
         return -1;
     }
@@ -1380,12 +1378,12 @@ static int do_chflags(const char *dev, uint32_t flags, uint32_t mask)
  */
 int set_up_device(const char *dev, int up)
 {
-    int err     = -1, total_add;
+    int      err   = -1, total_add;
     uint32_t mask  = 0;
     uint32_t flags = 0;
-    char label[4];
-    char *res   = NULL;
-    int size_dev;
+    char     label[4];
+    char    *res = NULL;
+    int      size_dev;
 
     if (up == 1) {
         mask  |= IFF_UP;
@@ -1396,9 +1394,9 @@ int set_up_device(const char *dev, int up)
         for (total_add = lsi_total; total_add > 0; total_add--) {
             sprintf(label, ":%d", total_add);
             size_dev = sizeof(dev) + sizeof(label);
-            res      = calloc(1,size_dev + 1);
+            res      = calloc(1, size_dev + 1);
             strcat(strcat(res, dev), label);
-            err      = do_chflags(res, flags, mask);
+            err = do_chflags(res, flags, mask);
             free(res);
         }
     }
@@ -1406,4 +1404,3 @@ int set_up_device(const char *dev, int up)
 
     return err;
 }
-

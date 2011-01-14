@@ -47,9 +47,6 @@
 #include "lib/core/prefix.h"
 #include "oppipdb.h"
 
-#define HIP_LOCK_OPPIP(entry)
-#define HIP_UNLOCK_OPPIP(entry)
-
 HIP_HASHTABLE *oppipdb;
 
 /**
@@ -100,22 +97,20 @@ static int hip_oppipdb_match_ip(const void *ptr1, const void *ptr2)
  */
 int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaque)
 {
-    int i = 0;
+    int          i = 0;
     hip_oppip_t *this;
-    LHASH_NODE *item, *tmp;
+    LHASH_NODE  *item, *tmp;
 
     if (!func) {
         return -EINVAL;
     }
 
-    HIP_LOCK_HT(&oppipdb);
     list_for_each_safe(item, tmp, oppipdb, i)
     {
         this = list_entry(item);
         func(this, opaque);
     }
 
-    HIP_UNLOCK_HT(&oppipdb);
     return 0;
 }
 
@@ -127,9 +122,7 @@ int hip_for_each_oppip(void (*func)(hip_oppip_t *entry, void *opaq), void *opaqu
  */
 void hip_oppipdb_del_entry_by_entry(hip_oppip_t *entry, UNUSED void *arg)
 {
-    HIP_LOCK_OPPIP(entry);
     hip_ht_delete(oppipdb, entry);
-    HIP_UNLOCK_OPPIP(entry);
     free(entry);
 }
 
@@ -162,7 +155,7 @@ static hip_oppip_t *hip_create_oppip_entry(void)
  */
 int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
 {
-    int err               = 0;
+    int          err      = 0;
     hip_oppip_t *new_item = NULL;
 
     new_item = hip_create_oppip_entry();

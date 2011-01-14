@@ -62,19 +62,31 @@
 #define USER_IPSEC_INACTIVE 0
 #define USER_IPSEC_ACTIVE 1
 
+/* this is the maximum buffer-size needed for an userspace ipsec esp packet
+ * including the initialization vector for ESP and the hash value of the
+ * ESP protection extension */
+#define MAX_ESP_PADDING     255
+#define ESP_PACKET_SIZE     (HIP_MAX_PACKET + sizeof(struct udphdr) \
+                             + sizeof(struct hip_esp) \
+                             + AES_BLOCK_SIZE \
+                             + MAX_ESP_PADDING \
+                             + sizeof(struct hip_esp_tail) \
+                             + EVP_MAX_MD_SIZE) \
+                             + MAX_HASH_LENGTH
+
 
 /* this is the ESP packet we are about to build */
-static unsigned char *esp_packet       = NULL;
+static unsigned char *esp_packet = NULL;
 /* the original packet before ESP decryption */
 static unsigned char *decrypted_packet = NULL;
 
 /* sockets needed in order to reinject the ESP packet into the network stack */
-static int raw_sock_v4                 = 0;
-static int raw_sock_v6                 = 0;
+static int raw_sock_v4 = 0;
+static int raw_sock_v6 = 0;
 /* allows us to make sure that we only init ones */
-static int is_init                     = 0;
+static int is_init = 0;
 /* 0 = hipd does not know that userspace ipsec on */
-static int init_hipd                   = 0;
+static int init_hipd = 0;
 
 /**
  * triggers user ipsec init message for hipd
@@ -115,7 +127,7 @@ static int init_raw_sockets(void)
     // this option allows us to add the IP header ourselves
     HIP_IFEL(setsockopt(raw_sock_v4, IPPROTO_IP, IP_HDRINCL, (char *) &on,
                         sizeof(on)) < 0, -1,
-                        "setsockopt() error for IPv4 raw socket\n");
+             "setsockopt() error for IPv4 raw socket\n");
 
     // open IPv6 raw socket, no options needed here
     raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
@@ -218,14 +230,14 @@ int hip_fw_userspace_ipsec_output(const struct hip_fw_context *ctx)
     // entry matching the peer HIT
     struct hip_sa_entry *entry = NULL;
     // the routable addresses as used in HIPL
-    struct in6_addr preferred_local_addr;
-    struct in6_addr preferred_peer_addr;
+    struct in6_addr         preferred_local_addr;
+    struct in6_addr         preferred_peer_addr;
     struct sockaddr_storage preferred_peer_sockaddr;
-    struct timeval now;
-    uint16_t esp_packet_len       = 0;
-    int out_ip_version            = 0;
-    int err                       = 0;
-    const struct ip6_hdr *ip6_hdr = NULL;
+    struct timeval          now;
+    uint16_t                esp_packet_len = 0;
+    int                     out_ip_version = 0;
+    int                     err            = 0;
+    const struct ip6_hdr   *ip6_hdr        = NULL;
 
     /* we should only get HIT addresses here
      * LSI have been handled by LSI module before and converted to HITs */
@@ -325,7 +337,7 @@ int hip_fw_userspace_ipsec_output(const struct hip_fw_context *ctx)
         entry->usetime_ka.tv_usec = now.tv_usec;
 
         // the original packet has to be dropped
-        err                       = 1;
+        err = 1;
     }
 
     // now do some esp token maintenance operations
@@ -344,15 +356,15 @@ out_err:
  */
 int hip_fw_userspace_ipsec_input(const struct hip_fw_context *ctx)
 {
-    struct hip_esp *esp_hdr       = NULL;
+    struct hip_esp         *esp_hdr = NULL;
     struct sockaddr_storage local_sockaddr;
     // entry matching the SPI
-    struct hip_sa_entry *entry    = NULL;
-    struct timeval now;
-    uint16_t decrypted_packet_len = 0;
-    uint32_t spi                  = 0;
-    uint32_t seq_no               = 0;
-    int err                       = 0;
+    struct hip_sa_entry *entry = NULL;
+    struct timeval       now;
+    uint16_t             decrypted_packet_len = 0;
+    uint32_t             spi                  = 0;
+    uint32_t             seq_no               = 0;
+    int                  err                  = 0;
 
     gettimeofday(&now, NULL);
 
@@ -396,7 +408,7 @@ int hip_fw_userspace_ipsec_input(const struct hip_fw_context *ctx)
         entry->usetime_ka.tv_usec = now.tv_usec;
 
         // the original packet has to be dropped
-        err                       = 1;
+        err = 1;
     }
 
 out_err:

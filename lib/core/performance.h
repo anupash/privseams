@@ -37,23 +37,23 @@
 /** This performace set holds all measurements */
 struct perf_set {
     /** @brief A pointer to names of output files */
-    FILE          **files;
+    FILE **files;
     /** @brief A list of names of the perf sets. */
-    char          **names;
+    char **names;
     /** @brief A list timeval time structs. */
     struct timeval *times;
     /** @brief A list of measured results. */
-    double         *result;
+    double *result;
     /** @brief The number of perf sets. */
-    int             num_files;
+    int num_files;
     /** @brief A linecount */
-    int            *linecount;
+    int *linecount;
     /** @brief Are the necessary files opened? 1=TRUE, 0=FALSE. */
-    int             files_open;
+    int files_open;
     /** @brief Are measurements running? This is an integer field of the length num_files. */
-    int            *running;
+    int *running;
     /** @brief Are the measurements writable (completed)? This is an integer field of the length num_files. */
-    int            *writable;
+    int *writable;
 };
 
 struct perf_set *hip_perf_create(int num);

@@ -151,7 +151,7 @@ int hip_netdev_white_list_add(char *device_name)
 
     ifr.ifr_ifindex = -1;
     strncpy(ifr.ifr_name, device_name, (size_t) IF_NAMESIZE);
-    sock            = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     if (ioctl(sock, SIOCGIFINDEX, &ifr) == 0) {
         ret = 1;
@@ -178,7 +178,7 @@ int hip_netdev_white_list_add(char *device_name)
 static unsigned long hip_netdev_hash(const void *ptr)
 {
     const struct netdev_address *na = (const struct netdev_address *) ptr;
-    uint8_t hash[HIP_AH_SHA_LEN];
+    uint8_t                      hash[HIP_AH_SHA_LEN];
 
     /* stg: TODO A cryptographically secure hash is unnecessarily expensive for a hash table. Something cheaper, like an XOR, would do just fine. */
     hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
@@ -217,8 +217,8 @@ static int hip_netdev_match(const void *ptr1, const void *ptr2)
 static int hip_count_if_addresses(int ifindex)
 {
     struct netdev_address *na;
-    LHASH_NODE *n, *t;
-    int i = 0, c;
+    LHASH_NODE            *n, *t;
+    int                    i = 0, c;
 
     list_for_each_safe(n, t, addresses, c) {
         na = list_entry(n);
@@ -238,9 +238,9 @@ static int hip_count_if_addresses(int ifindex)
  */
 static int hip_filter_address(struct sockaddr *addr)
 {
-    char s[INET6_ADDRSTRLEN];
+    char             s[INET6_ADDRSTRLEN];
     struct in6_addr *a_in6 = NULL;
-    in_addr_t a_in;
+    in_addr_t        a_in;
     HIP_DEBUG("Filtering the address family %d \n", addr->sa_family);
     switch (addr->sa_family) {
     case AF_INET6:
@@ -331,9 +331,9 @@ static int hip_filter_address(struct sockaddr *addr)
 static int hip_exists_address_family_in_list(const struct in6_addr *addr)
 {
     struct netdev_address *n;
-    LHASH_NODE *tmp, *t;
-    int c;
-    int mapped = IN6_IS_ADDR_V4MAPPED(addr);
+    LHASH_NODE            *tmp, *t;
+    int                    c;
+    int                    mapped = IN6_IS_ADDR_V4MAPPED(addr);
 
     list_for_each_safe(tmp, t, addresses, c) {
         n = list_entry(tmp);
@@ -357,17 +357,17 @@ static int hip_exists_address_family_in_list(const struct in6_addr *addr)
 int hip_exists_address_in_list(struct sockaddr *addr, int ifindex)
 {
     struct netdev_address *n;
-    LHASH_NODE *tmp, *t;
-    int c;
-    int err = 0;
+    LHASH_NODE            *tmp, *t;
+    int                    c;
+    int                    err = 0;
     const struct in6_addr *in6;
-    const struct in_addr *in;
+    const struct in_addr  *in;
 
     list_for_each_safe(tmp, t, addresses, c) {
         int mapped       = 0;
         int addr_match   = 0;
         int family_match = 0;
-        n      = list_entry(tmp);
+        n = list_entry(tmp);
 
         mapped = hip_sockaddr_is_v6_mapped((struct sockaddr * ) (&n->addr));
         HIP_DEBUG("mapped=%d\n", mapped);
@@ -380,11 +380,10 @@ int hip_exists_address_in_list(struct sockaddr *addr, int ifindex)
 
             addr_match   = IPV6_EQ_IPV4(in6, in);
             family_match = 1;
-
         } else if (!mapped && addr->sa_family == AF_INET6) {
-            addr_match   = !memcmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
-                                   hip_cast_sa_addr(addr),
-                                   hip_sa_addr_len(&n->addr));
+            addr_match = !memcmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
+                                 hip_cast_sa_addr(addr),
+                                 hip_sa_addr_len(&n->addr));
             family_match = (n->addr.ss_family == addr->sa_family);
         } else { /* addr->sa_family == AF_INET */
             HIP_DEBUG("Addr given was not IPv6 nor IPv4.\n");
@@ -427,8 +426,8 @@ out_err:
 void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 {
     struct netdev_address *n;
-    unsigned char tmp_secret[40];
-    int err_rand = 0;
+    unsigned char          tmp_secret[40];
+    int                    err_rand = 0;
 
     if (hip_exists_address_in_list(addr, ifindex)) {
         return;
@@ -471,7 +470,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
     n->if_index = ifindex;
     list_add(n, addresses);
     address_count++;
-    n->flags    = flags;
+    n->flags = flags;
 
     HIP_DEBUG("Added a new IPv6 address to ifindex2spi map. The map has " \
               "%d addresses.\n", address_count);
@@ -487,9 +486,9 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
 {
     struct netdev_address *n;
-    LHASH_NODE *item, *tmp;
-    int i, deleted = 0;
-    struct sockaddr_in6 addr_sin6;
+    LHASH_NODE            *item, *tmp;
+    int                    i, deleted = 0;
+    struct sockaddr_in6    addr_sin6;
 
     if (addr && addr->sa_family == AF_INET) {
         memset(&addr_sin6, 0, sizeof(addr_sin6));
@@ -539,8 +538,8 @@ static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
 void hip_delete_all_addresses(void)
 {
     struct netdev_address *n;
-    LHASH_NODE *item, *tmp;
-    int i;
+    LHASH_NODE            *item, *tmp;
+    int                    i;
 
     if (address_count) {
         list_for_each_safe(item, tmp, addresses, i)
@@ -568,9 +567,9 @@ void hip_delete_all_addresses(void)
  */
 static int hip_netdev_find_if(struct sockaddr *addr)
 {
-    struct netdev_address *n = NULL;
-    LHASH_NODE *item         = NULL, *tmp = NULL;
-    int i                    = 0;
+    struct netdev_address *n    = NULL;
+    LHASH_NODE            *item = NULL, *tmp = NULL;
+    int                    i    = 0;
 
 #ifdef CONFIG_HIP_DEBUG /* Debug block. */
     {
@@ -654,7 +653,7 @@ int hip_devaddr2ifindex(struct in6_addr *addr)
 int hip_netdev_init_addresses(void)
 {
     struct ifaddrs *g_ifaces = NULL, *g_iface = NULL;
-    int err                  = 0, if_index = 0;
+    int             err      = 0, if_index = 0;
 
     /* Initialize address list */
     HIP_DEBUG("Initializing addresses...\n");
@@ -701,8 +700,8 @@ out_err:
 int hip_map_id_to_addr(const hip_hit_t *hit, const hip_lsi_t *lsi,
                        struct in6_addr *addr)
 {
-    int err      = -1, skip_namelookup = 0; /* Assume that resolving fails */
-    hip_hit_t hit2;
+    int                    err = -1, skip_namelookup = 0; /* Assume that resolving fails */
+    hip_hit_t              hit2;
     struct hip_hadb_state *ha = NULL;
 
     HIP_ASSERT(hit || lsi);
@@ -790,32 +789,32 @@ static int hip_netdev_trigger_bex(const hip_hit_t *src_hit_in,
                                   const struct in6_addr *src_addr_in,
                                   const struct in6_addr *dst_addr_in)
 {
-    int err = 0, if_index = 0, is_ipv4_locator;
-    int reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status;
-    int old_global_nat_mode = hip_nat_status;
-    in_port_t ha_local_port;
-    in_port_t ha_peer_port;
-    struct hip_hadb_state *entry = NULL;
-    int is_loopback = 0;
-    hip_lsi_t dlsi, slsi;
-    struct in6_addr dhit, shit, saddr, dst6_lsi;
-    struct in6_addr *src_hit, *dst_hit, *src_addr, *dst_addr;
-    struct in_addr *src_lsi, *dst_lsi;
-    struct in6_addr daddr;
+    int                     err                      = 0, if_index = 0, is_ipv4_locator;
+    int                     reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status;
+    int                     old_global_nat_mode      = hip_nat_status;
+    in_port_t               ha_local_port;
+    in_port_t               ha_peer_port;
+    struct hip_hadb_state  *entry       = NULL;
+    int                     is_loopback = 0;
+    hip_lsi_t               dlsi, slsi;
+    struct in6_addr         dhit, shit, saddr;
+    struct in6_addr        *src_hit, *dst_hit, *src_addr, *dst_addr;
+    struct in_addr         *src_lsi, *dst_lsi;
+    struct in6_addr         daddr;
     struct sockaddr_storage ss_addr;
-    struct sockaddr *addr;
-    int broadcast = 0, shotgun_status_orig = 0;
+    struct sockaddr        *addr;
+    int                     broadcast = 0, shotgun_status_orig = 0;
 
     ha_local_port =
         (hip_nat_status ? hip_get_local_nat_udp_port() : 0);
-    ha_peer_port  =
+    ha_peer_port =
         (hip_nat_status ? hip_get_peer_nat_udp_port() : 0);
 
-    addr          = (struct sockaddr *) &ss_addr;
+    addr = (struct sockaddr *) &ss_addr;
 
     /* Make sure that dst_hit is not a NULL pointer */
     hip_copy_in6addr_null_check(&dhit, dst_hit_in);
-    dst_hit       = &dhit;
+    dst_hit = &dhit;
     HIP_DEBUG_HIT("dst hit", dst_hit);
 
     /* Make sure that src_hit is not a NULL pointer */
@@ -825,14 +824,6 @@ static int hip_netdev_trigger_bex(const hip_hit_t *src_hit_in,
     }
     src_hit = &shit;
     HIP_DEBUG_HIT("src hit", src_hit);
-
-    /* Initialize mapped format of dst lsi before pointer
-     * changes just below */
-    if (dst_lsi_in) {
-        IPV4_TO_IPV6_MAP(dst_lsi_in, &dst6_lsi);
-    } else {
-        memset(&dst6_lsi, 0, sizeof(dst6_lsi));
-    }
 
     /* Make sure that dst_lsi is not a NULL pointer */
     hip_copy_inaddr_null_check(&dlsi, dst_lsi_in);
@@ -941,7 +932,7 @@ static int hip_netdev_trigger_bex(const hip_hit_t *src_hit_in,
         shotgun_status_orig = hip_shotgun_status;
         hip_shotgun_status  = HIP_MSG_SHOTGUN_ON;
         IPV4_TO_IPV6_MAP(&bcast, dst_addr);
-        err                 = 0;
+        err = 0;
     }
 
     /* Next, create state into HADB. Make sure that we choose the right
@@ -968,9 +959,9 @@ static int hip_netdev_trigger_bex(const hip_hit_t *src_hit_in,
     }
 
     /* Preserve NAT status with peer */
-    entry->local_udp_port    = ha_local_port;
-    entry->peer_udp_port     = ha_peer_port;
-    entry->nat_mode          = ha_nat_mode;
+    entry->local_udp_port = ha_local_port;
+    entry->peer_udp_port  = ha_peer_port;
+    entry->nat_mode       = ha_nat_mode;
 
     reuse_hadb_local_address = 1;
 
@@ -1002,7 +993,7 @@ send_i1:
     HIP_DEBUG_IN6ADDR("our locator", &entry->our_addr);
 
     if_index = hip_devaddr2ifindex(&entry->our_addr);
-    HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
+    HIP_IFEL(if_index < 0, -1, "if_index NOT determined\n");
     /* we could try also hip_select_source_address() here on failure,
      * but it seems to fail too */
 
@@ -1028,12 +1019,12 @@ out_err:
  */
 static int hip_netdev_handle_acquire(struct nlmsghdr *msg)
 {
-    hip_hit_t *src_hit        = NULL, *dst_hit = NULL;
-    hip_lsi_t *src_lsi        = NULL, *dst_lsi = NULL;
-    struct in6_addr *src_addr = NULL, *dst_addr = NULL;
+    hip_hit_t                *src_hit  = NULL, *dst_hit = NULL;
+    hip_lsi_t                *src_lsi  = NULL, *dst_lsi = NULL;
+    struct in6_addr          *src_addr = NULL, *dst_addr = NULL;
     struct xfrm_user_acquire *acq;
-    struct hip_hadb_state *entry;
-    int err                   = 0;
+    struct hip_hadb_state    *entry;
+    int                       err = 0;
 
     HIP_DEBUG("Acquire (pid: %d) \n", msg->nlmsg_pid);
 
@@ -1048,7 +1039,7 @@ static int hip_netdev_handle_acquire(struct nlmsghdr *msg)
     entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
     if (entry) {
-        HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
+        HIP_IFEL(entry->state == HIP_STATE_ESTABLISHED, 0,
                  "State established, not triggering bex\n");
 
         src_lsi = &(entry->lsi_our);
@@ -1074,11 +1065,11 @@ out_err:
  */
 int hip_netdev_trigger_bex_msg(const struct hip_common *msg)
 {
-    const hip_hit_t *our_hit        = NULL, *peer_hit  = NULL;
-    const hip_lsi_t *our_lsi        = NULL, *peer_lsi  = NULL;
-    const struct in6_addr *our_addr = NULL, *peer_addr = NULL;
+    const hip_hit_t             *our_hit  = NULL, *peer_hit  = NULL;
+    const hip_lsi_t             *our_lsi  = NULL, *peer_lsi  = NULL;
+    const struct in6_addr       *our_addr = NULL, *peer_addr = NULL;
     const struct hip_tlv_common *param;
-    int err                   = 0;
+    int                          err = 0;
 
     HIP_DUMP_MSG(msg);
 
@@ -1191,12 +1182,12 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
  */
 int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
 {
-    int err = 0, l = 0, is_add = 0, exists;
+    int                     err = 0, l = 0, is_add = 0, exists;
     struct sockaddr_storage ss_addr;
-    struct ifinfomsg *ifinfo  = NULL;     /* link layer specific message */
-    struct ifaddrmsg *ifa     = NULL;     /* interface address message */
-    struct rtattr *rta        = NULL, *tb[IFA_MAX + 1];
-    struct sockaddr *addr     = NULL;
+    struct ifinfomsg       *ifinfo = NULL; /* link layer specific message */
+    struct ifaddrmsg       *ifa    = NULL; /* interface address message */
+    struct rtattr          *rta    = NULL, *tb[IFA_MAX + 1];
+    struct sockaddr        *addr   = NULL;
 
     addr = (struct sockaddr *) &ss_addr;
 
@@ -1227,14 +1218,12 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
 
             /* Check if our interface is in the whitelist */
             if ((hip_netdev_white_list_count > 0) &&
-                (!hip_netdev_is_in_white_list(ifindex)))
-            {
+                (!hip_netdev_is_in_white_list(ifindex))) {
                 continue;
             }
 
             if ((ifa->ifa_family != AF_INET) &&
-                (ifa->ifa_family != AF_INET6))
-            {
+                (ifa->ifa_family != AF_INET6)) {
                 continue;
             }
 
@@ -1278,7 +1267,7 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
             /* Trying to add an existing address or deleting a non-existing
              * address */
             exists = hip_exists_address_in_list(addr, ifa->ifa_index);
-            HIP_IFEL(((exists && is_add) || (!exists && !is_add)), -1,
+            HIP_IFEL((exists && is_add) || (!exists && !is_add), -1,
                      "Address change discarded (exists=%d, is_add=%d)\n",
                      exists, is_add);
 
@@ -1347,9 +1336,9 @@ out_err:
  */
 int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 {
-    int err                   = 0;
-    char hit_str[INET6_ADDRSTRLEN + 2];
-    struct idxmap *idxmap[16] = {0};
+    int            err = 0;
+    char           hit_str[INET6_ADDRSTRLEN + 2];
+    struct idxmap *idxmap[16] = { 0 };
 
     hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR, hit_str);
     HIP_DEBUG("Adding HIT: %s\n", hit_str);
@@ -1370,7 +1359,7 @@ out_err:
  */
 int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
-    int err = 0;
+    int  err = 0;
     char hit_str[INET6_ADDRSTRLEN + 2];
 
     hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR, hit_str);
@@ -1397,10 +1386,10 @@ out_err:
  */
 int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
 {
-    int err                   = 0;
-    int family                = AF_INET6;
-    struct idxmap *idxmap[16] = { 0 };
-    struct in6_addr lpback    = IN6ADDR_LOOPBACK_INIT;
+    int             err        = 0;
+    int             family     = AF_INET6;
+    struct idxmap  *idxmap[16] = { 0 };
+    struct in6_addr lpback     = IN6ADDR_LOOPBACK_INIT;
 
     HIP_DEBUG_IN6ADDR("dst", dst);
 
@@ -1415,8 +1404,8 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
     if (ipv6_addr_is_teredo(dst)) {
         struct netdev_address *na;
         const struct in6_addr *in6;
-        LHASH_NODE *n, *t;
-        int c, match = 0;
+        LHASH_NODE            *n, *t;
+        int                    c, match = 0;
 
         list_for_each_safe(n, t, addresses, c) {
             na  = list_entry(n);
@@ -1445,9 +1434,9 @@ out_err:
  */
 void hip_copy_peer_addrlist_changed(struct hip_hadb_state *ha)
 {
-    LHASH_NODE *item = NULL, *tmp = NULL;
+    LHASH_NODE                     *item = NULL, *tmp = NULL;
     struct hip_peer_addr_list_item *addr_li;
-    int i            = 0;
+    int                             i = 0;
 
     if (!ha->peer_addr_list_to_be_added) {
         return;

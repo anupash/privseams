@@ -129,7 +129,7 @@ static uint64_t sflags;
 static void hip_sig_chld(int signum)
 {
     union wait status;
-    int pid;
+    int        pid;
 
     signal(signum, hip_sig_chld);
 
@@ -152,7 +152,7 @@ static void hip_create_file_unless_exists(const char *path, const char *contents
         return;
     }
 
-    FILE *fp     = fopen(path, "w");
+    FILE *fp = fopen(path, "w");
     HIP_ASSERT(fp);
     size_t items = fwrite(contents, strlen(contents), 1, fp);
     HIP_ASSERT(items > 0);
@@ -252,7 +252,7 @@ static void hip_load_configuration(void)
 static void hip_set_os_dep_variables(void)
 {
     struct utsname un;
-    int rel[4] = {0};
+    int            rel[4] = { 0 };
 
     uname(&un);
 
@@ -284,7 +284,7 @@ static void hip_set_os_dep_variables(void)
  */
 static int hip_init_raw_sock_v4(int proto)
 {
-    int on  = 1, off = 0, err = 0;
+    int on = 1, off = 0, err = 0;
     int sock;
 
     sock = socket(AF_INET, SOCK_RAW, proto);
@@ -332,8 +332,8 @@ static const char *kernel_net_mod[] = {
  */
 static int hip_check_kernel_modules(void)
 {
-    int net_total, crypto_total, count;
-    char str[MODPROBE_MAX_LINE];
+    int         net_total, crypto_total, count;
+    char        str[MODPROBE_MAX_LINE];
     struct stat sbuf;
 
     net_total    = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
@@ -353,7 +353,7 @@ static int hip_check_kernel_modules(void)
         snprintf(str, sizeof(str), "/sys/module/%s", kernel_net_mod[count]);
         if (stat(str, &sbuf)) {
             HIP_INFO("The %s kernel module is not loaded\n",
-                      kernel_net_mod[count]);
+                     kernel_net_mod[count]);
         }
     }
 
@@ -366,9 +366,9 @@ static int hip_check_kernel_modules(void)
  */
 static int hip_probe_kernel_modules(void)
 {
-    int count;
-    char cmd[MODPROBE_MAX_LINE];
-    int net_total, crypto_total;
+    int         count;
+    char        cmd[MODPROBE_MAX_LINE];
+    int         net_total, crypto_total;
     struct stat sbuf;
 
     net_total    = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
@@ -433,9 +433,9 @@ static inline int hip_rmmod(const char *name)
 static void hip_remove_kernel_modules(void)
 {
     /* some net modules depend on crypto, so keep net modules first */
-    const char **mods[] = {kernel_net_mod, kernel_crypto_mod};
-    int count[2], type, i, ret;
-    char cmd[MODPROBE_MAX_LINE];
+    const char **mods[] = { kernel_net_mod, kernel_crypto_mod };
+    int          count[2], type, i, ret;
+    char         cmd[MODPROBE_MAX_LINE];
 
     count[0] = sizeof(kernel_net_mod)    / sizeof(kernel_net_mod[0]);
     count[1] = sizeof(kernel_crypto_mod) / sizeof(kernel_crypto_mod[0]);
@@ -474,7 +474,7 @@ static void hip_remove_kernel_modules(void)
  */
 static int init_random_seed(void)
 {
-    struct timeval tv;
+    struct timeval  tv;
     struct timezone tz;
     struct {
         struct timeval tv;
@@ -483,7 +483,7 @@ static int init_random_seed(void)
     } rand_data;
     int err = 0;
 
-    err            = gettimeofday(&tv, &tz);
+    err = gettimeofday(&tv, &tz);
     srandom(tv.tv_usec);
 
     memcpy(&rand_data.tv, &tv, sizeof(tv));
@@ -531,15 +531,15 @@ out_err:
  */
 static struct hip_host_id_entry *hip_return_first_rsa(void)
 {
-    LHASH_NODE *curr, *iter;
+    LHASH_NODE               *curr, *iter;
     struct hip_host_id_entry *tmp = NULL;
-    int c;
-    uint16_t algo                 = 0;
+    int                       c;
+    uint16_t                  algo = 0;
 
     HIP_READ_LOCK_DB(hip_local_hostid_db);
 
     list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
-        tmp  = list_entry(curr);
+        tmp = list_entry(curr);
         HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
         algo = hip_get_host_id_algo(tmp->host_id);
         HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",
@@ -564,11 +564,11 @@ out_err:
  */
 static int hip_init_host_ids(void)
 {
-    int err = 0;
-    struct stat status;
+    int                err = 0;
+    struct stat        status;
     struct hip_common *user_msg = NULL;
-    hip_hit_t default_hit;
-    hip_lsi_t default_lsi;
+    hip_hit_t          default_hit;
+    hip_lsi_t          default_lsi;
 
     /* We are first serializing a message with HIs and then
      * deserializing it. This building and parsing causes
@@ -620,6 +620,10 @@ out_err:
     return err;
 }
 
+
+/* Needed if the configuration file for certs did not exist  */
+#define HIP_CERT_INIT_DAYS 10
+
 /**
  * Initialize certificates for the local host
  *
@@ -627,11 +631,11 @@ out_err:
  */
 static int hip_init_certs(void)
 {
-    int err = 0;
-    char hit[41];
-    FILE *conf_file;
+    int                       err = 0;
+    char                      hit[41];
+    FILE                     *conf_file;
     struct hip_host_id_entry *entry;
-    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    char                      hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
     memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
     HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
@@ -874,7 +878,7 @@ static int hip_init_handle_functions(void)
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_R2_SENT, &hip_check_notify,  20000);
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_R2_SENT, &hip_handle_notify, 30000);
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_ESTABLISHED, &hip_check_notify, 20000);
-    hip_register_handle_function(HIP_NOTIFY, HIP_STATE_ESTABLISHED, &hip_handle_notify,30000);
+    hip_register_handle_function(HIP_NOTIFY, HIP_STATE_ESTABLISHED, &hip_handle_notify, 30000);
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_CLOSING, &hip_check_notify,  20000);
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_CLOSING, &hip_handle_notify, 30000);
     hip_register_handle_function(HIP_NOTIFY, HIP_STATE_CLOSED, &hip_check_notify,  20000);
@@ -1047,7 +1051,7 @@ static void hip_close(int signum)
 
     /* Close SAs with all peers */
     if (terminate == 1) {
-        hip_send_close(NULL, FLUSH_HA_INFO_DB);
+        hip_send_close(NULL, 1);
         hipd_set_state(HIPD_STATE_CLOSING);
         HIP_DEBUG("Starting to close HIP daemon...\n");
     } else if (terminate == 2) {
@@ -1066,11 +1070,11 @@ static void hip_close(int signum)
  */
 int hipd_init(const uint64_t flags)
 {
-    int err = 0, certerr = 0, hitdberr = 0, i, j;
-    int killold = ((flags & HIPD_START_KILL_OLD) > 0);
-    unsigned int mtu_val = HIP_HIT_DEV_MTU;
-    char str[64];
-    char mtu[16];
+    int                 err     = 0, certerr = 0, hitdberr = 0, i, j;
+    int                 killold = ((flags & HIPD_START_KILL_OLD) > 0);
+    unsigned int        mtu_val = HIP_HIT_DEV_MTU;
+    char                str[64];
+    char                mtu[16];
     struct sockaddr_in6 daemon_addr;
 
     /* Keep the flags around: they will be used at kernel module removal */
@@ -1118,7 +1122,7 @@ int hipd_init(const uint64_t flags)
              "Cannot initialize opportunistic mode IP database for " \
              "non HIP capable hosts!\n");
 #endif
-    HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
+    HIP_IFEL(hip_init_cipher() < 0, 1, "Unable to init ciphers.\n");
 
     HIP_IFE(init_random_seed(), -1);
 
@@ -1155,25 +1159,25 @@ int hipd_init(const uint64_t flags)
 
     hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
 
-    hip_raw_sock_output_v6  = hip_init_raw_sock_v6(IPPROTO_HIP);
+    hip_raw_sock_output_v6 = hip_init_raw_sock_v6(IPPROTO_HIP);
     HIP_IFEL(hip_raw_sock_output_v6 < 0, -1, "raw sock output v6\n");
 
-    hip_raw_sock_output_v4  = hip_init_raw_sock_v4(IPPROTO_HIP);
+    hip_raw_sock_output_v4 = hip_init_raw_sock_v4(IPPROTO_HIP);
     HIP_IFEL(hip_raw_sock_output_v4 < 0, -1, "raw sock output v4\n");
 
     /* hip_nat_sock_input should be initialized after hip_nat_sock_output
-       because for the sockets bound to the same address/port, only the last socket seems
-       to receive the packets. NAT input socket is a normal UDP socket where as
-       NAT output socket is a raw socket. A raw output socket support better the "shotgun"
-       extension (sending packets from multiple source addresses). */
+     * because for the sockets bound to the same address/port, only the last socket seems
+     * to receive the packets. NAT input socket is a normal UDP socket where as
+     * NAT output socket is a raw socket. A raw output socket support better the "shotgun"
+     * extension (sending packets from multiple source addresses). */
 
     hip_nat_sock_output_udp = hip_init_raw_sock_v4(IPPROTO_UDP);
     HIP_IFEL(hip_nat_sock_output_udp < 0, -1, "raw sock output udp\n");
 
-    hip_raw_sock_input_v6   = hip_init_raw_sock_v6(IPPROTO_HIP);
+    hip_raw_sock_input_v6 = hip_init_raw_sock_v6(IPPROTO_HIP);
     HIP_IFEL(hip_raw_sock_input_v6 < 0, -1, "raw sock input v6\n");
 
-    hip_raw_sock_input_v4   = hip_init_raw_sock_v4(IPPROTO_HIP);
+    hip_raw_sock_input_v4 = hip_init_raw_sock_v4(IPPROTO_HIP);
     HIP_IFEL(hip_raw_sock_input_v4 < 0, -1, "raw sock input v4\n");
 
     HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
@@ -1210,8 +1214,8 @@ int hipd_init(const uint64_t flags)
 
     HIP_IFE(hip_init_host_ids(), 1);
 
-    hip_user_sock           = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL((hip_user_sock < 0), 1,
+    hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
+    HIP_IFEL(hip_user_sock < 0, 1,
              "Could not create socket for user communication.\n");
     bzero(&daemon_addr, sizeof(daemon_addr));
     daemon_addr.sin6_family = AF_INET6;
@@ -1280,7 +1284,6 @@ out_err:
     return err;
 }
 
-
 /**
  * create a socket to handle UDP encapsulation of HIP control
  * packets
@@ -1295,9 +1298,9 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
                             struct sockaddr_in *addr,
                             int is_output)
 {
-    int on  = 1, off = 0, err = 0;
+    int                on = 1, off = 0, err = 0;
     struct sockaddr_in myaddr;
-    int type, protocol;
+    int                type, protocol;
 
     if (is_output) {
         type     = SOCK_RAW;
@@ -1338,7 +1341,7 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
     if (addr) {
         memcpy(&myaddr, addr, sizeof(struct sockaddr_in));
     } else {
-        myaddr.sin_family      = AF_INET;
+        myaddr.sin_family = AF_INET;
         /** @todo Change this inaddr_any -- Abi */
         myaddr.sin_addr.s_addr = INADDR_ANY;
         myaddr.sin_port        = htons(hip_get_local_nat_udp_port());
@@ -1356,5 +1359,3 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp,
 out_err:
     return err;
 }
-
-

@@ -33,9 +33,8 @@
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
 /** UDP encapsulation type. */
-#define HIP_UDP_ENCAP_ESPINUDP 2
-/** UDP encapsulation type. */
 #define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1
+#define HIP_UDP_ENCAP_ESPINUDP        2
 
 /**
  * Get HIP local NAT UDP port.

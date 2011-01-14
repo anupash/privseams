@@ -44,9 +44,6 @@
 #define HIPD_FLAG_RESTART       0x00000100
 /* @} */
 
-#define INDEX_HASH_LENGTH       SHA_DIGEST_LENGTH
-
-#define INDEX_HASH_FN           HIP_DIGEST_SHA1
 
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);
@@ -54,4 +51,3 @@ int hipd_get_flag(unsigned int);
 void hipd_set_flag(unsigned int);
 
 #endif /* HIP_HIPD_ACCESSOR_H */
-

@@ -55,19 +55,19 @@ struct esp_prot_tfm {
 };
 
 
-extern int token_transform;
-extern int num_parallel_hchains;
-extern int ring_buffer_size;
-extern int num_linear_elements;
-extern int num_random_elements;
-extern int hash_length_g;
-extern int hash_structure_length;
-extern int num_hchains_per_item;
-extern int num_hierarchies;
+extern int    token_transform;
+extern int    num_parallel_hchains;
+extern int    ring_buffer_size;
+extern int    num_linear_elements;
+extern int    num_random_elements;
+extern int    hash_length_g;
+extern int    hash_structure_length;
+extern int    num_hchains_per_item;
+extern int    num_hierarchies;
 extern double refill_threshold;
 extern double update_threshold;
 
-extern int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
+extern int           hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
 extern hash_function hash_functions[NUM_HASH_FUNCTIONS];
 
 int esp_prot_init(void);

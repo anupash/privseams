@@ -37,30 +37,30 @@
 #include "lib/core/hashtree.h"
 #include "lib/core/statistics.h"
 
-const hash_function hash_functions[2] = {(hash_function) SHA1,
-                                         (hash_function) MD5};
+const hash_function hash_functions[2] = { (hash_function) SHA1,
+                                          (hash_function) MD5 };
 
-int count         = 100;
+int count = 100;
 // this is supported by both md5 and sha1
-int hash_length   = 16;
-int hchain_length = 100000;
-int verify_length = 64;
+int           hash_length   = 16;
+int           hchain_length = 100000;
+int           verify_length = 64;
 hash_function hash_func;
-int test_hc       = 0;
-int test_ht       = 0;
+int           test_hc = 0;
+int           test_ht = 0;
 
 
 static void print_usage(void)
 {
-    printf( "Usage: hc_performance -c|t -s|m [-lhvn NUM]\n"
-            "-c = do hash-chain performance tests\n"
-            "-t = do hash-tree performance tests\n"
-            "-s = use SHA1 hash-function\n"
-            "-m = use MD5 hash-function\n"
-            "-l [NUM] = create hash-chain with length NUM\n"
-            "-h [NUM] = create hash elements of length NUM\n"
-            "-v [NUM] = verify NUM elements\n"
-            "-n [NUM] = do NUM measurements\n");
+    printf("Usage: hc_performance -c|t -s|m [-lhvn NUM]\n"
+           "-c = do hash-chain performance tests\n"
+           "-t = do hash-tree performance tests\n"
+           "-s = use SHA1 hash-function\n"
+           "-m = use MD5 hash-function\n"
+           "-l [NUM] = create hash-chain with length NUM\n"
+           "-h [NUM] = create hash elements of length NUM\n"
+           "-v [NUM] = verify NUM elements\n"
+           "-n [NUM] = do NUM measurements\n");
 }
 
 /**
@@ -75,9 +75,9 @@ static void print_usage(void)
 static void print_timeres(void)
 {
     struct timeval tv1, tv2;
-    int i;
-    printf( "-------------------------------\n"
-            "Determine gettimeofday resolution:\n");
+    int            i;
+    printf("-------------------------------\n"
+           "Determine gettimeofday resolution:\n");
 
 
     for (i = 0; i < 10; i++) {
@@ -90,32 +90,32 @@ static void print_timeres(void)
                1000000 * (tv2.tv_sec - tv1.tv_sec));
     }
 
-    printf( "-------------------------------\n\n\n");
+    printf("-------------------------------\n\n\n");
 }
 
 int main(int argc, char **argv)
 {
-    int i;
-    int c;
-    int err                     = 0;
-    struct timeval start_time;
-    struct timeval stop_time;
-    struct hash_chain *hchain   = NULL;
-    struct hash_tree  *htree    = NULL;
+    int                    i;
+    int                    c;
+    int                    err = 0;
+    struct timeval         start_time;
+    struct timeval         stop_time;
+    struct hash_chain     *hchain = NULL;
+    struct hash_tree      *htree  = NULL;
     struct statistics_data creation_stats, verify_stats;
-    uint64_t timediff           = 0;
-    uint32_t num_items          = 0;
-    double min                  = 0.0, max = 0.0, avg = 0.0;
-    double std_dev              = 0.0;
-    unsigned char *branch_nodes = NULL;
-    int branch_length           = 0;
-    const unsigned char *secret = NULL;
-    int secret_length           = 0;
-    struct hash_chain *hchains[8];
-    const unsigned char *data   = NULL;
-    int data_length             = 0;
-    const unsigned char *root   = NULL;
-    int root_length             = 0;
+    uint64_t               timediff      = 0;
+    uint32_t               num_items     = 0;
+    double                 min           = 0.0, max = 0.0, avg = 0.0;
+    double                 std_dev       = 0.0;
+    unsigned char         *branch_nodes  = NULL;
+    int                    branch_length = 0;
+    const unsigned char   *secret        = NULL;
+    int                    secret_length = 0;
+    struct hash_chain     *hchains[8];
+    const unsigned char   *data        = NULL;
+    int                    data_length = 0;
+    const unsigned char   *root        = NULL;
+    int                    root_length = 0;
 
     hash_func = NULL;
 
@@ -123,28 +123,28 @@ int main(int argc, char **argv)
     while ((c = getopt(argc, argv, "ctsml:h:v:n:")) != -1) {
         switch (c) {
         case 'c':
-            test_hc       = 1;
+            test_hc = 1;
             break;
         case 't':
-            test_ht       = 1;
+            test_ht = 1;
             break;
         case 's':
-            hash_func     = hash_functions[0];
+            hash_func = hash_functions[0];
             break;
         case 'm':
-            hash_func     = hash_functions[1];
+            hash_func = hash_functions[1];
             break;
         case 'l':
             hchain_length = atoi(optarg);
             break;
         case 'h':
-            hash_length   = atoi(optarg);
+            hash_length = atoi(optarg);
             break;
         case 'v':
             verify_length = atoi(optarg);
             break;
         case 'n':
-            count         = atoi(optarg);
+            count = atoi(optarg);
             break;
         case ':':
             printf("Missing argument %c\n", optopt);
@@ -171,9 +171,9 @@ int main(int argc, char **argv)
     print_timeres();
 
     if (test_hc) {
-        printf( "-------------------------------\n"
-                "Hash chain performance test\n"
-                "-------------------------------\n\n");
+        printf("-------------------------------\n"
+               "Hash chain performance test\n"
+               "-------------------------------\n\n");
 
         printf("Creating %d hash chains of length %d with element length %d\n",
                count, hchain_length, hash_length);
@@ -230,9 +230,9 @@ int main(int argc, char **argv)
     }
 
     if (test_ht) {
-        printf( "\n-------------------------------\n"
-                "Hash tree performance test\n"
-                "-------------------------------\n\n");
+        printf("\n-------------------------------\n"
+               "Hash tree performance test\n"
+               "-------------------------------\n\n");
 
         memset(&creation_stats, 0, sizeof(struct statistics_data));
         memset(&verify_stats, 0, sizeof(struct statistics_data));
@@ -246,8 +246,8 @@ int main(int argc, char **argv)
             HIP_DEBUG("data_length: %i\n", hash_length);
 
             gettimeofday(&start_time, NULL);
-            htree    = htree_init(hchain_length, hash_length,
-                                  hash_length, 0, NULL, 0);
+            htree = htree_init(hchain_length, hash_length,
+                               hash_length, 0, NULL, 0);
             htree_add_random_data(htree, hchain_length);
             htree_calc_nodes(htree, htree_leaf_generator,
                              htree_node_generator, NULL);

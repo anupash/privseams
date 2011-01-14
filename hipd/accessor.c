@@ -38,7 +38,7 @@
 #include "accessor.h"
 #include "hipd.h"
 
-unsigned int hipd_state         = HIPD_STATE_CLOSED;
+unsigned int hipd_state = HIPD_STATE_CLOSED;
 
 /**
  * Set global daemon state.

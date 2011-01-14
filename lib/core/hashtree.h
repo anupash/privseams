@@ -66,36 +66,36 @@ typedef int (*htree_node_gen)(const unsigned char *left_node,
 
 struct hash_tree {
     // data variables
-    int               leaf_set_size; /* maximum number of data blocks to be stored in the tree */
-    int               num_data_blocks; /* number of data blocks to be verified with the tree */
-    int               max_data_length; /* max length for a single leaf element */
-    unsigned char *   data;  /* array containing the data to be validated with the tree */
-    int               secret_length; /* length of the secret */
-    unsigned char *   secrets;  /* individual secrets to be revealed with each data block */
+    int            leaf_set_size;    /* maximum number of data blocks to be stored in the tree */
+    int            num_data_blocks;    /* number of data blocks to be verified with the tree */
+    int            max_data_length;    /* max length for a single leaf element */
+    unsigned char *data;     /* array containing the data to be validated with the tree */
+    int            secret_length;    /* length of the secret */
+    unsigned char *secrets;     /* individual secrets to be revealed with each data block */
 
     struct hash_tree *link_tree;
     int               hierarchy_level;
 
     // tree elements variables
-    int               node_length; /* length of a single node element */
-    unsigned char *   nodes;  /* array containing the nodes of the tree */
-    unsigned char *   root;  /* the root of the tree -> points into nodes-array */
+    int            node_length;    /* length of a single node element */
+    unsigned char *nodes;     /* array containing the nodes of the tree */
+    unsigned char *root;     /* the root of the tree -> points into nodes-array */
 
     // management variables
-    int               depth; /* depth of the tree */
-    int               data_position; /* index of the next free leaf */
-    int               is_open; /* can one enter new entries?
-                      *                 This is only true if the nodes have not been
-                      *                 computed yet. */
+    int depth;               /* depth of the tree */
+    int data_position;               /* index of the next free leaf */
+    int is_open;               /* can one enter new entries?
+                                *                 This is only true if the nodes have not been
+                                *                 computed yet. */
 };
 
 double log_x(const int base, const double value);
 struct hash_tree *htree_init(const int num_data_blocks,
-                        const int max_data_length,
-                        const int node_length,
-                        const int secret_length,
-                        struct hash_tree *link_tree,
-                        const int hierarchy_level);
+                             const int max_data_length,
+                             const int node_length,
+                             const int secret_length,
+                             struct hash_tree *link_tree,
+                             const int hierarchy_level);
 void htree_free(struct hash_tree *tree);
 int htree_add_data(struct hash_tree *tree,
                    const unsigned char *data,

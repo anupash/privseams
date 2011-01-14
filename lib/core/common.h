@@ -41,37 +41,37 @@
 
 /** unused attribute marking */
 #ifdef __GNUC__
-# define UNUSED __attribute__((unused))
+#define UNUSED __attribute__((unused))
 #else
-# define UNUSED
+#define UNUSED
 #endif
 
 /** marking for RVS-specific function parameters */
 #ifdef CONFIG_HIP_RVS
-# define RVS
+#define RVS
 #else
-# define RVS UNUSED
+#define RVS UNUSED
 #endif
 
 /** marking for firewall function parameters */
 #ifdef CONFIG_HIP_FIREWALL
-# define HIPFW
+#define HIPFW
 #else
-# define HIPFW UNUSED
+#define HIPFW UNUSED
 #endif
 
 /** marking for OPPORTUNISTIC-specific function parameters */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-# define OPP
+#define OPP
 #else
-# define OPP UNUSED
+#define OPP UNUSED
 #endif
 
 /** marking for DEBUG-specific function parameters */
 #ifdef CONFIG_HIP_DEBUG
-# define DBG
+#define DBG
 #else
-# define DBG UNUSED
+#define DBG UNUSED
 #endif
 /*********** ESP structures *************/
 
@@ -101,17 +101,6 @@ struct hip_esp_tail {
 /* IP version translation from IPv4 to IPv6 takes another 20 bytes */
 #define IPV4_TO_IPV6            (sizeof(struct ip6_hdr) - sizeof(struct ip))
 
-/* max. ESP padding as defined in RFC ???
- *
- * @note this allows to hide the actual payload length */
-#define MAX_ESP_PADDING         255
-/* this is the the max. ESP padding as needed by the cipher
- *
- * @note calculated as max. block-size - 1 */
-#define CIPHER_ESP_PADDING      CIPHER_BLOCK_SIZE - 1
-/* in the max packet size case we don't want to use any padding
- * -> the payload should fill the whole last block */
-#define NO_ESP_PADDING          0
 /* if we do IP version translation from IPv4 to IPv6 we get another IPV4_TO_IPV6
  * bytes. Consider this in the last block. */
 #define OPTIMAL_ESP_PADDING CIPHER_BLOCK_SIZE - (IPV4_TO_IPV6 % CIPHER_BLOCK_SIZE)
@@ -135,5 +124,7 @@ struct hip_esp_tail {
 #define HIP_MTU                 MAX_PACKET_SIZE - (BEET_OVERHEAD)
 
 #define HIP_HIT_DEV_MTU         HIP_MTU >= MIN_HIP_MTU ? HIP_MTU : MIN_HIP_MTU
+
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 #endif /* HIP_LIB_CORE_COMMON_H */

@@ -26,7 +26,8 @@ ACLOCAL_AMFLAGS  = -I m4
 HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h))
 
 # For "make dist"
-EXTRA_DIST =  .vimrc debian doc patches version.h
+EXTRA_DIST =  .vimrc debian doc patches version.h .uncrustify.cfg
+EXTRA_DIST += .uncrustify-0.57.cfg tools/bazaar/plugins/stylecheck.py
 EXTRA_DIST += packaging process_modules.py tools/maintainer
 EXTRA_DIST += $(wildcard modules/*/module_info.xml)
 EXTRA_DIST += $(wildcard modules/*/Makefile.am) $(wildcard modules/*/*/*.c)
@@ -204,13 +205,6 @@ test_check_lib_core_SOURCES = test/check_lib_core.c          \
                               test/lib/core/hit.c            \
                               test/lib/core/straddr.c
 
-# Initialize LDADD lists empty, because modules might add entries to LDADD. The
-# module LDADDs need to be included before the standard LDADDs, because modules
-# can depend on the core code.
-hipd_hipd_LDADD      =
-firewall_hipfw_LDADD =
-tools_hipconf_LDADD  =
-
 # Include module Makefile.am's.
 # TODO: Make this inclusion dynamic
 include modules/heartbeat/Makefile.am
@@ -219,8 +213,8 @@ include modules/update/Makefile.am
 
 ### library dependencies ###
 
-firewall_hipfw_LDADD                    += lib/core/libhipcore.la
-hipd_hipd_LDADD                         += lib/core/libhipcore.la
+firewall_hipfw_LDADD                     = lib/core/libhipcore.la
+hipd_hipd_LDADD                          = lib/core/libhipcore.la
 test_auth_performance_LDADD              = lib/core/libhipcore.la
 test_check_firewall_LDADD                = lib/core/libhipcore.la
 test_check_lib_core_LDADD                = lib/core/libhipcore.la
@@ -228,7 +222,7 @@ test_certteststub_LDADD                  = lib/core/libhipcore.la
 test_dh_performance_LDADD                = lib/core/libhipcore.la
 test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
 test_hc_performance_LDADD                = lib/core/libhipcore.la
-tools_hipconf_LDADD                     += lib/core/libhipcore.la
+tools_hipconf_LDADD                      = lib/core/libhipcore.la
 tools_pisacert_LDADD                     = lib/core/libhipcore.la
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \

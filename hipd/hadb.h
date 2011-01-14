@@ -33,10 +33,6 @@
 #include "lib/core/state.h"
 
 
-#define HIP_LOCK_INIT(ha)
-#define HIP_LOCK_HA(ha)
-#define HIP_UNLOCK_HA(ha)
-
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
@@ -104,11 +100,11 @@ int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 struct hip_hadb_state *hip_hadb_create_state(void);
 
-int hip_for_each_ha(int(func) (struct hip_hadb_state * entry, void *opaq),
+int hip_for_each_ha(int(func) (struct hip_hadb_state *entry, void *opaq),
                     void *opaque);
 
 /* next 2 functions are not called from outside but make sense and are
- * 'proposed' in libhipcore/state.h
+ * 'proposed' in lib/core/state.h
  */
 
 void hip_hadb_set_local_controls(struct hip_hadb_state *entry,

@@ -100,6 +100,8 @@
 #include "message.h"
 
 
+#define HIP_DEFAULT_MSG_TIMEOUT 4000000000ul /* nanosecs */
+
 /**
  * Finds out how much data is coming from a socket
  *
@@ -117,19 +119,19 @@ static int hip_peek_recv_total_len(int sockfd,
                                    int encap_hdr_size,
                                    long timeout)
 {
-    int bytes                  = 0, err = 0, flags = MSG_PEEK;
-    unsigned long timeout_left = timeout;
-    int hdr_size               = encap_hdr_size + sizeof(struct hip_common);
-    char *msg                  = NULL;
+    int             bytes        = 0, err = 0, flags = MSG_PEEK;
+    unsigned long   timeout_left = timeout;
+    int             hdr_size     = encap_hdr_size + sizeof(struct hip_common);
+    char           *msg          = NULL;
     struct timespec ts;
 
     ts.tv_sec  = 0;
     ts.tv_nsec =  100000000;
 
     /* We're using system call here add thus reseting errno. */
-    errno      = 0;
+    errno = 0;
 
-    msg        = malloc(hdr_size);
+    msg = malloc(hdr_size);
     HIP_IFEL(!msg, -ENOMEM, "Error allocating memory.\n");
 
     /* If a positive timeout value is given, make sure that the
@@ -139,7 +141,7 @@ static int hip_peek_recv_total_len(int sockfd,
     }
 
     do {
-        errno         = 0;
+        errno = 0;
         nanosleep(&ts, NULL);
         bytes         = recv(sockfd, msg, hdr_size, flags);
         timeout_left -= ts.tv_nsec;
@@ -189,10 +191,10 @@ out_err:
  */
 int hip_daemon_connect(int hip_user_sock)
 {
-    int err = 0;
+    int                 err = 0;
     struct sockaddr_in6 daemon_addr;
     // We're using system call here add thus reseting errno.
-    errno                   = 0;
+    errno = 0;
 
     memset(&daemon_addr, 0, sizeof(daemon_addr));
     daemon_addr.sin6_family = AF_INET6;
@@ -200,7 +202,7 @@ int hip_daemon_connect(int hip_user_sock)
     daemon_addr.sin6_addr   = in6addr_loopback;
 
     HIP_IFEL(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
-             sizeof(daemon_addr)), -1, "connection to daemon failed\n");
+                     sizeof(daemon_addr)), -1, "connection to daemon failed\n");
 
 out_err:
 
@@ -229,7 +231,7 @@ out_err:
  */
 static int hip_daemon_bind_socket(int sockfd, struct sockaddr *sa)
 {
-    int err                   = 0, port = 0, on = 1;
+    int                  err  = 0, port = 0, on = 1;
     struct sockaddr_in6 *addr = (struct sockaddr_in6 *) sa;
 
     HIP_ASSERT(addr->sin6_family == AF_INET6);
@@ -299,14 +301,14 @@ static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
 {
     /* Variables. */
     struct sockaddr_in6 sock_addr;
-    int n = -1, alen;
+    int                 n = -1, alen;
 
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
     sock_addr.sin6_addr   = in6addr_loopback;
 
-    alen                  = sizeof(sock_addr);
+    alen = sizeof(sock_addr);
 
     HIP_DEBUG("Sending user message %d to HIPD on socket %d\n",
               hip_get_msg_type(msg), sockfd);
@@ -317,6 +319,11 @@ static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
 
     return n;
 }
+
+
+/** A generic HIP error. This should be a value whose value does not overlap
+ *  with the global errno values. */
+#define EHIP       500
 
 /**
  * Send and receive data with hipd. Do not call this function directly, use
@@ -331,19 +338,19 @@ static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
  */
 static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_socket)
 {
-    int hip_user_sock = 0, err = 0, n = 0, len = 0;
+    int                 hip_user_sock = 0, err = 0, n = 0, len = 0;
     struct sockaddr_in6 addr;
-    uint8_t msg_type_old, msg_type_new;
+    uint8_t             msg_type_old, msg_type_new;
 
     msg_type_old = hip_get_msg_type(msg);
 
     // We're using system call here and thus reseting errno.
-    errno        = 0;
+    errno = 0;
 
     if (opt_socket) {
         hip_user_sock = opt_socket;
     } else {
-        HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
+        HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, EHIP);
 
         memset(&addr, 0, sizeof(addr));
         addr.sin6_family = AF_INET6;
@@ -384,7 +391,7 @@ static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_so
 
     /* You have a message synchronization problem if you see this error. */
     msg_type_new = hip_get_msg_type(msg);
-    HIP_IFEL((msg_type_new != msg_type_old), -1,
+    HIP_IFEL(msg_type_new != msg_type_old, -1,
              "Message sync problem. Expected %d, got %d\n",
              msg_type_old, msg_type_new);
 
@@ -395,7 +402,7 @@ static int hip_send_recv_daemon_info_internal(struct hip_common *msg, int opt_so
                  "orderly shutdown.\n");
         // Note. This is not an error condition, thus we return zero.
         goto out_err;
-    } else if (n < (int)sizeof(struct hip_common)) {
+    } else if (n < (int) sizeof(struct hip_common)) {
         HIP_ERROR("Could not receive message from daemon.\n");
         goto out_err;
     }
@@ -437,7 +444,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
                               int send_only,
                               int opt_socket)
 {
-    int hip_user_sock = 0, err = 0, n, len;
+    int                 hip_user_sock = 0, err = 0, n, len;
     struct sockaddr_in6 addr;
 
     if (!send_only) {
@@ -447,7 +454,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
     if (opt_socket) {
         hip_user_sock = opt_socket;
     } else {
-        HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
+        HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, -1);
         memset(&addr, 0, sizeof(addr));
         addr.sin6_family = AF_INET6;
         addr.sin6_addr   = in6addr_loopback;
@@ -488,7 +495,7 @@ out_err:
 int hip_read_user_control_msg(int sockfd, struct hip_common *hip_msg,
                               struct sockaddr_in6 *saddr)
 {
-    int err = 0, bytes = 0, total;
+    int       err = 0, bytes = 0, total;
     socklen_t len;
 
     HIP_DEBUG("Receiving user message.\n");
@@ -498,17 +505,13 @@ int hip_read_user_control_msg(int sockfd, struct hip_common *hip_msg,
 
     len = sizeof(*saddr);
 
-    HIP_IFEL(((total = hip_peek_recv_total_len(sockfd, 0, HIP_DEFAULT_MSG_TIMEOUT)) <= 0),
+    HIP_IFEL((total = hip_peek_recv_total_len(sockfd, 0, HIP_DEFAULT_MSG_TIMEOUT)) <= 0,
              -1,
              "recv peek failed\n");
 
-    /** @todo Compiler warning;
-     *  warning: pointer targets in passing argument 6 of 'recvfrom'
-     *  differ in signedness. */
-    HIP_IFEL(((bytes = recvfrom(sockfd, hip_msg, total, 0,
-                                (struct sockaddr *) saddr,
-                                &len)) != total),
-               -1, "recv\n");
+    HIP_IFEL((bytes = recvfrom(sockfd, hip_msg, total, 0,
+                               (struct sockaddr *) saddr,&len)) != total,
+             -1, "recv\n");
 
     HIP_DEBUG("received user message from local port %d\n",
               ntohs(saddr->sin6_port));
@@ -540,18 +543,18 @@ static int hip_read_control_msg_all(int sockfd,
                                     int is_ipv4)
 {
     struct sockaddr_storage addr_from, addr_to;
-    struct sockaddr_in *addr_from4  = ((struct sockaddr_in *) &addr_from);
-    struct sockaddr_in6 *addr_from6 = ((struct sockaddr_in6 *) &addr_from);
-    struct cmsghdr *cmsg = NULL;
-    struct msghdr msg;
+    struct sockaddr_in     *addr_from4 = ((struct sockaddr_in *) &addr_from);
+    struct sockaddr_in6    *addr_from6 = ((struct sockaddr_in6 *) &addr_from);
+    struct cmsghdr         *cmsg       = NULL;
+    struct msghdr           msg;
     union {
-        struct in_pktinfo *   pktinfo_in4;
+        struct in_pktinfo    *pktinfo_in4;
         struct inet6_pktinfo *pktinfo_in6;
     } pktinfo;
     struct iovec iov;
-    char cbuff[CMSG_SPACE(256)];
-    int err = 0, len;
-    int cmsg_level, cmsg_type;
+    char         cbuff[CMSG_SPACE(256)];
+    int          err = 0, len;
+    int          cmsg_level, cmsg_type;
 
     hip_msg_init(ctx->input_msg);
 
@@ -563,24 +566,24 @@ static int hip_read_control_msg_all(int sockfd,
     memset(&addr_to, 0, sizeof(addr_to));
 
     /* setup message header with control and receive buffers */
-    msg.msg_name        = &addr_from;
-    msg.msg_namelen     = sizeof(struct sockaddr_storage);
-    msg.msg_iov         = &iov;
-    msg.msg_iovlen      = 1;
+    msg.msg_name    = &addr_from;
+    msg.msg_namelen = sizeof(struct sockaddr_storage);
+    msg.msg_iov     = &iov;
+    msg.msg_iovlen  = 1;
 
     memset(cbuff, 0, sizeof(cbuff));
-    msg.msg_control     = cbuff;
-    msg.msg_controllen  = sizeof(cbuff);
-    msg.msg_flags       = 0;
+    msg.msg_control    = cbuff;
+    msg.msg_controllen = sizeof(cbuff);
+    msg.msg_flags      = 0;
 
-    iov.iov_len         = HIP_MAX_NETWORK_PACKET;
-    iov.iov_base        = ctx->input_msg;
+    iov.iov_len  = HIP_MAX_NETWORK_PACKET;
+    iov.iov_base = ctx->input_msg;
 
     pktinfo.pktinfo_in4 = NULL;
 
-    len                 = recvmsg(sockfd, &msg, 0);
+    len = recvmsg(sockfd, &msg, 0);
 
-    HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
+    HIP_IFEL(len < 0, -1, "ICMP%s error: errno=%d, %s\n",
              (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
 
     cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
@@ -613,7 +616,7 @@ static int hip_read_control_msg_all(int sockfd,
     } else {
         ctx->msg_ports.src_port = 0;
         ctx->msg_ports.dst_port = 0;
-   }
+    }
 
     /* IPv4 addresses */
     if (is_ipv4) {
@@ -672,7 +675,7 @@ int hip_read_control_msg_v6(int sockfd,
                             struct hip_packet_context *ctx,
                             int encap_hdr_size)
 {
-    HIP_DEBUG("Receiving a message on raw HIP from IPv6/HIP socket "\
+    HIP_DEBUG("Receiving a message on raw HIP from IPv6/HIP socket " \
               " (file descriptor: %d).\n", sockfd);
     return hip_read_control_msg_all(sockfd, ctx, encap_hdr_size, 0);
 }
@@ -689,7 +692,7 @@ int hip_read_control_msg_v4(int sockfd,
                             struct hip_packet_context *ctx,
                             int encap_hdr_size)
 {
-    HIP_DEBUG("Receiving a message on raw HIP from IPv4/HIP socket "\
+    HIP_DEBUG("Receiving a message on raw HIP from IPv4/HIP socket " \
               " (file descriptor: %d).\n", socket);
     return hip_read_control_msg_all(sockfd, ctx, encap_hdr_size, 1);
 }

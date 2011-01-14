@@ -56,8 +56,8 @@
 static int hip_userspace_ipsec_send_to_fw(const struct hip_common *msg)
 {
     struct sockaddr_in6 hip_fw_addr;
-    struct in6_addr loopback = in6addr_loopback;
-    int err                  = 0;
+    struct in6_addr     loopback = in6addr_loopback;
+    int                 err      = 0;
 
     HIP_ASSERT(msg != NULL);
 
@@ -112,13 +112,12 @@ uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
                                     struct hip_hadb_state *entry)
 {
     struct hip_common *msg = NULL;
-    in_port_t sport, dport;
-    int err                = 0;
+    in_port_t          sport, dport;
+    int                err = 0;
 
     HIP_ASSERT(spi != 0);
 
-    HIP_IFEL((entry->disable_sas == 1), 0,
-             "SA creation disabled\n");
+    HIP_IFEL(entry->disable_sas == 1, 0, "SA creation disabled\n");
 
     if (direction == HIP_SPI_DIRECTION_OUT) {
         sport = entry->local_udp_port;

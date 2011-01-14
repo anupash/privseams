@@ -61,6 +61,9 @@
 #include "user_ipsec_sadb.h"
 
 
+#define INDEX_HASH_FN           HIP_DIGEST_SHA1
+#define INDEX_HASH_LENGTH       SHA_DIGEST_LENGTH
+
 /* hash functions used for calculating the entries' hashes
  *
  * TODO use own function to hash hits to improve performance
@@ -77,7 +80,7 @@ struct hip_link_entry {
 };
 
 /* database storing the sa entries, indexed by src _and_ dst hits */
-HIP_HASHTABLE *sadb   = NULL;
+HIP_HASHTABLE *sadb = NULL;
 /* database storing shortcuts to sa entries for incoming packets */
 HIP_HASHTABLE *linkdb = NULL;
 
@@ -91,8 +94,8 @@ HIP_HASHTABLE *linkdb = NULL;
 static unsigned long hip_sa_entry_hash(const struct hip_sa_entry *sa_entry)
 {
     struct in6_addr addr_pair[2];               /* in BEET-mode these are HITs */
-    unsigned char hash[INDEX_HASH_LENGTH];
-    int err = 0;
+    unsigned char   hash[INDEX_HASH_LENGTH];
+    int             err = 0;
 
     memset(&hash, 0, INDEX_HASH_LENGTH);
 
@@ -114,7 +117,7 @@ static unsigned long hip_sa_entry_hash(const struct hip_sa_entry *sa_entry)
 
     HIP_IFEL(hip_build_digest(INDEX_HASH_FN, addr_pair,
                               2 * sizeof(struct in6_addr), hash), -1,
-                              "failed to hash addresses\n");
+             "failed to hash addresses\n");
 
 out_err:
     if (err) {
@@ -161,10 +164,10 @@ static int hip_sa_entries_cmp(const struct hip_sa_entry *sa_entry1,
  */
 static unsigned long hip_link_entry_hash(const struct hip_link_entry *link_entry)
 {
-    int input_length = sizeof(struct in6_addr) + sizeof(uint32_t);
+    int           input_length = sizeof(struct in6_addr) + sizeof(uint32_t);
     unsigned char hash_input[input_length];
     unsigned char hash[INDEX_HASH_LENGTH];
-    int err          = 0;
+    int           err = 0;
 
     // values have to be present
     HIP_ASSERT(link_entry != NULL && link_entry->spi != 0);
@@ -238,7 +241,7 @@ static struct hip_link_entry *hip_link_entry_find(const struct in6_addr *dst_add
                                                   uint32_t spi)
 {
     struct hip_link_entry search_link, *stored_link = NULL;
-    int err = 0;
+    int                   err = 0;
 
     // search the linkdb for the link to the corresponding entry
     memcpy(&search_link.dst_addr, dst_addr, sizeof(struct in6_addr));
@@ -270,7 +273,7 @@ static int hip_link_entry_add(struct in6_addr *dst_addr,
                               struct hip_sa_entry *entry)
 {
     struct hip_link_entry *link = NULL;
-    int err = 0;
+    int                    err  = 0;
 
     HIP_IFEL(!(link = malloc(sizeof(struct hip_link_entry))),
              -1, "failed to allocate memory\n");
@@ -296,7 +299,7 @@ out_err:
 static int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi)
 {
     struct hip_link_entry *stored_link = NULL;
-    int err = 0;
+    int                    err         = 0;
 
     // find link entry and free members
     HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
@@ -361,10 +364,10 @@ static int hip_sa_entry_set(struct hip_sa_entry *entry,
                             unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
                             int update)
 {
-    int key_len         = 0;                            /* for 3-DES */
+    int           key_len = 0;                          /* for 3-DES */
     unsigned char key1[8], key2[8], key3[8];            /* for 3-DES */
-    int enc_key_changed = 0;
-    int err             = 0;
+    int           enc_key_changed = 0;
+    int           err             = 0;
 
     // TODO handle update case with credit-based authentication
     // -> introduce backup of spi and keying material
@@ -383,7 +386,7 @@ static int hip_sa_entry_set(struct hip_sa_entry *entry,
     entry->src_port   = src_port;
     entry->dst_port   = dst_port;
 
-    entry->ealg       = ealg;
+    entry->ealg = ealg;
 
     // copy raw keys, if they changed
     if (memcmp(entry->auth_key, auth_key, hip_auth_key_length_esp(ealg))) {
@@ -392,7 +395,6 @@ static int hip_sa_entry_set(struct hip_sa_entry *entry,
 
     if (hip_enc_key_length(ealg) > 0 && memcmp(entry->enc_key, enc_key,
                                                hip_enc_key_length(ealg))) {
-
         memcpy(entry->enc_key, enc_key, hip_enc_key_length(ealg));
         enc_key_changed = 1;
     }
@@ -466,7 +468,7 @@ static int hip_sa_entry_set(struct hip_sa_entry *entry,
 
     HIP_IFEL(esp_prot_sa_entry_set(entry, esp_prot_transform, hash_item_length,
                                    esp_num_anchors, esp_prot_anchors, update),
-            -1, "failed to set esp protection members\n");
+             -1, "failed to set esp protection members\n");
 
 out_err:
     return err;
@@ -517,12 +519,12 @@ static int hip_sa_entry_update(int direction,
                                int update)
 {
     struct hip_sa_entry *stored_entry = NULL;
-    int err = 0;
+    int                  err          = 0;
 
     // we need the sadb entry to go through entries in the linkdb
     HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(inner_src_addr,
                                                          inner_dst_addr)), -1,
-                                                         "failed to retrieve sa entry\n");
+             "failed to retrieve sa entry\n");
 
     /* delete all links
      *
@@ -538,7 +540,7 @@ static int hip_sa_entry_update(int direction,
                               enc_key, lifetime, esp_prot_transform,
                               hash_item_length, esp_num_anchors,
                               esp_prot_anchors, update),
-                              -1, "failed to update the entry members\n");
+             -1, "failed to update the entry members\n");
 
     HIP_IFEL(hip_link_entry_add(&stored_entry->dst_addr, stored_entry), -1,
              "failed to add links\n");
@@ -605,7 +607,7 @@ static int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
                             int update)
 {
     struct hip_sa_entry *entry = NULL;
-    int err               = 0;
+    int                  err   = 0;
 
     /* initialize members to 0/NULL */
     HIP_IFEL(!(entry = calloc(1, sizeof(struct hip_sa_entry))), -1,
@@ -659,7 +661,7 @@ out_err:
 static int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 {
     struct hip_sa_entry *stored_entry = NULL;
-    int err = 0;
+    int                  err          = 0;
 
     /* find entry in sadb and delete entries in linkdb for all (addr, spi)-matches */
     HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(src_addr, dst_addr)), -1,
@@ -761,10 +763,10 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
                  unsigned char (*esp_prot_anchors)[MAX_HASH_LENGTH],
                  UNUSED int retransmission, int update)
 {
-    int err                                = 0;
+    int                    err             = 0;
     const struct in6_addr *check_local_hit = NULL;
-    struct in6_addr *default_hit           = NULL;
-    in_port_t src_port, dst_port;
+    struct in6_addr       *default_hit     = NULL;
+    in_port_t              src_port, dst_port;
 
     /* TODO handle retransmission correctly */
 
@@ -817,7 +819,7 @@ out_err:
 int hip_sadb_delete(const struct in6_addr *dst_addr, uint32_t spi)
 {
     struct hip_sa_entry *entry = NULL;
-    int err               = 0;
+    int                  err   = 0;
 
     HIP_IFEL(!(entry = hip_sa_entry_find_inbound(dst_addr, spi)), -1,
              "failed to retrieve sa entry\n");
@@ -836,8 +838,8 @@ out_err:
  */
 int hip_sadb_flush(void)
 {
-    int err               = 0, i = 0;
-    LHASH_NODE *item      = NULL, *tmp = NULL;
+    int                  err   = 0, i = 0;
+    LHASH_NODE          *item  = NULL, *tmp = NULL;
     struct hip_sa_entry *entry = NULL;
 
     // iterating over all elements
@@ -867,7 +869,7 @@ struct hip_sa_entry *hip_sa_entry_find_inbound(const struct in6_addr *dst_addr,
 {
     struct hip_link_entry *stored_link  = NULL;
     struct hip_sa_entry   *stored_entry = NULL;
-    int err = 0;
+    int                    err          = 0;
 
     HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
              "failed to find link entry\n");
@@ -892,9 +894,9 @@ out_err:
 struct hip_sa_entry *hip_sa_entry_find_outbound(const struct in6_addr *src_hit,
                                                 const struct in6_addr *dst_hit)
 {
-    struct hip_sa_entry search_entry;
+    struct hip_sa_entry  search_entry;
     struct hip_sa_entry *stored_entry = NULL;
-    int err = 0;
+    int                  err          = 0;
 
     // fill search entry with information needed by the hash function
     memcpy(&search_entry.inner_src_addr, src_hit, sizeof(struct in6_addr));

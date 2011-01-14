@@ -54,7 +54,7 @@
 struct socketfd {
     uint16_t priority;
     int      fd;
-    int    (*func_ptr)(struct hip_packet_context *ctx);
+    int      (*func_ptr)(struct hip_packet_context *ctx);
 };
 
 /**
@@ -122,8 +122,8 @@ static int hip_handle_nat_input(struct hip_packet_context *ctx)
 
 static int hip_handle_user_sock(struct hip_packet_context *ctx)
 {
-    int err = 0, send_response = 0, n = 0, len = 0;
-    uint8_t msg_type = 0;
+    int                 err      = 0, send_response = 0, n = 0, len = 0;
+    uint8_t             msg_type = 0;
     struct sockaddr_in6 app_src;
 
     HIP_DEBUG("received on: hip_user_sock\n");
@@ -150,7 +150,7 @@ static int hip_handle_user_sock(struct hip_packet_context *ctx)
         HIP_DEBUG("Sending message (type=%d) response to port %d \n",
                   hip_get_msg_type(ctx->input_msg), ntohs(app_src.sin6_port));
         HIP_DEBUG_HIT("To address", &app_src.sin6_addr);
-        n   = hip_sendto_user(ctx->input_msg, (struct sockaddr *)  &app_src);
+        n = hip_sendto_user(ctx->input_msg, (struct sockaddr *)  &app_src);
         if (n != len) {
             err = -1;
         } else {
@@ -203,7 +203,7 @@ int hip_register_socket(int socketfd,
                         int (*func_ptr)(struct hip_packet_context *ctx),
                         const uint16_t priority)
 {
-    int err = 0;
+    int              err        = 0;
     struct socketfd *new_socket = NULL;
 
     HIP_IFEL(!(new_socket = malloc(sizeof(struct socketfd))),
@@ -228,13 +228,13 @@ out_err:
 
 int hip_get_highest_descriptor(void)
 {
-    int highest_descriptor   = 0;
-    struct hip_ll_node *iter = NULL;
+    int                 highest_descriptor = 0;
+    struct hip_ll_node *iter               = NULL;
 
     if (hip_sockets) {
         while ((iter = hip_ll_iterate(hip_sockets, iter))) {
-            if (((struct socketfd*) iter->ptr)->fd >= highest_descriptor) {
-                highest_descriptor = ((struct socketfd*) iter->ptr)->fd;
+            if (((struct socketfd *) iter->ptr)->fd >= highest_descriptor) {
+                highest_descriptor = ((struct socketfd *) iter->ptr)->fd;
             }
         }
     } else {
@@ -252,7 +252,7 @@ void hip_prepare_fd_set(fd_set *read_fdset)
 
     if (hip_sockets) {
         while ((iter = hip_ll_iterate(hip_sockets, iter))) {
-            FD_SET(((struct socketfd*) iter->ptr)->fd, read_fdset);
+            FD_SET(((struct socketfd *) iter->ptr)->fd, read_fdset);
         }
     } else {
         HIP_DEBUG("No sockets registered.\n");
@@ -274,14 +274,14 @@ void hip_prepare_fd_set(fd_set *read_fdset)
 void hip_run_socket_handles(fd_set *read_fdset, struct hip_packet_context *ctx)
 {
     struct hip_ll_node *iter = NULL;
-    int socketfd;
+    int                 socketfd;
 
     if (hip_sockets) {
         while ((iter = hip_ll_iterate(hip_sockets, iter))) {
-            socketfd = ((struct socketfd*) iter->ptr)->fd;
+            socketfd = ((struct socketfd *) iter->ptr)->fd;
 
             if (FD_ISSET(socketfd, read_fdset)) {
-                ((struct socketfd*) iter->ptr)->func_ptr(ctx);
+                ((struct socketfd *) iter->ptr)->func_ptr(ctx);
                 HIP_DEBUG("result: %d\n", ctx->error);
 
                 /* Reset for next iteration.

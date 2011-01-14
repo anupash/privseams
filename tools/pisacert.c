@@ -54,7 +54,7 @@
  */
 static int get_default_hit(struct in6_addr *result)
 {
-    int err                            = 0;
+    int                          err   = 0;
     struct       hip_common     *msg   = NULL;
     const struct hip_tlv_common *param = NULL;
     const struct in6_addr       *hit   = NULL;
@@ -88,7 +88,7 @@ static int create_certificate(time_t *not_before, time_t *not_after,
                               struct in6_addr *hit, char *certificate,
                               size_t size)
 {
-    int err = 0;
+    int                       err = 0;
     struct hip_cert_spki_info cert;
 
     memset(&cert, 0, sizeof(cert));
@@ -110,12 +110,12 @@ out_err:
 
 int main(int argc, char *argv[])
 {
-    time_t not_before      = 0, not_after = 0;
+    time_t          not_before = 0, not_after = 0;
     struct in6_addr hit;
-    int err                = 0, days = 0;
-    FILE *f                = NULL;
-    char certificate[1024] = "";
-    size_t ignored;
+    int             err               = 0, days = 0;
+    FILE           *f                 = NULL;
+    char            certificate[1024] = "";
+    size_t          ignored;
 
     HIP_IFEL(argc != 3, -1, "Wrong number of arguments.\n");
 
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
     days = atoi(argv[1]);
     HIP_IFEL(days <= 0, -1, "Specify a positive number of days.\n");
 
-    f    = fopen(argv[2], "w");
+    f = fopen(argv[2], "w");
     HIP_IFEL(f == NULL, -1, "Could not write to file.\n");
 
     time(&not_before);

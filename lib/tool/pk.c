@@ -41,13 +41,13 @@
  */
 int hip_rsa_sign(void *priv_key, struct hip_common *msg)
 {
-    RSA *rsa      = priv_key;
-    uint8_t sha1_digest[HIP_AH_SHA_LEN];
-    uint8_t *signature = NULL;
-    int err       = 0, len;
+    RSA         *rsa = priv_key;
+    uint8_t      sha1_digest[HIP_AH_SHA_LEN];
+    uint8_t     *signature = NULL;
+    int          err       = 0, len;
     unsigned int sig_len;
 
-    len       = hip_get_msg_total_len(msg);
+    len = hip_get_msg_total_len(msg);
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
              -1, "Building of SHA1 digest failed\n");
 
@@ -126,10 +126,10 @@ out_err:
  */
 int hip_dsa_sign(void *priv_key, struct hip_common *msg)
 {
-    DSA *dsa = priv_key;
+    DSA    *dsa = priv_key;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     uint8_t signature[HIP_DSA_SIGNATURE_LEN];
-    int err  = 0, len;
+    int     err = 0, len;
 
     len = hip_get_msg_total_len(msg);
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
@@ -138,14 +138,14 @@ int hip_dsa_sign(void *priv_key, struct hip_common *msg)
              -1, "Signing error\n");
 
     if (hip_get_msg_type(msg) == HIP_R1) {
-        HIP_IFEL(hip_build_param_signature2_contents(
-                msg, signature,
-                HIP_DSA_SIGNATURE_LEN, HIP_SIG_DSA),
-                -1, "Building of signature failed\n");
+        HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
+                                                     HIP_DSA_SIGNATURE_LEN,
+                                                     HIP_SIG_DSA),
+                 -1, "Building of signature failed\n");
     } else {
-        HIP_IFEL(hip_build_param_signature_contents(
-                msg, signature,
-                HIP_DSA_SIGNATURE_LEN, HIP_SIG_DSA),
+        HIP_IFEL(hip_build_param_signature_contents(msg, signature,
+                                                    HIP_DSA_SIGNATURE_LEN,
+                                                    HIP_SIG_DSA),
                  -1, "Building of signature failed\n");
     }
 
@@ -164,13 +164,13 @@ out_err:
  */
 static int verify(void *peer_pub, struct hip_common *msg, const int type)
 {
-    int err               = 0, len, origlen;
-    struct hip_sig *sig;
-    uint8_t sha1_digest[HIP_AH_SHA_LEN];
-    struct in6_addr tmpaddr;
+    int                err = 0, len, origlen;
+    struct hip_sig    *sig;
+    uint8_t            sha1_digest[HIP_AH_SHA_LEN];
+    struct in6_addr    tmpaddr;
     struct hip_puzzle *pz = NULL;
-    uint8_t opaque[3];
-    uint64_t randi        = 0;
+    uint8_t            opaque[3];
+    uint64_t           randi = 0;
 
     ipv6_addr_copy(&tmpaddr, &msg->hitr);     /* so update is handled, too */
 

@@ -65,7 +65,7 @@
 
 #include "lib/tool/pk.h"
 #include "config.h"
-#include "crypto.h"
+#include "common.h"
 #include "debug.h"
 #include "ife.h"
 #include "keylen.h"
@@ -332,8 +332,8 @@ int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
     sizeof(dhprime_modp_8192),
 };
 
-unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = {0, 0x02, 0x02, 0x02,
-                                            0x02, 0x02, 0x02};
+unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,    0x02, 0x02, 0x02,
+                                             0x02, 0x02, 0x02 };
 
 /**
  * Calculates a hmac.
@@ -398,11 +398,11 @@ int hip_write_hmac(int type, const void *key, void *in, int in_len, void *out)
 int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
                          uint8_t *key, int direction)
 {
-    void *result = NULL;
-    int err      = -1;
-    AES_KEY aes_key;
+    void            *result = NULL;
+    int              err    = -1;
+    AES_KEY          aes_key;
     des_key_schedule ks1, ks2, ks3;
-    uint8_t secret_key1[8], secret_key2[8], secret_key3[8];
+    uint8_t          secret_key1[8], secret_key2[8], secret_key3[8];
     /* OpenSSL modifies the IV it is passed during the encryption/decryption */
     uint8_t iv[20];
     HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
@@ -433,11 +433,10 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
         des_set_odd_parity((des_cblock *) &secret_key2);
         des_set_odd_parity((des_cblock *) &secret_key3);
 
-        HIP_IFEL(((err = des_set_key_checked(((des_cblock *) &secret_key1), ks1)) != 0)
-                 || ((err = des_set_key_checked(((des_cblock *) &secret_key2), ks2)) != 0)
-                 || ((err = des_set_key_checked(((des_cblock *) &secret_key3), ks3)) != 0),
-                 err,
-                 "Unable to use calculated DH secret for 3DES key (%d)\n", err);
+        HIP_IFEL((err = des_set_key_checked(((des_cblock *) &secret_key1), ks1)) != 0 ||
+                 (err = des_set_key_checked(((des_cblock *) &secret_key2), ks2)) != 0 ||
+                 (err = des_set_key_checked(((des_cblock *) &secret_key3), ks3)) != 0,
+                 err, "Unable to use calculated DH secret for 3DES key (%d)\n", err);
         des_ede3_cbc_encrypt(data, result, len,
                              ks1, ks2, ks3, (des_cblock *) iv,
                              direction == HIP_DIRECTION_ENCRYPT ? DES_ENCRYPT : DES_DECRYPT);
@@ -505,10 +504,10 @@ out_err:
 int impl_dsa_sign(const unsigned char *const digest, DSA *const dsa, unsigned char *const signature)
 {
     DSA_SIG *dsa_sig = NULL;
-    int err          = 0, t;
+    int      err     = 0, t;
 
-    t            = (BN_num_bytes(dsa->p) - 64) / 8;
-    HIP_IFEL((t > 8 || t < 0), 1, "Illegal DSA key\n");
+    t = (BN_num_bytes(dsa->p) - 64) / 8;
+    HIP_IFEL(t > 8 || t < 0, 1, "Illegal DSA key\n");
 
     memset(signature, 0, HIP_DSA_SIGNATURE_LEN);
     signature[0] = t;
@@ -577,10 +576,10 @@ out_err:
 int impl_dsa_verify(const unsigned char *const digest, DSA *const dsa, const unsigned char *const signature)
 {
     DSA_SIG *dsa_sig;
-    int err = 0;
+    int      err = 0;
 
     /* build the signature structure */
-    dsa_sig    = DSA_SIG_new();
+    dsa_sig = DSA_SIG_new();
     HIP_IFEL(!dsa_sig, 1, "Failed to allocate DSA_SIG\n");
     dsa_sig->r = BN_bin2bn(&signature[1], DSA_PRIV, NULL);
     dsa_sig->s = BN_bin2bn(&signature[1 + DSA_PRIV], DSA_PRIV, NULL);
@@ -618,8 +617,8 @@ int hip_gen_dh_shared_key(DH *dh,
                           size_t outlen)
 {
     BIGNUM *peer_pub_key = NULL;
-    size_t len;
-    int err;
+    size_t  len;
+    int     err;
 
     HIP_IFEL(!dh, -EINVAL, "No DH context\n");
     HIP_IFEL(!(peer_pub_key = BN_bin2bn(peer_key, peer_len, NULL)),
@@ -662,9 +661,9 @@ out_err:
  */
 DH *hip_generate_dh_key(int group_id)
 {
-    int err;
-    DH *dh;
-    char rnd_seed[20];
+    int            err;
+    DH            *dh;
+    char           rnd_seed[20];
     struct timeval time1;
 
     gettimeofday(&time1, NULL);
@@ -839,20 +838,20 @@ out_err:
  */
 int save_dsa_private_key(const char *const filenamebase, DSA *const dsa)
 {
-    int err           = 0, files = 0, ret;
+    int   err         = 0, files = 0, ret;
     char *pubfilename = NULL;
-    int pubfilename_len;
-    FILE *fp          = NULL;
+    int   pubfilename_len;
+    FILE *fp = NULL;
 
     HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
 
     pubfilename_len =
         strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
-    pubfilename     = malloc(pubfilename_len);
+    pubfilename = malloc(pubfilename_len);
     HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
 
-    ret             = snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
-                               DEFAULT_PUB_FILE_SUFFIX);
+    ret = snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
+                   DEFAULT_PUB_FILE_SUFFIX);
     HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
 
     HIP_INFO("Saving DSA keys to: pub='%s' priv='%s'\n", pubfilename,
@@ -865,7 +864,7 @@ int save_dsa_private_key(const char *const filenamebase, DSA *const dsa)
 
     /* rewrite using PEM_write_PKCS8PrivateKey */
 
-    fp  = fopen(pubfilename, "wb" /* mode */);
+    fp = fopen(pubfilename, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open public key file %s for writing\n", pubfilename);
     files++;
@@ -881,7 +880,7 @@ int save_dsa_private_key(const char *const filenamebase, DSA *const dsa)
         goto out_err;
     }
 
-    fp  = fopen(filenamebase, "wb" /* mode */);
+    fp = fopen(filenamebase, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open private key file %s for writing\n", filenamebase);
     files++;
@@ -898,7 +897,7 @@ out_err:
         if (fclose(fp)) {
             HIP_ERROR("Error closing file\n");
         }
-    } else if (fp && (err = fclose(fp)))   {
+    } else if (fp && (err = fclose(fp))) {
         HIP_ERROR("Error closing file\n");
     }
 
@@ -940,21 +939,21 @@ out_err:
  */
 int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
 {
-    int err           = 0, files = 0, ret;
+    int   err         = 0, files = 0, ret;
     char *pubfilename = NULL;
-    int pubfilename_len;
-    FILE *fp          = NULL;
+    int   pubfilename_len;
+    FILE *fp = NULL;
 
     HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
 
     pubfilename_len =
         strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
-    pubfilename     = malloc(pubfilename_len);
+    pubfilename = malloc(pubfilename_len);
     HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
 
     ret = snprintf(pubfilename, pubfilename_len, "%s%s",
-                               filenamebase,
-                               DEFAULT_PUB_FILE_SUFFIX);
+                   filenamebase,
+                   DEFAULT_PUB_FILE_SUFFIX);
     HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
 
     HIP_INFO("Saving RSA keys to: pub='%s' priv='%s'\n", pubfilename,
@@ -967,7 +966,7 @@ int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
 
     /* rewrite using PEM_write_PKCS8PrivateKey */
 
-    fp  = fopen(pubfilename, "wb" /* mode */);
+    fp = fopen(pubfilename, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open public key file %s for writing\n", pubfilename);
     files++;
@@ -983,7 +982,7 @@ int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
         goto out_err;
     }
 
-    fp  = fopen(filenamebase, "wb" /* mode */);
+    fp = fopen(filenamebase, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open private key file %s for writing\n", filenamebase);
     files++;
@@ -1002,7 +1001,7 @@ out_err:
         if (fclose(fp)) {
             HIP_ERROR("Error closing file\n");
         }
-    } else if (fp && (err = fclose(fp)))   {
+    } else if (fp && (err = fclose(fp))) {
         HIP_ERROR("Error closing file\n");
     }
 
@@ -1178,14 +1177,14 @@ out_err:
  */
 int load_dsa_private_key(const char *const filename, DSA **const dsa)
 {
-    FILE *fp = NULL;
-    int err  = 0;
+    FILE *fp  = NULL;
+    int   err = 0;
 
     *dsa = NULL;
 
     HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
 
-    fp   = fopen(filename, "rb");
+    fp = fopen(filename, "rb");
     HIP_IFEL(!fp, -ENOMEM,
              "Could not open private key file %s for reading\n", filename);
 
@@ -1217,14 +1216,14 @@ out_err:
  */
 int load_rsa_private_key(const char *const filename, RSA **const rsa)
 {
-    FILE *fp = NULL;
-    int err  = 0;
+    FILE *fp  = NULL;
+    int   err = 0;
 
     *rsa = NULL;
 
     HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
 
-    fp   = fopen(filename, "rb");
+    fp = fopen(filename, "rb");
     HIP_IFEL(!fp, -ENOMEM,
              "Couldn't open private key file %s for reading\n", filename);
 

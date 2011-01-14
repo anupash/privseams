@@ -31,12 +31,12 @@ struct pseudo_header {
 };
 
 struct pseudo_v6 {
-    struct in6_addr  src;
-    struct in6_addr  dst;
-    uint16_t         length;
-    uint16_t         zero1;
-    uint8_t          zero2;
-    uint8_t          next;
+    struct in6_addr src;
+    struct in6_addr dst;
+    uint16_t        length;
+    uint16_t        zero1;
+    uint8_t         zero2;
+    uint8_t         next;
 };
 
 /** @todo this is redundant with struct pseudo_v6 */
@@ -61,9 +61,9 @@ struct pseudo_header6 {
 uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c,
                        uint16_t len)
 {
-    uint8_t *src   = s;
-    uint8_t *dst   = d;
-    uint8_t *data  = c;
+    uint8_t *src  = s;
+    uint8_t *dst  = d;
+    uint8_t *data = c;
     uint16_t word16;
     uint32_t sum;
     uint16_t i;
@@ -76,10 +76,10 @@ uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c,
     for (i = 0; i < len; i = i + 2) {
         word16 = (((uint16_t) (data[i] << 8)) & 0xFF00) +
                  (((uint16_t) data[i + 1]) & 0xFF);
-        sum    = sum + (unsigned long) word16;
+        sum = sum + (unsigned long) word16;
     }
     /* add the TCP pseudo header which contains:
-       the IP source and destination addresses, */
+     * the IP source and destination addresses, */
     for (i = 0; i < 4; i = i + 2) {
         word16 = ((src[i] << 8) & 0xFF00) + (src[i + 1] & 0xFF);
         sum    = sum + word16;
@@ -92,7 +92,7 @@ uint16_t ipv4_checksum(uint8_t protocol, void *s, void *d, void *c,
     sum = sum + protocol + len;
 
     /* keep only the last 16 bits of the 32 bit calculated sum
-       and add the carries */
+     * and add the carries */
     while (sum >> 16) {
         sum = (sum & 0xFFFF) + (sum >> 16);
     }
@@ -117,7 +117,7 @@ uint16_t ipv6_checksum(uint8_t protocol,
                        struct in6_addr *dst,
                        void *data, uint16_t len)
 {
-    uint32_t chksum = 0;
+    uint32_t         chksum = 0;
     struct pseudo_v6 pseudo;
     memset(&pseudo, 0, sizeof(struct pseudo_v6));
 
@@ -126,13 +126,13 @@ uint16_t ipv6_checksum(uint8_t protocol,
     pseudo.length = htons(len);
     pseudo.next   = protocol;
 
-    chksum        = inchksum(&pseudo, sizeof(struct pseudo_v6));
-    chksum       += inchksum(data, len);
+    chksum  = inchksum(&pseudo, sizeof(struct pseudo_v6));
+    chksum += inchksum(data, len);
 
-    chksum        = (chksum >> 16) + (chksum & 0xffff);
-    chksum       +=  chksum >> 16;
+    chksum  = (chksum >> 16) + (chksum & 0xffff);
+    chksum +=  chksum >> 16;
 
-    chksum        = (uint16_t) (~chksum);
+    chksum = (uint16_t) (~chksum);
     if (chksum == 0) {
         chksum = 0xffff;
     }
@@ -149,10 +149,10 @@ uint16_t ipv6_checksum(uint8_t protocol,
  */
 uint16_t checksum_ip(struct ip *ip_hdr, const unsigned int ip_hl)
 {
-    uint16_t checksum = 0;
-    unsigned long sum = 0;
-    int count         = ip_hl * 4;
-    unsigned short *p = (unsigned short *) ip_hdr;
+    uint16_t        checksum = 0;
+    unsigned long   sum      = 0;
+    int             count    = ip_hl * 4;
+    unsigned short *p        = (unsigned short *) ip_hdr;
 
     /*
      * this checksum algorithm can be found
@@ -188,9 +188,9 @@ uint16_t checksum_ip(struct ip *ip_hdr, const unsigned int ip_hl)
  */
 uint16_t inchksum(const void *data, uint32_t length)
 {
-    long sum            = 0;
-    const uint16_t *wrd = data;
-    long slen           = (long) length;
+    long            sum  = 0;
+    const uint16_t *wrd  = data;
+    long            slen = (long) length;
 
     while (slen > 1) {
         sum  += *wrd++;
@@ -224,15 +224,15 @@ uint16_t inchksum(const void *data, uint32_t length)
 uint16_t hip_checksum_packet(char *data, struct sockaddr *src,
                              struct sockaddr *dst)
 {
-    uint16_t checksum = 0;
-    unsigned long sum = 0;
-    int count         = 0, length = 0;
-    unsigned short *p = NULL;     /* 16-bit */
-    struct pseudo_header pseudoh;
+    uint16_t              checksum = 0;
+    unsigned long         sum      = 0;
+    int                   count    = 0, length = 0;
+    unsigned short       *p        = NULL; /* 16-bit */
+    struct pseudo_header  pseudoh;
     struct pseudo_header6 pseudoh6;
-    uint32_t src_network, dst_network;
-    struct in6_addr *src6, *dst6;
-    struct hip_common *hiph = (struct hip_common *) data;
+    uint32_t              src_network, dst_network;
+    struct in6_addr      *src6, *dst6;
+    struct hip_common    *hiph = (struct hip_common *) data;
 
     if (src->sa_family == AF_INET) {
         /* IPv4 checksum based on UDP-- Section 6.1.2 */
@@ -246,8 +246,8 @@ uint16_t hip_checksum_packet(char *data, struct sockaddr *src,
         length                = (hiph->payload_len + 1) * 8;
         pseudoh.packet_length = htons(length);
 
-        count                 = sizeof(struct pseudo_header); /* count always even number */
-        p                     = (unsigned short *) &pseudoh;
+        count = sizeof(struct pseudo_header);                 /* count always even number */
+        p     = (unsigned short *) &pseudoh;
     } else {
         /* IPv6 checksum based on IPv6 pseudo-header */
         src6 = &((struct sockaddr_in6 *) src)->sin6_addr;
@@ -260,8 +260,8 @@ uint16_t hip_checksum_packet(char *data, struct sockaddr *src,
         pseudoh6.packet_length = htonl(length);
         pseudoh6.next_hdr      = IPPROTO_HIP;
 
-        count                  = sizeof(struct pseudo_header6); /* count always even number */
-        p                      = (unsigned short *) &pseudoh6;
+        count = sizeof(struct pseudo_header6);                  /* count always even number */
+        p     = (unsigned short *) &pseudoh6;
     }
     /*
      * this checksum algorithm can be found
@@ -297,4 +297,3 @@ uint16_t hip_checksum_packet(char *data, struct sockaddr *src,
 
     return checksum;
 }
-

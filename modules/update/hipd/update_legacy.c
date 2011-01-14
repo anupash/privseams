@@ -62,10 +62,10 @@
  */
 int hip_build_locators_old(struct hip_common *msg)
 {
-    int err                                 = 0, i = 0, count = 0;
-    int addr_max;
-    struct netdev_address *n;
-    LHASH_NODE *item                        = NULL, *tmp = NULL;
+    int                                err = 0, i = 0, count = 0;
+    int                                addr_max;
+    struct netdev_address             *n;
+    LHASH_NODE                        *item = NULL, *tmp = NULL;
     struct hip_locator_info_addr_item *locs = NULL;
 
     if (address_count == 0) {
@@ -76,8 +76,7 @@ int hip_build_locators_old(struct hip_common *msg)
 
     addr_max = address_count;
 
-    HIP_IFEL(!(locs = calloc(1, addr_max *
-                             sizeof(struct hip_locator_info_addr_item))),
+    HIP_IFEL(!(locs = calloc(addr_max, sizeof(struct hip_locator_info_addr_item))),
              -1, "Malloc for LOCATORS type1 failed\n");
 
     HIP_DEBUG("there are %d type 1 locator item\n", addr_max);
@@ -102,7 +101,7 @@ int hip_build_locators_old(struct hip_common *msg)
 
     HIP_DEBUG("locator count %d\n", count);
 
-    HIP_IFEL((count == 0), -1, "No locators to build\n");
+    HIP_IFEL(count == 0, -1, "No locators to build\n");
 
     err = hip_build_param_locator(msg, locs, count);
 

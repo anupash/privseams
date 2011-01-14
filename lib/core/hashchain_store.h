@@ -54,31 +54,31 @@
 struct hchain_shelf {
     /* number of different hchain lengths currently used for this
      * (hash-function, hash_length)-combination */
-    unsigned      num_hchain_lengths;
+    unsigned num_hchain_lengths;
     /* the different hchain lengths */
-    unsigned      hchain_lengths[MAX_NUM_HCHAIN_LENGTH];
+    unsigned hchain_lengths[MAX_NUM_HCHAIN_LENGTH];
     /* number of hierarchies in this shelf */
-    unsigned      num_hierarchies[MAX_NUM_HCHAIN_LENGTH];
+    unsigned num_hierarchies[MAX_NUM_HCHAIN_LENGTH];
     /* hchains with the respective hchain length */
     struct hip_ll hchains[MAX_NUM_HCHAIN_LENGTH][MAX_NUM_HIERARCHIES];
 };
 
 struct hchain_store {
     /* determines at which volume a store item should be refilled */
-    double      refill_threshold;
+    double refill_threshold;
     /* number of hash structures stored per item, when it is full */
-    unsigned    num_hchains_per_item;
+    unsigned num_hchains_per_item;
     /* amount of currently used hash-functions */
-    unsigned    num_functions;
+    unsigned num_functions;
     /* pointer to the hash-function used to create and verify the hchain
      *
      * @note params: (in_buffer, in_length, out_buffer)
      * @note out_buffer should be size MAX_HASH_LENGTH */
-    hash_function       hash_functions[MAX_FUNCTIONS];
+    hash_function hash_functions[MAX_FUNCTIONS];
     /* amount of different hash_lengths per hash-function */
-    unsigned            num_hash_lengths[MAX_FUNCTIONS];
+    unsigned num_hash_lengths[MAX_FUNCTIONS];
     /* length of the hashes, of which the respective hchain items consist */
-    unsigned            hash_lengths[MAX_FUNCTIONS][MAX_NUM_HASH_LENGTH];
+    unsigned hash_lengths[MAX_FUNCTIONS][MAX_NUM_HASH_LENGTH];
     /* contains hchains and meta-information about how to process them */
     struct hchain_shelf hchain_shelves[MAX_FUNCTIONS][MAX_NUM_HASH_LENGTH];
 };

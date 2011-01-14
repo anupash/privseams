@@ -53,9 +53,6 @@
 #include "capability.h"
 
 
-#define USER_NOBODY "nobody"
-#define USER_HIPD "hipd"
-
 /**
  * map a user name such as "nobody" to the corresponding UID number
  *
@@ -64,10 +61,10 @@
  */
 static int hip_user_to_uid(const char *name)
 {
-    int uid            = -1;
-    int i;
+    int            uid = -1;
+    int            i;
     struct passwd *pwp = NULL, pw;
-    char buf[4096];
+    char           buf[4096];
 
     setpwent();
     while (1) {
@@ -117,9 +114,9 @@ int hip_set_lowcapability(void)
     int uid = -1;
 
     struct __user_cap_header_struct header;
-    struct __user_cap_data_struct data;
+    struct __user_cap_data_struct   data;
 
-    header.pid     = 0;
+    header.pid = 0;
     /* note: CentOS 5.5 lacks _LINUX_CAPABILITY_VERSION_1 constant */
     header.version = _LINUX_CAPABILITY_VERSION;
     data.effective = data.permitted = data.inheritable = 0;
@@ -128,7 +125,7 @@ int hip_set_lowcapability(void)
 
     HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
-    uid = hip_user_to_uid(USER_NOBODY);
+    uid = hip_user_to_uid("nobody");
     if (uid == -1) {
         HIP_ERROR("User 'nodoby' could not be found\n");
         goto out_err;
@@ -152,7 +149,7 @@ int hip_set_lowcapability(void)
     HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
               data.effective, data.permitted, data.inheritable);
     HIP_DEBUG("Going to clear all capabilities except the ones needed\n");
-    data.effective  = data.permitted = data.inheritable = 0;
+    data.effective = data.permitted = data.inheritable = 0;
     /* for CAP_NET_RAW capability */
     data.effective |= (1 << CAP_NET_RAW);
     data.permitted |= (1 << CAP_NET_RAW);

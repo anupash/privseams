@@ -68,19 +68,19 @@
 
 struct maint_function {
     uint16_t priority;
-    int    (*func_ptr)(void);
+    int      (*func_ptr)(void);
 };
 
 int hip_firewall_sock_lsi_fd = -1;
 
-float retrans_counter        = HIP_RETRANSMIT_INIT;
-float opp_fallback_counter   = HIP_OPP_FALLBACK_INIT;
-float precreate_counter      = HIP_R1_PRECREATE_INIT;
-float queue_counter          = QUEUE_CHECK_INIT;
-int force_exit_counter       = FORCE_EXIT_COUNTER_START;
-int cert_publish_counter     = CERTIFICATE_PUBLISH_INTERVAL;
-int hip_firewall_status      = -1;
-int fall, retr;
+float retrans_counter      = HIP_RETRANSMIT_INIT;
+float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
+float precreate_counter    = HIP_R1_PRECREATE_INIT;
+float queue_counter        = QUEUE_CHECK_INIT;
+int   force_exit_counter   = FORCE_EXIT_COUNTER_START;
+int   cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL;
+int   hip_firewall_status  = -1;
+int   fall, retr;
 
 /**
  * List containing all maintenance functions.
@@ -97,7 +97,7 @@ static struct hip_ll *hip_maintenance_functions;
 static int hip_handle_retransmission(struct hip_hadb_state *entry,
                                      void *current_time)
 {
-    int err     = 0;
+    int     err = 0;
     time_t *now = (time_t *) current_time;
 
     if (entry->hip_msg_retrans.buf == NULL ||
@@ -161,7 +161,7 @@ out_err:
  */
 static int hip_scan_opp_fallback(void)
 {
-    int err = 0;
+    int    err = 0;
     time_t current_time;
     time(&current_time);
 
@@ -170,6 +170,7 @@ static int hip_scan_opp_fallback(void)
 out_err:
     return err;
 }
+
 #endif
 
 /**
@@ -179,7 +180,7 @@ out_err:
  */
 static int hip_scan_retransmissions(void)
 {
-    int err = 0;
+    int    err = 0;
     time_t current_time;
     time(&current_time);
     HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, &current_time), 0,
@@ -202,15 +203,15 @@ out_err:
 int hip_register_maint_function(int (*maint_function)(void),
                                 const uint16_t priority)
 {
-    int err = 0;
+    int                    err       = 0;
     struct maint_function *new_entry = NULL;
 
     HIP_IFEL(!(new_entry = malloc(sizeof(struct maint_function))),
              -1,
              "Error on allocating memory for a maintenance function entry.\n");
 
-    new_entry->priority    = priority;
-    new_entry->func_ptr    = maint_function;
+    new_entry->priority = priority;
+    new_entry->func_ptr = maint_function;
 
     hip_maintenance_functions = lmod_register_function(hip_maintenance_functions,
                                                        new_entry,
@@ -251,7 +252,7 @@ static int hip_run_maint_functions(void)
 
     if (hip_maintenance_functions) {
         while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {
-            ((struct maint_function*) iter->ptr)->func_ptr();
+            ((struct maint_function *) iter->ptr)->func_ptr();
         }
     } else {
         HIP_DEBUG("No maintenance function registered.\n");
@@ -376,10 +377,10 @@ int hip_firewall_is_alive(void)
  */
 int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_addr *hit_r)
 {
-    struct hip_common *msg = NULL;
+    struct hip_common  *msg = NULL;
     struct sockaddr_in6 hip_fw_addr;
-    int err                = 0, n = 0, r_is_our;
-    socklen_t alen         = sizeof(hip_fw_addr);
+    int                 err  = 0, n = 0, r_is_our;
+    socklen_t           alen = sizeof(hip_fw_addr);
 
     if (!hip_get_firewall_status()) {
         goto out_err;
@@ -412,7 +413,7 @@ int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_add
                (struct sockaddr *) &hip_firewall_addr,
                alen);
 
-    HIP_IFEL( n < 0, -1, "Send to firewall failed. str errno %s\n", strerror(errno));
+    HIP_IFEL(n < 0, -1, "Send to firewall failed. str errno %s\n", strerror(errno));
 
     HIP_DEBUG("BEX DATA Send to firewall OK.\n");
 
@@ -431,8 +432,8 @@ out_err:
 int hip_firewall_set_esp_relay(int action)
 {
     struct hip_common *msg = NULL;
-    int err                = 0;
-    int sent;
+    int                err = 0;
+    int                sent;
 
     HIP_DEBUG("Setting ESP relay to %d\n", action);
     HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);

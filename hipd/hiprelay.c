@@ -147,20 +147,20 @@
 #define HIP_RELAY_CONFIG_FILE  HIPL_SYSCONFDIR "/relay_config"
 
 /** A hashtable for storing the relay records. */
-static HIP_HASHTABLE *hiprelay_ht       = NULL;
+static HIP_HASHTABLE *hiprelay_ht = NULL;
 /** A hashtable for storing the the HITs of the clients that are allowed to use
  *  the relay / RVS service. */
-static HIP_HASHTABLE *hiprelay_wl       = NULL;
+static HIP_HASHTABLE *hiprelay_wl = NULL;
 
 /** Minimum relay record life time as a 8-bit integer. */
-uint8_t hiprelay_min_lifetime           = HIP_RELREC_MIN_LIFETIME;
+uint8_t hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
 /** Maximum relay record life time as a 8-bit integer. */
-uint8_t hiprelay_max_lifetime           = HIP_RELREC_MAX_LIFETIME;
+uint8_t hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
 /**
  * A boolean to indicating if the RVS / relay is enabled. User sets this value
  * using the hipconf tool.
  */
-enum hip_relay_status relay_enabled        = HIP_RELAY_OFF;
+enum hip_relay_status relay_enabled = HIP_RELAY_OFF;
 /**
  * A boolean to indicating if the RVS / relay whitelist is enabled. User sets
  * this value from the relay configuration file.
@@ -175,8 +175,8 @@ enum hip_relay_wl_status whitelist_enabled = HIP_RELAY_WL_ON;
  */
 static inline unsigned long hip_hash_func(const hip_hit_t *hit)
 {
-    uint32_t bits_1st  = 0;
-    unsigned long hash = 0;
+    uint32_t      bits_1st = 0;
+    unsigned long hash     = 0;
 
     /* HITs are of the form: 2001:001x:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx
      * We have four groups of 32 bit sequences here, but the first 28 bits
@@ -192,14 +192,14 @@ static inline unsigned long hip_hash_func(const hip_hit_t *hit)
     /* We calculate the hash by avalanching the bits. The avalanching
      * ensures that we make use of all bits when dealing with 64 bits
      * architectures. */
-    hash      =  (bits_1st ^ hit->s6_addr32[1]);
-    hash     ^= hash << 3;
-    hash     ^= (hit->s6_addr32[2] ^ hit->s6_addr32[3]);
-    hash     += hash >> 5;
-    hash     ^= hash << 4;
-    hash     += hash >> 17;
-    hash     ^= hash << 25;
-    hash     += hash >> 6;
+    hash  =  (bits_1st ^ hit->s6_addr32[1]);
+    hash ^= hash << 3;
+    hash ^= (hit->s6_addr32[2] ^ hit->s6_addr32[3]);
+    hash += hash >> 5;
+    hash ^= hash << 4;
+    hash += hash >> 17;
+    hash ^= hash << 25;
+    hash += hash >> 6;
 
     return hash;
 }
@@ -525,13 +525,13 @@ struct hip_relrec *hip_relrec_alloc(const enum hip_relrec_type type,
         HIP_ERROR("Error allocating memory for HIP relay record.\n");
         return NULL;
     }
-    rec->type       = type;
+    rec->type = type;
     memcpy(&(rec->hit_r), hit_r, sizeof(*hit_r));
     memcpy(&(rec->ip_r), ip_r, sizeof(*ip_r));
     rec->udp_port_r = port;
     memcpy(&(rec->hmac_relay), hmac, sizeof(*hmac));
     hip_relrec_set_lifetime(rec, lifetime);
-    rec->created    = time(NULL);
+    rec->created = time(NULL);
 
     return rec;
 }
@@ -711,7 +711,7 @@ int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
     if (requested_lifetime < hiprelay_min_lifetime) {
         *granted_lifetime = hiprelay_min_lifetime;
         return -1;
-    } else if (requested_lifetime > hiprelay_max_lifetime)   {
+    } else if (requested_lifetime > hiprelay_max_lifetime) {
         *granted_lifetime = hiprelay_max_lifetime;
         return -1;
     } else {
@@ -730,21 +730,21 @@ int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
  */
 static int hip_relay_read_config(void)
 {
-    FILE *fp    = NULL;
-    int lineerr = 0, parseerr = 0, err = 0;
-    char parameter[HIP_RELAY_MAX_PAR_LEN + 1];
+    FILE                        *fp      = NULL;
+    int                          lineerr = 0, parseerr = 0, err = 0;
+    char                         parameter[HIP_RELAY_MAX_PAR_LEN + 1];
     struct hip_config_value_list values;
-    hip_hit_t hit, *wl_hit = NULL;
-    uint8_t max = 255;     /* Theoretical maximum lifetime value. */
+    hip_hit_t                    hit, *wl_hit = NULL;
+    uint8_t                      max = 255; /* Theoretical maximum lifetime value. */
 
-    HIP_IFEL(((fp = fopen(HIP_RELAY_CONFIG_FILE, "r")) == NULL), -ENOENT,
+    HIP_IFEL((fp = fopen(HIP_RELAY_CONFIG_FILE, "r")) == NULL, -ENOENT,
              "Cannot open file %s for reading.\n", HIP_RELAY_CONFIG_FILE);
 
     do {
         parseerr = 0;
         memset(parameter, '\0', sizeof(parameter));
         hip_cvl_init(&values);
-        lineerr  = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
+        lineerr = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
 
         if (parseerr == 0) {
             struct hip_configfile_value *current = NULL;
@@ -777,7 +777,7 @@ static int hip_relay_read_config(void)
                     }
                 }
             } else if (strcmp(parameter, "minimum_lifetime") == 0) {
-                time_t tmp  = 0;
+                time_t  tmp = 0;
                 uint8_t val = 0;
                 current = hip_cvl_get_next(&values, current);
                 tmp     = atol(current->data);
@@ -792,7 +792,7 @@ static int hip_relay_read_config(void)
                     hiprelay_min_lifetime = val;
                 }
             } else if (strcmp(parameter, "maximum_lifetime") == 0) {
-                time_t tmp  = 0;
+                time_t  tmp = 0;
                 uint8_t val = 0;
                 current = hip_cvl_get_next(&values, current);
                 tmp     = atol(current->data);
@@ -838,10 +838,10 @@ out_err:
  */
 static int hip_relay_write_config(void)
 {
-    int err  = 0;
-    FILE *fp = NULL;
+    int   err = 0;
+    FILE *fp  = NULL;
 
-    HIP_IFEL(((fp = fopen(HIP_RELAY_CONFIG_FILE, "w")) == NULL), -ENOENT,
+    HIP_IFEL((fp = fopen(HIP_RELAY_CONFIG_FILE, "w")) == NULL, -ENOENT,
              "Cannot open file %s for writing.\n", HIP_RELAY_CONFIG_FILE);
 
     fprintf(fp, "# HIP relay / RVS configuration file.\n\
@@ -899,10 +899,10 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
                       struct hip_relrec *rec,
                       const uint8_t type_hdr)
 {
-    struct hip_common *msg_to_be_relayed       = NULL;
-    const struct hip_tlv_common *current_param = NULL;
-    int err = 0, from_added = 0;
-    hip_tlv param_type = 0;
+    struct hip_common           *msg_to_be_relayed = NULL;
+    const struct hip_tlv_common *current_param     = NULL;
+    int                          err               = 0, from_added = 0;
+    hip_tlv                      param_type        = 0;
 
     HIP_DEBUG("Msg type :      %s (%d)\n",
               hip_message_type_name(hip_get_msg_type(ctx->input_msg)),
@@ -941,9 +941,9 @@ int hip_relay_forward(const struct hip_packet_context *ctx,
                       "to be relayed.\n");
             hip_build_param(msg_to_be_relayed, current_param);
         } else {
-           /* Parameter under inspection has greater type than FROM
-            * (RELAY_FROM) parameter: insert a new FROM (RELAY_FROM) parameter
-            * between the previous parameter and "current_param". */
+            /* Parameter under inspection has greater type than FROM
+             * (RELAY_FROM) parameter: insert a new FROM (RELAY_FROM) parameter
+             * between the previous parameter and "current_param". */
             HIP_DEBUG("Created new param %d and copied " \
                       "current parameter to relayed packet.\n",
                       param_type);
@@ -1024,9 +1024,9 @@ static int hip_relay_forward_response(const struct hip_common *r,
                                       const struct in6_addr *relay_to_addr,
                                       const in_port_t relay_to_port)
 {
-    struct hip_common *r_to_be_relayed         = NULL;
-    const struct hip_tlv_common *current_param = NULL;
-    int err                                    = 0;
+    struct hip_common           *r_to_be_relayed = NULL;
+    const struct hip_tlv_common *current_param   = NULL;
+    int                          err             = 0;
 
     HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  source address", r_saddr);
     HIP_DEBUG_IN6ADDR("hip_relay_forward_response:  destination address", r_daddr);
@@ -1074,8 +1074,8 @@ int hip_relay_handle_relay_to(const uint8_t packet_type,
                               UNUSED const uint32_t ha_state,
                               struct hip_packet_context *ctx)
 {
-    int err           = 0;
-    struct hip_relrec *rec = NULL, dummy;
+    int                        err = 0;
+    struct hip_relrec         *rec = NULL, dummy;
     const struct hip_relay_to *relay_to;
     //check if full relay service is active
 
@@ -1146,7 +1146,7 @@ int hip_relay_add_rvs_to_ha(const struct hip_common *source_msg,
                             struct hip_hadb_state *entry)
 {
     const struct hip_via_rvs *via_rvs = NULL;
-    int err                     = 0;
+    int                       err     = 0;
 
     // Get rendezvous server's IP addresses
     via_rvs = hip_get_param(source_msg, HIP_PARAM_VIA_RVS);
@@ -1186,11 +1186,11 @@ int hip_relay_handle_relay_from(struct hip_common *source_msg,
                                 RVS struct in6_addr *relay_ip,
                                 struct in6_addr *dest_ip, in_port_t *dest_port)
 {
-    int param_type;
+    int                          param_type;
     const struct hip_relay_from *relay_from = NULL;
-    const struct hip_from *from             = NULL;
+    const struct hip_from       *from       = NULL;
 #ifdef CONFIG_HIP_RVS
-    struct hip_hadb_state *relay_ha_entry   = NULL;
+    struct hip_hadb_state *relay_ha_entry = NULL;
 #endif
 
     /* Check if the incoming I1 packet has  RELAY_FROM parameters. */
@@ -1252,7 +1252,7 @@ int hip_relay_handle_relay_from(struct hip_common *source_msg,
     if (relay_from != NULL &&
         hip_verify_packet_hmac_general(source_msg,
                                        &relay_ha_entry->hip_hmac_out,
-                                       HIP_PARAM_RELAY_HMAC ) != 0) {
+                                       HIP_PARAM_RELAY_HMAC) != 0) {
         /* Notice that the HMAC is currently ignored to allow rvs/relay e.g.
          * in the following use case: I <----IPv4 ----> RVS <----IPv6---> R
          * Otherwise we have to loop through all host associations and try
@@ -1262,13 +1262,13 @@ int hip_relay_handle_relay_from(struct hip_common *source_msg,
     } else if (from != NULL &&
                hip_verify_packet_hmac_general(source_msg,
                                               &relay_ha_entry->hip_hmac_out,
-                                              HIP_PARAM_RVS_HMAC ) != 0) {
+                                              HIP_PARAM_RVS_HMAC) != 0) {
         HIP_DEBUG("RVS_HMAC verification failed.\n");
         HIP_DEBUG("Ignoring HMAC verification\n");
     }
 
     HIP_DEBUG("RVS_HMAC or Full_Relay verified.\n");
-#endif  /* CONFIG_HIP_RVS */
+#endif /* CONFIG_HIP_RVS */
 
     return param_type;
 }
@@ -1282,7 +1282,7 @@ int hip_relay_handle_relay_to_in_client(const uint8_t packet_type,
                                         UNUSED const uint32_t ha_state,
                                         struct hip_packet_context *ctx)
 {
-    int err = 0;
+    int                        err = 0;
     const struct hip_relay_to *relay_to;
     //check if full relay service is active
 
@@ -1363,6 +1363,7 @@ static void hip_relht_uninit(void)
     hip_ht_uninit(hiprelay_ht);
     hiprelay_ht = NULL;
 }
+
 /**
  * Initializes the global HIP relay whitelist. Allocates memory for
  * @c hiprelay_wl.

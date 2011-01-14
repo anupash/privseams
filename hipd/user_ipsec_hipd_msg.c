@@ -58,7 +58,7 @@
 int hip_userspace_ipsec_activate(const struct hip_common *msg)
 {
     const struct hip_tlv_common *param = NULL;
-    int err                            = 0, activate = 0;
+    int                          err   = 0, activate = 0;
 
     // process message and store anchor elements in the db
     param    = hip_get_param(msg, HIP_PARAM_INT);
@@ -112,7 +112,7 @@ struct hip_common *create_add_sa_msg(const struct in6_addr *saddr,
                                      struct hip_hadb_state *entry)
 {
     struct hip_common *msg = NULL;
-    int err                = 0;
+    int                err = 0;
 
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "alloc memory for adding sa entry\n");
@@ -228,7 +228,7 @@ struct hip_common *create_delete_sa_msg(const uint32_t spi,
                                         const int dst_port)
 {
     struct hip_common *msg = NULL;
-    int err                = 0;
+    int                err = 0;
 
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "alloc memory for adding sa entry\n");
@@ -279,7 +279,7 @@ out_err:
 struct hip_common *create_flush_all_sa_msg(void)
 {
     struct hip_common *msg = NULL;
-    int err                = 0;
+    int                err = 0;
 
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "alloc memory for adding sa entry\n");

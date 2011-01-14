@@ -71,7 +71,7 @@ static struct midauth_handlers handlers;
 static void update_ipv4_header(struct iphdr *ip, int len)
 {
     unsigned short *w = (unsigned short *) ip;
-    int hdrlen, checksum = 0;
+    int             hdrlen, checksum = 0;
 
     ip->tot_len = htons(len);
     ip->check   = 0;
@@ -113,16 +113,16 @@ static void update_ipv6_header(struct ip6_hdr *ip, int len)
  */
 static void update_udp_header(struct iphdr *ip, int len)
 {
-    unsigned long sum;
-    uint16_t *w       = (uint16_t *) ((unsigned char *) ip + (ip->ihl * 4));
-    uint16_t protocol = ntohs(IPPROTO_UDP);
-    int i;
+    unsigned long  sum;
+    uint16_t      *w        = (uint16_t *) ((unsigned char *) ip + (ip->ihl * 4));
+    uint16_t       protocol = ntohs(IPPROTO_UDP);
+    int            i;
     struct udphdr *udp = (struct udphdr *) w;
 
     len -= ip->ihl * 4;
 
     udp->check = 0;
-    udp->len = htons(len);
+    udp->len   = htons(len);
 
     /* UDP header and data */
     sum = 0;
@@ -133,11 +133,11 @@ static void update_udp_header(struct iphdr *ip, int len)
     if (len == 1) {
         unsigned short padding = 0;
         *(unsigned char *) (&padding) = *(unsigned char *) w;
-        sum += padding;
+        sum                          += padding;
     }
 
     /* add UDP pseudoheader */
-    w          = (uint16_t *) &ip->saddr;
+    w = (uint16_t *) &ip->saddr;
     for (i = 0; i < 4; w++, i++) {
         sum += *w;
     }
@@ -171,9 +171,9 @@ static void update_hip_checksum_ipv4(struct iphdr *ip)
     memcpy(&dst.sin_addr, &ip->daddr, sizeof(uint32_t));
 
     hip_zero_msg_checksum(msg);
-    msg->checksum  = hip_checksum_packet((char *) msg,
-                                         (struct sockaddr *) &src,
-                                         (struct sockaddr *) &dst);
+    msg->checksum = hip_checksum_packet((char *) msg,
+                                        (struct sockaddr *) &src,
+                                        (struct sockaddr *) &dst);
 }
 
 /**
@@ -184,8 +184,8 @@ static void update_hip_checksum_ipv4(struct iphdr *ip)
 static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
 {
     struct sockaddr_in6 src, dst;
-    struct hip_common *msg = (struct hip_common *) ((char *) ip +
-                                                    sizeof(struct ip6_hdr));
+    struct hip_common  *msg = (struct hip_common *) ((char *) ip +
+                                                     sizeof(struct ip6_hdr));
 
     memset(&src, 0, sizeof(src));
     memset(&dst, 0, sizeof(dst));
@@ -197,9 +197,9 @@ static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
     memcpy(&dst.sin6_addr, &ip->ip6_dst, sizeof(struct in6_addr));
 
     hip_zero_msg_checksum(msg);
-    msg->checksum   = hip_checksum_packet((char *) msg,
-                                          (struct sockaddr *) &src,
-                                          (struct sockaddr *) &dst);
+    msg->checksum = hip_checksum_packet((char *) msg,
+                                        (struct sockaddr *) &src,
+                                        (struct sockaddr *) &dst);
 }
 
 /**
@@ -210,9 +210,9 @@ static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
  */
 static void midauth_update_all_headers(struct hip_fw_context *ctx)
 {
-    struct iphdr *ipv4   = NULL;
+    struct iphdr   *ipv4 = NULL;
     struct ip6_hdr *ipv6 = NULL;
-    size_t len           = 0;
+    size_t          len  = 0;
 
     len = hip_get_msg_total_len(ctx->transport_hdr.hip);
 
@@ -253,9 +253,9 @@ static void midauth_update_all_headers(struct hip_fw_context *ctx)
 int midauth_verify_challenge_response(struct hip_common *hip,
                                       struct hip_challenge_response *s)
 {
-    int err = 0;
+    int                 err = 0;
     struct hip_solution solution;
-    uint8_t digist[HIP_AH_SHA_LEN];
+    uint8_t             digist[HIP_AH_SHA_LEN];
 
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, s->opaque, 24, digist) < 0,
              -1, "Building of SHA1 Random seed I failed\n");
@@ -282,10 +282,10 @@ out_err:
  */
 static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
 {
-    int err                  = 0, len, total_len, offset;
-    char buffer[HIP_MAX_PACKET], *ptr = (char *) hip;
+    int                    err = 0, len, total_len, offset;
+    char                   buffer[HIP_MAX_PACKET], *ptr = (char *) hip;
     struct hip_tlv_common *i = NULL, *last = NULL;
-    hip_tlv type;
+    hip_tlv                type;
 
     while ((i = hip_get_next_param_readwrite(hip, i))) {
         last = i;
@@ -297,7 +297,7 @@ static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
     len       = hip_get_param_total_len(last);
     type      = hip_get_param_type(last);
 
-    HIP_IFEL(len > (int)sizeof(buffer), -1,
+    HIP_IFEL(len > (int) sizeof(buffer), -1,
              "Last parameter's length exceeds HIP_MAX_PACKET\n");
 
     /* @todo check for signature parameter to avoid broken packets */
@@ -337,7 +337,7 @@ int midauth_add_challenge_request(struct hip_fw_context *ctx, uint8_t val_K,
                                   uint8_t opaque_len)
 {
     struct hip_common *hip = ctx->transport_hdr.hip;
-    int err                = 0;
+    int                err = 0;
 
     ctx->modified = 1;
 
@@ -398,7 +398,7 @@ static midauth_handler filter_midauth_update(const struct hip_fw_context *ctx)
  */
 int midauth_filter_hip(struct hip_fw_context *ctx)
 {
-    int verdict               = NF_ACCEPT;
+    int             verdict   = NF_ACCEPT;
     midauth_handler h         = NULL;
     midauth_handler h_default = midauth_handler_accept;
     /* @todo change this default value to midauth_handler_drop to

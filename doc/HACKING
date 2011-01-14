@@ -999,7 +999,7 @@ To help in a situation like this, the HIPL project has a special file just for
 doxygen comments, i.e. it has no code whatsoever. The file is doc/doxygen.h.
 We can target comments from this file to another files using the "@file" special
 command. For example, to insert a Doxygen comment for the definition of
-HIP_NTF_INVALID_SYNTAX located in libhipcore/protodefs.h you can add the
+HIP_NTF_INVALID_SYNTAX located in lib/core/protodefs.h you can add the
 following comment block in doc/doxygen.h, example 7.
 
 /**

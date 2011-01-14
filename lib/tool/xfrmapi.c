@@ -37,7 +37,7 @@
 
 /* New OSes have this, but older ones don't */
 #ifndef XFRM_MODE_BEET
-#  define XFRM_MODE_BEET 4
+#define XFRM_MODE_BEET 4
 #endif
 
 #define XFRM_TMPLS_BUF_SIZE 1024
@@ -51,24 +51,48 @@ struct rtnl_handle *hip_xfrmapi_nl_ipsec;
 int hip_xfrmapi_beet;
 int hip_xfrmapi_sa_default_prefix;
 
-const char **e_algo_names;
-const char **a_algo_names;
+static const char *const *e_algo_names;
+static const char *const *a_algo_names;
 
 /* Mappings from HIP to XFRM algo names < 2.6.19 */
-const char *e_algo_names_old[] =
-{"reserved",   "aes",         "des3_ede", "des3_ede",
- "blowfish", "cipher_null", "cipher_null"};
-const char *a_algo_names_old[] =
-{"reserved", "sha1", "sha1", "md5",
- "sha1",   "sha1", "md5"};
+static const char *const E_ALGO_NAMES_OLD[] = {
+    "reserved",
+    "aes",
+    "des3_ede",
+    "des3_ede",
+    "blowfish",
+    "cipher_null",
+    "cipher_null"
+};
+static const char *const A_ALGO_NAMES_OLD[] = {
+    "reserved",
+    "sha1",
+    "sha1",
+    "md5",
+    "sha1",
+    "sha1",
+    "md5"
+};
 
 /* Mappings from HIP to XFRM algo names >= 2.6.19 */
-const char *e_algo_names_new[] =
-{"reserved",        "cbc(aes)",         "cbc(des3_ede)", "cbc(des3_ede)",
- "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)"};
-const char *a_algo_names_new[] =
-{"reserved",     "hmac(sha1)", "hmac(sha1)", "hmac(md5)",
- "hmac(sha1)", "hmac(sha1)", "hmac(md5)"};
+static const char *const E_ALGO_NAMES_NEW[] = {
+    "reserved",
+    "cbc(aes)",
+    "cbc(des3_ede)",
+    "cbc(des3_ede)",
+    "cbc(blowfish)",
+    "ecb(cipher_null)",
+    "ecb(cipher_null)"
+};
+static const char *const A_ALGO_NAMES_NEW[] = {
+    "reserved",
+    "hmac(sha1)",
+    "hmac(sha1)",
+    "hmac(md5)",
+    "hmac(sha1)",
+    "hmac(sha1)",
+    "hmac(md5)"
+};
 
 
 /**
@@ -212,9 +236,9 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
         struct xfrm_userpolicy_info xpinfo;
         char                        buf[RTA_BUF_SIZE];
     } req;
-    char tmpls_buf[XFRM_TMPLS_BUF_SIZE];
-    int tmpls_len  = 0, err = 0;
-    unsigned flags = 0;
+    char                   tmpls_buf[XFRM_TMPLS_BUF_SIZE];
+    int                    tmpls_len = 0, err = 0;
+    unsigned               flags     = 0;
     struct xfrm_user_tmpl *tmpl;
 
     memset(&req, 0, sizeof(req));
@@ -272,13 +296,10 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
         req.xpinfo.sel.family = AF_INET6;
     }
 
-    {
-        HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
-                 "netlink_talk failed\n");
-    }
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0,
+             -1, "netlink_talk failed\n");
 
 out_err:
-
     return err;
 }
 
@@ -303,11 +324,10 @@ static int hip_xfrm_sa_flush(struct rtnl_handle *rth)
     req.n.nlmsg_type  = XFRM_MSG_FLUSHSA;
     req.xfs.proto     = IPPROTO_ESP;
 
-    HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "SA flush failed\n");
 
 out_err:
-
     return err;
 }
 
@@ -330,11 +350,10 @@ static int hip_xfrm_policy_flush(struct rtnl_handle *rth)
     req.n.nlmsg_flags = NLM_F_REQUEST;
     req.n.nlmsg_type  = XFRM_MSG_FLUSHPOLICY;
 
-    HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "Policy flush failed\n");
 
 out_err:
-
     return err;
 }
 
@@ -368,16 +387,15 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
     req.n.nlmsg_flags = NLM_F_REQUEST;
     req.n.nlmsg_type  = XFRM_MSG_DELPOLICY;
 
-    req.xpid.dir      = dir;
+    req.xpid.dir = dir;
 
     /* SELECTOR <--> HITs */
     HIP_IFE(hip_xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
                                    hit_prefix, preferred_family), -1);
-    HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "No associated policies to be deleted\n");
 
 out_err:
-
     return err;
 }
 
@@ -417,7 +435,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
                                  const int preferred_family,
                                  const int sport, const int dport)
 {
-    int err = 0;
+    int                    err = 0;
     struct xfrm_encap_tmpl encap;
     struct {
         struct nlmsghdr         n;
@@ -442,16 +460,16 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         req.xsinfo.family = preferred_family;
     }
 
-    req.n.nlmsg_len     = NLMSG_LENGTH(sizeof(req.xsinfo));
-    req.n.nlmsg_flags   = NLM_F_REQUEST;
-    req.n.nlmsg_type    = cmd;
+    req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xsinfo));
+    req.n.nlmsg_flags = NLM_F_REQUEST;
+    req.n.nlmsg_type  = cmd;
 
     hip_xfrm_init_lft(&req.xsinfo.lft);
 
     req.xsinfo.mode     = XFRM_MODE_BEET;
     req.xsinfo.id.proto = IPPROTO_ESP;
 
-    req.xsinfo.id.spi   = htonl(spi);
+    req.xsinfo.id.spi = htonl(spi);
 
     /* Selector */
     HIP_IFE(hip_xfrm_fill_selector(&req.xsinfo.sel, src_id, dst_id,
@@ -471,12 +489,12 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
             struct xfrm_algo algo;
             char             buf[XFRM_ALGO_KEY_BUF_SIZE];
         } alg;
-        const char *e_name = e_algo_names[ealg];
-        const char *a_name = a_algo_names[aalg];
-        int len;
+        const char *const e_name = e_algo_names[ealg];
+        const char *const a_name = a_algo_names[aalg];
+        int               len;
 
-        HIP_ASSERT(ealg < (int)sizeof(e_algo_names));
-        HIP_ASSERT(aalg < (int)sizeof(a_algo_names));
+        HIP_ASSERT(ealg < (int) sizeof(e_algo_names));
+        HIP_ASSERT(aalg < (int) sizeof(a_algo_names));
 
         memset(alg.buf, 0, sizeof(alg.buf));
 
@@ -487,8 +505,8 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
                                     sizeof(alg.buf)), -1);
         len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
-        HIP_IFE((addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_AUTH,
-                           &alg, len)), -1);
+        HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_AUTH, &alg, len),
+                -1);
 
         /* XFRMA_ALG_CRYPT */
         memset(&alg, 0, sizeof(alg));
@@ -502,10 +520,9 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
                           &alg, len), -1);
     }
 
-    HIP_IFE((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1);
+    HIP_IFE(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1);
 
 out_err:
-
     return err;
 }
 
@@ -532,7 +549,7 @@ static int hip_xfrm_state_delete(struct rtnl_handle *rth,
         char                  buf[RTA_BUF_SIZE];
     } req;
     struct xfrm_encap_tmpl encap;
-    int err = 0;
+    int                    err = 0;
 
     memset(&req, 0, sizeof(req));
 
@@ -571,7 +588,7 @@ static int hip_xfrm_state_delete(struct rtnl_handle *rth,
 
     HIP_DEBUG("deleting xfrm state with spi 0x%x\n", spi);
     HIP_HEXDUMP("SA peer addr: ", &req.xsid.daddr, sizeof(req.xsid.daddr));
-    HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+    HIP_IFEL(netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0, -1,
              "netlink_talk() failed!\n");
 
 out_err:
@@ -593,9 +610,9 @@ static int hip_calc_sp_prefix(const struct in6_addr *src_id,
 
     if (IN6_IS_ADDR_V4MAPPED(src_id)) {
         HIP_DEBUG("ipv4 address mapped as ipv6\n");
-        prefix = (use_full_prefix) ? 32 : HIP_LSI_PREFIX_LEN;
+        prefix = use_full_prefix ? 32 : HIP_LSI_PREFIX_LEN;
     } else {
-        prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+        prefix = use_full_prefix ? 128 : HIP_HIT_PREFIX_LEN;
     }
 
     return prefix;
@@ -639,8 +656,8 @@ void hip_xfrm_set_default_sa_prefix_len(int len)
  */
 void hip_xfrm_set_algo_names(int new_algo_names)
 {
-    e_algo_names = (new_algo_names ? e_algo_names_new : e_algo_names_old);
-    a_algo_names = (new_algo_names ? a_algo_names_new : a_algo_names_old);
+    e_algo_names = new_algo_names ? E_ALGO_NAMES_NEW : E_ALGO_NAMES_OLD;
+    a_algo_names = new_algo_names ? A_ALGO_NAMES_NEW : A_ALGO_NAMES_OLD;
 }
 
 /**
@@ -674,29 +691,23 @@ int hip_flush_all_sa(void)
 void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
                    const int direction, struct hip_hadb_state *entry)
 {
-    in_port_t sport, dport;
-
     // Ignore the dst_addr, because xfrm accepts only one address.
-    if (direction == HIP_SPI_DIRECTION_OUT) {
-        sport = entry->local_udp_port;
-        dport = entry->peer_udp_port;
+    if (direction == HIP_SPI_DIRECTION_OUT && entry->outbound_sa_count > 0) {
+        hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, AF_INET6,
+                              entry->local_udp_port, entry->peer_udp_port);
         entry->outbound_sa_count--;
-        if (entry->outbound_sa_count < 0) {
-            HIP_ERROR("Warning: out sa count negative\n");
-            entry->outbound_sa_count = 0;
-        }
-    } else {
-        sport = entry->peer_udp_port;
-        dport = entry->local_udp_port;
-        entry->inbound_sa_count--;
-        if (entry->inbound_sa_count < 0) {
-            HIP_ERROR("Warning: in sa count negative\n");
-            entry->inbound_sa_count = 0;
-        }
-    }
 
-    hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, AF_INET6,
-                          sport, dport);
+        HIP_DEBUG("outbound IPsec SA deleted\n");
+    } else if (direction == HIP_SPI_DIRECTION_IN &&
+               entry->inbound_sa_count > 0) {
+        hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, AF_INET6,
+                              entry->peer_udp_port, entry->local_udp_port);
+        entry->inbound_sa_count--;
+
+        HIP_DEBUG("inbound IPsec SA deleted\n");
+    } else {
+        HIP_DEBUG("No IPsec SA set up yet\n");
+    }
 }
 
 /**
@@ -730,15 +741,15 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
                     const int update,
                     struct hip_hadb_state *entry)
 {
-    int err  = 0, enckey_len, authkey_len;
-    int aalg = ealg;
-    int cmd  = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
+    int       err  = 0, enckey_len, authkey_len;
+    int       aalg = ealg;
+    int       cmd  = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
     in_port_t sport, dport;
 
     HIP_ASSERT(spi != 0);
     HIP_ASSERT(entry);
 
-    HIP_IFEL((entry->disable_sas == 1), 0,
+    HIP_IFEL(entry->disable_sas == 1, 0,
              "SA creation disabled\n");
 
     if (direction == HIP_SPI_DIRECTION_OUT) {
@@ -754,7 +765,7 @@ uint32_t hip_add_sa(const struct in6_addr *saddr,
     authkey_len = hip_auth_key_length_esp(aalg);
     enckey_len  = hip_enc_key_length(ealg);
 
-    HIP_IFEL((enckey_len < 0 || authkey_len < 0), 1,
+    HIP_IFEL(enckey_len < 0 || authkey_len < 0, 1,
              "Bad enc or auth key len\n");
 
     HIP_DEBUG("************************************\n");
@@ -802,9 +813,9 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
 {
     HIP_DEBUG("Start\n");
 
-    int err   = 0;
+    int     err    = 0;
     uint8_t prefix = hip_calc_sp_prefix(src_id, use_full_prefix);
-    int cmd   = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
+    int     cmd    = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 
     /* XX FIXME: remove the proto argument */
     HIP_DEBUG("hip_setup_hit_sp_pair\n");
@@ -820,6 +831,7 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
                                    XFRM_POLICY_OUT, proto, prefix,
                                    AF_INET6), -1);
     HIP_DEBUG("End\n");
+
 out_err:
     return err;
 }
@@ -836,7 +848,7 @@ void hip_delete_hit_sp_pair(const hip_hit_t *src_hit,
                             const hip_hit_t *dst_hit,
                             const int use_full_prefix)
 {
-    uint8_t prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+    uint8_t prefix = use_full_prefix ? 128 : HIP_HIT_PREFIX_LEN;
 
     hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, dst_hit, src_hit,
                            XFRM_POLICY_IN, prefix, AF_INET6);
@@ -869,8 +881,8 @@ void hip_delete_default_prefix_sp_pair(void)
  */
 int hip_setup_default_sp_prefix_pair(void)
 {
-    int err = 0;
-    hip_hit_t src_hit, dst_hit;
+    int             err = 0;
+    hip_hit_t       src_hit, dst_hit;
     struct in6_addr ip;
 
     memset(&ip, 0, sizeof(hip_hit_t));
@@ -881,8 +893,8 @@ int hip_setup_default_sp_prefix_pair(void)
     set_hit_prefix(&src_hit);
     set_hit_prefix(&dst_hit);
 
-    HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0),
-            -1);
+    HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0), -1);
+
 out_err:
     return err;
 }

@@ -41,8 +41,6 @@
  * @brief Hashtable wrappers for OpenSSL lhash implementation
  *
  * @author Miika Komu <miika@iki.fi>
- * @see lib/opphip/wrap_db.c for a minimal hash table implementation
- *      example
  */
 
 #include <limits.h>

@@ -28,13 +28,6 @@
 
 #include "debug.h"
 
-/** A generic HIP error. This should be a value whose value does not overlap
- *  with the global errno values. */
-#define EHIP       500
-/** A generic error value for getaddrinfo() error since the negated library
- *  error values overlap ernno values. */
-#define EHADDRINFO 501
-
 /**
  * @addtogroup ife
  * @{

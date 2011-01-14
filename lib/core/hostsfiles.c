@@ -55,6 +55,12 @@
 
 #define HOSTS_FILE "/etc/hosts"
 
+struct hosts_file_line {
+    char           *hostname, *alias, *alias2;
+    struct in6_addr id;
+    int             lineno;
+};
+
 /**
  * "For-each" loop to iterate through /etc/hosts or HIPL_SYSCONFDIR/hosts
  * file, line by line.
@@ -72,13 +78,13 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
                                         const void *arg,
                                         void *result)
 {
-    FILE *hip_hosts = NULL;
-    struct list mylist;
-    char line[500];
-    int err         = 0, lineno = 0;
-    struct in_addr in_addr;
+    FILE                  *hip_hosts = NULL;
+    struct list            mylist;
+    char                   line[500];
+    int                    err = 0, lineno = 0;
+    struct in_addr         in_addr;
     struct hosts_file_line entry;
-    char *hostname  = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr = NULL;
+    char                  *hostname = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr = NULL;
 
     initlist(&mylist);
     memset(line, 0, sizeof(line));
@@ -95,7 +101,7 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
     err = 1;
     while (fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
         char *eofline, *c, *comment;
-        int len;
+        int   len;
 
         lineno++;
         c = line;
@@ -176,9 +182,9 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
         entry.hostname = hostname;
         HIP_ASSERT(entry.hostname)
 
-        entry.alias2   = alias2;
-        entry.alias    = alias;
-        entry.lineno   = lineno;
+        entry.alias2 = alias2;
+        entry.alias  = alias;
+        entry.lineno = lineno;
 
         /* Finally, call the handler function to handle the line */
 
@@ -365,7 +371,7 @@ static int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line 
         is_hit = hip_id_type_match(&entry->id, 1);
         is_lsi = hip_id_type_match(&entry->id, 2);
 
-        HIP_IFE((is_hit || is_lsi), 1);
+        HIP_IFE(is_hit || is_lsi, 1);
 
         ipv6_addr_copy(result, &entry->id);
         err = 0; /* Stop at the first match */
@@ -387,8 +393,8 @@ out_err:
  */
 int hip_map_lsi_to_hit_from_hosts_files(const hip_lsi_t *lsi, hip_hit_t *hit)
 {
-    int err = 0;
-    uint8_t hostname[HOST_NAME_MAX];
+    int             err = 0;
+    uint8_t         hostname[HOST_NAME_MAX];
     struct in6_addr mapped_lsi;
 
     memset(hostname, 0, sizeof(hostname));
@@ -436,8 +442,8 @@ out_err:
  */
 int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
 {
-    int err = 0;
-    uint8_t hostname[HOST_NAME_MAX];
+    int             err = 0;
+    uint8_t         hostname[HOST_NAME_MAX];
     struct in6_addr mapped_lsi;
 
     memset(hostname, 0, sizeof(hostname));
@@ -485,7 +491,7 @@ int hip_map_id_to_ip_from_hosts_files(const hip_hit_t *hit,
                                       const hip_lsi_t *lsi,
                                       struct in6_addr *ip)
 {
-    int err = 0;
+    int     err = 0;
     uint8_t hostname[HOST_NAME_MAX];
 
     HIP_ASSERT((hit || lsi) && ip);
@@ -530,7 +536,7 @@ out_err:
  */
 int hip_host_file_info_exists_lsi(hip_lsi_t *lsi)
 {
-    uint8_t hostname[HOST_NAME_MAX];
+    uint8_t         hostname[HOST_NAME_MAX];
     struct in6_addr mapped_lsi;
 
     memset(hostname, 0, sizeof(hostname));

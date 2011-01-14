@@ -64,8 +64,8 @@ uint64_t hip_solve_puzzle(const void *puzzle_or_solution,
     uint64_t randval  = 0;
     uint64_t maxtries = 0;
     uint64_t digest   = 0;
-    uint8_t cookie[48];
-    int err           = 0;
+    uint8_t  cookie[48];
+    int      err = 0;
     const union {
         struct hip_puzzle   pz;
         struct hip_solution sl;
@@ -73,7 +73,7 @@ uint64_t hip_solve_puzzle(const void *puzzle_or_solution,
 
     HIP_HEXDUMP("puzzle", puzzle_or_solution,
                 (mode == HIP_VERIFY_PUZZLE ? sizeof(struct hip_solution) :
-                                             sizeof(struct hip_puzzle)));
+                 sizeof(struct hip_puzzle)));
 
     /* pre-create cookie */
     u = puzzle_or_solution;
@@ -161,10 +161,10 @@ out_err:
 int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
 {
     const struct hip_challenge_request *pz;
-    struct hip_puzzle tmp;
-    uint64_t solution;
-    int err = 0;
-    uint8_t digist[HIP_AH_SHA_LEN];
+    struct hip_puzzle                   tmp;
+    uint64_t                            solution;
+    int                                 err = 0;
+    uint8_t                             digist[HIP_AH_SHA_LEN];
 
     pz = hip_get_param(in, HIP_PARAM_CHALLENGE_REQUEST);
     while (pz) {
@@ -195,5 +195,5 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
 out_err:
     return err;
 }
-#endif /* CONFIG_HIP_MIDAUTH */
 
+#endif /* CONFIG_HIP_MIDAUTH */

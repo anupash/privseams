@@ -38,7 +38,7 @@
 
 static double time_clock(const unsigned int iterations)
 {
-    clock_t start, end, tmp;
+    clock_t      start, end, tmp;
     unsigned int i;
 
     start = clock();
@@ -53,8 +53,8 @@ static double time_clock(const unsigned int iterations)
 static double time_hip_fb_create_delete(const unsigned int iterations,
                                         const char *file_name)
 {
-    clock_t start, end;
-    unsigned int i;
+    clock_t                start, end;
+    unsigned int           i;
     struct hip_file_buffer fb;
 
     start = clock();
@@ -71,10 +71,10 @@ static double time_hip_fb_create_delete(const unsigned int iterations,
 static double time_hip_fb_reload(const unsigned int iterations,
                                  const char *file_name)
 {
-    clock_t start, end;
-    unsigned int i;
+    clock_t                start, end;
+    unsigned int           i;
     struct hip_file_buffer fb;
-    int err;
+    int                    err;
 
     err = hip_fb_create(&fb, file_name);
     assert(0 == err);
@@ -93,9 +93,9 @@ static double time_hip_fb_reload(const unsigned int iterations,
 
 static double time_hip_lp_create_delete(const unsigned int iterations)
 {
-    clock_t start, end;
-    unsigned int i;
-    struct hip_mem_area ma = { 0, 0 };
+    clock_t                start, end;
+    unsigned int           i;
+    struct hip_mem_area    ma = { 0, 0 };
     struct hip_line_parser lp;
 
     start = clock();
@@ -111,12 +111,12 @@ static double time_hip_lp_create_delete(const unsigned int iterations)
 
 static double time_hip_lp_first(const unsigned int iterations)
 {
-    clock_t start, end;
-    unsigned int i;
+    clock_t                start, end;
+    unsigned int           i;
     struct hip_line_parser lp;
-    char *line;
-    struct hip_mem_area ma = { 0, 0 };
-    int err;
+    char                  *line;
+    struct hip_mem_area    ma = { 0, 0 };
+    int                    err;
 
     err = hip_lp_create(&lp, &ma);
     assert(0 == err);
@@ -135,12 +135,12 @@ static double time_hip_lp_first(const unsigned int iterations)
 static double time_hip_lp_next(const unsigned int iterations,
                                const char *file_name)
 {
-    clock_t start, end;
-    unsigned int i;
+    clock_t                start, end;
+    unsigned int           i;
     struct hip_file_buffer fb;
     struct hip_line_parser lp;
-    char *line;
-    int err;
+    char                  *line;
+    int                    err;
 
     err = hip_fb_create(&fb, file_name);
     assert(0 == err);
@@ -164,12 +164,12 @@ static double time_hip_lp_next(const unsigned int iterations,
 static double time_hip_lp_parse_file(const unsigned int iterations,
                                      const char *file_name)
 {
-    clock_t start, end;
-    unsigned int i;
+    clock_t                start, end;
+    unsigned int           i;
     struct hip_file_buffer fb;
     struct hip_line_parser lp;
-    char *line;
-    int err;
+    char                  *line;
+    int                    err;
 
     err = hip_fb_create(&fb, file_name);
     assert(0 == err);
@@ -194,7 +194,7 @@ static double time_hip_lp_parse_file(const unsigned int iterations,
 static double time_hip_port_binding_create_delete(const unsigned int iterations,
                                                   const bool enable_cache)
 {
-    clock_t start, end;
+    clock_t      start, end;
     unsigned int i;
 
     start = clock();
@@ -212,8 +212,8 @@ static double time_hip_port_bindings_get(const unsigned int iterations,
                                          const in_port_t port,
                                          const bool enable_cache)
 {
-    clock_t start, end;
-    unsigned int i;
+    clock_t               start, end;
+    unsigned int          i;
     enum hip_port_binding pi;
 
     hip_port_bindings_init(enable_cache);
@@ -231,11 +231,11 @@ static double time_hip_port_bindings_get(const unsigned int iterations,
 
 int main(void)
 {
-    const unsigned int iterations = 10000;
-    const char *file_name = "/proc/net/tcp6";
-    const uint8_t proto = 6;
-    const in_port_t port = 0xFFFF;
-    bool enable_cache = false;
+    const unsigned int iterations   = 10000;
+    const char        *file_name    = "/proc/net/tcp6";
+    const uint8_t      proto        = 6;
+    const in_port_t    port         = 0xFFFF;
+    bool               enable_cache = false;
 
     printf("Testing clock reading used for benchmarks:\n"
            "  - call clock()\n"
@@ -313,17 +313,17 @@ int main(void)
            "  - call hip_port_bindings_uninit() to\n"
            "    - delete tcp6 and udp6 line parser objects\n"
            "    - de-allocate cache\n"
-            "  ==> time_hip_port_binding_create_delete(%d, %d): %fs\n\n",
-            iterations, enable_cache,
-            time_hip_port_binding_create_delete(iterations, enable_cache));
+           "  ==> time_hip_port_binding_create_delete(%d, %d): %fs\n\n",
+           iterations, enable_cache,
+           time_hip_port_binding_create_delete(iterations, enable_cache));
 
     printf("Testing port binding parsing with cache:\n"
            "  - call hip_port_bindings_get() to\n"
            "    - check cache for port binding\n"
            "    - parse proc file if no cache entry\n"
-            "  ==> time_hip_port_bindings_get(%d, %d, 0x%X, %d): %fs\n\n",
-            iterations, proto, port, enable_cache,
-            time_hip_port_bindings_get(iterations, proto, port, enable_cache));
+           "  ==> time_hip_port_bindings_get(%d, %d, 0x%X, %d): %fs\n\n",
+           iterations, proto, port, enable_cache,
+           time_hip_port_bindings_get(iterations, proto, port, enable_cache));
 
     return 0;
 }

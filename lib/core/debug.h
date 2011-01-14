@@ -30,14 +30,8 @@
 #include <stdint.h>
 
 #include "config.h"
+#include "common.h"
 #include "protodefs.h"
-
-/* includes filename, line number and max(debug_prefix[]) */
-#define DEBUG_PREFIX_MAX  64
-
-/* stderror: includes prefix, separator, msg and \0
- * syslog:   includes msg and \0 */
-#define DEBUG_MSG_MAX_LEN     1024
 
 /**
  * Error handling macros used for checking errors. To use these macros, define a
@@ -229,7 +223,7 @@
 #define HIP_ERROR(...) hip_print_str(DEBUG_LEVEL_ERROR, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_DIE(...)   hip_die(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_PERROR(s) hip_perror_wrapper(__FILE__, __LINE__, __FUNCTION__, s)
-#define HIP_ASSERT(s) { if (!(s)) {HIP_DIE("assertion failed\n"); }}
+#define HIP_ASSERT(s) { if (!(s)) { HIP_DIE("assertion failed\n"); } }
 /** @} */
 
 /** @defgroup debug HIP debug macros
@@ -249,7 +243,7 @@
     hip_print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, sockaddr)
 #define HIP_DUMP_MSG(msg) { hip_print_str(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
 #define HIP_DEBUG_GL(debug_group, debug_level, ...) \
-    hip_debug_gl( debug_group, debug_level, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+    hip_debug_gl(debug_group, debug_level, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 
 #else
 #define HIP_DEBUG(...) do {} while (0)
@@ -265,41 +259,43 @@
 /* Debug groups define groups of debug messages which belong to the
  * same logical part of hip. Debug messages can be enabled or disabled more
  * finegrained by only printing messages which belong to a debug group */
-# define HIP_DEBUG_GROUP_ALL            770
-# define HIP_DEBUG_GROUP_DEFAULT        771
-# define HIP_DEBUG_GROUP_ADAPT          772
-# define HIP_DEBUG_GROUP_INIT           773
-# define HIP_DEBUG_GROUP_MSG            774
+#define HIP_DEBUG_GROUP_ALL            770
+#define HIP_DEBUG_GROUP_DEFAULT        771
+#define HIP_DEBUG_GROUP_ADAPT          772
+#define HIP_DEBUG_GROUP_INIT           773
+#define HIP_DEBUG_GROUP_MSG            774
 
 /* Current debug group */
-# define HIP_DEBUG_GROUP HIP_DEBUG_GROUP_INIT
+#define HIP_DEBUG_GROUP HIP_DEBUG_GROUP_INIT
 
 /* Debug messages are divided into several levels. Severe errors
  * or abnormal conditions are the lowest level. Higher levels are
  * considered as less severe or less important. The highest level means
  * every debug message which matches the current switch is printed.
  * The highest debug level number must be assigned to HIP_DEBUG_ALL*/
-# define HIP_DEBUG_LEVEL_ERRORS         0
-# define HIP_DEBUG_LEVEL_IMPORTANT      10
-# define HIP_DEBUG_LEVEL_INFORMATIVE    20
-# define HIP_DEBUG_LEVEL_DEFAULT        30
-# define HIP_DEBUG_LEVEL_ALL            40
+#define HIP_DEBUG_LEVEL_ERRORS         0
+#define HIP_DEBUG_LEVEL_IMPORTANT      10
+#define HIP_DEBUG_LEVEL_INFORMATIVE    20
+#define HIP_DEBUG_LEVEL_DEFAULT        30
+#define HIP_DEBUG_LEVEL_ALL            40
 
-# define HIP_DEBUG_LEVEL HIP_DEBUG_LEVEL_ALL
+#define HIP_DEBUG_LEVEL HIP_DEBUG_LEVEL_ALL
 
 /* differentiate between die(), error() and debug() error levels */
 enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
                    DEBUG_LEVEL_DEBUG, DEBUG_LEVEL_MAX };
 
-#define HIP_INFO_HIT(str, hit)  hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, hit)
-#define HIP_INFO_IN6ADDR(str, in6) hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, in6)
-#define HIP_INFO_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, lsi)
-#define HIP_INFO_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, in)
+#define HIP_PRINT(func, level, ...) func(level, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 
-#define HIP_DEBUG_HIT(str, hit)  hip_print_hit(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, hit)
-#define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in6)
-#define HIP_DEBUG_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, lsi)
-#define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in)
+#define HIP_INFO_HIT(str, hit)     HIP_PRINT(hip_print_hit, DEBUG_LEVEL_INFO, str, hit)
+#define HIP_INFO_IN6ADDR(str, in6) HIP_INFO_HIT(str, in6)
+#define HIP_INFO_LSI(str, lsi)     HIP_PRINT(hip_print_lsi, DEBUG_LEVEL_INFO, str, lsi)
+#define HIP_INFO_INADDR(str, in)   HIP_INFO_LSI(str, in)
+
+#define HIP_DEBUG_HIT(str, hit)     HIP_PRINT(hip_print_hit, DEBUG_LEVEL_DEBUG, str, hit)
+#define HIP_DEBUG_IN6ADDR(str, in6) HIP_DEBUG_HIT(str, in6)
+#define HIP_DEBUG_LSI(str, lsi)     HIP_PRINT(hip_print_lsi, DEBUG_LEVEL_DEBUG, str, lsi)
+#define HIP_DEBUG_INADDR(str, in)   HIP_DEBUG_LSI(str, in)
 
 enum logtype  { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
 enum logfmt   { LOGFMT_SHORT, LOGFMT_LONG };
@@ -406,8 +402,6 @@ void hip_print_locator_addresses(const struct hip_common *);
 void hip_print_peer_addresses_to_be_added(struct hip_hadb_state *);
 void hip_print_peer_addresses(struct hip_hadb_state *);
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-
 /**
  * Gets the name of a state.
  *
@@ -416,7 +410,7 @@ void hip_print_peer_addresses(struct hip_hadb_state *);
  */
 static inline const char *hip_state_str(unsigned int state)
 {
-    const char *str             = "UNKNOWN";
+    const char        *str      = "UNKNOWN";
     static const char *states[] = {
         "NONE",                          // 0
         "UNASSOCIATED",                  // 1

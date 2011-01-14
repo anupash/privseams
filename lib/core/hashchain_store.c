@@ -81,7 +81,7 @@ int hcstore_init(struct hchain_store *hcstore,
     hcstore->num_hchains_per_item = num_hchains_per_item;
     hcstore->refill_threshold     = refill_threshold;
 
-    hcstore->num_functions        = 0;
+    hcstore->num_functions = 0;
 
     for (i = 0; i < MAX_FUNCTIONS; i++) {
         hcstore->hash_functions[i]   = NULL;
@@ -158,7 +158,7 @@ void hcstore_uninit(struct hchain_store *hcstore, const int use_hash_trees)
 int hcstore_register_function(struct hchain_store *hcstore,
                               const hash_function hash_func)
 {
-    int err = 0;
+    int      err = 0;
     unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
@@ -200,11 +200,11 @@ out_err:
 int hcstore_register_hash_length(struct hchain_store *hcstore, const int function_id,
                                  const int hash_length)
 {
-    int err = 0;
+    int      err = 0;
     unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int) hcstore->num_functions);
     HIP_ASSERT(hash_length > 0);
 
     // first check that there's still some space left
@@ -213,7 +213,7 @@ int hcstore_register_hash_length(struct hchain_store *hcstore, const int functio
 
     // also check if the hash length is already stored for this function
     for (i = 0; i < hcstore->num_hash_lengths[function_id]; i++) {
-        if ((int)hcstore->hash_lengths[function_id][i] == hash_length) {
+        if ((int) hcstore->hash_lengths[function_id][i] == hash_length) {
             HIP_DEBUG("hchain store already contains this hash length\n");
 
             err = i;
@@ -222,7 +222,7 @@ int hcstore_register_hash_length(struct hchain_store *hcstore, const int functio
     }
 
     // store the hash length
-    err  = hcstore->num_hash_lengths[function_id];
+    err                                                                        = hcstore->num_hash_lengths[function_id];
     hcstore->hash_lengths[function_id][hcstore->num_hash_lengths[function_id]] = hash_length;
     hcstore->num_hash_lengths[function_id]++;
 
@@ -246,13 +246,13 @@ int hcstore_register_hash_item_length(struct hchain_store *hcstore,
                                       const int hash_length_id,
                                       const int hitem_length)
 {
-    int err = 0;
+    int      err = 0;
     unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int) hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int) hcstore->num_hash_lengths[function_id]);
     HIP_ASSERT(hitem_length > 0);
 
     // first check that there's still some space left
@@ -263,7 +263,7 @@ int hcstore_register_hash_item_length(struct hchain_store *hcstore,
     for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
          num_hchain_lengths; i++) {
         if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
-            == (unsigned)hitem_length) {
+            == (unsigned) hitem_length) {
             HIP_DEBUG("hchain store already contains this hchain length\n");
 
             err = i;
@@ -299,14 +299,14 @@ int hcstore_register_hash_item_hierarchy(struct hchain_store *hcstore,
                                          const int hitem_length,
                                          const int addtional_hierarchies)
 {
-    int item_offset = -1;
-    int err         = 0;
+    int      item_offset = -1;
+    int      err         = 0;
     unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int) hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int) hcstore->num_hash_lengths[function_id]);
     HIP_ASSERT(hitem_length > 0);
     HIP_ASSERT(addtional_hierarchies > 0);
 
@@ -314,7 +314,7 @@ int hcstore_register_hash_item_hierarchy(struct hchain_store *hcstore,
     for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
          num_hchain_lengths; i++) {
         if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
-            == (unsigned)hitem_length) {
+            == (unsigned) hitem_length) {
             // set item_offset
             item_offset = i;
 
@@ -362,25 +362,25 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                              const int update_higher_level,
                              const int use_hash_trees)
 {
-    struct hash_chain *hchain     = NULL;
-    struct hash_tree  *htree      = NULL;
-    struct hash_tree  *link_tree  = NULL;
-    hash_function hash_func       = NULL;
-    int hash_length               = 0;
-    int hchain_length             = 0;
-    unsigned create_hchains       = 0;
-    struct hash_chain *tmp_hchain = NULL;
-    struct hash_tree  *tmp_htree  = NULL;
-    unsigned char *root           = NULL;
-    int root_length               = 0;
-    int err                       = 0;
-    unsigned i, j;
+    struct hash_chain *hchain         = NULL;
+    struct hash_tree  *htree          = NULL;
+    struct hash_tree  *link_tree      = NULL;
+    hash_function      hash_func      = NULL;
+    int                hash_length    = 0;
+    int                hchain_length  = 0;
+    unsigned           create_hchains = 0;
+    struct hash_chain *tmp_hchain     = NULL;
+    struct hash_tree  *tmp_htree      = NULL;
+    unsigned char     *root           = NULL;
+    int                root_length    = 0;
+    int                err            = 0;
+    unsigned           i, j;
 
     // set necessary parameters
-    hash_func      = hcstore->hash_functions[hash_func_id];
-    hash_length    = hcstore->hash_lengths[hash_func_id][hash_length_id];
-    hchain_length  = hcstore->hchain_shelves[hash_func_id][hash_length_id].
-                     hchain_lengths[hchain_length_id];
+    hash_func     = hcstore->hash_functions[hash_func_id];
+    hash_length   = hcstore->hash_lengths[hash_func_id][hash_length_id];
+    hchain_length = hcstore->hchain_shelves[hash_func_id][hash_length_id].
+                    hchain_lengths[hchain_length_id];
 
     // how many hchains are missing to fill up the item again
     create_hchains = hcstore->num_hchains_per_item
@@ -400,8 +400,8 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                                               hierarchy_level - 1,
                                               1,
                                               use_hash_trees)) < 0,
-                    -1,
-                    "failed to fill item\n");
+                     -1,
+                     "failed to fill item\n");
         }
 
         // create one hchain at a time
@@ -421,10 +421,8 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                 htree_add_random_secrets(link_tree);
 
                 // lower items should be full by now
-                HIP_ASSERT(hip_ll_get_size(
-                               &hcstore->hchain_shelves[hash_func_id][hash_length_id].
-                               hchains[hchain_length_id][hierarchy_level - 1]) ==
-                           hcstore->num_hchains_per_item);
+                HIP_ASSERT(hip_ll_get_size(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level - 1])
+                           == hcstore->num_hchains_per_item);
 
                 // add the anchors of the next lower level as data
                 for (j = 0; j < hcstore->num_hchains_per_item; j++) {
@@ -432,8 +430,7 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                         tmp_htree = hip_ll_get(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level - 1],
                                                j);
 
-                        htree_add_data(link_tree, tmp_htree->root,
-                                       hash_length);
+                        htree_add_data(link_tree, tmp_htree->root, hash_length);
                     } else {
                         tmp_hchain = hip_ll_get(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level - 1],
                                                 j);
@@ -456,7 +453,7 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                                               0,
                                               link_tree,
                                               hierarchy_level)),
-                          -1,
+                         -1,
                          "failed to alloc memory or to init htree\n");
                 HIP_IFEL(htree_add_random_data(htree, hchain_length),
                          -1,
@@ -471,21 +468,17 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
                          "failed to calculate tree nodes\n");
 
                 // add it as last element to have some circulation
-                HIP_IFEL(hip_ll_add_last(
-                                &hcstore->hchain_shelves[hash_func_id][hash_length_id].
-                                hchains[hchain_length_id][hierarchy_level], htree), -1,
-                        "failed to store new htree\n");
+                HIP_IFEL(hip_ll_add_last(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level], htree),
+                         -1, "failed to store new htree\n");
             } else {
                 // create a new hchain
                 HIP_IFEL(!(hchain = hchain_create(hash_func, hash_length,
-                                        hchain_length, hierarchy_level, link_tree)), -1,
-                        "failed to create new hchain\n");
+                                                  hchain_length, hierarchy_level, link_tree)), -1,
+                         "failed to create new hchain\n");
 
                 // add it as last element to have some circulation
-                HIP_IFEL(hip_ll_add_last(
-                                &hcstore->hchain_shelves[hash_func_id][hash_length_id].
-                                hchains[hchain_length_id][hierarchy_level], hchain), -1,
-                        "failed to store new hchain\n");
+                HIP_IFEL(hip_ll_add_last(&hcstore->hchain_shelves[hash_func_id][hash_length_id].hchains[hchain_length_id][hierarchy_level], hchain),
+                         -1, "failed to store new hchain\n");
             }
         }
 
@@ -507,7 +500,7 @@ out_err:
  */
 int hcstore_refill(struct hchain_store *hcstore, const int use_hash_trees)
 {
-    int err = 0;
+    int      err = 0;
     unsigned i, j, g, h;
 
     HIP_ASSERT(hcstore != NULL);
@@ -545,23 +538,23 @@ void *hcstore_get_hash_item(struct hchain_store *hcstore,
                             const int hchain_length)
 {
     // inited to invalid values
-    int item_offset     = -1;
-    void *stored_item   = NULL;
-    int hierarchy_level = 0;
-    int err             = 0;
+    int      item_offset     = -1;
+    void    *stored_item     = NULL;
+    int      hierarchy_level = 0;
+    int      err             = 0;
     unsigned i;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int) hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int) hcstore->num_hash_lengths[function_id]);
     HIP_ASSERT(hchain_length > 0);
 
     // first find the correct hchain item
     for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
          num_hchain_lengths; i++) {
         if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
-            == (unsigned)hchain_length) {
+            == (unsigned) hchain_length) {
             // set item_offset
             item_offset = i;
 
@@ -608,15 +601,15 @@ void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
                                  const unsigned char *anchor,
                                  const int use_hash_trees)
 {
-    struct hash_tree  *htree       = NULL;
-    void              *stored_item = NULL;
-    int hash_length = 0, err = 0;
-    unsigned i, j;
+    struct hash_tree *htree       = NULL;
+    void             *stored_item = NULL;
+    int               hash_length = 0, err = 0;
+    unsigned          i, j;
 
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int) hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int) hcstore->num_hash_lengths[function_id]);
     HIP_ASSERT(hierarchy_level >= 0);
     HIP_ASSERT(anchor != NULL);
 
@@ -629,7 +622,7 @@ void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
     for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
          num_hchain_lengths; i++) {
         // look for the anchor at each hchain_length with the respective hierarchy level
-        HIP_ASSERT((unsigned)hierarchy_level < hcstore->hchain_shelves
+        HIP_ASSERT((unsigned) hierarchy_level < hcstore->hchain_shelves
                    [function_id][hash_length_id].num_hierarchies[i]);
 
         for (j = 0; j < hip_ll_get_size(&hcstore->hchain_shelves[function_id]
@@ -644,8 +637,8 @@ void *hcstore_get_item_by_anchor(struct hchain_store *hcstore,
                 if (!memcmp(anchor, htree->root, hash_length)) {
                     stored_item =
                         hip_ll_del(&hcstore->
-                                       hchain_shelves[function_id][hash_length_id].
-                                       hchains[i][hierarchy_level],
+                                   hchain_shelves[function_id][hash_length_id].
+                                   hchains[i][hierarchy_level],
                                    j,
                                    NULL);
 
@@ -686,7 +679,7 @@ hash_function hcstore_get_hash_function(struct hchain_store *hcstore,
                                         const int function_id)
 {
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int) hcstore->num_functions);
 
     return hcstore->hash_functions[function_id];
 }
@@ -703,9 +696,9 @@ int hcstore_get_hash_length(struct hchain_store *hcstore,
                             const int hash_length_id)
 {
     HIP_ASSERT(hcstore != NULL);
-    HIP_ASSERT(function_id >= 0 && function_id < (int)hcstore->num_functions);
+    HIP_ASSERT(function_id >= 0 && function_id < (int) hcstore->num_functions);
     HIP_ASSERT(hash_length_id >= 0
-               && hash_length_id < (int)hcstore->num_hash_lengths[function_id]);
+               && hash_length_id < (int) hcstore->num_hash_lengths[function_id]);
 
     return hcstore->hash_lengths[function_id][hash_length_id];
 }

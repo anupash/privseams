@@ -71,7 +71,7 @@ END_TEST
 START_TEST(test_hip_lp_delete_valid)
 {
     struct hip_line_parser lp;
-    int err = 0;
+    int                    err = 0;
 
     err = hip_lp_create(&lp, &ma);
     assert(0 == err);
@@ -88,7 +88,7 @@ END_TEST
 START_TEST(test_hip_lp_first_valid)
 {
     struct hip_line_parser lp;
-    int err = 0;
+    int                    err = 0;
 
     err = hip_lp_create(&lp, &ma);
     assert(0 == err);
@@ -105,8 +105,8 @@ END_TEST
 START_TEST(test_hip_lp_next_valid)
 {
     struct hip_line_parser lp;
-    int err     = 0;
-    char *first = NULL;
+    int                    err   = 0;
+    char                  *first = NULL;
 
     err = hip_lp_create(&lp, &ma);
     assert(0 == err);

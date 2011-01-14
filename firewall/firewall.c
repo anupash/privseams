@@ -142,14 +142,14 @@ static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEF
 
 /* externally used state */
 // TODO try to decrease number of globally used variables
-int filter_traffic                        = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
-int hip_kernel_ipsec_fallback             = 0;
-int hip_lsi_support                       = 0;
-int system_based_opp_mode                 = 0;
-int esp_relay                             = 0;
-int hip_esp_protection                    = 0;
+int filter_traffic            = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
+int hip_kernel_ipsec_fallback = 0;
+int hip_lsi_support           = 0;
+int system_based_opp_mode     = 0;
+int esp_relay                 = 0;
+int hip_esp_protection        = 0;
 #ifdef CONFIG_HIP_MIDAUTH
-int use_midauth                           = 0;
+int use_midauth = 0;
 #endif
 
 /** Use this to send and receive responses to hipd. Notice that
@@ -162,12 +162,12 @@ int use_midauth                           = 0;
  *
  * @todo make accessible through send function, no-one should read on that
  */
-int hip_fw_sock                           = 0;
+int hip_fw_sock = 0;
 /**
  * Use this socket *only* for receiving async messages from hipd
  * @todo make static, no-one should read on that
  */
-int hip_fw_async_sock                     = 0;
+int hip_fw_async_sock = 0;
 
 /**
  * display usage of firewall to stdout
@@ -213,8 +213,8 @@ static void print_usage(void)
  */
 static int hip_fw_init_userspace_ipsec(void)
 {
-    int err = 0;
-    int ver_c;
+    int            err = 0;
+    int            ver_c;
     struct utsname name;
 
     HIP_IFEL(uname(&name), -1, "Failed to retrieve kernel information: %s\n",
@@ -301,7 +301,7 @@ static int hip_fw_init_esp_prot(void)
 
     // userspace ipsec is a prerequisite for esp protection
     if (hip_esp_protection && hip_userspace_ipsec) {
-            HIP_IFEL(esp_prot_init(), -1, "failed to init esp protection\n");
+        HIP_IFEL(esp_prot_init(), -1, "failed to init esp protection\n");
     } else {
         HIP_ERROR("userspace ipsec needs to be turned on for this to work\n");
 
@@ -435,7 +435,6 @@ static int hip_fw_init_system_based_opp_mode(void)
     return err;
 }
 
-
 /*
  * Initialize rules for filtering traffic
  *
@@ -551,7 +550,7 @@ int hip_fw_init_esp_relay(void)
         /* Still accept HIP traffic as if the -A flag had been given
          * instead of -F */
         accept_hip_esp_traffic_by_default = 1;
-        restore_accept_hip_esp_traffic = 1;
+        restore_accept_hip_esp_traffic    = 1;
 
         firewall_init_filter_traffic();
     }
@@ -604,11 +603,11 @@ static int hip_fw_uninit_system_based_opp_mode(void)
  */
 static int hip_query_default_local_hit_from_hipd(void)
 {
-    int err                            = 0;
-    struct hip_common *msg             = NULL;
+    int                          err   = 0;
+    struct hip_common           *msg   = NULL;
     const struct hip_tlv_common *param = NULL;
-    const hip_hit_t *hit               = NULL;
-    const hip_lsi_t *lsi               = NULL;
+    const hip_hit_t             *hit   = NULL;
+    const hip_lsi_t             *lsi   = NULL;
 
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_DEFAULT_HIT, 0), -1,
@@ -742,9 +741,9 @@ static void firewall_increase_netlink_buffers(void)
  */
 static void firewall_probe_kernel_modules(void)
 {
-    int count, err, status;
-    char cmd[40];
-    int mod_total;
+    int         count, err, status;
+    char        cmd[40];
+    int         mod_total;
     const char *mod_name[] =
     { "ip_queue", "ip6_queue", "iptable_filter", "ip6table_filter" };
 
@@ -855,9 +854,9 @@ static int filter_esp(const struct hip_fw_context *ctx)
 
     if (esp_relay && ctx->udp_encap_hdr &&
         ((ret = hipfw_relay_esp(ctx)) <= 0)) {
-         /* 0: drop original and reinject new packet
-            -1: accept reinject packet and avoid filter_esp_state
-            1: just let it pass => proceed to filter */
+        /* 0: drop original and reinject new packet
+         * -1: accept reinject packet and avoid filter_esp_state
+         * 1: just let it pass => proceed to filter */
         if (ret == 0) {
             HIP_DEBUG("Drop original and reinject relayed ESP packet\n");
             verdict = 0;
@@ -865,7 +864,7 @@ static int filter_esp(const struct hip_fw_context *ctx)
             HIP_DEBUG("Accept reinjected packet\n");
             verdict = 1;
         } else {
-             HIP_ASSERT(0);
+            HIP_ASSERT(0);
         }
     } else if (filter_esp_state(ctx) > 0) {
         verdict = 1;
@@ -900,14 +899,14 @@ static int filter_hip(const struct in6_addr *ip6_src,
                       struct hip_fw_context *ctx)
 {
     // complete rule list for hook (== IN / OUT / FORWARD)
-    struct dlist *list  = get_rule_list(hook);
-    struct rule *rule   = NULL;
+    struct dlist *list = get_rule_list(hook);
+    struct rule  *rule = NULL;
     // assume match for current rule
-    int match           = 1, print_addr = 0;
+    int match = 1, print_addr = 0;
     // assume packet has not yet passed connection tracking
-    int conntracked     = 0;
+    int conntracked = 0;
     // block traffic by default
-    int verdict         = 0;
+    int verdict = 0;
 
     HIP_DEBUG("\n");
 
@@ -922,25 +921,25 @@ static int filter_hip(const struct in6_addr *ip6_src,
     if (buf->type_hdr == HIP_I1) {
         HIP_INFO("received packet type: I1\n");
         print_addr = 1;
-    } else if (buf->type_hdr == HIP_R1)   {
+    } else if (buf->type_hdr == HIP_R1) {
         HIP_INFO("received packet type: R1\n");
         print_addr = 1;
-    } else if (buf->type_hdr == HIP_I2)   {
+    } else if (buf->type_hdr == HIP_I2) {
         HIP_INFO("received packet type: I2\n");
         print_addr = 1;
-    } else if (buf->type_hdr == HIP_R2)   {
+    } else if (buf->type_hdr == HIP_R2) {
         HIP_INFO("received packet type: R2\n");
         print_addr = 1;
-    } else if (buf->type_hdr == HIP_UPDATE)   {
+    } else if (buf->type_hdr == HIP_UPDATE) {
         HIP_INFO("received packet type: UPDATE\n");
         print_addr = 1;
-    } else if (buf->type_hdr == HIP_CLOSE)   {
+    } else if (buf->type_hdr == HIP_CLOSE) {
         HIP_INFO("received packet type: CLOSE\n");
         print_addr = 1;
-    } else if (buf->type_hdr == HIP_CLOSE_ACK)   {
+    } else if (buf->type_hdr == HIP_CLOSE_ACK) {
         HIP_INFO("received packet type: CLOSE_ACK\n");
         print_addr = 1;
-    } else if (buf->type_hdr == HIP_NOTIFY)   {
+    } else if (buf->type_hdr == HIP_NOTIFY) {
         HIP_DEBUG("received packet type: NOTIFY\n");
     } else if (buf->type_hdr == HIP_LUPDATE) {
         HIP_DEBUG("received packet type: LIGHT UPDATE\n");
@@ -1039,7 +1038,6 @@ static int filter_hip(const struct in6_addr *ip6_src,
             if (!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept,
                               ctx)) {
                 match = 0;
-
             } else {
                 // if it is a valid packet, this also tracked the packet
                 conntracked = 1;
@@ -1140,7 +1138,8 @@ static int filter_hip(const struct in6_addr *ip6_src,
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_hip_output(struct hip_fw_context *ctx){
+static int hip_fw_handle_hip_output(struct hip_fw_context *ctx)
+{
     int verdict = accept_hip_esp_traffic_by_default;
 
     HIP_DEBUG("hip_fw_handle_hip_output \n");
@@ -1198,7 +1197,6 @@ static int hip_fw_handle_other_output(struct hip_fw_context *ctx)
               accept_normal_traffic_by_default);
 
     if (ctx->ip_version == 6 && hip_userspace_ipsec) {
-
         hip_hit_t *def_hit = hip_fw_get_default_hit();
         HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 
@@ -1229,7 +1227,7 @@ static int hip_fw_handle_other_output(struct hip_fw_context *ctx)
             }
         } else if (system_based_opp_mode) {
             verdict = hip_fw_handle_outgoing_system_based_opp(ctx,
-                                             accept_normal_traffic_by_default);
+                                                              accept_normal_traffic_by_default);
         }
     }
 
@@ -1428,10 +1426,10 @@ static int firewall_init(void)
               NF_IP_FORWARD);
 
     // funtion pointers for the respective packet handlers
-    fw_handlers[NF_IP_LOCAL_IN][OTHER_PACKET]  = hip_fw_handle_other_input;
-    fw_handlers[NF_IP_LOCAL_IN][HIP_PACKET]    = hip_fw_handle_hip_input;
-    fw_handlers[NF_IP_LOCAL_IN][ESP_PACKET]    = hip_fw_handle_esp_input;
-    fw_handlers[NF_IP_LOCAL_IN][TCP_PACKET]    = hip_fw_handle_tcp_input;
+    fw_handlers[NF_IP_LOCAL_IN][OTHER_PACKET] = hip_fw_handle_other_input;
+    fw_handlers[NF_IP_LOCAL_IN][HIP_PACKET]   = hip_fw_handle_hip_input;
+    fw_handlers[NF_IP_LOCAL_IN][ESP_PACKET]   = hip_fw_handle_esp_input;
+    fw_handlers[NF_IP_LOCAL_IN][TCP_PACKET]   = hip_fw_handle_tcp_input;
 
     fw_handlers[NF_IP_LOCAL_OUT][OTHER_PACKET] = hip_fw_handle_other_output;
     fw_handlers[NF_IP_LOCAL_OUT][HIP_PACKET]   = hip_fw_handle_hip_output;
@@ -1439,10 +1437,10 @@ static int firewall_init(void)
     fw_handlers[NF_IP_LOCAL_OUT][TCP_PACKET]   = hip_fw_handle_tcp_output;
 
     //apply rules for forwarded hip and esp traffic
-    fw_handlers[NF_IP_FORWARD][HIP_PACKET]     = hip_fw_handle_hip_forward;
-    fw_handlers[NF_IP_FORWARD][ESP_PACKET]     = hip_fw_handle_esp_forward;
+    fw_handlers[NF_IP_FORWARD][HIP_PACKET] = hip_fw_handle_hip_forward;
+    fw_handlers[NF_IP_FORWARD][ESP_PACKET] = hip_fw_handle_esp_forward;
     //do not drop those files by default
-    fw_handlers[NF_IP_FORWARD][TCP_PACKET]     = hip_fw_handle_tcp_forward;
+    fw_handlers[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward;
 
     HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
     system_print("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
@@ -1498,15 +1496,15 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
 {
     int ip_hdr_len, err = 0;
     // length of packet starting at udp header
-    uint16_t udp_len         = 0;
-    struct udphdr *udphdr    = NULL;
-    int udp_encap_zero_bytes = 0;
-
-    // default assumption
-    ctx->packet_type = OTHER_PACKET;
+    uint16_t       udp_len              = 0;
+    struct udphdr *udphdr               = NULL;
+    int            udp_encap_zero_bytes = 0;
 
     // same context memory as for packets before -> re-init
     memset(ctx, 0, sizeof(struct hip_fw_context));
+
+    // default assumption
+    ctx->packet_type = OTHER_PACKET;
 
     // add whole packet to context and ip version
     ctx->ipq_packet = ipq_get_packet(buf);
@@ -1529,9 +1527,9 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
         /* ip_hl is given in multiple of 4 bytes
          *
          * NOTE: not sizeof(struct ip) as we might have options */
-        ip_hdr_len       = (iphdr->ip_hl * 4);
+        ip_hdr_len = (iphdr->ip_hl * 4);
         // needed for opportunistic TCP
-        ctx->ip_hdr_len  = ip_hdr_len;
+        ctx->ip_hdr_len = ip_hdr_len;
         HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
         HIP_DEBUG("total length: %u\n", ntohs(iphdr->ip_len));
         HIP_DEBUG("ttl: %u\n", iphdr->ip_ttl);
@@ -1553,7 +1551,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
 
             ctx->packet_type       = HIP_PACKET;
             ctx->transport_hdr.hip = (struct hip_common *)
-                    (((char *) iphdr) + ip_hdr_len);
+                                     (((char *) iphdr) + ip_hdr_len);
 
             goto end_init;
         } else if (iphdr->ip_p == IPPROTO_ESP) {
@@ -1562,7 +1560,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
 
             ctx->packet_type       = ESP_PACKET;
             ctx->transport_hdr.esp = (struct hip_esp *)
-                    (((char *) iphdr) + ip_hdr_len);
+                                     (((char *) iphdr) + ip_hdr_len);
 
             goto end_init;
         } else if (iphdr->ip_p == IPPROTO_TCP) {
@@ -1570,7 +1568,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
             HIP_DEBUG("plain TCP packet\n");
 
             ctx->packet_type       = TCP_PACKET;
-            ctx->transport_hdr.tcp = (struct tcphdr*)
+            ctx->transport_hdr.tcp = (struct tcphdr *)
                                      (((char *) iphdr) + ip_hdr_len);
 
             HIP_DEBUG("src port: %u\n", ntohs(ctx->transport_hdr.tcp->source));
@@ -1585,9 +1583,9 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
         }
 
         // need UDP header to look for encapsulated ESP
-        udp_len            = ntohs(iphdr->ip_len);
-        udphdr             = ((struct udphdr *)
-                (((char *) iphdr) + ip_hdr_len));
+        udp_len = ntohs(iphdr->ip_len);
+        udphdr  = ((struct udphdr *)
+                   (((char *) iphdr) + ip_hdr_len));
 
         // add UDP header to context
         ctx->udp_encap_hdr = udphdr;
@@ -1597,9 +1595,9 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
         ctx->ip_hdr.ipv6 = ip6_hdr;
 
         // Ipv6 has fixed header length
-        ip_hdr_len       = sizeof(struct ip6_hdr);
+        ip_hdr_len = sizeof(struct ip6_hdr);
         // needed for opportunistic TCP
-        ctx->ip_hdr_len  = ip_hdr_len;
+        ctx->ip_hdr_len = ip_hdr_len;
         HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
         HIP_DEBUG("payload length: %u\n", ntohs(ip6_hdr->ip6_plen));
         HIP_DEBUG("ttl: %u\n", ip6_hdr->ip6_hlim);
@@ -1622,7 +1620,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
 
             ctx->packet_type       = HIP_PACKET;
             ctx->transport_hdr.hip = (struct hip_common *)
-                    (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
+                                     (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
 
             goto end_init;
         } else if (ip6_hdr->ip6_nxt == IPPROTO_ESP) {
@@ -1631,7 +1629,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
 
             ctx->packet_type       = ESP_PACKET;
             ctx->transport_hdr.esp = (struct hip_esp *)
-                    (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
+                                     (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
 
             goto end_init;
         } else if (ip6_hdr->ip6_nxt == IPPROTO_TCP) {
@@ -1639,7 +1637,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
             HIP_DEBUG("plain TCP packet\n");
 
             ctx->packet_type       = TCP_PACKET;
-            ctx->transport_hdr.tcp = (struct tcphdr*)
+            ctx->transport_hdr.tcp = (struct tcphdr *)
                                      (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
 
             HIP_DEBUG("src port: %u\n", ntohs(ctx->transport_hdr.tcp->source));
@@ -1661,9 +1659,9 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
          *
          * NOTE: the length will include optional extension headers
          * -> handle this */
-        udp_len            = ntohs(ip6_hdr->ip6_plen);
-        udphdr             = ((struct udphdr *)
-                (((char *) ip6_hdr) + ip_hdr_len));
+        udp_len = ntohs(ip6_hdr->ip6_plen);
+        udphdr  = ((struct udphdr *)
+                   (((char *) ip6_hdr) + ip_hdr_len));
 
         // add udp header to context
         ctx->udp_encap_hdr = udphdr;
@@ -1682,7 +1680,6 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
     if (ctx->ip_version == 4) {
         // we might have only received a UDP packet with headers only
         if (udp_len >= sizeof(struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN) {
-
             uint32_t *zero_bytes = NULL;
 
             // we can distinguish UDP encapsulated control and data traffic with 32 zero bits
@@ -1715,16 +1712,16 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
         /* check if zero byte hint is correct and we are processing a
          * HIP control message */
         if (!hip_check_network_msg((struct hip_common *) (((char *) udphdr)
-                                                + sizeof(struct udphdr)
-                                                + HIP_UDP_ZERO_BYTES_LEN))) {
+                                                          + sizeof(struct udphdr)
+                                                          + HIP_UDP_ZERO_BYTES_LEN))) {
             // we found an UDP encapsulated HIP control packet
             HIP_DEBUG("UDP encapsulated HIP control packet\n");
 
             // add to context
             ctx->packet_type       = HIP_PACKET;
             ctx->transport_hdr.hip = (struct hip_common *) (((char *) udphdr)
-                                                    + sizeof(struct udphdr)
-                                                    + HIP_UDP_ZERO_BYTES_LEN);
+                                                            + sizeof(struct udphdr)
+                                                            + HIP_UDP_ZERO_BYTES_LEN);
 
             goto end_init;
         }
@@ -1932,21 +1929,21 @@ static void hip_fw_wait_for_hipd(void)
  */
 int main(int argc, char **argv)
 {
-    int err                = 0, highest_descriptor, i;
-    int n, len;
-    struct ipq_handle *h4  = NULL, *h6 = NULL;
-    int ch;
-    char *rule_file        = NULL;
-    int errflg             = 0, killold = 0;
-    struct hip_common *msg = NULL;
-    struct sockaddr_in6 sock_addr;
-    socklen_t alen;
-    fd_set read_fdset;
-    struct timeval timeout;
-    unsigned char buf[HIP_MAX_PACKET];
+    int                   err = 0, highest_descriptor, i;
+    int                   n, len;
+    struct ipq_handle    *h4 = NULL, *h6 = NULL;
+    int                   ch;
+    char                 *rule_file = NULL;
+    int                   errflg    = 0, killold = 0;
+    struct hip_common    *msg       = NULL;
+    struct sockaddr_in6   sock_addr;
+    socklen_t             alen;
+    fd_set                read_fdset;
+    struct timeval        timeout;
+    unsigned char         buf[HIP_MAX_PACKET];
     struct hip_fw_context ctx;
-    int limit_capabilities = 0;
-    int is_root            = 0, access_ok = 0, msg_type = 0; //variables for accepting user messages only from hipd
+    int                   limit_capabilities = 0;
+    int                   is_root            = 0, access_ok = 0, msg_type = 0; //variables for accepting user messages only from hipd
 
     /* Make sure that root path is set up correcly (e.g. on Fedora 9).
      * Otherwise may get warnings from system_print() commands.
@@ -2007,7 +2004,7 @@ int main(int argc, char **argv)
             rule_file = optarg;
             break;
         case 'F':
-            filter_traffic = 0;
+            filter_traffic         = 0;
             restore_filter_traffic = filter_traffic;
             break;
         case 'h':
@@ -2018,11 +2015,11 @@ int main(int argc, char **argv)
             accept_normal_traffic_by_default = 0;
             break;
         case 'i':
-            hip_userspace_ipsec = 1;
+            hip_userspace_ipsec       = 1;
             hip_kernel_ipsec_fallback = 0;
             break;
         case 'I':
-            hip_userspace_ipsec = 1;
+            hip_userspace_ipsec       = 1;
             hip_kernel_ipsec_fallback = 1;
             break;
         case 'k':
@@ -2034,7 +2031,7 @@ int main(int argc, char **argv)
         case 'm':
 #ifdef CONFIG_HIP_MIDAUTH
             filter_traffic = 1;
-            use_midauth = 1;
+            use_midauth    = 1;
             break;
 #endif
         case 'o':
@@ -2079,14 +2076,14 @@ int main(int argc, char **argv)
 
     /* Request-response socket with hipfw */
     hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL((hip_fw_sock < 0), 1, "Could not create socket for firewall.\n");
+    HIP_IFEL(hip_fw_sock < 0, 1, "Could not create socket for firewall.\n");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
-    sock_addr.sin6_port = htons(HIP_FIREWALL_SYNC_PORT);
-    sock_addr.sin6_addr = in6addr_loopback;
+    sock_addr.sin6_port   = htons(HIP_FIREWALL_SYNC_PORT);
+    sock_addr.sin6_addr   = in6addr_loopback;
 
-    for (i=0; i<2; i++) {
-        err = bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
+    for (i = 0; i < 2; i++) {
+        err = bind(hip_fw_sock, (struct sockaddr *) &sock_addr,
                    sizeof(sock_addr));
         if (err == 0) {
             break;
@@ -2100,12 +2097,12 @@ int main(int argc, char **argv)
 
     /* Only for receiving out-of-sync notifications from hipd  */
     hip_fw_async_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL((hip_fw_async_sock < 0), 1, "Could not create socket for firewall.\n");
+    HIP_IFEL(hip_fw_async_sock < 0, 1, "Could not create socket for firewall.\n");
     memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
-    sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-    sock_addr.sin6_addr = in6addr_loopback;
-    HIP_IFEL(bind(hip_fw_async_sock, (struct sockaddr *)& sock_addr, sizeof(sock_addr)), -1,
+    sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
+    sock_addr.sin6_addr   = in6addr_loopback;
+    HIP_IFEL(bind(hip_fw_async_sock, (struct sockaddr *) &sock_addr, sizeof(sock_addr)), -1,
              "Bind on firewall socket addr failed. Give -k option to kill old hipfw\n");
     HIP_IFEL(hip_daemon_connect(hip_fw_async_sock), -1,
              "connecting socket failed\n");
@@ -2175,7 +2172,7 @@ int main(int argc, char **argv)
         FD_SET(h4->fd, &read_fdset);
         FD_SET(h6->fd, &read_fdset);
 
-        timeout.tv_sec = HIP_SELECT_TIMEOUT;
+        timeout.tv_sec  = HIP_SELECT_TIMEOUT;
         timeout.tv_usec = 0;
 
         // get handle with queued packet and process
@@ -2238,8 +2235,8 @@ int main(int argc, char **argv)
 
             HIP_DEBUG("Receiving message type %d (%d bytes)\n",
                       hip_get_msg_type(msg), len);
-            n    = recvfrom(hip_fw_async_sock, msg, len, 0,
-                            (struct sockaddr *) &sock_addr, &alen);
+            n = recvfrom(hip_fw_async_sock, msg, len, 0,
+                         (struct sockaddr *) &sock_addr, &alen);
 
             if (n < 0) {
                 HIP_ERROR("Error receiving message parameters from daemon.\n");

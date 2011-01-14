@@ -52,16 +52,16 @@
 
 int main(int argc, char *argv[])
 {
-    int err                                    = 0, i = 0, len;
+    int                        err             = 0, i = 0, len;
     struct hip_cert_spki_info *cert            = NULL;
     struct hip_cert_spki_info *to_verification = NULL;
-    time_t not_before                          = 0, not_after = 0;
-    struct hip_common *msg;
-    struct in6_addr *defhit;
-    char certificate[1024];
-    unsigned char der_cert[1024];
-    CONF *conf;
-    CONF_VALUE *item;
+    time_t                     not_before      = 0, not_after = 0;
+    struct hip_common         *msg;
+    struct in6_addr           *defhit;
+    char                       certificate[1024];
+    unsigned char              der_cert[1024];
+    CONF                      *conf;
+    CONF_VALUE                *item;
     STACK_OF(CONF_VALUE) * sec      = NULL;
     STACK_OF(CONF_VALUE) * sec_name = NULL;
 
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
     HIP_DEBUG("Starting to test SPKI certficate tools\n");
 
-    cert            = malloc(sizeof(struct hip_cert_spki_info));
+    cert = malloc(sizeof(struct hip_cert_spki_info));
     if (!cert) {
         goto out_err;
     }
@@ -187,7 +187,7 @@ skip_spki:
     len = hip_cert_x509v3_request_certificate(defhit, der_cert);
 
     /** Now send it back for the verification */
-    HIP_IFEL(((err = hip_cert_x509v3_request_verification(der_cert, len)) < 0),
+    HIP_IFEL((err = hip_cert_x509v3_request_verification(der_cert, len) < 0),
              -1, "Failed to verify a certificate\n");
 
 out_err:

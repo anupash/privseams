@@ -70,10 +70,6 @@
 #include "reinject.h"
 
 
-#define BUFSIZE HIP_MAX_PACKET
-
-#define PROTO_STRING_MAX    16
-
 /**
  * build a message for hipd to trigger a base exchange
  *
@@ -84,7 +80,7 @@
  * @param src_ip  an optional source IP address for the I1
  * @param dst_ip  a destination IP for the I1
  * @return        zero on success or negative on error
-
+ *
  * @note Many of the parameters are optional, but at least a
  * destination LSI, HIT or IP (for opportunistic BEX) must to be
  * provided
@@ -97,7 +93,7 @@ int hip_trigger_bex(const struct in6_addr *src_hit,
                     const struct in6_addr *dst_ip)
 {
     struct hip_common *msg = NULL;
-    int err                = 0;
+    int                err = 0;
     HIP_IFE(!(msg = hip_msg_alloc()), -1);
     HIP_IFEL(!dst_hit && !dst_ip && !dst_lsi,
              -1, "no destination hit, ip or lsi provided\n");
@@ -181,7 +177,7 @@ out_err:
 int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi)
 {
     hip_lsi_t *local_lsi;
-    int err = 0;
+    int        err = 0;
     HIP_IFEL(!(local_lsi = hip_fw_get_default_lsi()), -1,
              "Failed to get default LSI");
     if (local_lsi->s_addr == lsi->s_addr) {
@@ -194,6 +190,8 @@ int hip_is_packet_lsi_reinjection(hip_lsi_t *lsi)
 out_err:
     return err;
 }
+
+#define BUFSIZE HIP_MAX_PACKET
 
 /**
  * Executes the packet reinjection
@@ -212,13 +210,13 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
                         const int ipOrigTraffic,
                         const int incoming)
 {
-    int err              = 0;
-    int ip_hdr_size      = 0;
-    int packet_length    = 0;
-    int protocol         = 0;
-    int ttl              = 0;
-    uint8_t *msg              = NULL;
-    struct icmphdr *icmp = NULL;
+    int             err           = 0;
+    int             ip_hdr_size   = 0;
+    int             packet_length = 0;
+    int             protocol      = 0;
+    int             ttl           = 0;
+    uint8_t        *msg           = NULL;
+    struct icmphdr *icmp          = NULL;
 
     if (ipOrigTraffic == 4) {
         const struct ip *iphdr = (const struct ip *) m->payload;
@@ -238,7 +236,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
         HIP_DEBUG_IN6ADDR("New packet dst address: ", dst_hit);
     }
 
-    if ((int)m->data_len <= (BUFSIZE - ip_hdr_size)) {
+    if ((int) m->data_len <= (BUFSIZE - ip_hdr_size)) {
         packet_length = m->data_len - ip_hdr_size;
         HIP_DEBUG("packet size smaller than buffer size\n");
     } else {
@@ -308,16 +306,16 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
                                const struct in6_addr *ip_dst,
                                const int lsi_support)
 {
-    int err                                               = 0;
-    int verdict                                           = 1;
-    int ip_hdr_size                                       = 0;
-    int portDest                                          = 0;
-    struct hip_hadb_user_info_state *entry                = NULL;
-    enum hip_port_binding port_binding                    = HIP_PORT_INFO_UNKNOWN;
-    const struct ip6_hdr *ip6_hdr                         = NULL;
-    struct in6_addr src_addr, dst_addr;
+    int                              err          = 0;
+    int                              verdict      = 1;
+    int                              ip_hdr_size  = 0;
+    int                              portDest     = 0;
+    struct hip_hadb_user_info_state *entry        = NULL;
+    enum hip_port_binding            port_binding = HIP_PORT_INFO_UNKNOWN;
+    const struct ip6_hdr            *ip6_hdr      = NULL;
+    struct in6_addr                  src_addr, dst_addr;
 
-    ip6_hdr = (const struct ip6_hdr *) m->payload;
+    ip6_hdr     = (const struct ip6_hdr *) m->payload;
     ip_hdr_size = sizeof(struct ip6_hdr);
 
     switch (ip6_hdr->ip6_nxt) {
@@ -398,7 +396,7 @@ out_err:
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
                                struct in_addr *lsi_dst)
 {
-    int err = 0;
+    int                              err        = 0;
     struct hip_hadb_user_info_state *entry_peer = NULL;
 
     if (lsi_dst) {

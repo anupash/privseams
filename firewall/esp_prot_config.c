@@ -46,23 +46,23 @@
 #include "config.h"
 
 
-const char *config_file                = HIPL_SYSCONFDIR "/esp_prot_config.cfg";
+const char *config_file = HIPL_SYSCONFDIR "/esp_prot_config.cfg";
 
 const char *path_hash_length           = "token_config.hash_length";
 const char *path_hash_structure_length = "token_config.hash_structure_length";
 const char *path_token_transform       = "token_config.token_transform";
 
-const char *path_num_parallel_hchains  = "token_config.token_modes.num_parallel_hchains";
-const char *path_ring_buffer_size      = "token_config.token_modes.ring_buffer_size";
-const char *path_num_linear_elements   = "token_config.token_modes.num_linear_elements";
-const char *path_num_random_elements   = "token_config.token_modes.num_random_elements";
+const char *path_num_parallel_hchains = "token_config.token_modes.num_parallel_hchains";
+const char *path_ring_buffer_size     = "token_config.token_modes.ring_buffer_size";
+const char *path_num_linear_elements  = "token_config.token_modes.num_linear_elements";
+const char *path_num_random_elements  = "token_config.token_modes.num_random_elements";
 
-const char *path_num_hchains_per_item  = "sender.hcstore.num_hchains_per_item";
-const char *path_num_hierarchies       = "sender.hcstore.num_hierarchies";
-const char *path_refill_threshold      = "sender.hcstore.refill_threshold";
-const char *path_update_threshold      = "sender.update_threshold";
+const char *path_num_hchains_per_item = "sender.hcstore.num_hchains_per_item";
+const char *path_num_hierarchies      = "sender.hcstore.num_hierarchies";
+const char *path_refill_threshold     = "sender.hcstore.refill_threshold";
+const char *path_update_threshold     = "sender.update_threshold";
 
-const char *path_window_size           = "verifier.window_size";
+const char *path_window_size = "verifier.window_size";
 
 #ifdef HAVE_LIBCONFIG
 /**
@@ -84,10 +84,10 @@ static int esp_prot_wrap_config_lookup_int(const config_t *cfg,
  * libconfig 1.4, remove the ugly workaround below accordingly. See #134. */
 #if defined LIBCONFIG_VER_MAJOR && defined LIBCONFIG_VER_MINOR && (((LIBCONFIG_VER_MAJOR == 1) && (LIBCONFIG_VER_MINOR >= 4)) || (LIBCONFIG_VER_MAJOR > 1))
     /* libconfig version 1.4 and later */
-    int value   = 0;
+    int value = 0;
 #else
     /* libconfig version before 1.4 */
-    long value  = 0;
+    long value = 0;
 #endif
 
     int success = config_lookup_int(cfg, name, &value);
@@ -97,6 +97,7 @@ static int esp_prot_wrap_config_lookup_int(const config_t *cfg,
     }
     return success;
 }
+
 #endif /* HAVE_LIBCONFIG */
 
 /**
@@ -112,7 +113,7 @@ config_t *esp_prot_read_config(void)
  *
  * FIXME this should be removed once we go tiny */
 #ifdef HAVE_LIBCONFIG
-    int err       = 0;
+    int err = 0;
 
     HIP_IFEL(!(cfg = malloc(sizeof(config_t))), -1,
              "Unable to allocate memory!\n");
@@ -164,7 +165,6 @@ int esp_prot_token_config(const config_t *cfg)
     int err = 0;
 
     if (cfg) {
-
 #ifdef HAVE_LIBCONFIG
         // process parallel hchains-related settings
         if (!esp_prot_wrap_config_lookup_int(cfg, path_token_transform,
@@ -198,9 +198,9 @@ int esp_prot_token_config(const config_t *cfg)
                 num_parallel_hchains = 2;
             }
 
-            ring_buffer_size     = 0;
-            num_linear_elements  = 0;
-            num_random_elements  = 0;
+            ring_buffer_size    = 0;
+            num_linear_elements = 0;
+            num_random_elements = 0;
 
             break;
         case ESP_PROT_TFM_CUMULATIVE:
@@ -263,7 +263,6 @@ int esp_prot_token_config(const config_t *cfg)
         err = -1;
         goto out_err;
 #endif /* HAVE_LIBCONFIG */
-
     } else {
         HIP_ERROR("no configuration file available\n");
 
@@ -306,7 +305,6 @@ int esp_prot_sender_config(const config_t *cfg)
     int err = 0;
 
     if (cfg) {
-
 #ifdef HAVE_LIBCONFIG
         // process hcstore-related settings
         if (!esp_prot_wrap_config_lookup_int(cfg, path_num_hchains_per_item,
@@ -335,7 +333,6 @@ int esp_prot_sender_config(const config_t *cfg)
         err = -1;
         goto out_err;
 #endif /* HAVE_LIBCONFIG */
-
     } else {
         HIP_ERROR("no configuration file available\n");
 
@@ -389,7 +386,6 @@ int esp_prot_verifier_config(const config_t *cfg)
         err = -1;
         goto out_err;
 #endif /* HAVE_LIBCONFIG */
-
     } else {
         HIP_ERROR("no configuration file available\n");
 

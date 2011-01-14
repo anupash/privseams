@@ -88,11 +88,11 @@ static void add_ipv4_header(struct ip *ip_hdr,
     IPV6_TO_IPV4_MAP(dst_addr, &dst_in_addr);
 
     // set changed values
-    ip_hdr->ip_v          = 4;
+    ip_hdr->ip_v = 4;
     /* assume no options */
-    ip_hdr->ip_hl         = 5;
-    ip_hdr->ip_tos        = 0;
-    ip_hdr->ip_len        = packet_len;
+    ip_hdr->ip_hl  = 5;
+    ip_hdr->ip_tos = 0;
+    ip_hdr->ip_len = packet_len;
     /* assume that we have no fragmentation */
     ip_hdr->ip_id         = 0;
     ip_hdr->ip_off        = 0;
@@ -103,7 +103,7 @@ static void add_ipv4_header(struct ip *ip_hdr,
     ip_hdr->ip_dst.s_addr = dst_in_addr.s_addr;
 
     /* recalculate the header checksum, does not include payload */
-    ip_hdr->ip_sum        = checksum_ip(ip_hdr, ip_hdr->ip_hl);
+    ip_hdr->ip_sum = checksum_ip(ip_hdr, ip_hdr->ip_hl);
 }
 
 /** adds an IPv6-header to the packet
@@ -149,19 +149,19 @@ static int hip_payload_encrypt(unsigned char *in,
                                struct hip_sa_entry *entry)
 {
     /* elen is length of data to encrypt */
-    uint16_t elen                 = in_len;
+    uint16_t elen = in_len;
     /* length of auth output */
-    unsigned int alen             = 0;
+    unsigned int alen = 0;
     /* initialization vector */
-    uint16_t iv_len               = 0;
+    uint16_t      iv_len = 0;
     unsigned char cbc_iv[16];
     /* ESP tail information */
-    uint16_t pad_len              = 0;
+    uint16_t             pad_len  = 0;
     struct hip_esp_tail *esp_tail = NULL;
     // offset of the payload counting from the beginning of the esp header
-    uint16_t esp_data_offset      = 0;
-    int i                         = 0;
-    int err                       = 0;
+    uint16_t esp_data_offset = 0;
+    int      i               = 0;
+    int      err             = 0;
 
     esp_data_offset = esp_prot_get_data_offset(entry);
 
@@ -354,20 +354,20 @@ static int hip_payload_decrypt(const unsigned char *in, const uint16_t in_len,
                                struct hip_sa_entry *entry)
 {
     /* elen is length of data to encrypt */
-    uint16_t elen                 = 0;
+    uint16_t elen = 0;
     // length of authentication protection field
-    uint16_t alen                 = 0;
+    uint16_t alen = 0;
     // authentication data
-    unsigned int hmac_md_len;
+    unsigned int  hmac_md_len;
     unsigned char hmac_md[EVP_MAX_MD_SIZE];
     /* initialization vector */
-    uint16_t iv_len               = 0;
+    uint16_t      iv_len = 0;
     unsigned char cbc_iv[16];
     /* ESP tail information */
     struct hip_esp_tail *esp_tail = NULL;
     // offset of the payload counting from the beginning of the esp header
-    uint16_t esp_data_offset      = 0;
-    int err                       = 0;
+    uint16_t esp_data_offset = 0;
+    int      err             = 0;
 
     // different offset if esp extension used or not
     esp_data_offset = esp_prot_get_data_offset(entry);
@@ -553,20 +553,20 @@ int hip_beet_mode_output(const struct hip_fw_context *ctx,
                          unsigned char *esp_packet, uint16_t *esp_packet_len)
 {
     // some pointers to packet headers
-    struct ip *out_ip_hdr           = NULL;
-    struct ip6_hdr *out_ip6_hdr     = NULL;
-    struct udphdr *out_udp_hdr      = NULL;
-    struct hip_esp *out_esp_hdr     = NULL;
-    unsigned char *in_transport_hdr = NULL;
-    uint8_t in_transport_type       = 0;
-    int next_hdr_offset             = 0;
+    struct ip      *out_ip_hdr        = NULL;
+    struct ip6_hdr *out_ip6_hdr       = NULL;
+    struct udphdr  *out_udp_hdr       = NULL;
+    struct hip_esp *out_esp_hdr       = NULL;
+    unsigned char  *in_transport_hdr  = NULL;
+    uint8_t         in_transport_type = 0;
+    int             next_hdr_offset   = 0;
     // length of the data to be encrypted
-    uint16_t elen                   = 0;
+    uint16_t elen = 0;
     // length of the esp payload
-    uint16_t encryption_len         = 0;
+    uint16_t encryption_len = 0;
     // length of the hash value used by the esp protection extension
-    int esp_prot_hash_length        = 0;
-    int err                         = 0;
+    int esp_prot_hash_length = 0;
+    int err                  = 0;
 
     // distinguish IPv4 and IPv6 output
     if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr)) {
@@ -582,14 +582,14 @@ int hip_beet_mode_output(const struct hip_fw_context *ctx,
         }
 
         // set up esp header
-        out_esp_hdr          =
-                (struct hip_esp *) (esp_packet + next_hdr_offset);
+        out_esp_hdr =
+            (struct hip_esp *) (esp_packet + next_hdr_offset);
         out_esp_hdr->esp_spi = htonl(entry->spi);
         out_esp_hdr->esp_seq = htonl(entry->sequence++);
 
         // packet to be re-inserted into network stack has at least
         // length of all defined headers
-        *esp_packet_len     += next_hdr_offset + sizeof(struct hip_esp);
+        *esp_packet_len += next_hdr_offset + sizeof(struct hip_esp);
 
         /* put the esp protection extension hash right behind the header
          * (virtual header extension)
@@ -599,7 +599,7 @@ int hip_beet_mode_output(const struct hip_fw_context *ctx,
         HIP_IFEL(esp_prot_add_hash(esp_packet + *esp_packet_len,
                                    &esp_prot_hash_length,
                                    entry), -1,
-                                   "failed to add the esp protection extension hash\n");
+                 "failed to add the esp protection extension hash\n");
         HIP_DEBUG("esp prot hash_length: %i\n", esp_prot_hash_length);
         HIP_HEXDUMP("esp prot hash: ", esp_packet + *esp_packet_len,
                     esp_prot_hash_length);
@@ -612,14 +612,14 @@ int hip_beet_mode_output(const struct hip_fw_context *ctx,
         /* get pointer to data, right behind IPv6 header
          *
          * NOTE: we are only dealing with HIT-based (-> IPv6) data traffic */
-        in_transport_hdr  = ((unsigned char *) ctx->ipq_packet->payload)
-                            + sizeof(struct ip6_hdr);
+        in_transport_hdr = ((unsigned char *) ctx->ipq_packet->payload)
+                           + sizeof(struct ip6_hdr);
 
         in_transport_type = ((struct ip6_hdr *) ctx->ipq_packet->payload)->ip6_nxt;
 
         /* length of data to be encrypted is length of the original packet
          * starting at the transport layer header */
-        elen              = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
+        elen = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
 
         /* encrypt data now */
         HIP_DEBUG("encrypting data...\n");
@@ -669,7 +669,7 @@ int hip_beet_mode_output(const struct hip_fw_context *ctx,
 
         // packet to be re-inserted into network stack has at least
         // length of defined headers
-        *esp_packet_len     += next_hdr_offset + sizeof(struct hip_esp);
+        *esp_packet_len += next_hdr_offset + sizeof(struct hip_esp);
 
         /* put the esp protection extension hash right behind the header
          * (virtual header extension)
@@ -678,7 +678,7 @@ int hip_beet_mode_output(const struct hip_fw_context *ctx,
          *       in order to be more flexible about the hash length */
         HIP_IFEL(esp_prot_add_hash(esp_packet + *esp_packet_len,
                                    &esp_prot_hash_length, entry), -1,
-                                   "failed to add the esp protection extension hash\n");
+                 "failed to add the esp protection extension hash\n");
         HIP_DEBUG("esp prot hash_length: %i\n", esp_prot_hash_length);
         HIP_HEXDUMP("esp prot hash: ", esp_packet + *esp_packet_len,
                     esp_prot_hash_length);
@@ -692,14 +692,14 @@ int hip_beet_mode_output(const struct hip_fw_context *ctx,
         /* get pointer to data, right behind IPv6 header
          *
          * NOTE: we are only dealing with HIT-based (-> IPv6) data traffic */
-        in_transport_hdr  = ((unsigned char *) ctx->ipq_packet->payload)
-                            + sizeof(struct ip6_hdr);
+        in_transport_hdr = ((unsigned char *) ctx->ipq_packet->payload)
+                           + sizeof(struct ip6_hdr);
 
         in_transport_type = ((struct ip6_hdr *) ctx->ipq_packet->payload)->ip6_nxt;
 
         /* length of data to be encrypted is length of the original packet
          * starting at the transport layer header */
-        elen              = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
+        elen = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
 
         HIP_DEBUG("encrypting data...\n");
 
@@ -744,11 +744,11 @@ int hip_beet_mode_input(const struct hip_fw_context *ctx,
                         unsigned char *decrypted_packet,
                         uint16_t *decrypted_packet_len)
 {
-    int next_hdr_offset         = 0;
+    int      next_hdr_offset    = 0;
     uint16_t esp_len            = 0;
     uint16_t decrypted_data_len = 0;
-    uint8_t next_hdr            = 0;
-    int err                     = 0;
+    uint8_t  next_hdr           = 0;
+    int      err                = 0;
 
     // the decrypted data will be placed behind the HIT-based IPv6 header
     next_hdr_offset = sizeof(struct ip6_hdr);
