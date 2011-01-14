@@ -493,10 +493,15 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
         if (hip_tuple->data) {
             // free keys depending on cipher
             if (hip_tuple->data->src_pub_key && hip_tuple->data->src_hi) {
-                if (hip_get_host_id_algo(hip_tuple->data->src_hi) == HIP_HI_RSA) {
+                switch (hip_get_host_id_algo(hip_tuple->data->src_hi)) {
+                case HIP_HI_RSA:
                     RSA_free(hip_tuple->data->src_pub_key);
-                } else {
+                    break;
+                case HIP_HI_DSA:
                     DSA_free(hip_tuple->data->src_pub_key);
+                    break;
+                default:
+                    HIP_DEBUG("Could not free public key, because key type is unknown.\n");
                 }
             }
 
