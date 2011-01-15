@@ -147,6 +147,10 @@ e.g.:
 [DEFAULT]
 BZR_EDITOR = nano
 
+NOTE: To support code quality and style, please use the stylecheck pre-commit
+hook found in tools/bazaar/plugins/stylecheck.py - this script contains its own
+documentation, including how to set it up. See also 'Style Checking'.
+
 TBD: further useful commands
 
 bzr conflicts/resolve
@@ -450,6 +454,10 @@ CODING STYLE
 C code formatting and style:
 ----------------------------
 
+NOTE: As a tool to help with good style, please use the stylecheck pre-commit
+hook found in tools/bazaar/plugins/stylecheck.py - this script contains its own
+documentation, including how to set it up. See also 'Style Checking'.
+
 This project uses the Kernighan & Ritchie (K&R) coding style in the
 one true brace style (1TBS) variant. Indentation width is four
 spaces.
@@ -556,6 +564,50 @@ static void a_function_with_a_long_name(struct ip_pkt *pkt,
         }
     }
 }
+
+
+Style Checking
+--------------
+
+As a tool to help with good style, please use the stylecheck pre-commit
+hook found in tools/bazaar/plugins/stylecheck.py - this script contains its own
+documentation, including how to set it up.
+
+You are strongly recommended to use this hook based on the code beautification
+uncrustify because it gets things right almost all the time. This means that:
+1) At the time of this writing, only the syntactically confusing macros in the
+unit test code are not handled correctly by uncrustify. So you can and should
+throw all code at uncrustify (via the commit hook) to have it checked.
+2) uncrustify produces very good results and you can trust them. At the time of
+this writing, the only issue is with the alignment of consecutive variable
+declarations and initializations (where uncrustify might accidentally align
+unrelated code or not align related code). Obviously, it never hurts to check
+the uncrustify output.
+
+If the above style recommendations are unclear about a topic, you should trust
+the style decisions that uncrustify takes.
+
+The style rules used by uncrustify can be found in the .uncrustify*.cfg files in
+the top-level directory of a branch. If these rules need to be changed, please
+make sure that
+0) other developers are okay with the change in code style;
+1) the modified rules have no undesirable side-effects across the code base
+   (always test new rules with the whole code base);
+2) all .uncrustify*.cfg files are modified and the rules remain consistent.
+
+The rationale for introducing and using the uncrustify-based pre-commit hook has
+been derived from the HIPL development process. The fundamental problem is that
+poor style ties up resources and precious time. How? Well, first of all, it can
+be difficult to get code style right manually. Thus, a lot of commits and merge
+proposals can contain varying amounts of style violations of varying severity.
+Consequently, code reviewers are forced to look out for and comment on style
+violations and thus have less time to focus on a meaningful semantic review,
+spotting actual bugs or defects. And having to spend this time on these minor,
+non-functional issues creates friction both for the reviewers and the original
+authors.
+
+Thus, checking and enforcing style automatically may not always produce the
+perfect result but it frees valuable developer time for more important tasks.
 
 
 CODING CONVENTIONS
