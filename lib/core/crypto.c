@@ -962,7 +962,7 @@ int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
 
     /* rewrite using PEM_write_PKCS8PrivateKey */
 
-    fp = fopen(pubfilename, "wb" /* mode */);
+    fp = fopen(pubfilename, "wb");
     HIP_IFEL(!fp, 1,
              "Couldn't open public key file %s for writing\n", pubfilename);
     files++;
