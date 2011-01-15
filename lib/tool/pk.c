@@ -85,7 +85,7 @@ out_err:
  * @note the order of parameters is significant so this function
  *       must be called at the right time of building of the parameters
  */
-int hip_ecdsa_sign(void *priv_key, struct hip_common *msg)
+int hip_ecdsa_sign(void *const priv_key, struct hip_common *msg)
 {
     EC_KEY *ecdsa = priv_key;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
@@ -162,7 +162,7 @@ out_err:
  * @param type HIP_HI_RSA, HIP_HI_DSA or HIP_HI_ECDSA
  * @return zero on success and non-zero on failure
  */
-static int verify(void *peer_pub, struct hip_common *msg, const int type)
+static int verify(void *const peer_pub, struct hip_common *const msg, const int type)
 {
     int                err = 0, len, origlen;
     struct hip_sig    *sig;
@@ -245,7 +245,7 @@ out_err:
  *            be verified
  * @return zero on success and non-zero on failure
  */
-int hip_ecdsa_verify(void *peer_pub, struct hip_common *msg)
+int hip_ecdsa_verify(void *const peer_pub, struct hip_common *const msg)
 {
     return verify(peer_pub, msg, HIP_HI_ECDSA);
 }
