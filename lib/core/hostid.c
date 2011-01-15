@@ -288,10 +288,10 @@ int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *const host_i
            sizeof(host_id_pub) - sizeof(host_id_pub.key) - sizeof(host_id_pub.hostname));
     /* copy the key rr
      * the size of the key rr has the size of the public key + 2 bytes for the curve identifier (see RFC5201-bis 5.2.8.)*/
-    memcpy(host_id_pub.key, host_id->key, key_lens.Y_len + HIP_CURVE_ID_LENGTH);
+    memcpy(host_id_pub.key, host_id->key, key_lens.pub_key + HIP_CURVE_ID_LENGTH);
     /* set the hi length
      * the hi length is the length of the key rr data + the key rr header */
-    host_id_pub.hi_length = htons(key_lens.Y_len + HIP_CURVE_ID_LENGTH + sizeof(struct hip_host_id_key_rdata));
+    host_id_pub.hi_length = htons(key_lens.pub_key + HIP_CURVE_ID_LENGTH + sizeof(struct hip_host_id_key_rdata));
 
     hip_set_param_contents_len((struct hip_tlv_common *) &host_id_pub, sizeof(struct hip_host_id) - sizeof(struct hip_tlv_common));
 
@@ -452,8 +452,8 @@ int hip_get_ecdsa_keylen(const struct hip_host_id_priv *const host_id,
      *      Thus the size of the public key is twice the size of the curve.
      *      (Actually, there is one additional openssl-specific magic byte)
      */
-    ret->z_len = (curve_size + 7) / 8;
-    ret->Y_len = ret->z_len * 2 + 1;
+    ret->priv_key = (curve_size + 7) / 8;
+    ret->pub_key  = ret->priv_key * 2 + 1;
 
 out_err:
     return err;
@@ -627,7 +627,7 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const 
     HIP_IFEL(!EC_KEY_set_group(ret, group),
              -1, "Failed setting the group for key.\n");
 
-    HIP_IFEL(!EC_POINT_oct2point(group, pub_key, host_id->key + HIP_CURVE_ID_LENGTH, key_lens.Y_len, NULL),
+    HIP_IFEL(!EC_POINT_oct2point(group, pub_key, host_id->key + HIP_CURVE_ID_LENGTH, key_lens.pub_key, NULL),
              -1, "Failed deserializing public key.\n");
 
     HIP_IFEL(!EC_KEY_set_public_key(ret, pub_key),
@@ -635,7 +635,7 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const 
 
     /* Build private key from key rr */
     if (is_priv) {
-        HIP_IFEL(!(priv_key = BN_bin2bn(host_id->key + HIP_CURVE_ID_LENGTH + key_lens.Y_len, key_lens.z_len, priv_key)),
+        HIP_IFEL(!(priv_key = BN_bin2bn(host_id->key + HIP_CURVE_ID_LENGTH + key_lens.pub_key, key_lens.priv_key, priv_key)),
                  -1, "Failed deserializing private key.\n");
         HIP_IFEL(!EC_KEY_set_private_key(ret, priv_key),
                  -1, "Failed setting private key.\n");

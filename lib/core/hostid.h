@@ -34,8 +34,8 @@
 #include "state.h"
 
 struct hip_ecdsa_keylen {
-    int z_len;  // private key length
-    int Y_len;  // public key length
+    int priv_key;
+    int pub_key;
 };
 
 struct hip_rsa_keylen {
