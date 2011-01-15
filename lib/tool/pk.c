@@ -89,16 +89,15 @@ int hip_ecdsa_sign(void *const priv_key, struct hip_common *msg)
 {
     EC_KEY *ecdsa = priv_key;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
-    uint8_t signature[ECDSA_size(ecdsa)];
-    int     err = 0, len, siglen;
+    int     siglen = ECDSA_size(ecdsa);
+    uint8_t signature[siglen];
+    int     err = 0, len;
 
     len = hip_get_msg_total_len(msg);
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
              -1, "Building of SHA1 digest failed\n");
     HIP_IFEL(impl_ecdsa_sign(sha1_digest, ecdsa, signature),
              -1, "Signing error\n");
-
-    siglen = ECDSA_size(ecdsa);
 
     if (hip_get_msg_type(msg) == HIP_R1) {
         HIP_IFEL(hip_build_param_signature2_contents(
