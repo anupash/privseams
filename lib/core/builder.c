@@ -3745,12 +3745,13 @@ int ecdsa_to_hip_endpoint(const EC_KEY *const ecdsa,
                        hostname,
                        ecdsa_key_rr);
 
+    free(ecdsa_key_rr);
+    return 0;
+
 out_err:
     free(ecdsa_key_rr);
-    if (err) {
-        free(*endpoint);
-        *endpoint = NULL;
-    }
+    free(*endpoint);
+    *endpoint = NULL;
     return err;
 }
 
