@@ -236,8 +236,8 @@ int dsa_to_hip_endpoint(const DSA *const dsa,
                         se_hip_flags endpoint_flags,
                         const char *const hostname);
 int ecdsa_to_hip_endpoint(const EC_KEY *const ecdsa,
-                          struct endpoint_hip **endpoint,
-                          se_hip_flags endpoint_flags,
+                          struct endpoint_hip **const endpoint,
+                          const se_hip_flags endpoint_flags,
                           const char *const hostname);
 int hip_any_key_to_hit(const void *const any_key,
                        hip_hit_t *const hit,

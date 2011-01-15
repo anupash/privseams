@@ -3717,9 +3717,9 @@ int hip_build_param_hit_to_ip_set(struct hip_common *msg, const char *name)
  * @param hostname          host name for the EC key
  * @return                  zero on success and negative on failure
  */
-int ecdsa_to_hip_endpoint(const EC_KEY *ecdsa,
-                          struct endpoint_hip **endpoint,
-                          se_hip_flags endpoint_flags,
+int ecdsa_to_hip_endpoint(const EC_KEY *const ecdsa,
+                          struct endpoint_hip **const endpoint,
+                          const se_hip_flags endpoint_flags,
                           const char *const hostname)
 {
     int                 err          = 0;
