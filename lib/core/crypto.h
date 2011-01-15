@@ -61,7 +61,7 @@
 
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE      HIPL_SYSCONFDIR "/hip_host_dsa_key"
 #define DEFAULT_HOST_RSA_KEY_FILE_BASE      HIPL_SYSCONFDIR "/hip_host_rsa_key"
-#define DEFAULT_HOST_ECDSA_KEY_FILE_BASE    HIPL_SYSCONFDIR"/hip_host_ecdsa_key"
+#define DEFAULT_HOST_ECDSA_KEY_FILE_BASE    HIPL_SYSCONFDIR "/hip_host_ecdsa_key"
 #define DEFAULT_PUB_FILE_SUFFIX             ".pub"
 
 #define DEFAULT_PUB_HI_FILE_NAME_SUFFIX  "_pub"
