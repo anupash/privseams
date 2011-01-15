@@ -76,7 +76,7 @@ out_err:
 }
 
 /**
- * sign a HIP control message with a private ECDSA key
+ * Sign a HIP control message with a private ECDSA key.
  *
  * @param priv_key the ECDSA private key of the local host
  * @param msg The HIP control message to sign. The signature
@@ -238,7 +238,7 @@ out_err:
 }
 
 /**
- * ECDSA signature verification function
+ * Verify the ECDSA signature from a message.
  *
  * @param peer_pub public key of the peer
  * @param msg a HIP control message containing a signature parameter to
