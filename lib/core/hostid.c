@@ -1126,7 +1126,7 @@ out_err:
  *
  * @note This functions assumes that the key is public.
  */
-int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
+int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
 {
     int err = 0;
     int public = 0;
