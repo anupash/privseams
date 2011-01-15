@@ -460,7 +460,7 @@ int hip_create_i2(UNUSED const uint8_t packet_type,
             break;
         default:
             HIP_EAE(-ENOSYS, "HIP transform not supported (%d)\n",
-                     transform_hip_suite);
+                    transform_hip_suite);
         }
     } else {   /* add host id in plaintext without encrypted wrapper */
                /* Parameter HOST_ID. Notice that hip_get_public_key overwrites
