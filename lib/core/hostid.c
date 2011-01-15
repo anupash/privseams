@@ -1175,14 +1175,13 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **const ec_key_rr)
         bn2bin_safe(priv_key, buffer + HIP_CURVE_ID_LENGTH + pub_key_len, priv_key_len);
     }
 
-out_err:
-    if (err) {
-        *ec_key_rr = NULL;
-        free(buffer);
-        return -1;
-    }
     *ec_key_rr = buffer;
     return out_len;
+
+out_err:
+    *ec_key_rr = NULL;
+    free(buffer);
+    return err;
 }
 
 /**
