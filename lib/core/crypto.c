@@ -1022,7 +1022,7 @@ out_err:
 }
 
 /**
- * save host ECDSA keys to disk
+ * Save the host's ECDSA keys to disk.
  * @param filenamebase the filename base where ECDSA key should be saved
  * @param ecdsa the ECDSA key structure
  *
