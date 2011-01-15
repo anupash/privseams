@@ -3722,9 +3722,9 @@ int ecdsa_to_hip_endpoint(const EC_KEY *ecdsa,
                           se_hip_flags endpoint_flags,
                           const char *const hostname)
 {
-    int err = 0;
-    unsigned char *ecdsa_key_rr = NULL;
-    int ecdsa_key_rr_len;
+    int                 err          = 0;
+    unsigned char      *ecdsa_key_rr = NULL;
+    int                 ecdsa_key_rr_len;
     struct endpoint_hip endpoint_hdr;
 
     ecdsa_key_rr_len = ecdsa_to_key_rr(ecdsa, &ecdsa_key_rr);
