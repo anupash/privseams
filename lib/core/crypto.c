@@ -943,7 +943,7 @@ int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
     HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
 
     pubfilename_len =
-        strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
+        strlen(filenamebase) + sizeof(DEFAULT_PUB_FILE_SUFFIX) + 1;
     pubfilename = malloc(pubfilename_len);
     HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
 
