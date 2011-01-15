@@ -332,8 +332,8 @@ int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
     sizeof(dhprime_modp_8192),
 };
 
-unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,    0x02, 0x02, 0x02,
-                                             0x02, 0x02, 0x02 };
+unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,    0x02,    0x02,    0x02,
+                                             0x02, 0x02,    0x02 };
 
 /**
  * Calculates a hmac.
@@ -471,8 +471,8 @@ out_err:
 int impl_ecdsa_sign(const unsigned char *const digest, EC_KEY *const ecdsa, unsigned char *const signature)
 {
     ECDSA_SIG *ecdsa_sig = NULL;
-    int err              = 0;
-    int sig_size;
+    int        err       = 0;
+    int        sig_size;
 
     HIP_IFEL(!EC_KEY_check_key(ecdsa),
              -1, "Check of signing key failed. \n");
@@ -484,8 +484,8 @@ int impl_ecdsa_sign(const unsigned char *const digest, EC_KEY *const ecdsa, unsi
     HIP_IFEL(!ecdsa_sig, 1, "ECDSA_do_sign failed\n");
 
     /* build signature from ECDSA_SIG struct */
-    bn2bin_safe(ecdsa_sig->r, signature, sig_size/2);
-    bn2bin_safe(ecdsa_sig->s, signature + (sig_size/2), sig_size/2);
+    bn2bin_safe(ecdsa_sig->r, signature, sig_size / 2);
+    bn2bin_safe(ecdsa_sig->s, signature + (sig_size / 2), sig_size / 2);
 
 out_err:
     ECDSA_SIG_free(ecdsa_sig);
@@ -546,17 +546,17 @@ out_err:
 int impl_ecdsa_verify(const unsigned char *digest, EC_KEY *const ecdsa, const unsigned char *const signature)
 {
     ECDSA_SIG *ecdsa_sig;
-    int err = 0;
-    int sig_size;
+    int        err = 0;
+    int        sig_size;
 
     sig_size = ECDSA_size(ecdsa);
 
     /* build the signature structure */
-    ecdsa_sig    = ECDSA_SIG_new();
+    ecdsa_sig = ECDSA_SIG_new();
     HIP_IFEL(!ecdsa_sig, 1, "Failed to allocate ECDSA_SIG\n");
-    ecdsa_sig->r = BN_bin2bn(&signature[0], sig_size/2, NULL);
-    ecdsa_sig->s = BN_bin2bn(&signature[sig_size/2], sig_size/2, NULL);
-    err = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
+    ecdsa_sig->r = BN_bin2bn(&signature[0], sig_size / 2, NULL);
+    ecdsa_sig->s = BN_bin2bn(&signature[sig_size / 2], sig_size / 2, NULL);
+    err          = ECDSA_do_verify(digest, SHA_DIGEST_LENGTH, ecdsa_sig, ecdsa) == 1 ? 0 : 1;
 
 out_err:
     ECDSA_SIG_free(ecdsa_sig);
@@ -773,8 +773,7 @@ err_out:
 }
 
 /**
-<<<<<<< TREE
- * generates ECDSA parameters and a new key pair
+ * Generates ECDSA parameters and a new key pair.
  *
  * The caller is responsible for freeing the allocated ECDSA key.
  *
@@ -785,15 +784,15 @@ err_out:
  */
 EC_KEY *create_ecdsa_key(const int nid)
 {
-    int err = 0;
-    EC_KEY *eckey = NULL;
-    EC_GROUP *group = NULL;
-    int asn1_flag = OPENSSL_EC_NAMED_CURVE;
+    int       err       = 0;
+    EC_KEY   *eckey     = NULL;
+    EC_GROUP *group     = NULL;
+    int       asn1_flag = OPENSSL_EC_NAMED_CURVE;
 
     HIP_IFEL(!(eckey = EC_KEY_new()),
              -1, "Could not init new key.\n");
 
-    if(!(group = EC_GROUP_new_by_curve_name(nid))) {
+    if (!(group = EC_GROUP_new_by_curve_name(nid))) {
         HIP_ERROR("Could not create curve.\n");
         HIP_DEBUG("Retrying with standard curve NIST_ECDSA_384 \n");
         HIP_IFEL(!(group = EC_GROUP_new_by_curve_name(NID_secp384r1)),
@@ -818,10 +817,7 @@ out_err:
 }
 
 /**
- * save host DSA keys to disk
-=======
  * Save host DSA keys to disk.
->>>>>>> MERGE-SOURCE
  * @param filenamebase the filename base where DSA key should be saved
  * @param dsa the DSA key structure
  *
@@ -1025,7 +1021,6 @@ out_err:
     return err;
 }
 
-
 /**
  * save host ECDSA keys to disk
  * @param filenamebase the filename base where ECDSA key should be saved
@@ -1044,27 +1039,27 @@ out_err:
  */
 int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *const ecdsa)
 {
-    int err           = 0, files = 0, ret;
+    int   err         = 0, files = 0, ret;
     char *pubfilename = NULL;
-    int pubfilename_len;
-    FILE *fp          = NULL;
+    int   pubfilename_len;
+    FILE *fp = NULL;
 
     HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
 
     pubfilename_len =
         strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
-    pubfilename     = malloc(pubfilename_len);
+    pubfilename = malloc(pubfilename_len);
     HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
 
     ret = snprintf(pubfilename, pubfilename_len, "%s%s",
-                               filenamebase,
-                               DEFAULT_PUB_FILE_SUFFIX);
+                   filenamebase,
+                   DEFAULT_PUB_FILE_SUFFIX);
     HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
 
     HIP_INFO("Saving ECDSA keys to: pub='%s' priv='%s'\n", pubfilename,
              filenamebase);
 
-    fp  = fopen(pubfilename, "wb" /* mode */);
+    fp = fopen(pubfilename, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open public key file %s for writing\n", pubfilename);
     files++;
@@ -1081,7 +1076,7 @@ int save_ecdsa_private_key(const char *const filenamebase, EC_KEY *const ecdsa)
         goto out_err;
     }
 
-    fp  = fopen(filenamebase, "wb" /* mode */);
+    fp = fopen(filenamebase, "wb" /* mode */);
     HIP_IFEL(!fp, 1,
              "Couldn't open private key file %s for writing\n", filenamebase);
     files++;
@@ -1099,7 +1094,7 @@ out_err:
         if (fclose(fp)) {
             HIP_ERROR("Error closing file\n");
         }
-    } else if (fp && (err = fclose(fp)))   {
+    } else if (fp && (err = fclose(fp))) {
         HIP_ERROR("Error closing file %s\n", filenamebase);
     }
 
@@ -1120,7 +1115,6 @@ out_err:
 
     free(pubfilename);
     return err;
-
 }
 
 /**
@@ -1138,14 +1132,14 @@ out_err:
  */
 int load_ecdsa_private_key(const char *const filename, EC_KEY **const ecdsa)
 {
-    FILE *fp = NULL;
-    int err  = 0;
+    FILE *fp  = NULL;
+    int   err = 0;
 
     *ecdsa = NULL;
 
     HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
 
-    fp   = fopen(filename, "rb");
+    fp = fopen(filename, "rb");
     HIP_IFEL(!fp, -ENOMEM,
              "Could not open private key file %s for reading\n", filename);
 
