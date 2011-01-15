@@ -543,7 +543,7 @@ out_err:
  * @return 1 for a valid signature, 0 for an incorrect signature and -1 on
  *         error (see ERR_get_error(3) for the actual error)
  */
-int impl_ecdsa_verify(const unsigned char *digest, EC_KEY *const ecdsa, const unsigned char *const signature)
+int impl_ecdsa_verify(const unsigned char *const digest, EC_KEY *const ecdsa, const unsigned char *const signature)
 {
     ECDSA_SIG *ecdsa_sig;
     int        err = 0;
