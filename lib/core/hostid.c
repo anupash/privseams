@@ -277,9 +277,9 @@ int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
                                      struct in6_addr *const hit,
                                      int hit_type)
 {
-    int err = 0;
+    int                     err = 0;
     struct hip_ecdsa_keylen key_lens;
-    struct hip_host_id host_id_pub;
+    struct hip_host_id      host_id_pub;
 
     HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
              -1, "Failed computing key sizes.\n");
@@ -293,7 +293,7 @@ int hip_private_ecdsa_host_id_to_hit(const struct hip_host_id_priv *host_id,
      * the hi length is the length of the key rr data + the key rr header */
     host_id_pub.hi_length = htons(key_lens.Y_len + HIP_CURVE_ID_LENGTH + sizeof(struct hip_host_id_key_rdata));
 
-    hip_set_param_contents_len((struct hip_tlv_common *) &host_id_pub, sizeof(struct hip_host_id)-sizeof(struct hip_tlv_common));
+    hip_set_param_contents_len((struct hip_tlv_common *) &host_id_pub, sizeof(struct hip_host_id) - sizeof(struct hip_tlv_common));
 
     HIP_IFEL(hip_rsa_host_id_to_hit(&host_id_pub, hit, hit_type),
              -1, "Failed to convert HI to HIT.\n");
@@ -369,14 +369,14 @@ static enum hip_cuve_id get_ecdsa_curve_hip_name(const int nid)
  */
 static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
 {
-    int err = 0;
+    int              err = 0;
     enum hip_cuve_id curve_id;
-    int nid;
+    int              nid;
 
     /* Determine the curve
      * The first two bytes contain the hip curve identifier
      * as defined in RFC5201-bis */
-    curve_id = ntohs(*(const uint16_t*)host_id->key);
+    curve_id = ntohs(*(const uint16_t *) host_id->key);
     HIP_DEBUG("Got curve id %d \n", curve_id);
     switch (curve_id) {
     case NIST_ECDSA_160:
@@ -400,8 +400,9 @@ static int get_ecdsa_curve_nid(const struct hip_host_id *const host_id)
     }
 
 out_err:
-    if (err)
+    if (err) {
         return -1;
+    }
     return nid;
 }
 
@@ -599,13 +600,13 @@ DSA *hip_key_rr_to_dsa(const struct hip_host_id_priv *const host_id, const int i
  */
 EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const int is_priv)
 {
-    int err             = 0;
-    int nid             = 0;
-    EC_POINT *pub_key   = NULL;
-    EC_GROUP *group     = NULL;
-    BIGNUM *priv_key    = NULL;
+    int                     err      = 0;
+    int                     nid      = 0;
+    EC_POINT               *pub_key  = NULL;
+    EC_GROUP               *group    = NULL;
+    BIGNUM                 *priv_key = NULL;
     struct hip_ecdsa_keylen key_lens;
-    EC_KEY *ret;
+    EC_KEY                 *ret;
 
     nid = get_ecdsa_curve_nid((const struct hip_host_id *) host_id);
     HIP_IFEL(hip_get_ecdsa_keylen(host_id, &key_lens),
@@ -630,7 +631,7 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const 
              -1, "Failed deserializing public key.\n");
 
     HIP_IFEL(!EC_KEY_set_public_key(ret, pub_key),
-            -1, "Failed setting public key.\n");
+             -1, "Failed setting public key.\n");
 
     /* Build private key from key rr */
     if (is_priv) {
@@ -645,8 +646,9 @@ EC_KEY *hip_key_rr_to_ecdsa(const struct hip_host_id_priv *const host_id, const 
              -1, "Key check failed. \n");
 
 out_err:
-    if (err)
+    if (err) {
         return NULL;
+    }
     return ret;
 }
 
@@ -684,7 +686,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                                  const int ecdsa_nid)
 {
     int                  err                = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0, ecdsa_key_rr_len = 0;
-    int                  dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0, ecdsa_pub_key_rr_len = 0;;
+    int                  dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0, ecdsa_pub_key_rr_len = 0;
     hip_hdr              numeric_action     = 0;
     char                 hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     const char          *rsa_filenamebase       = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
@@ -692,7 +694,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
     const char          *ecdsa_filenamebase     = DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_ANON_HI_FILE_NAME_SUFFIX;
     const char          *rsa_filenamebase_pub   = DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
     const char          *dsa_filenamebase_pub   = DEFAULT_HOST_DSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
-    const char          *ecdsa_filenamebase_pub = DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;;
+    const char          *ecdsa_filenamebase_pub = DEFAULT_HOST_ECDSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX;
     unsigned char       *dsa_key_rr             = NULL, *rsa_key_rr = NULL, *ecdsa_key_rr = NULL;
     unsigned char       *dsa_pub_key_rr         = NULL, *rsa_pub_key_rr = NULL, *ecdsa_pub_key_rr = NULL;
     DSA                 *dsa_key                = NULL, *dsa_pub_key = NULL;
@@ -749,7 +751,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                     HIP_ERROR("Saving of DSA key failed.\n");
                     goto out_err;
                 }
-            } else if(!strcmp(hi_fmt, "ecdsa")) {
+            } else if (!strcmp(hi_fmt, "ecdsa")) {
                 ecdsa_key = create_ecdsa_key(ecdsa_nid);
                 HIP_IFEL(!ecdsa_key, -EINVAL,
                          "Creation of ECDSA key failed.\n");
@@ -937,8 +939,8 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
             }
         } else if (!strcmp(hi_fmt, "ecdsa")) {
             if (anon) {
-              if ((err = load_ecdsa_private_key(ecdsa_filenamebase, &ecdsa_key))) {
-                 HIP_ERROR("Loading of the ECDSA key failed\n");
+                if ((err = load_ecdsa_private_key(ecdsa_filenamebase, &ecdsa_key))) {
+                    HIP_ERROR("Loading of the ECDSA key failed\n");
                     goto out_err;
                 }
 
@@ -947,8 +949,8 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                          "ecdsa_key_rr_len <= 0\n");
 
                 if ((err = hip_any_key_to_hit(ecdsa_key, &ecdsa_lhi.hit, 0, HIP_HI_ECDSA))) {
-                   HIP_ERROR("Conversion from ECDSA to HIT failed\n");
-                   goto out_err;
+                    HIP_ERROR("Conversion from ECDSA to HIT failed\n");
+                    goto out_err;
                 }
                 HIP_DEBUG_HIT("ECDSA HIT", &ecdsa_lhi.hit);
 
@@ -958,9 +960,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                     HIP_ERROR("Failed to allocate and build ECDSA endpoint (anon).\n");
                     goto out_err;
                 }
-
             } else { /* pub */
-
                 if ((err = load_ecdsa_private_key(ecdsa_filenamebase_pub,
                                                   &ecdsa_pub_key))) {
                     HIP_ERROR("Loading of the ECDSA key (pub) failed\n");
@@ -1053,10 +1053,10 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
                 goto out_err;
             }
         } else {
-           if ((err = hip_build_param_eid_endpoint(msg, endpoint_ecdsa_pub_hip))) {
-              HIP_ERROR("Building of host id failed\n");
+            if ((err = hip_build_param_eid_endpoint(msg, endpoint_ecdsa_pub_hip))) {
+                HIP_ERROR("Building of host id failed\n");
                 goto out_err;
-           }
+            }
         }
     } else if (anon) { /* rsa anon */
         if ((err = hip_build_param_eid_endpoint(msg, endpoint_rsa_hip))) {
@@ -1130,12 +1130,12 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
 {
     int err = 0;
     int public = 0;
-    unsigned char *buffer = NULL;
-    size_t pub_key_len = 0;
-    size_t priv_key_len = 0;
-    int out_len = 0;
-    const BIGNUM *priv_key = NULL;
-    uint16_t curveid;
+    unsigned char  *buffer       = NULL;
+    size_t          pub_key_len  = 0;
+    size_t          priv_key_len = 0;
+    int             out_len      = 0;
+    const BIGNUM   *priv_key     = NULL;
+    uint16_t        curveid;
     const EC_GROUP *group = NULL;
 
     /* sanity check */
@@ -1145,9 +1145,9 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
     /* get sizes for public and private key, allocate memory for output */
     HIP_IFEL(!(pub_key_len = EC_POINT_point2oct(EC_KEY_get0_group(ecdsa), EC_KEY_get0_public_key(ecdsa), EC_KEY_get_conv_form(ecdsa), NULL, 0, NULL)),
              -1, "Failed to calculate out length of serialized key.\n");
-    public = ((priv_key = EC_KEY_get0_private_key(ecdsa)) == NULL ? 1: 0);
-    if(!public) {
-        priv_key_len = (pub_key_len - 1)/2;
+    public = ((priv_key = EC_KEY_get0_private_key(ecdsa)) == NULL ? 1 : 0);
+    if (!public) {
+        priv_key_len = (pub_key_len - 1) / 2;
     }
     out_len = HIP_CURVE_ID_LENGTH + pub_key_len + priv_key_len;
     HIP_IFEL(!(buffer = malloc(out_len)),
@@ -1171,12 +1171,12 @@ int ecdsa_to_key_rr(const EC_KEY *const ecdsa, unsigned char **ec_key_rr)
              -1, "Failed to serialize public key key.\n");
 
     /* serialize private key */
-    if(!public) {
+    if (!public) {
         bn2bin_safe(priv_key, buffer + HIP_CURVE_ID_LENGTH + pub_key_len, priv_key_len);
     }
 
 out_err:
-    if(err) {
+    if (err) {
         *ec_key_rr = NULL;
         free(buffer);
         return -1;
