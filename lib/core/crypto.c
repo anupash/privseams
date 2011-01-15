@@ -983,13 +983,8 @@ int save_rsa_private_key(const char *const filenamebase, RSA *const rsa)
              "Couldn't open private key file %s for writing\n", filenamebase);
     files++;
 
-    err = PEM_write_RSAPrivateKey(fp, rsa, NULL, NULL,
-                                  0, NULL, NULL) == 0 ? 1 : 0;
-
-    if (err) {
-        HIP_ERROR("Write failed for %s\n", filenamebase);
-        goto out_err;
-    }
+    HIP_IFEL(!PEM_write_RSAPrivateKey(fp, rsa, NULL, NULL, 0, NULL, NULL),
+             1, "Write failed for %s\n", filenamebase);
 
 out_err:
 
