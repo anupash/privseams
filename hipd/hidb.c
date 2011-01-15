@@ -578,12 +578,18 @@ static int hip_add_host_id(HIP_HASHTABLE *db,
 out_err:
     if (err && id_entry) {
         if (id_entry->host_id) {
-            if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA) {
+            switch (hip_get_host_id_algo(id_entry->host_id)) {
+            case HIP_HI_RSA:
                 RSA_free(id_entry->private_key);
-            } else if (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_ECDSA) {
+                break;
+            case HIP_HI_ECDSA:
                 EC_KEY_free(id_entry->private_key);
-            } else {
+                break;
+            case HIP_HI_DSA:
                 DSA_free(id_entry->private_key);
+                break;
+            default:
+                HIP_DEBUG("Could not free key, because key type is unknown\n");
             }
             free(id_entry->host_id);
         }
