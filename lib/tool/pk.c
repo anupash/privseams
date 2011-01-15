@@ -90,7 +90,7 @@ int hip_ecdsa_sign(void *priv_key, struct hip_common *msg)
     EC_KEY *ecdsa = priv_key;
     uint8_t sha1_digest[HIP_AH_SHA_LEN];
     uint8_t signature[ECDSA_size(ecdsa)];
-    int err  = 0, len, siglen;
+    int     err = 0, len, siglen;
 
     len = hip_get_msg_total_len(msg);
     HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
