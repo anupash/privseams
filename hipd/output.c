@@ -459,7 +459,7 @@ int hip_create_i2(UNUSED const uint8_t packet_type,
                              sizeof(struct hip_encrypted_null_sha1);
             break;
         default:
-            HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
+            HIP_EAE(-ENOSYS, "HIP transform not supported (%d)\n",
                      transform_hip_suite);
         }
     } else {   /* add host id in plaintext without encrypted wrapper */

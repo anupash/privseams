@@ -402,7 +402,7 @@ static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
         signature_func = hip_dsa_sign;
         break;
     default:
-        HIP_IFEL(1, -1, "Unkown algorithm");
+        HIP_EAE(-1, "Unkown algorithm");
     }
 
     HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
