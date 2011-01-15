@@ -1113,7 +1113,7 @@ out_err:
 }
 
 /**
- * load host EC private keys from disk
+ * Load the host's private EC keys from disk.
  * @param filename the file name base of the host EC key
  * @param ec Pointer to the EC key structure.
  *
