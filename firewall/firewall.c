@@ -511,6 +511,9 @@ static int firewall_init_extensions(void)
 
 
     firewall_init_filter_traffic();
+    // Initializing local cache database
+    hip_firewall_cache_init_hldb();
+
     HIP_IFEL(hip_fw_init_system_based_opp_mode(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
@@ -521,8 +524,6 @@ static int firewall_init_extensions(void)
     midauth_init();
 #endif
 
-    // Initializing local cache database
-    hip_firewall_cache_init_hldb();
     // Initializing local port cache database
     hip_port_bindings_init(true);
     /* Initialize raw sockets for packet reinjection */
