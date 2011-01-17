@@ -428,10 +428,14 @@ int signaling_verify_user_signature(struct hip_common *msg) {
 
     orig_len = hip_get_msg_total_len(msg);
 
-    /* We need to construct a temporary host_id struct since, all key_rr_to_xxx functions take this as argument.
-     * However, we need only to fill in hi_length, algorithm and the key rr. */
+    /* sanity checks */
     HIP_IFEL(!(param_usr_ctx = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO)),
              -1, "Need user context to verify his signature \n");
+    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
+             -1, "Packet contains no user signature\n");
+
+    /* We need to construct a temporary host_id struct since, all key_rr_to_xxx functions take this as argument.
+     * However, we need only to fill in hi_length, algorithm and the key rr. */
     pseudo_ui.hi_length = htons(param_usr_ctx->pkey_rr_length);
     pseudo_ui.rdata.algorithm = param_usr_ctx->rdata.algorithm;
     // note: the + 1 moves the pointer behind the parameter, where the key rr begins
@@ -441,8 +445,6 @@ int signaling_verify_user_signature(struct hip_common *msg) {
     PEM_write_PUBKEY(stderr, pkey);
 
     /* Now modify the packet to verify signature */
-    HIP_IFEL(!(param_user_signature = hip_get_param_readwrite(msg, HIP_PARAM_SIGNALING_USER_SIGNATURE)),
-             -1, "Packet contains no user signature\n");
     hash_range_len = ((const uint8_t *) param_user_signature) - ((const uint8_t *) msg);
     hip_zero_msg_checksum(msg);
     HIP_IFEL(hash_range_len < 0, -ENOENT, "Invalid signature len\n");
