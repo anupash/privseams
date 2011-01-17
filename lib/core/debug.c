@@ -30,23 +30,23 @@
  * stderr. This is done automatically using DEBUG flag in Makefile (see logtype
  * variable below).
  * Examples:
- **<pre>
+ * <pre>
  * HIP_INFO("test foobar");
  * HIP_INFO("%s\n", "debug test");
  * HIP_ERROR("%s%d\n", "serious error!", 123);
  * HIP_DIE("%s\n", "really bad error, exiting!");
  * HIP_PERROR("socket");
  * HIP_HEXDUMP("foobar", data, len);
- **</pre>
+ * </pre>
  *
  * Adjusting of log types and format dynamically. (there really should not be a
  * reason to call these in the code, because default settings should be
  * reasonable)
  *
- **<pre>
+ * <pre>
  * hip_set_logtype(LOGTYPE_STDERR); // set logging output to stderr
  * hip_set_logfmt(LOGFMT_SHORT);    // set short logging format
- **</pre>
+ * </pre>
  *
  * @todo debug messages should not be compiled at all in a production release
  * @todo set_log{type|format}(XX_DEFAULT)
