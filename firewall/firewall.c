@@ -1103,7 +1103,7 @@ static int hip_fw_handle_other_output(struct hip_fw_context *ctx)
         } else {
             verdict = !hip_fw_userspace_ipsec_output(ctx);
         }
-    } else if (ctx->ip_version == 4) {
+    } else if (ctx->ip_version == 4 && hip_lsi_support) {
         hip_lsi_t src_lsi, dst_lsi;
 
         IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
