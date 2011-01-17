@@ -1301,7 +1301,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
                                const unsigned char *buf,
                                const int ip_version)
 {
-    int ip_hdr_len, err = 0;
+    int err = 0;
     // length of packet starting at udp header
     uint16_t       udp_len              = 0;
     struct udphdr *udphdr               = NULL;
@@ -1334,10 +1334,9 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
         /* ip_hl is given in multiple of 4 bytes
          *
          * NOTE: not sizeof(struct ip) as we might have options */
-        ip_hdr_len = (iphdr->ip_hl * 4);
-        // needed for opportunistic TCP
-        ctx->ip_hdr_len = ip_hdr_len;
-        HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
+        ctx->ip_hdr_len = iphdr->ip_hl * 4;
+
+        HIP_DEBUG("ip_hdr_len is: %d\n", ctx->ip_hdr_len);
         HIP_DEBUG("total length: %u\n", ntohs(iphdr->ip_len));
         HIP_DEBUG("ttl: %u\n", iphdr->ip_ttl);
         HIP_DEBUG("packet length (ipq): %u\n", ctx->ipq_packet->data_len);
@@ -1358,7 +1357,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
 
             ctx->packet_type       = HIP_PACKET;
             ctx->transport_hdr.hip = (struct hip_common *)
-                                     (((char *) iphdr) + ip_hdr_len);
+                                     (((char *) iphdr) + ctx->ip_hdr_len);
 
             goto end_init;
         } else if (iphdr->ip_p == IPPROTO_ESP) {
@@ -1367,7 +1366,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
 
             ctx->packet_type       = ESP_PACKET;
             ctx->transport_hdr.esp = (struct hip_esp *)
-                                     (((char *) iphdr) + ip_hdr_len);
+                                     (((char *) iphdr) + ctx->ip_hdr_len);
 
             goto end_init;
         } else if (iphdr->ip_p != IPPROTO_UDP) {
@@ -1379,8 +1378,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
 
         // need UDP header to look for encapsulated ESP
         udp_len = ntohs(iphdr->ip_len);
-        udphdr  = ((struct udphdr *)
-                   (((char *) iphdr) + ip_hdr_len));
+        udphdr  = (struct udphdr *) (((char *) iphdr) + ctx->ip_hdr_len);
 
         // add UDP header to context
         ctx->udp_encap_hdr = udphdr;
@@ -1390,10 +1388,9 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
         ctx->ip_hdr.ipv6 = ip6_hdr;
 
         // Ipv6 has fixed header length
-        ip_hdr_len = sizeof(struct ip6_hdr);
-        // needed for opportunistic TCP
-        ctx->ip_hdr_len = ip_hdr_len;
-        HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
+        ctx->ip_hdr_len = sizeof(struct ip6_hdr);
+
+        HIP_DEBUG("ip_hdr_len is: %d\n", ctx->ip_hdr_len);
         HIP_DEBUG("payload length: %u\n", ntohs(ip6_hdr->ip6_plen));
         HIP_DEBUG("ttl: %u\n", ip6_hdr->ip6_hlim);
         HIP_DEBUG("packet length (ipq): %u\n", ctx->ipq_packet->data_len);
@@ -1443,8 +1440,7 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
          * NOTE: the length will include optional extension headers
          * -> handle this */
         udp_len = ntohs(ip6_hdr->ip6_plen);
-        udphdr  = ((struct udphdr *)
-                   (((char *) ip6_hdr) + ip_hdr_len));
+        udphdr  = (struct udphdr *) (((char *) ip6_hdr) + ctx->ip_hdr_len);
 
         // add udp header to context
         ctx->udp_encap_hdr = udphdr;
