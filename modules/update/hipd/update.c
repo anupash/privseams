@@ -935,9 +935,9 @@ static int hip_update_ipsec_sa(UNUSED const uint8_t packet_type,
 
     // don't update IPsec SAs and SPs for 1st UPDATE packet
     if (!hip_get_param(ctx->input_msg, HIP_PARAM_LOCATOR)) {
-        HIP_IFEL(hip_recreate_security_associations_and_sp(ctx->hadb_entry,
-                                                           &ctx->src_addr,
-                                                           &ctx->dst_addr),
+        HIP_IFEL(hip_create_or_update_security_associations_and_sp(ctx->hadb_entry,
+                                                                   &ctx->src_addr,
+                                                                   &ctx->dst_addr),
                  -1, "failed to update IPsec SAs and SPs\n");
     }
 

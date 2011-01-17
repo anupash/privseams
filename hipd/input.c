@@ -1170,55 +1170,12 @@ int hip_setup_ipsec_sa(UNUSED const uint8_t packet_type,
 {
     int err = 0;
 
-    /* If we have old SAs with these HITs delete them */
-    hip_delete_security_associations_and_sp(ctx->hadb_entry);
-
-    // set up inbound IPsec SA
-    HIP_IFEL(hip_add_sa(&ctx->src_addr,
-                        &ctx->dst_addr,
-                        &ctx->input_msg->hits,
-                        &ctx->input_msg->hitr,
-                        ctx->hadb_entry->spi_inbound_current,
-                        ctx->hadb_entry->esp_transform,
-                        &ctx->hadb_entry->esp_in,
-                        &ctx->hadb_entry->auth_in,
-                        HIP_SPI_DIRECTION_IN,
-                        0,
-                        ctx->hadb_entry),
-             -1, "Failed to setup IPsec SPD/SA entries, peer:src\n");
-
-    // set up outbound IPsec SA
-    HIP_IFEL(hip_add_sa(&ctx->dst_addr,
-                        &ctx->src_addr,
-                        &ctx->input_msg->hitr,
-                        &ctx->input_msg->hits,
-                        ctx->hadb_entry->spi_outbound_current,
-                        ctx->hadb_entry->esp_transform,
-                        &ctx->hadb_entry->esp_out,
-                        &ctx->hadb_entry->auth_out,
-                        HIP_SPI_DIRECTION_OUT,
-                        0,
-                        ctx->hadb_entry),
-             -1, "Failed to setup IPsec SPD/SA entries, peer:dst\n");
-
-    // set up corresponding IPsec policies
-    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input_msg->hits,
-                                   &ctx->input_msg->hitr,
-                                   &ctx->src_addr,
-                                   &ctx->dst_addr,
-                                   IPPROTO_ESP,
-                                   1,
-                                   1),
-             -1, "Setting up SP pair failed\n");
+    HIP_IFEL(hip_create_or_update_security_associations_and_sp(ctx->hadb_entry,
+                                                               &ctx->src_addr,
+                                                               &ctx->dst_addr),
+             -1, "failed to set up IPsec SAs and SPs\n");
 
 out_err:
-    if (err) {
-        HIP_ERROR("Failed to setup IPsec SAs, removing IPsec state!");
-
-        /* delete all IPsec related SPD/SA for this ctx->hadb_entry*/
-        hip_delete_security_associations_and_sp(ctx->hadb_entry);
-    }
-
     return err;
 }
 

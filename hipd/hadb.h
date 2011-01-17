@@ -65,7 +65,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit);
 
 /* insert/create/delete */
 int hip_hadb_insert_state(struct hip_hadb_state *ha);
-void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha);
+void hip_delete_security_associations_and_sp(struct hip_hadb_state *const ha);
 int hip_init_peer(struct hip_hadb_state *entry, const struct hip_host_id *peer);
 int hip_init_us(struct hip_hadb_state *entry, hip_hit_t *hit_our);
 
@@ -127,8 +127,8 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi);
 struct hip_hadb_state *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src,
                                                         hip_lsi_t *lsi_dst);
 
-int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
-                                              struct in6_addr *src_addr,
-                                              struct in6_addr *dst_addr);
+int hip_create_or_update_security_associations_and_sp(struct hip_hadb_state *const ha,
+                                                      const struct in6_addr *const src_addr,
+                                                      const struct in6_addr *const dst_addr);
 
 #endif /* HIP_HIPD_HADB_H */

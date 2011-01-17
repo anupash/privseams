@@ -1005,7 +1005,6 @@ int esp_prot_handle_second_update_packet(struct hip_hadb_state *entry,
                         &entry->esp_out,
                         &entry->auth_out,
                         HIP_SPI_DIRECTION_OUT,
-                        1,
                         entry),
              -1, "failed to notify sadb about next anchor\n");
 
