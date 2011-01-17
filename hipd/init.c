@@ -105,7 +105,7 @@
 /** ICMPV6_FILTER related stuff */
 #define BIT_CLEAR(nr, addr) do { ((uint32_t *) (addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while (0)
 #define BIT_SET(nr,   addr) do { ((uint32_t *) (addr))[(nr) >> 5] |=  (1U << ((nr) & 31)); } while (0)
-#define BIT_TEST(nr,  addr) do {  (uint32_t *) (addr))[(nr) >> 5] &   (1U << ((nr) & 31)); } while (0)
+#define BIT_TEST(nr,  addr) do { ((uint32_t *) (addr))[(nr) >> 5] &   (1U << ((nr) & 31)); } while (0)
 
 #ifndef ICMP6_FILTER_WILLPASS
 #define ICMP6_FILTER_WILLPASS(type, filterp) (BIT_TEST((type),  filterp) == 0)
@@ -619,7 +619,6 @@ out_err:
     free(user_msg);
     return err;
 }
-
 
 /* Needed if the configuration file for certs did not exist  */
 #define HIP_CERT_INIT_DAYS 10
