@@ -43,8 +43,6 @@ void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
 
 void hip_firewall_cache_init_hldb(void);
 
-struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void);
-
 void hip_firewall_cache_delete_hldb(int);
 
 int hip_firewall_cache_set_bex_state(const struct in6_addr *hit_s,

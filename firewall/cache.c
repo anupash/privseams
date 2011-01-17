@@ -63,7 +63,7 @@ static HIP_HASHTABLE *firewall_cache_db = NULL;
  *
  * @return the allocated cache entry
  */
-struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void)
+static struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void)
 {
     struct hip_hadb_user_info_state *entry = NULL;
     int                              err   = 0;
