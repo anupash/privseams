@@ -722,7 +722,6 @@ void hip_delete_sa(const uint32_t spi, const struct in6_addr *peer_addr,
  * @param enckey encryption key for ESP
  * @param authkey authentication key for ESP
  * @param direction the direction of the SA (HIP_SPI_DIRECTION_OUT or HIP_SPI_DIRECTION_IN)
- * @param update zero if new SA or one if an old SA
  * @param entry corresponding host association
  * @return zero on success and non-zero on error
  * @note IPv4 addresses in IPv6 mapped format
@@ -797,7 +796,6 @@ out_err:
  * @param proto protocol for the SP (IPPROTO_ESP)
  * @param use_full_prefix one if we should use /128 prefix for HITs
  *                        or zero otherwise
- * @param update zero if the the SP is new or one otherwise
  * @note  IPv4 addresses in IPv6 mapped format
  */
 int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
