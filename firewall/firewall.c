@@ -1036,8 +1036,6 @@ static int hip_fw_handle_hip_output(struct hip_fw_context *ctx)
 {
     int verdict = accept_hip_esp_traffic_by_default;
 
-    HIP_DEBUG("hip_fw_handle_hip_output \n");
-
     if (filter_traffic) {
         verdict = filter_hip(&ctx->src,
                              &ctx->dst,
@@ -1184,8 +1182,6 @@ static int hip_fw_handle_esp_input(struct hip_fw_context *ctx)
     }
 
     if (verdict && hip_userspace_ipsec) {
-        HIP_DEBUG("userspace ipsec input\n");
-        // added by Tao Wan
         verdict = !hip_fw_userspace_ipsec_input(ctx);
     }
 
