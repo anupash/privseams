@@ -98,7 +98,6 @@
 #include "rule_management.h"
 #include "user_ipsec_api.h"
 #include "firewall.h"
-#include "sysopp.h"
 
 
 /* packet types handled by the firewall */
@@ -145,7 +144,6 @@ static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEF
 int filter_traffic            = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 int hip_kernel_ipsec_fallback = 0;
 int hip_lsi_support           = 0;
-int system_based_opp_mode     = 0;
 int esp_relay                 = 0;
 int hip_esp_protection        = 0;
 #ifdef CONFIG_HIP_MIDAUTH
@@ -194,7 +192,6 @@ static void print_usage(void)
     printf("      -I = as -i, also allow fallback to kernel ipsec when exiting hipfw\n");
     printf("      -e = use esp protection extension (also sets -i)\n");
     printf("      -l = activate lsi support\n");
-    printf("      -o = system-based opportunistic mode\n\n");
     printf("      -p = run with lowered priviledges. iptables rules will not be flushed on exit\n");
     printf("      -h = print this help\n");
 #ifdef CONFIG_HIP_MIDAUTH
@@ -413,30 +410,9 @@ static int hip_fw_uninit_lsi_support(void)
 }
 
 /**
- * Initialize packet capture rules for system-based opportunistic mode
+ * Initialize all basic and extended packet capture rules
  *
  * @return zero on success and non-zero on failure
- */
-static int hip_fw_init_system_based_opp_mode(void)
-{
-    int err = 0;
-
-    if (system_based_opp_mode) {
-        system_print("iptables -N HIPFWOPP-INPUT");
-        system_print("iptables -N HIPFWOPP-OUTPUT");
-
-        system_print("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j QUEUE");
-        system_print("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
-
-        system_print("iptables -I HIPFW-INPUT -j HIPFWOPP-INPUT");
-        system_print("iptables -I HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
-    }
-
-    return err;
-}
-
-/*
- * Initialize rules for filtering traffic
  *
  */
 static void firewall_init_filter_traffic(void)
@@ -513,8 +489,6 @@ static int firewall_init_extensions(void)
     firewall_init_filter_traffic();
     // Initializing local cache database
     hip_firewall_cache_init_hldb();
-
-    HIP_IFEL(hip_fw_init_system_based_opp_mode(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
     HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
@@ -566,33 +540,6 @@ int hip_fw_init_esp_relay(void)
 void hip_fw_uninit_esp_relay(void)
 {
     esp_relay = 0;
-}
-
-/**
- * Uninitialize packet capture rules for system-based opportunistic mode
- *
- * @return zero on success and non-zero on failure
- */
-static int hip_fw_uninit_system_based_opp_mode(void)
-{
-    int err = 0;
-
-    if (system_based_opp_mode) {
-        system_based_opp_mode = 0;
-
-        system_print("iptables -D HIPFW-INPUT -j HIPFWOPP-INPUT");
-        system_print("iptables -D HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
-
-        system_print("iptables -D HIPFW-OUTPUT ! -d 127.0.0.1 -j QUEUE");
-        system_print("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
-
-        system_print("iptables -F HIPFWOPP-INPUT");
-        system_print("iptables -F HIPFWOPP-OUTPUT");
-        system_print("iptables -X HIPFWOPP-INPUT");
-        system_print("iptables -X HIPFWOPP-OUTPUT");
-    }
-
-    return err;
 }
 
 /*-------------------HELPER FUNCTIONS---------------------*/
@@ -686,7 +633,6 @@ static void firewall_exit(void)
 
     hip_firewall_cache_delete_hldb(1);
     hip_port_bindings_uninit();
-    hip_fw_uninit_system_based_opp_mode();
     hip_fw_flush_iptables();
     /* rules have to be removed first, otherwise HIP packets won't pass through
      * at this time any more */
@@ -1220,15 +1166,12 @@ static int hip_fw_handle_other_output(struct hip_fw_context *ctx)
         /* LSI HOOKS */
         if (IS_LSI32(dst_lsi.s_addr) && hip_lsi_support) {
             if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
-                verdict = 1;
+                verdict = ACCEPT;
             } else {
                 hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
                                            &src_lsi, &dst_lsi);
-                verdict = 0;                 /* Reject the packet */
+                verdict = DROP;     /* Reject the packet */
             }
-        } else if (system_based_opp_mode) {
-            verdict = hip_fw_handle_outgoing_system_based_opp(ctx,
-                                                              accept_normal_traffic_by_default);
         }
     }
 
@@ -1326,7 +1269,7 @@ static int hip_fw_handle_other_input(struct hip_fw_context *ctx)
     HIP_DEBUG("\n");
 
     if (ip_hits) {
-        if (hip_lsi_support || system_based_opp_mode) {
+        if (hip_lsi_support) {
             verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
                                                  &ctx->src,
                                                  &ctx->dst,
@@ -1986,7 +1929,7 @@ int main(int argc, char **argv)
 
     hip_set_logdebug(LOGDEBUG_ALL);
 
-    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmopvV")) != -1) {
+    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpvV")) != -1) {
         switch (ch) {
         case 'A':
             accept_hip_esp_traffic_by_default = 1;
@@ -2035,9 +1978,6 @@ int main(int argc, char **argv)
             use_midauth    = 1;
             break;
 #endif
-        case 'o':
-            system_based_opp_mode = 1;
-            break;
         case 'p':
             limit_capabilities = 1;
             break;
@@ -2109,7 +2049,7 @@ int main(int argc, char **argv)
              "connecting socket failed\n");
 
     /* Starting hipfw does not always work when hipfw starts first -miika */
-    if (hip_userspace_ipsec || hip_lsi_support || system_based_opp_mode) {
+    if (hip_userspace_ipsec || hip_lsi_support) {
         hip_fw_wait_for_hipd();
     }
 
