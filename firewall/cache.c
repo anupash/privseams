@@ -228,25 +228,6 @@ out_err:
 }
 
 /**
- * Delete a database entry identified by HITs, LSIs or IPs
- *
- * @param local local identifier or locator (optional)
- * @param peer peer identifier or locator
- * @param type whether the parameters are HITs, LSIs or IPs
- */
-void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
-                                     enum fw_cache_query_type type)
-{
-    struct hip_hadb_user_info_state *entry;
-
-    entry = hip_firewall_cache_db_match(local, peer, type, 0);
-    if (entry) {
-        hip_ht_delete(firewall_cache_db, entry);
-        free(entry);
-    }
-}
-
-/**
  * Generate the hash information that is used to index the cache table
  *
  * @param ptr pointer to the hit used to make the hash
@@ -343,47 +324,6 @@ int hip_firewall_cache_set_bex_state(const struct in6_addr *hit_our,
     entry = hip_firewall_cache_db_match(hit_our, hit_peer, FW_CACHE_HIT, 0);
     HIP_IFEL(!entry, -1, "No cache entry found\n");
 
-    entry->state = state;
-
-out_err:
-    return err;
-}
-
-/**
- * Update the HIT and state information of an entry identified by a pair
- * of IP addresses. Used for opportunistic base exchange.
- *
- * @param ip_our local IP to search for (optional)
- * @param ip_peer peer IP to search for
- * @param hit_our new local hit (optional)
- * @param hit_peer new peer hit (optional)
- * @param state new state
- * @return 0 on success, negative on error
- */
-
-int hip_firewall_cache_update_entry(const struct in6_addr *ip_our,
-                                    const struct in6_addr *ip_peer,
-                                    const struct in6_addr *hit_our,
-                                    const struct in6_addr *hit_peer,
-                                    int state)
-{
-    int                              err = 0;
-    struct hip_hadb_user_info_state *entry;
-
-    HIP_IFEL(!ip_peer, -1, "Need peer IP to search\n");
-
-    entry = hip_firewall_cache_db_match(ip_our, ip_peer, FW_CACHE_IP, 0);
-    HIP_IFEL(!entry, -1, "No cache entry found\n");
-
-    if (hit_our) {
-        ipv6_addr_copy(&entry->hit_our, hit_our);
-    }
-    if (hit_peer) {
-        /* A hash of the peer HIT is used as the key. Re-add to update. */
-        hip_ht_delete(firewall_cache_db, entry);
-        ipv6_addr_copy(&entry->hit_peer, hit_peer);
-        hip_ht_add(firewall_cache_db, entry);
-    }
     entry->state = state;
 
 out_err:
