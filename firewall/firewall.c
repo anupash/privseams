@@ -104,8 +104,7 @@
 #define OTHER_PACKET          0
 #define HIP_PACKET            1
 #define ESP_PACKET            2
-#define TCP_PACKET            3
-#define FW_PROTO_NUM          4 /* number of packet types */
+#define FW_PROTO_NUM          3 /* number of packet types */
 
 /* location of the lock file */
 #define HIP_FIREWALL_LOCK_FILE HIPL_LOCKDIR "/hip_firewall.lock"
@@ -1025,61 +1024,9 @@ static int filter_hip(const struct in6_addr *ip6_src,
 }
 
 /*
- * Handle packet capture for outbound HIP packets. The rules are as follows:
+ * Handle packet capture for outbound HIP packets.
  *
- * Output:
- *
- * - HIP:
- *   1. default rule checks for hip
- *   1. filter_hip
- *
- * - ESP:
- *   1. default rule checks for esp
- *   2. filter_esp
- *
- * - TCP:
- *   1. default rule checks for non-hip
- *   2.
- *   - destination is hit (userspace ipsec output)
- *   - destination is lsi (lsi output)
- *   - destination not hit or lsi
- *     1. opp tcp filtering (TBD)
- *
- * - Other
- *   - Same as with TCP except no opp tcp filtering
- *
- * Input:
- *
- * - HIP:
- *   1. default rule checks for hip
- *   2. filter_hip
- *
- * - ESP:
- *   1. default rule checks for hip
- *   2. filter_esp
- *   3. userspace_ipsec input
- *   4. lsi input
- *
- * - Other:
- *   - Same as with TCP except no opp tcp input
- *
- * - TCP:
- *   1. default rule checks for non-hip
- *   2. opp tcp input
- *
- * Forward:
- *
- * - HIP:
- *   1. None
- *
- * - ESP:
- *   1. None
- *
- * - TCP:
- *   1. Proxy input
- *
- * - Other:
- *   2. Proxy input
+ * @note hooks HIP message filtering.
  *
  * @param ctx packet context
  *
@@ -1108,7 +1055,9 @@ static int hip_fw_handle_hip_output(struct hip_fw_context *ctx)
 }
 
 /**
- * Process an ESP packet from the outbound packet queue
+ * Process an ESP packet from the outbound packet queue.
+ *
+ * @note hooks ESP filtering
  *
  * @param ctx the packet context
  *
@@ -1130,7 +1079,9 @@ static int hip_fw_handle_esp_output(struct hip_fw_context *ctx)
 }
 
 /**
- * Process an ESP packet from the outbound packet capture queue
+ * Process any other packet from the outbound packet capture queue
+ *
+ * @note hooks userspace IPsec and LSI
  *
  * @param ctx the packet context
  *
@@ -1181,21 +1132,9 @@ static int hip_fw_handle_other_output(struct hip_fw_context *ctx)
 }
 
 /**
- * Process a TCP packet from the outbound packet capture queue
- *
- * @param ctx the packet context
- *
- * @return the verdict (1 for pass and 0 for drop)
- */
-static int hip_fw_handle_tcp_output(struct hip_fw_context *ctx)
-{
-    HIP_DEBUG("\n");
-
-    return hip_fw_handle_other_output(ctx);
-}
-
-/**
  * Process a HIP packet from the forward packet capture queue
+ *
+ * @note hooks middlebox authentication
  *
  * @param ctx the packet context
  *
@@ -1216,92 +1155,16 @@ static int hip_fw_handle_hip_forward(struct hip_fw_context *ctx)
     return hip_fw_handle_hip_output(ctx);
 }
 
-/**
- * Process an ESP packet from the forward packet capture queue
- *
- * @param ctx the packet context
- *
- * @return the verdict (1 for pass and 0 for drop)
- */
-static int hip_fw_handle_esp_forward(struct hip_fw_context *ctx)
-{
-    int verdict = accept_hip_esp_traffic_by_default;
+/* hip_fw_handle_esp_forward is the same as hip_fw_handle_esp_output */
 
-    HIP_DEBUG("\n");
-    if (filter_traffic) {
-        // check if this belongs to one of the connections pass through
-        verdict = filter_esp(ctx);
-    } else {
-        verdict = ACCEPT;
-    }
+/* no need for hip_fw_handle_other_forward */
 
-    return verdict;
-}
-
-/**
- * Process a TCP packet from the forward packet capture queue
- *
- * @param ctx the packet context, required because of the handler format
- *
- * @return the verdict (1 for pass and 0 for drop)
- */
-static int hip_fw_handle_tcp_forward(UNUSED struct hip_fw_context *ctx)
-{
-    HIP_DEBUG("\n");
-
-    return 0;
-}
-
-/**
- * Process another (not HIP, ESP, TCP) packet from the inbound packet
- * capture queue. May result in LSI or SysOPP Transformation.
- *
- * @param ctx the packet context
- *
- * @return the verdict (1 for pass and 0 for drop)
- */
-static int hip_fw_handle_other_input(struct hip_fw_context *ctx)
-{
-    int verdict = accept_normal_traffic_by_default;
-    int ip_hits = ipv6_addr_is_hit(&ctx->src) &&
-                  ipv6_addr_is_hit(&ctx->dst);
-
-    HIP_DEBUG("\n");
-
-    if (ip_hits) {
-        if (hip_lsi_support) {
-            verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
-                                                 &ctx->src,
-                                                 &ctx->dst,
-                                                 hip_lsi_support);
-        }
-    }
-
-    /* No need to check default rules as it is handled by the
-     * iptables rules */
-    return verdict;
-}
-
-/**
- * Process a HIP packet from the input packet capture queue
- *
- * @param ctx the packet context
- *
- * @return the verdict (1 for pass and 0 for drop)
- */
-static int hip_fw_handle_hip_input(struct hip_fw_context *ctx)
-{
-    int verdict = accept_hip_esp_traffic_by_default;
-
-    HIP_DEBUG("hip_fw_handle_hip_input()\n");
-
-    verdict = hip_fw_handle_hip_output(ctx);
-
-    return verdict;
-}
+/* hip_fw_handle_hip_input is the same as hip_fw_handle_hip_output */
 
 /**
  * Process an ESP packet from the inbound packet capture queue
+ *
+ * @note hooks ESP filtering and userspace IPsec
  *
  * @param ctx the packet context
  *
@@ -1330,26 +1193,31 @@ static int hip_fw_handle_esp_input(struct hip_fw_context *ctx)
 }
 
 /**
- * Process a TCP packet from the inbound packet capture queue
+ * Process any other packet from the inbound packet capture queue.
+ *
+ * @note hooks LSI
  *
  * @param ctx the packet context
  *
  * @return the verdict (1 for pass and 0 for drop)
  */
-static int hip_fw_handle_tcp_input(struct hip_fw_context *ctx)
+static int hip_fw_handle_other_input(struct hip_fw_context *ctx)
 {
     int verdict = accept_normal_traffic_by_default;
 
     HIP_DEBUG("\n");
 
-    // any incoming plain TCP packet might be an opportunistic I1
-    HIP_DEBUG_HIT("hit src", &ctx->src);
-    HIP_DEBUG_HIT("hit dst", &ctx->dst);
+    if (ipv6_addr_is_hit(&ctx->src) &&
+        ipv6_addr_is_hit(&ctx->dst) &&
+        hip_lsi_support) {
+        verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
+                                             &ctx->src,
+                                             &ctx->dst,
+                                             hip_lsi_support);
+    }
 
-    // as we should never receive TCP with HITs, this will only apply
-    // to IPv4 TCP
-    verdict = hip_fw_handle_other_input(ctx);
-
+    /* No need to check default rules as it is handled by the
+     * iptables rules */
     return verdict;
 }
 
@@ -1371,20 +1239,16 @@ static int firewall_init(void)
 
     // funtion pointers for the respective packet handlers
     fw_handlers[NF_IP_LOCAL_IN][OTHER_PACKET] = hip_fw_handle_other_input;
-    fw_handlers[NF_IP_LOCAL_IN][HIP_PACKET]   = hip_fw_handle_hip_input;
+    fw_handlers[NF_IP_LOCAL_IN][HIP_PACKET]   = hip_fw_handle_hip_output;
     fw_handlers[NF_IP_LOCAL_IN][ESP_PACKET]   = hip_fw_handle_esp_input;
-    fw_handlers[NF_IP_LOCAL_IN][TCP_PACKET]   = hip_fw_handle_tcp_input;
 
     fw_handlers[NF_IP_LOCAL_OUT][OTHER_PACKET] = hip_fw_handle_other_output;
     fw_handlers[NF_IP_LOCAL_OUT][HIP_PACKET]   = hip_fw_handle_hip_output;
     fw_handlers[NF_IP_LOCAL_OUT][ESP_PACKET]   = hip_fw_handle_esp_output;
-    fw_handlers[NF_IP_LOCAL_OUT][TCP_PACKET]   = hip_fw_handle_tcp_output;
 
     //apply rules for forwarded hip and esp traffic
     fw_handlers[NF_IP_FORWARD][HIP_PACKET] = hip_fw_handle_hip_forward;
-    fw_handlers[NF_IP_FORWARD][ESP_PACKET] = hip_fw_handle_esp_forward;
-    //do not drop those files by default
-    fw_handlers[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward;
+    fw_handlers[NF_IP_FORWARD][ESP_PACKET] = hip_fw_handle_esp_output;
 
     HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
     system_print("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
@@ -1425,7 +1289,6 @@ out_err:
  * Currently supported types:   type
  * - plain HIP control packet      1
  * - ESP packet                    2
- * - TCP packet                    3 (for opportunistic TCP handshake)
  *
  * Unsupported types -> type 0
  *
@@ -1507,18 +1370,6 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
                                      (((char *) iphdr) + ip_hdr_len);
 
             goto end_init;
-        } else if (iphdr->ip_p == IPPROTO_TCP) {
-            // this might be a TCP packet for opportunistic mode
-            HIP_DEBUG("plain TCP packet\n");
-
-            ctx->packet_type       = TCP_PACKET;
-            ctx->transport_hdr.tcp = (struct tcphdr *)
-                                     (((char *) iphdr) + ip_hdr_len);
-
-            HIP_DEBUG("src port: %u\n", ntohs(ctx->transport_hdr.tcp->source));
-            HIP_DEBUG("dst port: %u\n", ntohs(ctx->transport_hdr.tcp->dest));
-
-            goto end_init;
         } else if (iphdr->ip_p != IPPROTO_UDP) {
             // if it's not UDP either, it's unsupported
             HIP_DEBUG("some other packet\n");
@@ -1574,18 +1425,6 @@ static int hip_fw_init_context(struct hip_fw_context *ctx,
             ctx->packet_type       = ESP_PACKET;
             ctx->transport_hdr.esp = (struct hip_esp *)
                                      (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
-
-            goto end_init;
-        } else if (ip6_hdr->ip6_nxt == IPPROTO_TCP) {
-            // this might be a TCP packet for opportunistic mode
-            HIP_DEBUG("plain TCP packet\n");
-
-            ctx->packet_type       = TCP_PACKET;
-            ctx->transport_hdr.tcp = (struct tcphdr *)
-                                     (((char *) ip6_hdr) + sizeof(struct ip6_hdr));
-
-            HIP_DEBUG("src port: %u\n", ntohs(ctx->transport_hdr.tcp->source));
-            HIP_DEBUG("dst port: %u\n", ntohs(ctx->transport_hdr.tcp->dest));
 
             goto end_init;
         } else if (ip6_hdr->ip6_nxt != IPPROTO_UDP) {
