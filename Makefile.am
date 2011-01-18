@@ -252,6 +252,11 @@ tools_hipdnsproxydir    = $(pythondir)/hipdnsproxy
 
 
 ### misc stuff ###
+
+# This is supposed to be a sanity check target to run before pushing changes
+# to the world at large. It should catch a number of easily-avoidable mistakes.
+alltests: doxygen checkheaders check distcheck
+
 doxygen: doc/Doxyfile
 	doxygen $<
 
@@ -301,4 +306,4 @@ dist-hook:
 	rm -f $(addprefix $(distdir)/doc/,Doxyfile HOWTO.xml)
 	rm -f $(addprefix $(distdir)/tools/,nsupdate.pl hipdnsproxy/hipdnsproxy hipdnskeyparse/hipdnskeyparse)
 
-.PHONY: bin checkheaders deb doxygen rpm syncrepo*
+.PHONY: alltests bin checkheaders deb doxygen rpm syncrepo*
