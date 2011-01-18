@@ -238,8 +238,11 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
                  -1, "Missing application_context parameter\n");
 
+        HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
+                 -1, "failed to retrieve state for signaling module\n");
+
         /* check if previous BEX has been completed, if send notification to oslayer to wait with this connection */
-        if (entry->state != HIP_STATE_ESTABLISHED && entry->state != HIP_STATE_R2_SENT) {
+        if ((entry->state != HIP_STATE_ESTABLISHED && entry->state != HIP_STATE_R2_SENT) || sig_state->update_in_progress) {
             HIP_DEBUG("We have a BEX running, postponing establishment of new connection. STATE = %d \n", entry->state);
             signaling_copy_connection_context(&resp_ctx, (const struct signaling_connection_context *) (param + 1));
             resp_ctx.connection_status = SIGNALING_CONN_WAITING;
@@ -248,8 +251,6 @@ int signaling_handle_connection_request(struct hip_common *msg,
         }
 
         /* save application context to our local state */
-        HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(entry->hip_modular_state, "signaling_hipd_state")),
-                 -1, "failed to retrieve state for signaling module\n");
         signaling_connection_context_print((const struct signaling_connection_context *) (param + 1), "");
         // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
         HIP_IFEL(signaling_copy_connection_context(&sig_state->ctx, (const struct signaling_connection_context *) (param + 1)),
@@ -258,6 +259,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
         /* now trigger the UPDATE */
         HIP_IFEL(signaling_send_first_update(our_hit, peer_hit),
                  -1, "Failed triggering first bex update.\n");
+        sig_state->update_in_progress = 1;
 
         HIP_DEBUG("Triggered UPDATE for following connection context:\n");
         signaling_connection_context_print(&sig_state->ctx, "");

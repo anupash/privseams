@@ -654,7 +654,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
     int err = 0;
     int update_type;
     struct signaling_connection_context conn_ctx;
-
+    struct signaling_hipd_state *sig_state = NULL;
     /* Sanity checks */
     HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
              -1, "This is no signaling update packet\n");
@@ -674,6 +674,9 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         conn_ctx.connection_status = SIGNALING_CONN_ALLOWED;
         HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");
+        HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+                     -1, "failed to retrieve state for signaling\n");
+        sig_state->update_in_progress = 0;
     } else if (update_type == SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE) {
         err = signaling_handle_incoming_certificate_udpate(packet_type, ha_state, ctx);
     } else if (update_type == SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE) {
