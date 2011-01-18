@@ -64,22 +64,20 @@ out_err:
 int signaling_hipfw_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_hit,
                                             uint16_t src_port, uint16_t dst_port) {
     int err = 0;
-    struct signaling_connection_context *new_ctx    = NULL;
+    struct signaling_connection_context  new_ctx;
     struct hip_common *msg                          = NULL;
 
     /* Build the local connection context */
-    HIP_IFEL(!(new_ctx = malloc(sizeof(struct signaling_connection_context))),
-             -1, "Could not allocate memory for new connection context\n");
-    HIP_IFEL(signaling_init_connection_context(new_ctx),
+    HIP_IFEL(signaling_init_connection_context(&new_ctx),
              -1, "Could not init connection context\n");
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, new_ctx),
+    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_ctx),
              -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_user_api_get_uname(new_ctx->user_ctx.euid, &new_ctx->user_ctx),
+    HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.euid, &new_ctx.user_ctx),
              -1, "Could not get user name \n");
-    new_ctx->connection_status = SIGNALING_CONN_PENDING;
+    new_ctx.connection_status = SIGNALING_CONN_PENDING;
 
     /* Since this is a new connection we have to add an entry to the scdb */
-    HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, new_ctx),
+    HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_ctx),
              -1, "Could not add entry to scdb.\n");
 
     /* Now request the connection from the HIPD */
@@ -90,17 +88,14 @@ int signaling_hipfw_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_h
              -1, "build param contents (dst hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
              -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, new_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
+    HIP_IFEL(hip_build_param_contents(msg, &new_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
              -1, "build connection context failed \n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Send request to HIPD to establish a new connection with following connection context: \n");
-    signaling_connection_context_print(new_ctx, "");
+    signaling_connection_context_print(&new_ctx, "");
 
 out_err:
-    if (err) {
-        free(new_ctx);
-    }
     free(msg);
     return err;
 }
@@ -158,7 +153,8 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     const struct hip_tlv_common *param          = NULL;
     const hip_hit_t *src_hit                    = NULL;
     const hip_hit_t *dst_hit                    = NULL;
-    struct signaling_connection_context *ctx    = NULL;
+    struct signaling_connection_context ctx;
+    struct signaling_connection_context *waiting_ctx = NULL;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRM_CONNECTION,
             -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
@@ -170,32 +166,24 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
 
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT)),
             -1, "No HIP_PARAM_SIGNALING_CONNECTION_CONTEXT parameter in message.\n");
-    HIP_IFEL(!(ctx = malloc(sizeof(struct signaling_connection_context))),
-             -1, "Could not allocate memory for new application context\n");
     // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
-    HIP_IFEL(signaling_copy_connection_context(ctx, (const struct signaling_connection_context*) (param + 1)),
-             -1, "Failed to init app context \n");
+    signaling_copy_connection_context(&ctx, (const struct signaling_connection_context *) (param + 1));
 
-    if (ctx->connection_status == SIGNALING_CONN_USER_AUTHED) {
-        ctx->connection_status = SIGNALING_CONN_ALLOWED;
+    if (ctx.connection_status == SIGNALING_CONN_USER_AUTHED) {
+        ctx.connection_status = SIGNALING_CONN_ALLOWED;
     }
-    signaling_cdb_add(src_hit, dst_hit, ctx);
+    signaling_cdb_add(src_hit, dst_hit, &ctx);
     signaling_cdb_print();
 
     /* If this confirmation notified about an established connection,
      * determine if there is at least one waiting connection we can now establish */
-    if (ctx->connection_status == SIGNALING_CONN_ALLOWED) {
-        ctx = signaling_cdb_get_waiting(src_hit, dst_hit);
-        if (ctx) {
-            HIP_DEBUG("Have connection on wait. Triggering again... \n");
-            signaling_hipfw_resend_connection_request(src_hit, dst_hit, ctx);
-        }
+    waiting_ctx = signaling_cdb_get_waiting(src_hit, dst_hit);
+    if (waiting_ctx) {
+        HIP_DEBUG("Have connection on wait. Triggering again... \n");
+        signaling_hipfw_resend_connection_request(src_hit, dst_hit, waiting_ctx);
     }
 
 out_err:
-    if (err) {
-        free(ctx);
-    }
     return err;
 }
 
@@ -218,10 +206,10 @@ out_err:
 int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
     int err                                         = 0;
     const struct signaling_connection_context *remote_ctx    = NULL;
-    struct signaling_connection_context *new_ctx    = NULL;
     const struct hip_tlv_common *param              = NULL;
     const hip_hit_t *hits                           = NULL;
     const hip_hit_t *hitr                           = NULL;
+    struct signaling_connection_context new_ctx;
     uint16_t src_port , dst_port;
 
     /* Get HITs and Ports from the message */
@@ -242,34 +230,35 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
 
 
     /* b) build the local connection context */
-    HIP_IFEL(!(new_ctx = malloc(sizeof(struct signaling_connection_context))),
-             -1, "Could not allocate memory for new connection context\n");
-    HIP_IFEL(signaling_init_connection_context(new_ctx),
+    HIP_IFEL(signaling_init_connection_context(&new_ctx),
              -1, "Could not init connection context\n");
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, new_ctx),
+    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_ctx),
              -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_user_api_get_uname(new_ctx->user_ctx.euid, &new_ctx->user_ctx),
+    HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.euid, &new_ctx.user_ctx),
              -1, "Could not get user name \n");
 
     /* c) check with local policy if we want to allow the local connection context
      *    if we allow the connection, add it right away, or wait for user auth confirmation.
      *    TODO: hand local context to some policy decision engine
      *    */
+
     if (remote_ctx->connection_status == SIGNALING_CONN_USER_UNAUTHED) {
         /* tell the HIPD that user auth is required */
-        new_ctx->connection_status = SIGNALING_CONN_USER_UNAUTHED;
+        new_ctx.connection_status = SIGNALING_CONN_PENDING;
+        signaling_cdb_add(hits, hitr, &new_ctx);
+        signaling_cdb_print();
+        new_ctx.connection_status = SIGNALING_CONN_USER_UNAUTHED;
     } else {
         /* tell the HIPD that the connection has been accepted by local policy
          * and add it to the connection tracking DB */
-        new_ctx->connection_status = SIGNALING_CONN_ALLOWED;
+        new_ctx.connection_status = SIGNALING_CONN_ALLOWED;
+        signaling_cdb_add(hits, hitr, &new_ctx);
+        signaling_cdb_print();
     }
-    signaling_cdb_add(hits, hitr, new_ctx);
-    signaling_cdb_print();
 
     /* d) send answer to HIPD */
-    signaling_hipfw_send_connection_context(hits, hitr, new_ctx);
+    signaling_hipfw_send_connection_context(hits, hitr, &new_ctx);
 
 out_err:
-    free(new_ctx);
     return err;
 }
