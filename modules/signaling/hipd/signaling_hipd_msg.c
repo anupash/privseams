@@ -121,11 +121,11 @@ static struct hip_common *build_update_message(hip_ha_t *ha, const int type, str
                  -1, "Building of ACK parameter failed\n");
     }
 
-    /* Add Appinfo */
-    HIP_IFEL(signaling_build_param_application_context(msg_buf, ctx),
-            -1, "Building of APPInfo parameter failed\n");
-
-    /* Add Userinfo */
+    /* Add application and user context.
+     * These parameters (as well as the user's signature are non-critical */
+    if(signaling_build_param_application_context(msg_buf, ctx)) {
+        HIP_DEBUG("Building of APPInfo parameter failed\n");
+    }
     if(signaling_build_param_user_context(msg_buf, &ctx->user_ctx)) {
         HIP_DEBUG("Building of userinfo parameter for I2 failed.\n");
     }
@@ -137,14 +137,15 @@ static struct hip_common *build_update_message(hip_ha_t *ha, const int type, str
             -EINVAL, "Could not sign UPDATE. Failing\n");
 
     /* Add user authentication */
-    HIP_IFEL(signaling_build_param_user_signature(msg_buf, ctx->user_ctx.euid),
-             0, "User failed to sign UPDATE.\n");
+    if(signaling_build_param_user_signature(msg_buf, ctx->user_ctx.euid)) {
+        HIP_DEBUG("User failed to sign UPDATE.\n");
+    }
+
+    return msg_buf;
 
 out_err:
-    if(err) {
-        return NULL;
-    }
-    return msg_buf;
+    free(msg_buf);
+    return NULL;
 }
 
 /**
