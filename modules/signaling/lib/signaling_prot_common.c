@@ -13,7 +13,7 @@
 #include "lib/core/builder.h"
 #include "signaling_prot_common.h"
 #include "signaling_common_builder.h"
-#include "signaling_user_api.h"
+#include "signaling_x509_api.h"
 
 static const char *signaling_connection_status_name(int status) {
     switch (status) {

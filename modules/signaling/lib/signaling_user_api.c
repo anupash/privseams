@@ -22,94 +22,9 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 
-#include "signaling_user_management.h"
+#include "signaling_x509_api.h"
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
-
-int signaling_X509_NAME_to_DER(X509_NAME *const name, unsigned char **buf) {
-    int len;
-    int err = 0;
-
-    HIP_IFEL(!name, -1, "Cannot encode NULL-certificate\n");
-    *buf = NULL;
-    len = i2d_X509_NAME(name, buf);
-    HIP_IFEL(len < 0, -1, "Could not DER-encode the given X509 name.\n");
-    HIP_IFEL(len > SIGNALING_USER_ID_MAX_LEN,
-             -1, "DER Encoding exceeds user id max size\n");
-out_err:
-    if (err) {
-        return err;
-    }
-    return len;
-}
-
-int signaling_X509_to_DER(X509 *const cert, unsigned char **buf) {
-    int len;
-    int err = 0;
-
-    HIP_IFEL(!cert, -1, "Cannot encode NULL-certificate\n");
-    *buf = NULL;
-    len = i2d_X509(cert, buf);
-    HIP_IFEL(len < 0, -1, "Could not DER-encode the given certificate.\n");
-
-out_err:
-    if (err) {
-        return err;
-    }
-    return len;
-}
-
-int signaling_DER_to_X509_NAME(const unsigned char *const buf, const int len, X509_NAME **name) {
-    int err = 0;
-    const unsigned char *p;
-
-    HIP_IFEL(!buf,      -1, "Cannot decode from NULL-buffer\n");
-    HIP_IFEL(len <= 0,  -1, "Cannot decode x509 name of length <= 0\n");
-    p = buf;
-    *name = d2i_X509_NAME(NULL, (const unsigned char **)  &p, len);
-
-out_err:
-    return err;
-}
-
-
-int signaling_DER_to_X509(const unsigned char *const buf, const int len, X509 **cert) {
-    int err = 0;
-    const unsigned char *p;
-
-    HIP_IFEL(!buf, -1, "Cannot decode from NULL-buffer\n");
-    HIP_IFEL(len <= 0, -1, "Cannot decode certificate of length <= 0\n");
-    p = buf;
-    *cert = d2i_X509(NULL, (const unsigned char **)  &p, len);
-
-out_err:
-    return err;
-}
-
-UNUSED static X509 *load_x509_certificate(const char *const file) {
-    int err     = 0;
-    FILE *fp    = NULL;
-    X509 *cert  = NULL;
-
-    HIP_IFEL(!file, -ENOENT, "NULL filename\n");
-
-    fp   = fopen(file, "rb");
-    HIP_IFEL(!fp, -ENOMEM,
-             "Could not open certificate key file %s for reading\n", file);
-
-    cert = PEM_read_X509(fp, NULL, NULL, NULL);
-    if ((err = fclose(fp))) {
-        HIP_ERROR("Error closing file\n");
-        goto out_err;
-    }
-
-out_err:
-    if (err) {
-        X509_free(cert);
-        return NULL;
-    }
-    return cert;
-}
 
 /*
  * @return NULL on error

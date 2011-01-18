@@ -57,6 +57,7 @@
 
 #include "modules/signaling/lib/signaling_oslayer.h"
 #include "modules/signaling/lib/signaling_user_api.h"
+#include "modules/signaling/lib/signaling_x509_api.h"
 #include "modules/signaling/lib/signaling_user_management.h"
 #include "signaling_hipd_state.h"
 #include "signaling_hipd_msg.h"

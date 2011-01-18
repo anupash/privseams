@@ -43,7 +43,7 @@
 
 #include "firewall/hslist.h"
 
-#include "modules/signaling/lib/signaling_user_api.h"
+#include "modules/signaling/lib/signaling_x509_api.h"
 #include "signaling_policy_engine.h"
 
 const char *path_rules     = {"rules"};

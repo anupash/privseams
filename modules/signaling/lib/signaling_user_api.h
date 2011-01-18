@@ -13,12 +13,6 @@
 
 #include "signaling_prot_common.h"
 
-/* Utility functions to convert X509 certificates/names to DER encoding and back */
-int signaling_X509_NAME_to_DER(X509_NAME *const name, unsigned char **buf);
-int signaling_X509_to_DER(X509 *const cert, unsigned char **buf);
-int signaling_DER_to_X509_NAME(const unsigned char *const buf, const int len, X509_NAME **name);
-int signaling_DER_to_X509(const unsigned char *const buf, const int len, X509 **cert);
-
 /* Getters for different user context information */
 int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context *const user_ctx);
 STACK_OF(X509) *signaling_user_api_get_user_certificate_chain(const uid_t uid);
