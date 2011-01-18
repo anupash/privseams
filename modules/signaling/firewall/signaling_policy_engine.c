@@ -181,7 +181,7 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
  *
  * @return          1 if the connection complies with the policy, 0 otherwise
  */
-int signaling_policy_check(UNUSED const struct tuple *tuple, UNUSED const struct signaling_connection_context *conn_ctx) {
+int signaling_policy_check(const struct tuple *tuple, const struct signaling_connection_context *conn_ctx) {
     int match = 0;
     struct policy_tuple tuple_for_conn;
     struct slist *listentry;
