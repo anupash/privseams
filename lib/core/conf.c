@@ -1398,9 +1398,8 @@ static int hip_conf_handle_debug(struct hip_common *msg, UNUSED int action,
                                  const char *opt[], int optc,
                                  UNUSED int send_only)
 {
-    int             err    = 0;
-    int             status = 0;
-    struct in6_addr hit;
+    int err    = 0;
+    int status = 0;
 
     if (optc != 0) {
         HIP_IFEL(1,
@@ -1410,15 +1409,12 @@ static int hip_conf_handle_debug(struct hip_common *msg, UNUSED int action,
 
     if (!strcmp("all", opt[0])) {
         HIP_INFO("Displaying all debugging messages\n");
-        memset(&hit, 0, sizeof(struct in6_addr));
         status = HIP_MSG_SET_DEBUG_ALL;
     } else if (!strcmp("medium", opt[0])) {
         HIP_INFO("Displaying ERROR and INFO debugging messages\n");
-        memset(&hit, 0, sizeof(struct in6_addr));
         status = HIP_MSG_SET_DEBUG_MEDIUM;
     } else if (!strcmp("none", opt[0])) {
         HIP_INFO("Displaying no debugging messages\n");
-        memset(&hit, 0, sizeof(struct in6_addr));
         status = HIP_MSG_SET_DEBUG_NONE;
     } else {
         HIP_IFEL(1, -EINVAL, "Unknown argument\n");
@@ -1517,15 +1513,12 @@ static int hip_conf_handle_nat(struct hip_common *msg, UNUSED int action,
                                const char *opt[], UNUSED int optc,
                                UNUSED int send_only)
 {
-    int             err    = 0;
-    int             status = 0;
-    struct in6_addr hit;
+    int err    = 0;
+    int status = 0;
 
     if (!strcmp("plain-udp", opt[0])) {
-        memset(&hit, 0, sizeof(struct in6_addr));
         status = HIP_MSG_SET_NAT_PLAIN_UDP;
     } else if (!strcmp("none", opt[0])) {
-        memset(&hit, 0, sizeof(struct in6_addr));
         status = HIP_MSG_SET_NAT_NONE;
     }
 
