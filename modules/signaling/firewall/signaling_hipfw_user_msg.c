@@ -30,8 +30,8 @@
  *
  * @return          0 on sucess, negative on error
  */
-static int signaling_hipfw_resend_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                              const struct signaling_connection_context *conn_ctx) {
+int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+                                            const struct signaling_connection_context *conn_ctx) {
     int err                 = 0;
     struct hip_common *msg  = NULL;
 
@@ -61,8 +61,8 @@ out_err:
  *
  * @return          0 on sucess, negative on error
  */
-int signaling_hipfw_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-                                            uint16_t src_port, uint16_t dst_port) {
+int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+                                                     uint16_t src_port, uint16_t dst_port) {
     int err = 0;
     struct signaling_connection_context  new_ctx;
     struct hip_common *msg                          = NULL;
@@ -81,16 +81,7 @@ int signaling_hipfw_send_connection_request(hip_hit_t *src_hit, hip_hit_t *dst_h
              -1, "Could not add entry to scdb.\n");
 
     /* Now request the connection from the HIPD */
-    HIP_IFE(!(msg = hip_msg_alloc()), -1);
-    HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_SIGNALING_REQUEST_CONNECTION, 0),
-             -1, "build hdr failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, dst_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
-             -1, "build param contents (dst hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, src_hit, HIP_PARAM_HIT, sizeof(hip_hit_t)),
-             -1, "build param contents (src hit) failed\n");
-    HIP_IFEL(hip_build_param_contents(msg, &new_ctx, HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, sizeof(struct signaling_connection_context)),
-             -1, "build connection context failed \n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
+    signaling_hipfw_send_connection_request(src_hit, dst_hit, &new_ctx);
 
     HIP_DEBUG("Send request to HIPD to establish a new connection with following connection context: \n");
     signaling_connection_context_print(&new_ctx, "");
@@ -180,7 +171,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     waiting_ctx = signaling_cdb_get_waiting(src_hit, dst_hit);
     if (waiting_ctx) {
         HIP_DEBUG("Have connection on wait. Triggering again... \n");
-        signaling_hipfw_resend_connection_request(src_hit, dst_hit, waiting_ctx);
+        signaling_hipfw_send_connection_request(src_hit, dst_hit, waiting_ctx);
     }
 
 out_err:
@@ -243,10 +234,10 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
      *    */
 
     if (remote_ctx->connection_status == SIGNALING_CONN_USER_UNAUTHED) {
-        /* tell the HIPD that user auth is required */
         new_ctx.connection_status = SIGNALING_CONN_PENDING;
         signaling_cdb_add(hits, hitr, &new_ctx);
         signaling_cdb_print();
+        /* tell the HIPD that user auth is required (hack) */
         new_ctx.connection_status = SIGNALING_CONN_USER_UNAUTHED;
     } else {
         /* tell the HIPD that the connection has been accepted by local policy

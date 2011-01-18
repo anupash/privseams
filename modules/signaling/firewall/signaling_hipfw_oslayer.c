@@ -83,7 +83,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     if(entry == NULL) {
         HIP_DEBUG("No association between the two hosts, need to trigger complete BEX.\n");
 
-        HIP_IFEL(signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, src_port, dest_port),
+        HIP_IFEL(signaling_hipfw_send_connection_request_by_ports(&ctx->src, &ctx->dst, src_port, dest_port),
                  -1, "Failed to trigger new connection\n");
         verdict = VERDICT_DROP;
         goto out_err;
@@ -119,7 +119,7 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
         }
     } else {
         HIP_DEBUG("HA exists, but connection is new. We need to trigger a BEX UPDATE now and drop this packet.\n");
-        HIP_IFEL(signaling_hipfw_send_connection_request(&ctx->src, &ctx->dst, src_port, dest_port),
+        HIP_IFEL(signaling_hipfw_send_connection_request_by_ports(&ctx->src, &ctx->dst, src_port, dest_port),
                  -1, "Failed to trigger new connection\n");
         verdict = VERDICT_DROP;
     }
