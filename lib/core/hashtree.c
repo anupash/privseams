@@ -137,10 +137,6 @@ struct hash_tree *htree_init(const int num_data_blocks,
         tmp_length = secret_length;
     }
 
-    // init array elements to 0
-    memset(tree->data, 0, max_data_length * tree->leaf_set_size);
-    memset(tree->nodes, 0, node_length * tree->leaf_set_size * 2);
-
     tree->is_open         = 1;
     tree->data_position   = 0;
     tree->num_data_blocks = num_data_blocks;
@@ -168,11 +164,6 @@ struct hash_tree *htree_init(const int num_data_blocks,
                          -1,
                          "failed to add linking root as secrets\n");
             }
-
-            memset(&tree->secrets[num_data_blocks * secret_length], 0,
-                   secret_length * (tree->leaf_set_size - num_data_blocks));
-        } else {
-            memset(tree->secrets, 0, secret_length * tree->leaf_set_size);
         }
     }
 
