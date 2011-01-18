@@ -223,8 +223,8 @@ int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, UN
         break;
     case -1:
         HIP_DEBUG("Error processing user signature, assuming \"ANY USER\"\n");
-        free(conn_ctx);
-        return 0;
+        signaling_init_user_context(&conn_ctx->user_ctx);
+        break;
     default:
         HIP_DEBUG("Could not verify certifcate chain:\n");
         HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
