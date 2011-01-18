@@ -287,7 +287,7 @@ DISTCLEANFILES       = $(wildcard modules/*.h)
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
-	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
+	$(AM_V_CC) $(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
 # Ensure that version.h is created before everything else. This does not work
 # when creating specific objects that may depend on version.h directly.
