@@ -37,11 +37,10 @@ int signaling_X509_NAME_to_DER(X509_NAME *const name, unsigned char **buf) {
     HIP_IFEL(len < 0, -1, "Could not DER-encode the given X509 name.\n");
     HIP_IFEL(len > SIGNALING_USER_ID_MAX_LEN,
              -1, "DER Encoding exceeds user id max size\n");
-out_err:
-    if (err) {
-        return err;
-    }
     return len;
+
+out_err:
+    return err;
 }
 
 int signaling_X509_to_DER(X509 *const cert, unsigned char **buf) {
@@ -52,12 +51,10 @@ int signaling_X509_to_DER(X509 *const cert, unsigned char **buf) {
     *buf = NULL;
     len = i2d_X509(cert, buf);
     HIP_IFEL(len < 0, -1, "Could not DER-encode the given certificate.\n");
+    return len;
 
 out_err:
-    if (err) {
-        return err;
-    }
-    return len;
+    return err;
 }
 
 int signaling_DER_to_X509_NAME(const unsigned char *const buf, const int len, X509_NAME **name) {
