@@ -20,6 +20,8 @@ struct user_certificate_context {
     int user_certificate_required;
     int group;
     STACK_OF(X509) *cert_chain;
+    /* Holds the user context for which the certificates are received */
+    struct signaling_user_context user_ctx;
 };
 
 /**
@@ -30,8 +32,6 @@ struct signaling_hipd_state {
     struct signaling_connection_context ctx;
     /* Collects user certificates accross multiple updates */
     struct user_certificate_context user_cert_ctx;
-    /* Holds the user context for the  the connection that is currently being established */
-    struct signaling_user_context user_ctx;
 };
 
 int signaling_hipd_init_state(struct modular_state *state);

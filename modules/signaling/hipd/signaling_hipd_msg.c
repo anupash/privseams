@@ -461,7 +461,7 @@ static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UN
                  -1, " error getting user context. \n");
         HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling module\n");
-        signaling_build_user_context(param_usr_ctx, &sig_state->user_ctx);
+        signaling_build_user_context(param_usr_ctx, &sig_state->user_cert_ctx.user_ctx);
         HIP_DEBUG("Requesting user's certificate chain.\n");
         signaling_send_user_auth_failed_ntf(ctx->hadb_entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
     }
@@ -566,16 +566,16 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
             /* Now verify the user identity with the certificate chain
              * We need to construct a temporary host_id struct since, all key_rr_to_xxx functions take this as argument.
              * However, we need only to fill in hi_length, algorithm and the key rr. */
-            pseudo_ui.hi_length = sig_state->user_ctx.key_rr_len;
-            pseudo_ui.rdata.algorithm = sig_state->user_ctx.rdata.algorithm;
+            pseudo_ui.hi_length = sig_state->user_cert_ctx.user_ctx.key_rr_len;
+            pseudo_ui.rdata.algorithm = sig_state->user_cert_ctx.user_ctx.rdata.algorithm;
             // note: the + 1 moves the pointer behind the parameter, where the key rr begins
             memcpy(pseudo_ui.key,
-                   sig_state->user_ctx.pkey,
-                   sig_state->user_ctx.key_rr_len - sizeof(struct hip_host_id_key_rdata));
+                   sig_state->user_cert_ctx.user_ctx.pkey,
+                   sig_state->user_cert_ctx.user_ctx.key_rr_len - sizeof(struct hip_host_id_key_rdata));
             HIP_IFEL(!(pkey = hip_key_rr_to_evp_key(&pseudo_ui, 0)), -1, "Could not deserialize users public key\n");
             PEM_write_PUBKEY(stderr, pkey);
             cert = sk_X509_pop(cert_chain);
-            HIP_IFEL(signaling_DER_to_X509_NAME(sig_state->user_ctx.subject_name, sig_state->user_ctx.subject_name_len, &subject_name),
+            HIP_IFEL(signaling_DER_to_X509_NAME(sig_state->user_cert_ctx.user_ctx.subject_name, sig_state->user_cert_ctx.user_ctx.subject_name_len, &subject_name),
                      -1, "Could not get users X509 name");
             HIP_IFEL(signaling_user_api_verify_pubkey(subject_name, pkey, cert, 1),
                      -1, "Could not verify users public key with received certificate chain\n");
