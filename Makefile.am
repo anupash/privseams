@@ -66,14 +66,11 @@ lib_LTLIBRARIES = lib/core/libhipcore.la
 
 
 ### tests ###
-TESTS           =
-check_PROGRAMS  =
-
 if HIP_UNITTESTS
-TESTS           += test/check_firewall \
-                   test/check_lib_core
-check_PROGRAMS  += test/check_firewall \
-                   test/check_lib_core
+TESTS           = test/check_firewall \
+                  test/check_lib_core
+check_PROGRAMS  = test/check_firewall \
+                  test/check_lib_core
 endif
 
 
