@@ -83,8 +83,6 @@
 #include "nat.h"
 #include "netdev.h"
 #include "nsupdate.h"
-#include "oppdb.h"
-#include "oppipdb.h"
 #include "output.h"
 #include "pkt_handling.h"
 #include "registration.h"
@@ -955,10 +953,6 @@ void hip_exit(void)
 
     lmod_uninit_packet_types();
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    hip_oppdb_uninit();
-#endif
-
 #ifdef CONFIG_HIP_RVS
     HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
     hip_relay_uninit();
@@ -1116,21 +1110,11 @@ int hipd_init(const uint64_t flags)
     signal(SIGTERM, hip_close);
     signal(SIGCHLD, hip_sig_chld);
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    HIP_IFEL(hip_init_oppip_db(), -1,
-             "Cannot initialize opportunistic mode IP database for " \
-             "non HIP capable hosts!\n");
-#endif
     HIP_IFEL(hip_init_cipher() < 0, 1, "Unable to init ciphers.\n");
 
     HIP_IFE(init_random_seed(), -1);
 
     hip_init_hadb();
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    hip_init_opp_db();
-#endif
-
 
     /* Resolve our current addresses, afterwards the events from kernel
      * will maintain the list This needs to be done before opening
