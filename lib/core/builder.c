@@ -1119,7 +1119,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_CONF_PUZZLE_SET:    return "HIP_MSG_CONF_PUZZLE_SET";
     case HIP_MSG_CONF_PUZZLE_INC:    return "HIP_MSG_CONF_PUZZLE_INC";
     case HIP_MSG_CONF_PUZZLE_DEC:    return "HIP_MSG_CONF_PUZZLE_DEC";
-    case HIP_MSG_SET_OPPORTUNISTIC_MODE: return "HIP_MSG_SET_OPPORTUNISTIC_MODE";
     case HIP_MSG_SET_DEBUG_ALL:      return "HIP_MSG_SET_DEBUG_ALL";
     case HIP_MSG_SET_DEBUG_MEDIUM:   return "HIP_MSG_SET_DEBUG_MEDIUM";
     case HIP_MSG_SET_DEBUG_NONE:     return "HIP_MSG_SET_DEBUG_NONE";
@@ -1131,9 +1130,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_HIT_TO_IP_ON:       return "HIP_MSG_HIT_TO_IP_ON";
     case HIP_MSG_HIT_TO_IP_OFF:      return "HIP_MSG_HIT_TO_IP_OFF";
     case HIP_MSG_HIT_TO_IP_SET:      return "HIP_MSG_HIT_TO_IP_SET";
-    case HIP_MSG_SET_OPPTCP_ON:      return "HIP_MSG_SET_OPPTCP_ON";
-    case HIP_MSG_SET_OPPTCP_OFF:     return "HIP_MSG_SET_OPPTCP_OFF";
-    case HIP_MSG_OPPTCP_SEND_TCP_PACKET: return "HIP_MSG_OPPTCP_SEND_TCP_PACKET";
     case HIP_MSG_TRANSFORM_ORDER:    return "HIP_MSG_TRANSFORM_ORDER";
     case HIP_MSG_OFFER_RVS:          return "HIP_MSG_OFFER_RVS";
     case HIP_MSG_CANCEL_RVS:         return "HIP_MSG_CANCEL_RVS";
@@ -1158,7 +1154,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_TRIGGER_UPDATE:     return "HIP_MSG_TRIGGER_UPDATE";
     case HIP_MSG_ANCHOR_CHANGE:      return "HIP_MSG_ANCHOR_CHANGE";
     case HIP_MSG_TRIGGER_BEX:        return "HIP_MSG_TRIGGER_BEX";
-    case HIP_MSG_GET_PEER_HIT:       return "HIP_MSG_GET_PEER_HIT";
     case HIP_MSG_NSUPDATE_ON:        return "HIP_MSG_NSUPDATE_ON";
     case HIP_MSG_NSUPDATE_OFF:       return "HIP_MSG_NSUPDATE_OFF";
     case HIP_MSG_HEARTBEAT:          return "HIP_MSG_HEARTBEAT";
