@@ -94,7 +94,6 @@
 #include "input.h"
 #include "keymat.h"
 #include "netdev.h"
-#include "oppdb.h"
 #include "output.h"
 #include "hadb.h"
 
@@ -908,28 +907,13 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
  */
 int hip_del_peer_info_entry(struct hip_hadb_state *ha)
 {
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    struct hip_opp_blocking_request *opp_entry = NULL;
-#endif
-
     /* by now, if everything is according to plans, the refcnt
      * should be 1 */
     HIP_DEBUG_HIT("our HIT", &ha->hit_our);
     HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
     hip_delete_security_associations_and_sp(ha);
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
-#endif
-
-    /* Delete hadb entry before oppdb entry to avoid a loop */
     hip_hadb_delete_state(ha);
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    if (opp_entry) {
-        hip_oppdb_entry_clean_up(opp_entry);
-    }
-#endif
 
     return 0;
 }
