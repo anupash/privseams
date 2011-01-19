@@ -296,13 +296,15 @@ static int hip_fw_init_esp_prot(void)
     int err = 0;
 
     // userspace ipsec is a prerequisite for esp protection
-    if (hip_esp_protection && hip_userspace_ipsec) {
-        HIP_IFEL(esp_prot_init(), -1, "failed to init esp protection\n");
-    } else {
-        HIP_ERROR("userspace ipsec needs to be turned on for this to work\n");
+    if (hip_esp_protection) {
+        if (hip_userspace_ipsec) {
+            HIP_IFEL(esp_prot_init(), -1, "failed to init esp protection\n");
+        } else {
+            HIP_ERROR("userspace ipsec needs to be turned on for this to work\n");
 
-        err = 1;
-        goto out_err;
+            err = 1;
+            goto out_err;
+        }
     }
 
 out_err:
