@@ -72,7 +72,7 @@ int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit
              -1, "Could not init connection context\n");
     HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_ctx),
              -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.euid, &new_ctx.user_ctx),
+    HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.uid, &new_ctx.user_ctx),
              -1, "Could not get user name \n");
     new_ctx.connection_status = SIGNALING_CONN_PENDING;
 
@@ -225,7 +225,7 @@ int signaling_hipfw_handle_connection_context_request(struct hip_common *msg) {
              -1, "Could not init connection context\n");
     HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_ctx),
              -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.euid, &new_ctx.user_ctx),
+    HIP_IFEL(signaling_user_api_get_uname(new_ctx.user_ctx.uid, &new_ctx.user_ctx),
              -1, "Could not get user name \n");
 
     /* c) check with local policy if we want to allow the local connection context

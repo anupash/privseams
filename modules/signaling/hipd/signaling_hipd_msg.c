@@ -138,7 +138,7 @@ static struct hip_common *build_update_message(hip_ha_t *ha, const int type, str
             -EINVAL, "Could not sign UPDATE. Failing\n");
 
     /* Add user authentication */
-    if(signaling_build_param_user_signature(msg_buf, ctx->user_ctx.euid)) {
+    if(signaling_build_param_user_signature(msg_buf, ctx->user_ctx.uid)) {
         HIP_DEBUG("User failed to sign UPDATE.\n");
     }
 
@@ -324,8 +324,8 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha) {
     /* Get the users certificate chain */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ha->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
-    HIP_IFEL(!(cert_chain = signaling_user_api_get_user_certificate_chain(sig_state->ctx.user_ctx.euid)),
-             -1, "Could not get certificate for user with id %d\n", sig_state->ctx.user_ctx.euid);
+    HIP_IFEL(!(cert_chain = signaling_user_api_get_user_certificate_chain(sig_state->ctx.user_ctx.uid)),
+             -1, "Could not get certificate for user with id %d\n", sig_state->ctx.user_ctx.uid);
     total_cert_count = sk_X509_num(cert_chain);
     HIP_DEBUG("Sending a total of %d certificates from users chain.\n", total_cert_count);
 
@@ -371,7 +371,7 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha) {
         HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
                  -EINVAL, "Could not sign UPDATE. Failing\n");
 
-        HIP_DEBUG("Sending certificate chain for subject id %d up to certificate %d of %d\n", sig_state->ctx.user_ctx.euid, count, total_cert_count);
+        HIP_DEBUG("Sending certificate chain for subject id %d up to certificate %d of %d\n", sig_state->ctx.user_ctx.uid, count, total_cert_count);
 
         err = hip_send_pkt(NULL,
                            &ha->peer_addr,
@@ -727,7 +727,7 @@ int signaling_i2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED con
     HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                  -1, "failed to retrieve state for signaling\n");
-    HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->ctx.user_ctx.euid),
+    HIP_IFEL(signaling_build_param_user_signature(ctx->output_msg, sig_state->ctx.user_ctx.uid),
              -1, "User failed to sign packet.\n");
 out_err:
     return err;

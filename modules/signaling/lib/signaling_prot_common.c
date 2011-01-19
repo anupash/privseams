@@ -136,7 +136,7 @@ void signaling_user_context_print(const struct signaling_user_context * const us
     if (header)
         HIP_DEBUG("%s+------------- USER CONTEXT START ----------------------\n", prefix);
     HIP_DEBUG("%s  User context \n", prefix);
-    HIP_DEBUG("%s  \tSystem UID:\t %d\n", prefix, user_ctx->euid);
+    HIP_DEBUG("%s  \tSystem UID:\t %d\n", prefix, user_ctx->uid);
     HIP_DEBUG("%s  \tUser Name:\t %s\n", prefix, subj_name_string);
     HIP_DEBUG("%s  \tUser Key:\t %s\n", prefix, signaling_user_key_name(user_ctx->rdata.algorithm));
     HIP_DEBUG("%s  \tUser Key RR:\t Size %d\n", prefix, user_ctx->key_rr_len == -1 ? 0 : user_ctx->key_rr_len - sizeof(struct hip_host_id_key_rdata));
@@ -225,7 +225,7 @@ int signaling_init_user_context(struct signaling_user_context * const user_ctx) 
 
     HIP_IFEL(!user_ctx, -1, "User context has to be allocated before initialization\n");
 
-    user_ctx->euid              = -1;    // no user id
+    user_ctx->uid              = -1;    // no user id
     user_ctx->subject_name_len  = -1;    // no subject name
     user_ctx->key_rr_len        = -1;    // no user public key (but key_rdata still has size 4)
     user_ctx->rdata.algorithm   = 0;     // no user public key algorithm

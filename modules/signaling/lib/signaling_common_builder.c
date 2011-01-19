@@ -225,7 +225,7 @@ int signaling_build_param_user_context(struct hip_common *msg,
      *   a) We already have it in the user_ctx (send by the firewall).
      *   b) We need to load it from the users certificate. */
     if (user_ctx->key_rr_len <= 0) {
-        HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(user_ctx->euid)),
+        HIP_IFEL(!(user_pkey = signaling_user_api_get_user_public_key(user_ctx->uid)),
                  -1, "Could not obtain users public key \n");
         PEM_write_PUBKEY(stdout, user_pkey);
         HIP_IFEL((user_ctx->key_rr_len = any_key_to_key_rr(user_pkey, &user_ctx->rdata.algorithm, &key_rr)) < 0,

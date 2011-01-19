@@ -220,7 +220,7 @@ struct signaling_application_context {
      All integers are in host-byte-order.
 */
 struct signaling_user_context {
-    long int euid;
+    long int uid;
     int subject_name_len;
     int key_rr_len;
 

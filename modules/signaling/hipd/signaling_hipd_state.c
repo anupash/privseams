@@ -32,7 +32,7 @@ int signaling_hipd_init_state(struct modular_state *state)
 
     // TODO: proper initialization to 0/NULL values
     memset(sig_state, 0, sizeof(struct signaling_hipd_state));
-    sig_state->ctx.user_ctx.euid            = -1;
+    sig_state->ctx.user_ctx.uid            = -1;
 
     sig_state->user_cert_ctx.user_certificate_required    = 0;
     sig_state->user_cert_ctx.cert_chain                   = NULL;
