@@ -83,8 +83,7 @@
 #include "keymat.h"
 #include "maintenance.h"
 #include "netdev.h"
-#include "oppdb.h"
-#include "oppipdb.h"
+#include "opp_mode.h"
 #include "output.h"
 #include "pisa.h"
 #include "pkt_handling.h"
@@ -558,8 +557,8 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     if (!ctx->hadb_entry &&
         (type == HIP_I1 || type == HIP_R1)) {
         ctx->hadb_entry =
-            hip_oppdb_get_hadb_entry_i1_r1(ctx->input_msg,
-                                           &ctx->src_addr);
+            hip_opp_get_hadb_entry_i1_r1(ctx->input_msg,
+                                         &ctx->src_addr);
     }
 #endif
 
@@ -707,8 +706,6 @@ int hip_check_r1(RVS const uint8_t packet_type,
              "Dropping.\n");
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&ctx->hadb_entry->peer_addr);
     /* Replace the opportunistic entry with one using the peer HIT
      * before further operations */
     if (hit_is_opportunistic_hit(&ctx->hadb_entry->hit_peer)) {
@@ -1128,10 +1125,6 @@ int hip_handle_r2(RVS const uint8_t packet_type,
     ctx->hadb_entry->state = HIP_STATE_ESTABLISHED;
     hip_hadb_insert_state(ctx->hadb_entry);
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&(ctx->hadb_entry->peer_addr));
-#endif
     HIP_INFO("Reached ESTABLISHED state\n");
     HIP_INFO("Handshake completed\n");
 
