@@ -155,7 +155,7 @@
 /* free slot */
 #define TYPE_PUZZLE        6
 #define TYPE_NAT           7
-#define TYPE_OPP           EXEC_LOADLIB_OPP /* Should be 8 */
+/* unused, was TYPE_OPP 8 */
 /* unused, was TYPE_BLIND 9 */
 #define TYPE_SERVICE       10
 #define TYPE_CONFIG        11
@@ -168,7 +168,7 @@
 #define TYPE_DAEMON        19
 #define TYPE_LOCATOR       20
 /* free slots */
-#define TYPE_OPPTCP        23
+/* unused, was TYPE_OPPTCP 23 */
 #define TYPE_ORDER         24
 /* free slots */
 #define TYPE_HEARTBEAT     27
@@ -219,9 +219,6 @@ const char *hipconf_usage =
     "Client side:\n"
     "\tadd server rvs|relay|full-relay [HIT] <IP|hostname> <lifetime in seconds>\n"
     "\tdel server rvs|relay|full-relay [HIT] <IP|hostname>\n"
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    "set opp normal|advanced|none\n"
-#endif
     "heartbeat <seconds> (0 seconds means off)\n"
     "get ha all|HIT\n"
     "locator on|off|get\n"
@@ -699,13 +696,7 @@ static int hip_conf_get_type(const char *text, const char *argv[])
         ret = TYPE_DAEMON;
     } else if ((!strcmp("mode", text)) && (strcmp("handover", argv[1]) == 0)) {
         ret = TYPE_HANDOVER;
-    }
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    else if (!strcmp("opp", text)) {
-        ret = TYPE_OPP;
-    }
-#endif
-    else if (!strcmp("order", text)) {
+    } else if (!strcmp("order", text)) {
         ret = TYPE_ORDER;
     } else if (strcmp("heartbeat", argv[1]) == 0) {
         ret = TYPE_HEARTBEAT;
@@ -866,11 +857,10 @@ static int hip_conf_handle_server(struct hip_common *msg,
 {
     hip_hit_t       hit;
     struct in6_addr ipv6;
-    int             err          = 0, seconds = 0, i = 0, number_of_regtypes = 0, reg_type = 0;
-    int             index_of_hit = 0, index_of_ip = 0, opp_mode = 0;
-    ;
-    uint8_t lifetime              = 0, *reg_types = NULL;
-    time_t  seconds_from_lifetime = 0;
+    int             err                   = 0, seconds = 0, i = 0, number_of_regtypes = 0, reg_type = 0;
+    int             index_of_hit          = 0, index_of_ip = 0, opp_mode = 0;
+    uint8_t         lifetime              = 0, *reg_types = NULL;
+    time_t          seconds_from_lifetime = 0;
 
     memset(&hit, 0, sizeof(hit));
     memset(&ipv6, 0, sizeof(ipv6));
@@ -1748,66 +1738,6 @@ out_err:
 }
 
 /**
- * Handles the hipconf commands where the type is @c opp.
- *
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array.
- * @param send_only currently unused
- * @return       zero on success, or negative error value on error.
- */
-static int hip_conf_handle_opp(struct hip_common *msg,
-                               int action,
-                               const char *opt[],
-                               int optc,
-                               UNUSED int send_only)
-{
-    unsigned int oppmode = 0;
-    int          err     = 0;
-
-    if (action == ACTION_RUN) {
-        return hip_handle_exec_app(0, EXEC_LOADLIB_OPP, optc, &opt[0]);
-    }
-    if (optc != 1) {
-        HIP_ERROR("Incorrect number of arguments\n");
-        err = -EINVAL;
-        goto out;
-    }
-
-    if (!strcmp("normal", opt[0])) {
-        oppmode = 1;
-    } else if (!strcmp("advanced", opt[0])) {
-        oppmode = 2;
-    } else if (!strcmp("none", opt[0])) {
-        oppmode = 0;
-    } else {
-        HIP_ERROR("Invalid argument\n");
-        err = -EINVAL;
-        goto out;
-    }
-
-    /* Build the message header */
-    err = hip_build_user_hdr(msg, HIP_MSG_SET_OPPORTUNISTIC_MODE, 0);
-    if (err) {
-        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-        goto out;
-    }
-
-    err = hip_build_param_contents(msg, &oppmode, HIP_PARAM_UINT,
-                                   sizeof(unsigned int));
-    if (err) {
-        HIP_ERROR("build param oppmode failed: %s\n", strerror(err));
-        goto out;
-    }
-
-out:
-    return err;
-}
-
-/**
  * Translate a HIT to an LSI
  *
  * @param msg input/output message for the query/response for hipd
@@ -2161,8 +2091,7 @@ out_err:
  * @note In order to this function to work properly, "make install"
  *       must be executed to install libraries to right paths. Also library
  *       paths must be set right.
- * @see exec_app_types EXEC_LOADLIB_OPP, EXEC_LOADLIB_HIP and
- *      EXEC_LOADLIB_NONE
+ * @see exec_app_types EXEC_LOADLIB_HIP and EXEC_LOADLIB_NONE
  *
  */
 int hip_handle_exec_app(int do_fork, int type, int argc,
@@ -2198,9 +2127,6 @@ int hip_handle_exec_app(int do_fork, int type, int argc,
     HIP_DEBUG("Executing %s.\n", argv[0]);
     if (type == EXEC_LOADLIB_HIP) {
         libs[0] = strdup("libhiptool.so");
-    } else if (type == EXEC_LOADLIB_OPP) {
-        libs[0] = strdup("libopphip.so");
-        libs[1] = strdup("libhiptool.so");
     }
 
     hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
@@ -2583,7 +2509,7 @@ int (*action_handler[])(struct hip_common *,
     NULL,                               /* 5: unused, was TYPE_BOS */
     hip_conf_handle_puzzle,             /* 6: TYPE_PUZZLE */
     hip_conf_handle_nat,                /* 7: TYPE_NAT */
-    hip_conf_handle_opp,                /* 8: TYPE_OPP */
+    NULL,                               /* 8: unused, was TYPE_OPP */
     NULL,                               /* 9: unused, was TYPE_BLIND */
     hip_conf_handle_service,            /* 10: TYPE_SERVICE */
     /* Any server side registration action. */
