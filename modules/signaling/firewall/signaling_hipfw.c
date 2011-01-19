@@ -170,7 +170,6 @@ int signaling_hipfw_uninit(void) {
     return 0;
 }
 
-
 /*
  * Add all information about application and user to the connection tracking table.
  *
@@ -183,17 +182,20 @@ static int signaling_hipfw_conntrack(struct tuple * const tuple,
                                      struct signaling_connection_context * const conn_ctx)
 {
     int err = 0;
-
-    HIP_IFEL(!tuple,
-             -1, "Connection tracking tuple is NULL \n");
+    struct signaling_connection_context *new_conn_ctx = NULL;
 
     if(!do_conntrack) {
         return 0;
     }
+    HIP_IFEL(!tuple, -1, "Connection tracking tuple is NULL \n");
+    HIP_IFEL(!(new_conn_ctx = malloc(sizeof(struct signaling_connection_context))),
+             -1, "Could not allocate new connection context \n");
+    signaling_copy_connection_context(new_conn_ctx, conn_ctx);
+    tuple->connection_contexts = append_to_slist(tuple->connection_contexts, &new_conn_ctx);
 
-    tuple->connection_contexts = append_to_slist(tuple->connection_contexts, conn_ctx);
-
+    return 0;
 out_err:
+    free(new_conn_ctx);
     return err;
 }
 
@@ -206,13 +208,11 @@ out_err:
  */
 int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
 {
-    struct signaling_connection_context *conn_ctx = NULL;
+    struct signaling_connection_context conn_ctx;
     int verdict = 1;
     int err = 0;
 
-    HIP_IFEL(!(conn_ctx = malloc(sizeof(struct signaling_connection_context))),
-             -1, "Could not allocate new connection context\n");
-    HIP_IFEL(signaling_init_connection_context_from_msg(conn_ctx, common),
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, common),
              -1, "Could not init new connection context from message\n");
 
     /* Verify the user signature in the packet. */
@@ -223,17 +223,18 @@ int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, UN
         break;
     case -1:
         HIP_DEBUG("Error processing user signature, assuming \"ANY USER\"\n");
-        signaling_init_user_context(&conn_ctx->user_ctx);
+        signaling_init_user_context(&conn_ctx.user_ctx);
         break;
     default:
         HIP_DEBUG("Could not verify certifcate chain:\n");
         HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
         HIP_DEBUG("Requesting user's certificate chain.\n");
+
         // TODO: send a notification / certificate request
     }
 
     /* Get a verdict on given hosts, user and application from the policy engine */
-    verdict = signaling_policy_check(tuple, conn_ctx);
+    verdict = signaling_policy_check(tuple, &conn_ctx);
     if(!verdict) {
         HIP_DEBUG("Connection has been rejected according to the firewall's policy\n");
     } else {
@@ -242,7 +243,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, UN
 
     /* If we allow the connection, save it in conntracking table */
     if (verdict) {
-        if (signaling_hipfw_conntrack(tuple, conn_ctx)) {
+        if (signaling_hipfw_conntrack(tuple, &conn_ctx)) {
             // for now we let pass, if we were very restrictive,
             // we would spread verdict = DROP here
             HIP_DEBUG("Couldn't conntrack connection context\n");
@@ -251,7 +252,6 @@ int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, UN
 
     return verdict;
 out_err:
-    free(conn_ctx);
     return 0;
 }
 
