@@ -123,9 +123,7 @@ hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
 
 if HIP_OPPORTUNISTIC
-hipd_hipd_SOURCES += hipd/oppdb.c                \
-                     hipd/oppipdb.c              \
-                     hipd/opp_mode.c
+hipd_hipd_SOURCES += hipd/opp_mode.c
 endif
 
 firewall_hipfw_SOURCES = firewall/cache.c               \
