@@ -76,7 +76,7 @@
 #define SIGNALING_APP_GRP_MAX_LEN   64
 #define SIGNALING_USER_ID_MAX_LEN   256
 #define SIGNALING_USER_KEY_MAX_LEN  HIP_MAX_RSA_KEY_LEN / 8 + 4 // see lib/core/protodefs.h
-#define SIGNALING_PATH_MAX_LEN      2048
+#define SIGNALING_PATH_MAX_LEN      PATH_MAX
 
 /* Failure types for user authentication */
 #define SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED    1
@@ -206,8 +206,6 @@ struct signaling_param_app_context {
      All integers are in host-byte-order.
 */
 struct signaling_application_context {
-    pid_t pid;
-    char path[SIGNALING_PATH_MAX_LEN];
     char application_dn[SIGNALING_APP_DN_MAX_LEN];
     char issuer_dn[SIGNALING_ISS_DN_MAX_LEN];
     char requirements[SIGNALING_APP_REQ_MAX_LEN];

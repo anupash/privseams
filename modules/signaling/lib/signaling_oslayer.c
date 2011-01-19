@@ -21,20 +21,6 @@
 /* MAX = sizeof(/proc/{port}/exe) <= 16 */
 #define SYMLINKBUF_SIZE         16
 
-// Netstat format widths (derived from netstat source code)
-#define NETSTAT_SIZE_PROTO      7
-#define NETSTAT_SIZE_RECV_SEND  7
-#define NETSTAT_SIZE_OUTPUT     160
-#define NETSTAT_SIZE_STATE      12
-#define NETSTAT_SIZE_PROGNAME   20
-#define NETSTAT_SIZE_ADDR_v6    50
-
-
-#include <x509ac.h>
-#include <x509attr.h>
-#include <x509ac-supp.h>
-#include <x509attr-supp.h>
-#include <x509ac_utils.h>
 #include <openssl/x509.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
@@ -48,7 +34,8 @@
  *
  * @note app_file is supposed to be 0-terminated
  */
-static X509AC *get_application_attribute_certificate(const char *app_file) {
+static X509AC *get_application_attribute_certificate(const char *app_file)
+{
     FILE *fp = NULL;
     char *app_cert_file = NULL;
     X509AC *app_cert = NULL;
@@ -78,7 +65,8 @@ out_err:
 /**
  * This hashes a file 'in_file' and returns the digest in 'digest_buffer'.
  */
-static int hash_file(const char *in_file, unsigned char *digest_buffer) {
+static int hash_file(const char *in_file, unsigned char *digest_buffer)
+{
     SHA_CTX context;
     int fd;
     int i;
@@ -107,7 +95,8 @@ out_err:
     return err;
 }
 
-static int verify_application_hash(const char *file, X509AC *ac) {
+static int verify_application_hash(const char *file, X509AC *ac)
+{
     int err = 0;
     int res = 0;
     unsigned char md[SHA_DIGEST_LENGTH];
@@ -152,7 +141,10 @@ out_err:
  *
  *  @return NULL on error, the path to the application binary on success
  */
-int signaling_netstat_get_application_by_ports(const uint16_t src_port, const uint16_t dst_port, struct signaling_connection_context *ctx) {
+int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_port,
+                                                           const uint16_t dst_port,
+                                                           struct system_app_context *const sys_ctx)
+{
     FILE *fp;
     int err = 0, UNUSED scanerr;
     char *res;
@@ -160,21 +152,13 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
     char symlinkbuf[SYMLINKBUF_SIZE];
     char readbuf[NETSTAT_SIZE_OUTPUT];
 
-    // variables for parsing
-    char proto[NETSTAT_SIZE_PROTO];
-    char unused[NETSTAT_SIZE_RECV_SEND];
-    char remote_addr[NETSTAT_SIZE_ADDR_v6];
-    char local_addr[NETSTAT_SIZE_ADDR_v6];
-    char state[NETSTAT_SIZE_STATE];
-    char progname[NETSTAT_SIZE_PROGNAME];
-    UNUSED int inode;
-
-    memset(proto,       0, NETSTAT_SIZE_PROTO);
-    memset(unused,      0, NETSTAT_SIZE_RECV_SEND);
-    memset(remote_addr, 0, NETSTAT_SIZE_ADDR_v6);
-    memset(local_addr,  0, NETSTAT_SIZE_ADDR_v6);
-    memset(state,       0, NETSTAT_SIZE_STATE);
-    memset(progname,    0, NETSTAT_SIZE_PROGNAME);
+    memset(sys_ctx->proto,       0, NETSTAT_SIZE_PROTO);
+    memset(sys_ctx->recv_q,      0, NETSTAT_SIZE_RECV_SEND);
+    memset(sys_ctx->send_q,      0, NETSTAT_SIZE_RECV_SEND);
+    memset(sys_ctx->remote_addr, 0, NETSTAT_SIZE_ADDR_v6);
+    memset(sys_ctx->local_addr,  0, NETSTAT_SIZE_ADDR_v6);
+    memset(sys_ctx->state,       0, NETSTAT_SIZE_STATE);
+    memset(sys_ctx->progname,    0, NETSTAT_SIZE_PROGNAME);
 
     // prepare and make call to netstat
     sprintf(callbuf, "netstat -tpneW | grep :%d | grep :%d", src_port, dst_port);
@@ -208,23 +192,28 @@ int signaling_netstat_get_application_by_ports(const uint16_t src_port, const ui
      * Parse the output.
      * Format is the same for connections and listening sockets.
      */
-    scanerr = sscanf(readbuf, "%s %s %s %s %s %s %ld %d %d/%s",
-            proto, unused, unused, local_addr, remote_addr, state, &ctx->user_ctx.euid, &inode, &ctx->app_ctx.pid, progname);
-    HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", progname, ctx->app_ctx.pid, ctx->user_ctx.euid, proto);
-    HIP_DEBUG("\t from:\t %s\n", local_addr);
-    HIP_DEBUG("\t to:\t %s\n", remote_addr);
+    scanerr = sscanf(readbuf, "%s %s %s %s %s %s %d %d %d/%s",
+                     sys_ctx->proto,
+                     sys_ctx->recv_q,
+                     sys_ctx->send_q,
+                     sys_ctx->local_addr,
+                     sys_ctx->remote_addr,
+                     sys_ctx->state,
+                     &sys_ctx->uid,
+                     &sys_ctx->inode,
+                     &sys_ctx->pid,
+                     sys_ctx->progname);
+    HIP_DEBUG("Found program %s (%d) owned by uid %d on a %s connection from: \n", sys_ctx->progname, sys_ctx->pid, sys_ctx->uid, sys_ctx->proto);
+    HIP_DEBUG("\t from:\t %s\n", sys_ctx->local_addr);
+    HIP_DEBUG("\t to:\t %s\n",   sys_ctx->remote_addr);
 
     // determine path to application binary from /proc/{pid}/exe
-    memset(ctx->app_ctx.path, 0, SIGNALING_PATH_MAX_LEN);
-    sprintf(symlinkbuf, "/proc/%i/exe", ctx->app_ctx.pid);
-    HIP_IFEL(0 > readlink(symlinkbuf, ctx->app_ctx.path, SIGNALING_PATH_MAX_LEN),
+    memset(sys_ctx->path, 0, SIGNALING_PATH_MAX_LEN);
+    sprintf(symlinkbuf, "/proc/%i/exe", sys_ctx->pid);
+    HIP_IFEL(0 > readlink(symlinkbuf, sys_ctx->path, SIGNALING_PATH_MAX_LEN),
              -1, "Failed to read symlink to application binary\n");
 
-    HIP_DEBUG("Found application binary at: %s \n", ctx->app_ctx.path);
-
-    /* We still need to set ports */
-    ctx->src_port = src_port;
-    ctx->dest_port = dst_port;
+    HIP_DEBUG("Found application binary at: %s \n", sys_ctx->path);
 
 out_err:
     return err;
@@ -235,20 +224,16 @@ out_err:
  *
  * Also sets application path.
  */
-int signaling_get_application_context_from_certificate(char *app_path, struct signaling_application_context *app_ctx) {
+int signaling_get_application_context_from_certificate(X509AC *ac,
+                                                       struct signaling_application_context *app_ctx)
+{
     int err = 0;
-    X509AC *ac = NULL;
     X509_NAME *name;
 
-    HIP_IFEL(!(ac = get_application_attribute_certificate(app_path)),
-            -1, "Could not open application certificate.");
-
-    /* Dump certificate */
-    //X509AC_print(app_cert);
+    HIP_IFEL(!ac,       -1, "Cannot fill application context from NULL-certificate.\n");
+    HIP_IFEL(!app_ctx,  -1, "Cannot write to NULL-application context.\n");
 
     /* Fill in context */
-    strcpy(app_ctx->path, app_path);
-
     if ((ac->info->issuer->type == 0)||
         ((ac->info->issuer->type == 1)&&(ac->info->issuer->d.v2Form->issuer != NULL))) {
         name = X509AC_get_issuer_name(ac);
@@ -277,7 +262,8 @@ out_err:
 /*
  * Argument is a null-terminated string.
  */
-int signaling_verify_application(const char *app_path) {
+int signaling_verify_application(const char *app_path)
+{
     int err = 0;
     const char *issuer_cert_file;
     FILE *fp = NULL;
@@ -340,14 +326,25 @@ out_err:
 /*
  * Just a wrapper.
  */
-int signaling_get_verified_application_context_by_ports(uint16_t src_port, uint16_t dst_port, struct signaling_connection_context *ctx) {
+int signaling_get_verified_application_context_by_ports(uint16_t src_port,
+                                                        uint16_t dst_port,
+                                                        struct signaling_connection_context *const ctx)
+{
     int err = 0;
-    HIP_IFEL(signaling_netstat_get_application_by_ports(src_port, dst_port, ctx),
-             -1, "Netstat failed to get path to application for given port pair.\n");
-    HIP_IFEL(signaling_verify_application(ctx->app_ctx.path),
-             -1, "Could not verify certificate of application: %s.\n", ctx->app_ctx.path);
-    HIP_IFEL(signaling_get_application_context_from_certificate(ctx->app_ctx.path, &ctx->app_ctx),
-             -1, "Could not build application context for application: %s.\n", ctx->app_ctx.path);
+    X509AC *ac = NULL;
+    struct system_app_context sys_ctx;
+
+    ctx->src_port = src_port;
+    ctx->dest_port = dst_port;
+    HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(src_port, dst_port, &sys_ctx),
+             -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", src_port, dst_port);
+    ctx->user_ctx.euid = sys_ctx.uid;
+    HIP_IFEL(signaling_verify_application(sys_ctx.path),
+             -1, "Could not verify certificate of application: %s.\n", sys_ctx.path);
+    HIP_IFEL(!(ac = get_application_attribute_certificate(sys_ctx.path)),
+            -1, "Could not open application certificate.");
+    HIP_IFEL(signaling_get_application_context_from_certificate(ac, &ctx->app_ctx),
+             -1, "Could not build application context for application: %s.\n", sys_ctx.path);
 
 out_err:
     return err;

@@ -203,12 +203,10 @@ int signaling_init_application_context(struct signaling_application_context * co
 
     HIP_IFEL(!app_ctx, -1, "Application context has to be allocated before initialization\n");
 
-    app_ctx->pid                = -1;
     app_ctx->application_dn[0]  = '\0';
     app_ctx->issuer_dn[0]       = '\0';
     app_ctx->groups[0]          = '\0';
     app_ctx->requirements[0]    = '\0';
-    app_ctx->path[0]            = '\0';
 
 out_err:
     return err;
