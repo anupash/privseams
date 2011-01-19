@@ -60,7 +60,6 @@
 #include "hidb.h"
 #include "hipd.h"
 #include "init.h"
-#include "oppdb.h"
 #include "output.h"
 #include "maintenance.h"
 
@@ -74,7 +73,6 @@ struct maint_function {
 int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter      = HIP_RETRANSMIT_INIT;
-float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
 float precreate_counter    = HIP_R1_PRECREATE_INIT;
 float queue_counter        = QUEUE_CHECK_INIT;
 int   force_exit_counter   = FORCE_EXIT_COUNTER_START;
@@ -151,27 +149,6 @@ out_err:
 
     return err;
 }
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-/**
- * scan for opportunistic connections that should time out
- * and give up (fall back to normal TCP/IP)
- *
- * @return zero on success or negative on failure
- */
-static int hip_scan_opp_fallback(void)
-{
-    int    err = 0;
-    time_t current_time;
-    time(&current_time);
-
-    HIP_IFEL(hip_for_each_opp(hip_handle_opp_fallback, &current_time), 0,
-             "for_each_ha err.\n");
-out_err:
-    return err;
-}
-
-#endif
 
 /**
  * deliver pending retransmissions for all host associations
@@ -307,17 +284,6 @@ int hip_periodic_maintenance(void)
         retrans_counter--;
     }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-
-    if (opp_fallback_counter < 0) {
-        HIP_IFEL(hip_scan_opp_fallback(), -1,
-                 "retransmission scan failed\n");
-        opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
-    } else {
-        opp_fallback_counter--;
-    }
-#endif
-
     if (precreate_counter < 0) {
         HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1,
                  "Failed to recreate puzzles\n");
@@ -367,7 +333,7 @@ int hip_firewall_is_alive(void)
 
 /**
  * Update firewall on host association state. Currently used by the
- * LSI and system-based opportunistic mode in the firewall.
+ * LSI mode in the firewall.
  *
  * @param action HIP_MSG_FW_UPDATE_DB or HIP_MSG_FW_BEX_DONE
  * @param hit_s optional source HIT
