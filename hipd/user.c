@@ -86,7 +86,6 @@
 #include "nat.h"
 #include "netdev.h"
 #include "nsupdate.h"
-#include "oppdb.h"
 #include "output.h"
 #include "registration.h"
 #include "user.h"
@@ -251,6 +250,10 @@ int hip_handle_user_msg(struct hip_common *msg,
     int                          err       = 0, msg_type = 0, reti = 0;
     int                          access_ok = 0, is_root = 0;
     const struct hip_tlv_common *param     = NULL;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+    struct in6_addr opp_hit, src_ip;
+    struct in6_addr hit_local;
+#endif
 
     HIP_ASSERT(src->sin6_family == AF_INET6);
     HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -364,11 +367,6 @@ int hip_handle_user_msg(struct hip_common *msg,
         dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
         hip_dec_cookie_difficulty();
         break;
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    case HIP_MSG_GET_PEER_HIT:
-        err = hip_opp_get_peer_hit(msg, src);
-        break;
-#endif
     case HIP_MSG_CERT_SPKI_VERIFY:
     {
         HIP_DEBUG("Got an request to verify SPKI cert\n");
@@ -432,9 +430,6 @@ int hip_handle_user_msg(struct hip_common *msg,
         struct sockaddr_in6           sock_addr6;
         struct sockaddr_in            sock_addr;
         struct in6_addr               server_addr;
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-        struct in6_addr *hit_local;
-#endif
 
         /* Get RVS IP address, HIT and requested lifetime given as
          * commandline parameters to hipconf. */
@@ -501,12 +496,39 @@ int hip_handle_user_msg(struct hip_common *msg,
         }
 #ifdef CONFIG_HIP_OPPORTUNISTIC
         else {
-            hit_local = malloc(sizeof(struct in6_addr));
-            HIP_IFEL(hip_get_default_hit(hit_local), -1,
+            HIP_IFEL(hip_get_default_hit(&hit_local), -1,
                      "Error retrieving default HIT \n");
-            entry = hip_opp_add_map(dst_ip, hit_local, src);
+
+            HIP_IFEL(hip_opportunistic_ipv6_to_hit(dst_ip,
+                                                   &opp_hit,
+                                                   HIP_HIT_TYPE_HASH100),
+                     -1,
+                     "Opportunistic HIT conversion failed\n");
+
+            HIP_ASSERT(hit_is_opportunistic_hit(&opp_hit));
+
+            HIP_DEBUG_HIT("Opportunistic HIT", &opp_hit);
+
+            HIP_IFEL(hip_select_source_address(&src_ip,
+                                               dst_ip),
+                     -1,
+                     "Cannot find source address\n");
+
+            HIP_IFEL(hip_hadb_add_peer_info_complete(&hit_local,
+                                                     &opp_hit,
+                                                     NULL,
+                                                     &src_ip,
+                                                     dst_ip,
+                                                     NULL),
+                     -1,
+                     "failed to add peer information to hadb\n");
+
+            HIP_IFEL(!(entry = hip_hadb_find_byhits(&hit_local, &opp_hit)),
+                     -1,
+                     "Did not find entry\n");
         }
 #endif
+
         reg_types  = reg_req->reg_type;
         type_count = hip_get_param_contents_len(reg_req) -
                      sizeof(reg_req->lifetime);
