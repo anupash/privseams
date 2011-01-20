@@ -467,90 +467,14 @@ out_err:
     return err;
 }
 
+
 /*
- * Process application information in an I2 packet.
+ * Handles an incoming I2 packet.
+ *
+ * Process connection context information in an I2 packet.
  * We have to send a request to the firewall for the connection with this context,
  * and expect our own connection context from the hipfw to send it in the R2.
- *
- */
-UNUSED static int signaling_handle_i2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    int err = 0;
-    struct signaling_connection_context conn_ctx;
-
-    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
-             -1, "Could not init connection context from R2 \n");
-    signaling_send_connection_context_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
-
-out_err:
-	return err;
-}
-
-/*
- * Process application information in an R2 packet.
- * This completes a BEX with application context for which this HIPD process was the initiator.
- * So, we have to confirm the new connection to the hipfw/oslayer.
- *
- */
-static int signaling_handle_r2_app_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    int err = 0;
-    struct signaling_connection_context conn_ctx;
-
-    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
-             -1, "Could not init connection context from R2 \n");
-    conn_ctx.connection_status = SIGNALING_CONN_ALLOWED;
-    signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
-
-out_err:
-    return err;
-}
-
-
-/*
- * Process user context information in an I2 packet.
- */
-static int signaling_handle_i2_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    int err = 0;
-    const struct signaling_param_user_context *param_usr_ctx = NULL;
-    struct signaling_hipd_state * sig_state = NULL;
-
-    err = signaling_verify_user_signature(ctx->input_msg);
-    switch (err) {
-    case 0:
-        HIP_DEBUG("User signature verification successful\n");
-        break;
-    case -1:
-        HIP_DEBUG("Error processing user signature \n");
-        break;
-    default:
-        HIP_DEBUG("Could not verify certifcate chain:\n");
-        HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
-        /* cache the user identity */
-        HIP_IFEL(!(param_usr_ctx = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO)),
-                 -1, " error getting user context. \n");
-        HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-                 -1, "failed to retrieve state for signaling module\n");
-        signaling_build_user_context(param_usr_ctx, &sig_state->user_cert_ctx.user_ctx);
-        HIP_DEBUG("Requesting user's certificate chain.\n");
-        signaling_send_user_auth_failed_ntf(ctx->hadb_entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
-    }
-
-out_err:
-    return err;
-}
-
-/*
- * Process user context information in an R2 packet.
- */
-static int signaling_handle_r2_user_context(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
-{
-    return signaling_handle_i2_user_context(packet_type, ha_state, ctx);
-}
-
-/*
- * Handles an incomding I2 packet.
+ * We have to wait for the I3 to fully open the connection.
  */
 int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
     int err = 0;
@@ -603,14 +527,37 @@ out_err:
 
 /*
  * Handles an incoming R2 packet.
+ *
+ * Process connection context in an R2 packet.
+ * This completes a BEX with application context for which this HIPD process was the initiator.
+ * So, we have to confirm the new connection to the hipfw/oslayer and send the I3.
  */
 int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
-    int err     = 0;
-    struct signaling_hipd_state *sig_state = NULL;
+    int err                                                  = 0;
+    struct signaling_hipd_state * sig_state                  = NULL;
+    struct signaling_connection_context conn_ctx;
 
     HIP_IFEL(packet_type != HIP_R2, -1, "Not an R2 Packet\n")
-    signaling_handle_r2_user_context(packet_type, ha_state, ctx);
-    signaling_handle_r2_app_context(packet_type, ha_state, ctx);
+    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
+             -1, "Could not init connection context from R2 \n");
+
+    err = signaling_verify_user_signature(ctx->input_msg);
+    switch (err) {
+    case 0:
+        HIP_DEBUG("User signature verification of R2 successful\n");
+        conn_ctx.connection_status = SIGNALING_CONN_USER_AUTHED;
+        break;
+    case -1:
+        HIP_DEBUG("Error processing user signature in R2 \n");
+        conn_ctx.connection_status = SIGNALING_CONN_USER_UNAUTHED;
+        break;
+    default:
+        HIP_DEBUG("Could not verify certifcate chain for user in R2:\n");
+        HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
+        conn_ctx.connection_status = SIGNALING_CONN_USER_UNAUTHED;
+    }
+
+    signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx);
 
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
             -1, "failed to retrieve state for signaling ports\n");
@@ -753,7 +700,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_DEBUG("Received SECOND BEX Update... \n");
         HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, ctx->input_msg),
                  -1, "Could not init connection context from UPDATE \n");
-        conn_ctx.connection_status = SIGNALING_CONN_ALLOWED;
+        conn_ctx.connection_status = SIGNALING_CONN_UNAUTHED;
         HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn_ctx),
                 -1, "failed to notify fw to update scdb\n");
         HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),

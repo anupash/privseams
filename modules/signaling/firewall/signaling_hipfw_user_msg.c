@@ -143,7 +143,6 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     const hip_hit_t *src_hit                    = NULL;
     const hip_hit_t *dst_hit                    = NULL;
     struct signaling_connection_context ctx;
-    struct signaling_connection_context *waiting_ctx = NULL;
 
     HIP_IFEL(hip_get_msg_type(msg) != HIP_MSG_SIGNALING_CONFIRM_CONNECTION,
             -1, "Message has wrong type, expected HIP_MSG_SIGNALING_CONFIRM_CONNECTION.\n");
@@ -158,19 +157,12 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     // "param + 1" because we need to skip the hip_tlv_common_t header to get to the connection context struct
     signaling_copy_connection_context(&ctx, (const struct signaling_connection_context *) (param + 1));
 
-    if (ctx.connection_status == SIGNALING_CONN_USER_AUTHED) {
+    // todo: handle unauthed case porperly
+    if (ctx.connection_status == SIGNALING_CONN_USER_AUTHED || ctx.connection_status == SIGNALING_CONN_USER_UNAUTHED) {
         ctx.connection_status = SIGNALING_CONN_ALLOWED;
     }
     signaling_cdb_add(src_hit, dst_hit, &ctx);
     signaling_cdb_print();
-
-    /* If this confirmation notified about an established connection,
-     * determine if there is at least one waiting connection we can now establish */
-    waiting_ctx = signaling_cdb_get_waiting(src_hit, dst_hit);
-    if (waiting_ctx) {
-        HIP_DEBUG("Have connection on wait. Triggering again... \n");
-        signaling_hipfw_send_connection_request(src_hit, dst_hit, waiting_ctx);
-    }
 
 out_err:
     return err;
