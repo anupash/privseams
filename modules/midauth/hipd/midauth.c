@@ -31,6 +31,7 @@
  * @author Rene Hummen
  */
 
+#include "lib/core/common.h"
 #include "midauth.h"
 
 
@@ -48,7 +49,7 @@
  * al, End-Host Authentication for HIP Middleboxes, Internet draft,
  * work in progress, February 2009</a>
  */
-int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in)
+static int hip_add_puzzle_solution_m(struct hip_common *out, struct hip_common *in)
 {
     const struct hip_challenge_request *pz;
     struct hip_puzzle                   tmp;
@@ -86,33 +87,65 @@ out_err:
     return err;
 }
 
-int hip_midauth_puzzle_update(void)
+static int hip_midauth_add_puzzle_solution_m_update(UNUSED const uint8_t packet_type,
+                                                    UNUSED const uint32_t ha_state,
+                                                    struct hip_packet_context *ctx)
 {
-    /* TODO: no caching is done for PUZZLE_M parameters. This may be
-     * a DOS attack vector.
-     */
-    if (received_update_packet && type == HIP_UPDATE_ECHO_REQUEST) {
+    int err = 0;
+
+    if (hip_classify_update_type(ctx->input_msg) == SECOND_PACKET ||
+        hip_classify_update_type(ctx->input_msg) == THIRD_PACKET) {
+        /* TODO: no caching is done for PUZZLE_M parameters. This may be
+         * a DOS attack vector. */
         HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet), -1,
                  "Building of Challenge_Response failed\n");
-    } else {
-        HIP_DEBUG("msg is NULL, midauth parameters not included in reply\n");
     }
 
-    /* TODO: no caching is done for PUZZLE_M parameters. This may be
-     * a DOS attack vector.
-     */
-    if (type == HIP_UPDATE_ECHO_RESPONSE) {
-        HIP_IFEL(hip_solve_puzzle_m(update_packet_to_send, received_update_packet), -1,
-                 "Building of Challenge_Response failed\n");
-    }
+out_err:
+    return err;
 }
 
-void hip_midauth_init(void)
+static int hip_midauth_add_host_id_update(UNUSED const uint8_t packet_type,
+                                          UNUSED const uint32_t ha_state,
+                                          struct hip_packet_context *ctx)
 {
+    struct hip_host_id_entry *host_id_entry = NULL;
+    int                       err           = 0;
+
+    if (hip_classify_update_type(ctx->input_msg) == FIRST_PACKET ||
+        hip_classify_update_type(ctx->input_msg) == SECOND_PACKET) {
+        HIP_IFEL(!(host_id_entry = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
+                                                                        &ctx->input_msg->hitr,
+                                                                        HIP_ANY_ALGO,
+                                                                        -1)),
+                 -1,
+                 "Unknown HIT\n");
+
+        HIP_IFEL(hip_build_param_host_id(ctx->output_msg, host_id_entry->host_id),
+                 -1,
+                 "Building of host id failed\n");
+    }
+
+out_err:
+    return err;
+}
+
+int hip_midauth_init(void)
+{
+    int err = 0;
+
     /* register parameter types (builder:hip_check_network_param_type())
      *  HIP_PARAM_ECHO_REQUEST_M,
      *  HIP_PARAM_ECHO_RESPONSE_M,
      *  HIP_PARAM_CHALLENGE_REQUEST,
      *  HIP_PARAM_CHALLENGE_RESPONSE
      */
+
+    HIP_IFEL(hip_register_handle_function(HIP_UPDATE,
+                                          HIP_STATE_ESTABLISHED,
+                                          &hip_midauth_add_host_id_update,
+                                          40000),
+             -1, "Error on registering UPDATE handle function.\n");
+
+    return err;
 }

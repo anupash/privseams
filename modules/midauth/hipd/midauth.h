@@ -34,8 +34,6 @@
 #ifndef MIDAUTH_H_
 #define MIDAUTH_H_
 
-int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in);
-int hip_midauth_puzzle_update(void);
-void hip_midauth_init(void);
+int hip_midauth_init(void);
 
 #endif /* MIDAUTH_H_ */
