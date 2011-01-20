@@ -43,6 +43,9 @@
 
 #include "lib/core/protodefs.h"
 
+// definition of additional packet I3,
+// which we need for user authentication
+#define HIP_I3                                      6
 
 /* Signaling specific parameters for messages on the wire (adds to protodefs.h) */
 #define HIP_PARAM_SIGNALING_CONNECTION_ID       5000

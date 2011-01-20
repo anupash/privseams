@@ -33,6 +33,9 @@ int hip_signaling_init(void)
 {
 	int err = 0;
 
+	// register I3
+    lmod_register_packet_type(HIP_I3, "HIP_I3");
+
 	// register on the wire parameter types
 	lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_ID,      "HIP_PARAM_SIGNALING_CONNECTION_IDENTIFIER");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO,            "HIP_PARAM_SIGNALING_APPLICATION_CONTEXT");

@@ -56,6 +56,9 @@ int signaling_r2_add_application_context(const uint8_t packet_type, const uint32
 int signaling_r2_add_user_context(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 int signaling_r2_add_user_signature(const uint8_t packet_type, const uint32_t ha_state, struct hip_packet_context *ctx);
 
+/* Function for prolonged BEX */
+int signaling_send_I3(hip_ha_t *ha, struct signaling_connection_context *ctx);
+
 /* Functions for initiating and answering to a bex update */
 int signaling_send_first_update(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit,

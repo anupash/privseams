@@ -156,6 +156,66 @@ out_err:
 }
 
 /**
+ * Send an I3.
+ *
+ * @param src_hit   the HIT of the initiator of the BEX
+ * @param dst_hit   the HIT of the responder of the BEX
+ * @param ctx       the connection context, of the responder which is confirmed in the I3
+ *
+ * @return 0 on success, negative on error
+ */
+int signaling_send_I3(hip_ha_t *ha, struct signaling_connection_context *ctx) {
+    int err                    = 0;
+    uint16_t mask              = 0;
+    hip_common_t * msg_buf     = NULL;
+
+    /* sanity tests */
+    HIP_IFEL(!ha,      -1, "No host association given \n");
+    HIP_IFEL(!ctx    , -1, "No connection context given \n");
+
+    /* Allocate and build message */
+    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
+          -ENOMEM, "Out of memory while allocation memory for the I3 packet\n");
+    hip_build_network_hdr(msg_buf, HIP_I3, mask, &ha->hit_our, &ha->hit_peer);
+
+    /* Add connection id, application and user context.
+    * These parameters (as well as the user's signature are non-critical */
+    if(signaling_build_param_connection_identifier(msg_buf, ctx)) {
+      HIP_DEBUG("Building of connection identifier parameter failed\n");
+    }
+    if(signaling_build_param_application_context(msg_buf, &ctx->app_ctx)) {
+      HIP_DEBUG("Building of application context parameter failed\n");
+    }
+    if(signaling_build_param_user_context(msg_buf, &ctx->user_ctx)) {
+      HIP_DEBUG("Building of user conext parameter failed.\n");
+    }
+
+    /* Add host authentication */
+    HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
+             -1, "Building of HMAC failed\n");
+    HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
+             -EINVAL, "Could not sign I3. Failing\n");
+
+    /* Add user authentication */
+    if(signaling_build_param_user_signature(msg_buf, ctx->user_ctx.uid)) {
+      HIP_DEBUG("User failed to sign UPDATE.\n");
+    }
+
+    err = hip_send_pkt(NULL,
+                       &ha->peer_addr,
+                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ha->peer_udp_port,
+                       msg_buf,
+                       ha,
+                       1);
+
+out_err:
+    free(msg_buf);
+    return err;
+}
+
+
+/**
  * Send the first UPDATE message for an application that wants to establish a new connection.
  *
  * @param src_hit   the HIT of the initiator of the update exchange
