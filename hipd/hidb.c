@@ -334,7 +334,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db
             return id_entry;
         }
     }
-    HIP_DEBUG("Failed to find a host ID entry, Returning NULL.\n");
+    HIP_DEBUG("Failed to find a host ID entry.\n");
     return NULL;
 }
 

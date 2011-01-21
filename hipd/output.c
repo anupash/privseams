@@ -818,11 +818,11 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
 
     HIP_DEBUG_IN6ADDR("i1_saddr", &ctx->src_addr);
     HIP_DEBUG_IN6ADDR("i1_daddr", &ctx->dst_addr);
-    HIP_DEBUG_IN6ADDR("dst_ip", &dst_ip);
 
     relay_para_type = hip_relay_handle_relay_from(ctx->input_msg,
                                                   &ctx->src_addr,
                                                   &dst_ip, &r1_dst_port);
+    HIP_DEBUG_IN6ADDR("Final destination IP", &dst_ip);
 
     /* Get the final destination address and port for the outgoing R1.
      * dst_ip and dst_port have values only if the incoming I1 had
