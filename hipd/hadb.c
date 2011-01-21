@@ -235,24 +235,24 @@ static void hip_hadb_set_lsi_pair(struct hip_hadb_state *entry)
  * This function searches for a struct hip_hadb_state entry from the
  * hip_hadb_hit by a HIT pair (local,peer).
  *
- * @param hit local HIT
- * @param hit2 peer HIT
+ * @param hit_local local HIT
+ * @param hit_remote peer HIT
  * @return the corresponding host association or NULL if not found
  */
-struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit,
-                                            const hip_hit_t *hit2)
+struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit_local,
+                                            const hip_hit_t *hit_remote)
 {
     struct hip_hadb_state ha, *ret = NULL;
 
-    memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
-    memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
-    HIP_DEBUG_HIT("HIT1", hit);
-    HIP_DEBUG_HIT("HIT2", hit2);
+    memcpy(&ha.hit_our, hit_local, sizeof(hip_hit_t));
+    memcpy(&ha.hit_peer, hit_remote, sizeof(hip_hit_t));
+    HIP_DEBUG_HIT("Local HIT", hit_local);
+    HIP_DEBUG_HIT("Remote HIT", hit_remote);
 
     ret = hip_ht_find(hadb_hit, &ha);
     if (!ret) {
-        memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
-        memcpy(&ha.hit_our, hit2, sizeof(hip_hit_t));
+        memcpy(&ha.hit_peer, hit_local, sizeof(hip_hit_t));
+        memcpy(&ha.hit_our, hit_remote, sizeof(hip_hit_t));
         ret = hip_ht_find(hadb_hit, &ha);
     }
 
