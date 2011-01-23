@@ -101,6 +101,13 @@ enum direction {
     FWD     // pass through traffic (routers)
 };
 
+enum flag {
+    USER_AUTH_REQUEST,
+    USER_AUTHED,
+    HOST_AUTH_REQUEST,
+    HOST_AUTHED
+};
+
 /* ------------------------------------------------------------------------------------
  *
  *                    PARAMETER DEFINITIONS
@@ -284,7 +291,6 @@ struct signaling_user_context {
 struct signaling_connection_context {
     uint8_t  flags;
     uint8_t  direction;
-    uint16_t status;
     struct signaling_application_context app;
     struct signaling_user_context user;
 };
@@ -341,6 +347,12 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
                                        const hip_common_t * const msg);
 int signaling_copy_connection(struct signaling_connection * const dst,
                               const struct signaling_connection * const src);
+
+/* Flag handling */
+void signaling_flags_print(uint8_t flags, const char *const prefix);
+int signaling_flag_check(uint8_t flags, enum flag f);
+void signaling_flag_set(uint8_t *flags, enum flag f);
+void signaling_flag_unset(uint8_t *flags, enum flag f);
 
 #endif /*HIP_LIB_CORE_SIGNALING_PROT_COMMON_H*/
 

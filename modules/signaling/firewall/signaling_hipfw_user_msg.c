@@ -19,6 +19,7 @@
 #include "hipd/user.h"
 
 #include "modules/signaling/lib/signaling_common_builder.h"
+#include "modules/signaling/lib/signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_oslayer.h"
 #include "modules/signaling/lib/signaling_user_api.h"
 #include "signaling_hipfw_user_msg.h"
@@ -70,14 +71,21 @@ int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit
     /* Build the local connection context */
     HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
-    new_conn.src_port = src_port;
-    new_conn.dst_port = dst_port;
-    HIP_IFEL(signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_conn.ctx_out),
-             -1, "Application lookup/verification failed.\n");
-    HIP_IFEL(signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user),
-             -1, "Could not get user name \n");
     new_conn.status            = SIGNALING_CONN_NEW;
     new_conn.id                = signaling_cdb_get_next_connection_id();
+    new_conn.src_port = src_port;
+    new_conn.dst_port = dst_port;
+
+    if (signaling_get_verified_application_context_by_ports(src_port, dst_port, &new_conn.ctx_out)) {
+        HIP_DEBUG("Application lookup/verification failed.\n");
+    }
+
+    if (signaling_user_api_get_uname(new_conn.ctx_out.user.uid, &new_conn.ctx_out.user)) {
+        HIP_DEBUG("Could not get user name \n");
+        signaling_flag_unset(&new_conn.ctx_out.flags, USER_AUTHED);
+    } else {
+        signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
+    }
 
     /* Since this is a new connection we have to add an entry to the scdb */
     HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_conn),
@@ -160,7 +168,7 @@ int signaling_hipfw_handle_connection_confirmation(struct hip_common *msg) {
     signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1));
 
     // todo: handle unauthed case porperly
-    if (conn.ctx_in.status == SIGNALING_CONN_USER_AUTHED || conn.ctx_in.status == SIGNALING_CONN_USER_UNAUTHED) {
+    if (signaling_flag_check(conn.ctx_in.flags, USER_AUTHED) || !signaling_flag_check(conn.ctx_in.flags, USER_AUTHED)) {
         conn.status = SIGNALING_CONN_ALLOWED;
     }
 

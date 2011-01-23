@@ -319,8 +319,6 @@ static int signaling_cdb_update_entry(struct signaling_connection *old,
                                       const struct signaling_connection *new) {
 
     old->status = new->status;
-    old->ctx_in.status = new->ctx_in.status;
-    old->ctx_out.status = new->ctx_out.status;
     // TODO: update application context and user context
 
     return 0;

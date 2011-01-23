@@ -159,7 +159,7 @@ void signaling_connection_context_print(const struct signaling_connection_contex
     }
 
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT START ----------------------\n", prefix);
-    HIP_DEBUG("%s  Status:\t\t %s\n",   prefix, signaling_connection_status_name(ctx->status));
+    signaling_flags_print(ctx->flags, prefix);
     signaling_user_context_print(&ctx->user, prefix, 0);
     signaling_application_context_print(&ctx->app, prefix, 0);
     HIP_DEBUG("%s+------------ CONNECTION CONTEXT END   ----------------------\n", prefix);
@@ -374,7 +374,6 @@ int signaling_init_connection_context(struct signaling_connection_context *const
     HIP_IFEL(!ctx, -1, "Connection context has to be allocated before initialization\n");
     ctx->direction          = dir;
     ctx->flags              = 0;
-    ctx->status             = SIGNALING_CONN_NEW;
     HIP_IFEL(signaling_init_application_context(&ctx->app),
              -1, "Could not init outgoing application context\n");
     HIP_IFEL(signaling_init_user_context(&ctx->user),
@@ -439,4 +438,50 @@ int signaling_copy_connection_context(struct signaling_connection_context * cons
     }
     memcpy(dst, src, sizeof(struct signaling_connection_context));
     return 0;
+}
+
+
+/**
+ * Print the internal connection structure.
+ *
+ * @param conn      the connection to print
+ * @param prefix    prefix is prepended to all output of this function
+ */
+void signaling_flags_print(uint8_t flags, const char *const prefix) {
+    char buf[100];
+    memset(buf, 0, sizeof(buf));
+
+    sprintf(buf + strlen(buf), "HA  = %d | ", signaling_flag_check(flags, HOST_AUTHED));
+    sprintf(buf + strlen(buf), "HAR = %d | ", signaling_flag_check(flags, HOST_AUTH_REQUEST));
+    sprintf(buf + strlen(buf), "UA  = %d | ", signaling_flag_check(flags, USER_AUTHED));
+    sprintf(buf + strlen(buf), "UAR = %d | ", signaling_flag_check(flags, USER_AUTH_REQUEST));
+
+
+
+    HIP_DEBUG("%s  Flags: %s int = %d \n", prefix, buf, flags);
+}
+
+/**
+ * @return 1 if flag is set, 0 otherwise
+ */
+int signaling_flag_check(uint8_t flags, enum flag f) {
+    return (flags & (1 << (int) f)) > 0;
+}
+
+/**
+ * Set flag f in flags.
+ *
+ * @return flags with f set to 1
+ */
+void signaling_flag_set(uint8_t *flags, enum flag f) {
+    *flags |= 1 << (int) f;
+}
+
+/**
+ * Unset flag f in flags.
+ *
+ * @return flags with f set to 1
+ */
+void signaling_flag_unset(uint8_t *flags, enum flag f) {
+    *flags &= ~(1 << (int) f);
 }

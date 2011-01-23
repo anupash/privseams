@@ -196,7 +196,7 @@ int signaling_handle_connection_context(struct hip_common *msg,
     HIP_IFEL(signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1)),
              -1, "Could not copy connection context\n");
 
-    if (conn.ctx_in.status == SIGNALING_CONN_USER_UNAUTHED) {
+    if (!signaling_flag_check(conn.ctx_in.flags, USER_AUTHED)) {
         /* The firewall wants the user to be authenticated */
         HIP_DEBUG("Requesting user certificate chain for remote user \n");
         signaling_send_user_auth_failed_ntf(entry, SIGNALING_USER_AUTH_CERTIFICATE_REQUIRED);
@@ -260,10 +260,8 @@ int signaling_handle_connection_request(struct hip_common *msg,
         /* check if previous BEX has been completed */
         if ((entry->state != HIP_STATE_ESTABLISHED && entry->state != HIP_STATE_R2_SENT)) {
             conn.status         = SIGNALING_CONN_WAITING;
-            conn.ctx_out.status = SIGNALING_CONN_WAITING;
         } else {
             conn.status         = SIGNALING_CONN_PROCESSING;
-            conn.ctx_out.status = SIGNALING_CONN_PROCESSING;
         }
 
         /* save application context to our local state */
@@ -297,7 +295,6 @@ int signaling_handle_connection_request(struct hip_common *msg,
         HIP_IFEL(signaling_copy_connection(&conn, (const struct signaling_connection *) (param + 1)),
                  -1, "Could not copy connection\n");
         conn.status         = SIGNALING_CONN_PROCESSING;
-        conn.ctx_out.status = SIGNALING_CONN_PROCESSING;
 
         /* save application context to our local state */
         HIP_IFEL(signaling_hipd_state_add_connection(sig_state, &conn),

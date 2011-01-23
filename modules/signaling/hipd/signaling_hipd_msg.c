@@ -518,13 +518,13 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     case 0:
         /* In this case we can tell the oslayer to add the connection, if it complies with local policy */
         HIP_DEBUG("User signature verification successful\n");
-        conn.ctx_in.status = SIGNALING_CONN_USER_AUTHED;
+        signaling_flag_set(&conn.ctx_in.flags, USER_AUTHED);
         break;
     case -1:
         /* In this case we just assume user auth has failed, we do not request his certificates,
          * since this was an internal error. Here, some retransmission of the received packet would be needed */
         HIP_DEBUG("Error processing user signature \n");
-        conn.ctx_in.status = SIGNALING_CONN_USER_UNAUTHED;
+        signaling_flag_unset(&conn.ctx_in.flags, USER_AUTHED);
         break;
     default:
         /* In this case, we need to request the user's certificate chain.
@@ -533,7 +533,7 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
          * doesn't care about the user. */
         HIP_DEBUG("Could not verify user's certifcate chain:\n");
         HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
-        conn.ctx_in.status = SIGNALING_CONN_USER_UNAUTHED;
+        signaling_flag_unset(&conn.ctx_in.flags, USER_AUTHED);
 
         /* cache the user identity to able to identify it later on */
         HIP_IFEL(!(param_usr_ctx = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USERINFO)),
@@ -577,16 +577,16 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     switch (err) {
     case 0:
         HIP_DEBUG("User signature verification of R2 successful\n");
-        existing_conn->ctx_in.status = SIGNALING_CONN_USER_AUTHED;
+        signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTHED);
         break;
     case -1:
         HIP_DEBUG("Error processing user signature in R2 \n");
-        existing_conn->ctx_in.status = SIGNALING_CONN_USER_UNAUTHED;
+        signaling_flag_unset(&existing_conn->ctx_in.flags, USER_AUTHED);
         break;
     default:
         HIP_DEBUG("Could not verify certifcate chain for user in R2:\n");
         HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
-        existing_conn->ctx_in.status = SIGNALING_CONN_USER_UNAUTHED;
+        signaling_flag_unset(&existing_conn->ctx_in.flags, USER_AUTHED);
     }
 
     /* send connection context to firewall
@@ -622,7 +622,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     HIP_IFEL(packet_type != HIP_I3, -1, "Not an I3 Packet\n")
     HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
              -1, "Could not init connection context from R2 \n");
-    conn.ctx_in.status = SIGNALING_CONN_USER_AUTHED;
+    signaling_flag_set(&conn.ctx_in.flags, USER_AUTHED);
 
     /* Tell the firewall/oslayer about the new connection and await it's decision */
     signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn);
@@ -711,7 +711,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
                 /* Public key verification was successful, so we save the chain and confirm to the firewall */
                 sk_X509_push(cert_chain, cert);
                 signaling_add_user_certificate_chain(cert_chain);
-                conn->ctx_in.status = SIGNALING_CONN_USER_AUTHED;
+                signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
                 HIP_DEBUG("Confirming user authentication to OSLAYER\n");
                 signaling_connection_context_print(&conn->ctx_in, "");
                 signaling_send_connection_confirmation(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
@@ -761,7 +761,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_DEBUG("Received SECOND BEX Update... \n");
         HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
                  -1, "Could not init connection context from UPDATE \n");
-        conn.ctx_in.status = SIGNALING_CONN_USER_UNAUTHED;
+        signaling_flag_unset(&conn.ctx_in.flags, USER_AUTHED);
         HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn),
                 -1, "failed to notify fw to update scdb\n");
         HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
