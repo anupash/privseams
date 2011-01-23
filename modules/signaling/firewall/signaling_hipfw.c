@@ -271,6 +271,27 @@ int signaling_hipfw_handle_r2(struct hip_common *common, struct tuple *tuple, co
 }
 
 /*
+ * Handles an I3 packet observed by the firewall.
+ *
+ * @return the verdict, i.e. 1 for pass, 0 for drop
+ */
+int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
+{
+    /* For now, just let the I3 pass through.
+     *
+     * TODO:
+     *   We have to check the state for the given connection id.
+     *     a) Has there been I1 - R2 for this connection previously.
+     *     b) Is the F(U2) Flag set correctly.
+     *     c) If F(U1) was set previously, this message may already contain certificates, handle these.
+     */
+    HIP_DEBUG("Received i3: Let through.\n");
+
+    return 1;
+
+}
+
+/*
  * Handles an UPDATE packet observed by the firewall.
  * This includes adding connection context information to the conntracking table
  * and speaking a verdict based on the firewalls policy about host, user and application.
