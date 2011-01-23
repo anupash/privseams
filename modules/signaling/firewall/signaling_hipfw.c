@@ -136,6 +136,9 @@ int signaling_hipfw_init(const char *policy_file) {
     int err         = 0;
     config_t *cfg   = NULL;
 
+    // register I3
+    lmod_register_packet_type(HIP_I3, "HIP_I3");
+
     if (!policy_file) {
         policy_file = default_policy_file;
     }

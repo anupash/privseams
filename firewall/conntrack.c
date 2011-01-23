@@ -75,6 +75,7 @@
 #include "reinject.h"
 
 #include "modules/signaling/firewall/signaling_hipfw.h"
+#include "modules/signaling/lib/signaling_prot_common.h"
 
 
 static struct dlist *hip_list  = NULL;
@@ -1737,6 +1738,8 @@ static int check_packet(struct hip_common *common,
         goto out_err;
     } else if (common->type_hdr == HIP_LUPDATE) {
         err = esp_prot_conntrack_lupdate(common, tuple, ctx);
+    } else if (common->type_hdr == HIP_I3) {
+        HIP_ERROR("packet is I3 (signaling extension)\n");
     } else {
         HIP_ERROR("unknown packet type\n");
         err = 0;
