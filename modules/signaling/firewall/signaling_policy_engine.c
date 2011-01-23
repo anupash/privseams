@@ -46,9 +46,13 @@
 #include "modules/signaling/lib/signaling_x509_api.h"
 #include "signaling_policy_engine.h"
 
-const char *path_rules     = {"rules"};
+const char *path_rules_in      = {"rules_in"};
+const char *path_rules_out     = {"rules_out"};
+const char *path_rules_fwd     = {"rules_fwd"};
 
-struct slist *policy_tuples = NULL;
+struct slist *policy_tuples_in  = NULL;
+struct slist *policy_tuples_out = NULL;
+struct slist *policy_tuples_fwd = NULL;
 
 static void print_policy_tuple(const struct policy_tuple *tuple, const char *prefix) {
     char dst[INET6_ADDRSTRLEN];
@@ -66,7 +70,7 @@ static void print_policy_tuple(const struct policy_tuple *tuple, const char *pre
     HIP_DEBUG("%s--------------------------------------------\n", prefix);
 }
 
-static int read_tuple(config_setting_t *tuple) {
+static int read_tuple(config_setting_t *tuple, struct slist **rulelist) {
     int err                     = 0;
     struct policy_tuple *entry  = NULL;
     const char *host_id         = NULL;
@@ -103,7 +107,7 @@ static int read_tuple(config_setting_t *tuple) {
         entry->target = strcmp(target_string, "ALLOW") == 0 ? 1 : 0;
     }
 
-    policy_tuples = append_to_slist(policy_tuples, entry);
+    *rulelist = append_to_slist(*rulelist, entry);
 
 out_err:
     return err;
@@ -115,15 +119,35 @@ static int read_tuples(config_t *cfg) {
     config_setting_t *rules = NULL;
     config_setting_t *tuple = NULL;
 
-    HIP_IFEL(!(rules = config_lookup(cfg, path_rules)),
-             -1, "Could not get list of tuples from rule setting \n)");
-
+    HIP_IFEL(!(rules = config_lookup(cfg, path_rules_in)),
+             -1, "Could not get list of tuples from incoming rule setting \n)");
     while ((tuple = config_setting_get_elem(rules, i))) {
-        read_tuple(tuple);
+        read_tuple(tuple, &policy_tuples_in);
         i++;
     }
+    rules = NULL;
+    HIP_DEBUG("Read %d rules for incoming traffic from policy file \n", i);
 
-    HIP_DEBUG("Read %d rules from policy file \n", i);
+    HIP_IFEL(!(rules = config_lookup(cfg, path_rules_out)),
+             -1, "Could not get list of tuples from outgoing rule setting \n)");
+    i = 0;
+    while ((tuple = config_setting_get_elem(rules, i))) {
+        read_tuple(tuple, &policy_tuples_out);
+        i++;
+    }
+    rules = NULL;
+    HIP_DEBUG("Read %d rules for outgoing traffic from policy file \n", i);
+
+    HIP_IFEL(!(rules = config_lookup(cfg, path_rules_fwd)),
+             -1, "Could not get list of tuples from outgoing rule setting \n)");
+    i = 0;
+    while ((tuple = config_setting_get_elem(rules, i))) {
+        read_tuple(tuple, &policy_tuples_fwd);
+        i++;
+    }
+    rules = NULL;
+    HIP_DEBUG("Read %d rules for forwarding traffic from policy file \n", i);
+
 out_err:
     return err;
 }
@@ -184,7 +208,7 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
 int signaling_policy_check(const struct tuple *tuple, const struct signaling_connection_context *conn_ctx) {
     int match = 0;
     struct policy_tuple tuple_for_conn;
-    struct slist *listentry;
+    struct slist *listentry = NULL;
     X509_NAME *x509_subj_name;
 
     /* Construct the tuple for the current context */
@@ -197,8 +221,19 @@ int signaling_policy_check(const struct tuple *tuple, const struct signaling_con
         tuple_for_conn.user_id[0] = '\0';
     }
 
+    switch (conn_ctx->direction) {
+    case IN:
+        listentry = policy_tuples_in;
+        break;
+    case OUT:
+        listentry = policy_tuples_out;
+        break;
+    case FWD:
+        listentry = policy_tuples_fwd;
+        break;
+    }
+
     /* Find a match */
-    listentry = policy_tuples;
     while (listentry) {
         match = match_tuples(&tuple_for_conn, (struct policy_tuple *) listentry->data);
         if (match) {
@@ -212,10 +247,10 @@ int signaling_policy_check(const struct tuple *tuple, const struct signaling_con
 
 void signaling_policy_engine_print_rule_set(const char *prefix) {
     struct slist *listentry;
-    listentry = policy_tuples;
     struct policy_tuple *entry;
 
-    HIP_DEBUG("%s-------------- POLICY RULES START ----------------\n", prefix);
+    listentry = policy_tuples_in;
+    HIP_DEBUG("%s-------------- RULES FOR INCOMING TRAFFIC ----------------\n", prefix);
     while(listentry != NULL) {
         if(listentry->data != NULL) {
             entry = (struct policy_tuple *) listentry->data;
@@ -223,5 +258,28 @@ void signaling_policy_engine_print_rule_set(const char *prefix) {
         }
         listentry = listentry->next;
     }
-    HIP_DEBUG("%s-------------- POLICY RULES END   ----------------\n", prefix);
+    HIP_DEBUG("%s--------------           END RULES        ----------------\n", prefix);
+
+    listentry = policy_tuples_out;
+    HIP_DEBUG("%s-------------- RULES FOR OUTGOING TRAFFIC ----------------\n", prefix);
+    while(listentry != NULL) {
+        if(listentry->data != NULL) {
+            entry = (struct policy_tuple *) listentry->data;
+            print_policy_tuple(entry, "\t");
+        }
+        listentry = listentry->next;
+    }
+    HIP_DEBUG("%s--------------           END RULES        ----------------\n", prefix);
+
+    listentry = policy_tuples_fwd;
+    HIP_DEBUG("%s-------------- RULES FOR FORWARDING TRAFFIC ----------------\n", prefix);
+    while(listentry != NULL) {
+        if(listentry->data != NULL) {
+            entry = (struct policy_tuple *) listentry->data;
+            print_policy_tuple(entry, "\t");
+        }
+        listentry = listentry->next;
+    }
+    HIP_DEBUG("%s--------------            END RULES         ----------------\n", prefix);
+
 }

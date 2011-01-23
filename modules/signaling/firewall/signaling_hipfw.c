@@ -217,7 +217,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, UN
 
     HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, common),
              -1, "Could not init new connection context from message\n");
-
+    conn_ctx.direction = FWD;
     /* Verify the user signature in the packet. */
     err = signaling_verify_user_signature(common);
     switch (err) {

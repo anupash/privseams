@@ -96,8 +96,9 @@
 
 /* Direction for connections */
 enum direction {
-    IN,
-    OUT
+    IN,     // incoming traffic
+    OUT,    // outgoing traffic
+    FWD     // pass through traffic (routers)
 };
 
 /* ------------------------------------------------------------------------------------
