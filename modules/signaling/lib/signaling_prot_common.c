@@ -169,10 +169,7 @@ void signaling_connection_context_print(const struct signaling_connection_contex
  */
 void signaling_connection_print(const struct signaling_connection *const conn, const char *const prefix) {
     char prefix_buf[strlen(prefix)+2];
-
-    memset(prefix_buf, 0, strlen(prefix)+2);
-    strcat(prefix_buf, prefix);
-    strcat(prefix_buf, "\t");
+    sprintf(prefix_buf, "%s\t", prefix);
 
     if(conn == NULL) {
         HIP_DEBUG("%sNo connection struct given.\n", prefix);
@@ -463,6 +460,7 @@ int signaling_copy_connection_context(struct signaling_connection_context * cons
     memcpy(dst, src, sizeof(struct signaling_connection_context));
     return 0;
 }
+
 
 int signaling_update_flags_from_connection_id(const struct hip_common *const msg,
                                               struct signaling_connection *const conn)
