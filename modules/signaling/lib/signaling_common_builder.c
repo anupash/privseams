@@ -517,7 +517,7 @@ int signaling_get_update_type(hip_common_t *msg) {
         return SIGNALING_SECOND_BEX_UPDATE;
     } else if (param_cert && param_seq) {
         return SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE;
-    } else if (param_cert && param_ack) {
+    } else if (param_ack) {
         return SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE;
     }
 
