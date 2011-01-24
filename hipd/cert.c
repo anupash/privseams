@@ -185,7 +185,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
         sig_len = SHA_DIGEST_LENGTH + DSA_PRIV * 2;
         break;
     default:
-        HIP_EAE(-1, "Unknown algorithm for signing\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
     }
 
     /* clearing signature field just to be sure */
@@ -264,7 +264,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
                 p_b64, q_b64, g_b64, y_b64);
         break;
     default:
-        HIP_EAE(-1, "Unknown algorithm for public-key element\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm for public-key element\n");
     }
 
     /* Put the results into the msg back */
@@ -534,7 +534,7 @@ algo_check_done:
         evpret = EVP_DecodeBlock(y_bin, y_b64, strlen((char *) y_b64));
         break;
     default:
-        HIP_EAE(-1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
     memset(sha_digest, '\0', sizeof(sha_digest));
@@ -603,7 +603,7 @@ algo_check_done:
         HIP_IFEL((err = err == 1 ? 0 : -1), -1, "DSA_do_verify error\n");
         break;
     default:
-        HIP_EAE(-1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
     hip_msg_init(msg);
@@ -821,7 +821,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
                  "Failed to set public key of the certificate\n");
         break;
     default:
-        HIP_EAE(-1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
     if (sec_ext != NULL) {
@@ -907,7 +907,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
         digest = EVP_dss1();
         break;
     default:
-        HIP_EAE(-1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
     HIP_IFEL(!X509_sign(cert, pkey, digest), -1,

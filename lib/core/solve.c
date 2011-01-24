@@ -98,7 +98,7 @@ uint64_t hip_solve_puzzle(const void *puzzle_or_solution,
         maxtries = 1ULL << (u->pz.K + 3);
         get_random_bytes(&randval, sizeof(uint64_t));
     } else {
-        HIP_EAE(0, "Unknown mode: %d\n", mode);
+        HIP_OUT_ERR(0, "Unknown mode: %d\n", mode);
     }
 
     HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);

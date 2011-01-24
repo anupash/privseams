@@ -43,7 +43,7 @@
  *
  * @note EAE stands for ERROR and EXIT.
  */
-#define HIP_EAE(eval, args ...) \
+#define HIP_OUT_ERR(eval, args ...) \
     { \
         HIP_ERROR(args); \
         err = eval; \
