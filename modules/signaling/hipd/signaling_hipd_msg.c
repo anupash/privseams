@@ -562,6 +562,15 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     HIP_IFEL(signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
 
+    /* If connection has been blocked by the oslayer.
+     * send an error notification with the reason and discard the i2. */
+    if (conn->status == SIGNALING_CONN_BLOCKED) {
+        HIP_DEBUG("Firewall has blocked incoming connection from I2, sending error notification to initiator... \n");
+        // todo: send error notification
+        return 0;
+    }
+
+
 out_err:
     return err;
 }
@@ -620,13 +629,19 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     HIP_IFEL(signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection information from R2 to hipfw \n");
 
-    /* send an I3 if connection has been accepted by the oslayer */
-    // TODO [AUTH] set flags according to what is received by the hipfw
-    if (1) {
+    /* Send an I3 if connection has not been blocked by the oslayer.
+     * otherwise send an error notification with the reason and discard the R2. */
+    if (conn->status != SIGNALING_CONN_BLOCKED) {
         signaling_send_I3(ctx->hadb_entry, conn);
+    } else {
+        HIP_DEBUG("Firewall has blocked the connection after receipt of R2, sending error notification to responder... \n");
+        // todo: send error notification
+        return -1;
     }
 
-    if (sig_state->user_cert_ctx.user_certificate_required) {
+    /* Check if authentication of initiator user was requested,
+     * if yes send certificate chain */
+    if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
         signaling_send_user_certificate_chain(ctx->hadb_entry, sig_state->pending_conn);
     }
 
