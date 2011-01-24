@@ -43,7 +43,7 @@ struct signaling_hipd_state {
 int signaling_hipd_init_state(struct modular_state *state);
 struct signaling_connection *signaling_hipd_state_get_connection(struct signaling_hipd_state *state, uint32_t id);
 void signaling_hipd_state_delete_connection(struct signaling_hipd_state *state, struct signaling_connection *conn);
-int signaling_hipd_state_add_connection(struct signaling_hipd_state *state, struct signaling_connection *conn);
+int signaling_hipd_state_add_connection(struct signaling_hipd_state *state, const struct signaling_connection *const conn);
 void signaling_hipd_state_print(struct signaling_hipd_state *state);
 
 #endif /*HIP_HIPD_SIGNALING_HIPD_STATE_H*/

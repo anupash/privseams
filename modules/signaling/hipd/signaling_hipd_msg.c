@@ -761,7 +761,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
                 signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
                 HIP_DEBUG("Confirming user authentication to OSLAYER\n");
                 signaling_connection_print(conn, "");
-                signaling_send_connection_confirmation(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
+                signaling_send_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
 
             } else {
                 HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
@@ -809,7 +809,7 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
                  -1, "Could not init connection context from UPDATE \n");
         signaling_flag_unset(&conn.ctx_in.flags, USER_AUTHED);
-        HIP_IFEL(signaling_send_connection_confirmation(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn),
+        HIP_IFEL(signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, &conn),
                 -1, "failed to notify fw to update scdb\n");
         HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                      -1, "failed to retrieve state for signaling\n");

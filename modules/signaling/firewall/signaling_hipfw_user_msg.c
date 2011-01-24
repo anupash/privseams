@@ -35,8 +35,8 @@
  *
  * @return          0 on sucess, negative on error
  */
-int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
-                                            const struct signaling_connection *const conn) {
+static int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_hit_t *dst_hit,
+                                                   const struct signaling_connection *const conn) {
     int err                 = 0;
     struct hip_common *msg  = NULL;
 
@@ -126,8 +126,8 @@ out_err:
  *
  * @return          0 on success, negative on error
  */
-int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, const hip_hit_t *hitr,
-                                            const struct signaling_connection *const conn)
+static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, const hip_hit_t *hitr,
+                                                        const struct signaling_connection *const conn)
 {
     int err                 = 0;
     struct hip_common *msg  = NULL;

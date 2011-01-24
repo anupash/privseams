@@ -346,7 +346,7 @@ out_err:
  * @return negative value on error, 0 on success
  */
 int signaling_copy_connection(struct signaling_connection * const dst,
-                                      const struct signaling_connection * const src) {
+                              const struct signaling_connection * const src) {
     if (!dst || !src) {
         HIP_ERROR("Cannot copy from/to NULL struct \n");
         return -1;

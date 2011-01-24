@@ -89,7 +89,7 @@ struct signaling_connection *signaling_hipd_state_get_connection(struct signalin
     return hip_ht_find(state->connections, &search_entry);
 }
 
-int signaling_hipd_state_add_connection(struct signaling_hipd_state *state, struct signaling_connection *conn) {
+int signaling_hipd_state_add_connection(struct signaling_hipd_state *state, const struct signaling_connection *const conn) {
     struct signaling_connection *new_entry;
 
     /* reject new entry if one already exists */
