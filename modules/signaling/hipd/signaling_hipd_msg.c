@@ -388,6 +388,48 @@ out_err:
     return err;
 }
 
+int signaling_send_user_certificate_chain_ack(hip_ha_t *ha,
+                                              const uint32_t seq,
+                                              const struct signaling_connection *const conn) {
+    int err = 0;
+    uint32_t mask = 0;
+    hip_common_t *msg_buf = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!conn, -1, "Need connection state to build connection identifier from\n");
+    HIP_IFEL(!ha, -1, "Need host association state to send message \n");
+
+    /* Allocate and build a new message */
+    HIP_IFEL(!(msg_buf = hip_msg_alloc()),
+            -ENOMEM, "Out of memory while allocation memory for the user cert update packet\n");
+    hip_build_network_hdr(msg_buf, HIP_UPDATE, mask, &ha->hit_our, &ha->hit_peer);
+
+    /* Add ACK paramater for sequence number of last certificate update */
+    HIP_IFEL(hip_build_param_ack(msg_buf, seq),
+            -1, "Building of ACK parameter failed\n");
+
+    /* Add connection id */
+    HIP_IFEL(signaling_build_param_connection_identifier(msg_buf, conn),
+             -1, "Building of connection identifier parameter failed\n");
+
+        /* Add host authentication */
+    HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
+             -1, "Building of HMAC failed\n");
+    HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
+             -EINVAL, "Could not sign certificate chain acknowledgment. Failing\n");
+
+    /* send the message */
+    err = hip_send_pkt(NULL,
+                       &ha->peer_addr,
+                       (ha->nat_mode ? hip_get_local_nat_udp_port() : 0),
+                       ha->peer_udp_port,
+                       msg_buf,
+                       ha,
+                       1);
+out_err:
+    return err;
+}
+
 /**
  * Send a whole certificate chain, possibly dstributed over multiple messages.
  * TODO: Refactor this and move the building parts to the builder.
@@ -625,7 +667,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
     signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
 
-    /* Ask the firewall for a decision on this connection context */
+    /* Ask the firewall for a decision on the remote connection context */
     HIP_IFEL(signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection information from R2 to hipfw \n");
 
@@ -656,6 +698,7 @@ out_err:
  */
 int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
+    int wait_auth = 0;
     int err = 0;
     struct signaling_connection conn;
     struct signaling_connection *existing_conn = NULL;
@@ -664,23 +707,32 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     /* sanity checks */
     HIP_IFEL(packet_type != HIP_I3, -1, "Not an I3 Packet\n")
 
-    /* get connection and add remote context */
+    /* get connection and update flags */
     HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
              -1, "Could not init connection context from I3 \n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling ports\n");
     HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn.id)),
              -1, "Could not get state for existing connection\n");
+    HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),
+             -1, "Could not update authentication flags from I3 message \n");
 
-    /* check for middlebox flags on user and host authentication
-     * todo: define parameters and check them */
-    if (0) {
-        signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTH_REQUEST);
-        signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTH_REQUEST);
+    /* Check if we're done with this connection or if we have to wait for addition authentication */
+    if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
+        HIP_DEBUG("Auth uncompleted after I3, waiting for authentication of remote user.\n");
+        wait_auth = 1;
+    }
+    if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+        HIP_DEBUG("Auth uncompleted after I3, because authentication of local user has been requested\n");
+        //signaling_send_user_certificate_chain(ctx->hadb_entry, existing_conn);
+        wait_auth = 1;
     }
 
-    /* Tell the firewall/oslayer about the new connection and await it's decision */
-    signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
+    if (!wait_auth) {
+        HIP_DEBUG("Auth completed after I3 \n");
+        signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
+    }
+
 
 out_err:
     return err;
@@ -702,13 +754,14 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
     X509_NAME *subject_name = NULL;
     uint32_t conn_id;
     struct signaling_connection *conn = NULL;
+    const struct hip_seq *param_seq = NULL;
 
     /* sanity checks */
     HIP_IFEL(!ctx->input_msg,  -1, "Message is NULL\n");
 
     /* get connection identifier and context */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
-            -1, "failed to retrieve state\n");
+             -1, "failed to retrieve state\n");
     HIP_IFEL(!(param_conn_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CONNECTION_ID)),
              -1, "No connection identifier found in the message, cannot handle certificates.\n");
     conn_id = ntohl(param_conn_id->id);
@@ -717,7 +770,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
 
     /* process certificates */
     HIP_IFEL(!(param_cert = hip_get_param(ctx->input_msg, HIP_PARAM_CERT)),
-             0, "Message contains no certificate (second certificate update (ACK) \n");
+             -1, "Message contains no certificate. \n");
     if (!sig_state->user_cert_ctx.cert_chain) {;
         HIP_IFEL(!(sig_state->user_cert_ctx.cert_chain = sk_X509_new_null()),
                  -1, "memory allocation failure\n");
@@ -767,10 +820,13 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
                 sk_X509_push(cert_chain, cert);
                 signaling_add_user_certificate_chain(cert_chain);
                 signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
+                signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+                HIP_IFEL(!(param_seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ)),
+                         -1, "Cannot build ack for last certificate update, because corressponding UPDATE has no sequence number \n");
+                signaling_send_user_certificate_chain_ack(ctx->hadb_entry, ntohl(param_seq->update_id), conn);
                 HIP_DEBUG("Confirming user authentication to OSLAYER\n");
                 signaling_connection_print(conn, "");
                 signaling_send_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
-
             } else {
                 HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
                 free(cert);
@@ -785,6 +841,51 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
         }
 
         param_cert = (const struct hip_cert *) hip_get_next_param(ctx->input_msg, (const struct hip_tlv_common *) param_cert);
+    }
+
+out_err:
+    return err;
+}
+
+static int signaling_handle_incoming_certificate_udpate_ack(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx) {
+    int err = 0;
+    const struct signaling_param_connection_identifier *param_conn_id = NULL;
+    struct signaling_hipd_state *sig_state = NULL;
+    struct signaling_connection *existing_conn = NULL;
+    uint32_t conn_id;
+
+    /* sanity checks */
+    HIP_IFEL(!ctx->input_msg,  -1, "Message is NULL\n");
+
+    /* get connection identifier and context */
+    HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+            -1, "failed to retrieve state\n");
+    HIP_IFEL(!(param_conn_id = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_CONNECTION_ID)),
+             -1, "No connection identifier found in the message, cannot handle certificates.\n");
+    conn_id = ntohl(param_conn_id->id);
+    HIP_IFEL(!(existing_conn = signaling_hipd_state_get_connection(sig_state, conn_id)),
+             -1, "No connection context for connection id \n");
+
+    /* unflag user authentication flag */
+    HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),
+             -1, "Could not update flags from certificate update ack \n");
+
+    HIP_DEBUG("State of HIPD after receipt of certificate update ack\n");
+    signaling_hipd_state_print(sig_state);
+
+    /* Check if we're done with this connection or if authentication failed or we have to wait for addition authentication */
+    if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+        HIP_DEBUG("Auth still uncompleted after sending own certificate chain.");
+        HIP_ERROR("User authentication was requested but failed. Dropping the connection.\n");
+        existing_conn->status = SIGNALING_CONN_BLOCKED;
+        signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
+        return -1;
+    }
+    if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
+        HIP_DEBUG("Auth uncompleted, waiting for authentication of remote user.\n");
+    } else {
+        HIP_DEBUG("Auth completed after I3 \n");
+        signaling_send_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, existing_conn);
     }
 
 out_err:
@@ -822,9 +923,11 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                      -1, "failed to retrieve state for signaling\n");
     } else if (update_type == SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE) {
+        HIP_DEBUG("Received certificate Update... \n");
         err = signaling_handle_incoming_certificate_udpate(packet_type, ha_state, ctx);
     } else if (update_type == SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE) {
-        err = signaling_handle_incoming_certificate_udpate(packet_type, ha_state, ctx);
+        HIP_DEBUG("Received certificate Update Ack... \n");
+        err = signaling_handle_incoming_certificate_udpate_ack(packet_type, ha_state, ctx);
     }
 
 out_err:

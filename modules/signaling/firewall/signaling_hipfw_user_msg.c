@@ -243,12 +243,8 @@ int signaling_hipfw_handle_connection_request(struct hip_common *msg) {
         HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(hits, hitr, new_conn.id)),
                  -1, "Could not retrieve cdb entry \n");
     } else {
-        existing_conn->status = recv_conn->status;
+        signaling_copy_connection(existing_conn, recv_conn);
     }
-
-    /* Now, we have handled the differences between an initial connection request and an update request.
-       We can now update the existing entry with the incoming context. */
-    signaling_copy_connection_context(&existing_conn->ctx_in, &recv_conn->ctx_in);
 
     /* Check the remote context against out local policy,
      * block this connection if context is rejected */
@@ -262,7 +258,10 @@ int signaling_hipfw_handle_connection_request(struct hip_common *msg) {
     } else {
         // todo: [AUTH] policy engine needs to return whether auth is requested or not
         signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTHED);
-        signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTHED);
+        // todo: [AUTH] right now, we do not care about the responder's user
+        if (existing_conn->side == INITIATOR) {
+            signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTHED);
+        }
     }
 
     /* Check the local context against our local policy,
