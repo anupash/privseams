@@ -40,8 +40,6 @@
  * as destination after proper actions.
  *
  * @param eval Set variable called 'err' to this value.
- *
- * @note EAE stands for ERROR and EXIT.
  */
 #define HIP_OUT_ERR(eval, args ...) \
     { \
