@@ -480,28 +480,50 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
         if (conn->side == INITIATOR) {
             if (signaling_flag_check(param_conn_id->flags, FH1)) {
                 signaling_flag_set(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
+            } else {
+                signaling_flag_unset(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
             }
+
             if (signaling_flag_check(param_conn_id->flags, FU1)) {
                 signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
+            } else {
+                signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
             }
+
             if (signaling_flag_check(param_conn_id->flags, FH2)) {
                 signaling_flag_set(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
+            } else {
+                signaling_flag_unset(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
             }
+
             if (signaling_flag_check(param_conn_id->flags, FU2)) {
                 signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+            } else {
+                signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
             }
         } else {
             if (signaling_flag_check(param_conn_id->flags, FH1)) {
                 signaling_flag_set(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
+            } else {
+                signaling_flag_unset(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
             }
+
             if (signaling_flag_check(param_conn_id->flags, FU1)) {
                 signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+            } else {
+                signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
             }
+
             if (signaling_flag_check(param_conn_id->flags, FH2)) {
                 signaling_flag_set(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
+            } else {
+                signaling_flag_unset(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
             }
+
             if (signaling_flag_check(param_conn_id->flags, FU2)) {
                 signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
+            } else {
+                signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
             }
         }
     }
