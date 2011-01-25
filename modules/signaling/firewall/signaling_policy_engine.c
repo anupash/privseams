@@ -110,6 +110,19 @@ out_err:
     return cfg;
 }
 
+UNUSED static int compare_tuples(const struct policy_tuple *t1, const struct policy_tuple *t2) {
+    if (strncmp(t1->app_id, t2->app_id, SIGNALING_APP_DN_MAX_LEN)) {
+        return -1;
+    }
+    if (strncmp(t1->user_id, t2->user_id, SIGNALING_USER_ID_MAX_LEN)) {
+       return -1;
+    }
+    if (IN6_ARE_ADDR_EQUAL(&t1->host_id, &t2->host_id)) {
+        return -1;
+    }
+    return 0;
+}
+
 static void print_policy_tuple(const struct policy_tuple *tuple, const char *prefix) {
     char dst[INET6_ADDRSTRLEN];
 
@@ -158,9 +171,9 @@ static int read_tuple(config_setting_t *tuple, struct slist **rulelist) {
         entry->app_id[SIGNALING_APP_DN_MAX_LEN - 1] = '\0';
     }
     if(CONFIG_FALSE == config_setting_lookup_string(tuple, "target", &target_string)) {
-        entry->target = 0;
+        entry->target = POLICY_REJECT;
     } else {
-        entry->target = strcmp(target_string, "ALLOW") == 0 ? 1 : 0;
+        entry->target = strcmp(target_string, "ALLOW") == 0 ? POLICY_ACCEPT : POLICY_REJECT;
     }
 
     *rulelist = append_to_slist(*rulelist, entry);
@@ -231,6 +244,9 @@ int signaling_policy_engine_init_from_file(const char *const policy_file) {
     return signaling_policy_engine_init(cfg);
 }
 
+/**
+ * @return 0 if tuples don't match, 1 if they do
+ */
 static int match_tuples(const struct policy_tuple *tuple_conn, const struct policy_tuple *tuple_rule) {
     /* Check if hits match or if rule allows any hit */
     if(ipv6_addr_cmp(&tuple_rule->host_id, &in6addr_any) != 0) {
@@ -253,13 +269,21 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
         }
     }
 
-    HIP_DEBUG("Connection tuple:\n");
-    print_policy_tuple(tuple_conn, "\t");
-    HIP_DEBUG("is matched by rule tuple:\n");
-    print_policy_tuple(tuple_rule, "\t");
+    return 1;
+}
 
-    /* If we made it so far, the connection tuple matches the rule tuple */
-    return tuple_rule->target;
+/**
+ * @return the matching tuple or NULL if no tuples matches
+ */
+static const struct policy_tuple *match_tuple_list(const struct policy_tuple *tuple_conn, const struct slist *const rules) {
+    const struct slist *listentry = rules;
+    while (listentry) {
+        if(match_tuples(tuple_conn, (struct policy_tuple *) listentry->data)) {
+            return listentry->data;
+        }
+        listentry = listentry->next;
+    }
+    return NULL;
 }
 
 /**
@@ -268,47 +292,109 @@ static int match_tuples(const struct policy_tuple *tuple_conn, const struct poli
  * @param tuple     the conntracking tuple for the connection
  * @param conn_ctx  the connection context with application and user context for this connection
  *
- * @return          1 if the connection complies with the policy, 0 otherwise
- */
+ * @return          0 if the connection complies with the policy,
+ *                  if not, a bitmask specifying what parts of the context need to be authed
+ *                  in order for the connection to comply
+ *                  -1 the connection would not comply even if every entity as given was authenticated
+  */
 int signaling_policy_check(const struct in6_addr *const hit,
-                           const struct signaling_connection_context *const conn_ctx) {
-    int match = 0;
-    struct policy_tuple tuple_for_conn;
-    struct slist *listentry = NULL;
+                           const struct signaling_connection_context *const conn_ctx)
+{
+    int ret   = 0;
+    struct policy_tuple tuple_for_conn_authed;
+    struct policy_tuple tuple_for_conn_unauthed;
+    const struct policy_tuple *tuple_match = NULL;
+    struct slist *rule_list = NULL;
     X509_NAME *x509_subj_name;
 
-    /* Construct the tuple for the current context */
-    memcpy(tuple_for_conn.app_id,  conn_ctx->app.application_dn, SIGNALING_APP_DN_MAX_LEN);
-    memcpy(&tuple_for_conn.host_id, hit, sizeof(struct in6_addr));
-    if(!signaling_DER_to_X509_NAME(conn_ctx->user.subject_name, conn_ctx->user.subject_name_len, &x509_subj_name)) {
-        X509_NAME_oneline(x509_subj_name, tuple_for_conn.user_id, SIGNALING_USER_ID_MAX_LEN);
-        tuple_for_conn.user_id[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
+    /* Construct the authed and unauthed tuple for the current context.
+     * Need to memset-0 because we want to use memcmp later. */
+    memset(&tuple_for_conn_authed, 0, sizeof(struct policy_tuple));
+    memset(&tuple_for_conn_authed, 0, sizeof(struct policy_tuple));
+    memcpy(tuple_for_conn_authed.app_id,   conn_ctx->app.application_dn, SIGNALING_APP_DN_MAX_LEN);
+    memcpy(tuple_for_conn_unauthed.app_id, conn_ctx->app.application_dn, SIGNALING_APP_DN_MAX_LEN);
+    if (signaling_flag_check(conn_ctx->flags, HOST_AUTHED)) {
+        memcpy(&tuple_for_conn_authed.host_id, hit, sizeof(struct in6_addr));
     } else {
-        tuple_for_conn.user_id[0] = '\0';
+        memcpy(&tuple_for_conn_authed.host_id, &in6addr_any, sizeof(struct in6_addr));
+    }
+    memcpy(&tuple_for_conn_unauthed.host_id, hit,         sizeof(struct in6_addr));
+    if (!signaling_DER_to_X509_NAME(conn_ctx->user.subject_name, conn_ctx->user.subject_name_len, &x509_subj_name)) {
+        X509_NAME_oneline(x509_subj_name, tuple_for_conn_authed.user_id, SIGNALING_USER_ID_MAX_LEN);
+        X509_NAME_oneline(x509_subj_name, tuple_for_conn_unauthed.user_id, SIGNALING_USER_ID_MAX_LEN);
+        tuple_for_conn_authed.user_id[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
+        tuple_for_conn_unauthed.user_id[SIGNALING_USER_ID_MAX_LEN-1] = '\0';
+    } else {
+        tuple_for_conn_authed.user_id[0] = '\0';
+        tuple_for_conn_unauthed.user_id[0] = '\0';
+    }
+    if (!signaling_flag_check(conn_ctx->flags, USER_AUTHED)) {
+        tuple_for_conn_authed.user_id[0] = '\0';
     }
 
+    /* Determine which rule set to apply */
     switch (conn_ctx->direction) {
     case IN:
-        listentry = policy_tuples_in;
+        rule_list = policy_tuples_in;
         break;
     case OUT:
-        listentry = policy_tuples_out;
+        rule_list = policy_tuples_out;
         break;
     case FWD:
-        listentry = policy_tuples_fwd;
+        rule_list = policy_tuples_fwd;
         break;
     }
 
-    /* Find a match */
-    while (listentry) {
-        match = match_tuples(&tuple_for_conn, (struct policy_tuple *) listentry->data);
-        if (match) {
-            break;
-        }
-        listentry = listentry->next;
+    /* Find a match for authed tuple */
+    if ((tuple_match = match_tuple_list(&tuple_for_conn_authed, rule_list))) {
+        HIP_DEBUG("Connection tuple:\n");
+        print_policy_tuple(&tuple_for_conn_authed, "\t");
+        HIP_DEBUG("is matched by rule tuple:\n");
+        print_policy_tuple(tuple_match, "\t");
+        return tuple_match->target;
     }
 
-    return match;
+    /* If we haven't found a match and the unauthed tuple does not differ from
+     * the authed tuple, we can return the result right away. */
+    if (!memcmp(&tuple_for_conn_authed, &tuple_for_conn_unauthed, sizeof(struct policy_tuple))) {
+        return POLICY_REJECT;
+    }
+
+    /* If we wouldn't have a match for the unauthed tuple, reject. */
+    if (!(tuple_match = match_tuple_list(&tuple_for_conn_unauthed, rule_list))) {
+        return POLICY_REJECT;
+    }
+
+    /* If we have found a match for the unautehd tuple,
+     *  determine which minimum set of the unauthed entities need to be authenticated */
+
+    /* Check if we need host auth,
+     * this is the case if the match's host id is not "ANY",
+     */
+    if(ipv6_addr_cmp(&tuple_match->host_id, &in6addr_any)) {
+        ret |= POLICY_HOST_AUTH_REQUIRED;
+    }
+
+    /* Check if we really need the user auth,
+     * this is the case if the match's user id is not "ANY",
+     */
+    if(strlen(tuple_match->user_id)) {
+        ret |= POLICY_USER_AUTH_REQUIRED;
+    }
+
+    /* Check if we really need the app auth,
+     * this is the case if the match's app id is not "ANY",
+     */
+    if(strlen(tuple_match->app_id)) {
+        ret |= POLICY_APP_AUTH_REQUIRED;
+    }
+
+    HIP_DEBUG("Unauthed connection tuple:\n");
+    print_policy_tuple(&tuple_for_conn_unauthed, "\t");
+    HIP_DEBUG("is matched by rule tuple:\n");
+    print_policy_tuple(tuple_match, "\t");
+
+    return ret;
 }
 
 void signaling_policy_engine_print_rule_set(const char *prefix) {

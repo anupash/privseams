@@ -36,8 +36,19 @@
 
 #include "modules/signaling/lib/signaling_prot_common.h"
 
+/* Definition of return values for signaling_policy_check.
+ */
+enum policy_decision {
+    POLICY_ACCEPT              = 0,
+    POLICY_REJECT              = 1,
+    POLICY_USER_AUTH_REQUIRED  = 2,
+    POLICY_HOST_AUTH_REQUIRED  = 4,
+    POLICY_APP_AUTH_REQUIRED   = 8,
+};
+
+
 struct policy_tuple {
-    hip_hit_t host_id;
+    struct in6_addr host_id;
     char user_id[SIGNALING_USER_ID_MAX_LEN];
     char app_id[SIGNALING_APP_DN_MAX_LEN];
     int target;
@@ -49,6 +60,6 @@ int signaling_policy_engine_init_from_file(const char *const policy_file);
 void signaling_policy_engine_print_rule_set(const char *prefix);
 
 int signaling_policy_check(const struct in6_addr *const hit,
-                           const struct signaling_connection_context *const conn_ctx);
+                                                const struct signaling_connection_context *const conn_ctx);
 
 #endif /* HIP_HIPFW_SIGNALING_POLICY_ENGINE_H */

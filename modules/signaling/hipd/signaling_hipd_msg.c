@@ -609,7 +609,7 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     if (conn->status == SIGNALING_CONN_BLOCKED) {
         HIP_DEBUG("Firewall has blocked incoming connection from I2, sending error notification to initiator... \n");
         // todo: send error notification
-        return 0;
+        return -1;
     }
 
 

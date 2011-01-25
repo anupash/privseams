@@ -115,10 +115,7 @@ int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context 
     unsigned char *buf  = NULL;
     int out_len;
 
-    if (!(usercert_chain = signaling_user_api_get_user_certificate_chain(uid))) {
-        HIP_DEBUG("Could not get user's certificate, using system username as fallback.\n");
-        memcpy(user_ctx->subject_name, "anonymous", strlen("anonymous"));
-    } else {
+    if ((usercert_chain = signaling_user_api_get_user_certificate_chain(uid))) {
         usercert = sk_X509_pop(usercert_chain);
         HIP_IFEL(!(uname = X509_get_subject_name(usercert)),
                  -1, "Could not get subject name from certificate\n");
@@ -126,6 +123,8 @@ int signaling_user_api_get_uname(const uid_t uid, struct signaling_user_context 
                  -1, "Could not DER encode X509 Subject Name");
         memcpy(user_ctx->subject_name, buf, out_len);
         user_ctx->subject_name_len = out_len;
+    } else {
+        err = -1;
     }
 
 out_err:
