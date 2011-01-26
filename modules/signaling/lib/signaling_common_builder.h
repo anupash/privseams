@@ -27,9 +27,9 @@ int signaling_build_param_cert_chain(hip_common_t *msg,
                                      int start,
                                      int count,
                                      int freespace);
-int signaling_build_param_user_auth_request(hip_common_t *msg,
+int signaling_build_param_user_auth_req_u(hip_common_t *msg,
                                             uint32_t network_id);
-int signaling_build_param_user_auth_response(hip_common_t *msg,
+int signaling_build_param_user_auth_req_s(hip_common_t *msg,
                                              uint32_t network_id);
 
 

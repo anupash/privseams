@@ -433,7 +433,7 @@ static int build_param_user_auth(hip_common_t *msg,
     struct signaling_param_user_auth_request ur;
 
     /* sanity checks*/
-    HIP_IFEL(type != HIP_PARAM_SIGNALING_USER_REQ && type != HIP_PARAM_SIGNALING_USER_RESP,
+    HIP_IFEL(type != HIP_PARAM_SIGNALING_USER_REQ_U && type != HIP_PARAM_SIGNALING_USER_REQ_S,
              -1, "Invalid types \n");
 
     /* build and append parameter */
@@ -448,14 +448,14 @@ out_err:
     return err;
 }
 
-int signaling_build_param_user_auth_request(hip_common_t *msg,
-                                            uint32_t network_id) {
-    return build_param_user_auth(msg, network_id, HIP_PARAM_SIGNALING_USER_REQ);
+int signaling_build_param_user_auth_req_u(hip_common_t *msg,
+                                          uint32_t network_id) {
+    return build_param_user_auth(msg, network_id, HIP_PARAM_SIGNALING_USER_REQ_U);
 }
 
-int signaling_build_param_user_auth_response(hip_common_t *msg,
-                                             uint32_t network_id) {
-    return build_param_user_auth(msg, network_id, HIP_PARAM_SIGNALING_USER_RESP);
+int signaling_build_param_user_auth_req_s(hip_common_t *msg,
+                                          uint32_t network_id) {
+    return build_param_user_auth(msg, network_id, HIP_PARAM_SIGNALING_USER_REQ_S);
 }
 
 /*
