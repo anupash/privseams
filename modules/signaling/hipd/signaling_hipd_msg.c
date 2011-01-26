@@ -200,7 +200,7 @@ int signaling_send_I3(hip_ha_t *ha, struct signaling_connection *conn) {
 
     /* Add user_auth_request parameter, if received in R2
      * This parameter is critical, if flagged. */
-    if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+    if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
         HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, 0),
                  -1, "Failed to build signed user authentication request\n");
     }
@@ -1101,7 +1101,7 @@ int signaling_r2_add_user_auth_resp(UNUSED const uint8_t packet_type, UNUSED con
     HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling\n");
     /* check if we must include a user auth req_s parameter */
-    if (signaling_flag_check(sig_state->pending_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+    if (signaling_flag_check(sig_state->pending_conn->ctx_in.flags, USER_AUTH_REQUEST)) {
         HIP_IFEL(signaling_build_param_user_auth_req_s(ctx->output_msg, 0),
                      -1, "Building of user context parameter failed.\n");
     }
