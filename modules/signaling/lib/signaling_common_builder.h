@@ -27,6 +27,11 @@ int signaling_build_param_cert_chain(hip_common_t *msg,
                                      int start,
                                      int count,
                                      int freespace);
+int signaling_build_param_user_auth_request(hip_common_t *msg,
+                                            uint32_t network_id);
+int signaling_build_param_user_auth_response(hip_common_t *msg,
+                                             uint32_t network_id);
+
 
 /* Builders for internal state structures */
 int signaling_build_application_context(const struct signaling_param_app_context *param_app_ctx,

@@ -424,7 +424,39 @@ out_err:
     return err;
 }
 
+static int build_param_user_auth(hip_common_t *msg,
+                                 uint32_t network_id,
+                                 uint16_t type)
+{
+    int err = 0;
+    int len;
+    struct signaling_param_user_auth_request ur;
 
+    /* sanity checks*/
+    HIP_IFEL(type != HIP_PARAM_SIGNALING_USER_REQ && type != HIP_PARAM_SIGNALING_USER_RESP,
+             -1, "Invalid types \n");
+
+    /* build and append parameter */
+    hip_set_param_type((struct hip_tlv_common *) &ur, type);
+    len = sizeof(struct signaling_param_user_auth_request) - sizeof(struct hip_tlv_common);
+    hip_set_param_contents_len((struct hip_tlv_common *) &ur, len);
+    ur.network_id = htonl(network_id);
+    HIP_IFEL(hip_build_param(msg, &ur),
+             -1, "Could not build notification parameter into message \n");
+
+out_err:
+    return err;
+}
+
+int signaling_build_param_user_auth_request(hip_common_t *msg,
+                                            uint32_t network_id) {
+    return build_param_user_auth(msg, network_id, HIP_PARAM_SIGNALING_USER_REQ);
+}
+
+int signaling_build_param_user_auth_response(hip_common_t *msg,
+                                             uint32_t network_id) {
+    return build_param_user_auth(msg, network_id, HIP_PARAM_SIGNALING_USER_RESP);
+}
 
 /*
  * Fill the internal application_context struct with data from application_context parameter.
