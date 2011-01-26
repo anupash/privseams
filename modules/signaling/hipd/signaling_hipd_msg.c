@@ -906,14 +906,16 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
              -1, "This is no signaling update packet\n");
 
     /* Handle the different update types */
-    if(update_type == SIGNALING_FIRST_BEX_UPDATE) {
+    switch (update_type) {
+    case SIGNALING_FIRST_BEX_UPDATE:
         HIP_DEBUG("Received FIRST BEX Update... \n");
         HIP_IFEL(signaling_verify_user_signature(ctx->input_msg),
                  -1, "Could not verify user's signature in update packet.");
         HIP_DEBUG("Correctly verified user signature in UPDATE \n");
         HIP_IFEL(signaling_send_second_update(ctx->input_msg),
                  -1, "failed to trigger second bex update. \n");
-    } else if (update_type == SIGNALING_SECOND_BEX_UPDATE) {
+        break;
+    case SIGNALING_SECOND_BEX_UPDATE:
         HIP_DEBUG("Received SECOND BEX Update... \n");
         HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
                  -1, "Could not init connection context from UPDATE \n");
@@ -922,12 +924,17 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
                 -1, "failed to notify fw to update scdb\n");
         HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
                      -1, "failed to retrieve state for signaling\n");
-    } else if (update_type == SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE) {
+        break;
+    case SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE:
         HIP_DEBUG("Received certificate Update... \n");
         err = signaling_handle_incoming_certificate_udpate(packet_type, ha_state, ctx);
-    } else if (update_type == SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE) {
+        break;
+    case SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE:
         HIP_DEBUG("Received certificate Update Ack... \n");
         err = signaling_handle_incoming_certificate_update_ack(packet_type, ha_state, ctx);
+        break;
+    default:
+        HIP_DEBUG("Received unknown UPDATE type. \n");
     }
 
 out_err:
