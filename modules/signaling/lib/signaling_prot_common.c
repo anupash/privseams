@@ -506,68 +506,25 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
                                               struct signaling_connection *const conn)
 {
     int err = 0;
-    const struct signaling_param_connection_identifier *param_conn_id = NULL;
+    const struct signaling_param_user_auth_request *param_usr_auth;
 
     /* sanity checks */
     HIP_IFEL(!conn,           -1, "Cannot update flags of NULL-connection\n");
     HIP_IFEL(!msg,            -1, "Cannot update flags from NULL-msg\n");
 
-    /* Set flags from connection id flags */
-    param_conn_id = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION_ID);
-    if (param_conn_id && hip_get_param_type(param_conn_id) == HIP_PARAM_SIGNALING_CONNECTION_ID) {
-        if (conn->side == INITIATOR) {
-            if (signaling_flag_check(param_conn_id->flags, FH1)) {
-                signaling_flag_set(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
-            } else {
-                signaling_flag_unset(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
-            }
-
-            if (signaling_flag_check(param_conn_id->flags, FU1)) {
-                signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
-            } else {
-                signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
-            }
-
-            if (signaling_flag_check(param_conn_id->flags, FH2)) {
-                signaling_flag_set(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
-            } else {
-                signaling_flag_unset(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
-            }
-
-            if (signaling_flag_check(param_conn_id->flags, FU2)) {
-                signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
-            } else {
-                signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
-            }
-        } else {
-            if (signaling_flag_check(param_conn_id->flags, FH1)) {
-                signaling_flag_set(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
-            } else {
-                signaling_flag_unset(&conn->ctx_in.flags, HOST_AUTH_REQUEST);
-            }
-
-            if (signaling_flag_check(param_conn_id->flags, FU1)) {
-                signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
-            } else {
-                signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
-            }
-
-            if (signaling_flag_check(param_conn_id->flags, FH2)) {
-                signaling_flag_set(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
-            } else {
-                signaling_flag_unset(&conn->ctx_out.flags, HOST_AUTH_REQUEST);
-            }
-
-            if (signaling_flag_check(param_conn_id->flags, FU2)) {
-                signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
-            } else {
-                signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
-            }
-        }
+    /* This flags the local user. */
+    if ((param_usr_auth = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+        signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
+    } else {
+        signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
     }
 
-    /* Set flags from middlebox flags */
-    // todo [AUTH] process middlebox flags
+    /* This flags the remote user */
+    if ((param_usr_auth = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_U))) {
+        signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+    } else {
+        signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+    }
 
 out_err:
     return err;
