@@ -51,7 +51,9 @@
 #define HIP_PARAM_SIGNALING_CONNECTION_ID       5000
 #define HIP_PARAM_SIGNALING_APPINFO             5002
 #define HIP_PARAM_SIGNALING_USERINFO            5004
+#define HIP_PARAM_SIGNALING_USER_RESP           5006
 #define HIP_PARAM_SIGNALING_USER_SIGNATURE      62500
+#define HIP_PARAM_SIGNALING_USER_REQ            62502
 
 /* Parameters for internal communication */
 #define HIP_PARAM_SIGNALING_CONNECTION_CONTEXT  5006
@@ -149,6 +151,27 @@ struct signaling_ntf_user_auth_failed_data {
     uint16_t reason;
 } __attribute__ ((packed));
 
+/*
+     Parameter for a connection identifier.
+     The parameter contains source and destination port numbers,
+     as well as a connection identifier, that is unique per host association.
+
+     All integers are in network byte order.
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |             Type              |             Length            |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                      Network Identifier                       |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+*/
+struct signaling_param_user_auth_request {
+    hip_tlv_type_t type;
+    hip_tlv_len_t  length;
+    uint32_t network_id;
+} __attribute__ ((packed));
 
 /*
      Parameter for a connection identifier.
