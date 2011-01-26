@@ -42,6 +42,8 @@ int hip_signaling_init(void)
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_APPINFO,            "HIP_PARAM_SIGNALING_APPLICATION_CONTEXT");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USERINFO,           "HIP_PARAM_SIGNALING_USER_CONTEXT");
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_SIGNATURE,     "HIP_PARAM_SIGNALING_USER_SIGNATURE");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_REQ_U,         "HIP_PARAM_SIGNALING_USER_AUTH_REQ_U");
+    lmod_register_parameter_type(HIP_PARAM_SIGNALING_USER_REQ_S,         "HIP_PARAM_SIGNALING_USER_AUTH_REQ_S");
 
     // register internal parameter types
     lmod_register_parameter_type(HIP_PARAM_SIGNALING_CONNECTION_CONTEXT, "HIP_PARAM_SIGNALING_CONNECTION_CONTEXT");
