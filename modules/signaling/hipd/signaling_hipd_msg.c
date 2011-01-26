@@ -192,11 +192,20 @@ int signaling_send_I3(hip_ha_t *ha, struct signaling_connection *conn) {
           -ENOMEM, "Out of memory while allocation memory for the I3 packet\n");
     hip_build_network_hdr(msg_buf, HIP_I3, mask, &ha->hit_our, &ha->hit_peer);
 
+    /* Add certificates if required */
+
     /* Add connection id. This parameter is critical. */
     HIP_IFEL(signaling_build_param_connection_identifier(msg_buf, conn),
              -1, "Building of connection identifier parameter failed\n");
 
-    /* Add host authentication */
+    /* Add user_auth_request parameter, if received in R2
+     * This parameter is critical, if flagged. */
+    if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+        HIP_IFEL(signaling_build_param_user_auth_response(msg_buf, 0),
+                 -1, "Failed to build signed user authentication request\n");
+    }
+
+    /* Add host authentication. */
     HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
              -1, "Building of HMAC failed\n");
     HIP_IFEL(ha->sign(ha->our_priv_key, msg_buf),
@@ -1081,4 +1090,22 @@ int signaling_r2_add_user_context(UNUSED const uint8_t packet_type, UNUSED const
 int signaling_r2_add_user_signature(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
 {
     return signaling_i2_add_user_signature(packet_type, ha_state, ctx);
+}
+
+int signaling_r2_add_user_auth_resp(UNUSED const uint8_t packet_type, UNUSED const uint32_t ha_state, struct hip_packet_context *ctx)
+{
+    int err = 0;
+    struct signaling_hipd_state *sig_state;
+
+    HIP_IFEL(!ctx->hadb_entry, -1, "No hadb entry.\n");
+    HIP_IFEL(!(sig_state = lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
+             -1, "failed to retrieve state for signaling\n");
+    /* check if we must include a user auth req_s parameter */
+    if (signaling_flag_check(sig_state->pending_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+        HIP_IFEL(signaling_build_param_user_auth_response(ctx->output_msg, 0),
+                     -1, "Building of user context parameter failed.\n");
+    }
+
+out_err:
+    return err;
 }

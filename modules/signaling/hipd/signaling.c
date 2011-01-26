@@ -25,6 +25,7 @@
 #define OUTBOUND_I2_CREATE_USER_SIG_PRIO        42500
 #define OUTBOUND_R2_CREATE_APPINFO_PRIO         41501
 #define OUTBOUND_R2_CREATE_USRINFO_PRIO         41502
+#define OUTBOUND_R2_CREATE_USR_AUTH_PRIO        41504
 #define OUTBOUND_R2_CREATE_USER_SIG_PRIO        42501
 
 #define INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO    30000
@@ -118,6 +119,19 @@ int hip_signaling_init(void)
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,         &signaling_r2_add_user_context, OUTBOUND_R2_CREATE_USRINFO_PRIO),
              -1, "Error on registering Signaling handle function.\n");
 
+    /* Add user_auth_request_signed to R2 */
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_UNASSOCIATED,    &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I1_SENT,         &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_I2_SENT,         &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+    HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,         &signaling_r2_add_user_auth_resp, OUTBOUND_R2_CREATE_USR_AUTH_PRIO),
+             -1, "Error on registering Signaling handle function.\n");
+
+
     /* Add user signature to R2 */
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_NONE,            &signaling_r2_add_user_signature, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
              -1, "Error on registering Signaling handle function.\n");
@@ -129,6 +143,7 @@ int hip_signaling_init(void)
              -1, "Error on registering Signaling handle function.\n");
     HIP_IFEL(hip_register_handle_function(HIP_I2, HIP_STATE_R2_SENT,         &signaling_r2_add_user_signature, OUTBOUND_R2_CREATE_USER_SIG_PRIO),
              -1, "Error on registering Signaling handle function.\n");
+
 
     // register user message handler
     HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST,  &signaling_handle_connection_request, INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO),
