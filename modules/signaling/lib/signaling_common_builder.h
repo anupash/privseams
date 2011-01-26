@@ -10,6 +10,7 @@
 
 #include "signaling_prot_common.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
+#include "modules/signaling/hipd/signaling_hipd_state.h"
 
 /* Builders for on the wire parameters */
 int signaling_build_param_connection_identifier(hip_common_t *msg,
@@ -21,6 +22,11 @@ int signaling_build_param_user_context(hip_common_t *msg,
                                        struct signaling_user_context *user_ctx);
 int signaling_build_param_user_signature(hip_common_t *msg, const uid_t uid);
 int signaling_build_param_user_auth_fail(hip_common_t *msg, const uint16_t reason);
+int signaling_build_param_cert_chain(hip_common_t *msg,
+                                     STACK_OF(X509) *cert_chain,
+                                     int start,
+                                     int count,
+                                     int freespace);
 
 /* Builders for internal state structures */
 int signaling_build_application_context(const struct signaling_param_app_context *param_app_ctx,

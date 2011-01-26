@@ -44,6 +44,7 @@
 #include "signaling_oslayer.h"
 #include "signaling_prot_common.h"
 #include "signaling_user_api.h"
+#include "signaling_x509_api.h"
 
 static uint8_t signaling_build_flags(const struct signaling_connection *const conn)
 {
@@ -364,6 +365,66 @@ int signaling_build_param_user_auth_fail(struct hip_common *msg, const uint16_t 
 out_err:
     return err;
 }
+
+/**
+ * Build as many hip_cert parameters into the message as possible.
+ *
+ * @param msg         msg, where the certificates are appended
+ * @param cert_chain  the certificate chain
+ * @param start       the first certificate included is at position start from the top of the stack
+ *                    e.g. use start = 1 to start at the top
+ * @param freespace   the number of bytes we can use for the certificate parameter
+ *                    (the caller should calculate this number in a way that the remaining parameters
+ *                     like signatures, HMAC still fit into the packet)
+ *
+ * @return          -1 on error, otherwise the number of certificates included in the message
+ */
+int signaling_build_param_cert_chain(hip_common_t *msg,
+                                     STACK_OF(X509) *cert_chain,
+                                     int start,
+                                     int count,
+                                     int freespace) {
+    int err = 0;
+    int i   = start;
+    int cert_len;
+    unsigned char *buf;
+    X509 *cert = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!msg, -1, "Cannot build parameters into NULL-message\n");
+    if (sk_X509_num(cert_chain) == 0) {
+        return 0;
+    }
+    if (start > sk_X509_num(cert_chain)) {
+        HIP_DEBUG("Start index is out of range. \n");
+        return -1;
+    }
+
+    do {
+        cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain) - i);
+        HIP_IFEL((cert_len = signaling_X509_to_DER(cert, &buf)) < 0,
+                 -1, "Could not get DER encoding of certificate #%d (from top)\n", i);
+        if(freespace > cert_len + (int) sizeof(struct hip_sig) + 7) {
+            HIP_IFEL(hip_build_param_cert(msg, 0, count, i, HIP_CERT_X509V3, buf, cert_len),
+                     -1, "Could not build cert parameter\n");
+            freespace -= cert_len;
+        } else {
+            HIP_DEBUG("Free space left in current message is not not enough for next cert: Have %d but need %d\n",
+                      freespace, cert_len + (int) sizeof(struct hip_sig) + 7);
+            break;
+        }
+        free(buf);
+        buf = NULL;
+        i++;
+    } while (sk_X509_num(cert_chain) - i >= 0);
+
+    return i - start;
+
+out_err:
+    return err;
+}
+
+
 
 /*
  * Fill the internal application_context struct with data from application_context parameter.

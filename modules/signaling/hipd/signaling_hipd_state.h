@@ -20,6 +20,7 @@ struct user_certificate_context {
     /* Flag to save whether we need to send our user certificate after BEX or UPDATE is completed */
     int user_certificate_required;
     int group;
+    int next_cert_id;
     STACK_OF(X509) *cert_chain;
 };
 

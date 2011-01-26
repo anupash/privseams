@@ -165,6 +165,7 @@ int signaling_user_api_sign(const uid_t uid, const void *const data, const int i
                  -1, "Signature function failed \n");
         break;
     case HIP_HI_ECDSA:
+    default:
         HIP_IFEL(!(homedir = get_user_homedir(uid)),
                  -1, "Could not get homedir for user %d.\n", uid);
         sprintf(filebuf, "%s/.signaling/user-ecdsa-key.pem", homedir);

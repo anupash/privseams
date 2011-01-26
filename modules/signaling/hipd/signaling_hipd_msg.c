@@ -487,11 +487,10 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connect
     struct update_state * updatestate       = NULL;
     STACK_OF(X509) *cert_chain = NULL;
     X509 *cert = NULL;
-    int cert_len;
-    unsigned char *buf;
-    int count = 0;
     int total_cert_count;
-    int free_space;
+    int next_id = 1;
+    int sent = 0;
+    int i = 0;
 
     /* sanity checks */
     HIP_IFEL(!ha, -1, "Given HA is NULL \n");
@@ -504,7 +503,7 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connect
     total_cert_count = sk_X509_num(cert_chain);
     HIP_DEBUG("Sending a total of %d certificates from users chain.\n", total_cert_count);
 
-    while(sk_X509_num(cert_chain) > 0) {
+    while(total_cert_count - next_id >= 0) {
         /* Allocate and build a new message */
         HIP_IFEL(!(msg_buf = hip_msg_alloc()),
                 -ENOMEM, "Out of memory while allocation memory for the user cert update packet\n");
@@ -514,31 +513,22 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connect
         updatestate->update_id_out++;
         HIP_IFEL(hip_build_param_seq(msg_buf, hip_update_get_out_id(updatestate)),
                  -1, "Building of SEQ parameter failed\n");
-        /* Put as much certificate parameter into the message as possible */
-        do {
-            cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain)-1);
-            HIP_IFEL((cert_len = signaling_X509_to_DER(cert, &buf)) < 0,
-                     -1, "Could not get DER encoding of certificate\n");
-            free_space = signaling_get_free_message_space(msg_buf, ha);
-            if (free_space == -1) {
-                err = -1;
-                goto out_err;
-            } else if(free_space > cert_len + (int) sizeof(struct hip_sig) + 7) {
-                count++;
-                HIP_IFEL(hip_build_param_cert(msg_buf, 0, total_cert_count, count, HIP_CERT_X509V3, buf, cert_len),
-                         -1, "Could not build cert parameter\n");
-                cert = sk_X509_pop(cert_chain);
-                X509_free(cert);
-            }
-            free(buf);
-            buf = NULL;
 
-            if(free_space <= cert_len) {
-                HIP_DEBUG("Free space left in current message is not not enough for next cert: Have %d but need %d\n",
-                          free_space, cert_len + (int) sizeof(struct hip_sig) + 7);
-                break;
-            }
-        } while (sk_X509_num(cert_chain) > 0);
+        /* Put as much certificate parameter into the message as possible */
+        sent = signaling_build_param_cert_chain(msg_buf, cert_chain, next_id, total_cert_count,
+                                                signaling_get_free_message_space(msg_buf, ha));
+        i++;
+        switch (sent) {
+        case -1:
+            HIP_ERROR("Error sending certificate chain \n");
+            err = -1;
+            goto out_err;
+        case 0:
+            HIP_DEBUG("Sent all certificates \n");
+            break;
+        default:
+            next_id += sent;
+        }
 
         /* Add the connection identifier */
         HIP_IFEL(signaling_build_param_connection_identifier(msg_buf, conn),
@@ -551,7 +541,7 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connect
                  -EINVAL, "Could not sign UPDATE. Failing\n");
 
         HIP_DEBUG("Sending certificate chain for subject id %d up to certificate %d of %d\n",
-                  conn->ctx_out.user.uid, count, total_cert_count);
+                  conn->ctx_out.user.uid, next_id - 1, total_cert_count);
 
         err = hip_send_pkt(NULL,
                            &ha->peer_addr,
@@ -571,7 +561,6 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connect
 out_err:
     sk_X509_free(cert_chain);
     X509_free(cert);
-    free(buf);
     free(msg_buf);
     return err;
 }
@@ -788,7 +777,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     }
     if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
         HIP_DEBUG("Auth uncompleted after I3/U3, because authentication of local user has been requested\n");
-        //signaling_send_user_certificate_chain(ctx->hadb_entry, existing_conn);
+        signaling_send_user_certificate_chain(ctx->hadb_entry, existing_conn);
         wait_auth = 1;
     }
 

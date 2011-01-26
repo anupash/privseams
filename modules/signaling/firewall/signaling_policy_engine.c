@@ -135,7 +135,7 @@ static void print_policy_tuple(const struct policy_tuple *tuple, const char *pre
     }
     HIP_DEBUG("%s  USER:\t %s\n", prefix, strlen(tuple->user_id) == 0 ? "ANY USER" : tuple->user_id);
     HIP_DEBUG("%s  APP:\t %s\n",  prefix, strlen(tuple->app_id)  == 0 ? "ANY APPLICATION" : tuple->app_id);
-    HIP_DEBUG("%s  TRGT:\t %s\n",  prefix, tuple->target  == 1 ? "ALLOW" : "DROP");
+    HIP_DEBUG("%s  TRGT:\t %s\n",  prefix, tuple->target  == POLICY_ACCEPT ? "ALLOW" : "DROP");
     HIP_DEBUG("%s--------------------------------------------\n", prefix);
 }
 
