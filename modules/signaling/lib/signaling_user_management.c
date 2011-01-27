@@ -26,7 +26,6 @@
 #include <openssl/pem.h>
 
 #include "signaling_common_builder.h"
-#include "signaling_prot_common.h"
 #include "signaling_user_management.h"
 #include "signaling_user_api.h"
 #include "signaling_x509_api.h"
@@ -324,5 +323,53 @@ out_err:
     RSA_free(rsa);
     EC_KEY_free(ecdsa);
     X509_NAME_free(subject_name);
+    return err;
+}
+
+int signaling_handle_user_signature(struct hip_common *const msg,
+                                    struct signaling_connection *const conn,
+                                    enum direction dir) {
+    int err = 0;
+    int v_err = 0;
+    const struct signaling_param_user_context *param_usr_ctx = NULL;
+    struct signaling_connection_context *conn_ctx = NULL;
+
+    if (dir == IN) {
+        conn_ctx = &conn->ctx_in;
+    } else {
+        conn_ctx = &conn->ctx_out;
+    }
+
+    switch ((v_err = signaling_verify_user_signature(msg))) {
+    case X509_V_OK:
+        /* In this case we can tell the oslayer to add the connection, if it complies with local policy */
+        HIP_DEBUG("User signature verification successful\n");
+        signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
+        break;
+    case -1:
+        /* In this case we just assume user auth has failed, we do not request his certificates,
+         * since this was an internal error.
+         * todo: Some retransmission of the received packet would be needed
+         */
+        HIP_DEBUG("Error processing user signature \n");
+        signaling_flag_unset(&conn_ctx->flags, USER_AUTHED);
+        break;
+    default:
+        /* In this case, we need to request the user's certificate chain.
+         * We tell the firewall, that we haven't authenticated the user,
+         * so that it can either block until user is authed or allow if the local policy
+         * doesn't care about the user. */
+        HIP_DEBUG("Could not verify user's certifcate chain:\n");
+        HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(v_err));
+        signaling_flag_unset(&conn_ctx->flags, USER_AUTHED);
+
+        /* cache the user identity to able to identify it later on */
+        HIP_IFEL(!(param_usr_ctx = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO)),
+                 -1, " error getting user context. \n");
+
+        signaling_build_user_context(param_usr_ctx, &conn_ctx->user);
+    }
+
+out_err:
     return err;
 }

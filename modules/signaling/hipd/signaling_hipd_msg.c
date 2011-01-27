@@ -574,45 +574,6 @@ out_err:
     return err;
 }
 
-static int signaling_handle_user_signature(struct hip_common *const msg,
-                                           struct signaling_connection *const conn) {
-    int err = 0;
-    int v_err = 0;
-    const struct signaling_param_user_context *param_usr_ctx = NULL;
-
-    switch ((v_err = signaling_verify_user_signature(msg))) {
-    case X509_V_OK:
-        /* In this case we can tell the oslayer to add the connection, if it complies with local policy */
-        HIP_DEBUG("User signature verification successful\n");
-        signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
-        break;
-    case -1:
-        /* In this case we just assume user auth has failed, we do not request his certificates,
-         * since this was an internal error.
-         * todo: Some retransmission of the received packet would be needed
-         */
-        HIP_DEBUG("Error processing user signature \n");
-        signaling_flag_unset(&conn->ctx_in.flags, USER_AUTHED);
-        break;
-    default:
-        /* In this case, we need to request the user's certificate chain.
-         * We tell the firewall, that we haven't authenticated the user,
-         * so that it can either block until user is authed or allow if the local policy
-         * doesn't care about the user. */
-        HIP_DEBUG("Could not verify user's certifcate chain:\n");
-        HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(v_err));
-        signaling_flag_unset(&conn->ctx_in.flags, USER_AUTHED);
-
-        /* cache the user identity to able to identify it later on */
-        HIP_IFEL(!(param_usr_ctx = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO)),
-                 -1, " error getting user context. \n");
-        signaling_build_user_context(param_usr_ctx, &conn->ctx_in.user);
-    }
-
-out_err:
-    return err;
-}
-
 /*
  * Handles an incoming I2 packet.
  *
@@ -651,7 +612,7 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     signaling_hipd_state_print(sig_state);
 
     /* Try to authenticate the user and set flags accordingly */
-    signaling_handle_user_signature(ctx->input_msg, conn);
+    signaling_handle_user_signature(ctx->input_msg, conn, IN);
 
     /* The host is authed because this packet went through all the default hip checking functions */
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
@@ -710,7 +671,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     signaling_hipd_state_print(sig_state);
 
     /* Try to authenticate the user and set flags accordingly */
-    signaling_handle_user_signature(ctx->input_msg, conn);
+    signaling_handle_user_signature(ctx->input_msg, conn, IN);
 
     /* The initiator and responder hosts are authed,
      * because this packet went through all the default hip checking functions. */
