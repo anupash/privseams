@@ -358,18 +358,49 @@ out_err:
  */
 int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
 {
-    /* For now, just let the I3 pass through.
-     *
-     * TODO:
-     *   We have to check the state for the given connection id.
-     *     a) Has there been I1 - R2 for this connection previously.
-     *     b) Is the F(U2) Flag set correctly.
-     *     c) If F(U1) was set previously, this message may already contain certificates, handle these.
-     */
-    HIP_DEBUG("Received i3: Let through.\n");
+    int err = 0;
+    struct signaling_connection recv_conn;
+    struct signaling_connection *existing_conn = NULL;
+    const struct signaling_param_user_auth_request *auth_req = NULL;
+    int wait_auth = 0;
+
+    /* Step a) */
+    HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
+             0, "Could not init connection context from I3 \n");
+    HIP_IFEL(!(existing_conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, recv_conn.id)),
+             0, "Could not get connection state for connection-tracking table\n");
+    HIP_IFEL(signaling_update_flags_from_connection_id(common, existing_conn),
+             -1, "Could not update authentication flags from I3/U3 message \n");
+
+    /* Step b) */
+    if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+        if (!(auth_req = hip_get_param(common, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+            HIP_ERROR("Requested authentication in R2, but I3 is missing signed request parameter. \n");
+            // todo: [user auth] send notification
+            return 0;
+        }
+    }
+
+    /* Check if we're done with this connection or if we have to wait for addition authentication */
+    if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
+        HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of initiator user.\n");
+        wait_auth = 1;
+    }
+    if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+        HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of responder user.\n");
+        wait_auth = 1;
+    }
+    if (!wait_auth) {
+        HIP_DEBUG("Auth completed after I3/U3 \n");
+        existing_conn->status = SIGNALING_CONN_ALLOWED;
+    }
+
+    signaling_cdb_print();
 
     return 1;
 
+out_err:
+    return err;
 }
 
 /*
