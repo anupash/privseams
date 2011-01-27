@@ -458,7 +458,8 @@ int lmod_register_packet_type(const uint16_t packet_type,
 
     new_entry->num = packet_type;
 
-    identifier_len = strlen(identifier);
+    /* strlen() does not include the terminating \0, count an additional byte */
+    identifier_len = strlen(identifier) + 1;
     if (!(new_entry->identifier = malloc(identifier_len))) {
         return -1;
     }
