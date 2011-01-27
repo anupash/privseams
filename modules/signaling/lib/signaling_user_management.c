@@ -329,9 +329,7 @@ out_err:
 int signaling_handle_user_signature(struct hip_common *const msg,
                                     struct signaling_connection *const conn,
                                     enum direction dir) {
-    int err = 0;
     int v_err = 0;
-    const struct signaling_param_user_context *param_usr_ctx = NULL;
     struct signaling_connection_context *conn_ctx = NULL;
 
     if (dir == IN) {
@@ -345,7 +343,7 @@ int signaling_handle_user_signature(struct hip_common *const msg,
         /* In this case we can tell the oslayer to add the connection, if it complies with local policy */
         HIP_DEBUG("User signature verification successful\n");
         signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
-        break;
+        return 0;
     case -1:
         /* In this case we just assume user auth has failed, we do not request his certificates,
          * since this was an internal error.
@@ -353,7 +351,7 @@ int signaling_handle_user_signature(struct hip_common *const msg,
          */
         HIP_DEBUG("Error processing user signature \n");
         signaling_flag_unset(&conn_ctx->flags, USER_AUTHED);
-        break;
+        return -1;
     default:
         /* In this case, we need to request the user's certificate chain.
          * We tell the firewall, that we haven't authenticated the user,
@@ -362,14 +360,6 @@ int signaling_handle_user_signature(struct hip_common *const msg,
         HIP_DEBUG("Could not verify user's certifcate chain:\n");
         HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(v_err));
         signaling_flag_unset(&conn_ctx->flags, USER_AUTHED);
-
-        /* cache the user identity to able to identify it later on */
-        HIP_IFEL(!(param_usr_ctx = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO)),
-                 -1, " error getting user context. \n");
-
-        signaling_build_user_context(param_usr_ctx, &conn_ctx->user);
+        return 0;
     }
-
-out_err:
-    return err;
 }
