@@ -30,39 +30,6 @@
 #include "signaling_policy_engine.h"
 
 /**
- * Check a connection context against the local policy and check the flags
- * for those entities that need to be auth'd to comply.
- *
- * @return    0 on success (if the tuple complies, or will comply if auth is complete),
- *           -1 if the context will be rejected no matter what authentication takes place
- */
-static int check_and_flag(const hip_hit_t *hit, struct signaling_connection_context *const conn_ctx) {
-    int req_auth_types = 0;
-
-    req_auth_types = signaling_policy_check(hit, conn_ctx);
-    if (req_auth_types & POLICY_REJECT) {
-        HIP_DEBUG("Connection request has been rejected by local policy. \n");
-        return -1;
-    } else if (req_auth_types == POLICY_ACCEPT){
-        HIP_DEBUG("Connection request has been accepted as is by local policy \n");
-        /* tell the HIPD that it needs not request authentication for the firewall */
-        signaling_flag_set(&conn_ctx->flags, HOST_AUTHED);
-        signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
-    } else {
-        HIP_DEBUG("Connection request will be accepted by local policy if further authentication is effectuated: \n");
-        /* Set those flags for which we need no user authentication */
-        if (!(req_auth_types & POLICY_USER_AUTH_REQUIRED)) {
-            signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
-        }
-        if (!(req_auth_types & POLICY_HOST_AUTH_REQUIRED)) {
-            signaling_flag_set(&conn_ctx->flags, HOST_AUTHED);
-        }
-    }
-
-    return 0;
-}
-
-/**
  * HIPFW resends a CONNECTION_REQUEST message to the HIPD, when it has been notified about
  * the successful establishment of another connection by the HIPD and HIPFW has waiting connections.
  *
@@ -132,7 +99,7 @@ int signaling_hipfw_send_connection_request_by_ports(hip_hit_t *src_hit, hip_hit
 
     /* Check the local context against our local policy,
      * block this connection if context is rejected */
-    if (check_and_flag(dst_hit, &new_conn.ctx_out)) {
+    if (signaling_policy_engine_check_and_flag(dst_hit, &new_conn.ctx_out)) {
         new_conn.status = SIGNALING_CONN_BLOCKED;
         HIP_IFEL(signaling_cdb_add(src_hit, dst_hit, &new_conn), -1, "Could not insert connection into cdb\n");
         signaling_cdb_print();
@@ -265,7 +232,7 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg) {
 
     /* Check the remote context against our local policy,
      * block this connection if context is rejected */
-    if (check_and_flag(hitr, &new_conn.ctx_in)) {
+    if (signaling_policy_engine_check_and_flag(hitr, &new_conn.ctx_in)) {
         new_conn.status = SIGNALING_CONN_BLOCKED;
         signaling_cdb_add(hits, hitr, &new_conn);
         signaling_cdb_print();
@@ -292,7 +259,7 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg) {
     signaling_flag_set(&new_conn.ctx_out.flags, HOST_AUTHED);
     signaling_flag_set(&new_conn.ctx_out.flags, USER_AUTHED);
 
-    if (check_and_flag(hits, &new_conn.ctx_out)) {
+    if (signaling_policy_engine_check_and_flag(hits, &new_conn.ctx_out)) {
         new_conn.status = SIGNALING_CONN_BLOCKED;
         signaling_cdb_add(hits, hitr, &new_conn);
         signaling_cdb_print();
@@ -346,7 +313,7 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
 
     /* Check the remote context against our local policy,
      * block this connection if context is rejected */
-    if (check_and_flag(hitr, &existing_conn->ctx_in)) {
+    if (signaling_policy_engine_check_and_flag(hitr, &existing_conn->ctx_in)) {
         existing_conn->status = SIGNALING_CONN_BLOCKED;
         signaling_cdb_print();
         signaling_hipfw_send_connection_confirmation(hits, hitr, existing_conn);

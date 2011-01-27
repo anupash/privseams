@@ -397,6 +397,42 @@ int signaling_policy_check(const struct in6_addr *const hit,
     return ret;
 }
 
+/**
+ * Check a connection context against the local policy and check the flags
+ * for those entities that need to be auth'd to comply.
+ *
+ * @return    0 on success (if the tuple complies, or will comply if auth is complete),
+ *           -1 if the context will be rejected no matter what authentication takes place
+ */
+int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
+                                           struct signaling_connection_context *const conn_ctx)
+{
+    int req_auth_types = 0;
+
+    req_auth_types = signaling_policy_check(hit, conn_ctx);
+    if (req_auth_types & POLICY_REJECT) {
+        HIP_DEBUG("Connection request has been rejected by local policy. \n");
+        return -1;
+    } else if (req_auth_types == POLICY_ACCEPT){
+        HIP_DEBUG("Connection request has been accepted as is by local policy \n");
+        /* tell the HIPD that it needs not request authentication for the firewall */
+        signaling_flag_set(&conn_ctx->flags, HOST_AUTHED);
+        signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
+    } else {
+        HIP_DEBUG("Connection request will be accepted by local policy if further authentication is effectuated: \n");
+        /* Set those flags for which we need no user authentication */
+        if (!(req_auth_types & POLICY_USER_AUTH_REQUIRED)) {
+            signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
+        }
+        if (!(req_auth_types & POLICY_HOST_AUTH_REQUIRED)) {
+            signaling_flag_set(&conn_ctx->flags, HOST_AUTHED);
+        }
+    }
+
+    return 0;
+}
+
+
 void signaling_policy_engine_print_rule_set(const char *prefix) {
     struct slist *listentry;
     struct policy_tuple *entry;
