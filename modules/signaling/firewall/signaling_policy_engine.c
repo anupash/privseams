@@ -245,6 +245,16 @@ int signaling_policy_engine_init_from_file(const char *const policy_file) {
 }
 
 /**
+ * Uninitialize the policy engine from a given configuration.
+ *
+ * @param cfg   the configuration object parsed from a policy configuration file
+ */
+int signaling_policy_engine_uninit(void) {
+    HIP_DEBUG("Uninitializing the policy engine \n");
+    return 0;
+}
+
+/**
  * @return 0 if tuples don't match, 1 if they do
  */
 static int match_tuples(const struct policy_tuple *tuple_conn, const struct policy_tuple *tuple_rule) {
