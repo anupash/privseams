@@ -379,7 +379,6 @@ struct signaling_connection {
     uint32_t id;
     int status;
     int side;
-    uint16_t src_port;
     struct signaling_port_pair sockets[SIGNALING_MAX_SOCKETS];
     struct signaling_connection_context ctx_out;
     struct signaling_connection_context ctx_in;
