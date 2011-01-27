@@ -665,8 +665,8 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not init connection context from R2/U2 \n");
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, recv_conn.id)),
              -1, "Could not get connection state for connection in R2\n");
-    HIP_IFEL(signaling_update_connection_from_msg(conn, ctx->input_msg),
-             -1, "Could not update connection state with information from R2\n");
+    HIP_IFEL(signaling_update_connection_from_msg(conn, ctx->input_msg, IN),
+             -1, "Could not update connection state with information from R2\n", IN);
     HIP_DEBUG("HIPD state after receiving R2/U2 \n");
     signaling_hipd_state_print(sig_state);
 

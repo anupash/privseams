@@ -378,10 +378,12 @@ out_err:
 }
 
 int signaling_update_connection_from_msg(struct signaling_connection *const conn,
-                                         const hip_common_t * const msg)
+                                         const hip_common_t * const msg,
+                                         enum direction dir)
 {
     int err                     = 0;
     const struct hip_tlv_common *param     = NULL;
+    struct signaling_connection_context *ctx_to_update = NULL;
 
     /* sanity checks */
     HIP_IFEL(!conn, -1, "Cannot initialize NULL-context\n");
@@ -392,11 +394,17 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
         conn->id = ntohl(((const struct signaling_param_connection_identifier *) param)->id);
     }
 
+    if (dir == IN) {
+        ctx_to_update = &conn->ctx_in;
+    } else {
+        ctx_to_update = &conn->ctx_out;
+    }
+
     signaling_update_flags_from_connection_id(msg, conn);
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
-        signaling_build_application_context((const struct signaling_param_app_context *) param, &conn->ctx_in.app);
+        signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_update->app);
         // init ports only for the responder, the initiator already has them
         // todo: [mult conn] define some checks, that ports are equal?
         if (conn->side == RESPONDER) {
@@ -405,7 +413,7 @@ int signaling_update_connection_from_msg(struct signaling_connection *const conn
     }
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
-        signaling_build_user_context((const struct signaling_param_user_context *) param, &conn->ctx_in.user);
+        signaling_build_user_context((const struct signaling_param_user_context *) param, &ctx_to_update->user);
     }
 
 out_err:

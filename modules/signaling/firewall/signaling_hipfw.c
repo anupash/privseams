@@ -253,7 +253,7 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     }
 
     /* Step c) */
-    if (!signaling_flag_check(new_conn.ctx_in.flags, USER_AUTHED)) {
+    if (signaling_flag_check(new_conn.ctx_in.flags, USER_AUTH_REQUEST)) {
         if (signaling_build_param_user_auth_req_u(common, 0)) {
             HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
             return 0;
@@ -282,15 +282,68 @@ out_err:
  *      Drop the connection if there is no such entry (then the FW has not previously seen an I2).
  *   b) If we appended a auth_req_u parameter in I2, check for auth_req_s parameter in this message.
  *   c) Check, whether to allow the connection context.
- *   d) Check, user signature and append an auth_req_u parameter,
- *      if the user's certificate chain is missing.
+ *   d) Append an auth_req_u parameter, if the user's certificate chain is requested but missing.
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
 
-int signaling_hipfw_handle_r2(struct hip_common *common, struct tuple *tuple, hip_fw_context_t *ctx)
+int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tuple, hip_fw_context_t *ctx)
 {
-    return signaling_hipfw_handle_i2(common, tuple, ctx);
+    int err = 0;
+    struct signaling_connection recv_conn;
+    struct signaling_connection *conn = NULL;
+    const struct signaling_param_user_auth_request *auth_req = NULL;
+
+    /* sanity checks */
+    HIP_IFEL(!common, -1, "Message is NULL\n");
+
+    /* Step a) */
+    HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, common, OUT),
+             0, "Could not init connection context from R2/U2 \n");
+    HIP_IFEL(!(conn = signaling_cdb_entry_get_connection(&common->hits, &common->hitr, recv_conn.id)),
+             0, "Could not get connection state for connection-tracking table\n");
+    HIP_IFEL(signaling_update_connection_from_msg(conn, common, OUT),
+             0, "Could not update connection state with information from R2\n");
+    conn->ctx_out.direction = FWD;
+    /* Try to auth the user and set flags accordingly */
+    signaling_handle_user_signature(common, conn, OUT);
+    /* The host is authed because this packet went through all the default hip checking functions */
+    signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
+
+    /* Step b) */
+    if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+        if (!(auth_req = hip_get_param(common, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+            HIP_ERROR("Requested authentication in I2, but R2 is missing signed request parameter. \n");
+            // todo: [user auth] send notification
+            return 0;
+        }
+    }
+
+    /* Step c) */
+    if (signaling_policy_engine_check_and_flag(&common->hits, &conn->ctx_out)) {
+        conn->status = SIGNALING_CONN_BLOCKED;
+        signaling_cdb_add(&common->hits, &common->hitr, conn);
+        signaling_cdb_print();
+        return 0;
+    }
+
+    /* Step d) */
+    if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+        if (signaling_build_param_user_auth_req_u(common, 0)) {
+            HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
+            return 0;
+        }
+        ctx->modified = 1;
+    }
+
+    HIP_DEBUG("Connection tracking table after receipt of R2\n");
+    signaling_cdb_print();
+
+    /* Let packet pass */
+    return 1;
+
+out_err:
+    return err;
 }
 
 /*
