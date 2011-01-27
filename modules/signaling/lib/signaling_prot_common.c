@@ -357,14 +357,8 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
 
     if (dir == IN) {
         ctx_to_init = &conn->ctx_in;
-    } else if (dir == OUT) {
+    } else {
         ctx_to_init = &conn->ctx_out;
-    } else if (dir == FWD) {
-        if (&conn->ctx_in.direction == UNINIT) {
-            ctx_to_init = &conn->ctx_in;
-        } else {
-            ctx_to_init = &conn->ctx_out;
-        }
     }
     ctx_to_init->direction = dir;
 
