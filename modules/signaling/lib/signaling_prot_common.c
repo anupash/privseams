@@ -328,15 +328,19 @@ out_err:
  * connection context information found in the message.
  * Values that are not given in the  message are initialized to default.
  *
- * @param ctx a pointer to the connection context that should be initialized
- * @param msg a msg that contains connection context information
+ * @param ctx   a pointer to the connection context that should be initialized
+ * @param msg   a msg that contains connection context information
+ * @param dir   init the incoming (dir = IN), the outgoing (dir = OUT)
+ *              or the first unassigned (dir = FWD) connection context from this message
  *
  * @return negative value on error, 0 on success
  */
 int signaling_init_connection_from_msg(struct signaling_connection *const conn,
-                                       const hip_common_t * const msg) {
+                                       const hip_common_t * const msg,
+                                       enum direction dir) {
     int err                     = 0;
     const struct hip_tlv_common *param     = NULL;
+    struct signaling_connection_context *ctx_to_init = NULL;
 
     /* sanity checks */
     HIP_IFEL(!conn, -1, "Cannot initialize NULL-context\n");
@@ -351,15 +355,28 @@ int signaling_init_connection_from_msg(struct signaling_connection *const conn,
 
     signaling_update_flags_from_connection_id(msg, conn);
 
+    if (dir == IN) {
+        ctx_to_init = &conn->ctx_in;
+    } else if (dir == OUT) {
+        ctx_to_init = &conn->ctx_out;
+    } else if (dir == FWD) {
+        if (&conn->ctx_in.direction == UNINIT) {
+            ctx_to_init = &conn->ctx_in;
+        } else {
+            ctx_to_init = &conn->ctx_out;
+        }
+    }
+    ctx_to_init->direction = dir;
+
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_APPINFO) {
-        signaling_build_application_context((const struct signaling_param_app_context *) param, &conn->ctx_in.app);
+        signaling_build_application_context((const struct signaling_param_app_context *) param, &ctx_to_init->app);
         signaling_get_ports_from_param_app_ctx((const struct signaling_param_app_context *) param, conn->sockets);
     }
 
     param = hip_get_param(msg, HIP_PARAM_SIGNALING_USERINFO);
     if (param && hip_get_param_type(param) == HIP_PARAM_SIGNALING_USERINFO) {
-        signaling_build_user_context((const struct signaling_param_user_context *) param, &conn->ctx_in.user);
+        signaling_build_user_context((const struct signaling_param_user_context *) param, &ctx_to_init->user);
     }
 
 out_err:

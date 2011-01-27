@@ -310,7 +310,7 @@ int signaling_send_second_update(const struct hip_common *first_update) {
     seq_id = hip_update_get_out_id(updatestate);
 
     /* get the connection state */
-    signaling_init_connection_from_msg(&conn_tmp, first_update);
+    signaling_init_connection_from_msg(&conn_tmp, first_update, IN);
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id)),
              -1, "Could not retrieve local connection state for conn id %d \n", conn_tmp.id);
 
@@ -373,7 +373,7 @@ int signaling_send_third_update(UNUSED const struct hip_common *second_update) {
              -1, "Could not get update state for host association.\n");
 
     /* get the connection state */
-    signaling_init_connection_from_msg(&conn_tmp, second_update);
+    signaling_init_connection_from_msg(&conn_tmp, second_update, IN);
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, conn_tmp.id)),
              -1, "Could not retrieve local connection state for conn id %d \n", conn_tmp.id);
 
@@ -642,8 +642,8 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
      * and fill the new state with the information in the I2 */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
-    HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg),
-             -1, "Could not init connection context from R2 \n");
+    HIP_IFEL(signaling_init_connection_from_msg(&new_conn, ctx->input_msg, IN),
+             -1, "Could not init connection context from I2 \n");
     new_conn.side = RESPONDER;
     HIP_IFEL(!(conn = signaling_hipd_state_add_connection(sig_state, &new_conn)),
              -1, "Could not add new connection to hipd state. \n");
@@ -700,7 +700,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     /* Get the connection from state and update it with the information in the R2. */
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling module\n");
-    HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, ctx->input_msg),
+    HIP_IFEL(signaling_init_connection_from_msg(&recv_conn, ctx->input_msg, IN),
              -1, "Could not init connection context from R2/U2 \n");
     HIP_IFEL(!(conn = signaling_hipd_state_get_connection(sig_state, recv_conn.id)),
              -1, "Could not get connection state for connection in R2\n");
@@ -770,7 +770,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     }
 
     /* get connection and update flags */
-    HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg),
+    HIP_IFEL(signaling_init_connection_from_msg(&conn, ctx->input_msg, IN),
              -1, "Could not init connection context from I3/U3 \n");
     HIP_IFEL(!(sig_state = (struct signaling_hipd_state *) lmod_get_state_item(ctx->hadb_entry->hip_modular_state, "signaling_hipd_state")),
              -1, "failed to retrieve state for signaling ports\n");
