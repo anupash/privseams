@@ -196,7 +196,19 @@ void signaling_connection_print(const struct signaling_connection *const conn, c
     HIP_DEBUG("%s+------------ CONNECTION START ----------------------\n", prefix);
     HIP_DEBUG("%s  Identifier:\t\t %d\n", prefix, conn->id);
     HIP_DEBUG("%s  Status:\t\t %s\n",   prefix, signaling_connection_status_name(conn->status));
-    HIP_DEBUG("%s  Side:\t\t %s\n",   prefix, conn->side == INITIATOR ? "INITIATOR" : "RESPONDER");
+    switch (conn->side) {
+    case INITIATOR:
+        HIP_DEBUG("%s  Side:  \t\t %s\n",   prefix, "INITIATOR");
+        break;
+    case RESPONDER:
+        HIP_DEBUG("%s  Side:  \t\t %s\n",   prefix, "RESPONDER");
+        break;
+    case MIDDLEBOX:
+        HIP_DEBUG("%s  Side:  \t\t %s\n",   prefix, "MIDDELBOX");
+        break;
+    default:
+        HIP_DEBUG("%s  Side:  \t\t %s\n",   prefix, "UNKNOWN");
+    }
     HIP_DEBUG("%s  Sockets:\t\t ", prefix);
     for (i = 0; i < SIGNALING_MAX_SOCKETS; i++) {
         if (conn->sockets[i].src_port == 0 && conn->sockets[i].dst_port == 0 && i > 0) {
