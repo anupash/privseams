@@ -342,6 +342,9 @@ int signaling_policy_check(const struct in6_addr *const hit,
         tuple_for_conn_authed.user_id[0] = '\0';
     }
 
+    HIP_DEBUG("Checking connection context:\n");
+    print_policy_tuple(&tuple_for_conn_unauthed, "\t");
+
     /* Determine which rule set to apply */
     switch (conn_ctx->direction) {
     case IN:
@@ -372,6 +375,7 @@ int signaling_policy_check(const struct in6_addr *const hit,
 
     /* If we wouldn't have a match for the unauthed tuple, reject. */
     if (!(tuple_match = match_tuple_list(&tuple_for_conn_unauthed, rule_list))) {
+        HIP_DEBUG("Rejected because no match for unauthed tuple.\n");
         return POLICY_REJECT;
     }
 
@@ -428,6 +432,7 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
         /* tell the HIPD that it needs not request authentication for the firewall */
         signaling_flag_set(&conn_ctx->flags, HOST_AUTHED);
         signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
+        return 0;
     } else {
         HIP_DEBUG("Connection request will be accepted by local policy if further authentication is effectuated: \n");
         /* Set those flags for which we need no user authentication */
@@ -437,9 +442,8 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
         if (!(req_auth_types & POLICY_HOST_AUTH_REQUIRED)) {
             signaling_flag_set(&conn_ctx->flags, HOST_AUTHED);
         }
+        return 0;
     }
-
-    return 0;
 }
 
 
