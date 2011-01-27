@@ -56,6 +56,7 @@ typedef struct {
 #include "modules/signaling/lib/signaling_user_management.h"
 
 #include "signaling_policy_engine.h"
+#include "signaling_cdb.h"
 #include "signaling_hipfw.h"
 
 /* Set from libconfig.
@@ -139,10 +140,13 @@ int signaling_hipfw_init(const char *policy_file) {
     // register I3
     lmod_register_packet_type(HIP_I3, "HIP_I3");
 
+    // init cdb
+    HIP_IFEL(signaling_cdb_init(), -1, "Could not initialize conntracking database. \n");
+
+    // read and process policy
     if (!policy_file) {
         policy_file = default_policy_file;
     }
-
     HIP_DEBUG("Starting firewall with policy: %s \n", policy_file);
     HIP_IFEL(!(cfg = signaling_hipfw_read_config(policy_file)),
              -1, "Could not parse policy file.\n");
@@ -155,7 +159,7 @@ int signaling_hipfw_init(const char *policy_file) {
         HIP_DEBUG("Connection tracking for signaling firewall is set to: %d\n", do_conntrack);
     }
 
-    /* Start the policy engine */
+    /* Initialize the policy engine */
     HIP_IFEL(signaling_policy_engine_init(cfg),
              -1, "Failed to start policy engine \n");
 out_err:
@@ -170,6 +174,8 @@ out_err:
  */
 int signaling_hipfw_uninit(void) {
     HIP_DEBUG("Uninit signaling firewall \n");
+    signaling_cdb_uninit();
+    signaling_policy_engine_uninit();
     return 0;
 }
 
@@ -181,7 +187,7 @@ int signaling_hipfw_uninit(void) {
  *
  * @return 0 on success, negative on error
  */
-static int signaling_hipfw_conntrack(struct tuple * const tuple,
+UNUSED static int signaling_hipfw_conntrack(struct tuple * const tuple,
                                      struct signaling_connection_context * const conn_ctx)
 {
     int err = 0;
@@ -204,74 +210,96 @@ out_err:
 
 /*
  * Handles an I2 packet observed by the firewall.
- * This includes adding connection context information to the conntracking table
- * and speaking a verdict based on the firewalls policy about host, user and application.
+ * We have to
+ *   a) Build the connection state.
+ *   b) Check with local policy, whether to allow the connection context.
+ *   c) Append an auth_req_u parameter, if the user's certificate chain is missing and required.
+ *   d) Add the new connection to the conntracking table.
  *
- * @return the verdict, i.e. 1 for pass, 0 for drop
+ * @param common    the i2 message
+ * @param tuple
+ * @param ctx
+ *
+ * @return          the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_i2(struct hip_common *common, struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
+int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tuple, hip_fw_context_t *ctx)
 {
-    struct signaling_connection_context conn_ctx;
-    int verdict = 1;
     int err = 0;
+    struct signaling_connection new_conn;
 
-    HIP_IFEL(signaling_init_connection_context_from_msg(&conn_ctx, common),
-             -1, "Could not init new connection context from message\n");
-    conn_ctx.direction = FWD;
-    /* Verify the user signature in the packet. */
-    err = signaling_verify_user_signature(common);
-    switch (err) {
-    case 0:
-        HIP_DEBUG("User signature verification successful\n");
-        break;
-    case -1:
-        HIP_DEBUG("Error processing user signature, assuming \"ANY USER\"\n");
-        signaling_init_user_context(&conn_ctx.user);
-        break;
-    default:
-        HIP_DEBUG("Could not verify certifcate chain:\n");
-        HIP_DEBUG("Error: %s \n", X509_verify_cert_error_string(err));
-        HIP_DEBUG("Requesting user's certificate chain.\n");
+    /* sanity checks */
+    HIP_IFEL(!common, -1, "Message is NULL\n");
 
-        // TODO: send a notification / certificate request
+    /* Step a) */
+    if (signaling_init_connection_from_msg(&new_conn, common, IN)) {
+        HIP_ERROR("Could not init connection context from I2 \n");
+        return -1;
+    }
+    new_conn.ctx_in.direction = FWD;
+    new_conn.side = MIDDLEBOX;
+    /* Try to auth the user and set flags accordingly */
+    signaling_handle_user_signature(common, &new_conn, IN);
+    /* The host is authed because this packet went through all the default hip checking functions */
+    signaling_flag_set(&new_conn.ctx_in.flags, HOST_AUTHED);
+
+    /* Step b) */
+    HIP_DEBUG("Connection after receipt of i2\n");
+    signaling_connection_print(&new_conn, "\t");
+    if (signaling_policy_engine_check_and_flag(&common->hits, &new_conn.ctx_in)) {
+        new_conn.status = SIGNALING_CONN_BLOCKED;
+        signaling_cdb_add(&common->hits, &common->hitr, &new_conn);
+        signaling_cdb_print();
+        return 0;
     }
 
-    /* Get a verdict on given hosts, user and application from the policy engine */
-    verdict = signaling_policy_check(&tuple->hip_tuple->data->src_hit, &conn_ctx);
-    if(!verdict) {
-        HIP_DEBUG("Connection has been rejected according to the firewall's policy\n");
-    } else {
-        HIP_DEBUG("Connection has been accepted according to the firewall's policy\n");
-    }
-
-    /* If we allow the connection, save it in conntracking table */
-    if (verdict) {
-        if (signaling_hipfw_conntrack(tuple, &conn_ctx)) {
-            // for now we let pass, if we were very restrictive,
-            // we would spread verdict = DROP here
-            HIP_DEBUG("Couldn't conntrack connection context\n");
+    /* Step c) */
+    if (!signaling_flag_check(new_conn.ctx_in.flags, USER_AUTHED)) {
+        if (signaling_build_param_user_auth_req_u(common, 0)) {
+            HIP_ERROR("Could not add unsigned user auth request. Dropping packet.\n");
+            return 0;
         }
+        ctx->modified = 1;
     }
 
-    return verdict;
+    /* Step d) */
+    new_conn.status = SIGNALING_CONN_PROCESSING;
+    HIP_IFEL(signaling_cdb_add(&common->hits, &common->hitr, &new_conn),
+             -1, "Could not add new connection to conntracking table\n");
+    HIP_DEBUG("Connection tracking table after receipt of I2\n");
+    signaling_cdb_print();
+
+    /* Let packet pass */
+    return 1;
+
 out_err:
-    return 0;
+    return err;
 }
 
 /*
  * Handles an R2 packet observed by the firewall.
- * This includes adding connection context information to the conntracking table
- * and speaking a verdict based on the firewalls policy about host, user and application.
+ * We have to
+ *   a) Add the new connection context to the existing entry in the conntracking table.
+ *      Drop the connection if there is no such entry (then the FW has not previously seen an I2).
+ *   b) If we appended a auth_req_u parameter in I2, check for auth_req_s parameter in this message.
+ *   c) Check, whether to allow the connection context.
+ *   d) Check, user signature and append an auth_req_u parameter,
+ *      if the user's certificate chain is missing.
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_r2(struct hip_common *common, struct tuple *tuple, const hip_fw_context_t *ctx)
+
+int signaling_hipfw_handle_r2(struct hip_common *common, struct tuple *tuple, hip_fw_context_t *ctx)
 {
     return signaling_hipfw_handle_i2(common, tuple, ctx);
 }
 
 /*
  * Handles an I3 packet observed by the firewall.
+ * We have to
+ *   a) Check for a corressponding entry in the conntracking table.
+ *   b) If we appended a auth_req_s parameter in R2, check for auth_req_s parameter in this message.
+ *   c) Handle certificates contained in this message, if we requested auth of initiator user,
+ *   d) Allow connection if no further authentication is required.
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
@@ -298,7 +326,7 @@ int signaling_hipfw_handle_i3(UNUSED struct hip_common *common, UNUSED struct tu
  *
  * @return the verdict, i.e. 1 for pass, 0 for drop
  */
-int signaling_hipfw_handle_update(UNUSED const struct hip_common *common, UNUSED struct tuple *tuple, UNUSED const hip_fw_context_t *ctx)
+int signaling_hipfw_handle_update(UNUSED const struct hip_common *common, UNUSED struct tuple *tuple, UNUSED hip_fw_context_t *ctx)
 {
     HIP_DEBUG("WARNING: unimplemented function \n");
     return 1;
