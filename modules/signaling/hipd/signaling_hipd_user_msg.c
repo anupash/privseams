@@ -158,16 +158,6 @@ static int signaling_handle_connection_confirmation(struct hip_common *msg,
                  -1, "Could not copy connection context to state \n");
     }
 
-    /* The firewall sets USER_AUTHED resp. HOST_AUTHED flags to 0 in its resopnse,
-     * if it needs further authentication. If further authentication is needed set
-     * the global flags from which connection identifier flags are built. */
-    if (!signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTHED)) {
-        signaling_flag_set(&existing_conn->ctx_in.flags, USER_AUTH_REQUEST);
-    }
-    if (!signaling_flag_check(existing_conn->ctx_in.flags, HOST_AUTHED)) {
-        signaling_flag_set(&existing_conn->ctx_in.flags, HOST_AUTH_REQUEST);
-    }
-
     HIP_DEBUG("Saved/updated state for connection received from hipfw:\n");
     signaling_connection_print(existing_conn, "");
 

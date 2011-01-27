@@ -438,9 +438,13 @@ int signaling_policy_engine_check_and_flag(const hip_hit_t *hit,
         /* Set those flags for which we need no user authentication */
         if (!(req_auth_types & POLICY_USER_AUTH_REQUIRED)) {
             signaling_flag_set(&conn_ctx->flags, USER_AUTHED);
+        } else {
+            signaling_flag_set(&conn_ctx->flags, USER_AUTH_REQUEST);
         }
         if (!(req_auth_types & POLICY_HOST_AUTH_REQUIRED)) {
             signaling_flag_set(&conn_ctx->flags, HOST_AUTHED);
+        } else {
+            signaling_flag_set(&conn_ctx->flags, HOST_AUTH_REQUEST);
         }
         return 0;
     }
