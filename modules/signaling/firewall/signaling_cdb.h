@@ -63,8 +63,16 @@ int signaling_cdb_entry_find_connection(const uint16_t src_port, const uint16_t 
                                         signaling_cdb_entry_t * entry,
                                         struct signaling_connection **ret);
 
+struct signaling_connection *signaling_cdb_entry_find_connection_by_dst_port(const struct in6_addr *src_hit,
+                                                                             const struct in6_addr *dst_hit,
+                                                                             const uint16_t dest_port);
+
 struct signaling_connection *signaling_cdb_get_waiting(const struct in6_addr *src_hit,
                                                                const struct in6_addr *dst_hit);
+
+int signaling_cdb_entry_print(signaling_cdb_entry_t * entry);
+
+void signaling_cdb_apply_func(int(*func)(signaling_cdb_entry_t *));
 
 uint32_t signaling_cdb_get_next_connection_id(void);
 

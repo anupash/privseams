@@ -410,8 +410,10 @@ uint32_t signaling_cdb_get_next_connection_id(void) {
 
 /*
  * Prints one database entry.
+ *
+ * @return always returns 0 (but needs to be of type int to be able to use it with cdb_apply_func).
  */
-static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
+int signaling_cdb_entry_print(signaling_cdb_entry_t * entry) {
     struct slist *listentry;
     struct signaling_connection *conn;
 
@@ -430,15 +432,38 @@ static void signaling_cdb_print_doall(signaling_cdb_entry_t * entry) {
         listentry = listentry->next;
     }
     HIP_DEBUG("\t----- SCDB ELEMENT END   ------\n");
+    return 0;
+}
+
+/*
+ * Prints one database entry.
+ */
+static void signaling_cdb_apply_func_doall_arg(signaling_cdb_entry_t *entry, void *ptr) {
+    int err = 0;
+    int(**func)(signaling_cdb_entry_t *) = ptr;
+
+    if ((err = (**func)(entry))) {
+        HIP_DEBUG("Error evaluationg following entry: \n");
+        signaling_cdb_entry_print(entry);
+    } else {
+        //HIP_DEBUG("Successfully evaluated following entry: \n");
+        //signaling_cdb_print_doall(entry);
+    }
 }
 
 /** A callback wrapper of the prototype required by @c lh_doall_arg(). */
-static IMPLEMENT_LHASH_DOALL_FN(signaling_cdb_print, signaling_cdb_entry_t)
+static IMPLEMENT_LHASH_DOALL_ARG_FN(signaling_cdb_apply_func, signaling_cdb_entry_t, void *)
+
+/* Apply a function to each element of the cdb. */
+void signaling_cdb_apply_func(int(*func)(signaling_cdb_entry_t *)) {
+    hip_ht_doall_arg(scdb, (LHASH_DOALL_ARG_FN_TYPE) LHASH_DOALL_ARG_FN(signaling_cdb_apply_func), &func);
+}
 
 /* Print the contents of the database */
 void signaling_cdb_print(void) {
     HIP_DEBUG("------------------ SCDB START ------------------\n");
-    hip_ht_doall(scdb, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(signaling_cdb_print));
+    signaling_cdb_apply_func(&signaling_cdb_entry_print);
+    //hip_ht_doall(scdb, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(signaling_cdb_print));
     HIP_DEBUG("------------------ SCDB END   ------------------\n");
 }
 
