@@ -46,39 +46,6 @@
 #include "signaling_user_api.h"
 #include "signaling_x509_api.h"
 
-static uint8_t signaling_build_flags(const struct signaling_connection *const conn)
-{
-    uint8_t ret = 0;
-    if (conn->side == INITIATOR) {
-        if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-            signaling_flag_set(&ret, FU1);
-        }
-        if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-            signaling_flag_set(&ret, FU2);
-        }
-        if (signaling_flag_check(conn->ctx_out.flags, HOST_AUTH_REQUEST)) {
-            signaling_flag_set(&ret, FH1);
-        }
-        if (signaling_flag_check(conn->ctx_out.flags, HOST_AUTH_REQUEST)) {
-            signaling_flag_set(&ret, FH2);
-        }
-    } else {
-        if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-            signaling_flag_set(&ret, FU2);
-        }
-        if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
-            signaling_flag_set(&ret, FU1);
-        }
-        if (signaling_flag_check(conn->ctx_out.flags, HOST_AUTH_REQUEST)) {
-            signaling_flag_set(&ret, FH1);
-        }
-        if (signaling_flag_check(conn->ctx_out.flags, HOST_AUTH_REQUEST)) {
-            signaling_flag_set(&ret, FH2);
-        }
-    }
-    return ret;
-}
-
 /**
  * Builds a hip_param_connection_identifier parameter into msg,
  * using the values in the connection context .
@@ -101,7 +68,6 @@ int signaling_build_param_connection_identifier(hip_common_t *msg, const struct 
     hip_set_param_contents_len((struct hip_tlv_common *) &conn_id,
                                sizeof(struct signaling_param_connection_identifier) - sizeof(struct hip_tlv_common));
     conn_id.id       = htonl(conn->id);
-    conn_id.flags    = signaling_build_flags(conn);
 
     HIP_IFEL(hip_build_param(msg, &conn_id),
              -1, "Failed to append connection identifier parameter to message.\n");

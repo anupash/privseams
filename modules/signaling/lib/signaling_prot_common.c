@@ -237,7 +237,6 @@ void signaling_param_connection_identifier_print(const struct signaling_param_co
     }
     HIP_DEBUG("+------------ CONNECTION IDENTIFIER START ----------------------\n");
     HIP_DEBUG("Connection ID:\t %d \n", ntohl(conn_id->id));
-    signaling_flags_print(conn_id->flags, "");
     HIP_DEBUG("+------------ CONNECTION IDENTIFIER END   ----------------------\n");
 }
 
