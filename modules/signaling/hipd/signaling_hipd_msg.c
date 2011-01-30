@@ -441,7 +441,8 @@ out_err:
 
 int signaling_send_user_certificate_chain_ack(hip_ha_t *ha,
                                               const uint32_t seq,
-                                              const struct signaling_connection *const conn) {
+                                              const struct signaling_connection *const conn,
+                                              uint32_t network_id) {
     int err = 0;
     uint32_t mask = 0;
     hip_common_t *msg_buf = NULL;
@@ -462,6 +463,10 @@ int signaling_send_user_certificate_chain_ack(hip_ha_t *ha,
     /* Add connection id */
     HIP_IFEL(signaling_build_param_connection_identifier(msg_buf, conn),
              -1, "Building of connection identifier parameter failed\n");
+
+    /* Add original auth request */
+    HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, network_id),
+             -1, "Could not build a copy of the user auth request into certificate ack packet \n");
 
         /* Add host authentication */
     HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
@@ -489,7 +494,7 @@ out_err:
  * @param uid  the id of the user, whose certificate chain is sent
  * @return  0 on success, negative on error
  */
-int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connection *conn) {
+int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connection *conn, uint32_t network_id) {
     int err = 0;
     uint16_t mask           = 0;
     struct hip_common *msg_buf = NULL;
@@ -542,6 +547,10 @@ int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connect
         /* Add the connection identifier */
         HIP_IFEL(signaling_build_param_connection_identifier(msg_buf, conn),
                  -1, "Could not build connection identifier for certificate update packet \n");
+
+        /* Add the network identifier */
+        HIP_IFEL(signaling_build_param_user_auth_req_s(msg_buf, network_id),
+                 -1, "Could not build a copy of the user auth request into certificate update packet \n");
 
         /* Mac and sign the packet */
         HIP_IFEL(hip_build_param_hmac_contents(msg_buf, &ha->hip_hmac_out),
@@ -646,6 +655,7 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_hipd_state *sig_state                   = NULL;
     struct signaling_connection recv_conn;
     struct signaling_connection *conn               = NULL;
+    const struct signaling_param_user_auth_request *param_usr_auth = NULL;
 
     /* sanity checks */
     if (packet_type == HIP_R2) {
@@ -699,7 +709,13 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     /* Check if authentication of initiator user was requested,
      * if yes send certificate chain */
     if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-        signaling_send_user_certificate_chain(ctx->hadb_entry, sig_state->pending_conn);
+        if ((param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+            signaling_send_user_certificate_chain(ctx->hadb_entry, sig_state->pending_conn, ntohl(param_usr_auth->network_id));
+        } else {
+            HIP_ERROR("User auth parameter missing \n");
+            err = -1;
+            goto out_err;
+        }
     }
 
 out_err:
@@ -718,6 +734,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_connection conn;
     struct signaling_connection *existing_conn = NULL;
     struct signaling_hipd_state *sig_state = NULL;
+    const struct signaling_param_user_auth_request *param_usr_auth = NULL;
 
     /* sanity checks */
     if (packet_type == HIP_I3) {
@@ -747,8 +764,14 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     }
     if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
         HIP_DEBUG("Auth uncompleted after I3/U3, because authentication of local user has been requested\n");
-        signaling_send_user_certificate_chain(ctx->hadb_entry, existing_conn);
-        wait_auth = 1;
+        if ((param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+            signaling_send_user_certificate_chain(ctx->hadb_entry, existing_conn, ntohl(param_usr_auth->network_id));
+            wait_auth = 1;
+        } else {
+            HIP_ERROR("User auth parameter missing \n");
+            err = -1;
+            goto out_err;
+        }
     }
 
     if (!wait_auth) {
@@ -778,6 +801,7 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
     uint32_t conn_id;
     struct signaling_connection *conn = NULL;
     const struct hip_seq *param_seq = NULL;
+    const struct signaling_param_user_auth_request *param_usr_auth = NULL;
 
     /* sanity checks */
     HIP_IFEL(!ctx->input_msg,  -1, "Message is NULL\n");
@@ -838,14 +862,20 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
             HIP_IFEL(signaling_user_api_verify_pubkey(subject_name, pkey, cert, 1),
                      -1, "Could not verify users public key with received certificate chain\n");
             if (!verify_certificate_chain(cert, CERTIFICATE_INDEX_TRUSTED_DIR, NULL, cert_chain)) {
-                /* Public key verification was successful, so we save the chain and confirm to the firewall */
+                /* Public key verification was successful, so we save the chain */
                 sk_X509_push(cert_chain, cert);
                 signaling_add_user_certificate_chain(cert_chain);
                 signaling_flag_set(&conn->ctx_in.flags, USER_AUTHED);
                 signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+
+                /* We send an ack */
+                HIP_IFEL(!(param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S)),
+                         -1, "Could not get auth request from certificate update \n");
                 HIP_IFEL(!(param_seq = hip_get_param(ctx->input_msg, HIP_PARAM_SEQ)),
-                         -1, "Cannot build ack for last certificate update, because corressponding UPDATE has no sequence number \n");
-                signaling_send_user_certificate_chain_ack(ctx->hadb_entry, ntohl(param_seq->update_id), conn);
+                         -1, "Cannot build ack for last certificate update, because corresponding UPDATE has no sequence number \n");
+                signaling_send_user_certificate_chain_ack(ctx->hadb_entry, ntohl(param_seq->update_id), conn, ntohl(param_usr_auth->network_id));
+
+                /* We confirm to the firewall*/
                 HIP_DEBUG("Confirming user authentication to OSLAYER\n");
                 signaling_connection_print(conn, "");
                 signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
@@ -889,20 +919,9 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
              -1, "No connection context for connection id \n");
 
     /* unflag user authentication flag */
-    HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),
-             -1, "Could not update flags from certificate update ack \n");
+    signaling_flag_unset(&existing_conn->ctx_out.flags, USER_AUTH_REQUEST);
 
-    HIP_DEBUG("State of HIPD after receipt of certificate update ack\n");
-    signaling_hipd_state_print(sig_state);
-
-    /* Check if we're done with this connection or if authentication failed or we have to wait for addition authentication */
-    if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
-        HIP_DEBUG("Auth still uncompleted after sending own certificate chain.");
-        HIP_ERROR("User authentication was requested but failed. Dropping the connection.\n");
-        existing_conn->status = SIGNALING_CONN_BLOCKED;
-        signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
-        return -1;
-    }
+    /* Check if we're done with this connection or if authentication failed or we have to wait for additional authentication */
     if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
         HIP_DEBUG("Auth uncompleted, waiting for authentication of remote user.\n");
     } else {

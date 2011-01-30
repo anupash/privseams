@@ -70,10 +70,11 @@ int signaling_send_third_update(const struct hip_common *second_update);
 
 /* Functions for certificate exchange */
 int signaling_send_user_auth_failed_ntf(hip_ha_t *ha, const int reason);
-int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connection *conn);
+int signaling_send_user_certificate_chain(hip_ha_t *ha, struct signaling_connection *conn, uint32_t network_id);
 int signaling_send_user_certificate_chain_ack(hip_ha_t *ha,
                                               const uint32_t seq,
-                                              const struct signaling_connection *const conn);
+                                              const struct signaling_connection *const conn,
+                                              uint32_t network_id);
 
 /* Classification of signaling update messages */
 int signaling_get_update_type(struct hip_common *msg);

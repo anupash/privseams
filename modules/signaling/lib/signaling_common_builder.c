@@ -556,21 +556,23 @@ int signaling_get_update_type(hip_common_t *msg) {
     const struct hip_seq *param_seq                             = NULL;
     const struct hip_ack *param_ack                             = NULL;
     const struct hip_cert *param_cert                           = NULL;
+    const struct signaling_param_user_auth_request *param_usr_auth_req = NULL;
 
     param_app_ctx   = hip_get_param(msg, HIP_PARAM_SIGNALING_APPINFO);
     param_seq       = hip_get_param(msg, HIP_PARAM_SEQ);
     param_ack       = hip_get_param(msg, HIP_PARAM_ACK);
     param_cert      = hip_get_param(msg, HIP_PARAM_CERT);
+    param_usr_auth_req = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_S);
 
     if (param_app_ctx && param_seq && !param_ack) {
         return SIGNALING_FIRST_BEX_UPDATE;
     } else if (param_app_ctx && param_seq && param_ack) {
         return SIGNALING_SECOND_BEX_UPDATE;
-    } else if (param_ack && !param_seq) {
+    } else if (param_ack && !param_seq && !param_usr_auth_req) {
         return SIGNALING_THIRD_BEX_UPDATE;
     } else if (param_cert && param_seq && !param_ack) {
         return SIGNALING_FIRST_USER_CERT_CHAIN_UPDATE;
-    } else if (param_ack) {
+    } else if (param_ack && param_usr_auth_req) {
         return SIGNALING_SECOND_USER_CERT_CHAIN_UPDATE;
     }
 
