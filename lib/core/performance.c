@@ -200,7 +200,7 @@ int hip_perf_write_benchmark(struct perf_set *set, int slot)
 
     if (set->num_files > slot && set->writable[slot] == 1) {
         if (set->files[slot]) {
-            sprintf(buffer, "%4d\t%8.8lf\n", set->linecount[slot]++,
+            sprintf(buffer, "%4d\t%8.8lf abc\n", set->linecount[slot]++,
                     set->result[slot]);
             fputs(buffer, set->files[slot]);
             set->result[slot]   = 0;
@@ -209,7 +209,10 @@ int hip_perf_write_benchmark(struct perf_set *set, int slot)
             HIP_ERROR("Name for slot %d not set \n", slot);
             err = 1;
         }
+    } else {
+        HIP_DEBUG("error outer if\n");
     }
+    HIP_DEBUG("wrote to %s \n", set->names[slot]);
 out_err:
     return err;
 }

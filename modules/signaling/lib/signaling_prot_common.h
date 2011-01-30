@@ -42,7 +42,12 @@
 #include <sys/types.h>
 #include <linux/limits.h>
 
+#include "config.h"
+
 #include "lib/core/protodefs.h"
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "lib/core/performance.h"
+#endif
 
 // definition of additional packet I3,
 // which we need for user authentication

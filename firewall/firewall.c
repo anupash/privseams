@@ -688,7 +688,7 @@ static void firewall_exit(void)
 
 #ifdef CONFIG_HIP_PERFORMANCE
     /* Deallocate memory of perf_set after finishing all of tests */
-    hip_perf_destroy(perf_set);
+    //hip_perf_destroy(perf_set);
 #endif
 
     hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);
@@ -1923,6 +1923,7 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_R1, "results/PERF_R1.csv");
     hip_perf_set_name(perf_set, PERF_I2, "results/PERF_I2.csv");
     hip_perf_set_name(perf_set, PERF_R2, "results/PERF_R2.csv");
+    hip_perf_set_name(perf_set, PERF_UPDATE, "results/PERF_UPDATE.csv");
     hip_perf_set_name(perf_set, PERF_VERIFY, "results/PERF_VERIFY.csv");
     hip_perf_set_name(perf_set, PERF_BASE, "results/PERF_BASE.csv");
     hip_perf_set_name(perf_set, PERF_CLOSE_SEND, "results/PERF_CLOSE_SEND.csv");
@@ -1931,6 +1932,7 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_CLOSE_COMPLETE, "results/PERF_CLOSE_COMPLETE.csv");
     hip_perf_set_name(perf_set, PERF_DSA_VERIFY_IMPL, "results/PERF_DSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_RSA_VERIFY_IMPL, "results/PERF_RSA_VERIFY_IMPL.csv");
+    hip_perf_set_name(perf_set, PERF_NEW_CONN, "results/PERF_NEW_CONN.csv");
 
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);

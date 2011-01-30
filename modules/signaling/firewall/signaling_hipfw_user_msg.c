@@ -260,6 +260,11 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
     if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
         signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_NEW_CONN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+#endif
     } else {
         HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
         signaling_flags_print(existing_conn->ctx_out.flags, "OUTGOING");
@@ -302,6 +307,11 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
     if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
         signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_NEW_CONN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+#endif
     } else {
         HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
         signaling_flags_print(existing_conn->ctx_out.flags, "OUTGOING");

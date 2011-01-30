@@ -60,7 +60,7 @@ int signaling_hipfw_oslayer_init(void) {
         return -1;
     }
 
-    new_connection_wait_timeout.tv_sec = 2;
+    new_connection_wait_timeout.tv_sec = 0;
     new_connection_wait_timeout.tv_usec = 0;
 
     if (signaling_policy_engine_init_from_file("/usr/local/etc/hip/signaling_local_firewall_policy.cfg")) {
@@ -221,6 +221,11 @@ int signaling_hipfw_conntrack(hip_fw_context_t *ctx) {
     int src_port, dest_port;
     signaling_cdb_entry_t *entry = NULL;
     struct signaling_connection *conn = NULL;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_NEW_CONN\n");
+    hip_perf_start_benchmark(perf_set, PERF_NEW_CONN);
+#endif
 
     /* Get ports from tcp header */
     src_port    = ntohs(ctx->transport_hdr.tcp->source);
