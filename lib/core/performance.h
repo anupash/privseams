@@ -77,6 +77,8 @@ enum perf_sensor {
     PERF_CLOSE_COMPLETE,
     PERF_DSA_VERIFY_IMPL,
     PERF_RSA_VERIFY_IMPL,
+
+    PERF_NEW_CONN,
     /* The firewall only uses the sensors given above, hence it
      * has a separate PERF_MAX. */
     PERF_MAX_FIREWALL,

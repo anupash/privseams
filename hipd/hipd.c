@@ -307,6 +307,8 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_DSA_VERIFY_IMPL, "results/PERF_DSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_RSA_VERIFY_IMPL, "results/PERF_RSA_VERIFY_IMPL.csv");
     hip_perf_set_name(perf_set, PERF_RSA_SIGN_IMPL, "results/PERF_RSA_SIGN_IMPL.csv");
+    hip_perf_set_name(perf_set, PERF_NEW_CONN, "results/PERF_NEW_CONN.csv");
+
     hip_perf_open(perf_set);
 
     HIP_DEBUG("Start PERF_STARTUP\n");
