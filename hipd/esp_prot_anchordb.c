@@ -69,6 +69,13 @@ static struct anchor_db anchor_db;
 /** uninits the anchorDB */
 void anchor_db_uninit(void)
 {
+    int i, j;
+
+    for (i = 0; i < MAX_NUM_TRANSFORMS; i++) {
+        for (j = 0; j < HCSTORE_MAX_HCHAINS_PER_ITEM; j++) {
+            free(anchor_db.anchors[i][j]);
+        }
+    }
     memset(&anchor_db, 0, sizeof(struct anchor_db));
 
     HIP_DEBUG("uninited hchain anchorDB\n");
