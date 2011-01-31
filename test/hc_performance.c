@@ -100,17 +100,17 @@ int main(int argc, char **argv)
     int                    err = 0;
     struct timeval         start_time;
     struct timeval         stop_time;
-    struct hash_chain     *hchain = NULL;
-    struct hash_tree      *htree  = NULL;
-    struct statistics_data creation_stats, verify_stats;
-    uint64_t               timediff      = 0;
-    uint32_t               num_items     = 0;
-    double                 min           = 0.0, max = 0.0, avg = 0.0;
-    double                 std_dev       = 0.0;
-    unsigned char         *branch_nodes  = NULL;
-    int                    branch_length = 0;
-    const unsigned char   *secret        = NULL;
-    int                    secret_length = 0;
+    struct hash_chain     *hchain         = NULL;
+    struct hash_tree      *htree          = NULL;
+    struct statistics_data creation_stats = { 0 }, verify_stats = { 0 };
+    uint64_t               timediff       = 0;
+    uint32_t               num_items      = 0;
+    double                 min            = 0.0, max = 0.0, avg = 0.0;
+    double                 std_dev        = 0.0;
+    unsigned char         *branch_nodes   = NULL;
+    int                    branch_length  = 0;
+    const unsigned char   *secret         = NULL;
+    int                    secret_length  = 0;
     struct hash_chain     *hchains[8];
     const unsigned char   *data        = NULL;
     int                    data_length = 0;
@@ -164,9 +164,6 @@ int main(int argc, char **argv)
     }
 
     hip_set_logdebug(LOGDEBUG_NONE);
-
-    memset(&creation_stats, 0, sizeof(struct statistics_data));
-    memset(&verify_stats, 0, sizeof(struct statistics_data));
 
     print_timeres();
 

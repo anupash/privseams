@@ -191,12 +191,11 @@ out_err:
  */
 int hip_daemon_connect(int hip_user_sock)
 {
-    int                 err = 0;
-    struct sockaddr_in6 daemon_addr;
+    int                 err         = 0;
+    struct sockaddr_in6 daemon_addr = { 0 };
     // We're using system call here add thus resetting errno.
     errno = 0;
 
-    memset(&daemon_addr, 0, sizeof(daemon_addr));
     daemon_addr.sin6_family = AF_INET6;
     daemon_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
     daemon_addr.sin6_addr   = in6addr_loopback;
@@ -300,10 +299,9 @@ out_err:
 static int hip_sendto_hipd(int sockfd, struct hip_common *msg, int len)
 {
     /* Variables. */
-    struct sockaddr_in6 sock_addr;
-    int                 n = -1, alen;
+    struct sockaddr_in6 sock_addr = { 0 };
+    int                 alen, n   = -1;
 
-    memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
     sock_addr.sin6_addr   = in6addr_loopback;
@@ -339,7 +337,7 @@ static int hip_send_recv_daemon_info_internal(struct hip_common *msg,
                                               int opt_socket)
 {
     int                 hip_user_sock = 0, err = 0, n = 0, len = 0;
-    struct sockaddr_in6 addr;
+    struct sockaddr_in6 addr          = { 0 };
     uint8_t             msg_type_old, msg_type_new;
 
     msg_type_old = hip_get_msg_type(msg);
@@ -352,7 +350,6 @@ static int hip_send_recv_daemon_info_internal(struct hip_common *msg,
     } else {
         HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, EHIP);
 
-        memset(&addr, 0, sizeof(addr));
         addr.sin6_family = AF_INET6;
         addr.sin6_addr   = in6addr_loopback;
 
@@ -445,7 +442,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
                               int opt_socket)
 {
     int                 hip_user_sock = 0, err = 0, n, len;
-    struct sockaddr_in6 addr;
+    struct sockaddr_in6 addr          = { 0 };
 
     if (!send_only) {
         return hip_send_recv_daemon_info_internal(msg, opt_socket);
@@ -455,7 +452,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg,
         hip_user_sock = opt_socket;
     } else {
         HIP_IFE((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0, -1);
-        memset(&addr, 0, sizeof(addr));
+
         addr.sin6_family = AF_INET6;
         addr.sin6_addr   = in6addr_loopback;
 
@@ -542,7 +539,7 @@ static int hip_read_control_msg_all(int sockfd,
                                     int encap_hdr_size,
                                     int is_ipv4)
 {
-    struct sockaddr_storage addr_from, addr_to;
+    struct sockaddr_storage addr_from, addr_to = { 0 };
     struct sockaddr_in     *addr_from4 = ((struct sockaddr_in *) &addr_from);
     struct sockaddr_in6    *addr_from6 = ((struct sockaddr_in6 *) &addr_from);
     struct cmsghdr         *cmsg       = NULL;
@@ -552,18 +549,15 @@ static int hip_read_control_msg_all(int sockfd,
         struct inet6_pktinfo *pktinfo_in6;
     } pktinfo;
     struct iovec iov;
-    char         cbuff[CMSG_SPACE(256)];
-    int          err = 0, len;
+    char         cbuff[CMSG_SPACE(256)] = { 0 };
+    int          len, err               = 0;
     int          cmsg_level, cmsg_type;
 
     hip_msg_init(ctx->input_msg);
 
     HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-//    memset(msg_info, 0, sizeof(struct hip_portpair));
     memset(&msg, 0, sizeof(msg));
-    memset(cbuff, 0, sizeof(cbuff));
-    memset(&addr_to, 0, sizeof(addr_to));
 
     /* setup message header with control and receive buffers */
     msg.msg_name    = &addr_from;
@@ -571,7 +565,6 @@ static int hip_read_control_msg_all(int sockfd,
     msg.msg_iov     = &iov;
     msg.msg_iovlen  = 1;
 
-    memset(cbuff, 0, sizeof(cbuff));
     msg.msg_control    = cbuff;
     msg.msg_controllen = sizeof(cbuff);
     msg.msg_flags      = 0;
