@@ -161,6 +161,11 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
         }
     }
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_CONN_REQUEST\n");
+    hip_perf_start_benchmark(perf_set, PERF_CONN_REQUEST);
+#endif
+
     /* We have no waiting contexts. So build the local connection context and queue it. */
     HIP_IFEL(signaling_init_connection(&new_conn),
              -1, "Could not init connection context\n");
@@ -204,6 +209,12 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
              -1, "Could not add entry to scdb.\n");
     signaling_cdb_print();
     waiting_connections++;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_CONN_REQUEST\n");
+    hip_perf_stop_benchmark(perf_set, PERF_CONN_REQUEST);
+    hip_perf_write_benchmark(perf_set, PERF_CONN_REQUEST);
+#endif
 
 out_err:
     return err;

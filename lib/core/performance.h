@@ -80,6 +80,8 @@ enum perf_sensor {
     PERF_ECDSA_VERIFY_IMPL,
 
     PERF_NEW_CONN,           // test 0
+    PERF_CONN_REQUEST,       // test 1
+    PERF_SEND_CONN_REQUEST,  // test 1.2
     PERF_HANDLE_I2,          // test 2
     PERF_HANDLE_R2,          // test 3
     PERF_VERIFY_USER_SIG,    // test 2.1, 3.1

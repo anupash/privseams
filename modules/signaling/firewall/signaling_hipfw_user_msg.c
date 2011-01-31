@@ -49,7 +49,18 @@ int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_
              -1, "build param contents (src hit) failed\n");
     HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
              -1, "build connection parameter failed \n");
+
+    HIP_DEBUG("asdf\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_SEND_CONN_REQUEST\n");
+    hip_perf_start_benchmark(perf_set, PERF_SEND_CONN_REQUEST);
+#endif
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, 0), -1, "send_recv msg failed\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_SEND_CONN_REQUEST\n");
+    hip_perf_stop_benchmark(perf_set, PERF_SEND_CONN_REQUEST);
+    hip_perf_write_benchmark(perf_set, PERF_SEND_CONN_REQUEST);
+#endif
 
     HIP_DEBUG("Sent request to HIPD to establish a connection with following connection context: \n");
     signaling_connection_print(conn, "");
@@ -87,6 +98,17 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
                                       HIP_PARAM_SIGNALING_CONNECTION,
                                       sizeof(struct signaling_connection)),
              -1, "build application context failed \n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_HIPFW_REQ1\n");
+        hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ1);
+        hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ1);
+        HIP_DEBUG("Stop PERF_HIPFW_REQ2\n");
+        hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ2);
+        hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ2);
+        HIP_DEBUG("Stop PERF_HIPFW_REQ3\n");
+        hip_perf_stop_benchmark(perf_set, PERF_HIPFW_REQ3);
+        hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ3);
+#endif
     HIP_IFEL(hip_send_recv_daemon_info(msg, 1, 0), -1, "send_recv msg failed\n");
 
     HIP_DEBUG("Sent connection confirmation to HIPD: \n");
@@ -155,6 +177,11 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg) {
     const hip_hit_t *hitr                           = NULL;
     const struct signaling_connection *recv_conn    = NULL;
     struct signaling_connection new_conn;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_HIPFW_REQ1\n");
+    hip_perf_start_benchmark(perf_set, PERF_HIPFW_REQ1);
+#endif
 
     /* sanity checks */
     HIP_IFEL(!msg, -1, "Msg is NULL \n");
@@ -235,6 +262,11 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
     const struct signaling_connection *recv_conn    = NULL;
     struct signaling_connection *existing_conn      = NULL;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_HIPFW_REQ2\n");
+    hip_perf_start_benchmark(perf_set, PERF_HIPFW_REQ2);
+#endif
+
     /* sanity checks */
     HIP_IFEL(!msg, -1, "Msg is NULL \n");
 
@@ -289,6 +321,10 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
     const struct signaling_connection *recv_conn    = NULL;
     struct signaling_connection *existing_conn      = NULL;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_HIPFW_REQ3\n");
+    hip_perf_start_benchmark(perf_set, PERF_HIPFW_REQ3);
+#endif
     /* Get the connection state */
     signaling_get_hits_from_msg(msg, &hitr, &hits);
     HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_SIGNALING_CONNECTION)),
