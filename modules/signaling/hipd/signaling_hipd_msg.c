@@ -597,6 +597,11 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_connection new_conn;
     struct signaling_connection *conn;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_HANDLE_I2\n");
+    hip_perf_start_benchmark(perf_set, PERF_HANDLE_I2);
+#endif
+
     /* Sanity checks */
     if (packet_type == HIP_I2) {
         HIP_DEBUG("Handling an I2\n");
@@ -638,6 +643,11 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
         return -1;
     }
 
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_HANDLE_I2\n");
+        hip_perf_stop_benchmark(perf_set, PERF_HANDLE_I2);
+        hip_perf_write_benchmark(perf_set, PERF_HANDLE_I2);
+#endif
 
 out_err:
     return err;
@@ -656,6 +666,12 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     struct signaling_connection recv_conn;
     struct signaling_connection *conn               = NULL;
     const struct signaling_param_user_auth_request *param_usr_auth = NULL;
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_HANDLE_R2\n");
+    hip_perf_start_benchmark(perf_set, PERF_HANDLE_R2);
+#endif
+
 
     /* sanity checks */
     if (packet_type == HIP_R2) {
@@ -691,6 +707,12 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     /* Ask the firewall for a decision on the remote connection context */
     HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_HANDLE_R2\n");
+        hip_perf_stop_benchmark(perf_set, PERF_HANDLE_R2);
+        hip_perf_write_benchmark(perf_set, PERF_HANDLE_R2);
+#endif
 
     /* Send an I3 if connection has not been blocked by the oslayer.
      * otherwise send an error notification with the reason and discard the R2. */
