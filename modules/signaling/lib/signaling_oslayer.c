@@ -278,7 +278,7 @@ int signaling_verify_application(const char *app_path)
              -1, "No application certificate found for application: %s.\n", app_path);
 
     /* Look for and get issuer certificate */
-    issuer_cert_file = "cert.pem";
+    issuer_cert_file = "/root/cert.pem";
     HIP_IFEL(!(fp = fopen(issuer_cert_file, "r")),
              -1, "No issuer cert file given.\n");
     HIP_IFEL(!(issuercert = PEM_read_X509(fp, NULL, NULL, NULL)),
