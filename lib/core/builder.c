@@ -3131,8 +3131,8 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
  *
  * @return 0 on success, negative on error
  */
-int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
-                                 struct hip_host_id *peer_host_id)
+int hip_build_host_id_from_param(const struct hip_host_id *const wire_host_id,
+                                 struct hip_host_id *const peer_host_id)
 {
     int      err = 0;
     uint16_t header_len;
@@ -3183,7 +3183,7 @@ out_err:
  * @return zero on success, negative on error
  * @see hip_build_param()
  */
-int hip_build_param_host_id(struct hip_common *msg,
+int hip_build_param_host_id(struct hip_common *const msg,
                             const struct hip_host_id *const host_id)
 {
     int                err = 0;
