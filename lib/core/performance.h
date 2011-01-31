@@ -83,6 +83,9 @@ enum perf_sensor {
     PERF_HANDLE_I2,          // test 2
     PERF_HANDLE_R2,          // test 3
     PERF_VERIFY_USER_SIG,    // test 2.1, 3.1
+    PERF_HIPFW_REQ1,         // test 2.2
+    PERF_HIPFW_REQ2,         // test 3.2
+    PERF_HIPFW_REQ3,         // test 4.3
     /* The firewall only uses the sensors given above, hence it
      * has a separate PERF_MAX. */
     PERF_MAX_FIREWALL,

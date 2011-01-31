@@ -589,7 +589,12 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     hip_perf_write_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_ECDSA_VERIFY_IMPL);
     hip_perf_write_benchmark(perf_set, PERF_DH_CREATE);
+    hip_perf_write_benchmark(perf_set, PERF_HANDLE_I2);
+    hip_perf_write_benchmark(perf_set, PERF_HANDLE_R2);
     hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+    hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ1);
+    hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ2);
+    hip_perf_write_benchmark(perf_set, PERF_HIPFW_REQ3);
 #endif
 
     return 0;
