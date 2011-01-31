@@ -319,7 +319,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
         conn.status         = SIGNALING_CONN_PROCESSING;
 
         /* save application context to our local state */
-        HIP_IFEL(signaling_hipd_state_add_connection(sig_state, &conn),
+        HIP_IFEL(!signaling_hipd_state_add_connection(sig_state, &conn),
                  -1, "Could not save connection in local state\n");
 
         HIP_DEBUG("HIPD STATE \n");
