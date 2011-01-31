@@ -245,7 +245,7 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
     int                          hash_item_length         = 0;
     unsigned char                cmp_val[MAX_HASH_LENGTH] = { 0 };
     int                          err                      = 0;
-    long                         num_parallel_hchains     = 0, i;
+    long                         i, num_parallel_hchains  = 0;
 
     param     = hip_get_param(msg, HIP_PARAM_HIT);
     local_hit = hip_get_param_contents_direct(param);
@@ -1090,7 +1090,7 @@ int esp_prot_update_handle_anchor(const struct hip_common *recv_update,
     const struct hip_tlv_common  *param                      = NULL;
     int                           hash_length                = 0;
     unsigned char                 cmp_value[MAX_HASH_LENGTH] = { 0 };
-    int                           err                        = 0, i;
+    int                           i, err                     = 0;
 
     HIP_ASSERT(spi != NULL);
 

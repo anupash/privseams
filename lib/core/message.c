@@ -540,8 +540,8 @@ static int hip_read_control_msg_all(int sockfd,
                                     int is_ipv4)
 {
     struct sockaddr_storage addr_from, addr_to = { 0 };
-    struct sockaddr_in     *addr_from4 = ((struct sockaddr_in *) &addr_from);
-    struct sockaddr_in6    *addr_from6 = ((struct sockaddr_in6 *) &addr_from);
+    struct sockaddr_in     *addr_from4 = (struct sockaddr_in *) &addr_from;
+    struct sockaddr_in6    *addr_from6 = (struct sockaddr_in6 *) &addr_from;
     struct cmsghdr         *cmsg       = NULL;
     struct msghdr           msg;
     union {
