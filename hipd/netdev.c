@@ -1186,7 +1186,7 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
     struct sockaddr_storage ss_addr;
     struct ifinfomsg       *ifinfo = NULL; /* link layer specific message */
     struct ifaddrmsg       *ifa    = NULL; /* interface address message */
-    struct rtattr          *rta    = NULL, *tb[IFA_MAX + 1];
+    struct rtattr          *rta    = NULL, *tb[IFA_MAX + 1] = { 0 };
     struct sockaddr        *addr   = NULL;
 
     addr = (struct sockaddr *) &ss_addr;
@@ -1227,7 +1227,6 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
                 continue;
             }
 
-            memset(tb, 0, sizeof(tb));
             memset(addr, 0, sizeof(struct sockaddr_storage));
             is_add = ((msg->nlmsg_type == RTM_NEWADDR) ? 1 : 0);
 

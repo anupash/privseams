@@ -1977,14 +1977,13 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
                                        struct hip_tlv_common *param)
 {
     int                           rem, err = 0;
-    struct hip_encrypted_aes_sha1 enc;
+    struct hip_encrypted_aes_sha1 enc          = { 0 };
     int                           param_len    = hip_get_param_total_len(param);
     struct hip_tlv_common        *common       = param;
     char                         *param_padded = NULL;
 
     hip_set_param_type((struct hip_tlv_common *) &enc, HIP_PARAM_ENCRYPTED);
     enc.reserved = htonl(0);
-    memset(&enc.iv, 0, 16);
 
     /* copy the IV *IF* needed, and then the encrypted data */
 
@@ -2854,8 +2853,8 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg,
                                     int hash_length,
                                     int hash_item_length)
 {
-    int                    err = 0;
-    struct esp_prot_anchor esp_anchor;
+    int                    err        = 0;
+    struct esp_prot_anchor esp_anchor = { 0 };
 
     HIP_ASSERT(msg != NULL);
     /* NULL-active_anchor only allowed for UNUSED-transform */
@@ -2873,17 +2872,12 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg,
     if (!transform) {
         /* send 1 byte of 0 per anchor in UNUSED case */
         hash_length = 1;
-
-        memset(&esp_anchor.anchors[0], 0, hash_length);
-        memset(&esp_anchor.anchors[hash_length], 0, hash_length);
     } else {
         memcpy(&esp_anchor.anchors[0], active_anchor, hash_length);
 
         /* send 0 if next_anchor not present */
         if (next_anchor) {
             memcpy(&esp_anchor.anchors[hash_length], next_anchor, hash_length);
-        } else {
-            memset(&esp_anchor.anchors[hash_length], 0, hash_length);
         }
     }
 
@@ -3083,14 +3077,13 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
                                         struct hip_tlv_common *param)
 {
     int                            err = 0;
-    struct hip_encrypted_3des_sha1 enc;
+    struct hip_encrypted_3des_sha1 enc = { 0 };
 
     hip_set_param_type((struct hip_tlv_common *) &enc, HIP_PARAM_ENCRYPTED);
     hip_calc_param_len((struct hip_tlv_common *) &enc, sizeof(enc) -
                        sizeof(struct hip_tlv_common) +
                        hip_get_param_total_len(param));
     enc.reserved = htonl(0);
-    memset(&enc.iv, 0, 8);
 
     /* copy the IV *IF* needed, and then the encrypted data */
 

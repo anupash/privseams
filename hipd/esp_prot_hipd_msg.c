@@ -241,13 +241,11 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
     const unsigned char         *secret[MAX_NUM_PARALLEL_HCHAINS];
     const unsigned char         *branch_nodes[MAX_NUM_PARALLEL_HCHAINS];
     const unsigned char         *root[MAX_NUM_PARALLEL_HCHAINS];
-    struct hip_hadb_state       *entry            = NULL;
-    int                          hash_item_length = 0;
-    unsigned char                cmp_val[MAX_HASH_LENGTH];
-    int                          err                  = 0;
-    long                         num_parallel_hchains = 0, i;
-
-    memset(cmp_val, 0, MAX_HASH_LENGTH);
+    struct hip_hadb_state       *entry                    = NULL;
+    int                          hash_item_length         = 0;
+    unsigned char                cmp_val[MAX_HASH_LENGTH] = { 0 };
+    int                          err                      = 0;
+    long                         num_parallel_hchains     = 0, i;
 
     param     = hip_get_param(msg, HIP_PARAM_HIT);
     local_hit = hip_get_param_contents_direct(param);
@@ -1088,11 +1086,11 @@ int esp_prot_update_handle_anchor(const struct hip_common *recv_update,
                                   struct hip_hadb_state *entry,
                                   uint32_t *spi)
 {
-    const struct esp_prot_anchor *prot_anchor = NULL;
-    const struct hip_tlv_common  *param       = NULL;
-    int                           hash_length = 0;
-    unsigned char                 cmp_value[MAX_HASH_LENGTH];
-    int                           err = 0, i;
+    const struct esp_prot_anchor *prot_anchor                = NULL;
+    const struct hip_tlv_common  *param                      = NULL;
+    int                           hash_length                = 0;
+    unsigned char                 cmp_value[MAX_HASH_LENGTH] = { 0 };
+    int                           err                        = 0, i;
 
     HIP_ASSERT(spi != NULL);
 
@@ -1107,9 +1105,6 @@ int esp_prot_update_handle_anchor(const struct hip_common *recv_update,
 
         // we need to know the hash_length for this transform
         hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
-
-        // compare peer_update_anchor to 0
-        memset(cmp_value, 0, MAX_HASH_LENGTH);
 
         /* treat the very first hchain update after the BEX differently
          * -> assume properties of first parallal chain same as for others */

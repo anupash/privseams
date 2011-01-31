@@ -291,7 +291,7 @@ static int hipd_main(uint64_t flags)
     int                       highest_descriptor = 0, err = 0;
     struct timeval            timeout;
     fd_set                    read_fdset;
-    struct hip_packet_context ctx;
+    struct hip_packet_context ctx = { 0 };
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Creating perf set\n");
@@ -349,7 +349,6 @@ static int hipd_main(uint64_t flags)
     time(&load_time);
 
     /* prepare the one and only hip_packet_context instance */
-    memset(&ctx, 0, sizeof(ctx));
     HIP_IFEL(!(ctx.input_msg  = hip_msg_alloc()), ENOMEM, "Insufficient memory");
     HIP_IFEL(!(ctx.output_msg = hip_msg_alloc()), ENOMEM, "Insufficient memory");
 
