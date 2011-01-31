@@ -157,13 +157,13 @@ out_err:
  */
 static int hip_scan_retransmissions(void)
 {
-    int    err = 0;
     time_t current_time;
     time(&current_time);
-    HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, &current_time), 0,
-             "for_each_ha err.\n");
-out_err:
-    return err;
+
+    if (hip_for_each_ha(hip_handle_retransmission, &current_time)) {
+        return -1;
+    }
+    return 0;
 }
 
 /**
