@@ -3129,7 +3129,7 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
  * @param wire_host_id the host id parameter
  * @param peer_host_id pointer to memory, where the uncompressed host id is written to
  *
- * @return 0 on success, negative on error (if parameter was of wrong type)
+ * @return 0 on success, negative on error
  */
 int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
                                  struct hip_host_id *peer_host_id)
@@ -3180,7 +3180,7 @@ out_err:
  * @param msg the message where the parameter is inserted
  * @param host_id the host identity from which the parameter is built
  *
- * @return zero on success, negative on error value on error
+ * @return zero on success, negative on error
  * @see hip_build_param()
  */
 int hip_build_param_host_id(struct hip_common *msg,
