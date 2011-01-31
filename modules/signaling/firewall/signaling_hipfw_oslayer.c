@@ -116,8 +116,6 @@ static int send_on_timeout(signaling_cdb_entry_t *entry) {
                 HIP_DEBUG("Sending connection request after timeout of %d s.\n", new_connection_wait_timeout.tv_sec);
                 signaling_hipfw_send_connection_request(&entry->local_hit, &entry->remote_hit, conn);
             }
-        } else {
-            break;
         }
         listentry = listentry->next;
     }
