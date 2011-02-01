@@ -140,7 +140,8 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
     int pos = 0;
 
     /* Find if there is a waiting connection for this source and destination application. */
-    if ((conn = signaling_cdb_entry_find_connection_by_dst_port(src_hit, dst_hit, dst_port))) {
+    if ((new_connection_wait_timeout.tv_sec != 0 || new_connection_wait_timeout.tv_usec != 0) &&
+        (conn = signaling_cdb_entry_find_connection_by_dst_port(src_hit, dst_hit, dst_port))) {
         if (conn->status == SIGNALING_CONN_WAITING) {
             pos = signaling_connection_add_port_pair(src_port, dst_port, conn);
             if (pos < 0 || pos == SIGNALING_MAX_SOCKETS - 1) {
@@ -209,6 +210,9 @@ static int handle_new_connection(struct in6_addr *src_hit, struct in6_addr *dst_
              -1, "Could not add entry to scdb.\n");
     signaling_cdb_print();
     waiting_connections++;
+
+    /* check if this can be sent right away */
+    check_timeout_wait_for_new_connections();
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_CONN_REQUEST\n");
