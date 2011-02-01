@@ -263,6 +263,11 @@ int signaling_handle_connection_request(struct hip_common *msg,
     struct signaling_connection conn;
     int err = 0;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_TRIGGER_CONN\n");
+        hip_perf_start_benchmark(perf_set, PERF_TRIGGER_CONN);
+#endif
+
     /* Determine if we already have an association */
     signaling_get_hits_from_msg(msg, &our_hit, &peer_hit);
     entry = hip_hadb_find_byhits(our_hit, peer_hit);
@@ -333,6 +338,11 @@ int signaling_handle_connection_request(struct hip_common *msg,
     /* send status for new connection to os layer */
     signaling_send_connection_confirmation(our_hit, peer_hit, &conn);
 
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
+#endif
 out_err:
     return err;
 }

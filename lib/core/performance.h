@@ -97,8 +97,11 @@ enum perf_sensor {
     PERF_DSA_SIGN_IMPL,
     PERF_I1_SEND,
     PERF_RSA_SIGN_IMPL,
-    PERF_ECDSA_SIGN_IMPL,
     PERF_STARTUP,
+
+    PERF_ECDSA_SIGN_IMPL,
+    PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
+
     /* Number of sensors for the HIP daemon. */
     PERF_MAX
 };
