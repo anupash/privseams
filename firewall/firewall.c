@@ -1938,6 +1938,8 @@ int hipfw_main(const char *const rule_file,
     hip_perf_set_name(perf_set, PERF_HIPFW_REQ1, "results/PERF_HIPFW_REQ1.csv");
     hip_perf_set_name(perf_set, PERF_HIPFW_REQ2, "results/PERF_HIPFW_REQ2.csv");
     hip_perf_set_name(perf_set, PERF_HIPFW_REQ3, "results/PERF_HIPFW_REQ3.csv");
+    hip_perf_set_name(perf_set, PERF_CTX_LOOKUP, "results/PERF_CTX_LOOKUP.csv");
+
 
     HIP_DEBUG("Opening perf set\n");
     hip_perf_open(perf_set);

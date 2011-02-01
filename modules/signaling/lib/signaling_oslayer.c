@@ -334,16 +334,38 @@ int signaling_get_verified_application_context_by_ports(uint16_t src_port,
     X509AC *ac = NULL;
     struct system_app_context sys_ctx;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_CTX_LOOKUP\n");  // test 1.1.1
+    hip_perf_start_benchmark(perf_set, PERF_CTX_LOOKUP);
+#endif
     HIP_IFEL(signaling_netstat_get_application_system_info_by_ports(src_port, dst_port, &sys_ctx),
              -1, "Netstat failed to get system context for application corresponding to ports %d -> %d.\n", src_port, dst_port);
     ctx->user.uid = sys_ctx.uid;
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_CTX_LOOKUP\n");
+    hip_perf_stop_benchmark(perf_set, PERF_CTX_LOOKUP);
+    hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
+    HIP_DEBUG("Start PERF_CTX_LOOKUP\n");   // test 1.1.2
+    hip_perf_start_benchmark(perf_set, PERF_CTX_LOOKUP);
+#endif
     HIP_IFEL(signaling_verify_application(sys_ctx.path),
              -1, "Could not verify certificate of application: %s.\n", sys_ctx.path);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_CTX_LOOKUP\n");
+    hip_perf_stop_benchmark(perf_set, PERF_CTX_LOOKUP);
+    hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
+    HIP_DEBUG("Start PERF_CTX_LOOKUP\n");     // test 1.1.3
+    hip_perf_start_benchmark(perf_set, PERF_CTX_LOOKUP);
+#endif
     HIP_IFEL(!(ac = get_application_attribute_certificate(sys_ctx.path)),
             -1, "Could not open application certificate.");
     HIP_IFEL(signaling_get_application_context_from_certificate(ac, &ctx->app),
              -1, "Could not build application context for application: %s.\n", sys_ctx.path);
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_CTX_LOOKUP\n");
+    hip_perf_stop_benchmark(perf_set, PERF_CTX_LOOKUP);
+    hip_perf_write_benchmark(perf_set, PERF_CTX_LOOKUP);
+#endif
 out_err:
     return err;
 }

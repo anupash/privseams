@@ -81,6 +81,7 @@ enum perf_sensor {
 
     PERF_NEW_CONN,           // test 0
     PERF_CONN_REQUEST,       // test 1
+    PERF_CTX_LOOKUP,         // test 1.1 (the three measurements are tests 1.1.1, 1.1.2 and 1.1.3)
     PERF_SEND_CONN_REQUEST,  // test 1.2
     PERF_HANDLE_I2,          // test 2
     PERF_HANDLE_R2,          // test 3
