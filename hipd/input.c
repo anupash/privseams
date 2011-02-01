@@ -1177,6 +1177,8 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_BASE);
     HIP_DEBUG("Start PERF_I1\n");
     hip_perf_start_benchmark(perf_set, PERF_I1);
+    HIP_DEBUG("Start PERF_NEW_CONN\n");
+    hip_perf_start_benchmark(perf_set, PERF_NEW_CONN);
 #endif
 
     if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {

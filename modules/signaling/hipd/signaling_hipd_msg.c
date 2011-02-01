@@ -809,6 +809,11 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 
     if (!wait_auth) {
 #ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
+    hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+#endif
+#ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_USER_COMM\n");
     hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
 #endif
