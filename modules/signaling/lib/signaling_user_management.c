@@ -263,7 +263,7 @@ int signaling_verify_user_signature(struct hip_common *msg) {
     struct hip_host_id pseudo_ui;
 
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_VERIFY_USER_SIG\n");
+    HIP_DEBUG("Start PERF_VERIFY_USER_SIG\n"); // test 2.1.1
     hip_perf_start_benchmark(perf_set, PERF_VERIFY_USER_SIG);
 #endif
 
@@ -326,7 +326,13 @@ int signaling_verify_user_signature(struct hip_common *msg) {
                                         ntohs(param_usr_ctx->un_length),
                                         &subject_name),
              -1, "Could not decode to x509 name.");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_VERIFY_USER_SIG\n");
+        hip_perf_stop_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+        hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+        HIP_DEBUG("Start PERF_VERIFY_USER_SIG\n");              // test 2.1.2
+        hip_perf_start_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+#endif
     /* Request the user to send his certificate chain if there was an error */
     err = signaling_user_api_verify_pubkey(subject_name, pkey, NULL, 0);
 
@@ -338,6 +344,7 @@ out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_VERIFY_USER_SIG\n");
         hip_perf_stop_benchmark(perf_set, PERF_VERIFY_USER_SIG);
+        hip_perf_write_benchmark(perf_set, PERF_VERIFY_USER_SIG);
 #endif
     return err;
 }
