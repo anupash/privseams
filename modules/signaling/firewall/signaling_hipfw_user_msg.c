@@ -50,7 +50,6 @@ int signaling_hipfw_send_connection_request(const hip_hit_t *src_hit, const hip_
     HIP_IFEL(hip_build_param_contents(msg, conn, HIP_PARAM_SIGNALING_CONNECTION, sizeof(struct signaling_connection)),
              -1, "build connection parameter failed \n");
 
-    HIP_DEBUG("asdf\n");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_SEND_CONN_REQUEST\n");
     hip_perf_start_benchmark(perf_set, PERF_SEND_CONN_REQUEST);
