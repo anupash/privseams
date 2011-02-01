@@ -207,7 +207,7 @@ int signaling_hipfw_handle_first_connection_request(struct hip_common *msg) {
      * build the local connection context and check it, too. */
     // todo: [mult conns] verify all contexts and that they're equal
     if (signaling_get_verified_application_context_by_ports(recv_conn->sockets[0].src_port,
-                                                            recv_conn->sockets[0].dst_port,
+                                                            0,
                                                             &new_conn.ctx_out)) {
         HIP_DEBUG("Application lookup/verification failed, assuming ANY APP.\n");
         signaling_init_application_context(&new_conn.ctx_out.app);

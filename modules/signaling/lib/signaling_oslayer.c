@@ -160,20 +160,18 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
     memset(sys_ctx->state,       0, NETSTAT_SIZE_STATE);
     memset(sys_ctx->progname,    0, NETSTAT_SIZE_PROGNAME);
 
-    // prepare and make call to netstat
-    sprintf(callbuf, "netstat -tpneW | grep :%d | grep :%d", src_port, dst_port);
-    memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
-    HIP_IFEL(!(fp = popen(callbuf, "r")),
-             -1, "Failed to make call to nestat.\n");
-    res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
-    pclose(fp);
-
-    /*
-     * If we have no connection, then we might be the server process.
-     * We have to look for a listening socket on the destination port.
+    /**
+     * Prepare and make call to netstat.
+     * Distinguish between client and server process.
      */
-    if(!res) {
-        // prepare make second call to netstat
+    if (dst_port != 0) {
+        sprintf(callbuf, "netstat -tpneW | grep :%d | grep :%d", src_port, dst_port);
+        memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
+        HIP_IFEL(!(fp = popen(callbuf, "r")),
+                 -1, "Failed to make call to nestat.\n");
+        res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
+        pclose(fp);
+    } else {
         HIP_DEBUG("No output from netstat call: %s\n", callbuf);
         sprintf(callbuf, "netstat -tpneWl | grep :%d", src_port);
         memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
@@ -186,7 +184,7 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
     if(!res) {
         HIP_DEBUG("No output from netstat call: %s\n", callbuf);
     }
-    HIP_IFEL(!res, -1, "Got no output from netstat (neither connection nor listening socket).\n");
+    HIP_IFEL(!res, -1, "Got no output from netstat.\n");
 
     /*
      * Parse the output.
