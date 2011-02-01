@@ -630,11 +630,18 @@ int signaling_handle_incoming_i2(const uint8_t packet_type, UNUSED const uint32_
 
     /* The host is authed because this packet went through all the default hip checking functions */
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_USER_COMM\n");
+    hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
+#endif
     /* Tell the firewall/oslayer about the new connection and await it's decision */
     HIP_IFEL(signaling_send_first_connection_request(&ctx->input_msg->hits, &ctx->input_msg->hitr, conn),
              -1, "Failed to communicate new connection received in I2 to HIPFW\n");
-
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_USER_COMM\n");
+    hip_perf_stop_benchmark(perf_set, PERF_USER_COMM);
+    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
+#endif
     /* If connection has been blocked by the oslayer.
      * send an error notification with the reason and discard the i2. */
     if (conn->status == SIGNALING_CONN_BLOCKED) {
@@ -703,12 +710,19 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     signaling_flag_set(&conn->ctx_in.flags, HOST_AUTHED);
     signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_HANDLE_R2\n");
+    hip_perf_stop_benchmark(perf_set, PERF_HANDLE_R2);
+    HIP_DEBUG("Start PERF_USER_COMM\n");
+    hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
+#endif
     /* Ask the firewall for a decision on the remote connection context */
     HIP_IFEL(signaling_send_second_connection_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn),
              -1, "Failed to communicate new connection information from R2/U2 to hipfw \n");
 #ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_HANDLE_R2\n");
-    hip_perf_stop_benchmark(perf_set, PERF_HANDLE_R2);
+    HIP_DEBUG("Stop PERF_USER_COMM\n");
+    hip_perf_stop_benchmark(perf_set, PERF_USER_COMM);
+    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
 #endif
 
     /* Send an I3 if connection has not been blocked by the oslayer.
@@ -794,8 +808,17 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     }
 
     if (!wait_auth) {
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_USER_COMM\n");
+    hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
+#endif
         HIP_DEBUG("Auth completed after I3/U3 \n");
         signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_USER_COMM\n");
+    hip_perf_stop_benchmark(perf_set, PERF_USER_COMM);
+    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
+#endif
     }
 
 out_err:

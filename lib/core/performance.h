@@ -101,6 +101,7 @@ enum perf_sensor {
 
     PERF_ECDSA_SIGN_IMPL,
     PERF_TRIGGER_CONN,       // hipd side of test SEND_CONN_REQUEST
+    PERF_USER_COMM,          // arount tests 2.2, 3.2 and 4.3
 
     /* Number of sensors for the HIP daemon. */
     PERF_MAX

@@ -313,6 +313,7 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_HANDLE_R2, "results/PERF_HANDLE_R2.csv");
     hip_perf_set_name(perf_set, PERF_VERIFY_USER_SIG, "results/PERF_VERIFY_USER_SIG.csv");
     hip_perf_set_name(perf_set, PERF_TRIGGER_CONN, "results/PERF_TRIGGER_CONN.csv");
+    hip_perf_set_name(perf_set, PERF_USER_COMM, "results/PERF_USER_COMM.csv");
 
     hip_perf_open(perf_set);
 
