@@ -166,7 +166,7 @@ static int any_key_to_key_rr(EVP_PKEY *key, uint8_t *algorithm, unsigned char **
 
     HIP_IFEL(!key,          -1, "Cannot serialize NULL-key \n");
     HIP_IFEL(!algorithm,    -1, "Cannot write algorithm to NULL field \n");
-    HIP_IFEL(!*key_rr_out,  -1, "Cannot write to NULL-buffer \n");
+    HIP_IFEL(!key_rr_out,   -1, "Cannot write to NULL-buffer \n");
 
     type = EVP_PKEY_type(key->type);
 
