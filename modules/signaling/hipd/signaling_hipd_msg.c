@@ -921,10 +921,18 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
                          -1, "Cannot build ack for last certificate update, because corresponding UPDATE has no sequence number \n");
                 signaling_send_user_certificate_chain_ack(ctx->hadb_entry, ntohl(param_seq->update_id), conn, ntohl(param_usr_auth->network_id));
 
-                /* We confirm to the firewall*/
-                HIP_DEBUG("Confirming user authentication to OSLAYER\n");
-                signaling_connection_print(conn, "");
-                signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
+                /* We confirm to the firewall if we're done.
+                 * If not, we'll confirm when we receive our own certifiate ack. */
+                if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
+                    HIP_DEBUG("Confirming user authentication to OSLAYER\n");
+                    signaling_connection_print(conn, "");
+                    signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, conn);
+#ifdef CONFIG_HIP_PERFORMANCE
+                    HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
+                    hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+                    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+#endif
+                }
             } else {
                 HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
                 free(cert);
@@ -973,6 +981,11 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
     } else {
         HIP_DEBUG("Auth completed after update ack \n");
         signaling_send_connection_update_request(&ctx->hadb_entry->hit_our, &ctx->hadb_entry->hit_peer, existing_conn);
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+#endif
     }
 
 out_err:
