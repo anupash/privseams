@@ -41,12 +41,7 @@
  *
  * @param eval Set variable called 'err' to this value.
  */
-#define HIP_OUT_ERR(eval, args ...) \
-    { \
-        HIP_ERROR(args); \
-        err = eval; \
-        goto out_err; \
-    }
+#define HIP_OUT_ERR(eval, args ...) HIP_IFEL(1, err, args)
 
 /**
  * Use this macro to detect failures and exit function in case
