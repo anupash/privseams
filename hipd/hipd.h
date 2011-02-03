@@ -41,10 +41,6 @@
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5
 #define HIP_RETRANSMIT_INTERVAL   1 /* seconds */
-#define HIP_OPP_WAIT              5 /* seconds */
-#define HIP_OPP_FALLBACK_INTERVAL 1 /* seconds */
-#define HIP_OPP_FALLBACK_INIT \
-    (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
 /* the interval with which the hadb entries are checked for retransmissions */
 #define HIP_RETRANSMIT_INIT \
     (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)

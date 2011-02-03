@@ -118,7 +118,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                         void *arg)
 {
     struct nlmsghdr   *h;
-    struct sockaddr_nl nladdr;
+    struct sockaddr_nl nladdr = { 0 };
     struct iovec       iov;
     struct msghdr      msg = {
         (void *) &nladdr, sizeof(nladdr),
@@ -130,7 +130,6 @@ int hip_netlink_receive(struct rtnl_handle *nl,
     int                status  = 0;
     char               buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
-    memset(&nladdr, 0, sizeof(nladdr));
     nladdr.nl_family = AF_NETLINK;
     nladdr.nl_pid    = 0;
     nladdr.nl_groups = 0;
@@ -234,9 +233,9 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
     int                status, err = 0;
     unsigned           seq;
     struct nlmsghdr   *h;
-    struct sockaddr_nl nladdr;
-    char               buf[16384];
-    struct iovec       iov = {
+    struct sockaddr_nl nladdr     = { 0 };
+    char               buf[16384] = { 0 };
+    struct iovec       iov        = {
         .iov_base = (void *) n,
         .iov_len  = n->nlmsg_len
     };
@@ -247,7 +246,6 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
         .msg_iovlen  = 1,
     };
 
-    memset(&nladdr, 0, sizeof(nladdr));
     /*Assign values to the socket address*/
     nladdr.nl_family = AF_NETLINK;
     nladdr.nl_pid    = peer;
@@ -281,8 +279,6 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
         goto out_err;
     }
 
-
-    memset(buf, 0, sizeof(buf));
     iov.iov_base = buf;
 
     while (HIP_NETLINK_TALK_ACK) {
@@ -675,9 +671,8 @@ static int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
         struct nlmsghdr nlh;
         struct rtgenmsg g;
     } req;
-    struct sockaddr_nl nladdr;
+    struct sockaddr_nl nladdr = { 0 };
 
-    memset(&nladdr, 0, sizeof(nladdr));
     nladdr.nl_family = AF_NETLINK;
 
     memset(&req, 0, sizeof(req));
@@ -990,8 +985,8 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
     int                status;
     unsigned           seq;
     struct nlmsghdr   *h;
-    struct sockaddr_nl nladdr;
-    struct iovec       iov = {
+    struct sockaddr_nl nladdr = { 0 };
+    struct iovec       iov    = {
         .iov_base = (void *) n,
         .iov_len  = n->nlmsg_len
     };
@@ -1001,9 +996,8 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
         .msg_iov     = &iov,
         .msg_iovlen  = 1,
     };
-    char               buf[16384];
+    char               buf[16384] = { 0 };
 
-    memset(&nladdr, 0, sizeof(nladdr));
     nladdr.nl_family = AF_NETLINK;
     nladdr.nl_pid    = peer;
     nladdr.nl_groups = groups;
@@ -1019,8 +1013,6 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
         HIP_PERROR("Cannot talk to rtnetlink");
         return -1;
     }
-
-    memset(buf, 0, sizeof(buf));
 
     iov.iov_base = buf;
 

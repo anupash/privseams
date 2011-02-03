@@ -205,7 +205,6 @@ int esp_prot_set_preferred_transforms(const struct hip_common *msg)
 
     // this works as we always have to send at least ESP_PROT_TFM_UNUSED
     if (esp_prot_active) {
-        anchor_db_init();
         HIP_DEBUG("switched to esp protection extension\n");
     } else {
         anchor_db_uninit();
@@ -242,13 +241,11 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
     const unsigned char         *secret[MAX_NUM_PARALLEL_HCHAINS];
     const unsigned char         *branch_nodes[MAX_NUM_PARALLEL_HCHAINS];
     const unsigned char         *root[MAX_NUM_PARALLEL_HCHAINS];
-    struct hip_hadb_state       *entry            = NULL;
-    int                          hash_item_length = 0;
-    unsigned char                cmp_val[MAX_HASH_LENGTH];
-    int                          err                  = 0;
-    long                         num_parallel_hchains = 0, i;
-
-    memset(cmp_val, 0, MAX_HASH_LENGTH);
+    struct hip_hadb_state       *entry                    = NULL;
+    int                          hash_item_length         = 0;
+    unsigned char                cmp_val[MAX_HASH_LENGTH] = { 0 };
+    int                          err                      = 0;
+    long                         i, num_parallel_hchains  = 0;
 
     param     = hip_get_param(msg, HIP_PARAM_HIT);
     local_hit = hip_get_param_contents_direct(param);
@@ -1005,7 +1002,6 @@ int esp_prot_handle_second_update_packet(struct hip_hadb_state *entry,
                         &entry->esp_out,
                         &entry->auth_out,
                         HIP_SPI_DIRECTION_OUT,
-                        1,
                         entry),
              -1, "failed to notify sadb about next anchor\n");
 
@@ -1090,11 +1086,11 @@ int esp_prot_update_handle_anchor(const struct hip_common *recv_update,
                                   struct hip_hadb_state *entry,
                                   uint32_t *spi)
 {
-    const struct esp_prot_anchor *prot_anchor = NULL;
-    const struct hip_tlv_common  *param       = NULL;
-    int                           hash_length = 0;
-    unsigned char                 cmp_value[MAX_HASH_LENGTH];
-    int                           err = 0, i;
+    const struct esp_prot_anchor *prot_anchor                = NULL;
+    const struct hip_tlv_common  *param                      = NULL;
+    int                           hash_length                = 0;
+    unsigned char                 cmp_value[MAX_HASH_LENGTH] = { 0 };
+    int                           i, err                     = 0;
 
     HIP_ASSERT(spi != NULL);
 
@@ -1109,9 +1105,6 @@ int esp_prot_update_handle_anchor(const struct hip_common *recv_update,
 
         // we need to know the hash_length for this transform
         hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
-
-        // compare peer_update_anchor to 0
-        memset(cmp_value, 0, MAX_HASH_LENGTH);
 
         /* treat the very first hchain update after the BEX differently
          * -> assume properties of first parallal chain same as for others */

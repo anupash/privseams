@@ -1119,7 +1119,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_CONF_PUZZLE_SET:    return "HIP_MSG_CONF_PUZZLE_SET";
     case HIP_MSG_CONF_PUZZLE_INC:    return "HIP_MSG_CONF_PUZZLE_INC";
     case HIP_MSG_CONF_PUZZLE_DEC:    return "HIP_MSG_CONF_PUZZLE_DEC";
-    case HIP_MSG_SET_OPPORTUNISTIC_MODE: return "HIP_MSG_SET_OPPORTUNISTIC_MODE";
     case HIP_MSG_SET_DEBUG_ALL:      return "HIP_MSG_SET_DEBUG_ALL";
     case HIP_MSG_SET_DEBUG_MEDIUM:   return "HIP_MSG_SET_DEBUG_MEDIUM";
     case HIP_MSG_SET_DEBUG_NONE:     return "HIP_MSG_SET_DEBUG_NONE";
@@ -1131,9 +1130,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_HIT_TO_IP_ON:       return "HIP_MSG_HIT_TO_IP_ON";
     case HIP_MSG_HIT_TO_IP_OFF:      return "HIP_MSG_HIT_TO_IP_OFF";
     case HIP_MSG_HIT_TO_IP_SET:      return "HIP_MSG_HIT_TO_IP_SET";
-    case HIP_MSG_SET_OPPTCP_ON:      return "HIP_MSG_SET_OPPTCP_ON";
-    case HIP_MSG_SET_OPPTCP_OFF:     return "HIP_MSG_SET_OPPTCP_OFF";
-    case HIP_MSG_OPPTCP_SEND_TCP_PACKET: return "HIP_MSG_OPPTCP_SEND_TCP_PACKET";
     case HIP_MSG_TRANSFORM_ORDER:    return "HIP_MSG_TRANSFORM_ORDER";
     case HIP_MSG_OFFER_RVS:          return "HIP_MSG_OFFER_RVS";
     case HIP_MSG_CANCEL_RVS:         return "HIP_MSG_CANCEL_RVS";
@@ -1158,7 +1154,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_TRIGGER_UPDATE:     return "HIP_MSG_TRIGGER_UPDATE";
     case HIP_MSG_ANCHOR_CHANGE:      return "HIP_MSG_ANCHOR_CHANGE";
     case HIP_MSG_TRIGGER_BEX:        return "HIP_MSG_TRIGGER_BEX";
-    case HIP_MSG_GET_PEER_HIT:       return "HIP_MSG_GET_PEER_HIT";
     case HIP_MSG_NSUPDATE_ON:        return "HIP_MSG_NSUPDATE_ON";
     case HIP_MSG_NSUPDATE_OFF:       return "HIP_MSG_NSUPDATE_OFF";
     case HIP_MSG_HEARTBEAT:          return "HIP_MSG_HEARTBEAT";
@@ -1982,14 +1977,13 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
                                        struct hip_tlv_common *param)
 {
     int                           rem, err = 0;
-    struct hip_encrypted_aes_sha1 enc;
+    struct hip_encrypted_aes_sha1 enc          = { 0 };
     int                           param_len    = hip_get_param_total_len(param);
     struct hip_tlv_common        *common       = param;
     char                         *param_padded = NULL;
 
     hip_set_param_type((struct hip_tlv_common *) &enc, HIP_PARAM_ENCRYPTED);
     enc.reserved = htonl(0);
-    memset(&enc.iv, 0, 16);
 
     /* copy the IV *IF* needed, and then the encrypted data */
 
@@ -2859,8 +2853,8 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg,
                                     int hash_length,
                                     int hash_item_length)
 {
-    int                    err = 0;
-    struct esp_prot_anchor esp_anchor;
+    int                    err        = 0;
+    struct esp_prot_anchor esp_anchor = { 0 };
 
     HIP_ASSERT(msg != NULL);
     /* NULL-active_anchor only allowed for UNUSED-transform */
@@ -2878,17 +2872,12 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg,
     if (!transform) {
         /* send 1 byte of 0 per anchor in UNUSED case */
         hash_length = 1;
-
-        memset(&esp_anchor.anchors[0], 0, hash_length);
-        memset(&esp_anchor.anchors[hash_length], 0, hash_length);
     } else {
         memcpy(&esp_anchor.anchors[0], active_anchor, hash_length);
 
         /* send 0 if next_anchor not present */
         if (next_anchor) {
             memcpy(&esp_anchor.anchors[hash_length], next_anchor, hash_length);
-        } else {
-            memset(&esp_anchor.anchors[hash_length], 0, hash_length);
         }
     }
 
@@ -3088,14 +3077,13 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
                                         struct hip_tlv_common *param)
 {
     int                            err = 0;
-    struct hip_encrypted_3des_sha1 enc;
+    struct hip_encrypted_3des_sha1 enc = { 0 };
 
     hip_set_param_type((struct hip_tlv_common *) &enc, HIP_PARAM_ENCRYPTED);
     hip_calc_param_len((struct hip_tlv_common *) &enc, sizeof(enc) -
                        sizeof(struct hip_tlv_common) +
                        hip_get_param_total_len(param));
     enc.reserved = htonl(0);
-    memset(&enc.iv, 0, 8);
 
     /* copy the IV *IF* needed, and then the encrypted data */
 
@@ -3141,10 +3129,10 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
  * @param wire_host_id the host id parameter
  * @param peer_host_id pointer to memory, where the uncompressed host id is written to
  *
- * @return 0 on success, negative on error (if parameter was of wrong type)
+ * @return 0 on success, negative on error
  */
-int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
-                                 struct hip_host_id *peer_host_id)
+int hip_build_host_id_from_param(const struct hip_host_id *const wire_host_id,
+                                 struct hip_host_id *const peer_host_id)
 {
     int      err = 0;
     uint16_t header_len;
@@ -3154,7 +3142,7 @@ int hip_build_host_id_from_param(const struct hip_host_id *wire_host_id,
     /* sanity checks */
     HIP_IFEL(!wire_host_id, -1, "Given host identity is NULL.\n");
     HIP_IFEL(!peer_host_id, -1, "Cannot write return value to NULL-pointer.\n");
-    HIP_IFEL(!(hip_get_param_type(wire_host_id) == HIP_PARAM_HOST_ID),
+    HIP_IFEL(hip_get_param_type(wire_host_id) != HIP_PARAM_HOST_ID,
              -1, "Param has wrong type (not HIP_PARAM_HOST_ID)");
 
     // copy the header, key and fqdn
@@ -3192,10 +3180,10 @@ out_err:
  * @param msg the message where the parameter is inserted
  * @param host_id the host identity from which the parameter is built
  *
- * @return zero on success, negative on error value on error
+ * @return zero on success, negative on error
  * @see hip_build_param()
  */
-int hip_build_param_host_id(struct hip_common *msg,
+int hip_build_param_host_id(struct hip_common *const msg,
                             const struct hip_host_id *const host_id)
 {
     int                err = 0;

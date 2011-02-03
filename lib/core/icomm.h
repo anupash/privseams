@@ -60,8 +60,6 @@
 /* free slots */
 #define HIP_MSG_NULL_OP                          8
 /* free slots */
-#define HIP_MSG_GET_PEER_HIT                     14
-/* free slot */
 #define HIP_MSG_DEFAULT_HIT                      16
 /* Free slots here */
 #define HIP_MSG_GET_HITS                         21
@@ -89,8 +87,6 @@
 #define HIP_MSG_CONF_PUZZLE_SET                  74
 #define HIP_MSG_CONF_PUZZLE_INC                  75
 #define HIP_MSG_CONF_PUZZLE_DEC                  76
-/* free slot */
-#define HIP_MSG_SET_OPPORTUNISTIC_MODE           78
 /* Free slots here */
 #define HIP_MSG_SET_DEBUG_ALL                    82
 #define HIP_MSG_SET_DEBUG_MEDIUM                 83
@@ -103,13 +99,12 @@
 #define HIP_MSG_SET_LOCATOR_ON                   89
 #define HIP_MSG_SET_LOCATOR_OFF                  90
 /* Free slots here */
-#define HIP_MSG_SET_OPPTCP_ON                    94
-#define HIP_MSG_SET_OPPTCP_OFF                   95
 
 
 #define HIP_MSG_RESET_FIREWALL_DB                98
 
-#define HIP_MSG_OPPTCP_SEND_TCP_PACKET           99
+/* Free slots here */
+
 #define HIP_MSG_TRANSFORM_ORDER                  100
 
 /** Socket option for the server to offer the RVS service. (server side) */

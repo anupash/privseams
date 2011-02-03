@@ -1200,7 +1200,7 @@ int hip_relay_handle_relay_from(struct hip_common *source_msg,
     if (relay_from == NULL) {
         from = hip_get_param(source_msg, HIP_PARAM_FROM);
         if (from == NULL) {
-            HIP_DEBUG("No FROM/RELAY_FROM parameters found in I.\n");
+            HIP_DEBUG("No FROM/RELAY_FROM parameters found in I1.\n");
             return 0;
         } else {
             HIP_DEBUG("Found FROM parameter in I1.\n");
@@ -1211,13 +1211,13 @@ int hip_relay_handle_relay_from(struct hip_common *source_msg,
             HIP_DEBUG("FROM port in I1: %d \n", *dest_port);
         }
     } else {
-        HIP_DEBUG("Found RELAY_FROM parameter in I.\n");
+        HIP_DEBUG("Found RELAY_FROM parameter in I1.\n");
         // set the relay ip and port to the destination address and port.
         param_type = HIP_PARAM_RELAY_FROM;
 
         memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
         *dest_port = ntohs(relay_from->port);
-        HIP_DEBUG("RELAY_FROM port in I. %d \n", *dest_port);
+        HIP_DEBUG("RELAY_FROM port in I1. %d \n", *dest_port);
     }
 
     /* The relayed I1 packet has the initiator's HIT as source HIT, and the

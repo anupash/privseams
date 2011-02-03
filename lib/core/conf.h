@@ -49,13 +49,6 @@
  * These values are used for TYPE_xxx macros.
  */
 
-/** @defgroup exec_app_types Execute application types
- * @{
- * Execute application with opportunistic library preloaded.
- * @see handle_exec_application()
- */
-#define EXEC_LOADLIB_OPP        8
-
 /**
  * Execute application with hip-libraries preloaded.
  * Overides example getaddrinfo().

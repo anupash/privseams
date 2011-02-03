@@ -670,8 +670,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
     char                            saltname[45];
     struct in6_addr                *issuer_hit_n;
     struct hip_host_id             *host_id;
-    RSA                            *rsa = NULL;
-    DSA                            *dsa = NULL;
+    RSA                            *rsa          = NULL;
+    DSA                            *dsa          = NULL;
     unsigned char                  *der_cert     = NULL;
     int                             der_cert_len = 0;
     char                            arg1[21];

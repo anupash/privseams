@@ -94,7 +94,6 @@
 #include "input.h"
 #include "keymat.h"
 #include "netdev.h"
-#include "oppdb.h"
 #include "output.h"
 #include "hadb.h"
 
@@ -236,24 +235,24 @@ static void hip_hadb_set_lsi_pair(struct hip_hadb_state *entry)
  * This function searches for a struct hip_hadb_state entry from the
  * hip_hadb_hit by a HIT pair (local,peer).
  *
- * @param hit local HIT
- * @param hit2 peer HIT
+ * @param hit_local local HIT
+ * @param hit_remote peer HIT
  * @return the corresponding host association or NULL if not found
  */
-struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit,
-                                            const hip_hit_t *hit2)
+struct hip_hadb_state *hip_hadb_find_byhits(const hip_hit_t *hit_local,
+                                            const hip_hit_t *hit_remote)
 {
     struct hip_hadb_state ha, *ret = NULL;
 
-    memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
-    memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
-    HIP_DEBUG_HIT("HIT1", hit);
-    HIP_DEBUG_HIT("HIT2", hit2);
+    memcpy(&ha.hit_our, hit_local, sizeof(hip_hit_t));
+    memcpy(&ha.hit_peer, hit_remote, sizeof(hip_hit_t));
+    HIP_DEBUG_HIT("Local HIT", hit_local);
+    HIP_DEBUG_HIT("Remote HIT", hit_remote);
 
     ret = hip_ht_find(hadb_hit, &ha);
     if (!ret) {
-        memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
-        memcpy(&ha.hit_our, hit2, sizeof(hip_hit_t));
+        memcpy(&ha.hit_peer, hit_local, sizeof(hip_hit_t));
+        memcpy(&ha.hit_our, hit_remote, sizeof(hip_hit_t));
         ret = hip_ht_find(hadb_hit, &ha);
     }
 
@@ -908,28 +907,13 @@ static void hip_hadb_delete_state(struct hip_hadb_state *ha)
  */
 int hip_del_peer_info_entry(struct hip_hadb_state *ha)
 {
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    struct hip_opp_blocking_request *opp_entry = NULL;
-#endif
-
     /* by now, if everything is according to plans, the refcnt
      * should be 1 */
     HIP_DEBUG_HIT("our HIT", &ha->hit_our);
     HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
-    hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, 1);
+    hip_delete_security_associations_and_sp(ha);
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    opp_entry = hip_oppdb_find_by_ip(&ha->peer_addr);
-#endif
-
-    /* Delete hadb entry before oppdb entry to avoid a loop */
     hip_hadb_delete_state(ha);
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    if (opp_entry) {
-        hip_oppdb_entry_clean_up(opp_entry);
-    }
-#endif
 
     return 0;
 }
@@ -1490,7 +1474,7 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_lsi(const hip_lsi_t *lsi_dst
  *
  * @param ha the host association
  */
-void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
+void hip_delete_security_associations_and_sp(struct hip_hadb_state *const ha)
 {
     int prev_spi_out = ha->spi_outbound_current;
     int prev_spi_in  = ha->spi_inbound_current;
@@ -1526,64 +1510,59 @@ void hip_delete_security_associations_and_sp(struct hip_hadb_state *ha)
  * @param dst_addr the new destination address for the SAs
  * @return zero on success and negative on error
  */
-int hip_recreate_security_associations_and_sp(struct hip_hadb_state *ha,
-                                              struct in6_addr *src_addr,
-                                              struct in6_addr *dst_addr)
+int hip_create_or_update_security_associations_and_sp(struct hip_hadb_state *const ha,
+                                                      const struct in6_addr *const src_addr,
+                                                      const struct in6_addr *const dst_addr)
 {
     int err = 0;
 
-    int new_spi_out = ha->spi_outbound_new;
-    int new_spi_in  = ha->spi_inbound_current;
-
+    /* If we have old SAs with these HITs delete them */
     hip_delete_security_associations_and_sp(ha);
 
-    // Create a new security policy
+    // Create a new inbound SA
+    HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", ha->spi_inbound_current);
+    HIP_IFEL(hip_add_sa(src_addr,
+                        dst_addr,
+                        &ha->hit_peer,
+                        &ha->hit_our,
+                        ha->spi_inbound_current,
+                        ha->esp_transform,
+                        &ha->esp_in,
+                        &ha->auth_in,
+                        HIP_SPI_DIRECTION_IN,
+                        ha),
+             -1, "Error while changing inbound security association\n");
+
+    // Create a new outbound SA
+    HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", ha->spi_outbound_new);
+    HIP_IFEL(hip_add_sa(dst_addr,
+                        src_addr,
+                        &ha->hit_our,
+                        &ha->hit_peer,
+                        ha->spi_outbound_new,
+                        ha->esp_transform,
+                        &ha->esp_out,
+                        &ha->auth_out,
+                        HIP_SPI_DIRECTION_OUT,
+                        ha),
+             -1, "Error while changing outbound security association\n");
+
+    // Create a new security policy pointing to SAs after SA setup
     HIP_IFEL(hip_setup_hit_sp_pair(&ha->hit_peer,
                                    &ha->hit_our,
                                    src_addr,
                                    dst_addr,
                                    IPPROTO_ESP,
-                                   1,
-                                   0),
+                                   1),
              -1, "Setting up SP pair failed\n");
 
-    // Create a new inbound SA
-    HIP_DEBUG("Creating a new inbound SA, SPI=0x%x\n", new_spi_in);
-
-    HIP_IFEL(hip_add_sa(src_addr,
-                        dst_addr,
-                        &ha->hit_peer,
-                        &ha->hit_our,
-                        new_spi_in,
-                        ha->esp_transform,
-                        &ha->esp_in,
-                        &ha->auth_in,
-                        HIP_SPI_DIRECTION_IN,
-                        0,
-                        ha),
-             -1, "Error while changing inbound security association\n");
-
-    HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
-
-    // Create a new outbound SA
-    HIP_DEBUG("Creating a new outbound SA, SPI=0x%x\n", new_spi_out);
-    ha->local_udp_port = ha->nat_mode ? hip_get_local_nat_udp_port() : 0;
-
-    HIP_IFEL(hip_add_sa(dst_addr,
-                        src_addr,
-                        &ha->hit_our,
-                        &ha->hit_peer,
-                        new_spi_out,
-                        ha->esp_transform,
-                        &ha->esp_out,
-                        &ha->auth_out,
-                        HIP_SPI_DIRECTION_OUT,
-                        0,
-                        ha),
-             -1, "Error while changing outbound security association\n");
-
-    HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
-
 out_err:
+    if (err) {
+        HIP_ERROR("Failed to setup IPsec SAs, removing IPsec state!");
+
+        /* delete all IPsec related SPD/SA for this ctx->hadb_entry*/
+        hip_delete_security_associations_and_sp(ha);
+    }
+
     return err;
 };

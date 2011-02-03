@@ -287,9 +287,6 @@ int esp_prot_init(void)
 
     HIP_DEBUG("setting up esp_prot_transforms...\n");
 
-    // init all possible transforms
-    memset(esp_prot_transforms, 0, MAX_NUM_TRANSFORMS * sizeof(struct esp_prot_tfm));
-
     // set available transforms to used
     esp_prot_transforms[token_transform].is_used = 1;
 

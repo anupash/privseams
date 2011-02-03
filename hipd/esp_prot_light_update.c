@@ -290,7 +290,6 @@ int esp_prot_handle_light_update(UNUSED const uint8_t packet_type,
                             &(ctx->hadb_entry)->esp_out,
                             &(ctx->hadb_entry)->auth_out,
                             HIP_SPI_DIRECTION_OUT,
-                            1,
                             ctx->hadb_entry),
                  -1,
                  "failed to notify sadb about next anchor\n");

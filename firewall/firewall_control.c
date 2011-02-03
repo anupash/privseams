@@ -49,7 +49,6 @@
 #include "firewall.h"
 #include "user_ipsec_fw_msg.h"
 #include "firewall_control.h"
-#include "sysopp.h"
 
 /**
  * Change the state of hadb state cache in the firewall
@@ -130,11 +129,6 @@ int hip_handle_msg(struct hip_common *msg)
         HIP_DEBUG("Received flush all sa request from hipd\n");
         HIP_IFEL(handle_sa_flush_all_request(), -1,
                  "hip userspace sadb flush all did NOT succeed\n");
-        break;
-    case HIP_MSG_GET_PEER_HIT:
-        if (system_based_opp_mode) {
-            err = hip_fw_sys_opp_set_peer_hit(msg);
-        }
         break;
     case HIP_MSG_TURN_INFO:
         break;

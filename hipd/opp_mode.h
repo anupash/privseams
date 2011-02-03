@@ -23,17 +23,26 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HIP_FIREWALL_SYSOPP_H
-#define HIP_FIREWALL_SYSOPP_H
+/**
+ * @file
+ * This file represents the interface of the opportunistic mode for the Host
+ * Identity Protocol (HIP).
+ *
+ * @brief Interface of the HIP opportunistic mode
+ *
+ * @author Rene Hummen
+ */
 
-#define _BSD_SOURCE
+#ifndef HIP_HIPD_OPP_MODE_H
+#define HIP_HIPD_OPP_MODE_H
 
 #include "lib/core/protodefs.h"
-#include "firewall_defines.h"
 
-int hip_fw_handle_outgoing_system_based_opp(const struct hip_fw_context *ctx,
-                                            const int default_verdict);
-int hip_fw_sys_opp_set_peer_hit(const struct hip_common *msg);
-void hip_fw_flush_system_based_opp_chains(void);
 
-#endif /* HIP_FIREWALL_SYSOPP_H */
+struct hip_hadb_state *hip_opp_get_hadb_entry(const hip_hit_t *const init_hit,
+                                              const struct in6_addr *const resp_addr);
+struct hip_hadb_state *hip_opp_get_hadb_entry_i1_r1(struct hip_common *msg,
+                                                    const struct in6_addr *const src_addr);
+int hip_handle_opp_r1(struct hip_packet_context *ctx);
+
+#endif /* HIP_HIPD_OPP_MODE_H */

@@ -54,7 +54,6 @@
 #include "hiprelay.h"
 #include "input.h"
 #include "maintenance.h"
-#include "oppipdb.h"
 #include "output.h"
 #include "user.h"
 #include "close.h"
@@ -89,11 +88,6 @@ static int hip_xmit_close(struct hip_hadb_state *entry, void *opaque)
         HIP_DEBUG("Peer HIT did not match, ignoring.\n");
         goto out_err;
     }
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&(entry->peer_addr));
-#endif
 
     if (!(entry->state == HIP_STATE_ESTABLISHED) && delete_ha_info) {
         HIP_DEBUG("Not sending CLOSE message, invalid hip state " \
@@ -489,13 +483,7 @@ int hip_close_ack_handle_packet(UNUSED const uint8_t packet_type,
 
     HIP_DEBUG("CLOSED\n");
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-    /* Check and remove the IP of the peer from the opp non-HIP database */
-    hip_oppipdb_delentry(&ctx->hadb_entry->peer_addr);
-#endif
-
-    HIP_IFEL(hip_del_peer_info(&ctx->hadb_entry->hit_our,
-                               &ctx->hadb_entry->hit_peer),
+    HIP_IFEL(hip_del_peer_info_entry(ctx->hadb_entry),
              -1, "Deleting peer info failed\n");
 out_err:
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -523,7 +511,7 @@ int hip_purge_closing_ha(struct hip_hadb_state *ha, UNUSED void *opaque)
     if ((ha->state == HIP_STATE_CLOSING || ha->state == HIP_STATE_CLOSED)) {
         if (ha->purge_timeout <= 0) {
             HIP_DEBUG("Purging HA (state=%d)\n", ha->state);
-            HIP_IFEL(hip_del_peer_info(&ha->hit_our, &ha->hit_peer), -1,
+            HIP_IFEL(hip_del_peer_info_entry(ha), -1,
                      "Deleting peer info failed.\n");
         } else {
             ha->purge_timeout--;

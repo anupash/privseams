@@ -93,7 +93,6 @@ enum number_dh_keys_t number_dh_keys = TWO;
  *
  * @param i1         a pointer to a i1 packet common header with source and
  *                   destination HITs.
- * @param dst_hit    destination HIT (used only for the opportunistic TCP extension)
  * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
  *                   If local_addr is NULL, the packet is sent from all addresses.
  * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
@@ -101,10 +100,8 @@ enum number_dh_keys_t number_dh_keys = TWO;
  * @param dst_port   not used.
  * @param entry      a pointer to the current host association database state.
  * @return           zero on success, or negative error value on error.
- * @todo remove the dst_hit parameter? test with the opportunistic TCP extension
  */
 static int hip_send_i1_pkt(struct hip_common *i1,
-                           UNUSED const hip_hit_t *dst_hit,
                            struct in6_addr *local_addr,
                            struct in6_addr *peer_addr,
                            in_port_t src_port,
@@ -210,7 +207,6 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
 
         local_addr = &entry->our_addr;
         err        = hip_send_i1_pkt(i1,
-                                     dst_hit,
                                      local_addr,
                                      &peer_addr,
                                      entry->local_udp_port,
@@ -225,7 +221,6 @@ int hip_send_i1(hip_hit_t *src_hit, const hip_hit_t *dst_hit,
             ipv6_addr_copy(&peer_addr, &addr->address);
 
             err = hip_send_i1_pkt(i1,
-                                  dst_hit,
                                   NULL,
                                   &peer_addr,
                                   entry->local_udp_port,
@@ -823,11 +818,11 @@ int hip_send_r1(UNUSED const uint8_t packet_type,
 
     HIP_DEBUG_IN6ADDR("i1_saddr", &ctx->src_addr);
     HIP_DEBUG_IN6ADDR("i1_daddr", &ctx->dst_addr);
-    HIP_DEBUG_IN6ADDR("dst_ip", &dst_ip);
 
     relay_para_type = hip_relay_handle_relay_from(ctx->input_msg,
                                                   &ctx->src_addr,
                                                   &dst_ip, &r1_dst_port);
+    HIP_DEBUG_IN6ADDR("Final destination IP", &dst_ip);
 
     /* Get the final destination address and port for the outgoing R1.
      * dst_ip and dst_port have values only if the incoming I1 had

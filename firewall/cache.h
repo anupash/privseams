@@ -38,23 +38,12 @@ struct hip_hadb_user_info_state *hip_firewall_cache_db_match(const void *local,
                                                              enum fw_cache_query_type type,
                                                              int query_daemon);
 
-void hip_firewall_cache_db_del_entry(const void *local, const void *peer,
-                                     enum fw_cache_query_type type);
-
 void hip_firewall_cache_init_hldb(void);
-
-struct hip_hadb_user_info_state *hip_cache_create_hl_entry(void);
 
 void hip_firewall_cache_delete_hldb(int);
 
 int hip_firewall_cache_set_bex_state(const struct in6_addr *hit_s,
                                      const struct in6_addr *hit_r,
                                      int state);
-
-int hip_firewall_cache_update_entry(const struct in6_addr *ip_our,
-                                    const struct in6_addr *ip_peer,
-                                    const struct in6_addr *hit_our,
-                                    const struct in6_addr *hit_peer,
-                                    int state);
 
 #endif /* HIP_FIREWALL_CACHE_H */

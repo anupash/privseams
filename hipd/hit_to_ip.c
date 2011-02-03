@@ -141,8 +141,8 @@ int hip_hit_to_ip(const hip_hit_t *hit, struct in6_addr *retval)
     struct addrinfo *rp = NULL;     // no C99 :(
     char             hit_to_ip_hostname[64 + HIT_TO_IP_ZONE_MAX_LEN + 1];
     int              found_addr = 0;
-    struct addrinfo  hints;
-    struct addrinfo *result = NULL;
+    struct addrinfo  hints      = { 0 };
+    struct addrinfo *result     = NULL;
     int              res;
 
     if ((hit == NULL) || (retval == NULL)) {
@@ -153,14 +153,9 @@ int hip_hit_to_ip(const hip_hit_t *hit, struct in6_addr *retval)
         return -1;
     }
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family    = AF_UNSPEC;     /* Allow IPv4 or IPv6 */
-    hints.ai_socktype  = SOCK_DGRAM;    /* Datagram socket. Right? */
-    hints.ai_flags     = AI_PASSIVE;    /* For wildcard IP address */
-    hints.ai_protocol  = 0;             /* Any protocol */
-    hints.ai_canonname = NULL;
-    hints.ai_addr      = NULL;
-    hints.ai_next      = NULL;
+    hints.ai_family   = AF_UNSPEC;      /* Allow IPv4 or IPv6 */
+    hints.ai_socktype = SOCK_DGRAM;     /* Datagram socket. Right? */
+    hints.ai_flags    = AI_PASSIVE;     /* For wildcard IP address */
 
     /* getaddrinfo is too complex for DNS lookup, but let us use it now */
     res = getaddrinfo(hit_to_ip_hostname, NULL, &hints, &result);

@@ -66,14 +66,11 @@ lib_LTLIBRARIES = lib/core/libhipcore.la
 
 
 ### tests ###
-TESTS           =
-check_PROGRAMS  =
-
 if HIP_UNITTESTS
-TESTS           += test/check_firewall \
-                   test/check_lib_core
-check_PROGRAMS  += test/check_firewall \
-                   test/check_lib_core
+TESTS           = test/check_firewall \
+                  test/check_lib_core
+check_PROGRAMS  = test/check_firewall \
+                  test/check_lib_core
 endif
 
 
@@ -126,8 +123,7 @@ hipd_hipd_SOURCES +=  hipd/pisa.c
 endif
 
 if HIP_OPPORTUNISTIC
-hipd_hipd_SOURCES += hipd/oppdb.c                \
-                     hipd/oppipdb.c
+hipd_hipd_SOURCES += hipd/opp_mode.c
 endif
 
 firewall_hipfw_SOURCES = firewall/cache.c               \
@@ -147,7 +143,6 @@ firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/port_bindings.c       \
                          firewall/reinject.c            \
                          firewall/rule_management.c     \
-                         firewall/sysopp.c              \
                          firewall/user_ipsec_api.c      \
                          firewall/user_ipsec_esp.c      \
                          firewall/user_ipsec_fw_msg.c   \
@@ -253,12 +248,17 @@ tools_hipdnsproxydir    = $(pythondir)/hipdnsproxy
 
 
 ### misc stuff ###
+
+# This is supposed to be a sanity check target to run before pushing changes
+# to the world at large. It should catch a number of easily-avoidable mistakes.
+alltests: doxygen checkheaders check distcheck
+
 doxygen: doc/Doxyfile
 	doxygen $<
 
 # CentOS 5.5 requires this or otherwise autoreconf gives the error:
 # Makefile.am:213: `nodist_doc_DATA' is used but `docdir' is undefined
-docdir = ${datadir}/doc/${PACKAGE}
+docdir ?= ${datadir}/doc/${PACKAGE}
 
 if HAVE_XMLTO
 nodist_doc_DATA = doc/HOWTO.html doc/HOWTO.txt $(wildcard $(addprefix $(srcdir)/doc/,*.png))
@@ -288,7 +288,7 @@ DISTCLEANFILES       = $(wildcard modules/*.h)
 checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
-	$(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
+	$(AM_V_CC) $(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
 
 # Ensure that version.h is created before everything else. This does not work
 # when creating specific objects that may depend on version.h directly.
@@ -302,4 +302,4 @@ dist-hook:
 	rm -f $(addprefix $(distdir)/doc/,Doxyfile HOWTO.xml)
 	rm -f $(addprefix $(distdir)/tools/,nsupdate.pl hipdnsproxy/hipdnsproxy hipdnskeyparse/hipdnskeyparse)
 
-.PHONY: bin checkheaders deb doxygen rpm syncrepo*
+.PHONY: alltests bin checkheaders deb doxygen rpm syncrepo*

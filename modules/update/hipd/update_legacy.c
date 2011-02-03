@@ -39,7 +39,6 @@
 #include "config.h"
 #include "hipd/hipd.h"
 #include "hipd/maintenance.h"
-#include "hipd/oppipdb.h"
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"

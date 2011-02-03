@@ -332,8 +332,13 @@ int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
     sizeof(dhprime_modp_8192),
 };
 
-unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,    0x02, 0x02, 0x02,
-                                             0x02, 0x02, 0x02 };
+unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = { 0,
+                                             0x02,
+                                             0x02,
+                                             0x02,
+                                             0x02,
+                                             0x02,
+                                             0x02 };
 
 /**
  * Calculates a hmac.

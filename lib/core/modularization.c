@@ -443,10 +443,9 @@ static int lmod_packet_type_exists(const uint16_t packet_type)
 int lmod_register_packet_type(const uint16_t packet_type,
                               const char *identifier)
 {
-    int                 idx            = 0;
-    size_t              identifier_len = 0;
-    struct hip_ll_node *iter           = NULL;
-    struct packet_type *new_entry      = NULL;
+    int                 idx       = 0;
+    struct hip_ll_node *iter      = NULL;
+    struct packet_type *new_entry = NULL;
 
     if (!identifier || (lmod_packet_type_exists(packet_type) != -1)) {
         return -1;
@@ -458,11 +457,9 @@ int lmod_register_packet_type(const uint16_t packet_type,
 
     new_entry->num = packet_type;
 
-    identifier_len = strlen(identifier);
-    if (!(new_entry->identifier = malloc(identifier_len))) {
+    if (!(new_entry->identifier = strdup(identifier))) {
         return -1;
     }
-    strncpy(new_entry->identifier, identifier, identifier_len);
 
     while ((iter = hip_ll_iterate(&packet_types, iter))) {
         if (packet_type == ((struct packet_type *) iter->ptr)->num) {
