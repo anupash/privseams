@@ -869,7 +869,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  hip_hit_t *hit)
         goto out_err;
     }
 
-    HIP_IFE(hip_build_param(msg, hi_public), -1);
+    HIP_IFE(hip_build_param_host_id(msg, hi_public), -1);
 
     alg = hip_get_host_id_algo(hi_public);
     switch (alg) {
