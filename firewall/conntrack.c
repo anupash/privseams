@@ -1538,8 +1538,8 @@ static int check_packet(const struct in6_addr *ip6_src,
 
     // new connection can only be started with I1 of from update packets
     // when accept_mobile is true
-    if (!(tuple || common->type_hdr == HIP_I1 || common->type_hdr == HIP_DATA
-          || (common->type_hdr == HIP_UPDATE && accept_mobile))) {
+    if (!(tuple || common->type_hdr == HIP_I1 ||
+          (common->type_hdr == HIP_UPDATE && accept_mobile))) {
         HIP_DEBUG("hip packet type %d cannot start a new connection\n",
                   common->type_hdr);
 

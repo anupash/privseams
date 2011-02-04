@@ -537,8 +537,6 @@ static struct int_option *parse_type(char *token)
         option->value = HIP_I2;
     } else if (!strcmp(token, "R2")) {
         option->value = HIP_R2;
-    } else if (!strcmp(token, "CER")) {
-        option->value = HIP_CER;
     } else if (!strcmp(token, "UPDATE")) {
         option->value = HIP_UPDATE;
     } else if (!strcmp(token, "NOTIFY")) {
@@ -547,8 +545,6 @@ static struct int_option *parse_type(char *token)
         option->value = HIP_CLOSE;
     } else if (!strcmp(token, "CLOSE_ACK")) {
         option->value = HIP_CLOSE_ACK;
-    } else if (!strcmp(token, "PAYLOAD")) {
-        option->value = HIP_PAYLOAD;
     } else {
         HIP_DEBUG("parse_type error\n");
         free(option);

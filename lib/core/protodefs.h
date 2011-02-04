@@ -66,19 +66,12 @@
 #define HIP_R1                  2
 #define HIP_I2                  3
 #define HIP_R2                  4
-#define HIP_CER                 5
 
 #define HIP_UPDATE              16
 #define HIP_NOTIFY              17
 #define HIP_CLOSE               18
 #define HIP_CLOSE_ACK           19
-/* 20 was already occupied by HIP_PSIG so shifting HIP_PSIG and HIP_TRIG plus 1*/
-/* free slot */
-#define HIP_PSIG                21 ///< lightweight HIP pre signature
-#define HIP_TRIG                22 ///< lightweight HIP signature trigger
 #define HIP_LUPDATE             23
-#define HIP_DATA                32
-#define HIP_PAYLOAD             64
 /* only hip network message types here */
 /* @} */
 

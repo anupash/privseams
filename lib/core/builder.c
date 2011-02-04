@@ -1108,10 +1108,6 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_NOTIFY:        return "HIP_NOTIFY";
     case HIP_CLOSE:         return "HIP_CLOSE";
     case HIP_CLOSE_ACK:     return "HIP_CLOSE_ACK";
-    case HIP_CER:           return "HIP_CER";
-    case HIP_PAYLOAD:       return "HIP_PAYLOAD";
-    case HIP_PSIG:          return "HIP_PSIG";
-    case HIP_TRIG:          return "HIP_TRIG";
     case HIP_MSG_ADD_LOCAL_HI:       return "HIP_MSG_ADD_LOCAL_HI";
     case HIP_MSG_DEL_LOCAL_HI:       return "HIP_MSG_DEL_LOCAL_HI";
     case HIP_MSG_RUN_UNIT_TEST:      return "HIP_MSG_RUN_UNIT_TEST";

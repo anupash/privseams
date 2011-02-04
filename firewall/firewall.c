@@ -891,10 +891,6 @@ static int filter_hip(const struct in6_addr *ip6_src,
         HIP_DEBUG("received packet type: NOTIFY\n");
     } else if (buf->type_hdr == HIP_LUPDATE) {
         HIP_DEBUG("received packet type: LIGHT UPDATE\n");
-    }
-    //Added by Prabhu to support DATA Packets
-    else if (buf->type_hdr == HIP_DATA) {
-        HIP_DEBUG("received packet type: HIP_DATA");
     } else {
         HIP_DEBUG("received packet type: UNKNOWN\n");
     }
