@@ -140,7 +140,6 @@
 #define HIP_PARAM_LOCATOR              193
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
-#define HIP_PARAM_CHALLENGE_RESPONSE   322
 #define HIP_PARAM_SEQ                  385
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
@@ -156,7 +155,6 @@
 #define HIP_PARAM_REG_FAILED           936
 #define HIP_PARAM_REG_FROM             950
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
-#define HIP_PARAM_ECHO_RESPONSE_M      962
 #define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
 #define HIP_PARAM_ESP_PROT_ANCHOR      4121
@@ -230,8 +228,6 @@
 //#define HIP_PARAM_REG_FROM            64010
 #define HIP_PARAM_TO_PEER               64006
 #define HIP_PARAM_FROM_PEER             64008
-#define HIP_PARAM_ECHO_REQUEST_M        65332
-#define HIP_PARAM_CHALLENGE_REQUEST     65334
 #define HIP_PARAM_FROM                  65498
 #define HIP_PARAM_RVS_HMAC              65500
 #define HIP_PARAM_VIA_RVS               65502

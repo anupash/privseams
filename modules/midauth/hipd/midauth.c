@@ -39,6 +39,7 @@
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
 #include "lib/core/ife.h"
+#include "lib/core/modularization.h"
 #include "lib/core/protodefs.h"
 #include "lib/core/solve.h"
 #include "modules/update/hipd/update.h"
@@ -156,12 +157,18 @@ int hip_midauth_init(void)
 {
     int err = 0;
 
-    /* register parameter types (builder:hip_check_network_param_type())
-     *  HIP_PARAM_ECHO_REQUEST_M,
-     *  HIP_PARAM_ECHO_RESPONSE_M,
-     *  HIP_PARAM_CHALLENGE_REQUEST,
-     *  HIP_PARAM_CHALLENGE_RESPONSE
-     */
+    HIP_IFEL(lmod_register_parameter_type(HIP_PARAM_ECHO_REQUEST_M,
+                                          "HIP_PARAM_ECHO_REQUEST_M"),
+             -1, "failed to register parameter type\n");
+    HIP_IFEL(lmod_register_parameter_type(HIP_PARAM_ECHO_RESPONSE_M,
+                                          "HIP_PARAM_ECHO_RESPONSE_M"),
+             -1, "failed to register parameter type\n");
+    HIP_IFEL(lmod_register_parameter_type(HIP_PARAM_CHALLENGE_REQUEST,
+                                          "HIP_PARAM_CHALLENGE_REQUEST"),
+             -1, "failed to register parameter type\n");
+    HIP_IFEL(lmod_register_parameter_type(HIP_PARAM_CHALLENGE_RESPONSE,
+                                          "HIP_PARAM_CHALLENGE_RESPONSE"),
+             -1, "failed to register parameter type\n");
 
     HIP_IFEL(hip_register_handle_function(HIP_R2,
                                           HIP_STATE_R2_SENT,

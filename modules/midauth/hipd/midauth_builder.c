@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include "lib/core/ife.h"
+#include "midauth.h"
 #include "midauth_builder.h"
 
 

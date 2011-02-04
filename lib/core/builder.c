@@ -1159,10 +1159,8 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     case HIP_PARAM_DST_ADDR:        return "HIP_PARAM_DST_ADDR";
     case HIP_PARAM_ECHO_REQUEST:    return "HIP_PARAM_ECHO_REQUEST";
     case HIP_PARAM_ECHO_REQUEST_SIGN: return "HIP_PARAM_ECHO_REQUEST_SIGN";
-    case HIP_PARAM_ECHO_REQUEST_M:  return "HIP_PARAM_ECHO_REQUEST_M";
     case HIP_PARAM_ECHO_RESPONSE:   return "HIP_PARAM_ECHO_RESPONSE";
     case HIP_PARAM_ECHO_RESPONSE_SIGN: return "HIP_PARAM_ECHO_RESPONSE_SIGN";
-    case HIP_PARAM_ECHO_RESPONSE_M: return "HIP_PARAM_ECHO_RESPONSE_M";
     case HIP_PARAM_EID_ADDR:        return "HIP_PARAM_EID_ADDR";
     case HIP_PARAM_EID_ENDPOINT:    return "HIP_PARAM_EID_ENDPOINT";
     case HIP_PARAM_EID_IFACE:       return "HIP_PARAM_EID_IFACE";
@@ -1193,7 +1191,6 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     case HIP_PARAM_NOTIFICATION:    return "HIP_PARAM_NOTIFICATION";
     case HIP_PARAM_PORTPAIR:        return "HIP_PARAM_PORTPAIR";
     case HIP_PARAM_PUZZLE:          return "HIP_PARAM_PUZZLE";
-    case HIP_PARAM_CHALLENGE_REQUEST:       return "HIP_PARAM_CHALLENGE_REQUEST";
     case HIP_PARAM_R1_COUNTER:      return "HIP_PARAM_R1_COUNTER";
     case HIP_PARAM_REG_FAILED:      return "HIP_PARAM_REG_FAILED";
     case HIP_PARAM_REG_FROM:        return "HIP_PARAM_REG_FROM";
@@ -1206,7 +1203,6 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     case HIP_PARAM_RVS_HMAC:        return "HIP_PARAM_RVS_HMAC";
     case HIP_PARAM_SEQ:             return "HIP_PARAM_SEQ";
     case HIP_PARAM_SOLUTION:        return "HIP_PARAM_SOLUTION";
-    case HIP_PARAM_CHALLENGE_RESPONSE:      return "HIP_PARAM_CHALLENGE_RESPONSE";
     case HIP_PARAM_SRC_ADDR:        return "HIP_PARAM_SRC_ADDR";
     case HIP_PARAM_TO_PEER:         return "HIP_PARAM_TO_PEER";
     case HIP_PARAM_UINT:            return "HIP_PARAM_UINT";
