@@ -45,6 +45,7 @@
 #include "icomm.h"
 #include "state.h"
 
+
 /* Removed in 2.6.11 - why ? */
 extern struct hip_cert_spki_info hip_cert_spki_info;
 

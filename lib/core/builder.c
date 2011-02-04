@@ -104,6 +104,7 @@
 #include "hostid.h"
 #include "prefix.h"
 #include "builder.h"
+#include "modularization.h"
 
 
 enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
@@ -598,6 +599,11 @@ static int hip_check_network_msg_type(const struct hip_common *msg)
         }
     }
 
+    if (!ok && lmod_packet_type_exists(type) != -1) {
+        ok = 1;
+    }
+
+
     return ok;
 }
 
@@ -696,6 +702,10 @@ static int hip_check_network_param_type(const struct hip_tlv_common *param)
             ok = 1;
             break;
         }
+    }
+
+    if (!ok && lmod_parameter_type_exists(type) != -1) {
+        ok = 1;
     }
 
     return ok;
@@ -1163,8 +1173,10 @@ const char *hip_message_type_name(const uint8_t msg_type)
     case HIP_MSG_FIREWALL_START:     return "HIP_MSG_FIREWALL_START";
     case HIP_MSG_MANUAL_UPDATE_PACKET: return "HIP_MSG_MANUAL_UPDATE_PACKET";
     default:
-        return "UNDEFINED";
+        return lmod_get_packet_identifier(msg_type);
     }
+
+    return "UNDEFINED";
 }
 
 #ifdef CONFIG_HIP_DEBUG
@@ -1255,6 +1267,7 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     case HIP_PARAM_DST_TCP_PORT:    return "HIP_PARAM_DST_TCP_PORT";
     case HIP_PARAM_STUN:            return "HIP_PARAM_STUN";
     case HIP_PARAM_HOSTNAME:        return "HIP_PARAM_HOSTNAME";
+    default:                        return lmod_get_parameter_identifier(param_type);
     }
     return "UNDEFINED";
 }
