@@ -69,10 +69,16 @@ int lmod_module_disabled(const char *module_id);
 
 void lmod_uninit_disabled_modules(void);
 
+int lmod_packet_type_exists(const uint16_t packet_type);
+
+const char *lmod_get_packet_identifier(const uint8_t packet_type);
+
 int lmod_register_packet_type(const uint16_t packet_type,
                               const char *identifier);
 
 void lmod_uninit_packet_types(void);
+
+int lmod_parameter_type_exists(const uint16_t parameter_type);
 
 int lmod_register_parameter_type(const uint16_t packet_type, const char *identifier);
 

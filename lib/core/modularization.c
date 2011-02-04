@@ -48,8 +48,8 @@ struct function {
 };
 
 struct packet_type {
-    uint16_t num;
-    char    *identifier;
+    uint8_t num;
+    char   *identifier;
 };
 
 struct parameter_type {
@@ -427,7 +427,7 @@ void lmod_uninit_disabled_modules(void)
  * @return The index of the packet type, if existing or
  *         -1, if the packet type not exists
  */
-static int lmod_packet_type_exists(const uint16_t packet_type)
+int lmod_packet_type_exists(const uint16_t packet_type)
 {
     int                 idx  = 0;
     struct hip_ll_node *iter = NULL;
@@ -441,6 +441,26 @@ static int lmod_packet_type_exists(const uint16_t packet_type)
     }
 
     return -1;
+}
+
+/**
+ * Get the identifier of the packet type.
+ *
+ * @return parameter name or UNDEFINED if parameter type was not found.
+ */
+const char *lmod_get_packet_identifier(const uint8_t packet_type)
+{
+    struct hip_ll_node *iter = NULL;
+    HIP_DEBUG("Name search for packet type %d \n", packet_type);
+
+    while ((iter = hip_ll_iterate(&packet_types, iter))) {
+        HIP_DEBUG("Packet type in list %d \n", ((struct packet_type *) iter->ptr)->num);
+        if (packet_type == ((struct packet_type *) iter->ptr)->num) {
+            return ((struct packet_type *) iter->ptr)->identifier;
+        }
+    }
+
+    return "UNDEFINED";
 }
 
 /**
@@ -526,7 +546,7 @@ void lmod_uninit_packet_types(void)
  * @return The index of the parameter type, if existing or
  *         -1, if the parameter type does not exist
  */
-static int lmod_parameter_type_exists(const uint16_t parameter_type)
+int lmod_parameter_type_exists(const uint16_t parameter_type)
 {
     int                 index = 0;
     struct hip_ll_node *iter  = NULL;
