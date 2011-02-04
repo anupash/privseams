@@ -653,14 +653,24 @@ out_err:
     return err;
 }
 
-//TODO doxygen header missing
+/**
+ * This function stores the LOCATOR parameter into the hadb entry
+ * of a connection in question. The whole LOCATOR is stored and 
+ * handled later as the LOCATOR is received before the connection
+ * state has reached ESTABLISHED (UPDATEs are not allowed before
+ * the state is ESTABLISHED) and the address verification is 
+ * handled later during the BEX (after receiving the R2). 
+ *
+ * @param locator The received LOCATOR parameter.
+ * @param entry Hadb entry where the LOCATOR is stored.
+ *
+ * @return Zero on success, non-zero else.
+ */
 static int handle_locator(const struct hip_locator *locator,
                           struct hip_hadb_state *entry)
 {
     int n_addrs = 0, loc_size = 0, err = 0;
 
-    // Lets save the LOCATOR to the entry 'till we
-    //   get the esp_info in r2 then handle it
     n_addrs  = hip_get_locator_addr_item_count(locator);
     loc_size = sizeof(struct hip_locator) +
                (n_addrs * sizeof(struct hip_locator_info_addr_item));
