@@ -74,4 +74,10 @@ int lmod_register_packet_type(const uint16_t packet_type,
 
 void lmod_uninit_packet_types(void);
 
+int lmod_register_parameter_type(const uint16_t packet_type, const char *identifier);
+
+const char *lmod_get_parameter_identifier(const uint16_t parameter_type);
+
+void lmod_uninit_parameter_types(void);
+
 #endif /* HIP_LIB_CORE_MODULARIZATION_H */

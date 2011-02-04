@@ -34,7 +34,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug.h"
 #include "modularization.h"
+#include "ife.h"
+
 
 /**
  * A generic struct for function pointer.
@@ -49,6 +52,10 @@ struct packet_type {
     char    *identifier;
 };
 
+struct parameter_type {
+    uint16_t num;
+    char    *identifier;
+};
 
 /**
  * List of initialization functions for the modular state.
@@ -77,6 +84,14 @@ static char **disabled_modules;
  *
  */
 static struct hip_ll packet_types;
+
+/**
+ * List of parameter types.
+ *
+ * Used to track all registered parameter types. Each module which defines a new
+ * parameter type must register it using lmod_register_parameter_type.
+ */
+static struct hip_ll parameter_types;
 
 /**
  * Number of enabled modules.
@@ -479,6 +494,7 @@ int lmod_register_packet_type(const uint16_t packet_type,
 /**
  * Free allocated memory for one entry of the packet type list.
  *
+ * @param entry packet type entry to be freed
  */
 static void lmod_free_packet_entry(void *entry)
 {
@@ -496,4 +512,118 @@ static void lmod_free_packet_entry(void *entry)
 void lmod_uninit_packet_types(void)
 {
     hip_ll_uninit(&packet_types, lmod_free_packet_entry);
+}
+
+/**
+ * Check whether a certain parameter type was already registered.
+ *
+ * @note The return value is not 0 (FALSE), if the packet type does not exist.
+ *       Therefore you have to check, if the return value is equal to -1, if you
+ *       want to check whether a parameter type exists or not.
+ *
+ * @param parameter_type The parameter type number to search for.
+ *
+ * @return The index of the parameter type, if existing or
+ *         -1, if the parameter type does not exist
+ */
+static int lmod_parameter_type_exists(const uint16_t parameter_type)
+{
+    int                 index = 0;
+    struct hip_ll_node *iter  = NULL;
+
+    while ((iter = hip_ll_iterate(&parameter_types, iter))) {
+        if (parameter_type == ((struct parameter_type *) iter->ptr)->num) {
+            return index;
+        } else {
+            index++;
+        }
+    }
+
+    return -1;
+}
+
+/**
+ * Register a new parameter type and the corresponding identifier. Each module
+ * introducing a new parameter type must register it using this function.
+ *
+ * @note Call lmod_uninit_packet_types() to free the allocated memory!
+ *
+ * @param parameter_type The packet type number to register.
+ * @param *identifier A name for the packet type.
+ *
+ * @return Success =  0
+ *         Error   = -1
+ */
+int lmod_register_parameter_type(const uint16_t parameter_type,
+                                 const char *identifier)
+{
+    int                    index     = 0;
+    struct hip_ll_node    *iter      = NULL;
+    struct parameter_type *new_entry = NULL;
+    int                    err       = 0;
+
+    HIP_IFEL(!identifier || (lmod_parameter_type_exists(parameter_type) != -1),
+             -1, "No parameter type inserted\n");
+
+    HIP_IFEL(!(new_entry = malloc(sizeof(struct parameter_type))),
+             -1, "failed to allocate memory\n");
+
+    new_entry->num = parameter_type;
+
+    HIP_IFEL(!(new_entry->identifier = strdup(identifier)),
+             -1, "failed to copy parameter type identifier");
+
+    while ((iter = hip_ll_iterate(&parameter_types, iter))) {
+        if (parameter_type < ((struct parameter_type *) iter->ptr)->num) {
+            break;
+        } else {
+            index++;
+        }
+    }
+
+    hip_ll_add(&parameter_types, index, new_entry);
+
+out_err:
+    return err;
+}
+
+/*
+ *
+ * @return parameter name or UNDEFINED if parameter type was not found.
+ */
+const char *lmod_get_parameter_identifier(const uint16_t parameter_type)
+{
+    struct hip_ll_node *iter = NULL;
+    HIP_DEBUG("Name search for parameter type %d \n", parameter_type);
+
+    while ((iter = hip_ll_iterate(&parameter_types, iter))) {
+        HIP_DEBUG("Parameter type in list %d \n", ((struct parameter_type *) iter->ptr)->num);
+        if (parameter_type == ((struct parameter_type *) iter->ptr)->num) {
+            return ((struct parameter_type *) iter->ptr)->identifier;
+        }
+    }
+
+    return "UNDEFINED";
+}
+
+/**
+ * Free allocated memory for one entry of the packet type list.
+ *
+ * @param entry parameter type entry to be freed
+ */
+static void lmod_free_parameter_entry(void *entry)
+{
+    struct packet_type *parameter_type_entry = entry;
+    free(parameter_type_entry->identifier);
+    free(parameter_type_entry);
+}
+
+/**
+ * Free all allocated memory for storage of the parameter type list.
+ *
+ * @note Call this function, if you have added parameter types.
+ */
+void lmod_uninit_parameter_types(void)
+{
+    hip_ll_uninit(&parameter_types, lmod_free_parameter_entry);
 }
