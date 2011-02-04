@@ -135,17 +135,9 @@
  * @{
  */
 
-/** Defines the minimum parameter type value.
- * @note exclusive */
-#define HIP_PARAM_MIN                  -1
-
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
-#define HIP_PARAM_STUN                 195 /* 195 is temp value, check me later */
-#define HIP_PARAM_HASH_CHAIN_VALUE     221 ///< lhip hash chain. 221 is is temporary.
-#define HIP_PARAM_HASH_CHAIN_ANCHORS   222 ///< lhip hash chain anchors. 222 is temporary.
-#define HIP_PARAM_HASH_CHAIN_PSIG      223 ///< lhip hash chain signature. 223 is temporary.
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
 #define HIP_PARAM_CHALLENGE_RESPONSE   322
@@ -153,8 +145,6 @@
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
 #define HIP_PARAM_HIP_TRANSFORM        577
-#define HIP_PARAM_NAT_TRANSFORM        608
-#define HIP_PARAM_NAT_PACING           610
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768

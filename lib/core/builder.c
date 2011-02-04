@@ -662,9 +662,6 @@ static int hip_check_network_param_type(const struct hip_tlv_common *param)
         HIP_PARAM_RVS_HMAC,
         HIP_PARAM_HOST_ID,
         HIP_PARAM_LOCATOR,
-        HIP_PARAM_NAT_TRANSFORM,
-        HIP_PARAM_NAT_PACING,
-        HIP_PARAM_STUN,
         HIP_PARAM_NOTIFICATION,
         HIP_PARAM_PUZZLE,
         HIP_PARAM_R1_COUNTER,
@@ -1208,9 +1205,6 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     case HIP_PARAM_FROM_PEER:       return "HIP_PARAM_FROM_PEER";
     case HIP_PARAM_FROM:            return "HIP_PARAM_FROM";
     case HIP_PARAM_HA_INFO:         return "HIP_PARAM_HA_INFO";
-    case HIP_PARAM_HASH_CHAIN_ANCHORS: return "HIP_PARAM_HASH_CHAIN_ANCHORS";
-    case HIP_PARAM_HASH_CHAIN_PSIG: return "HIP_PARAM_HASH_CHAIN_PSIG";
-    case HIP_PARAM_HASH_CHAIN_VALUE: return "HIP_PARAM_HASH_CHAIN_VALUE";
     case HIP_PARAM_HIP_SIGNATURE2:  return "HIP_PARAM_HIP_SIGNATURE2";
     case HIP_PARAM_HIP_SIGNATURE:   return "HIP_PARAM_HIP_SIGNATURE";
     case HIP_PARAM_HIP_TRANSFORM:   return "HIP_PARAM_HIP_TRANSFORM";
@@ -1256,12 +1250,9 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     case HIP_PARAM_ESP_PROT_BRANCH: return "HIP_PARAM_ESP_PROT_BRANCH";
     case HIP_PARAM_ESP_PROT_SECRET: return "HIP_PARAM_ESP_PROT_SECRET";
     case HIP_PARAM_ESP_PROT_ROOT: return "HIP_PARAM_ESP_PROT_ROOT";
-    case HIP_PARAM_NAT_TRANSFORM:   return "HIP_PARAM_NAT_TRANSFORM";
-    case HIP_PARAM_NAT_PACING:      return "HIP_PARAM_NAT_PACING";
     case HIP_PARAM_LSI:             return "HIP_PARAM_LSI";
     case HIP_PARAM_SRC_TCP_PORT:    return "HIP_PARAM_SRC_TCP_PORT";
     case HIP_PARAM_DST_TCP_PORT:    return "HIP_PARAM_DST_TCP_PORT";
-    case HIP_PARAM_STUN:            return "HIP_PARAM_STUN";
     case HIP_PARAM_HOSTNAME:        return "HIP_PARAM_HOSTNAME";
     default:                        return lmod_get_parameter_identifier(param_type);
     }
