@@ -215,7 +215,7 @@ struct hip_hadb_user_info_state *hip_firewall_cache_db_match(const void *local,
     }
 
     if (!ha_match && query_daemon) {
-        HIP_DEBUG("No cache found, querying daemon\n");
+        HIP_DEBUG("No match found in cache, querying daemon\n");
         ha_match = hip_firewall_cache_hadb_match(local, peer, type);
     }
 
