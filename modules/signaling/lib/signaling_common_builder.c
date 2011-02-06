@@ -106,6 +106,7 @@ int signaling_build_param_application_context(hip_common_t *msg,
     HIP_IFEL(app_ctx == NULL, -1, "Got no context to built the parameter from.\n");
 
     /* BUILD THE PARAMETER CONTENTS */
+    appinfo.reserved = htons(0);
     pp = (struct signaling_port_pair *) param_buf;
 
     /* Set the ports */
@@ -117,6 +118,7 @@ int signaling_build_param_application_context(hip_common_t *msg,
         pp[i].dst_port = htons(port_list[i].dst_port);
     }
     appinfo.port_count = htons(i);
+    len_contents += i * sizeof(struct signaling_port_pair);
     p_tmp = (uint8_t *) (pp + i);
 
     /* Set the application */
