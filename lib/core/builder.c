@@ -3822,7 +3822,7 @@ int hip_any_key_to_hit(const void *const any_key,
                  "key_rr_len\n");
         break;
     default:
-        HIP_IFEL(1, -1, "Unknown algorithm\n");
+        HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
     if (is_public) {

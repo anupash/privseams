@@ -1430,7 +1430,7 @@ static int hip_conf_handle_debug(struct hip_common *msg, UNUSED int action,
         HIP_INFO("Displaying no debugging messages\n");
         status = HIP_MSG_SET_DEBUG_NONE;
     } else {
-        HIP_IFEL(1, -EINVAL, "Unknown argument\n");
+        HIP_OUT_ERR(-EINVAL, "Unknown argument\n");
     }
 
     HIP_IFEL(hip_build_user_hdr(msg, status, 0),
@@ -1570,7 +1570,7 @@ static int hip_conf_handle_locator(struct hip_common *msg, UNUSED int action,
     } else if (!strcmp("get", opt[0])) {
         status = HIP_MSG_LOCATOR_GET;
     } else {
-        HIP_IFEL(1, -1, "bad args\n");
+        HIP_OUT_ERR(-1, "bad args\n");
     }
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
              "Failed to build user message header.: %s\n", strerror(err));
@@ -2196,7 +2196,7 @@ static int hip_conf_handle_nsupdate(struct hip_common *msg,
     } else if (!strcmp("off", opt[0])) {
         status = HIP_MSG_NSUPDATE_OFF;
     } else {
-        HIP_IFEL(1, -1, "bad args\n");
+        HIP_OUT_ERR(-1, "bad args\n");
     }
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
              "Failed to build user message header.: %s\n", strerror(err));

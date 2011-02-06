@@ -489,7 +489,7 @@ static struct hip_host_id *parse_hi(const char *token, const struct in6_addr *hi
         HIP_IFEL(load_dsa_file(fp, hi),     -1, "Failed to load DSA key\n")
         break;
     default:
-        HIP_IFEL(1, -1, "Could not load host identity, because algorithm is unknown.\n");
+        HIP_OUT_ERR(-1, "Could not load host identity, because algorithm is unknown.\n");
     }
 
     /* verify hi => hit */
