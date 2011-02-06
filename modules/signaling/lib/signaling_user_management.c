@@ -753,6 +753,12 @@ int userdb_handle_user_signature(struct hip_common *const msg,
         conn_ctx = &conn->ctx_out;
     }
 
+    /* check if we have a user */
+    if (!conn_ctx->userdb_entry) {
+        HIP_DEBUG("Cannot verify signature, because user is not known.");
+        return 0;
+    }
+
     /* check signature in any case */
     if (signaling_verify_user_signature(msg, conn_ctx->userdb_entry->pub_key)) {
         HIP_ERROR("User's signature is incorrect.\n");
