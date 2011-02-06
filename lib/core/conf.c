@@ -136,7 +136,8 @@
 #define ACTION_LSI_TO_HIT 38
 #define ACTION_HANDOVER 39
 #define ACTION_MANUAL_UPDATE 40
-#define ACTION_MAX 41 /* exclusive */
+#define ACTION_BROADCAST 41
+#define ACTION_MAX 42 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -185,7 +186,8 @@
 #define TYPE_LSI_TO_HIT    41
 #define TYPE_HANDOVER      42
 #define TYPE_MANUAL_UPDATE 43
-#define TYPE_MAX           44 /* exclusive */
+#define TYPE_BROADCAST     44
+#define TYPE_MAX           45 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -233,6 +235,7 @@ const char *hipconf_usage =
     "hit-to-ip-zone <hit-to-ip.zone.>\n"
     "shotgun on|off\n"
     "id-to-addr hit|lsi\n"
+    "broadcast on|off\n"
 ;
 
 /**
@@ -458,6 +461,12 @@ static int hip_conf_print_info_ha(const struct hip_hadb_user_info_state *ha)
         HIP_INFO(" Shotgun mode is off.\n");
     }
 
+    if (ha->broadcast_status == HIP_MSG_BROADCAST_ON) {
+        HIP_INFO(" Broadcast mode is on.\n");
+    } else {
+        HIP_INFO(" Broadcast mode is off.\n");
+    }
+
     HIP_INFO_HIT(" Local HIT", &ha->hit_our);
     HIP_INFO_HIT(" Peer  HIT", &ha->hit_peer);
     HIP_DEBUG_LSI(" Local LSI", &ha->lsi_our);
@@ -584,6 +593,8 @@ static int hip_conf_get_action(const char *argv[])
         } else {
             ret = ACTION_NAT;
         }
+    } else if (!strcmp("broadcast", argv[1])) {
+        ret = ACTION_BROADCAST;
     }
 
     return ret;
@@ -621,6 +632,7 @@ static int hip_conf_check_action_argc(int action)
     case ACTION_NSUPDATE:
     case ACTION_HIT_TO_IP:
     case ACTION_HIT_TO_IP_SET:
+    case ACTION_BROADCAST:
         count = 1;
         break;
     case ACTION_ADD:
@@ -716,6 +728,8 @@ static int hip_conf_get_type(const char *text, const char *argv[])
         ret = TYPE_HIT_TO_IP;
     } else if (strcmp("lsi-to-hit", argv[1]) == 0) {
         ret = TYPE_LSI_TO_HIT;
+    } else if (strcmp("broadcast", argv[1]) == 0) {
+        ret = TYPE_BROADCAST;
     } else {
         HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
     }
@@ -761,6 +775,7 @@ static int hip_conf_get_type_arg(int action)
     case ACTION_NSUPDATE:
     case ACTION_HIT_TO_IP:
     case ACTION_HIT_TO_IP_SET:
+    case ACTION_BROADCAST:
         type_arg = 2;
         break;
     case ACTION_MANUAL_UPDATE:
@@ -2465,6 +2480,28 @@ out_err:
     return err;
 }
 
+static int hip_conf_handle_broadcast(struct hip_common *msg,
+                                     UNUSED int action,
+                                     const char *opt[],
+                                     UNUSED int optc,
+                                     UNUSED int send_only)
+{
+    int err = 0, status;
+
+    if (!strcmp("on", opt[0])) {
+        status = HIP_MSG_BROADCAST_ON;
+    } else if (!strcmp("off", opt[0])) {
+        status = HIP_MSG_BROADCAST_OFF;
+    } else {
+        HIP_IFEL(1, -1, "bad args\n");
+    }
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
+             "Failed to build user message header.: %s\n", strerror(err));
+
+out_err:
+    return err;
+}
+
 /**
  * Function pointer array containing pointers to handler functions.
  * Add a handler function for your new action in the action_handler[] array.
@@ -2537,6 +2574,7 @@ int (*action_handler[])(struct hip_common *,
     hip_conf_handle_lsi_to_hit,         /* 41: TYPE_LSI_TO_HIT */
     hip_conf_handle_handover,           /* 42: TYPE_HANDOVER */
     hip_conf_handle_manual_update,      /* 43: TYPE_MANUAL_UPDATE */
+    hip_conf_handle_broadcast,      /* 44: TYPE_BROADCAST */
     NULL     /* TYPE_MAX, the end. */
 };
 

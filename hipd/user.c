@@ -939,6 +939,19 @@ int hip_handle_user_msg(struct hip_common *msg,
                  -1, "Build param failed\n");
         break;
     }
+    case HIP_MSG_BROADCAST_ON:
+        HIP_DEBUG("Setting BROADCAST ON\n");
+        hip_broadcast_status = HIP_MSG_BROADCAST_ON;
+        HIP_DEBUG("hip_broadcast_status =  %d (should be %d)\n",
+                  hip_broadcast_status, HIP_MSG_BROADCAST_ON);
+        break;
+
+    case HIP_MSG_BROADCAST_OFF:
+        HIP_DEBUG("Setting BROADCAST OFF\n");
+        hip_broadcast_status = HIP_MSG_BROADCAST_OFF;
+        HIP_DEBUG("hip_broadcast_status =  %d (should be %d)\n",
+                  hip_broadcast_status, HIP_MSG_BROADCAST_OFF);
+        break;
     default:
         HIP_ERROR("Unknown socket option (%d)\n", msg_type);
         err = -ESOCKTNOSUPPORT;

@@ -90,6 +90,8 @@ extern int is_hard_handover;
 
 extern int hip_shotgun_status;
 
+extern int hip_broadcast_status;
+
 extern int hip_encrypt_i2_hi;
 
 extern hip_transform_suite hip_nat_status;

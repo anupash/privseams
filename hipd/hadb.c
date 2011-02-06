@@ -1276,6 +1276,8 @@ int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
     hid.nat_udp_port_peer  = entry->peer_udp_port;
     hid.nat_udp_port_local = entry->local_udp_port;
 
+    hid.broadcast_status = hip_broadcast_status;
+
     hid.peer_controls = entry->peer_controls;
 
     /* does not print heartbeat info, but I do not think it even should -Samu*/

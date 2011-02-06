@@ -180,6 +180,8 @@
 #define HIP_MSG_HANDOVER_HARD                    199
 #define HIP_MSG_HANDOVER_SOFT                    200
 #define HIP_MSG_FIREWALL_STATUS                  201
+#define HIP_MSG_BROADCAST_OFF                    202
+#define HIP_MSG_BROADCAST_ON                     203
 /* @} */
 
 /* inclusive */

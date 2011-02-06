@@ -368,6 +368,7 @@ struct hip_hadb_user_info_state {
     in_port_t       nat_udp_port_local;
     in_port_t       nat_udp_port_peer;
     int             shotgun_status;
+    int             broadcast_status;
     hip_controls    peer_controls;
     struct timeval  bex_duration;
 };
