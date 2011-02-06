@@ -172,7 +172,6 @@ int signaling_netstat_get_application_system_info_by_ports(const uint16_t src_po
         res = fgets(readbuf, NETSTAT_SIZE_OUTPUT, fp);
         pclose(fp);
     } else {
-        HIP_DEBUG("No output from netstat call: %s\n", callbuf);
         sprintf(callbuf, "netstat -tpneWl | grep :%d", src_port);
         memset(readbuf, 0, NETSTAT_SIZE_OUTPUT);
         HIP_IFEL(!(fp = popen(callbuf, "r")),
