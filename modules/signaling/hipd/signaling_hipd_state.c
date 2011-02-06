@@ -90,7 +90,7 @@ struct signaling_connection *signaling_hipd_state_get_connection(struct signalin
 
 struct signaling_connection * signaling_hipd_state_add_connection(struct signaling_hipd_state *state,
                                                                   const struct signaling_connection *const conn) {
-    struct signaling_connection *new_entry;
+    struct signaling_connection *new_entry = NULL;
 
     /* allocate new entry and copy contents */
     if (!(new_entry = malloc(sizeof(struct signaling_connection)))) {
