@@ -40,6 +40,7 @@
  * as destination after proper actions.
  *
  * @param eval Set variable called 'err' to this value.
+ * @param args Arguments for HIP_OUT_ERR(), use like with printf().
  */
 #define HIP_OUT_ERR(eval, args ...) HIP_IFEL(1, err, args)
 
