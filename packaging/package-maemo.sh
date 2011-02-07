@@ -76,7 +76,7 @@ if [ -e $HIPL ]; then
     echo "    Done."
 
     echo "    Compiling HIPL for Maemo..."
-    $SCRATCHBOX/login -d hipl-${VERSION}/packaging ./build-maemo.sh
+    $SCRATCHBOX/login -d hipl-${VERSION} packaging/build-maemo.sh
     echo "    Done."
 else
     echo "ERROR: $HIPL does not exist."

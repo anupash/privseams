@@ -6,9 +6,6 @@ export PATH=/usr/bin/dh7:/usr/bin:$PATH
 # than provided by the respective devkit
 export SBOX_REDIRECT_IGNORE=/usr/bin/perl
 
-# go to root of HIPL sources
-cd ..
-
 # build the package and do not check for build dependencies
 # -> the work-around above makes dpkg-buildpackage find the
 #    wrong debhelper version
