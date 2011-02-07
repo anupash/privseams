@@ -174,7 +174,7 @@ static void usage(void)
     fprintf(stderr, "  -i <device name> add interface to the white list. " \
                     "Use additional -i for additional devices.\n");
     fprintf(stderr, "  -k kill existing hipd\n");
-    fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
+    fprintf(stderr, "  -N do not flush all IPsec databases during start\n");
     fprintf(stderr, "  -a fix alignment issues automatically(ARM)\n");
     fprintf(stderr, "  -f set debug type format to short\n");
     fprintf(stderr, "  -d set the initial (pre-config) debug level to ALL (default is MEDIUM)\n");
