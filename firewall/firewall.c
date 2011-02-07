@@ -384,6 +384,12 @@ static int hip_fw_init_signaling_extensions(void)
                  -1, "failed to init signaling os layer\n");
     }
 
+    if (!hip_userspace_ipsec) {
+        // queue outgoing TCP and UDP packets sent to HITs
+        system_print("ip6tables -I HIPFW-OUTPUT -p tcp -d 2001:0010::/28 -j QUEUE");
+        system_print("ip6tables -I HIPFW-OUTPUT -p udp -d 2001:0010::/28 -j QUEUE");
+    }
+
 out_err:
     return err;
 }
