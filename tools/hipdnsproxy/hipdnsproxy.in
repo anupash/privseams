@@ -516,7 +516,9 @@ class Global:
         f.write('%s\n' % myid)
         f.close()
 
-    # Add local HITs to hosts files (bug id 737).
+    # Add local HITs to the hosts files. Otherwise certain services (sendmail,
+    # cups, httpd) timeout when they are started and they query the local
+    # HITs from the DNS.
     # xx fixme: should we really write the local hits
     #           to a file rather than just adding them
     #           to the cache?
