@@ -9,7 +9,7 @@
 # Short-Description:    HIPL IPsec key and mobility management daemon
 ### END INIT INFO
 
-HIPD_OPTS="-bk"
+HIPD_OPTS="-bkN"
 PID=$(pidof -o $$ hipd)
 
 set -e
