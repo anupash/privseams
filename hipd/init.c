@@ -1135,7 +1135,7 @@ int hipd_init(const uint64_t flags)
 
     HIP_DEBUG("Setting SP\n");
     hip_delete_default_prefix_sp_pair();
-    HIP_IFE(hip_setup_default_sp_prefix_pair(), -1);
+    //HIP_IFE(hip_setup_default_sp_prefix_pair(), -1);
 
     HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
     set_up_device(HIP_HIT_DEV, 0);
