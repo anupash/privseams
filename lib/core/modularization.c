@@ -427,7 +427,7 @@ void lmod_uninit_disabled_modules(void)
  * @return The index of the packet type, if existing or
  *         -1, if the packet type not exists
  */
-int lmod_packet_type_exists(const uint16_t packet_type)
+int lmod_packet_type_exists(const uint8_t packet_type)
 {
     int                 idx  = 0;
     struct hip_ll_node *iter = NULL;
@@ -475,7 +475,7 @@ const char *lmod_get_packet_identifier(const uint8_t packet_type)
  * @return Success =  0
  *         Error   = -1
  */
-int lmod_register_packet_type(const uint16_t packet_type,
+int lmod_register_packet_type(const uint8_t packet_type,
                               const char *identifier)
 {
     int                 idx       = 0;
