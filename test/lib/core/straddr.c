@@ -30,6 +30,7 @@
 
 #include <check.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lib/core/straddr.h"
 
