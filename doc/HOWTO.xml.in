@@ -479,7 +479,7 @@ $ make package/hipl/install
             standard distribution. These include ipv6 support and
             various IPSec- and packet filtering related options.</para>
 
-      <para>A pre-compiled version of the kernel for the 2008, r.36
+      <para>A precompiled version of the kernel for the 2008, r.36
             firmware can be found <ulink
             url="http://hipl.hiit.fi/MERCoNe/diablo/kernel/">here</ulink>
             </para>
@@ -489,8 +489,8 @@ $ make package/hipl/install
             url="http://www.maemo.org/">www.maemo.org</ulink>.</para>
 
       <para>Note that the firmware loaded on the device must match the
-      versio for which the kernel is compiled. In case you do not know
-      which firmware you have, you should re-flash the whole device
+      version for which the kernel is compiled. In case you do not know
+      which firmware you have, you should reflash the whole device
       image with the correct version (found from the maemo-release
       downloads at <ulink url="http://tablets-dev.nokia.com/">Nokia's tablet development site</ulink>).</para>
 
@@ -513,9 +513,9 @@ $ make package/hipl/install
 
       </section>
 
-      <section><title>Installing from Pre-compiled Packages</title>
+      <section><title>Installing from Precompiled Packages</title>
 
-      <para>Instructions on installing HIPL using the pre-compiled
+      <para>Instructions on installing HIPL using the precompiled
             packages can be found from the
             <ulink url="http://hipl.hiit.fi/index.php?index=download">download
             section</ulink> of the HIPL homepage.</para>
@@ -2781,7 +2781,7 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     I1 or UPDATE-with-locator packets sequentially. The idea is to
     scan through all possible source and destination IP pairs at the
     HIP layer to improve the chances for successful initial contact
-    (I1) and to re-establish contact (UPDATE-with-locator) in way
+    (I1) and to reestablish contact (UPDATE-with-locator) in way
     similar to the NAT-ICE extensions. We have playfully called the
     extension as "shotgun" mode in the implementation.</para>
 
