@@ -946,8 +946,8 @@ static int hip_conf_handle_server(struct hip_common *msg,
         if (inet_pton(AF_INET, opt[index_of_ip], &ipv4) <= 0) {
             /* First try to find an IPv4 or IPv6 address. Second,
              * settle for HIT if no routable address found.
-             * The second step is required with dnsproxy
-             * (see bug id 880) */
+             * The second step is required when dnsproxy is running
+             * during HIP service registration. */
             for (i = 0; i < 2; i++) {
                 err = resolve_hostname_to_id(opt[index_of_ip], &ipv6, i);
                 if (err == 0) {
