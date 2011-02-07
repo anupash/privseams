@@ -20,6 +20,7 @@
 #include "hipd/hadb.h"
 #include "hipd/hipd.h"
 #include "hipd/user.h"
+#include "firewall/helpers.h"
 
 #include "modules/signaling/lib/signaling_common_builder.h"
 #include "modules/signaling/lib/signaling_prot_common.h"
@@ -28,6 +29,33 @@
 #include "signaling_hipfw_user_msg.h"
 #include "signaling_cdb.h"
 #include "signaling_policy_engine.h"
+
+static void insert_iptables_rule(const struct in6_addr *const s,
+                                 const struct in6_addr *const d,
+                                 const struct signaling_port_pair *const ports)
+{
+    int i = 0;
+    char buf[200];
+    char src_hit[41];
+    char dst_hit[41];
+
+    if (!inet_ntop(AF_INET6, s, src_hit, sizeof(src_hit))) {
+        return;
+    }
+    if (!inet_ntop(AF_INET6, d, dst_hit, sizeof(dst_hit))) {
+        return;
+    }
+
+    while(i < SIGNALING_MAX_SOCKETS && ports[i].src_port != 0 && ports[i].src_port != 0) {
+        sprintf(buf, "ip6tables -I HIPFW-OUTPUT -p tcp -s %s -d %s --sport %d --dport %d -j ACCEPT",
+                src_hit, dst_hit, ports[i].src_port, ports[i].dst_port);
+        system_print(buf);
+        sprintf(buf, "ip6tables -I HIPFW-INPUT -p tcp -d %s -s %s --dport %d --sport %d -j ACCEPT",
+                src_hit, dst_hit, ports[i].src_port, ports[i].dst_port);
+        system_print(buf);
+        i++;
+    }
+}
 
 /**
  * HIPFW resends a CONNECTION_REQUEST message to the HIPD, when it has been notified about
@@ -291,6 +319,8 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
     if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
         signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
+        insert_iptables_rule(hitr, hits, existing_conn->sockets);
+
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_NEW_CONN\n");
         hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
@@ -342,6 +372,7 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
     if (signaling_flag_check_auth_complete(existing_conn->ctx_out.flags) &&
         signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
+        insert_iptables_rule(hitr, hits, existing_conn->sockets);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_NEW_CONN\n");
         hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
