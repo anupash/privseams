@@ -38,7 +38,7 @@ HIPL="$HOME/src/hipl/trunk"
 ### DON'T CHANGE BELOW THIS LINE ###
 
 SCRATCHBOX_HOME=$SCRATCHBOX/users/$USER/home/$USER
-VERSION=$(grep '^AC_INIT' ${HIPL}/configure.ac|cut -d'[' -f 3|cut -d']' -f1)
+VERSION=$(grep '^AC_INIT' ${HIPL}/configure.ac | cut -d'[' -f 3 | cut -d']' -f1)
 
 if [ ! -e $SCRATCHBOX ]; then
     echo "ERROR: There seems to be no ScratchBox installation at $SCRATCHBOX"
