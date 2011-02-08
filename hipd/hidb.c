@@ -262,7 +262,7 @@ static int hip_del_host_id(HIP_HASHTABLE *db, struct hip_lhi *lhi)
     case HIP_HI_DSA:
         DSA_free(id->private_key);
     default:
-        HIP_ERROR("Cannot free key, because key type is unkown.\n");
+        HIP_ERROR("Cannot free key because key type is unknown.\n");
     }
 
     free(id->host_id);

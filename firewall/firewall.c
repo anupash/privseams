@@ -332,7 +332,7 @@ out_err:
 }
 
 /**
- * Unitialize packet capture rules for ESP connection tracking
+ * Initialize packet capture rules for ESP connection tracking
  *
  * @return zero on success and non-zero on failure
  */

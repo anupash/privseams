@@ -1418,7 +1418,7 @@ static int hip_conf_handle_debug(struct hip_common *msg, UNUSED int action,
 
     HIP_IFEL(optc != 0,
              -EINVAL,
-             "Wrong amount of arguments. Usage:\nhipconf debug all|medium|none\n");
+             "Wrong number of arguments. Usage:\nhipconf debug all|medium|none\n");
 
     if (!strcmp("all", opt[0])) {
         HIP_INFO("Displaying all debugging messages\n");
