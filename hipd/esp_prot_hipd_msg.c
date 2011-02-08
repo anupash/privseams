@@ -362,12 +362,14 @@ int esp_prot_handle_trigger_update_msg(const struct hip_common *msg)
          * HMAC and HIP_SIGNATURE as well as the ESP_PROT_ANCHOR and the
          * SEQ param (to guaranty freshness of the ANCHOR) in the signed part
          * of the message */
-        HIP_IFEL(hip_send_update_to_one_peer(NULL, entry,
-                                             &entry->our_addr,
-                                             &entry->peer_addr,
-                                             NULL,
-                                             HIP_UPDATE_ESP_ANCHOR),
-                 -1, "failed to send anchor update\n");
+        /* TODO implement own update trigger
+         * HIP_IFEL(hip_send_update_to_one_peer(NULL, entry,
+         *                                   &entry->our_addr,
+         *                                   &entry->peer_addr,
+         *                                   NULL,
+         *                                   HIP_UPDATE_ESP_ANCHOR),
+         *       -1, "failed to send anchor update\n");
+         */
     }
 
 out_err:
