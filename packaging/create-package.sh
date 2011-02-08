@@ -86,7 +86,7 @@ build_rpm()
 
 build_deb()
 {
-    dpkg-buildpackage -us -uc -I.bzr -j32
+    dpkg-buildpackage -us -uc -I.bzr $BUILDPACKAGE_OPTS
 }
 
 ############### Main program #####################
@@ -100,24 +100,31 @@ REPO_BASE=/var/www/packages/html
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version; then
-    DISTRO_RELEASE=$(lsb_release -c | cut -f2)
     ARCH=$(dpkg --print-architecture)
     PKG_DIR=..
-    PKG_SERVER_DIR=$REPO_BASE/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
     INDEXING_CMD=mkindex_deb
     PACKAGING_CMD=build_deb
+    if test -r /etc/maemo_version; then
+        export PATH=/usr/bin/dh7:/usr/bin:$PATH
+        export SBOX_REDIRECT_IGNORE=/usr/bin/perl
+        BUILDPACKAGE_OPTS="-d -rfakeroot"
+    else
+        DISTRO_RELEASE=$(lsb_release -c | cut -f2)
+        PKG_SERVER_DIR=$REPO_BASE/ubuntu/dists/$DISTRO_RELEASE/main/binary-${ARCH}
+        BUILDPACKAGE_OPTS=-j32
+    fi
 elif test -r /etc/redhat-release; then
-    DISTRO_RELEASE=$(lsb_release -r | cut -f2)
     ARCH=$(uname -i)
     BUILDDIR=$PWD/rpmbuild
     PKG_DIR=$BUILDDIR/RPMS/$ARCH
-    PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
     INDEXING_CMD=mkindex_rpm
     PACKAGING_CMD=build_rpm
+    DISTRO_RELEASE=$(lsb_release -r | cut -f2)
+    PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
     case $(lsb_release -d) in
         "Description:	CentOS release 5.5 (Final)")
             export CPPFLAGS=-U__STRICT_ANSI__;;
