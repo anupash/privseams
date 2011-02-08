@@ -46,6 +46,10 @@ static void insert_iptables_rule(const struct in6_addr *const s,
         return;
     }
 
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_SYSTEM_CALL\n");
+    hip_perf_start_benchmark(perf_set, PERF_IP6TABLES);
+#endif
     while(i < SIGNALING_MAX_SOCKETS && ports[i].src_port != 0 && ports[i].src_port != 0) {
         sprintf(buf, "ip6tables -I HIPFW-OUTPUT -p tcp -s %s -d %s --sport %d --dport %d -j ACCEPT",
                 src_hit, dst_hit, ports[i].src_port, ports[i].dst_port);
@@ -55,6 +59,11 @@ static void insert_iptables_rule(const struct in6_addr *const s,
         system_print(buf);
         i++;
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_SYSTEM_CALL\n");
+    hip_perf_stop_benchmark(perf_set, PERF_IP6TABLES);
+    hip_perf_write_benchmark(perf_set, PERF_IP6TABLES);
+#endif
 }
 
 /**
@@ -320,7 +329,6 @@ int signaling_hipfw_handle_second_connection_request(struct hip_common *msg) {
         signaling_flag_check_auth_complete(existing_conn->ctx_in.flags)) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);
-
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_NEW_CONN\n");
         hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
