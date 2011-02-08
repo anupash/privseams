@@ -165,9 +165,6 @@ run_program "make -j distcheck"
 # run unit tests (needs to run after HIPL has been configured)
 run_program "make -j check"
 
-# test binary distribution packages
-run_program "make -j bin"
-
 # PISA configuration
 compile --enable-firewall --disable-rvs --disable-opportunistic --disable-profiling --enable-debug --enable-midauth --disable-performance
 
@@ -187,6 +184,11 @@ compile $FEATURES_ALL CFLAGS="-Os"
 
 # Without modules
 compile --with-nomodules=heartbeat,update,heartbeat_update
+
+# test binary distribution packages
+# This is run as the last test because it can have sideeffects on the
+# other standard configurations.
+run_program "make -j bin"
 
 # Compile HIPL within an OpenWrt checkout
 CONFIGURATION="OpenWrt ARM crosscompile"
