@@ -472,7 +472,7 @@ $ make package/hipl/install
       firmware.
       </para>
 
-      <section><title>Prerequisites</title>
+      <section id="maemo_prerequisites"><title>Prerequisites</title>
 
       <para>The kernel needs to be updated to support the various
             features required by HIPL that aren't present in the
@@ -513,7 +513,7 @@ $ make package/hipl/install
 
       </section>
 
-      <section><title>Installing from Precompiled Packages</title>
+      <section id="maemo_precompiled"><title>Installing from Precompiled Packages</title>
 
       <para>Instructions on installing HIPL using the precompiled
             packages can be found from the
@@ -522,7 +522,7 @@ $ make package/hipl/install
 
       </section>
 
-      <section><title>Supported features</title>
+      <section id="maemo_features"><title>Supported features</title>
 
       <para>
 
@@ -533,7 +533,7 @@ $ make package/hipl/install
 
       </section>
 
-      <section><title>Compiling HIPL from Source</title>
+      <section id="maemo_source"><title>Compiling HIPL from Source</title>
 
       <para>
       HIPL can be compiled from source for maemo/diablo with the following
@@ -705,7 +705,7 @@ $ make package/hipl/install
               section we will demonstrate few command line applications.</para>
             <para> You should run nc6 with root privileges at the server side
               if the port number is less than 1024.</para>
-            <para>In this section we will use ipv6 addresses, but you can use also ipv4 addresses.
+            <para>In this section we will use IPv6 addresses, but you can use also IPv4 addresses.
               Furthermore, the use of hipfw is optional.</para>
     <para>
       oops:
