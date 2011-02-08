@@ -26,6 +26,8 @@ debian/files
 debian/hipl-all/
 debian/hipl-daemon/
 debian/hipl-dnsproxy/
+debian/hipl-dnsproxy.dirs
+debian/hipl-dnsproxy.install
 debian/hipl-doc/
 debian/hipl-firewall/
 debian/tmp/

@@ -252,6 +252,8 @@ echo ""
 
 
 AC_CONFIG_FILES([Makefile
+                 debian/hipl-dnsproxy.dirs
+                 debian/hipl-dnsproxy.install
                  doc/Doxyfile
                  doc/HOWTO.xml])
 AC_CONFIG_FILES([tools/hipdnskeyparse/hipdnskeyparse],
