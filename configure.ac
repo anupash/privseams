@@ -251,6 +251,7 @@ echo ""
 
 
 
+# Do not forget to remove files added here in the dist-hook in Makefile.am.
 AC_CONFIG_FILES([Makefile
                  debian/hipl-dnsproxy.dirs
                  debian/hipl-dnsproxy.install
