@@ -456,6 +456,43 @@ static void firewall_init_filter_traffic(void)
 }
 
 /**
+ * Uninitialize all basic and extended packet capture rules
+ *
+ */
+static void firewall_uninit_filter_traffic(void)
+{
+    system_print("iptables -D HIPFW-FORWARD -p 139 -j QUEUE");
+    system_print("iptables -D HIPFW-FORWARD -p 50 -j QUEUE");
+    system_print("iptables -D HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+    system_print("iptables -D HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
+
+    system_print("iptables -D HIPFW-INPUT -p 139 -j QUEUE");
+    system_print("iptables -D HIPFW-INPUT -p 50 -j QUEUE");
+    system_print("iptables -D HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+    system_print("iptables -D HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
+
+    system_print("iptables -D HIPFW-OUTPUT -p 139 -j QUEUE");
+    system_print("iptables -D HIPFW-OUTPUT -p 50 -j QUEUE");
+    system_print("iptables -D HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+    system_print("iptables -D HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
+
+    system_print("ip6tables -D HIPFW-FORWARD -p 139 -j QUEUE");
+    system_print("ip6tables -D HIPFW-FORWARD -p 50 -j QUEUE");
+    system_print("ip6tables -D HIPFW-FORWARD -p 17 --dport 10500 -j QUEUE");
+    system_print("ip6tables -D HIPFW-FORWARD -p 17 --sport 10500 -j QUEUE");
+
+    system_print("ip6tables -D HIPFW-INPUT -p 139 -j QUEUE");
+    system_print("ip6tables -D HIPFW-INPUT -p 50 -j QUEUE");
+    system_print("ip6tables -D HIPFW-INPUT -p 17 --dport 10500 -j QUEUE");
+    system_print("ip6tables -D HIPFW-INPUT -p 17 --sport 10500 -j QUEUE");
+
+    system_print("ip6tables -D HIPFW-OUTPUT -p 139 -j QUEUE");
+    system_print("ip6tables -D HIPFW-OUTPUT -p 50 -j QUEUE");
+    system_print("ip6tables -D HIPFW-OUTPUT -p 17 --dport 10500 -j QUEUE");
+    system_print("ip6tables -D HIPFW-OUTPUT -p 17 --sport 10500 -j QUEUE");
+}
+
+/**
  * Initialize all basic and extended packet capture rules
  *
  * @return zero on success and non-zero on failure
@@ -541,6 +578,11 @@ int hip_fw_init_esp_relay(void)
 void hip_fw_uninit_esp_relay(void)
 {
     esp_relay = 0;
+
+    if (restore_filter_traffic == 0) {
+        filter_traffic = 0;
+        firewall_uninit_filter_traffic();
+    }
 }
 
 /*-------------------HELPER FUNCTIONS---------------------*/
