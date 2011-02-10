@@ -413,8 +413,6 @@ static int hip_fw_uninit_lsi_support(void)
 /**
  * Initialize all basic and extended packet capture rules
  *
- * @return zero on success and non-zero on failure
- *
  */
 static void firewall_init_filter_traffic(void)
 {
