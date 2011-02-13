@@ -63,16 +63,19 @@ AM_PATH_PYTHON([2.4.3],, [AC_MSG_ERROR([Minimum required Python version not foun
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(OpenSSL not found.))
 # Check for ellyptic curve crypto in OpenSSL.
 AC_CHECK_FUNC(EC_KEY_new,
-              AC_DEFINE(HAVE_EC_CRYPTO)
-              AH_TEMPLATE(HAVE_EC_CRYPTO, [Defined to 1 if elliptic curve crypto is enabled.]))
+              AC_DEFINE(HAVE_EC_CRYPTO) AH_TEMPLATE(HAVE_EC_CRYPTO,
+              [Defined to 1 if elliptic curve crypto is enabled.]))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math library not found.))
 # The unit tests depend on 'check' (http://check.sourceforge.net/)
 AC_CHECK_LIB(check, suite_create,,
-             AC_MSG_WARN(libcheck (http://check.sourceforge.net/) not found: unit tests not available))
+             AC_MSG_WARN(libcheck not found: unit tests not available))
 AM_CONDITIONAL(HIP_UNITTESTS, test x"$ac_cv_lib_check_suite_create" = xyes)
 if test x"$ac_cv_lib_check_suite_create" = x"yes"; then
-    AC_CHECK_DECL(tcase_add_exit_test, AC_DEFINE(HAVE_TCASE_ADD_EXIT_TEST) AH_TEMPLATE(HAVE_TCASE_ADD_EXIT_TEST, [Defined to 1 if the check library supports tcase_add_exit_test.]),, [#include <check.h>])
+    AC_CHECK_DECL(tcase_add_exit_test,
+                  AC_DEFINE(HAVE_TCASE_ADD_EXIT_TEST) AH_TEMPLATE(HAVE_TCASE_ADD_EXIT_TEST,
+                  [Defined to 1 if the check library supports tcase_add_exit_test.]),,
+                  [#include <check.h>])
 fi
 
 
