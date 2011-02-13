@@ -71,6 +71,9 @@ AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math library not found.))
 AC_CHECK_LIB(check, suite_create,,
              AC_MSG_WARN(libcheck (http://check.sourceforge.net/) not found: unit tests not available))
 AM_CONDITIONAL(HIP_UNITTESTS, test x"$ac_cv_lib_check_suite_create" = xyes)
+if test x"$ac_cv_lib_check_suite_create" = x"yes"; then
+    AC_CHECK_DECL(tcase_add_exit_test, AC_DEFINE(HAVE_TCASE_ADD_EXIT_TEST) AH_TEMPLATE(HAVE_TCASE_ADD_EXIT_TEST, [Defined to 1 if the check library supports tcase_add_exit_test.]),, [#include <check.h>])
+fi
 
 
 

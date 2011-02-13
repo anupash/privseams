@@ -34,6 +34,7 @@
 #include <stdio.h>
 
 #include "lib/core/hit.h"
+#include "config.h"
 
 START_TEST(test_hip_convert_hit_to_str_valid)
 {
@@ -117,11 +118,7 @@ START_TEST(test_hip_hit_is_bigger_equal_smaller)
 }
 END_TEST
 
-// the tcase_add_exit_test macro is only available in check 0.9.8 or later but
-// scratchbox uses an older version of checkc so we try to avoid this macro
-#if CHECK_MAJOR_VERSION > 0 || \
-    (CHECK_MAJOR_VERSION == 0 && CHECK_MINOR_VERSION > 9) || \
-    (CHECK_MAJOR_VERSION == 0 && CHECK_MINOR_VERSION == 9 && CHECK_MICRO_VERSION >= 8)
+#ifdef HAVE_TCASE_ADD_EXIT_TEST
 START_TEST(test_hip_hit_is_bigger_null_first)
 {
     const hip_hit_t hit = IN6ADDR_LOOPBACK_INIT;
@@ -149,7 +146,7 @@ START_TEST(test_hip_hit_is_bigger_second_null)
     hip_hit_is_bigger(&hit, NULL);
 }
 END_TEST
-#endif
+#endif /* HAVE_TCASE_ADD_EXIT_TEST */
 
 // For unknown reasons, this file does not compile with the following,
 // seemingly useless forward declaration
@@ -169,9 +166,7 @@ Suite *lib_core_hit(void)
     tcase_add_test(tc_core, test_hip_hit_is_bigger_equal_smaller);
     // the tcase_add_exit_test macro is only available in check 0.9.8 or later but
     // scratchbox uses an older version of checkc so we try to avoid this macro
-#if CHECK_MAJOR_VERSION > 0 || \
-    (CHECK_MAJOR_VERSION == 0 && CHECK_MINOR_VERSION > 9) || \
-    (CHECK_MAJOR_VERSION == 0 && CHECK_MINOR_VERSION == 9 && CHECK_MICRO_VERSION >= 8)
+#ifdef HAVE_TCASE_ADD_EXIT_TEST
     tcase_add_exit_test(tc_core, test_hip_hit_is_bigger_null_first, 1);
     tcase_add_exit_test(tc_core, test_hip_hit_is_bigger_null_second, 1);
     tcase_add_exit_test(tc_core, test_hip_hit_is_bigger_first_null, 1);
