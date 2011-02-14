@@ -123,13 +123,6 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
     HIP_IFEL(entry->outbound_sa_count == 0, 0,
              "No outbound sa, ignoring keepalive\n")
 
-    /* memset and malloc everything you need */
-    memset(&mhdr, 0, sizeof(struct msghdr));
-    memset(&tval, 0, sizeof(struct timeval));
-    memset(cmsgbuf, 0, sizeof(cmsgbuf));
-    memset(iov, 0, sizeof(struct iovec));
-    memset(&dst6, 0, sizeof(dst6));
-
     icmp_pkt = calloc(1, HIP_MAX_ICMP_PACKET);
     HIP_IFEL(!icmp_pkt, -1, "Malloc for icmp_pkt failed\n");
 
@@ -281,12 +274,6 @@ static int hip_icmp_recvmsg(int sockfd)
     /* cast */
     chdr    = (struct cmsghdr *) cmsgbuf;
     pktinfo = (struct inet6_pktinfo *) CMSG_DATA(chdr);
-
-    /* clear memory */
-    memset(&src_sin6, 0, sizeof(struct sockaddr_in6));
-    memset(&iov, 0, sizeof(&iov));
-    memset(&iovbuf, 0, sizeof(iovbuf));
-    memset(&mhdr, 0, sizeof(mhdr));
 
     /* receive control msg */
     chdr->cmsg_level = IPPROTO_IPV6;

@@ -97,8 +97,6 @@ static unsigned long hip_sa_entry_hash(const struct hip_sa_entry *sa_entry)
     unsigned char   hash[INDEX_HASH_LENGTH];
     int             err = 0;
 
-    memset(&hash, 0, INDEX_HASH_LENGTH);
-
     if (sa_entry->mode == 3) {
         /* use hits to index in beet mode
          *
@@ -171,8 +169,6 @@ static unsigned long hip_link_entry_hash(const struct hip_link_entry *link_entry
 
     // values have to be present
     HIP_ASSERT(link_entry != NULL && link_entry->spi != 0);
-
-    memset(hash, 0, INDEX_HASH_LENGTH);
 
     /* concatenate dst_addr and spi */
     memcpy(&hash_input[0], &link_entry->dst_addr, sizeof(struct in6_addr));
@@ -406,10 +402,6 @@ static int hip_sa_entry_set(struct hip_sa_entry *entry,
         case HIP_ESP_3DES_SHA1:
         case HIP_ESP_3DES_MD5:
             key_len = hip_enc_key_length(ealg) / 3;
-
-            memset(key1, 0, key_len);
-            memset(key2, 0, key_len);
-            memset(key3, 0, key_len);
 
             memcpy(key1, &enc_key[0], key_len);
             memcpy(key2, &enc_key[8], key_len);

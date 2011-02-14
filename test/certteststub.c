@@ -132,7 +132,6 @@ int main(int argc, char *argv[])
      * and create a hip_cert_spki_info and send it to the daemon
      * for verification.
      */
-    memset(&certificate, '\0', sizeof(certificate));
     sprintf((char *) &certificate, "(sequence %s%s%s)",
             cert->public_key,
             cert->cert,

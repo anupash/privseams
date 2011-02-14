@@ -91,8 +91,6 @@ static int create_certificate(time_t *not_before, time_t *not_after,
     int                       err = 0;
     struct hip_cert_spki_info cert;
 
-    memset(&cert, 0, sizeof(cert));
-
     HIP_IFEL(!not_before || !not_after || !hit || !certificate, -1,
              "NULL parameter found.\n");
 

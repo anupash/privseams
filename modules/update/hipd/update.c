@@ -438,9 +438,6 @@ static int hip_select_local_addr_for_first_update(const struct hip_hadb_state *h
     LHASH_NODE             *n   = NULL, *t = NULL;
     const struct in6_addr  *in6 = NULL;
 
-    memset(&ss, 0, sizeof(ss));
-    memset(new_src_addr, 0, sizeof(*new_src_addr));
-
     if (IN6_IS_ADDR_V4MAPPED(&ha->our_addr)) {
         ss.ss_family = AF_INET;
         IPV6_TO_IPV4_MAP(&ha->our_addr, &(((struct sockaddr_in *) &ss)->sin_addr));
