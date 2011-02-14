@@ -135,9 +135,9 @@ out_err:
  * type and host association state.
  *
  * @param msg_type The packet type of the control message (RFC 5201, 5.3.)
- * @param *handle_func Pointer to the function which should be called
- *                         when the combination of packet type and host
- *                         association state is reached.
+ * @param handle_func Pointer to the function which should be called when
+ *                    the combination of packet type and host association
+ *                    state is reached.
  * @param priority Execution priority for the handle function.
  *
  * @return Success =  0

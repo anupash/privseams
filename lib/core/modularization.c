@@ -150,7 +150,7 @@ int lmod_register_state_init_function(void *func)
  * @note  Call lmod_register_state_init_function to add an initialization
  *        function.
  *
- * @param *state    Pointer to the modular state data structure.
+ * @param state Pointer to the modular state data structure.
  */
 void lmod_init_state_items(struct modular_state *state)
 {
@@ -274,8 +274,8 @@ void lmod_uninit_state(struct modular_state *state)
 /**
  * Register a function to the specified list according their priority.
  *
- * @param *list Pointer to the list if already exist, NULL otherwise.
- * @param *entry Pointer to the data structure containing the function pointer.
+ * @param list     Pointer to the list if already exist, NULL otherwise.
+ * @param entry    Pointer to the data structure containing the function pointer.
  * @param priority Execution priority for the function.
  *
  * @note If there already exists a function with the same priority, this
@@ -323,8 +323,8 @@ struct hip_ll *lmod_register_function(struct hip_ll *list,
 /**
  * Unregister a function from the specified list.
  *
- * @param *list Pointer to the list from which the function should be removed.
- * @param *function Pointer to the function to remove.
+ * @param list     Pointer to the list from which the function should be removed.
+ * @param function Pointer to the function to remove.
  *
  * @return Success =  0
  *         Error   = -1
@@ -356,7 +356,7 @@ int lmod_unregister_function(struct hip_ll *list, const void *function)
  *
  * @note Call lmod_uninit_disabled_modules() to free the allocated memory!
  *
- * @param *module_name String identifier for the module to disable.
+ * @param module_name String identifier for the module to disable.
  *
  * @return Success =  0
  *         Error   = -1 (if the module was already disabled)
@@ -381,7 +381,7 @@ int lmod_disable_module(const char *module_name)
  * @note This function uses string compares. Therefore you should call this
  *       function only once and cache the result to improve performance.
  *
- * @param *module_name String identifier for the module to check.
+ * @param module_name String identifier for the module to check.
  *
  * @return 0, if module with this name is ENABLED
  *         1, if module with this name is DISABLED
@@ -470,7 +470,7 @@ const char *lmod_get_packet_identifier(const uint8_t packet_type)
  * @note Call lmod_uninit_packet_types() to free the allocated memory!
  *
  * @param packet_type The packet type number to register.
- * @param *identifier A name for the packet type.
+ * @param identifier  A name for the packet type.
  *
  * @return Success =  0
  *         Error   = -1
@@ -569,7 +569,7 @@ int lmod_parameter_type_exists(const uint16_t parameter_type)
  * @note Call lmod_uninit_packet_types() to free the allocated memory!
  *
  * @param parameter_type The packet type number to register.
- * @param *identifier A name for the packet type.
+ * @param identifier     A name for the packet type.
  *
  * @return Success =  0
  *         Error   = -1

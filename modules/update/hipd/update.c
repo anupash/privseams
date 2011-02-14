@@ -147,7 +147,7 @@ out_err:
  *       first UPDATE packet should contain 0 as value, we need to decrement
  *       the packet value by one for each UPDATE packet.
  *
- * @param *state    Pointer to the update state.
+ * @param state Pointer to the update state.
  *
  * @return The next UPDATE out ID if state is set, -1 on error
  */
@@ -946,8 +946,8 @@ out_err:
  * Thin wrapper function around hip_send_locators_to_all_peers. Needed for
  * registration as user message handle function.
  *
- * @param *msg unused, needed due to type check of handle functions
- * @param *src unused, needed due to type check of handle functions
+ * @param msg unused, needed due to type check of handle functions
+ * @param src unused, needed due to type check of handle functions
  *
  * @return zero on success or negative on failure
  */
@@ -1095,11 +1095,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, non-negative on error.
  */

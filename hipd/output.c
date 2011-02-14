@@ -247,11 +247,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *             information for the packet handling
- *             (received message, source and destination address, the
- *             ports and the corresponding entry from the host
- *             association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, negative value on error.
  */
@@ -278,11 +277,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *             information for the packet handling
- *             (received message, source and destination address, the
- *             ports and the corresponding entry from the host
- *             association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, negative value on error.
  */
@@ -319,11 +317,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *             information for the packet handling
- *             (received message, source and destination address, the
- *             ports and the corresponding entry from the host
- *             association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, non-negative on error.
  */
@@ -350,11 +347,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, non-negative on error.
  */
@@ -562,11 +558,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, non-negative on error.
  */
@@ -791,11 +786,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return              zero on success, or negative error value on error.
  */
@@ -934,11 +928,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *             information for the packet handling
- *             (received message, source and destination address, the
- *             ports and the corresponding entry from the host
- *             association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, negative otherwise.
  */
@@ -967,11 +960,10 @@ int hip_add_rvs_reg_from(UNUSED const uint8_t packet_type,
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *             information for the packet handling
- *             (received message, source and destination address, the
- *             ports and the corresponding entry from the host
- *             association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, negative otherwise.
  */
@@ -1004,11 +996,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *             information for the packet handling
- *             (received message, source and destination address, the
- *             ports and the corresponding entry from the host
- *             association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, negative otherwise.
  */
@@ -1040,11 +1031,10 @@ int hip_add_rvs_relay_to(UNUSED const uint8_t packet_type,
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, negative otherwise.
  */
@@ -1114,11 +1104,10 @@ out_err:
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
  * @param ha_state The host association state (RFC 5201, 4.4.1.)
- * @param *ctx Pointer to the packet context, containing all
- *                    information for the packet handling
- *                    (received message, source and destination address, the
- *                    ports and the corresponding entry from the host
- *                    association database).
+ * @param ctx Pointer to the packet context, containing all information for
+ *            the packet handling (received message, source and destination
+ *            address, the ports and the corresponding entry from the host
+ *            association database).
  *
  * @return zero on success, negative otherwise.
  */

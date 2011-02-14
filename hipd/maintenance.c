@@ -170,7 +170,7 @@ static int hip_scan_retransmissions(void)
  * Register a maintenance function. All maintenance functions are called during
  * the periodic maintenance cycle.
  *
- * @param *maint_function Pointer to the maintenance function.
+ * @param maint_function Pointer to the maintenance function.
  * @param priority Priority of the maintenance function.
  *
  * @return Success =  0
@@ -205,7 +205,7 @@ out_err:
 /**
  * Remove a maintenance function from the list.
  *
- * @param *maint_function Pointer to the function which should be unregistered.
+ * @param maint_function Pointer to the function which should be unregistered.
  *
  * @return Success =  0
  *         Error   = -1
