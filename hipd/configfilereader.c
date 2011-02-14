@@ -109,7 +109,6 @@ static int hip_cvl_add(struct hip_config_value_list *linkedlist,
     /* Item to add is the first item of the list. */
     if (linkedlist->head == NULL) {
         linkedlist->head = newnode;
-        return 0;
     } else {
         struct hip_configfile_value *pointer = linkedlist->head;
 
@@ -118,8 +117,6 @@ static int hip_cvl_add(struct hip_config_value_list *linkedlist,
         }
 
         pointer->next = newnode;
-
-        return 0;
     }
 
     return 0;
