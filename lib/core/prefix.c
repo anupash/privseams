@@ -350,8 +350,6 @@ int hip_sa_addr_len(void *sockaddr)
  */
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
 {
-    memset(sa, 0, sizeof(struct sockaddr_storage));
-
     if (IN6_IS_ADDR_V4MAPPED(addr)) {
         struct sockaddr_in *in = (struct sockaddr_in *) sa;
         in->sin_family = AF_INET;

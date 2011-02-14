@@ -241,9 +241,6 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
     unsigned               flags     = 0;
     struct xfrm_user_tmpl *tmpl;
 
-    memset(&req, 0, sizeof(req));
-    memset(&tmpls_buf, 0, sizeof(tmpls_buf));
-
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xpinfo));
     req.n.nlmsg_flags = NLM_F_REQUEST | flags;
     req.n.nlmsg_type  = cmd;
@@ -495,8 +492,6 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
         HIP_ASSERT(ealg < (int) sizeof(e_algo_names));
         HIP_ASSERT(aalg < (int) sizeof(a_algo_names));
-
-        memset(alg.buf, 0, sizeof(alg.buf));
 
         /* XFRMA_ALG_AUTH */
         memset(&alg, 0, sizeof(alg));

@@ -192,7 +192,6 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
 
     HIP_IFEL(contents_len <= 20, -EMSGSIZE, "Host id too short\n");
 
-    memset(&host_id_pub, 0, sizeof(struct hip_host_id));
     memcpy(&host_id_pub.rdata, &host_id->rdata, contents_len - DSA_PRIV);
 
     temp                  = ntohs(host_id->hi_length) - DSA_PRIV;
@@ -470,8 +469,6 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
         HIP_ERROR("build hdr error %d\n", err);
         goto out_err;
     }
-
-    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
     if ((err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))) {
         HIP_ERROR("Failed to get hostname. Err is (%d).\n", err);

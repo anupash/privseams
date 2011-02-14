@@ -3570,7 +3570,7 @@ int hip_build_param_cert_spki_info(struct hip_common *msg,
 {
     int                       err = 0;
     struct hip_cert_spki_info local;
-    memset(&local, '\0', sizeof(struct hip_cert_spki_info));
+
     memcpy(&local, cert_info, sizeof(struct hip_cert_spki_info));
     hip_set_param_type((struct hip_tlv_common *) &local,
                        HIP_PARAM_CERT_SPKI_INFO);
@@ -3808,7 +3808,6 @@ int hip_any_key_to_hit(const void *const any_key,
     const RSA *const         rsa_key     = any_key;
     const DSA *const         dsa_key     = any_key;
 
-    memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
     HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
              "gethostname failed\n");
 

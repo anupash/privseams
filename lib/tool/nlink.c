@@ -412,7 +412,6 @@ int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
         return -1;
     }
 
-    memset(&rth->local, 0, sizeof(rth->local));
     rth->local.nl_family = AF_NETLINK;
     rth->local.nl_groups = subscriptions;
 

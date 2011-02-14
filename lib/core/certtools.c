@@ -275,7 +275,6 @@ algo_check_done:
         HIP_IFEL(1 == 0, -1, "Unknown algorithm\n");
     }
 
-    memset(sha_digest, '\0', sizeof(sha_digest));
     /* build sha1 digest that will be signed */
     HIP_IFEL(!(sha_retval = SHA1((unsigned char *) cert->cert,
                                  strlen((char *) cert->cert), sha_digest)),
@@ -475,16 +474,6 @@ int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
     }
     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1,
              "Malloc for msg failed\n");
-
-    /* Memset everything */
-    HIP_IFEL(!memset(buf_before, '\0', sizeof(buf_before)), -1,
-             "Failed to memset memory for tmp buffers variables\n");
-    HIP_IFEL(!memset(buf_after, '\0', sizeof(buf_after)), -1,
-             "Failed to memset memory for tmp buffers variables\n");
-    HIP_IFEL(!memset(present_issuer, '\0', sizeof(present_issuer)), -1,
-             "Failed to memset memory for tmp variables\n");
-    HIP_IFEL(!memset(present_subject, '\0', sizeof(present_subject)), -1,
-             "Failed to memset memory for tmp variables\n");
 
     /* Make needed transforms to the date */
     /*  Format and print the time, "yyyy-mm-dd hh:mm:ss"

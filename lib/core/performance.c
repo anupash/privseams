@@ -198,7 +198,7 @@ int hip_perf_write_benchmark(struct perf_set *set, int slot)
     int err = 0;
     HIP_IFEL(!set, -1, "Performance set is empty\n");
     char buffer[30];
-    memset(buffer, 0, 30);
+
     if (set->num_files > slot && set->writable[slot] == 1) {
         if (set->files[slot]) {
             sprintf(buffer, "%4d\t%8.8lf\n", set->linecount[slot]++,

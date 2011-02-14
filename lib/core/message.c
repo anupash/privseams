@@ -557,8 +557,6 @@ static int hip_read_control_msg_all(int sockfd,
 
     HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-    memset(&msg, 0, sizeof(msg));
-
     /* setup message header with control and receive buffers */
     msg.msg_name    = &addr_from;
     msg.msg_namelen = sizeof(struct sockaddr_storage);

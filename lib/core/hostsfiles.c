@@ -87,7 +87,6 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
     char                  *hostname = NULL, *alias = NULL, *alias2 = NULL, *addr_ptr = NULL;
 
     initlist(&mylist);
-    memset(line, 0, sizeof(line));
 
     /* check whether  given hit_str is actually a HIT */
 
@@ -163,10 +162,6 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
             break;
         }
 
-        /* Initialize entry */
-
-        memset(&entry, 0, sizeof(entry));
-
         HIP_ASSERT(addr_ptr);
         err = inet_pton(AF_INET6, addr_ptr, &entry.id);
         if (err <= 0) {
@@ -193,7 +188,6 @@ static int hip_for_each_hosts_file_line(const char *hosts_file,
             break;
         }
 
-        memset(line, 0, sizeof(line));
         destroy(&mylist);
     }
 
