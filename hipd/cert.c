@@ -97,8 +97,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
     unsigned char *p_bin = NULL, *q_bin = NULL, *g_bin = NULL, *y_bin = NULL;
     unsigned char *p_b64 = NULL, *q_b64 = NULL, *g_b64 = NULL, *y_b64 = NULL;
 
-    cert = calloc(1, sizeof(struct hip_cert_spki_info));
-    HIP_IFEL(!cert, -1, "calloc for cert failed\n");
+    cert = malloc(sizeof(struct hip_cert_spki_info));
+    HIP_IFEL(!cert, -1, "malloc for cert failed\n");
 
     HIP_IFEL(!(p_cert = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)),
              -1, "No cert_info struct found\n");
@@ -113,8 +113,6 @@ int hip_cert_spki_sign(struct hip_common *msg)
     if (algo == HIP_HI_DSA) {
         dsa = (DSA *) rsa;
     }
-
-    memset(sha_digest, '\0', sizeof(sha_digest));
 
     digest_b64 = calloc(1, 30);
     HIP_IFEL(!digest_b64, -1, "calloc for digest_b64 failed\n");
@@ -187,9 +185,6 @@ int hip_cert_spki_sign(struct hip_common *msg)
     default:
         HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
     }
-
-    /* clearing signature field just to be sure */
-    memset(cert->signature, '\0', sizeof(cert->signature));
 
     HIP_IFEL(EVP_EncodeBlock(digest_b64, sha_digest, sizeof(sha_digest)) > 0,
              -1, "Failed to encode digest_b64\n");
@@ -537,7 +532,6 @@ algo_check_done:
         HIP_OUT_ERR(-1, "Unknown algorithm\n");
     }
 
-    memset(sha_digest, '\0', sizeof(sha_digest));
     /* build sha1 digest that will be signed */
     HIP_IFEL(!(sha_retval = SHA1((unsigned char *) cert->cert,
                                  strlen(cert->cert), sha_digest)),
@@ -681,16 +675,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
              "Malloc for subject failed\n");
     HIP_IFEL(!(pkey = malloc(sizeof(EVP_PKEY))), -1,
              "Malloc for pkey failed\n");
-    HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(issuer_hit_n)), -1,
-             "Failed to memset memory for issuer\n");
-    HIP_IFEL(!memset(subject_hit, '\0', sizeof(subject_hit)), -1,
-             "Failed to memset memory for subject\n");
-    HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(struct in6_addr)), -1,
-             "Failed to memset memory for issuer HIT\n");
-    HIP_IFEL(!memset(ialtname, 0, sizeof(ialtname)), -1,
-             "Failed to memset memory for ialtname\n");
-    HIP_IFEL(!memset(saltname, 0, sizeof(saltname)), -1,
-             "Failed to memset memory for saltname\n");
 
     OpenSSL_add_all_algorithms();
     ERR_load_crypto_strings();
@@ -722,8 +706,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *msg)
                 HIP_IFEL(ret < 0 && errno == EAFNOSUPPORT, -1,
                          "Failed to convert issuer HIT to hip_hit_t\n");
                 HIP_DEBUG_HIT("Issuer HIT", issuer_hit_n);
-                /* on conversion more to get rid of padding 0s*/
-                memset(issuer_hit, 0, sizeof(issuer_hit));
                 HIP_IFEL(!inet_ntop(AF_INET6, issuer_hit_n,
                                     issuer_hit, sizeof(issuer_hit)),
                          -1, "Failed to convert subject hit to "
@@ -961,7 +943,6 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *msg)
     OpenSSL_add_all_algorithms();
     ERR_load_crypto_strings();
 
-    memset(&verify, 0, sizeof(struct hip_cert_x509_resp));
     HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_REQ)), -1,
              "Failed to get cert info from the msg\n");
     memcpy(&verify, p, sizeof(struct hip_cert_x509_resp));

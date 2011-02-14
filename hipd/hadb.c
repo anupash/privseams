@@ -288,8 +288,6 @@ struct hip_hadb_state *hip_hadb_try_to_find_by_peer_hit(const hip_hit_t *hit)
     hip_hit_t                 our_hit;
     int                       i;
 
-    memset(&our_hit, 0, sizeof(our_hit));
-
     /* Let's try with the default HIT first */
     hip_get_default_hit(&our_hit);
 

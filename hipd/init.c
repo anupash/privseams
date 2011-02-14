@@ -635,7 +635,6 @@ static int hip_init_certs(void)
     struct hip_host_id_entry *entry;
     char                      hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
-    memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
     HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
              "gethostname failed\n");
 
@@ -643,8 +642,6 @@ static int hip_init_certs(void)
     if (!conf_file) {
         HIP_DEBUG("Configuration file did NOT exist creating it and "
                   "filling it with default information\n");
-        HIP_IFEL(!memset(hit, '\0', sizeof(hit)), -1,
-                 "Failed to memset memory for hit presentation format\n");
         /* Fetch the first RSA HIT */
         entry = hip_return_first_rsa();
         if (entry == NULL) {
@@ -1043,9 +1040,6 @@ int hipd_init(const uint64_t flags)
 
     /* Keep the flags around: they will be used at kernel module removal */
     sflags = flags;
-
-    memset(str, 0, 64);
-    memset(mtu, 0, 16);
 
     /* Make sure that root path is set up correcly (e.g. on Fedora 9).
      * Otherwise may get warnings from system() commands.

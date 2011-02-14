@@ -194,8 +194,6 @@ int hip_get_active_services(struct hip_srv *active_services,
 
     int i = 0, j = 0;
 
-    memset(active_services, 0, sizeof(hip_services));
-
     for (; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
         if (hip_services[i].status == HIP_SERVICE_ON) {
             memcpy(&active_services[j], &hip_services[i],

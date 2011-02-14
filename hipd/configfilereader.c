@@ -214,7 +214,6 @@ static int hip_cf_parse_val(const char * const line,
             if (line[i] == HIP_RELAY_VAL_CON &&
                 (line[j] == HIP_RELAY_VAL_SEP || j == end)) {
                 i++;
-                memset(value, '\0', sizeof(value));
                 k = i;
                 l = 0;
 
@@ -228,6 +227,7 @@ static int hip_cf_parse_val(const char * const line,
                         return HIP_EVAL;
                     }
                 }
+                value[l] = '\0';
 
                 /* Check for trash after the trailing container
                  * mark. */

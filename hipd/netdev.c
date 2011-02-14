@@ -450,7 +450,6 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
     /* Convert IPv4 address to IPv6 */
     if (addr->sa_family == AF_INET) {
         struct sockaddr_in6 temp;
-        memset(&temp, 0, sizeof(temp));
         temp.sin6_family = AF_INET6;
         IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *) addr)->sin_addr),
                          &temp.sin6_addr);
@@ -460,7 +459,6 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
     }
 
     /* Add secret to address. */
-    memset(tmp_secret, 0, sizeof(tmp_secret));
     err_rand = RAND_bytes(tmp_secret, 40);
     memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
 
@@ -491,7 +489,6 @@ static void hip_delete_address_from_list(struct sockaddr *addr, int ifindex)
     struct sockaddr_in6    addr_sin6;
 
     if (addr && addr->sa_family == AF_INET) {
-        memset(&addr_sin6, 0, sizeof(addr_sin6));
         addr_sin6.sin6_family = AF_INET6;
         IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
                          ((struct in6_addr *) hip_cast_sa_addr((struct sockaddr *) &addr_sin6)));
@@ -973,7 +970,6 @@ send_i1:
 
     is_ipv4_locator = IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
 
-    memset(addr, 0, sizeof(struct sockaddr_storage));
     addr->sa_family = (is_ipv4_locator ? AF_INET : AF_INET6);
 
     if (!reuse_hadb_local_address && src_addr) {
@@ -1220,7 +1216,6 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
                 continue;
             }
 
-            memset(addr, 0, sizeof(struct sockaddr_storage));
             is_add = ((msg->nlmsg_type == RTM_NEWADDR) ? 1 : 0);
 
             /* parse list of attributes into table

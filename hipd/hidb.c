@@ -941,7 +941,6 @@ int hip_get_default_lsi(struct in_addr *lsi)
     struct in6_addr lsi_aux6;
     hip_lsi_t       lsi_tmpl;
 
-    memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
     set_lsi_prefix(&lsi_tmpl);
     IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
     HIP_IFEL(hip_iproute_get(&hip_nl_route, &lsi_aux6, &lsi_addr, NULL,

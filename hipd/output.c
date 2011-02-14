@@ -1022,7 +1022,6 @@ int hip_add_rvs_relay_to(UNUSED const uint8_t packet_type,
     struct in6_addr dst;
     in_port_t       dst_port = 0;
 
-    memset(&dst, 0, sizeof(dst));
     if ((hip_relay_handle_relay_from(ctx->input_msg,
                                      &ctx->src_addr,
                                      &dst,
@@ -1205,8 +1204,6 @@ static int hip_queue_packet(const struct in6_addr *src_addr,
         goto out_err;
     }
 
-    memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
-
     memcpy(entry->hip_msg_retrans.buf, msg, len);
     memcpy(&entry->hip_msg_retrans.saddr, src_addr,
            sizeof(struct in6_addr));
@@ -1291,9 +1288,6 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
     dst6 = (struct sockaddr_in6 *) &dst;
     src4 = (struct sockaddr_in *)  &src;
     dst4 = (struct sockaddr_in *)  &dst;
-
-    memset(&src, 0, sizeof(src));
-    memset(&dst, 0, sizeof(dst));
 
     if (dst_port && dst_is_ipv4) {
         HIP_DEBUG("Using IPv4 UDP socket\n");

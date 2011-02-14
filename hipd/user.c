@@ -443,8 +443,6 @@ int hip_handle_user_msg(struct hip_common *msg,
             struct in_addr lsi;
 
             IPV6_TO_IPV4_MAP(dst_ip, &lsi);
-            memset(&server_addr, 0, sizeof(server_addr));
-
             if (IS_LSI32(lsi.s_addr) &&
                 !hip_map_id_to_addr(NULL, &lsi, &server_addr)) {
                 dst_ip = &server_addr;
@@ -581,7 +579,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 
         if (add_to_global) {
             if (IN6_IS_ADDR_V4MAPPED(dst_ip)) {
-                memset(&sock_addr, 0, sizeof(sock_addr));
                 IPV6_TO_IPV4_MAP(dst_ip, &sock_addr.sin_addr);
                 sock_addr.sin_family = AF_INET;
                 /* The server address is added with 0 interface index */
@@ -589,7 +586,6 @@ int hip_handle_user_msg(struct hip_common *msg,
                                         0,
                                         HIP_FLAG_CONTROL_TRAFFIC_ONLY);
             } else {
-                memset(&sock_addr6, 0, sizeof(sock_addr6));
                 sock_addr6.sin6_family = AF_INET6;
                 sock_addr6.sin6_addr   = *dst_ip;
                 /* The server address is added with 0 interface index */
@@ -800,7 +796,6 @@ int hip_handle_user_msg(struct hip_common *msg,
             struct hip_common msg_tmp;
             hip_lsi_t         lsi;
 
-            memset(&msg_tmp, 0, sizeof(msg_tmp));
             hip_generate_peer_lsi(&lsi);
             HIP_IFE(hip_build_param_contents(&msg_tmp, dst_hit,
                                              HIP_PARAM_HIT, sizeof(hip_hit_t)), -1);
@@ -897,7 +892,6 @@ int hip_handle_user_msg(struct hip_common *msg,
             hit = id;
         }
 
-        memset(&addr, 0, sizeof(addr));
         HIP_IFEL(hip_map_id_to_addr(hit, &lsi, &addr), -1,
                  "Couldn't determine address\n");
         hip_msg_init(msg);
