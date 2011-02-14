@@ -99,8 +99,6 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
 {
     int              err     = 0, diff = 0;
     const hip_hit_t *dst_hit = NULL;
-    hip_hit_t        all_zero_hit;
-    bzero(&all_zero_hit, sizeof(all_zero_hit));
 
     /* obtain the hit */
     dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
@@ -124,8 +122,6 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
     int              err     = 0;
     const int       *newVal  = NULL;
     const hip_hit_t *dst_hit = NULL;
-    hip_hit_t        all_zero_hit;
-    bzero(&all_zero_hit, sizeof(all_zero_hit));
 
     HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
              -1, "No HIT set\n");
