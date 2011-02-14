@@ -1746,7 +1746,7 @@ int main(int argc, char **argv)
     char                 *rule_file = NULL;
     int                   errflg    = 0, killold = 0;
     struct hip_common    *msg       = NULL;
-    struct sockaddr_in6   sock_addr;
+    struct sockaddr_in6   sock_addr = { 0 };
     socklen_t             alen;
     fd_set                read_fdset;
     struct timeval        timeout;
@@ -1881,7 +1881,6 @@ int main(int argc, char **argv)
     /* Request-response socket with hipfw */
     hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
     HIP_IFEL(hip_fw_sock < 0, 1, "Could not create socket for firewall.\n");
-    memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_FIREWALL_SYNC_PORT);
     sock_addr.sin6_addr   = in6addr_loopback;
@@ -1902,7 +1901,6 @@ int main(int argc, char **argv)
     /* Only for receiving out-of-sync notifications from hipd  */
     hip_fw_async_sock = socket(AF_INET6, SOCK_DGRAM, 0);
     HIP_IFEL(hip_fw_async_sock < 0, 1, "Could not create socket for firewall.\n");
-    memset(&sock_addr, 0, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
     sock_addr.sin6_addr   = in6addr_loopback;

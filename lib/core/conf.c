@@ -2107,10 +2107,9 @@ int hip_handle_exec_app(int do_fork, int type, int argc,
     unsigned i;
     int      k;
     char     lib_all[LIB_LENGTH];
-    char    *libs[5];
+    char    *libs[5]  = { 0 };
     char   **argv_new = NULL;
 
-    memset(libs, 0, sizeof(libs));
     argv_new = calloc(argc, sizeof(char *));
 
     for (k = 0; k < argc; k++) {

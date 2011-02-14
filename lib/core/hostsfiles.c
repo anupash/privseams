@@ -393,11 +393,10 @@ out_err:
  */
 int hip_map_lsi_to_hit_from_hosts_files(const hip_lsi_t *lsi, hip_hit_t *hit)
 {
-    int             err = 0;
-    uint8_t         hostname[HOST_NAME_MAX];
+    int             err                     = 0;
+    uint8_t         hostname[HOST_NAME_MAX] = { 0 };
     struct in6_addr mapped_lsi;
 
-    memset(hostname, 0, sizeof(hostname));
     HIP_ASSERT(lsi && hit);
 
     IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
@@ -442,11 +441,10 @@ out_err:
  */
 int hip_map_hit_to_lsi_from_hosts_files(const hip_hit_t *hit, hip_lsi_t *lsi)
 {
-    int             err = 0;
-    uint8_t         hostname[HOST_NAME_MAX];
+    int             err                     = 0;
+    uint8_t         hostname[HOST_NAME_MAX] = { 0 };
     struct in6_addr mapped_lsi;
 
-    memset(hostname, 0, sizeof(hostname));
     HIP_ASSERT(lsi && hit);
 
     err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
@@ -491,12 +489,10 @@ int hip_map_id_to_ip_from_hosts_files(const hip_hit_t *hit,
                                       const hip_lsi_t *lsi,
                                       struct in6_addr *ip)
 {
-    int     err = 0;
-    uint8_t hostname[HOST_NAME_MAX];
+    int     err                     = 0;
+    uint8_t hostname[HOST_NAME_MAX] = { 0 };
 
     HIP_ASSERT((hit || lsi) && ip);
-
-    memset(hostname, 0, sizeof(hostname));
 
     if (hit && !ipv6_addr_any(hit)) {
         err = (hip_for_each_hosts_file_line(HIPL_HOSTS_FILE,
@@ -536,10 +532,8 @@ out_err:
  */
 int hip_host_file_info_exists_lsi(hip_lsi_t *lsi)
 {
-    uint8_t         hostname[HOST_NAME_MAX];
+    uint8_t         hostname[HOST_NAME_MAX] = { 0 };
     struct in6_addr mapped_lsi;
-
-    memset(hostname, 0, sizeof(hostname));
 
     IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
 

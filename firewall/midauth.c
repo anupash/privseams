@@ -157,12 +157,9 @@ static void update_udp_header(struct iphdr *ip, int len)
  */
 static void update_hip_checksum_ipv4(struct iphdr *ip)
 {
-    struct sockaddr_in src, dst;
+    struct sockaddr_in src = { 0 }, dst = { 0 };
     struct hip_common *msg = (struct hip_common *) ((char *) ip +
                                                     (ip->ihl * 4));
-
-    memset(&src, 0, sizeof(src));
-    memset(&dst, 0, sizeof(dst));
 
     src.sin_family = AF_INET;
     memcpy(&src.sin_addr, &ip->saddr, sizeof(uint32_t));
@@ -183,12 +180,9 @@ static void update_hip_checksum_ipv4(struct iphdr *ip)
  */
 static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
 {
-    struct sockaddr_in6 src, dst;
+    struct sockaddr_in6 src = { 0 }, dst = { 0 };
     struct hip_common  *msg = (struct hip_common *) ((char *) ip +
                                                      sizeof(struct ip6_hdr));
-
-    memset(&src, 0, sizeof(src));
-    memset(&dst, 0, sizeof(dst));
 
     src.sin6_family = AF_INET6;
     memcpy(&src.sin6_addr, &ip->ip6_src, sizeof(struct in6_addr));

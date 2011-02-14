@@ -422,10 +422,8 @@ int hip_cf_get_line_data(FILE *fp, char *parameter,
         return EOF;
     }
 
-    int  lineerr = 0;
-    char line[HIP_RELAY_MAX_LINE_LEN + 1];
-
-    memset(line, '\0', sizeof(line));
+    int  lineerr                          = 0;
+    char line[HIP_RELAY_MAX_LINE_LEN + 1] = { 0 };
 
     lineerr = hip_cf_readline(fp, line, parseerr);
 
