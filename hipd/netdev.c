@@ -145,9 +145,8 @@ static int hip_netdev_is_in_white_list(int if_index)
 int hip_netdev_white_list_add(char *device_name)
 {
     struct ifreq ifr;
-    bzero(&ifr, sizeof(ifr));
-    int sock = 0;
-    int ret  = 0;
+    int          sock = 0;
+    int          ret  = 0;
 
     ifr.ifr_ifindex = -1;
     strncpy(ifr.ifr_name, device_name, (size_t) IF_NAMESIZE);
