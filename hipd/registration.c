@@ -1068,12 +1068,10 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
     /* Get the number of registration types. */
     type_count = hip_get_param_contents_len(reg_request) -
                  sizeof(reg_request->lifetime);
-    accepted_requests  = malloc(sizeof(uint8_t) * type_count);
-    accepted_lifetimes = malloc(sizeof(uint8_t) * type_count);
-    refused_requests   = malloc(sizeof(uint8_t) * type_count);
-    failure_types      = malloc(sizeof(uint8_t) * type_count);
-
-    /* Allocate memory for types */
+    accepted_requests  = calloc(type_count, sizeof(uint8_t));
+    accepted_lifetimes = calloc(type_count, sizeof(uint8_t));
+    refused_requests   = calloc(type_count, sizeof(uint8_t));
+    failure_types      = calloc(type_count, sizeof(uint8_t));
 
     /* Get a pointer to the actual registration types. */
     reg_types = (const uint8_t *) hip_get_param_contents_direct(reg_request) +
@@ -1096,11 +1094,6 @@ int hip_handle_param_reg_request(struct hip_hadb_state *entry,
         /* As above. */
         return err;
     }
-
-    memset(accepted_requests,  0, sizeof(uint8_t) * type_count);
-    memset(accepted_lifetimes, 0, sizeof(uint8_t) * type_count);
-    memset(refused_requests,   0, sizeof(uint8_t) * type_count);
-    memset(failure_types,      0, sizeof(uint8_t) * type_count);
 
     if (reg_request->lifetime == 0) {
         hip_del_registration_server(entry, reg_types, type_count,
