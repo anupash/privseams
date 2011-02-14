@@ -2003,7 +2003,7 @@ int main(int argc, char **argv)
 
         if (FD_ISSET(hip_fw_async_sock, &read_fdset)) {
             HIP_DEBUG("****** Received HIPD message ******\n");
-            bzero(&sock_addr, sizeof(sock_addr));
+            memset(&sock_addr, 0, sizeof(sock_addr));
             alen = sizeof(sock_addr);
             n    = recvfrom(hip_fw_async_sock, msg, sizeof(struct hip_common),
                             MSG_PEEK, (struct sockaddr *) &sock_addr, &alen);
