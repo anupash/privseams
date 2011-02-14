@@ -161,10 +161,10 @@ out_err:
 int hip_send_close(struct hip_common *msg,
                    int delete_ha_info)
 {
-    int                 err    = 0, retry, n;
-    char               *opaque = NULL;
-    const hip_hit_t    *hit    = NULL;
-    struct sockaddr_in6 sock_addr;
+    int                 err             = 0, retry, n;
+    char               *opaque          = NULL;
+    const hip_hit_t    *hit             = NULL;
+    struct sockaddr_in6 sock_addr       = { 0 };
     struct hip_common  *msg_to_firewall = NULL;
 
     HIP_DEBUG("msg=%p\n", msg);
@@ -192,7 +192,6 @@ int hip_send_close(struct hip_common *msg,
     hip_msg_init(msg_to_firewall);
     HIP_IFE(hip_build_user_hdr(msg_to_firewall,
                                HIP_MSG_RESET_FIREWALL_DB, 0), -1);
-    bzero(&sock_addr, sizeof(sock_addr));
     sock_addr.sin6_family = AF_INET6;
     sock_addr.sin6_port   = htons(HIP_FIREWALL_PORT);
     sock_addr.sin6_addr   = in6addr_loopback;
