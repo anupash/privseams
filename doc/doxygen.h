@@ -14,14 +14,14 @@
  * @section sec_doc Project Documents
  * <ul>
  * <li><a href="http://hipl.hiit.fi/index.php?index=source">HIPL source code</a></li>
- * <li><a href="http://hipl.hiit.fi/loggerhead/">Web-based version control browser</a></li>
+ * <li><a href="http://bazaar.launchpad.net/~hipl-core/hipl/trunk/files">Web-based version control browser</a></li>
  * <li>doc/HACKING. This file contains developer information on policies in the
  * HIPL project.</li>
  * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in "doc" directory.
  * The user manual is then available at doc/howto-html/index.html</li>.
  * Periodically prebuilt <a href="http://hipl.hiit.fi/hipl/manual/index.html">manual</a>
  * is also available (from the trunk branch).
- * <li><a href="http://hipl.hiit.fi/bugzilla/">Bugzilla</a></li>
+ * <li><a href="https://bugs.launchpad.net/hipl/">Launchpad bug tracker</a></li>
  * <!--<li><a href=""></a>.</li>-->
  * </ul>
  *
