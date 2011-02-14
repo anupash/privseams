@@ -655,11 +655,11 @@ out_err:
 
 /**
  * This function stores the LOCATOR parameter into the hadb entry
- * of a connection in question. The whole LOCATOR is stored and 
+ * of a connection in question. The whole LOCATOR is stored and
  * handled later as the LOCATOR is received before the connection
  * state has reached ESTABLISHED (UPDATEs are not allowed before
- * the state is ESTABLISHED) and the address verification is 
- * handled later during the BEX (after receiving the R2). 
+ * the state is ESTABLISHED) and the address verification is
+ * handled later during the BEX (after receiving the R2).
  *
  * @param locator The received LOCATOR parameter.
  * @param entry Hadb entry where the LOCATOR is stored.

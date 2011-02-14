@@ -1056,7 +1056,7 @@ $ make package/hipl/install
         hipconf command also to @sysconfdir@/hipd_config and restart hipd.
       </para>
     </section>
- 
+
   <section id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
     <section id="sec_using_hip_proxy">
