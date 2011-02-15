@@ -109,14 +109,14 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
 {
     int                   err   = 0, i = 0, identifier = 0;
     struct icmp6_hdr     *icmph = NULL;
-    struct sockaddr_in6   dst6;
-    u_char                cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    u_char               *icmp_pkt = NULL;
-    struct msghdr         mhdr;
+    struct sockaddr_in6   dst6  = { 0 };
+    struct msghdr         mhdr  = { 0 };
     struct iovec          iov[1];
     struct cmsghdr       *chdr = NULL;
     struct inet6_pktinfo *pkti = NULL;
     struct timeval        tval;
+    u_char                cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))] = { 0 };
+    u_char               *icmp_pkt                                          = NULL;
 
     HIP_IFEL(!entry, 0, "No entry\n");
 
@@ -249,15 +249,15 @@ out_err:
  */
 static int hip_icmp_recvmsg(int sockfd)
 {
-    int                   err = 0, ret = 0, identifier = 0;
-    struct msghdr         mhdr;
+    int                   err  = 0, ret = 0, identifier = 0;
+    struct msghdr         mhdr = { 0 };
     struct cmsghdr       *chdr;
     struct iovec          iov[1];
+    unsigned char         iovbuf[HIP_MAX_ICMP_PACKET] = { 0 };
     unsigned char         cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))];
-    unsigned char         iovbuf[HIP_MAX_ICMP_PACKET];
-    struct icmp6_hdr     *icmph = NULL;
+    struct sockaddr_in6   src_sin6 = { 0 };
+    struct icmp6_hdr     *icmph    = NULL;
     struct inet6_pktinfo *pktinfo;
-    struct sockaddr_in6   src_sin6;
     struct in6_addr      *src   = NULL, *dst = NULL;
     struct timeval       *stval = NULL, *rtval = NULL, *ptr = NULL;
 

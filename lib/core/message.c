@@ -543,7 +543,7 @@ static int hip_read_control_msg_all(int sockfd,
     struct sockaddr_in     *addr_from4 = (struct sockaddr_in *) &addr_from;
     struct sockaddr_in6    *addr_from6 = (struct sockaddr_in6 *) &addr_from;
     struct cmsghdr         *cmsg       = NULL;
-    struct msghdr           msg;
+    struct msghdr           msg        = { 0 };
     union {
         struct in_pktinfo    *pktinfo_in4;
         struct inet6_pktinfo *pktinfo_in6;

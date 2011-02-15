@@ -450,10 +450,10 @@ int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
     struct tm                       *ts          = NULL;
     char                             buf_before[80];
     char                             buf_after[80];
-    char                             present_issuer[41];
-    char                             present_subject[41];
-    struct hip_common               *msg      = NULL;
-    const struct hip_cert_spki_info *returned = NULL;
+    char                             present_issuer[41]  = { 0 };
+    char                             present_subject[41] = { 0 };
+    struct hip_common               *msg                 = NULL;
+    const struct hip_cert_spki_info *returned            = NULL;
 
     /* Malloc needed */
     tmp_issuer = calloc(1, 128);
