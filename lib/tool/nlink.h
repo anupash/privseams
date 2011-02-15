@@ -31,7 +31,6 @@ struct pseudo6_hdr {
 struct netdev_address {
     struct sockaddr_storage addr;
     int                     if_index;
-    unsigned char           secret[40];
     time_t                  timestamp;
     int                     flags;
 };

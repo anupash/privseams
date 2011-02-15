@@ -426,8 +426,6 @@ out_err:
 void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 {
     struct netdev_address *n;
-    unsigned char          tmp_secret[40];
-    int                    err_rand = 0;
 
     if (hip_exists_address_in_list(addr, ifindex)) {
         return;
@@ -457,10 +455,6 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
     } else {
         memcpy(&n->addr, addr, hip_sockaddr_len(addr));
     }
-
-    /* Add secret to address. */
-    err_rand = RAND_bytes(tmp_secret, 40);
-    memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
 
     /* Clear the timestamp, initially 0 so everything will be sent. */
     memset(&n->timestamp, 0, sizeof(time_t));
