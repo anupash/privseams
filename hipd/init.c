@@ -635,7 +635,7 @@ static int hip_init_certs(void)
     struct hip_host_id_entry *entry;
     char                      hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
-    HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
+    HIP_IFEL(gethostname(hostname, sizeof(hostname)), -1,
              "gethostname failed\n");
 
     conf_file = fopen(HIP_CERT_CONF_PATH, "r");

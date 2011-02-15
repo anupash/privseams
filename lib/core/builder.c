@@ -3808,7 +3808,7 @@ int hip_any_key_to_hit(const void *const any_key,
     const RSA *const         rsa_key     = any_key;
     const DSA *const         dsa_key     = any_key;
 
-    HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
+    HIP_IFEL(gethostname(hostname, sizeof(hostname)), -1,
              "gethostname failed\n");
 
     switch (type) {

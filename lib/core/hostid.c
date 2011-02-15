@@ -470,7 +470,7 @@ int hip_serialize_host_id_action(struct hip_common *const msg,
         goto out_err;
     }
 
-    if ((err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))) {
+    if ((err = -gethostname(hostname, sizeof(hostname)))) {
         HIP_ERROR("Failed to get hostname. Err is (%d).\n", err);
         goto out_err;
     }
