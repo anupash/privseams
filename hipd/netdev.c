@@ -143,14 +143,13 @@ static int hip_netdev_is_in_white_list(int if_index)
  * @param device_name the name of the device to be white listed
  * @return 1 on success, 0 on error
  */
-int hip_netdev_white_list_add(char *device_name)
+int hip_netdev_white_list_add(const char *const device_name)
 {
     struct ifreq ifr;
     int          sock = 0;
     int          ret  = 0;
 
-    ifr.ifr_ifindex = -1;
-    strncpy(ifr.ifr_name, device_name, (size_t) IF_NAMESIZE);
+    strncpy(ifr.ifr_name, device_name, IF_NAMESIZE);
     sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     if (ioctl(sock, SIOCGIFINDEX, &ifr) == 0) {
