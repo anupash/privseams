@@ -1616,11 +1616,7 @@ NAT handover in hard IPv4-Only Handover, no locators in base exchange
 -----------
 
 
-8. Blind support
-----------------
-
-
-9. Closing of connections
+8. Closing of connections
 -------------------------
 
 * tools/hipconf rst all
