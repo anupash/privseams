@@ -446,7 +446,7 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
 
     /* Convert IPv4 address to IPv6 */
     if (addr->sa_family == AF_INET) {
-        struct sockaddr_in6 temp;
+        struct sockaddr_in6 temp = { 0 };
         temp.sin6_family = AF_INET6;
         IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *) addr)->sin_addr),
                          &temp.sin6_addr);

@@ -1013,6 +1013,7 @@ int hip_add_rvs_relay_to(UNUSED const uint8_t packet_type,
     struct in6_addr dst;
     in_port_t       dst_port = 0;
 
+    memset(&dst, 0, sizeof(dst));
     if ((hip_relay_handle_relay_from(ctx->input_msg,
                                      &ctx->src_addr,
                                      &dst,
@@ -1242,11 +1243,12 @@ static int hip_send_raw_from_one_src(const struct in6_addr *local_addr,
                                      struct hip_hadb_state *entry,
                                      const int retransmit)
 {
-    int                     err = 0, sa_size, sent, len = 0, dupl, try_again, udp = 0;
-    struct sockaddr_storage src, dst;
+    int                     err         = 0, len         = 0, udp      = 0;
     int                     src_is_ipv4 = 0, dst_is_ipv4 = 0, memmoved = 0;
-    struct sockaddr_in6    *src6        = NULL, *dst6 = NULL;
-    struct sockaddr_in     *src4        = NULL, *dst4 = NULL;
+    int                     sa_size, sent, dupl, try_again;
+    struct sockaddr_storage src  = { 0 }, dst  = { 0 };
+    struct sockaddr_in6    *src6 = NULL, *dst6 = NULL;
+    struct sockaddr_in     *src4 = NULL, *dst4 = NULL;
     struct in6_addr         my_addr;
     /* Points either to v4 or v6 raw sock */
     int hip_raw_sock_output = 0;

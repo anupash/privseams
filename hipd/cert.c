@@ -97,8 +97,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
     unsigned char *p_bin = NULL, *q_bin = NULL, *g_bin = NULL, *y_bin = NULL;
     unsigned char *p_b64 = NULL, *q_b64 = NULL, *g_b64 = NULL, *y_b64 = NULL;
 
-    cert = malloc(sizeof(struct hip_cert_spki_info));
-    HIP_IFEL(!cert, -1, "malloc for cert failed\n");
+    cert = calloc(1, sizeof(struct hip_cert_spki_info));
+    HIP_IFEL(!cert, -1, "calloc for cert failed\n");
 
     HIP_IFEL(!(p_cert = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)),
              -1, "No cert_info struct found\n");

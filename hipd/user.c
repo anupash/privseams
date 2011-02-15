@@ -427,8 +427,8 @@ int hip_handle_user_msg(struct hip_common *msg,
         int                           i             = 0, type_count = 0;
         int                           opp_mode      = 0;
         int                           add_to_global = 0;
-        struct sockaddr_in6           sock_addr6;
-        struct sockaddr_in            sock_addr;
+        struct sockaddr_in6           sock_addr6    = { 0 };
+        struct sockaddr_in            sock_addr     = { 0 };
         struct in6_addr               server_addr;
 
         /* Get RVS IP address, HIT and requested lifetime given as
@@ -793,7 +793,7 @@ int hip_handle_user_msg(struct hip_common *msg,
             HIP_IFE(hip_build_param_contents(msg, &entry->lsi_our,
                                              HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1);
         } else if (dst_hit) {         /* Assign a new LSI */
-            struct hip_common msg_tmp;
+            struct hip_common msg_tmp = { 0 };
             hip_lsi_t         lsi;
 
             hip_generate_peer_lsi(&lsi);
