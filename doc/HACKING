@@ -11,27 +11,19 @@ read and understood all of the rules in this document.
 The intention of this document is not to make your life as a programmer
 harder. On the contrary: everyone wants and deserves to work with
 good code. Only if you (you personally) adhere to the following
-rules, we can ensure code quality and joy while working with the
-code. You are in this project for two reasons: to learn and to work.
+rules, can we ensure code quality and joy while working with HIPL.
+You are in this project for two reasons: to learn and to work.
 Take your time to learn how to do things properly and take your time
 to do things properly. Reading this document completely is your
-first step towards this.
-
-This document is a working document. Feel free to add more information
-if you feel that we missed an important topic. Put your name to the
-list of authors above if you made a considerable addition.
+first step towards this goal.
 
 EVERYTHING in this document is important. We would not take the
 effort to write anything down if we wouldn't care about it with
 every pore. Please read every single line in this document. It may
 take some time but it will help you to fit into the project neatly.
 
-
-
-TODO
-====
-
-- xx
+This document is continuously updated. Feel free to add more information
+if you feel that we missed an important topic.
 
 
 
@@ -50,7 +42,7 @@ Before you start working with Bazaar, you should provide some
 information about yourself, such that your work can properly be
 identified in the revision logs.
 
-bzr whoami "#FIRST_NAME# #LAST_NAME# <#EMAIL_ADDRESS#>"
+  bzr whoami "#FIRST_NAME# #LAST_NAME# <#EMAIL_ADDRESS#>"
 
 
 Creating a local shared repository (optional, but recommended)
@@ -65,91 +57,83 @@ information will be shared among the branches set up within this
 repository. As branches are expected to share a lot of common history
 in our branch layout, this step will result in:
 
-- shorter checkout time for additional branches
+- quicker creation of additional local branches,
 
-- faster merging, due to purely local operations
+- faster merging, due to purely local operations,
 
-- the history will be located in the repository top directory and thus
-  will not pollute the branch directory (especially good in case you
-  are using eclipse or other IDEs)
+- history located in the top-level directory and not in branch directories
+  (especially good in case you are using Eclipse or other IDEs).
 
-bzr init-repo #REPOSITORY_NAME#
+To create a local shared repository run
 
-Change into the just created repository before going on with the next
+  bzr init-repo #REPOSITORY_NAME#
+
+Change into the just created repository before continuing with the next
 steps.
 
-cd #REPOSITORY_NAME#
+  cd #REPOSITORY_NAME#
 
 
 Getting the history of a remote branch
 --------------------------------------
 
-Bazaar allows to you a SVN-like/TLA-like usage, i.e. each commit is
-applied to the local as well as to the remote repository in one
-go. This means you have to be online, in order to commit changes. The
-command associated with this kind of tracking branch is checkout.
+Bazaar allows a centralized SVN-like workflow, i.e. each commit is applied to
+the local as well as to the remote repository in one go. This means you have
+to be online in order to commit changes. The command associated with this
+kind of tracking branch is checkout.
 
-bzr checkout bzr+ssh://#USERNAME#@hipl.hiit.fi/var/archive/hipl-bzr/trunk
-
-IMPORTANT: Do NOT confuse "checkout" with the "get" command from
-TLA. This is an alias for Bazaar that will result in a different
-behavior than you are used to. I might go into more detail about this
-in the advanced user section at some point.
+  bzr checkout lp:hipl
 
 NOTE: If this is the first branch you check out into a local shared
 repository or if you are merely checking out this branch stand-alone,
-the checkout will take some time, as the history information is
-currently accounts for about 200MB.  Updating the local history
+the checkout will take some time, as the history information currently
+accounts for about 200MB.
 
 If you checkout a branch as described above, you just have to run an
-update from within the branch directory, in order to retrieve the most
+update from within the branch directory in order to retrieve the most
 current revision of the branch.
 
-bzr update
+  bzr update
 
 
 Committing to a remote branch
 -----------------------------
 
-If you checkout a branch as described above, doing a commit from with
-in the branch directory will first try to apply your changes remotely
-and only add the changes to the local history, iff the remote commit
-succeeded. Otherwise, you will need to update the local repository to
-the current revision.
+If you checkout a branch as described above, doing a commit from within the
+checkout directory will try to apply your changes to the remote repository.
 
 It is good practice to ALWAYS check your modifications and to ensure
 that your commit only contains changes you actually want to publish at
-that very moment!
+that very moment:
 
-bzr diff
+  bzr diff
 
 If bzrtools are installed, you can also get a color version of bzr's
-diff.
+diff:
 
-bzr cdiff
+  bzr cdiff
 
 NOTE: By providing the parameter -r #REVISION#, you can create a diff
 against the specified revision.
 
 Once you have confirmed that your modifications are correct, you can
-commit the changes.
+commit the changes:
 
-bzr commit
+  bzr commit
 
-NOTE: Please, don't use the -m "#COMMIT_COMMENT#" option.
-I strongly encourage you to use an editor for your commit
-messages instead and to give a one line summary followed by a empty
-line and then a more detailed description of your changes. This way,
-it will be much easier for your fellow developers to understand your
-changes and to use the extra information for eventual bug fixes in the
-future.
+NOTE: Please, don't use the -m "#COMMIT_COMMENT#" option. It is strongly
+encouraged to use an editor for your commit messages. Good log messages
+consisto of a one-line summary followed by an empty line and then a more
+detailed description of your changes. Your fellow developers will have much
+less trouble understanding your changes and will be able to employ the extra
+information for bug fixes in the future.
 
 NOTE: To automatically close a bug in launchpad, use
-bzr commit --fixes lp:#BUG_ID#
 
-NOTE: You can set your preferred editor by editing the [DEFAULT]
-section of Bazaar configuration located at $HOME/.bazaar/bazaar.conf,
-e.g.:
+  bzr commit --fixes lp:#BUG_ID#
+
+NOTE: You can set your preferred editor by editing the [DEFAULT] section of
+the Bazaar configuration located at $HOME/.bazaar/bazaar.conf, e.g.:
 
 [DEFAULT]
 BZR_EDITOR = nano
@@ -160,7 +144,7 @@ documentation, including how to set it up. See also 'Style Checking'.
 
 TBD: further useful commands
 
-bzr conflicts/resolve
+  bzr conflicts/resolve
 
 A list of possible conflicts can be found at:
 http://doc.bazaar.canonical.com/bzr.2.0/en/user-reference/index.html#conflicts-types
