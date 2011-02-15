@@ -56,14 +56,14 @@ bzr whoami "#FIRST_NAME# #LAST_NAME# <#EMAIL_ADDRESS#>"
 Creating a local shared repository (optional, but recommended)
 --------------------------------------------------------------
 
-Bazaar does not only provide a working copy and a history information
+Bazaar does not only provide a working copy and history information
 for the current revision, but instead it maintains the complete
 history of a retrieved branch locally. This allows Bazaar to
 dramatically speed up operations such as log, diff, annotate and
 merge. The advantage of having a shared repository is that all history
 information will be shared among the branches set up within this
 repository. As branches are expected to share a lot of common history
-in our branch layout, this a step will result in:
+in our branch layout, this step will result in:
 
 - shorter checkout time for additional branches
 
@@ -141,7 +141,7 @@ I strongly encourage you to use an editor for your commit
 messages instead and to give a one line summary followed by a empty
 line and then a more detailed description of your changes. This way,
 it will be much easier for your fellow developers to understand your
-changes and to use the extra information for eventual bugfixes in the
+changes and to use the extra information for eventual bug fixes in the
 future.
 
 NOTE: To automatically close a bug in launchpad, use
@@ -360,7 +360,7 @@ the names - things should not be ambiguous in a large context.
 Single letter names (i, j, k, ...) are reserved for integer counter
 variables only.
 
-We use underscores (_) to structure names - No camelCaps!
+We use underscores (_) to structure names - No CamelCase!
 
 
 On Functions*
@@ -644,7 +644,7 @@ CODING CONVENTIONS
   DOCUMENTATION)
 
 - Don't invent your own coding style. It will give the code an
-  ununified look.
+  untidy look.
 
 - Use under_scores instead of CamelCase
 
@@ -803,7 +803,7 @@ in testing whether a function fully behaves as documented because that can be
 very complex, slow, or impossible on a local system.
 
 
-Unit Tests Organizition
+Unit Tests Organization
 -----------------------
 
 The unit tests are organized as follows:
@@ -891,7 +891,7 @@ a) Instead of including hipd/bar.h, include the implementation file hipd/bar.c
 b) For the test target static foo() create the wrapper foo_test_wrapper() that
    is not static. Declare all such wrappers in hipd/bar_test_wrappers.h and
    include that file instead of hipd/bar.h. While more effort, this is cleaner
-   than solution a) and should work where a) prooves problematic.
+   than solution a) and should work where a) proves problematic.
 
 
 
@@ -911,9 +911,9 @@ debugging statements in a unified way:
 - HIP_INFO(arguments as for printk)
 - HIP_DEBUG(arguments as for printk)
 
-The wrappers exists for many reasons. First, it is very convinient to
-have the same syntax for the debug statements indepently of whether
-you degugging in kernel or userspace.
+The wrappers exist for many reasons. First, it is very convenient to
+have the same syntax for the debug statements independently of whether
+you are debugging in kernel- or userspace.
 
 Second, an "ad hoc" debug statement mechanism would make it more
 difficult to adopt HIPL into production environment because it would
@@ -922,11 +922,11 @@ superfluous debug messages can be suppressed by a single switch to
 configure (CONFIG_HIP_DEBUG) if an unified interface for debugging is
 used.
 
-Third reason for the existance of wrappers is that a uniform
-importancy level of debug messages can be enforced. For example, error
+Third reason for the existence of wrappers is that a uniform
+importance level of debug messages can be enforced. For example, error
 messages are more important than info messages and info messages are
-more important than debug messages. One benefit of the importancy of
-levels is that the debug messages can be cathegorized into two groups:
+more important than debug messages. One benefit of the importance of
+levels is that the debug messages can be categorized into two groups:
 the ones that are always included in a build and the ones that are
 included only in a development build. HIP_DEBUG belongs to the latter
 group and the other functions belong to the second group.
@@ -1029,13 +1029,13 @@ c-header file. However, if no implementation exists in the c-source file, you
 must document the code in the c-header file (e.g., inline function in c-header
 file). This applies to all Doxygen comments, not just function comments.
 
-To ensure correct cross-referencing, global variables should be prepended
+To ensure correct cross-referencing, global variables should be prefixed
 by :: and functions appended by () in comment blocks, like this:
 
 /**
  * Stores information about one ESP connection endpoint (i.e., one SPI).
  *
- * @todo Write allocator/deallocator for automatic synching with ::esp_list.
+ * @todo Write allocator/deallocator for automatic syncing with ::esp_list.
  */
 struct esp_tuple { /* ... */ };
 
@@ -1153,8 +1153,8 @@ possible to force some extra files in top most Makefile.am.
 PREBUILT BINARY PACKAGES
 ========================
 
-Redhat
-------
+Red Hat
+-------
 
 Note well: Currently the status of the packaging scripts is in release
 phase.
@@ -1214,8 +1214,8 @@ semi-automatic HIPL binary package system and how to use the
 repositories at clients.
 
 
-Prequisites for Server Configuration
-------------------------------------
+Prerequisites for Server Configuration
+--------------------------------------
 
 For server configuration, you must first do the following things:
 * Make sure that you set up authorized keys for ssh as follows:
@@ -1238,7 +1238,7 @@ You must do the following things first at the server:
 Install repository tool at the host where you are building packages:
 * yum -y install createrepo
 
-Create binaries and synchronise to repository:
+Create binaries and synchronize to repository:
 * make bin syncrepo
 
 
@@ -1313,15 +1313,15 @@ by typing adduser my_username src
 In order to build the binary package type the following:
 * fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_image
 
-Instead, if you would like to produces  a  debianised  package  of  the  Linux kernel sources type the following:
+Instead, if you would like to produces a debianized package of the Linux kernel sources type the following:
 * fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source kernel_headers
 
 After the kernel has been successfully compiled, you will find the
-debian packages in the top directory.
+Debian packages in the top directory.
 
 To install it type:
 dpkg -i kernel-image-2.6.16.5.hipl_1.0_i386.deb
-and reboot. The debian package should already include the new
+and reboot. The Debian package should already include the new
 installed kernel for grub.
 If you need grub check this:
 http://newbiedoc.sourceforge.net/system/kernel-pkg.html#GRUB-KERNEL-PKG
@@ -1330,8 +1330,8 @@ Main reference (.)
 http://newbiedoc.sourceforge.net/system/kernel-pkg.html
 
 
-Redhat notes
-------------
+Red Hat notes
+-------------
 
 To create the package from vanilla sources (preferred method) for
 Fedora, follow the instructions of this document:
@@ -1354,7 +1354,7 @@ NEW-KERNEL-PKG IS NECESSARY AS THE RPM DOES NOT INCLUDE INITRD AND
 THE KERNEL IS NOT INCLUDED IN GRUB CONFIGURATION.
 
 That will create and install vanilla rpm. However, if you want to use
-the Fedora/Redhat patches to improve e.g. hardware support, use the
+the Fedora/Red Hat patches to improve e.g. hardware support, use the
 instructions below.
 
 To create rpm for Fedora patched kernel, you need to download the
