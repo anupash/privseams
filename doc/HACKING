@@ -1,4 +1,3 @@
-
 ABOUT THIS DOCUMENT
 ===================
 
@@ -27,17 +26,22 @@ effort to write anything down if we wouldn't care about it with
 every pore. Please read every single line in this document. It may
 take some time but it will help you to fit into the project neatly.
 
+
+
 TODO
 ====
 
 - xx
 
+
+
 HOWTO Bazaar VCS
-===========================================
+================
 
 This step by step guide will provide you with the knowledge necessary
 to develop with Bazaar on a day-to-day basis. For more detailed
 information, please follow the links provided below.
+
 
 Setting up Bazaar
 -----------------
@@ -47,6 +51,7 @@ information about yourself, such that your work can properly be
 identified in the revision logs.
 
 bzr whoami "#FIRST_NAME# #LAST_NAME# <#EMAIL_ADDRESS#>"
+
 
 Creating a local shared repository (optional, but recommended)
 --------------------------------------------------------------
@@ -75,6 +80,7 @@ steps.
 
 cd #REPOSITORY_NAME#
 
+
 Getting the history of a remote branch
 --------------------------------------
 
@@ -100,6 +106,7 @@ update from within the branch directory, in order to retrieve the most
 current revision of the branch.
 
 bzr update
+
 
 Committing to a remote branch
 -----------------------------
@@ -178,274 +185,284 @@ constructs. Take your time to go through these rules. They will
 help you become a better programmer and they will protect you from
 messy code.
 
-  The boy scout rule*
-  -------------------
 
-  "Leave the camping ground cleaner than you found it". This is a
-  simple yet powerful rule. We try to work with code in a professional
-  manner. However, you may encounter code parts that can be improved.
-  Don't take these code parts as justification to also produce messy
-  code but improve them. Try to leave the code in a better shape
-  than you encountered it. Your efforts will be noticed by
-  your adviser and will not be forgotten.
+The boy scout rule*
+-------------------
 
-  The compiler is your friend:
-  ----------------------------
+"Leave the camping ground cleaner than you found it". This is a
+simple yet powerful rule. We try to work with code in a professional
+manner. However, you may encounter code parts that can be improved.
+Don't take these code parts as justification to also produce messy
+code but improve them. Try to leave the code in a better shape
+than you encountered it. Your efforts will be noticed by
+your adviser and will not be forgotten.
 
-  The gcc compiler is a great tool that can save you hours of
-  run-time debugging if you decide to listen to it. In this project
-  we use a number of gcc warning options that will provide you
-  detailed warning output in some cases in which the compiler
-  suspects something is wrong. Since we use -Werror these warnings
-  will be treated as errors, breaking compilation. Be sure to handle
-  these warnings in a proper way because otherwise you may mask
-  serious errors and will make them really hard to debug. Just doing
-  a change to silence the compiler is not an option because the
-  code will soon break and the code base will deteriorate. Instead
-  you should try to understand the underlying problem that the
-  compiler complains about (not the symptom). Let me make an example:
 
-    Cast align warnings tell you whenever two structs that are not
-    compatible are assigned and casted. There are two things you
-    can do about a cast align warning. You can either cast the
-    source struct to void* and the compiler will not notice the
-    problem anymore and won't produce the warning. Although this
-    option suppresses the warning, this is NOT intended programmer
-    behavior. The right way to do it is to look at the structs,
-    read about the problem in Internet resources, think about the
-    problem and rearrange the structs using unions and such. Although
-    this takes some time you will have a proper solution to the
-    problem and you will not have ugly surprises (e.g., hard to
-    track run time errors.)
+The compiler is your friend:
+----------------------------
 
-  So the main point of the above section is: Don't take the easy
-  path that only treats the symptom. Cure the cause. This will save
-  you trouble in the long run. Listen to the compiler and take its
-  warnings seriously.
+The gcc compiler is a great tool that can save you hours of
+run-time debugging if you decide to listen to it. In this project
+we use a number of gcc warning options that will provide you
+detailed warning output in some cases in which the compiler
+suspects something is wrong. Since we use -Werror these warnings
+will be treated as errors, breaking compilation. Be sure to handle
+these warnings in a proper way because otherwise you may mask
+serious errors and will make them really hard to debug. Just doing
+a change to silence the compiler is not an option because the
+code will soon break and the code base will deteriorate. Instead
+you should try to understand the underlying problem that the
+compiler complains about (not the symptom). Let me make an example:
 
-  Tell your friend (the compiler) what you are doing
-  --------------------------------------------------
+  Cast align warnings tell you whenever two structs that are not
+  compatible are assigned and casted. There are two things you
+  can do about a cast align warning. You can either cast the
+  source struct to void* and the compiler will not notice the
+  problem anymore and won't produce the warning. Although this
+  option suppresses the warning, this is NOT intended programmer
+  behavior. The right way to do it is to look at the structs,
+  read about the problem in Internet resources, think about the
+  problem and rearrange the structs using unions and such. Although
+  this takes some time you will have a proper solution to the
+  problem and you will not have ugly surprises (e.g., hard to
+  track run time errors.)
 
-  C has a number of language constructs that do not provide
-  functionality but rather enable the compiler to do some sanity
-  checks on your and others' codes. These little helpers are the
-  keywords "static" and "const" in function definitions/declarations.
-  If you have only been working in small projects (e.g. homework
-  assignments) you probably haven't really used these mechanisms
-  because you don't see the necessity. However in larger projects
-  that live for quite some time, these keywords are not just useful
-  but essential because they can help the compiler detect errors
-  that happen when different persons work with the same code base.
-  Learn what these keywords do and use them appropriately! A short
-  explanation will help you understand why we rely on these little
-  helpers.
+So the main point of the above section is: Don't take the easy
+path that only treats the symptom. Cure the cause. This will save
+you trouble in the long run. Listen to the compiler and take its
+warnings seriously.
 
-    Const: const tells the compiler that something is not supposed
-    to be changed. It can be applied to variables and function
-    parameters. When writing a new function, take some time to
-    consider which input parameters may be changed within this
-    functions and which shouldn't be changed. Add const wherever
-    you believe that a parameter should not be touched. Use const
-    generously!  Const can help you to discover errors like unwanted
-    modification of variables, function calls with mixed up function
-    parameters, etc. Missing a const is considered an error although
-    the code works. Please take care.
 
-    Static functions: Making a function static tells the compiler
-    that it is only used in the C file in which it is defined. This
-    makes it easy for the compiler to find functions that are used
-    nowhere. Funding unused functions can be very hard in code that
-    is maintained by a number of people. Unused functions are dead
-    code that is not tested anymore. They should be removed because
-    someone could try to use them again not knowing that the function
-    wasn't tested for months and does something slightly wrong.
-    Moreover, the keyword static tells other programmers: Stop! You
-    are not supposed to use this function in another file. This
-    helps programmers to identify the functionality that is supposed
-    to be used within a module and the functionality that the module
-    (C file) provides as interface.This distinction is essential
-    if you try to maintain data integrity (cf. Section about Header
-    files).
+Tell your friend (the compiler) what you are doing
+--------------------------------------------------
 
-  Please make sure that you help the compiler and your co-workers
-  in doing a good job. Use const and static properly.
+C has a number of language constructs that do not provide
+functionality but rather enable the compiler to do some sanity
+checks on your and others' codes. These little helpers are the
+keywords "static" and "const" in function definitions/declarations.
+If you have only been working in small projects (e.g. homework
+assignments) you probably haven't really used these mechanisms
+because you don't see the necessity. However in larger projects
+that live for quite some time, these keywords are not just useful
+but essential because they can help the compiler detect errors
+that happen when different persons work with the same code base.
+Learn what these keywords do and use them appropriately! A short
+explanation will help you understand why we rely on these little
+helpers.
 
-  Header Files
-  ------------
+  Const: const tells the compiler that something is not supposed
+  to be changed. It can be applied to variables and function
+  parameters. When writing a new function, take some time to
+  consider which input parameters may be changed within this
+  functions and which shouldn't be changed. Add const wherever
+  you believe that a parameter should not be touched. Use const
+  generously!  Const can help you to discover errors like unwanted
+  modification of variables, function calls with mixed up function
+  parameters, etc. Missing a const is considered an error although
+  the code works. Please take care.
 
-  Since C headers are included from many other files, the contents
-  of the *.h files must be selected carefully. Otherwise the global
-  namespace of C is polluted with tons of globally visible declarations
-  and definitions. These globally visible declarations and definitions
-  are not bad in the first place but they make working with a C
-  project, understanding the project, and maintaining the project
-  a pain.
+  Static functions: Making a function static tells the compiler
+  that it is only used in the C file in which it is defined. This
+  makes it easy for the compiler to find functions that are used
+  nowhere. Funding unused functions can be very hard in code that
+  is maintained by a number of people. Unused functions are dead
+  code that is not tested anymore. They should be removed because
+  someone could try to use them again not knowing that the function
+  wasn't tested for months and does something slightly wrong.
+  Moreover, the keyword static tells other programmers: Stop! You
+  are not supposed to use this function in another file. This
+  helps programmers to identify the functionality that is supposed
+  to be used within a module and the functionality that the module
+  (C file) provides as interface.This distinction is essential
+  if you try to maintain data integrity (cf. Section about Header
+  files).
 
-  A header file serves a single purpose: it is an interface. It
-  declares symbols for EVERY file that include the *.h file so that
-  the compiler knows what's in the *.c file. Three things that a
-  header file is NOT. A) An overview of the contents of the .c file
-  and B) a good place to define stuff that's used in the .c file,
-  C) a good place to make forward declarations for the C file.
-  Hence, header files should ONLY contain things of the *.c file
-  that are used by OTHER *.c files. Don't put stuff in the header
-  file that is used only in the C file. Put that stuff in the C
-  file and make it static.
+Please make sure that you help the compiler and your co-workers
+in doing a good job. Use const and static properly.
 
-  Selectively putting stuff into header files helps understanding
-  the code because people can just look at the header file and see
-  what functions they are supposed to use when working with that
-  header file. Everything in there is free for use and you don't
-  have to worry that you mess up by calling the wrong functions.
 
-  Selectively putting stuff into header files also prevents namespace
-  conflicts.
+Header Files
+------------
 
-  Copy & paste and external code
-  ------------------------------
+Since C headers are included from many other files, the contents
+of the *.h files must be selected carefully. Otherwise the global
+namespace of C is polluted with tons of globally visible declarations
+and definitions. These globally visible declarations and definitions
+are not bad in the first place but they make working with a C
+project, understanding the project, and maintaining the project
+a pain.
 
-  Copying code from somewhere else (within the project as well as
-  from outside the project) is a bad habit and an absolute no-go.
-  First, copying from within the project is a sign of poor software
-  design. If you need a particular piece of code in a different
-  context consider generalizing the function that provides the code
-  instead of just copying it. Copy & paste programming leads to
-  duplicated code. Duplicated code is often redundant and doubles
-  the maintenance overhead. Moreover, copied code often does not solve
-  the problem well and uses names and types that are not appropriate
-  for solving the problem. Copy & pasting code is bad. Don't do it.
-  If you feel the urge to copy code from somewhere within the
-  project, ask your adviser first!
+A header file serves a single purpose: it is an interface. It
+declares symbols for EVERY file that include the *.h file so that
+the compiler knows what's in the *.c file. Three things that a
+header file is NOT. A) An overview of the contents of the .c file
+and B) a good place to define stuff that's used in the .c file,
+C) a good place to make forward declarations for the C file.
+Hence, header files should ONLY contain things of the *.c file
+that are used by OTHER *.c files. Don't put stuff in the header
+file that is used only in the C file. Put that stuff in the C
+file and make it static.
 
-  Copying code from outside the project is even worse. By doing it,
-  you inject code for which someone else can claim authorship into
-  the project. We try to keep our licensing situation (GPL, LGPL,
-  etc.) as straightforward as possible. Mixing code from different
-  (possibly unknown) sources with unknown or incompatible licenses
-  puts the whole project in jeopardy. This applies to code from
-  other projects but also to example code found in wikis and forums.
-  If you think you need to copy code from somewhere else inform your
-  adviser about it BEFORE you do it. Please take this very seriously.
+Selectively putting stuff into header files helps understanding
+the code because people can just look at the header file and see
+what functions they are supposed to use when working with that
+header file. Everything in there is free for use and you don't
+have to worry that you mess up by calling the wrong functions.
 
-  On naming*
-  ----------
+Selectively putting stuff into header files also prevents namespace
+conflicts.
 
-  Names (function names, file names, parameter names, variable
-  names) are important: It's one of the core task of a programmer
-  to use good names. Names should be consistent with the rest of
-  the code base.
 
-  Names should convey the intention of the code. Names should be
-  unambiguous (show real differences between things)
+Copy & paste and external code
+------------------------------
 
-  Be careful with unspecific names containing words like info, data,
-  etc. they just confuse people. Be as specific as possible.
+Copying code from somewhere else (within the project as well as
+from outside the project) is a bad habit and an absolute no-go.
+First, copying from within the project is a sign of poor software
+design. If you need a particular piece of code in a different
+context consider generalizing the function that provides the code
+instead of just copying it. Copy & paste programming leads to
+duplicated code. Duplicated code is often redundant and doubles
+the maintenance overhead. Moreover, copied code often does not solve
+the problem well and uses names and types that are not appropriate
+for solving the problem. Copy & pasting code is bad. Don't do it.
+If you feel the urge to copy code from somewhere within the
+project, ask your adviser first!
 
-  Use shorter names for things that are only used in a very restricted
-  context (just a few lines). The larger the context, the longer
-  the names - things should not be ambiguous in a large context.
-  Single letter names (i, j, k, ...) are reserved for integer counter
-  variables only.
+Copying code from outside the project is even worse. By doing it,
+you inject code for which someone else can claim authorship into
+the project. We try to keep our licensing situation (GPL, LGPL,
+etc.) as straightforward as possible. Mixing code from different
+(possibly unknown) sources with unknown or incompatible licenses
+puts the whole project in jeopardy. This applies to code from
+other projects but also to example code found in wikis and forums.
+If you think you need to copy code from somewhere else inform your
+adviser about it BEFORE you do it. Please take this very seriously.
 
-  We use underscores (_) to structure names - No camelCaps!
 
-  On Functions*
-  -------------
+On naming*
+----------
 
-  Functions should be short - period. Long functions are a sign
-  that you try to do too much within a function. Long functions are
-  error magnets because they are hard to understand and they lack
-  proper problem boundaries. They are a pain to maintain, ... you
-  got it: they are pure evil. Try to keep your functions simple and
-  short. If you write a function with more than 30 lines: reconsider
-  and try to split it up into sub-functions. If you write a function
-  with more 50 lines tell your adviser about it and discuss its
-  necessity with him. As usual you will find functions with more
-  than 50 lines in the code. The existence of these behemoth functions
-  is, of course, no justification for introducing more long functions
-  but an encouragement to split up these monsters.
+Names (function names, file names, parameter names, variable
+names) are important: It's one of the core task of a programmer
+to use good names. Names should be consistent with the rest of
+the code base.
 
-  Likewise, functions with many arguments are error magnets, too.
-  Again they are hard to maintain, provoke errors, ... and are evil,
-  too. If you feel the need to write a function with more than four
-  parameters: reconsider and try to find out why you have so many
-  parameters there. If you write a function with six or more
-  parameters, inform you adviser.
+Names should convey the intention of the code. Names should be
+unambiguous (show real differences between things)
 
-  Short functions with good names are easy to understand, make
-  finding errors simpler and help to prevent bugs and bad code.
-  Everyone else dislikes long functions as much as you do. Don't
-  pester others with them.
+Be careful with unspecific names containing words like info, data,
+etc. they just confuse people. Be as specific as possible.
 
-  On Types
-  ---------
+Use shorter names for things that are only used in a very restricted
+context (just a few lines). The larger the context, the longer
+the names - things should not be ambiguous in a large context.
+Single letter names (i, j, k, ...) are reserved for integer counter
+variables only.
 
-  Be very careful which type you use for a variable. Be very careful
-  about the signedness of a variable. Short, int, and long are
-  signed types by default, meaning that they are designed to hold
-  positive and NEGATIVE values. Don't use signed types if you only
-  expect positive values. Mismatches in signedness are often the
-  cause for security weaknesses like buffer overflows.
+We use underscores (_) to structure names - No camelCaps!
 
-  Use typedefs where appropriate. However, note that typedefs are
-  not a tool for saving keystrokes. Don't define typedefs as
-  shorthands for structs. Use typedefs when you want to convey
-  additional semantics. Sometimes typedefs are useful (e.g. for a
-  special data type for which the concrete type may change in the
-  future (short, long) or if a generic type would be misleading:
-  some things stored as ints are not necessarily integers.
 
-  Prefer enums over long lists of preprocessor defines. The compiler
-  will see the enums and it can give you useful hints. In general,
-  prefer to not use the preprocessor but the compiler. The compiler
-  is much smarter.  Rather use global constants than preprocessor
-  defines. They are typed and help the compiler make smart choices.
+On Functions*
+-------------
 
-  On Magic Numbers
-  ----------------
+Functions should be short - period. Long functions are a sign
+that you try to do too much within a function. Long functions are
+error magnets because they are hard to understand and they lack
+proper problem boundaries. They are a pain to maintain, ... you
+got it: they are pure evil. Try to keep your functions simple and
+short. If you write a function with more than 30 lines: reconsider
+and try to split it up into sub-functions. If you write a function
+with more 50 lines tell your adviser about it and discuss its
+necessity with him. As usual you will find functions with more
+than 50 lines in the code. The existence of these behemoth functions
+is, of course, no justification for introducing more long functions
+but an encouragement to split up these monsters.
 
-  Magic numbers are numbers that pop up in the code without context.
-  Almost every number you find in code can be considered a magic
-  number. Let me give an example.
+Likewise, functions with many arguments are error magnets, too.
+Again they are hard to maintain, provoke errors, ... and are evil,
+too. If you feel the need to write a function with more than four
+parameters: reconsider and try to find out why you have so many
+parameters there. If you write a function with six or more
+parameters, inform you adviser.
 
-    unsigned int special_prize[52];
-    unsigned int extra_winner;
-    unsigned int i;
+Short functions with good names are easy to understand, make
+finding errors simpler and help to prevent bugs and bad code.
+Everyone else dislikes long functions as much as you do. Don't
+pester others with them.
 
-    extra_winner = rand() % 52;
 
-    for (i = 0; i < 52; i++) {
-        special_prize[i] = extra_winner;
-    }
+On Types
+--------
 
-  What does the number 52 stand for? Is the first 52 related to the
-  second one? If I decide to choose the winner from 56 numbers do
-  I have to change the second occurrence of 52 as well? 52 is
-  obviously a magic number. The use of definitions and constants
-  can make the code much easier to understand:
+Be very careful which type you use for a variable. Be very careful
+about the signedness of a variable. Short, int, and long are
+signed types by default, meaning that they are designed to hold
+positive and NEGATIVE values. Don't use signed types if you only
+expect positive values. Mismatches in signedness are often the
+cause for security weaknesses like buffer overflows.
 
-    unsigned int special_prize[WEEKS_PER_YEAR];
-    unsigned int extra_winner;
-    unsigned int i;
+Use typedefs where appropriate. However, note that typedefs are
+not a tool for saving keystrokes. Don't define typedefs as
+shorthands for structs. Use typedefs when you want to convey
+additional semantics. Sometimes typedefs are useful (e.g. for a
+special data type for which the concrete type may change in the
+future (short, long) or if a generic type would be misleading:
+some things stored as ints are not necessarily integers.
 
-    extra_winner = rand() % NUM_CLIENTS;
+Prefer enums over long lists of preprocessor defines. The compiler
+will see the enums and it can give you useful hints. In general,
+prefer to not use the preprocessor but the compiler. The compiler
+is much smarter.  Rather use global constants than preprocessor
+defines. They are typed and help the compiler make smart choices.
 
-    for (i = 0; i < WEEKS_PER_YEAR; i++) {
-        special_prize[i] = extra_winner;
-    }
 
-  If a programmer had changed all occurrences of 52 in the first
-  example above to 56 the result would have been pure nonsense. In
-  the second example it is clear what happens. The example shows
-  an extreme case of a magic number but small numbers like 1 and 2
-  can also be magic numbers.
+On Magic Numbers
+----------------
 
-  Another bad thing about magic numbers is that it is hard to grep
-  or search for them. Try to grep for 1 or 2 in your source tree.
-  You'll find way too much. If you use a good constant name you can
-  easily search for it and identify the relevant code parts.
+Magic numbers are numbers that pop up in the code without context.
+Almost every number you find in code can be considered a magic
+number. Let me give an example.
 
-  Therefore: NO magic numbers. Nowhere.
+  unsigned int special_prize[52];
+  unsigned int extra_winner;
+  unsigned int i;
+
+  extra_winner = rand() % 52;
+
+  for (i = 0; i < 52; i++) {
+      special_prize[i] = extra_winner;
+  }
+
+What does the number 52 stand for? Is the first 52 related to the
+second one? If I decide to choose the winner from 56 numbers do
+I have to change the second occurrence of 52 as well? 52 is
+obviously a magic number. The use of definitions and constants
+can make the code much easier to understand:
+
+  unsigned int special_prize[WEEKS_PER_YEAR];
+  unsigned int extra_winner;
+  unsigned int i;
+
+  extra_winner = rand() % NUM_CLIENTS;
+
+  for (i = 0; i < WEEKS_PER_YEAR; i++) {
+      special_prize[i] = extra_winner;
+  }
+
+If a programmer had changed all occurrences of 52 in the first
+example above to 56 the result would have been pure nonsense. In
+the second example it is clear what happens. The example shows
+an extreme case of a magic number but small numbers like 1 and 2
+can also be magic numbers.
+
+Another bad thing about magic numbers is that it is hard to grep
+or search for them. Try to grep for 1 or 2 in your source tree.
+You'll find way too much. If you use a good constant name you can
+easily search for it and identify the relevant code parts.
+
+Therefore: NO magic numbers. Nowhere.
+
 
 
 CODING STYLE
@@ -494,6 +511,7 @@ Here is a quick reminder of what K&R style means in practice:
 
 - The function type should be kept on the same line as the function
   name.
+
 
 In addition to K&R style
 ------------------------
@@ -610,6 +628,7 @@ Thus, checking and enforcing style automatically may not always produce the
 perfect result but it frees valuable developer time for more important tasks.
 
 
+
 CODING CONVENTIONS
 ==================
 
@@ -683,8 +702,9 @@ CODING CONVENTIONS
       return err;
   }
 
+
 EMACS
-=====
+-----
 
 To adjust emacs to the right spacing conventions for the code, you can
 add the following lines to your *empty* ~/.emacs configuration file:
@@ -703,10 +723,11 @@ surround this by c-mode-hook and lambda function:
             (setq c-basic-offset 4)
             (setq c-indent-level 8))
     )
-) 
+)
+
 
 ECLIPSE
-========
+-------
 
 Eclipse is an originally IDE developed for Java but there's also
 CDT (C/C++ Development Tooling) extension that can be used while
@@ -746,8 +767,11 @@ If you face memory problems, append the following to the eclipse.ini:
 
 Modify the numbers depending on your hardware to suit your needs.
 
+
+
 UNIT TESTS
 ==========
+
 You can (and are recommended to) use unit testing to improve code quality.
 
 The command
@@ -758,8 +782,10 @@ runs the existing unit tests.
 HIPL uses the check framework (http://check.sourceforge.net/) for unit tests.
 It is available in source and binary form, e.g. the Debian package 'check'.
 
+
 What To Test?
 -------------
+
 Unit tests check whether implementations conform to their specification (i.e.,
 their documentation). Some rules of thumb for writing tests are:
 
@@ -776,8 +802,10 @@ cases and unusual input and state. Obviously, unit tests are limited
 in testing whether a function fully behaves as documented because that can be
 very complex, slow, or impossible on a local system.
 
+
 Unit Tests Organizition
 -----------------------
+
 The unit tests are organized as follows:
 
 - all test code resides in the test directory. The directories below test
@@ -803,8 +831,10 @@ The unit tests are organized as follows:
   valid input parameters. By convention, the test function is called
   test_<function under test>_<test aspect>().
 
+
 Adding Unit Tests
 -----------------
+
 To add a unit test for the function foo() in the file hipd/bar.c, follow these
 steps:
 
@@ -840,8 +870,10 @@ steps:
     tcase_add_exit_test().
   - run "make check"
 
+
 Testing Static Functions
 ------------------------
+
 Usually, unit tests are not intended to apply to static functions and doing so
 is difficult because these functions are not accessible by test programs
 from outside of the files that define them. However, static functions
@@ -860,6 +892,7 @@ b) For the test target static foo() create the wrapper foo_test_wrapper() that
    is not static. Declare all such wrappers in hipd/bar_test_wrappers.h and
    include that file instead of hipd/bar.h. While more effort, this is cleaner
    than solution a) and should work where a) prooves problematic.
+
 
 
 DEBUGGING
@@ -906,6 +939,8 @@ debug statements cannot be printed on the screen in such a case;
 instead, the statements have to passed via syslog. On the other hand,
 the developer wants to run the daemon interactively. The wrappers make
 it possible to please both of the groups easily.
+
+
 
 COMMENTING AND DOCUMENTING THE CODE
 ===================================
@@ -1092,6 +1127,8 @@ and
 
 commenting style.
 
+
+
 SUBMITTING PATCHES
 ==================
 
@@ -1102,6 +1139,7 @@ patches against the main branch.  Please try the test matrix below at
 least partially before you contribute.
 
 
+
 CREATING A TARBALL OF THE SOURCE CODE
 =====================================
 
@@ -1109,6 +1147,7 @@ There is a "make dist" target which builds a tarball of the hipl source
 code. It includes only the files which are necessary. The included files
 are specified in SOURCES and HEADER rules in */Makefile.am, but it is also
 possible to force some extra files in top most Makefile.am.
+
 
 
 PREBUILT BINARY PACKAGES
@@ -1155,6 +1194,7 @@ http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
 http://fedoranews.org/tchung/htmldoc/htmldoc.spec
 http://fedoraproject.org/wiki/Packaging/Guidelines
 
+
 Debian
 ------
 
@@ -1163,6 +1203,8 @@ DEB package is created similarly:
 autoreconf --install && ./configure && make deb
 
 Correspondingly, the binary packages are written to /usr/src/debian
+
+
 
 REPOSITORY MANAGEMENT FOR FEDORA AND UBUNTU
 ===========================================
@@ -1184,6 +1226,7 @@ For server configuration, you must first do the following things:
 * Add hipl to /etc/sudoers at build host: hipl ALL=(ALL) NOPASSWD: ALL
 * Comment out "Defaults    requiretty" from /etc/sudoers
 
+
 Updating Fedora Server Repository
 ---------------------------------
 
@@ -1198,6 +1241,7 @@ Install repository tool at the host where you are building packages:
 Create binaries and synchronise to repository:
 * make bin syncrepo
 
+
 Fedora Client-side Configuration
 --------------------------------
 
@@ -1208,6 +1252,7 @@ name=HIPL
 baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch
 gpgcheck=0
 enabled=1
+
 
 Updating Ubuntu Server Repository
 ---------------------------------
@@ -1230,6 +1275,7 @@ Currently the scripting just "forgets" older versions of the
 software. I am not sure if we should do some rsyncing to preserve
 older versions. Also, source packages are not yet supported. -miika
 
+
 Ubuntu Client-side Configuration
 --------------------------------
 
@@ -1243,6 +1289,8 @@ deb http://packages.infrahip.net/ubuntu/ intrepid main
 
 $ apt-get update
 $ apt-get install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
+
+
 
 HOW TO CREATE KERNEL PACKAGES
 =============================
@@ -1344,6 +1392,7 @@ This is what I did:
    * rpmbuild --target i686 -ba --without kabichk /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
 
 
+
 TEST MATRIX
 ===========
 
@@ -1353,11 +1402,13 @@ TEST MATRIX
 * OS: Fedora, Ubuntu
 * memory leaks; run hipd through valgrind in all tests
 
+
 1. Compilation
 --------------
 
 * Compilation on Ubuntu
 * Compilation on Fedora
+
 
 2. Applications
 ---------------
@@ -1370,6 +1421,7 @@ Applications:
 * use dnsproxy to obtain HITs from DNS
 * hipconf run opp nc/nc6 (both client & server side)
 
+
 3. Base Exchange
 ----------------
 
@@ -1378,6 +1430,7 @@ Applications:
 * hipconf locator on
 * hipconf locator off
 * retransmissions
+
 
 4. Mobility Management
 ----------------------
@@ -1546,26 +1599,32 @@ NAT handover in hard IPv4-Only Handover, no locators in base exchange
 * ip addr add NEW_LOCAL_IPV4
 * ping6 PEER_HIT
 
+
 5. Rendezvous
 -------------
 
 * test rendezvous as instructed in the manual
+
 
 6. NAT Relay
 ----------------
 
 * not supported officially yet
 
+
 7. Firewall
 -----------
 
+
 8. Blind support
 ----------------
+
 
 9. Closing of connections
 -------------------------
 
 * tools/hipconf rst all
+
 
 
 ADDING HIPCONF ACTIONS AND PARAMETERS
@@ -1577,13 +1636,17 @@ but also for hipd.
 
 Assume that you want to add an action named as 'NEWACT'.
 
+
 1.1. ACTION_NEWACT in lib/core/conf.h
 -------------------------------------
+
 Define a constant ACTION_NEWACT which has value between 0 and ACTION_MAX.
 Probably you also need to increase the value of ACTION_MAX.
 
+
 1.2. hip_conf_get_action() in lib/core/conf.c
 ---------------------------------------------
+
 Add a proper sentence in the strcmp() series, like that:
 
     ...
@@ -1591,36 +1654,50 @@ Add a proper sentence in the strcmp() series, like that:
         ret = ACTION_NEWACT;
     ...
 
+
 1.3. hip_conf_check_action_argc() in lib/core/conf.c
 ----------------------------------------------------
+
 Add a case block for your ACTION_NEWACT constant in the switch(action) block.
+
 
 1.4. hip_conf_get_type_arg() in lib/core/conf.c
 -----------------------------------------------
+
 Add a case block for your ACTION_NEWACT constant in the switch(action) block.
+
 
 2.1. HIP_MSG_NEWMODE in lib/core/icomm.h
 ---------------------------------------
+
 Define a constant HIP_MSG_NEWMODE which has value between 0 and
 HIP_MSG_ROOT_MAX. Take also care of the value of HIP_MSG_ROOT_MAX.
 
+
 2.2. hip_handle_user_msg() in hipd/user.c
 -----------------------------------------
+
 Add a case block for your HIP_MSG_NEWMODE constant in the switch(msg_type) block.
+
 
 2.3. hip_message_type_name() in lib/core/builder.c
 --------------------------------------------------
+
 Add a case block for your HIP_MSG_NEWMODE constant in the switch(msg_type) block.
 In this case, you just need to return the same string as the constant.
 
+
 3.1. action_handler[] in lib/core/conf.c
 ----------------------------------------
+
 Add a handler function for your new action in the action_handler[] array.
 NOTE: the location and the order of these handlers are important, because
 each entry of the handler array is to be accessed via type index.
 
+
 3.2. TYPE_NEWTYPE in lib/core/conf.h
 ------------------------------------
+
 Define a constant TYPE_NEWTYPE which has value between 0 and TYPE_MAX.
 Probably you also need to increase the value of TYPE_MAX.
 
@@ -1632,15 +1709,21 @@ NOTE: the value of TYPE_NEWTYPE must be a correct index for looking up
 each handler function in action_handler[], which you just added above
 at the step 3.1.
 
+
 3.3. hip_conf_handle_NEWACT() in lib/core/conf.c
 ------------------------------------------------
+
 Define a handler function added above at the step 3.1, somewhere in conf.c.
+
 
 3.4. hip_conf_handle_NEWACT() in lib/core/conf.h
 ------------------------------------------------
+
 Declare a prototype for your new handler function hip_conf_handle_NEWACT
 defined above at the step 3.1.
 
+
 4. hipconf_usage in lib/core/conf.c
 -----------------------------------
+
 Add a simple usage for your new action in the usage string.
