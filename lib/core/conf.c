@@ -2402,13 +2402,13 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
                          int optc,
                          UNUSED int send_only)
 {
-    int   err        = 0, i, len;
+    int   err        = 0, i, len, res_len;
     FILE *hip_config = NULL;
 
     struct list list;
-    char       *c, line[128], *hip_arg, str[128];
+    char       *c, line[128], str[128];
     const char *args[64];
-    char       *comment, *nl;
+    char       *comment;
     char        fname[sizeof(HIPL_CONFIG_FILE) << 1];
 
     HIP_IFEL(optc != 1, -1, "Missing arguments\n");
@@ -2442,20 +2442,15 @@ int hip_conf_handle_load(UNUSED struct hip_common *msg,
         }
 
         /* prefix the contents of the line with" hipconf"  */
-        memset(str, '\0', sizeof(str));
-        strcpy(str, "hipconf");
-        str[strlen(str)] = ' ';
-        hip_arg          = strcat(str, c);
-        /* replace \n with \0  */
-        nl = strchr(hip_arg, '\n');
-        if (nl) {
-            *nl = '\0';
+        res_len = sprintf(str, "hipconf %s", c);
+        if (str[res_len] == '\n') {
+            str[res_len] = '\0';
         }
 
         /* split the line into an array of strings and feed it
          * recursively to hipconf */
         initlist(&list);
-        extractsubstrings(hip_arg, &list);
+        extractsubstrings(str, &list);
         len = length(&list);
         for (i = 0; i < len; i++) {
             /* the list is backwards ordered */
