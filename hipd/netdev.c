@@ -141,6 +141,7 @@ static int hip_netdev_is_in_white_list(int if_index)
  * network interfaces by name.
  *
  * @param device_name the name of the device to be white listed
+ * @return 1 on success, 0 on error
  */
 int hip_netdev_white_list_add(char *device_name)
 {
