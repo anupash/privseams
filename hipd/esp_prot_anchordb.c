@@ -64,7 +64,7 @@ struct anchor_db {
 };
 
 /* stores all anchors sent by the firewall */
-static struct anchor_db anchor_db;
+static struct anchor_db anchor_db = { { 0 } };
 
 /** uninits the anchorDB */
 void anchor_db_uninit(void)
