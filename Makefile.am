@@ -285,7 +285,8 @@ HIPL_HEADER_OBJS     = $(subst $(srcdir),$(builddir),$(HIPL_HEADER_LIST:.h=.ho))
 CLEANFILES          += $(HIPL_HEADER_OBJS)
 DISTCLEANFILES       = $(wildcard modules/*.h)
 
-checkheaders: $(BUILT_SOURCES) $(HIPL_HEADER_OBJS)
+$(HIPL_HEADER_OBJS): $(BUILT_SOURCES)
+checkheaders: $(HIPL_HEADER_OBJS)
 vpath %.h $(srcdir)
 %.ho: %.h
 	$(AM_V_CC) $(CC) -I$(srcdir) -I$(builddir) $(AM_CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -o $@ $<
