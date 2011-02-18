@@ -76,7 +76,7 @@ build_rpm()
     echo "Version: $VERSION"  > $SPECFILE
     echo "Release: $RELEASE" >> $SPECFILE
     echo "%define _topdir $BUILDDIR" >> $SPECFILE
-    cat $SRCDIR_PACKAGING/hipl-rpm.spec >> $SPECFILE
+    cat $SRCDIR_PACKAGING/hipl.spec >> $SPECFILE
 
     make dist > /dev/null
     cp hipl-${VERSION}.tar.gz $BUILDDIR/SOURCES
