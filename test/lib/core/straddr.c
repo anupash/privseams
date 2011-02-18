@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include "lib/core/straddr.h"
+#include "test_suites.h"
 
 START_TEST(test_hip_in6_ntop_valid)
 {
@@ -113,10 +114,6 @@ START_TEST(test_hip_convert_string_to_address_invalid)
     fail_unless(hip_convert_string_to_address(str, &ip) < 0, NULL);
 }
 END_TEST
-
-// For unknown reasons, this file does not compile with the following,
-// seemingly useless forward declaration
-Suite *lib_core_straddr(void);
 
 Suite *lib_core_straddr(void)
 {

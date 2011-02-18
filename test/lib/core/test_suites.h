@@ -23,25 +23,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * @file
- * @brief Unit tests of lib/core (see doc/HACKING on unit tests).
- * @author Stefan Goetz <stefan.goetz@cs.rwth-aachen.de>
- */
+#ifndef HIP_TEST_LIB_CORE_TEST_SUITES_H
+#define HIP_TEST_LIB_CORE_TEST_SUITES_H
 
-#include <stdlib.h>
 #include <check.h>
 
-#include "test/lib/core/test_suites.h"
+Suite *lib_core_hit(void);
+Suite *lib_core_straddr(void);
 
-int main(void)
-{
-    int      number_failed;
-    SRunner *sr = srunner_create(lib_core_hit());
-    srunner_add_suite(sr, lib_core_straddr());
-
-    srunner_run_all(sr, CK_NORMAL);
-    number_failed = srunner_ntests_failed(sr);
-    srunner_free(sr);
-    return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
-}
+#endif /* HIP_TEST_LIB_CORE_TEST_SUITES_H */
