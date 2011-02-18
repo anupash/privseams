@@ -757,8 +757,6 @@ int hip_check_r1(RVS const uint8_t packet_type,
     /* According to the section 8.6 of the base draft, we must first check
      * signature. */
 
-    /* Blinded R1 packets do not contain HOST ID parameters, so the
-     * verification must be delayed to the R2 */
     /* Store the peer's public key to HA and validate it */
     /** @todo Do not store the key if the verification fails. */
     HIP_IFEL(!(param = hip_get_param(ctx->input_msg, HIP_PARAM_HOST_ID)),

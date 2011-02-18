@@ -971,7 +971,6 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
     HIP_IFEL(!(spi = hip_get_param(common, HIP_PARAM_ESP_INFO)),
              0, "no spi found\n");
 
-    // might not be there in case of BLIND
     host_id = hip_get_param(common, HIP_PARAM_HOST_ID);
 
     // handling HOST_ID param
