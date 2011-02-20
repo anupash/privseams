@@ -235,11 +235,10 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
         struct nlmsghdr             n;
         struct xfrm_userpolicy_info xpinfo;
         char                        buf[RTA_BUF_SIZE];
-    } req                                                 = { { 0 } };
-    char                   tmpls_buf[XFRM_TMPLS_BUF_SIZE] = { 0 };
-    struct xfrm_user_tmpl *tmpl;
-    int                    tmpls_len = 0, err = 0;
-    unsigned               flags     = 0;
+    } req                       = { { 0 } };
+    struct xfrm_user_tmpl tmpl  = { { { 0 } } };
+    int                   err   = 0;
+    unsigned              flags = 0;
 
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xpinfo));
     req.n.nlmsg_flags = NLM_F_REQUEST | flags;
@@ -254,40 +253,36 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
     HIP_IFE(hip_xfrm_fill_selector(&req.xpinfo.sel, id_peer, id_our, 0,
                                    id_prefix, preferred_family), -1);
 
-    /* TEMPLATE */
-    tmpl = (struct xfrm_user_tmpl *) ((char *) tmpls_buf);
-
     if (IN6_IS_ADDR_V4MAPPED(tmpl_saddr) || IN6_IS_ADDR_V4MAPPED(tmpl_daddr)) {
         HIP_DEBUG("IPv4 address found in tmpl policy\n");
-        tmpl->family = AF_INET;
+        tmpl.family = AF_INET;
     } else {
-        tmpl->family = preferred_family;
+        tmpl.family = preferred_family;
     }
 
 
     /* The mode has to be BEET */
     if (proto) {
-        tmpl->mode     = XFRM_MODE_BEET;
-        tmpl->id.proto = proto;
+        tmpl.mode     = XFRM_MODE_BEET;
+        tmpl.id.proto = proto;
     }
 
-    tmpl->aalgos   = (~(uint32_t) 0);
-    tmpl->ealgos   = (~(uint32_t) 0);
-    tmpl->calgos   = (~(uint32_t) 0);
-    tmpl->optional = 0;     /* required */
-    tmpls_len     += sizeof(*tmpl);
+    tmpl.aalgos   = (~(uint32_t) 0);
+    tmpl.ealgos   = (~(uint32_t) 0);
+    tmpl.calgos   = (~(uint32_t) 0);
+    tmpl.optional = 0;     /* required */
+
     if (tmpl_saddr && tmpl_daddr) {
-        if (tmpl->family == AF_INET) {
-            tmpl->saddr.a4    = tmpl_saddr->s6_addr32[3];
-            tmpl->id.daddr.a4 = tmpl_daddr->s6_addr32[3];
+        if (tmpl.family == AF_INET) {
+            tmpl.saddr.a4    = tmpl_saddr->s6_addr32[3];
+            tmpl.id.daddr.a4 = tmpl_daddr->s6_addr32[3];
         } else {
-            memcpy(&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
-            memcpy(&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
+            memcpy(&tmpl.saddr, tmpl_saddr, sizeof(tmpl.saddr));
+            memcpy(&tmpl.id.daddr, tmpl_daddr, sizeof(tmpl.id.daddr));
         }
     }
 
-    addattr_l(&req.n, sizeof(req), XFRMA_TMPL,
-              tmpls_buf, tmpls_len);
+    addattr_l(&req.n, sizeof(req), XFRMA_TMPL, &tmpl, sizeof(tmpl));
 
     if (req.xpinfo.sel.family == AF_UNSPEC) {
         req.xpinfo.sel.family = AF_INET6;
