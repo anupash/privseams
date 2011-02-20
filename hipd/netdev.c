@@ -455,9 +455,6 @@ void hip_add_address_to_list(struct sockaddr *addr, int ifindex, int flags)
         memcpy(&n->addr, addr, hip_sockaddr_len(addr));
     }
 
-    /* Clear the timestamp, initially 0 so everything will be sent. */
-    memset(&n->timestamp, 0, sizeof(time_t));
-
     n->if_index = ifindex;
     list_add(n, addresses);
     address_count++;
