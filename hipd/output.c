@@ -1193,6 +1193,8 @@ static int hip_queue_packet(const struct in6_addr *src_addr,
         goto out_err;
     }
 
+    memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
+
     memcpy(entry->hip_msg_retrans.buf, msg, len);
     memcpy(&entry->hip_msg_retrans.saddr, src_addr,
            sizeof(struct in6_addr));
