@@ -235,11 +235,11 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
         struct nlmsghdr             n;
         struct xfrm_userpolicy_info xpinfo;
         char                        buf[RTA_BUF_SIZE];
-    } req;
-    char                   tmpls_buf[XFRM_TMPLS_BUF_SIZE];
+    } req                                                 = { { 0 } };
+    char                   tmpls_buf[XFRM_TMPLS_BUF_SIZE] = { 0 };
+    struct xfrm_user_tmpl *tmpl;
     int                    tmpls_len = 0, err = 0;
     unsigned               flags     = 0;
-    struct xfrm_user_tmpl *tmpl;
 
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xpinfo));
     req.n.nlmsg_flags = NLM_F_REQUEST | flags;
