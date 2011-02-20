@@ -1654,7 +1654,7 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
     int                             err      = 0, retransmission = 0;
     const struct hip_locator       *locator  = NULL;
     int                             if_index = 0;
-    struct sockaddr_storage         ss_addr;
+    struct sockaddr_storage         ss_addr  = { 0 };
     struct sockaddr                *addr     = NULL;
     const struct hip_esp_info      *esp_info = NULL;
     const struct hip_esp_transform *esp_tfm  = NULL;
@@ -1672,7 +1672,6 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
 
     /* We need our local IP address as a sockaddr because
      * hip_add_address_to_list() eats only sockaddr structures. */
-    memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
     addr            = (struct sockaddr *) &ss_addr;
     addr->sa_family = AF_INET6;
 

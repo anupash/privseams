@@ -1010,10 +1010,9 @@ int hip_add_rvs_relay_to(UNUSED const uint8_t packet_type,
     int err = 0;
 
 #ifdef CONFIG_HIP_RVS
-    struct in6_addr dst;
+    struct in6_addr dst      = { { { 0 } } };
     in_port_t       dst_port = 0;
 
-    memset(&dst, 0, sizeof(dst));
     if ((hip_relay_handle_relay_from(ctx->input_msg,
                                      &ctx->src_addr,
                                      &dst,

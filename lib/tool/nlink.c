@@ -669,12 +669,11 @@ static int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
     struct {
         struct nlmsghdr nlh;
         struct rtgenmsg g;
-    } req;
+    } req                     = { { 0 } };
     struct sockaddr_nl nladdr = { 0 };
 
     nladdr.nl_family = AF_NETLINK;
 
-    memset(&req, 0, sizeof(req));
     req.nlh.nlmsg_len   = sizeof(req);
     req.nlh.nlmsg_type  = type;
     req.nlh.nlmsg_flags = NLM_F_ROOT | NLM_F_MATCH | NLM_F_REQUEST;
@@ -823,13 +822,12 @@ int hip_iproute_modify(struct rtnl_handle *rth,
         struct nlmsghdr n;
         struct rtmsg    r;
         char            buf[1024];
-    } req1;
+    } req1 = { { 0 } };
     struct inet_prefix dst;
     struct idxmap     *idxmap[16];
     int                dst_ok = 0, err = 0;
     int                idx, i;
 
-    memset(&req1, 0, sizeof(req1));
     for (i = 0; i < 16; i++) {
         idxmap[i] = NULL;
     }
@@ -1121,7 +1119,7 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
         struct nlmsghdr n;
         struct rtmsg    r;
         char            buf[1024];
-    } req;
+    } req = { { 0 } };
 
     int                err = 0, idx, preferred_family = family;
     struct inet_prefix addr;
@@ -1140,7 +1138,6 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
         HIP_IFEL(!inet_ntop(preferred_family, dst_addr, dst_str, INET6_ADDRSTRLEN),
                  -1, "inet_pton\n");
     }
-    memset(&req, 0, sizeof(req));
 
     req.n.nlmsg_len    = NLMSG_LENGTH(sizeof(struct rtmsg));
     req.n.nlmsg_flags  = NLM_F_REQUEST;
@@ -1234,7 +1231,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         struct nlmsghdr  n;
         struct ifaddrmsg ifa;
         char             buf[256];
-    } req;
+    } req = { { 0 } };
 
     struct inet_prefix lcl;
     int                local_len = 0, err = 0, size_dev;
@@ -1244,7 +1241,6 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
     char              *res = NULL;
     int                aux;
 
-    memset(&req, 0, sizeof(req));
     if (convert_ipv6_slash_to_ipv4_slash(ip, &ip4)) {
         family   = AF_INET;
         ip_is_v4 = 1;

@@ -311,10 +311,8 @@ static int hip_xfrm_sa_flush(struct rtnl_handle *rth)
     struct {
         struct nlmsghdr          n;
         struct xfrm_usersa_flush xfs;
-    } req;
+    } req   = { { 0 } };
     int err = 0;
-
-    memset(&req, 0, sizeof(req));
 
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xfs));
     req.n.nlmsg_flags = NLM_F_REQUEST;
@@ -338,10 +336,8 @@ static int hip_xfrm_policy_flush(struct rtnl_handle *rth)
 {
     struct {
         struct nlmsghdr n;
-    } req;
+    } req   = { { 0 } };
     int err = 0;
-
-    memset(&req, 0, sizeof(req));
 
     req.n.nlmsg_len   = NLMSG_LENGTH(0);
     req.n.nlmsg_flags = NLM_F_REQUEST;
@@ -375,10 +371,8 @@ static int hip_xfrm_policy_delete(struct rtnl_handle *rth,
     struct {
         struct nlmsghdr           n;
         struct xfrm_userpolicy_id xpid;
-    } req;
+    } req   = { { 0 } };
     int err = 0;
-
-    memset(&req, 0, sizeof(req));
 
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xpid));
     req.n.nlmsg_flags = NLM_F_REQUEST;
@@ -438,14 +432,12 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         struct nlmsghdr         n;
         struct xfrm_usersa_info xsinfo;
         char                    buf[RTA_BUF_SIZE];
-    } req;
+    } req = { { 0 } };
 
     HIP_DEBUG("hip_xfrm_state_modify() invoked.\n");
     HIP_DEBUG("sport %d, dport %d\n", sport, dport);
     HIP_DEBUG_IN6ADDR("saddr in sa", saddr);
     HIP_DEBUG_IN6ADDR("daddr in sa", daddr);
-
-    memset(&req, 0, sizeof(req));
 
     if (IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr)) {
         req.xsinfo.saddr.a4    = saddr->s6_addr32[3];
@@ -485,7 +477,7 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         struct {
             struct xfrm_algo algo;
             char             buf[XFRM_ALGO_KEY_BUF_SIZE];
-        } alg;
+        } alg                    = { { { 0 } } };
         const char *const e_name = e_algo_names[ealg];
         const char *const a_name = a_algo_names[aalg];
         int               len;
@@ -494,7 +486,6 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         HIP_ASSERT(aalg < (int) sizeof(a_algo_names));
 
         /* XFRMA_ALG_AUTH */
-        memset(&alg, 0, sizeof(alg));
         HIP_IFE(hip_xfrm_algo_parse((void *) &alg, a_name,
                                     authkey->key, authkey_len,
                                     sizeof(alg.buf)), -1);
@@ -542,11 +533,9 @@ static int hip_xfrm_state_delete(struct rtnl_handle *rth,
         struct nlmsghdr       n;
         struct xfrm_usersa_id xsid;
         char                  buf[RTA_BUF_SIZE];
-    } req;
+    } req = { { 0 } };
     struct xfrm_encap_tmpl encap;
     int                    err = 0;
-
-    memset(&req, 0, sizeof(req));
 
     req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(req.xsid));
     req.n.nlmsg_flags = NLM_F_REQUEST;
@@ -850,9 +839,7 @@ void hip_delete_hit_sp_pair(const hip_hit_t *src_hit,
  */
 void hip_delete_default_prefix_sp_pair(void)
 {
-    hip_hit_t src_hit, dst_hit;
-    memset(&src_hit, 0, sizeof(hip_hit_t));
-    memset(&dst_hit, 0, sizeof(hip_hit_t));
+    hip_hit_t src_hit = { { { 0 } } }, dst_hit = { { { 0 } } };
 
     /* See the comment in hip_setup_sp_prefix_pair() */
     set_hit_prefix(&src_hit);
@@ -869,13 +856,9 @@ void hip_delete_default_prefix_sp_pair(void)
  */
 int hip_setup_default_sp_prefix_pair(void)
 {
-    int             err = 0;
-    hip_hit_t       src_hit, dst_hit;
-    struct in6_addr ip;
-
-    memset(&ip, 0, sizeof(hip_hit_t));
-    memset(&src_hit, 0, sizeof(hip_hit_t));
-    memset(&dst_hit, 0, sizeof(hip_hit_t));
+    int             err     = 0;
+    hip_hit_t       src_hit = { { { 0 } } }, dst_hit = { { { 0 } } };
+    struct in6_addr ip      = { { { 0 } } };
 
     /* The OUTGOING and INCOMING policy is set to the generic value */
     set_hit_prefix(&src_hit);

@@ -870,15 +870,12 @@ static int hip_conf_handle_server(struct hip_common *msg,
                                   int optc,
                                   UNUSED int send_only)
 {
-    hip_hit_t       hit;
-    struct in6_addr ipv6;
+    hip_hit_t       hit                   = { { { 0 } } };
+    struct in6_addr ipv6                  = { { { 0 } } };
     int             err                   = 0, seconds = 0, i = 0, number_of_regtypes = 0, reg_type = 0;
     int             index_of_hit          = 0, index_of_ip = 0, opp_mode = 0;
     uint8_t         lifetime              = 0, *reg_types = NULL;
     time_t          seconds_from_lifetime = 0;
-
-    memset(&hit, 0, sizeof(hit));
-    memset(&ipv6, 0, sizeof(ipv6));
 
     if (action != ACTION_ADD && action != ACTION_DEL) {
         HIP_ERROR("Only actions \"add\" and \"del\" are supported for " \
@@ -1608,10 +1605,10 @@ static int hip_conf_handle_puzzle(struct hip_common *msg,
 {
     int                          err  = 0, ret = 0, msg_type = 0, all, newVal = 0;
     const int                   *diff = NULL;
-    hip_hit_t                    hit, all_zero_hit;
+    hip_hit_t                    hit  = { { { 0 } } }, all_zero_hit = { { { 0 } } };
+    char                         hit_s[INET6_ADDRSTRLEN];
     const struct hip_tlv_common *current_param = NULL;
     hip_tlv                      param_type    = 0;
-    char                         hit_s[INET6_ADDRSTRLEN];
 
     memset(&hit, 0, sizeof(hip_hit_t));
     memset(&all_zero_hit, 0, sizeof(hip_hit_t));

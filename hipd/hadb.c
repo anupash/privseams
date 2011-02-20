@@ -577,8 +577,8 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                            const hip_lsi_t *peer_lsi,
                            const char *peer_hostname)
 {
-    int                      err = 0;
-    struct hip_peer_map_info peer_map;
+    int                      err      = 0;
+    struct hip_peer_map_info peer_map = { { { { 0 } } } };
 
     HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
 
@@ -594,8 +594,6 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                          &nat_peer_udp_port);
 
     HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
-
-    memset(&peer_map, 0, sizeof(peer_map));
 
     memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
     if (peer_addr) {
@@ -1247,10 +1245,9 @@ int hip_count_open_connections(void)
 int hip_handle_get_ha_info(struct hip_hadb_state *entry, void *opaq)
 {
     int                             err = 0;
-    struct hip_hadb_user_info_state hid;
+    struct hip_hadb_user_info_state hid = { { { { 0 } } } };
     struct hip_common              *msg = opaq;
 
-    memset(&hid, 0, sizeof(hid));
     hid.state = entry->state;
     ipv6_addr_copy(&hid.hit_our, &entry->hit_our);
     ipv6_addr_copy(&hid.hit_peer, &entry->hit_peer);

@@ -1528,7 +1528,7 @@ static int check_packet(const struct in6_addr *ip6_src,
 {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     hip_hit_t       phit;
-    struct in6_addr all_zero_addr;
+    struct in6_addr all_zero_addr = { { { 0 } } };
 #endif
     struct in6_addr hit;
     int             err = 1;
@@ -1591,8 +1591,6 @@ static int check_packet(const struct in6_addr *ip6_src,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
             //if peer hit is all-zero in I1 packet, replace it with pseudo hit
-            memset(&all_zero_addr, 0, sizeof(struct in6_addr));
-
             if (IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)) {
                 hip_opportunistic_ipv6_to_hit(ip6_dst, &phit,
                                               HIP_HIT_TYPE_HASH100);
