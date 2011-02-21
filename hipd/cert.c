@@ -81,7 +81,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
     const struct hip_cert_spki_info *p_cert;
     struct hip_cert_spki_info       *cert;
     struct hip_host_id              *host_id = NULL;
-    unsigned char                    sha_digest[21];
+    unsigned char                    sha_digest[SHA_DIGEST_LENGTH];
     unsigned char                   *signature_b64 = NULL;
     unsigned char                   *digest_b64    = NULL;
     unsigned char                   *sha_retval;
@@ -132,13 +132,13 @@ int hip_cert_spki_sign(struct hip_common *msg)
         signature_b64 = calloc(1, (RSA_size(rsa) + 2) / 3 * 4 + 1);
         HIP_IFEL(!signature_b64, -1, "calloc for signature_b64 failed\n");
 
-        n_bin = calloc(1, RSA_size(rsa) + 1);
+        n_bin = calloc(1, BN_num_bytes(rsa->n));
         HIP_IFEL(!n_bin, -1, "calloc for n_bin failed\n");
 
-        n_b64 = calloc(1, (RSA_size(rsa) + 2) / 3 * 4 + 1);
+        n_b64 = calloc(1, (BN_num_bytes(rsa->n) + 2) / 3 * 4 + 1);
         HIP_IFEL(!n_b64, -1, "calloc for n_b64 failed\n");
 
-        e_bin = calloc(1, BN_num_bytes(rsa->e) + 1);
+        e_bin = calloc(1, BN_num_bytes(rsa->e));
         HIP_IFEL(!e_bin, -1, "calloc for e_bin failed\n");
 
         /* RSA sign the digest */
@@ -192,7 +192,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
         HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
     }
 
-    HIP_IFEL(!EVP_EncodeBlock(digest_b64, sha_digest, sizeof(sha_digest)),
+    HIP_IFEL(!EVP_EncodeBlock(digest_b64, sha_digest, SHA_DIGEST_LENGTH),
              -1, "Failed to encode digest_b64\n");
     HIP_IFEL(!EVP_EncodeBlock(signature_b64, signature, sig_len),
              -1, "Failed to encode signature_b64\n");
@@ -216,7 +216,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
                  -1,
                  "Error in converting public exponent from BN to bin\n");
 
-        HIP_IFEL(!EVP_EncodeBlock(n_b64, n_bin, RSA_size(rsa)),
+        HIP_IFEL(!EVP_EncodeBlock(n_b64, n_bin, BN_num_bytes(rsa->n)),
                  -1,
                  "Failed to encode n_b64\n");
 
