@@ -92,6 +92,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
     RSA           *rsa   = NULL;
     unsigned char *e_bin = NULL, *n_bin = NULL;
     unsigned char *e_hex = NULL, *n_b64 = NULL;
+
     /* DSA needed variables */
     DSA           *dsa   = NULL;
     unsigned char *p_bin = NULL, *q_bin = NULL, *g_bin = NULL, *y_bin = NULL;
@@ -109,6 +110,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
     HIP_IFEL(hip_get_host_id_and_priv_key(hip_local_hostid_db, &cert->issuer_hit,
                                           HIP_ANY_ALGO, &host_id, (void **) &rsa),
              -1, "Private key not found\n");
+
     algo = host_id->rdata.algorithm;
     if (algo == HIP_HI_DSA) {
         dsa = (DSA *) rsa;
@@ -186,10 +188,11 @@ int hip_cert_spki_sign(struct hip_common *msg)
         HIP_OUT_ERR(-1, "Unknown algorithm for signing\n");
     }
 
-    HIP_IFEL(EVP_EncodeBlock(digest_b64, sha_digest, sizeof(sha_digest)) > 0,
+    HIP_IFEL(!EVP_EncodeBlock(digest_b64, sha_digest, sizeof(sha_digest)),
              -1, "Failed to encode digest_b64\n");
-    HIP_IFEL(EVP_EncodeBlock(signature_b64, signature, sig_len) > 0,
+    HIP_IFEL(!EVP_EncodeBlock(signature_b64, signature, sig_len),
              -1, "Failed to encode signature_b64\n");
+
     /* create (signature (hash sha1 |digest|)|signature|) */
     sprintf(cert->signature, "(signature (hash sha1 |%s|)|%s|)",
             digest_b64, signature_b64);
@@ -209,7 +212,7 @@ int hip_cert_spki_sign(struct hip_common *msg)
                  -1,
                  "Error in converting public exponent from BN to bin\n");
 
-        HIP_IFEL(EVP_EncodeBlock(n_b64, n_bin, RSA_size(rsa)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(n_b64, n_bin, RSA_size(rsa)),
                  -1,
                  "Failed to encode n_b64\n");
 
@@ -236,22 +239,22 @@ int hip_cert_spki_sign(struct hip_common *msg)
          */
         HIP_IFEL(!BN_bn2bin(dsa->p, p_bin), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(EVP_EncodeBlock(p_b64, p_bin, BN_num_bytes(dsa->p)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(p_b64, p_bin, BN_num_bytes(dsa->p)),
                  -1, "Failed to encode p_b64\n");
 
         HIP_IFEL(!BN_bn2bin(dsa->q, q_bin), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(EVP_EncodeBlock(q_b64, q_bin, BN_num_bytes(dsa->q)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(q_b64, q_bin, BN_num_bytes(dsa->q)),
                  -1, "Failed to encode q_64");
 
         HIP_IFEL(!(BN_bn2bin(dsa->g, g_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(EVP_EncodeBlock(g_b64, g_bin, BN_num_bytes(dsa->g)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(g_b64, g_bin, BN_num_bytes(dsa->g)),
                  -1, "Failed to encode g_b64\n");
 
         HIP_IFEL(!BN_bn2bin(dsa->pub_key, y_bin), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_IFEL(EVP_EncodeBlock(y_b64, y_bin, BN_num_bytes(dsa->pub_key)) > 0,
+        HIP_IFEL(!EVP_EncodeBlock(y_b64, y_bin, BN_num_bytes(dsa->pub_key)),
                  -1, "Failed to encode y_b64\n");
 
         sprintf(cert->public_key, "(public_key (dsa-pkcs1-sha1 (p |%s|)(q |%s|)"
