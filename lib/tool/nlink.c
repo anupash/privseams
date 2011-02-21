@@ -107,7 +107,7 @@ int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
  * @param handler a function pointer to the function that handles the message
  *        parameter each by each
  * @param arg an extra value to be passed for the handler function
- * @return always zero
+ * @return zero on success and negative on error
  * @note Unfortunately libnetlink does not provide a generic receive a
  * message function. This is a modified version of the rtnl_listen
  * function that processes only a finite amount of messages and then
