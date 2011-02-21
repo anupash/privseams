@@ -66,14 +66,11 @@ int set_up_device(const char *dev, int up);
 int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
               int alen);
 
-int hip_netlink_open(struct rtnl_handle *nl,
-                     unsigned subscriptions,
+int hip_netlink_open(struct rtnl_handle *nl, unsigned subscriptions,
                      int protocol);
-int hip_netlink_receive(struct rtnl_handle *nl,
-                        hip_filter handler,
-                        void *arg);
-int rtnl_open_byproto(struct rtnl_handle *rth,
-                      unsigned subscriptions,
+int hip_netlink_receive(struct rtnl_handle *nl, hip_filter handler, void *arg);
+
+int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
                       int protocol);
 void rtnl_close(struct rtnl_handle *rth);
 int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg);
@@ -83,9 +80,8 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
                       const char *dev, struct idxmap **idxma);
-int hip_iproute_modify(struct rtnl_handle *rth,
-                       int cmd, int flags, int family, char *ip,
-                       const char *dev);
+int hip_iproute_modify(struct rtnl_handle *rth, int cmd, int flags, int family,
+                       char *ip, const char *dev);
 int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
                     const struct in6_addr *dst_addr, char *idev, char *odev,
                     int family, struct idxmap **idxmap);

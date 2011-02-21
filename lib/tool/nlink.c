@@ -113,9 +113,7 @@ int addattr_l(struct nlmsghdr *n, unsigned maxlen, int type, const void *data,
  * function that processes only a finite amount of messages and then
  * returns.
  */
-int hip_netlink_receive(struct rtnl_handle *nl,
-                        hip_filter handler,
-                        void *arg)
+int hip_netlink_receive(struct rtnl_handle *nl, hip_filter handler, void *arg)
 {
     struct nlmsghdr   *h;
     struct sockaddr_nl nladdr = { 0 };
@@ -510,8 +508,8 @@ static int get_addr_1(struct inet_prefix *addr, const char *name, int family)
     memset(addr, 0, sizeof(*addr));
 
     if (strcmp(name, "default") == 0 ||
-        strcmp(name, "all") == 0 ||
-        strcmp(name, "any") == 0) {
+        strcmp(name, "all")     == 0 ||
+        strcmp(name, "any")     == 0) {
         if (family == AF_DECnet) {
             return -1;
         }
@@ -570,8 +568,8 @@ static int get_prefix_1(struct inet_prefix *dst, char *arg, int family)
     memset(dst, 0, sizeof(*dst));
 
     if (strcmp(arg, "default") == 0 ||
-        strcmp(arg, "any") == 0 ||
-        strcmp(arg, "all") == 0) {
+        strcmp(arg, "any")     == 0 ||
+        strcmp(arg, "all")     == 0) {
         if (family == AF_DECnet) {
             return -1;
         }
@@ -624,7 +622,8 @@ done:
  * @param data the attribute
  * @return zero on success and negative on error
  */
-static int addattr32(struct nlmsghdr *n, unsigned maxlen, int type, uint32_t data)
+static int addattr32(struct nlmsghdr *n, unsigned maxlen, int type,
+                     uint32_t data)
 {
     int            len = RTA_LENGTH(4);
     struct rtattr *rta;
@@ -646,7 +645,7 @@ static int addattr32(struct nlmsghdr *n, unsigned maxlen, int type, uint32_t dat
  * @param rth rtnl_handle structure containing a pointer to netlink
  * @param family address family
  * @param type request type
- * @return On success, returns number of chars  sent to kernel. On
+ * @return On success, returns number of chars sent to kernel. On
  *         error, returns -1 and sets errno.
  * @note the reply has to be read separately
  */
@@ -681,11 +680,8 @@ static int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
  * @param arg2 optional argument for the junk function
  * @return zero on success and negative on error
  */
-static int rtnl_dump_filter(struct rtnl_handle *rth,
-                            rtnl_filter filter,
-                            void *arg1,
-                            rtnl_filter junk,
-                            void *arg2)
+static int rtnl_dump_filter(struct rtnl_handle *rth, rtnl_filter filter,
+                            void *arg1, rtnl_filter junk, void *arg2)
 {
     struct sockaddr_nl nladdr;
     struct iovec       iov;
@@ -800,9 +796,8 @@ static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
  * @param dev the network device of the ip
  * @return zero on success and negative on failure
  */
-int hip_iproute_modify(struct rtnl_handle *rth,
-                       int cmd, int flags, int family, char *ip,
-                       const char *dev)
+int hip_iproute_modify(struct rtnl_handle *rth, int cmd, int flags, int family,
+                       char *ip, const char *dev)
 {
     struct {
         struct nlmsghdr n;
@@ -867,10 +862,8 @@ out_err:
  * @param len the length of the rta structure
  * @return zero
  */
-static int parse_rtattr(struct rtattr *tb[],
-                        int max,
-                        struct rtattr *rta,
-                        int len)
+static int parse_rtattr(struct rtattr *tb[], int max,
+                        struct rtattr *rta, int len)
 {
     memset(tb, 0, sizeof(struct rtattr *) * (max + 1));
 
@@ -950,16 +943,15 @@ static int get_prefix(struct inet_prefix *dst, char *arg, int family)
  * @param n the message to send to the kernel
  * @param peer process id of the recipient (zero for kernel)
  * @param groups group id of the recipient (zero for any)
- * @param answer If present, filled with the response from the recipient. Allocated
- *               by the caller. Set answer to NULL for no response.
+ * @param answer If present, filled with the response from the recipient.
+ *               Allocated by the caller. Set answer to NULL for no response.
  * @param junk junk handler function
  * @param jarg an optioanl extra argument to be passed to the junk handler
  * @return zero on success and negative on error
  */
 static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                      unsigned groups, struct nlmsghdr *answer,
-                     rtnl_filter junk,
-                     void *jarg)
+                     rtnl_filter junk, void *jarg)
 {
     int                status;
     unsigned           seq;
@@ -1028,9 +1020,9 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                 return -1;
             }
 
-            if (nladdr.nl_pid != (unsigned) peer ||
-                h->nlmsg_pid != rtnl->local.nl_pid ||
-                h->nlmsg_seq != seq) {
+            if (nladdr.nl_pid != (unsigned) peer    ||
+                h->nlmsg_pid  != rtnl->local.nl_pid ||
+                h->nlmsg_seq  != seq) {
                 if (junk) {
                     err = junk(&nladdr, h, jarg);
                     if (err < 0) {
@@ -1085,7 +1077,8 @@ static int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
  * Query a source address for the given destination address from the kernel
  *
  * @param rth rtnl_handle structure containing a netlink socket
- * @param src_addr queried source address (possibly in IPv6 mapped format if IPv4 address)
+ * @param src_addr queried source address (possibly in IPv6 mapped format
+ *                 if IPv4 address)
  * @param dst_addr the destination address
  * @param idev optional source network device
  * @param odev optional destination network device
@@ -1157,7 +1150,6 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
     HIP_IFE(hip_parse_src_addr(&req.n, src_addr), -1);
 
 out_err:
-
     return err;
 }
 
@@ -1166,8 +1158,8 @@ out_err:
  * numberic presentation
  *
  * @param ip a string with an IPv6 address with an optional prefix
- * @param ip4 output argument: a numerical representation (struct in_addr) of the
- *        ip argument
+ * @param ip4 output argument: a numerical representation (struct in_addr)
+ *        of the ip argument
  * @return zero on success and non-zero on failure
  */
 static int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4)
