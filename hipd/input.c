@@ -1279,13 +1279,11 @@ int hip_handle_i1(UNUSED const uint8_t packet_type,
                   UNUSED const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int err = 0, src_hit_is_our;
-
     /* In some environments, a copy of broadcast our own I1 packets
      * arrive at the local host too. The following variable handles
      * that special case. Since we are using source HIT (and not
      * destination) it should handle also opportunistic I1 broadcast */
-    src_hit_is_our = hip_hidb_hit_is_our(&ctx->input_msg->hits);
+    int src_hit_is_our = hip_hidb_hit_is_our(&ctx->input_msg->hits);
 
     /* check i1 for broadcast/multicast addresses */
     if (IN6_IS_ADDR_V4MAPPED(&ctx->dst_addr)) {
@@ -1295,32 +1293,31 @@ int hip_handle_i1(UNUSED const uint8_t packet_type,
 
         if (addr4.s_addr == INADDR_BROADCAST) {
             HIP_DEBUG("Received I1 broadcast\n");
-            HIP_IFF(src_hit_is_our,
-                    -1,
-                    ctx->error = 1,
-                    "Received a copy of own broadcast, dropping\n");
-
-            HIP_IFF(hip_select_source_address(&ctx->dst_addr, &ctx->src_addr),
-                    -1,
-                    ctx->error = 1,
-                    "Could not find source address\n");
+            if (src_hit_is_our) {
+                HIP_ERROR("Received a copy of own broadcast, dropping\n");
+                ctx->error = 1;
+                return -1;
+            }
+            if (hip_select_source_address(&ctx->dst_addr, &ctx->src_addr)) {
+                HIP_ERROR("Could not find source address\n");
+                ctx->error = 1;
+                return -1;
+            }
         }
     } else if (IN6_IS_ADDR_MULTICAST(&ctx->dst_addr)) {
-        HIP_IFF(src_hit_is_our,
-                -1,
-                ctx->error = 1,
-                "Received a copy of own broadcast, dropping\n");
-        HIP_IFF(hip_select_source_address(&ctx->dst_addr, &ctx->src_addr),
-                -1,
-                ctx->error = 1,
-                "Could not find source address\n");
+        if (src_hit_is_our) {
+            HIP_ERROR("Received a copy of own broadcast, dropping\n");
+            ctx->error = 1;
+            return -1;
+        }
+        if (hip_select_source_address(&ctx->dst_addr, &ctx->src_addr)) {
+            HIP_ERROR("Could not find source address\n");
+            ctx->error = 1;
+            return -1;
+        }
     }
 
-out_err:
-    if (err) {
-        ctx->error = err;
-    }
-    return err;
+    return 0;
 }
 
 /**

@@ -80,16 +80,6 @@
         } \
     }
 
-#define HIP_IFF(cond, eval, finally, args ...) \
-    { \
-        if (cond) { \
-            HIP_ERROR(args); \
-            err = eval; \
-            finally; \
-            goto out_err; \
-        } \
-    }
-
 /** @} */
 
 #endif /* HIP_LIB_CORE_IFE_H */
