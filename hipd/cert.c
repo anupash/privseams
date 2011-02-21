@@ -116,7 +116,11 @@ int hip_cert_spki_sign(struct hip_common *msg)
         dsa = (DSA *) rsa;
     }
 
-    digest_b64 = calloc(1, 30);
+    // Note: EVP_EncodeBlock(unsigned char *t, const unsigned char *f, int dlen) (vintage SSLeay
+    //  code) is used to generate the different BASE64 representations. It requires an area of
+    //  ((dlen + 2) / 3 * 4 + 1) bytes - so, obviously larger than the size of the input - to be
+    //  available for its output (at location "t") - you have been warned.
+    digest_b64 = calloc(1, (SHA_DIGEST_LENGTH + 2) / 3 * 4 + 1);
     HIP_IFEL(!digest_b64, -1, "calloc for digest_b64 failed\n");
 
     /* build sha1 digest that will be signed */
@@ -125,13 +129,13 @@ int hip_cert_spki_sign(struct hip_common *msg)
 
     switch (algo) {
     case HIP_HI_RSA:
-        signature_b64 = calloc(1, RSA_size(rsa));
+        signature_b64 = calloc(1, (RSA_size(rsa) + 2) / 3 * 4 + 1);
         HIP_IFEL(!signature_b64, -1, "calloc for signature_b64 failed\n");
 
         n_bin = calloc(1, RSA_size(rsa) + 1);
         HIP_IFEL(!n_bin, -1, "calloc for n_bin failed\n");
 
-        n_b64 = calloc(1, RSA_size(rsa) + 20);
+        n_b64 = calloc(1, (RSA_size(rsa) + 2) / 3 * 4 + 1);
         HIP_IFEL(!n_b64, -1, "calloc for n_b64 failed\n");
 
         e_bin = calloc(1, BN_num_bytes(rsa->e) + 1);
