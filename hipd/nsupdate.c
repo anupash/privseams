@@ -109,23 +109,19 @@ int hip_get_nsupdate_status(void)
  * @return          newly allocated string with result or NULL in case of error
  */
 
-static char *make_env(const char *name, char *value)
+static char *make_env(const char *const name, const char *const value)
 {
     char *result = NULL;
-    int   err    = 0;
 
-    if ((name == NULL) || (value == NULL)) {
+    /* Malloc enough space for both strings, the '=' and a '\0'. */
+    if (!name || !value ||
+        !(result = malloc(strlen(name) + strlen(value) + 2))) {
         return NULL;
     }
 
-    HIP_IFEL(!(result = malloc(strlen(name) + 1 + strlen(value) + 1)),
-             -1, "malloc");     // name,'=',value,0
-
-    strcpy(result, name);
+    strcat(result, name);
     strcat(result, "=");
     strcat(result, value);
-
-out_err:
 
     return result;
 }
