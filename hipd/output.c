@@ -581,8 +581,6 @@ int hip_send_i2(UNUSED const uint8_t packet_type,
                        ctx->msg_ports.src_port, ctx->output_msg, ctx->hadb_entry, 1);
     HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
-    HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
-
     if (ctx->hadb_entry->state == HIP_STATE_I1_SENT) {
         ctx->hadb_entry->state = HIP_STATE_I2_SENT;
     }
