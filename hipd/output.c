@@ -967,24 +967,22 @@ int hip_hmac2_and_sign(UNUSED const uint8_t packet_type,
                        UNUSED const uint32_t ha_state,
                        struct hip_packet_context *ctx)
 {
-    int err = 0;
-
     /* Create HMAC2 parameter. */
     HIP_ASSERT(ctx->hadb_entry->our_pub);
 
-    HIP_IFEL(hip_build_param_hmac2_contents(ctx->output_msg,
-                                            &ctx->hadb_entry->hip_hmac_out,
-                                            ctx->hadb_entry->our_pub),
-             -1,
-             "Failed to build parameter HMAC2 contents.\n");
+    if (hip_build_param_hmac2_contents(ctx->output_msg,
+                                       &ctx->hadb_entry->hip_hmac_out,
+                                       ctx->hadb_entry->our_pub)) {
+        HIP_ERROR("Failed to build parameter HMAC2 contents.\n");
+        return -1;
+    }
 
-    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
-                                   ctx->output_msg),
-             -EINVAL,
-             "Could not sign R2. Failing\n");
+    if (ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key, ctx->output_msg)) {
+        HIP_ERROR("Could not sign R2. Failing\n");
+        return -EINVAL;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
