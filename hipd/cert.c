@@ -98,9 +98,8 @@ int hip_cert_spki_sign(struct hip_common *msg)
     unsigned char *p_bin = NULL, *q_bin = NULL, *g_bin = NULL, *y_bin = NULL;
     unsigned char *p_b64 = NULL, *q_b64 = NULL, *g_b64 = NULL, *y_b64 = NULL;
 
-    cert = calloc(1, sizeof(struct hip_cert_spki_info));
-    HIP_IFEL(!cert, -1, "calloc for cert failed\n");
-
+    HIP_IFEL(!(cert = calloc(1, sizeof(struct hip_cert_spki_info))),
+             -1, "calloc for cert failed\n");
     HIP_IFEL(!(p_cert = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)),
              -1, "No cert_info struct found\n");
     memcpy(cert, p_cert, sizeof(struct hip_cert_spki_info));
@@ -129,7 +128,12 @@ int hip_cert_spki_sign(struct hip_common *msg)
 
     switch (algo) {
     case HIP_HI_RSA:
-        signature_b64 = calloc(1, (RSA_size(rsa) + 2) / 3 * 4 + 1);
+        sig_len = RSA_size(rsa);
+
+        signature = calloc(1, sig_len);
+        HIP_IFEL(!signature, -1, "calloc for signature failed\n");
+
+        signature_b64 = calloc(1, (sig_len + 2) / 3 * 4 + 1);
         HIP_IFEL(!signature_b64, -1, "calloc for signature_b64 failed\n");
 
         n_bin = calloc(1, BN_num_bytes(rsa->n));
@@ -142,10 +146,6 @@ int hip_cert_spki_sign(struct hip_common *msg)
         HIP_IFEL(!e_bin, -1, "calloc for e_bin failed\n");
 
         /* RSA sign the digest */
-        sig_len   = RSA_size(rsa);
-        signature = calloc(1, sig_len);
-        HIP_IFEL(!signature, -1, "calloc for signature failed\n");
-
         err = RSA_sign(NID_sha1, sha_digest, SHA_DIGEST_LENGTH, signature,
                        (unsigned int *) &sig_len, rsa);
         HIP_IFEL((err = err == 0 ? -1 : 0), -1, "RSA_sign error\n");
@@ -304,6 +304,8 @@ out_err:
     free(y_b64);
 
     DSA_SIG_free(dsa_sig);
+
+    free(cert);
 
     return err;
 }
