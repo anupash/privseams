@@ -288,28 +288,17 @@ int hip_sign_and_mac_packet(UNUSED const uint8_t packet_type,
                             UNUSED const uint32_t ha_state,
                             struct hip_packet_context *ctx)
 {
-    int err = 0;
-
-    HIP_IFEL(hip_build_param_hmac_contents(ctx->output_msg,
-                                           &ctx->hadb_entry->hip_hmac_out),
-             -1,
-             "Building of HMAC failed\n");
-
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Start PERF_SIGN\n");
-    hip_perf_start_benchmark(perf_set, PERF_SIGN);
-#endif
-    HIP_IFEL(ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
-                                   ctx->output_msg),
-             -EINVAL,
-             "Could not create signature\n");
-#ifdef CONFIG_HIP_PERFORMANCE
-    HIP_DEBUG("Stop PERF_SIGN\n");
-    hip_perf_stop_benchmark(perf_set, PERF_SIGN);
-#endif
-
-out_err:
-    return err;
+    if (hip_build_param_hmac_contents(ctx->output_msg,
+                                      &ctx->hadb_entry->hip_hmac_out)) {
+        HIP_ERROR("Building of HMAC failed\n");
+        return -1;
+    }
+    if (ctx->hadb_entry->sign(ctx->hadb_entry->our_priv_key,
+                              ctx->output_msg)) {
+        HIP_ERROR("Could not create signature\n");
+        return -EINVAL;
+    }
+    return 0;
 }
 
 /**
