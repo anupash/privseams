@@ -121,7 +121,6 @@ static struct hip_hadb_user_info_state *hip_firewall_cache_hadb_match(const void
 {
     int                                    err           = 0;
     struct       hip_hadb_user_info_state *ha_ret        = NULL;
-    const struct hip_hadb_user_info_state *ha_match      = NULL;
     const struct hip_hadb_user_info_state *ha_curr       = NULL;
     struct       hip_common               *msg           = NULL;
     const struct hip_tlv_common           *current_param = NULL;
@@ -136,26 +135,15 @@ static struct hip_hadb_user_info_state *hip_firewall_cache_hadb_match(const void
     while ((current_param = hip_get_next_param(msg, current_param))) {
         ha_curr = hip_get_param_contents_direct(current_param);
 
-        if (type == FW_CACHE_HIT &&
-            !ipv6_addr_cmp(peer, &ha_curr->hit_peer) &&
-            (!local || !ipv6_addr_cmp(local,  &ha_curr->hit_our))) {
-            ha_match = ha_curr;
-            break;
-        } else if (type == FW_CACHE_LSI &&
-                   !ipv4_addr_cmp(peer, &ha_curr->lsi_peer) &&
-                   (!local || !ipv4_addr_cmp(local, &ha_curr->lsi_our))) {
-            ha_match = ha_curr;
-            break;
-        } else if (type == FW_CACHE_IP &&
-                   !ipv6_addr_cmp(peer, &ha_curr->ip_peer) &&
-                   (!local || !ipv6_addr_cmp(local, &ha_curr->ip_our))) {
-            ha_match = ha_curr;
+        if ((type == FW_CACHE_HIT && !ipv6_addr_cmp(peer, &ha_curr->hit_peer) &&
+             (!local || !ipv6_addr_cmp(local,  &ha_curr->hit_our))) ||
+            (type == FW_CACHE_LSI && !ipv4_addr_cmp(peer, &ha_curr->lsi_peer) &&
+             (!local || !ipv4_addr_cmp(local, &ha_curr->lsi_our)))  ||
+            (type == FW_CACHE_IP  && !ipv6_addr_cmp(peer, &ha_curr->ip_peer)  &&
+             (!local || !ipv6_addr_cmp(local, &ha_curr->ip_our)))) {
+            ha_ret = firewall_add_new_entry(ha_curr);
             break;
         }
-    }
-
-    if (ha_match) {
-        ha_ret = firewall_add_new_entry(ha_match);
     }
 
 out_err:
