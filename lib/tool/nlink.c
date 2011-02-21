@@ -162,7 +162,6 @@ int hip_netlink_receive(struct rtnl_handle *nl,
             }
             HIP_ERROR("Netlink overrun.\n");
             return -1;
-            continue;
         }
         if (status == 0) {
             HIP_ERROR("EOF on netlink\n");
