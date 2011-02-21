@@ -243,6 +243,32 @@ out_err:
 }
 
 /**
+ * @brief Add a signed or unsigned echo response to an outbound packet.
+ *
+ * @param ctx pointer to the packet context
+ * @param sign 0 if unsigned response is wanted, 1 for a signed response
+ *
+ * @return zero on success, negative on error
+ */
+static int hip_add_echo_response(struct hip_packet_context *ctx, int sign)
+{
+    int param_type = sign ?
+                     HIP_PARAM_ECHO_REQUEST_SIGN : HIP_PARAM_ECHO_REQUEST;
+
+    const struct hip_echo_request *ping = hip_get_param(ctx->input_msg,
+                                                        param_type);
+
+    if (ping &&
+        hip_build_param_echo(ctx->output_msg, ping + 1,
+                             hip_get_param_contents_len(ping), sign, 0)) {
+        HIP_ERROR("Error while creating echo reply parameter\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
  * @brief Add a signed echo response to an outbound packet.
  *
  * @param packet_type The packet type of the control message (RFC 5201, 5.3.)
@@ -258,18 +284,7 @@ int hip_add_signed_echo_response(UNUSED const uint8_t packet_type,
                                  UNUSED const uint32_t ha_state,
                                  struct hip_packet_context *ctx)
 {
-    const struct hip_echo_request *ping = NULL;
-    int                            err  = 0;
-
-    ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST_SIGN);
-    if (ping) {
-        int ln = hip_get_param_contents_len(ping);
-        HIP_IFEL(hip_build_param_echo(ctx->output_msg, ping + 1, ln, 1, 0), -1,
-                 "Error while creating echo reply parameter\n");
-    }
-
-out_err:
-    return err;
+    return hip_add_echo_response(ctx, 1);
 }
 
 /**
@@ -311,24 +326,13 @@ int hip_sign_and_mac_packet(UNUSED const uint8_t packet_type,
  *            address, the ports and the corresponding entry from the host
  *            association database).
  *
- * @return zero on success, non-negative on error.
+ * @return zero on success, negative value on error
  */
 int hip_add_unsigned_echo_response(UNUSED const uint8_t packet_type,
                                    UNUSED const uint32_t ha_state,
                                    struct hip_packet_context *ctx)
 {
-    const struct hip_echo_request *ping = NULL;
-    int                            err  = 0;
-
-    ping = hip_get_param(ctx->input_msg, HIP_PARAM_ECHO_REQUEST);
-    if (ping) {
-        int ln = hip_get_param_contents_len(ping);
-        HIP_IFEL(hip_build_param_echo(ctx->output_msg, (ping + 1), ln, 0, 0), -1,
-                 "Error while creating echo reply parameter\n");
-    }
-
-out_err:
-    return err;
+    return hip_add_echo_response(ctx, 0);
 }
 
 /**
