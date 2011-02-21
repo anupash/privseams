@@ -857,7 +857,7 @@ static int hipfw_handle_relay_to_r2(const struct hip_common *common,
     HIP_DEBUG_IN6ADDR("reverse_tuple relay ip", &reverse_tuple->esp_relay_daddr);
 
 out_err:
-    return 0;
+    return err;
 }
 
 /**
