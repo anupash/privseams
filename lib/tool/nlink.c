@@ -812,7 +812,7 @@ static int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
  * @param family address family for the new route
  * @param ip the address for which to modify the route
  * @param dev the network device of the ip
- * @return zero
+ * @return zero on success and negative on failure
  */
 int hip_iproute_modify(struct rtnl_handle *rth,
                        int cmd, int flags, int family, char *ip,
@@ -872,7 +872,7 @@ out_err:
         free(idxmap[i]);
     }
 
-    return 0;
+    return err;
 }
 
 /**
