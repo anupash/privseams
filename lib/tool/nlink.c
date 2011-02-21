@@ -824,13 +824,9 @@ int hip_iproute_modify(struct rtnl_handle *rth,
         char            buf[1024];
     } req1 = { { 0 } };
     struct inet_prefix dst;
-    struct idxmap     *idxmap[16];
-    int                dst_ok = 0, err = 0;
+    struct idxmap     *idxmap[16] = { 0 };
+    int                dst_ok     = 0, err = 0;
     int                idx, i;
-
-    for (i = 0; i < 16; i++) {
-        idxmap[i] = NULL;
-    }
 
     req1.n.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtmsg));
     req1.n.nlmsg_flags = NLM_F_REQUEST | flags;
