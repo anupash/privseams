@@ -1147,19 +1147,10 @@ out_err:
 int are_addresses_compatible(const struct in6_addr *src_addr,
                              const struct in6_addr *dst_addr)
 {
-    if (!IN6_IS_ADDR_V4MAPPED(src_addr) && IN6_IS_ADDR_V4MAPPED(dst_addr)) {
-        return 0;
-    }
-
-    if (IN6_IS_ADDR_V4MAPPED(src_addr) && !IN6_IS_ADDR_V4MAPPED(dst_addr)) {
-        return 0;
-    }
-
-    if (!IN6_IS_ADDR_LINKLOCAL(src_addr) && IN6_IS_ADDR_LINKLOCAL(dst_addr)) {
-        return 0;
-    }
-
-    if (IN6_IS_ADDR_LINKLOCAL(src_addr) && !IN6_IS_ADDR_LINKLOCAL(dst_addr)) {
+    if ((!IN6_IS_ADDR_V4MAPPED(src_addr)  && IN6_IS_ADDR_V4MAPPED(dst_addr))  ||
+        (IN6_IS_ADDR_V4MAPPED(src_addr)   && !IN6_IS_ADDR_V4MAPPED(dst_addr)) ||
+        (!IN6_IS_ADDR_LINKLOCAL(src_addr) && IN6_IS_ADDR_LINKLOCAL(dst_addr)) ||
+        (IN6_IS_ADDR_LINKLOCAL(src_addr)  && !IN6_IS_ADDR_LINKLOCAL(dst_addr))) {
         return 0;
     }
 
