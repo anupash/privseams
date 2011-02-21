@@ -1259,8 +1259,6 @@ static const char *hip_param_type_name(const hip_tlv param_type)
     return "UNDEFINED";
 }
 
-#endif /* CONFIG_HIP_DEBUG */
-
 /**
  * Print the contents of a message using HIP debug interface for diagnostics
  *
@@ -1305,6 +1303,8 @@ void hip_dump_msg(const struct hip_common *msg)
     }
     HIP_DEBUG("---------------- MSG END --------------------\n");
 }
+
+#endif /* CONFIG_HIP_DEBUG */
 
 /**
  * check a user (interprocess) message for integrity
