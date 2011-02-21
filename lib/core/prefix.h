@@ -57,12 +57,10 @@ int hip_lsi_are_equal(const hip_lsi_t *lsi1,
 
 int ipv4_addr_cmp(const struct in_addr *a1,
                   const struct in_addr *a2);
-void ipv4_addr_copy(struct in_addr *a1,
-                    const struct in_addr *a2);
+void ipv4_addr_copy(struct in_addr *dest, const struct in_addr *src);
 int ipv6_addr_cmp(const struct in6_addr *a1,
                   const struct in6_addr *a2);
-void ipv6_addr_copy(struct in6_addr *a1,
-                    const struct in6_addr *a2);
+void ipv6_addr_copy(struct in6_addr *dest, const struct in6_addr *src);
 int ipv6_addr_any(const struct in6_addr *a);
 void hip_copy_in6addr_null_check(struct in6_addr *to,
                                  const struct in6_addr *from);

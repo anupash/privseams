@@ -386,9 +386,9 @@ int ipv4_addr_cmp(const struct in_addr *a1, const struct in_addr *a2)
     return memcmp(a1, a2, sizeof(struct in_addr));
 }
 
-void ipv4_addr_copy(struct in_addr *a1, const struct in_addr *a2)
+void ipv4_addr_copy(struct in_addr *dest, const struct in_addr *src)
 {
-    memcpy(a1, a2, sizeof(struct in_addr));
+    memcpy(dest, src, sizeof(struct in_addr));
 }
 
 int ipv6_addr_cmp(const struct in6_addr *a1, const struct in6_addr *a2)
@@ -396,9 +396,9 @@ int ipv6_addr_cmp(const struct in6_addr *a1, const struct in6_addr *a2)
     return memcmp(a1, a2, sizeof(struct in6_addr));
 }
 
-void ipv6_addr_copy(struct in6_addr *a1, const struct in6_addr *a2)
+void ipv6_addr_copy(struct in6_addr *dest, const struct in6_addr *src)
 {
-    memcpy(a1, a2, sizeof(struct in6_addr));
+    memcpy(dest, src, sizeof(struct in6_addr));
 }
 
 int ipv6_addr_any(const struct in6_addr *a)
