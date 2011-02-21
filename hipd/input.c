@@ -1194,7 +1194,8 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
                  UNUSED const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
-    int err = 0, mask = 0;
+    int mask = 0;
+
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_BASE\n");
     hip_perf_start_benchmark(perf_set, PERF_BASE);
@@ -1206,11 +1207,12 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
 
     HIP_ASSERT(!ipv6_addr_any(&(ctx->input_msg)->hitr));
 
-    HIP_IFF(!hip_controls_sane(ntohs(ctx->input_msg->control), mask),
-            -1,
-            ctx->error = 1,
-            "Received illegal controls in I1: 0x%x. Dropping\n",
-            ntohs(ctx->input_msg->control));
+    if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
+        HIP_ERROR("Received illegal controls in I1: 0x%x. Dropping\n",
+                  ntohs(ctx->input_msg->control));
+        ctx->error = 1;
+        return -1;
+    }
 
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status() != HIP_RELAY_OFF &&
@@ -1228,14 +1230,12 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
                    rec->type == HIP_RVSRELAY) {
             HIP_INFO("Matching relay record found.\n");
             hip_relay_forward(ctx, rec, HIP_I1);
-            err = -ECANCELED;
-            goto out_err;
+            return -ECANCELED;
         }
     }
 #endif
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
