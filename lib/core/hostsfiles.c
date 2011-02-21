@@ -356,16 +356,13 @@ static int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line 
                                                    void *result)
 {
     int err = 1;
-    int is_lsi, is_hit;
 
     /* test if hostname/alias matches and the type is routable ip */
     if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
         (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX)) ||
         (entry->alias2 && !strncmp(arg, entry->alias2, HOST_NAME_MAX))) {
-        is_hit = hip_id_type_match(&entry->id, 1);
-        is_lsi = hip_id_type_match(&entry->id, 2);
-
-        HIP_IFE(is_hit || is_lsi, 1);
+        HIP_IFE(hip_id_type_match(&entry->id, 1) ||
+                hip_id_type_match(&entry->id, 2), 1);
 
         ipv6_addr_copy(result, &entry->id);
         err = 0; /* Stop at the first match */
