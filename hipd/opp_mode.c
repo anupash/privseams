@@ -55,21 +55,16 @@
 struct hip_hadb_state *hip_opp_get_hadb_entry(const hip_hit_t *const init_hit,
                                               const struct in6_addr *const resp_addr)
 {
-    struct hip_hadb_state *entry_tmp = NULL;
-    hip_hit_t              phit;
-    int                    err = 0;
+    hip_hit_t phit;
 
     HIP_DEBUG_HIT("resp_addr=", resp_addr);
-    HIP_IFEL(hip_opportunistic_ipv6_to_hit(resp_addr, &phit,
-                                           HIP_HIT_TYPE_HASH100), -1,
-             "hip_opportunistic_ipv6_to_hit failed\n");
-
+    if (hip_opportunistic_ipv6_to_hit(resp_addr, &phit, HIP_HIT_TYPE_HASH100)) {
+        HIP_ERROR("hip_opportunistic_ipv6_to_hit failed\n");
+        return NULL;
+    }
     HIP_ASSERT(hit_is_opportunistic_hit(&phit));
 
-    entry_tmp = hip_hadb_find_byhits(init_hit, &phit);
-
-out_err:
-    return entry_tmp;
+    return hip_hadb_find_byhits(init_hit, &phit);
 }
 
 /**
@@ -87,7 +82,7 @@ struct hip_hadb_state *hip_opp_get_hadb_entry_i1_r1(struct hip_common *msg,
 
     if (type == HIP_I1) {
         if (!ipv6_addr_is_null(&msg->hitr)) {
-            goto out_err;
+            return NULL;
         }
         hip_get_default_hit(&msg->hitr);
     } else if (type == HIP_R1) {
@@ -96,7 +91,6 @@ struct hip_hadb_state *hip_opp_get_hadb_entry_i1_r1(struct hip_common *msg,
         HIP_ASSERT(0);
     }
 
-out_err:
     return entry;
 }
 
@@ -151,6 +145,5 @@ int hip_handle_opp_r1(struct hip_packet_context *ctx)
     hip_del_peer_info_entry(opp_entry);
 
 out_err:
-
     return err;
 }
