@@ -931,14 +931,12 @@ out_err:
  *            address, the ports and the corresponding entry from the host
  *            association database).
  *
- * @return zero on success, negative otherwise.
+ * @return zero
  */
 int hip_add_rvs_reg_from(UNUSED const uint8_t packet_type,
                          UNUSED const uint32_t ha_state,
                          RVS struct hip_packet_context *ctx)
 {
-    int err = 0;
-
 #ifdef CONFIG_HIP_RVS
     hip_handle_param_reg_request(ctx->hadb_entry,
                                  ctx->input_msg,
@@ -950,7 +948,7 @@ int hip_add_rvs_reg_from(UNUSED const uint8_t packet_type,
     }
 #endif
 
-    return err;
+    return 0;
 }
 
 /**
@@ -999,14 +997,12 @@ out_err:
  *            address, the ports and the corresponding entry from the host
  *            association database).
  *
- * @return zero on success, negative otherwise.
+ * @return zero
  */
 int hip_add_rvs_relay_to(UNUSED const uint8_t packet_type,
                          UNUSED const uint32_t ha_state,
                          RVS struct hip_packet_context *ctx)
 {
-    int err = 0;
-
 #ifdef CONFIG_HIP_RVS
     struct in6_addr dst      = { { { 0 } } };
     in_port_t       dst_port = 0;
@@ -1021,7 +1017,7 @@ int hip_add_rvs_relay_to(UNUSED const uint8_t packet_type,
     }
 #endif
 
-    return err;
+    return 0;
 }
 
 /**
@@ -1165,7 +1161,7 @@ int are_addresses_compatible(const struct in6_addr *src_addr,
  * @param msg       a pointer to a HIP packet common header with source and
  *                  destination HITs.
  * @param entry     a pointer to the current host association database state.
- * @return          zero on success, or negative error value on error.
+ * @return          zero
  * @note currently the queue length is one and new packets replace old ones
  */
 static int hip_queue_packet(const struct in6_addr *src_addr,
@@ -1173,13 +1169,12 @@ static int hip_queue_packet(const struct in6_addr *src_addr,
                             const struct hip_common *msg,
                             struct hip_hadb_state *entry)
 {
-    int err = 0;
     int len = hip_get_msg_total_len(msg);
 
     /* Not reusing the old entry as the new packet may have
      * different length */
     if (!entry) {
-        goto out_err;
+        return 0;
     }
 
     memset(entry->hip_msg_retrans.buf, 0, HIP_MAX_NETWORK_PACKET);
@@ -1191,8 +1186,8 @@ static int hip_queue_packet(const struct in6_addr *src_addr,
            sizeof(struct in6_addr));
     entry->hip_msg_retrans.count = HIP_RETRANSMIT_MAX;
     time(&entry->hip_msg_retrans.last_transmit);
-out_err:
-    return err;
+
+    return 0;
 }
 
 /**
