@@ -229,7 +229,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                  unsigned groups, struct nlmsghdr *answer,
                  hip_filter junk, void *arg)
 {
-    int                status, err = 0;
+    int                status;
     unsigned           seq;
     struct nlmsghdr   *h;
     struct sockaddr_nl nladdr     = { 0 };
@@ -274,8 +274,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 
     if (status < 0) {
         HIP_PERROR("Cannot talk to rtnetlink");
-        err = -1;
-        goto out_err;
+        return -1;
     }
 
     iov.iov_base = buf;
@@ -295,14 +294,12 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
         }
         if (status == 0) {
             HIP_ERROR("EOF on netlink.\n");
-            err = -1;
-            goto out_err;
+            return -1;
         }
         if (msg.msg_namelen != sizeof(nladdr)) {
             HIP_ERROR("sender address length == %d\n",
                       msg.msg_namelen);
-            err = -1;
-            goto out_err;
+            return -1;
         }
         for (h = (struct nlmsghdr *) buf; status >= (int) sizeof(*h); ) {
             int len = h->nlmsg_len;
@@ -311,23 +308,17 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
             if (l < 0 || len > status) {
                 if (msg.msg_flags & MSG_TRUNC) {
                     HIP_ERROR("Truncated message\n");
-                    err = -1;
-                    goto out_err;
+                    return -1;
                 }
                 HIP_ERROR("Malformed message: len=%d\n", len);
-                err = -1;
-                goto out_err;
+                return -1;
             }
 
             if (nladdr.nl_pid != (unsigned) peer || h->nlmsg_seq != seq) {
                 HIP_DEBUG("%d %d %d %d\n", nladdr.nl_pid,
                           peer, h->nlmsg_seq, seq);
-                if (junk) {
-                    err = junk(h, len, arg);
-                    if (err < 0) {
-                        err = -1;
-                        goto out_err;
-                    }
+                if (junk && junk(h, len, arg) < 0) {
+                    return -1;
                 }
                 /* Don't forget to skip that message. */
                 status -= NLMSG_ALIGN(len);
@@ -345,16 +336,15 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                         if (answer) {
                             memcpy(answer, h, h->nlmsg_len);
                         }
-                        goto out_err;
+                        return 0;
                     }
                     HIP_PERROR("NETLINK answers");
                 }
-                err = -1;
-                goto out_err;
+                return -1;
             }
             if (answer) {
                 memcpy(answer, h, h->nlmsg_len);
-                goto out_err;
+                return 0;
             }
 
             HIP_ERROR("Unexpected netlink reply!\n");
@@ -368,14 +358,11 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
         }
         if (status) {
             HIP_ERROR("Remnant of size %d\n", status);
-            err = -1;
-            goto out_err;
+            return -1;
         }
     }
 
-out_err:
-
-    return err;
+    return 0;
 }
 
 /**
