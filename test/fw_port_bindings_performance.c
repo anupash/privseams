@@ -38,12 +38,12 @@
 
 static double time_clock(const unsigned int iterations)
 {
-    clock_t      start, end, tmp;
+    clock_t      start, end;
     unsigned int i;
 
     start = clock();
     for (i = 0; i < iterations; i += 1) {
-        tmp = clock();
+        end = clock();
     }
     end = clock();
 
