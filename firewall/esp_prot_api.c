@@ -633,15 +633,13 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet,
                                const uint16_t esp_length,
                                struct hip_sa_entry *entry)
 {
-    int           err         = 0;
-    hash_function hash_func   = NULL;
-    int           hash_length = 0;
+    int           err       = 0;
+    hash_function hash_func = NULL;
 
     // check whether cumulative authentication is active
     if (entry->esp_prot_transform == ESP_PROT_TFM_CUMULATIVE ||
         entry->esp_prot_transform == ESP_PROT_TFM_PARA_CUMUL) {
-        hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
-        hash_func   = esp_prot_get_hash_function(entry->esp_prot_transform);
+        hash_func = esp_prot_get_hash_function(entry->esp_prot_transform);
 
         HIP_DEBUG("adding IPsec packet with SEQ %u to ring buffer at position %u...\n",
                   entry->sequence - 1, entry->next_free);
@@ -650,12 +648,8 @@ int esp_prot_cache_packet_hash(unsigned char *esp_packet,
         hash_func(esp_packet, esp_length,
                   entry->hash_buffer[entry->next_free].packet_hash);
         entry->hash_buffer[entry->next_free].seq = entry->sequence - 1;
-
-        HIP_HEXDUMP("added packet hash: ",
-                    entry->hash_buffer[entry->next_free].packet_hash,
-                    hash_length);
-
-        entry->next_free = (entry->next_free + 1) % ring_buffer_size;
+        entry->next_free                         = (entry->next_free + 1) %
+                                                   ring_buffer_size;
     }
 
     return err;

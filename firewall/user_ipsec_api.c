@@ -72,7 +72,7 @@
                              + MAX_ESP_PADDING \
                              + sizeof(struct hip_esp_tail) \
                              + EVP_MAX_MD_SIZE) \
-                             + MAX_HASH_LENGTH
+    + MAX_HASH_LENGTH
 
 
 /* this is the ESP packet we are about to build */
@@ -237,20 +237,12 @@ int hip_fw_userspace_ipsec_output(const struct hip_fw_context *ctx)
     uint16_t                esp_packet_len = 0;
     int                     out_ip_version = 0;
     int                     err            = 0;
-    const struct ip6_hdr   *ip6_hdr        = NULL;
 
     /* we should only get HIT addresses here
      * LSI have been handled by LSI module before and converted to HITs */
     HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
 
     HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
-
-    ip6_hdr = (struct ip6_hdr *) ctx->ipq_packet->payload;
-
-    HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
-    HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ntohs(ip6_hdr->ip6_plen));
-    HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
-    HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
 
     HIP_DEBUG_HIT("src_hit", &ctx->src);
     HIP_DEBUG_HIT("dst_hit", &ctx->dst);
@@ -363,7 +355,6 @@ int hip_fw_userspace_ipsec_input(const struct hip_fw_context *ctx)
     struct timeval       now;
     uint16_t             decrypted_packet_len = 0;
     uint32_t             spi                  = 0;
-    uint32_t             seq_no               = 0;
     int                  err                  = 0;
 
     gettimeofday(&now, NULL);
@@ -372,7 +363,6 @@ int hip_fw_userspace_ipsec_input(const struct hip_fw_context *ctx)
      * UDP encapsulation is handled in firewall already */
     esp_hdr = ctx->transport_hdr.esp;
     spi     = ntohl(esp_hdr->esp_spi);
-    seq_no  = ntohl(esp_hdr->esp_seq);
 
     // lookup corresponding SA entry by dst_addr and SPI
     HIP_IFEL(!(entry = hip_sa_entry_find_inbound(&ctx->dst, spi)), -1,

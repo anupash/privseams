@@ -209,7 +209,6 @@ int handle_sa_delete_request(const struct hip_common *msg)
     uint32_t                     spi       = 0;
     const struct in6_addr       *peer_addr = NULL;
     const struct in6_addr       *dst_addr  = NULL;
-    int                          family    = 0, src_port = 0, dst_port = 0;
     int                          err       = 0;
 
     /* get all attributes from the message */
@@ -225,18 +224,6 @@ int handle_sa_delete_request(const struct hip_common *msg)
     param    = hip_get_next_param(msg, param);
     dst_addr = hip_get_param_contents_direct(param);
     HIP_DEBUG_IN6ADDR("dst address: ", dst_addr);
-
-    param  = hip_get_param(msg, HIP_PARAM_INT);
-    family = *((const int *) hip_get_param_contents_direct(param));
-    HIP_DEBUG("family: %i\n", family);
-
-    param    = hip_get_next_param(msg, param);
-    src_port = *((const int *) hip_get_param_contents_direct(param));
-    HIP_DEBUG("src_port: %i\n", src_port);
-
-    param    = hip_get_next_param(msg, param);
-    dst_port = *((const int *) hip_get_param_contents_direct(param));
-    HIP_DEBUG("dst_port: %i\n", dst_port);
 
     /* work-around due to broken sa_delete in hipd */
     /** @todo remove when fixed */

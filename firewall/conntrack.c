@@ -1261,9 +1261,7 @@ static int handle_update(const struct hip_common *common,
 {
     const struct hip_seq      *seq             = NULL;
     const struct hip_esp_info *esp_info        = NULL;
-    const struct hip_ack      *ack             = NULL;
     const struct hip_locator  *locator         = NULL;
-    const struct hip_spi      *spi             = NULL;
     struct tuple              *other_dir_tuple = NULL;
     const struct in6_addr     *ip6_src         = &ctx->src;
     int                        err             = 1;
@@ -1271,9 +1269,7 @@ static int handle_update(const struct hip_common *common,
     /* get params from UPDATE message */
     seq      = hip_get_param(common, HIP_PARAM_SEQ);
     esp_info = hip_get_param(common, HIP_PARAM_ESP_INFO);
-    ack      = hip_get_param(common, HIP_PARAM_ACK);
     locator  = hip_get_param(common, HIP_PARAM_LOCATOR);
-    spi      = hip_get_param(common, HIP_PARAM_ESP_INFO);
 
     /* connection changed to a path going through this firewall */
     if (tuple == NULL) {
@@ -1761,7 +1757,6 @@ out_err:
 int filter_esp_state(const struct hip_fw_context *ctx)
 {
     const struct in6_addr *dst_addr  = NULL;
-    const struct in6_addr *src_addr  = NULL;
     struct hip_esp        *esp       = NULL;
     struct tuple          *tuple     = NULL;
     struct esp_tuple      *esp_tuple = NULL;
@@ -1770,7 +1765,6 @@ int filter_esp_state(const struct hip_fw_context *ctx)
     uint32_t spi;
 
     dst_addr = &ctx->dst;
-    src_addr = &ctx->src;
     esp      = ctx->transport_hdr.esp;
 
     // needed to de-multiplex ESP traffic
