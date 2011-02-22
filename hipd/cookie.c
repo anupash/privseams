@@ -208,7 +208,8 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
     /* Find the proper R1 table and copy the R1 message from the table */
     HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-    HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO, -1)),
+    HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID,
+                                                          our_hit, HIP_ANY_ALGO, -1)),
              NULL, "Unknown HIT\n");
 
     hip_r1table = hid->r1;
@@ -266,8 +267,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
 
         cookie_k = hip_get_cookie_difficulty();
 
-        r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey,
-                                      cookie_k);
+        r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey, cookie_k);
         if (!r1table[i].r1) {
             HIP_ERROR("Unable to precreate R1s\n");
             return 0;
@@ -355,8 +355,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
                  "Solution's I did not match the sent I\n");
         HIP_IFEL(memcmp(solution->opaque, result->Copaque,
                         HIP_PUZZLE_OPAQUE_LEN), -1,
-                 "Solution's opaque data does not match sent opaque " \
-                 "data.\n");
+                 "Solution's opaque data does not match sent opaque data.\n");
         HIP_DEBUG("Received solution to an old puzzle\n");
     } else {
         HIP_HEXDUMP("solution", solution, sizeof(*solution));
@@ -365,15 +364,13 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
                  "Solution's I did not match the sent I\n");
         HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
                         HIP_PUZZLE_OPAQUE_LEN), -1,
-                 "Solution's opaque data does not match the opaque " \
-                 "data sent\n");
+                 "Solution's opaque data does not match the opaque data sent\n");
     }
 
     HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), -1,
              "Puzzle incorrectly solved.\n");
 
 out_err:
-
     return err;
 }
 
