@@ -564,7 +564,7 @@ out_err:
  * @param private_key  a pointer to the local host private key
  * @param host_id_pub  a pointer to the public host id of the local host
  * @param cookie_k     the difficulty value for the puzzle
- * @return             zero on success, or negative error value on error.
+ * @return             a pointer to the payload on success, NULL on error.
  */
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                                  int (*sign)(void *key, struct hip_common *m),
