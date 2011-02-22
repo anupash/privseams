@@ -1259,7 +1259,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 
 out_err:
     free(res);
-    return 0;
+    return err;
 }
 
 /**
