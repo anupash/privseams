@@ -119,18 +119,17 @@ static struct hip_hadb_user_info_state *hip_firewall_cache_hadb_match(const void
                                                                       const void *peer,
                                                                       enum fw_cache_query_type type)
 {
-    int                                    err           = 0;
-    struct       hip_hadb_user_info_state *ha_ret        = NULL;
+    struct       hip_hadb_user_info_state *err           = NULL;
     const struct hip_hadb_user_info_state *ha_curr       = NULL;
     struct       hip_common               *msg           = NULL;
     const struct hip_tlv_common           *current_param = NULL;
 
-    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+    HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), NULL, "malloc failed\n");
     hip_msg_init(msg);
     HIP_IFEL(hip_build_user_hdr(msg, HIP_MSG_GET_HA_INFO, 0),
-             -1, "Building of daemon header failed\n");
+             NULL, "Building of daemon header failed\n");
     HIP_IFEL(hip_send_recv_daemon_info(msg, 0, hip_fw_sock),
-             -1, "send recv daemon info\n");
+             NULL, "send recv daemon info\n");
 
     while ((current_param = hip_get_next_param(msg, current_param))) {
         ha_curr = hip_get_param_contents_direct(current_param);
@@ -141,14 +140,14 @@ static struct hip_hadb_user_info_state *hip_firewall_cache_hadb_match(const void
              (!local || !ipv4_addr_cmp(local, &ha_curr->lsi_our)))  ||
             (type == FW_CACHE_IP  && !ipv6_addr_cmp(peer, &ha_curr->ip_peer)  &&
              (!local || !ipv6_addr_cmp(local, &ha_curr->ip_our)))) {
-            ha_ret = firewall_add_new_entry(ha_curr);
+            err = firewall_add_new_entry(ha_curr);
             break;
         }
     }
 
 out_err:
     free(msg);
-    return ha_ret;
+    return err;
 }
 
 /**
