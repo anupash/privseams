@@ -208,27 +208,6 @@ static int hip_netdev_match(const void *ptr1, const void *ptr2)
 }
 
 /**
- * count the cached addresses from the given network interface
- *
- * @param ifindex the network interface index
- * @return the number of addresses on the network interface
- */
-static int hip_count_if_addresses(int ifindex)
-{
-    struct netdev_address *na;
-    LHASH_NODE            *n, *t;
-    int                    i = 0, c;
-
-    list_for_each_safe(n, t, addresses, c) {
-        na = list_entry(n);
-        if (na->if_index == ifindex) {
-            i++;
-        }
-    }
-    return i;
-}
-
-/**
  * Filters addresses that are allowed for this host.
  *
  * @param addr a pointer to a socket address structure.
@@ -1128,7 +1107,7 @@ int hip_netdev_trigger_bex_msg(const struct hip_common *msg)
 static void hip_update_address_list(struct sockaddr *addr, int is_add,
                                     int interface_index)
 {
-    int addr_exists = 0, interface_count = 0;
+    int addr_exists = 0;
 
     addr_exists = hip_exists_address_in_list(addr, interface_index);
     HIP_DEBUG("is_add = %d, exists = %d\n", is_add, addr_exists);
@@ -1144,9 +1123,6 @@ static void hip_update_address_list(struct sockaddr *addr, int is_add,
     } else {
         hip_delete_address_from_list(addr, interface_index);
     }
-
-    interface_count = hip_count_if_addresses(interface_index);
-    HIP_DEBUG("%d addr(s) in ifindex %d\n", interface_count, interface_index);
 }
 
 /**
@@ -1382,14 +1358,13 @@ int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst)
         struct netdev_address *na;
         const struct in6_addr *in6;
         LHASH_NODE            *n, *t;
-        int                    c, match = 0;
+        int                    c;
 
         list_for_each_safe(n, t, addresses, c) {
             na  = list_entry(n);
             in6 = hip_cast_sa_addr((struct sockaddr *) &na->addr);
             if (ipv6_addr_is_teredo(in6)) {
                 ipv6_addr_copy(src, in6);
-                match = 1;
             }
         }
         HIP_IFEL(err, -1, "No src addr found for Teredo\n");

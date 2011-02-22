@@ -622,14 +622,13 @@ out_err:
  */
 int hip_receive_udp_control_packet(struct hip_packet_context *ctx)
 {
-    int                    err   = 0, type;
-    struct hip_hadb_state *entry = NULL;
-
-    type  = hip_get_msg_type(ctx->input_msg);
-    entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
-                                 &ctx->input_msg->hitr);
+    int err = 0;
 
 #ifndef CONFIG_HIP_RVS
+    int                    type  = hip_get_msg_type(ctx->input_msg);
+    struct hip_hadb_state *entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
+                                                        &ctx->input_msg->hitr);
+
     /* The ip of RVS is taken to be ip of the peer while using RVS server
      * to relay R1. Hence have removed this part for RVS --Abi */
     if (entry && (type == HIP_R1 || type == HIP_R2)) {
@@ -1078,12 +1077,11 @@ int hip_handle_r2(RVS const uint8_t packet_type,
                   const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int                        err      = 0, retransmission = 0;
+    int                        err      = 0;
     const struct hip_locator  *locator  = NULL;
     const struct hip_esp_info *esp_info = NULL;
 
     if (ha_state == HIP_STATE_ESTABLISHED) {
-        retransmission = 1;
         HIP_DEBUG("Retransmission\n");
     } else {
         HIP_DEBUG("Not a retransmission\n");
@@ -1648,13 +1646,12 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
                   UNUSED const uint32_t ha_state,
                   struct hip_packet_context *ctx)
 {
-    int                             err      = 0, retransmission = 0;
-    const struct hip_locator       *locator  = NULL;
-    int                             if_index = 0;
+    int                             err      = 0, if_index = 0;
     struct sockaddr_storage         ss_addr  = { 0 };
     struct sockaddr                *addr     = NULL;
     const struct hip_esp_info      *esp_info = NULL;
     const struct hip_esp_transform *esp_tfm  = NULL;
+    const struct hip_locator       *locator  = NULL;
 
     /* Get the interface index of the network device which has our
      * local IP address. */
@@ -1712,12 +1709,6 @@ int hip_handle_i2(UNUSED const uint8_t packet_type,
                                     ctx->msg_ports.src_port),
              -1,
              "Error while adding the preferred peer address\n");
-
-    if ((ctx->hadb_entry->state == HIP_STATE_R2_SENT) ||
-        (ctx->hadb_entry->state == HIP_STATE_ESTABLISHED)) {
-        retransmission = 1;
-    }
-    HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 
     HIP_IFEL(!(esp_tfm = hip_get_param(ctx->input_msg,
                                        HIP_PARAM_ESP_TRANSFORM)),
@@ -1822,7 +1813,6 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
     const struct hip_notification *notification  = NULL;
     struct in6_addr                responder_ip, responder_hit;
     hip_tlv                        param_type = 0, response;
-    hip_tlv_len                    param_len  = 0;
     uint16_t                       msgtype    = 0;
     in_port_t                      port       = 0;
 
@@ -1835,9 +1825,7 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
             HIP_INFO("Found NOTIFICATION parameter in NOTIFY " \
                      "packet.\n");
             notification = (const struct hip_notification *) current_param;
-
-            param_len = hip_get_param_contents_len(current_param);
-            msgtype   = ntohs(notification->msgtype);
+            msgtype      = ntohs(notification->msgtype);
 
             switch (msgtype) {
             case HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE:
@@ -1944,12 +1932,6 @@ int hip_handle_notify(UNUSED const uint8_t packet_type,
                          "type.\n");
                 break;
             }
-            HIP_HEXDUMP("NOTIFICATION parameter notification data:",
-                        notification->data,
-                        param_len
-                        - sizeof(notification->reserved)
-                        - sizeof(notification->msgtype)
-                        );
             msgtype = 0;
         } else {
             HIP_INFO("Found unsupported parameter in NOTIFY packet.\n");

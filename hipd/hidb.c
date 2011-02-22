@@ -80,7 +80,6 @@ static const char *lsi_addresses[] = { "1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4
  */
 static int hip_get_dsa_public_key(const struct hip_host_id_priv *const hi, struct hip_host_id *const ret)
 {
-    int key_len;
     /* T could easily have been an int, since the compiler will
      * probably add 3 alignment bytes here anyway. */
     uint8_t  T;
@@ -95,7 +94,6 @@ static int hip_get_dsa_public_key(const struct hip_host_id_priv *const hi, struc
     if (T != 8) {
         HIP_DEBUG("T-value in DSA-key not 8 (0x%x)!\n", T);
     }
-    key_len = 64 + (T * 8);
 
     /* Copy the header and key_rr header */
     memcpy(ret, hi, sizeof(struct hip_host_id) - sizeof(ret->key) - sizeof(ret->hostname));
@@ -285,7 +283,7 @@ static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
 {
     LHASH_NODE               *curr, *iter;
     struct hip_host_id_entry *tmp;
-    int                       count, err;
+    int                       count;
 
     HIP_WRITE_LOCK_DB(db);
 
@@ -295,7 +293,7 @@ static void hip_uninit_hostid_db(HIP_HASHTABLE *db)
         tmp = list_entry(curr);
 
         memcpy(&lhi, &tmp->lhi, sizeof(lhi));
-        err = hip_del_host_id(db, &lhi);
+        hip_del_host_id(db, &lhi);
     }
 
     hip_ht_uninit(db);

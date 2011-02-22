@@ -97,11 +97,7 @@ static int hip_set_cookie_difficulty(int k)
  */
 int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    int              err     = 0, diff = 0;
-    const hip_hit_t *dst_hit = NULL;
-
-    /* obtain the hit */
-    dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+    int err = 0, diff = 0;
 
     diff = hip_get_cookie_difficulty();
 

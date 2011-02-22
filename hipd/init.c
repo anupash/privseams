@@ -1031,7 +1031,7 @@ static void hip_close(int signum)
  */
 int hipd_init(const uint64_t flags)
 {
-    int                 err     = 0, certerr = 0, hitdberr = 0, i, j;
+    int                 err     = 0, certerr = 0, i, j;
     int                 killold = ((flags & HIPD_START_KILL_OLD) > 0);
     unsigned int        mtu_val = HIP_HIT_DEV_MTU;
     char                str[64];
@@ -1181,8 +1181,6 @@ int hipd_init(const uint64_t flags)
     if (certerr < 0) {
         HIP_DEBUG("Initializing cert configuration file returned error\n");
     }
-
-    hitdberr = 0;
 
     /* Service initialization. */
     hip_init_services();

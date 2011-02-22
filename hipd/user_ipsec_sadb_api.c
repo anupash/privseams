@@ -112,7 +112,6 @@ uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
                                     struct hip_hadb_state *entry)
 {
     struct hip_common *msg = NULL;
-    in_port_t          sport, dport;
     int                err = 0;
 
     HIP_ASSERT(spi != 0);
@@ -120,12 +119,8 @@ uint32_t hip_userspace_ipsec_add_sa(const struct in6_addr *saddr,
     HIP_IFEL(entry->disable_sas == 1, 0, "SA creation disabled\n");
 
     if (direction == HIP_SPI_DIRECTION_OUT) {
-        sport = entry->local_udp_port;
-        dport = entry->peer_udp_port;
         entry->outbound_sa_count++;
     } else {
-        sport = entry->peer_udp_port;
-        dport = entry->local_udp_port;
         entry->inbound_sa_count++;
     }
 

@@ -136,9 +136,8 @@ static char *make_env(const char *const name, const char *const value)
  */
 static void sig_chld(UNUSED int signo)
 {
-    pid_t child_pid;
-    int   child_status;   // child exit code
-    child_pid = waitpid(0, &child_status, WNOHANG);
+    int child_status;     // child exit code
+    waitpid(0, &child_status, WNOHANG);
 }
 
 /**
