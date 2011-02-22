@@ -572,11 +572,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                                  const struct hip_host_id *host_id_pub,
                                  int cookie_k)
 {
-    struct hip_common *msg = NULL;
+    struct hip_common *err = NULL;
     struct hip_srv     service_list[HIP_TOTAL_EXISTING_SERVICES];
     uint8_t           *dh_data1      = NULL, *dh_data2 = NULL;
     char               order[]       = "000";
-    int                err           = 0, dh_size1 = 0, dh_size2 = 0;
+    int                dh_size1      = 0, dh_size2 = 0;
     int                mask          = 0, i = 0, written1 = 0, written2 = 0;
     unsigned int       service_count = 0;
 
@@ -614,81 +614,81 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         }
     }
 
-    HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
+    HIP_IFEL(!(err = hip_msg_alloc()), NULL, "Out of memory\n");
 
     /* Allocate memory for writing the first Diffie-Hellman shared secret */
     HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0,
-             -1, "Could not get dh_size1\n");
+             NULL, "Could not get dh_size1\n");
     HIP_IFEL(!(dh_data1 = calloc(1, dh_size1)),
-             -1, "Failed to alloc memory for dh_data1\n");
+             NULL, "Failed to alloc memory for dh_data1\n");
 
     /* Allocate memory for writing the second Diffie-Hellman shared secret */
     HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0,
-             -1, "Could not get dh_size2\n");
+             NULL, "Could not get dh_size2\n");
     HIP_IFEL(!(dh_data2 = calloc(1, dh_size2)),
-             -1, "Failed to alloc memory for dh_data2\n");
+             NULL, "Failed to alloc memory for dh_data2\n");
 
     /* Ready to begin building of the R1 packet */
 
     /** @todo TH: hip_build_network_hdr has to be replaced with an
      *  appropriate function pointer */
     HIP_DEBUG_HIT("src_hit used to build r1 network header", src_hit);
-    hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
+    hip_build_network_hdr(err, HIP_R1, mask, src_hit, NULL);
 
     /********** R1_COUNTER (OPTIONAL) *********/
 
     /********** PUZZLE ************/
-    HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
+    HIP_IFEL(hip_build_param_puzzle(err, cookie_k,
                                     42 /* 2^(42-32) sec lifetime */, 0, 0),
-             -1, "Cookies were burned. Bummer!\n");
+             NULL, "Cookies were burned. Bummer!\n");
 
     /* Parameter Diffie-Hellman */
     HIP_IFEL((written1 = hip_insert_dh(dh_data1, dh_size1,
                                        HIP_FIRST_DH_GROUP_ID)) < 0,
-             -1, "Could not extract the first DH public key\n");
+             NULL, "Could not extract the first DH public key\n");
 
     if (number_dh_keys == TWO) {
         HIP_IFEL((written2 = hip_insert_dh(dh_data2, dh_size2,
                                            HIP_SECOND_DH_GROUP_ID)) < 0,
-                 -1, "Could not extract the second DH public key\n");
+                 NULL, "Could not extract the second DH public key\n");
 
-        HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
+        HIP_IFEL(hip_build_param_diffie_hellman_contents(err,
                                                          HIP_FIRST_DH_GROUP_ID, dh_data1, written1,
                                                          HIP_SECOND_DH_GROUP_ID, dh_data2, written2),
-                 -1, "Building of DH failed.\n");
+                 NULL, "Building of DH failed.\n");
     } else {
-        HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
+        HIP_IFEL(hip_build_param_diffie_hellman_contents(err,
                                                          HIP_FIRST_DH_GROUP_ID, dh_data1, written1,
                                                          HIP_MAX_DH_GROUP_ID, dh_data2, 0),
-                 -1, "Building of DH failed.\n");
+                 NULL, "Building of DH failed.\n");
     }
 
     /* Parameter HIP transform. */
-    HIP_IFEL(hip_build_param_hip_transform(msg,
+    HIP_IFEL(hip_build_param_hip_transform(err,
                                            transform_hip_suite,
                                            sizeof(transform_hip_suite) /
                                            sizeof(hip_transform_suite)),
-             -1, "Building of HIP transform failed\n");
+             NULL, "Building of HIP transform failed\n");
 
     /* Parameter HOST_ID */
-    HIP_IFEL(hip_build_param_host_id(msg, host_id_pub),
-             -1, "Building of host id failed\n");
+    HIP_IFEL(hip_build_param_host_id(err, host_id_pub),
+             NULL, "Building of host id failed\n");
 
     /* Parameter REG_INFO */
     hip_get_active_services(service_list, &service_count);
     HIP_DEBUG("Found %d active service(s) \n", service_count);
-    hip_build_param_reg_info(msg, service_list, service_count);
+    hip_build_param_reg_info(err, service_list, service_count);
 
     /* Parameter ESP-ENC transform. */
-    HIP_IFEL(hip_build_param_esp_transform(msg,
+    HIP_IFEL(hip_build_param_esp_transform(err,
                                            transform_esp_suite,
                                            sizeof(transform_esp_suite) /
                                            sizeof(hip_transform_suite)),
-             -1, "Building of ESP transform failed\n");
+             NULL, "Building of ESP transform failed\n");
 
     /********** ESP-PROT transform (OPTIONAL) **********/
 
-    HIP_IFEL(esp_prot_r1_add_transforms(msg), -1,
+    HIP_IFEL(esp_prot_r1_add_transforms(err), NULL,
              "failed to add optional esp transform parameter\n");
 
     /********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
@@ -697,7 +697,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
     /* Parameter Signature 2 */
 
-    HIP_IFEL(sign(private_key, msg), -1, "Signing of R1 failed.\n");
+    HIP_IFEL(sign(private_key, err), NULL, "Signing of R1 failed.\n");
 
     /* Parameter ECHO_REQUEST (OPTIONAL) */
 
@@ -706,7 +706,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         struct hip_puzzle *pz;
         uint64_t           random_i;
 
-        HIP_IFEL(!(pz = hip_get_param_readwrite(msg, HIP_PARAM_PUZZLE)), -1,
+        HIP_IFEL(!(pz = hip_get_param_readwrite(err, HIP_PARAM_PUZZLE)), NULL,
                  "Internal error\n");
 
         /* hardcode kludge */
@@ -723,13 +723,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     free(dh_data1);
     free(dh_data2);
 
-    return msg;
+    return err;
 
 out_err:
-    free(msg);
+    free(err);
     free(dh_data1);
     free(dh_data2);
-    return NULL;
+    return err;
 }
 
 /**
