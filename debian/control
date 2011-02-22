@@ -14,7 +14,7 @@ Description: HIP for Linux full software bundle
 
 Package: hipl-daemon
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, openssl, iptables, libnet-ip-perl, libnet-dns-perl
+Depends: ${shlibs:Depends}, ${misc:Depends}, openssl, libnet-ip-perl, libnet-dns-perl
 Suggests: hipl-doc
 Replaces: hipl-minimal, hipl-tools
 Description: HIP for Linux IPsec key management and mobility daemon
