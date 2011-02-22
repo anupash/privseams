@@ -774,9 +774,7 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *section_name,
                                                   CONF * conf)
 {
     long err = 0;
-    int  i;
     STACK_OF(CONF_VALUE) * sec = NULL;
-    CONF_VALUE *item;
 
     /* XXTODO conf is opened and reopened here why -Samu */
     conf = NCONF_new(NCONF_default());
@@ -787,9 +785,6 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(const char *section_name,
              "Section %s was not in the configuration (%s)\n",
              section_name, HIP_CERT_CONF_PATH);
 
-    for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
-        item = sk_CONF_VALUE_value(sec, i);
-    }
 out_err:
     if (err == -1) {
         return NULL;

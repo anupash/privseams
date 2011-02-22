@@ -113,7 +113,6 @@ int main(int argc, char *argv[])
     int             err               = 0, days = 0;
     FILE           *f                 = NULL;
     char            certificate[1024] = "";
-    size_t          ignored;
 
     HIP_IFEL(argc != 3, -1, "Wrong number of arguments.\n");
 
@@ -134,7 +133,7 @@ int main(int argc, char *argv[])
                                 certificate, sizeof(certificate)) != 0,
              -1, "Could not create the certificate.\n");
 
-    ignored = fwrite(certificate, strlen(certificate), 1, f);
+    fwrite(certificate, strlen(certificate), 1, f);
 
 out_err:
     if (err == -1) {

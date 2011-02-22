@@ -806,7 +806,7 @@ int hip_iproute_modify(struct rtnl_handle *rth, int cmd, int flags, int family,
     } req1 = { { 0 } };
     struct inet_prefix dst;
     struct idxmap     *idxmap[16] = { 0 };
-    int                dst_ok     = 0, err = 0;
+    int                err        = 0;
     int                idx, i;
 
     req1.n.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtmsg));
@@ -828,7 +828,6 @@ int hip_iproute_modify(struct rtnl_handle *rth, int cmd, int flags, int family,
     }
     HIP_IFEL(get_prefix_1(&dst, ip, req1.r.rtm_family), -1, "prefix\n");
     req1.r.rtm_dst_len = dst.bitlen;
-    dst_ok             = 1;
     if (dst.bytelen) {
         addattr_l(&req1.n, sizeof(req1), RTA_DST, &dst.data,
                   dst.bytelen);
@@ -1208,12 +1207,10 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
     } req = { { 0 } };
 
     struct inet_prefix lcl;
-    int                local_len = 0, err = 0, size_dev;
-    struct in_addr     ip4       = { 0 };
-    int                ip_is_v4  = 0;
+    struct in_addr     ip4      = { 0 };
+    int                ip_is_v4 = 0, err = 0, size_dev, aux;
     char               label[4];
     char              *res = NULL;
-    int                aux;
 
     if (convert_ipv6_slash_to_ipv4_slash(ip, &ip4)) {
         family   = AF_INET;
@@ -1240,8 +1237,6 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         addattr_l(&req.n, sizeof(req), IFA_LABEL, res,
                   strlen(dev) + strlen(label) + 1);
     }
-
-    local_len = lcl.bytelen;
 
     if (req.ifa.ifa_prefixlen == 0) {
         req.ifa.ifa_prefixlen = lcl.bitlen;

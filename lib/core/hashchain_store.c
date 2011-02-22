@@ -371,8 +371,6 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
     unsigned           create_hchains = 0;
     struct hash_chain *tmp_hchain     = NULL;
     struct hash_tree  *tmp_htree      = NULL;
-    unsigned char     *root           = NULL;
-    int                root_length    = 0;
     int                err            = 0;
     unsigned           i, j;
 
@@ -407,9 +405,7 @@ static int hcstore_fill_item(struct hchain_store *hcstore,
         // create one hchain at a time
         for (i = 0; i < create_hchains; i++) {
             // hierarchy level 0 does not use any link trees
-            link_tree   = NULL;
-            root        = NULL;
-            root_length = 0;
+            link_tree = NULL;
 
             if (hierarchy_level > 0) {
                 // right now the trees only support hashes of 20 bytes
