@@ -119,19 +119,23 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
  */
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    int              err     = 0;
     const int       *newVal  = NULL;
     const hip_hit_t *dst_hit = NULL;
 
-    HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
-             -1, "No HIT set\n");
-    HIP_IFEL(!(newVal = hip_get_param_contents(msg, HIP_PARAM_INT)),
-             -1, "No difficulty set\n");
+    if (!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT))) {
+        HIP_ERROR("No HIT set\n");
+        return -1;
+    }
+    if (!(newVal = hip_get_param_contents(msg, HIP_PARAM_INT))) {
+        HIP_ERROR("No difficulty set\n");
+        return -1;
+    }
+    if (hip_set_cookie_difficulty(*newVal), -1) {
+        HIP_ERROR("Setting difficulty failed\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_set_cookie_difficulty(*newVal), -1,
-             "Setting difficulty failed\n");
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -235,9 +239,10 @@ struct hip_r1entry *hip_init_r1(void)
 {
     struct hip_r1entry *err;
 
-    HIP_IFE(!(err = calloc(HIP_R1TABLESIZE, sizeof(struct hip_r1entry))), NULL);
+    if (!(err = calloc(HIP_R1TABLESIZE, sizeof(struct hip_r1entry)))) {
+        return NULL;
+    }
 
-out_err:
     return err;
 }
 
@@ -265,16 +270,13 @@ int hip_precreate_r1(struct hip_r1entry *r1table, const struct in6_addr *hit,
                                       cookie_k);
         if (!r1table[i].r1) {
             HIP_ERROR("Unable to precreate R1s\n");
-            goto err_out;
+            return 0;
         }
 
         HIP_DEBUG("Packet %d created\n", i);
     }
 
     return 1;
-
-err_out:
-    return 0;
 }
 
 /**
@@ -385,11 +387,12 @@ out_err:
 static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
                                            UNUSED void *opaque)
 {
-    int err = 0;
     int (*signature_func)(void *key, struct hip_common *m);
 
     hip_uninit_r1(entry->r1);
-    HIP_IFE(!(entry->r1 = hip_init_r1()), -ENOMEM);
+    if (!(entry->r1 = hip_init_r1())) {
+        return -ENOMEM;
+    }
     switch (hip_get_host_id_algo(entry->host_id)) {
     case HIP_HI_RSA:
         signature_func = hip_rsa_sign;
@@ -398,15 +401,16 @@ static int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry,
         signature_func = hip_dsa_sign;
         break;
     default:
-        HIP_OUT_ERR(-1, "Unkown algorithm");
+        HIP_ERROR("Unkown algorithm");
+        return -1;
     }
 
-    HIP_IFE(!hip_precreate_r1(entry->r1, &entry->lhi.hit,
-                              signature_func,
-                              entry->private_key, entry->host_id), -1);
+    if (!hip_precreate_r1(entry->r1, &entry->lhi.hit, signature_func,
+                          entry->private_key, entry->host_id)) {
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
