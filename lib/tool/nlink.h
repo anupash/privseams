@@ -53,8 +53,8 @@ struct rtnl_handle {
     uint32_t           dump;
 };
 
-/* Workaround: in6_pktinfo does not compile on Fedora and Ubuntu anymore.
- * This works also with CentOS */
+/* FIXME: in6_pktinfo is a GNU extension. Copy it into HIPL as inet6_pktinfo
+ * because it is small and simple although it is preferable to avoid it. */
 struct inet6_pktinfo {
     struct in6_addr ipi6_addr;
     unsigned int    ipi6_ifindex;
