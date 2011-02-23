@@ -35,7 +35,7 @@
 #include <sys/select.h>
 #include "lib/core/protodefs.h"
 
-void hip_init_sockets(void);
+void hip_register_sockets(void);
 
 int hip_register_socket(int socketfd,
                         int (*func_ptr)(struct hip_packet_context *ctx),

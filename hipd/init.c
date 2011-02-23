@@ -1223,7 +1223,7 @@ int hipd_init(const uint64_t flags)
                  "Module initialization failed.\n");
     }
 
-    hip_init_sockets();
+    hip_register_sockets();
 
 out_err:
     return err;

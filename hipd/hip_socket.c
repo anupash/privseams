@@ -189,7 +189,10 @@ static int hip_handle_nl_route_sock(UNUSED struct hip_packet_context *ctx)
     return 0;
 }
 
-void hip_init_sockets(void)
+/**
+ * Register the hip sockets with their associated handler functions.
+ */
+void hip_register_sockets(void)
 {
     hip_register_socket(hip_raw_sock_input_v6,  &hip_handle_raw_input_v6,  10000);
     hip_register_socket(hip_raw_sock_input_v4,  &hip_handle_raw_input_v4,  10100);
