@@ -989,6 +989,8 @@ void hip_exit(void)
     hip_perf_destroy(perf_set);
 #endif
 
+    hip_unregister_sockets();
+
     hip_dh_uninit();
 
     lmod_uninit_disabled_modules();

@@ -37,6 +37,8 @@
 
 void hip_register_sockets(void);
 
+void hip_unregister_sockets(void);
+
 int hip_register_socket(int socketfd,
                         int (*func_ptr)(struct hip_packet_context *ctx),
                         const uint16_t priority);

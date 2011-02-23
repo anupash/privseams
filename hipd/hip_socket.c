@@ -203,7 +203,19 @@ void hip_register_sockets(void)
 }
 
 /**
+ * Free memory used for storage of the socket list.
+ */
+void hip_unregister_sockets(void)
+{
+    hip_ll_uninit(hip_sockets, free);
+    free(hip_sockets);
+}
+
+/**
  * Register a socket with a handler function and priority.
+ *
+ * @note Free allocated memory from all registered sockets with
+ *       hip_unregister_sockets().
  *
  * @param socketfd The socket descriptor.
  * @param func_ptr The associated handler function.
