@@ -115,8 +115,8 @@ static int hip_send_icmp(int sockfd, struct hip_hadb_state *entry)
     struct cmsghdr       *chdr = NULL;
     struct inet6_pktinfo *pkti = NULL;
     struct timeval        tval;
-    u_char                cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))] = { 0 };
-    u_char               *icmp_pkt                                          = NULL;
+    unsigned char         cmsgbuf[CMSG_SPACE(sizeof(struct inet6_pktinfo))] = { 0 };
+    unsigned char        *icmp_pkt                                          = NULL;
 
     HIP_IFEL(!entry, 0, "No entry\n");
 
