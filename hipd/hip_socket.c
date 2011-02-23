@@ -202,6 +202,15 @@ void hip_register_sockets(void)
     hip_register_socket(hip_nl_route.fd,        &hip_handle_nl_route_sock, 10500);
 }
 
+/**
+ * Register a socket with a handler function and priority.
+ *
+ * @param socketfd The socket descriptor.
+ * @param func_ptr The associated handler function.
+ * @param priority Execution priority for the handler function.
+ * @return Success =  0
+ *         Error   = -1
+ */
 int hip_register_socket(int socketfd,
                         int (*func_ptr)(struct hip_packet_context *ctx),
                         const uint16_t priority)
