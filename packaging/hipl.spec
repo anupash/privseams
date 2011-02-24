@@ -22,7 +22,7 @@ extensions also support mobility, multihoming and NAT traversal.
 HIP for Linux (HIPL) is an implementation of HIP that consists of
 the key and mobility management daemon plus other related tools.
 %prep
-%setup
+%setup -q
 
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
