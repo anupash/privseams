@@ -134,7 +134,7 @@ AC_SUBST(AM_CPPFLAGS, "-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500")
 case "$(uname -n)" in
     "centos55")
         AC_SUBST(AM_CPPFLAGS, "$AM_CPPFLAGS -U__STRICT_ANSI__")
-        AC_SUBST(docdir, $(eval echo ${datadir}/doc))
+        AC_SUBST(docdir, $(eval echo ${datadir}/doc/hipl))
     ;;
 esac
 
