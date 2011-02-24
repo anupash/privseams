@@ -164,6 +164,7 @@ fi
 rm -rf %{buildroot}
 
 %files daemon
+%defattr(755,root,root,-)
 %{_sbindir}/hipd
 %{_sbindir}/hipconf
 %{_sbindir}/pisacert
@@ -171,19 +172,21 @@ rm -rf %{buildroot}
 %config /etc/rc.d/init.d/hipd
 
 %files dnsproxy
+%defattr(755,root,root,755)
 %{_sbindir}/hipdnsproxy
 %{_sbindir}/hipdnskeyparse
 %{python_sitelib}/hipdnsproxy
 %{python_sitelib}/hipdnskeyparse
 %{python_sitelib}/DNS
-%defattr(755,root,root)
 %config /etc/rc.d/init.d/hipdnsproxy
 
 %files firewall
+%defattr(755,root,root,-)
 %{_sbindir}/hipfw
 %config /etc/rc.d/init.d/hipfw
 
 %files doc
+%defattr(644,root,root,-)
 %doc doc/HOWTO.txt doc/HOWTO.html
 %doc doc/base-exchange-relay.png doc/base-exchange-rvs.png
 %doc doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
