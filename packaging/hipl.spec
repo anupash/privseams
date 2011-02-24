@@ -80,10 +80,6 @@ Group: System Environment/Kernel
 %install
 rm -rf %{buildroot}
 
-#added by CentOS
-install -d %{buildroot}%{prefix}/share/pixmaps
-#end CentOS add
-
 make install-strip DESTDIR=%{buildroot}
 install -d %{buildroot}/etc/rc.d/init.d
 install -m 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
