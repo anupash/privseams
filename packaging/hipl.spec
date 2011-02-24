@@ -21,6 +21,7 @@ extensions also support mobility, multihoming and NAT traversal.
 
 HIP for Linux (HIPL) is an implementation of HIP that consists of
 the key and mobility management daemon plus other related tools.
+
 %prep
 %setup -q
 
@@ -152,15 +153,15 @@ fi
 rm -rf %{buildroot}
 
 %files daemon
-%{prefix}/sbin/hipd
-%{prefix}/sbin/hipconf
-%{prefix}/sbin/pisacert
-%{prefix}/sbin/nsupdate.pl
+%{_sbindir}/hipd
+%{_sbindir}/hipconf
+%{_sbindir}/pisacert
+%{_sbindir}/nsupdate.pl
 %config /etc/rc.d/init.d/hipd
 
 %files dnsproxy
-%{prefix}/sbin/hipdnsproxy
-%{prefix}/sbin/hipdnskeyparse
+%{_sbindir}/hipdnsproxy
+%{_sbindir}/hipdnskeyparse
 %{python_sitelib}/hipdnsproxy
 %{python_sitelib}/hipdnskeyparse
 %{python_sitelib}/DNS
@@ -168,7 +169,7 @@ rm -rf %{buildroot}
 %config /etc/rc.d/init.d/hipdnsproxy
 
 %files firewall
-%{prefix}/sbin/hipfw
+%{_sbindir}/hipfw
 %config /etc/rc.d/init.d/hipfw
 
 %files doc
