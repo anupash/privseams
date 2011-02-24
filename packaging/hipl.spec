@@ -31,15 +31,8 @@ autoreconf --install
 %configure --prefix=/usr --sysconfdir=/etc
 make %{?_smp_mflags}
 
-# Currently we are not going to install all includes and test software.
-# As a consequence, we need to tell rpmbuild that we don't want to package
-# everything and need the following two lines. In fact, the build fails
-# without them). However, you might want to uncomment the lines temporarily
-# before building the final release just to check that you have not discarded
-# any essential files.
-#
-#%define _unpackaged_files_terminate_build 0
-#%define _missing_doc_files_terminate_build 0
+%define _unpackaged_files_terminate_build 0
+%define _missing_doc_files_terminate_build 0
 %define python_sitelib %(%{__python} -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
 
 
