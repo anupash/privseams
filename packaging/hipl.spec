@@ -7,7 +7,7 @@ Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.
 Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2 and MIT/Expat
-Group: System Environment/Kernel
+Group: System Environment/Daemons
 BuildRequires: gcc autoconf automake libtool xmlto openssl-devel iptables-devel rpm-build
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
@@ -49,7 +49,7 @@ make -j 32
 
 %package all
 Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
-Group: System Environment/Kernel
+Group: System Environment/Daemons
 Requires: hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
 %description all
 
@@ -57,24 +57,24 @@ Requires: hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
 Requires: openssl perl-Net-IP perl-Net-DNS
 Obsoletes: minimal tools
 Summary: HIP for Linux IPsec key management and mobility daemon
-Group: System Environment/Kernel
+Group: System Environment/Daemons
 %description daemon
 
 %package firewall
 Requires: openssl iptables
 Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control, Local Scope Identifier support, userspace BEET-mode IPsec (for kernels below < 2.6.27) and system-based opportunistic mode for HIP.
-Group: System Environment/Kernel
+Group: System Environment/Daemons
 %description firewall
 
 %package doc
 Summary: documentation for HIP for Linux
-Group: System Environment/Kernel
+Group: Documentation
 %description doc
 
 %package dnsproxy
 Requires: python
 Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS or hosts files
-Group: System Environment/Kernel
+Group: System Environment/Daemons
 %description dnsproxy
 
 %install
