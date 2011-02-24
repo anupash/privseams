@@ -8,7 +8,7 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2 and MIT
 Group: System Environment/Daemons
-BuildRequires: gcc autoconf automake libtool xmlto openssl-devel iptables-devel rpm-build
+BuildRequires: gcc autoconf automake libtool xmlto openssl-devel iptables-devel rpm-build python >= 2.4.3
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
