@@ -125,10 +125,6 @@ elif test -r /etc/redhat-release; then
     PACKAGING_CMD=build_rpm
     DISTRO_RELEASE=$(lsb_release -r | cut -f2)
     PKG_SERVER_DIR=$REPO_BASE/fedora/base/$DISTRO_RELEASE/$ARCH
-    case $(lsb_release -d) in
-        "Description:	CentOS release 5.5 (Final)")
-            export CPPFLAGS=-U__STRICT_ANSI__;;
-    esac
 else
     die "unknown distribution"
 fi
