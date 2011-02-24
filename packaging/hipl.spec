@@ -95,6 +95,17 @@ install -pm 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -pm 755 packaging/fedora-init.d/hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -pm 755 packaging/fedora-init.d/dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
 
+
+# Remove files that are not being packaged on purpose from buildroot, to shut
+# up some RPM warnings about unpackaged files. The doc files do get packaged,
+# but still cause warnings for some reason, this works around that fact.
+rm -r %{buildroot}%{_datadir}/doc/hipl
+rm    %{buildroot}%{_bindir}/auth_performance
+rm    %{buildroot}%{_bindir}/certteststub
+rm    %{buildroot}%{_bindir}/hc_performance
+rm    %{buildroot}%{_libdir}/libhipcore.a
+rm    %{buildroot}%{_libdir}/libhipcore.la
+
 %post daemon
 if [ "$1" = "2" ]; then
         # upgrade
