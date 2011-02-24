@@ -90,9 +90,9 @@ rm -rf %{buildroot}
 
 make install-strip DESTDIR=%{buildroot}
 install -d %{buildroot}/etc/rc.d/init.d
-install -m 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
-install -m 755 packaging/fedora-init.d/hipd %{buildroot}/etc/rc.d/init.d/hipd
-install -m 755 packaging/fedora-init.d/dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
+install -pm 755 packaging/fedora-init.d/hipfw %{buildroot}/etc/rc.d/init.d/hipfw
+install -pm 755 packaging/fedora-init.d/hipd %{buildroot}/etc/rc.d/init.d/hipd
+install -pm 755 packaging/fedora-init.d/dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
 
 %post daemon
 if [ "$1" = "2" ]; then
