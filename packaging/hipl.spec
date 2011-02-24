@@ -1,12 +1,12 @@
 Name: hipl
-Summary: HIP IPsec key management and mobility daemon.
+Summary: HIP IPsec key management and mobility daemon
 # Note: Version and Release are generated and prefixed automatically to this file
 #       by packaging/create-package.sh
 URL: http://infrahip.hiit.fi/
-Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
+Source: http://infrahip.hiit.fi/hipl/release/%{version}/noarch/hipl-%{version}.tar.gz
 Packager: miika@iki.fi
 Vendor: InfraHIP
-License: GPLv2 and MIT/Expat
+License: GPLv2 and MIT
 Group: System Environment/Daemons
 BuildRequires: gcc autoconf automake libtool xmlto openssl-devel iptables-devel rpm-build
 ExclusiveOS: linux
