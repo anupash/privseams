@@ -48,10 +48,11 @@ make -j 32
 # list of files with the name of subpackage
 
 %package all
-Summary: Full HIPL software bundle. This virtual package is suitable e.g. for client machines.
+Summary: Full HIPL software bundle
 Group: System Environment/Daemons
 Requires: hipl-firewall hipl-daemon hipl-doc hipl-dnsproxy
 %description all
+Full HIPL software bundle. This virtual package is suitable e.g. for clients.
 
 %package daemon
 Requires: openssl perl-Net-IP perl-Net-DNS
@@ -59,23 +60,30 @@ Obsoletes: minimal tools
 Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Daemons
 %description daemon
+HIP for Linux IPsec key management and mobility daemon.
 
 %package firewall
 Requires: openssl iptables
-Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control, Local Scope Identifier support, userspace BEET-mode IPsec (for kernels below < 2.6.27) and system-based opportunistic mode for HIP.
+Summary: HIPL multi-purpose firewall daemon
 Group: System Environment/Daemons
 %description firewall
+HIPL multi-purpose firewall daemon. Public-key/HIT-based access control,
+Local Scope Identifier support, userspace BEET-mode IPsec (for kernels
+below < 2.6.27) and system-based opportunistic mode for HIP.
 
 %package doc
-Summary: documentation for HIP for Linux
+Summary: Documentation for HIP for Linux
 Group: Documentation
 %description doc
+Documentation for HIP for Linux.
 
 %package dnsproxy
 Requires: python
-Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS or hosts files
+Summary: Name look-up proxy for HIP for Linux
 Group: System Environment/Daemons
 %description dnsproxy
+Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns
+HIT or LSIs when corresponding entries are found in DNS or hosts files.
 
 %install
 rm -rf %{buildroot}
