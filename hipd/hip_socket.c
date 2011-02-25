@@ -227,27 +227,26 @@ int hip_register_socket(int socketfd,
                         int (*func_ptr)(struct hip_packet_context *ctx),
                         const uint16_t priority)
 {
+    int              err        = 0;
     struct socketfd *new_socket = NULL;
 
-    if (!(new_socket = malloc(sizeof(struct socketfd)))) {
-        HIP_ERROR("Error on allocating memory for a socket entry.\n");
-        return -1;
-    }
+    HIP_IFEL(!(new_socket = malloc(sizeof(struct socketfd))),
+             -1,
+             "Error on allocating memory for a socket entry.\n");
 
     new_socket->priority = priority;
     new_socket->fd       = socketfd;
     new_socket->func_ptr = func_ptr;
 
-    hip_sockets = lmod_register_function(hip_sockets,
-                                         new_socket,
-                                         priority);
-    if (!hip_sockets) {
-        HIP_ERROR("Error on registering a maintenance function.\n");
-        free(new_socket);
-        return -1;
-    }
+    HIP_IFEL(!(hip_sockets = lmod_register_function(hip_sockets, new_socket, priority)),
+             -1,
+             "Error on registering a maintenance function.\n");
 
     return 0;
+
+out_err:
+    free(new_socket);
+    return err;
 }
 
 int hip_get_highest_descriptor(void)
