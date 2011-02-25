@@ -607,9 +607,10 @@ out_err:
     return err;
 }
 
-/*
+/**
+ * Get the identifier of the parameter type.
  *
- * @return parameter name or UNDEFINED if parameter type was not found.
+ * @return Parameter name or UNDEFINED if parameter type was not found.
  */
 const char *lmod_get_parameter_identifier(const uint16_t parameter_type)
 {

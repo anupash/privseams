@@ -1085,7 +1085,7 @@ void hip_calc_param_len(struct hip_tlv_common *tlv_common,
 }
 
 /**
- * Return a sting for a given parameter type number for diagnostics.
+ * Return a string for a given parameter type number for diagnostics.
  * The returned string should be just the same as its type constant name.
  *
  * @note If you added a HIP_MSG_NEWMODE in lib/core/icomm.h, you also need to
