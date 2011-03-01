@@ -704,8 +704,6 @@ int hip_check_r1(RVS const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_R1);
 #endif
 
-    HIP_DEBUG("Verifying R1\n");
-
     HIP_IFEL(!ctx->hadb_entry, -1,
              "No entry in host association database when receiving R1." \
              "Dropping.\n");
@@ -1200,8 +1198,6 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
     HIP_DEBUG("Start PERF_I1\n");
     hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
-    HIP_INFO_HIT("I1 Source HIT:", &(ctx->input_msg)->hits);
-    HIP_INFO_IN6ADDR("I1 Source IP :", &ctx->src_addr);
 
     HIP_ASSERT(!ipv6_addr_any(&(ctx->input_msg)->hitr));
 
@@ -1386,11 +1382,6 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
              0,
              "Received illegal controls in I2: 0x%x. Dropping\n",
              ntohs(ctx->input_msg->control));
-
-    HIP_DEBUG("Received I2 in state %s\n", hip_state_str(ha_state));
-    HIP_INFO("Received I2 from:\n");
-    HIP_INFO_HIT("Source HIT:", &ctx->input_msg->hits);
-    HIP_INFO_IN6ADDR("Source IP: ", &ctx->src_addr);
 
     /* Next, we initialize the new HIP association. Peer HIT is the
      * source HIT of the received I2 packet. We can have many Host
