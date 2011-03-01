@@ -711,8 +711,10 @@ int hip_check_r1(RVS const uint8_t packet_type,
              "Dropping.\n");
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    /* Replace the opportunistic entry with one using the peer HIT
-     * before further operations */
+    /* Internally, we use HITs derived from the dst IP of the I1 for the
+     * creation of an hadb entry when triggering an opportunistic I1.
+     * Check for such a HIT now and possibly handle the opportunistic
+     * handshake. */
     if (hit_is_opportunistic_hit(&ctx->hadb_entry->hit_peer)) {
         hip_handle_opp_r1(ctx);
     }
