@@ -1013,7 +1013,6 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
     HIP_DEBUG("Start PERF_R2\n");
     hip_perf_start_benchmark(perf_set, PERF_R2);
 #endif
-    HIP_DEBUG("Received R2 in state %s\n", hip_state_str(ha_state));
 
     if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
         HIP_DEBUG_HIT("Dst HIT does not belong to this host",
