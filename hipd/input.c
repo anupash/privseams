@@ -718,9 +718,17 @@ int hip_check_r1(RVS const uint8_t packet_type,
     }
 #endif
 
-    HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), mask), 0,
-             "Received illegal controls in R1: 0x%x Dropping\n",
-             ntohs(ctx->input_msg->control));
+    if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+        HIP_DEBUG_HIT("Dst HIT does not belong to this host",
+                      &ctx->input_msg->hitr);
+        return -1;
+    }
+
+    if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
+        HIP_DEBUG("Received illegal controls: 0x%x.\n",
+                  ntohs(ctx->input_msg->control));
+        return -1;
+    }
 
     /* An implicit and insecure REA. If sender's address is different than
      * the one that was mapped, then we will overwrite the mapping with the
@@ -1007,13 +1015,17 @@ int hip_check_r2(UNUSED const uint8_t packet_type,
 #endif
     HIP_DEBUG("Received R2 in state %s\n", hip_state_str(ha_state));
 
-    HIP_IFEL(ipv6_addr_any(&(ctx->input_msg)->hitr), -1,
-             "Received NULL receiver HIT in R2. Dropping\n");
+    if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+        HIP_DEBUG_HIT("Dst HIT does not belong to this host",
+                      &ctx->input_msg->hitr);
+        return -1;
+    }
 
-    HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), mask),
-             -1,
-             "Received illegal controls in R2: 0x%x. Dropping\n",
-             ntohs(ctx->input_msg->control));
+    if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
+        HIP_DEBUG("Received illegal controls: 0x%x.\n",
+                  ntohs(ctx->input_msg->control));
+        return -1;
+    }
 
     HIP_IFEL(!ctx->hadb_entry, -1,
              "No entry in host association database when receiving R2." \
@@ -1195,12 +1207,17 @@ int hip_check_i1(UNUSED const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_I1);
 #endif
 
-    HIP_ASSERT(!ipv6_addr_any(&(ctx->input_msg)->hitr));
+    /* I1 may be opportunistic with zero dst HIT */
+    if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr) &&
+        !ipv6_addr_any(&(ctx->input_msg)->hitr)) {
+        HIP_DEBUG_HIT("Dst HIT does not belong to this host",
+                      &ctx->input_msg->hitr);
+        return -1;
+    }
 
     if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
-        HIP_ERROR("Received illegal controls in I1: 0x%x. Dropping\n",
+        HIP_DEBUG("Received illegal controls: 0x%x.\n",
                   ntohs(ctx->input_msg->control));
-        ctx->error = 1;
         return -1;
     }
 
@@ -1365,15 +1382,17 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     }
 #endif
 
-    HIP_IFEL(!hip_hidb_hit_is_our(&ctx->input_msg->hitr),
-             -EPROTO,
-             "Responder's HIT in the received I2 packet does not correspond " \
-             " to one of our own HITs. Dropping\n");
+    if (!hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
+        HIP_DEBUG_HIT("Dst HIT does not belong to this host",
+                      &ctx->input_msg->hitr);
+        return -1;
+    }
 
-    HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), mask),
-             0,
-             "Received illegal controls in I2: 0x%x. Dropping\n",
-             ntohs(ctx->input_msg->control));
+    if (!hip_controls_sane(ntohs(ctx->input_msg->control), mask)) {
+        HIP_DEBUG("Received illegal controls: 0x%x.\n",
+                  ntohs(ctx->input_msg->control));
+        return -1;
+    }
 
     /* Next, we initialize the new HIP association. Peer HIT is the
      * source HIT of the received I2 packet. We can have many Host
