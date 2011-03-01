@@ -506,19 +506,11 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     struct in6_addr ipv6_any_addr = IN6ADDR_ANY_INIT;
     uint32_t        type, state;
 
-    /* Debug printing of received packet information. All received HIP
-     * control packets are first passed to this function. Therefore
-     * printing packet data here works for all packets. To avoid excessive
-     * debug printing do not print this information inside the individual
-     * receive or handle functions. */
-    HIP_DEBUG_HIT("HIT Sender  ", &ctx->input_msg->hits);
-    HIP_DEBUG_HIT("HIT Receiver", &ctx->input_msg->hitr);
-    HIP_DEBUG("source port: %u, destination port: %u\n",
-              ctx->msg_ports.src_port,
-              ctx->msg_ports.dst_port);
+    HIP_IFEL(hip_check_network_msg(ctx->input_msg),
+             -1,
+             "Checking control message failed.\n");
 
-    HIP_DUMP_MSG(ctx->input_msg);
-
+    /* check for invalid loopback message */
     if (hip_hidb_hit_is_our(&ctx->input_msg->hits) &&
         (IN6_ARE_ADDR_EQUAL(&ctx->input_msg->hitr,
                             &ctx->input_msg->hits) ||
@@ -531,13 +523,18 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         goto out_err;
     }
 
-    HIP_IFEL(hip_check_network_msg(ctx->input_msg),
-             -1,
-             "Checking control message failed.\n");
+    /* Debug printing of received packet information. All received HIP
+     * control packets are first passed to this function. Therefore
+     * printing packet data here works for all packets. To avoid excessive
+     * debug printing do not print this information inside the individual
+     * receive or handle functions. */
+    HIP_INFO_IN6ADDR("Src IP", &ctx->src_addr);
+    HIP_INFO_IN6ADDR("Dst IP", &ctx->src_addr);
+    HIP_DEBUG("Src port: %u\n", ctx->msg_ports.src_port);
+    HIP_DEBUG("Dst port: %u\n", ctx->msg_ports.dst_port);
+    HIP_DUMP_MSG(ctx->input_msg);
 
     type = hip_get_msg_type(ctx->input_msg);
-
-    /** @todo Check packet csum.*/
 
     ctx->hadb_entry = hip_hadb_find_byhits(&ctx->input_msg->hits,
                                            &ctx->input_msg->hitr);
