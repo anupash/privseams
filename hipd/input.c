@@ -564,6 +564,8 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
         state = HIP_STATE_NONE;
     }
 
+    HIP_DEBUG("HIP association state %s\n", hip_state_str(state));
+
 #ifdef CONFIG_HIP_RVS
     /* check if it a relaying msg */
     if (hip_relay_handle_relay_to(type, state, ctx)) {
@@ -574,7 +576,6 @@ int hip_receive_control_packet(struct hip_packet_context *ctx)
     }
 #endif
 
-    HIP_DEBUG("packet type: %u, state: %u\n", type, state);
     hip_run_handle_functions(type, state, ctx);
 
 #ifdef CONFIG_HIP_PERFORMANCE
