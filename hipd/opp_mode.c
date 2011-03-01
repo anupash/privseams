@@ -34,6 +34,8 @@
  * @author Rene Hummen
  */
 
+#include <netinet/in.h>
+
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
 #include "lib/core/ife.h"

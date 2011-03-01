@@ -36,6 +36,8 @@
 #ifndef HIP_HIPD_OPP_MODE_H
 #define HIP_HIPD_OPP_MODE_H
 
+#include <netinet/in.h>
+
 #include "lib/core/protodefs.h"
 
 
