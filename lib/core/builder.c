@@ -1276,7 +1276,8 @@ void hip_dump_msg(const struct hip_common *msg)
      * length of padding. */
     size_t total_len = 0, pad_len = 0;
     HIP_DEBUG("--------------- MSG START ------------------\n");
-
+    HIP_DEBUG_HIT("HIT Sender  ", &msg->hits);
+    HIP_DEBUG_HIT("HIT Receiver", &msg->hitr);
     HIP_DEBUG("Msg type :      %s (%d)\n",
               hip_message_type_name(hip_get_msg_type(msg)),
               hip_get_msg_type(msg));
