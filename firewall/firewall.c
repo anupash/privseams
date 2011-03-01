@@ -1281,9 +1281,6 @@ static int firewall_init(void)
     fw_handlers[NF_IP_FORWARD][HIP_PACKET] = hip_fw_handle_hip_forward;
     fw_handlers[NF_IP_FORWARD][ESP_PACKET] = hip_fw_handle_esp_output;
 
-    HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
-    system_print("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
-
     /* Flush in case previous hipfw process crashed */
     hip_fw_flush_iptables();
 
