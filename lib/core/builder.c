@@ -1399,7 +1399,7 @@ int hip_check_network_msg(const struct hip_common *msg)
     hip_tlv                      current_param_type = 0, prev_param_type = 0;
     int                          err                = 0;
 
-    /* Checksum of the message header is verified in input.c */
+    /** @todo Check packet csum.*/
 
     if (!hip_check_network_msg_type(msg)) {
         err = -EINVAL;
