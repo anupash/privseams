@@ -718,10 +718,6 @@ int hip_check_r1(RVS const uint8_t packet_type,
     }
 #endif
 
-    if (ipv6_addr_any(&ctx->input_msg->hitr)) {
-        HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
-    }
-
     HIP_IFEL(!hip_controls_sane(ntohs(ctx->input_msg->control), mask), 0,
              "Received illegal controls in R1: 0x%x Dropping\n",
              ntohs(ctx->input_msg->control));
