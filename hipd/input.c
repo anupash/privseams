@@ -1342,10 +1342,6 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
     hip_perf_start_benchmark(perf_set, PERF_I2);
 #endif
 
-    HIP_IFEL(ipv6_addr_any(&ctx->input_msg->hitr),
-             0,
-             "Received NULL receiver HIT in I2. Dropping\n");
-
 #ifdef CONFIG_HIP_RVS
     if (hip_relay_get_status() != HIP_RELAY_OFF &&
         !hip_hidb_hit_is_our(&ctx->input_msg->hitr)) {
