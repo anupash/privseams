@@ -1107,7 +1107,7 @@ int hipd_init(const uint64_t flags)
     HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
     HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", mtu_val);
     sprintf(mtu, "%u", mtu_val);
-    strcpy(str, "ifconfig dummy0 mtu ");
+    strcpy(str, "ifconfig " HIP_HIT_DEV " mtu ");
     strcat(str, mtu);
     /* MTU is set using system call rather than in do_chflags to avoid
      * chicken and egg problems in hipd start up. */
