@@ -30,20 +30,15 @@
 
 #include "list.h"
 
-/* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
- * These backwards compatibility hacks can be removed when all platforms
- * support OpenSSL 1.0.0 by default. */
-#ifdef LHASH_OF
-#define HIPL_OPENSSL_100
-#endif /* LHASH_OF */
-
 #define STATIC_IMPLEMENT_LHASH_COMP_FN      static IMPLEMENT_LHASH_COMP_FN
 #define STATIC_IMPLEMENT_LHASH_DOALL_FN     static IMPLEMENT_LHASH_DOALL_FN
 #define STATIC_IMPLEMENT_LHASH_DOALL_ARG_FN static IMPLEMENT_LHASH_DOALL_ARG_FN
 #define STATIC_IMPLEMENT_LHASH_HASH_FN      static IMPLEMENT_LHASH_HASH_FN
 
-
-#ifdef HIPL_OPENSSL_100
+/* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
+ * These backwards compatibility hacks can be removed when all platforms
+ * support OpenSSL 1.0.0 by default. */
+#ifdef LHASH_OF
 
 #define LHASH100_CAST _LHASH
 
