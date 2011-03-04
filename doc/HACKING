@@ -1187,11 +1187,6 @@ Red Hat
 Note well: Currently the status of the packaging scripts is in release
 phase.
 
-Two separate packages are planned to be provided by HIPL: one for user
-space software and the other for kernel and kernel modules. Currently only
-scripts for building user space packages exist.
-
-
 There are scripts in the 'packaging' directory that can be used to create
 binary packages. The aim for these packages is for easier testing of HIPL
 software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
@@ -1201,22 +1196,20 @@ To create the RPM package, type:
 
 autoreconf --install && ./configure && make rpm
 
-This will create a source tar.gz (in the same
-directory) which will be used when building the RPM file. After the
-script has run successfully, follow the instructions given by the
-script. That is, login as root and copy the source package (e.g.
-hipl-userspace-1.0-1.tgz) to directory /usr/src/redhat/SOURCES. Then
-issue the command "rpmbuild -ba
-<hiplroot>/packaging/hiplx.spec".  When everything
-is finished successfully, there will be a binary RPM package
-"/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package
-can then be installed with rpm -i.
+This will create a source tar.gz (in the same directory) which will be used
+when building the RPM file. After the script has run successfully, follow the
+instructions given by the script. That is, login as root and copy the source
+package (e.g. hipl--1.0.6.tar.gz) to the directory /usr/src/redhat/SOURCES.
+Then issue the command "rpmbuild -ba <hiplroot>/packaging/hipl.spec". When
+everything is finished successfully, there will be a binary RPM package
+"/usr/src/rpm/RPMS/i386/hipl-1.0.6.i386.rpm". The package can then be
+installed with rpm -i.
 
-Install hipl package by command yum:
+Install HIPL package via yum:
 
 * sudo yum install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
 
-For more info about rpm packaging, please see:
+For more info about RPM packaging, please see:
 
 http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
 http://fedoranews.org/tchung/htmldoc/htmldoc.spec
@@ -1226,11 +1219,11 @@ http://fedoraproject.org/wiki/Packaging/Guidelines
 Debian
 ------
 
-DEB package is created similarly:
+Debian packages are created in a similar fashion:
 
 autoreconf --install && ./configure && make deb
 
-Correspondingly, the binary packages are written to /usr/src/debian
+The binary packages are placed one level above the build directory.
 
 
 
@@ -1299,9 +1292,9 @@ Packages are copied to hipl.hiit.fi:
 
 The release is gutsy, intrepid etc and the arch is i386, amd64 or armel.
 
-Currently the scripting just "forgets" older versions of the
-software. I am not sure if we should do some rsyncing to preserve
-older versions. Also, source packages are not yet supported. -miika
+TODO: Currently the scripting just "forgets" older versions of the software.
+It's not clear if some rsyncing should be done to preserve older versions.
+Also, source packages are not yet supported.
 
 
 Ubuntu Client-side Configuration
@@ -1316,7 +1309,7 @@ deb http://packages.infrahip.net/ubuntu/ intrepid main
 - update and install hipl packages
 
 $ apt-get update
-$ apt-get install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
+$ apt-get install hipl-daemon hipl-firewall hipl-dnsproxy hipl-doc
 
 
 
@@ -1370,7 +1363,7 @@ http://www.fedoraforum.org/forum/archive/index.php/t-28290.html
 In short:
 * download and extract kernel sources
 * cd linux-2.6.xx
-* apply hip patches
+* apply HIP patches
 * cp /boot/config-something .config
 * make rpm # or bin-rpm??
 
@@ -1381,12 +1374,12 @@ To install, do this:
 NEW-KERNEL-PKG IS NECESSARY AS THE RPM DOES NOT INCLUDE INITRD AND
 THE KERNEL IS NOT INCLUDED IN GRUB CONFIGURATION.
 
-That will create and install vanilla rpm. However, if you want to use
+That will create and install a vanilla RPM. However, if you want to use
 the Fedora/Red Hat patches to improve e.g. hardware support, use the
 instructions below.
 
-To create rpm for Fedora patched kernel, you need to download the
-kernel from somewhere from here:
+To create an RPM for a Fedora-patched kernel, you need to download the
+kernel from:
 
   http://download.fedora.redhat.com/pub/fedora/linux/core/updates/
 
