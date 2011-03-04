@@ -28,14 +28,7 @@
 
 #include <openssl/lhash.h>
 
-/* OpenSSL 1.0.0 introduced backwards incompatible changes to the lhash.
- * These backwards compatibility hacks can be removed when all platforms
- * support OpenSSL 1.0.0 by default. */
-#ifdef LHASH_OF
-#define LHASH_CAST (_LHASH *)
-#else
-#define LHASH_CAST
-#endif /* LHASH_OF */
+#include "hashtable.h"
 
 /**
  * list_entry - get the struct for this entry
