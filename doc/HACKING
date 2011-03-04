@@ -39,7 +39,7 @@ Setting up Bazaar
 -----------------
 
 Before you start working with Bazaar, you should provide some
-information about yourself, such that your work can properly be
+information about yourself, such that your work can be properly
 identified in the revision logs.
 
   bzr whoami "#FIRST_NAME# #LAST_NAME# <#EMAIL_ADDRESS#>"
@@ -108,8 +108,7 @@ that very moment:
 
   bzr diff
 
-If bzrtools are installed, you can also get a color version of bzr's
-diff:
+If bzrtools are installed, you can get colorized output:
 
   bzr cdiff
 
@@ -122,11 +121,12 @@ commit the changes:
   bzr commit
 
 NOTE: Please, don't use the -m "#COMMIT_COMMENT#" option. It is strongly
-encouraged to use an editor for your commit messages. Good log messages
-consisto of a one-line summary followed by an empty line and then a more
-detailed description of your changes. Your fellow developers will have much
-less trouble understanding your changes and will be able to employ the extra
-information for bug fixes in the future.
+encouraged to use an editor for your commit messages.
+
+Good log messages consist of a one-line summary followed by an empty line
+and then a more detailed description of your changes. Your fellow developers
+will have much less trouble understanding your changes and will be able to
+employ the extra information for bug fixes in the future.
 
 NOTE: To automatically close a bug in launchpad, use
 
@@ -214,18 +214,18 @@ your adviser and will not be forgotten.
 The compiler is your friend:
 ----------------------------
 
-The gcc compiler is a great tool that can save you hours of
-run-time debugging if you decide to listen to it. In this project
-we use a number of gcc warning options that will provide you
-detailed warning output in some cases in which the compiler
-suspects something is wrong. Since we use -Werror these warnings
-will be treated as errors, breaking compilation. Be sure to handle
-these warnings in a proper way because otherwise you may mask
-serious errors and will make them really hard to debug. Just doing
-a change to silence the compiler is not an option because the
-code will soon break and the code base will deteriorate. Instead
-you should try to understand the underlying problem that the
-compiler complains about (not the symptom). Let me make an example:
+The GCC compiler is a great tool that can save you hours of run-time debugging
+if you decide to listen to it. In HIPL we use a number of GCC warning options
+that will provide you with detailed warning output in cases where the compiler
+suspects something is wrong.
+
+Since HIPL has -Werror in CFLAGS these warnings will be treated as errors and
+halt compilation. Be sure to fix the underlying issues that caused a warning
+properly. If you just quickly paper over a warning you may mask serious errors
+and make them really hard to debug later on. Just doing a change to silence the
+compiler is not an option because the code will soon break and the code base
+deteriorate. Instead you should try to understand the underlying problem that
+the compiler complains about (not the symptom). For example:
 
   Cast align warnings tell you whenever two structs that are not
   compatible are assigned and casted. There are two things you
@@ -238,7 +238,7 @@ compiler complains about (not the symptom). Let me make an example:
   problem and rearrange the structs using unions and such. Although
   this takes some time you will have a proper solution to the
   problem and you will not have ugly surprises (e.g., hard to
-  track run time errors.)
+  track run-time errors.)
 
 So the main point of the above section is: Don't take the easy
 path that only treats the symptom. Cure the cause. This will save
@@ -267,7 +267,7 @@ helpers.
   to be changed. It can be applied to variables and function
   parameters. When writing a new function, take some time to
   consider which input parameters may be changed within this
-  functions and which shouldn't be changed. Add const wherever
+  function and which shouldn't be changed. Add const wherever
   you believe that a parameter should not be touched. Use const
   generously!  Const can help you to discover errors like unwanted
   modification of variables, function calls with mixed up function
@@ -284,7 +284,7 @@ helpers.
   wasn't tested for months and does something slightly wrong.
   Moreover, the keyword static tells other programmers: Stop! You
   are not supposed to use this function in another file. This
-  helps programmers to identify the functionality that is supposed
+  helps programmers identify the functionality that is supposed
   to be used within a module and the functionality that the module
   (C file) provides as interface.This distinction is essential
   if you try to maintain data integrity (cf. Section about Header
@@ -300,17 +300,19 @@ Header Files
 Since C headers are included from many other files, the contents
 of the *.h files must be selected carefully. Otherwise the global
 namespace of C is polluted with tons of globally visible declarations
-and definitions. These globally visible declarations and definitions
-are not bad in the first place but they make working with a C
-project, understanding the project, and maintaining the project
-a pain.
+and definitions. These globally visible declarations can clash with
+other declarations and thus make working with, understanding and
+maintaining a C project a pain.
 
 A header file serves a single purpose: it is an interface. It
-declares symbols for EVERY file that include the *.h file so that
-the compiler knows what's in the *.c file. Three things that a
-header file is NOT. A) An overview of the contents of the .c file
-and B) a good place to define stuff that's used in the .c file,
+declares symbols for EVERY file that includes the .h file so that
+the compiler knows what's in the .c file. Three things that a
+header file is NOT.
+
+A) An overview of the contents of the .c file and
+B) a good place to define stuff that's used in the .c file,
 C) a good place to make forward declarations for the C file.
+
 Hence, header files should ONLY contain things of the *.c file
 that are used by OTHER *.c files. Don't put stuff in the header
 file that is used only in the C file. Put that stuff in the C
@@ -403,7 +405,7 @@ proper problem boundaries. They are a pain to maintain, ... you
 got it: they are pure evil. Try to keep your functions simple and
 short. If you write a function with more than 30 lines: reconsider
 and try to split it up into sub-functions. If you write a function
-with more 50 lines tell your adviser about it and discuss its
+with more than 50 lines tell your adviser about it and discuss its
 necessity with him. As usual you will find functions with more
 than 50 lines in the code. The existence of these behemoth functions
 is, of course, no justification for introducing more long functions
@@ -452,7 +454,7 @@ On Magic Numbers
 
 Magic numbers are numbers that pop up in the code without context.
 Almost every number you find in code can be considered a magic
-number. Let me give an example.
+number. For example:
 
   unsigned int special_prize[52];
   unsigned int extra_winner;
@@ -505,9 +507,8 @@ NOTE: As a tool to help with good style, please use the stylecheck pre-commit
 hook found in tools/bazaar/plugins/stylecheck.py - this script contains its own
 documentation, including how to set it up. See also 'Style Checking'.
 
-This project uses the Kernighan & Ritchie (K&R) coding style in the
-one true brace style (1TBS) variant. Indentation width is four
-spaces.
+HIPL uses the Kernighan & Ritchie (K&R) coding style in the one true brace
+style (1TBS) variant. Indentation width is four spaces.
 
 K&R style was chosen because it is the most common style and the
 one used by the creators of C. Insisting on another style is thus
@@ -620,13 +621,12 @@ As a tool to help with good style, please use the stylecheck pre-commit
 hook found in tools/bazaar/plugins/stylecheck.py - this script contains its own
 documentation, including how to set it up.
 
-You are strongly recommended to use this hook based on the code beautification
-uncrustify because it gets things right almost all the time. This means that:
-1) At the time of this writing, only the syntactically confusing macros in the
-unit test code are not handled correctly by uncrustify. So you can and should
-throw all code at uncrustify (via the commit hook) to have it checked.
-2) uncrustify produces very good results and you can trust them. At the time of
-this writing, the only issue is with the alignment of consecutive variable
+You are strongly recommended to use this hook based on the code beautifier
+uncrustify because it gets things right almost all the time. So you can and
+should throw all code at uncrustify (via the commit hook) to have it checked.
+
+At the time of this writing, the only two problems are the syntactically
+confusing macros in the unit test code and the alignment of consecutive variable
 declarations and initializations (where uncrustify might accidentally align
 unrelated code or not align related code). Obviously, it never hurts to check
 the uncrustify output.
@@ -635,9 +635,9 @@ If the above style recommendations are unclear about a topic, you should trust
 the style decisions that uncrustify takes.
 
 The style rules used by uncrustify can be found in the .uncrustify*.cfg files in
-the top-level directory of a branch. If these rules need to be changed, please
-make sure that
-0) other developers are okay with the change in code style;
+the top-level directory of the HIPL sources. If these rules need to be changed,
+please make sure that
+0) other developers are OK with the change in code style;
 1) the modified rules have no undesirable side-effects across the code base
    (always test new rules with the whole code base);
 2) all .uncrustify*.cfg files are modified and the rules remain consistent.
@@ -649,9 +649,8 @@ be difficult to get code style right manually. Thus, a lot of commits and merge
 proposals can contain varying amounts of style violations of varying severity.
 Consequently, code reviewers are forced to look out for and comment on style
 violations and thus have less time to focus on a meaningful semantic review,
-spotting actual bugs or defects. And having to spend this time on these minor,
-non-functional issues creates friction both for the reviewers and the original
-authors.
+spotting actual bugs or defects. And spending time on minor, non-functional
+issues creates friction both for the reviewers and the original authors.
 
 Thus, checking and enforcing style automatically may not always produce the
 perfect result but it frees valuable developer time for more important tasks.
@@ -698,10 +697,10 @@ CODING CONVENTIONS
   Instead, join the conditional expressions (foo && bar && hello)
   or use goto (goto skip;). However, use goto only for error handling.
 
-- Declare variables right after beginning brace, not in the middle
-  of the code:
+- Declare variables before all statements, not in the middle of the code:
 
-  int foo {
+  int foo
+  {
       int i;  /* integers declared in the beginning of the function */
       char c;
 
@@ -758,11 +757,11 @@ surround this by c-mode-hook and lambda function:
 ECLIPSE
 -------
 
-Eclipse is an originally IDE developed for Java but there's also
+Eclipse is an IDE originally developed for Java but there's also
 CDT (C/C++ Development Tooling) extension that can be used while
 developing for HIPL. It has a nice IDE similar to Visual Studio
 but it also consumes resources more with compared to editors such
-as vi, emacs.
+as vi or emacs.
 
 First download Eclipse-CDT from the Eclipse site. It is more convenient
 than downloading from CDT because Eclipse site has it set up already.
@@ -772,7 +771,7 @@ Then follow these steps for creating a project:
 1. Get the files to your local drive from the repository with bzr.
 2. Select File/New/C Project
 3. Fill in the dialog appropriately. (For our purposes Empty Project
-project type and Linux GCC toolchains are OK)
+   project type and Linux GCC toolchains are OK)
 4. Right click the Project in the Project folder.
 5. Select New/Folder
 6. Press Advanced
@@ -945,13 +944,13 @@ have the same syntax for the debug statements independently of whether
 you are debugging in kernel- or userspace.
 
 Second, an "ad hoc" debug statement mechanism would make it more
-difficult to adopt HIPL into production environment because it would
-be awkward to comment all the superfluous debug messages. The
+difficult to adopt HIPL into a production environment because it would
+be awkward to comment-out all the superfluous debug messages. The
 superfluous debug messages can be suppressed by a single switch to
-configure (CONFIG_HIP_DEBUG) if an unified interface for debugging is
+configure (CONFIG_HIP_DEBUG) if a unified interface for debugging is
 used.
 
-Third reason for the existence of wrappers is that a uniform
+The third reason for the existence of wrappers is that a uniform
 importance level of debug messages can be enforced. For example, error
 messages are more important than info messages and info messages are
 more important than debug messages. One benefit of the importance of
@@ -961,21 +960,20 @@ included only in a development build. HIP_DEBUG belongs to the latter
 group and the other functions belong to the second group.
 
 The fourth reason for justifying the wrappers is that some programs
-cannot be run interactively on the screen in production
-environment. For example, the HIP daemon is preferred to be run as a
-background process in production environment by the end-users. The
-debug statements cannot be printed on the screen in such a case;
-instead, the statements have to passed via syslog. On the other hand,
-the developer wants to run the daemon interactively. The wrappers make
-it possible to please both of the groups easily.
+cannot be run interactively on the screen in a production environment.
+For example, the HIP daemon is preferred to be run as a background
+process in these cases. The debug statements cannot be printed on the
+screen then; instead, the statements have to passed via syslog. On the
+other hand, the developer wants to run the daemon interactively. The
+wrappers make it possible to please both groups easily.
 
 
 
 COMMENTING AND DOCUMENTING THE CODE
 ===================================
 
-Doxygen is now used for documenting HIPL. Manual for how to use doxygen
-documentation, is found from here:
+Doxygen is used for documenting HIPL. The manual for doxygen documentation
+is at:
 http://www.stack.nl/~dimitri/doxygen/manual.html
 
 To create doxygen documentation in HTML format, execute "make doxygen".
@@ -983,86 +981,87 @@ Doxygen will create documentation under doc/doxy/html.
 You can view the generated documentation with
 "firefox doc/doxy/html/index.html"
 
-The aforementioned Doxygen manual has detailed instructions on how to document
-the code. We go the basics through next.
+The aforementioned doxygen manual has detailed instructions on how to document
+the code. We present the basics next.
 
-First of all, Doxygen supports different commenting styles. We use the JavaDoc
+First of all, doxygen supports different commenting styles. We use the JavaDoc
 style in this project. In this style, every Doxygen comment starts and ends with
-constant character sequence. To start a commenting block use "\**", and to end a
+constant character sequence. To start a commenting block use "/**", and to end a
 commenting block use "*/". Example 1:
 
-/** The number of items in the list. */
-int count;
+  /** The number of items in the list. */
+  int count;
 
 In example 1 we have a variable named count to which we wish to add a Doxygen
 comment "The number of items in the list." As a general rule, a Doxygen comment
-is bound to the next item. So if in Example 1 we would have had "int count2"
-just after count, the Doxygen comment would have been bound only to "int count".
+is bound to the next item. So if in Example 1 we had "int count2" just after
+count, the doxygen comment would have been bound only to "int count".
 
-If you wish to add a Doxygen comment on the same line that the variable is,
-you'll have to to put an additional "<" marker in the comment block. Example 2:
+If you wish to add a Doxygen comment on the same line as the variable, put an
+additional "<" marker in the comment block. Example 2:
 
-int count; /**< The number of items in the list. */
+  int count; /**< The number of items in the list. */
 
 This has the same effect as Example 1. Remember that the comment with the "<"
 marker has to start from the same line as the variable. Using the special marker
 "<" one can comment also structure members. Example 3:
 
-/** A HIP FROM parameter. */
-struct hip_from {
-     hip_tlv      type;         /**< type code for the parameter */
-     hip_tlv_len  length;       /**< length of the parameter contents in bytes */
-     uint8_t      address[16];  /**< IPv6 address */
-} __attribute__ ((packed));
+  /** A HIP FROM parameter. */
+  struct hip_from {
+       hip_tlv      type;         /**< type code for the parameter */
+       hip_tlv_len  length;       /**< length of the parameter contents in bytes */
+       uint8_t      address[16];  /**< IPv6 address */
+  } __attribute__ ((packed));
 
-Here the whole structure gets Doxygen comment "A HIP FROM parameter", and the
-members get commented as illustrated. The structure members can also be
+Here the whole structure gets the doxygen comment "A HIP FROM parameter", and
+the members get commented as illustrated. The structure members can also be
 commented using the plain /** ... */ comment block by placing the comment block
-on the line before the member, but the "<" marker saves some space. This does it
-for variable commenting, lets move onto function commenting. Example 4.
+on the line before the member, but the "<" marker saves some space.
 
-/**
- * Sets a type for a host association. Sets the type for a host association
- * and validates the type number. If the type number is illegal, the @c entry
- * is left untouched.
- *
- * @param entry       a pointer to a host association entry.
- * @param type_number a type number to be set for @c entry.
- * @return            zero on success, non-zero else.
- * @note              the entry must not be NULL
- * @see               hip_clear_type()
- */
-int hip_set_type(struct hip_hadb_state *entry, int type_number);
+Next up: commenting function. Example 4.
 
-Notice how that whole commenting is just before the function block. The
-function commenting block contains three elements, the brief description, the
-description and the special commands starting with "@". The brief description
-is the first comment line which ends at the first dot followed by a space or new
-line. Thus, in example 4 the brief description is "Sets a type for a host
-association." The description consists of the brief description and the rest of
-the lines following the brief description before the special commands.
+  /**
+   * Set a type for a host association.
+   * Set the type for a host association and validate the type number.
+   * If the type number is illegal, the @c entry is left untouched.
+   *
+   * @param entry       a pointer to a host association entry
+   * @param type_number a type number to be set for @c entry
+   * @return            zero on success, non-zero else
+   * @note              The entry must not be NULL.
+   * @see               hip_clear_type()
+   */
+  int hip_set_type(struct hip_hadb_state *entry, int type_number);
+
+Notice how that whole comment is placed before the function block. The function
+comment block contains three elements, the brief description, the description
+and the special commands starting with "@". The brief description is the first
+comment line which ends at the first period followed by a space or newline.
+Thus, in example 4 the brief description is "Set a type for a host association."
+The description consists of the brief description and the rest of the lines
+following the brief description before the special commands.
 
 The special commands comment the function parameters and the return value.
 Furthermore an extra note is added to this comment with "@note" and a reference
 to a related function with "@see". Notice how we refer to the function
 parameters in the description text with the special command "@a" Including this
-special command is by no way obligatory. It only makes the next word to be
+special command is by no way obligatory. It only makes the next word be
 rendered using Courier instead of the default font. If that causes a
 doxygen warning, try "@c" which results in courier too, but doesn't confer
 semantics like "@a". However, be careful not to add your own special commands
 by accidentally typing something like @entry.
 
-Function comment blocks must be placed to the c-source file. Generally, if
-possible, place the doxygen comment in the c-source file instead of the
-c-header file. However, if no implementation exists in the c-source file, you
-must document the code in the c-header file (e.g., inline function in c-header
-file). This applies to all Doxygen comments, not just function comments.
+Function comment blocks must be placed in the C-source file. Generally, if
+possible, place the doxygen comment in the C-source file instead of the
+C-header file. However, if no implementation exists in the C-source file, you
+must document the code in the C-header file (e.g., inline function in C-header
+file). This applies to all doxygen comments, not just function comments.
 
 To ensure correct cross-referencing, global variables should be prefixed
 by :: and functions appended by () in comment blocks, like this:
 
 /**
- * Stores information about one ESP connection endpoint (i.e., one SPI).
+ * Store information about one ESP connection endpoint (i.e., one SPI).
  *
  * @todo Write allocator/deallocator for automatic syncing with ::esp_list.
  */
@@ -1075,20 +1074,20 @@ struct esp_tuple { /* ... */ };
  */
 struct connection { /*...*/  };
 
-Doxygen includes a special tag for todo items. The todo tag is "@todo". The todo
+Doxygen includes a special tag for TODO items. The TODO tag is "@todo". The TODO
 tag can be placed anywhere in the code. When placed inside of a function, the
-todo item becomes a todo item for the respective function. When placed outside
-of a function, the todo item becomes a todo item for the whole file. To create
-a todo item for a variable, insert a @todo inside the variable's Doxygen comment
-block.
+TODO item becomes a TODO item for the respective function. When placed outside
+of a function, the TODO item becomes a TODO item for the whole file. To create
+a TODO item for a variable, insert an @todo inside the variable's doxygen
+comment block.
 
-Example 5 is an example of an todo item placed inside a function, in the middle
-of the code. Hence, this becomes a todo item for the whole function. Doxygen
-maintains a list that contains all the todo items of the project. Example 5.
+Example 5 is an example of a TODO item placed inside a function, in the middle
+of the code. Hence, this becomes a TODO item for the whole function. Doxygen
+maintains a list that contains all the TODO items of the project. Example 5.
 
-HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
-/** @todo Handle this case. */
-HIP_IFEL(!update_id_out, -EINVAL, "Outgoing UPDATE ID overflowed.\n");
+  HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
+  /** @todo Handle this case. */
+  HIP_IFEL(!update_id_out, -EINVAL, "Outgoing UPDATE ID overflowed.\n");
 
 Entire files can be commented with the "@file" special tag as illustrated in
 Example 6. From example 6 we notice that Doxygen comments can also include
@@ -1113,7 +1112,7 @@ that kind of file.
 
 To help in a situation like this, the HIPL project has a special file just for
 doxygen comments, i.e. it has no code whatsoever. The file is doc/doxygen.h.
-We can target comments from this file to another files using the "@file" special
+We can target comments from this file to another file using the "@file" special
 command. For example, to insert a Doxygen comment for the definition of
 HIP_NTF_INVALID_SYNTAX located in lib/core/protodefs.h you can add the
 following comment block in doc/doxygen.h, example 7.
@@ -1141,11 +1140,11 @@ add members to the group declared in example 8.
 #define HIP_NTF_INVALID_SYNTAX                      7
 /* @} */
 
-The general JavaDoc style guide applies to HIPL project. This style guide is
-available at:
+The general JavaDoc style guide applies to the HIPL project. This style guide
+is available at:
 http://java.sun.com/j2se/javadoc/writingdoccomments/index.html
 
-Remember that normal non-Doxygen comments are always valid. Thus if you need
+Remember that normal non-doxygen comments are always valid. Thus if you need
 to comment something more specific to the code, use the regular
 
 /* comment here. */
@@ -1624,7 +1623,7 @@ NAT handover in hard IPv4-Only Handover, no locators in base exchange
 5. Rendezvous
 -------------
 
-* test rendezvous as instructed in the manual
+* Test rendezvous as instructed in the manual.
 
 
 6. NAT Relay
@@ -1647,8 +1646,8 @@ NAT handover in hard IPv4-Only Handover, no locators in base exchange
 ADDING HIPCONF ACTIONS AND PARAMETERS
 =====================================
 
-If you want to add some actions and parameters for hipconf, do the following
-things carefully. Otherwise your codes could cause bugs not only for hipconf
+If you want to add some actions and parameters to hipconf, do the following
+things carefully. Otherwise your code could cause bugs not only for hipconf
 but also for hipd.
 
 Assume that you want to add an action named as 'NEWACT'.
@@ -1657,7 +1656,7 @@ Assume that you want to add an action named as 'NEWACT'.
 1.1. ACTION_NEWACT in lib/core/conf.h
 -------------------------------------
 
-Define a constant ACTION_NEWACT which has value between 0 and ACTION_MAX.
+Define a constant ACTION_NEWACT which has a value between 0 and ACTION_MAX.
 Probably you also need to increase the value of ACTION_MAX.
 
 
@@ -1687,7 +1686,7 @@ Add a case block for your ACTION_NEWACT constant in the switch(action) block.
 2.1. HIP_MSG_NEWMODE in lib/core/icomm.h
 ---------------------------------------
 
-Define a constant HIP_MSG_NEWMODE which has value between 0 and
+Define a constant HIP_MSG_NEWMODE which has a value between 0 and
 HIP_MSG_ROOT_MAX. Take also care of the value of HIP_MSG_ROOT_MAX.
 
 
@@ -1715,7 +1714,7 @@ each entry of the handler array is to be accessed via type index.
 3.2. TYPE_NEWTYPE in lib/core/conf.h
 ------------------------------------
 
-Define a constant TYPE_NEWTYPE which has value between 0 and TYPE_MAX.
+Define a constant TYPE_NEWTYPE which has a value between 0 and TYPE_MAX.
 Probably you also need to increase the value of TYPE_MAX.
 
 NOTE: TYPE_MAX must be exactly the largest value of all type variables:
