@@ -40,14 +40,12 @@
  * support OpenSSL 1.0.0 by default. */
 #ifdef LHASH_OF
 
-#define LHASH100_CAST _LHASH
+#define LHASH_CAST (_LHASH *)
 
 typedef DECLARE_LHASH_OF(HIP_HT) HIP_HASHTABLE;
 typedef LHASH_OF(HIP_HT)         HIP_HASHTABLE_TYPE;
 
 #else
-
-#define LHASH100_CAST void
 
 #define LHASH_OF(type) struct lhash_st_ ## type
 #define DECLARE_LHASH_OF(type) LHASH_OF(type) { int dummy; }
