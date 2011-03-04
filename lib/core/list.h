@@ -32,9 +32,6 @@
  * These backwards compatibility hacks can be removed when all platforms
  * support OpenSSL 1.0.0 by default. */
 #ifdef LHASH_OF
-#ifndef HIPL_OPENSSL_100
-#define HIPL_OPENSSL_100
-#endif /* HIPL_OPENSSL_100 */
 #define LHASH_CAST (_LHASH *)
 #else
 #define LHASH_CAST
