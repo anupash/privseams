@@ -563,8 +563,7 @@ especially for people unfamiliar with the code.
 
 If in doubt you can use the uncrustify tool to format code for you.
 It should do the right thing. A suitable configuration file that
-was used to initially reformat HIPL can be found in
-'tools/dot_uncrustify.cfg'.
+was used to initially reformat HIPL can be found in '.uncrustify.cfg'.
 
 Here is an example piece of C code to showcase K&R style as used
 in HIPL. Pay special attention to spacing and the placement of
