@@ -47,6 +47,8 @@ typedef LHASH_OF(HIP_HT)         HIP_HASHTABLE_TYPE;
 
 #else
 
+#define LHASH_CAST
+
 #define LHASH_OF(type) struct lhash_st_ ## type
 #define DECLARE_LHASH_OF(type) LHASH_OF(type) { int dummy; }
 
