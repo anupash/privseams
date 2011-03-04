@@ -1172,10 +1172,9 @@ least partially before you contribute.
 CREATING A TARBALL OF THE SOURCE CODE
 =====================================
 
-There is a "make dist" target which builds a tarball of the hipl source
-code. It includes only the files which are necessary. The included files
-are specified in SOURCES and HEADER rules in */Makefile.am, but it is also
-possible to force some extra files in top most Makefile.am.
+There is a "make dist" target which builds a tarball of the HIPL source
+code. It includes all the files declared as SOURCES, plus whatever gets
+declared in EXTRA_DIST.
 
 
 
