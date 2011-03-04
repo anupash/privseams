@@ -376,6 +376,23 @@ variables only.
 We use underscores (_) to structure names - No CamelCase!
 
 
+On namespaces
+-------------
+
+C reserves names starting with two underscores '__' and those starting with
+an underscore '_' and a capital letter for the system. Other names starting
+with an underscore are reserved at the file level, i.e. should only be used
+for file-local symbols. To not have to worry about such fineprint we forbid
+all names starting with underscores in HIPL.
+
+POSIX reserves the _t suffix namespace. Avoid creating identifiers that
+pollute this namespace.
+
+Note that pollution of the POSIX and system namespaces is extremely common in
+other projects as it was in HIPL before this issue was addressed. Please do
+not copy from these bad examples and keep your environment clean.
+
+
 On Functions*
 -------------
 
