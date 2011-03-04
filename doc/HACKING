@@ -150,6 +150,35 @@ A list of possible conflicts can be found at:
 http://doc.bazaar.canonical.com/bzr.2.0/en/user-reference/index.html#conflicts-types
 
 
+Fixing mistakes
+---------------
+
+Everybody makes mistakes, so - inevitably - you will as well. If you botched a
+local commit you can use
+
+  bzr uncommit
+
+to undo it and start afresh. However, if you have committed or pushed a change
+to the central repository then you must *NEVER* uncommit it. If you do it, you
+will wreak havoc with the repositories of other developers that have pulled
+changes from the central repository in the meantime. Also note that there are
+automated build bots like the HIPL autobuilder, the ohloh.net enlistenment and
+possibly others that pull from the central repository and are unable to cope
+with conflicts caused by messed-up history. Inconsistent repository states can
+only be fixed via manual intervention there and might go unnoticed for a long
+time.
+
+This is so important that it bears repeating: *NEVER* mess with the history
+of the central repository through uncommit or similar means. If you fail to
+abide by this rule you will be publicly shamed, laughed at, tarred, feathered
+and put on display in the heart of your city for bystanders to insult, spit
+at and mistreat you. Afterwards you will be dipped in honey and dropped into
+your choice of a termite mound or ant colony and finally abducted by aliens
+to a lonesome place in the remotest north of Finland where nobody can hear
+you over the maniacal laughter of mad scientists tormenting their human
+victims. In short: Don't do it, ever. :-)
+
+
 
 C CODING QUALITY
 ================
