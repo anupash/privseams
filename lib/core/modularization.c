@@ -566,10 +566,11 @@ int lmod_parameter_type_exists(const uint16_t parameter_type)
  * Register a new parameter type and the corresponding identifier. Each module
  * introducing a new parameter type must register it using this function.
  *
- * @note Call lmod_uninit_packet_types() to free the allocated memory!
+ * @note Call lmod_uninit_parameter_types() to free all memory allocated for
+ *       parameter types.
  *
- * @param parameter_type The packet type number to register.
- * @param identifier     A name for the packet type.
+ * @param parameter_type The parameter type number to register.
+ * @param identifier     A name for the parameter type.
  *
  * @return Success =  0
  *         Error   = -1
@@ -583,7 +584,7 @@ int lmod_register_parameter_type(const uint16_t parameter_type,
     int                    err       = 0;
 
     HIP_IFEL(!identifier || (lmod_parameter_type_exists(parameter_type) != -1),
-             -1, "No parameter type inserted.\n");
+             -1, "Missing identifier or parameter type already registered.\n");
 
     HIP_IFEL(!(new_entry = malloc(sizeof(struct parameter_type))),
              -1, "Failed to allocate memory.\n");
