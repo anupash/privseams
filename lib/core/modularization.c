@@ -575,7 +575,7 @@ int lmod_parameter_type_exists(const uint16_t parameter_type)
  *         Error   = -1
  */
 int lmod_register_parameter_type(const uint16_t parameter_type,
-                                 const char *identifier)
+                                 const char *const identifier)
 {
     int                    index     = 0;
     struct hip_ll_node    *iter      = NULL;
