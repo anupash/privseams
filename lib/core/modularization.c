@@ -602,9 +602,16 @@ int lmod_register_parameter_type(const uint16_t parameter_type,
         }
     }
 
-    hip_ll_add(&parameter_types, index, new_entry);
+    HIP_IFEL(hip_ll_add(&parameter_types, index, new_entry) == -1,
+             -1, "Failed to register parameter type.\n");
+
+    return 0;
 
 out_err:
+    if (new_entry) {
+        free(new_entry->identifier);
+        free(new_entry);
+    }
     return err;
 }
 
