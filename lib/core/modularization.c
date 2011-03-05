@@ -583,15 +583,15 @@ int lmod_register_parameter_type(const uint16_t parameter_type,
     int                    err       = 0;
 
     HIP_IFEL(!identifier || (lmod_parameter_type_exists(parameter_type) != -1),
-             -1, "No parameter type inserted\n");
+             -1, "No parameter type inserted.\n");
 
     HIP_IFEL(!(new_entry = malloc(sizeof(struct parameter_type))),
-             -1, "failed to allocate memory\n");
+             -1, "Failed to allocate memory.\n");
 
     new_entry->num = parameter_type;
 
     HIP_IFEL(!(new_entry->identifier = strdup(identifier)),
-             -1, "failed to copy parameter type identifier");
+             -1, "Failed to copy parameter type identifier.\n");
 
     while ((iter = hip_ll_iterate(&parameter_types, iter))) {
         if (parameter_type < ((struct parameter_type *) iter->ptr)->num) {
