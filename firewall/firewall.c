@@ -1562,16 +1562,16 @@ end_init:
 /**
  * Set an accept verdict for a modified packet
  *
- * @param handle ipqueue file handle
- * @param packetId ipqueue packet id
- * @param len length of buf
- * @param buf the packet to be accepted
+ * @param handle    ipqueue file handle
+ * @param packet_id ipqueue packet id
+ * @param len       length of buf
+ * @param buf       the packet to be accepted
  *
  */
-static void allow_modified_packet(struct ipq_handle *handle, unsigned long packetId,
+static void allow_modified_packet(struct ipq_handle *handle, unsigned long packet_id,
                                   size_t len, unsigned char *buf)
 {
-    ipq_set_verdict(handle, packetId, NF_ACCEPT, len, buf);
+    ipq_set_verdict(handle, packet_id, NF_ACCEPT, len, buf);
     HIP_DEBUG("Packet accepted with modifications\n\n");
 }
 
@@ -1579,12 +1579,12 @@ static void allow_modified_packet(struct ipq_handle *handle, unsigned long packe
  * Allow a packet to pass
  *
  * @param handle    the handle for the packets.
- * @param packetId  the packet ID.
+ * @param packet_id the packet ID.
  * @return          nothing
  */
-static void allow_packet(struct ipq_handle *handle, unsigned long packetId)
+static void allow_packet(struct ipq_handle *handle, unsigned long packet_id)
 {
-    ipq_set_verdict(handle, packetId, NF_ACCEPT, 0, NULL);
+    ipq_set_verdict(handle, packet_id, NF_ACCEPT, 0, NULL);
 
     HIP_DEBUG("Packet accepted \n\n");
 }
@@ -1593,12 +1593,12 @@ static void allow_packet(struct ipq_handle *handle, unsigned long packetId)
  * Drop a packet
  *
  * @param handle    the handle for the packets.
- * @param packetId  the packet ID.
+ * @param packet_id the packet ID.
  * @return          nothing
  */
-static void drop_packet(struct ipq_handle *handle, unsigned long packetId)
+static void drop_packet(struct ipq_handle *handle, unsigned long packet_id)
 {
-    ipq_set_verdict(handle, packetId, NF_DROP, 0, NULL);
+    ipq_set_verdict(handle, packet_id, NF_DROP, 0, NULL);
 
     HIP_DEBUG("Packet dropped \n\n");
 }
