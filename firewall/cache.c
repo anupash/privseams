@@ -274,11 +274,13 @@ void hip_firewall_cache_delete_hldb(int exiting)
 
     HIP_DEBUG("Start hldb delete\n");
 
-    list_for_each_safe(item, tmp, firewall_cache_db, i)
-    {
-        this = list_entry(item);
-        hip_ht_delete(firewall_cache_db, this);
-        free(this);
+    if (firewall_cache_db) {
+        list_for_each_safe(item, tmp, firewall_cache_db, i)
+        {
+            this = list_entry(item);
+            hip_ht_delete(firewall_cache_db, this);
+            free(this);
+        }
     }
 
     /* Note: this function is also reached by "hipconf rst all"
