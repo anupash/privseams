@@ -290,7 +290,7 @@ void hip_firewall_cache_delete_hldb(int exiting)
     if (exiting) {
         hip_ht_uninit(firewall_cache_db);
     }
-    HIP_DEBUG("End hldbdb delete\n");
+    HIP_DEBUG("End hldb delete\n");
 }
 
 /**
