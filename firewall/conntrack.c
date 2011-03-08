@@ -538,6 +538,8 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
 
             free(addr->update_id);
             free(addr);
+
+            free(list);
             list = esp_tuple->dst_addr_list;
         }
 
