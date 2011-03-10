@@ -1692,7 +1692,7 @@ int hipfw_relay_esp(const struct hip_fw_context *ctx)
     int             err   = 0;
     uint32_t        spi;
 
-    HIP_IFEL(!list, -1, "List is empty\n");
+    HIP_IFEL(!list, -1, "ESP List is empty\n");
     HIP_IFEL(iph->protocol != IPPROTO_UDP, -1,
              "Protocol is not UDP. Not relaying packet.\n\n");
     HIP_IFEL(!esp, -1, "No ESP header\n");
