@@ -1061,14 +1061,14 @@ static int filter_hip(const struct in6_addr *ip6_src,
     return verdict;
 }
 
-/*
+/**
  * Handle packet capture for outbound HIP packets.
  *
  * @note hooks HIP message filtering.
  *
  * @param ctx packet context
  *
- * @return the verdict (1 for pass and 0 for drop)
+ * @return the verdict (ACCEPT or DROP)
  */
 static int hip_fw_handle_hip_output(struct hip_fw_context *ctx)
 {
