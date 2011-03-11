@@ -991,7 +991,6 @@ int hipd_init(const uint64_t flags)
     int                 killold = ((flags & HIPD_START_KILL_OLD) > 0);
     unsigned int        mtu_val = HIP_HIT_DEV_MTU;
     char                str[64];
-    char                mtu[16];
     struct sockaddr_in6 daemon_addr = { 0 };
 
     /* Keep the flags around: they will be used at kernel module removal */
@@ -1106,9 +1105,7 @@ int hipd_init(const uint64_t flags)
     set_up_device(HIP_HIT_DEV, 0);
     HIP_IFE(set_up_device(HIP_HIT_DEV, 1), -1);
     HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", mtu_val);
-    sprintf(mtu, "%u", mtu_val);
-    strcpy(str, "ifconfig " HIP_HIT_DEV " mtu ");
-    strcat(str, mtu);
+    snprintf(str, sizeof(str), "ifconfig %s mtu %u", HIP_HIT_DEV, mtu_val);
     /* MTU is set using system call rather than in do_chflags to avoid
      * chicken and egg problems in hipd start up. */
     if (system(str) == -1) {
