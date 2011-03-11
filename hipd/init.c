@@ -288,7 +288,7 @@ static int hip_init_raw_sock_v4(int proto)
 
     sock = socket(AF_INET, SOCK_RAW, proto);
     set_cloexec_flag(sock, 1);
-    HIP_IFEL(sock <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+    HIP_IFEL(sock <= 0, -1, "Raw socket v4 creation failed. Not root?\n");
 
     /* RECV_ERR is off because it is not handled properly by hipd
      * (message length is -1 and this causes msg reading problems) */
@@ -462,7 +462,7 @@ static int hip_init_raw_sock_v6(int proto)
 
     sock = socket(AF_INET6, SOCK_RAW, proto);
     set_cloexec_flag(sock, 1);
-    HIP_IFEL(sock <= 0, 1, "Raw socket creation failed. Not root?\n");
+    HIP_IFEL(sock <= 0, -1, "Raw socket creation failed. Not root?\n");
 
     /* RECV_ERR is off because it is not handled properly by hipd
      * (message length is -1 and this causes msg reading problems) */
@@ -1031,7 +1031,7 @@ int hipd_init(const uint64_t flags)
     signal(SIGTERM, hip_close);
     signal(SIGCHLD, hip_sig_chld);
 
-    HIP_IFEL(hip_init_cipher() < 0, 1, "Unable to init ciphers.\n");
+    HIP_IFEL(hip_init_cipher() < 0, -1, "Unable to init ciphers.\n");
 
     HIP_IFE(init_random_seed(), -1);
 
@@ -1104,7 +1104,7 @@ int hipd_init(const uint64_t flags)
 
     HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
     set_up_device(HIP_HIT_DEV, 0);
-    HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
+    HIP_IFE(set_up_device(HIP_HIT_DEV, 1), -1);
     HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", mtu_val);
     sprintf(mtu, "%u", mtu_val);
     strcpy(str, "ifconfig " HIP_HIT_DEV " mtu ");
@@ -1116,10 +1116,10 @@ int hipd_init(const uint64_t flags)
     }
 
 
-    HIP_IFE(hip_init_host_ids(), 1);
+    HIP_IFE(hip_init_host_ids(), -1);
 
     hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL(hip_user_sock < 0, 1,
+    HIP_IFEL(hip_user_sock < 0, -1,
              "Could not create socket for user communication.\n");
     daemon_addr.sin6_family = AF_INET6;
     daemon_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);
