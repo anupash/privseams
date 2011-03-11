@@ -129,3 +129,21 @@ struct slist *remove_link_slist(struct slist *list, struct slist *link)
 
     return list;
 }
+
+/**
+ * Find an element in the singly linked list.
+ *
+ * @param list the linked list
+ * @param data the element to find
+ * @return     the element in the linked list
+ */
+struct slist *find_in_slist(struct slist *list, void *data)
+{
+    while (list) {
+        if (list->data == data) {
+            break;
+        }
+        list = list->next;
+    }
+    return list;
+}
