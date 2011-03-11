@@ -36,7 +36,7 @@
 #include "lib/tool/nlink.h"
 
 
-#define HIP_HIT_DEV "hipl0"
+#define HIP_HIT_DEV "dummy0"
 
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5
