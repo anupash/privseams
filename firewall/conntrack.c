@@ -74,8 +74,8 @@
 #include "reinject.h"
 
 
-struct dlist *hip_list = NULL;
-struct dlist *esp_list = NULL;
+static struct dlist *hip_list = NULL;
+static struct dlist *esp_list = NULL;
 
 enum {
     STATE_NEW,
