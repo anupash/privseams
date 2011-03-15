@@ -1296,6 +1296,10 @@ int hip_add_iface_local_hit(const hip_hit_t *local_hit)
     hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR, hit_str);
     HIP_DEBUG("Adding HIT: %s\n", hit_str);
 
+    /* errors non-fatal */
+    hip_ipaddr_modify(&hip_nl_route, RTM_DELADDR, AF_INET6,
+                      hit_str, HIP_HIT_DEV, idxmap);
+
     HIP_IFE(hip_ipaddr_modify(&hip_nl_route, RTM_NEWADDR, AF_INET6,
                               hit_str, HIP_HIT_DEV, idxmap), -1);
 
