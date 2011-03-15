@@ -74,13 +74,14 @@ int lmod_packet_type_exists(const uint8_t packet_type);
 const char *lmod_get_packet_identifier(const uint8_t packet_type);
 
 int lmod_register_packet_type(const uint8_t packet_type,
-                              const char *identifier);
+                              const char *const identifier);
 
 void lmod_uninit_packet_types(void);
 
 int lmod_parameter_type_exists(const uint16_t parameter_type);
 
-int lmod_register_parameter_type(const uint16_t packet_type, const char *identifier);
+int lmod_register_parameter_type(const uint16_t packet_type,
+                                 const char *const identifier);
 
 const char *lmod_get_parameter_identifier(const uint16_t parameter_type);
 
