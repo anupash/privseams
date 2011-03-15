@@ -173,7 +173,7 @@ int hip_fw_async_sock = 0;
 static void print_usage(void)
 {
     printf("HIP Firewall\n");
-    printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-h] [-V]");
+    printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-t <seconds>] [-h] [-V]");
 #ifdef CONFIG_HIP_MIDAUTH
     printf(" [-m]");
 #endif
@@ -192,6 +192,7 @@ static void print_usage(void)
     printf("      -e = use esp protection extension (also sets -i)\n");
     printf("      -l = activate lsi support\n");
     printf("      -p = run with lowered priviledges. iptables rules will not be flushed on exit\n");
+    printf("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0.\n");
     printf("      -h = print this help\n");
 #ifdef CONFIG_HIP_MIDAUTH
     printf("      -m = middlebox authentification\n");
@@ -1751,6 +1752,7 @@ int main(int argc, char **argv)
     struct hip_fw_context ctx;
     int                   limit_capabilities = 0;
     int                   is_root            = 0, access_ok = 0, msg_type = 0; //variables for accepting user messages only from hipd
+    char                 *ptr                = NULL; // temporary pointer (see -t option)
 
     /* Make sure that root path is set up correcly (e.g. on Fedora 9).
      * Otherwise may get warnings from system_print() commands.
@@ -1789,7 +1791,7 @@ int main(int argc, char **argv)
 
     hip_set_logdebug(LOGDEBUG_ALL);
 
-    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpvV")) != -1) {
+    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpt:vV")) != -1) {
         switch (ch) {
         case 'A':
             accept_hip_esp_traffic_by_default = 1;
@@ -1840,6 +1842,17 @@ int main(int argc, char **argv)
 #endif
         case 'p':
             limit_capabilities = 1;
+            break;
+        case 't':
+            connection_timeout = strtoul(optarg, &ptr, 10);
+            if (ptr == optarg) {
+                fprintf(stderr, "Error: Invalid timeout given\n");
+                errflg = 1;
+            }
+            if (connection_timeout < cleanup_interval) {
+                /* we must poll at least once per timeout interval */
+                cleanup_interval = connection_timeout;
+            }
             break;
         case 'v':
             log_level = LOGDEBUG_MEDIUM;
@@ -1987,6 +2000,8 @@ int main(int argc, char **argv)
             pisa_check_for_random_update();
         }
 #endif
+
+        hip_fw_conntrack_periodic_cleanup();
 
         if (FD_ISSET(h4->fd, &read_fdset)) {
             HIP_DEBUG("received IPv4 packet from iptables queue\n");
