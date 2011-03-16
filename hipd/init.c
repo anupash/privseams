@@ -865,6 +865,7 @@ void hip_exit(void)
     hip_delete_all_addresses();
 
     set_up_device(HIP_HIT_DEV, 0);
+    hip_remove_iface_all_local_hits();
 
     /* Next line is needed only if RVS or hiprelay is in use. */
     hip_uninit_services();

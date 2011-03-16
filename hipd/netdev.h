@@ -32,6 +32,7 @@
 #ifndef HIP_HIPD_NETDEV_H
 #define HIP_HIPD_NETDEV_H
 
+#include <stdbool.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -42,7 +43,8 @@ int hip_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(void);
 void hip_delete_all_addresses(void);
 int hip_netdev_event(struct nlmsghdr *msg, int len, void *arg);
-int hip_add_iface_local_hit(const hip_hit_t *local_hit);
+int hip_manage_iface_local_hit(const hip_hit_t *local_hit, bool add);
+int hip_remove_iface_all_local_hits(void);
 int hip_add_iface_local_route(const hip_hit_t *local_hit);
 int hip_select_source_address(struct in6_addr *src, const struct in6_addr *dst);
 int hip_netdev_trigger_bex_msg(const struct hip_common *msg);
