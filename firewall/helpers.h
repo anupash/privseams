@@ -30,6 +30,7 @@
 
 const char *addr_to_numeric(const struct in6_addr *addrp);
 struct in6_addr *numeric_to_addr(const char *num);
-void system_print(const char *command);
+int system_print(const char *command);
+int system_printf(const char *command, ...);
 
 #endif /* HIP_FIREWALL_HELPERS_H */

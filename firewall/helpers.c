@@ -33,6 +33,8 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
@@ -84,10 +86,43 @@ struct in6_addr *numeric_to_addr(const char *num)
  *
  * @param command The system command. The caller of this function must take
  *                care that command does not contain malicious code.
+ * @return        Exit code on success, -1 on failure.
  */
-void system_print(const char *command)
+int system_print(const char *command)
 {
-    if (system(command) == -1) {
-        HIP_ERROR("Could not execute system command %s", command);
+    int ret;
+
+    if ((ret = system(command)) == -1) {
+        HIP_ERROR("Could not execute system command `%s'", command);
+        return -1;
     }
+
+    HIP_DEBUG("$ %s -> %d\n", command, WEXITSTATUS(ret));
+
+    return WEXITSTATUS(ret);
+}
+
+/**
+ * printf()-like wrapper arount system_print.
+ *
+ * @param command The system command. This is a printf format string.
+ *                The caller of this function must take care that command
+ *                does not contain malicious code.
+ * @return        Exit code on success, -1 on failure.
+ */
+int system_printf(const char *command, ...)
+{
+    char bfr[196];
+
+    va_list vargs;
+    va_start(vargs, command);
+
+    if (vsnprintf(bfr, sizeof(bfr), command, vargs) <= 0) {
+        HIP_ERROR("vsnprintf failed\n");
+        va_end(vargs);
+        return -1;
+    }
+
+    va_end(vargs);
+    return system_print(bfr);
 }
