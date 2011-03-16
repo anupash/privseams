@@ -1288,7 +1288,7 @@ out_err:
  *
  * @note Adding just the HIT is not enough, a route has to be added as well.
  */
-int hip_manage_iface_local_hit(const hip_hit_t *local_hit, bool add)
+int hip_manage_iface_local_hit(const hip_hit_t *const local_hit, const bool add)
 {
     int            err = 0;
     char           hit_str[INET6_ADDRSTRLEN + 2];
