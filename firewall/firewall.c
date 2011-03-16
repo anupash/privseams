@@ -174,7 +174,7 @@ int hip_fw_async_sock = 0;
 static void print_usage(void)
 {
     printf("HIP Firewall\n");
-    printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-h] [-V]");
+    printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-u] [-h] [-V]");
 #ifdef CONFIG_HIP_MIDAUTH
     printf(" [-m]");
 #endif
