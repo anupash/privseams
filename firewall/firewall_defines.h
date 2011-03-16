@@ -139,18 +139,18 @@ struct tuple {
 };
 
 struct connection {
-    struct tuple   original;
-    struct tuple   reply;
-    int            verify_responder;
-    int            state;
-    struct timeval time_stamp;
+    struct tuple original;
+    struct tuple reply;
+    int          verify_responder;
+    int          state;
+    time_t       timestamp;
     /* members needed for iptables setup */
-    bool           udp_encap; /**< uses udp-nat? */
+    bool         udp_encap; /**< uses udp-nat? */
     /* members needed for ESP protection extension */
-    int     num_esp_prot_tfms;
-    uint8_t esp_prot_tfms[MAX_NUM_TRANSFORMS];
+    int          num_esp_prot_tfms;
+    uint8_t      esp_prot_tfms[MAX_NUM_TRANSFORMS];
 #ifdef CONFIG_HIP_MIDAUTH
-    int pisa_state;
+    int          pisa_state;
 #endif
 };
 
