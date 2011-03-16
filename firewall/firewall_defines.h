@@ -30,6 +30,7 @@
 
 #include <libipq.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
@@ -130,6 +131,7 @@ struct tuple {
     int                direction;
     struct connection *connection;
     int                state;
+    int                hook;
     uint32_t           lupdate_seq;
     int                esp_relay;
     struct in6_addr    esp_relay_daddr;
@@ -142,6 +144,8 @@ struct connection {
     int            verify_responder;
     int            state;
     struct timeval time_stamp;
+    /* members needed for iptables setup */
+    bool           udp_encap; /**< uses udp-nat? */
     /* members needed for ESP protection extension */
     int     num_esp_prot_tfms;
     uint8_t esp_prot_tfms[MAX_NUM_TRANSFORMS];

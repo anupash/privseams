@@ -40,7 +40,9 @@
 #define _BSD_SOURCE
 
 #include <errno.h>
+#include <limits.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
@@ -50,6 +52,7 @@
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <sys/time.h>
+#include <linux/netfilter_ipv4.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/debug.h"
@@ -318,12 +321,140 @@ static struct esp_address *get_esp_address(const struct slist *addr_list,
 }
 
 /**
+ * Set up or remove iptables rules to bypass userspace processing of the
+ * SPI/destination pairs as specified by @a esp_tuple and @a dest.
+ * This can greatly improve firewall throughput.
+ *
+ * @param esp_tuple Determines the SPI.
+ * @param dest      The corresponding destination address to bypass. May be
+ *                  a IPv6-mapped IPv4 address.
+ * @param insert    Insert new rule if true, remove existing if false.
+ * @return          0 if rules were modified, non-zero otherwise.
+ *
+ * @note This feature may be turned off completely by the -u command line option.
+ *       It is also automatically deactivated for connections that demand
+ *       more advanced connection tracking.
+ *       In these cases, -1 is returned even though there was not even an
+ *       attempt to modify rules.
+ *
+ * @note This interferes, in one way or another, with userspace_ipsec,
+ *       Relay, LSI, midauth, lightweight-update and esp_prot. Care was
+ *       taken to not break these features though.
+ *
+ * @see update_esp_address
+ * @see free_esp_tuple
+ */
+static int hip_fw_manage_esp_rule(const struct esp_tuple *esp_tuple,
+                                  const struct in6_addr *dest, bool insert)
+{
+    int         err   = 0;
+    const char *flag  = insert ? "-I" : "-D";
+    const char *table = NULL;
+
+    if (hip_userspace_ipsec || prefer_userspace) {
+        return -1;
+    }
+
+    HIP_ASSERT(esp_tuple);
+    HIP_ASSERT(dest);
+
+    if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED) {
+        HIP_DEBUG("ESP Transforms requested; not handled via iptables "
+                  "since we need to inspect packets\n");
+        return -1;
+    }
+
+    if (esp_tuple->tuple->esp_relay) {
+        HIP_DEBUG("ESP Relay requested; not handled via iptables "
+                  "since we need packet rewriting\n");
+        return -1;
+    }
+
+    switch (esp_tuple->tuple->hook) {
+    case NF_IP_LOCAL_IN:
+        table = "HIPFW-INPUT";
+        break;
+    case NF_IP_FORWARD:
+        table = "HIPFW-FORWARD";
+        break;
+    case NF_IP_LOCAL_OUT:
+        table = "HIPFW-OUT";
+        break;
+    default:
+        HIP_ERROR("Packet was received via unsupported netfilter hook %d\n",
+                  esp_tuple->tuple->hook);
+        return -1;
+    }
+
+    HIP_DEBUG("insert         = %d\n", insert);
+    HIP_DEBUG("table          = %s\n", table);
+    HIP_DEBUG("esp_tuple->spi = 0x%08X\n", esp_tuple->spi);
+    HIP_DEBUG_IN6ADDR("src  ip", esp_tuple->tuple->src_ip);
+    HIP_DEBUG_IN6ADDR("dest ip", dest);
+
+    if (IN6_IS_ADDR_V4MAPPED(dest)) {
+        char           daddr[INET_ADDRSTRLEN];
+        struct in_addr dest4;
+
+        IPV6_TO_IPV4_MAP(dest, &dest4);
+        HIP_IFEL(!inet_ntop(AF_INET, &dest4, daddr, sizeof(daddr)), -1,
+                 "inet_ntop: %s", strerror(errno));
+
+        if (esp_tuple->tuple->connection->udp_encap) {
+            /* SPI is the first 32bit value in encapsulating UDP payload, so
+             * we may use a simple u32 Pattern. Here, '4&0x1FFF=0' ensures
+             * we're not processing a fragmented packet.
+             */
+            err = system_printf("iptables %s %s -p UDP "
+                                "--dport 10500 --sport 10500 -d %s -m u32 "
+                                "--u32 '4&0x1FFF=0 && 0>>22&0x3C@8=0x%08X' -j ACCEPT",
+                                flag, table, daddr, esp_tuple->spi);
+        } else {
+            err = system_printf("iptables %s %s -p 50 "
+                                "-d %s -m esp --espspi 0x%08X -j ACCEPT",
+                                flag, table, daddr, esp_tuple->spi);
+        }
+    } else {
+        char daddr[INET6_ADDRSTRLEN];
+        HIP_IFEL(!inet_ntop(AF_INET6, dest, daddr, sizeof(daddr)), -1,
+                 "inet_ntop: %s", strerror(errno));
+
+        HIP_ASSERT(!esp_tuple->tuple->connection->udp_encap);
+        err = system_printf("ip6tables %s %s -p 50 "
+                            "-d %s -m esp --espspi 0x%08X -j ACCEPT",
+                            flag, table, daddr, esp_tuple->spi);
+    }
+
+out_err:
+    return err;
+}
+
+/**
+ * Set up or remove iptables rules to bypass userspace processing of all
+ * SPI/destination pairs associated with @a esp_tuple.
+ *
+ * @param esp_tuple Determines the SPI and all destination addresses.
+ * @param insert    Insert rules if true, remove existing if false.
+ *
+ * @see hip_fw_manage_esp_rule
+ */
+void hip_fw_manage_esp_tuple(const struct esp_tuple *esp_tuple, bool insert)
+{
+    struct slist *lst = esp_tuple->dst_addr_list;
+    while (lst) {
+        hip_fw_manage_esp_rule(esp_tuple, (const struct in6_addr *)
+                               lst->data, insert);
+        lst = lst->next;
+    }
+}
+
+/**
  * Insert a destination address into an esp_tuple. If same address exists already,
  * the update_id is replaced with the new value instead.
  *
- * @param esp the esp tuple
- * @param addr the address to be added
- * @param upd_id update id
+ * @param esp_tuple the esp tuple
+ * @param addr      the address to be added
+ * @param upd_id    update id
  */
 static void update_esp_address(struct esp_tuple *esp_tuple,
                                const struct in6_addr *addr,
@@ -356,6 +487,8 @@ static void update_esp_address(struct esp_tuple *esp_tuple,
 
     esp_tuple->dst_addr_list = append_to_slist(esp_tuple->dst_addr_list, esp_addr);
     HIP_DEBUG("update_esp_address: addr created and added\n");
+
+    hip_fw_manage_esp_rule(esp_tuple, addr, true);
 }
 
 /**
@@ -425,7 +558,7 @@ struct esp_tuple *find_esp_tuple(const struct slist *search_list,
  * @param data the connection-related data to be inserted
  * @see remove_connection
  */
-static void insert_new_connection(const struct hip_data *data)
+static void insert_new_connection(const struct hip_data *data, struct hip_fw_context *ctx)
 {
     struct connection *connection = NULL;
 
@@ -433,7 +566,8 @@ static void insert_new_connection(const struct hip_data *data)
 
     connection = calloc(1, sizeof(struct connection));
 
-    connection->state = STATE_ESTABLISHED;
+    connection->state     = STATE_ESTABLISHED;
+    connection->udp_encap = ctx->udp_encap_hdr ? 1 : 0;
     //set time stamp
     gettimeofday(&connection->time_stamp, NULL);
 #ifdef HIP_CONFIG_MIDAUTH
@@ -535,6 +669,7 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
                                                          list);
             addr = list->data;
 
+            hip_fw_manage_esp_rule(esp_tuple, &addr->dst_addr, false);
             free(addr->update_id);
             free(addr);
 
@@ -1576,7 +1711,7 @@ static int check_packet(const struct in6_addr *ip6_src,
             }
 #endif
 
-            insert_new_connection(data);
+            insert_new_connection(data, ctx);
 
             // TODO call free for all pointer members of data - comment by Rene
             free(data);
@@ -1633,6 +1768,8 @@ static int check_packet(const struct in6_addr *ip6_src,
         } else {
             HIP_DEBUG("Tuple connection NULL, could not timestamp\n");
         }
+
+        tuple->hook = ctx->ipq_packet->hook;
     }
 
     HIP_DEBUG("udp_encap_hdr=%p tuple=%p err=%d\n", ctx->udp_encap_hdr, tuple, err);

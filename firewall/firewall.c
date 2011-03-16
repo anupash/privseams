@@ -134,7 +134,6 @@ typedef int (*hip_fw_handler)(struct hip_fw_context *);
 static hip_fw_handler fw_handlers[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 /* extension-specific state */
-static int hip_userspace_ipsec            = 0;
 static int restore_filter_traffic         = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 
@@ -145,6 +144,8 @@ int hip_kernel_ipsec_fallback = 0;
 int hip_lsi_support           = 0;
 int esp_relay                 = 0;
 int hip_esp_protection        = 0;
+int hip_userspace_ipsec       = 0;
+int prefer_userspace          = 0;
 #ifdef CONFIG_HIP_MIDAUTH
 int use_midauth = 0;
 #endif
@@ -192,6 +193,7 @@ static void print_usage(void)
     printf("      -e = use esp protection extension (also sets -i)\n");
     printf("      -l = activate lsi support\n");
     printf("      -p = run with lowered priviledges. iptables rules will not be flushed on exit\n");
+    printf("      -u = prefer userspace processing: don't add iptables rules for speedups\n");
     printf("      -h = print this help\n");
 #ifdef CONFIG_HIP_MIDAUTH
     printf("      -m = middlebox authentification\n");
@@ -1789,7 +1791,7 @@ int main(int argc, char **argv)
 
     hip_set_logdebug(LOGDEBUG_ALL);
 
-    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpvV")) != -1) {
+    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpuvV")) != -1) {
         switch (ch) {
         case 'A':
             accept_hip_esp_traffic_by_default = 1;
@@ -1840,6 +1842,9 @@ int main(int argc, char **argv)
 #endif
         case 'p':
             limit_capabilities = 1;
+            break;
+        case 'u':
+            prefer_userspace = 1;
             break;
         case 'v':
             log_level = LOGDEBUG_MEDIUM;

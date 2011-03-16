@@ -29,6 +29,7 @@
 #define _BSD_SOURCE
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <netinet/in.h>
 
 #include "lib/core/protodefs.h"
@@ -58,5 +59,7 @@ struct esp_tuple *find_esp_tuple(const struct slist *esp_list,
 struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit);
 int hipfw_relay_esp(const struct hip_fw_context *ctx);
+
+void hip_fw_manage_esp_tuple(const struct esp_tuple *esp_tuple, bool insert);
 
 #endif /* HIP_FIREWALL_CONNTRACK_H */
