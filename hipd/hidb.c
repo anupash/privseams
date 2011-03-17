@@ -610,9 +610,9 @@ int hip_handle_add_local_hi(const struct hip_common *input)
         hip_add_iface_local_route(&in6_lsi);
 
         /* Adding HITs and LSIs to the interface */
-        HIP_IFEL(hip_manage_iface_local_hit(&lhi.hit, true), -1,
+        HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
                  "Failed to add HIT to the device\n");
-        HIP_IFEL(hip_manage_iface_local_hit(&in6_lsi, true), -1,
+        HIP_IFEL(hip_add_iface_local_hit(&in6_lsi), -1,
                  "Failed to add LSI to the device\n");
     }
 

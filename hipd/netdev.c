@@ -1282,26 +1282,15 @@ out_err:
  * Add or remove a HIT on the local virtual interface to enable HIT-based
  * connectivity. The interface is defined in the ::HIP_HIT_DEV constant.
  *
- * @param local_hit The HIT to be added
+ * @param local_hit The HIT to be added or removed.
  * @param add       Add @a local_hit if true, remove otherwise.
  * @return          Zero on success, non-zero on failure.
- *
- * @note Adding just the HIT is not enough, a route has to be added as well.
  */
-int hip_manage_iface_local_hit(const hip_hit_t *const local_hit, const bool add)
+static int hip_manage_iface_local_hit(const hip_hit_t *const local_hit, const bool add)
 {
     int            err = 0;
     char           hit_str[INET6_ADDRSTRLEN + 2];
     struct idxmap *idxmap[16] = { 0 };
-
-    if (add) {
-        /* Re-assigning the same address (if hipd didn't exit
-         * properly and left the device as-is, for example) would not
-         * trigger RTM_NEWADDR and, most importantly, not set up the needed
-         * routes automatically. So we try to clear the address first.
-         */
-        hip_manage_iface_local_hit(local_hit, false);
-    }
 
     hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR, hit_str);
     HIP_DEBUG("%s HIT: %s\n", (add ? "Adding" : "Removing"), hit_str);
@@ -1312,6 +1301,42 @@ int hip_manage_iface_local_hit(const hip_hit_t *const local_hit, const bool add)
 out_err:
 
     return err;
+}
+
+/**
+ * Add a HIT on the local virtual interface to enable HIT-based
+ * connectivity. The interface is defined in the ::HIP_HIT_DEV constant.
+ *
+ * @param local_hit The HIT to be added
+ * @return          Zero on success, non-zero on failure.
+ *
+ * @note Adding just the HIT is not enough, a route has to be added as well.
+ * @see hip_manage_iface_local_hit()
+ */
+int hip_add_iface_local_hit(const hip_hit_t *const local_hit)
+{
+    /* Re-assigning the current address (if hipd didn't exit
+     * properly and left the device as-is, for example) would not
+     * trigger RTM_NEWADDR and, most importantly, not set up the needed
+     * routes automatically. So we try to clear the address first.
+     */
+    hip_remove_iface_local_hit(local_hit);
+
+    return hip_manage_iface_local_hit(local_hit, true);
+}
+
+/**
+ * Remove a HIT from the local virtual interface to disable HIT-based
+ * connectivity. The interface is defined in the ::HIP_HIT_DEV constant.
+ *
+ * @param local_hit The HIT to be removed.
+ * @return          Zero on success, non-zero on failure.
+ *
+ * @see hip_manage_iface_local_hit()
+ */
+int hip_remove_iface_local_hit(const hip_hit_t *const local_hit)
+{
+    return hip_manage_iface_local_hit(local_hit, false);
 }
 
 /**
