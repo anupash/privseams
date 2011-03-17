@@ -288,7 +288,7 @@ static int hip_init_raw_sock_v4(int proto)
 
     sock = socket(AF_INET, SOCK_RAW, proto);
     set_cloexec_flag(sock, 1);
-    HIP_IFEL(sock <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+    HIP_IFEL(sock <= 0, -1, "Raw socket v4 creation failed. Not root?\n");
 
     /* RECV_ERR is off because it is not handled properly by hipd
      * (message length is -1 and this causes msg reading problems) */
@@ -462,7 +462,7 @@ static int hip_init_raw_sock_v6(int proto)
 
     sock = socket(AF_INET6, SOCK_RAW, proto);
     set_cloexec_flag(sock, 1);
-    HIP_IFEL(sock <= 0, 1, "Raw socket creation failed. Not root?\n");
+    HIP_IFEL(sock <= 0, -1, "Raw socket creation failed. Not root?\n");
 
     /* RECV_ERR is off because it is not handled properly by hipd
      * (message length is -1 and this causes msg reading problems) */
@@ -865,6 +865,7 @@ void hip_exit(void)
     hip_delete_all_addresses();
 
     set_up_device(HIP_HIT_DEV, 0);
+    hip_remove_iface_all_local_hits();
 
     /* Next line is needed only if RVS or hiprelay is in use. */
     hip_uninit_services();
@@ -991,7 +992,6 @@ int hipd_init(const uint64_t flags)
     int                 killold = ((flags & HIPD_START_KILL_OLD) > 0);
     unsigned int        mtu_val = HIP_HIT_DEV_MTU;
     char                str[64];
-    char                mtu[16];
     struct sockaddr_in6 daemon_addr = { 0 };
 
     /* Keep the flags around: they will be used at kernel module removal */
@@ -1031,7 +1031,7 @@ int hipd_init(const uint64_t flags)
     signal(SIGTERM, hip_close);
     signal(SIGCHLD, hip_sig_chld);
 
-    HIP_IFEL(hip_init_cipher() < 0, 1, "Unable to init ciphers.\n");
+    HIP_IFEL(hip_init_cipher() < 0, -1, "Unable to init ciphers.\n");
 
     HIP_IFE(init_random_seed(), -1);
 
@@ -1104,11 +1104,9 @@ int hipd_init(const uint64_t flags)
 
     HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
     set_up_device(HIP_HIT_DEV, 0);
-    HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
+    HIP_IFE(set_up_device(HIP_HIT_DEV, 1), -1);
     HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", mtu_val);
-    sprintf(mtu, "%u", mtu_val);
-    strcpy(str, "ifconfig " HIP_HIT_DEV " mtu ");
-    strcat(str, mtu);
+    snprintf(str, sizeof(str), "ifconfig %s mtu %u", HIP_HIT_DEV, mtu_val);
     /* MTU is set using system call rather than in do_chflags to avoid
      * chicken and egg problems in hipd start up. */
     if (system(str) == -1) {
@@ -1116,10 +1114,10 @@ int hipd_init(const uint64_t flags)
     }
 
 
-    HIP_IFE(hip_init_host_ids(), 1);
+    HIP_IFE(hip_init_host_ids(), -1);
 
     hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-    HIP_IFEL(hip_user_sock < 0, 1,
+    HIP_IFEL(hip_user_sock < 0, -1,
              "Could not create socket for user communication.\n");
     daemon_addr.sin6_family = AF_INET6;
     daemon_addr.sin6_port   = htons(HIP_DAEMON_LOCAL_PORT);

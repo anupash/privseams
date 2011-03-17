@@ -361,8 +361,10 @@ static int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line 
     if (!strncmp(arg, entry->hostname, HOST_NAME_MAX) ||
         (entry->alias && !strncmp(arg, entry->alias, HOST_NAME_MAX)) ||
         (entry->alias2 && !strncmp(arg, entry->alias2, HOST_NAME_MAX))) {
-        HIP_IFE(hip_id_type_match(&entry->id, 1) ||
-                hip_id_type_match(&entry->id, 2), 1);
+        /* check that we did not resolve name to a HIT or an LSI */
+        HIP_IFEL(hip_id_type_match(&entry->id, 1) ||
+                 hip_id_type_match(&entry->id, 2),
+                 1, "resolved hostname to non-routable HIT or LSI\n");
 
         ipv6_addr_copy(result, &entry->id);
         err = 0; /* Stop at the first match */

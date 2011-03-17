@@ -84,32 +84,32 @@ void hip_copy_inaddr_null_check(struct in_addr *to,
      (((const uint32_t *) (in6_addr_a))[3] == (in_addr_b)->s_addr))
 
 /**
- * Checks if a uint32_t represents a Local Scope Identifier (LSI).
+ * Checks if a in_addr_t represents a Local Scope Identifier (LSI).
  *
- * @param       a the uint32_t to test
+ * @param       a the in_addr_t to test
  * @return      true if @c a is from 1.0.0.0/8
- * @note        This macro tests directly uint32_t, not struct in_addr or a pointer
+ * @note        This macro tests directly in_addr_t, not struct in_addr or a pointer
  *              to a struct in_addr. To use this macro in context with struct
  *              in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
  *              struct in_addr.
  */
-#define IS_LSI32(a) ((a & 0x000000FF) == 0x00000001)
+#define IS_LSI32(a) ((((in_addr_t) ntohl(a)) & 0xFF000000) == 0x01000000)
 
 #define IS_LSI(a) ((((struct sockaddr *) a)->sa_family == AF_INET) ? \
                    (IS_LSI32(((struct sockaddr_in *) a)->sin_addr.s_addr)) : \
                    (ipv6_addr_is_hit(&((struct sockaddr_in6 *) a)->sin6_addr)))
 
 /**
- * A macro to test if a uint32_t represents an IPv4 loopback address.
+ * A macro to test if a in_addr_t represents an IPv4 loopback address.
  *
- * @param a the uint32_t to test
+ * @param a the in_addr_t to test
  * @return  non-zero if @c a is from 127.0.0.0/8
- * @note    This macro tests directly uint32_t, not struct in_addr or a pointer
+ * @note    This macro tests directly in_addr_t, not struct in_addr or a pointer
  *          to a struct in_addr. To use this macro in context with struct
  *          in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
  *          struct in_addr.
  */
-#define IS_IPV4_LOOPBACK(a) ((a & 0x000000FF) == 0x0000007F)
+#define IS_IPV4_LOOPBACK(a) ((((in_addr_t) ntohl(a)) & 0xFF000000) == 0x7F000000)
 
 #ifndef MIN
 #define MIN(a, b)      ((a) < (b) ? (a) : (b))

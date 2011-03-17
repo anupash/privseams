@@ -476,7 +476,7 @@ const char *lmod_get_packet_identifier(const uint8_t packet_type)
  *         Error   = -1
  */
 int lmod_register_packet_type(const uint8_t packet_type,
-                              const char *identifier)
+                              const char *const identifier)
 {
     int                 idx       = 0;
     struct hip_ll_node *iter      = NULL;
