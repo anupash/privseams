@@ -80,11 +80,11 @@ static struct slist *conn_list = NULL;
 
 #ifdef CONFIG_HIP_DEBUG
 // this improves our chances of finding bugs in the timeout code
-#define DEFAULT_CONNECTION_TIMEOUT 10; // 10 seconds
-#define DEFAULT_CLEANUP_INTERVAL 5; // 5 seconds
+#define DEFAULT_CONNECTION_TIMEOUT 30; // 30 seconds
+#define DEFAULT_CLEANUP_INTERVAL   10; // 10 seconds
 #else
 #define DEFAULT_CONNECTION_TIMEOUT (60 * 5); // 5 minutes
-#define DEFAULT_CLEANUP_INTERVAL (60 * 60); // 1 minute
+#define DEFAULT_CLEANUP_INTERVAL   (60 * 1); // 1 minute
 #endif
 
 /**
