@@ -101,8 +101,8 @@ time_t cleanup_interval = DEFAULT_CLEANUP_INTERVAL;
  * Connection timeout, in seconds.
  * Disabled if zero. This actually specifies the minimum period of
  * inactivity before a connection is considered stale.
- * Thus, a connection may be inactive for at most @c connection_timeout
- * plus @c cleanup_interval seconds before getting removed.
+ * Thus, a connection may be inactive for at most ::connection_timeout
+ * plus ::cleanup_interval seconds before getting removed.
  *
  * @see hip_fw_conntrack_periodic_cleanup()
  */
@@ -1991,7 +1991,7 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
 /**
  * Do some necessary bookkeeping concerning connection tracking.
  * Currently, this only makes sure that stale locations will be removed.
- * The actual tasks will be run at most once per @c connection_timeout
+ * The actual tasks will be run at most once per ::connection_timeout
  * seconds, no matter how often you call the function.
  *
  * @note Don't call this from a thread or timer, since most of hipfw is not
