@@ -1999,9 +1999,10 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
  */
 void hip_fw_conntrack_periodic_cleanup(void)
 {
-    static time_t last_check = 0;  // timestamp of last call
-    const time_t  now        = time(NULL);
-    struct slist *iter_conn;
+    static time_t      last_check = 0;   // timestamp of last call
+    const time_t       now        = time(NULL);
+    struct slist      *iter_conn;
+    struct connection *conn;
 
     if (connection_timeout == 0) {
         // timeout disabled
@@ -2014,7 +2015,7 @@ void hip_fw_conntrack_periodic_cleanup(void)
 
         iter_conn = conn_list;
         while (iter_conn) {
-            struct connection *conn = iter_conn->data;
+            conn      = iter_conn->data;
             iter_conn = iter_conn->next; // iter_conn might get removed
 
             HIP_ASSERT(now >= conn->timestamp);
