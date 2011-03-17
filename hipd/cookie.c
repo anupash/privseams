@@ -115,7 +115,7 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
  */
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    const int       *new_val  = NULL;
+    const int       *new_val = NULL;
     const hip_hit_t *dst_hit = NULL;
 
     if (!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT))) {

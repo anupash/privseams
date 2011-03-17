@@ -336,10 +336,12 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     port_binding = hip_port_bindings_get(ip6_hdr->ip6_nxt, port_dest);
 
     if (port_binding == HIP_PORT_INFO_IPV6BOUND) {
-        HIP_DEBUG("Port %d is bound to an IPv6 address -> accepting packet\n", port_dest);
+        HIP_DEBUG("Port %d is bound to an IPv6 address -> accepting packet\n",
+                  port_dest);
         verdict = 1;
     } else if (port_binding == HIP_PORT_INFO_IPV6UNBOUND) {
-        HIP_DEBUG("Port %d is unbound or bound to an IPv4 address -> looking up in cache\n", port_dest);
+        HIP_DEBUG("Port %d is unbound or bound to an IPv4 address -> looking up in cache\n",
+                  port_dest);
         HIP_IFEL(!(entry = hip_firewall_cache_db_match(ip_dst, ip_src,
                                                        FW_CACHE_HIT, 1)),
                  -1, "Failed to obtain from cache\n");
