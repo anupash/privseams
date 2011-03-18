@@ -89,7 +89,7 @@ static struct slist *conn_list = NULL;
 
 /**
  * Interval between sweeps in hip_fw_conntrack_periodic_cleanup(),
- * in Seconds.
+ * in seconds.
  * Because all active connections are traversed, this should not be too
  * low for performance reasons.
  *
