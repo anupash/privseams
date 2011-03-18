@@ -230,9 +230,9 @@ out_err:
  * The initial ESP keys are drawn out of the keying material.
  *
  * @param ctx context
- * @param dhpv pointer to the DH public value choosen
  * @param I I value from puzzle
  * @param J J value from puzzle
+ * @param dhpv pointer to the DH public value choosen
  * @return zero on success, or negative on error.
  */
 static int hip_produce_keying_material(struct hip_packet_context *ctx,
