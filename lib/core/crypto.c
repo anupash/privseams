@@ -601,7 +601,7 @@ out_err:
  * @param group_id the group id of the D-H
  * @return a new Diffie-Hellman key (caller deallocates)
  */
-DH *hip_generate_dh_key(int group_id)
+DH *hip_generate_dh_key(const int group_id)
 {
     int            err;
     DH            *dh;
