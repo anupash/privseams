@@ -2177,13 +2177,13 @@ static unsigned int detect_esp_rule_activity(const char *const cmd,
             // theres's two ways of specifying SPIs in a rule
             // (see hip_fw_manage_esp_rule)
 
-            if ((str_spi = strstr(bfr, "spi:")) != NULL) {
+            if ((str_spi = strstr(bfr, "spi:"))) {
                 // non-UDP
                 if (sscanf(str_spi, "spi:%u", &spi) < 1) {
                     HIP_ERROR("Unexpected iptables output: '%s'\n", bfr);
                     continue;
                 }
-            } else if ((str_spi = strstr(bfr, u32_prefix)) != NULL) {
+            } else if ((str_spi = strstr(bfr, u32_prefix))) {
                 // UDP
                 // spi follows u32_prefix string as a hex number
                 // (always host byte order)
