@@ -478,8 +478,7 @@ void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple, const bool
 {
     struct slist *lst = esp_tuple->dst_addr_list;
     while (lst) {
-        hip_fw_manage_esp_rule(esp_tuple, (const struct in6_addr *)
-                               lst->data, insert);
+        hip_fw_manage_esp_rule(esp_tuple, lst->data, insert);
         lst = lst->next;
     }
 }
