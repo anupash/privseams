@@ -1603,7 +1603,7 @@ static int hip_conf_handle_puzzle(struct hip_common *msg,
                                   int optc,
                                   int send_only)
 {
-    int                          err  = 0, ret = 0, msg_type = 0, all, newVal = 0;
+    int                          err  = 0, ret = 0, msg_type = 0, all, new_val = 0;
     const int                   *diff = NULL;
     hip_hit_t                    hit  = { { { 0 } } }, all_zero_hit = { { { 0 } } };
     char                         hit_s[INET6_ADDRSTRLEN];
@@ -1667,7 +1667,7 @@ static int hip_conf_handle_puzzle(struct hip_common *msg,
 
     /* obtain the new value for set */
     if ((msg_type == HIP_MSG_CONF_PUZZLE_SET) && (optc == 2)) {
-        newVal = atoi(opt[1]);
+        new_val = atoi(opt[1]);
     }
 
     /* Build a HIP message with socket option to get puzzle difficulty. */
@@ -1709,7 +1709,7 @@ static int hip_conf_handle_puzzle(struct hip_common *msg,
 
     /* attach new val for the set action */
     if (msg_type == HIP_MSG_CONF_PUZZLE_SET) {
-        err = hip_build_param_contents(msg, &newVal, HIP_PARAM_INT,
+        err = hip_build_param_contents(msg, &new_val, HIP_PARAM_INT,
                                        sizeof(int));
         if (err) {
             HIP_ERROR("build param int failed: %s\n", strerror(err));

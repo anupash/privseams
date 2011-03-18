@@ -84,8 +84,8 @@ enum {
     STATE_CLOSING
 };
 
-int           timeoutChecking = 0;
-unsigned long timeoutValue    = 0;
+int           timeout_checking = 0;
+unsigned long timeout_value    = 0;
 
 /*------------print functions-------------*/
 /**
