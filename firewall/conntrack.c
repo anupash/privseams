@@ -375,8 +375,8 @@ static struct esp_address *get_esp_address(const struct slist *addr_list,
  * @see update_esp_address
  * @see free_esp_tuple
  */
-static int hip_fw_manage_esp_rule(const struct esp_tuple *esp_tuple,
-                                  const struct in6_addr *dest, bool insert)
+static int hip_fw_manage_esp_rule(const struct esp_tuple *const esp_tuple,
+                                  const struct in6_addr *const dest, bool insert)
 {
     int         err   = 0;
     const char *flag  = insert ? "-I" : "-D";
@@ -474,7 +474,7 @@ out_err:
  *
  * @see hip_fw_manage_esp_rule
  */
-void hip_fw_manage_esp_tuple(const struct esp_tuple *esp_tuple, bool insert)
+void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple, const bool insert)
 {
     struct slist *lst = esp_tuple->dst_addr_list;
     while (lst) {
