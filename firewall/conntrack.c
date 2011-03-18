@@ -84,16 +84,16 @@ static struct slist *conn_list = NULL;
 
 #ifdef CONFIG_HIP_DEBUG
 // this improves our chances of finding bugs in the timeout code
-#define DEFAULT_CONNECTION_TIMEOUT 10; // 10 seconds
-#define DEFAULT_CLEANUP_INTERVAL 5; // 5 seconds
+#define DEFAULT_CONNECTION_TIMEOUT 30; // 30 seconds
+#define DEFAULT_CLEANUP_INTERVAL   10; // 10 seconds
 #else
 #define DEFAULT_CONNECTION_TIMEOUT (60 * 5); // 5 minutes
-#define DEFAULT_CLEANUP_INTERVAL (60 * 60); // 1 minute
+#define DEFAULT_CLEANUP_INTERVAL   (60 * 1); // 1 minute
 #endif
 
 /**
  * Interval between sweeps in hip_fw_conntrack_periodic_cleanup(),
- * in Seconds.
+ * in seconds.
  * Because all active connections are traversed, this should not be too
  * low for performance reasons.
  *
@@ -102,11 +102,11 @@ static struct slist *conn_list = NULL;
 time_t cleanup_interval = DEFAULT_CLEANUP_INTERVAL;
 
 /**
- * Connection timeout, in seconds.
- * Disabled if zero. This actually specifies the minimum period of
- * inactivity before a connection is considered stale.
- * Thus, a connection may be inactive for at most @c connection_timeout
- * plus @c cleanup_interval seconds before getting removed.
+ * Connection timeout in seconds, or zero to disable timeout.
+ * This actually specifies the minimum period of inactivity before a
+ * connection is considered stale. Thus, a connection may be inactive for
+ * at most ::connection_timeout plus ::cleanup_interval seconds before
+ * getting removed.
  *
  * @see hip_fw_conntrack_periodic_cleanup()
  */
@@ -2250,7 +2250,7 @@ static unsigned int detect_esp_rule_activity(const char *const cmd,
 /**
  * Do some necessary bookkeeping concerning connection tracking.
  * Currently, this only makes sure that stale locations will be removed.
- * The actual tasks will be run at most once per @c connection_timeout
+ * The actual tasks will be run at most once per ::connection_timeout
  * seconds, no matter how often you call the function.
  *
  * @note Don't call this from a thread or timer, since most of hipfw is not
@@ -2258,7 +2258,7 @@ static unsigned int detect_esp_rule_activity(const char *const cmd,
  */
 void hip_fw_conntrack_periodic_cleanup(void)
 {
-    static time_t      last_check = 0;  // timestamp of last call
+    static time_t      last_check = 0; // timestamp of last call
     const time_t       now        = time(NULL);
     struct slist      *iter_conn;
     struct connection *conn;
@@ -2270,7 +2270,7 @@ void hip_fw_conntrack_periodic_cleanup(void)
 
     HIP_ASSERT(now >= last_check);
     if (now - last_check >= cleanup_interval) {
-        HIP_DEBUG("Commencing periodic cleanup\n");
+        HIP_DEBUG("Checking for connection timeouts\n");
 
         // If connections are covered by iptables rules, we rely on kernel
         // packet counters to update timestamps indirectly for these.
@@ -2302,7 +2302,10 @@ void hip_fw_conntrack_periodic_cleanup(void)
 
             HIP_ASSERT(now >= conn->timestamp);
             if (now - conn->timestamp >= connection_timeout) {
-                HIP_DEBUG("Connection timeout\n");
+                HIP_DEBUG("Connection timed out:\n");
+                HIP_DEBUG_HIT("src HIT", &conn->original.hip_tuple->data->src_hit);
+                HIP_DEBUG_HIT("dst HIT", &conn->original.hip_tuple->data->dst_hit);
+
                 remove_connection(conn);
             }
         }
