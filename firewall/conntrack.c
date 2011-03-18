@@ -65,6 +65,7 @@
 #include "modules/update/hipd/update.h"
 #include "common_types.h"
 #include "dlist.h"
+#include "hslist.h"
 #include "esp_prot_conntrack.h"
 #include "firewall_defines.h"
 #include "firewall.h"
@@ -117,6 +118,8 @@ enum {
     STATE_ESTABLISHING_FROM_UPDATE,
     STATE_CLOSING
 };
+
+static unsigned int total_esp_rules_count = 0;
 
 /*------------print functions-------------*/
 /**
@@ -426,7 +429,7 @@ static int hip_fw_manage_esp_rule(const struct esp_tuple *esp_tuple,
 
         IPV6_TO_IPV4_MAP(dest, &dest4);
         HIP_IFEL(!inet_ntop(AF_INET, &dest4, daddr, sizeof(daddr)), -1,
-                 "inet_ntop: %s", strerror(errno));
+                 "inet_ntop: %s\n", strerror(errno));
 
         if (esp_tuple->tuple->connection->udp_encap) {
             /* SPI is the first 32bit value in encapsulating UDP payload, so
@@ -445,7 +448,7 @@ static int hip_fw_manage_esp_rule(const struct esp_tuple *esp_tuple,
     } else {
         char daddr[INET6_ADDRSTRLEN];
         HIP_IFEL(!inet_ntop(AF_INET6, dest, daddr, sizeof(daddr)), -1,
-                 "inet_ntop: %s", strerror(errno));
+                 "inet_ntop: %s\n", strerror(errno));
 
         HIP_ASSERT(!esp_tuple->tuple->connection->udp_encap);
         err = system_printf("ip6tables %s %s -p 50 "
@@ -453,8 +456,13 @@ static int hip_fw_manage_esp_rule(const struct esp_tuple *esp_tuple,
                             flag, table, daddr, esp_tuple->spi);
     }
 
+    if (err == EXIT_SUCCESS) {
+        total_esp_rules_count += (insert ? 1 : -1);
+        HIP_DEBUG("total_esp_rules_count = %d\n", total_esp_rules_count);
+    }
+
 out_err:
-    return err;
+    return err == EXIT_SUCCESS ? 0 : -1;
 }
 
 /**
@@ -596,7 +604,6 @@ static void insert_new_connection(const struct hip_data *data, struct hip_fw_con
 
     connection->state     = STATE_ESTABLISHED;
     connection->udp_encap = ctx->udp_encap_hdr ? 1 : 0;
-    //set time stamp
     connection->timestamp = time(NULL);
 #ifdef HIP_CONFIG_MIDAUTH
     connection->pisa_state = PISA_STATE_DISALLOW;
@@ -2107,6 +2114,140 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
 }
 
 /**
+ * Update timestamps of all ESP tuples where corresponding iptables rules'
+ * packet counters are non-zero.
+ * Currently, this works by parsing the output given by @a cmd, which is
+ * expected to have `iptables --nvL' format.
+ *
+ * @param cmd       Command line to capture output from.
+ * @param now       We consider this the current time.
+ * @return          Number of rules that were identified with an esp tuple.
+ *                  Not necessarily the number of tuples updated.
+ *
+ * @note This function doesn't clear the packet counters itself.
+ *
+ * @todo De-uglify this. You may be tempted to statically link in libiptc,
+ *       and I'd generally approve of it because while it was never meant
+ *       to be used publicly, quite some projects have relied on it without
+ *       burning their fingers too badly for a long time now. But on the
+ *       other hand, there's the impending nftables release that will render
+ *       all your hard work obsolete anyway. I'd rather suggest waiting for
+ *       a post-alpha release of libnl_nft before wasting your time...
+ *       --cmroz, oct 2010
+ */
+static unsigned int detect_esp_rule_activity(const char *const cmd,
+                                             const time_t now)
+{
+    static const char u32_prefix[] = "u32 0x4&0x1fff=0x0&&0x0>>0x16&0x3c@0x8=0x";
+
+    /*
+     * In iptables output, one column is optional. So we try the long
+     * format first and fall back to the shorter one (see sscanf call
+     * below).
+     * The %45s format is used here because 45 is the maximum IPv6 address
+     * length, considering all variations (i.e. INET6_ADDRSTRLEN - 1).
+     */
+    static const char *formats[] = { "%u %*u %*s %*s %*2[!f-] %*s %*s %*s %45s",
+                                     "%u %*u %*s %*s %*s %*s %*s %45s" };
+
+    unsigned int ret      = 0;
+    bool         chain_ok = false;
+    char         bfr[256];
+    FILE        *p;
+
+    if (!(p = popen(cmd, "r"))) {
+        HIP_ERROR("popen(\"%s\"): %s\n", cmd, strerror(errno));
+        return 0;
+    }
+
+    while (fgets(bfr, sizeof(bfr), p)) {
+        if (strncmp(bfr, "Chain", 5) == 0) {
+            chain_ok = (strncmp(bfr, "Chain HIPFW-INPUT",   17) == 0) ||
+                       (strncmp(bfr, "Chain HIPFW-OUTPUT",  18) == 0) ||
+                       (strncmp(bfr, "Chain HIPFW-FORWARD", 19) == 0);
+            continue;
+        }
+
+        if (chain_ok) {
+            unsigned int    packet_count;
+            uint32_t        spi;
+            struct in6_addr dest;
+            char            ip[INET6_ADDRSTRLEN];
+            const char     *str_spi;
+
+            // theres's two ways of specifying SPIs in a rule
+            // (see hip_fw_manage_esp_rule)
+
+            if ((str_spi = strstr(bfr, "spi:")) != NULL) {
+                // non-UDP
+                if (sscanf(str_spi, "spi:%u", &spi) < 1) {
+                    HIP_ERROR("Unexpected iptables output: '%s'\n", bfr);
+                    continue;
+                }
+            } else if ((str_spi = strstr(bfr, u32_prefix)) != NULL) {
+                // UDP
+                // spi follows u32_prefix string as a hex number
+                // (always host byte order)
+                if (sscanf(&str_spi[sizeof(u32_prefix) - 1], "%x", &spi) < 1) {
+                    HIP_ERROR("Unexpected iptables output: '%s'\n", bfr);
+                    continue;
+                }
+            } else {
+                // no SPI specified, so it's no ESP rule
+                continue;
+            }
+
+            // grab packet count and destination IP.
+            if (sscanf(bfr, formats[0], &packet_count, ip) < 2) {
+                // retry with alternative format before we give up
+                if (sscanf(bfr, formats[1], &packet_count, ip) < 2) {
+                    HIP_ERROR("Unexpected iptables output: '%s'\n", bfr);
+                    continue;
+                }
+            }
+
+            if (packet_count > 0) {
+                char         *slash;
+                struct tuple *tuple;
+
+                // IP may be in /128 format, strip the suffix
+                if ((slash = strchr(ip, '/'))) {
+                    *slash = '\0';
+                }
+
+                // parse destination IP; try IPv6 first, then IPv4
+                if (!inet_pton(AF_INET6, ip, &dest)) {
+                    struct in_addr addr4;
+                    if (!inet_pton(AF_INET, ip, &addr4)) {
+                        HIP_ERROR("Unexpected iptables output: '%s'\n", bfr);
+                        HIP_ERROR("Can't parse destination IP: %s\n", ip);
+                        continue;
+                    }
+
+                    IPV4_TO_IPV6_MAP(&addr4, &dest);
+                }
+
+                if ((tuple = get_tuple_by_esp(&dest, spi))) {
+                    tuple->connection->timestamp = now;
+                    HIP_DEBUG("Activity detected\n");
+                }
+            }
+
+            ret += 1;
+        }
+    }
+
+    if (!feof(p)) {
+        HIP_ERROR("fgets(\"%s\"): %s\n", cmd, strerror(errno));
+    }
+
+    pclose(p);
+
+    HIP_DEBUG("-> %u\n", ret);
+    return ret;
+}
+
+/**
  * Do some necessary bookkeeping concerning connection tracking.
  * Currently, this only makes sure that stale locations will be removed.
  * The actual tasks will be run at most once per @c connection_timeout
@@ -2130,6 +2271,29 @@ void hip_fw_conntrack_periodic_cleanup(void)
     HIP_ASSERT(now >= last_check);
     if (now - last_check >= cleanup_interval) {
         HIP_DEBUG("Commencing periodic cleanup\n");
+
+        // If connections are covered by iptables rules, we rely on kernel
+        // packet counters to update timestamps indirectly for these.
+
+        if (total_esp_rules_count > 0) {
+            unsigned int found = 0;
+            found += detect_esp_rule_activity("iptables -nvL", now);
+            found += detect_esp_rule_activity("ip6tables -nvL", now);
+
+            // we should be paranoid about iptables output
+            if (found != total_esp_rules_count) {
+                HIP_ERROR("Not all ESP tuples' packet counts were found\n");
+            }
+
+            // reset packet counters
+            system_print("iptables -Z HIPFW-INPUT");
+            system_print("iptables -Z HIPFW-OUTPUT");
+            system_print("iptables -Z HIPFW-FORWARD");
+
+            system_print("ip6tables -Z HIPFW-INPUT");
+            system_print("ip6tables -Z HIPFW-OUTPUT");
+            system_print("ip6tables -Z HIPFW-FORWARD");
+        }
 
         iter_conn = conn_list;
         while (iter_conn) {
