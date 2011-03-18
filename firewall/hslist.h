@@ -32,6 +32,6 @@ struct slist *append_to_slist(struct slist *list, void *data);
 
 struct slist *remove_link_slist(struct slist *list, struct slist *link);
 
-struct slist *find_in_slist(struct slist *const list, const void *const data);
+struct slist *find_in_slist(struct slist *list, const void *const data);
 
 #endif /* HIP_FIREWALL_HSLIST_H */
