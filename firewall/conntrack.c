@@ -2011,7 +2011,7 @@ void hip_fw_conntrack_periodic_cleanup(void)
 
     HIP_ASSERT(now >= last_check);
     if (now - last_check >= cleanup_interval) {
-        HIP_DEBUG("Commencing periodic cleanup\n");
+        HIP_DEBUG("Checking for connection timeouts\n");
 
         iter_conn = conn_list;
         while (iter_conn) {
@@ -2020,7 +2020,10 @@ void hip_fw_conntrack_periodic_cleanup(void)
 
             HIP_ASSERT(now >= conn->timestamp);
             if (now - conn->timestamp >= connection_timeout) {
-                HIP_DEBUG("Connection timeout\n");
+                HIP_DEBUG("Connection timed out:\n");
+                HIP_DEBUG_HIT("src HIT", &conn->original.hip_tuple->data->src_hit);
+                HIP_DEBUG_HIT("dst HIT", &conn->original.hip_tuple->data->dst_hit);
+
                 remove_connection(conn);
             }
         }
