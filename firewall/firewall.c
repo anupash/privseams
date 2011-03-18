@@ -1752,7 +1752,7 @@ int main(int argc, char **argv)
     struct hip_fw_context ctx;
     int                   limit_capabilities = 0;
     int                   is_root            = 0, access_ok = 0, msg_type = 0; //variables for accepting user messages only from hipd
-    char                 *ptr                = NULL; // temporary pointer (see -t option)
+    char                 *end_of_number; // temporary pointer (see -t option)
 
     /* Make sure that root path is set up correcly (e.g. on Fedora 9).
      * Otherwise may get warnings from system_print() commands.
@@ -1844,8 +1844,8 @@ int main(int argc, char **argv)
             limit_capabilities = 1;
             break;
         case 't':
-            connection_timeout = strtoul(optarg, &ptr, 10);
-            if (ptr == optarg) {
+            connection_timeout = strtoul(optarg, &end_of_number, 10);
+            if (end_of_number == optarg) {
                 fprintf(stderr, "Error: Invalid timeout given\n");
                 errflg = 1;
             }
