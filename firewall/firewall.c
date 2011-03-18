@@ -2072,8 +2072,6 @@ int main(int argc, char **argv)
         }
 #endif
 
-        hip_fw_conntrack_periodic_cleanup();
-
         if (FD_ISSET(h4->fd, &read_fdset)) {
             HIP_DEBUG("received IPv4 packet from iptables queue\n");
             err = hip_fw_handle_packet(buf, h4, 4, &ctx);
@@ -2088,6 +2086,8 @@ int main(int argc, char **argv)
             HIP_DEBUG("****** Received HIPD message ******\n");
             err = hip_fw_handle_hipd_message(msg);
         }
+
+        hip_fw_conntrack_periodic_cleanup();
     }
 
 out_err:
