@@ -98,11 +98,11 @@ static struct slist *conn_list = NULL;
 time_t cleanup_interval = DEFAULT_CLEANUP_INTERVAL;
 
 /**
- * Connection timeout, in seconds.
- * Disabled if zero. This actually specifies the minimum period of
- * inactivity before a connection is considered stale.
- * Thus, a connection may be inactive for at most ::connection_timeout
- * plus ::cleanup_interval seconds before getting removed.
+ * Connection timeout in seconds, or zero to disable timeout.
+ * This actually specifies the minimum period of inactivity before a
+ * connection is considered stale. Thus, a connection may be inactive for
+ * at most ::connection_timeout plus ::cleanup_interval seconds before
+ * getting removed.
  *
  * @see hip_fw_conntrack_periodic_cleanup()
  */
