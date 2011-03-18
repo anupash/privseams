@@ -4,7 +4,7 @@
 START=65
 STOP=65
 
-HIPFW_START='hipfw -mb'
+HIPFW_START='hipfw -kb'
 
 start() {
     echo -n "Starting hipfw"
