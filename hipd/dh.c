@@ -197,6 +197,7 @@ void hip_dh_uninit(void)
         DH_free(dh_table[i]);
         dh_table[i] = NULL;
     }
+    CRYPTO_cleanup_all_ex_data();
 }
 
 /**
