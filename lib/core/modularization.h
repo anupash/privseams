@@ -50,6 +50,8 @@ int lmod_unregister_function(struct hip_ll *list, const void *function);
 
 int lmod_register_state_init_function(void *func);
 
+void lmod_uninit_state_init_functions(void);
+
 void lmod_init_state_items(struct modular_state *state);
 
 struct modular_state *lmod_init_state(void);
