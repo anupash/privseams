@@ -2107,6 +2107,82 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
     return NULL;
 }
 
+static bool parse_iptables_esp_rule(const char *const input,
+                                    unsigned int *const packet_count,
+                                    uint32_t *const spi,
+                                    struct in6_addr *const dest)
+{
+    static const char u32_prefix[] = "u32 0x4&0x1fff=0x0&&0x0>>0x16&0x3c@0x8=0x";
+
+    /*
+     * In iptables output, one column is optional. So we try the long
+     * format first and fall back to the shorter one (see sscanf call
+     * below).
+     * The %45s format is used here because 45 is the maximum IPv6 address
+     * length, considering all variations (i.e. INET6_ADDRSTRLEN - 1).
+     */
+    static const char *formats[] = { "%u %*u %*s %*s %*2[!f-] %*s %*s %*s %45s",
+                                     "%u %*u %*s %*s %*s %*s %*s %45s" };
+
+    char        ip[INET6_ADDRSTRLEN];
+    const char *str_spi;
+
+    // theres's two ways of specifying SPIs in a rule
+    // (see hip_fw_manage_esp_rule)
+
+    if ((str_spi = strstr(input, "spi:"))) {
+        // non-UDP
+        if (sscanf(str_spi, "spi:%u", spi) < 1) {
+            HIP_ERROR("Unexpected iptables output: '%s'\n", input);
+            return false;
+        }
+    } else if ((str_spi = strstr(input, u32_prefix))) {
+        // UDP
+        // spi follows u32_prefix string as a hex number
+        // (always host byte order)
+        if (sscanf(&str_spi[sizeof(u32_prefix) - 1], "%x", spi) < 1) {
+            HIP_ERROR("Unexpected iptables output: '%s'\n", input);
+            return false;
+        }
+    } else {
+        // no SPI specified, so it's no ESP rule
+        return false;
+    }
+
+    // grab packet count and destination IP.
+    if (sscanf(input, formats[0], packet_count, ip) < 2) {
+        // retry with alternative format before we give up
+        if (sscanf(input, formats[1], packet_count, ip) < 2) {
+            HIP_ERROR("Unexpected iptables output: '%s'\n", input);
+            return false;
+        }
+    }
+
+    // IP not needed, unless there was activity
+    if (*packet_count > 0) {
+        char *slash;
+
+        // IP may be in /128 format, strip the suffix
+        if ((slash = strchr(ip, '/'))) {
+            *slash = '\0';
+        }
+
+        // parse destination IP; try IPv6 first, then IPv4
+        if (!inet_pton(AF_INET6, ip, dest)) {
+            struct in_addr addr4;
+            if (!inet_pton(AF_INET, ip, &addr4)) {
+                HIP_ERROR("Unexpected iptables output: '%s'\n", input);
+                HIP_ERROR("Can't parse destination IP: %s\n", ip);
+                return false;
+            }
+
+            IPV4_TO_IPV6_MAP(&addr4, dest);
+        }
+    }
+
+    return true;
+}
+
 /**
  * Update timestamps of all ESP tuples where corresponding iptables rules'
  * packet counters are non-zero.
@@ -2132,17 +2208,6 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
 static unsigned int detect_esp_rule_activity(const char *const cmd,
                                              const time_t now)
 {
-    static const char u32_prefix[] = "u32 0x4&0x1fff=0x0&&0x0>>0x16&0x3c@0x8=0x";
-
-    /*
-     * In iptables output, one column is optional. So we try the long
-     * format first and fall back to the shorter one (see sscanf call
-     * below).
-     * The %45s format is used here because 45 is the maximum IPv6 address
-     * length, considering all variations (i.e. INET6_ADDRSTRLEN - 1).
-     */
-    static const char *formats[] = { "%u %*u %*s %*s %*2[!f-] %*s %*s %*s %45s",
-                                     "%u %*u %*s %*s %*s %*s %*s %45s" };
 
     unsigned int ret      = 0;
     bool         chain_ok = false;
@@ -2162,72 +2227,25 @@ static unsigned int detect_esp_rule_activity(const char *const cmd,
             continue;
         }
 
-        if (chain_ok) {
-            unsigned int    packet_count;
-            uint32_t        spi;
-            struct in6_addr dest;
-            char            ip[INET6_ADDRSTRLEN];
-            const char     *str_spi;
+        unsigned int     packet_count;
+        uint32_t         spi;
+        struct in6_addr  dest;
+        struct tuple    *tuple;
 
-            // theres's two ways of specifying SPIs in a rule
-            // (see hip_fw_manage_esp_rule)
-
-            if ((str_spi = strstr(bfr, "spi:"))) {
-                // non-UDP
-                if (sscanf(str_spi, "spi:%u", &spi) < 1) {
-                    HIP_ERROR("Unexpected iptables output: '%s'\n", bfr);
-                    continue;
-                }
-            } else if ((str_spi = strstr(bfr, u32_prefix))) {
-                // UDP
-                // spi follows u32_prefix string as a hex number
-                // (always host byte order)
-                if (sscanf(&str_spi[sizeof(u32_prefix) - 1], "%x", &spi) < 1) {
-                    HIP_ERROR("Unexpected iptables output: '%s'\n", bfr);
-                    continue;
-                }
-            } else {
-                // no SPI specified, so it's no ESP rule
-                continue;
-            }
-
-            // grab packet count and destination IP.
-            if (sscanf(bfr, formats[0], &packet_count, ip) < 2) {
-                // retry with alternative format before we give up
-                if (sscanf(bfr, formats[1], &packet_count, ip) < 2) {
-                    HIP_ERROR("Unexpected iptables output: '%s'\n", bfr);
-                    continue;
-                }
-            }
+        if (chain_ok && parse_iptables_esp_rule(bfr, &packet_count, &spi, &dest)) {
+            ret += 1;
 
             if (packet_count > 0) {
-                char         *slash;
-                struct tuple *tuple;
-
-                // IP may be in /128 format, strip the suffix
-                if ((slash = strchr(ip, '/'))) {
-                    *slash = '\0';
+                tuple = get_tuple_by_esp(&dest, spi);
+                if (!tuple) {
+                    HIP_ERROR("Stray ESP rule: SPI = %u\n", spi);
+                    continue;
                 }
 
-                // parse destination IP; try IPv6 first, then IPv4
-                if (!inet_pton(AF_INET6, ip, &dest)) {
-                    struct in_addr addr4;
-                    if (!inet_pton(AF_INET, ip, &addr4)) {
-                        HIP_ERROR("Unexpected iptables output: '%s'\n", bfr);
-                        HIP_ERROR("Can't parse destination IP: %s\n", ip);
-                        continue;
-                    }
-
-                    IPV4_TO_IPV6_MAP(&addr4, &dest);
-                }
-
-                if ((tuple = get_tuple_by_esp(&dest, spi))) {
-                    tuple->connection->timestamp = now;
-                    HIP_DEBUG("Activity detected\n");
-                }
+                tuple->connection->timestamp = now;
+                HIP_DEBUG("Activity detected: SPI = %u\n", spi);
+                HIP_DEBUG_IN6ADDR("dest: ", &dest);
             }
-
-            ret += 1;
         }
     }
 
