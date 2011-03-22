@@ -1677,7 +1677,7 @@ out_err:
  * @note The buffer @a msg is reused between calls because it is quite
  *       large.
  */
-static int hip_fw_handle_hipd_message(struct hip_common *msg)
+static int hip_fw_handle_hipd_message(struct hip_common *const msg)
 {
     struct sockaddr_in6 sock_addr;
     int                 msg_type, len, n;
