@@ -2107,6 +2107,21 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
     return NULL;
 }
 
+/**
+ * Parse one line of iptables -nvL formatted output, and extract
+ * packet count, SPI and destination IP if successful.
+ * This takes into account all kinds of rules that can are created by
+ * hip_fw_manage_esp_rule().
+ *
+ * @param input        The line to be parsed.
+ * @param packet_count Out: receives the packet count (first column).
+ * @param spi          Out: receives the SPI.
+ * @param spi          Out: receives the destination IP.
+ * @return             true if rule was valid and output was written,
+ *                     false otherwise
+ *
+ * @see detect_esp_rule_activity()
+ */
 static bool parse_iptables_esp_rule(const char *const input,
                                     unsigned int *const packet_count,
                                     uint32_t *const spi,
