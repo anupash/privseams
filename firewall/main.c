@@ -72,7 +72,7 @@ static void hipfw_usage(void)
     puts("      -e = use esp protection extension (also sets -i)");
     puts("      -l = activate lsi support");
     puts("      -p = run with lowered privileges. iptables rules will not be flushed on exit");
-    puts("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0.\n");
+    puts("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0");
     puts("      -u = attempt to speed up esp traffic using iptables rules");
     puts("      -h = print this help");
 #ifdef CONFIG_HIP_MIDAUTH

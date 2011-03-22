@@ -216,6 +216,12 @@ test_check_firewall_SOURCES = test/check_firewall.c         \
                               firewall/user_ipsec_fw_msg.c  \
                               firewall/user_ipsec_sadb.c
 
+if HIP_MIDAUTH
+test_check_firewall_SOURCES += firewall/midauth.c   \
+                               firewall/pisa.c      \
+                               firewall/pisa_cert.c
+endif
+
 test_check_lib_core_SOURCES = test/check_lib_core.c          \
                               test/lib/core/hit.c            \
                               test/lib/core/straddr.c
