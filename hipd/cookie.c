@@ -115,18 +115,18 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg)
  */
 int hip_set_puzzle_difficulty_msg(struct hip_common *msg)
 {
-    const int       *newVal  = NULL;
+    const int       *new_val = NULL;
     const hip_hit_t *dst_hit = NULL;
 
     if (!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT))) {
         HIP_ERROR("No HIT set\n");
         return -1;
     }
-    if (!(newVal = hip_get_param_contents(msg, HIP_PARAM_INT))) {
+    if (!(new_val = hip_get_param_contents(msg, HIP_PARAM_INT))) {
         HIP_ERROR("No difficulty set\n");
         return -1;
     }
-    if (hip_set_cookie_difficulty(*newVal), -1) {
+    if (hip_set_cookie_difficulty(*new_val), -1) {
         HIP_ERROR("Setting difficulty failed\n");
         return -1;
     }

@@ -90,7 +90,7 @@ int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
     res = hip_encode_dh_publickey(tmp, buffer, bufsize);
     if (res < 0) {
         HIP_ERROR("Encoding error\n");
-        res = -3;
+        res = -1;
         goto err_free;
     }
 
@@ -197,6 +197,7 @@ void hip_dh_uninit(void)
         DH_free(dh_table[i]);
         dh_table[i] = NULL;
     }
+    CRYPTO_cleanup_all_ex_data();
 }
 
 /**

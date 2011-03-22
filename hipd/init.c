@@ -878,6 +878,8 @@ void hip_exit(void)
 
     lmod_uninit_packet_types();
 
+    lmod_uninit_state_init_functions();
+
 #ifdef CONFIG_HIP_RVS
     HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
     hip_relay_uninit();

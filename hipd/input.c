@@ -230,9 +230,9 @@ out_err:
  * The initial ESP keys are drawn out of the keying material.
  *
  * @param ctx context
- * @param dhpv pointer to the DH public value choosen
  * @param I I value from puzzle
  * @param J J value from puzzle
+ * @param dhpv pointer to the DH public value choosen
  * @return zero on success, or negative on error.
  */
 static int hip_produce_keying_material(struct hip_packet_context *ctx,
@@ -430,7 +430,8 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     ctx->hadb_entry->dh_shared_key     = dh_shared_key;
     ctx->hadb_entry->dh_shared_key_len = dh_shared_len;
 
-    /* on success free for dh_shared_key is called by caller */
+    /* on success free for dh_shared_key is called during close procedure with
+     * hip_del_peer_info_entry() */
 out_err:
     if (err) {
         free(dh_shared_key);
@@ -930,8 +931,6 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
 
     /********** Diffie-Hellman *********/
     /* calculate shared secret and create keying material */
-    ctx->hadb_entry->dh_shared_key = NULL;
-
     HIP_IFEL(!(dh_req = hip_get_param(ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT,
              "Internal error\n");
@@ -959,7 +958,6 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
     /******************************************************************/
 
 out_err:
-    free(ctx->hadb_entry->dh_shared_key);
     return err;
 }
 

@@ -129,6 +129,9 @@ struct modular_state *lmod_init_state(void)
  * Registers a new state initialization function. These functions are called,
  * when a new host association database entry is created.
  *
+ * @note   Call lmod_uninit_state_init_functions() to free all memory allocated
+ *         for state initialization functions.
+ *
  * @param  func Pointer to the state initialization function.
  *
  * @return Success = 0
@@ -141,6 +144,14 @@ int lmod_register_state_init_function(void *func)
     }
 
     return hip_ll_add_last(&state_init_functions, func);
+}
+
+/**
+ * Free all memory allocated for storage of the state initialization functions.
+ */
+void lmod_uninit_state_init_functions(void)
+{
+    hip_ll_uninit(&state_init_functions, NULL);
 }
 
 /**

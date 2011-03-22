@@ -458,7 +458,7 @@ out_err:
 }
 
 /**
- * retrive host id public key algorithm
+ * retrieve host id public key algorithm
  *
  * @param host_id a hip_host_id parameter
  * @return the host id public key algorithm
@@ -849,8 +849,7 @@ out:
  * @param param_type the type of the parameter to be searched from msg
  *                   (in host byte order)
  * @return           a pointer to the first parameter of the type param_type,
- *                   or NULL if no parameters of the type param_type were not
- *                   found.
+ *                   or NULL if no parameters of the type param_type were found.
  */
 const void *hip_get_param(const struct hip_common *msg,
                           hip_tlv param_type)
@@ -3356,7 +3355,7 @@ int hip_get_param_host_id_di_type_len(const struct hip_host_id *host,
 }
 
 /**
- * an accessor function to retrive a pointer to the hostname field within
+ * an accessor function to retrieve a pointer to the hostname field within
  * a host id parameter
  *
  * @param hostid the host id parameter
