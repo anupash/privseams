@@ -73,7 +73,7 @@ static void hipfw_usage(void)
     puts("      -l = activate lsi support");
     puts("      -p = run with lowered privileges. iptables rules will not be flushed on exit");
     puts("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0.\n");
-    puts("      -u = prefer userspace processing: don't add iptables rules for speedups\n");
+    puts("      -u = attempt to speed up esp traffic using iptables rules");
     puts("      -h = print this help");
 #ifdef CONFIG_HIP_MIDAUTH
     puts("      -m = middlebox authentication");
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
             }
             break;
         case 'u':
-            prefer_userspace = 1;
+            esp_speedup = 1;
             break;
         case 'v':
             log_level = LOGDEBUG_MEDIUM;

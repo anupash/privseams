@@ -376,7 +376,7 @@ static int hip_fw_manage_esp_rule(const struct esp_tuple *const esp_tuple,
     const char *flag  = insert ? "-I" : "-D";
     const char *table = NULL;
 
-    if (hip_userspace_ipsec || prefer_userspace) {
+    if (!esp_speedup || hip_userspace_ipsec) {
         return -1;
     }
 
