@@ -691,15 +691,34 @@ static void firewall_exit(void)
 }
 
 /**
- * Firewall signal handler wrapper (SIGINT, SIGTERM). Exit firewall gracefully
- * and clean up all packet capture rules.
+ * Firewall signal handler wrapper (callback).
+ * Exit firewall gracefully and clean up all packet capture rules.
  *
+ * @param sig Signal number (currently SIGINT, SIGTERM or SIGABRT).
+ *
+ * @see firewall_init()
+ * @see firewall_exit()
  */
 static void firewall_close(DBG const int sig)
 {
+    static unsigned int count = 0;
+
     HIP_DEBUG("Caught signal %d, closing firewall.\n", sig);
-    firewall_exit();
-    exit(EXIT_SUCCESS);
+
+    count += 1;
+    switch (count) {
+    case 1:
+        firewall_exit();
+        exit(EXIT_SUCCESS);
+        break;
+    case 2:
+        HIP_DEBUG("Received another signal\n");
+        HIP_DEBUG("Send one more signal to force exit\n");
+        break;
+    default:
+        HIP_DEBUG("Hard exit\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 /**
