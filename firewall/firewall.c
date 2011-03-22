@@ -1313,6 +1313,7 @@ static int firewall_init(void)
     /* Register signal handlers */
     signal(SIGINT, firewall_close);
     signal(SIGTERM, firewall_close);
+    signal(SIGABRT, firewall_close);
 
     HIP_IFEL(firewall_init_extensions(), -1, "failed to start requested extensions");
 
@@ -1750,8 +1751,6 @@ static void hip_fw_wait_for_hipd(void)
  * @param argv an array of pointers to the arguments
  *
  * @return zero on success and non-zero on failure
- *
- * @todo   Set up atexit() for clean shutdown on HIP_ASSERT.
  */
 int main(int argc, char **argv)
 {
