@@ -82,14 +82,8 @@ static struct dlist *hip_list  = NULL;
 static struct dlist *esp_list  = NULL;
 static struct slist *conn_list = NULL;
 
-#ifdef CONFIG_HIP_DEBUG
-// this improves our chances of finding bugs in the timeout code
-#define DEFAULT_CONNECTION_TIMEOUT 30; // 30 seconds
-#define DEFAULT_CLEANUP_INTERVAL   10; // 10 seconds
-#else
 #define DEFAULT_CONNECTION_TIMEOUT (60 * 5); // 5 minutes
 #define DEFAULT_CLEANUP_INTERVAL   (60 * 1); // 1 minute
-#endif
 
 /**
  * Interval between sweeps in hip_fw_conntrack_periodic_cleanup(),
@@ -2252,13 +2246,14 @@ static unsigned int detect_esp_rule_activity(const char *const cmd,
  * The actual tasks will be run at most once per ::connection_timeout
  * seconds, no matter how often you call the function.
  *
+ * @param now The current time.
+ *
  * @note Don't call this from a thread or timer, since most of hipfw is not
  *       reentrant (and so this function isn't either).
  */
-void hip_fw_conntrack_periodic_cleanup(void)
+void hip_fw_conntrack_periodic_cleanup(const time_t now)
 {
     static time_t      last_check = 0; // timestamp of last call
-    const time_t       now        = time(NULL);
     struct slist      *iter_conn;
     struct connection *conn;
 

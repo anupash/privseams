@@ -116,10 +116,9 @@
 
 
 /* firewall-specific state */
-static int foreground                        = 1;
-static int accept_normal_traffic_by_default  = HIP_FW_ACCEPT_NORMAL_TRAFFIC_BY_DEFAULT;
-static int accept_hip_esp_traffic_by_default = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
-static int log_level                         = LOGDEBUG_NONE;
+int accept_normal_traffic_by_default  = HIP_FW_ACCEPT_NORMAL_TRAFFIC_BY_DEFAULT;
+int accept_hip_esp_traffic_by_default = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
+int log_level                         = LOGDEBUG_NONE;
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 static hip_hit_t default_hit;
 /* Default LSI - do not access this directly, call hip_fw_get_default_lsi() */
@@ -134,8 +133,9 @@ typedef int (*hip_fw_handler)(struct hip_fw_context *);
 static hip_fw_handler fw_handlers[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 /* extension-specific state */
-static int restore_filter_traffic         = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
-static int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
+int hip_userspace_ipsec            = 0;
+int restore_filter_traffic         = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
+int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 
 /* externally used state */
 // TODO try to decrease number of globally used variables
@@ -144,7 +144,6 @@ int hip_kernel_ipsec_fallback = 0;
 int hip_lsi_support           = 0;
 int esp_relay                 = 0;
 int hip_esp_protection        = 0;
-int hip_userspace_ipsec       = 0;
 int prefer_userspace          = 0;
 #ifdef CONFIG_HIP_MIDAUTH
 int use_midauth = 0;
@@ -166,42 +165,6 @@ int hip_fw_sock = 0;
  * @todo make static, no-one should read on that
  */
 int hip_fw_async_sock = 0;
-
-/**
- * display usage of firewall to stdout
- *
- */
-static void print_usage(void)
-{
-    printf("HIP Firewall\n");
-    printf("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-t <seconds>] [-u] [-h] [-V]");
-#ifdef CONFIG_HIP_MIDAUTH
-    printf(" [-m]");
-#endif
-    printf("\n");
-    printf("      -f file_name = is a path to a file containing firewall filtering rules\n");
-    printf("      -V = print version information and exit\n");
-    printf("      -d = debugging output\n");
-    printf("      -v = verbose output\n");
-    printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authenticated HIP traffic)\n");
-    printf("      -F = accept all HIP traffic, deactivate HIP traffic filtering\n");
-    printf("      -H = drop all non-HIP traffic (default: accept non-HIP traffic)\n");
-    printf("      -b = fork the firewall to background\n");
-    printf("      -k = kill running firewall pid\n");
-    printf("      -i = switch on userspace ipsec\n");
-    printf("      -I = as -i, also allow fallback to kernel ipsec when exiting hipfw\n");
-    printf("      -e = use esp protection extension (also sets -i)\n");
-    printf("      -l = activate lsi support\n");
-    printf("      -p = run with lowered priviledges. iptables rules will not be flushed on exit\n");
-    printf("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0.\n");
-    printf("      -u = prefer userspace processing: don't add iptables rules for speedups\n");
-    printf("      -h = print this help\n");
-#ifdef CONFIG_HIP_MIDAUTH
-    printf("      -m = middlebox authentification\n");
-    printf("      -w = IP address of web-based authentication server \n");
-#endif
-    printf("\n");
-}
 
 /*----------------INIT FUNCTIONS------------------*/
 
@@ -694,15 +657,34 @@ static void firewall_exit(void)
 }
 
 /**
- * Firewall signal handler wrapper (SIGINT, SIGTERM). Exit firewall gracefully
- * and clean up all packet capture rules.
+ * Firewall signal handler wrapper (callback).
+ * Exit firewall gracefully and clean up all packet capture rules.
  *
+ * @param sig Signal number (currently SIGINT, SIGTERM or SIGABRT).
+ *
+ * @see firewall_init()
+ * @see firewall_exit()
  */
 static void firewall_close(DBG const int sig)
 {
+    static unsigned int count = 0;
+
     HIP_DEBUG("Caught signal %d, closing firewall.\n", sig);
-    firewall_exit();
-    exit(EXIT_SUCCESS);
+
+    count += 1;
+    switch (count) {
+    case 1:
+        firewall_exit();
+        exit(EXIT_SUCCESS);
+        break;
+    case 2:
+        HIP_DEBUG("Received another signal\n");
+        HIP_DEBUG("Send one more signal to force exit\n");
+        break;
+    default:
+        HIP_DEBUG("Hard exit\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 /**
@@ -1297,6 +1279,7 @@ static int firewall_init(void)
     /* Register signal handlers */
     signal(SIGINT, firewall_close);
     signal(SIGTERM, firewall_close);
+    signal(SIGABRT, firewall_close);
 
     HIP_IFEL(firewall_init_extensions(), -1, "failed to start requested extensions");
 
@@ -1565,16 +1548,16 @@ end_init:
 /**
  * Set an accept verdict for a modified packet
  *
- * @param handle ipqueue file handle
- * @param packetId ipqueue packet id
- * @param len length of buf
- * @param buf the packet to be accepted
+ * @param handle    ipqueue file handle
+ * @param packet_id ipqueue packet id
+ * @param len       length of buf
+ * @param buf       the packet to be accepted
  *
  */
-static void allow_modified_packet(struct ipq_handle *handle, unsigned long packetId,
+static void allow_modified_packet(struct ipq_handle *handle, unsigned long packet_id,
                                   size_t len, unsigned char *buf)
 {
-    ipq_set_verdict(handle, packetId, NF_ACCEPT, len, buf);
+    ipq_set_verdict(handle, packet_id, NF_ACCEPT, len, buf);
     HIP_DEBUG("Packet accepted with modifications\n\n");
 }
 
@@ -1582,12 +1565,12 @@ static void allow_modified_packet(struct ipq_handle *handle, unsigned long packe
  * Allow a packet to pass
  *
  * @param handle    the handle for the packets.
- * @param packetId  the packet ID.
+ * @param packet_id the packet ID.
  * @return          nothing
  */
-static void allow_packet(struct ipq_handle *handle, unsigned long packetId)
+static void allow_packet(struct ipq_handle *handle, unsigned long packet_id)
 {
-    ipq_set_verdict(handle, packetId, NF_ACCEPT, 0, NULL);
+    ipq_set_verdict(handle, packet_id, NF_ACCEPT, 0, NULL);
 
     HIP_DEBUG("Packet accepted \n\n");
 }
@@ -1596,12 +1579,12 @@ static void allow_packet(struct ipq_handle *handle, unsigned long packetId)
  * Drop a packet
  *
  * @param handle    the handle for the packets.
- * @param packetId  the packet ID.
+ * @param packet_id the packet ID.
  * @return          nothing
  */
-static void drop_packet(struct ipq_handle *handle, unsigned long packetId)
+static void drop_packet(struct ipq_handle *handle, unsigned long packet_id)
 {
-    ipq_set_verdict(handle, packetId, NF_DROP, 0, NULL);
+    ipq_set_verdict(handle, packet_id, NF_DROP, 0, NULL);
 
     HIP_DEBUG("Packet dropped \n\n");
 }
@@ -1802,40 +1785,28 @@ static void hip_fw_wait_for_hipd(void)
 }
 
 /**
- * main function that starts the single-threaded hipfw process
+ * Main function that starts the single-threaded hipfw process.
  *
- * @param argc number of arguments
- * @param argv an array of pointers to the arguments
- *
- * @return zero on success and non-zero on failure
- *
- * @todo   Set up atexit() for clean shutdown on HIP_ASSERT.
+ * @param rule_file          Initial firewall rules are read from this file.
+ * @param kill_old           If another hipfw instance is currently running,
+ *                           (according to the lockfile), terminate it if set.
+ *                           If unset, an error is returned in this case instead.
+ * @param limit_capabilities Give up root privileges (capabilities) as soon as
+ *                           possible if set.
+ * @return                   Zero if successful, non-zero otherwise.
  */
-int main(int argc, char **argv)
+int hipfw_main(const char *const rule_file,
+               const bool        kill_old,
+               const bool        limit_capabilities)
 {
-    int                   err = 0, highest_descriptor, i;
-    struct ipq_handle    *h4  = NULL, *h6 = NULL;
-    int                   ch;
-    char                 *rule_file = NULL;
-    int                   errflg    = 0, killold = 0;
+    int                   err       = 0, highest_descriptor, i;
+    struct ipq_handle    *h4        = NULL, *h6 = NULL;
     struct hip_common    *msg       = NULL;
     struct sockaddr_in6   sock_addr = { 0 };
     fd_set                read_fdset;
     struct timeval        timeout;
     unsigned char         buf[HIP_MAX_PACKET];
     struct hip_fw_context ctx;
-    int                   limit_capabilities = 0;
-    char                 *end_of_number; // temporary pointer (see -t option)
-
-    /* Make sure that root path is set up correcly (e.g. on Fedora 9).
-     * Otherwise may get warnings from system_print() commands.
-     * @todo: should append, not overwrite  */
-    setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
-
-    if (geteuid() != 0) {
-        HIP_ERROR("firewall must be run as root\n");
-        exit(-1);
-    }
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Creating perf set\n");
@@ -1862,106 +1833,7 @@ int main(int argc, char **argv)
     hip_perf_open(perf_set);
 #endif
 
-    hip_set_logdebug(LOGDEBUG_ALL);
-
-    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpt:uvV")) != -1) {
-        switch (ch) {
-        case 'A':
-            accept_hip_esp_traffic_by_default = 1;
-            restore_accept_hip_esp_traffic    = 1;
-            break;
-        case 'b':
-            foreground = 0;
-            break;
-        case 'd':
-            log_level = LOGDEBUG_ALL;
-            break;
-        case 'e':
-            hip_esp_protection = 1;
-            break;
-        case 'f':
-            rule_file = optarg;
-            break;
-        case 'F':
-            filter_traffic         = 0;
-            restore_filter_traffic = filter_traffic;
-            break;
-        case 'h':
-            print_usage();
-            exit(2);
-            break;
-        case 'H':
-            accept_normal_traffic_by_default = 0;
-            break;
-        case 'i':
-            hip_userspace_ipsec       = 1;
-            hip_kernel_ipsec_fallback = 0;
-            break;
-        case 'I':
-            hip_userspace_ipsec       = 1;
-            hip_kernel_ipsec_fallback = 1;
-            break;
-        case 'k':
-            killold = 1;
-            break;
-        case 'l':
-            hip_lsi_support = 1;
-            break;
-        case 'm':
-#ifdef CONFIG_HIP_MIDAUTH
-            filter_traffic = 1;
-            use_midauth    = 1;
-            break;
-#endif
-        case 'p':
-            limit_capabilities = 1;
-            break;
-        case 't':
-            connection_timeout = strtoul(optarg, &end_of_number, 10);
-            if (end_of_number == optarg) {
-                fprintf(stderr, "Error: Invalid timeout given\n");
-                errflg = 1;
-            }
-            if (connection_timeout < cleanup_interval) {
-                /* we must poll at least once per timeout interval */
-                cleanup_interval = connection_timeout;
-            }
-            break;
-        case 'u':
-            prefer_userspace = 1;
-            break;
-        case 'v':
-            log_level = LOGDEBUG_MEDIUM;
-            hip_set_logfmt(LOGFMT_SHORT);
-            break;
-        case 'V':
-            hip_print_version("hipfw");
-            return 0;
-        case ':':         /* option without operand */
-            printf("Option -%c requires an operand\n", optopt);
-            errflg = 1;
-            break;
-        case '?':
-            printf("Unrecognized option: -%c\n", optopt);
-            errflg = 1;
-        }
-    }
-
-    if (errflg) {
-        print_usage();
-        printf("Invalid argument. Closing. \n\n");
-        exit(2);
-    }
-
-    if (!foreground) {
-        hip_set_logtype(LOGTYPE_SYSLOG);
-        HIP_DEBUG("Forking into background\n");
-        if (fork() > 0) {
-            return 0;
-        }
-    }
-
-    HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
+    HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, kill_old), -1,
              "Failed to obtain firewall lock.\n");
 
     /* Request-response socket with hipfw */
@@ -2077,8 +1949,6 @@ int main(int argc, char **argv)
         }
 #endif
 
-        hip_fw_conntrack_periodic_cleanup();
-
         if (FD_ISSET(h4->fd, &read_fdset)) {
             HIP_DEBUG("received IPv4 packet from iptables queue\n");
             err = hip_fw_handle_packet(buf, h4, 4, &ctx);
@@ -2094,7 +1964,7 @@ int main(int argc, char **argv)
             err = hip_fw_handle_hipd_message(msg);
         }
 
-        hip_fw_conntrack_periodic_cleanup();
+        hip_fw_conntrack_periodic_cleanup(time(NULL));
     }
 
 out_err:

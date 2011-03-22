@@ -197,17 +197,17 @@ out_err:
  * Executes the packet reinjection
  *
  *
- * @param src_hit              ipv6 source address
- * @param dst_hit              ipv6 destination address
- * @param m                    pointer to the packet
- * @param ipOrigTraffic        type of Traffic (IPv4 or IPv6)
- * @param incoming             packet direction
- * @return                     err during the reinjection
+ * @param src_hit         ipv6 source address
+ * @param dst_hit         ipv6 destination address
+ * @param m               pointer to the packet
+ * @param ip_orig_traffic type of Traffic (IPv4 or IPv6)
+ * @param incoming        packet direction
+ * @return                err during the reinjection
  */
 int hip_reinject_packet(const struct in6_addr *src_hit,
                         const struct in6_addr *dst_hit,
                         const ipq_packet_msg_t *m,
-                        const int ipOrigTraffic,
+                        const int ip_orig_traffic,
                         const int incoming)
 {
     int             err           = 0;
@@ -218,7 +218,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
     uint8_t        *msg           = NULL;
     struct icmphdr *icmp          = NULL;
 
-    if (ipOrigTraffic == 4) {
+    if (ip_orig_traffic == 4) {
         const struct ip *iphdr = (const struct ip *) m->payload;
         ip_hdr_size = (iphdr->ip_hl * 4);
         protocol    = iphdr->ip_p;
@@ -309,7 +309,7 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
     int                              err          = 0;
     int                              verdict      = 1;
     int                              ip_hdr_size  = 0;
-    int                              portDest     = 0;
+    int                              port_dest    = 0;
     struct hip_hadb_user_info_state *entry        = NULL;
     enum hip_port_binding            port_binding = HIP_PORT_INFO_UNKNOWN;
     const struct ip6_hdr            *ip6_hdr      = NULL;
@@ -320,10 +320,10 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
 
     switch (ip6_hdr->ip6_nxt) {
     case IPPROTO_UDP:
-        portDest = ((const struct udphdr *) ((m->payload) + ip_hdr_size))->dest;
+        port_dest = ((const struct udphdr *) ((m->payload) + ip_hdr_size))->dest;
         break;
     case IPPROTO_TCP:
-        portDest = ((const struct tcphdr *) ((m->payload) + ip_hdr_size))->dest;
+        port_dest = ((const struct tcphdr *) ((m->payload) + ip_hdr_size))->dest;
         break;
     case IPPROTO_ICMPV6:
         HIP_DEBUG("ICMPv6 packet\n");
@@ -333,14 +333,15 @@ int hip_fw_handle_incoming_hit(const ipq_packet_msg_t *m,
         break;
     }
 
-    port_binding = hip_port_bindings_get(ip6_hdr->ip6_nxt,
-                                         portDest);
+    port_binding = hip_port_bindings_get(ip6_hdr->ip6_nxt, port_dest);
 
     if (port_binding == HIP_PORT_INFO_IPV6BOUND) {
-        HIP_DEBUG("Port %d is bound to an IPv6 address -> accepting packet\n", portDest);
+        HIP_DEBUG("Port %d is bound to an IPv6 address -> accepting packet\n",
+                  port_dest);
         verdict = 1;
     } else if (port_binding == HIP_PORT_INFO_IPV6UNBOUND) {
-        HIP_DEBUG("Port %d is unbound or bound to an IPv4 address -> looking up in cache\n", portDest);
+        HIP_DEBUG("Port %d is unbound or bound to an IPv4 address -> looking up in cache\n",
+                  port_dest);
         HIP_IFEL(!(entry = hip_firewall_cache_db_match(ip_dst, ip_src,
                                                        FW_CACHE_HIT, 1)),
                  -1, "Failed to obtain from cache\n");
