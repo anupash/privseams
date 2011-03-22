@@ -193,10 +193,28 @@ lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
 
 
-test_check_firewall_SOURCES = test/check_firewall.c          \
-                              test/firewall/file_buffer.c    \
-                              test/firewall/line_parser.c    \
-                              test/firewall/port_bindings.c
+test_check_firewall_SOURCES = test/check_firewall.c         \
+                              test/firewall/file_buffer.c   \
+                              test/firewall/line_parser.c   \
+                              test/firewall/port_bindings.c \
+                              test/firewall/conntrack.c     \
+                              firewall/cache.c              \
+                              firewall/dlist.c              \
+                              firewall/esp_prot_api.c       \
+                              firewall/esp_prot_config.c    \
+                              firewall/esp_prot_conntrack.c \
+                              firewall/esp_prot_fw_msg.c    \
+                              firewall/firewall.c           \
+                              firewall/firewall_control.c   \
+                              firewall/helpers.c            \
+                              firewall/hslist.c             \
+                              firewall/lsi.c                \
+                              firewall/reinject.c           \
+                              firewall/rule_management.c    \
+                              firewall/user_ipsec_api.c     \
+                              firewall/user_ipsec_esp.c     \
+                              firewall/user_ipsec_fw_msg.c  \
+                              firewall/user_ipsec_sadb.c
 
 test_check_lib_core_SOURCES = test/check_lib_core.c          \
                               test/lib/core/hit.c            \

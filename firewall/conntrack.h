@@ -63,6 +63,6 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit);
 int hipfw_relay_esp(const struct hip_fw_context *ctx);
 
-void hip_fw_conntrack_periodic_cleanup(void);
+void hip_fw_conntrack_periodic_cleanup(const time_t now);
 
 #endif /* HIP_FIREWALL_CONNTRACK_H */

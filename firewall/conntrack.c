@@ -1988,13 +1988,14 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
  * The actual tasks will be run at most once per ::connection_timeout
  * seconds, no matter how often you call the function.
  *
+ * @param now The current time.
+ *
  * @note Don't call this from a thread or timer, since most of hipfw is not
  *       reentrant (and so this function isn't either).
  */
-void hip_fw_conntrack_periodic_cleanup(void)
+void hip_fw_conntrack_periodic_cleanup(const time_t now)
 {
     static time_t      last_check = 0;   // timestamp of last call
-    const time_t       now        = time(NULL);
     struct slist      *iter_conn;
     struct connection *conn;
 

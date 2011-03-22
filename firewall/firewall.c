@@ -1798,7 +1798,7 @@ int hipfw_main(const char *const rule_file,
                const bool        kill_old,
                const bool        limit_capabilities)
 {
-    int                   err = 0, highest_descriptor, i;
+    int                   err       = 0, highest_descriptor, i;
     struct ipq_handle    *h4        = NULL, *h6 = NULL;
     struct hip_common    *msg       = NULL;
     struct sockaddr_in6   sock_addr = { 0 };
@@ -1963,7 +1963,7 @@ int hipfw_main(const char *const rule_file,
             err = hip_fw_handle_hipd_message(msg);
         }
 
-        hip_fw_conntrack_periodic_cleanup();
+        hip_fw_conntrack_periodic_cleanup(time(NULL));
     }
 
 out_err:

@@ -34,6 +34,7 @@ int main(void)
     SRunner *sr = srunner_create(firewall_file_buffer());
     srunner_add_suite(sr, firewall_line_parser());
     srunner_add_suite(sr, firewall_port_bindings());
+    srunner_add_suite(sr, firewall_conntrack());
 
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
