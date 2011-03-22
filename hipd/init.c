@@ -641,10 +641,11 @@ static int hip_init_certs(void)
                 hit, HIP_CERT_INIT_DAYS,
                 hit, HIP_CERT_INIT_DAYS,
                 hit /* TODO SAMU: removed because not used:*/  /*, hostname*/);
-        fclose(conf_file);
     } else {
         HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");
     }
+    fclose(conf_file);
+
 out_err:
     return err;
 }
