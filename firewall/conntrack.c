@@ -366,8 +366,9 @@ static struct esp_address *get_esp_address(const struct slist *addr_list,
  *       Relay, LSI, midauth, lightweight-update and esp_prot. Care was
  *       taken to not break these features though.
  *
- * @see update_esp_address
- * @see free_esp_tuple
+ * @see update_esp_address()
+ * @see free_esp_tuple()
+ * @see ::esp_speedup
  */
 static int hip_fw_manage_esp_rule(const struct esp_tuple *const esp_tuple,
                                   const struct in6_addr *const dest, bool insert)
