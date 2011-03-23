@@ -18,7 +18,7 @@
 # - $HOME/src/hipl/<branch>   - location for HIPL <branch> to be tested
 # - $HOME/tmp/autobuild/hipl/ - temporary build directory
 # - $HOME/tmp/autobuild/openwrt - working OpenWrt tree
-# - /srv/power/scratchbox/users/${LOGNAME}${HOME]} - working scratchbox environment
+# - /opt/scratchbox/users/${LOGNAME}${HOME]} - working scratchbox environment
 #
 # TODO      Shortly describe the different stages (as in check-out, compare, ...)
 #           of the autobuilder, especially when/why the autobuilder uses which
@@ -61,7 +61,7 @@ BRANCH_NAME=$1
 AUTOBUILD_DIR=$HOME/tmp/autobuild
 BUILD_DIR=$AUTOBUILD_DIR/hipl
 OPENWRT_DIR=$AUTOBUILD_DIR/openwrt
-SCRATCHBOX_DIR="/srv/power/scratchbox"
+SCRATCHBOX_DIR="/opt/scratchbox"
 SCRATCHBOX_HOME=$SCRATCHBOX_DIR/users/${LOGNAME}${HOME}
 
 BRANCH_URL=$HOME/src/hipl/$BRANCH_NAME
