@@ -205,12 +205,12 @@ run_program "make -j package/hipl/install V=99"
 # scratchbox complains if USER is missing from the environment
 export USER=$LOGNAME
 
-#CONFIGURATION="Scratchbox ARM crosscompile"
-#cd $SCRATCHBOX_HOME || cleanup 1
+CONFIGURATION="Scratchbox ARM crosscompile"
+cd $SCRATCHBOX_HOME || cleanup 1
 # clean-up previous run and get fresh sources for compilation (in host env)
-#run_program "rm -rf hipl-[0-9.]* hipl_*.changes hipl_*.deb"
-#run_program "tar -xzf $CHECKOUT_DIR/hipl-[0-9.]*.tar.gz"
+run_program "rm -rf hipl-[0-9.]* hipl_*.changes hipl_*.deb"
+run_program "tar -xzf $CHECKOUT_DIR/hipl-[0-9.]*.tar.gz"
 # perform debian packaging (in maemo sdk env)
-#run_program "$SCRATCHBOX_DIR/login -d hipl-[0-9.]* dpkg-buildpackage -rfakeroot -b"
+run_program "$SCRATCHBOX_DIR/login -d hipl-[0-9.]* dpkg-buildpackage -rfakeroot -b"
 
 cleanup 0
