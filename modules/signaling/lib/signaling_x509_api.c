@@ -283,10 +283,15 @@ int verify_certificate_chain(X509 *leaf_cert, const char *trusted_lookup_dir, ST
      err = X509_verify_cert(verify_ctx);
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_X509_VERIFY_CERT_CHAIN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_I2_VERIFY_USER_SIG);
+        hip_perf_stop_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
 #endif
      if (err != 1) {
          err = X509_STORE_CTX_get_error(verify_ctx);
+         HIP_DEBUG("X509 verify cert error: %d \n", err);
+         HIP_DEBUG("at depth: %d \n", X509_STORE_CTX_get_error_depth(verify_ctx));
+         HIP_DEBUG("reason: %s\n", X509_verify_cert_error_string(err));
+         HIP_DEBUG("certificate:\n");
+         X509_print_fp(stderr, X509_STORE_CTX_get_current_cert(verify_ctx));
      } else {
          err = 0;
      }
@@ -333,8 +338,6 @@ int verify_ac_certificate_chain(X509AC *leaf_cert, const char *trusted_lookup_di
     if(trusted_chain) {
         X509_STORE_CTX_trusted_stack(verify_ctx, trusted_chain);
     }
-
-    OpenSSL_add_all_algorithms();
 
     /* Finally do the verification and output some info */
     err = X509AC_verify_cert(verify_ctx, leaf_cert);

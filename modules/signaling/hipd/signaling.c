@@ -155,6 +155,9 @@ int hip_signaling_init(void)
     HIP_IFEL(hip_user_register_handle(HIP_MSG_SIGNALING_FIRST_CONNECTION_REQUEST,  &signaling_handle_connection_request, INBOUND_HANDLE_TRIGGER_NEW_CONN_PRIO),
              -1, "Error on registering Signaling user handle function.\n");
 
+    // Init openssl
+    OpenSSL_add_all_algorithms();
+
     HIP_DEBUG("Initialized Signaling Module.\n");
 
 out_err:

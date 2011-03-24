@@ -620,8 +620,8 @@ int userdb_verify_public_key(X509_NAME *subject, const EVP_PKEY *const pub_key)
     HIP_IFEL(!pub_key,      -1, "Cannot verify NULL-pubkey.\n");
     HIP_IFEL(!subject,      -1, "Need X509 subject name for certificate lookup\n");
 
-    HIP_DEBUG("Verifying public key of subject: %s \n", name);
     X509_NAME_oneline(subject, name, SIGNALING_USER_ID_MAX_LEN);
+    HIP_DEBUG("Verifying public key of subject: %s \n", name);
     memset(hash_filename, 0, PATH_MAX);
 
     /* Check if we have the user in our database */
@@ -635,8 +635,8 @@ int userdb_verify_public_key(X509_NAME *subject, const EVP_PKEY *const pub_key)
 
     /* If there was no entry in the database, check the certificate directories. */
     if (!cert_chain) {
-        HIP_DEBUG("Looking up certificates index beginning at: %s\n", hash_filename);
         get_user_certchain_hash_path(subject, hash_filename);
+        HIP_DEBUG("Looking up certificates index beginning at: %s\n", hash_filename);
         while ((cert_chain = signaling_load_certificate_chain(hash_filename)) != NULL) {
             leaf_cert = sk_X509_value(cert_chain, sk_X509_num(cert_chain) - 1);
             if (match_public_key(leaf_cert, pub_key)) {
