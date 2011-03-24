@@ -62,7 +62,7 @@
  * @param  line the line to check.
  * @return 1 if the line is a comment, zero otherwise.
  */
-static int hip_cf_is_comment(const char * const line)
+static int hip_cf_is_comment(const char *const line)
 {
     int i = 0;
 
@@ -140,7 +140,7 @@ static int hip_cvl_add(struct hip_config_value_list *linkedlist,
  * @note          This function is not meant to be called outside this file. Use
  *                hip_cf_get_line_data() to get data from lines.
  */
-static int hip_cf_parse_val(const char * const line,
+static int hip_cf_parse_val(const char *const line,
                             struct hip_config_value_list *values)
 {
     int  i = 0, j = 0, k = 0, l = 0, end = 0;
@@ -281,7 +281,7 @@ static int hip_cf_parse_val(const char * const line,
  * @note             This function is not meant to be called outside this file.
  *                   Use hip_cf_get_line_data() to get data from lines.
  */
-static int hip_cf_parse_par(const char * const line, char *parameter)
+static int hip_cf_parse_par(const char *const line, char *parameter)
 {
     int i = 0, j = 0, k = 0, l = 0;
 
