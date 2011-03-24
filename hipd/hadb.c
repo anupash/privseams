@@ -328,8 +328,6 @@ int hip_hadb_insert_state(struct hip_hadb_state *ha)
     enum   hip_hastate     st  = 0;
     struct hip_hadb_state *tmp = NULL;
 
-    HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
-
     /* assume already locked ha */
 
     HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
@@ -553,7 +551,6 @@ static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 {
     struct hip_peer_map_info *peer_map = peer_map_void;
 
-    HIP_DEBUG("hip_hadb_add_peer_info_wrapper() invoked.\n");
     if (hip_hadb_add_peer_info_complete(&entry->lhi.hit,
                                         &peer_map->peer_hit,
                                         &peer_map->peer_lsi,
@@ -582,8 +579,6 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                            const char *peer_hostname)
 {
     struct hip_peer_map_info peer_map = { { { { 0 } } } };
-
-    HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
 
     in_port_t nat_local_udp_port = hip_get_local_nat_udp_port();
     in_port_t nat_peer_udp_port  = hip_get_peer_nat_udp_port();
