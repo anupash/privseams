@@ -429,7 +429,6 @@ static int hip_xfrm_state_modify(struct rtnl_handle *rth,
         char                    buf[RTA_BUF_SIZE];
     } req = { { 0 } };
 
-    HIP_DEBUG("hip_xfrm_state_modify() invoked.\n");
     HIP_DEBUG("sport %d, dport %d\n", sport, dport);
     HIP_DEBUG_IN6ADDR("saddr in sa", saddr);
     HIP_DEBUG_IN6ADDR("daddr in sa", daddr);
@@ -784,13 +783,10 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
                           uint8_t proto,
                           int use_full_prefix)
 {
-    HIP_DEBUG("Start\n");
-
     int     err    = 0;
     uint8_t prefix = hip_calc_sp_prefix(src_id, use_full_prefix);
 
     /* XX FIXME: remove the proto argument */
-    HIP_DEBUG("hip_setup_hit_sp_pair\n");
     HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, XFRM_MSG_NEWPOLICY,
                                    dst_id, src_id,
                                    src_addr, dst_addr,
@@ -802,7 +798,6 @@ int hip_setup_hit_sp_pair(const struct in6_addr *src_id,
                                    dst_addr, src_addr,
                                    XFRM_POLICY_OUT, proto, prefix,
                                    AF_INET6), -1);
-    HIP_DEBUG("End\n");
 
 out_err:
     return err;
