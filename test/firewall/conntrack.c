@@ -38,7 +38,8 @@
 #include "firewall/conntrack.c"
 #include "test_suites.h"
 
-static struct connection *setup_connection(void) {
+static struct connection *setup_connection(void)
+{
     struct hip_data data = { };
 
     inet_pton(AF_INET6, "2001:12:bd2d:d23e:4a09:b2ab:6414:e110", &data.src_hit);
