@@ -555,6 +555,8 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
  */
 static void remove_tuple(struct tuple *tuple)
 {
+    struct slist *list;
+
     if (tuple) {
         // remove hip_tuple from helper list
         hip_list = remove_link_dlist(hip_list,
@@ -563,7 +565,7 @@ static void remove_tuple(struct tuple *tuple)
         free_hip_tuple(tuple->hip_tuple);
         tuple->hip_tuple = NULL;
 
-        struct slist *list = tuple->esp_tuples;
+        list = tuple->esp_tuples;
         while (list) {
             // remove esp_tuples from helper list
             esp_list = remove_link_dlist(esp_list,
@@ -680,13 +682,15 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *esp_
                                                  const struct in6_addr *addr,
                                                  struct tuple *tuple)
 {
-    struct esp_tuple *new_esp = NULL;
+    struct esp_address *esp_address;
+    struct esp_tuple   *new_esp = NULL;
+
     if (esp_info) {
         new_esp        = calloc(1, sizeof(struct esp_tuple));
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
 
-        struct esp_address *esp_address = malloc(sizeof(struct esp_address));
+        esp_address = malloc(sizeof(struct esp_address));
 
         memcpy(&esp_address->dst_addr, addr, sizeof(struct in6_addr));
 

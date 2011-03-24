@@ -195,9 +195,10 @@ void hip_perf_stop_benchmark(struct perf_set *set, int slot)
  */
 int hip_perf_write_benchmark(struct perf_set *set, int slot)
 {
-    int err = 0;
-    HIP_IFEL(!set, -1, "Performance set is empty\n");
+    int  err = 0;
     char buffer[30];
+
+    HIP_IFEL(!set, -1, "Performance set is empty\n");
 
     if (set->num_files > slot && set->writable[slot] == 1) {
         if (set->files[slot]) {

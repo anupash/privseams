@@ -948,6 +948,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *msg)
     X509_STORE                      *store      = NULL;
     X509_STORE_CTX                  *verify_ctx = NULL;
     unsigned char                   *der_cert   = NULL;
+    const unsigned char             *vessel;
 
     OpenSSL_add_all_algorithms();
     ERR_load_crypto_strings();
@@ -958,7 +959,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common *msg)
 
     der_cert = (unsigned char *) &p->der;
 
-    const unsigned char *vessel = p->der;
+    vessel = p->der;
     HIP_IFEL((cert = d2i_X509(NULL, &vessel, verify.der_len)) == NULL, -1,
              "Failed to convert cert from DER to internal format\n");
     /*
