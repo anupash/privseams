@@ -454,7 +454,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
                                     const struct in6_addr *peer_addr,
                                     const char *peer_hostname)
 {
-    int                    err   = 0;
     struct hip_hadb_state *entry = NULL, *aux = NULL;
     hip_lsi_t              lsi_aux;
     in_port_t              nat_udp_port_local = hip_get_local_nat_udp_port();
@@ -475,8 +474,10 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     } else {
         HIP_DEBUG("hip_hadb_create_state\n");
         entry = hip_hadb_create_state();
-        HIP_IFEL(!entry, -1, "Unable to create a new entry");
-
+        if (!entry) {
+            HIP_ERROR("Unable to create a new entry");
+            return -1;
+        }
         entry->peer_addr_list_to_be_added =
             hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
     }
@@ -484,8 +485,10 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     ipv6_addr_copy(&entry->hit_peer, peer_hit);
     ipv6_addr_copy(&entry->hit_our, local_hit);
     ipv6_addr_copy(&entry->our_addr, local_addr);
-    HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1,
-             "Unable to find local hit");
+    if (hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our)) {
+        HIP_ERROR("Unable to find local hit");
+        return -1;
+    }
 
     /* Copying peer_lsi */
     if (peer_lsi != NULL && peer_lsi->s_addr != 0) {
@@ -529,11 +532,13 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
     hip_hadb_insert_state(entry);
 
     /* Add initial HIT-IP mapping. */
-    HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE, hip_get_peer_nat_udp_port()),
-             -2, "error while adding a new peer address\n");
+    if (hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE,
+                               hip_get_peer_nat_udp_port())) {
+        HIP_ERROR("error while adding a new peer address\n");
+        return -2;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -547,20 +552,19 @@ static int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
                                           void *peer_map_void)
 {
     struct hip_peer_map_info *peer_map = peer_map_void;
-    int                       err      = 0;
 
     HIP_DEBUG("hip_hadb_add_peer_info_wrapper() invoked.\n");
-    HIP_IFEL(hip_hadb_add_peer_info_complete(&entry->lhi.hit,
-                                             &peer_map->peer_hit,
-                                             &peer_map->peer_lsi,
-                                             &peer_map->our_addr,
-                                             &peer_map->peer_addr,
-                                             (char *) &peer_map->peer_hostname),
-             -1,
-             "Failed to add peer info\n");
+    if (hip_hadb_add_peer_info_complete(&entry->lhi.hit,
+                                        &peer_map->peer_hit,
+                                        &peer_map->peer_lsi,
+                                        &peer_map->our_addr,
+                                        &peer_map->peer_addr,
+                                        (char *) &peer_map->peer_hostname)) {
+        HIP_ERROR("Failed to add peer info\n");
+        return -1;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -577,7 +581,6 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                            const hip_lsi_t *peer_lsi,
                            const char *peer_hostname)
 {
-    int                      err      = 0;
     struct hip_peer_map_info peer_map = { { { { 0 } } } };
 
     HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
@@ -593,7 +596,10 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                          &nat_local_udp_port,
                          &nat_peer_udp_port);
 
-    HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
+    if (!ipv6_addr_is_hit(peer_hit)) {
+        HIP_ERROR("Not a HIT\n");
+        return -1;
+    }
 
     memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
     if (peer_addr) {
@@ -609,14 +615,17 @@ int hip_hadb_add_peer_info(const hip_hit_t *peer_hit,
                HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
     }
 
-    HIP_IFEL(hip_select_source_address(&peer_map.our_addr, &peer_map.peer_addr),
-             -1, "Cannot find source address\n");
+    if (hip_select_source_address(&peer_map.our_addr, &peer_map.peer_addr)) {
+        HIP_ERROR("Cannot find source address\n");
+        return -1;
+    }
 
-    HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
-             "for_each_hi err.\n");
+    if (hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map)) {
+        HIP_ERROR("for_each_hi err.\n");
+        return 0;
+    }
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
@@ -643,8 +652,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
     if (!ip && (!lsi || !hit)) {
         HIP_ERROR("handle async map: no ip and maybe no lsi or hit\n");
-        err = -ENODATA;
-        goto out_err;
+        return -ENODATA;
     }
 
     if (lsi) {
@@ -659,12 +667,10 @@ int hip_add_peer_map(const struct hip_common *input)
 
     if (err) {
         HIP_ERROR("Failed to insert peer map (%d)\n", err);
-        goto out_err;
+        return err;
     }
 
-out_err:
-
-    return err;
+    return 0;
 }
 
 /**
@@ -674,9 +680,10 @@ out_err:
  */
 static int hip_hadb_init_entry(struct hip_hadb_state *entry)
 {
-    int err = 0;
-
-    HIP_IFEL(!entry, -1, "HA is NULL\n");
+    if (!entry) {
+        HIP_ERROR("HA is NULL\n");
+        return -1;
+    }
 
     entry->state         = HIP_STATE_UNASSOCIATED;
     entry->hastate       = HIP_HASTATE_INVALID;
@@ -691,8 +698,10 @@ static int hip_hadb_init_entry(struct hip_hadb_state *entry)
     get_random_bytes(&entry->spi_inbound_current,
                      sizeof(entry->spi_inbound_current));
 
-    HIP_IFE(!(entry->hip_msg_retrans.buf = calloc(1, HIP_MAX_NETWORK_PACKET)),
-            -ENOMEM);
+    if (!(entry->hip_msg_retrans.buf = calloc(1, HIP_MAX_NETWORK_PACKET))) {
+        return -ENOMEM;
+    }
+
     entry->hip_msg_retrans.count = 0;
 
     /* Initialize module states */
@@ -700,8 +709,7 @@ static int hip_hadb_init_entry(struct hip_hadb_state *entry)
     lmod_init_state_items(entry->hip_modular_state);
     HIP_DEBUG("Modular state initialized.\n");
 
-out_err:
-    return err;
+    return 0;
 }
 
 /**
