@@ -659,7 +659,7 @@ static void firewall_exit(void)
  * Firewall signal handler wrapper (callback).
  * Exit firewall gracefully and clean up all packet capture rules.
  *
- * @param sig Signal number (currently SIGINT, SIGTERM or SIGABRT).
+ * @param sig Signal number (currently SIGINT or SIGTERM).
  *
  * @see firewall_init()
  * @see firewall_exit()
@@ -1278,7 +1278,6 @@ static int firewall_init(void)
     /* Register signal handlers */
     signal(SIGINT, firewall_close);
     signal(SIGTERM, firewall_close);
-    signal(SIGABRT, firewall_close);
 
     HIP_IFEL(firewall_init_extensions(), -1, "failed to start requested extensions");
 
