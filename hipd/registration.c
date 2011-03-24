@@ -188,11 +188,11 @@ int hip_set_srv_status(uint8_t reg_type, enum hip_srv_status status)
 int hip_get_active_services(struct hip_srv *active_services,
                             unsigned int *active_service_count)
 {
+    int i = 0, j = 0;
+
     if (active_services == NULL) {
         return -1;
     }
-
-    int i = 0, j = 0;
 
     for (; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
         if (hip_services[i].status == HIP_SERVICE_ON) {
@@ -338,12 +338,12 @@ int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
 static int hip_get_pending_requests(struct hip_hadb_state *entry,
                                     struct hip_pending_request *requests[])
 {
+    struct hip_ll_node *iter          = 0;
+    int                 request_count = 0;
+
     if (requests == NULL) {
         return -1;
     }
-
-    struct hip_ll_node *iter          = 0;
-    int                 request_count = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((struct hip_pending_request *) (iter->ptr))->entry  == entry) {
@@ -989,11 +989,11 @@ out_err:
 
 static int hip_has_duplicate_services(const uint8_t *reg_types, int type_count)
 {
+    int i = 0, j = 0;
+
     if (reg_types == NULL || type_count <= 0) {
         return -1;
     }
-
-    int i = 0, j = 0;
 
     for (; i < type_count; i++) {
         for (j = i + 1; j < type_count; j++) {

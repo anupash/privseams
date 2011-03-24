@@ -332,8 +332,7 @@ static double dhp_stop_benchmark(struct timeval *bench_time)
  */
 int main(int argc, char **argv)
 {
-    int i;
-    int err = 0;
+    int i, j, k, dh_size, err = 0;
     /* switches */
     int              sw_create_dh      = 5;
     int              sw_create_dsa     = 5;
@@ -356,6 +355,12 @@ int main(int argc, char **argv)
     struct timeval   bench_time;
     unsigned int     sig_len;
     struct perf_set *perfset = NULL;
+    uint8_t          rsa_data[SHA_DIGEST_LENGTH];
+    uint8_t        **rsa_sig_pool;
+    uint8_t          dsa_data[SHA_DIGEST_LENGTH];
+    DSA_SIG        **dsa_sig_pool;
+    uint8_t          shared_key[sw_shared_key_len];
+    uint8_t          buffer1[HASH_LEN], buffer2[HASH_LEN];
 
     printf("Default settings RSA: key pool of %d keys of length %d.\n",
            sw_create_rsa,
@@ -465,9 +470,7 @@ int main(int argc, char **argv)
 
         /* if sw_rsa_sig_len == 0 we will use the default lengths as they
          * occur in hip */
-        uint8_t rsa_data[SHA_DIGEST_LENGTH];
         memset(rsa_data, 22, SHA_DIGEST_LENGTH);
-        uint8_t **rsa_sig_pool;
         rsa_sig_pool = malloc(sw_bench_loops * sizeof(uint8_t *));
 
         printf("Calculating %d RSA signatures (len: %d)\n", sw_bench_loops, sw_rsa_keylen);
@@ -578,9 +581,7 @@ int main(int argc, char **argv)
 
         /* if sw_dsa_sig_len == 0 we will use the default lengths as they
          * occur in hip */
-        uint8_t dsa_data[SHA_DIGEST_LENGTH];
         memset(dsa_data, 22, SHA_DIGEST_LENGTH);
-        DSA_SIG **dsa_sig_pool;
         dsa_sig_pool = malloc(sw_bench_loops * sizeof(DSA_SIG *));
 
         printf("Calculating %d DSA signatures\n", sw_bench_loops);
@@ -691,13 +692,11 @@ int main(int argc, char **argv)
 
 
     dhp_start_benchmark(&bench_time);
-    int     dh_size = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID);
-    uint8_t shared_key[sw_shared_key_len];
+    dh_size = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID);
     uint8_t pub_key[dh_size];
 
-
     printf("Calculating %d DH shared secrets\n", sw_bench_loops);
-    int k = 0;
+    k = 0;
     for (i = 0; i < sw_bench_loops; i++) {
         if (i % sw_create_dh == 0) {
             k++;
@@ -735,14 +734,10 @@ int main(int argc, char **argv)
            "-------------------------------\n\n");
 
     printf("Creating %d hashes\n", sw_hashloops);
-    uint8_t buffer1[HASH_LEN];
-    uint8_t buffer2[HASH_LEN];
     memset(buffer1, 22, SHA_DIGEST_LENGTH);
     memset(buffer2, 25, SHA_DIGEST_LENGTH);
 
     dhp_start_benchmark(&bench_time);
-
-    int j;
 
     for (i = 0; i < sw_hashloops / 100; i++) {
         if (sw_file_output) {

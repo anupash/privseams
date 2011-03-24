@@ -92,13 +92,13 @@ static int hip_cf_is_comment(const char *const line)
 static int hip_cvl_add(struct hip_config_value_list *linkedlist,
                        const void *data)
 {
+    struct hip_configfile_value *newnode;
+
     if (linkedlist == NULL || data == NULL) {
         return HIP_EVAL;
     }
 
-    struct hip_configfile_value *newnode = malloc(sizeof(struct hip_configfile_value));
-
-    if (newnode == NULL) {
+    if (!(newnode = malloc(sizeof(struct hip_configfile_value)))) {
         HIP_ERROR("Error on allocating memory for a linked list node.\n");
         return HIP_EVAL;
     }
@@ -418,12 +418,12 @@ int hip_cf_get_line_data(FILE *fp, char *parameter,
                          struct hip_config_value_list *values,
                          int *parseerr)
 {
+    int  lineerr                          = 0;
+    char line[HIP_RELAY_MAX_LINE_LEN + 1] = { 0 };
+
     if (fp == NULL || parameter == NULL || values == NULL || parseerr == NULL) {
         return EOF;
     }
-
-    int  lineerr                          = 0;
-    char line[HIP_RELAY_MAX_LINE_LEN + 1] = { 0 };
 
     lineerr = hip_cf_readline(fp, line, parseerr);
 
@@ -464,11 +464,12 @@ void hip_cvl_init(struct hip_config_value_list *linkedlist)
  */
 void hip_cvl_uninit(struct hip_config_value_list *linkedlist)
 {
+    struct hip_configfile_value *pointer = NULL;
+
     if (linkedlist == NULL || linkedlist->head == NULL) {
         return;
     }
 
-    struct hip_configfile_value *pointer = NULL;
     pointer = linkedlist->head;
 
     /* Free the item currently at list head and move the next item to list
