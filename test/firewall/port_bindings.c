@@ -30,7 +30,6 @@
 #include <stdio.h>
 
 #include "firewall/port_bindings.h"
-#include "firewall/port_bindings.c"
 #include "test_suites.h"
 
 // these tests do not clean up after themselves because they assume that
