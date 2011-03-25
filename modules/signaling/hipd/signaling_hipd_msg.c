@@ -729,6 +729,11 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
     hip_perf_stop_benchmark(perf_set, PERF_R2);
 #endif
 
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE\n");
+        hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
+#endif
+
     /* Check if authentication of initiator user was requested,
      * if yes send certificate chain */
     if (signaling_flag_check(conn->ctx_out.flags, USER_AUTH_REQUEST)) {
@@ -781,7 +786,8 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_R2_I3\n");
     hip_perf_stop_benchmark(perf_set, PERF_R2_I3);
-    HIP_DEBUG("Start PERF_HIPD_I3_FINISH\n");
+    HIP_DEBUG("Start PERF_HIPD_I3_FINISH, PERF_I3\n");
+    hip_perf_start_benchmark(perf_set, PERF_I3);
     hip_perf_start_benchmark(perf_set, PERF_HIPD_I3_FINISH);
 #endif
 
@@ -828,6 +834,12 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
         HIP_DEBUG("Auth uncompleted after I3/U3, because authentication of local user has been requested\n");
         if ((param_usr_auth = hip_get_param(ctx->input_msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
+#ifdef CONFIG_HIP_PERFORMANCE
+            HIP_DEBUG("Stop PERF_I3\n");
+            hip_perf_stop_benchmark(perf_set, PERF_I3);
+            HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE\n");
+            hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
+#endif
             signaling_send_user_certificate_chain(ctx->hadb_entry, existing_conn, ntohl(param_usr_auth->network_id));
             wait_auth = 1;
         } else {
@@ -843,15 +855,18 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 #ifdef CONFIG_HIP_PERFORMANCE
         HIP_DEBUG("Stop PERF_NEW_CONN\n");
         hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
-        HIP_DEBUG("Write PERF_USER_COMM, PERF_R2_I3, PERF_NEW_CONN, PERF_I3_VERIFY_HOST_SIG, PERF_HIPD_I3_FINISH\n");
-        hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
-        hip_perf_write_benchmark(perf_set, PERF_R2_I3);
-        hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
-        hip_perf_write_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
-        hip_perf_write_benchmark(perf_set, PERF_HIPD_I3_FINISH);
 #endif
-
     }
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Write PERF_USER_COMM, PERF_R2_I3, PERF_NEW_CONN, PERF_I3_VERIFY_HOST_SIG, PERF_HIPD_I3_FINISH, PERF_I3\n");
+    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
+    hip_perf_write_benchmark(perf_set, PERF_R2_I3);
+    hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+    hip_perf_write_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
+    hip_perf_write_benchmark(perf_set, PERF_HIPD_I3_FINISH);
+    hip_perf_write_benchmark(perf_set, PERF_I3);
+#endif
 
 out_err:
     return err;
@@ -940,8 +955,9 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
         HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
     }
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Write PERF_X509_VERIFY_CERT_CHAIN\n");
+        HIP_DEBUG("Write PERF_X509_VERIFY_CERT_CHAIN, PERF_CERTIFICATE_EXCHANGE\n");
         hip_perf_write_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
+        hip_perf_write_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
 #endif
 out_err:
     return err;
@@ -979,6 +995,8 @@ static int signaling_handle_incoming_certificate_update_ack(UNUSED const uint8_t
         HIP_DEBUG("Stop and write PERF_NEW_CONN\n");
         hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
         hip_perf_write_benchmark(perf_set, PERF_NEW_CONN);
+        HIP_DEBUG("Write PERF_CERTIFICATE_EXCHANGE\n");
+        hip_perf_write_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
 #endif
     }
 
@@ -997,6 +1015,19 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
     /* Sanity checks */
     HIP_IFEL((update_type = signaling_get_update_type(ctx->input_msg)) < 0,
              -1, "This is no signaling update packet\n");
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Start PERF_UPDATE_VERIFY_HOST_SIG\n");
+    hip_perf_start_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
+#endif
+    HIP_IFEL(ctx->hadb_entry->verify(ctx->hadb_entry->peer_pub_key,
+                                     ctx->input_msg),
+                                     -EINVAL,
+                                     "Verification of Update signature failed\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Stop PERF_UPDATE_VERIFY_HOST_SIG\n");
+    hip_perf_stop_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
+#endif
 
     /* Handle the different update types */
     switch (update_type) {
@@ -1032,6 +1063,12 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
     default:
         HIP_DEBUG("Received unknown UPDATE type. \n");
     }
+
+#ifdef CONFIG_HIP_PERFORMANCE
+    HIP_DEBUG("Write PERF_UPDATE_VERIFY_HOST_SIG\n");
+    hip_perf_write_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);
+#endif
+
 
 out_err:
     return err;
