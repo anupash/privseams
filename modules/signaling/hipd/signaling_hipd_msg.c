@@ -939,7 +939,10 @@ static int signaling_handle_incoming_certificate_udpate(UNUSED const uint8_t pac
     } else {
         HIP_DEBUG("Rejecting certificate chain. Chain will not be saved. \n");
     }
-
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Write PERF_X509_VERIFY_CERT_CHAIN\n");
+        hip_perf_write_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
+#endif
 out_err:
     return err;
 }

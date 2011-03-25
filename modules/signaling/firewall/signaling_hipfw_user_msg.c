@@ -153,7 +153,6 @@ static int signaling_hipfw_send_connection_confirmation(const hip_hit_t *hits, c
         hip_perf_write_benchmark(perf_set, PERF_X509AC_VERIFY_CERT_CHAIN);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_R2_FINISH);
         hip_perf_write_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
-
 #endif
 
     HIP_DEBUG("Sent connection confirmation to HIPD: \n");
@@ -393,8 +392,9 @@ int signaling_hipfw_handle_connection_update_request(struct hip_common *msg) {
         existing_conn->status = SIGNALING_CONN_ALLOWED;
         insert_iptables_rule(hitr, hits, existing_conn->sockets);
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop PERF_HIPFW_I3_FINISH\n");
+        HIP_DEBUG("Stop PERF_HIPFW_I3_FINISH, PERF_NEW_CONN\n");
         hip_perf_stop_benchmark(perf_set, PERF_HIPFW_I3_FINISH);
+        hip_perf_stop_benchmark(perf_set, PERF_NEW_CONN);
 #endif
     } else {
         HIP_DEBUG("Can not yet allow this connection, because authentication is not complete:\n");
