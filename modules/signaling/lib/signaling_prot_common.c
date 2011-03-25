@@ -571,16 +571,16 @@ int signaling_update_flags_from_connection_id(const struct hip_common *const msg
     /* This flags the local user. */
     if ((param_usr_auth = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_S))) {
         signaling_flag_set(&conn->ctx_out.flags, USER_AUTH_REQUEST);
-    } else {
-        signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
-    }
+    } //else {
+      //  signaling_flag_unset(&conn->ctx_out.flags, USER_AUTH_REQUEST);
+    //}
 
     /* This flags the remote user */
     if ((param_usr_auth = hip_get_param(msg, HIP_PARAM_SIGNALING_USER_REQ_U))) {
         signaling_flag_set(&conn->ctx_in.flags, USER_AUTH_REQUEST);
-    } else {
-        signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
-    }
+    } //else if (!signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
+      //  signaling_flag_unset(&conn->ctx_in.flags, USER_AUTH_REQUEST);
+    //}
 
 out_err:
     return err;
