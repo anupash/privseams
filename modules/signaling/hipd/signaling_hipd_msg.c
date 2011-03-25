@@ -811,6 +811,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not get state for existing connection\n");
     HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),
              -1, "Could not update authentication flags from I3/U3 message \n");
+    signaling_connection_print(existing_conn, " xxxx");
 
     /* Signature validation */
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -830,6 +831,12 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
     if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
         HIP_DEBUG("Auth uncompleted after I3/U3, waiting for authentication of remote user.\n");
         wait_auth = 1;
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_I3\n");
+        hip_perf_stop_benchmark(perf_set, PERF_I3);
+        HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE\n");
+        hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
+#endif
     }
     if (signaling_flag_check(existing_conn->ctx_out.flags, USER_AUTH_REQUEST)) {
         HIP_DEBUG("Auth uncompleted after I3/U3, because authentication of local user has been requested\n");
