@@ -109,7 +109,11 @@ enum perf_sensor {
     PERF_IP6TABLES,          // time for setting up ip6table rules
     PERF_X509AC_VERIFY_CERT_CHAIN,
     PERF_X509_VERIFY_CERT_CHAIN,
+    PERF_X509_VERIFY_CERT_CHAIN_RESPONDER,  // hack
+    PERF_HANDLE_CERT_CHAIN_RESPONDER, // hack
+    PERF_SEND_CERT_CHAIN,    // time to push out a certificate chain
     PERF_CERTIFICATE_EXCHANGE, // time for additional certificate exchange
+    PERF_HANDLE_CERT_CHAIN,  // time to save, verify etc
     PERF_USER_COMM,          // around tests 2.2, 3.2 and 4.3
     PERF_LOAD_USER_KEY,      // time to load the users key from harddrive
     PERF_LOAD_USER_PUBKEY,   // time to load the users public key from harddrive
@@ -131,6 +135,7 @@ enum perf_sensor {
     PERF_R2_VERIFY_USER_SIG, // time to verify user signature on R2
     PERF_I3_HOST_SIGN,       // time to generate host signature on I3
     PERF_I3_VERIFY_HOST_SIG, // time to verify user signature on I3
+    PERF_UPDATE_HOST_SIGN,   // time to sign an update packet
     PERF_UPDATE_VERIFY_HOST_SIG, // time to verify user signature on UPDATE
     PERF_ECDSA_VERIFY_IMPL,  // time for openssl ecdsa do verify
     PERF_ECDSA_SIGN_IMPL,    // time for openssl ecdsa do sign
