@@ -241,16 +241,17 @@ int signaling_hipfw_handle_i2(struct hip_common *common, UNUSED struct tuple *tu
     }
     new_conn.ctx_in.direction = FWD;
     new_conn.side = MIDDLEBOX;
-    /* Try to auth the user and set flags accordingly */
-    userdb_handle_user_signature(common, &new_conn, IN);
-    /* The host is authed because this packet went through all the default hip checking functions */
-    signaling_flag_set(&new_conn.ctx_in.flags, HOST_AUTHED);
 
     /* add/update user in user db */
     if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
         HIP_ERROR("Could not add user from message\n");
     }
     new_conn.ctx_in.userdb_entry = db_entry;
+
+    /* Try to auth the user and set flags accordingly */
+    userdb_handle_user_signature(common, &new_conn, IN);
+    /* The host is authed because this packet went through all the default hip checking functions */
+    signaling_flag_set(&new_conn.ctx_in.flags, HOST_AUTHED);
 
     /* Step b) */
     HIP_DEBUG("Connection after receipt of i2\n");
@@ -316,16 +317,18 @@ int signaling_hipfw_handle_r2(struct hip_common *common, UNUSED struct tuple *tu
     HIP_IFEL(signaling_update_connection_from_msg(conn, common, OUT),
              0, "Could not update connection state with information from R2\n");
     conn->ctx_out.direction = FWD;
-    /* Try to auth the user and set flags accordingly */
-    userdb_handle_user_signature(common, conn, OUT);
-    /* The host is authed because this packet went through all the default hip checking functions */
-    signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
 
     /* add/update user in user db */
     if (!(db_entry = userdb_add_user_from_msg(common, 0))) {
         HIP_ERROR("Could not add user from message\n");
     }
     conn->ctx_out.userdb_entry = db_entry;
+
+    /* Try to auth the user and set flags accordingly */
+    userdb_handle_user_signature(common, conn, OUT);
+    /* The host is authed because this packet went through all the default hip checking functions */
+    signaling_flag_set(&conn->ctx_out.flags, HOST_AUTHED);
+
 
     /* Step b) */
     if (signaling_flag_check(conn->ctx_in.flags, USER_AUTH_REQUEST)) {
