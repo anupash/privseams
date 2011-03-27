@@ -26,7 +26,6 @@
 #define _BSD_SOURCE
 
 #include <check.h>
-
 #include <net/if.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -40,7 +39,8 @@
 
 static time_t fake_time = 0;
 
-time_t time(time_t *t) {
+time_t time(time_t *t)
+{
     if (t) {
         *t = fake_time;
     }
@@ -50,14 +50,14 @@ time_t time(time_t *t) {
 
 static struct connection *setup_connection(void)
 {
-    struct hip_data data = { };
+    struct hip_data data = {};
 
     inet_pton(AF_INET6, "2001:12:bd2d:d23e:4a09:b2ab:6414:e110", &data.src_hit);
     inet_pton(AF_INET6, "2001:10:f039:6bc5:cab3:0727:7fbc:9dcb", &data.dst_hit);
 
     insert_new_connection(&data);
 
-    fail_if(conn_list == NULL,       "No connection inserted.");
+    fail_if(conn_list       == NULL, "No connection inserted.");
     fail_if(conn_list->next != NULL, "More than one connection inserted.");
     fail_if(conn_list->data == NULL, "No connection allocated.");
     return conn_list->data;
@@ -70,7 +70,7 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_timeout)
     cleanup_interval   = 0;
     connection_timeout = 2;
 
-    conn = setup_connection();
+    conn            = setup_connection();
     conn->timestamp = 1;
 
     fake_time = 2;
@@ -104,7 +104,7 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_glitched_packet_time)
 
     fake_time = 1;
 
-    conn = setup_connection();
+    conn            = setup_connection();
     conn->timestamp = 1;
     hip_fw_conntrack_periodic_cleanup(); // OK
     conn->timestamp = 2;
