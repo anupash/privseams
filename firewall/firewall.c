@@ -1788,13 +1788,13 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I1);
         break;
     case HIP_R1:
-        HIP_DEBUG("Stop and write PERF_MBOX_R1, PERF_MBOX_R1_VERIFY_HOST_SIG\n\n");
+        HIP_DEBUG("Stop and write PERF_MBOX_R1, write PERF_MBOX_R1_VERIFY_HOST_SIG\n\n");
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_R1);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_R1);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_R1_VERIFY_HOST_SIG);
         break;
     case HIP_I2:
-        HIP_DEBUG("Stop and write PERF_MBOX_I2, PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_PUBKEY\n\n");
+        HIP_DEBUG("Stop and write PERF_MBOX_I2, write PERF_MBOX_I2_VERIFY_HOST_SIG, PERF_MBOX_I2_VERIFY_USER_SIG, PERF_MBOX_I2_VERIFY_USER_PUBKEY\n\n");
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_I2);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I2);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I2_VERIFY_HOST_SIG);
@@ -1802,7 +1802,7 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I2_VERIFY_USER_PUBKEY);
         break;
     case HIP_R2:
-        HIP_DEBUG("Stop and write PERF_MBOX_R2, PERF_MBOX_R2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_PUBKEY\n\n");
+        HIP_DEBUG("Stop and write PERF_MBOX_R2, write PERF_MBOX_R2_VERIFY_HOST_SIG, PERF_MBOX_R2_VERIFY_USER_SIG, PERF_MBOX_R2_VERIFY_USER_PUBKEY\n\n");
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_R2);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_R2);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_R2_VERIFY_HOST_SIG);
@@ -1810,7 +1810,7 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_MBOX_R2_VERIFY_USER_PUBKEY);
         break;
     case 6: //HIP_I3:
-        HIP_DEBUG("Stop and write PERF_MBOX_I3, PERF_MBOX_I3_VERIFY_HOST_SIG\n\n");
+        HIP_DEBUG("Stop and write PERF_MBOX_I3, write PERF_MBOX_I3_VERIFY_HOST_SIG\n\n");
         hip_perf_stop_benchmark(perf_set, PERF_MBOX_I3);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I3);
         hip_perf_write_benchmark(perf_set, PERF_MBOX_I3_VERIFY_HOST_SIG);
