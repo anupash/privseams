@@ -375,12 +375,14 @@ struct hip_relrec *hip_relht_get(const struct hip_relrec *rec)
  */
 void hip_relht_rec_free_doall(struct hip_relrec *rec)
 {
+    struct hip_relrec *deleted_rec;
+
     if (hiprelay_ht == NULL || rec == NULL) {
         return;
     }
 
     /* Check if such element exist, and delete the pointer from the hashtable. */
-    struct hip_relrec *deleted_rec = list_del(rec, hiprelay_ht);
+    deleted_rec = list_del(rec, hiprelay_ht);
 
     /* Free the memory allocated for the element. */
     if (deleted_rec != NULL) {
@@ -447,11 +449,13 @@ unsigned long hip_relht_size(void)
  */
 int hip_relht_maintenance(void)
 {
+    unsigned int tmp;
+
     if (hiprelay_ht == NULL) {
         return 0;
     }
 
-    unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
+    tmp                                          = ((struct lhash_st *) hiprelay_ht)->down_load;
     ((struct lhash_st *) hiprelay_ht)->down_load = 0;
     hip_ht_doall(hiprelay_ht, (LHASH_DOALL_FN_TYPE) LHASH_DOALL_FN(hip_relht_rec_free_expired));
     ((struct lhash_st *) hiprelay_ht)->down_load = tmp;
@@ -467,11 +471,13 @@ int hip_relht_maintenance(void)
  */
 void hip_relht_free_all_of_type(enum hip_relrec_type type)
 {
+    unsigned int tmp;
+
     if (hiprelay_ht == NULL) {
         return;
     }
 
-    unsigned int tmp = ((struct lhash_st *) hiprelay_ht)->down_load;
+    tmp                                          = ((struct lhash_st *) hiprelay_ht)->down_load;
     ((struct lhash_st *) hiprelay_ht)->down_load = 0;
     hip_ht_doall_arg(hiprelay_ht, (LHASH_DOALL_ARG_FN_TYPE) LHASH_DOALL_ARG_FN(hip_relht_rec_free_type), &type);
     ((struct lhash_st *) hiprelay_ht)->down_load = tmp;
@@ -515,13 +521,13 @@ struct hip_relrec *hip_relrec_alloc(const enum hip_relrec_type type,
                                     const in_port_t port,
                                     const struct hip_crypto_key *hmac)
 {
+    struct hip_relrec *rec;
+
     if (hit_r == NULL || ip_r == NULL || hmac == NULL) {
         return NULL;
     }
 
-    struct hip_relrec *rec = malloc(sizeof(struct hip_relrec));
-
-    if (rec == NULL) {
+    if (!(rec = malloc(sizeof(struct hip_relrec)))) {
         HIP_ERROR("Error allocating memory for HIP relay record.\n");
         return NULL;
     }
@@ -589,12 +595,14 @@ STATIC_IMPLEMENT_LHASH_COMP_FN(hip_relwl, const hip_hit_t)
  */
 static void hip_relwl_hit_free_doall(hip_hit_t *hit)
 {
+    hip_hit_t *deleted_hit;
+
     if (hiprelay_wl == NULL || hit == NULL) {
         return;
     }
 
     /* Check if such element exist, and delete the pointer from the hashtable. */
-    hip_hit_t *deleted_hit = list_del(hit, hiprelay_wl);
+    deleted_hit = list_del(hit, hiprelay_wl);
 
     /* Free the memory allocated for the element. */
     if (deleted_hit != NULL) {
@@ -625,6 +633,8 @@ static void hip_relwl_hit_free_doall(hip_hit_t *hit)
  */
 static int hip_relwl_put(hip_hit_t *hit)
 {
+    hip_hit_t *dummy;
+
     if (hiprelay_wl == NULL || hit == NULL) {
         return -1;
     }
@@ -633,7 +643,7 @@ static int hip_relwl_put(hip_hit_t *hit)
      * delete the previous entry. If we do not do so, only the pointer in
      * the hashtable is replaced and the reference to the previous element
      * is lost resulting in a memory leak. */
-    hip_hit_t *dummy = hip_relwl_get(hit);
+    dummy = hip_relwl_get(hit);
     if (dummy != NULL) {
         hip_relwl_hit_free_doall(dummy);
         list_add(hit, hiprelay_wl);

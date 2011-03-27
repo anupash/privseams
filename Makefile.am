@@ -127,8 +127,7 @@ if HIP_OPPORTUNISTIC
 hipd_hipd_SOURCES += hipd/opp_mode.c
 endif
 
-firewall_hipfw_SOURCES = firewall/cache.c               \
-                         firewall/conntrack.c           \
+firewall_hipfw_sources = firewall/cache.c               \
                          firewall/dlist.c               \
                          firewall/esp_prot_api.c        \
                          firewall/esp_prot_config.c     \
@@ -141,7 +140,6 @@ firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/hslist.c              \
                          firewall/line_parser.c         \
                          firewall/lsi.c                 \
-                         firewall/main.c                \
                          firewall/port_bindings.c       \
                          firewall/reinject.c            \
                          firewall/rule_management.c     \
@@ -151,11 +149,17 @@ firewall_hipfw_SOURCES = firewall/cache.c               \
                          firewall/user_ipsec_sadb.c
 
 if HIP_MIDAUTH
-firewall_hipfw_SOURCES += firewall/midauth.c   \
+firewall_hipfw_sources += firewall/midauth.c   \
                           firewall/pisa.c      \
                           firewall/pisa_cert.c
 endif
 
+# The firewall unit test program is linked against the firewall object files.
+# To avoid duplicate symbols during linking some object files need to excluded.
+# Add all files that need to be excluded here.
+firewall_hipfw_SOURCES = $(firewall_hipfw_sources) \
+                         firewall/conntrack.c      \
+                         firewall/main.c
 
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
                                  lib/core/capability.c      \
@@ -193,34 +197,12 @@ lib_core_libhipcore_la_SOURCES += lib/core/performance.c
 endif
 
 
-test_check_firewall_SOURCES = test/check_firewall.c         \
-                              test/firewall/conntrack.c     \
-                              test/firewall/file_buffer.c   \
-                              test/firewall/line_parser.c   \
-                              test/firewall/port_bindings.c \
-                              firewall/cache.c              \
-                              firewall/dlist.c              \
-                              firewall/esp_prot_api.c       \
-                              firewall/esp_prot_config.c    \
-                              firewall/esp_prot_conntrack.c \
-                              firewall/esp_prot_fw_msg.c    \
-                              firewall/firewall.c           \
-                              firewall/firewall_control.c   \
-                              firewall/helpers.c            \
-                              firewall/hslist.c             \
-                              firewall/lsi.c                \
-                              firewall/reinject.c           \
-                              firewall/rule_management.c    \
-                              firewall/user_ipsec_api.c     \
-                              firewall/user_ipsec_esp.c     \
-                              firewall/user_ipsec_fw_msg.c  \
-                              firewall/user_ipsec_sadb.c
-
-if HIP_MIDAUTH
-test_check_firewall_SOURCES += firewall/midauth.c   \
-                               firewall/pisa.c      \
-                               firewall/pisa_cert.c
-endif
+test_check_firewall_SOURCES = test/check_firewall.c          \
+                              test/firewall/conntrack.c      \
+                              test/firewall/file_buffer.c    \
+                              test/firewall/line_parser.c    \
+                              test/firewall/port_bindings.c  \
+                              $(firewall_hipfw_sources)
 
 test_check_lib_core_SOURCES = test/check_lib_core.c          \
                               test/lib/core/hit.c            \

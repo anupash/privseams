@@ -666,7 +666,7 @@ out_err:
 int hip_map_id_to_addr(const hip_hit_t *hit, const hip_lsi_t *lsi,
                        struct in6_addr *addr)
 {
-    int                    err = -1, skip_namelookup = 0; /* Assume that resolving fails */
+    int                    err = -1, res, skip_namelookup = 0; /* Assume that resolving fails */
     hip_hit_t              hit2;
     struct hip_hadb_state *ha = NULL;
 
@@ -711,7 +711,7 @@ int hip_map_id_to_addr(const hip_hit_t *hit, const hip_lsi_t *lsi,
     if (hip_get_hit_to_ip_status() && !skip_namelookup) {
         HIP_DEBUG("looking for hit-to-ip record in dns\n");
         HIP_DEBUG("operation may take a while..\n");
-        int res = hip_hit_to_ip(hit, addr);
+        res = hip_hit_to_ip(hit, addr);
 
         if (res == 0) {
             HIP_DEBUG_IN6ADDR("found hit-to-ip addr ", addr);

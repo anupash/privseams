@@ -146,13 +146,16 @@ static void hip_sig_chld(int signum)
 static void hip_create_file_unless_exists(const char *path, const char *contents)
 {
     struct stat status;
+    FILE       *fp;
+    size_t      items;
+
     if (stat(path, &status)  == 0) {
         return;
     }
 
-    FILE *fp = fopen(path, "w");
+    fp = fopen(path, "w");
     HIP_ASSERT(fp);
-    size_t items = fwrite(contents, strlen(contents), 1, fp);
+    items = fwrite(contents, strlen(contents), 1, fp);
     HIP_ASSERT(items > 0);
     fclose(fp);
 }
@@ -641,10 +644,11 @@ static int hip_init_certs(void)
                 hit, HIP_CERT_INIT_DAYS,
                 hit, HIP_CERT_INIT_DAYS,
                 hit /* TODO SAMU: removed because not used:*/  /*, hostname*/);
-        fclose(conf_file);
     } else {
         HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");
     }
+    fclose(conf_file);
+
 out_err:
     return err;
 }

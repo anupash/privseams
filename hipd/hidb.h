@@ -58,13 +58,6 @@
 #define HIP_WRITE_UNLOCK_DB(db)
 #endif
 
-struct hip_entry_list {
-    LHASH_NODE      list;
-    struct in6_addr peer_hit;
-    /* These two _MUST_ be left untouched. Feel free to add more
-     * to the end */
-};
-
 struct hip_host_id_entry {
     struct hip_lhi      lhi;
     hip_lsi_t           lsi;

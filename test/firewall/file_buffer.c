@@ -27,11 +27,11 @@
 #include <check.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "firewall/file_buffer.h"
-#include "firewall/file_buffer.c"
 #include "test_suites.h"
 
 // these tests do not clean up after themselves because they assume that

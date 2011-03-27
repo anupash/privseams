@@ -27,7 +27,6 @@
 #include <check.h>
 
 #include "firewall/line_parser.h"
-#include "firewall/line_parser.c"
 #include "test_suites.h"
 
 // four lines, each 50 characters long (including \n)

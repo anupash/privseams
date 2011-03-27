@@ -988,6 +988,9 @@ int hip_create_r2(UNUSED const uint8_t packet_type,
 {
     int      err  = 0;
     uint16_t mask = 0;
+#ifdef CONFIG_HIP_MIDAUTH
+    char *midauth_cert;
+#endif
 
     HIP_IFEL(ctx->error, -1,
              "Abort packet processing and don't send R1 packet.\n")
@@ -1017,7 +1020,7 @@ int hip_create_r2(UNUSED const uint8_t packet_type,
      */
     HIP_IFEL(hip_solve_puzzle_m(ctx->output_msg, ctx->input_msg),
              -1, "Building of Challenge_Response failed\n");
-    char *midauth_cert = hip_pisa_get_certificate();
+    midauth_cert = hip_pisa_get_certificate();
 
     HIP_IFEL(hip_build_param(ctx->output_msg, ctx->hadb_entry->our_pub), -1,
              "Building of host id failed\n");
