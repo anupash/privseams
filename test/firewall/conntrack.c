@@ -25,11 +25,11 @@
 
 #define _BSD_SOURCE
 
-#include <check.h>
 #include <net/if.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <check.h>
 #include <signal.h>
 #include <time.h>
 
