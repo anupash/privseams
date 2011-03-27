@@ -514,7 +514,7 @@ static int get_addr_1(struct inet_prefix *addr, const char *name, int family)
             return -1;
         }
         addr->family  = family;
-        addr->bytelen = (family == AF_INET6 ? 16 : 4);
+        addr->bytelen = family == AF_INET6 ? 16 : 4;
         addr->bitlen  = -1;
         return 0;
     }

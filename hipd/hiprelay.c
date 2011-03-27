@@ -192,9 +192,9 @@ static inline unsigned long hip_hash_func(const hip_hit_t *hit)
     /* We calculate the hash by avalanching the bits. The avalanching
      * ensures that we make use of all bits when dealing with 64 bits
      * architectures. */
-    hash  =  (bits_1st ^ hit->s6_addr32[1]);
+    hash  = bits_1st ^ hit->s6_addr32[1];
     hash ^= hash << 3;
-    hash ^= (hit->s6_addr32[2] ^ hit->s6_addr32[3]);
+    hash ^= hit->s6_addr32[2] ^ hit->s6_addr32[3];
     hash += hash >> 5;
     hash ^= hash << 4;
     hash += hash >> 17;

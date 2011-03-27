@@ -1122,7 +1122,7 @@ void hip_hadb_cancel_local_controls(struct hip_hadb_state *entry,
                                     hip_controls mask)
 {
     if (entry != NULL) {
-        entry->local_controls &= (~mask);
+        entry->local_controls &= ~mask;
     }
 }
 

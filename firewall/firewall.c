@@ -1692,9 +1692,9 @@ static int hip_fw_handle_hipd_message(struct hip_common *const msg)
     }
 
     // making sure user messages are received from hipd
-    // resetting vars to 0 because it is a loop
-    msg_type = hip_get_msg_type(msg);
-    is_root  = (ntohs(sock_addr.sin6_port) < 1024);
+    access_ok = 0;
+    msg_type  = hip_get_msg_type(msg);
+    is_root   = ntohs(sock_addr.sin6_port) < 1024;
     if (is_root) {
         access_ok = 1;
     } else if (!is_root &&
