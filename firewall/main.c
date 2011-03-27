@@ -193,6 +193,25 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (esp_speedup && limit_capabilities) {
+        puts("Conflict: ESP speedups (-u) requires root privileges,\n");
+        puts("          but lowered privleges (-p) requested as well.\n");
+        hipfw_usage();
+        return EXIT_FAILURE;
+    }
+
+    if (esp_speedup && userspace_ipsec) {
+        puts("Conflict: Bypassing userspace ESP processing (-u) impossible\n");
+        puts("          with userspace IPSEC enabled (-i or -I)\n");
+        hipfw_usage();
+        return EXIT_FAILURE;
+    }
+
+    if (esp_speedup && !filter_traffic) {
+        puts("Warning: ESP speedup (-U) has no effect without\n");
+        puts("         connection tracking (-F)\n");
+    }
+
     if (geteuid() != 0) {
         HIP_ERROR("Firewall must be run as root\n");
         exit(-1);
