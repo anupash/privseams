@@ -1671,7 +1671,7 @@ out_err:
  * Receive and process one message from hipd.
  *
  * @param msg A previously allocated message buffer.
- * @return    Zero on success, non-zero on error.
+ * @return    Zero on success, -1 on error.
  *
  * @note The buffer @a msg is reused between calls because it is quite
  *       large.
