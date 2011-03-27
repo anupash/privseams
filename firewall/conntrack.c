@@ -1999,8 +1999,9 @@ void hip_fw_conntrack_periodic_cleanup(const time_t now)
     struct slist      *iter_conn;
     struct connection *conn;
 
-    if (connection_timeout == 0) {
-        // timeout disabled
+    if (connection_timeout == 0 || !filter_traffic) {
+        // timeout disabled, or no connections
+        // tracked in the first place
         return;
     }
 
