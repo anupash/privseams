@@ -38,6 +38,16 @@
 #include "firewall/conntrack.c"
 #include "test_suites.h"
 
+static time_t fake_time = 0;
+
+time_t time(time_t *t) {
+    if (t) {
+        *t = fake_time;
+    }
+
+    return fake_time;
+}
+
 static struct connection *setup_connection(void)
 {
     struct hip_data data = { };
@@ -62,10 +72,13 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_timeout)
 
     conn = setup_connection();
     conn->timestamp = 1;
-    hip_fw_conntrack_periodic_cleanup(2); // don't time out yet
+
+    fake_time = 2;
+    hip_fw_conntrack_periodic_cleanup(); // don't time out yet
     fail_if(conn_list == NULL, "Connection was removed too early.");
 
-    hip_fw_conntrack_periodic_cleanup(3); // time out this time
+    fake_time = 3;
+    hip_fw_conntrack_periodic_cleanup(); // time out this time
     fail_unless(conn_list == NULL, "Idle connection was not removed.");
 }
 END_TEST
@@ -74,8 +87,11 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_glitched_system_time)
 {
     cleanup_interval = 0;
 
-    hip_fw_conntrack_periodic_cleanup(2); // OK
-    hip_fw_conntrack_periodic_cleanup(1); // throws assertion
+    fake_time = 2;
+    hip_fw_conntrack_periodic_cleanup(); // OK
+
+    fake_time = 1;
+    hip_fw_conntrack_periodic_cleanup(); // throws assertion
 }
 END_TEST
 
@@ -86,11 +102,13 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_glitched_packet_time)
     cleanup_interval   = 0;
     connection_timeout = 2;
 
+    fake_time = 1;
+
     conn = setup_connection();
     conn->timestamp = 1;
-    hip_fw_conntrack_periodic_cleanup(1); // OK
+    hip_fw_conntrack_periodic_cleanup(); // OK
     conn->timestamp = 2;
-    hip_fw_conntrack_periodic_cleanup(1); // throws assertion
+    hip_fw_conntrack_periodic_cleanup(); // throws assertion
 }
 END_TEST
 

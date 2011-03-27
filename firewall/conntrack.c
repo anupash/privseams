@@ -1997,7 +1997,7 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
  * @note Don't call this from a thread or timer, since most of hipfw is not
  *       reentrant (and so this function isn't either).
  */
-void hip_fw_conntrack_periodic_cleanup(const time_t now)
+void hip_fw_conntrack_periodic_cleanup(void)
 {
     static time_t      last_check = 0;   // timestamp of last call
     struct slist      *iter_conn;
@@ -2008,6 +2008,8 @@ void hip_fw_conntrack_periodic_cleanup(const time_t now)
         // tracked in the first place
         return;
     }
+
+    const time_t now = time(NULL);
 
     HIP_ASSERT(now >= last_check);
     if (now - last_check >= cleanup_interval) {

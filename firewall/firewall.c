@@ -1962,7 +1962,7 @@ int hipfw_main(const char *const rule_file,
             err = hip_fw_handle_hipd_message(msg);
         }
 
-        hip_fw_conntrack_periodic_cleanup(time(NULL));
+        hip_fw_conntrack_periodic_cleanup();
     }
 
 out_err:
