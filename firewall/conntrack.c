@@ -78,9 +78,6 @@ static struct dlist *hip_list  = NULL;
 static struct dlist *esp_list  = NULL;
 static struct slist *conn_list = NULL;
 
-#define DEFAULT_CONNECTION_TIMEOUT (60 * 5); // 5 minutes
-#define DEFAULT_CLEANUP_INTERVAL   (60 * 1); // 1 minute
-
 /**
  * Interval between sweeps in hip_fw_conntrack_periodic_cleanup(),
  * in seconds.
@@ -89,7 +86,7 @@ static struct slist *conn_list = NULL;
  *
  * @see hip_fw_conntrack_periodic_cleanup()
  */
-time_t cleanup_interval = DEFAULT_CLEANUP_INTERVAL;
+time_t cleanup_interval = 60; // 1 minute
 
 /**
  * Connection timeout in seconds, or zero to disable timeout.
@@ -100,7 +97,7 @@ time_t cleanup_interval = DEFAULT_CLEANUP_INTERVAL;
  *
  * @see hip_fw_conntrack_periodic_cleanup()
  */
-time_t connection_timeout = DEFAULT_CONNECTION_TIMEOUT;
+time_t connection_timeout = 60 * 5; // 5 minutes
 
 enum {
     STATE_NEW,
