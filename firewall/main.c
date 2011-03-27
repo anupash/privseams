@@ -189,6 +189,11 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (connection_timeout > 0 && !filter_traffic) {
+        puts("Warning: timeouts (-t) have no effect with connection");
+        puts("         tracking disabled (-F)");
+    }
+
     if (geteuid() != 0) {
         HIP_ERROR("Firewall must be run as root\n");
         exit(-1);
