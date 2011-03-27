@@ -267,9 +267,9 @@ static int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
         tmpl.id.proto = proto;
     }
 
-    tmpl.aalgos   = (~(uint32_t) 0);
-    tmpl.ealgos   = (~(uint32_t) 0);
-    tmpl.calgos   = (~(uint32_t) 0);
+    tmpl.aalgos   = ~(uint32_t) 0;
+    tmpl.ealgos   = ~(uint32_t) 0;
+    tmpl.calgos   = ~(uint32_t) 0;
     tmpl.optional = 0;     /* required */
 
     if (tmpl_saddr && tmpl_daddr) {

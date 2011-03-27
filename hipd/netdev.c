@@ -362,7 +362,7 @@ int hip_exists_address_in_list(struct sockaddr *addr, int ifindex)
             addr_match = !memcmp(hip_cast_sa_addr((struct sockaddr *) &n->addr),
                                  hip_cast_sa_addr(addr),
                                  hip_sa_addr_len(&n->addr));
-            family_match = (n->addr.ss_family == addr->sa_family);
+            family_match = n->addr.ss_family == addr->sa_family;
         } else { /* addr->sa_family == AF_INET */
             HIP_DEBUG("Addr given was not IPv6 nor IPv4.\n");
         }
@@ -939,7 +939,7 @@ send_i1:
 
     is_ipv4_locator = IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
 
-    addr->sa_family = (is_ipv4_locator ? AF_INET : AF_INET6);
+    addr->sa_family = is_ipv4_locator ? AF_INET : AF_INET6;
 
     if (!reuse_hadb_local_address && src_addr) {
         ipv6_addr_copy(&entry->our_addr, src_addr);
@@ -1182,7 +1182,7 @@ int hip_netdev_event(struct nlmsghdr *msg, int len, UNUSED void *arg)
                 continue;
             }
 
-            is_add = ((msg->nlmsg_type == RTM_NEWADDR) ? 1 : 0);
+            is_add = (msg->nlmsg_type == RTM_NEWADDR) ? 1 : 0;
 
             /* parse list of attributes into table
              * (same as parse_rtattr()) */

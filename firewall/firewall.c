@@ -1903,7 +1903,7 @@ int hipfw_main(const char *const rule_file,
             //resetting vars to 0 because it is a loop
             is_root  = 0, access_ok = 0, msg_type = 0;
             msg_type = hip_get_msg_type(msg);
-            is_root  = (ntohs(sock_addr.sin6_port) < 1024);
+            is_root  = ntohs(sock_addr.sin6_port) < 1024;
             if (is_root) {
                 access_ok = 1;
             } else if (!is_root &&

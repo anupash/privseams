@@ -995,7 +995,7 @@ static void hip_close(int signum)
 int hipd_init(const uint64_t flags)
 {
     int                 err     = 0, certerr = 0, i, j;
-    int                 killold = ((flags & HIPD_START_KILL_OLD) > 0);
+    int                 killold = (flags & HIPD_START_KILL_OLD) > 0;
     unsigned int        mtu_val = HIP_HIT_DEV_MTU;
     char                str[64];
     struct sockaddr_in6 daemon_addr = { 0 };

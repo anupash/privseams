@@ -175,7 +175,7 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
     }
 
     for (i = 0; i < 3; i++) {
-        base ^= ((base >> (24 - i * 8)) & 0xFF);
+        base ^= (base >> (24 - i * 8)) & 0xFF;
     }
 
     /* base ready */
