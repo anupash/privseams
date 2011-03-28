@@ -2114,7 +2114,8 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
 
 /**
  * Parse one line of iptables -nvL formatted output, and extract
- * packet count, SPI and destination IP if successful.
+ * packet count, SPI and destination IP if it is valid and packet count is
+ * not zero.
  * This takes into account all kinds of rules that can are created by
  * hip_fw_manage_esp_rule().
  *
@@ -2153,7 +2154,7 @@ static bool parse_iptables_esp_rule(const char *const input,
     if ((str_spi = strstr(input, "spi:"))) {
         // non-UDP
         if (sscanf(str_spi, "spi:%u", spi) < 1) {
-            HIP_ERROR("Unexpected iptables output: '%s'\n", input);
+            HIP_ERROR("Unexpected iptables output (spi): '%s'\n", input);
             return false;
         }
     } else if ((str_spi = strstr(input, u32_prefix))) {
@@ -2161,7 +2162,7 @@ static bool parse_iptables_esp_rule(const char *const input,
         // spi follows u32_prefix string as a hex number
         // (always host byte order)
         if (sscanf(&str_spi[sizeof(u32_prefix) - 1], "%x", spi) < 1) {
-            HIP_ERROR("Unexpected iptables output: '%s'\n", input);
+            HIP_ERROR("Unexpected iptables output (u32 match): '%s'\n", input);
             return false;
         }
     } else {
@@ -2173,7 +2174,7 @@ static bool parse_iptables_esp_rule(const char *const input,
     if (sscanf(input, formats[0], packet_count, ip) < 2) {
         // retry with alternative format before we give up
         if (sscanf(input, formats[1], packet_count, ip) < 2) {
-            HIP_ERROR("Unexpected iptables output: '%s'\n", input);
+            HIP_ERROR("Unexpected iptables output (number of colums): '%s'\n", input);
             return false;
         }
     }
@@ -2207,7 +2208,7 @@ static bool parse_iptables_esp_rule(const char *const input,
  * Update timestamps of all ESP tuples where corresponding iptables rules'
  * packet counters are non-zero.
  * Currently, this works by parsing the output given by @a cmd, which is
- * expected to have `iptables --nvL' format.
+ * expected to have `iptables -nvL' format.
  *
  * @param cmd       Command line to capture output from.
  * @param now       We consider this the current time.
