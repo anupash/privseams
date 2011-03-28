@@ -826,8 +826,9 @@ int signaling_handle_incoming_r2(const uint8_t packet_type, UNUSED const uint32_
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE\n");
-        hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
+    HIP_DEBUG("Start PERF_CERTIFICATE_EXCHANGE, PERF_RECEIVE_CERT_CHAIN\n");
+    hip_perf_start_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
+    hip_perf_start_benchmark(perf_set, PERF_RECEIVE_CERT_CHAIN);
 #endif
 
     /* Check if authentication of initiator user was requested,
