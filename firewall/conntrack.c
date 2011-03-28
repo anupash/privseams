@@ -94,19 +94,18 @@ unsigned long timeout_value    = 0;
  * @param addresses list of addresses
  *
  */
-static void print_esp_addresses(const struct slist *addresses)
+static void print_esp_addresses(const struct hip_ll *const addresses)
 {
-    const struct slist *list = addresses;
-    struct esp_address *addr = NULL;
+    const struct hip_ll_node *node = addresses->head;
 
     HIP_DEBUG("ESP dst addr list:\n");
-    while (list) {
-        addr = list->data;
+    while (node) {
+        const struct esp_address *const addr = node->ptr;
         HIP_DEBUG("addr: %s\n", addr_to_numeric(&addr->dst_addr));
         if (addr && addr->update_id != NULL) {
             HIP_DEBUG("upd id: %d\n", *addr->update_id);
         }
-        list = list->next;
+        node = node->next;
     }
     HIP_DEBUG("\n");
 }
@@ -135,7 +134,7 @@ static void print_esp_tuple(const struct esp_tuple *esp_tuple)
               esp_tuple->spi, esp_tuple->new_spi, esp_tuple->spi_update_id,
               esp_tuple->tuple->direction);
 
-    print_esp_addresses(esp_tuple->dst_addresses);
+    print_esp_addresses(&esp_tuple->dst_addresses);
 }
 
 /**
@@ -292,16 +291,15 @@ static struct tuple *get_tuple_by_hip(const struct hip_data *data,
  * @param addr the address to matched from the list
  * @return the entry from the list that matched to the given address, or NULL if not found
  */
-static struct esp_address *get_esp_address(const struct slist *addresses,
-                                           const struct in6_addr *addr)
+static struct esp_address *get_esp_address(const struct hip_ll *const addresses,
+                                           const struct in6_addr *const addr)
 {
-    const struct slist *list     = addresses;
-    struct esp_address *esp_addr = NULL;
+    const struct hip_ll_node *node = addresses->head;
 
     HIP_DEBUG("get_esp_address\n");
 
-    while (list) {
-        esp_addr = list->data;
+    while (node) {
+        struct esp_address *const esp_addr = node->ptr;
         HIP_DEBUG("addr: %s \n", addr_to_numeric(&esp_addr->dst_addr));
 
         HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
@@ -311,7 +309,7 @@ static struct esp_address *get_esp_address(const struct slist *addresses,
             HIP_DEBUG("addr found\n");
             return esp_addr;
         }
-        list = list->next;
+        node = node->next;
     }
     HIP_DEBUG("get_esp_address: addr %s not found\n", addr_to_numeric(addr));
     return NULL;
@@ -327,16 +325,13 @@ static struct esp_address *get_esp_address(const struct slist *addresses,
  *
  * @return the address list
  */
-static struct slist *update_esp_address(struct slist *addresses,
-                                        const struct in6_addr *addr,
-                                        const uint32_t *upd_id)
+static struct hip_ll *update_esp_address(struct hip_ll *const addresses,
+                                         const struct in6_addr *const addr,
+                                         const uint32_t *const upd_id)
 {
     struct esp_address *esp_addr = get_esp_address(addresses, addr);
     HIP_DEBUG("update_esp_address: address: %s \n", addr_to_numeric(addr));
 
-    if (!addresses) {
-        HIP_DEBUG("Esp slist is empty\n");
-    }
     if (esp_addr != NULL) {
         if (upd_id != NULL) {
             if (esp_addr->update_id == NULL) {
@@ -356,7 +351,8 @@ static struct slist *update_esp_address(struct slist *addresses,
         esp_addr->update_id = NULL;
     }
     HIP_DEBUG("update_esp_address: addr created and added\n");
-    return append_to_slist(addresses, esp_addr);
+    hip_ll_add_first(addresses, esp_addr);
+    return addresses;
 }
 
 /**
@@ -377,7 +373,7 @@ static struct tuple *get_tuple_by_esp(const struct in6_addr *dst_addr, const uin
     while (list) {
         struct esp_tuple *tuple = list->data;
         if (spi == tuple->spi) {
-            if (dst_addr && get_esp_address(tuple->dst_addresses, dst_addr) != NULL) {
+            if (dst_addr && get_esp_address(&tuple->dst_addresses, dst_addr) != NULL) {
                 HIP_DEBUG("connection found by esp\n");
                 return tuple->tuple;
             } else if (!dst_addr) {
@@ -524,23 +520,17 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
 static void free_esp_tuple(struct esp_tuple *esp_tuple)
 {
     if (esp_tuple) {
-        struct slist       *list = esp_tuple->dst_addresses;
         struct esp_address *addr = NULL;
 
         // remove eventual cached anchor elements for this esp tuple
         esp_prot_conntrack_remove_state(esp_tuple);
 
         // remove all associated addresses
-        while (list) {
-            esp_tuple->dst_addresses = remove_link_slist(esp_tuple->dst_addresses,
-                                                         list);
-            addr = list->data;
-
+        addr = hip_ll_del_first(&esp_tuple->dst_addresses, NULL);
+        while (addr) {
             free(addr->update_id);
             free(addr);
-
-            free(list);
-            list = esp_tuple->dst_addresses;
+            addr = hip_ll_del_first(&esp_tuple->dst_addresses, NULL);
         }
 
         esp_tuple->tuple = NULL;
@@ -641,6 +631,7 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
         new_esp        = calloc(1, sizeof(struct esp_tuple));
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
+        hip_ll_init(&new_esp->dst_addresses);
 
         n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
             sizeof(struct hip_locator_info_addr_item);
@@ -655,8 +646,7 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
                        sizeof(struct in6_addr));
                 esp_address->update_id  = malloc(sizeof(uint32_t));
                 *esp_address->update_id = seq->update_id;
-                new_esp->dst_addresses  = append_to_slist(new_esp->dst_addresses,
-                                                          esp_address);
+                hip_ll_add_first(&new_esp->dst_addresses, esp_address);
                 n--;
                 if (n > 0) {
                     locator_addr++;
@@ -689,14 +679,14 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *esp_
         new_esp        = calloc(1, sizeof(struct esp_tuple));
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
+        hip_ll_init(&new_esp->dst_addresses);
 
         esp_address = malloc(sizeof(struct esp_address));
 
         memcpy(&esp_address->dst_addr, addr, sizeof(struct in6_addr));
 
         esp_address->update_id = NULL;
-        new_esp->dst_addresses = append_to_slist(new_esp->dst_addresses,
-                                                 esp_address);
+        hip_ll_add_first(&new_esp->dst_addresses, esp_address);
     }
     return new_esp;
 }
@@ -1038,9 +1028,9 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         esp_tuple->spi           = ntohl(spi->new_spi);
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
-        esp_tuple->dst_addresses = NULL;
-        esp_tuple->dst_addresses = update_esp_address(esp_tuple->dst_addresses,
-                                                      ip6_src, NULL);
+        hip_ll_init(&esp_tuple->dst_addresses);
+        esp_tuple->dst_addresses = *update_esp_address(&esp_tuple->dst_addresses,
+                                                       ip6_src, NULL);
         esp_tuple->tuple = other_dir;
 
         other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples, esp_tuple);
@@ -1109,9 +1099,9 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
         esp_tuple->spi           = ntohl(spi->new_spi);
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
-        esp_tuple->dst_addresses = NULL;
-        esp_tuple->dst_addresses = update_esp_address(esp_tuple->dst_addresses,
-                                                      ip6_src, NULL);
+        hip_ll_init(&esp_tuple->dst_addresses);
+        esp_tuple->dst_addresses = *update_esp_address(&esp_tuple->dst_addresses,
+                                                       ip6_src, NULL);
         esp_tuple->tuple = other_dir;
 
         insert_esp_tuple(esp_tuple);
@@ -1187,9 +1177,9 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
                        (locator + 1);
 
         while (n > 0) {
-            esp_tuple->dst_addresses = update_esp_address(esp_tuple->dst_addresses,
-                                                          &locator_addr->address,
-                                                          &seq->update_id);
+            esp_tuple->dst_addresses = *update_esp_address(&esp_tuple->dst_addresses,
+                                                           &locator_addr->address,
+                                                           &seq->update_id);
             n--;
 
             if (n > 0) {
@@ -1229,9 +1219,9 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
         print_esp_tuple(esp_tuple);
 
         while (n > 0) {
-            esp_tuple->dst_addresses = update_esp_address(esp_tuple->dst_addresses,
-                                                          &locator_addr->address,
-                                                          &seq->update_id);
+            esp_tuple->dst_addresses = *update_esp_address(&esp_tuple->dst_addresses,
+                                                           &locator_addr->address,
+                                                           &seq->update_id);
             n--;
 
             if (n > 0) {
