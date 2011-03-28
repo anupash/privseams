@@ -351,7 +351,7 @@ static struct esp_address *get_esp_address(const struct slist *addr_list,
  * @param dest      The corresponding destination address to bypass. May be
  *                  a IPv6-mapped IPv4 address.
  * @param insert    Insert new rule if true, remove existing if false.
- * @return          0 if rules were modified, non-zero otherwise.
+ * @return          0 if rules were modified, -1 otherwise.
  *
  * @note This feature may be turned off completely by the -u command line option.
  *       It is also automatically deactivated for connections that demand
@@ -360,7 +360,7 @@ static struct esp_address *get_esp_address(const struct slist *addr_list,
  *       attempt to modify rules.
  *
  * @note This interferes, in one way or another, with userspace_ipsec,
- *       Relay, LSI, midauth, lightweight-update and esp_prot. Care was
+ *       relay, LSI, midauth, lightweight-update and esp_prot. Care was
  *       taken to not break these features though.
  *
  * @see update_esp_address()
@@ -465,9 +465,10 @@ out_err:
  * @param esp_tuple Determines the SPI and all destination addresses.
  * @param insert    Insert rules if true, remove existing if false.
  *
- * @see hip_fw_manage_esp_rule
+ * @see hip_fw_manage_esp_rule()
  */
-void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple, const bool insert)
+void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple,
+                             const bool insert)
 {
     struct slist *lst = esp_tuple->dst_addr_list;
     while (lst) {
@@ -2116,8 +2117,8 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
  * Parse one line of iptables -nvL formatted output, and extract
  * packet count, SPI and destination IP if it is valid and packet count is
  * not zero.
- * This takes into account all kinds of rules that can are created by
- * hip_fw_manage_esp_rule().
+ * This takes into account specifically the kinds of rules that can be
+ * created by hip_fw_manage_esp_rule().
  *
  * @param input        The line to be parsed.
  * @param packet_count Out: receives the packet count (first column).
@@ -2127,6 +2128,7 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
  *                     false otherwise
  *
  * @see detect_esp_rule_activity()
+ * @see hip_fw_manage_esp_rule()
  */
 static bool parse_iptables_esp_rule(const char *const input,
                                     unsigned int *const packet_count,
@@ -2148,7 +2150,7 @@ static bool parse_iptables_esp_rule(const char *const input,
     char        ip[INET6_ADDRSTRLEN];
     const char *str_spi;
 
-    // theres's two ways of specifying SPIs in a rule
+    // there's two ways of specifying SPIs in a rule
     // (see hip_fw_manage_esp_rule)
 
     if ((str_spi = strstr(input, "spi:"))) {
