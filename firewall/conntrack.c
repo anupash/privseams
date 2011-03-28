@@ -368,7 +368,8 @@ static struct esp_address *get_esp_address(const struct slist *addr_list,
  * @see ::esp_speedup
  */
 static int hip_fw_manage_esp_rule(const struct esp_tuple *const esp_tuple,
-                                  const struct in6_addr *const dest, bool insert)
+                                  const struct in6_addr *const dest,
+                                  const bool insert)
 {
     int         err   = 0;
     const char *flag  = insert ? "-I" : "-D";
@@ -484,8 +485,8 @@ void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple, const bool
  * @param upd_id    update id
  */
 static void update_esp_address(struct esp_tuple *esp_tuple,
-                               const struct in6_addr *addr,
-                               const uint32_t *upd_id)
+                               const struct in6_addr *const addr,
+                               const uint32_t *const upd_id)
 {
     struct esp_address *esp_addr = get_esp_address(esp_tuple->dst_addr_list, addr);
     HIP_DEBUG("update_esp_address: address: %s \n", addr_to_numeric(addr));
@@ -589,7 +590,8 @@ struct esp_tuple *find_esp_tuple(const struct slist *search_list,
  *
  * @see remove_connection()
  */
-static void insert_new_connection(const struct hip_data *data, struct hip_fw_context *ctx)
+static void insert_new_connection(const struct hip_data *const data,
+                                  const struct hip_fw_context *const ctx)
 {
     struct connection *connection = NULL;
 

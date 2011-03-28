@@ -51,8 +51,8 @@ time_t time(time_t *t)
 
 static struct connection *setup_connection(void)
 {
-    struct hip_fw_context ctx  = { };   // only ctx.udp_encap_hdr is examined
-    struct hip_data       data = { };
+    const struct hip_fw_context ctx  = { };   // only ctx.udp_encap_hdr is examined
+    struct hip_data             data = { };
 
     inet_pton(AF_INET6, "2001:12:bd2d:d23e:4a09:b2ab:6414:e110", &data.src_hit);
     inet_pton(AF_INET6, "2001:10:f039:6bc5:cab3:0727:7fbc:9dcb", &data.dst_hit);
