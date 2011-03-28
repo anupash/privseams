@@ -1038,7 +1038,7 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
         hip_ll_init(&esp_tuple->dst_addresses);
-        HIP_IFEL(update_esp_address(&esp_tuple->dst_addresses, ip6_src, NULL),
+        HIP_IFEL(!update_esp_address(&esp_tuple->dst_addresses, ip6_src, NULL),
                  -1, "adding or updating ESP destination address failed");
         esp_tuple->tuple = other_dir;
 
@@ -1109,7 +1109,7 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
         hip_ll_init(&esp_tuple->dst_addresses);
-        HIP_IFEL(update_esp_address(&esp_tuple->dst_addresses, ip6_src, NULL),
+        HIP_IFEL(!update_esp_address(&esp_tuple->dst_addresses, ip6_src, NULL),
                  -1, "adding or updating ESP destination address failed");
         esp_tuple->tuple = other_dir;
 
@@ -1186,9 +1186,9 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
                        (locator + 1);
 
         while (n > 0) {
-            HIP_IFEL(update_esp_address(&esp_tuple->dst_addresses,
-                                        &locator_addr->address,
-                                        &seq->update_id), 0,
+            HIP_IFEL(!update_esp_address(&esp_tuple->dst_addresses,
+                                         &locator_addr->address,
+                                         &seq->update_id), 0,
                      "adding or updating ESP destination address failed");
             n--;
 
@@ -1229,9 +1229,9 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
         print_esp_tuple(esp_tuple);
 
         while (n > 0) {
-            HIP_IFEL(update_esp_address(&esp_tuple->dst_addresses,
-                                        &locator_addr->address,
-                                        &seq->update_id), 0,
+            HIP_IFEL(!update_esp_address(&esp_tuple->dst_addresses,
+                                         &locator_addr->address,
+                                         &seq->update_id), 0,
                      "adding or updating ESP destination address failed");
             n--;
 
