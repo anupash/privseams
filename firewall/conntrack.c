@@ -583,10 +583,14 @@ struct esp_tuple *find_esp_tuple(const struct slist *search_list,
 }
 
 /**
- * initialize and store a new HIP/ESP connnection into the connection table
+ * Initialize and store a new HIP/ESP connnection into the connection
+ * table.
  *
- * @param data the connection-related data to be inserted
- * @see remove_connection
+ * @param data The connection-related data to be inserted.
+ * @param ctx  The packet context. Note that source and destination HITs
+ *             are always taken from @a data rather than @a ctx.
+ *
+ * @see remove_connection()
  */
 static void insert_new_connection(const struct hip_data *data, struct hip_fw_context *ctx)
 {
@@ -2116,7 +2120,7 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
  * @param input        The line to be parsed.
  * @param packet_count Out: receives the packet count (first column).
  * @param spi          Out: receives the SPI.
- * @param spi          Out: receives the destination IP.
+ * @param dest         Out: receives the destination IP.
  * @return             true if rule was valid and output was written,
  *                     false otherwise
  *
