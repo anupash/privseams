@@ -82,7 +82,7 @@ struct esp_tuple {
     uint32_t      spi;
     uint32_t      new_spi;
     uint32_t      spi_update_id;
-    struct slist *dst_addr_list;
+    struct slist *dst_addresses;
     struct tuple *tuple;
     /* tracking of the ESP SEQ number */
     uint32_t seq_no;
