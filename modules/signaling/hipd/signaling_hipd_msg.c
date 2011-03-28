@@ -902,7 +902,6 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not get state for existing connection\n");
     HIP_IFEL(signaling_update_flags_from_connection_id(ctx->input_msg, existing_conn),
              -1, "Could not update authentication flags from I3/U3 message \n");
-    signaling_connection_print(existing_conn, " xxxx");
 
     /* Signature validation */
 #ifdef CONFIG_HIP_PERFORMANCE
