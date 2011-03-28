@@ -2312,21 +2312,19 @@ void hip_fw_conntrack_periodic_cleanup(void)
         if (total_esp_rules_count > 0) {
             unsigned int found = 0;
             found += detect_esp_rule_activity("iptables -nvL", now);
+            system_print("iptables -Z HIPFW-INPUT");
+            system_print("iptables -Z HIPFW-OUTPUT");
+            system_print("iptables -Z HIPFW-FORWARD");
+
             found += detect_esp_rule_activity("ip6tables -nvL", now);
+            system_print("ip6tables -Z HIPFW-INPUT");
+            system_print("ip6tables -Z HIPFW-OUTPUT");
+            system_print("ip6tables -Z HIPFW-FORWARD");
 
             // we should be paranoid about iptables output
             if (found != total_esp_rules_count) {
                 HIP_ERROR("Not all ESP tuples' packet counts were found\n");
             }
-
-            // reset packet counters
-            system_print("iptables -Z HIPFW-INPUT");
-            system_print("iptables -Z HIPFW-OUTPUT");
-            system_print("iptables -Z HIPFW-FORWARD");
-
-            system_print("ip6tables -Z HIPFW-INPUT");
-            system_print("ip6tables -Z HIPFW-OUTPUT");
-            system_print("ip6tables -Z HIPFW-FORWARD");
         }
 
         iter_conn = conn_list;
