@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    if (esp_speedup && userspace_ipsec) {
+    if (esp_speedup && hip_userspace_ipsec) {
         puts("Conflict: Bypassing userspace ESP processing (-u) impossible\n");
         puts("          with userspace IPSEC enabled (-i or -I)\n");
         hipfw_usage();
