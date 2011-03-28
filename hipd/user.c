@@ -248,12 +248,14 @@ int hip_handle_user_msg(struct hip_common *msg,
     const hip_hit_t             *src_hit   = NULL, *dst_hit = NULL;
     struct hip_hadb_state       *entry     = NULL;
     int                          err       = 0, msg_type = 0, reti = 0;
-    int                          access_ok = 0, is_root = 0;
+    int                          access_ok = 0, is_root = 0, name_len;
     const struct hip_tlv_common *param     = NULL;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
     struct in6_addr opp_hit, src_ip;
     struct in6_addr hit_local;
 #endif
+    const struct hip_transformation_order *transorder;
+    struct hip_hit_to_ip_set              *name_info;
 
     HIP_ASSERT(src->sin6_family == AF_INET6);
     HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
@@ -404,7 +406,6 @@ int hip_handle_user_msg(struct hip_common *msg,
     case HIP_MSG_TRANSFORM_ORDER:
     {
         err = 0;
-        const struct hip_transformation_order *transorder;
         HIP_IFEL(!(transorder = hip_get_param(msg, HIP_PARAM_TRANSFORM_ORDER)), -1,
                  "no transform order struct found (should contain transform order)\n");
         HIP_DEBUG("Transform order received from hipconf: %d\n", transorder->transorder);
@@ -843,12 +844,11 @@ int hip_handle_user_msg(struct hip_common *msg,
     case HIP_MSG_HIT_TO_IP_SET:
     {
         err = 0;
-        struct hip_hit_to_ip_set *name_info;
         HIP_IFEL(!(name_info = hip_get_param_readwrite(msg,
                                                        HIP_PARAM_HIT_TO_IP_SET)),
                  -1, "no name struct found\n");
         HIP_DEBUG("Name in name_info %s\n", name_info->name);
-        int name_len = strlen(name_info->name);
+        name_len = strlen(name_info->name);
         if (name_len >= 1) {
             if (name_info->name[name_len - 1] != '.') {
                 HIP_DEBUG("final dot is missing");

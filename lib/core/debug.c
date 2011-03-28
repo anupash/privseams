@@ -578,7 +578,7 @@ static size_t hip_mem2pretty_hex(const void *in, const size_t in_len, char *out,
         HIP_ASSERT(line_result == 1);
 
         // advance input pointer by at most the maximum available input so the return value is calculated correctly
-        in_cur  += (in_remaining > HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH ? HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH : in_remaining);
+        in_cur  += in_remaining > HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH ? HIP_MEM2PRETTY_HEX_INPUT_LINE_LENGTH : in_remaining;
         out_cur += HIP_MEM2PRETTY_HEX_OUTPUT_LINE_LENGTH;
     }
 

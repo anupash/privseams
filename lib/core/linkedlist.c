@@ -75,11 +75,11 @@ void hip_ll_init(struct hip_ll *linkedlist)
  */
 void hip_ll_uninit(struct hip_ll *linkedlist, free_elem_fn free_element)
 {
+    struct hip_ll_node *pointer = NULL;
+
     if (linkedlist == NULL || linkedlist->head == NULL) {
         return;
     }
-
-    struct hip_ll_node *pointer = NULL;
 
     /* Free the node currently at list head and move the next item to list
      * head. Continue this until the item at list head is NULL. If
@@ -141,12 +141,12 @@ unsigned int hip_ll_get_size(const struct hip_ll *linkedlist)
  */
 int hip_ll_add(struct hip_ll *linkedlist, const unsigned int index, void *ptr)
 {
+    struct hip_ll_node *newnode       = NULL, *pointer = NULL;
+    unsigned int        current_index = 0;
+
     if (linkedlist == NULL || ptr == NULL) {
         return -1;
     }
-
-    struct hip_ll_node *newnode       = NULL, *pointer = NULL;
-    unsigned int        current_index = 0;
 
     if ((newnode = malloc(sizeof(struct hip_ll_node))) == NULL) {
         HIP_ERROR("Error on allocating memory for a linked list node.\n");
@@ -248,15 +248,15 @@ int hip_ll_add_last(struct hip_ll *linkedlist, void *ptr)
 void *hip_ll_del(struct hip_ll *linkedlist, const unsigned int index,
                  free_elem_fn free_element)
 {
+    struct hip_ll_node *pointer       = NULL, *previous = NULL;
+    void               *ptr           = NULL;
+    unsigned int        current_index = 0;
+
     if (linkedlist == NULL || linkedlist->head == NULL) {
         return NULL;
     } else if (index > (linkedlist->element_count - 1)) {
         return NULL;
     }
-
-    struct hip_ll_node *pointer       = NULL, *previous = NULL;
-    void               *ptr           = NULL;
-    unsigned int        current_index = 0;
 
     if (index == 0) {
         ptr     = linkedlist->head->ptr;
@@ -337,14 +337,14 @@ void *hip_ll_del_first(struct hip_ll *linkedlist,
  */
 void *hip_ll_get(struct hip_ll *linkedlist, const unsigned int index)
 {
+    struct hip_ll_node *pointer       = linkedlist->head;
+    unsigned int        current_index = 0;
+
     if (linkedlist == NULL || linkedlist->head == NULL) {
         return NULL;
     } else if (index > (linkedlist->element_count - 1)) {
         return NULL;
     }
-
-    struct hip_ll_node *pointer       = linkedlist->head;
-    unsigned int        current_index = 0;
 
     while (pointer != NULL) {
         if (current_index == index) {

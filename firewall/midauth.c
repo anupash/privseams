@@ -86,7 +86,7 @@ static void update_ipv4_header(struct iphdr *ip, int len)
     }
 
     checksum  = (checksum >> 16) + (checksum & 0xffff);
-    checksum += (checksum >> 16);
+    checksum +=  checksum >> 16;
 
     ip->check = ~checksum;
 }
@@ -145,7 +145,7 @@ static void update_udp_header(struct iphdr *ip, int len)
     sum += udp->len;
 
     /* set the checksum */
-    udp->check = (CHECKSUM_CARRY(sum));
+    udp->check = CHECKSUM_CARRY(sum);
 }
 
 /**

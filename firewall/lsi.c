@@ -220,7 +220,7 @@ int hip_reinject_packet(const struct in6_addr *src_hit,
 
     if (ip_orig_traffic == 4) {
         const struct ip *iphdr = (const struct ip *) m->payload;
-        ip_hdr_size = (iphdr->ip_hl * 4);
+        ip_hdr_size = iphdr->ip_hl * 4;
         protocol    = iphdr->ip_p;
         ttl         = iphdr->ip_ttl;
         HIP_DEBUG_LSI("Ipv4 address src ", &(iphdr->ip_src));

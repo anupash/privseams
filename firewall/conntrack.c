@@ -82,9 +82,6 @@ static struct dlist *hip_list  = NULL;
 static struct dlist *esp_list  = NULL;
 static struct slist *conn_list = NULL;
 
-#define DEFAULT_CONNECTION_TIMEOUT (60 * 5); // 5 minutes
-#define DEFAULT_CLEANUP_INTERVAL   (60 * 1); // 1 minute
-
 /**
  * Interval between sweeps in hip_fw_conntrack_periodic_cleanup(),
  * in seconds.
@@ -93,7 +90,7 @@ static struct slist *conn_list = NULL;
  *
  * @see hip_fw_conntrack_periodic_cleanup()
  */
-time_t cleanup_interval = DEFAULT_CLEANUP_INTERVAL;
+time_t cleanup_interval = 60; // 1 minute
 
 /**
  * Connection timeout in seconds, or zero to disable timeout.
@@ -104,7 +101,7 @@ time_t cleanup_interval = DEFAULT_CLEANUP_INTERVAL;
  *
  * @see hip_fw_conntrack_periodic_cleanup()
  */
-time_t connection_timeout = DEFAULT_CONNECTION_TIMEOUT;
+time_t connection_timeout = 60 * 5; // 5 minutes
 
 enum {
     STATE_NEW,
@@ -723,6 +720,8 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
  */
 static void remove_tuple(struct tuple *tuple)
 {
+    struct slist *list;
+
     if (tuple) {
         // remove hip_tuple from helper list
         hip_list = remove_link_dlist(hip_list,
@@ -731,7 +730,7 @@ static void remove_tuple(struct tuple *tuple)
         free_hip_tuple(tuple->hip_tuple);
         tuple->hip_tuple = NULL;
 
-        struct slist *list = tuple->esp_tuples;
+        list = tuple->esp_tuples;
         while (list) {
             // remove esp_tuples from helper list
             esp_list = remove_link_dlist(esp_list,
@@ -2227,7 +2226,6 @@ static bool parse_iptables_esp_rule(const char *const input,
 static unsigned int detect_esp_rule_activity(const char *const cmd,
                                              const time_t now)
 {
-
     unsigned int ret      = 0;
     bool         chain_ok = false;
     char         bfr[256];
@@ -2246,10 +2244,10 @@ static unsigned int detect_esp_rule_activity(const char *const cmd,
             continue;
         }
 
-        unsigned int     packet_count;
-        uint32_t         spi;
-        struct in6_addr  dest;
-        struct tuple    *tuple;
+        unsigned int    packet_count;
+        uint32_t        spi;
+        struct in6_addr dest;
+        struct tuple   *tuple;
 
         if (chain_ok && parse_iptables_esp_rule(bfr, &packet_count, &spi, &dest)) {
             ret += 1;
@@ -2284,21 +2282,22 @@ static unsigned int detect_esp_rule_activity(const char *const cmd,
  * The actual tasks will be run at most once per ::connection_timeout
  * seconds, no matter how often you call the function.
  *
- * @param now The current time.
- *
  * @note Don't call this from a thread or timer, since most of hipfw is not
  *       reentrant (and so this function isn't either).
  */
-void hip_fw_conntrack_periodic_cleanup(const time_t now)
+void hip_fw_conntrack_periodic_cleanup(void)
 {
     static time_t      last_check = 0; // timestamp of last call
     struct slist      *iter_conn;
     struct connection *conn;
 
-    if (connection_timeout == 0) {
-        // timeout disabled
+    if (connection_timeout == 0 || !filter_traffic) {
+        // timeout disabled, or no connections
+        // tracked in the first place
         return;
     }
+
+    const time_t now = time(NULL);
 
     HIP_ASSERT(now >= last_check);
     if (now - last_check >= cleanup_interval) {

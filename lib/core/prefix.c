@@ -188,11 +188,11 @@ int hip_id_type_match(const struct in6_addr *id, int id_type)
     HIP_ASSERT(!(is_lsi && is_hit));
 
     if (id_type == HIP_ID_TYPE_HIT) {
-        ret = (is_hit ? 1 : 0);
+        ret = is_hit ? 1 : 0;
     } else if (id_type == HIP_ID_TYPE_LSI) {
-        ret = (is_lsi ? 1 : 0);
+        ret = is_lsi ? 1 : 0;
     } else {
-        ret = ((is_hit || is_lsi) ? 0 : 1);
+        ret = (is_hit || is_lsi) ? 0 : 1;
     }
 
     return ret;

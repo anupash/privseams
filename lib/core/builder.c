@@ -2487,7 +2487,7 @@ int hip_build_param_challenge_response(struct hip_common *msg,
     cookie.J        = hton64(val_J);
     cookie.K        = pz->K;
     cookie.lifetime = pz->K;
-    opaque_len      = (sizeof(pz->opaque) / sizeof(pz->opaque[0]));
+    opaque_len      = sizeof(pz->opaque) / sizeof(pz->opaque[0]);
     memcpy(&cookie.opaque, pz->opaque, opaque_len);
 
     err = hip_build_generic_param(msg,

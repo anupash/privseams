@@ -660,7 +660,7 @@ static void firewall_exit(void)
  * Firewall signal handler wrapper (callback).
  * Exit firewall gracefully and clean up all packet capture rules.
  *
- * @param sig Signal number (currently SIGINT, SIGTERM or SIGABRT).
+ * @param sig Signal number (currently SIGINT or SIGTERM).
  *
  * @see firewall_init()
  * @see firewall_exit()
@@ -1279,7 +1279,6 @@ static int firewall_init(void)
     /* Register signal handlers */
     signal(SIGINT, firewall_close);
     signal(SIGTERM, firewall_close);
-    signal(SIGABRT, firewall_close);
 
     HIP_IFEL(firewall_init_extensions(), -1, "failed to start requested extensions");
 
@@ -1673,12 +1672,12 @@ out_err:
  * Receive and process one message from hipd.
  *
  * @param msg A previously allocated message buffer.
- * @return    Zero on success, non-zero on error.
+ * @return    Zero on success, -1 on error.
  *
  * @note The buffer @a msg is reused between calls because it is quite
  *       large.
  */
-static int hip_fw_handle_hipd_message(struct hip_common *msg)
+static int hip_fw_handle_hipd_message(struct hip_common *const msg)
 {
     struct sockaddr_in6 sock_addr;
     int                 msg_type, len, n;
@@ -1694,9 +1693,9 @@ static int hip_fw_handle_hipd_message(struct hip_common *msg)
     }
 
     // making sure user messages are received from hipd
-    // resetting vars to 0 because it is a loop
-    msg_type = hip_get_msg_type(msg);
-    is_root  = (ntohs(sock_addr.sin6_port) < 1024);
+    access_ok = 0;
+    msg_type  = hip_get_msg_type(msg);
+    is_root   = ntohs(sock_addr.sin6_port) < 1024;
     if (is_root) {
         access_ok = 1;
     } else if (!is_root &&
@@ -1964,7 +1963,7 @@ int hipfw_main(const char *const rule_file,
             err = hip_fw_handle_hipd_message(msg);
         }
 
-        hip_fw_conntrack_periodic_cleanup(time(NULL));
+        hip_fw_conntrack_periodic_cleanup();
     }
 
 out_err:

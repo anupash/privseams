@@ -193,6 +193,11 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (connection_timeout > 0 && !filter_traffic) {
+        puts("Warning: timeouts (-t) have no effect with connection");
+        puts("         tracking disabled (-F)");
+    }
+
     if (esp_speedup && limit_capabilities) {
         puts("Conflict: ESP speedups (-u) requires root privileges,\n");
         puts("          but lowered privleges (-p) requested as well.\n");
