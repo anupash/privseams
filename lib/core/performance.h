@@ -144,6 +144,7 @@ enum perf_sensor {
     PERF_HANDLE_CERT_CHAIN,  // time to save, verify etc
     PERF_CERT_UP_CERT_ACK,  // time after sending a chain until receiving the ack
     PERF_USER_COMM,          // around tests 2.2, 3.2 and 4.3
+    PERF_USER_COMM_UPDATE,   // same as above but during update exchange
     PERF_LOAD_USER_KEY,      // time to load the users key from harddrive
     PERF_LOAD_USER_PUBKEY,   // time to load the users public key from harddrive
     /* The firewall only uses the sensors given above, hence it

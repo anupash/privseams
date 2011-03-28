@@ -342,6 +342,7 @@ int hipd_main(uint64_t flags)
     hip_perf_set_name(perf_set, PERF_CONN_U1, "results/PERF_CONN_U1.csv");
     hip_perf_set_name(perf_set, PERF_CONN_U2, "results/PERF_CONN_U2.csv");
     hip_perf_set_name(perf_set, PERF_CONN_U3, "results/PERF_CONN_U3.csv");
+    hip_perf_set_name(perf_set, PERF_USER_COMM_UPDATE, "results/PERF_USER_COMM_UPDATE.csv");
 
     /* signature verification and generation */
     hip_perf_set_name(perf_set, PERF_R1_VERIFY_HOST_SIG, "results/PERF_R1_VERIFY_HOST_SIG.csv");

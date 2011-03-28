@@ -873,11 +873,11 @@ out_err:
 
     /* The packet is on the wire, so write all tests now.. */
     HIP_DEBUG("Write PERF_USER_COMM PERF_X509_VERIFY_CERT_CHAIN, PERF_I3_HOST_SIGN, PERF_SEND_CERT_CHAIN, \n");
-    hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
     hip_perf_write_benchmark(perf_set, PERF_X509_VERIFY_CERT_CHAIN);
     hip_perf_write_benchmark(perf_set, PERF_SEND_CERT_CHAIN);
     if (conn->id <= 0) {
-        HIP_DEBUG("Write PERF_R2, PERF_I2_R2, PERF_HIPD_R2_FINISH, PERF_R2_VERIFY_HOST_SIG, PERF_R2_VERIFY_USER_SIG, PERF_I3_HOST_SIGN\n");
+        HIP_DEBUG("Write PERF_R2, PERF_I2_R2, PERF_HIPD_R2_FINISH, PERF_R2_VERIFY_HOST_SIG, PERF_R2_VERIFY_USER_SIG, PERF_I3_HOST_SIGN, PERF_USER_COMM\n");
+        hip_perf_write_benchmark(perf_set, PERF_USER_COMM);
         hip_perf_write_benchmark(perf_set, PERF_I3_HOST_SIGN);
         hip_perf_write_benchmark(perf_set, PERF_R2);
         hip_perf_write_benchmark(perf_set, PERF_R2x1);
@@ -1007,9 +1007,10 @@ out_err:
         hip_perf_write_benchmark(perf_set, PERF_I3);
         hip_perf_write_benchmark(perf_set, PERF_SEND_CERT_CHAIN);
     } else {
-        HIP_DEBUG("Write PERF_CONN_U3, PERF_NEW_UPDATE_CONN\n");
+        HIP_DEBUG("Write PERF_CONN_U3, PERF_NEW_UPDATE_CONN, PERF_USER_COMM_UPDATE\n");
         hip_perf_write_benchmark(perf_set, PERF_CONN_U3);
         hip_perf_write_benchmark(perf_set, PERF_NEW_UPDATE_CONN);
+        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
     }
 #endif
 
@@ -1268,15 +1269,18 @@ int signaling_handle_incoming_update(UNUSED const uint8_t packet_type, UNUSED co
         hip_perf_write_benchmark(perf_set, PERF_CONN_U1);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2_HOST_SIGN);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2_USER_SIGN);
+        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
+        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
         break;
     case SIGNALING_SECOND_BEX_UPDATE:
         HIP_DEBUG("Write PERF_CONN_U2_VERIFY_USER_SIG, PERF_CONN_U3_HOST_SIGN, PERF_CONN_U2\n");
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2_VERIFY_USER_SIG);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U3_HOST_SIGN);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U2);
+        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
         break;
     case SIGNALING_THIRD_BEX_UPDATE:
-
+        hip_perf_write_benchmark(perf_set, PERF_USER_COMM_UPDATE);
         break;
     }
     hip_perf_write_benchmark(perf_set, PERF_UPDATE_VERIFY_HOST_SIG);

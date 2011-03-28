@@ -225,11 +225,13 @@ static int signaling_send_any_connection_request(const hip_hit_t *src_hit,
     hip_perf_stop_benchmark(perf_set, PERF_CERTIFICATE_EXCHANGE);
     HIP_DEBUG("Start PERF_USER_COMM\n");
     hip_perf_start_benchmark(perf_set, PERF_USER_COMM);
+    hip_perf_start_benchmark(perf_set, PERF_USER_COMM_UPDATE);
 #endif
     HIP_IFEL(signaling_hipd_send_to_fw(msg, 1), -1, "failed to send/recv connection request to fw\n");
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_USER_COMM\n");
     hip_perf_stop_benchmark(perf_set, PERF_USER_COMM);
+    hip_perf_stop_benchmark(perf_set, PERF_USER_COMM_UPDATE);
 #endif
 
     /* We expect the corresponding local application context in the response. */
@@ -326,6 +328,10 @@ int signaling_handle_connection_request(struct hip_common *msg,
         if (conn->status == SIGNALING_CONN_PROCESSING) {
             HIP_IFEL(signaling_send_first_update(our_hit, peer_hit, conn),
                      -1, "Failed triggering first bex update.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
+#endif
             HIP_DEBUG("Triggered UPDATE for following connection context:\n");
             signaling_connection_print(conn, "");
         } else {
@@ -338,6 +344,10 @@ int signaling_handle_connection_request(struct hip_common *msg,
         // trigger bex since we intercepted the packet before it could be handled by the hipfw
         HIP_IFEL(hip_netdev_trigger_bex_msg(msg, src),
                  -1, "Netdev could not trigger the BEX\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop PERF_TRIGGER_CONN\n");
+        hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
+#endif
         // have to do this again after triggering BEX since there is no state before
         HIP_IFEL(!(entry = hip_hadb_find_byhits(our_hit, peer_hit)),
                  -1, "hadb entry has not been set up\n");
@@ -369,8 +379,7 @@ int signaling_handle_connection_request(struct hip_common *msg,
     signaling_send_connection_confirmation(our_hit, peer_hit, conn);
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Stop and write PERF_TRIGGER_CONN, write PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN\n");
-        hip_perf_stop_benchmark(perf_set, PERF_TRIGGER_CONN);
+        HIP_DEBUG("Write PERF_TRIGGER_CONN, write PERF_CONN_U1_HOST_SIGN, PERF_CONN_U1_USER_SIGN\n");
         hip_perf_write_benchmark(perf_set, PERF_TRIGGER_CONN);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U1_HOST_SIGN);
         hip_perf_write_benchmark(perf_set, PERF_CONN_U1_USER_SIGN);
