@@ -91,12 +91,12 @@ unsigned long timeout_value    = 0;
 /**
  * prints out the list of addresses of esp_addr_list
  *
- * @param addr_list list of addresses
+ * @param addresses list of addresses
  *
  */
-static void print_esp_addr_list(const struct slist *addr_list)
+static void print_esp_addresses(const struct slist *addresses)
 {
-    const struct slist *list = addr_list;
+    const struct slist *list = addresses;
     struct esp_address *addr = NULL;
 
     HIP_DEBUG("ESP dst addr list:\n");
@@ -135,7 +135,7 @@ static void print_esp_tuple(const struct esp_tuple *esp_tuple)
               esp_tuple->spi, esp_tuple->new_spi, esp_tuple->spi_update_id,
               esp_tuple->tuple->direction);
 
-    print_esp_addr_list(esp_tuple->dst_addresses);
+    print_esp_addresses(esp_tuple->dst_addresses);
 }
 
 /**
@@ -288,14 +288,14 @@ static struct tuple *get_tuple_by_hip(const struct hip_data *data,
 /**
  * Find an entry from the given list that matches to the given address
  *
- * @param addr_list the list to be searched for
+ * @param addresses the list to be searched for
  * @param addr the address to matched from the list
  * @return the entry from the list that matched to the given address, or NULL if not found
  */
-static struct esp_address *get_esp_address(const struct slist *addr_list,
+static struct esp_address *get_esp_address(const struct slist *addresses,
                                            const struct in6_addr *addr)
 {
-    const struct slist *list     = addr_list;
+    const struct slist *list     = addresses;
     struct esp_address *esp_addr = NULL;
 
     HIP_DEBUG("get_esp_address\n");
@@ -321,20 +321,20 @@ static struct esp_address *get_esp_address(const struct slist *addr_list,
  * Insert an address into a list of addresses. If same address exists already,
  * the update_id is replaced with the new value.
  *
- * @param addr_list the address list
+ * @param addresses the address list
  * @param addr the address to be added
  * @param upd_id update id
  *
  * @return the address list
  */
-static struct slist *update_esp_address(struct slist *addr_list,
+static struct slist *update_esp_address(struct slist *addresses,
                                         const struct in6_addr *addr,
                                         const uint32_t *upd_id)
 {
-    struct esp_address *esp_addr = get_esp_address(addr_list, addr);
+    struct esp_address *esp_addr = get_esp_address(addresses, addr);
     HIP_DEBUG("update_esp_address: address: %s \n", addr_to_numeric(addr));
 
-    if (!addr_list) {
+    if (!addresses) {
         HIP_DEBUG("Esp slist is empty\n");
     }
     if (esp_addr != NULL) {
@@ -345,7 +345,7 @@ static struct slist *update_esp_address(struct slist *addr_list,
             *esp_addr->update_id = *upd_id;
         }
         HIP_DEBUG("update_esp_address: found and updated\n");
-        return addr_list;
+        return addresses;
     }
     esp_addr = malloc(sizeof(struct esp_address));
     memcpy(&esp_addr->dst_addr, addr, sizeof(struct in6_addr));
@@ -356,7 +356,7 @@ static struct slist *update_esp_address(struct slist *addr_list,
         esp_addr->update_id = NULL;
     }
     HIP_DEBUG("update_esp_address: addr created and added\n");
-    return append_to_slist(addr_list, esp_addr);
+    return append_to_slist(addresses, esp_addr);
 }
 
 /**
