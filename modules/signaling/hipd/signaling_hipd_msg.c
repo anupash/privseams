@@ -913,7 +913,8 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
              -1, "Could not update authentication flags from I3/U3 message \n");
 
     /* Signature validation */
-#ifdef CONFIG_HIP_PERFORMANCE
+/* DONT DO THIS in HIPD, this is just for the HIPFW
+ * #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I3_VERIFY_HOST_SIG\n");
     hip_perf_start_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
 #endif
@@ -924,7 +925,7 @@ int signaling_handle_incoming_i3(const uint8_t packet_type, UNUSED const uint32_
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Stop PERF_I3_VERIFY_HOST_SIG\n");
     hip_perf_stop_benchmark(perf_set, PERF_I3_VERIFY_HOST_SIG);
-#endif
+#endif */
 
     /* Check if we're done with this connection or if we have to wait for addition authentication */
     if (signaling_flag_check(existing_conn->ctx_in.flags, USER_AUTH_REQUEST)){
