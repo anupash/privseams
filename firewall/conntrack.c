@@ -485,7 +485,7 @@ void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple,
  * @param addr      the address to be added
  * @param upd_id    update id
  */
-static void update_esp_address(struct esp_tuple *esp_tuple,
+static void update_esp_address(struct esp_tuple *const esp_tuple,
                                const struct in6_addr *const addr,
                                const uint32_t *const upd_id)
 {
