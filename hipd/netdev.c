@@ -1304,6 +1304,20 @@ out_err:
 }
 
 /**
+ * Remove a HIT from the local virtual interface to disable HIT-based
+ * connectivity. The interface is defined in the ::HIP_HIT_DEV constant.
+ *
+ * @param local_hit The HIT to be removed.
+ * @return          Zero on success, non-zero on failure.
+ *
+ * @see hip_manage_iface_local_hit()
+ */
+static int hip_remove_iface_local_hit(const hip_hit_t *const local_hit)
+{
+    return hip_manage_iface_local_hit(local_hit, false);
+}
+
+/**
  * Add a HIT on the local virtual interface to enable HIT-based
  * connectivity. The interface is defined in the ::HIP_HIT_DEV constant.
  *
@@ -1323,20 +1337,6 @@ int hip_add_iface_local_hit(const hip_hit_t *const local_hit)
     hip_remove_iface_local_hit(local_hit);
 
     return hip_manage_iface_local_hit(local_hit, true);
-}
-
-/**
- * Remove a HIT from the local virtual interface to disable HIT-based
- * connectivity. The interface is defined in the ::HIP_HIT_DEV constant.
- *
- * @param local_hit The HIT to be removed.
- * @return          Zero on success, non-zero on failure.
- *
- * @see hip_manage_iface_local_hit()
- */
-int hip_remove_iface_local_hit(const hip_hit_t *const local_hit)
-{
-    return hip_manage_iface_local_hit(local_hit, false);
 }
 
 /**
