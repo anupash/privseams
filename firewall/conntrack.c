@@ -682,34 +682,45 @@ out_err:
 }
 
 /**
- * create a new esp_tuple from the given parameters
+ * Create an esp_tuple object from an esp_info message parameter and with a
+ * specific destination address.
  *
  * @param esp_info a pointer to an ESP info parameter in the control message
  * @param addr a pointer to an address
  * @param tuple a pointer to a tuple structure
  * @return the created ESP tuple (caller frees) or NULL on failure (e.g. SPIs don't match)
  */
-static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *esp_info,
-                                                 const struct in6_addr *addr,
-                                                 struct tuple *tuple)
+static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
+                                                 const struct in6_addr *const addr,
+                                                 struct tuple *const tuple)
 {
-    struct esp_address *esp_address;
-    struct esp_tuple   *new_esp = NULL;
+    HIP_ASSERT(esp_info);
+    HIP_ASSERT(addr);
+    HIP_ASSERT(tuple);
 
-    if (esp_info) {
-        new_esp        = calloc(1, sizeof(struct esp_tuple));
+    struct esp_tuple *const new_esp = calloc(1, sizeof(*new_esp));
+    if (new_esp) {
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
         hip_ll_init(&new_esp->dst_addresses);
 
-        esp_address = malloc(sizeof(struct esp_address));
-
-        memcpy(&esp_address->dst_addr, addr, sizeof(struct in6_addr));
-
-        esp_address->update_id = NULL;
-        hip_ll_add_first(&new_esp->dst_addresses, esp_address);
+        struct esp_address *const esp_address = malloc(sizeof(*esp_address));
+        if (esp_address) {
+            esp_address->dst_addr  = *addr;
+            esp_address->update_id = NULL;
+            if (hip_ll_add_first(&new_esp->dst_addresses, esp_address) == 0) {
+                return new_esp;
+            } else {
+                HIP_ERROR("Inserting esp_address object into ESP destination address list failed");
+            }
+        }
+        free(esp_address);
+    } else {
+        HIP_ERROR("Allocating esp_tuple object failed");
     }
-    return new_esp;
+    free(new_esp);
+
+    return NULL;
 }
 
 /**
@@ -1335,6 +1346,10 @@ static int handle_update(const struct hip_common *common,
 
             /* we have to consider the src ip address in case of cascading NATs (see above FIXME) */
             esp_tuple = esp_tuple_from_esp_info(esp_info, ip6_src, other_dir_tuple);
+            if (!esp_tuple) {
+                free(data);
+                HIP_OUT_ERR(0, "Unable to create esp_tuple object from update message");
+            }
 
             other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
                                                           esp_tuple);
