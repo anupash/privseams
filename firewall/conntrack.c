@@ -713,6 +713,8 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *cons
             } else {
                 HIP_ERROR("Inserting esp_address object into ESP destination address list failed");
             }
+        } else {
+            HIP_ERROR("Allocating esp_address object failed");
         }
         free(esp_address);
     } else {
