@@ -2213,15 +2213,13 @@ static bool parse_iptables_esp_rule(const char *const input,
 /**
  * Update timestamps of all ESP tuples where corresponding iptables rules'
  * packet counters are non-zero.
- * Currently, this works by parsing the output given by @a cmd, which is
- * expected to have `iptables -nvL' format.
+ * Currently, this works by parsing the output of iptables and ip6tables
+ * to extracting and zero the packet counters.
  *
- * @param cmd       Command line to capture output from.
  * @param now       We consider this the current time.
- * @return          Number of rules that were identified with an esp tuple.
- *                  Not necessarily the number of tuples updated.
- *
- * @note This function doesn't clear the packet counters itself.
+ * @return          Number of rules that were identified with an esp tuple
+ *                  (not necessarily the number of tuples updated), or -1 if
+ *                  communication with iptables failed.
  *
  * @todo De-uglify this. You may be tempted to statically link in libiptc,
  *       and I'd generally approve of it because while it was never meant
@@ -2232,54 +2230,56 @@ static bool parse_iptables_esp_rule(const char *const input,
  *       a post-alpha release of libnl_nft before wasting your time...
  *       --cmroz, oct 2010
  */
-static unsigned int detect_esp_rule_activity(const char *const cmd,
-                                             const time_t now)
+static int detect_esp_rule_activity(const time_t now)
 {
-    unsigned int ret      = 0;
-    bool         chain_ok = false;
-    char         bfr[256];
-    FILE        *p;
+    static const char *const bins[]   = { "iptables", "ip6tables" };
+    static const char *const chains[] = { "HIPFW-INPUT", "HIPFW-OUTPUT",
+                                          "HIPFW-FORWARD" };
 
-    if (!(p = popen(cmd, "r"))) {
-        HIP_ERROR("popen(\"%s\"): %s\n", cmd, strerror(errno));
-        return 0;
-    }
+    unsigned int chain, bin, ret = 0;
 
-    while (fgets(bfr, sizeof(bfr), p)) {
-        if (strncmp(bfr, "Chain", 5) == 0) {
-            chain_ok = (strncmp(bfr, "Chain HIPFW-INPUT",   17) == 0) ||
-                       (strncmp(bfr, "Chain HIPFW-OUTPUT",  18) == 0) ||
-                       (strncmp(bfr, "Chain HIPFW-FORWARD", 19) == 0);
-            continue;
-        }
+    for (bin = 0; bin < ARRAY_SIZE(bins); ++bin) {
+        for (chain = 0; chain < ARRAY_SIZE(chains); ++chain) {
+            char  bfr[256];
+            FILE *p;
 
-        unsigned int    packet_count;
-        uint32_t        spi;
-        struct in6_addr dest;
-        struct tuple   *tuple;
-
-        if (chain_ok && parse_iptables_esp_rule(bfr, &packet_count, &spi, &dest)) {
-            ret += 1;
-
-            if (packet_count > 0) {
-                tuple = get_tuple_by_esp(&dest, spi);
-                if (!tuple) {
-                    HIP_ERROR("Stray ESP rule: SPI = %u\n", spi);
-                    continue;
-                }
-
-                tuple->connection->timestamp = now;
-                HIP_DEBUG("Activity detected: SPI = %u\n", spi);
-                HIP_DEBUG_IN6ADDR("dest: ", &dest);
+            snprintf(bfr, sizeof(bfr), "%s -nvL -Z %s", bins[bin], chains[chain]);
+            if (!(p = popen(bfr, "r"))) {
+                HIP_ERROR("popen(\"%s\"): %s\n", bfr, strerror(errno));
+                return -1;
             }
+
+            while (fgets(bfr, sizeof(bfr), p)) {
+                unsigned int    packet_count;
+                uint32_t        spi;
+                struct in6_addr dest;
+                struct tuple   *tuple;
+
+                if (parse_iptables_esp_rule(bfr, &packet_count, &spi, &dest)) {
+                    ret += 1;
+                    if (packet_count > 0) {
+                        tuple = get_tuple_by_esp(&dest, spi);
+                        if (!tuple) {
+                            HIP_ERROR("Stray ESP rule: SPI = %u\n", spi);
+                            continue;
+                        }
+
+                        tuple->connection->timestamp = now;
+                        HIP_DEBUG("Activity detected: SPI = %u\n", spi);
+                        HIP_DEBUG_IN6ADDR("dest: ", &dest);
+                    }
+                }
+            }
+
+            if (!feof(p)) {
+                HIP_ERROR("fgets(), bin: %s, chain %s: %s\n",
+                           bins[bin], chains[chain], strerror(errno));
+                return -1;
+            }
+
+            pclose(p);
         }
     }
-
-    if (!feof(p)) {
-        HIP_ERROR("fgets(\"%s\"): %s\n", cmd, strerror(errno));
-    }
-
-    pclose(p);
 
     HIP_DEBUG("-> %u\n", ret);
     return ret;
@@ -2320,19 +2320,9 @@ void hip_fw_conntrack_periodic_cleanup(void)
         // packet counters to update timestamps indirectly for these.
 
         if (total_esp_rules_count > 0) {
-            unsigned int found = 0;
-            found += detect_esp_rule_activity("iptables -nvL", now);
-            system_print("iptables -Z HIPFW-INPUT");
-            system_print("iptables -Z HIPFW-OUTPUT");
-            system_print("iptables -Z HIPFW-FORWARD");
-
-            found += detect_esp_rule_activity("ip6tables -nvL", now);
-            system_print("ip6tables -Z HIPFW-INPUT");
-            system_print("ip6tables -Z HIPFW-OUTPUT");
-            system_print("ip6tables -Z HIPFW-FORWARD");
-
-            // we should be paranoid about iptables output
-            if (found != total_esp_rules_count) {
+            // cast to signed value
+            const int found = detect_esp_rule_activity(now);
+            if (found == -1 || (unsigned int) found != total_esp_rules_count) {
                 HIP_ERROR("Not all ESP tuples' packet counts were found\n");
             }
         }
