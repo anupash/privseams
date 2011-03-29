@@ -617,7 +617,7 @@ static void remove_connection(struct connection *connection)
 }
 
 /**
- * create new ESP tuple based on the given parameters
+ * Create an ESP tuple based on the parameters from a HIP message.
  *
  * @param esp_info a pointer to the ESP info parameter in the control message
  * @param locator a pointer to the locator
@@ -625,48 +625,60 @@ static void remove_connection(struct connection *connection)
  * @param tuple a pointer to the corresponding tuple
  * @return the created tuple (caller frees) or NULL on failure (e.g. SPIs do not match)
  */
-static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info *esp_info,
-                                                         const struct hip_locator *locator,
-                                                         const struct hip_seq *seq,
-                                                         struct tuple *tuple)
+static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info *const esp_info,
+                                                         const struct hip_locator *const locator,
+                                                         const struct hip_seq *const seq,
+                                                         struct tuple *const tuple)
 {
-    struct esp_tuple                        *new_esp      = NULL;
-    const struct hip_locator_info_addr_item *locator_addr = NULL;
-    int                                      n            = 0;
+    int               err     = 0;
+    struct esp_tuple *new_esp = NULL;
 
-    if (esp_info && locator && esp_info->new_spi == esp_info->old_spi) {
-        HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi 0x%lx\n", esp_info->new_spi);
-        /* check that old spi is found */
-        new_esp        = calloc(1, sizeof(struct esp_tuple));
+    HIP_ASSERT(esp_info);
+    HIP_ASSERT(locator);
+    HIP_ASSERT(seq);
+    HIP_ASSERT(tuple);
+    HIP_ASSERT(esp_info->new_spi == esp_info->old_spi);
+
+    HIP_DEBUG("new spi 0x%lx\n", esp_info->new_spi);
+
+    const unsigned addresses_in_locator =
+        (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
+        sizeof(struct hip_locator_info_addr_item);
+    HIP_DEBUG("%d addresses in locator\n", addresses_in_locator);
+    if (addresses_in_locator > 0) {
+        const struct hip_locator_info_addr_item *const addresses =
+            (const struct hip_locator_info_addr_item *) (locator + 1);
+
+        HIP_IFEL((new_esp = calloc(1, sizeof(*new_esp))) == NULL, -1,
+                 "Allocating esp_tuple object failed");
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
         hip_ll_init(&new_esp->dst_addresses);
 
-        n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
-            sizeof(struct hip_locator_info_addr_item);
-        HIP_DEBUG("esp_tuple_from_esp_info_locator: %d addresses in locator\n", n);
-        if (n > 0) {
-            locator_addr = (const struct hip_locator_info_addr_item *)
-                           (locator + 1);
-            while (n > 0) {
-                struct esp_address *esp_address = malloc(sizeof(struct esp_address));
-                memcpy(&esp_address->dst_addr,
-                       &locator_addr->address,
-                       sizeof(struct in6_addr));
-                esp_address->update_id  = malloc(sizeof(uint32_t));
-                *esp_address->update_id = seq->update_id;
-                hip_ll_add_first(&new_esp->dst_addresses, esp_address);
-                n--;
-                if (n > 0) {
-                    locator_addr++;
-                }
-            }
-        } else {
-            free(new_esp);
-            new_esp = NULL;
+        for (unsigned idx = 0; idx < addresses_in_locator; idx += 1) {
+            struct esp_address *const esp_address =
+                malloc(sizeof(*esp_address));
+            HIP_IFEL(esp_address == NULL, -1,
+                     "Allocating esp_address object for address %i failed",
+                     idx);
+            esp_address->dst_addr = addresses[idx].address;
+            HIP_IFEL(hip_ll_add_first(&new_esp->dst_addresses, esp_address)
+                     != 0, -1,
+                     "Appending esp_address object %i to list of destination addresses in ESP tuple failed",
+                     idx);
+            HIP_IFEL((esp_address->update_id =
+                          malloc(sizeof(*esp_address->update_id))) == NULL, -1,
+                     "Allocating update_id object for address %i failed",
+                     idx);
+            *esp_address->update_id = seq->update_id;
         }
+
+        return new_esp;
     }
-    return new_esp;
+
+out_err:
+    free_esp_tuple(new_esp);
+    return NULL;
 }
 
 /**
