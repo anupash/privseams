@@ -311,12 +311,7 @@ static void pisa_accept_connection(const struct hip_fw_context *ctx)
     if (t) {
         t->connection->pisa_state = PISA_STATE_ALLOW;
         HIP_INFO("PISA accepted the connection.\n");
-
-        struct slist *lst = t->esp_tuples;
-        while (lst) {
-            hip_fw_manage_esp_tuple(lst->data, true);
-            lst = lst->next;
-        }
+        hip_fw_manage_all_esp_tuples(t, true);
     } else {
         HIP_ERROR("Connection not found.\n");
     }
@@ -336,12 +331,7 @@ static void pisa_remove_connection(const struct hip_fw_context *ctx)
     if (t) {
         t->connection->pisa_state = PISA_STATE_DISALLOW;
         HIP_INFO("PISA removed the connection.\n");
-
-        struct slist *lst = t->esp_tuples;
-        while (lst) {
-            hip_fw_manage_esp_tuple(lst->data, false);
-            lst = lst->next;
-        }
+        hip_fw_manage_all_esp_tuples(t, false);
     } else {
         HIP_ERROR("Connection not found.\n");
     }

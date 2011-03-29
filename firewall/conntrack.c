@@ -467,12 +467,32 @@ out_err:
  *
  * @see hip_fw_manage_esp_rule()
  */
-void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple,
-                             const bool insert)
+static void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple,
+                                    const bool insert)
 {
     struct slist *lst = esp_tuple->dst_addr_list;
     while (lst) {
         hip_fw_manage_esp_rule(esp_tuple, lst->data, insert);
+        lst = lst->next;
+    }
+}
+
+/**
+ * Set up or remove iptables rules to bypass userspace processing of all
+ * ESP SPI/destination pairs associated with @a tuple.
+ *
+ * @param esp_tuple Determines all SPI/destination pairs.
+ * @param insert    Insert rules if true, remove existing if false.
+ *
+ * @see hip_fw_manage_esp_rule()
+ * @see hip_fw_manage_esp_tuple()
+ */
+void hip_fw_manage_all_esp_tuples(const struct tuple *const tuple,
+                                  const bool insert)
+{
+    const struct slist *lst = tuple->esp_tuples;
+    while (lst) {
+        hip_fw_manage_esp_tuple(lst->data, insert);
         lst = lst->next;
     }
 }
