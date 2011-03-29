@@ -621,7 +621,7 @@ static void insert_new_connection(const struct hip_data *const data,
     connection = calloc(1, sizeof(struct connection));
 
     connection->state     = STATE_ESTABLISHED;
-    connection->udp_encap = ctx->udp_encap_hdr ? 1 : 0;
+    connection->udp_encap = ctx->udp_encap_hdr ? true : false;
     connection->timestamp = time(NULL);
 #ifdef HIP_CONFIG_MIDAUTH
     connection->pisa_state = PISA_STATE_DISALLOW;
