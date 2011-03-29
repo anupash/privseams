@@ -402,7 +402,7 @@ static int hip_fw_manage_esp_rule(const struct esp_tuple *const esp_tuple,
         table = "HIPFW-FORWARD";
         break;
     case NF_IP_LOCAL_OUT:
-        table = "HIPFW-OUT";
+        table = "HIPFW-OUTPUT";
         break;
     default:
         HIP_ERROR("Packet was received via unsupported netfilter hook %d\n",
