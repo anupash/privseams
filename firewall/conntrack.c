@@ -2145,9 +2145,9 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
  * @param spi          Out: receives the SPI, unless the packet count was zero.
  * @param dest         Out: receives the destination IP, unless the packet count
  *                          was zero.
- * @return             true if @a input could be parsed as an ESP  
+ * @return             true if @a input could be parsed as an ESP
  *                     rule (and at least @a packet_count was set), false
- *                     otherwise. 
+ *                     otherwise.
  *
  * @note Short-circuiting behaviour for @a spi and @a dest (see description).
  *
@@ -2293,7 +2293,7 @@ static int detect_esp_rule_activity(const time_t now)
 
             if (!feof(p)) {
                 HIP_ERROR("fgets(), bin: %s, chain %s: %s\n",
-                           bins[bin], chains[chain], strerror(errno));
+                          bins[bin], chains[chain], strerror(errno));
                 return -1;
             }
 
