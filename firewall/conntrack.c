@@ -2214,21 +2214,21 @@ static bool parse_iptables_esp_rule(const char *const input,
  * Update timestamps of all ESP tuples where corresponding iptables rules'
  * packet counters are non-zero.
  * Currently, this works by parsing the output of iptables and ip6tables
- * to extracting and zero the packet counters.
+ * to extract and zero the packet counters.
  *
- * @param now       We consider this the current time.
- * @return          Number of rules that were identified with an esp tuple
- *                  (not necessarily the number of tuples updated), or -1 if
- *                  communication with iptables failed.
+ * @param now We consider this the current time.
+ * @return    Number of rules that were identified with an esp tuple
+ *            (not necessarily the number of tuples updated), or -1 if
+ *            communication with iptables failed.
  *
- * @todo De-uglify this. You may be tempted to statically link in libiptc,
- *       and I'd generally approve of it because while it was never meant
- *       to be used publicly, quite some projects have relied on it without
- *       burning their fingers too badly for a long time now. But on the
- *       other hand, there's the impending nftables release that will render
- *       all your hard work obsolete anyway. I'd rather suggest waiting for
- *       a post-alpha release of libnl_nft before wasting your time...
- *       --cmroz, oct 2010
+ * @note Ugly approach, yes. You may be tempted to statically link in
+ *       libiptc, and I'd generally approve of it because while it was never
+ *       meant to be used publicly, quite some projects have relied on it
+ *       without burning their fingers too badly for a long time now.  On the
+ *       other hand, libiptc would blow up iptables communication code at most
+ *       other places, and the output format is unlikely to change.
+ *       Furthermore, a successor to iptables (namely: nftables) with an actual
+ *       API is under consideration by the netfilter team.
  */
 static int detect_esp_rule_activity(const time_t now)
 {
