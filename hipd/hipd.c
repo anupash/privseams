@@ -46,7 +46,6 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/un.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -110,8 +109,7 @@ hip_transform_suite hip_nat_status = 0;
 int hip_encrypt_i2_hi = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
-int                hip_user_sock = 0;
-struct sockaddr_un hip_user_addr;
+int hip_user_sock = 0;
 
 /** For receiving netlink IPsec events (acquire, expire, etc) */
 struct rtnl_handle hip_nl_ipsec;
