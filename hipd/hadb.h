@@ -90,7 +90,6 @@ int hip_hadb_add_peer_info_complete(const hip_hit_t *local_hit,
                                     const char *peer_hostname);
 
 int hip_del_peer_info_entry(struct hip_hadb_state *ha);
-int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 
 /* Utilities */

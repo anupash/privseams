@@ -916,26 +916,6 @@ int hip_del_peer_info_entry(struct hip_hadb_state *ha)
 }
 
 /**
- * Search and delete a host association based on HITs
- *
- * @param our_hit the local HIT
- * @param peer_hit the remote HIT
- *
- * @return zero on success and negative on error
- */
-int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
-{
-    struct hip_hadb_state *ha;
-
-    ha = hip_hadb_find_byhits(our_hit, peer_hit);
-    if (!ha) {
-        return -ENOENT;
-    }
-
-    return hip_del_peer_info_entry(ha);
-}
-
-/**
  * store a remote host identifier to a host association
  *
  * @param entry the host association
