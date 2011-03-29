@@ -33,13 +33,15 @@
 #include <signal.h>
 #include <time.h>
 #include <assert.h>
+#include <stdlib.h>
 
 #include "firewall/conntrack.h"
 #include "firewall/conntrack.c"
 #include "test_suites.h"
 
 
-static time_t fake_time = 0;
+static time_t fake_time    = 0;     // used by time() mock
+static char  *last_command = NULL;  // used by system() mock
 
 time_t time(time_t *t)
 {
@@ -48,6 +50,13 @@ time_t time(time_t *t)
     }
 
     return fake_time;
+}
+
+int system(const char *command)
+{
+    free(last_command);
+    assert(last_command = strdup(command));
+    return 0;
 }
 
 static struct connection *setup_connection(void)
@@ -64,6 +73,28 @@ static struct connection *setup_connection(void)
     fail_if(conn_list->next != NULL, "More than one connection inserted.");
     fail_if(conn_list->data == NULL, "No connection allocated.");
     return conn_list->data;
+}
+
+static struct esp_tuple *setup_esp_tuple(const uint32_t spi,
+                                         const struct in6_addr *const dest,
+                                         struct connection *const conn)
+{
+    struct esp_tuple *const esp_tuple = calloc(1, sizeof(*esp_tuple));
+
+    fail_if(conn      == NULL, NULL);
+    fail_if(esp_tuple == NULL, NULL);
+
+    esp_tuple->spi   = spi;
+    esp_tuple->tuple = &conn->original;
+    update_esp_address(esp_tuple, dest, NULL);
+    insert_esp_tuple(esp_tuple);
+
+    fail_if(esp_list == NULL, "Failed to insert a new ESP tuple");
+
+    conn->original.esp_tuples = append_to_slist(conn->original.esp_tuples,
+                                                esp_tuple);
+
+    return esp_tuple;
 }
 
 START_TEST(test_hip_fw_conntrack_periodic_cleanup_timeout)
@@ -175,6 +206,116 @@ START_TEST(test_parse_iptables_esp_rule)
 }
 END_TEST
 
+START_TEST(test_hip_fw_manage_esp_rule_not_enabled)
+{
+    struct in6_addr dest;
+    assert(inet_pton(AF_INET6, "3ffe::1", &dest));
+
+    struct connection *const conn      = setup_connection();
+    struct esp_tuple  *const esp_tuple = setup_esp_tuple(0xAABBCCDD, &dest, conn);
+
+    esp_speedup         = 0;
+    conn->original.hook = NF_IP_LOCAL_IN;
+
+    fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) == 0,
+            "Success, even though esp speedup is disabled");
+    fail_if(last_command, "Rule was created even though esp speedup is disabled");
+}
+END_TEST
+
+START_TEST(test_hip_fw_manage_esp_rule_needs_userspace)
+{
+    struct in6_addr dest;
+    assert(inet_pton(AF_INET6, "3ffe::1", &dest));
+
+    struct connection *const conn      = setup_connection();
+    struct esp_tuple  *const esp_tuple = setup_esp_tuple(0xAABBCCDD, &dest, conn);
+
+    esp_speedup         = 1;
+    conn->original.hook = NF_IP_LOCAL_IN;
+
+    esp_tuple->esp_prot_tfm = ESP_PROT_TFM_PLAIN;
+    fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) == 0,
+            "Added rule even though ESP transforms requested");
+
+    esp_tuple->esp_prot_tfm = ESP_PROT_TFM_UNUSED; // reset
+    esp_tuple->tuple->esp_relay = 1;
+    fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) == 0,
+            "Added rule even though connection is relayed");
+
+    hip_userspace_ipsec = 1;
+    fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) == 0,
+            "Added rule even though userspace IPSEC requested");
+}
+END_TEST
+
+START_TEST(test_hip_fw_manage_esp_rule_inet6)
+{
+    static const char *const expected = "ip6tables -I HIPFW-INPUT -p 50 "
+                                        "-d 3ffe::1 -m esp --espspi 0xAABBCCDD "
+                                        "-j ACCEPT";
+
+    struct in6_addr dest;
+    assert(inet_pton(AF_INET6, "3ffe::1", &dest));
+
+    struct connection *const conn      = setup_connection();
+    struct esp_tuple  *const esp_tuple = setup_esp_tuple(0xAABBCCDD, &dest, conn);
+
+    esp_speedup         = 1;
+    hip_userspace_ipsec = 0;
+    conn->original.hook = NF_IP_LOCAL_IN;
+
+    fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) != 0);
+    fail_if(strcmp(last_command, expected) != 0, "Unexpected rule was generated");
+}
+END_TEST
+
+START_TEST(test_hip_fw_manage_esp_rule_inet4)
+{
+    static const char *const expected = "iptables -I HIPFW-FORWARD -p 50 "
+                                        "-d 192.168.1.1 -m esp --espspi 0xAABBCCDD "
+                                        "-j ACCEPT";
+
+    struct in6_addr dest;
+    assert(inet_pton(AF_INET6, "::ffff:192.168.1.1", &dest));
+
+    struct connection *const conn      = setup_connection();
+    struct esp_tuple  *const esp_tuple = setup_esp_tuple(0xAABBCCDD, &dest, conn);
+
+    esp_speedup         = 1;
+    hip_userspace_ipsec = 0;
+    conn->original.hook = NF_IP_FORWARD;
+
+    fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) != 0);
+    fail_if(strcmp(last_command, expected) != 0, "Unexpected rule was generated");
+}
+END_TEST
+
+START_TEST(test_hip_fw_manage_esp_rule_inet4_udp)
+{
+    static const char *const expected = "iptables -I HIPFW-OUTPUT -p UDP "
+                                        "--dport 10500 --sport 10500 -d 192.168.1.1 "
+                                        "-m u32 --u32 '4&0x1FFF=0 && 0>>22&0x3C@8=0xAABBCCDD' "
+                                        "-j ACCEPT";
+
+    struct in6_addr dest;
+    assert(inet_pton(AF_INET6, "::ffff:192.168.1.1", &dest));
+
+    struct connection *const conn      = setup_connection();
+    struct esp_tuple  *const esp_tuple = setup_esp_tuple(0xAABBCCDD, &dest, conn);
+
+    esp_speedup         = 1;
+    hip_userspace_ipsec = 0;
+    conn->original.hook = NF_IP_LOCAL_OUT;
+    conn->udp_encap     = true;
+
+    fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) != 0,
+            "Adding an iptables rule failed");
+    fail_if(!last_command, "No iptables command was executed");
+    fail_if(strcmp(last_command, expected) != 0, "Unexpected rule was generated");
+}
+END_TEST
+
 Suite *firewall_conntrack(void)
 {
     Suite *s = suite_create("firewall/conntrack");
@@ -184,6 +325,11 @@ Suite *firewall_conntrack(void)
     tcase_add_test(tc_conntrack, test_parse_iptables_esp_rule);
     tcase_add_test(tc_conntrack, test_hip_fw_conntrack_periodic_cleanup_glitched_system_time);
     tcase_add_test(tc_conntrack, test_hip_fw_conntrack_periodic_cleanup_glitched_packet_time);
+    tcase_add_test(tc_conntrack, test_hip_fw_manage_esp_rule_not_enabled);
+    tcase_add_test(tc_conntrack, test_hip_fw_manage_esp_rule_needs_userspace);
+    tcase_add_test(tc_conntrack, test_hip_fw_manage_esp_rule_inet6);
+    tcase_add_test(tc_conntrack, test_hip_fw_manage_esp_rule_inet4);
+    tcase_add_test(tc_conntrack, test_hip_fw_manage_esp_rule_inet4_udp);
     suite_add_tcase(s, tc_conntrack);
 
     return s;
