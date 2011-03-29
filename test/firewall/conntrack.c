@@ -38,6 +38,7 @@
 #include "firewall/conntrack.c"
 #include "test_suites.h"
 
+
 static time_t fake_time = 0;
 
 time_t time(time_t *t)
@@ -71,9 +72,8 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_timeout)
 
     cleanup_interval   = 0;
     connection_timeout = 2;
-
-    conn            = setup_connection();
-    conn->timestamp = 1;
+    conn               = setup_connection();
+    conn->timestamp    = 1;
 
     fake_time = 2;
     hip_fw_conntrack_periodic_cleanup(); // don't time out yet
@@ -87,13 +87,25 @@ END_TEST
 
 START_TEST(test_hip_fw_conntrack_periodic_cleanup_glitched_system_time)
 {
-    cleanup_interval = 0;
+    struct connection *conn;
+
+    cleanup_interval   = 0;
+    connection_timeout = 2;
+    conn               = setup_connection();
+    conn->timestamp    = 1;
 
     fake_time = 2;
-    hip_fw_conntrack_periodic_cleanup(); // OK
+    hip_fw_conntrack_periodic_cleanup();
+    fail_if(conn_list == NULL, "Connection was removed too early.");
 
-    fake_time = 1;
-    hip_fw_conntrack_periodic_cleanup(); // throws assertion
+    fake_time = 1; // travel back in time
+    hip_fw_conntrack_periodic_cleanup();
+    fail_if(conn_list == NULL,
+            "Connection was removed despite system time glitch.");
+
+    fake_time = 3;
+    hip_fw_conntrack_periodic_cleanup();
+    fail_if(conn_list != NULL, "Connection was not removed.");
 }
 END_TEST
 
@@ -103,13 +115,22 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_glitched_packet_time)
 
     cleanup_interval   = 0;
     connection_timeout = 2;
-    fake_time          = 1;
+    conn               = setup_connection();
 
-    conn            = setup_connection();
+    fake_time       = 1;
     conn->timestamp = 1;
-    hip_fw_conntrack_periodic_cleanup(); // OK
-    conn->timestamp = 2;
-    hip_fw_conntrack_periodic_cleanup(); // throws assertion
+    hip_fw_conntrack_periodic_cleanup();
+    fail_if(conn_list == NULL, "Connection was removed too early.");
+
+    conn->timestamp = 0xC0FFEE; // timestamp in the future
+    hip_fw_conntrack_periodic_cleanup();
+    fail_if(conn_list == NULL,
+            "Connection was removed despite packet time glitch.");
+    fail_if(conn->timestamp != 1, "Packet timestamp was not reset.");
+
+    fake_time = 3;
+    hip_fw_conntrack_periodic_cleanup();
+    fail_if(conn_list != NULL, "Connection was not removed.");
 }
 END_TEST
 
@@ -161,8 +182,8 @@ Suite *firewall_conntrack(void)
     TCase *tc_conntrack = tcase_create("Conntrack");
     tcase_add_test(tc_conntrack, test_hip_fw_conntrack_periodic_cleanup_timeout);
     tcase_add_test(tc_conntrack, test_parse_iptables_esp_rule);
-    tcase_add_exit_test(tc_conntrack, test_hip_fw_conntrack_periodic_cleanup_glitched_system_time, 1);
-    tcase_add_exit_test(tc_conntrack, test_hip_fw_conntrack_periodic_cleanup_glitched_packet_time, 1);
+    tcase_add_test(tc_conntrack, test_hip_fw_conntrack_periodic_cleanup_glitched_system_time);
+    tcase_add_test(tc_conntrack, test_hip_fw_conntrack_periodic_cleanup_glitched_packet_time);
     suite_add_tcase(s, tc_conntrack);
 
     return s;

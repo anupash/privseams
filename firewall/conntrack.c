@@ -2304,7 +2304,11 @@ void hip_fw_conntrack_periodic_cleanup(void)
 
     const time_t now = time(NULL);
 
-    HIP_ASSERT(now >= last_check);
+    if (now < last_check) {
+        last_check = now;
+        HIP_ERROR("System clock skew detected; internal timestamp reset\n");
+    }
+
     if (now - last_check >= cleanup_interval) {
         HIP_DEBUG("Checking for connection timeouts\n");
 
@@ -2334,7 +2338,11 @@ void hip_fw_conntrack_periodic_cleanup(void)
             conn      = iter_conn->data;
             iter_conn = iter_conn->next; // iter_conn might get removed
 
-            HIP_ASSERT(now >= conn->timestamp);
+            if (now < conn->timestamp) {
+                conn->timestamp = now;
+                HIP_ERROR("Packet timestamp skew detected; timestamp reset\n");
+            }
+
             if (now - conn->timestamp >= connection_timeout) {
                 HIP_DEBUG("Connection timed out:\n");
                 HIP_DEBUG_HIT("src HIT", &conn->original.hip_tuple->data->src_hit);
