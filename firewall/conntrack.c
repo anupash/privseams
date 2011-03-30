@@ -666,14 +666,24 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
         for (unsigned idx = 0; idx < addresses_in_locator; idx += 1) {
             struct esp_address *const esp_address =
                 malloc(sizeof(*esp_address));
-            HIP_IFEL(esp_address == NULL, -1,
-                     "Allocating esp_address object for address %i failed", idx);
-            esp_address->dst_addr = addresses[idx].address;
-            HIP_IFEL(hip_ll_add_first(&new_esp->dst_addresses, esp_address) != 0, -1,
-                     "Appending esp_address object %i to list of destination addresses in ESP tuple failed", idx);
-            HIP_IFEL((esp_address->update_id = malloc(sizeof(*esp_address->update_id))) == NULL,
-                     -1, "Allocating update_id object for address %i failed", idx);
-            *esp_address->update_id = seq->update_id;
+            if (esp_address) {
+                esp_address->dst_addr = addresses[idx].address;
+                if ((esp_address->update_id = malloc(sizeof(*esp_address->update_id)))) {
+                    *esp_address->update_id = seq->update_id;
+                    if (hip_ll_add_first(&new_esp->dst_addresses, esp_address) == 0) {
+                        continue;
+                    } else {
+                        HIP_ERROR("Appending esp_address object %i to list of destination addresses in ESP tuple failed", idx);
+                    }
+                    free(esp_address->update_id);
+                } else {
+                    HIP_OUT_ERR(-1, "Allocating update_id object for address %i failed", idx);
+                }
+                free(esp_address);
+            } else {
+                HIP_ERROR("Allocating esp_address object for address %i failed", idx);
+            }
+            goto out_err;
         }
 
         return new_esp;
