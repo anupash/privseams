@@ -545,11 +545,9 @@ static void free_esp_tuple(struct esp_tuple *esp_tuple)
         esp_prot_conntrack_remove_state(esp_tuple);
 
         // remove all associated addresses
-        addr = hip_ll_del_first(&esp_tuple->dst_addresses, NULL);
-        while (addr) {
+        while ((addr = hip_ll_del_first(&esp_tuple->dst_addresses, NULL))) {
             free(addr->update_id);
             free(addr);
-            addr = hip_ll_del_first(&esp_tuple->dst_addresses, NULL);
         }
 
         esp_tuple->tuple = NULL;
