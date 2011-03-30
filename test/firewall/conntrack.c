@@ -38,7 +38,7 @@
 #include "test_suites.h"
 
 
-/** 
+/**
  * The value returned on the next invocation of the time(2) mock.
  * @see time()
  */
@@ -77,7 +77,7 @@ time_t time(time_t *t)
 
 static struct connection *setup_connection(void)
 {
-    struct hip_data data = {};
+    struct hip_data data = { { { { 0 } } } };
 
     inet_pton(AF_INET6, "2001:12:bd2d:d23e:4a09:b2ab:6414:e110", &data.src_hit);
     inet_pton(AF_INET6, "2001:10:f039:6bc5:cab3:0727:7fbc:9dcb", &data.dst_hit);
