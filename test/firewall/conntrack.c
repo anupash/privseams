@@ -38,8 +38,34 @@
 #include "test_suites.h"
 
 
+/** 
+ * The value returned on the next invocation of the time(2) mock.
+ * @see time()
+ */
 static time_t fake_time = 0;
 
+/**
+ * Mock function for time(2), used to test connection timeouts which rely on the
+ * system clock internally.
+ *
+ * @param t Optional: The fake timestamp ::fake_time will be written to this
+ *                    location if it is not NULL.
+ * @return            The current value of ::fake_time.
+ *
+ * @note As one positive side effect, unit testing encourages decoupling of
+ *       external state, because this yields more compact and self-contained
+ *       test cases.
+ *       On the other hand this places burden on the caller, which in turn
+ *       sometimes introduces overhead e.g. due to strict parameter evaluation
+ *       that should not be tolerated because just for the sake of
+ *       pretty-looking unit tests.
+ *       In this case, decoupling the system time by passing it as a parameter to
+ *       hip_fw_conntrack_periodic_cleanup() causes time(2) to be called in any
+ *       case, even though the function does not use always refer to it (e.g.
+ *       if timeouts are disabled).
+ *       While the performance hit is miniscule here, this mock should be kept
+ *       as a proof of concept for more problematic cases, if anything.
+ */
 time_t time(time_t *t)
 {
     if (t) {
