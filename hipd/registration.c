@@ -272,8 +272,8 @@ int hip_del_pending_request(struct hip_hadb_state *entry)
  * @return          zero if the pending request was succesfully deleted, -1
  *                  otherwise.
  */
-int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
-                                    uint8_t reg_type)
+static int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
+                                           uint8_t reg_type)
 {
     int                         idx     = 0;
     struct hip_ll_node         *iter    = NULL;

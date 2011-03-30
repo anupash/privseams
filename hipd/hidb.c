@@ -663,7 +663,8 @@ out_err:
  * @param anon   -1 if you don't care, 1 if anon, 0 if public
  * @return       0 if ok, and negative if failed.
  */
-int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
+static int hip_get_any_localhost_hit(struct in6_addr *target, int algo,
+                                     int anon)
 {
     struct hip_host_id_entry *entry;
     int                       err = 0;

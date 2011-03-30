@@ -726,43 +726,47 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *cons
 }
 
 /**
- * initialize and insert connection based on the given parameters from UPDATE packet
+ * Initialize and insert connection based on the given parameters from UPDATE
+ * packet.
  *
- * @param data a pointer a HIP data structure
- * @param esp_info a pointer to an ESP info data structure
- * @param locator a pointer to a locator
- * @param seq a pointer to a sequence number
+ * @param data a pointer a HIP data structure.
+ * @param esp_info a pointer to an ESP info message parameter.
+ * @param locator a pointer to a locator message parameter.
+ * @param seq a pointer to a sequence number of an UPDATE message.
  *
- * returns 1 if succesful 0 otherwise (latter does not occur currently)
+ * returns true if successful, false otherwise.
  */
-static int insert_connection_from_update(const struct hip_data *data,
-                                         const struct hip_esp_info *esp_info,
-                                         const struct hip_locator *locator,
-                                         const struct hip_seq *seq)
+static bool insert_connection_from_update(const struct hip_data *const data,
+                                          const struct hip_esp_info *const esp_info,
+                                          const struct hip_locator *const locator,
+                                          const struct hip_seq *const seq)
 {
-    struct connection *connection = malloc(sizeof(struct connection));
-    struct esp_tuple  *esp_tuple  = NULL;
+    int                      err        = 0;
+    struct connection *const connection = malloc(sizeof(*connection));
+    HIP_IFEL(!connection, -1, "Allocating connection object failed");
 
-    esp_tuple = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
-                                                &connection->reply);
-    if (esp_tuple == NULL) {
-        free(connection);
-        HIP_DEBUG("insert_connection_from_update: can't create connection\n");
-        return 0;
-    }
+    struct esp_tuple *const esp_tuple =
+        esp_tuple_from_esp_info_locator(esp_info, locator, seq,
+                                        &connection->reply);
+    HIP_IFEL(!esp_tuple, -1, "Creating ESP tuple object failed");
+
     connection->state = STATE_ESTABLISHING_FROM_UPDATE;
 #ifdef HIP_CONFIG_MIDAUTH
     connection->pisa_state = PISA_STATE_DISALLOW;
 #endif
 
     //original direction tuple
-    connection->original.state                    = HIP_STATE_UNASSOCIATED;
-    connection->original.direction                = ORIGINAL_DIR;
-    connection->original.esp_tuples               = NULL;
-    connection->original.connection               = connection;
-    connection->original.hip_tuple                = malloc(sizeof(struct hip_tuple));
-    connection->original.hip_tuple->tuple         = &connection->original;
-    connection->original.hip_tuple->data          = malloc(sizeof(struct hip_data));
+    connection->original.state      = HIP_STATE_UNASSOCIATED;
+    connection->original.direction  = ORIGINAL_DIR;
+    connection->original.esp_tuples = NULL;
+    connection->original.connection = connection;
+    connection->original.hip_tuple  = malloc(sizeof(struct hip_tuple));
+    HIP_IFEL(!connection->original.hip_tuple, -1,
+             "Allocating hip_tuple object failed");
+    connection->original.hip_tuple->tuple = &connection->original;
+    connection->original.hip_tuple->data  = malloc(sizeof(struct hip_data));
+    HIP_IFEL(!connection->original.hip_tuple->data, -1,
+             "Allocating hip_data object failed");
     connection->original.hip_tuple->data->src_hit = data->src_hit;
     connection->original.hip_tuple->data->dst_hit = data->dst_hit;
     connection->original.hip_tuple->data->src_hi  = NULL;
@@ -776,12 +780,14 @@ static int insert_connection_from_update(const struct hip_data *data,
     connection->reply.esp_tuples = NULL;
     connection->reply.esp_tuples = append_to_slist(connection->reply.esp_tuples,
                                                    esp_tuple);
-    insert_esp_tuple(esp_tuple);
-
-    connection->reply.connection               = connection;
-    connection->reply.hip_tuple                = malloc(sizeof(struct hip_tuple));
-    connection->reply.hip_tuple->tuple         = &connection->reply;
-    connection->reply.hip_tuple->data          = malloc(sizeof(struct hip_data));
+    connection->reply.connection = connection;
+    connection->reply.hip_tuple  = malloc(sizeof(struct hip_tuple));
+    HIP_IFEL(!connection->reply.hip_tuple, -1,
+             "Allocating hip_tuple object failed");
+    connection->reply.hip_tuple->tuple = &connection->reply;
+    connection->reply.hip_tuple->data  = malloc(sizeof(struct hip_data));
+    HIP_IFEL(!connection->reply.hip_tuple->data, -1,
+             "Allocating hip_data object failed");
     connection->reply.hip_tuple->data->src_hit = data->dst_hit;
     connection->reply.hip_tuple->data->dst_hit = data->src_hit;
     connection->reply.hip_tuple->data->src_hi  = NULL;
@@ -790,10 +796,27 @@ static int insert_connection_from_update(const struct hip_data *data,
 
 
     //add tuples to list
+    insert_esp_tuple(esp_tuple);
     hip_list = append_to_list(hip_list, connection->original.hip_tuple);
     hip_list = append_to_list(hip_list, connection->reply.hip_tuple);
     HIP_DEBUG("insert_connection_from_update \n");
-    return 1;
+
+    return true;
+
+out_err:
+    if (connection) {
+        if (connection->reply.hip_tuple) {
+            free(connection->reply.hip_tuple->data);
+            free(connection->reply.hip_tuple);
+        }
+        if (connection->original.hip_tuple) {
+            free(connection->original.hip_tuple->data);
+            free(connection->original.hip_tuple);
+        }
+    }
+    free(connection);
+    free_esp_tuple(esp_tuple);
+    return false;
 }
 
 /**

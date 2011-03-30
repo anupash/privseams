@@ -97,8 +97,9 @@ out_err:
  * @param  hit_type type of the HIT (must be HIP_HIT_TYPE_HASH100).
  * @return          zero on success, negative otherwise.
  */
-int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
-                           struct in6_addr *const hit, const int hit_type)
+static int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
+                                  struct in6_addr *const hit,
+                                  const int hit_type)
 {
     int            err = 0;
     uint8_t        digest[HIP_AH_SHA_LEN];
@@ -144,6 +145,15 @@ out_err:
 }
 
 /**
+ * @todo useless abstraction
+ */
+static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *const host_id,
+                                         struct in6_addr *const hit, const int hit_type)
+{
+    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+}
+
+/**
  * convert DSA or RSA-based host id to a HIT
  *
  * @param host_id a host id
@@ -177,9 +187,9 @@ int hip_host_id_to_hit(const struct hip_host_id *const host_id,
  * @param hit_type the type of the HIT
  * @return zero on success or negative on error
  */
-int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
-                                   struct in6_addr *const hit,
-                                   const int hit_type)
+static int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
+                                          struct in6_addr *const hit,
+                                          const int hit_type)
 {
     uint16_t           temp;
     int                contents_len;
