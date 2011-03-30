@@ -299,7 +299,7 @@ static struct esp_address *get_esp_address(const struct hip_ll *const addresses,
     HIP_DEBUG("get_esp_address\n");
 
     while (node) {
-        struct esp_address *const esp_addr = node->ptr;
+        const struct esp_address *const esp_addr = node->ptr;
         HIP_DEBUG("addr: %s \n", addr_to_numeric(&esp_addr->dst_addr));
 
         HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
@@ -307,7 +307,13 @@ static struct esp_address *get_esp_address(const struct hip_ll *const addresses,
 
         if (IN6_ARE_ADDR_EQUAL(&esp_addr->dst_addr, addr)) {
             HIP_DEBUG("addr found\n");
-            return esp_addr;
+            /* cannot return esp_addr because
+             * a) it is const but this function's return type is not
+             * b) it is const for good reason: we do not intend to modify it
+             * c) casting esp_addr to 'struct esp_address*' causes a compiler
+             *    error.
+             */
+            return node->ptr;
         }
         node = node->next;
     }
