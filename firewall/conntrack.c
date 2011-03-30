@@ -659,17 +659,12 @@ static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_in
             struct esp_address *const esp_address =
                 malloc(sizeof(*esp_address));
             HIP_IFEL(esp_address == NULL, -1,
-                     "Allocating esp_address object for address %i failed",
-                     idx);
+                     "Allocating esp_address object for address %i failed", idx);
             esp_address->dst_addr = addresses[idx].address;
-            HIP_IFEL(hip_ll_add_first(&new_esp->dst_addresses, esp_address)
-                     != 0, -1,
-                     "Appending esp_address object %i to list of destination addresses in ESP tuple failed",
-                     idx);
-            HIP_IFEL((esp_address->update_id =
-                          malloc(sizeof(*esp_address->update_id))) == NULL, -1,
-                     "Allocating update_id object for address %i failed",
-                     idx);
+            HIP_IFEL(hip_ll_add_first(&new_esp->dst_addresses, esp_address) != 0, -1,
+                     "Appending esp_address object %i to list of destination addresses in ESP tuple failed", idx);
+            HIP_IFEL((esp_address->update_id = malloc(sizeof(*esp_address->update_id))) == NULL,
+                     -1, "Allocating update_id object for address %i failed", idx);
             *esp_address->update_id = seq->update_id;
         }
 
