@@ -336,37 +336,41 @@ static bool update_esp_address(struct hip_ll *const addresses,
                                const struct in6_addr *const addr,
                                const uint32_t *const upd_id)
 {
-    struct esp_address *esp_addr = get_esp_address(addresses, addr);
-    HIP_DEBUG("update_esp_address: address: %s \n", addr_to_numeric(addr));
+    bool                remove_esp_addr = false;
+    int                 err             = 0;
+    struct esp_address *esp_addr        = get_esp_address(addresses, addr);
+    HIP_DEBUG("address: %s \n", addr_to_numeric(addr));
 
-    if (esp_addr != NULL) {
-        if (upd_id != NULL) {
-            if (esp_addr->update_id == NULL) {
-                esp_addr->update_id = malloc(sizeof(uint32_t));
-                if (!esp_addr->update_id) {
-                    return false;
-                }
-            }
-            *esp_addr->update_id = *upd_id;
-        }
-        HIP_DEBUG("update_esp_address: found and updated\n");
-        return true;
+    // if necessary, allocate a new esp_address object
+    if (!esp_addr) {
+        HIP_IFEL(!(esp_addr = malloc(sizeof(*esp_addr))), -1,
+                 "Allocating esp_address object failed");
+        remove_esp_addr     = true;
+        esp_addr->dst_addr  = *addr;
+        esp_addr->update_id = NULL; // gets set below
+        HIP_IFEL(hip_ll_add_first(addresses, esp_addr) != 0, -1,
+                 "Inserting ESP address object into list of destination addresses failed");
     }
 
-    if ((esp_addr = malloc(sizeof(*esp_addr)))) {
-        esp_addr->dst_addr  = *addr;
-        esp_addr->update_id = NULL;
-        if (upd_id == NULL || (esp_addr->update_id = malloc(sizeof(*esp_addr->update_id)))) {
-            *esp_addr->update_id = *upd_id;
-            if (hip_ll_add_first(addresses, esp_addr) == 0) {
-                HIP_DEBUG("update_esp_address: addr created and added\n");
-                return true;
-            }
-            free(esp_addr->update_id);
+    // update the update ID
+    if (upd_id) {
+        if (!esp_addr->update_id) {
+            HIP_IFEL(!(esp_addr->update_id = malloc(sizeof(*esp_addr->update_id))),
+                     -1, "Allocating update ID object failed");
         }
+        *esp_addr->update_id = *upd_id;
+    }
+
+    return true;
+
+out_err:
+    if (esp_addr && remove_esp_addr) {
+        if (hip_ll_get(addresses, 0) == esp_addr) {
+            hip_ll_del_first(addresses, NULL);
+        }
+        free(esp_addr->update_id);
         free(esp_addr);
     }
-
     return false;
 }
 
