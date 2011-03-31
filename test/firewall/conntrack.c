@@ -57,8 +57,8 @@ static time_t fake_time = 0;
  *       test cases.
  *       On the other hand this places burden on the caller, which in turn
  *       sometimes introduces overhead e.g. due to strict parameter evaluation
- *       that should not be tolerated because just for the sake of
- *       pretty-looking unit tests.
+ *       that should not be tolerated just for the sake of pretty-looking unit
+ *       tests.
  *       In this case, decoupling the system time by passing it as a parameter to
  *       hip_fw_conntrack_periodic_cleanup() causes time(2) to be called in any
  *       case, even though the function does not use always refer to it (e.g.
