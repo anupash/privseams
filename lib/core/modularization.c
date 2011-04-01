@@ -189,7 +189,7 @@ static int lmod_get_state_item_id(struct modular_state *state,
     unsigned int i;
 
     for (i = 0; i < state->num_items; i++) {
-        if (0 == strcmp(item_name, state->item_names[i])) {
+        if (strcmp(item_name, state->item_names[i]) == 0) {
             return i;
         }
     }
@@ -248,7 +248,7 @@ int lmod_add_state_item(struct modular_state *state,
                         const char *item_name)
 {
     /* Check if identifier already exists */
-    if (-1 != lmod_get_state_item_id(state, item_name)) {
+    if (lmod_get_state_item_id(state, item_name) != -1) {
         return -1;
     }
 
@@ -402,7 +402,7 @@ int lmod_module_disabled(const char *module_name)
     unsigned int i;
 
     for (i = 0; i < num_disabled_modules; i++) {
-        if (0 == strcmp(module_name, disabled_modules[i])) {
+        if (strcmp(module_name, disabled_modules[i]) == 0) {
             return 1;
         }
     }
