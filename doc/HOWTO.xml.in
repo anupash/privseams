@@ -1525,13 +1525,15 @@ VPN
     </para>
 
     <para>
-     The DNS proxy tries to find host identities from two places,
-     the "hosts" files or HI records in DNS. The @sysconfdir@/hosts file
-     can be used to isolate all HITs or LSIs, or they can be overloaded
-     all in the /etc/hosts file. In the case of DNS, the DNS proxy
-     converts the HI records automatically to HITs and returns also
-     LSIs to the application when requested. The DNS proxy handles
-     the LSI conversion through hipd.
+     The DNS proxy tries to find host identities from two places, the
+     "hosts" files or HI records in DNS. The @sysconfdir@/hosts file
+     can be used to isolate all HITs or LSIs, or they can be
+     overloaded all in the /etc/hosts file. If you prefer isolation to
+     @sysconfdir@/hosts, you may have to change the "hosts" line in
+     /etc/nsswitch.conf so that "dns" occurs before "hosts". In the case
+     of DNS, the DNS proxy converts the HI records automatically to
+     HITs and returns also LSIs to the application when requested. The
+     DNS proxy handles the LSI conversion through hipd.
     </para>
 
     <para>
