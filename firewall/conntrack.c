@@ -91,22 +91,21 @@ unsigned long timeout_value    = 0;
 /**
  * prints out the list of addresses of esp_addr_list
  *
- * @param addr_list list of addresses
+ * @param addresses list of addresses
  *
  */
-static void print_esp_addr_list(const struct slist *addr_list)
+static void print_esp_addresses(const struct hip_ll *const addresses)
 {
-    const struct slist *list = addr_list;
-    struct esp_address *addr = NULL;
+    const struct hip_ll_node *node = addresses->head;
 
     HIP_DEBUG("ESP dst addr list:\n");
-    while (list) {
-        addr = list->data;
+    while (node) {
+        const struct esp_address *const addr = node->ptr;
         HIP_DEBUG("addr: %s\n", addr_to_numeric(&addr->dst_addr));
         if (addr && addr->update_id != NULL) {
             HIP_DEBUG("upd id: %d\n", *addr->update_id);
         }
-        list = list->next;
+        node = node->next;
     }
     HIP_DEBUG("\n");
 }
@@ -135,7 +134,7 @@ static void print_esp_tuple(const struct esp_tuple *esp_tuple)
               esp_tuple->spi, esp_tuple->new_spi, esp_tuple->spi_update_id,
               esp_tuple->tuple->direction);
 
-    print_esp_addr_list(esp_tuple->dst_addr_list);
+    print_esp_addresses(&esp_tuple->dst_addresses);
 }
 
 /**
@@ -288,20 +287,19 @@ static struct tuple *get_tuple_by_hip(const struct hip_data *data,
 /**
  * Find an entry from the given list that matches to the given address
  *
- * @param addr_list the list to be searched for
+ * @param addresses the list to be searched for
  * @param addr the address to matched from the list
  * @return the entry from the list that matched to the given address, or NULL if not found
  */
-static struct esp_address *get_esp_address(const struct slist *addr_list,
-                                           const struct in6_addr *addr)
+static struct esp_address *get_esp_address(const struct hip_ll *const addresses,
+                                           const struct in6_addr *const addr)
 {
-    const struct slist *list     = addr_list;
-    struct esp_address *esp_addr = NULL;
+    const struct hip_ll_node *node = addresses->head;
 
     HIP_DEBUG("get_esp_address\n");
 
-    while (list) {
-        esp_addr = list->data;
+    while (node) {
+        const struct esp_address *const esp_addr = node->ptr;
         HIP_DEBUG("addr: %s \n", addr_to_numeric(&esp_addr->dst_addr));
 
         HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
@@ -309,9 +307,15 @@ static struct esp_address *get_esp_address(const struct slist *addr_list,
 
         if (IN6_ARE_ADDR_EQUAL(&esp_addr->dst_addr, addr)) {
             HIP_DEBUG("addr found\n");
-            return esp_addr;
+            /* cannot return esp_addr because
+             * a) it is const but this function's return type is not
+             * b) it is const for good reason: we do not intend to modify it
+             * c) casting esp_addr to 'struct esp_address*' causes a compiler
+             *    error.
+             */
+            return node->ptr;
         }
-        list = list->next;
+        node = node->next;
     }
     HIP_DEBUG("get_esp_address: addr %s not found\n", addr_to_numeric(addr));
     return NULL;
@@ -321,42 +325,53 @@ static struct esp_address *get_esp_address(const struct slist *addr_list,
  * Insert an address into a list of addresses. If same address exists already,
  * the update_id is replaced with the new value.
  *
- * @param addr_list the address list
+ * @param addresses the address list
  * @param addr the address to be added
  * @param upd_id update id
  *
- * @return the address list
+ * @return true on success, false if insufficient memory is available for a new
+ *         esp address object.
  */
-static struct slist *update_esp_address(struct slist *addr_list,
-                                        const struct in6_addr *addr,
-                                        const uint32_t *upd_id)
+static bool update_esp_address(struct hip_ll *const addresses,
+                               const struct in6_addr *const addr,
+                               const uint32_t *const upd_id)
 {
-    struct esp_address *esp_addr = get_esp_address(addr_list, addr);
-    HIP_DEBUG("update_esp_address: address: %s \n", addr_to_numeric(addr));
+    bool                remove_esp_addr = false;
+    int                 err             = 0;
+    struct esp_address *esp_addr        = get_esp_address(addresses, addr);
+    HIP_DEBUG("address: %s \n", addr_to_numeric(addr));
 
-    if (!addr_list) {
-        HIP_DEBUG("Esp slist is empty\n");
+    // if necessary, allocate a new esp_address object
+    if (!esp_addr) {
+        HIP_IFEL(!(esp_addr = malloc(sizeof(*esp_addr))), -1,
+                 "Allocating esp_address object failed");
+        remove_esp_addr     = true;
+        esp_addr->dst_addr  = *addr;
+        esp_addr->update_id = NULL; // gets set below
+        HIP_IFEL(hip_ll_add_first(addresses, esp_addr) != 0, -1,
+                 "Inserting ESP address object into list of destination addresses failed");
     }
-    if (esp_addr != NULL) {
-        if (upd_id != NULL) {
-            if (esp_addr->update_id == NULL) {
-                esp_addr->update_id = malloc(sizeof(uint32_t));
-            }
-            *esp_addr->update_id = *upd_id;
+
+    // update the update ID
+    if (upd_id) {
+        if (!esp_addr->update_id) {
+            HIP_IFEL(!(esp_addr->update_id = malloc(sizeof(*esp_addr->update_id))),
+                     -1, "Allocating update ID object failed");
         }
-        HIP_DEBUG("update_esp_address: found and updated\n");
-        return addr_list;
-    }
-    esp_addr = malloc(sizeof(struct esp_address));
-    memcpy(&esp_addr->dst_addr, addr, sizeof(struct in6_addr));
-    if (upd_id != NULL) {
-        esp_addr->update_id  = malloc(sizeof(uint32_t));
         *esp_addr->update_id = *upd_id;
-    } else {
-        esp_addr->update_id = NULL;
     }
-    HIP_DEBUG("update_esp_address: addr created and added\n");
-    return append_to_slist(addr_list, esp_addr);
+
+    return true;
+
+out_err:
+    if (esp_addr && remove_esp_addr) {
+        if (hip_ll_get(addresses, 0) == esp_addr) {
+            hip_ll_del_first(addresses, NULL);
+        }
+        free(esp_addr->update_id);
+        free(esp_addr);
+    }
+    return false;
 }
 
 /**
@@ -377,7 +392,7 @@ static struct tuple *get_tuple_by_esp(const struct in6_addr *dst_addr, const uin
     while (list) {
         struct esp_tuple *tuple = list->data;
         if (spi == tuple->spi) {
-            if (dst_addr && get_esp_address(tuple->dst_addr_list, dst_addr) != NULL) {
+            if (dst_addr && get_esp_address(&tuple->dst_addresses, dst_addr) != NULL) {
                 HIP_DEBUG("connection found by esp\n");
                 return tuple->tuple;
             } else if (!dst_addr) {
@@ -524,23 +539,15 @@ static void free_hip_tuple(struct hip_tuple *hip_tuple)
 static void free_esp_tuple(struct esp_tuple *esp_tuple)
 {
     if (esp_tuple) {
-        struct slist       *list = esp_tuple->dst_addr_list;
         struct esp_address *addr = NULL;
 
         // remove eventual cached anchor elements for this esp tuple
         esp_prot_conntrack_remove_state(esp_tuple);
 
         // remove all associated addresses
-        while (list) {
-            esp_tuple->dst_addr_list = remove_link_slist(esp_tuple->dst_addr_list,
-                                                         list);
-            addr = list->data;
-
+        while ((addr = hip_ll_del_first(&esp_tuple->dst_addresses, NULL))) {
             free(addr->update_id);
             free(addr);
-
-            free(list);
-            list = esp_tuple->dst_addr_list;
         }
 
         esp_tuple->tuple = NULL;
@@ -618,7 +625,7 @@ static void remove_connection(struct connection *connection)
 }
 
 /**
- * create new ESP tuple based on the given parameters
+ * Create an ESP tuple based on the parameters from a HIP message.
  *
  * @param esp_info a pointer to the ESP info parameter in the control message
  * @param locator a pointer to the locator
@@ -626,79 +633,109 @@ static void remove_connection(struct connection *connection)
  * @param tuple a pointer to the corresponding tuple
  * @return the created tuple (caller frees) or NULL on failure (e.g. SPIs do not match)
  */
-static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info *esp_info,
-                                                         const struct hip_locator *locator,
-                                                         const struct hip_seq *seq,
-                                                         struct tuple *tuple)
+static struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info *const esp_info,
+                                                         const struct hip_locator *const locator,
+                                                         const struct hip_seq *const seq,
+                                                         struct tuple *const tuple)
 {
-    struct esp_tuple                        *new_esp      = NULL;
-    const struct hip_locator_info_addr_item *locator_addr = NULL;
-    int                                      n            = 0;
+    int               err     = 0;
+    struct esp_tuple *new_esp = NULL;
 
-    if (esp_info && locator && esp_info->new_spi == esp_info->old_spi) {
-        HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi 0x%lx\n", esp_info->new_spi);
-        /* check that old spi is found */
-        new_esp        = calloc(1, sizeof(struct esp_tuple));
+    HIP_ASSERT(esp_info);
+    HIP_ASSERT(locator);
+    HIP_ASSERT(seq);
+    HIP_ASSERT(tuple);
+    HIP_ASSERT(esp_info->new_spi == esp_info->old_spi);
+
+    HIP_DEBUG("new spi 0x%lx\n", esp_info->new_spi);
+
+    const unsigned addresses_in_locator =
+        (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
+        sizeof(struct hip_locator_info_addr_item);
+    HIP_DEBUG("%d addresses in locator\n", addresses_in_locator);
+    if (addresses_in_locator > 0) {
+        const struct hip_locator_info_addr_item *const addresses =
+            (const struct hip_locator_info_addr_item *) (locator + 1);
+
+        HIP_IFEL((new_esp = calloc(1, sizeof(*new_esp))) == NULL, -1,
+                 "Allocating esp_tuple object failed");
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
+        hip_ll_init(&new_esp->dst_addresses);
 
-        n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
-            sizeof(struct hip_locator_info_addr_item);
-        HIP_DEBUG("esp_tuple_from_esp_info_locator: %d addresses in locator\n", n);
-        if (n > 0) {
-            locator_addr = (const struct hip_locator_info_addr_item *)
-                           (locator + 1);
-            while (n > 0) {
-                struct esp_address *esp_address = malloc(sizeof(struct esp_address));
-                memcpy(&esp_address->dst_addr,
-                       &locator_addr->address,
-                       sizeof(struct in6_addr));
-                esp_address->update_id  = malloc(sizeof(uint32_t));
-                *esp_address->update_id = seq->update_id;
-                new_esp->dst_addr_list  = append_to_slist(new_esp->dst_addr_list,
-                                                          esp_address);
-                n--;
-                if (n > 0) {
-                    locator_addr++;
+        for (unsigned idx = 0; idx < addresses_in_locator; idx += 1) {
+            struct esp_address *const esp_address =
+                malloc(sizeof(*esp_address));
+            if (esp_address) {
+                esp_address->dst_addr = addresses[idx].address;
+                if ((esp_address->update_id = malloc(sizeof(*esp_address->update_id)))) {
+                    *esp_address->update_id = seq->update_id;
+                    if (hip_ll_add_first(&new_esp->dst_addresses, esp_address) == 0) {
+                        continue;
+                    } else {
+                        HIP_ERROR("Appending esp_address object %i to list of destination addresses in ESP tuple failed", idx);
+                    }
+                    free(esp_address->update_id);
+                } else {
+                    HIP_OUT_ERR(-1, "Allocating update_id object for address %i failed", idx);
                 }
+                free(esp_address);
+            } else {
+                HIP_ERROR("Allocating esp_address object for address %i failed", idx);
             }
-        } else {
-            free(new_esp);
-            new_esp = NULL;
+            goto out_err;
         }
+
+        return new_esp;
     }
-    return new_esp;
+
+out_err:
+    free_esp_tuple(new_esp);
+    return NULL;
 }
 
 /**
- * create a new esp_tuple from the given parameters
+ * Create an esp_tuple object from an esp_info message parameter and with a
+ * specific destination address.
  *
  * @param esp_info a pointer to an ESP info parameter in the control message
  * @param addr a pointer to an address
  * @param tuple a pointer to a tuple structure
  * @return the created ESP tuple (caller frees) or NULL on failure (e.g. SPIs don't match)
  */
-static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *esp_info,
-                                                 const struct in6_addr *addr,
-                                                 struct tuple *tuple)
+static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *const esp_info,
+                                                 const struct in6_addr *const addr,
+                                                 struct tuple *const tuple)
 {
-    struct esp_address *esp_address;
-    struct esp_tuple   *new_esp = NULL;
+    HIP_ASSERT(esp_info);
+    HIP_ASSERT(addr);
+    HIP_ASSERT(tuple);
 
-    if (esp_info) {
-        new_esp        = calloc(1, sizeof(struct esp_tuple));
+    struct esp_tuple *const new_esp = calloc(1, sizeof(*new_esp));
+    if (new_esp) {
         new_esp->spi   = ntohl(esp_info->new_spi);
         new_esp->tuple = tuple;
+        hip_ll_init(&new_esp->dst_addresses);
 
-        esp_address = malloc(sizeof(struct esp_address));
-
-        memcpy(&esp_address->dst_addr, addr, sizeof(struct in6_addr));
-
-        esp_address->update_id = NULL;
-        new_esp->dst_addr_list = append_to_slist(new_esp->dst_addr_list,
-                                                 esp_address);
+        struct esp_address *const esp_address = malloc(sizeof(*esp_address));
+        if (esp_address) {
+            esp_address->dst_addr  = *addr;
+            esp_address->update_id = NULL;
+            if (hip_ll_add_first(&new_esp->dst_addresses, esp_address) == 0) {
+                return new_esp;
+            } else {
+                HIP_ERROR("Inserting esp_address object into ESP destination address list failed");
+            }
+        } else {
+            HIP_ERROR("Allocating esp_address object failed");
+        }
+        free(esp_address);
+    } else {
+        HIP_ERROR("Allocating esp_tuple object failed");
     }
-    return new_esp;
+    free(new_esp);
+
+    return NULL;
 }
 
 /**
@@ -1061,9 +1098,9 @@ static int handle_i2(struct hip_common *common, struct tuple *tuple,
         esp_tuple->spi           = ntohl(spi->new_spi);
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
-        esp_tuple->dst_addr_list = NULL;
-        esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
-                                                      ip6_src, NULL);
+        hip_ll_init(&esp_tuple->dst_addresses);
+        HIP_IFEL(!update_esp_address(&esp_tuple->dst_addresses, ip6_src, NULL),
+                 -1, "adding or updating ESP destination address failed");
         esp_tuple->tuple = other_dir;
 
         other_dir->esp_tuples = append_to_slist(other_dir->esp_tuples, esp_tuple);
@@ -1132,9 +1169,9 @@ static int handle_r2(const struct hip_common *common, struct tuple *tuple,
         esp_tuple->spi           = ntohl(spi->new_spi);
         esp_tuple->new_spi       = 0;
         esp_tuple->spi_update_id = 0;
-        esp_tuple->dst_addr_list = NULL;
-        esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
-                                                      ip6_src, NULL);
+        hip_ll_init(&esp_tuple->dst_addresses);
+        HIP_IFEL(!update_esp_address(&esp_tuple->dst_addresses, ip6_src, NULL),
+                 -1, "adding or updating ESP destination address failed");
         esp_tuple->tuple = other_dir;
 
         insert_esp_tuple(esp_tuple);
@@ -1210,9 +1247,10 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
                        (locator + 1);
 
         while (n > 0) {
-            esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
-                                                          &locator_addr->address,
-                                                          &seq->update_id);
+            HIP_IFEL(!update_esp_address(&esp_tuple->dst_addresses,
+                                         &locator_addr->address,
+                                         &seq->update_id), 0,
+                     "adding or updating ESP destination address failed");
             n--;
 
             if (n > 0) {
@@ -1252,9 +1290,10 @@ static int update_esp_tuple(const struct hip_esp_info *esp_info,
         print_esp_tuple(esp_tuple);
 
         while (n > 0) {
-            esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
-                                                          &locator_addr->address,
-                                                          &seq->update_id);
+            HIP_IFEL(!update_esp_address(&esp_tuple->dst_addresses,
+                                         &locator_addr->address,
+                                         &seq->update_id), 0,
+                     "adding or updating ESP destination address failed");
             n--;
 
             if (n > 0) {
@@ -1345,6 +1384,10 @@ static int handle_update(const struct hip_common *common,
 
             /* we have to consider the src ip address in case of cascading NATs (see above FIXME) */
             esp_tuple = esp_tuple_from_esp_info(esp_info, ip6_src, other_dir_tuple);
+            if (!esp_tuple) {
+                free(data);
+                HIP_OUT_ERR(0, "Unable to create esp_tuple object from update message");
+            }
 
             other_dir_tuple->esp_tuples = append_to_slist(other_dir_esps,
                                                           esp_tuple);
