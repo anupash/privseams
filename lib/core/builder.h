@@ -187,8 +187,8 @@ int hip_verify_network_header(struct hip_common *hip_common,
 int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
 void hip_dump_msg(const struct hip_common *);
-struct hip_dh_public_value
-*hip_dh_select_key(struct hip_diffie_hellman *);
+const struct hip_dh_public_value
+*hip_dh_select_key(const struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);

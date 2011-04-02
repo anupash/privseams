@@ -79,7 +79,7 @@
 int ssl_rsa_verify(uint8_t *digest, uint8_t *public_key, uint8_t *signature, int pub_klen);
 int ssl_dsa_verify(uint8_t *digest, uint8_t *public_key, uint8_t *signature);
 /* In kernel these come from crypto/dh.h, included above */
-int hip_gen_dh_shared_key(DH *dh, uint8_t *peer_key, size_t peer_len, uint8_t *out,
+int hip_gen_dh_shared_key(DH *dh, const uint8_t *peer_key, size_t peer_len, uint8_t *out,
                           size_t outlen);
 int hip_encode_dh_publickey(DH *dh, uint8_t *out, int outlen);
 DH *hip_generate_dh_key(const int group_id);

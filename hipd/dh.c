@@ -55,7 +55,7 @@ static DH *dh_table[HIP_MAX_DH_GROUP_ID] = { 0 };
  * insert the current DH-key into the buffer
  *
  * If a DH-key does not exist, we will create one.
- * @return >0 if ok, -1 if errors
+ * @return the number of bytes written
  */
 int hip_insert_dh(uint8_t *buffer, int bufsize, int group_id)
 {
@@ -111,7 +111,7 @@ err_free:
  * @return the length of the shared secret in octets if successful,
  * or -1 if an error occured.
  */
-int hip_calculate_shared_secret(uint8_t *public_value,
+int hip_calculate_shared_secret(const uint8_t *public_value,
                                 uint8_t group_id,
                                 signed int len,
                                 unsigned char *buffer,

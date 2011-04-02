@@ -553,7 +553,7 @@ out_err:
  * @return 1 on success, 0 otherwise
  */
 int hip_gen_dh_shared_key(DH *dh,
-                          uint8_t *peer_key,
+                          const uint8_t *peer_key,
                           size_t peer_len,
                           uint8_t *dh_shared_key,
                           size_t outlen)

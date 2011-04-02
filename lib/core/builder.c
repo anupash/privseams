@@ -424,17 +424,17 @@ static hip_tlv_len hip_get_diffie_hellman_param_public_value_len(const struct hi
  * @param dhf pointer to the Diffie-Hellman parameter with two DH keys.
  * @return a pointer to the chosen Diffie-Hellman parameter
  */
-struct hip_dh_public_value *hip_dh_select_key(struct hip_diffie_hellman *dhf)
+const struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *dhf)
 {
-    struct hip_dh_public_value *dhpv1 = NULL, *dhpv2 = NULL, *err = NULL;
+    const struct hip_dh_public_value *dhpv1 = NULL, *dhpv2 = NULL, *err = NULL;
 
     if (ntohs(dhf->pub_val.pub_len) ==
         hip_get_diffie_hellman_param_public_value_len(dhf)) {
         HIP_DEBUG("Single DHF public value received\n");
-        return (struct hip_dh_public_value *) &dhf->pub_val.group_id;
+        return (const struct hip_dh_public_value *) &dhf->pub_val.group_id;
     } else {
-        dhpv1 = (struct hip_dh_public_value *) &dhf->pub_val.group_id;
-        dhpv2 = (struct hip_dh_public_value *)
+        dhpv1 = (const struct hip_dh_public_value *) &dhf->pub_val.group_id;
+        dhpv2 = (const struct hip_dh_public_value *)
                 (dhf->pub_val.public_value + ntohs(dhf->pub_val.pub_len));
 
         HIP_IFEL(hip_get_diffie_hellman_param_public_value_len(dhf) !=

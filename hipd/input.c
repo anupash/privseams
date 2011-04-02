@@ -229,16 +229,17 @@ out_err:
  * Creates shared secret and produce keying material
  * The initial ESP keys are drawn out of the keying material.
  *
- * @param ctx context
- * @param I I value from puzzle
- * @param J J value from puzzle
- * @param dhpv pointer to the DH public value choosen
+ * @param ctx      context
+ * @param I        I value from puzzle
+ * @param J        J value from puzzle
+ * @param dhpv_out Out: pointer to the DH public value choosen.
+ *                 Not set if this parameter is NULL.
  * @return zero on success, or negative on error.
  */
 static int hip_produce_keying_material(struct hip_packet_context *ctx,
                                        uint64_t I,
                                        uint64_t J,
-                                       struct hip_dh_public_value **dhpv)
+                                       const struct hip_dh_public_value **dhpv_out)
 {
     char                        *dh_shared_key = NULL;
     int                          hip_transf_length, hmac_transf_length;
@@ -331,14 +332,14 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
              -ENOENT,  "No Diffie-Hellman parameter found.\n");
 
     /* If the message has two DH keys, select (the stronger, usually) one. */
-    *dhpv = hip_dh_select_key(dhf);
+    const struct hip_dh_public_value *dhpv = hip_dh_select_key(dhf);
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_DH_CREATE\n");
     hip_perf_start_benchmark(perf_set, PERF_DH_CREATE);
 #endif
-    HIP_IFEL((dh_shared_len = hip_calculate_shared_secret((*dhpv)->public_value, (*dhpv)->group_id,
-                                                          ntohs((*dhpv)->pub_len),
+    HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(dhpv->public_value, dhpv->group_id,
+                                                          ntohs(dhpv->pub_len),
                                                           (unsigned char *) dh_shared_key,
                                                           dh_shared_len)) < 0,
              -EINVAL, "Calculation of shared secret failed.\n");
@@ -429,6 +430,10 @@ static int hip_produce_keying_material(struct hip_packet_context *ctx,
     /* store DH shared key */
     ctx->hadb_entry->dh_shared_key     = dh_shared_key;
     ctx->hadb_entry->dh_shared_key_len = dh_shared_len;
+
+    if (dhpv_out) {
+        *dhpv_out = dhpv;
+    }
 
     /* on success free for dh_shared_key is called during close procedure with
      * hip_del_peer_info_entry() */
@@ -896,6 +901,15 @@ int hip_handle_r1(UNUSED const uint8_t packet_type,
                           &ctx->input_msg->hitr,
                           &ctx->input_msg->hits);
 
+    /* note: we could skip keying material generation in the case
+     * of a retransmission but then we'd had to fill ctx->hmac etc */
+    HIP_IFEL(hip_produce_keying_material(ctx,
+                                         ctx->hadb_entry->puzzle_i,
+                                         ctx->hadb_entry->puzzle_solution,
+                                         NULL),
+             -EINVAL,
+             "Could not produce keying material\n");
+
 out_err:
     return err;
 }
@@ -941,39 +955,41 @@ int hip_handle_diffie_hellman(UNUSED const uint8_t packet_type,
                               UNUSED const uint32_t ha_state,
                               struct hip_packet_context *ctx)
 {
-    int                              err    = 0, written;
-    const struct hip_diffie_hellman *dh_req = NULL;
-    struct hip_dh_public_value      *dhpv   = NULL;
-
-    /* note: we could skip keying material generation in the case
-     * of a retransmission but then we'd had to fill ctx->hmac etc */
-    HIP_IFEL(hip_produce_keying_material(ctx,
-                                         ctx->hadb_entry->puzzle_i,
-                                         ctx->hadb_entry->puzzle_solution,
-                                         &dhpv),
-             -EINVAL,
-             "Could not produce keying material\n");
-
+    int                               err = 0;
+    const struct hip_diffie_hellman  *dh_req;
+    const struct hip_dh_public_value *dhpv;
+    int                               pub_len;
+    uint8_t                          *public_value;
 
     /* calculate shared secret and create keying material */
     HIP_IFEL(!(dh_req = hip_get_param(ctx->input_msg, HIP_PARAM_DIFFIE_HELLMAN)),
              -ENOENT,
              "Internal error\n");
-    HIP_IFEL((written = hip_insert_dh(dhpv->public_value,
-                                      ntohs(dhpv->pub_len),
+
+    /* If the message has two DH keys, select (the stronger, usually) one. */
+    dhpv = hip_dh_select_key(dh_req);
+
+    pub_len = ntohs(dhpv->pub_len);
+    HIP_IFEL(!(public_value = malloc(pub_len)),
+             -1,
+             "Failed to allocate memory for public value\n");
+    HIP_IFEL((pub_len = hip_insert_dh(public_value,
+                                      pub_len,
                                       dhpv->group_id)) < 0,
              -1,
              "Could not extract the DH public key\n");
 
     HIP_IFEL(hip_build_param_diffie_hellman_contents(ctx->output_msg,
                                                      dhpv->group_id,
-                                                     dhpv->public_value,
-                                                     written,
+                                                     public_value,
+                                                     pub_len,
                                                      HIP_MAX_DH_GROUP_ID,
                                                      NULL,
                                                      0),
              -1,
              "Building of DH failed.\n");
+
+    free(public_value);
 
 out_err:
     return err;
@@ -1358,17 +1374,17 @@ int hip_check_i2(UNUSED const uint8_t packet_type,
                  UNUSED const uint32_t ha_state,
                  struct hip_packet_context *ctx)
 {
-    int                             err            = 0, is_loopback = 0;
-    uint16_t                        mask           = HIP_PACKET_CTRL_ANON, crypto_len = 0;
-    char                           *tmp_enc        = NULL;
-    const char                     *enc            = NULL;
-    unsigned char                  *iv             = NULL;
-    const struct hip_solution      *solution       = NULL;
-    struct hip_dh_public_value     *dhpv           = NULL;
-    const struct hip_r1_counter    *r1cntr         = NULL;
-    const struct hip_hip_transform *hip_transform  = NULL;
-    struct hip_host_id             *host_id_in_enc = NULL;
-    struct hip_host_id              host_id;
+    int                               err            = 0, is_loopback = 0;
+    uint16_t                          mask           = HIP_PACKET_CTRL_ANON, crypto_len = 0;
+    char                             *tmp_enc        = NULL;
+    const char                       *enc            = NULL;
+    unsigned char                    *iv             = NULL;
+    const struct hip_solution        *solution       = NULL;
+    const struct hip_dh_public_value *dhpv           = NULL;
+    const struct hip_r1_counter      *r1cntr         = NULL;
+    const struct hip_hip_transform   *hip_transform  = NULL;
+    struct hip_host_id               *host_id_in_enc = NULL;
+    struct hip_host_id                host_id;
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Start PERF_I2\n");
     hip_perf_start_benchmark(perf_set, PERF_I2);
