@@ -699,19 +699,7 @@ static struct esp_tuple *esp_tuple_from_esp_info(const struct hip_esp_info *cons
         new_esp->tuple = tuple;
         hip_ll_init(&new_esp->dst_addresses);
 
-        struct esp_address *const esp_address = malloc(sizeof(*esp_address));
-        if (esp_address) {
-            esp_address->dst_addr  = *addr;
-            esp_address->update_id = NULL;
-            if (hip_ll_add_first(&new_esp->dst_addresses, esp_address) == 0) {
-                return new_esp;
-            } else {
-                HIP_ERROR("Inserting esp_address object into ESP destination address list failed");
-            }
-        } else {
-            HIP_ERROR("Allocating esp_address object failed");
-        }
-        free(esp_address);
+        update_esp_address(new_esp, addr, NULL);
     } else {
         HIP_ERROR("Allocating esp_tuple object failed");
     }
