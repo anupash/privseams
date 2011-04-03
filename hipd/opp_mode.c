@@ -54,8 +54,8 @@
  *                  which to calculate the pseudo HIT
  * @return a host association or NULL if not found
  */
-struct hip_hadb_state *hip_opp_get_hadb_entry(const hip_hit_t *const init_hit,
-                                              const struct in6_addr *const resp_addr)
+static struct hip_hadb_state *hip_opp_get_hadb_entry(const hip_hit_t *const init_hit,
+                                                     const struct in6_addr *const resp_addr)
 {
     hip_hit_t phit;
 

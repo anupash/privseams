@@ -61,7 +61,7 @@ static struct dlist *alloc_list(void)
  * @param list a pointer to the list
  * @return a pointer to the next list item
  */
-struct dlist *list_last(struct dlist *list)
+static struct dlist *list_last(struct dlist *list)
 {
     if (list) {
         while (list->next) {

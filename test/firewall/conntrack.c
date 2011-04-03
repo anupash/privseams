@@ -37,32 +37,14 @@
 
 #include "firewall/conntrack.h"
 #include "firewall/conntrack.c"
+#include "test/mocks.h"
 #include "test_suites.h"
 
 
-static time_t fake_time    = 0;     // used by time() mock
-static char  *last_command = NULL;  // used by system() mock
-
-time_t time(time_t *t)
-{
-    if (t) {
-        *t = fake_time;
-    }
-
-    return fake_time;
-}
-
-int system(const char *command)
-{
-    free(last_command);
-    assert(last_command = strdup(command));
-    return 0;
-}
-
 static struct connection *setup_connection(void)
 {
-    const struct hip_fw_context ctx  = { };   // only ctx.udp_encap_hdr is examined
-    struct hip_data             data = { };
+    const struct hip_fw_context ctx  = { 0 };   // only ctx.udp_encap_hdr is examined
+    struct hip_data             data = { { { { 0 } } } };
 
     inet_pton(AF_INET6, "2001:12:bd2d:d23e:4a09:b2ab:6414:e110", &data.src_hit);
     inet_pton(AF_INET6, "2001:10:f039:6bc5:cab3:0727:7fbc:9dcb", &data.dst_hit);
@@ -101,16 +83,18 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_timeout)
 {
     struct connection *conn;
 
+    mock_time = true;
+
     cleanup_interval   = 0;
     connection_timeout = 2;
     conn               = setup_connection();
     conn->timestamp    = 1;
 
-    fake_time = 2;
+    mock_time_next = 2;
     hip_fw_conntrack_periodic_cleanup(); // don't time out yet
     fail_if(conn_list == NULL, "Connection was removed too early.");
 
-    fake_time = 3;
+    mock_time_next = 3;
     hip_fw_conntrack_periodic_cleanup(); // time out this time
     fail_unless(conn_list == NULL, "Idle connection was not removed.");
 }
@@ -120,21 +104,23 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_glitched_system_time)
 {
     struct connection *conn;
 
+    mock_time = true;
+
     cleanup_interval   = 0;
     connection_timeout = 2;
     conn               = setup_connection();
     conn->timestamp    = 1;
 
-    fake_time = 2;
+    mock_time_next = 2;
     hip_fw_conntrack_periodic_cleanup();
     fail_if(conn_list == NULL, "Connection was removed too early.");
 
-    fake_time = 1; // travel back in time
+    mock_time_next = 1; // travel back in time
     hip_fw_conntrack_periodic_cleanup();
     fail_if(conn_list == NULL,
             "Connection was removed despite system time glitch.");
 
-    fake_time = 3;
+    mock_time_next = 3;
     hip_fw_conntrack_periodic_cleanup();
     fail_if(conn_list != NULL, "Connection was not removed.");
 }
@@ -144,11 +130,13 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_glitched_packet_time)
 {
     struct connection *conn;
 
+    mock_time = true;
+
     cleanup_interval   = 0;
     connection_timeout = 2;
     conn               = setup_connection();
 
-    fake_time       = 1;
+    mock_time_next  = 1;
     conn->timestamp = 1;
     hip_fw_conntrack_periodic_cleanup();
     fail_if(conn_list == NULL, "Connection was removed too early.");
@@ -159,7 +147,7 @@ START_TEST(test_hip_fw_conntrack_periodic_cleanup_glitched_packet_time)
             "Connection was removed despite packet time glitch.");
     fail_if(conn->timestamp != 1, "Packet timestamp was not reset.");
 
-    fake_time = 3;
+    mock_time_next = 3;
     hip_fw_conntrack_periodic_cleanup();
     fail_if(conn_list != NULL, "Connection was not removed.");
 }
@@ -208,6 +196,8 @@ END_TEST
 
 START_TEST(test_hip_fw_manage_esp_rule_not_enabled)
 {
+    mock_system = true;
+
     struct in6_addr dest;
     assert(inet_pton(AF_INET6, "3ffe::1", &dest));
 
@@ -219,7 +209,7 @@ START_TEST(test_hip_fw_manage_esp_rule_not_enabled)
 
     fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) == 0,
             "Success, even though esp speedup is disabled");
-    fail_if(last_command, "Rule was created even though esp speedup is disabled");
+    fail_if(mock_system_last, "Rule was created even though esp speedup is disabled");
 }
 END_TEST
 
@@ -251,6 +241,8 @@ END_TEST
 
 START_TEST(test_hip_fw_manage_esp_rule_inet6)
 {
+    mock_system = true;
+
     static const char *const expected = "ip6tables -I HIPFW-INPUT -p 50 "
                                         "-d 3ffe::1 -m esp --espspi 0xAABBCCDD "
                                         "-j ACCEPT";
@@ -266,12 +258,14 @@ START_TEST(test_hip_fw_manage_esp_rule_inet6)
     conn->original.hook = NF_IP_LOCAL_IN;
 
     fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) != 0);
-    fail_if(strcmp(last_command, expected) != 0, "Unexpected rule was generated");
+    fail_if(strcmp(mock_system_last, expected) != 0, "Unexpected rule was generated");
 }
 END_TEST
 
 START_TEST(test_hip_fw_manage_esp_rule_inet4)
 {
+    mock_system = true;
+
     static const char *const expected = "iptables -I HIPFW-FORWARD -p 50 "
                                         "-d 192.168.1.1 -m esp --espspi 0xAABBCCDD "
                                         "-j ACCEPT";
@@ -287,12 +281,14 @@ START_TEST(test_hip_fw_manage_esp_rule_inet4)
     conn->original.hook = NF_IP_FORWARD;
 
     fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) != 0);
-    fail_if(strcmp(last_command, expected) != 0, "Unexpected rule was generated");
+    fail_if(strcmp(mock_system_last, expected) != 0, "Unexpected rule was generated");
 }
 END_TEST
 
 START_TEST(test_hip_fw_manage_esp_rule_inet4_udp)
 {
+    mock_system = true;
+
     static const char *const expected = "iptables -I HIPFW-OUTPUT -p UDP "
                                         "--dport 10500 --sport 10500 -d 192.168.1.1 "
                                         "-m u32 --u32 '4&0x1FFF=0 && 0>>22&0x3C@8=0xAABBCCDD' "
@@ -311,8 +307,8 @@ START_TEST(test_hip_fw_manage_esp_rule_inet4_udp)
 
     fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) != 0,
             "Adding an iptables rule failed");
-    fail_if(!last_command, "No iptables command was executed");
-    fail_if(strcmp(last_command, expected) != 0, "Unexpected rule was generated");
+    fail_if(!mock_system_last, "No iptables command was executed");
+    fail_if(strcmp(mock_system_last, expected) != 0, "Unexpected rule was generated");
 }
 END_TEST
 

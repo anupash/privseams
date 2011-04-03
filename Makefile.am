@@ -23,7 +23,7 @@
 
 ACLOCAL_AMFLAGS  = -I m4
 
-HIPL_HEADER_LOCATIONS = firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h test/*/*.h test/*/*/*.h
+HIPL_HEADER_LOCATIONS = firewall/*.h hipd/*.h lib/*/*.h modules/*/*/*.h test/*/*.h test/*/*/*.h test/mocks.h
 HIPL_HEADER_LIST = $(wildcard $(addprefix $(srcdir)/,$(HIPL_HEADER_LOCATIONS)))
 
 # For "make dist"
@@ -198,6 +198,7 @@ endif
 
 
 test_check_firewall_SOURCES = test/check_firewall.c          \
+                              test/mocks.c                   \
                               test/firewall/conntrack.c      \
                               test/firewall/file_buffer.c    \
                               test/firewall/line_parser.c    \
@@ -214,7 +215,7 @@ include modules/heartbeat/Makefile.am
 include modules/heartbeat_update/Makefile.am
 include modules/update/Makefile.am
 
-### library dependencies ###
+### static library dependencies ###
 
 firewall_hipfw_LDADD                     = lib/core/libhipcore.la
 hipd_hipd_LDADD                          = lib/core/libhipcore.la
@@ -227,6 +228,10 @@ test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
 test_hc_performance_LDADD                = lib/core/libhipcore.la
 tools_hipconf_LDADD                      = lib/core/libhipcore.la
 tools_pisacert_LDADD                     = lib/core/libhipcore.la
+
+### dynamic library dependencies ###
+
+test_check_firewall_LDFLAGS              = -ldl
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \

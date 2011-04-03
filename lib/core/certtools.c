@@ -434,13 +434,14 @@ out_err:
  *                hip_send_recv_daemon_info
  * @return 0 if ok -1 if error
  */
-int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
-                                   const char *issuer_type,
-                                   struct in6_addr *issuer,
-                                   const char *subject_type,
-                                   struct in6_addr *subject,
-                                   time_t *not_before, time_t *not_after,
-                                   int hip_user_socket)
+static int hip_cert_spki_create_cert_sock(struct hip_cert_spki_info *content,
+                                          const char *issuer_type,
+                                          struct in6_addr *issuer,
+                                          const char *subject_type,
+                                          struct in6_addr *subject,
+                                          time_t *not_before,
+                                          time_t *not_after,
+                                          int hip_user_socket)
 {
     int                              err         = 0;
     char                            *tmp_issuer  = NULL;

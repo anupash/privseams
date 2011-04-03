@@ -109,6 +109,9 @@ extern HIP_HASHTABLE *addresses;
 
 extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 
+/* For switch userspace / kernel IPsec */
+extern int hip_use_userspace_ipsec;
+
 int hip_firewall_is_alive(void);
 
 /* Functions for handling incoming packets. */

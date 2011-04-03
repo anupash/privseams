@@ -41,8 +41,6 @@
 #include "lib/core/protodefs.h"
 
 
-struct hip_hadb_state *hip_opp_get_hadb_entry(const hip_hit_t *const init_hit,
-                                              const struct in6_addr *const resp_addr);
 struct hip_hadb_state *hip_opp_get_hadb_entry_i1_r1(struct hip_common *msg,
                                                     const struct in6_addr *const src_addr);
 int hip_handle_opp_r1(struct hip_packet_context *ctx);
