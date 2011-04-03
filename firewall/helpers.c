@@ -41,9 +41,6 @@
 #include "lib/core/debug.h"
 #include "helpers.h"
 
-/** The maximum command line length (that is, argument to system()) we expect. */
-static const size_t MAX_COMMAND_LINE = 196;
-
 /**
  * A wrapper for inet_ntop(). Converts a numeric IPv6 address to a string.
  *
@@ -106,8 +103,8 @@ int system_print(const char *const command)
 
 /**
  * printf()-like wrapper around system_print.
- * Fails and returns if the resulting command line would be longer
- * than ::MAX_COMMAND_LINE characters.
+ * Fails and returns an error if the resulting command line
+ * would be longer than ::MAX_COMMAND_LINE characters.
  *
  * @param command The command. This is a printf format string.
  *                The caller of this function must take care that command

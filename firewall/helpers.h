@@ -33,4 +33,7 @@ struct in6_addr *numeric_to_addr(const char *num);
 int system_print(const char *command);
 int system_printf(const char *command, ...);
 
+/** The maximum command line length (that is, argument to system()) we expect. */
+#define MAX_COMMAND_LINE 196
+
 #endif /* HIP_FIREWALL_HELPERS_H */
