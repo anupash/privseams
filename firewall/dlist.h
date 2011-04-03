@@ -37,6 +37,4 @@ struct dlist *insert_to_list(struct dlist *list, void *data,
 
 struct dlist *find_in_dlist(struct dlist *list, void *data);
 
-struct dlist *list_last(struct dlist *list);
-
 #endif /* HIP_FIREWALL_DLIST_H */

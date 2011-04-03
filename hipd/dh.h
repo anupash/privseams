@@ -35,5 +35,6 @@ int hip_calculate_shared_secret(uint8_t *public_value,
                                 signed int len,
                                 unsigned char *buffer,
                                 int bufsize);
+int hip_init_cipher(void);
 
 #endif /* HIP_HIPD_DH_H */

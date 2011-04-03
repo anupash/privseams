@@ -46,8 +46,7 @@
 void hip_ll_init(struct hip_ll *linkedlist)
 {
     if (linkedlist != NULL) {
-        linkedlist->head          = NULL;
-        linkedlist->element_count = 0;
+        *linkedlist = (struct hip_ll) HIP_LL_INIT;
     }
 }
 

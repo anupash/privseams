@@ -204,11 +204,11 @@ out_err:
  * @param incoming        packet direction
  * @return                err during the reinjection
  */
-int hip_reinject_packet(const struct in6_addr *src_hit,
-                        const struct in6_addr *dst_hit,
-                        const ipq_packet_msg_t *m,
-                        const int ip_orig_traffic,
-                        const int incoming)
+static int hip_reinject_packet(const struct in6_addr *src_hit,
+                               const struct in6_addr *dst_hit,
+                               const ipq_packet_msg_t *m,
+                               const int ip_orig_traffic,
+                               const int incoming)
 {
     int             err           = 0;
     int             ip_hdr_size   = 0;

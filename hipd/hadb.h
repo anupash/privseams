@@ -33,9 +33,6 @@
 #include "lib/core/state.h"
 
 
-/* For switch userspace / kernel IPsec */
-extern int hip_use_userspace_ipsec;
-
 extern HIP_HASHTABLE *hadb_hit;
 
 void hip_hadb_hold_entry(void *entry);

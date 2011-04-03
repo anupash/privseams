@@ -44,26 +44,8 @@ struct hip_hit_info {
     hip_lsi_t      lsi;
 };
 
-int hip_dsa_host_id_to_hit(const struct hip_host_id *const host_id,
-                           struct in6_addr *const hit, const int hit_type);
-
-/* Useless abstraction, goes to the same function anyway -- SAMU
- *
- * True that. Let's make this a static inline function and move it to the header
- * file. It still remains as useless abstraction, but at least we eliminate the
- * need for a call and return sequence. -Lauri 06.08.2008
- */
-static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *const host_id,
-                                         struct in6_addr *const hit, const int hit_type)
-{
-    return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-}
-
 int hip_host_id_to_hit(const struct hip_host_id *const host_id,
                        struct in6_addr *const hit, const int hit_type);
-int hip_private_dsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
-                                   struct in6_addr *const hit,
-                                   const int hit_type);
 int hip_private_rsa_host_id_to_hit(const struct hip_host_id_priv *const host_id,
                                    struct in6_addr *const hit,
                                    const int hit_type);

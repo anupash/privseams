@@ -80,7 +80,6 @@ extern HIP_HASHTABLE *hip_local_hostid_db;
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(HIP_HASHTABLE *db,
                                                                const struct in6_addr *hit,
                                                                int algo, int anon);
-int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon);
 int hip_get_host_id_and_priv_key(HIP_HASHTABLE *db, struct in6_addr *hit,
                                  int algo, struct hip_host_id **host_id, void **key);
 int hip_hit_is_our(struct in6_addr *hit);

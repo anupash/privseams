@@ -58,6 +58,8 @@ struct hip_ll {
     struct hip_ll_node *head;           /**< A pointer to the first node of the list. */
 };
 
+#define HIP_LL_INIT { 0, NULL }
+
 /** Linked list element memory deallocator function pointer. */
 typedef void (*free_elem_fn)(void *ptr);
 
