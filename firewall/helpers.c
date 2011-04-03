@@ -128,8 +128,8 @@ int system_printf(const char *const command, ...)
         return -1;
     }
 
-    // cast sizeof() to signed value
-    if (ret >= (int) sizeof(bfr)) {
+    // cast to unsigned value (we know that ret >= 0)
+    if ((unsigned) ret >= sizeof(bfr)) {
         HIP_ERROR("Format '%s' results in unexpectedly large command line "
                   "(%d characters): not executed.", command, ret);
         va_end(vargs);
