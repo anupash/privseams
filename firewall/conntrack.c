@@ -322,12 +322,14 @@ static struct esp_address *get_esp_address(const struct hip_ll *const addresses,
 }
 
 /**
- * Insert an address into a list of addresses. If same address exists already,
- * the update_id is replaced with the new value.
+ * Insert or update a destination address associated with an ESP tuple.
+ * If the address is already known, its update_id is replaced with the new
+ * value.
  *
- * @param esp_tuple the esp tuple to update the destination address of
- * @param addr the address to be added
- * @param upd_id update id
+ * @param esp_tuple The esp tuple to update the destination address of.
+ * @param addr      The address to be added or updated.
+ * @param upd_id    The update id. May be NULL if the address is inserted for
+ *                  the first time.
  *
  * @return true on success, false if insufficient memory is available for a new
  *         esp address object.
