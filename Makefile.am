@@ -198,7 +198,6 @@ endif
 
 
 test_check_firewall_SOURCES = test/check_firewall.c          \
-                              test/mocks.c                   \
                               test/firewall/file_buffer.c    \
                               test/firewall/line_parser.c    \
                               test/firewall/port_bindings.c  \
@@ -214,7 +213,7 @@ include modules/heartbeat/Makefile.am
 include modules/heartbeat_update/Makefile.am
 include modules/update/Makefile.am
 
-### static library dependencies ###
+### library dependencies ###
 
 firewall_hipfw_LDADD                     = lib/core/libhipcore.la
 hipd_hipd_LDADD                          = lib/core/libhipcore.la
@@ -227,10 +226,6 @@ test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
 test_hc_performance_LDADD                = lib/core/libhipcore.la
 tools_hipconf_LDADD                      = lib/core/libhipcore.la
 tools_pisacert_LDADD                     = lib/core/libhipcore.la
-
-### dynamic library dependencies ###
-
-test_check_firewall_LDFLAGS = -ldl
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \
