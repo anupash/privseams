@@ -55,14 +55,6 @@
 #include "lib/core/protodefs.h"
 #include "lib/core/statistics.h"
 
-#define PACKET_LENGTH 1280
-
-int num_measurements = 100;
-int key_pool_size    = 5;
-int rsa_key_len      = 1024;
-int dsa_key_len      = 1024;
-#define ECDSA_CURVE NID_sect163r1
-
 /**
  * @brief Determine and print the gettimeofday time resolution.
  *
@@ -93,6 +85,12 @@ static void print_timeres(void)
 
 int main(void)
 {
+#define PACKET_LENGTH 1280
+
+    int            num_measurements = 100;
+    int            key_pool_size    = 5;
+    int            rsa_key_len      = 1024;
+    int            dsa_key_len      = 1024;
     int            i;
     int            err = 0;
     struct timeval start_time;
@@ -384,6 +382,8 @@ int main(void)
     printf("\n-------------------------------\n"
            "ECDSA performance test\n"
            "-------------------------------\n");
+
+#define ECDSA_CURVE NID_sect163r1
 
     printf("Creating key pool of %d keys for curve ECDSA_CURVE...\n",
            key_pool_size);

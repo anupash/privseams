@@ -185,7 +185,7 @@ int hip_user_run_handles(const uint8_t msg_type,
                          struct hip_common *msg,
                          struct sockaddr_in6 *src)
 {
-    struct hip_ll_node *iter = NULL;
+    const struct hip_ll_node *iter = NULL;
 
     if (!hip_user_msg_handles[msg_type] ||
         !hip_ll_get_size(hip_user_msg_handles[msg_type])) {
