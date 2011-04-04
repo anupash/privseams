@@ -107,8 +107,6 @@ extern int            suppress_af_family;
 extern int            address_count;
 extern HIP_HASHTABLE *addresses;
 
-extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
