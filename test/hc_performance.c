@@ -37,19 +37,6 @@
 #include "lib/core/hashtree.h"
 #include "lib/core/statistics.h"
 
-const hash_function hash_functions[2] = { (hash_function) SHA1,
-                                          (hash_function) MD5 };
-
-int count = 100;
-// this is supported by both md5 and sha1
-int           hash_length   = 16;
-int           hchain_length = 100000;
-int           verify_length = 64;
-hash_function hash_func;
-int           test_hc = 0;
-int           test_ht = 0;
-
-
 static void print_usage(void)
 {
     printf("Usage: hc_performance -c|t -s|m [-lhvn NUM]\n"
@@ -112,13 +99,20 @@ int main(int argc, char **argv)
     const unsigned char   *secret         = NULL;
     int                    secret_length  = 0;
     struct hash_chain     *hchains[8];
-    const unsigned char   *data        = NULL;
-    int                    data_length = 0;
-    const unsigned char   *root        = NULL;
-    int                    root_length = 0;
+    const unsigned char   *data          = NULL;
+    int                    data_length   = 0;
+    const unsigned char   *root          = NULL;
+    int                    root_length   = 0;
+    int                    count         = 100;
+    int                    hash_length   = 16;
+    int                    hchain_length = 100000;
+    int                    verify_length = 64;
+    int                    test_hc       = 0;
+    int                    test_ht       = 0;
 
-    hash_func = NULL;
-
+    const hash_function hash_functions[2] = { (hash_function) SHA1,
+                                              (hash_function) MD5 };
+    hash_function       hash_func = NULL;
 
     while ((c = getopt(argc, argv, "ctsml:h:v:n:")) != -1) {
         switch (c) {

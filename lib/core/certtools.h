@@ -38,7 +38,7 @@
 #include <stdint.h>
 #include <netinet/in.h>
 #include <openssl/rsa.h>
-#include <openssl/x509.h>
+#include <openssl/ossl_typ.h>
 #include <sys/types.h>
 
 #include "protodefs.h"

@@ -83,10 +83,6 @@
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
-enum number_dh_keys_t { ONE, TWO };
-
-enum number_dh_keys_t number_dh_keys = TWO;
-
 
 /**
  * Send an I1 packet to the Responder. Used internally by hip_send_i1().
@@ -579,6 +575,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
     int                dh_size1      = 0, dh_size2 = 0;
     int                mask          = 0, i = 0, written1 = 0, written2 = 0;
     unsigned int       service_count = 0;
+
+    enum number_dh_keys_t { ONE, TWO };
+    enum number_dh_keys_t number_dh_keys = TWO;
+
 
     /* Supported HIP and ESP transforms. */
     hip_transform_suite transform_hip_suite[] = {

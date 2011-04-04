@@ -165,8 +165,8 @@ void lmod_uninit_state_init_functions(void)
  */
 void lmod_init_state_items(struct modular_state *state)
 {
-    struct hip_ll_node *iter = NULL;
-    int                 (*init_function)(struct modular_state *state) = NULL;
+    const struct hip_ll_node *iter = NULL;
+    int                       (*init_function)(struct modular_state *state) = NULL;
 
     while ((iter = hip_ll_iterate(&state_init_functions, iter))) {
         init_function = iter->ptr;
@@ -300,9 +300,9 @@ struct hip_ll *lmod_register_function(struct hip_ll *list,
                                       void *entry,
                                       const uint16_t priority)
 {
-    int                 idx      = 0;
-    struct hip_ll      *new_list = NULL;
-    struct hip_ll_node *iter     = NULL;
+    int                       idx      = 0;
+    struct hip_ll            *new_list = NULL;
+    const struct hip_ll_node *iter     = NULL;
 
     if (!list) {
         if (!(new_list = malloc(sizeof(struct hip_ll)))) {
@@ -342,8 +342,8 @@ struct hip_ll *lmod_register_function(struct hip_ll *list,
  */
 int lmod_unregister_function(struct hip_ll *list, const void *function)
 {
-    int                 idx  = 0;
-    struct hip_ll_node *iter = NULL;
+    int                       idx  = 0;
+    const struct hip_ll_node *iter = NULL;
 
     if (!list) {
         return -1;
@@ -440,8 +440,8 @@ void lmod_uninit_disabled_modules(void)
  */
 int lmod_packet_type_exists(const uint8_t packet_type)
 {
-    int                 idx  = 0;
-    struct hip_ll_node *iter = NULL;
+    int                       idx  = 0;
+    const struct hip_ll_node *iter = NULL;
 
     while ((iter = hip_ll_iterate(&packet_types, iter))) {
         if (packet_type == ((struct packet_type *) iter->ptr)->num) {
@@ -461,7 +461,7 @@ int lmod_packet_type_exists(const uint8_t packet_type)
  */
 const char *lmod_get_packet_identifier(const uint8_t packet_type)
 {
-    struct hip_ll_node *iter = NULL;
+    const struct hip_ll_node *iter = NULL;
     HIP_DEBUG("Name search for packet type %d \n", packet_type);
 
     while ((iter = hip_ll_iterate(&packet_types, iter))) {
@@ -489,9 +489,9 @@ const char *lmod_get_packet_identifier(const uint8_t packet_type)
 int lmod_register_packet_type(const uint8_t packet_type,
                               const char *const identifier)
 {
-    int                 idx       = 0;
-    struct hip_ll_node *iter      = NULL;
-    struct packet_type *new_entry = NULL;
+    int                       idx       = 0;
+    const struct hip_ll_node *iter      = NULL;
+    struct packet_type       *new_entry = NULL;
 
     if (!identifier || (lmod_packet_type_exists(packet_type) != -1)) {
         return -1;
@@ -559,8 +559,8 @@ void lmod_uninit_packet_types(void)
  */
 int lmod_parameter_type_exists(const uint16_t parameter_type)
 {
-    int                 index = 0;
-    struct hip_ll_node *iter  = NULL;
+    int                       index = 0;
+    const struct hip_ll_node *iter  = NULL;
 
     while ((iter = hip_ll_iterate(&parameter_types, iter))) {
         if (parameter_type == ((struct parameter_type *) iter->ptr)->num) {
@@ -589,10 +589,10 @@ int lmod_parameter_type_exists(const uint16_t parameter_type)
 int lmod_register_parameter_type(const uint16_t parameter_type,
                                  const char *const identifier)
 {
-    int                    index     = 0;
-    struct hip_ll_node    *iter      = NULL;
-    struct parameter_type *new_entry = NULL;
-    int                    err       = 0;
+    int                       index     = 0;
+    const struct hip_ll_node *iter      = NULL;
+    struct parameter_type    *new_entry = NULL;
+    int                       err       = 0;
 
     HIP_IFEL(!identifier || (lmod_parameter_type_exists(parameter_type) != -1),
              -1, "Missing identifier or parameter type already registered.\n");
@@ -633,7 +633,7 @@ out_err:
  */
 const char *lmod_get_parameter_identifier(const uint16_t parameter_type)
 {
-    struct hip_ll_node *iter = NULL;
+    const struct hip_ll_node *iter = NULL;
     HIP_DEBUG("Name search for parameter type %d \n", parameter_type);
 
     while ((iter = hip_ll_iterate(&parameter_types, iter))) {
