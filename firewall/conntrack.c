@@ -110,6 +110,10 @@ enum {
     STATE_CLOSING
 };
 
+/**
+ * Number of currently managed iptables rules for ESP speedup (-u option).
+ * @see hip_fw_manage_esp_rule();
+ */
 static unsigned int total_esp_rules_count = 0;
 
 /*------------print functions-------------*/
