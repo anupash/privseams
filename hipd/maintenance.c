@@ -224,8 +224,8 @@ int hip_unregister_maint_function(int (*maint_function)(void))
  */
 static int hip_run_maint_functions(void)
 {
-    int                 err  = 0;
-    struct hip_ll_node *iter = NULL;
+    int                       err  = 0;
+    const struct hip_ll_node *iter = NULL;
 
     if (hip_maintenance_functions) {
         while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {
