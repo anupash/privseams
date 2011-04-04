@@ -2334,12 +2334,11 @@ static int detect_esp_rule_activity(const time_t now)
                 unsigned int    packet_count;
                 uint32_t        spi;
                 struct in6_addr dest;
-                struct tuple   *tuple;
 
                 if (parse_iptables_esp_rule(bfr, &packet_count, &spi, &dest)) {
                     ret += 1;
                     if (packet_count > 0) {
-                        tuple = get_tuple_by_esp(&dest, spi);
+                        struct tuple *const tuple = get_tuple_by_esp(&dest, spi);
                         if (!tuple) {
                             HIP_ERROR("Stray ESP rule: SPI = %u\n", spi);
                             continue;
