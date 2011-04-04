@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <openssl/bn.h>
 #include <openssl/dsa.h>
+#include <openssl/objects.h>
 #include <openssl/rsa.h>
 
 #include "lib/core/builder.h"
