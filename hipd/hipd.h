@@ -62,7 +62,6 @@
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern struct rtnl_handle hip_nl_generic;
-extern time_t             load_time;
 
 extern int hip_raw_sock_input_v6;
 extern int hip_raw_sock_input_v4;
@@ -106,8 +105,6 @@ extern int hip_transform_order;
 extern int            suppress_af_family;
 extern int            address_count;
 extern HIP_HASHTABLE *addresses;
-
-extern uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;

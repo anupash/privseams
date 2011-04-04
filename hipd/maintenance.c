@@ -72,13 +72,10 @@ struct maint_function {
 
 int hip_firewall_sock_lsi_fd = -1;
 
-float retrans_counter      = HIP_RETRANSMIT_INIT;
-float precreate_counter    = HIP_R1_PRECREATE_INIT;
-float queue_counter        = QUEUE_CHECK_INIT;
-int   force_exit_counter   = FORCE_EXIT_COUNTER_START;
-int   cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL;
-int   hip_firewall_status  = -1;
-int   fall, retr;
+float retrans_counter     = HIP_RETRANSMIT_INIT;
+float precreate_counter   = HIP_R1_PRECREATE_INIT;
+int   force_exit_counter  = FORCE_EXIT_COUNTER_START;
+int   hip_firewall_status = -1;
 
 /**
  * List containing all maintenance functions.
@@ -224,8 +221,8 @@ int hip_unregister_maint_function(int (*maint_function)(void))
  */
 static int hip_run_maint_functions(void)
 {
-    int                 err  = 0;
-    struct hip_ll_node *iter = NULL;
+    int                       err  = 0;
+    const struct hip_ll_node *iter = NULL;
 
     if (hip_maintenance_functions) {
         while ((iter = hip_ll_iterate(hip_maintenance_functions, iter))) {

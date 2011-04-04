@@ -104,7 +104,7 @@ static int hip_del_pending_request_by_expiration(void)
 {
     int                         idx     = 0;
     time_t                      now     = time(NULL);
-    struct hip_ll_node         *iter    = NULL;
+    const struct hip_ll_node   *iter    = NULL;
     struct hip_pending_request *request = NULL;
 
     /* See hip_del_pending_request() for a comment. */
@@ -241,8 +241,8 @@ out_err:
  */
 int hip_del_pending_request(struct hip_hadb_state *entry)
 {
-    int                 idx  = 0;
-    struct hip_ll_node *iter = NULL;
+    int                       idx  = 0;
+    const struct hip_ll_node *iter = NULL;
 
     /* Iterate through the linked list. The iterator itself can't be used
      * for deleting nodes from the list. Therefore, we just get the index of
@@ -276,7 +276,7 @@ static int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
                                            uint8_t reg_type)
 {
     int                         idx     = 0;
-    struct hip_ll_node         *iter    = NULL;
+    const struct hip_ll_node   *iter    = NULL;
     struct hip_pending_request *request = NULL;
 
     /* See hip_del_pending_request() for a comment. */
@@ -308,7 +308,7 @@ static int hip_del_pending_request_by_type(struct hip_hadb_state *entry,
 int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
                                  struct hip_hadb_state *entry_new)
 {
-    struct hip_ll_node *iter = 0;
+    const struct hip_ll_node *iter = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((struct hip_pending_request *) (iter->ptr))->entry == entry_old) {
@@ -338,8 +338,8 @@ int hip_replace_pending_requests(struct hip_hadb_state *entry_old,
 static int hip_get_pending_requests(struct hip_hadb_state *entry,
                                     struct hip_pending_request *requests[])
 {
-    struct hip_ll_node *iter          = 0;
-    int                 request_count = 0;
+    const struct hip_ll_node *iter          = 0;
+    int                       request_count = 0;
 
     if (requests == NULL) {
         return -1;
@@ -368,8 +368,8 @@ static int hip_get_pending_requests(struct hip_hadb_state *entry,
  */
 static int hip_get_pending_request_count(struct hip_hadb_state *entry)
 {
-    struct hip_ll_node *iter          = 0;
-    int                 request_count = 0;
+    const struct hip_ll_node *iter          = 0;
+    int                       request_count = 0;
 
     while ((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
         if (((struct hip_pending_request *) (iter->ptr))->entry == entry) {

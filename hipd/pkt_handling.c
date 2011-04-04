@@ -139,8 +139,8 @@ int hip_run_handle_functions(const uint8_t packet_type,
                              const uint32_t ha_state,
                              struct hip_packet_context *ctx)
 {
-    int                 err  = 0;
-    struct hip_ll_node *iter = NULL;
+    int                       err  = 0;
+    const struct hip_ll_node *iter = NULL;
 
     HIP_IFEL(packet_type > HIP_MAX_PACKET_TYPE,
              -1,

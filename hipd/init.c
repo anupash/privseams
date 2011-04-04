@@ -44,6 +44,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <openssl/aes.h>
+#include <openssl/evp.h>
 #include <openssl/lhash.h>
 #include <openssl/rand.h>
 #include <sys/syscall.h>

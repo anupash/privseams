@@ -40,12 +40,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/time.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -67,11 +67,6 @@
 #include "netdev.h"
 #include "hipd.h"
 
-
-/* Defined as a global just to allow freeing in exit(). Do not use outside
- * of this file! */
-struct hip_common *hipd_msg    = NULL;
-struct hip_common *hipd_msg_v4 = NULL;
 
 int is_active_mhaddr = 1;                 /**< Which mhaddr to use active or lazy? (default: active) */
 int is_hard_handover = 0;                 /**< if hard handover is forced to be used (default: no) */
@@ -140,7 +135,6 @@ int hip_locator_status = HIP_MSG_SET_LOCATOR_OFF;
 
 int            address_count;
 HIP_HASHTABLE *addresses;
-time_t         load_time;
 
 int address_change_time_counter = -1;
 
@@ -150,10 +144,9 @@ int address_change_time_counter = -1;
  */
 int hip_use_userspace_ipsec = 0;
 
-int     esp_prot_active         = 0;
-int     esp_prot_num_transforms = 0;
-uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
-long    esp_prot_num_parallel_hchains = 0;
+int  esp_prot_active               = 0;
+int  esp_prot_num_transforms       = 0;
+long esp_prot_num_parallel_hchains = 0;
 
 int hip_shotgun_status = HIP_MSG_SHOTGUN_OFF;
 
@@ -346,7 +339,6 @@ static int hipd_main(uint64_t flags)
     }
 
     HIP_INFO("hipd pid=%d starting\n", getpid());
-    time(&load_time);
 
     /* prepare the one and only hip_packet_context instance */
     HIP_IFEL(!(ctx.input_msg  = hip_msg_alloc()), ENOMEM, "Insufficient memory");
