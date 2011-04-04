@@ -143,12 +143,12 @@ time_t mock_time_next;    /**< value returned on next invocation of time(2) mock
  *          to by @a t.
  * @return  The current value of ::mock_time_next.
  */
-time_t time(time_t *t) {
+time_t time(time_t *t)
+{
     if (!mock_time) {
-        time_t (*original)(time_t*) = get_original(time, "time");
+        time_t (*original)(time_t *) = get_original(time, "time");
         return original(t);
     }
-
 
     if (t) {
         *t = mock_time_next;
@@ -176,7 +176,8 @@ int   mock_system_exit = EXIT_SUCCESS; /**< value that will be returned by
  * @return        The value of ::mock_system_exit if @a command was non-NULL, -1
  *                otherwise.
  */
-int system(const char *command) {
+int system(const char *command)
+{
     if (!mock_system) {
         int (*original)(const char *) = get_original(system, "system");
         return original(command);
