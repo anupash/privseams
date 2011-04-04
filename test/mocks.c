@@ -88,7 +88,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "test/mocks.h"
+#include "mocks.h"
 
 
 // A NULL argument to dlsym() is allowed as per POSIX, and may do the trick,
