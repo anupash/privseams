@@ -211,7 +211,7 @@ cd $SCRATCHBOX_HOME || cleanup 1
 run_program "rm -rf hipl-[0-9.]* hipl_*.changes hipl_*.deb"
 run_program "tar -xzf $CHECKOUT_DIR/hipl-[0-9.]*.tar.gz"
 # perform debian packaging (in maemo sdk env)
-run_program "$SCRATCHBOX_DIR/login -d hipl-${VERSION} ./configure"
-run_program "$SCRATCHBOX_DIR/login -d hipl-${VERSION} make deb"
+run_program "$SCRATCHBOX_DIR/login -d hipl-[0-9.]* ./configure"
+run_program "$SCRATCHBOX_DIR/login -d hipl-[0-9.]* make deb"
 
 cleanup 0
