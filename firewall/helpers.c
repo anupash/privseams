@@ -113,7 +113,7 @@ int system_print(const char *const command)
  */
 int system_printf(const char *const command, ...)
 {
-    char bfr[MAX_COMMAND_LINE];
+    char bfr[MAX_COMMAND_LINE + 1];
 
     va_list vargs;
     va_start(vargs, command);
@@ -126,9 +126,9 @@ int system_printf(const char *const command, ...)
     }
 
     // cast to unsigned value (we know that ret >= 0)
-    if ((unsigned) ret >= sizeof(bfr)) {
+    if ((unsigned) ret > MAX_COMMAND_LINE) {
         HIP_ERROR("Format '%s' results in unexpectedly large command line "
-                  "(%d characters): not executed.", command, ret);
+                  "(%d characters): not executed.\n", command, ret);
         va_end(vargs);
         return -1;
     }
