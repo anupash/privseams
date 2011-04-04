@@ -62,7 +62,6 @@
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern struct rtnl_handle hip_nl_generic;
-extern time_t             load_time;
 
 extern int hip_raw_sock_input_v6;
 extern int hip_raw_sock_input_v4;

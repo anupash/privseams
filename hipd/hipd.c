@@ -40,12 +40,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/time.h>
 
 #include "lib/core/builder.h"
 #include "lib/core/common.h"
@@ -140,7 +140,6 @@ int hip_locator_status = HIP_MSG_SET_LOCATOR_OFF;
 
 int            address_count;
 HIP_HASHTABLE *addresses;
-time_t         load_time;
 
 int address_change_time_counter = -1;
 
@@ -345,7 +344,6 @@ static int hipd_main(uint64_t flags)
     }
 
     HIP_INFO("hipd pid=%d starting\n", getpid());
-    time(&load_time);
 
     /* prepare the one and only hip_packet_context instance */
     HIP_IFEL(!(ctx.input_msg  = hip_msg_alloc()), ENOMEM, "Insufficient memory");
