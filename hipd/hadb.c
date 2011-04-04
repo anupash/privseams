@@ -99,7 +99,6 @@
 
 
 HIP_HASHTABLE *hadb_hit = NULL;
-struct in_addr peer_lsi_index;
 
 struct hip_peer_map_info {
     hip_hit_t       peer_hit;
