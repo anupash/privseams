@@ -53,14 +53,14 @@
  * will be emitted. On the other hand, a non-static definition will be picked up
  * by other object files in the same test suite, i.e. they will invariably use
  * your mock function which may not be intended.
- * This also implies that each other suite can not define an own implementation
+ * This also implies that each other suite cannot define its own implementation
  * due to "duplicate symbol" errors.
  *
  * For this reason, and to encourage modularity, mock functions should be
  * defined in this file. They should be opt-in by enabling a global boolean
  * flag, in order not to disrupt other unit tests.
  * Remember that each test runs in a process of its own, so the flags must be
- * set at the beginning of each.
+ * set at the beginning of each test.
  *
  * @note The documentation implies that argments of disabled mock functions are
  *       passed to the original implementation.
@@ -68,14 +68,16 @@
  * @author Christof Mroz <christof.mroz@rwth-aachen.de>
  */
 
-//
-// RTLD_NEXT is optional in POSIX, and unit tests relying on mock functions will
-// be silently ignored on systems that don't support it. See get_original().
-//
-// Some libc implementations (e.g. uclibc) export RTLD_NEXT by default, if
-// supported. glibc considers this a GNU extension, so we pass _GNU_SOURCE
-// (which should not affect non-glibc systems).
-//
+/*
+ * RTLD_NEXT is just "reserved for future use" in POSIX but not mandatory, so it
+ * may not be available.
+ * Unit tests relying on mock functions will be silently ignored on systems that
+ * don't support it. See get_original().
+ *
+ * Some libc implementations (e.g. uclibc) export RTLD_NEXT by default, if
+ * supported. glibc considers this a GNU extension, so we pass _GNU_SOURCE
+ * (which should not affect non-glibc systems).
+ */
 #define _GNU_SOURCE
 
 #include <check.h>
@@ -97,14 +99,14 @@
 
 /**
  * Retrieve a pointer to the real implementation of the library function
- * name by symbol @a name.
+ * named by symbol @a name.
  * Exits with status 0 if it cannot be retrieved.
  *
  * @param mock A pointer to the mock function. This is used to guard against
  *             returning a pointer to the mock rather than the real function
  *             instead, which would in turn be called by the mock itself and so
  *             on, thereby triggering infinite recursion.
- * @param name Symbolic (i.e. exported) name, of the original function. It will
+ * @param name Symbolic (i.e. exported) name,of the original function. It will
  *             be searched in default shared object load order and the first
  *             occurence retrieved.
  * @return     Function pointer to import symbol @a name.
@@ -157,9 +159,13 @@ time_t time(time_t *t) {
 
 /*** system(3) ***/
 
-bool  mock_system      = false;
-char *mock_system_last = NULL;
-int   mock_system_exit = EXIT_SUCCESS;
+bool  mock_system      = false;        /**< system(3) mock enabled? */
+char *mock_system_last = NULL;         /**< copy of last argument passed to
+                                        *   system(3) mock, or NULL if mock was
+                                        *   not called yet. */
+int   mock_system_exit = EXIT_SUCCESS; /**< value that will be returned by
+                                        *   system(3) mock if a non-NULL
+                                        *   argument is supplied to it.*/
 
 /**
  * system(3) mock function. Controlled by the ::mock_system flag.
