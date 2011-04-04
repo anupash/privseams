@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,23 +23,37 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#define _BSD_SOURCE
+
 #include <check.h>
 #include <stdlib.h>
 
-#include "test/firewall/test_suites.h"
+#include "lib/core/common.h"
+#include "firewall/helpers.h"
+#include "test/mocks.h"
+#include "test_suites.h"
 
-int main(void)
+
+START_TEST(test_system_printf)
 {
-    int      number_failed;
-    SRunner *sr = srunner_create(NULL);
-    srunner_add_suite(sr, firewall_conntrack());
-    srunner_add_suite(sr, firewall_file_buffer());
-    srunner_add_suite(sr, firewall_helpers());
-    srunner_add_suite(sr, firewall_line_parser());
-    srunner_add_suite(sr, firewall_port_bindings());
+    mock_system = true;
 
-    srunner_run_all(sr, CK_NORMAL);
-    number_failed = srunner_ntests_failed(sr);
-    srunner_free(sr);
-    return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+    char str[MAX_COMMAND_LINE + 1];
+    memset(str, '.', sizeof(str));
+    str[MAX_COMMAND_LINE] = '\0';
+
+    fail_unless(system_printf("_%s",  str) == -1, "Truncated command line executed");
+    fail_unless(system_printf("%s", str)   ==  0, "Fitting command line not executed");
+}
+END_TEST
+
+Suite *firewall_helpers(void)
+{
+    Suite *s = suite_create("firewall/helpers");
+
+    TCase *tc_helpers = tcase_create("helpers");
+    tcase_add_test(tc_helpers, test_system_printf);
+    suite_add_tcase(s, tc_helpers);
+
+    return s;
 }
