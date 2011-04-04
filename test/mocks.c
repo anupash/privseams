@@ -51,9 +51,9 @@
  *
  * Mocks can be defined in the file they're needed in, but beware:
  * The overriding implementation's definition cannot be static: a compiler error
- * will be emitted. On the other hand, a non-static definition will be picked up
- * by other object files in the same test suite, i.e. they will invariably use
- * your mock function which may not be intended.
+ * would be emitted. On the other hand, a non-static definition is picked up
+ * by other object files in the same test suite, i.e. they invariably use your
+ * mock function which may not be intended.
  * This also implies that each other suite cannot define its own implementation
  * due to "duplicate symbol" errors.
  *
@@ -63,7 +63,7 @@
  * Remember that each test runs in a process of its own, so the flags must be
  * set at the beginning of each test.
  *
- * @note The documentation implies that argments of disabled mock functions are
+ * @note The documentation implies that arguments of disabled mock functions are
  *       passed to the original implementation.
  *
  * @author Christof Mroz <christof.mroz@rwth-aachen.de>
@@ -72,7 +72,7 @@
 /*
  * RTLD_NEXT is just "reserved for future use" in POSIX but not mandatory, so it
  * may not be available.
- * Unit tests relying on mock functions will be silently ignored on systems that
+ * Unit tests relying on mock functions are silently ignored on systems that
  * don't support it. See get_original().
  *
  * Some libc implementations (e.g. uclibc) export RTLD_NEXT by default, if
@@ -92,7 +92,7 @@
 #include "mocks.h"
 
 
-// A NULL argument to dlsym() is allowed as per POSIX, and may do the trick,
+// A NULL argument to dlsym() is allowed as per POSIX, and may just work,
 // even though the chances are slim. We try it anyway.
 #ifndef RTLD_NEXT
 #define RTLD_NEXT NULL
@@ -107,9 +107,9 @@
  *             returning a pointer to the mock rather than the real function
  *             instead, which would in turn be called by the mock itself and so
  *             on, thereby triggering infinite recursion.
- * @param name Symbolic (i.e. exported) name,of the original function. It will
- *             be searched in default shared object load order and the first
- *             occurence retrieved.
+ * @param name Symbolic (i.e. exported) name of the original function. It is
+ *             searched in default shared object load order and the first
+ *             occurrence retrieved.
  * @return     Function pointer to import symbol @a name.
  *             Does not return on failure.
  */
@@ -164,7 +164,7 @@ bool  mock_system      = false;        /**< system(3) mock enabled? */
 char *mock_system_last = NULL;         /**< copy of last argument passed to
                                         *   system(3) mock, or NULL if mock was
                                         *   not called yet. */
-int   mock_system_exit = EXIT_SUCCESS; /**< value that will be returned by
+int   mock_system_exit = EXIT_SUCCESS; /**< value that is returned by
                                         *   system(3) mock if a non-NULL
                                         *   argument is supplied to it.*/
 
@@ -172,7 +172,7 @@ int   mock_system_exit = EXIT_SUCCESS; /**< value that will be returned by
  * system(3) mock function. Controlled by the ::mock_system flag.
  * Stores a copy of @a command in ::mock_system_last, if enabled.
  *
- * @param command A copy of this string will be stored in ::mock_system_last of
+ * @param command A copy of this string is stored in ::mock_system_last of
  *                non-NULL. Otherwise, ::mock_system_last is set to NULL.
  * @return        The value of ::mock_system_exit if @a command was non-NULL, -1
  *                otherwise.
