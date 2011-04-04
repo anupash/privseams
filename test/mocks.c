@@ -31,7 +31,8 @@
  * functions that rely on external state can be tricky. Sometimes, the easiest
  * solution lies in overloading certain library functions with so-called
  * <i>mock functions</i> that simulate those calls and produce user-supplied
- * fake output.
+ * fake output for the duration of the test. Nothing is overridden outside of
+ * unit tests, of course.
  *
  * <h2>Short tutorial</h2>
  * - In Makefile.am
