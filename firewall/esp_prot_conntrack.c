@@ -80,7 +80,7 @@ struct esp_anchor_item {
  * NOTE set to the preferred anti-replay window size of ESP */
 int window_size;
 
-struct esp_prot_conntrack_tfm esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
+static struct esp_prot_conntrack_tfm esp_prot_conntrack_tfms[MAX_NUM_TRANSFORMS];
 
 
 /**

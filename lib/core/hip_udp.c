@@ -36,8 +36,8 @@
 #include "debug.h"
 
 /** Port numbers for NAT traversal of hip control packets. */
-in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
-in_port_t hip_peer_nat_udp_port  = HIP_NAT_UDP_PORT;
+static in_port_t hip_local_nat_udp_port = HIP_NAT_UDP_PORT;
+static in_port_t hip_peer_nat_udp_port  = HIP_NAT_UDP_PORT;
 
 
 /**

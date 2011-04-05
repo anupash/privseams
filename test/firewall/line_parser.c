@@ -35,7 +35,7 @@ Took it with you when you moved and got it broke \n\
 Found the pieces we counted them all alone       \n\
 Didn't add up forgot to carry a zero             ";
 // four pointers to the beginning of the lines
-char *const lines[4] = {
+static char *const lines[4] = {
     data,
     data + 50,
     data + 100,

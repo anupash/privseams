@@ -48,7 +48,7 @@
 #include "maintenance.h"
 
 
-int hip_hit_to_ip_status = 0;
+static int hip_hit_to_ip_status = 0;
 
 /**
  * This function is an interface to turn on/off locators lookup in hit-to-ip domain
@@ -74,7 +74,7 @@ int hip_get_hit_to_ip_status(void)
 // append unless set in configuration
 #define HIT_TO_IP_ZONE_DEFAULT "hit-to-ip.infrahip.net"
 
-char *hip_hit_to_ip_zone = NULL;
+static char *hip_hit_to_ip_zone = NULL;
 
 /**
  * Set the zone for hit-to-ip domain lookups

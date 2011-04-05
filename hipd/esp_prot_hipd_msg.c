@@ -57,7 +57,7 @@
 /** @todo Remove this dependency from core to UPDATE module */
 #include "modules/update/hipd/update.h"
 
-uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
+static uint8_t esp_prot_transforms[MAX_NUM_TRANSFORMS];
 
 /**
  * Sends second update message for a public-key-based anchor element update

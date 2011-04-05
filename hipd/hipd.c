@@ -114,7 +114,7 @@ struct rtnl_handle hip_nl_ipsec;
 struct rtnl_handle hip_nl_route;
 
 struct sockaddr_in6 hip_firewall_addr;
-int                 hip_firewall_sock = 0;
+static int          hip_firewall_sock = 0;
 
 /* used to change the transform order see hipconf usage to see the usage
  * This is set to AES, 3DES, NULL by default see hipconf trasform order for

@@ -74,7 +74,7 @@
 #define ERR -1
 
 
-int hip_nsupdate_status = 0;
+static int hip_nsupdate_status = 0;
 
 /**
  * This function is an interface to turn on/off DNS updates

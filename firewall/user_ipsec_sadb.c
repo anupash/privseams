@@ -80,9 +80,9 @@ struct hip_link_entry {
 };
 
 /* database storing the sa entries, indexed by src _and_ dst hits */
-HIP_HASHTABLE *sadb = NULL;
+static HIP_HASHTABLE *sadb = NULL;
 /* database storing shortcuts to sa entries for incoming packets */
-HIP_HASHTABLE *linkdb = NULL;
+static HIP_HASHTABLE *linkdb = NULL;
 
 
 /**

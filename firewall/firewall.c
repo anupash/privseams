@@ -164,7 +164,7 @@ int hip_fw_sock = 0;
  * Use this socket *only* for receiving async messages from hipd
  * @todo make static, no-one should read on that
  */
-int hip_fw_async_sock = 0;
+static int hip_fw_async_sock = 0;
 
 /*----------------INIT FUNCTIONS------------------*/
 

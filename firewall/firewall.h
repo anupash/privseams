@@ -45,7 +45,6 @@ extern int esp_relay;
 extern int hip_esp_protection;
 extern int use_midauth;
 extern int hip_fw_sock;
-extern int hip_fw_async_sock;
 extern int system_based_opp_mode;
 extern int esp_speedup;
 

@@ -114,9 +114,9 @@ enum {
     HOOK
 };
 
-struct dlist *input_rules;
-struct dlist *output_rules;
-struct dlist *forward_rules;
+static struct dlist *input_rules;
+static struct dlist *output_rules;
+static struct dlist *forward_rules;
 
 /**
  * Writes the default firewall configuration file to the disk if it does

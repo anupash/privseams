@@ -70,7 +70,7 @@ struct inet_prefix {
     uint32_t data[4];
 };
 
-int lsi_total = 0;
+static int lsi_total = 0;
 
 /**
  * append a parameter to a netlink message

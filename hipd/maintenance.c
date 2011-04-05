@@ -71,11 +71,11 @@ struct maint_function {
 };
 
 int hip_firewall_sock_lsi_fd = -1;
+int hip_firewall_status      = -1;
 
-float retrans_counter     = HIP_RETRANSMIT_INIT;
-float precreate_counter   = HIP_R1_PRECREATE_INIT;
-int   force_exit_counter  = FORCE_EXIT_COUNTER_START;
-int   hip_firewall_status = -1;
+static float retrans_counter    = HIP_RETRANSMIT_INIT;
+static float precreate_counter  = HIP_R1_PRECREATE_INIT;
+static int   force_exit_counter = FORCE_EXIT_COUNTER_START;
 
 /**
  * List containing all maintenance functions.

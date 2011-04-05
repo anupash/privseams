@@ -102,13 +102,13 @@
 #define SYSLOG_FACILITY   LOG_LOCAL6
 
 /* must be in the same order as enum debug_level (straight mapping) */
-const int debug2syslog_map[] = { LOG_ALERT,
-                                 LOG_ERR,
-                                 LOG_INFO,
-                                 LOG_DEBUG };
+static const int debug2syslog_map[] = { LOG_ALERT,
+                                        LOG_ERR,
+                                        LOG_INFO,
+                                        LOG_DEBUG };
 
 /* must be in the same order as enum debug_level (straight mapping) */
-const char *debug_prefix[] = { "die", "error", "info", "debug" };
+static const char *debug_prefix[] = { "die", "error", "info", "debug" };
 /* printed just on stderr */
 
 /* Production quality code prints debugging stuff on syslog, testing code

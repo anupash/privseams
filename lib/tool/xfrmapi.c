@@ -46,10 +46,10 @@
 
 /* For receiving netlink IPsec events (acquire, expire, etc);
  * thread unfriendly! */
-struct rtnl_handle *hip_xfrmapi_nl_ipsec;
+static struct rtnl_handle *hip_xfrmapi_nl_ipsec;
 
-int hip_xfrmapi_beet;
-int hip_xfrmapi_sa_default_prefix;
+static int hip_xfrmapi_beet;
+static int hip_xfrmapi_sa_default_prefix;
 
 static const char *const *e_algo_names;
 static const char *const *a_algo_names;

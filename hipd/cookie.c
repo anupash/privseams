@@ -56,7 +56,7 @@
 
 #define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
 
-int hip_cookie_difficulty = 1ULL; /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */
+static int hip_cookie_difficulty = 1ULL; /* a difficulty of i leads to approx. 2^(i-1) hash computations during BEX */
 
 /**
  * query for current puzzle difficulty

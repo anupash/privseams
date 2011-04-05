@@ -153,19 +153,19 @@ static HIP_HASHTABLE *hiprelay_ht = NULL;
 static HIP_HASHTABLE *hiprelay_wl = NULL;
 
 /** Minimum relay record life time as a 8-bit integer. */
-uint8_t hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
+static uint8_t hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
 /** Maximum relay record life time as a 8-bit integer. */
-uint8_t hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
+static uint8_t hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
 /**
  * A boolean to indicating if the RVS / relay is enabled. User sets this value
  * using the hipconf tool.
  */
-enum hip_relay_status relay_enabled = HIP_RELAY_OFF;
+static enum hip_relay_status relay_enabled = HIP_RELAY_OFF;
 /**
  * A boolean to indicating if the RVS / relay whitelist is enabled. User sets
  * this value from the relay configuration file.
  */
-enum hip_relay_wl_status whitelist_enabled = HIP_RELAY_WL_ON;
+static enum hip_relay_wl_status whitelist_enabled = HIP_RELAY_WL_ON;
 
 /**
  * Returns a hash calculated over a HIT.

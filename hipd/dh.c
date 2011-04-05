@@ -49,7 +49,7 @@
  * This array is indexed by the Group ID value defined in the RFC.
  * Note that this means that the array element at index 0 is thus unused.
  */
-DH *dh_table[HIP_MAX_DH_GROUP_ID] = { 0 };
+static DH *dh_table[HIP_MAX_DH_GROUP_ID] = { 0 };
 
 /**
  * insert the current DH-key into the buffer

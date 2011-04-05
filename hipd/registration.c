@@ -61,11 +61,11 @@
 #define HIP_PENDING_REQUEST_LIFETIME 120
 
 /** An array for storing all existing services. */
-struct hip_srv hip_services[HIP_TOTAL_EXISTING_SERVICES];
+static struct hip_srv hip_services[HIP_TOTAL_EXISTING_SERVICES];
 /** A linked list for storing pending requests on the client side.
  *  @note This assumes a single threaded model. We are not using mutexes here.
  */
-struct hip_ll pending_requests;
+static struct hip_ll pending_requests;
 
 /**
  * initialize services

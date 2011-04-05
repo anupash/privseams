@@ -94,7 +94,7 @@
 #define HIP_HEARTBEAT_INTERVAL 20
 #define HIP_MAX_ICMP_PACKET 512
 
-int        hip_icmp_sock;
+static int hip_icmp_sock;
 static int heartbeat_counter = HIP_HEARTBEAT_INTERVAL;
 
 /**
