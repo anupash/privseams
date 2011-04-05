@@ -489,8 +489,8 @@ static void hip_fw_manage_esp_tuple(const struct esp_tuple *const esp_tuple,
  * Set up or remove iptables rules to bypass userspace processing of all
  * ESP SPI/destination pairs associated with @a tuple.
  *
- * @param esp_tuple Determines all SPI/destination pairs.
- * @param insert    Insert rules if true, remove existing if false.
+ * @param tuple  Determines all SPI/destination pairs.
+ * @param insert Insert rules if true, remove existing if false.
  *
  * @see hip_fw_manage_esp_rule()
  * @see hip_fw_manage_esp_tuple()
