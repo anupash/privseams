@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Aalto University and RWTH Aachen University.
+ * Copyright (c) 2011 Aalto University and RWTH Aachen University.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -228,7 +228,7 @@ START_TEST(test_hip_fw_manage_esp_rule_needs_userspace)
     fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) == 0,
             "Added rule even though ESP transforms requested");
 
-    esp_tuple->esp_prot_tfm = ESP_PROT_TFM_UNUSED; // reset
+    esp_tuple->esp_prot_tfm     = ESP_PROT_TFM_UNUSED; // reset
     esp_tuple->tuple->esp_relay = 1;
     fail_if(hip_fw_manage_esp_rule(esp_tuple, &dest, true) == 0,
             "Added rule even though connection is relayed");
