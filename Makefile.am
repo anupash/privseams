@@ -128,7 +128,6 @@ hipd_hipd_SOURCES += hipd/opp_mode.c
 endif
 
 firewall_hipfw_sources = firewall/cache.c               \
-                         firewall/conntrack.c           \
                          firewall/dlist.c               \
                          firewall/esp_prot_api.c        \
                          firewall/esp_prot_config.c     \
@@ -159,6 +158,7 @@ endif
 # To avoid duplicate symbols during linking some object files need to excluded.
 # Add all files that need to be excluded here.
 firewall_hipfw_SOURCES = $(firewall_hipfw_sources) \
+                         firewall/conntrack.c      \
                          firewall/main.c
 
 lib_core_libhipcore_la_SOURCES = lib/core/builder.c         \
@@ -198,6 +198,8 @@ endif
 
 
 test_check_firewall_SOURCES = test/check_firewall.c          \
+                              test/mocks.c                   \
+                              test/firewall/conntrack.c      \
                               test/firewall/file_buffer.c    \
                               test/firewall/line_parser.c    \
                               test/firewall/port_bindings.c  \
@@ -213,7 +215,7 @@ include modules/heartbeat/Makefile.am
 include modules/heartbeat_update/Makefile.am
 include modules/update/Makefile.am
 
-### library dependencies ###
+### static library dependencies ###
 
 firewall_hipfw_LDADD                     = lib/core/libhipcore.la
 hipd_hipd_LDADD                          = lib/core/libhipcore.la
@@ -226,6 +228,10 @@ test_fw_port_bindings_performance_LDADD  = lib/core/libhipcore.la
 test_hc_performance_LDADD                = lib/core/libhipcore.la
 tools_hipconf_LDADD                      = lib/core/libhipcore.la
 tools_pisacert_LDADD                     = lib/core/libhipcore.la
+
+### dynamic library dependencies ###
+
+test_check_firewall_LDFLAGS              = -ldl
 
 dist_sbin_SCRIPTS = tools/hipdnskeyparse/hipdnskeyparse \
                     tools/hipdnsproxy/hipdnsproxy       \

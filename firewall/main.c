@@ -33,6 +33,8 @@
  *       Anything defined here will be unavailable in these cases.
  */
 
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -42,6 +44,7 @@
 #include "lib/core/debug.h"
 #include "lib/core/util.h"
 #include "firewall.h"
+#include "conntrack.h"
 
 
 /**
@@ -50,7 +53,7 @@
 static void hipfw_usage(void)
 {
     puts("HIP Firewall");
-    puts("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-h] [-V]");
+    puts("Usage: hipfw [-f file_name] [-d|-v] [-A] [-F] [-H] [-b] [-a] [-c] [-k] [-i|-I|-e] [-l] [-o] [-p] [-t <seconds>] [-h] [-V]");
 #ifdef CONFIG_HIP_MIDAUTH
     puts(" [-m]");
 #endif
@@ -69,6 +72,7 @@ static void hipfw_usage(void)
     puts("      -e = use esp protection extension (also sets -i)");
     puts("      -l = activate lsi support");
     puts("      -p = run with lowered privileges. iptables rules will not be flushed on exit");
+    puts("      -t <seconds> = set timeout interval to <seconds>. Disable if <seconds> = 0");
     puts("      -h = print this help");
 #ifdef CONFIG_HIP_MIDAUTH
     puts("      -m = middlebox authentication");
@@ -97,13 +101,14 @@ int main(int argc, char *argv[])
     bool        limit_capabilities = false;
     const char *rule_file          = NULL;
 
-    int         ch;
+    char *end_of_number;
+    int   ch;
 
     /* Make sure that root path is set up correctly (e.g. on Fedora 9).
      * Otherwise may get warnings from system_print() commands. */
     setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
 
-    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpvV")) != -1) {
+    while ((ch = getopt(argc, argv, "aAbcdef:FhHiIklmpt:vV")) != -1) {
         switch (ch) {
         case 'A':
             accept_hip_esp_traffic_by_default = 1;
@@ -154,6 +159,18 @@ int main(int argc, char *argv[])
         case 'p':
             limit_capabilities = 1;
             break;
+        case 't':
+            connection_timeout = strtoul(optarg, &end_of_number, 10);
+            if (end_of_number == optarg) {
+                fprintf(stderr, "Error: Invalid timeout given\n");
+                hipfw_usage();
+                return EXIT_FAILURE;
+            }
+            if (connection_timeout < cleanup_interval) {
+                /* we must poll at least once per timeout interval */
+                cleanup_interval = connection_timeout;
+            }
+            break;
         case 'v':
             log_level = LOGDEBUG_MEDIUM;
             hip_set_logfmt(LOGFMT_SHORT);
@@ -170,6 +187,11 @@ int main(int argc, char *argv[])
             hipfw_usage();
             return EXIT_FAILURE;
         }
+    }
+
+    if (connection_timeout > 0 && !filter_traffic) {
+        puts("Warning: timeouts (-t) have no effect with connection");
+        puts("         tracking disabled (-F)");
     }
 
     if (geteuid() != 0) {

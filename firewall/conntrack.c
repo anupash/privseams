@@ -74,8 +74,30 @@
 #include "reinject.h"
 
 
-static struct dlist *hip_list = NULL;
-static struct dlist *esp_list = NULL;
+static struct dlist *hip_list  = NULL;
+static struct dlist *esp_list  = NULL;
+static struct slist *conn_list = NULL;
+
+/**
+ * Interval between sweeps in hip_fw_conntrack_periodic_cleanup(),
+ * in seconds.
+ * Because all active connections are traversed, this should not be too
+ * low for performance reasons.
+ *
+ * @see hip_fw_conntrack_periodic_cleanup()
+ */
+time_t cleanup_interval = 60; // 1 minute
+
+/**
+ * Connection timeout in seconds, or zero to disable timeout.
+ * This actually specifies the minimum period of inactivity before a
+ * connection is considered stale. Thus, a connection may be inactive for
+ * at most ::connection_timeout plus ::cleanup_interval seconds before
+ * getting removed.
+ *
+ * @see hip_fw_conntrack_periodic_cleanup()
+ */
+time_t connection_timeout = 60 * 5; // 5 minutes
 
 enum {
     STATE_NEW,
@@ -83,9 +105,6 @@ enum {
     STATE_ESTABLISHING_FROM_UPDATE,
     STATE_CLOSING
 };
-
-int           timeout_checking = 0;
-unsigned long timeout_value    = 0;
 
 /*------------print functions-------------*/
 /**
@@ -452,9 +471,8 @@ static void insert_new_connection(const struct hip_data *data)
 
     connection = calloc(1, sizeof(struct connection));
 
-    connection->state = STATE_ESTABLISHED;
-    //set time stamp
-    gettimeofday(&connection->time_stamp, NULL);
+    connection->state     = STATE_ESTABLISHED;
+    connection->timestamp = time(NULL);
 #ifdef HIP_CONFIG_MIDAUTH
     connection->pisa_state = PISA_STATE_DISALLOW;
 #endif
@@ -485,6 +503,7 @@ static void insert_new_connection(const struct hip_data *data)
     hip_list = append_to_list(hip_list, connection->original.hip_tuple);
     hip_list = append_to_list(hip_list, connection->reply.hip_tuple);
     HIP_DEBUG("inserting connection \n");
+    conn_list = append_to_slist(conn_list, connection);
 }
 
 /**
@@ -607,6 +626,8 @@ static void remove_tuple(struct tuple *tuple)
  */
 static void remove_connection(struct connection *connection)
 {
+    struct slist *conn_link;
+
     HIP_DEBUG("remove_connection: tuple list before: \n");
     print_tuple_list();
 
@@ -614,6 +635,10 @@ static void remove_connection(struct connection *connection)
     print_esp_list();
 
     if (connection) {
+        HIP_ASSERT(conn_link = find_in_slist(conn_list, connection));
+        conn_list = remove_link_slist(conn_list, conn_link);
+        free(conn_link);
+
         remove_tuple(&connection->original);
         remove_tuple(&connection->reply);
 
@@ -1691,7 +1716,7 @@ static int check_packet(const struct in6_addr *ip6_src,
         // update time_stamp only on valid packets
         // for new connections time_stamp is set when creating
         if (tuple->connection) {
-            gettimeofday(&tuple->connection->time_stamp, NULL);
+            tuple->connection->timestamp = time(NULL);
         } else {
             HIP_DEBUG("Tuple connection NULL, could not timestamp\n");
         }
@@ -1854,7 +1879,7 @@ int filter_esp_state(const struct hip_fw_context *ctx)
 out_err:
     // if we are going to accept the packet, update time stamp of the connection
     if (err > 0) {
-        gettimeofday(&tuple->connection->time_stamp, NULL);
+        tuple->connection->timestamp = time(NULL);
     }
 
     HIP_DEBUG("verdict %d \n", err);
@@ -1994,4 +2019,58 @@ struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit, const struct in6
     }
     HIP_DEBUG("get_tuple_by_hits: no connection found\n");
     return NULL;
+}
+
+/**
+ * Do some necessary bookkeeping concerning connection tracking.
+ * Currently, this only makes sure that stale locations will be removed.
+ * The actual tasks will be run at most once per ::connection_timeout
+ * seconds, no matter how often you call the function.
+ *
+ * @note Don't call this from a thread or timer, since most of hipfw is not
+ *       reentrant (and so this function isn't either).
+ */
+void hip_fw_conntrack_periodic_cleanup(void)
+{
+    static time_t      last_check = 0;   // timestamp of last call
+    struct slist      *iter_conn;
+    struct connection *conn;
+
+    if (connection_timeout == 0 || !filter_traffic) {
+        // timeout disabled, or no connections
+        // tracked in the first place
+        return;
+    }
+
+    const time_t now = time(NULL);
+
+    if (now < last_check) {
+        last_check = now;
+        HIP_ERROR("System clock skew detected; internal timestamp reset\n");
+    }
+
+    if (now - last_check >= cleanup_interval) {
+        HIP_DEBUG("Checking for connection timeouts\n");
+
+        iter_conn = conn_list;
+        while (iter_conn) {
+            conn      = iter_conn->data;
+            iter_conn = iter_conn->next; // iter_conn might get removed
+
+            if (now < conn->timestamp) {
+                conn->timestamp = now;
+                HIP_ERROR("Packet timestamp skew detected; timestamp reset\n");
+            }
+
+            if (now - conn->timestamp >= connection_timeout) {
+                HIP_DEBUG("Connection timed out:\n");
+                HIP_DEBUG_HIT("src HIT", &conn->original.hip_tuple->data->src_hit);
+                HIP_DEBUG_HIT("dst HIT", &conn->original.hip_tuple->data->dst_hit);
+
+                remove_connection(conn);
+            }
+        }
+
+        last_check = now;
+    }
 }

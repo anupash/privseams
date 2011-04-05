@@ -38,6 +38,10 @@
 
 
 /*-------------- CONNECTION TRACKING ------------*/
+
+extern time_t connection_timeout;
+extern time_t cleanup_interval;
+
 enum {
     ORIGINAL_DIR,
     REPLY_DIR,
@@ -58,5 +62,7 @@ struct esp_tuple *find_esp_tuple(const struct slist *esp_list,
 struct tuple *get_tuple_by_hits(const struct in6_addr *src_hit,
                                 const struct in6_addr *dst_hit);
 int hipfw_relay_esp(const struct hip_fw_context *ctx);
+
+void hip_fw_conntrack_periodic_cleanup(void);
 
 #endif /* HIP_FIREWALL_CONNTRACK_H */

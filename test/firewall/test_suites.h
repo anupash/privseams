@@ -28,6 +28,7 @@
 
 #include <check.h>
 
+Suite *firewall_conntrack(void);
 Suite *firewall_file_buffer(void);
 Suite *firewall_line_parser(void);
 Suite *firewall_port_bindings(void);

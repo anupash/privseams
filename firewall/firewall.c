@@ -1668,6 +1668,80 @@ out_err:
 }
 
 /**
+ * Receive and process one message from hipd.
+ *
+ * @param msg A previously allocated message buffer.
+ * @return    Zero on success, -1 on error.
+ *
+ * @note The buffer @a msg is reused between calls because it is quite
+ *       large.
+ */
+static int hip_fw_handle_hipd_message(struct hip_common *const msg)
+{
+    struct sockaddr_in6 sock_addr;
+    int                 msg_type, len, n;
+    int                 is_root, access_ok;
+    socklen_t           alen;
+
+    alen = sizeof(sock_addr);
+    n    = recvfrom(hip_fw_async_sock, msg, sizeof(struct hip_common),
+                    MSG_PEEK, (struct sockaddr *) &sock_addr, &alen);
+    if (n < 0) {
+        HIP_ERROR("Error receiving message header from daemon.\n");
+        return -1;
+    }
+
+    // making sure user messages are received from hipd
+    access_ok = 0;
+    msg_type  = hip_get_msg_type(msg);
+    is_root   = ntohs(sock_addr.sin6_port) < 1024;
+    if (is_root) {
+        access_ok = 1;
+    } else if (!is_root &&
+               (msg_type >= HIP_MSG_ANY_MIN &&
+                msg_type <= HIP_MSG_ANY_MAX)) {
+        access_ok = 1;
+    }
+    if (!access_ok) {
+        HIP_ERROR("The sender of the message is not trusted.\n");
+        return -1;
+    }
+
+    alen = sizeof(sock_addr);
+    len  = hip_get_msg_total_len(msg);
+
+    HIP_DEBUG("Receiving message type %d (%d bytes)\n",
+              hip_get_msg_type(msg), len);
+    n = recvfrom(hip_fw_async_sock, msg, len, 0,
+                 (struct sockaddr *) &sock_addr, &alen);
+
+    if (n < 0) {
+        HIP_ERROR("Error receiving message parameters from daemon.\n");
+        return -1;
+    }
+
+    HIP_ASSERT(n == len);
+
+    if (ntohs(sock_addr.sin6_port) != HIP_DAEMON_LOCAL_PORT) {
+        int type = hip_get_msg_type(msg);
+        if (type == HIP_MSG_FW_BEX_DONE) {
+            HIP_DEBUG("HIP_MSG_FW_BEX_DONE\n");
+            HIP_DEBUG("%d == %d\n", ntohs(sock_addr.sin6_port),
+                      HIP_DAEMON_LOCAL_PORT);
+        }
+        HIP_DEBUG("Drop, message not from hipd\n");
+        return -1;
+    }
+
+    if (hip_handle_msg(msg) < 0) {
+        HIP_ERROR("Error handling message\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
  * Hipfw should be started before hipd to make sure
  * that nobody can bypass ACLs. However, some hipfw
  * extensions (e.g. userspace ipsec) work consistently
@@ -1723,17 +1797,14 @@ int hipfw_main(const char *const rule_file,
                const bool        kill_old,
                const bool        limit_capabilities)
 {
-    int                   err = 0, highest_descriptor, i;
-    int                   n, len;
+    int                   err       = 0, highest_descriptor, i;
     struct ipq_handle    *h4        = NULL, *h6 = NULL;
     struct hip_common    *msg       = NULL;
     struct sockaddr_in6   sock_addr = { 0 };
-    socklen_t             alen;
     fd_set                read_fdset;
     struct timeval        timeout;
     unsigned char         buf[HIP_MAX_PACKET];
     struct hip_fw_context ctx;
-    int                   is_root = 0, access_ok = 0, msg_type = 0; //variables for accepting user messages only from hipd
 
 #ifdef CONFIG_HIP_PERFORMANCE
     HIP_DEBUG("Creating perf set\n");
@@ -1888,69 +1959,10 @@ int hipfw_main(const char *const rule_file,
 
         if (FD_ISSET(hip_fw_async_sock, &read_fdset)) {
             HIP_DEBUG("****** Received HIPD message ******\n");
-            memset(&sock_addr, 0, sizeof(sock_addr));
-            alen = sizeof(sock_addr);
-            n    = recvfrom(hip_fw_async_sock, msg, sizeof(struct hip_common),
-                            MSG_PEEK, (struct sockaddr *) &sock_addr, &alen);
-            if (n < 0) {
-                HIP_ERROR("Error receiving message header from daemon.\n");
-                err = -1;
-                continue;
-            }
-
-
-            /*making sure user messages are received from hipd*/
-            //resetting vars to 0 because it is a loop
-            is_root  = 0, access_ok = 0, msg_type = 0;
-            msg_type = hip_get_msg_type(msg);
-            is_root  = ntohs(sock_addr.sin6_port) < 1024;
-            if (is_root) {
-                access_ok = 1;
-            } else if (!is_root &&
-                       (msg_type >= HIP_MSG_ANY_MIN &&
-                        msg_type <= HIP_MSG_ANY_MAX)) {
-                access_ok = 1;
-            }
-            if (!access_ok) {
-                HIP_ERROR("The sender of the message is not trusted.\n");
-                err = -1;
-                continue;
-            }
-
-            alen = sizeof(sock_addr);
-            len  = hip_get_msg_total_len(msg);
-
-            HIP_DEBUG("Receiving message type %d (%d bytes)\n",
-                      hip_get_msg_type(msg), len);
-            n = recvfrom(hip_fw_async_sock, msg, len, 0,
-                         (struct sockaddr *) &sock_addr, &alen);
-
-            if (n < 0) {
-                HIP_ERROR("Error receiving message parameters from daemon.\n");
-                err = -1;
-                continue;
-            }
-
-            HIP_ASSERT(n == len);
-
-            if (ntohs(sock_addr.sin6_port) != HIP_DAEMON_LOCAL_PORT) {
-                int type = hip_get_msg_type(msg);
-                if (type == HIP_MSG_FW_BEX_DONE) {
-                    HIP_DEBUG("HIP_MSG_FW_BEX_DONE\n");
-                    HIP_DEBUG("%d == %d\n", ntohs(sock_addr.sin6_port),
-                              HIP_DAEMON_LOCAL_PORT);
-                }
-                HIP_DEBUG("Drop, message not from hipd\n");
-                err = -1;
-                continue;
-            }
-
-            err = hip_handle_msg(msg);
-            if (err < 0) {
-                HIP_ERROR("Error handling message\n");
-                continue;
-            }
+            err = hip_fw_handle_hipd_message(msg);
         }
+
+        hip_fw_conntrack_periodic_cleanup();
     }
 
 out_err:
