@@ -109,8 +109,6 @@ extern HIP_HASHTABLE *addresses;
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
-int hip_firewall_is_alive(void);
-
 /* Functions for handling incoming packets. */
 int hip_sock_recv_firewall(void);
 

@@ -38,6 +38,7 @@ void hip_uninit_maint_functions(void);
 int hip_periodic_maintenance(void);
 void hip_set_firewall_status(void);
 int hip_get_firewall_status(void);
+int hip_firewall_is_alive(void);
 
 /*Communication with firewall daemon*/
 int hip_firewall_set_bex_data(int action, struct in6_addr *hit_s, struct in6_addr *hit_r);
